@@ -17695,13 +17695,14 @@ describe("spelling (25.6)", () => {
   });
 
   /** A Turkish dictionary (9 MB) under a path of the test's own, so it's built now whatever was built before, and a
-   *  note in its language open. */
-  const turkish = async () => {
+   *  note in its language open. Held: its words a named pipe, read only as the test writes them into it. */
+  const turkish = async (held = false) => {
     const { dictionaryFiles } = await import("../src/core/spell.ts");
     const tr = dictionaryFiles("tr", {})!;
     const dict = mkdtempSync(join(sandbox, "dict-"));
     cpSync(tr.aff, join(dict, "zz.aff"));
-    cpSync(tr.dic, join(dict, "zz.dic"));
+    if (held) expect(Bun.spawnSync(["mkfifo", join(dict, "zz.dic")]).exitCode).toBe(0);
+    else cpSync(tr.dic, join(dict, "zz.dic"));
     const root = vault({ "s6.md": "---\nlang: zz\n---\nBugün evlerinzde kitap okuyorum.\n" });
     return harness({
       root,
@@ -17733,28 +17734,70 @@ describe("spelling (25.6)", () => {
     expect(h.app.speller.misspelt(h.app.view!)!.map((w) => w.word)).toEqual(["evlerinzde", "kitpa"]);
   });
 
-  // quarantined: #126 — on a loaded CI runner the main thread's longest gap ran past half the loading time (716 ms
-  // against 473, linux-x64, 2026-10-17), though the build was the thread's (counted above): the clock measures the
-  // runner's scheduling as much as slipbox. Back once its turns are counted, not timed.
-  test.skip("while the thread builds a dictionary, the main thread keeps its turns (#40)", async () => {
-    const h = await turkish();
-    // The longest the main thread went without a turn while the dictionary loaded: on it, as long as the build.
-    let last = performance.now();
-    let longest = 0;
-    const tick = setInterval(() => {
-      const now = performance.now();
-      longest = Math.max(longest, now - last);
-      last = now;
-    }, 2);
-    const asked = performance.now();
-    try {
-      await h.keys("space", "u", "s");
-      expect(await until(() => (h.frame(), h.app.speller.misspelt(h.app.view!) !== null))).toBe(true);
-    } finally {
-      clearInterval(tick);
-    }
-    const loading = performance.now() - asked;
-    expect(longest).toBeLessThan(loading / 2);
+  // Counted, not timed. The main thread's longest gap against the load's time measured the test process and its runner
+  // as much as slipbox (716 ms of 946 on CI, 605 of 632 on a release's runner): a file's harnesses, never quit, hold
+  // the main thread for longer the more there are of them. So the thread is held inside the dictionary's opening,
+  // reading its words from a named pipe, until the main thread has taken its turns: a main thread held while the
+  // dictionary loads takes none before it's there. Windows has no mkfifo.
+  test.skipIf(process.platform === "win32")(
+    "while the thread builds a dictionary, the main thread keeps its turns: counted, the thread held at a pipe (#40)",
+    async () => {
+      const { dictionaryFiles } = await import("../src/core/spell.ts");
+      const h = await turkish(true);
+      const words = [dictionaryFiles("tr", {})!.dic, h.app.config.spell.dictionaries.zz!];
+      // The pipe's writer: "open" once the thread reads the pipe; the words written when it's told, or after 10 s
+      // untold, so that a main thread held until the dictionary is there fails below instead of hanging the run.
+      const feeder = Bun.spawn(["bash", "-c", 'exec 3>"$1"; echo open; read -t 10 _; exec cat "$0" >&3', ...words], {
+        stdin: "pipe",
+        stdout: "pipe",
+      });
+      let ticks = 0;
+      const tick = setInterval(() => ticks++, 2);
+      try {
+        await h.keys("space", "u", "s");
+        const { value } = await feeder.stdout.getReader().read();
+        expect(new TextDecoder().decode(value)).toBe("open\n");
+        // The thread is reading the dictionary, none of its words written yet. The main thread's turns meanwhile: its
+        // timer's, and keys answered and drawn, the dictionary not there at any of them.
+        expect(h.app.speller.misspelt(h.app.view!)).toBeNull();
+        const at = ticks;
+        expect(await until(() => ticks - at >= 5)).toBe(true);
+        await h.keys("]", "s");
+        expect(h.app.messages.at(-1)?.text).toBe("spelling: its dictionaries are loading");
+        await h.keys("shift+g", "shift+a");
+        for (const k of ["space", ..."kitpa"]) {
+          await h.keys(k);
+          expect(h.app.speller.misspelt(h.app.view!)).toBeNull();
+        }
+        expect(h.app.view!.buf.source).toEndWith("okuyorum. kitpa\n");
+        feeder.stdin.write("go\n");
+        feeder.stdin.flush();
+        expect(await checked(h)).toBe(true);
+        expect(h.app.speller.misspelt(h.app.view!)!.map((w) => w.word)).toEqual(["evlerinzde", "kitpa"]);
+      } finally {
+        clearInterval(tick);
+        feeder.kill();
+      }
+    },
+  );
+
+  test("a dictionary the thread can't build is said once; the note's other languages still check it", async () => {
+    const dict = mkdtempSync(join(sandbox, "dict-"));
+    writeFileSync(join(dict, "zz.aff"), "SET UTF-8\n");
+    mkdirSync(join(dict, "zz.dic")); // a folder: there, but no words to read
+    const h = await harness({
+      root: vault({ "s7.md": "---\nlang: [zz, en]\n---\nThis has a recieve.\n" }),
+      open: "s7.md",
+      width: 120,
+      height: 30,
+      config: (c) => {
+        c.spell.dictionaries = { zz: join(dict, "zz.dic") };
+      },
+    });
+    expect(await on(h)).toEqual(["recieve"]);
+    h.frame();
+    const said = h.app.messages.filter((m) => m.text.startsWith("spelling: zz's dictionary didn't load ("));
+    expect(said.map((m) => m.level)).toEqual(["warn"]);
   });
 });
 // typos: on
