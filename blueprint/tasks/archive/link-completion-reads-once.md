@@ -175,3 +175,32 @@ link being typed, matched or not, so the keys that match nothing cost the same h
   - `inOrder` copies the array it sorts: an array of references, beside the sort and the build, not measurable.
   - A pointer item keeps its style in its data, beside the list's `links`: both set from one build, they can't
     differ, and accepting worked that way before.
+- 2026-10-23: Reviewed again, the whole diff and the narrowing. Verified and fixed:
+  - Two targets on one line shared a list: from `[a](zz` a jump (`end`, `ctrl+right`) straight into `[b](to` on the
+    same line kept the first's. A target is kept now where its start is unchanged, or moved along its line with what
+    follows it unchanged (an indent); a jump to another target changes what follows. Test: `end` from `[[zz` into
+    `[[to` on its line builds a list of its own.
+  - A backspace ranked the whole list again: only the last word's matches were kept. Each word typed is kept with its
+    matches now, and a key ranks only those of the longest one it types on from; a backspace's is a word typed
+    before. Test: four backspaces from `todqQqq` rank 0, 0, 0, then 1 items.
+  Mutation-checked, each alone: only the last word kept, kept by line alone, kept by style alone, kept only at the same
+  start, narrowed from the shown, ranking the whole list, the old `narrow`, no memo, a stack cut at 8: each fails a
+  unit test. Rejected:
+  - A language server's late answer can replace a link's list after `[` (a markdown server whose trigger characters
+    hold it): the link list never cancelled a server's ask, before this change either; and it needs such a server.
+  - Server lists narrowed the same way: a server's list can be partial and asked again; a change of its own.
+  - Raised again, as logged: a note made meanwhile not offered; `findVaultRoot` per note; the memo's place and its
+    root check; the named folders' 7 reads pinned; the extra passes of a ranking kept in order (the `Set` and the
+    filter are O(n) beside the matching itself); the read count's spy keyed by `linkItems` (renamed, it fails, it
+    doesn't pass).
+- 2026-10-23: Terminal checks for every case, in `tests/terminal/checks/links-and-files.ts`, each run with
+  `SLIPBOX_TERMINAL_JOBS=2`:
+  - "links: a target's completion kept while it's typed": past a match nothing shows, tab indents, a backspace back
+    to a match shows the list again after the indent; a wikilink's the same, and `]` closes it.
+  - "links: a target's completion narrowed key by key": `in`, `inbox`, back to `in`; `SKILL`, `zZ`, back; with 600
+    notes matching `t`, `[[tq` finds `tquokka`, ranked after the 500 shown.
+  - "links: each target its own completion": photography indexed while a list is kept, up into another line's
+    target offers its new note, `end` into another target on the same line likewise, and the next link too.
+  - "links: another vault's note completed as its pointer": photography's pointer written; a name two folders share
+    asked, then written; a private name said; `slipbox link` the same.
+  Mutation-checked: narrowing from the shown, kept by line alone, kept by style alone: each fails its check.

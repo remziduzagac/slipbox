@@ -561,6 +561,176 @@ const LINKS: Check[] = [
       s.expect(zk.out === "[Bike fit](../gear/202608201000-bike-fit)\n", `zk's link: ${zk.out}`);
     },
   },
+  {
+    area: "links-and-files",
+    name: "links: a target's completion kept while it's typed — hidden past a match, keys as with no popup, back on a backspace; an indent keeps it (20.13)",
+    covers: { cases: ["links"], commands: ["view.source"] },
+    options: { home: true, startAt: "home/notes/index.md" },
+    run: async (s) => {
+      const inbox = /inbox\.md +~\/notes\/inbox\.md/;
+      await leader(s, "n", "v");
+      await s.keys("shift+g", "o");
+      // A markdown link's target: the list as it's typed.
+      for (const k of "[x](inb") await s.keys(k);
+      await s.see(inbox);
+      // Past any match it shows nothing, and tab is the editor's again: the line indented.
+      await s.keys("z", "z");
+      await s.notSee(inbox);
+      const before = pos(s).col;
+      await s.keys("tab");
+      await s.until(() => pos(s).col > before, 3000, "the line indented");
+      // Back to a match: the list again, its target moved by the indent.
+      await s.keys("backspace", "backspace");
+      await s.see(inbox);
+      // A wikilink's the same; its target ended, it closes.
+      await s.keys("escape", "o");
+      for (const k of "[[inb") await s.keys(k);
+      const wiki = /inbox +inbox\.md/;
+      await s.see(wiki);
+      await s.keys("q", "q");
+      await s.notSee(wiki);
+      await s.keys("backspace", "backspace");
+      await s.see(wiki);
+      await s.keys("]");
+      await s.notSee(wiki);
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "links: a target's completion narrowed key by key — among the last key's matches, back on a backspace, a capital past a match, more matches than shown (20.13)",
+    covers: { cases: ["links"], commands: ["view.source"] },
+    options: {
+      home: true,
+      startAt: "home/notes/index.md",
+      // More notes matching `t` than a list shows, and one that ranks after them all.
+      setup: (s) => {
+        for (let i = 0; i < 600; i++) s.write(`~/notes/tt/t${String(i).padStart(3, "0")}.md`, "# T\n");
+        s.write("~/notes/tt/tquokka.md", "# Quokka\n");
+      },
+    },
+    run: async (s) => {
+      const inbox = /inbox\.md +~\/notes\/inbox\.md/;
+      const interviews = /research\/user-interviews-2026-08\.md +~\/notes\/research/;
+      await leader(s, "n", "v");
+      await s.keys("shift+g", "o");
+      // `in`, a long list; `inbox`, inbox alone; back to `in`, the long list again.
+      for (const k of "[x](in") await s.keys(k);
+      await s.see(inbox);
+      await s.see(interviews);
+      for (const k of "box") await s.keys(k);
+      await s.see(inbox);
+      await s.notSee(interviews);
+      await s.keys("backspace", "backspace", "backspace");
+      await s.see(interviews);
+      // A capital matches as typed: past a match nothing, and back.
+      await s.keys("escape", "o");
+      for (const k of "[x](SKILL") await s.keys(k);
+      // The popup cuts a long path short.
+      const skill = "research/agent-skills/draft-checklist/S";
+      await s.see(skill);
+      await s.keys("z", "Z");
+      await s.notSee(skill);
+      await s.keys("backspace", "backspace");
+      await s.see(skill);
+      // More match `t` than are shown, tquokka not among them: `q` finds it among every match of `t`.
+      await s.keys("escape", "o");
+      for (const k of "[[tq") await s.keys(k);
+      await s.see(/tquokka +tt\/tquokka\.md/);
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "links: each target its own completion — another line's, another on the same line, the next link's: a note indexed since offered (20.13)",
+    covers: { cases: ["links"], commands: ["view.source"] },
+    options: {
+      home: true,
+      startAt: "home/notes/index.md",
+      setup: (s) => void s.cliIn("~/hobbies/photography", "index", "--refresh"),
+    },
+    run: async (s) => {
+      // A note of another vault, indexed while a list is kept: offered only by a list made since.
+      const indexed = (name: string) => {
+        s.write(`~/hobbies/photography/${name}.md`, `# ${name}\n`);
+        const r = s.cliIn("~/hobbies/photography", "index", "--refresh");
+        s.expect(r.code === 0, `photography indexed: ${r.out}`);
+      };
+      const row = (name: string) => `~/hobbies/photography/${name}.md`;
+      await leader(s, "n", "v");
+      await s.keys("shift+g", "o");
+      // Another line's target, the cursor gone there from a list kept: its own list, made then.
+      for (const k of "[b](walrus") await s.keys(k);
+      await s.keys("escape", "o");
+      for (const k of "[a](zzzzzz") await s.keys(k);
+      indexed("walrus");
+      await s.keys("up");
+      await s.see(row("walrus"));
+      // Another target on the same line, the cursor gone there at a jump: likewise.
+      await s.keys("escape", "o");
+      for (const k of "[d](seal") await s.keys(k);
+      await s.keys("home");
+      for (const k of "[c](zz") await s.keys(k);
+      indexed("seal");
+      await s.keys("end");
+      await s.see(row("seal"));
+      // The link ended, the next one's list made anew.
+      await s.keys("escape", "o");
+      indexed("otter");
+      for (const k of "[e](otter") await s.keys(k);
+      await s.see(row("otter"));
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "links: another vault's note completed as its pointer — each folder by its name, a name two share asked first, a private one said; slipbox link the same (20.13, 21.7)",
+    covers: { cases: ["links", "links/conventions"], commands: ["view.source", "note.save"] },
+    options: {
+      home: true,
+      startAt: "home/notes/index.md",
+      setup: (s) => {
+        // A second folder called handbook, not a copy of the first: its own id, its name shared.
+        s.write("~/hobbies/handbook/.slipbox/config.toml", '[vault]\nid = "4d0c2e17a9b38f61"\nname = "handbook"\n');
+        s.write("~/hobbies/handbook/knots.md", "# Knots\n");
+        // A private name: its .slipbox/ kept out of git.
+        s.write("~/hobbies/diary/entry.md", "# Entry\n");
+        git(s, "~/hobbies/diary", "init", "-q");
+        s.cliIn("~/hobbies", "init", s.path("~/hobbies/diary"), "--name", "diary", "--private");
+        for (const v of ["~/hobbies/photography", "~/work/product/handbook", "~/hobbies/handbook", "~/hobbies/diary"])
+          s.cliIn(v, "index", "--refresh");
+      },
+    },
+    run: async (s) => {
+      await leader(s, "n", "v");
+      await s.keys("shift+g", "o");
+      for (const k of "[x](photography/index") await s.keys(k);
+      await s.see("~/hobbies/photography/index.md");
+      await s.keys("tab", ")", "space");
+      // A name two folders share: asked how it's written, then written as it is.
+      for (const k of "[y](handbook/glossary") await s.keys(k);
+      await s.see("~/work/product/handbook/glossary.md");
+      await s.keys("tab");
+      await s.see("handbook: 2 different folders have this name");
+      await s.keys("enter");
+      await s.see("[y](slipbox://handbook/glossary.md");
+      await s.keys(")", "space");
+      // A private name: written, and said to work on this machine only.
+      for (const k of "[z](diary/entry") await s.keys(k);
+      await s.see("~/hobbies/diary/entry.md");
+      await s.keys("tab");
+      await s.message(/diary is a private name/);
+      await s.keys(")", "escape", "ctrl+s");
+      await s.file(
+        "~/notes/index.md",
+        (t) =>
+          t.includes(
+            "[x](slipbox://photography/index.md) [y](slipbox://handbook/glossary.md) [z](slipbox://diary/entry.md)",
+          ),
+        "each folder's note by its pointer",
+      );
+      // An agent asks the same of the command line.
+      const r = s.cliIn("~/notes", "link", s.path("~/hobbies/photography/index.md"), "--from", "index.md");
+      s.expect(r.out.includes("slipbox://photography/index.md"), `slipbox link: ${r.out}`);
+    },
+  },
 ];
 
 const ROOTS: Check[] = [

@@ -38,11 +38,13 @@ export interface CompletionState {
   incomplete: boolean;
   /** A link's target being completed (20.13), in this style: slipbox's list, no server's. */
   links?: LinkStyle;
-  /** A link's: where its target's line starts, which an indent before the target doesn't move. */
+  /** A link's: where its target's line starts, and how far its start is from the line's end: an indent before it
+   *  leaves both. */
   line?: number;
-  /** A link's last word, and the items it matched in the list's order: a word typed on from it matches no other. */
-  typed?: string;
-  matched?: CompletionItem[];
+  tail?: number;
+  /** A link's words typed so far, each with the items it matched in the list's order: a word typed on from one
+   *  matches no other. */
+  steps?: { typed: string; matched: CompletionItem[] }[];
   /** A word completed from the open files' words (25.5): narrowed by how it starts, kept in their order. */
   words?: boolean;
 }
@@ -163,10 +165,16 @@ export function afterInsertKey(app: App, view: View, key: string): void {
     const c = app.completion;
     if (from !== null) {
       const style: LinkStyle = md !== null ? "markdown" : "wiki";
-      const line = view.buf.source.lastIndexOf("\n", from - 1) + 1;
-      // The same target's list, kept where an indent moved its start; another line's target gets its own.
-      if (c?.links === style && c.view === view && c.line === line) {
+      const src = view.buf.source;
+      const line = src.lastIndexOf("\n", from - 1) + 1;
+      const end = src.indexOf("\n", from);
+      const tail = (end < 0 ? src.length : end) - from;
+      // The same target's list: typed into where it starts, or moved along its line by an indent, what follows its
+      // start unchanged. Another target, on this line or another, gets its own.
+      if (c?.links === style && c.view === view && (c.from === from || (c.line === line && c.tail === tail))) {
         c.from = from;
+        c.line = line;
+        c.tail = tail;
         return narrow(app, c);
       }
       app.completion = {
@@ -178,6 +186,7 @@ export function afterInsertKey(app: App, view: View, key: string): void {
         incomplete: false,
         links: style,
         line,
+        tail,
       };
       return narrow(app, app.completion);
     }
@@ -342,14 +351,16 @@ function narrow(app: App, c: CompletionState): void {
   }
   const key = (i: CompletionItem) => i.filterText ?? i.label;
   if (c.links) {
-    // A word typed on from the last matches only what that one did: each word is matched whole (3.16), and a capital
-    // only makes it match as typed. So only those are ranked, none past a non-match, however many notes the list
-    // holds; the list is in order since it was built.
-    const among = c.typed !== undefined && word.startsWith(c.typed) ? c.matched! : c.items;
+    // A word typed on from another matches only what that one did: each word is matched whole (3.16), and a capital
+    // only makes it match as typed. So a key ranks only the matches of the longest word typed before that it types
+    // on from, the last key's or, after a backspace, a shorter one's: none past a non-match, however many notes the
+    // list holds. The list is in order since it was built.
+    const steps = (c.steps ??= []);
+    while (steps.length && !word.startsWith(steps.at(-1)!.typed)) steps.pop();
+    const among = steps.at(-1)?.matched ?? c.items;
     const hits = word ? rank(word, among, key, Number.POSITIVE_INFINITY) : null;
     const kept = hits && new Set(hits.map((h) => h.item));
-    c.typed = word;
-    c.matched = kept ? among.filter((i) => kept.has(i)) : c.items;
+    if (kept && steps.at(-1)?.typed !== word) steps.push({ typed: word, matched: among.filter((i) => kept.has(i)) });
     c.shown = hits ? hits.slice(0, RANKED).map((h) => h.item) : c.items;
     c.selected = 0;
     // Kept while nothing matches, showing nothing, until its target ends: built again per key, it would read every

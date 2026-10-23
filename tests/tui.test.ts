@@ -10188,10 +10188,13 @@ describe("vaults in the TUI (17.x)", () => {
         expect(shown()).toEqual([]);
         expect(reads).toBe(1);
         expect(among()).toEqual([1, 0, 0, 0]);
-        // Back to a match, it shows again from the same list.
+        // Back to a match, it shows again from the same list; each backspace ranks only what its shorter word
+        // matched when it was typed.
+        ranked.mockClear();
         for (let i = 0; i < 4; i++) await h.keys("backspace");
         expect(shown()).toEqual(["todo.md"]);
         expect(reads).toBe(1);
+        expect(among()).toEqual([0, 0, 0, 1]);
         // tab while nothing shows isn't the popup's: it indents the line, as with no popup. The target moved, the
         // same list.
         await h.keys("q", "tab");
@@ -10249,6 +10252,18 @@ describe("vaults in the TUI (17.x)", () => {
     expect(h.app.completion?.links).toBe("wiki");
     expect(h.app.completion).not.toBe(next);
     expect(h.app.completion!.from).toBeLessThan(next!.from);
+    // Another target on the same line too, the cursor gone there at a jump (end).
+    await h.keys("escape", "o");
+    for (const k of "[[to") await h.keys(k);
+    await h.keys("home");
+    expect(h.app.completion).toBeNull();
+    for (const k of "[[zz") await h.keys(k);
+    const first = h.app.completion;
+    expect(first?.shown).toEqual([]);
+    await h.keys("end");
+    expect(h.app.view!.buf.source).toContain("\n[[zz  [[to\n");
+    expect(h.app.completion).not.toBe(first);
+    expect(h.app.completion?.shown.map((i) => i.detail)).toEqual(["todo.md"]);
     await h.keys("escape");
   });
 
