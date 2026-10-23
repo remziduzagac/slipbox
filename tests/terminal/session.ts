@@ -65,7 +65,7 @@ export interface SessionOptions {
   /** More environment (`SLIPBOX_GLYPHS: "ascii"`); `{dir}` is the check's folder. */
   env?: Record<string, string>;
   /** A script of the tests' that Bun preloads into slipbox (`--preload`; slipbox's own process, not the CLI's): to hold
-   *  it mid-work, say. */
+   *  it mid-work, say. A path from the repository, or absolute; `{dir}` is the check's folder. */
   preload?: string;
   /** Don't wait for the first frame: a start meant to fail, or one the check waits for itself. */
   noWait?: boolean;
@@ -180,7 +180,8 @@ export class Session {
           ];
     const cwd = this.opts.cwd !== undefined ? join(this.dir, this.opts.cwd) : REPO;
     // Bun by its own path: with $HOME the check's, nothing may depend on finding it.
-    const preload = this.opts.preload ? ["--preload", this.opts.preload] : [];
+    const script = this.opts.preload?.replaceAll("{dir}", this.dir);
+    const preload = script ? ["--preload", isAbsolute(script) ? script : join(REPO, script)] : [];
     const argv = [process.execPath, ...preload, join(REPO, "src", "main.ts"), ...(this.opts.args ?? []), ...file];
     // What the slipbox before wrote is drawn first: its queries' answers, and its keyboard flags, are its own.
     await this.until(() => this.term.drawn, undefined, "the terminal to draw what the slipbox before wrote");

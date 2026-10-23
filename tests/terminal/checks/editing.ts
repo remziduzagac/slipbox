@@ -47,10 +47,11 @@ async function heldSpell(s: Session, what: string): Promise<void> {
   await s.until(() => !["", "set"].includes(holdState(s)), WAIT, what);
   s.expect(holdState(s) === "waiting", `${what}: ${holdState(s)}, not waiting`);
 }
-/** The hold let go, by the check: not its wait run out. */
+/** The hold let go, by the check: not its wait run out, nor dropped with a thread stopped at a request's deadline. */
 async function letGoSpell(s: Session): Promise<void> {
   writeFileSync(join(s.dir, "hold-go"), "");
-  await s.until(() => holdState(s) === "let go", WAIT, "the thread let go, not its wait run out");
+  await s.until(() => holdState(s) !== "waiting", WAIT, "the thread let go (still waiting: was it stopped?)");
+  s.expect(holdState(s) === "let go", `the thread ${holdState(s)}, not let go`);
 }
 /** A bundled dictionary copied under the check's folder (`dict/<lang>.aff`, `.dic`): built when asked, as yours. */
 function ownDictionary(s: Session, lang: string): void {

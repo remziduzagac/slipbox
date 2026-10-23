@@ -4807,9 +4807,9 @@ describe("spelling (25.6)", () => {
       // Its wait run out (100 ms here, 40 s unless said): built all the same, and it says so.
       await openDictionary(b);
       expect(holdB.state()).toBe("ran out");
-      // Stopped while it waits: the request ends with the thread, and the wait with it — past its limit (300 ms here)
-      // it hasn't run out, so the thread never built the dictionary. A fresh thread builds it.
-      const holdC = await holdBuild(c.dic, 300);
+      // Stopped while it waits: the request ends with the thread, and the wait with it — the hold dropped, and past its
+      // limit (5 s here, wide of any pause before the stop) never run out, so the thread never built the dictionary.
+      const holdC = await holdBuild(c.dic, 5000);
       const openC = openDictionary(c).then(
         () => "built",
         (err: Error) => err.message,
@@ -4817,8 +4817,12 @@ describe("spelling (25.6)", () => {
       expect(await until(() => holdC.state() === "waiting")).toBe(true);
       stopSpellThread();
       expect(await openC).toBe("worker stopped");
-      await Bun.sleep(600);
-      expect(holdC.state()).toBe("waiting");
+      await Bun.sleep(5500);
+      expect(holdC.state()).toBe("dropped");
+      // Set and not yet reached, it's dropped with its thread too; a fresh thread builds the dictionary, unheld.
+      const holdD = await holdBuild(c.dic);
+      stopSpellThread();
+      expect(holdD.state()).toBe("dropped");
       await openDictionary(c);
     } finally {
       stopSpellThread();

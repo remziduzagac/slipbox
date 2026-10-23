@@ -36,7 +36,8 @@ that a busy machine can't fail and that still fails if the main thread is held w
 ## References
 
 - Delivers: design/testing.md § Strategy (flaky tests fixed, or quarantined by name; never retried).
-- Rests on: D232; design/tui.md (spelling on its thread); D223 (a small design change: an issue and one pull request).
+- Rests on: D232; D?1 (a test holds the spell checker's thread); design/tui.md (spelling on its thread); D223 (a small
+  design change: an issue and one pull request).
 
 ## Log
 
@@ -275,3 +276,31 @@ that a busy machine can't fail and that still fails if the main thread is held w
   through the environment: the harness test fails (no load, or the CLI's too). No "spent" written, or a second hold
   accepted: the hold's unit test fails. Then: `core.test.ts`'s spelling, 11 pass; the spelling block, 7 pass; the
   scope test passes; the preload's harness test passes; the four spelling terminal checks, 4 of 4.
+- 2026-10-24: Round 6, two independent reviews (a second reviewer standing in for the usual one while it was out),
+  consolidated, each finding checked:
+  - Verified, fixed: the hold's unit test stopped the thread while it waited with a 300 ms limit, so a main thread
+    pausing longer than that before the stop let the wait run out first ("ran out" with a 350 ms pause, a standalone
+    try). The limit is 5 s now, the state read past it.
+  - Verified, fixed: the preload stopped watching 2 s after letting go, so a thread slow to wake would never be seen
+    let go. It watches until the state changes, which only an Atomics read a tick costs.
+  - Verified, fixed: a hold dropped with its thread (stopped, or started afresh after a deadline) read "set" or
+    "waiting" for ever. `holdBuild` counts the threads started and stopped, and such a hold reads "dropped". The unit
+    test checks one dropped while waiting, past its limit (so never run out either), and one dropped before it's
+    reached.
+  - Verified, fixed: `preload` was handed to Bun as given, so a path from the repository broke a check that starts
+    slipbox elsewhere, and a restart found the last run's files. `{dir}` is replaced, a relative path is taken from
+    the repository (the harness test names it so and starts slipbox deeper than the repository), and the preload
+    clears its files when it starts.
+  - Verified, fixed: the hook in the product had no decision. D?1 records it (`decisions/process.md`), with a note
+    under D232.
+  - Verified, fixed: the harness test that starts slipbox had the 30 s default timeout; 60 s now. A check failing
+    because a request's deadline stopped the held thread says so, not "its wait run out".
+  - Rejected again: a finite stall (as above). Rejected: `terminate` ending a wait is Bun's, and the test leans on it.
+    The test checks what the doc says, and a Bun that changed it would leave a thread building for nothing, so the
+    test should fail then. Rejected: work out the checks' harness without following check files, rather than an entry
+    for the preload. That's a change to the scope's rules for every check; the entry's check name is held to a real
+    check by `tests/terminal-coverage.test.ts`. The copy helpers, as before.
+  - Mutation-checked, each alone, the files restored: "dropped" never computed, or a stop not counted, fails the
+    hold's unit test; the preload not resolved from the repository fails the harness test ("preload not found").
+    Then: `core.test.ts`'s spelling, 11 pass; the spelling block, 7 pass; the harness and scope tests pass; the four
+    spelling terminal checks, 4 of 4.

@@ -2,13 +2,13 @@
 // reading back what a program draws and answering what it asks (TT-T1).
 
 import { describe, expect, test } from "bun:test";
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, relative } from "node:path";
 import { COMMAND_SPECS } from "../src/core/command-specs.ts";
 import { EXPLORER, explorerClosed, explorerOpen, MODES, mode, modeOf, OUTLINE, opened } from "./terminal/check.ts";
 import { encodeKey } from "./terminal/keys.ts";
-import { Session, type SessionOptions } from "./terminal/session.ts";
+import { REPO, Session, type SessionOptions } from "./terminal/session.ts";
 import { HeadlessTerminal } from "./terminal/terminal.ts";
 
 describe("keys as a terminal sends them", () => {
@@ -581,7 +581,14 @@ describe("starting slipbox (session.ts)", () => {
     const dir = mkdtempSync(join(tmpdir(), "slipbox-preload-"));
     const script = join(dir, "mark.ts");
     writeFileSync(script, 'require("node:fs").appendFileSync(process.env.PRELOAD_MARK, `${process.pid}\\n`);\n');
-    const s = new Session({ preload: script, env: { PRELOAD_MARK: join(dir, "loaded") } });
+    // Named from the repository, slipbox started in a folder of the check's deeper than it: found all the same.
+    const deep = join("home", ...Array(8).fill("d"));
+    const s = new Session({
+      preload: relative(REPO, script),
+      cwd: deep,
+      setup: (s) => mkdirSync(join(s.dir, deep), { recursive: true }),
+      env: { PRELOAD_MARK: join(dir, "loaded") },
+    });
     try {
       await s.start();
       expect(readFileSync(join(dir, "loaded"), "utf8")).toBe(`${s.pid()}\n`);
@@ -591,5 +598,5 @@ describe("starting slipbox (session.ts)", () => {
       await s.quit();
       s.cleanup();
     }
-  });
+  }, 60_000);
 });

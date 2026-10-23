@@ -11,9 +11,11 @@ import { WorkerRequests } from "./worker-requests.ts";
 import { workerUrl } from "./workers.ts";
 
 let channel: WorkerRequests | null = null;
+/** Bumped when a thread starts or is stopped: a test's hold belongs to the thread it was set on. */
+let threads = 0;
 
 function ask<T>(request: SpellAsk): Promise<T> {
-  channel ??= new WorkerRequests(() => new Worker(workerUrl("spell-worker.ts")), { deadline: 20_000 });
+  channel ??= new WorkerRequests(() => (threads++, new Worker(workerUrl("spell-worker.ts"))), { deadline: 20_000 });
   return channel
     .request<SpellAnswer>(request)
     .then((result) => result.answer as T)
@@ -42,22 +44,26 @@ export function addToDictionaries(word: string): void {
   if (channel) ask({ op: "add", word }).catch(() => {});
 }
 
-/** Where a test's hold is (`holdBuild`): set, the thread waiting there, let go by the test, its wait run out, or spent
- *  on words built already. */
-export type HoldState = (typeof HOLD_STATES)[number];
+/** Where a test's hold is (`holdBuild`): set, the thread waiting there, let go by the test, its wait run out, spent on
+ *  words built already, or dropped with its thread, stopped or started afresh. */
+export type HoldState = (typeof HOLD_STATES)[number] | "dropped";
 
 /**
  * For a test: the dictionary whose words are `dic`, the next time the thread is asked to build it, waits first until
  * the test lets it go, or for `limit` ms on the thread's own clock, so that a main thread held until it's built is let
  * go too. Asked for when it's built already, it isn't built again: the hold is spent, never waiting. Stopping the
- * thread ends a wait, the dictionary unbuilt, and drops the holds it had. A second hold on the same words, before the
- * first is spent, is refused.
+ * thread ends a wait, the dictionary unbuilt; a hold set or waiting on a thread since stopped, or started afresh after
+ * a deadline, is dropped. A second hold on the same words, before the first is spent, is refused.
  */
 export async function holdBuild(dic: string, limit = 40_000): Promise<{ state: () => HoldState; letGo: () => void }> {
   const flag = new Int32Array(new SharedArrayBuffer(8));
   await ask({ op: "hold", dic, limit, flag: flag.buffer as SharedArrayBuffer });
+  const on = threads;
   return {
-    state: () => HOLD_STATES[Atomics.load(flag, 1)]!,
+    state: () => {
+      const state = HOLD_STATES[Atomics.load(flag, 1)]!;
+      return (state === "set" || state === "waiting") && threads !== on ? "dropped" : state;
+    },
     letGo: () => {
       Atomics.store(flag, 0, 1);
       Atomics.notify(flag, 0);
@@ -67,6 +73,7 @@ export async function holdBuild(dic: string, limit = 40_000): Promise<{ state: (
 
 /** Stop the thread and settle every accepted request; a later request starts a fresh one. */
 export function stopSpellThread(): void {
+  if (channel) threads++;
   channel?.dispose();
   channel = null;
 }
