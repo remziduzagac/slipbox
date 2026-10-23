@@ -6,7 +6,7 @@
 // is started afresh for the rest.
 
 import type { SpellAnswer, SpellAsk } from "./spell-worker.ts";
-import { type Dictionaries, type DictionaryFiles, ownWordsFile } from "./spell.ts";
+import { type Dictionaries, type DictionaryFiles, HOLD_STATES, ownWordsFile } from "./spell.ts";
 import { WorkerRequests } from "./worker-requests.ts";
 import { workerUrl } from "./workers.ts";
 
@@ -43,18 +43,19 @@ export function addToDictionaries(word: string): void {
 }
 
 /** Where a test's hold is (`holdBuild`): set, the thread waiting there, let go by the test, or its wait run out. */
-export type HoldState = "set" | "waiting" | "let go" | "ran out";
+export type HoldState = (typeof HOLD_STATES)[number];
 
 /**
- * For a test: the dictionary whose words are `dic`, once the thread is asked for it, waits before it's built until the
- * test lets it go, or for 40 s, the thread's own clock, so that a main thread held until it's built is let go too.
+ * For a test: the dictionary whose words are `dic`, the next time the thread is asked to build it, waits first until
+ * the test lets it go, or for `limit` ms on the thread's own clock, so that a main thread held until it's built is let
+ * go too. One already built isn't built again, so it never waits; stopping the thread ends a wait, the dictionary
+ * unbuilt.
  */
-export async function holdBuild(dic: string): Promise<{ state: () => HoldState; letGo: () => void }> {
+export async function holdBuild(dic: string, limit = 40_000): Promise<{ state: () => HoldState; letGo: () => void }> {
   const flag = new Int32Array(new SharedArrayBuffer(8));
-  await ask({ op: "hold", dic, flag: flag.buffer as SharedArrayBuffer });
-  const states: HoldState[] = ["set", "waiting", "let go", "ran out"];
+  await ask({ op: "hold", dic, limit, flag: flag.buffer as SharedArrayBuffer });
   return {
-    state: () => states[Atomics.load(flag, 1)]!,
+    state: () => HOLD_STATES[Atomics.load(flag, 1)]!,
     letGo: () => {
       Atomics.store(flag, 0, 1);
       Atomics.notify(flag, 0);

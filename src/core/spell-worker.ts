@@ -3,7 +3,7 @@
 // as it's asked; and requests are answered in the order they came, so a word added is known to every check after it.
 
 import { openSpeller } from "./hunspell.ts";
-import { type DictionaryFiles, ownWords, type Speller } from "./spell.ts";
+import { type DictionaryFiles, HOLD_STATES, ownWords, type Speller } from "./spell.ts";
 
 declare const self: Worker;
 
@@ -13,7 +13,7 @@ export type SpellAsk =
   | { op: "check"; files: DictionaryFiles[]; wordsFile: string; words: string[] }
   | { op: "suggest"; files: DictionaryFiles[]; wordsFile: string; word: string }
   | { op: "add"; word: string }
-  | { op: "hold"; dic: string; flag: SharedArrayBuffer };
+  | { op: "hold"; dic: string; limit: number; flag: SharedArrayBuffer };
 
 /** A request, by its number: its answer has the number too. */
 export type SpellRequest = SpellAsk & { id: number };
@@ -23,18 +23,18 @@ export type SpellAnswer = { id: number; answer?: unknown; error?: string };
 
 const spellers = new Map<string, Speller>();
 
-/** A test's hold (`holdBuild`): the dictionary with these words waits, once asked for, before it's built. */
-let held: { dic: string; flag: Int32Array } | null = null;
+/** Tests' holds (`holdBuild`), by the words they hold: such a dictionary waits, once asked for, before it's built. */
+const holds = new Map<string, { flag: Int32Array; limit: number }>();
 
-/** Waiting for the test to let go, or 40 s: the flag's second slot says where it is, as `holdBuild` reads it (1
- *  waiting, 2 let go, 3 the wait ran out). */
+/** Waiting for the test to let go, or its limit: the flag's second slot says where it is (`HOLD_STATES`). */
 function waitIfHeld(dic: string): void {
-  if (held?.dic !== dic) return;
-  const { flag } = held;
-  held = null;
-  Atomics.store(flag, 1, 1);
-  const how = Atomics.wait(flag, 0, 0, 40_000);
-  Atomics.store(flag, 1, how === "timed-out" ? 3 : 2);
+  const hold = holds.get(dic);
+  if (!hold) return;
+  holds.delete(dic);
+  const { flag, limit } = hold;
+  Atomics.store(flag, 1, HOLD_STATES.indexOf("waiting"));
+  const how = Atomics.wait(flag, 0, 0, limit);
+  Atomics.store(flag, 1, HOLD_STATES.indexOf(how === "timed-out" ? "ran out" : "let go"));
 }
 
 /** The dictionaries named, each built the first time. */
@@ -68,7 +68,7 @@ async function answer(m: SpellRequest): Promise<unknown> {
       for (const s of spellers.values()) s.add(m.word);
       return true;
     case "hold":
-      held = { dic: m.dic, flag: new Int32Array(m.flag) };
+      holds.set(m.dic, { flag: new Int32Array(m.flag), limit: m.limit });
       return true;
   }
 }

@@ -29,7 +29,8 @@ that a busy machine can't fail and that still fails if the main thread is held w
 
 ## Out of scope
 
-- The spell checker's thread itself (D232): unchanged unless the reproduction shows the main thread really is held.
+- What the spell checker's thread does (D232): unchanged. It gains only a hold a test can ask for (`holdBuild`), which
+  nothing but a test sends.
 - The other quarantined or timed tests.
 
 ## References
@@ -173,3 +174,48 @@ that a busy machine can't fail and that still fails if the main thread is held w
   spelling, 10 pass; the spelling terminal checks, 2 of 2. Live, this worktree's slipbox on a scratch copy of the
   reference set: spelling on in `okuma-notlari.md` marked only `kitpa`, `] s` went to it, and `slipbox spell` printed
   `reading/okuma-notlari.md:8:14: kitpa`; the saved spelling setting put back off.
+- 2026-10-23: The hold version's diff reviewed; each finding checked:
+  - Verified, fixed: the said-once test passed in file order without the guard. English was already built, so the
+    checker was made on the first frame after zz failed, and zz was asked about once whatever the guard did. Now
+    English is a copy under the test's own path, held before it's built, and frames are drawn while it waits: with
+    the guard removed, the test fails in file order (37 said, not 1).
+  - Verified, fixed: one hold slot, matched by the words alone. A second hold replaced the first. Holds are now kept
+    per dictionary, and a unit test holds two at once.
+  - Verified, fixed: the states were numbers in the worker and a list's order on the main thread, tied by nothing.
+    Both now read `HOLD_STATES` in `core/spell.ts`.
+  - Verified, fixed: letting go after stopping the thread did nothing. Terminated while waiting, a worker doesn't
+    resume (a standalone try: still "waiting" after the wait's limit, and after letting go). `finally` only stops it
+    now, and `holdBuild` says that stopping the thread ends a wait, the dictionary unbuilt.
+  - Verified, fixed: the counter test left its 9 MB dictionary built in the shared thread. It stops the thread when
+    it ends, as the held test does.
+  - Verified, fixed: the task's Out of scope said the thread was unchanged. It now says what the thread gains.
+  - Taken in a lighter form: the 2 ms interval. One timer's turn, taken while the thread waits, shows the main thread
+    keeps its timers: the hold is checked still waiting, and the dictionary still not there, after it.
+  - Rejected: a stall of a few hundred milliseconds a frame while the dictionary loads passes (`Bun.sleepSync(300)` in
+    the checker's wait). The old assertion's deletion goes against testing.md's "never deleted or loosened". As
+    before: only a clock sees a finite stall, timings are the benchmark's (§ Timings) and not asserted, and the issue
+    asked for a count.
+  - Rejected: the hold could be a stand-in `Worker` on the main thread. Its clock would be the main thread's, so a
+    main thread held until the dictionary is there would hang the run, where the worker's own clock lets it go.
+  - Rejected: link the Turkish files rather than copy them. The test now runs on Windows, where a symlink needs a
+    privilege and a hard link the same volume.
+- 2026-10-23: Tests for every case (the maintainer's rule): a unit test and a terminal check each.
+  - Keys answered while a dictionary loads, `] s` saying so, then marks: `tests/tui.test.ts` "while the thread loads a
+    dictionary, the main thread keeps its turns…"; the terminal check "spelling: while a dictionary loads, keys are
+    answered and ] s says so; let go, ] s goes to the misspelt" (`tests/terminal/checks/editing.ts`). In slipbox's own
+    process, it holds the thread with a preloaded script, `tests/terminal/spell-hold.ts` (`BUN_OPTIONS=--preload`,
+    `holdBuild`, a file to let go). This was the first live try.
+  - A dictionary that won't load is said once, the other languages still checking: `tests/tui.test.ts` "a dictionary
+    the thread can't build is said once…"; the terminal check "spelling: a dictionary that won't load is said once;
+    the note's other languages still check it" (its `.dic` a folder, the messages list counted). This was the second
+    live try's message.
+  - The hold itself: `tests/core.test.ts` "a test's hold on the spell checker's thread…". It covers letting go, two
+    holds at once, one already built never waiting, a wait running out (`limit`, 100 ms there), and stopping the
+    thread ending a wait unbuilt.
+  - The built dictionary's marks, `] s` and the CLI (the third live try): the existing checks "spelling: ] s and [ s
+    go to a misspelt word…" and "settings: spelling on marks the misspelt…", and the counter test.
+  - The case list: `examples/home/CASES.md` § ui names both new spelling cases. design/testing.md § The terminal
+    tests says how a check holds slipbox with a preloaded script.
+- 2026-10-23: The terminal checks, mutation-checked, each alone, the files restored. The dictionary built on the main
+  thread, or the worker ignoring the hold: the held check fails, the thread never waiting. The said-once guard
+  removed, or the failed load said otherwise: the other check fails.

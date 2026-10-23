@@ -1,8 +1,9 @@
 // Editing: source mode, normal mode, vim's grammar, motions, repeat, visual, typing, the lens, tasks, copy, create,
 // save and quit, pinned tabs, conflicts, reload, autosave, the scratch, the hand-off to an editor (TT-T4).
 
-import { existsSync, readFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { dictionaryFiles } from "../../../src/core/spell.ts";
 import {
   type Check,
   follow,
@@ -16,7 +17,7 @@ import {
   pos,
   SCRATCH_FLOATING,
 } from "../check.ts";
-import type { Session, SessionOptions } from "../session.ts";
+import { REPO, type Session, type SessionOptions, WAIT } from "../session.ts";
 
 /** The reference set, slipbox started on one of its files (`~/notes/…`, as the checks name it). */
 const at = (rel: string): SessionOptions => ({ home: true, startAt: `home/${rel.slice(2)}` });
@@ -782,6 +783,79 @@ export const EDITING: Check[] = [
       await s.until(() => !misspelt().includes("kitpa"), 3000, "kitpa no longer misspelt for the CLI");
     },
   },
+  {
+    area: "editing",
+    name: "spelling: while a dictionary loads, keys are answered and ] s says so; let go, ] s goes to the misspelt",
+    covers: { cases: ["ui"], commands: ["ui.spell", "spell.next"] },
+    options: {
+      ...at("~/notes/reading/okuma-notlari.md"),
+      // Turkish as your own dictionary, its words at a path of the check's: the spell checker's thread waits before it
+      // builds them until the check lets it go (tests/terminal/spell-hold.ts, preloaded).
+      config: '[spell]\ndictionaries = { tr = "{dir}/dict/tr.dic" }\n',
+      env: {
+        BUN_OPTIONS: `--preload ${join(REPO, "tests", "terminal", "spell-hold.ts")}`,
+        SPELL_HOLD_DIC: "{dir}/dict/tr.dic",
+        SPELL_HOLD_GO: "{dir}/hold-go",
+        SPELL_HOLD_STATE: "{dir}/hold-state",
+      },
+      setup: (s) => {
+        const tr = dictionaryFiles("tr", {})!;
+        mkdirSync(join(s.dir, "dict"), { recursive: true });
+        cpSync(tr.aff, join(s.dir, "dict", "tr.aff"));
+        cpSync(tr.dic, join(s.dir, "dict", "tr.dic"));
+      },
+    },
+    run: async (s) => {
+      const hold = () => (existsSync(join(s.dir, "hold-state")) ? readFileSync(join(s.dir, "hold-state"), "utf8") : "");
+      await ready(s);
+      await leader(s, "u", "s");
+      await s.message("Spelling: on");
+      await s.until(() => hold() === "waiting", WAIT, "the spell checker's thread waiting before it builds Turkish");
+      // Held: keys answered, and ] s says the dictionaries are loading.
+      await moveTo(s, ["g", "g", "j", "j", "j"], (l) => l > 1, "j answered while the dictionary loads");
+      await s.keys("]", "s");
+      await s.message("spelling: its dictionaries are loading");
+      s.expect(hold() === "waiting", `the thread still held, not ${hold()}`);
+      // Let go: built, and ] s goes to the note's one misspelt word, "kitpa" (column 14), not its code span's.
+      writeFileSync(join(s.dir, "hold-go"), "");
+      await s.until(() => hold() === "let go", WAIT, "the thread let go, not its wait run out");
+      const there = () => pos(s).line === 8 && pos(s).col === 14;
+      await s.retry(() => s.keys("g", "g", "]", "s"), there, "] s onto kitpa", 1000, 20000);
+    },
+  },
+  // typos: off
+  {
+    area: "editing",
+    name: "spelling: a dictionary that won't load is said once; the note's other languages still check it",
+    covers: { cases: ["ui"], commands: ["ui.spell", "spell.next"] },
+    options: {
+      ...at("~/notes/reading/two-languages.md"),
+      config: '[spell]\ndictionaries = { zz = "{dir}/dict/zz.dic" }\n',
+      setup: (s) => {
+        mkdirSync(join(s.dir, "dict", "zz.dic"), { recursive: true }); // a folder: there, but no words to read
+        writeFileSync(join(s.dir, "dict", "zz.aff"), "SET UTF-8\n");
+        s.write("~/notes/reading/two-languages.md", "---\nlang: [zz, en]\n---\nThis has a recieve.\n");
+      },
+    },
+    run: async (s) => {
+      const said = /spelling: zz's dictionary didn't load \(/;
+      await ready(s);
+      await leader(s, "u", "s");
+      await s.message("Spelling: on");
+      await s.message(said);
+      // English still checks the note: ] s onto its typo.
+      const there = () => pos(s).line === 4 && pos(s).col === 12;
+      await s.retry(() => s.keys("g", "g", "]", "s"), there, "] s onto recieve", 1000, 20000);
+      // Frames drawn since, each asking about zz again: said once all the same, as the messages list has it.
+      await s.keys("j", "k", "j", "k");
+      await s.notSee(said);
+      await s.ex("messages");
+      await s.see("Spelling: on");
+      const lines = s.screen().filter((row) => said.test(row));
+      s.expect(lines.length === 1, `said once, not ${lines.length} times:\n${lines.join("\n")}`);
+    },
+  },
+  // typos: on
 
   // --- tabs, saving, quitting -----------------------------------------------------------------
   {
