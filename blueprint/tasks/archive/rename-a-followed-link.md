@@ -10,7 +10,7 @@ created: "2026-10-23"
 
 Renaming or moving a symlink that leads out of the vault, named by its own path inside the vault, moves the link
 entry, not its target, and is no longer refused as `… resolves outside the vault`. The link stays followed, and a
-relative one still leads where it did (D?1). What is reached through the link stays where it is: a move out of it or
+relative one still leads where it did (D260). What is reached through the link stays where it is: a move out of it or
 into it is still refused. Found on the way, and fixed here at the maintainer's word: a plan's file reached through a
 file link is written through the link, never over it.
 
@@ -23,7 +23,7 @@ or a file `ext.md → /elsewhere/ext.md`), named itself, that target is outside 
 refused, though the rename only changes the link's entry in its folder. The check should look at the link entry
 (`lstat`) when the path named is the link itself, and keep resolving every folder on its way. Moved, the link keeps
 the answer kept for it (`links.json`, by the link's path), and a relative one moved to another folder is written again
-to lead where it did (D?1).
+to lead where it did (D260).
 
 ## Acceptance criteria
 
@@ -50,7 +50,7 @@ to lead where it did (D?1).
 ## References
 
 - Delivers: design/roots.md § Links followed only when you say so; design/links.md § Renames and moves.
-- Rests on: VV-D6, D220, D?1.
+- Rests on: VV-D6, D220, D260.
 
 ## Log
 
@@ -85,7 +85,7 @@ to lead where it did (D?1).
   links need rewriting, would do the same: it has to write through the link.
 - 2026-10-23: The maintainer chose: the answer moves with the link (only for a link moved itself); a relative link is
   written again to lead where it did; the home bug is fixed here; copy and delete of a link stay refused. Recorded as
-  D?1 (decisions/roots-and-links.md), with a note under VV-D6.
+  D260 (decisions/roots-and-links.md), with a note under VV-D6.
 - 2026-10-23: Fixed. `entryInside` (`src/core/fsutil.ts`): a symlink named itself checked by its folder's real path,
   anything else as before; used by `checkSource` and by `outside` for `move.from`. `moveLink` (`src/core/symlinks.ts`),
   called by `applyPlan` when what moves is a link: renamed, or, relative and changing folder, made anew from
@@ -116,19 +116,19 @@ to lead where it did (D?1).
   Run beside it, passing: the explorer's file operations, `rename:` (four), `files: space d`, `files: a folder with an
   unsaved note`, `nested roots: the explorer's row`, and the two followed-link checks (11/11). Unit tests reached
   (`renam|move|undo|plans|VV-D6|replace|convert|symlink|relink` in vault, cli and tui tests): 285 pass.
-- 2026-10-23: The diff reviewed. Taken: (1) `applyPlan` checked a plan's file where it was (`mayRewrite` on
-  `f.abs`) but wrote at `realTarget` of where it is after the move, so a relative file link inside a moved folder could
-  lead the write somewhere new, out of the vault even (`a/docs/kept.md → ../../.shelved/kept.md`, `a/docs` moved up
-  to `docs`, leads to the vault's parent): each file's real target is found before anything moves now, what's inside
-  the moved folder itself mapped to where the folder goes; (2) a link's text was split on `\` on POSIX too, where it
-  is a name's character: split on `/` only, but on Windows; (3) an answer that couldn't be written was swallowed, a
-  stale one where it went left in force: `moveLink` says it, `Applied.warnings` carries it, the CLI's warnings and the
-  TUI's messages show it; (6) the terminal check now changes the renamed link's target from outside and sees it read
-  again. Not taken: (4) numbering `D?1`: a root decision is numbered when it's merged. Tests: `a folder moved with a
-  relative file link in it: …` (tests/vault.test.ts), and in `a link moved as a link: …` a `\` in a name and the state
-  folder made unwritable. Mutation-checked: writing where the moved link leads, a moved folder's
-  files written at their old place, `\` split on POSIX, the lost answer not said: each fails a test. Reached unit
-  tests: 286 pass; the 11 terminal checks: pass.
+- 2026-10-23: The diff reviewed. Taken: (1) `applyPlan` checked a plan's file where it was (`mayRewrite` on `f.abs`) but
+  wrote at `realTarget` of where it is after the move, so a relative file link inside a moved folder could lead the
+  write somewhere new, out of the vault even (`a/docs/kept.md → ../../.shelved/kept.md`, `a/docs` moved up to `docs`,
+  leads to the vault's parent): each file's real target is found before anything moves now, what's inside the moved
+  folder itself mapped to where the folder goes; (2) a link's text was split on `\` on POSIX too, where it is a name's
+  character: split on `/` only, but on Windows; (3) an answer that couldn't be written was swallowed, a stale one where
+  it went left in force: `moveLink` says it, `Applied.warnings` carries it, the CLI's warnings and the TUI's messages
+  show it; (6) the terminal check now changes the renamed link's target from outside and sees it read again. Not taken:
+  (4) numbering the decision: a root decision is numbered when it's merged. Tests: `a folder moved with a relative file
+  link in it: …` (tests/vault.test.ts), and in `a link moved as a link: …` a `\` in a name and the state folder made
+  unwritable. Mutation-checked: writing where the moved link leads, a moved folder's files written at their old place,
+  `\` split on POSIX, the lost answer not said: each fails a test. Reached unit tests: 286 pass; the 11 terminal checks:
+  pass.
 - 2026-10-23: Found, trying a nested vault reached through a link: a followed link to another vault is a nested vault
   of the one it's in, and with the fix `slipbox mv ov ov2` moved it, and the machine's list then said the other vault
   was at `vault/ov2`, the link's path, not its real one (a scratch script; `recordLocation(rootAt(to))` after the move).
@@ -225,7 +225,7 @@ to lead where it did (D?1).
   file found and an edit you made, and agree where they meet; the save is out of this change); the other-name lookup
   limited to names through links (the walk's knowledge of its links isn't in the index: once a plan, only when a link is
   met); keying the Collector by real path (as round 1); `entryAt` merged with `install.ts`'s and `review.ts`'s own
-  (theirs, before this change); citing `D?1` (a root decision is numbered when it's merged).
+  (theirs, before this change); citing the decision unnumbered (a root decision is numbered when it's merged).
 - 2026-10-23: At the maintainer's word, every case has a terminal check too: tests/terminal/checks/moving-links.ts,
   thirteen, beside the one in vaults.ts (its undo now sees the relative link said). Each fix was undone in turn and its
   check found failing (thirty-two). Three cases have none, each said in the pull request: a link inside a followed
@@ -250,7 +250,7 @@ to lead where it did (D?1).
   asked about its other names too (only a link's name or a reached one can share a file: the walk leaves out a link to a
   file it lists); (2) a relative link inside a moved folder that leads out of it had its note rewritten for its new
   folder, and written where it led before — right for no name, since from its new place the link leads elsewhere: that
-  note is left, and said, as D?1 leaves links inside a moved folder as the move leaves them; this replaces round 1's
+  note is left, and said, as D260 leaves links inside a moved folder as the move leaves them; this replaces round 1's
   writing it where it was read, and its undo's record of where; (3) a followed link's case-only rename, on a disk that
   ignores case, was refused through the link itself: a link at the destination is judged by its folder, in the plan,
   `outside` and the CLI — tried on Linux with a second name for the link's own entry; (4) the lookup of other names
@@ -266,7 +266,8 @@ to lead where it did (D?1).
   wrote the link's note (a refusal, said, the answer kept where it was: carrying it would need the undo to judge the
   note as it will be reached after its move, which it can't see before); a note another vault reached in its own hidden
   folder, reached here through that vault's link, left by this vault's plan (said: judging it needs that vault's index
-  and its other names); `entryInside` for `checkSource` (a plan's flag, against an entry just looked at); citing `D?1`.
+  and its other names); `entryInside` for `checkSource` (a plan's flag, against an entry just looked at); citing the
+  decision unnumbered.
 - 2026-10-24: Round 3's fixes tried live in a scratch home, the release and then this worktree's CLI: renaming
   `.hidden/b.md` (reached) to `c.md` made the release write `.hidden/n.md` for its own folder, breaking `l.md`'s view of
   it, and here leaves it, said (`reached as l.md too, from another folder`); `slipbox mv a/docs docs`, a relative link
@@ -278,3 +279,5 @@ to lead where it did (D?1).
   `stat` (a linked worktree's name) and render.test's `Mermaid … drawn while its library loads`, which fails on
   `origin/dev` too, alone, here (it passes in CI); two pictures tests that failed in the whole run pass alone, the
   machine loaded. The terminal checks of renames, moves and links: 16 pass.
+- 2026-10-24: The decision numbered D260, at the maintainer's word for the merge: its heading, the note under VV-D6,
+  the design files, this task and the code that cite it.

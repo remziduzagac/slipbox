@@ -70,7 +70,7 @@ function cleanTarget(g: Graph, input: string, holds: "file" | "folder" | "vault"
 /**
  * What moves, by its real path inside the vault (VV-D6): nothing is moved out of where a link leads, followed or
  * not, as nothing is moved into it — in home too, as a copy or a delete there. A link named itself moves as a link,
- * its target staying where it is (D?1): its entry is checked, in its folder by its real path — but one leading to a
+ * its target staying where it is (D260): its entry is checked, in its folder by its real path — but one leading to a
  * vault, or to a folder holding one (`vaults`), whose place is known by its real path: no link's name moves it.
  * Whether it moves as a link, for its plan's `move.link`.
  */
@@ -179,7 +179,7 @@ export function planFolderMove(g: Graph, fromDir: string, toInput: string): Rena
 }
 
 /**
- * A folder moving from `from` to `to` with a relative link in it that leads out of it (D?1): left as the move leaves
+ * A folder moving from `from` to `to` with a relative link in it that leads out of it (D260): left as the move leaves
  * it, it leads elsewhere from its new place, so an edit for the file it reaches now is right for no name — that file
  * left, and said. A file is judged by the first link on its way under the folder; where it leads after is read from
  * the link's own text, from its folder's new place.
@@ -254,7 +254,7 @@ function planMove(
     // link by a name or from the top too: they'd be read from that root (17.17, 21.3) — relative paths.
     const crosses = rootOfPath(abs(toRel)) !== real(g.root);
     if (posix.dirname(fromRel) === posix.dirname(toRel) && !crosses) continue;
-    // A link's note is what it leads to (D?1): reached by another name too, one this plan doesn't move with it, its
+    // A link's note is what it leads to (D260): reached by another name too, one this plan doesn't move with it, its
     // own links are that name's as much, so left as they are, and said.
     const also = isLink(abs(fromRel)) ? (c.otherNames(abs(fromRel)).find((r) => !moves.has(r)) ?? null) : null;
     if (also) {

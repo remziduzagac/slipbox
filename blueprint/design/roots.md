@@ -391,7 +391,7 @@ of every read through a link out of the root; D220's writes stay for vaults.
   source or destination crosses a link out of the vault, or out of home, is refused in the CLI and the TUI, in home too,
   said the same: `… resolves outside the vault` for what's moved, copied or deleted, `… would land outside the vault`
   for where it goes. A link named itself crosses nothing when it moves: its entry is checked, in its folder by its real
-  path (`entryInside` in `core/fsutil.ts`), and it's renamed or moved as a link (`moveLink` in `core/symlinks.ts`; D?1),
+  path (`entryInside` in `core/fsutil.ts`), and it's renamed or moved as a link (`moveLink` in `core/symlinks.ts`; D260),
   what it leads to staying where it is; its answer goes with it, in place of any kept where it goes — one without an
   answer leaves one there for where it leads, an answer being a place and where it leads, as a link made there by hand
   would find it; one that can't be kept there (the state folder unwritable) is said, and the index walked again, the

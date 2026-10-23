@@ -324,7 +324,7 @@ folder changes, a code or data file's as a note's: previewed, undoable, a plan i
   still reaches (read from its top when nothing is beside the file), and a `/…`, stays; a data file's value keeps
   its `./` and its fragment (`#/definitions/User`), and neither is percent-encoded, being no URL.
 
-A symlink renamed or moved itself moves as a link, followed still, leading where it did (D?1; [roots.md](roots.md)
+A symlink renamed or moved itself moves as a link, followed still, leading where it did (D260; [roots.md](roots.md)
 § Links followed only when you say so).
 
 **Where a move or a copy lands** (DF-D4, DF-D20). A new path typed for a move — `slipbox mv`, `space n m`, `:mv` —

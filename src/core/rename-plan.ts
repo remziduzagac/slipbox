@@ -82,7 +82,7 @@ export interface FileChange {
   /** The text as planned from, and as it will be. */
   text: string;
   next: string;
-  /** Other names the file has here, in its folder, that edited it alike (D?1): written once, indexed again each. */
+  /** Other names the file has here, in its folder, that edited it alike (D260): written once, indexed again each. */
   also?: string[];
 }
 
@@ -133,11 +133,11 @@ export class Collector {
   readonly skipped: RenamePlan["skipped"] = [];
   /** Why a file can't be rewritten, where it's more than unreadable. */
   private readonly why = new Map<string, string>();
-  /** The vault's indexed names, by the real path of what each is: made once, when a link is met (D?1). */
+  /** The vault's indexed names, by the real path of what each is: made once, when a link is met (D260). */
   private names: Map<string, string[]> | null = null;
   /** The vault's root, by its real path: read once. */
   private rootReal: string | null = null;
-  /** Why a plan leaves a file it would read, beside the place's own rules: a folder's move's (D?1), say; null for none. */
+  /** Why a plan leaves a file it would read, beside the place's own rules: a folder's move's (D260), say; null for none. */
   leave: ((abs: string) => string | null) | null = null;
 
   constructor(readonly g: Graph) {}
@@ -149,7 +149,7 @@ export class Collector {
   }
 
   /**
-   * The other names the vault's index has for the file at `abs` (D?1), vault paths. Only a name a link leads, or one
+   * The other names the vault's index has for the file at `abs` (D260), vault paths. Only a name a link leads, or one
    * the vault reached (20.8), can share its file with another: the walk leaves out a link to a file it lists. Never
    * looked for through a followed link whose target hasn't answered: reading there could hang.
    */
@@ -192,7 +192,7 @@ export class Collector {
         return null;
       }
       // Reached by another name too, from another folder: its links read otherwise there, so an edit made for one is
-      // wrong for the other — left, and said (D?1).
+      // wrong for the other — left, and said (D260).
       const folder = posix.dirname(relative(this.g.root, abs).split(sep).join("/"));
       const elsewhere = this.otherNames(abs).find((r) => posix.dirname(r) !== folder);
       if (elsewhere) {
@@ -261,7 +261,7 @@ export class Collector {
 
   result(): FileChange[] {
     // One file reached by two names in one folder (links to what the walk doesn't list): written once; edited
-    // otherwise by each, not at all, and said (D?1).
+    // otherwise by each, not at all, and said (D260).
     const byReal = new Map<string, FileChange[]>();
     for (const f of this.files.values()) {
       if (f.next === f.text) continue;
@@ -325,7 +325,7 @@ export function sameFile(a: string, b: string): boolean {
 
 /**
  * Whether `a` and `b` are one entry, as a case-only rename on a disk that ignores case has it: a link its own, never
- * what it leads to — a link moved onto its target, or onto another link to it, goes over something else (D?1).
+ * what it leads to — a link moved onto its target, or onto another link to it, goes over something else (D260).
  */
 export function sameEntry(a: string, b: string): boolean {
   try {
@@ -338,7 +338,7 @@ export function sameEntry(a: string, b: string): boolean {
 }
 
 /**
- * What a plan moving a link says of it (D?1): a relative one moved itself to another folder is written again there, to
+ * What a plan moving a link says of it (D260): a relative one moved itself to another folder is written again there, to
  * lead where it did — no link's edit, so said. `from` and `to` as the plan shows them.
  */
 export function relinkSaid(move: RenamePlan["move"], from: string, to: string): string[] {

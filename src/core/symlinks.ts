@@ -164,7 +164,7 @@ export function forgetLinkAnswer(link: string): KeptLink | null {
 }
 
 /**
- * Move the symlink `from` to `to` as a link (D?1): its own entry, never what it leads to. A relative one moved to
+ * Move the symlink `from` to `to` as a link (D260): its own entry, never what it leads to. A relative one moved to
  * another folder is made anew at `to` (`movedLinkText`); nothing has changed when it can't be. The answer kept for it
  * is kept for `to` then, in place of whatever was kept there: the same link, leading to the same place. One without an
  * answer leaves `to`'s as it is when that leads where the link does — an answer is a place and where it leads, and
@@ -207,7 +207,7 @@ export function moveLink(from: string, to: string): string | null {
 }
 
 /**
- * What the symlink `from` says once it's moved to `to` (D?1), when it says something else: a relative one moved to
+ * What the symlink `from` says once it's moved to `to` (D260), when it says something else: a relative one moved to
  * another folder, written from there to lead where it did, from its own text (a link to a link stays one). Null when
  * it moves as it is: an absolute one, or one staying in its folder.
  */

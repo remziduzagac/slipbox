@@ -1112,7 +1112,7 @@ reached (one index lookup) for a path at a hidden name.
 indexing what's listed (a dotfiles folder's every file); `.git` listed with the rest (git's own, thousands of files);
 the switcher and find following the setting (they'd list files the index doesn't hold, which no search finds).
 
-## D?1: A link renamed or moved itself moves as a link, its answer with it (#11, 2026-10-23)
+## D260: A link renamed or moved itself moves as a link, its answer with it (#11, 2026-10-23)
 
 **Decision:** A symlink named itself in a rename or a move — the explorer's `r` and `m`, `space n m`, `slipbox mv` — is
 renamed or moved as a link, in a vault or home, whatever it leads to: its entry is what's checked to be inside the

@@ -22,7 +22,7 @@ export const CHECK_FILES: Record<string, Check[]> = {
   "links-and-files": LINKS_AND_FILES,
   // Vaults, home and Elsewhere, the view, marks, links, the peek: their own file, in the areas they belong to.
   vaults: VAULTS,
-  // A link renamed or moved itself, and what a rename writes through links (D?1): links-and-files', a file of their own.
+  // A link renamed or moved itself, and what a rename writes through links (D260): links-and-files', a file of their own.
   "moving-links": MOVING_LINKS,
   "outside-and-code": OUTSIDE_AND_CODE,
   // Source control's, in the outside-and-code area: their own file.

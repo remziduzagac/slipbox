@@ -88,7 +88,7 @@ export function planUndo(g: Graph): RenamePlan {
       ...(f.also ? { also: f.also } : {}),
     });
   }
-  // A link moved as a link moves back as one (D?1); anything else, a link now where it went among them, as it moved.
+  // A link moved as a link moves back as one (D260); anything else, a link now where it went among them, as it moved.
   const move = r.move
     ? { from: r.move.to, to: r.move.from, dir: r.move.dir, ...(r.move.link ? { link: true } : {}) }
     : null;
@@ -121,14 +121,14 @@ export function planUndo(g: Graph): RenamePlan {
 export interface Applied {
   written: string[];
   moved: { from: string; to: string } | null;
-  /** What was done but not all of it: a link moved whose answer couldn't be kept for its new place (D?1). */
+  /** What was done but not all of it: a link moved whose answer couldn't be kept for its new place (D260). */
   warnings: string[];
 }
 
 /**
  * What of a plan would land out of where it may (VV-D6), said; null when nothing would. Every file it writes where
  * `mayRewrite` allows; what moves, from and to, inside the vault by its real path — a link planned as one by its entry
- * (`entryInside`, D?1), but one a vault moves with, whose place is its real path — as a folder made a vault or a vault
+ * (`entryInside`, D260), but one a vault moves with, whose place is its real path — as a folder made a vault or a vault
  * made a plain folder.
  */
 export function outside(
@@ -137,7 +137,7 @@ export function outside(
 ): string | null {
   for (const f of plan.files)
     if (!mayRewrite(g, f.abs)) return `${g.shownPath(f.abs)}: ${whereItLeads(g, f.abs)}, where nothing is written`;
-  // A link planned as one by its entry (D?1); a link that wasn't (put where something else went) by where it leads.
+  // A link planned as one by its entry (D260); a link that wasn't (put where something else went) by where it leads.
   if (plan.move && !entryInside(g.root, plan.move.from, movesAsLink(plan)))
     return `${g.shownPath(plan.move.from)} resolves outside the vault`;
   // What a link moved as a link lands as is its own entry, in its folder (on a disk that ignores case, the very one).
@@ -147,7 +147,7 @@ export function outside(
   return null;
 }
 
-/** Whether a plan's move moves a link as a link (D?1): planned as one, a link still, and no vault moving with it. */
+/** Whether a plan's move moves a link as a link (D260): planned as one, a link still, and no vault moving with it. */
 function movesAsLink(plan: Pick<RenamePlan, "move" | "vaults">): boolean {
   return !!plan.move?.link && !plan.vaults?.length && isLink(plan.move.from);
 }
@@ -186,7 +186,7 @@ export function applyPlan(g: Graph, plan: RenamePlan): Applied {
   const written: string[] = [];
   /** The first folder the move made to hold it, if it made any: an undo takes it away again, empty. */
   let made: string | null = null;
-  /** A link planned as one moves as a link (D?1): its entry, its answer with it, what it leads to staying. */
+  /** A link planned as one moves as a link (D260): its entry, its answer with it, what it leads to staying. */
   const link = movesAsLink(plan);
   const warnings: string[] = [];
   /** The link moved, its answer not kept where it is now: not followed there, so the index is walked again. */

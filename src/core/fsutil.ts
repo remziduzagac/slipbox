@@ -138,7 +138,7 @@ export function landsInside(root: string, path: string): boolean {
 }
 
 /**
- * Whether what a move takes at `path` is inside `root` (D?1): a symlink moved as a link (`asLink`) by its own entry,
+ * Whether what a move takes at `path` is inside `root` (D260): a symlink moved as a link (`asLink`) by its own entry,
  * in its folder by that folder's real path, wherever it leads; anything else by its real path, as `landsInside`.
  */
 export function entryInside(root: string, path: string, asLink: boolean): boolean {

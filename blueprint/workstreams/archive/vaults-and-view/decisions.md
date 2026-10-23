@@ -75,7 +75,7 @@ is in the file system.
 
 ## VV-D6: Symlinks followed only when the user says so (2026-10-14)
 
-> **Detailed by D?1 (2026-10-23):** a link renamed or moved itself moves as a link, its answer with it; a relative one
+> **Detailed by D260 (2026-10-23):** a link renamed or moved itself moves as a link, its answer with it; a relative one
 > is written again to lead where it did.
 
 **Decision:** A symlinked folder or file leading out of its vault, or out of home, is shown as a link
