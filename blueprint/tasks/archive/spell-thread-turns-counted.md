@@ -22,9 +22,8 @@ that a busy machine can't fail and that still fails if the main thread is held w
 
 ## Acceptance criteria
 
-- The quarantined test is back (no `quarantined:` comment; skipped only where it can't run, Windows having no
-  `mkfifo`), measuring a count, not comparing two durations, and passes on a machine slowed to one CPU
-  (`taskset -c 0`) as well as unloaded.
+- The quarantined test is back (no `test.skip`, no `quarantined:` comment), measuring a count, not comparing two
+  durations, and passes on a machine slowed to one CPU (`taskset -c 0`) as well as unloaded.
 - It fails when the main thread is held for the build (checked once by holding it on purpose).
 - design/testing.md still holds; it says what changed if the test's way of measuring is described there.
 
@@ -36,7 +35,7 @@ that a busy machine can't fail and that still fails if the main thread is held w
 ## References
 
 - Delivers: design/testing.md § Strategy (flaky tests fixed, or quarantined by name; never retried).
-- Rests on: D232; design/tui.md (spelling on its thread).
+- Rests on: D232; design/tui.md (spelling on its thread); D223 (a small design change: an issue and one pull request).
 
 ## Log
 
@@ -116,7 +115,7 @@ that a busy machine can't fail and that still fails if the main thread is held w
   proves the event loop ran: kept, as they show timer turns whatever `h.keys` resolves through.
 - 2026-10-23: CI on the pull request, the whole of `tests/tui.test.ts` (late in the file, where the timed test failed):
   the new test passed on macOS (654 ms) and Linux (481 ms), the pipe and `bash`'s `read -t` working on both.
-- 2026-10-23: Review round 1, two independent reviews of the pull request's diff, consolidated and each checked:
+- 2026-10-23: The pull request's diff reviewed again, each finding checked:
   - Verified, fixed: nothing checked that the thread was held until "go". The writer's `;` wrote the words on a
     timeout, or on its input closing early, and the "still loading" checks could pass anyway while the build ran. The
     writer now says "told" or "untold" before writing, and the test asserts "told": with its input closed early, the
@@ -138,6 +137,39 @@ that a busy machine can't fail and that still fails if the main thread is held w
     open call itself, after the test has already failed.
   - Rejected again (as above): a finite stall of the main thread during the load passes (3 s here, as 12 s before).
     Only a clock sees one, and the clock is what failed.
-  - One finding, outside this change, went to the maintainer privately.
   - Then: the spelling block, 7 pass, under `nice` at a load of 38; the spelling terminal checks, 2 of 2. No product
     code changed, so the app's live try stands; the writer's changes were tried with the rc files above.
+- 2026-10-23: The gate moved into the spell checker's thread: asked to (`holdBuild` in `core/spell-thread.ts`, the op
+  `hold` in `core/spell-worker.ts`), the thread waits with `Atomics.wait`, once it has the request for the test's
+  dictionary and before Hunspell builds it, until the test lets it go; the wait's state is in shared memory (set,
+  waiting, let go, ran out). Its wait runs out after 40 s on the thread's own clock, so a main thread held until the
+  dictionary is there is let go and fails, inside the test's 60 s. No child process, no named pipe, no blocking read
+  to strand a thread, and it runs on Windows too: the `bash` writer, its environment, its output's reader and the
+  pipe's cleanup are gone with it. The test asserts the thread was waiting, then "let go", not "ran out"; `finally`
+  stops the thread before letting it go, so it doesn't build the dictionary on its way out.
+- 2026-10-23: The pull request's diff, the pipe version, reviewed again; checked against the hold:
+  - Gone with the pipe: the writer's environment (exported functions), its output's reader left open, killing the
+    writer before stopping the thread (the thread building from an empty pipe).
+  - Verified, fixed: the bounds' comment left out the request's 20 s deadline, which ends a hold first when the main
+    thread is merely starved: it says so now. The ticks run only while the thread waits, not through the build.
+  - Verified, fixed: the thread stopped first, then let go (the pipe's had the same order to fix).
+  - Rejected: the task ought to be a workstream, the design file changing. A small design change goes as an issue and
+    one pull request that changes the design file with the code (D223); this is that, recorded as a task.
+  - Rejected: the test name's "(#40)" read as this repository's #40. Numbers in code are the repository's before it
+    was restarted (the issue's own note), and the sibling test's name cites #40 the same way.
+  - Rejected again: no count during Hunspell's call, nor of work the main thread might do after the answer comes (a
+    big answer decoded there); and the harnesses' lifecycle, and the ticks, as above. A count during the call, or of
+    the main thread's work afterwards, is a clock again.
+
+- 2026-10-23: The hold, mutation-checked, each alone, the files restored. The dictionary built on the main thread:
+  the hold still "set" when the dictionary is there, the new test fails at once; the counter test fails too. The main
+  thread held until the thread has built (`openDictionary` yields once, then `Bun.sleepSync(45_000)`): the new test
+  fails, its timer's turns not taken while the thread waits. Held at the moment it asks, with no yield: it fails on
+  "ran out" (run alone; run after the counter test, which the same mutation holds 45 s first and fails, it passed once).
+  The load never starting, the worker ignoring the hold, the test never letting go: each fails the new test. The
+  said-once pair fails the said-once test. Failing early: the next spelling test took 255 ms; without `finally`'s stop
+  and letting go, 21 s, behind the held request's deadline.
+- 2026-10-23: Then, under `nice` on a machine at a load of 10 to 25: the spelling block, 7 pass; `core.test.ts`'s
+  spelling, 10 pass; the spelling terminal checks, 2 of 2. Live, this worktree's slipbox on a scratch copy of the
+  reference set: spelling on in `okuma-notlari.md` marked only `kitpa`, `] s` went to it, and `slipbox spell` printed
+  `reading/okuma-notlari.md:8:14: kitpa`; the saved spelling setting put back off.

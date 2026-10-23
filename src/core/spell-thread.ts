@@ -42,6 +42,26 @@ export function addToDictionaries(word: string): void {
   if (channel) ask({ op: "add", word }).catch(() => {});
 }
 
+/** Where a test's hold is (`holdBuild`): set, the thread waiting there, let go by the test, or its wait run out. */
+export type HoldState = "set" | "waiting" | "let go" | "ran out";
+
+/**
+ * For a test: the dictionary whose words are `dic`, once the thread is asked for it, waits before it's built until the
+ * test lets it go, or for 40 s, the thread's own clock, so that a main thread held until it's built is let go too.
+ */
+export async function holdBuild(dic: string): Promise<{ state: () => HoldState; letGo: () => void }> {
+  const flag = new Int32Array(new SharedArrayBuffer(8));
+  await ask({ op: "hold", dic, flag: flag.buffer as SharedArrayBuffer });
+  const states: HoldState[] = ["set", "waiting", "let go", "ran out"];
+  return {
+    state: () => states[Atomics.load(flag, 1)]!,
+    letGo: () => {
+      Atomics.store(flag, 0, 1);
+      Atomics.notify(flag, 0);
+    },
+  };
+}
+
 /** Stop the thread and settle every accepted request; a later request starts a fresh one. */
 export function stopSpellThread(): void {
   channel?.dispose();
