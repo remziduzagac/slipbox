@@ -471,3 +471,48 @@ dates. Each says what was asked, decided, built and found, and cites the decisio
   source and role mapping in [research](research/tokyo-night-palettes.md).
 - D254 adds Moon and Storm and aligns Night and Day with upstream base colours, amending D96's palette adjustments.
   Night remains the default; existing semantic roles and typography are retained.
+
+## The release flow's first release (2026-10-22 to 2026-10-23)
+
+- Releasing 0.5.0, the first release through D251's flow, found two faults in the flow itself (#28). `main`'s ruleset
+  refused the push of `test`, though the commit had passed `full`: a ruleset counts no check from a run started by
+  hand. And once the release was published, the site went on without a `stable` channel, so the installer and
+  `slipbox upgrade` on the stable channel found no release for an hour. The maintainer chose to let 0.5.0 through
+  with `main`'s ruleset off for that one push, and to fix the flow after.
+- The fix, an issue and one pull request (#30, D223): `ci` run by hand posts `full` again as a commit status (D257); a
+  release's site is deployed by a run by hand on `main`, and every deployment reads its channels back (D258). What was
+  learned on the way is in [research/github-behaviour.md](research/github-behaviour.md).
+- An agent merged #30 when the maintainer asked (D251). D257 and D258 went in with the fix before they were put to the
+  maintainer, who agreed to them on 2026-10-23, after the merge.
+- The preview of 71313f3, the first deployment to read its channels back, passed at the first read. The rest waits
+  for the next release ([T10](tasks/verify-release-flow.md)).
+- **Open:** the `github-pages` environment still takes deployments from `v*` tags, which no run makes since D258;
+  dropping them, and their line in `.github/upkeep/settings.json`, is the maintainer's to do.
+
+## The example projects' Dependabot alerts (2026-10-23)
+
+- 50 alerts were open, every one from a manifest under `examples/` (kestrel's lockfiles, nightjar's `package.json`):
+  projects the tests read as files, never installed or run. At the maintainer's ask they were dismissed as not used,
+  each with a comment saying so, as design/repository.md § The weekly health check has it. No alert was open
+  elsewhere.
+- Not chosen: updating the example projects' lockfiles (files the tests read would churn, and new advisories keep
+  coming); renaming their folders out of the dependency graph's sight (they'd read less like projects).
+- **Open:** keeping new ones away. `dependabot.yml` can't; a repository's auto-triage rule dismissing alerts from the
+  examples' manifests can ([research](research/github-behaviour.md)). It's a setting, the maintainer's; once it's
+  made, design/repository.md § The upkeep files names it.
+
+## The blueprint synced with `dev` (2026-10-23)
+
+- A sync pass over `a193318..71313f3`, the commits since the fresh start. The first, 3c17a15 (`dev`'s work as it stood
+  on 2026-10-20), carried the blueprint's changes too, but left some text behind the code. Written back: the rulesets as
+  they are (design/repository.md § The upkeep files: `dev` takes pull requests and `ci`, `main` `full`); `:changes` and
+  `:diff` asking for a branch's base afresh (design/tui.md § Git); a big note the threads failed reading as its source
+  (design/how-it-works.md); the boundary check's rule for diagrams; EPUB's ZIP limits (design/export.md); each branch
+  against its own base in the CLI too (requirements.md § Git, D255); the SVG and spelling caps (design/rendering.md);
+  and the modules added since, in the module map.
+- The six after it needed nothing more: each carried its own blueprint changes, or changed nothing the blueprint
+  describes.
+- `site/scripts/gather.ts`'s changes are DOCS's, in its design until it's consolidated.
+- **Open:** the code or the design. On the screen, the SVG rasteriser always names a font (`rasterizer` in
+  `src/core/svg.ts`), even where the machine has none, so a Mermaid picture would be drawn without its words, where
+  design/rendering.md § Blocks and inlines says it's drawn in characters. The maintainer decides which is right.

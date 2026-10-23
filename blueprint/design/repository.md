@@ -232,10 +232,11 @@ UPK-03, UPK-04, UPK-15, UPK-16):
   compared, so a field GitHub adds is no drift.
 - `rulesets/dev.json`, `rulesets/test.json`, `rulesets/main.json` and `rulesets/tags.json`: the four rulesets as GitHub
   exports them (D251).
-  `main`: no deletion, no force push, changes through a pull request with no approval required and squash merges
-  only, the `ci` check from GitHub Actions required, no one bypassing. `tags`: `v*` tags created, moved and deleted
-  only by the admin role. `test`, the branch previews are made from: never deleted or forced back, the `ci` check
-  required, no one bypassing (GR-D13).
+  `dev`, the default branch: no deletion, no force push, changes through a pull request with no approval required
+  and squash merges only, the `ci` check from GitHub Actions required, no one bypassing (GR-D6, D251). `test`, the
+  branch previews are made from: never deleted or forced back, the `ci` check required, no one bypassing (GR-D13).
+  `main`: no deletion, no force push, the `full` check from GitHub Actions required (D251, D257), no one bypassing.
+  `tags`: `v*` tags created, moved and deleted only by the admin role.
 - `renewals.toml`: every credential and renewal, with its kind, what it is, what it's for, where it lives, its
   status, its expiry or rotation date and what's due then. GitHub shows no expiry for a personal account's tokens,
   and deploy keys can't expire, so the dates are kept here. Today it holds the tap's deploy key,
