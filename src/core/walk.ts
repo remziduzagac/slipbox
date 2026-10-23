@@ -194,6 +194,11 @@ export class WalkFilter {
     return !!this.opts.home;
   }
 
+  /** What makes this filter, for one made the same on another thread (T12): its folder, its settings, its opts. */
+  get settings(): { root: string; walk: Config["walk"]; opts: { home?: boolean; platform?: string } } {
+    return { root: this.root, walk: this.walk, opts: this.opts };
+  }
+
   isNoteName(name: string): boolean {
     const dot = name.lastIndexOf(".");
     return dot > 0 && this.extensions.has(name.slice(dot + 1).toLowerCase());
@@ -549,12 +554,26 @@ export function walkTop(root: string, filter: WalkFilter): WalkResult {
   return finishWalk(st);
 }
 
+const readdirTyped = (abs: string): Dirent[] => readdirSync(abs, { withFileTypes: true });
+/** How the walk reads a folder: `readdirSync`, unless a test holds it up (`setFolderReader`). */
+let folderReader = readdirTyped;
+
+/** A folder's entries, read as the walk reads them (the explorer's listings too, listing.ts). */
+export function readFolder(abs: string): Dirent[] {
+  return folderReader(abs);
+}
+
+/** A test's folder reader for the walk (T12: one held up on purpose, as a slow disk is); null, `readdirSync` again. */
+export function setFolderReader(read: ((abs: string) => Dirent[]) | null): void {
+  folderReader = read ?? readdirTyped;
+}
+
 /** One folder listed: its notes and files kept, each folder of it given to `descend`, a vault in it skipped. */
 function listDir(st: WalkState, dirRel: string, descend: (rel: string) => void): void {
   const { root, filter, out } = st;
   let entries: Dirent[];
   try {
-    entries = readdirSync(join(root, dirRel), { withFileTypes: true });
+    entries = folderReader(join(root, dirRel));
   } catch (err) {
     out.errors.push(`${dirRel || "."}: ${(err as NodeJS.ErrnoException).code ?? (err as Error).message}`);
     return;

@@ -656,7 +656,21 @@ keys.
   vault, beside it, in another vault, a nested one's folder — the folder is listed a level at a time, never walked
   (`outsideRows`): its folders, then its files as this vault's `files.show` lists them (`auto` worked out from the
   listed folder's own vault), hidden ones left out unless `files.hidden` is on, `.git` always (a busy folder is
-  listed, VV-D8; below). There the vault open is a row,
+  listed, VV-D8; below). Such a folder is read off the main thread (T12; `Listings` in `tui/listings.ts`,
+  `core/listing.ts`), so one on a disk that answers slowly never freezes the keys or the screen: on one of two listing
+  threads, apart from the walk's, its entries the explorer lists (a hidden name, while they aren't listed, never read)
+  and what its rows and marks say of each (a folder or a file, where a link leads, a vault's key, name and branch, one
+  you may not read, a busy folder) — a link's answer, and so its mark, still read here from the answers kept. Kept, at
+  most 256 folders besides those the tree shows, a listing is read again in the background as the tree is built again
+  once it's a second old, or under other settings (`[walk]`, `files.hidden`), its rows replaced only when it says
+  something new, the selection kept on the row it was on. A folder moved is let go of, the folders it left and came
+  into read again, and a file operation in the vault reads its folders listed this way again: an answer read before
+  is dropped; one read under settings changed since (another vault gone into) is read again at once. Until a folder's
+  first listing answers, nothing is under it; after 150 ms a dim `listing…` row says it's being read, and one that
+  can't be listed says why (`can't read: ENOENT`; `can't read: no answer in time`, past a minute): rows that only say
+  something, never opened or marked. A folder listed before whose thread gives no answer when it's read again stays as
+  it was listed. A test's App, not the TUI's, lists at once here
+  (`AppOptions.listOffThread`). There the vault open is a row,
   highlighted (`sidebar_active`), its tree under it while unfolded; another vault is a row with the vault's icon (`◈`,
   Nerd: a bookshelf; `17.13`, D51) in a folder's blue (`sidebar_root`, for `[colors]` to set; `sidebar_vault`, its old
   name, read as it: DF-D22), its name dimmed after the folder's when they differ, its branch among its marks (below). A

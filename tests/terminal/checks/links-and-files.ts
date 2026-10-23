@@ -1118,7 +1118,8 @@ const ROOTS: Check[] = [
         "the view at ~/work, the worktree past it in the breadcrumb",
       );
       // Both paths unfolded — kestrel's folders listed, the worktree's tree under it, the vault open — and only
-      // them: the other repositories folded.
+      // them: the other repositories folded. ~/work is listed off the main thread: its rows once it's read.
+      await s.until(() => listed(s, /\skestrel$/), 3000, "~/work listed");
       for (const n of [/\skestrel$/, /\skestrel-agent-sync-retry\b/, /\sproduct$/, /\sinfra$/])
         s.expect(listed(s, n), `${n.source} in the view`);
       s.expect(explorer(s).filter((r) => names(r, /\sdocs$/)).length === 2, "docs/ under each of the two");

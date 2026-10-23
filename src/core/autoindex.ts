@@ -5,17 +5,15 @@
 // resumes where it stopped: the vaults still to index (home's walk, quick beside them, is made again). A pass done,
 // the next starts a day later.
 
-import { type Dirent, readdirSync } from "node:fs";
-import { join, relative, sep } from "node:path";
+import { join } from "node:path";
 import { type Config, loadConfig } from "./config.ts";
 import { readJson, writeJson, ensureDir } from "./fsutil.ts";
-import { Graph } from "./graph.ts";
-import { recordFolder } from "./folders.ts";
 import { describeCap, homeFilter, keepHomeWalk } from "./home.ts";
-import { stateHome, vaultKey } from "./paths.ts";
-import { noteIndexed, readRoots, recordRoot } from "./registry.ts";
-import { configFilesFor, homeAt, isVaultRoot, knownWorktree, rootAt } from "./vault.ts";
-import { SlicedWalk, type WalkCap, type WalkFilter, type WalkLimits } from "./walk.ts";
+import { stateHome } from "./paths.ts";
+import { noteIndexed, readRoots } from "./registry.ts";
+import { homeAt, type VaultLocation } from "./vault.ts";
+import type { WalkCap, WalkFilter, WalkLimits } from "./walk.ts";
+import { HERE, type PastCap, type Pending, type SteppedIndex, type SteppedWalk, type Walker } from "./walkers.ts";
 
 /** A pass finished: the next starts this long after. */
 export const REPASS_MS = 24 * 60 * 60 * 1000;
@@ -73,18 +71,26 @@ export interface AutoIndexOptions {
   /** Home's settings — yours alone (VV-D2) — as the one who asks has them (the TUI's, `--config` and all); your config
    *  file's by default. */
   config?: () => Config;
+  /** Where its walks are made (T12): here by default (the CLI's), on the walk's own thread for the TUI. */
+  walker?: Walker;
+  /** Home's walk or index given up on, and why: its thread didn't answer in time, or couldn't start (T12). */
+  onGaveUp?: (what: "walk" | "index", why: string) => void;
 }
 
 export class AutoIndex {
   private progress: AutoIndexProgress;
-  private graph: Graph | null = null;
-  /** Home's walk under way, its filter, and when it began; then home's graph, being parsed. */
-  private walk: SlicedWalk | null = null;
+  /** A vault's index under way, and whether it's recorded as found yet. */
+  private vaultIndex: SteppedIndex | null = null;
+  private recorded = false;
+  /** Home's walk under way, its filter, and when it began; then home's index, being built. */
+  private walk: SteppedWalk | null = null;
   private walkFilter: WalkFilter | null = null;
   private walkStarted = 0;
-  private homeGraph: Graph | null = null;
+  private homeIndex: SteppedIndex | null = null;
   /** Home walked again within a pass (`homeAgain`): the vaults' place in it kept. */
   private again = false;
+  /** A folder past home's cap being looked in for vaults. */
+  private seeking: { dir: string; found: Pending<PastCap> } | null = null;
 
   /** `file`: where its place is kept; null keeps it nowhere (a run of its own, from home's top). */
   constructor(
@@ -132,35 +138,46 @@ export class AutoIndex {
           if (this.stepHome(end)) return true;
           continue;
         }
-        // A vault's index, built a slice at a time; done, the vaults nested in it are next.
+        // A vault's index, built a slice at a time where the walker builds it — opened, walked, its notes parsed; done,
+        // the vaults nested in it are next. Not a vault, or not one that can be opened: let go of.
         if (p.current) {
-          this.graph ??= this.open(p.current);
-          if (this.graph?.parseSome(Math.max(1, end - performance.now()))) return true;
-          if (this.graph) {
-            p.indexed++;
-            for (const s of this.graph.skipped)
-              if (s.reason === "nested vault") p.queue.unshift(join(p.current, s.rel));
-            this.markIndexed(p.current);
+          const root = p.current;
+          const index = (this.vaultIndex ??= this.walker.index({ root }));
+          const more = index.step(Math.max(1, end - performance.now()));
+          // Opened, and recorded as found where it was opened: counted.
+          if (index.opened && !this.recorded) {
+            this.recorded = true;
+            p.found++;
           }
-          this.graph = null;
+          if (more) {
+            if (index.waiting || performance.now() >= end) return true;
+            continue;
+          }
+          const r = index.result;
+          if (r?.vault) {
+            p.indexed++;
+            for (const rel of r.nested) p.queue.unshift(join(root, rel));
+            if (index.opened) this.markIndexed(index.opened.key);
+          }
+          this.vaultIndex = null;
+          this.recorded = false;
           p.current = null;
           continue;
         }
         const dir = this.opts.vaults === false ? undefined : p.queue.shift();
         if (dir === undefined) {
           // Past home's cap, the vaults are still looked for: a folder it left unlisted, a level at a time.
-          const more = this.opts.vaults === false ? undefined : p.seek?.shift();
+          const more = this.opts.vaults === false ? undefined : p.seek?.[0];
           if (more !== undefined) {
-            this.seekIn(more);
+            if (!this.seekIn(more)) return true;
+            p.seek!.shift();
             continue;
           }
           p.passFinished ??= new Date(this.now()).toISOString();
           return false;
         }
-        if (isVaultRoot(dir)) {
-          p.current = dir;
-          p.found++;
-        }
+        // Looked at next: a vault, indexed (`IndexJob` asks whether it is one, where it's made).
+        p.current = dir;
       } while (performance.now() < end);
       return true;
     } finally {
@@ -171,17 +188,26 @@ export class AutoIndex {
   /** Home's part of a slice (VV-D2): its walk, then its index; true while there's more of it. */
   private stepHome(end: number): boolean {
     const p = this.progress;
-    const loc = homeAt(this.root);
+    const loc = this.home;
     // A folder, or a note, at least.
     const left = () => Math.max(0, end - performance.now());
-    if (!this.homeGraph) {
+    if (!this.homeIndex) {
       if (!this.walk) {
         this.walkStarted = this.now();
         this.walkFilter = homeFilter(loc, this.config());
-        this.walk = new SlicedWalk(this.root, this.walkFilter, this.opts.limits);
+        this.walk = this.walker.sliced(this.root, this.walkFilter, this.opts.limits);
       }
       if (this.walk.step(left())) return true;
-      const walk = this.walk.result!;
+      if (!this.walk.result) {
+        // Given up on (T12): home's index waits for the next pass, or the next walk asked for; the vaults go on.
+        const why = this.walk.failed ?? "no answer";
+        this.walk = null;
+        p.home = true;
+        this.again = false;
+        this.opts.onGaveUp?.("walk", why);
+        return false;
+      }
+      const walk = this.walk.result;
       const capped = this.walk.capped;
       const rest = this.walk.rest().map((rel) => join(this.root, rel));
       const filter = this.walkFilter!;
@@ -200,91 +226,65 @@ export class AutoIndex {
         p.current = null;
       }
       p.capped = capped;
-      this.homeGraph = this.openHome(walk, capped);
-      if (!this.homeGraph) {
-        p.home = true;
-        this.again = false;
-        return false;
-      }
+      // Its index built from the walk just made, where the walker builds it (recorded as found there).
+      this.homeIndex = this.walker.index({
+        root: this.root,
+        home: { walk, walked: this.walkStarted, capped },
+        config: this.config(),
+      });
       if (performance.now() >= end) return true;
     }
-    if (this.homeGraph.parseSome(left())) return true;
-    p.homeNotes = this.homeGraph.notes.size;
+    const index = this.homeIndex;
+    while (index.step(left())) if (index.waiting || performance.now() >= end) return true;
+    this.homeIndex = null;
     p.home = true;
     this.again = false;
-    this.homeGraph = null;
-    this.markIndexed(this.root);
+    const r = index.result;
+    if (!r?.vault) {
+      this.opts.onGaveUp?.("index", index.failed ?? "no answer");
+      return false;
+    }
+    p.homeNotes = r.notes;
+    this.markIndexed(loc.key);
     this.opts.onHome?.(p.capped);
     return false;
   }
 
   private seekFilter: WalkFilter | null = null;
 
+  /** Home's location, by its key (its real path's): made once, not read again at every slice (T12). */
+  private get home(): VaultLocation {
+    return (this.homeLoc ??= homeAt(this.root));
+  }
+  private homeLoc: VaultLocation | null = null;
+
   /** Home's settings: your config's alone (VV-D2). */
   private config(): Config {
     return this.opts.config?.() ?? loadConfig().config;
   }
 
+  private get walker(): Walker {
+    return this.opts.walker ?? HERE;
+  }
+
   /**
    * A folder home's cap left unlisted, looked in for vaults (20.9): a vault in it indexed next, its other folders looked
-   * in later — home's skip list held, as its walk holds it.
+   * in later — home's skip list held, as its walk holds it (`vaultsPastCap`). False while it's being looked in.
    */
-  private seekIn(dir: string): void {
+  private seekIn(dir: string): boolean {
     const p = this.progress;
-    let entries: Dirent[] = [];
-    try {
-      entries = readdirSync(dir, { withFileTypes: true });
-    } catch {
-      return;
-    }
-    this.seekFilter ??= homeFilter(homeAt(this.root), this.config());
-    for (const e of entries.sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0))) {
-      if (!e.isDirectory()) continue;
-      const abs = join(dir, e.name);
-      const why = this.seekFilter.exclusion(relative(this.root, abs).split(sep).join("/"), true);
-      if (why === "nested vault") p.queue.push(abs);
-      else if (why === null) (p.seek ??= []).push(abs);
-    }
+    this.seekFilter ??= homeFilter(this.home, this.config());
+    if (this.seeking?.dir !== dir) this.seeking = { dir, found: this.walker.seek(dir, this.seekFilter) };
+    const { found } = this.seeking;
+    if (!found.settled) return false;
+    this.seeking = null;
+    p.queue.push(...(found.value?.vaults ?? []));
+    (p.seek ??= []).push(...(found.value?.folders ?? []));
+    return true;
   }
 
-  /** Home's graph (VV-D2), built from the walk just made; recorded as found when it isn't known yet. */
-  private openHome(walk: NonNullable<SlicedWalk["result"]>, capped: WalkCap | null): Graph | null {
-    try {
-      const loc = homeAt(this.root);
-      if (!readRoots().some((v) => v.key === loc.key && v.kind === "home"))
-        recordRoot({ kind: "home", path: this.root, found: true });
-      return new Graph(loc, this.config()).build(true, "lazy", {
-        walk,
-        walked: this.walkStarted,
-        capped,
-      });
-    } catch {
-      return null;
-    }
-  }
-
-  /** The root at `root`, its index read and refreshed lazily; recorded as found, not opened. */
-  private open(root: string): Graph | null {
-    try {
-      const loc = rootAt(root);
-      // Listed after those opened, until it's opened itself; its name in the lookup (21.6), as found.
-      // By its key (its real path's): reached by another path, it's the root already listed.
-      if (!readRoots().some((v) => v.kind === "vault" && v.key === loc.key))
-        recordRoot({
-          kind: "vault",
-          path: root,
-          found: true,
-          ...(loc.worktree ? { worktree: knownWorktree(loc.worktree) } : {}),
-        });
-      recordFolder(root, { found: true });
-      return new Graph(loc, loadConfig({ ...configFilesFor(loc) }).config).build(true, "lazy");
-    } catch {
-      return null;
-    }
-  }
-
-  private markIndexed(root: string): void {
-    const v = readRoots().find((x) => x.kind !== "folder" && x.key === vaultKey(root));
+  private markIndexed(key: string): void {
+    const v = readRoots().find((x) => x.kind !== "folder" && x.key === key);
     if (v) noteIndexed(v.key, new Date(this.now()));
   }
 

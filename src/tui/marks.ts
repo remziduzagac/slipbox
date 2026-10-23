@@ -9,6 +9,7 @@ import { accessSync, constants as fsConstants, existsSync, lstatSync, statSync }
 import { basename, join, relative, sep } from "node:path";
 import { checkoutOf, headOf } from "../core/git.ts";
 import type { Glyphs } from "../core/glyphs.ts";
+import type { ListedEntry } from "../core/listing.ts";
 import { cacheDir, vaultKey } from "../core/paths.ts";
 import type { Role } from "../core/theme/theme.ts";
 import { isInside } from "../core/vault.ts";
@@ -119,6 +120,8 @@ export class Marks {
 
   /** A row's marks. */
   of(row: TreeRow): RowMarks {
+    // A row that only says something of its folder (`listing…`, T12): nothing to mark.
+    if (row.placeholder) return {};
     const f = this.factsOf(row);
     const out: RowMarks = {};
     const describe = this.describe(row, f);
@@ -131,6 +134,7 @@ export class Marks {
 
   /** Why a row isn't indexed (VV-D9) — its `⊘` — in words a user knows; null when it has no `⊘`. */
   why(row: TreeRow): string | null {
+    if (row.placeholder) return null;
     const n = this.index(row, this.factsOf(row));
     return typeof n === "object" ? this.words(n) : null;
   }
@@ -299,6 +303,12 @@ export class Marks {
       this.facts.set(row, f);
       return f;
     }
+    // Listed off the main thread (T12): what its listing read, nothing read here but the index's own folder.
+    if (row.listed) {
+      f = this.listedFacts(row, row.listed);
+      this.facts.set(row, f);
+      return f;
+    }
     f = { unreadable: false, broken: false, big: false };
     if (row.kind === "note") {
       try {
@@ -313,6 +323,18 @@ export class Marks {
       else if (row.outside && !row.leftOut) f.busy = busyFolderWhyAt(abs, this.app.config.walk);
     }
     this.facts.set(row, f);
+    return f;
+  }
+
+  /** `factsOf` a row listed a level at a time, from what its listing read (`ListedEntry`), as `factsOf` reads them. */
+  private listedFacts(row: TreeRow, l: ListedEntry): Facts {
+    const broken = !!l.link && !l.link.target;
+    const f: Facts = { unreadable: !broken && l.denied, broken: row.kind === "note" && broken, big: false };
+    if (row.kind === "root" && row.root) {
+      const indexed = !!l.vault && existsSync(join(cacheDir({ key: l.vault.key }), "index.json"));
+      const h = l.vault?.head;
+      f.vault = { indexed, branch: h ? (h.worktree ? `${this.app.glyphs.branch} ${h.name}` : h.name) : null };
+    } else if (row.kind !== "note" && row.outside && !row.leftOut) f.busy = l.busy ?? null;
     return f;
   }
 

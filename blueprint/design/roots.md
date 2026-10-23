@@ -82,16 +82,16 @@ gives each reason, for the explorer's marks ([tui.md](tui.md) § Side panes). No
 polls it while it's open, as it polls every open file the graph doesn't know.
 
 **Its index, in slices.** Home is never walked when it's opened: its walk is made a slice at a time (`SlicedWalk`,
-breadth first, entries by name) while nobody is working, and kept in its cache folder (`walk.json`, `keepHomeWalk`;
-`core/home.ts`). Its graph is built from the walk kept (`homeWalk`), brought up to now as a build is (freshness checked,
-not assumed): each folder kept is statted; one changed since the walk is listed again (what came and went, a folder new
-in it walked); one gone, or become a vault, is dropped with what it held; a vault the walk found that is none any more
-is walked as home's; each note is statted again (gone, dropped; grown past the size cap, skipped), and one that is a link
-kept only while the walk would keep it (`symlinkVerdict`: pointed elsewhere, it asks again, whatever its folder's time
-says; § Links followed only when you say so). What changed is kept
-again (not a folder whose time moved alone: a shell's history rewritten in `~`). The graph's `walkedAt` is the walk's,
-so the watcher lists again the folders changed since. So an agent's note made in home is there at its next command,
-and a folder made a vault by hand (`git init`) leaves home. The walk is kept with its filter's settings
+breadth first, entries by name) while nobody is working — in the TUI on the walk's own thread (§ The index) — and kept
+in its cache folder (`walk.json`, `keepHomeWalk`; `core/home.ts`). Its graph is built from the walk kept (`homeWalk`),
+brought up to now as a build is (freshness checked, not assumed): each folder kept is statted; one changed since the
+walk is listed again (what came and went, a folder new in it walked); one gone, or become a vault, is dropped with what
+it held; a vault the walk found that is none any more is walked as home's; each note is statted again (gone, dropped;
+grown past the size cap, skipped), and one that is a link kept only while the walk would keep it (`symlinkVerdict`:
+pointed elsewhere, it asks again, whatever its folder's time says; § Links followed only when you say so). What changed
+is kept again (not a folder whose time moved alone: a shell's history rewritten in `~`). The graph's `walkedAt` is the
+walk's, so the watcher lists again the folders changed since. So an agent's note made in home is there at its next
+command, and a folder made a vault by hand (`git init`) leaves home. The walk is kept with its filter's settings
 (`WalkFilter.signature`: the note extensions, `walk.exclude`, the root markers, where Downloads is): kept under others,
 it's no walk of home's, so a `[walk]` setting changed is home never walked, its walk made again (the TUI's reload asks
 for it; the background index makes a walk under way again; the CLI walks it at once). Never walked, home is its top
@@ -159,13 +159,12 @@ folder) are no note of home's, opened as they are, never gone into.
 Not done: the vaults inside a folder home's skip list leaves out (a clone in `~/Downloads`) are no longer found by the
 background index, only when opened, and nor is a vault whose own folder is hidden or is a busy folder (`~/.dotfiles`, a
 repository `~/build` with no note at its top), in home or nested in a vault: the skip list and the busy folders are
-checked before the markers. Link completion offers other vaults' notes, not home's. Every walk of home runs on the main
-thread, a slice at a time: another disk is never walked, but a slow one that's home's own filesystem, or a mount you
-unfold in the explorer, holds the TUI up while it's read; a walk in a worker would not. Freshness is by a folder's time:
-a folder whose time is set back after its notes changed (an archive unpacked with its times, `cp -a`, `rsync -a`) isn't
-listed again, its notes waiting for home's next walk or `slipbox index --refresh ~` (the TUI's reindex reads the walk
-kept). Tabs of home's top restored in a folder its walk hasn't reached open as files the graph doesn't know, until it
-does.
+checked before the markers. Link completion offers other vaults' notes, not home's. A slow disk that's home's own
+filesystem still holds the TUI up where it's read on the main thread (§ The index, "Not done"). Freshness is by a
+folder's time: a folder whose time is set back after its notes changed (an archive unpacked with its times, `cp -a`,
+`rsync -a`) isn't listed again, its notes waiting for home's next walk or `slipbox index --refresh ~` (the TUI's reindex
+reads the walk kept). Tabs of home's top restored in a folder its walk hasn't reached open as files the graph doesn't
+know, until it does.
 
 ## Elsewhere
 
@@ -404,9 +403,10 @@ of every read through a link out of the root; D220's writes stay for vaults.
 Not done:
 
 - A "no" kept asks again at every open, as no answer does (ideas.md § Roots and vaults).
-- A link not followed still has its target resolved and statted on the main thread, by the walk (`symlinkVerdict`),
-  Elsewhere's listing and the explorer's: a mount that hangs behind one can hold them up. The probe guards followed
-  links only.
+- A link not followed still has its target resolved and statted by the walk (`symlinkVerdict`) and by the explorer's
+  listings: on their own threads in the TUI (§ The index), each given up on in time, but on the main thread where the
+  vault open is built (the CLI, a reindex, a rescan, a vault gone into), which a mount that hangs behind one holds up.
+  The probe guards followed links only.
 - A followed link skipped as `loop` or `twice` is described in the explorer as `not followed`.
 
 ## The index
@@ -429,6 +429,31 @@ deleted (D61). Each vault's is in its cache folder (the link index, the search i
   index --home` runs it now. It leaves out what home's walk leaves out (D218). Places outside home (drives, `/tmp`) are
   indexed when opened or linked to, a vault's; Elsewhere's never. The TUI's side: [tui.md](tui.md) § Going into a
   vault.
+- **Off the main thread, in the TUI** (T12; `core/walk-thread.ts`): the walks the TUI makes by itself are made on the
+  walk's own thread (`walk-worker.ts`, serving `core/walk-jobs.ts`), so a folder that answers slowly (a share, a disk
+  asleep, a folder of many thousands of files) never holds up the keys or the screen: home's walk, kept there between
+  its slices and stepped a slice at a time as on the main thread, so it rests while you work; the index of each vault
+  the background index finds, and home's own from its walk (`IndexJob`, `core/index-job.ts`: opened, walked, its notes
+  parsed, kept there between slices as well), written to its cache there; the folders past home's cap, looked in for
+  vaults; and home's walk kept, brought up to now when home's graph is built again after its walk. Each is the same
+  code as on the main thread (`AutoIndex` takes a walker, `core/walkers.ts`: `HERE` for the CLI, whose command waits
+  for its answer either way), given what the thread can't see for itself: the environment naming slipbox's folders,
+  the root markers, the probe's answers. A vault opened there is recorded as found there, as a CLI command records one
+  beside the TUI; its key comes back for the main thread to mark it indexed. The thread doesn't write home's walk:
+  what changed in the walk kept comes back unkept (`homeWalk`'s `keep`), kept by the TUI once it takes the answer —
+  dropped when the graph was built since (`Graph.builds`), the folders asked for changed, or the vault open did, and
+  asked again (three times at most) when the watcher took a change in meanwhile, newer than what the thread read. A
+  slice or a seek has a minute on the thread, a whole walk (a vault opened and walked) ten; past that the thread is
+  started afresh and the work given up on — a vault left for the next pass, home's walk or index said
+  (`home's walk gave up: a folder didn't answer in time; it's made again at the next pass`) — the pass going on
+  without it, never made on the main thread instead. The explorer's listings have two threads of their own
+  ([tui.md](tui.md) § Side panes).
+
+  Not done: the rest of what reads a slow disk on the main thread still holds the TUI up while it's read — the
+  watcher's polling of the vault open (a stat per watched folder every two seconds, per note every thirty; its folders
+  listed again), the vault open built again (a reindex, the watcher's rescan, a vault gone into, a setting changed, a
+  rename), a note's text read to parse or open it, the explorer's own tree of the vault open (`fromDisk`, its rows'
+  marks) and the view's folder statted as its tree is built, and the walk at the start, before the screen is up.
 - **Freshness is checked, not assumed:** a build lists the folders again and keeps a file's entry only while its size
   and modification time match, since a folder's own time doesn't change when a file in it is edited; a file gone is
   dropped, or paired as a move ([links.md](links.md) § Repairs). Folders open are watched. What is covered and how

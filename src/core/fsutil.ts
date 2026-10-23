@@ -2,6 +2,7 @@
 // in the same directory, so a crash or a full disk never truncates a note.
 
 import {
+  accessSync,
   chmodSync,
   closeSync,
   constants,
@@ -225,4 +226,20 @@ export function carryPaths(file: string, from: string, to: string): void {
   };
   const next = carry(data);
   if (changed) writeJson(file, next);
+}
+
+/** Why a folder can't be read, in a few words (VV-D5); null when it can. */
+export function folderUnreadable(dir: string): string | null {
+  try {
+    if (!statSync(dir).isDirectory()) return "it isn't a folder";
+    // Listed (read) and gone into (searched): both, as the account running slipbox may.
+    accessSync(dir, constants.R_OK | constants.X_OK);
+    return null;
+  } catch (err) {
+    const code = (err as NodeJS.ErrnoException).code;
+    if (code === "EACCES" || code === "EPERM") return "you may not read it (no permission)";
+    if (code === "ENOENT") return "it isn't there";
+    if (code === "ENOTDIR") return "it isn't a folder";
+    return code ?? (err as Error).message;
+  }
 }

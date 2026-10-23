@@ -7,11 +7,12 @@ import { offsetOf } from "./editing.ts";
 import { planRelink } from "../core/rename.ts";
 import { activityFile, AutoIndex, autoIndexFile } from "../core/autoindex.ts";
 import { loadConfig } from "../core/config.ts";
-import { describeCap } from "../core/home.ts";
+import { describeCap, type HomeWalk, keepHomeWalk } from "../core/home.ts";
 import { HOME_LIMITS, type WalkCap } from "../core/walk.ts";
 import { homeFolder, isListed } from "../core/vault.ts";
 import { applyToGraph } from "../core/vault-feed.ts";
 import { VaultWatcher, type WatchBatch } from "../core/watch.ts";
+import { walkFailure, walkThread } from "../core/walk-thread.ts";
 import { newParseCache } from "../core/parse.ts";
 import { parseInBackground } from "../core/parse-pool.ts";
 import { BACKGROUND_PARSE, type NoteBuffer } from "./buffer.ts";
@@ -196,12 +197,23 @@ export class Watch {
     // Home's settings, as this TUI has them: its own in home, your config's (`--config` too) in a vault.
     const config = () =>
       this.app.loc.mode === "home" ? this.app.config : loadConfig({ configFile: this.app.configFile }).config;
+    // Its walks made on the walk's thread (T12): a folder that answers slowly never holds up the keys or the screen.
+    const walker = walkThread();
+    const onGaveUp = (what: "walk" | "index", why: string) => this.gaveUp(what, why);
+    const opts = { onHome, config, walker, onGaveUp };
     if (this.app.config.index.background)
-      return (this.autoIndex ??= new AutoIndex(homeFolder(), autoIndexFile(), () => Date.now(), { onHome, config }));
+      return (this.autoIndex ??= new AutoIndex(homeFolder(), autoIndexFile(), () => Date.now(), opts));
     if (this.app.loc.mode !== "home") return null;
     if (this.homeIndex?.root !== this.app.loc.root)
-      this.homeIndex = new AutoIndex(this.app.loc.root, null, () => Date.now(), { vaults: false, onHome, config });
+      this.homeIndex = new AutoIndex(this.app.loc.root, null, () => Date.now(), { vaults: false, ...opts });
     return this.homeIndex;
+  }
+
+  /** Home's walk or index given up on (T12): said, home's index left as it was until the next. */
+  private gaveUp(what: "walk" | "index", why: string): void {
+    if (this.app.quitting) return;
+    this.app.message("warn", `home's ${what} gave up: ${why}; it's made again at the next pass`);
+    this.app.host.requestRender();
   }
 
   /** Home's walk made again while nobody is working (VV-D2): never made yet, or a folder came that only a walk finds. */
@@ -226,12 +238,48 @@ export class Watch {
   /**
    * Home's walk made and its index written (VV-D2): while home is the vault open, its graph built again from them —
    * what came, what went — and its cap said when it's reached: the walk's, or the one the folders asked for by name
-   * bring it to, those said to be whole.
+   * bring it to, those said to be whole. The walk kept is brought up to now on the walk's thread (T12), and taken only
+   * while nothing else built the graph since, nor asked for another folder: else what's here is newer. A change the
+   * watcher took in meanwhile may be newer than what the thread read: it's asked again, three times at most.
    */
   private homeIndexed(capped: WalkCap | null): void {
     if (this.app.loc.mode !== "home" || this.app.quitting) return;
+    this.homeRefreshed = this.refreshHome(capped, ++this.homeRefresh, 3);
+  }
+
+  private async refreshHome(capped: WalkCap | null, at: number, tries: number): Promise<void> {
+    if (this.app.loc.mode !== "home" || this.app.quitting || at !== this.homeRefresh) return;
+    const { loc, graph } = this.app;
+    const asked = [...graph.askedFolders];
+    const builds = graph.builds;
+    const applied = this.applied;
+    let home: HomeWalk;
+    try {
+      home = await walkThread().homeWalk(loc, graph.filter, asked);
+    } catch (err) {
+      if (at === this.homeRefresh) this.gaveUp("walk", walkFailure(err as Error));
+      return;
+    }
+    const now = this.app.graph;
+    if (this.app.quitting || at !== this.homeRefresh || this.app.loc !== loc || now !== graph) return;
+    if (now.builds !== builds || now.askedFolders.join("\0") !== asked.join("\0")) return;
+    if (this.applied !== applied) return tries > 1 ? this.refreshHome(capped, at, tries - 1) : undefined;
+    if (home.unkept) keepHomeWalk(loc, home.unkept.walk, home.unkept.capped, home.unkept.walked, now.filter);
+    this.homeBuilt(home, capped);
+  }
+
+  /** The watcher's batches taken into the graph so far: a walk read before one is older than the graph. */
+  private applied = 0;
+
+  /** Home's latest graph asked for, its walk on the walk's thread: an earlier one's answer is dropped. */
+  private homeRefresh = 0;
+  /** The latest of them answered, taken or dropped (tests wait for it). */
+  homeRefreshed: Promise<void> = Promise.resolve();
+
+  /** Home's graph built again from its walk, made on the walk's thread (`homeIndexed`). */
+  private homeBuilt(walk: HomeWalk, capped: WalkCap | null): void {
     const keep = this.rememberSelections();
-    this.app.graph.build(true, "lazy");
+    this.app.graph.build(true, "lazy", walk);
     keep();
     this.app.watcher?.sync(this.app.graph.dirs, this.knownFromGraph(), this.sizesFromGraph());
     this.indexInBackground();
@@ -336,6 +384,7 @@ export class Watch {
   }
 
   private applyChangesNow(batch: WatchBatch): void {
+    if (batch.rescan || batch.changes.length) this.applied++;
     const { structural: setChanged, warnings } = applyToGraph(
       this.app.graph,
       batch,

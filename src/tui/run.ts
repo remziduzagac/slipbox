@@ -129,6 +129,8 @@ export async function runTui(argv: string[]): Promise<number> {
 
   const app = new App({
     ...start,
+    // The explorer's folders listed off the main thread (T12): a slow disk never freezes the screen.
+    listOffThread: true,
     host: {
       requestRender: () => renderer.requestRender(),
       // SLIPBOX_CLIPBOARD=file keeps copies off the real clipboard (core/clipboard.ts).
