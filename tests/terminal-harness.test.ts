@@ -343,20 +343,25 @@ describe("what the checks share (check.ts)", () => {
     const s = new Session({ size: { cols: 60, rows: 10 } });
     const pressed = join(s.dir, "pressed");
     const [shown, focused] = STARTS[start];
-    s.term.spawn(["sh", "-c", cycling], {
-      cwd: "/",
-      env: {
-        ...env,
-        T: s.trace,
-        PRESSED: pressed,
-        LABEL,
-        LAG: String(LAG / 1000),
-        shown: `${shown}`,
-        focused: `${focused}`,
-      },
-    });
-    // Its first frame whole: the mode on the status line, drawn last.
-    await s.until(() => mode(s) !== null, undefined, "the fake explorer's first frame");
+    try {
+      s.term.spawn(["sh", "-c", cycling], {
+        cwd: "/",
+        env: {
+          ...env,
+          T: s.trace,
+          PRESSED: pressed,
+          LABEL,
+          LAG: String(LAG / 1000),
+          shown: `${shown}`,
+          focused: `${focused}`,
+        },
+      });
+      // Its first frame whole: the mode on the status line, drawn last.
+      await s.until(() => mode(s) !== null, undefined, "the fake explorer's first frame");
+    } catch (err) {
+      s.cleanup(); // the test's own cleanup is in the try it never reaches
+      throw err;
+    }
     const presses = () => (existsSync(pressed) ? readFileSync(pressed, "utf8") : "").length;
     return { s, presses };
   };
@@ -374,6 +379,10 @@ describe("what the checks share (check.ts)", () => {
     expect(EXPLORER.test(" ≡  Explorer               󰝒  󰉗  │ 1 operations-handbook.md × │")).toBe(true);
     expect(EXPLORER.test(" =  Explorer               +  +>  | 1 operations-handbook.md x |")).toBe(true);
     expect(EXPLORER.test(" ≡  Explorer   │ 1 operations-handbook.md × │")).toBe(true);
+    // A tab, or a note's line, that says "Explorer" in passing (the explorer closed); a note's line starting "Outline".
+    expect(EXPLORER.test(" ≡  │ 1 Explorer guide.md × │ 2 home.md × │")).toBe(false);
+    expect(EXPLORER.test(" ≡  │   12  the Explorer lists every note │ Outline")).toBe(false);
+    expect(OUTLINE.test(" ≡  │ Outline of the plan, in brief")).toBe(false);
     expect(OUTLINE.test(" ±  󰉋 equipment     ● │ § Halden Ridge Observatory    │ Outline           󰋽")).toBe(true);
     expect(OUTLINE.test(" ±  󰉋 equipment     ● │ § Halden Ridge Observatory    │ Outline")).toBe(true);
     expect(OUTLINE.test(" +  equipment     * | § Halden Ridge Observatory    | Outline")).toBe(true);

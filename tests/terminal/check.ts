@@ -179,17 +179,18 @@ export function mode(s: Session): string | null {
 }
 
 /**
- * The explorer's own title, at its top: "Explorer", its buttons (a new note, a new folder), its border (`|` in ASCII).
- * Not the leader's which-key popup, on screen between `space` and `e`, whose line for `space e` says "Explorer: open,
- * focus, close". A pane shorter than eight rows has no title (draw-panels.ts), and these helpers need it.
+ * The explorer's own title, at its top: "Explorer", the spaces up to its buttons (a new note, a new folder, a glyph
+ * or two each), its border (`|` in ASCII). Not the leader's which-key popup, on screen between `space` and `e`, whose
+ * line for `space e` says "Explorer: open, focus, close"; nor a tab or a note's line that says "Explorer" in passing.
+ * A pane shorter than eight rows has no title (draw-panels.ts), and these helpers need it.
  */
-export const EXPLORER = /Explorer +(?:\S+ +)*[│┃|]/;
+export const EXPLORER = /Explorer {2,}(?:\S{1,2} +)*[│┃|]/;
 
 /**
- * The outline's own title, after the right panel's border, at the row's end when no rail is right of it; not the
- * which-key popup's "Outline: open, focus, close".
+ * The outline's own title, after the right panel's border: spaces after it, or the row's end when no rail is right of
+ * it. Not the which-key popup's "Outline: open, focus, close", nor a note's line that starts "Outline".
  */
-export const OUTLINE = /[│┃|] Outline(?: |$)/;
+export const OUTLINE = /[│┃|] Outline(?: {2,}|$)/;
 
 /**
  * A panel open and focused: its leader key pressed once, unless it is already, then its own `title` and the status

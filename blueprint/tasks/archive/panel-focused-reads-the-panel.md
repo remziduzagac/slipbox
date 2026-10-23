@@ -65,11 +65,11 @@ and the status line's mode waited for together. Never pressed again on a screen 
   panel closes; from an open one it's safe (only the mode counts). `explorerClosed` (the session check, from open and
   unfocused) takes the popup's ` ␣ ` for FILES gone and its line for the explorer still there: it presses a third time
   and reopens it.
-- 2026-10-23: Codex agreed with the cause and the one-press fix, and added: match the mode chip at the status line's
-  start, not a substring (a file name can hold `FILES`); `explorerClosed` returns at once when already closed (opening
-  it would `reveal()` and move the selection); closed means a mode on the chip, not merely "not FILES" (a prompt, an
-  empty line); titles vanish in panes under eight rows; test each helper from every start, the presses counted, the
-  fake's popup turning the chip to `␣`. All taken.
+- 2026-10-23: The cause and the one-press fix, challenged, held; the challenge added: match the mode chip at the
+  status line's start, not a substring (a file name can hold `FILES`); `explorerClosed` returns at once when already
+  closed (opening it would `reveal()` and move the selection); closed means a mode on the chip, not merely "not FILES"
+  (a prompt, an empty line); titles vanish in panes under eight rows; test each helper from every start, the presses
+  counted, the fake's popup turning the chip to `␣`. All taken.
 - 2026-10-23: Fixed (`tests/terminal/check.ts`): `mode(s)`, the status line's chip; `EXPLORER` and `OUTLINE`, the
   panels' own titles (the explorer's up to its border past its buttons, the outline's after the right panel's border),
   which the popup's `Explorer: …`/`Outline: …` lines don't match; `panelFocused` as `toPanel`: pressed once unless
@@ -87,11 +87,11 @@ and the status line's mode waited for together. Never pressed again on a screen 
   `explorerOpen` (`vaults-explorer`), taken into a scratch folder: as before.
 - 2026-10-23: No user docs or CHANGELOG line: the terminal tests' helpers, nothing users see. No design change: the
   design says every check waits for the screen to agree; the helper now does.
-- 2026-10-23: Codex's review of the diff, one finding, verified: the fake's readiness wait (the status line holding
+- 2026-10-23: First review of the diff, one finding, verified: the fake's readiness wait (the status line holding
   `home.md`) could pass on a half-drawn first frame, its first row also saying `home.md`; from the focused start
   `explorerOpen` would then press and close it. Fixed: the fake marks its frames as slipbox does (synchronized
   output), and the fixture waits for the mode chip, drawn last. 8 pass; the mutation check fails the same 3.
-- 2026-10-23: The code-review skill's review of the diff (medium), eight findings, each checked against the code:
+- 2026-10-23: A second, independent review of the diff, eight findings, each checked against the code:
   - Taken: `OUTLINE` wanted a character after the title, but the screen's rows are read with their trailing spaces
     gone (`translateToString(true)`), so with no right rail beside the outline (zen, `ui.right_rail` off, no tabs:
     `rightRailWidth`) its title ends the row: now `/[│┃|] Outline(?: |$)/`.
@@ -117,4 +117,31 @@ and the status line's mode waited for together. Never pressed again on a screen 
   readers, 24 passed; the 25th (`links: a symlink within the vault never asks`) timed out with slipbox never started,
   a blank screen, while the machine's load was 50 on 10 cores (the run took 426 s, against 47). Run again alone under
   `nice` at a load of 8.5: passed, 1.9 s.
+- 2026-10-23: The pull request's own review, round 1: two independent reviews of `git diff origin/dev...`, eleven
+  findings, none the same; each checked against the code:
+  - Taken: `EXPLORER` matched any row where "Explorer" was followed by words and a border: a tab (`1 Explorer
+    guide.md ×`) or a note's line with a panel beside it, which would keep `explorerClosed` waiting. Now two spaces or
+    more after the title, then the buttons (a glyph or two each): `/Explorer {2,}(?:\S{1,2} +)*[│┃|]/`; `OUTLINE`
+    likewise, `/[│┃|] Outline(?: {2,}|$)/`, so a note's line starting "Outline" isn't it. The titles' test has those
+    rows; the patterns before fail it.
+  - Taken: the fixture's setup, failing (slipbox's stand-in not starting), left its session, its process and folder:
+    the tests' `finally` is in a `try` it never reached. It cleans up and rethrows.
+  - Taken: the git panel's `toPanel` was the helper `panelFocused` now is, with the status line read as a substring:
+    it is `panelFocused(s, "g", "GIT", TITLE)`.
+  - Taken: this Log named the agents that challenged and reviewed the work; it says what was found, not who said it.
+  - Rejected: "the old helper pressed again when nothing changed, the new one never retries a dropped press" — the old
+    one didn't either: its wait threw at `WAIT` when neither the mode nor the title came.
+  - Rejected: ASCII's `|` taken by the titles but not by the readers' border search (`explorerRow`, `explorer`,
+    `crumbs`, `paneRows`), which look for `│` or `┃` alone. That was so before this change, and no check runs them in
+    ASCII; with the title and border logic written five times over (those, and the git panel's `panelPart`), a helper
+    of its own in check.ts is a follow-up, not this fix.
+  - Rejected: herdr's widths check finds the explorer's title by `/Explorer/`. It runs only in a real terminal (not
+    here), reading once after the start with nothing pending.
+  - Rejected: `s.see("Explorer")` after `explorerOpen` and `s.see("Outline")` after the outline's are redundant now,
+    but can't pass falsely: the popup can't be up once the helper saw the mode chip.
+  - Rejected, as before: `Session.keys` and the stale screen, a follow-up.
+  - Rejected: the six fixture tests take about 6 s, the lag their margin to catch the old helpers on a slow machine;
+    run concurrently, two of Bun's pseudo-terminals in one process can cross their output.
+- 2026-10-23: After round 1: the tests of what the checks share, 8 pass; the 59 terminal checks that use the helpers,
+  the readers or `toPanel` (the git panel's 34 with them), `SLIPBOX_TERMINAL_JOBS=2` under `nice`, pass, 120 s.
 - 2026-10-23: The typecheck, the lint and `check:docs` pass. Done; the pull request's merge is the acceptance.
