@@ -23,7 +23,6 @@ import {
   relinkSaid,
   walkSkips,
   sameEntry,
-  sameFile,
   whereItLeads,
 } from "./rename-plan.ts";
 import { real } from "./rename-links.ts";
@@ -141,7 +140,9 @@ export function outside(
   // A link planned as one by its entry (D?1); a link that wasn't (put where something else went) by where it leads.
   if (plan.move && !entryInside(g.root, plan.move.from, movesAsLink(plan)))
     return `${g.shownPath(plan.move.from)} resolves outside the vault`;
-  const ends = [plan.move?.to, plan.makeVault?.root, plan.unmakeVault?.root];
+  // What a link moved as a link lands as is its own entry, in its folder (on a disk that ignores case, the very one).
+  const to = plan.move && movesAsLink(plan) ? dirname(plan.move.to) : plan.move?.to;
+  const ends = [to, plan.makeVault?.root, plan.unmakeVault?.root];
   for (const end of ends) if (end && !landsInside(g.root, end)) return `${g.shownPath(end)} resolves outside the vault`;
   return null;
 }
@@ -249,34 +250,30 @@ export function applyPlan(g: Graph, plan: RenamePlan): Applied {
       }
     }
   }
-  /** Where each file was written, by a name that leads there now: its new one, unless a link moved with its folder
-   *  leads that elsewhere — then where it was written, for an undo to read it again. */
-  const wrote = new Map<string, string>();
-  // A folder moves whole — everything in it, whatever the walk lists — before its files' edits. A
-  // file's folder is made first too: if it can't be (a file is in the way), nothing is written.
+  /** The folder what moves goes into, made first: if it can't be (a file in the way, a folder shut), nothing is. */
+  const makeInto = (to: string) => {
+    try {
+      made = mkdirSync(dirname(to), { recursive: true }) ?? null;
+    } catch (err) {
+      throw new RenameError(
+        `${dirname(to)} can't be made (${(err as NodeJS.ErrnoException).code ?? err}); nothing changed`,
+      );
+    }
+  };
+  // A folder moves whole — everything in it, whatever the walk lists — before its files' edits.
   if (mv?.dir) {
-    made = mkdirSync(dirname(mv.to), { recursive: true }) ?? null;
+    makeInto(mv.to);
     moveFirst(mv.from, mv.to);
   }
   /** A case-only rename on a case-insensitive disk: the file written at its new name is the old one. */
   const oneFile = !!mv && !mv.dir && sameEntry(mv.from, mv.to);
-  if (mv && !mv.dir) {
-    try {
-      made = mkdirSync(dirname(mv.to), { recursive: true }) ?? null;
-    } catch (err) {
-      throw new RenameError(
-        `${dirname(mv.to)} can't be made (${(err as NodeJS.ErrnoException).code ?? err}); nothing changed`,
-      );
-    }
-  }
+  if (mv && !mv.dir) makeInto(mv.to);
   // A file's link moves first too, as a folder does: if it can't be made where it goes, nothing is written.
   if (mv && !mv.dir && link) moveFirst(mv.from, mv.to);
   for (const f of plan.files) {
     if (mv && !mv.dir && f.abs === mv.from) continue; // written at its new place, below
-    const w = at.get(f.abs)!;
-    atomicWrite(w, text(f));
-    wrote.set(f.abs, sameFile(dest(f.abs), w) ? dest(f.abs) : w);
-    written.push(wrote.get(f.abs)!, ...(f.also ?? []).map(dest)); // its other names indexed again too
+    atomicWrite(at.get(f.abs)!, text(f));
+    written.push(dest(f.abs), ...(f.also ?? []).map(dest)); // its other names indexed again too
   }
   if (mv && !mv.dir) {
     const own = plan.files.find((f) => f.abs === mv.from);
@@ -355,7 +352,7 @@ export function applyPlan(g: Graph, plan: RenamePlan): Applied {
       moves: plan.moves ?? [],
       vaults: plan.vaults ?? [],
       files: plan.files.map((f) => ({
-        abs: wrote.get(f.abs) ?? dest(f.abs),
+        abs: dest(f.abs),
         shown: f.shown,
         vault: f.vault,
         edits: f.edits,
@@ -377,6 +374,8 @@ export function applyPlan(g: Graph, plan: RenamePlan): Applied {
   const touched = new Set([...written, ...(plan.moves ?? []).map(([, to]) => join(g.root, to))]);
   for (const abs of touched) {
     if (!isInside(g.root, abs)) continue;
+    // Through a link moved without its answer: not followed at its new name, so not read (VV-D6).
+    if (unfollowed && mv && (abs === mv.to || abs.startsWith(`${mv.to}/`))) continue;
     // A moved vault's files are its own, not this vault's (18.7); so are a nested root's (17.17),
     // reindexed with the others.
     if (plan.vaults?.some(([, to]) => abs === to || abs.startsWith(`${to}/`))) continue;

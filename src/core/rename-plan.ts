@@ -8,7 +8,7 @@ import { classify } from "./filetypes.ts";
 import { readText, realTarget } from "./fsutil.ts";
 import type { Graph } from "./graph.ts";
 import { gitArgs } from "./gitops.ts";
-import { isLink, movedLinkText, writesThrough } from "./symlinks.ts";
+import { isLink, movedLinkText, quietFollowed, writesThrough } from "./symlinks.ts";
 import { findVaultRoot, homeOf, isInside, vaultOf } from "./vault.ts";
 import { type Site, replaceAt } from "./rename-links.ts";
 
@@ -30,15 +30,17 @@ export const notRewritten = (g: Graph, abs: string): string => `${whereItLeads(g
  */
 export function landsHidden(g: Graph, abs: string): boolean {
   const real = realTarget(abs);
-  if (asNamed(g.root, abs, real)) return false;
+  const rootReal = realTarget(g.root);
+  if (asNamed(g.root, abs, real, rootReal)) return false;
   // Past a link, the place it's named in by its path: a vault reached through one has its own config.toml.
   const named = vaultOf(abs);
   if (named && asNamed(named, abs, real)) return false;
   const place = vaultOf(real);
   if (!place) return false;
-  const there = relative(realTarget(place), real);
+  const placeReal = realTarget(place);
+  const there = relative(placeReal, real);
   if (!there.split(sep).some((part) => part.startsWith("."))) return false;
-  return !(realTarget(place) === realTarget(g.root) && g.reached.has(there.split(sep).join("/")));
+  return !(placeReal === rootReal && g.reached.has(there.split(sep).join("/")));
 }
 
 /** Whether `abs`, under `root`, lands where it's named, `real` its real path: no link on the way past `root`. */
@@ -135,6 +137,8 @@ export class Collector {
   private names: Map<string, string[]> | null = null;
   /** The vault's root, by its real path: read once. */
   private rootReal: string | null = null;
+  /** Why a plan leaves a file it would read, beside the place's own rules: a folder's move's (D?1), say; null for none. */
+  leave: ((abs: string) => string | null) | null = null;
 
   constructor(readonly g: Graph) {}
 
@@ -144,17 +148,23 @@ export class Collector {
     return isInside(this.g.root, abs) && !asNamed(this.g.root, abs, realTarget(abs), this.rootReal);
   }
 
-  /** The other names the vault's index has for what a link leads `abs` to (D?1), vault paths; none without one. */
+  /**
+   * The other names the vault's index has for the file at `abs` (D?1), vault paths. Only a name a link leads, or one
+   * the vault reached (20.8), can share its file with another: the walk leaves out a link to a file it lists. Never
+   * looked for through a followed link whose target hasn't answered: reading there could hang.
+   */
   otherNames(abs: string): string[] {
-    if (!this.throughLink(abs)) return [];
+    const rel = relative(this.g.root, abs).split(sep).join("/");
+    if (!this.throughLink(abs) && !this.g.reached.has(rel)) return [];
     if (!this.names) {
       this.names = new Map();
-      for (const rel of [...this.g.notes.keys(), ...this.g.filePaths()]) {
-        const real = realTarget(join(this.g.root, rel));
-        this.names.set(real, [...(this.names.get(real) ?? []), rel]);
+      const quiet = quietFollowed(this.g.root).map((l) => relative(this.rootReal!, l).split(sep).join("/"));
+      for (const name of [...this.g.notes.keys(), ...this.g.filePaths()]) {
+        if (quiet.some((q) => name === q || name.startsWith(`${q}/`))) continue;
+        const real = realTarget(join(this.g.root, name));
+        this.names.set(real, [...(this.names.get(real) ?? []), name]);
       }
     }
-    const rel = relative(this.g.root, abs).split(sep).join("/");
     return (this.names.get(realTarget(abs)) ?? []).filter((r) => r !== rel);
   }
 
@@ -171,17 +181,22 @@ export class Collector {
     let f = this.files.get(abs);
     if (!f) {
       if (this.why.has(abs)) return null;
+      const left = this.leave?.(abs);
+      if (left) {
+        this.why.set(abs, left);
+        return null;
+      }
       // Read through a link out of its vault, or into a hidden folder, never written there: left, and said (VV-D6).
       if (!mayRewrite(this.g, abs)) {
         this.why.set(abs, notRewritten(this.g, abs));
         return null;
       }
-      // Reached through a link, and by another name from another folder: its links read otherwise there, so an edit
-      // made for one is wrong for the other — left, and said (D?1).
+      // Reached by another name too, from another folder: its links read otherwise there, so an edit made for one is
+      // wrong for the other — left, and said (D?1).
       const folder = posix.dirname(relative(this.g.root, abs).split(sep).join("/"));
       const elsewhere = this.otherNames(abs).find((r) => posix.dirname(r) !== folder);
       if (elsewhere) {
-        this.why.set(abs, `what it leads to is ${elsewhere} too, from another folder: not rewritten`);
+        this.why.set(abs, `reached as ${elsewhere} too, from another folder: not rewritten`);
         return null;
       }
       let text: string;
@@ -261,7 +276,7 @@ export class Collector {
       }
       for (const f of [first!, ...rest]) {
         const other = f === first ? rest[0]! : first!;
-        const reason = `what it leads to is ${other.shown} too, edited otherwise there: not rewritten`;
+        const reason = `reached as ${other.shown} too, edited otherwise there: not rewritten`;
         this.skipped.push({ shown: f.shown, line: f.edits[0]?.line ?? 1, reason });
       }
     }

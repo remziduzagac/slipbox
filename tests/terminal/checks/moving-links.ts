@@ -6,6 +6,7 @@
 import {
   chmodSync,
   existsSync,
+  linkSync,
   lstatSync,
   mkdirSync,
   readdirSync,
@@ -172,7 +173,7 @@ export const MOVING_LINKS: Check[] = [
   },
   {
     area: "links-and-files",
-    name: "links: a relative link moved keeps its own text's way — a link to a link stays one, a `..` after a link stays, a `\\` in a name is the name's",
+    name: "rename: a relative link moved keeps its own text's way — a link to a link stays one, a `..` after a link stays, a `\\` in a name is the name's",
     covers: { cases: ["links/moves", "rename"] },
     options: {
       startAt: "v/b.md",
@@ -258,7 +259,7 @@ export const MOVING_LINKS: Check[] = [
   },
   {
     area: "links-and-files",
-    name: "links: a followed link moved where its answer can't be kept: it moves, said — in the CLI's JSON data too — nothing indexed through it at its new name; undone, it's followed again where it was",
+    name: "links: a followed link renamed where its answer can't be kept: it moves, said — in the CLI's JSON data too — nothing indexed through it at its new name; undone, it's followed again where it was",
     covers: { cases: ["links/state", "rename"], commands: ["rename.undo"] },
     options: {
       startAt: "v/b.md",
@@ -309,7 +310,7 @@ export const MOVING_LINKS: Check[] = [
   },
   {
     area: "links-and-files",
-    name: "rename: a folder moved with a relative file link in it writes the link's note where it was read, never where the moved link leads; undone, it's given back there",
+    name: "rename: a folder moved with a relative file link in it that leads out of it leaves the link's note as it is, said — never written where the moved link leads; undone, back",
     covers: { cases: ["rename", "links/moves", "safety"], commands: ["rename.undo"] },
     options: {
       startAt: "v/b.md",
@@ -331,18 +332,21 @@ export const MOVING_LINKS: Check[] = [
     run: async (s) => {
       const v = join(s.dir, "v");
       await explorerOpen(s);
-      await moveRow(s, "docs", "deep", "docs/ → deep/docs/: 1 change in 1 file");
+      // From its new place the link leads elsewhere: an edit for the note it reaches now is right for no name.
+      await moveRow(s, "docs", "deep", "skipped docs/kept.md:3");
+      await s.see("a link moving with its folder leads elsewhere after");
       await s.keys("enter");
       await s.message("moved docs/ → deep/docs/");
-      s.expect(s.read(join(v, "shelf", "kept.md")).includes("[b](../../b.md)"), "written where it was read");
+      s.expect(s.read(join(v, "shelf", "kept.md")) === "# Kept\n\n[b](../b.md)\n", "its note left as it is");
       s.expect(s.read(join(v, "deep", "shelf", "kept.md")) === "# Decoy\n", "never where the moved link leads");
       s.expect(isLink(join(v, "deep", "docs", "kept.md")), "the link moved with its folder, a link");
       await leader(s, "v", "shift+u");
       await s.see("undo: deep/docs/ → docs/");
       await s.keys("enter");
       await s.message("moved deep/docs/ back to");
-      s.expect(s.read(join(v, "shelf", "kept.md")).includes("[b](../b.md)"), "given back where it was written");
+      s.expect(s.read(join(v, "shelf", "kept.md")) === "# Kept\n\n[b](../b.md)\n", "its note as it was");
       s.expect(s.read(join(v, "deep", "shelf", "kept.md")) === "# Decoy\n", "the decoy as it was");
+      s.expect(isLink(join(v, "docs", "kept.md")), "the link back with its folder");
     },
   },
   {
@@ -383,7 +387,7 @@ export const MOVING_LINKS: Check[] = [
   },
   {
     area: "links-and-files",
-    name: "links: in home, a vault reached through a followed link is named with shift+r: its own config.toml written, not taken for a hidden folder",
+    name: "links: in home, naming a vault reached through a followed link with shift+r: its own config.toml written, not taken for a hidden folder",
     covers: { cases: ["vault", "multiple-roots", "links/state"] },
     options: {
       startAt: "home/h.md",
@@ -511,7 +515,7 @@ export const MOVING_LINKS: Check[] = [
   },
   {
     area: "links-and-files",
-    name: "links: a file two links reach from two folders isn't written for either, said; two links to one file moved together edit it alike, written once, both indexed again",
+    name: "links: a rename reaching a file by two links from two folders writes it for neither, said; two links to one file moved together edit it alike, written once, both indexed again",
     covers: { cases: ["rename", "links/moves", "links/backlinks"], commands: ["note.rename", "backlinks.open"] },
     options: {
       startAt: "v/sub/a.md",
@@ -662,6 +666,10 @@ export const MOVING_LINKS: Check[] = [
         const r = cli(s, "mv", "shut/f", "new2/f");
         s.expect(r.code === 5 && r.error === "shut/f can't be moved (EACCES); nothing changed", `${r.error}`);
       });
+      await withMode(join(v, "zro"), 0o500, async () => {
+        const r = cli(s, "mv", "shut", "zro/deep/shut");
+        s.expect(r.code === 5 && !!r.error?.endsWith("can't be made (EACCES); nothing changed"), `${r.error}`);
+      });
       s.expect(!s.exists(join(v, "new")) && !s.exists(join(v, "new2")), "no folder made left");
       s.expect(isLink(join(v, "box", "rel.md")) && s.exists(join(v, "shut", "f", "n.md")), "each where it was");
       // A plan saved, then its note's folder made unsearchable: `slipbox apply` refuses it.
@@ -673,6 +681,62 @@ export const MOVING_LINKS: Check[] = [
         s.expect(r.code === 5 && r.error === "src2/s.md can't be moved (EACCES); nothing changed", `${r.error}`);
       });
       s.expect(s.read(join(v, "ref.md")) === "# Ref\n\n[s](src2/s.md)\n", "the plan's other file as it was");
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "links: a rename reaching a note the vault reached in a hidden folder, and a link to it from another folder: written for neither name, said",
+    covers: { cases: ["rename", "links/moves"], commands: ["note.rename"] },
+    options: {
+      startAt: "v/r.md",
+      config: WIDE,
+      setup: (s) => {
+        const v = vault(s, {
+          "b.md": "# B\n",
+          ".hidden/b.md": "# HB\n",
+          ".hidden/n.md": "# N\n\n[b](b.md)\n",
+          "r.md": "# R\n\n[x](.hidden/b.md) [n](.hidden/n.md)\n", // what reaches them
+        });
+        link(".hidden/n.md", join(v, "l.md")); // from the top, its `b.md` is the top's
+      },
+    },
+    run: async (s) => {
+      const v = join(s.dir, "v");
+      await toLink(s, ".hidden/b.md");
+      await s.keys("enter");
+      await opened(s, ".hidden/b.md");
+      await s.ex("mv c.md");
+      await s.see("skipped .hidden/n.md:3");
+      await s.see("reached as l.md too, from another folder");
+      await s.keys("enter");
+      await s.message("renamed .hidden/b.md → c.md");
+      s.expect(s.read(join(v, ".hidden", "n.md")) === "# N\n\n[b](b.md)\n", "written for neither name");
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "links: a followed link's case-only rename with r, as a disk that ignores case has it: renamed as a link, never refused through it",
+    covers: { cases: ["rename", "links/moves"] },
+    options: {
+      startAt: "v/b.md",
+      config: WIDE,
+      setup: (s) => {
+        const v = vault(s, { "b.md": "# B\n\n[s](Outer/s.md)\n" });
+        if (!existsSync(join(s.dir, "out"))) put(join(s.dir, "out", "s.md"), "# S\n");
+        link(join(s.dir, "out"), join(v, "Outer"));
+        // A disk that ignores case finds `Outer` as `outer`; on one that doesn't, a second name for the link's entry.
+        if (!existsSync(join(v, "OUTER")) && !existsSync(join(v, "outer")))
+          linkSync(join(v, "Outer"), join(v, "outer"));
+        followed(s, [[join(v, "Outer"), join(s.dir, "out")]]);
+      },
+    },
+    run: async (s) => {
+      const v = join(s.dir, "v");
+      await explorerOpen(s);
+      await renameRow(s, "Outer", "outer", "Outer/ → outer/");
+      await s.keys("enter");
+      await s.message("moved Outer/ → outer/");
+      s.expect(isLink(join(v, "outer")), "a link still");
     },
   },
   {

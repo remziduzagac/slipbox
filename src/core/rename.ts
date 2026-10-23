@@ -8,10 +8,10 @@
 // rename-links.ts's; a folder named or made a vault is rename-vaults.ts's, a heading renamed
 // rename-heading.ts's; carrying a plan out and undoing it, rename-apply.ts's. All of it is imported from here.
 
-import { existsSync, statSync } from "node:fs";
-import { dirname, isAbsolute, join, posix, relative, sep } from "node:path";
+import { existsSync, readlinkSync, statSync } from "node:fs";
+import { dirname, isAbsolute, join, posix, relative, resolve, sep } from "node:path";
 import { classify } from "./filetypes.ts";
-import { entryAt, landsInside } from "./fsutil.ts";
+import { entryAt, landsInside, realTarget } from "./fsutil.ts";
 import type { Backlink, Graph, NoteEntry, ResolvedLink } from "./graph.ts";
 import { extensionless, formatPathLink, normKey, pathForm, pathLink, type PathForm, pathNamed } from "./links.ts";
 import { readRoots } from "./registry.ts";
@@ -59,7 +59,9 @@ function cleanTarget(g: Graph, input: string, holds: "file" | "folder" | "vault"
   if (walkSkips(rel)) throw new RenameError(`${input}: the walk leaves hidden folders out`);
   const never = holds === "vault" ? null : g.neverIndexed(rel, holds === "folder", notes);
   if (never) throw new RenameError(`${input}: ${never}`);
-  if (!landsInside(g.root, join(g.root, rel))) throw new RenameError(`${rel} would land outside the vault`);
+  // A link there (the one moving, on a disk that ignores case) is its own entry, in its folder: not where it leads.
+  const at = join(g.root, rel);
+  if (!landsInside(g.root, isLink(at) ? dirname(at) : at)) throw new RenameError(`${rel} would land outside the vault`);
   const where = fileInTheWay(g.root, rel);
   if (where) throw new RenameError(`${where} is a file: ${rel} can't go under it`);
   return rel;
@@ -176,6 +178,34 @@ export function planFolderMove(g: Graph, fromDir: string, toInput: string): Rena
   );
 }
 
+/**
+ * A folder moving from `from` to `to` with a relative link in it that leads out of it (D?1): left as the move leaves
+ * it, it leads elsewhere from its new place, so an edit for the file it reaches now is right for no name — that file
+ * left, and said. A file is judged by the first link on its way under the folder; where it leads after is read from
+ * the link's own text, from its folder's new place.
+ */
+function leadsElsewhere(from: string, to: string): (abs: string) => string | null {
+  const fromReal = realTarget(from);
+  const toReal = realTarget(to);
+  const moved = (p: string) =>
+    p === fromReal || p.startsWith(`${fromReal}${sep}`) ? toReal + p.slice(fromReal.length) : p;
+  return (abs) => {
+    if (abs === from || !abs.startsWith(`${from}/`)) return null;
+    const parts = relative(from, abs).split(sep);
+    for (let i = 1; i <= parts.length; i++) {
+      const p = join(from, ...parts.slice(0, i));
+      if (!isLink(p)) continue;
+      const text = readlinkSync(p);
+      if (isAbsolute(text)) return null;
+      const after = resolve(moved(realTarget(dirname(p))), text);
+      return after === moved(realTarget(p))
+        ? null
+        : "a link moving with its folder leads elsewhere after: not rewritten";
+    }
+    return null;
+  };
+}
+
 /** The folder `from` and every folder in it, each to where it goes under `to` (links to a folder, 21.2). */
 function foldersMoving(g: Graph, from: string, to: string): Map<string, string> {
   const out = new Map<string, string>();
@@ -199,6 +229,7 @@ function planMove(
   const c = new Collector(g);
   const abs = (rel: string) => join(g.root, rel);
   const mv = head.move;
+  if (mv?.dir && !mv.link) c.leave = leadsElsewhere(mv.from, mv.to);
   /** What the plan says beside its edits. */
   const said: string[] = [];
   /** Where a file will be: its new place if it moves (a folder's, a root nested in it too), else where it is. */

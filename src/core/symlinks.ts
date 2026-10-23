@@ -234,6 +234,17 @@ function relinked(text: string, fromDir: string, toDir: string): string {
 }
 
 /**
+ * The followed links in `top`, by their path, whose targets haven't answered (VV-D6): what's behind them is never read
+ * on the main thread — a disk gone quiet would hang it. From the answers kept, nothing near the links themselves.
+ */
+export function quietFollowed(top: string): string[] {
+  const at = real(top);
+  return kept()
+    .filter((e) => e.answer === "follow" && within(at, e.link) && answered(e.target) !== true)
+    .map((e) => e.link);
+}
+
+/**
  * Where a vault's links may lead without asking (VV-D6), by its real path: a vault's own folder; home's, home.
  * Elsewhere has none: every link there asks.
  */

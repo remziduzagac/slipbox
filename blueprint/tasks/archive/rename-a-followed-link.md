@@ -243,3 +243,38 @@ to lead where it did (D?1).
   changed`, its other file as it was. The TUI's cases are the terminal checks'. Reached unit tests: all but two pass —
   cli.test's `stat` (a linked worktree's name, by design) and render.test's `Mermaid … drawn while its library loads`,
   which fails alone too, the library loading before the first frame asks (a timing test; nothing here draws).
+- 2026-10-24: Reviewed again (round 3), by `/code-review` alone: Codex had reached its usage limit, and the maintainer
+  chose to go on without it this round. Thirteen findings, each tried against the code. Taken, each with a test that
+  fails without its fix, and a terminal check but where said: (1) a note the vault reached in a hidden folder, with a
+  link to it from another folder, was rewritten for its own folder, breaking the link's view of it: a reached name is
+  asked about its other names too (only a link's name or a reached one can share a file: the walk leaves out a link to a
+  file it lists); (2) a relative link inside a moved folder that leads out of it had its note rewritten for its new
+  folder, and written where it led before — right for no name, since from its new place the link leads elsewhere: that
+  note is left, and said, as D?1 leaves links inside a moved folder as the move leaves them; this replaces round 1's
+  writing it where it was read, and its undo's record of where; (3) a followed link's case-only rename, on a disk that
+  ignores case, was refused through the link itself: a link at the destination is judged by its folder, in the plan,
+  `outside` and the CLI — tried on Linux with a second name for the link's own entry; (4) the lookup of other names
+  resolved every indexed name, behind a followed link to a disk that had stopped answering too, which could hang: names
+  behind such a link (`quietFollowed`, from the answers kept and the probes) are left out — a unit test only, a disk
+  that stops answering being nothing a terminal check can make; (5) a folder moved under a folder that can't be made
+  threw a raw error: refused, said (`makeInto`); (6) a link moved without its answer was read through at its new name
+  before the index was walked again: not read — a unit test only, the walk hiding it from the screen; (7) one call of
+  `landsHidden` reads each real path once; (8) the new checks are named so that CI's scope runs them for the files they
+  drive (`rename`, `naming` in their names). Not taken: a moved link's own change carrying `also` (run: with another
+  name staying in its folder, its own links are left and its links to itself aren't backlinks, so the other name's
+  change carries the edit); an undo in home of a link moved where its answer couldn't be kept, refused when the move
+  wrote the link's note (a refusal, said, the answer kept where it was: carrying it would need the undo to judge the
+  note as it will be reached after its move, which it can't see before); a note another vault reached in its own hidden
+  folder, reached here through that vault's link, left by this vault's plan (said: judging it needs that vault's index
+  and its other names); `entryInside` for `checkSource` (a plan's flag, against an entry just looked at); citing `D?1`.
+- 2026-10-24: Round 3's fixes tried live in a scratch home, the release and then this worktree's CLI: renaming
+  `.hidden/b.md` (reached) to `c.md` made the release write `.hidden/n.md` for its own folder, breaking `l.md`'s view of
+  it, and here leaves it, said (`reached as l.md too, from another folder`); `slipbox mv a/docs docs`, a relative link
+  in it leading out, made the release write its copy over the link, and here leaves the note, said — moved to
+  `deep/docs` instead, at the same depth, the link leads where it did and the note is written for it; `slipbox mv f
+  ro/deep/f` under a folder that can't be written threw the release's raw `EACCES`, and here says `… can't be made
+  (EACCES); nothing changed`; a followed link's case-only rename (`Outer` → `outer`, a second name for its entry) was
+  refused by the release as landing outside the vault, and here is planned. Reached unit tests: all pass but cli.test's
+  `stat` (a linked worktree's name) and render.test's `Mermaid … drawn while its library loads`, which fails on
+  `origin/dev` too, alone, here (it passes in CI); two pictures tests that failed in the whole run pass alone, the
+  machine loaded. The terminal checks of renames, moves and links: 16 pass.
