@@ -380,16 +380,18 @@ of every read through a link out of the root; D220's writes stay for vaults.
   files, the converter and a heading's rename leave a file whose write would land out of its vault as it is, a
   `skipped` row saying so, and `applyPlan` refuses a plan holding one, or moving anything from or to outside the vault
   (`outside`), before it writes: an undo and a saved plan are checked as they're carried out. What it writes it writes
-  where it is: a file reached through a link, through the link, never over it. A move's source is checked as its
-  destination is: a move, copy or delete whose source or destination crosses a link out of the vault, or out of home,
-  is refused in the CLI and the TUI, in home too, said the same: `… resolves outside the vault` for what's moved,
-  copied or deleted, `… would land outside the vault` for where it goes. A link named itself crosses nothing when it
-  moves: its entry is checked, in its folder by its real path (`entryInside` in `core/fsutil.ts`), and it's renamed
-  or moved as a link (`moveLink` in `core/symlinks.ts`; D?1), what it leads to staying where it is; its answer goes
-  with it, in place of any kept where it goes, and a relative one moved to another folder is written again there to
-  lead where it did, from its own text, the plan saying so (`movedLinkText`). A link inside a folder that moves is left
-  as the folder's move leaves it, and a copy or delete of a link out is refused still. An export's default place,
-  beside a note reached through a link out of the vault, is refused; `--out` names one. Where links are looked at on a
+  where it was read, found before anything moves: a file reached through a link, through the link, never over it, nor
+  where a link moving with a folder leads after. A move's source is checked as its destination is: a move, copy or
+  delete whose source or destination crosses a link out of the vault, or out of home, is refused in the CLI and the
+  TUI, in home too, said the same: `… resolves outside the vault` for what's moved, copied or deleted, `… would land
+  outside the vault` for where it goes. A link named itself crosses nothing when it moves: its entry is checked, in its
+  folder by its real path (`entryInside` in `core/fsutil.ts`), and it's renamed or moved as a link (`moveLink` in
+  `core/symlinks.ts`; D?1), what it leads to staying where it is; its answer goes with it, in place of any kept where
+  it goes (one that can't be kept there, the state folder unwritable, said), and a relative one moved to another
+  folder is written again there to lead where it did, from its own text, the plan saying so (`movedLinkText`). A link
+  inside a folder that moves is left as the folder's move leaves it, and a copy or delete of a link out is refused
+  still. An export's default place, beside a note reached through a link out of the vault, is refused; `--out` names
+  one. Where links are looked at on a
   path's way (`blockingLink`): from the vault's or home's folder; in Elsewhere every link on the way asks, from the
   folder you work in — the TUI's folder opened, the CLI's current folder (`workDir`) — down; a path named outright
   outside it starts at its own folder, the file itself asking: what's above the folder you work in is yours to name

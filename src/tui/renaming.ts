@@ -260,6 +260,7 @@ export class Renaming {
       "info",
       `${what}: ${n} change${n === 1 ? "" : "s"} in ${plan.files.length} file${plan.files.length === 1 ? "" : "s"}`,
     );
+    for (const w of applied.warnings) this.app.message("warn", w);
   }
 
   /** Undo the vault's last rename, move or relink (7.4): its preview, then carried out as a rename is. */

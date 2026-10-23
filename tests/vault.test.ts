@@ -7856,6 +7856,28 @@ describe("plans write only inside the vault (VV-D6)", () => {
   );
 
   test(
+    "a folder moved with a relative file link in it: the link's note written where it was read, never where the moved link leads",
+    homed(async () => {
+      const top = realpathSync(mkdtempSync(join(tmpdir(), "slipbox-inside-")));
+      const vault = join(top, "vault");
+      mkdirSync(join(vault, ".slipbox"), { recursive: true });
+      mkdirSync(join(vault, "a", "docs"), { recursive: true });
+      writeFileSync(join(vault, "a", "b.md"), "# B\n");
+      // The note kept in a hidden folder, reached by its link only; beside the vault, where the link moved up leads.
+      mkdirSync(join(vault, ".shelved"));
+      writeFileSync(join(vault, ".shelved", "kept.md"), "# Kept\n\n[b](../b.md)\n");
+      mkdirSync(join(top, ".shelved"));
+      writeFileSync(join(top, ".shelved", "kept.md"), "# Outside\n");
+      symlinkSync("../../.shelved/kept.md", join(vault, "a", "docs", "kept.md"));
+      const r = await cli(["mv", "a/docs", "docs"], vault);
+      expect(r.code).toBe(0);
+      expect(readFileSync(join(vault, ".shelved", "kept.md"), "utf8")).toBe("# Kept\n\n[b](../a/b.md)\n");
+      expect(readFileSync(join(top, ".shelved", "kept.md"), "utf8")).toBe("# Outside\n");
+      expect(lstatSync(join(vault, "docs", "kept.md")).isSymbolicLink()).toBe(true);
+    }),
+  );
+
+  test(
     "undo moves a note back only inside the vault: where a link out of it stands now, nothing is moved",
     homed(async () => {
       const top = realpathSync(mkdtempSync(join(tmpdir(), "slipbox-inside-")));
@@ -12095,6 +12117,28 @@ describe("the symlinks you've answered: listed, and forgotten (VV-D6)", () => {
       expect(() => moveLink(join(w, "taken"), join(w, "sub", "taken"))).toThrow();
       expect(readlinkSync(join(w, "taken"))).toBe("../far");
       expect(readFileSync(join(w, "sub", "taken"), "utf8")).toBe("x");
+      // A `\` is a name's own character here, not a folder's end.
+      if (process.platform !== "win32") {
+        writeFileSync(join(w, "x\\y.md"), "# XY\n");
+        symlinkSync("x\\y.md", join(w, "bs.md"));
+        moveLink(join(w, "bs.md"), join(w, "sub", "bs.md"));
+        expect(readlinkSync(join(w, "sub", "bs.md"))).toBe("../x\\y.md");
+        expect(realpathSync(join(w, "sub", "bs.md"))).toBe(join(w, "x\\y.md"));
+      }
+      // Moved, but its answer can't be kept for where it is now: said, the link moved all the same.
+      symlinkSync("../far", join(w, "e"));
+      setLinkAnswer(join(w, "e"), "follow");
+      const stateDir = join(process.env.XDG_STATE_HOME!, "slipbox");
+      chmodSync(stateDir, 0o500);
+      try {
+        expect(moveLink(join(w, "e"), join(w, "sub", "e"))).toMatch(
+          /sub\/e: the link moved, but its answer couldn't be kept for its new place \(EACCES\)/,
+        );
+      } finally {
+        chmodSync(stateDir, 0o755);
+      }
+      expect(readlinkSync(join(w, "sub", "e"))).toBe(join("..", "..", "far"));
+      expect(moveLink(join(w, "sub", "e"), join(w, "e"))).toBeNull();
     } finally {
       process.env.XDG_STATE_HOME = state;
     }

@@ -115,6 +115,8 @@ export function planUndo(g: Graph): RenamePlan {
 export interface Applied {
   written: string[];
   moved: { from: string; to: string } | null;
+  /** What was done but not all of it: a link moved whose answer couldn't be kept for its new place (D?1). */
+  warnings: string[];
 }
 
 /**
@@ -173,11 +175,25 @@ export function applyPlan(g: Graph, plan: RenamePlan): Applied {
   let made: string | null = null;
   /** A link named itself moves as a link (D?1): its entry, its answer with it, what it leads to staying. */
   const link = !!mv && isLink(mv.from);
+  const warnings: string[] = [];
+  // Where each file is written, found before anything moves: through a link it's reached by, never over it — where
+  // it was read and checked (`outside`), as a link moving with a folder may lead elsewhere after. What the folder's
+  // move takes along, there.
+  const fromReal = mv?.dir && !link ? realTarget(mv.from) : null;
+  const toReal = fromReal && mv ? realTarget(mv.to) : "";
+  const at = new Map<string, string>();
+  for (const f of plan.files) {
+    const t = realTarget(f.abs);
+    at.set(
+      f.abs,
+      fromReal && (t === fromReal || t.startsWith(`${fromReal}${sep}`)) ? toReal + t.slice(fromReal.length) : t,
+    );
+  }
   // A folder moves whole — everything in it, whatever the walk lists — before its files' edits. A
   // file's folder is made first too: if it can't be (a file is in the way), nothing is written.
   if (mv?.dir) {
     made = mkdirSync(dirname(mv.to), { recursive: true }) ?? null;
-    if (link) moveLink(mv.from, mv.to);
+    if (link) warnings.push(...said(moveLink(mv.from, mv.to)));
     else renameSync(mv.from, mv.to);
   }
   /** A case-only rename on a case-insensitive disk: the file written at its new name is the old one. */
@@ -191,17 +207,16 @@ export function applyPlan(g: Graph, plan: RenamePlan): Applied {
       );
     }
   }
-  // A file reached through a link is written where it is, through the link, never over it.
   for (const f of plan.files) {
     if (mv && !mv.dir && f.abs === mv.from) continue; // written at its new place, below
-    atomicWrite(realTarget(dest(f.abs)), text(f));
+    atomicWrite(at.get(f.abs)!, text(f));
     written.push(dest(f.abs));
   }
   if (mv && !mv.dir) {
     const own = plan.files.find((f) => f.abs === mv.from);
     if (link) {
-      moveLink(mv.from, mv.to);
-      if (own) atomicWrite(realTarget(mv.to), text(own));
+      warnings.push(...said(moveLink(mv.from, mv.to)));
+      if (own) atomicWrite(at.get(own.abs)!, text(own));
     } else if (own) {
       atomicWrite(mv.to, text(own));
       if (!oneFile) unlinkSync(mv.from);
@@ -234,7 +249,7 @@ export function applyPlan(g: Graph, plan: RenamePlan): Applied {
     }
     g.build(true, "lazy");
     reindexOthers();
-    return { written, moved: null };
+    return { written, moved: null, warnings };
   }
   reindexOthers();
   // The vault's log (7.4): a rename carried out is logged, so it can be undone; an undo, forgotten.
@@ -325,5 +340,8 @@ export function applyPlan(g: Graph, plan: RenamePlan): Applied {
       ),
     ];
   }
-  return { written, moved: mv ? { from: mv.from, to: mv.to } : null };
+  return { written, moved: mv ? { from: mv.from, to: mv.to } : null, warnings };
 }
+
+/** A warning, as a list: none for null. */
+const said = (warning: string | null): string[] => (warning ? [warning] : []);

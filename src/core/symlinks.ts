@@ -161,9 +161,9 @@ export function forgetLinkAnswer(link: string): KeptLink | null {
  * Move the symlink `from` to `to` as a link (D?1): its own entry, never what it leads to. A relative one moved to
  * another folder is made anew at `to` (`movedLinkText`); nothing has changed when it can't be. The answer kept for it
  * is kept for `to` then, in place of whatever was kept there: the same link, leading to the same place. `to`'s folder
- * is there already.
+ * is there already. Moved, but its answer not kept there (the state folder can't be written): said, as a warning.
  */
-export function moveLink(from: string, to: string): void {
+export function moveLink(from: string, to: string): string | null {
   const was = linkKey(from);
   const text = movedLinkText(from, to);
   if (text === null) renameSync(from, to);
@@ -180,16 +180,21 @@ export function moveLink(from: string, to: string): void {
       throw err;
     }
   }
-  // Moved, the link keeps its answer; if it can't be kept, it asks again.
+  // Moved, the link keeps its answer.
+  const now = linkKey(to);
+  const list = kept();
+  const hit = list.find((e) => e.link === was);
+  const rest = list.filter((e) => e.link !== was && e.link !== now);
+  if (!hit && rest.length === list.length) return null;
   try {
-    const now = linkKey(to);
-    const list = kept();
-    const hit = list.find((e) => e.link === was);
-    const rest = list.filter((e) => e.link !== was && e.link !== now);
-    if (!hit && rest.length === list.length) return;
     writeJson(linksFile(), { version: 1, links: hit ? [...rest, { ...hit, link: now }] : rest });
+  } catch (err) {
+    const why = (err as NodeJS.ErrnoException).code ?? String(err);
+    return `${tildePath(to)}: the link moved, but its answer couldn't be kept for its new place (${why}); slipbox symlinks lists the answers kept`;
+  } finally {
     cache = null;
-  } catch {}
+  }
+  return null;
 }
 
 /**
@@ -211,7 +216,7 @@ export function movedLinkText(from: string, to: string): string | null {
  */
 function relinked(text: string, fromDir: string, toDir: string): string {
   const way = relative(toDir, fromDir).split(sep).filter(Boolean);
-  const rest = text.split(/[\\/]/).filter((s) => s && s !== ".");
+  const rest = text.split(process.platform === "win32" ? /[\\/]/ : "/").filter((s) => s && s !== "."); // on POSIX, `\` is a name's
   while (way.length && way.at(-1) !== ".." && rest[0] === "..") {
     way.pop();
     rest.shift();

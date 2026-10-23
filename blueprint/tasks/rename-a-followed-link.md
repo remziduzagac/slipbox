@@ -116,3 +116,16 @@ to lead where it did (D?1).
   Run beside it, passing: the explorer's file operations, `rename:` (four), `files: space d`, `files: a folder with an
   unsaved note`, `nested roots: the explorer's row`, and the two followed-link checks (11/11). Unit tests reached
   (`renam|move|undo|plans|VV-D6|replace|convert|symlink|relink` in vault, cli and tui tests): 285 pass.
+- 2026-10-23: Codex reviewed the diff. Taken: (1) `applyPlan` checked a plan's file where it was (`mayRewrite` on
+  `f.abs`) but wrote at `realTarget` of where it is after the move, so a relative file link inside a moved folder could
+  lead the write somewhere new, out of the vault even (`a/docs/kept.md → ../../.shelved/kept.md`, `a/docs` moved up
+  to `docs`, leads to the vault's parent): each file's real target is found before anything moves now, what's inside
+  the moved folder itself mapped to where the folder goes; (2) a link's text was split on `\` on POSIX too, where it
+  is a name's character: split on `/` only, but on Windows; (3) an answer that couldn't be written was swallowed, a
+  stale one where it went left in force: `moveLink` says it, `Applied.warnings` carries it, the CLI's warnings and the
+  TUI's messages show it; (6) the terminal check now changes the renamed link's target from outside and sees it read
+  again. Not taken: (4) numbering `D?1`: a root decision is numbered when it's merged. Tests: `a folder moved with a
+  relative file link in it: …` (tests/vault.test.ts), and in `a link moved as a link: …` a `\` in a name and the state
+  folder made unwritable. Mutation-checked (`t14-mutate3.log`): writing where the moved link leads, a moved folder's
+  files written at their old place, `\` split on POSIX, the lost answer not said: each fails a test. Reached unit
+  tests: 286 pass; the 11 terminal checks: pass.

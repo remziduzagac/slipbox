@@ -975,6 +975,9 @@ const LINKED: Check[] = [
       await opened(s, "shelved/far.md");
       await s.see("A note kept on the shelf.");
       s.expect(!s.text().includes("follow it?"), "renamed, still followed: nothing asked");
+      // Watched through its new name: changed from outside, it's read again.
+      writeFileSync(s.path("~/shelf/far.md"), "# Far\n\nMoved along the shelf.\n");
+      await s.see("Moved along the shelf.", 10_000);
       await s.keys("ctrl+o");
       await opened(s, "to-shelf.md");
       // m on the relative one: into box, written again to lead where it did, and said so.

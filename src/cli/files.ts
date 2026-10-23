@@ -286,6 +286,7 @@ export async function renameResult(
   }
   s.warnings.push(
     ...p.warnings,
+    ...(applied?.warnings ?? []),
     ...p.skipped.map((x) => `${x.shown}:${x.line}: ${x.reason}`),
     ...(p.ambiguous ?? []).map(
       (a) =>
