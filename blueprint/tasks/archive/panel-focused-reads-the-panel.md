@@ -250,4 +250,13 @@ and the status line's mode waited for together. Never pressed again on a screen 
     eight rows.
 - 2026-10-24: After round 5: the unit tests of what the checks share, 14 pass, and `home.test.ts`'s; the eight checks
   of `panels.ts` and the outline's pass.
-- 2026-10-23: The typecheck, the lint and `check:docs` pass. Done; the pull request's merge is the acceptance.
+- 2026-10-24: Round 6, the first review: ten findings, none new, each one rejected before for the reason it was:
+  the titles against a line that is only "Explorer" or "Outline", a table cell or a folder so named (no sample has
+  one; a heading reading only "Explorer" is in the user docs, which no check opens); the old helper's second press
+  (never a retry); the first look on a whole frame not caught up (the stale screen, the follow-up's); ASCII in the
+  readers and the git panel's title; panes under eight rows and zen; herdr's check and the title logic written five
+  times; the modes' test reading draw-status.ts (it fails out loud when the source moves, which is the point; the app
+  isn't changed for it).
+- 2026-10-24: Round 6's second review not run: its reviewer was out of quota, and the maintainer no longer needed it.
+  CI on round 5's push (15ce861): green on every platform, macOS's terminal run included.
+- 2026-10-24: The typecheck, the lint and `check:docs` pass. Done; the pull request's merge is the acceptance.
