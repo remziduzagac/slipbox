@@ -171,37 +171,50 @@ export const leader = (s: Session, ...keys: string[]) => s.keys("space", ...keys
 export const SCRATCH_FLOATING = "esc · q closes, saved";
 
 /**
- * A panel open and focused: its leader key cycles it (open, focus, close), each press seen taking effect before the
- * next is decided, since pressed blind, a late first one would make the third close it.
+ * The mode on the status line: its chip, at its start (` FILES `), or null while it shows something else — the keys
+ * pending (` ␣ `, as the leader's which-key popup is up), an operator's, a prompt.
  */
-export async function panelFocused(s: Session, key: string, mode: string, title: RegExp): Promise<void> {
-  for (let i = 0; i < 2 && !s.statusLine().includes(mode); i++) {
-    const open = s.rowOf(title) >= 0;
-    await leader(s, key);
-    await s.until(
-      () => s.statusLine().includes(mode) || (!open && s.rowOf(title) >= 0),
-      undefined,
-      `space ${key} to open or focus it`,
-    );
-  }
-  await s.status(mode);
+export function mode(s: Session): string | null {
+  return /^ ([A-Z][A-Z-]*) /.exec(s.statusLine())?.[1] ?? null;
+}
+
+/**
+ * The explorer's own title, at its top: "Explorer", its buttons (a new note, a new folder), its border. Not the
+ * leader's which-key popup, on screen between `space` and `e`, whose line for `space e` says "Explorer: open, focus,
+ * close". A pane shorter than eight rows has no title.
+ */
+export const EXPLORER = /Explorer +(?:\S+ +)*[│┃]/;
+
+/** The outline's own title, after the right panel's border; not the which-key popup's "Outline: open, focus, close". */
+export const OUTLINE = /[│┃] Outline +/;
+
+/**
+ * A panel open and focused: its leader key pressed once, unless it is already, then its own `title` and the status
+ * line's `mode` waited for together. Its key cycles it — opened and focused, focused, closed (panels.ts) — so one press
+ * gets there from closed or open, and it's never pressed again on a screen that hasn't caught up: the which-key popup,
+ * still showing, names the panel too, and a second press would close it. Called with nothing else taking the keys (a
+ * picker, a filter, keys pending).
+ */
+export async function panelFocused(s: Session, key: string, panelMode: string, title: RegExp): Promise<void> {
+  const focused = () => s.rowOf(title) >= 0 && mode(s) === panelMode;
+  if (focused()) return;
+  await leader(s, key);
+  await s.until(focused, undefined, `space ${key} to open the panel and focus it`);
 }
 
 /** The explorer open and focused (FILES). */
-export const explorerOpen = (s: Session) => panelFocused(s, "e", "FILES", /Explorer/);
+export const explorerOpen = (s: Session) => panelFocused(s, "e", "FILES", EXPLORER);
 
-/** The explorer closed: space e until it's gone, each press seen taking effect first. */
+/**
+ * The explorer closed: focused first (`explorerOpen`), then space e once, its title gone and a mode other than FILES
+ * on the status line waited for — each press seen taking effect before the next, never on the which-key popup.
+ */
 export async function explorerClosed(s: Session): Promise<void> {
-  for (let i = 0; i < 3 && s.rowOf(/Explorer/) >= 0; i++) {
-    const was = s.statusLine().includes("FILES");
-    await leader(s, "e");
-    await s.until(
-      () => s.rowOf(/Explorer/) < 0 || s.statusLine().includes("FILES") !== was,
-      undefined,
-      "space e to focus or close the explorer",
-    );
-  }
-  await s.notSee(/Explorer/);
+  const closed = () => s.rowOf(EXPLORER) < 0 && mode(s) !== null && mode(s) !== "FILES";
+  if (closed()) return;
+  await explorerOpen(s);
+  await leader(s, "e");
+  await s.until(closed, undefined, "space e to close the explorer");
 }
 
 /** Select the explorer's row named `name` (it has focus, the row on screen): from the top, down to it. */
@@ -211,7 +224,7 @@ export async function explorerRow(s: Session, name: string): Promise<void> {
   // explorer shows the row: a busy slipbox draws it late.
   const find = () => {
     const screen = s.screen();
-    const title = screen.findIndex((r) => /Explorer/.test(r));
+    const title = screen.findIndex((r) => EXPLORER.test(r));
     if (title < 0) return null;
     const border = [...screen[title]!].findIndex((c) => c === "│" || c === "┃");
     const left = (r: string) => [...r].slice(3, border).join("");

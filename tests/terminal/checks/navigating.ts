@@ -15,6 +15,7 @@ import {
   leader,
   MEETING,
   moveTo,
+  OUTLINE,
   open,
   panelFocused,
   pos,
@@ -430,7 +431,7 @@ export const NAVIGATING: Check[] = [
     covers: { cases: ["outline"], commands: ["outline.cycle", "outline.pick", "outline.toggle"] },
     options: { open: HANDBOOK, size: { cols: 100, rows: 34 } },
     run: async (s) => {
-      await panelFocused(s, "o", "OUTLINE", /Outline/);
+      await panelFocused(s, "o", "OUTLINE", OUTLINE);
       await s.see("Outline");
       await s.keys("escape");
       await leader(s, "f", "o");

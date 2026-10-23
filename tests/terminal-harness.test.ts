@@ -2,7 +2,10 @@
 // reading back what a program draws and answering what it asks (TT-T1).
 
 import { describe, expect, test } from "bun:test";
-import { opened } from "./terminal/check.ts";
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import { COMMAND_SPECS } from "../src/core/command-specs.ts";
+import { EXPLORER, explorerClosed, explorerOpen, mode, OUTLINE, opened } from "./terminal/check.ts";
 import { encodeKey } from "./terminal/keys.ts";
 import { Session } from "./terminal/session.ts";
 import { HeadlessTerminal } from "./terminal/terminal.ts";
@@ -304,4 +307,102 @@ describe("what the checks share (check.ts)", () => {
       s.cleanup();
     }
   });
+
+  // The explorer as `space e` cycles it (panels.ts: opened and focused, focused, closed), on a screen behind its own
+  // trace: a key is in the trace at once with a frame after it, but what it did is drawn LAG ms later, as a loaded
+  // runner's slipbox paints before its terminal has caught up. Meanwhile the which-key popup drawn after `space` stays,
+  // its line for `space e` the command's title, as slipbox's is (#18).
+  const LAG = 400;
+  const LABEL = COMMAND_SPECS.find((c) => c.id === "explorer.cycle")!.title;
+  const cycling = [
+    "stty -echo -icanon min 1 time 0",
+    "pending=0",
+    "draw() {",
+    "  printf '\\033[2J\\033[H'",
+    "  if [ $shown = 1 ]; then printf ' ≡  Explorer   +  +  │ home.md'; else printf '    home.md'; fi",
+    "  if [ $pending = 1 ]; then printf '\\033[4;1H  │ e   → %s  │' \"$LABEL\"; chip='␣'",
+    "  elif [ $focused = 1 ]; then chip=FILES; else chip=READ; fi",
+    "  printf '\\033[8;1H %s  notes  ‹ home.md ›  L1:1' \"$chip\"",
+    "}",
+    "draw",
+    'while c=$(dd bs=1 count=1 2>/dev/null) && [ -n "$c" ]; do',
+    "  if [ \"$c\" = ' ' ]; then pending=1; draw; printf 'key\\nframe\\n' >> \"$T\"",
+    '  elif [ "$c" = e ] && [ $pending = 1 ]; then',
+    '    pending=0; printf e >> "$PRESSED"',
+    "    if [ $shown = 1 ] && [ $focused = 0 ]; then focused=1",
+    "    elif [ $shown = 1 ]; then shown=0; focused=0",
+    "    else shown=1; focused=1; fi",
+    "    printf 'key\\nframe\\n' >> \"$T\"; sleep $LAG; draw",
+    "  fi",
+    "done",
+  ].join("\n");
+  const STARTS = { closed: [0, 0], open: [1, 0], focused: [1, 1] } as const;
+  /** The fake explorer, started `closed`, `open` or `focused`; `presses()`, the `space e`s it has taken. */
+  const explorer = async (start: keyof typeof STARTS) => {
+    const s = new Session({ size: { cols: 60, rows: 10 } });
+    const pressed = join(s.dir, "pressed");
+    const [shown, focused] = STARTS[start];
+    s.term.spawn(["sh", "-c", cycling], {
+      cwd: "/",
+      env: {
+        ...env,
+        T: s.trace,
+        PRESSED: pressed,
+        LABEL,
+        LAG: String(LAG / 1000),
+        shown: `${shown}`,
+        focused: `${focused}`,
+      },
+    });
+    await until(() => s.statusLine().includes("home.md"), "the fake explorer's first frame");
+    const presses = () => (existsSync(pressed) ? readFileSync(pressed, "utf8") : "").length;
+    return { s, presses };
+  };
+
+  test("the panels' own titles, never the which-key popup's lines that name them", () => {
+    const popup = (id: string) => `  │ e   → ${COMMAND_SPECS.find((c) => c.id === id)!.title}  │`;
+    expect(EXPLORER.test(popup("explorer.cycle"))).toBe(false);
+    expect(OUTLINE.test(popup("outline.cycle"))).toBe(false);
+    // As slipbox draws them, the Nerd Font's glyphs in use: the explorer's buttons before its border; the outline after
+    // the right panel's.
+    expect(EXPLORER.test(" ≡  Explorer               󰝒  󰉗  │ 1 operations-handbook.md × │")).toBe(true);
+    expect(OUTLINE.test(" ±  󰉋 equipment     ● │ § Halden Ridge Observatory    │ Outline           󰋽")).toBe(true);
+  });
+
+  test.each([
+    ["closed", 1],
+    ["open", 1],
+    ["focused", 0],
+  ] as const)("explorerOpen from %s presses space e %d times, never again on the which-key popup", async (start, n) => {
+    const { s, presses } = await explorer(start);
+    try {
+      await explorerOpen(s);
+      await Bun.sleep(LAG + 200); // a press too many, drawn by now
+      expect(presses()).toBe(n);
+      expect(mode(s)).toBe("FILES");
+      expect(s.rowOf(EXPLORER)).toBeGreaterThanOrEqual(0);
+    } finally {
+      s.cleanup();
+    }
+  });
+
+  test.each([
+    ["open", 2],
+    ["focused", 1],
+    ["closed", 0],
+  ] as const)(
+    "explorerClosed from %s presses space e %d times, never again on the which-key popup",
+    async (start, n) => {
+      const { s, presses } = await explorer(start);
+      try {
+        await explorerClosed(s);
+        await Bun.sleep(LAG + 200);
+        expect(presses()).toBe(n);
+        expect(mode(s)).toBe("READ");
+        expect(s.rowOf(/Explorer/)).toBe(-1);
+      } finally {
+        s.cleanup();
+      }
+    },
+  );
 });
