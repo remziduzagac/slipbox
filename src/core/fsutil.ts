@@ -138,14 +138,21 @@ export function landsInside(root: string, path: string): boolean {
 }
 
 /**
- * Whether what a move takes at `path` is inside `root` (D?1): a symlink named itself is its own entry, in its folder
- * (by that folder's real path), wherever it leads; anything else by its real path, as `landsInside`.
+ * Whether what a move takes at `path` is inside `root` (D?1): a symlink moved as a link (`asLink`) by its own entry,
+ * in its folder by that folder's real path, wherever it leads; anything else by its real path, as `landsInside`.
  */
-export function entryInside(root: string, path: string): boolean {
+export function entryInside(root: string, path: string, asLink: boolean): boolean {
+  return landsInside(root, asLink && entryAt(path) && lstatSync(path).isSymbolicLink() ? dirname(resolve(path)) : path);
+}
+
+/** Whether anything is at `path` — a link leading nowhere too, which `existsSync` says isn't there. */
+export function entryAt(path: string): boolean {
   try {
-    if (lstatSync(path).isSymbolicLink()) return landsInside(root, dirname(resolve(path)));
-  } catch {}
-  return landsInside(root, path);
+    lstatSync(path);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export interface Stamp {

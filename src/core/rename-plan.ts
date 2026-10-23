@@ -3,19 +3,43 @@
 
 import { execFileSync } from "node:child_process";
 import { statSync } from "node:fs";
-import { dirname } from "node:path";
+import { dirname, relative, sep } from "node:path";
 import { classify } from "./filetypes.ts";
-import { readText } from "./fsutil.ts";
+import { readText, realTarget } from "./fsutil.ts";
 import type { Graph } from "./graph.ts";
 import { gitArgs } from "./gitops.ts";
-import { writesThrough } from "./symlinks.ts";
-import { findVaultRoot, homeOf, isInside } from "./vault.ts";
+import { isLink, movedLinkText, writesThrough } from "./symlinks.ts";
+import { findVaultRoot, homeOf, isInside, vaultOf } from "./vault.ts";
 import { type Site, replaceAt } from "./rename-links.ts";
 
 export class RenameError extends Error {}
 
 /** Why a plan leaves a file as it is when a link leads it out of its vault (VV-D6). */
 export const LEADS_OUT = "a link leads it out of the vault: not rewritten";
+
+/** Why a plan leaves a file as it is when a link leads it into a folder the walk doesn't list (VV-D6). */
+export const LEADS_HIDDEN = "a link leads it into a folder the walk doesn't list: not rewritten";
+
+/** Why a plan may not write the file at `abs` (`mayRewrite`), said as its skipped row says it. */
+export const notRewritten = (g: Graph, abs: string): string => (landsHidden(g, abs) ? LEADS_HIDDEN : LEADS_OUT);
+
+/**
+ * Whether a link on the way leads a write to `abs` where the vault or home holding it doesn't list (VV-D6): by its
+ * real path, in a hidden folder or file of that place, `.git` and `.slipbox` among them, but one this vault has
+ * reached there (20.8) — refused as it's refused named there, as the command line's `checkWritable` measures it: one
+ * into `.shelved/`, or `~/notes/x.md → ~/.bashrc`. A path named there itself (a vault's own `config.toml`) is its own.
+ */
+export function landsHidden(g: Graph, abs: string): boolean {
+  const dotted = (rel: string) => rel.split(sep).some((part) => part.startsWith("."));
+  const named = vaultOf(abs);
+  if (named && dotted(relative(named, abs))) return false;
+  const real = realTarget(abs);
+  const place = vaultOf(real);
+  if (!place) return false;
+  const there = relative(realTarget(place), real);
+  if (!dotted(there)) return false;
+  return !(realTarget(place) === realTarget(g.root) && g.reached.has(there.split(sep).join("/")));
+}
 
 /**
  * Whether a plan may write the file at `abs` (VV-D6): it lands where each place holding it allows — this vault, when
@@ -24,6 +48,7 @@ export const LEADS_OUT = "a link leads it out of the vault: not rewritten";
  * Elsewhere's only while it's the place open: it has no index for another's plan to find it by.
  */
 export function mayRewrite(g: Graph, abs: string): boolean {
+  if (landsHidden(g, abs)) return false;
   const here = isInside(g.root, abs);
   if (here && !writesThrough(g.loc, abs)) return false;
   const own = findVaultRoot(abs);
@@ -58,7 +83,7 @@ export interface RenamePlan {
   from: string;
   to: string;
   /** What moves: a file or a folder, absolute paths; null for a vault's rename or a relink. */
-  move: { from: string; to: string; dir: boolean } | null;
+  move: { from: string; to: string; dir: boolean; link?: boolean } | null;
   /** Every file that moves, vault paths old → new (a folder's: each file in it). */
   moves?: [string, string][];
   /** Vaults that move with a vault's folder (18.7), absolute roots old → new: the machine's list follows. */
@@ -115,9 +140,9 @@ export class Collector {
     let f = this.files.get(abs);
     if (!f) {
       if (this.why.has(abs)) return null;
-      // Read through a link out of its vault, never written there: left as it is, and said (VV-D6).
+      // Read through a link out of its vault, or into a hidden folder, never written there: left, and said (VV-D6).
       if (!mayRewrite(this.g, abs)) {
-        this.why.set(abs, LEADS_OUT);
+        this.why.set(abs, notRewritten(this.g, abs));
         return null;
       }
       let text: string;
@@ -224,4 +249,13 @@ export function sameFile(a: string, b: string): boolean {
   } catch {
     return false;
   }
+}
+
+/**
+ * What a plan moving a link says of it (D?1): a relative one moved itself to another folder is written again there, to
+ * lead where it did — no link's edit, so said. `from` and `to` as the plan shows them.
+ */
+export function relinkSaid(move: RenamePlan["move"], from: string, to: string): string[] {
+  const text = move?.link && isLink(move.from) ? movedLinkText(move.from, move.to) : null;
+  return text ? [`${from} is a relative link: written again at ${to} to lead where it did (${text})`] : [];
 }

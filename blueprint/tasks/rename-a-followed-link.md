@@ -72,7 +72,7 @@ to lead where it did (D?1).
     `0 changes`.
 - 2026-10-23: Not a neighbour: a link with two names to one target is walked once (`twice`), so the second isn't in
   the index and `mv` says `no folder relout`, as for a link not followed.
-- 2026-10-23: Codex challenged the cause and the plan: the cause holds (no other step resolves the source: the CLI's
+- 2026-10-23: The cause and the plan reviewed: the cause holds (no other step resolves the source: the CLI's
   `folderArg` and the TUI's `movePlan` pass the path as named). Taken: an answer is moved only once the move has
   succeeded, and replaces whatever the new path had (an undo carries the answer there is then, never an old one);
   a relative link re-pointed from its `readlink` text, not its real path (a link to a link stays one); the watcher
@@ -83,7 +83,7 @@ to lead where it did (D?1).
   saying `[a](z.md)`, and `out/s.md` as it was. `applyPlan` writes each file with `atomicWrite` at its path as
   reached, and the rename over it replaces the link. With this fix, moving such a link itself in home, when its own
   links need rewriting, would do the same: it has to write through the link.
-- 2026-10-23: Asked the maintainer: the answer moves with the link (only for a link moved itself); a relative link is
+- 2026-10-23: The maintainer chose: the answer moves with the link (only for a link moved itself); a relative link is
   written again to lead where it did; the home bug is fixed here; copy and delete of a link stay refused. Recorded as
   D?1 (decisions/roots-and-links.md), with a note under VV-D6.
 - 2026-10-23: Fixed. `entryInside` (`src/core/fsutil.ts`): a symlink named itself checked by its folder's real path,
@@ -102,21 +102,21 @@ to lead where it did (D?1).
   checkSource and outside by the real path, entryInside letting a link inside the target through, the answer not
   moved, a stale answer kept, no re-pointing, no way back in the text, the text resolved lexically, a link to a link
   flattened, a plan's file written over a link, a moved link's own text written over it, a link moved as a file: each
-  fails a test (tmp logs `t14-mutate*.log`).
+  fails a test.
 - 2026-10-23: Live, this worktree's TUI on the scratch vault: `r` on `outdir` previews `outdir/ → outlink/: 1 change in
   1 file`; applied, `outlink` is followed and indexed (`●`), unfolds without asking, `:e outlink/s.md` opens, and an
   edit to its target from outside reloads it (`↻ outlink/s.md changed on disk — reloaded`): the watcher follows. `m`
   on `relout` into `box` says `! relout is a relative link: written again at box/relout to lead where it did
   (../../../out2)`; applied, `box/relout → ../../../out2`, its answer moved. `m` on `ext.md` into `box`: a link still,
   `b.md` following. `:undo-rename` twice: each back, `relout → ../../out2` as it was, the answers at their old paths.
-  `:mv` of `outdir/s.md`: `! outdir/s.md resolves outside the vault`, nothing moved. Live in home, the release:
-  tmp/issue/live-home1.log (the bug); the test above covers it fixed.
+  `:mv` of `outdir/s.md`: `! outdir/s.md resolves outside the vault`, nothing moved. Live in home, the release showed
+  the bug, as above; the test covers it fixed.
 - 2026-10-23: Terminal check added (tests/terminal/checks/vaults.ts, `links: a followed link renamed with r, a
   relative one moved with m — …`): passes; fails with checkSource by the real path, and with a link moved as a file.
   Run beside it, passing: the explorer's file operations, `rename:` (four), `files: space d`, `files: a folder with an
   unsaved note`, `nested roots: the explorer's row`, and the two followed-link checks (11/11). Unit tests reached
   (`renam|move|undo|plans|VV-D6|replace|convert|symlink|relink` in vault, cli and tui tests): 285 pass.
-- 2026-10-23: Codex reviewed the diff. Taken: (1) `applyPlan` checked a plan's file where it was (`mayRewrite` on
+- 2026-10-23: The diff reviewed. Taken: (1) `applyPlan` checked a plan's file where it was (`mayRewrite` on
   `f.abs`) but wrote at `realTarget` of where it is after the move, so a relative file link inside a moved folder could
   lead the write somewhere new, out of the vault even (`a/docs/kept.md → ../../.shelved/kept.md`, `a/docs` moved up
   to `docs`, leads to the vault's parent): each file's real target is found before anything moves now, what's inside
@@ -126,7 +126,7 @@ to lead where it did (D?1).
   TUI's messages show it; (6) the terminal check now changes the renamed link's target from outside and sees it read
   again. Not taken: (4) numbering `D?1`: a root decision is numbered when it's merged. Tests: `a folder moved with a
   relative file link in it: …` (tests/vault.test.ts), and in `a link moved as a link: …` a `\` in a name and the state
-  folder made unwritable. Mutation-checked (`t14-mutate3.log`): writing where the moved link leads, a moved folder's
+  folder made unwritable. Mutation-checked: writing where the moved link leads, a moved folder's
   files written at their old place, `\` split on POSIX, the lost answer not said: each fails a test. Reached unit
   tests: 286 pass; the 11 terminal checks: pass.
 - 2026-10-23: Found, trying a nested vault reached through a link: a followed link to another vault is a nested vault
@@ -135,4 +135,23 @@ to lead where it did (D?1).
   Before the fix every link was refused. A link leading to a vault, or to a folder holding one, stays refused now:
   `checkSource`'s `vaults` (from `planVaultFolderMove`, and `planFolderMove` when vaults are nested under it), and
   `outside` when a plan carries vaults. Test: `a followed link to a vault, or to a folder holding one, isn't moved by
-  its name: …`; mutation-checked, each of the three (`t14-mutate4.log`).
+  its name: …`; mutation-checked, each of the three.
+- 2026-10-23: The diff reviewed again. Taken: (1) with plans written through links, a rename's relinking wrote into a
+  hidden folder through a link inside the place (`n.md → .hidden/n.md`, `~/rc.md → ~/.bashrc`), which a write named
+  there is refused: `landsHidden` in `mayRewrite` leaves such a file, its row saying `a link leads it into a folder the
+  walk doesn't list: not rewritten` — only a link's doing: a path named there (a vault's own `.slipbox/config.toml`, a
+  note reached there) is written as before; (2) a file link moved after the plan's other files were written, and a
+  link leading nowhere where it went (which `existsSync` doesn't see) failed it half done: it moves first now, as a
+  folder does, a destination is taken as there by `lstat` (`entryAt`) when planned and carried out, and a failed
+  move says `… can't be moved (EACCES); nothing changed`; (3) a link whose target another indexed name reaches had
+  its own links rewritten for its new folder, breaking them for the other: left, and said; (5) an undo judged any
+  link by its entry, so a link a pull put where a folder went was moved back: the plan says `move.link`, and the undo
+  moves back as a link only what moved as one; (6) an undo re-pointing a relative link says so; (7) a failed
+  rollback in `moveLink` no longer hides why the move failed; (8) the CHANGELOG says vaults too; (9, 10) the link
+  rule is one flag, `move.link`, and `links.json` written in one place (`keep`); (11) this Log names no session.
+  Not taken: (4) a real folder holding a followed link to a vault, moved, records that vault at the link's path: it
+  did before this change too (nothing here allows it), so it's a follow-up of its own. Tests (tests/vault.test.ts):
+  `a rename's relinking never writes through a link into a folder the walk doesn't list, …`, `a file link moved where
+  a link leading nowhere is: …`, `undo moves back only what moved as it moved: …`, the undo's warning in `a followed
+  link out of the vault, named itself, …`; the earlier `a folder moved with a relative file link in it` now reaches
+  its note through `walk.exclude`, a hidden one being never written. Mutation-checked, each of the ten: fails a test.

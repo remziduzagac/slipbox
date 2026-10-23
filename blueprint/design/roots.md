@@ -377,7 +377,8 @@ of every read through a link out of the root; D220's writes stay for vaults.
   — a note's text, a new note, a new folder, in the CLI and the TUI alike (`newPath` in `tui/files.ts`); in a vault,
   reading and the index, never a write that lands outside the vault, followed or not (D220); in Elsewhere, what the
   file system allows. Plans keep to it (`mayRewrite` in `core/rename-plan.ts`): a rename's relinking, a replace across
-  files, the converter and a heading's rename leave a file whose write would land out of its vault as it is, a
+  files, the converter and a heading's rename leave a file whose write would land out of its vault as it is, or
+  through a link where its place doesn't list it (`landsHidden`: a hidden folder, as `checkWritable` measures it), a
   `skipped` row saying so, and `applyPlan` refuses a plan holding one, or moving anything from or to outside the vault
   (`outside`), before it writes: an undo and a saved plan are checked as they're carried out. What it writes it writes
   where it was read, found before anything moves: a file reached through a link, through the link, never over it, nor
@@ -388,7 +389,10 @@ of every read through a link out of the root; D220's writes stay for vaults.
   folder by its real path (`entryInside` in `core/fsutil.ts`), and it's renamed or moved as a link (`moveLink` in
   `core/symlinks.ts`; D?1), what it leads to staying where it is; its answer goes with it, in place of any kept where
   it goes (one that can't be kept there, the state folder unwritable, said), and a relative one moved to another
-  folder is written again there to lead where it did, from its own text, the plan saying so (`movedLinkText`). A link
+  folder is written again there to lead where it did, from its own text, the plan and its undo saying so
+  (`movedLinkText`). Its plan's `move.link` says it moves as one, and its undo moves it back as one: a link put
+  where something else went is judged by where it leads. A link's own relative links are left, and said, when another
+  name the index holds leads to the same file. A link
   inside a folder that moves is left as the folder's move leaves it; a link leading to a vault, or to a folder holding
   one, isn't moved (`checkSource`'s `vaults`, `outside`), a vault being known by its real path; a copy or delete of a
   link out is refused still. An export's default place, beside a note reached through a link out of the vault, is

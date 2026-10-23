@@ -124,9 +124,17 @@ export function setLinkAnswer(link: string, answer: LinkAnswer | null): void {
   const target = linkTarget(link);
   const list = kept().filter((e) => e.link !== key);
   if (answer && target) list.push({ link: key, target, answer, at: new Date().toISOString() });
+  keep(list);
+}
+
+/** The answers kept, written: `links.json` in the state folder (VV-D6). */
+function keep(links: KeptLink[]): void {
   ensureDir(stateHome());
-  writeJson(linksFile(), { version: 1, links: list });
-  cache = null;
+  try {
+    writeJson(linksFile(), { version: 1, links });
+  } finally {
+    cache = null;
+  }
 }
 
 /** An answer kept (VV-D6), as it's listed: and where the link leads now, the answer holding only while it's `target`. */
@@ -151,9 +159,7 @@ export function forgetLinkAnswer(link: string): KeptLink | null {
   const list = kept();
   const hit = list.find((e) => keys.has(e.link));
   if (!hit) return null;
-  ensureDir(stateHome());
-  writeJson(linksFile(), { version: 1, links: list.filter((e) => e !== hit) });
-  cache = null;
+  keep(list.filter((e) => e !== hit));
   return hit;
 }
 
@@ -176,8 +182,10 @@ export function moveLink(from: string, to: string): string | null {
     try {
       unlinkSync(from);
     } catch (err) {
-      unlinkSync(to);
-      throw err;
+      try {
+        unlinkSync(to);
+      } catch {}
+      throw err; // why the move failed, not why taking it back did
     }
   }
   // Moved, the link keeps its answer.
@@ -187,12 +195,10 @@ export function moveLink(from: string, to: string): string | null {
   const rest = list.filter((e) => e.link !== was && e.link !== now);
   if (!hit && rest.length === list.length) return null;
   try {
-    writeJson(linksFile(), { version: 1, links: hit ? [...rest, { ...hit, link: now }] : rest });
+    keep(hit ? [...rest, { ...hit, link: now }] : rest);
   } catch (err) {
     const why = (err as NodeJS.ErrnoException).code ?? String(err);
     return `${tildePath(to)}: the link moved, but its answer couldn't be kept for its new place (${why}); slipbox symlinks lists the answers kept`;
-  } finally {
-    cache = null;
   }
   return null;
 }

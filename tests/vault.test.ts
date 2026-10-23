@@ -7774,6 +7774,7 @@ describe("plans write only inside the vault (VV-D6)", () => {
         from: link,
         to: join(vault, "outlink"),
         dir: true,
+        link: true,
       });
       expect(planNoteRename(g, "ext.md", "box/ext.md").move?.to).toBe(join(vault, "box", "ext.md"));
       // Through the CLI: each link moves, what it leads to stays, and the links to it follow.
@@ -7804,8 +7805,13 @@ describe("plans write only inside the vault (VV-D6)", () => {
           .map((e) => e.link)
           .filter((k) => k.startsWith(`${vault}/`));
       expect(keys().sort()).toEqual([join(vault, "box", "ext.md"), join(vault, "box", "rel"), join(vault, "outlink")]);
-      // Undone, each link is back where it was, as it was written, its answer with it.
-      for (let i = 0; i < 3; i++) expect((await cli(["undo"], vault)).code).toBe(0);
+      // Undone, each link is back where it was, as it was written, its answer with it; the relative one said again.
+      const undone = await cli(["undo"], vault);
+      expect(undone.code).toBe(0);
+      expect(undone.json.warnings).toContain(
+        "box/rel is a relative link: written again at rel to lead where it did (../far)",
+      );
+      for (let i = 0; i < 2; i++) expect((await cli(["undo"], vault)).code).toBe(0);
       expect([lstatSync(link), lstatSync(file), lstatSync(rel)].map((s) => s.isSymbolicLink())).toEqual([
         true,
         true,
@@ -7821,7 +7827,7 @@ describe("plans write only inside the vault (VV-D6)", () => {
       expect(() => planNoteRename(g2, "outdir/s.md", "s.md")).toThrow("outdir/s.md resolves outside the vault");
       expect(() => planNoteRename(g2, "a.md", "outdir/a.md")).toThrow("outdir/a.md would land outside the vault");
       symlinkSync(join(outer, "s.md"), join(outer, "inner.md"));
-      const inner = { from: join(link, "inner.md"), to: join(vault, "inner.md"), dir: false };
+      const inner = { from: join(link, "inner.md"), to: join(vault, "inner.md"), dir: false, link: true };
       const plan = { kind: "note" as const, from: "outdir/inner.md", to: "inner.md", move: inner, files: [] };
       expect(() => applyPlan(g2, { ...plan, warnings: [], skipped: [] })).toThrow(
         "outdir/inner.md resolves outside the vault",
@@ -7901,6 +7907,98 @@ describe("plans write only inside the vault (VV-D6)", () => {
   );
 
   test(
+    "a rename's relinking never writes through a link into a folder the walk doesn't list, in a vault or home: said",
+    homed(async (home) => {
+      const top = realpathSync(mkdtempSync(join(tmpdir(), "slipbox-inside-")));
+      const vault = join(top, "vault");
+      mkdirSync(join(vault, ".slipbox"), { recursive: true });
+      mkdirSync(join(vault, ".hidden"));
+      mkdirSync(join(vault, "box"));
+      writeFileSync(join(vault, "a.md"), "# A\n");
+      writeFileSync(join(vault, ".hidden", "n.md"), "# N\n\nsee [a](a.md)\n");
+      symlinkSync(".hidden/n.md", join(vault, "n.md"));
+      const r = await cli(["mv", "a.md", "z.md"], vault);
+      expect(r.code).toBe(0);
+      expect(r.json.warnings).toContain("n.md:3: a link leads it into a folder the walk doesn't list: not rewritten");
+      expect(readFileSync(join(vault, ".hidden", "n.md"), "utf8")).toBe("# N\n\nsee [a](a.md)\n");
+      // The link moved itself: its own links aren't written there either.
+      expect((await cli(["mv", "n.md", "box/"], vault)).code).toBe(0);
+      expect(lstatSync(join(vault, "box", "n.md")).isSymbolicLink()).toBe(true);
+      expect(readFileSync(join(vault, ".hidden", "n.md"), "utf8")).toBe("# N\n\nsee [a](a.md)\n");
+      // Home's own: a note that is a link to ~/.bashrc.
+      writeFileSync(join(home, "b.md"), "# B\n");
+      writeFileSync(join(home, ".bashrc"), "# rc\n\n[b](b.md)\n");
+      symlinkSync(join(home, ".bashrc"), join(home, "rc.md"));
+      expect((await cli(["mv", "b.md", "c.md"], home)).code).toBe(0);
+      expect(readFileSync(join(home, ".bashrc"), "utf8")).toBe("# rc\n\n[b](b.md)\n");
+    }),
+  );
+
+  test(
+    "a file link moved where a link leading nowhere is: refused, nothing written; one shared with another name keeps its own links",
+    homed(async (home) => {
+      const { planNoteRename } = await import("../src/core/rename.ts");
+      const top = realpathSync(mkdtempSync(join(tmpdir(), "slipbox-inside-")));
+      writeFileSync(join(home, "a.md"), "# A\n");
+      writeFileSync(join(top, "s.md"), "# S\n\nsee [a](a.md)\n");
+      writeFileSync(join(home, "b.md"), "# B\n\n[e](e1.md)\n");
+      for (const n of ["e1.md", "e2.md"]) {
+        symlinkSync(join(top, "s.md"), join(home, n));
+        setLinkAnswer(join(home, n), "follow");
+      }
+      await probe(join(top, "s.md"));
+      mkdirSync(join(home, "box"));
+      // Planned, then a link leading nowhere put where it goes: carried out, refused, nothing written.
+      const g = openGraph(locateVault({ root: home }), DEFAULT_CONFIG, false);
+      const plan = planNoteRename(g, "e1.md", "box/e1.md");
+      symlinkSync(join(top, "gone.md"), join(home, "box", "e1.md"));
+      expect(() => applyPlan(g, plan)).toThrow("exists now; nothing changed");
+      expect(readFileSync(join(home, "b.md"), "utf8")).toBe("# B\n\n[e](e1.md)\n");
+      expect(lstatSync(join(home, "e1.md")).isSymbolicLink()).toBe(true);
+      const there = await cli(["mv", "e1.md", "box/"], home);
+      expect([there.code, there.json.error.message]).toEqual([5, "box/e1.md exists; not overwriting it"]);
+      rmSync(join(home, "box", "e1.md"));
+      // Where it can't be made (its folder can't be written), nothing is written either.
+      chmodSync(join(home, "box"), 0o500);
+      try {
+        expect(() => applyPlan(g, plan)).toThrow("e1.md can't be moved (EACCES); nothing changed");
+      } finally {
+        chmodSync(join(home, "box"), 0o755);
+      }
+      expect(readFileSync(join(home, "b.md"), "utf8")).toBe("# B\n\n[e](e1.md)\n");
+      // What it leads to is e2.md's too: its links are left as they are, and said.
+      const moved = await cli(["mv", "e1.md", "box/"], home);
+      expect(moved.code).toBe(0);
+      expect(moved.json.warnings).toContain("e1.md: what it leads to is e2.md too: its own links left as they are");
+      expect(readFileSync(join(top, "s.md"), "utf8")).toBe("# S\n\nsee [a](a.md)\n");
+      expect(readFileSync(join(home, "b.md"), "utf8")).toBe("# B\n\n[e](box/e1.md)\n");
+    }),
+  );
+
+  test(
+    "undo moves back only what moved as it moved: a link put where a folder went isn't moved back as a link",
+    homed(async () => {
+      const top = realpathSync(mkdtempSync(join(tmpdir(), "slipbox-inside-")));
+      const vault = join(top, "vault");
+      const ext = join(top, "ext");
+      mkdirSync(join(vault, ".slipbox"), { recursive: true });
+      mkdirSync(join(vault, "a"));
+      mkdirSync(ext);
+      writeFileSync(join(vault, "a", "n.md"), "# N\n");
+      writeFileSync(join(ext, "n.md"), "# N\n\nfrom outside\n");
+      expect((await cli(["mv", "a", "b"], vault)).code).toBe(0);
+      rmSync(join(vault, "b"), { recursive: true });
+      symlinkSync(ext, join(vault, "b")); // a pull made it a link out
+      const r = await cli(["undo"], vault);
+      expect([r.code, r.json.error.message]).toEqual([
+        5,
+        "b resolves outside the vault: the move of a/ can't be undone",
+      ]);
+      expect([lstatSync(join(vault, "b")).isSymbolicLink(), existsSync(join(vault, "a"))]).toEqual([true, false]);
+    }),
+  );
+
+  test(
     "a folder moved with a relative file link in it: the link's note written where it was read, never where the moved link leads",
     homed(async () => {
       const top = realpathSync(mkdtempSync(join(tmpdir(), "slipbox-inside-")));
@@ -7908,16 +8006,18 @@ describe("plans write only inside the vault (VV-D6)", () => {
       mkdirSync(join(vault, ".slipbox"), { recursive: true });
       mkdirSync(join(vault, "a", "docs"), { recursive: true });
       writeFileSync(join(vault, "a", "b.md"), "# B\n");
-      // The note kept in a hidden folder, reached by its link only; beside the vault, where the link moved up leads.
-      mkdirSync(join(vault, ".shelved"));
-      writeFileSync(join(vault, ".shelved", "kept.md"), "# Kept\n\n[b](../b.md)\n");
-      mkdirSync(join(top, ".shelved"));
-      writeFileSync(join(top, ".shelved", "kept.md"), "# Outside\n");
-      symlinkSync("../../.shelved/kept.md", join(vault, "a", "docs", "kept.md"));
+      // The note kept where the walk leaves it out, reached by its link only; beside the vault, where the link moved up
+      // leads.
+      writeFileSync(join(vault, ".slipbox", "config.toml"), '[walk]\nexclude = ["shelf/"]\n');
+      mkdirSync(join(vault, "shelf"));
+      writeFileSync(join(vault, "shelf", "kept.md"), "# Kept\n\n[b](../b.md)\n");
+      mkdirSync(join(top, "shelf"));
+      writeFileSync(join(top, "shelf", "kept.md"), "# Outside\n");
+      symlinkSync("../../shelf/kept.md", join(vault, "a", "docs", "kept.md"));
       const r = await cli(["mv", "a/docs", "docs"], vault);
       expect(r.code).toBe(0);
-      expect(readFileSync(join(vault, ".shelved", "kept.md"), "utf8")).toBe("# Kept\n\n[b](../a/b.md)\n");
-      expect(readFileSync(join(top, ".shelved", "kept.md"), "utf8")).toBe("# Outside\n");
+      expect(readFileSync(join(vault, "shelf", "kept.md"), "utf8")).toBe("# Kept\n\n[b](../a/b.md)\n");
+      expect(readFileSync(join(top, "shelf", "kept.md"), "utf8")).toBe("# Outside\n");
       expect(lstatSync(join(vault, "docs", "kept.md")).isSymbolicLink()).toBe(true);
     }),
   );

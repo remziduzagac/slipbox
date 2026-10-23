@@ -32,8 +32,9 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 - A followed link that leads out of the vault can be renamed or moved itself, from the explorer or with `slipbox mv`.
   The link moves and stays followed, what it leads to stays where it is, and a relative link moved to another folder
   still leads to the same place. Before, the move was refused as `… resolves outside the vault`.
-- In home, a rename that rewrote a link in a note reached through a followed file link wrote the note over the link,
-  as a copy, and left the note the link leads to unchanged. It's written through the link now.
+- A rename that rewrote a link in a note reached through a file link wrote the note over the link, as a copy, and left
+  the note the link leads to unchanged. It's written through the link now, or, where the link leads into a hidden
+  folder, left as it is, and the preview says so.
 - A release is on the installer's site as soon as it's published, so `curl … | sh` and `slipbox upgrade` on the stable
   channel find it at once. 0.5.0's wasn't until the site was deployed again, an hour later.
 - With `render.mermaid = "picture"` on a machine without a sans font (DejaVu, Liberation, Noto, Arial or Helvetica), a

@@ -1114,18 +1114,18 @@ the switcher and find following the setting (they'd list files the index doesn't
 
 ## D?1: A link renamed or moved itself moves as a link, its answer with it (#11, 2026-10-23)
 
-**Decision:** A symlink named itself in a rename or a move — the explorer's `r` and `m`, `space n m`, `slipbox mv` —
-is renamed or moved as a link, in a vault or home, whatever it leads to: its entry is what's checked to be inside the
+**Decision:** A symlink named itself in a rename or a move — the explorer's `r` and `m`, `space n m`, `slipbox mv` — is
+renamed or moved as a link, in a vault or home, whatever it leads to: its entry is what's checked to be inside the
 vault, in its folder by that folder's real path, and what it leads to stays where it is. The answer kept for it (VV-D6)
-goes with it, in place of any kept for where it goes: the same link, leading to the same place, isn't asked about
-again; an undo moves the answer there is then, never an older one. When it can't be kept there (slipbox's state
-folder can't be written), the move stands, and says so. A relative link moved to another folder is written
-again there to lead where it did, from its own text, so a link to a link stays one; the plan says so. Unchanged: what
-is reached through a link out of the vault is never moved out of it, nor anything into it; a link inside a folder that
-moves is left as the folder's move leaves it; a link leading to a vault, or to a folder holding one, isn't moved, a
-vault being known by its real path; a copy or a delete of a link out is refused. As built: `entryInside`
-(`src/core/fsutil.ts`), `moveLink` and `movedLinkText` (`src/core/symlinks.ts`), called by `applyPlan`; design/roots.md
-§ Links followed only when you say so.
+goes with it, in place of any kept for where it goes: the same link, leading to the same place, isn't asked about again;
+an undo moves the answer there is then, never an older one. When it can't be kept there (slipbox's state folder can't be
+written), the move stands, and says so. A relative link moved to another folder is written again there to lead where it
+did, from its own text, so a link to a link stays one; the plan says so, and its undo. A link's own relative links are
+rewritten through it, as a note's, unless another name leads to the same file. Unchanged: what is reached through a link
+out of the vault is never moved out of it, nor anything into it; a link inside a folder that moves is left as the
+folder's move leaves it; a link leading to a vault, or to a folder holding one, isn't moved, a vault being known by its
+real path; a copy or a delete of a link out is refused. As built: `entryInside` (`src/core/fsutil.ts`), `moveLink` and
+`movedLinkText` (`src/core/symlinks.ts`), called by `applyPlan`; design/roots.md § Links followed only when you say so.
 
 **Why:** The maintainer's choice, 2026-10-23 (#11): a rename of the link changes only its entry in its folder, so
 refusing it as `… resolves outside the vault` refused what never crossed the vault's edge. Moved without its answer, the
