@@ -6553,6 +6553,226 @@ describe("home, a vault without a marker (VV-D2)", () => {
       expect([...g.notes.keys()].sort()).toEqual(["a.md", "b.md"]);
     });
   });
+
+  test("before home's first walk, the watcher looks into no folder its graph hasn't: a folder in one is the walk's, one come into home's top is listed for it; in a folder asked for, or home walked, a folder is taken in (#16)", async () => {
+    const { VaultWatcher } = await import("../src/core/watch.ts");
+    const { HOME_LIMITS } = await import("../src/core/walk.ts");
+    const { applyToGraph } = await import("../src/core/vault-feed.ts");
+    const files: Record<string, string> = { "a.md": "# A\n", "Documents/top.md": "# Top\n", "touched/t.md": "# T\n" };
+    for (const top of ["Documents", "touched", "notes"])
+      for (const d of ["d0", "d1"]) files[`${top}/${d}/sub/n.md`] = "# N\n";
+    await withHome(files, async (home) => {
+      // A person's folders, dated back; touched/ changed in the two seconds before the watcher starts.
+      const hour = new Date(Date.now() - 3_600_000);
+      for (const d of ["", "Documents", "notes", "notes/d0", "notes/d1"]) utimesSync(join(home, d), hour, hour);
+      const g = openGraph(homeAt(home), DEFAULT_CONFIG, true, "lazy");
+      g.askFolder(join(home, "notes")); // `slipbox ~/notes`: walked whole
+      expect(g.home?.walked).toBeNull();
+      const known = new Map([...g.notes.values()].map((n) => [n.rel, n.mtimeMs] as [string, number]));
+      const reported: string[] = [];
+      const toWalk: string[] = [];
+      let rescan = false;
+      const w = new VaultWatcher({
+        root: home,
+        filter: g.filter,
+        dirs: g.dirs,
+        debounceMs: 20,
+        pollMs: 1_000_000,
+        known,
+        walkedAt: () => g.walkedAt,
+        maxDirs: HOME_LIMITS.folders,
+        leftToWalk: (rel) => g.waitsForHomeWalk(rel),
+        onBatch: (b) => {
+          reported.push(...b.changes.map((c) => c.rel));
+          toWalk.push(...(b.toWalk ?? []));
+          rescan ||= b.rescan;
+        },
+        onDegraded: () => {},
+      });
+      /** A tick, its batch and the events' settled: what they reported, the folders they named for the walk, a rescan. */
+      const look = async () => {
+        await Bun.sleep(30);
+        w.pollTick();
+        w.flush();
+        await Bun.sleep(30);
+        w.flush();
+        const out = {
+          reported: [...new Set(reported.splice(0))].sort(),
+          toWalk: [...new Set(toWalk.splice(0))],
+          rescan,
+        };
+        rescan = false;
+        return out;
+      };
+      try {
+        const none = { reported: [], toWalk: [], rescan: false };
+        // touched/ listed again at once: its own note comes, its folders are the walk's.
+        expect(await look()).toEqual({ ...none, reported: ["touched/t.md"] });
+        // A file saved in Documents: the same — nothing a folder down, nothing named (the walk takes them).
+        writeFileSync(join(home, "Documents", "letter.txt"), "Dear…\n");
+        expect(await look()).toEqual({ ...none, reported: ["Documents/letter.txt", "Documents/top.md"] });
+        // A folder come into home's top: left to the walk, named once for the graph to list — no note came with it —
+        // then watched, as the TUI does, never looked into.
+        mkdirSync(join(home, "cloned", "x", "y"), { recursive: true });
+        writeFileSync(join(home, "cloned", "x", "y", "deep.md"), "# Deep\n");
+        expect(await look()).toEqual({ ...none, toWalk: ["cloned"] });
+        expect(await look()).toEqual(none);
+        const notes = [...g.notes.keys()];
+        expect(applyToGraph(g, { changes: [], rescan: false, toWalk: ["cloned"] }, 1e9).structural).toBe(false);
+        expect(g.dirs).toContain("cloned");
+        expect([...g.notes.keys()]).toEqual(notes); // listed, nothing built again
+        w.watch(["cloned"]);
+        writeFileSync(join(home, "cloned", "own.md"), "# Own\n");
+        expect(await look()).toEqual({ ...none, reported: ["cloned/own.md"] });
+        // One gone before it's watched, and made again: new, named again.
+        mkdirSync(join(home, "brief"));
+        expect(await look()).toEqual({ ...none, toWalk: ["brief"] });
+        rmSync(join(home, "brief"), { recursive: true });
+        expect(await look()).toEqual(none);
+        mkdirSync(join(home, "brief"));
+        expect(await look()).toEqual({ ...none, toWalk: ["brief"] });
+        // A known note gone as a folder comes into home's top: none went there, so it's named, not read.
+        rmSync(join(home, "a.md"));
+        mkdirSync(join(home, "bulk", "x"), { recursive: true });
+        writeFileSync(join(home, "bulk", "x", "n.md"), "# N\n");
+        expect(await look()).toEqual({ ...none, reported: ["a.md"], toWalk: ["bulk"] });
+        // Listed as the walk would take it when the batch is applied (held while git wrote): one gone since, or become a
+        // vault, isn't. A vault come into home's top is never named.
+        mkdirSync(join(home, "vaulted", ".slipbox"), { recursive: true });
+        expect(await look()).toEqual(none);
+        applyToGraph(g, { changes: [], rescan: false, toWalk: ["gone", "vaulted"] }, 1e9);
+        expect(g.dirs).not.toContain("gone");
+        expect(g.dirs).not.toContain("vaulted");
+        // A folder left to the walk, gone: nothing to say — it was never a file.
+        rmSync(join(home, "Documents", "d1"), { recursive: true });
+        expect(await look()).toEqual(none);
+        // A folder made in one asked for, which is whole: taken in at once.
+        mkdirSync(join(home, "notes", "d0", "fresh"));
+        writeFileSync(join(home, "notes", "d0", "fresh", "f.md"), "# F\n");
+        expect((await look()).reported).toEqual(["notes/d0/fresh/f.md"]);
+        // The folder asked for renamed: its notes went, so the folder found is where — taken in whole, nothing named.
+        renameSync(join(home, "notes"), join(home, "zettel"));
+        const renamed = await look();
+        expect(renamed.reported.filter((r) => r.endsWith(".md"))).toEqual([
+          "notes/d0/fresh/f.md",
+          "notes/d0/sub/n.md",
+          "notes/d1/sub/n.md",
+          "zettel/d0/fresh/f.md",
+          "zettel/d0/sub/n.md",
+          "zettel/d1/sub/n.md",
+        ]);
+        expect(renamed.toWalk).toEqual([]);
+        // Home walked: a folder that comes is taken in, as in a vault.
+        walkHomeNow(homeAt(home), DEFAULT_CONFIG);
+        g.build(true, "lazy");
+        expect(g.home?.walked).not.toBeNull();
+        expect(g.waitsForHomeWalk("Documents")).toBe(false);
+        w.sync(g.dirs, new Map([...g.notes.values()].map((n) => [n.rel, n.mtimeMs] as [string, number])));
+        await look();
+        mkdirSync(join(home, "Documents", "d9", "sub"), { recursive: true });
+        writeFileSync(join(home, "Documents", "d9", "sub", "z.md"), "# Z\n");
+        expect((await look()).reported).toEqual(["Documents/d9/sub/z.md"]);
+      } finally {
+        w.close();
+      }
+    });
+  });
+
+  test("before home's first walk, a folder of home polled (its watch failed) is listed at every tick: its folders the walk's, never named; one come into home's top named once, then watched (#16)", async () => {
+    const { VaultWatcher } = await import("../src/core/watch.ts");
+    const files: Record<string, string> = { "a.md": "# A\n", "Documents/top.md": "# Top\n" };
+    for (const d of ["d0", "d1"]) files[`Documents/${d}/sub/n.md`] = "# N\n";
+    await withHome(files, async (home) => {
+      const hour = new Date(Date.now() - 3_600_000);
+      for (const d of ["", "Documents"]) utimesSync(join(home, d), hour, hour);
+      const g = openGraph(homeAt(home), DEFAULT_CONFIG, true, "lazy");
+      const known = new Map([...g.notes.values()].map((n) => [n.rel, n.mtimeMs] as [string, number]));
+      // Documents' own note known, as when it came by its event.
+      known.set("Documents/top.md", statSync(join(home, "Documents", "top.md")).mtimeMs);
+      const reported: string[] = [];
+      const toWalk: string[] = [];
+      let rescan = false;
+      const w = new VaultWatcher({
+        root: home,
+        filter: g.filter,
+        dirs: g.dirs,
+        debounceMs: 20,
+        pollMs: 1_000_000,
+        known,
+        walkedAt: () => g.walkedAt,
+        leftToWalk: (rel) => g.waitsForHomeWalk(rel),
+        maxDirs: 4, // home's cap, as if four folders were all it may watch
+        onBatch: (b) => {
+          reported.push(...b.changes.map((c) => c.rel));
+          toWalk.push(...(b.toWalk ?? []));
+          rescan ||= b.rescan;
+        },
+        onDegraded: () => {},
+      });
+      // Home's top and Documents polled alone: their watches closed, as when they fail.
+      const inside = w as unknown as {
+        watchers: Map<string, { close(): void }>;
+        pollDir(d: string, r: string): void;
+        degrade(r: string): void;
+      };
+      for (const d of ["", "Documents"]) {
+        inside.watchers.get(d)?.close();
+        inside.watchers.delete(d);
+        inside.pollDir(d, "EACCES: test");
+      }
+      const look = async () => {
+        await Bun.sleep(30);
+        w.pollTick();
+        w.flush();
+        await Bun.sleep(30);
+        w.flush();
+        const out = {
+          reported: [...new Set(reported.splice(0))].sort(),
+          toWalk: [...new Set(toWalk.splice(0))],
+          rescan,
+        };
+        rescan = false;
+        return out;
+      };
+      const none = { reported: [], toWalk: [], rescan: false };
+      try {
+        expect(w.polledDirs.sort()).toEqual(["", "Documents"]);
+        // Its folders found at every tick, the walk's each time: nothing taken in, nothing named, no rescan.
+        expect(await look()).toEqual(none);
+        mkdirSync(join(home, "Documents", "d2"));
+        writeFileSync(join(home, "Documents", "d2", "m.md"), "# M\n");
+        expect(await look()).toEqual(none);
+        expect(await look()).toEqual(none);
+        // Its note moved into a folder made in it, seen by the listing alone: where it went is taken in, the move seen.
+        mkdirSync(join(home, "Documents", "new"));
+        renameSync(join(home, "Documents", "top.md"), join(home, "Documents", "new", "top.md"));
+        expect(await look()).toEqual({ ...none, reported: ["Documents/new/top.md", "Documents/top.md"] });
+        // A folder come into home's top, found by its listing: named once, not again before it's watched; watched, a
+        // note in it comes. Named, it holds its room under home's cap: one more come meanwhile isn't named.
+        mkdirSync(join(home, "cloned", "z"), { recursive: true });
+        writeFileSync(join(home, "cloned", "z", "deep.md"), "# Deep\n");
+        expect(await look()).toEqual({ ...none, toWalk: ["cloned"] });
+        expect(await look()).toEqual(none);
+        mkdirSync(join(home, "spare"));
+        expect(await look()).toEqual(none);
+        w.watch(["cloned"]);
+        writeFileSync(join(home, "cloned", "own.md"), "# Own\n");
+        expect(await look()).toEqual({ ...none, reported: ["cloned/own.md"] });
+        // Home's cap reached (four folders): another isn't named, nor watched if asked — the walk, which holds the cap,
+        // has it.
+        mkdirSync(join(home, "more"));
+        expect(await look()).toEqual(none);
+        w.watch(["more"]);
+        expect(w.watchedCount).toBe(2);
+        // Watching degraded (the system's limit): nothing watched, the folders still found at every tick — none named.
+        inside.degrade("ENOSPC: test");
+        expect(await look()).toEqual(none);
+        expect(await look()).toEqual(none);
+      } finally {
+        w.close();
+      }
+    });
+  });
 });
 
 describe("freshness and coverage (20.10)", () => {

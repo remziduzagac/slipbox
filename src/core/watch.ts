@@ -3,6 +3,7 @@
 // `target/` with no note at its top: D237) and anything gitignored are never watched. A busy folder
 // that changes kind — its first note, its line in a `.gitignore` gone — is taken in when its parent
 // is listed again (the filter asks the folder again once it changed) or the vault is walked again.
+// Before home's first walk, a folder its graph hasn't looked into is the walk's (VV-D2): never taken in here.
 //
 // Events are debounced — agents write in bursts, and editors save by temp-and-rename, which looks
 // like delete-then-create — and then settled by stat, so the consumer gets one clean list of
@@ -41,6 +42,12 @@ export interface WatchBatch {
    * may differ, so rebuild.
    */
   rescan: boolean;
+  /**
+   * Folders come into one looked into that a walk is to look into (`leftToWalk`: into home's top before its walk,
+   * VV-D2), each named once: for the graph to list, and the watcher to watch (`watch`) — never looking in — and the walk
+   * to be asked for again.
+   */
+  toWalk?: string[];
 }
 
 export interface WatcherOptions {
@@ -72,6 +79,8 @@ export interface WatcherOptions {
   /** Home's cap (VV-D2): how many folders it watches at most — a folder that comes past it isn't taken in, left to
    *  home's walk, which holds the cap. */
   maxDirs?: number;
+  /** A folder a walk is to look into, never the watcher (home before its first walk, VV-D2: `waitsForHomeWalk`). */
+  leftToWalk?: (dirRel: string) => boolean;
 }
 
 /**
@@ -85,6 +94,14 @@ export class VaultWatcher {
   private readonly watchers = new Map<string, FSWatcher>();
   private pending = new Set<string>();
   private rescan = false;
+  /** Folders found for a walk to look into, to name in the next batch (`WatchBatch.toWalk`). */
+  private readonly toWalk = new Set<string>();
+  /** The folders named so far (`toWalk`), never named again: a folder polled finds them at every tick until they're
+   *  watched — and for good, when watching has degraded. One gone is forgotten (`unname`), new if it comes again. */
+  private readonly named = new Set<string>();
+  /** Folders a second look found and left to the walk (`found`): where a known note that went may have gone, looked
+   *  at by the next `flush` only then (`movedInto`). */
+  private readonly leftSeen = new Set<string>();
   private timer: ReturnType<typeof setTimeout> | null = null;
   private pollTimer: ReturnType<typeof setInterval> | null = null;
   private readonly ownWrites = new Map<string, number>();
@@ -201,6 +218,65 @@ export class VaultWatcher {
     if (v.dir) return "dir";
     const target = relative(this.realRoot, v.target).split(sep).join("/");
     return target === rel || !this.opts.known.has(target) ? "file" : null;
+  }
+
+  /**
+   * What becomes of a folder found that isn't watched: taken in with all it holds (`adopt`); or, a walk's to look into
+   * (`leftToWalk`), left — come into a folder looked into (home's top), named once in a batch for the graph to list it
+   * (`ask`, `WatchBatch.toWalk`), within home's cap; in one left to the walk itself, named already, or with watching
+   * degraded, nothing more (`leave`): the walk takes it with the rest.
+   */
+  private found(dirRel: string): "adopt" | "ask" | "leave" {
+    const left = this.opts.leftToWalk;
+    if (!left?.(dirRel)) return "adopt";
+    if (left(parentOf(dirRel)) || this.named.has(dirRel) || this.degraded) return "leave";
+    return this.room() > 0 ? "ask" : "leave";
+  }
+
+  /** How many more folders home's cap (`maxDirs`) lets it watch: those named and not watched yet count already. */
+  private room(): number {
+    let n = this.watchers.size + this.polled.size;
+    for (const d of this.named) if (!this.watchers.has(d) && !this.polled.has(d)) n++;
+    return (this.opts.maxDirs ?? Number.POSITIVE_INFINITY) - n;
+  }
+
+  /**
+   * Whether the folder `dirRel` is where notes that went (`went`, known before) went: one of them is in it under the
+   * same path below where it was, or the same name (a folder renamed or moved, a note moved into it). A few looked at: a
+   * folder moved has them all.
+   */
+  private movedInto(dirRel: string, went: readonly string[]): boolean {
+    const dir = join(this.opts.root, dirRel);
+    for (const rel of went.slice(0, 20)) {
+      for (let at = 0; ; ) {
+        if (existsSync(join(dir, rel.slice(at)))) return true;
+        const slash = rel.indexOf("/", at);
+        if (slash < 0) break;
+        at = slash + 1;
+      }
+    }
+    return false;
+  }
+
+  /** A folder named for the walk (`found`'s `ask`), once. */
+  private ask(dirRel: string): void {
+    this.named.add(dirRel);
+    this.toWalk.add(dirRel);
+  }
+
+  /** A folder gone: named no more, nor anything in it — come again, it's new. */
+  private unname(dirRel: string): void {
+    for (const d of this.named) if (d === dirRel || d.startsWith(`${dirRel}/`)) this.named.delete(d);
+  }
+
+  /**
+   * Watch these folders too, closing none (`sync` watches exactly what it's given): folders the graph lists since its
+   * build (`WatchBatch.toWalk`), so what changed in them since the graph's walk is listed on the next tick.
+   */
+  watch(dirs: readonly string[]): void {
+    const walkedAt = this.opts.walkedAt?.() ?? Date.now();
+    const max = this.opts.maxDirs ?? Number.POSITIVE_INFINITY;
+    for (const d of dirs) if (this.watchers.size + this.polled.size < max) this.watchDir(d, walkedAt);
   }
 
   get watchedCount(): number {
@@ -325,8 +401,12 @@ export class VaultWatcher {
         const rel = dirRel ? `${dirRel}/${e.name}` : e.name;
         if (e.isDirectory()) {
           if (!this.watchers.has(rel) && !this.polled.has(rel) && filter.exclusion(rel, true) === null) {
-            this.watchDir(rel);
-            this.rescan = true;
+            const to = this.found(rel);
+            if (to === "adopt") {
+              this.watchDir(rel);
+              this.rescan = true;
+            } else if (to === "ask") this.ask(rel);
+            else this.leftSeen.add(rel);
           }
           continue;
         }
@@ -344,7 +424,7 @@ export class VaultWatcher {
       }
     }
     if (this.degraded) for (const rel of this.opts.pollTargets?.() ?? []) this.pending.add(rel);
-    if (this.pending.size || this.rescan) this.flush();
+    if (this.pending.size || this.rescan || this.toWalk.size) this.flush();
     if (moved.length) this.lookAgain(moved, statAt);
   }
 
@@ -372,9 +452,14 @@ export class VaultWatcher {
       for (const e of entries) {
         const rel = d ? `${d}/${e.name}` : e.name;
         if (e.isDirectory()) {
-          // A folder the walk would take and not watched yet: adopted, with all it holds.
+          // A folder the walk would take and not watched yet: adopted, with all it holds — unless a walk is to look into
+          // it, and it's nothing to name (`found`).
           if (listed || this.watchers.has(rel) || this.polled.has(rel) || filter.exclusion(rel, true) !== null)
             continue;
+          if (this.found(rel) === "leave") {
+            this.leftSeen.add(rel);
+            continue;
+          }
         } else {
           if (gone.delete(rel)) continue; // known, and still here
           if (listed && !filter.isNoteName(e.name)) continue;
@@ -423,8 +508,25 @@ export class VaultWatcher {
     this.rescan = false;
     const changes: WatchChange[] = [];
     const { filter, known, root } = this.opts;
-    for (let i = 0; i < paths.length; i++) {
-      const rel = paths[i]!;
+    /** Folders found that a walk is to look into (`found`), a second look's among them: decided once the rest is. */
+    const left: string[] = [...this.leftSeen];
+    this.leftSeen.clear();
+    /** The known notes that went. */
+    const went: string[] = [];
+    let i = 0;
+    for (;;) {
+      if (i === paths.length) {
+        // A folder found where known notes went (renamed, or moved within home): taken in whole after all, so they come
+        // back and the move is seen.
+        const into = went.length ? left.filter((d) => !this.watchers.has(d) && this.movedInto(d, went)) : [];
+        if (!into.length) break;
+        for (const d of into) {
+          left.splice(left.indexOf(d), 1);
+          paths.push(...this.adoptTree(d));
+        }
+        continue;
+      }
+      const rel = paths[i++]!;
       if (seen.has(rel)) continue;
       seen.add(rel);
       const name = rel.slice(rel.lastIndexOf("/") + 1);
@@ -444,10 +546,14 @@ export class VaultWatcher {
         st = null; // a note that became such a link: gone
       }
       if (st?.isDirectory()) {
-        if (filter.exclusion(rel, true) === null && !this.watchers.has(rel)) paths.push(...this.adoptTree(rel));
+        if (filter.exclusion(rel, true) === null && !this.watchers.has(rel)) {
+          if (this.found(rel) === "adopt") paths.push(...this.adoptTree(rel));
+          else left.push(rel);
+        }
         continue;
       }
       if (!st && !known.has(rel)) {
+        this.unname(rel);
         // Possibly a directory that went away (deleted, or moved out of the vault) — its own
         // watcher may already have errored and gone — so every known note under it went too.
         const prefix = `${rel}/`;
@@ -462,6 +568,9 @@ export class VaultWatcher {
           this.unwatchTree(rel);
           continue;
         }
+        // Where a walk is to look (`leftToWalk`), no note nor a file known: a folder left to it, gone — nothing to say.
+        if (!filter.isNoteName(name) && this.opts.leftToWalk?.(rel) && !this.attachments.get(parentOf(rel))?.has(rel))
+          continue;
       }
       if (filter.exclusion(rel, false) !== null) continue;
       if (!filter.isNoteName(name)) {
@@ -481,6 +590,7 @@ export class VaultWatcher {
       if (!st) {
         // Gone — or, never known, come and gone between two looks (written and removed at once): said all the
         // same, since what was drawn meanwhile may have read it from the disk (a link to it, resolved by its file).
+        if (before !== undefined) went.push(rel);
         known.delete(rel);
         changes.push({ rel, kind: "deleted", isNote: true });
         continue;
@@ -517,7 +627,11 @@ export class VaultWatcher {
         changes.push({ rel, kind: "changed", isNote: true });
       }
     }
-    if (changes.length || rescan) this.opts.onBatch({ changes, rescan });
+    for (const d of left) if (this.found(d) === "ask") this.ask(d);
+    const toWalk = [...this.toWalk];
+    this.toWalk.clear();
+    if (changes.length || rescan || toWalk.length)
+      this.opts.onBatch({ changes, rescan, ...(toWalk.length ? { toWalk } : {}) });
   }
 }
 

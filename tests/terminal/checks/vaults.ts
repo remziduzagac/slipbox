@@ -113,8 +113,8 @@ function git(s: Session, cwd: string, ...args: string[]): void {
 /**
  * Folders of home beside the reference set's (VV-D2): household's last policy a folder down, and garden — dated an
  * hour back, as a person's folders are. Made the moment before slipbox starts, they would be new to its watcher: a
- * folder changed in the two seconds before it watches is looked at again, and a folder that came in it taken in with
- * its notes, garden's among them, whatever home's walk has done.
+ * folder changed in the two seconds before it watches is looked at again, its own notes taken in, garden's among them,
+ * whatever home's walk has done (the folders in it are left to that walk).
  */
 function homeFolders(s: Session): void {
   if (s.exists("~/garden/plan.md")) return;
@@ -353,8 +353,8 @@ const MARKED: Check[] = [
         // notes indexed, its index on the disk.
         const r = s.cliIn("~/notes", "index", "--refresh");
         if (r.code !== 0) throw new CheckFailed(`slipbox index --refresh in ~/notes: exit ${r.code}\n${r.out}`);
-        // Home's top, built a moment ago, dated back: new to the watcher, its folders would be taken in, walked
-        // (homeFolders says why).
+        // Home's top, built a moment ago, dated back, as a person's is: new to the watcher, it would be looked at
+        // again (homeFolders says why).
         const before = new Date(Date.now() - 3_600_000);
         utimesSync(s.home, before, before);
       },

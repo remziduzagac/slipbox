@@ -25,7 +25,7 @@ import { changedBetween, inVault } from "./gitops.ts";
 import { contentHash, Redirects } from "./redirects.ts";
 import { dataLinks, parseData } from "./data.ts";
 import { classify, extensionOf } from "./filetypes.ts";
-import { type AskedWhole, type HomeWalk, homeWalk, walksInto } from "./home.ts";
+import { type AskedWhole, type HomeWalk, homeWalk, inFolders, walksInto } from "./home.ts";
 import { checkoutAt, findVaultRoot, isListed, isVaultRoot, type VaultLocation } from "./vault.ts";
 import { listDirectory, type NoteFile, type Skipped, type WalkCap, WalkFilter, walkVault } from "./walk.ts";
 import { tagKey, tagName } from "./tags.ts";
@@ -162,6 +162,27 @@ export class Graph {
     const covered = this.home?.walked != null && !this.home.capped && this.dirs.includes(rel);
     if (!covered && walksInto(this.root, this.filter, rel)) this.build(this.useCache, "lazy");
     return rel;
+  }
+
+  /**
+   * Whether the folder `rel` waits for home's first walk (VV-D2): home not walked yet, a folder its graph hasn't looked
+   * into — any but its top and the folders asked for by name, which are whole. The watcher leaves it to the walk. False
+   * once a walk is kept, one capped too, and in a vault.
+   */
+  waitsForHomeWalk(rel: string): boolean {
+    return this.home?.walked === null && rel !== "" && !inFolders(rel, this.asked);
+  }
+
+  /**
+   * A folder come into home's top before its walk (VV-D2: `WatchBatch.toWalk`), listed as its top's folders are, never
+   * looked into — while home's walk would go into it: named in a batch held while git wrote, it may have gone, or become
+   * a vault, since. Whether it's listed.
+   */
+  listForWalk(rel: string): boolean {
+    if (this.dirs.includes(rel)) return true;
+    if (!walksInto(this.root, this.filter, rel)) return false;
+    this.dirs.push(rel);
+    return true;
   }
 
   get root(): string {

@@ -150,6 +150,8 @@ export class Watch {
       listed: isListed(this.app.loc),
       // Home's cap held by what comes while it's open too (VV-D2).
       ...(this.app.loc.mode === "home" ? { maxDirs: HOME_LIMITS.folders } : {}),
+      // Before home's first walk, what its graph hasn't looked into is the walk's (VV-D2), made while nobody works.
+      leftToWalk: (rel) => this.app.graph.waitsForHomeWalk(rel),
       onBatch: (b) => this.receiveBatch(b),
       onDegraded: (reason) => {
         this.app.message("error", `watching degraded: ${reason}`);
@@ -355,6 +357,12 @@ export class Watch {
       // not followed now (VV-D6: one forgotten).
       for (const buf of this.app.buffers.values())
         if (buf.changedOnDisk() && (buf.elsewhere || !this.app.following.blocked(buf.abs))) this.reloadBuffer(buf);
+    } else if (batch.toWalk?.length) {
+      // Folders come into home's top before its walk (VV-D2), listed: watched, never looked into — the walk, asked for
+      // again, takes what's in them. Only the explorer shows a folder.
+      this.app.watcher?.watch(batch.toWalk.filter((d) => this.app.graph.dirs.includes(d)));
+      this.app.explorer.invalidateTree();
+      this.walkHomeAgain();
     }
     for (const c of batch.changes) {
       // An open note reloads — a data or text file too, like a note (16.4) — and a big one still

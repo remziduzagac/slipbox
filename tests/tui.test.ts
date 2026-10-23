@@ -14328,6 +14328,120 @@ describe("the background auto-index in the TUI (20.9)", () => {
     }
   });
 
+  test("home never walked, its watcher leaves what the walk is to look into (VV-D2): a note saved in a folder of home comes, nothing a folder down; a folder come into home's top is listed and watched, its folders the walk's, nothing dropped (#16)", async () => {
+    const { homeAt } = await import("../src/core/vault.ts");
+    const home = realpathSync(mkdtempSync(join(sandbox, "home-")));
+    mkdirSync(join(home, "Documents", "d0", "sub"), { recursive: true });
+    writeFileSync(join(home, "a.md"), "# A\n");
+    writeFileSync(join(home, "Documents", "d0", "sub", "n.md"), "# N\n");
+    const hour = new Date(Date.now() - 3_600_000);
+    for (const d of ["", "Documents"]) utimesSync(join(home, d), hour, hour);
+    const until = async (ok: () => boolean, ms = 25_000) => {
+      const end = Date.now() + ms;
+      while (!ok() && Date.now() < end) await Bun.sleep(20);
+    };
+    const before = process.env.HOME;
+    process.env.HOME = home;
+    try {
+      const h = await harness({
+        loc: homeAt(home),
+        open: "a.md",
+        watch: true,
+        config: (c) => ((c.watch.debounce_ms = 20), (c.watch.poll_ms = 50)),
+      });
+      try {
+        expect(h.app.graph.home?.walked).toBeNull();
+        expect(h.app.graph.dirs).toEqual(["", "Documents"]);
+        writeFileSync(join(home, "Documents", "letter.md"), "# Letter\n");
+        await until(() => h.app.graph.notes.has("Documents/letter.md"));
+        // Dated back, as if saved a while ago: Documents settles, listed again no more.
+        utimesSync(join(home, "Documents"), hour, hour);
+        await Bun.sleep(300); // ticks enough to list Documents again
+        expect([...h.app.graph.notes.keys()].sort()).toEqual(["Documents/letter.md", "a.md"]);
+        mkdirSync(join(home, "cloned", "x"), { recursive: true });
+        writeFileSync(join(home, "cloned", "x", "deep.md"), "# Deep\n");
+        await until(() => h.app.graph.dirs.includes("cloned"));
+        await Bun.sleep(300);
+        expect(h.app.graph.dirs).toEqual(["", "Documents", "cloned"]);
+        expect(h.app.explorer.treeRows().find((r) => r.path === "cloned")).toBeDefined();
+        // Named in a batch held while git wrote, a folder become a vault since is neither listed nor watched.
+        mkdirSync(join(home, "vaulted", ".slipbox"), { recursive: true });
+        const watched = h.app.watcher!.watchedCount;
+        h.app.watch.applyChanges({ changes: [], rescan: false, toWalk: ["vaulted"] });
+        expect(h.app.graph.dirs).not.toContain("vaulted");
+        expect(h.app.watcher!.watchedCount).toBe(watched);
+        // Listed, not built again: what came before stays.
+        expect([...h.app.graph.notes.keys()].sort()).toEqual(["Documents/letter.md", "a.md"]);
+        // And watched: a note saved in it comes.
+        writeFileSync(join(home, "cloned", "top.md"), "# Top\n");
+        await until(() => h.app.graph.notes.has("cloned/top.md"));
+        await Bun.sleep(300);
+        expect([...h.app.graph.notes.keys()].sort()).toEqual(["Documents/letter.md", "a.md", "cloned/top.md"]);
+        // Walked, while nobody works (here at once): every note of home's.
+        const job = h.app.watch.indexJob();
+        while (job!.step(50)) {}
+        expect(h.app.graph.home?.walked).not.toBeNull();
+        expect([...h.app.graph.notes.keys()].sort()).toEqual([
+          "Documents/d0/sub/n.md",
+          "Documents/letter.md",
+          "a.md",
+          "cloned/top.md",
+          "cloned/x/deep.md",
+        ]);
+      } finally {
+        h.app.watcher?.close();
+      }
+    } finally {
+      process.env.HOME = before;
+    }
+  });
+
+  test("home never walked, a folder come into its top leaves the rest watched as it was: a folder made in one asked for by name, taken in, still sees its notes (#16)", async () => {
+    const { homeAt } = await import("../src/core/vault.ts");
+    const home = realpathSync(mkdtempSync(join(sandbox, "home-")));
+    mkdirSync(join(home, "notes"), { recursive: true });
+    writeFileSync(join(home, "notes", "inbox.md"), "# Inbox\n");
+    const hour = new Date(Date.now() - 3_600_000);
+    for (const d of ["", "notes"]) utimesSync(join(home, d), hour, hour);
+    const until = async (ok: () => boolean, ms = 25_000) => {
+      const end = Date.now() + ms;
+      while (!ok() && Date.now() < end) await Bun.sleep(20);
+    };
+    const before = process.env.HOME;
+    process.env.HOME = home;
+    try {
+      // `slipbox ~/notes`, home never walked: notes is walked whole, the rest the walk's.
+      const h = await harness({
+        loc: homeAt(home),
+        open: null,
+        folder: join(home, "notes"),
+        watch: true,
+        config: (c) => ((c.watch.debounce_ms = 20), (c.watch.poll_ms = 50)),
+      });
+      try {
+        expect(h.app.graph.home?.walked).toBeNull();
+        // A folder made in notes: taken in, as notes is whole; then left alone a while, as if made long ago.
+        mkdirSync(join(home, "notes", "fresh", "sub"), { recursive: true });
+        writeFileSync(join(home, "notes", "fresh", "sub", "a.md"), "# A\n");
+        await until(() => h.app.graph.notes.has("notes/fresh/sub/a.md"));
+        for (const d of ["notes", "notes/fresh", "notes/fresh/sub"]) utimesSync(join(home, d), hour, hour);
+        await Bun.sleep(300);
+        // A folder come into home's top: listed, and the watcher otherwise as it was.
+        mkdirSync(join(home, "cloned"));
+        await until(() => h.app.graph.dirs.includes("cloned"));
+        utimesSync(home, hour, hour);
+        await Bun.sleep(300);
+        writeFileSync(join(home, "notes", "fresh", "sub", "b.md"), "# B\n");
+        await until(() => h.app.graph.notes.has("notes/fresh/sub/b.md"), 5000);
+        expect(h.app.graph.notes.has("notes/fresh/sub/b.md")).toBe(true);
+      } finally {
+        h.app.watcher?.close();
+      }
+    } finally {
+      process.env.HOME = before;
+    }
+  });
+
   test("a link from a vault to a note of home's peeks (VV-D2, VV-D7): home names it, t keeps it read-only, o goes into home; the scratch is no note of home's", async () => {
     const home = realpathSync(mkdtempSync(join(sandbox, "home-")));
     const notes = join(home, "notes");

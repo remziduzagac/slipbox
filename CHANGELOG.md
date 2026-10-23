@@ -18,6 +18,9 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
   that already matched, and building the list takes a fraction of the time it did.
 - A paste while a completion list shows closes it: the next `tab` or `enter` no longer writes the chosen item over what
   you pasted. And `.` after completing a link and typing on repeats all of it, the new line included.
+- Before your home folder's first walk, a file saved in a folder of home no longer has slipbox read every folder in it
+  at once, and a folder new in home isn't read whole: they wait for home's walk, made a little at a time while nobody
+  is working, as the manual says. 0.5.0 read them on the spot, which could take thousands of notes in at once.
 
 ## [0.5.0] - 2026-10-22
 

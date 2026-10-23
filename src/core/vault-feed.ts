@@ -38,6 +38,8 @@ export function applyToGraph(
     graph.build(true, "lazy");
     structural = true;
   }
+  // Folders come into home's top before its walk (VV-D2): listed, never looked into. No note came or went with them.
+  for (const dir of batch.toWalk ?? []) graph.listForWalk(dir);
   for (const c of batch.changes) {
     if (!c.isNote) {
       // An attachment appeared or went: ![[embeds]] of it change status. Only a real change to the
@@ -162,7 +164,12 @@ export class VaultFeed {
     this.held = [];
     this.checkHead();
     if (!batches.length) return;
-    const merged: WatchBatch = { changes: batches.flatMap((b) => b.changes), rescan: batches.some((b) => b.rescan) };
+    const toWalk = batches.flatMap((b) => b.toWalk ?? []);
+    const merged: WatchBatch = {
+      changes: batches.flatMap((b) => b.changes),
+      rescan: batches.some((b) => b.rescan),
+      ...(toWalk.length ? { toWalk } : {}),
+    };
     this.o.gitNews?.();
     if (this.o.now() - this.switchedAt < SWITCH_SETTLE_MS) this.o.graph().pauseMoves(() => this.o.apply(merged));
     else this.o.apply(merged);
