@@ -2,12 +2,13 @@
 // reading back what a program draws and answering what it asks (TT-T1).
 
 import { describe, expect, test } from "bun:test";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { COMMAND_SPECS } from "../src/core/command-specs.ts";
 import { EXPLORER, explorerClosed, explorerOpen, MODES, mode, modeOf, OUTLINE, opened } from "./terminal/check.ts";
 import { encodeKey } from "./terminal/keys.ts";
-import { Session } from "./terminal/session.ts";
+import { Session, type SessionOptions } from "./terminal/session.ts";
 import { HeadlessTerminal } from "./terminal/terminal.ts";
 
 describe("keys as a terminal sends them", () => {
@@ -73,9 +74,10 @@ describe("the headless terminal", () => {
   const printEnd = String.raw`printf '\033]7777;end\007'`;
   /** Until everything the script printed has been read and drawn: its end read, nothing left to draw. */
   const ended = (t: HeadlessTerminal) => until(() => t.output.includes(END) && t.drawn, "the script's end");
-  /** Run `script` (sh) in a terminal of `cols`×`rows` to its end; the terminal, drawn. */
-  const run = async (script: string, cols = 40, rows = 6) => {
-    const t = new HeadlessTerminal({ cols, rows });
+  /** Run `script` (sh) in a terminal of `cols`×`rows` to its end, its output read `readSize` bytes at a time if said;
+   *  the terminal, drawn. */
+  const run = async (script: string, cols = 40, rows = 6, readSize?: number) => {
+    const t = new HeadlessTerminal({ cols, rows, readSize });
     t.spawn(["sh", "-c", `${script}\n${printEnd}`], { cwd: "/", env });
     await ended(t);
     return t;
@@ -129,6 +131,63 @@ describe("the headless terminal", () => {
     expect(t.screen()[0]).toBe(text);
     expect(t.cursor().x).toBe(2 + 1 + 2 + 1 + 2 + 1 + 1 + 1 + 2 + 1);
     t.dispose();
+  });
+  test("a character cut across reads after a 0x80 byte kept whole: an em dash, a four-byte one (#19)", async () => {
+    // Each cut where xterm 6.0.0 drops it, and printed only once the harness has read what came before: `a` and the
+    // em dash's E2 80, then its 94; U+10000's F0 90 80, then its last 80.
+    const parts = [String.raw`\ra\342\200`, String.raw`\224b \360\220\200`, String.raw`\200d`];
+    const script = ["stty -echo", "printf '>'", ...parts.flatMap((p) => ["read x", `printf '${p}'`]), "read x"];
+    const read = ["\ra", "—b ", "\u{10000}d"];
+    const t = new HeadlessTerminal({ cols: 40, rows: 4 });
+    try {
+      t.spawn(["sh", "-c", script.join("; ")], { cwd: "/", env });
+      await until(() => t.screen()[0] === ">", "the program to listen");
+      for (const [i, text] of read.entries()) {
+        t.write("\n");
+        await until(() => t.output.endsWith(text) && t.drawn, `part ${i + 1} read`);
+      }
+      expect(t.screen()[0]).toBe("a—b \u{10000}d");
+    } finally {
+      t.dispose();
+    }
+  });
+  test("read a byte at a time (readSize), the screen is as one read draws it; a size that isn't one is refused", async () => {
+    const text = "a—b … • € 京都、☄️👩‍🔬é\u{10000}";
+    const t = await run(`printf '%s' '${text}'`, 40, 6, 1);
+    try {
+      expect(t.screen()[0]).toBe(text);
+    } finally {
+      t.dispose();
+    }
+    for (const readSize of [0, 1.5, -1]) expect(() => new HeadlessTerminal({ cols: 40, rows: 6, readSize })).toThrow();
+  });
+  test("spawned again, the program before is stopped and cut off: what a child of it writes late never shows", async () => {
+    // The first leaves a child holding its terminal, which writes again only once the second runs (the file `go`),
+    // then says it tried (`tried`); it gives up by itself after ten seconds whatever happens.
+    const dir = mkdtempSync(join(tmpdir(), "slipbox-harness-"));
+    const t = new HeadlessTerminal({ cols: 40, rows: 4 });
+    try {
+      const wait = `i=0; while [ ! -e '${dir}/go' ] && [ $i -lt 500 ]; do sleep 0.02; i=$((i+1)); done`;
+      const first = t.spawn(["sh", "-c", `printf first; (${wait}; printf late; touch '${dir}/tried') & wait`], {
+        cwd: "/",
+        env,
+      });
+      await until(() => t.output.includes("first"), "the first program's output");
+      t.spawn(["sh", "-c", `printf second\n${printEnd}`], { cwd: "/", env });
+      await ended(t);
+      await first.exited;
+      expect(first.signalCode).toBe("SIGKILL");
+      writeFileSync(join(dir, "go"), "");
+      await until(() => existsSync(join(dir, "tried")), "the child's late write");
+      // A read of it, were the terminal still open, could come a moment after: given that moment.
+      await Bun.sleep(200);
+      await until(() => t.drawn, "the screen drawn");
+      expect(t.output).not.toContain("late");
+    } finally {
+      t.dispose();
+      writeFileSync(join(dir, "go"), "");
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
   test("the title and every OSC 52 copy kept", async () => {
     // Not String.raw: Bun writes the dash in a raw template's source as \u2014.
@@ -278,6 +337,23 @@ describe("frames read whole (synchronized output)", () => {
 
 describe("what the checks share (check.ts)", () => {
   const env = { PATH: process.env.PATH ?? "/usr/bin:/bin" };
+
+  test("a restart can't change what the session was made with: said, not ignored", async () => {
+    const s = new Session();
+    try {
+      // Past the types (they refuse them too), as a check written in haste would pass them.
+      const changes: Partial<SessionOptions>[] = [
+        { readSize: 1 },
+        { keyboard: "legacy" },
+        { size: { cols: 80, rows: 24 } },
+        { home: true },
+        { config: "[ui]\nmouse = false\n" },
+      ];
+      for (const c of changes) await expect(s.restart(c as object)).rejects.toThrow("the session is made with it once");
+    } finally {
+      s.cleanup();
+    }
+  });
 
   test("opened waits for the file open, not for the link under the cursor that names it", async () => {
     // The status line on a link to shelf/far.md, its note still open, as while a link out of the vault is followed only

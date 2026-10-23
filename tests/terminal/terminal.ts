@@ -52,6 +52,11 @@ export interface TerminalOptions {
   frameMax?: number;
   /** The clock a frame is timed by (`performance.now` unless said): a test's own times one exactly. */
   clock?: () => number;
+  /**
+   * What the program writes, read this many bytes at a time (as it comes unless said): a character's bytes cut
+   * across reads, as a pseudo-terminal that hands a frame over in small reads (macOS's) cuts one now and then.
+   */
+  readSize?: number;
 }
 
 /** The longest a frame is waited for (ms) unless said: one begun and not ended this long is read as it is. */
@@ -122,7 +127,14 @@ export class HeadlessTerminal {
   private frameSince: number | null = null;
   private readonly clock: () => number;
 
+  /** `opts.readSize`, as checked when the terminal was made. */
+  private readonly readSize: number | undefined;
+
   constructor(readonly opts: TerminalOptions) {
+    const size = opts.readSize;
+    if (size !== undefined && !(Number.isInteger(size) && size > 0))
+      throw new Error(`readSize: a whole number of bytes, at least 1 (${size})`);
+    this.readSize = size;
     const keyboard = opts.keyboard ?? "kitty";
     const colors = opts.colors ?? { fg: "#c0caf5", bg: "#1a1b26" };
     this.clock = opts.clock ?? (() => performance.now());
@@ -188,22 +200,40 @@ export class HeadlessTerminal {
   spawn(argv: string[], opts: { cwd: string; env: Record<string, string> }): Bun.Subprocess {
     this.kitty = [];
     this.frameSince = null;
+    // The program before is cut off: stopped if it still runs, and its terminal closed, so nothing it or a child still
+    // holding that terminal writes from now on reaches this one's screen (what was read before is still drawn: a
+    // session waits for it, `Session.start`).
+    if (this.pid) this.proc?.kill("SIGKILL");
+    this.pty?.close();
     const decoder = new TextDecoder();
     this.pty = new Bun.Terminal({
       cols: this.opts.cols,
       rows: this.opts.rows,
       data: (_t, data) => {
-        this.output += decoder.decode(data, { stream: true });
+        const step = this.readSize ?? data.length;
+        for (let i = 0; i < data.length; i += step) this.read(decoder, data.subarray(i, i + step));
         if (this.opts.graphics) this.answerGraphics();
-        this.lastOutput = performance.now();
-        this.pending++;
-        // A copy: xterm parses later, and the pseudo-terminal's buffer is read into again before then.
-        this.xterm.write(data.slice(), () => this.pending--);
       },
     });
     this.proc = Bun.spawn(argv, { cwd: opts.cwd, env: opts.env, terminal: this.pty });
     this.lastOutput = performance.now();
     return this.proc;
+  }
+
+  /**
+   * One read of what the program wrote: decoded here, a character cut at the read's end kept for the next, and xterm
+   * given the text. Never the bytes: xterm 6.0.0 drops a character cut after a continuation byte of 0x80 — an em dash
+   * read as `E2 80`, then `94` — and what follows on its row lands a cell to the left (xtermjs/xterm.js#6003, fixed
+   * after 6.0.0); slipbox, drawing only the cells that changed, leaves those cells wrong (#19). A byte that is no
+   * character at all shows as U+FFFD, as a terminal shows it.
+   */
+  private read(decoder: TextDecoder, data: Uint8Array): void {
+    const text = decoder.decode(data, { stream: true });
+    this.output += text;
+    this.lastOutput = performance.now();
+    if (!text) return;
+    this.pending++;
+    this.xterm.write(text, () => this.pending--);
   }
 
   /** The program's pid, while it runs. */
@@ -336,7 +366,7 @@ export class HeadlessTerminal {
     return { x: b.cursorX, y: b.cursorY };
   }
 
-  /** Close the pseudo-terminal (the program, if still running, gets a hangup) and the screen. */
+  /** Close the pseudo-terminal. A program still running isn't told (Bun sends no hangup: a check sends one, `signal`). */
   close(): void {
     this.pty?.close();
     this.pty = null;

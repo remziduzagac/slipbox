@@ -74,7 +74,12 @@ export interface SessionOptions {
   graphics?: boolean;
   /** The longest a frame is waited for (ms; a second unless said): the harness's own tests hold one open at will. */
   frameMax?: number;
+  /** What slipbox writes, read this many bytes at a time: its characters cut across reads (terminal.ts). */
+  readSize?: number;
 }
+
+/** What a session is made with, once: its folders and config, and its terminal. A restart can't change them. */
+const MADE_ONCE = ["home", "config", "size", "keyboard", "graphics", "frameMax", "readSize"] as const;
 
 export class CheckFailed extends Error {}
 
@@ -90,6 +95,16 @@ export class Session {
   readonly term: HeadlessTerminal;
 
   constructor(readonly opts: SessionOptions = {}) {
+    // The terminal first: an option it refuses leaves no folder behind.
+    const size = opts.size ?? SIZE;
+    this.term = new HeadlessTerminal({
+      cols: size.cols,
+      rows: size.rows,
+      keyboard: opts.keyboard,
+      graphics: opts.graphics,
+      frameMax: opts.frameMax,
+      readSize: opts.readSize,
+    });
     this.dir = realpathSync(mkdtempSync(join(BASE, "slipbox-terminal-")));
     this.vault = join(this.dir, "vault");
     this.home = join(this.dir, "home");
@@ -108,14 +123,6 @@ export class Session {
     writeFileSync(join(this.dir, "config", "slipbox", "config.toml"), `${config}${off}`);
     this.trace = join(this.dir, "trace");
     writeFileSync(this.trace, "");
-    const size = opts.size ?? SIZE;
-    this.term = new HeadlessTerminal({
-      cols: size.cols,
-      rows: size.rows,
-      keyboard: opts.keyboard,
-      graphics: opts.graphics,
-      frameMax: opts.frameMax,
-    });
   }
 
   get cols(): number {
@@ -171,6 +178,8 @@ export class Session {
     const cwd = this.opts.cwd !== undefined ? join(this.dir, this.opts.cwd) : REPO;
     // Bun by its own path: with $HOME the check's, nothing may depend on finding it.
     const argv = [process.execPath, join(REPO, "src", "main.ts"), ...(this.opts.args ?? []), ...file];
+    // What the slipbox before wrote is drawn first: its queries' answers, and its keyboard flags, are its own.
+    await this.until(() => this.term.drawn, undefined, "the terminal to draw what the slipbox before wrote");
     this.term.spawn(argv, { cwd, env: this.processEnv() });
     if (this.opts.noWait) return;
     await this.until(() => /\b(READ|SOURCE|FILES|LENS)\b/.test(this.statusLine()), 15000, "slipbox to start");
@@ -178,8 +187,13 @@ export class Session {
     await this.settle();
   }
 
-  /** Quit, then start again with these options changed (the same folders: its state carries over). */
-  async restart(changes: Partial<SessionOptions> = {}): Promise<void> {
+  /**
+   * Quit, then start again with these options changed (the same folders: its state carries over). Not what the session
+   * is made with (`MADE_ONCE`: its folders, config and terminal): asked to, it refuses rather than ignore them.
+   */
+  async restart(changes: Partial<Omit<SessionOptions, (typeof MADE_ONCE)[number]>> = {}): Promise<void> {
+    const fixed = MADE_ONCE.filter((k) => (changes as SessionOptions)[k] !== undefined);
+    if (fixed.length) throw new Error(`restart can't change ${fixed.join(", ")}: the session is made with it once`);
     await this.quit();
     Object.assign(this.opts as SessionOptions, changes);
     await this.start();
