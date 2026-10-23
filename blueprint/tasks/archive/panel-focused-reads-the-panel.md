@@ -206,4 +206,28 @@ and the status line's mode waited for together. Never pressed again on a screen 
 - 2026-10-23: After round 3: the unit tests of what the checks share and the coverage's, 33 pass; `home.test.ts` and
   the new note's rendering pass; the 59 terminal checks that use the helpers pass (one, the `/tmp` failure above, run
   again alone); the seven of `panels.ts` pass, 23 s.
+- 2026-10-23: Round 4, two independent reviews of the diff with the terminal checks; nine findings, checked:
+  - Taken: the helpers' first look (focused already? closed already?) read the screen as it was, without `until`'s
+    rule that a frame is read whole: a repaint begun, the screen cleared, showed neither title nor mode, and they
+    pressed. They decide between frames now (`betweenFrames`). Tested on the fake, which repaints once with its frame
+    held half drawn: `explorerOpen` from focused presses nothing, `explorerClosed` from open twice; with the direct
+    read, both fail. No terminal check: slipbox can't be made to hold a frame half drawn at that moment; every check
+    goes through the guarded look.
+  - Taken: `MODES`, a copy of `drawStatus`'s chips, is held to them by a test reading draw-status.ts.
+  - Taken: the Log and the pull request said every case had a terminal check, but ` F ` and ` dT ` waiting had none,
+    and two cases had none to have: a new check drives ` F ` and ` dT ` in source mode (the pattern before fails it).
+    "The chip alone, nothing after it" (round 3) and "the outline's title, nothing after it" (round 1) aren't drawn by
+    slipbox: at 12 to 30 columns the status line shows more after the chip, and a panel's blank is drawn to the edge.
+    Both branches are gone, with their unit rows.
+  - Rejected: a table cell `| Explorer   |`, a line that is only "Outline": no sample has either (TT-D5).
+  - Rejected: zen with the explorer shown as an overlay: `explorerClosed` can't close it, its focus having no mode to
+    show; no check does it, and the helper's comment says so.
+  - Rejected: in zen a note's last row read as a chip: zen draws the note past a two-column margin, and a chip is one
+    space from the edge.
+  - Rejected, as before: panes under eight rows; the git panel's title in ASCII.
+- 2026-10-23: After round 4: the unit tests of what the checks share, 13 pass; the eight checks of `panels.ts` pass;
+  the 65 terminal checks using the helpers pass, before the last two branches went and after (266 s).
+- 2026-10-23: CI on the round-3 push: macOS's terminal run failed one check this change doesn't reach, `git: source
+  control — a file staged, committed, the commit amended`: its amend editor still open after its own `escape,
+  ctrl+s`, with no helper of this change in it; it passed on macOS for the pushes before.
 - 2026-10-23: The typecheck, the lint and `check:docs` pass. Done; the pull request's merge is the acceptance.

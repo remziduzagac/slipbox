@@ -131,6 +131,27 @@ export const PANELS: Check[] = [
   },
   {
     area: "navigating",
+    name: "status line: the mode's chip, and in its place keys waiting — F for its character, d then T — read as no mode",
+    covers: { cases: ["status", "source-mode"], commands: ["view.source"] },
+    options: { open: HANDBOOK },
+    run: async (s) => {
+      await inMode(s, "READ");
+      await s.keys("ctrl+k");
+      await inMode(s, "SOURCE");
+      for (const [keys, chip] of [
+        [["F"], " F "],
+        [["d", "T"], " dT "],
+      ] as const) {
+        await s.keys(...keys);
+        await s.until(() => s.statusLine().startsWith(chip), undefined, `${chip.trim()} on the status line`);
+        s.expect(mode(s) === null, `${chip.trim()} waiting, no mode: ${s.statusLine()}`);
+        await s.keys("escape");
+        await inMode(s, "SOURCE");
+      }
+    },
+  },
+  {
+    area: "navigating",
     name: "glyphs: in ASCII the explorer's title and border, and the leader pending as SPC, no mode; the helpers as in Unicode",
     covers: { cases: ["glyphs", "explorer", "which-key"], commands: ["explorer.cycle"] },
     options: { open: HANDBOOK, env: { SLIPBOX_GLYPHS: "ascii" } },

@@ -5,7 +5,7 @@ import { describe, expect, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { COMMAND_SPECS } from "../src/core/command-specs.ts";
-import { EXPLORER, explorerClosed, explorerOpen, mode, modeOf, OUTLINE, opened } from "./terminal/check.ts";
+import { EXPLORER, explorerClosed, explorerOpen, MODES, mode, modeOf, OUTLINE, opened } from "./terminal/check.ts";
 import { encodeKey } from "./terminal/keys.ts";
 import { Session } from "./terminal/session.ts";
 import { HeadlessTerminal } from "./terminal/terminal.ts";
@@ -328,6 +328,8 @@ describe("what the checks share (check.ts)", () => {
     "  else printf '\\033[8;1H %s  notes  ‹ home.md ›  L1:1\\033[?2026l' \"$chip\"; fi",
     "}",
     "draw",
+    // A repaint after the first frame: begun, the screen cleared, held a while, then drawn whole.
+    "if [ $repaint = 1 ]; then sleep 0.3; printf '\\033[?2026h\\033[2J'; sleep 0.6; draw; fi",
     'while c=$(dd bs=1 count=1 2>/dev/null) && [ -n "$c" ]; do',
     "  if [ \"$c\" = ' ' ]; then pending=1; draw; printf 'key\\nframe\\n' >> \"$T\"",
     '  elif [ "$c" = e ] && [ $pending = 1 ]; then',
@@ -340,8 +342,11 @@ describe("what the checks share (check.ts)", () => {
     "done",
   ].join("\n");
   const STARTS = { closed: [0, 0], open: [1, 0], focused: [1, 1] } as const;
-  /** The fake explorer, started `closed`, `open` or `focused`, in zen or not; `presses()`, the `space e`s it took. */
-  const explorer = async (start: keyof typeof STARTS, zen = false) => {
+  /**
+   * The fake explorer, started `closed`, `open` or `focused`, in zen or not, repainting once after its first frame or
+   * not; `presses()`, the `space e`s it took.
+   */
+  const explorer = async (start: keyof typeof STARTS, { zen = false, repaint = false } = {}) => {
     const s = new Session({ size: { cols: 60, rows: 10 } });
     const pressed = join(s.dir, "pressed");
     const [shown, focused] = STARTS[start];
@@ -357,6 +362,7 @@ describe("what the checks share (check.ts)", () => {
           shown: `${shown}`,
           focused: `${focused}`,
           zen: zen ? "1" : "0",
+          repaint: repaint ? "1" : "0",
         },
       });
       // Its first frame, read whole (its frames are marked).
@@ -369,10 +375,15 @@ describe("what the checks share (check.ts)", () => {
     return { s, presses };
   };
 
+  test("the modes are the chips the status line draws (draw-status.ts)", () => {
+    const src = readFileSync(join(import.meta.dir, "..", "src", "tui", "draw-status.ts"), "utf8");
+    const chips = src.slice(src.indexOf("const chip = "), src.indexOf("const chipSt"));
+    expect([...chips.matchAll(/" ([A-Z][A-Z-]+) "/g)].map((c) => c[1]).sort()).toEqual([...MODES].sort());
+  });
+
   test("the status line's mode is its chip when it names one, never the keys pending or an operator's", () => {
     for (const m of ["READ", "SOURCE", "INSERT", "V-LINE", "FILES", "GIT", "OUTLINE"])
       expect(modeOf(` ${m}  notes  ‹ home.md ›  L1:1`)).toBe(m);
-    expect(modeOf(" FILES")).toBe("FILES"); // the chip alone, nothing drawn after it
     // The leader pending (Unicode's ␣, ASCII's SPC), F waiting for its character, an operator, a prompt, a file name.
     for (const line of [
       " ␣  notes  L1:1",
@@ -393,8 +404,7 @@ describe("what the checks share (check.ts)", () => {
       expect(OUTLINE.test(popup("outline.cycle"))).toBe(false);
     }
     // As slipbox draws them: the explorer's buttons before its border (the Nerd Font's, ASCII's, none in a narrow
-    // pane); the outline after the right panel's border, the right rail beside it, or blank to the edge, or nothing
-    // drawn after it.
+    // pane); the outline after the right panel's border, the right rail beside it or its blank drawn to the edge.
     expect(EXPLORER.test(" ≡  Explorer               󰝒  󰉗  │ 1 operations-handbook.md × │")).toBe(true);
     expect(EXPLORER.test(" =  Explorer               +  +>  | 1 operations-handbook.md x |")).toBe(true);
     expect(EXPLORER.test(" ≡  Explorer   │ 1 operations-handbook.md × │")).toBe(true);
@@ -403,8 +413,8 @@ describe("what the checks share (check.ts)", () => {
     expect(EXPLORER.test(" ≡  │   12  the Explorer lists every note │ Outline")).toBe(false);
     expect(OUTLINE.test(" ≡  │ Outline of the plan, in brief")).toBe(false);
     expect(OUTLINE.test(" ±  󰉋 equipment     ● │ § Halden Ridge Observatory    │ Outline           󰋽")).toBe(true);
-    expect(OUTLINE.test(" ±  󰉋 equipment     ● │ § Halden Ridge Observatory    │ Outline")).toBe(true);
-    expect(OUTLINE.test(" +  equipment     * | § Halden Ridge Observatory    | Outline")).toBe(true);
+    expect(OUTLINE.test(" ±  󰉋 equipment     ● │ § Halden Ridge Observatory    │ Outline         ")).toBe(true);
+    expect(OUTLINE.test(" +  equipment     * | § Halden Ridge Observatory    | Outline         ")).toBe(true);
   });
 
   test.each([
@@ -444,8 +454,28 @@ describe("what the checks share (check.ts)", () => {
     },
   );
 
+  test.each([
+    ["explorerOpen", "focused", 0, "FILES"],
+    ["explorerClosed", "open", 2, "READ"],
+  ] as const)(
+    "%s from %s, called while a repaint is half drawn: %d presses, decided on the frame whole",
+    async (helper, start, n, m) => {
+      const { s, presses } = await explorer(start, { repaint: true });
+      try {
+        // The screen cleared, its frame not yet ended: neither the title nor the mode on it.
+        await until(() => s.term.midFrame, "the repaint begun");
+        await (helper === "explorerOpen" ? explorerOpen(s) : explorerClosed(s));
+        await Bun.sleep(LAG + 200);
+        expect(presses()).toBe(n);
+        expect(mode(s)).toBe(m);
+      } finally {
+        s.cleanup();
+      }
+    },
+  );
+
   test("explorerClosed with no status line (zen) leaves a closed explorer as it is", async () => {
-    const { s, presses } = await explorer("closed", true);
+    const { s, presses } = await explorer("closed", { zen: true });
     try {
       await explorerClosed(s);
       await Bun.sleep(LAG + 200);
