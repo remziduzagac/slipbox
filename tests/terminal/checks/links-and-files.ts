@@ -2162,6 +2162,22 @@ const GIT: Check[] = [
   },
   {
     area: "links-and-files",
+    name: "git: what slipbox writes read a byte at a time — the commit's message over the reload's, every character whole",
+    covers: { cases: ["git"], commands: ["git.commit"] },
+    // Each character cut across the terminal's reads, as macOS's pseudo-terminal cuts one now and then: the em dash
+    // drawn, and the rest of its row in place — slipbox redraws only the cells that changed, trusting the rest (#19).
+    options: { home: true, startAt: "home/work/kestrel/docs/sync.md", readSize: 1 },
+    run: async (s) => {
+      s.write(SYNC, `${s.read(SYNC)}\nA line the agent added.\n`);
+      await s.status("reloaded", 5000);
+      // The commit's message over the reload's, as in the git check: the cells under its box drawn only where they
+      // differ. Its own em dash cut too.
+      await s.ex("Commit");
+      await s.message("nothing staged — s stages a file in the git panel");
+    },
+  },
+  {
+    area: "links-and-files",
     name: "git: branches — one checked out, a new one made from here",
     covers: { cases: ["git"], commands: ["git.branches"] },
     options: { home: true, startAt: "home/work/kestrel/README.md" },

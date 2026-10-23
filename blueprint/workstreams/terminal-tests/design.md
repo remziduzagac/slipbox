@@ -11,7 +11,7 @@ feature (TT-D3), and the coverage test (TT-D4); the parallel runner and its repo
 remainder (the real-terminal set; the screenshots are taken headless too since D236). Previously: "a herdr pane … a
 developer's tool, not part of `bun run check` or CI".
 
-The text, as TT-T1 to TT-T10 built it:
+The text, as TT-T1 to TT-T10 built it, and T22 the reading of the output:
 
 **The headless terminal** (`tests/terminal/terminal.ts`). A check's slipbox runs in a pseudo-terminal of Bun's own
 (`Bun.Terminal`), its output fed to a headless xterm (`@xterm/headless`), which keeps the screen: each row's text,
@@ -19,8 +19,12 @@ each cell's colours (true colour as `#rrggbb`, the palette as its SGR code) and 
 slipbox asks a terminal at start as a modern one does: the cursor's place and the device's attributes (xterm's own
 answers), its colours (OSC 10 and 11, a dark scheme), and the Kitty keyboard protocol, whose flags slipbox pushes (5:
 disambiguate, alternate keys). It keeps the title (OSC 0 and 2) and every OSC 52 copy, and everything slipbox wrote,
-for checks of what's sent (pictures, by their protocol's bytes). Each chunk of output is copied before xterm parses
-it: the pseudo-terminal reads into the same buffer again. Its widths are a terminal's that keeps grapheme clusters
+for checks of what's sent (pictures, by their protocol's bytes). Each read of the output is decoded as it comes, a
+character cut at its end kept for the next, and xterm is given the text, never the bytes: xterm 6.0.0 drops a
+character a read cuts after a 0x80 byte (an em dash read as `E2 80`, then `94`; xterm.js#6003, fixed after 6.0.0),
+which puts the rest of its row a cell to the left, under cells slipbox then leaves as they are (T22). A byte that is no
+character shows as U+FFFD, as in a terminal. A check can read the output a set number of bytes at a time
+(`readSize`); one at a time cuts every character. Its widths are a terminal's that keeps grapheme clusters
 whole (kitty, libghostty, WezTerm: a ZWJ family, a flag, an emoji and its selector are one cluster, measured by Bun),
 not xterm's own Unicode 6 table, where most emoji are one cell and what slipbox drew past them would drift. A resize
 changes both sizes and sends slipbox SIGWINCH itself: Bun's child has the pseudo-terminal as its files but not as its
@@ -38,11 +42,14 @@ set built (`home`); its own config, state, cache, data, home and temporary folde
 lint, language servers and the background index off unless the check's config turns them on; slipbox started by
 Bun's own path in a terminal of 236×85 unless the check asks for another size, with nothing of the environment but
 `PATH`. It drives (`keys`, `type`, `paste`, `ex`, `send`, `resize`, `signal`, `restart`, `quit`) and reads (`screen`,
-`statusLine`, `runs`, `styleOf`, `title`, `osc52`, `after`: what slipbox printed on its way out), and every check
-waits for the screen to agree (`until`, `see`, `status`), never a fixed time; a wait gets at least ten seconds
-whatever the check asked (`SLIPBOX_TERMINAL_WAIT`), since a machine with a check on every core is slower than the one
-a check was written on, and a wait that passes returns at once. What lands only once slipbox is ready (spelling's
-dictionaries, loading in the background) is tried again until it does (`retry`): a key pressed early does nothing.
+`statusLine`, `runs`, `styleOf`, `title`, `osc52`, `after`: what slipbox printed on its way out). A restart keeps what
+the session was made with — its folders, config and terminal (asked to change them, it refuses) — and cuts off the
+slipbox before once what it wrote is drawn, stopped if it still runs and its terminal closed, so nothing it or a child
+writes later shows. Every check waits for the screen to agree (`until`, `see`, `status`), never a fixed time; a wait
+gets at least ten seconds whatever the check asked (`SLIPBOX_TERMINAL_WAIT`), since a machine with a check on every core
+is slower than the one a check was written on, and a wait that passes returns at once. What lands only once slipbox is
+ready (spelling's dictionaries, loading in the background) is tried again until it does (`retry`): a key pressed early
+does nothing.
 
 **In step with slipbox.** On a loaded machine slipbox reads a key late and draws late: a check that reads the screen
 right after sending keys can read the frame before them, and act on it (the link under the cursor, the line it's
