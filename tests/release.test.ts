@@ -464,6 +464,7 @@ interface Job {
   environment?: { name: string } | string;
   strategy?: { matrix: { include?: { target: string }[]; target?: string[] } };
   with?: Record<string, string | boolean>;
+  outputs?: Record<string, string>;
   steps?: Step[];
 }
 interface Workflow {
@@ -645,6 +646,36 @@ describe("the workflows: one build for releases and previews, previews from test
     expect(runs(site)).toContain("bun run site");
     expect(runs(site)).toContain("cp -R site/dist _site/docs");
     expect(site.steps?.find((s) => s.uses?.startsWith("actions/upload-pages-artifact@"))?.with?.path).toBe("_site");
+  });
+
+  test("a release's site deployed by a run by hand on main; every deployment reads its channels back (D258)", () => {
+    // Under a `release` event, a deployment of a commit deployed before is reported a success and never served
+    // (actions/deploy-pages#383): 0.5.0's `stable` channel wasn't, its commit deployed already by its preview.
+    const pages = workflow("pages.yml");
+    const redeploy = pages.jobs.redeploy!;
+    expect(redeploy.if).toBe("${{ github.event_name == 'release' && !github.event.repository.fork }}");
+    expect(redeploy.permissions).toEqual({ actions: "write" });
+    expect(runs(redeploy)).toBe('gh workflow run pages.yml --repo "$GITHUB_REPOSITORY" --ref main');
+    // Nothing built or deployed under the release's own run: `deploy` waits for `site`, skipped there.
+    expect(pages.jobs.site?.if).toBe("${{ !github.event.repository.fork && github.event_name != 'release' }}");
+    expect(needs(pages.jobs.deploy!)).toEqual(["site"]);
+    // The channels as built, read back from the site, once deployed, until it serves them.
+    expect(pages.jobs.site?.outputs).toEqual({
+      stable: "${{ steps.site.outputs.stable }}",
+      preview: "${{ steps.site.outputs.preview }}",
+    });
+    expect(runs(pages.jobs.site!)).toContain('echo "$channel=$(cat "_site/$channel" 2>/dev/null || true)"');
+    const steps = pages.jobs.deploy?.steps ?? [];
+    const deploy = steps.findIndex((s) => s.uses?.startsWith("actions/deploy-pages@"));
+    const served = steps.findIndex((s) => s.name === "served");
+    expect(deploy).toBeGreaterThanOrEqual(0);
+    expect(served).toBeGreaterThan(deploy);
+    expect(steps[served]?.env).toEqual({
+      SITE: "${{ steps.deploy.outputs.page_url }}",
+      STABLE: "${{ needs.site.outputs.stable }}",
+      PREVIEW: "${{ needs.site.outputs.preview }}",
+    });
+    expect(steps[served]?.run).toContain('[ "$(served stable)" = "$STABLE" ] && [ "$(served preview)" = "$PREVIEW" ]');
   });
 
   test("a job calling a workflow grants it at least what its jobs ask: GitHub won't start it otherwise", () => {

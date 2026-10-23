@@ -225,6 +225,9 @@ typecheck together (2026-10-17), fixed within the hour.
 
 ## D251: dev, test, then main: tested as it moves, everything before a release (2026-10-17)
 
+> **Amended by D257 (2026-10-23):** `main`'s ruleset sees `full` as a commit status the run by hand posts once it
+> passed: a ruleset counts no check a run by hand reports.
+
 **Decision:** Work moves through three branches. Every pull request merges into `dev`, now the default branch, once
 reviewed and its `ci` check passed; `ci` runs the lint, the typecheck, and the tests and terminal checks the change
 reaches (D239), and a push to `dev` the same on the merged commit. `dev` is moved to `test` (a fast-forward) when a
@@ -273,3 +276,25 @@ nothing checks a commit for a trailer, so a contributor's keep theirs.
 
 **Not chosen:** no trailer for anyone (a contributor's agent stays named, as D234 asks); a check in CI refusing the
 trailer (it would refuse a contributor's).
+
+## D257: `full` reported again as a commit status, the one `main`'s ruleset sees (2026-10-23)
+
+**Decision:** `ci` run by hand, once every job passed and it reported `full`, posts a commit status `full` on its
+commit with the run's own token, from a job of its own (`status`, which alone holds `statuses: write`). `main`'s
+ruleset, which requires `full` from GitHub Actions, is met by that status. A ruleset counts no check that a run by hand
+reports (GitHub's "Troubleshooting required status checks"), so it never saw the job's `full`: 0.5.0's commit, which
+had passed it, was refused (`Required status check "full" is expected`), and reached `main` with the ruleset off for
+that one push. `release.yml` still reads the check. Amends D251. Detail: design/repository.md § CI, `MAINTAINING.md`
+§ From dev to a release.
+
+**Why:** It keeps D251 as meant: `main` takes only a commit that passed the whole suite, and no one bypasses its
+ruleset, with the full run's command and the repository's settings as they were.
+
+**Cost:** Any workflow granted `statuses: write` could post the status; only this job is. A status a person posts
+doesn't count, since the ruleset takes `full` from GitHub Actions alone.
+
+**Verify:** the next release's push of `test` to `main` is taken with the ruleset on.
+
+**Not chosen:** `main`'s ruleset requiring `ci` and leaving `full` to `release.yml` (`main` could take a commit the
+whole suite never ran on); the full run started by a push to a branch of its own (a branch kept only to start it, and a
+new command for the full run).

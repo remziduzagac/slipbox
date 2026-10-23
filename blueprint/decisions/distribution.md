@@ -271,3 +271,26 @@ installer and in builds from 0.4.0 on. Running from source on an Intel Mac may s
 
 **Not chosen:** keeping the Intel build until Apple's last security update for macOS 26; building it without testing
 it (ideas.md § Distribution).
+
+## D258: A release's site deployed by a run on `main`, and every deployment read back (2026-10-23)
+
+**Decision:** When a release is published, `pages.yml` deploys nothing under the `release` event: that run's one job,
+`redeploy` (`actions: write`), starts a run of the workflow by hand on `main`, which builds and deploys the site as any
+run does. Every deployment then reads `stable` and `preview` back from the site until they're the lines it built, for
+eleven minutes at most, past the ten the site's cache keeps a file, and fails if they never are. Amends GR-D14.
+Detail: design/distribution.md § Previews, `MAINTAINING.md` § Releasing.
+
+**Why:** A Pages deployment made under a `release` event is reported a success and never served when its commit was
+deployed before (actions/deploy-pages#383, open since 2024), and under D251 a release's commit always was, by its
+preview. After 0.5.0 was published, the site went on without a `stable` channel, so the installer and `slipbox
+upgrade` on the stable channel found no release, until another commit was deployed an hour later. That issue's reports,
+from several repositories, find a run by hand of a commit deployed before served. Reading the channels back turns a
+deployment that isn't served into a failed run, whatever the cause.
+
+**Cost:** A release's site comes from a second run, a minute or two later. `preview.yml`'s call to `pages.yml` grants
+`actions: write` too, since GitHub checks every called job's grants, whichever runs; only `redeploy`, which never runs
+for a preview, takes it. A deployment the site doesn't serve takes its run eleven minutes to fail.
+
+**Not chosen:** naming a deployment other than by its commit (deploy-pages takes no other name, and the Pages API
+answered 404 to one in that issue's reports); deploying by hand as a step of the release (the step 0.5.0 lacked); a
+query string to get past the site's cache (it isn't part of the cache's key: a new one is a hit).

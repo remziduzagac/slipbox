@@ -255,7 +255,8 @@ describe("the supply chain's gates (14.10)", () => {
       on: Record<string, { branches?: string[] } | null>;
       jobs: Record<string, { needs?: string[]; if?: string; name?: string }>;
     };
-    const others = Object.keys(ci.jobs).filter((j) => j !== "ci");
+    // `status` reports `full` again, after it (D257).
+    const others = Object.keys(ci.jobs).filter((j) => j !== "ci" && j !== "status");
     expect(others.length).toBeGreaterThan(1);
     expect([...(ci.jobs.ci?.needs ?? [])].sort()).toEqual(others.sort());
     expect(ci.jobs.ci?.if).toBe("${{ always() }}");
@@ -270,6 +271,30 @@ describe("the supply chain's gates (14.10)", () => {
     const checks = (name: string) =>
       ruleset(name).rules.flatMap((r) => r.parameters?.required_status_checks?.map((c) => c.context) ?? []);
     expect([checks("dev"), checks("test"), checks("main")]).toEqual([["ci"], ["ci"], ["full"]]);
+  });
+
+  test("run by hand, `full` is reported again as a commit status once it passed, the one `main`'s ruleset sees (D257)", () => {
+    // A ruleset counts no check a run by hand reports, so `main`'s refused 0.5.0's commit, which had passed `full`. It
+    // counts a status the run's own token posts: GitHub Actions', the source it requires (integration 15368).
+    const ci = Bun.YAML.parse(readFileSync(join(ROOT, ".github", "workflows", "ci.yml"), "utf8")) as {
+      jobs: Record<
+        string,
+        { needs?: string; if?: string; permissions?: Record<string, string>; steps?: { run?: string }[] }
+      >;
+    };
+    const status = ci.jobs.status;
+    expect(status?.if).toBe("${{ github.event_name == 'workflow_dispatch' }}");
+    // After `ci`, which is `full` run by hand: skipped when it failed.
+    expect(status?.needs).toBe("ci");
+    expect(status?.permissions).toEqual({ statuses: "write" });
+    const run = (status?.steps ?? []).map((s) => s.run ?? "").join("\n");
+    expect(run).toContain('gh api "repos/$GITHUB_REPOSITORY/statuses/$GITHUB_SHA" -f state=success -f context=full');
+    const main = JSON.parse(readFileSync(join(ROOT, ".github", "upkeep", "rulesets", "main.json"), "utf8")) as {
+      rules: { type: string; parameters?: { required_status_checks?: unknown[] } }[];
+    };
+    expect(main.rules.find((r) => r.type === "required_status_checks")?.parameters?.required_status_checks).toEqual([
+      { context: "full", integration_id: 15368 },
+    ]);
   });
 
   test("a pull request of the docs alone skips the tests and the terminal tests; lint runs the docs' tests (D230)", () => {

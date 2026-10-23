@@ -296,12 +296,20 @@ published release tagged `v<x.y.z>` of the highest version (the newest, unless a
 it), `preview` the newest published preview; a draft is neither, and a channel with no release has no file
 (`release.ts site`: the releases from `gh api`, each installer downloaded and hashed, refused when GitHub's own digest
 of the asset differs). The site also holds the docs, at `docs/` (§ The documentation site), and its `index.html`
-sends a visitor there, with a link to the repository. It's deployed when a release is published (a person publishes
-it), by `preview.yml` once a preview is, when the bootstrap, the workflow, `docs/` or `site/` change on `main`, and by
-hand; the site is always made from `main`'s scripts, whichever ref started the run, and from the releases as they are
-then, one deployment at a time, never cancelled, so an older run never deploys over a newer one. Its build job only
-reads; the Pages grants (`pages: write`, `id-token: write`) are its deploy job's alone, in the `github-pages`
+sends a visitor there, with a link to the repository. It's deployed by `preview.yml` once a preview is published, when
+the bootstrap, the workflow, `docs/` or `site/` change on `main`, by hand, and when a release is published (a person
+publishes it); the site is always made from `main`'s scripts, whichever ref started the run, and from the releases as
+they are then, one deployment at a time, never cancelled, so an older run never deploys over a newer one. Its build job
+only reads; the Pages grants (`pages: write`, `id-token: write`) are its deploy job's alone, in the `github-pages`
 environment, which takes deployments from `main`, `test` and `v*` tags only.
+
+**A release's deployment** is a run of `pages.yml` by hand, on `main`, started by the release's own run, which does
+nothing else (`redeploy`, `actions: write`): a deployment made under a `release` event is reported a success and never
+served when its commit was deployed before (actions/deploy-pages#383), and a release's commit always was, by its
+preview (D258). **Every deployment is read back:** once deployed, `stable` and `preview` are fetched from the site
+until they're the lines the build wrote (an empty one for a channel with none, which the site answers with a 404), for
+eleven minutes at most, past the ten the site's cache keeps a file, and the run fails if they never are. A deployment
+empties the cache; a query string doesn't get past it, not being part of its key.
 
 ## The documentation site
 

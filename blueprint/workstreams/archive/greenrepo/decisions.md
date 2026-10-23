@@ -163,6 +163,9 @@ took near half an hour each: "I agree we should not run full suite in previews".
 
 ## GR-D14: The installer at a fixed address on GitHub Pages (2026-10-12)
 
+> **Amended by D258 (2026-10-23):** a release published is deployed by a run of `pages.yml` by hand on `main`, which
+> the release's run starts, and every deployment reads the channels back from the site.
+
 **Decision:** `curl -fsSL https://remziduzagac.github.io/slipbox/install.sh | sh` installs slipbox; `sh -s --
 --preview`, the newest preview. The Pages `install.sh` is a bootstrap: it reads the channel's file from Pages (`stable`,
 `preview`: a release's tag and the SHA-256 of its `install.sh`), downloads that release's own installer, checks its

@@ -134,8 +134,10 @@ jobs:
   pages:
     needs: publish
     uses: ./.github/workflows/pages.yml # zizmor: ignore[self-repository]
-    # The most pages.yml's jobs may have: its build reads, its deploy alone deploys.
+    # The most pages.yml's jobs may have: its build reads, its deploy alone deploys, and its redeploy, which runs for a
+    # release alone, starts it again; GitHub checks every job's grants, whichever runs.
     permissions:
+      actions: write # to run pages.yml by hand, on main (its redeploy: never for a preview)
       contents: read # to check out main, and list the releases
       pages: write # to deploy the site
       id-token: write # to prove to Pages which workflow and ref the deployment comes from (OIDC)

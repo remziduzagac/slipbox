@@ -86,8 +86,9 @@ fast-forward: nothing is committed to them directly, and their rulesets forbid d
   ```
 
 - **The full run**, to know where things stand: `ci` run by hand on `test` runs everything — every unit test on Linux
-  and macOS, every terminal check on all three runners — and reports `full` on the commit. Run it whenever you want,
-  and always before a release; a failure is fixed through `dev` as above.
+  and macOS, every terminal check on all three runners — and reports `full` on the commit: as a check, and once it
+  passed, as a commit status, the one `main`'s ruleset sees (D257). Run it whenever you want, and always before a
+  release; a failure is fixed through `dev` as above.
 
   ```bash
   gh workflow run ci --ref test
@@ -151,8 +152,9 @@ and `.github/workflows/pages.yml` the installer's site once it's published. The 
 10. **Publish the draft** on its page, or with `gh release edit v0.3.0 --repo remziduzagac/slipbox --draft=false`. A
     published release can't be changed.
 11. **Homebrew and Pages follow:** publishing runs `homebrew.yml`, which copies the release's formula into the tap,
-    through the `release` environment, and `pages.yml`, whose `stable` channel then names the release. Check the tap's
-    new commit, then `brew upgrade slipbox` on a machine that has it; and that
+    through the `release` environment, and `pages.yml`, which starts a run of itself on `main` to deploy the site (a
+    deployment under the release's own run isn't served, D258); that run passes once the site's `stable` channel names
+    the release. Check the tap's new commit, then `brew upgrade slipbox` on a machine that has it; and that
     `https://remziduzagac.github.io/slipbox/stable` names the new tag.
 12. **Try it as a user would:** `curl -fsSL https://remziduzagac.github.io/slipbox/install.sh | sh` on a clean machine,
     `slipbox upgrade --check` from the version before, and `slipbox --version` after.
