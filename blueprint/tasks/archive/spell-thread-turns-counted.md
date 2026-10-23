@@ -114,3 +114,5 @@ that a busy machine can't fail and that still fails if the main thread is held w
   and fails. (2) Quit every harness at a test's end, the stall's suspect: the hold's cause isn't established, and it's
   a change to the whole test file's lifecycle, beyond this task. (3) Drop the timer ticks, since reaching the checks
   proves the event loop ran: kept, as they show timer turns whatever `h.keys` resolves through.
+- 2026-10-23: CI on the pull request, the whole of `tests/tui.test.ts` (late in the file, where the timed test failed):
+  the new test passed on macOS (654 ms) and Linux (481 ms), the pipe and `bash`'s `read -t` working on both.
