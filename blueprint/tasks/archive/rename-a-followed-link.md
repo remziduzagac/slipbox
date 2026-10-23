@@ -1,5 +1,5 @@
 ---
-status: doing
+status: done
 assignee: claude-11
 blocked_by: []
 tracker: [gh:#11]
@@ -155,3 +155,4 @@ to lead where it did (D?1).
   a link leading nowhere is: …`, `undo moves back only what moved as it moved: …`, the undo's warning in `a followed
   link out of the vault, named itself, …`; the earlier `a folder moved with a relative file link in it` now reaches
   its note through `walk.exclude`, a hidden one being never written. Mutation-checked, each of the ten: fails a test.
+- 2026-10-23: Done, in a draft pull request into `dev`; its merge is the maintainer's acceptance.
