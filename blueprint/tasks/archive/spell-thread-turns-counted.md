@@ -251,3 +251,27 @@ that a busy machine can't fail and that still fails if the main thread is held w
   "stopped" without being terminated: the unit test fails, as the old thread ran out and built the dictionary. The
   scope's entry for the preloaded script removed: the scope test fails. Then: `core.test.ts`'s spelling, 11 pass;
   the spelling block, 7 pass; the four spelling terminal checks, 4 of 4.
+- 2026-10-24: The diff after round 4, reviewed; each finding checked:
+  - Verified, fixed: the said-once terminal check kept English held while its warning's floating box faded (4 s)
+    and through the messages list, eating into the request's 20 s deadline. It's let go right after its frames
+    now; the messages are counted after.
+  - Verified, fixed: a spent hold read "set", the same as one not yet reached. It reads "spent" now (`HOLD_STATES`),
+    and the checks' wait for the hold ends on any state past "set", then says which it found.
+  - Verified, fixed: the preload's relative path in `BUN_OPTIONS` reached every bun process the check starts from
+    elsewhere: the CLI run from the vault, a language server. A quoted absolute path isn't read either: quoted, it's
+    silently not preloaded (a standalone try). A session option, `preload`, now puts `--preload <path>` before
+    slipbox's `main.ts`, for slipbox's own process alone. A harness test shows it loaded there once, and not in the
+    CLI's.
+  - Verified, fixed: the preload's watcher polled for as long as slipbox ran once a hold was spent, or its thread
+    stopped mid-wait. It stops past "set" and "waiting", and two seconds after it lets go.
+  - Verified, fixed: with the preload in `BUN_OPTIONS`, the scope comment's reason was wrong (nothing named the
+    script). With `preload` it's named by a check's path again, and counts as the harness without its entry ("every
+    check"). With it, the spelling checks (a standalone try of `scope`).
+  - Verified, fixed: a second hold on the same words silently replaced the first. It's refused now, and the unit test
+    says so.
+  - Verified, fixed: design/testing.md said one check preloads the script. Both spelling checks do.
+  - Rejected again: a finite stall isn't caught; the hook ships in the product; the copied dictionaries' helpers.
+- 2026-10-24: Round 5's fixes, mutation-checked, each alone, the files restored. `preload` ignored, or passed
+  through the environment: the harness test fails (no load, or the CLI's too). No "spent" written, or a second hold
+  accepted: the hold's unit test fails. Then: `core.test.ts`'s spelling, 11 pass; the spelling block, 7 pass; the
+  scope test passes; the preload's harness test passes; the four spelling terminal checks, 4 of 4.

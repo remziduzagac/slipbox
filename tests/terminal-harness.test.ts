@@ -575,3 +575,21 @@ describe("what the checks share (check.ts)", () => {
     }
   });
 });
+
+describe("starting slipbox (session.ts)", () => {
+  test("a preload: Bun loads it into slipbox's own process, once, before slipbox; never into the CLI's", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "slipbox-preload-"));
+    const script = join(dir, "mark.ts");
+    writeFileSync(script, 'require("node:fs").appendFileSync(process.env.PRELOAD_MARK, `${process.pid}\\n`);\n');
+    const s = new Session({ preload: script, env: { PRELOAD_MARK: join(dir, "loaded") } });
+    try {
+      await s.start();
+      expect(readFileSync(join(dir, "loaded"), "utf8")).toBe(`${s.pid()}\n`);
+      expect(s.cli("--version").code).toBe(0);
+      expect(readFileSync(join(dir, "loaded"), "utf8")).toBe(`${s.pid()}\n`);
+    } finally {
+      await s.quit();
+      s.cleanup();
+    }
+  });
+});

@@ -24,7 +24,7 @@ export type SpellAnswer = { id: number; answer?: unknown; error?: string };
 const spellers = new Map<string, Speller>();
 
 /** Tests' holds (`holdBuild`), by the words they hold: the next time such a dictionary is asked for, it waits before
- *  it's built, or, built already, the hold is spent. */
+ *  it's built, or, built already, the hold is spent without waiting. One hold for the same words at a time. */
 const holds = new Map<string, { flag: Int32Array; limit: number }>();
 
 /** Waiting for the test to let go, or its limit: the flag's second slot says where it is (`HOLD_STATES`). */
@@ -43,6 +43,7 @@ async function open(files: DictionaryFiles[], wordsFile: string): Promise<Spelle
     const hold = holds.get(f.dic);
     holds.delete(f.dic);
     let s = spellers.get(key);
+    if (hold && s) Atomics.store(hold.flag, 1, HOLD_STATES.indexOf("spent"));
     if (!s) {
       if (hold) wait(hold);
       s = await openSpeller(f, ownWords(wordsFile));
@@ -68,6 +69,7 @@ async function answer(m: SpellRequest): Promise<unknown> {
       for (const s of spellers.values()) s.add(m.word);
       return true;
     case "hold":
+      if (holds.has(m.dic)) throw new Error(`a hold is set on ${m.dic} already`);
       holds.set(m.dic, { flag: new Int32Array(m.flag), limit: m.limit });
       return true;
   }

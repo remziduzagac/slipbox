@@ -211,9 +211,10 @@ bun run e2e find replace     # only the scenarios whose names contain these
   (`beside`: another vault, a folder outside every vault), run the CLI before slipbox starts (`setup`: `init`
   that vault), and start slipbox another way: elsewhere (`startAt`), with no path (`startAt: null`), from
   a folder (`cwd`), with flags (`args`) or environment (`env`), or expecting it to fail (`noWait`). A check that
-  must hold slipbox mid-work preloads a script of the tests' into it (`BUN_OPTIONS=--preload`): the spelling check
-  of a dictionary still loading preloads `tests/terminal/spell-hold.ts`, which holds the spell checker's thread
-  (`holdBuild`) until the check writes a file, and writes the hold's state to another.
+  must hold slipbox mid-work has Bun preload a script of the tests' into slipbox's own process, not the CLI's
+  (`preload`): the spelling checks of a dictionary still loading and of one that won't load preload
+  `tests/terminal/spell-hold.ts`, which holds the spell checker's thread (`holdBuild`) until the check writes a file,
+  and writes the hold's state to another.
 - **Waits, never sleeps.** Every check waits (up to a timeout) for the screen to agree: a row that
   contains something, the status line's mode, a message's floating box, a file on disk. Only a check
   that something *doesn't* happen — no autosave mid-insert, no popup before its delay — waits out a

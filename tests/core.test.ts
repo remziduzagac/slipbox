@@ -4781,6 +4781,10 @@ describe("spelling (25.6)", () => {
       const holdA = await holdBuild(a.dic);
       const holdB = await holdBuild(b.dic, 100);
       expect([holdA.state(), holdB.state()]).toEqual(["set", "set"]);
+      // A second on the same words, before the first is spent: refused.
+      expect(await holdBuild(b.dic).then(String, (err: Error) => err.message)).toBe(
+        `a hold is set on ${b.dic} already`,
+      );
       let built = false;
       const openA = openDictionary(a).then(
         () => (built = true),
@@ -4796,9 +4800,10 @@ describe("spelling (25.6)", () => {
       // with another affix file, built, don't wait either.
       const again = await holdBuild(a.dic);
       await openDictionary(a);
+      expect(again.state()).toBe("spent");
       cpSync(a.aff, join(dirname(a.aff), "other.aff"));
       await openDictionary({ ...a, aff: join(dirname(a.aff), "other.aff") });
-      expect(again.state()).toBe("set");
+      expect(again.state()).toBe("spent");
       // Its wait run out (100 ms here, 40 s unless said): built all the same, and it says so.
       await openDictionary(b);
       expect(holdB.state()).toBe("ran out");

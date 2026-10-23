@@ -42,14 +42,16 @@ export function addToDictionaries(word: string): void {
   if (channel) ask({ op: "add", word }).catch(() => {});
 }
 
-/** Where a test's hold is (`holdBuild`): set, the thread waiting there, let go by the test, or its wait run out. */
+/** Where a test's hold is (`holdBuild`): set, the thread waiting there, let go by the test, its wait run out, or spent
+ *  on words built already. */
 export type HoldState = (typeof HOLD_STATES)[number];
 
 /**
  * For a test: the dictionary whose words are `dic`, the next time the thread is asked to build it, waits first until
  * the test lets it go, or for `limit` ms on the thread's own clock, so that a main thread held until it's built is let
  * go too. Asked for when it's built already, it isn't built again: the hold is spent, never waiting. Stopping the
- * thread ends a wait, the dictionary unbuilt.
+ * thread ends a wait, the dictionary unbuilt, and drops the holds it had. A second hold on the same words, before the
+ * first is spent, is refused.
  */
 export async function holdBuild(dic: string, limit = 40_000): Promise<{ state: () => HoldState; letGo: () => void }> {
   const flag = new Int32Array(new SharedArrayBuffer(8));
