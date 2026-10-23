@@ -144,4 +144,22 @@ and the status line's mode waited for together. Never pressed again on a screen 
     run concurrently, two of Bun's pseudo-terminals in one process can cross their output.
 - 2026-10-23: After round 1: the tests of what the checks share, 8 pass; the 59 terminal checks that use the helpers,
   the readers or `toPanel` (the git panel's 34 with them), `SLIPBOX_TERMINAL_JOBS=2` under `nice`, pass, 120 s.
+- 2026-10-23: Round 2, two independent reviews of the new diff: one found nothing; the other ten findings, checked:
+  - Taken: `mode()` took any chip of capitals for a mode, but ASCII draws the pending leader as ` SPC ` (`keyText`) and
+    `F` waiting for its character as ` F `, against what its comment said. It reads the chip against the thirteen
+    modes `drawStatus` names (`modeOf`, tested; the pattern before fails it on `SPC`).
+  - Rejected: a source-mode table cell `| Explorer   |` or a rendered one `│ Outline   │` would match the titles. A
+    check's content comes from the sample folders alone (TT-D5), and none has such a cell.
+  - Rejected: an outline narrower than its title and two spaces: `ui.outline_width` is 32 unless set, and the one
+    check that sets it gives 60.
+  - Rejected: `explorerClosed` takes a left panel showing another view (git) for the explorer closed. It is: the
+    helper's job is the explorer, as the old one's `notSee(/Explorer/)` was.
+  - Rejected: the git panel's `TITLE` takes no ASCII `|` while the explorer's and the outline's do; with the readers'
+    border search (round 1), ASCII through the panels' helpers is the follow-up's.
+  - Rejected: the regression tests catch the old helpers only while they read the screen within the 400 ms lag, which
+    a runner loaded enough may not; the fixed helpers pass either way, and the lag was the margin chosen (round 1).
+  - Rejected: T21 after T10, its numbers between unused: the IDs were handed out to the branches working at once, T21
+    to this one.
+  - Rejected, as before: `Session.keys` and the stale screen; the title and border logic written five times.
+- 2026-10-23: After round 2: the tests of what the checks share, 9 pass; the 59 terminal checks pass, 165 s.
 - 2026-10-23: The typecheck, the lint and `check:docs` pass. Done; the pull request's merge is the acceptance.

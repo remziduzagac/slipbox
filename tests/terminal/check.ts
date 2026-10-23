@@ -170,13 +170,23 @@ export const leader = (s: Session, ...keys: string[]) => s.keys("space", ...keys
 /** The floating scratch's bottom border, how it closes (#43): on screen while it's open. */
 export const SCRATCH_FLOATING = "esc · q closes, saved";
 
+/** The modes the status line's chip names (draw-status.ts): a note's, a panel's. */
+const MODES = new Set(
+  "READ SOURCE LENS INSERT VISUAL V-LINE RESIZE FILES GIT PROBLEMS OUTLINE FOOTNOTES INFO".split(" "),
+);
+
 /**
- * The mode on the status line: its chip, at its start (` FILES `), or null while it shows something else — the keys
- * pending (` ␣ `, as the leader's which-key popup is up), an operator's, a prompt.
+ * The mode a status line shows: its chip, at its start (` FILES `), or null while the chip is something else — the keys
+ * pending (` ␣ `, ` SPC ` in ASCII, as the leader's which-key popup is up; ` F ` waiting for its character), an
+ * operator's, a prompt over the line.
  */
-export function mode(s: Session): string | null {
-  return /^ ([A-Z][A-Z-]*) /.exec(s.statusLine())?.[1] ?? null;
+export function modeOf(statusLine: string): string | null {
+  const chip = /^ (\S+) /.exec(statusLine)?.[1];
+  return chip && MODES.has(chip) ? chip : null;
 }
+
+/** The mode on the status line now (`modeOf`). */
+export const mode = (s: Session) => modeOf(s.statusLine());
 
 /**
  * The explorer's own title, at its top: "Explorer", the spaces up to its buttons (a new note, a new folder, a glyph

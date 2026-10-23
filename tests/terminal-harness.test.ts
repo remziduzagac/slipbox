@@ -5,7 +5,7 @@ import { describe, expect, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { COMMAND_SPECS } from "../src/core/command-specs.ts";
-import { EXPLORER, explorerClosed, explorerOpen, mode, OUTLINE, opened } from "./terminal/check.ts";
+import { EXPLORER, explorerClosed, explorerOpen, mode, modeOf, OUTLINE, opened } from "./terminal/check.ts";
 import { encodeKey } from "./terminal/keys.ts";
 import { Session } from "./terminal/session.ts";
 import { HeadlessTerminal } from "./terminal/terminal.ts";
@@ -365,6 +365,21 @@ describe("what the checks share (check.ts)", () => {
     const presses = () => (existsSync(pressed) ? readFileSync(pressed, "utf8") : "").length;
     return { s, presses };
   };
+
+  test("the status line's mode is its chip when it names one, never the keys pending or an operator's", () => {
+    for (const m of ["READ", "SOURCE", "INSERT", "V-LINE", "FILES", "GIT", "OUTLINE"])
+      expect(modeOf(` ${m}  notes  ‹ home.md ›  L1:1`)).toBe(m);
+    // The leader pending (Unicode's ␣, ASCII's SPC), F waiting for its character, an operator, a prompt, a file name.
+    for (const line of [
+      " ␣  notes  L1:1",
+      " SPC  notes  L1:1",
+      " F  notes  L1:1",
+      " dT  notes  L1:1",
+      ":write",
+      "FILES.md",
+    ])
+      expect(modeOf(line)).toBeNull();
+  });
 
   test("the panels' own titles, never the which-key popup's lines that name them", () => {
     // The popup's line for each key, its border Unicode's or ASCII's.
