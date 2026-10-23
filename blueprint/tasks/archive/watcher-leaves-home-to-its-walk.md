@@ -302,3 +302,41 @@ folder asked for by name, which is whole, and once home's walk is kept, a folder
   once: 7, `diary/2025/m01/day-1.md` followed, m02's notes none of home's, `diary` listed `◐`. Passing: the eleven home
   and marks terminal checks, the neighbouring tests (65, 132), tests/home.test.ts, the terminal-coverage and docs tests,
   the typecheck, the lint, `check:boundary`, `check:size`.
+- 2026-10-24: Round 3 (on 65ee507). Codex hit its usage limit before reviewing (it resets at 1:41); its review of this
+  round comes after. The code-review skill's fourteen, each checked; its altitude finding (11: drop following moves,
+  leave them to home's walk and the graph's pairing by content) went to the maintainer, who chose to keep following
+  them and fix the round.
+  - Verified, fixed (1): a folder named for the walk was never where notes that went could be — a polled top folder's
+    listing named it and didn't keep it, and `watchNamed` forgot it — so a rename whose new name came first, or by the
+    polled listing, lost its notes. A folder found and left, named or not, stays a candidate for a tick (`leftSeen`),
+    watched or not. Tests: the batches test's `fifth` renamed `sixth`, the new name's batch first; a new test, `… the
+    folder opened by name renamed while home's top is polled …`.
+  - Verified, fixed (2): a copy kept with its times of a folder that went (`cp -a`), in a folder seen lately, took its
+    notes. Every candidate, and each note followed into it, now needs the folder changed (its ctime: a rename changes
+    that, not its mtime) after a little before the note went; a folder found in the batch itself is new. Test: the
+    moves test's `Archive` moved out of home, `Documents/archive-bak` its copy, another note gone a moment before. Found
+    making it: `rm -rf` reports each note before its folder, so a folder deleted is never one that went with its notes:
+    only a folder moved is; the step moves `Archive` out of home. C3 does the same with `~/archive`.
+  - Verified, fixed (3), for what home's files are: the files known in a folder that went weren't said gone, nor
+    followed. They are now, in a vault too (a folder deleted there left its files in the graph). Home's walk leaves
+    pictures out ("not a note or text file"), so the case is a data or text file, not an embed's picture. A file
+    followed is said once, though a later batch in the tick looks again. Test: the batches test's `kept/sub/table.csv`.
+  - Verified, fixed (4): a batch both rescanning and naming (two merged while git wrote) never forgot its names. The
+    TUI applies the names after a rescan too. Test: T1, a merged batch.
+  - Verified, fixed (5): the batch's own look named a polled top folder for the walk whenever an event named it. A
+    polled folder is passed over, as a watched one is. Test: B, an event naming polled Documents.
+  - Verified, fixed (6, 7, 8): a spread of every note that went, a bucket copied at each insert, the folders that went
+    filtered again for each candidate, and a candidate's `walksInto` before its time: now a loop, a push, once per
+    folder, and the time first. The spread of `adoptTree`'s files is dev's, left.
+  - Verified, fixed (9, 10, 12): a second look ran a folder's marker checks again though it was left before; moves were
+    kept in a vault, and in home once walked, where none is followed; `sync` guessed whether home was walked from a key.
+    The watcher is given `walkPending` (the TUI: home's walk still to make), in home only with `leftToWalk`.
+  - Fixed in part (13): `flush` settles in two passes (`settle`), the paths then the moves followed, with no flags; the
+    batch's folders are named after (`found` once more there, on purpose: each name takes its room).
+  - Fixed in part (14): `forget` uses home.ts's `under`; `unwatchTree`'s own prefix test is dev's, its root case not
+    the same, left.
+  - Not fixed (11): the maintainer's choice, above.
+  Mutations: 42, each failing a test once two steps were made sharper (the polled folder named once with room left;
+  the copy step with another note gone at the real time — removing the per-note guard then failed it, so it stays).
+  Five separate runs of each file pass; the neighbouring tests (66, 132), tests/home.test.ts, the terminal-coverage and
+  docs tests, the eleven home and marks terminal checks, the typecheck, the lint, `check:boundary` and `check:size`.

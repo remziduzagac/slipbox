@@ -421,9 +421,21 @@ const UNWALKED_HOME: Check[] = [
       const before = new Date(Date.now() - 3_600_000);
       for (const f of ["diary/old.md", "diary/backup/old.md", "diary/backup"])
         utimesSync(join(s.home, f), before, before);
-      await new Promise((r) => setTimeout(r, 1000));
+      // (Past the two seconds and a tick the watcher allows a folder a note moved into: the copy made long before.)
+      await new Promise((r) => setTimeout(r, 3000));
       rmSync(join(s.home, "diary", "old.md"));
       await neverListed(s, "Old note", "diary/backup/old.md", "a copy in a folder unchanged since: no move");
+      // A folder moved out of home, a copy of it kept with its times (`cp -a`) in diary: no move.
+      s.write("~/archive/a1.md", "# Archived\n");
+      await untilListed(s, "Archived", "archive/a1.md");
+      s.write("~/diary/archive-bak/a1.md", "# Archived\n");
+      for (const f of ["archive/a1.md", "diary/archive-bak/a1.md", "diary/archive-bak"])
+        utimesSync(join(s.home, f), before, before);
+      await new Promise((r) => setTimeout(r, 3000));
+      s.write("~/diary/tick.md", "# Tick\n"); // diary listed again: archive-bak found
+      renameSync(join(s.home, "archive"), join(s.dir, "tmp", "archive"));
+      await untilListed(s, "Tick", "diary/tick.md");
+      await neverListed(s, "Archived", "diary/archive-bak/a1.md", "a folder moved out, its copy kept: no move");
       // A known note deleted as a folder comes holding one of the same name: no move, nothing below it read.
       rmSync(join(s.home, "todo.md"));
       s.write("~/bulk/todo.md", "# Another to-do list\n");

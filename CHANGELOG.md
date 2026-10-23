@@ -21,6 +21,8 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 - Before your home folder's first walk, a file saved in a folder of home no longer has slipbox read every folder in it
   at once, and a folder new in home isn't read whole: they wait for home's walk, made a little at a time while nobody
   is working, as the manual says. 0.5.0 read them on the spot, which could take thousands of notes in at once.
+- A folder deleted or moved away outside slipbox takes its files with it from the index, not only its notes: a link or
+  embed to a data or text file in it is said broken at once. 0.5.0 kept them until the folder's vault was walked again.
 
 ## [0.5.0] - 2026-10-22
 

@@ -27,7 +27,7 @@ import {
   watch,
 } from "node:fs";
 import { join, relative, sep } from "node:path";
-import { walksInto } from "./home.ts";
+import { under, walksInto } from "./home.ts";
 import { symlinkVerdict, type WalkFilter } from "./walk.ts";
 
 export interface WatchChange {
@@ -82,6 +82,24 @@ export interface WatcherOptions {
   maxDirs?: number;
   /** A folder a walk is to look into, never the watcher (home before its first walk, VV-D2: `waitsForHomeWalk`). */
   leftToWalk?: (dirRel: string) => boolean;
+  /** Home's walk still to make (VV-D2): only then are notes moved into what it's left followed (`movedTo`). */
+  walkPending?: () => boolean;
+  /** The clock (epoch ms): tests set it. */
+  now?: () => number;
+}
+
+/** A batch being settled (`flush`): the paths, what came of them, and the folders left to a walk among them. */
+interface Settling {
+  paths: string[];
+  seen: Set<string>;
+  changes: WatchChange[];
+  rescan: boolean;
+  /** Folders found unwatched in this batch that a walk is to look into (`found`). */
+  found: string[];
+  /** Where known notes that went may be now: those, and the folders second looks left lately (`leftSeen`). */
+  candidates: string[];
+  /** Whether moves are followed: home's walk still to make. */
+  following: boolean;
 }
 
 /**
@@ -118,8 +136,11 @@ export class VaultWatcher {
   private readonly leftSeen = new Map<string, number>();
   /** Known notes that went lately: a move's two ends may come in two batches, the second look's a tick later. */
   private readonly recentlyWent: Went[] = [];
-  /** The folders that went lately holding known notes, by the tick: renamed or moved, maybe (`movedTo`). */
-  private readonly recentlyGone: { dir: string; tick: number }[] = [];
+  /**
+   * The folders that went lately holding known notes, the other files known in them (an embed's picture), by the tick:
+   * renamed or moved, maybe (`movedTo`).
+   */
+  private readonly recentlyGone: { dir: string; files: string[]; tick: number }[] = [];
   private timer: ReturnType<typeof setTimeout> | null = null;
   private pollTimer: ReturnType<typeof setInterval> | null = null;
   private readonly ownWrites = new Map<string, number>();
@@ -160,9 +181,8 @@ export class VaultWatcher {
 
   /** After a rescan: watch exactly `dirs`, and adopt the new graph's notes as known. */
   sync(dirs: string[], known: Map<string, number>, sizes?: Map<string, number>): void {
-    // Nothing left to a walk any more (home's walk kept): what the watcher left, and moves to follow, forgotten.
-    const [some] = this.left.keys();
-    if (some !== undefined && !this.opts.leftToWalk?.(some)) {
+    // Home's walk kept: nothing left to it any more — what the watcher left, and moves to follow, forgotten.
+    if (!this.opts.walkPending?.()) {
       this.left.clear();
       this.leftSeen.clear();
       this.recentlyWent.length = 0;
@@ -274,19 +294,25 @@ export class VaultWatcher {
 
   /** A folder left to the walk, gone or taken: forgotten, with the folders in it — found again, it's new. */
   private forget(dirRel: string): void {
-    const under = (d: string) => d === dirRel || d.startsWith(`${dirRel}/`);
-    for (const d of this.left.keys()) if (under(d)) this.left.delete(d);
-    for (const d of this.leftSeen.keys()) if (under(d)) this.leftSeen.delete(d);
+    for (const d of this.left.keys()) if (under(d, dirRel)) this.left.delete(d);
+    for (const d of this.leftSeen.keys()) if (under(d, dirRel)) this.leftSeen.delete(d);
   }
 
   /**
-   * Where known notes that went (`went`) are now, in folders found and left to the walk (`into`): the same file by its
-   * time and size (a move keeps them), under the same path below a folder that went (`gone`: renamed or moved there) or
-   * at the folder's top under any name (a note moved into it). Those notes alone — the rest of such a folder is the
-   * walk's. Never in a folder home's walk wouldn't go into, nor through one (`walksInto`): a vault made in it, or a link
-   * it doesn't follow, since it was found.
+   * Where known notes that went (`went`) are now, in folders left to the walk (`into`): the same file by its time and size
+   * (a move keeps them), under the same path below a folder that went (`gone`: renamed or moved there — the other files
+   * known in it with them) or at the folder's top under any name (a note moved into it). Those alone: the rest of such a
+   * folder is the walk's. A note only into a folder found in this batch (`fresh`), or one changed since a little before
+   * it went — never a copy made long ago (`cp -a`), its times kept, though another note went just now — and never one
+   * home's walk wouldn't go into, nor through one (`walksInto`): a vault made in it, or a link it doesn't follow, since
+   * it was found.
    */
-  private movedTo(into: readonly string[], went: readonly Went[], gone: readonly string[]): string[] {
+  private movedTo(
+    into: readonly string[],
+    fresh: ReadonlySet<string>,
+    went: readonly Went[],
+    gone: readonly { dir: string; files: string[] }[],
+  ): string[] {
     const { filter, root } = this.opts;
     const walked = new Map<string, boolean>();
     const walks = (dir: string) => walked.get(dir) ?? walked.set(dir, walksInto(root, filter, dir)).get(dir)!;
@@ -294,21 +320,35 @@ export class VaultWatcher {
       const st = statOrNull(join(root, rel));
       return !!st && st.mtimeMs === w.mtimeMs && (w.size === undefined || st.size === w.size);
     };
+    // A note seen gone a tick at most after it went, and a coarse clock (a rename changes the folder's ctime, not its
+    // mtime).
+    const late = Math.min(this.opts.pollMs ?? 2000, 10_000) + SETTLE_MS;
     const byTime = new Map<number, Went[]>();
-    for (const w of went) byTime.set(w.mtimeMs, [...(byTime.get(w.mtimeMs) ?? []), w]);
-    // A folder a note moved into changed then: one unchanged since before the first went isn't listed for it.
-    const since = Math.min(...went.map((w) => w.at)) - (this.opts.pollMs ?? 2000) - SETTLE_MS;
+    for (const w of went) {
+      const bucket = byTime.get(w.mtimeMs);
+      if (bucket) bucket.push(w);
+      else byTime.set(w.mtimeMs, [w]);
+    }
+    const folders = gone.map((g) => ({ ...g, notes: went.filter((w) => w.rel.startsWith(`${g.dir}/`)) }));
     const there = new Set<string>();
     for (const d of new Set(into)) {
-      if (!walks(d)) continue;
-      // A folder that went, here now: its notes, once one of the first few is found here (another may have gone alone).
-      for (const g of gone) {
-        const below = went.filter((w) => w.rel.startsWith(`${g}/`));
-        const at = (w: Went) => `${d}${w.rel.slice(g.length)}`;
-        if (below.slice(0, 20).some((w) => same(at(w), w)))
-          for (const w of below) if (same(at(w), w) && walks(parentOf(at(w)))) there.add(at(w));
+      const changed = fresh.has(d) ? Number.POSITIVE_INFINITY : (changedAt(join(root, d)) ?? Number.NEGATIVE_INFINITY);
+      /** A note that went before `d` changed, give or take: one that can be in it (not a copy made long before). */
+      const after = (w: Went) => changed >= w.at - late;
+      if (!went.some(after) || !walks(d)) continue;
+      // A folder that went, here now: its notes, once one of the first few is (another may have gone alone), and the
+      // other files known in it.
+      for (const g of folders) {
+        const notes = g.notes.filter(after);
+        const at = (rel: string) => `${d}${rel.slice(g.dir.length)}`;
+        if (!notes.slice(0, 20).some((w) => same(at(w.rel), w))) continue;
+        for (const w of notes) if (same(at(w.rel), w) && walks(parentOf(at(w.rel)))) there.add(at(w.rel));
+        for (const f of g.files) {
+          const rel = at(f);
+          if (!this.attachments.get(parentOf(rel))?.has(rel) && existsSync(join(root, rel)) && walks(parentOf(rel)))
+            there.add(rel); // not found there before (a later batch in the tick looks again)
+        }
       }
-      if ((dirMtime(join(root, d)) ?? 0) < since) continue;
       let entries: Dirent[] = [];
       try {
         entries = readdirSync(join(root, d), { withFileTypes: true });
@@ -316,7 +356,9 @@ export class VaultWatcher {
       for (const e of entries) {
         if (!e.isFile()) continue;
         const rel = `${d}/${e.name}`;
-        if (byTime.get(statOrNull(join(root, rel))?.mtimeMs ?? Number.NaN)?.some((w) => same(rel, w))) there.add(rel);
+        const st = statOrNull(join(root, rel));
+        if (st && byTime.get(st.mtimeMs)?.some((w) => after(w) && (w.size === undefined || st.size === w.size)))
+          there.add(rel);
       }
     }
     return [...there];
@@ -332,7 +374,6 @@ export class VaultWatcher {
     const max = this.opts.maxDirs ?? Number.POSITIVE_INFINITY;
     for (const d of dirs) {
       this.left.delete(d);
-      this.leftSeen.delete(d);
       if (listed(d) && this.watchers.size + this.polled.size < max) this.watchDir(d, walkedAt);
     }
   }
@@ -470,7 +511,7 @@ export class VaultWatcher {
               this.rescan = true;
             } else {
               this.leave(rel, to);
-              if (to === "leave") this.leftSeen.set(rel, tick);
+              this.leftSeen.set(rel, tick); // where a note that went may be, for a tick
             }
           }
           continue;
@@ -520,10 +561,11 @@ export class VaultWatcher {
         const rel = d ? `${d}/${e.name}` : e.name;
         if (e.isDirectory()) {
           // A folder the walk would take and not watched yet: adopted, with all it holds — unless a walk is to look into
-          // it, and it's nothing to name (`found`).
-          if (listed || this.watchers.has(rel) || this.polled.has(rel) || filter.exclusion(rel, true) !== null)
-            continue;
-          if (this.found(rel) === "leave") {
+          // it, and it's nothing to name (`found`): one left before is still left, its markers not looked for again.
+          if (listed || this.watchers.has(rel) || this.polled.has(rel)) continue;
+          const wasLeft = this.left.has(rel);
+          if (!wasLeft && filter.exclusion(rel, true) !== null) continue;
+          if (wasLeft || this.found(rel) === "leave") {
             this.leave(rel, "leave");
             if (!this.leftSeen.has(rel)) seenLeft = true;
             this.leftSeen.set(rel, this.ticks);
@@ -571,38 +613,47 @@ export class VaultWatcher {
   /** Settle pending paths by stat. Exposed for tests. */
   flush(): void {
     this.timer = null;
-    const paths = [...this.pending];
+    const leftSeen = [...this.leftSeen.keys()];
+    const batch: Settling = {
+      paths: [...this.pending],
+      seen: new Set(),
+      changes: [],
+      rescan: this.rescan,
+      found: [],
+      candidates: leftSeen,
+      following: this.opts.walkPending?.() ?? false,
+    };
     this.pending.clear();
-    const seen = new Set<string>();
-    let rescan = this.rescan;
     this.rescan = false;
-    const changes: WatchChange[] = [];
+    this.settle(batch, batch.paths);
+    this.vanished(batch);
+    // Known notes moved lately into a folder left to the walk: found there, so they stay and the move is seen.
+    if (batch.following && this.recentlyWent.length && batch.candidates.length)
+      this.settle(batch, this.movedTo(batch.candidates, new Set(batch.found), this.recentlyWent, this.recentlyGone));
+    for (const d of new Set(batch.found)) {
+      if (batch.following) this.leftSeen.set(d, this.ticks); // where a note that goes next may be, for a tick
+      // Named in order, each name taking its room under home's cap (`found` again: the room changed).
+      const to = this.found(d);
+      if (to !== "adopt") this.leave(d, to);
+    }
+    const toWalk = [...this.toWalk];
+    this.toWalk.clear();
+    const { changes, rescan } = batch;
+    if (changes.length || rescan || toWalk.length)
+      this.opts.onBatch({ changes, rescan, ...(toWalk.length ? { toWalk } : {}) });
+  }
+
+  /** Each path of `list` — which grows, as folders are taken in and gone ones say what they held — settled by stat. */
+  private settle(batch: Settling, list: string[]): void {
     const { filter, known, root } = this.opts;
-    /** Folders found unwatched that a walk is to look into (`found`), those second looks found lately among them. */
-    const left: string[] = [...this.leftSeen.keys()];
-    let swept = false;
-    let paired = false;
-    let i = 0;
-    for (;;) {
-      if (i === paths.length) {
-        if (!swept) {
-          swept = true;
-          this.vanished(paths, seen, changes);
-        }
-        // Known notes moved into a folder left to the walk, lately: found there, so they stay and the move is seen.
-        if (paired || !this.recentlyWent.length || !left.length) break;
-        paired = true;
-        const gone = this.recentlyGone.map((g) => g.dir);
-        paths.push(...this.movedTo(left, this.recentlyWent, gone));
-        continue;
-      }
-      const rel = paths[i++]!;
-      if (seen.has(rel)) continue;
-      seen.add(rel);
+    for (let i = 0; i < list.length; i++) {
+      const rel = list[i]!;
+      if (batch.seen.has(rel)) continue;
+      batch.seen.add(rel);
       const name = rel.slice(rel.lastIndexOf("/") + 1);
       if (name === ".gitignore") {
         filter.invalidate(rel.includes("/") ? rel.slice(0, rel.lastIndexOf("/")) : "");
-        rescan = true;
+        batch.rescan = true;
         continue;
       }
       let st: ReturnType<typeof statSync> | null = null;
@@ -616,28 +667,35 @@ export class VaultWatcher {
         st = null; // a note that became such a link: gone
       }
       if (st?.isDirectory()) {
-        if (filter.exclusion(rel, true) === null && !this.watchers.has(rel)) {
-          if (this.found(rel) === "adopt") paths.push(...this.adoptTree(rel));
-          else left.push(rel);
+        if (filter.exclusion(rel, true) === null && !this.watchers.has(rel) && !this.polled.has(rel)) {
+          if (this.found(rel) === "adopt") list.push(...this.adoptTree(rel));
+          else {
+            batch.found.push(rel);
+            batch.candidates.push(rel);
+          }
         }
         continue;
       }
       if (!st && !known.has(rel)) {
         // Possibly a directory that went away (deleted, or moved out of the vault) — its own
-        // watcher may already have errored and gone — so every known note under it went too.
+        // watcher may already have errored and gone — so every known note under it went too, and the other files
+        // known in it (an embed's picture).
         const prefix = `${rel}/`;
         let any = false;
         for (const k of known.keys()) {
           if (k.startsWith(prefix)) {
-            paths.push(k);
+            list.push(k);
             any = true;
           }
         }
+        const files: string[] = [];
+        for (const [dir, inDir] of this.attachments) if (under(dir, rel)) files.push(...inDir);
+        for (const f of files) list.push(f);
         const wasLeft = this.left.has(rel);
         // A folder gone: what was left in it, forgotten (a file gone has nothing to forget).
-        if (wasLeft || any || this.watchers.has(rel)) this.forget(rel);
-        if (any) this.recentlyGone.push({ dir: rel, tick: this.ticks });
-        if (any || this.watchers.has(rel)) {
+        if (wasLeft || any || files.length || this.watchers.has(rel)) this.forget(rel);
+        if (any && batch.following) this.recentlyGone.push({ dir: rel, files, tick: this.ticks });
+        if (any || files.length || this.watchers.has(rel)) {
           this.unwatchTree(rel);
           continue;
         }
@@ -648,7 +706,7 @@ export class VaultWatcher {
         // Editors' temporary files (vim's 4913, backups~, swap files) are never attachments.
         if (/^\d+$|~$|\.sw[a-p]$|^\.#|^#.*#$/.test(name)) continue;
         // An attachment: the graph keeps a name index of them for ![[embeds]].
-        changes.push({ rel, kind: st ? "created" : "deleted", isNote: false });
+        batch.changes.push({ rel, kind: st ? "created" : "deleted", isNote: false });
         this.attachment(rel, !!st);
         continue;
       }
@@ -661,52 +719,48 @@ export class VaultWatcher {
       if (!st) {
         // Gone — or, never known, come and gone between two looks (written and removed at once): said all the
         // same, since what was drawn meanwhile may have read it from the disk (a link to it, resolved by its file).
-        if (before !== undefined)
-          this.recentlyWent.push({ rel, mtimeMs: before, size: this.sizes.get(rel), tick: this.ticks, at: Date.now() });
+        if (before !== undefined) this.went(batch, rel, before);
         known.delete(rel);
-        changes.push({ rel, kind: "deleted", isNote: true });
+        batch.changes.push({ rel, kind: "deleted", isNote: true });
         continue;
       }
-      if (before === undefined) changes.push({ rel, kind: "created", isNote: true });
+      if (before === undefined) batch.changes.push({ rel, kind: "created", isNote: true });
       else if (before !== st.mtimeMs || (this.sizes.has(rel) && this.sizes.get(rel) !== st.size))
-        changes.push({ rel, kind: "changed", isNote: true });
+        batch.changes.push({ rel, kind: "changed", isNote: true });
       else continue;
       known.set(rel, st.mtimeMs);
       this.sizes.set(rel, st.size);
     }
-    for (const d of new Set(left)) {
-      if (dirMtime(join(root, d)) === null) continue; // gone since a second look found it
-      const to = this.found(d);
-      if (to !== "adopt") this.leave(d, to);
-    }
-    const toWalk = [...this.toWalk];
-    this.toWalk.clear();
-    if (changes.length || rescan || toWalk.length)
-      this.opts.onBatch({ changes, rescan, ...(toWalk.length ? { toWalk } : {}) });
+  }
+
+  /** A known note gone (it was `mtimeMs`): kept as gone lately while moves are followed, to find where it went. */
+  private went(batch: Settling, rel: string, mtimeMs: number): void {
+    if (!batch.following) return;
+    const at = this.opts.now?.() ?? Date.now();
+    this.recentlyWent.push({ rel, mtimeMs, size: this.sizes.get(rel), tick: this.ticks, at });
   }
 
   /**
    * A batch's last look (`flush`), before moves are followed: a rename reports only the new name, so notes that
-   * vanished from the directories heard from (`paths`'), or moved away under the same name, are found here — gone, and
-   * kept as gone lately (`recentlyWent`), so where they went is followed — and a burst of writes in a folder reported as
-   * one event is said for the rest of it.
+   * vanished from the directories heard from, or moved away under the same name, are found here — gone, and kept as
+   * gone lately (`went`), so where they went is followed — and a burst of writes in a folder reported as one event is
+   * said for the rest of it.
    */
-  private vanished(paths: readonly string[], seen: ReadonlySet<string>, changes: WatchChange[]): void {
+  private vanished(batch: Settling): void {
     const { known, root } = this.opts;
-    const dirs = new Set(paths.map((p) => (p.includes("/") ? p.slice(0, p.lastIndexOf("/")) : "")));
+    const dirs = new Set(batch.paths.map((p) => (p.includes("/") ? p.slice(0, p.lastIndexOf("/")) : "")));
     const createdNames = new Set(
-      changes.filter((c) => c.kind === "created").map((c) => c.rel.slice(c.rel.lastIndexOf("/") + 1)),
+      batch.changes.filter((c) => c.kind === "created").map((c) => c.rel.slice(c.rel.lastIndexOf("/") + 1)),
     );
     for (const rel of [...known.keys()]) {
       const slash = rel.lastIndexOf("/");
       const dir = slash >= 0 ? rel.slice(0, slash) : "";
-      if (!(dirs.has(dir) || createdNames.has(rel.slice(slash + 1))) || seen.has(rel)) continue;
+      if (!(dirs.has(dir) || createdNames.has(rel.slice(slash + 1))) || batch.seen.has(rel)) continue;
       const st = statOrNull(join(root, rel));
       if (!st) {
-        const went = { rel, mtimeMs: known.get(rel)!, size: this.sizes.get(rel), tick: this.ticks, at: Date.now() };
-        this.recentlyWent.push(went);
+        this.went(batch, rel, known.get(rel)!);
         known.delete(rel);
-        changes.push({ rel, kind: "deleted", isNote: true });
+        batch.changes.push({ rel, kind: "deleted", isNote: true });
       } else if (
         dirs.has(dir) &&
         (st.mtimeMs !== known.get(rel) || (this.sizes.has(rel) && this.sizes.get(rel) !== st.size)) &&
@@ -714,7 +768,7 @@ export class VaultWatcher {
       ) {
         known.set(rel, st.mtimeMs);
         this.sizes.set(rel, st.size);
-        changes.push({ rel, kind: "changed", isNote: true });
+        batch.changes.push({ rel, kind: "changed", isNote: true });
       }
     }
   }
@@ -731,6 +785,15 @@ function isSymlink(path: string): boolean {
 /** A polling interval for a message: "2 s", or "500 ms" under a second (never "0 s"). */
 function every(ms: number): string {
   return ms < 1000 ? `${ms} ms` : `${Math.round(ms / 1000)} s`;
+}
+
+/** When a folder last changed (its ctime: what came or went in it, or it renamed), or null when it isn't there. */
+function changedAt(path: string): number | null {
+  try {
+    return statSync(path).ctimeMs;
+  } catch {
+    return null;
+  }
 }
 
 /** A directory's mtime, or null when it isn't there. */

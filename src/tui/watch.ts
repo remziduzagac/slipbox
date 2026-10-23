@@ -148,10 +148,15 @@ export class Watch {
       attachments: this.app.graph.filePaths(),
       walkedAt: () => this.app.graph.walkedAt,
       listed: isListed(this.app.loc),
-      // Home's cap held by what comes while it's open too (VV-D2).
-      ...(this.app.loc.mode === "home" ? { maxDirs: HOME_LIMITS.folders } : {}),
-      // Before home's first walk, what its graph hasn't looked into is the walk's (VV-D2), made while nobody works.
-      leftToWalk: (rel) => this.app.graph.waitsForHomeWalk(rel),
+      // Home's cap held by what comes while it's open too (VV-D2); before its first walk, what its graph hasn't looked
+      // into is the walk's, made while nobody works, and a note moved there followed.
+      ...(this.app.loc.mode === "home"
+        ? {
+            maxDirs: HOME_LIMITS.folders,
+            leftToWalk: (rel: string) => this.app.graph.waitsForHomeWalk(rel),
+            walkPending: () => this.app.graph.home?.walked === null,
+          }
+        : {}),
       onBatch: (b) => this.receiveBatch(b),
       onDegraded: (reason) => {
         this.app.message("error", `watching degraded: ${reason}`);
@@ -357,12 +362,13 @@ export class Watch {
       // not followed now (VV-D6: one forgotten).
       for (const buf of this.app.buffers.values())
         if (buf.changedOnDisk() && (buf.elsewhere || !this.app.following.blocked(buf.abs))) this.reloadBuffer(buf);
-    } else if (batch.toWalk?.length) {
+    }
+    if (batch.toWalk?.length) {
       // Folders come into home's top before its walk (VV-D2), listed: watched, never looked into — the walk, asked for
       // again, takes what's in them. Only the explorer shows a folder. None listed (walked since, while git wrote; or
-      // gone, a vault): nothing to ask.
+      // gone, a vault): nothing to ask. With a rescan, that has done both.
       this.app.watcher?.watchNamed(batch.toWalk, (d) => listed.includes(d));
-      if (listed.length) {
+      if (listed.length && !batch.rescan) {
         this.app.explorer.invalidateTree();
         this.walkHomeAgain();
       }

@@ -96,7 +96,7 @@ const strings = (v: unknown): string[] => (Array.isArray(v) ? v.filter((x): x is
 const SETTLE_MS = 2000;
 
 /** Whether `rel` is the folder `dir` or in it (`""`: home's top, holding everything). */
-const under = (rel: string, dir: string) => dir === "" || rel === dir || rel.startsWith(`${dir}/`);
+export const under = (rel: string, dir: string): boolean => dir === "" || rel === dir || rel.startsWith(`${dir}/`);
 const parentOf = (rel: string) => (rel.includes("/") ? rel.slice(0, rel.lastIndexOf("/")) : "");
 const isDir = (abs: string) => {
   try {

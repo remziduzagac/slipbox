@@ -14379,6 +14379,11 @@ describe("the background auto-index in the TUI (20.9)", () => {
         await until(() => h.app.graph.notes.has("cloned/top.md"));
         await Bun.sleep(300);
         expect([...h.app.graph.notes.keys()].sort()).toEqual(["Documents/letter.md", "a.md", "cloned/top.md"]);
+        // A batch both rescanning and naming (two merged while git wrote; its graph built again): the name forgotten all the same.
+        const left = (h.app.watcher as unknown as { left: Map<string, boolean> }).left;
+        left.set("vaulted", true);
+        h.app.watch.applyChanges({ changes: [], rescan: true, toWalk: ["vaulted"] });
+        expect(left.has("vaulted")).toBe(false);
         // Walked, while nobody works (here at once): every note of home's.
         const job = h.app.watch.indexJob();
         while (job!.step(50)) {}
