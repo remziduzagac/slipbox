@@ -92,7 +92,8 @@ export const CHECKS_FOR: [RegExp, string[]][] = [
 
 /**
  * The samples changed most often, and what reads them; any other sample runs what names it, through the import
- * graph (the home the checks run in is built from `examples/home`: all of them).
+ * graph (the home the checks run in is built from `examples/home`: all of them). Also a script a check preloads,
+ * which the import graph would count as the checks' harness.
  */
 export const SAMPLES_FOR: Record<string, { tests: string[]; checks: string[] }> = {
   // The reference set's cases: every command's and every area's, held to the checks and the home. Its words could
@@ -100,6 +101,9 @@ export const SAMPLES_FOR: Record<string, { tests: string[]; checks: string[] }> 
   "examples/home/CASES.md": { tests: ["tests/terminal-coverage.test.ts", "tests/home.test.ts"], checks: [] },
   // The kitchen-sink config: every key once, every command bound.
   "examples/home/work/infra/dotfiles/slipbox/config.toml": { tests: ["tests/home.test.ts"], checks: ["kitchen-sink"] },
+  // A script the spelling checks preload into slipbox, to hold its spell checker's thread: named by a check, it would
+  // count as the checks' harness; theirs, not every check's.
+  "tests/terminal/spell-hold.ts": { tests: [], checks: ["spelling"] },
 };
 
 /** The terminal checks' files, by name: `bun run test:terminal <name>` runs one's checks. */

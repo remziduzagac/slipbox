@@ -77,9 +77,15 @@ busy with other work, is slower by a different amount each run. A test waits unt
 watcher's event, `app.watch.whenIndexed`, `app.views.whenParsed`, `app.search.whenIndexed`), bounded only by its
 timeout, which is a backstop for a stuck test and not a measure. Where a test guards against work done in the wrong
 place, it counts that work: the background index's test (`15.1`) checks that the main thread parsed none of a big
-note's chunks, not how long its slices took. A test about a time itself, a timeout that must stop something, bounds it
-with a wide margin (stopped at 0.2 s, checked under 3 s). Timings are the benchmark's (§ Timings), read and not
-asserted.
+note's chunks, not how long its slices took. Where it guards that the main thread keeps its turns while other work goes
+on, it counts the turns taken meanwhile, never the gaps between them: a gap, against how long the work took, measures
+the runner and the test process as much as slipbox. Most count a timer's turns while the work is pending (the syntax
+pass on its thread, a slow `git`). The spell checker's thread is held at a point the test controls instead: asked to
+(`holdBuild` in `core/spell-thread.ts`, D262), it waits before building the test's dictionary until the test lets it go,
+once the main thread has answered its keys. Its wait runs out on its own clock, inside the test's timeout and past any
+passing run, so that a main thread held until the dictionary is there fails rather than hangs. A test about a time
+itself, a timeout that must stop something, bounds it with a wide margin (stopped at 0.2 s, checked under 3 s).
+Timings are the benchmark's (§ Timings), read and not asserted.
 
 **Nothing a test file leaves behind changes another's results.** `bun test` runs every file in one process, so what
 loads lazily (`16.6`), Mermaid or MathJax, is loaded by whichever file asked first. A file whose output depends on one
@@ -204,7 +210,11 @@ bun run e2e find replace     # only the scenarios whose names contain these
   running slipbox is refused rather than typed into. A scenario can put files beside the vault
   (`beside`: another vault, a folder outside every vault), run the CLI before slipbox starts (`setup`: `init`
   that vault), and start slipbox another way: elsewhere (`startAt`), with no path (`startAt: null`), from
-  a folder (`cwd`), with flags (`args`) or environment (`env`), or expecting it to fail (`noWait`).
+  a folder (`cwd`), with flags (`args`) or environment (`env`), or expecting it to fail (`noWait`). A check that
+  must hold slipbox mid-work has Bun preload a script of the tests' into slipbox's own process, not the CLI's
+  (`preload`): the spelling checks of a dictionary still loading and of one that won't load preload
+  `tests/terminal/spell-hold.ts`, which holds the spell checker's thread (`holdBuild`) until the check writes a file,
+  and writes the hold's state to another.
 - **Waits, never sleeps.** Every check waits (up to a timeout) for the screen to agree: a row that
   contains something, the status line's mode, a message's floating box, a file on disk. Only a check
   that something *doesn't* happen — no autosave mid-insert, no popup before its delay — waits out a

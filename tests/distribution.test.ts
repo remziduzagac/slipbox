@@ -464,11 +464,12 @@ describe("the supply chain's gates (14.10)", () => {
     expect(of("examples/home/hobbies/cooking/Pantry.md")).toMatchObject({
       tests: expect.arrayContaining(["tests/home.test.ts"]),
     });
-    // The samples changed most: what reads them.
+    // The samples changed most: what reads them. A script a check preloads: that check's feature.
     expect(of("examples/home/CASES.md")).toMatchObject({
       tests: ["tests/home.test.ts", "tests/terminal-coverage.test.ts"],
       checks: [],
     });
+    expect(of("tests/terminal/spell-hold.ts")).toMatchObject({ tests: [], checks: ["spelling"] });
     // A snapshot: its test. The lint's config: the lint alone.
     expect(of("tests/__snapshots__/render.test.ts.snap")).toMatchObject({
       tests: ["tests/render.test.ts"],

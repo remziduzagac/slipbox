@@ -1585,7 +1585,9 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
 ### ui
 
 - spelling (space u s, on in the kitchen sink): a Turkish and English note's deliberate typo (kitpa) marked, not
-  in its code span; ] s, z = (kitap), z g; an English note's names — `notes/reading/okuma-notlari.md`,
+  in its code span; ] s, z = (kitap), z g; an English note's names; while its dictionaries load, keys answered and
+  ] s says so (a check holds the spell checker's thread); a dictionary that won't load said once, the note's other
+  languages still checking (a check's own dictionary and note) — `notes/reading/okuma-notlari.md`,
   `notes/reading/maps-and-territories.md` (tui.md Spelling (25.6); tests 'spelling (25.6)')
 - themes and glyph sets (nerd, unicode, ascii, auto) picker preview and esc restores; NO\_COLOR —
   `work/infra/dotfiles/slipbox/themes/kestrel-dark.yaml`, `work/kestrel/docs/qa/theme-showcase.md` (theme.pick,

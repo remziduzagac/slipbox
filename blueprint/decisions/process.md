@@ -298,3 +298,25 @@ doesn't count, since the ruleset takes `full` from GitHub Actions alone.
 **Not chosen:** `main`'s ruleset requiring `ci` and leaving `full` to `release.yml` (`main` could take a commit the
 whole suite never ran on); the full run started by a push to a branch of its own (a branch kept only to start it, and a
 new command for the full run).
+
+## D262: A test holds the spell checker's thread in the worker, on the thread's own clock (25.6, 2026-10-23)
+
+**Decision:** The spell checker's worker takes a test's hold (`holdBuild` in `core/spell-thread.ts`, the `hold` op in
+`core/spell-worker.ts`): the next time the thread is asked to build the dictionary with the words named, it waits first,
+with `Atomics.wait` on shared memory, until the test lets it go or its limit runs out on the thread's own clock; the
+hold's state (`HOLD_STATES`) is in that memory. The test that the main thread keeps its turns while a dictionary
+loads counts them there, and the terminal checks hold slipbox's own thread the same way, through a preloaded test
+script. Decided with issue #15 (T18), whose timed test it replaces.
+
+**Why:** A count needs the thread held at a point the test controls. Held on the thread's own clock, a main thread held
+until the dictionary is there is let go, and fails the test instead of hanging the run. It needs no child process and
+no named pipe, and runs on every platform.
+
+**Cost:** A test's op ships in the worker: a lookup by the dictionary's words on each request, and a caller in the
+process could hold the thread for up to its limit. Nothing a vault or a setting holds can.
+
+**Not chosen:** the dictionary's words a named pipe the test writes into (a child process to write it, POSIX only, and a
+thread blocked in a read nothing can end); a stand-in `Worker` on the main thread that delays the request (its clock is
+the main thread's: a main thread held until the dictionary is there would hang the run); turns counted while the
+dictionary loads, unheld, as the syntax pass's test counts them (ticks before a build on the main thread pass it, and a
+pause covering the whole load fails it).

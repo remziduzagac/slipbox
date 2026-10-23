@@ -17699,67 +17699,130 @@ describe("spelling (25.6)", () => {
   });
 
   /** A Turkish dictionary (9 MB) under a path of the test's own, so it's built now whatever was built before, and a
-   *  note in its language open. */
+   *  note in its language open: the harness, and the dictionary's words (`dic`). */
   const turkish = async () => {
     const { dictionaryFiles } = await import("../src/core/spell.ts");
     const tr = dictionaryFiles("tr", {})!;
     const dict = mkdtempSync(join(sandbox, "dict-"));
+    const dic = join(dict, "zz.dic");
     cpSync(tr.aff, join(dict, "zz.aff"));
-    cpSync(tr.dic, join(dict, "zz.dic"));
+    cpSync(tr.dic, dic);
     const root = vault({ "s6.md": "---\nlang: zz\n---\nBugün evlerinzde kitap okuyorum.\n" });
-    return harness({
+    const h = await harness({
       root,
       open: "s6.md",
       width: 120,
       height: 30,
       config: (c) => {
-        c.spell.dictionaries = { zz: join(dict, "zz.dic") };
+        c.spell.dictionaries = { zz: dic };
       },
     });
+    return { h, dic };
   };
 
   test("a dictionary is built on the spell checker's thread, never here: counted; typing keeps the marks (#40)", async () => {
     const { dictionariesBuilt } = await import("../src/core/hunspell.ts");
-    const h = await turkish();
-    const built = dictionariesBuilt();
-    await h.keys("space", "u", "s");
-    expect(await until(() => (h.frame(), h.app.speller.misspelt(h.app.view!) !== null))).toBe(true);
-    expect(dictionariesBuilt()).toBe(built); // none here: the thread built it
-    expect(await checked(h)).toBe(true);
-    expect(h.app.speller.misspelt(h.app.view!)!.map((w) => w.word)).toEqual(["evlerinzde"]);
-    // Typing a word the thread hasn't answered: the marks it has answered stay, at every key.
-    await h.keys("shift+g", "shift+a");
-    for (const k of ["space", ..."kitpa"]) {
-      await h.keys(k);
-      expect(h.app.speller.misspelt(h.app.view!)!.map((w) => w.word)).toContain("evlerinzde");
-    }
-    expect(await checked(h)).toBe(true);
-    expect(h.app.speller.misspelt(h.app.view!)!.map((w) => w.word)).toEqual(["evlerinzde", "kitpa"]);
-  });
-
-  // quarantined: #126 — on a loaded CI runner the main thread's longest gap ran past half the loading time (716 ms
-  // against 473, linux-x64, 2026-10-17), though the build was the thread's (counted above): the clock measures the
-  // runner's scheduling as much as slipbox. Back once its turns are counted, not timed.
-  test.skip("while the thread builds a dictionary, the main thread keeps its turns (#40)", async () => {
-    const h = await turkish();
-    // The longest the main thread went without a turn while the dictionary loaded: on it, as long as the build.
-    let last = performance.now();
-    let longest = 0;
-    const tick = setInterval(() => {
-      const now = performance.now();
-      longest = Math.max(longest, now - last);
-      last = now;
-    }, 2);
-    const asked = performance.now();
+    const { stopSpellThread } = await import("../src/core/spell-thread.ts");
+    const { h } = await turkish();
     try {
+      const built = dictionariesBuilt();
       await h.keys("space", "u", "s");
       expect(await until(() => (h.frame(), h.app.speller.misspelt(h.app.view!) !== null))).toBe(true);
+      expect(dictionariesBuilt()).toBe(built); // none here: the thread built it
+      expect(await checked(h)).toBe(true);
+      expect(h.app.speller.misspelt(h.app.view!)!.map((w) => w.word)).toEqual(["evlerinzde"]);
+      // Typing a word the thread hasn't answered: the marks it has answered stay, at every key.
+      await h.keys("shift+g", "shift+a");
+      for (const k of ["space", ..."kitpa"]) {
+        await h.keys(k);
+        expect(h.app.speller.misspelt(h.app.view!)!.map((w) => w.word)).toContain("evlerinzde");
+      }
+      expect(await checked(h)).toBe(true);
+      expect(h.app.speller.misspelt(h.app.view!)!.map((w) => w.word)).toEqual(["evlerinzde", "kitpa"]);
     } finally {
-      clearInterval(tick);
+      stopSpellThread(); // a fresh thread for the tests after: this test's 9 MB dictionary isn't kept for them
     }
-    const loading = performance.now() - asked;
-    expect(longest).toBeLessThan(loading / 2);
   });
+
+  // Counted, not timed. The main thread's longest gap against the load's time measured the runner and the test process
+  // as much as slipbox: on CI the main thread went without a turn for most of a load the thread built (716 ms of 946;
+  // 605 of 632 on a release's runner), and here for 200 ms just after a thousand harnesses were made. So the thread is
+  // held inside the dictionary's opening, before Hunspell builds it, until the main thread has taken its turns: a main
+  // thread held while the dictionary loads takes none before it's there.
+  test("while the thread loads a dictionary, the main thread keeps its turns: counted, the thread held before it builds (#40)", async () => {
+    const { holdBuild, stopSpellThread } = await import("../src/core/spell-thread.ts");
+    const { h, dic } = await turkish();
+    // The hold's own bounds are a stuck test's, never a passing one's (let go milliseconds after it's waiting): its
+    // wait runs out after 40 s on the thread's clock, inside the test's 60 s, so a main thread held until the
+    // dictionary is there is let go and fails here rather than hanging the run. The request's 20 s deadline, on the
+    // main thread, ends the hold first if the main thread is merely starved that long.
+    const hold = await holdBuild(dic);
+    try {
+      await h.keys("space", "u", "s");
+      // The thread has the request and waits before building — unless the dictionary is there already, built here.
+      expect(await until(() => hold.state() !== "set" || h.app.speller.misspelt(h.app.view!) !== null)).toBe(true);
+      expect(hold.state()).toBe("waiting");
+      // The main thread's turns meanwhile: a timer's, and keys answered and drawn, the dictionary not there at any.
+      expect(h.app.speller.misspelt(h.app.view!)).toBeNull();
+      await new Promise((turn) => setTimeout(turn, 0));
+      expect([hold.state(), h.app.speller.misspelt(h.app.view!)]).toEqual(["waiting", null]);
+      await h.keys("]", "s");
+      expect(h.app.messages.at(-1)?.text).toBe("spelling: its dictionaries are loading");
+      await h.keys("shift+g", "shift+a");
+      for (const k of ["space", ..."kitpa"]) {
+        await h.keys(k);
+        expect(h.app.speller.misspelt(h.app.view!)).toBeNull();
+      }
+      expect(h.app.view!.buf.source).toEndWith("okuyorum. kitpa\n");
+      // Held until now: let go by the test, not by its wait running out.
+      hold.letGo();
+      expect(await until(() => hold.state() !== "waiting")).toBe(true);
+      expect(hold.state()).toBe("let go");
+      expect(await checked(h)).toBe(true);
+      expect(h.app.speller.misspelt(h.app.view!)!.map((w) => w.word)).toEqual(["evlerinzde", "kitpa"]);
+    } finally {
+      // A fresh thread for the tests after, nothing of this test's kept; a thread still held ends there, unbuilt.
+      stopSpellThread();
+    }
+  }, 60_000);
+
+  test("a dictionary the thread can't build is said once; the note's other languages still check it", async () => {
+    const { dictionaryFiles } = await import("../src/core/spell.ts");
+    const { holdBuild, stopSpellThread } = await import("../src/core/spell-thread.ts");
+    const dict = mkdtempSync(join(sandbox, "dict-"));
+    writeFileSync(join(dict, "zz.aff"), "SET UTF-8\n");
+    mkdirSync(join(dict, "zz.dic")); // a folder: there, but no words to read
+    // English under a path of the test's own, held before it's built: frames drawn after zz failed, while English
+    // still loads, each ask about zz again, whatever was built before. Its wait's 40 s are inside the test's 60.
+    const en = dictionaryFiles("en", {})!;
+    cpSync(en.aff, join(dict, "en.aff"));
+    cpSync(en.dic, join(dict, "en.dic"));
+    const h = await harness({
+      root: vault({ "s7.md": "---\nlang: [zz, en]\n---\nThis has a recieve.\n" }),
+      open: "s7.md",
+      width: 120,
+      height: 30,
+      config: (c) => {
+        c.spell.dictionaries = { zz: join(dict, "zz.dic"), en: join(dict, "en.dic") };
+      },
+    });
+    const hold = await holdBuild(join(dict, "en.dic"));
+    const said = () => h.app.messages.filter((m) => m.text.startsWith("spelling: zz's dictionary didn't load ("));
+    try {
+      await h.keys("space", "u", "s");
+      // zz is asked first and fails before English is asked for.
+      expect(await until(() => hold.state() === "waiting")).toBe(true);
+      for (let i = 0; i < 3; i++) h.frame();
+      expect(said().map((m) => m.level)).toEqual(["warn"]);
+      hold.letGo();
+      expect(await checked(h)).toBe(true);
+      expect(h.app.speller.misspelt(h.app.view!)!.map((w) => w.word)).toEqual(["recieve"]);
+      h.frame();
+      expect(said()).toHaveLength(1);
+    } finally {
+      stopSpellThread();
+    }
+  }, 60_000);
 });
 // typos: on
 
