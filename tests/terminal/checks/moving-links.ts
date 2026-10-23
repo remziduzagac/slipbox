@@ -498,15 +498,18 @@ export const MOVING_LINKS: Check[] = [
       s.expect(onto.code === 5 && onto.error === "img.png exists; not overwriting it", `${onto.error}`);
       s.expect(s.read(join(v, "img.png")) === "PNG" && isLink(join(v, "alias.png")), "nothing put over img.png");
       s.expect(isLink(join(v, "l1.md")) && isLink(join(v, "l2.md")), "both links as they were");
-      // Planned, then a link leading nowhere put where it goes: refused as it's carried out.
-      await moveRow(s, "l1.md", "box", "what it leads to is l2.md too: its own links left as they are");
+      // Planned, then a link leading nowhere put where it goes: refused as it's carried out. A plan saved and applied
+      // by the command line, as an agent's two steps: the TUI's preview would race the watcher's look at the link.
+      const planned = cli(s, "mv", "l1.md", "box/", "--plan");
+      const id = String((planned.data.plan as { id?: string } | undefined)?.id ?? planned.data.id ?? "");
+      s.expect(planned.code === 0 && id !== "", `a plan saved (${JSON.stringify(planned.data)})`);
       symlinkSync(join(v, "gone.md"), join(v, "box", "l1.md"));
-      await s.settle(undefined, 1500, 300); // the watcher's look at it, first
-      await s.keys("enter");
-      await s.message("l1.md exists"); // the rest wraps
+      const applied = cli(s, "apply", id);
+      s.expect(applied.code === 5 && !!applied.error?.endsWith("exists now; nothing changed"), `${applied.error}`);
       s.expect(s.read(join(v, "b.md")).includes("[l](l1.md)"), "nothing written");
       rmSync(join(v, "box", "l1.md"));
-      await moveRow(s, "l1.md", "box", "l1.md → box/l1.md: 1 change in 1 file");
+      // In the TUI: its own links left, l2.md leading where it does too, and said.
+      await moveRow(s, "l1.md", "box", "what it leads to is l2.md too: its own links left as they are");
       await s.keys("enter");
       await s.message("renamed l1.md → box/l1.md");
       s.expect(s.read(join(v, "shelf", "s.md")) === "# S\n\n[a](a.md)\n", "its own links left: l2.md's too");

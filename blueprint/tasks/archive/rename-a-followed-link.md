@@ -281,3 +281,10 @@ to lead where it did (D260).
   machine loaded. The terminal checks of renames, moves and links: 16 pass.
 - 2026-10-24: The decision numbered D260, at the maintainer's word for the merge: its heading, the note under VV-D6,
   the design files, this task and the code that cite it.
+- 2026-10-24: CI on the rebased branch found two of this change's tests leaning on chance: the case-only rename's unit
+  test took `Outer` to be the name the walk lists of two links to one folder (on Ubuntu it listed the other): its link
+  has a folder of its own now, and the rename goes from whichever name the walk lists; and on macOS the terminal check's
+  link put where a move goes, between its preview and its enter, raced the watcher's look at it, so the refusal never
+  showed: that step is a plan saved and applied by the command line now, as an agent's two steps. Both found failing
+  again with their fixes undone. A linters test failed on macOS too (`linters without a server …`, a message said once),
+  nothing this change touches.

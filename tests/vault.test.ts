@@ -8353,20 +8353,26 @@ describe("plans write only inside the vault (VV-D6)", () => {
   test(
     "a followed link's case-only rename, as a disk that ignores case has it: the link moved, never refused through it",
     homed(async () => {
-      const { vault, outer } = await linked();
-      symlinkSync(outer, join(vault, "Outer"));
+      const { top, vault } = await linked();
+      // A folder of its own: the only link followed to it.
+      mkdirSync(join(top, "case"));
+      writeFileSync(join(top, "case", "c.md"), "# C\n");
+      symlinkSync(join(top, "case"), join(vault, "Outer"));
       setLinkAnswer(join(vault, "Outer"), "follow");
+      await probe(join(top, "case"));
       // A disk that ignores case gives `outer` for `Outer` itself; here, a second name for the link's own entry does.
       const ignoresCase = existsSync(join(vault, "OUTER"));
       if (!ignoresCase && process.platform !== "linux") return;
       if (!ignoresCase) linkSync(join(vault, "Outer"), join(vault, "outer"));
       const g = openGraph(locateVault({ root: vault }), DEFAULT_CONFIG, false);
+      // The walk lists one of the names (where case is ignored, there's one): the rename goes to the other.
+      const [from, to] = g.dirs.includes("Outer") ? ["Outer", "outer"] : ["outer", "Outer"];
       const { planFolderMove } = await import("../src/core/rename.ts");
-      const plan = planFolderMove(g, "Outer", "outer");
+      const plan = planFolderMove(g, from, to);
       expect(plan.move?.link).toBe(true);
       expect(outside(g, plan)).toBeNull();
       // The command line's own check of where it goes, too.
-      const r = await cli(["mv", "Outer", "outer"], vault);
+      const r = await cli(["mv", from, to], vault);
       expect([r.code, r.json.error?.message]).toEqual([0, undefined]);
     }),
   );
