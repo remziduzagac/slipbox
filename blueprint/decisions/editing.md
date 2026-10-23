@@ -497,7 +497,7 @@ deleting is an edit, made in the lens or source mode.
 
 ## D232: Spelling on a thread of its own; each worker an entry point of the build (25.6, 15.1, 2026-10-14)
 
-> **Detailed by D?1 (2026-10-23):** the thread takes a test's hold before it builds a dictionary.
+> **Detailed by D262 (2026-10-23):** the thread takes a test's hold before it builds a dictionary.
 
 **Decision:** Hunspell runs on a worker thread, the spell checker's (`core/spell-thread.ts`, `core/spell-worker.ts`): it
 builds each dictionary there and checks words there, and `z =` asks it for suggestions. The main thread never loads

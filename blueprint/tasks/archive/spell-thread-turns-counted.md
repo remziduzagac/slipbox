@@ -36,7 +36,7 @@ that a busy machine can't fail and that still fails if the main thread is held w
 ## References
 
 - Delivers: design/testing.md § Strategy (flaky tests fixed, or quarantined by name; never retried).
-- Rests on: D232; D?1 (a test holds the spell checker's thread); design/tui.md (spelling on its thread); D223 (a small
+- Rests on: D232; D262 (a test holds the spell checker's thread); design/tui.md (spelling on its thread); D223 (a small
   design change: an issue and one pull request).
 
 ## Log
@@ -276,8 +276,7 @@ that a busy machine can't fail and that still fails if the main thread is held w
   through the environment: the harness test fails (no load, or the CLI's too). No "spent" written, or a second hold
   accepted: the hold's unit test fails. Then: `core.test.ts`'s spelling, 11 pass; the spelling block, 7 pass; the
   scope test passes; the preload's harness test passes; the four spelling terminal checks, 4 of 4.
-- 2026-10-24: Round 6, two independent reviews (a second reviewer standing in for the usual one while it was out),
-  consolidated, each finding checked:
+- 2026-10-24: Round 6, two independent reviews, consolidated, each finding checked:
   - Verified, fixed: the hold's unit test stopped the thread while it waited with a 300 ms limit, so a main thread
     pausing longer than that before the stop let the wait run out first ("ran out" with a 350 ms pause, a standalone
     try). The limit is 5 s now, the state read past it.
@@ -291,7 +290,7 @@ that a busy machine can't fail and that still fails if the main thread is held w
     slipbox elsewhere, and a restart found the last run's files. `{dir}` is replaced, a relative path is taken from
     the repository (the harness test names it so and starts slipbox deeper than the repository), and the preload
     clears its files when it starts.
-  - Verified, fixed: the hook in the product had no decision. D?1 records it (`decisions/process.md`), with a note
+  - Verified, fixed: the hook in the product had no decision. D262 records it (`decisions/process.md`), with a note
     under D232.
   - Verified, fixed: the harness test that starts slipbox had the 30 s default timeout; 60 s now. A check failing
     because a request's deadline stopped the held thread says so, not "its wait run out".
@@ -304,3 +303,26 @@ that a busy machine can't fail and that still fails if the main thread is held w
     hold's unit test; the preload not resolved from the repository fails the harness test ("preload not found").
     Then: `core.test.ts`'s spelling, 11 pass; the spelling block, 7 pass; the harness and scope tests pass; the four
     spelling terminal checks, 4 of 4.
+- 2026-10-24: Round 7, two independent reviews, consolidated, each finding checked:
+  - Verified, fixed (both reviews; one ran it): a hold whose thread ended at a request's deadline, or in a crash,
+    with no request after, still read "waiting": only a thread started or stopped was counted. The thread is now
+    counted when it starts and when it ends, at its `terminate`, which every end goes through. The count is made
+    once the worker exists, so a worker that can't be made counts nothing.
+  - Verified, fixed (both): the check could read the hold's state file half written. Bun's `writeFileSync` doesn't
+    truncate first, and a reader saw "let gog" in about 17% of reads (a standalone try). The preload writes beside
+    the file and renames it over, and `letGoSpell` waits past an empty state too.
+  - Verified, fixed: the decision's placeholder number. It's D262.
+  - Verified, fixed: `holdBuild` matches the dictionary's words by the exact path `dictionaryFiles` gives (`~`
+    expanded, the name ending `.dic`). Its doc says so.
+  - Verified, fixed: the hold's unit test slept 5.5 s past a limit to show a stopped thread never ran out. It now
+    lets the dropped hold go after the stop: a thread still waiting would wake and say "let go". That takes 0.4 s.
+  - Verified, fixed: the worker took any limit. It's a minute at most, and with no hold set the worker does no map
+    work.
+  - Verified, fixed: an entry of this Log described how the session ran. Taken out.
+  - Rejected again: a stall during Hunspell's call itself isn't caught (as above). Rejected: the preload starts the
+    spell thread before slipbox does, so the held checks never see the thread start on the first request. The hold
+    has to be set before that request; the other two spelling checks and the unit tests start it on first use.
+
+  - Mutation-checked, each alone, the files restored: a thread's end not counted at its `terminate`, or the thread
+    stopped without being terminated, fails the hold's unit test. Then: `core.test.ts`'s spelling, 11 pass; the
+    spelling block, 7 pass; the harness and scope tests pass; the four spelling terminal checks, 4 of 4.

@@ -40,8 +40,8 @@ async function open(files: DictionaryFiles[], wordsFile: string): Promise<Spelle
   const out: Speller[] = [];
   for (const f of files) {
     const key = `${f.aff}\n${f.dic}`;
-    const hold = holds.get(f.dic);
-    holds.delete(f.dic);
+    const hold = holds.size ? holds.get(f.dic) : undefined;
+    if (hold) holds.delete(f.dic);
     let s = spellers.get(key);
     if (hold && s) Atomics.store(hold.flag, 1, HOLD_STATES.indexOf("spent"));
     if (!s) {
@@ -70,7 +70,7 @@ async function answer(m: SpellRequest): Promise<unknown> {
       return true;
     case "hold":
       if (holds.has(m.dic)) throw new Error(`a hold is set on ${m.dic} already`);
-      holds.set(m.dic, { flag: new Int32Array(m.flag), limit: m.limit });
+      holds.set(m.dic, { flag: new Int32Array(m.flag), limit: Math.min(m.limit, 60_000) });
       return true;
   }
 }

@@ -299,7 +299,7 @@ doesn't count, since the ruleset takes `full` from GitHub Actions alone.
 whole suite never ran on); the full run started by a push to a branch of its own (a branch kept only to start it, and a
 new command for the full run).
 
-## D?1: A test holds the spell checker's thread in the worker, on the thread's own clock (25.6, 2026-10-23)
+## D262: A test holds the spell checker's thread in the worker, on the thread's own clock (25.6, 2026-10-23)
 
 **Decision:** The spell checker's worker takes a test's hold (`holdBuild` in `core/spell-thread.ts`, the `hold` op in
 `core/spell-worker.ts`): the next time the thread is asked to build the dictionary with the words named, it waits first,

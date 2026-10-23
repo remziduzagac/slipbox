@@ -11,11 +11,24 @@ import { WorkerRequests } from "./worker-requests.ts";
 import { workerUrl } from "./workers.ts";
 
 let channel: WorkerRequests | null = null;
-/** Bumped when a thread starts or is stopped: a test's hold belongs to the thread it was set on. */
+/** Bumped when a thread starts or ends (stopped, a deadline, a crash): a test's hold belongs to the thread it was set
+ *  on. */
 let threads = 0;
 
+/** A spell checker's thread, counted when it starts and when it ends: the mailbox ends one by terminating it. */
+function startThread(): Worker {
+  const worker = new Worker(workerUrl("spell-worker.ts"));
+  threads++;
+  const terminate = worker.terminate.bind(worker);
+  worker.terminate = () => {
+    threads++;
+    terminate();
+  };
+  return worker;
+}
+
 function ask<T>(request: SpellAsk): Promise<T> {
-  channel ??= new WorkerRequests(() => (threads++, new Worker(workerUrl("spell-worker.ts"))), { deadline: 20_000 });
+  channel ??= new WorkerRequests(startThread, { deadline: 20_000 });
   return channel
     .request<SpellAnswer>(request)
     .then((result) => result.answer as T)
@@ -49,11 +62,12 @@ export function addToDictionaries(word: string): void {
 export type HoldState = (typeof HOLD_STATES)[number] | "dropped";
 
 /**
- * For a test: the dictionary whose words are `dic`, the next time the thread is asked to build it, waits first until
- * the test lets it go, or for `limit` ms on the thread's own clock, so that a main thread held until it's built is let
- * go too. Asked for when it's built already, it isn't built again: the hold is spent, never waiting. Stopping the
- * thread ends a wait, the dictionary unbuilt; a hold set or waiting on a thread since stopped, or started afresh after
- * a deadline, is dropped. A second hold on the same words, before the first is spent, is refused.
+ * For a test: the dictionary whose words are `dic` (its `.dic` path as `dictionaryFiles` gives it: `~` expanded, the
+ * name ending `.dic`), the next time the thread is asked to build it, waits first until the test lets it go, or for
+ * `limit` ms (a minute at most) on the thread's own clock, so that a main thread held until it's built is let go too.
+ * Asked for when it's built already, it isn't built again: the hold is spent, never waiting. Stopping the thread ends
+ * a wait, the dictionary unbuilt; a hold set or waiting on a thread that has ended since (stopped, at a request's
+ * deadline, crashed) is dropped. A second hold on the same words, before the first is spent, is refused.
  */
 export async function holdBuild(dic: string, limit = 40_000): Promise<{ state: () => HoldState; letGo: () => void }> {
   const flag = new Int32Array(new SharedArrayBuffer(8));
@@ -73,7 +87,6 @@ export async function holdBuild(dic: string, limit = 40_000): Promise<{ state: (
 
 /** Stop the thread and settle every accepted request; a later request starts a fresh one. */
 export function stopSpellThread(): void {
-  if (channel) threads++;
   channel?.dispose();
   channel = null;
 }

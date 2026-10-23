@@ -50,7 +50,11 @@ async function heldSpell(s: Session, what: string): Promise<void> {
 /** The hold let go, by the check: not its wait run out, nor dropped with a thread stopped at a request's deadline. */
 async function letGoSpell(s: Session): Promise<void> {
   writeFileSync(join(s.dir, "hold-go"), "");
-  await s.until(() => holdState(s) !== "waiting", WAIT, "the thread let go (still waiting: was it stopped?)");
+  await s.until(
+    () => !["", "waiting"].includes(holdState(s)),
+    WAIT,
+    "the thread let go (still waiting: was it stopped?)",
+  );
   s.expect(holdState(s) === "let go", `the thread ${holdState(s)}, not let go`);
 }
 /** A bundled dictionary copied under the check's folder (`dict/<lang>.aff`, `.dic`): built when asked, as yours. */
