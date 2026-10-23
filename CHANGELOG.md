@@ -10,6 +10,8 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 
 - A release is on the installer's site as soon as it's published, so `curl … | sh` and `slipbox upgrade` on the stable
   channel find it at once. 0.5.0's wasn't until the site was deployed again, an hour later.
+- With `render.mermaid = "picture"` on a machine without a sans font (DejaVu, Liberation, Noto, Arial or Helvetica), a
+  Mermaid diagram is drawn in characters again, as the manual says. 0.5.0 drew it as a picture without its words.
 
 ## [0.5.0] - 2026-10-22
 

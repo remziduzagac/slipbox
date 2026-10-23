@@ -38,7 +38,7 @@ import {
   visit,
 } from "../src/core/parse.ts";
 import { mathRows, mathText } from "../src/core/math.ts";
-import { flattenVars, loadRasterizer, looksLikeSvg } from "../src/core/svg.ts";
+import { flattenVars, loadRasterizer, looksLikeSvg, machineFont, rasterizer } from "../src/core/svg.ts";
 import { loadMermaid, mermaidSvg } from "../src/core/diagrams.ts";
 import { loadTypesetter } from "../src/core/typeset.ts";
 import { extractFromSource } from "../src/core/graph.ts";
@@ -2608,6 +2608,24 @@ describe("SVG drawn (12.15), and what slipbox draws as pictures (12.16, 12.17)",
     expect(pngWidth(r.png(svg, 80)!)).toBe(80);
     expect(r.size("not an svg")).toBeNull();
     expect(r.png("<svg", 10)).toBeNull();
+  });
+  test("on the screen, a diagram's words get a font only where the machine has one: else it's drawn in characters", () => {
+    const dir = mkdtempSync(join(tmpdir(), "slipbox-font-"));
+    try {
+      const there = join(dir, "Sans.ttf");
+      writeFileSync(there, "");
+      const gone: [string, string] = [join(dir, "Gone.ttf"), "Gone"];
+      expect(machineFont([gone, [there, "Sans"]])).toEqual({ path: there, family: "Sans" });
+      expect(machineFont([gone])).toBeNull();
+      // No font: no family, so a Mermaid block isn't asked for as a picture, which would have no words.
+      expect(rasterizer(null)!.family).toBeNull();
+      const colors = { bg: "#101010", fg: "#e0e0e0", line: "#707070", accent: "#3080f0", muted: "#909090" };
+      expect(mermaidSvg("graph TD\n  A --> B", colors, rasterizer(null)!.family)).toBeNull();
+      expect(rasterizer({ path: there, family: "Sans" })!.family).toBe("sans-serif");
+      expect(rasterizer()!.family).toBe(machineFont() ? "sans-serif" : null);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
   test("a Mermaid diagram as an SVG in the theme's colours, nothing left for resvg to resolve; maths typeset in its colour", async () => {
     await loadMermaid();
