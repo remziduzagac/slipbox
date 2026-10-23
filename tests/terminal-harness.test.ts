@@ -311,18 +311,19 @@ describe("what the checks share (check.ts)", () => {
   // The explorer as `space e` cycles it (panels.ts: opened and focused, focused, closed), on a screen behind its own
   // trace: a key is in the trace at once with a frame after it, but what it did is drawn LAG ms later, as a loaded
   // runner's slipbox paints before its terminal has caught up. Meanwhile the which-key popup drawn after `space` stays,
-  // its line for `space e` the command's title, as slipbox's is (#18).
+  // its line for `space e` the command's title, as slipbox's is (#18). Its frames are marked as slipbox's are
+  // (synchronized output), so a wait reads each whole.
   const LAG = 400;
   const LABEL = COMMAND_SPECS.find((c) => c.id === "explorer.cycle")!.title;
   const cycling = [
     "stty -echo -icanon min 1 time 0",
     "pending=0",
     "draw() {",
-    "  printf '\\033[2J\\033[H'",
+    "  printf '\\033[?2026h\\033[2J\\033[H'",
     "  if [ $shown = 1 ]; then printf ' ≡  Explorer   +  +  │ home.md'; else printf '    home.md'; fi",
     "  if [ $pending = 1 ]; then printf '\\033[4;1H  │ e   → %s  │' \"$LABEL\"; chip='␣'",
     "  elif [ $focused = 1 ]; then chip=FILES; else chip=READ; fi",
-    "  printf '\\033[8;1H %s  notes  ‹ home.md ›  L1:1' \"$chip\"",
+    "  printf '\\033[8;1H %s  notes  ‹ home.md ›  L1:1\\033[?2026l' \"$chip\"",
     "}",
     "draw",
     'while c=$(dd bs=1 count=1 2>/dev/null) && [ -n "$c" ]; do',
@@ -354,19 +355,28 @@ describe("what the checks share (check.ts)", () => {
         focused: `${focused}`,
       },
     });
-    await until(() => s.statusLine().includes("home.md"), "the fake explorer's first frame");
+    // Its first frame whole: the mode on the status line, drawn last.
+    await s.until(() => mode(s) !== null, undefined, "the fake explorer's first frame");
     const presses = () => (existsSync(pressed) ? readFileSync(pressed, "utf8") : "").length;
     return { s, presses };
   };
 
   test("the panels' own titles, never the which-key popup's lines that name them", () => {
-    const popup = (id: string) => `  │ e   → ${COMMAND_SPECS.find((c) => c.id === id)!.title}  │`;
-    expect(EXPLORER.test(popup("explorer.cycle"))).toBe(false);
-    expect(OUTLINE.test(popup("outline.cycle"))).toBe(false);
-    // As slipbox draws them, the Nerd Font's glyphs in use: the explorer's buttons before its border; the outline after
-    // the right panel's.
+    // The popup's line for each key, its border Unicode's or ASCII's.
+    for (const border of ["│", "|"]) {
+      const popup = (id: string) => `  ${border} e   → ${COMMAND_SPECS.find((c) => c.id === id)!.title}  ${border}`;
+      expect(EXPLORER.test(popup("explorer.cycle"))).toBe(false);
+      expect(OUTLINE.test(popup("outline.cycle"))).toBe(false);
+    }
+    // As slipbox draws them: the explorer's buttons before its border (the Nerd Font's, ASCII's, none in a narrow
+    // pane); the outline after the right panel's border, the right rail beside it or not (the screen's rows are read
+    // with their trailing spaces gone).
     expect(EXPLORER.test(" ≡  Explorer               󰝒  󰉗  │ 1 operations-handbook.md × │")).toBe(true);
+    expect(EXPLORER.test(" =  Explorer               +  +>  | 1 operations-handbook.md x |")).toBe(true);
+    expect(EXPLORER.test(" ≡  Explorer   │ 1 operations-handbook.md × │")).toBe(true);
     expect(OUTLINE.test(" ±  󰉋 equipment     ● │ § Halden Ridge Observatory    │ Outline           󰋽")).toBe(true);
+    expect(OUTLINE.test(" ±  󰉋 equipment     ● │ § Halden Ridge Observatory    │ Outline")).toBe(true);
+    expect(OUTLINE.test(" +  equipment     * | § Halden Ridge Observatory    | Outline")).toBe(true);
   });
 
   test.each([

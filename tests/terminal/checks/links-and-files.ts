@@ -18,6 +18,7 @@ import {
   explorerOpen,
   type Check,
   downloadsElsewhere,
+  EXPLORER,
   explorerRow,
   follow,
   type LeftOut,
@@ -55,7 +56,7 @@ function gitOk(s: Session, what: string, ok: boolean, repo: string, ...args: str
 /** What the explorer shows: each row left of its border, from under its breadcrumb down (empty when it's closed). */
 function explorer(s: Session): string[] {
   const rows = s.screen();
-  const title = rows.findIndex((r) => /Explorer/.test(r));
+  const title = rows.findIndex((r) => EXPLORER.test(r));
   if (title < 0) return [];
   const border = [...rows[title]!].findIndex((c) => c === "│" || c === "┃");
   return rows.slice(title + 2, -1).map((r) => [...r].slice(0, border).join(""));
@@ -64,7 +65,7 @@ function explorer(s: Session): string[] {
 /** The explorer's breadcrumb (VV-D5): its row under the title, left of its border ("" when it's closed). */
 export function crumbs(s: Session): string {
   const rows = s.screen();
-  const title = rows.findIndex((r) => /Explorer/.test(r));
+  const title = rows.findIndex((r) => EXPLORER.test(r));
   if (title < 0) return "";
   const border = [...rows[title]!].findIndex((c) => c === "│" || c === "┃");
   return [...rows[title + 1]!].slice(3, border).join("").trim(); // past the rail
@@ -73,7 +74,7 @@ export function crumbs(s: Session): string {
 /** A click on the breadcrumb's folder `name` (SGR's reports, as a terminal sends them). */
 async function clickCrumb(s: Session, name: string): Promise<void> {
   const rows = s.screen();
-  const row = rows.findIndex((r) => /Explorer/.test(r)) + 1;
+  const row = rows.findIndex((r) => EXPLORER.test(r)) + 1;
   const at = new RegExp(`(^|\\s)${name}(\\s|$)`).exec(rows[row] ?? "");
   s.expect(row > 0 && !!at, `${name} in the breadcrumb to click: ${crumbs(s)}`);
   const col = at!.index + at![1]!.length;

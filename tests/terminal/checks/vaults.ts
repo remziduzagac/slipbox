@@ -5,7 +5,17 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, lstatSync, mkdirSync, rmSync, symlinkSync, utimesSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { type Check, downloadsElsewhere, explorerOpen, explorerRow, follow, leader, open, opened } from "../check.ts";
+import {
+  type Check,
+  downloadsElsewhere,
+  EXPLORER,
+  explorerOpen,
+  explorerRow,
+  follow,
+  leader,
+  open,
+  opened,
+} from "../check.ts";
 import { CheckFailed, type Session } from "../session.ts";
 import { ARCHITECTURE, crumbs, lastMessage, listed, PEEK_HINT, toLink } from "./links-and-files.ts";
 
@@ -30,7 +40,7 @@ const escaped = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
  */
 function paneRows(s: Session): string[] {
   const rows = s.screen();
-  const title = rows.findIndex((r) => /Explorer/.test(r));
+  const title = rows.findIndex((r) => EXPLORER.test(r));
   if (title < 0) return [];
   const border = [...rows[title]!].findIndex((c) => c === "│" || c === "┃");
   return rows.slice(title + 2, -1).map((r) => {

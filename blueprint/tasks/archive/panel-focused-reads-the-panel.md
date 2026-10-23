@@ -1,5 +1,5 @@
 ---
-status: doing
+status: done
 assignee: claude-18
 blocked_by: []
 tracker: [gh:#18]
@@ -87,3 +87,34 @@ and the status line's mode waited for together. Never pressed again on a screen 
   `explorerOpen` (`vaults-explorer`), taken into a scratch folder: as before.
 - 2026-10-23: No user docs or CHANGELOG line: the terminal tests' helpers, nothing users see. No design change: the
   design says every check waits for the screen to agree; the helper now does.
+- 2026-10-23: Codex's review of the diff, one finding, verified: the fake's readiness wait (the status line holding
+  `home.md`) could pass on a half-drawn first frame, its first row also saying `home.md`; from the focused start
+  `explorerOpen` would then press and close it. Fixed: the fake marks its frames as slipbox does (synchronized
+  output), and the fixture waits for the mode chip, drawn last. 8 pass; the mutation check fails the same 3.
+- 2026-10-23: The code-review skill's review of the diff (medium), eight findings, each checked against the code:
+  - Taken: `OUTLINE` wanted a character after the title, but the screen's rows are read with their trailing spaces
+    gone (`translateToString(true)`), so with no right rail beside the outline (zen, `ui.right_rail` off, no tabs:
+    `rightRailWidth`) its title ends the row: now `/[│┃|] Outline(?: |$)/`.
+  - Taken: in ASCII the borders are `|` (`glyphs.ts`, `vbar`); both titles take it. No check uses these helpers in
+    ASCII today.
+  - Taken: the checks' own explorer readers (`explorer`, `crumbs`, `clickCrumb` in links-and-files.ts, `paneRows` in
+    vaults.ts) found its title by the bare `/Explorer/`: they use `EXPLORER` now, one definition of the title. None
+    reads with the popup up today, so no failure was seen; the same notion, kept in one place.
+  - Taken: the titles' test now has the popup's lines in Unicode and ASCII, and the rows of an ASCII explorer, an
+    explorer too narrow for its buttons, and an outline with no rail beside it. Mutation-checked: the first round's
+    patterns fail it.
+  - Not taken, stated instead: in a pane under eight rows slipbox draws no title (`paneTitle`), so `panelFocused`
+    never sees one and `explorerClosed` takes an open explorer for closed. No check calls them in a pane that short,
+    and the old `explorerClosed` had the same limit; `EXPLORER`'s comment says the helpers need the title.
+  - Not taken, stated instead: `explorerClosed` with a prompt, an operator or keys pending at its start finds no mode
+    and opens the explorer first. That's a caller taking the keys, which the helpers exclude, as `panelFocused` says;
+    a message goes over the status line only on a screen under 30 columns or 5 rows (`draw.ts`).
+  - Not taken, a follow-up for the maintainer: the stale screen itself, `Session.keys` returning once the trace has a
+    `frame` before its bytes reach the headless terminal, could be closed once for every check (a marker slipbox
+    writes in each frame, the terminal waited for). That changes the terminal tests' design (§ In step with slipbox),
+    beyond this task; the helpers no longer act on a stale screen, and other checks wait for what they expect.
+- 2026-10-23: Terminal checks again after these, `SLIPBOX_TERMINAL_JOBS=2`: the 25 that use the helpers or the
+  readers, 24 passed; the 25th (`links: a symlink within the vault never asks`) timed out with slipbox never started,
+  a blank screen, while the machine's load was 50 on 10 cores (the run took 426 s, against 47). Run again alone under
+  `nice` at a load of 8.5: passed, 1.9 s.
+- 2026-10-23: The typecheck, the lint and `check:docs` pass. Done; the pull request's merge is the acceptance.

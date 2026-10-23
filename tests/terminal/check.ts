@@ -179,14 +179,17 @@ export function mode(s: Session): string | null {
 }
 
 /**
- * The explorer's own title, at its top: "Explorer", its buttons (a new note, a new folder), its border. Not the
- * leader's which-key popup, on screen between `space` and `e`, whose line for `space e` says "Explorer: open, focus,
- * close". A pane shorter than eight rows has no title.
+ * The explorer's own title, at its top: "Explorer", its buttons (a new note, a new folder), its border (`|` in ASCII).
+ * Not the leader's which-key popup, on screen between `space` and `e`, whose line for `space e` says "Explorer: open,
+ * focus, close". A pane shorter than eight rows has no title (draw-panels.ts), and these helpers need it.
  */
-export const EXPLORER = /Explorer +(?:\S+ +)*[│┃]/;
+export const EXPLORER = /Explorer +(?:\S+ +)*[│┃|]/;
 
-/** The outline's own title, after the right panel's border; not the which-key popup's "Outline: open, focus, close". */
-export const OUTLINE = /[│┃] Outline +/;
+/**
+ * The outline's own title, after the right panel's border, at the row's end when no rail is right of it; not the
+ * which-key popup's "Outline: open, focus, close".
+ */
+export const OUTLINE = /[│┃|] Outline(?: |$)/;
 
 /**
  * A panel open and focused: its leader key pressed once, unless it is already, then its own `title` and the status
@@ -207,7 +210,8 @@ export const explorerOpen = (s: Session) => panelFocused(s, "e", "FILES", EXPLOR
 
 /**
  * The explorer closed: focused first (`explorerOpen`), then space e once, its title gone and a mode other than FILES
- * on the status line waited for — each press seen taking effect before the next, never on the which-key popup.
+ * on the status line waited for — each press seen taking effect before the next, never on the which-key popup. Called
+ * as `panelFocused` is, with nothing else taking the keys.
  */
 export async function explorerClosed(s: Session): Promise<void> {
   const closed = () => s.rowOf(EXPLORER) < 0 && mode(s) !== null && mode(s) !== "FILES";
