@@ -179,10 +179,8 @@ export class Graph {
    * may have gone, or become a vault, or home been walked, since. Whether it's listed.
    */
   listForWalk(rel: string): boolean {
-    if (this.home?.walked !== null) return false;
-    if (this.dirs.includes(rel)) return true;
-    if (!walksInto(this.root, this.filter, rel)) return false;
-    this.dirs.push(rel);
+    if (this.home?.walked !== null || !walksInto(this.root, this.filter, rel)) return false;
+    if (!this.dirs.includes(rel)) this.dirs.push(rel); // listed before: gone and come again, looked at all the same
     return true;
   }
 

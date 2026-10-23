@@ -137,7 +137,12 @@ export class VaultWatcher {
   /** Known notes that went lately: a move's two ends may come in two batches, the second look's a tick later. */
   private readonly recentlyWent: Went[] = [];
   /**
-   * The folders that went lately holding known notes, the other files known in them (an embed's picture), by the tick:
+   * The notes followed into folders left to the walk (`movedTo`): no watch sees them there, so each is looked at every
+   * tick — changed, or moved again, it's seen at once — until its folder is watched or it goes.
+   */
+  private readonly followed = new Set<string>();
+  /**
+   * The folders that went lately holding known notes, the other files known in them (a data file), by the tick:
    * renamed or moved, maybe (`movedTo`).
    */
   private readonly recentlyGone: { dir: string; files: string[]; tick: number }[] = [];
@@ -187,6 +192,7 @@ export class VaultWatcher {
       this.leftSeen.clear();
       this.recentlyWent.length = 0;
       this.recentlyGone.length = 0;
+      this.followed.clear();
     }
     const want = new Set(dirs);
     for (const [d, w] of this.watchers) {
@@ -492,6 +498,16 @@ export class VaultWatcher {
         this.rescan = true;
       }
     }
+    // The notes followed into folders left to the walk, whose folders no watch sees: looked at every tick.
+    for (const rel of this.followed) {
+      if (!known.has(rel) || this.watchers.has(parentOf(rel))) {
+        this.followed.delete(rel);
+        continue;
+      }
+      const st = statOrNull(join(root, rel));
+      if (!st || st.mtimeMs !== known.get(rel) || (this.sizes.has(rel) && this.sizes.get(rel) !== st.size))
+        this.pending.add(rel);
+    }
     for (const dirRel of this.polled) {
       let entries: Dirent[] = [];
       try {
@@ -628,8 +644,12 @@ export class VaultWatcher {
     this.settle(batch, batch.paths);
     this.vanished(batch);
     // Known notes moved lately into a folder left to the walk: found there, so they stay and the move is seen.
-    if (batch.following && this.recentlyWent.length && batch.candidates.length)
-      this.settle(batch, this.movedTo(batch.candidates, new Set(batch.found), this.recentlyWent, this.recentlyGone));
+    if (batch.following && this.recentlyWent.length && batch.candidates.length) {
+      const moved = this.movedTo(batch.candidates, new Set(batch.found), this.recentlyWent, this.recentlyGone);
+      this.settle(batch, moved);
+      for (const rel of moved)
+        if (this.opts.known.has(rel) && !this.watchers.has(parentOf(rel))) this.followed.add(rel);
+    }
     for (const d of new Set(batch.found)) {
       if (batch.following) this.leftSeen.set(d, this.ticks); // where a note that goes next may be, for a tick
       // Named in order, each name taking its room under home's cap (`found` again: the room changed).

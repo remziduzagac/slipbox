@@ -344,3 +344,19 @@ folder asked for by name, which is whole, and once home's walk is kept, a folder
   `space e` the second time: the explorer, shown but not focused, while home's walk built the graph again. The step
   needs no key: the explorer still shown says when home is walked, and with no key pressed nobody is working. C2 now
   waits for `cloned`'s `●` without one; three runs pass here.
+- 2026-10-24: Round 3, Codex's (after its limit reset, on bea450d), two and a wording:
+  - Verified, fixed: `Graph.listForWalk` took a folder already in `graph.dirs` without looking again, so one listed,
+    then gone and made again as a vault while git held its batch, was listed and watched inside the vault. It looks
+    every time now. Test: A, `cloned` made a vault after it was listed.
+  - Verified, fixed: a note followed into a folder left to the walk, moved on from there, was seen to go only by the
+    sweep of known notes, every fifteenth tick, by when where it went was no candidate any more: lost until the walk.
+    Such a note is looked at every tick now (`followed`) until its folder is watched or it goes: moved on into a folder
+    the watcher sees, it's followed again, and a change to it is seen at once, not in half a minute. A move on into a
+    folder no watch sees still waits for the walk; design/roots.md says so. Tests: M (`Documents/new/b.md` moved on to
+    a new `Documents/again/c.md`) and C3 (`journal/2025/kept.md` moved on to a new `journal/new/b.md`). Undone, M
+    fails; C3 can still pass, the sweep finding the note in time by chance, as with C4 and T2.
+  - Fixed: examples/home/CASES.md said the folder opened by name stays whole renamed or not; renamed, its notes are
+    followed, no more.
+- 2026-10-24: Passing after Codex's round 3: five separate runs of each test file; forty-four mutations, each failing a
+  test; the neighbouring tests (66, 132), tests/home.test.ts, the terminal-coverage and docs tests, the eleven home and
+  marks terminal checks, the typecheck, the lint, `check:boundary`, `check:size` and `check:docs`.

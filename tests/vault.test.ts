@@ -6664,6 +6664,9 @@ describe("home, a vault without a marker (VV-D2)", () => {
         applyToGraph(g, { changes: [], rescan: false, toWalk: ["gone", "vaulted"] }, 1e9);
         expect(g.dirs).not.toContain("gone");
         expect(g.dirs).not.toContain("vaulted");
+        // One listed before, a vault since (gone and made again while git wrote): not listed, nor watched, again.
+        mkdirSync(join(home, "cloned", ".slipbox"));
+        expect(applyToGraph(g, { changes: [], rescan: false, toWalk: ["cloned"] }, 1e9).listed).toEqual([]);
         // A folder left to the walk, gone: nothing to say — it was never a file.
         rmSync(join(home, "Documents", "d1"), { recursive: true });
         expect(await look()).toEqual(none);
@@ -6818,6 +6821,14 @@ describe("home, a vault without a marker (VV-D2)", () => {
         mkdirSync(join(home, "Documents", "new"));
         renameSync(join(home, "a.md"), join(home, "Documents", "new", "b.md"));
         expect(await look()).toEqual({ ...none, reported: ["created Documents/new/b.md", "deleted a.md"], toWalk: [] });
+        // Moved on from there, into another folder made in Documents: Documents/new unwatched, the note followed into it
+        // is looked at every tick, so it's seen to go, and followed again.
+        mkdirSync(join(home, "Documents", "again"));
+        renameSync(join(home, "Documents", "new", "b.md"), join(home, "Documents", "again", "c.md"));
+        expect(await look()).toEqual({
+          ...none,
+          reported: ["created Documents/again/c.md", "deleted Documents/new/b.md"],
+        });
         // A known note gone as a folder comes into home's top holding one of the same name, another file: named, not
         // read.
         rmSync(join(home, "index.md"));

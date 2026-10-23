@@ -397,17 +397,21 @@ const UNWALKED_HOME: Check[] = [
       await untilListed(s, "Saved", "journal/2025/kept.md");
       s.expect(!(await switcherLists(s, "Saved", "journal/saved.md")), "the note moved: gone from where it was");
       await neverListed(s, "2025-01-01", "journal/2025/m01/day-1.md", "a note moved into 2025: its days unread");
-      // Another, moved under another name into a folder made in journal: followed there.
+      // Moved on from there, under another name, into a folder made in journal: 2025 unwatched, the note followed into
+      // it is looked at every tick — seen to go, and followed again.
+      mkdirSync(join(s.home, "journal", "new"));
+      renameSync(join(s.home, "journal", "2025", "kept.md"), join(s.home, "journal", "new", "b.md"));
+      await untilListed(s, "Saved", "journal/new/b.md");
+      s.expect(!(await switcherLists(s, "Saved", "journal/2025/kept.md")), "moved on: gone from where it was");
+      // Another, saved in journal and moved under another name into new: followed there too.
       s.write("~/journal/second.md", "# Second\n");
       await untilListed(s, "Second", "journal/second.md");
-      mkdirSync(join(s.home, "journal", "new"));
-      renameSync(join(s.home, "journal", "second.md"), join(s.home, "journal", "new", "b.md"));
-      await untilListed(s, "Second", "journal/new/b.md");
-      s.expect(!(await switcherLists(s, "Second", "journal/second.md")), "the note moved: gone from where it was");
+      renameSync(join(s.home, "journal", "second.md"), join(s.home, "journal", "new", "second-b.md"));
+      await untilListed(s, "Second", "journal/new/second-b.md");
       // journal renamed: its notes known followed under the new name; the days below it never read; the folder listed.
       renameSync(join(s.home, "journal"), join(s.home, "diary"));
-      await untilListed(s, "Saved", "diary/2025/kept.md");
-      await untilListed(s, "Second", "diary/new/b.md");
+      await untilListed(s, "Saved", "diary/new/b.md");
+      await untilListed(s, "Second", "diary/new/second-b.md");
       await untilListed(s, "Journal", "diary/index.md");
       await neverListed(s, "2025-01-01", "diary/2025/m01/day-1.md", "journal renamed: the days below it unread");
       await explorerOpen(s);
