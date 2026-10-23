@@ -175,10 +175,11 @@ export class Graph {
 
   /**
    * A folder come into home's top before its walk (VV-D2: `WatchBatch.toWalk`), listed as its top's folders are, never
-   * looked into — while home's walk would go into it: named in a batch held while git wrote, it may have gone, or become
-   * a vault, since. Whether it's listed.
+   * looked into — while home's walk would go into it, and is still to make: named in a batch held while git wrote, it
+   * may have gone, or become a vault, or home been walked, since. Whether it's listed.
    */
   listForWalk(rel: string): boolean {
+    if (this.home?.walked !== null) return false;
     if (this.dirs.includes(rel)) return true;
     if (!walksInto(this.root, this.filter, rel)) return false;
     this.dirs.push(rel);

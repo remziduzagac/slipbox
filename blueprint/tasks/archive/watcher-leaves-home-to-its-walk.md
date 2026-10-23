@@ -182,3 +182,56 @@ folder asked for by name, which is whole, and once home's walk is kept, a folder
   passing; the neighbouring tests (63, 132), the seven terminal checks, the typecheck, the lint and `check:docs` pass.
   A second look at a watched folder keeping what it left isn't pinned by a test: its events find the same folder.
 - 2026-10-23: Done; draft pull request into `dev` for the maintainer's review.
+- 2026-10-23: The pull request's own review (the maintainer's review loop), round 1, CI green on #42: the code-review
+  skill and Codex, each on `git diff origin/dev...` without the other's findings. Codex's three, each reproduced with a
+  script (`tmp/issue/repro-r1.ts`) before the fix:
+  - Verified, fixed: a folder a second look left could be taken in after it became a link out of home that isn't
+    followed: moving a known note to where the link leads read the whole target through it (`Documents/new/a.md`,
+    `Documents/new/deep/secret.md` reported). `movedInto` looks again first: a folder the walk takes, and a link only
+    when it's followed; and what second looks leave is forgotten at the next tick.
+  - Verified, fixed: a file of the same name was enough: a known `~/index.md` gone as `~/bulk/` came with its own
+    `index.md` read all of `bulk` whole. A note moved is now the same file, by its time and size, which a move keeps.
+  - Verified, fixed: a note moved under another name (`~/a.md` to a new `~/Documents/new/b.md`) was said gone and
+    never found; on dev the folder was taken in. `movedInto` also looks at the folder's top, by time and size. A note
+    moved and renamed deeper in a new folder waits for the walk; design/roots.md § Home says only what holds.
+  Tests: `before home's first walk, a folder a known note was moved into is taken in …` in tests/vault.test.ts; each
+  of the three fixes undone fails it.
+- 2026-10-23: Round 1, the code-review skill's twelve, merged with Codex's (its 1, a name taken for a move, is Codex's
+  second), each checked against the code:
+  - Verified, fixed (2, 5, 6, 10): a move into a folder left to the walk took that folder in whole — `mv ~/Documents
+    ~/Docs` read all of `Docs/**`, a note moved into `~/Documents/proj` all of `proj` — and each batch with a note gone
+    probed every folder seen for it, on the screen's thread. Now no folder is taken in for a move: the moved notes
+    alone are found where they went (`movedTo`, by time and size, below a folder that went or at the folder's top) and
+    reported there; the rest stays the walk's. A renamed folder costs a probe per note it held, a folder found one
+    listing of its top.
+  - Verified, fixed (3): second looks come after the tick's batch, so a move's two ends could land in two batches.
+    The notes that went and the folders second looks left are kept for a tick (`recentlyWent`, `leftSeen`), and a
+    second look finding a folder as a note went lately asks for a batch.
+  - Verified, fixed (7): a batch held while git wrote, applied after home's walk, listed its folder and asked for a
+    second whole walk (`homeAgain` resets a pass that's done). `Graph.listForWalk` lists nothing once home is walked,
+    and the TUI then asks for no walk.
+  - Verified, fixed (8): a folder named that the graph didn't take (a vault since, gone, past the cap) stayed named for
+    good, never named again and holding its room. The watcher keeps one map of the folders it left (`left`), and
+    `watchNamed`, given what the graph listed, forgets every name it's given.
+  - Verified, fixed (9): the rule for a gone folder said nothing for any path where the walk looks, so a file the graph
+    knew and the watcher didn't (one reached, 20.8) went unsaid. Now only a folder the watcher found and left goes
+    unsaid (`left`).
+  - Verified, fixed (11, 12): design/tui.md said more than holds; rewritten. The tests' copies of `look` and `until`
+    are one helper each (`watchHome`, a describe's `until`). The prefix match repeated in watch.ts is left: each loop
+    runs over its own map.
+  - Not fixed (4): the folder asked for by name, renamed, isn't asked for under its new name: its notes are followed
+    there, but a folder made in it later waits for the walk, and a build before the walk drops them. On dev a build
+    drops them as well, and it lasts until home's walk, made the first time nobody works; carrying the folder asked
+    for over would need the graph told of folder renames, more than this issue asks.
+  - Fixing them found two more, fixed: the end of a batch named again a folder that a second look had found, once it
+    was watched since, or gone.
+- 2026-10-23: Tests for round 1: `… a folder a known note was moved into is taken in …` (now: a note moved under another
+  name, a same-named note, a link not followed, a note moved into a folder that was there with its ends a tick apart,
+  a top folder renamed with notes below it never read), the renamed folder asked for, the polled cap, and the TUI's
+  batch after the walk. Thirty mutations, each failing a test (`tmp/issue/mutations.sh`); the step for a move's ends a
+  tick apart caught its mutation only once Documents was dated back and its earlier second looks forgotten. Passing:
+  the neighbouring tests (64, 132), the seven terminal checks, the typecheck, the lint, `check:boundary`,
+  `check:size`. Live on the scratch home: 3, 5 (`journal/saved.md`), 5 after `mkdir ~/journal/new && mv
+  ~/journal/saved.md ~/journal/new/kept.md` (found there), 5 after `mv ~/journal ~/diary` (`diary/index.md`,
+  `diary/new/kept.md`; `diary` listed `◐`; none of the 60 below read). Seen, not changed: the explorer still lists
+  `journal` after the rename; a folder gone stays in `graph.dirs` until the graph is built again, on dev too.

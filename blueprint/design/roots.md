@@ -117,12 +117,13 @@ keeps the walk, builds home's index, then indexes the vaults it found; its progr
 Until then, a folder the graph hasn't looked into is the walk's (`Graph.waitsForHomeWalk`: any but home's top and the
 folders asked for by name), never the watcher's: a folder found in one isn't taken in, and one that comes into home's
 top is listed and watched, not looked into, and asks for the walk again (`WatchBatch.toWalk`), the graph not built again
-for it. A folder watched still has its own files taken in as they come, and a folder the graph's own notes went into
-(renamed, or moved within home) is taken in whole, so they stay and the move is seen. Once the walk is kept, a folder
-that comes is taken in at once, as in a vault, within the cap. The CLI walks home at once the first time it needs it (an
-agent's answer is now), and `index --refresh ~` walks it again. Home's notes are another vault's backlinks as of its
-index (`Reach` reads it beside the vaults'), the relink of a vault moved rewrites them too, and search's linked and all
-scopes take home as a vault (`scopeRoots`).
+for it. A folder watched still has its own files taken in as they come, and a known note moved into a folder left to the
+walk is followed there, so it stays and the move is seen: found by its time and size, under the same path below a folder
+that went (renamed or moved) or at the folder's top; the rest of that folder stays the walk's. Once the walk is kept, a
+folder that comes is taken in at once, as in a vault, within the cap. The CLI walks home at once the first time it needs
+it (an agent's answer is now), and `index --refresh ~` walks it again. Home's notes are another vault's backlinks as of
+its index (`Reach` reads it beside the vaults'), the relink of a vault moved rewrites them too, and search's linked and
+all scopes take home as a vault (`scopeRoots`).
 
 **The cap.** Home's index holds 10,000 notes at most, and its walk lists 5,000 folders (`HOME_LIMITS`), those nearest
 the top: a walk stops past the cap, not at it, so one of exactly 10,000 notes left nothing out. What stopped it is kept

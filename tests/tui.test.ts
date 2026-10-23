@@ -14328,6 +14328,12 @@ describe("the background auto-index in the TUI (20.9)", () => {
     }
   });
 
+  /** Until `ok`, or `ms` gone by: the watcher's batches come in their own time. */
+  const until = async (ok: () => boolean, ms = 25_000) => {
+    const end = Date.now() + ms;
+    while (!ok() && Date.now() < end) await Bun.sleep(20);
+  };
+
   test("home never walked, its watcher leaves what the walk is to look into (VV-D2): a note saved in a folder of home comes, nothing a folder down; a folder come into home's top is listed and watched, its folders the walk's, nothing dropped (#16)", async () => {
     const { homeAt } = await import("../src/core/vault.ts");
     const home = realpathSync(mkdtempSync(join(sandbox, "home-")));
@@ -14336,10 +14342,6 @@ describe("the background auto-index in the TUI (20.9)", () => {
     writeFileSync(join(home, "Documents", "d0", "sub", "n.md"), "# N\n");
     const hour = new Date(Date.now() - 3_600_000);
     for (const d of ["", "Documents"]) utimesSync(join(home, d), hour, hour);
-    const until = async (ok: () => boolean, ms = 25_000) => {
-      const end = Date.now() + ms;
-      while (!ok() && Date.now() < end) await Bun.sleep(20);
-    };
     const before = process.env.HOME;
     process.env.HOME = home;
     try {
@@ -14388,6 +14390,12 @@ describe("the background auto-index in the TUI (20.9)", () => {
           "cloned/top.md",
           "cloned/x/deep.md",
         ]);
+        // A batch naming a folder, held while git wrote and applied once home is walked: home has it already — nothing
+        // listed, no walk asked for again.
+        mkdirSync(join(home, "late"));
+        h.app.watch.applyChanges({ changes: [], rescan: false, toWalk: ["late"] });
+        expect(h.app.graph.dirs).not.toContain("late");
+        expect(job!.status.home).toBe(true);
       } finally {
         h.app.watcher?.close();
       }
@@ -14403,10 +14411,6 @@ describe("the background auto-index in the TUI (20.9)", () => {
     writeFileSync(join(home, "notes", "inbox.md"), "# Inbox\n");
     const hour = new Date(Date.now() - 3_600_000);
     for (const d of ["", "notes"]) utimesSync(join(home, d), hour, hour);
-    const until = async (ok: () => boolean, ms = 25_000) => {
-      const end = Date.now() + ms;
-      while (!ok() && Date.now() < end) await Bun.sleep(20);
-    };
     const before = process.env.HOME;
     process.env.HOME = home;
     try {

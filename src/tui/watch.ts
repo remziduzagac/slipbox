@@ -359,10 +359,14 @@ export class Watch {
         if (buf.changedOnDisk() && (buf.elsewhere || !this.app.following.blocked(buf.abs))) this.reloadBuffer(buf);
     } else if (batch.toWalk?.length) {
       // Folders come into home's top before its walk (VV-D2), listed: watched, never looked into — the walk, asked for
-      // again, takes what's in them. Only the explorer shows a folder.
-      this.app.watcher?.watch(batch.toWalk.filter((d) => this.app.graph.dirs.includes(d)));
-      this.app.explorer.invalidateTree();
-      this.walkHomeAgain();
+      // again, takes what's in them. Only the explorer shows a folder. Walked since (the batch held while git wrote),
+      // home has them already.
+      const waiting = this.app.graph.home?.walked === null;
+      this.app.watcher?.watchNamed(batch.toWalk, (d) => waiting && this.app.graph.dirs.includes(d));
+      if (waiting) {
+        this.app.explorer.invalidateTree();
+        this.walkHomeAgain();
+      }
     }
     for (const c of batch.changes) {
       // An open note reloads — a data or text file too, like a note (16.4) — and a big one still
