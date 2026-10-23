@@ -21,9 +21,9 @@ export interface Head {
 export const SWITCH_SETTLE_MS = 3000;
 
 /**
- * A batch applied to the graph: notes updated, added and removed, attachments, a rescan.
- * `structural` when notes came or went — every link's status may have changed — and warnings for
- * what was left out. `maxNotes`: home's cap (VV-D2) — a note that comes past it is left to home's walk, which holds it,
+ * A batch applied to the graph: notes updated, added and removed, attachments, a rescan, folders listed for home's walk
+ * (`listed`, of `toWalk`). `structural` when notes came or went — every link's status may have changed — and warnings
+ * for what was left out. `maxNotes`: home's cap (VV-D2) — a note that comes past it is left to home's walk, which holds it,
  * unless it's in a folder asked for by name.
  */
 export function applyToGraph(
@@ -31,7 +31,7 @@ export function applyToGraph(
   batch: WatchBatch,
   maxFileSize: number,
   maxNotes = graph.home ? HOME_LIMITS.notes : Number.POSITIVE_INFINITY,
-): { structural: boolean; warnings: string[] } {
+): { structural: boolean; warnings: string[]; listed: string[] } {
   let structural = false;
   const warnings: string[] = [];
   if (batch.rescan) {
@@ -39,7 +39,7 @@ export function applyToGraph(
     structural = true;
   }
   // Folders come into home's top before its walk (VV-D2): listed, never looked into. No note came or went with them.
-  for (const dir of batch.toWalk ?? []) graph.listForWalk(dir);
+  const listed = (batch.toWalk ?? []).filter((dir) => graph.listForWalk(dir));
   for (const c of batch.changes) {
     if (!c.isNote) {
       // An attachment appeared or went: ![[embeds]] of it change status. Only a real change to the
@@ -82,7 +82,7 @@ export function applyToGraph(
       graph.updateFile(c.rel, { rel: c.rel, abs, size: st.size, mtimeMs: st.mtimeMs });
     }
   }
-  return { structural, warnings };
+  return { structural, warnings, listed };
 }
 
 export interface FeedOptions {

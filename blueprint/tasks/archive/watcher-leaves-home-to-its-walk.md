@@ -235,3 +235,70 @@ folder asked for by name, which is whole, and once home's walk is kept, a folder
   ~/journal/saved.md ~/journal/new/kept.md` (found there), 5 after `mv ~/journal ~/diary` (`diary/index.md`,
   `diary/new/kept.md`; `diary` listed `◐`; none of the 60 below read). Seen, not changed: the explorer still lists
   `journal` after the rename; a folder gone stays in `graph.dirs` until the graph is built again, on dev too.
+- 2026-10-23: Round 2 (on 67d2cbb), Codex's three, each reproduced by a new test before its fix
+  (`before home's first walk, a move is followed whatever its batches …`, tests/vault.test.ts):
+  - Verified, fixed: a folder renamed with its two ends in two batches lost the folder that went (kept per batch), so
+    only its top was looked at: `kept/sub/deep.md` renamed to `zettel/` wasn't followed. The folders that went are
+    kept a tick, as the notes are (`recentlyGone`).
+  - Verified, fixed: a note found gone only by the batch's last look (a rename reported by its new name alone) wasn't
+    kept as gone, and that look came after moves were followed: `~/a.md` moved to a new `~/dest/b.md`, the batch
+    naming `dest` alone, wasn't followed. The last look (`vanished`) runs first now, and keeps what it finds gone.
+  - Verified, fixed: following notes into a renamed folder looked only at the folder, not at the folders between it and
+    each note, so a vault made in it (`kept2/sub/.slipbox`) had its notes said home's. A note is followed only while
+    home's walk would go into its folder (`walksInto`, each folder on the way, links too).
+  Each fix undone fails the test.
+- 2026-10-23: Round 2, the code-review skill's ten (on 67d2cbb), merged with Codex's: its 1 (a note found gone by the
+  batch's last look, never followed), 2 (a folder renamed in two batches) and 6 (a path below the folder not looked at)
+  are Codex's three, fixed above. The rest:
+  - Verified, fixed (3): the design said a note moved into a folder left to the walk is followed there, but only a
+    folder the watcher sees is looked in (one come, or one in a folder of its that changed): `mv ~/a.md
+    ~/Documents/proj/a2.md`, proj there before and Documents unchanged, waits for the walk. design/roots.md and
+    design/tui.md say only that.
+  - Verified, fixed (4): a renamed folder's notes were followed only if the first that went was found under the new
+    name, so a note of it deleted alone a moment before kept the rest from being followed. The first twenty are tried.
+  - Verified, fixed (8): a known note going in a top folder had every folder in it listed for where it went (500
+    folders, 25,000 stats), on the screen's thread. Only a folder changed since a little before the note went is
+    listed now; the paths found are counted once.
+  - Verified, fixed (9): the folders left stayed known once home was walked, and each gone path ran over them all. They
+    are forgotten at the first `sync` with nothing left to a walk, and only a folder gone is looked for among them.
+  - Verified, fixed (10): the rule for which named folders are listed lived in the graph and again in the TUI.
+    `applyToGraph` returns what it listed (`listed`), and the TUI watches that.
+  - Not fixed (5): a note followed into a folder left to the walk is known, but its folder isn't watched, so a change to
+    it is seen by the sweep of known notes (every fifteenth tick, half a minute by default), and a note made beside it
+    waits for the walk. Watching that folder would take its own files in at its next change, more than the note.
+  - Not fixed (7), in part: a copy kept with its times (`cp -p`) in a folder changed since, its note deleted, is taken
+    for the note's move, and a relink offered. With 8 a copy in a folder unchanged since isn't. On dev the folder was
+    taken in whole and the graph, pairing by content, took the same move.
+- 2026-10-24: Tests for round 2: the batches test gained a folder whose note was deleted alone before its rename; the
+  moves test a copy kept with its times in a folder unchanged since. Thirty-five mutations, each failing a test; five
+  runs of the four vault tests passing. One run of five, at a load near 20, failed a vault test; at a load under 10,
+  five more passed. A step that could depend on the setup's speed (touched/ changed within two seconds of the graph's
+  build) now sets touched/'s time itself. The neighbouring tests (65, 132), the seven terminal checks, the typecheck,
+  the lint, `check:boundary` and `check:size` pass.
+- 2026-10-24: The maintainer asked for a terminal check of every case, the live tries' among them. Four, in
+  tests/terminal/checks/vaults.ts (`UNWALKED_HOME`, home never walked, the watcher looking again every 200 ms):
+  `home: before its first walk, a note saved in a folder of home comes, nothing a folder down …` (a folder made just
+  before the start, `~/.zsh_history` rewritten, `~/journal/saved.md`); `… a folder come into home's top is listed ◐ …`
+  (`~/cloned`, a note saved in it, home walked once nobody works); `… a note moved is followed where it went …` (into
+  a folder that was there, under another name into one made, its folder renamed, a copy kept with its times, a
+  same-named note); `home: a folder opened by name before home's walk …` (a folder made in it, renamed with a vault
+  made in it). Undoing the fix (every folder taken in, as on dev) fails three of the four; the opened folder's passes
+  on dev too, which took it in whole. Moves not followed fails two; a vault made in a renamed folder, the moves kept no
+  tick, and a copy taken for a move fail one each. Under a load of 32 one of the four failed once; at under 10 all
+  passed. Found writing them: a note followed into a folder left to the walk and moved on from there isn't seen to go
+  (its folder isn't watched), so the moves check moves its notes from journal, which is.
+- 2026-10-24: What a terminal check can't drive, tested by unit tests alone: a folder polled because its watch failed,
+  and watching degraded (the system's watch limit); home's cap (5,000 folders); a folder named and gone before the TUI
+  watched it, or become a vault, or a batch applied after home's walk (each needs git's index lock held between the
+  batch and its applying); a move's two ends in two batches, and a rename reported by its new name alone (the order
+  events come in); a folder a second look found, become a link before a note went (between two looks); a folder whose
+  first note went alone a moment before its rename (the order notes go in one batch); a folder left to the walk
+  removed (nothing is said either way).
+- 2026-10-24: examples/home/CASES.md lists the case (§ links/roots, Home before its first walk), its tests and checks.
+- 2026-10-24: C4 gained a folder come into home's top while a folder taken in inside the one opened is watched, and a
+  note saved there after. With the TUI's `sync` on a named folder put back, C4 still passes (by the time the note comes
+  the folder is watched again); the TUI test T2 is what fails then. Live on a fresh build of the reference set
+  (`tmp/issue/home2`): `slipbox ~/journal`, 10 notes; `mv ~/journal ~/diary` with `diary/2025/m02/.slipbox` made at
+  once: 7, `diary/2025/m01/day-1.md` followed, m02's notes none of home's, `diary` listed `◐`. Passing: the eleven home
+  and marks terminal checks, the neighbouring tests (65, 132), tests/home.test.ts, the terminal-coverage and docs tests,
+  the typecheck, the lint, `check:boundary`, `check:size`.

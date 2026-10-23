@@ -338,11 +338,11 @@ export class Watch {
   }
 
   private applyChangesNow(batch: WatchBatch): void {
-    const { structural: setChanged, warnings } = applyToGraph(
-      this.app.graph,
-      batch,
-      this.app.config.walk.max_file_size,
-    );
+    const {
+      structural: setChanged,
+      warnings,
+      listed,
+    } = applyToGraph(this.app.graph, batch, this.app.config.walk.max_file_size);
     for (const w of warnings) this.app.message("warn", w);
     if (batch.rescan) {
       this.indexInBackground();
@@ -359,11 +359,10 @@ export class Watch {
         if (buf.changedOnDisk() && (buf.elsewhere || !this.app.following.blocked(buf.abs))) this.reloadBuffer(buf);
     } else if (batch.toWalk?.length) {
       // Folders come into home's top before its walk (VV-D2), listed: watched, never looked into — the walk, asked for
-      // again, takes what's in them. Only the explorer shows a folder. Walked since (the batch held while git wrote),
-      // home has them already.
-      const waiting = this.app.graph.home?.walked === null;
-      this.app.watcher?.watchNamed(batch.toWalk, (d) => waiting && this.app.graph.dirs.includes(d));
-      if (waiting) {
+      // again, takes what's in them. Only the explorer shows a folder. None listed (walked since, while git wrote; or
+      // gone, a vault): nothing to ask.
+      this.app.watcher?.watchNamed(batch.toWalk, (d) => listed.includes(d));
+      if (listed.length) {
         this.app.explorer.invalidateTree();
         this.walkHomeAgain();
       }

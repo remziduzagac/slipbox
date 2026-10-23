@@ -2190,6 +2190,11 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
   `household/bike-insurance.md` (VV-D2; test 'a file's vault (VV-D4)'; the terminal check 'vaults: home')
 - Home's skip list: hidden folders, the system's, Downloads, the busy folders; a vault inside home its own —
   `Downloads/stray-note.md`, `notes/index.md`, `work/kestrel/README.md` (VV-D2; test 'its skip list')
+- Home before its first walk: what its graph hasn't looked into is the walk's — a note saved in a folder of home comes,
+  nothing a folder down; a folder come into home's top listed `◐`, its notes the walk's; a note moved followed where it
+  went; a folder opened by name whole, renamed or not — `household/bike-insurance.md`, `todo.md` (VV-D2, #16; tests
+  'before home's first walk, …'; the terminal checks 'home: before its first walk, …', 'home: a folder opened by name
+  before home's walk')
 - root\_markers configurable — `work/infra/dotfiles/slipbox/config.toml`, `work/kestrel/.slipbox/config.toml` (test
   'root\_markers in your config decide what a root is')
 - --root override — `work/kestrel/README.md`, `work/kestrel/docs/qa/links.md` (test '--root names a vault: it takes

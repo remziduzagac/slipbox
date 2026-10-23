@@ -6613,10 +6613,17 @@ describe("home, a vault without a marker (VV-D2)", () => {
       g.askFolder(join(home, "notes")); // `slipbox ~/notes`: walked whole
       expect(g.home?.walked).toBeNull();
       const known = new Map([...g.notes.values()].map((n) => [n.rel, n.mtimeMs] as [string, number]));
+      // touched/ changed just now, however long the setup took: inside the two seconds the watcher looks again.
+      const now = new Date();
+      utimesSync(join(home, "touched"), now, now);
       const { w, look } = await watchHome(home, g, { known, maxDirs: HOME_LIMITS.folders });
       try {
         // touched/ listed again at once: its own note comes, its folders are the walk's.
         expect(await look()).toEqual({ ...none, reported: ["touched/t.md"] });
+        // A shell's history rewritten in ~, by a file put in its place: nothing taken in, nothing named.
+        writeFileSync(join(home, ".zsh_history.new"), "ls\n");
+        renameSync(join(home, ".zsh_history.new"), join(home, ".zsh_history"));
+        expect(await look()).toEqual(none);
         // A file saved in Documents: the same — nothing a folder down, nothing named (the walk takes them).
         writeFileSync(join(home, "Documents", "letter.txt"), "Dear…\n");
         expect(await look()).toEqual({ ...none, reported: ["Documents/letter.txt", "Documents/top.md"] });
@@ -6763,14 +6770,19 @@ describe("home, a vault without a marker (VV-D2)", () => {
       "Documents/proj/old.md": "# Old\n",
       "Projects/p.md": "# P\n",
       "Projects/deep/sub/x.md": "# X\n",
+      "Documents/orig.md": "# Orig\n",
+      "Documents/backup/orig.md": "# Orig\n",
     };
     await withHome(files, async (home) => {
       const hour = new Date(Date.now() - 3_600_000);
-      for (const d of ["", "Documents", "Documents/proj", "Projects"]) utimesSync(join(home, d), hour, hour);
+      // A copy made with its times kept (`cp -p`), in a folder left as it was since.
+      for (const f of ["Documents/orig.md", "Documents/backup/orig.md"]) utimesSync(join(home, f), hour, hour);
+      for (const d of ["", "Documents", "Documents/proj", "Documents/backup", "Projects"])
+        utimesSync(join(home, d), hour, hour);
       const g = openGraph(homeAt(home), DEFAULT_CONFIG, true, "lazy");
       const known = new Map([...g.notes.values()].map((n) => [n.rel, n.mtimeMs] as [string, number]));
       // The top folders' own notes known, as when they came by their events.
-      for (const rel of ["Documents/keep.md", "Documents/README.md", "Projects/p.md"])
+      for (const rel of ["Documents/keep.md", "Documents/README.md", "Projects/p.md", "Documents/orig.md"])
         known.set(rel, statSync(join(home, rel)).mtimeMs);
       const sizes = new Map([...known.keys()].map((rel) => [rel, statSync(join(home, rel)).size] as [string, number]));
       const { w, look, reported } = await watchHome(home, g, { known, sizes, kinds: true });
@@ -6805,6 +6817,9 @@ describe("home, a vault without a marker (VV-D2)", () => {
           reported: ["created Documents/proj/moved.md", "deleted Documents/README.md"],
           toWalk: [],
         });
+        // A known note deleted, its copy kept in a folder unchanged since: no move.
+        rmSync(join(home, "Documents", "orig.md"));
+        expect(await look()).toEqual({ ...none, reported: ["deleted Documents/orig.md"] });
         // A top folder renamed: its known notes found under the new name, nothing deeper read; the folder named.
         renameSync(join(home, "Projects"), join(home, "Work"));
         const renamed = await look();
@@ -6827,6 +6842,77 @@ describe("home, a vault without a marker (VV-D2)", () => {
         inside.pending.add("Documents/keep.md");
         w.flush();
         expect([...new Set(reported.splice(0))]).toEqual(["deleted Documents/keep.md"]);
+      } finally {
+        w.close();
+      }
+    });
+  });
+
+  test("before home's first walk, a move is followed whatever its batches: a folder's ends in two, a note's gone found only by the batch's last look; never into a vault made in it (#16)", async () => {
+    const files = {
+      "a.md": "# A\n",
+      "kept/inbox.md": "# Inbox\n",
+      "kept/sub/deep.md": "# Deep\n",
+      "held/inbox.md": "# Held\n",
+      "held/sub/deep.md": "# Held deep\n",
+      "third/old.md": "# Old\n",
+      "third/inbox.md": "# Third\n",
+      "third/sub/deep.md": "# Third deep\n",
+    };
+    await withHome(files, async (home) => {
+      const hour = new Date(Date.now() - 3_600_000);
+      for (const d of ["", "kept", "kept/sub", "held", "held/sub", "third", "third/sub"])
+        utimesSync(join(home, d), hour, hour);
+      const g = openGraph(homeAt(home), DEFAULT_CONFIG, true, "lazy");
+      // Both asked for by name: walked whole, their notes known.
+      g.askFolder(join(home, "kept"));
+      g.askFolder(join(home, "held"));
+      g.askFolder(join(home, "third"));
+      const known = new Map([...g.notes.values()].map((n) => [n.rel, n.mtimeMs] as [string, number]));
+      const sizes = new Map([...known.keys()].map((rel) => [rel, statSync(join(home, rel)).size] as [string, number]));
+      const { w, look, reported } = await watchHome(home, g, { known, sizes, kinds: true });
+      const inside = w as unknown as { pending: Set<string> };
+      /** A batch of these paths alone, before any event of theirs comes: what it reported. */
+      const batch = (...paths: string[]) => {
+        for (const p of paths) inside.pending.add(p);
+        w.flush();
+        return [...new Set(reported.splice(0))].filter((r) => r.endsWith(".md")).sort();
+      };
+      try {
+        await look();
+        // A folder renamed, the batch saying it went before the one finding where: its notes followed, a folder down too.
+        renameSync(join(home, "kept"), join(home, "zettel"));
+        expect(batch("kept")).toEqual(["deleted kept/inbox.md", "deleted kept/sub/deep.md"]);
+        expect(batch("zettel")).toEqual(["created zettel/inbox.md", "created zettel/sub/deep.md"]);
+        await look();
+        reported.length = 0;
+        // A note moved under another name into a folder made, the batch naming the folder alone: the batch's last look
+        // finds it went, and it's followed.
+        mkdirSync(join(home, "dest"));
+        renameSync(join(home, "a.md"), join(home, "dest", "b.md"));
+        expect(batch("dest")).toEqual(["created dest/b.md", "deleted a.md"]);
+        await look();
+        reported.length = 0;
+        // A folder renamed, a vault made in it before the batch: what's in the vault is never home's.
+        renameSync(join(home, "held"), join(home, "kept2"));
+        mkdirSync(join(home, "kept2", "sub", ".slipbox"));
+        expect(batch("held", "kept2")).toEqual([
+          "created kept2/inbox.md",
+          "deleted held/inbox.md",
+          "deleted held/sub/deep.md",
+        ]);
+        await look();
+        reported.length = 0;
+        // A note of a folder deleted alone, and the folder renamed a moment later: the rest of its notes followed.
+        rmSync(join(home, "third", "old.md"));
+        expect(batch("third/old.md")).toEqual(["deleted third/old.md"]);
+        renameSync(join(home, "third"), join(home, "fourth"));
+        expect(batch("third", "fourth")).toEqual([
+          "created fourth/inbox.md",
+          "created fourth/sub/deep.md",
+          "deleted third/inbox.md",
+          "deleted third/sub/deep.md",
+        ]);
       } finally {
         w.close();
       }
