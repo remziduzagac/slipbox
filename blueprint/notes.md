@@ -516,3 +516,5 @@ dates. Each says what was asked, decided, built and found, and cites the decisio
 - **Open:** the code or the design. On the screen, the SVG rasteriser always names a font (`rasterizer` in
   `src/core/svg.ts`), even where the machine has none, so a Mermaid picture would be drawn without its words, where
   design/rendering.md § Blocks and inlines says it's drawn in characters. The maintainer decides which is right.
+- The same day, the maintainer settled it: the design is right. The screen's rasteriser now names a font only where the
+  machine has one (#32).

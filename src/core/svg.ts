@@ -3,7 +3,7 @@
 // picture protocol takes. Loaded the first time one is asked for (16.6). It reads no system fonts by itself: a sans
 // font found on the machine is given to it, for a diagram's words; none found, what needs words isn't drawn.
 
-import { readFileSync } from "node:fs";
+import { accessSync, constants, readFileSync } from "node:fs";
 import wasm from "@resvg/resvg-wasm/index_bg.wasm" with { type: "file" };
 import { load as loadLazy } from "./lazy.ts";
 import { paintJobs } from "./paint-jobs.ts";
@@ -24,6 +24,24 @@ const FONTS: [string, string][] = [
   ["/Library/Fonts/Arial.ttf", "Arial"],
   ["/System/Library/Fonts/Helvetica.ttc", "Helvetica"],
 ];
+
+/** The sans font this machine has, the first of `fonts` there to read; null where there's none. */
+export function machineFont(fonts: [string, string][] = FONTS): { path: string; family: string } | null {
+  for (const [path, family] of fonts) {
+    try {
+      accessSync(path, constants.R_OK);
+      return { path, family };
+    } catch {}
+  }
+  return null;
+}
+
+/** The machine's font, as the screen's thread knows it: looked for once, the first time it's asked. */
+let screenFont: { path: string; family: string } | null | undefined;
+function onScreen(): { path: string; family: string } | null {
+  if (screenFont === undefined) screenFont = machineFont();
+  return screenFont;
+}
 
 /** The name it loads under: what a layout drawn without it waited for. */
 export const RESVG = "resvg";
@@ -83,10 +101,14 @@ async function load(): Promise<Rasterizer> {
   };
 }
 
-/** The rasteriser, or null while it loads (what waited for it is laid out again when it's in). */
-export function rasterizer(): Rasterizer | null {
+/**
+ * The rasteriser, or null while it loads (what waited for it is laid out again when it's in). Its work is the paint
+ * worker's, which gives resvg the machine's font as `sans-serif`; with none (`font`, the machine's unless a test says),
+ * it names no family, so a diagram needing words is drawn in characters rather than as a picture without them.
+ */
+export function rasterizer(font = onScreen()): Rasterizer | null {
   return {
-    family: "sans-serif",
+    family: font ? "sans-serif" : null,
     size(svg) {
       const value = paintJobs.get({ kind: "size", source: svg });
       return value && !(value instanceof Uint8Array) && typeof value !== "string" ? value : null;
