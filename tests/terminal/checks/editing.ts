@@ -17,7 +17,7 @@ import {
   pos,
   SCRATCH_FLOATING,
 } from "../check.ts";
-import { REPO, type Session, type SessionOptions, WAIT } from "../session.ts";
+import { type Session, type SessionOptions, WAIT } from "../session.ts";
 
 /** The reference set, slipbox started on one of its files (`~/notes/…`, as the checks name it). */
 const at = (rel: string): SessionOptions => ({ home: true, startAt: `home/${rel.slice(2)}` });
@@ -31,6 +31,32 @@ async function ready(s: Session): Promise<void> {
   await s.until(() => s.commands().includes("app.escape"), 15000, "slipbox to take keys");
 }
 
+/**
+ * The environment that holds slipbox's spell checker's thread before it builds the dictionary whose words are `dic`,
+ * until the check lets it go: a script of the tests' preloaded into slipbox (`tests/terminal/spell-hold.ts`), by a
+ * path from the repository, where the check starts it, so that no space in the checkout's path splits it.
+ */
+const holdingSpell = (dic: string): Record<string, string> => ({
+  BUN_OPTIONS: "--preload ./tests/terminal/spell-hold.ts",
+  SPELL_HOLD_DIC: dic,
+  SPELL_HOLD_GO: "{dir}/hold-go",
+  SPELL_HOLD_STATE: "{dir}/hold-state",
+});
+/** Where the hold is: set, waiting, let go, ran out (HOLD_STATES); empty before the script says. */
+const holdState = (s: Session) =>
+  existsSync(join(s.dir, "hold-state")) ? readFileSync(join(s.dir, "hold-state"), "utf8") : "";
+/** The hold let go, by the check: not its wait run out. */
+async function letGoSpell(s: Session): Promise<void> {
+  writeFileSync(join(s.dir, "hold-go"), "");
+  await s.until(() => holdState(s) === "let go", WAIT, "the thread let go, not its wait run out");
+}
+/** A bundled dictionary copied under the check's folder (`dict/<lang>.aff`, `.dic`): built when asked, as yours. */
+function ownDictionary(s: Session, lang: string): void {
+  const files = dictionaryFiles(lang, {})!;
+  mkdirSync(join(s.dir, "dict"), { recursive: true });
+  cpSync(files.aff, join(s.dir, "dict", `${lang}.aff`));
+  cpSync(files.dic, join(s.dir, "dict", `${lang}.dic`));
+}
 /** The cursor onto the first match of `text` below it: found, the find row closed. */
 async function findText(s: Session, text: string): Promise<void> {
   await s.keys("/");
@@ -789,36 +815,27 @@ export const EDITING: Check[] = [
     covers: { cases: ["ui"], commands: ["ui.spell", "spell.next"] },
     options: {
       ...at("~/notes/reading/okuma-notlari.md"),
-      // Turkish as your own dictionary, its words at a path of the check's: the spell checker's thread waits before it
-      // builds them until the check lets it go (tests/terminal/spell-hold.ts, preloaded).
+      // Turkish as your own dictionary, its words at a path of the check's, held before they're built.
       config: '[spell]\ndictionaries = { tr = "{dir}/dict/tr.dic" }\n',
-      env: {
-        BUN_OPTIONS: `--preload ${join(REPO, "tests", "terminal", "spell-hold.ts")}`,
-        SPELL_HOLD_DIC: "{dir}/dict/tr.dic",
-        SPELL_HOLD_GO: "{dir}/hold-go",
-        SPELL_HOLD_STATE: "{dir}/hold-state",
-      },
-      setup: (s) => {
-        const tr = dictionaryFiles("tr", {})!;
-        mkdirSync(join(s.dir, "dict"), { recursive: true });
-        cpSync(tr.aff, join(s.dir, "dict", "tr.aff"));
-        cpSync(tr.dic, join(s.dir, "dict", "tr.dic"));
-      },
+      env: holdingSpell("{dir}/dict/tr.dic"),
+      setup: (s) => ownDictionary(s, "tr"),
     },
     run: async (s) => {
-      const hold = () => (existsSync(join(s.dir, "hold-state")) ? readFileSync(join(s.dir, "hold-state"), "utf8") : "");
       await ready(s);
       await leader(s, "u", "s");
       await s.message("Spelling: on");
-      await s.until(() => hold() === "waiting", WAIT, "the spell checker's thread waiting before it builds Turkish");
+      await s.until(
+        () => holdState(s) === "waiting",
+        WAIT,
+        "the spell checker's thread waiting before it builds Turkish",
+      );
       // Held: keys answered, and ] s says the dictionaries are loading.
       await moveTo(s, ["g", "g", "j", "j", "j"], (l) => l > 1, "j answered while the dictionary loads");
       await s.keys("]", "s");
       await s.message("spelling: its dictionaries are loading");
-      s.expect(hold() === "waiting", `the thread still held, not ${hold()}`);
+      s.expect(holdState(s) === "waiting", `the thread still held, not ${holdState(s)}`);
       // Let go: built, and ] s goes to the note's one misspelt word, "kitpa" (column 14), not its code span's.
-      writeFileSync(join(s.dir, "hold-go"), "");
-      await s.until(() => hold() === "let go", WAIT, "the thread let go, not its wait run out");
+      await letGoSpell(s);
       const there = () => pos(s).line === 8 && pos(s).col === 14;
       await s.retry(() => s.keys("g", "g", "]", "s"), there, "] s onto kitpa", 1000, 20000);
     },
@@ -830,10 +847,14 @@ export const EDITING: Check[] = [
     covers: { cases: ["ui"], commands: ["ui.spell", "spell.next"] },
     options: {
       ...at("~/notes/reading/two-languages.md"),
-      config: '[spell]\ndictionaries = { zz = "{dir}/dict/zz.dic" }\n',
+      // zz's words a folder: there, but nothing to read. English as your own, held before it's built: frames drawn
+      // after zz failed, while English still loads, each ask about zz again.
+      config: '[spell]\ndictionaries = { zz = "{dir}/dict/zz.dic", en = "{dir}/dict/en.dic" }\n',
+      env: holdingSpell("{dir}/dict/en.dic"),
       setup: (s) => {
-        mkdirSync(join(s.dir, "dict", "zz.dic"), { recursive: true }); // a folder: there, but no words to read
+        mkdirSync(join(s.dir, "dict", "zz.dic"), { recursive: true });
         writeFileSync(join(s.dir, "dict", "zz.aff"), "SET UTF-8\n");
+        ownDictionary(s, "en");
         s.write("~/notes/reading/two-languages.md", "---\nlang: [zz, en]\n---\nThis has a recieve.\n");
       },
     },
@@ -843,16 +864,19 @@ export const EDITING: Check[] = [
       await leader(s, "u", "s");
       await s.message("Spelling: on");
       await s.message(said);
-      // English still checks the note: ] s onto its typo.
-      const there = () => pos(s).line === 4 && pos(s).col === 12;
-      await s.retry(() => s.keys("g", "g", "]", "s"), there, "] s onto recieve", 1000, 20000);
-      // Frames drawn since, each asking about zz again: said once all the same, as the messages list has it.
+      await s.until(() => holdState(s) === "waiting", WAIT, "English held before it's built");
+      // Frames drawn while English waits, each asking about zz again: said once, as the messages list has it.
       await s.keys("j", "k", "j", "k");
       await s.notSee(said);
       await s.ex("messages");
       await s.see("Spelling: on");
       const lines = s.screen().filter((row) => said.test(row));
       s.expect(lines.length === 1, `said once, not ${lines.length} times:\n${lines.join("\n")}`);
+      await s.keys("escape");
+      // English let go: it checks the note, ] s onto its typo.
+      await letGoSpell(s);
+      const there = () => pos(s).line === 4 && pos(s).col === 12;
+      await s.retry(() => s.keys("g", "g", "]", "s"), there, "] s onto recieve", 1000, 20000);
     },
   },
   // typos: on

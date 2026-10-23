@@ -219,3 +219,35 @@ that a busy machine can't fail and that still fails if the main thread is held w
 - 2026-10-23: The terminal checks, mutation-checked, each alone, the files restored. The dictionary built on the main
   thread, or the worker ignoring the hold: the held check fails, the thread never waiting. The said-once guard
   removed, or the failed load said otherwise: the other check fails.
+- 2026-10-23: The diff with the tests for every case, reviewed; each finding checked:
+  - Verified, fixed: the hold's unit test left its first open's promise unhandled until awaited, so an early failure
+    would surface as an unhandled rejection in a later test. It's handled at once now, as the third open's is.
+  - Verified, fixed: the said-once unit test and the hold's unit test used the hold's 40 s with the 30 s default
+    timeout, so a held main thread would end the test before its wait ran out, and its `finally` would stop the
+    thread under a later test. Both have the 60 s the held test has.
+  - Verified, fixed: the terminal said-once check let English load unheld, so its frames asked about zz only if
+    zz's failure and English's arrival fell in different frames. English is now held through the preload while it
+    draws them, as the unit test does.
+  - Verified, fixed: `HOLD_STATES` had been put between `DictionaryFiles` and its doc comment. Moved above it.
+  - Verified, fixed: `BUN_OPTIONS` took the preload by its absolute path, which a space in the checkout's path splits
+    (Bun: "Module not found"; a standalone try). Now a path from the repository, where the check starts slipbox.
+  - Verified, fixed: a hold set on a dictionary already built was never spent, and would make a later build of the
+    same words wait. It's spent by the next request for those words, built or not. The unit test builds the same
+    words with another affix file afterwards, and it doesn't wait.
+  - Verified, fixed: "stopping the thread ends a wait" was asserted only right after the stop. The unit test now
+    holds with a 300 ms limit, stops, and still reads "waiting" past it: a thread still blocked would have run out.
+  - Verified, fixed: `tests/terminal/spell-hold.ts`, named by a check, counted as the checks' harness, so a change to
+    it would run every terminal check. `scripts/ci-scope.ts` sends it to the spelling checks, and the scope test says
+    so.
+  - Rejected: the held terminal check's waits could add past slipbox's 20 s request deadline on a slow runner. That
+    deadline is the thread's own and bounds every spelling check. The held phase is two keys, answered in
+    milliseconds, and a runner that took 20 s over them would fail the kitchen-sink check's 3 s first.
+  - Rejected again: a finite stall isn't caught (as above); the hook ships in the product (the maintainer's choice);
+    the copied dictionaries could share a helper across the unit and terminal tests (each copies the files it needs,
+    in its own harness).
+- 2026-10-23: Round 4's fixes, mutation-checked, each alone, the files restored. The said-once guard removed: the
+  terminal check fails, English now held while it draws its frames. A hold not spent when its dictionary is built:
+  the hold's unit test fails, the other affix file's build kept waiting until the request's deadline. The thread
+  "stopped" without being terminated: the unit test fails, as the old thread ran out and built the dictionary. The
+  scope's entry for the preloaded script removed: the scope test fails. Then: `core.test.ts`'s spelling, 11 pass;
+  the spelling block, 7 pass; the four spelling terminal checks, 4 of 4.

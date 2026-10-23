@@ -4782,22 +4782,29 @@ describe("spelling (25.6)", () => {
       const holdB = await holdBuild(b.dic, 100);
       expect([holdA.state(), holdB.state()]).toEqual(["set", "set"]);
       let built = false;
-      const openA = openDictionary(a).then(() => (built = true));
+      const openA = openDictionary(a).then(
+        () => (built = true),
+        (err: Error) => err.message,
+      );
       expect(await until(() => holdA.state() === "waiting")).toBe(true);
       await Bun.sleep(50);
       expect([built, holdB.state()]).toEqual([false, "set"]);
       holdA.letGo();
-      await openA;
-      expect([holdA.state(), built]).toEqual(["let go", true]);
-      // Built already: asked again, it never waits.
+      expect(await openA).toBe(true);
+      expect(holdA.state()).toBe("let go");
+      // Built already: asked for again, it isn't built again, and the hold is spent without waiting — so the same words
+      // with another affix file, built, don't wait either.
       const again = await holdBuild(a.dic);
       await openDictionary(a);
+      cpSync(a.aff, join(dirname(a.aff), "other.aff"));
+      await openDictionary({ ...a, aff: join(dirname(a.aff), "other.aff") });
       expect(again.state()).toBe("set");
       // Its wait run out (100 ms here, 40 s unless said): built all the same, and it says so.
       await openDictionary(b);
       expect(holdB.state()).toBe("ran out");
-      // Stopped while it waits: the request ends with the thread, the dictionary unbuilt; a fresh thread builds it.
-      const holdC = await holdBuild(c.dic);
+      // Stopped while it waits: the request ends with the thread, and the wait with it — past its limit (300 ms here)
+      // it hasn't run out, so the thread never built the dictionary. A fresh thread builds it.
+      const holdC = await holdBuild(c.dic, 300);
       const openC = openDictionary(c).then(
         () => "built",
         (err: Error) => err.message,
@@ -4805,12 +4812,13 @@ describe("spelling (25.6)", () => {
       expect(await until(() => holdC.state() === "waiting")).toBe(true);
       stopSpellThread();
       expect(await openC).toBe("worker stopped");
+      await Bun.sleep(600);
       expect(holdC.state()).toBe("waiting");
       await openDictionary(c);
     } finally {
       stopSpellThread();
     }
-  });
+  }, 60_000);
 
   test("Hunspell is loaded by the spell checker's thread alone: nothing else imports it (#40)", async () => {
     const { importsOf } = await import("../scripts/check-boundary.ts");

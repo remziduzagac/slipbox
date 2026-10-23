@@ -34,11 +34,11 @@ export interface Speller {
   add(word: string): void;
 }
 
-/** A dictionary's two files, and whose they are. */
 /** Where a test's hold on the thread is (`holdBuild`), by its number in shared memory: the thread and its caller
  *  both read these. */
 export const HOLD_STATES = ["set", "waiting", "let go", "ran out"] as const;
 
+/** A dictionary's two files, and whose they are. */
 export interface DictionaryFiles {
   aff: string;
   dic: string;

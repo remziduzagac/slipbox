@@ -17789,7 +17789,7 @@ describe("spelling (25.6)", () => {
     writeFileSync(join(dict, "zz.aff"), "SET UTF-8\n");
     mkdirSync(join(dict, "zz.dic")); // a folder: there, but no words to read
     // English under a path of the test's own, held before it's built: frames drawn after zz failed, while English
-    // still loads, each ask about zz again, whatever was built before.
+    // still loads, each ask about zz again, whatever was built before. Its wait's 40 s are inside the test's 60.
     const en = dictionaryFiles("en", {})!;
     cpSync(en.aff, join(dict, "en.aff"));
     cpSync(en.dic, join(dict, "en.dic"));
@@ -17818,7 +17818,7 @@ describe("spelling (25.6)", () => {
     } finally {
       stopSpellThread();
     }
-  });
+  }, 60_000);
 });
 // typos: on
 

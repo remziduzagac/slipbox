@@ -48,8 +48,8 @@ export type HoldState = (typeof HOLD_STATES)[number];
 /**
  * For a test: the dictionary whose words are `dic`, the next time the thread is asked to build it, waits first until
  * the test lets it go, or for `limit` ms on the thread's own clock, so that a main thread held until it's built is let
- * go too. One already built isn't built again, so it never waits; stopping the thread ends a wait, the dictionary
- * unbuilt.
+ * go too. Asked for when it's built already, it isn't built again: the hold is spent, never waiting. Stopping the
+ * thread ends a wait, the dictionary unbuilt.
  */
 export async function holdBuild(dic: string, limit = 40_000): Promise<{ state: () => HoldState; letGo: () => void }> {
   const flag = new Int32Array(new SharedArrayBuffer(8));

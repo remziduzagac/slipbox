@@ -23,14 +23,12 @@ export type SpellAnswer = { id: number; answer?: unknown; error?: string };
 
 const spellers = new Map<string, Speller>();
 
-/** Tests' holds (`holdBuild`), by the words they hold: such a dictionary waits, once asked for, before it's built. */
+/** Tests' holds (`holdBuild`), by the words they hold: the next time such a dictionary is asked for, it waits before
+ *  it's built, or, built already, the hold is spent. */
 const holds = new Map<string, { flag: Int32Array; limit: number }>();
 
 /** Waiting for the test to let go, or its limit: the flag's second slot says where it is (`HOLD_STATES`). */
-function waitIfHeld(dic: string): void {
-  const hold = holds.get(dic);
-  if (!hold) return;
-  holds.delete(dic);
+function wait(hold: { flag: Int32Array; limit: number }): void {
   const { flag, limit } = hold;
   Atomics.store(flag, 1, HOLD_STATES.indexOf("waiting"));
   const how = Atomics.wait(flag, 0, 0, limit);
@@ -42,9 +40,11 @@ async function open(files: DictionaryFiles[], wordsFile: string): Promise<Spelle
   const out: Speller[] = [];
   for (const f of files) {
     const key = `${f.aff}\n${f.dic}`;
+    const hold = holds.get(f.dic);
+    holds.delete(f.dic);
     let s = spellers.get(key);
     if (!s) {
-      waitIfHeld(f.dic);
+      if (hold) wait(hold);
       s = await openSpeller(f, ownWords(wordsFile));
       spellers.set(key, s);
     }
