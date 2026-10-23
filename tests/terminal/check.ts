@@ -107,6 +107,19 @@ export async function open(s: Session, name: string): Promise<void> {
   await s.status(name);
 }
 
+/** In the switcher: reopened until it lists `path` (it lists what the vault had when it opened). */
+export async function inSwitcher(s: Session, query: string, path: string): Promise<void> {
+  const end = Date.now() + 5000;
+  for (;;) {
+    await s.keys("ctrl+p");
+    await s.see(/Open (note|\()/);
+    await s.type(query);
+    if (s.rowOf(path) >= 0) return;
+    await s.keys("escape");
+    s.expect(Date.now() < end, `the switcher to list ${path}`);
+  }
+}
+
 /**
  * The status line naming `path` as the file open: where it draws it, before the window's forward arrow (`‹ x.md ›`;
  * `< x.md >` in ASCII). Not the link under the cursor (`→ x.md (resolved)`), which names a link by its text while the

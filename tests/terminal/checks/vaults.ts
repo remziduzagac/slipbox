@@ -26,11 +26,12 @@ import {
   explorerOpen,
   explorerRow,
   follow,
+  inSwitcher,
   leader,
   open,
   opened,
 } from "../check.ts";
-import { CheckFailed, type Session, Skipped } from "../session.ts";
+import { CheckFailed, type Session, Skipped, sleep } from "../session.ts";
 import { ARCHITECTURE, crumbs, lastMessage, listed, PEEK_HINT, toLink } from "./links-and-files.ts";
 
 /**
@@ -308,6 +309,302 @@ const HOME: Check[] = [
         ![tab("\\d", "2025-policy.md"), tab("\\d", "seeds.md"), tab("\\d", "plan.md")].some((t) => t.test(s.text())),
         "home's top: none of its folders' tabs",
       );
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "home: its tabs brought back — one in a folder home's walk hasn't reached has its folder's notes at once, its backlinks there",
+    covers: {
+      cases: ["vault", "tabs", "switcher", "links/backlinks"],
+      commands: ["switcher.open", "backlinks.open", "app.quit"],
+    },
+    options: { home: true, startAt: "home/household/bike-insurance.md", config: UNWALKED, setup: homeFolders },
+    run: async (s) => {
+      // A note of household opened by its path, left open: home's top keeps it as its tab.
+      await opened(s, "household/bike-insurance.md");
+      await quits(s);
+      // Home's top: the tab back, its folder walked as it opens — a note a folder down known, never opened.
+      await s.restart({ startAt: "home" });
+      await s.see(tab(1, "bike-insurance.md"));
+      await s.keys("ctrl+p");
+      await s.see(/Open (note|\()/);
+      await s.type("2025-policy");
+      await s.see("household/archive/2025-policy.md");
+      await s.keys("escape");
+      // What was asked for alone: another folder of home isn't walked.
+      await s.keys("ctrl+p");
+      await s.see(/Open (note|\()/);
+      await s.type("garden");
+      s.expect(s.rowOf("garden/plan.md") < 0, "another folder of home never walked: garden's notes not in the list");
+      await s.keys("escape");
+      // Watched as it's walked: a note made in it now comes in.
+      s.write("~/household/new-quote.md", "# New quote\n\nA third insurer's.\n");
+      await inSwitcher(s, "new-quote", "household/new-quote.md");
+      await s.keys("escape");
+      // Searched too: a note of it never opened.
+      await leader(s, "f", "s");
+      await s.type("renewal");
+      await s.see("household/archive/2025-policy.md:", 5000);
+      await s.keys("escape");
+      // The tab's note links to home's todo.md: a backlink there.
+      await open(s, "todo");
+      await leader(s, "l", "b");
+      await s.see("Linking to");
+      await s.see("household/bike-insurance.md");
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "home: its tabs brought back — a split's other window's folder walked too; a file gone, or one in Downloads, walks nothing",
+    covers: { cases: ["vault", "tabs", "switcher"], commands: ["window.split_side", "tab.new", "app.quit"] },
+    options: {
+      home: true,
+      startAt: "home/household/bike-insurance.md",
+      config: UNWALKED,
+      setup: (s) => {
+        homeFolders(s);
+        if (!s.exists("~/old/kept.md")) s.write("~/old/kept.md", "# Kept\n");
+      },
+    },
+    run: async (s) => {
+      await opened(s, "household/bike-insurance.md");
+      // A split, garden's plan in its other window; a tab of Downloads; one of a note about to go.
+      await s.keys("ctrl+w", "v");
+      await s.until(() => s.text().split("§ ").length - 1 === 2, 3000, "two windows");
+      await s.ex("e garden/plan.md");
+      await opened(s, "garden/plan.md");
+      // New tabs by :tabnew, the split kept (ctrl+t c would take its window out into a tab of its own).
+      await s.ex("tabnew Downloads/stray-note.md");
+      await opened(s, "Downloads/stray-note.md");
+      s.write("~/old/gone.md", "# Gone\n");
+      await s.ex("tabnew old/gone.md");
+      await opened(s, "old/gone.md");
+      await quits(s);
+      rmSync(s.path("~/old/gone.md"));
+      // Home's top: its tabs back (the split named by its window in use), the gone one not.
+      await s.restart({ startAt: "home" });
+      await s.see(tab(1, "plan.md"));
+      await s.see(tab(2, "stray-note.md"));
+      // Said, and no tab for it.
+      await s.see("cannot read old/gone.md");
+      s.expect(!tab("\\d", "gone.md").test(s.text()), "the gone note's tab not brought back");
+      // Each window's folder walked, the one in use and the other: a note of each never opened is known.
+      await inSwitcher(s, "seeds", "garden/seeds.md");
+      await s.keys("escape");
+      await inSwitcher(s, "2025-policy", "household/archive/2025-policy.md");
+      await s.keys("escape");
+      // Nothing walked for the gone file's folder, nor for Downloads.
+      await s.keys("ctrl+p");
+      await s.see(/Open (note|\()/);
+      await s.type("kept");
+      s.expect(s.rowOf("old/kept.md") < 0, "the gone file's folder not walked: old/kept.md not in the list");
+      await s.keys("escape");
+      await s.keys("ctrl+p");
+      await s.see(/Open (note|\()/);
+      await s.type("plan");
+      s.expect(s.rowOf("Downloads/plan.md") < 0, "Downloads left out: its plan.md not in the list");
+      await s.keys("escape");
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "home: gone into from another vault, its tabs brought back — their folders walked at once, a backlink there",
+    covers: { cases: ["vault", "tabs", "switcher", "links/backlinks"], commands: ["note.open", "backlinks.open"] },
+    options: { home: true, startAt: "home/household/bike-insurance.md", config: UNWALKED, setup: homeFolders },
+    run: async (s) => {
+      await opened(s, "household/bike-insurance.md");
+      await quits(s);
+      // In the notes vault: home's todo.md opened by its path goes into home, its tabs back with it.
+      await s.restart({ startAt: "home/notes/index.md" });
+      await s.status(/ notes\b/);
+      await s.ex(`e ${s.path("~/todo.md")}`);
+      await s.status(/ ~ .*todo\.md/, 5000);
+      await s.see(tab(1, "bike-insurance.md"));
+      await inSwitcher(s, "2025-policy", "household/archive/2025-policy.md");
+      await s.keys("escape");
+      await leader(s, "l", "b");
+      await s.see("Linking to");
+      await s.see("household/bike-insurance.md");
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "home a repository: a branch's tabs brought back as it's checked out — a folder of home and one only it has walked then",
+    covers: { cases: ["vault", "tabs", "git", "search"], commands: ["tab.new", "search.open", "backlinks.open"] },
+    options: {
+      home: true,
+      startAt: "home/household/bike-insurance.md",
+      config: UNWALKED,
+      setup: (s) => {
+        homeFolders(s);
+        if (s.exists("~/.git")) return;
+        git(s, s.home, "init", "-q", "-b", "main");
+        git(s, s.home, "add", "-f", "README.md", "todo.md", "household", "garden");
+        git(s, s.home, "commit", "-q", "-m", "home");
+        git(s, s.home, "checkout", "-q", "-b", "feat");
+        s.write("~/household/2026/quote.md", "# Quote\n\nThe third, for [the insurance](../bike-insurance.md).\n");
+        git(s, s.home, "add", "-f", "household/2026/quote.md");
+        git(s, s.home, "commit", "-q", "-m", "a quote");
+        git(s, s.home, "checkout", "-q", "main");
+      },
+    },
+    run: async (s) => {
+      await opened(s, "household/bike-insurance.md");
+      // On feat, two tabs more: its own note, and garden's plan; back on main, main's tab.
+      git(s, s.home, "checkout", "-q", "feat");
+      await s.message("switched to branch feat", 5000);
+      await s.keys("ctrl+t", "c");
+      await s.ex("e household/2026/quote.md");
+      await opened(s, "household/2026/quote.md");
+      await s.keys("ctrl+t", "c");
+      await s.ex("e garden/plan.md");
+      await opened(s, "garden/plan.md");
+      git(s, s.home, "checkout", "-q", "main");
+      await s.message("switched to branch main: its tabs are back", 5000);
+      // Started again on main: household walked for its tab, garden not. feat checked out: its tabs back, their
+      // folders walked then — household/2026, only feat has, and garden.
+      await s.restart({ startAt: "home" });
+      await s.see(tab(1, "bike-insurance.md"));
+      git(s, s.home, "checkout", "-q", "feat");
+      await s.message("switched to branch feat: its tabs are back", 5000);
+      await s.see(tab(3, "plan.md"));
+      await inSwitcher(s, "seeds", "garden/seeds.md");
+      await s.keys("escape");
+      await leader(s, "f", "s");
+      await s.type("sow");
+      await s.see("garden/seeds.md:", 5000);
+      await s.keys("escape");
+      await open(s, "bike-insurance");
+      await leader(s, "l", "b");
+      await s.see("Linking to");
+      await s.see("household/2026/quote.md");
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "home: a tab behind a link out of home not followed isn't brought back, nothing read through it",
+    covers: { cases: ["vault", "tabs", "links/state", "safety"], commands: ["note.open", "app.quit"] },
+    options: {
+      home: true,
+      startAt: "home/README.md",
+      config: UNWALKED,
+      setup: (s) => {
+        if (!existsSync(join(s.dir, "tmp", "ext", "far.md"))) {
+          mkdirSync(join(s.dir, "tmp", "ext"), { recursive: true });
+          writeFileSync(join(s.dir, "tmp", "ext", "far.md"), "# Far\n\nOutside home.\n");
+        }
+        symlinkOnce(join(s.dir, "tmp", "ext"), s.path("~/ext"));
+      },
+    },
+    run: async (s) => {
+      // Looked at through the link, this once: a tab kept.
+      await s.ex("e ext/far.md");
+      await s.see("follow it?", 5000);
+      await s.keys("l");
+      await s.see("Outside home.");
+      await quits(s);
+      // Started again: the tab isn't read through the link, and says why.
+      await s.restart({ startAt: "home" });
+      const said = await lastMessage(s, "isn't followed");
+      s.expect(/^~\/ext → .* isn't followed — open it to choose$/.test(said), `said why: ${said}`);
+      s.expect(!/far\.md/.test(s.statusLine()), "nothing read through the link");
+      s.expect(!s.text().includes("Outside home."), "its text not shown");
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "home: a note gone forward to in a folder not walked — read again when changed, home's note once home's walk reaches it",
+    covers: { cases: ["vault", "links/backlinks", "watching"], commands: ["history.forward", "backlinks.open"] },
+    options: {
+      home: true,
+      startAt: "home/README.md",
+      config: UNWALKED,
+      setup: (s) => {
+        homeFolders(s);
+        if (!s.read("~/garden/seeds.md").includes("plan.md"))
+          s.write("~/garden/seeds.md", "# Seeds\n\nFor [the plan](plan.md).\n");
+      },
+    },
+    run: async (s) => {
+      // garden's plan, opened and gone back from: forward in README's window's history.
+      await s.ex("e garden/plan.md");
+      await opened(s, "garden/plan.md");
+      await s.keys("ctrl+o");
+      await opened(s, "README.md");
+      await quits(s);
+      // Started again, home walked once nobody has worked for 3 s: forward to the plan, garden not walked yet.
+      const config = join(s.dir, "config", "slipbox", "config.toml");
+      s.write(config, s.read(config).replace("idle_seconds = 86400", "idle_seconds = 3"));
+      await s.restart({ startAt: "home" });
+      await leader(s, "h", "n");
+      await opened(s, "garden/plan.md");
+      // Changed elsewhere: read again.
+      s.write("~/garden/plan.md", "# Garden plan\n\nBeds by the fence; the herbs moved to the window.\n");
+      await s.see("the herbs moved to the window", 5000);
+      // Home's walk made while nobody works (asked every 8 s, idle between): the plan is home's note, its backlink
+      // found.
+      await s.retry(
+        async () => {
+          if (s.rowOf("Linking to") >= 0) await s.keys("escape");
+          await leader(s, "l", "b");
+        },
+        () => s.rowOf("Linking to plan.md (1)") >= 0,
+        "plan.md's backlink, from seeds.md, once home is walked",
+        8000,
+        90_000,
+      );
+      await s.see("garden/seeds.md");
+      await s.keys("escape");
+      await s.see("the herbs moved to the window");
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "home: a note typed in before its folder is walked, changed by an agent — theirs loaded, home's note once walked",
+    covers: { cases: ["vault", "watching", "links/backlinks"], commands: ["history.forward", "backlinks.open"] },
+    options: {
+      home: true,
+      startAt: "home/README.md",
+      config: UNWALKED,
+      setup: (s) => {
+        homeFolders(s);
+        if (!s.read("~/garden/seeds.md").includes("plan.md"))
+          s.write("~/garden/seeds.md", "# Seeds\n\nFor [the plan](plan.md).\n");
+      },
+    },
+    run: async (s) => {
+      await s.ex("e garden/plan.md");
+      await opened(s, "garden/plan.md");
+      await s.keys("ctrl+o");
+      await opened(s, "README.md");
+      await quits(s);
+      // Started again, home walked once nobody has worked for 3 s; forward to the plan, garden not walked yet.
+      const config = join(s.dir, "config", "slipbox", "config.toml");
+      s.write(config, s.read(config).replace("idle_seconds = 86400", "idle_seconds = 3"));
+      await s.restart({ startAt: "home" });
+      await leader(s, "h", "n");
+      await opened(s, "garden/plan.md");
+      // Typed in, unsaved; rewritten by an agent: asked which to keep.
+      await s.keys("i");
+      await s.type("Mine. ");
+      await s.keys("escape");
+      s.write("~/garden/plan.md", "# Garden plan\n\nTheirs: the herbs by the window.\n");
+      await s.see("Load theirs", 5000);
+      // Home walked while the question waits (nobody working): then theirs loaded, and the plan is home's note.
+      await sleep(9000);
+      await s.keys("l");
+      await s.see("Theirs: the herbs by the window.", 5000);
+      await s.retry(
+        async () => {
+          if (s.rowOf("Linking to") >= 0) await s.keys("escape");
+          await leader(s, "l", "b");
+        },
+        () => s.rowOf("Linking to plan.md (1)") >= 0,
+        "plan.md's backlink, from seeds.md",
+        8000,
+        60_000,
+      );
+      await s.see("garden/seeds.md");
     },
   },
   {
@@ -1049,6 +1346,46 @@ const ELSEWHERE: Check[] = [
       await s.notSee(tab("\\d", "stray-note.md"));
     },
   },
+  {
+    area: "links-and-files",
+    name: "Elsewhere: a note just looked at through a link, the link forgotten, then followed — the same window writable",
+    covers: { cases: ["vault", "links/state"], commands: ["note.open", "vault.links"] },
+    options: {
+      startAt: "tmp/plain/a.md",
+      setup: (s) => {
+        const plain = join(s.dir, "tmp", "plain");
+        if (existsSync(join(plain, "a.md"))) return;
+        mkdirSync(join(s.dir, "tmp", "out"), { recursive: true });
+        writeFileSync(join(s.dir, "tmp", "out", "far.md"), "# Far\n\nKept out of the way.\n");
+        mkdirSync(plain, { recursive: true });
+        writeFileSync(join(plain, "a.md"), "# A\n");
+        symlinkOnce(join(s.dir, "tmp", "out"), join(plain, "data"));
+      },
+    },
+    run: async (s) => {
+      const far = join(s.dir, "tmp", "plain", "data", "far.md");
+      await s.status(/ Elsewhere /);
+      // l: just looked at — read-only.
+      await s.ex(`e ${far}`);
+      await s.see("Just look", 5000);
+      await s.keys("l");
+      await s.see("Kept out of the way.");
+      await s.keys("i");
+      await s.message("not editing");
+      // Forgotten, opened again, followed: the same window takes typing.
+      await s.ex("symlinks");
+      await s.see("Symlinks you've answered");
+      await s.keys("enter");
+      await s.message("forgot", 5000);
+      await s.ex(`e ${far}`);
+      await s.see("Just look", 5000);
+      await s.keys("f");
+      await s.message("following", 5000);
+      await s.keys("i");
+      await s.until(() => /^\s*(INSERT|LENS)\b/.test(s.statusLine()), 3000, "i to edit: writable now");
+      await s.keys("escape");
+    },
+  },
 ];
 
 // --- the view ---------------------------------------------------------------------------------------------------
@@ -1409,6 +1746,127 @@ const LINKED: Check[] = [
       await s.keys("enter");
       await opened(s, "shelf/far.md");
       s.expect(!s.text().includes("follow it?"), "followed once: never asked again");
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "links: a note just looked at through a link, the link followed later — the same window the vault's note, writable",
+    covers: { cases: ["links/state", "links/backlinks"], commands: ["link.follow", "vault.links", "backlinks.open"] },
+    options: { home: true, startAt: "home/notes/to-shelf.md", setup: shelf },
+    run: async (s) => {
+      // l: just looked at — read-only.
+      await toLink(s, "shelf/far.md");
+      await s.keys("enter");
+      await s.see(asked("~/shelf"));
+      await s.keys("l");
+      await opened(s, "shelf/far.md");
+      await s.keys("i");
+      await s.message("not editing");
+      // Forgotten, then followed: asked again, f.
+      await s.ex("symlinks");
+      await s.see("Symlinks you've answered");
+      await s.keys("enter");
+      await s.message("forgot", 5000);
+      await s.keys("ctrl+o");
+      await opened(s, "to-shelf.md");
+      await toLink(s, "shelf/far.md");
+      await s.keys("enter");
+      await s.see(asked("~/shelf"));
+      await s.keys("f");
+      await opened(s, "shelf/far.md");
+      // Once the vault is walked through the link, the window open on it is the vault's note: its backlink found,
+      // and it takes typing.
+      await s.retry(
+        async () => {
+          if (s.rowOf("Linking to") >= 0) await s.keys("escape");
+          await leader(s, "l", "b");
+        },
+        () => s.rowOf("Linking to far.md (1)") >= 0,
+        "far.md's backlink, from to-shelf.md",
+        2000,
+        20_000,
+      );
+      await s.keys("escape");
+      await s.keys("i");
+      await s.until(() => /^\s*(INSERT|LENS)\b/.test(s.statusLine()), 3000, "i to edit: writable now");
+      await s.keys("escape");
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "links: a link followed, its note open, forgotten — read-only, an edit out there unread; followed again, read and writable",
+    covers: { cases: ["links/state", "safety", "watching"], commands: ["link.follow", "vault.links"] },
+    options: { home: true, startAt: "home/notes/to-shelf.md", setup: shelf },
+    run: async (s) => {
+      // f: followed, the note open through the link.
+      await toLink(s, "shelf/far.md");
+      await s.keys("enter");
+      await s.see(asked("~/shelf"));
+      await s.keys("f");
+      await opened(s, "shelf/far.md");
+      await s.see("A note kept on the shelf.");
+      // Forgotten: the window read-only, and what's written out there isn't read through the link.
+      await s.ex("symlinks");
+      await s.see("Symlinks you've answered");
+      await s.keys("enter");
+      await s.message("forgot", 5000);
+      await s.keys("i");
+      await s.message("not editing");
+      s.write("~/shelf/far.md", "# Far\n\nRewritten on the shelf.\n");
+      await sleep(2500);
+      await s.notSee("Rewritten on the shelf.");
+      // Followed again: asked, f; the same window read again, and it takes typing.
+      await s.keys("ctrl+o");
+      await opened(s, "to-shelf.md");
+      await toLink(s, "shelf/far.md");
+      await s.keys("enter");
+      await s.see(asked("~/shelf"));
+      await s.keys("f");
+      await opened(s, "shelf/far.md");
+      await s.see("Rewritten on the shelf.", 10_000);
+      await s.keys("i");
+      await s.until(() => /^\s*(INSERT|LENS)\b/.test(s.statusLine()), 3000, "i to edit: writable again");
+      await s.keys("escape");
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "links: a note too big to index, looked at through a link, then followed — still read-only: a vault never writes out of itself",
+    covers: { cases: ["links/state", "safety"], commands: ["link.follow", "vault.links"] },
+    options: {
+      home: true,
+      startAt: "home/notes/to-big.md",
+      config: "[walk]\nmax_file_size = 300\n",
+      setup: (s) => {
+        if (!s.exists("~/shelf/big.md"))
+          s.write("~/shelf/big.md", `# Big\n\n${"A long line of a note too big to index. ".repeat(12)}\n`);
+        if (!s.exists("~/notes/to-big.md"))
+          s.write("~/notes/to-big.md", "# To the big one\n\n[The big note](shelf/big.md).\n");
+        symlinkOnce(s.path("~/shelf"), s.path("~/notes/shelf"));
+      },
+    },
+    run: async (s) => {
+      await toLink(s, "shelf/big.md");
+      await s.keys("enter");
+      await s.see(asked("~/shelf"));
+      await s.keys("l");
+      await opened(s, "shelf/big.md");
+      // Forgotten, opened again, followed: the vault doesn't take a note past its size cap, so the window stays
+      // read-only — a write would land outside the vault.
+      await s.ex("symlinks");
+      await s.see("Symlinks you've answered");
+      await s.keys("enter");
+      await s.message("forgot", 5000);
+      await s.keys("ctrl+o");
+      await opened(s, "to-big.md");
+      await toLink(s, "shelf/big.md");
+      await s.keys("enter");
+      await s.see(asked("~/shelf"));
+      await s.keys("f");
+      await s.message("following", 5000);
+      await opened(s, "shelf/big.md");
+      await s.keys("i");
+      await s.message("not editing");
     },
   },
   {

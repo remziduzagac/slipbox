@@ -122,14 +122,20 @@ alone (`walkTop`): its notes and files, the vaults in it, its folders listed but
 A folder of home asked for by name is what was asked for: opened (`slipbox ~/notes`), or a file in it opened, it's
 walked at once when home's walk doesn't cover it (never made, or stopped at its cap: a walk capped covers no folder
 whole, since one it listed may hold folders it didn't), with home's skip list and whole, whatever it holds (D248: you
-are working in it; the cap, below), and merged into home's walk as the graph is built (`Graph.askFolder`, `homeWalk`'s
+are working in it; the cap, below), and merged into home's walk as the graph is built (`Graph.askFolders`, `homeWalk`'s
 `asked`), at each build after too, until home's walk covers it. Every way into a folder of home goes through one path
 (`Vaults.ask`): the start, and every switch into home, a note of it opened from another vault (`intoOther`, a peek's
-`o`), the way back, a folder revealed (a link to it). A graph built anew for home (a `[walk]` setting changed) carries
-the folders asked for (`askedFolders`). That walk isn't kept: home's own, still made while nobody is working, covers
-it, and a start after finds the folder in it, walked once. One home's skip list leaves out (`~/Downloads`, another
-disk), or behind a link the walk doesn't go through (§ Links followed only when you say so), isn't walked
-(`walksInto`; `leftOutOfHome` says why).
+`o`), the way back, a folder revealed (a link to it). So do the tabs a session brings back into home: before they open,
+each one's folder is asked for, a split's other window's too, as a file opened is. At the start and on a switch into
+home, with the folder named (`Vaults.ask`, the session's tabs read first: `Session.toRestore`): the graph, not built
+yet, is built once for them all (`Graph.askFolders`; one the build listed in a folder walked whole is covered). A
+branch's, when it's checked out (`Session.openTabs`, `Vaults.askTabs`): built again once, and what follows a build
+follows it (`Watch.rebuilt`: the watcher, the background parse, search). A tab in a folder home's walk hasn't reached is
+a note of home's, its links and backlinks there. A file gone asks for nothing, nor one behind a link not followed, never
+looked at. A graph built anew for home (a `[walk]` setting changed) carries the folders asked for (`askedFolders`). That
+walk isn't kept: home's own, still made while nobody is working, covers it, and a start after finds the folder in it,
+walked once. One home's skip list leaves out (`~/Downloads`, another disk), or behind a link the walk doesn't go through
+(§ Links followed only when you say so), isn't walked (`walksInto`; `leftOutOfHome` says why).
 
 The background index (`AutoIndex`, § The index) walks home first in each pass, finding the vaults in it as it did,
 keeps the walk, builds home's index, then indexes the vaults it found; its progress is version 2 (`home`, `homeNotes`,
@@ -169,8 +175,8 @@ start that asks for none. One that alone holds more than the cap is walked whole
 notes all there and none of home's own. Its other files are held the same way. A note that comes into one while home
 is open comes past `maxNotes`, home's deepest own note leaving the graph for it (`deepestOutside`); none left, it comes
 past the cap. The cap's message, said as the graph built again after home's walk has it, adds that they're whole
-(`describeCap`'s `asked`): `…; ~/notes, the folder you opened, is whole`; past the cap alone, `home's index is full:
-it holds 12,345 notes, all in ~/big, the folder you opened — the rest aren't indexed`.
+(`describeCap`'s `asked`): `…; ~/notes, the folder open, is whole`; past the cap alone, `home's index is full:
+it holds 12,345 notes, all in ~/big, the folder open — the rest aren't indexed`.
 
 **What's shown.** The top bar names home `◈ ~`, the status line `~` while the bar is hidden; `info` says `mode` `home`
 (an addition to schema 1's values), the Info view and `stat` `home (~)`. Started in `~`, nothing opens over the
@@ -199,8 +205,7 @@ a disk whose clock is behind and whose times are coarse, a second change within 
 too. A ctime is settled only when in whole seconds, so where a kernel moves file times once a tick (Linux before 6.13),
 a time put back, the listing, and the same time put back with a note, all within that tick (a few milliseconds), is
 missed as well. The watcher goes by a folder's time alone (`src/core/watch.ts`), so one it polls, not watches, put back
-so while the TUI is open, waits for the next build. Tabs of home's top restored in a folder its walk hasn't reached open
-as files the graph doesn't know, until it does.
+so while the TUI is open, waits for the next build.
 
 ## Elsewhere
 
@@ -525,13 +530,13 @@ deleted (D61). Each vault's is in its cache folder (the link index, the search i
   it's made again at the next pass`). The explorer's listings have two threads of their own ([tui.md](tui.md) § Side
   panes).
 
-  Not done: the rest of what reads a slow disk on the main thread still holds the TUI up while it's read — the
-  watcher's polling of the vault open (a stat per watched folder every two seconds, per note every thirty; its folders
-  listed again), the vault open built again (a reindex, the watcher's rescan, a vault gone into, a setting changed, a
-  rename), a note's text read to parse or open it, the explorer's own tree of the vault open (`fromDisk`, its rows'
-  marks) and the view's folder statted as its tree is built, slipbox's own state, cache and config folders (under home
-  by default: the machine's lists, the place the background index keeps), and the walk at the start, before the
-  screen is up.
+  Not done: the rest of what reads a slow disk on the main thread still holds the TUI up while it's read — the watcher's
+  polling of the vault open (a stat per watched folder every two seconds, per note every thirty; its folders listed
+  again), the vault open built again (a reindex, the watcher's rescan, a vault gone into, a setting changed, a rename, a
+  branch's tabs in folders of home not walked), a note's text read to parse or open it, the explorer's own tree of the
+  vault open (`fromDisk`, its rows' marks) and the view's folder statted as its tree is built, slipbox's own state,
+  cache and config folders (under home by default: the machine's lists, the place the background index keeps), and the
+  walk at the start: a vault's before the screen is up, home's as it comes up, with the folders it asks for (its tabs').
 - **Freshness is checked, not assumed:** a build lists the folders again and keeps a file's entry only while its size
   and modification time match, since a folder's own time doesn't change when a file in it is edited; a file gone is
   dropped, or paired as a move ([links.md](links.md) § Repairs). Folders open are watched. What is covered and how

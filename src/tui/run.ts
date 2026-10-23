@@ -4,7 +4,7 @@
 import { createCliRenderer, type KeyEvent } from "@opentui/core";
 import { flag, parseArgs } from "../cli/args.ts";
 import { loadConfig } from "../core/config.ts";
-import { openGraph } from "../core/graph.ts";
+import { Graph, openGraph } from "../core/graph.ts";
 import { sanitize } from "../core/sanitize.ts";
 import { setWidthMethod } from "../core/width.ts";
 import { appendFileSync } from "node:fs";
@@ -79,7 +79,9 @@ export function prepare(argv: string[]): Start | number {
   return {
     loc,
     config: loaded.config,
-    graph: openGraph(loc, loaded.config, true, "lazy"),
+    // Home's built by the screen as it starts, once, with what it asks for: the folder opened, its tabs' (VV-D2). Any
+    // other's before the screen is taken.
+    graph: loc.mode === "home" ? new Graph(loc, loaded.config) : openGraph(loc, loaded.config, true, "lazy"),
     warnings,
     notes,
     open: loc.file ?? null,

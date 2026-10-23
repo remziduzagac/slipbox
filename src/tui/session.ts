@@ -111,6 +111,12 @@ export class Session {
     return true;
   }
 
+  /** The tabs `restore` brings back here: none, without a session or with nothing kept for here. */
+  toRestore(): SessionTab[] {
+    const s = loadSession(this.app.loc);
+    return (s && this.tabsOf(s)?.tabs) || [];
+  }
+
   /**
    * The tabs `s` brings back: this branch's, when it has kept some (5.9), else the last ones. In home (VV-D2), a folder
    * opened by name has its own — none yet, none: its own note opens — and home's top its own, once folders keep theirs.
@@ -126,6 +132,8 @@ export class Session {
 
   /** Tabs from the session opened, after any there are; the active one as it was. */
   openTabs(tabs: SessionTab[], activeTab: number): void {
+    // In home, their folders asked for first (VV-D2): a tab in one its walk hasn't reached is a note of home's all the same.
+    this.app.vaults.askTabs(tabs);
     for (const t of tabs) {
       const views: View[] = [];
       for (const p of t.panes) {

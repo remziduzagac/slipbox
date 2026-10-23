@@ -45,6 +45,8 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
   vault: a vault is what's shared, its notes and settings, and a workspace is yours, kept on your machine. Each branch
   and each folder of home opened by name has one, as before; the docs and messages say workspace where they said
   session.
+- When your home folder's index is full, the message names the folders it holds whole as the folders open (`~/notes,
+  the folder open, is whole`): the one you opened by name, and those of the tabs slipbox brought back.
 
 ### Fixed
 
@@ -128,6 +130,18 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
   message, `c` commits, `f` fetches. They did nothing there.
 - Back in the explorer after the git panel, its selection is on the note you opened meanwhile, or on the folder the
   view zoomed out from, not on whatever row came to the place it had; filtered, the match you had selected stays.
+- In your home folder, the tabs slipbox brings back have their folders walked at once, as a folder you open by name
+  does. A note left open in a folder home's walk hadn't reached yet came back as a file home's index didn't know: no
+  backlinks, its links not found.
+- A note open before slipbox's index knew it is the vault's note once the index does: its backlinks there, its links
+  found. Switching to a branch that brings a note its tabs hold, the note opened without them until you opened it
+  again; so did one in a folder of your home folder walked since you opened it.
+- A hidden or git-ignored note you open by its path, or one in a hidden or git-ignored folder, reloads when an agent
+  changes it, once, and its links follow. Before, it kept showing what you opened.
+- A note open through a symlink you look at, or forget, then follow takes typing again in the same window, in home and
+  Elsewhere at once, in a vault once it indexes the note (a note too big to index stays read-only: a vault never
+  writes outside itself). Once you forget the link, nothing more is read through it.
+- A reindex (`space v r`) reads again an open note changed while nobody watched.
 
 ## [0.5.0] - 2026-10-22
 

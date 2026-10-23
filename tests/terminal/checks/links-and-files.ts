@@ -110,7 +110,7 @@ function tree(dir: string, base = dir): string[] {
 }
 
 /** How many messages say `needle`: the Messages window filtered by `words` first (it shows only its newest rows). */
-async function messagesSaying(s: Session, words: string, needle: RegExp): Promise<number> {
+export async function messagesSaying(s: Session, words: string, needle: RegExp): Promise<number> {
   await leader(s, "m");
   await s.see("Messages");
   await s.type(words);
@@ -2052,6 +2052,54 @@ const GIT: Check[] = [
         (await messagesSaying(s, "switched main", /switched to branch main/)) === 1,
         "the switch to main said once",
       );
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "git: a branch's tab of a note only it has, back as it's checked out — its links found, a backlink there, once it comes",
+    covers: { cases: ["git", "links/git", "links/backlinks"], commands: ["links.open", "backlinks.open", "note.open"] },
+    options: {
+      home: true,
+      startAt: "home/work/kestrel/docs/only-here.md",
+      setup: (s) => {
+        // A branch with a note main hasn't, checked out: made once (setup runs at every start).
+        if (git(s, KESTREL, "rev-parse", "--verify", "-q", "only-here").code === 0) return;
+        gitOk(s, "a branch made", true, KESTREL, "checkout", "-q", "-b", "only-here");
+        s.write(
+          "~/work/kestrel/docs/only-here.md",
+          "# Only here\n\nOn this branch alone, to [the readme](../README.md).\n",
+        );
+        gitOk(s, "its note added", true, KESTREL, "add", "docs/only-here.md");
+        gitOk(s, "its note committed", true, KESTREL, "-c", "commit.gpgsign=false", "commit", "-q", "-m", "only here");
+      },
+    },
+    run: async (s) => {
+      // Open on only-here, left; main checked out, slipbox started there; only-here checked out while it runs.
+      await s.status(/kestrel · only-here +‹ docs\/only-here\.md/);
+      await s.quit();
+      gitOk(s, "main checked out", true, KESTREL, "checkout", "-q", "main");
+      await s.restart({ startAt: "home/work/kestrel" });
+      await s.status(/kestrel · main /);
+      gitOk(s, "only-here checked out from outside", true, KESTREL, "checkout", "-q", "only-here");
+      await s.message("switched to branch only-here: its tabs are back", 5000);
+      await opened(s, "docs/only-here.md");
+      // Its tab came before the note did: once it has, the vault's note — its link found, its backlink there.
+      await s.retry(
+        async () => {
+          if (s.rowOf("Links from") >= 0) await s.keys("escape");
+          await leader(s, "l", "l");
+        },
+        () => s.rowOf("Links from only-here.md") >= 0 && /README\.md\s+resolved/.test(s.text()),
+        "only-here.md's link to README.md, resolved",
+        1000,
+        15_000,
+      );
+      await s.keys("escape");
+      await s.ex(`e ${s.path("~/work/kestrel/README.md")}`);
+      await opened(s, "README.md");
+      await leader(s, "l", "b");
+      await s.see("Linking to");
+      await s.see("docs/only-here.md");
     },
   },
   {
