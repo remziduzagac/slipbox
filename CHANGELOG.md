@@ -12,6 +12,12 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
   channel find it at once. 0.5.0's wasn't until the site was deployed again, an hour later.
 - With `render.mermaid = "picture"` on a machine without a sans font (DejaVu, Liberation, Noto, Arial or Helvetica), a
   Mermaid diagram is drawn in characters again, as the manual says. 0.5.0 drew it as a picture without its words.
+- Typing a link's target is quick again with many vaults. Once what you typed matched no file, each key built the list
+  of files again, from every other vault: with 300 vaults, about half a second a key. The list is now made as you start
+  the target and kept while you type it, so a note made meanwhile isn't in it; typing on looks only among the files
+  that already matched, and building the list takes a fraction of the time it did.
+- A paste while a completion list shows closes it: the next `tab` or `enter` no longer writes the chosen item over what
+  you pasted. And `.` after completing a link and typing on repeats all of it, the new line included.
 
 ## [0.5.0] - 2026-10-22
 

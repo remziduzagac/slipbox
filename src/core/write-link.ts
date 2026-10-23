@@ -11,7 +11,15 @@ import { dirname, isAbsolute, posix, relative, sep } from "node:path";
 import type { Convention, LinkStyle } from "./convention.ts";
 import { linkText, urlPath } from "./convert.ts";
 import type { Graph } from "./graph.ts";
-import { folderIdentity, pointerNaming, type PointerNaming, pointerWarnings, travelTogether } from "./folders.ts";
+import {
+  folderIdentity,
+  type NamedFolder,
+  pointerNaming,
+  type PointerNaming,
+  pointerWarnings,
+  readFolders,
+  travelTogether,
+} from "./folders.ts";
 import { formatPointer } from "./pointer.ts";
 import { findVaultRoot } from "./vault.ts";
 
@@ -93,15 +101,36 @@ function formatPointerEncoded(pointer: string): string {
 }
 
 /**
+ * What pointers from one root to many files work out once (a link completion's list, 20.13): each folder's name as
+ * written, null where none is (it travels with the root, or isn't named), and the machine's named folders it's checked
+ * against. Kept for one list: a folder named or renamed meanwhile is the next list's.
+ */
+export interface PointerMemo {
+  /** The root the pointers are from: whether a folder travels with it is this root's alone. */
+  root: string;
+  naming: Map<string, PointerNaming | null>;
+  folders?: NamedFolder[];
+}
+
+/**
  * The pointer to `abs` (21.7) when it's in a named folder (21.6) that doesn't travel with `root`:
  * `slipbox://<name>/<path from its root>` — the name as written for it (qualified on a clash), and what it means.
+ * A memo of another root's is left alone.
  */
-export function pointerAt(root: string, abs: string): { pointer: string; naming: PointerNaming } | null {
+export function pointerAt(
+  root: string,
+  abs: string,
+  memo?: PointerMemo,
+): { pointer: string; naming: PointerNaming } | null {
   const there = findVaultRoot(abs);
-  if (!there || travelTogether(root, there)) return null;
-  const ident = folderIdentity(there);
-  if (!ident) return null;
-  const naming = pointerNaming(ident);
+  if (!there) return null;
+  const m = memo?.root === root ? memo : undefined;
+  let naming = m?.naming.get(there);
+  if (naming === undefined) {
+    naming = folderNaming(root, there, m);
+    m?.naming.set(there, naming);
+  }
+  if (!naming) return null;
   return {
     pointer: formatPointer({
       name: naming.name,
@@ -113,20 +142,31 @@ export function pointerAt(root: string, abs: string): { pointer: string; naming:
   };
 }
 
+/** The name a pointer from `root` into the folder `there` is written by; null when none is. */
+function folderNaming(root: string, there: string, memo?: PointerMemo): PointerNaming | null {
+  if (travelTogether(root, there)) return null;
+  const ident = folderIdentity(there);
+  if (!ident) return null;
+  return memo ? pointerNaming(ident, (memo.folders ??= readFolders())) : pointerNaming(ident);
+}
+
 /** The pointer to `abs`, as `pointerAt` writes it; null when none is. */
 export function pointerTo(root: string, abs: string): string | null {
   return pointerAt(root, abs)?.pointer ?? null;
 }
 
-/** A link's ends in a graph: `to` in its root when the root's walk has it (a nested root's file isn't). */
-export function linkEnds(g: Graph, fromAbs: string, toAbs: string): LinkEnds {
+/**
+ * A link's ends in a graph: `to` in its root when the root's walk has it (a nested root's file isn't). `memo`, for many
+ * links at once: what their pointers share, worked out once.
+ */
+export function linkEnds(g: Graph, fromAbs: string, toAbs: string, memo?: PointerMemo): LinkEnds {
   const inRoot = (abs: string) => {
     const r = relative(g.root, abs).split(sep).join("/");
     return r && !r.startsWith("../") && !isAbsolute(r) && g.known(r) ? r : null;
   };
   const fromRel = inRoot(fromAbs) ?? relative(g.root, fromAbs).split(sep).join("/");
   const rel = inRoot(toAbs);
-  const at = rel === null ? pointerAt(g.root, toAbs) : null;
+  const at = rel === null ? pointerAt(g.root, toAbs, memo) : null;
   return {
     fromAbs,
     pointer: at?.pointer ?? null,

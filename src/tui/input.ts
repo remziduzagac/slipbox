@@ -6,7 +6,7 @@ import { insertRecord, PASTE, put, vimKey, visualKey } from "./vim.ts";
 import * as R from "./replacing.ts";
 import type { Keymap } from "../core/commands.ts";
 import { afterSnippetKey, snippetKey } from "./snippets.ts";
-import { afterInsertKey, completeWords, completionKey } from "./completion.ts";
+import { afterInsertKey, afterPaste, completeWords, completionKey } from "./completion.ts";
 import { sanitize } from "../core/sanitize.ts";
 import {
   EXPLORER_ACTION_INFO,
@@ -56,6 +56,7 @@ export class Input {
       // Into the text, its line breaks the note's own (over a selection made while typing); part of the change for `.`.
       deleteTypedSelection(this.app, iv);
       insertText(this.app, iv, text.replace(/\r\n?/g, "\n").replaceAll("\n", iv.buf.eol));
+      afterPaste(this.app);
       return insertRecord(this.app, iv, `${PASTE}${text}`);
     }
     // In normal mode where the text is editable: put after the cursor, as p does — and, as p is,

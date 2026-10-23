@@ -69,12 +69,15 @@ export function match(query: string, text: string, labelEnd = text.length): Matc
   return { score, positions: [...positions].sort((a, b) => a - b) };
 }
 
+/** How many a ranking keeps unless asked for more. */
+export const RANKED = 500;
+
 /** The items whose text matches, best first. `key` gives the text, or a label and its description. */
 export function rank<T>(
   query: string,
   items: T[],
   key: (item: T) => string | [string, string],
-  limit = 500,
+  limit = RANKED,
 ): { item: T; match: Match }[] {
   const out: { item: T; match: Match }[] = [];
   for (const item of items) {

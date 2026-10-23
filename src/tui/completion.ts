@@ -12,7 +12,7 @@ import { basename, dirname, join, relative } from "node:path";
 import { pathToFileURL } from "node:url";
 import type { CompletionItem, CompletionList, SignatureHelp, TextEdit } from "vscode-languageserver-protocol";
 import { conventionOf, type LinkStyle } from "../core/convention.ts";
-import { linkDestination, linkEnds } from "../core/write-link.ts";
+import { linkDestination, linkEnds, type PointerMemo } from "../core/write-link.ts";
 import { readJson } from "../core/fsutil.ts";
 import { cacheDir } from "../core/paths.ts";
 import { readRoots } from "../core/registry.ts";
@@ -20,7 +20,7 @@ import { homeFolder } from "../core/vault.ts";
 import type { App, View } from "./app.ts";
 import { offsetOf, placeAt, prevBoundary } from "./editing.ts";
 import { keyChar } from "./keys.ts";
-import { rank } from "./match.ts";
+import { RANKED, rank } from "./match.ts";
 import { PASTE } from "./vim.ts";
 import { startSnippet } from "./snippets.ts";
 import { expandSnippet, type SnippetContext } from "../core/snippet.ts";
@@ -36,8 +36,15 @@ export interface CompletionState {
   selected: number;
   /** The server said its list was partial: typing asks it again. */
   incomplete: boolean;
-  /** A link's target being completed (20.13): slipbox's list, no server's. */
-  links?: boolean;
+  /** A link's target being completed (20.13), in this style: slipbox's list, no server's. */
+  links?: LinkStyle;
+  /** A link's: where its target's line starts, and what's before the target on it, its indent aside: an indent leaves
+   *  both. */
+  lineStart?: number;
+  before?: string;
+  /** A link's words typed so far, each with the items it matched in the list's order: a word typed on from one
+   *  matches no other. */
+  steps?: { typed: string; matched: CompletionItem[] }[];
   /** A word completed from the open files' words (25.5): narrowed by how it starts, kept in their order. */
   words?: boolean;
 }
@@ -157,15 +164,26 @@ export function afterInsertKey(app: App, view: View, key: string): void {
     const from = md ?? wiki;
     const c = app.completion;
     if (from !== null) {
-      if (c?.links && c.view === view && c.from === from) return narrow(app, c);
+      const style: LinkStyle = md !== null ? "markdown" : "wiki";
+      const start = view.buf.source.lastIndexOf("\n", from - 1) + 1;
+      const before = view.buf.source.slice(start, from).trimStart();
+      // The same target's list: on its line, what's before it unchanged but for the indent, as typing into it or an
+      // indent leaves it. Another target, on this line or another, gets its own.
+      const same = c?.lineStart === start && c.before === before;
+      if (c?.links === style && c.view === view && same) {
+        c.from = from;
+        return narrow(app, c);
+      }
       app.completion = {
         view,
         from,
-        items: linkItems(app, view, md !== null ? "markdown" : "wiki"),
+        items: inOrder(linkItems(app, view, style)),
         shown: [],
         selected: 0,
         incomplete: false,
-        links: true,
+        links: style,
+        lineStart: start,
+        before,
       };
       return narrow(app, app.completion);
     }
@@ -211,6 +229,17 @@ export function afterInsertKey(app: App, view: View, key: string): void {
   app.completion = null;
 }
 
+/**
+ * A paste while typing: the popup closed and a pending ask dropped, as a word ended does, so the next `tab` or `enter`
+ * never writes over what was pasted; the next key typed in a link's target makes its list again.
+ */
+export function afterPaste(app: App): void {
+  if (timer) clearTimeout(timer);
+  timer = null;
+  asked++;
+  app.completion = null;
+}
+
 /** Inside a markdown link's target (`[text](do|`): where the target starts, else null. */
 export function linkTargetStart(source: string, at: number): number | null {
   const line = source.slice(source.lastIndexOf("\n", at - 1) + 1, at);
@@ -236,8 +265,10 @@ function linkItems(app: App, view: View, style: LinkStyle): CompletionItem[] {
   const c = conventionOf(g, app.config, app.settings.origins, style);
   const home = homeFolder();
   const tilde = (abs: string) => (abs.startsWith(`${home}/`) ? `~/${relative(home, abs)}` : abs);
+  // Each other vault's pointer name worked out once, not once per note: per note it read every named folder.
+  const memo: PointerMemo = { root: g.root, naming: new Map() };
   const item = (abs: string, form: string, here: boolean): CompletionItem => {
-    const ends = linkEnds(g, view.buf.abs, abs);
+    const ends = linkEnds(g, view.buf.abs, abs, memo);
     const dest = linkDestination(c, style, ends);
     return {
       // A wikilink's shows what it writes (a name, a path); a markdown link's, the file by its path as shown (21.9).
@@ -326,10 +357,33 @@ function narrow(app: App, c: CompletionState): void {
     if (!c.shown.length) app.completion = null;
     return;
   }
-  const byServer = [...c.items].sort((a, b) => (a.sortText ?? a.label).localeCompare(b.sortText ?? b.label));
-  c.shown = word ? rank(word, byServer, (i) => i.filterText ?? i.label).map((r) => r.item) : byServer;
+  const key = (i: CompletionItem) => i.filterText ?? i.label;
+  if (c.links) {
+    // A word typed on from another matches only what that one did: each word is matched whole (3.16), and a capital
+    // only makes it match as typed. So a key ranks only the matches of the longest word typed before that it types
+    // on from, the last key's or, after a backspace, a shorter one's: none past a non-match, however many notes the
+    // list holds. The list is in order since it was built.
+    const steps = (c.steps ??= []);
+    while (steps.length && !word.startsWith(steps.at(-1)!.typed)) steps.pop();
+    const among = steps.at(-1)?.matched ?? c.items;
+    const hits = word ? rank(word, among, key, Number.POSITIVE_INFINITY) : null;
+    const kept = hits && new Set(hits.map((h) => h.item));
+    if (kept && steps.at(-1)?.typed !== word) steps.push({ typed: word, matched: among.filter((i) => kept.has(i)) });
+    c.shown = hits ? hits.slice(0, RANKED).map((h) => h.item) : c.items;
+    c.selected = 0;
+    // Kept while nothing matches, showing nothing, until its target ends: built again per key, it would read every
+    // vault's index each time. A backspace back to a match shows it again.
+    return;
+  }
+  const byServer = inOrder(c.items);
+  c.shown = word ? rank(word, byServer, key).map((r) => r.item) : byServer;
   c.selected = 0;
   if (!c.shown.length) app.completion = null;
+}
+
+/** The items in the server's order: by `sortText`, else the label. */
+function inOrder(items: CompletionItem[]): CompletionItem[] {
+  return [...items].sort((a, b) => (a.sortText ?? a.label).localeCompare(b.sortText ?? b.label));
 }
 
 /** What a snippet (25.8) is expanded with here: the line's indentation, the file's unit, the file's variables. */

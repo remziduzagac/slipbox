@@ -1,6 +1,7 @@
 // The fixture vault (0.5) against the walk (0.11), discovery (1.1), the graph and the CLI (9.x).
 
-import { describe, expect, setDefaultTimeout, test } from "bun:test";
+import { describe, expect, setDefaultTimeout, spyOn, test } from "bun:test";
+import * as fs from "node:fs";
 import {
   chmodSync,
   cpSync,
@@ -9541,6 +9542,87 @@ describe("slipbox:// pointers (21.7)", () => {
       (await cli(["--root", a, "link", join(b, "far note.md"), "--from", "a.md", "--json"])).out,
     ).data;
     expect(j.link).toBe(`[Far](slipbox://wb${tag}/far%20note.md)`);
+  });
+
+  test("pointers to many files from one root, with a memo: the same as one by one, each folder's name worked out once, the named folders read once", async () => {
+    const { linkEnds, linkWarnings, pointerAt } = await import("../src/core/write-link.ts");
+    const { foldersFile, recordFolder } = await import("../src/core/folders.ts");
+    const tag = uniq();
+    const parent = mkdtempSync(join(tmpdir(), "slipbox-ptr-memo-"));
+    const b = await named(`mb${tag}`, { "x.md": "# X\n", "sub/y.md": "# Y\n", "z.md": "# Z\n" }, parent);
+    const c = await named(`mc${tag}`, { "w.md": "# W\n" }, parent);
+    const a = await named(`ma${tag}`, { "a.md": "# A\n" }, parent);
+    const inner = await named(`mi${tag}`, { "i.md": "# I\n" }, a);
+    // Two folders of one name (ambiguous), a private name, and two repositories of one short name (qualified).
+    const twin1 = await named(`mt${tag}`, { "t.md": "# T\n" }, join(parent, "one"));
+    await named(`mt${tag}`, { "t.md": "# T\n" }, join(parent, "two"));
+    const priv = join(parent, `mp${tag}`);
+    mkdirSync(priv);
+    expect(git(priv, "init", "-q")).toBe(0);
+    writeFileSync(join(priv, "p.md"), "# P\n");
+    expect((await cli(["init", priv, "--name", `mp${tag}`, "--private"])).code).toBe(0);
+    const repo = (remote: string) => {
+      const d = mkdtempSync(join(parent, "repo-"));
+      mkdirSync(join(d, ".git", "info"), { recursive: true });
+      writeFileSync(join(d, ".git", "config"), `[core]\n\tbare = false\n[remote "origin"]\n\turl = ${remote}\n`);
+      writeFileSync(join(d, "r.md"), "# R\n");
+      recordFolder(d);
+      return d;
+    };
+    const mine = repo(`git@github.com:me/mr${tag}.git`);
+    repo(`https://gitlab.com/lab/mr${tag}`);
+    const g = openGraph(locateVault({ root: a }), DEFAULT_CONFIG, false);
+    const from = join(a, "a.md");
+    const targets = [
+      join(b, "x.md"),
+      join(b, "sub", "y.md"),
+      join(c, "w.md"),
+      join(b, "z.md"),
+      join(inner, "i.md"),
+      join(parent, "loose.md"),
+      join(twin1, "t.md"),
+      join(priv, "p.md"),
+      join(mine, "r.md"),
+    ];
+    const ends = (memo?: import("../src/core/write-link.ts").PointerMemo) =>
+      targets.map((t) => linkEnds(g, from, t, memo));
+    const shape = (e: ReturnType<typeof linkEnds>) => ({ pointer: e.pointer, naming: e.naming, say: linkWarnings(e) });
+    const read = fs.readFileSync;
+    let reads = 0;
+    const spy = spyOn(fs, "readFileSync").mockImplementation(((path: fs.PathOrFileDescriptor, ...rest: never[]) => {
+      if (path === foldersFile()) reads++;
+      return read(path, ...rest);
+    }) as typeof fs.readFileSync);
+    try {
+      const alone = ends();
+      expect(reads).toBeGreaterThan(1); // without a memo, read again per file
+      reads = 0;
+      const memo = { root: a, naming: new Map() };
+      const memoed = ends(memo);
+      expect(reads).toBe(1);
+      expect(memoed.map(shape)).toEqual(alone.map(shape));
+      expect(alone.map((e) => e.pointer)).toEqual([
+        `slipbox://mb${tag}/x.md`,
+        `slipbox://mb${tag}/sub/y.md`,
+        `slipbox://mc${tag}/w.md`,
+        `slipbox://mb${tag}/z.md`,
+        null, // travels with it: a relative path
+        null, // in no named folder
+        `slipbox://mt${tag}/t.md`,
+        `slipbox://mp${tag}/p.md`,
+        `slipbox://github.com/me/mr${tag}/r.md`,
+      ]);
+      expect(alone.slice(6).map((e) => linkWarnings(e).length)).toEqual([1, 1, 1]);
+      // One folder's files share its name, worked out once; another folder has its own.
+      expect(memoed[1]!.naming).toBe(memoed[0]!.naming!);
+      expect(memoed[3]!.naming).toBe(memoed[0]!.naming!);
+      expect(memoed[2]!.naming).not.toBe(memoed[0]!.naming!);
+      expect(alone[1]!.naming).not.toBe(alone[0]!.naming!);
+      // From another root, the memo is left alone: the folder nested in this one travels with it, not with that one.
+      expect(pointerAt(b, join(inner, "i.md"), memo)?.pointer).toBe(`slipbox://mi${tag}/i.md`);
+    } finally {
+      spy.mockRestore();
+    }
   });
 
   test("a pointer written says when its name is private; on a name different folders share, the qualified one, said — else ambiguous, said (D74, D83)", async () => {

@@ -3,7 +3,8 @@
 // The harness is tests/tui-harness.ts; source control's worktrees, marks, diffs, review, merge, pull and rebase
 // are tests/tui-git.test.ts's.
 
-import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { afterAll, beforeAll, describe, expect, spyOn, test } from "bun:test";
+import * as fs from "node:fs";
 import {
   chmodSync,
   cpSync,
@@ -38,7 +39,7 @@ import { setTrust } from "../src/core/trust.ts";
 import type { PanelRow } from "../src/tui/gitpanel.ts";
 import type { NvimServer } from "../src/core/nvim.ts";
 import { TextCanvas } from "../src/tui/canvas.ts";
-import { match, rank } from "../src/tui/match.ts";
+import { match, RANKED, rank } from "../src/tui/match.ts";
 import { graphemes, setWidthMethod, stringWidth, type WidthMethod } from "../src/core/width.ts";
 import { glyphsFor } from "../src/core/glyphs.ts";
 import { crumbLayout } from "../src/tui/draw.ts";
@@ -4075,6 +4076,26 @@ describe("review round 3", () => {
       "Delete the note",
     ]);
     expect(rank("move trash", items, (i) => [i.label, i.detail]).map((r) => r.item.label)).toEqual(["Delete the note"]);
+  });
+  test("matching: a query typed on from one that matched nothing matches nothing either — capitals, words, as drawn", () => {
+    // What a link's completion counts on to rank nothing past a non-match (20.13).
+    const texts = [
+      "handbook/operations-handbook.md",
+      "tel-Scope.md",
+      "Telescope.md",
+      "İİstanbul.md",
+      "Café notes.md",
+      "ǅ notes.md",
+      "bell\x07ring.md",
+      "a\u202e/ring.md",
+    ];
+    const starts = ["x", "q", "hanx", "tels", "TelX", "cafx", "i̇x", "ǆx", "bellx", "ring z", "oper xyz"];
+    const more = ["", "a", "S", "x", "e", " hand", " Scope", "İ", "é", "ǅ", "\x07ring"];
+    for (const text of texts)
+      for (const q of starts) {
+        if (match(q, text)) continue;
+        for (const m of more) expect([text, q + m, match(q + m, text)]).toEqual([text, q + m, null]);
+      }
   });
   const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   test("the scratch's own writes never read as external changes (polled directories included)", async () => {
@@ -10087,7 +10108,7 @@ describe("vaults in the TUI (17.x)", () => {
     await h.keys("shift+g", "o");
     for (const k of "[x](") await h.keys(k);
     const shown = (h: Harness) => h.app.completion?.shown.map((i) => i.label) ?? [];
-    expect(h.app.completion?.links).toBe(true);
+    expect(h.app.completion?.links).toBe("markdown");
     expect(shown(h)).toContain("todo.md");
     expect(shown(h)).toContain(join(app, "design.md"));
     expect(shown(h)).not.toContain("sub/here.md"); // not the note itself
@@ -10116,6 +10137,228 @@ describe("vaults in the TUI (17.x)", () => {
     for (const k of " f(") await h.keys(k);
     expect(h.app.completion).toBeNull();
     await h.keys("escape");
+  });
+
+  test("a link's target that matches nothing keeps its list while typed: the other vaults' indexes read once per link, not per key", async () => {
+    const { base, notes, app } = await twoVaults();
+    await onlyRootsUnder(base, async () => {
+      const { cacheDir } = await import("../src/core/paths.ts");
+      const { readRoots } = await import("../src/core/registry.ts");
+      const { foldersFile } = await import("../src/core/folders.ts");
+      const match = await import("../src/tui/match.ts");
+      const index = join(cacheDir(readRoots().find((v) => v.path === app)!), "index.json");
+      const h = await harness({ root: notes, open: "index.md" });
+      await h.app.run("view.source");
+      await h.keys("shift+g", "o");
+      const read = fs.readFileSync;
+      let reads = 0;
+      let named = 0;
+      // The list's own reads and rankings, not a frame's (backlinks across vaults, a pointer followed, a filter): told
+      // by the whole stack, as each is some frames below `linkItems` or `narrow`.
+      const under = (fn: string) => {
+        const limit = Error.stackTraceLimit;
+        Error.stackTraceLimit = Number.POSITIVE_INFINITY;
+        const stack = new Error().stack ?? "";
+        Error.stackTraceLimit = limit;
+        return stack.includes(fn);
+      };
+      const spy = spyOn(fs, "readFileSync").mockImplementation(((path: fs.PathOrFileDescriptor, ...rest: never[]) => {
+        if ((path === index || path === foldersFile()) && under("linkItems")) {
+          if (path === index) reads++;
+          else named++;
+        }
+        return read(path, ...rest);
+      }) as typeof fs.readFileSync);
+      // How many items each key ranked, and how many each matched.
+      const rank = match.rank;
+      const sizes: { among: number; found: number }[] = [];
+      const ranked = spyOn(match, "rank").mockImplementation(((...args: Parameters<typeof rank>) => {
+        const out = rank(...args);
+        if (under("narrow")) sizes.push({ among: args[1].length, found: out.length });
+        return out;
+      }) as typeof rank);
+      const among = () => sizes.map((x) => x.among);
+      const found = () => sizes.map((x) => x.found);
+      const shown = () => h.app.completion?.shown.map((i) => i.label) ?? [];
+      try {
+        for (const k of "[x](tod") await h.keys(k);
+        expect(shown()).toEqual(["todo.md"]);
+        // The named folders read once for the list, not once per other vault's note.
+        expect(named).toBe(1);
+        // Each key ranks only what the last one matched: the whole list for `t`, then fewer.
+        expect(among()).toHaveLength(3);
+        expect(among().slice(1)).toEqual(found().slice(0, -1));
+        expect(among().at(-1)).toBeLessThan(among()[0]!);
+        // Past any match: nothing shown, and typing on reads nothing again, nor ranks anything.
+        sizes.length = 0;
+        for (const k of "qQqq") await h.keys(k);
+        expect(shown()).toEqual([]);
+        expect(reads).toBe(1);
+        expect(among()).toEqual([1, 0, 0, 0]);
+        // Back to a match, it shows again from the same list; each backspace ranks only what its shorter word
+        // matched when it was typed.
+        sizes.length = 0;
+        for (let i = 0; i < 4; i++) await h.keys("backspace");
+        expect(shown()).toEqual(["todo.md"]);
+        expect(reads).toBe(1);
+        expect(among()).toEqual([0, 0, 0, 1]);
+        // tab while nothing shows isn't the popup's: it indents the line, as with no popup. The target moved, the
+        // same list.
+        await h.keys("q", "tab");
+        expect(h.app.view!.buf.source).toEndWith("\n  [x](todq\n");
+        expect(reads).toBe(1);
+        // The link ended, the next one reads them again: a note indexed since is offered.
+        await h.keys("backspace", "backspace", ")", "space");
+        expect(h.app.completion).toBeNull();
+        writeFileSync(join(app, "later.md"), "# Later\n");
+        openGraph(locateVault({ root: app }), DEFAULT_CONFIG, true);
+        const before = reads;
+        for (const k of "[y](") await h.keys(k);
+        expect(reads).toBe(before + 1);
+        expect(shown()).toContain(join(app, "later.md"));
+      } finally {
+        spy.mockRestore();
+        ranked.mockRestore();
+      }
+      await h.keys("escape");
+    });
+    // A wikilink's list (this vault's alone) is kept the same way; narrowed from the last key's matches, it shows
+    // what ranking the whole list would.
+    const h = await harness({ root: notes, open: "index.md" });
+    await h.app.run("view.source");
+    await h.keys("shift+g", "o");
+    await h.keys("[", "[");
+    for (const k of "to") {
+      await h.keys(k);
+      const c = h.app.completion!;
+      const word = h.app.view!.buf.source.slice(c.from, offsetOf(h.app, h.app.view!));
+      const whole = word ? rank(word, c.items, (i) => i.filterText ?? i.label).map((r) => r.item) : c.items;
+      expect(c.shown).toEqual(whole);
+    }
+    const list = h.app.completion;
+    expect(list?.shown.map((i) => i.detail)).toEqual(["todo.md"]);
+    for (const k of "qq") await h.keys(k);
+    expect(h.app.completion).toBe(list);
+    expect(list?.shown).toEqual([]);
+    await h.keys("backspace", "backspace");
+    expect(h.app.completion).toBe(list);
+    expect(list?.shown.map((i) => i.detail)).toEqual(["todo.md"]);
+    // An indent (tab while nothing shows) moves the target: the same list.
+    await h.keys("q", "tab");
+    expect(h.app.view!.buf.source).toEndWith("\n  [[toq\n");
+    expect(h.app.completion).toBe(list);
+    // Its target ended: gone.
+    await h.keys("backspace", "]");
+    expect(h.app.completion).toBeNull();
+    // Another line's target gets its own list, the cursor gone there straight from one kept.
+    await h.keys("enter");
+    for (const k of "[[zz") await h.keys(k);
+    const next = h.app.completion;
+    expect(next?.shown).toEqual([]);
+    await h.keys("up");
+    expect(h.app.completion?.links).toBe("wiki");
+    expect(h.app.completion).not.toBe(next);
+    expect(h.app.completion!.from).toBeLessThan(next!.from);
+    // Another target on the same line too, the cursor gone there at a jump (end).
+    await h.keys("escape", "o");
+    for (const k of "[[to") await h.keys(k);
+    await h.keys("home");
+    expect(h.app.completion).toBeNull();
+    for (const k of "[[zz") await h.keys(k);
+    const first = h.app.completion;
+    expect(first?.shown).toEqual([]);
+    await h.keys("end");
+    expect(h.app.view!.buf.source).toContain("\n[[zz  [[to\n");
+    expect(h.app.completion).not.toBe(first);
+    expect(h.app.completion?.shown.map((i) => i.detail)).toEqual(["todo.md"]);
+    // A paste that leaves the cursor in another target on the line, then a key there: its own list too.
+    await h.keys("escape", "o");
+    for (const k of "[[zz") await h.keys(k);
+    const kept = h.app.completion;
+    expect(kept?.shown).toEqual([]);
+    await h.app.input.paste("]] [[to");
+    await h.keys("left");
+    expect(h.app.view!.buf.source).toContain("\n[[zz]] [[to\n");
+    expect(h.app.completion?.links).toBe("wiki");
+    expect(h.app.completion).not.toBe(kept);
+    // What's before a target changed where it stands, its start unmoved (an edit from outside, a reload): its own list.
+    await h.keys("escape", "o");
+    for (const k of ["a", "space", ..."[[zz"]) await h.keys(k);
+    const here = h.app.completion;
+    expect(here?.shown).toEqual([]);
+    const buf = h.app.view!.buf;
+    buf.edit(buf.source.lastIndexOf("a [[zz"), 1, "b");
+    await h.keys("z");
+    expect(h.app.view!.buf.source).toContain("\nb [[zzz\n");
+    expect(h.app.completion?.links).toBe("wiki");
+    expect(h.app.completion).not.toBe(here);
+    await h.keys("escape");
+  });
+
+  test("a link's list narrows from every match of the last key, not only the ones shown (20.13)", async () => {
+    const root = makeVault();
+    for (let i = 0; i < RANKED + 100; i++) writeFileSync(join(root, `t${String(i).padStart(3, "0")}.md`), "# T\n");
+    writeFileSync(join(root, "target.md"), "# Target\n");
+    const h = await harness({ root, open: "index.md" });
+    await h.app.run("view.source");
+    await h.keys("shift+g", "o");
+    for (const k of "[[t") await h.keys(k);
+    const details = () => h.app.completion?.shown.map((i) => i.detail) ?? [];
+    // More match than are shown, and target.md, the longest, isn't among those shown.
+    expect(details()).toHaveLength(RANKED);
+    expect(details()).not.toContain("target.md");
+    await h.keys("a");
+    expect(details()).toContain("target.md");
+    await h.keys("escape");
+  });
+
+  test("a paste while typing closes the completion: tab or enter never takes back what was pasted (20.13)", async () => {
+    const root = makeVault();
+    const h = await harness({ root, open: "index.md" });
+    await h.app.run("view.source");
+    // Pasted while a link's list shows, on into another target or past the target's end: closed, and tab is the
+    // editor's.
+    await h.keys("shift+g", "o");
+    for (const k of "[[to") await h.keys(k);
+    expect(h.app.completion?.shown.length).toBeGreaterThan(0);
+    await h.app.input.paste("]] [[qqq");
+    expect(h.app.completion).toBeNull();
+    await h.keys("tab");
+    expect(h.app.view!.buf.source).toContain("[[to]] [[qqq");
+    await h.keys("escape", "o");
+    for (const k of "[x](to") await h.keys(k);
+    expect(h.app.completion?.shown.length).toBeGreaterThan(0);
+    await h.app.input.paste(") and more");
+    expect(h.app.completion).toBeNull();
+    await h.keys("tab");
+    expect(h.app.view!.buf.source).toContain("[x](to) and more");
+    // Pasted into a target whose list was closed: none opened, and enter is a new line.
+    await h.keys("escape", "o");
+    for (const k of "[x](") await h.keys(k);
+    await h.keys("ctrl+e");
+    await h.app.input.paste("diagram");
+    expect(h.app.completion).toBeNull();
+    await h.keys("enter");
+    expect(h.app.view!.buf.source).toContain("[x](diagram\n");
+    // The next key typed in a target makes its list again.
+    for (const k of "[x](diagra") await h.keys(k);
+    expect(h.app.completion?.shown.length).toBeGreaterThan(0);
+    await h.keys("escape");
+  });
+
+  test("`.` after a link completed and more typed repeats it as typed: the item, then a new line and the rest (20.13)", async () => {
+    const root = makeVault();
+    const h = await harness({ root, open: "index.md" });
+    await h.app.run("view.source");
+    await h.keys("shift+g", "o");
+    for (const k of "[[to") await h.keys(k);
+    expect(h.app.completion?.shown.length).toBeGreaterThan(0);
+    await h.keys("tab", "enter", "x", "escape");
+    const src = h.app.view!.buf.source;
+    const change = src.slice(src.lastIndexOf("\n[[") + 1);
+    expect(change).toMatch(/^\[\[[^\n]+\nx\n$/);
+    await h.keys(".");
+    expect(h.app.view!.buf.source).toEndWith(change + change);
   });
 
   test("a pointer completed to a name two folders share asks first (D74, D83): written as it is, or one folder renamed first, previewed, then written; a private name, said", async () => {
@@ -10217,7 +10460,7 @@ describe("vaults in the TUI (17.x)", () => {
     await h.keys("shift+g", "o");
     const shown = () => h.app.completion?.shown.map((i) => [i.label, i.detail]) ?? [];
     for (const k of "[[") await h.keys(k);
-    expect(h.app.completion?.links).toBe(true);
+    expect(h.app.completion?.links).toBe("wiki");
     // Each as it would be written: beside this note a name; the other b by its path.
     expect(shown()).toContainEqual(["b", "sub/b.md"]);
     expect(shown()).toContainEqual(["other/b", "other/b.md"]);
