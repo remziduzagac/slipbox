@@ -39,7 +39,7 @@ import { setTrust } from "../src/core/trust.ts";
 import type { PanelRow } from "../src/tui/gitpanel.ts";
 import type { NvimServer } from "../src/core/nvim.ts";
 import { TextCanvas } from "../src/tui/canvas.ts";
-import { match, rank } from "../src/tui/match.ts";
+import { match, RANKED, rank } from "../src/tui/match.ts";
 import { graphemes, setWidthMethod, stringWidth, type WidthMethod } from "../src/core/width.ts";
 import { glyphsFor } from "../src/core/glyphs.ts";
 import { crumbLayout } from "../src/tui/draw.ts";
@@ -10169,18 +10169,25 @@ describe("vaults in the TUI (17.x)", () => {
         return read(path, ...rest);
       }) as typeof fs.readFileSync);
       const ranked = spyOn(match, "rank");
+      // How many items each key ranked, and how many each matched.
+      const among = () => ranked.mock.calls.map(([, items]) => items.length);
+      const found = () => ranked.mock.results.map((r) => (r.value as unknown[]).length);
       const shown = () => h.app.completion?.shown.map((i) => i.label) ?? [];
       try {
         for (const k of "[x](tod") await h.keys(k);
         expect(shown()).toEqual(["todo.md"]);
         // The named folders read once for the list, not once per other vault's note.
         expect(named).toBe(1);
-        // Past any match: nothing shown, and typing on reads nothing again, nor matches again what can't match.
+        // Each key ranks only what the last one matched: the whole list for `t`, then fewer.
+        expect(among()).toHaveLength(3);
+        expect(among().slice(1)).toEqual(found().slice(0, -1));
+        expect(among().at(-1)).toBeLessThan(among()[0]!);
+        // Past any match: nothing shown, and typing on reads nothing again, nor ranks anything.
         ranked.mockClear();
         for (const k of "qQqq") await h.keys(k);
         expect(shown()).toEqual([]);
         expect(reads).toBe(1);
-        expect(ranked).toHaveBeenCalledTimes(1);
+        expect(among()).toEqual([1, 0, 0, 0]);
         // Back to a match, it shows again from the same list.
         for (let i = 0; i < 4; i++) await h.keys("backspace");
         expect(shown()).toEqual(["todo.md"]);
@@ -10205,11 +10212,19 @@ describe("vaults in the TUI (17.x)", () => {
       }
       await h.keys("escape");
     });
-    // A wikilink's list (this vault's alone) is kept the same way.
+    // A wikilink's list (this vault's alone) is kept the same way; narrowed from the last key's matches, it shows
+    // what ranking the whole list would.
     const h = await harness({ root: notes, open: "index.md" });
     await h.app.run("view.source");
     await h.keys("shift+g", "o");
-    for (const k of "[[to") await h.keys(k);
+    await h.keys("[", "[");
+    for (const k of "to") {
+      await h.keys(k);
+      const c = h.app.completion!;
+      const word = h.app.view!.buf.source.slice(c.from, offsetOf(h.app, h.app.view!));
+      const whole = word ? rank(word, c.items, (i) => i.filterText ?? i.label).map((r) => r.item) : c.items;
+      expect(c.shown).toEqual(whole);
+    }
     const list = h.app.completion;
     expect(list?.shown.map((i) => i.detail)).toEqual(["todo.md"]);
     for (const k of "qq") await h.keys(k);
@@ -10234,6 +10249,23 @@ describe("vaults in the TUI (17.x)", () => {
     expect(h.app.completion?.links).toBe("wiki");
     expect(h.app.completion).not.toBe(next);
     expect(h.app.completion!.from).toBeLessThan(next!.from);
+    await h.keys("escape");
+  });
+
+  test("a link's list narrows from every match of the last key, not only the ones shown (20.13)", async () => {
+    const root = makeVault();
+    for (let i = 0; i < RANKED + 100; i++) writeFileSync(join(root, `t${String(i).padStart(3, "0")}.md`), "# T\n");
+    writeFileSync(join(root, "target.md"), "# Target\n");
+    const h = await harness({ root, open: "index.md" });
+    await h.app.run("view.source");
+    await h.keys("shift+g", "o");
+    for (const k of "[[t") await h.keys(k);
+    const details = () => h.app.completion?.shown.map((i) => i.detail) ?? [];
+    // More match than are shown, and target.md, the longest, isn't among those shown.
+    expect(details()).toHaveLength(RANKED);
+    expect(details()).not.toContain("target.md");
+    await h.keys("a");
+    expect(details()).toContain("target.md");
     await h.keys("escape");
   });
 

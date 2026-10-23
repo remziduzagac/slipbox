@@ -14,7 +14,8 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
   Mermaid diagram is drawn in characters again, as the manual says. 0.5.0 drew it as a picture without its words.
 - Typing a link's target is quick again with many vaults. Once what you typed matched no file, each key built the list
   of files again, from every other vault: with 300 vaults, about half a second a key. The list is now kept while you
-  type, a key past the last match costs next to nothing, and building the list takes a fraction of the time it did.
+  type, each key looks only among what the key before it matched, and building the list takes a fraction of the time
+  it did.
 
 ## [0.5.0] - 2026-10-22
 

@@ -1807,9 +1807,9 @@ line's target, the cursor gone there, gets its own. While what's typed matches n
 act as with no popup, until a backspace brings a match back. Closed (`ctrl+e`), accepted, or replaced by `ctrl+n`'s
 words, it's dropped, and a key typed after in the same target builds it again. Built per key, it would read every
 other vault's index each time; building it works out each folder's pointer name once (`PointerMemo` in
-`core/write-link.ts`), not once per note, and puts it in order once. A word typed on from one that matched nothing
-isn't matched again: each word matches whole, and a capital only makes it match as typed, so it can't. Same keys as
-above.
+`core/write-link.ts`), not once per note, and puts it in order once. A word typed on from the last is matched only
+among the last one's matches, none past a non-match: each word matches whole, and a capital only makes it match as
+typed, so nothing else can. The best 500 are shown, and every match is kept to narrow from. Same keys as above.
 
 **A word from the open files** (`25.5`): `ctrl+n` in insert mode with no popup showing completes the word before the
 cursor, as vim's does, server or not, in a note or a code file — the open files' words that start as it does, two

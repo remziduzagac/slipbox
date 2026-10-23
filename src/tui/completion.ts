@@ -20,7 +20,7 @@ import { homeFolder } from "../core/vault.ts";
 import type { App, View } from "./app.ts";
 import { offsetOf, placeAt, prevBoundary } from "./editing.ts";
 import { keyChar } from "./keys.ts";
-import { rank } from "./match.ts";
+import { RANKED, rank } from "./match.ts";
 import { PASTE } from "./vim.ts";
 import { startSnippet } from "./snippets.ts";
 import { expandSnippet, type SnippetContext } from "../core/snippet.ts";
@@ -40,8 +40,9 @@ export interface CompletionState {
   links?: LinkStyle;
   /** A link's: where its target's line starts, which an indent before the target doesn't move. */
   line?: number;
-  /** A link's word that matched nothing: one typed on from it matches nothing either. */
-  none?: string;
+  /** A link's last word, and the items it matched in the list's order: a word typed on from it matches no other. */
+  typed?: string;
+  matched?: CompletionItem[];
   /** A word completed from the open files' words (25.5): narrowed by how it starts, kept in their order. */
   words?: boolean;
 }
@@ -339,17 +340,26 @@ function narrow(app: App, c: CompletionState): void {
     if (!c.shown.length) app.completion = null;
     return;
   }
-  // A link's word typed on from one that matched nothing matches nothing either: each word is matched whole (3.16), and
-  // a capital only makes it match as typed. Nothing to rank, however many notes the list holds.
-  if (c.links && c.none !== undefined && word.startsWith(c.none)) return;
-  // A link's list is in order since it was built; a server's is put in order here.
-  const byServer = c.links ? c.items : inOrder(c.items);
-  c.shown = word ? rank(word, byServer, (i) => i.filterText ?? i.label).map((r) => r.item) : byServer;
+  const key = (i: CompletionItem) => i.filterText ?? i.label;
+  if (c.links) {
+    // A word typed on from the last matches only what that one did: each word is matched whole (3.16), and a capital
+    // only makes it match as typed. So only those are ranked, none past a non-match, however many notes the list
+    // holds; the list is in order since it was built.
+    const among = c.typed !== undefined && word.startsWith(c.typed) ? c.matched! : c.items;
+    const hits = word ? rank(word, among, key, Number.POSITIVE_INFINITY) : null;
+    const kept = hits && new Set(hits.map((h) => h.item));
+    c.typed = word;
+    c.matched = kept ? among.filter((i) => kept.has(i)) : c.items;
+    c.shown = hits ? hits.slice(0, RANKED).map((h) => h.item) : c.items;
+    c.selected = 0;
+    // Kept while nothing matches, showing nothing, until its target ends: built again per key, it would read every
+    // vault's index each time. A backspace back to a match shows it again.
+    return;
+  }
+  const byServer = inOrder(c.items);
+  c.shown = word ? rank(word, byServer, key).map((r) => r.item) : byServer;
   c.selected = 0;
-  if (c.links) c.none = c.shown.length ? undefined : word;
-  // A link's list is kept while nothing matches, showing nothing, until its target ends: built again per key, it
-  // would read every vault's index each time. A backspace back to a match shows it again.
-  if (!c.shown.length && !c.links) app.completion = null;
+  if (!c.shown.length) app.completion = null;
 }
 
 /** The items in the server's order: by `sortText`, else the label. */

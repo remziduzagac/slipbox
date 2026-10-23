@@ -152,15 +152,23 @@ link being typed, matched or not, so the keys that match nothing cost the same h
   - The shortcut past a non-match skipped words with a capital, needlessly: a capital only makes a word match as
     typed, stricter, so a word typed on from one that matched nothing can't match either way. A target like
     `](Meetings/zz` ranked every item per key. Dropped; a test of the matcher (capitals, more words, characters
-    never drawn, a capital whose lowercase is longer) holds the property the shortcut counts on, and the completion's
-    test types `qQqq` past the match: the ranking runs once.
+    never drawn, a capital whose lowercase is longer) holds the property: a query typed on from one matches only
+    where that one did.
+  - A key that still matched ranked every item of the list: at 10,000 other notes, about 110 ms a key. Taken into
+    this change's scope, on the same property: each key ranks only what the last one matched (`typed`, `matched`),
+    kept in the list's order, so that ties fall as ranking the whole list would; what's shown is the best 500
+    (`RANKED` in `match.ts`), what's kept to narrow from is every match. Past a non-match that's nothing, so the
+    shortcut above is this case. Tests: typing `t`, `o`, `d` ranks 3, then 3, then 1 items, each the last key's
+    matches; past the match, `qQqq` ranks 1, then none; at each key a wikilink's list shows what ranking the whole
+    list shows; with 600 notes matching `t`, `target.md`, not among the 500 shown, is found by `ta`. At 10,000 other
+    notes (250 vaults of 40, the load 6 to 10), median per key, before this round and after: matching 109 ms and
+    5.5 ms (the first keys after `](` still rank most of the list: 72 and 49 ms); matching nothing 88 ms and 2.5 ms.
   - The Log named its agreements and reviews as conversations; it says what was decided and found.
-  Mutation-checked, each alone: the capital guard back, kept across lines, and the earlier five, each failing the
-  test. Ran the completion and matcher tests (26 pass) and the two terminal checks; tried live: `[x](READ` shows
-  README, `zZ` past it nothing, two backspaces bring it back; up from another line's target into `[x](REA` shows
-  that target's matches. Rejected:
-  - A key that still matches ranks every item; narrowing from the last key's matches would rank fewer. That cost was
-    there before this change and is the matcher's, the same for every filter: a change of its own.
+  Mutation-checked, each alone: ranking the whole list per key, narrowing from the shown rather than every match,
+  kept across lines, kept only at the same start, the old `narrow`, no memo, a stack cut at 8: each fails a test.
+  Ran the completion and matcher tests and the two terminal checks; tried live: `[x](READ` shows README, `zZ` past
+  it nothing, two backspaces bring it back; up from another line's target into `[x](REA` shows that target's
+  matches; `[x](in` shows a long list, `inbox` only `inbox.md`, three backspaces the list `in` showed. Rejected:
   - Raised again, as logged: the list dropped by accepting, `ctrl+e` or `ctrl+n` (one build per action; with no word
     found, `ctrl+n` drops the hidden list too: one build); a note made meanwhile not offered; `findVaultRoot` per
     note.
