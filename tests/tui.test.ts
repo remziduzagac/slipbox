@@ -10153,25 +10153,32 @@ describe("vaults in the TUI (17.x)", () => {
       const read = fs.readFileSync;
       let reads = 0;
       let named = 0;
-      // The list's own reads: a frame's (backlinks across vaults, a pointer followed) aren't the question. The whole
-      // stack, as the read is some frames below `linkItems`.
+      // The list's own reads and rankings, not a frame's (backlinks across vaults, a pointer followed, a filter): told
+      // by the whole stack, as each is some frames below `linkItems` or `narrow`.
+      const under = (fn: string) => {
+        const limit = Error.stackTraceLimit;
+        Error.stackTraceLimit = Number.POSITIVE_INFINITY;
+        const stack = new Error().stack ?? "";
+        Error.stackTraceLimit = limit;
+        return stack.includes(fn);
+      };
       const spy = spyOn(fs, "readFileSync").mockImplementation(((path: fs.PathOrFileDescriptor, ...rest: never[]) => {
-        if (path === index || path === foldersFile()) {
-          const limit = Error.stackTraceLimit;
-          Error.stackTraceLimit = Number.POSITIVE_INFINITY;
-          const stack = new Error().stack;
-          Error.stackTraceLimit = limit;
-          if (stack?.includes("linkItems")) {
-            if (path === index) reads++;
-            else named++;
-          }
+        if ((path === index || path === foldersFile()) && under("linkItems")) {
+          if (path === index) reads++;
+          else named++;
         }
         return read(path, ...rest);
       }) as typeof fs.readFileSync);
-      const ranked = spyOn(match, "rank");
       // How many items each key ranked, and how many each matched.
-      const among = () => ranked.mock.calls.map(([, items]) => items.length);
-      const found = () => ranked.mock.results.map((r) => (r.value as unknown[]).length);
+      const rank = match.rank;
+      const sizes: { among: number; found: number }[] = [];
+      const ranked = spyOn(match, "rank").mockImplementation(((...args: Parameters<typeof rank>) => {
+        const out = rank(...args);
+        if (under("narrow")) sizes.push({ among: args[1].length, found: out.length });
+        return out;
+      }) as typeof rank);
+      const among = () => sizes.map((x) => x.among);
+      const found = () => sizes.map((x) => x.found);
       const shown = () => h.app.completion?.shown.map((i) => i.label) ?? [];
       try {
         for (const k of "[x](tod") await h.keys(k);
@@ -10183,14 +10190,14 @@ describe("vaults in the TUI (17.x)", () => {
         expect(among().slice(1)).toEqual(found().slice(0, -1));
         expect(among().at(-1)).toBeLessThan(among()[0]!);
         // Past any match: nothing shown, and typing on reads nothing again, nor ranks anything.
-        ranked.mockClear();
+        sizes.length = 0;
         for (const k of "qQqq") await h.keys(k);
         expect(shown()).toEqual([]);
         expect(reads).toBe(1);
         expect(among()).toEqual([1, 0, 0, 0]);
         // Back to a match, it shows again from the same list; each backspace ranks only what its shorter word
         // matched when it was typed.
-        ranked.mockClear();
+        sizes.length = 0;
         for (let i = 0; i < 4; i++) await h.keys("backspace");
         expect(shown()).toEqual(["todo.md"]);
         expect(reads).toBe(1);
@@ -10302,6 +10309,31 @@ describe("vaults in the TUI (17.x)", () => {
     expect(details()).not.toContain("target.md");
     await h.keys("a");
     expect(details()).toContain("target.md");
+    await h.keys("escape");
+  });
+
+  test("a paste while a link's list shows: the list follows it, and tab never takes back what was pasted (20.13)", async () => {
+    const root = makeVault();
+    const h = await harness({ root, open: "index.md" });
+    await h.app.run("view.source");
+    // Pasted on into another target: that target's list, here nothing shown, so tab is the editor's.
+    await h.keys("shift+g", "o");
+    for (const k of "[[to") await h.keys(k);
+    const was = h.app.completion;
+    expect(was?.shown.length).toBeGreaterThan(0);
+    await h.app.input.paste("]] [[qqq");
+    expect(h.app.completion).not.toBe(was);
+    expect(h.app.completion?.shown).toEqual([]);
+    await h.keys("tab");
+    expect(h.app.view!.buf.source).toContain("[[to]] [[qqq");
+    // Pasted past the target's end: no list, and tab is the editor's.
+    await h.keys("escape", "o");
+    for (const k of "[x](to") await h.keys(k);
+    expect(h.app.completion?.shown.length).toBeGreaterThan(0);
+    await h.app.input.paste(") and more");
+    expect(h.app.completion).toBeNull();
+    await h.keys("tab");
+    expect(h.app.view!.buf.source).toContain("[x](to) and more");
     await h.keys("escape");
   });
 

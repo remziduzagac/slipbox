@@ -1791,7 +1791,8 @@ it (a backspace takes it), and its mirrors follow what's typed. `tab` goes to th
 and an edit cutting across one. The stops follow the text, an import added above included. Typing through a snippet
 isn't one `.` repeats. Only the last ask's answer is shown: one arriving after a later ask is dropped. **Signature
 help** shows after `(` and `,` (as the server names them): the signature on a line above the cursor, the active
-parameter marked; `)` or leaving insert closes it. Both are insert mode's, and leaving it closes both.
+parameter marked; `)` or leaving insert closes it. Both are insert mode's, and leaving it closes both. A paste closes
+the completion as a word ended does: the next `tab` or `enter` never writes over what was pasted.
 
 **A link's target** (`20.13`) in a note is completed by slipbox itself, server or not: right after `](`, the files the
 link could reach — this vault's notes and files by their path here, other vaults' notes (as of their last index; not
@@ -1803,15 +1804,16 @@ the path from the note. Right after `[[` (or `![[`), this vault's notes and file
 write it — a name where it reaches the note from here, else its path from the vault's top (a top-level note's being its
 name, a relative path: `../plan`) — with its path beside it. Typing past the target (`)`, a space, `]`, `|`, `#`) closes
 it. The list is built when the target starts and kept while it's typed, and where an indent moves the target (what's
-before it, the indent aside, unchanged); another target, on its line or another, the cursor gone there, gets its own.
-Its notes are as they were when it was built, this vault's and other vaults' (as last indexed) alike. While what's typed
-matches nothing it shows nothing, and the keys act as with no popup, until a backspace brings a match back. Closed
-(`ctrl+e`), accepted, or replaced by `ctrl+n`'s words, it's dropped, and a key typed after in the same target builds it
-again. Built per key, it would read every other vault's index each time; building it works out each folder's pointer
-name once (`PointerMemo` in `core/write-link.ts`), not once per note, and puts it in order once. A word typed on from an
-earlier one is matched only among that one's matches, the longest such word's (a backspace's is a shorter word typed
-before), none past a non-match: each word matches whole, and a capital only makes it match as typed, so nothing else
-can. With a word typed, the best 500 are shown, and every match is kept to narrow from. Same keys as above.
+before it, the indent aside, unchanged); another target, on its line or another, the cursor gone there by a key or a
+paste, gets its own. Its notes are as they were when it was built, this vault's and other vaults' (as last indexed)
+alike. While what's typed matches nothing it shows nothing, and the keys act as with no popup, until a backspace brings
+a match back. Closed (`ctrl+e`), accepted, or replaced by `ctrl+n`'s words, it's dropped, and a key typed after in the
+same target builds it again. Built per key, it would read every other vault's index each time; building it works out
+each folder's pointer name once (`PointerMemo` in `core/write-link.ts`), not once per note, and puts it in order once. A
+word typed on from an earlier one is matched only among that one's matches, the longest such word's (a backspace's is a
+shorter word typed before), none past a non-match: each word matches whole, and a capital only makes it match as typed,
+so nothing else can. With a word typed, the best 500 are shown, and every match is kept to narrow from. Same keys as
+above.
 
 **A word from the open files** (`25.5`): `ctrl+n` in insert mode with no popup showing completes the word before the
 cursor, as vim's does, server or not, in a note or a code file — the open files' words that start as it does, two

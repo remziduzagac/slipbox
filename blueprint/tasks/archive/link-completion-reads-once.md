@@ -248,3 +248,27 @@ link being typed, matched or not, so the keys that match nothing cost the same h
     (bounded by the word's length times the list); `findVaultRoot` per note; the ranking's passes; the list kept apart
     from the popup; the narrowing moved to `match.ts` (the property it counts on is tested beside the matcher's
     tests); the style twice: as logged.
+- 2026-10-24: Reviewed again, the whole diff, by one reviewer (the second still not available). Verified and fixed:
+  - A paste while a list showed left the list as it was (a paste never ran the completion's key step), and the next
+    `tab` or `enter` wrote the chosen item over what was pasted: `[[to`, `]] [[x` pasted, `tab` gave `[[./todo.md`;
+    `[x](to`, `) and more` pasted, `tab` gave `[x](todo.md`. Older than this change, on its path; taken in by the
+    maintainer's choice. A paste runs the key step now (`input.ts`): a link's list made for where it left the
+    cursor, a word's or a server's closed. Tests: both pastes keep their text; the terminal check of the list kept
+    while typed pastes `) and more` with `inbox` showing, and tab indents the line, the paste kept. Tried live: the
+    list gone with the paste, `[x](inb) and more` kept, tab indented it.
+  - The manual said a note made while typing is offered from the next link: it's offered by the next list, which
+    `ctrl+e` or accepting also brings; now it says a note made after the list isn't in it. The CHANGELOG says so too,
+    and has a line for the paste. The design says a paste closes the completion, and moves a link's on.
+  - The ranking's spy counted every ranking in the app: only those under `narrow` now, as the reads only under
+    `linkItems`, one helper reading the whole stack for both.
+  - The kept list's `lineStart` and `before` were written again where they'd just been found equal: only `from` is.
+  Mutation-checked, each alone: no key step after a paste, and the earlier eleven: each fails a unit test; no key step
+  after a paste fails the terminal check too. Ran the completion, matcher and paste tests (38 pass), the other tests
+  that paste (9 pass), and the terminal checks of links and pastes (8 pass). Rejected:
+  - A language server's late answer after `[`: older than this change, untestable here; issue #48, by the
+    maintainer's choice.
+  - The design changed by a task, not a workstream: a fix's behaviour updates its design file in the same change; the
+    narrowing and the pointer names were taken into this fix's scope by the maintainer.
+  - Raised again, as logged: `findVaultRoot` per note; the matches kept per word; the list kept apart from the popup;
+    the memo's place; `Reach`'s caches. A helper for a line's start, now written four times in the file: one
+    expression, as the file has it.

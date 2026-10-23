@@ -172,8 +172,6 @@ export function afterInsertKey(app: App, view: View, key: string): void {
       const same = c?.lineStart === start && c.before === before;
       if (c?.links === style && c.view === view && same) {
         c.from = from;
-        c.lineStart = start;
-        c.before = before;
         return narrow(app, c);
       }
       app.completion = {

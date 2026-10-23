@@ -56,6 +56,9 @@ export class Input {
       // Into the text, its line breaks the note's own (over a selection made while typing); part of the change for `.`.
       deleteTypedSelection(this.app, iv);
       insertText(this.app, iv, text.replace(/\r\n?/g, "\n").replaceAll("\n", iv.buf.eol));
+      // The popup follows it as it does a key: closed, or a link's list made for where the paste left the cursor,
+      // never accepted over what was pasted.
+      afterInsertKey(this.app, iv, `${PASTE}${text}`);
       return insertRecord(this.app, iv, `${PASTE}${text}`);
     }
     // In normal mode where the text is editable: put after the cursor, as p does — and, as p is,

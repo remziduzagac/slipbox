@@ -563,7 +563,7 @@ const LINKS: Check[] = [
   },
   {
     area: "links-and-files",
-    name: "links: a target's completion kept while it's typed — hidden past a match, keys as with no popup, back on a backspace; an indent keeps it (20.13)",
+    name: "links: a target's completion kept while it's typed — hidden past a match, keys as with no popup, back on a backspace; an indent keeps it, a paste moves it on (20.13)",
     covers: { cases: ["links"], commands: ["view.source"] },
     options: { home: true, startAt: "home/notes/index.md" },
     run: async (s) => {
@@ -593,6 +593,14 @@ const LINKS: Check[] = [
       await s.see(wiki);
       await s.keys("]");
       await s.notSee(wiki);
+      // A paste while the list shows, past the target's end: the list gone with it, and tab never takes it back.
+      await s.keys("escape", "o");
+      for (const k of "[x](inb") await s.keys(k);
+      await s.see(inbox);
+      await s.paste(") and more");
+      await s.notSee(inbox);
+      await s.keys("tab");
+      await s.see("[x](inb) and more");
     },
   },
   {
