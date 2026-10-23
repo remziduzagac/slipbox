@@ -17697,6 +17697,19 @@ describe("spelling (25.6)", () => {
     expect(h.app.messages.at(-1)?.text).toBe("spelling is a note's");
   });
 
+  /** A process's output, line by line. */
+  async function* lines(out: ReadableStream<Uint8Array>) {
+    const decoder = new TextDecoder();
+    let rest = "";
+    for await (const chunk of out) {
+      rest += decoder.decode(chunk, { stream: true });
+      for (let at = rest.indexOf("\n"); at >= 0; at = rest.indexOf("\n")) {
+        yield rest.slice(0, at);
+        rest = rest.slice(at + 1);
+      }
+    }
+  }
+
   /** A Turkish dictionary (9 MB) under a path of the test's own, so it's built now whatever was built before, and a
    *  note in its language open: the harness, the Turkish words (`source`) and the dictionary's words file (`dic`).
    *  Held: `dic` a named pipe, read only as the test writes `source` into it. */
@@ -17750,22 +17763,31 @@ describe("spelling (25.6)", () => {
     async () => {
       const { stopSpellThread } = await import("../src/core/spell-thread.ts");
       const { h, source, dic } = await turkish(true);
-      // The pipe's writer: "open" once the thread reads the pipe, the words written when it's told. Its bounds are a
-      // stuck test's, never a passing one's (told milliseconds after "open"), all inside the test's 60 s: untold, it
-      // writes the words after 40 s, so a main thread held until the dictionary is there is let go and fails here
-      // rather than hanging the run; killed after 50 s if the thread never opened the pipe.
-      const feeder = Bun.spawn(["bash", "-c", 'exec 3>"$1"; echo open; read -t 40 _; exec cat "$0" >&3', source, dic], {
-        stdin: "pipe",
-        stdout: "pipe",
-        timeout: 50_000,
-      });
+      // The pipe's writer: "open" once the thread reads the pipe, then "told" and the words when it's told. Its bounds
+      // are a stuck test's, never a passing one's (told milliseconds after "open"), all inside the test's 60 s: untold,
+      // it says "untold" and writes the words after 40 s, so a main thread held until the dictionary is there is let go
+      // and fails here rather than hanging the run; killed after 50 s if the thread never opened the pipe. No rc file
+      // nor BASH_ENV: nothing but its own lines on its output.
+      const env = Object.fromEntries(Object.entries(process.env).filter(([k]) => k !== "BASH_ENV"));
+      const feeder = Bun.spawn(
+        [
+          "bash",
+          "--norc",
+          "--noprofile",
+          "-c",
+          'exec 3>"$1"; echo open; if read -t 40 _; then echo told; else echo untold; fi; exec cat "$0" >&3',
+          source,
+          dic,
+        ],
+        { stdin: "pipe", stdout: "pipe", env, timeout: 50_000 },
+      );
+      const said = lines(feeder.stdout);
       let ticks = 0;
       const tick = setInterval(() => ticks++, 2);
       let fed = false;
       try {
         await h.keys("space", "u", "s");
-        const { value } = await feeder.stdout.getReader().read();
-        expect(new TextDecoder().decode(value)).toBe("open\n");
+        expect((await said.next()).value).toBe("open");
         // The thread is reading the dictionary, none of its words written yet. The main thread's turns meanwhile: its
         // timer's, and keys answered and drawn, the dictionary not there at any of them.
         expect(h.app.speller.misspelt(h.app.view!)).toBeNull();
@@ -17779,23 +17801,28 @@ describe("spelling (25.6)", () => {
           expect(h.app.speller.misspelt(h.app.view!)).toBeNull();
         }
         expect(h.app.view!.buf.source).toEndWith("okuyorum. kitpa\n");
-        feeder.stdin.write("go\n");
-        await feeder.stdin.end();
-        fed = true;
+        try {
+          feeder.stdin.write("go\n");
+          await feeder.stdin.end();
+        } catch {} // untold already: it's gone, and says so below
+        // Held until now: the words written because it was told, not because its wait ran out.
+        const how = (await said.next()).value;
+        fed = how === "told" || how === "untold";
+        expect(how).toBe("told");
         expect(await checked(h)).toBe(true);
         expect(h.app.speller.misspelt(h.app.view!)!.map((w) => w.word)).toEqual(["evlerinzde", "kitpa"]);
       } finally {
         clearInterval(tick);
         feeder.kill();
         await feeder.exited;
-        if (!fed) {
-          // Failed before the words were written: the thread may sit at the pipe, or be on its way there. Stopped, and a
-          // reader there let go (a writer opened and closed: no words), so the tests after start afresh.
-          stopSpellThread();
+        // The thread started afresh for the tests after: this test's 9 MB dictionary isn't kept for them.
+        stopSpellThread();
+        // Failed before the words were written: the thread may sit at the pipe, stopping it can't end its read. A
+        // reader there let go (a writer opened and closed: no words).
+        if (!fed)
           try {
             closeSync(openSync(dic, constants.O_WRONLY | constants.O_NONBLOCK));
           } catch {} // no reader there
-        }
       }
     },
     60_000,

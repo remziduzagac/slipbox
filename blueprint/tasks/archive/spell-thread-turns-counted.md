@@ -116,3 +116,28 @@ that a busy machine can't fail and that still fails if the main thread is held w
   proves the event loop ran: kept, as they show timer turns whatever `h.keys` resolves through.
 - 2026-10-23: CI on the pull request, the whole of `tests/tui.test.ts` (late in the file, where the timed test failed):
   the new test passed on macOS (654 ms) and Linux (481 ms), the pipe and `bash`'s `read -t` working on both.
+- 2026-10-23: Review round 1, two independent reviews of the pull request's diff, consolidated and each checked:
+  - Verified, fixed: nothing checked that the thread was held until "go". The writer's `;` wrote the words on a
+    timeout, or on its input closing early, and the "still loading" checks could pass anyway while the build ran. The
+    writer now says "told" or "untold" before writing, and the test asserts "told": with its input closed early, the
+    test fails ("untold"). Writing "go" to a writer already gone threw EPIPE and hid that; it's caught, and the line
+    read says why.
+  - Verified, fixed: `bash` could print before "open": `BASH_ENV`, and `~/.bashrc` when its input is a socket (Bun's
+    pipes are) and `SHLVL` is unset. With both echoing (`HOME` a scratch folder, `SHLVL` unset) the first line was
+    "hello-from-bashrc" and the test failed; with `--norc --noprofile` and `BASH_ENV` left out of its environment, it
+    passes.
+  - Verified, fixed: design/testing.md gave the held thread as the rule, where most turn-counting tests count a
+    timer's turns while work is pending (`tests/syntax-worker-tui.test.ts`, `tests/diagrams.test.ts`,
+    `tests/regex-jobs.test.ts`, a slow `git`'s history in `tests/tui.test.ts`). It now says both.
+  - Verified, fixed: a passing run left this test's 9 MB dictionary built in the shared thread for the rest of the
+    process. The thread is stopped in `finally` whatever the outcome; the reader at the pipe is let go only when the
+    words weren't written.
+  - Rejected: a reader reaching the pipe after the cleanup's one attempt to let it go. Bun's `terminate` takes effect
+    between two blocking reads: a worker terminated while blocked reading one pipe stopped after it and never opened
+    the next; without `terminate` it did, a reader there (a standalone try). What's left is the instant inside the
+    open call itself, after the test has already failed.
+  - Rejected again (as above): a finite stall of the main thread during the load passes (3 s here, as 12 s before).
+    Only a clock sees one, and the clock is what failed.
+  - One finding, outside this change, went to the maintainer privately.
+  - Then: the spelling block, 7 pass, under `nice` at a load of 38; the spelling terminal checks, 2 of 2. No product
+    code changed, so the app's live try stands; the writer's changes were tried with the rc files above.

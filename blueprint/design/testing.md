@@ -77,12 +77,13 @@ busy with other work, is slower by a different amount each run. A test waits unt
 watcher's event, `app.watch.whenIndexed`, `app.views.whenParsed`, `app.search.whenIndexed`), bounded only by its
 timeout, which is a backstop for a stuck test and not a measure. Where a test guards against work done in the wrong
 place, it counts that work: the background index's test (`15.1`) checks that the main thread parsed none of a big
-note's chunks, not how long its slices took. Where it guards that the main thread keeps its turns while another thread
-works, it holds that thread at a point it controls and counts the turns taken meanwhile, since a gap between turns,
-against how long the work took, measures the runner and the test process as much as slipbox: the spell checker's thread
-reads a dictionary from a named pipe the test writes into once the main thread has answered its keys. What lets a held
-main thread go, so that it fails rather than hangs, is bounded inside the test's timeout and past any passing run. A
-test about a time itself, a timeout that must stop something, bounds it with a wide margin (stopped at 0.2 s, checked
+note's chunks, not how long its slices took. Where it guards that the main thread keeps its turns while other work goes
+on, it counts the turns taken meanwhile, never the gaps between them: a gap, against how long the work took, measures
+the runner and the test process as much as slipbox. Most count a timer's turns while the work is pending (the syntax
+pass on its thread, a slow `git`). The spell checker's thread is held at a point the test controls instead: it reads a
+dictionary from a named pipe the test writes into once the main thread has answered its keys, and what lets a held main
+thread go, so that it fails rather than hangs, is bounded inside the test's timeout and past any passing run. A test
+about a time itself, a timeout that must stop something, bounds it with a wide margin (stopped at 0.2 s, checked
 under 3 s). Timings are the benchmark's (§ Timings), read and not asserted.
 
 **Nothing a test file leaves behind changes another's results.** `bun test` runs every file in one process, so what
