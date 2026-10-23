@@ -11,7 +11,7 @@
 import { existsSync, statSync } from "node:fs";
 import { dirname, isAbsolute, join, posix, relative, sep } from "node:path";
 import { classify } from "./filetypes.ts";
-import { entryAt, entryInside, landsInside, realTarget } from "./fsutil.ts";
+import { entryAt, entryInside, landsInside } from "./fsutil.ts";
 import type { Backlink, Graph, NoteEntry, ResolvedLink } from "./graph.ts";
 import { extensionless, formatPathLink, normKey, pathForm, pathLink, type PathForm, pathNamed } from "./links.ts";
 import { readRoots } from "./registry.ts";
@@ -29,7 +29,15 @@ import { formatPointer, isPointer, parsePointer, resolvePointer } from "./pointe
 import { isLink } from "./symlinks.ts";
 import { findVaultRoot, isHome, isInside } from "./vault.ts";
 import { holdsNotes } from "./walk.ts";
-import { RenameError, type RenamePlan, Collector, dirtyTrees, relinkSaid, walkSkips, sameFile } from "./rename-plan.ts";
+import {
+  RenameError,
+  type RenamePlan,
+  Collector,
+  dirtyTrees,
+  relinkSaid,
+  walkSkips,
+  sameEntry,
+} from "./rename-plan.ts";
 import { type Site, NOTE_EXT, wikiTarget, rootOfPath, real, pathRetarget, mdTarget } from "./rename-links.ts";
 
 export { RenameError, Collector, dirtyTrees } from "./rename-plan.ts";
@@ -90,7 +98,7 @@ export function moveTarget(g: Graph, fromRel: string, input: string): string {
     folder = statSync(abs).isDirectory();
   } catch {}
   // A folder's case-only rename on a disk that ignores case: the "folder" there is itself.
-  return folder && !sameFile(join(g.root, fromRel), abs) ? `${rel}/${name}` : input;
+  return folder && !sameEntry(join(g.root, fromRel), abs) ? `${rel}/${name}` : input;
 }
 
 /** A file where a folder of the path `rel` would have to be (`x.md` for `x.md/a.md`), or null. */
@@ -119,7 +127,7 @@ export function planNoteRename(g: Graph, fromRel: string, toInput: string): Rena
   let toRel = cleanTarget(g, toInput, "file", isNote);
   if (posix.extname(toRel) === "" || (isNote && !NOTE_EXT.test(toRel))) toRel += posix.extname(fromRel);
   if (toRel === fromRel) throw new RenameError(`${fromRel} is already there`);
-  if (entryAt(join(g.root, toRel)) && !sameFile(join(g.root, fromRel), join(g.root, toRel)))
+  if (entryAt(join(g.root, toRel)) && !sameEntry(join(g.root, fromRel), join(g.root, toRel)))
     throw new RenameError(`${toRel} exists; not overwriting it`);
   return planMove(g, new Map([[fromRel, toRel]]), {
     kind: "note",
@@ -146,7 +154,7 @@ export function planFolderMove(g: Graph, fromDir: string, toInput: string): Rena
   );
   if (to === from) throw new RenameError(`${from} is already there`);
   if (to.startsWith(`${from}/`)) throw new RenameError(`${from} can't move into itself`);
-  if (entryAt(join(g.root, to)) && !sameFile(join(g.root, from), join(g.root, to)))
+  if (entryAt(join(g.root, to)) && !sameEntry(join(g.root, from), join(g.root, to)))
     throw new RenameError(`${to} exists; not overwriting it`);
   const moves = new Map<string, string>();
   for (const rel of [...g.notes.keys(), ...g.filePaths()])
@@ -166,12 +174,6 @@ export function planFolderMove(g: Graph, fromDir: string, toInput: string): Rena
     foldersMoving(g, from, to),
     roots,
   );
-}
-
-/** Another name the vault's index has for what the link at `rel` leads to (D?1), or null. */
-function otherName(g: Graph, rel: string): string | null {
-  const target = realTarget(join(g.root, rel));
-  return [...g.notes.keys(), ...g.filePaths()].find((r) => r !== rel && realTarget(join(g.root, r)) === target) ?? null;
 }
 
 /** The folder `from` and every folder in it, each to where it goes under `to` (links to a folder, 21.2). */
@@ -221,9 +223,9 @@ function planMove(
     // link by a name or from the top too: they'd be read from that root (17.17, 21.3) — relative paths.
     const crosses = rootOfPath(abs(toRel)) !== real(g.root);
     if (posix.dirname(fromRel) === posix.dirname(toRel) && !crosses) continue;
-    // A link's note is what it leads to (D?1): reached by another name too, its own links are that name's as much,
-    // so left as they are, and said.
-    const also = isLink(abs(fromRel)) ? otherName(g, fromRel) : null;
+    // A link's note is what it leads to (D?1): reached by another name too, one this plan doesn't move with it, its
+    // own links are that name's as much, so left as they are, and said.
+    const also = isLink(abs(fromRel)) ? (c.otherNames(abs(fromRel)).find((r) => !moves.has(r)) ?? null) : null;
     if (also) {
       said.push(`${fromRel}: what it leads to is ${also} too: its own links left as they are`);
       continue;
@@ -362,7 +364,7 @@ export function planVaultFolderMove(parent: Graph, fromRel: string, toInput: str
   const to = cleanTarget(parent, toInput, "vault");
   if (to === from) throw new RenameError(`${from} is already there`);
   if (to.startsWith(`${from}/`)) throw new RenameError(`${from} can't move into itself`);
-  if (entryAt(join(parent.root, to)) && !sameFile(join(parent.root, from), join(parent.root, to)))
+  if (entryAt(join(parent.root, to)) && !sameEntry(join(parent.root, from), join(parent.root, to)))
     throw new RenameError(`${to} exists; not overwriting it`);
   const fromAbs = join(parent.root, from);
   const toAbs = join(parent.root, to);

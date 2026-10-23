@@ -2,8 +2,8 @@
 // the collector that reads each file once and edits it in turn, and the git trees that have changes already (7.3).
 
 import { execFileSync } from "node:child_process";
-import { statSync } from "node:fs";
-import { dirname, relative, sep } from "node:path";
+import { lstatSync, statSync } from "node:fs";
+import { dirname, join, posix, relative, sep } from "node:path";
 import { classify } from "./filetypes.ts";
 import { readText, realTarget } from "./fsutil.ts";
 import type { Graph } from "./graph.ts";
@@ -14,30 +14,28 @@ import { type Site, replaceAt } from "./rename-links.ts";
 
 export class RenameError extends Error {}
 
-/** Why a plan leaves a file as it is when a link leads it out of its vault (VV-D6). */
-export const LEADS_OUT = "a link leads it out of the vault: not rewritten";
-
-/** Why a plan leaves a file as it is when a link leads it into a folder the walk doesn't list (VV-D6). */
-export const LEADS_HIDDEN = "a link leads it into a folder the walk doesn't list: not rewritten";
+/** Where a link leads the file at `abs` that a plan may not write (`mayRewrite`, VV-D6), said. */
+export const whereItLeads = (g: Graph, abs: string): string =>
+  landsHidden(g, abs) ? "a link leads it into a folder the walk doesn't list" : "a link leads it out of the vault";
 
 /** Why a plan may not write the file at `abs` (`mayRewrite`), said as its skipped row says it. */
-export const notRewritten = (g: Graph, abs: string): string => (landsHidden(g, abs) ? LEADS_HIDDEN : LEADS_OUT);
+export const notRewritten = (g: Graph, abs: string): string => `${whereItLeads(g, abs)}: not rewritten`;
 
 /**
  * Whether a link on the way leads a write to `abs` where the vault or home holding it doesn't list (VV-D6): by its
  * real path, in a hidden folder or file of that place, `.git` and `.slipbox` among them, but one this vault has
  * reached there (20.8) — refused as it's refused named there, as the command line's `checkWritable` measures it: one
- * into `.shelved/`, or `~/notes/x.md → ~/.bashrc`. A path named there itself (a vault's own `config.toml`) is its own.
+ * into `.shelved/`, or `~/notes/x.md → ~/.bashrc`. A path no link leads elsewhere is where it's named: a vault's
+ * own `config.toml` is its own.
  */
 export function landsHidden(g: Graph, abs: string): boolean {
-  const dotted = (rel: string) => rel.split(sep).some((part) => part.startsWith("."));
-  const named = vaultOf(abs);
-  if (named && dotted(relative(named, abs))) return false;
   const real = realTarget(abs);
+  const named = isInside(g.root, abs) ? g.root : vaultOf(abs);
+  if (named && join(realTarget(named), relative(named, abs)) === real) return false;
   const place = vaultOf(real);
   if (!place) return false;
   const there = relative(realTarget(place), real);
-  if (!dotted(there)) return false;
+  if (!there.split(sep).some((part) => part.startsWith("."))) return false;
   return !(realTarget(place) === realTarget(g.root) && g.reached.has(there.split(sep).join("/")));
 }
 
@@ -124,8 +122,29 @@ export class Collector {
   readonly skipped: RenamePlan["skipped"] = [];
   /** Why a file can't be rewritten, where it's more than unreadable. */
   private readonly why = new Map<string, string>();
+  /** The vault's indexed names, by the real path of what each is: made once, when a link is met (D?1). */
+  private names: Map<string, string[]> | null = null;
 
   constructor(readonly g: Graph) {}
+
+  /** Whether a link on the way, past the vault's root, leads `abs` elsewhere. */
+  private throughLink(abs: string): boolean {
+    return isInside(this.g.root, abs) && join(realTarget(this.g.root), relative(this.g.root, abs)) !== realTarget(abs);
+  }
+
+  /** The other names the vault's index has for what a link leads `abs` to (D?1), vault paths; none without one. */
+  otherNames(abs: string): string[] {
+    if (!this.throughLink(abs)) return [];
+    if (!this.names) {
+      this.names = new Map();
+      for (const rel of [...this.g.notes.keys(), ...this.g.filePaths()]) {
+        const real = realTarget(join(this.g.root, rel));
+        this.names.set(real, [...(this.names.get(real) ?? []), rel]);
+      }
+    }
+    const rel = relative(this.g.root, abs).split(sep).join("/");
+    return (this.names.get(realTarget(abs)) ?? []).filter((r) => r !== rel);
+  }
 
   /** Why the file at `abs` isn't rewritten, for its skipped rows. */
   private reason(abs: string): string {
@@ -143,6 +162,14 @@ export class Collector {
       // Read through a link out of its vault, or into a hidden folder, never written there: left, and said (VV-D6).
       if (!mayRewrite(this.g, abs)) {
         this.why.set(abs, notRewritten(this.g, abs));
+        return null;
+      }
+      // Reached through a link, and by another name from another folder: its links read otherwise there, so an edit
+      // made for one is wrong for the other — left, and said (D?1).
+      const folder = posix.dirname(relative(this.g.root, abs).split(sep).join("/"));
+      const elsewhere = this.otherNames(abs).find((r) => posix.dirname(r) !== folder);
+      if (elsewhere) {
+        this.why.set(abs, `what it leads to is ${elsewhere} too, from another folder: not rewritten`);
         return null;
       }
       let text: string;
@@ -206,9 +233,27 @@ export class Collector {
   }
 
   result(): FileChange[] {
-    return [...this.files.values()]
-      .filter((f) => f.next !== f.text)
-      .map((f) => ({ ...f, edits: f.edits.sort((a, b) => a.line - b.line) }));
+    // One file reached by two names in one folder (links to what the walk doesn't list): written once; edited
+    // otherwise by each, not at all, and said (D?1).
+    const byReal = new Map<string, FileChange[]>();
+    for (const f of this.files.values()) {
+      if (f.next === f.text) continue;
+      const real = realTarget(f.abs);
+      byReal.set(real, [...(byReal.get(real) ?? []), f]);
+    }
+    const out: FileChange[] = [];
+    for (const [first, ...rest] of byReal.values()) {
+      if (rest.every((f) => f.next === first!.next)) {
+        out.push(first!);
+        continue;
+      }
+      for (const f of [first!, ...rest]) {
+        const other = f === first ? rest[0]! : first!;
+        const reason = `what it leads to is ${other.shown} too, edited otherwise there: not rewritten`;
+        this.skipped.push({ shown: f.shown, line: f.edits[0]?.line ?? 1, reason });
+      }
+    }
+    return out.map((f) => ({ ...f, edits: f.edits.sort((a, b) => a.line - b.line) }));
   }
 }
 
@@ -245,6 +290,20 @@ export function sameFile(a: string, b: string): boolean {
   try {
     const x = statSync(a);
     const y = statSync(b);
+    return x.ino === y.ino && x.dev === y.dev;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Whether `a` and `b` are one entry, as a case-only rename on a disk that ignores case has it: a link its own, never
+ * what it leads to — a link moved onto its target, or onto another link to it, goes over something else (D?1).
+ */
+export function sameEntry(a: string, b: string): boolean {
+  try {
+    const x = lstatSync(a);
+    const y = lstatSync(b);
     return x.ino === y.ino && x.dev === y.dev;
   } catch {
     return false;

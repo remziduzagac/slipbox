@@ -156,3 +156,50 @@ to lead where it did (D?1).
   link out of the vault, named itself, …`; the earlier `a folder moved with a relative file link in it` now reaches
   its note through `walk.exclude`, a hidden one being never written. Mutation-checked, each of the ten: fails a test.
 - 2026-10-23: Done, in a draft pull request into `dev`; its merge is the maintainer's acceptance.
+- 2026-10-23: The pull request reviewed twice, independently (round 1): fifteen findings, fourteen once the one both
+  found is merged, each tried against the code. Taken, each reproduced by a test that fails without its fix
+  (mutation-checked): (1) a link renamed onto what it leads to, or onto another link to it (`alias.png → img.png`,
+  `slipbox mv alias.png img.png`), was put in its place: `sameFile` follows the link, so the destination's check took it
+  for a case-only rename, and `img.png` became a link to itself, the file lost. On `dev` too, for an asset; this change
+  reached it with any link. A destination is one entry now (`sameEntry`, by `lstat`), at every check: refused, `img.png
+  exists; not overwriting it`; a folder link onto another goes into it, so out of the vault, refused; (2) the undo's log
+  kept a file by its moved name, not where it was written: a relative link moved with its folder leads elsewhere then,
+  so the undo read another file and was refused (`a/docs/kept.md has changed since`): the log, and `written`, keep where
+  it was written when the moved name doesn't lead there; (3) a file two links reach from two folders (`e1.md →
+  shelf/s.md`, `sub/e2.md → ../shelf/s.md`), edited by each its own way: the last write won, the other's edit was lost
+  and the undo refused. A file reached through a link and by another name from another folder isn't written now, said
+  (`what it leads to is sub/e2.md too, from another folder: not rewritten`); two names in one folder editing it alike,
+  written once; otherwise, neither. A note's own name and a link to it can't both be in the index (the walk skips the
+  link, `already in the vault`); (4) a moved link whose other name moved with it, both in the folder moved, had its own
+  links left: a name the plan moves along isn't another; (5) `landsHidden` let any dotted name through, so a reached
+  `.notes/n.md → ../.private/p.md` was written in `.private/`, which `checkWritable` refuses: only a path no link leads
+  elsewhere is its own now; (6) a file written through a link into a nested vault left that vault's index as it was:
+  other vaults are found by where files were written too; (7) a file link moved before its target was written, so a
+  target in a folder that can't be written left it half done, links rewritten and no undo: every file's folder is
+  checked writable before anything moves (`… can't be written where it is (EACCES); nothing changed`), and, the same
+  claim needing it, a plain note's move checks the folders it leaves and goes into, a folder's move refused as a link's
+  is; (8) a link that couldn't be moved left the folders made for it: taken away again, for a folder's move too; (9)
+  `outside` took `vaults` but didn't read it: a link planned with vaults moving is refused there too; (10) the
+  other-name lookup resolved the whole index once for each moved link: once a plan now (`Collector.otherNames`); (11)
+  `landsHidden` walked up for every file: one no link leads elsewhere in the vault is answered from the vault's real
+  path; (12) `entryInside`'s two `lstat`s are one, and the refusal's words come from one place (`whereItLeads`). Not
+  taken: the tests' `chmod` run as root (the file's other `chmod` tests aren't guarded either: the suite runs as a
+  user); `moveLink`'s taking back failing too, leaving both links, which needs the folder made unwritable between two
+  calls; keying the Collector by real path (in part: (2) and (3) give one change per file, its name kept for what's
+  shown, indexed and moved); `checkWritable` calling `landsHidden` (one measures a path named, the other a file found,
+  and they agree now). Tests (tests/vault.test.ts, VV-D6's block): `a link moved onto what it leads to, …`, `a file
+  reached by two links from two folders …`, `a reached note in a hidden folder that is a link into another hidden folder
+  …`, `a file written through a link into a vault nested in this one: …`, `a move that can't be finished changes
+  nothing: …`, the undo in `a folder moved with a relative file link in it: …`, and a link planned with vaults in `a
+  followed link to a vault, …`.
+- 2026-10-23: Round 1's fixes tried live, in a scratch home, the release and then this worktree's CLI: `slipbox mv
+  alias.png img.png` left the release's `img.png` a link to itself, the image gone, and is refused here (`img.png
+  exists; not overwriting it`); a folder moved with a relative file link in it, then undone, gives its note back where
+  it was written, the outside one untouched; a rename reaching `.notes/n.md → ../.private/p.md` made the release's link
+  a plain copy, and here leaves it, said; `slipbox mv d.md ro/` into a folder that can't be written left the release
+  half done (`e.md` saying `ro/d.md`, `d.md` where it was), and here changes nothing (`d.md can't be moved (EACCES);
+  nothing changed`). In the TUI, in a headless terminal: `r` on one of two links to a note, onto the other, says `!
+  zl2.md exists; not overwriting it`, both links as they were; `m` of a note into a folder that can't be written
+  previews, then says `✗ zd.md can't be moved (EACCES); nothing changed`, the note linking to it as it was. Reached unit
+  tests (`renam|move|undo|plans|VV-D6|replace|convert|symlink|relink` in vault, cli and tui tests): 295 pass; the 14
+  terminal checks of the explorer's files, renames and links: pass.

@@ -2,7 +2,7 @@
 // the index and the redirects following; logged, so it can be undone (7.4) — the undo a plan of its own.
 
 import { randomUUID } from "node:crypto";
-import { existsSync, mkdirSync, renameSync, rmdirSync, statSync, unlinkSync } from "node:fs";
+import { accessSync, constants, existsSync, mkdirSync, renameSync, rmdirSync, statSync, unlinkSync } from "node:fs";
 import { dirname, join, relative, sep } from "node:path";
 import { classify } from "./filetypes.ts";
 import { atomicWrite, entryAt, entryInside, landsInside, readText, realTarget } from "./fsutil.ts";
@@ -19,11 +19,12 @@ import {
   type FileChange,
   type RenamePlan,
   dirtyTrees,
-  landsHidden,
   mayRewrite,
   relinkSaid,
   walkSkips,
+  sameEntry,
   sameFile,
+  whereItLeads,
 } from "./rename-plan.ts";
 import { real } from "./rename-links.ts";
 import { isLink, moveLink } from "./symlinks.ts";
@@ -93,7 +94,7 @@ export function planUndo(g: Graph): RenamePlan {
     : null;
   if (move && !(move.link ? entryAt : existsSync)(move.from))
     throw new RenameError(`${relative(g.root, move.from)} isn't there any more: the ${what} can't be undone`);
-  if (move && entryAt(move.to) && !sameFile(move.from, move.to))
+  if (move && entryAt(move.to) && !sameEntry(move.from, move.to))
     throw new RenameError(`${relative(g.root, move.to)} exists again: the ${what} can't be undone`);
   // Back only inside the vault: a link that leads out of it now, where the folder was, isn't moved through (VV-D6).
   const out = outside(g, { files, move, vaults: r.vaults });
@@ -127,17 +128,17 @@ export interface Applied {
 /**
  * What of a plan would land out of where it may (VV-D6), said; null when nothing would. Every file it writes where
  * `mayRewrite` allows; what moves, from and to, inside the vault by its real path — a link planned as one by its entry
- * (`entryInside`, D?1) — as a folder made a vault or a vault made a plain folder.
+ * (`entryInside`, D?1), but one a vault moves with, whose place is its real path — as a folder made a vault or a vault
+ * made a plain folder.
  */
 export function outside(
   g: Graph,
   plan: Pick<RenamePlan, "files" | "move" | "makeVault" | "unmakeVault" | "vaults">,
 ): string | null {
   for (const f of plan.files)
-    if (!mayRewrite(g, f.abs))
-      return `${g.shownPath(f.abs)}: ${landsHidden(g, f.abs) ? "a link leads it into a folder the walk doesn't list" : "a link leads it out of the vault"}, where nothing is written`;
+    if (!mayRewrite(g, f.abs)) return `${g.shownPath(f.abs)}: ${whereItLeads(g, f.abs)}, where nothing is written`;
   // A link planned as one by its entry (D?1); a link that wasn't (put where something else went) by where it leads.
-  if (plan.move && !entryInside(g.root, plan.move.from, !!plan.move.link))
+  if (plan.move && !entryInside(g.root, plan.move.from, !!plan.move.link && !plan.vaults?.length))
     return `${g.shownPath(plan.move.from)} resolves outside the vault`;
   const ends = [plan.move?.to, plan.makeVault?.root, plan.unmakeVault?.root];
   for (const end of ends) if (end && !landsInside(g.root, end)) return `${g.shownPath(end)} resolves outside the vault`;
@@ -168,7 +169,7 @@ export function applyPlan(g: Graph, plan: RenamePlan): Applied {
   }
   const text = (f: FileChange) => (bom.has(f.abs) ? `\uFEFF${f.next}` : f.next);
   const mv = plan.move;
-  if (mv && entryAt(mv.to) && !sameFile(mv.from, mv.to)) throw new RenameError(`${mv.to} exists now; nothing changed`);
+  if (mv && entryAt(mv.to) && !sameEntry(mv.from, mv.to)) throw new RenameError(`${mv.to} exists now; nothing changed`);
   /** Where a file of the plan is written: at its new place when it moves. */
   const dest = (fileAbs: string) => {
     if (!mv) return fileAbs;
@@ -181,11 +182,20 @@ export function applyPlan(g: Graph, plan: RenamePlan): Applied {
   /** A link planned as one moves as a link (D?1): its entry, its answer with it, what it leads to staying. */
   const link = !!mv?.link && isLink(mv.from);
   const warnings: string[] = [];
-  /** The link moved, before anything is written: if it can't be, nothing has changed. */
-  const moveTheLink = (from: string, to: string) => {
+  /** What moves, moved before anything is written — a link as a link: if it can't be, nothing has changed, the folders
+   *  made for it gone. */
+  const moveFirst = (from: string, to: string) => {
     try {
-      warnings.push(...said(moveLink(from, to)));
+      if (link) warnings.push(...said(moveLink(from, to)));
+      else renameSync(from, to);
     } catch (err) {
+      for (let d = dirname(to); made && isInside(made, d); d = dirname(d)) {
+        try {
+          rmdirSync(d);
+        } catch {
+          break;
+        }
+      }
       throw new RenameError(
         `${g.shownPath(from)} can't be moved (${(err as NodeJS.ErrnoException).code ?? err}); nothing changed`,
       );
@@ -204,15 +214,42 @@ export function applyPlan(g: Graph, plan: RenamePlan): Applied {
       fromReal && (t === fromReal || t.startsWith(`${fromReal}${sep}`)) ? toReal + t.slice(fromReal.length) : t,
     );
   }
+  // Each written where it can be, its folder writable, before anything moves: else nothing is.
+  for (const f of plan.files) {
+    if (mv && !mv.dir && !link && f.abs === mv.from) continue; // written at its new place
+    try {
+      accessSync(dirname(realTarget(f.abs)), constants.W_OK);
+    } catch (err) {
+      throw new RenameError(
+        `${f.shown} can't be written where it is (${(err as NodeJS.ErrnoException).code ?? err}); nothing changed`,
+      );
+    }
+  }
+  // A file moves last, after the edits (a link's, first): the folder it leaves, and the one it goes into, writable too.
+  if (mv && !mv.dir && !link) {
+    let into = dirname(mv.to);
+    while (!existsSync(into) && dirname(into) !== into) into = dirname(into);
+    for (const dir of [dirname(mv.from), into]) {
+      try {
+        accessSync(dir, constants.W_OK);
+      } catch (err) {
+        throw new RenameError(
+          `${g.shownPath(mv.from)} can't be moved (${(err as NodeJS.ErrnoException).code ?? err}); nothing changed`,
+        );
+      }
+    }
+  }
+  /** Where each file was written, by a name that leads there now: its new one, unless a link moved with its folder
+   *  leads that elsewhere — then where it was written, for an undo to read it again. */
+  const wrote = new Map<string, string>();
   // A folder moves whole — everything in it, whatever the walk lists — before its files' edits. A
   // file's folder is made first too: if it can't be (a file is in the way), nothing is written.
   if (mv?.dir) {
     made = mkdirSync(dirname(mv.to), { recursive: true }) ?? null;
-    if (link) moveTheLink(mv.from, mv.to);
-    else renameSync(mv.from, mv.to);
+    moveFirst(mv.from, mv.to);
   }
   /** A case-only rename on a case-insensitive disk: the file written at its new name is the old one. */
-  const oneFile = !!mv && !mv.dir && sameFile(mv.from, mv.to);
+  const oneFile = !!mv && !mv.dir && sameEntry(mv.from, mv.to);
   if (mv && !mv.dir) {
     try {
       made = mkdirSync(dirname(mv.to), { recursive: true }) ?? null;
@@ -223,11 +260,13 @@ export function applyPlan(g: Graph, plan: RenamePlan): Applied {
     }
   }
   // A file's link moves first too, as a folder does: if it can't be made where it goes, nothing is written.
-  if (mv && !mv.dir && link) moveTheLink(mv.from, mv.to);
+  if (mv && !mv.dir && link) moveFirst(mv.from, mv.to);
   for (const f of plan.files) {
     if (mv && !mv.dir && f.abs === mv.from) continue; // written at its new place, below
-    atomicWrite(at.get(f.abs)!, text(f));
-    written.push(dest(f.abs));
+    const w = at.get(f.abs)!;
+    atomicWrite(w, text(f));
+    wrote.set(f.abs, sameFile(dest(f.abs), w) ? dest(f.abs) : w);
+    written.push(wrote.get(f.abs)!);
   }
   if (mv && !mv.dir) {
     const own = plan.files.find((f) => f.abs === mv.from);
@@ -244,7 +283,7 @@ export function applyPlan(g: Graph, plan: RenamePlan): Applied {
   // Other vaults' files written: their indexes learn it now, as when they're next opened — the
   // backlinks they give, and the next plan, read the links they hold now.
   const others = new Set<string>();
-  for (const abs of written) {
+  for (const abs of [...written, ...at.values()]) {
     const root = findVaultRoot(abs);
     if (root && real(root) !== real(g.root)) others.add(root);
   }
@@ -306,7 +345,7 @@ export function applyPlan(g: Graph, plan: RenamePlan): Applied {
       moves: plan.moves ?? [],
       vaults: plan.vaults ?? [],
       files: plan.files.map((f) => ({
-        abs: dest(f.abs),
+        abs: wrote.get(f.abs) ?? dest(f.abs),
         shown: f.shown,
         vault: f.vault,
         edits: f.edits,

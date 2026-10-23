@@ -7903,6 +7903,10 @@ describe("plans write only inside the vault (VV-D6)", () => {
       const move = { from: join(vault, "ov"), to: join(vault, "ov2"), dir: true };
       const plan = { kind: "folder" as const, from: "ov", to: "ov2", move, files: [], warnings: [], skipped: [] };
       expect(() => applyPlan(g, { ...plan, vaults: [[move.from, move.to]] })).toThrow("ov resolves outside the vault");
+      // Planned as a link, with the vault moving with it: still refused.
+      const asLink = { ...plan, move: { ...move, link: true }, vaults: [[move.from, move.to]] as [string, string][] };
+      expect(() => applyPlan(g, asLink)).toThrow("ov resolves outside the vault");
+      expect(lstatSync(join(vault, "ov")).isSymbolicLink()).toBe(true);
     }),
   );
 
@@ -8019,6 +8023,191 @@ describe("plans write only inside the vault (VV-D6)", () => {
       expect(readFileSync(join(vault, "shelf", "kept.md"), "utf8")).toBe("# Kept\n\n[b](../a/b.md)\n");
       expect(readFileSync(join(top, "shelf", "kept.md"), "utf8")).toBe("# Outside\n");
       expect(lstatSync(join(vault, "docs", "kept.md")).isSymbolicLink()).toBe(true);
+      // Undone, it's given back its text where it was written: never read through the moved link.
+      const undone = await cli(["undo"], vault);
+      expect([undone.code, undone.json.error?.message]).toEqual([0, undefined]);
+      expect(readFileSync(join(vault, "shelf", "kept.md"), "utf8")).toBe("# Kept\n\n[b](../b.md)\n");
+      expect(readFileSync(join(top, "shelf", "kept.md"), "utf8")).toBe("# Outside\n");
+      expect(lstatSync(join(vault, "a", "docs", "kept.md")).isSymbolicLink()).toBe(true);
+    }),
+  );
+
+  test(
+    "a link moved onto what it leads to, or onto another link to it, is refused: nothing is put over it",
+    homed(async () => {
+      const { vault, outer, link } = await linked();
+      writeFileSync(join(vault, "img.png"), "PNG");
+      symlinkSync("img.png", join(vault, "alias.png"));
+      writeFileSync(join(vault, "b.md"), "# B\n\n[a](a.md)\n");
+      symlinkSync("b.md", join(vault, "e.md"));
+      const two = join(vault, "outdir2");
+      symlinkSync(outer, two);
+      setLinkAnswer(two, "follow");
+      for (const [from, to, why] of [
+        ["alias.png", "img.png", "img.png exists; not overwriting it"],
+        ["e.md", "b.md", "b.md exists; not overwriting it"],
+        // A folder there is one to go into, not itself: through the link, out of the vault.
+        ["outdir", "outdir2", "outdir2 would land outside the vault"],
+      ] as const) {
+        const r = await cli(["mv", from, to], vault);
+        expect([r.code, r.json.error?.message]).toEqual([5, why]);
+      }
+      expect(readFileSync(join(vault, "img.png"), "utf8")).toBe("PNG");
+      expect(readFileSync(join(vault, "b.md"), "utf8")).toBe("# B\n\n[a](a.md)\n");
+      for (const l of ["alias.png", "e.md", "outdir", "outdir2"])
+        expect(lstatSync(join(vault, l)).isSymbolicLink()).toBe(true);
+      expect([linkAnswer(link), linkAnswer(two)]).toEqual(["follow", "follow"]);
+    }),
+  );
+
+  test(
+    "a file reached by two links from two folders isn't written for either: said; two names moved together, written once",
+    homed(async () => {
+      const top = realpathSync(mkdtempSync(join(tmpdir(), "slipbox-inside-")));
+      const vault = join(top, "vault");
+      mkdirSync(join(vault, ".slipbox"), { recursive: true });
+      writeFileSync(join(vault, ".slipbox", "config.toml"), '[walk]\nexclude = ["shelf/"]\n');
+      mkdirSync(join(vault, "shelf"));
+      mkdirSync(join(vault, "sub"));
+      writeFileSync(join(vault, "sub", "a.md"), "# A\n");
+      writeFileSync(join(vault, "shelf", "s.md"), "# S\n\n[x](sub/a.md) [y](a.md)\n");
+      // Two links to it, each reading its links from its own folder: each would edit it its own way.
+      symlinkSync("shelf/s.md", join(vault, "e1.md"));
+      symlinkSync("../shelf/s.md", join(vault, "sub", "e2.md"));
+      const r = await cli(["mv", "sub/a.md", "sub/z.md"], vault);
+      expect(r.code).toBe(0);
+      const why = (other: string) => `what it leads to is ${other} too, from another folder: not rewritten`;
+      expect(r.json.warnings).toEqual(
+        expect.arrayContaining([`e1.md:3: ${why("sub/e2.md")}`, `sub/e2.md:3: ${why("e1.md")}`]),
+      );
+      expect(readFileSync(join(vault, "shelf", "s.md"), "utf8")).toBe("# S\n\n[x](sub/a.md) [y](a.md)\n");
+      expect((await cli(["undo"], vault)).code).toBe(0);
+      // Both names moved together, by the same way: each edits it the same, so it's written once.
+      writeFileSync(join(vault, "a.md"), "# A\n");
+      writeFileSync(join(vault, "shelf", "t.md"), "# T\n\n[a](../a.md)\n");
+      mkdirSync(join(vault, "box"));
+      for (const n of ["e3.md", "e4.md"]) symlinkSync(join(vault, "shelf", "t.md"), join(vault, "box", n));
+      const moved = await cli(["mv", "box", "deep/box"], vault);
+      expect(moved.code).toBe(0);
+      expect(moved.json.warnings.filter((w: string) => w.includes("too"))).toEqual([]);
+      expect(moved.json.data.files.map((f: { path: string }) => f.path)).toEqual(["box/e3.md"]);
+      expect(readFileSync(join(vault, "shelf", "t.md"), "utf8")).toBe("# T\n\n[a](../../a.md)\n");
+      expect((await cli(["undo"], vault)).code).toBe(0);
+      expect(readFileSync(join(vault, "shelf", "t.md"), "utf8")).toBe("# T\n\n[a](../a.md)\n");
+      // Two names in one folder edited otherwise each: neither is written, both said.
+      const { Collector } = await import("../src/core/rename-plan.ts");
+      const c = new Collector(openGraph(locateVault({ root: vault }), loadConfig({ vaultRoot: vault }).config, false));
+      for (const [n, to] of [
+        ["e3.md", "[a](x.md)"],
+        ["e4.md", "[a](y.md)"],
+      ] as const)
+        c.line(join(vault, "box", n), null, 3, () => to, "");
+      expect(c.result()).toEqual([]);
+      expect(c.skipped.map((x) => `${x.shown}:${x.line}: ${x.reason}`)).toEqual([
+        "box/e3.md:3: what it leads to is box/e4.md too, edited otherwise there: not rewritten",
+        "box/e4.md:3: what it leads to is box/e3.md too, edited otherwise there: not rewritten",
+      ]);
+    }),
+  );
+
+  test(
+    "a reached note in a hidden folder that is a link into another hidden folder isn't written through: as it's refused named",
+    homed(async () => {
+      const top = realpathSync(mkdtempSync(join(tmpdir(), "slipbox-inside-")));
+      const vault = join(top, "vault");
+      mkdirSync(join(vault, ".slipbox"), { recursive: true });
+      for (const d of [".notes", ".private"]) mkdirSync(join(vault, d));
+      writeFileSync(join(vault, "a.md"), "# A\n\n[n](.notes/n.md)\n");
+      writeFileSync(join(vault, "b.md"), "# B\n");
+      writeFileSync(join(vault, ".private", "p.md"), "# P\n\n[b](../b.md)\n");
+      symlinkSync("../.private/p.md", join(vault, ".notes", "n.md"));
+      const r = await cli(["mv", "b.md", "c.md"], vault);
+      expect(r.code).toBe(0);
+      expect(r.json.warnings).toContain(
+        ".notes/n.md:3: a link leads it into a folder the walk doesn't list: not rewritten",
+      );
+      expect(readFileSync(join(vault, ".private", "p.md"), "utf8")).toBe("# P\n\n[b](../b.md)\n");
+    }),
+  );
+
+  test(
+    "a file written through a link into a vault nested in this one: that vault's index learns it",
+    homed(async () => {
+      const top = realpathSync(mkdtempSync(join(tmpdir(), "slipbox-inside-")));
+      const parent = join(top, "parent");
+      const nested = join(parent, "sub", "n");
+      for (const d of [parent, nested]) mkdirSync(join(d, ".slipbox"), { recursive: true });
+      writeFileSync(join(parent, "t.md"), "# T\n");
+      writeFileSync(join(nested, "n.md"), "# N\n\n[t](t.md)\n");
+      symlinkSync("sub/n/n.md", join(parent, "alias.md"));
+      const { openVault } = await import("../src/core/reach.ts");
+      openVault(nested).ensureAll();
+      const indexed = () =>
+        JSON.stringify(JSON.parse(readFileSync(join(cacheDir(rootAt(nested)), "index.json"), "utf8")));
+      expect((await cli(["mv", "t.md", "u.md"], parent)).code).toBe(0);
+      expect(readFileSync(join(nested, "n.md"), "utf8")).toBe("# N\n\n[t](u.md)\n");
+      expect(indexed()).toContain('"u.md"');
+    }),
+  );
+
+  test(
+    "a move that can't be finished changes nothing: what a link leads to can't be written there, what moves can't leave its folder or go into one",
+    homed(async (home) => {
+      const top = realpathSync(mkdtempSync(join(tmpdir(), "slipbox-inside-")));
+      mkdirSync(join(top, "out"));
+      writeFileSync(join(home, "a.md"), "# A\n");
+      writeFileSync(join(top, "out", "s.md"), "# S\n\nsee [a](a.md)\n");
+      writeFileSync(join(home, "b.md"), "# B\n\n[e](ext.md) [r](box/rel.md)\n");
+      const ext = join(home, "ext.md");
+      symlinkSync(join(top, "out", "s.md"), ext);
+      setLinkAnswer(ext, "follow");
+      await probe(join(top, "out", "s.md"));
+      mkdirSync(join(home, "box"));
+      writeFileSync(join(home, "t.md"), "# T\n");
+      symlinkSync("../t.md", join(home, "box", "rel.md"));
+      const b = readFileSync(join(home, "b.md"), "utf8");
+      // What it leads to is in a folder that can't be written: its own link can't be, so nothing moves.
+      chmodSync(join(top, "out"), 0o500);
+      try {
+        const r = await cli(["mv", "ext.md", "deep/"], home);
+        expect([r.code, r.json.error?.message]).toEqual([
+          5,
+          "ext.md can't be written where it is (EACCES); nothing changed",
+        ]);
+      } finally {
+        chmodSync(join(top, "out"), 0o755);
+      }
+      expect([lstatSync(ext).isSymbolicLink(), existsSync(join(home, "deep"))]).toEqual([true, false]);
+      expect(readFileSync(join(top, "out", "s.md"), "utf8")).toBe("# S\n\nsee [a](a.md)\n");
+      // A link that can't leave its folder: the folders made for it are taken away again.
+      chmodSync(join(home, "box"), 0o500);
+      try {
+        const r = await cli(["mv", "box/rel.md", "new/sub/rel.md"], home);
+        expect([r.code, r.json.error?.message]).toEqual([5, "box/rel.md can't be moved (EACCES); nothing changed"]);
+      } finally {
+        chmodSync(join(home, "box"), 0o755);
+      }
+      expect([lstatSync(join(home, "box", "rel.md")).isSymbolicLink(), existsSync(join(home, "new"))]).toEqual([
+        true,
+        false,
+      ]);
+      expect(readFileSync(join(home, "b.md"), "utf8")).toBe(b);
+      // A note moved into a folder that can't be written, a folder out of one: nothing written, nothing made.
+      writeFileSync(join(home, "c.md"), "# C\n\n[a](a.md)\n");
+      mkdirSync(join(home, "ro"));
+      mkdirSync(join(home, "shut", "f"), { recursive: true });
+      writeFileSync(join(home, "shut", "f", "n.md"), "# N\n");
+      for (const d of ["ro", "shut"]) chmodSync(join(home, d), 0o500);
+      try {
+        const into = await cli(["mv", "a.md", "ro/"], home);
+        expect([into.code, into.json.error?.message]).toEqual([5, "a.md can't be moved (EACCES); nothing changed"]);
+        const out = await cli(["mv", "shut/f", "new2/f"], home);
+        expect([out.code, out.json.error?.message]).toEqual([5, "shut/f can't be moved (EACCES); nothing changed"]);
+      } finally {
+        for (const d of ["ro", "shut"]) chmodSync(join(home, d), 0o755);
+      }
+      expect(readFileSync(join(home, "c.md"), "utf8")).toBe("# C\n\n[a](a.md)\n");
+      expect([existsSync(join(home, "a.md")), existsSync(join(home, "new2"))]).toEqual([true, false]);
     }),
   );
 

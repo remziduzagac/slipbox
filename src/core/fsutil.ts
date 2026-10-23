@@ -142,7 +142,11 @@ export function landsInside(root: string, path: string): boolean {
  * in its folder by that folder's real path, wherever it leads; anything else by its real path, as `landsInside`.
  */
 export function entryInside(root: string, path: string, asLink: boolean): boolean {
-  return landsInside(root, asLink && entryAt(path) && lstatSync(path).isSymbolicLink() ? dirname(resolve(path)) : path);
+  let link = false;
+  try {
+    link = asLink && lstatSync(path).isSymbolicLink();
+  } catch {}
+  return landsInside(root, link ? dirname(resolve(path)) : path);
 }
 
 /** Whether anything is at `path` — a link leading nowhere too, which `existsSync` says isn't there. */
