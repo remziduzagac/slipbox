@@ -177,3 +177,60 @@ still blocks.
   20.
 - 2026-10-23: Done, every acceptance criterion checked above; the draft pull request into `dev` carries it, the
   maintainer's merge its acceptance. A follow-up issue holds what this leaves on the main thread.
+- 2026-10-23: CI on #47: green but for one terminal check on macOS (`links: a symlink out of the vault asks first …`,
+  its status line short of `›` after `l`): it passed on its rerun, on both Linux runners and three times of three
+  here, so taken for a flake; the rerun made the run green.
+- 2026-10-23: Review round 2 (the maintainer's loop), `/code-review` and Codex each on `git diff origin/dev...`
+  independently; consolidated, each checked against the code:
+  - **Real, fixed** (with a unit test, and a terminal check where it's something you'd see — below):
+    (a) home's refresh could still put an older walk over the TUI's own write (`createNote` updates the graph and tells
+    no watcher; Codex) — and dropped after three tries it never rebuilt home's graph at all (`/code-review`): the
+    refresh now always applies, then replays every file that changed in the graph meanwhile (`applyToGraph`, as the
+    watcher would); (b) the lists written from the walk's thread could lose a write to the TUI's own, and
+    `atomicWrite`'s temporary name (process id and millisecond) could be the same for two threads of one process
+    (both): the lists are written on the main thread alone from what the thread read (`Opened`: key, worktree,
+    identity, real path; `recordRoot`'s `key`, `recordFolder`'s `known`), and the temporary name has random bytes too;
+    (c) home's location (`homeAt`: a `realpathSync`), its filter (reading `user-dirs.dirs`) and its walk kept
+    (`keepHomeWalk`) were still made on the main thread (Codex): `AutoIndex` describes home's walk by its settings
+    alone, and the index job keeps the walk and reads home's key on the thread; (d) the listings could be trimmed
+    while the tree was still being built, letting go of folders it was about to show (Codex): trimmed once it's built
+    (`endTree`); (e) the docs promised a minute where a vault gets ten (Codex): said as it is; (f) a row the
+    explorer means to select (`-`'s folder it came from, a note revealed) in a folder not listed yet was lost: it's
+    selected once its listing comes (`/code-review`, reproduced there); (g) a listing did about seven checks per
+    folder in one request with a minute to answer, and a hung entry (a stale mount under the folder) failed the whole
+    folder: one access check per entry, nothing read inside another disk mounted there, and the listing has a whole
+    walk's ten minutes; (h) a failed listing was read again at every rebuild, each try holding a thread a minute:
+    read again a minute after it failed, not before; (i) the two listing threads were picked by how many requests
+    they held, so half the listings queued behind a stuck one: one answering is picked over one whose request is
+    over a second old; (j) home's walk given up on in a pass's first walk finished the pass with nothing found,
+    idle for a day: tried again ten minutes later, the pass going on then; (k) a vault found was counted twice when
+    the TUI quit mid-index: counted once, kept with the place; (l) a `listing…` row's path made `collapse`,
+    `zoom_in` and `copy_path` act on the wrong folder: those rows answer navigation alone; (m) home's whole walk
+    crossed between threads twice: it stays on the thread, the index built from it there; (n) a listing's answer
+    was compared to the last as two JSON strings on the main thread: by a digest the thread computes; (o) `denied`,
+    a vault's name and its branch were each written twice (`listing.ts`, `marks.ts`, `explorer.ts`): once, in
+    `listing.ts`; (p) code no production path uses (`drop`, `Walker.home`, `Graph.build`'s vault walk given): gone;
+    (q) each vault took two ticks at least: opened and parsed in one request where its budget allows.
+  - **Not taken:** a filtered explorer's selection (Codex): filtered rows come from the graph's notes and the vault's
+    own files (`allNotesInTreeOrder`), never from a listing, so an answer can't move it. The existing explorer tests
+    listing on the main thread (`/code-review`'s altitude point): making the 91 tests wait on threads is a rewrite of
+    them for no case they check; the async path has its own tests and the terminal checks run the TUI as shipped.
+- 2026-10-24: Round 2's fixes made, each with a unit test (`tests/walk-thread.test.ts`) that fails without it — all
+  thirteen mutation-checked, each fix undone once (`tmp`'s runner) — and the cases you'd see with a terminal check of
+  their own (`tests/terminal/checks/slow-disk.ts`, ten). The terminal checks drive the TUI as shipped on a slow disk
+  stood in for by `SLIPBOX_SLOW_DISK=<folder name>:<ms>[:<deadline ms>]` (`slowDisk` in `core/walk.ts`: a folder of that
+  name takes so long to list on whichever thread lists it, the threads' deadlines the third): a check can't mount a
+  disk, and a test hook of this kind is the terminal tests' own (`SLIPBOX_TRACE`, `SLIPBOX_CLIPBOARD`). Two of them
+  mutation-checked too: with the background index walking on the main thread again, or the explorer listing there,
+  each fails. The ten pass, and with them the `vaults` file and the view's, Elsewhere's and nested roots' checks: 35
+  of 35.
+- 2026-10-24: (m) measured before taking it: at 10,000 notes the longest slice was 21 ms, but a 5 ms timer saw a 50
+  ms gap — the main thread taking home's whole walk in from the thread and sending it back for its index. So home's
+  walk stays on the thread (`SteppedWalk.handOver`: by its number there, `walkOn`), the main thread given only what
+  stopped it, what it left and the vaults it found.
+- 2026-10-24: Live again on the slow mount, this branch after round 2, the background index on: keys answered in 29 to
+  234 ms over 20 presses while home was walked and indexed.
+- 2026-10-24: Measured again with the walk kept on its thread (`tmp`'s `stall.ts`): 10,000 notes, the longest slice
+  11 ms and the timer's longest gap 6 ms (were 21 and 50; 90 and 91 in the release); home on the slow mount (its
+  `hobbies/` listing in a second), 6 and 9 ms. Memory: the main heap 6 MB either way; RSS grows 52 MB at 10,000 notes
+  (the walk's thread with its index), 24 MB on the slow mount.

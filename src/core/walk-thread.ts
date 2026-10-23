@@ -7,12 +7,21 @@
 
 import type { Config } from "./config.ts";
 import type { HomeWalk } from "./home.ts";
-import type { IndexAnswer, IndexOf, Opened } from "./index-job.ts";
+import type { IndexAnswer, Opened } from "./index-job.ts";
 import type { FolderListing } from "./listing.ts";
-import type { WalkCap, WalkFilter, WalkLimits, WalkResult } from "./walk.ts";
+import { type FilterSettings, slowDisk, type WalkCap, type WalkLimits } from "./walk.ts";
 import type { StepAnswer, WalkRequest } from "./walk-jobs.ts";
 import { walkContext } from "./worker-context.ts";
-import { type PastCap, type Pending, type SteppedIndex, type SteppedWalk, takeAnswer, type Walker } from "./walkers.ts";
+import {
+  type HomeOf,
+  type IndexAsk,
+  type PastCap,
+  type Pending,
+  type SteppedIndex,
+  type SteppedWalk,
+  takeAnswer,
+  type Walker,
+} from "./walkers.ts";
 import { WorkerRequestError, WorkerRequests } from "./worker-requests.ts";
 import { workerUrl } from "./workers.ts";
 
@@ -21,7 +30,10 @@ import { workerUrl } from "./workers.ts";
  * past its cap — a folder that doesn't answer in a minute is given up on — and a whole walk (a vault's, home's kept
  * brought up to now), far longer, for a big one on a slow disk.
  */
-export const WALK_DEADLINES = { step: 60_000, whole: 10 * 60_000 };
+export const WALK_DEADLINES = {
+  step: slowDisk()?.deadline ?? 60_000,
+  whole: slowDisk()?.deadline ?? 10 * 60_000,
+};
 
 type Ask = WalkRequest extends infer R ? (R extends unknown ? Omit<R, "context"> : never) : never;
 
@@ -68,42 +80,33 @@ export class WalkThread implements Walker {
     return this.requests.request<A>({ ...request, context: walkContext() }, { deadline, bytes: 0 });
   }
 
-  sliced(_root: string, filter: WalkFilter, limits?: WalkLimits): SteppedWalk {
-    return new ThreadedWalk(this, ++this.serial, filter, limits);
+  sliced(settings: FilterSettings, limits?: WalkLimits): SteppedWalk {
+    return new ThreadedWalk(this, ++this.serial, settings, limits);
   }
 
-  index(of: IndexOf): SteppedIndex {
+  index(of: IndexAsk): SteppedIndex {
     return new ThreadedIndex(this, ++this.serial, of);
-  }
-
-  home(
-    loc: { root: string; key: string },
-    filter: WalkFilter,
-    asked: readonly string[],
-    limits?: WalkLimits,
-  ): Pending<HomeWalk> {
-    return pending(this.homeWalk(loc, filter, asked, limits), (h) => h);
   }
 
   /** Home's walk kept, brought up to now, with the folders asked for (`homeWalk`): what changed handed back, unkept. */
   async homeWalk(
     loc: { root: string; key: string },
-    filter: WalkFilter,
+    settings: FilterSettings,
     asked: readonly string[],
     limits?: WalkLimits,
   ): Promise<HomeWalk> {
     const request = {
       op: "home" as const,
       loc: { root: loc.root, key: loc.key },
-      filter: filter.settings,
+      filter: settings,
       asked: [...asked],
       ...(limits ? { limits } : {}),
     };
     return (await this.ask<{ home: HomeWalk }>(request, this.deadlines.whole)).home;
   }
 
-  seek(dir: string, filter: WalkFilter): Pending<PastCap> {
-    return pending(this.ask<PastCap>({ op: "seek", dir, filter: filter.settings }, this.deadlines.step), (a) => ({
+  seek(dir: string, settings: FilterSettings): Pending<PastCap> {
+    return pending(this.ask<PastCap>({ op: "seek", dir, filter: settings }, this.deadlines.step), (a) => ({
       vaults: a.vaults,
       folders: a.folders,
     }));
@@ -117,10 +120,11 @@ export class WalkThread implements Walker {
 
 /** Home's walk on the walk's thread: each `step` asks for a slice there, and says there's more until it's answered. */
 class ThreadedWalk implements SteppedWalk {
-  result: WalkResult | null = null;
+  done = false;
   capped: WalkCap | null = null;
   failed: string | null = null;
   private left: string[] = [];
+  private found: string[] = [];
   private started = false;
   private asking = false;
 
@@ -131,15 +135,15 @@ class ThreadedWalk implements SteppedWalk {
   constructor(
     private readonly thread: WalkThread,
     private readonly id: number,
-    private readonly filter: WalkFilter,
+    private readonly settings: FilterSettings,
     private readonly limits?: WalkLimits,
   ) {}
 
   step(budgetMs: number): boolean {
-    if (this.result || this.failed) return false;
+    if (this.done || this.failed) return false;
     if (this.asking) return true;
     this.asking = true;
-    const start = { filter: this.filter.settings, ...(this.limits ? { limits: this.limits } : {}) };
+    const start = { filter: this.settings, ...(this.limits ? { limits: this.limits } : {}) };
     const request = {
       op: "step" as const,
       walk: this.id,
@@ -151,9 +155,10 @@ class ThreadedWalk implements SteppedWalk {
       (a) => {
         this.asking = false;
         if (!a.done || this.failed) return;
-        this.result = a.result;
+        this.done = true;
         this.capped = a.capped;
         this.left = a.rest;
+        this.found = a.nested;
       },
       (err: Error) => {
         this.asking = false;
@@ -167,10 +172,13 @@ class ThreadedWalk implements SteppedWalk {
     return this.left;
   }
 
-  drop(): void {
-    if (this.result || this.failed) return;
-    this.failed = "let go of";
-    if (this.started) this.thread.ask({ op: "drop", walk: this.id }, this.thread.deadlines.step).catch(() => {});
+  nested(): string[] {
+    return this.found;
+  }
+
+  /** The walk kept on the thread, by its number there: home's index is built from it there. */
+  handOver(walked: number): HomeOf {
+    return { walkOn: this.id, walked, capped: this.capped };
   }
 }
 
@@ -179,28 +187,48 @@ class ThreadedWalk implements SteppedWalk {
  * nor every folder behind one that answers slowly; one listing at a time on each, the next on the one with less to do.
  */
 export class ListThreads {
-  private readonly pool: WorkerRequests[];
+  private readonly pool: { requests: WorkerRequests; asked: number[] }[];
 
+  /** `deadline`: a whole walk's, a folder of many entries on a slow disk asked of each. */
   constructor(
     factory: () => Worker = () => new Worker(workerUrl("list-worker.ts")),
-    readonly deadline = WALK_DEADLINES.step,
+    readonly deadline = WALK_DEADLINES.whole,
     size = 2,
   ) {
-    this.pool = Array.from({ length: size }, () => new WorkerRequests(factory, { result: Infinity }));
+    this.pool = Array.from({ length: size }, () => ({
+      requests: new WorkerRequests(factory, { result: Infinity }),
+      asked: [],
+    }));
   }
 
-  /** The folder `dir` listed (`listFolder`), `walk` the settings a busy folder is decided by, `hidden` `files.hidden`. */
+  /**
+   * The folder `dir` listed (`listFolder`), `walk` the settings a busy folder is decided by, `hidden` `files.hidden` —
+   * on the thread with the least to do of those answering: one whose oldest request is over a second old is taken
+   * for stuck on a folder that doesn't answer, and asked only when every one is.
+   */
   async list(dir: string, walk: Config["walk"], hidden: boolean): Promise<FolderListing> {
-    const load = (r: WorkerRequests) => r.pending.requests + r.pending.waiting;
-    const on = this.pool.reduce((a, b) => (load(b) < load(a) ? b : a));
+    const now = Date.now();
+    const stuck = (t: (typeof this.pool)[number]) => t.asked.length > 0 && now - Math.min(...t.asked) > STUCK_MS;
+    const answering = this.pool.filter((t) => !stuck(t));
+    const on = (answering.length ? answering : this.pool).reduce((a, b) => (b.asked.length < a.asked.length ? b : a));
+    const at = Date.now();
+    on.asked.push(at);
     const request = { op: "list", dir, walk, hidden, context: walkContext() };
-    return (await on.request<{ listing: FolderListing }>(request, { deadline: this.deadline, bytes: 0 })).listing;
+    try {
+      return (await on.requests.request<{ listing: FolderListing }>(request, { deadline: this.deadline, bytes: 0 }))
+        .listing;
+    } finally {
+      on.asked.splice(on.asked.indexOf(at), 1);
+    }
   }
 
   stop(): void {
-    for (const r of this.pool) r.stop();
+    for (const t of this.pool) t.requests.stop();
   }
 }
+
+/** A listing thread whose oldest request is this old is taken for stuck: a fast folder isn't sent behind it. */
+export const STUCK_MS = 1000;
 
 /** An index on the walk's thread (`IndexJob`): each `step` asks for a slice there — the first opens and walks the
  *  vault, a whole walk's time — and says there's more until it's answered. */
@@ -218,7 +246,7 @@ class ThreadedIndex implements SteppedIndex {
   constructor(
     private readonly thread: WalkThread,
     private readonly id: number,
-    private readonly of: IndexOf,
+    private readonly of: IndexAsk,
   ) {}
 
   step(budgetMs: number): boolean {
@@ -247,12 +275,6 @@ class ThreadedIndex implements SteppedIndex {
       );
     return true;
   }
-
-  drop(): void {
-    if (this.result || this.failed) return;
-    this.failed = "let go of";
-    if (this.started) this.thread.ask({ op: "drop", walk: this.id }, this.thread.deadlines.step).catch(() => {});
-  }
 }
 
 let shared: { walk: WalkThread | null; list: ListThreads | null } = { walk: null, list: null };
@@ -266,7 +288,7 @@ export function walkThread(): WalkThread {
 
 /** The TUI's listing threads, started when they're first asked. */
 export function listThreads(): ListThreads {
-  shared.list ??= made ? new ListThreads(made.factory, made.deadlines?.step) : new ListThreads();
+  shared.list ??= made ? new ListThreads(made.factory, made.deadlines?.whole) : new ListThreads();
   return shared.list;
 }
 

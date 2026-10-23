@@ -6,13 +6,12 @@ import ignore from "ignore";
 import { classify, type FileGroup } from "../core/filetypes.ts";
 import { type Dirent, readdirSync, statSync } from "node:fs";
 import { basename, dirname, isAbsolute, join, posix, relative, sep } from "node:path";
-import { checkoutOf } from "../core/git.ts";
 import { folderUnreadable } from "../core/fsutil.ts";
-import { MARKER, readIdentity, vaultConfigFile } from "../core/registry.ts";
+import { MARKER } from "../core/registry.ts";
 import { tildePath } from "../core/names.ts";
 import { hasMarker, homeFolder, isInside, isListed, isVaultRoot, locationAt } from "../core/vault.ts";
 import { isLink, linkScope, linkStateAt, linkTarget } from "../core/symlinks.ts";
-import type { FolderListing, ListedEntry } from "../core/listing.ts";
+import { type FolderListing, type ListedEntry, vaultName } from "../core/listing.ts";
 import { ANOTHER_DISK, busyFolderAt, LINK_REASON } from "../core/walk.ts";
 import { match } from "./match.ts";
 import { prettyKey } from "./keys.ts";
@@ -64,6 +63,23 @@ export class Explorer {
         ? { rel: row.path, dir: true, vault: true }
         : null;
     return { rel: row.path, dir: row.kind === "dir" };
+  }
+
+  /**
+   * A row to select once it's listed (T12): one the explorer meant to select in a folder still being read — the folder
+   * zoomed out from, a note revealed. Selected by `Listings` when the rows come, unless the selection moved since.
+   */
+  wanted: { path: string; at: number } | null = null;
+
+  /** Select the row at `path` (a row path): now, or once its folder's listing comes (`wanted`); `fallback` meanwhile. */
+  selectRow(path: string, fallback?: number): void {
+    const at = this.rows().findIndex((r) => r.path === path);
+    this.wanted = null;
+    if (at >= 0) this.app.sidebar.selected = at;
+    else {
+      if (fallback !== undefined) this.app.sidebar.selected = fallback;
+      this.wanted = { path, at: this.app.sidebar.selected };
+    }
   }
 
   /** Select a path in the explorer, unfolding its folders. */
@@ -245,9 +261,7 @@ export class Explorer {
   /** A vault's name beside its folder's, when it has another one (17.13); none for a worktree, every one of which has
    *  its repository's: its branch tells them apart (17.19), among the row's marks (VV-D9, `marks.ts`). */
   private rootName(abs: string): string | undefined {
-    if (checkoutOf(abs)?.worktree) return undefined;
-    const n = readIdentity(vaultConfigFile(abs)).name;
-    return n && n !== basename(abs) ? n : undefined;
+    return vaultName(abs);
   }
 
   /**
@@ -394,6 +408,7 @@ export class Explorer {
     const own = this.ownView(T);
     if (own === null) this.outsideRows(T, 0, rows, this.leftOutAt(T));
     else rows.push(...this.rootTree(own));
+    this.listings.endTree();
     this.tree = rows;
     return rows;
   }
@@ -411,7 +426,7 @@ export class Explorer {
     if (!listing || listing.error !== null) {
       const said = listing ? `can't read: ${listing.error}` : this.listings.pending(dir) ? "listing…" : null;
       if (said)
-        out.push({ kind: "note", path: `${dir}\0${said}`, name: said, depth, outside: true, placeholder: true });
+        out.push({ kind: "note", path: `${dir}/\0${said}`, name: said, depth, outside: true, placeholder: true });
       return;
     }
     const R = this.app.loc.root;
@@ -515,12 +530,8 @@ export class Explorer {
     this.invalidateTree();
     this.app.sidebar.pinned = false;
     this.app.sidebar.scroll = 0;
-    this.app.sidebar.selected = out
-      ? Math.max(
-          0,
-          this.rows().findIndex((r) => r.path === this.rowPath(from)),
-        )
-      : 0;
+    if (out) this.selectRow(this.rowPath(from), 0);
+    else this.app.sidebar.selected = 0;
   }
 
   /** `-`: the view a folder up (VV-D5), the folder it showed unfolded in it and selected. */
@@ -906,8 +917,8 @@ export class Explorer {
     for (let d = open ? abs : dirname(abs); d !== view && isInside(view, d); d = dirname(d))
       this.expanded.add(this.rowPath(d));
     this.invalidateTree();
-    const idx = abs === view ? 0 : this.treeRows().findIndex((r) => r.path === this.rowPath(abs));
-    if (idx >= 0) this.app.sidebar.selected = idx;
+    if (abs === view) this.app.sidebar.selected = 0;
+    else this.selectRow(this.rowPath(abs));
   }
 
   /**
@@ -932,6 +943,8 @@ export class Explorer {
 
   action(action: string): void | Promise<void> {
     this.app.sidebar.pinned = false;
+    // Moved by you: a row meant to be selected once listed isn't any more.
+    this.wanted = null;
     if (this.app.leftView === "history") return this.app.history.action(action);
     if (this.app.leftView === "git") return this.app.gitPanel.action(action);
     if (action === "filter") {
@@ -940,6 +953,8 @@ export class Explorer {
     }
     const rows = this.rows();
     const row = rows[this.app.sidebar.selected];
+    // A row that only says something of its folder (T12: `listing…`): moved past, or its folder folded, nothing else.
+    if (row?.placeholder && !PLACEHOLDER_ACTIONS.has(action)) return;
     // A link to a folder not followed asks first (VV-D6); a second name for one of the vault's goes to it.
     if (row?.link?.dir && ["open", "expand", "open_tab", "zoom_in"].includes(action) && this.linkFirst(row, action))
       return;
@@ -1145,6 +1160,21 @@ export interface TreeRow {
    *  opened, nothing to mark. */
   placeholder?: true;
 }
+
+/** What a row that only says something of its folder (`listing…`, `can't read: …`) answers: moving, and folding it. */
+const PLACEHOLDER_ACTIONS: ReadonlySet<string> = new Set([
+  "down",
+  "up",
+  "top",
+  "bottom",
+  "collapse",
+  "filter",
+  "all_files",
+  "toggle_hidden",
+  "zoom_out",
+  "close",
+  "leave",
+]);
 
 /** What the vault open's walk leaves out (VV-D8), carried down what's listed in it: why, and where it was decided. */
 export interface LeftOut {

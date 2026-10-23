@@ -435,8 +435,9 @@ The background index:
 - picks up where it stopped
 - once it has been through, waits a day before the next pass
 - reads the disk away from the screen, so a slow one, such as a network share or a drive that's asleep, never stops the
-  screen or the keys. A folder that doesn't answer within a minute is left for the next pass, and slipbox says so:
-  `home's walk gave up: a folder didn't answer in time; it's made again at the next pass`
+  screen or the keys. When a folder of your home folder doesn't answer within a minute, home's walk is tried again ten
+  minutes later, and slipbox says so: `home's walk gave up: a folder didn't answer in time; it's tried again in ten
+  minutes`. A vault that doesn't answer within ten minutes is left for the next pass
 
 `index.background = false` turns it off ([Configuration](configuration.md)). `slipbox index --home` runs it now.
 

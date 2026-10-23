@@ -198,12 +198,18 @@ function writeFolders(folders: NamedFolder[]): void {
  */
 export function recordFolder(
   root: string,
-  opts: { found?: boolean; now?: Date; replaces?: string | null } = {},
+  opts: {
+    found?: boolean;
+    now?: Date;
+    replaces?: string | null;
+    /** Its identity and real path, read where it was opened (T12: another thread): not read again here. */
+    known?: { ident: FolderIdentity | null; real: string };
+  } = {},
 ): NamedFolder | null {
-  const ident = folderIdentity(root);
+  const ident = opts.known ? opts.known.ident : folderIdentity(root);
   const list = readFolders();
   // By its real path: reached through a symlink, it's the same copy, not a second one.
-  const at = ident?.copy ?? realPath(root);
+  const at = ident?.copy ?? opts.known?.real ?? realPath(root);
   const here = (c: FolderCopy) => c.path === at || realPath(c.path) === at;
   // A copy moved here by hand (21.8, `movedFrom`): the one it was, gone.
   if (opts.replaces) {

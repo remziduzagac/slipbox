@@ -11,7 +11,8 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 - A slow disk, such as a network share or a drive that's asleep, no longer freezes the screen while the background
   index walks and indexes your home folder and the vaults in it, or while the explorer lists a folder outside the vault
   you're in. Both read the disk in the background now: a folder being listed says `listing…` until it answers, and
-  one that doesn't answer within a minute is given up on and said.
+  says `can't read: no answer in time` if it hasn't within ten minutes; home's walk, given up on after a minute, says
+  so and tries again ten minutes later.
 
 - A release is on the installer's site as soon as it's published, so `curl … | sh` and `slipbox upgrade` on the stable
   channel find it at once. 0.5.0's wasn't until the site was deployed again, an hour later.

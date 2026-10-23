@@ -2,6 +2,7 @@
 // can't see polled, the background auto-index (20.9), and a note changed on disk reloaded.
 
 import { existsSync, statSync } from "node:fs";
+import { basename, join } from "node:path";
 import { readText } from "../core/fsutil.ts";
 import { offsetOf } from "./editing.ts";
 import { planRelink } from "../core/rename.ts";
@@ -212,7 +213,12 @@ export class Watch {
   /** Home's walk or index given up on (T12): said, home's index left as it was until the next. */
   private gaveUp(what: "walk" | "index", why: string): void {
     if (this.app.quitting) return;
-    this.app.message("warn", `home's ${what} gave up: ${why}; it's made again at the next pass`);
+    this.app.message(
+      "warn",
+      what === "walk"
+        ? `home's walk gave up: ${why}; it's tried again in ten minutes`
+        : `home's index gave up: ${why}; it's made again at the next pass`,
+    );
     this.app.host.requestRender();
   }
 
@@ -239,47 +245,64 @@ export class Watch {
    * Home's walk made and its index written (VV-D2): while home is the vault open, its graph built again from them —
    * what came, what went — and its cap said when it's reached: the walk's, or the one the folders asked for by name
    * bring it to, those said to be whole. The walk kept is brought up to now on the walk's thread (T12), and taken only
-   * while nothing else built the graph since, nor asked for another folder: else what's here is newer. A change the
-   * watcher took in meanwhile may be newer than what the thread read: it's asked again, three times at most.
+   * while nothing else built the graph since, nor asked for another folder: else what's here is newer. A file that
+   * came, went or changed in it meanwhile — the watcher's, or slipbox's own write — may be newer than what the thread
+   * read: taken in again over the walk, as the watcher takes a change in.
    */
   private homeIndexed(capped: WalkCap | null): void {
     if (this.app.loc.mode !== "home" || this.app.quitting) return;
-    this.homeRefreshed = this.refreshHome(capped, ++this.homeRefresh, 3);
+    this.homeRefreshed = this.refreshHome(capped, ++this.homeRefresh);
   }
 
-  private async refreshHome(capped: WalkCap | null, at: number, tries: number): Promise<void> {
-    if (this.app.loc.mode !== "home" || this.app.quitting || at !== this.homeRefresh) return;
+  private async refreshHome(capped: WalkCap | null, at: number): Promise<void> {
     const { loc, graph } = this.app;
     const asked = [...graph.askedFolders];
     const builds = graph.builds;
-    const applied = this.applied;
+    const since = new Set<string>();
+    const stop = graph.onChange((c) => {
+      if (c.kind === "moved") since.add(c.from).add(c.to);
+      else since.add(c.path);
+    });
     let home: HomeWalk;
     try {
-      home = await walkThread().homeWalk(loc, graph.filter, asked);
+      home = await walkThread().homeWalk(loc, graph.filter.settings, asked);
     } catch (err) {
-      if (at === this.homeRefresh) this.gaveUp("walk", walkFailure(err as Error));
+      if (at === this.homeRefresh) this.gaveUp("index", walkFailure(err as Error));
       return;
+    } finally {
+      stop();
     }
     const now = this.app.graph;
     if (this.app.quitting || at !== this.homeRefresh || this.app.loc !== loc || now !== graph) return;
     if (now.builds !== builds || now.askedFolders.join("\0") !== asked.join("\0")) return;
-    if (this.applied !== applied) return tries > 1 ? this.refreshHome(capped, at, tries - 1) : undefined;
     if (home.unkept) keepHomeWalk(loc, home.unkept.walk, home.unkept.capped, home.unkept.walked, now.filter);
-    this.homeBuilt(home, capped);
+    this.homeBuilt(home, capped, [...since]);
   }
-
-  /** The watcher's batches taken into the graph so far: a walk read before one is older than the graph. */
-  private applied = 0;
 
   /** Home's latest graph asked for, its walk on the walk's thread: an earlier one's answer is dropped. */
   private homeRefresh = 0;
   /** The latest of them answered, taken or dropped (tests wait for it). */
   homeRefreshed: Promise<void> = Promise.resolve();
 
-  /** Home's graph built again from its walk, made on the walk's thread (`homeIndexed`). */
-  private homeBuilt(walk: HomeWalk, capped: WalkCap | null): void {
+  /** Home's graph built again from its walk, made on the walk's thread (`homeIndexed`); the files that changed in the
+   *  graph while it was made (`since`) taken in again over it, as the watcher takes a change in. */
+  private homeBuilt(walk: HomeWalk, capped: WalkCap | null, since: string[]): void {
     const keep = this.rememberSelections();
-    this.app.graph.build(true, "lazy", walk);
+    const graph = this.app.graph;
+    graph.build(true, "lazy", walk);
+    if (since.length)
+      applyToGraph(
+        graph,
+        {
+          changes: since.map((rel) => ({
+            rel,
+            kind: existsSync(join(graph.root, rel)) ? "changed" : "deleted",
+            isNote: graph.filter.isNoteName(basename(rel)),
+          })),
+          rescan: false,
+        },
+        this.app.config.walk.max_file_size,
+      );
     keep();
     this.app.watcher?.sync(this.app.graph.dirs, this.knownFromGraph(), this.sizesFromGraph());
     this.indexInBackground();
@@ -384,7 +407,6 @@ export class Watch {
   }
 
   private applyChangesNow(batch: WatchBatch): void {
-    if (batch.rescan || batch.changes.length) this.applied++;
     const { structural: setChanged, warnings } = applyToGraph(
       this.app.graph,
       batch,

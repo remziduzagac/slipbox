@@ -48,6 +48,16 @@ export function setMountTable(read: (() => Mount[]) | null): void {
   given = read;
 }
 
+/** The mount table as read lately: read again when it's `maxAgeMs` old (on macOS, reading it runs `mount`). */
+let recent: { at: number; table: Mount[] } | null = null;
+
+/** The machine's mount table read at most `maxAgeMs` ago (T12: the explorer's listings, many a second); a test's at once. */
+export function recentMountTable(maxAgeMs: number): Mount[] {
+  if (given) return given();
+  if (!recent || Date.now() - recent.at > maxAgeMs) recent = { at: Date.now(), table: mountTable() };
+  return recent.table;
+}
+
 /** The machine's mount table, as far as it can be read: none when it can't (or the platform has none to read). */
 export function mountTable(platform = process.platform): Mount[] {
   if (given) return given();

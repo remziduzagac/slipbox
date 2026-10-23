@@ -272,9 +272,9 @@ export function adoptStorage(from: string, to: string): void {
 const SEEN_REFRESH_MS = 10 * 60 * 1000;
 
 /** The root at `path` recorded as seen now — once per change, else at most every ten minutes. */
-export function recordRoot(v: Omit<KnownRoot, "key" | "seen">, now = new Date()): KnownRoot {
+/** `key`: its key when it's known already (T12: read where the root was opened), not read again here. */
+export function recordRoot(v: Omit<KnownRoot, "key" | "seen">, now = new Date(), key = vaultKey(v.path)): KnownRoot {
   const list = readRoots();
-  const key = vaultKey(v.path);
   const i = list.findIndex((x) => x.key === key);
   const old = list[i];
   const fresh: KnownRoot = { ...old, ...v, key, seen: now.toISOString() };

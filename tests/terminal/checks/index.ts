@@ -8,6 +8,7 @@ import { LEFT_OUT_NAVIGATING, NAVIGATING } from "./navigating.ts";
 import { LEFT_OUT_OUTSIDE_AND_CODE, OUTSIDE_AND_CODE } from "./outside-and-code.ts";
 import { PANELS } from "./panels.ts";
 import { LEFT_OUT_READING, READING } from "./reading.ts";
+import { SLOW_DISK } from "./slow-disk.ts";
 import { SOURCE_CONTROL } from "./source-control.ts";
 import { VAULTS } from "./vaults.ts";
 
@@ -28,6 +29,8 @@ export const CHECK_FILES: Record<string, Check[]> = {
   // The panels as the checks' shared helpers drive them (#18): the which-key popup, the explorer, the outline, the git
   // panel; in the navigating area, navigating.ts being past the size limit.
   panels: PANELS,
+  // A slow disk read off the main thread (T12): home's walk, the background index, the explorer's listings.
+  "slow-disk": SLOW_DISK,
 };
 
 export const CHECKS: Check[] = Object.values(CHECK_FILES).flat();

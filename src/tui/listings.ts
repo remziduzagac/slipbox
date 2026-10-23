@@ -14,6 +14,9 @@ import type { App } from "./app.ts";
 export const PENDING_MS = 150;
 /** A listing read longer ago than this is read again when the tree is built again: what came or went, seen. */
 export const REREAD_MS = 1000;
+/** One that failed (it couldn't be read, or gave no answer) is read again only this long after: a share that's gone
+ *  isn't asked at every rebuild, a thread held each time. */
+export const RETRY_MS = 60_000;
 /** Folders kept listed at most, those the tree shows aside: the one shown longest ago let go of first. */
 const KEPT = 256;
 
@@ -59,6 +62,14 @@ export class Listings {
     this.tree++;
   }
 
+  /** The tree built: past the cap, the folders it didn't show let go of, those shown longest ago first. */
+  endTree(): void {
+    for (const [d, k] of this.kept) {
+      if (this.kept.size <= KEPT) return;
+      if (k.reading === null && k.tree < this.tree) this.kept.delete(d);
+    }
+  }
+
   /** The folder `dir` as last listed — null while its first listing is read — read again when it's old. */
   get(dir: string): FolderListing | null {
     if (!this.offThread) return listFolder(dir, this.app.config.walk, this.app.ui.hidden_files);
@@ -70,7 +81,6 @@ export class Listings {
     } else {
       k = { listing: null, reading: null, asked: Date.now(), at: 0, settings, tree: this.tree };
       this.kept.set(dir, k);
-      this.trim();
       // Still not listed then: its rows say it's being listed.
       const t = setTimeout(() => {
         if (this.kept.get(dir)?.listing === null) this.redraw();
@@ -78,7 +88,8 @@ export class Listings {
       (t as { unref?: () => void }).unref?.();
     }
     k.tree = this.tree;
-    if (k.reading === null && (!k.listing || k.settings !== settings || Date.now() - k.at > REREAD_MS))
+    const again = k.listing?.error ? RETRY_MS : REREAD_MS;
+    if (k.reading === null && (!k.listing || k.settings !== settings || Date.now() - k.at > again))
       this.read(dir, k, settings);
     return k.listing;
   }
@@ -143,31 +154,30 @@ export class Listings {
     k.at = Date.now();
     const now = this.settings();
     if (settings !== now) return this.read(dir, k, now);
-    const changed = !k.listing || k.settings !== settings || JSON.stringify(k.listing) !== JSON.stringify(listing);
+    const changed =
+      !k.listing || k.settings !== settings || k.listing.error !== listing.error || k.listing.digest !== listing.digest;
     k.listing = listing;
     k.settings = settings;
     if (changed) this.redraw();
   }
 
-  /** The tree built again with what came, the selection kept on the row it was on, and drawn. */
+  /** The tree built again with what came, and drawn: the row the explorer meant to select selected once it's there
+   *  (`wanted`, the selection not moved since), else the selection kept on the row it was on. */
   private redraw(): void {
     if (this.app.quitting) return;
     const ex = this.app.explorer;
-    const mine = this.app.leftView === "explorer" && !this.app.sidebar.filter;
-    const at = mine ? ex.rows()[this.app.sidebar.selected]?.path : undefined;
+    const s = this.app.sidebar;
+    const mine = this.app.leftView === "explorer" && !s.filter;
+    const wanted = ex.wanted?.at === s.selected ? ex.wanted.path : undefined;
+    const at = mine ? (wanted ?? ex.rows()[s.selected]?.path) : undefined;
     ex.invalidateTree();
     if (at !== undefined) {
       const i = ex.rows().findIndex((r) => r.path === at);
-      if (i >= 0) this.app.sidebar.selected = i;
+      if (i >= 0) {
+        s.selected = i;
+        if (at === wanted) ex.wanted = null;
+      }
     }
     this.app.host.requestRender();
-  }
-
-  /** Past the cap, the folders shown longest ago let go of: never one the tree shows now, nor one being read. */
-  private trim(): void {
-    for (const [d, k] of this.kept) {
-      if (this.kept.size <= KEPT) return;
-      if (k.reading === null && k.tree < this.tree) this.kept.delete(d);
-    }
   }
 }

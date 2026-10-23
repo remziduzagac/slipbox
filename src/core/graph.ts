@@ -177,18 +177,13 @@ export class Graph {
    *
    * Home (VV-D2) is never walked here: its walk is the one kept (`homeWalk`), the folders asked for that it doesn't
    * cover walked with it (`askFolder`), or `given` — one just made, a slice at a time, by the background index or the
-   * TUI. A vault's walk `given` is one made elsewhere, on the walk's thread (T12).
+   * TUI.
    */
-  build(useCache = true, parse: "all" | "lazy" = "all", given?: HomeWalk | Pick<HomeWalk, "walk">): this {
+  build(useCache = true, parse: "all" | "lazy" = "all", given?: HomeWalk): this {
     const t0 = performance.now();
     this.builds++;
     this.walkedAt = Date.now();
-    const home =
-      this.loc.mode === "home"
-        ? given && "walked" in given
-          ? given
-          : homeWalk(this.loc, this.filter, this.asked)
-        : null;
+    const home = this.loc.mode === "home" ? (given ?? homeWalk(this.loc, this.filter, this.asked)) : null;
     // What changed after home's walk began may be missing from it: the watcher looks at those folders again.
     if (home?.walked) this.walkedAt = home.walked;
     this.home = home
@@ -198,7 +193,7 @@ export class Graph {
       ? home.walk
       : isListed(this.loc)
         ? listDirectory(this.root, this.filter)
-        : (given?.walk ?? walkVault(this.root, this.filter));
+        : walkVault(this.root, this.filter);
     this.dirs = walk.dirs;
     this.assets.clear();
     for (const a of walk.assets) this.addAsset(a);

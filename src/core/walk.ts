@@ -98,9 +98,7 @@ export function busyWhy(name: string, ignored: () => boolean, notes: () => boole
 /** Whether the folder `abs` holds a note directly in it: a file named as a note, not hidden. One listing; none there, no. */
 export function holdsNotes(abs: string, isNoteName: (name: string) => boolean): boolean {
   try {
-    return readdirSync(abs, { withFileTypes: true }).some(
-      (e) => !e.isDirectory() && !e.name.startsWith(".") && isNoteName(e.name),
-    );
+    return readFolder(abs).some((e) => !e.isDirectory() && !e.name.startsWith(".") && isNoteName(e.name));
   } catch {
     return false;
   }
@@ -165,6 +163,18 @@ function downloadsIn(home: string): string {
   return rel && !rel.startsWith("..") ? rel : "Downloads";
 }
 
+/** What makes a filter (T12): its folder, its walk settings, its opts — for one made the same elsewhere (`filterFrom`). */
+export interface FilterSettings {
+  root: string;
+  walk: Config["walk"];
+  opts: { home?: boolean; platform?: string };
+}
+
+/** The filter `settings` make. */
+export function filterFrom(settings: FilterSettings): WalkFilter {
+  return new WalkFilter(settings.root, settings.walk, settings.opts);
+}
+
 export class WalkFilter {
   private readonly extensions: Set<string>;
   /** `walk.exclude`, as it was when the filter was made: what it applies. */
@@ -195,7 +205,7 @@ export class WalkFilter {
   }
 
   /** What makes this filter, for one made the same on another thread (T12): its folder, its settings, its opts. */
-  get settings(): { root: string; walk: Config["walk"]; opts: { home?: boolean; platform?: string } } {
+  get settings(): FilterSettings {
     return { root: this.root, walk: this.walk, opts: this.opts };
   }
 
@@ -554,8 +564,23 @@ export function walkTop(root: string, filter: WalkFilter): WalkResult {
   return finishWalk(st);
 }
 
-const readdirTyped = (abs: string): Dirent[] => readdirSync(abs, { withFileTypes: true });
-/** How the walk reads a folder: `readdirSync`, unless a test holds it up (`setFolderReader`). */
+/**
+ * A slow disk, for the terminal tests (T12; `SLIPBOX_SLOW_DISK=<folder name>:<ms>[:<deadline ms>]`): a folder of that name
+ * takes so long to list, on whichever thread lists it — the disk a check can't mount. Its deadline is walk-thread.ts's.
+ */
+export function slowDisk(env = process.env): { name: string; ms: number; deadline?: number } | null {
+  const [name, ms, deadline] = (env.SLIPBOX_SLOW_DISK ?? "").split(":");
+  if (!name || !(Number(ms) > 0)) return null;
+  return { name, ms: Number(ms), ...(Number(deadline) > 0 ? { deadline: Number(deadline) } : {}) };
+}
+
+const readdirTyped = (abs: string): Dirent[] => {
+  const slow = slowDisk();
+  if (slow && basename(abs) === slow.name) Bun.sleepSync(slow.ms);
+  return readdirSync(abs, { withFileTypes: true });
+};
+/** How the walk reads a folder: `readdirSync` (a terminal test's slow disk held up: `slowDisk`), unless a test holds it
+ *  up itself (`setFolderReader`). */
 let folderReader = readdirTyped;
 
 /** A folder's entries, read as the walk reads them (the explorer's listings too, listing.ts). */

@@ -8,17 +8,13 @@ import type { Config } from "./config.ts";
 import { type HomeWalk, homeWalk, vaultsPastCap } from "./home.ts";
 import { type IndexAnswer, IndexJob, type IndexOf } from "./index-job.ts";
 import { type FolderListing, listFolder } from "./listing.ts";
-import { SlicedWalk, WalkFilter, type WalkLimits, type WalkResult } from "./walk.ts";
-import type { PastCap } from "./walkers.ts";
+import { type FilterSettings, filterFrom, SlicedWalk, type WalkLimits, type WalkResult } from "./walk.ts";
+import { type IndexAsk, nestedIn, type PastCap } from "./walkers.ts";
 import { enterContext, type WalkContext } from "./worker-context.ts";
-
-/** What makes a filter (`WalkFilter.settings`): it's made again here from it. */
-export type FilterSettings = WalkFilter["settings"];
 
 export type WalkRequest = { context: WalkContext } & (
   | { op: "step"; walk: number; budget: number; start?: { filter: FilterSettings; limits?: WalkLimits } }
-  | { op: "drop"; walk: number }
-  | { op: "index"; job: number; budget: number; start?: IndexOf }
+  | { op: "index"; job: number; budget: number; start?: IndexAsk }
   | { op: "home"; loc: { root: string; key: string }; filter: FilterSettings; asked: string[]; limits?: WalkLimits }
   | { op: "seek"; dir: string; filter: FilterSettings }
   | { op: "list"; dir: string; walk: Config["walk"]; hidden: boolean }
@@ -26,12 +22,14 @@ export type WalkRequest = { context: WalkContext } & (
 
 export type StepAnswer =
   | { done: false }
-  | { done: true; result: WalkResult; capped: SlicedWalk["capped"]; rest: string[] };
+  | { done: true; capped: SlicedWalk["capped"]; rest: string[]; nested: string[] };
 
 /** Home's walks under way here, and the indexes, by their number: a few at most, the oldest let go (its asker gone, or
  *  started over). */
 const walks = new Map<number, SlicedWalk>();
 const indexes = new Map<number, IndexJob>();
+/** Home's walks done, kept here for the index built from them (`walkOn`): never sent across and back. */
+const done = new Map<number, { walk: WalkResult; capped: SlicedWalk["capped"] }>();
 const KEPT = 4;
 
 /** `job` kept under `n`, the oldest let go of past the few kept. */
@@ -41,12 +39,19 @@ function keep<T>(jobs: Map<number, T>, n: number, job: T): T {
   return job;
 }
 
-const filterOf = (s: FilterSettings) => new WalkFilter(s.root, s.walk, s.opts);
+/** An index asked of a walk kept here (`walkOn`): that walk, let go of once handed on. */
+function homeWalkOf(of: IndexAsk): IndexOf {
+  if (!("home" in of) || !("walkOn" in of.home)) return of as IndexOf;
+  const kept = done.get(of.home.walkOn);
+  if (!kept) throw new Error("the walk was let go of on its thread");
+  done.delete(of.home.walkOn);
+  return { root: of.root, home: { walk: kept.walk, walked: of.home.walked, capped: kept.capped }, config: of.config };
+}
 
 /** A request answered: what it asked for, walked here. */
 export function answerWalk(
   req: WalkRequest,
-): StepAnswer | IndexAnswer | { home: HomeWalk } | PastCap | { listing: FolderListing } | { dropped: true } {
+): StepAnswer | IndexAnswer | { home: HomeWalk } | PastCap | { listing: FolderListing } {
   enterContext(req.context);
   switch (req.op) {
     case "step": {
@@ -55,29 +60,26 @@ export function answerWalk(
         walk = keep(
           walks,
           req.walk,
-          new SlicedWalk(req.start.filter.root, filterOf(req.start.filter), req.start.limits),
+          new SlicedWalk(req.start.filter.root, filterFrom(req.start.filter), req.start.limits),
         );
       if (!walk) throw new Error("the walk was let go of on its thread");
       if (walk.step(req.budget)) return { done: false };
       walks.delete(req.walk);
-      return { done: true, result: walk.result!, capped: walk.capped, rest: walk.rest() };
+      keep(done, req.walk, { walk: walk.result!, capped: walk.capped });
+      return { done: true, capped: walk.capped, rest: walk.rest(), nested: nestedIn(walk.result) };
     }
-    case "drop":
-      walks.delete(req.walk);
-      indexes.delete(req.walk);
-      return { dropped: true };
     case "index": {
       let job = indexes.get(req.job);
-      if (!job && req.start) job = keep(indexes, req.job, new IndexJob(req.start));
+      if (!job && req.start) job = keep(indexes, req.job, new IndexJob(homeWalkOf(req.start)));
       if (!job) throw new Error("the index was let go of on its thread");
       const answer = job.step(req.budget);
       if (!answer.vault || answer.done) indexes.delete(req.job);
       return answer;
     }
     case "home":
-      return { home: homeWalk(req.loc, filterOf(req.filter), req.asked, req.limits, false) };
+      return { home: homeWalk(req.loc, filterFrom(req.filter), req.asked, req.limits, false) };
     case "seek":
-      return vaultsPastCap(req.dir, filterOf(req.filter));
+      return vaultsPastCap(req.dir, filterFrom(req.filter));
     case "list":
       return { listing: listFolder(req.dir, req.walk, req.hidden) };
   }

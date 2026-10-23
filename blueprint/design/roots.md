@@ -434,26 +434,33 @@ deleted (D61). Each vault's is in its cache folder (the link index, the search i
   asleep, a folder of many thousands of files) never holds up the keys or the screen: home's walk, kept there between
   its slices and stepped a slice at a time as on the main thread, so it rests while you work; the index of each vault
   the background index finds, and home's own from its walk (`IndexJob`, `core/index-job.ts`: opened, walked, its notes
-  parsed, kept there between slices as well), written to its cache there; the folders past home's cap, looked in for
-  vaults; and home's walk kept, brought up to now when home's graph is built again after its walk. Each is the same
-  code as on the main thread (`AutoIndex` takes a walker, `core/walkers.ts`: `HERE` for the CLI, whose command waits
-  for its answer either way), given what the thread can't see for itself: the environment naming slipbox's folders,
-  the root markers, the probe's answers. A vault opened there is recorded as found there, as a CLI command records one
-  beside the TUI; its key comes back for the main thread to mark it indexed. The thread doesn't write home's walk:
-  what changed in the walk kept comes back unkept (`homeWalk`'s `keep`), kept by the TUI once it takes the answer —
-  dropped when the graph was built since (`Graph.builds`), the folders asked for changed, or the vault open did, and
-  asked again (three times at most) when the watcher took a change in meanwhile, newer than what the thread read. A
-  slice or a seek has a minute on the thread, a whole walk (a vault opened and walked) ten; past that the thread is
-  started afresh and the work given up on — a vault left for the next pass, home's walk or index said
-  (`home's walk gave up: a folder didn't answer in time; it's made again at the next pass`) — the pass going on
-  without it, never made on the main thread instead. The explorer's listings have two threads of their own
-  ([tui.md](tui.md) § Side panes).
+  parsed — a small one in a single step's budget — kept there between slices as well), written to its cache there,
+  home's walk kept there too (`keepHomeWalk`); the folders past home's cap, looked in for vaults; and home's walk kept,
+  brought up to now when home's graph is built again after its walk. Each is the same code as on the main thread
+  (`AutoIndex` takes a walker, `core/walkers.ts`: `HERE` for the CLI, whose command waits for its answer either way),
+  given what the thread can't see for itself (`core/worker-context.ts`): the environment naming slipbox's folders, the
+  root markers, the probe's answers. `AutoIndex` reads nothing of home itself: home's walk is told by its settings
+  alone (`FilterSettings`), its filter made, and its location read, where it walks. The machine's lists are written on
+  the main thread alone, from what the thread read of a vault it opened (`Opened`: its key, worktree, identity and real
+  path; `recordRoot`'s `key`, `recordFolder`'s `known`) — a vault counted found once, its count kept with the place
+  (`counted`), so one being indexed when the TUI quit isn't counted again. Nor does the thread write the walk a
+  refresh makes: what changed in home's walk kept comes back unkept (`homeWalk`'s `keep`), kept by the TUI once it
+  takes the answer — dropped when the graph was built since (`Graph.builds`), the folders asked for changed, or the
+  vault open did; a file that came, went or changed in the graph meanwhile (the watcher's, slipbox's own write) taken
+  in again over it, as the watcher takes one in. A slice or a seek has a minute on the thread, a whole walk (a vault
+  opened and walked) ten; past that the thread is started afresh and the work given up on, never made on the main
+  thread instead: home's walk tried again ten minutes later (`WALK_RETRY_MS`), the pass waiting for it, and said
+  (`home's walk gave up: a folder didn't answer in time; it's tried again in ten minutes`); a vault left for the next
+  pass; home's index said (`home's index gave up: …; it's made again at the next pass`). The explorer's listings have
+  two threads of their own ([tui.md](tui.md) § Side panes).
 
   Not done: the rest of what reads a slow disk on the main thread still holds the TUI up while it's read — the
   watcher's polling of the vault open (a stat per watched folder every two seconds, per note every thirty; its folders
   listed again), the vault open built again (a reindex, the watcher's rescan, a vault gone into, a setting changed, a
   rename), a note's text read to parse or open it, the explorer's own tree of the vault open (`fromDisk`, its rows'
-  marks) and the view's folder statted as its tree is built, and the walk at the start, before the screen is up.
+  marks) and the view's folder statted as its tree is built, slipbox's own state, cache and config folders (under home
+  by default: the machine's lists, the place the background index keeps), and the walk at the start, before the
+  screen is up.
 - **Freshness is checked, not assumed:** a build lists the folders again and keeps a file's entry only while its size
   and modification time match, since a folder's own time doesn't change when a file in it is edited; a file gone is
   dropped, or paired as a move ([links.md](links.md) § Repairs). Folders open are watched. What is covered and how

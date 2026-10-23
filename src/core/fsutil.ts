@@ -17,6 +17,7 @@ import {
   unlinkSync,
   writeSync,
 } from "node:fs";
+import { randomBytes } from "node:crypto";
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 
 export function ensureDir(dir: string): void {
@@ -31,7 +32,12 @@ export function ensureDir(dir: string): void {
 export function atomicWrite(path: string, content: string | Uint8Array): Stamp {
   const dir = dirname(path);
   ensureDir(dir);
-  const tmp = join(dir, `.${basename(path)}.slipbox-${process.pid}-${Date.now()}.tmp`);
+  // Its own name, whatever else writes there in the same millisecond: another process, or another thread of this one
+  // (the walk's, T12), which shares its process id.
+  const tmp = join(
+    dir,
+    `.${basename(path)}.slipbox-${process.pid}-${Date.now()}-${randomBytes(4).toString("hex")}.tmp`,
+  );
   // A file being replaced keeps its permissions.
   let mode = 0o644;
   try {
