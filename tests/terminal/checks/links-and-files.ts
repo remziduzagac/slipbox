@@ -3085,9 +3085,4 @@ const PEEK: Check[] = [
 export const LINKS_AND_FILES: Check[] = [...LINKS, ...ROOTS, ...NAMED, ...FILES, ...RENAMES, ...GIT, ...NOTES, ...PEEK];
 
 // GIT's review, merge screen and rebase have their checks in source-control.ts, with the git panel's.
-export const LEFT_OUT_LINKS_AND_FILES: LeftOut = {
-  commands: {
-    "vault.links":
-      "its terminal check comes with the next pass of the links' checks; tests/tui.test.ts lists and forgets meanwhile",
-  },
-};
+export const LEFT_OUT_LINKS_AND_FILES: LeftOut = {};

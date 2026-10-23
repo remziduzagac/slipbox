@@ -1371,7 +1371,8 @@ const ELSEWHERE: Check[] = [
       await s.keys("l");
       await s.see("Kept out of the way.");
       await s.keys("i");
-      await s.message("not editing");
+      // Read whole from the list: a long path wraps its box.
+      s.expect((await lastMessage(s, "not editing")).endsWith("— not editing"), "i refused: read-only");
       // Forgotten, opened again, followed: the same window takes typing.
       await s.ex("symlinks");
       await s.see("Symlinks you've answered");
@@ -1761,7 +1762,8 @@ const LINKED: Check[] = [
       await s.keys("l");
       await opened(s, "shelf/far.md");
       await s.keys("i");
-      await s.message("not editing");
+      // Read whole from the list: a long path wraps its box.
+      s.expect((await lastMessage(s, "not editing")).endsWith("— not editing"), "i refused: read-only");
       // Forgotten, then followed: asked again, f.
       await s.ex("symlinks");
       await s.see("Symlinks you've answered");
@@ -1811,7 +1813,8 @@ const LINKED: Check[] = [
       await s.keys("enter");
       await s.message("forgot", 5000);
       await s.keys("i");
-      await s.message("not editing");
+      // Read whole from the list: a long path wraps its box.
+      s.expect((await lastMessage(s, "not editing")).endsWith("— not editing"), "i refused: read-only");
       s.write("~/shelf/far.md", "# Far\n\nRewritten on the shelf.\n");
       await sleep(2500);
       await s.notSee("Rewritten on the shelf.");
@@ -1866,7 +1869,8 @@ const LINKED: Check[] = [
       await s.message("following", 5000);
       await opened(s, "shelf/big.md");
       await s.keys("i");
-      await s.message("not editing");
+      // Read whole from the list: a long path wraps its box.
+      s.expect((await lastMessage(s, "not editing")).endsWith("— not editing"), "i refused: read-only");
     },
   },
   {
