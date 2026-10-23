@@ -12,7 +12,7 @@ import { basename, dirname, join, relative } from "node:path";
 import { pathToFileURL } from "node:url";
 import type { CompletionItem, CompletionList, SignatureHelp, TextEdit } from "vscode-languageserver-protocol";
 import { conventionOf, type LinkStyle } from "../core/convention.ts";
-import { linkDestination, linkEnds } from "../core/write-link.ts";
+import { linkDestination, linkEnds, type PointerMemo } from "../core/write-link.ts";
 import { readJson } from "../core/fsutil.ts";
 import { cacheDir } from "../core/paths.ts";
 import { readRoots } from "../core/registry.ts";
@@ -236,8 +236,10 @@ function linkItems(app: App, view: View, style: LinkStyle): CompletionItem[] {
   const c = conventionOf(g, app.config, app.settings.origins, style);
   const home = homeFolder();
   const tilde = (abs: string) => (abs.startsWith(`${home}/`) ? `~/${relative(home, abs)}` : abs);
+  // Each other vault's pointer name worked out once, not once per note: per note it read every named folder.
+  const memo: PointerMemo = { root: g.root, naming: new Map() };
   const item = (abs: string, form: string, here: boolean): CompletionItem => {
-    const ends = linkEnds(g, view.buf.abs, abs);
+    const ends = linkEnds(g, view.buf.abs, abs, memo);
     const dest = linkDestination(c, style, ends);
     return {
       // A wikilink's shows what it writes (a name, a path); a markdown link's, the file by its path as shown (21.9).
@@ -329,7 +331,9 @@ function narrow(app: App, c: CompletionState): void {
   const byServer = [...c.items].sort((a, b) => (a.sortText ?? a.label).localeCompare(b.sortText ?? b.label));
   c.shown = word ? rank(word, byServer, (i) => i.filterText ?? i.label).map((r) => r.item) : byServer;
   c.selected = 0;
-  if (!c.shown.length) app.completion = null;
+  // A link's list is kept while nothing matches, showing nothing, until its target ends: built again per key, it
+  // would read every vault's index each time. A backspace back to a match shows it again.
+  if (!c.shown.length && !c.links) app.completion = null;
 }
 
 /** What a snippet (25.8) is expanded with here: the line's indentation, the file's unit, the file's variables. */

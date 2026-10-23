@@ -1802,7 +1802,10 @@ markdown link's path (`21.5`: relative or from the vault's top, with or without 
 the path from the note. Right after `[[` (or `![[`), this vault's notes and files, each shown as the wikilink would
 write it — a name where it reaches the note from here, else its path from the vault's top (a top-level note's being its
 name, a relative path: `../plan`) — with its path beside it. Typing past the target (`)`, a space, `]`, `|`, `#`) closes
-it. Same keys as above.
+it. The list is built once, when the target starts, and kept until it ends: while what's typed matches nothing it shows
+nothing, and the keys act as with no popup, until a backspace brings a match back. Built per key, it would read every
+other vault's index each time; building it works out each folder's pointer name once (`PointerMemo` in
+`core/write-link.ts`), not once per note. Same keys as above.
 
 **A word from the open files** (`25.5`): `ctrl+n` in insert mode with no popup showing completes the word before the
 cursor, as vim's does, server or not, in a note or a code file — the open files' words that start as it does, two

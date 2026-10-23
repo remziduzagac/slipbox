@@ -3,7 +3,8 @@
 // The harness is tests/tui-harness.ts; source control's worktrees, marks, diffs, review, merge, pull and rebase
 // are tests/tui-git.test.ts's.
 
-import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { afterAll, beforeAll, describe, expect, spyOn, test } from "bun:test";
+import * as fs from "node:fs";
 import {
   chmodSync,
   cpSync,
@@ -10114,6 +10115,77 @@ describe("vaults in the TUI (17.x)", () => {
     await h.keys(")");
     expect(h.app.completion).toBeNull();
     for (const k of " f(") await h.keys(k);
+    expect(h.app.completion).toBeNull();
+    await h.keys("escape");
+  });
+
+  test("a link's target that matches nothing keeps its list while typed: the other vaults' indexes read once per link, not per key", async () => {
+    const { base, notes, app } = await twoVaults();
+    await onlyRootsUnder(base, async () => {
+      const { cacheDir } = await import("../src/core/paths.ts");
+      const { readRoots } = await import("../src/core/registry.ts");
+      const { foldersFile } = await import("../src/core/folders.ts");
+      const index = join(cacheDir(readRoots().find((v) => v.path === app)!), "index.json");
+      const h = await harness({ root: notes, open: "index.md" });
+      await h.app.run("view.source");
+      await h.keys("shift+g", "o");
+      const read = fs.readFileSync;
+      let reads = 0;
+      let named = 0;
+      // The list's own reads: a frame's (backlinks across vaults, a pointer followed) aren't the question.
+      const spy = spyOn(fs, "readFileSync").mockImplementation(((path: fs.PathOrFileDescriptor, ...rest: never[]) => {
+        if ((path === index || path === foldersFile()) && new Error().stack?.includes("linkItems")) {
+          if (path === index) reads++;
+          else named++;
+        }
+        return read(path, ...rest);
+      }) as typeof fs.readFileSync);
+      const shown = () => h.app.completion?.shown.map((i) => i.label) ?? [];
+      try {
+        for (const k of "[x](tod") await h.keys(k);
+        expect(shown()).toEqual(["todo.md"]);
+        // The named folders read once for the list, not once per other vault's note.
+        expect(named).toBe(1);
+        // Past any match: nothing shown, and typing on reads nothing again.
+        for (const k of "qqqq") await h.keys(k);
+        expect(shown()).toEqual([]);
+        expect(reads).toBe(1);
+        // Back to a match, it shows again from the same list.
+        for (let i = 0; i < 4; i++) await h.keys("backspace");
+        expect(shown()).toEqual(["todo.md"]);
+        expect(reads).toBe(1);
+        // tab while nothing shows isn't the popup's: it indents the line, as with no popup.
+        await h.keys("q", "tab");
+        expect(h.app.view!.buf.source).toEndWith("\n  [x](todq\n");
+        // The link ended, the next one reads them again: a note indexed since is offered.
+        await h.keys("backspace", "backspace", ")", "space");
+        expect(h.app.completion).toBeNull();
+        writeFileSync(join(app, "later.md"), "# Later\n");
+        openGraph(locateVault({ root: app }), DEFAULT_CONFIG, true);
+        const before = reads;
+        for (const k of "[y](") await h.keys(k);
+        expect(reads).toBe(before + 1);
+        expect(shown()).toContain(join(app, "later.md"));
+      } finally {
+        spy.mockRestore();
+      }
+      await h.keys("escape");
+    });
+    // A wikilink's list (this vault's alone) is kept the same way.
+    const h = await harness({ root: notes, open: "index.md" });
+    await h.app.run("view.source");
+    await h.keys("shift+g", "o");
+    for (const k of "[[to") await h.keys(k);
+    const list = h.app.completion;
+    expect(list?.shown.map((i) => i.detail)).toEqual(["todo.md"]);
+    for (const k of "qq") await h.keys(k);
+    expect(h.app.completion).toBe(list);
+    expect(list?.shown).toEqual([]);
+    await h.keys("backspace", "backspace");
+    expect(h.app.completion).toBe(list);
+    expect(list?.shown.map((i) => i.detail)).toEqual(["todo.md"]);
+    // Its target ended: gone.
+    await h.keys("]");
     expect(h.app.completion).toBeNull();
     await h.keys("escape");
   });
