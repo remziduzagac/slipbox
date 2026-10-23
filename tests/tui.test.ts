@@ -10312,21 +10312,19 @@ describe("vaults in the TUI (17.x)", () => {
     await h.keys("escape");
   });
 
-  test("a paste while a link's list shows: the list follows it, and tab never takes back what was pasted (20.13)", async () => {
+  test("a paste while typing closes the completion: tab or enter never takes back what was pasted (20.13)", async () => {
     const root = makeVault();
     const h = await harness({ root, open: "index.md" });
     await h.app.run("view.source");
-    // Pasted on into another target: that target's list, here nothing shown, so tab is the editor's.
+    // Pasted while a link's list shows, on into another target or past the target's end: closed, and tab is the
+    // editor's.
     await h.keys("shift+g", "o");
     for (const k of "[[to") await h.keys(k);
-    const was = h.app.completion;
-    expect(was?.shown.length).toBeGreaterThan(0);
+    expect(h.app.completion?.shown.length).toBeGreaterThan(0);
     await h.app.input.paste("]] [[qqq");
-    expect(h.app.completion).not.toBe(was);
-    expect(h.app.completion?.shown).toEqual([]);
+    expect(h.app.completion).toBeNull();
     await h.keys("tab");
     expect(h.app.view!.buf.source).toContain("[[to]] [[qqq");
-    // Pasted past the target's end: no list, and tab is the editor's.
     await h.keys("escape", "o");
     for (const k of "[x](to") await h.keys(k);
     expect(h.app.completion?.shown.length).toBeGreaterThan(0);
@@ -10334,7 +10332,33 @@ describe("vaults in the TUI (17.x)", () => {
     expect(h.app.completion).toBeNull();
     await h.keys("tab");
     expect(h.app.view!.buf.source).toContain("[x](to) and more");
+    // Pasted into a target whose list was closed: none opened, and enter is a new line.
+    await h.keys("escape", "o");
+    for (const k of "[x](") await h.keys(k);
+    await h.keys("ctrl+e");
+    await h.app.input.paste("diagram");
+    expect(h.app.completion).toBeNull();
+    await h.keys("enter");
+    expect(h.app.view!.buf.source).toContain("[x](diagram\n");
+    // The next key typed in a target makes its list again.
+    for (const k of "[x](diagra") await h.keys(k);
+    expect(h.app.completion?.shown.length).toBeGreaterThan(0);
     await h.keys("escape");
+  });
+
+  test("`.` after a link completed and more typed repeats it as typed: the item, then a new line and the rest (20.13)", async () => {
+    const root = makeVault();
+    const h = await harness({ root, open: "index.md" });
+    await h.app.run("view.source");
+    await h.keys("shift+g", "o");
+    for (const k of "[[to") await h.keys(k);
+    expect(h.app.completion?.shown.length).toBeGreaterThan(0);
+    await h.keys("tab", "enter", "x", "escape");
+    const src = h.app.view!.buf.source;
+    const change = src.slice(src.lastIndexOf("\n[[") + 1);
+    expect(change).toMatch(/^\[\[[^\n]+\nx\n$/);
+    await h.keys(".");
+    expect(h.app.view!.buf.source).toEndWith(change + change);
   });
 
   test("a pointer completed to a name two folders share asks first (D74, D83): written as it is, or one folder renamed first, previewed, then written; a private name, said", async () => {

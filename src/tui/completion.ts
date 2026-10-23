@@ -229,6 +229,17 @@ export function afterInsertKey(app: App, view: View, key: string): void {
   app.completion = null;
 }
 
+/**
+ * A paste while typing: the popup closed and a pending ask dropped, as a word ended does, so the next `tab` or `enter`
+ * never writes over what was pasted; the next key typed in a link's target makes its list again.
+ */
+export function afterPaste(app: App): void {
+  if (timer) clearTimeout(timer);
+  timer = null;
+  asked++;
+  app.completion = null;
+}
+
 /** Inside a markdown link's target (`[text](do|`): where the target starts, else null. */
 export function linkTargetStart(source: string, at: number): number | null {
   const line = source.slice(source.lastIndexOf("\n", at - 1) + 1, at);

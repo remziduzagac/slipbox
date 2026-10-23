@@ -563,8 +563,8 @@ const LINKS: Check[] = [
   },
   {
     area: "links-and-files",
-    name: "links: a target's completion kept while it's typed — hidden past a match, keys as with no popup, back on a backspace; an indent keeps it, a paste moves it on (20.13)",
-    covers: { cases: ["links"], commands: ["view.source"] },
+    name: "links: a target's completion kept while it's typed — hidden past a match, keys as with no popup, back on a backspace; an indent keeps it, a paste closes it; . repeats a completed one (20.13)",
+    covers: { cases: ["links"], commands: ["view.source", "note.save"] },
     options: { home: true, startAt: "home/notes/index.md" },
     run: async (s) => {
       const inbox = /inbox\.md +~\/notes\/inbox\.md/;
@@ -593,7 +593,7 @@ const LINKS: Check[] = [
       await s.see(wiki);
       await s.keys("]");
       await s.notSee(wiki);
-      // A paste while the list shows, past the target's end: the list gone with it, and tab never takes it back.
+      // A paste while the list shows: the list closed, and tab never takes back what was pasted.
       await s.keys("escape", "o");
       for (const k of "[x](inb") await s.keys(k);
       await s.see(inbox);
@@ -601,6 +601,23 @@ const LINKS: Check[] = [
       await s.notSee(inbox);
       await s.keys("tab");
       await s.see("[x](inb) and more");
+      // A paste into a target whose list was closed: none opened, and enter is a new line.
+      await s.keys("escape", "o");
+      for (const k of "[x](") await s.keys(k);
+      await s.keys("ctrl+e");
+      await s.paste("inbo");
+      await s.keys("enter");
+      // `.` after a link completed and a line more: the same again, the item, then the line.
+      await s.keys("escape", "o");
+      for (const k of "[[inb") await s.keys(k);
+      await s.see(wiki);
+      await s.keys("tab", "enter", "x", "escape", ".", "ctrl+s");
+      await s.file(
+        "~/notes/index.md",
+        // The lines after the indent above are indented as it is.
+        (t) => t.includes("[x](inbo\n") && /\[\[inbox\n\s*x\n\s*\[\[inbox\n\s*x(\n|$)/.test(t),
+        "the paste kept as pasted, and the completed link repeated as typed",
+      );
     },
   },
   {

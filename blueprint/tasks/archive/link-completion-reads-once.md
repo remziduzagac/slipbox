@@ -225,8 +225,7 @@ link being typed, matched or not, so the keys that match nothing cost the same h
     `Reach`'s caches. New of the kind: `linkEnds` works out the note's own path per item, once per build: the build's
     cost, not a key's.
   - The link list's four fields grouped in one: cosmetic; `line` renamed `lineStart`, which it is.
-- 2026-10-24: Reviewed again, the whole diff, by one reviewer (the second wasn't available for this round). Verified and
-  fixed:
+- 2026-10-24: Reviewed again, the whole diff. Verified and fixed:
   - A list was kept wherever a target started at the same offset, its line and what's before it unchecked: after a
     reload (`:e!`, a conflict's reload) while a list is kept, another target at that offset reused it. Typing into a
     target never changes what's before it, so a target is known by its line's start and what's before it alone. Test:
@@ -248,12 +247,12 @@ link being typed, matched or not, so the keys that match nothing cost the same h
     (bounded by the word's length times the list); `findVaultRoot` per note; the ranking's passes; the list kept apart
     from the popup; the narrowing moved to `match.ts` (the property it counts on is tested beside the matcher's
     tests); the style twice: as logged.
-- 2026-10-24: Reviewed again, the whole diff, by one reviewer (the second still not available). Verified and fixed:
+- 2026-10-24: Reviewed again, the whole diff. Verified and fixed:
   - A paste while a list showed left the list as it was (a paste never ran the completion's key step), and the next
     `tab` or `enter` wrote the chosen item over what was pasted: `[[to`, `]] [[x` pasted, `tab` gave `[[./todo.md`;
-    `[x](to`, `) and more` pasted, `tab` gave `[x](todo.md`. Older than this change, on its path; taken in by the
-    maintainer's choice. A paste runs the key step now (`input.ts`): a link's list made for where it left the
-    cursor, a word's or a server's closed. Tests: both pastes keep their text; the terminal check of the list kept
+    `[x](to`, `) and more` pasted, `tab` gave `[x](todo.md`. Older than this change, on its path; taken into its
+    scope. A paste runs the key step now (`input.ts`): a link's list made for where it left the cursor, a word's or
+    a server's closed. Tests: both pastes keep their text; the terminal check of the list kept
     while typed pastes `) and more` with `inbox` showing, and tab indents the line, the paste kept. Tried live: the
     list gone with the paste, `[x](inb) and more` kept, tab indented it.
   - The manual said a note made while typing is offered from the next link: it's offered by the next list, which
@@ -265,10 +264,28 @@ link being typed, matched or not, so the keys that match nothing cost the same h
   Mutation-checked, each alone: no key step after a paste, and the earlier eleven: each fails a unit test; no key step
   after a paste fails the terminal check too. Ran the completion, matcher and paste tests (38 pass), the other tests
   that paste (9 pass), and the terminal checks of links and pastes (8 pass). Rejected:
-  - A language server's late answer after `[`: older than this change, untestable here; issue #48, by the
-    maintainer's choice.
+  - A language server's late answer after `[`: older than this change, untestable here; issue #48.
   - The design changed by a task, not a workstream: a fix's behaviour updates its design file in the same change; the
-    narrowing and the pointer names were taken into this fix's scope by the maintainer.
+    narrowing and the pointer names were taken into this fix's scope.
   - Raised again, as logged: `findVaultRoot` per note; the matches kept per word; the list kept apart from the popup;
     the memo's place; `Reach`'s caches. A helper for a line's start, now written four times in the file: one
     expression, as the file has it.
+- 2026-10-24: Reviewed again, the whole diff. Verified and fixed:
+  - The paste's key step opened a list: pasted into a target whose list was closed (`ctrl+e`) or not showing, `enter`
+    then took the best match over the paste, the new line lost (`[x](`, `ctrl+e`, `diagram` pasted, `enter`:
+    `[x](attachments/diagram.png`). And `.` after a link completed and a line more replayed the accept's paste, which
+    narrowed the list again, so the recorded `enter` accepted once more (the line lost; worse before this change, the
+    whole list's first item). A paste now closes the completion and drops a pending ask, as a word ended does
+    (`afterPaste`); the next key typed in a target makes its list again. That also keeps a paste from leaving a
+    server's pending ask to answer over a link's list. Tests: `diagram` pasted into a closed target, `enter` a new
+    line; `.` after `[[to`, `tab`, `enter`, `x` repeats it whole; the terminal check of the list kept while typed does
+    both (`inbo` pasted, `[[inb`, `tab`, `enter`, `x`, `.`) and saves the note to read them.
+  Mutation-checked, each alone: a paste leaving the popup as it was (as before this change), a paste running the key
+  step (the last round's), and the earlier eleven: each fails a unit test; both pastes fail the terminal check too.
+  Ran the completion, matcher and paste tests (41 pass), the pointer tests (23 pass), the terminal checks of links and
+  pastes (8 pass). Tried live: `inbo` pasted into `[x](` after `ctrl+e` stays as pasted and `enter` is a new line;
+  `[[inb`, `tab`, `enter`, `x`, `.` writes `[[inbox` and `x` twice. Rejected:
+  - A paste doesn't run the snippet's key step either: older than this change, and a paste closing the completion
+    claims nothing for snippets.
+  - Raised again, as logged: the list kept apart from the popup; the ranking's passes; a key leaving the word as it was
+    ranked again; `findVaultRoot` per note; the narrowing beside the matcher; the memo's root check.
