@@ -10251,9 +10251,11 @@ describe("vaults in the TUI (17.x)", () => {
     // Its target ended: gone.
     await h.keys("backspace", "]");
     expect(h.app.completion).toBeNull();
-    // Another line's target gets its own list, the cursor gone there straight from one kept.
+    // Another line's target gets its own list, the cursor gone there straight from one kept. A target matching
+    // nothing has a `~`: an item's text holds its whole path, and a random temporary folder's name can hold any two
+    // letters (`two-dG0Zz7` matched "zz").
     await h.keys("enter");
-    for (const k of "[[zz") await h.keys(k);
+    for (const k of "[[z~") await h.keys(k);
     const next = h.app.completion;
     expect(next?.shown).toEqual([]);
     await h.keys("up");
@@ -10265,32 +10267,32 @@ describe("vaults in the TUI (17.x)", () => {
     for (const k of "[[to") await h.keys(k);
     await h.keys("home");
     expect(h.app.completion).toBeNull();
-    for (const k of "[[zz") await h.keys(k);
+    for (const k of "[[z~") await h.keys(k);
     const first = h.app.completion;
     expect(first?.shown).toEqual([]);
     await h.keys("end");
-    expect(h.app.view!.buf.source).toContain("\n[[zz  [[to\n");
+    expect(h.app.view!.buf.source).toContain("\n[[z~  [[to\n");
     expect(h.app.completion).not.toBe(first);
     expect(h.app.completion?.shown.map((i) => i.detail)).toEqual(["todo.md"]);
     // A paste that leaves the cursor in another target on the line, then a key there: its own list too.
     await h.keys("escape", "o");
-    for (const k of "[[zz") await h.keys(k);
+    for (const k of "[[z~") await h.keys(k);
     const kept = h.app.completion;
     expect(kept?.shown).toEqual([]);
     await h.app.input.paste("]] [[to");
     await h.keys("left");
-    expect(h.app.view!.buf.source).toContain("\n[[zz]] [[to\n");
+    expect(h.app.view!.buf.source).toContain("\n[[z~]] [[to\n");
     expect(h.app.completion?.links).toBe("wiki");
     expect(h.app.completion).not.toBe(kept);
     // What's before a target changed where it stands, its start unmoved (an edit from outside, a reload): its own list.
     await h.keys("escape", "o");
-    for (const k of ["a", "space", ..."[[zz"]) await h.keys(k);
+    for (const k of ["a", "space", ..."[[z~"]) await h.keys(k);
     const here = h.app.completion;
     expect(here?.shown).toEqual([]);
     const buf = h.app.view!.buf;
-    buf.edit(buf.source.lastIndexOf("a [[zz"), 1, "b");
+    buf.edit(buf.source.lastIndexOf("a [[z~"), 1, "b");
     await h.keys("z");
-    expect(h.app.view!.buf.source).toContain("\nb [[zzz\n");
+    expect(h.app.view!.buf.source).toContain("\nb [[z~z\n");
     expect(h.app.completion?.links).toBe("wiki");
     expect(h.app.completion).not.toBe(here);
     await h.keys("escape");
