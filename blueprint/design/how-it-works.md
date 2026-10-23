@@ -41,6 +41,8 @@ implementation, fails at start-up and fails a test ([tui.md](tui.md) § Parity w
 | `src/core/` | `src/tui/`, `src/cli/`, `@opentui/*` |
 | `src/cli/` | `src/tui/`, `@opentui/*` |
 
+It fails it too when a module other than `core/diagram-worker.ts` imports `core/diagram-render.ts` for more than its
+types: a diagram drawn on the screen's thread could freeze it ([rendering.md](rendering.md) § Blocks and inlines).
 It runs in CI (`.github/workflows/ci.yml`) and in `bun run check`, as does `scripts/check-deps.ts`, the supply chain's
 gates (`14.10`, [distribution.md](distribution.md) § The supply chain).
 
@@ -52,7 +54,7 @@ controller of its own) and `src/tui/draw.ts` (painting, its regions in `draw-*.t
 
 | File | What it does with OpenTUI |
 | --- | --- |
-| `src/tui/opentui.ts` | `Canvas` over `OptimizedBuffer`; the full-screen `Renderable` |
+| `src/tui/opentui.ts` | `Canvas` over `OptimizedBuffer`; the full-screen `Renderable`; a worker decoding pictures |
 | `src/tui/run.ts` | `createCliRenderer`, key, paste and mouse events, resize, OSC 52, shutdown |
 
 What comes before the screen is taken is `run.ts`'s `prepare`, which needs no terminal (a test calls it):
@@ -162,8 +164,10 @@ The CLI's commands are the user's reference, [cli.md](../../docs/manual/cli.md);
 | `core/obsidian.ts` | DF-D17 | Obsidian's `==highlight==` and `%%comment%%`, read into the tree; a block comment too |
 | `core/parse-pool.ts` | 15.1 | a big note's chunks parsed on up to four workers (`parse-worker.ts`), into its cache |
 | `core/workers.ts` | 15.1, 25.6 | where a worker's script is, from the source or in the compiled binary (D232) |
+| `core/worker-requests.ts` | 15.1, 25.6 | a worker's requests one at a time: a bounded mailbox, a line, deadlines |
 | `core/links.ts` | 1.4 | `LinkIndex`: case policy, collisions, markdown URLs |
 | `core/search.ts` | 6.x | search: the query, a file read for it, the index kept, the index or a scan, hits located |
+| `core/regex-jobs.ts` | 25.4 | a regex matched in a worker (`regex-worker.ts`), stopped at its deadline |
 | `core/search-index.ts` | 6.6 | the search index: SQLite FTS5 in the cache, a row per file, BM25 |
 | `core/scope.ts` | 20.16, 21.10 | search by vault: `here`, then linked vaults, then every vault known (`--scope`) |
 | `core/autoindex.ts` | 20.9 | the background auto-index: home walked in slices and indexed, then the vaults in it |
@@ -183,10 +187,14 @@ The CLI's commands are the user's reference, [cli.md](../../docs/manual/cli.md);
 | `core/hosting.ts` | — | a repository's hosting URLs (GitHub, GitLab, Bitbucket) read as its files |
 | `core/data.ts` | 16.11–16.15 | data files (TOML, INI, YAML, JSON, CSV) read into a document tree; their links |
 | `core/lazy.ts` | 16.6 | modules and assets loaded on first use: asked synchronously, heard when ready |
-| `core/diagrams.ts` | 12.10 | Mermaid drawn in box drawing (loaded on first use), or why it's its code |
+| `core/diagrams.ts` | 12.10, 12.16 | Mermaid's drawings read once done: box drawing, an SVG, or why it's its code |
+| `core/diagram-jobs.ts` | 12.10, D253 | the diagrams' queue and results, drawn one at a time in `diagram-worker.ts` |
+| `core/diagram-render.ts` | 12.10, 12.16 | Mermaid laid out as text or an SVG; imported by the worker alone |
+| `core/diagram-cache.ts` | D253 | diagrams drawn, kept on disk across sessions: private, optional, bounded |
 | `core/math.ts` | 12.11 | maths as Unicode text: a formula, a display's rows (aligned, cases, matrices) |
-| `core/svg.ts` | 12.15 | SVG rasterised (resvg, on first use), a machine's font for words; CSS variables resolved |
-| `core/typeset.ts` | 12.17 | a display's maths typeset as an SVG (MathJax, loaded on first use) |
+| `core/svg.ts` | 12.15 | SVG rasterised (resvg), a machine's font for words; CSS variables resolved |
+| `core/typeset.ts` | 12.17 | a display's maths typeset as an SVG (MathJax) |
+| `core/paint-jobs.ts` | 12.15, 12.17 | the screen's maths and SVGs, done in `paint-worker.ts` and read once done |
 | `core/imagecache.ts` | 12.12 | where a picture on the web is kept once fetched: a file per address |
 | `core/export/assemble.ts` | 10.1 | notes as one document: chapters, embeds drawn in, links inside it, pictures found |
 | `core/export/mark.ts` | 10.3, DF-D25 | the mark a Markdown export carries, read without loading the writers |
@@ -201,8 +209,13 @@ The CLI's commands are the user's reference, [cli.md](../../docs/manual/cli.md);
 | `core/export/convert.ts` | 10.10 | a picture a format doesn't hold made PNG first: BMP, GIF, WebP decoded |
 | `core/export/style.ts` | 10.x | the look on paper: print's colours, callouts', code's; the stylesheet |
 | `core/export/index.ts` | 10.x | the formats by name, where an export goes, writing it ([export.md](export.md)) |
+| `core/export/jobs.ts` | 10.x | an export in a worker of its own (`export-worker.ts`); only the owner writes it |
+| `core/export/reads.ts` | 10.x | what a job reads: regular files only, each note parsed once |
+| `core/export/spool.ts` | 10.x | the output staged privately (`stream.ts`), published by the owner |
+| `core/export/zip.ts` | 10.x | EPUB's ZIP, an entry at a time; no ZIP64, so 4 GiB or 65,535 files at most |
 | `tui/placeholders.ts` | 12.7 | Kitty's Unicode placeholders: a picture's id, its cells as text, sent once, let go |
 | `core/syntax.ts` | 16.7–16.9, 16.18–16.22 | tree-sitter: spans, outline, errors, comments; parts in other languages |
+| `core/syntax-thread.ts` | 16.7–16.9, D252 | a code file's grammar, parse and outline on `syntax-worker.ts` |
 | `core/docformats.ts` | 24.4 | a doc comment read into one shape, whatever wrote it: JSDoc, Google, NumPy, Sphinx |
 | `core/landing.ts` | 11.3 | where a link lands in its note — a heading, a block's `^id`, `L42` — and its text there |
 | `core/note.ts` | 2.x, 1.11 | a note rendered for a pane: parse, resolve links, embeds' notes, lay out (CLI and TUI) |
@@ -258,6 +271,8 @@ The CLI's commands are the user's reference, [cli.md](../../docs/manual/cli.md);
 | `core/servers/manager.ts` | 19.1 | the servers of open files: one per server and project, installed, restarted |
 | `core/servers/doctor.ts` | 19.7 | each language's servers and where each is; a file's, in its project |
 | `core/servers/client.ts` | 19.1 | a language server as slipbox's client: started, files synced, diagnostics, stopped |
+| `core/servers/limits.ts` | 19.1 | what a server may cost: requests unanswered, their bytes, diagnostics kept |
+| `core/servers/transport.ts` | 19.1 | an answer's framing checked before it's read |
 | `core/servers/linters.ts` | 19.19 | linters with no language server, in efm-langserver's keys, via the lint surface |
 | `core/tool-process.ts` | 3.21, 19.5, 19.19 | a linter's or install's run: its output bounded, its group stopped |
 | `core/servers/vscode.ts` | 19.20 | a project's `.vscode/settings.json` answering its servers' settings |
@@ -294,6 +309,7 @@ The CLI's commands are the user's reference, [cli.md](../../docs/manual/cli.md);
 | `tui/vim.ts` | 4.4 | counts, operators and text objects, the register, `.` |
 | `tui/replacing.ts` | 4.16 | the replace row, `:s` and its confirm, `gn`'s matches |
 | `tui/githistory.ts` | 26.4, 22.1 | blame and a file's history: a version read, its diff to now |
+| `tui/gitquery.ts` | — | the one foreground git read: a newer one cancels it, a stale view never takes it |
 | `tui/gitview.ts` | 26.2, GIT-D8 | the git panel's working tree: its sections, a file's changes, what its keys run |
 | `tui/gitpanel.ts` | GIT-D8, GIT-D12 | the git panel: its top, buttons, rows, keys and footer; `space g` |
 | `tui/gitbranchview.ts` | GIT-D9, GIT-D10 | the git panel's branches: worktrees, bases; made, removed, merged |
@@ -491,8 +507,9 @@ the whole-note work — the first open, a change of width — short:
   their nodes back as JSON into the buffer's parse cache — so the parse that follows here finds every chunk done.
   Meanwhile the view draws one line, `reading big.md — 20,000 lines…`, without moving (its reading position waits
   for the real layout); a key waits for the parse and then acts on the note, and a click is dropped. The Info and
-  footnotes views wait too, rather than parse here. Where threads can't start, or one fails, the note is parsed
-  here as any other. The workers stop after a minute idle.
+  footnotes views wait too, rather than parse here. Where threads can't start, or one fails, the note reads as its
+  source, the app says why once, and opening it again tries again ([rendering.md](rendering.md) § Background parsing and
+  spelling limits); the index parses it here. The workers stop after a minute idle.
 - **Wrapping is mostly ASCII work** (`core/layout/wrap.ts`, `core/width.ts`): a paragraph of printable ASCII is
   wrapped by ranges of its text, not a grapheme object per character (the same rows, exactly: a randomised test
   holds the two paths together); other text goes through the grapheme segmenter only around what isn't ASCII

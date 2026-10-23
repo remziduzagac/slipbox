@@ -116,11 +116,11 @@ than retrying each frame. Idle workers are unreferenced and stop after 30 second
 clears its queued jobs and retained images. CLI/export retain their explicit awaited loaders.
 
 Math input is at most 32 KiB, SVG input 8 MiB, generated output 8 MiB, and each completed-job cache 16 MiB or 512
-entries. Native files are at most 20 MiB; inspection accepts dimensions up to 16,384 per side and 16 million pixels.
-Screen decoding returns at most one million pixels, with sides no larger than 2,048; the adapter retains the 24 such
-decoded images drawn last (96 MB of pixels), so the pictures on screen are never decoded again while they show. SVG
-rasterization targets at most four million pixels and width 4,096. These are application budgets, not an
-operating-system memory sandbox or native-fault containment.
+entries. Native files are at most 20 MiB; inspection accepts dimensions up to 16,384 per side and 16 million pixels, as
+an SVG's size does on the screen. Screen decoding returns at most one million pixels, with sides no larger than 2,048;
+the adapter retains the 24 such decoded images drawn last (96 MB of pixels), so the pictures on screen are never decoded
+again while they show. SVG rasterization targets at most four million pixels and width 4,096. These are application
+budgets, not an operating-system memory sandbox or native-fault containment.
 
 A local ordinary 549,252-byte SVG took 163 ms to size/rasterize synchronously versus 3.2 ms to submit the background
 jobs; a 180-term math display took 46.6 ms synchronously versus 2.45 ms to submit (2026-10-18, one local run). The
@@ -547,6 +547,6 @@ The background index's parses aren't cancelled. A result for a file that changed
 text goes to the threads. A note whose parse failed is parsed on the main thread, as before the threads; its entry is
 never made, or cached, from the fallback. The pool's workers stop after a minute with no parse running.
 
-A spelling check that fails leaves its words unknown, never taken as right, and its warning is said once. The words
-are asked again on a draw two seconds or more later. These are budgets for requests and held input, not OS-enforced
-limits on a worker's memory.
+A spelling check that fails leaves its words unknown, never taken as right, and its warning is said once; an answer is
+held to 16 MiB, the default for a worker's requests (`core/worker-requests.ts`). The words are asked again on a draw two
+seconds or more later. These are budgets for requests and held input, not OS-enforced limits on a worker's memory.

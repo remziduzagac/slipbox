@@ -1,5 +1,5 @@
 ---
-synced_with: dev@a193318
+synced_with: dev@71313f3
 ---
 
 # slipbox blueprint
@@ -91,9 +91,9 @@ This blueprint is public, so a contributor's agent needs nothing but this README
   docs' lint, spelling and links, the tests) runs freely, and CI runs the same on Linux and macOS. Terminal tests and
   live checks against real servers are listed for the person's approval before they run (D207). A feature just built
   is tried live by the agent, in a herdr tab of its own on the reference set, and marked done once it works (D209).
-- **Changes land** through a pull request that passes CI's `ci` check, merged by the maintainer, its title a
-  Conventional Commit and the IDs in its body; agents propose, never merge, release or change settings (GR-D6;
-  design/repository.md § How a change lands).
+- **Changes land** through a pull request that passes CI's `ci` check, its title a Conventional Commit and the IDs
+  in its body. Agents propose; they merge, move `test` or `main` and release only when the maintainer asks, and the
+  settings are the maintainer's alone (GR-D6, D251; design/repository.md § How a change lands).
 - **Every bug fixed gets a regression test** that fails without the fix.
 - **The examples.** The reference set, `examples/home/`, holds every case of every feature, listed in its `CASES.md`:
   use it to test a feature. The demo vault, `examples/vault/`, holds the rendering fixtures (its `about-this-vault.md`

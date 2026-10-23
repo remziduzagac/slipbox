@@ -21,3 +21,6 @@ obtained. Research informs the decisions but decides nothing; each file's summar
 - [maintenance-gaps.md](maintenance-gaps.md): verified local gaps and deferred maintenance/accessibility proposals.
 
 - [tokyo-night-palettes.md](tokyo-night-palettes.md): the four official palettes and their semantic-role mapping.
+- [github-behaviour.md](github-behaviour.md): what GitHub does that the release flow and the upkeep rely on: a
+  ruleset and the checks of a run by hand, a Pages deployment under a release, the site's cache, Dependabot's alerts
+  in a folder.

@@ -185,8 +185,9 @@ How: design/lsp.md; design/tui.md § The lint surface, § Problems where they ar
 
 ## Git
 
-- For reviewing: what a branch changed against its merge base, each branch against its own base in the TUI, a note's
-  diff, the worktrees, a merge's conflicts in Problems, and the links a merge would break (D66, D154, GIT-D10).
+- For reviewing: what a branch changed against its merge base, each branch against its own base (the CLI's `changed` and
+  `diff` too, D255), a note's diff, the worktrees, a merge's conflicts in Problems, and the links a merge would break
+  (D66, D154, GIT-D10).
 - In the editor, the TUI's alone: changed lines in the gutter, source control, commit, blame and a file's history,
   branches; a change reviewed a hunk at a time, each kept, reverted or noted for the agent (GIT-D3); fetch, pull, push
   and stash, asked for, never on a timer (GIT-D4); git's conflicts settled in a merge screen, a pull where both sides

@@ -1928,11 +1928,12 @@ git is given it (`refName`, as
 `[git] base` and `[git] bases`, a vault's own config's too, are checked as the config is read, anything else left out
 and said; a kept one is checked before use; and git is given each after `--end-of-options`. `Git.baseOf` asks it once
 each time git has news, `Git.fallbackBase` `[git] base`, main or master the same — never on every frame that draws it;
-the panel, `:changes` (`openChanges`), `:diff` (`showDiff`), This branch against main, Merge…, `:merge-review`
-(`openMergeReview`: this branch into its own base, as D154's amendment of 2026-10-17 settles it) and the rebase onto
-the base use it. The CLI's `changed` and `diff` choose it the same way (D255): `--base`, else the branch's own
-(`baseFor`), else `[git] base`, main or master; `data.baseChosen` says how (`given`, `kept`, `nearest`, `configured`).
-`merge-review` merges the branch it names into `--into`, else HEAD.
+the panel, This branch against main, Merge…, `:merge-review` (`openMergeReview`: this branch into its own base, as
+D154's amendment of 2026-10-17 settles it) and the rebase onto the base use it; `:changes` (`openChanges`) and `:diff`
+(`showDiff`) ask afresh each time, off the screen's thread (`Git.baseLater`, § Asynchronous git reads). The CLI's
+`changed` and `diff` choose it the same way (D255): `--base`, else the branch's own (`baseFor`), else `[git] base`, main
+or master; `data.baseChosen` says how (`given`, `kept`, `nearest`, `configured`). `merge-review` merges the branch it
+names into `--into`, else HEAD.
 
 **A base asked for** (D255; `core/gitbase.ts`): `resolveBase` (`resolveBaseLater` on the screen) takes what was typed —
 never an option, a space or a control character — and keeps a branch, remote branch or tag by its plain name

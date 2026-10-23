@@ -86,7 +86,8 @@ buffered inside the worker, without an additional copy into the owner or a priva
 These are bounds on output transport and publication, not on the assembled tree, an individual raster decode or
 third-party encoder allocations. No total-process memory ceiling is claimed. Nothing an export reads or makes is capped
 by its size: a note, a picture, all of them together, the document and its output are as big as they are, as an export
-on the main thread had them. Worker isolation keeps their CPU work away from input; it is not an OS memory sandbox or
+on the main thread had them, but for an EPUB: a ZIP written without ZIP64, refused past 4 GiB or 65,535 files
+(`core/export/zip.ts`). Worker isolation keeps their CPU work away from input; it is not an OS memory sandbox or
 independent native-fault containment. Existing writers are JavaScript/WebAssembly; a helper process is unnecessary for
 the measured CPU scheduling problem, but remains an option for stronger future containment. A worker the export's starts
 (the diagrams') is found from the compiled binary's root, whichever entry point starts it (`core/workers.ts`).
