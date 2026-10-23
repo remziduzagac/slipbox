@@ -1122,7 +1122,8 @@ again; an undo moves the answer there is then, never an older one. When it can't
 folder can't be written), the move stands, and says so. A relative link moved to another folder is written
 again there to lead where it did, from its own text, so a link to a link stays one; the plan says so. Unchanged: what
 is reached through a link out of the vault is never moved out of it, nor anything into it; a link inside a folder that
-moves is left as the folder's move leaves it; a copy or a delete of a link out is refused. As built: `entryInside`
+moves is left as the folder's move leaves it; a link leading to a vault, or to a folder holding one, isn't moved, a
+vault being known by its real path; a copy or a delete of a link out is refused. As built: `entryInside`
 (`src/core/fsutil.ts`), `moveLink` and `movedLinkText` (`src/core/symlinks.ts`), called by `applyPlan`; design/roots.md
 § Links followed only when you say so.
 

@@ -166,8 +166,9 @@ folder asks only about the file itself.
 
 The link itself can be renamed or moved, in a vault or in home: `r` and `m` on its row in the explorer, or `slipbox mv`.
 That moves the link, never what it leads to, and it stays followed under its new name. A relative link moved to
-another folder is written again so that it still leads to the same place, and the preview says so. Copying or deleting
-a link that leads out is refused.
+another folder is written again so that it still leads to the same place, and the preview says so. A link that leads
+to a vault, or to a folder holding one, isn't moved: slipbox knows a vault by where it really is. Copying or deleting a
+link that leads out is refused.
 
 A write never lands in a hidden folder of your home folder, or of a vault, through a link: slipbox refuses it there as
 it refuses it named directly.

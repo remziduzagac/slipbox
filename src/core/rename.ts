@@ -60,10 +60,12 @@ function cleanTarget(g: Graph, input: string, holds: "file" | "folder" | "vault"
 /**
  * What moves, by its real path inside the vault (VV-D6): nothing is moved out of where a link leads, followed or
  * not, as nothing is moved into it — in home too, as a copy or a delete there. A link named itself moves as a link,
- * its target staying where it is (D?1): its entry is checked, in its folder (`entryInside`).
+ * its target staying where it is (D?1): its entry is checked, in its folder (`entryInside`) — but one leading to a
+ * vault, or to a folder holding one (`vaults`), whose place is known by its real path: no link's name moves it.
  */
-function checkSource(g: Graph, rel: string): void {
-  if (!entryInside(g.root, join(g.root, rel))) throw new RenameError(`${rel} resolves outside the vault`);
+function checkSource(g: Graph, rel: string, vaults = false): void {
+  const abs = join(g.root, rel);
+  if (!(vaults ? landsInside : entryInside)(g.root, abs)) throw new RenameError(`${rel} resolves outside the vault`);
 }
 
 /**
@@ -131,7 +133,8 @@ export function planNoteRename(g: Graph, fromRel: string, toInput: string): Rena
 export function planFolderMove(g: Graph, fromDir: string, toInput: string): RenamePlan {
   const from = posix.normalize(fromDir.replace(/\/+$/, ""));
   if (!g.dirs.includes(from) || !from || from === ".") throw new RenameError(`no folder ${fromDir} in ${g.root}`);
-  checkSource(g, from);
+  const nested = g.nestedRoots().filter((r) => r.startsWith(`${from}/`));
+  checkSource(g, from, nested.length > 0);
   const to = cleanTarget(
     g,
     toInput,
@@ -150,7 +153,6 @@ export function planFolderMove(g: Graph, fromDir: string, toInput: string): Rena
   const toAbs = join(g.root, to);
   const moving = (abs: string) => abs === fromAbs || abs.startsWith(`${fromAbs}/`);
   const shift = (abs: string) => (moving(abs) ? toAbs + abs.slice(fromAbs.length) : abs);
-  const nested = g.nestedRoots().filter((r) => r.startsWith(`${from}/`));
   const roots = nested.length
     ? (c: Collector) => nested.flatMap((r) => nestedRootEdits(g, c, join(g.root, r), moving, shift))
     : undefined;
@@ -338,7 +340,7 @@ function relativeAs(written: string, fileAbs: string, targetAbs: string): string
 export function planVaultFolderMove(parent: Graph, fromRel: string, toInput: string): RenamePlan {
   const from = posix.normalize(fromRel.replace(/\/+$/, ""));
   if (!parent.nestedRoots().includes(from)) throw new RenameError(`no vault nested at ${fromRel} in ${parent.root}`);
-  checkSource(parent, from);
+  checkSource(parent, from, true);
   const to = cleanTarget(parent, toInput, "vault");
   if (to === from) throw new RenameError(`${from} is already there`);
   if (to.startsWith(`${from}/`)) throw new RenameError(`${from} can't move into itself`);

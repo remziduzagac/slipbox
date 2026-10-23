@@ -7856,6 +7856,51 @@ describe("plans write only inside the vault (VV-D6)", () => {
   );
 
   test(
+    "a followed link to a vault, or to a folder holding one, isn't moved by its name: a vault's place is its real path",
+    homed(async () => {
+      const { recordLocation, rootAt } = await import("../src/core/vault.ts");
+      const top = realpathSync(mkdtempSync(join(tmpdir(), "slipbox-inside-")));
+      const vault = join(top, "vault");
+      const other = join(top, "other");
+      const held = join(top, "holder", "v2");
+      for (const d of [vault, other, held]) mkdirSync(join(d, ".slipbox"), { recursive: true });
+      writeFileSync(join(other, "o.md"), "# O\n");
+      writeFileSync(join(held, "h.md"), "# H\n");
+      writeFileSync(join(vault, "a.md"), "# A\n\n[o](ov/o.md) and [h](hold/v2/h.md)\n");
+      symlinkSync(other, join(vault, "ov"));
+      symlinkSync(join(top, "holder"), join(vault, "hold"));
+      for (const [link, target] of [
+        ["ov", other],
+        ["hold", join(top, "holder")],
+      ] as const) {
+        setLinkAnswer(join(vault, link), "follow");
+        await probe(target);
+      }
+      for (const v of [other, vault]) recordLocation(rootAt(v));
+      const roots = () =>
+        readRoots()
+          .map((r) => r.path)
+          .sort();
+      const before = roots();
+      for (const [from, to] of [
+        ["ov", "ov2"],
+        ["hold", "held"],
+      ] as const) {
+        const r = await cli(["mv", from, to], vault);
+        expect([r.code, r.json.error.message]).toEqual([5, `${from} resolves outside the vault`]);
+        expect(lstatSync(join(vault, from)).isSymbolicLink()).toBe(true);
+      }
+      expect(roots()).toEqual(before);
+      expect(readFileSync(join(vault, "a.md"), "utf8")).toBe("# A\n\n[o](ov/o.md) and [h](hold/v2/h.md)\n");
+      // Carried out as a plan made before the link was there: refused as it's carried out.
+      const g = openGraph(locateVault({ root: vault }), DEFAULT_CONFIG, false);
+      const move = { from: join(vault, "ov"), to: join(vault, "ov2"), dir: true };
+      const plan = { kind: "folder" as const, from: "ov", to: "ov2", move, files: [], warnings: [], skipped: [] };
+      expect(() => applyPlan(g, { ...plan, vaults: [[move.from, move.to]] })).toThrow("ov resolves outside the vault");
+    }),
+  );
+
+  test(
     "a folder moved with a relative file link in it: the link's note written where it was read, never where the moved link leads",
     homed(async () => {
       const top = realpathSync(mkdtempSync(join(tmpdir(), "slipbox-inside-")));

@@ -389,13 +389,13 @@ of every read through a link out of the root; D220's writes stay for vaults.
   `core/symlinks.ts`; D?1), what it leads to staying where it is; its answer goes with it, in place of any kept where
   it goes (one that can't be kept there, the state folder unwritable, said), and a relative one moved to another
   folder is written again there to lead where it did, from its own text, the plan saying so (`movedLinkText`). A link
-  inside a folder that moves is left as the folder's move leaves it, and a copy or delete of a link out is refused
-  still. An export's default place, beside a note reached through a link out of the vault, is refused; `--out` names
-  one. Where links are looked at on a
-  path's way (`blockingLink`): from the vault's or home's folder; in Elsewhere every link on the way asks, from the
-  folder you work in — the TUI's folder opened, the CLI's current folder (`workDir`) — down; a path named outright
-  outside it starts at its own folder, the file itself asking: what's above the folder you work in is yours to name
-  (macOS's `/tmp` and `/var` are links).
+  inside a folder that moves is left as the folder's move leaves it; a link leading to a vault, or to a folder holding
+  one, isn't moved (`checkSource`'s `vaults`, `outside`), a vault being known by its real path; a copy or delete of a
+  link out is refused still. An export's default place, beside a note reached through a link out of the vault, is
+  refused; `--out` names one. Where links are looked at on a path's way (`blockingLink`): from the vault's or home's
+  folder; in Elsewhere every link on the way asks, from the folder you work in — the TUI's folder opened, the CLI's
+  current folder (`workDir`) — down; a path named outright outside it starts at its own folder, the file itself asking:
+  what's above the folder you work in is yours to name (macOS's `/tmp` and `/var` are links).
 - **The CLI** refuses a read through a link not followed (`refuseUnfollowed`, exit 5: `… is reached through a link
   that isn't followed (~/notes/data → /mnt/disk/data): open it in slipbox to choose`) — a note however it's named
   (`resolveNote`, Elsewhere's listing holding a linked note as any other), a snippet `capture --ref --snippet` reads —

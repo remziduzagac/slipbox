@@ -91,7 +91,7 @@ export function planUndo(g: Graph): RenamePlan {
   if (move && existsSync(move.to) && !sameFile(move.from, move.to))
     throw new RenameError(`${relative(g.root, move.to)} exists again: the ${what} can't be undone`);
   // Back only inside the vault: a link that leads out of it now, where the folder was, isn't moved through (VV-D6).
-  const out = outside(g, { files, move });
+  const out = outside(g, { files, move, vaults: r.vaults });
   if (out) throw new RenameError(`${out}: the ${what} can't be undone`);
   const back = (pairs: [string, string][]) => pairs.map(([a, b]): [string, string] => [b, a]);
   const warnings = dirtyTrees(files.map((f) => f.abs));
@@ -126,13 +126,15 @@ export interface Applied {
  */
 export function outside(
   g: Graph,
-  plan: Pick<RenamePlan, "files" | "move" | "makeVault" | "unmakeVault">,
+  plan: Pick<RenamePlan, "files" | "move" | "makeVault" | "unmakeVault" | "vaults">,
 ): string | null {
   for (const f of plan.files)
     if (!mayRewrite(g, f.abs))
       return `${g.shownPath(f.abs)}: a link leads it out of the vault, where nothing is written`;
-  if (plan.move && !entryInside(g.root, plan.move.from))
-    return `${g.shownPath(plan.move.from)} resolves outside the vault`;
+  // A link named itself by its entry (D?1); one carrying vaults by where it leads, as a vault is known by its real path.
+  const from = plan.move?.from;
+  if (from && !(plan.vaults?.length ? landsInside : entryInside)(g.root, from))
+    return `${g.shownPath(from)} resolves outside the vault`;
   const ends = [plan.move?.to, plan.makeVault?.root, plan.unmakeVault?.root];
   for (const end of ends) if (end && !landsInside(g.root, end)) return `${g.shownPath(end)} resolves outside the vault`;
   return null;

@@ -129,3 +129,10 @@ to lead where it did (D?1).
   folder made unwritable. Mutation-checked (`t14-mutate3.log`): writing where the moved link leads, a moved folder's
   files written at their old place, `\` split on POSIX, the lost answer not said: each fails a test. Reached unit
   tests: 286 pass; the 11 terminal checks: pass.
+- 2026-10-23: Found, trying a nested vault reached through a link: a followed link to another vault is a nested vault
+  of the one it's in, and with the fix `slipbox mv ov ov2` moved it, and the machine's list then said the other vault
+  was at `vault/ov2`, the link's path, not its real one (a scratch script; `recordLocation(rootAt(to))` after the move).
+  Before the fix every link was refused. A link leading to a vault, or to a folder holding one, stays refused now:
+  `checkSource`'s `vaults` (from `planVaultFolderMove`, and `planFolderMove` when vaults are nested under it), and
+  `outside` when a plan carries vaults. Test: `a followed link to a vault, or to a folder holding one, isn't moved by
+  its name: …`; mutation-checked, each of the three (`t14-mutate4.log`).
