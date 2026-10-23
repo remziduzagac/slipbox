@@ -18,7 +18,7 @@ import { cacheDir } from "../core/paths.ts";
 import { readRoots } from "../core/registry.ts";
 import { homeFolder } from "../core/vault.ts";
 import type { App, View } from "./app.ts";
-import { offsetOf, placeAt, prevBoundary } from "./editing.ts";
+import { lineStart, offsetOf, placeAt, prevBoundary } from "./editing.ts";
 import { keyChar } from "./keys.ts";
 import { RANKED, rank } from "./match.ts";
 import { PASTE } from "./vim.ts";
@@ -38,10 +38,10 @@ export interface CompletionState {
   incomplete: boolean;
   /** A link's target being completed (20.13), in this style: slipbox's list, no server's. */
   links?: LinkStyle;
-  /** A link's: where its target's line starts, and how far its start is from the line's end: an indent before it
-   *  leaves both. */
-  line?: number;
-  tail?: number;
+  /** A link's: where its target's line starts, and what's before the target on it, its indent aside: an indent leaves
+   *  both. */
+  lineStart?: number;
+  before?: string;
   /** A link's words typed so far, each with the items it matched in the list's order: a word typed on from one
    *  matches no other. */
   steps?: { typed: string; matched: CompletionItem[] }[];
@@ -165,16 +165,15 @@ export function afterInsertKey(app: App, view: View, key: string): void {
     const c = app.completion;
     if (from !== null) {
       const style: LinkStyle = md !== null ? "markdown" : "wiki";
-      const src = view.buf.source;
-      const line = src.lastIndexOf("\n", from - 1) + 1;
-      const end = src.indexOf("\n", from);
-      const tail = (end < 0 ? src.length : end) - from;
-      // The same target's list: typed into where it starts, or moved along its line by an indent, what follows its
-      // start unchanged. Another target, on this line or another, gets its own.
-      if (c?.links === style && c.view === view && (c.from === from || (c.line === line && c.tail === tail))) {
+      const start = lineStart(view, from);
+      const before = view.buf.source.slice(start, from).trimStart();
+      // The same target's list: typed into where it starts, or moved along its line by an indent, what's before it
+      // otherwise unchanged. Another target, on this line or another, gets its own.
+      const same = c?.from === from || (c?.lineStart === start && c.before === before);
+      if (c?.links === style && c.view === view && same) {
         c.from = from;
-        c.line = line;
-        c.tail = tail;
+        c.lineStart = start;
+        c.before = before;
         return narrow(app, c);
       }
       app.completion = {
@@ -185,8 +184,8 @@ export function afterInsertKey(app: App, view: View, key: string): void {
         selected: 0,
         incomplete: false,
         links: style,
-        line,
-        tail,
+        lineStart: start,
+        before,
       };
       return narrow(app, app.completion);
     }

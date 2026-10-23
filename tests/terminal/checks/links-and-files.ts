@@ -602,7 +602,8 @@ const LINKS: Check[] = [
     options: {
       home: true,
       startAt: "home/notes/index.md",
-      // More notes matching `t` than a list shows, and one that ranks after them all.
+      // More notes matching `t` than a list shows, and one that ranks after them all: made here, the one exception to
+      // the samples in these checks, as the reference set holds fewer files than a list shows.
       setup: (s) => {
         for (let i = 0; i < 600; i++) s.write(`~/notes/tt/t${String(i).padStart(3, "0")}.md`, "# T\n");
         s.write("~/notes/tt/tquokka.md", "# Quokka\n");
@@ -640,61 +641,60 @@ const LINKS: Check[] = [
   },
   {
     area: "links-and-files",
-    name: "links: each target its own completion — another line's, another on the same line, the next link's: a note indexed since offered (20.13)",
+    name: "links: each target its own completion — another line's, another on the same line, after a paste, the next link's: a vault indexed since offered (20.13)",
     covers: { cases: ["links"], commands: ["view.source"] },
-    options: {
-      home: true,
-      startAt: "home/notes/index.md",
-      setup: (s) => void s.cliIn("~/hobbies/photography", "index", "--refresh"),
-    },
+    options: { home: true, startAt: "home/notes/index.md" },
     run: async (s) => {
-      // A note of another vault, indexed while a list is kept: offered only by a list made since.
-      const indexed = (name: string) => {
-        s.write(`~/hobbies/photography/${name}.md`, `# ${name}\n`);
-        const r = s.cliIn("~/hobbies/photography", "index", "--refresh");
-        s.expect(r.code === 0, `photography indexed: ${r.out}`);
+      // A vault of the set indexed while a list is kept: its notes offered only by a list made since.
+      const indexed = (vault: string) => {
+        const r = s.cliIn(vault, "index", "--refresh");
+        s.expect(r.code === 0, `${vault} indexed: ${r.out}`);
       };
-      const row = (name: string) => `~/hobbies/photography/${name}.md`;
       await leader(s, "n", "v");
       await s.keys("shift+g", "o");
       // Another line's target, the cursor gone there from a list kept: its own list, made then.
-      for (const k of "[b](walrus") await s.keys(k);
+      for (const k of "[b](shaksh") await s.keys(k);
       await s.keys("escape", "o");
       for (const k of "[a](zzzzzz") await s.keys(k);
-      indexed("walrus");
+      indexed("~/hobbies/cooking");
       await s.keys("up");
-      await s.see(row("walrus"));
+      await s.see("~/hobbies/cooking/Recipes/Weeknight/");
       // Another target on the same line, the cursor gone there at a jump: likewise.
       await s.keys("escape", "o");
-      for (const k of "[d](seal") await s.keys(k);
+      for (const k of "[d](bike-fit") await s.keys(k);
       await s.keys("home");
       for (const k of "[c](zz") await s.keys(k);
-      indexed("seal");
+      indexed("~/hobbies/cycling");
       await s.keys("end");
-      await s.see(row("seal"));
+      await s.see("~/hobbies/cycling/gear/");
+      // A paste that leaves the cursor in another target on the line, then a key there: likewise.
+      await s.keys("escape", "o");
+      for (const k of "[f](zz") await s.keys(k);
+      indexed("~/work/product/design");
+      await s.paste(") [g](share");
+      await s.keys("left");
+      await s.see("~/work/product/design/share-flow.md");
       // The link ended, the next one's list made anew.
       await s.keys("escape", "o");
-      indexed("otter");
-      for (const k of "[e](otter") await s.keys(k);
-      await s.see(row("otter"));
+      indexed("~/work/product/handbook");
+      for (const k of "[e](glossary") await s.keys(k);
+      await s.see("~/work/product/handbook/glossary.md");
     },
   },
   {
     area: "links-and-files",
     name: "links: another vault's note completed as its pointer — each folder by its name, a name two share asked first, a private one said; slipbox link the same (20.13, 21.7)",
-    covers: { cases: ["links", "links/conventions"], commands: ["view.source", "note.save"] },
+    covers: { cases: ["links", "links/conventions", "links/named-folders"], commands: ["view.source", "note.save"] },
     options: {
       home: true,
       startAt: "home/notes/index.md",
       setup: (s) => {
-        // A second folder called handbook, not a copy of the first: its own id, its name shared.
-        s.write("~/hobbies/handbook/.slipbox/config.toml", '[vault]\nid = "4d0c2e17a9b38f61"\nname = "handbook"\n');
-        s.write("~/hobbies/handbook/knots.md", "# Knots\n");
-        // A private name: its .slipbox/ kept out of git.
-        s.write("~/hobbies/diary/entry.md", "# Entry\n");
-        git(s, "~/hobbies/diary", "init", "-q");
-        s.cliIn("~/hobbies", "init", s.path("~/hobbies/diary"), "--name", "diary", "--private");
-        for (const v of ["~/hobbies/photography", "~/work/product/handbook", "~/hobbies/handbook", "~/hobbies/diary"])
+        // The cooking folder named as the product handbook is: a name two different folders share.
+        s.cliIn("~/hobbies/cooking", "init", ".", "--name", "handbook");
+        // Cycling named privately: its .slipbox/ kept out of the git it's given here.
+        git(s, "~/hobbies/cycling", "init", "-q");
+        s.cliIn("~/hobbies/cycling", "init", ".", "--name", "rides", "--private");
+        for (const v of ["~/hobbies/photography", "~/work/product/handbook", "~/hobbies/cooking", "~/hobbies/cycling"])
           s.cliIn(v, "index", "--refresh");
       },
     },
@@ -713,16 +713,16 @@ const LINKS: Check[] = [
       await s.see("[y](slipbox://handbook/glossary.md");
       await s.keys(")", "space");
       // A private name: written, and said to work on this machine only.
-      for (const k of "[z](diary/entry") await s.keys(k);
-      await s.see("~/hobbies/diary/entry.md");
+      for (const k of "[z](cycling/gear/2026082") await s.keys(k);
+      await s.see("~/hobbies/cycling/gear/");
       await s.keys("tab");
-      await s.message(/diary is a private name/);
+      await s.message(/rides is a private name/);
       await s.keys(")", "escape", "ctrl+s");
       await s.file(
         "~/notes/index.md",
         (t) =>
           t.includes(
-            "[x](slipbox://photography/index.md) [y](slipbox://handbook/glossary.md) [z](slipbox://diary/entry.md)",
+            "[x](slipbox://photography/index.md) [y](slipbox://handbook/glossary.md) [z](slipbox://rides/gear/202608201000-bike-fit.md)",
           ),
         "each folder's note by its pointer",
       );

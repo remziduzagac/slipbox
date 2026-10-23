@@ -204,3 +204,24 @@ link being typed, matched or not, so the keys that match nothing cost the same h
   - "links: another vault's note completed as its pointer": photography's pointer written; a name two folders share
     asked, then written; a private name said; `slipbox link` the same.
   Mutation-checked: narrowing from the shown, kept by line alone, kept by style alone: each fails its check.
+- 2026-10-24: Reviewed again, the whole diff and the terminal checks. Verified and fixed:
+  - A paste could keep another target's list: a paste doesn't run the completion's key step, and the next key there
+    (`left`) found the same line and the same distance to its end, as `[a](foo` pasted with `x) [b](bar` has. A
+    target is now known by its line's start and what's before it on the line, the indent aside: an indent changes
+    only the indent, a paste or a jump what's before. Test: `[[zz`, `]] [[to` pasted, `left`: a list of its own. The
+    line's start comes from `editing.ts`'s `lineStart`, not worked out again.
+  - The CHANGELOG said a deleted key looks only among what matched too: only after a word typed in this list's life.
+    The manual said other vaults' notes are as of their last indexing: as of when the link started. The design said
+    the best 500 are shown: once a word is typed. Each reworded.
+  - The terminal checks wrote notes of their own (walrus, seal, otter, a second handbook, a diary), where checks take
+    their notes from the samples (design/testing.md): now the set's own vaults are indexed while a list is kept
+    (cooking, cycling, the product's design and handbook), a shared name and a private one are given by `slipbox
+    init` (and `git init`) to the set's cooking and cycling folders. The 600 notes matching `t` stay, the one
+    exception: the reference set holds fewer files than a list shows.
+  Mutation-checked, each alone: kept by line alone (same-line targets, a paste), indent not set aside, and the
+  earlier eight: each fails a unit test; kept by line alone and kept by style alone each fail the terminal check of
+  each target's own list (an indent rebuilding shows the same rows on screen: that case is the unit test's). Rejected:
+  - Raised again, as logged: `findVaultRoot` per note; the ranking's extra passes; a list kept apart from the popup;
+    `Reach`'s caches. New of the kind: `linkEnds` works out the note's own path per item, once per build: the build's
+    cost, not a key's.
+  - The link list's four fields grouped in one: cosmetic; `line` renamed `lineStart`, which it is.

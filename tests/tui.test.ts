@@ -10264,6 +10264,16 @@ describe("vaults in the TUI (17.x)", () => {
     expect(h.app.view!.buf.source).toContain("\n[[zz  [[to\n");
     expect(h.app.completion).not.toBe(first);
     expect(h.app.completion?.shown.map((i) => i.detail)).toEqual(["todo.md"]);
+    // A paste that leaves the cursor in another target on the line, then a key there: its own list too.
+    await h.keys("escape", "o");
+    for (const k of "[[zz") await h.keys(k);
+    const kept = h.app.completion;
+    expect(kept?.shown).toEqual([]);
+    await h.app.input.paste("]] [[to");
+    await h.keys("left");
+    expect(h.app.view!.buf.source).toContain("\n[[zz]] [[to\n");
+    expect(h.app.completion?.links).toBe("wiki");
+    expect(h.app.completion).not.toBe(kept);
     await h.keys("escape");
   });
 

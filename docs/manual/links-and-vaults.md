@@ -361,9 +361,9 @@ There are three ways to have slipbox write a link for you, all in the vault's co
 - **The link picker:** `space l i` (`:link`) lists the vault's notes and files. Pick one, and the link goes in at the
   cursor while you type. While you read, it goes after the word under the cursor, and the note is saved.
 - **Completion:** typing `](` or `[[` in a note opens a list of the files a link could reach, narrowed as you type.
-  `tab` or `enter` puts the chosen one in. After `](` the list includes other vaults' notes, as of their last indexing.
-  While nothing in the list matches what you typed, it hides, and it comes back when you delete back to a match.
-  [Editing](editing.md) has completion's keys.
+  `tab` or `enter` puts the chosen one in. After `](` the list includes other vaults' notes, as they were last indexed
+  when the link started. While nothing in the list matches what you typed, it hides, and it comes back when you delete
+  back to a match. [Editing](editing.md) has completion's keys.
 - **The command line:** `slipbox link <note> --from <note>` prints the link slipbox would write, for an agent to use.
 
 A Markdown link's text is the note's title. A wikilink has none. A wikilink is written:
