@@ -235,8 +235,10 @@ export class ListThreads {
     return new Promise((resolve, reject) => this.line.push({ resolve, reject }));
   }
 
+  /** Stopped for good (the TUI quitting; the next `listThreads` makes others): a listing asked before, or waiting, is
+   *  refused, never a thread started again for it. */
   stop(): void {
-    for (const t of this.pool) t.requests.stop();
+    for (const t of this.pool) t.requests.dispose();
     for (const w of this.line.splice(0)) w.reject(new WorkerRequestError("worker request cancelled", "stopped"));
   }
 }

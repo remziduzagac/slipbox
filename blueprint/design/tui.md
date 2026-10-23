@@ -674,7 +674,8 @@ keys.
   most every five seconds) is listed by its name alone, never looked at — a folder or a file as its folder's entry
   says (a file bind-mounted, a container's `/etc/hosts`). A listing has a whole walk's ten minutes, counted from when
   a thread takes it: one at a time on each thread, the others wait in one line, each going to a thread once it's
-  free — never behind a folder that doesn't answer while the other thread is free. Until a folder's first listing
+  free — never behind a folder that doesn't answer while the other thread is free. Stopped (the TUI quitting), a
+  listing asked or waiting is refused, never a thread started again for it. Until a folder's first listing
   answers, nothing is under it; after 150 ms a dim `listing…` row says it's being read, and one that can't be listed
   says why, in `l`'s words (`can't read: it isn't there`; `can't read: no answer in time`): rows that only say
   something, never opened or marked. On one, nothing acts on its own path (opening, zooming, copying its path,

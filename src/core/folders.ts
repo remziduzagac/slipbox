@@ -203,7 +203,7 @@ export function recordFolder(
     now?: Date;
     replaces?: string | null;
     /** Its identity and real path, and the copies recorded (`copyFacts`), read where it was opened (T12: another
-     *  thread): not read again here — but a copy recorded since. */
+     *  thread): nothing read again here — a copy recorded since taken as it was recorded, by its real path, there. */
     known?: { ident: FolderIdentity | null; real: string; copies?: CopyFacts };
   } = {},
 ): NamedFolder | null {
@@ -211,9 +211,11 @@ export function recordFolder(
   const list = readFolders();
   // By its real path: reached through a symlink, it's the same copy, not a second one.
   const at = ident?.copy ?? opts.known?.real ?? realPath(root);
-  const facts = opts.known?.copies ?? {};
-  const here = (c: FolderCopy) => c.path === at || (facts[c.path]?.real ?? realPath(c.path)) === at;
-  const available = (path: string) => path === at || (facts[path]?.available ?? copyAvailable(path));
+  const facts = opts.known?.copies;
+  const realOf = (p: string) => (facts ? (facts[p]?.real ?? p) : realPath(p));
+  const there = (p: string) => (facts ? (facts[p]?.available ?? true) : copyAvailable(p));
+  const here = (c: FolderCopy) => c.path === at || realOf(c.path) === at;
+  const available = (path: string) => path === at || there(path);
   // A copy moved here by hand (21.8, `movedFrom`): the one it was, gone.
   if (opts.replaces) {
     const f = list.find((x) => x.key === ident?.key);

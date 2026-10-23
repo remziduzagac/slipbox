@@ -278,3 +278,11 @@ still blocks.
 - 2026-10-24: Each test run took over a minute here meanwhile: `bun test` looks for test files under the worktree, and
   went through the slow FUSE mounts the live tries had left under `tmp/issue/live/`. Unmounted, the runs took their
   usual time; the round's live try used a home with `SLIPBOX_SLOW_DISK` instead.
+- 2026-10-24: Round 3's fixes reviewed by Codex (`git diff cd104eb..da1e0d8`), each finding checked against the code;
+  all three hold, and are fixed: (c1) a listing asked just before the listing threads stopped started a thread again
+  after them (`WorkerRequests.stop` lets a later request start one) — stopped for good now (`dispose`), the listing
+  refused; (c2) a copy recorded after the thread read the copies' facts (another slipbox, meanwhile) was still
+  realpathed and looked for on the main thread — taken as it was recorded, by its real path, there; (c3) the Downloads
+  test's 300 ms didn't make sure the thread had made its filter before Downloads moved, so it could pass with the
+  check broken — it waits for the thread's first answer. Each has its test, failing with its fix undone (c3's: with
+  the signature's check undone). None is seen on a screen: (c1) at quit, (c2) the lists' writes.

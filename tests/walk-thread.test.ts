@@ -18,7 +18,7 @@ import { type HomeWalk, homeFilter, homeWalk, homeWalkFile, keepHomeWalk } from 
 import { probe, setLinkAnswer } from "../src/core/symlinks.ts";
 import { homeAt, setRootMarkers } from "../src/core/vault.ts";
 import { SlicedWalk, setFolderReader } from "../src/core/walk.ts";
-import { listThreads, setWalkWorker, WalkThread } from "../src/core/walk-thread.ts";
+import { ListThreads, listThreads, setWalkWorker, WalkThread } from "../src/core/walk-thread.ts";
 import { listFolder } from "../src/core/listing.ts";
 import { tildePath } from "../src/core/names.ts";
 import { HERE, type IndexAsk, type Pending, type SteppedWalk, type Walker } from "../src/core/walkers.ts";
@@ -323,6 +323,31 @@ describe("the TUI's walks on their own thread (T12, #9)", () => {
     });
   });
 
+  test("a found vault recorded from what was read where it was opened: a copy recorded since read of nothing here", async () => {
+    const fs = await import("node:fs");
+    const folders = await import("../src/core/folders.ts");
+    const TWICE = '[vault]\nname = "since"\nid = "5d0c-recorded-since"\n';
+    const home = tree({ "proj/.slipbox/config.toml": TWICE });
+    const elsewhere = tree({ "c2/.slipbox/config.toml": TWICE });
+    const proj = join(home, "proj");
+    const ident = folders.folderIdentity(proj);
+    // What the thread read, before `c2` was recorded (by another slipbox, meanwhile).
+    const copies = folders.copyFacts();
+    folders.recordFolder(join(elsewhere, "c2"));
+    const spies = [spyOn(fs, "realpathSync"), spyOn(fs, "existsSync"), spyOn(fs, "statSync")];
+    try {
+      folders.recordFolder(proj, { found: true, known: { ident, real: proj, copies } });
+      const here = spies.flatMap((s) => s.mock.calls.map((c) => String(c[0])));
+      expect(here.filter((p) => p.startsWith(elsewhere))).toEqual([]);
+    } finally {
+      for (const s of spies) s.mockRestore();
+    }
+    // `c2` taken as it was recorded, by its real path, there: two copies, a choice to make.
+    const twice = folders.readFolders().find((f) => f.name === "since");
+    expect(twice?.copies.map((c) => c.path)).toEqual([join(elsewhere, "c2"), proj]);
+    expect(twice).toMatchObject({ ask: true });
+  });
+
   test("a found vault counted once, the TUI quitting while it's indexed; a small one opened and parsed in one step", async () => {
     const { AutoIndex } = await import("../src/core/autoindex.ts");
     const { IndexJob } = await import("../src/core/index-job.ts");
@@ -447,16 +472,25 @@ describe("the TUI's walks on their own thread (T12, #9)", () => {
       mkdirSync(config);
       process.env.XDG_CONFIG_HOME = config;
       const thread = on === "thread" ? new WalkThread() : null;
+      // The walk, to know when the thread has answered its first slice: its filter made there by then.
+      let walk: SteppedWalk | null = null;
+      const walker: Walker = thread
+        ? {
+            sliced: (settings, limits) => (walk = thread.sliced(settings, limits)),
+            index: (of) => thread.index(of),
+            seek: (dir, settings) => thread.seek(dir, settings),
+          }
+        : HERE;
       try {
         await inHome(home, async () => {
           const job = new AutoIndex(home, null, () => Date.now(), {
-            walker: thread ?? HERE,
+            walker,
             vaults: false,
             config: () => structuredClone(DEFAULT_CONFIG),
           });
           // Its first folder walked, Downloads where it always is: then the desktop says it's elsewhere.
           expect(job.step(0)).toBe(true);
-          await Bun.sleep(on === "thread" ? 300 : 0);
+          while ((walk as SteppedWalk | null)?.waiting) await Bun.sleep(5);
           expect(job.step(0)).toBe(true);
           writeFileSync(join(config, "user-dirs.dirs"), 'XDG_DOWNLOAD_DIR="$HOME/Téléchargements"\n');
           await stepToEnd(job, 0);
@@ -1048,6 +1082,18 @@ describe("the explorer's listings off the main thread (T12, #9)", () => {
     await Promise.all(["one", "two"].map((d) => threads.list(join(top, d), DEFAULT_CONFIG.walk, false)));
     expect(performance.now() - at).toBeLessThan(STUCK_MS / 3);
     await stuck;
+  });
+
+  test("the listing threads stopped: a listing asked just before is refused, no thread started again for it", async () => {
+    let started = 0;
+    const threads = new ListThreads(() => {
+      started++;
+      return slowWorker();
+    });
+    const asked = threads.list(tree({ "a.md": "# A\n" }), DEFAULT_CONFIG.walk, false);
+    threads.stop();
+    await expect(asked).rejects.toThrow("cancelled");
+    expect(started).toBe(0);
   });
 
   test("a `listing…` row answers moving and folding alone: nothing copied, opened or zoomed into", async () => {

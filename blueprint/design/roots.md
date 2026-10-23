@@ -444,7 +444,8 @@ deleted (D61). Each vault's is in its cache folder (the link index, the search i
   other than home's when it's kept (Downloads moved meanwhile, a root marker added: the filter's signature, compared
   where the walk is), walked again, never kept under the new. The machine's lists are written on the main thread
   alone, from what the thread read of a vault it opened (`Opened`: its key, worktree, identity and real path, and the
-  real path and presence of each copy the list of named folders records, `copyFacts`; `recordRoot`'s `key`,
+  real path and presence of each copy the list of named folders records, `copyFacts` — one recorded since taken as it
+  was recorded, by its real path, there: nothing read on the main thread; `recordRoot`'s `key`,
   `recordFolder`'s `known`) — a vault counted found once, its count kept with the place (`counted`, set afresh with
   each pass), so one being indexed when the TUI quit isn't counted again; home recorded as found apart from the
   vault being indexed, when it's walked again meanwhile. The place is written only when it changed: a tick waiting
