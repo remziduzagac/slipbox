@@ -4,9 +4,10 @@ name: pages
 # change: `install.sh`, the bootstrap (`scripts/bootstrap.ts`), and the channels it reads, `stable` and `preview`, each
 # one line, `<tag> <SHA-256 of that release's install.sh>` — the highest stable release, the newest preview; none for
 # a channel with no release (`scripts/release.ts site`); and the docs at `docs/`, the site/ Starlight site built from
-# docs/ (DS), where the site's index sends a visitor. Deployed when a release is published (by a person: a release CI
-# publishes starts no workflow), by preview.yml once a preview is, when the bootstrap, the docs or the site change on
-# main, and by hand.
+# docs/ (DS), where the site's index sends a visitor. Deployed by preview.yml once a preview is published, when the
+# bootstrap, the docs or the site change on main, by hand, and when a release is published (by a person: a release CI
+# publishes starts no workflow), by a run by hand on main that the release's run starts (D258). A deployment passes
+# once the site serves the channels it built.
 # Every action pinned by its commit, a week old when taken (14.10); values reach the shell through env, never inline.
 on:
   workflow_call:
@@ -31,16 +32,35 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # D258: a release published is deployed by a run of this workflow by hand, on main, which this job starts. A
+  # deployment made under a `release` event is reported a success and never served when its commit was deployed before
+  # (actions/deploy-pages#383), as a release's always is, by its preview (D251); one made by hand is served.
+  redeploy:
+    if: ${{ github.event_name == 'release' && !github.event.repository.fork }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      actions: write # to run this workflow by hand, on main
+    steps:
+      - name: run on main
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run pages.yml --repo "$GITHUB_REPOSITORY" --ref main
+
   # The site, from main's bootstrap whichever ref started the run, and the releases as they are now; the docs under
   # docs/, built by the site's own packages (site/package.json, installed under site/bunfig.toml's gates: no install
   # script runs). No other dependency is installed.
   site:
-    # Never in a fork: its Pages isn't this one's.
-    if: ${{ !github.event.repository.fork }}
+    # Never in a fork: its Pages isn't this one's; nor for a release, which `redeploy` hands to a run by hand.
+    if: ${{ !github.event.repository.fork && github.event_name != 'release' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
       contents: read # to check out main, and list the releases
+    # The channels' lines as built, for `deploy` to read back from the site: empty for a channel with no release.
+    outputs:
+      stable: ${{ steps.site.outputs.stable }}
+      preview: ${{ steps.site.outputs.preview }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -52,12 +72,16 @@ jobs:
           cache: false
           minimum_release_age: 7d
       - name: site
+        id: site
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           mkdir -p _site
           bun --no-install scripts/bootstrap.ts "$GITHUB_REPOSITORY" _site/install.sh
           bun --no-install scripts/release.ts site --repo "$GITHUB_REPOSITORY" --out _site
+          for channel in stable preview; do
+            echo "$channel=$(cat "_site/$channel" 2>/dev/null || true)" >>"$GITHUB_OUTPUT"
+          done
       - name: docs
         run: |
           bun run site
@@ -71,7 +95,8 @@ jobs:
   deploy:
     needs: site
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    # deploy-pages waits ten minutes at most, and reading the channels back eleven more.
+    timeout-minutes: 25
     permissions:
       pages: write # to deploy the site
       id-token: write # to prove to Pages which workflow and ref the deployment comes from (OIDC)
@@ -81,3 +106,23 @@ jobs:
     steps:
       - id: deploy
         uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
+      # D258: a deployment can be reported a success and not be served (actions/deploy-pages#383), as 0.5.0's was. The
+      # channels are read back from the site until they're what `site` built: eleven minutes at most, past the ten its
+      # cache keeps a file (a deployment empties the cache, and a query doesn't get past it).
+      - name: served
+        env:
+          SITE: ${{ steps.deploy.outputs.page_url }}
+          STABLE: ${{ needs.site.outputs.stable }}
+          PREVIEW: ${{ needs.site.outputs.preview }}
+        run: |
+          served() { curl -fsS "$SITE$1" 2>/dev/null || true; }
+          for _ in $(seq 66); do
+            if [ "$(served stable)" = "$STABLE" ] && [ "$(served preview)" = "$PREVIEW" ]; then
+              echo "the site serves the channels built"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "after eleven minutes, the site doesn't serve the channels built:"
+          echo "stable \"$STABLE\", preview \"$PREVIEW\""
+          exit 1

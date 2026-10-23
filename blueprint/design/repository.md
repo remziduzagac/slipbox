@@ -50,11 +50,11 @@ body. A contributor's commit made with an agent ends with a `Co-Authored-By:` tr
 commits and pull requests name no agent (D256).
 
 From `dev`, work moves on by fast-forward, never committed to directly (D251): to `test`, which publishes a preview to
-try by hand (§ CI), and where `ci` run by hand runs everything and reports `full`; then to `main`, the released state,
-whose ruleset takes only a commit that passed `full`, and on which releases are tagged. Agents work on branches and
-open pull requests; reviewing and merging into `dev`, moving `test` or `main`, the full run and releasing happen when
-the maintainer asks; changing the settings is the maintainer's alone. No one bypasses the rulesets, the maintainer
-included.
+try by hand (§ CI), and where `ci` run by hand runs everything and reports `full`, as a check and a commit status
+(D257); then to `main`, the released state, whose ruleset takes only a commit that passed `full`, and on which releases
+are tagged. Agents work on branches and open pull requests; reviewing and merging into `dev`, moving `test` or `main`,
+the full run and releasing happen when the maintainer asks; changing the settings is the maintainer's alone. No one
+bypasses the rulesets, the maintainer included.
 
 ## The check
 
@@ -103,7 +103,7 @@ workflow: actionlint 1.7.12 doesn't know the token's `vulnerability-alerts` scop
 `.github/workflows/ci.yml` runs on every pull request, every push to `dev` or `test`, a merge queue's group (listed for
 later: a merge queue needs an organisation's repository) and by hand (GR-D9, D251). A pull request and a push run what
 their change reaches; a run by hand runs everything, and its aggregator reports `full` instead of `ci`. Its jobs are
-`bun run check`'s parts, each step a package.json script, never a command of its own:
+`bun run check`'s parts, each step a package.json script, never a command of its own, and one more for a run by hand:
 
 - **`lint`**, on `ubuntu-24.04`: Biome (`bun run lint`), the workflows (`bun run check:actions`, zizmor online with
   the job's token), the docs (`bun run check:docs`) and the tests that read the docs (`bun run test:docs`: the docs'
@@ -126,9 +126,13 @@ their change reaches; a run by hand runs everything, and its aggregator reports 
 - **`site`**, on `ubuntu-24.04`: the docs' site built (`bun run site`), every link within it landing (DS).
 - **`ci`**, the aggregator and the one required check: it always runs, waits for every other job, and fails unless
   each passed or was skipped. A job skipped by its `if:` counts as passed; one that failed, was cancelled or never
-  started doesn't. A test holds it to waiting for every job, so a job added can't be left out of the required check.
-  Run by hand, its name is `full` (D251): `dev`'s and `test`'s rulesets require `ci`, `main`'s requires `full`, and a
-  release refuses a tag whose commit didn't pass it.
+  started doesn't. A test holds it to waiting for every job but `status`, so a job added can't be left out of the
+  required check. Run by hand, its name is `full` (D251): `dev`'s and `test`'s rulesets require `ci`, `main`'s requires
+  `full`, and a release refuses a tag whose commit didn't pass it.
+- **`status`**, on `ubuntu-24.04`, run by hand alone, once `full` passed: `full` again, as a commit status the run's
+  token posts (`statuses: write`, D257). A ruleset counts no check a run by hand reports (GitHub's "Troubleshooting
+  required status checks"), so `main`'s, which requires `full` from GitHub Actions, sees this status, never the check;
+  `release.yml` reads the check.
 
 **What a change reaches** (D239, `scripts/ci-scope.ts`). The tests: each that uses a changed file — imports it, at
 any depth, statically or not, code or not (the skill's text, a dictionary), or names it by its path from the
@@ -173,7 +177,9 @@ GitHub's newer `$/` form, which means the same, but actionlint 1.7.12 doesn't re
 checks a call's inputs and permissions against the workflow called only in the `./` form, which for a reusable workflow
 is read from the run's own commit, never the workspace; the finding is ignored inline, with that reason. A release run
 is never cancelled; `preview.yml` and `pages.yml` each run one at a time (`preview`, `pages`), never cancelled;
-`pages.yml`'s Pages grants are its `deploy` job's alone. What each builds and publishes:
+`pages.yml`'s Pages grants are its `deploy` job's alone, and for a release it deploys nothing: its `redeploy` job starts
+a run of it by hand on `main` (`actions: write`, D258), so `preview.yml`'s call grants that too. What each builds and
+publishes:
 [distribution.md](distribution.md) § Releases, § Previews, § Channels.
 
 Beside the workflows, GitHub's own: CodeQL's default setup scans the code (`javascript-typescript`) and the workflows

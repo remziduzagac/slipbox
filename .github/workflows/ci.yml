@@ -6,8 +6,9 @@ name: ci
 # changes only the docs skips the tests and the terminal tests; the lint job runs the docs' own (D230). Any other runs
 # the tests and the terminal checks its files reach (D239, scripts/ci-scope.ts), and so does a push to `dev` or `test`,
 # by what changed since that branch's last head. A run by hand runs everything, and calls itself `full`: the check
-# `main` takes nothing without (D251). One job, `ci` (`full` by hand), is the required check: it always runs and fails
-# unless every job it waits for passed or was skipped. Each job calls package.json's scripts, never commands of its own.
+# `main` takes nothing without (D251), which it reports again as a commit status, the one `main`'s ruleset sees (D257).
+# One job, `ci` (`full` by hand), is the required check: it always runs and fails unless every job it waits for passed
+# or was skipped. Each job calls package.json's scripts, never commands of its own.
 on:
   pull_request:
   push:
@@ -181,7 +182,8 @@ jobs:
 
   # The required check (GR-D9): one name, whichever jobs ran. A job skipped by its `if:` counts as passed; one that
   # failed, was cancelled or never started fails this. Run by hand, everything ran: it's `full`, which `main`'s
-  # ruleset requires of a commit before it takes it (D251); otherwise `ci`, which `dev`'s requires of a pull request.
+  # ruleset requires of a commit before it takes it (D251), as `status` reports it; otherwise `ci`, which `dev`'s and
+  # `test`'s require.
   ci:
     name: ${{ github.event_name == 'workflow_dispatch' && 'full' || 'ci' }}
     if: ${{ always() }}
@@ -201,3 +203,22 @@ jobs:
             exit 1
           fi
           echo "every job passed or was skipped"
+
+  # D257: run by hand, once every job passed, `full` reported again as a commit status. A ruleset counts no check that a
+  # run by hand reports (GitHub's "Troubleshooting required status checks"), so `main`'s never sees the job above; it
+  # counts a status this run's token posts, which is GitHub Actions', the source it requires.
+  status:
+    if: ${{ github.event_name == 'workflow_dispatch' }}
+    needs: ci
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      statuses: write # to report `full` on the commit, where main's ruleset sees it
+    steps:
+      - name: full
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          run="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          gh api "repos/$GITHUB_REPOSITORY/statuses/$GITHUB_SHA" -f state=success -f context=full \
+            -f description="every job passed" -f target_url="$run"

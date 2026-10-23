@@ -6,6 +6,11 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 
 ## [Unreleased]
 
+### Fixed
+
+- A release is on the installer's site as soon as it's published, so `curl … | sh` and `slipbox upgrade` on the stable
+  channel find it at once. 0.5.0's wasn't until the site was deployed again, an hour later.
+
 ## [0.5.0] - 2026-10-22
 
 ### Added
