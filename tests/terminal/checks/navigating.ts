@@ -16,7 +16,7 @@ import {
   MEETING,
   moveTo,
   open,
-  panelFocused,
+  outlineOpen,
   pos,
 } from "../check.ts";
 import { type Session, type StyledRun, sleep } from "../session.ts";
@@ -430,7 +430,7 @@ export const NAVIGATING: Check[] = [
     covers: { cases: ["outline"], commands: ["outline.cycle", "outline.pick", "outline.toggle"] },
     options: { open: HANDBOOK, size: { cols: 100, rows: 34 } },
     run: async (s) => {
-      await panelFocused(s, "o", "OUTLINE", /Outline/);
+      await outlineOpen(s);
       await s.see("Outline");
       await s.keys("escape");
       await leader(s, "f", "o");

@@ -8,7 +8,7 @@
 import { spawnSync } from "node:child_process";
 import { join } from "node:path";
 import { loadTheme, type Role } from "../../../src/core/theme/index.ts";
-import { type Check, leader } from "../check.ts";
+import { type Check, leader, panelFocused } from "../check.ts";
 import type { Session, SessionOptions } from "../session.ts";
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -118,16 +118,8 @@ export const bgOf = (role: Role) => ROLES[role].bg!.toLowerCase();
  */
 const TITLE = /Source control +[│┃]/;
 
-/**
- * The git panel open and focused: `space g` pressed once, unless it is already, then the panel's own title and the
- * status line's GIT waited for. Never pressed again on a screen that hasn't caught up: a second press closes it.
- */
-export async function toPanel(s: Session): Promise<void> {
-  const focused = () => s.rowOf(TITLE) >= 0 && s.statusLine().includes(" GIT ");
-  if (focused()) return;
-  await leader(s, "g");
-  await s.until(focused, undefined, "space g to open the git panel and focus it");
-}
+/** The git panel open and focused (GIT): `space g`, as `panelFocused` presses a panel's key. */
+export const toPanel = (s: Session) => panelFocused(s, "g", "GIT", TITLE);
 
 /** The left panel's part of a screen row: up to its border, the first `│` or `┃` of its title's row. */
 function panelPart(s: Session, row: number): string {

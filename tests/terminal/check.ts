@@ -170,38 +170,79 @@ export const leader = (s: Session, ...keys: string[]) => s.keys("space", ...keys
 /** The floating scratch's bottom border, how it closes (#43): on screen while it's open. */
 export const SCRATCH_FLOATING = "esc · q closes, saved";
 
+/** The modes the status line's chip names (draw-status.ts, a test holding the two the same): a note's, a panel's. */
+export const MODES = new Set(
+  "READ SOURCE LENS INSERT VISUAL V-LINE RESIZE FILES GIT PROBLEMS OUTLINE FOOTNOTES INFO".split(" "),
+);
+
 /**
- * A panel open and focused: its leader key cycles it (open, focus, close), each press seen taking effect before the
- * next is decided, since pressed blind, a late first one would make the third close it.
+ * The mode a status line shows: its chip, at its start (` FILES `), or null while the chip is something else — the keys
+ * pending (` ␣ `, ` SPC ` in ASCII, as the leader's which-key popup is up; ` F ` waiting for its character), an
+ * operator's, a prompt over the line.
  */
-export async function panelFocused(s: Session, key: string, mode: string, title: RegExp): Promise<void> {
-  for (let i = 0; i < 2 && !s.statusLine().includes(mode); i++) {
-    const open = s.rowOf(title) >= 0;
-    await leader(s, key);
-    await s.until(
-      () => s.statusLine().includes(mode) || (!open && s.rowOf(title) >= 0),
-      undefined,
-      `space ${key} to open or focus it`,
-    );
-  }
-  await s.status(mode);
+export function modeOf(statusLine: string): string | null {
+  const chip = /^ (\S+) /.exec(statusLine)?.[1];
+  return chip && MODES.has(chip) ? chip : null;
+}
+
+/** The mode on the status line now (`modeOf`). */
+export const mode = (s: Session) => modeOf(s.statusLine());
+
+/**
+ * The explorer's own title, at its top: "Explorer", the spaces up to its buttons (a new note, a new folder, a glyph
+ * or two each), its border (`|` in ASCII). Not the leader's which-key popup, on screen between `space` and `e`, whose
+ * line for `space e` says "Explorer: open, focus, close"; nor a tab or a note's line that says "Explorer" in passing.
+ * A pane shorter than eight rows has no title (draw-panels.ts), and these helpers need it.
+ */
+export const EXPLORER = /Explorer {2,}(?:\S{1,2} +)*[│┃|]/;
+
+/**
+ * The outline's own title, after the right panel's border: then the panel's blank, drawn to the right rail or the
+ * screen's edge. Not the which-key popup's "Outline: open, focus, close", nor a note's line going on past "Outline".
+ */
+export const OUTLINE = /[│┃|] Outline {2,}/;
+
+/**
+ * `ok` of the screen as a whole frame shows it, as `until` reads: one half drawn is part the last frame, part the next,
+ * and decides a press wrongly — a repaint begun shows neither the title nor the mode.
+ */
+async function betweenFrames(s: Session, ok: () => boolean): Promise<boolean> {
+  await s.until(() => true, undefined, "a frame drawn whole"); // `until` looks only between frames
+  return ok();
+}
+
+/**
+ * A panel open and focused: its leader key pressed once, unless it is already, then its own `title` and the status
+ * line's `mode` waited for together. Its key cycles it — opened and focused, focused, closed (panels.ts) — so one press
+ * gets there from closed or open, and it's never pressed again on a screen that hasn't caught up: the which-key popup,
+ * still showing, names the panel too, and a second press would close it. Called with nothing else taking the keys (a
+ * picker, a filter, keys pending).
+ */
+export async function panelFocused(s: Session, key: string, panelMode: string, title: RegExp): Promise<void> {
+  const focused = () => s.rowOf(title) >= 0 && mode(s) === panelMode;
+  if (await betweenFrames(s, focused)) return;
+  await leader(s, key);
+  await s.until(focused, undefined, `space ${key} to open the panel and focus it`);
 }
 
 /** The explorer open and focused (FILES). */
-export const explorerOpen = (s: Session) => panelFocused(s, "e", "FILES", /Explorer/);
+export const explorerOpen = (s: Session) => panelFocused(s, "e", "FILES", EXPLORER);
 
-/** The explorer closed: space e until it's gone, each press seen taking effect first. */
+/** The outline open and focused (OUTLINE). */
+export const outlineOpen = (s: Session) => panelFocused(s, "o", "OUTLINE", OUTLINE);
+
+/**
+ * The explorer closed: focused first (`explorerOpen`), then space e once, its title gone and the status line off FILES
+ * waited for — each press seen taking effect before the next, never on the which-key popup, under which the title
+ * still shows. Called as `panelFocused` is, with nothing else taking the keys; with no status line (zen), a closed
+ * explorer is left as it is, and an open one can't be closed: its focus has no mode to show.
+ */
 export async function explorerClosed(s: Session): Promise<void> {
-  for (let i = 0; i < 3 && s.rowOf(/Explorer/) >= 0; i++) {
-    const was = s.statusLine().includes("FILES");
-    await leader(s, "e");
-    await s.until(
-      () => s.rowOf(/Explorer/) < 0 || s.statusLine().includes("FILES") !== was,
-      undefined,
-      "space e to focus or close the explorer",
-    );
-  }
-  await s.notSee(/Explorer/);
+  const closed = () => s.rowOf(EXPLORER) < 0 && mode(s) !== "FILES";
+  if (await betweenFrames(s, closed)) return;
+  await explorerOpen(s);
+  await leader(s, "e");
+  await s.until(closed, undefined, "space e to close the explorer");
 }
 
 /** Select the explorer's row named `name` (it has focus, the row on screen): from the top, down to it. */
@@ -211,7 +252,7 @@ export async function explorerRow(s: Session, name: string): Promise<void> {
   // explorer shows the row: a busy slipbox draws it late.
   const find = () => {
     const screen = s.screen();
-    const title = screen.findIndex((r) => /Explorer/.test(r));
+    const title = screen.findIndex((r) => EXPLORER.test(r));
     if (title < 0) return null;
     const border = [...screen[title]!].findIndex((c) => c === "│" || c === "┃");
     const left = (r: string) => [...r].slice(3, border).join("");

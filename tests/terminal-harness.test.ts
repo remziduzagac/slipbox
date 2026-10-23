@@ -2,7 +2,10 @@
 // reading back what a program draws and answering what it asks (TT-T1).
 
 import { describe, expect, test } from "bun:test";
-import { opened } from "./terminal/check.ts";
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import { COMMAND_SPECS } from "../src/core/command-specs.ts";
+import { EXPLORER, explorerClosed, explorerOpen, MODES, mode, modeOf, OUTLINE, opened } from "./terminal/check.ts";
 import { encodeKey } from "./terminal/keys.ts";
 import { Session } from "./terminal/session.ts";
 import { HeadlessTerminal } from "./terminal/terminal.ts";
@@ -300,6 +303,197 @@ describe("what the checks share (check.ts)", () => {
       s.term.write("\n");
       await waited;
       expect(s.statusLine()).toContain("‹ shelf/far.md ›");
+    } finally {
+      s.cleanup();
+    }
+  });
+
+  // The explorer as `space e` cycles it (panels.ts: opened and focused, focused, closed), on a screen behind its own
+  // trace: a key is in the trace at once with a frame after it, but what it did is drawn LAG ms later, as a loaded
+  // runner's slipbox paints before its terminal has caught up. Meanwhile the which-key popup drawn after `space` stays,
+  // its line for `space e` the command's title, as slipbox's is (#18). Its frames are marked as slipbox's are
+  // (synchronized output), so a wait reads each whole.
+  const LAG = 400;
+  const LABEL = COMMAND_SPECS.find((c) => c.id === "explorer.cycle")!.title;
+  const cycling = [
+    "stty -echo -icanon min 1 time 0",
+    "pending=0",
+    "draw() {",
+    "  printf '\\033[?2026h\\033[2J\\033[H'",
+    "  if [ $shown = 1 ]; then printf ' ≡  Explorer   +  +  │ home.md'; else printf '    home.md'; fi",
+    "  if [ $pending = 1 ]; then printf '\\033[4;1H  │ e   → %s  │' \"$LABEL\"; chip='␣'",
+    "  elif [ $focused = 1 ]; then chip=FILES; else chip=READ; fi",
+    // No status line in zen: the frame's end alone.
+    "  if [ $zen = 1 ]; then printf '\\033[?2026l'",
+    "  else printf '\\033[8;1H %s  notes  ‹ home.md ›  L1:1\\033[?2026l' \"$chip\"; fi",
+    "}",
+    "draw",
+    'while c=$(dd bs=1 count=1 2>/dev/null) && [ -n "$c" ]; do',
+    "  if [ \"$c\" = ' ' ]; then pending=1; draw; printf 'key\\nframe\\n' >> \"$T\"",
+    // From the test, not keys: r begins a repaint, the screen cleared and its frame left open; R draws it whole.
+    "  elif [ \"$c\" = r ]; then printf '\\033[?2026h\\033[2J'",
+    '  elif [ "$c" = R ]; then draw',
+    '  elif [ "$c" = e ] && [ $pending = 1 ]; then',
+    '    pending=0; printf e >> "$PRESSED"',
+    "    if [ $shown = 1 ] && [ $focused = 0 ]; then focused=1",
+    "    elif [ $shown = 1 ]; then shown=0; focused=0",
+    "    else shown=1; focused=1; fi",
+    "    printf 'key\\nframe\\n' >> \"$T\"; sleep $LAG; draw",
+    "  fi",
+    "done",
+  ].join("\n");
+  const STARTS = { closed: [0, 0], open: [1, 0], focused: [1, 1] } as const;
+  /**
+   * The fake explorer, started `closed`, `open` or `focused`, in zen or not; a frame begun held open as long as the
+   * test holds it (`held`), or a second at most; `presses()`, the `space e`s it took.
+   */
+  const explorer = async (start: keyof typeof STARTS, { zen = false, held = false } = {}) => {
+    const s = new Session({ size: { cols: 60, rows: 10 }, frameMax: held ? Number.POSITIVE_INFINITY : undefined });
+    const pressed = join(s.dir, "pressed");
+    const [shown, focused] = STARTS[start];
+    try {
+      s.term.spawn(["sh", "-c", cycling], {
+        cwd: "/",
+        env: {
+          ...env,
+          T: s.trace,
+          PRESSED: pressed,
+          LABEL,
+          LAG: String(LAG / 1000),
+          shown: `${shown}`,
+          focused: `${focused}`,
+          zen: zen ? "1" : "0",
+        },
+      });
+      // Its first frame, read whole (its frames are marked).
+      await s.until(() => s.rowOf("home.md") >= 0, undefined, "the fake explorer's first frame");
+    } catch (err) {
+      s.cleanup(); // the test's own cleanup is in the try it never reaches
+      throw err;
+    }
+    const presses = () => (existsSync(pressed) ? readFileSync(pressed, "utf8") : "").length;
+    return { s, presses };
+  };
+
+  test("the modes are the chips the status line draws (draw-status.ts)", () => {
+    const src = readFileSync(join(import.meta.dir, "..", "src", "tui", "draw-status.ts"), "utf8");
+    // The chip's expression, from its name to the next statement's: both found, in that order.
+    const [from, to] = [src.indexOf("const chip = "), src.indexOf("const chipSt")];
+    expect(from).toBeGreaterThan(0);
+    expect(to).toBeGreaterThan(from);
+    const chips = src.slice(from, to);
+    expect([...chips.matchAll(/" ([A-Z][A-Z-]+) "/g)].map((c) => c[1]).sort()).toEqual([...MODES].sort());
+  });
+
+  test("the status line's mode is its chip when it names one, never the keys pending or an operator's", () => {
+    for (const m of ["READ", "SOURCE", "INSERT", "V-LINE", "FILES", "GIT", "OUTLINE"])
+      expect(modeOf(` ${m}  notes  ‹ home.md ›  L1:1`)).toBe(m);
+    // The leader pending (Unicode's ␣, ASCII's SPC), F waiting for its character, an operator, a prompt, a file name.
+    for (const line of [
+      " ␣  notes  L1:1",
+      " SPC  notes  L1:1",
+      " F  notes  L1:1",
+      " dT  notes  L1:1",
+      ":write",
+      "FILES.md",
+    ])
+      expect(modeOf(line)).toBeNull();
+  });
+
+  test("the panels' own titles, never the which-key popup's lines that name them", () => {
+    // The popup's line for each key, its border Unicode's or ASCII's.
+    for (const border of ["│", "|"]) {
+      const popup = (id: string) => `  ${border} e   → ${COMMAND_SPECS.find((c) => c.id === id)!.title}  ${border}`;
+      expect(EXPLORER.test(popup("explorer.cycle"))).toBe(false);
+      expect(OUTLINE.test(popup("outline.cycle"))).toBe(false);
+    }
+    // As slipbox draws them: the explorer's buttons before its border (the Nerd Font's, ASCII's, none in a narrow
+    // pane); the outline after the right panel's border, the right rail beside it or its blank drawn to the edge.
+    expect(EXPLORER.test(" ≡  Explorer               󰝒  󰉗  │ 1 operations-handbook.md × │")).toBe(true);
+    expect(EXPLORER.test(" =  Explorer               +  +>  | 1 operations-handbook.md x |")).toBe(true);
+    expect(EXPLORER.test(" ≡  Explorer   │ 1 operations-handbook.md × │")).toBe(true);
+    // A tab, or a note's line, that says "Explorer" in passing (the explorer closed); a note's line starting "Outline".
+    expect(EXPLORER.test(" ≡  │ 1 Explorer guide.md × │ 2 home.md × │")).toBe(false);
+    expect(EXPLORER.test(" ≡  │   12  the Explorer lists every note │ Outline")).toBe(false);
+    expect(OUTLINE.test(" ≡  │ Outline of the plan, in brief")).toBe(false);
+    expect(OUTLINE.test(" ±  󰉋 equipment     ● │ § Halden Ridge Observatory    │ Outline           󰋽")).toBe(true);
+    expect(OUTLINE.test(" ±  󰉋 equipment     ● │ § Halden Ridge Observatory    │ Outline         ")).toBe(true);
+    expect(OUTLINE.test(" +  equipment     * | § Halden Ridge Observatory    | Outline         ")).toBe(true);
+  });
+
+  test.each([
+    ["closed", 1],
+    ["open", 1],
+    ["focused", 0],
+  ] as const)("explorerOpen from %s presses space e %d times, never again on the which-key popup", async (start, n) => {
+    const { s, presses } = await explorer(start);
+    try {
+      await explorerOpen(s);
+      await Bun.sleep(LAG + 200); // a press too many, drawn by now
+      expect(presses()).toBe(n);
+      expect(mode(s)).toBe("FILES");
+      expect(s.rowOf(EXPLORER)).toBeGreaterThanOrEqual(0);
+    } finally {
+      s.cleanup();
+    }
+  });
+
+  test.each([
+    ["open", 2],
+    ["focused", 1],
+    ["closed", 0],
+  ] as const)(
+    "explorerClosed from %s presses space e %d times, never again on the which-key popup",
+    async (start, n) => {
+      const { s, presses } = await explorer(start);
+      try {
+        await explorerClosed(s);
+        await Bun.sleep(LAG + 200);
+        expect(presses()).toBe(n);
+        expect(mode(s)).toBe("READ");
+        expect(s.rowOf(/Explorer/)).toBe(-1);
+      } finally {
+        s.cleanup();
+      }
+    },
+  );
+
+  test.each([
+    ["explorerOpen", "focused", 0, "FILES"],
+    ["explorerClosed", "open", 2, "READ"],
+  ] as const)(
+    "%s from %s, called while a repaint is half drawn: %d presses, decided on the frame whole",
+    async (helper, start, n, m) => {
+      const { s, presses } = await explorer(start, { held: true });
+      try {
+        // A repaint begun, the screen cleared, its frame held open: neither the title nor the mode on it.
+        s.term.write("r");
+        await until(() => s.term.midFrame, "the repaint begun");
+        let done = false;
+        const helped = (helper === "explorerOpen" ? explorerOpen(s) : explorerClosed(s)).then(() => {
+          done = true;
+        });
+        await Bun.sleep(300); // it has looked, mid-frame, many times
+        expect(done).toBe(false);
+        expect(presses()).toBe(0);
+        s.term.write("R"); // the frame drawn whole
+        await helped;
+        await Bun.sleep(LAG + 200);
+        expect(presses()).toBe(n);
+        expect(mode(s)).toBe(m);
+      } finally {
+        s.cleanup();
+      }
+    },
+  );
+
+  test("explorerClosed with no status line (zen) leaves a closed explorer as it is", async () => {
+    const { s, presses } = await explorer("closed", { zen: true });
+    try {
+      await explorerClosed(s);
+      await Bun.sleep(LAG + 200);
+      expect(presses()).toBe(0);
+      expect(s.rowOf(/Explorer/)).toBe(-1);
     } finally {
       s.cleanup();
     }
