@@ -11,7 +11,7 @@ import {
   leader,
   mode,
   OUTLINE,
-  panelFocused,
+  outlineOpen,
 } from "../check.ts";
 import type { Session } from "../session.ts";
 import { toPanel } from "./source-control.ts";
@@ -72,8 +72,8 @@ export const PANELS: Check[] = [
         ["focused: closed", () => explorerClosed(s), 1, "READ", false],
         ["closed: as it is", () => explorerClosed(s), 0, "READ", false],
         ["closed: opened and focused", () => explorerOpen(s), 1, "FILES", true],
-        ["open, unfocused (escape back to the note): focused, then closed", () => s.keys("escape"), 0, "READ", true],
-        ["", () => explorerClosed(s), 2, "READ", false],
+        ["focused: escape back to the note, the explorer still open", () => s.keys("escape"), 0, "READ", true],
+        ["open, unfocused: focused, then closed", () => explorerClosed(s), 2, "READ", false],
       ];
       for (const [what, act, n, m, shown] of steps) {
         const pressed = await presses(s, "explorer.cycle", act);
@@ -106,25 +106,25 @@ export const PANELS: Check[] = [
       s.expect(s.rowOf(EXPLORER) < 0, "EXPLORER on no row: not the tab's, the heading's or the text's");
       s.expect((await presses(s, "explorer.cycle", () => explorerClosed(s))) === 0, "closed already, no press");
       // The outline opened: its title found, above the note's line.
-      const opening = await presses(s, "outline.cycle", () => panelFocused(s, "o", "OUTLINE", OUTLINE));
+      const opening = await presses(s, "outline.cycle", () => outlineOpen(s));
       s.expect(opening === 1, `space o once: ${opening}`);
       s.expect(s.rowOf(OUTLINE) < s.rowOf("Outline of the book"), "OUTLINE on the panel's title, above the text");
     },
   },
   {
     area: "navigating",
-    name: "outline: panelFocused opens and focuses it with one press, its title at the screen's edge with no right rail",
+    name: "outline: outlineOpen (panelFocused) opens and focuses it with one press, its title at the screen's edge with no right rail",
     covers: { cases: ["outline"], commands: ["outline.cycle"] },
     options: { open: HANDBOOK, config: "[ui]\nright_rail = false\n" },
     run: async (s) => {
       await inMode(s, "READ");
       s.expect(s.rowOf(OUTLINE) < 0, "the outline closed at the start");
-      const pressed = await presses(s, "outline.cycle", () => panelFocused(s, "o", "OUTLINE", OUTLINE));
+      const pressed = await presses(s, "outline.cycle", () => outlineOpen(s));
       s.expect(pressed === 1, `one press of space o, not ${pressed}`);
       // Nothing right of it: the title, then the panel's blank to the screen's edge.
       const row = s.screen()[s.rowOf(OUTLINE)]!;
       s.expect(/[│┃] Outline *$/.test(row), `the outline's title, nothing after it: ${row}`);
-      const again = await presses(s, "outline.cycle", () => panelFocused(s, "o", "OUTLINE", OUTLINE));
+      const again = await presses(s, "outline.cycle", () => outlineOpen(s));
       s.expect(again === 0, `focused already, no press: ${again}`);
       await inMode(s, "OUTLINE");
     },

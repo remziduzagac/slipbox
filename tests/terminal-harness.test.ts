@@ -328,10 +328,11 @@ describe("what the checks share (check.ts)", () => {
     "  else printf '\\033[8;1H %s  notes  ‹ home.md ›  L1:1\\033[?2026l' \"$chip\"; fi",
     "}",
     "draw",
-    // A repaint after the first frame: begun, the screen cleared, held a while, then drawn whole.
-    "if [ $repaint = 1 ]; then sleep 0.3; printf '\\033[?2026h\\033[2J'; sleep 0.6; draw; fi",
     'while c=$(dd bs=1 count=1 2>/dev/null) && [ -n "$c" ]; do',
     "  if [ \"$c\" = ' ' ]; then pending=1; draw; printf 'key\\nframe\\n' >> \"$T\"",
+    // From the test, not keys: r begins a repaint, the screen cleared and its frame left open; R draws it whole.
+    "  elif [ \"$c\" = r ]; then printf '\\033[?2026h\\033[2J'",
+    '  elif [ "$c" = R ]; then draw',
     '  elif [ "$c" = e ] && [ $pending = 1 ]; then',
     '    pending=0; printf e >> "$PRESSED"',
     "    if [ $shown = 1 ] && [ $focused = 0 ]; then focused=1",
@@ -343,11 +344,11 @@ describe("what the checks share (check.ts)", () => {
   ].join("\n");
   const STARTS = { closed: [0, 0], open: [1, 0], focused: [1, 1] } as const;
   /**
-   * The fake explorer, started `closed`, `open` or `focused`, in zen or not, repainting once after its first frame or
-   * not; `presses()`, the `space e`s it took.
+   * The fake explorer, started `closed`, `open` or `focused`, in zen or not; a frame begun held open as long as the
+   * test holds it (`held`), or a second at most; `presses()`, the `space e`s it took.
    */
-  const explorer = async (start: keyof typeof STARTS, { zen = false, repaint = false } = {}) => {
-    const s = new Session({ size: { cols: 60, rows: 10 } });
+  const explorer = async (start: keyof typeof STARTS, { zen = false, held = false } = {}) => {
+    const s = new Session({ size: { cols: 60, rows: 10 }, frameMax: held ? Number.POSITIVE_INFINITY : undefined });
     const pressed = join(s.dir, "pressed");
     const [shown, focused] = STARTS[start];
     try {
@@ -362,7 +363,6 @@ describe("what the checks share (check.ts)", () => {
           shown: `${shown}`,
           focused: `${focused}`,
           zen: zen ? "1" : "0",
-          repaint: repaint ? "1" : "0",
         },
       });
       // Its first frame, read whole (its frames are marked).
@@ -377,7 +377,11 @@ describe("what the checks share (check.ts)", () => {
 
   test("the modes are the chips the status line draws (draw-status.ts)", () => {
     const src = readFileSync(join(import.meta.dir, "..", "src", "tui", "draw-status.ts"), "utf8");
-    const chips = src.slice(src.indexOf("const chip = "), src.indexOf("const chipSt"));
+    // The chip's expression, from its name to the next statement's: both found, in that order.
+    const [from, to] = [src.indexOf("const chip = "), src.indexOf("const chipSt")];
+    expect(from).toBeGreaterThan(0);
+    expect(to).toBeGreaterThan(from);
+    const chips = src.slice(from, to);
     expect([...chips.matchAll(/" ([A-Z][A-Z-]+) "/g)].map((c) => c[1]).sort()).toEqual([...MODES].sort());
   });
 
@@ -460,11 +464,20 @@ describe("what the checks share (check.ts)", () => {
   ] as const)(
     "%s from %s, called while a repaint is half drawn: %d presses, decided on the frame whole",
     async (helper, start, n, m) => {
-      const { s, presses } = await explorer(start, { repaint: true });
+      const { s, presses } = await explorer(start, { held: true });
       try {
-        // The screen cleared, its frame not yet ended: neither the title nor the mode on it.
+        // A repaint begun, the screen cleared, its frame held open: neither the title nor the mode on it.
+        s.term.write("r");
         await until(() => s.term.midFrame, "the repaint begun");
-        await (helper === "explorerOpen" ? explorerOpen(s) : explorerClosed(s));
+        let done = false;
+        const helped = (helper === "explorerOpen" ? explorerOpen(s) : explorerClosed(s)).then(() => {
+          done = true;
+        });
+        await Bun.sleep(300); // it has looked, mid-frame, many times
+        expect(done).toBe(false);
+        expect(presses()).toBe(0);
+        s.term.write("R"); // the frame drawn whole
+        await helped;
         await Bun.sleep(LAG + 200);
         expect(presses()).toBe(n);
         expect(mode(s)).toBe(m);

@@ -198,7 +198,7 @@ export const EXPLORER = /Explorer {2,}(?:\S{1,2} +)*[│┃|]/;
 
 /**
  * The outline's own title, after the right panel's border: then the panel's blank, drawn to the right rail or the
- * screen's edge. Not the which-key popup's "Outline: open, focus, close", nor a note's line that starts "Outline".
+ * screen's edge. Not the which-key popup's "Outline: open, focus, close", nor a note's line going on past "Outline".
  */
 export const OUTLINE = /[│┃|] Outline {2,}/;
 
@@ -207,16 +207,8 @@ export const OUTLINE = /[│┃|] Outline {2,}/;
  * and decides a press wrongly — a repaint begun shows neither the title nor the mode.
  */
 async function betweenFrames(s: Session, ok: () => boolean): Promise<boolean> {
-  let held = false;
-  await s.until(
-    () => {
-      held = ok();
-      return true;
-    },
-    undefined,
-    "a frame drawn whole",
-  );
-  return held;
+  await s.until(() => true, undefined, "a frame drawn whole"); // `until` looks only between frames
+  return ok();
 }
 
 /**
@@ -235,6 +227,9 @@ export async function panelFocused(s: Session, key: string, panelMode: string, t
 
 /** The explorer open and focused (FILES). */
 export const explorerOpen = (s: Session) => panelFocused(s, "e", "FILES", EXPLORER);
+
+/** The outline open and focused (OUTLINE). */
+export const outlineOpen = (s: Session) => panelFocused(s, "o", "OUTLINE", OUTLINE);
 
 /**
  * The explorer closed: focused first (`explorerOpen`), then space e once, its title gone and the status line off FILES

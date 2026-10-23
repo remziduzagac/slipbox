@@ -606,9 +606,9 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
   `work/kestrel/scripts/dev/agent-replay.sh` (test 'the explorer and outline keep their selection')
 - narrow terminal overlays explorer/outline, closing after pick; tiny terminals — `notes/meetings/standup-log.md`,
   `work/kestrel/docs/qa/render-torture.md` (Narrow terminals 3.14)
-- the explorer's and the outline's names said in passing — a tab, a heading, a line starting "Outline" — never their
-  panels' own titles — `notes/reading/Explorer of the North.md` (check 'explorer: a tab, a heading and a note's line…';
-  #18)
+- the explorer's and the outline's names said in passing — a tab, a heading, a line going on past "Outline" — never
+  their panels' own titles — `notes/reading/Explorer of the North.md` (check 'explorer: a tab, a heading and a note's
+  line…'; #18)
 
 ### toml
 

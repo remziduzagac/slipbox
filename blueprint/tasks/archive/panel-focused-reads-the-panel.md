@@ -230,4 +230,24 @@ and the status line's mode waited for together. Never pressed again on a screen 
 - 2026-10-23: CI on the round-3 push: macOS's terminal run failed one check this change doesn't reach, `git: source
   control — a file staged, committed, the commit amended`: its amend editor still open after its own `escape,
   ctrl+s`, with no helper of this change in it; it passed on macOS for the pushes before.
+- 2026-10-24: Round 5, one review (the other reviewer out of its quota until 01:41; its review follows in round 6):
+  nine findings, checked:
+  - Taken: the repaint test could hang: its repaint came 0.3 s after the fake's first frame, and a runner that missed
+    that window waited for a frame begun that never came. The test begins the repaint itself (`r`), holds its frame
+    open as long as it likes, and ends it (`R`); with the direct read both cases fail at once.
+  - Taken: `navigating.ts`, already past the size limit, grew a line (`OUTLINE`'s import): `outlineOpen` joins
+    `explorerOpen` in check.ts, and the file is back to its size on `dev`.
+  - Taken: `betweenFrames` said what it does plainly: `until` with nothing to wait for, which looks only between
+    frames, then the look.
+  - Taken: the test holding `MODES` to draw-status.ts sliced the source by two names; it fails if either is gone or
+    out of order, rather than reading the wrong stretch.
+  - Taken: a step of the explorer's check had no name for its failures.
+  - Taken, the words: the sample's line goes on past "Outline", and `CASES.md` and `OUTLINE`'s comment say so.
+  - Rejected: a table cell, a line that is only "Outline", a folder named "Explorer": no sample has one (TT-D5).
+  - Rejected: other checks' bare `see`/`notSee("Explorer")`: none decides a press on it, a wait for it gone can't
+    pass early, and they run in the demo vault, not beside the new note (the full run on the round-3 push passed).
+  - Rejected, as before: the first look on a screen not caught up (the stale screen, the follow-up's); panes under
+    eight rows.
+- 2026-10-24: After round 5: the unit tests of what the checks share, 14 pass, and `home.test.ts`'s; the eight checks
+  of `panels.ts` and the outline's pass.
 - 2026-10-23: The typecheck, the lint and `check:docs` pass. Done; the pull request's merge is the acceptance.
