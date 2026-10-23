@@ -18,7 +18,7 @@ import { cacheDir } from "../core/paths.ts";
 import { readRoots } from "../core/registry.ts";
 import { homeFolder } from "../core/vault.ts";
 import type { App, View } from "./app.ts";
-import { lineStart, offsetOf, placeAt, prevBoundary } from "./editing.ts";
+import { offsetOf, placeAt, prevBoundary } from "./editing.ts";
 import { keyChar } from "./keys.ts";
 import { RANKED, rank } from "./match.ts";
 import { PASTE } from "./vim.ts";
@@ -165,11 +165,11 @@ export function afterInsertKey(app: App, view: View, key: string): void {
     const c = app.completion;
     if (from !== null) {
       const style: LinkStyle = md !== null ? "markdown" : "wiki";
-      const start = lineStart(view, from);
+      const start = view.buf.source.lastIndexOf("\n", from - 1) + 1;
       const before = view.buf.source.slice(start, from).trimStart();
-      // The same target's list: typed into where it starts, or moved along its line by an indent, what's before it
-      // otherwise unchanged. Another target, on this line or another, gets its own.
-      const same = c?.from === from || (c?.lineStart === start && c.before === before);
+      // The same target's list: on its line, what's before it unchanged but for the indent, as typing into it or an
+      // indent leaves it. Another target, on this line or another, gets its own.
+      const same = c?.lineStart === start && c.before === before;
       if (c?.links === style && c.view === view && same) {
         c.from = from;
         c.lineStart = start;

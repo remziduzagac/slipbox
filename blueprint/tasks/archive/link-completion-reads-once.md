@@ -225,3 +225,26 @@ link being typed, matched or not, so the keys that match nothing cost the same h
     `Reach`'s caches. New of the kind: `linkEnds` works out the note's own path per item, once per build: the build's
     cost, not a key's.
   - The link list's four fields grouped in one: cosmetic; `line` renamed `lineStart`, which it is.
+- 2026-10-24: Reviewed again, the whole diff, by one reviewer (the second wasn't available for this round). Verified and
+  fixed:
+  - A list was kept wherever a target started at the same offset, its line and what's before it unchecked: after a
+    reload (`:e!`, a conflict's reload) while a list is kept, another target at that offset reused it. Typing into a
+    target never changes what's before it, so a target is known by its line's start and what's before it alone. Test:
+    `a [[zz` with the `a` changed where it stands, then a key: a list of its own.
+  - The manual and the design said other vaults' notes are as of when the list was made: this vault's are too, said.
+  - The line's start came from `editing.ts`'s `lineStart`, which walks every line start per key, and its import
+    shadowed `snippetContext`'s own: worked out as `snippetContext` and `linkTargetStart` do (a line's start is the
+    same under CRLF).
+  - The vault test pinned the named folders' 7 reads without a memo: now more than one, the point it makes.
+  Mutation-checked, each alone: the same start kept whatever is before it, and the earlier ten: each fails a unit
+  test; the three of the terminal checks still fail them. Ran the completion and matcher tests (29 pass), the pointer
+  tests (23 pass), and the links terminal checks (5 pass). Rejected:
+  - A language server's late answer after `[` (raised before): it predates this change, and a test of it needs a
+    markdown server the terminal checks don't have; a follow-up of its own.
+  - The list stale within one link, a note deleted meanwhile still offered: kept so, as logged; a deleted note was
+    offered as long as anything matched before this change too.
+  - A key that leaves the word as it was (an indent, a forward delete) ranks the last word's matches again: what a
+    typed key costs; `Intl.Collator` for the sort once per list; the matches kept per word for the target's life
+    (bounded by the word's length times the list); `findVaultRoot` per note; the ranking's passes; the list kept apart
+    from the popup; the narrowing moved to `match.ts` (the property it counts on is tested beside the matcher's
+    tests); the style twice: as logged.

@@ -10274,6 +10274,17 @@ describe("vaults in the TUI (17.x)", () => {
     expect(h.app.view!.buf.source).toContain("\n[[zz]] [[to\n");
     expect(h.app.completion?.links).toBe("wiki");
     expect(h.app.completion).not.toBe(kept);
+    // What's before a target changed where it stands, its start unmoved (an edit from outside, a reload): its own list.
+    await h.keys("escape", "o");
+    for (const k of ["a", "space", ..."[[zz"]) await h.keys(k);
+    const here = h.app.completion;
+    expect(here?.shown).toEqual([]);
+    const buf = h.app.view!.buf;
+    buf.edit(buf.source.lastIndexOf("a [[zz"), 1, "b");
+    await h.keys("z");
+    expect(h.app.view!.buf.source).toContain("\nb [[zzz\n");
+    expect(h.app.completion?.links).toBe("wiki");
+    expect(h.app.completion).not.toBe(here);
     await h.keys("escape");
   });
 
