@@ -17,6 +17,7 @@ import { REGEX, stopRegexJobs } from "../core/regex-jobs.ts";
 import { stopParsePool } from "../core/parse-pool.ts";
 import { stopWalkThreads } from "../core/walk-thread.ts";
 import { Listings } from "./listings.ts";
+import { stopBacklinkJobs } from "../core/backlinks-jobs.ts";
 import { stopSpellThread } from "../core/spell-thread.ts";
 import { stopSyntaxThread } from "../core/syntax-thread.ts";
 import { onLoaded } from "../core/lazy.ts";
@@ -40,8 +41,8 @@ import { type Layout, posOfSrc, srcAt } from "../core/layout/ir.ts";
 import { slipboxOwn, stateDir } from "../core/paths.ts";
 import { type Anchor, type CursorAnchor, loadSession, PositionStore, TOP } from "../core/position.ts";
 import type { Role, Theme } from "../core/theme/index.ts";
-import { Reach } from "../core/reach.ts";
-import { type Peek, vaultGraph } from "./peek.ts";
+import type { Reach } from "../core/reach.ts";
+import { keepCaughtUp, type Peek, tuiReach, vaultGraph } from "./peek.ts";
 import type { DiffWindow } from "./diffview.ts";
 import type { MergeState } from "./mergescreen.ts";
 import type { Review } from "./review.ts";
@@ -439,6 +440,9 @@ export interface AppOptions {
   listOffThread?: boolean;
 }
 
+/** Buffers of another vault's file whose vault a view of them has had caught up (`makeView`, #10). */
+const caughtUpOnce = new WeakSet<NoteBuffer>();
+
 export class App {
   /** The root the TUI is in; it changes when a link or the explorer leads into another (17.10). */
   loc: VaultLocation;
@@ -638,7 +642,8 @@ export class App {
     this.vaults.ask(opts.folder ?? null, opts.open ? this.absOf(opts.open) : null);
     // This machine sees the root (17.6); a named folder moved here by hand brought its state (21.8).
     const { carriedFrom } = opts.recorded ?? recordLocation(opts.loc);
-    this.reach = new Reach(opts.loc);
+    // The vaults it reaches never parsed whole here (`thorough`): that holds the keys. Caught up on a thread instead.
+    this.reach = tuiReach(this, opts.loc);
     this.graph.reach ??= this.reach;
     this.languages.lintCmd = lintCommand(opts.config.lint, opts.loc.root, undefined, opts.config.lsp.auto_install);
     this.host = opts.host;
@@ -970,6 +975,16 @@ export class App {
     // structure likewise (16.7).
     buf.retryParse();
     this.languages.retrySyntax(buf);
+    // Another vault's file shown — a tab kept from a peek, back with the session; not a buffer read for an edit, nor
+    // the peek's own: its graph caught up on a thread, as a peek's is (#10), its index built if it has none, home's
+    // excepted (VV-D2) — or a link by a name in a note changed since would never be found: the TUI never parses a
+    // vault whole to look (`thorough`). Even when its index here isn't behind its walk: the thread's walk asks the
+    // links its vault follows first (VV-D6), and finds the folders through them this walk leaves out until they answer.
+    // With its first view, not every split of it.
+    if (buf.elsewhere?.graph && !buf.virtual && !caughtUpOnce.has(buf)) {
+      caughtUpOnce.add(buf);
+      keepCaughtUp(this, buf.elsewhere.graph);
+    }
     const topAnchor = anchor ?? this.positions.get(buf.key) ?? { ...TOP };
     const curAnchor =
       cursor ??
@@ -1354,6 +1369,7 @@ export class App {
     this.stopLazy?.();
     stopParsePool();
     stopWalkThreads();
+    stopBacklinkJobs();
     stopSpellThread();
     stopSyntaxThread();
     stopRegexJobs();

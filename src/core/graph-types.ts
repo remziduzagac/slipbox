@@ -156,6 +156,8 @@ export interface VaultReach {
   entryAt(abs: string): NoteEntry | undefined;
   /** Another root's graph (an embed of its note resolves its links there, 1.11); null if unreadable. */
   graphAt(root: string, opts?: { known?: boolean }): Graph | null;
+  /** Another root's index written meanwhile, a root found and recorded with it: the machine's list read again. */
+  othersChanged?(): void;
 }
 
 /** A link that reaches nothing, or more than one note (1.7): where it is, how it's written, why. */

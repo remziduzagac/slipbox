@@ -10,7 +10,7 @@ import { loadConfig } from "./config.ts";
 import { readJson } from "./fsutil.ts";
 import {
   type Backlink,
-  type Graph,
+  Graph,
   type LinkRef,
   type NoteEntry,
   openGraph,
@@ -62,19 +62,84 @@ export function openVault(root: string): Graph {
   return g;
 }
 
+export interface ReachOptions {
+  /** The graphs it opens parse every note before calling a link unresolved (`Graph.thorough`): the CLI's, whose answer
+   *  is now. The TUI's don't: a vault parsed whole on the main thread holds the keys. */
+  thorough?: boolean;
+  /** It records the roots it reaches in the machine's list (17.11). A thread of its own doesn't: the list is read,
+   *  changed and written again, and the main thread may be writing it too. */
+  record?: boolean;
+  /** Told of each root's graph a link reaches, once: when it's opened for one, or — opened from the machine's list
+   *  (`known`) — when a link first reaches it. The TUI's, not parsing one whole (`thorough`), has it caught up
+   *  elsewhere. */
+  opened?: (g: Graph) => void;
+  /**
+   * The graphs it opens write nothing of their vaults' — their indexes, their redirects, the commit they caught up
+   * with — but home's walk, kept as every graph on the main thread keeps it (`Graph.keepsWalk`). The TUI's: its
+   * backlinks' thread writes them, off the keys (#10). A backlinks' thread's, reading another vault for a link alone:
+   * that vault's own request writes its state, or the main thread does. A nested root's first index (`nested`) is
+   * written all the same.
+   */
+  readOnly?: boolean;
+  /** Roots whose state another thread holds (the TUI's own vault, for its backlinks' thread): never indexed here. */
+  owned?: string[];
+  /**
+   * A nested root with no index, found (`discover`): indexed then — the CLI's, and a backlinks' thread's (they're
+   * small); opened, for `opened` to have it built on a thread — the TUI's, as a big one indexed here would hold the
+   * keys; or left alone — a peeked vault's reach in the TUI, whose own thread builds them.
+   */
+  nested?: "index" | "open" | "none";
+}
+
 export class Reach implements VaultReach {
   /** Other roots' graphs, by real path; null where one couldn't be opened. */
   private readonly graphs = new Map<string, Graph | null>();
   private inboundCache: { stamp: string; map: Map<string, Backlink[]> } | null = null;
+  private readonly thorough: boolean;
+  private readonly record: boolean;
+  private readonly opened: ((g: Graph) => void) | undefined;
+  private readonly readOnly: boolean;
+  private readonly owned: Set<string>;
+  private readonly nested: "index" | "open" | "none";
 
-  constructor(readonly here: VaultLocation) {}
+  constructor(
+    readonly here: VaultLocation,
+    opts: ReachOptions = {},
+  ) {
+    this.thorough = opts.thorough ?? true;
+    this.record = opts.record ?? true;
+    this.opened = opts.opened;
+    this.readOnly = opts.readOnly ?? false;
+    this.owned = new Set((opts.owned ?? []).map(real));
+    this.nested = opts.nested ?? "index";
+  }
 
   private knownCache: { at: number; list: KnownRoot[] } | null = null;
+  /**
+   * A root `discover` found, recorded in the machine's list (17.11) — or, not recording, or that failing, known to this
+   * reach all the same, its index read for the links it makes.
+   */
+  private remember(loc: VaultLocation, root: string): void {
+    if (this.record) {
+      try {
+        recordLocation(loc);
+        return;
+      } catch {}
+    }
+    // A worktree's notes count at its main checkout (17.19), which the list knows if anything does.
+    if (!loc.worktree) this.found.push({ key: loc.key, kind: "vault", path: root, seen: new Date().toISOString() });
+  }
+
+  /** The roots `discover` found while it doesn't record them: known to it all the same, their indexes read. */
+  private readonly found: KnownRoot[] = [];
 
   /** The machine's roots: read again after a second (another slipbox may add one), not once per link. */
   private known(): KnownRoot[] {
     const now = Date.now();
-    if (!this.knownCache || now - this.knownCache.at > 1000) this.knownCache = { at: now, list: readRoots() };
+    if (!this.knownCache || now - this.knownCache.at > 1000) {
+      const list = readRoots();
+      this.knownCache = { at: now, list: [...list, ...this.found.filter((f) => !list.some((v) => v.key === f.key))] };
+    }
     return this.knownCache.list;
   }
 
@@ -116,31 +181,89 @@ export class Reach implements VaultReach {
   /**
    * The graph of another root, opened on first use with its own config; its index refreshed. A root
    * reached is recorded as seen; one taken from the machine's list (`known`: a search of every root, a
-   * moved folder's relink) isn't — it's known already, and each would read as just opened.
+   * moved folder's relink) isn't — it's known already, and each would read as just opened — until a link reaches it:
+   * recorded then, and `opened` told, as of a root a link opens.
    */
   graphAt(root: string, opts: { known?: boolean } = {}): Graph | null {
     const key = real(root);
-    if (this.graphs.has(key)) return this.graphs.get(key)!;
-    let g: Graph | null = null;
+    if (this.graphs.has(key)) {
+      const g = this.graphs.get(key)!;
+      // Taken from the machine's list, reached by a link now: recorded as seen, and told.
+      if (g && !opts.known && this.untold.delete(key)) {
+        try {
+          if (this.record) recordLocation(g.loc);
+        } catch {}
+        this.opened?.(g);
+      }
+      return g;
+    }
+    const g = this.open(root, !!opts.known);
+    this.graphs.set(key, g);
+    if (g && opts.known) this.untold.add(key);
+    else if (g) this.opened?.(g);
+    return g;
+  }
+
+  /** Roots taken from the machine's list and not reached by a link since: `opened` not told of them yet. */
+  private readonly untold = new Set<string>();
+
+  /** A root's graph built: lazily, its index read, as this reach's graphs are. */
+  private open(root: string, known: boolean): Graph | null {
     try {
       // Home (VV-D2) by its kept walk; any other vault by its marker.
       const loc = vaultAt(root);
-      if (!opts.known) recordLocation(loc); // reached: known on this machine, its links counted as backlinks (17.11)
+      // Reached: known on this machine, its links counted (17.11) — opened all the same if the list can't say so.
+      if (!known && this.record) {
+        try {
+          recordLocation(loc);
+        } catch {}
+      }
       const config = loadConfig({ ...configFilesFor(loc) }).config;
-      g = openGraph(loc, config, true, "lazy");
-      g.thorough = true;
+      const g = new Graph(loc, config);
+      g.writesIndex = !this.readOnly;
+      g.writesState = !this.readOnly;
+      g.build(true, "lazy");
+      g.thorough = this.thorough;
+      return g;
     } catch {
-      g = null;
+      return null;
     }
-    this.graphs.set(key, g);
+  }
+
+  /** Another root's graph if it's been opened here, never opening it: undefined, not yet; null, it couldn't be. */
+  held(root: string): Graph | null | undefined {
+    return this.graphs.get(real(root));
+  }
+
+  othersChanged(): void {
+    this.knownCache = null;
+    // Read again whatever the indexes' mtimes say: a coarse clock gives a rewrite the mtime it had.
+    this.inboundCache = null;
+  }
+
+  /** The roots whose graph it opened wrote its index, by their keys: those nested, built (`discover`). */
+  written(): string[] {
+    return [...this.graphs.values()].flatMap((g) => (g?.writtenAt != null ? [g.loc.key] : []));
+  }
+
+  /**
+   * Another root's graph opened anew, with its settings as they are now; null, it can't be (gone, unreadable), and the
+   * one held is kept.
+   */
+  reopen(root: string): Graph | null {
+    const key = real(root);
+    // Recorded and told of already: `opened` would ask its catch-up again, the one answered just now.
+    const g = this.open(root, true);
+    if (g) this.graphs.set(key, g);
     return g;
   }
 
   /**
    * The roots nested in `g` and the ones it sits in (17.17): the walk and the folders above know
    * them, so they're recorded — their links counted as backlinks — without having been opened first.
-   * A nested root with no index yet is indexed now (they're small; an enclosing one isn't: it's used
-   * as of its last indexing).
+   * A nested root with no index yet is indexed now, opened or left alone, as `nested` says (an enclosing one isn't
+   * indexed: it's used as of its last indexing). The peek records them on the main thread, and its thread, working out
+   * a note's backlinks, indexes them, recording nothing (`backlinks-jobs.ts`).
    */
   private discovered = false;
 
@@ -161,8 +284,20 @@ export class Reach implements VaultReach {
       } catch {
         continue;
       }
-      recordLocation(loc);
-      if (nested && !existsSync(join(cacheDir(loc), "index.json"))) this.graphAt(root)?.ensureAll();
+      this.remember(loc, root);
+      if (
+        nested &&
+        this.nested !== "none" &&
+        !this.owned.has(real(root)) &&
+        !existsSync(join(cacheDir(loc), "index.json"))
+      ) {
+        const n = this.graphAt(root);
+        // Its first index, written whatever the others this reach opens write.
+        if (n && this.nested === "index") {
+          n.writesIndex = true;
+          n.ensureAll();
+        }
+      }
     }
     this.knownCache = null;
   }

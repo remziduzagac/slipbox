@@ -94,8 +94,11 @@ The links in a peek are read in the note's own vault:
 - A link to a note of the vault you are in closes the peek and opens the note in your tabs, as usual.
 - A link to a third vault moves the peek there.
 
-Under the note, the peek lists its backlinks, when its vault has an index. Most do, once the background index has
-been through (see [Backlinks](#backlinks)). A vault without one yet says so: `o` goes there, and finds them.
+Under the note, the peek lists its backlinks. They're worked out away from the screen, so the note shows at once and
+the list follows when it's ready, as the vault is then: what changed there since your last peek counts. A vault with no
+index here yet gets one built for the peek, and the list comes when it's done. In a big vault that takes a while, and
+you can read, scroll and close the peek meanwhile. Your home folder is the exception: its index is built by the
+background index (see [Backlinks](#backlinks)), and until then the peek says so: `o` goes there, and finds them.
 
 The same peek opens for a backlink from another vault, for another vault's hit in a search widened with `ctrl+a`, and
 for a file of [Elsewhere's](vaults.md#elsewhere) that a link reaches. With the mouse, a click on such a link peeks, and

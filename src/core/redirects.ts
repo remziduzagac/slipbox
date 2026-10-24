@@ -3,8 +3,8 @@
 // in the vault's state, not its cache: only seeing the move teaches it, so it can't be rebuilt.
 
 import { createHash } from "node:crypto";
-import { posix } from "node:path";
-import { readJson, writeJson } from "./fsutil.ts";
+import { basename, dirname, posix } from "node:path";
+import { readJson, sweepTemps, writeJson } from "./fsutil.ts";
 import { normKey } from "./links.ts";
 
 /** A note's content hash, over its text. */
@@ -56,6 +56,7 @@ export class Redirects {
     if (entries.length > MAX_REDIRECTS)
       this.data = Object.fromEntries(entries.sort((a, b) => (a[1].at < b[1].at ? 1 : -1)).slice(0, MAX_REDIRECTS));
     try {
+      sweepTemps(dirname(this.file), basename(this.file));
       writeJson(this.file, { version: 1, redirects: this.data } satisfies RedirectFile);
     } catch {}
   }

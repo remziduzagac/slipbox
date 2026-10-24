@@ -7,6 +7,7 @@ import { GIT_DIFF } from "./git-diff.ts";
 import { LEFT_OUT_LINKS_AND_FILES, LINKS_AND_FILES } from "./links-and-files.ts";
 import { MOVING_LINKS } from "./moving-links.ts";
 import { LEFT_OUT_NAVIGATING, NAVIGATING } from "./navigating.ts";
+import { PEEK_BACKLINKS } from "./peek-backlinks.ts";
 import { LEFT_OUT_OUTSIDE_AND_CODE, OUTSIDE_AND_CODE } from "./outside-and-code.ts";
 import { PANELS } from "./panels.ts";
 import { LEFT_OUT_READING, READING } from "./reading.ts";
@@ -21,6 +22,8 @@ export const CHECK_FILES: Record<string, Check[]> = {
   editing: EDITING,
   navigating: NAVIGATING,
   "links-and-files": LINKS_AND_FILES,
+  // The peek's backlinks (#10): their own file, in the links-and-files area.
+  "peek-backlinks": PEEK_BACKLINKS,
   // Vaults, home and Elsewhere, the view, marks, links, the peek: their own file, in the areas they belong to.
   vaults: VAULTS,
   // A link renamed or moved itself, and what a rename writes through links (D260): links-and-files', a file of their own.
