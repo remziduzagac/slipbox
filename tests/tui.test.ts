@@ -14392,9 +14392,11 @@ describe("the background auto-index in the TUI (20.9)", () => {
         left.set("vaulted", true);
         h.app.watch.applyChanges({ changes: [], rescan: true, toWalk: ["vaulted"] });
         expect(left.has("vaulted")).toBe(false);
-        // Walked, while nobody works (here at once): every note of home's.
+        // Walked, while nobody works (here at once): every note of home's. Its walks are on their own thread: stepped as
+        // the TUI steps them, their answers awaited — a loop that never yields never gets one, and spins for good.
         const job = h.app.watch.indexJob();
-        while (job!.step(50)) {}
+        await stepToEnd(job!);
+        await h.app.watch.homeRefreshed;
         expect(h.app.graph.home?.walked).not.toBeNull();
         expect([...h.app.graph.notes.keys()].sort()).toEqual([
           "Documents/d0/sub/n.md",
