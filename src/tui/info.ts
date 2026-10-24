@@ -46,7 +46,8 @@ export class Info {
     const b = view.buf;
     // Why it isn't indexed (VV-D9): its row's `⊘` in the explorer, or its folder's.
     const why = b.virtual ? null : this.app.explorer.marks.whyAt(b.abs);
-    const key = `${b.key}:${b.version}:${this.app.graph.generation}:${b.dirty}:${b.deleted}:${!!b.parsing}:${why}`;
+    const exported = b.rel ? this.app.exporter.lastPath(b.rel) : null;
+    const key = `${exported}:${b.key}:${b.version}:${this.app.graph.generation}:${b.dirty}:${b.deleted}:${!!b.parsing}:${why}`;
     if (this.cache?.key === key) return this.cache.rows;
     const rows: Omit<InfoRow, "folded">[] = [];
     const head = (section: string) =>
@@ -210,6 +211,13 @@ export class Info {
       row("Links", ".md", shown(c.extension.value, c.extension), copy, 1);
       if (one) row("Links", "from", by(c.style), copy, 1);
     }
+    if (note) {
+      head("Export");
+      row("Export", "Export…", exported ?? "Choose a format", {
+        run: "note.export",
+        ...(exported ? { copy: exported } : {}),
+      });
+    }
     this.cache = { key, rows };
     return rows;
   }
@@ -276,8 +284,18 @@ export class Info {
       case "unfold":
         if (row?.heading) this.folded.delete(row.section);
         break;
+      case "export":
+        if (this.app.view?.buf.kind.group === "note") {
+          this.app.region = "content";
+          void this.app.run("note.export");
+        }
+        break;
       case "copy":
-        if (row && !row.heading) this.app.copy(row.act && "copy" in row.act ? row.act.copy : row.value);
+        if (row?.section === "Export" && !row.heading && !(row.act && "copy" in row.act && row.act.copy)) {
+          this.app.message("info", "no export for this note yet");
+          break;
+        }
+        if (row && !row.heading) this.app.copy(row.act && "copy" in row.act && row.act.copy ? row.act.copy : row.value);
         break;
       case "edit":
         return this.app.properties.open();
@@ -308,5 +326,5 @@ export interface InfoRow {
   /** What the filter matches. */
   text: string;
   folded: boolean;
-  act?: { copy: string } | { line: number } | { tag: string } | { run: string };
+  act?: { copy: string } | { line: number } | { tag: string } | { run: string; copy?: string };
 }

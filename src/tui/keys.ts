@@ -590,12 +590,19 @@ export const DEFAULT_FOOTNOTE_KEYS: Record<string, string> = {
 export const FOOTNOTE_ACTIONS = [...PANE_ACTIONS, "add", "edit", "delete", "rename"];
 
 /** Keys inside the Info view (3.19): the outline's, and `y` to copy a row's value. */
-export const DEFAULT_INFO_KEYS: Record<string, string> = { ...PANE_KEYS, y: "copy", e: "edit" };
+export const DEFAULT_INFO_KEYS: Record<string, string> = { ...PANE_KEYS, y: "copy", e: "edit", x: "export" };
 
-export const INFO_ACTIONS = [...PANE_ACTIONS, "copy", "edit"];
+export const INFO_ACTIONS = [...PANE_ACTIONS, "copy", "edit", "export"];
 
 /** What the Info view's actions do, for help and which-key. */
-export const INFO_ACTION_INFO: Record<string, { title: string; desc: string }> = {
+export const INFO_ACTION_INFO: Record<
+  string,
+  {
+    title: string;
+    desc: string;
+  }
+> = {
+  export: { title: "Export the note", desc: "Offers export formats for the current note" },
   down: { title: "Move down", desc: "Selects the next row" },
   up: { title: "Move up", desc: "Selects the previous row" },
   jump: {

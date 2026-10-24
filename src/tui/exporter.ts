@@ -36,6 +36,13 @@ export class Exporter {
     return true;
   }
 
+  lastPath(rel: string): string | null {
+    return (
+      readJson<{ paths?: Record<string, string> }>(join(stateDir(this.app.loc), "export.json"), {})?.paths?.[rel] ??
+      null
+    );
+  }
+
   /**
    * Export a note (10.x): the explorer's selected one, or this one. Its format picked — or named, `:export docx` — then
    * where asked: beside it, its name, unless you say otherwise.
@@ -212,7 +219,13 @@ export class Exporter {
         // Where it went, for "Where you exported last": as soon as it's there, not once its staging is cleared, so the
         // window opened meanwhile opens there.
         try {
-          writeJson(join(stateDir(graph.loc), "export.json"), { dir: dirname(target) });
+          const file = join(stateDir(graph.loc), "export.json");
+          const previous = readJson<{ paths?: Record<string, string> }>(file, {});
+          writeJson(file, {
+            dir: dirname(target),
+            paths: { ...previous?.paths, ...(rels.length === 1 ? { [rels[0]!]: target } : {}) },
+          });
+          if (this.app.graph === graph) this.app.info.cache = null;
         } catch {}
       } catch (err) {
         if (!this.app.quitting)

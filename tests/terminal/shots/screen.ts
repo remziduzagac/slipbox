@@ -5,6 +5,16 @@ import { HOME, leader, type Shot } from "../shot.ts";
 
 export const SHOTS: Shot[] = [
   {
+    name: "screen-info-export",
+    options: HOME("notes/index.md"),
+    take: async (s) => {
+      await leader(s, "n", "i");
+      await s.status("INFO");
+      await s.keys("shift+g");
+      await s.see("Export…");
+    },
+  },
+  {
     name: "screen-map",
     options: HOME("notes/index.md"),
     take: async (s) => {

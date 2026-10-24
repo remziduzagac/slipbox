@@ -2715,3 +2715,9 @@ paths and positions only. A repeated-switch ownership test checks notes, parses 
 
 The Vaults popup uses known roots independently of named pointer lookup. It sorts by recent use, includes unnamed
 vaults and home-folder workspaces, and groups worktrees under their repository. Filtering keeps group context.
+
+## Export from Info (#84)
+
+For notes, Info ends with Export…; enter or a click runs note.export, as does x while Info has focus. The row shows
+the note's last output path; y copies it. Successful single-note exports persist their path by note alongside the
+existing last export directory. Code and data files have no Export row.

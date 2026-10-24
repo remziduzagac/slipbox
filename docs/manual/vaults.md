@@ -283,6 +283,8 @@ A message names the vault you are now in.
   folder holding both, the two unfolded and the vault you are in now highlighted ([Files](files.md#the-zoom)).
 - **Every known vault** is a key away: `space v v` lists them, named or not, and `enter` goes into one.
 
+![Unsaved notes before changing vault](../images/vaults-unsaved-switch.png)
+
 ### Worktrees
 
 A git worktree (made with `git worktree add`) is a vault of its own, with its own workspaces, scratch and history.

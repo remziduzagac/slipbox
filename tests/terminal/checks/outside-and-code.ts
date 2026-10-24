@@ -184,6 +184,22 @@ const CONFLICT = "changed on disk, and you have unsaved changes";
 const append = (s: Session, line: string) => s.write(MEETING, `${s.read(MEETING)}\n${line}\n`);
 
 export const OUTSIDE_AND_CODE: Check[] = [
+  {
+    area: "outside-and-code",
+    name: "Info export: x and the Export row run the existing note export",
+    covers: { cases: ["info", "export"], commands: ["note.info", "note.export"] },
+    run: async (s) => {
+      await leader(s, "n", "i");
+      await s.status("INFO");
+      await s.keys("x");
+      await s.see("Export home.md as");
+      await s.see("Word (.docx)");
+      await s.keys("escape");
+      await leader(s, "n", "i");
+      await s.keys("shift+g", "enter");
+      await s.see("Export home.md as");
+    },
+  },
   // --- the Problems panel -----------------------------------------------------------------------
   {
     area: "outside-and-code",

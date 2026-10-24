@@ -459,6 +459,7 @@ The footnotes view has the outline's keys, and four of its own.
 | `h`, `left` / `l`, `right` | fold / unfold a section |
 | `g g` / `shift+g` | the first / last row |
 | `/` | filter the rows by name and value |
+| `x` | export the note; the Export row offers the same formats, and `y` copies its last output path |
 | `e` | edit the note's properties in a floating editor |
 | `q` | close Info |
 | `esc` | back to the note |

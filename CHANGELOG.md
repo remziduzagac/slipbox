@@ -8,6 +8,9 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 
 ### Added
 
+- Info ends with an Export row for notes. Enter, a click or `x` offers the formats; the row remembers the last output
+  path, and `y` copies it.
+
 - Switching vaults asks to save all, discard or stay, and releases the outgoing notes, parses and index. The vault
   list includes unnamed vaults, home workspaces and worktrees grouped under their repository; returning restores
   the workspace from disk.

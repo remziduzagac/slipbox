@@ -271,8 +271,13 @@ The Info view tells you what the file on screen is. It follows you to the next f
 - a tag's notes
 - the list of links or backlinks
 - the outline or the footnotes
+- **Export…**, at the end for notes: choose an export format; its value shows the last output path, which `y` copies
 
 On any other row, `enter` copies its value, as `y` does on every row.
+
+`x` in Info exports the note through the same format picker. Code and data files have no Export row.
+
+![Export at the end of Info](../images/screen-info-export.png)
 
 `e` opens the properties editor. It's a floating window with the note's front matter to edit as text. See
 [Editing](editing.md).
