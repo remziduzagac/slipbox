@@ -296,24 +296,25 @@ published release tagged `v<x.y.z>` of the highest version (the newest, unless a
 it), `preview` the newest published preview; a draft is neither, and a channel with no release has no file
 (`release.ts site`: the releases from `gh api`, each installer downloaded and hashed, refused when GitHub's own digest
 of the asset differs). The site also holds the docs, at `docs/` (§ The documentation site), and its `index.html`
-sends a visitor there, with a link to the repository. It's deployed once a preview is published, when the bootstrap,
-the workflow, `docs/` or `site/` change on `main`, by hand, and when a release is published (a person publishes it);
-the site is always made from `main`'s scripts, whichever ref started the run, and from the releases as they are then,
-one deployment at a time, never cancelled, so an older run never deploys over a newer one. Its build job only reads;
-the Pages grants (`pages: write`, `id-token: write`) are its deploy job's alone, in the `github-pages` environment,
-which takes deployments from `main`, `test` and `v*` tags only.
+sends a visitor there, with a link to the repository. It's deployed once a preview is published, when a release is
+published (a person publishes it), and by hand; not when `main` moves, which it does only for a release (D251), so a
+release's docs reach the site when it's published, and a release whose draft is deleted never shows its docs (D?1). The
+site is always made from `main`'s scripts, whichever ref started the run, and from the releases as they are then, one
+deployment at a time, never cancelled, so an older run never deploys over a newer one. Its build job only reads; the
+Pages grants (`pages: write`, `id-token: write`) are its deploy job's alone, in the `github-pages` environment, which
+takes deployments from `main`, `test` and `v*` tags only.
 
 **Where it's deployed:** in a preview's own run (`preview.yml`'s call), and in a run of `pages.yml` by hand on `main`.
-Every other run — a release published, `main`'s push, a run by hand on `test` or a tag — does nothing but start a run
-by hand on `main` (`redeploy`, `actions: write`). A deployment is named by its commit, and one of a commit deployed
-before is reported a success and never served when it's made under a `release` or a `push` (issue #7,
-actions/deploy-pages#383); a run by hand's is served (D258, D?1). A release's commit and `main`'s always were
-deployed, by their preview (D251); a preview's is its commit's first. **Every deployment is read back:** the site
-holds a marker of the run's own, `deployment` (its ID and attempt), and once deployed, it, `stable` and `preview` are
-fetched from the site until they're what the build wrote (an empty line for a channel with none, which the site
-answers with a 404), for eleven minutes at most, past the ten the site's cache keeps a file, and the run fails if they
-never are. The marker is in no other deployment, so channels the site served already don't pass for this one. A
-deployment empties the cache; a query string doesn't get past it, not being part of its key.
+Every other run — a release published, a run by hand on `test` or a tag — does nothing but start a run by hand on `main`
+(`redeploy`, `actions: write`). A deployment is named by its commit, and one of a commit deployed before is reported a
+success and never served when it's made under a `release` or a `push` (issue #7, actions/deploy-pages#383); a run by
+hand's is served (D258, D?1). A release's commit always was deployed, by its preview (D251); a preview's is its commit's
+first. **Every deployment is read back:** the site holds a marker of the run's own, `deployment` (its ID and attempt),
+and once deployed, it, `stable` and `preview` are fetched from the site until they're what the build wrote (an empty
+line for a channel with none, which the site answers with a 404), for eleven minutes at most, past the ten the site's
+cache keeps a file, and the run fails if they never are. The marker is in no other deployment, so channels the site
+served already don't pass for this one. A deployment empties the cache; a query string doesn't get past it, not being
+part of its key.
 
 ## The documentation site
 

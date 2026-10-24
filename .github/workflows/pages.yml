@@ -5,22 +5,15 @@ name: pages
 # one line, `<tag> <SHA-256 of that release's install.sh>` — the highest stable release, the newest preview; none for
 # a channel with no release (`scripts/release.ts site`); and the docs at `docs/`, the site/ Starlight site built from
 # docs/ (DS), where the site's index sends a visitor. Deployed by preview.yml once a preview is published, in its own
-# run, and by a run by hand on main, which every other run starts instead of deploying (D258, D?1): when the
-# bootstrap, the docs or the site change on main, when a release is published (by a person: a release CI publishes
-# starts no workflow), and by hand on another ref. A deployment passes once the site serves the run's own marker,
-# `deployment`, and the channels it built.
+# run, and by a run by hand on main, which every other run starts instead of deploying (D258, D?1): when a release is
+# published (by a person: a release CI publishes starts no workflow), and by hand on another ref. Not when main moves:
+# main takes only test's commits, for a release (D251), and its docs reach the site when the release is published.
+# A deployment passes once the site serves the run's own marker, `deployment`, and the channels it built.
 # Every action pinned by its commit, a week old when taken (14.10); values reach the shell through env, never inline.
 on:
   workflow_call:
   release:
     types: [published]
-  push:
-    branches: [main]
-    paths:
-      - "scripts/bootstrap*"
-      - "docs/**"
-      - "site/**"
-      - ".github/workflows/pages.yml"
   workflow_dispatch:
 
 # No permission by default; each job grants what it needs, and says why (GR-D9). No cache is restored anywhere in it.
@@ -35,8 +28,8 @@ concurrency:
 jobs:
   # D258, D?1: a deployment of a commit deployed before is reported a success and never served when it's made under a
   # `release` or a `push` (actions/deploy-pages#383, #7); one made by hand is served. So only two runs deploy: a
-  # preview's (preview.yml's call, the one push on `test`), its commit's first deployment, and a run by hand on main.
-  # Any other — a release published or main's push, whose commit its preview deployed already (D251), a run by hand on
+  # preview's (preview.yml's call, the one push this workflow sees), its commit's first deployment, and a run by hand
+  # on main. Any other — a release published, whose commit its preview deployed already (D251), a run by hand on
   # `test` or a tag — deploys nothing: this job starts a run by hand on main instead. `site` runs on the opposite.
   redeploy:
     if: >-
@@ -113,7 +106,7 @@ jobs:
   deploy:
     needs: site
     runs-on: ubuntu-24.04
-    # deploy-pages waits ten minutes at most, and reading the channels back eleven more.
+    # deploy-pages waits ten minutes at most, and reading the deployment back eleven more, and a round of requests.
     timeout-minutes: 25
     permissions:
       pages: write # to deploy the site
@@ -125,8 +118,9 @@ jobs:
       - id: deploy
         uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
       # D258, D?1: a deployment can be reported a success and not be served (actions/deploy-pages#383), as 0.5.0's was.
-      # The marker and the channels are read back from the site until they're what `site` built: eleven minutes at
-      # most, past the ten its cache keeps a file (a deployment empties the cache, and a query doesn't get past it).
+      # The marker and the channels are read back from the site until they're what `site` built: for eleven minutes,
+      # past the ten its cache keeps a file (a deployment empties the cache, and a query doesn't get past it), however
+      # long the site takes to answer.
       - name: served
         env:
           SITE: ${{ steps.deploy.outputs.page_url }}
@@ -139,12 +133,14 @@ jobs:
             exit 1
           fi
           served() { curl -fsS --connect-timeout 5 --max-time 10 "$SITE$1" 2>/dev/null || true; }
-          for _ in $(seq 66); do
+          deadline=$(($(date +%s) + 660))
+          while :; do
             if [ "$(served deployment)" = "$DEPLOYMENT" ] && [ "$(served stable)" = "$STABLE" ] &&
               [ "$(served preview)" = "$PREVIEW" ]; then
               echo "the site serves this deployment, $DEPLOYMENT, and the channels built"
               exit 0
             fi
+            [ "$(date +%s)" -lt "$deadline" ] || break
             sleep 10
           done
           echo "after eleven minutes, the site doesn't serve this deployment:"

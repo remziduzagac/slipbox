@@ -71,8 +71,7 @@ the deployments D258 relies on are served; then whatever fix that calls for.
   `main` would be another repeat from `main`, its read-back failing as 0.5.0's site did. Other rules fit too (repeats
   served only from Pages' source branch, `main`; or only from the default branch, `dev` here). The reports can't tell
   them apart.
-- 2026-10-24: Codex's challenge of the cause skipped: it stopped at a permission menu in its pane (network access for
-  `gh api`). A fresh Claude reviewer does its part, from the same brief (`tmp/issue/codex-cause.md`).
+- 2026-10-24: Codex's challenge of the cause skipped, Codex having stopped; a second reviewer does its part.
 - 2026-10-24: The site's files carry the `last-modified` of the deployment serving them (`Fri, 23 Oct 2026 14:00:00
   GMT`, 71313f3's preview, for `stable`, `preview`, `install.sh` and `docs/`; ran, curl), so a deployment that
   changes nothing in the channels still shows whether it's served.
@@ -100,7 +99,7 @@ the deployments D258 relies on are served; then whatever fix that calls for.
   `full` from a run by hand on any ref, so `dev` could reach `main` without `test` (the reviewer, not checked further).
 - 2026-10-24: Asked the maintainer: how #28's "kept the preview's files" was seen isn't remembered; the experiment
   approved, `main` first.
-- 2026-10-24: The experiment (ran; `tmp/issue/probe.sh`, logs `probe-main.log`, `probe-test.log`): `pages.yml` by hand
+- 2026-10-24: The experiment (ran; the site's headers read every minute for twelve): `pages.yml` by hand
   on `main`, run 40045492245, deployment 7291672244 of 5fe758f — a commit deployed from `test` by its preview, from
   `main` by its push, from `v0.5.0` by its release — created 00:32:56Z; the site's `stable`, `preview`, `install.sh`
   and `docs/` went from `last-modified` 2026-10-23 14:00:00 to 00:33:06 by the first read, a minute later, and stayed
@@ -118,18 +117,18 @@ the deployments D258 relies on are served; then whatever fix that calls for.
   under `push`, which reads back its new channel and fails, the re-run not helping. A preview itself is a commit's first
   deployment, served.
 - 2026-10-24: Pages tells a repeat before deploying: `pages/deployments/<sha>` answers `{"status":""}` for a commit
-  never deployed and `succeed` for one deployed (ran, with the maintainer's token); anonymously, 404 (ran), so a job
+  never deployed and `succeed` for one deployed (ran, with a token); anonymously, 404 (ran), so a job
   asking it needs the run's token with `pages: read`.
-- 2026-10-24: Codex's answer came after all, once its menu was answered, while the experiment ran. Agrees with the
+- 2026-10-24: Codex's answer came after all, while the experiment ran. Agrees with the
   reviewer, and adds: deploy-pages takes the ID the API returns before falling back to the version (here the API
   returns the SHA: "ID: <sha>" in every log); a run by hand on `test` before a preview publishes deploys its commit
   first, so the preview's own deployment is then a repeat; `main`'s push runs only when its paths filter matches, and
   without it D258's run is `main`'s first repeat; a marker that changes each run, read back with the channels, and a
   test that a stale marker fails though the channels match. Its next step, a scratch repository's experiment, is
   answered by the one above for what matters here (a run by hand served, from `main` and from `test`).
-- 2026-10-24: Planned with Codex (`tmp/issue/codex-plan.md`: every deployment a run by hand on `main`, a marker read
-  back). Its critique: hand off everything rather than check first (a check adds an undocumented answer and a race,
-  and a preview isn't always first); a hand-off that waits for the run it starts deadlocks today, both in the `pages`
+- 2026-10-24: Planned with Codex (every deployment a run by hand on `main`, a marker read back). Its critique: hand
+  off everything rather than check first (a check adds an undocumented answer and a race, and a preview isn't always
+  first); a hand-off that waits for the run it starts deadlocks today, both in the `pages`
   concurrency group, and a newer pending run replaces an older one, failing whoever waits on it; "on `main`" must be in
   the condition, or a run by hand on `test` or a `v*` tag deploys there; until the fix is on `main`, a run handed off
   runs `main`'s old workflow (none matters before the next release: a preview runs `test`'s, a release `main`'s new
@@ -162,3 +161,37 @@ the deployments D258 relies on are served; then whatever fix that calls for.
 - 2026-10-24: Until the fix reaches `main`, a run handed off runs `main`'s `pages.yml`, the old one. Nothing hands off
   before then but a release's run, as D258 does already: a preview runs `test`'s `pages.yml`, and `main`'s push, the
   release's tag and the run by hand they start all run the release's commit's, the new one.
+- 2026-10-24: Review, round 1. Codex: (1) the Log named private files and how the session went: removed, the findings
+  kept; (2) `served` counted 66 tries, not the time, so a site answering in ten seconds a request could take it past
+  the job's 25 minutes: now a deadline by the clock, and a test whose `date`, `sleep` and `curl` share a clock file, a
+  slow site giving up in time (the count put back: 1,330 s, the test failing); (3) the research had cron runs as a
+  `push` report, and the files' ETags the same: corrected. All three verified, all fixed.
+- 2026-10-24: Review, round 1, `/code-review`, nine findings, each checked against the code. Taken: the Log's line
+  over 120 columns; D?1's Cost had a run by hand on `test` make a preview a repeat, which D?1 hands to `main` now;
+  the slow-site bound fits one request a round, not three (a channel off): the worst case is the deadline, a sleep, a
+  round and the message's request, 710 s with curl at ten; `settings.json`'s and `MAINTAINING.md`'s lines on which
+  refs deploy, stale since D258 (a `v*` tag deploys nothing); the deploy job's timeout comment. For the maintainer:
+  both experiments deployed a commit the site wasn't serving, so a rule "a repeat of the commit served isn't applied"
+  fits slipbox's own evidence too (#383's dispatches against it are second-hand), and under it the next release's runs
+  by hand fail, D258's as well as D?1's: two runs by hand on `main` in a row would tell; and `main`'s push handed off
+  puts a release's docs on the site at step 7, before it's published (D258's push repeat went unserved, so they went
+  live with the release), and doubles the runs in the `pages` group, where a pending one is replaced by a newer.
+  Not taken: writing the deploy condition once (`site` after `redeploy`, when it's skipped): the test's table holds
+  the two `if`s complementary, and `needs` with `always()` brings cancellation's own rules; T24 a workstream, since it
+  changes the design: D223 takes a small change as an issue and one pull request with its design file, as T12 did.
+- 2026-10-24: Asked the maintainer: the two runs by hand approved; `main`'s push trigger dropped (D?1, amending
+  GR-D14 too).
+- 2026-10-24: The second experiment (ran): `pages.yml` by hand on `main` twice in a row. Run 40050527681 deployed
+  5fe758f while the site served 71313f3: served at 01:36:26. Run 40050816202 deployed 5fe758f again at 01:40:21, the
+  site serving it: the files' `last-modified` went to 01:40:28 and stayed for the twelve minutes read. Served: a run by
+  hand repeating the commit the site serves is applied, so the review's rule is out, and a release's run by hand, the
+  site serving its preview's deployment of the same commit, is the case seen.
+- 2026-10-24: Round 1's fixes, `/code-review`'s: `pages.yml` has no `push` trigger; `redeploy`'s comment, the header's
+  and the deploy job's timeout comment say so and what's read back; the routing test's table keeps a push to `main`
+  (no trigger starts one; one that did would hand off), and the triggers' test has none; the slow site's test runs a
+  stale marker, no marker and a channel off, each within the deadline, a wait, a round and the message's request (the
+  plain no-marker and channel-off cases folded into it: the test took 13 s on a loaded machine, 5 s now); D?1's Cost
+  without the run by hand on `test`; D?1's Why with the four runs; notes under D258 and GR-D14; design § Previews,
+  `MAINTAINING.md` (step 11; § Settings: only `main` and `test` deploy), `settings.json`'s line on the environment's
+  refs (its words, not the setting). The concurrency finding goes with `main`'s push: a release's hand-off is the one
+  left, as under D258.

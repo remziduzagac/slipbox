@@ -13,10 +13,10 @@ Each claim is marked with its provenance, as the blueprint's README says.
 
 - **A ruleset counts no check from a run started by hand:** a `workflow_dispatch` run's checks don't satisfy a
   required status check, even passed; the rule is about checks alone, not commit statuses. Informed D257.
-- **A Pages deployment of a commit deployed before is reported a success and not served under a `release` or a
-  `push` event;** a `workflow_dispatch` run's is, here from `main` and from `test`, whatever deployed the commit
-  before. Informed D258 and D?1. Until 2026-10-24 this line had a `push` repeat served too, which no report showed,
-  and #7 contradicts.
+- **A Pages deployment of a commit deployed before is reported a success and not served under a `release` or a `push`
+  event;** a `workflow_dispatch` run's is, here from `main` and from `test`, whatever deployed the commit before, the
+  commit the site serves included. Informed D258 and D?1. Until 2026-10-24 this line had a `push` repeat served too,
+  which no report showed, and #7 contradicts.
 - **The site keeps a file for ten minutes, whatever the query string,** so a deployment can be read back for certain
   only after that. Informed D258's eleven minutes.
 - **`dependabot.yml` doesn't keep Dependabot's alerts off a folder;** a repository's auto-triage rule can dismiss them
@@ -46,9 +46,10 @@ Each claim is marked with its provenance, as the blueprint's README says.
   own was answered 404 by the Pages API, in the same reports (*read*, the issue's comments, 2026-10-22); a timestamp
   and `1.2.3` alike, in community discussion 170184 (*read*, 2026-10-24).
 - In those reports the `push` run on the commit was its first deployment: a branch's pushes are new commits
-  (felixgeelhaar's table: `push`, "no — new commit each time"). No report has a `push` repeat served. Two have one
-  not served: a tag's push (davidrg), and cron runs (TheBigRoomXXL, with too little detail to say what came before)
-  (*read*, 2026-10-24). Every `workflow_dispatch` repeat reported was served, a `workflow_call` from one too.
+  (felixgeelhaar's table: `push`, "no — new commit each time"). No report has a `push` repeat served; one has one
+  not served, a tag's push (davidrg). Another has `schedule` runs not updating the site, with too little detail to say
+  what deployed their commit before (TheBigRoomXXL) (*read*, 2026-10-24). Every `workflow_dispatch` repeat reported
+  was served, a `workflow_call` from one too.
 - #7, 2026-10-14, before D251: a preview, made by pushing `main`'s commit to `test`, deployed it 22 minutes after
   `main`'s push had; under a `push` (`preview.yml` calls `pages.yml`, which runs under its caller's event), reported a
   success, not served: the site's `preview` kept the `last-modified` of `main`'s deployment (*read*, the issue).
@@ -66,8 +67,14 @@ Each claim is marked with its provenance, as the blueprint's README says.
   minutes read; by hand on `test`, run 40046571004, redeployed 71313f3, deployed before from `test` alone: served ten
   seconds after, the same. So not a rule by ref: one by the first ref to deploy the commit predicted the first
   unserved, one by Pages' source branch (`main`) the second, one by the default branch (`dev`) both.
-- The site's files carry the `last-modified` and an ETag of the deployment serving them, the same for every file, so a
-  deployment that changes no file's contents still shows whether it's served (*ran*, curl, 2026-10-24).
+- **And repeating the commit served:** both of those deployed a commit the site wasn't serving, so they left open a
+  rule that a repeat of the commit served is never applied, which a release's run by hand is. By hand on `main` twice
+  in a row (*ran*, 2026-10-24): run 40050527681 deployed 5fe758f, served at 01:36:26; run 40050816202 deployed it
+  again at 01:40:21 while the site served it, and the files' `last-modified` went to 01:40:28, for the twelve minutes
+  read. Served.
+- The site's files carry the `last-modified` of the deployment serving them, the same for every file, and ETags that
+  begin with that time in hex (`6adbfcc2-48`, `6adbfcc2-5e`), so a deployment that changes no file's contents still
+  shows whether it's served (*ran*, curl, 2026-10-24).
 - 0.5.0's release run, 39864294664: the site's artifact held `stable`; the deployment of 5fe758f said "Reported
   success!" five seconds after it was created, and the site went on serving the preview's files, without `stable`,
   until another commit was deployed an hour later (*ran*, the run's log and the site, 2026-10-22).
@@ -97,8 +104,8 @@ Each claim is marked with its provenance, as the blueprint's README says.
 ## Gaps
 
 - Whether `main`'s ruleset takes D257's status: first seen at the next release's push (T10).
-- Whether a release's run by hand on `main` is served (D258): seen for 0.5.0's commit, by hand, on 2026-10-24; under a
-  real release, first at the next one (T10).
+- Whether a release's run by hand on `main` is served (D258): seen for 0.5.0's commit by hand on 2026-10-24, the site
+  serving that commit or not; started by a release's run, first at the next one (T10).
 - Whether a `push` repeat is ever served (`main`'s push of a release's commit): not tried. D?1 makes none.
 - Whether an auto-triage rule's manifest criterion takes a path prefix, or only files by name: the form wasn't seen.
 
@@ -107,8 +114,8 @@ Each claim is marked with its provenance, as the blueprint's README says.
 - GitHub Docs: [Troubleshooting required status checks][checks], [Dependabot auto-triage rules][triage],
   [Troubleshooting the dependency graph][graph], the [Dependabot options reference][options].
 - [actions/deploy-pages#383](https://github.com/actions/deploy-pages/issues/383).
-- slipbox's runs: 39864294664 (0.5.0's release), 39964133295 (the preview of 71313f3), 40045492245 and 40046571004
-  (by hand, 2026-10-24); rule suite 4671786583; issue #7.
+- slipbox's runs: 39864294664 (0.5.0's release), 39964133295 (the preview of 71313f3), 40045492245, 40046571004,
+  40050527681 and 40050816202 (by hand, 2026-10-24); rule suite 4671786583; issue #7.
 - [GitHub community discussion 170184](https://github.com/orgs/community/discussions/170184), on `pages_build_version`.
 
 [checks]: https://docs.github.com/en/pull-requests/how-tos/merge-and-close-pull-requests/troubleshooting-required-status-checks

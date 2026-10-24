@@ -690,14 +690,11 @@ describe("the workflows: one build for releases and previews, previews from test
     expect(writers.map(([id]) => id).sort()).toEqual(["prune", "publish"]);
   });
 
-  test("pages.yml: called, on a release published, on the bootstrap, the docs or the site changed on main, by hand; Pages' grants only in its deploy", () => {
+  test("pages.yml: called, on a release published, by hand, never when main moves; Pages' grants only in its deploy", () => {
     const pages = workflow("pages.yml");
-    expect(Object.keys(pages.on).sort()).toEqual(["push", "release", "workflow_call", "workflow_dispatch"]);
+    // D?1: main moves only for a release (D251), whose publishing deploys it: a release's docs go live with it.
+    expect(Object.keys(pages.on).sort()).toEqual(["release", "workflow_call", "workflow_dispatch"]);
     expect(pages.on.release).toEqual({ types: ["published"] });
-    expect(pages.on.push).toEqual({
-      branches: ["main"],
-      paths: ["scripts/bootstrap*", "docs/**", "site/**", ".github/workflows/pages.yml"],
-    });
     expect(pages.concurrency).toEqual({ group: "pages", "cancel-in-progress": false });
     for (const [id, job] of Object.entries(pages.jobs)) {
       const grants = Object.keys(job.permissions ?? {}).filter((p) => p === "pages" || p === "id-token");
@@ -730,7 +727,8 @@ describe("the workflows: one build for releases and previews, previews from test
     const starts = [
       ["a preview's call, under its push to test", run("push", "refs/heads/test"), "site"],
       ["by hand on main", run("workflow_dispatch", "refs/heads/main"), "site"],
-      ["main's push of the bootstrap, the docs or the site", run("push", "refs/heads/main"), "redeploy"],
+      // No trigger starts this one now; one that did would hand off.
+      ["a push to main", run("push", "refs/heads/main"), "redeploy"],
       ["a release published", run("release", "refs/tags/v1.2.3"), "redeploy"],
       ["by hand on test", run("workflow_dispatch", "refs/heads/test"), "redeploy"],
       ["by hand on a tag", run("workflow_dispatch", "refs/tags/v1.2.3"), "redeploy"],
@@ -785,12 +783,19 @@ describe("the workflows: one build for releases and previews, previews from test
       STABLE: "${{ needs.site.outputs.stable }}",
       PREVIEW: "${{ needs.site.outputs.preview }}",
     });
-    // The site, as files `curl` answers from (a 404, curl's 22, for one missing), and `later`'s served once the
-    // step has waited once; `sleep` waits for nothing, and counts.
+    // The site, as files `curl` answers from (a 404, curl's 22, for one missing), each request taking `lag` seconds,
+    // and `later`'s served once the step has waited once. The clock is a file: `date` reads it, `sleep` and `curl`
+    // move it on, and nothing waits.
     const stable = "v1.2.3 aaa";
     const preview = "preview-202610231322-71313f3 bbb";
-    const readBack = (site: Record<string, string>, built: Record<string, string>, later?: Record<string, string>) => {
+    const readBack = (
+      site: Record<string, string>,
+      built: Record<string, string>,
+      { later, lag = 0 }: { later?: Record<string, string>; lag?: number } = {},
+    ) => {
       const dir = mkdtempSync(join(sandbox, "served-"));
+      const start = 1_761_264_000;
+      writeFileSync(join(dir, "clock"), `${start}\n`);
       for (const [where, files] of [
         ["site", site],
         ["later", later],
@@ -801,21 +806,23 @@ describe("the workflows: one build for releases and previews, previews from test
       }
       const stubs = join(dir, "bin");
       mkdirSync(stubs);
-      writeFileSync(
-        join(stubs, "curl"),
-        '#!/bin/sh\nfor a; do url=$a; done\nf="$FAKE/site/${url#"$SITE"}"\n[ -f "$f" ] || exit 22\ncat "$f"\n',
-      );
-      writeFileSync(
-        join(stubs, "sleep"),
-        '#!/bin/sh\necho >>"$FAKE/slept"\nif [ -d "$FAKE/later" ]; then cp "$FAKE"/later/* "$FAKE/site/"; rm -r "$FAKE/later"; fi\n',
-      );
-      for (const stub of ["curl", "sleep"]) chmodSync(join(stubs, stub), 0o755);
-      const env = { FAKE: dir, SITE: "https://example.test/slipbox/", ...built };
+      const tick = (by: string) => `t=$(cat "$FAKE/clock"); echo $((t + ${by})) >"$FAKE/clock"\n`;
+      const stub = {
+        date: '#!/bin/sh\ncat "$FAKE/clock"\n',
+        curl: `#!/bin/sh\n${tick("$LAG")}for a; do url=$a; done\nf="$FAKE/site/\${url#"$SITE"}"\n[ -f "$f" ] || exit 22\ncat "$f"\n`,
+        sleep: `#!/bin/sh\n${tick("$1")}echo >>"$FAKE/slept"\nif [ -d "$FAKE/later" ]; then cp "$FAKE"/later/* "$FAKE/site/"; rm -r "$FAKE/later"; fi\n`,
+      };
+      for (const [name, text] of Object.entries(stub)) {
+        writeFileSync(join(stubs, name), text);
+        chmodSync(join(stubs, name), 0o755);
+      }
+      const env = { FAKE: dir, SITE: "https://example.test/slipbox/", LAG: String(lag), ...built };
       const { code, out } = runStep(served, env, dir, stubs);
       const slept = existsSync(join(dir, "slept"))
         ? readFileSync(join(dir, "slept"), "utf8").split("\n").length - 1
         : 0;
-      return { code, slept, out };
+      const took = Number(readFileSync(join(dir, "clock"), "utf8")) - start;
+      return { code, slept, took, out };
     };
     const built = { DEPLOYMENT: "40045492245.1", STABLE: stable, PREVIEW: preview };
     // Served at once.
@@ -825,15 +832,26 @@ describe("the workflows: one build for releases and previews, previews from test
     // #7: the channels are what the site served already (a release's commit pushed to main, its preview's), but the
     // files are the deployment before: never served, failing after eleven minutes, no longer passing at once.
     const stale = readBack({ deployment: "39964133295.1", stable, preview }, built);
-    expect([stale.code, stale.slept]).toEqual([1, 66]);
+    expect([stale.code, stale.slept, stale.took]).toEqual([1, 66, 660]);
     expect(stale.out).toContain('deployment "40045492245.1" (served: "39964133295.1")');
-    // No marker on the site at all (a site deployed before markers), or a channel off: the same.
-    expect(readBack({ stable, preview }, built).code).toBe(1);
-    expect(
-      readBack({ deployment: "40045492245.1", stable, preview: "preview-202610222311-95570ea ccc" }, built).code,
-    ).toBe(1);
+    // A site slow to answer (ten seconds a request, curl's bound) still gives up after eleven minutes, at most a wait,
+    // a round of three requests and the message's one later: within the job's 25 minutes, with deploy-pages' ten.
+    // With the marker the deployment before's; with no marker at all (a site deployed before markers); with the
+    // marker this one's and a channel off: each fails.
+    for (const site of [
+      { deployment: "39964133295.1", stable, preview },
+      { stable, preview } as Record<string, string>,
+      { deployment: "40045492245.1", stable, preview: "preview-202610222311-95570ea ccc" },
+    ]) {
+      const slow = readBack(site, built, { lag: 10 });
+      expect(slow.code).toBe(1);
+      expect(slow.took).toBeGreaterThanOrEqual(660);
+      expect(slow.took).toBeLessThanOrEqual(660 + 10 + 3 * 10 + 10);
+    }
     // Served a while after the deployment says it's done.
-    const later = readBack({ deployment: "39964133295.1", stable, preview }, built, { deployment: "40045492245.1" });
+    const later = readBack({ deployment: "39964133295.1", stable, preview }, built, {
+      later: { deployment: "40045492245.1" },
+    });
     expect([later.code, later.slept]).toEqual([0, 1]);
     // A channel with no release has no file, which reads back as the empty line built.
     expect(readBack({ deployment: "40045492245.1", preview }, { ...built, STABLE: "" }).code).toBe(0);

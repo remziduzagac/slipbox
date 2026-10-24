@@ -154,9 +154,10 @@ and `.github/workflows/pages.yml` the installer's site once it's published. The 
 11. **Homebrew and Pages follow:** publishing runs `homebrew.yml`, which copies the release's formula into the tap,
     through the `release` environment, and `pages.yml`, which starts a run of itself on `main` to deploy the site (a
     deployment under the release's own run isn't served, D258; only a preview's run and one by hand on `main` deploy,
-    D?1, so `main`'s push in step 7 started one too); that run passes once the site serves the deployment's own
-    marker and its `stable` channel names the release. Check the tap's new commit, then `brew upgrade slipbox` on a
-    machine that has it; and that `https://remziduzagac.github.io/slipbox/stable` names the new tag.
+    D?1: moving `main` in step 7 deploys nothing, so the release's docs go live now); that run passes once the site
+    serves the deployment's own marker and its `stable` channel names the release. Check the tap's new commit, then
+    `brew upgrade slipbox` on a machine that has it; and that `https://remziduzagac.github.io/slipbox/stable` names the
+    new tag.
 12. **Try it as a user would:** `curl -fsSL https://remziduzagac.github.io/slipbox/install.sh | sh` on a clean machine,
     `slipbox upgrade --check` from the version before, and `slipbox --version` after.
 
@@ -259,7 +260,8 @@ be.
 
 Pages is among them: its source is GitHub Actions (Settings → Pages), and its environment, `github-pages`, takes
 deployments from `main`, `test` and `v*` tags alone (Settings → Environments), the refs `pages.yml` runs from: by hand,
-after a preview, after a release.
+after a preview, after a release. Only `main` (a run by hand, a release's among them) and `test` (a preview) deploy;
+a run on a `v*` tag hands off to `main` (D258, D?1).
 
 - **Weekly,** the health check compares what its token can read (the rulesets, the workflows' states, private
   vulnerability reporting, Pages and its environment) and reports any drift in the health issue.
