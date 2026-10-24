@@ -288,3 +288,19 @@ folder before its tabs open, as a file opened by name has its folder asked for, 
   is home's alone now (the watcher imports it, as it does `under`), no import cycle. Considered,
   left: `sees` true for a note T19 follows into a folder left to the walk (the watcher looks at it every tick). The poll
   looks at it too, but `heard` keeps the watcher from saying a change twice; it would save a stat, nothing seen.
+- 2026-10-24: Review loop, round 6: the code-review skill, and a fresh Claude reviewer in Codex's place (Codex's part
+  skipped: its pane still waits), each on the rebased diff alone. Verified and fixed, each with a unit test red without
+  it: a build the watcher is synced to read changed open notes outside the feed, so mid-write while git held its lock
+  (`rebuilt` polls them through the feed); following a link left a window changed meanwhile writable with its old text
+  (`lift` reads it first); forgetting a link with unsaved text let a save, an autosave or a task toggle write through
+  it, in a vault out of it (`writeBuffer` refuses a window read through a link not followed, and writes a vault's file
+  as the vault's: also dev's hole for a note too big to index, and for a task toggled while just looking); the poll's
+  stat threw on a folder unreadable or made a file, quitting slipbox (`stamp`); a reached note gone and back was never
+  indexed again (reached again); a branch's tabs in folders already covered made #47 drop home's walk for good
+  (`refreshHome` asks again). Terminal checks for each, red without its fix, but two: following in Elsewhere (the poll
+  reads it during the target's probe: driven, the unit test pins it) and #47's dropped walk (needs it in flight).
+  Rejected: the start's build on the main thread, the poll's design and cost, `tabFolders`' filter (dev's `askFolders`
+  keeps a folder opened by name asked), the check file's length (`check:size` is for `src/`), comment links resolved at
+  parse (dev's rule). Ran: tests/tui.test.ts's `#13` and VV-D6 tests (56), vault's and the walk thread's `#13` and
+  `#16` (27), the docs' and coverage tests (34), 29 terminal checks, every fix undone once (`tmp/issue/mut/run-r6*.py`,
+  `term-r6*.py`), the typecheck, the lint, `check:docs`.

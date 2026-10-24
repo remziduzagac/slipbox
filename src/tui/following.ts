@@ -159,10 +159,16 @@ export class Following {
   /**
    * The windows read-only as read through a link not followed (VV-D6) — looked at, or forgotten — whose link is
    * followed now: writable, and the vault's once the graph knows it (`App.claim`) — in a vault only then, as a write
-   * there never lands outside it through a link; in home and Elsewhere at once.
+   * there never lands outside it through a link; in home and Elsewhere at once. One changed while nothing read it
+   * through the link is read again first, which claims it (`Watch.reloadBuffer`): never writable showing what's no longer
+   * there. With unsaved changes, the conflict prompt decides between the two (5.5).
    */
   private lift(): void {
-    for (const buf of this.app.buffers.values()) if (buf.throughLink) this.app.claim(buf);
+    for (const buf of this.app.buffers.values()) {
+      if (!buf.throughLink || this.blocked(buf.abs) || this.lookedAt(buf.abs)) continue;
+      if (buf.changedOnDisk() && !buf.dirty) this.app.watch.reloadBuffer(buf);
+      else this.app.claim(buf);
+    }
   }
 
   /** The vault walked again, a link followed now: Elsewhere has nothing to walk. */

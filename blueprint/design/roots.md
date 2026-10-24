@@ -405,47 +405,49 @@ of every read through a link out of the root; D220's writes stay for vaults.
   on is a warning); the TUI at the start and on going into a vault, in the background, walking the vault again with
   those that answer. Never answered, a followed link is skipped as `waiting`. Only the probe is off the main thread: a
   target that answered is walked as the vault is.
-- **What a yes allows** (`writesThrough`, `writeNote`'s `through`): in home, reading, the index and writing through it
-  — a note's text, a new note, a new folder, in the CLI and the TUI alike (`newPath` in `tui/files.ts`); in a vault,
-  reading and the index, never a write that lands outside the vault, followed or not (D220); in Elsewhere, what the
-  file system allows. Plans keep to it (`mayRewrite` in `core/rename-plan.ts`): a rename's relinking, a replace across
-  files, the converter and a heading's rename leave a file whose write would land out of its vault as it is, or
-  through a link where its place doesn't list it (`landsHidden`: a hidden folder, as `checkWritable` measures it), a
-  `skipped` row saying so, and `applyPlan` refuses a plan holding one, or moving anything from or to outside the vault
-  (`outside`), before it writes: an undo and a saved plan are checked as they're carried out. What it writes it writes
-  where it was read, found before anything moves: a file reached through a link, through the link, never over it; one
-  reached through a link that moves with its folder and leads elsewhere from its new place, its text read a part at a
-  time from there as the disk will read it, or a followed one (its answer staying where it was), not at all — an edit
-  for the file is right for no name — left, and said; nothing read, after, behind a link not followed (the index walked
-  again then), nor by an undo before it refuses; a move whose note is gone since its plan writes nothing; each in a
-  folder it can write and search, or nothing is written. A file reached by two names from two folders — two links, a
-  note the vault reached and a link to it, a file other than a note and a link to it, or a note of another vault (or of
-  home) reached through a link, which its own vault reads from its own folder — is written for neither, each reading its
-  links its own way, and said; two in one folder edit it alike: written once, each name indexed again. Another name is
-  never looked for behind a followed link whose target has stopped answering (`quietFollowed`). A move's source is
-  checked as its destination is: a move, copy or delete whose source or destination crosses a link out of the vault, or
-  out of home, is refused in the CLI and the TUI, in home too, said the same: `… resolves outside the vault` for what's
-  moved, copied or deleted, `… would land outside the vault` for where it goes. A link named itself crosses nothing when
-  it moves: its entry is checked, in its folder by its real path (`entryInside` in `core/fsutil.ts`), and it's renamed
-  or moved as a link (`moveLink` in `core/symlinks.ts`; D260), what it leads to staying where it is; its answer goes
-  with it, in place of any kept where it goes — one without an answer leaves one there for where it leads, an answer
-  being a place and where it leads, as a link made there by hand would find it; one that can't be kept there (the state
-  folder unwritable) is said, and the index walked again, the link not followed at its new name — and a relative one
-  moved to another folder is written again there to lead where it did, from its own text, the plan and its undo saying
-  so (`movedLinkText`). Its plan's `move.link` says it moves as one, and its undo moves it back as one: a link put where
-  something else went is judged by where it leads. A link's own relative links are left, and said, when another name the
-  index holds, one the plan doesn't move with it, leads to the same file. A destination is one entry (`sameEntry`; a
-  second name for its file, a hard link, is another): a link moved onto what it leads to, or onto another link to it,
-  would go over something else, so it's refused as any other there is; a link there is judged by its folder, as the one
-  moving is on a disk that ignores case; one whose new folder can't be made changes nothing, and one that can't be moved
-  takes away the folders made for it. A link inside a folder that moves is left as the folder's move leaves it; a link
-  leading to a vault, or to a folder holding one, isn't moved (`checkSource`'s `vaults`, `outside`), a vault being known
-  by its real path; a copy or delete of a link out is refused still. An export's default place, beside a note reached
-  through a link out of the vault, is refused; `--out` names one. Where links are looked at on a path's way
-  (`blockingLink`): from the vault's or home's folder; in Elsewhere every link on the way asks, from the folder you work
-  in — the TUI's folder opened, the CLI's current folder (`workDir`) — down; a path named outright outside it starts at
-  its own folder, the file itself asking: what's above the folder you work in is yours to name (macOS's `/tmp` and
-  `/var` are links).
+- **What a yes allows** (`writesThrough`, `writeNote`'s `through`): in home, reading, the index and writing through it —
+  a note's text, a new note, a new folder, in the CLI and the TUI alike (`newPath` in `tui/files.ts`); in a vault,
+  reading and the index, never a write that lands outside the vault, followed or not (D220) — a file under its folder
+  written as the vault's whatever its window knows of it, one the index doesn't take too (`walk.max_file_size`); in
+  Elsewhere, what the file system allows. A window read through a link not followed now — looked at, or forgotten with
+  unsaved text — is never written through it (`App.writeBuffer`): not saved, autosaved, nor a task toggled in it. Plans
+  keep to it (`mayRewrite` in `core/rename-plan.ts`): a rename's relinking, a replace across files, the converter and a
+  heading's rename leave a file whose write would land out of its vault as it is, or through a link where its place
+  doesn't list it (`landsHidden`: a hidden folder, as `checkWritable` measures it), a `skipped` row saying so, and
+  `applyPlan` refuses a plan holding one, or moving anything from or to outside the vault (`outside`), before it writes:
+  an undo and a saved plan are checked as they're carried out. What it writes it writes where it was read, found before
+  anything moves: a file reached through a link, through the link, never over it; one reached through a link that moves
+  with its folder and leads elsewhere from its new place, its text read a part at a time from there as the disk will
+  read it, or a followed one (its answer staying where it was), not at all — an edit for the file is right for no name —
+  left, and said; nothing read, after, behind a link not followed (the index walked again then), nor by an undo before
+  it refuses; a move whose note is gone since its plan writes nothing; each in a folder it can write and search, or
+  nothing is written. A file reached by two names from two folders — two links, a note the vault reached and a link to
+  it, a file other than a note and a link to it, or a note of another vault (or of home) reached through a link, which
+  its own vault reads from its own folder — is written for neither, each reading its links its own way, and said; two in
+  one folder edit it alike: written once, each name indexed again. Another name is never looked for behind a followed
+  link whose target has stopped answering (`quietFollowed`). A move's source is checked as its destination is: a move,
+  copy or delete whose source or destination crosses a link out of the vault, or out of home, is refused in the CLI and
+  the TUI, in home too, said the same: `… resolves outside the vault` for what's moved, copied or deleted,
+  `… would land outside the vault` for where it goes. A link named itself crosses nothing when it moves: its entry is
+  checked, in its folder by its real path (`entryInside` in `core/fsutil.ts`), and it's renamed or moved as a link
+  (`moveLink` in `core/symlinks.ts`; D260), what it leads to staying where it is; its answer goes with it, in place of
+  any kept where it goes — one without an answer leaves one there for where it leads, an answer being a place and where
+  it leads, as a link made there by hand would find it; one that can't be kept there (the state folder unwritable) is
+  said, and the index walked again, the link not followed at its new name — and a relative one moved to another folder
+  is written again there to lead where it did, from its own text, the plan and its undo saying so (`movedLinkText`). Its
+  plan's `move.link` says it moves as one, and its undo moves it back as one: a link put where something else went is
+  judged by where it leads. A link's own relative links are left, and said, when another name the index holds, one the
+  plan doesn't move with it, leads to the same file. A destination is one entry (`sameEntry`; a second name for its
+  file, a hard link, is another): a link moved onto what it leads to, or onto another link to it, would go over
+  something else, so it's refused as any other there is; a link there is judged by its folder, as the one moving is on a
+  disk that ignores case; one whose new folder can't be made changes nothing, and one that can't be moved takes away the
+  folders made for it. A link inside a folder that moves is left as the folder's move leaves it; a link leading to a
+  vault, or to a folder holding one, isn't moved (`checkSource`'s `vaults`, `outside`), a vault being known by its real
+  path; a copy or delete of a link out is refused still. An export's default place, beside a note reached through a link
+  out of the vault, is refused; `--out` names one. Where links are looked at on a path's way (`blockingLink`): from the
+  vault's or home's folder; in Elsewhere every link on the way asks, from the folder you work in — the TUI's folder
+  opened, the CLI's current folder (`workDir`) — down; a path named outright outside it starts at its own folder, the
+  file itself asking: what's above the folder you work in is yours to name (macOS's `/tmp` and `/var` are links).
 - **The CLI** refuses a read through a link not followed (`refuseUnfollowed`, exit 5: `… is reached through a link
   that isn't followed (~/notes/data → /mnt/disk/data): open it in slipbox to choose`) — a note however it's named
   (`resolveNote`, Elsewhere's listing holding a linked note as any other), a snippet `capture --ref --snippet` reads —
@@ -506,29 +508,29 @@ deleted (D61). Each vault's is in its cache folder (the link index, the search i
   brought up to now when home's graph is built again after its walk. Each is the same code as on the main thread
   (`AutoIndex` takes a walker, `core/walkers.ts`: `HERE` for the CLI, whose command waits for its answer either way),
   given what the thread can't see for itself (`core/worker-context.ts`): the environment naming slipbox's folders, the
-  root markers, the probe's answers. `AutoIndex` reads nothing of home itself: home's walk is told by its settings
-  alone (`FilterSettings`), its filter made, and its location read, where it walks — and its walk, made under a filter
-  other than home's when it's kept (Downloads moved meanwhile, a root marker added: the filter's signature, compared
-  where the walk is), walked again, never kept under the new. The machine's lists are written on the main thread
-  alone, from what the thread read of a vault it opened (`Opened`: its key, worktree, identity and real path, and the
-  real path and presence of each copy the list of named folders records, `copyFacts` — one recorded since taken as it
-  was recorded, by its real path, there: nothing read on the main thread; `recordRoot`'s `key`,
-  `recordFolder`'s `known`) — a vault counted found once, its count kept with the place (`counted`, set afresh with
-  each pass), so one being indexed when the TUI quit isn't counted again; home recorded as found apart from the
-  vault being indexed, when it's walked again meanwhile. The place is written only when it changed: a tick waiting
-  on the thread writes nothing. Nor does the thread write the walk a refresh makes: what changed in home's walk kept
-  comes back unkept (`homeWalk`'s `keep`), kept by the TUI once it takes the answer — dropped when the graph was built
-  since (`Graph.builds`), the folders asked for changed, or the vault open did; a file that came, went or changed in
-  the graph meanwhile (the watcher's, slipbox's own write) taken in again over it, as the watcher takes one in, and one
-  reached (20.8) that the build didn't keep reached again, never one of home's own. A slice or a seek has five minutes
-  on the thread (a folder that always takes long, a share's thousands of files, still read), a whole walk (a vault
-  opened and walked, home's walk kept brought up to now) ten; past that the thread is started afresh and the work given
-  up on, never made on the main thread instead: home's walk tried again ten minutes later (`WALK_RETRY_MS`), the pass
-  waiting for it, and said (`home's walk gave up: a folder didn't answer in time; it's tried again in ten minutes`) —
-  so is home's walk kept brought up to now for its graph, home walked again ten minutes later (`homeAgain(true)`), the
-  vaults of the pass indexed meanwhile; a vault left for the next pass; home's index said (`home's index gave up: …;
-  it's made again at the next pass`). The explorer's listings have two threads of their own ([tui.md](tui.md) § Side
-  panes).
+  root markers, the probe's answers. `AutoIndex` reads nothing of home itself: home's walk is told by its settings alone
+  (`FilterSettings`), its filter made, and its location read, where it walks — and its walk, made under a filter other
+  than home's when it's kept (Downloads moved meanwhile, a root marker added: the filter's signature, compared where the
+  walk is), walked again, never kept under the new. The machine's lists are written on the main thread alone, from what
+  the thread read of a vault it opened (`Opened`: its key, worktree, identity and real path, and the real path and
+  presence of each copy the list of named folders records, `copyFacts` — one recorded since taken as it was recorded, by
+  its real path, there: nothing read on the main thread; `recordRoot`'s `key`, `recordFolder`'s `known`) — a vault
+  counted found once, its count kept with the place (`counted`, set afresh with each pass), so one being indexed when
+  the TUI quit isn't counted again; home recorded as found apart from the vault being indexed, when it's walked again
+  meanwhile. The place is written only when it changed: a tick waiting on the thread writes nothing. Nor does the thread
+  write the walk a refresh makes: what changed in home's walk kept comes back unkept (`homeWalk`'s `keep`), kept by the
+  TUI once it takes the answer — dropped when the graph was built since (`Graph.builds`) or the vault open changed; when
+  only the folders asked for did, building nothing (home's walk covers them: a branch's tabs), asked for again with
+  them, or home would stay unwalked; a file that came, went or changed in the graph meanwhile (the watcher's, slipbox's
+  own write) taken in again over it, as the watcher takes one in, and one reached (20.8) that the build didn't keep
+  reached again, never one of home's own. A slice or a seek has five minutes on the thread (a folder that always takes
+  long, a share's thousands of files, still read), a whole walk (a vault opened and walked, home's walk kept brought up
+  to now) ten; past that the thread is started afresh and the work given up on, never made on the main thread instead:
+  home's walk tried again ten minutes later (`WALK_RETRY_MS`), the pass waiting for it, and said (`home's walk gave up:
+  a folder didn't answer in time; it's tried again in ten minutes`) — so is home's walk kept brought up to now for its
+  graph, home walked again ten minutes later (`homeAgain(true)`), the vaults of the pass indexed meanwhile; a vault left
+  for the next pass; home's index said (`home's index gave up: …; it's made again at the next pass`). The explorer's
+  listings have two threads of their own ([tui.md](tui.md) § Side panes).
 
   Not done: the rest of what reads a slow disk on the main thread still holds the TUI up while it's read — the watcher's
   polling of the vault open (a stat per watched folder every two seconds, per note every thirty; its folders listed

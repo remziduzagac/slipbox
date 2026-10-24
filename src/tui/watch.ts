@@ -3,7 +3,7 @@
 
 import { existsSync, statSync } from "node:fs";
 import { basename, join } from "node:path";
-import { readText } from "../core/fsutil.ts";
+import { readText, stamp } from "../core/fsutil.ts";
 import { offsetOf } from "./editing.ts";
 import { planRelink } from "../core/rename.ts";
 import { activityFile, AutoIndex, autoIndexFile } from "../core/autoindex.ts";
@@ -283,7 +283,8 @@ export class Watch {
    * Home's walk made and its index written (VV-D2): while home is the vault open, its graph built again from them —
    * what came, what went — and its cap said when it's reached: the walk's, or the one the folders asked for by name
    * bring it to, those said to be whole. The walk kept is brought up to now on the walk's thread (T12), and taken only
-   * while nothing else built the graph since, nor asked for another folder: else what's here is newer. A file that
+   * while nothing else built the graph since, nor asked for another folder: else what's here is newer — or, a folder
+   * asked for that built nothing, home's walk asked for again with it. A file that
    * came, went or changed in it meanwhile — the watcher's, or slipbox's own write — may be newer than what the thread
    * read: taken in again over the walk, as the watcher takes a change in.
    */
@@ -316,7 +317,13 @@ export class Watch {
     }
     const now = this.app.graph;
     if (this.app.quitting || at !== this.homeRefresh || this.app.loc !== loc || now !== graph) return;
-    if (now.builds !== builds || now.askedFolders.join("\0") !== asked.join("\0")) return;
+    if (now.builds !== builds) return;
+    // Folders asked for since that built nothing (home's walk covers them: a branch's tabs, say): asked again with
+    // them, or home would stay unwalked until the next pass.
+    if (now.askedFolders.join("\0") !== asked.join("\0")) {
+      this.homeIndexed(capped);
+      return this.homeRefreshed;
+    }
     if (home.unkept) keepHomeWalk(loc, home.unkept.walk, home.unkept.capped, home.unkept.walked, now.filter);
     this.homeBuilt(home, capped, [...since]);
   }
@@ -366,10 +373,10 @@ export class Watch {
    */
   rebuilt(): void {
     this.app.watcher?.sync(this.app.graph.dirs, this.knownFromGraph(), this.sizesFromGraph());
-    // The watcher knows the files as built: an open note changed before it said so is read again now, or never would
-    // be — never through a link not followed (VV-D6).
-    for (const buf of this.app.buffers.values())
-      if (buf.changedOnDisk() && (buf.elsewhere || !this.app.following.blocked(buf.abs))) this.reloadBuffer(buf);
+    // The watcher knows the files as built: an open note changed before it said so is read again, or never would be —
+    // told to the graph as the poll tells one, through the feed (held while git writes: what git does lands as one
+    // change, D153).
+    this.poll(true);
     // Not in an app that isn't live (a test's), which starts no background parse.
     if (this.app.live) this.indexInBackground();
     // The notes the walk found, searched too: the search index caught up with them.
@@ -406,9 +413,10 @@ export class Watch {
    * it does). Never one read through a link not followed (VV-D6). Changed on disk: one the graph knows told to it as
    * the watcher would, through the feed (held while git writes, 5.10), once for each change, and the watcher told it's
    * heard, so its sweep says it no second time; any other read again. Unchanged, one the graph knows now is claimed
-   * (`App.claim`): a conflict settled with the disk's text leaves it so. True when one was read or told.
+   * (`App.claim`): a conflict settled with the disk's text leaves it so. True when one was read or told. `all`: the
+   * files the watcher sees too (a build it was synced to, `rebuilt`).
    */
-  poll(): boolean {
+  poll(all = false): boolean {
     let changed = false;
     const told: WatchChange[] = [];
     let dirs: Set<string> | null = null;
@@ -419,20 +427,24 @@ export class Watch {
         : watchTakes(this.app.graph.filter, rel, (dirs ??= new Set(this.app.graph.dirs)));
     for (const buf of this.app.buffers.values()) {
       const rel = buf.rel;
-      if (rel !== null && sees(rel)) continue;
+      if (!all && rel !== null && sees(rel)) continue;
       if (!buf.elsewhere && this.app.following.blocked(buf.abs)) continue;
       if (buf.changedOnDisk()) {
         if (rel !== null && this.app.graph.known(rel)) {
           // Told once: one with unsaved changes isn't read again until its conflict is settled, so it stays changed.
-          const st = statSync(buf.abs, { throwIfNoEntry: false }) ?? null;
+          // Unreadable (a folder on the way locked, made a file, a mount gone) is gone, as the buffer has it.
+          const st = stamp(buf.abs);
           const at = st ? `${st.mtimeMs}:${st.size}` : "gone";
           if (this.toldAt.get(buf) !== at) {
             this.toldAt.set(buf, at);
             this.app.watcher?.heard(rel, st);
+            if (!st) this.toldGone.add(buf);
             told.push({ rel, kind: st ? "changed" : "deleted", isNote: this.app.graph.notes.has(rel) });
             changed = true;
           }
         } else {
+          // Told gone, back since (one reached, 20.8): reached again, as opening it reaches it.
+          if (rel !== null && this.toldGone.delete(buf)) this.app.graph.reachFile(rel, { keep: true });
           this.reloadBuffer(buf);
           changed = true;
         }
@@ -444,6 +456,8 @@ export class Watch {
 
   /** Each polled file's stamp as last told to the graph (`poll`). */
   private readonly toldAt = new WeakMap<NoteBuffer, string>();
+  /** The polled files told gone (`poll`): reached again when they're back (20.8). */
+  private readonly toldGone = new WeakSet<NoteBuffer>();
 
   applyChanges(given: WatchBatch): void {
     // A change to a note open only through a link not followed now (VV-D6: heard before it was forgotten): never read.

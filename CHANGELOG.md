@@ -138,10 +138,14 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
   again; so did one in a folder of your home folder walked since you opened it.
 - A hidden or git-ignored note you open by its path, or one in a hidden or git-ignored folder, reloads when an agent
   changes it, once, and its links follow. Before, it kept showing what you opened.
-- A note open through a symlink you look at, or forget, then follow takes typing again in the same window, in home and
-  Elsewhere at once, in a vault once it indexes the note (a note too big to index stays read-only: a vault never
-  writes outside itself). Once you forget the link, nothing more is read through it.
-- A reindex (`space v r`) reads again an open note changed while nobody watched.
+- A note open through a symlink you look at, or forget, then follow is as one you open through it: in home and
+  Elsewhere it takes typing again in the same window, read again first if it changed meanwhile; in a vault it does once
+  the vault indexes the note, and is never saved through the link, as a vault never writes outside itself. Once you
+  forget the link, nothing more is read through it, and nothing you typed is written through it.
+- A reindex (`space v r`) reads again an open note changed while nobody watched, once git has finished writing.
+- A task toggled (`ctrl+l`) in a note you're just looking at through a symlink isn't written through it, and in a
+  vault a note too big to index, opened through a symlink you follow, is never saved through it. 0.5.0 wrote both
+  where the link leads, out of the vault.
 
 ## [0.5.0] - 2026-10-22
 

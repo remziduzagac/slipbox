@@ -616,6 +616,30 @@ describe("the TUI's walks on their own thread (T12, #9)", () => {
       thread.stop();
     }
   });
+  test("home's walk answered on its thread, a branch's tabs asked for meanwhile in a folder it covers: home walked all the same (#13)", async () => {
+    const home = tree({
+      "a.md": "# A\n",
+      "slow/s.md": "# S\n",
+      "notes/n.md": "# N\n",
+      "notes/sub/x.md": "# X\n",
+      "other/deep/o.md": "# O\n",
+    });
+    setWalkWorker(slowWorker);
+    await inHome(home, async () => {
+      const h = await harness({ loc: homeAt(home), open: "notes/n.md" });
+      expect(h.app.graph.home?.walked).toBeNull();
+      // Home's walk made, its graph built again on the walk's thread: slowly, a folder there answering slowly.
+      await stepToEnd(h.app.watch.indexJob()!);
+      const builds = h.app.graph.builds;
+      // Meanwhile a branch's tabs brought back as it's checked out, in `notes`, walked whole already: nothing built.
+      const anchor = { heading: null, headingIndex: 0, offset: 0, line: 0 };
+      h.app.vaults.askTabs([{ panes: [{ path: "notes/sub/x.md", anchor }], active: 0 }]);
+      expect(h.app.graph.builds).toBe(builds);
+      await h.app.watch.homeRefreshed;
+      expect(h.app.graph.home?.walked).not.toBeNull();
+      expect(h.app.graph.notes.has("other/deep/o.md")).toBe(true);
+    });
+  });
 });
 
 describe("the walk's thread takes what the walk here takes (T12)", () => {

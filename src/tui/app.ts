@@ -1205,9 +1205,17 @@ export class App {
       this.message("warn", `${this.displayName(buf)} is the floating window's, not a file: not written`);
       return false;
     }
-    // A vault note stays inside the vault; a file from outside it (the scratch) inside its folder. Through a link
-    // you follow, home's and Elsewhere's are written where it leads; a vault's never out of it (VV-D6).
-    const root = buf.rel !== null ? this.loc.root : dirname(buf.abs);
+    // Read through a link not followed now (VV-D6: looked at, or forgotten with unsaved text): never written through it.
+    if (buf.throughLink) {
+      this.message("warn", `${buf.key} not written: ${buf.readOnly ?? "read through a link not followed"}`);
+      return false;
+    }
+    // A vault's file stays inside the vault, one its graph doesn't know too (past `walk.max_file_size`); a file from
+    // outside it (the scratch) inside its folder. Through a link you follow, home's and Elsewhere's are written where it
+    // leads; a vault's never out of it (VV-D6).
+    const inVault =
+      buf.rel !== null || (this.loc.mode === "vault" && !buf.elsewhere && isInside(this.loc.root, buf.abs));
+    const root = inVault ? this.loc.root : dirname(buf.abs);
     const through = this.loc.mode !== "vault" && !buf.elsewhere && writesThrough(this.loc, buf.abs);
     let written: ReturnType<typeof writeNote>;
     try {

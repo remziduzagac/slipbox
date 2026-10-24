@@ -575,13 +575,62 @@ export const OUTSIDE_AND_CODE: Check[] = [
       await opened(s, "home.md");
       await leader(s, "l", "b");
       await s.see(/Linking to home\.md/, 5000);
-      await s.see(".stash/kept.md");
+      await s.see(/\.stash\/kept\.md\s+home\b/);
       await s.keys("escape");
       // A hidden note in a folder the watcher watches (the top): its name the watch doesn't take, the poll does.
       await s.ex("e .aside.md");
       await opened(s, ".aside.md");
       s.write(".aside.md", "# Aside\n\nRewritten by an agent.\n");
       await s.see("Rewritten by an agent.", 5000);
+    },
+  },
+  {
+    area: "outside-and-code",
+    name: "watching: a note reached in a hidden folder, deleted and made again by an agent — read again and indexed again, its backlink there",
+    covers: { cases: ["watching"], commands: ["note.open", "backlinks.open"] },
+    options: {
+      setup: (s) => {
+        if (!s.exists(".stash/back.md")) s.write(".stash/back.md", "# Back\n\nTo [home](../home.md).\n");
+      },
+    },
+    run: async (s) => {
+      await s.ex("e .stash/back.md");
+      await opened(s, ".stash/back.md");
+      // Gone, then made again while it's open: no watcher sees its folder, the poll does.
+      rmSync(s.path(".stash/back.md"));
+      await s.message(/back\.md was deleted on disk/, 5000);
+      s.write(".stash/back.md", "# Back again\n\nTo [home](../home.md), once more.\n");
+      await s.see("once more", 5000);
+      // Reached again, as opening it reaches it: in the index, home.md's backlinks list it — its row, its link's text
+      // beside it (the messages name its path too).
+      await s.ex("e home.md");
+      await opened(s, "home.md");
+      await leader(s, "l", "b");
+      await s.see(/Linking to home\.md/, 5000);
+      await s.see(/\.stash\/back\.md\s+home\b/, 3000);
+      await s.keys("escape");
+    },
+  },
+  {
+    area: "outside-and-code",
+    name: "watching: a note reached in a hidden folder, the folder made a file by an agent — said deleted, slipbox goes on",
+    covers: { cases: ["watching"], commands: ["note.open"] },
+    options: {
+      setup: (s) => {
+        if (!s.exists(".junk/gone.md")) s.write(".junk/gone.md", "# Gone soon\n");
+      },
+    },
+    run: async (s) => {
+      await s.ex("e .junk/gone.md");
+      await opened(s, ".junk/gone.md");
+      // The folder made a file: looking at the note through it fails (ENOTDIR), and is taken as the note gone.
+      rmSync(s.path(".junk"), { recursive: true });
+      s.write(".junk", "A file now.\n");
+      await s.message(/gone\.md was deleted on disk/, 5000);
+      // Still here, answering.
+      await s.keys("ctrl+p");
+      await s.see(/Open \(\d+ notes/, 5000);
+      await s.keys("escape");
     },
   },
   {
@@ -1130,6 +1179,32 @@ export const OUTSIDE_AND_CODE: Check[] = [
       await s.status("• unsaved");
       rmSync(lock);
       await s.file(NOTE, (t) => t.includes("Under the lock."), "autosaved once git let go");
+    },
+  },
+  {
+    area: "outside-and-code",
+    name: "index: space v r while git holds its index lock — an open note git changed is read again once git lets go, once",
+    covers: { cases: ["index", "reload"], commands: ["vault.reindex"] },
+    // Not watching: only the reindex reads the note again.
+    options: { home: true, startAt: "home/work/product/roadmap/q4.md", config: "[watch]\nenabled = false\n" },
+    run: async (s) => {
+      const NOTE = "~/work/product/roadmap/q4.md";
+      await s.status("q4.md");
+      // git mid-checkout: the note rewritten under its lock, then a reindex.
+      const lock = s.path("~/work/product/.git/index.lock");
+      writeFileSync(lock, "");
+      writeFileSync(s.path(NOTE), `${s.read(NOTE)}\nA line git wrote.\n`);
+      await leader(s, "v", "r");
+      await s.message(/reindexed \d+ notes/, 5000);
+      await s.keys("shift+g");
+      await sleep(1500);
+      s.expect(!s.screen().some((r) => r.includes("A line git wrote.")), "not read again while git holds index.lock");
+      rmSync(lock);
+      await s.message(/q4\.md changed on disk — reloaded/, 5000);
+      await s.keys("shift+g");
+      await s.see("A line git wrote.", 5000);
+      const said = await messagesSaying(s, "q4.md changed", /q4\.md changed on disk — reloaded/);
+      s.expect(said === 1, `read again once (${said} times)`);
     },
   },
   {

@@ -15285,6 +15285,53 @@ describe("the background auto-index in the TUI (20.9)", () => {
     expect(h.app.graph.linksOf(".stash/h.md").map((l) => l.path)).toEqual(["index.md"]);
   });
 
+  test("a reached note's folder made a file, or unreadable: the poll takes it as gone, never throws (#13)", async () => {
+    const root = makeVault();
+    for (const d of [".stash", ".locked"]) {
+      mkdirSync(join(root, d));
+      writeFileSync(join(root, d, "h.md"), "# Hidden\n");
+    }
+    const h = await harness({ root, open: "index.md" });
+    await h.app.run("note.open .stash/h.md");
+    const stash = h.app.view!.buf;
+    await h.app.run("note.open .locked/h.md");
+    const locked = h.app.view!.buf;
+    expect([stash.rel, locked.rel]).toEqual([".stash/h.md", ".locked/h.md"]);
+    rmSync(join(root, ".stash"), { recursive: true });
+    writeFileSync(join(root, ".stash"), "A file now.\n");
+    expect(() => h.app.watch.poll()).not.toThrow();
+    expect(stash.deleted).toBe(true);
+    // Root reads any folder: a locked one is only locked for others.
+    if (process.getuid?.() === 0) return;
+    chmodSync(join(root, ".locked"), 0o000);
+    try {
+      expect(() => h.app.watch.poll()).not.toThrow();
+      expect(locked.deleted).toBe(true);
+    } finally {
+      chmodSync(join(root, ".locked"), 0o755);
+    }
+  });
+
+  test("a reached note deleted, then made again while open: reached again, its links found (20.8, #13)", async () => {
+    const root = makeVault();
+    mkdirSync(join(root, ".stash"));
+    writeFileSync(join(root, ".stash", "h.md"), "# Hidden\n\nTo [the index](../index.md).\n");
+    const h = await harness({ root, open: "index.md" });
+    await h.app.run("note.open .stash/h.md");
+    const buf = h.app.view!.buf;
+    rmSync(join(root, ".stash", "h.md"));
+    h.app.watch.poll();
+    expect([buf.deleted, h.app.graph.known(".stash/h.md")]).toEqual([true, false]);
+    writeFileSync(join(root, ".stash", "h.md"), "# Hidden again\n\nTo [the index](../index.md).\n");
+    h.app.watch.poll();
+    expect([buf.source, buf.rel, h.app.graph.known(".stash/h.md")]).toEqual([
+      "# Hidden again\n\nTo [the index](../index.md).\n",
+      ".stash/h.md",
+      true,
+    ]);
+    expect(h.app.graph.backlinks("index.md").map((b) => b.from)).toContain(".stash/h.md");
+  });
+
   test("a reached note with unsaved changes, changed on disk: told to the graph once, not at every poll (#13)", async () => {
     const root = makeVault();
     mkdirSync(join(root, ".stash"));
@@ -15341,6 +15388,22 @@ describe("the background auto-index in the TUI (20.9)", () => {
     writeFileSync(join(root, "index.md"), "# Index\n\nRewritten by an agent.\n");
     await h.app.run("vault.reindex");
     expect(index.source).toBe("# Index\n\nRewritten by an agent.\n");
+  });
+
+  test("space v r while git holds its index lock: an open note git changed is read again once git lets go, not before (D153, #13)", async () => {
+    const root = makeVault();
+    if (Bun.spawnSync(["git", "init", "-q", "-b", "main", root]).exitCode !== 0) return;
+    const h = await harness({ root, open: "index.md" });
+    const index = h.app.view!.buf;
+    writeFileSync(join(root, ".git", "index.lock"), "");
+    writeFileSync(join(root, "index.md"), "# Index\n\nRewritten by git.\n");
+    await h.app.run("vault.reindex");
+    // What git does lands as one change: nothing read again while it writes.
+    expect(index.source).not.toContain("Rewritten");
+    rmSync(join(root, ".git", "index.lock"));
+    await new Promise((r) => setTimeout(r, 400));
+    expect(index.source).toBe("# Index\n\nRewritten by git.\n");
+    expect(h.app.messages.filter((m) => m.text.endsWith("changed on disk — reloaded"))).toHaveLength(1);
   });
 
   test("a reached file the graph takes as a note since (walk.extensions), changed: told to the graph as a note (#13)", async () => {
@@ -20558,6 +20621,68 @@ describe("links followed only when you say so (VV-D6)", () => {
     expect([far.source, far.readOnly]).toEqual(["# Far\n\nFrom far away.\n", said]);
   });
 
+  test("a link followed, its note edited, then forgotten: its unsaved text never written through it (VV-D6, #13)", async () => {
+    const { root, link, out } = linked();
+    setLinkAnswer(link, "follow");
+    await probe(out);
+    const h = await harness({ root, open: "index.md" });
+    await h.app.run("note.open data/far.md");
+    const far = h.app.view!.buf;
+    far.edit(0, 0, "Typed. ");
+    h.app.following.forget(link);
+    // Neither saved nor autosaved, nor a task toggled: a vault never writes out of itself, and the link isn't followed.
+    expect(h.app.saving.save(far)).toBe(false);
+    h.app.saving.autosave();
+    expect(h.app.writeBuffer(far, "# Far\n\nToggled.\n")).toBe(false);
+    expect(readFileSync(join(out, "far.md"), "utf8")).toBe("# Far\n\nFrom far away.\n");
+    expect(h.app.messages.at(-1)?.text).toContain("data/far.md not written: ");
+  });
+
+  test("home: a link out of it followed, its note edited, then forgotten: its unsaved text never written through it (VV-D6, #13)", async () => {
+    const { homeAt } = await import("../src/core/vault.ts");
+    const top = realpathSync(mkdtempSync(join(sandbox, "homelinks-")));
+    const home = join(top, "home");
+    const out = join(top, "out");
+    mkdirSync(home);
+    mkdirSync(out);
+    writeFileSync(join(home, "a.md"), "# A\n");
+    writeFileSync(join(out, "far.md"), "# Far\n\nFrom far away.\n");
+    symlinkSync(out, join(home, "data"));
+    const link = join(home, "data");
+    setLinkAnswer(link, "follow");
+    await probe(out);
+    const before = process.env.HOME;
+    process.env.HOME = home;
+    try {
+      const h = await harness({ loc: homeAt(home), open: "a.md" });
+      h.app.open(join(link, "far.md"));
+      const far = h.app.view!.buf;
+      far.edit(0, 0, "Typed. ");
+      h.app.following.forget(link);
+      h.app.saving.autosave();
+      expect(h.app.saving.save(far)).toBe(false);
+      expect(readFileSync(join(out, "far.md"), "utf8")).toBe("# Far\n\nFrom far away.\n");
+    } finally {
+      process.env.HOME = before;
+    }
+  });
+
+  test("a vault's followed link to a note too big to index, opened: never written out of the vault (VV-D6, #13)", async () => {
+    const { root, link, out } = linked();
+    const big = `# Far\n\n${"A long line of a big note. ".repeat(40)}\n`;
+    writeFileSync(join(out, "far.md"), big);
+    setLinkAnswer(link, "follow");
+    await probe(out);
+    const h = await harness({ root, open: "index.md", config: (c) => (c.walk.max_file_size = 500) });
+    await h.app.run("note.open data/far.md");
+    const far = h.app.view!.buf;
+    expect(far.rel).toBeNull();
+    far.edit(0, 0, "Typed. ");
+    expect(h.app.saving.save(far)).toBe(false);
+    expect(h.app.messages.at(-1)?.text).toContain("resolves outside the vault");
+    expect(readFileSync(join(out, "far.md"), "utf8")).toBe(big);
+  });
+
   test("Elsewhere: a note just looked at through a link, the link forgotten, then followed: writable again (VV-D3, #13)", async () => {
     const { elsewhereAt } = await import("../src/core/vault.ts");
     const top = realpathSync(mkdtempSync(join(sandbox, "plain-")));
@@ -20582,6 +20707,64 @@ describe("links followed only when you say so (VV-D6)", () => {
     h.app.following.answer(link, out, "follow");
     await h.app.following.settled();
     expect([far.readOnly, far.throughLink]).toEqual([null, false]);
+  });
+
+  test("Elsewhere: a note looked at through a link, changed by an agent, then followed: read again at once, writable (VV-D3, #13)", async () => {
+    const { elsewhereAt } = await import("../src/core/vault.ts");
+    const top = realpathSync(mkdtempSync(join(sandbox, "plain-")));
+    const plain = join(top, "plain");
+    const out = join(top, "out");
+    mkdirSync(plain);
+    mkdirSync(out);
+    writeFileSync(join(plain, "a.md"), "# A\n");
+    writeFileSync(join(out, "far.md"), "# Far\n");
+    symlinkSync(out, join(plain, "data"));
+    const link = join(plain, "data");
+    const h = await harness({ loc: elsewhereAt(plain), open: null });
+    h.app.open(join(link, "far.md"));
+    await h.keys("l");
+    const far = h.app.view!.buf;
+    expect(far.throughLink).toBe(true);
+    // Nothing reads it through the link while it's only looked at: an agent's change waits.
+    writeFileSync(join(out, "far.md"), "# Far\n\nRewritten by an agent.\n");
+    h.app.following.answer(link, out, "follow");
+    await h.app.following.settled();
+    // Followed: read again before it takes typing (no poll yet), never writable showing what's no longer there.
+    expect([far.source, far.readOnly, far.throughLink]).toEqual(["# Far\n\nRewritten by an agent.\n", null, false]);
+  });
+
+  test("Elsewhere: a link followed, the others not: a note forgotten, or one looked at, changed by an agent, still not read through theirs (VV-D6, #13)", async () => {
+    const { elsewhereAt } = await import("../src/core/vault.ts");
+    const top = realpathSync(mkdtempSync(join(sandbox, "plain-")));
+    const plain = join(top, "plain");
+    mkdirSync(plain);
+    writeFileSync(join(plain, "a.md"), "# A\n");
+    for (const d of ["forgot", "looked", "one", "two"]) {
+      mkdirSync(join(top, d));
+      writeFileSync(join(top, d, `${d}.md`), `# ${d}\n`);
+      symlinkSync(join(top, d), join(plain, d));
+    }
+    const changed = (d: string) => writeFileSync(join(top, d, `${d}.md`), `# ${d}\n\nRewritten by an agent.\n`);
+    const follow = async (d: string) => {
+      h.app.following.answer(join(plain, d), join(top, d), "follow");
+      await h.app.following.settled();
+    };
+    setLinkAnswer(join(plain, "forgot"), "follow");
+    const h = await harness({ loc: elsewhereAt(plain), open: null });
+    // Followed, open, then forgotten; another link followed, nothing looked at.
+    h.app.open(join(plain, "forgot", "forgot.md"));
+    const forgot = h.app.view!.buf;
+    h.app.following.forget(join(plain, "forgot"));
+    changed("forgot");
+    await follow("one");
+    expect([forgot.source, forgot.throughLink]).toEqual(["# forgot\n", true]);
+    // One looked at; another followed.
+    h.app.open(join(plain, "looked", "looked.md"));
+    await h.keys("l");
+    const looked = h.app.view!.buf;
+    changed("looked");
+    await follow("two");
+    expect([looked.source, looked.throughLink, forgot.source]).toEqual(["# looked\n", true, "# forgot\n"]);
   });
 
   test("a followed link's target asked at the start, in the background: walked once it answers", async () => {

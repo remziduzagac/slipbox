@@ -1387,6 +1387,54 @@ const ELSEWHERE: Check[] = [
       await s.keys("escape");
     },
   },
+  {
+    area: "links-and-files",
+    name: "Elsewhere: a note looked at through a link, forgotten, changed by an agent, then followed — read again at once, typing goes into theirs",
+    covers: { cases: ["vault", "links/state", "reload"], commands: ["note.open", "vault.links"] },
+    options: {
+      startAt: "tmp/plain-agent/a.md",
+      setup: (s) => {
+        const plain = join(s.dir, "tmp", "plain-agent");
+        if (existsSync(join(plain, "a.md"))) return;
+        mkdirSync(join(s.dir, "tmp", "out-agent"), { recursive: true });
+        writeFileSync(join(s.dir, "tmp", "out-agent", "far.md"), "# Far\n\nKept out of the way.\n");
+        mkdirSync(plain, { recursive: true });
+        writeFileSync(join(plain, "a.md"), "# A\n");
+        symlinkOnce(join(s.dir, "tmp", "out-agent"), join(plain, "data"));
+      },
+    },
+    run: async (s) => {
+      const far = join(s.dir, "tmp", "plain-agent", "data", "far.md");
+      await s.status(/ Elsewhere /);
+      await s.ex(`e ${far}`);
+      await s.see("Just look", 5000);
+      await s.keys("l");
+      await s.see("Kept out of the way.");
+      // Forgotten: nothing reads it through the link, an agent's change to it unread.
+      await s.ex("symlinks");
+      await s.see("Symlinks you've answered");
+      await s.keys("enter");
+      await s.message("forgot", 5000);
+      writeFileSync(join(s.dir, "tmp", "out-agent", "far.md"), "# Far\n\nRewritten by an agent.\n");
+      await sleep(1500);
+      await s.see("Kept out of the way.");
+      // Followed, typed into at once: read again as it's followed, so what's typed goes into theirs — no conflict.
+      await s.ex(`e ${far}`);
+      await s.see("Just look", 5000);
+      await s.keys("f");
+      await s.message("following", 5000);
+      await s.keys("i");
+      await s.until(() => /^\s*(INSERT|LENS)\b/.test(s.statusLine()), 3000, "i to edit: writable now");
+      await s.type("Z");
+      await s.keys("escape");
+      await sleep(1500);
+      await s.see("Rewritten by an agent.");
+      s.expect(
+        !s.screen().some((r) => r.includes("changed on disk") && !r.includes("reloaded")),
+        "no conflict: nothing typed into what was no longer there",
+      );
+    },
+  },
 ];
 
 // --- the view ---------------------------------------------------------------------------------------------------
@@ -1871,6 +1919,92 @@ const LINKED: Check[] = [
       await s.keys("i");
       // Read whole from the list: a long path wraps its box.
       s.expect((await lastMessage(s, "not editing")).endsWith("— not editing"), "i refused: read-only");
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "links: a note too big to index, through a link followed, typed into and saved — never written: a vault never writes out of itself",
+    covers: { cases: ["links/state", "safety"], commands: ["link.follow"] },
+    options: {
+      home: true,
+      startAt: "home/notes/to-big.md",
+      config: "[walk]\nmax_file_size = 300\n",
+      setup: (s) => {
+        if (!s.exists("~/shelf/big.md"))
+          s.write("~/shelf/big.md", `# Big\n\n${"A long line of a note too big to index. ".repeat(12)}\n`);
+        if (!s.exists("~/notes/to-big.md"))
+          s.write("~/notes/to-big.md", "# To the big one\n\n[The big note](shelf/big.md).\n");
+        symlinkOnce(s.path("~/shelf"), s.path("~/notes/shelf"));
+      },
+    },
+    run: async (s) => {
+      const before = s.read("~/shelf/big.md");
+      await toLink(s, "shelf/big.md");
+      await s.keys("enter");
+      await s.see(asked("~/shelf"));
+      await s.keys("f");
+      await s.message("following", 5000);
+      await opened(s, "shelf/big.md");
+      // Opened through the link followed, the vault not taking it: typed into, saved — refused, as a note the vault
+      // takes through a link is.
+      await s.keys("i");
+      await s.until(() => /^\s*(INSERT|LENS)\b/.test(s.statusLine()), 3000, "i to edit");
+      await s.type("Typed here. ");
+      await s.keys("escape");
+      await s.ex("w");
+      s.expect((await lastMessage(s, "resolves outside")).includes("resolves outside the vault"), ":w refused");
+      s.expect(s.read("~/shelf/big.md") === before, "nothing written out of the vault");
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "links: a note looked at through a link, its task toggled; followed, typed into, the link forgotten, saved — nothing written through the link",
+    covers: { cases: ["links/state", "safety"], commands: ["link.follow", "vault.links", "task.toggle"] },
+    options: {
+      home: true,
+      startAt: "home/notes/to-tasks.md",
+      setup: (s) => {
+        if (!s.exists("~/shelf/tasks.md")) s.write("~/shelf/tasks.md", "# Tasks\n\n- [ ] Shelve it.\n");
+        if (!s.exists("~/notes/to-tasks.md"))
+          s.write("~/notes/to-tasks.md", "# To the tasks\n\n[The tasks](shelf/tasks.md).\n");
+        symlinkOnce(s.path("~/shelf"), s.path("~/notes/shelf"));
+      },
+    },
+    run: async (s) => {
+      const kept = "# Tasks\n\n- [ ] Shelve it.\n";
+      const forget = async () => {
+        await s.ex("symlinks");
+        await s.see("Symlinks you've answered");
+        await s.keys("enter");
+        await s.message("forgot", 5000);
+      };
+      // l: just looked at; its task toggled — written nowhere, the link not followed.
+      await toLink(s, "shelf/tasks.md");
+      await s.keys("enter");
+      await s.see(asked("~/shelf"));
+      await s.keys("l");
+      await opened(s, "shelf/tasks.md");
+      await s.keys("shift+g");
+      await s.keys("ctrl+l");
+      s.expect((await lastMessage(s, "not written")).includes("tasks.md not written"), "the toggle refused");
+      s.expect(s.read("~/shelf/tasks.md") === kept, "the task not toggled through the link");
+      // Followed, typed into, then forgotten: what's typed isn't written through the link, :w or not.
+      await forget();
+      await s.keys("ctrl+o");
+      await opened(s, "to-tasks.md");
+      await toLink(s, "shelf/tasks.md");
+      await s.keys("enter");
+      await s.see(asked("~/shelf"));
+      await s.keys("f");
+      await opened(s, "shelf/tasks.md");
+      await s.keys("i");
+      await s.until(() => /^\s*(INSERT|LENS)\b/.test(s.statusLine()), 3000, "i to edit: followed");
+      await s.type("Typed here. ");
+      await s.keys("escape");
+      await forget();
+      await s.ex("w");
+      s.expect((await lastMessage(s, "not written")).includes("tasks.md not written"), ":w refused");
+      s.expect(s.read("~/shelf/tasks.md") === kept, "nothing typed written through the link forgotten");
     },
   },
   {
