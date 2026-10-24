@@ -276,7 +276,7 @@ async function catchUp(app: App, asked: Graph, answer: BacklinksAnswer, holder: 
     app.explorer.invalidateTree();
   }
   try {
-    if (!(await rebuilt(app, asked, answer, holder)) && others) relayout(app);
+    if (!(await rebuilt(app, asked, answer, holder)) && others && !app.quitting) relayout(app);
   } finally {
     // The vaults nested in it stamped indexed once the rebuild has recorded those found: one new since isn't in the
     // machine's list before. Not once slipbox is quitting.
@@ -305,7 +305,7 @@ async function rebuilt(
   await peekProbe.followed(graph.root);
   if (app.quitting || holder()?.held(graph.root) !== graph) return false;
   let g: Graph | null = graph;
-  if (settings) g = reopened(app, graph, reach, holder);
+  if (settings) g = reopened(app, graph, reach);
   else {
     // A graph a link opened has no reach of its own yet: given one now, the walk made.
     const was = graph.reach ? nestedIn(graph) : null;
@@ -344,14 +344,11 @@ function parseHere(app: App, graph: Graph, holder: Holder): void {
  * Another vault's graph opened anew, with its settings as they are now: let go of, every buffer reading through it
  * given the new one. Its settings are fixed when it's made, and with others it walks and resolves differently.
  */
-function reopened(app: App, graph: Graph, reach: Reach, holder: Holder): Graph | null {
+function reopened(app: App, graph: Graph, reach: Reach): Graph | null {
   // Not opened anew (the vault gone since): the old kept, its buffers reading through it still.
   const fresh = reach.reopen(graph.root);
   if (!fresh) return null;
   if (!fresh.reach) reachFrom(app, fresh);
-  // Home's notes it still lacks (one changed since its thread's walk) aren't parsed here (`parseHere`): its thread
-  // asked again, once.
-  if (fresh.loc.mode === "home" && fresh.pendingCount) queueMicrotask(() => keepCaughtUp(app, fresh, holder));
   retired.add(graph);
   for (const b of everyBuffer(app))
     if (b.elsewhere?.graph === graph) b.elsewhere = { ...b.elsewhere, graph: fresh, rel: relative(fresh.root, b.abs) };

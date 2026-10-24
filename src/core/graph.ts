@@ -554,8 +554,9 @@ export class Graph {
   writesState = true;
 
   /**
-   * Home's: the walk it makes kept for the next (`walk.json`, VV-D2) — on the main thread alone. A walk made on another
-   * thread (T12; a peek's backlinks', an export's) is never kept there: the main thread's may be newer.
+   * Home's: the walk it makes kept for the next (`walk.json`, VV-D2) — by a graph on the main thread. One built on a
+   * thread of a peek's backlinks or an export's keeps nothing: the main thread's may be newer. (The background index
+   * keeps its own, on the walk's thread, T12.)
    */
   keepsWalk = isMainThread;
 

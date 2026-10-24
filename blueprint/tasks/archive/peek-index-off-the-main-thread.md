@@ -408,3 +408,29 @@ changed in that vault since.
   - 12, the tests' ages hard-coded: `STALE_TEMP_MS`. 13, the list written once per key: once (`noteIndexed` takes
     several). 14, a test patching a private method: it makes the build fail instead.
   Unit tests for each fixed one, mutation-checked (M120–M126, each caught).
+- 2026-10-24: Dev's hanging test, from the main session: since #42, `tests/tui.test.ts`'s "home never walked, its
+  watcher leaves what the walk is to look into…" spins (a synchronous loop on a job whose work is on the walk's
+  thread), so every pull request's unit-test jobs run out their 45 minutes. A pull request of its own fixes it; this
+  branch is rebased when it's in.
+- 2026-10-24: Review loop, round 8, on round 7's commit (b1dfca2): Codex, nothing. The code-review skill's agents, 11
+  findings. Checked against the code:
+  - 1 and 2, round 7's ask of home's thread after a reopen: verified wrong. The same gap stays after a rebuild in
+    place, and asking there too would never end for a note slipbox can't read (never cached, always to parse). Taken
+    out: home's notes a graph here lacks wait for home's next peek or the background index (VV-D2), as the design's
+    Not done says of home's names. Round 7's 6 is accepted, not fixed.
+  - 3, the background index keeps home's walk on the walk's thread, which the comments and roots.md denied: verified,
+    the docs said too much. They say who keeps it now: graphs on the main thread, and the background index on its
+    thread; never the backlinks' or an export's.
+  - 4 and 11, `readOnly`'s comment and the design, and `graphAt`'s comment: fixed.
+  - 5, home's whole walk written on the main thread by a reached graph of home: rejected — dev's own builds do it
+    there, as they did before this branch; written only when something in the walk changed.
+  - 6, recording a root a link reaches after the list opened it, unguarded: verified. A failure there no longer
+    escapes into the layout.
+  - 7, a nested vault's stamp lost when the rebuild fails before recording it: rejected — a list's freshness, in a
+    rebuild that failed; the next one records and stamps it.
+  - 8, every view laid out while slipbox quits: verified. Not then.
+  - 9, the test of stamps in one write not counting writes: it counts them now.
+  - 10, no test of the export's thread keeping home's walk: rejected — `keepsWalk` is the thread's default, which the
+    backlinks' thread's test exercises.
+  Unit tests for each fixed one, mutation-checked (M127–M130, each caught; M124, round 7's, retired with the ask it
+  checked). 89 unit tests; the home, deletion and nested-vault terminal checks, 4 of 4.

@@ -74,7 +74,8 @@ export interface ReachOptions {
    *  elsewhere. */
   opened?: (g: Graph) => void;
   /**
-   * The graphs it opens write nothing of their vaults': their indexes, their redirects, the commit they caught up with.
+   * The graphs it opens write nothing of their vaults' — their indexes, their redirects, the commit they caught up
+   * with — but home's walk, kept as every graph on the main thread keeps it (`Graph.keepsWalk`).
    * The TUI's: its backlinks' thread writes them, off the keys (#10). A backlinks' thread's, reading another vault for a
    * link alone: that vault's own request writes its state, or the main thread does. A nested root's first index
    * (`nested`) is written all the same.
@@ -165,8 +166,8 @@ export class Reach implements VaultReach {
   /**
    * The graph of another root, opened on first use with its own config; its index refreshed. A root
    * reached is recorded as seen; one taken from the machine's list (`known`: a search of every root, a
-   * moved folder's relink) isn't — it's known already, and each would read as just opened. `opened` is told of a root
-   * reached, when it's first reached: one taken from the list before, once a link reaches it.
+   * moved folder's relink) isn't — it's known already, and each would read as just opened — until a link reaches it:
+   * recorded then, and `opened` told, as of a root a link opens.
    */
   graphAt(root: string, opts: { known?: boolean } = {}): Graph | null {
     const key = real(root);
@@ -174,7 +175,9 @@ export class Reach implements VaultReach {
       const g = this.graphs.get(key)!;
       // Taken from the machine's list, reached by a link now: recorded as seen, and told.
       if (g && !opts.known && this.untold.delete(key)) {
-        if (this.record) recordLocation(g.loc);
+        try {
+          if (this.record) recordLocation(g.loc);
+        } catch {}
         this.opened?.(g);
       }
       return g;

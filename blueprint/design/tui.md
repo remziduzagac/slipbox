@@ -662,37 +662,40 @@ vault). A folder link out of the vault is revealed in its own vault, as before (
   third vault a peeked vault's links reach, held by that vault's reach. Not this TUI's own vault, reached from another's
   links: its index is its own graph's, and its state this thread's. A vault taken from the machine's list first (a
   search of every vault, a relink) is caught up once a link reaches it, and recorded as seen then. A graph opened anew
-  for changed settings asks nothing more (`Reach.reopen`): its answer came just now — but home's, with notes it still
-  lacks, asks its thread again, once, as they're never parsed here. Each answer brings the signature of the walk the
-  thread made (its notes' paths, mtimes and sizes, its other files, its folders, the vaults in it; the graph's own kept
-  by its generation): when it differs from the graph's, or the graph has notes it didn't parse and isn't being parsed
-  here, the links that vault follows are asked here too, and the graph is opened again in place from the index the
-  thread wrote, its redirects read again (the thread may have found moves); the roots in and around it are found again
-  only when the vaults in it changed, each found being recorded in the machine's list (a graph a link opened, with no
-  reach of its own yet, is given one then, once, after its rebuild — not by an answer that changes nothing); and every
-  view is laid out again: the peek's and a kept tab's read through it, and this vault's own notes may reach a note of it
-  by a name it has only now. The answer brings the signature of the settings it was read with too, those a graph reads
-  (its walk's: a theme or a key changed opens nothing anew): when they differ from the graph's, the graph is opened anew
-  with them, every buffer reading through the old one given it (`Reach.reopen`; the vault gone, the old one kept), since
-  a graph's settings are fixed when it's made. A vault's catch-ups run one after another, each against the graph held
-  for it by then (this TUI's reach as it is then, or a peeked vault's), so an answer that comes while another's waits on
-  its probe never opens anew a graph already let go of. A rebuild that fails leaves the backlinks shown. When that index
-  couldn't be written, or the thread failed, its notes are parsed here as this vault's own are (`parseInSlices`,
-  `tui/watch.ts`): a slice at a time, a big one on the parse threads, stopped once the graph is let go of. A tab of
-  another vault's file — kept from a peek, back with the session — asks the thread to catch its vault up too, with its
-  first view (`makeView`; a buffer read for an edit alone asks nothing, a split nothing more), its index built if it has
-  none (`keepCaughtUp`). A rename that gives this TUI a new reach (a vault made or unmade, this vault's config renamed)
-  gives every buffer of another vault's file that vault's graph as the new reach opens it, and asks its catch-up
-  (`reachedAgain`), or none, its file no vault's other than this one any more (a vault unmade). The TUI's reached graphs
-  write nothing of their vaults' here (`readOnly`): no index, no redirects, no commit caught up with, no `git diff` run
-  here to find moves. The thread does it all, off the keys, and each answer has the graph's redirects read again. A
-  vault nested in this one without an index is opened and built on the thread, not parsed whole here (`nested: "open"`).
-  Once the thread has written another vault's index — the peeked one's, or one nested in it it built (`others`), each
-  stamped indexed in the machine's list — this vault's backlinks from other vaults are read again, the machine's list
-  with them, whatever the indexes' mtimes say (a coarse clock gives a rewrite the mtime it had), and what's worked out
-  from them (its `generation`: the Info view's count); every view is laid out again whether or not the graph there
-  changed (`othersChanged`), and the explorer's rows are made again, a vault's saying whether it has an index. A third
-  vault's graph, held by a peeked vault's reach, is caught up only while that vault's graph is held itself.
+  for changed settings asks nothing more (`Reach.reopen`): its answer came just now. Home's notes a graph here still
+  lacks (one come since the thread's walk) are never parsed here, nor asked again: they wait for home's next peek, or
+  the background index (VV-D2) — asking again would never end for a note slipbox can't read. Each answer brings the
+  signature of the walk the thread made (its notes' paths, mtimes and sizes, its other files, its folders, the vaults in
+  it; the graph's own kept by its generation): when it differs from the graph's, or the graph has notes it didn't parse
+  and isn't being parsed here, the links that vault follows are asked here too, and the graph is opened again in place
+  from the index the thread wrote, its redirects read again (the thread may have found moves); the roots in and around
+  it are found again only when the vaults in it changed, each found being recorded in the machine's list (a graph a link
+  opened, with no reach of its own yet, is given one then, once, after its rebuild — not by an answer that changes
+  nothing); and every view is laid out again: the peek's and a kept tab's read through it, and this vault's own notes
+  may reach a note of it by a name it has only now. The answer brings the signature of the settings it was read with
+  too, those a graph reads (its walk's: a theme or a key changed opens nothing anew): when they differ from the graph's,
+  the graph is opened anew with them, every buffer reading through the old one given it (`Reach.reopen`; the vault gone,
+  the old one kept), since a graph's settings are fixed when it's made. A vault's catch-ups run one after another, each
+  against the graph held for it by then (this TUI's reach as it is then, or a peeked vault's), so an answer that comes
+  while another's waits on its probe never opens anew a graph already let go of. A rebuild that fails leaves the
+  backlinks shown. When that index couldn't be written, or the thread failed, its notes are parsed here as this vault's
+  own are (`parseInSlices`, `tui/watch.ts`): a slice at a time, a big one on the parse threads, stopped once the graph
+  is let go of. A tab of another vault's file — kept from a peek, back with the session — asks the thread to catch its
+  vault up too, with its first view (`makeView`; a buffer read for an edit alone asks nothing, a split nothing more),
+  its index built if it has none (`keepCaughtUp`). A rename that gives this TUI a new reach (a vault made or unmade,
+  this vault's config renamed) gives every buffer of another vault's file that vault's graph as the new reach opens it,
+  and asks its catch-up (`reachedAgain`), or none, its file no vault's other than this one any more (a vault unmade).
+  The TUI's reached graphs write nothing of their vaults' here (`readOnly`): no index, no redirects, no commit caught up
+  with, no `git diff` run here to find moves — but home's walk, kept as every graph on the main thread keeps it, never
+  on the thread (`Graph.keepsWalk`). The thread does it all, off the keys, and each answer has the graph's redirects
+  read again. A vault nested in this one without an index is opened and built on the thread, not parsed whole here
+  (`nested: "open"`). Once the thread has written another vault's index — the peeked one's, or one nested in it it built
+  (`others`), each stamped indexed in the machine's list — this vault's backlinks from other vaults are read again, the
+  machine's list with them, whatever the indexes' mtimes say (a coarse clock gives a rewrite the mtime it had), and
+  what's worked out from them (its `generation`: the Info view's count); every view is laid out again whether or not the
+  graph there changed (`othersChanged`), and the explorer's rows are made again, a vault's saying whether it has an
+  index. A third vault's graph, held by a peeked vault's reach, is caught up only while that vault's graph is held
+  itself.
 - **Mouse:** a click on a link out of the vault peeks; `ctrl+click` (`link.go`, the terminal's ctrl with a click) goes
   there at once, a peek skipped; within the vault it's a click. A click outside the peek closes it.
 

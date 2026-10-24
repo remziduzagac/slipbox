@@ -2,6 +2,7 @@
 // once; as the other vault is now, at each peek; its index built when it has none.
 import { afterEach, expect, spyOn, test } from "bun:test";
 import * as fs from "node:fs";
+import * as vaultModule from "../src/core/vault.ts";
 import {
   existsSync,
   mkdirSync,
@@ -2080,7 +2081,18 @@ test("several roots stamped indexed at once: each stamped, the machine's list wr
   await onlyRootsUnder(base, async () => {
     for (const root of [notes, app]) recordLocation(locateVault({ root }));
     const keys = [notes, app].map((root) => locateVault({ root }).key);
-    noteIndexed(keys, new Date("2026-10-24T05:00:00Z"));
+    let writes = 0;
+    const rename = fs.renameSync;
+    const spy = spyOn(fs, "renameSync").mockImplementation((from, to) => {
+      writes++;
+      return rename(from, to);
+    });
+    try {
+      noteIndexed(keys, new Date("2026-10-24T05:00:00Z"));
+    } finally {
+      spy.mockRestore();
+    }
+    expect(writes).toBe(1);
     expect(
       readRoots()
         .filter((v) => keys.includes(v.key))
@@ -2141,10 +2153,15 @@ test("nested vaults an answer built aren't stamped once slipbox is quitting (#10
       // An answer that changes the graph here: its rebuild waits on the probe, and slipbox quits meanwhile.
       reply(sent.length - 1, { others: [locateVault({ root: lab }).key], config: configSignature(g.config) });
       await Bun.sleep(0);
+      let laidOut = 0;
+      h.app.relayoutAll = () => {
+        laidOut++;
+      };
       h.app.quitting = true;
       open();
       await peek.reading;
       expect(readRoots().find((v) => v.path === lab)?.indexed).toBeUndefined();
+      expect(laidOut).toBe(0); // nothing laid out for a screen going away
     });
   } finally {
     peekProbe.followed = probe;
@@ -2152,7 +2169,7 @@ test("nested vaults an answer built aren't stamped once slipbox is quitting (#10
   }
 });
 
-test("home's graph opened anew for changed settings, with notes it still lacks: its thread asked again, never parsed here (VV-D2, #10)", async () => {
+test("home's graph opened anew for changed settings, with notes it still lacks: neither parsed here nor asked again — they wait for home's next peek (VV-D2, #10)", async () => {
   const home = realpathSync(mkdtempSync(join(sandbox, "home-")));
   const notes = join(home, "notes");
   mkdirSync(join(notes, ".slipbox"), { recursive: true });
@@ -2172,11 +2189,40 @@ test("home's graph opened anew for changed settings, with notes it still lacks: 
     writeFileSync(join(home, "later.md"), "# Later\n");
     reply(sent.length - 1, { config: "other settings" });
     await read(h);
-    for (let i = 0; i < 100 && sent.length === asked; i++) await Bun.sleep(1);
-    expect(vaultGraph(h.app, home)).not.toBe(g);
-    expect(sent.slice(asked).map((m) => [m.root, m.rel])).toEqual([[g.root, null]]);
+    for (let i = 0; i < 40; i++) await Bun.sleep(1);
+    const fresh = vaultGraph(h.app, home)!;
+    expect(fresh).not.toBe(g);
+    expect(fresh.pendingCount).toBeGreaterThan(0);
+    // Asked again, it would be again at each answer for a note slipbox can't read: never done.
+    expect(sent.slice(asked)).toEqual([]);
   } finally {
     process.env.HOME = before;
+    stopBacklinkJobs();
+  }
+});
+
+test("a root the machine's list opened, recorded when a link reaches it: that failing, the link is resolved all the same (#10)", async () => {
+  const { base, notes } = twoVaults();
+  const far = join(realpathSync(base), "far");
+  mkdirSync(far);
+  writeFileSync(join(far, "a.md"), "# A\n");
+  initVault(far, `pfar${made}`);
+  stopBacklinkJobs();
+  fakeThread();
+  try {
+    await onlyRootsUnder(base, async () => {
+      const h = await harness({ root: notes, open: "index.md" });
+      const g = h.app.reach.graphAt(far, { known: true })!;
+      const spy = spyOn(vaultModule, "recordLocation").mockImplementation(() => {
+        throw new Error("the machine's list can't be written");
+      });
+      try {
+        expect(h.app.reach.graphAt(far)).toBe(g);
+      } finally {
+        spy.mockRestore();
+      }
+    });
+  } finally {
     stopBacklinkJobs();
   }
 });
