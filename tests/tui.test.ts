@@ -3168,13 +3168,13 @@ describe("top bar, tab strip, status line", () => {
     const page = h.app.theme.roles.text.bg ?? h.app.theme.bg;
     expect(h.app.theme.roles.topbar.bg).toBeUndefined();
     expect(h.canvas().styles[chipR.y]![chipR.x + 2]!.bg).toBe(page);
-    expect(h.canvas().styles[0]![80]?.bg ?? page).toBe(page);
+    expect(h.canvas().styles[0]![80]?.bg).toBe(h.app.theme.roles.topbar_group.bg!);
     expect(h.frame().split("\n")[1]!.startsWith("━━━━")).toBe(true);
-    const ex = hot(h, "btn:explorer");
-    click(h, ex.x, ex.y);
-    expect(h.app.panels.sidebarShown).toBe(false);
+    const ex = hot(h, "top:zoom");
+    h.app.panels.showSidebar(false);
     click(h, ex.x, ex.y);
     expect(h.app.panels.sidebarShown).toBe(true);
+    expect(h.app.region).toBe("sidebar");
     const ol = hot(h, "btn:outline");
     expect(ol.x + ol.w).toBe(160); // far right, the rail's second button: Info's is first (3.19), level with the breadcrumb
     expect(hot(h, "btn:info").y).toBe(h.app.geometry!.panes[0]!.y - 2);
@@ -3195,12 +3195,10 @@ describe("top bar, tab strip, status line", () => {
     h.app.mouse.handle({ type: "move", x: 80, y: 10, button: 0 });
     expect(h.app.mouse.hover).toBeNull();
   });
-  test("top_bar = false removes it; zen hides it", async () => {
-    const off = await harness({ config: (c) => (c.ui.top_bar = false) });
-    expect(off.frame().split("\n").slice(0, 3).join("\n")).not.toContain("slipbox");
+  test("zen retains the permanent top bar", async () => {
     const zen = await harness({ config: (c) => (c.ui.zen = true) });
-    zen.frame();
-    expect(zen.app.geometry!.hot.some((r) => r.id === "btn:explorer")).toBe(false);
+    expect(topRow(zen.frame())).toContain("slipbox");
+    expect(zen.app.geometry!.hot.some((r) => r.id === "top:zoom")).toBe(true);
   });
   test("tab strip under the top bar, even with one tab: click, ×, middle-click, wheel, drag", async () => {
     const h = await harness({ width: 160 });
@@ -3637,18 +3635,10 @@ describe("top bar, tab strip, status line", () => {
     await h.keys("escape", "escape");
     expect(h.app.view!.find).toBeNull();
     expect(h.app.view!.height).toBe(height); // the row gone with the search
-    // The top bar can go (space u b, a UI setting): the note gains its row, messages still float.
-    await h.keys("space", "u", "b");
-    expect(h.app.ui.top_bar).toBe(false);
-    f = lines();
-    expect(h.app.view!.height).toBe(height + 1);
-    expect(f[0]).not.toContain("slipbox");
-    h.app.message("warn", "careful");
-    f = lines();
-    expect(f.join("\n")).toContain("! careful");
-    expect(f.at(-1)).toContain("READ");
-    await h.app.run("ui.top_bar");
+    // The permanent bar keeps its row while messages float.
     expect(lines()[0]).toContain("slipbox");
+    h.app.message("warn", "careful");
+    expect(lines().join("\n")).toContain("! careful");
     // Too narrow for a box: a message takes over the status line for its while.
     const n = await harness({ open: "notes/alpha.md", width: 28, height: 24 });
     n.frame();
@@ -15737,12 +15727,7 @@ describe("a branch switch as one event (5.9)", () => {
     // Room enough: the whole path.
     const wide = await harness({ root, open: "a.md", width: 300 });
     expect(topRow(wide.frame())).toContain(`◈ ${root} · main`);
-    // The top bar hidden: the status line says it, however wide the screen at most 40 columns, the note's own path
-    // first.
-    wide.app.ui.top_bar = false;
-    const row = statusRow(wide.frame());
-    expect(row).toMatch(/ …[^ ]*\/experiment · main /);
-    expect(row).not.toContain(root);
+    expect(statusRow(wide.frame())).not.toContain(root);
     // Outside home and every vault: Elsewhere, no branch (VV-D3).
     const plain = mkdtempSync(join(sandbox, "plain-status-"));
     writeFileSync(join(plain, "p.md"), "# P\n");

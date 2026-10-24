@@ -155,6 +155,7 @@ export const ROLES = [
   // a button that can't be used: a mode the window's file has no view for, on its header (HDR-D2)
   "topbar_button_disabled",
   "topbar_chip",
+  "topbar_group",
   "hover",
   "breadcrumb",
   "breadcrumb_current",
@@ -454,6 +455,7 @@ export function themeFromPalette(
     // missing (HDR-D6).
     topbar_button_disabled: { fg: blend(p.comment, p.surface2, 0.5), italic: true },
     topbar_chip: { fg: p.purple, bold: true },
+    topbar_group: { bg: blend(p.surface, p.bg, 0.35) },
     hover: { fg: p.fg_strong, bg: p.surface2, bold: true },
     breadcrumb_band: { bg: blend(p.surface, p.bg, 0.35) }, // the window header's background
     // The rails: a tinted column instead of a bordered one (the tab strip's shade).
@@ -526,6 +528,7 @@ export function terminalTheme(): Theme {
     // The palette's own colour 8 for both: told apart by dim and italics, as without colour (HDR-D5).
     topbar_button_disabled: { fg: a(8), dim: true, italic: true },
     topbar_chip: { fg: a(5), bold: true },
+    topbar_group: { bg: a(0) },
     hover: { fg: a(0), bg: a(7), bold: true },
     breadcrumb_band: { bg: a(0) },
     rail: { bg: a(0) },

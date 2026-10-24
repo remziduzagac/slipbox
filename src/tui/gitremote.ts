@@ -113,7 +113,11 @@ export function gitFetch(app: App): void {
     app,
     "fetching",
     "fetch",
-    () => fetchLater(c),
+    () => {
+      const abort = new AbortController();
+      const finished = app.background.begin("Git fetch", () => abort.abort());
+      return fetchLater(c, abort.signal).finally(finished);
+    },
     async () => {
       await app.git.refreshNow();
       const t = app.git.track;

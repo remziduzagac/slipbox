@@ -243,7 +243,6 @@ export const DEFAULT_KEYS: Record<string, string> = {
   "alt+z": "ui.wrap",
   "leader u r": "ui.urls",
   "leader u m": "ui.mouse",
-  "leader u b": "ui.top_bar",
   "leader u d": "ui.problems_bar",
   "leader u shift+d": "ui.problem_marks",
   "leader u c": "ui.code_cells",

@@ -49,6 +49,9 @@ test("a pending export leaves keys available and rechecks its target before publ
     });
   try {
     const pending = h.app.exporter.write(["exported.md"], formatFor("html")!, target);
+    expect([...h.app.background.tasks.values()].map((task) => task.label)).toEqual([
+      `Export to ${h.app.graph.shownPath(target)}`,
+    ]);
     await h.keys("j");
     expect(existsSync(target)).toBe(false);
     writeFileSync(target, "created while export was preparing");
@@ -57,6 +60,7 @@ test("a pending export leaves keys available and rechecks its target before publ
     await spool.document(async (sink) => sink(new TextEncoder().encode("new export")));
     complete(await PreparedExport.take(dir, spool.manifest));
     await pending;
+    expect(h.app.background.tasks.size).toBe(0);
     expect(readFileSync(target, "utf8")).toBe("created while export was preparing");
     expect(h.app.messages.at(-1)?.text).toContain("not written");
   } finally {

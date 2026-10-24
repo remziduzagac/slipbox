@@ -137,14 +137,26 @@ export class Watch {
     if (!total) return;
     this.app.indexing = total;
     const t0 = this.app.now();
+    let cancelled = false;
+    const finished = this.app.background.begin("Indexing", () => {
+      cancelled = true;
+      this.app.indexing = 0;
+    });
     // This vault's graph as it is at each slice: switched to another, the pass goes on with that one's notes.
     parseInSlices(() => this.app.graph, {
-      stopped: () => this.app.quitting,
+      stopped: () => {
+        if (this.app.quitting || cancelled) {
+          finished();
+          return true;
+        }
+        return false;
+      },
       slice: (left) => {
         this.app.indexing = left;
         if (left && total > 200) this.app.host.requestRender();
       },
       done: () => {
+        finished();
         this.app.explorer.invalidateTree();
         // A link that reaches a note by its alias resolves only now that every note is parsed (17.7).
         for (const b of this.app.buffers.values()) b.invalidateLayouts();

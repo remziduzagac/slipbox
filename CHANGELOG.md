@@ -8,6 +8,10 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 
 ### Added
 
+- The permanent top bar groups explorer zoom, workspace and git state, with separate click targets and changed-file
+  count. Background indexing, exports, fetches and language servers starting have a task list with individual cancel;
+  an available upgrade stays visible. The bar remains in zen; `space u b` is removed and `ui.top_bar` is retired.
+
 - The status chip keeps READ or SOURCE beside NORMAL, INSERT, VISUAL or V-LINE, so Escape visibly returns to
   NORMAL. The header uses compact R/L/S buttons: READ and SOURCE select a view; L toggles the lens within READ.
   View switches are silent. Rendering defaults for notes, code and data choose the opening view without removing

@@ -183,6 +183,7 @@ export class Exporter {
     let files: string[];
     const controller = new AbortController();
     this.jobs.add(controller);
+    const finished = this.app.background.begin(`Export to ${shown}`, () => controller.abort());
     const graph = this.app.graph;
     let output: PreparedExport | undefined;
     try {
@@ -203,7 +204,10 @@ export class Exporter {
           },
           controller.signal,
           // Over once a cancel can't stop it, its document's rename begun: from then on, none is running (#68).
-          () => this.jobs.delete(controller),
+          () => {
+            this.jobs.delete(controller);
+            finished();
+          },
         );
         // Where it went, for "Where you exported last": as soon as it's there, not once its staging is cleared, so the
         // window opened meanwhile opens there.
@@ -220,6 +224,7 @@ export class Exporter {
       } finally {
         // Over, written or not: a cancel from now on finds none running (#68).
         this.jobs.delete(controller);
+        finished();
       }
       const beside = files.length ? `, ${files.length} file${files.length === 1 ? "" : "s"} beside it` : "";
       // A note written where the vault never indexes it (D246): Markdown into a folder `walk.exclude` names.

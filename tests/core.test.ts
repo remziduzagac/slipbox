@@ -402,6 +402,16 @@ describe("config (0.9)", () => {
     expect(r.warnings.join("\n")).toContain("bogus");
     expect(r.warnings.join("\n")).toContain("render.inset");
   });
+  test("the retired top bar key gives one notice and does not change UI configuration", () => {
+    const dir = mkdtempSync(join(tmpdir(), "slipbox-cfg-"));
+    const file = join(dir, "c.toml");
+    writeFileSync(file, "[ui]\ntop_bar = false\n");
+    const result = loadConfig({ configFile: file });
+    expect(result.warnings.filter((warning) => warning.includes("top_bar"))).toHaveLength(1);
+    expect(result.warnings.join("\n")).toContain('"ui.top_bar" is retired');
+    expect(result.warnings.join("\n")).not.toContain("unknown key");
+    expect(Object.hasOwn(result.config.ui, "top_bar")).toBe(false);
+  });
   test('a retired section says why, not "unknown key" (21.12)', () => {
     const dir = mkdtempSync(join(tmpdir(), "slipbox-cfg-"));
     const file = join(dir, "c.toml");

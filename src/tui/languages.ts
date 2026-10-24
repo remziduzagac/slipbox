@@ -206,6 +206,7 @@ export class Languages {
   startServers(): void {
     if (this.servers || !this.app.config.lsp.enabled) return;
     this.servers = new ServerManager({
+      starting: (label, cancel) => this.app.background.begin(label, cancel),
       table: () => serverTable(this.app.config["language-server"], this.app.config.language),
       userTable: () => this.userServerTable(),
       autoInstall: () => this.app.config.lsp.auto_install,

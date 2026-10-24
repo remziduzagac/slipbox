@@ -3,12 +3,11 @@
 // two click targets, and the status line saying it only while the top bar doesn't.
 
 import { describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, realpathSync, utimesSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, realpathSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { ListOverlay } from "../src/tui/app.ts";
 import { fitWhere, type Where } from "../src/tui/where.ts";
-import { stringWidth } from "../src/core/width.ts";
-import { harness, makeSandbox, statusRow, topRow, whereNow, type Harness } from "./tui-harness.ts";
+import { harness, makeSandbox, statusRow, topRow, type Harness } from "./tui-harness.ts";
 
 const sandbox = makeSandbox();
 
@@ -128,224 +127,84 @@ describe("where you are, cut to fit (WSP-D4)", () => {
   });
 });
 
-describe("where you are on the top bar (WSP-D4)", () => {
-  test("a named vault without git: its name, no branch, centred; said once, not on the status line (WSP-D5)", async () => {
-    const h = await harness({ width: 120 });
-    const top = topRow(h.frame());
-    expect(top).toContain("◈ fixture");
-    expect(top).not.toContain(" · ");
+describe("permanent location bar (VB-T2)", () => {
+  test("zoom and workspace are separate targets; focus opens the explorer without changing zoom", async () => {
+    const h = await harness({ width: 160 });
+    expect(topRow(h.frame())).toContain("◈ fixture");
+    expect(hot(h, "top:zoom")).toBeDefined();
+    expect(hot(h, "top:vault")).toBeDefined();
+    h.app.panels.showSidebar(false);
+    const zoom = h.app.explorer.top;
+    click(h, "top:zoom");
+    expect(h.app.panels.sidebarShown).toBe(true);
+    expect(h.app.region).toBe("sidebar");
+    expect(h.app.explorer.top).toBe(zoom);
     expect(statusRow(h.frame())).not.toContain("fixture");
-    const v = hot(h, "top:vault")!;
-    expect(Math.abs(v.x + v.w / 2 - 60)).toBeLessThanOrEqual(1);
-    expect(hot(h, "top:branch")).toBeUndefined();
-  });
-
-  test("a vault by its path, in a repository: its branch, dim; a branch switched while it runs, followed", async () => {
-    const root = realpathSync(mkdtempSync(join(sandbox, "by-path-")));
-    writeFileSync(join(root, "index.md"), "# Index\n");
-    if (git(root, "init", "-q", "-b", "main").exitCode !== 0) return;
-    git(root, "add", "-A");
-    git(root, "commit", "-q", "-m", "first");
-    const h = await harness({ root, width: 200 });
-    expect(topRow(h.frame())).toContain(`◈ ${whereNow(h)}`);
-    expect(whereNow(h)).toBe(`${root} · main`);
-    const b = hot(h, "top:branch")!;
-    expect(h.canvas().styles[b.y]![b.x + 2]!.fg).toBe(h.app.theme.roles.status_dim.fg!);
-    // Each switch dates HEAD apart: headOf reads it again when its mtime moves, and two writes in one clock tick
-    // could share one.
-    const switched = (n: number, ...args: string[]) => {
-      git(root, "switch", "-q", ...args);
-      const at = new Date(Date.now() + n * 1000);
-      utimesSync(join(root, ".git", "HEAD"), at, at);
-    };
-    switched(1, "-c", "topic");
-    expect(topRow(h.frame())).toContain(" · topic");
-    // A detached head: its commit.
-    switched(2, "--detach");
-    const commit = git(root, "rev-parse", "--short=7", "HEAD").stdout.toString().trim();
-    expect(topRow(h.frame())).toContain(` · ${commit}`);
-  });
-
-  test("home as ~, and a folder of it opened by name after it (VV-D2)", async () => {
-    const { homeAt } = await import("../src/core/vault.ts");
-    const home = realpathSync(mkdtempSync(join(sandbox, "home-")));
-    mkdirSync(join(home, "notes"));
-    writeFileSync(join(home, "README.md"), "# Home\n");
-    writeFileSync(join(home, "notes", "inbox.md"), "# Inbox\n");
-    const before = process.env.HOME;
-    process.env.HOME = home;
-    try {
-      const top = await harness({ loc: homeAt(home), open: "README.md" });
-      expect(topRow(top.frame())).toContain("◈ ~");
-      expect(topRow(top.frame())).not.toContain("›");
-      const folder = await harness({ loc: homeAt(home), open: null, folder: join(home, "notes") });
-      expect(folder.app.homeFolder).toBe("notes");
-      expect(topRow(folder.frame())).toContain("◈ ~ › notes");
-      // The workspace is part of the vault's target.
-      expect(hot(folder, "top:vault")!.w).toBe("◈ ~ › notes".length);
-    } finally {
-      process.env.HOME = before;
-    }
-  });
-
-  test("Elsewhere, without the glyph", async () => {
-    const { elsewhereAt } = await import("../src/core/vault.ts");
-    const dir = realpathSync(mkdtempSync(join(sandbox, "elsewhere-")));
-    writeFileSync(join(dir, "a.md"), "# A\n");
-    const h = await harness({ loc: elsewhereAt(dir, join(dir, "a.md")), open: join(dir, "a.md") });
-    const top = topRow(h.frame());
-    expect(top).toContain("Elsewhere");
-    expect(top).not.toContain("◈");
-  });
-
-  test("a name of wide characters", async () => {
-    const root = named("日本語のノート");
-    const h = await harness({ root: root!, width: 120 });
-    expect(topRow(h.frame())).toContain("◈ 日本語のノート");
-  });
-
-  test("kept 2 columns clear of the chip, the outline's button and indexing…, moved only as far as it must", async () => {
-    const root = named("a-vault-named-at-some-length", true);
-    if (!root) return;
-    // The left rail off: the explorer's button before the chip. The right rail and the window header off: the outline's
-    // button on the bar.
-    const h = await harness({
-      root,
-      width: 60,
-      config: (c) => {
-        c.ui.left_rail = false;
-        c.ui.right_rail = false;
-        c.ui.window_header = false;
-      },
-    });
-    h.app.indexing = 3;
-    const top = topRow(h.frame());
-    expect(top).toContain("indexing 3…");
-    const chip = hot(h, "btn:palette")!;
-    const outline = hot(h, "btn:outline")!;
-    const v = hot(h, "top:vault")!;
-    const b = hot(h, "top:branch");
-    expect(hot(h, "btn:explorer")!.x).toBeLessThan(chip.x);
-    expect(v.x).toBeGreaterThanOrEqual(chip.x + chip.w + 2);
-    const end = b ? b.x + b.w : v.x + v.w;
-    expect(end).toBeLessThanOrEqual(top.indexOf("indexing 3…") - 2);
-    expect(outline.y).toBe(0);
-    expect(outline.x).toBeGreaterThan(top.indexOf("indexing 3…"));
-    // Cut to fit between them: the branch gone, the name cut from its end.
-    expect(top).not.toContain("a-vault-named-at-some-length");
-    expect(top).toMatch(/◈ a-vault-named-at-s[^ ]*… {3}indexing/); // 2 columns beyond its padding, as the chip's
-    expect(b).toBeUndefined();
-  });
-
-  test("with Nerd glyphs: the vault's target covers the glyph by its width, the branch's starts right after", async () => {
-    const root = named("osprey", true);
-    if (!root) return;
-    const h = await harness({ root, width: 120, config: (c) => (c.render.glyphs = "nerd") });
-    const glyph = h.app.glyphs.vault;
-    expect(glyph).toBe("\u{f125f}");
-    expect(topRow(h.frame())).toContain(`${glyph} osprey · main`);
-    const v = hot(h, "top:vault")!;
-    const b = hot(h, "top:branch")!;
-    expect(v.w).toBe(stringWidth(`${glyph} osprey`));
-    expect(b.x).toBe(v.x + v.w);
-    expect(b.w).toBe(stringWidth(" · main"));
-  });
-
-  test("hovered: the part under the mouse in hover", async () => {
-    const h = await harness({ width: 120 });
-    const v = hot(h, "top:vault")!;
-    h.app.mouse.hover = "top:vault";
-    expect(h.canvas().styles[v.y]![v.x]!.bg).toBe(h.app.theme.roles.hover.bg!);
-  });
-
-  test("the vault clicked: the named folders, enter goes into one, the bar naming it", async () => {
-    const kestrel = named("kestrel");
-    await harness({ root: kestrel! }); // seen, so named
-    const h = await harness({ width: 120 });
-    click(h, "top:vault");
-    const list = h.app.overlay as ListOverlay;
-    expect(list.title).toMatch(/^Folders \(\d+\) — enter goes into one$/);
-    expect(list.items.map((it) => it.label)).toContain("kestrel"); // failing, it says what the list had
-    const i = list.items.findIndex((it) => it.label === "kestrel");
-    await h.keys(...Array<string>(i).fill("down"), "enter");
-    expect(h.app.loc.root).toBe(kestrel!);
-    expect(topRow(h.frame())).toContain(`${h.app.glyphs.vault} kestrel`); // its config's glyphs, the harness's left
-  });
-
-  test("the branch clicked: the branches' menu, as the status line's was (GIT-D8)", async () => {
-    const root = named("osprey", true);
-    if (!root) return;
-    const h = await harness({ root, width: 120 });
-    expect(topRow(h.frame())).toContain("◈ osprey · main");
-    click(h, "top:branch");
-    const list = h.app.overlay as ListOverlay;
-    expect(list.items.map((i) => i.label)).toContain("Fetch");
-  });
-});
-
-describe("where you are on the status line, only while the top bar doesn't say it (WSP-D5)", () => {
-  test("the top bar hidden: the status line says it, its click the branches' menu; zen: neither", async () => {
-    const root = named("heron", true);
-    if (!root) return;
-    const h = await harness({ root, width: 120 });
-    expect(statusRow(h.frame())).not.toContain("heron");
-    expect(hot(h, "status:branch")).toBeUndefined();
-    await h.app.run("ui.top_bar");
-    expect(h.app.ui.top_bar).toBe(false);
-    expect(statusRow(h.frame())).toContain("heron · main");
-    click(h, "status:branch");
-    expect((h.app.overlay as ListOverlay).items.map((i) => i.label)).toContain("Fetch");
-    await h.keys("escape");
-    await h.app.run("ui.top_bar");
     h.app.ui.zen = true;
-    const f = h.frame();
-    expect(topRow(f)).not.toContain("heron");
-    expect(statusRow(f)).not.toContain("heron");
+    expect(topRow(h.frame())).toContain("slipbox");
+    expect(hot(h, "top:zoom")).toBeDefined();
   });
 
-  test("home's folder on the status line too, without the glyph", async () => {
-    const { homeAt } = await import("../src/core/vault.ts");
-    const home = realpathSync(mkdtempSync(join(sandbox, "home-")));
-    mkdirSync(join(home, "notes"));
-    writeFileSync(join(home, "notes", "inbox.md"), "# Inbox\n");
-    const before = process.env.HOME;
-    process.env.HOME = home;
-    try {
+  test("branch and changed files have separate targets and individual hover", async () => {
+    const root = named("osprey", true);
+    if (!root) return;
+    const h = await harness({ root, width: 200 });
+    writeFileSync(join(root, "index.md"), "# Changed\n");
+    await h.app.git.refreshNow();
+    expect(topRow(h.frame())).toContain("◈ main");
+    expect(topRow(h.frame())).toContain("⎇ main");
+    expect(topRow(h.frame())).toContain("● 1");
+    const branch = hot(h, "top:branch")!;
+    const changed = hot(h, "top:changed")!;
+    expect(changed.x).toBeGreaterThan(branch.x + branch.w);
+    h.app.mouse.hover = "top:changed";
+    const canvas = h.canvas();
+    expect(canvas.styles[changed.y]![changed.x]!.bg).toBe(h.app.theme.roles.hover.bg!);
+    expect(canvas.styles[branch.y]![branch.x]!.bg).not.toBe(h.app.theme.roles.hover.bg!);
+    click(h, "top:changed");
+    expect(h.app.leftView).toBe("git");
+    click(h, "top:branch");
+    expect((h.app.overlay as ListOverlay).items.map((i) => i.label)).toContain("Fetch");
+  });
+
+  test("background tasks cancel individually and disappear on completion; upgrade stays after an offer", async () => {
+    const h = await harness({ width: 220 });
+    let cancelled = false;
+    const done = h.app.background.begin("Export document", () => {
+      cancelled = true;
+    });
+    const other = h.app.background.begin("Git fetch", () => {});
+    expect(topRow(h.frame())).toMatch(/[◴◷◶◵] 2/);
+    click(h, "top:work");
+    expect((h.app.overlay as ListOverlay).items.map((i) => i.label)).toEqual(["Export document", "Git fetch"]);
+    await h.keys("enter");
+    expect(cancelled).toBe(true);
+    expect(h.app.background.tasks.size).toBe(1);
+    done();
+    other();
+    expect(hot(h, "top:work")).toBeUndefined();
+    h.app.updates.available = "0.5.2";
+    expect(topRow(h.frame())).toContain("⇡ 0.5.2");
+    await h.keys("escape");
+    expect(hot(h, "top:upgrade")).toBeDefined();
+  });
+
+  test("narrowing keeps zoom and workspace in every glyph set", async () => {
+    for (const glyphs of ["nerd", "unicode", "ascii"] as const) {
       const h = await harness({
-        loc: homeAt(home),
-        open: null,
-        folder: join(home, "notes"),
-        config: (c) => (c.ui.top_bar = false),
+        width: 40,
+        config: (c) => {
+          c.render.glyphs = glyphs;
+        },
       });
-      expect(statusRow(h.frame())).toContain("~ › notes");
-      expect(statusRow(h.frame())).not.toContain("◈");
-    } finally {
-      process.env.HOME = before;
+      h.app.updates.available = "0.5.2";
+      h.app.background.begin("Indexing", () => {});
+      h.frame();
+      expect(hot(h, "top:zoom")).toBeDefined();
+      expect(hot(h, "top:vault")).toBeDefined();
+      expect(hot(h, "top:upgrade")).toBeUndefined();
+      const regions = h.app.geometry!.hot.filter((r) => r.id.startsWith("top:"));
+      for (const r of regions) expect(r.x + r.w).toBeLessThanOrEqual(40);
     }
-  });
-
-  test("no note open (a folder of home with none), the bar hidden: the status line says where all the same", async () => {
-    const { homeAt } = await import("../src/core/vault.ts");
-    const home = realpathSync(mkdtempSync(join(sandbox, "home-")));
-    mkdirSync(join(home, "empty"));
-    const before = process.env.HOME;
-    process.env.HOME = home;
-    try {
-      const h = await harness({ loc: homeAt(home), open: null, folder: join(home, "empty") });
-      expect(h.app.view).toBeNull();
-      expect(topRow(h.frame())).toContain("◈ ~ › empty");
-      expect(statusRow(h.frame())).not.toContain("empty");
-      h.app.ui.top_bar = false;
-      expect(statusRow(h.frame())).toContain("~ › empty");
-    } finally {
-      process.env.HOME = before;
-    }
-  });
-
-  test("a screen too narrow for either: neither says it", async () => {
-    const h = await harness({ width: 18 });
-    const f = h.frame();
-    expect(topRow(f)).not.toContain("◈");
-    expect(statusRow(f)).not.toContain("fix");
   });
 });

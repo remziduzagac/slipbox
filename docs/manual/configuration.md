@@ -83,7 +83,6 @@ sidebar_width = 30             # 8–200; drawn from 12 to half the terminal, le
 outline = false                # the outline open on the right on a wide terminal
 outline_width = 32             # 8–200; drawn as the explorer is
 split_ratio = 0.5              # 0.2–0.8: the first window's share of a split
-top_bar = true                 # the bar along the top: the chip, where you are, the vault's state; space u b
 lines = "light"                # the frame's lines: light (─ │) | heavy (━ ┃)
 window_header = true           # the row atop each window: a split's name, the breadcrumb, Read · Lens · Source, ▤
 breadcrumb = true              # the headings the cursor is under, on each window's header
@@ -479,6 +478,7 @@ These are the roles of the screen most worth changing:
 | --- | --- |
 | `border` | the frame, the panes' borders and the rules |
 | `topbar_chip` | the `slipbox` chip |
+| `topbar_group` | the faint background of each top-bar group |
 | `topbar_button`, `topbar_button_on` | the rails', the top bar's and the window header's buttons: off and on |
 | `topbar_button_disabled` | a window header's button for a mode the file can't be shown in (in italics) |
 | `rail` | the rails' tint (its `bg`); with none, as under `NO_COLOR`, a rail is drawn with a border |

@@ -3,7 +3,7 @@
 
 import { stopInsert } from "./editing.ts";
 import * as R from "./replacing.ts";
-import { branchMenu, gitClick, gitRightClick, signClick } from "./gitmouse.ts";
+import { gitClick, gitRightClick, signClick } from "./gitmouse.ts";
 import { stringWidth } from "../core/width.ts";
 import { saveAsMouse } from "./saveas.ts";
 import { dialogMouse } from "./dialog.ts";
@@ -775,14 +775,18 @@ export class Mouse {
         break;
       // Where you are on the top bar (WSP-D4): the vault, the named folders to go into; the branch, the branches' menu.
       case "top":
-        if (arg === "vault") void this.app.run("folders.open");
-        else if (arg === "branch") branchMenu(this.app);
+        if (arg === "zoom") void this.app.run("explorer.focus");
+        else if (arg === "changed") void this.app.run("git.focus");
+        else if (arg === "work") void this.app.run("background.open");
+        else if (arg === "upgrade") void this.app.run("app.upgrade");
+        else if (arg === "vault") void this.app.run("folders.open");
+        else if (arg === "branch") void this.app.run("git.menu");
         break;
       case "status":
         // The path: its window's history, and Copy path; the arrows around it, back and forward.
         if (arg === "path" && this.app.view) this.app.history.openPathMenu();
         // The vault and its branch (GIT-D8): the branches, pull and push.
-        else if (arg === "branch") branchMenu(this.app);
+        else if (arg === "branch") void this.app.run("git.menu");
         else if (arg === "back" || arg === "forward") this.app.history.go(arg);
         else if (arg === "message") void this.app.run("messages.open");
         // The file's problems: the Problems panel on This file (1.7) — on All when it has none; open there, closed.

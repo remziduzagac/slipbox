@@ -112,7 +112,6 @@ export interface Config {
     /** Hide the top bar, frame, explorer, outline, tab strip, window headers and status line; readable width on. */
     zen: boolean;
     /** The top bar: the explorer button, the app chip, vault state. */
-    top_bar: boolean;
     /** The window header (HDR-D3): the row atop each window — a split's name, the breadcrumb, the mode's buttons, ▤. */
     window_header: boolean;
     /** The outline breadcrumb on each window's header: the headings the cursor is under. */
@@ -344,7 +343,6 @@ export const DEFAULT_CONFIG: Config = {
     readable_width: false,
     readable_max: 100,
     zen: false,
-    top_bar: true,
     window_header: true,
     breadcrumb: true,
     lines: "light",
@@ -394,6 +392,7 @@ export const DEFAULT_CONFIG: Config = {
 
 /** Settings that were, and why they aren't: said once, never an unknown key's warning. */
 const RETIRED: Record<string, string> = {
+  "ui.top_bar": "the top bar is always shown",
   rename: "renames no longer write a note's old name into it; links reach notes by their paths",
 };
 

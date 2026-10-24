@@ -48,7 +48,7 @@ Code, in `src/tui/`:
 ## Screen layout (plan `3.1`)
 
 ```text
- slipbox                    ◈ notes · main ↑2           indexing 3…     ← top bar (ui.top_bar; can be hidden)
+ slipbox                    ◈ notes · main ↑2           indexing 3…     ← permanent top bar
 ━━━━━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━  ← the frame's top rule
  ≡  Explorer   ┃ 1 index × ┃ 2 alpha × ┃                             ┃ +3  ← left rail (tinted) · explorer ┃ tab strip
  ◷             ┣━━━━━━━━━━━┻━━━━━━━━━━━┻━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━┻━━━  ← the strip's rule, the outline under it
@@ -79,39 +79,26 @@ panes). Zen mode has no frame. The lines are light by default (`ui.lines = "ligh
 **The terminal's title** is `slipbox — <the file on screen>` (its path in its vault), else the
 folder open in its place: told when it changes, its control characters stripped.
 
-**The top bar** has buttons, where you are, and the vault's state. It sits on the page's background like the rest, so
-the frame's rule under it gives it the same half row of air the tab strip and the titles get from theirs:
+**The top bar** is permanent, including zen (VB-D3, VB-T2, #86). `draw-topbar.ts` draws the grouped items:
 
-- on the left, the `slipbox` chip (plain accent text), which opens the command palette; before it, without the left
-  rail, the explorer's `≡`;
-- in the middle, **where you are** (WSP-D4; `where.ts`): the vault after the vault glyph (`◈`; Nerd: a bookshelf; ascii
-  `#`), by its name or its path, as § How a vault is named and shown in roots.md says (`◈ kestrel`,
-  `◈ ~/src/experiment`, home `◈ ~`; Elsewhere `Elsewhere`, no glyph, being no vault); then the workspace when it isn't
-  the vault's own, a folder of home opened by name, by home's path for it (`◈ ~ › notes`); then the branch as the status
-  line said it: `· main`, how far it's ahead of its upstream and behind (`↑2 ↓1`; GIT-D4), a merge or a rebase under way
-  (`merging`, `rebasing 2/5`; GIT-D6), a named worktree's after its name (`◈ kestrel@feat`), a detached head by its
-  commit. The vault and the workspace are drawn in the bar's text, the branch and what follows it dim (`status_dim`), a
-  part under the mouse in `hover`; every name passes through `sanitize`, and every width is `core/width.ts`'s. **Where
-  it goes:** in the span between the left side's last item (the chip) and the right end's first (`indexing…`, or the
-  outline's button when the bar has it), 2 columns kept from each beyond its padding; centred on the screen, then
-  clamped into that span, so it moves right or left only as far as it must. **Short of room,** cut in this order, each
-  step only while it still doesn't fit: a path is cut from the front (the vault's, then the workspace's, to 12 columns
-  each, `…earch/notes`, each step cutting from the whole text, so a part given up gives a path its room back); the
-  branch's ahead and behind go; the branch is cut from its end, to 8 columns, then goes; a merge or a rebase under way
-  goes (kept after the branch, a sign that something's to finish); the workspace goes; the vault's name is cut, a name
-  from its end and a path from the front, to 6 columns. Narrower still, nothing is drawn, and the status line says where
-  if it has the room (below). **Clicked**, two targets, each a hot region only while its part is drawn: the vault's
-  (`top:vault`: the glyph, the name, and the workspace after it, `◈ ~ › notes`) lists the named folders, seen last
-  first, and `enter` goes into one (`space v v`, § Going into a vault), from Elsewhere too; the branch's (`top:branch`:
-  from the space before its `·`, or a worktree's `@`, through the operation: `· main ↑2 merging`, `@feat`), in a
-  repository, opens the branches' menu as the status line's did (GIT-D8): Pull while there's an upstream not gone, Push,
-  Fetch and the git panel, then the branches;
-- at the right end, the vault's state (`indexing N…`), dropped when fewer than 12 columns are left.
+- the `slipbox` palette chip at left;
+- the central location block: explorer zoom (`top:zoom`, `explorer.focus`), workspace without the vault prefix
+  (`top:vault`, `folders.open`), branch with tracking and operation (`top:branch`, branches menu), changed-file count
+  (`top:changed`, `git.focus`). The vault remains in Info. A workspace is the home folder, branch, home or vault fallback;
+- at right, background work (`top:work`, `background.open`) with spinner and count, and the persistent available
+  upgrade (`top:upgrade`, `app.upgrade`). Each appears only when needed.
 
-Toggle buttons have no fill of their own: their glyph is dim (`topbar_button`) while the pane is closed and bright
-(`topbar_button_on`) while it is open. `ui.top_bar = false` removes the bar, as do `space u b` and "Top bar" in the
-UI settings (`space u u`, remembered like the other settings; the note gains its row, `:` still opens the palette,
-the indexing state isn't shown, and the status line says where you are); zen mode hides it too.
+`topbar_group` supplies the faint background. Groups have spaces between them and Nerd rounded ends, plain ends in
+Unicode and ASCII. Items have a dim thin separator and individual hover regions. Names pass through sanitize and
+widths through core/width.ts. Right blocks shrink to icons then go; tracking, cut branch, branch and changed count
+then give way. Zoom and workspace keep their icons and shortened names, paths cut from the front.
+
+`Background`, owned by App, tracks tasks and their cancel closures. Index slices, each export, fetch and server
+initialization register and remove their tasks on completion. Selecting a task invokes `background.cancel` with its
+id; cancellation is per task. Export stops before publishing begins; a fetch aborts its child process; indexing
+stops subsequent slices; server cancellation stops initialization. The spinner redraws while tasks remain.
+
+`ui.top_bar` is retired with a notice, removed from settings and keys. The status line has no location fallback.
 
 **The window header** tops each window, between two rules: in a split the window's file name, then the breadcrumb,
 then at its right the mode's buttons, and at the far right of the window at the top right, without the right rail,
@@ -163,8 +150,7 @@ breadcrumb click does, `esc` or a click outside closes it. Clicking a heading fo
 the heading, and scrolls the heading to the window's first row (as far as the note's end allows). The header stays
 above the first heading, so the text doesn't jump. `ui.breadcrumb = false` hides the breadcrumb alone: the header
 keeps its name, its buttons and `▤` (HDR-D3). Without the right rail (below), the `▤` button sits at the header's
-right end; when no window shows a header, it moves to the right end of the top bar (with neither, in zen or with
-`ui.top_bar = false`, the outline opens with `space o`).
+right end. Without a header or rail, the outline opens with `space o`.
 
 The header has its own background, `breadcrumb_band` (`surface` blended into the page at 35%; the role keeps its
 name, HDR-D1). The breadcrumb's icon is `breadcrumb_icon` (blue), outer headings `breadcrumb` (dim), separators
@@ -201,19 +187,6 @@ workspace keeps them.
   divided by `│` (`|` in ASCII, whose lens label is `READ-LENS`). The roles are `view_read`, `view_lens`,
   `view_source` and `mode_normal`, `mode_insert`, `mode_visual`. Panel focus, resize and pending keys appear alongside
   them, keeping both segments visible (VB-D1);
-- where you are, and its branch, dimmed, **only while the top bar doesn't say it** (WSP-D5): the bar hidden
-  (`ui.top_bar = false`, `space u b`; zen has neither bar), or too narrow for even the vault: with a note open, a bar
-  that narrow leaves the status line no room either; with none, the status line has the row and says it. The same parts
-  as the top bar's, without the glyph (`20.14`, `21.9`; D65, D77; `whereOf` in `tui/where.ts`): the vault's name if it
-  has one, else its path — `research · main`, `~/src/experiment · main` (no remote), `notes` — home as `~`, a folder of
-  home opened by name after it (`~ › notes`), and Elsewhere as `Elsewhere` (VV-D2, VV-D3); then the branch checked out
-  now (a detached head: its commit), a named worktree as `research@refactor`; then, a branch with an upstream not gone,
-  how far it's ahead of it and behind it as of the last fetch, only what isn't zero (`research · main ↑2 ↓1`; ascii
-  `+2 -1`; GIT-D4); then a merge or a rebase under way (`kestrel · main merging`,
-  `kestrel@agent/sync-retry rebasing 2/5`, a rebase's branch named rather than its detached commit; GIT-D6). Clicked, in
-  a repository, the whole of it opens the branches' menu (§ Side panes), as before: unlike the top bar's, it has no
-  vault target. At most 40 columns, cut as the top bar's is; it's the first to go when the path would be left fewer than
-  24 columns, so on a narrow screen neither bar may say where;
 - the note's path between back and forward, as an address bar's: `‹ notes/people/kenji-mori.md ›`. `‹` and `›` go
   back and forward in the focused window's history, each bright when there's somewhere to go, dim when not; hovered,
   one says where, above it (`back: home.md › Start here`; back past the vault's first place, the vault before). A click
@@ -410,7 +383,7 @@ short.
 - **Each folder of home's workspace** (VV-D2): each folder of home opened by name (`slipbox ~/notes`, a folder
   revealed; the 30 left most recently) has a workspace of its own beside home's own (its top's), so each brings back
   its own tabs; one it has none for opens its own note ([roots.md](roots.md) § Home). The top bar names it
-  (`◈ ~ › notes`).
+  (`◈ notes`).
 
 ## History (plan `3.6`)
 
@@ -454,7 +427,7 @@ pointers give it (`21.6`; D74) and the copy its links open here, those seen last
 repository's worktrees are its branches, not copies: listed once. **Which copy** a folder's links open (`space v
 shift+v`, `:folders-default`, `folders.default`; `slipbox folders default`): this folder's copies — its repository's, a
 clone with a `.slipbox/` name of its own among them (DF-D30) —, else a pick of the folders with two. **Names** here, on
-the top bar (the status line, while it's hidden), `space v i`, the Info view and messages are each vault's name as
+`space v i`, the Info view and messages are each vault's name as
 pointers give it — its `.slipbox/` name, else its repository's remote's — else its path (`~/…`); a named worktree as
 `name@branch` (`21.9`); home `~`; Elsewhere `Elsewhere`.
 
@@ -2520,8 +2493,7 @@ listed and only while that name still holds its commit: one saved meanwhile (an 
 the pick is refused, said why. Saving and bringing one back change the files: unsaved notes are saved or kept first.
 git's "No local changes to save" is said as nothing to stash; a conflict, in git's words, the stash kept.
 
-Where you are shows a branch with an upstream ahead of it and behind it (§ Screen layout: the top bar, else the
-status line), as of the last fetch:
+Where you are shows a branch with an upstream ahead of it and behind it (§ Screen layout: the top bar), as of the last fetch:
 read from `git status --branch`'s first line, asked with the status in the background whenever git has news
 (`statusLater`), so after a fetch, a pull, a push, or HEAD moving.
 

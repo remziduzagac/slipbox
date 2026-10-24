@@ -703,7 +703,6 @@ With spelling on (`space u s`), these keys work:
 | `space u w`, `alt+z` | wrap long lines, on at first (when off, a wide note scrolls sideways) |
 | `space u r` | a link's address shown after its text |
 | `space u m` | the mouse on or off (when off, the terminal selects text as it does elsewhere) |
-| `space u b` | the top bar on or off |
 | `space u d` | the problems bar beside the text, on or off |
 | `space u shift+d` | problems marked in the text: off, errors, warnings, all, in turn |
 | `space u c` | the code view's cells, in boxes or on tinted bands |

@@ -13,32 +13,6 @@ import type { Role, Color } from "../core/theme/theme.ts";
 import { SEVERITIES, worst } from "../core/diagnostics.ts";
 import { severityGlyph, SEVERITY_ROLE } from "./draw-pane.ts";
 
-import { fitWhere, whereOf } from "./where.ts";
-
-/**
- * Where you are on the status line (WSP-D5), in `room` columns from `x`, while the top bar doesn't say it: the same parts
- * as the bar's, without the glyph, dim; in a repository, clicked, the branches' menu (GIT-D8). The columns it took, its
- * two spaces after it included; none when it isn't drawn (the bar says it, or fewer than 8 columns).
- */
-function drawWhereOnStatus(app: App, c: Canvas, x: number, band: Band, geo: Geometry, room: number): number {
-  const fit = room >= 8 && !geo.whereOnTop ? fitWhere({ ...whereOf(app), glyph: "" }, room) : null;
-  if (!fit) return 0;
-  const theme = app.theme;
-  const bg = roleStyle(theme, "status", pageBg(theme)).bg;
-  const dim = { ...roleStyle(theme, "status_dim", bg), bg };
-  const id = app.git.checkout ? "status:branch" : null;
-  const y = mid(band);
-  const w = drawText(
-    c,
-    x,
-    y,
-    fit.vault + fit.branch,
-    id && app.mouse.hover === id ? roleStyle(theme, "hover", bg) : dim,
-  );
-  if (id) geo.hot.push({ id, x, y: band.y, w, h: band.h });
-  return w + drawText(c, x + w, y, "  ", dim);
-}
-
 export function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void {
   const theme = app.theme;
   const page = pageBg(theme);
@@ -107,7 +81,6 @@ export function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void
   if (!view) {
     // No note open (a folder with none, home's left out): where you are all the same, while the top bar doesn't say it.
     x += 1;
-    x += drawWhereOnStatus(app, c, x, band, geo, Math.min(40, c.width - x - 1));
     if (whyText) drawText(c, x, y, truncate(whyText.trimEnd(), Math.max(0, c.width - x - 1)), dim);
     return;
   }
@@ -160,7 +133,6 @@ export function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void
   x += drawText(c, x, y, " ", st);
   // Where the file is (21.9): the vault, by name or path, and its branch (20.14), only while the top bar doesn't say it
   // (WSP-D5), and while the path keeps a readable width (it goes before the path does) — at most 40 columns.
-  x += drawWhereOnStatus(app, c, x, band, geo, Math.min(40, c.width - x - rightW - 4 - 24));
   const pathId = "status:path";
   // The path shrinks to leave room for its marker (reloaded / deleted) and the right-hand side;
   // the watch marker after it is dropped when it doesn't fit.

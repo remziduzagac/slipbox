@@ -80,7 +80,7 @@ as any other vault's does: `~ › todo.md`, and `o` goes into home.
 
 Home is a vault as the others are. Its notes have backlinks, `/` starts from your home folder, and a wikilink's name
 matches its notes. It has its own workspace, and each folder of it you open by name, such as `slipbox ~/notes`, has a
-workspace of its own, which the top bar names (`◈ ~ › notes`): open `~/work` and `~/notes` in turn, and each brings
+workspace of its own, which the top bar names (`◈ notes`): open `~/work` and `~/notes` in turn, and each brings
 back what you had open in it. `slipbox ~` brings back home's own. Its settings are your own config, since it has no
 `.slipbox/` to hold any. It has git only when your home folder is itself a repository.
 

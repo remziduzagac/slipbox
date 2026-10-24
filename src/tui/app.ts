@@ -1,3 +1,4 @@
+import { Background } from "./background.ts";
 // The TUI app model (plan 3.x; keymap in docs/manual/keys.md): the state every part shares — the vault open, its
 // graph and config, tabs of one or two windows over shared buffers, the panels' state, the overlay and the floating
 // window, messages, the UI settings — and the wiring: the start, opening a note, a window's layout and cursor, the
@@ -364,7 +365,6 @@ export interface UiState {
   /** The row atop each window (HDR-D3), and the breadcrumb on it. */
   window_header: boolean;
   breadcrumb: boolean;
-  top_bar: boolean;
   /** The problems bar beside the text (19.9), and the problems' text marked (19.10). */
   problems_bar: boolean;
   /** The least severity underlined in the text (`off`: none); the Problems panel's choice is marked whatever it is. */
@@ -394,7 +394,6 @@ export function uiDefaults(c: Config): UiState {
     mouse: c.ui.mouse,
     window_header: c.ui.window_header,
     breadcrumb: c.ui.breadcrumb,
-    top_bar: c.ui.top_bar,
     problems_bar: c.diagnostics.bar !== "off",
     problem_marks: c.diagnostics.marks,
     code_cells: c.render.code_cells,
@@ -636,6 +635,7 @@ export class App {
   /** The mouse: clicks, drags, the wheel. */
   readonly mouse = new Mouse(this);
   /** Export: notes, a format, a place. */
+  readonly background = new Background(this);
   readonly exporter = new Exporter(this);
   /** Spelling: checkers, misspelt words, suggestions. */
   readonly speller = new Speller(this);

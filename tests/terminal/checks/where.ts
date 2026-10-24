@@ -74,6 +74,23 @@ function rebaseStopped(s: Session): void {
 
 export const WHERE: Check[] = [
   {
+    area: "navigating",
+    name: "permanent top bar: zoom focuses explorer, workspace and branch have distinct targets, zen retains location",
+    covers: { cases: ["ui", "status", "mouse"], commands: ["explorer.focus", "ui.zen"] },
+    options: { home: true, startAt: "home/work/kestrel/README.md" },
+    run: async (s) => {
+      await s.until(() => /≡ .*│ ◈ main │ ⎇ main/.test(s.topBar()), 5000, "zoom, workspace and branch");
+      await leader(s, "e");
+      await onTopBar(s, "≡");
+      await s.see("Explorer");
+      await onTopBar(s, "⎇ main");
+      await s.see(/Branches \(\d+\) — enter: check one out/);
+      await s.keys("escape");
+      await leader(s, "u", "z");
+      await s.until(() => s.topBar().includes("slipbox") && s.topBar().includes("◈ main"), 3000, "bar retained in zen");
+    },
+  },
+  {
     area: "links-and-files",
     name: "where you are: the top bar's vault clicked lists the named folders; enter goes into one, the bar then naming it",
     covers: { cases: ["vault", "mouse"], commands: ["folders.open"] },
@@ -188,7 +205,7 @@ export const WHERE: Check[] = [
   {
     area: "navigating",
     name: "where you are: no note open (home's Downloads, left out) — the bar hidden, the status line says it all the same",
-    covers: { cases: ["vault", "ui", "status"], commands: ["ui.top_bar"] },
+    covers: { cases: ["vault", "ui", "status"], commands: [] },
     options: { home: true, startAt: "home/Downloads" },
     run: async (s) => {
       await s.where("~ › Downloads");
@@ -226,7 +243,7 @@ export const WHERE: Check[] = [
   {
     area: "navigating",
     name: "where you are: on the top bar, not the status line; the bar hidden (space u b), the status line says it, its click the branches' menu; zen, neither",
-    covers: { cases: ["ui", "status", "mouse"], commands: ["ui.top_bar", "ui.zen"] },
+    covers: { cases: ["ui", "status", "mouse"], commands: ["ui.zen"] },
     options: { home: true, startAt: "home/work/kestrel/README.md" },
     run: async (s) => {
       await s.where(/^kestrel · main\b/, /‹ README\.md/);

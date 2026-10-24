@@ -68,6 +68,8 @@ export class Updates {
 
   /** `tui/run.ts` sets it; without it (a test's App, unless it sets one) nothing is checked or offered. */
   env: UpdateEnv | null = null;
+  /** Latest available release, kept on the bar after its offer closes. */
+  available: string | null = null;
   /** What waits for a quiet moment to be shown, in turn, each once (by its key): an offer, a restart's, the restart's
    *  question after waiting for an upgrade. */
   private queue: { key: string; show: () => void }[] = [];
@@ -179,6 +181,8 @@ export class Updates {
 
   /** What the daily check found: its line kept in the messages list, and the offer opened once the TUI is quiet. */
   found(f: Found): void {
+    this.available = f.version;
+    this.app.host.requestRender();
     this.app.listMessage("info", f.said);
     // Installed underneath already, its restart waiting: not offered again as out.
     if (this.queue.some((q) => q.key.startsWith("restart:") && !isNewer(f.version, q.key.slice(8)))) return;
@@ -243,6 +247,7 @@ export class Updates {
 
   /** The offer of a newer version, by how this slipbox was installed. */
   offer(version: string): void {
+    this.available = version;
     const env = this.env!;
     this.forget(`offer:${version}`);
     const title = `slipbox ${version} is out${env.channel === "preview" ? " on the preview channel" : ""}`;

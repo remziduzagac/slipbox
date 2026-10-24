@@ -28,12 +28,9 @@ export const UI_SPECS: CommandSpec[] = [
     cli: I,
     desc: "Shows or hides the heading path on each window's header; the header stays",
   },
-  {
-    id: "ui.top_bar",
-    title: "Top bar",
-    cli: I,
-    desc: "Shows or hides the top bar (the palette chip, where you are, the vault's state)",
-  },
+  { id: "background.open", title: "Background work", cli: I, desc: "Lists running tasks; select one to cancel it" },
+  { id: "background.cancel", title: "Cancel background task", cli: I, desc: "Cancels the selected background task" },
+  { id: "explorer.focus", title: "Focus explorer", cli: I, desc: "Opens and focuses the explorer at its current zoom" },
   {
     id: "ui.spell",
     title: "Spelling",

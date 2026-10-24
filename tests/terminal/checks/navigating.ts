@@ -707,15 +707,10 @@ export const NAVIGATING: Check[] = [
     name: "settings: the top bar, the breadcrumb and the window header hidden and shown again; zen has no header",
     covers: {
       cases: ["ui", "breadcrumb", "window-header"],
-      commands: ["ui.top_bar", "ui.breadcrumb", "ui.window_header", "ui.zen", "palette.open"],
+      commands: ["ui.breadcrumb", "ui.window_header", "ui.zen", "palette.open"],
     },
     run: async (s) => {
       s.expect(s.topBar().includes("slipbox"), "the top bar showing to begin with");
-      await leader(s, "u", "b");
-      await s.message("Top bar: off");
-      await s.until(() => !s.topBar().includes("slipbox"), 3000, "the top bar gone");
-      await leader(s, "u", "b");
-      await s.until(() => s.topBar().includes("slipbox"), 3000, "the top bar back");
       // The breadcrumb has no key: the palette (or the list) toggles it. Hidden, the header stays, with its buttons.
       const HEADER = /Read {2}Lens {2}Source/;
       await s.see("§ Halden Ridge Observatory");

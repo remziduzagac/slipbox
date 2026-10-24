@@ -16,7 +16,7 @@ import { prettyKey } from "./keys.ts";
 import type { SaveAsGeometry } from "./saveas.ts";
 import type { DialogGeometry } from "./dialog.ts";
 import { LEFT_VIEWS, RIGHT_VIEWS } from "./panels.ts";
-import { fitWhere, whereOf } from "./where.ts";
+import { drawTopBar } from "./draw-topbar.ts";
 import { drawPane, drawCompletion, drawSignature } from "./draw-pane.ts";
 import { drawSidebar, drawInfo, drawFootnotes, drawOutline } from "./draw-panels.ts";
 import { drawProblemsPanel } from "./draw-problems.ts";
@@ -179,7 +179,7 @@ export function drawApp(app: App, c: Canvas): Geometry {
     return geo;
   }
   const zen = app.ui.zen;
-  const topBar = app.ui.top_bar && !zen ? 1 : 0;
+  const topBar = 1;
   const tabBar = app.tabs.length > 0 && !zen ? 1 : 0;
   const status = zen ? 0 : 1;
   const head = topBar;
@@ -436,91 +436,6 @@ export function button(
   drawText(c, x, mid(band), text, st, maxW);
   geo.hot.push({ id, x, y: band.y, w, h: band.h });
   return w;
-}
-
-/**
- * The top bar: the explorer button and the app chip on the left, the vault's state (indexing) on the right (and the
- * outline's button, when no window's header has it); where you are in the middle (WSP-D4).
- */
-function drawTopBar(app: App, c: Canvas, band: Band, geo: Geometry): void {
-  const theme = app.theme;
-  const g = app.glyphs;
-  const bar = roleStyle(theme, "topbar", pageBg(theme));
-  c.fill(0, band.y, c.width, band.h, bar.bg);
-  const y = mid(band);
-  const icon = (glyph: string) => ` ${glyph} `;
-  // The explorer's button, unless the left rail has it.
-  let x = app.panels.leftRailWidth
-    ? 0
-    : button(
-        app,
-        c,
-        0,
-        band,
-        icon(g.explorerButton),
-        app.panels.sidebarShown ? "topbar_button_on" : "topbar_button",
-        "btn:explorer",
-        geo,
-        bar.bg,
-      ) + 1;
-  x += button(app, c, x, band, " slipbox ", "topbar_chip", "btn:palette", geo, bar.bg);
-
-  // Right side, laid out from the far right inwards. The outline's button is on a window's header,
-  // or here when no window drew one (the header off, a window too short for it). `edge`: the right side's first column.
-  let rx = c.width - 1;
-  let edge = c.width;
-  if (app.tab && !geo.hot.some((h) => h.id === "btn:outline")) {
-    const label = icon(g.outlineButton);
-    rx = c.width - stringWidth(label);
-    edge = rx;
-    button(
-      app,
-      c,
-      rx,
-      band,
-      label,
-      app.panels.outlineShown ? "topbar_button_on" : "topbar_button",
-      "btn:outline",
-      geo,
-      bar.bg,
-    );
-    rx -= 1;
-  }
-  // The vault's state; the watcher and reload markers are about the file, so they sit by its path.
-  const items: { text: string; role: Role }[] = [];
-  if (app.indexing > 0) items.push({ text: `indexing ${app.indexing}…`, role: "status_dim" });
-  for (const it of items) {
-    const w = stringWidth(it.text) + 2;
-    if (rx - w < x + 12) break;
-    rx -= w;
-    edge = rx; // its padding, as the outline's button's and the chip's: where you are keeps 2 columns beyond it
-    drawText(c, rx + 1, y, it.text, { ...roleStyle(theme, it.role, bar.bg), bg: bar.bg });
-  }
-  drawWhere(app, c, band, geo, x + 2, edge - 2, bar.bg);
-}
-
-/**
- * Where you are (WSP-D4), in the top bar's middle between `left` and `right` (the chip's end and the right side's
- * first column, 2 columns kept from each): centred on the screen, then moved only as far as it must to stay in
- * between; cut to fit (`fitWhere`). The vault (with the workspace) lists the named folders when clicked; the branch,
- * in a repository, opens the branches' menu. Drawn, the status line leaves it out (WSP-D5).
- */
-function drawWhere(app: App, c: Canvas, band: Band, geo: Geometry, left: number, right: number, bg: Color | null) {
-  const fit = fitWhere(whereOf(app), right - left);
-  if (!fit) return;
-  const theme = app.theme;
-  const tw = stringWidth(fit.vault) + stringWidth(fit.branch);
-  let x = Math.min(Math.max(Math.floor((c.width - tw) / 2), left), right - tw);
-  const y = mid(band);
-  const part = (text: string, id: string | null, role: Role) => {
-    const hovered = id !== null && app.mouse.hover === id;
-    const w = drawText(c, x, y, text, hovered ? roleStyle(theme, "hover", bg) : { ...roleStyle(theme, role, bg), bg });
-    if (id) geo.hot.push({ id, x, y: band.y, w, h: band.h });
-    x += w;
-  };
-  part(fit.vault, "top:vault", "topbar");
-  if (fit.branch) part(fit.branch, app.git.checkout ? "top:branch" : null, "status_dim");
-  geo.whereOnTop = true;
 }
 
 /**
