@@ -140,3 +140,4 @@ the cleanup is slow, the window opened in between falls back to beside the note.
   all of those. Ran: tests/export-jobs-tui.test.ts (5 pass); distribution's "a pull request runs the tests …"; the
   places test and "an export that can't be written" in tests/tui.test.ts; the terminal checks `export:`, `notes:
   exported`, `notes: an export cancelled` (12/12, `SLIPBOX_TERMINAL_JOBS=2`); the typecheck, the lint, `check:docs`.
+- 2026-10-24: The maintainer's call: no further review rounds, the scope being the issue's; handed over after round 1.
