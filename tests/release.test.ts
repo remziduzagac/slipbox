@@ -479,13 +479,15 @@ const workflow = (name: string) =>
 const needs = (j: Job) => [j.needs ?? []].flat().sort();
 const runs = (j: Job) => (j.steps ?? []).map((s) => s.run ?? "").join("\n");
 
-/** A job's `if`, evaluated as GitHub does for the forms the workflows use: `!`, `&&`, `||`, `==` and `!=` (strings
- *  compared ignoring case), parentheses, quoted strings and the context's dotted names. Anything around the `${{ }}`,
- *  a newline a YAML block keeps included, makes it a string, which GitHub takes as true: refused. */
+/** A job's `if`, evaluated as GitHub does: `!`, `&&` and `||` (each giving back an operand, as GitHub's do), `==` and
+ *  `!=` (strings compared ignoring case), parentheses, quoted strings, numbers, `true`, `false`, `null` and the
+ *  context's dotted names; no functions. Anything around the `${{ }}`, a newline a YAML block keeps included, makes it
+ *  a string, which GitHub takes as true: refused. */
 function holds(expr: string | undefined, context: Record<string, unknown>): boolean {
   const body = /^\$\{\{([\s\S]*)\}\}$/.exec(expr ?? "")?.[1];
   if (body === undefined) throw new Error(`not an expression: ${expr}`);
-  const tokens = body.match(/'[^']*'|&&|\|\||==|!=|!|\(|\)|[A-Za-z_][\w.-]*|\S/g) ?? [];
+  const tokens = body.match(/'[^']*'|&&|\|\||==|!=|!|\(|\)|\d+(?:\.\d+)?|[A-Za-z_][\w.-]*|\S/g) ?? [];
+  const literals: Record<string, unknown> = { true: true, false: false, null: null };
   let at = 0;
   const fail = (): never => {
     throw new Error(`can't read ${JSON.stringify(tokens[at])} in ${expr}`);
@@ -498,7 +500,9 @@ function holds(expr: string | undefined, context: Record<string, unknown>): bool
       return v;
     }
     if (t.startsWith("'")) return t.slice(1, -1);
-    if (/^[A-Za-z_]/.test(t))
+    if (/^\d/.test(t)) return Number(t);
+    if (t in literals) return literals[t];
+    if (/^[A-Za-z_]/.test(t) && tokens[at] !== "(")
       return t.split(".").reduce<unknown>((v, k) => (v as Record<string, unknown> | undefined)?.[k], context);
     return fail();
   };
@@ -515,34 +519,36 @@ function holds(expr: string | undefined, context: Record<string, unknown>): bool
     const same = String(left).toLowerCase() === String(unary()).toLowerCase();
     return op === "==" ? same : !same;
   };
-  const and = (): boolean => {
-    let v = Boolean(comparison());
+  const and = (): unknown => {
+    let v = comparison();
     while (tokens[at] === "&&") {
       at++;
-      v = Boolean(comparison()) && v;
+      const right = comparison();
+      v = v ? right : v;
     }
     return v;
   };
-  const or = (): boolean => {
+  const or = (): unknown => {
     let v = and();
     while (tokens[at] === "||") {
       at++;
-      v = and() || v;
+      const right = and();
+      v = v ? v : right;
     }
     return v;
   };
   const v = or();
   if (at !== tokens.length) fail();
-  return v;
+  return Boolean(v);
 }
 
-/** A step's script run as GitHub runs it on Linux (`bash -eo pipefail`), with the environment given and the commands
- *  in `stubs` first on PATH; in `cwd`. */
+/** A step's script run as GitHub runs one with no `shell` on Linux (`bash -e`), with the environment given and the
+ *  commands in `stubs` first on PATH; in `cwd`. */
 function runStep(step: Step | undefined, env: Record<string, string>, cwd: string, stubs?: string) {
   const script = join(cwd, "step.sh");
   writeFileSync(script, step?.run ?? "exit 99");
   const PATH = [stubs, "/usr/bin", "/bin"].filter(Boolean).join(":");
-  const r = Bun.spawnSync(["bash", "--noprofile", "--norc", "-eo", "pipefail", script], {
+  const r = Bun.spawnSync(["bash", "-e", script], {
     env: { ...env, PATH },
     cwd,
     timeout: 20_000,
@@ -720,6 +726,13 @@ describe("the workflows: one build for releases and previews, previews from test
     // A deployment of a commit deployed before is reported a success and never served under a `release` (0.5.0's
     // `stable` channel, D258) or a `push` (#7: a preview of `main`'s commit); a run by hand's is. A release's commit and
     // `main`'s, under D251, were always deployed by their preview; a preview's own is its commit's first.
+    // The evaluator itself, on forms GitHub reads its own way: an operand given back, literals, a number.
+    const ctx = { github: { event_name: "workflow_dispatch" } };
+    expect(holds("${{ github.event_name == 'workflow_dispatch' && 'full' || 'ci' }}", ctx)).toBe(true);
+    expect(holds("${{ false || 'x' == 'X' }}", ctx)).toBe(true);
+    expect(holds("${{ true && null }}", ctx)).toBe(false);
+    expect(holds("${{ 0 || '' }}", ctx)).toBe(false);
+    expect(() => holds("${{ always() }}", ctx)).toThrow("can't read");
     const pages = workflow("pages.yml");
     const { redeploy, site, deploy } = pages.jobs;
     const run = (event_name: string, ref: string, fork = false) => ({
@@ -812,7 +825,7 @@ describe("the workflows: one build for releases and previews, previews from test
       const tick = (by: string) => `t=$(cat "$FAKE/clock"); echo $((t + ${by})) >"$FAKE/clock"\n`;
       const stub = {
         date: '#!/bin/sh\ncat "$FAKE/clock"\n',
-        curl: `#!/bin/sh\n${tick("$LAG")}for a; do url=$a; done\nf="$FAKE/site/\${url#"$SITE"}"\n[ -f "$f" ] || exit 22\ncat "$f"\n`,
+        curl: `#!/bin/sh\n${tick("$LAG")}echo "$*" >>"$FAKE/curl-args"\nfor a; do url=$a; done\nf="$FAKE/site/\${url#"$SITE"}"\n[ -f "$f" ] || exit 22\ncat "$f"\n`,
         sleep: `#!/bin/sh\n${tick("$1")}echo >>"$FAKE/slept"\nif [ -d "$FAKE/later" ]; then cp "$FAKE"/later/* "$FAKE/site/"; rm -r "$FAKE/later"; fi\n`,
       };
       for (const [name, text] of Object.entries(stub)) {
@@ -825,6 +838,11 @@ describe("the workflows: one build for releases and previews, previews from test
         ? readFileSync(join(dir, "slept"), "utf8").split("\n").length - 1
         : 0;
       const took = Number(readFileSync(join(dir, "clock"), "utf8")) - start;
+      // Every request bounded: a site that hangs can't hold the job past its timeout.
+      const asked = join(dir, "curl-args");
+      const requests = existsSync(asked) ? readFileSync(asked, "utf8").trim().split("\n") : [];
+      for (const args of requests)
+        expect(args).toStartWith("-fsS --connect-timeout 5 --max-time 10 https://example.test/");
       return { code, slept, took, out };
     };
     const built = { DEPLOYMENT: "40045492245.1", STABLE: stable, PREVIEW: preview };
@@ -837,6 +855,7 @@ describe("the workflows: one build for releases and previews, previews from test
     const stale = readBack({ deployment: "39964133295.1", stable, preview }, built);
     expect([stale.code, stale.slept, stale.took]).toEqual([1, 66, 660]);
     expect(stale.out).toContain('deployment "40045492245.1" (served: "39964133295.1")');
+    expect(stale.out).toContain("run pages.yml\nby hand on main instead");
     // A site slow to answer (ten seconds a request, curl's bound) still gives up after eleven minutes, at most a wait,
     // a round of three requests and the message's one later: within the job's 25 minutes, with deploy-pages' ten.
     // With the marker the deployment before's; with no marker at all (a site deployed before markers); with the

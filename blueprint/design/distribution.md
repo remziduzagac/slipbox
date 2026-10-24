@@ -305,15 +305,15 @@ Pages grants (`pages: write`, `id-token: write`) are its deploy job's alone, in 
 takes deployments from `main`, `test` and `v*` tags only.
 
 **Where it's deployed:** in a preview's own run (`preview.yml`'s call), and in a run of `pages.yml` by hand on `main`.
-Every other run — a release published, a run by hand on `test` or a tag — does nothing but start a run by hand on `main`
+Every other run — a release published, a run by hand on another ref — does nothing but start a run by hand on `main`
 (`redeploy`, `actions: write`). A deployment is named by its commit, and one of a commit deployed before is reported a
 success and never served when it's made under a `release` or a `push` (issue #7, actions/deploy-pages#383); a run by
 hand's is served (D258, D?1). A release's commit always was deployed, by its preview (D251); a preview's is its commit's
 first. **Every deployment is read back:** the site holds a marker of the run's own, `deployment` (its ID and attempt),
 and once deployed, it, `stable` and `preview` are fetched from the site until they're what the build wrote (an empty
-line for a channel with none, which the site answers with a 404), for eleven minutes at most, past the ten the site's
-cache keeps a file, and the run fails if they never are. The marker is in no other deployment, so channels the site
-served already don't pass for this one. A re-run of the deploy job alone is refused (the marker built by an earlier
+line for a channel with none, which the site answers with a 404), for eleven minutes and a last round, past the ten the
+site's cache keeps a file, and the run fails if they never are. The marker is in no other deployment, so channels the
+site served already don't pass for this one. A re-run of the deploy job alone is refused (the marker built by an earlier
 attempt than the run's): it would deploy the run's site again, older than any since. A deployment empties the cache; a
 query string doesn't get past it, not being part of its key.
 

@@ -120,13 +120,13 @@ the deployments D258 relies on are served; then whatever fix that calls for.
 - 2026-10-24: Pages tells a repeat before deploying: `pages/deployments/<sha>` answers `{"status":""}` for a commit
   never deployed and `succeed` for one deployed (ran, with a token); anonymously, 404 (ran), so a job
   asking it needs the run's token with `pages: read`.
-- 2026-10-24: Codex's answer came after all, while the experiment ran. Agrees with the
-  reviewer, and adds: deploy-pages takes the ID the API returns before falling back to the version (here the API
-  returns the SHA: "ID: <sha>" in every log); a run by hand on `test` before a preview publishes deploys its commit
-  first, so the preview's own deployment is then a repeat; `main`'s push runs only when its paths filter matches, and
-  without it D258's run is `main`'s first repeat; a marker that changes each run, read back with the channels, and a
-  test that a stale marker fails though the channels match. Its next step, a scratch repository's experiment, is
-  answered by the one above for what matters here (a run by hand served, from `main` and from `test`).
+- 2026-10-24: Codex's answer to the same questions. Agrees with the reviewer, and adds: deploy-pages takes the ID the
+  API returns before falling back to the version (here the API returns the SHA: "ID: <sha>" in every log); a run by hand
+  on `test` before a preview publishes deploys its commit first, so the preview's own deployment is then a repeat;
+  `main`'s push runs only when its paths filter matches, and without it D258's run is `main`'s first repeat; a marker
+  that changes each run, read back with the channels, and a test that a stale marker fails though the channels match.
+  Its next step, a scratch repository's experiment, is answered by the one above for what matters here (a run by hand
+  served, from `main` and from `test`).
 - 2026-10-24: Planned with Codex (every deployment a run by hand on `main`, a marker read back). Its critique: hand
   off everything rather than check first (a check adds an undocumented answer and a race, and a preview isn't always
   first); a hand-off that waits for the run it starts deadlocks today, both in the `pages`
@@ -216,3 +216,21 @@ the deployments D258 relies on are served; then whatever fix that calls for.
   view: a worktree kept outside the view chosen …` ("docs/ under each of the two"), which passed on `ubuntu-24.04`;
   nothing in slipbox changes here (a change to `.github/` runs every check), so not this change's. The test jobs run
   into `dev`'s hanging `tui.test.ts` check since #42, fixed elsewhere.
+- 2026-10-24: Review, round 3: Codex's part skipped, Codex at its usage limit; a second reviewer does it, beside
+  `/code-review`.
+- 2026-10-24: Review, round 3: `/code-review` and the second reviewer, each finding checked. Taken: re-running a
+  preview's `pages / site` re-runs `deploy` too, deploying its commit again under a push, not served: the read-back's
+  failure now says so and names the run by hand on `main`, and `MAINTAINING.md` § Previews too; a run by hand on any
+  ref but `main` hands off, not only `test` or a tag: D?1, the design and the comment say "another ref"; `holds` read
+  `true`, `false` and `null` as names and gave `&&`/`||` booleans, not GitHub's operands: literals, numbers and
+  operands now, checked on forms like `… && 'full' || 'ci'`; nothing held curl to its bounds (the stub took the URL
+  alone): each request's arguments are checked now, and taking the bounds out fails the test; GitHub runs a step with
+  no `shell` as `bash -e`, not `-eo pipefail`: `runStep` too; D?1 and the pull request had a read-back pass on
+  `main`'s push for 0.5.0, which had none (5fe758f's `pages.yml` reads nothing back): said as what D258's would do;
+  the design's "eleven minutes at most" is that and a last round; T10's Log had the runs out of order; the
+  `deploy` job's comment on `v*` tags; a comment line of 130 columns. Not taken: a preview that repeats a commit after
+  `dev` reached `main` without `test` (the ruleset gap left to the maintainer; its read-back fails, loudly); a loop
+  guard for a tag named `main` (nothing makes one, and the `pages` group runs one at a time); `served`'s own check
+  for no marker, now behind the guard's, kept so the read-back can't pass on an empty one by itself; the session's
+  notes on Codex's skips, which the maintainer asked for; and, again, `v*` in the environment, D?1's number, the
+  condition written twice.

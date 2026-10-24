@@ -302,28 +302,29 @@ query string to get past the site's cache (it isn't part of the cache's key: a n
 ## D?1: Only a preview's run and a run by hand on `main` deploy the site, each read back by its own marker (2026-10-24)
 
 **Decision:** `pages.yml` deploys in two kinds of run only: a preview's (`preview.yml`'s call, under its push to
-`test`), its commit's first deployment, and a run by hand on `main`. Every other run deploys nothing and starts a run
-by hand on `main` instead (`redeploy`): a release published, as D258 has it, and now a run by hand on `test` or a tag.
-`main` moving no longer starts `pages.yml`: it moves only for a release (D251), which deploys once it's published, so
-a release's docs go live with it. Every deployment also puts a marker of its own on the site, `deployment` (the run's
-ID and attempt), and reads it back with the channels, for eleven minutes by the clock; it fails when the site doesn't
-serve it. A re-run of the deploy job alone is refused, the marker an attempt older than the run's: it would deploy the
-run's site again, older than any since. Amends D258 and GR-D14. Detail: design/distribution.md § Previews.
+`test`), its commit's first deployment, and a run by hand on `main`. Every other run deploys nothing and starts a run by
+hand on `main` instead (`redeploy`): a release published, as D258 has it, and now a run by hand on another ref. `main`
+moving no longer starts `pages.yml`: it moves only for a release (D251), which deploys once it's published, so a
+release's docs go live with it. Every deployment also puts a marker of its own on the site, `deployment` (the run's ID
+and attempt), and reads it back with the channels, for eleven minutes by the clock; it fails when the site doesn't serve
+it. A re-run of the deploy job alone is refused, the marker an attempt older than the run's: it would deploy the run's
+site again, older than any since. Amends D258 and GR-D14. Detail: design/distribution.md § Previews.
 
 **Why:** A deployment is named by its commit, and one of a commit deployed before is reported a success and not served
 under a `push` as well as a `release`: #7's preview, of the commit `main`'s push had deployed, wasn't, and nor was a
 tag's push in actions/deploy-pages#383; no report has a `push` repeat served. Under D251, `main` takes only `test`'s
-commits, each deployed by its preview, so `main`'s push was such a repeat, and its read-back passed on the channels the
-preview had served whether it was served or not (0.5.0's isn't recorded). A run by hand was served in every report, and
-here four times, on 2026-10-24: on `main`, of 0.5.0's commit, deployed before from `test`, `main` and `v0.5.0`; on
-`test`, of 71313f3, deployed before from `test`; and on `main` twice in a row, the second deploying the commit the site
-was serving, as a release's run by hand does ([research/github-behaviour.md](../research/github-behaviour.md) § Pages,
-T24). A preview's own deployment is its commit's first, served whatever the event, so it stays in the preview's run,
-which fails when its site isn't served. The marker is in no other deployment, so the read-back can no longer pass on
-channels the site served already. Dropping `main`'s push: handed off, it would put a release's docs on the site when
-`main` moves, before the release is built and published; and it doubled the runs in the `pages` group, where a newer
-pending run replaces an older one (the maintainer's call, 2026-10-24). A preview or a run by hand before the release is
-published still builds the docs from `main`, as every deployment does.
+commits, each deployed by its preview, so `main`'s push was such a repeat, and D258's read-back would pass on the
+channels the preview had served whether it was served or not (0.5.0's push, made before the read-back, had none, and
+whether it was served isn't recorded). A run by hand was served in every report, and here four times, on 2026-10-24: on
+`main`, of 0.5.0's commit, deployed before from `test`, `main` and `v0.5.0`; on `test`, of 71313f3, deployed before from
+`test`; and on `main` twice in a row, the second deploying the commit the site was serving, as a release's run by hand
+does ([research/github-behaviour.md](../research/github-behaviour.md) § Pages, T24). A preview's own deployment is its
+commit's first, served whatever the event, so it stays in the preview's run, which fails when its site isn't served. The
+marker is in no other deployment, so the read-back can no longer pass on channels the site served already. Dropping
+`main`'s push: handed off, it would put a release's docs on the site when `main` moves, before the release is built and
+published; and it doubled the runs in the `pages` group, where a newer pending run replaces an older one (the
+maintainer's call, 2026-10-24). A preview or a run by hand before the release is published still builds the docs from
+`main`, as every deployment does.
 
 **Cost:** A run by hand elsewhere becomes two runs, a minute apart, like a release's. A change to the bootstrap, the
 docs or the site reaches the site with the next preview or release, or a run by hand. A deployment that fails its
