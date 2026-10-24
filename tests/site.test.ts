@@ -2,7 +2,17 @@
 // the site's addresses, a page's title and description. The build itself runs in CI's `site` job (`bun run site`).
 
 import { describe, expect, test } from "bun:test";
-import { copyFileSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  copyFileSync,
+  cpSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { crc32 } from "node:zlib";
@@ -21,7 +31,7 @@ import {
 } from "../site/scripts/gather.ts";
 import { CARD, DESCRIPTION, DOCS_URL, fullTitle, headTags, LINE, SENTENCE } from "../site/scripts/about.ts";
 import { headOf, problems, rootProblems } from "../site/scripts/check-meta.ts";
-import { type LlmsPage, llmsFull, llmsTxt } from "../site/scripts/llms.ts";
+import { AGENT_GUIDE, type LlmsPage, llmsFull, llmsTxt } from "../site/scripts/llms.ts";
 import { rootPage } from "../site/scripts/root.ts";
 import { valueImportsOf } from "../scripts/check-boundary.ts";
 import { pngSize } from "../scripts/screenshot.ts";
@@ -406,6 +416,31 @@ describe("the docs' site: the docs for agents (SEO-D5)", () => {
     });
     expect(targets.length).toBeGreaterThan(5);
     expect(targets.filter((t) => !/^https:\/\//.test(t))).toEqual([]);
+  });
+
+  test("the gathering runs in a clean checkout, which has no public/ yet, and serves the docs for agents there", () => {
+    // A copy of what it reads, as a clone has it: nothing the build made.
+    const repo = join(import.meta.dir, "..");
+    const root = mkdtempSync(join(tmpdir(), "slipbox-gather-"));
+    try {
+      for (const dir of ["docs", "assets", join("site", "scripts")])
+        cpSync(join(repo, dir), join(root, dir), { recursive: true });
+      const index = join("site", "src", "content", "docs", "index.mdx");
+      mkdirSync(join(root, index, ".."), { recursive: true });
+      copyFileSync(join(repo, index), join(root, index));
+      expect(existsSync(join(root, "site", "public"))).toBe(false);
+      const run = Bun.spawnSync([process.execPath, join(root, "site", "scripts", "gather.ts")], {
+        cwd: join(root, "site"),
+        env: { ...process.env },
+      });
+      expect(run.stderr.toString()).toBe("");
+      expect(run.exitCode).toBe(0);
+      for (const file of [AGENT_GUIDE, "llms.txt", "llms-full.txt", CARD.file, "logo.svg"])
+        expect(existsSync(join(root, "site", "public", file)), file).toBe(true);
+      expect(readFileSync(join(root, "site", "public", AGENT_GUIDE), "utf8")).toStartWith("# ");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 
   test("where llms.txt sends an agent: a page's address, the agent guide's Markdown", () => {

@@ -37,3 +37,7 @@ full text absolute, a page's own anchors included; compatibility anchors left ou
   the full text has them. `llms.txt`'s paragraph names the agent guide, as the acceptance asks; a map with no
   Reference group stops the gathering, since the paragraph promises the Optional section. `pageAddress` is the one
   place a page's address is made. Mutations: each undone, caught.
+- 2026-10-24, CI on the review's fixes: a clean checkout has no `site/public/`, and writing the guide there came
+  before anything made it; the gathering makes it first, and a test runs it in a copy with none. A fresh clone's
+  `bun run site` passes. CodeQL flagged the `pages.yml` test's pattern, a repetition that could backtrack: the
+  test splits the commands into words instead.

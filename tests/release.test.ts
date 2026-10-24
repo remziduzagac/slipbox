@@ -867,9 +867,9 @@ describe("the workflows: one build for releases and previews, previews from test
     // until the next one brings it to main, and no preview deploys. The site's build runs its own checks (SEO-D6).
     const site = workflow("pages.yml").jobs.site!;
     expect(site.steps?.find((s) => s.uses?.startsWith("actions/checkout@"))?.with?.ref).toBe("main");
-    const files = [...runs(site).matchAll(/\b(?:bun|node|sh|bash)\s+(?:--?[\w-]+\s+)*([\w./-]+\.\w+)/g)].map(
-      (m) => m[1],
-    );
+    const files = runs(site)
+      .split(/\s+/)
+      .filter((word) => /\.(?:ts|js|mjs)$/.test(word));
     expect(files).toEqual(["scripts/bootstrap.ts", "scripts/release.ts"]);
     expect(runs(site)).toContain("bun run site\n");
   });

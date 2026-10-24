@@ -169,6 +169,8 @@ function gather(): void {
   const map = readMap(mapText);
   const legacy = readLegacyPages(mapText);
   for (const entry of readdirSync(OUT)) if (entry !== "index.mdx") rmSync(join(OUT, entry), { recursive: true });
+  // A clean checkout has none: everything in it is made here.
+  mkdirSync(join(SITE, "public"), { recursive: true });
   const isDir = (p: string) => existsSync(join(REPO, p)) && statSync(join(REPO, p)).isDirectory();
   const sidebar: { label: string; items: { slug: string }[] }[] = [];
   let pages = 0;
