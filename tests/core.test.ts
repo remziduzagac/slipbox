@@ -5000,7 +5000,7 @@ describe("commands run by your shell (25.7)", () => {
     }
   });
 
-  test("merged (a window's, D?1): its errors through its output's pipe, in the order written — your shell given -c and the command, its exit, its signal; stopped, what it started too", async () => {
+  test("merged (a window's, D264): its errors through its output's pipe, in the order written — your shell given -c and the command, its exit, its signal; stopped, what it started too", async () => {
     const { runShell } = await import("../src/core/shell.ts");
     const was = process.env.SHELL;
     try {

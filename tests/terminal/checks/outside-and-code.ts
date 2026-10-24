@@ -1152,7 +1152,7 @@ export const OUTSIDE_AND_CODE: Check[] = [
   },
   {
     area: "outside-and-code",
-    name: "shell: :!cmd's window lists what a command writes to its errors among its output, where it wrote it (D?1)",
+    name: "shell: :!cmd's window lists what a command writes to its errors among its output, where it wrote it (D264)",
     covers: { commands: ["shell.run"] },
     options: { open: MEETING },
     run: async (s) => {

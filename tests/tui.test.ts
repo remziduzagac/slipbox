@@ -18055,7 +18055,7 @@ describe("commands run by your shell (25.7)", () => {
     expect(h.app.overlay).toBeNull();
     expect(h.app.view!.buf.rel).toBe("c1.md");
     expect(h.app.currentLayout(h.app.view!).lines[h.app.view!.cur.row]!.src).toBe(5);
-    // Its errors among its output where it wrote them, however quickly: through one pipe (D?1). Read from two, every
+    // Its errors among its output where it wrote them, however quickly: through one pipe (D264). Read from two, every
     // line of one came before every line of the other.
     await ex(h, "!i=0; while [ $i -lt 20 ]; do echo o$i; echo e$i >&2; i=$((i+1)); done");
     expect(list(h).items.map((i) => i.label)).toEqual(Array.from({ length: 20 }, (_, i) => [`o${i}`, `e${i}`]).flat());
@@ -18129,7 +18129,7 @@ describe("commands run by your shell (25.7)", () => {
     expect(h.app.view!.buf.source.length).toBe("raep\nELPPA\n".length + 2_200_000 + 22_000);
     await h.keys("u");
     expect(h.app.view!.buf.source).toBe("raep\nELPPA\nfig\n");
-    // What it writes to its errors stays out of the lines it gives back (a window's merges them, D?1).
+    // What it writes to its errors stays out of the lines it gives back (a window's merges them, D264).
     await ex(h, "3!echo warning >&2; tr a-z A-Z");
     expect(h.app.view!.buf.source).toBe("raep\nELPPA\nFIG\n");
     await h.keys("u");

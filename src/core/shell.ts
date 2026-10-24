@@ -68,7 +68,7 @@ export const STDOUT_MAX = 32 * 1024 * 1024;
 /**
  * Run a command by your shell (`$SHELL`, else `/bin/sh`) in `cwd`, `input` its standard input (none: nothing to read).
  * `stop` ends it — and, run by a shell, what the shell started — and `done` says how it went. `merged`: its standard
- * error through its standard output's pipe, so what it prints comes in the order it reached the pipe (D?1); two pipes,
+ * error through its standard output's pipe, so what it prints comes in the order it reached the pipe (D264); two pipes,
  * read as each has something, can come either way. (A program that holds its output back while it isn't writing to
  * a terminal, as many do, still writes it late: only a terminal of its own would change that.)
  */

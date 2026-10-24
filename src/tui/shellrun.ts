@@ -25,7 +25,7 @@ function prepared(app: App, command: string): string | null {
 
 /**
  * Started: the job kept (one at a time), said, and `then` when it ends — the frame drawn again. `merged`: its errors
- * through its output's pipe, in the order they reach it (a window's, D?1; a filter's lines are its output alone).
+ * through its output's pipe, in the order they reach it (a window's, D264; a filter's lines are its output alone).
  */
 function launch(
   app: App,

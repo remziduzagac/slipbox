@@ -604,7 +604,7 @@ typed revision is kept as a commit, so it doesn't move with the branch it was ty
 **Not chosen:** asking GitHub or another forge for a pull request's base: whoever opens slipbox passes it, and slipbox
 stays independent of any forge. Several bases at once, or comparing two arbitrary commits on the screen.
 
-## D?1: `:!cmd`'s window: its errors through its output's pipe, in the order they reach it (25.7, 2026-10-24)
+## D264: `:!cmd`'s window: its errors through its output's pipe, in the order they reach it (25.7, 2026-10-24)
 
 **Decision:** `:!cmd` (`shell.run`) gives the command one pipe for its standard output and error: `/bin/sh`, by its
 path, runs `exec "$0" -c "$1" 2>&1` with your shell (`$SHELL`, else `/bin/sh`) and the command, so the shell's standard

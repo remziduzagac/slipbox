@@ -1236,10 +1236,10 @@ shell") run what you type, never what a vault brings: a folder's config can't bi
 -c` in the vault's folder, `SLIPBOX_ROOT` and `SLIPBOX_FILE` in its environment, in a process group of its own so
 stopping it stops what it started; the TUI goes on meanwhile, `running: cmd` said. `:!cmd`'s standard error goes through
 its standard output's pipe, so the window lists what it prints in the order it reached the pipe: `/bin/sh` points the
-shell's standard error at its standard output and becomes it (D?1). (A program that holds its output back off a terminal
-still writes it late.) A filter's lines are its standard output alone, and the window a failed one opens lists the two
-as they were read. Each stream is decoded as a stream, so a character cut across two reads stays whole. What it prints
-is kept to 2 MB (the window says so when cut short), a filter's output to 32 MB; the window is a list — each line
+shell's standard error at its standard output and becomes it (D264). (A program that holds its output back off a
+terminal still writes it late.) A filter's lines are its standard output alone, and the window a failed one opens lists
+the two as they were read. Each stream is decoded as a stream, so a character cut across two reads stays whole. What it
+prints is kept to 2 MB (the window says so when cut short), a filter's output to 32 MB; the window is a list — each line
 sanitized, filtered as typed — whose `enter` on a `path:line` of the vault opens it.
 
 **Spelling (`25.6`, D157; `space u s`, `[spell] enabled`).** A note's misspelt words are marked (`spell`: underlined) in

@@ -39,13 +39,13 @@ shown before the fix, and gone after.
 ## References
 
 - Delivers: `blueprint/design/testing.md` § Strategy ("A test waits for a condition, never a fixed time"; "Flaky tests
-  are fixed, or quarantined by name; never retried"); `blueprint/design/tui.md` § Commands run by your shell (D?1).
+  are fixed, or quarantined by name; never retried"); `blueprint/design/tui.md` § Commands run by your shell (D264).
 - Rests on: D239 (a pull request runs what its change reaches); D155 (25.7, commands run by your shell); T21, T22 (the
   checks' `panelFocused`, the checks' screen keeping a character cut across reads).
 - Tests: `tests/tui.test.ts` ("a file's linters: findings beside their lines as it opens …", ":%!, :.!, :N,M!, and !
-  on a selection …"); `tests/core.test.ts` ("merged (a window's, D?1): …"); `tests/clipboard-async.test.ts`
+  on a selection …"); `tests/core.test.ts` ("merged (a window's, D264): …"); `tests/clipboard-async.test.ts`
   ("clipboard timeout falls back …"); `tests/tool-process.test.ts` ("a helper in a session of its own …"); the terminal
-  check "shell: :!cmd's window lists what a command writes to its errors among its output, where it wrote it (D?1)".
+  check "shell: :!cmd's window lists what a command writes to its errors among its output, where it wrote it (D264)".
 
 ## Log
 
@@ -109,8 +109,8 @@ shown before the fix, and gone after.
   19 runs in 200,000, about 1 in 10,000. Possible, unlikely; left unexplained, the test unchanged.
 - 2026-10-24: Ran, the change list's check 20 times, 2 at a time: 20 passed.
 - 2026-10-24: The maintainer decided, asked: the link list's test fixed in the test, slipbox's matching unchanged (it
-  narrows by the full path, design/tui.md § What's under the cursor); `:!cmd` through one pipe in slipbox (D?1); the two
-  time bounds by the state they guard, with a wide margin; a diagnostic on CI's runners (draft #51).
+  narrows by the full path, design/tui.md § What's under the cursor); `:!cmd` through one pipe in slipbox (D264); the
+  two time bounds by the state they guard, with a wide margin; a diagnostic on CI's runners (draft #51).
 - 2026-10-24: Codex's critique of the plan, taken: the linters' missing one held until the test has seen the others'
   findings and checked its message isn't there yet (released when the other two return, all three could still land
   before the test looks); no sleep to force two pipes' wrong order — the errors' place in standard output is the
@@ -128,7 +128,7 @@ shown before the fix, and gone after.
   - process group: under 10 s, halfway between the 0.42 s stop and the helper's 20 s; `alive(helper)` already says the
     run didn't wait for it. Undone (the cutoff at 100 s), with `--timeout 30000` as `bun run test` runs: 20028 ms
     against 10000, failed on the bound, not on the runner's timeout.
-- 2026-10-24: Fixed, `:!cmd` (D?1): `runShell` takes `merged`, which `shellRun` passes and the filter doesn't. Ran: the
+- 2026-10-24: Fixed, `:!cmd` (D264): `runShell` takes `merged`, which `shellRun` passes and the filter doesn't. Ran: the
   core test (errors in standard output where written, 50 lines by turns, a shell with a space in its path, `$SHELL`
   unset, exit 3, SIGTERM, a stop), the TUI's shell tests (the filter's lines without its error added): pass. Undone
   (`merged` ignored): the core test fails on the errors' place; the new terminal check fails 10 of 10, its window's
@@ -160,15 +160,15 @@ shown before the fix, and gone after.
 - 2026-10-24: Review, round 1, of the branch's first commit: `/code-review`, and in Codex's place a fresh Claude
   reviewer — Codex's part skipped, its usage limit reached (a menu in its pane at the prompt).
 - 2026-10-24: Round 1's findings, the two reviews consolidated, each verified:
-  - Real, the docs and D?1 claiming the window shows a command's lines "as a terminal shows them" (both): ran,
+  - Real, the docs and D264 claiming the window shows a command's lines "as a terminal shows them" (both): ran,
     Python's `print("out")` then `print("err", file=sys.stderr)` comes back `err`, `out` through one pipe, its output
     held back while it isn't writing to a terminal. Reworded: in the order the lines reach the pipe; a terminal of
-    its own for each command added to D?1's Not chosen.
+    its own for each command added to D264's Not chosen.
   - Real, a character cut across two reads decoded as two replacement characters (code-review): ran, an em dash
     printed in two writes came back `��`, merged or not, on either stream — older than this change, and a filter
     puts it in the note. Fixed: each stream decoded as a stream (`setEncoding`). Taken in, so the scope grew.
   - Real, a failed filter's window lists its output and errors as read (both): by construction, its two pipes.
-    Said so in the design and D?1; a filter's lines must stay its standard output alone.
+    Said so in the design and D264; a filter's lines must stay its standard output alone.
   - Real, merged, every chunk kept twice, in `output` (2 MB) and `stdout` (32 MB), the second read by nothing
     (code-review). Fixed: merged, `stdout` is `output`.
   - Real, the clipboard test's `finished` could never be written within it, and its pid check was skipped when no
@@ -183,13 +183,13 @@ shown before the fix, and gone after.
     showed `shellRun` passing `merged` (the second reviewer). Fixed: the stop once both sleeps run, both seen gone;
     a TUI test of 20 lines by turns through `shellRun`.
   - Taken from the second reviewer over code-review's: `/bin/sh` by its path, not `sh` from `PATH`, as the shell's
-    own fallback is; and on macOS a `DYLD_*` variable doesn't reach the command through `/bin/sh`, in D?1's Cost.
-  - Not taken: `merged` derived from `input` (code-review) — a window's run and a filter's are what D?1 tells apart,
-    said where they're started; the `D?1` placeholder (code-review) — numbered when merged, as the brief says; the
-    bounds "patching the symptom" (code-review) — testing.md's wide margin for a timeout's test, and neither test is
-    about latency (why the timers ran late on CI's macOS, the whole suite in one process, is not known); a
-    successful filter's errors not shown (code-review) — as before this change, the design's choice; `SHLVL` one
-    higher under `/bin/sh` (both) — nothing reads it.
+    own fallback is; and on macOS a `DYLD_*` variable doesn't reach the command through `/bin/sh`, in D264's Cost.
+  - Not taken: `merged` derived from `input` (code-review) — a window's run and a filter's are what D264 tells apart,
+    said where they're started; the decision left unnumbered (code-review) — numbered when merged, as the brief says;
+    the bounds "patching the symptom" (code-review) — testing.md's wide margin for a timeout's test, and neither test is
+    about latency (why the timers ran late on CI's macOS, the whole suite in one process, is not known); a successful
+    filter's errors not shown (code-review) — as before this change, the design's choice; `SHLVL` one higher under
+    `/bin/sh` (both) — nothing reads it.
 - 2026-10-24: Round 1's fixes, each undone once: stream decoding off, the cut em dash fails; the redraw only after
   all, the linters test fails on the layout and the frame not asked for; the clipboard's kill off, its helper is seen
   still running; `shellRun` without `merged`, the 20 lines by turns fail; the stop signalling the shell alone, the
@@ -214,9 +214,9 @@ shown before the fix, and gone after.
   - Real, the linters test's stand-in `requestRender` left in place by a failure, and the linters check's comment
     reading as if it were the regression test (both). Fixed.
   - Taken: `program` and `args` as plain constants, no `!` (code-review).
-  - Not taken: `D?1` numbered now (code-review) — at the merge; one helper for the "lay out this buffer's views again
-    and ask for a frame" loop that about fifteen places repeat (code-review) — a refactor beyond this change, left as a
-    follow-up.
+  - Not taken: the decision numbered now (code-review) — at the merge; one helper for the "lay out this buffer's views
+    again and ask for a frame" loop that about fifteen places repeat (code-review) — a refactor beyond this change, left
+    as a follow-up.
 - 2026-10-24: Added, from the main session: `links-and-files: view: a worktree kept outside the view chosen …` failed
   on `macos-15` (run 40083598491, b0a508d), as after #34, passing on reruns: `docs/ under each of the two` asked the
   moment kestrel's row was listed, but kestrel's own folders come a read later on the listing threads
@@ -236,10 +236,12 @@ shown before the fix, and gone after.
     on CI every wait is at least 30 s (`tests/terminal/session.ts`), where the bound is what fails; a cut window's
     last character possibly half a surrogate pair (code-review) — cosmetic, in a window already said cut short; the
     2 MB and 32 MB limits counted in UTF-16 units, not bytes (code-review) — as before this change, left as a
-    follow-up to say or change; `D?1` (code-review) — numbered at the merge.
+    follow-up to say or change; the decision's number (code-review) — given at the merge.
 - 2026-10-24: Follow-ups, not in this pull request: the limits' unit (bytes or characters, said in the design and the
   docs); one helper for laying a buffer's views out again and asking for a frame (about fifteen copies); the
   pictures' ids able to collide (24 bits); a successful filter's errors shown nowhere.
 - 2026-10-24: Done, after three rounds of review: every acceptance criterion met (each test accounted for above; each
   fix with a test that fails without it; the design, docs and changelog where slipbox changed). Moved to `archive/`;
   the merge is the maintainer's acceptance.
+- 2026-10-24: Numbered, from the main session before the merge: the decision is D264 (`decisions/editing.md`), in every
+  place that cites it.
