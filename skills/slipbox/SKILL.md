@@ -1,7 +1,7 @@
 ---
 name: slipbox
 description: >-
-  Drive slipbox, the terminal companion the user reads, reviews and edits your work in, from the
+  Drive slipbox, where the user reads, reviews and edits what you write in their terminal, from the
   shell: find text across notes, read and safely write notes (atomic, never clobbering a note the user
   changed), replace text, tick tasks, render a note as readable text, follow links (paths, wikilinks,
   slipbox:// pointers), write a link in the folder's convention, list links and backlinks, outline a

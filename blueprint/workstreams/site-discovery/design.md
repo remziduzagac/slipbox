@@ -21,12 +21,13 @@ loses its own description, so Starlight gives it the site's (`description` in th
 visible heading and text don't change. `og:title` stays the page's own title, and a page's description its first
 paragraph, as now.
 
-**The card** (SEO-D4), `assets/share-card.png`, 1,200 by 630 and at most 1 MB: the logo and the name at the top left,
-the line beneath, and the README's screenshot (`docs/images/readme-hero.png`) below them, cut off by the card's right
-and bottom edges, on the logo's dark blue. `scripts/share-card.ts` (`bun run share-card`) draws it as an SVG and
+**The card** (SEO-D4), `assets/share-card.png`, 1,200 by 630 and at most 1 MB: the logo and the name at the left,
+the line beneath, and the README's screenshot (`docs/images/readme-hero.png`) on the right, cut off by the card's right
+edge, on the logo's dark blue. `scripts/share-card.ts` (`bun run share-card`) draws it as an SVG and
 rasterises it with `scripts/screenshot.ts`' `toPng`, which gains a choice of fonts and default family (DejaVu Sans and
 its bold here; the screenshots keep DejaVu Sans Mono), and embeds the screenshot as `toSvg` embeds a picture. It writes
-into the PNG, as `tEXt` chunks, the line and the SHA-256 of the logo and of the screenshot. `tests/site.test.ts` fails
+into the PNG, as `iTXt` chunks (UTF-8, so a line beyond Latin-1 reads back as written), the line and the SHA-256 of the
+logo and of the screenshot. `tests/site.test.ts` fails
 when one differs from what's committed now, naming which and saying to run `bun run share-card` and look at the card;
 it also holds the card to its size and its byte limit. The gathering copies the card into the site, as it does the
 logo (`public/share-card.png`). Every page's head gets, from the config's `head` (`headTags`): `og:image` (an absolute
@@ -42,12 +43,13 @@ rel="describedby">`, as llmstxt.org proposes.
   agent and that an agent can use it too, that these docs follow the newest release while `slipbox skill` prints the
   skill of the version installed, and that the full text is in `llms-full.txt`, with its size; then an H2 per group of
   the docs map, in its order, a line per page, `- [<title>](<absolute address>): <its description>`, the agent guide's
-  line linking its Markdown (`agent-guide.md`). The Reference group goes under `## Optional`, the proposal's section
-  for what an agent may skip. The compatibility pages aren't listed.
-- `llms-full.txt`: the same H1 and blockquote, then every page of the map in its order, each `# <title>`, a
-  `Source: <absolute address>` line and its Markdown as gathered, every link and picture made absolute: the site's
-  `/slipbox/docs/…` addresses prefixed by its origin, and a page's own anchors (`#…`) by its address. The compatibility
-  anchors (`<a id="…"></a>` lines) are left out. About 650 KB.
+  line linking its Markdown (`agent-guide.md`), which the paragraph names too. The Reference group goes under
+  `## Optional`, the proposal's section for what an agent may skip; a map with no Reference group stops the gathering,
+  since the paragraph promises the section. The compatibility pages aren't listed.
+- `llms-full.txt`: `# slipbox documentation` and the same blockquote, then every page of the map in its order, each
+  `# <title>`, a `Source: <absolute address>` line and its Markdown as gathered, every link and picture made absolute:
+  the site's `/slipbox/docs/…` addresses prefixed by its origin, and a page's own anchors (`#…`) by its address. The
+  compatibility anchors (`<a id="…"></a>` lines) are left out. About 700 KB.
 
 **The root** (SEO-D3), `/slipbox/`, is still an instant redirect to `docs/`, which Google takes as permanent, so the
 docs home is what it indexes. `site/scripts/root.ts`' `rootPage(site, repository)`, which imports only `about.ts`,
@@ -67,11 +69,14 @@ built docs and fails, listing each problem, when:
   differs from `about.ts`'; the home's description isn't the site's;
 - the card isn't in the built site, or its size (read from its PNG header) isn't what the tags say;
 - `llms.txt` or `llms-full.txt` is missing, or leaves out a page of the docs map;
-- the root's page lacks its title, description, canonical link, refresh, `describedby` link or the card's tags.
+- the root's page lacks its title, description, canonical link, refresh, `describedby` link or the card's tags;
+- the agent guide's Markdown links anything by a relative address.
 
 In the site's build there's no root yet, so it checks `rootPage`'s for the site's own base, and CI's `site` job runs it
-on every change, inside the required check. `pages.yml` runs it again over the Pages site it's about to deploy
-(`--pages _site`): the root `release.ts` wrote, and the docs beside it.
+on every change, inside the required check; `tests/release.test.ts` holds `writeSite` to writing `rootPage`'s page.
+`pages.yml` runs no step of its own for it: its `site` job checks out `main` while a preview's run takes test's
+workflow, so a step running a file newer than the last release would fail every preview until the next one. Once a
+release brings the build's check to `main`, `pages.yml`'s `bun run site` runs it before each deployment.
 
 Previously: none; the section is new.
 
@@ -81,10 +86,33 @@ In "The Pages site" paragraph, the sentence on the site's index, whole:
 
 The site also holds the docs, at `docs/` (§ The documentation site), and its `index.html` (`site/scripts/root.ts`)
 sends a visitor there at once, its head saying what slipbox is to a search engine and a link preview (§ What the site
-tells search engines and agents). `pages.yml` checks both before it deploys.
+tells search engines and agents).
 
 Previously: "The site also holds the docs, at `docs/` (§ The documentation site), and its `index.html` sends a visitor
 there, with a link to the repository."
+
+## MODIFIED design/distribution.md § The documentation site
+
+In "Its pages are gathered" paragraph, the sentence on the screenshots and the agent guide, whole:
+
+The screenshots are copied in, and the agent guide is also served as its Markdown (`/slipbox/docs/agent-guide.md`),
+for an agent to read, its links made absolute as in `llms-full.txt`: fetched alone, a relative one would resolve
+against the file, where no page is. The gathering also writes `llms.txt` and `llms-full.txt`, and copies the share card
+(§ What the site tells search engines and agents).
+
+Previously: "The screenshots are copied in, and the agent guide is also served as its Markdown
+(`/slipbox/docs/agent-guide.md`), for an agent to read."
+
+In the "Built" paragraph, the steps, whole:
+
+**Built** by `bun run site` (the site's install, then `gather`, `astro build` under Bun,
+`site/scripts/check-links.ts`, which fails on a link within the site to a page or heading that isn't there, or to a
+path on the domain outside it but the installer's files, and `site/scripts/check-meta.ts`, § What the site tells
+search engines and agents).
+
+Previously: "**Built** by `bun run site` (the site's install, then `gather`, `astro build` under Bun, and
+`site/scripts/check-links.ts`, which fails on a link within the site to a page or heading that isn't there, or to a
+path on the domain outside it but the installer's files)."
 
 ## Where slipbox describes itself (SEO-D1)
 

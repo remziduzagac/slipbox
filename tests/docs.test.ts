@@ -582,7 +582,7 @@ describe("how slipbox describes itself (SEO-D1)", () => {
       "site/astro.config.mjs",
       "site/scripts/about.ts",
     ])
-      expect(read(file), file).not.toMatch(/companion for coding agents/i);
+      expect(read(file), file).not.toMatch(/companion for coding agents|terminal companion/i);
   });
 });
 

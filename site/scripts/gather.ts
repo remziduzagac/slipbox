@@ -7,7 +7,8 @@
 //   - A page's H1 is its title, its first paragraph its description; the H1 leaves the text (Starlight draws it).
 //   - Links between the docs become the site's addresses (`../manual/keys.md#leader` → `/slipbox/docs/manual/keys/#leader`);
 //     one to a file outside docs/ goes to it on GitHub. Code, fenced or inline, is left as it is.
-//   - The screenshots are copied to public/images; the agent guide is served as it is, for an agent to read.
+//   - The screenshots are copied to public/images; the agent guide is served as Markdown too, for an agent to read,
+//     its links absolute.
 //   - llms.txt and llms-full.txt, the docs for agents (llms.ts), go to public/: the docs' root.
 //   - The logo is the README's (assets/logo.svg), copied to public/logo.svg: the site's logo and its favicon. The share
 //     card (assets/share-card.png, scripts/share-card.ts) is copied beside it: the picture a shared link shows.
@@ -24,7 +25,7 @@ import {
 } from "node:fs";
 import { dirname, join, posix, relative, resolve } from "node:path";
 import { BASE, CARD, DOCS_URL, GITHUB, SITE as ORIGIN } from "./about.ts";
-import { type LlmsPage, llmsFull, llmsTxt } from "./llms.ts";
+import { AGENT_GUIDE, type LlmsPage, llmsFull, llmsTxt } from "./llms.ts";
 
 const SITE = resolve(import.meta.dir, "..");
 const REPO = resolve(SITE, "..");
@@ -135,16 +136,27 @@ export function splitPage(text: string): { title: string; description: string; b
  * only the site's earlier addresses need, left out.
  */
 export function llmsText(siteText: string, page: string): string {
-  const own = `${ORIGIN}${pageUrl(page)}`;
+  const own = pageAddress(page);
   return rewriteLinks(siteText, (t) => (t.startsWith("#") ? `${own}${t}` : /^\/(?!\/)/.test(t) ? `${ORIGIN}${t}` : t))
     .split("\n")
     .filter((line) => !COMPAT_ANCHOR.test(line))
     .join("\n");
 }
 
+/** A page's whole address: the site's origin and the page's path. */
+export function pageAddress(page: string): string {
+  return `${ORIGIN}${pageUrl(page)}`;
+}
+
 /** Where llms.txt sends an agent for a page: its Markdown where the site serves it (the agent guide), else the page. */
 export function llmsUrl(page: string): string {
-  return page === "agent-guide.md" ? `${DOCS_URL}agent-guide.md` : `${ORIGIN}${pageUrl(page)}`;
+  return page === AGENT_GUIDE ? `${DOCS_URL}${AGENT_GUIDE}` : pageAddress(page);
+}
+
+/** The agent guide's Markdown as the site serves it: its H1, then its text with every link absolute, as the full text
+ *  has it; fetched alone, a relative link would resolve against the file, where no page is. */
+export function servedGuide(title: string, siteText: string): string {
+  return `# ${title}\n\n${llmsText(siteText, AGENT_GUIDE).trim()}\n`;
 }
 
 /** YAML's double-quoted string. */
@@ -179,11 +191,12 @@ function gather(): void {
       mkdirSync(dirname(out), { recursive: true });
       const text = rewriteLinks(body, (t) => rewriteTarget(t, page, isDir));
       writeFileSync(out, front + text);
+      if (page === AGENT_GUIDE) writeFileSync(join(SITE, "public", AGENT_GUIDE), servedGuide(title, text));
       items.push({ slug: page.replace(/\.md$/, "") });
       listed.push({
         title,
         url: llmsUrl(page),
-        source: `${ORIGIN}${pageUrl(page)}`,
+        source: pageAddress(page),
         description,
         text: llmsText(text, page),
       });
@@ -202,8 +215,6 @@ function gather(): void {
   for (const f of readdirSync(join(DOCS, "images"))) copyFileSync(join(DOCS, "images", f), join(images, f));
   copyLogo(join(SITE, "public"));
   copyCard(join(SITE, "public"));
-  if (existsSync(join(DOCS, "agent-guide.md")))
-    copyFileSync(join(DOCS, "agent-guide.md"), join(SITE, "public", "agent-guide.md"));
   const full = llmsFull(llms);
   writeFileSync(join(SITE, "public", "llms-full.txt"), full);
   writeFileSync(join(SITE, "public", "llms.txt"), llmsTxt(llms, Buffer.byteLength(full)));

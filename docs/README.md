@@ -5,8 +5,7 @@ start on your own files, then add Git review, exports or a coding-agent workflow
 interface (TUI) can hold unsaved edits; the command-line interface (CLI) reads the files you have saved.
 
 The [documentation website](https://remziduzagac.github.io/slipbox/docs/) has the same pages with search. An agent can
-read them as [llms.txt](https://remziduzagac.github.io/slipbox/docs/llms.txt), a line per page, or all at once in
-[llms-full.txt](https://remziduzagac.github.io/slipbox/docs/llms-full.txt).
+read them from its `llms.txt`, a line per page, or all at once from its `llms-full.txt`.
 
 ## Start here
 

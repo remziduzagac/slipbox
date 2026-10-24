@@ -5,6 +5,7 @@ import { describe, expect, test } from "bun:test";
 import { copyFileSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { crc32 } from "node:zlib";
 import {
   copyCard,
   copyLogo,
@@ -15,6 +16,7 @@ import {
   readMap,
   rewriteLinks,
   rewriteTarget,
+  servedGuide,
   splitPage,
 } from "../site/scripts/gather.ts";
 import { CARD, DESCRIPTION, DOCS_URL, fullTitle, headTags, LINE, SENTENCE } from "../site/scripts/about.ts";
@@ -272,11 +274,22 @@ describe("the docs' site: the share card (SEO-D4)", () => {
   });
 
   test("what a card was made from: text chunks after its header, read back; a key written again replaces its chunk", () => {
-    const marked = withText(card, { "slipbox:line": "a line", other: "x" });
-    expect(textOf(marked)).toEqual({ ...textOf(card), "slipbox:line": "a line", other: "x" });
+    // Beyond Latin-1, as a line with a dash or a curly quote would be: it reads back as written.
+    const line = "a line — it’s read back";
+    const marked = withText(card, { "slipbox:line": line, other: "x" });
+    expect(textOf(marked)).toEqual({ ...textOf(card), "slipbox:line": line, other: "x" });
     expect(new TextDecoder("latin1").decode(marked).split("slipbox:line").length).toBe(2);
     expect(pngSize(marked)).toEqual(pngSize(card));
-    expect(madeFrom(marked).line).toBe("a line");
+    expect(madeFrom(marked).line).toBe(line);
+    // Every chunk's CRC, which a strict decoder checks, holds.
+    const view = new DataView(marked.buffer, marked.byteOffset, marked.byteLength);
+    let chunks = 0;
+    for (let at = 8; at < marked.byteLength; chunks++) {
+      const length = view.getUint32(at);
+      expect(view.getUint32(at + 8 + length)).toBe(crc32(marked.subarray(at + 4, at + 8 + length)));
+      at += 12 + length;
+    }
+    expect(chunks).toBeGreaterThan(4);
   });
 
   test("the card's SVG: the name, the line in lines of words, the screenshot embedded", () => {
@@ -323,7 +336,7 @@ describe("the docs' site: the docs for agents (SEO-D5)", () => {
     const text = llmsTxt(groups, 700 * 1024);
     expect(text.startsWith(`# slipbox\n\n> ${DESCRIPTION}\n\n`)).toBe(true);
     expect(text).toContain("made for the person working beside a coding agent");
-    expect(text).toContain("`slipbox skill`");
+    expect(text).toContain(`the [agent guide](${DOCS_URL}agent-guide.md) says how, and \`slipbox skill\``);
     expect(text).toContain(`[llms-full.txt](${DOCS_URL}llms-full.txt) (about 700 KB)`);
     const headings = [...text.matchAll(/^## (.+)$/gm)].map((m) => m[1]);
     expect(headings).toEqual(["Start here", "For agents", "Optional"]);
@@ -333,6 +346,8 @@ describe("the docs' site: the docs for agents (SEO-D5)", () => {
     // The agent guide's line points to its Markdown, which the site serves as it is.
     expect(text).toContain(`- [Agent guide](${DOCS_URL}agent-guide.md): Agent guide, described.`);
     expect(text.indexOf("## Optional")).toBeLessThan(text.indexOf("[Keys]"));
+    // Its paragraph promises the Optional section: a map whose reference is named otherwise stops the build.
+    expect(() => llmsTxt([groups[0]!, { ...groups[1]!, label: "Lookup" }], 1024)).toThrow('no "Reference" group');
   });
 
   test("llms-full.txt: every page in the map's order, each its title, its address and its text", () => {
@@ -371,6 +386,28 @@ describe("the docs' site: the docs for agents (SEO-D5)", () => {
     );
   });
 
+  test("the agent guide's Markdown, as the site serves it: its H1, then every link absolute, as fetched alone it needs", () => {
+    expect(
+      servedGuide("Agent guide", "\nRead [the install](/slipbox/docs/guides/install/) and [below](#steps).\n"),
+    ).toBe(
+      "# Agent guide\n\nRead [the install](https://remziduzagac.github.io/slipbox/docs/guides/install/) and " +
+        "[below](https://remziduzagac.github.io/slipbox/docs/agent-guide/#steps).\n",
+    );
+    // The guide itself, gathered as the build gathers it: no link left relative.
+    const { title, body } = splitPage(readFileSync(join(DOCS, "agent-guide.md"), "utf8"));
+    const served = servedGuide(
+      title,
+      rewriteLinks(body, (t) => rewriteTarget(t, "agent-guide.md", noDirs)),
+    );
+    const targets: string[] = [];
+    rewriteLinks(served, (t) => {
+      targets.push(t);
+      return t;
+    });
+    expect(targets.length).toBeGreaterThan(5);
+    expect(targets.filter((t) => !/^https:\/\//.test(t))).toEqual([]);
+  });
+
   test("where llms.txt sends an agent: a page's address, the agent guide's Markdown", () => {
     expect(llmsUrl("manual/keys.md")).toBe("https://remziduzagac.github.io/slipbox/docs/manual/keys/");
     expect(llmsUrl("agent-guide.md")).toBe("https://remziduzagac.github.io/slipbox/docs/agent-guide.md");
@@ -405,8 +442,9 @@ describe("the docs' site: the build's check of what it tells search engines and 
       join(dist, "llms-full.txt"),
       `# slipbox documentation\n\n# Quick start\nSource: ${DOCS_URL}guides/quick-start/\n`,
     );
-    spoil(dist);
+    writeFileSync(join(dist, "agent-guide.md"), `# Agent guide\n\nRead [the start](${DOCS_URL}guides/quick-start/).\n`);
     try {
+      spoil(dist);
       return problems(dist, MAP, ROOT);
     } finally {
       rmSync(dist, { recursive: true, force: true });
@@ -444,6 +482,9 @@ describe("the docs' site: the build's check of what it tells search engines and 
     expect(site((d) => writeFileSync(join(d, "llms-full.txt"), "# slipbox documentation\n"))).toEqual([
       "llms-full.txt leaves out guides/quick-start.md",
     ]);
+    expect(site((d) => writeFileSync(join(d, "agent-guide.md"), "Read [the start](guides/quick-start.md).\n"))).toEqual(
+      ["agent-guide.md links guides/quick-start.md, not an absolute address"],
+    );
   });
 
   test("the root's page: its title, description, canonical link, refresh and card, each named when missing", () => {
@@ -461,5 +502,14 @@ describe("the docs' site: the build's check of what it tells search engines and 
     const head = headOf('<title>A &amp; B</title><meta property="og:image:alt" content="say &quot;hi&quot;"/>');
     expect(head.title).toBe("A & B");
     expect(head.tags).toEqual([{ tag: "meta", attrs: { property: "og:image:alt", content: 'say "hi"' } }]);
+    // Astro escapes only `&` and `"` in a value, and Starlight writes the title as it is: `<` and `>` stand there.
+    const raw = headOf(
+      '<title>a < b</title><meta property="og:title" content="Keys -> actions"/><link rel="x" href="y">',
+    );
+    expect(raw.title).toBe("a < b");
+    expect(raw.tags).toEqual([
+      { tag: "meta", attrs: { property: "og:title", content: "Keys -> actions" } },
+      { tag: "link", attrs: { rel: "x", href: "y" } },
+    ]);
   });
 });

@@ -31,3 +31,7 @@ map, "What is slipbox?", the skill. The docs home's agent section and the docs m
 - 2026-10-24: the README's paragraph after the line no longer repeats it; "What is slipbox?" leads with the line, then
   your own Markdown and code, and puts "beside a coding agent" before "on your own". The skill's line is the agent's
   view: where the user reads, reviews and edits what you write. Mutation: the README's old line back, caught.
+- 2026-10-24, review: the skill's description said "the terminal companion"; it says where the user reads, reviews
+  and edits what you write now, and the test looks for "terminal companion" too. The docs map names `llms.txt` and
+  `llms-full.txt` without linking them: the weekly online link check would find them missing until a release
+  deploys them.

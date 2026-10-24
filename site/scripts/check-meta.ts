@@ -2,16 +2,15 @@
 // After the build, beside check-links.ts: what the site tells search engines, shared links and agents is all there
 // (SEO-D6). Every page has its full title, a description, the share card's tags and the link to llms.txt; the card is
 // served, its size what the tags say; llms.txt and llms-full.txt name every page of the docs map; and the root's page
-// says what slipbox is. In the build there's no root yet, so it's checked as root.ts writes it; pages.yml checks the
-// Pages site it's about to deploy, the root release.ts wrote and the docs beside it:
-//
-//   bun scripts/check-meta.ts                  the built docs (dist/), and root.ts' page
-//   bun scripts/check-meta.ts --pages <dir>    a Pages site: <dir>/index.html, and the docs in <dir>/docs
+// says what slipbox is; the agent guide, served as Markdown, links only by absolute addresses. There's no root in the
+// build, so it's checked as root.ts writes it (release.ts site writes that, tests/release.test.ts). Not run by
+// pages.yml: its site job checks out main, which has this file only once a release brings it.
 
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
-import { CARD, DESCRIPTION, DOCS_URL, fullTitle, GITHUB, headTags, SITE } from "./about.ts";
-import { llmsUrl, pageUrl, readMap } from "./gather.ts";
+import { CARD, DESCRIPTION, DOCS_URL, fullTitle, GITHUB, headTags } from "./about.ts";
+import { llmsUrl, pageAddress, readMap, rewriteLinks } from "./gather.ts";
+import { AGENT_GUIDE } from "./llms.ts";
 import { rootPage } from "./root.ts";
 
 /** A tag's attributes, entities decoded. */
@@ -26,10 +25,11 @@ const decode = (s: string) =>
     .replaceAll("&gt;", ">")
     .replaceAll("&amp;", "&");
 
-/** An HTML page's `<title>`, and its `<meta>` and `<link>` tags. */
+/** An HTML page's `<title>`, and its `<meta>` and `<link>` tags. A `<` or `>` may stand as it is in a title or a quoted
+ *  value: Astro escapes only `&` and `"` there. */
 export function headOf(html: string): { title: string | null; tags: { tag: string; attrs: Attrs }[] } {
-  const title = /<title>([^<]*)<\/title>/.exec(html)?.[1];
-  const tags = [...html.matchAll(/<(meta|link)\b([^>]*)>/g)].map(([, tag, rest]) => ({
+  const title = /<title>([\s\S]*?)<\/title>/.exec(html)?.[1];
+  const tags = [...html.matchAll(/<(meta|link)\b((?:[^>"']|"[^"]*"|'[^']*')*)>/g)].map(([, tag, rest]) => ({
     tag: tag!,
     attrs: Object.fromEntries([...rest!.matchAll(/([\w:-]+)="([^"]*)"/g)].map(([, k, v]) => [k!, decode(v!)])),
   }));
@@ -118,25 +118,24 @@ export function problems(dist: string, mapText: string, root: string): string[] 
   else {
     const text = readFileSync(full, "utf8");
     for (const page of map)
-      if (!text.includes(`\nSource: ${SITE}${pageUrl(page)}\n`)) found.push(`llms-full.txt leaves out ${page}`);
+      if (!text.includes(`\nSource: ${pageAddress(page)}\n`)) found.push(`llms-full.txt leaves out ${page}`);
   }
+  // Fetched alone, a relative link resolves against the file, where no page is.
+  const guide = join(dist, AGENT_GUIDE);
+  if (existsSync(guide))
+    rewriteLinks(readFileSync(guide, "utf8"), (t) => {
+      if (!/^https?:\/\//.test(t)) found.push(`${AGENT_GUIDE} links ${t}, not an absolute address`);
+      return t;
+    });
 
   found.push(...rootProblems(root));
   return found;
 }
 
 if (import.meta.main) {
-  const i = process.argv.indexOf("--pages");
-  const pagesDir = i < 0 ? null : resolve(process.argv[i + 1] ?? "");
-  const dist = pagesDir ? join(pagesDir, "docs") : resolve(import.meta.dir, "..", "dist");
+  const dist = resolve(import.meta.dir, "..", "dist");
   const mapText = readFileSync(resolve(import.meta.dir, "..", "..", "docs", "README.md"), "utf8");
-  // In the build, the root's page as root.ts writes it for the site; on a Pages site, the one release.ts wrote there.
-  const root = pagesDir
-    ? existsSync(join(pagesDir, "index.html"))
-      ? readFileSync(join(pagesDir, "index.html"), "utf8")
-      : ""
-    : rootPage(DOCS_URL.replace(/\/docs\/$/, ""), GITHUB);
-  const found = problems(dist, mapText, root);
+  const found = problems(dist, mapText, rootPage(DOCS_URL.replace(/\/docs\/$/, ""), GITHUB));
   if (found.length) {
     console.error(`check-meta: ${found.length} missing or wrong\n${found.join("\n")}`);
     process.exit(1);

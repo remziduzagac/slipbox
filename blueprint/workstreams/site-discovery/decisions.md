@@ -84,3 +84,9 @@ deploys.
 
 **Why:** The issue asks for the build in CI to fail if the picture, `llms.txt` or the root's description goes missing.
 CI's `site` job builds on every change; the root is only written when `pages.yml` deploys, so both are checked.
+
+> **Amended (2026-10-24), from the review:** `pages.yml` doesn't run it. Its `site` job checks out `main` while a
+> preview's run takes test's workflow, so the step would fail every preview until a release brought the file to
+> `main`. The build checks `rootPage`'s output, and `tests/release.test.ts` holds `writeSite` to writing it; once on
+> `main`, the check runs in `pages.yml`'s `bun run site` before each deployment. It also checks that the agent guide's
+> Markdown links only by absolute addresses.

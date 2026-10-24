@@ -31,3 +31,7 @@ which `pages.yml` runs over `_site` before it deploys.
 - 2026-10-24: run over a copy of the Pages site (`site/dist` as `docs/`, the root from `writeSite`), whole it passes;
   with a page's `og:image`, a page's `describedby`, a page's full title, the card, `llms.txt`, `llms-full.txt` or the
   root's description removed, one at a time, it fails naming that one. `pages.yml` runs it with `--pages _site`.
+- 2026-10-24, review: the `pages.yml` step and `--pages` removed (notes.md § Review): a preview's run checks out
+  `main`, which lacks the check until a release. A test now holds `pages.yml`'s `site` job to running `bootstrap.ts`
+  and `release.ts` alone. `headOf` reads a `<` or `>` in a title or a quoted value, which Astro leaves as it is. The
+  check names a relative link in the served agent guide. Mutations: each undone, caught.

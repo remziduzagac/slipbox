@@ -34,3 +34,7 @@ chunks. The gathering copies it to `site/public/share-card.png` (ignored).
   alone; second: three lines at 34px, the column centred, the screenshot from x 560 — looked at, 214 KB, written to
   `assets/`. Its chunks' CRCs checked with Python's `zlib`. `withText` first added a second chunk for a key already
   there; the test caught it, and it replaces it now. Mutation: the line changed, the stale-card test fails.
+- 2026-10-24, review: `iTXt` chunks, UTF-8, for `tEXt`'s Latin-1, which read a line with a dash back garbled; the
+  test round-trips one and checks every chunk's CRC with `node:zlib`. The SVG's text escaped by `root.ts`'
+  `escapeHtml`; `--out` without a file is a usage error. The card retaken and looked at: the same picture, its chunks
+  `iTXt`, its CRCs valid.

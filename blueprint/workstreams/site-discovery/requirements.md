@@ -52,8 +52,8 @@
   and a line linking the docs, the install guide and the repository; its values escaped.
 - `bun run site` fails, saying what's missing, when a page's head lacks its title, description, `describedby` link or
   the card's tags, the card's file or its size is wrong, `llms.txt` or `llms-full.txt` is missing or leaves out a page
-  of the map, or the root's page lacks its title, description, canonical link or the card's tags; `pages.yml` runs the
-  same check over the Pages site it deploys.
+  of the map, the root's page lacks its title, description, canonical link or the card's tags, or the agent guide's
+  Markdown links by a relative address.
 - The card is made by one command from the logo, a screenshot and the line; a test fails when the committed card was
   made from another logo, screenshot or line, saying which.
 - Unit tests for each case (`tests/site.test.ts`, `tests/release.test.ts`); the site built and served locally, its

@@ -18,6 +18,9 @@ export interface LlmsPage {
 /** The map's group an agent may skip: the reference, which the full text holds whole. */
 export const OPTIONAL = "Reference";
 
+/** The agent guide, which the site serves as Markdown too, at the docs' root. */
+export const AGENT_GUIDE = "agent-guide.md";
+
 /** The full text: every page in the map's order, each its title, its address and its Markdown. */
 export function llmsFull(groups: { label: string; pages: LlmsPage[] }[]): string {
   const head = [
@@ -34,6 +37,9 @@ export function llmsFull(groups: { label: string; pages: LlmsPage[] }[]): string
 
 /** llms.txt: what slipbox is, then a section per group of the map, a line per page; the reference last, as Optional. */
 export function llmsTxt(groups: { label: string; pages: LlmsPage[] }[], fullBytes: number): string {
+  // Its paragraph promises the section.
+  if (!groups.some((g) => g.label === OPTIONAL))
+    throw new Error(`llms.txt: the docs map has no "${OPTIONAL}" group, which its Optional section lists`);
   const kb = Math.max(1, Math.round(fullBytes / 1024));
   const lines = [
     "# slipbox",
@@ -41,8 +47,9 @@ export function llmsTxt(groups: { label: string; pages: LlmsPage[] }[], fullByte
     `> ${DESCRIPTION}`,
     "",
     "slipbox is made for the person working beside a coding agent: in its full-screen terminal interface they read, " +
-      "review and edit what the agent writes. An agent can use it too, through its command line: `slipbox skill` " +
-      "prints the skill of the version installed, which these docs, written for the newest release, may be ahead of. " +
+      "review and edit what the agent writes. An agent can use it too, through its command line: the " +
+      `[agent guide](${DOCS_URL}${AGENT_GUIDE}) says how, and \`slipbox skill\` prints the skill of the version ` +
+      "installed, which these docs, written for the newest release, may be ahead of. " +
       `The full text of every page is in [llms-full.txt](${DOCS_URL}llms-full.txt) (about ${kb} KB); the Optional ` +
       "section below is the reference: keys, commands, settings, environment.",
   ];

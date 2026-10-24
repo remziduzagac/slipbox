@@ -32,3 +32,8 @@ full text absolute, a page's own anchors included; compatibility anchors left ou
   addresses file paths; imported as `ORIGIN`. The full text's `Source:` is each page's address, the agent guide's too,
   while `llms.txt` links the guide's Markdown (the build's check found the two disagreeing). 35 pages, about 706 KB.
   Mutations: anchors left relative, the reference not under Optional, both caught.
+- 2026-10-24, review: the served agent guide was a raw copy, its links relative to `docs/` and broken on the site
+  (on `dev` before this work, but `llms.txt` now sends agents there): `servedGuide` writes it with absolute links, as
+  the full text has them. `llms.txt`'s paragraph names the agent guide, as the acceptance asks; a map with no
+  Reference group stops the gathering, since the paragraph promises the Optional section. `pageAddress` is the one
+  place a page's address is made. Mutations: each undone, caught.
