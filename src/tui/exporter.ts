@@ -186,48 +186,52 @@ export class Exporter {
     const graph = this.app.graph;
     let output: PreparedExport | undefined;
     try {
-      output = await prepareExport(graph, rels, format.name, target, {
-        signal: controller.signal,
-        progress: (stage) => {
-          if (this.app.quitting || controller.signal.aborted) return;
-          this.app.message("info", `exporting to ${shown}: ${stage}… — Cancel export stops it`);
-          this.app.host.requestRender();
-        },
-      });
-      if (controller.signal.aborted || this.app.quitting) return;
-      files = await output.publish(
-        target,
-        () => {
-          exportTarget(graph, rels[0]!, format, target, graph.root, force);
-        },
-        controller.signal,
-      );
-      // Where it went, for "Where you exported last": as soon as it's there, not once its staging is cleared, so the
-      // window opened meanwhile opens there.
       try {
-        writeJson(join(stateDir(graph.loc), "export.json"), { dir: dirname(target) });
-      } catch {}
-    } catch (err) {
-      if (!this.app.quitting)
-        this.app.message(
-          controller.signal.aborted ? "info" : "error",
-          controller.signal.aborted ? "export cancelled" : `export: ${shown} not written — ${(err as Error).message}`,
+        output = await prepareExport(graph, rels, format.name, target, {
+          signal: controller.signal,
+          progress: (stage) => {
+            if (this.app.quitting || controller.signal.aborted) return;
+            this.app.message("info", `exporting to ${shown}: ${stage}… — Cancel export stops it`);
+            this.app.host.requestRender();
+          },
+        });
+        if (controller.signal.aborted || this.app.quitting) return;
+        files = await output.publish(
+          target,
+          () => {
+            exportTarget(graph, rels[0]!, format, target, graph.root, force);
+          },
+          controller.signal,
         );
-      return;
+        // Where it went, for "Where you exported last": as soon as it's there, not once its staging is cleared, so the
+        // window opened meanwhile opens there.
+        try {
+          writeJson(join(stateDir(graph.loc), "export.json"), { dir: dirname(target) });
+        } catch {}
+      } catch (err) {
+        if (!this.app.quitting)
+          this.app.message(
+            controller.signal.aborted ? "info" : "error",
+            controller.signal.aborted ? "export cancelled" : `export: ${shown} not written — ${(err as Error).message}`,
+          );
+        return;
+      } finally {
+        // Over once it's written, or has failed or stopped: a cancel from now on finds none running (#68).
+        this.jobs.delete(controller);
+      }
+      const beside = files.length ? `, ${files.length} file${files.length === 1 ? "" : "s"} beside it` : "";
+      // A note written where the vault never indexes it (D246): Markdown into a folder `walk.exclude` names.
+      const why =
+        this.app.graph === graph && graph.filter.isNoteName(basename(target)) ? this.app.files.leftOut(target) : null;
+      this.app.message(
+        "info",
+        `exported ${rels.length === 1 ? rels[0] : `${rels.length} notes`} to ${shown} (${format.title}${why ? `, not indexed: ${why}` : ""})${beside}`,
+      );
     } finally {
+      // Its staging cleared once it's said: a warning from the cleanup is the newest message, not under it (#68).
       await output?.dispose().catch((error) => this.app.message("warn", `export cleanup: ${error.message}`));
-      this.jobs.delete(controller);
       this.app.host.requestRender();
     }
-    const beside = files.length ? `, ${files.length} file${files.length === 1 ? "" : "s"} beside it` : "";
-    // A note written where the vault never indexes it (D246): Markdown into a folder `walk.exclude` names.
-    const why =
-      this.app.graph === graph && graph.filter.isNoteName(basename(target)) ? this.app.files.leftOut(target) : null;
-    this.app.message(
-      "info",
-      `exported ${rels.length === 1 ? rels[0] : `${rels.length} notes`} to ${shown} (${format.title}${why ? `, not indexed: ${why}` : ""})${beside}`,
-    );
-    this.app.host.requestRender();
   }
 }
 
