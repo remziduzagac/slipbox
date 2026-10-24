@@ -1,0 +1,181 @@
+# Notes: the window header
+
+## The issue, and what the code does today (2026-10-24)
+
+Issue #24 asks for three things: the window's mode as buttons on the row atop each window, a name for that row, and
+`ui.breadcrumb = false` hiding only the breadcrumb. What the code does now (*read*, at `origin/dev` 390000c):
+
+- **The row** is drawn in `drawPane` (`src/tui/draw-pane.ts:51-108`): a rule, a band in `breadcrumb_band`, a split's
+  name (cut to half the row), `drawBreadcrumb` (`src/tui/draw.ts:469`), `▤` at the far right of the top-right window
+  without the right rail (`btn:outline`), a rule. Its gate (`:52`) is `app.ui.breadcrumb && !app.ui.zen && rect.h >= 8
+  && app.floating?.view !== view`; off, a split's name gets a `tab`-styled row (`:103`) and the window's text the rows
+  (`:58`); `▤` goes to the top bar when no window drew it (`src/tui/draw.ts:433-451`).
+- **The mode** is `view.source` / `view.live`; `Lens.setViewMode(view, "rendered" | "source" | "live")`
+  (`src/tui/lens.ts:298`) sets it directly, refusing a drawn diff ("a diff is drawn one way") and, for a mode other than
+  source, a file `canRender` says no to (`src/tui/app.ts:966`: data that doesn't parse, text that isn't a code
+  document), with "`<name>` doesn't parse — `<error>`: source mode" (warn) or "`<name>` has no rendered view: source
+  mode" (info). Asked for the mode the window is in, it returns at once (`:300`), and a refusal returns before
+  anything changes; only a switch stops typing first, and keeps the cursor's character.
+- **The mode changes without `setViewMode`** in two places: a data file that stopped parsing goes to source mode when
+  typing ends, as it's laid out (`src/tui/views.ts:64-69`; while typing it stays in the lens), and a window given
+  another file (`Lens.fitMode`, `src/tui/lens.ts:46`). A window's mode isn't kept in the session (`src/tui/session.ts`
+  saves paths, places and history; restored windows are made again, `makeView`).
+- **A click ends typing** in every window before it's dispatched (`src/tui/mouse.ts:83`), whatever it lands on.
+- **The toggles** `view.source` (`ctrl+k`, `space n v`, `:source`) and `view.live` (`space n l`, `:live`, `:lens`) are
+  in `src/core/commands/files.ts:34-44`, their handlers in `src/tui/actions-view.ts:141-165`, each saying what the
+  window shows now ("source — the note's markdown", "the lens: … — esc closes it", "rendered", "the code as a
+  document"). `esc` in normal mode closes the lens (`src/tui/actions.ts:130`).
+- **Drawn buffers** (a diff, a review, the merge screen) live only in the floating window (`src/tui/diffview.ts:165`,
+  `src/tui/mergescreen.ts:251`), which has no header: the issue's "a drawn diff: none" never shows on screen.
+- **The colour role** `breadcrumb_band` also fills the code view's cells drawn as bands (`src/core/layout/code.ts:794`);
+  renamed roles are read by their old word through `OLD_ROLES` (`src/core/theme/theme.ts:167`, DF-D22).
+- **Hit areas** are strings: per-window ones carry the window's index (`crumb:<window>:<row>`, `crumbicon:<window>`),
+  the app's buttons don't (`btn:outline`); `clickHot` (`src/tui/mouse.ts:612`) dispatches them.
+- **Coverage**: every command needs a terminal check that runs it, or a reason left out
+  (`tests/terminal-coverage.test.ts`, TT-D4).
+
+## Proposals (2026-10-24)
+
+As they were put to the user; agreed the same day, below.
+
+- **HDR-D1, the name.** The row is the window header; "breadcrumb" names only the heading trail on it. The docs and
+  the design say so, `docs/manual/screen.md` § The breadcrumb becomes § The window header with § The breadcrumb under
+  it (so `#the-breadcrumb` still lands, by its own heading), and the code's names follow (`crumbs` in `drawPane`
+  becomes `header`; `drawWindowHeader` in a module of its own, `src/tui/draw-header.ts`, D235). The colour role keeps
+  its name, `breadcrumb_band`: it also tints the code view's bands, which `window_header` would misname, and one name
+  needs no alias (question 3).
+- **HDR-D2, the radio group.** Read, Lens and Source on each window's header, exactly one selected, the window's mode;
+  a click on another switches straight to it (`setViewMode`), on the selected one does nothing; typing isn't a mode;
+  what `setViewMode` refuses is disabled, its click saying why. Three new commands set a mode, `view.mode_read`,
+  `view.mode_lens`, `view.mode_source` (`cli: null`, no default keys), saying what the toggles say; `view.source` and
+  `view.live` stay toggles. A click focuses its window first, as a breadcrumb heading's does, so the status chip, which
+  describes the focused window, agrees. One home for the refusals: `Lens.refusal(view, mode)` returns the message, used
+  by `setViewMode` and by the drawing.
+- **HDR-D3, two settings.** `ui.breadcrumb = false` hides only the heading trail; `ui.window_header` (default `true`)
+  removes the row, as `ui.breadcrumb = false` did: "Window header" in `space u u` and the palette (`ui.window_header`,
+  no key), remembered like the other settings. Zen mode, the floating window and windows under 8 rows still have no
+  header. `ui.breadcrumb`'s narrower effect is a CHANGELOG line under Changed; nothing is renamed, so no config breaks.
+
+## Open questions for the user (2026-10-24)
+
+1. **The commands' names.** Recommended: `view.mode_read`, `view.mode_lens`, `view.mode_source` ("Read mode", "Lens
+   mode", "Source mode" in the palette and help): one pattern, beside the toggles, no clash with `view.source`. Else the
+   issue's `view.read`, `view.lens`, `view.whole_source`; or one `view.mode read|lens|source`, which the palette would
+   list once and would need its argument typed.
+2. **Default keys for them.** Recommended: none. `ctrl+k`, `space n v` and `space n l` keep toggling; the free letters
+   under `space n` (`a b g j k u z`) say nothing of the modes; a user binds them in `[keys]`.
+3. **The colour role.** Recommended: keep `breadcrumb_band`, documented as the window header's background (and the code
+   view's bands). Else a `window_header` role with `breadcrumb_band` read as it (`OLD_ROLES`), which the code view's
+   bands would then use too, or get a role of their own.
+4. **When the buttons shorten.** This orders the breadcrumb against the buttons, which the issue states as "the
+   breadcrumb folds into `…` first, then the buttons shorten". Recommended: the buttons shorten once the breadcrumb
+   would have less than its innermost heading cut to 8 columns (with `§ … ›`, 14 columns at most), so a narrow split
+   still shows the heading the cursor is in; past that the breadcrumb folds on to `…`. Else, read strictly, the
+   buttons shorten only once the breadcrumb is down to `§ …`. Either way the selected letter stays as long as it fits
+   beside the name and `▤`.
+5. **The disabled style.** Recommended: `topbar_button_on` selected and `topbar_button` the others, as the issue
+   suggests and as `▤` already is, and a new role, `topbar_button_disabled` (`surface2`; dim without colour). Without
+   colour (the `mono` theme, `NO_COLOR`) an enabled button is dim already, so there a disabled one looks the same and
+   only its click tells; the selected one is bold. Else three roles of the header's own (`mode_button`,
+   `mode_button_on`, `mode_button_disabled`), where without colour an enabled button is plain, the selected bold and a
+   disabled one dim: more roles to document, a distinction that holds without colour.
+6. **The header setting's name.** `ui.window_header`, "Window header" in `space u u`. Recommended as the issue has it.
+7. **A click on the selected button while typing.** Every click ends typing today (`src/tui/mouse.ts:83`), a heading's
+   included. Recommended: so does this one, and it changes nothing else: the mode stays, the changes stay in the
+   buffer. Else the selected button's click is let through without ending typing, a rule for one target.
+
+## Review by Codex (2026-10-24)
+
+The draft sent for critique (`tmp/issue/codex-design.md`, not in git). Its findings, each checked against the code, and
+what was settled in the design:
+
+- **A click ends typing before it's dispatched** (`src/tui/mouse.ts:83`), so "the selected button does nothing" can't
+  also keep typing without a rule of its own. Checked: true. Settled as "changes nothing else", open question 7.
+- **The mode changes outside `setViewMode`** (`src/tui/views.ts:64-69` once typing ends on data that stopped parsing;
+  `Lens.fitMode`, `src/tui/lens.ts:46`), so the buttons must be drawn after the window's layout is asked for, even
+  with the breadcrumb hidden (today the breadcrumb asks for it). Checked: true. In the design.
+- **Data that stops parsing while typed** keeps the lens until typing ends: Lens selected while `canRender` is false.
+  Settled: the selected button is never disabled; the others are as refused. In the design.
+- **The widths**: three padded labels are 20 columns, as the design meant (Codex counted the inline literal, which
+  Markdown trims to 18); now written as three labels. The breadcrumb's columns are the row's less one at each end
+  (`src/tui/draw-pane.ts:100`), and its least room depends on its headings (a single one needs no `…`): the design
+  now measures it on those columns, from the headings. The order against the breadcrumb is a policy, the user's: open
+  question 4.
+- **Hover** is applied by `button()` whatever the role (`src/tui/draw.ts:397`), so the selected and disabled buttons
+  are drawn without it; a click runs the mode's named command rather than `setViewMode` directly. In the design.
+- **The other readers of the row**: only the gate at `src/tui/draw-pane.ts:52` and its height arithmetic (`:58`) read
+  the setting; find's row follows the body, the messages the pane's geometry, the outline `mainY`; `▤`'s fallback
+  stays by the hit areas drawn; a hidden breadcrumb leaves no anchor, so `space f b` centres its list
+  (`src/tui/outline.ts:45`). Checked: true. The height arithmetic stays in `drawPane`.
+- **Corrections to the account of today**: `setViewMode` returns before anything for the mode the window is in;
+  a window's mode isn't in the session; the scratch on the right is an ordinary window (buttons), the floating scratch
+  and the peek aren't; a read-only file keeps its modes. Taken into the account above and the design.
+- **The tests**: the draft plan was too thin for "every case a unit test and a terminal check"; it's now a matrix
+  (below).
+- Codex agreed with questions 1, 2, 3 and 6 as recommended, and asked that 4, 5 (the disabled style without colour)
+  and 7 go to the user.
+
+## Approval (2026-10-24)
+
+- The user: "design is ok", after the design and its seven questions were put, each with a recommendation. Taken as
+  the recommendations agreed: HDR-D1 (the name; `breadcrumb_band` kept: question 3), HDR-D2 (the radio group; the
+  commands `view.mode_read`, `view.mode_lens`, `view.mode_source` with no keys; `topbar_button_disabled`; the
+  selected one's click ending typing as every click does: questions 1, 2, 5, 7), HDR-D3 (the two settings,
+  `ui.window_header`: question 6), HDR-D4 (the buttons give way before the breadcrumb's innermost heading: question 4).
+- The workstream is active, its tasks in tasks/.
+- In the same message the user asked for an issue: slipbox should install its skill for agents. Filed as #50, outside
+  this workstream.
+
+## The tasks
+
+As planned before approval; each is a file in tasks/ now:
+
+- HDR-T1, the refusals in one place: `Lens.refusal`, `setViewMode` saying it; the toggles' messages shared.
+- HDR-T2, the commands: `view.mode_read`, `view.mode_lens`, `view.mode_source`; the help group; registered.
+- HDR-T3, the header: `src/tui/draw-header.ts`, the buttons and their room (`modeButtons`), the clicks (`mode:` in
+  `clickHot`), the disabled role; `drawPane` calling it.
+- HDR-T4, the settings: `ui.window_header` (config, `UiState`, `space u u`, the command), `ui.breadcrumb` narrowed.
+- HDR-T5, the tests, case by case (below): each a unit test (`tests/tui.test.ts`, the harness) and a terminal check
+  (`tests/terminal/checks/`), the new commands and cases in the coverage.
+- HDR-T6, the docs and records: `docs/manual/screen.md`, `keys.md`, `configuration.md`, the mouse help, CHANGELOG, the
+  screenshots retaken; the design changes above checked against what was built.
+
+The cases, each with a unit test (U) and a terminal check (T):
+
+- **Selection follows the mode**: Read on opening; `ctrl+k` to Source and back; `space n l` to Lens; `esc` closing the
+  lens; `i` from Read to the `edit_in` mode, and `esc` out of typing keeping it (U, T).
+- **Every switch by a click**: Read→Lens, Read→Source, Lens→Read, Lens→Source, Source→Read, Source→Lens straight
+  (never through Read), each saying what the toggles say; the chip agreeing (U every one; T Source→Lens, Lens→Read,
+  Read→Source).
+- **The selected one clicked**: the mode unchanged, no message; while typing, typing ends, the changes kept (U, T).
+- **Switching while typing**: a click on another mode stops typing, the buffer still dirty, the text kept (U, T).
+- **A click in the other window** of a split: that window focused and switched, the first untouched; its selected one
+  clicked: only focused (U, T).
+- **Disabled**: a text file (Read and Lens), code `[render] code = "source"`, data that doesn't parse, each click
+  saying `setViewMode`'s words at its level; a code document, data that parses, a note: all three (U each; T a text
+  file and broken data).
+- **Data that stops parsing while typed in the lens**: Lens selected, Read disabled; once typing ends, Source selected
+  (U, T).
+- **A window given another file**: from a text file (Source only) to a note (Read again), and back (U, T).
+- **Two windows on one file**: each its own selection (U).
+- **The scratch on the right**: buttons; the floating window (scratch, a peek, a diff): no header (U; T the diff).
+- **Drawn buffers**: `Lens.refusal` refuses every switch (U); their floating window has no header (T, above).
+- **Hover**: an enabled button under the mouse in `hover`; the selected and a disabled one not (U).
+- **The which-key popup** over the header: the buttons under it not clickable (U).
+- **Room**: `modeButtons` at each boundary (20, 9, 3, 0 columns left; no headings; one heading; two or more; a heading
+  under 8 columns); in a window: full, letters, the selected letter alone, the name and `▤` in their places (U; T a
+  split narrowed with `<` until the letters show).
+- **`ui.breadcrumb = false`**: the header kept, its name, buttons and `▤`, no `§`, no anchor (`space f b` centred), find's
+  row under the header (U, T).
+- **`ui.window_header = false`**: no row, the split's names on their own rows, `▤` on the top bar, find's row at the
+  window's top; with the breadcrumb on or off; both remembered in the session (U, T).
+- **Zen mode and windows under 8 rows**: no header, either setting (U at heights 7 and 8; T zen).
+- **The colour role**: `[colors] breadcrumb_band` colours the header (U).
+- **The commands**: in the palette and help under Editing, `cli: null`, registered (U: the registry's test; T run from
+  the palette, which the coverage counts).
+
+## Log
+
+- 2026-10-24: drafted from the issue and the code; no research outside the code was needed.
+- 2026-10-24: Codex critiqued the draft; its findings checked and settled (§ Review by Codex).
+- 2026-10-24: the user accepted the design (§ Approval); decisions recorded, tasks written.
