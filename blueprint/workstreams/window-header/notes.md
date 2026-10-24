@@ -397,3 +397,7 @@ here, and the work go on.
     - More contrast for a disabled button: fainter than an enabled one it must be, and enabled ones are 1.6 to 4:1 in
       the built-in themes; the italics carry the difference.
 - Terminal checks after round 3's fixes: the header's seventeen and the settings check, 18 of 18.
+- 2026-10-24: CI on the rebased head: the terminal checks green on all three; the tests failed on one:
+  `tests/terminal-harness.test.ts` reads the status chip's expression in `draw-status.ts` as text, and the mode chips
+  had moved to `CHIP` (from `MODES`). The test now takes a window's modes from `MODES`; missed here, since it names the
+  file by path rather than importing it.
