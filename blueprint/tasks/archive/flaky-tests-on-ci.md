@@ -1,5 +1,5 @@
 ---
-status: doing
+status: done
 assignee: claude-6
 blocked_by: []
 related: [T21, T22]
@@ -222,3 +222,24 @@ shown before the fix, and gone after.
   moment kestrel's row was listed, but kestrel's own folders come a read later on the listing threads
   (`src/tui/listings.ts`), and macOS's screen had kestrel with none. Fixed in the check: it waits for them, as it
   waits for kestrel. Ran: 20 of 20 passed here before (not reproduced), 10 of 10 after.
+- 2026-10-24: Review, round 3, the last (the maintainer's cap), of the branch after round 2: `/code-review` and a fresh
+  Claude reviewer (Codex still at its limit). The Claude reviewer found nothing real. Consolidated, each verified:
+  - Taken, robustness: a linter run that threw would have left the file's run "running" for good, so it was never
+    linted again (code-review): `Promise.all`'s rejection skipped the cleanup. No way for a run to throw is known; the
+    run now waits for every linter to settle (`Promise.allSettled`), and the last redraw, made already by each
+    linter's own, is gone. Test: "a linter whose run throws ends that run all the same: …" (a run made to throw);
+    with `Promise.all` back, it fails. No terminal check: an exception inside a run can't be made from outside.
+  - Taken: the clipboard test's `ps` lines matched by their end, not anywhere in them (the Claude reviewer): another
+    run's sleep whose length starts with this run's digits would have matched.
+  - Not taken: `/bin/sh` needed even with `$SHELL` set (code-review) — slipbox's platforms (Linux, macOS, WSL) have
+    it, as the shell's own fallback already assumed; the linters check's 15 s bound "never failing" (code-review) —
+    on CI every wait is at least 30 s (`tests/terminal/session.ts`), where the bound is what fails; a cut window's
+    last character possibly half a surrogate pair (code-review) — cosmetic, in a window already said cut short; the
+    2 MB and 32 MB limits counted in UTF-16 units, not bytes (code-review) — as before this change, left as a
+    follow-up to say or change; `D?1` (code-review) — numbered at the merge.
+- 2026-10-24: Follow-ups, not in this pull request: the limits' unit (bytes or characters, said in the design and the
+  docs); one helper for laying a buffer's views out again and asking for a frame (about fifteen copies); the
+  pictures' ids able to collide (24 bits); a successful filter's errors shown nowhere.
+- 2026-10-24: Done, after three rounds of review: every acceptance criterion met (each test accounted for above; each
+  fix with a test that fails without it; the design, docs and changelog where slipbox changed). Moved to `archive/`;
+  the merge is the maintainer's acceptance.

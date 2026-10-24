@@ -50,12 +50,12 @@ test("clipboard helpers leave the event loop available while copying and reading
   );
 });
 
-/** The processes whose command line holds any of `needles` (`-ww`: never cut to a width), by pid and command. */
+/** The processes whose command line ends with any of `needles` (`-ww`: never cut to a width), by pid and command. */
 const running = (...needles: string[]) =>
   Bun.spawnSync(["ps", "-A", "-ww", "-o", "pid=,command="])
     .stdout.toString()
     .split("\n")
-    .filter((line) => needles.some((n) => line.includes(n)));
+    .filter((line) => needles.some((n) => line.trimEnd().endsWith(n)));
 const until = async (ok: () => boolean, ms = 10_000) => {
   for (const t = Date.now(); !ok() && Date.now() - t < ms; ) await Bun.sleep(20);
   return ok();

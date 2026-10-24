@@ -448,7 +448,8 @@ export class Languages {
           for (const v of this.app.allViews()) if (v.buf === buf) v.layoutKey = "";
           this.app.host.requestRender();
         };
-        void Promise.all(
+        // Settled whatever each did: one that threw leaves the next run free to start, never the file unlinted.
+        void Promise.allSettled(
           due.map(async (d) => {
             try {
               const root = linterRoot(d, buf.abs, project);
@@ -463,10 +464,7 @@ export class Languages {
               drawn();
             }
           }),
-        ).then(() => {
-          this.linterRuns.delete(buf);
-          drawn();
-        });
+        ).then(() => this.linterRuns.delete(buf));
       },
       buf.linted.typed >= 0 || buf.linted.saved >= 0 ? 500 : 0,
     );

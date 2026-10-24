@@ -15968,6 +15968,33 @@ describe("linters without a server (19.19)", () => {
     }
   });
 
+  test("a linter whose run throws ends that run all the same: the file is linted again once typing pauses", async () => {
+    // Its run ended in an exception, not an answer: the others' answers are kept, and the next run isn't held back as
+    // if this one were still going.
+    const servers = await import("../src/core/servers/linters.ts");
+    const run = servers.runLinter;
+    let threw = false;
+    const spy = spyOn(servers, "runLinter").mockImplementation((async (def, ...rest) => {
+      if (def.name === "saved" && !threw) {
+        threw = true;
+        throw new Error("the linter's run went wrong");
+      }
+      return run(def, ...rest);
+    }) as typeof run);
+    try {
+      const root = makeVault();
+      writeFileSync(join(root, "Dockerfile"), "FROM x\nRUN BAD\n");
+      const h = await harness({ root, open: "Dockerfile", config: linters });
+      const shown = () =>
+        h.app.problems.ofView(h.app.view!).map((p) => `${p.start.line} ${p.severity} ${p.source}: ${p.message}`);
+      expect(await until(() => (h.frame(), threw && shown().includes("2 error fake: found BAD")))).toBe(true);
+      await h.keys("shift+g", "o", "R", "U", "N", "space", "B", "A", "D", "escape");
+      expect(await until(() => (h.frame(), shown().includes("3 error fake: found BAD")))).toBe(true);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
   test("one not installed, failing for two files at once, is said once", async () => {
     const root = makeVault();
     writeFileSync(join(root, "Dockerfile"), "RUN x\n");
