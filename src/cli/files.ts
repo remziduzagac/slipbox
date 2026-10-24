@@ -5,7 +5,7 @@
 import { statSync } from "node:fs";
 import { dirname, join, relative, sep } from "node:path";
 import { isPointer } from "../core/pointer.ts";
-import { landsInside, readText } from "../core/fsutil.ts";
+import { entryInside, readText } from "../core/fsutil.ts";
 import { openVault } from "../core/reach.ts";
 import {
   type Applied,
@@ -245,7 +245,8 @@ function destArg(s: Session, to: string | undefined, into = false): string | und
   if ((!rel && !into) || !isInside(s.loc.root, abs))
     throw new CliError(`${to} is outside the vault (${s.loc.root})`, EXIT.refused);
   // Through a link out of the vault, followed or not, in home too: said as the TUI's move and copy say it (VV-D6).
-  if (!landsInside(s.loc.root, abs)) throw new CliError(`${rel} would land outside the vault`, EXIT.refused);
+  // A link there (the one moving, on a disk that ignores case) is its own entry: by its folder.
+  if (!entryInside(s.loc.root, abs, true)) throw new CliError(`${rel} would land outside the vault`, EXIT.refused);
   if (!rel) return "/";
   return to.endsWith("/") ? `${rel}/` : rel;
 }
@@ -286,6 +287,7 @@ export async function renameResult(
   }
   s.warnings.push(
     ...p.warnings,
+    ...(applied?.warnings ?? []),
     ...p.skipped.map((x) => `${x.shown}:${x.line}: ${x.reason}`),
     ...(p.ambiguous ?? []).map(
       (a) =>
@@ -374,7 +376,7 @@ export async function renameResult(
       move: p.move,
       ...(left ? { notIndexed: left } : {}),
       files: p.files.map((f) => ({ path: f.shown, abs: f.abs, ...s.rootOf(f.abs), edits: f.edits })),
-      warnings: p.warnings,
+      warnings: [...p.warnings, ...(applied?.warnings ?? [])],
       skipped: p.skipped,
       ...(p.ambiguous ? { ambiguous: p.ambiguous } : {}),
       written: applied?.written ?? [],

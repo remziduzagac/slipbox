@@ -9,9 +9,18 @@
 // Elsewhere, what the file system allows. A followed target is asked whether it answers before it's walked, off the
 // main thread: one on a disk that doesn't answer is given up on (`probe`).
 
-import { lstatSync, promises, realpathSync, statSync } from "node:fs";
+import {
+  lstatSync,
+  promises,
+  readlinkSync,
+  realpathSync,
+  renameSync,
+  statSync,
+  symlinkSync,
+  unlinkSync,
+} from "node:fs";
 import { homedir } from "node:os";
-import { basename, dirname, join, relative, resolve, sep } from "node:path";
+import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { climbsOut, ensureDir, readJson, realTarget, writeJson } from "./fsutil.ts";
 import { stateHome, tildePath } from "./paths.ts";
 
@@ -115,9 +124,17 @@ export function setLinkAnswer(link: string, answer: LinkAnswer | null): void {
   const target = linkTarget(link);
   const list = kept().filter((e) => e.link !== key);
   if (answer && target) list.push({ link: key, target, answer, at: new Date().toISOString() });
+  keep(list);
+}
+
+/** The answers kept, written: `links.json` in the state folder (VV-D6). */
+function keep(links: KeptLink[]): void {
   ensureDir(stateHome());
-  writeJson(linksFile(), { version: 1, links: list });
-  cache = null;
+  try {
+    writeJson(linksFile(), { version: 1, links });
+  } finally {
+    cache = null;
+  }
 }
 
 /** An answer kept (VV-D6), as it's listed: and where the link leads now, the answer holding only while it's `target`. */
@@ -142,10 +159,90 @@ export function forgetLinkAnswer(link: string): KeptLink | null {
   const list = kept();
   const hit = list.find((e) => keys.has(e.link));
   if (!hit) return null;
-  ensureDir(stateHome());
-  writeJson(linksFile(), { version: 1, links: list.filter((e) => e !== hit) });
-  cache = null;
+  keep(list.filter((e) => e !== hit));
   return hit;
+}
+
+/**
+ * Move the symlink `from` to `to` as a link (D260): its own entry, never what it leads to. A relative one moved to
+ * another folder is made anew at `to` (`movedLinkText`); nothing has changed when it can't be. The answer kept for it
+ * is kept for `to` then, in place of whatever was kept there: the same link, leading to the same place. One without an
+ * answer leaves `to`'s as it is when that leads where the link does — an answer is a place and where it leads, and
+ * one a move that couldn't keep it left behind is this link's — and any other there goes. `to`'s folder is there
+ * already. Moved, but its answer not kept there (the state folder can't be written): said, as a warning.
+ */
+export function moveLink(from: string, to: string): string | null {
+  const was = linkKey(from);
+  const text = movedLinkText(from, to);
+  if (text === null) renameSync(from, to);
+  else {
+    let dir = false;
+    try {
+      dir = statSync(from).isDirectory();
+    } catch {}
+    symlinkSync(text, to, dir ? "dir" : "file");
+    try {
+      unlinkSync(from);
+    } catch (err) {
+      try {
+        unlinkSync(to);
+      } catch {}
+      throw err; // why the move failed, not why taking it back did
+    }
+  }
+  // Moved, the link keeps its answer.
+  const now = linkKey(to);
+  const list = kept();
+  const hit = list.find((e) => e.link === was);
+  const leads = hit ? null : linkTarget(to);
+  const rest = list.filter((e) => e.link !== was && (e.link !== now || (!hit && e.target === leads)));
+  if (!hit && rest.length === list.length) return null;
+  try {
+    keep(hit ? [...rest, { ...hit, link: now }] : rest);
+  } catch (err) {
+    if (!hit) return null; // it had none to keep: an old one where it went is all that stays
+    const why = (err as NodeJS.ErrnoException).code ?? String(err);
+    return `${tildePath(to)}: the link moved, but its answer couldn't be kept for its new place (${why}); slipbox symlinks lists the answers kept`;
+  }
+  return null;
+}
+
+/**
+ * What the symlink `from` says once it's moved to `to` (D260), when it says something else: a relative one moved to
+ * another folder, written from there to lead where it did, from its own text (a link to a link stays one). Null when
+ * it moves as it is: an absolute one, or one staying in its folder.
+ */
+export function movedLinkText(from: string, to: string): string | null {
+  const text = readlinkSync(from);
+  const fromDir = real(dirname(from));
+  const toDir = realTarget(dirname(to)); // made by the move, maybe
+  return isAbsolute(text) || fromDir === toDir ? null : relinked(text, fromDir, toDir);
+}
+
+/**
+ * A relative link's `text`, written in the real folder `fromDir`, as written in `toDir` to lead to the same place:
+ * the way from `toDir` back to `fromDir`, then the text, each `..` of the text taking back a folder of that way — a
+ * real folder's, so the same step. What the text says past that is kept as it is.
+ */
+function relinked(text: string, fromDir: string, toDir: string): string {
+  const way = relative(toDir, fromDir).split(sep).filter(Boolean);
+  const rest = text.split(process.platform === "win32" ? /[\\/]/ : "/").filter((s) => s && s !== "."); // on POSIX, `\` is a name's
+  while (way.length && way.at(-1) !== ".." && rest[0] === "..") {
+    way.pop();
+    rest.shift();
+  }
+  return [...way, ...rest].join(sep) || ".";
+}
+
+/**
+ * The followed links in `top`, by their path, whose targets haven't answered (VV-D6): what's behind them is never read
+ * on the main thread — a disk gone quiet would hang it. From the answers kept, nothing near the links themselves.
+ */
+export function quietFollowed(top: string): string[] {
+  const at = real(top);
+  return kept()
+    .filter((e) => e.answer === "follow" && within(at, e.link) && answered(e.target) !== true)
+    .map((e) => e.link);
 }
 
 /**

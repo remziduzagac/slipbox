@@ -2,10 +2,10 @@
 // the index and the redirects following; logged, so it can be undone (7.4) — the undo a plan of its own.
 
 import { randomUUID } from "node:crypto";
-import { existsSync, mkdirSync, renameSync, rmdirSync, statSync, unlinkSync } from "node:fs";
+import { accessSync, constants, existsSync, mkdirSync, renameSync, rmdirSync, statSync, unlinkSync } from "node:fs";
 import { dirname, join, relative, sep } from "node:path";
 import { classify } from "./filetypes.ts";
-import { atomicWrite, landsInside, readText } from "./fsutil.ts";
+import { atomicWrite, entryAt, entryInside, landsInside, readText, realTarget } from "./fsutil.ts";
 import type { Graph } from "./graph.ts";
 import { trashVaultMarker } from "./files.ts";
 import { contentHash } from "./redirects.ts";
@@ -20,10 +20,13 @@ import {
   type RenamePlan,
   dirtyTrees,
   mayRewrite,
+  relinkSaid,
   walkSkips,
-  sameFile,
+  sameEntry,
+  whereItLeads,
 } from "./rename-plan.ts";
 import { real } from "./rename-links.ts";
+import { blockingLink, isLink, moveLink } from "./symlinks.ts";
 
 // -------------------------------------------------------------------------------------------
 // Undoing (7.4)
@@ -65,8 +68,15 @@ export function planUndo(g: Graph): RenamePlan {
             : r.kind === "vault"
               ? `folder's naming as ${r.to}`
               : `rename of ${r.from}`;
+  // A link moved as a link moves back as one (D260); anything else, a link now where it went among them, as it moved.
+  const move = r.move
+    ? { from: r.move.to, to: r.move.from, dir: r.move.dir, ...(r.move.link ? { link: true } : {}) }
+    : null;
   const files: FileChange[] = [];
   for (const f of r.files) {
+    // Never read through a link not followed (VV-D6): one moved where its answer couldn't be kept, say.
+    if (blockingLink(g.loc, f.abs))
+      throw new RenameError(`${f.shown} is reached through a link that isn't followed: the ${what} can't be undone`);
     let now: string;
     try {
       now = readText(f.abs).text;
@@ -82,18 +92,18 @@ export function planUndo(g: Graph): RenamePlan {
       edits,
       text: now,
       next: now.slice(0, f.at) + f.was + now.slice(f.at + f.length),
+      ...(f.also ? { also: f.also } : {}),
     });
   }
-  const move = r.move ? { from: r.move.to, to: r.move.from, dir: r.move.dir } : null;
-  if (move && !existsSync(move.from))
+  if (move && !(move.link ? entryAt : existsSync)(move.from))
     throw new RenameError(`${relative(g.root, move.from)} isn't there any more: the ${what} can't be undone`);
-  if (move && existsSync(move.to) && !sameFile(move.from, move.to))
+  if (move && entryAt(move.to) && !sameEntry(move.from, move.to))
     throw new RenameError(`${relative(g.root, move.to)} exists again: the ${what} can't be undone`);
   // Back only inside the vault: a link that leads out of it now, where the folder was, isn't moved through (VV-D6).
-  const out = outside(g, { files, move });
+  const out = outside(g, { files, move, vaults: r.vaults });
   if (out) throw new RenameError(`${out}: the ${what} can't be undone`);
   const back = (pairs: [string, string][]) => pairs.map(([a, b]): [string, string] => [b, a]);
-  const warnings = dirtyTrees(files.map((f) => f.abs));
+  const warnings = [...dirtyTrees(files.map((f) => f.abs)), ...relinkSaid(move, r.to, r.from)];
   return {
     kind: r.kind,
     from: r.to,
@@ -114,23 +124,35 @@ export function planUndo(g: Graph): RenamePlan {
 export interface Applied {
   written: string[];
   moved: { from: string; to: string } | null;
+  /** What was done but not all of it: a link moved whose answer couldn't be kept for its new place (D260). */
+  warnings: string[];
 }
 
 /**
  * What of a plan would land out of where it may (VV-D6), said; null when nothing would. Every file it writes where
- * `mayRewrite` allows; what moves, from and to, inside the vault by its real path, as a folder made a vault or a vault
+ * `mayRewrite` allows; what moves, from and to, inside the vault by its real path — a link planned as one by its entry
+ * (`entryInside`, D260), but one a vault moves with, whose place is its real path — as a folder made a vault or a vault
  * made a plain folder.
  */
 export function outside(
   g: Graph,
-  plan: Pick<RenamePlan, "files" | "move" | "makeVault" | "unmakeVault">,
+  plan: Pick<RenamePlan, "files" | "move" | "makeVault" | "unmakeVault" | "vaults">,
 ): string | null {
   for (const f of plan.files)
-    if (!mayRewrite(g, f.abs))
-      return `${g.shownPath(f.abs)}: a link leads it out of the vault, where nothing is written`;
-  const ends = [plan.move?.from, plan.move?.to, plan.makeVault?.root, plan.unmakeVault?.root];
+    if (!mayRewrite(g, f.abs)) return `${g.shownPath(f.abs)}: ${whereItLeads(g, f.abs)}, where nothing is written`;
+  // A link planned as one by its entry (D260); a link that wasn't (put where something else went) by where it leads.
+  if (plan.move && !entryInside(g.root, plan.move.from, movesAsLink(plan)))
+    return `${g.shownPath(plan.move.from)} resolves outside the vault`;
+  // What a link moved as a link lands as is its own entry, in its folder (on a disk that ignores case, the very one).
+  const to = plan.move && movesAsLink(plan) ? dirname(plan.move.to) : plan.move?.to;
+  const ends = [to, plan.makeVault?.root, plan.unmakeVault?.root];
   for (const end of ends) if (end && !landsInside(g.root, end)) return `${g.shownPath(end)} resolves outside the vault`;
   return null;
+}
+
+/** Whether a plan's move moves a link as a link (D260): planned as one, a link still, and no vault moving with it. */
+function movesAsLink(plan: Pick<RenamePlan, "move" | "vaults">): boolean {
+  return !!plan.move?.link && !plan.vaults?.length && isLink(plan.move.from);
 }
 
 /**
@@ -157,8 +179,7 @@ export function applyPlan(g: Graph, plan: RenamePlan): Applied {
   }
   const text = (f: FileChange) => (bom.has(f.abs) ? `\uFEFF${f.next}` : f.next);
   const mv = plan.move;
-  if (mv && existsSync(mv.to) && !sameFile(mv.from, mv.to))
-    throw new RenameError(`${mv.to} exists now; nothing changed`);
+  if (mv && entryAt(mv.to) && !sameEntry(mv.from, mv.to)) throw new RenameError(`${mv.to} exists now; nothing changed`);
   /** Where a file of the plan is written: at its new place when it moves. */
   const dest = (fileAbs: string) => {
     if (!mv) return fileAbs;
@@ -168,31 +189,97 @@ export function applyPlan(g: Graph, plan: RenamePlan): Applied {
   const written: string[] = [];
   /** The first folder the move made to hold it, if it made any: an undo takes it away again, empty. */
   let made: string | null = null;
-  // A folder moves whole — everything in it, whatever the walk lists — before its files' edits. A
-  // file's folder is made first too: if it can't be (a file is in the way), nothing is written.
-  if (mv?.dir) {
-    made = mkdirSync(dirname(mv.to), { recursive: true }) ?? null;
-    renameSync(mv.from, mv.to);
-  }
-  /** A case-only rename on a case-insensitive disk: the file written at its new name is the old one. */
-  const oneFile = !!mv && !mv.dir && sameFile(mv.from, mv.to);
-  if (mv && !mv.dir) {
+  /** A link planned as one moves as a link (D260): its entry, its answer with it, what it leads to staying. */
+  const link = movesAsLink(plan);
+  const warnings: string[] = [];
+
+  /** What moves, moved before anything is written — a link as a link: if it can't be, nothing has changed, the folders
+   *  made for it gone. */
+  const moveFirst = (from: string, to: string) => {
     try {
-      made = mkdirSync(dirname(mv.to), { recursive: true }) ?? null;
+      if (!link) renameSync(from, to);
+      else warnings.push(...[moveLink(from, to)].filter((w) => w !== null));
+    } catch (err) {
+      for (let d = dirname(to); made && isInside(made, d); d = dirname(d)) {
+        try {
+          rmdirSync(d);
+        } catch {
+          break;
+        }
+      }
+      throw new RenameError(
+        `${g.shownPath(from)} can't be moved (${(err as NodeJS.ErrnoException).code ?? err}); nothing changed`,
+      );
+    }
+  };
+  // Where each file is written, found before anything moves: through a link it's reached by, never over it — where
+  // it was read and checked (`outside`), as a link moving with a folder may lead elsewhere after. What the folder's
+  // move takes along, there.
+  const fromReal = mv?.dir && !link ? realTarget(mv.from) : null;
+  const toReal = fromReal && mv ? realTarget(mv.to) : "";
+  // Each written where it can be, its folder writable (and searched), before anything moves: else nothing is.
+  const at = new Map<string, string>();
+  for (const f of plan.files) {
+    const t = realTarget(f.abs);
+    at.set(
+      f.abs,
+      fromReal && (t === fromReal || t.startsWith(`${fromReal}${sep}`)) ? toReal + t.slice(fromReal.length) : t,
+    );
+    if (mv && !mv.dir && !link && f.abs === mv.from) continue; // written at its new place
+    try {
+      accessSync(dirname(t), constants.W_OK | constants.X_OK);
     } catch (err) {
       throw new RenameError(
-        `${dirname(mv.to)} can't be made (${(err as NodeJS.ErrnoException).code ?? err}); nothing changed`,
+        `${f.shown} can't be written where it is (${(err as NodeJS.ErrnoException).code ?? err}); nothing changed`,
       );
     }
   }
+  // A file moves last, after the edits (a link's, first): the folder it leaves, and the one it goes into, writable too.
+  if (mv && !mv.dir && !link) {
+    let into = dirname(mv.to);
+    while (!existsSync(into) && dirname(into) !== into) into = dirname(into);
+    for (const dir of [dirname(mv.from), into]) {
+      try {
+        accessSync(dir, constants.W_OK | constants.X_OK);
+      } catch (err) {
+        throw new RenameError(
+          `${g.shownPath(mv.from)} can't be moved (${(err as NodeJS.ErrnoException).code ?? err}); nothing changed`,
+        );
+      }
+    }
+    // Gone since its plan (a plan saved, a preview left open): before anything is written.
+    if (!entryAt(mv.from)) throw new RenameError(`${g.shownPath(mv.from)} isn't there any more; nothing changed`);
+  }
+  /** The folder what moves goes into, made first: if it can't be (a file in the way, a folder shut), nothing is. */
+  const makeInto = (to: string) => {
+    try {
+      made = mkdirSync(dirname(to), { recursive: true }) ?? null;
+    } catch (err) {
+      throw new RenameError(
+        `${dirname(to)} can't be made (${(err as NodeJS.ErrnoException).code ?? err}); nothing changed`,
+      );
+    }
+  };
+  // A folder moves whole — everything in it, whatever the walk lists — before its files' edits.
+  if (mv?.dir) {
+    makeInto(mv.to);
+    moveFirst(mv.from, mv.to);
+  }
+  /** A case-only rename on a case-insensitive disk: the file written at its new name is the old one. */
+  const oneFile = !!mv && !mv.dir && sameEntry(mv.from, mv.to);
+  if (mv && !mv.dir) makeInto(mv.to);
+  // A file's link moves first too, as a folder does: if it can't be made where it goes, nothing is written.
+  if (mv && !mv.dir && link) moveFirst(mv.from, mv.to);
   for (const f of plan.files) {
     if (mv && !mv.dir && f.abs === mv.from) continue; // written at its new place, below
-    atomicWrite(dest(f.abs), text(f));
-    written.push(dest(f.abs));
+    atomicWrite(at.get(f.abs)!, text(f));
+    written.push(dest(f.abs), ...(f.also ?? []).map(dest)); // its other names indexed again too
   }
   if (mv && !mv.dir) {
     const own = plan.files.find((f) => f.abs === mv.from);
-    if (own) {
+    if (link) {
+      if (own) atomicWrite(at.get(own.abs)!, text(own));
+    } else if (own) {
       atomicWrite(mv.to, text(own));
       if (!oneFile) unlinkSync(mv.from);
     } else renameSync(mv.from, mv.to);
@@ -224,7 +311,7 @@ export function applyPlan(g: Graph, plan: RenamePlan): Applied {
     }
     g.build(true, "lazy");
     reindexOthers();
-    return { written, moved: null };
+    return { written, moved: null, warnings };
   }
   reindexOthers();
   // The vault's log (7.4): a rename carried out is logged, so it can be undone; an undo, forgotten.
@@ -271,6 +358,7 @@ export function applyPlan(g: Graph, plan: RenamePlan): Applied {
         edits: f.edits,
         hash: contentHash(f.next),
         ...changedSpan(f.text, f.next),
+        ...(f.also ? { also: f.also.map(dest) } : {}),
       })),
     });
   }
@@ -284,8 +372,16 @@ export function applyPlan(g: Graph, plan: RenamePlan): Applied {
     else g.removeAsset(from);
   }
   const touched = new Set([...written, ...(plan.moves ?? []).map(([, to]) => join(g.root, to))]);
+  /** A file the move put behind a link not followed: the index as the walk has it then, the link a row of its own. */
+  let unread = false;
   for (const abs of touched) {
     if (!isInside(g.root, abs)) continue;
+    // Through a link not followed (VV-D6) — one moved where its answer couldn't be kept, or one a folder's move took
+    // along, its answer staying where it was: never read, and the index walked again below.
+    if (blockingLink(g.loc, abs)) {
+      unread = true;
+      continue;
+    }
     // A moved vault's files are its own, not this vault's (18.7); so are a nested root's (17.17),
     // reindexed with the others.
     if (plan.vaults?.some(([, to]) => abs === to || abs.startsWith(`${to}/`))) continue;
@@ -315,5 +411,6 @@ export function applyPlan(g: Graph, plan: RenamePlan): Applied {
       ),
     ];
   }
-  return { written, moved: mv ? { from: mv.from, to: mv.to } : null };
+  if (unread) g.build(true, "lazy");
+  return { written, moved: mv ? { from: mv.from, to: mv.to } : null, warnings };
 }

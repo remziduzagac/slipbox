@@ -10,6 +10,7 @@ import {
   mkdirSync,
   readdirSync,
   readFileSync,
+  readlinkSync,
   renameSync,
   rmSync,
   statSync,
@@ -83,7 +84,7 @@ function rowEnd(s: Session, name: string): { describe: string; mark: string } | 
 }
 
 /** The index's mark at the end of the explorer's row named `name`. */
-const markOf = (s: Session, name: string) => rowEnd(s, name)?.mark ?? null;
+export const markOf = (s: Session, name: string) => rowEnd(s, name)?.mark ?? null;
 
 /** A tab in the tab strip: its number, its file's name, its close button. */
 const tab = (n: number | string, name: string) => new RegExp(` ${n} ${escaped(name)}\\s+×`);
@@ -1452,6 +1453,100 @@ const LINKED: Check[] = [
       s.expect(!s.text().includes("On shelf B."), "nothing read through it before the answer");
       await s.keys("n");
       await opened(s, "to-shelf.md");
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "links: a followed link renamed with r, a relative one moved with m — each moves as a link, still followed, what it leads to where it was; undone, back",
+    covers: { cases: ["links/state", "rename", "safety"], commands: ["rename.undo"] },
+    options: {
+      home: true,
+      startAt: "home/notes/to-shelf.md",
+      config: WIDE,
+      setup: (s) => {
+        if (!s.exists("~/notes/to-shelf.md")) {
+          s.write("~/shelf/far.md", "# Far\n\nA note kept on the shelf.\n");
+          s.write("~/attic/old.md", "# Old\n\nUp in the attic.\n");
+          s.write("~/notes/box/kept.md", "# Kept\n");
+          s.write("~/notes/to-shelf.md", "# To the shelf\n\nWhat's kept on [the shelf](shelf/far.md).\n");
+        }
+        symlinkOnce(s.path("~/shelf"), s.path("~/notes/shelf"));
+        symlinkOnce("../attic", s.path("~/notes/attic")); // relative
+        // Both followed, as the question's f keeps them: by the link, and where it leads.
+        mkdirSync(join(s.dir, "state", "slipbox"), { recursive: true });
+        const follow = (link: string, target: string) => ({ link, target, answer: "follow", at: "2026-10-23" });
+        writeFileSync(
+          join(s.dir, "state", "slipbox", "links.json"),
+          JSON.stringify({
+            version: 1,
+            links: [
+              follow(s.path("~/notes/shelf"), s.path("~/shelf")),
+              follow(s.path("~/notes/attic"), s.path("~/attic")),
+            ],
+          }),
+        );
+      },
+    },
+    run: async (s) => {
+      // r on the link's row: the link itself renamed, the note linking through it following.
+      await explorerOpen(s);
+      await explorerRow(s, "shelf");
+      await s.keys("r");
+      await s.see("rename shelf/ to:");
+      await s.keys("ctrl+u");
+      await s.type("shelved");
+      await s.keys("enter");
+      await s.see("shelf/ → shelved/: 1 change in 1 file");
+      await s.keys("enter");
+      await s.message("moved shelf/ → shelved/");
+      s.expect(lstatSync(s.path("~/notes/shelved")).isSymbolicLink(), "the link renamed, a link still");
+      s.expect(s.exists("~/shelf/far.md") && !s.exists("~/notes/shelf"), "what it leads to where it was");
+      s.expect(s.read("~/notes/to-shelf.md").includes("(shelved/far.md)"), "the link to it follows");
+      // Still followed, and indexed: its row says where it leads, nothing asked going through it.
+      await s.keys("escape");
+      await s.until(
+        () => rowEnd(s, "shelved")?.describe === "→ ~/shelf" && markOf(s, "shelved") === "●",
+        20_000,
+        "the row: → ~/shelf, followed and indexed ●",
+      );
+      await toLink(s, "shelved/far.md");
+      await s.keys("enter");
+      await opened(s, "shelved/far.md");
+      await s.see("A note kept on the shelf.");
+      s.expect(!s.text().includes("follow it?"), "renamed, still followed: nothing asked");
+      // Watched through its new name: changed from outside, it's read again.
+      writeFileSync(s.path("~/shelf/far.md"), "# Far\n\nMoved along the shelf.\n");
+      await s.see("Moved along the shelf.", 10_000);
+      await s.keys("ctrl+o");
+      await opened(s, "to-shelf.md");
+      // m on the relative one: into box, written again to lead where it did, and said so.
+      await explorerOpen(s);
+      await explorerRow(s, "attic");
+      await s.keys("m");
+      await s.see("Move attic/ to…");
+      await s.type("box");
+      await s.keys("enter");
+      await s.see("attic is a relative link: written again at box/attic to lead where it did (../../attic)");
+      await s.keys("enter");
+      await s.message("moved attic/ → box/attic/");
+      s.expect(readlinkSync(s.path("~/notes/box/attic")) === "../../attic", "written again from box");
+      await s.keys("escape");
+      await s.until(() => markOf(s, "attic") === "●", 20_000, "box/attic followed and indexed ●");
+      // Undone, newest first: each link back where it was, as it was written.
+      for (const [from, to] of [
+        ["box/attic", "attic"],
+        ["shelved", "shelf"],
+      ]) {
+        await leader(s, "v", "shift+u");
+        await s.see(`undo: ${from}/ → ${to}/`);
+        // The relative one written again as it moves back, and said.
+        if (from === "box/attic") await s.see("box/attic is a relative link: written again at attic");
+        await s.keys("enter");
+        await s.message(`moved ${from}/ back to`); // the toast wraps the rest
+      }
+      s.expect(readlinkSync(s.path("~/notes/attic")) === "../attic", "the relative link as it was written");
+      s.expect(lstatSync(s.path("~/notes/shelf")).isSymbolicLink(), "the renamed link back");
+      s.expect(s.read("~/notes/to-shelf.md").includes("(shelf/far.md)"), "the note linking to it as it was");
     },
   },
   {

@@ -19,6 +19,8 @@ export interface LoggedFile {
   at: number;
   length: number;
   was: string;
+  /** Its other names, in its folder, that the rename wrote through once (D260): indexed again with it. */
+  also?: string[];
 }
 
 export interface LoggedRename {
@@ -28,7 +30,7 @@ export interface LoggedRename {
   kind: "note" | "folder" | "vault" | "relink" | "heading" | "convert" | "replace";
   from: string;
   to: string;
-  move: { from: string; to: string; dir: boolean } | null;
+  move: { from: string; to: string; dir: boolean; link?: boolean } | null;
   /** The first folder the move made to hold what moved (absolute), if it made one. */
   made: string | null;
   /** The branch it was made on (5.9): undone only there. Absent in a log written before. */

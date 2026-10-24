@@ -7,7 +7,7 @@ import { readText } from "./fsutil.ts";
 import type { Graph } from "./graph.ts";
 import { matchText } from "./regex-jobs.ts";
 import { dirtyTrees, type Edit, type FileChange, RenameError, type RenamePlan } from "./rename.ts";
-import { LEADS_OUT, mayRewrite } from "./rename-plan.ts";
+import { mayRewrite, notRewritten } from "./rename-plan.ts";
 import {
   compilePattern,
   everyMatch,
@@ -52,9 +52,9 @@ function* replacementPlan(
     }
     const next = replaceMatches(d.text, ms, replacement, opts.regex).text;
     if (next === d.text) continue;
-    // Reached through a link out of the vault: read, never written there (VV-D6).
+    // Reached through a link out of the vault, or into a hidden folder: read, never written there (VV-D6).
     if (!mayRewrite(g, abs)) {
-      skipped.push({ shown, line: edits[0]?.line ?? 1, reason: LEADS_OUT });
+      skipped.push({ shown, line: edits[0]?.line ?? 1, reason: notRewritten(g, abs) });
       continue;
     }
     files.push({ abs, shown, vault: null, edits, text: d.text, next });
