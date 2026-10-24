@@ -482,7 +482,7 @@ function drawTopBar(app: App, c: Canvas, band: Band, geo: Geometry): void {
     const w = stringWidth(it.text) + 2;
     if (rx - w < x + 12) break;
     rx -= w;
-    edge = rx + 1;
+    edge = rx; // its padding, as the outline's button's and the chip's: where you are keeps 2 columns beyond it
     drawText(c, rx + 1, y, it.text, { ...roleStyle(theme, it.role, bar.bg), bg: bar.bg });
   }
   drawWhere(app, c, band, geo, x + 2, edge - 2, bar.bg);

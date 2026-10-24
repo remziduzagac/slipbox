@@ -7,6 +7,7 @@ import { mkdirSync, mkdtempSync, realpathSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { ListOverlay } from "../src/tui/app.ts";
 import { fitWhere, type Where } from "../src/tui/where.ts";
+import { stringWidth } from "../src/core/width.ts";
 import { harness, makeSandbox, statusRow, topRow, whereNow, type Harness } from "./tui-harness.ts";
 
 const sandbox = makeSandbox();
@@ -206,8 +207,22 @@ describe("where you are on the top bar (WSP-D4)", () => {
     expect(outline.x).toBeGreaterThan(top.indexOf("indexing 3…"));
     // Cut to fit between them: the branch gone, the name cut from its end.
     expect(top).not.toContain("a-vault-named-at-some-length");
-    expect(top).toMatch(/◈ a-vault-named-at-s[^ ]*… {2}indexing/);
+    expect(top).toMatch(/◈ a-vault-named-at-s[^ ]*… {3}indexing/); // 2 columns beyond its padding, as the chip's
     expect(b).toBeUndefined();
+  });
+
+  test("with Nerd glyphs: the vault's target covers the glyph by its width, the branch's starts right after", async () => {
+    const root = named("osprey", true);
+    if (!root) return;
+    const h = await harness({ root, width: 120, config: (c) => (c.render.glyphs = "nerd") });
+    const glyph = h.app.glyphs.vault;
+    expect(glyph).toBe("\u{f125f}");
+    expect(topRow(h.frame())).toContain(`${glyph} osprey · main`);
+    const v = hot(h, "top:vault")!;
+    const b = hot(h, "top:branch")!;
+    expect(v.w).toBe(stringWidth(`${glyph} osprey`));
+    expect(b.x).toBe(v.x + v.w);
+    expect(b.w).toBe(stringWidth(" · main"));
   });
 
   test("hovered: the part under the mouse in hover", async () => {

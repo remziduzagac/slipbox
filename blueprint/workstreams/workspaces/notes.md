@@ -155,3 +155,14 @@ The tasks are in [tasks/](tasks/README.md).
   this branch, as any folder inside a repository does. One slip: the CLI's `ls`, run from the worktree rather than
   from kestrel, named this repository, whose list then led into the main checkout; slipbox only read it (its git
   reads take no optional locks, its state was the try's own) and was quit at once, the try's state removed.
+- 2026-10-24, Codex's review of the diff (`git diff origin/dev...`): no product-code regression found; three points on
+  the tests, taken: the gap before `indexing…` was the 2 columns alone, its padding among them, where the chip's and
+  the outline's button's were their padding and 2 (now the same for all three, `edge` at the item's padding, the unit
+  test's 2 spaces made 3); the checks' `where()` parsed the bar loosely (now `whereOnBar`, the right end's items left
+  out, an empty middle beside the outline's button read as empty, with tests of its own in
+  `tests/terminal-harness.test.ts`); a check with the outline's button on the bar (no breadcrumb, no right rail) and a
+  unit test of the targets with Nerd glyphs. Not taken: a terminal check with `indexing…` showing (when it shows is the
+  index's timing; the unit test sets it), and one of the status line saying where while the bar shows but can't (not
+  reachable: `indexing…` is drawn only while it leaves the chip 12 columns, so the bar's span is at least 8, enough for
+  the vault cut to 6; and a screen with room on the status line has far more on the bar). Codex's pane then showed its
+  usage limit's menu: its later parts (a second look) are skipped, a fresh reviewer taking them.

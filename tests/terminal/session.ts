@@ -84,6 +84,20 @@ export interface SessionOptions {
 /** What a session is made with, once: its folders and config, and its terminal. A restart can't change them. */
 const MADE_ONCE = ["home", "config", "size", "keyboard", "graphics", "frameMax", "readSize"] as const;
 
+/**
+ * Where you are, read off a top bar's row (WSP-D4): what's between the `slipbox` chip and the right end's items (the
+ * vault's state, `indexing 3…`, and the outline's button), each 3 or more columns apart from it, the vault's glyph left
+ * out; empty when the middle says nothing.
+ */
+export function whereOnBar(bar: string): string {
+  const chip = bar.indexOf("slipbox");
+  const parts = (chip < 0 ? bar : bar.slice(chip + "slipbox".length))
+    .trim()
+    .split(/ {3,}/)
+    .filter((p) => p && !/^indexing \d+…$/.test(p) && [...p].length > 1);
+  return (parts[0] ?? "").replace(/^[^\p{L}\p{N}~…/.\s] /u, "");
+}
+
 export class CheckFailed extends Error {}
 
 /** What the check needs isn't there (said why): skipped, named — never a silent pass. */
@@ -528,11 +542,7 @@ export class Session {
    * 3 or more from the chip and the right end's items.
    */
   whereText(): string {
-    const bar = this.topBar();
-    const chip = bar.indexOf("slipbox");
-    const middle = (chip < 0 ? bar : bar.slice(chip + "slipbox".length)).trim().split(/ {3,}/)[0] ?? "";
-    if (/^indexing \d+…$/.test(middle)) return "";
-    return middle.replace(/^[^\p{L}\p{N}~…/.\s] /u, "");
+    return whereOnBar(this.topBar());
   }
 
   /**

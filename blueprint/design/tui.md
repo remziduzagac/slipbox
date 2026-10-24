@@ -84,26 +84,25 @@ the frame's rule under it gives it the same half row of air the tab strip and th
 - on the left, the `slipbox` chip (plain accent text), which opens the command palette; before it, without the left
   rail, the explorer's `≡`;
 - in the middle, **where you are** (WSP-D4; `where.ts`): the vault after the vault glyph (`◈`; Nerd: a bookshelf;
-  ascii `#`), by its name or its path, as § How a vault is named and shown in roots.md says (`◈ kestrel`,
-  `◈ ~/src/experiment`, home `◈ ~`; Elsewhere `Elsewhere`, no glyph, being no vault); then the workspace when it
-  isn't the vault's own, a folder of home opened by name, by home's path for it (`◈ ~ › notes`); then the branch as
-  the status line said it: `· main`, how far it's ahead of its upstream and behind (`↑2 ↓1`; GIT-D4), a merge or a
-  rebase under way (`merging`, `rebasing 2/5`; GIT-D6), a named worktree's after its name (`◈ kestrel@feat`), a
-  detached head by its commit. The vault and the workspace are drawn in the bar's text, the branch and what follows
-  it dim (`status_dim`), a part under the mouse in `hover`; every name passes through `sanitize`, and every width is
-  `core/width.ts`'s. **Where it goes:** in the span between the left side's last item (the chip) and the right
-  end's first (`indexing…`, or the outline's button when the bar has it), 2 columns kept from each; centred on the
-  screen, then clamped into that span, so it moves right or left only as far as it must. **Short of room,** cut in
-  this order, each step only while it still doesn't fit: a path is cut from the front (the vault's, then the
-  workspace's, to 12 columns each, `…/notes`); the branch's ahead and behind and its operation go; the branch is
-  cut from its end, to 8 columns, then goes; the workspace goes; the vault's name is cut, a name from its end and a
-  path from the front, to 6 columns. Narrower still, nothing is drawn, and the status line says where if it has the
-  room (below). **Clicked**, two targets, each a hot region only while its part is drawn: the vault's (`top:vault`:
-  the glyph, the name, and the workspace after it, `◈ ~ › notes`) lists the named folders, seen last first, and
-  `enter` goes into one (`space v v`, § Going into a vault), from Elsewhere too; the branch's (`top:branch`: from its
-  `·` or a worktree's `@` through the operation: `· main ↑2 merging`, `@feat`), in a repository, opens the branches'
-  menu as the status line's did (GIT-D8): Pull while there's an upstream not gone, Push, Fetch and the git panel,
-  then the branches;
+  ascii `#`), by its name or its path, as § How a vault is named and shown in roots.md says (`◈ kestrel`, `◈
+  ~/src/experiment`, home `◈ ~`; Elsewhere `Elsewhere`, no glyph, being no vault); then the workspace when it isn't the
+  vault's own, a folder of home opened by name, by home's path for it (`◈ ~ › notes`); then the branch as the status
+  line said it: `· main`, how far it's ahead of its upstream and behind (`↑2 ↓1`; GIT-D4), a merge or a rebase under way
+  (`merging`, `rebasing 2/5`; GIT-D6), a named worktree's after its name (`◈ kestrel@feat`), a detached head by its
+  commit. The vault and the workspace are drawn in the bar's text, the branch and what follows it dim (`status_dim`), a
+  part under the mouse in `hover`; every name passes through `sanitize`, and every width is `core/width.ts`'s. **Where
+  it goes:** in the span between the left side's last item (the chip) and the right end's first (`indexing…`, or the
+  outline's button when the bar has it), 2 columns kept from each beyond its padding; centred on the screen, then
+  clamped into that span, so it moves right or left only as far as it must. **Short of room,** cut in this order, each
+  step only while it still doesn't fit: a path is cut from the front (the vault's, then the workspace's, to 12 columns
+  each, `…/notes`); the branch's ahead and behind and its operation go; the branch is cut from its end, to 8 columns,
+  then goes; the workspace goes; the vault's name is cut, a name from its end and a path from the front, to 6 columns.
+  Narrower still, nothing is drawn, and the status line says where if it has the room (below). **Clicked**, two targets,
+  each a hot region only while its part is drawn: the vault's (`top:vault`: the glyph, the name, and the workspace after
+  it, `◈ ~ › notes`) lists the named folders, seen last first, and `enter` goes into one (`space v v`, § Going into a
+  vault), from Elsewhere too; the branch's (`top:branch`: from its `·` or a worktree's `@` through the operation:
+  `· main ↑2 merging`, `@feat`), in a repository, opens the branches' menu as the status line's did (GIT-D8): Pull
+  while there's an upstream not gone, Push, Fetch and the git panel, then the branches;
 - at the right end, the vault's state (`indexing N…`), dropped when fewer than 12 columns are left.
 
 Toggle buttons have no fill of their own: their glyph is dim (`topbar_button`) while the pane is closed and bright

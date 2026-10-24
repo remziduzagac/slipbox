@@ -174,6 +174,31 @@ export const WHERE: Check[] = [
   },
   {
     area: "navigating",
+    name: "where you are: beside the outline's button on the top bar (no breadcrumb, no right rail), kept clear of it; too narrow, the bar holds the button alone",
+    covers: { cases: ["width", "ui"] },
+    options: {
+      home: true,
+      startAt: "home/work/kestrel/README.md",
+      config: "[ui]\nbreadcrumb = false\nright_rail = false\n",
+    },
+    run: async (s) => {
+      await s.where(/^kestrel · main\b/);
+      await indexed(s);
+      s.expect(/ {3,}\S$/.test(s.topBar().trimEnd()), `the outline's button at the bar's right end:\n${s.topBar()}`);
+      clear(s);
+      // Narrow: moved left of centre only as far as the button needs, the branch gone first.
+      await s.resize(30, SIZE.rows);
+      await s.where("kestrel");
+      clear(s);
+      await s.resize(22, SIZE.rows);
+      await s.until(() => s.whereText() === "", 3000, "nothing said beside the button on a bar this narrow");
+      s.expect(/slipbox {3,}\S$/.test(s.topBar().trimEnd()), `the chip and the button alone:\n${s.topBar()}`);
+      await s.resize(SIZE.cols, SIZE.rows);
+      await s.where(/^kestrel · main\b/);
+    },
+  },
+  {
+    area: "navigating",
     name: "where you are: on the top bar, not the status line; the bar hidden (space u b), the status line says it, its click the branches' menu; zen, neither",
     covers: { cases: ["ui", "status", "mouse"], commands: ["ui.top_bar", "ui.zen"] },
     options: { home: true, startAt: "home/work/kestrel/README.md" },

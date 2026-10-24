@@ -56,8 +56,9 @@ Previously: `slipbox` at the left and `indexing 3…` at the right, the middle e
 >   detached head by its commit. The vault and the workspace are drawn in the bar's text, the branch and what follows
 >   it dim (`status_dim`), a part under the mouse in `hover`; every name passes through `sanitize`, and every width is
 >   `core/width.ts`'s. **Where it goes:** in the span between the left side's last item (the chip) and the right
->   end's first (`indexing…`, or the outline's button when the bar has it), 2 columns kept from each; centred on the
->   screen, then clamped into that span, so it moves right or left only as far as it must. **Short of room,** cut in
+>   end's first (`indexing…`, or the outline's button when the bar has it), 2 columns kept from each beyond its
+>   padding; centred on the screen, then clamped into that span, so it moves right or left only as far as it must.
+>   **Short of room,** cut in
 >   this order, each step only while it still doesn't fit: a path is cut from the front (the vault's, then the
 >   workspace's, to 12 columns each, `…/notes`); the branch's ahead and behind and its operation go; the branch is
 >   cut from its end, to 8 columns, then goes; the workspace goes; the vault's name is cut, a name from its end and a
