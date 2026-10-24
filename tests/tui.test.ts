@@ -11545,7 +11545,9 @@ describe("vaults in the TUI (17.x)", () => {
     expect([saveAs(h).dir, saveAs(h).focus]).toEqual([join(home, "Downloads"), "files"]);
     expect(h.frame()).toContain("~/Downloads/");
     await h.keys("tab", "enter");
-    expect(await until(() => existsSync(join(home, "Downloads", "rep.docx")))).toBe(true);
+    // The export ended, not only its file there: the file is there a moment before its folder is remembered.
+    expect(await until(() => h.app.messages.at(-1)?.text.startsWith("exported") ?? false)).toBe(true);
+    expect(existsSync(join(home, "Downloads", "rep.docx"))).toBe(true);
     // Next time: it opens there, "Last export" second.
     await h.keys("space", "n", "o", "enter");
     expect(saveAs(h).dir).toBe(join(home, "Downloads"));
@@ -11760,6 +11762,8 @@ describe("vaults in the TUI (17.x)", () => {
       expect(await until(() => h.app.messages.at(-1)!.level === "error")).toBe(true);
       expect(h.app.messages.at(-1)!.text).toStartWith("export: ro/rep.docx not written — ");
       expect(readdirSync(join(root, "ro"))).toEqual([]);
+      // Nor remembered as where you exported last.
+      expect(h.app.exporter.lastDir()).toBeNull();
     } finally {
       chmodSync(join(root, "ro"), 0o755);
     }

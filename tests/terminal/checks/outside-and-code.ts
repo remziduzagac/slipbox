@@ -3,6 +3,7 @@
 
 import { spawnSync } from "node:child_process";
 import {
+  chmodSync,
   cpSync,
   existsSync,
   mkdirSync,
@@ -1295,12 +1296,74 @@ export const OUTSIDE_AND_CODE: Check[] = [
       s.expect(s.exists("~/work/q3"), "the new folder made");
       await s.keys("tab", "enter");
       await exported(s, "~/work/q3/home.docx", "PK\x03\x04");
+      // The export ended, not only its file there: the file is there a moment before its folder is remembered.
+      await s.message("exported home.md");
       // Next time the window opens where this one went.
       await format(s, "home.md", "word");
       await s.see("~/work/q3/");
       await s.see("Last export");
       await s.keys("escape");
       await s.notSee("Name: home.docx");
+    },
+  },
+  {
+    area: "outside-and-code",
+    name: "export: where you exported last — the last export written; one that can't be written, or is cancelled, leaves it as it was",
+    covers: { commands: ["note.export", "note.export_cancel"] },
+    options: {
+      // Folders to export into, one that can't be written; a note long enough that its PDF takes seconds.
+      setup: (s) => {
+        for (const dir of ["out", "ro", "later"]) mkdirSync(s.path(dir));
+        s.write(
+          "long.md",
+          `# Long\n\n${Array.from({ length: 24_000 }, (_, i) => `Paragraph ${i} of a long note, a while as a PDF.\n`).join("\n")}`,
+        );
+      },
+    },
+    run: async (s) => {
+      const window = /[│┃] out\/ +[│┃]/; // the window's folder: out/
+      // Written into out/: the window opens there next time.
+      await format(s, "home.md", "word");
+      await s.see("Name: home.docx");
+      await s.keys("ctrl+u");
+      await s.type("out/home.docx");
+      await s.keys("enter");
+      await exported(s, "out/home.docx", "PK\x03\x04");
+      await s.message("exported home.md");
+      // Into a folder that can't be written: said, and not where you exported last.
+      chmodSync(s.path("ro"), 0o555);
+      try {
+        await format(s, "home.md", "word");
+        await s.see(window);
+        await s.see("Last export");
+        await s.keys("ctrl+u");
+        await s.type("../ro/home.docx");
+        await s.keys("enter");
+        await s.message(/ro\/home\.docx not written/);
+      } finally {
+        chmodSync(s.path("ro"), 0o755);
+      }
+      await format(s, "home.md", "word");
+      await s.see(window);
+      await s.keys("escape");
+      await s.notSee("Name: home.docx");
+      // Cancelled before it's written: not where you exported last either.
+      await open(s, "long.md");
+      await format(s, "long.md", "pdf");
+      await s.see(window);
+      await s.keys("ctrl+u");
+      await s.type("../later/long.pdf");
+      await s.keys("enter");
+      await s.keys(":");
+      await s.type("Cancel export");
+      await s.keys("enter");
+      await s.message("export cancelled");
+      s.expect(!s.exists("later/long.pdf"), "the PDF not written");
+      await format(s, "long.md", "pdf");
+      await s.see(window);
+      await s.see("Last export");
+      await s.keys("escape");
+      await s.notSee("Name: long.pdf");
     },
   },
   {

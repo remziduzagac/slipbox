@@ -138,7 +138,9 @@ lower retained output memory; these single-run timings are evidence of the trade
 - Then where (`10.14`, D190), in a Save As window: places down its left, the folder it's in on the right — its folders,
   then its files with their size and date — and the file's name at the bottom, with Export and Cancel buttons. It
   opens where you exported last (kept for the vault in its state, `export.json`, while that folder is there), else
-  beside the note, the note's name filled in and its focus: `enter` exports there.
+  beside the note, the note's name filled in and its focus: `enter` exports there. The folder is kept once the export's
+  files are in place, before its staging is cleared, so the window opened meanwhile opens there; an export that fails
+  or is cancelled leaves it as it was.
   - **Places:** Beside the note; Last export; Downloads, Desktop and Documents — where the desktop's `user-dirs.dirs`
     says, else by those names — and Home, those there are; This vault. The one the folder is in is marked.
   - **Keys:** `tab` (`shift+tab` back) moves between the places, the folder and the name. In the folder, `enter` or
