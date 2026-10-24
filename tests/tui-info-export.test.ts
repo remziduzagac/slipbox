@@ -1,6 +1,9 @@
 import { expect, test } from "bun:test";
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { stateDir } from "../src/core/paths.ts";
+import { writeJson } from "../src/core/fsutil.ts";
+import { rootAt } from "../src/core/vault.ts";
 import { formatFor } from "../src/core/export/index.ts";
 import type { ListOverlay } from "../src/tui/app.ts";
 import { harness, makeSandbox, makeVault } from "./tui-harness.ts";
@@ -40,4 +43,18 @@ test("Info has no export row for code or data", async () => {
     h.app.info.action("export");
     expect(h.app.overlay).toBeNull();
   }
+});
+
+test("Info keeps export paths in memory and reloads them when the vault changes", async () => {
+  const root = makeVault();
+  const other = makeVault();
+  const h = await harness({ root, open: "index.md" });
+  writeJson(join(stateDir(h.app.loc), "export.json"), { paths: { "index.md": "/first.html" } });
+  expect(h.app.exporter.lastPath("index.md")).toBe("/first.html");
+  writeJson(join(stateDir(h.app.loc), "export.json"), { paths: { "index.md": "/second.html" } });
+  for (let i = 0; i < 3; i++) expect(h.app.exporter.lastPath("index.md")).toBe("/first.html");
+  h.app.vaults.switchVault(rootAt(other), null);
+  expect(h.app.exporter.lastPath("index.md")).toBeNull();
+  h.app.vaults.switchVault(rootAt(root), null);
+  expect(h.app.exporter.lastPath("index.md")).toBe("/second.html");
 });

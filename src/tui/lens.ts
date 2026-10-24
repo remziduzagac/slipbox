@@ -26,7 +26,7 @@ export class Lens {
     if (buf.drawn) return true;
     if (buf.kind.group === "note") return this.app.config.render.notes;
     if (buf.kind.group === "data") return this.app.config.render.data;
-    return this.app.config.render.code !== false && this.app.config.render.code !== "source";
+    return this.app.config.render.code;
   }
 
   /** Initial presentation, explaining only an unavailable READ view. */
@@ -66,6 +66,7 @@ export class Lens {
    * state goes (resetForBuffer).
    */
   fitMode(view: View, before: NoteBuffer): void {
+    if (view.buf === before && this.app.canRender(view.buf)) return;
     if (view.buf !== before) this.resetForBuffer(view);
     const forced = !this.app.canRender(before) || !this.renderByDefault(before);
     if (!this.app.canRender(view.buf)) {

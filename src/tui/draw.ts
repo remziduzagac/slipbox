@@ -116,7 +116,6 @@ export interface Geometry {
   /** The Save As window's parts (10.14): clicks and the wheel there are its. */
   saveas?: SaveAsGeometry | null;
   /** The top bar said where you are (WSP-D4): the status line, drawn after it, leaves it out (WSP-D5). */
-  whereOnTop?: boolean;
   /** A dialog of choices (UPG): its box and its rows, for clicks. */
   choices?: DialogGeometry | null;
 }

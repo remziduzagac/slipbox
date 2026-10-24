@@ -13,6 +13,9 @@ set, padded to about three cells. Successful switches are silent; refusals still
 Reason: presentation and editing state must both be visible without overloading one word or one chip.
 Source: issue #82. Preserve HDR-D2; add a dated amendment there at consolidation.
 
+On narrow screens, shorten the view to R/R·L/S, then the vim mode to N/I/V/V-L before the file name. Without a
+window the chip says NORMAL.
+
 ## VB-D2: Rendering is a default per file kind (#82)
 
 `render.notes`, `render.code` and `render.data` are booleans, true by default. False opens SOURCE without disabling
@@ -36,12 +39,17 @@ and go, or stay. Only workspace state on disk survives the switch: old notes, pa
 Reason: a switch must preserve a deliberate choice about edits and must not accumulate vault contents in memory.
 Source: issue #85; extends WSP-D1 and WSP-D2 without changing their state ownership rules.
 
+Removing a vault marker retains its unsaved-note refusal: it also rewrites links, beyond switching workspaces.
+
 ## VB-D5: The list includes all vaults and home workspaces (#85)
 
 The vaults popup includes every known vault, named or unnamed, most recent first, with `/` filtering.
 Home folders opened by name appear and are marked as home's. Worktrees group beneath their repository.
 Reason: unnamed vaults must remain reachable, and many worktrees must not overwhelm the list.
 Source: issue #85; its home-folder and worktree questions are settled as above.
+
+The CLI exposes the same known-vault rows with `slipbox vaults`, including JSON; `folders` continues to describe
+pointer names and default copies.
 
 ## VB-D6: A git workspace is labelled by its vault (#85, #86)
 

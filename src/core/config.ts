@@ -27,7 +27,7 @@ export interface Config {
     show_urls: "auto" | "always" | "never";
     /** Opening defaults (VB-D2); legacy code strings are accepted on input. */
     notes: boolean;
-    code: boolean | "document" | "source";
+    code: boolean;
     data: boolean;
     /** How the code view draws a cell (24.13): in a box, or on a band. */
     code_cells: "box" | "band";

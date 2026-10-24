@@ -8,7 +8,7 @@ import { join, relative } from "node:path";
 import { COMMAND_SPECS } from "../src/core/command-specs.ts";
 import { EXPLORER, explorerClosed, explorerOpen, inSwitcher, mode, modeOf, OUTLINE, opened } from "./terminal/check.ts";
 import { encodeKey } from "./terminal/keys.ts";
-import { REPO, Session, type SessionOptions, WAIT, whereOnBar } from "./terminal/session.ts";
+import { REPO, Session, type SessionOptions, WAIT, whereOnBar, locationOnBar } from "./terminal/session.ts";
 import { HeadlessTerminal } from "./terminal/terminal.ts";
 
 describe("keys as a terminal sends them", () => {
@@ -670,27 +670,16 @@ describe("starting slipbox (session.ts)", () => {
   }, 60_000);
 });
 
-describe("where you are, read off the top bar (whereOnBar)", () => {
-  test("between the chip and the right end's items, the glyph left out; empty when the middle says nothing", () => {
-    expect(whereOnBar(" slipbox                  ◈ kestrel · main ↑2              indexing 3…")).toBe(
-      "kestrel · main ↑2",
-    );
-    // Clamped against the right end: 3 columns from it, the item's padding and the 2 kept.
-    expect(whereOnBar(" slipbox   ◈ kestrel   indexing 3…")).toBe("kestrel");
-    expect(whereOnBar(" ≡   slipbox   ◈ ~ › notes    ▤")).toBe("~ › notes");
-    expect(whereOnBar(" slipbox      Elsewhere")).toBe("Elsewhere");
-    expect(whereOnBar(" slipbox   \u{f125f} kestrel@agent/sync-retry rebasing 2/5")).toBe(
-      "kestrel@agent/sync-retry rebasing 2/5",
-    );
-    // Nothing in the middle: the outline's button or the vault's state alone isn't where you are.
-    expect(whereOnBar(" slipbox      ▤")).toBe("");
-    expect(whereOnBar(" slipbox      indexing 3…   ▤")).toBe("");
-    expect(whereOnBar(" slipbox")).toBe("");
-    // No bar: the row is the frame's rule, or a note's first line in zen.
+describe("where you are, read off the grouped bar", () => {
+  test("reads displayed workspace and git items, independently of zoom and activity", () => {
+    expect(whereOnBar(" slipbox    ≡ ~/work │ ◈ kestrel │ ⎇ main ↑2 │ ● 3   ◴ 2 ")).toBe("kestrel │ main ↑2");
+    expect(whereOnBar(" slipbox    ≡ ~ │ ◈ notes    ▤ ")).toBe("notes");
+    expect(whereOnBar(" slipbox    ≡ /tmp │ ◈ Elsewhere ")).toBe("Elsewhere");
+    expect(whereOnBar(" slipbox    ≡ ~ │ ◈ ~ ")).toBe("~");
     expect(whereOnBar("─────────────────────┬──────────")).toBe("");
-    expect(whereOnBar("   notes on kestrel   and more")).toBe("");
-    // ASCII: `…` is drawn `~`, the glyph `#`.
-    expect(whereOnBar(" slipbox      indexing 3~   #")).toBe("");
-    expect(whereOnBar(" slipbox   # kestrel - main   indexing 3~")).toBe("kestrel - main"); // `·` drawn `-`
+    expect(whereOnBar(" slipbox ")).toBe("");
+    expect(whereOnBar(" slipbox    = ~/work | # kestrel | git: main   ~ 2 ")).toBe("kestrel │ main");
+    expect(whereOnBar(" slipbox    \ue0b6 ≡ ~/work │ 󱉟 kestrel │ \ue725 main \ue0b4")).toBe("kestrel │ main");
+    expect(locationOnBar(" slipbox    ≡ ~/work │ ◈ kestrel │ ⎇ main ").zoom).toBe("~/work");
   });
 });

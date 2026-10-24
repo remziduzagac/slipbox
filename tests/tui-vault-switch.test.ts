@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { homeAt, rootAt } from "../src/core/vault.ts";
+import { readStale } from "../src/core/stale.ts";
 import { loadSession } from "../src/core/position.ts";
 import { recordRoot } from "../src/core/registry.ts";
 import { vaultChoices } from "../src/tui/vault-list.ts";
@@ -160,4 +161,32 @@ test("explorer zoom does not switch the home workspace or its tabs", async () =>
   } finally {
     process.env.HOME = before;
   }
+});
+
+test("back after an unsaved choice consumes its stop once; stay preserves it", async () => {
+  for (const choice of ["save", "discard", "stay"] as const) {
+    const a = makeVault();
+    const b = makeVault();
+    const h = await harness({ root: a });
+    h.app.vaults.switchVault(rootAt(b), null);
+    await h.keys("ctrl+k", "i", "x", "escape");
+    expect(h.app.vaults.back()).toBe(true);
+    await h.app.run(`vault.switch_${choice}`);
+    expect(h.app.loc.root).toBe(choice === "stay" ? b : a);
+    expect(h.app.vaults.trail.length).toBe(choice === "stay" ? 1 : 0);
+  }
+});
+
+test("dirty advisory is republished for the same relative path in a new vault", async () => {
+  const a = makeVault();
+  const b = makeVault();
+  const h = await harness({ root: a, open: "index.md" });
+  await h.keys("ctrl+k", "i", "x", "escape");
+  h.app.session.publishDirty();
+  expect(readStale(rootAt(a)).map((entry) => entry.path)).toContain("index.md");
+  h.app.vaults.switchVault(rootAt(b), join(b, "index.md"));
+  await h.app.run("vault.switch_discard");
+  h.app.view!.buf.edit(0, 0, "x", 0);
+  h.app.session.publishDirty();
+  expect(readStale(rootAt(b)).map((entry) => entry.path)).toContain("index.md");
 });

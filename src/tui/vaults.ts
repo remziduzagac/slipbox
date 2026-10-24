@@ -27,7 +27,6 @@ import { rootLabel, tildePath } from "../core/names.ts";
 import {
   copyAvailable,
   folderIdentity,
-  lookupFolder,
   type NamedFolder,
   pointerName,
   readFolders,
@@ -77,7 +76,11 @@ export class Vaults {
     if (choice === "save") {
       for (const buffer of this.app.dirtyBuffers()) if (!this.app.saving.save(buffer)) return;
     }
-    this.switchVault(pending.target, pending.open, pending.anchor, { ...pending.how, discard: true });
+    if (
+      this.switchVault(pending.target, pending.open, pending.anchor, { ...pending.how, discard: true }) &&
+      pending.how.back
+    )
+      this.trail.pop();
   }
 
   /**
@@ -567,23 +570,6 @@ export class Vaults {
       "info",
       `${tildePath(r.root)} has its .slipbox/ now${r.excluded ? ` (private: in ${r.excluded})` : ""} — :name names it for pointers`,
     );
-  }
-
-  /**
-   * The named folders to go into (21.6, 21.10): each by the name a pointer gives it, the copy it opens
-   * here (its default, else one that's here) — this folder's own left out; those seen last first.
-   */
-  folderChoices(): { folder: NamedFolder; path: string; name: string }[] {
-    const list = readFolders();
-    const here = this.app.loc.root;
-    const out: { folder: NamedFolder; path: string; name: string; seen: string }[] = [];
-    for (const f of list) {
-      const l = lookupFolder(pointerName(f, list), list);
-      const path = l.status === "found" ? l.path : null;
-      const seen = f.copies.find((c) => c.path === path)?.seen ?? "";
-      if (path && path !== here) out.push({ folder: f, path, name: pointerName(f, list), seen });
-    }
-    return out.sort((a, b) => b.seen.localeCompare(a.seen) || a.name.localeCompare(b.name));
   }
 
   /** The named folders (`:folders`, `space v v`): enter goes into one (17.10). */

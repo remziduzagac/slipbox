@@ -78,7 +78,9 @@ memory ownership, not merely visible tabs. Preserve existing git-state clearing 
 
 The vaults popup, `space v v`, `:folders` and the workspace click, lists every known vault regardless of pointer name,
 most recent first, filterable with `/`. Include named home folders, marked as home's, and group worktrees under their
-repository (VB-D5). Named-folder pointer lookup and default-copy selection remain distinct functions.
+repository (VB-D5). Named-folder pointer lookup and default-copy selection remain distinct functions. `slipbox vaults`
+exposes the
+same ordered rows as text and JSON; `slipbox folders` retains pointer names and copy defaults.
 
 ## MODIFIED design/tui.md § Positions; § Side panes
 
@@ -109,3 +111,11 @@ available for supported code regardless of that default (VB-D2).
 Append dated amendments under HDR-D2, WSP-D4 and WSP-D5; preserve their original entries. Update current terminology
 through root requirements and design, without rewriting historical decisions. Keep this workstream until its tasks
 and the whole batch's review and validation are complete.
+
+
+## Review refinements (VB-D1–VB-D5)
+
+The status chip narrows the view to R/R·L/S, then vim mode to N/I/V/V-L, before shortening the file name. Without a
+window it says NORMAL. Removing a vault marker keeps the existing unsaved-note refusal: it rewrites links, rather
+than only switching vaults. A cancelled index warns of incomplete search and backlinks and names reindex as the retry.
+The upgrade item clears when skipped, installed or no longer newer; merely closing its offer keeps it.

@@ -88,22 +88,27 @@ export interface SessionOptions {
 /** What a session is made with, once: its folders and config, and its terminal. A restart can't change them. */
 const MADE_ONCE = ["home", "config", "size", "keyboard", "graphics", "frameMax", "readSize"] as const;
 
-/**
- * Where you are, read off a top bar's row (WSP-D4): what's between the `slipbox` chip and the right end's items (the
- * vault's state, `indexing 3…`, and the outline's button), each 3 or more columns apart from it, the vault's glyph left
- * out; empty when the middle says nothing, or there's no bar (no chip on the row).
- */
-export function whereOnBar(bar: string): string {
-  // No chip: the bar is hidden (or zen), the row something else's.
+/** Read the actual zoom, workspace and git items of the grouped location block. */
+export function locationOnBar(bar: string): { zoom: string; workspace: string; git: string } {
   const chip = bar.indexOf("slipbox");
-  if (chip < 0) return "";
-  const parts = bar
-    .slice(chip + "slipbox".length)
-    .trim()
-    .split(/ {3,}/)
-    // The vault's state, `…` drawn `~` in ASCII; a button, one glyph.
-    .filter((p) => p && !/^indexing \d+[…~]$/.test(p) && [...p].length > 1);
-  return (parts[0] ?? "").replace(/^[^\p{L}\p{N}~…/.\s] /u, "");
+  if (chip < 0) return { zoom: "", workspace: "", git: "" };
+  const group =
+    bar
+      .slice(chip + 7)
+      .trim()
+      .split(/ {3,}/)[0] ?? "";
+  const items = group
+    .replace(/[\ue0b6\ue0b4]/g, "")
+    .split(/[│|]/)
+    .map((item) => item.trim());
+  const text = (i: number) => (items[i] ?? "").replace(/^\S+\s*/, "");
+  return { zoom: text(0), workspace: text(1), git: /^(?:⎇|\ue725|git:)/u.test(items[2] ?? "") ? text(2) : "" };
+}
+
+/** The workspace and git items, as displayed; zoom is separately available from locationOnBar. */
+export function whereOnBar(bar: string): string {
+  const at = locationOnBar(bar);
+  return [at.workspace, at.git].filter(Boolean).join(" │ ");
 }
 
 export class CheckFailed extends Error {}
@@ -220,7 +225,7 @@ export class Session {
     await this.until(() => this.term.drawn, undefined, "the terminal to draw what the slipbox before wrote");
     this.term.spawn(argv, { cwd, env: this.processEnv() });
     if (this.opts.noWait) return;
-    await this.until(() => /\b(READ|SOURCE|FILES|LENS)\b/.test(this.statusLine()), 15000, "slipbox to start");
+    await this.until(() => /\b(READ|SOURCE|FILES|LENS|NORMAL)\b/.test(this.statusLine()), 15000, "slipbox to start");
     // Its first frame isn't its last at start: what it reads after drawing (the index, git) redraws it.
     await this.settle();
   }
@@ -555,11 +560,7 @@ export class Session {
     await this.until(has, timeout, `the status line to show ${needle}`);
   }
 
-  /**
-   * Where you are, as the top bar's middle says it (WSP-D4), the vault's glyph left out: `kestrel · main ↑2`,
-   * `~ › notes`, `kestrel@agent/sync-retry`, `Elsewhere`; empty while it says nothing. Its parts are a space apart, and
-   * 3 or more from the chip and the right end's items.
-   */
+  /** Workspace and git items, as displayed on the permanent bar. */
   whereText(): string {
     return whereOnBar(this.topBar());
   }

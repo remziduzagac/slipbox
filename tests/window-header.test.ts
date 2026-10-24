@@ -219,7 +219,7 @@ describe("modes a window can't switch to are disabled (HDR-D2)", () => {
     expect(lastMessage(doc)).toBeUndefined();
     click(doc, "source");
     expect(lastMessage(doc)).toBeUndefined();
-    const src = await harness({ open: PYTHON, width: 120, height: 30, config: (c) => (c.render.code = "source") });
+    const src = await harness({ open: PYTHON, width: 120, height: 30, config: (c) => (c.render.code = false) });
     expect(states(src)).toBe("Read:enabled Lens:enabled Source:selected");
     click(src, "read");
     expect(viewMode(src.app.view!)).toBe("rendered");

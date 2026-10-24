@@ -712,7 +712,7 @@ export const NAVIGATING: Check[] = [
     run: async (s) => {
       s.expect(s.topBar().includes("slipbox"), "the top bar showing to begin with");
       // The breadcrumb has no key: the palette (or the list) toggles it. Hidden, the header stays, with its buttons.
-      const HEADER = /Read {2}Lens {2}Source/;
+      const HEADER = /R {2}L {2}S/;
       await s.see("§ Halden Ridge Observatory");
       await s.see(HEADER);
       const palette = async (title: string, shown: boolean) => {
@@ -870,7 +870,7 @@ export const NAVIGATING: Check[] = [
       // --root: started with no path in a folder that is no root (the check's own), halden all the same — its
       // workspace back (the weekly note), where that folder alone would open as a plain folder.
       await s.restart({ args: ["--root", s.vault], startAt: null, cwd: "" });
-      await s.where(/^halden(?: ·|$)/, /2026-09-14-weekly\.md/);
+      await s.where(/^halden(?: │|$)/, /2026-09-14-weekly\.md/);
       s.expect(s.rowOf(/Folders \(\d+\)/) < 0, "halden opened, not the named folders' list");
     },
   },
@@ -1447,9 +1447,10 @@ export const NAVIGATING: Check[] = [
       await s.see(TOP);
       // The rail's ≡: the explorer hidden, then shown.
       await s.see("Explorer");
-      await click("≡");
+      const railRow = () => s.screen().findIndex((line, i) => i > 0 && /^ ≡/.test(line));
+      await click("≡", railRow());
       await s.notSee("Explorer");
-      await click("≡");
+      await click("≡", railRow());
       await s.see("Explorer");
     },
   },

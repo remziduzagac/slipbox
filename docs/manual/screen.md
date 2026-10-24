@@ -61,7 +61,8 @@ Only the item under the mouse lights up.
 Two blocks appear at the right when needed. **Background work** has a spinner and a count: indexing, exports,
 git fetches and language servers starting. Click it to list the tasks; select one and press `enter` to cancel that
 one. **A newer slipbox** shows `⇡` and its version in the accent colour. Click for the upgrade offer; closing the
-offer leaves the version visible.
+offer leaves the version visible. Skipping that version, installing it, or finding it is already current clears it.
+Cancelling indexing warns that search and backlinks may be incomplete; `:reindex` tries again.
 
 Short of room, the right blocks shrink to icons, then disappear. Git loses ahead and behind, then its branch is cut
 and dropped, then the changed count goes. Zoom and workspace stay; long paths lose their front, keeping their end.
@@ -383,6 +384,8 @@ The status line describes the file in the focused window. From the left:
   The first segment stays visible while typing or selecting. The second is vim's `NORMAL`, `INSERT`, `VISUAL` or
   `V-LINE`. In ASCII the divider is `|` and the lens label is `READ-LENS`. Panel focus (`FILES`, `GIT`, `INFO`,
   `OUTLINE`, `FOOTNOTES`, `PROBLEMS`), `RESIZE` and pending keys appear alongside them.
+  Short of room, the view becomes `R`, `R·L` or `S`, then the mode becomes `N`, `I`, `V` or `V-L`, before the
+  file name shortens. Without a window, the chip says `NORMAL`.
 - **The file's path**, between `‹` and `›`. These two go back and forward in the window's history, as a browser's
   arrows do. Each is bright when there's somewhere to go. Hovering over one says where. Clicking the path lists the
   window's history above it, with **Copy path** first.

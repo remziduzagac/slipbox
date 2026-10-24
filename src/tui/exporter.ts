@@ -36,11 +36,16 @@ export class Exporter {
     return true;
   }
 
+  private pathFile = "";
+  private paths: Record<string, string> = {};
+
   lastPath(rel: string): string | null {
-    return (
-      readJson<{ paths?: Record<string, string> }>(join(stateDir(this.app.loc), "export.json"), {})?.paths?.[rel] ??
-      null
-    );
+    const file = join(stateDir(this.app.loc), "export.json");
+    if (this.pathFile !== file) {
+      this.pathFile = file;
+      this.paths = readJson<{ paths?: Record<string, string> }>(file, {})?.paths ?? {};
+    }
+    return this.paths[rel] ?? null;
   }
 
   /**
@@ -221,11 +226,15 @@ export class Exporter {
         try {
           const file = join(stateDir(graph.loc), "export.json");
           const previous = readJson<{ paths?: Record<string, string> }>(file, {});
+          const paths = { ...previous?.paths, ...(rels.length === 1 ? { [rels[0]!]: target } : {}) };
           writeJson(file, {
             dir: dirname(target),
-            paths: { ...previous?.paths, ...(rels.length === 1 ? { [rels[0]!]: target } : {}) },
+            paths,
           });
-          if (this.app.graph === graph) this.app.info.cache = null;
+          if (this.app.graph === graph) {
+            this.pathFile = file;
+            this.paths = paths;
+          }
         } catch {}
       } catch (err) {
         if (!this.app.quitting)

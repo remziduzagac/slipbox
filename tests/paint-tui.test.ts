@@ -1,10 +1,10 @@
 import { expect, test } from "bun:test";
 import { join } from "node:path";
 import { writeFileSync } from "node:fs";
-import { OptimizedBuffer } from "@opentui/core";
+import { OptimizedBuffer, type RenderContext } from "@opentui/core";
 import { onLoaded } from "../src/core/lazy.ts";
 import { loadRasterizer } from "../src/core/svg.ts";
-import { Pictures } from "../src/tui/opentui.ts";
+import { BufferCanvas, Pictures } from "../src/tui/opentui.ts";
 import { harness, makeSandbox, makeVault } from "./tui-harness.ts";
 
 makeSandbox();
@@ -98,6 +98,28 @@ test("the picture drawn every frame is kept while 24 others are drawn once each:
   } finally {
     stop();
     pictures.releaseAll();
+    buf.destroy();
+  }
+});
+
+test("native INSERT cursor translates canvas cells to terminal coordinates", () => {
+  const positions: unknown[] = [];
+  const context = {
+    setCursorStyle: () => {},
+    setCursorPosition: (...args: unknown[]) => positions.push(args),
+  } as unknown as RenderContext;
+  const buf = OptimizedBuffer.create(20, 4, "unicode");
+  try {
+    const canvas = new BufferCanvas(buf, undefined, context);
+    canvas.cursor({ x: 0, y: 0 });
+    canvas.cursor({ x: 7, y: 2 });
+    canvas.cursor(null);
+    expect(positions).toEqual([
+      [1, 1, true],
+      [8, 3, true],
+      [0, 0, false],
+    ]);
+  } finally {
     buf.destroy();
   }
 });

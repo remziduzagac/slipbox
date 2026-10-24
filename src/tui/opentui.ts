@@ -235,7 +235,7 @@ export class BufferCanvas implements Canvas {
   }
   cursor(at: { x: number; y: number } | null): void {
     this.context?.setCursorStyle({ style: "line", blinking: false });
-    this.context?.setCursorPosition(at?.x ?? 0, at?.y ?? 0, at !== null);
+    this.context?.setCursorPosition(at ? at.x + 1 : 0, at ? at.y + 1 : 0, at !== null);
   }
   ascii(x: number, y: number, text: string, s: CellStyle): void {
     this.buf.drawText(text, x, y, toRGBA(s.fg, true), toRGBA(s.bg, false), attrs(s));

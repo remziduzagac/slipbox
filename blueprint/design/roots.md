@@ -621,11 +621,20 @@ rewrites the pointer. Names are compared case aside.
 
 A vault is told by the name pointers use (its `.slipbox/` name, else its remote's), else by its path (`~/…`); a worktree
 of a named repository as `name@branch`, a detached head by its short commit; home as `~`, and Elsewhere as `Elsewhere`
-(D77, VV-D2, VV-D3; `rootLabel` in `core/names.ts`). Never by its folder's own name, and never in a file. The top bar
-(the status line while it's hidden), the explorer's vault rows, the named folders list, `slipbox info` and the CLI's
-`root` and `name` show it so ([tui.md](tui.md) § Screen layout, § Side panes, § Going into a vault;
+(D77, VV-D2, VV-D3; `rootLabel` in `core/names.ts`). Never by its folder's own name, and never in a file. The explorer's
+vault rows,
+`slipbox info` and the CLI's `root` and `name` show it so ([tui.md](tui.md) § Screen layout, § Side panes, § Going into
+a vault;
 [docs/manual/cli.md](../../docs/manual/cli.md) § `resolve`). Files in lists (backlinks, search results, pickers, hovers)
 are shown by path, from the vault's top ([rendering.md](rendering.md) § Blocks and inlines).
+
+The permanent top bar separates explorer zoom, workspace and git (VB-D3, VB-D6). A git workspace shows the vault name,
+with its branch once in the git item; a home folder opened by name shows that folder, home's own workspace `~`.
+The all-vault list (`space v v`, `:folders`, `slipbox vaults`) includes unnamed known vaults and saved home workspaces,
+marked as home's, most recent first. Repository headers group their main checkout and linked worktrees, each row
+labelled by branch and selecting that checkout's own vault/workspace. `/` filters. Pointer names and copy defaults
+remain the independent `slipbox folders` list (VB-D5).
+
 
 What the CLI prints for a person says vault, as the TUI and the docs do (VV-D1); its JSON keeps root in its values,
 whose `schema` stays 1 (DF-D9): `info`'s `mode` is `root`, `home` or `folder` (Elsewhere); a change's `kind` is `root`

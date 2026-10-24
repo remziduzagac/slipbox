@@ -472,6 +472,18 @@ describe("CLI (9.x)", () => {
   });
 });
 
+test("vaults lists known vaults as text and JSON and refuses extra arguments", async () => {
+  await cli(["ls"]);
+  const json = await cli(["vaults", "--json"]);
+  expect(json.code).toBe(0);
+  const entries = JSON.parse(json.out).data as { label: string; data: { root: string } | null }[];
+  expect(entries.some((entry) => entry.data?.root === VAULT)).toBe(true);
+  const text = await cli(["vaults"]);
+  expect(text.code).toBe(0);
+  expect(text.out).toContain(entries.find((entry) => entry.data?.root === VAULT)!.label);
+  expect((await cli(["vaults", "extra"])).code).not.toBe(0);
+});
+
 describe("CLI parity (Principles)", () => {
   test("every command declares its CLI equivalent or is an interaction", () => {
     const ids = new Set<string>();
@@ -4837,7 +4849,10 @@ describe("embeds drawn in place (1.11)", () => {
     const deep = text(await draw(g, "d1.md"));
     expect(deep.at(-1)).toBe("▎ ▎ ▎ ▎ embedded deeper still: enter opens it");
     expect(deep.join("\n")).not.toContain("bottom");
-    expect(text(await draw(g, "refs.md"))).toEqual(["▣ pic.png", "", "see ⧉ b here", "", "⧉ missing"]);
+    const refs = await draw(g, "refs.md");
+    expect(refs.lines.filter((line) => line.caption)).toHaveLength(3);
+    expect(refs.lines.find((line) => line.caption)?.caption?.text).toBe("pic.png");
+    expect(text(refs).slice(3)).toEqual(["", "see ⧉ b here", "", "⧉ missing"]);
     expect((await draw(g, "d1.md")).embedded!.sort()).toEqual(["d2.md", "d3.md", "d4.md"].map((r) => g.abs(r)));
   });
 

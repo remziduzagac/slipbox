@@ -84,7 +84,8 @@ folder open in its place: told when it changes, its control characters stripped.
 - the `slipbox` palette chip at left;
 - the central location block: explorer zoom (`top:zoom`, `explorer.focus`), workspace without the vault prefix
   (`top:vault`, `folders.open`), branch with tracking and operation (`top:branch`, branches menu), changed-file count
-  (`top:changed`, `git.focus`). The vault remains in Info. A workspace is the home folder, branch, home or vault fallback;
+  (`top:changed`, `git.focus`). The vault remains in Info. A workspace is the home folder, branch, home or vault
+  fallback;
 - at right, background work (`top:work`, `background.open`) with spinner and count, and the persistent available
   upgrade (`top:upgrade`, `app.upgrade`). Each appears only when needed.
 
@@ -126,7 +127,8 @@ occlude the header's targets as before. `modes.ts` keeps the internal `ViewMode`
 `live`, `source`) without runtime imports, shared by the lens, mouse and header.
 
 **Room** (HDR-D4). The header's row, from the right: `▤` where it is, then the buttons, then the breadcrumb between
-the name and them. The buttons are three letters side by side, each with a space either side: ` R ` ` L ` ` S `, 9 columns;
+the name and them. The buttons are three letters side by side, each with a space either side: ` R ` ` L ` ` S `, 9
+columns;
 at the least, the selected view's letter alone, 3. The
 breadcrumb is drawn in the columns between the name and the buttons less one at each end, as now, and folds into them
 as before. The buttons take the widest form that leaves the breadcrumb its least room: its narrowest form but `…`
@@ -408,7 +410,9 @@ reading positions and your workspace there, whose tabs come back, with the note 
 the vault left is forgotten — its files' states, the git panel's files, where its branch stood, those opened up — and
 the git panel's message box is emptied: a message typed in one vault is never committed in another. Leaving saves the
 one before as quitting does. Unsaved notes ask Save all and go, Discard and go, or Stay (VB-D4); all saves must
-succeed before leaving. The properties editor closes first, writing its edits into the note — or, while it asks,
+succeed before leaving. Release the outgoing buffers, parses, index and pending work; keep return history only as
+paths and positions, restoring from disk. The properties editor closes first, writing its edits into the note — or,
+while it asks,
 nothing switches. **Looking never moves you** (VV-D7): following a link into another
 vault, a backlink from one and another vault's search hit open a peek instead, going there a choice (§ The peek).
 
@@ -1601,7 +1605,8 @@ the way the render reads it (a line with markup parsed alone), so their text and
 A source line is a row, wrapped at the last space that fits (wrapping on) or kept whole (off); the
 text column is the window's full width, readable width aside. Highlighting is light and per line:
 frontmatter, headings, rules, quote bars, list markers and task boxes, fenced code, inline code and
-links. Fenced code uses its declared language's syntax colours, with plain text for unknown languages (#81).
+links. Fenced code uses its declared language's syntax colours over code-block shading, retaining comment and string
+context across lines. Unknown languages retain code-block shading (#81).
 The gutter keeps git and problem signs; `ui.relative_numbers` set to `source` or `both` shows other source lines'
 distance from the cursor's line, retaining the current line's absolute number. `lens` (the default) and `off` keep
 absolute source numbers; `both` also enables the lens's counters. The current line uses `cursor_line`; normal mode
@@ -1752,7 +1757,8 @@ the only one (`16.16`, `16.17`; D112): Org and AsciiDoc files open as text.
   waits its turn. A pass's deadline counts from when the worker is handed it: twenty seconds, as the spelling
   thread's, since a pass is a whole source's and can't be batched as a big note's parse is (a 3.7 MiB minified bundle
   took 4.3 s on a fast machine, idle, and missed a five-second deadline with its cores busy). A source is at most 4 MiB
-  (`SYNTAX_SOURCE_LIMIT`, D252); its answer has no cap of its own, its size following the source's (a span a line of a long
+  (`SYNTAX_SOURCE_LIMIT`, D252); its answer has no cap of its own, its size following the source's (a span a line of a
+  long
   string or comment can make it several times the text). Failures keep readable source and are reported once per
   revision. One that was the thread's (the deadline, a crash, a thread that can't start) is tried again when the file
   is opened again, as a big note's parse is (15.1); the code's own (the worker's error answer) waits for an edit or a
@@ -2494,7 +2500,8 @@ listed and only while that name still holds its commit: one saved meanwhile (an 
 the pick is refused, said why. Saving and bringing one back change the files: unsaved notes are saved or kept first.
 git's "No local changes to save" is said as nothing to stash; a conflict, in git's words, the stash kept.
 
-Where you are shows a branch with an upstream ahead of it and behind it (§ Screen layout: the top bar), as of the last fetch:
+Where you are shows a branch with an upstream ahead of it and behind it (§ Screen layout: the top bar), as of the last
+fetch:
 read from `git status --branch`'s first line, asked with the status in the background whenever git has news
 (`statusLater`), so after a fetch, a pull, a push, or HEAD moving.
 
@@ -2721,3 +2728,11 @@ vaults and home-folder workspaces, and groups worktrees under their repository. 
 For notes, Info ends with Export…; enter or a click runs note.export, as does x while Info has focus. The row shows
 the note's last output path; y copies it. Successful single-note exports persist their path by note alongside the
 existing last export directory. Code and data files have no Export row.
+
+
+### Compact status and task lifetimes (VB-D1, VB-D3)
+
+When space is short, shorten the view segment to R/R·L/S, then the vim mode to N/I/V/V-L before the file name.
+Without a window the chip says NORMAL. The outline button remains on the top bar if no header or right rail carries
+it. An upgrade remains after dismissing its offer, but clears when skipped, installed or no longer newer.
+Cancelling an index warns that search and backlinks may be incomplete and offers reindex as the retry.

@@ -6,7 +6,8 @@ import { describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, realpathSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { ListOverlay } from "../src/tui/app.ts";
-import { fitWhere, type Where } from "../src/tui/where.ts";
+import { fitLocation } from "../src/tui/draw-topbar.ts";
+import { stringWidth } from "../src/core/width.ts";
 import { harness, makeSandbox, statusRow, topRow, type Harness } from "./tui-harness.ts";
 
 const sandbox = makeSandbox();
@@ -40,91 +41,21 @@ const click = (h: Harness, id: string) => {
   h.frame();
 };
 
-describe("where you are, cut to fit (WSP-D4)", () => {
-  const parts: Where = {
-    glyph: "◈ ",
-    vault: "~/src/a-long-experiment",
-    vaultPath: true,
-    folder: null,
-    sep: "›",
-    branch: "feature/long-branch",
-    at: false,
-    track: "↑2 ↓1",
-    op: "merging",
-  };
-  const fit = (w: Where, width: number) => {
-    const f = fitWhere(w, width);
-    return f ? f.vault + f.branch : null;
-  };
-
-  test("a part at a time: the path from the front, to 12 columns; ahead and behind; the branch, to 8, then gone; the operation; the vault, to 6; then nothing", () => {
-    expect(fit(parts, 61)).toBe("◈ ~/src/a-long-experiment · feature/long-branch ↑2 ↓1 merging");
-    expect(fit(parts, 60)).toBe("◈ …src/a-long-experiment · feature/long-branch ↑2 ↓1 merging");
-    expect(fit(parts, 50)).toBe("◈ …-experiment · feature/long-branch ↑2 ↓1 merging");
-    // Ahead and behind gone, the path has its room back: each stage cuts from the whole text.
-    expect(fit(parts, 49)).toBe("◈ …-long-experiment · feature/long-branch merging");
-    expect(fit(parts, 40)).toBe("◈ …-experiment · feature/long-b… merging");
-    expect(fit(parts, 33)).toBe("◈ …-experiment · feature… merging");
-    // A merge under way outlasts the branch: something's to finish (the review's finding, 2026-10-24).
-    expect(fit(parts, 30)).toBe("◈ …c/a-long-experiment merging");
-    expect(fit(parts, 23)).toBe("◈ …g-experiment merging");
-    expect(fit(parts, 20)).toBe("◈ …a-long-experiment");
-    expect(fit(parts, 14)).toBe("◈ …-experiment");
-    expect(fit(parts, 13)).toBe("◈ …experiment");
-    expect(fit(parts, 8)).toBe("◈ …iment");
-    expect(fit(parts, 7)).toBeNull();
-  });
-
-  test("a worktree mid-rebase on a narrow bar: the rebase kept after the branch is gone", () => {
-    const wt = { ...parts, vault: "kestrel", vaultPath: false, branch: "agent/sync-retry", at: true, track: "" };
-    const rebasing = { ...wt, op: "rebasing 2/5" };
-    expect(fit(rebasing, 40)).toBe("◈ kestrel@agent/sync-retry rebasing 2/5");
-    expect(fit(rebasing, 30)).toBe("◈ kestrel rebasing 2/5");
-    expect(fit(rebasing, 21)).toBe("◈ kestrel");
-  });
-
-  test("an empty branch, as a rebase's `refs/heads/` alone gives: nothing after the vault but what's under way", () => {
-    const empty = { ...parts, vault: "kestrel", vaultPath: false, branch: "", track: "", op: "rebasing 1/2" };
-    expect(fit(empty, 80)).toBe("◈ kestrel rebasing 1/2");
-    expect(fit({ ...empty, at: true }, 80)).toBe("◈ kestrel rebasing 1/2");
-  });
-
-  test("the vault's part and the branch's apart: the two click targets", () => {
-    expect(fitWhere(parts, 61)).toEqual({
-      vault: "◈ ~/src/a-long-experiment",
-      branch: " · feature/long-branch ↑2 ↓1 merging",
-    });
-    // A named worktree's branch after its name, its operation after that.
-    const wt = {
-      ...parts,
-      vault: "kestrel",
-      vaultPath: false,
-      branch: "feat",
-      at: true,
-      track: "",
-      op: "rebasing 2/5",
-    };
-    expect(fitWhere(wt, 80)).toEqual({ vault: "◈ kestrel", branch: "@feat rebasing 2/5" });
-  });
-
-  test("home's folder: after home, its path cut from the front to 12 columns, then gone before the vault is cut", () => {
-    const home = { ...parts, vault: "~", folder: "projects/research/notes", branch: null, track: "", op: "" };
-    expect(fit(home, 29)).toBe("◈ ~ › projects/research/notes");
-    expect(fit(home, 20)).toBe("◈ ~ › …esearch/notes");
-    expect(fit(home, 10)).toBe("◈ ~");
-  });
-
-  test("a name of wide characters, measured by its columns and cut from its end", () => {
-    const wide = { ...parts, vault: "日本語のノート", vaultPath: false, branch: "main", track: "", op: "" };
-    expect(fit(wide, 23)).toBe("◈ 日本語のノート · main");
-    expect(fit(wide, 22)).toBe("◈ 日本語のノート");
-    expect(fit(wide, 12)).toBe("◈ 日本語の…");
-  });
-
-  test("Elsewhere has no glyph: it's no vault", () => {
-    const elsewhere = { ...parts, glyph: "", vault: "Elsewhere", vaultPath: false, branch: null, track: "", op: "" };
-    expect(fit(elsewhere, 40)).toBe("Elsewhere");
-  });
+test("location narrowing drops tracking, branch, count, then shortens zoom and workspace", () => {
+  const items = [
+    { id: "top:zoom", text: "≡ ~/notes", role: "topbar" as const },
+    { id: "top:vault", text: "◈ kestrel", role: "topbar" as const },
+    { id: "top:branch", text: "⎇ main ↑2 ↓1", compact: "⎇ main", role: "topbar" as const },
+    { id: "top:changed", text: "● 3", role: "topbar" as const },
+  ];
+  const fit = (width: number) => fitLocation(items, width, "│");
+  expect(fit(80)).toEqual(items);
+  expect(fit(45).find((item) => item.id === "top:branch")?.text).toBe("⎇ main");
+  expect(fit(34).map((item) => item.id)).toEqual(["top:zoom", "top:vault", "top:changed"]);
+  expect(fit(28).map((item) => item.id)).toEqual(["top:zoom", "top:vault"]);
+  expect(fit(20)[0]!.text).toContain("…");
+  const fitted = fit(20);
+  expect(fitted.reduce((width, item) => width + stringWidth(item.text) + 2, 3)).toBeLessThanOrEqual(20);
 });
 
 describe("permanent location bar (VB-T2)", () => {
@@ -190,9 +121,11 @@ describe("permanent location bar (VB-T2)", () => {
   });
 
   test("narrowing keeps zoom and workspace in every glyph set", async () => {
-    for (const glyphs of ["nerd", "unicode", "ascii"] as const) {
+    for (const [glyphs, width] of (["nerd", "unicode", "ascii"] as const).flatMap((glyphs) =>
+      [25, 40].map((width) => [glyphs, width] as const),
+    )) {
       const h = await harness({
-        width: 40,
+        width,
         config: (c) => {
           c.render.glyphs = glyphs;
         },
@@ -204,7 +137,27 @@ describe("permanent location bar (VB-T2)", () => {
       expect(hot(h, "top:vault")).toBeDefined();
       expect(hot(h, "top:upgrade")).toBeUndefined();
       const regions = h.app.geometry!.hot.filter((r) => r.id.startsWith("top:"));
-      for (const r of regions) expect(r.x + r.w).toBeLessThanOrEqual(40);
+      for (const r of regions) expect(r.x + r.w).toBeLessThanOrEqual(width);
     }
   });
+});
+
+test("a real index job cancelled from the list warns and can resume", async () => {
+  const h = await harness();
+  h.app.graph.build(true, "lazy");
+  const pending = h.app.graph.pendingCount;
+  expect(pending).toBeGreaterThan(1);
+  h.app.watch.indexInBackground();
+  await h.app.run("background.open");
+  expect((h.app.overlay as ListOverlay).items.some((item) => item.label === "Indexing")).toBe(true);
+  await h.keys("enter");
+  await h.app.watch.whenIndexed();
+  expect(h.app.background.tasks.size).toBe(0);
+  expect(h.app.graph.pendingCount).toBeGreaterThan(0);
+  expect(h.app.messages.at(-1)?.text).toContain("indexing cancelled");
+  await Bun.sleep(10);
+  h.app.watch.indexInBackground();
+  await h.app.watch.whenIndexed();
+  expect(h.app.graph.pendingCount).toBe(0);
+  expect(h.app.background.tasks.size).toBe(0);
 });

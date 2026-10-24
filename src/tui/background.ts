@@ -6,9 +6,9 @@ export class Background {
   constructor(readonly app: App) {}
   private next = 0;
   private timer: ReturnType<typeof setInterval> | null = null;
-  readonly tasks = new Map<string, { label: string; cancel: () => void }>();
+  readonly tasks = new Map<string, { label: string; cancel: (quiet: boolean) => void }>();
 
-  begin(label: string, cancel: () => void): () => void {
+  begin(label: string, cancel: (quiet: boolean) => void): () => void {
     const id = String(++this.next);
     if (!this.timer) {
       this.timer = setInterval(() => {
@@ -26,12 +26,12 @@ export class Background {
     };
   }
 
-  cancel(id?: string): void {
+  cancel(id?: string, quiet = false): void {
     if (!id) return;
     const task = this.tasks.get(id);
     if (!task) return;
     this.tasks.delete(id);
-    task.cancel();
+    task.cancel(quiet);
     if (!this.tasks.size) this.stopTimer();
     this.app.host.requestRender();
   }
@@ -42,7 +42,7 @@ export class Background {
   }
 
   cancelAll(): void {
-    for (const id of [...this.tasks.keys()]) this.cancel(id);
+    for (const id of [...this.tasks.keys()]) this.cancel(id, true);
   }
 
   open(): void {

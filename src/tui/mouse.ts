@@ -798,8 +798,6 @@ export class Mouse {
       case "status":
         // The path: its window's history, and Copy path; the arrows around it, back and forward.
         if (arg === "path" && this.app.view) this.app.history.openPathMenu();
-        // The vault and its branch (GIT-D8): the branches, pull and push.
-        else if (arg === "branch") void this.app.run("git.menu");
         else if (arg === "back" || arg === "forward") this.app.history.go(arg);
         else if (arg === "message") void this.app.run("messages.open");
         // The file's problems: the Problems panel on This file (1.7) — on All when it has none; open there, closed.

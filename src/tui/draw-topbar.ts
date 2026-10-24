@@ -28,17 +28,16 @@ export function locationItems(app: App): Item[] {
           },
         ]
       : []),
-    ...(count
-      ? [{ text: `${g.mode === "ascii" ? "*" : "●"} ${count}`, id: "top:changed", role: "git_modified" as Role }]
-      : []),
+    ...(count ? [{ text: `${g.changed} ${count}`, id: "top:changed", role: "git_modified" as Role }] : []),
   ];
 }
 
 /** Location survives narrowing; tracking gives way before branch, then the changed count. */
-export function fitLocation(items: Item[], width: number, separator: string): Item[] {
+export function fitLocation(items: Item[], width: number, separator: string, tight = false): Item[] {
   const out = items.map((item) => ({ ...item }));
   const size = () =>
-    out.reduce((n, item) => n + stringWidth(item.text) + 2, 2) + Math.max(0, out.length - 1) * stringWidth(separator);
+    out.reduce((n, item) => n + stringWidth(item.text) + (tight ? 0 : 2), tight ? 0 : 2) +
+    Math.max(0, out.length - 1) * stringWidth(separator);
   const branch = out.find((item) => item.id === "top:branch");
   if (size() > width && branch) branch.text = branch.compact ?? branch.text;
   if (size() > width && branch)
@@ -64,13 +63,12 @@ export function drawTopBar(app: App, c: Canvas, band: Band, geo: Geometry): void
   const group = roleStyle(app.theme, "topbar_group", bar.bg);
   c.fill(0, band.y, c.width, 1, bar.bg);
   const tight = c.width < 26;
-  const nerd = app.glyphs.mode === "nerd";
-  const sep = app.glyphs.mode === "ascii" ? "|" : "│";
+  const sep = app.glyphs.groupSeparator;
   const block = (items: Item[], x: number) => {
     const cap = (text: string) => {
       x += drawText(c, x, band.y, text, { ...bar, fg: group.bg ?? bar.fg });
     };
-    if (!tight) cap(nerd ? "\ue0b6" : " ");
+    if (!tight) cap(app.glyphs.groupLeft);
     items.forEach((item, i) => {
       if (i) x += drawText(c, x, band.y, sep, { ...roleStyle(app.theme, "status_dim", group.bg), bg: group.bg });
       const role = roleStyle(app.theme, item.role, group.bg);
@@ -85,14 +83,29 @@ export function drawTopBar(app: App, c: Canvas, band: Band, geo: Geometry): void
       geo.hot.push({ id: item.id, x, y: band.y, w: width, h: 1 });
       x += width;
     });
-    if (!tight) cap(nerd ? "\ue0b4" : " ");
+    if (!tight) cap(app.glyphs.groupRight);
     return x;
   };
   const left = button(app, c, 0, band, " slipbox ", "topbar_chip", "btn:palette", geo, bar.bg) + 1;
+  const outline = !app.panels.rightRailWidth && !geo.hot.some((hit) => hit.id === "btn:outline");
+  const outlineWidth = outline ? stringWidth(app.glyphs.outlineButton) + 2 : 0;
+  const end = c.width - outlineWidth;
+  if (outline)
+    button(
+      app,
+      c,
+      end,
+      band,
+      ` ${app.glyphs.outlineButton} `,
+      app.panels.outlineShown ? "topbar_button_on" : "topbar_button",
+      "btn:outline",
+      geo,
+      bar.bg,
+    );
   const work = app.background.tasks.size;
   const newer = app.updates.available;
-  const spin = app.glyphs.mode === "ascii" ? "~" : ["◴", "◷", "◶", "◵"][Math.floor(app.now() / 250) % 4]!;
-  const up = app.glyphs.mode === "ascii" ? "^" : "⇡";
+  const spin = app.glyphs.workSpinner[Math.floor(app.now() / 250) % app.glyphs.workSpinner.length]!;
+  const up = app.glyphs.upgrade;
   let right: Item[] = [
     ...(work ? [{ text: `${spin} ${work}`, id: "top:work", role: "topbar" as Role }] : []),
     ...(newer ? [{ text: `${up} ${sanitize(newer)}`, id: "top:upgrade", role: "link" as Role }] : []),
@@ -100,14 +113,15 @@ export function drawTopBar(app: App, c: Canvas, band: Band, geo: Geometry): void
   const rightSize = () => right.reduce((n, item) => n + stringWidth(item.text) + 5, 0);
   const items = locationItems(app);
   const full = items.reduce((n, item) => n + stringWidth(item.text) + 3, 2);
-  if (left + full + rightSize() > c.width)
+  if (left + full + rightSize() > end)
     right = right.map((item) => ({ ...item, text: item.id === "top:work" ? spin : up }));
-  if (left + full + rightSize() > c.width) right = [];
-  let rx = c.width - rightSize();
+  if (left + full + rightSize() > end) right = [];
+  let rx = end - rightSize();
   for (const item of right) rx = block([item], rx) + 1;
-  const room = c.width - rightSize() - left;
-  const fitted = fitLocation(items, room, sep);
-  const size = fitted.reduce((n, item) => n + stringWidth(item.text) + 2, 2) + Math.max(0, fitted.length - 1);
-  block(fitted, Math.max(left, Math.min(Math.floor((c.width - size) / 2), c.width - rightSize() - size)));
-  geo.whereOnTop = true;
+  const room = end - rightSize() - left;
+  const fitted = fitLocation(items, room, sep, tight);
+  const size =
+    fitted.reduce((n, item) => n + stringWidth(item.text) + (tight ? 0 : 2), tight ? 0 : 2) +
+    Math.max(0, fitted.length - 1);
+  block(fitted, Math.max(left, Math.min(Math.floor((c.width - size) / 2), end - rightSize() - size)));
 }

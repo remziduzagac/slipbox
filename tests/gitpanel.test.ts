@@ -310,6 +310,7 @@ describe("space g, the status line's branch, a change's sign (GIT-D8, GIT-D12)",
 
   test("the top bar's branch clicked: push and fetch, then the branches; one picked, checked out", async () => {
     const root = repo();
+    writeFileSync(join(root, ".slipbox", "config.toml"), '[vault]\nname = "review"\n');
     const { app, click } = await panel(root, "a.md", false);
     click("top:branch");
     const list = app.overlay as ListOverlay;

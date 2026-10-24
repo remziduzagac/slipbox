@@ -26,11 +26,12 @@ if (go && stateFile) {
     while (!existsSync(go)) await Bun.sleep(20);
     say("let go");
   };
-  if (at === "publication") {
+  if (at === "publication" || at === "before-publication") {
     const publish = PreparedExport.prototype.publish;
     PreparedExport.prototype.publish = async function (this: PreparedExport, ...args) {
+      if (at === "before-publication") await hold();
       const files = await publish.apply(this, args);
-      await hold();
+      if (at === "publication") await hold();
       return files;
     };
   } else {

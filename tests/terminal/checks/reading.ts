@@ -1017,7 +1017,7 @@ export const READING: Check[] = [
       await opened(s, "src/sync/queue.ts");
       await followLink(s, "../../docs/sync.md");
       await opened(s, "docs/sync.md");
-      await s.where(/^kestrel(?: ·|$)/);
+      await s.where(/^kestrel(?: │|$)/);
     },
   },
   {
@@ -1513,23 +1513,23 @@ export const READING: Check[] = [
         return [...body.matchAll(re)].length.toLocaleString("en");
       };
       // Where you are on the top bar, so not here (WSP-D5): the mode, then the file.
-      await s.where(/^notes(?: ·|$)/, /^ READ +‹ projects\/kestrel-v2-3\.md › +[✖⚠] \d+ +● watching /);
+      await s.where(/^notes(?: │|$)/, /^ READ │ NORMAL +‹ projects\/kestrel-v2-3\.md › +[✖⚠] \d+ +● watching /);
       await s.status(new RegExp(` ${count("~/notes/projects/kestrel-v2-3.md")} words +L1:1 0% *$`));
       await s.keys("G");
       await s.status(/ 100% *$/);
       await s.keys("g", "g");
       // The lens, typing, unsaved.
       await s.keys("i");
-      await s.status(/^ LENS /);
+      await s.status(/^ READ·LENS │ NORMAL /);
       await s.keys("j", "i");
-      await s.status(/^ INSERT /);
+      await s.status(/^ READ·LENS │ INSERT /);
       await s.type("x");
       await s.status(/› • unsaved /);
       await s.keys("escape", "escape");
-      await s.status(/^ READ .*› • unsaved /);
+      await s.status(/^ READ │ NORMAL .*› • unsaved /);
       // A selection: its words.
       await s.keys("v", "e");
-      await s.status(/^ VISUAL .* \d+ words? selected /);
+      await s.status(/^ READ │ VISUAL .* \d+ words? selected /);
       await s.keys("escape");
       // Han and kana: a word each.
       await s.ex("e daily/2026-08-24.md");
@@ -1663,7 +1663,7 @@ export const READING: Check[] = [
       // The lens on its lines whole.
       await line(s, badge);
       await leader(s, "k", "e");
-      await s.status(/^ LENS /);
+      await s.status(/^ READ·LENS │ NORMAL /);
       await s.see(`source · lines ${badge}–${end}`);
     },
   },

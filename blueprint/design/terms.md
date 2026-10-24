@@ -153,7 +153,8 @@ what replaced them.
   slipbox's state, never in the vault (WSP-D1, WSP-D2). Not VS Code's workspace, the folders a window opened (a vault,
   here); Obsidian's workspaces, saved layouts, are nearer, though slipbox keeps one per place by itself. Nor D33's
   "shared workspace", slipbox as a whole. [tui.md](tui.md) § Positions.
-- **Worktree**: a git worktree: its repository at a branch, a vault of its own, shown as `name@branch`.
+- **Worktree**: a git worktree: its repository at a branch, a vault of its own, shown as `name@branch` outside the
+  permanent bar, which separates the vault name and branch (VB-D6).
   [roots.md](roots.md) § Worktrees.
 
 ## Retired

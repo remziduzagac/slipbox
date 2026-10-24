@@ -186,8 +186,25 @@ const append = (s: Session, line: string) => s.write(MEETING, `${s.read(MEETING)
 export const OUTSIDE_AND_CODE: Check[] = [
   {
     area: "outside-and-code",
+    name: "background work: a real export cancelled through its list releases its task",
+    covers: { cases: ["ui"], commands: ["background.open", "background.cancel", "note.export"] },
+    options: { ...HOLD, env: { ...HOLD.env, EXPORT_HOLD_AT: "before-publication" } },
+    run: async (s) => {
+      await format(s, "home.md", "html");
+      await s.keys("enter");
+      await s.until(() => hold(s) === "waiting", 15000, "export held before publication");
+      await s.ex("Background work");
+      await s.see("Background work — enter: cancel");
+      await s.keys("enter");
+      writeFileSync(join(s.dir, "hold-go"), "");
+      await s.message("export cancelled", 15000);
+      await s.until(() => !/[◴◷◶◵]/.test(s.topBar()), 5000, "the finished task removed");
+    },
+  },
+  {
+    area: "outside-and-code",
     name: "Info export: x and the Export row run the existing note export",
-    covers: { cases: ["info", "export"], commands: ["note.info", "note.export"] },
+    covers: { cases: ["info"], commands: ["note.info", "note.export"] },
     run: async (s) => {
       await leader(s, "n", "i");
       await s.status("INFO");

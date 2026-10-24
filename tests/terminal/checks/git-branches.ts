@@ -138,7 +138,7 @@ export const GIT_BRANCHES: Check[] = [
       await s.message("agent/here made, but git:");
       await s.until(() => isSelected(s, "agent/here"), undefined, "agent/here selected");
       await panelRow(s, "[Check out here]");
-      await s.where(/ · main(?: |$)/);
+      await s.where(/ │ main(?: |$)/);
       s.expect(gitOk(s, TRAIL, "branch", "--list", "agent/here") === "agent/here", "made");
     },
   },
@@ -156,7 +156,7 @@ export const GIT_BRANCHES: Check[] = [
       await s.type("before");
       await s.keys("enter");
       await saidAsItCame(s, "would be overwritten", "checking out before");
-      await s.where(/ · main(?: |$)/);
+      await s.where(/ │ main(?: |$)/);
     },
   },
   {
@@ -214,7 +214,7 @@ export const GIT_BRANCHES: Check[] = [
       // A new branch checked out here: switched, then the hook said no — HEAD where it went.
       await newBranch(s, "agent/sw", "main", "down", "down", "enter");
       await s.message("agent/sw made, but git:");
-      await s.where(/ · agent\/sw(?: |$)/);
+      await s.where(/ │ agent\/sw(?: |$)/);
       // The status line's new branch from here: the same, HEAD where it went.
       await s.ex("Branches");
       await s.type("A new branch from here");
@@ -222,7 +222,7 @@ export const GIT_BRANCHES: Check[] = [
       await s.see("new branch:");
       await s.type("agent/status");
       await s.keys("enter");
-      await s.where(/ · agent\/status(?: |$)/);
+      await s.where(/ │ agent\/status(?: |$)/);
     },
   },
   {
@@ -278,7 +278,7 @@ export const GIT_BRANCHES: Check[] = [
       await s.see("Remove the worktree ~/work/trail-agent-done?");
       // Removed, its branch kept; then into agent/ahead's checkout by :worktrees, in the same keys, before git is done.
       await s.keys("enter", ":", ..."worktrees", "enter", ..."agent/ahead", "enter");
-      await s.where(/trail-agent-ahead · agent\/ahead(?: |$)/);
+      await s.where(/trail-agent-ahead │ agent\/ahead(?: |$)/);
       s.expect(s.rowOf("removed the worktree") < 0, "gone into agent/ahead's checkout before git removed the worktree");
       await toPanel(s);
       // Done there: agent/done, merged and in no worktree now, among the older ones — unfolded, still opened up.
@@ -305,7 +305,7 @@ export const GIT_BRANCHES: Check[] = [
       await s.message("made agent/fresh from main, in a new worktree");
       await s.until(() => isSelected(s, "agent/fresh"), undefined, "agent/fresh selected");
       await s.keys("o");
-      await s.where(/trail-agent-fresh · agent\/fresh(?: |$)/);
+      await s.where(/trail-agent-fresh │ agent\/fresh(?: |$)/);
     },
   },
   {
@@ -425,10 +425,10 @@ export const GIT_BRANCHES: Check[] = [
       await s.see("The worktree's folder");
       // Into agent/done's checkout by :worktrees, in the same keys: before git has answered.
       await s.keys("enter", ":", ..."worktrees", "enter", ..."agent/done", "enter");
-      await s.where(/trail-agent-done · agent\/done(?: |$)/);
+      await s.where(/trail-agent-done │ agent\/done(?: |$)/);
       await s.message("loose is in a worktree at");
       await Bun.sleep(1500);
-      await s.where(/trail-agent-done · agent\/done(?: |$)/);
+      await s.where(/trail-agent-done │ agent\/done(?: |$)/);
       s.expect(s.exists(`${TRAIL}-loose/data/leg-1.md`), "the worktree made");
     },
   },
@@ -456,27 +456,27 @@ export const GIT_BRANCHES: Check[] = [
       // Remove…, then into agent/ahead's checkout by :worktrees, in the same keys.
       await selectRow(s, "agent/done");
       await s.keys(".", "down", "down", "down", "enter", ":", ..."worktrees", "enter", ..."agent/ahead", "enter");
-      await s.where(/trail-agent-ahead · agent\/ahead(?: |$)/);
+      await s.where(/trail-agent-ahead │ agent\/ahead(?: |$)/);
       await Bun.sleep(3000);
       s.expect(s.rowOf("Remove it, keep") < 0, "no question opened in the checkout gone into");
       // Back, and Merge… on agent/ahead, then into agent/done's checkout.
       await s.ex("worktrees");
       await s.type("main");
       await s.keys("enter");
-      await s.where(/ · main(?: |$)/);
+      await s.where(/ │ main(?: |$)/);
       await toPanel(s);
       // Back in the main checkout: its row clicked, selected (and opened up).
       await on(s, "⎇ agent/ahead");
       await s.until(() => isSelected(s, "agent/ahead"), undefined, "agent/ahead selected");
       await s.keys(".", "down", "enter", ":", ..."worktrees", "enter", ..."agent/done", "enter");
-      await s.where(/trail-agent-done · agent\/done(?: |$)/);
+      await s.where(/trail-agent-done │ agent\/done(?: |$)/);
       await Bun.sleep(3000);
       s.expect(s.rowOf("The links it would break") < 0, "no menu opened in the checkout gone into");
       // Back, and Remove… on agent/done again, then typing in the note before git answers: not asked over it, said.
       await s.ex("worktrees");
       await s.type("main");
       await s.keys("enter");
-      await s.where(/ · main(?: |$)/);
+      await s.where(/ │ main(?: |$)/);
       await toPanel(s);
       await on(s, "⎇ agent/done");
       await s.until(() => isSelected(s, "agent/done"), undefined, "agent/done selected");
@@ -550,7 +550,7 @@ export const GIT_BRANCHES: Check[] = [
       await s.see("new branch:");
       await s.message("loose's worktree not gone into — o goes into it");
       await s.see("new branch:");
-      await s.where(/ · main(?: |$)/);
+      await s.where(/ │ main(?: |$)/);
     },
   },
   {

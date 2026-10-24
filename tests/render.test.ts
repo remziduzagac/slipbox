@@ -1529,7 +1529,7 @@ describe("a diff's rows as drawn (GIT-D2)", () => {
     const now = before.replace("echo one", "echo two").replace("## Retry budget", "## Retry limit");
     const l = diff(before, now, { language: null });
     // In the fence: its code, though the line read alone would be a heading.
-    expect(at(l, "  # a comment", "a comment")?.role).toBe("code_block");
+    expect(at(l, "  # a comment", "a comment")?.role).toBe("syn_comment");
     expect(at(l, "+ echo two", "two")).toEqual({ role: "code_block", bg: "diff_add_word" });
     // A heading: its level's colour, the word changed marked.
     expect(at(l, "+ ## Retry limit", "Retry")).toEqual({ role: "h2", bg: "diff_add" });

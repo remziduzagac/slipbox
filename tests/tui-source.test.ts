@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { layoutSource, newSourceCache } from "../src/core/layout/source.ts";
 import { loadConfig } from "../src/core/config.ts";
 import { harness, makeSandbox } from "./tui-harness.ts";
 
@@ -78,6 +79,8 @@ test("rendering defaults open each kind in SOURCE without disabling READ or the 
     const before = h.app.messages.length;
     await h.app.run("view.mode_read");
     expect(h.app.view!.source).toBe(false);
+    h.app.lens.fitMode(h.app.view!, h.app.view!.buf);
+    expect(h.app.view!.source).toBe(false);
     await h.app.run("view.mode_lens");
     expect(h.app.view!.live).toBe(true);
     await h.app.run("view.mode_lens");
@@ -104,4 +107,17 @@ test("rendering config accepts booleans and reads the legacy code and editing va
     expect(loaded.config.editor.edit_in).toBe("lens");
     expect(loaded.warnings).toEqual([]);
   }
+});
+
+test("source fences retain shading and multiline syntax after edits", () => {
+  const cache = newSourceCache();
+  const text = "```js\n/* first\ncontinued */\nconst x = 1;\n```\n\n```mermaid\ngraph LR\n```";
+  const layout = (source: string) => layoutSource(source, { width: 80, wrap: true, headings: "scan" }, cache);
+  let rows = layout(text).lines;
+  expect(rows[2]!.fill).toBe("code_block");
+  expect(rows[2]!.spans.every((span) => span.role === "syn_comment")).toBe(true);
+  expect(rows[3]!.spans.some((span) => span.role === "code_block")).toBe(true);
+  expect(rows[7]!.spans.every((span) => span.role === "code_block")).toBe(true);
+  rows = layout(text.replace("/* first", "// first")).lines;
+  expect(rows[2]!.spans.some((span) => span.role !== "syn_comment")).toBe(true);
 });

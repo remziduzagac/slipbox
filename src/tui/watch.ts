@@ -138,9 +138,11 @@ export class Watch {
     this.app.indexing = total;
     const t0 = this.app.now();
     let cancelled = false;
-    const finished = this.app.background.begin("Indexing", () => {
+    const finished = this.app.background.begin("Indexing", (quiet) => {
       cancelled = true;
       this.app.indexing = 0;
+      if (!quiet)
+        this.app.message("warn", "indexing cancelled: search and backlinks may be incomplete; :reindex tries again");
     });
     // This vault's graph as it is at each slice: switched to another, the pass goes on with that one's notes.
     parseInSlices(() => this.app.graph, {

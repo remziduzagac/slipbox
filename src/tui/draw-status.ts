@@ -49,21 +49,20 @@ export function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void
                     ? " INSERT "
                     : " NORMAL ";
   let x = 0;
+  let label = view ? (view.source ? " SOURCE " : view.live ? ` READ${app.glyphs.lensJoin}LENS ` : " READ ") : "";
+  let mode = view?.insert ? " INSERT " : view?.visual === "line" ? " V-LINE " : view?.visual ? " VISUAL " : " NORMAL ";
+  const reserve = view ? Math.min(16, stringWidth(app.displayName(view.buf))) + 24 : 0;
+  if (view && stringWidth(label + mode) + 1 + reserve > c.width)
+    label = view.source ? " S " : view.live ? ` R${app.glyphs.lensJoin}L ` : " R ";
+  if (view && stringWidth(label + mode) + 1 + reserve > c.width)
+    mode = view.insert ? " I " : view.visual === "line" ? " V-L " : view.visual ? " V " : " N ";
   if (view) {
-    const label = view.source ? " SOURCE " : view.live ? " READ·LENS " : " READ ";
     const role = view.source ? "view_source" : view.live ? "view_lens" : "view_read";
     const style = roleStyle(theme, role, st.bg);
     c.fill(0, band.y, stringWidth(label), band.h, style.bg ?? st.bg);
     x += drawText(c, x, y, label, style);
-    x += drawText(c, x, y, app.glyphs.mode === "ascii" ? "|" : "│", roleStyle(theme, "status_dim", st.bg));
+    x += drawText(c, x, y, app.glyphs.groupSeparator, roleStyle(theme, "status_dim", st.bg));
   }
-  const mode = view?.insert
-    ? " INSERT "
-    : view?.visual === "line"
-      ? " V-LINE "
-      : view?.visual
-        ? " VISUAL "
-        : " NORMAL ";
   const chipSt = roleStyle(
     theme,
     view ? (view.insert ? "mode_insert" : view.visual ? "mode_visual" : "mode_normal") : "status_accent",
@@ -72,7 +71,11 @@ export function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void
   const shown = view ? mode : chip;
   c.fill(x, band.y, stringWidth(shown), band.h, chipSt.bg ?? null);
   x += drawText(c, x, y, shown, chipSt);
-  if (view && chip !== mode) x += drawText(c, x, y, chip, roleStyle(theme, "status_accent", st.bg));
+  if (
+    view &&
+    chip.trim() !== (view.insert ? "INSERT" : view.visual === "line" ? "V-LINE" : view.visual ? "VISUAL" : "NORMAL")
+  )
+    x += drawText(c, x, y, chip, roleStyle(theme, "status_accent", st.bg));
   const chipWidth = x;
   // The explorer's row under the cursor not indexed (`⊘`, VV-D9): why, while the cursor is on it.
   const why = app.explorer.marks.selectedWhy();
