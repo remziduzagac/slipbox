@@ -468,3 +468,6 @@ changed in that vault since.
     still fails on it, as it chose. 9, two layouts when a parse here throws after one: rejected — it doesn't throw.
     11, roots.md on the background index's walk: rejected — said a few lines before, where the walk in slices is.
   Unit tests for each fixed one, mutation-checked (M137–M141, each caught). 96 unit tests.
+- 2026-10-24: The review loop stopped after round 10, by the maintainer's rule for it: at most three rounds, and past
+  them the round in hand is the last. Round 11's review of round 10's commit was stopped as it began. What comes of it
+  goes here, not into the pull request.
