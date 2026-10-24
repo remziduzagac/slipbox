@@ -52,6 +52,7 @@ export interface ShellResult {
   signal: string | null;
   /** Standard output and error, in the order they came: as a window shows it. */
   output: string;
+  /** Standard output alone; merged, both (one pipe). */
   stdout: string;
   /** More than the window keeps (`output`), or than a filter takes (`stdout`): the rest dropped. */
   truncated: boolean;
@@ -64,7 +65,9 @@ export const STDOUT_MAX = 32 * 1024 * 1024;
 
 /**
  * Run a command by your shell (`$SHELL`, else `/bin/sh`) in `cwd`, `input` its standard input (none: nothing to read).
- * `stop` ends it — and, run by a shell, what the shell started — and `done` says how it went.
+ * `stop` ends it — and, run by a shell, what the shell started — and `done` says how it went. `merged`: its standard
+ * error through its standard output's pipe, so what it prints comes in the order it wrote it, as a terminal shows it
+ * (D?1); two pipes, read as each has something, can come either way.
  */
 export function runShell(
   command: string,
@@ -72,14 +75,21 @@ export function runShell(
     cwd: string;
     input?: string;
     env?: Record<string, string>;
-    /** Each piece of its output as it's read, and from which stream: in the order the output keeps. */
+    merged?: boolean;
+    /** Each piece of its output as it's read, and from which stream (merged: all of it standard output's): in the order
+     *  the output keeps. */
     onOutput?: (text: string, stream: "stdout" | "stderr") => void;
   },
 ): { done: Promise<ShellResult>; stop: () => void } {
   const t0 = performance.now();
   const shell = process.env.SHELL || "/bin/sh";
+  // Merged, `/bin/sh` points the shell's standard error at its standard output and becomes it (`exec`: the same process,
+  // group and exit), the shell given `-c` and the command as ever: fish or nu as well as a POSIX shell.
+  const [program, ...args] = opts.merged
+    ? ["/bin/sh", "-c", 'exec "$0" -c "$1" 2>&1', shell, command]
+    : [shell, "-c", command];
   // A process group of its own: stopping it stops what it started too.
-  const child = spawn(shell, ["-c", command], {
+  const child = spawn(program!, args, {
     cwd: opts.cwd,
     env: { ...process.env, ...opts.env },
     stdio: [opts.input === undefined ? "ignore" : "pipe", "pipe", "pipe"],

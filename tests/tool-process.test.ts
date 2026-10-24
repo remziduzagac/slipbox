@@ -119,7 +119,9 @@ describe.skipIf(process.platform === "win32")("a tool's process group", () => {
     const helper = Number(result.stdout.trim());
     try {
       expect(result.error).toContain("deadline");
-      expect(Date.now() - t).toBeLessThan(2500); // the deadline, the grace and the cutoff's 100 ms; not its 20 s
+      // The deadline, the grace and the cutoff's 100 ms, 0.42 s; not the helper's 20 s. Bounded halfway between, a wide
+      // margin for a slow runner (4.4 s on CI's macOS, #6).
+      expect(Date.now() - t).toBeLessThan(10_000);
       expect(alive(helper, false)).toBe(true); // not slipbox's group: left alone
     } finally {
       reap(helper);

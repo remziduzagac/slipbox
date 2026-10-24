@@ -631,8 +631,8 @@ You can also type part of any command's name and pick it from the list ([The scr
 
 As in vim, `:!` runs a command by your shell (`$SHELL`), in the vault's top folder.
 
-**Running.** `:!make` runs the command and shows what it prints, both streams. It shows them in a window titled with how
-the command ended.
+**Running.** `:!make` runs the command and shows what it prints in a window titled with how the command ended. Its
+errors are among its output, where it printed them, as a terminal shows them.
 
 `enter` on a line that names a file and a line opens that file there. Such a line looks like `notes/inbox.md:12`, as
 `grep -n` and compilers print them.
@@ -640,7 +640,8 @@ the command ended.
 **The file's path.** `%` in the command is this file's path from the vault's top: `:!wc -w %`. `\%` is a percent sign.
 The command also finds the vault's and the file's paths in `SLIPBOX_ROOT` and `SLIPBOX_FILE`.
 
-**Filtering.** `:{range}!cmd` gives lines to the command, and puts what it prints in their place, as one undo step:
+**Filtering.** `:{range}!cmd` gives lines to the command, and puts what it prints in their place, as one undo step (its
+output only: an error it prints isn't put in the note):
 
 | Command | The lines it gives |
 | --- | --- |

@@ -4962,6 +4962,47 @@ describe("commands run by your shell (25.7)", () => {
       process.env.SHELL = was;
     }
   });
+
+  test("merged (a window's, D?1): its errors through its output's pipe, in the order written — your shell given -c and the command, its exit, its signal; stopped, what it started too", async () => {
+    const { runShell } = await import("../src/core/shell.ts");
+    const was = process.env.SHELL;
+    try {
+      const dir = mkdtempSync(join(tmpdir(), "slipbox-shell-"));
+      // One pipe: what it writes to its errors is in standard output, where it wrote it, with no wait between (on two
+      // pipes, CI's macOS read `c1.md` before `err`, #6).
+      process.env.SHELL = "/bin/sh";
+      const r = await runShell("echo out; echo err >&2; echo out2; exit 3", { cwd: dir, merged: true }).done;
+      expect(r).toMatchObject({ code: 3, signal: null, output: "out\nerr\nout2\n", stdout: "out\nerr\nout2\n" });
+      const turns = Array.from({ length: 50 }, (_, i) => `o${i}\ne${i}\n`).join("");
+      const by = await runShell("i=0; while [ $i -lt 50 ]; do echo o$i; echo e$i >&2; i=$((i+1)); done", {
+        cwd: dir,
+        merged: true,
+      }).done;
+      expect(by.output).toBe(turns);
+      // Unmerged (a filter's), its standard output alone.
+      expect((await runShell("echo out; echo err >&2", { cwd: dir }).done).stdout).toBe("out\n");
+      // Your shell, wherever it is (a space in its path), given -c and the command; none set, /bin/sh.
+      const fake = join(dir, "my shell");
+      writeFileSync(fake, '#!/bin/sh\necho "fake $1 $2"; echo "fake err" >&2\n');
+      chmodSync(fake, 0o755);
+      process.env.SHELL = fake;
+      expect((await runShell("echo hi", { cwd: dir, merged: true }).done).output).toBe("fake -c echo hi\nfake err\n");
+      delete process.env.SHELL;
+      expect((await runShell("echo $0", { cwd: dir, merged: true }).done).output).toBe("/bin/sh\n");
+      process.env.SHELL = "/bin/sh";
+      // Ended by a signal: said so. Stopped: the shell and the sleep it started.
+      expect((await runShell("kill -TERM $$", { cwd: dir, merged: true }).done).signal).toBe("SIGTERM");
+      const job = runShell("sleep 30 & sleep 30; echo never", { cwd: dir, merged: true });
+      await Bun.sleep(100);
+      job.stop();
+      const stopped = await job.done;
+      expect(stopped).toMatchObject({ signal: "SIGTERM", output: "" });
+      expect(stopped.ms).toBeLessThan(5000);
+    } finally {
+      if (was === undefined) delete process.env.SHELL;
+      else process.env.SHELL = was;
+    }
+  });
 });
 
 describe("a server's snippets (25.8)", () => {

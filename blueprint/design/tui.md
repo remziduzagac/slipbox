@@ -1234,9 +1234,11 @@ These are the `space u` toggles and pickers (list in [keys.md](../../docs/manual
 shell") run what you type, never what a vault brings: a folder's config can't bind `shell.run` or `shell.filter`
 ([configuration.md](../../docs/manual/configuration.md), "What only your own file can set"; D166). It runs by
 `$SHELL -c` in the vault's folder, `SLIPBOX_ROOT` and `SLIPBOX_FILE` in its environment, in a process group of its own
-so stopping it stops what it started; the TUI goes on meanwhile, `running: cmd` said. What it prints is kept to 2 MB
-(the window says so when cut short), a filter's output to 32 MB; the window is a list — each line sanitized, filtered as
-typed — whose `enter` on a `path:line` of the vault opens it.
+so stopping it stops what it started; the TUI goes on meanwhile, `running: cmd` said. `:!cmd`'s standard error goes
+through its standard output's pipe, so the window lists what it prints in the order written, as a terminal shows it:
+`/bin/sh` points the shell's standard error at its standard output and becomes it (D?1). A filter's lines are its
+standard output alone. What it prints is kept to 2 MB (the window says so when cut short), a filter's output to 32 MB;
+the window is a list — each line sanitized, filtered as typed — whose `enter` on a `path:line` of the vault opens it.
 
 **Spelling (`25.6`, D157; `space u s`, `[spell] enabled`).** A note's misspelt words are marked (`spell`: underlined) in
 every view — source, rendered and the lens — as `core/spell.ts` finds them: its prose, word by word — not its front

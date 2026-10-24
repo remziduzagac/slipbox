@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { copyTextAsync, readClipboardAsync } from "../src/core/clipboard.ts";
@@ -50,18 +50,46 @@ test("clipboard helpers leave the event loop available while copying and reading
   );
 });
 
+/** Whether no process is left in the group `pid` leads. */
+const groupGone = (pid: number) => {
+  try {
+    process.kill(-pid, 0);
+    return false;
+  } catch {
+    return true;
+  }
+};
+const until = async (ok: () => boolean, ms = 10_000) => {
+  for (const t = Date.now(); !ok() && Date.now() - t < ms; ) await Bun.sleep(20);
+  return ok();
+};
+
 test("clipboard timeout falls back and cancellation settles without fallback", async () => {
-  await withTool("/bin/sleep 10", async (dir) => {
-    const start = performance.now();
-    const result = await copyTextAsync("fallback", { fallbackDir: dir, osc52: () => false });
-    expect(performance.now() - start).toBeLessThan(2500);
-    expect(result.file).toBe(join(dir, "clipboard.txt"));
-    expect(readFileSync(result.file!, "utf8")).toBe("fallback");
-    const controller = new AbortController();
-    const pending = copyTextAsync("cancelled", { fallbackDir: dir, osc52: () => false, signal: controller.signal });
-    setTimeout(() => controller.abort(), 30);
-    expect((await pending).file).toBeNull();
-    expect(readFileSync(join(dir, "clipboard.txt"), "utf8")).toBe("fallback");
+  // A helper that outlives the copy's 1 s stop by far: the copy falls back once it's stopped it. Bounded at half the
+  // helper's life, a wide margin over the stop for a slow runner (2.6 s on CI's macOS, #6), and the helper's group
+  // seen killed, not left running.
+  await withTool('echo $$ > "${0%/*}/pid"; /bin/sleep 20; : > "${0%/*}/finished"', async (dir) => {
+    const pidFile = join(dir, "pid");
+    const pid = () => Number(existsSync(pidFile) ? readFileSync(pidFile, "utf8").trim() : 0);
+    try {
+      const start = performance.now();
+      const result = await copyTextAsync("fallback", { fallbackDir: dir, osc52: () => false });
+      expect(performance.now() - start).toBeLessThan(10_000);
+      expect(result.file).toBe(join(dir, "clipboard.txt"));
+      expect(readFileSync(result.file!, "utf8")).toBe("fallback");
+      // Killed before its first command, it wrote no pid at all.
+      if (await until(() => pid() > 0, 1000)) expect(await until(() => groupGone(pid()))).toBe(true);
+      expect(existsSync(join(dir, "finished"))).toBe(false);
+      const controller = new AbortController();
+      const pending = copyTextAsync("cancelled", { fallbackDir: dir, osc52: () => false, signal: controller.signal });
+      setTimeout(() => controller.abort(), 30);
+      expect((await pending).file).toBeNull();
+      expect(readFileSync(join(dir, "clipboard.txt"), "utf8")).toBe("fallback");
+    } finally {
+      try {
+        if (pid() > 0) process.kill(-pid(), "SIGKILL"); // a helper left behind by a failure
+      } catch {}
+    }
   });
 });
 

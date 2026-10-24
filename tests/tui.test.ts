@@ -15905,31 +15905,50 @@ describe("linters without a server (19.19)", () => {
   };
 
   test("a file's linters: findings beside their lines as it opens; one reading its input again once typing pauses, one reading the file once saved", async () => {
-    const root = makeVault();
-    writeFileSync(join(root, "Dockerfile"), "FROM x\nRUN BAD\n");
-    const h = await harness({ root, open: "Dockerfile", config: linters });
-    const shown = () =>
-      h.app.problems.ofView(h.app.view!).map((p) => `${p.start.line} ${p.severity} ${p.source}: ${p.message}`);
-    expect(await until(() => (h.frame(), shown().length === 2))).toBe(true);
-    expect(shown().sort()).toEqual(["2 error fake: found BAD", "2 warning saved: saved BAD"]);
-    expect(h.frame()).toMatch(/[┃│] ✖2 {2}RUN BAD/); // the bar: the worse one's sign and its two, beside its line
-    // Not installed: said once.
-    expect(h.app.messages.filter((m) => m.text.includes("linter gone: slipbox-no-such-linter not found")).length).toBe(
-      1,
-    );
-    // Typed: the input's linter again after the pause; the file's waits for the save. A line Dockerfile's grammar
-    // reads (16.21): no syntax error of its own among the findings.
-    await h.keys("shift+g", "o", "R", "U", "N", "space", "B", "A", "D", "escape");
-    expect(await until(() => (h.frame(), shown().length === 2))).toBe(true);
-    expect(shown().sort()).toEqual(["2 error fake: found BAD", "3 error fake: found BAD"]);
-    await h.keys("ctrl+s");
-    expect(await until(() => (h.frame(), shown().length === 4))).toBe(true);
-    expect(
-      shown()
-        .filter((p) => p.includes("saved"))
-        .sort(),
-    ).toEqual(["2 warning saved: saved BAD", "3 warning saved: saved BAD"]);
-    expect(h.app.messages.filter((m) => m.text.includes("linter gone")).length).toBe(1); // still once
+    // Each linter's answer lands on its own, in whatever order they end: the one not installed is held here until the
+    // others' findings are shown, the order a busy machine gave on CI (#6).
+    const servers = await import("../src/core/servers/linters.ts");
+    const run = servers.runLinter;
+    let release = () => {};
+    const held = new Promise<void>((go) => (release = go));
+    const spy = spyOn(servers, "runLinter").mockImplementation((async (def, ...rest) => {
+      if (def.name === "gone") await held;
+      return run(def, ...rest);
+    }) as typeof run);
+    try {
+      const root = makeVault();
+      writeFileSync(join(root, "Dockerfile"), "FROM x\nRUN BAD\n");
+      const h = await harness({ root, open: "Dockerfile", config: linters });
+      const shown = () =>
+        h.app.problems.ofView(h.app.view!).map((p) => `${p.start.line} ${p.severity} ${p.source}: ${p.message}`);
+      const gone = () => h.app.messages.filter((m) => m.text.includes("linter gone")).length;
+      expect(await until(() => (h.frame(), shown().length === 2))).toBe(true);
+      expect(shown().sort()).toEqual(["2 error fake: found BAD", "2 warning saved: saved BAD"]);
+      expect(h.frame()).toMatch(/[┃│] ✖2 {2}RUN BAD/); // the bar: the worse one's sign and its two, beside its line
+      // Not installed: said once, when its run ends.
+      expect(gone()).toBe(0);
+      release();
+      expect(await until(() => gone() === 1)).toBe(true);
+      expect(
+        h.app.messages.filter((m) => m.text.includes("linter gone: slipbox-no-such-linter not found")).length,
+      ).toBe(1);
+      // Typed: the input's linter again after the pause; the file's waits for the save. A line Dockerfile's grammar
+      // reads (16.21): no syntax error of its own among the findings.
+      await h.keys("shift+g", "o", "R", "U", "N", "space", "B", "A", "D", "escape");
+      expect(await until(() => (h.frame(), shown().length === 2))).toBe(true);
+      expect(shown().sort()).toEqual(["2 error fake: found BAD", "3 error fake: found BAD"]);
+      await h.keys("ctrl+s");
+      expect(await until(() => (h.frame(), shown().length === 4))).toBe(true);
+      expect(
+        shown()
+          .filter((p) => p.includes("saved"))
+          .sort(),
+      ).toEqual(["2 warning saved: saved BAD", "3 warning saved: saved BAD"]);
+      expect(gone()).toBe(1); // still once
+    } finally {
+      release();
+      spy.mockRestore();
+    }
   });
 
   test("one not installed, failing for two files at once, is said once", async () => {
@@ -18054,6 +18073,11 @@ describe("commands run by your shell (25.7)", () => {
     await ex(h, ".!tr a-z A-Z");
     expect(h.app.view!.buf.source).toBe("pear\nAPPLE\nfig\n");
     await ex(h, "1,2!rev");
+    expect(h.app.view!.buf.source).toBe("raep\nELPPA\nfig\n");
+    // What it writes to its errors stays out of the lines it gives back (a window's merges them, D?1).
+    await ex(h, "3!echo warning >&2; tr a-z A-Z");
+    expect(h.app.view!.buf.source).toBe("raep\nELPPA\nFIG\n");
+    await h.keys("u");
     expect(h.app.view!.buf.source).toBe("raep\nELPPA\nfig\n");
     // A failing filter: the lines as they were, its output shown.
     await ex(h, "%!echo bad >&2; exit 2");

@@ -603,3 +603,24 @@ typed revision is kept as a commit, so it doesn't move with the branch it was ty
 
 **Not chosen:** asking GitHub or another forge for a pull request's base: whoever opens slipbox passes it, and slipbox
 stays independent of any forge. Several bases at once, or comparing two arbitrary commits on the screen.
+
+## D?1: `:!cmd`'s window: its errors through its output's pipe, in the order written (25.7, 2026-10-24)
+
+**Decision:** `:!cmd` (`shell.run`) gives the command one pipe for its standard output and error: `/bin/sh` runs
+`exec "$0" -c "$1" 2>&1` with your shell (`$SHELL`, else `/bin/sh`) and the command, so the shell's standard error is
+its standard output and the shell takes the place of `/bin/sh` (the same process, group and exit). The window lists
+what it prints in the order written, as a terminal shows it. A filter (`:{range}!cmd`) keeps the two apart: its lines
+are its standard output alone. As built: `core/shell.ts` (`runShell`'s `merged`), `tui/shellrun.ts` (`shellRun`);
+design/tui.md § Commands run by your shell. Decided with issue #6 (T23).
+
+**Why:** Read from two pipes, the output and the errors come in the order slipbox reads them, not the order written: a
+command printing both quickly had all its output listed first, then all its errors (every time, on Linux, in the
+terminal check), and CI's macOS read a line of output before the error written ahead of it. Read from one pipe, the
+order is the command's. The shell is given `-c` and the command as before, so any shell works, fish or nu as well as a
+POSIX one; a prefix of the command's own (`exec 2>&1;`) would need a POSIX shell.
+
+**Cost:** One more program started for each `:!cmd`, `/bin/sh`, which every system slipbox runs on has. The window
+can't tell an error from output (it never did).
+
+**Not chosen:** the test asking only for each stream's own order (the window's order would stay the order read); a
+pause in the test between the two streams (still the order read, whenever slipbox is busy past the pause).

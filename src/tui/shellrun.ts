@@ -23,13 +23,24 @@ function prepared(app: App, command: string): string | null {
   return cmd;
 }
 
-/** Started: the job kept (one at a time), said, and `then` when it ends — the frame drawn again. */
-function launch(app: App, label: string, cmd: string, input: string | undefined, then: (r: ShellResult) => void): void {
+/**
+ * Started: the job kept (one at a time), said, and `then` when it ends — the frame drawn again. `merged`: its errors
+ * through its output's pipe, in the order written (a window's, D?1; a filter's lines are its output alone).
+ */
+function launch(
+  app: App,
+  label: string,
+  cmd: string,
+  input: string | undefined,
+  then: (r: ShellResult) => void,
+  merged = false,
+): void {
   const abs = app.view?.buf.abs;
   const job = runShell(cmd, {
     cwd: app.loc.root,
     input,
     env: { SLIPBOX_ROOT: app.loc.root, ...(abs ? { SLIPBOX_FILE: abs } : {}) },
+    merged,
   });
   app.shellJob = { command: label, stop: job.stop };
   app.message("info", `running: ${label}`);
@@ -79,11 +90,14 @@ function openPlace(app: App, line: string): void {
   if (v?.buf.rel === p.rel) placeAt(app, v, v.buf.lineStarts()[p.line - 1] ?? 0);
 }
 
-/** `:!cmd` (`shell.run`): the command, as typed, run by your shell in the root's folder; its output in a window. */
+/**
+ * `:!cmd` (`shell.run`): the command, as typed, run by your shell in the root's folder; its output in a window, its
+ * errors among it where it wrote them.
+ */
 export function shellRun(app: App, command: string): void {
   const label = command.trim();
   const cmd = prepared(app, label);
-  if (cmd !== null) launch(app, label, cmd, undefined, (r) => showOutput(app, label, r));
+  if (cmd !== null) launch(app, label, cmd, undefined, (r) => showOutput(app, label, r), true);
 }
 
 /**

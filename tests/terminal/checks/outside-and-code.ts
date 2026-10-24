@@ -1121,6 +1121,26 @@ export const OUTSIDE_AND_CODE: Check[] = [
   },
   {
     area: "outside-and-code",
+    name: "shell: :!cmd's window lists what a command writes to its errors among its output, where it wrote it (D?1)",
+    covers: { commands: ["shell.run"] },
+    options: { open: MEETING },
+    run: async (s) => {
+      // By turns to its output and its errors, with no pause between: through one pipe, in the order written.
+      await s.ex("!for i in 1 2 3 4; do echo out$i; echo err$i >&2; done");
+      await s.see(/\$ for i in 1 2 3 4; .* — exit 0/, 5000);
+      await s.see("err4");
+      const rows = ["out1", "err1", "out2", "err2", "out3", "err3", "out4", "err4"].map((l) =>
+        s.rowOf(new RegExp(`\\b${l}\\b`)),
+      );
+      s.expect(
+        rows.every((r, i) => r >= 0 && (i === 0 || r > rows[i - 1]!)),
+        `its lines in the order written, rows ${rows.join(", ")}`,
+      );
+      await s.keys("escape");
+    },
+  },
+  {
+    area: "outside-and-code",
     name: "shell: lines filtered through a command — :17,20!sort -r, one undo step; ! on a visual selection",
     covers: { commands: ["shell.filter", "edit.undo", "visual.line"] },
     options: { open: MEETING },

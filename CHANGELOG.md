@@ -8,6 +8,8 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 
 ### Fixed
 
+- `:!cmd`'s window shows a command's errors where it printed them among its output, as a terminal does. A command that
+  printed both quickly had all its output listed first, then all its errors.
 - A slow disk, such as a network share or a drive that's asleep, no longer freezes the screen while the background
   index walks and indexes your home folder and the vaults in it, or while the explorer lists a folder outside the vault
   you're in. Both read the disk in the background now: a folder being listed says `listing…` until it answers, and
