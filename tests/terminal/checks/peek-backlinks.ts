@@ -781,7 +781,7 @@ export const PEEK_BACKLINKS: Check[] = [
       startAt: "home/notes/index.md",
       // The watcher slow to tell, as a loaded runner's is: the note written below is in the explorer, from the disk,
       // well before the switcher lists it (#69).
-      config: "[watch]\ndebounce_ms = 1500\n",
+      config: "[watch]\ndebounce_ms = 3000\n",
       setup: (s) => {
         const far = join(s.home, "work", "lantern");
         mkdirSync(far, { recursive: true });
@@ -804,7 +804,8 @@ export const PEEK_BACKLINKS: Check[] = [
       await s.keys("escape");
       // Then a note naming it: the old form's enter (21.11) reaches lantern by its name — the graph the search opened.
       s.write("~/notes/by-name.md", "# By name\n\nSee [[lantern:Far Name]].\n");
-      await s.see("by-name.md", 5000); // in the explorer, from the disk; in the switcher once the watcher tells
+      // The explorer's row first, from the disk: no sign the switcher has it, which it does once the watcher tells.
+      await s.see("by-name.md", 5000);
       await inSwitcher(s, "by-name", "by-name.md");
       await s.keys("enter");
       await opened(s, "by-name.md");

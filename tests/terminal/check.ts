@@ -116,19 +116,32 @@ export async function open(s: Session, name: string): Promise<void> {
 }
 
 /**
- * In the switcher: reopened until its list has `path`, for 5 s or as long as any wait (`WAIT`), whichever is longer.
- * It lists the vault's notes as they were when it opened, and a note written from outside joins them only with the
- * watcher's batch: the explorer shows it from the disk before that (#69). The list's own row, its border and a space
- * before the path, never the explorer's row of a note at the vault's top.
+ * Whether the switcher on screen lists `path`: a row of its own, between its title and its bottom border (`└─… 1/2 ┘`),
+ * its border and a space before the path. Never the explorer's row of a note at the vault's top, a tab, a toast's.
+ */
+export function switcherListed(s: Session, path: string): boolean {
+  const screen = s.screen();
+  const top = screen.findIndex((r) => /[┌+][─-] Open (note|\()/.test(r));
+  if (top < 0) return false;
+  const row = new RegExp(`[│|] ${literal(path)}(\\s|$)`);
+  for (let i = top + 1; i < screen.length && !/[└+][─-]+ \d+\/\d+ [┘+]/.test(screen[i]!); i++)
+    if (row.test(screen[i]!)) return true;
+  return false;
+}
+
+/**
+ * In the switcher: reopened until it lists `path` (`switcherListed`), for 5 s or as long as any wait (`WAIT`),
+ * whichever is longer. It lists the vault's notes as they were when it opened, and a note written from outside joins
+ * them only with the watcher's batch: the explorer shows it from the disk before that (#69). Enter then opens the row
+ * selected, the best match: a query that matches only `path` opens it.
  */
 export async function inSwitcher(s: Session, query: string, path: string): Promise<void> {
-  const row = new RegExp(`[│|] ${literal(path)}(\\s|$)`);
   const end = Date.now() + Math.max(5000, WAIT);
   for (;;) {
     await s.keys("ctrl+p");
     await s.see(/Open (note|\()/);
     await s.type(query);
-    if (s.rowOf(row) >= 0) return;
+    if (switcherListed(s, path)) return;
     await s.keys("escape");
     s.expect(Date.now() < end, `the switcher to list ${path}`);
   }

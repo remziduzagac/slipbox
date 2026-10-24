@@ -30,6 +30,7 @@ import {
   leader,
   open,
   opened,
+  switcherListed,
 } from "../check.ts";
 import { CheckFailed, type Session, Skipped, sleep } from "../session.ts";
 import { ARCHITECTURE, crumbs, lastMessage, listed, messagesSaying, PEEK_HINT, toLink } from "./links-and-files.ts";
@@ -1146,7 +1147,7 @@ async function switcherLists(s: Session, query: string, path: string): Promise<b
   await s.see(/Open (note|\()/);
   await s.type(query);
   await s.settle();
-  const has = s.rowOf(path) >= 0;
+  const has = switcherListed(s, path);
   await s.keys("escape");
   await s.notSee(/Open (note|\()/);
   return has;

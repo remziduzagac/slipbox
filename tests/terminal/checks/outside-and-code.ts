@@ -679,7 +679,7 @@ export const OUTSIDE_AND_CODE: Check[] = [
     name: "watching: a note an agent writes at the vault's top — in the explorer from the disk at once, in the switcher once the watcher tells, opened from it (#69)",
     covers: { cases: ["watching", "explorer"], commands: ["switcher.open", "explorer.toggle_hidden"] },
     // The watcher slow to tell, as a loaded runner's is.
-    options: { config: "[watch]\ndebounce_ms = 1500\n" },
+    options: { config: "[watch]\ndebounce_ms = 3000\n" },
     run: async (s) => {
       s.write("arrival.md", "# Arrival\n\nWritten by an agent.\n");
       // The explorer's tree made again before the watcher has told (hidden files shown, then not): its row is the
