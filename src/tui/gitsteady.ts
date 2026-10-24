@@ -236,6 +236,8 @@ export class Steady {
       this.lost = null;
       this.anchor = null;
       this.anchorLost = null;
+      // Reported before these rows showed: the pointer holds them once it moves.
+      this.unmoved = mouse.at;
     } else if (s.selected !== this.pickedAt) {
       this.picked = keysOf(rows())[s.selected] ?? null;
       this.pickedAt = s.selected;

@@ -407,3 +407,10 @@ repository's own panel, and for the keys: the selection is an index, so a sort p
   come without a move). The checks now read the selected one as bold on the header's own background, as their hover
   check reads lit; the design's § Hover says a click counts. The test job's one failure, "home's walk, stepped while
   nobody works…", is `dev`'s flake.
+- 2026-10-24: Rebased on `dev` after #41, #64, #58 and #37 (GitHub said it conflicted), the branch squashed to one
+  commit first so the conflicts were resolved once. #41's branch made, selected once git lists it, is picked through
+  `Steady` (`select`, as a key's move: shown, not held off by the pointer), and its `touched` count kept in the
+  panel's keys and clicks. On the rebased head, "another repository's rows aren't held to the pointer's row" failed:
+  some of b's rows now come after its first frame, and the pointer reported in a, never moved, took an anchor in b.
+  `begin` now takes a pointer reported before the rows of another context showed as unmoved (D261: it holds once it's
+  reported on the rows after they showed).
