@@ -1,5 +1,5 @@
 ---
-status: doing
+status: done
 assignee: claude-68
 blocked_by: []
 related: [T25]
