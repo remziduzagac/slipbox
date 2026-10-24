@@ -511,10 +511,14 @@ export const REPORTING: Check[] = [
     run: async (s) => {
       await leader(s, "m");
       await s.see("Messages");
-      // The message is the one the command's name finds: its row cut at the window's width.
+      // The message is the one the command's name finds: its row cut at the list's width, where a long folder's path
+      // (macOS's /private/tmp/…) leaves the key out; enter copies it whole.
       await s.type("help.report_send");
-      await s.see(/config: .*config\.toml binds keys\.g r/);
+      await s.see(/config: .*config\.toml/);
       await s.see(/ 1\/1 ┘/);
+      await s.keys("enter");
+      await s.until(() => s.clipboard().includes("binds keys.g r to help.report_send gh"), 5000, "the message copied");
+      s.expect(s.clipboard().endsWith("(it runs a program); ignored"), `why, said: ${s.clipboard()}`);
     },
   },
 ];

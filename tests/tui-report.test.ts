@@ -714,6 +714,20 @@ describe("gh (RPT-D4)", () => {
     expect(readdirSync(dir)).not.toContain("argv");
   });
 
+  test("a key that came while gh's own key waited its turn (sent at once, a fast typist): typed meanwhile too", async () => {
+    const dir = fakeGh("echo https://github.com/remziduzagac/slipbox/issues/81", "sleep 0.4; echo octo-cat");
+    const h = await harness();
+    h.app.home = join(dir, "home");
+    await report(h, "Crash", "it froze");
+    // All three taken before g is handled: g waits behind ctrl+s, and j behind g.
+    const keys = ["ctrl+s", "g", "j"].map((k) => h.app.input.handleKey(k));
+    await Promise.all(keys);
+    for (let i = 0; i < 100 && !said(h).startsWith("gh is ready") && !h.app.overlay; i++) await Bun.sleep(20);
+    expect(h.app.overlay).toBeNull();
+    expect(said(h)).toBe("gh is ready: ctrl+s, g in the report asks again");
+    expect(readdirSync(dir)).not.toContain("argv");
+  });
+
   test("closed, or something opened over it, while gh was asked: nothing asked over that, said", async () => {
     const dir = fakeGh("echo https://github.com/remziduzagac/slipbox/issues/79", "sleep 0.4; echo octo-cat");
     const h = await harness();

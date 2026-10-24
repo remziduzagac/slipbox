@@ -127,9 +127,10 @@ export class Input {
    */
   handleKey(key: string): Promise<void> {
     this.app.lastInputAt = this.app.now();
-    this.keysSeen++;
+    const at = ++this.keysSeen;
     const start = () => {
       this.keysInFlight++;
+      this.keyAt = at;
       return this.processKey(key).finally(() => this.keysInFlight--);
     };
     // Nothing in flight: start now (a click's key acts at once); else after the ones before it.
@@ -140,6 +141,9 @@ export class Input {
   private keyQueue: Promise<void> = Promise.resolve();
   /** Keys taken so far: a question asked after a wait opens only if none came meanwhile (a report's gh). */
   keysSeen = 0;
+  /** Which of them is being handled, or was last: "meanwhile" starts there, not at `keysSeen`, so a key that came
+   *  while the one asking waited its turn counts too (sent at once, a fast typist). */
+  keyAt = 0;
   private keysInFlight = 0;
 
   /** Handle a key now, not queued: `.` replays its keys through this, inside its own turn. */

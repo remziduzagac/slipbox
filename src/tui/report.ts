@@ -374,7 +374,8 @@ export class Reporter {
     if ("why" in first) return this.app.message("warn", first.why);
     const repo = reportRepo();
     const home = existsSync(this.app.home) ? this.app.home : homedir();
-    const keys = this.app.input.keysSeen;
+    // From the key that asked (`ctrl+s`, `g`), not from the keys taken so far: one already behind it counts.
+    const keys = this.app.input.keyAt;
     const who = await ghAccount(gh, { env: process.env, home });
     if ("why" in who) return this.app.message("warn", who.why);
     // While gh was asked, the report closed, or something else opened over it: nothing asked over that, said.
