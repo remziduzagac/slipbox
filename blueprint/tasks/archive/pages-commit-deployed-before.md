@@ -1,5 +1,5 @@
 ---
-status: doing
+status: done
 assignee: claude-7
 blocked_by: []
 related: [T10]
@@ -37,7 +37,8 @@ the deployments D258 relies on are served; then whatever fix that calls for.
 ## References
 
 - Delivers: design/distribution.md § Previews (the Pages site, a release's deployment).
-- Rests on: (GR-D14), (D251), (D258); [research/github-behaviour.md](../research/github-behaviour.md) § Pages; #7.
+- Rests on: (GR-D14), (D251), (D258), (D?1); [research/github-behaviour.md](../../research/github-behaviour.md)
+  § Pages; issue #7.
 
 ## Log
 
@@ -195,3 +196,6 @@ the deployments D258 relies on are served; then whatever fix that calls for.
   `MAINTAINING.md` (step 11; § Settings: only `main` and `test` deploy), `settings.json`'s line on the environment's
   refs (its words, not the setting). The concurrency finding goes with `main`'s push: a release's hand-off is the one
   left, as under D258.
+- 2026-10-24: Done, every acceptance criterion met: the repeats in today's flow shown served or made so (a preview's,
+  its commit's first; a run by hand, four times), the tests above holding `pages.yml` to it, the design and D?1 saying
+  so. Moved to the archive with the pull request; its merge is the maintainer's acceptance.
