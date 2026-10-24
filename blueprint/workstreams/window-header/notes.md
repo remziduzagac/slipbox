@@ -284,4 +284,6 @@ here, and the work go on.
   [ideas.md](ideas.md) for later. Taken as recommended while the maintainer was away.
 - **Without colour, a disabled button looked like an enabled one** (the review's finding, HDR-D2's Cost): dim and
   italic now (HDR-D5). Taken as recommended while the maintainer was away.
-- 2026-10-24: HDR-D5 built: `topbar_button_disabled` dim and italic in `mono`; a unit test (it fails without the change, checked); no terminal check, since the headless terminal's runs keep colours and bold, not italics or dim. ACCESSIBILITY.md says it.
+- 2026-10-24: HDR-D5 built: `topbar_button_disabled` dim and italic in `mono`; a unit test (it fails without the
+  change, checked); no terminal check, since the headless terminal's runs keep colours and bold, not italics or dim.
+  ACCESSIBILITY.md says it.
