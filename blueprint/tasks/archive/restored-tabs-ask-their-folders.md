@@ -334,3 +334,8 @@ folder before its tabs open, as a file opened by name has its folder asked for, 
   returned early fails for the commands it declares and never ran), as it is for root; the unit test drives the case on
   both systems (`answer` given the target). Left for later, not this PR's: on macOS a link to a folder you may not list
   is broken, not asked about (never read either way); on Linux it's asked, and doesn't answer.
+- 2026-10-24: Rebased on `dev` again (#35, a folder whose time was set back listed again; #57, the window header):
+  `parentOf` is `walk.ts`'s now, as #35 has it (this branch had shared home's); the CHANGELOG, `design/roots.md` and the
+  vaults manual keep #35's lines and this branch's. Ran: tests/tui.test.ts's `#13` and VV-D6 tests (63), vault's and
+  the walk thread's (438), core's (308), the 32 terminal checks the branch reaches, the typecheck, the lint,
+  `check:docs`.
