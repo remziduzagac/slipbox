@@ -15153,8 +15153,8 @@ describe("the background auto-index in the TUI (20.9)", () => {
         ["note", "notes/ideas/coffee.md"],
       ]);
       // Home's walk made, reaching `other`: its buffer too.
-      const job = h.app.watch.indexJob()!;
-      while (job.step(50)) {}
+      await stepToEnd(h.app.watch.indexJob()!);
+      await h.app.watch.homeRefreshed;
       expect(p.rel).toBe("other/p.md");
     } finally {
       process.env.HOME = before;
