@@ -34,6 +34,7 @@ import { INFO_COMMANDS } from "./info.ts";
 import { SERVER_COMMANDS } from "./servers.ts";
 import { AGENT_COMMANDS } from "./agents.ts";
 import { INSTALL_COMMANDS } from "./install.ts";
+import { report } from "./report.ts";
 
 export { EXIT, CliError, retargetSaid } from "./common.ts";
 
@@ -122,6 +123,8 @@ Usage:
   slipbox upgrade                   the latest release installed, checked before it's used  [--check: only say whether there's one]
   slipbox channel [set stable|preview]  which releases the installer's install follows: stable, or previews too
   slipbox uninstall                 what the installer put here, listed; removed with --yes  [--purge: slipbox's folders too] [--yes]
+  slipbox report                    what a bug report asks for (the version, how it was installed, the system, the
+                                    terminal) and the bug form's address filled in with it; nothing sent
   slipbox skill                     the skill for agents, this slipbox's: printed; written into <dir>/slipbox/ with --install
                                     [--install <dir>] [--force: over a file slipbox didn't write, or a link] [--dry-run]
   slipbox commands                  list named commands and their CLI equivalents
@@ -200,6 +203,7 @@ export const CLI_COMMANDS = new Set([
   "uninstall",
   "skill",
   "types",
+  "report",
 ]);
 
 /** The command word in raw arguments that failed to parse: skips flags and their values. */
@@ -254,6 +258,13 @@ export async function runCli(argv: string[], io: Io): Promise<number> {
     const color = flag(args, "color");
     if (color !== undefined && !["auto", "always", "never"].includes(color))
       throw new UsageError("--color must be auto, always or never");
+    // A report is often of a vault that won't open: made before any is looked for, as --version is (RPT-D5).
+    if (command === "report") {
+      checkUsage(command, rest, args);
+      const r = report(io);
+      io.out(json ? envelope({ ok: true, command, data: r.data }) : sanitize(r.human ?? ""));
+      return EXIT.ok;
+    }
     // Where roots are (21.1), and which may run their own code (23.x), are your config's to say,
     // `--config` included: read before finding one.
     const yours = loadConfig({ configFile: flag(args, "config") }).config;
@@ -327,20 +338,7 @@ export async function runCli(argv: string[], io: Io): Promise<number> {
     session = new Session(args, loc, io);
     const handler = HANDLERS[command];
     if (!handler) throw new UsageError(`unknown command: ${command} (see slipbox help)`);
-    // Too many arguments is a mistake to report, not to drop (a dropped one can be a flag after --).
-    const most = MAX_ARGS[command];
-    if (most !== undefined && rest.length > most)
-      throw new UsageError(
-        `${command} takes at most ${most} argument${most === 1 ? "" : "s"}; got ${rest.length} (${rest.slice(most).join(" ")} too many)`,
-      );
-    // A flag the command doesn't take is an error, never ignored: `write --dry-run` would write.
-    const own = FLAGS[command] ?? [];
-    for (const name of args.flags.keys()) {
-      if (!GLOBAL_FLAGS.has(name) && !own.includes(name))
-        throw new UsageError(
-          `--${name} isn't an option of ${command}${own.length ? ` (it takes ${own.map((f) => `--${f}`).join(", ")})` : ""}`,
-        );
-    }
+    checkUsage(command, rest, args);
     // Its followed links' targets asked whether they answer, before anything is read through them (VV-D6).
     await probeLinks(session);
     const result = await handler(session, rest);
@@ -402,6 +400,24 @@ export async function runCli(argv: string[], io: Io): Promise<number> {
   }
 }
 
+/** A command's arguments and flags, checked before it runs. */
+function checkUsage(command: string, rest: string[], args: Args): void {
+  // Too many arguments is a mistake to report, not to drop (a dropped one can be a flag after --).
+  const most = MAX_ARGS[command];
+  if (most !== undefined && rest.length > most)
+    throw new UsageError(
+      `${command} takes at most ${most} argument${most === 1 ? "" : "s"}; got ${rest.length} (${rest.slice(most).join(" ")} too many)`,
+    );
+  // A flag the command doesn't take is an error, never ignored: `write --dry-run` would write.
+  const own = FLAGS[command] ?? [];
+  for (const name of args.flags.keys()) {
+    if (!GLOBAL_FLAGS.has(name) && !own.includes(name))
+      throw new UsageError(
+        `--${name} isn't an option of ${command}${own.length ? ` (it takes ${own.map((f) => `--${f}`).join(", ")})` : ""}`,
+      );
+  }
+}
+
 /** Arguments each command takes at most (`write` and `capture` take free text: no limit). */
 const MAX_ARGS: Record<string, number> = {
   render: 1,
@@ -452,6 +468,7 @@ const MAX_ARGS: Record<string, number> = {
   channel: 2,
   uninstall: 0,
   skill: 0,
+  report: 0,
   types: 1,
 };
 
@@ -576,6 +593,7 @@ export function defaultIo(): Io {
     },
     isTTY: !!process.stdout.isTTY,
     columns: process.stdout.columns,
+    rows: process.stdout.rows,
     cwd: process.cwd(),
     env: process.env,
   };
