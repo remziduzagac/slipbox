@@ -222,8 +222,9 @@ folder before its tabs open, as a file opened by name has its folder asked for, 
     batch heard before a link was forgotten, a redraw asked mid-render, a listener's own bug. Ran: all of
     tests/tui.test.ts (762), tui-git, gitpanel, marks, regressions, home (175), vault's home tests (53); 46 terminal
     checks; the typecheck, the lint, the docs' checks and tests.
-- 2026-10-24: Review loop, round 4 (the code-review skill; Codex's pane waited on a question of the maintainer's), each
-  finding checked. The maintainer chose to keep reached notes reloading in this pull request and fix its gaps:
+- 2026-10-24: Review loop, round 4 (the code-review skill; Codex's part skipped, its pane waiting on a question of the
+  maintainer's), each finding checked. The maintainer chose to keep reached notes reloading in this pull request and
+  fix its gaps:
   - Verified, fixed: the poll took "the graph lists its folder" for "a watcher sees it", so a hidden or ignored note
     in a watched folder (`.draft.md` at the top) was never read again; and its own set of folders went stale when a
     folder was added in place. The watcher says what it sees itself (`VaultWatcher.sees`: its folder watched or
@@ -247,8 +248,8 @@ folder before its tabs open, as a file opened by name has its folder asked for, 
     `Elsewhere: a note just looked at through a link, …`; `home: a note typed in before its folder is walked, …`. Each
     red without its change (`tmp/issue/mut/term4.py`). Ran: all of tests/tui.test.ts (767), the five other files
     (175), vault's home and watcher tests (66), 49 terminal checks, the typecheck, the lint, the docs' checks and tests.
-- 2026-10-24: Review loop, round 5 (the code-review skill; Codex's pane still waited on the maintainer's question), each
-  finding checked:
+- 2026-10-24: Review loop, round 5 (the code-review skill; Codex's part skipped, its pane still waiting on the
+  maintainer's question), each finding checked:
   - Verified (its probe), fixed: a build the watcher is synced to (`Watch.rebuilt`: a reindex, a branch's tabs) took
     the new stamps as known without reading again an open note changed meanwhile, so it never was. `rebuilt` reads
     each changed one again, never through a link not followed (a test and a terminal check, red without it).
@@ -274,3 +275,16 @@ folder before its tabs open, as a file opened by name has its folder asked for, 
   - Ran: all of tests/tui.test.ts (770), the five other files (175), vault's home and watcher tests (67); 50 terminal
     checks; every mutation set (`tmp/issue/mut/run*.py`, `term*.py`), each change failing a test; the typecheck, the
     lint, the docs' checks and tests.
+- 2026-10-24: Rebased on `dev` twice. First on T12 (#47: home's walk on the walk's thread): its build counter
+  (`Graph.builds`) replaces this branch's own, so "never built" is `builds === 0`; its `refreshHome` sends the folders
+  asked for (the tabs' among them) to the walk's thread and drops an answer once the graph is built or asked again since,
+  so a tab's folder asked for meanwhile is never lost; `homeBuilt` ends with `Watch.rebuilt` (the watcher, the open
+  notes changed, search). The start's build and a branch's tabs' stay on the screen's thread, as T12 leaves the walk at
+  the start and the open vault's builds. A test stepped home's job in a loop that never let the thread answer, and hung:
+  it waits as T12's do (`stepToEnd`, `homeRefreshed`). Then on T19 (#42: the watcher leaves home to its walk): a tab's
+  folder is asked for by name, so `waitsForHomeWalk` leaves it to the watcher, its folders taken in as they come (the
+  manual and design/tui.md say so); a folder listed for the walk (`listForWalk`) never counts as covered for a tab, home
+  not walked; its tests ask as the graph does now (`askFolders`, one folder each, a build each as before). `parentOf`
+  is home's alone now (the watcher imports it, as it does `under`), no import cycle. Considered,
+  left: `sees` true for a note T19 follows into a folder left to the walk (the watcher looks at it every tick). The poll
+  looks at it too, but `heard` keeps the watcher from saying a change twice; it would save a stat, nothing seen.
