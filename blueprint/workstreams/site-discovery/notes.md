@@ -69,3 +69,8 @@
 - The design approved; the decisions recorded as SEO-D1 to SEO-D6. The words were drafted as a root decision (`D?1`);
   the decisions' README puts a decision made inside a workstream under its key, the note under D226 coming with the
   consolidation, so it's SEO-D1.
+
+## Codex set aside (2026-10-24)
+
+- The maintainer's choice, from now until they say otherwise: Codex isn't used. Its part (a plan's challenge, the
+  second review, a hard problem) goes to a fresh Claude reviewer.

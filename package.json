@@ -20,6 +20,7 @@
     "test:terminal:changed": "bun scripts/ci-scope.ts terminal",
     "test:herdr": "bun tests/terminal/herdr/run.ts",
     "shots": "bun tests/terminal/shots.ts",
+    "share-card": "bun scripts/share-card.ts",
     "typecheck": "tsc --noEmit -p .",
     "check:boundary": "bun scripts/check-boundary.ts",
     "check:deps": "bun scripts/check-deps.ts",

@@ -13,6 +13,7 @@
       "site/scripts/**",
       "site/astro.config.mjs",
       "site/src/content.config.ts",
+      "site/src/route-data.ts",
       "site/package.json",
       "*.json",
       "*.jsonc",

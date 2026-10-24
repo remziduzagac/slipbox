@@ -8,7 +8,9 @@
 //   - Links between the docs become the site's addresses (`../manual/keys.md#leader` → `/slipbox/docs/manual/keys/#leader`);
 //     one to a file outside docs/ goes to it on GitHub. Code, fenced or inline, is left as it is.
 //   - The screenshots are copied to public/images; the agent guide is served as it is, for an agent to read.
-//   - The logo is the README's (assets/logo.svg), copied to public/logo.svg: the site's logo and its favicon.
+//   - llms.txt and llms-full.txt, the docs for agents (llms.ts), go to public/: the docs' root.
+//   - The logo is the README's (assets/logo.svg), copied to public/logo.svg: the site's logo and its favicon. The share
+//     card (assets/share-card.png, scripts/share-card.ts) is copied beside it: the picture a shared link shows.
 
 import {
   copyFileSync,
@@ -21,13 +23,13 @@ import {
   writeFileSync,
 } from "node:fs";
 import { dirname, join, posix, relative, resolve } from "node:path";
+import { BASE, CARD, DOCS_URL, GITHUB, SITE as ORIGIN } from "./about.ts";
+import { type LlmsPage, llmsFull, llmsTxt } from "./llms.ts";
 
 const SITE = resolve(import.meta.dir, "..");
 const REPO = resolve(SITE, "..");
 const DOCS = join(REPO, "docs");
 const OUT = join(SITE, "src", "content", "docs");
-const BASE = "/slipbox/docs/";
-const GITHUB = "https://github.com/remziduzagac/slipbox";
 
 /** The map's groups: each `##` section of docs/README.md, with the pages its list links, in order. */
 export function readMap(text: string): { label: string; pages: string[] }[] {
@@ -99,6 +101,9 @@ export function rewriteLinks(text: string, rewrite: (target: string) => string):
     .join("\n");
 }
 
+/** A compatibility anchor's line: an earlier address of a section, which the site keeps working. */
+const COMPAT_ANCHOR = /^<a id="[^"]+"><\/a>$/;
+
 /** A page's title (its H1), its description (its first paragraph, as plain text) and its body without the H1. */
 export function splitPage(text: string): { title: string; description: string; body: string } {
   const lines = text.split("\n");
@@ -109,7 +114,7 @@ export function splitPage(text: string): { title: string; description: string; b
   while (rest.length && !rest[0]!.trim()) rest.shift();
   const para: string[] = [];
   // Compatibility anchors belong in the body, but are not a page's introductory description.
-  const first = rest.findIndex((line) => line.trim() && !/^<a id="[^"]+"><\/a>$/.test(line));
+  const first = rest.findIndex((line) => line.trim() && !COMPAT_ANCHOR.test(line));
   for (const l of rest.slice(first < 0 ? rest.length : first)) {
     if (!l.trim() || /^(#|```|\||[-*] |\d+\. |>)/.test(l)) break;
     para.push(l.trim());
@@ -122,6 +127,24 @@ export function splitPage(text: string): { title: string; description: string; b
     .trim();
   const description = plain.length > 220 ? `${plain.slice(0, 217).replace(/\s+\S*$/, "")}…` : plain;
   return { title, description, body: rest.join("\n") };
+}
+
+/**
+ * A page's text for the llms files, from its text as the site has it: every link absolute — the site's `/slipbox/docs/…`
+ * addresses by the site's origin, the page's own anchors (`#…`) by its address — and the compatibility anchors, which
+ * only the site's earlier addresses need, left out.
+ */
+export function llmsText(siteText: string, page: string): string {
+  const own = `${ORIGIN}${pageUrl(page)}`;
+  return rewriteLinks(siteText, (t) => (t.startsWith("#") ? `${own}${t}` : /^\/(?!\/)/.test(t) ? `${ORIGIN}${t}` : t))
+    .split("\n")
+    .filter((line) => !COMPAT_ANCHOR.test(line))
+    .join("\n");
+}
+
+/** Where llms.txt sends an agent for a page: its Markdown where the site serves it (the agent guide), else the page. */
+export function llmsUrl(page: string): string {
+  return page === "agent-guide.md" ? `${DOCS_URL}agent-guide.md` : `${ORIGIN}${pageUrl(page)}`;
 }
 
 /** YAML's double-quoted string. */
@@ -138,8 +161,10 @@ function gather(): void {
   const sidebar: { label: string; items: { slug: string }[] }[] = [];
   let pages = 0;
   const groups = [...map, { label: "", pages: legacy }];
+  const llms: { label: string; pages: LlmsPage[] }[] = [];
   for (const group of groups) {
     const items: { slug: string }[] = [];
+    const listed: LlmsPage[] = [];
     for (const page of group.pages) {
       const { title, description, body } = splitPage(readFileSync(join(DOCS, page), "utf8"));
       const front = [
@@ -152,11 +177,17 @@ function gather(): void {
       ].join("\n");
       const out = join(OUT, page);
       mkdirSync(dirname(out), { recursive: true });
-      writeFileSync(out, front + rewriteLinks(body, (t) => rewriteTarget(t, page, isDir)));
+      const text = rewriteLinks(body, (t) => rewriteTarget(t, page, isDir));
+      writeFileSync(out, front + text);
       items.push({ slug: page.replace(/\.md$/, "") });
+      listed.push({ title, url: llmsUrl(page), description, text: llmsText(text, page) });
       pages++;
     }
-    if (group.label) sidebar.push({ label: group.label, items });
+    // The compatibility pages, the group without a label, are earlier addresses: neither in the sidebar nor the llms.
+    if (group.label) {
+      sidebar.push({ label: group.label, items });
+      llms.push({ label: group.label, pages: listed });
+    }
   }
   writeFileSync(join(SITE, "src", "sidebar.json"), `${JSON.stringify(sidebar, null, 2)}\n`);
   const images = join(SITE, "public", "images");
@@ -164,14 +195,23 @@ function gather(): void {
   mkdirSync(images, { recursive: true });
   for (const f of readdirSync(join(DOCS, "images"))) copyFileSync(join(DOCS, "images", f), join(images, f));
   copyLogo(join(SITE, "public"));
+  copyCard(join(SITE, "public"));
   if (existsSync(join(DOCS, "agent-guide.md")))
     copyFileSync(join(DOCS, "agent-guide.md"), join(SITE, "public", "agent-guide.md"));
+  const full = llmsFull(llms);
+  writeFileSync(join(SITE, "public", "llms-full.txt"), full);
+  writeFileSync(join(SITE, "public", "llms.txt"), llmsTxt(llms, Buffer.byteLength(full)));
   console.log(`gather: ${pages} pages in ${sidebar.length} groups, from ${relative(REPO, DOCS)}/`);
 }
 
 /** The README's logo (assets/logo.svg) into `publicDir`, as logo.svg: the site's logo and its favicon. */
 export function copyLogo(publicDir: string): void {
   copyFileSync(join(REPO, "assets", "logo.svg"), join(publicDir, "logo.svg"));
+}
+
+/** The share card (assets/share-card.png) into `publicDir`, at the docs' root, where every page's `og:image` points. */
+export function copyCard(publicDir: string): void {
+  copyFileSync(join(REPO, "assets", CARD.file), join(publicDir, CARD.file));
 }
 
 if (import.meta.main) gather();

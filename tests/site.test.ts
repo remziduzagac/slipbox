@@ -6,6 +6,7 @@ import { mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
+  copyCard,
   copyLogo,
   pageUrl,
   readLegacyPages,
@@ -14,6 +15,9 @@ import {
   rewriteTarget,
   splitPage,
 } from "../site/scripts/gather.ts";
+import { CARD, DESCRIPTION, DOCS_URL, fullTitle, headTags, LINE, SENTENCE } from "../site/scripts/about.ts";
+import { pngSize } from "../scripts/screenshot.ts";
+import { CARD_FILE, cardSvg, madeFrom, madeFromNow, textOf, withText, wrap } from "../scripts/share-card.ts";
 
 const DOCS = join(import.meta.dir, "..", "docs");
 const noDirs = () => false;
@@ -181,5 +185,100 @@ describe("the docs' site: its logo", () => {
     const config = readFileSync(join(top, "site", "astro.config.mjs"), "utf8");
     expect(config).toContain('logo: { src: "./public/logo.svg" }');
     expect(config).toContain('favicon: "/logo.svg"');
+  });
+});
+
+describe("the docs' site: what it says slipbox is (SEO-D1, SEO-D2)", () => {
+  test("a page's title is its own, then slipbox and the line; the home's slipbox and the line alone", () => {
+    expect(fullTitle("Quick start")).toBe(`Quick start | slipbox: ${LINE}`);
+    expect(fullTitle("slipbox documentation", true)).toBe(`slipbox: ${LINE}`);
+    expect(LINE).toBe("read, review and edit what your coding agent writes, in your terminal");
+  });
+
+  test("the description fits a search result and says what slipbox is", () => {
+    expect(DESCRIPTION.length).toBeLessThanOrEqual(160);
+    expect(DESCRIPTION).toContain("read, review and edit what your coding agent writes");
+  });
+
+  test("every page's head: the card at an absolute address, its type, size and alt, and the link to llms.txt", () => {
+    const tags = headTags(DOCS_URL);
+    const meta = (key: string) => tags.find((t) => t.attrs.property === key || t.attrs.name === key)?.attrs.content;
+    expect(meta("og:image")).toBe("https://remziduzagac.github.io/slipbox/docs/share-card.png");
+    expect(meta("og:image:type")).toBe("image/png");
+    expect(meta("og:image:width")).toBe(String(CARD.width));
+    expect(meta("og:image:height")).toBe(String(CARD.height));
+    expect(meta("og:image:alt")).toBe(CARD.alt);
+    expect(meta("twitter:image:alt")).toBe(CARD.alt);
+    expect(tags.find((t) => t.attrs.rel === "describedby")?.attrs.href).toBe(
+      "https://remziduzagac.github.io/slipbox/docs/llms.txt",
+    );
+    // The root's page passes its own address: the same tags, its addresses.
+    expect(headTags("https://example.github.io/x/docs/")[0]!.attrs.content).toBe(
+      "https://example.github.io/x/docs/share-card.png",
+    );
+  });
+
+  test("the config takes the description and the tags from about.ts, and the middleware sets the titles", () => {
+    const config = readFileSync(join(import.meta.dir, "..", "site", "astro.config.mjs"), "utf8");
+    expect(config).toContain("description: DESCRIPTION,");
+    expect(config).toContain("head: headTags(DOCS_URL),");
+    expect(config).toContain('routeMiddleware: "./src/route-data.ts"');
+    const middleware = readFileSync(join(import.meta.dir, "..", "site", "src", "route-data.ts"), "utf8");
+    expect(middleware).toContain('fullTitle(route.entry.data.title, home)');
+  });
+
+  test("the home has no description of its own, so it takes the site's", () => {
+    const home = readFileSync(join(import.meta.dir, "..", "site", "src", "content", "docs", "index.mdx"), "utf8");
+    const front = home.slice(0, home.indexOf("\n---", 4));
+    expect(front).not.toMatch(/^description:/m);
+  });
+});
+
+describe("the docs' site: the share card (SEO-D4)", () => {
+  const card = new Uint8Array(readFileSync(CARD_FILE));
+
+  test("the card is a PNG of 1,200 by 630, as its tags say, and small enough for a link preview", () => {
+    expect(pngSize(card)).toEqual({ width: CARD.width, height: CARD.height });
+    expect(card.byteLength).toBeLessThanOrEqual(1024 * 1024);
+  });
+
+  test("the committed card was made from the line, the logo and the screenshot as they are now", () => {
+    const made = madeFrom(card);
+    const now = madeFromNow();
+    for (const what of ["line", "logo", "screenshot"] as const)
+      expect(made[what], `the card's ${what} has changed: run \`bun run share-card\` and look at the card`).toBe(now[what]);
+  });
+
+  test("what a card was made from: text chunks after its header, read back; a key written again replaces its chunk", () => {
+    const marked = withText(card, { "slipbox:line": "a line", other: "x" });
+    expect(textOf(marked)).toEqual({ ...textOf(card), "slipbox:line": "a line", other: "x" });
+    expect(new TextDecoder("latin1").decode(marked).split("slipbox:line").length).toBe(2);
+    expect(pngSize(marked)).toEqual(pngSize(card));
+    expect(madeFrom(marked).line).toBe("a line");
+  });
+
+  test("the card's SVG: the name, the line in lines of words, the screenshot embedded", () => {
+    expect(wrap("Read, review and edit what your coding agent writes, in your terminal.", 25)).toEqual([
+      "Read, review and edit",
+      "what your coding agent",
+      "writes, in your terminal.",
+    ]);
+    const svg = cardSvg('<svg width="512" height="512" viewBox="0 0 512 512"></svg>', card, "A <line> & more");
+    expect(svg).toContain(`width="${CARD.width}" height="${CARD.height}"`);
+    expect(svg).toContain(">slipbox</text>");
+    expect(svg).toContain("A &lt;line&gt; &amp; more");
+    expect(svg).toContain('<svg x="64" y="112" width="104" height="104"');
+    expect(svg).toContain('href="data:image/png;base64,');
+  });
+
+  test("the gathering copies the card to the docs' root, where the tags point", () => {
+    const dir = mkdtempSync(join(tmpdir(), "slipbox-site-"));
+    try {
+      copyCard(dir);
+      expect(readFileSync(join(dir, CARD.file))).toEqual(Buffer.from(card));
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+    expect(SENTENCE).toBe("Read, review and edit what your coding agent writes, in your terminal.");
   });
 });
