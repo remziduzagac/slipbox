@@ -196,3 +196,29 @@ shown before the fix, and gone after.
   sleeps are seen left. The new terminal checks pass (the shell's 5, the linters' 1); the linters' check passes with
   its fix undone too — opening the file, other work draws the screen within a second — so the unit test is the one
   that fails without it, and the check covers the case.
+- 2026-10-24: Review, round 2, of the branch after round 1: `/code-review`, and a fresh Claude reviewer in Codex's
+  place (Codex still at its usage limit's menu). Consolidated, each verified:
+  - Real, the clipboard test found the helper's shell by its path but not the sleep it started, so a kill of the
+    shell alone passed (both): by reading, the sleep's command line holds no path. Fixed: a sleep of a length this run
+    alone has, found too; `ps -ww` so macOS's never cuts the line. Undone (the shell killed, not its group): fails.
+  - Real, the core test's sleeps counted across the machine, where other worktrees run the same test (the second
+    reviewer). Fixed: a length this run alone has. Undone (the stop signalling the shell alone): fails.
+  - Real, a linter its project no longer asks for: its findings dropped, no redraw asked (both). Fixed: every path
+    through a linter's run ends in the same redraw (`finally`); the linters test, undone, fails.
+  - Real, older than this change: a filter's output stopped at the window's 2 MB, not its 32 MB — one flag, set by
+    either, and a filter refusing on it — and a last piece past the window's limit cut it silently (the second
+    reviewer). Ran: `:3!head -c 2200000 … | fold -w 100` was refused, "its output cut short". Fixed: each limit its
+    own flag (`truncated`, `stdoutTruncated`), set by the length kept. Tests: the core test (a filter's 3 MB whole; a
+    last piece past 2 MB said cut), the TUI's filter test (2.2 MB put in), the terminal check "shell: a filter puts in
+    more than a window shows …"; each fails with its fix undone. Taken in: the scope grew again.
+  - Real, the linters test's stand-in `requestRender` left in place by a failure, and the linters check's comment
+    reading as if it were the regression test (both). Fixed.
+  - Taken: `program` and `args` as plain constants, no `!` (code-review).
+  - Not taken: `D?1` numbered now (code-review) — at the merge; one helper for the "lay out this buffer's views again
+    and ask for a frame" loop that about fifteen places repeat (code-review) — a refactor beyond this change, left as a
+    follow-up.
+- 2026-10-24: Added, from the main session: `links-and-files: view: a worktree kept outside the view chosen …` failed
+  on `macos-15` (run 40083598491, b0a508d), as after #34, passing on reruns: `docs/ under each of the two` asked the
+  moment kestrel's row was listed, but kestrel's own folders come a read later on the listing threads
+  (`src/tui/listings.ts`), and macOS's screen had kestrel with none. Fixed in the check: it waits for them, as it
+  waits for kestrel. Ran: 20 of 20 passed here before (not reproduced), 10 of 10 after.

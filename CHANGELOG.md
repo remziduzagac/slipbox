@@ -12,6 +12,9 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
   printed both quickly had all its output listed first, then all its errors.
 - A character a command printed in two pieces, such as an em dash, an accented letter or an emoji, is kept whole: in
   `:!cmd`'s window, and in the lines a filter (`:%!cmd`) puts in the note. It came out as replacement characters (`�`).
+- A filter (`:%!cmd`) puts in up to 32 MB of what a command prints. Past 2 MB, the most its window shows, the lines
+  were left as they were and its output called cut short. And a window cut at 2 MB says so when the last piece the
+  command printed is the one past the limit.
 - A file's linters each show their findings as soon as they answer. A slow linter beside a quick one kept the quick
   one's findings off the screen until it had answered too, for up to its 30-second limit, unless something else
   redrew the screen.

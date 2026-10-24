@@ -4958,6 +4958,16 @@ describe("commands run by your shell (25.7)", () => {
       const big = await runShell("head -c 3000000 /dev/zero | tr '\\0' x", { cwd: dir }).done;
       expect(big.truncated).toBe(true);
       expect(big.output.length).toBe(2 * 1024 * 1024);
+      // A filter's own limit is 32 MB: its standard output whole, though more than the window keeps.
+      expect(big.stdoutTruncated).toBe(false);
+      expect(big.stdout.length).toBe(3_000_000);
+      // A last piece past the window's limit is cut, and said so, as one after it would be.
+      const edge = await runShell(
+        `head -c ${2 * 1024 * 1024 - 10} /dev/zero | tr '\\0' x; sleep 0.2; printf '%020d' 0`,
+        { cwd: dir },
+      ).done;
+      expect(edge).toMatchObject({ truncated: true, stdoutTruncated: false });
+      expect(edge.output.length).toBe(2 * 1024 * 1024);
     } finally {
       process.env.SHELL = was;
     }
@@ -5020,13 +5030,14 @@ describe("commands run by your shell (25.7)", () => {
       // Ended by a signal: said so. Stopped once both its sleeps have started: the shell and both sleeps gone (a length
       // of sleep no other process here has, to find them by).
       expect((await runShell("kill -TERM $$", { cwd: dir, merged: true }).done).signal).toBe("SIGTERM");
+      const nap = `sleep 30.${process.pid}${Math.floor(Math.random() * 1000)}`; // this run's alone
       const sleeps = () =>
-        Bun.spawnSync(["ps", "-A", "-o", "command="])
+        Bun.spawnSync(["ps", "-A", "-ww", "-o", "command="])
           .stdout.toString()
           .split("\n")
-          .filter((line) => /(^|\/)sleep 30\.731$/.test(line.trim())).length; // the sleeps, not the shell running them
+          .filter((line) => line.trim() === nap || line.trim().endsWith(`/${nap}`)).length; // not the shell running them
       let started = false;
-      const job = runShell("sleep 30.731 & sleep 30.731 & echo started; wait; echo never", {
+      const job = runShell(`${nap} & ${nap} & echo started; wait; echo never`, {
         cwd: dir,
         merged: true,
         onOutput: (text) => (started ||= text.includes("started")),

@@ -15917,6 +15917,7 @@ describe("linters without a server (19.19)", () => {
       await (def.name === "gone" ? held : first);
       return run(def, ...rest);
     }) as typeof run);
+    let restore = () => {};
     try {
       const root = makeVault();
       writeFileSync(join(root, "Dockerfile"), "FROM x\nRUN BAD\n");
@@ -15929,12 +15930,13 @@ describe("linters without a server (19.19)", () => {
       h.frame();
       let asked = 0;
       const render = h.app.host.requestRender;
+      restore = () => void (h.app.host.requestRender = render);
       h.app.host.requestRender = () => void asked++;
       found();
       expect(await until(() => h.app.view!.buf.linterProblems.size === 2)).toBe(true);
       expect(h.app.view!.layoutKey).toBe("");
       expect(asked).toBeGreaterThan(0);
-      h.app.host.requestRender = render;
+      restore();
       expect(await until(() => (h.frame(), shown().length === 2))).toBe(true);
       expect(shown().sort()).toEqual(["2 error fake: found BAD", "2 warning saved: saved BAD"]);
       expect(h.frame()).toMatch(/[┃│] ✖2 {2}RUN BAD/); // the bar: the worse one's sign and its two, beside its line
@@ -15959,6 +15961,7 @@ describe("linters without a server (19.19)", () => {
       ).toEqual(["2 warning saved: saved BAD", "3 warning saved: saved BAD"]);
       expect(gone()).toBe(1); // still once
     } finally {
+      restore();
       found();
       release();
       spy.mockRestore();
@@ -18092,6 +18095,12 @@ describe("commands run by your shell (25.7)", () => {
     await ex(h, ".!tr a-z A-Z");
     expect(h.app.view!.buf.source).toBe("pear\nAPPLE\nfig\n");
     await ex(h, "1,2!rev");
+    expect(h.app.view!.buf.source).toBe("raep\nELPPA\nfig\n");
+    // More than a window keeps (2 MB), less than a filter takes (32 MB): put in, not refused.
+    await ex(h, "3!head -c 2200000 /dev/zero | tr '\\0' x | fold -w 100");
+    expect(h.app.messages.at(-1)?.text).toBe("1 line through head -c 2200000 /dev/zero | tr '\\0' x | fold -w 100");
+    expect(h.app.view!.buf.source.length).toBe("raep\nELPPA\n".length + 2_200_000 + 22_000);
+    await h.keys("u");
     expect(h.app.view!.buf.source).toBe("raep\nELPPA\nfig\n");
     // What it writes to its errors stays out of the lines it gives back (a window's merges them, D?1).
     await ex(h, "3!echo warning >&2; tr a-z A-Z");

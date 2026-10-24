@@ -342,8 +342,9 @@ export const OUTSIDE_AND_CODE: Check[] = [
       ].join("\n"),
     },
     run: async (s) => {
-      // No key pressed: the quick one's finding is on the status line while the slow one still sleeps — long before
-      // its 25 s are up, when its answer would draw the screen anyway (CI's waits are 30 s at least).
+      // No key pressed: the quick one's finding is on the status line while the slow one still sleeps, long before its
+      // 25 s are up (CI's waits are 30 s at least). Opening the file, other work draws the screen within a second too:
+      // the unit test ("a file's linters: …") is the one that fails if a linter's answer isn't drawn as it comes.
       const t0 = Date.now();
       await s.status(signed("{error} 1"), 10_000);
       s.expect(Date.now() - t0 < 15_000, `the quick one's finding shown while the slow one ran: ${Date.now() - t0} ms`);
@@ -1209,6 +1210,18 @@ export const OUTSIDE_AND_CODE: Check[] = [
       await s.see("TOMASZ: BOOK THE COURIER", 5000);
       await s.see("PRIYA: HALLEY 2.4");
       await s.see("Lena: update the visitor leaflet");
+    },
+  },
+  {
+    area: "outside-and-code",
+    name: "shell: a filter puts in more than a window shows — 2.2 MB of lines in a line's place, not refused",
+    covers: { commands: ["shell.filter"] },
+    options: { open: MEETING },
+    run: async (s) => {
+      // Past the 2 MB a window keeps, short of the 32 MB a filter takes.
+      await s.ex("1!head -c 2200000 /dev/zero | tr '\\0' x | fold -w 100");
+      await s.message("1 line through head -c 2200000", 10_000);
+      await s.see("x".repeat(100)); // its lines in the note
     },
   },
   {

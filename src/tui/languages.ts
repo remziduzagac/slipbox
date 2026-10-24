@@ -450,15 +450,18 @@ export class Languages {
         };
         void Promise.all(
           due.map(async (d) => {
-            const root = linterRoot(d, buf.abs, project);
-            if (!root) return void buf.linterProblems.delete(d.name); // the project doesn't ask for it
-            const r = await runLinter(d, buf.abs, text, root, undefined, this.tools.signal);
-            if ("problems" in r) buf.linterProblems.set(d.name, { version, list: r.problems });
-            else if ("skipped" in r) {
-              buf.linterProblems.delete(d.name); // none shown for this text, and the linter kept
-              this.saySkipped(`linter ${d.name}`, buf, r.skipped);
-            } else this.linterCouldNot(d, r.failed, r.detail);
-            drawn();
+            try {
+              const root = linterRoot(d, buf.abs, project);
+              if (!root) return void buf.linterProblems.delete(d.name); // the project doesn't ask for it
+              const r = await runLinter(d, buf.abs, text, root, undefined, this.tools.signal);
+              if ("problems" in r) buf.linterProblems.set(d.name, { version, list: r.problems });
+              else if ("skipped" in r) {
+                buf.linterProblems.delete(d.name); // none shown for this text, and the linter kept
+                this.saySkipped(`linter ${d.name}`, buf, r.skipped);
+              } else this.linterCouldNot(d, r.failed, r.detail);
+            } finally {
+              drawn();
+            }
           }),
         ).then(() => {
           this.linterRuns.delete(buf);

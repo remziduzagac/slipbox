@@ -134,7 +134,7 @@ function filter(app: App, view: View, [a, b]: [number, number], label: string, c
   launch(app, label, cmd, lf.endsWith("\n") ? lf : `${lf}\n`, (r) => {
     const n = b - a + 1;
     const lines = `${n} line${n === 1 ? "" : "s"}`;
-    if (r.code !== 0 || r.truncated) {
+    if (r.code !== 0 || r.stdoutTruncated) {
       showOutput(app, label, r);
       return app.message("warn", `${label}: ${ending(r)} — the ${lines} left as they were`);
     }

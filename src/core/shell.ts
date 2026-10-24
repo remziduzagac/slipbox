@@ -54,8 +54,10 @@ export interface ShellResult {
   output: string;
   /** Standard output alone; merged, the same as `output` (one pipe). */
   stdout: string;
-  /** More than the window keeps (`output`), or than a filter takes (`stdout`): the rest dropped. */
+  /** More than the window keeps (`output`): the rest dropped. */
   truncated: boolean;
+  /** More than a filter takes (`stdout`): the rest dropped. */
+  stdoutTruncated: boolean;
   ms: number;
 }
 
@@ -87,11 +89,10 @@ export function runShell(
   // Merged, `/bin/sh` — by its path, as the shell's own fallback is — points the shell's standard error at its standard
   // output and becomes it (`exec`: the same process, group and exit), the shell given `-c` and the command as ever: fish
   // or nu as well as a POSIX shell.
-  const [program, ...args] = opts.merged
-    ? ["/bin/sh", "-c", 'exec "$0" -c "$1" 2>&1', shell, command]
-    : [shell, "-c", command];
+  const program = opts.merged ? "/bin/sh" : shell;
+  const args = opts.merged ? ["-c", 'exec "$0" -c "$1" 2>&1', shell, command] : ["-c", command];
   // A process group of its own: stopping it stops what it started too.
-  const child = spawn(program!, args, {
+  const child = spawn(program, args, {
     cwd: opts.cwd,
     env: { ...process.env, ...opts.env },
     stdio: [opts.input === undefined ? "ignore" : "pipe", "pipe", "pipe"],
@@ -99,14 +100,13 @@ export function runShell(
   });
   let output = "";
   let stdout = "";
-  let truncated = false;
+  // Each against its own limit: a filter's output isn't refused for being more than a window keeps, and a last piece
+  // past the limit counts as cut as much as one after it.
   const take = (text: string, out: boolean) => {
     opts.onOutput?.(text, out ? "stdout" : "stderr");
-    if (output.length < OUTPUT_MAX) output += text;
-    else truncated = true;
+    if (output.length <= OUTPUT_MAX) output += text;
     if (!out || opts.merged) return; // merged, standard output is `output`
-    if (stdout.length < STDOUT_MAX) stdout += text;
-    else truncated = true;
+    if (stdout.length <= STDOUT_MAX) stdout += text;
   };
   // Decoded as streams: a character cut across two reads is kept whole, never two replacement characters.
   child.stdout!.setEncoding("utf8").on("data", (text: string) => take(text, true));
@@ -130,7 +130,8 @@ export function runShell(
         signal,
         output: output.slice(0, OUTPUT_MAX),
         stdout: opts.merged ? output.slice(0, OUTPUT_MAX) : stdout.slice(0, STDOUT_MAX),
-        truncated,
+        truncated: output.length > OUTPUT_MAX,
+        stdoutTruncated: opts.merged ? output.length > OUTPUT_MAX : stdout.length > STDOUT_MAX,
         ms: performance.now() - t0,
       });
     child.on("error", (err) => {

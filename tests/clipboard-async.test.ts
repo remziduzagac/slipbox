@@ -50,12 +50,12 @@ test("clipboard helpers leave the event loop available while copying and reading
   );
 });
 
-/** The processes whose command line names `path`: a helper script still running. */
-const running = (path: string) =>
-  Bun.spawnSync(["ps", "-A", "-o", "pid=,command="])
+/** The processes whose command line holds any of `needles` (`-ww`: never cut to a width), by pid and command. */
+const running = (...needles: string[]) =>
+  Bun.spawnSync(["ps", "-A", "-ww", "-o", "pid=,command="])
     .stdout.toString()
     .split("\n")
-    .filter((line) => line.includes(path));
+    .filter((line) => needles.some((n) => line.includes(n)));
 const until = async (ok: () => boolean, ms = 10_000) => {
   for (const t = Date.now(); !ok() && Date.now() - t < ms; ) await Bun.sleep(20);
   return ok();
@@ -63,29 +63,34 @@ const until = async (ok: () => boolean, ms = 10_000) => {
 
 test("clipboard timeout falls back and cancellation settles without fallback", async () => {
   // A helper that outlives the copy's 1 s stop by far: the copy falls back once it's stopped it, and the helper is
-  // gone — killed, not left to run. Bounded at half the helper's life, a wide margin over the stop for a slow runner
-  // (2.6 s on CI's macOS, #6).
-  await withTool("/bin/sleep 20", async (dir) => {
-    const helper = join(dir, "wl-copy");
+  // gone — its shell and the sleep it started, its group killed, not left to run. Bounded at half the helper's life, a
+  // wide margin over the stop for a slow runner (2.6 s on CI's macOS, #6). The sleep's length is this run's alone, to
+  // find it by.
+  const nap = `sleep 20.${process.pid}${Math.floor(Math.random() * 1000)}`;
+  await withTool(`/bin/${nap}`, async (dir) => {
+    const helper = [join(dir, "wl-copy"), nap];
     try {
       const start = performance.now();
       const result = await copyTextAsync("fallback", { fallbackDir: dir, osc52: () => false });
       expect(performance.now() - start).toBeLessThan(10_000);
       expect(result.file).toBe(join(dir, "clipboard.txt"));
       expect(readFileSync(result.file!, "utf8")).toBe("fallback");
-      expect(await until(() => running(helper).length === 0)).toBe(true);
+      expect(await until(() => running(...helper).length === 0)).toBe(true);
       const controller = new AbortController();
       const pending = copyTextAsync("cancelled", { fallbackDir: dir, osc52: () => false, signal: controller.signal });
       setTimeout(() => controller.abort(), 30);
       expect((await pending).file).toBeNull();
       expect(readFileSync(join(dir, "clipboard.txt"), "utf8")).toBe("fallback");
-      expect(await until(() => running(helper).length === 0)).toBe(true);
+      expect(await until(() => running(...helper).length === 0)).toBe(true);
     } finally {
-      // A helper a failure left behind.
-      for (const line of running(helper))
-        try {
-          process.kill(-Number(line.trim().split(/\s+/)[0]), "SIGKILL");
-        } catch {}
+      // A helper a failure left behind: its group, or the process alone (a sleep isn't its group's leader).
+      for (const line of running(...helper)) {
+        const pid = Number(line.trim().split(/\s+/)[0]);
+        for (const target of [-pid, pid])
+          try {
+            if (pid > 0) process.kill(target, "SIGKILL");
+          } catch {}
+      }
     }
   });
 });
