@@ -3,7 +3,7 @@
 // this branch onto its base's tip, after asking; while a merge, a rebase, or a cherry-pick or a revert begun in a
 // terminal is under way it offers continue, skip and abort instead (`git.continue`, `git.skip`, `git.abort`;
 // `:continue`, `:skip`, `:abort`; the panel's buttons, which gitpanel.ts shows meanwhile), abort asked first. A stop at a conflict opens the merge screen on it — said instead,
-// `x` named, while you type or a question is open (the pull's question likewise); the status line says what's under way
+// `x` named, while you type or a question is open (the pull's question likewise); where you are says what's under way
 // ("rebasing 2/5"). Each runs in the background, one git command at a time with the remote's (gitremote.ts), unsaved
 // notes saved or kept first. In a vault not trusted, no hook runs and nothing is signed. A rebase over tracked files
 // changed asks to stash them and put them back after (`--autostash`, D247); where they conflict going back, git keeps
@@ -34,7 +34,7 @@ import { conflictedFiles, mergeOf, openMergeScreen } from "./mergescreen.ts";
 /** What's under way in the vault's checkout, as last read: read again when git has news, or half a second on. */
 const seen = new WeakMap<App, { at: number; generation: number; op: Operation | null }>();
 
-/** What's under way now: the status line asks each frame, so git's files are read again only now and then. */
+/** What's under way now: where you are asks each frame, so git's files are read again only now and then. */
 export function operationNow(app: App): Operation | null {
   const c = app.git.checkout;
   if (!c) return null;
@@ -46,7 +46,7 @@ export function operationNow(app: App): Operation | null {
   return op;
 }
 
-/** The status line's words for what's under way — `rebasing 2/5`, `merging` — and the branch a rebase is of. */
+/** Where you are's words for what's under way — `rebasing 2/5`, `merging` — and the branch a rebase is of. */
 export function operationStatus(app: App): { text: string; branch: string | null } | null {
   const op = operationNow(app);
   return op ? { text: operationText(op), branch: op.branch } : null;

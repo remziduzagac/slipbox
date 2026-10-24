@@ -66,7 +66,7 @@ export function drawGitPanel(app: App, c: Canvas, pane: Rect, bg: Color | null, 
     rect = { ...rect, y: rect.y + h, h: rect.h - h };
   };
   const co = app.git.checkout;
-  // The repository and its branch, clicked: the branches (as the status line's); its base and its upstream under it.
+  // The repository and its branch, clicked: the branches (as the top bar's); its base and its upstream under it.
   if (co && rect.h >= 10) {
     const branch = app.git.branch();
     const head = `${sanitize(app.git.repoName())}${branch ? ` · ${sanitize(branch)}` : ""}`;

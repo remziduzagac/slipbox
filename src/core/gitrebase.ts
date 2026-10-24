@@ -1,5 +1,5 @@
 // A merge or a rebase from the TUI (GIT-D6): this branch rebased onto its base, and what's under way — a merge, a
-// rebase, or a cherry-pick or a revert started in a terminal, read from git's own files, no git run, so the status line
+// rebase, or a cherry-pick or a revert started in a terminal, read from git's own files, no git run, so where you are
 // can say it each frame ("rebasing 2/5") — continued, a commit skipped, or aborted. git runs without a terminal or an editor: a commit settled on the way keeps its message
 // (`GIT_EDITOR=true`). In a vault not trusted, `gitArgs`'s guards hold (no hook runs, no merge driver), and nothing is
 // signed: the repository's own config could name the program that signs. Tracked files changed, which git won't rebase
@@ -127,7 +127,7 @@ const none = (kind: "cherry-pick" | "revert"): Operation => ({
   merging: null,
 });
 
-/** What's under way, as the status line says it: `rebasing 2/5`, `merging`, `cherry-picking`, `reverting`. */
+/** What's under way, as where you are says it: `rebasing 2/5`, `merging`, `cherry-picking`, `reverting`. */
 export function operationText(op: Operation): string {
   if (op.kind !== "rebase") return OPERATIONS[op.kind].doing.toLowerCase();
   return op.step && op.total ? `rebasing ${Math.min(op.step, op.total)}/${op.total}` : "rebasing";

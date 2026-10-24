@@ -13,6 +13,7 @@ import type { Role, Color } from "../core/theme/theme.ts";
 import { SEVERITIES, worst } from "../core/diagnostics.ts";
 import { severityGlyph, SEVERITY_ROLE } from "./draw-pane.ts";
 import { MODES, type ViewMode, viewMode } from "./modes.ts";
+import { fitWhere, whereOf } from "./where.ts";
 
 /** The chip for a window's mode: the button its header has selected, by its label (HDR-D2). */
 const CHIP = Object.fromEntries(MODES.map((m) => [m.mode, ` ${m.label.toUpperCase()} `])) as Record<ViewMode, string>;
@@ -110,10 +111,11 @@ export function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void
 
   const rightW = stringWidth(right) + 1;
   x += drawText(c, x, y, " ", st);
-  // The root, by name or path, and its branch (20.14, 21.9), while the path keeps a readable width (it goes before the path does).
-  // Where the file is (21.9), in the room the path leaves it — at most 40 columns.
+  // Where the file is (21.9): the vault, by name or path, and its branch (20.14), only while the top bar doesn't say it
+  // (WSP-D5), and while the path keeps a readable width (it goes before the path does) — at most 40 columns.
   const rootRoom = Math.min(40, c.width - x - rightW - 4 - 24);
-  const vault = rootRoom >= 8 ? app.git.vaultStatus(rootRoom) : "";
+  const fit = rootRoom >= 8 && !geo.whereOnTop ? fitWhere({ ...whereOf(app), glyph: "" }, rootRoom) : null;
+  const vault = fit ? fit.vault + fit.branch : "";
   if (vault) {
     // In a repository, clicked: the branches, pull and push (GIT-D8).
     const id = app.git.checkout ? "status:branch" : null;
@@ -121,7 +123,7 @@ export function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void
       c,
       x,
       y,
-      sanitize(vault),
+      vault,
       id && app.mouse.hover === id
         ? roleStyle(theme, "hover", st.bg)
         : { ...roleStyle(theme, "status_dim", st.bg), bg: st.bg },

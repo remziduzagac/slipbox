@@ -33,6 +33,7 @@ export const MOUSE_HELP: [string, string[], string][] = [
     "On a rail: ≡ the explorer, ◷ the history, ± source control, ℹ Info, ▤ the outline, ¹ the footnotes, focused; again hides it",
   ],
   ["Open the command palette", ["click"], "On the top bar's slipbox"],
+  ["Go into another vault", ["click"], "On the top bar's vault: the named folders, enter goes into one"],
   [
     "Switch a window's mode",
     ["click"],
@@ -59,7 +60,7 @@ export const MOUSE_HELP: [string, string[], string][] = [
   [
     "The branches",
     ["click"],
-    "On the status line's vault and branch, in a repository: pull, push and fetch, then the branches to check one out",
+    "On the top bar's branch (the status line's vault and branch while the bar is hidden), in a repository: pull, push and fetch, then the branches to check one out",
   ],
   ["A change in the gutter", ["click"], "On a change's sign: the change, with Revert and Stage"],
   [

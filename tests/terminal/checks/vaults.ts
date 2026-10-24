@@ -218,8 +218,8 @@ const HOME: Check[] = [
     options: { home: true, startAt: "home/household", config: UNWALKED, setup: homeFolders },
     run: async (s) => {
       // Its own note: the one directly in it, before the one a folder down that comes first by path; never home's own
-      // README.md, at its top.
-      await s.status(/ ~ .*household\/bike-insurance\.md/);
+      // README.md, at its top. The top bar names the folder after home: its workspace (WSP-D4).
+      await s.where("~ › household", /household\/bike-insurance\.md/);
       await s.see("Bike insurance");
       // The view at the folder opened, home above it.
       await explorerOpen(s);
@@ -242,7 +242,7 @@ const HOME: Check[] = [
     covers: { cases: ["vault", "explorer", "switcher"], commands: ["switcher.open"] },
     options: { home: true, startAt: "home/notes/index.md", config: UNWALKED, setup: homeFolders },
     run: async (s) => {
-      await s.status(/ notes .*index\.md/);
+      await s.where(/^notes\b/, /index\.md/);
       await explorerOpen(s);
       await s.until(() => /^~ › \S+ notes ›$/.test(crumbs(s)), 3000, "the view at notes");
       // -: the view at ~, home's folders listed a level at a time; household unfolded in place.
@@ -254,7 +254,7 @@ const HOME: Check[] = [
       // Its note opened: into home (VV-D4), the note open there.
       await explorerRow(s, "bike-insurance\\.md");
       await s.keys("enter");
-      await s.status(/ ~ .*household\/bike-insurance\.md/, 5000);
+      await s.where(/^~(?: › .+)?$/, /household\/bike-insurance\.md/, 5000);
       // household walked as it was gone into: its note a folder down known, home's walk still to make.
       await s.keys("ctrl+p");
       await s.see(/Open (note|\()/);
@@ -274,8 +274,8 @@ const HOME: Check[] = [
     covers: { cases: ["vault", "tabs"], commands: ["tab.new", "switcher.open", "app.quit"] },
     options: { home: true, startAt: "home/household", config: UNWALKED, setup: homeFolders },
     run: async (s) => {
-      // household: its note, and a second tab.
-      await s.status(/ ~ .*household\/bike-insurance\.md/);
+      // household: its note, and a second tab; the top bar names its workspace (WSP-D4).
+      await s.where("~ › household", /household\/bike-insurance\.md/);
       await s.keys("ctrl+t", "c");
       await s.see(tab(2, "bike-insurance.md"));
       await open(s, "2025-policy");
@@ -283,7 +283,7 @@ const HOME: Check[] = [
       await quits(s);
       // garden: its own note alone, none of household's tabs.
       await s.restart({ startAt: "home/garden" });
-      await s.status(/ ~ .*garden\/plan\.md/);
+      await s.where("~ › garden", /garden\/plan\.md/);
       s.expect(!/bike-insurance|2025-policy/.test(s.text()), "garden opened on its own note, not household's tabs");
       await s.keys("ctrl+t", "c");
       await s.see(tab(2, "plan.md"));
@@ -303,7 +303,7 @@ const HOME: Check[] = [
       await quits(s);
       // Home's top: its own, neither folder's.
       await s.restart({ startAt: "home" });
-      await s.status(/ ~ /);
+      await s.where("~");
       s.expect(
         ![tab("\\d", "2025-policy.md"), tab("\\d", "seeds.md"), tab("\\d", "plan.md")].some((t) => t.test(s.text())),
         "home's top: none of its folders' tabs",
@@ -1029,7 +1029,7 @@ const ELSEWHERE: Check[] = [
     options: { home: true, startAt: "home/notes/index.md", setup: downloadsElsewhere },
     run: async (s) => {
       // notes: two tabs. (Not inbox.md: notes' config makes it its scratch, shown as `scratch`.)
-      await s.status(/ notes .*index\.md/);
+      await s.where(/^notes\b/, /index\.md/);
       await s.keys("ctrl+t", "c");
       await s.see(tab(2, "index.md"));
       await open(s, "sync-rewrite");
@@ -1037,13 +1037,13 @@ const ELSEWHERE: Check[] = [
       await s.see(tab(2, "sync-rewrite.md"));
       // A file outside home and every vault, chosen: into Elsewhere (VV-D3, VV-D4), its tabs, none of notes'.
       await s.ex(`e ${join(s.dir, "elsewhere", "stray-note.md")}`);
-      await s.status(/ Elsewhere .*stray-note\.md/, 5000);
+      await s.where("Elsewhere", /stray-note\.md/, 5000);
       await s.notSee(tab("\\d", "sync-rewrite.md"));
       await s.notSee(tab("\\d", "index.md"));
       // Back: notes, its two tabs, at the note left.
       await s.keys("ctrl+o");
       await opened(s, "projects/sync-rewrite.md");
-      await s.status(/ notes /);
+      await s.where(/^notes\b/);
       await s.see(tab(1, "index.md"));
       await s.see(tab(2, "sync-rewrite.md"));
       await s.notSee(tab("\\d", "stray-note.md"));
@@ -1115,7 +1115,7 @@ const MARKED: Check[] = [
       },
     },
     run: async (s) => {
-      await s.status(/ ~ /);
+      await s.where("~");
       await explorerOpen(s);
       // Downloads selected (a row of what home leaves out: no menu over any row's marks). A vault with its index on
       // the disk, indexed; a folder of home before home's walk, being indexed; Downloads, left out.
@@ -1603,12 +1603,12 @@ const LINKED: Check[] = [
       },
     },
     run: async (s) => {
-      await s.status(/ Elsewhere\b/);
+      await s.where("Elsewhere");
       // The file itself: opened, nothing asked.
       await explorerOpen(s);
       await explorerRow(s, "a\\.md");
       await s.keys("enter");
-      await s.status(/ Elsewhere .*a\.md/);
+      await s.where("Elsewhere", /a\.md/);
       s.expect(!s.text().includes("Just look"), "a file, no link: nothing asked");
       // Its link beside it: asked — outside home, so agents are said to see what's followed (a heading, in capitals).
       await explorerOpen(s);
@@ -1619,7 +1619,7 @@ const LINKED: Check[] = [
       await s.see("read and written as the file system allows");
       await s.see("Just look");
       await s.keys("f");
-      await s.status(/ Elsewhere .*b\.md/, 5000);
+      await s.where("Elsewhere", /b\.md/, 5000);
       await s.see("The note itself.");
     },
   },
@@ -1682,7 +1682,7 @@ const GIT_PANEL: Check[] = [
     covers: { cases: ["git", "vault", "multiple-roots"], commands: ["git.view"] },
     options: { startAt: "projects/a.md", config: "[ui]\nsidebar_width = 90\n", setup: repositories },
     run: async (s) => {
-      await s.status(/projects\b.*a\.md/);
+      await s.where(/projects$/, /a\.md/);
       await leader(s, "g");
       await s.status("GIT");
       await s.see(/projects holds 3 repositories/, 10_000);
@@ -1715,7 +1715,7 @@ const GIT_PANEL: Check[] = [
       await s.keys("shift+g");
       await s.see("o go in");
       await s.keys("o");
-      await s.status(/alpha · main/, 5000);
+      await s.where(/alpha · main$/, null, 5000);
     },
   },
 ];

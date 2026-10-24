@@ -1017,7 +1017,7 @@ export const READING: Check[] = [
       await opened(s, "src/sync/queue.ts");
       await followLink(s, "../../docs/sync.md");
       await opened(s, "docs/sync.md");
-      await s.status(/ kestrel[ ·]/);
+      await s.where(/^kestrel\b/);
     },
   },
   {
@@ -1500,7 +1500,7 @@ export const READING: Check[] = [
   // --- status, words ---------------------------------------------------------------------------------
   {
     area: "reading",
-    name: "status line: the mode, the root, the file, its problems, words, the cursor's line and column and how far down; unsaved said; a selection's words",
+    name: "status line: the mode, the file, its problems, words, the cursor's line and column and how far down; unsaved said; a selection's words; the vault on the top bar, not here",
     covers: { cases: ["status", "words"] },
     options: { home: true, startAt: "home/notes/projects/kestrel-v2-3.md" },
     run: async (s) => {
@@ -1512,7 +1512,8 @@ export const READING: Check[] = [
           /(?=[\p{L}ー])[\p{scx=Han}\p{scx=Hiragana}\p{scx=Katakana}]|[\p{L}\p{N}](?:[\p{L}\p{N}_]|['’-](?=[\p{L}\p{N}]))*/gu;
         return [...body.matchAll(re)].length.toLocaleString("en");
       };
-      await s.status(/^ READ +notes +‹ projects\/kestrel-v2-3\.md › +[✖⚠] \d+ +● watching /);
+      // Where you are on the top bar, so not here (WSP-D5): the mode, then the file.
+      await s.where(/^notes\b/, /^ READ +‹ projects\/kestrel-v2-3\.md › +[✖⚠] \d+ +● watching /);
       await s.status(new RegExp(` ${count("~/notes/projects/kestrel-v2-3.md")} words +L1:1 0% *$`));
       await s.keys("G");
       await s.status(/ 100% *$/);

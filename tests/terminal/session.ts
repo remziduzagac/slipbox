@@ -522,6 +522,30 @@ export class Session {
     await this.until(has, timeout, `the status line to show ${needle}`);
   }
 
+  /**
+   * Where you are, as the top bar's middle says it (WSP-D4), the vault's glyph left out: `kestrel · main ↑2`,
+   * `~ › notes`, `kestrel@agent/sync-retry`, `Elsewhere`; empty while it says nothing. Its parts are a space apart, and
+   * 3 or more from the chip and the right end's items.
+   */
+  whereText(): string {
+    const bar = this.topBar();
+    const chip = bar.indexOf("slipbox");
+    const middle = (chip < 0 ? bar : bar.slice(chip + "slipbox".length)).trim().split(/ {3,}/)[0] ?? "";
+    if (/^indexing \d+…$/.test(middle)) return "";
+    return middle.replace(/^[^\p{L}\p{N}~…/.\s] /u, "");
+  }
+
+  /**
+   * Wait for the top bar to say where you are (`whereText`): a string is the whole of it, a RegExp is tested against
+   * it. With `status`, the status line shows that at the same time (the file there, say).
+   */
+  async where(needle: string | RegExp, status?: string | RegExp | null, timeout = WAIT): Promise<void> {
+    const test = (n: string | RegExp, s: string, whole: boolean) =>
+      typeof n === "string" ? (whole ? s === n : s.includes(n)) : n.test(s);
+    const has = () => test(needle, this.whereText(), true) && (!status || test(status, this.statusLine(), false));
+    await this.until(has, timeout, `the top bar to say where: ${needle}${status ? `, the status line ${status}` : ""}`);
+  }
+
   /** A message showing: in its floating box (a long one wraps, so the needle is kept short). */
   async message(needle: string | RegExp, timeout = WAIT): Promise<void> {
     await this.see(needle, timeout);

@@ -17,6 +17,7 @@ import { SLOW_DISK } from "./slow-disk.ts";
 import { SOURCE_CONTROL } from "./source-control.ts";
 import { VAULTS } from "./vaults.ts";
 import { WINDOW_HEADER } from "./window-header.ts";
+import { WHERE } from "./where.ts";
 
 /** Each file's checks, by its name: `bun run test:terminal <name>` runs them. */
 export const CHECK_FILES: Record<string, Check[]> = {
@@ -50,6 +51,8 @@ export const CHECK_FILES: Record<string, Check[]> = {
   // Pictures sized to their window, at their own size on a click (#52): in the reading area, reading.ts being past the
   // size limit.
   pictures: PICTURES,
+  // Where you are on the top bar (WSP-D4, WSP-D5): its cases of its own, in the areas they belong to.
+  where: WHERE,
 };
 
 export const CHECKS: Check[] = Object.values(CHECK_FILES).flat();

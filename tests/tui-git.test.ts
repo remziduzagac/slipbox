@@ -42,16 +42,17 @@ describe("git worktrees in the TUI (17.19)", () => {
     return { base, x, wts };
   };
 
-  test("the status line: the root's name and its branch, a worktree as name@branch (20.14, 21.9); :folders lists the repository once", async () => {
+  test("the top bar: the vault's name and its branch, a worktree as name@branch (20.14, 21.9, WSP-D4); :folders lists the repository once", async () => {
     const l = layout();
     if (!l) return;
     const main = await harness({ root: l.x, open: "index.md" });
     const name = main.app.loc.name!;
-    expect(statusRow(main.frame())).toContain(`${name} · main`);
-    expect(topRow(main.frame())).not.toContain("⎇"); // the top bar's no longer
+    expect(topRow(main.frame())).toContain(`◈ ${name} · main`);
+    expect(topRow(main.frame())).not.toContain("⎇");
+    expect(statusRow(main.frame())).not.toContain(name); // said once (WSP-D5)
     const feat = await harness({ root: join(l.wts, "feat"), open: "index.md" });
-    expect(statusRow(feat.frame())).toContain(`${name}@feat`);
-    expect(statusRow(feat.frame())).not.toContain(" · ");
+    expect(topRow(feat.frame())).toContain(`◈ ${name}@feat`);
+    expect(topRow(feat.frame())).not.toContain(" · ");
     await harness({ root: join(l.wts, "fix"), open: "index.md" }); // seen too
     // From elsewhere: :folders lists it once, by its name — its worktrees are its branches, not copies (21.6).
     const { tildePath } = await import("../src/core/names.ts");
@@ -59,9 +60,9 @@ describe("git worktrees in the TUI (17.19)", () => {
     await other.app.run("folders.open");
     const items = (other.app.overlay as ListOverlay).items.filter((i) => i.label === name);
     expect(items.map((i) => i.detail)).toEqual([tildePath(l.x)]);
-    // A checkout switched to another branch: the status line follows it.
+    // A checkout switched to another branch: the top bar follows it.
     git(join(l.wts, "feat"), "checkout", "-q", "-b", "feat-2");
-    expect(statusRow(feat.frame())).toContain(`${name}@feat-2`);
+    expect(topRow(feat.frame())).toContain(`${name}@feat-2`);
   });
 
   test("a second copy of a folder opened: which one links to its name open — asked once, remembered; dismissed, the first stays (21.6)", async () => {
@@ -157,7 +158,7 @@ describe("git worktrees in the TUI (17.19)", () => {
     expect(readFileSync(join(repo, ".slipbox", "config.toml"), "utf8")).toContain(`name = "r${tag}"`);
     expect(h.app.messages.at(-1)!.text).toContain(`is named r${tag}`);
     expect(h.app.loc.name).toBe(`r${tag}`); // shown by it from now on
-    expect(statusRow(h.frame())).toContain(`r${tag}`);
+    expect(topRow(h.frame())).toContain(`r${tag}`);
     // :open with a pointer: the note in the copy links open.
     await h.app.run(`note.open slipbox://f${tag}/n.md`);
     expect(h.app.view!.buf.abs).toBe(join(two, "n.md"));
@@ -916,7 +917,7 @@ describe("git in the TUI: marks, what changed, a note's diff, worktrees, conflic
     expect(h.app.loc.root).toBe(wt);
     expect(h.app.view!.buf.rel).toBe("notes/b.md"); // the same note, there
     expect(h.app.view!.buf.source).toBe("# B\n"); // as the other branch has it
-    expect(statusRow(h.frame())).toContain("@other"); // the worktree, by its branch (20.14)
+    expect(topRow(h.frame())).toContain("@other"); // the worktree, by its branch (20.14)
   });
 
   test("a merge's conflicts in Problems: each file at its first marker; enter goes there", async () => {
@@ -1966,7 +1967,7 @@ describe("git's review, merge screen, pull and rebase (GIT-D3, GIT-D5, GIT-D6)",
   });
 
   describe("pulling where both sides moved, and rebasing (GIT-D6)", () => {
-    test("a merge settled on the merge screen, then concluded: the status line says it; shift+r offers continue, abort", async () => {
+    test("a merge settled on the merge screen, then concluded: the top bar says it; shift+r offers continue, abort", async () => {
       await isolated(async () => {
         const root = conflicted();
         const h = await harness({ root, open: "sync.md", width: 120, height: 50 });
@@ -1976,8 +1977,8 @@ describe("git's review, merge screen, pull and rebase (GIT-D3, GIT-D5, GIT-D6)",
         expect(await said(h, "sync.md staged, marked resolved — no conflict left: shift+r concludes the merge")).toBe(
           true,
         );
-        // The status line says a merge is under way; shift+r offers continue and abort (skip is a rebase's).
-        expect(statusRow(h.frame())).toContain("main merging");
+        // The top bar says a merge is under way; shift+r offers continue and abort (skip is a rebase's).
+        expect(topRow(h.frame())).toContain("main merging");
         await h.app.run("git.rebase");
         expect(list(h).title).toBe("Merging theirs");
         expect(list(h).items.map((i) => i.label)).toEqual(["(c) Continue", "(a) Abort"]);
@@ -1985,7 +1986,7 @@ describe("git's review, merge screen, pull and rebase (GIT-D3, GIT-D5, GIT-D6)",
         await h.app.run("git.continue");
         expect(await said(h, /^merged: the merge committed/)).toBe(true);
         expect(git(root, "log", "-1", "--format=%s")).toBe("Merge branch 'theirs'");
-        expect(statusRow(h.frame())).not.toContain("merging");
+        expect(topRow(h.frame())).not.toContain("merging");
       });
     });
 
@@ -2042,7 +2043,7 @@ describe("git's review, merge screen, pull and rebase (GIT-D3, GIT-D5, GIT-D6)",
       return root;
     };
 
-    test("shift+r rebases onto the base: asked, stopped at a conflict, the merge screen, the status line; continued", async () => {
+    test("shift+r rebases onto the base: asked, stopped at a conflict, the merge screen, the top bar; continued", async () => {
       await isolated(async () => {
         const root = behind();
         const h = await harness({ root, open: "b.md", width: 120, height: 50 });
@@ -2062,7 +2063,7 @@ describe("git's review, merge screen, pull and rebase (GIT-D3, GIT-D5, GIT-D6)",
           ),
         ).toBe(true);
         expect(floatText(h)).toContain("Rebasing: yours is what's rebased onto; theirs, the commit being replayed");
-        expect(statusRow(h.frame())).toContain("agent rebasing 1/2");
+        expect(topRow(h.frame())).toContain("agent rebasing 1/2");
         // Settled, saved, staged; shift+r: continue.
         await h.keys("t", "w", "s");
         expect(await said(h, /^a\.md staged, marked resolved — no conflict left: shift\+r continues the rebase/)).toBe(
@@ -2075,7 +2076,7 @@ describe("git's review, merge screen, pull and rebase (GIT-D3, GIT-D5, GIT-D6)",
         expect(await said(h, /^rebased: the rebase is done/)).toBe(true);
         expect(git(root, "log", "--format=%s", "main..agent")).toBe("Agent: b\nAgent: two");
         expect(readFileSync(join(root, "a.md"), "utf8")).toBe("one\nagent's two\nthree\n");
-        expect(statusRow(h.frame())).not.toContain("rebasing");
+        expect(topRow(h.frame())).not.toContain("rebasing");
       });
     });
 
@@ -2182,7 +2183,7 @@ describe("git's review, merge screen, pull and rebase (GIT-D3, GIT-D5, GIT-D6)",
         const h = await harness({ root, open: "a.md", width: 120, height: 50 });
         await h.app.run("git.view");
         await h.app.git.refreshNow();
-        expect(statusRow(h.frame())).toContain("main cherry-picking");
+        expect(topRow(h.frame())).toContain("main cherry-picking");
         const ids = () => h.app.gitPanel.buttons().map((b) => b.id);
         expect(ids()).toEqual(expect.arrayContaining(["resolve", "continue", "skip", "abort"]));
         const desc = (id: string) => h.app.gitPanel.buttons().find((b) => b.id === id)?.desc;
@@ -2227,7 +2228,7 @@ describe("git's review, merge screen, pull and rebase (GIT-D3, GIT-D5, GIT-D6)",
         expect(await said(h, /^the cherry-pick aborted: main as it was/)).toBe(true);
         expect(git(root, "rev-parse", "HEAD")).toBe(was);
         expect(git(root, "status", "--porcelain")).toBe("");
-        expect(statusRow(h.frame())).not.toContain("cherry-picking");
+        expect(topRow(h.frame())).not.toContain("cherry-picking");
       });
     });
 
@@ -2241,7 +2242,7 @@ describe("git's review, merge screen, pull and rebase (GIT-D3, GIT-D5, GIT-D6)",
         expect(git(root, "status", "--porcelain")).toBe("UU a.md");
         const h = await harness({ root, open: "a.md", width: 120, height: 50 });
         await h.app.git.refreshNow();
-        expect(statusRow(h.frame())).toContain("main reverting");
+        expect(topRow(h.frame())).toContain("main reverting");
         await h.app.run("git.rebase");
         expect(list(h).title).toBe('Reverting "Shout two" — 1 file in conflict');
         expect(list(h).items.map((i) => i.label)).toContain("(s) Skip this commit");
@@ -2259,7 +2260,7 @@ describe("git's review, merge screen, pull and rebase (GIT-D3, GIT-D5, GIT-D6)",
         const was = git(root, "rev-parse", "HEAD");
         git(root, "revert", "--no-edit", "HEAD~1");
         await h.app.git.refreshNow();
-        expect(statusRow(h.frame())).toContain("main reverting");
+        expect(topRow(h.frame())).toContain("main reverting");
         await h.app.run("git.abort");
         expect(h.app.overlay).toMatchObject({
           kind: "prompt",

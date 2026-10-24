@@ -745,6 +745,11 @@ export class Mouse {
       case "crumbicon":
         if (this.focusWindow(Number(arg))) void this.app.run("outline.pick");
         break;
+      // Where you are on the top bar (WSP-D4): the vault, the named folders to go into; the branch, the branches' menu.
+      case "top":
+        if (arg === "vault") void this.app.run("folders.open");
+        else if (arg === "branch") branchMenu(this.app);
+        break;
       case "status":
         // The path: its window's history, and Copy path; the arrows around it, back and forward.
         if (arg === "path" && this.app.view) this.app.history.openPathMenu();

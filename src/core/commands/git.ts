@@ -51,7 +51,7 @@ export const GIT_SPECS: CommandSpec[] = [
     id: "git.fetch",
     title: "Fetch",
     cli: I,
-    desc: "Fetches the branch's remote in the background; the status line's ↓ then says how far behind its upstream it is",
+    desc: "Fetches the branch's remote in the background; the branch's ↓ then says how far behind its upstream it is",
   },
   {
     id: "git.pull",

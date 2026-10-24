@@ -257,7 +257,7 @@ const PANEL: Check[] = [
     covers: { cases: ["git"], commands: ["git.view"] },
     options: repoAt((s) => trail(s)),
     run: async (s) => {
-      await s.status(/ · main /);
+      await s.where(/ · main$/);
       await leader(s, "g");
       await s.status("GIT");
       await s.see("Source control");
@@ -867,6 +867,8 @@ const MERGE: Check[] = [
     },
     options: repoAt(ridgeConflicts),
     run: async (s) => {
+      // The merge under way, said after the branch where you are (GIT-D6, WSP-D4).
+      await s.where(/ · main merging$/);
       await toPanel(s);
       await panelRow(s, "Conflicts (1)");
       await selectRow(s, "U ridge.md");
@@ -1146,7 +1148,7 @@ const REBASE: Check[] = [
       // Not opened over the typing: the letters went into the box, none to the merge screen.
       await panelRow(s, "tws");
       s.expect(!s.text().includes("Merge — route.md"), "no merge screen while typing");
-      await s.status(/ · agent rebasing 1\/2 /);
+      await s.where(/ · agent rebasing 1\/2$/);
       s.expect(gitOk(s, TRAIL, "ls-files", "--unmerged").includes("route.md"), "route.md still in conflict");
       // Typing done (esc leaves the box): what was said names x, and x opens it, the rebase said on it.
       await s.keys("escape");
@@ -1302,7 +1304,7 @@ const REBASE: Check[] = [
 const REMOTE: Check[] = [
   {
     area: "outside-and-code",
-    name: "git remote: f fetches — the status line's ↓, the Pull button's count; p pulls, fast-forward, from a bare remote",
+    name: "git remote: f fetches — the branch's ↓, the Pull button's count; p pulls, fast-forward, from a bare remote",
     covers: { cases: ["git", "status"], commands: ["git.fetch", "git.pull"] },
     options: repoAt((s) => {
       trail(s);
@@ -1314,13 +1316,13 @@ const REMOTE: Check[] = [
       await panelRow(s, "in step with origin/main");
       await s.keys("f");
       await s.message("fetched: main is 1 commit behind origin/main");
-      await s.status(/ · main ↓1 /);
+      await s.where(/ · main ↓1$/);
       await panelRow(s, "[↓ Pull 1]");
       s.expect(!s.exists(`${TRAIL}/water.md`), "nothing pulled by a fetch");
       await s.keys("p");
       await s.message(/pulled: main fast-forwarded to [0-9a-f]+/);
       await s.file(`${TRAIL}/water.md`, (t) => t.includes("At the spring."), "their file here");
-      await s.status(/ · main {2}/);
+      await s.where(/ · main$/);
       await panelRow(s, "in step with origin/main");
     },
   },
@@ -1411,7 +1413,7 @@ const REMOTE: Check[] = [
       s.expect(gitOk(s, bare, "rev-parse", "main") === gitOk(s, TRAIL, "rev-parse", "HEAD"), "main pushed");
       // A new branch, made by an agent: no upstream, so asked.
       gitOk(s, TRAIL, "switch", "-q", "-c", "topic");
-      await s.status(/ · topic /);
+      await s.where(/ · topic$/);
       await panelRow(s, "[↑ Publish]");
       await s.keys("shift+p");
       await s.see("topic has no upstream. Push it to origin/topic");

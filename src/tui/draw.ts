@@ -15,6 +15,7 @@ import { type Canvas, drawText } from "./canvas.ts";
 import { prettyKey } from "./keys.ts";
 import type { SaveAsGeometry } from "./saveas.ts";
 import { LEFT_VIEWS, RIGHT_VIEWS } from "./panels.ts";
+import { fitWhere, whereOf } from "./where.ts";
 import { drawPane, drawCompletion, drawSignature } from "./draw-pane.ts";
 import { drawSidebar, drawInfo, drawFootnotes, drawOutline } from "./draw-panels.ts";
 import { drawProblemsPanel } from "./draw-problems.ts";
@@ -108,6 +109,8 @@ export interface Geometry {
   problemsPage?: number;
   /** The Save As window's parts (10.14): clicks and the wheel there are its. */
   saveas?: SaveAsGeometry | null;
+  /** The top bar said where you are (WSP-D4): the status line, drawn after it, leaves it out (WSP-D5). */
+  whereOnTop?: boolean;
 }
 
 export const CHANGE_MARKER_MS = 3000;
@@ -425,8 +428,8 @@ export function button(
 }
 
 /**
- * The top bar: the explorer button and the app chip on the left, the root's state (indexing) on
- * the right; the middle is left empty. (The outline's button is on the window header.)
+ * The top bar: the explorer button and the app chip on the left, the vault's state (indexing) on the right (and the
+ * outline's button, when no window's header has it); where you are in the middle (WSP-D4).
  */
 function drawTopBar(app: App, c: Canvas, band: Band, geo: Geometry): void {
   const theme = app.theme;
@@ -452,11 +455,13 @@ function drawTopBar(app: App, c: Canvas, band: Band, geo: Geometry): void {
   x += button(app, c, x, band, " slipbox ", "topbar_chip", "btn:palette", geo, bar.bg);
 
   // Right side, laid out from the far right inwards. The outline's button is on a window's header,
-  // or here when no window drew one (the header off, a window too short for it).
+  // or here when no window drew one (the header off, a window too short for it). `edge`: the right side's first column.
   let rx = c.width - 1;
+  let edge = c.width;
   if (app.tab && !geo.hot.some((h) => h.id === "btn:outline")) {
     const label = icon(g.outlineButton);
     rx = c.width - stringWidth(label);
+    edge = rx;
     button(
       app,
       c,
@@ -470,16 +475,41 @@ function drawTopBar(app: App, c: Canvas, band: Band, geo: Geometry): void {
     );
     rx -= 1;
   }
-  // The root's state; the watcher and reload markers are about the file, so they sit by its path.
+  // The vault's state; the watcher and reload markers are about the file, so they sit by its path.
   const items: { text: string; role: Role }[] = [];
   if (app.indexing > 0) items.push({ text: `indexing ${app.indexing}…`, role: "status_dim" });
-  // The branch is the status line's, with the root, by name or path (20.14, 21.9).
   for (const it of items) {
     const w = stringWidth(it.text) + 2;
     if (rx - w < x + 12) break;
     rx -= w;
+    edge = rx + 1;
     drawText(c, rx + 1, y, it.text, { ...roleStyle(theme, it.role, bar.bg), bg: bar.bg });
   }
+  drawWhere(app, c, band, geo, x + 2, edge - 2, bar.bg);
+}
+
+/**
+ * Where you are (WSP-D4), in the top bar's middle between `left` and `right` (the chip's end and the right side's
+ * first column, 2 columns kept from each): centred on the screen, then moved only as far as it must to stay in
+ * between; cut to fit (`fitWhere`). The vault (with the workspace) lists the named folders when clicked; the branch,
+ * in a repository, opens the branches' menu. Drawn, the status line leaves it out (WSP-D5).
+ */
+function drawWhere(app: App, c: Canvas, band: Band, geo: Geometry, left: number, right: number, bg: Color | null) {
+  const fit = fitWhere(whereOf(app), right - left);
+  if (!fit) return;
+  const theme = app.theme;
+  const tw = stringWidth(fit.vault) + stringWidth(fit.branch);
+  let x = Math.min(Math.max(Math.floor((c.width - tw) / 2), left), right - tw);
+  const y = mid(band);
+  const part = (text: string, id: string | null, role: Role) => {
+    const hovered = id !== null && app.mouse.hover === id;
+    const w = drawText(c, x, y, text, hovered ? roleStyle(theme, "hover", bg) : { ...roleStyle(theme, role, bg), bg });
+    if (id) geo.hot.push({ id, x, y: band.y, w, h: band.h });
+    x += w;
+  };
+  part(fit.vault, "top:vault", "topbar");
+  if (fit.branch) part(fit.branch, app.git.checkout ? "top:branch" : null, "status_dim");
+  geo.whereOnTop = true;
 }
 
 /**

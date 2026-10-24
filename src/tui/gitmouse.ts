@@ -2,8 +2,9 @@
 // a branch opened up — a double-click what `o` does; a row's buttons under the pointer (stage or unstage, discard, the
 // diff), a heading's (its files all at once, a new branch), an opened-up branch's (Open, Merge…); the message box
 // clicked, typed in; the buttons at the top; a right click, the row's menu. The footer says what the pointer is on, with
-// its key. Outside the panel: the status line's branch clicked, the branches, pulling and pushing; a change's sign in the
-// gutter clicked, the change shown with Revert and Stage (GIT-D12).
+// its key. Outside the panel: the branch where you are clicked (the top bar's; the status line's while the bar is
+// hidden), the branches, pulling and pushing; a change's sign in the gutter clicked, the change shown with Revert and
+// Stage (GIT-D12).
 
 import { relative, sep } from "node:path";
 import { changeAt, type GitChange } from "../core/gitsigns.ts";
@@ -171,8 +172,8 @@ export function gitRightClick(app: App, id: string | null, x: number, y: number)
 }
 
 /**
- * The status line's branch, clicked (GIT-D8): the branches, to check one out or make one, after the remote's — pull,
- * push, fetch — and the git panel.
+ * The branch where you are, clicked (GIT-D8, WSP-D4): the branches, to check one out or make one, after the remote's —
+ * pull, push, fetch — and the git panel.
  */
 export function branchMenu(app: App): void {
   if (!app.git.checkout) return app.message("info", "not in a git repository");
