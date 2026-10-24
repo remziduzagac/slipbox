@@ -1253,9 +1253,11 @@ export class App {
       this.termTitle = title;
       this.host.setTitle?.(title);
     }
+    // A report waiting for the screen: this frame kept as text too, and the report opened on the next (RPT-D2) — the
+    // frame saying drawing failed among them: a report is wanted most then.
+    const c = this.report.canvas(canvas);
     try {
-      // A report waiting for the screen: this frame kept as text too, and the report opened on the next (RPT-D2).
-      this.geometry = drawApp(this, this.report.canvas(canvas));
+      this.geometry = drawApp(this, c);
       this.report.drawn();
     } catch (err) {
       // A drawing bug must never take the app down: report it, and say so on screen too (the
@@ -1263,8 +1265,8 @@ export class App {
       const text = `drawing failed: ${(err as Error).message}`;
       if (!this.drawFailed) this.message("error", text);
       this.drawFailed = true;
-      canvas.fill(0, 0, canvas.width, canvas.height, null);
-      drawText(canvas, 0, 0, truncate(`slipbox: ${text} — resize, or esc`, canvas.width), {
+      c.fill(0, 0, canvas.width, canvas.height, null);
+      drawText(c, 0, 0, truncate(`slipbox: ${text} — resize, or esc`, canvas.width), {
         fg: "default",
         bg: null,
         bold: true,
@@ -1273,6 +1275,7 @@ export class App {
         strike: false,
         dim: false,
       });
+      this.report.drawn();
       return;
     }
     this.drawFailed = false;

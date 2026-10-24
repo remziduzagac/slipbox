@@ -384,6 +384,15 @@ describe("adding the screen or the place (RPT-D2)", () => {
     );
   });
 
+  test("added is its first line outside any fence: the same words in a note's line, inside one, aren't", () => {
+    const where = attachment(WHERE_SAID, "notes/a.md, line 3, source\nThe screen, 80×24, as the report opened:");
+    const one = add(typed("T"), where);
+    expect(readReport(one).added).toEqual({ screen: false, where: true });
+    const screen = attachment(screenIntro(80, 24), " │ Where it was:\nWhere it was:");
+    expect(readReport(add(typed("T"), screen)).added).toEqual({ screen: true, where: false });
+    expect(readReport(add(one, SCREEN)).added).toEqual({ screen: true, where: true });
+  });
+
   test("refused while a fence is left open, anywhere", () => {
     const open = typed("T", { "What happened": "```\nunclosed" });
     expect(readReport(open).openFence).toBe(true);
@@ -535,10 +544,20 @@ describe("gh (RPT-D4)", () => {
     const r = await ghPost(f.gh, { repo: "me/slipbox", title: "It's -h broken", body }, { env: {}, home: f.home });
     expect(r).toEqual({ ok: true, url: "https://github.com/me/slipbox/issues/42" });
     const got = f.got();
-    expect(got.argv).toBe("issue\ncreate\n--repo\nme/slipbox\n--title\nIt's -h broken\n--body-file\n-\n");
+    expect(got.argv).toBe("issue\ncreate\n--repo\ngithub.com/me/slipbox\n--title\nIt's -h broken\n--body-file\n-\n");
     expect(got.input).toBe(body);
     expect(got.cwd).toBe(realpathSync(f.home));
     expect(readFileSync(join(f.dir, "prompt"), "utf8")).toBe("1");
+  });
+
+  test("github.com by name, whatever GH_HOST says: where the account was read and the bug form is", async () => {
+    const f = fakeGh("echo https://github.com/me/slipbox/issues/1");
+    await ghPost(
+      f.gh,
+      { repo: "me/slipbox", title: "t", body: "b" },
+      { env: { GH_HOST: "ghe.example.com" }, home: f.home },
+    );
+    expect(f.got().argv).toContain("--repo\ngithub.com/me/slipbox\n");
   });
 
   test("failed: gh's first lines; timed out: said, so it may have posted", async () => {

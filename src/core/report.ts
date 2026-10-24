@@ -311,6 +311,9 @@ export interface ReadBack {
   seen: { heading: number; end: number } | null;
   /** A fence still open where the text ends: where anything after it belongs isn't clear. */
   openFence: boolean;
+  /** The screen, and where you were, added: their first lines there, outside any fence (a note's own line that reads
+   *  the same, inside an added screen or place, isn't one). */
+  added: { screen: boolean; where: boolean };
 }
 
 /** The report's text read back, by its lines: headings count only outside fences (`### Version` in a screen is the
@@ -327,8 +330,13 @@ export function readReport(text: string): ReadBack {
   let titleLine = -1;
   let stray = false;
   let seen: { heading: number; end: number } | null = null;
+  const added = { screen: false, where: false };
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i]!;
+    if (!fence) {
+      if (SCREEN_LINE.test(line)) added.screen = true;
+      if (line === WHERE_SAID) added.where = true;
+    }
     const id = fence ? undefined : labelOf(line);
     if (id) {
       current = [];
@@ -370,12 +378,13 @@ export function readReport(text: string): ReadBack {
       .join("\n\n");
     if (joined) fields[id] = id === "output" ? unfenceAttachments(joined) : joined;
   }
-  return { title, titleLine, stray, fields, seen, openFence: fence !== null };
+  return { title, titleLine, stray, fields, seen, openFence: fence !== null, added };
 }
 
 /** What an added screen and place begin with: added is this line being in the text. */
 export const SCREEN_INTRO = /^The screen, \d+×\d+, as the report opened:$/m;
 export const WHERE_INTRO = /^Where it was:$/m;
+const SCREEN_LINE = new RegExp(SCREEN_INTRO.source);
 
 export function screenIntro(cols: number, rows: number): string {
   return `The screen, ${cols}×${rows}, as the report opened:`;

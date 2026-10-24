@@ -217,7 +217,7 @@ export const REPORTING: Check[] = [
       await s.keys("escape");
       s.expect(
         kept(s, "gh", "argv") ===
-          "issue\ncreate\n--repo\nremziduzagac/slipbox\n--title\nCrash on open\n--body-file\n-\n",
+          "issue\ncreate\n--repo\ngithub.com/remziduzagac/slipbox\n--title\nCrash on open\n--body-file\n-\n",
         `gh's arguments: ${JSON.stringify(kept(s, "gh", "argv"))}`,
       );
       const body = kept(s, "gh", "input");
@@ -230,6 +230,133 @@ export const REPORTING: Check[] = [
       await leader(s, "r");
       await s.see(WINDOW);
       s.expect(!s.text().includes("it froze"), "a new report");
+    },
+  },
+  {
+    area: "navigating",
+    name: "report: into an edited draft, the screen at the end of What slipbox sees; refused while a fence is open",
+    covers: { cases: ["help"], commands: ["help.report", "help.report_send"] },
+    options: { size: { cols: 120, rows: 34 } },
+    run: async (s) => {
+      await leader(s, "r");
+      await s.type("Edited draft");
+      await s.keys("escape", "/");
+      await s.type("### What happened");
+      await s.keys("enter", "o");
+      await s.type("it broke");
+      await s.keys("enter");
+      await s.type("```");
+      await s.keys("enter");
+      await s.type("a fence left open");
+      await s.keys("escape", "ctrl+s", "s");
+      await s.message("a fence is left open");
+      s.expect(!s.text().includes("The screen, 120×34"), "not added while a fence is open");
+      // Closed, and a What slipbox sees of your own, in the middle, with a heading of your own after it.
+      await s.keys("o");
+      await s.type("```");
+      await s.keys("enter");
+      await s.type("### What slipbox sees");
+      await s.keys("enter");
+      await s.type("my own notes");
+      await s.keys("enter");
+      await s.type("### Logs");
+      await s.keys("enter");
+      await s.type("a log line");
+      await s.keys("escape", "ctrl+s", "s");
+      await s.see("The screen, 120×34, as the report opened:");
+      await s.keys("ctrl+s", "c");
+      await s.until(() => s.clipboard().startsWith("Edited draft\n"), 5000, "the report copied");
+      // The copy said as it was made: to the state folder's file, no clipboard here.
+      await s.message("copied the report to");
+      const r = s.clipboard();
+      const at = (t: string) => r.indexOf(t);
+      s.expect(at("a log line") < at("The screen, 120×34"), "after the section's own heading and text");
+      s.expect(at("The screen, 120×34") < at("### What you expected"), "before the next label");
+      s.expect(at("a fence left open\n```") > 0, "the fence of your own kept as written");
+    },
+  },
+  {
+    area: "navigating",
+    name: "report: the screen too long for the address: left out, said, v copies it; the opener failing copies the address",
+    covers: { cases: ["help"], commands: ["help.report", "help.report_send", "messages.open"] },
+    options: {
+      size: { cols: 120, rows: 34 },
+      env: { ...FAKES, DISPLAY: ":9" },
+      setup: (s) => fake(s, "xdg-open", "exit 3"),
+    },
+    run: async (s) => {
+      await leader(s, "r");
+      await s.type("Too long");
+      await s.keys("escape", "ctrl+s", "s");
+      await s.see("The screen, 120×34, as the report opened:");
+      await s.keys("ctrl+s");
+      await s.see("(v) Copy What slipbox sees, to paste into its field");
+      await s.see("filled in but What slipbox sees: v copies it");
+      await s.keys("v");
+      await s.until(() => s.clipboard().startsWith("The screen, 120×34"), 5000, "What slipbox sees copied");
+      s.expect(!s.clipboard().includes("```text"), "without slipbox's fence: the form fences that field itself");
+      await s.keys("ctrl+s", "o");
+      await s.until(() => s.clipboard().startsWith("https://github.com/"), 8000, "the address copied instead");
+      const url = new URL(s.clipboard().trim());
+      s.expect(url.searchParams.get("title") === "Too long" && !url.searchParams.has("output"), "all but the screen");
+      s.expect(kept(s, "xdg-open", "argv").trim() === url.href, "the opener was given the same address");
+      await leader(s, "m");
+      await s.type("exited with 3");
+      await s.see(/ 1\/1 ┘/);
+      await s.keys("escape");
+    },
+  },
+  {
+    area: "navigating",
+    name: "report: gh failing: its words said, the draft kept",
+    covers: { cases: ["help"], commands: ["help.report", "help.report_send"] },
+    options: {
+      size: { cols: 120, rows: 34 },
+      env: FAKES,
+      setup: (s) => {
+        const at = join(s.dir, "bin", "gh");
+        mkdirSync(join(s.dir, "bin"), { recursive: true });
+        writeFileSync(
+          at,
+          "#!/bin/sh\nif [ \"$1\" = config ]; then echo octo-cat; exit 0; fi\ncat >/dev/null\necho 'HTTP 422: Validation Failed' >&2\nexit 1\n",
+        );
+        chmodSync(at, 0o755);
+      },
+    },
+    run: async (s) => {
+      await leader(s, "r");
+      await s.type("Kept on failure");
+      await s.keys("escape", "/");
+      await s.type("### What happened");
+      await s.keys("enter", "o");
+      await s.type("it froze");
+      await s.keys("escape", "ctrl+s", "g");
+      await s.see("Anyone can read it.");
+      await s.keys("y");
+      await s.message("HTTP 422");
+      await leader(s, "r");
+      await s.see("Kept on failure");
+      await s.see("it froze");
+    },
+  },
+  {
+    area: "navigating",
+    name: "report: slipbox report beside it, in a folder whose settings are broken: the facts, no warning",
+    covers: { cases: ["help"] },
+    options: {
+      size: { cols: 120, rows: 34 },
+      setup: (s) => s.write(".slipbox/config.toml", `${s.read(".slipbox/config.toml")}\n[links\nstyle = = \n`),
+    },
+    run: async (s) => {
+      const r = s.cli("report", "--json");
+      s.expect(r.code === 0, `exit 0: ${r.out.slice(0, 200)}`);
+      const j = JSON.parse(r.out);
+      s.expect(j.ok && j.warnings.length === 0, "no warning of the folder's settings");
+      s.expect(/^TERM xterm-256color/.test(j.data.fields.terminal), `the terminal: ${j.data.fields.terminal}`);
+      s.expect(
+        j.data.url.startsWith("https://github.com/remziduzagac/slipbox/issues/new?template=bug_report.yml"),
+        "the form",
+      );
     },
   },
   {

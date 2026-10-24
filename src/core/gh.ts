@@ -82,13 +82,14 @@ export const POST_TIMEOUT = 60_000;
 
 export type Posted = { ok: true; url: string } | { ok: false; why: string; timedOut: boolean };
 
-/** `gh issue create --repo <repo> --title <title> --body-file -`, the body on its input, from the home folder. */
+/** `gh issue create --repo github.com/<repo> --title <title> --body-file -`, the body on its input, from the home folder:
+ *  github.com by name, as its account was read and the bug form is, whatever `GH_HOST` says. */
 export async function ghPost(
   gh: string,
   post: { repo: string; title: string; body: string },
   opts: { env: Record<string, string | undefined>; home: string; timeout?: number },
 ): Promise<Posted> {
-  const argv = [gh, "issue", "create", "--repo", post.repo, "--title", post.title, "--body-file", "-"];
+  const argv = [gh, "issue", "create", "--repo", `github.com/${post.repo}`, "--title", post.title, "--body-file", "-"];
   const r = await run(argv, { cwd: opts.home, env: opts.env, input: post.body, timeout: opts.timeout ?? POST_TIMEOUT });
   if (r.timedOut) return { ok: false, why: "gh didn't answer in a minute", timedOut: true };
   const url = /https:\/\/\S+\/issues\/\d+/.exec(r.out)?.[0];

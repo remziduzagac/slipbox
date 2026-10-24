@@ -97,7 +97,8 @@ form's fields, by one rule, which also says where an added screen goes:
 - **The screen as text:** the frame drawn after the command ran — the palette, help or the which-key popup that ran
   it closed, the messages showing as they were — drawn as every frame is and kept as text too, onto a `TextCanvas` of
   the screen's size (`tui/canvas.ts`) beside the terminal's canvas, that frame only; the window opens on the next. Its
-  rows, with their trailing blanks cut. A picture isn't text, and isn't in it.
+  rows, with their trailing blanks cut. A picture isn't text, and isn't in it. A frame whose drawing failed is kept
+  as the screen that says so, and the report opens all the same: it's wanted most then.
 - **Where you were:** the window's file (its path in the vault, else from home, `~/…`), the cursor's line number and
   how it was shown (rendered, source, the lens open; nothing said for a file that isn't a note), then that line's
   text: `handbook/operations-handbook.md, line 3, rendered`. A window with no file (a hover, none open): "no file was
@@ -109,8 +110,9 @@ line of its own (`The screen, 236×60, as the report opened:`, `Where it was:`).
 slipbox sees` section as § Reading it back finds it, before the next label wherever that section is; with no such
 section, a new one at the end of the text. A fence left open anywhere outside one makes that end unclear: it's
 refused, saying to close the fence first, so the screen never lands inside another field or another fence. It's one
-undo step: `u` takes it out. Added is its first line being in the text: deleted, it can be added again; there, the
-entry is gone and the command says so. Opened again, the window keeps what was added; the screen kept is the newer
+undo step: `u` takes it out. Added is its first line being in the text, outside any fence (the same words in a note's
+line, inside an added screen or place, don't count): deleted, it can be added again; there, the entry is gone and the
+command says so. Opened again, the window keeps what was added; the screen kept is the newer
 one.
 
 **Sending** (`ctrl+s`, `:w`: `help.report_send`; RPT-D3, RPT-D4). A menu, "Send the report — nothing has left yet",
@@ -155,13 +157,14 @@ heads it, said, and `o` and `a` aren't there:
   network: a token in `GH_TOKEN` or `GITHUB_TOKEN` comes before what gh keeps, so then it's "the account of
   GH_TOKEN (not checked)"; else the account gh keeps (`gh config get -h github.com user`); neither, and it says
   `gh auth login` first. gh is run with `GH_PROMPT_DISABLED=1`, so it never waits on a question of its own. A
-  yes-or-no names everything: `Post "<title>" on <repo> as <account>? Anyone can read it.` On yes, the title and text
-  as they are then are posted — `gh issue create --repo <repo> --title <title> --body-file -`, the text after the
-  title on its input — from the home folder (never the vault's, so no folder's settings reach it), waited for up to a
-  minute. While it posts, the window is closed and the report can't be opened or posted again ("posting the report
-  with gh… — wait for it"). Done: the issue's address said, the draft dropped. Failed: gh's first lines said, the
-  draft kept. No answer in a minute: gh killed, the draft kept, and said that it may have posted — look at the issues
-  before posting again. No title, or no What happened, and it asks for them first.
+  yes-or-no names everything: `Post "<title>" on <repo> as <account>? Anyone can read it.`, the title and text read
+  once the account is known, and on yes those are posted — `gh issue create --repo github.com/<repo> --title <title>
+  --body-file -` (github.com by name, as the account was read and the bug form is, whatever `GH_HOST` says), the text
+  after the title on its input — from the home folder (never the vault's, so no folder's settings reach it), waited
+  for up to a minute. While it posts, the window is closed and the report can't be opened or posted again ("posting
+  the report with gh… — wait for it"). Done: the issue's address said, the draft dropped. Failed: gh's first lines
+  said, the draft kept. No answer in a minute: gh killed, the draft kept, and said that it may have posted — look at
+  the issues before posting again. No title, or no What happened, and it asks for them first.
 - The window stays open after the browser or a copy, to send again another way.
 
 **Commands.** `help.report` (`space r`, `:report`; CLI: `slipbox report`) opens the report, or with `screen` or

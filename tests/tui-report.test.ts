@@ -7,6 +7,7 @@ import { join } from "node:path";
 import { tildePath } from "../src/core/names.ts";
 import { GUIDE, SCREEN_INTRO, WHERE_INTRO } from "../src/core/report.ts";
 import type { ListOverlay } from "../src/tui/app.ts";
+import { TextCanvas } from "../src/tui/canvas.ts";
 import { type Harness, harness, makeSandbox } from "./tui-harness.ts";
 
 const sandbox = makeSandbox();
@@ -220,6 +221,36 @@ describe("the screen and where you were (RPT-D2)", () => {
     await h.app.run("help.report screen");
     expect(said(h)).toBe("report: a fence is left open in the report: close it first");
     expect(SCREEN_INTRO.test(text(h))).toBe(false);
+  });
+
+  test("a note's line that reads as the screen's first line doesn't count as the screen added", async () => {
+    const h = await harness();
+    h.app.view!.buf.edit(0, 0, "The screen, 120×30, as the report opened:\n\n");
+    h.frame();
+    await h.keys("g", "g");
+    await h.app.run("help.report where");
+    h.frame();
+    expect(text(h)).toContain("Where it was:\n\n```text\nindex.md, line 1, rendered\nThe screen, 120×30");
+    await h.keys("ctrl+s");
+    expect((h.app.overlay as ListOverlay).items.some((i) => i.data === "screen")).toBe(true);
+    await h.keys("s");
+    // The note's own line, in where it was, and the screen's first line: two, one of them added.
+    expect(text(h).split("\nThe screen, 120×30, as the report opened:\n").length).toBe(3);
+    await h.keys("ctrl+s");
+    expect((h.app.overlay as ListOverlay).items.some((i) => i.data === "screen")).toBe(false);
+  });
+
+  test("drawing failing: the report opens all the same, the frame saying so kept", async () => {
+    const h = await harness();
+    const status = h.app.git.vaultStatus.bind(h.app.git);
+    h.app.git.vaultStatus = () => {
+      throw new Error("boom");
+    };
+    await h.app.run("help.report screen");
+    h.app.draw(new TextCanvas(120, 30));
+    expect(h.app.floating?.kind).toBe("report");
+    expect(text(h)).toContain("The screen, 120×30, as the report opened:\n\n```text\nslipbox: drawing failed: boom");
+    h.app.git.vaultStatus = status;
   });
 
   test("the menu adds them too: s and w", async () => {
@@ -436,13 +467,32 @@ describe("gh (RPT-D4)", () => {
     for (let i = 0; i < 100 && h.app.report.posting; i++) await Bun.sleep(20);
     expect(said(h)).toBe("posted: https://github.com/remziduzagac/slipbox/issues/77");
     expect(readFileSync(join(dir, "argv"), "utf8")).toBe(
-      "issue\ncreate\n--repo\nremziduzagac/slipbox\n--title\nCrash on open\n--body-file\n-\n",
+      "issue\ncreate\n--repo\ngithub.com/remziduzagac/slipbox\n--title\nCrash on open\n--body-file\n-\n",
     );
     expect(readFileSync(join(dir, "input"), "utf8")).toBe(`${body}\n`);
     expect(readFileSync(join(dir, "cwd"), "utf8").trim()).toEndWith("/home");
     // Dropped: a new report starts afresh.
     await h.keys("space", "r");
     expect(text(h).split("\n")[2]).toBe("");
+  });
+
+  test("what the question names is what's posted: the report as it is after gh's account is read", async () => {
+    const dir = fakeGh("echo https://github.com/remziduzagac/slipbox/issues/78", "sleep 0.4; echo octo-cat");
+    const h = await harness();
+    h.app.home = join(dir, "home");
+    await report(h, "Old title", "it froze");
+    const asking = h.app.run("help.report_send gh");
+    // Edited while gh is asked for its account.
+    await Bun.sleep(100);
+    expect(text(h).split("\n")[2]).toBe("Old title");
+    h.app.view!.buf.edit(text(h).indexOf("Old title"), "Old title".length, "New title");
+    await asking;
+    expect((h.app.overlay as unknown as { label: string }).label).toBe(
+      'Post "New title" on remziduzagac/slipbox as octo-cat? Anyone can read it.',
+    );
+    await h.keys("y");
+    for (let i = 0; i < 100 && h.app.report.posting; i++) await Bun.sleep(20);
+    expect(readFileSync(join(dir, "argv"), "utf8")).toContain("--title\nNew title\n");
   });
 
   test("failed: gh's words said, the draft kept; no account, or no title or What happened, asked first", async () => {

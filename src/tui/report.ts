@@ -22,11 +22,9 @@ import {
   reportFacts,
   reportRepo,
   reportText,
-  SCREEN_INTRO,
   screenIntro,
   sentText,
   TITLE_LINE,
-  WHERE_INTRO,
   WHERE_SAID,
 } from "../core/report.ts";
 import { sanitize } from "../core/sanitize.ts";
@@ -152,7 +150,7 @@ export class Reporter {
     if (!v) return;
     const text = v.buf.source;
     const s = this.screen;
-    if (kind === "screen" ? SCREEN_INTRO.test(text) : WHERE_INTRO.test(text))
+    if (readReport(text).added[kind])
       return this.app.message(
         "info",
         `${kind === "screen" ? "the screen" : "where you were"} is in the report already`,
@@ -192,7 +190,7 @@ export class Reporter {
     if (!v) return;
     if (this.posting) return this.app.message("info", "posting the report with gh… — wait for it");
     const text = v.buf.source;
-    const { plan } = this.plan(text);
+    const { plan, read } = this.plan(text);
     const leaves = plan?.left.length ? leftSaid(plan.left) : "";
     const items: ListItem[] = [];
     if (!plan)
@@ -224,14 +222,14 @@ export class Reporter {
       data: "copy",
     });
     if (ghPath()) items.push({ label: "(g) Post it with gh", detail: "after a yes", hotkey: "g", data: "gh" });
-    if (!SCREEN_INTRO.test(text))
+    if (!read.added.screen)
       items.push({
         label: "(s) Add the screen as text",
         detail: "in full, to read first",
         hotkey: "s",
         data: "screen",
       });
-    if (!WHERE_INTRO.test(text))
+    if (!read.added.where)
       items.push({
         label: "(w) Add where you were",
         detail: "the file, the line and its text",
@@ -308,25 +306,27 @@ export class Reporter {
     if (!gh) return this.app.message("warn", "gh isn't on PATH");
     const v = this.openView();
     if (!v) return;
-    const { title } = postOf(v.buf.source);
-    if (!title || !readReport(v.buf.source).fields.happened)
-      return this.app.message("warn", "gh: write a title (the line after the guide) and What happened first");
+    const ready = () => !!postOf(v.buf.source).title && !!readReport(v.buf.source).fields.happened;
+    const missing = "gh: write a title (the line after the guide) and What happened first";
+    if (!ready()) return this.app.message("warn", missing);
     const repo = reportRepo();
     const home = existsSync(this.app.home) ? this.app.home : homedir();
     const account = await ghAccount(gh, { env: process.env, home });
     if (!account) return this.app.message("warn", "gh has no account for github.com here — gh auth login first");
     if (this.openView() !== v) return;
+    // The report as it is now, after the wait for gh: what the question names is what's posted.
+    if (!ready()) return this.app.message("warn", missing);
+    const post = postOf(v.buf.source);
     this.app.overlays.confirm(
-      sanitize(`Post "${title}" on ${repo} as ${account}? Anyone can read it.`),
-      () => void this.postNow(gh, repo, home),
+      sanitize(`Post "${post.title}" on ${repo} as ${account}? Anyone can read it.`),
+      () => void this.postNow(gh, repo, home, post),
     );
     this.app.host.requestRender();
   }
 
-  private async postNow(gh: string, repo: string, home: string): Promise<void> {
+  private async postNow(gh: string, repo: string, home: string, post: { title: string; body: string }): Promise<void> {
     const v = this.view;
     if (!v || this.posting) return;
-    const post = postOf(v.buf.source);
     this.posting = true;
     stopInsert(this.app, v);
     if (this.app.floating?.view === v) this.app.floating = null;
