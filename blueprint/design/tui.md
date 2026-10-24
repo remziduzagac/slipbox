@@ -21,6 +21,7 @@ Code, in `src/tui/`:
 | `following.ts`, `peek.ts` | links followed only when you say so; the peek at another vault's file |
 | `git.ts`, `info.ts`, `outline.ts`, `footnotes.ts` | git's state, changes and commits; Info; the outline; footnotes |
 | `gitpanel.ts`, `gitview.ts`, `gitmouse.ts`, `draw-git.ts` | the git panel: rows, keys, buttons, footer; mouse |
+| `gitsteady.ts` | the git panel's rows by what they are: the selection, the pointer's row, a click's |
 | `gitbranchview.ts`, `gitreposview.ts` | the git panel's branches and worktrees; the repositories in the view |
 | `diffview.ts`, `review.ts`, `mergescreen.ts` | the diff window; reviewing a change; the merge screen |
 | `gitremote.ts`, `rebase.ts` | fetch, pull, push and stash; a diverged pull, rebasing, what's under way |
@@ -274,7 +275,10 @@ wheel or trackpad scrolls a side pane sideways as it does the note.
 
 **Hover.** Buttons, tabs and their `×`, `+N`, breadcrumb headings and icon, the top bar's vault and branch, the
 status path and which-key entries are drawn in the `hover` role while the mouse is over them. Rows in lists and
-panes show their selection instead.
+panes show their selection instead. After each frame what's under the pointer is worked out again from where it
+last was, moved or clicked (`Mouse.rehover`, D261), and the frame drawn again once when that changed: whatever
+came under a still pointer (the git panel's rows as git answers, a tab moved, a mode button a click there left
+switchable once the mode changed back) shows its hover, not the one before it.
 
 **Viewport-only (plan `3.2`).** Only rows on screen are drawn, and a layout is computed once per
 width and cached on the buffer. A drawing failure never takes the app down: the screen says so on
@@ -759,7 +763,13 @@ Each side has one panel, which shows one of its views at a time; its rail has a 
 bright while that view shows. Clicking a view's button shows the panel on it (and focuses it), or
 hides the panel when that view already shows. Each view keeps its own position while another shows
 (selection, scroll, sideways offset and filter text) and gets it back when it returns; on its first
-showing the explorer reveals the current note and the history selects `here`. The views are a
+showing the explorer reveals the current note and the history selects `here`. The explorer's rows
+changed while it wasn't shown (a note revealed, the view zoomed out to hold it, its folder gone, a
+path selected), its selection goes where they say when it returns (`Explorer.later`), not to the
+index it had, another row's now — not in another vault, nor under a filter, whose rows (every note
+matching it) are the same whatever the view; a path it's asked to select while hidden is looked for
+in its tree, not under the filter of the view shown. The git panel keeps to its rows by what they
+are (D261). The views are a
 registry (`LEFT_VIEWS`,
 `RIGHT_VIEWS` in `panels.ts`) and more will come on both sides, each with its own rows, drawing and
 keys.
@@ -1007,6 +1017,43 @@ keys.
   of the file at the change, `formatEntry`, typing after its note), Copy its path; a branch's, a repository's, their
   own; a heading has none. The glyphs are `Glyphs.git`'s (`● ⎇ ✎ ◆ ✓` marks, `+ − ↺ ⧉` a row's buttons, `✓ ⟳`
   commit's and fetch's; ascii `* & ~ ! =`, `+ - x d`, `* @`).
+- **Its rows by what they are, not where they were** (D261; `tui/gitsteady.ts`, `Steady`, as `GitPanel.steady`): each
+  row has a key whatever its place (`rowKey`: its kind and what it's of — a file by section and path, a branch by name,
+  a change by its lines, hashed, so one edited is another; rows alike, such as two changes alike in a file, are told
+  apart by their order, `keysOf`, as `watch.ts` tells headings apart). As git answers, rows come, go and are sorted
+  under the pointer and the selection, and the panel keeps to them: **the selection** stays on its row, moved to its new
+  place — scrolled to, unless the wheel scrolled the panel away from it (kept as it is) or the pointer rests on the rows
+  (its row's line wins); every writer goes through `GitPanel.select` (a key that moves it, which shows it though the
+  wheel had scrolled the panel; a key that acts on its row, a click, a right click, the panel following a file staged to
+  where it went) or `place` (the panel's own pick, kept at its place: its own keys, `esc` and the filter leave it
+  there); one that doesn't say (a view's selection restored) is taken as it is, and the explorer, revealing a note while
+  it isn't the view shown, leaves the panel's selection alone, as the panel, answering while the explorer is shown (a
+  file staged followed), puts its own where it comes back to (`leftPositions`), finding its row among its own rows
+  (`GitPanel.filter`, the panel's filter, not the explorer's). A row gone a moment (a file's changes while git's answer
+  is read again) is still the one, the selection back on it when it's back, for a second (`A_MOMENT`); longer, the row
+  in its place is the selection's, and one back after longer with no frame drawn meanwhile is let go of all the same;
+  the moment is the row's (`lost`: its key, and since when), so another row picked meanwhile — by a key, the panel, or a
+  writer that didn't say — starts afresh. Of another repository (outside one, another folder's list: the view's once its
+  repositories are found, the last one's drawn until then, `RepoView.listedDir`), nothing selected or pointed at before
+  is looked for, between frames too (a key or a click before its rows are drawn does nothing, but on a pick made there
+  since, which its first frame follows too); in a checkout, the explorer's view changing changes nothing, its rows the
+  checkout's; another note open changes nothing (This file's rows are known by what they do). **The row under a resting
+  pointer** stays on its line (`settle`): the pointer holding the rows (on them, not their scrollbar's column, reported
+  since they showed, the mouse on), the scroll is set so that row is where the last frame drew it, past the list's end
+  if it must, blank under it until the pointer leaves — not when the view was scrolled, filtered or navigated by a key
+  since, nor in another repository, nor when its line is no longer the list's (the panel's top grew over it). Gone from
+  the rows (a file staged by its `+`), it isn't kept for: the rows move as they come — kept in place, the rows arriving
+  above it, the Staged a file goes to, would go out of sight. Below the last row, the last is kept where it is, so no
+  row above it comes under the pointer; one gone a moment is kept to while the pointer doesn't move, the moment its own
+  (an earlier row's goes with its anchor). Rows gone above it at the top, it moves up. **Between frames**, a click, a
+  right click and the footer take a row's hot id (`hotRow`) to the row the last frame drew there (`rowAt`, `hotNow`),
+  and a key to the row drawn selected, the panel's own pick too (or the row set since), the filter's `enter` too; a row
+  gone since does nothing, and says nothing (a new branch from a branch gone; any other row gone, `n` starts one from
+  HEAD, and `resolve`, as its button, opens the merge screen on this note when it's in conflict, else on the first file
+  in conflict). A key that moves the selection moves it from there; the panel's own keys leave it, and its pick, as they
+  are. After each frame what's under the pointer is worked out again from where it last was (`Mouse.rehover`, § Hover),
+  and drawn again when it isn't the row the frame drew by (`gitHover`), so its hover is the frame's. Scrolled past the
+  list's end, the scrollbar counts the blank, and the wheel down, with nothing more to show, leaves it as it is.
 - **The Branches section** (GIT-D9; `gitbranchview.ts`, `core/gitbranches.ts`): the local branches
   (`branchesLater`: `for-each-ref` with each tip and its date, `worktree list --porcelain -z` for where each is checked
   out — a folder's name may hold a line break; a git before 2.36 refuses `-z`, and the list is read as lines then,
@@ -1078,23 +1125,36 @@ keys.
   checked out nowhere, said so; Into another branch… among those checked out here or in a worktree.
 - **The repositories in the view** (VV-D10, GIT-D11; `tui/gitreposview.ts`, `core/gitrepos.ts`) are found under the
   explorer's view (`explorer.top`, else the vault) three folders down (`reposUnder`, `REPO_DEPTH`), 2,000 folders at
-  most, in the background: not into a hidden folder, a busy one (`busyFolderAt`, VV-D8, D237) or a repository, whose folders
-  are its own; a checkout's `.git` makes it one, and a worktree found beside its main checkout is grouped under it, by
-  its repository's shared git folder (`groupRepos`, `repoKey`). Found again each time the panel is shown
+  most, in the background: not into a hidden folder, a busy one (`busyFolderAt`, VV-D8, D237) or a repository, whose
+  folders are its own; a checkout's `.git` makes it one, and a worktree found beside its main checkout is grouped under
+  it, by its repository's shared git folder (`groupRepos`, `repoKey`). Found again each time the panel is shown
   (`RepoView.again`). **In a repository**, its own panel, and after it, folded, **Other repositories (n)**: the view's
-  others. **In a vault that isn't one** — home, a vault without git, Elsewhere — they're the panel: a line saying
-  `~/work holds 3 repositories` (or that it holds none), then each repository's row; in a folder of home, the view not
-  home itself, the rest of home's repositories (looked for from `~`) folded under **More in home (n)**. Each row says,
-  at its end, its checkouts' uncommitted files (`✎n`), its main checkout's ahead and behind its upstream, or `clean`,
-  `◆` when a worktree has uncommitted files, `asking git…` meanwhile: `git status --branch` asked per checkout
-  (`checkoutStateLater`) for the repositories drawn and the checkouts of those opened up, again when git has news or
-  the panel's shown again. **Ordered** by what needs attention, as far as git has said (`attention`): a worktree with
-  uncommitted files, uncommitted files, ahead of or behind the upstream, clean, then not asked yet; then by name.
-  **Opened up in place** (`enter`, a click): each checkout's row, the main one `●`, a worktree `⎇`, by branch and
-  folder, and its uncommitted files, each a diff against its last commit in the diff window. **`o`** goes into a
-  repository (its first checkout), the checkout selected, or a checkout at the file selected (`switchVault`, VV-D4);
-  `enter` on a checkout too. The filter keeps repositories by name. Not done: the panel asks again when it's shown, not
-  when the terminal gets the focus back (VV-D10).
+  others; on their rows, their own keys (`enter`, `l`, `h`, `o`, the menu) are theirs, the panel's (the message, commit,
+  fetch, …) the panel's. **In a vault that isn't one** — home, a vault without git, Elsewhere — they're the panel: a
+  line saying `~/work holds 3 repositories` (or that it holds none), then each repository's row; in a folder of home,
+  the view not home itself, the rest of home's repositories (looked for from `~`) folded under **More in home (n)**.
+  Each row says, at its end, its checkouts' uncommitted files (`✎n`), its main checkout's ahead and behind its upstream,
+  or `clean`, `◆` when a worktree has uncommitted files, `asking git…` meanwhile: `git status --branch` asked per
+  checkout (`checkoutStateLater`) for the repositories drawn and the checkouts of those opened up, again when git has
+  news or the panel's shown again. **Ordered** by what needs attention, as far as git has said (`attention`): a worktree
+  with uncommitted files, uncommitted files, ahead of or behind the upstream, clean, then not asked yet; then by name.
+  **Sorted so only as the panel's drawn** (`GitPanel.drawnRows`), and not while the pointer is on the panel's rows
+  (D261): on a row or between them, where the last frame drew them (`gitRows`, against where the mouse last said it was,
+  `Mouse.at`), the mouse on, and reported there since the rows showed and since the mouse came on — a pointer that
+  hasn't moved since holds nothing. Until then a repository stays where it was drawn, under the pointer, and for a key,
+  a click or the footer between frames (`RepoView.ordered`: the order last drawn for the folder they were found in, so a
+  view still showing the last one's list keeps it, and its own is sorted). The repositories the filter hides are ordered
+  too, in their place when it's cleared; a folded section's aren't sorted; one found since comes after. The hold ends
+  when the pointer leaves the rows or the mouse is turned off, never on a key. Sorted differently, the selection stays
+  on its row — a repository's, or a checkout's or a file's of one opened up, as the last frame drew it — and scrolls
+  into view; where the panel put it (`place`: the first row when it's shown, the filter's first match), it stays in that
+  place until a key moves it, a key acts on its row, or a click picks one (`select`); `esc`, the filter and the panel's
+  own keys (commit, push, …) leave it there. Rows that come or go are kept to by what they are, as all the panel's rows
+  are (above: its rows by what they are). **Opened up in place** (`enter`, a click): each checkout's row, the main one
+  `●`, a worktree `⎇`, by branch and folder, and its uncommitted files, each a diff against its last commit in the diff
+  window. **`o`** goes into a repository (its first checkout), the checkout selected, or a checkout at the file selected
+  (`switchVault`, VV-D4); `enter` on a checkout too. The filter keeps repositories by name. Not done: the panel asks
+  again when it's shown, not when the terminal gets the focus back (VV-D10).
 - **The branches' menu**, from the top bar's branch (`top:branch`) or the status line's (`status:branch`), in a
   repository: the branches list (`openBranches`) with Pull (while
   there's an upstream not gone; its count when behind), Push (or Push, and track it on origin), Fetch and The git panel

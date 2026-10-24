@@ -1657,7 +1657,7 @@ const PEEKED: Check[] = [
  * A vault of repositories (`projects/`, a `.slipbox/` of its own): alpha clean; beta clean, its worktree beside it
  * (`beta-agent`, on `agent`) with a new file, an agent's work to review; gamma with a change not committed.
  */
-function repositories(s: Session): void {
+export function repositories(s: Session): void {
   const top = join(s.dir, "projects");
   if (existsSync(top)) return;
   mkdirSync(join(top, ".slipbox"), { recursive: true });

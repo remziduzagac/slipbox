@@ -103,6 +103,10 @@ export interface Geometry {
   completion?: Rect | null;
   /** Where the active window's cursor is on screen: completion's popup hangs from it (19.16). */
   cursor?: { x: number; y: number } | null;
+  /** The git panel's rows, drawn: the pointer there holds the repositories' order (`GitPanel.drawnRows`). */
+  gitRows?: Rect | null;
+  /** The hover the git panel drew its rows by, taken to its rows as they are (`Steady.hotNow`). */
+  gitHover?: string | null;
   /** The Problems panel (1.7), at the bottom, under its rule: clicks and the wheel there are its. */
   problems?: Rect | null;
   /** How many of its entries it shows at once: the wheel's page. */

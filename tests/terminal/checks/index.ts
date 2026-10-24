@@ -4,6 +4,7 @@ import { CLI_CASES, type Check, type LeftOut } from "../check.ts";
 import { EDITING, LEFT_OUT_EDITING } from "./editing.ts";
 import { GIT_BRANCHES } from "./git-branches.ts";
 import { GIT_DIFF } from "./git-diff.ts";
+import { GIT_STEADY } from "./git-steady.ts";
 import { LEFT_OUT_LINKS_AND_FILES, LINKS_AND_FILES } from "./links-and-files.ts";
 import { MOVING_LINKS } from "./moving-links.ts";
 import { LEFT_OUT_NAVIGATING, NAVIGATING } from "./navigating.ts";
@@ -53,6 +54,8 @@ export const CHECK_FILES: Record<string, Check[]> = {
   pictures: PICTURES,
   // Where you are on the top bar (WSP-D4, WSP-D5): its cases of its own, in the areas they belong to.
   where: WHERE,
+  // The git panel holding still as git answers (D261): source control's too, in a file of its own.
+  "git-steady": GIT_STEADY,
 };
 
 export const CHECKS: Check[] = Object.values(CHECK_FILES).flat();

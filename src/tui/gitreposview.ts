@@ -3,7 +3,8 @@
 // Elsewhere) — each with what it has to say, ordered by what needs attention, opened up in place (its checkouts, a
 // worktree's branch among them; its changes, a file's diff a click away), gone into with `o`. In home, the rest of home's
 // repositories folded and counted under them. git is asked only about the rows on screen, in the background, again
-// when it has news and when the panel is opened.
+// when it has news and when the panel is opened. Sorted again only for a frame drawn, and not while the pointer is on
+// the panel's rows: a repository stays where it was drawn, under the pointer and under the keys, the selection on it.
 
 import { beginGitRead } from "./gitquery.ts";
 import { existsSync } from "node:fs";
@@ -46,10 +47,23 @@ export interface RepoFileRow {
 
 export type RepoViewRow = RepoRow | RepoCheckoutRow | RepoFileRow;
 
-/** The repositories found in a folder, by the question asked. */
+/** The actions a repository's, a checkout's or a file's row takes (`RepoView.action`): the rest are the panel's. */
+export const REPO_ACTIONS = new Set(["open", "expand", "collapse", "go", "menu"]);
+
+/** The repositories found in a folder, by the question asked; `dir`, the folder they're the answer for. */
 interface Found {
   key: string;
+  dir: string;
   repos: RepoFound[] | null;
+}
+
+/** A frame being drawn: the repositories sorted again, or held where the last frame drew them; null, not drawing. */
+export type Drawing = "sort" | "hold" | null;
+
+/** An order of the repositories, by key, for the folder they were found in. */
+interface Order {
+  dir: string;
+  at: Map<string, number>;
 }
 
 /** The repositories in the view and in home: found, each checkout's state asked when its row shows. */
@@ -63,25 +77,35 @@ export class RepoView {
   readonly opened = new Set<string>();
   /** Bumped when the panel is opened: everything asked again (VV-D10, the focus coming back). */
   private round = 0;
+  /** The order the last frame drew; and the one a frame being drawn puts them in, until it's drawn. */
+  private order: Order | null = null;
+  private next: Order | null = null;
 
   /** Asked again: the panel opened, git's news. */
   again(): void {
     this.round++;
   }
 
-  private found(slot: "view" | "home", dir: string): RepoFound[] | null {
+  /** The folder whose repositories the panel lists: the view's, or the last one's until the view's are found. */
+  listedDir(): string {
+    return this.view?.dir ?? (this.app.explorer.top || this.app.loc.root);
+  }
+
+  /** The repositories found under `dir` — meanwhile the last answer, for the folder it's for. */
+  private found(slot: "view" | "home", dir: string): Found {
     const key = `${this.round}\0${dir}`;
     const had = this[slot];
     if (had?.key !== key) {
-      const asked: Found = { key, repos: had?.repos ?? null };
+      const asked: Found = { key, dir: had?.dir ?? dir, repos: had?.repos ?? null };
       this[slot] = asked;
       void reposUnder(dir, undefined, this.app.config.walk).then((repos) => {
         if (this[slot] !== asked) return;
+        asked.dir = dir;
         asked.repos = repos;
         this.app.host.requestRender();
       });
     }
-    return this[slot]!.repos;
+    return this[slot]!;
   }
 
   /** A checkout's state: asked when its row is on screen and git has had news since; null until it has answered. */
@@ -107,17 +131,23 @@ export class RepoView {
   /**
    * The rows: the repositories in the view (the current vault's own left out, it has the panel), by what needs
    * attention; `mode` "all" when they're the panel, "others" folded under it. In home, the rest of home's after them.
+   * `drawing` for a frame being drawn: sorted again, or held as the last drew them (`ordered`).
    */
-  rows(mode: "all" | "others"): PanelRow[] {
+  rows(mode: "all" | "others", drawing: Drawing = null): PanelRow[] {
     const app = this.app;
     const p = app.gitPanel;
-    const q = app.sidebar.filter ?? "";
+    const q = p.filter();
     const view = app.explorer.top || app.loc.root;
     const own = app.git.checkout ? repoKey(app.git.checkout) : null;
-    const repos = this.found("view", view);
+    const found = this.found("view", view);
+    const repos = found.repos;
     const rows: PanelRow[] = [];
     if (repos === null) return mode === "all" ? [{ kind: "note", text: "looking for repositories…" }] : [];
-    const list = this.ordered(repos.filter((r) => r.key !== own && (!q || match(q, r.name))));
+    if (drawing) this.next = { dir: found.dir, at: new Map() };
+    // Ordered, those the filter hides too, so they're in their place when it's cleared; not while folded, unseen.
+    const shown = (r: RepoFound) => r.key !== own && (!q || match(q, r.name));
+    const folded = (section: "repos" | "home") => p.folded.has(section) && !q;
+    const list = (mode === "others" && folded("repos") ? repos : this.ordered(found.dir, repos, drawing)).filter(shown);
     if (mode === "all")
       rows.push({
         kind: "note",
@@ -135,21 +165,39 @@ export class RepoView {
     // Home's others, folded and counted (VV-T8): where they're the panel, and the view is a folder in home.
     const home = homeFolder();
     if (mode === "all" && view !== home && isInside(home, view)) {
-      const all = this.found("home", home);
       const seen = new Set(repos.map((r) => r.key));
-      const rest = (all ?? []).filter((r) => !seen.has(r.key) && r.key !== own && (!q || match(q, r.name)));
+      const others = (this.found("home", home).repos ?? []).filter((r) => !seen.has(r.key));
+      const rest = (folded("home") ? others : this.ordered(found.dir, others, drawing)).filter(shown);
       if (rest.length) {
         rows.push({ kind: "heading", section: "home", label: `More in home (${rest.length})` });
-        if (!p.folded.has("home") || q) for (const r of this.ordered(rest)) rows.push(...this.repoRows(r));
+        if (!folded("home")) for (const r of rest) rows.push(...this.repoRows(r));
       }
     }
     return rows;
   }
 
-  /** By what needs attention (VV-D10), as far as git has said; then by name. */
-  private ordered(repos: RepoFound[]): RepoFound[] {
-    const score = (r: RepoFound) => attention(r.checkouts.map((c) => this.known(c)));
-    return [...repos].sort((a, b) => score(b) - score(a) || a.name.localeCompare(b.name));
+  /**
+   * By what needs attention (VV-D10), as far as git has said; then by name. Sorted so only for a frame being drawn
+   * that doesn't hold them (`drawing` "sort": the pointer isn't on the panel's rows, D261): otherwise in the order the
+   * last frame drew, for the folder they were found in, any it didn't have (found since) after them — so a repository
+   * stays where it was drawn, under the pointer and for a key or a click between frames.
+   */
+  private ordered(dir: string, repos: RepoFound[], drawing: Drawing): RepoFound[] {
+    const score = new Map(repos.map((r) => [r.key, attention(r.checkouts.map((c) => this.known(c)))]));
+    const byAttention = (a: RepoFound, b: RepoFound) =>
+      score.get(b.key)! - score.get(a.key)! || a.name.localeCompare(b.name);
+    const drawn = drawing !== "sort" && this.order?.dir === dir ? this.order.at : null;
+    const at = (r: RepoFound) => drawn?.get(r.key) ?? drawn?.size ?? 0;
+    const sorted = [...repos].sort(drawn ? (a, b) => at(a) - at(b) || byAttention(a, b) : byAttention);
+    const next = drawing ? this.next : null;
+    if (next) for (const r of sorted) next.at.set(r.key, next.at.size);
+    return sorted;
+  }
+
+  /** The frame is drawn: its order is the one held from now on. */
+  drawn(): void {
+    if (this.next) this.order = this.next;
+    this.next = null;
   }
 
   /** A repository's row; opened up, its checkouts, and the main one's uncommitted files. */
@@ -194,13 +242,10 @@ export class RepoView {
         if (row.kind === "rfile") return this.fileDiff(row);
         this.opened.add(r.key);
         return;
-      case "collapse":
+      case "collapse": {
         this.opened.delete(r.key);
-        this.app.sidebar.selected = Math.max(
-          0,
-          this.app.gitPanel.rows().findIndex((x) => x.kind === "repo" && x.repo.key === r.key),
-        );
-        return;
+        return this.app.gitPanel.selectWhere((x) => x.kind === "repo" && x.repo.key === r.key);
+      }
       case "go":
         return this.goInto(
           row.kind === "repo" ? r.checkouts[0]! : row.checkout,

@@ -39,6 +39,10 @@ describe("the terminal checks' coverage", () => {
     const samples = Object.entries(SAMPLES_FOR).flatMap(([f, s]) => [f, ...s.tests]);
     expect(samples.filter((f) => !existsSync(join(top, f)))).toEqual([]);
   });
+  test("the git panel's rows kept by what they are (gitsteady.ts) run the git checks, not every check", () => {
+    expect(CHECKS_FOR.find(([re]) => re.test("src/tui/gitsteady.ts"))?.[1]).toEqual(["git"]);
+  });
+
   test("each reason says something", () => {
     const reasons = [...Object.values(LEFT_OUT.commands), ...Object.values(LEFT_OUT.cases)];
     expect(reasons.filter((r) => r.trim().length < 10)).toEqual([]);

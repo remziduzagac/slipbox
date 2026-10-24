@@ -171,6 +171,9 @@ the cells that didn't change leaves the ones that did.
 
 ## GIT-D8: The git panel by mouse as by keys, and what the branch changed (2026-10-14)
 
+> **Detailed by D261 (2026-10-23):** the panel's rows are known by what they are: the selection and the row under a
+> resting pointer kept to as rows come and go; a click or a key between frames acts on the row drawn there.
+
 **Decision:** Source control (the left panel, `±`) does everything it does by keys with the mouse too, and shows its
 keys as it does:
 

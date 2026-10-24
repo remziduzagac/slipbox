@@ -42,7 +42,7 @@ export const CHECKS_FOR: [RegExp, string[]][] = [
   ],
   [/^src\/core\/layout\/(diff|splitdiff|blockdiff)\.ts$/, ["git", "conflict"]],
   [/^src\/tui\/(gitview|gitpanel|gitchanges|githistory|gitmouse|gitremote|gitreposview|gitbranchview)\.ts$/, ["git"]],
-  [/^src\/tui\/(draw-git|mergescreen|rebase|review)\.ts$/, ["git"]],
+  [/^src\/tui\/(draw-git|gitsteady|mergescreen|rebase|review)\.ts$/, ["git"]],
   [/^src\/tui\/diffview\.ts$/, ["git", "conflict"]],
   // Export.
   [/^src\/core\/export\//, ["export"]],

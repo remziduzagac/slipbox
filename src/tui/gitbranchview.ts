@@ -84,10 +84,11 @@ export interface BranchFileRow {
   base: string | null;
 }
 
-/** A label over a branch's files: "Uncommitted (2)", "Against main (5)". */
+/** A label over a branch's files: "Uncommitted (2)", "Against main (5)"; `against`, which, as its files say. */
 export interface BranchSubRow {
   kind: "bsub";
   branch: Branch;
+  against: "base" | "uncommitted";
   label: string;
 }
 
@@ -270,7 +271,7 @@ export class BranchView {
   rows(): PanelRow[] {
     const p = this.app.gitPanel;
     const got = this.branches();
-    const q = this.app.sidebar.filter ?? "";
+    const q = p.filter();
     const heading: HeadingRow = { kind: "heading", section: "branches", label: "Branches" };
     if (!got) return [heading, { kind: "note", text: "asking git…" }];
     const { branches, merged } = got;
@@ -319,7 +320,12 @@ export class BranchView {
     const files = this.filesOf(b, st?.base ?? null);
     if (w && !b.here) {
       const un = files?.uncommitted;
-      rows.push({ kind: "bsub", branch: b, label: un ? `Uncommitted (${un.length})` : "Uncommitted: asking git…" });
+      rows.push({
+        kind: "bsub",
+        branch: b,
+        against: "uncommitted",
+        label: un ? `Uncommitted (${un.length})` : "Uncommitted: asking git…",
+      });
       for (const e of un ?? [])
         rows.push({
           kind: "bfile",
@@ -335,6 +341,7 @@ export class BranchView {
       rows.push({
         kind: "bsub",
         branch: b,
+        against: "base",
         label: of ? `Against ${sanitize(st.base)} (${of.length})` : `Against ${sanitize(st.base)}: asking git…`,
       });
       for (const f of of ?? [])
@@ -391,10 +398,10 @@ export class BranchView {
       case "expand":
         this.opened.add(b.name);
         return;
-      case "collapse":
+      case "collapse": {
         this.opened.delete(b.name);
-        this.app.sidebar.selected = Math.max(0, this.rowOf(b.name));
-        return;
+        return this.app.gitPanel.selectWhere((r) => r.kind === "branch" && r.branch.name === b.name);
+      }
       case "go":
         return b.worktree?.gone
           ? this.button(b, "prune")
@@ -820,9 +827,8 @@ export class BranchView {
           i = this.rowOf(name);
         }
         if (i < 0) return;
-        app.sidebar.selected = i;
-        // Brought into sight, as a key's move would.
-        app.sidebar.pinned = false;
+        // Picked, kept to as rows move (D261), and brought into sight, as a key's move would.
+        app.gitPanel.select(i, app.gitPanel.rows(), true);
       });
     };
     const done = (said: string, at: Asked) => {

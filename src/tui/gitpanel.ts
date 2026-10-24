@@ -18,7 +18,8 @@ import { sanitize } from "../core/sanitize.ts";
 import { keyChar, spellKey } from "./keys.ts";
 import { match } from "./match.ts";
 import { BranchView, type BranchViewRow } from "./gitbranchview.ts";
-import { RepoView, type RepoViewRow } from "./gitreposview.ts";
+import { type Drawing, REPO_ACTIONS, RepoView, type RepoViewRow } from "./gitreposview.ts";
+import { Steady } from "./gitsteady.ts";
 import {
   backToPanel,
   type ChangeRow,
@@ -87,6 +88,7 @@ export class GitPanel {
   constructor(readonly app: App) {
     this.branches = new BranchView(app);
     this.repos = new RepoView(app);
+    this.steady = new Steady(app);
   }
 
   /** The branches (GIT-D9) and the repositories in the view (VV-D10): their state, what they ask of git. */
@@ -95,6 +97,8 @@ export class GitPanel {
   /** Counted each time you act in the panel, by a key or a click: a branch made, selected once git lists it, isn't
    *  selected over a panel you've been using since (`BranchView.newWhere`). */
   touched = 0;
+  /** The rows by what they are, as git answers (D261): the selection's, the pointer's, a click's. */
+  readonly steady: Steady;
   /** The message box's text (GIT-D8), and whether keys go to it. */
   message = "";
   typing = false;
@@ -131,19 +135,65 @@ export class GitPanel {
     return { base, files: this.ahead.files };
   }
 
-  /** The panel's rows: its sections, each under its heading unless folded; the filter keeps the rows it matches. */
-  rows(): PanelRow[] {
+  /**
+   * The rows a frame draws: the repositories sorted again by what needs attention, unless the pointer holds the
+   * panel's rows (`Steady.begin`, D261); the selection kept on its row as they move (`Steady.follow`).
+   */
+  drawnRows(): PanelRow[] {
+    const holds = this.steady.begin(() => this.rows());
+    const rows = this.rows(holds ? "hold" : "sort");
+    this.repos.drawn();
+    this.steady.follow(rows);
+    return rows;
+  }
+
+  /**
+   * The selection put in a place, not on a row (the first row, the filter's first match): it stays at that place as
+   * rows move, until a key moves it, a key acts on its row, or a click picks one.
+   */
+  place(i: number, rows = this.rows()): void {
+    this.steady.place(i, rows);
+  }
+
+  /** Row `i` of `rows` picked by the user (a key, a click): selected, and kept on as rows move; `move`, by a key. */
+  select(i: number, rows = this.rows(), move = false): void {
+    this.steady.select(i, rows, move);
+  }
+
+  /** The first row `which` says, picked as `select` does (a row folded, made, followed to where it went); none, none. */
+  selectWhere(which: (r: PanelRow) => boolean): void {
+    const rows = this.rows();
+    const i = rows.findIndex(which);
+    if (i >= 0) this.select(i, rows);
+  }
+
+  /** Where the selection is in `rows` between frames: the row drawn selected, wherever it is now (`Steady.selected`). */
+  selectedIn(rows: PanelRow[]): number {
+    const i = this.steady.selected(rows);
+    return i < 0 ? this.app.sidebar.selected : i;
+  }
+
+  /**
+   * The panel's rows: its sections, each under its heading unless folded; the filter keeps the rows it matches. The
+   * repositories in the order last drawn; `drawing` for a frame being drawn (`drawnRows`).
+   */
+  rows(drawing: Drawing = null): PanelRow[] {
     const app = this.app;
     const c = app.git.checkout;
     // Not a repository (home, a vault without git, Elsewhere): the repositories in the view are the panel (VV-D10).
-    if (!c) return this.repos.rows("all");
+    if (!c) return this.repos.rows("all", drawing);
     if (app.git.entries === null) return [{ kind: "note", text: "asking git…" }];
-    const q = app.sidebar.filter ?? "";
+    const q = this.filter();
     const rows: PanelRow[] = [];
     const work = workRows(app);
     rows.push(...work);
     if (!work.length && !q) rows.push({ kind: "note", text: "nothing uncommitted" });
-    rows.push(...this.aheadRows(q), ...this.fileRows(q), ...this.branches.rows(), ...this.repos.rows("others"));
+    rows.push(
+      ...this.aheadRows(q),
+      ...this.fileRows(q),
+      ...this.branches.rows(),
+      ...this.repos.rows("others", drawing),
+    );
     if (q && rows.every((r) => r.kind === "note")) return [{ kind: "note", text: "no matches" }];
     return rows;
   }
@@ -285,9 +335,18 @@ export class GitPanel {
     return key ? spellKey(key) : null;
   }
 
+  /**
+   * The panel's filter: the left panel's while the panel is in it, else the one it comes back to — so a git answer
+   * followed while the explorer's shown finds its row among the panel's own rows, not under the explorer's filter.
+   */
+  filter(): string {
+    const app = this.app;
+    return (app.leftView === "git" ? app.sidebar.filter : app.panels.leftPositions.get("git")?.filter) ?? "";
+  }
+
   /** What the pointer is on, when it's a button or a row's own: its key and what it does, for the footer. */
-  pointedAt(): { key: string | null; desc: string } | null {
-    return pointedAt(this.app, this.app.mouse.hover);
+  pointedAt(hover: string | null): { key: string | null; desc: string } | null {
+    return pointedAt(this.app, hover);
   }
 
   /** The footer's keys for a row (GIT-D12): what its keys do to it, the commonest first. */
@@ -363,6 +422,10 @@ export class GitPanel {
     this.touched++;
     const s = app.sidebar;
     const rows = this.rows();
+    // The row the last frame drew selected, wherever it is now; gone since, nothing to act on. Only a key that moves
+    // from it, or acts on it, sets the selection: the panel's own keys leave it, its pick too, as it is.
+    const at = this.steady.selected(rows);
+    const from = at < 0 ? s.selected : at;
     const ok = (i: number) => !!rows[i] && rows[i]!.kind !== "note";
     const step = (from: number, by: number) => {
       for (let i = from + by; i >= 0 && i < rows.length; i += by) if (ok(i)) return i;
@@ -370,17 +433,13 @@ export class GitPanel {
     };
     switch (action) {
       case "down":
-        s.selected = step(s.selected, 1);
-        return;
+        return this.select(step(from, 1), rows, true);
       case "up":
-        s.selected = step(s.selected, -1);
-        return;
+        return this.select(step(from, -1), rows, true);
       case "top":
-        s.selected = step(-1, 1);
-        return;
+        return this.select(step(-1, 1), rows, true);
       case "bottom":
-        s.selected = step(rows.length, -1);
-        return;
+        return this.select(step(rows.length, -1), rows, true);
       case "filter":
         s.filtering = true;
         return;
@@ -395,12 +454,26 @@ export class GitPanel {
         app.region = "content";
         return;
     }
-    const row = rows[s.selected];
-    // The repositories' rows answer wherever they are; the rest is a repository's.
-    if (row && (row.kind === "repo" || row.kind === "rcheckout" || row.kind === "rfile"))
+    const row = at < 0 ? undefined : rows[at];
+    // The repositories' rows answer their own keys wherever they are (a row acted on is the user's pick); the panel's
+    // keys (the message, commit, fetch…) are the panel's on them too.
+    const repoRow = row?.kind === "repo" || row?.kind === "rcheckout" || row?.kind === "rfile";
+    if (repoRow && REPO_ACTIONS.has(action)) {
+      this.select(at, rows);
       return this.repos.action(row, action);
+    }
+    // A new branch from the branch selected: from one gone since it was drawn, none — not one from HEAD, nor from what
+    // came to its place. Any other row gone, `n` starts one from HEAD; `resolve`, as its button, opens the merge screen
+    // on this note when it's in conflict, else the first file in conflict.
+    if (at < 0 && action === "new_branch" && this.steady.sought()?.startsWith("branch\0")) return;
     const c = app.git.checkout;
-    if (!c) return app.message("info", "not in a git repository: o goes into one of those listed");
+    // Outside a repository, the panel's headings (Other repositories, More in home) fold and unfold all the same.
+    if (!c && row?.kind === "heading" && (action === "open" || action === "expand" || action === "collapse")) {
+      this.select(at, rows);
+      return this.headingAction(row, action);
+    }
+    // A row gone since it was drawn: nothing to say about it.
+    if (!c) return at < 0 ? undefined : app.message("info", "not in a git repository: o goes into one of those listed");
     switch (action) {
       case "message":
         this.typing = true;
@@ -442,7 +515,9 @@ export class GitPanel {
       case "new_branch":
         return this.branches.newBranch(row?.kind === "branch" ? row.branch.name : undefined);
     }
-    if (!row || row.kind === "note") return;
+    if (!row || row.kind === "note" || repoRow) return;
+    // The panel's own keys are above: what's left acts on the row, the user's pick from now on.
+    this.select(at, rows);
     switch (row.kind) {
       case "heading":
         return this.headingAction(row, action);

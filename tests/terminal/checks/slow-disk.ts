@@ -83,7 +83,7 @@ async function viewAtHome(s: Session): Promise<void> {
 }
 
 /** The explorer's selected row, by the path `shift+y` copies of it. */
-async function selectedPath(s: Session): Promise<string> {
+export async function selectedPath(s: Session): Promise<string> {
   await s.keys("shift+y");
   await s.settle();
   return s.clipboard().trim();

@@ -604,6 +604,40 @@ typed revision is kept as a commit, so it doesn't move with the branch it was ty
 **Not chosen:** asking GitHub or another forge for a pull request's base: whoever opens slipbox passes it, and slipbox
 stays independent of any forge. Several bases at once, or comparing two arbitrary commits on the screen.
 
+## D261: The git panel keeps to its rows as git answers, each by what it is, never sorted under the pointer (2026-10-23)
+
+**Decision:** The repositories in the git panel (VV-D10) are sorted by what needs attention only when a frame is drawn,
+and not while the pointer is on the panel's rows, on a row or between them; between frames, a key, a click and the
+footer find them in the order drawn. And every row of the panel is known by what it is, not by its place: the
+selection stays on its row as rows come, go and are sorted (a repository's, a branch's, a file's, a change by its
+lines); the row under a resting pointer stays on its line, the list scrolled as far as it must; a click, a key or the
+footer between frames acts on the row the last frame drew there, and on nothing if it's gone since. The pointer holds
+once it's reported on the rows after they showed, the mouse on, until it leaves them or the mouse is turned off, never
+on a key; a key that moves the selection, the wheel, the scrollbar and the filter aren't held off by it. The panel's
+own pick (its first row, the filter's first match) stays in its place until a key or a click picks a row. Details
+VV-D10 and GIT-D8. As built: `tui/gitsteady.ts` (`rowKey`, `Steady`), `tui/gitreposview.ts` (`ordered`),
+`tui/gitpanel.ts` (`drawnRows`, `place`, `select`), `tui/gitmouse.ts`, `tui/draw-git.ts`, `tui/mouse.ts` (`at`,
+`over`, `rehover`); design/tui.md § Side panes. Decided by an issue (#14).
+
+**Why:** git answers for each checkout in its own time, again on its news and when the panel's shown; each answer
+sorted the repositories again, and rows git fills in later (This branch against its base, the line under the branch,
+an opened repository's files, a new file in the working tree) pushed down the rows below them. The panel found its rows
+by their place, so a row could change under the pointer between moving to it and clicking, and under the selection
+between seeing it and pressing `enter`.
+
+**Cost:** A terminal doesn't say when the pointer leaves its window: left over the panel's rows, it holds them until
+the mouse moves. Keeping the pointer's row on its line can scroll the list past its end, blank under it until the
+pointer leaves; rows gone above it at the top move it up; and while it rests, the selection's row may go out of sight
+(the pointer's line wins). Scrolled away by the wheel, the panel stays so as the selection follows its row; a key shows
+it again. Scrolled past its end, the wheel down leaves it there, with nothing more to show; the wheel up scrolls back.
+Rows alike, two changes alike in a file, are told apart only by their order: the first gone, the second is taken for it.
+
+**Not chosen:** a key releasing the hold, which would sort the list just as a key acts on it; holding the order until
+every answer is in, which never comes for a list longer than the screen, only the rows drawn being asked; holding only
+on a row (by what's under the pointer), which missed rows drawn under a pointer resting below the last; the selection
+remembered by its index from frame to frame, which overrode a selection made on purpose at the same index (a filter's
+first match); freezing what the panel shows while the pointer rests, which would show git's state stale.
+
 ## D264: `:!cmd`'s window: its errors through its output's pipe, in the order they reach it (25.7, 2026-10-24)
 
 **Decision:** `:!cmd` (`shell.run`) gives the command one pipe for its standard output and error: `/bin/sh`, by its

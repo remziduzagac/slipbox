@@ -18,7 +18,7 @@ import type { Session, SessionOptions } from "../session.ts";
  * Who commits, for the check's git and slipbox's: the check's home has no ~/.gitconfig, and git won't commit without a
  * name. Nor the machine's own config (a default branch, a merge style): what git does here is the same everywhere.
  */
-const WHO = {
+export const WHO = {
   GIT_AUTHOR_NAME: "Ada Park",
   GIT_AUTHOR_EMAIL: "ada@example.invalid",
   GIT_COMMITTER_NAME: "Ada Park",
@@ -122,7 +122,7 @@ const TITLE = /Source control +[│┃]/;
 export const toPanel = (s: Session) => panelFocused(s, "g", "GIT", TITLE);
 
 /** The left panel's part of a screen row: up to its border, the first `│` or `┃` of its title's row. */
-function panelPart(s: Session, row: number): string {
+export function panelPart(s: Session, row: number): string {
   const rows = s.screen();
   const title = rows.findIndex((r) => TITLE.test(r));
   const border = title < 0 ? -1 : [...rows[title]!].findIndex((c) => c === "│" || c === "┃");
