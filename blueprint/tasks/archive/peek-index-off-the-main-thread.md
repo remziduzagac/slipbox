@@ -379,3 +379,32 @@ changed in that vault since.
   Unit tests for each fixed one, mutation-checked (M112–M119, each caught); a terminal check for the one a terminal
   shows (a widened search, then a name: the old form's suggestion found), mutation-checked. 83 unit tests; 32 of 32
   peek terminal checks.
+- 2026-10-24: CI at e62754f: the terminal checks pass on all three systems. The Ubuntu unit tests ran out of their
+  45 minutes in `tests/tui.test.ts`, after "home the vault open (VV-D2): its walk and index made while nobody works".
+  Dev's own runs do the same at 2504776 and d24699f, without this branch, so it's dev's. Here the whole file spins at
+  full CPU there too; the test alone, and with the one before it, passes.
+- 2026-10-24: Review loop, round 7, on round 6's commit (a496845): Codex, no fault in the code, and a terminal check
+  asked for home's walk kept by the main thread alone (a terminal can't tell which thread wrote it: the main thread's
+  graph of home keeps it on the same peek; unit-only). The code-review skill's agents, 14 findings. Checked against
+  the code:
+  - 1 and 5, home's walk kept by nobody in a vault session with the background index off, and kept by the export's
+    thread still: verified — round 6 set `keepsWalk` call site by call site. It's the thread's now
+    (`keepsWalk = isMainThread`): every graph on the main thread keeps it, none on another.
+  - 2, the asked vault's stamp waiting on the rebuild, and stamps written while quitting: verified. The asked vault's
+    is written first again; the nested ones' after the rebuild, even when it fails, never once quitting.
+  - 3, a vault reached for a link not caught up when its index isn't behind, though a kept tab is: rejected — a kept
+    tab is a file being read; every vault a note's links reach, caught up each start, would be a walk on the thread
+    and a signature here for each. Its folders through followed links that answer only now are found at its next peek
+    or kept tab.
+  - 4, an hour for a stale temporary file: kept — the cache and state folders are this machine's (a share only when
+    home is one), and a write cut short is swept at the next write of its file after the hour.
+  - 6, home's graph opened anew for its settings, notes still to parse, left so: verified (they're never parsed
+    here). Its thread is asked again, once.
+  - 7, a root the list opened, reached by a link later, not recorded as seen: verified. Recorded then.
+  - 8, 9 and 10, the design (taken from the list; who keeps home's walk, roots.md) and `opened`'s and `tuiReach`'s
+    comments: fixed.
+  - 11, three flags set together: two now (`writesIndex`, `writesState`), kept apart, as a nested vault's first index
+    is written by a graph writing nothing else.
+  - 12, the tests' ages hard-coded: `STALE_TEMP_MS`. 13, the list written once per key: once (`noteIndexed` takes
+    several). 14, a test patching a private method: it makes the build fail instead.
+  Unit tests for each fixed one, mutation-checked (M120–M126, each caught).

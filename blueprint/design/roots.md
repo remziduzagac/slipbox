@@ -109,13 +109,14 @@ stamps of the folders listed; so is a folder listed again for its stamp alone (s
 moved: a chmod; not a time moved on past the walk) with nothing in it changed, once the listing stamps it (not one it
 couldn't read), or it would be listed again at every build. One whose time only moved on (a shell's history rewritten in
 `~`) isn't worth writing the walk for: it's listed again at each build until something else is kept, as before the
-stamps. The graph's `walkedAt` is the walk's, so the watcher lists again the folders changed since. So an agent's note
-made in home is there at its next command, and a folder made a vault by hand (`git init`) leaves home. The walk is kept
-with its filter's settings (`WalkFilter.signature`: the note extensions, `walk.exclude`, the root markers, where
-Downloads is): kept under others, it's no walk of home's, so a `[walk]` setting changed is home never walked, its walk
-made again (the TUI's reload asks for it; the background index makes a walk under way again; the CLI walks it at once).
-Never walked, home is its top alone (`walkTop`): its notes and files, the vaults in it, its folders listed but not
-looked into.
+stamps. A walk is kept by a graph built on the main thread alone: a walk made on another thread (T12; a peek's
+backlinks', an export's) is never kept there, the main thread's being maybe newer (`Graph.keepsWalk`). The graph's
+`walkedAt` is the walk's, so the watcher lists again the folders changed since. So an agent's note made in home is there
+at its next command, and a folder made a vault by hand (`git init`) leaves home. The walk is kept with its filter's
+settings (`WalkFilter.signature`: the note extensions, `walk.exclude`, the root markers, where Downloads is): kept under
+others, it's no walk of home's, so a `[walk]` setting changed is home never walked, its walk made again (the TUI's
+reload asks for it; the background index makes a walk under way again; the CLI walks it at once). Never walked, home is
+its top alone (`walkTop`): its notes and files, the vaults in it, its folders listed but not looked into.
 
 A folder of home asked for by name is what was asked for: opened (`slipbox ~/notes`), or a file in it opened, it's
 walked at once when home's walk doesn't cover it (never made, or stopped at its cap: a walk capped covers no folder

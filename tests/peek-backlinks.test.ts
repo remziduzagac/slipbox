@@ -24,12 +24,12 @@ import {
   vaultSignature,
 } from "../src/core/backlinks-jobs.ts";
 import { DEFAULT_CONFIG } from "../src/core/config.ts";
-import { atomicWrite, sweepTemps, tempPath, tempRandom } from "../src/core/fsutil.ts";
+import { atomicWrite, STALE_TEMP_MS, sweepTemps, tempPath, tempRandom } from "../src/core/fsutil.ts";
 import { Graph, openGraph } from "../src/core/graph.ts";
 import { walkHomeNow } from "../src/core/home.ts";
 import { cacheDir, stateDir } from "../src/core/paths.ts";
 import { Reach } from "../src/core/reach.ts";
-import { readRoots } from "../src/core/registry.ts";
+import { noteIndexed, readRoots, writeRoots } from "../src/core/registry.ts";
 import { planMakeVault, planUnmakeVault } from "../src/core/rename-vaults.ts";
 import { Redirects } from "../src/core/redirects.ts";
 import { forgetProbes, setLinkAnswer } from "../src/core/symlinks.ts";
@@ -1143,7 +1143,7 @@ test("a temporary file of the index left by a thread let go of mid-write is swep
   const fresh = join(dir, `.index.json.slipbox-1-8-cafebabe.tmp`);
   const other = join(dir, `.heads.json.slipbox-1-7-deadbeef.tmp`);
   for (const f of [old, fresh, other]) writeFileSync(f, "{");
-  const hour = new Date(Date.now() - 2 * 3_600_000);
+  const hour = new Date(Date.now() - 2 * STALE_TEMP_MS);
   utimesSync(old, hour, hour);
   utimesSync(other, hour, hour);
   await onlyRootsUnder(base, async () => {
@@ -1190,10 +1190,18 @@ test("a vault whose settings changed and that can't be opened again: its buffers
       const h = await harness({ root: notes, open: "index.md" });
       await h.keys("tab", "enter");
       const g = vaultGraph(h.app, app)!;
-      // Opened again, it can't be (a graph that won't open).
-      (h.app.reach as unknown as { open: () => null }).open = () => null;
-      reply(sent.length - 1, { config: "other settings" });
-      await read(h);
+      // Opened again, it can't be (a graph that won't build).
+      const build = Graph.prototype.build;
+      Graph.prototype.build = function (this: Graph, ...args) {
+        if (this !== g && this.root === g.root) throw new Error("can't be read");
+        return build.apply(this, args);
+      };
+      try {
+        reply(sent.length - 1, { config: "other settings" });
+        await read(h);
+      } finally {
+        Graph.prototype.build = build;
+      }
       expect(h.app.view!.buf.elsewhere?.graph).toBe(g);
       expect(h.app.reach.held(app)).toBe(g);
     });
@@ -1358,7 +1366,7 @@ test("another vault's graph this TUI reaches never writes its index here: its th
 test("a temporary file left beside a vault's index or its redirects is swept at their next write (#10)", () => {
   const { app } = twoVaults();
   const loc = locateVault({ root: app });
-  const hour = new Date(Date.now() - 2 * 3_600_000);
+  const hour = new Date(Date.now() - 2 * STALE_TEMP_MS);
   const stale = (dir: string, name: string) => {
     mkdirSync(dir, { recursive: true });
     const f = join(dir, `.${name}.slipbox-1-7-deadbeef.tmp`);
@@ -1982,7 +1990,7 @@ test("a graph opened anew for changed settings tells nobody it was opened: its c
   });
 });
 
-test("home's walk made on the thread, or by a graph that writes nothing of its vault's, is never kept there: the main thread keeps it (VV-D2, T12)", async () => {
+test("home's walk made on the thread is never kept there; one made on the main thread is, by any graph of home (VV-D2, T12)", async () => {
   const home = realpathSync(mkdtempSync(join(sandbox, "home-")));
   const notes = join(home, "notes");
   mkdirSync(join(notes, ".slipbox"), { recursive: true });
@@ -1998,13 +2006,16 @@ test("home's walk made on the thread, or by a graph that writes nothing of its v
     // A folder come since: the walk made now has it.
     mkdirSync(join(home, "later"));
     writeFileSync(join(home, "later", "a.md"), "# A\n");
-    expect((await backlinksThere({ root: home, rel: "todo.md" })).indexed).toBe(true);
+    // Asked of the thread itself, as the peek asks.
+    expect((await askBacklinks({ root: home, rel: "todo.md" }))?.indexed).toBe(true);
     expect(readFileSync(kept, "utf8")).toBe(was);
+    // The TUI's graph of home, writing nothing else of home's: on this thread, its walk is kept.
     const reached = new Reach(locateVault({ root: notes }), { readOnly: true, record: false }).graphAt(home)!;
     expect(reached.notes.has("later/a.md")).toBe(true);
-    expect(readFileSync(kept, "utf8")).toBe(was);
+    expect(readFileSync(kept, "utf8")).toContain("later");
   } finally {
     process.env.HOME = before;
+    stopBacklinkJobs();
   }
 });
 
@@ -2032,8 +2043,140 @@ test("a temporary file only minutes old isn't swept: another writer's, on a shar
   utimesSync(f, minutes, minutes);
   sweepTemps(dir, "index.json");
   expect(existsSync(f)).toBe(true);
-  const hours = new Date(Date.now() - 2 * 3_600_000);
+  const hours = new Date(Date.now() - 2 * STALE_TEMP_MS);
   utimesSync(f, hours, hours);
   sweepTemps(dir, "index.json");
   expect(existsSync(f)).toBe(false);
+});
+
+test("a vault the machine's list opened, reached by a link later: recorded as seen then, as one a link opens is (17.11, #10)", async () => {
+  const { base, notes } = twoVaults();
+  // A vault nothing here links to.
+  const far = join(realpathSync(base), "far");
+  mkdirSync(far);
+  writeFileSync(join(far, "a.md"), "# A\n");
+  initVault(far, `pfar${made}`);
+  stopBacklinkJobs();
+  fakeThread();
+  try {
+    await onlyRootsUnder(base, async () => {
+      const h = await harness({ root: notes, open: "index.md" });
+      const seen = () => readRoots().find((v) => v.path === far)?.seen;
+      // Seen long ago: a reach records it again (17.11).
+      const was = "2020-01-01T00:00:00.000Z";
+      writeRoots(readRoots().map((v) => (v.path === far ? { ...v, seen: was } : v)));
+      h.app.reach.graphAt(far, { known: true });
+      expect(seen()).toBe(was);
+      h.app.reach.graphAt(far);
+      expect(seen()).not.toBe(was);
+    });
+  } finally {
+    stopBacklinkJobs();
+  }
+});
+
+test("several roots stamped indexed at once: each stamped, the machine's list written once (20.9)", async () => {
+  const { base, notes, app } = twoVaults();
+  await onlyRootsUnder(base, async () => {
+    for (const root of [notes, app]) recordLocation(locateVault({ root }));
+    const keys = [notes, app].map((root) => locateVault({ root }).key);
+    noteIndexed(keys, new Date("2026-10-24T05:00:00Z"));
+    expect(
+      readRoots()
+        .filter((v) => keys.includes(v.key))
+        .map((v) => v.indexed),
+    ).toEqual(["2026-10-24T05:00:00.000Z", "2026-10-24T05:00:00.000Z"]);
+  });
+});
+
+test("the vault an answer wrote the index of is stamped indexed even when catching the graph here up fails (20.9, #10)", async () => {
+  const { base, notes, app } = twoVaults();
+  stopBacklinkJobs();
+  const { sent, reply } = fakeThread();
+  try {
+    await onlyRootsUnder(base, async () => {
+      const h = await harness({ root: notes, open: "index.md" });
+      await h.keys("tab", "enter");
+      const g = vaultGraph(h.app, app)!;
+      const build = Graph.prototype.build;
+      Graph.prototype.build = function (this: Graph, ...args) {
+        if (this === g) throw new Error("can't be read");
+        return build.apply(this, args);
+      };
+      try {
+        reply(sent.length - 1, { wrote: true, config: configSignature(g.config) });
+        await read(h);
+      } finally {
+        Graph.prototype.build = build;
+      }
+      expect(readRoots().find((v) => v.key === g.loc.key)?.indexed).toBeString();
+    });
+  } finally {
+    stopBacklinkJobs();
+  }
+});
+
+test("nested vaults an answer built aren't stamped once slipbox is quitting (#10)", async () => {
+  const { base, notes, app } = twoVaults();
+  const lab = join(realpathSync(app), "lab");
+  mkdirSync(join(lab, ".slipbox"), { recursive: true });
+  stopBacklinkJobs();
+  const { sent, reply } = fakeThread();
+  const probe = peekProbe.followed;
+  let open!: () => void;
+  const gate = new Promise<void>((r) => {
+    open = r;
+  });
+  peekProbe.followed = async (root) => {
+    await gate;
+    return probe(root);
+  };
+  try {
+    await onlyRootsUnder(base, async () => {
+      recordLocation(locateVault({ root: lab }));
+      const h = await harness({ root: notes, open: "index.md" });
+      await h.keys("tab", "enter");
+      const peek = peekOf(h.app)!;
+      const g = vaultGraph(h.app, app)!;
+      // An answer that changes the graph here: its rebuild waits on the probe, and slipbox quits meanwhile.
+      reply(sent.length - 1, { others: [locateVault({ root: lab }).key], config: configSignature(g.config) });
+      await Bun.sleep(0);
+      h.app.quitting = true;
+      open();
+      await peek.reading;
+      expect(readRoots().find((v) => v.path === lab)?.indexed).toBeUndefined();
+    });
+  } finally {
+    peekProbe.followed = probe;
+    stopBacklinkJobs();
+  }
+});
+
+test("home's graph opened anew for changed settings, with notes it still lacks: its thread asked again, never parsed here (VV-D2, #10)", async () => {
+  const home = realpathSync(mkdtempSync(join(sandbox, "home-")));
+  const notes = join(home, "notes");
+  mkdirSync(join(notes, ".slipbox"), { recursive: true });
+  writeFileSync(join(notes, "index.md"), "# Index\n\n[the list](../todo.md)\n");
+  writeFileSync(join(home, "todo.md"), "# To do\n");
+  const before = process.env.HOME;
+  process.env.HOME = home;
+  stopBacklinkJobs();
+  const { sent, reply } = fakeThread();
+  try {
+    openGraph(homeAt(home), DEFAULT_CONFIG, true);
+    const h = await harness({ root: notes, open: "index.md" });
+    await h.keys("tab", "enter");
+    const g = vaultGraph(h.app, home)!;
+    const asked = sent.length;
+    // A note come since the thread's walk: the graph opened anew lacks it.
+    writeFileSync(join(home, "later.md"), "# Later\n");
+    reply(sent.length - 1, { config: "other settings" });
+    await read(h);
+    for (let i = 0; i < 100 && sent.length === asked; i++) await Bun.sleep(1);
+    expect(vaultGraph(h.app, home)).not.toBe(g);
+    expect(sent.slice(asked).map((m) => [m.root, m.rel])).toEqual([[g.root, null]]);
+  } finally {
+    process.env.HOME = before;
+    stopBacklinkJobs();
+  }
 });

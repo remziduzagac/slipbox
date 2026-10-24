@@ -300,12 +300,16 @@ export function writeRoots(roots: KnownRoot[]): boolean {
   }
 }
 
-/** The root `key` had its index built now (20.9, 20.10): how fresh it is, for the lists. */
-export function noteIndexed(key: string, at = new Date()): void {
+/**
+ * The root `key` had its index built now (20.9, 20.10): how fresh it is, for the lists. Several keys: the list written
+ * once.
+ */
+export function noteIndexed(key: string | string[], at = new Date()): void {
+  const keys = new Set(typeof key === "string" ? [key] : key);
   const list = readRoots();
-  const v = list.find((x) => x.key === key);
-  if (!v) return;
-  v.indexed = at.toISOString();
+  const found = list.filter((x) => keys.has(x.key));
+  if (!found.length) return;
+  for (const v of found) v.indexed = at.toISOString();
   writeRoots(list);
 }
 

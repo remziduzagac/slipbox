@@ -266,6 +266,7 @@ function caughtUp(app: App, graph: Graph, answer: BacklinksAnswer, holder: Holde
  */
 async function catchUp(app: App, asked: Graph, answer: BacklinksAnswer, holder: Holder): Promise<void> {
   if (app.quitting || !answer.indexed) return;
+  if (answer.wrote) noteIndexed(asked.loc.key);
   const others = answer.wrote || answer.others.length > 0;
   // This vault's backlinks from others read again, every view laid out with them, whatever becomes of the graph there:
   // an index just written may hold some (that vault's notes deleted, a vault nested in it built for the first time).
@@ -274,11 +275,13 @@ async function catchUp(app: App, asked: Graph, answer: BacklinksAnswer, holder: 
     app.graph.othersChanged();
     app.explorer.invalidateTree();
   }
-  if (!(await rebuilt(app, asked, answer, holder)) && others) relayout(app);
-  // Stamped indexed in the machine's list once the rebuild has recorded the vaults found in it: a nested one new since
-  // isn't in the list before.
-  if (answer.wrote) noteIndexed(asked.loc.key);
-  for (const key of answer.others) noteIndexed(key);
+  try {
+    if (!(await rebuilt(app, asked, answer, holder)) && others) relayout(app);
+  } finally {
+    // The vaults nested in it stamped indexed once the rebuild has recorded those found: one new since isn't in the
+    // machine's list before. Not once slipbox is quitting.
+    if (answer.others.length && !app.quitting) noteIndexed(answer.others);
+  }
 }
 
 /** The graph held for `asked`'s vault caught up with the answer (`catchUp`): true when it was, and laid out again. */
@@ -302,7 +305,7 @@ async function rebuilt(
   await peekProbe.followed(graph.root);
   if (app.quitting || holder()?.held(graph.root) !== graph) return false;
   let g: Graph | null = graph;
-  if (settings) g = reopened(app, graph, reach);
+  if (settings) g = reopened(app, graph, reach, holder);
   else {
     // A graph a link opened has no reach of its own yet: given one now, the walk made.
     const was = graph.reach ? nestedIn(graph) : null;
@@ -341,11 +344,14 @@ function parseHere(app: App, graph: Graph, holder: Holder): void {
  * Another vault's graph opened anew, with its settings as they are now: let go of, every buffer reading through it
  * given the new one. Its settings are fixed when it's made, and with others it walks and resolves differently.
  */
-function reopened(app: App, graph: Graph, reach: Reach): Graph | null {
+function reopened(app: App, graph: Graph, reach: Reach, holder: Holder): Graph | null {
   // Not opened anew (the vault gone since): the old kept, its buffers reading through it still.
   const fresh = reach.reopen(graph.root);
   if (!fresh) return null;
   if (!fresh.reach) reachFrom(app, fresh);
+  // Home's notes it still lacks (one changed since its thread's walk) aren't parsed here (`parseHere`): its thread
+  // asked again, once.
+  if (fresh.loc.mode === "home" && fresh.pendingCount) queueMicrotask(() => keepCaughtUp(app, fresh, holder));
   retired.add(graph);
   for (const b of everyBuffer(app))
     if (b.elsewhere?.graph === graph) b.elsewhere = { ...b.elsewhere, graph: fresh, rel: relative(fresh.root, b.abs) };
@@ -391,8 +397,8 @@ function nestedIn(graph: Graph): string {
  * The TUI's reach of other vaults (#10): never `thorough` — a vault is never parsed whole here to look for a name — and
  * each graph it opens for a link with notes its index lacks caught up on the backlinks' thread (`keepCaughtUp`), its
  * index built if it has none (home's excepted, VV-D2), the screen laid out again then: a name only those notes declare
- * is found a moment later. Not one taken from the machine's list (a search of every vault, a relink): no link
- * reached it.
+ * is found a moment later. One taken from the machine's list (a search of every vault, a relink) only once a link
+ * reaches it.
  */
 export function tuiReach(app: App, loc: VaultLocation): Reach {
   // Their state — indexes, redirects, the commit caught up with — written by the thread, never here (nor `git diff`

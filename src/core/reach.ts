@@ -69,8 +69,9 @@ export interface ReachOptions {
   /** It records the roots it reaches in the machine's list (17.11). A thread of its own doesn't: the list is read,
    *  changed and written again, and the main thread may be writing it too. */
   record?: boolean;
-  /** Told of each root's graph it opens for a link — not one `known`, taken from the machine's list: the TUI's, not
-   *  parsing one whole (`thorough`), has it caught up elsewhere. */
+  /** Told of each root's graph a link reaches, once: when it's opened for one, or — opened from the machine's list
+   *  (`known`) — when a link first reaches it. The TUI's, not parsing one whole (`thorough`), has it caught up
+   *  elsewhere. */
   opened?: (g: Graph) => void;
   /**
    * The graphs it opens write nothing of their vaults': their indexes, their redirects, the commit they caught up with.
@@ -171,7 +172,11 @@ export class Reach implements VaultReach {
     const key = real(root);
     if (this.graphs.has(key)) {
       const g = this.graphs.get(key)!;
-      if (g && !opts.known && this.untold.delete(key)) this.opened?.(g);
+      // Taken from the machine's list, reached by a link now: recorded as seen, and told.
+      if (g && !opts.known && this.untold.delete(key)) {
+        if (this.record) recordLocation(g.loc);
+        this.opened?.(g);
+      }
       return g;
     }
     const g = this.open(root, !!opts.known);
@@ -194,7 +199,6 @@ export class Reach implements VaultReach {
       const g = new Graph(loc, config);
       g.writesIndex = !this.readOnly;
       g.writesState = !this.readOnly;
-      g.keepsWalk = !this.readOnly;
       g.build(true, "lazy");
       g.thorough = this.thorough;
       return g;

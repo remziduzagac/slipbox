@@ -8,7 +8,7 @@ import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
 import { isAbsolute, join } from "node:path";
 import { type Config, loadConfig } from "./config.ts";
-import { Graph } from "./graph.ts";
+import { type Graph, openGraph } from "./graph.ts";
 import { sweepTemps } from "./fsutil.ts";
 import { cacheDir, stateDir } from "./paths.ts";
 import { Reach } from "./reach.ts";
@@ -79,10 +79,7 @@ export async function backlinksThere(request: BacklinksRequest): Promise<Backlin
   // another thread isn't known on this one, and a folder through one not asked is left out of the walk, and the index.
   await probeFollowed(loc.root);
   const config = loadConfig({ ...configFilesFor(loc) }).config;
-  const g = new Graph(loc, config);
-  // Home's walk, made here, kept by the main thread alone (T12): its `walk.json` never written on this thread.
-  g.keepsWalk = false;
-  g.build(true, "lazy");
+  const g = openGraph(loc, config, true, "lazy");
   // Home's index of another version's making, unread (VV-D2): it's as good as none — built in slices while nobody
   // works, never here. (One of this version whose every note changed since is caught up.)
   if (loc.mode === "home" && !g.indexRead) return { indexed: false };

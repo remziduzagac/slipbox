@@ -15,6 +15,7 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 import { loadConfig } from "../../../src/core/config.ts";
+import { STALE_TEMP_MS } from "../../../src/core/fsutil.ts";
 import { openGraph } from "../../../src/core/graph.ts";
 import { vaultKey } from "../../../src/core/paths.ts";
 import { setLinkAnswer } from "../../../src/core/symlinks.ts";
@@ -519,7 +520,7 @@ export const PEEK_BACKLINKS: Check[] = [
       home: true,
       startAt: "home/notes/index.md",
       setup: (s) => {
-        const hour = new Date(Date.now() - 2 * 3_600_000);
+        const hour = new Date(Date.now() - 2 * STALE_TEMP_MS);
         for (const f of staleTemps(s)) {
           mkdirSync(join(f, ".."), { recursive: true });
           writeFileSync(f, "{");

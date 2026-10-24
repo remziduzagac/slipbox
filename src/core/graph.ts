@@ -11,6 +11,7 @@
 import { statSync } from "node:fs";
 import { commentLinks, grammar, grammarFor, grammarNow, linkTokens, parseSyntax, type Grammar } from "./syntax.ts";
 import { basename, isAbsolute, join, posix, relative, sep } from "node:path";
+import { isMainThread } from "node:worker_threads";
 import type { Config } from "./config.ts";
 import { climbsOut, ensureDir, readJson, readText, sweepTemps, writeJson } from "./fsutil.ts";
 import { blockingLink } from "./symlinks.ts";
@@ -553,10 +554,10 @@ export class Graph {
   writesState = true;
 
   /**
-   * Home's: the walk it makes kept for the next (`walk.json`, VV-D2). False on another thread — a walk made there is
-   * handed back, never kept there (T12) — and for a graph that writes nothing of its vault's (`writesState`).
+   * Home's: the walk it makes kept for the next (`walk.json`, VV-D2) — on the main thread alone. A walk made on another
+   * thread (T12; a peek's backlinks', an export's) is never kept there: the main thread's may be newer.
    */
-  keepsWalk = true;
+  keepsWalk = isMainThread;
 
   /** Its index was read, of this version: false when there was none, or one another version wrote (unread). */
   indexRead = false;
