@@ -303,8 +303,9 @@ function labelOf(line: string): FieldId | undefined {
 export interface ReadBack {
   /** The title: the first line of text before the first label (a comment aside). */
   title: string;
-  /** The title's line, or -1. */
+  /** The title's line, or -1, and where in it the title starts (after a comment's end, say). */
   titleLine: number;
+  titleCol: number;
   /** Text before the first label that isn't the title: no field holds it, so the address would lose it. */
   stray: boolean;
   /** Each field's text, its sections joined; What slipbox sees with its generated fences taken off. */
@@ -313,7 +314,7 @@ export interface ReadBack {
   seen: { heading: number; end: number } | null;
   /** A fence still open where the text ends: where anything after it belongs isn't clear. */
   openFence: boolean;
-  /** A comment (`<!--`) still open where the text ends, before the first label: GitHub hides everything after it. */
+  /** A comment (`<!--`) still open where the text ends: GitHub hides everything after it. */
   openComment: boolean;
   /** The screen, and where you were, added: their first lines there, outside any fence (a note's own line that reads
    *  the same, inside an added screen or place, isn't one). */
@@ -335,33 +336,44 @@ export function readReport(text: string): ReadBack {
   let stray = false;
   let seen: { heading: number; end: number } | null = null;
   const added = { screen: false, where: false };
+  let titleCol = 0;
   for (let i = 0; i < lines.length; i++) {
-    let line = lines[i]!;
-    // Before the first label, a comment (the guide among them: GitHub hides them) is no text — neither the title nor
-    // text the address would lose — and nothing in it opens a fence. A comment opens a line, as an HTML block does;
-    // `<!--` later in a line is the line's own text (CommonMark), the title's as typed. Text after one is the line's.
-    if (!current && !fence) {
+    const raw = lines[i]!;
+    // A comment (the guide among them: GitHub hides them) opens a line, as an HTML block does, and runs to its `-->`:
+    // `<!--` later in a line is the line's own text (CommonMark), the title's as typed. Nothing in one is a label or
+    // opens a fence, nor does the rest of a line one starts — the line is the block's. Above the first label it's no
+    // text, neither the title nor text the address would lose; in a section it's the section's, as written.
+    let line = raw;
+    let cut = 0;
+    let html = false;
+    if (!fence) {
       if (comment) {
+        html = true;
         const end = line.indexOf("-->");
-        if (end < 0) continue;
-        comment = false;
-        line = line.slice(end + 3);
+        if (end < 0) line = "";
+        else {
+          comment = false;
+          cut = end + 3;
+          line = line.slice(cut);
+        }
       }
-      while (/^\s{0,3}<!--/.test(line)) {
-        const end = line.indexOf("-->");
+      while (!comment && /^\s{0,3}<!--/.test(line)) {
+        html = true;
+        const end = line.indexOf("-->", line.indexOf("<!--") + 4);
         if (end < 0) {
           comment = true;
           line = "";
-          break;
+        } else {
+          cut += end + 3;
+          line = line.slice(end + 3);
         }
-        line = line.slice(end + 3);
       }
     }
-    if (!fence) {
-      if (SCREEN_LINE.test(line)) added.screen = true;
-      if (line === WHERE_SAID) added.where = true;
+    if (!fence && !html) {
+      if (SCREEN_LINE.test(raw)) added.screen = true;
+      if (raw === WHERE_SAID) added.where = true;
     }
-    const id = fence ? undefined : labelOf(line);
+    const id = fence || html ? undefined : labelOf(raw);
     if (id) {
       current = [];
       currentId = id;
@@ -371,17 +383,17 @@ export function readReport(text: string): ReadBack {
     }
     const fenced = fence !== null;
     if (fence) {
-      if (fence.close.test(line)) fence = null;
-    } else {
-      const open = FENCE_OPEN.exec(line);
+      if (fence.close.test(raw)) fence = null;
+    } else if (!html) {
+      const open = FENCE_OPEN.exec(raw);
       // A backtick fence's info string never holds a backtick (CommonMark): such a line is text. Closed by a line of
       // its character, at least as long.
       if (open && !(open[1]![0] === "`" && open[2]!.includes("`")))
         fence = { close: new RegExp(`^ {0,3}${open[1]![0] === "`" ? "`" : "~"}{${open[1]!.length},}\\s*$`) };
     }
     if (current) {
-      current.push(line);
-      if (currentId === "output" && seen && line.trim()) seen.end = i + 1;
+      current.push(raw);
+      if (currentId === "output" && seen && raw.trim()) seen.end = i + 1;
       continue;
     }
     // Before the first label: the title, and any other text — a fence's lines never the title.
@@ -389,6 +401,8 @@ export function readReport(text: string): ReadBack {
     if (titleLine < 0 && !fenced && !fence) {
       title = line.trim();
       titleLine = i;
+      // Where the title starts in its line: what's before it there (a comment's end) stays in the body.
+      titleCol = cut + (line.length - line.trimStart().length);
     } else stray = true;
   }
   const fields: Partial<Record<FieldId, string>> = {};
@@ -399,7 +413,7 @@ export function readReport(text: string): ReadBack {
       .join("\n\n");
     if (joined) fields[id] = id === "output" ? inertFences(unfenceAttachments(joined)) : joined;
   }
-  return { title, titleLine, stray, fields, seen, openFence: fence !== null, openComment: comment, added };
+  return { title, titleLine, titleCol, stray, fields, seen, openFence: fence !== null, openComment: comment, added };
 }
 
 /** What an added screen and place begin with: added is this line being in the text. */
@@ -492,7 +506,13 @@ export function sentText(text: string): string {
 /** What gh posts: the title, and the text after it, as you left them (the guide out). */
 export function postOf(text: string, r: ReadBack = readReport(text)): { title: string; body: string } {
   const lines = text.split("\n");
-  if (r.titleLine >= 0) lines.splice(r.titleLine, 1);
+  // The title's line out of the body, but for what's before the title on it: a comment's end must stay, or the body
+  // would open a comment that never closes, and GitHub hide all of it.
+  if (r.titleLine >= 0) {
+    const before = lines[r.titleLine]!.slice(0, r.titleCol).replace(/\s+$/, "");
+    if (before) lines[r.titleLine] = before;
+    else lines.splice(r.titleLine, 1);
+  }
   return {
     title: r.title,
     body: `${sentText(lines.join("\n"))

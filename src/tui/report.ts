@@ -152,14 +152,17 @@ export class Reporter {
    *  text, and how it was shown. */
   private whereNow(): string {
     const v = this.app.view;
-    if (!v || v.buf.virtual) return "no file was open";
+    // A window of no file (a hover, a commit's message); a peek's is its file, in its vault.
+    const e = v?.buf.elsewhere;
+    if (!v || (v.buf.virtual && !e)) return "no file was open";
     const line = this.app.cursorLine(v);
     // The cursor's line alone, not the note split into all of its lines.
     const starts = v.buf.lineStarts();
     const from = starts[line - 1] ?? 0;
     const text = v.buf.source.slice(from, starts[line] ?? v.buf.source.length).replace(/\r?\n$/, "");
     const shown = v.buf.kind.group !== "note" ? "" : v.live ? ", the lens open" : v.source ? ", source" : ", rendered";
-    return sanitize(`${v.buf.rel ?? tildePath(v.buf.abs)}, line ${line}${shown}\n${text}`);
+    const path = e ? `${e.vault}: ${e.rel ?? tildePath(v.buf.abs)}` : (v.buf.rel ?? tildePath(v.buf.abs));
+    return sanitize(`${path}, line ${line}${shown}\n${text}`);
   }
 
   /** The window, opened: the report kept, else a new one, typing on its title's line. */

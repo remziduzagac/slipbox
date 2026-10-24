@@ -444,6 +444,23 @@ export const REPORTING: Check[] = [
   },
   {
     area: "navigating",
+    name: "report: a comment left open in What happened hides the facts after it on GitHub: no address, no gh",
+    covers: { cases: ["help"], commands: ["help.report", "help.report_send"] },
+    options: { size: { cols: 120, rows: 34 } },
+    run: async (s) => {
+      await leader(s, "r");
+      await s.type("Facts hidden");
+      await s.keys("escape", "/");
+      await s.type("### What happened");
+      await s.keys("enter", "o");
+      await s.type("<!-- an aside, never closed");
+      await s.keys("escape", "escape", "ctrl+s");
+      await s.see(/a comment \(<!--\) is left open: github hides everything after it/i);
+      s.expect(!s.text().includes("(a) Copy the bug form's address"), "no address while a comment is open");
+    },
+  },
+  {
+    area: "navigating",
     name: "report: a folder's keys can't send a report, which runs a program: ignored, said",
     covers: { cases: ["config"] },
     options: {

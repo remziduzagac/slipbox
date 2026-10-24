@@ -436,6 +436,38 @@ describe("adding the screen or the place (RPT-D2)", () => {
     });
   });
 
+  test("a comment left open in a section: GitHub hides every section after it, so no address, no gh", () => {
+    const text = "Title\n\n### What happened\n\n<!-- hidden\n\n### Version\n\n0.5\n";
+    const r = readReport(text);
+    expect(r.openComment).toBe(true);
+    // Its labels are the comment's, not the form's.
+    expect(r.fields.version).toBeUndefined();
+    expect(noAddress(r)).toBe("a comment (<!--) is left open: GitHub hides everything after it — close it with -->");
+    // Closed, the section keeps it as written, and the labels after it are labels again.
+    const closed = readReport("Title\n\n### What happened\n\n<!-- aside -->\nboom\n\n### Version\n\n0.5\n");
+    expect([closed.openComment, closed.fields.happened, closed.fields.version]).toEqual([
+      false,
+      "<!-- aside -->\nboom",
+      "0.5",
+    ]);
+  });
+
+  test("gh's body keeps a comment's end that shares the title's line: the body never opens a comment", () => {
+    const text = "<!-- a note\nstill -->My title\n\n### What happened\n\nboom\n";
+    const r = readReport(text);
+    expect([r.title, r.openComment]).toEqual(["My title", false]);
+    const post = postOf(text);
+    expect(post.title).toBe("My title");
+    expect(post.body).toBe("<!-- a note\nstill -->\n\n### What happened\n\nboom\n");
+  });
+
+  test("the rest of a line a comment starts is the comment's: no fence opened, no label, there", () => {
+    const fence = readReport("<!-- c -->```js\n\n### What happened\n\na\n");
+    expect([fence.openFence, fence.fields.happened]).toEqual([false, "a"]);
+    const label = readReport("T\n<!-- x -->### Version\n\n1\n");
+    expect(label.fields.version).toBeUndefined();
+  });
+
   test("a label with closing hashes is the label; a fence above the labels is never the title", () => {
     expect(readReport("T\n\n### What happened ###\n\na\n").fields.happened).toBe("a");
     const fenced = readReport("```\ncode\n```\nTitle\n### What happened\n\na\n");

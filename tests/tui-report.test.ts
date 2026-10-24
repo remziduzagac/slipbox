@@ -231,6 +231,23 @@ describe("the screen and where you were (RPT-D2)", () => {
     expect((h.app.overlay as ListOverlay).items.some((i) => i.data === "screen")).toBe(true);
   });
 
+  test('where you were in a peek: its file, in its vault, never "no file was open"', async () => {
+    const h = await harness();
+    const file = join(sandbox, "other-vault-note.md");
+    writeFileSync(file, "first\n");
+    const buf = new NoteBuffer(null, file, `peek:${file}`);
+    buf.kind = { group: "note", format: "markdown" };
+    buf.virtual = { save: () => true };
+    buf.readOnly = "a peek is read-only — o goes there, to edit it";
+    buf.elsewhere = { vault: "research", graph: null, rel: "notes/other.md" };
+    buf.loadText("first\n");
+    h.app.floating = { kind: "hover", view: h.app.makeView(buf), title: "Peek" };
+    h.frame();
+    await h.app.run("help.report where");
+    h.frame();
+    expect(text(h)).toContain("Where it was:\n\n```text\nresearch: notes/other.md, line 1, rendered\nfirst\n```");
+  });
+
   test("where you were: a window with no file, and a file outside the vault", async () => {
     const h = await harness();
     h.app.overlays.openHover("A hover's text", "Hover");
