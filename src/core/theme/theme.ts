@@ -146,6 +146,8 @@ export const ROLES = [
   "topbar",
   "topbar_button",
   "topbar_button_on",
+  // a button that can't be used: a mode the window's file has no view for, on its header (HDR-D2)
+  "topbar_button_disabled",
   "topbar_chip",
   "hover",
   "breadcrumb",
@@ -436,6 +438,8 @@ export function themeFromPalette(
     // Toggle buttons sit on whatever they're drawn on: dim while off, bright while on.
     topbar_button: { fg: p.comment },
     topbar_button_on: { fg: p.fg_strong, bold: true },
+    // Fainter than an unused one, so a disabled button reads as such (HDR-D2).
+    topbar_button_disabled: { fg: p.surface2 },
     topbar_chip: { fg: p.purple, bold: true },
     hover: { fg: p.fg_strong, bg: p.surface2, bold: true },
     breadcrumb_band: { bg: blend(p.surface, p.bg, 0.35) }, // the breadcrumb row's background
@@ -506,6 +510,7 @@ export function terminalTheme(): Theme {
     topbar: { fg: a(7) },
     topbar_button: { fg: a(8) },
     topbar_button_on: { fg: a(15), bold: true },
+    topbar_button_disabled: { fg: a(8), dim: true },
     topbar_chip: { fg: a(5), bold: true },
     hover: { fg: a(0), bg: a(7), bold: true },
     breadcrumb_band: { bg: a(0) },
@@ -560,6 +565,7 @@ export function monoTheme(): Theme {
   roles.tab_active_idle = { bold: true };
   roles.tab_active = { bold: true, underline: true };
   roles.topbar_button = { dim: true };
+  roles.topbar_button_disabled = { dim: true }; // as an unused one: without colour, only its click tells (HDR-D2)
   // Links and code must still read as such without colour, and a link's status must show.
   roles.link = { underline: true };
   roles.wikilink = { underline: true };

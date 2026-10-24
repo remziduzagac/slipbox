@@ -42,6 +42,25 @@ export const FILE_SPECS: CommandSpec[] = [
     cli: I,
     desc: "Shows the note rendered, except the block the cursor is in: the lens, its markdown to edit in place",
   },
+  // The window header's buttons (HDR-D2): each sets a mode; in that mode already, nothing.
+  {
+    id: "view.mode_read",
+    title: "Read mode",
+    cli: I,
+    desc: "Shows this window's file rendered (code as a document), as the header's Read does; the cursor stays on its line",
+  },
+  {
+    id: "view.mode_lens",
+    title: "Lens mode",
+    cli: I,
+    desc: "Opens the lens in this window, from source mode too, as the header's Lens does: the block the cursor is in as its markdown",
+  },
+  {
+    id: "view.mode_source",
+    title: "Source mode",
+    cli: I,
+    desc: "Shows this window's file as written, as the header's Source does; the cursor stays on its line",
+  },
   {
     id: "lens.grow",
     title: "Grow the lens",

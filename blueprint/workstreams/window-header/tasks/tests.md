@@ -1,5 +1,5 @@
 ---
-status: todo
+status: doing
 assignee: claude-24
 blocked_by: [HDR-T3, HDR-T4]
 tracker: [gh:#24]

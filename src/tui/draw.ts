@@ -2,8 +2,8 @@
 // the which-key popup and overlays. Viewport-only: only the rows on screen are drawn. This file
 // lays the screen out and draws its frame — the top bar, the tabs, the rails, the breadcrumb, the
 // rules between panes; each region's own drawing is a draw-*.ts of its own (D235): the windows'
-// (draw-pane.ts), the side panels' (draw-panels.ts), the Problems panel's, the status line's, what
-// floats over the windows (draw-overlays.ts).
+// (draw-pane.ts, their headers draw-header.ts), the side panels' (draw-panels.ts), the Problems
+// panel's, the status line's, what floats over the windows (draw-overlays.ts).
 //
 // Returns the geometry of what was drawn, which the mouse handler hit-tests against.
 
@@ -405,7 +405,7 @@ export function button(
 
 /**
  * The top bar: the explorer button and the app chip on the left, the root's state (indexing) on
- * the right; the middle is left empty. (The outline's button is on the breadcrumb row.)
+ * the right; the middle is left empty. (The outline's button is on the window header.)
  */
 function drawTopBar(app: App, c: Canvas, band: Band, geo: Geometry): void {
   const theme = app.theme;
@@ -430,8 +430,8 @@ function drawTopBar(app: App, c: Canvas, band: Band, geo: Geometry): void {
       ) + 1;
   x += button(app, c, x, band, " slipbox ", "topbar_chip", "btn:palette", geo, bar.bg);
 
-  // Right side, laid out from the far right inwards. The outline's button is on the breadcrumb,
-  // or here when no window drew one (breadcrumb off, a window too short for it).
+  // Right side, laid out from the far right inwards. The outline's button is on a window's header,
+  // or here when no window drew one (the header off, a window too short for it).
   let rx = c.width - 1;
   if (app.tab && !geo.hot.some((h) => h.id === "btn:outline")) {
     const label = icon(g.outlineButton);
@@ -462,14 +462,15 @@ function drawTopBar(app: App, c: Canvas, band: Band, geo: Geometry): void {
 }
 
 /**
- * A window's outline breadcrumb: the headings its cursor is under, each clickable. When they don't
- * all fit, the middle collapses into `…` (click: the whole path as a dropdown); then the texts are
- * cut; then the first goes too, then the last, leaving only `…`.
+ * A window's outline breadcrumb, on its header: `crumbs`, the headings its cursor is under, each clickable. When they
+ * don't all fit, the middle collapses into `…` (click: the whole path as a dropdown); then the texts are cut; then the
+ * first goes too, then the last, leaving only `…`.
  */
 export function drawBreadcrumb(
   app: App,
   c: Canvas,
   view: View,
+  crumbs: { text: string; line: number }[],
   x0: number,
   x1: number,
   y: number,
@@ -477,7 +478,6 @@ export function drawBreadcrumb(
   geo: Geometry,
 ): void {
   const theme = app.theme;
-  const crumbs = app.outlineView.breadcrumb(view);
   if (!crumbs.length || x1 - x0 < 4) return;
   const index = app.tab!.views.indexOf(view);
   const sep = ` ${app.glyphs.crumb} `;
@@ -518,6 +518,18 @@ export function drawBreadcrumb(
 
 /** Below this, a heading is cut no further: the breadcrumb drops it instead. */
 const CRUMB_MIN = 8;
+
+/**
+ * The columns a breadcrumb keeps before the mode's buttons beside it shorten (HDR-D4): its icon and a space, then its
+ * innermost heading cut to `CRUMB_MIN`, after `… ›` when there are two or more — crumbLayout's narrowest form but `…`
+ * alone. 0 with no headings.
+ */
+export function crumbLeast(crumbs: { text: string }[], glyphs: { crumb: string; crumbIcon: string }): number {
+  const n = crumbs.length;
+  if (!n) return 0;
+  const last = Math.min(CRUMB_MIN, stringWidth(crumbs[n - 1]!.text));
+  return stringWidth(glyphs.crumbIcon) + 1 + (n >= 2 ? 1 + stringWidth(` ${glyphs.crumb} `) : 0) + last;
+}
 
 /**
  * Which headings a breadcrumb shows in `room` columns, each with its width, and where `…` stands

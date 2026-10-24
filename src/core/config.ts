@@ -107,11 +107,13 @@ export interface Config {
     /** Cap the text column at `readable_max` columns, centred. */
     readable_width: boolean;
     readable_max: number;
-    /** Hide the top bar, frame, explorer, outline, tab strip, breadcrumbs and status line; readable width on. */
+    /** Hide the top bar, frame, explorer, outline, tab strip, window headers and status line; readable width on. */
     zen: boolean;
     /** The top bar: the explorer button, the app chip, vault state. */
     top_bar: boolean;
-    /** The outline breadcrumb at the top of each window. */
+    /** The window header (HDR-D3): the row atop each window — a split's name, the breadcrumb, the mode's buttons, ▤. */
+    window_header: boolean;
+    /** The outline breadcrumb on each window's header: the headings the cursor is under. */
     breadcrumb: boolean;
     /** The frame's lines: light `─ │` or heavy `━ ┃`. */
     lines: "light" | "heavy";
@@ -339,6 +341,7 @@ export const DEFAULT_CONFIG: Config = {
     readable_max: 100,
     zen: false,
     top_bar: true,
+    window_header: true,
     breadcrumb: true,
     lines: "light",
     left_rail: true,

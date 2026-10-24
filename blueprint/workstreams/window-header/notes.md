@@ -179,3 +179,19 @@ The cases, each with a unit test (U) and a terminal check (T):
 - 2026-10-24: drafted from the issue and the code; no research outside the code was needed.
 - 2026-10-24: Codex critiqued the draft; its findings checked and settled (§ Review by Codex).
 - 2026-10-24: the user accepted the design (§ Approval); decisions recorded, tasks written.
+- 2026-10-24: HDR-T1 to HDR-T4 built: `Lens.refusal` and `switchMode` (the toggles' words, shared), the three
+  commands, `ui.window_header`, `drawWindowHeader` in `src/tui/draw-header.ts` with `modeButtons` and `crumbLeast`,
+  the `mode:` clicks, `topbar_button_disabled`. Tried in the harness: full buttons beside the breadcrumb, letters in a
+  41-column split, a broken JSON file in source mode with Read and Lens disabled.
+- 2026-10-24: found while testing: a click on the header while typing in the lens on data that stopped parsing said
+  the "doesn't parse" warning twice, once as ending typing switched the window to source mode and once as the click's
+  refusal. The click now goes by the mode the window showed when clicked (design.md § the click); tests for the
+  selected Lens and the disabled Read clicked so.
+- 2026-10-24: the unit tests, `tests/window-header.test.ts` (30), each checked by undoing what it tests once (the
+  mutations in `tmp/issue/mutations-*.json`, not in git): every one fails without its code. Three passed at first
+  and were tightened: a helper that drew the frame twice (so a window laid out late looked right), a check that read
+  the other window's breadcrumb on a shared row, and the drawn buffer's own mode. One guard was found redundant (a
+  click on the selected button: its command does nothing) and removed.
+- 2026-10-24: existing tests that turned the row off with `ui.breadcrumb = false` now use `ui.window_header = false`
+  (`tests/tui.test.ts`: the outline button on the top bar; a split's names on their own rows); the breadcrumb's own
+  test checks that the header stays.

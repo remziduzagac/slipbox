@@ -9,6 +9,14 @@ import { stringWidth } from "../core/width.ts";
 import type { NoteBuffer } from "./buffer.ts";
 import type { App, View } from "./app.ts";
 
+/** A window's mode: the rendered view (Read), live preview (the lens) or source mode. */
+export type ViewMode = "rendered" | "source" | "live";
+
+/** The mode a window is in. */
+export function viewMode(view: View): ViewMode {
+  return view.source ? "source" : view.live ? "live" : "rendered";
+}
+
 /** The lens, live preview and source mode. */
 export class Lens {
   constructor(readonly app: App) {}
@@ -294,20 +302,29 @@ export class Lens {
     this.setViewMode(view, on ? "source" : "rendered");
   }
 
+  /**
+   * Why a window can't switch to `mode` (HDR-D2), said by `setViewMode` and drawn as a disabled button on its header;
+   * null when it can, or is in it. It says nothing itself.
+   */
+  refusal(view: View, mode: ViewMode): { level: "info" | "warn"; text: string } | null {
+    if (viewMode(view) === mode) return null;
+    if (view.buf.drawn) return { level: "info", text: "a diff is drawn one way" };
+    if (mode === "source" || this.app.canRender(view.buf)) return null;
+    const group = view.buf.kind.group;
+    const why =
+      group === "data"
+        ? `doesn't parse — ${view.buf.parsed.error}`
+        : group === "text"
+          ? "has no rendered view"
+          : "has no rendered view yet";
+    return { level: group === "data" ? "warn" : "info", text: `${view.buf.name} ${why}: source mode` };
+  }
+
   /** A window's mode: rendered, source (the markdown), or live preview. The cursor keeps its line. */
-  setViewMode(view: View, mode: "rendered" | "source" | "live"): void {
-    const now = view.source ? "source" : view.live ? "live" : "rendered";
-    if (now === mode) return;
-    if (view.buf.drawn) return this.app.message("info", "a diff is drawn one way");
-    if (mode !== "source" && !this.app.canRender(view.buf)) {
-      const why =
-        view.buf.kind.group === "data"
-          ? `doesn't parse — ${view.buf.parsed.error}`
-          : view.buf.kind.group === "text"
-            ? "has no rendered view"
-            : "has no rendered view yet";
-      return this.app.message(view.buf.kind.group === "data" ? "warn" : "info", `${view.buf.name} ${why}: source mode`);
-    }
+  setViewMode(view: View, mode: ViewMode): void {
+    if (viewMode(view) === mode) return;
+    const refused = this.refusal(view, mode);
+    if (refused) return this.app.message(refused.level, refused.text);
     if (view.insert) stopInsert(this.app, view);
     this.app.history.remember(view);
     // On a row of the file's text, the cursor keeps its character, not its column (a code cell's rows are framed).

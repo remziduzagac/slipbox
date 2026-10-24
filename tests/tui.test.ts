@@ -3563,27 +3563,38 @@ describe("top bar, tab strip, status line", () => {
     // Two steps forward at once, from there.
     expect(h.app.view!.fwd.length).toBe(2);
   });
-  test("the breadcrumb can be hidden (a UI setting); find's row then sits at the window's top", async () => {
+  test("the breadcrumb can be hidden (a UI setting): the header stays, find's row under it; without the header, at the window's top", async () => {
     const h = await harness({ open: "samples/handbook/operations-handbook.md", width: 120, height: 30 });
-    const v = h.app.view!;
     await h.keys("]", "]"); // onto a heading, so the breadcrumb has something
     expect(h.frame()).toContain("§");
     await h.app.run("ui.breadcrumb");
     expect(h.app.ui.breadcrumb).toBe(false);
-    let f = h.frame();
-    expect(f).not.toContain("§");
-    const pane = h.app.geometry!.panes[0]!;
+    let lines = h.frame().split("\n");
+    expect(lines.join("\n")).not.toContain("§");
+    // The header keeps its row and its buttons (HDR-D3).
+    const header = h.app.geometry!.panes[0]!.y - 2;
+    expect(lines[header]).toMatch(/Read {2}Lens {2}Source/);
     await h.keys("/", "D", "2");
-    f = h.frame();
-    const lines = f.split("\n");
-    // The find row is the window's first row, its rule under it, then the text.
+    lines = h.frame().split("\n");
+    // The find row under the header's rule, its own rule under it, then the text.
+    expect(lines[header]).toMatch(/Read {2}Lens {2}Source/);
+    expect(lines[header + 2]).toMatch(/› D2/);
     expect(lines[h.app.geometry!.panes[0]!.y - 2]).toMatch(/› D2/);
-    expect(pane.y).toBeLessThan(h.app.geometry!.panes[0]!.y);
     await h.keys("escape", "escape");
-    // It's in the UI settings list, and it's remembered like the others.
+    // Without the header, the find row is the window's first row.
+    await h.app.run("ui.window_header");
+    expect(h.app.ui.window_header).toBe(false);
+    h.frame();
+    const top = h.app.geometry!.panes[0]!.y;
+    await h.keys("/", "D", "2");
+    lines = h.frame().split("\n");
+    expect(lines[top]).toMatch(/› D2/);
+    expect(lines.join("\n")).not.toMatch(/Read {2}Lens/);
+    await h.keys("escape", "escape");
+    // Both are in the UI settings list, and remembered like the others.
+    await h.app.run("ui.window_header");
     await h.app.run("ui.breadcrumb");
-    expect(h.app.ui.breadcrumb).toBe(true);
-    void v;
+    expect([h.app.ui.window_header, h.app.ui.breadcrumb]).toEqual([true, true]);
   });
   test("messages float at the top right and prompts take the status line: the note never changes height", async () => {
     const h = await harness({ open: "notes/alpha.md", width: 100, height: 24 });
@@ -3888,11 +3899,11 @@ describe("review round 1", () => {
     expect(new Set(col).size).toBeGreaterThan(1);
     expect(h.app.theme.roles.sidebar_active.bold).toBe(true);
   });
-  test("without the breadcrumb, the outline button is in the top bar", async () => {
+  test("without the window header, the outline button is in the top bar", async () => {
     const h = await harness({
       width: 100,
       height: 14,
-      config: (c) => ((c.ui.breadcrumb = false), (c.ui.right_rail = false)),
+      config: (c) => ((c.ui.window_header = false), (c.ui.right_rail = false)),
     });
     h.frame();
     const btn = h.app.geometry!.hot.find((r) => r.id === "btn:outline")!;
@@ -16878,8 +16889,8 @@ describe("lists and commands no test had run (the TUI model)", () => {
     expect(h.app.view!.cur.row).toBeGreaterThan(0);
   });
 
-  test("a split with the breadcrumb off: each window titled by its note on its top row", async () => {
-    const h = await harness({ width: 160, config: (c) => (c.ui.breadcrumb = false) });
+  test("a split with the window header off: each window titled by its note on its top row", async () => {
+    const h = await harness({ width: 160, config: (c) => (c.ui.window_header = false) });
     await h.keys("ctrl+w", "v");
     await h.app.run("note.open notes/beta.md");
     const [a, b] = h.app.geometry!.panes;

@@ -1,5 +1,5 @@
 ---
-status: todo
+status: review
 assignee: claude-24
 blocked_by: []
 tracker: [gh:#24]

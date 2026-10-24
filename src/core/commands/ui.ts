@@ -17,10 +17,16 @@ export const UI_SPECS: CommandSpec[] = [
   { id: "ui.line_numbers", title: "Line numbers", cli: I, desc: "Shows source line numbers on the left" },
   { id: "ui.wrap", title: "Wrap long lines", cli: I, desc: "Wraps to the pane, or scrolls sideways when off" },
   {
+    id: "ui.window_header",
+    title: "Window header",
+    cli: I,
+    desc: "Shows or hides the row atop each window: its name in a split, the breadcrumb, the Read, Lens and Source buttons",
+  },
+  {
     id: "ui.breadcrumb",
     title: "Breadcrumb",
     cli: I,
-    desc: "Shows or hides the heading path at the top of each window",
+    desc: "Shows or hides the heading path on each window's header; the header stays",
   },
   {
     id: "ui.top_bar",

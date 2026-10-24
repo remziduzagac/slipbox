@@ -46,9 +46,12 @@ status chip, which describes the focused window, agrees. Then, on another enable
 command, `view.mode_read`, `view.mode_lens` or `view.mode_source`, which switches straight there through
 `Lens.setViewMode` (Lens from Source never passes through Read) and says what the window shows now, in the toggles'
 words. On the selected button it changes nothing more: a radio group never deselects. On a disabled one it says why,
-in `setViewMode`'s words. The hit areas are `mode:<window>:<read|lens|source>`, the window's index checked as a
-heading's is; the selected and the disabled keep theirs, without `hover`. The which-key popup over the header hides
-them as it hides the headings' (`draw-overlays.ts`).
+in `setViewMode`'s words. Where ending typing switched the window already (typing in the lens on data that stopped
+parsing: to source mode, said), the click adds nothing, so one click never says it twice; the mouse keeps each
+window's mode as the click found it for that (`Mouse.shownModes`). The hit areas are
+`mode:<window>:<read|lens|source>`, the window's index checked as a heading's is; the selected and the disabled keep
+theirs, without `hover`. The which-key popup over the header hides them as it hides the headings'
+(`draw-overlays.ts`).
 
 **Room** (HDR-D4). The header's row, from the right: `▤` where it is, then the buttons, then the breadcrumb between
 the name and them. The buttons are three labels side by side, each with a space either side: ` Read ` ` Lens `
@@ -58,8 +61,9 @@ as before. The buttons take the widest form that leaves the breadcrumb its least
 needs cut to 8 columns, with the icon and its space, and `… ›` before it when there are two headings or more (2 + 4 +
 8 = 14 columns at most; nothing when it has no headings or is hidden). Past that, the breadcrumb folds further, as
 `crumbLayout` does, until only `…` or nothing is left; the selected letter goes only where it doesn't fit beside the
-name and `▤` (a split's window squeezed to its narrowest, about 12 columns). `modeButtons(room, …)` beside
-`crumbLayout` picks the form. The name keeps its place (cut to half the row, as now), and `▤` its.
+name and `▤` (a split's window squeezed to its narrowest, about 12 columns). `modeButtons` (`draw-header.ts`) picks
+the form, from the breadcrumb's least room, `crumbLeast`, beside `crumbLayout`. The name keeps its place (cut to half
+the row, as now), and `▤` its.
 
 **The breadcrumb**, on the header after the name, starts with an icon (`§`, ascii `#`) that opens the heading finder
 when clicked, then the chain of headings that window's cursor is under, each cut to 40 columns. When they don't all

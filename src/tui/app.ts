@@ -346,6 +346,8 @@ export interface UiState {
   zen: boolean;
   mouse: boolean;
   urls: boolean;
+  /** The row atop each window (HDR-D3), and the breadcrumb on it. */
+  window_header: boolean;
   breadcrumb: boolean;
   top_bar: boolean;
   /** The problems bar beside the text (19.9), and the problems' text marked (19.10). */
@@ -375,6 +377,7 @@ export function uiDefaults(c: Config): UiState {
     readable_width: c.ui.readable_width,
     zen: c.ui.zen,
     mouse: c.ui.mouse,
+    window_header: c.ui.window_header,
     breadcrumb: c.ui.breadcrumb,
     top_bar: c.ui.top_bar,
     problems_bar: c.diagnostics.bar !== "off",
