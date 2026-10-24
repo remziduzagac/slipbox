@@ -247,3 +247,21 @@ the deployments D258 relies on are served; then whatever fix that calls for.
   types as strings and names by case: GitHub's loose equality (numbers for mixed types) and names ignoring case now,
   checked. Not taken: D?1's number, and `v*` in `settings.json`'s expected environment (the setting is the
   maintainer's), as before.
+- 2026-10-24: Review, round 5: Codex's part skipped, Codex at its usage limit; a second reviewer does it.
+- 2026-10-24: Review, round 5, `/code-review` and the second reviewer (each resumed after a usage limit), each finding
+  checked: no defect in the workflows or the tests. Taken: the hand-off's log said the site "is deployed" by the run
+  it started, which it can't know: it says that run does it and has the result; `holds` gave a missing name
+  `undefined`, not GitHub's `null`, and an object a number: fixed, checked; a failed read-back printed only the marker
+  served, which reads as a contradiction when only a channel is off: it prints each file's built and served lines now,
+  tested; the re-run hint said a re-run of the preview's run deploys again, which holds only for `pages / site`: says
+  so, and that `deploy` alone is refused; `pages.yml`'s header and `MAINTAINING.md` step 11 had the release's docs live
+  at publishing, unless a preview came first; the pull request's "older than any since" and "as they already did in
+  practice", and the guard test's title; the research's older line on 0.5.0's "preview's files" (neither the preview's
+  nor `main`'s push's had `stable`, so which isn't recorded); 40050527681's creation time (01:36:19). Taken as
+  recommended while the maintainer was away: the re-run guard kept, though a preview's run whose deployment failed
+  before anything was deployed can't then go green (its `deploy` alone refused, a whole re-run stopped at `plan`): a
+  run by hand on `main` fixes the site, and a re-run that might put an older site back would pass; written in D?1's
+  Cost and `MAINTAINING.md` § Previews. Not taken: steps run with `bash --noprofile --norc -eo pipefail` in the tests,
+  since GitHub runs a step with no `shell` as `bash -e {0}` (its own log, run 40050816202's `site`: `shell:
+  /usr/bin/bash -e {0}`); the release's run waiting for the run it starts (D?1's Not chosen: it deadlocks); and, as
+  before, `served`'s own empty-marker check, the condition written twice, `v*` in the environment.

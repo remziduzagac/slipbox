@@ -67,17 +67,18 @@ Each claim is marked with its provenance, as the blueprint's README says.
   minutes read; by hand on `test`, run 40046571004, redeployed 71313f3, deployed before from `test` alone: served ten
   seconds after, the same. So not a rule by ref: one by the first ref to deploy the commit predicted the first
   unserved, one by Pages' source branch (`main`) the second, one by the default branch (`dev`) both.
-- **And repeating the commit served:** both of those deployed a commit the site wasn't serving, so they left open a
-  rule that a repeat of the commit served is never applied, which a release's run by hand is. By hand on `main` twice
-  in a row (*ran*, 2026-10-24): run 40050527681 deployed 5fe758f, served at 01:36:26; run 40050816202 deployed it
+- **And repeating the commit served:** both of those deployed a commit the site wasn't serving, so they left open a rule
+  that a repeat of the commit served is never applied, which a release's run by hand is. By hand on `main` twice in a
+  row (*ran*, 2026-10-24): run 40050527681 deployed 5fe758f at 01:36:19, served at 01:36:26; run 40050816202 deployed it
   again at 01:40:21 while the site served it, and the files' `last-modified` went to 01:40:28, for the twelve minutes
   read. Served.
 - The site's files carry the `last-modified` of the deployment serving them, the same for every file, and ETags that
   begin with that time in hex (`6adbfcc2-48`, `6adbfcc2-5e`), so a deployment that changes no file's contents still
   shows whether it's served (*ran*, curl, 2026-10-24).
 - 0.5.0's release run, 39864294664: the site's artifact held `stable`; the deployment of 5fe758f said "Reported
-  success!" five seconds after it was created, and the site went on serving the preview's files, without `stable`,
-  until another commit was deployed an hour later (*ran*, the run's log and the site, 2026-10-22).
+  success!" five seconds after it was created, and the site went on serving files without `stable` until another commit
+  was deployed an hour later (*ran*, the run's log and the site, 2026-10-22). Whether they were the preview's or
+  `main`'s push's isn't recorded: neither had `stable` (2026-10-24).
 - The site answers with `cache-control: max-age=600`, and its cache ignores the query string: requests with new,
   random queries were all hits, their age growing (*ran*, curl, 2026-10-23). A deployment purges it (*memory*).
 - The first deployment to read its channels back, the preview of 71313f3 (run 39964133295), found both served at the

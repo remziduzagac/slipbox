@@ -503,10 +503,11 @@ function holds(expr: string | undefined, context: Record<string, unknown>): bool
     if (/^\d/.test(t)) return Number(t);
     if (t in literals) return literals[t];
     if (/^[A-Za-z_]/.test(t) && tokens[at] !== "(")
+      // A name that isn't there is null, as GitHub has it.
       return t.split(".").reduce<unknown>((v, k) => {
-        if (v === null || typeof v !== "object") return undefined;
+        if (v === null || typeof v !== "object") return null;
         const key = Object.keys(v).find((name) => name.toLowerCase() === k.toLowerCase());
-        return key === undefined ? undefined : (v as Record<string, unknown>)[key];
+        return key === undefined ? null : ((v as Record<string, unknown>)[key] ?? null);
       }, context);
     return fail();
   };
@@ -515,6 +516,10 @@ function holds(expr: string | undefined, context: Record<string, unknown>): bool
     at++;
     return !unary();
   };
+  // GitHub's numbers for a comparison of two types: null 0, booleans 0 and 1, a string's number ('' 0); anything else
+  // (an object, an array) NaN.
+  const number = (v: unknown): number =>
+    v === null ? 0 : typeof v === "boolean" || typeof v === "number" || typeof v === "string" ? Number(v) : Number.NaN;
   const comparison = (): unknown => {
     const left = unary();
     const op = tokens[at];
@@ -527,7 +532,7 @@ function holds(expr: string | undefined, context: Record<string, unknown>): bool
         ? left.toLowerCase() === right.toLowerCase()
         : typeof left === typeof right
           ? left === right
-          : Number(left) === Number(right);
+          : number(left) === number(right);
     return op === "==" ? same : !same;
   };
   const and = (): unknown => {
@@ -747,6 +752,8 @@ describe("the workflows: one build for releases and previews, previews from test
     expect(holds("${{ github.EVENT_NAME == 'WORKFLOW_DISPATCH' }}", ctx)).toBe(true);
     expect(holds("${{ true == 'true' }}", ctx)).toBe(false);
     expect(holds("${{ null == '' && 0 == '' && null == 0 && true == 1 }}", ctx)).toBe(true);
+    expect(holds("${{ github.missing == '' && github.missing == null }}", ctx)).toBe(true);
+    expect(holds("${{ github == 0 }}", ctx)).toBe(false);
     const pages = workflow("pages.yml");
     const { redeploy, site, deploy } = pages.jobs;
     const run = (event_name: string, ref: string, fork = false) => ({
@@ -879,16 +886,18 @@ describe("the workflows: one build for releases and previews, previews from test
     // files are the deployment before: never served, failing after eleven minutes, no longer passing at once.
     const stale = readBack({ deployment: "39964133295.1", stable, preview }, built);
     expect([stale.code, stale.slept, stale.took]).toEqual([1, 66, 660]);
-    expect(stale.out).toContain('deployment "40045492245.1" (served: "39964133295.1")');
+    expect(stale.out).toContain('deployment: built "40045492245.1", served "39964133295.1"');
+    expect(stale.out).toContain(`stable: built "${stable}", served "${stable}"`);
+    expect(stale.out).toContain(`preview: built "${preview}", served "${preview}"`);
     // A preview's run (a push) is told a re-run won't help; a run by hand, which is the remedy, isn't.
-    expect(stale.out).toContain("A re-run of this preview's run deploys its commit again");
+    expect(stale.out).toContain("Re-running this preview's pages / site deploys its commit again");
     const byHand = readBack(
       { deployment: "39964133295.1", stable, preview },
       { ...built, GITHUB_EVENT_NAME: "workflow_dispatch" },
       { lag: 10 },
     );
     expect(byHand.code).toBe(1);
-    expect(byHand.out).not.toContain("re-run");
+    expect(byHand.out).not.toMatch(/re-run/i);
     // A site slow to answer (ten seconds a request, curl's bound) still gives up after eleven minutes, at most a wait,
     // a round of three requests and the message's one later: within the job's 25 minutes, with deploy-pages' ten.
     // With the marker the deployment before's; with no marker at all (a site deployed before markers); with the
@@ -916,7 +925,7 @@ describe("the workflows: one build for releases and previews, previews from test
     expect(unmarked.out).toContain("no marker was built");
   }, 30_000);
 
-  test("a re-run of `deploy` alone is refused: it would put back the run's older site (D?1)", () => {
+  test("a re-run of `deploy` alone is refused: it might put back an older site (D?1)", () => {
     const steps = workflow("pages.yml").jobs.deploy?.steps ?? [];
     const guard = steps.findIndex((s) => s.name === "this run's site");
     expect(guard).toBeGreaterThanOrEqual(0);

@@ -7,7 +7,8 @@ name: pages
 # docs/ (DS), where the site's index sends a visitor. Deployed by preview.yml once a preview is published, in its own
 # run, and by a run by hand on main, which every other run starts instead of deploying (D258, D?1): when a release is
 # published (by a person: a release CI publishes starts no workflow), and by hand on another ref. Not when main moves:
-# main takes only test's commits, for a release (D251), and its docs reach the site when the release is published.
+# main takes only test's commits, for a release (D251), and its docs reach the site when the release is published,
+# unless a preview or a run by hand comes first (every deployment builds from main).
 # A deployment passes once the site serves the run's own marker, `deployment`, and the channels it built.
 # Every action pinned by its commit, a week old when taken (14.10); values reach the shell through env, never inline.
 on:
@@ -47,8 +48,8 @@ jobs:
         run: |
           gh workflow run pages.yml --repo "$GITHUB_REPOSITORY" --ref main
           runs="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/workflows/pages.yml?query=branch%3Amain"
-          echo "this run deploys nothing: the site is deployed, and read back, by the run by hand on main just started,"
-          echo "with main's pages.yml: $runs"
+          echo "this run deploys nothing: the run by hand on main just started, with main's pages.yml, deploys the site"
+          echo "and reads it back. Its result is there, not here: $runs"
 
   # The site, from main's bootstrap whichever ref started the run, and the releases as they are now; the docs under
   # docs/, built by the site's own packages (site/package.json, installed under site/bunfig.toml's gates: no install
@@ -162,10 +163,13 @@ jobs:
             [ "$(date +%s)" -lt "$deadline" ] || break
             sleep 10
           done
-          echo "after eleven minutes, the site doesn't serve this deployment:"
-          echo "deployment \"$DEPLOYMENT\" (served: \"$(served deployment)\"), stable \"$STABLE\", preview \"$PREVIEW\""
+          echo "after eleven minutes, the site doesn't serve what this deployment built:"
+          for file in deployment stable preview; do
+            case $file in deployment) built=$DEPLOYMENT ;; stable) built=$STABLE ;; *) built=$PREVIEW ;; esac
+            echo "  $file: built \"$built\", served \"$(served "$file")\""
+          done
           if [ "$GITHUB_EVENT_NAME" = push ]; then
-            echo "A re-run of this preview's run deploys its commit again, which Pages doesn't serve under a push: run"
-            echo "pages.yml by hand on main instead."
+            echo "Re-running this preview's pages / site deploys its commit again, which Pages doesn't serve under a"
+            echo "push, and re-running pages / deploy alone is refused: run pages.yml by hand on main instead."
           fi
           exit 1
