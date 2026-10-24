@@ -6,17 +6,28 @@
 // a file of the harness `HARNESS_FOR` names, which only some checks use: theirs). The packages, the toolchain, the
 // workflows, and a file nothing names run everything; so do a merge group, a run by hand (the `full` run `main`
 // requires, D251) and a diff that can't be read; the lint's own configs, only the lint. A push to `dev` or `test` is
-// scoped as a pull request is, by its commits since the branch's last head.
+// scoped the same over its range: since the nearest commit whose run passed, less what a pull request's run passed on
+// the same tree (CIW-D1, CIW-D2, `scripts/ci-range.ts`); a range with nothing in it runs nothing.
 //
-// `bun run ci:scope` writes what CI's jobs need to $GITHUB_OUTPUT (`code`, `checks`), and says it either way.
-// `bun run test:changed` and `bun run test:terminal:changed [runner's flags…]` run what a change reaches: a pull
-// request's merge commit against its base in CI, a push's commits; here, your branch, committed or not, against where
-// it left `origin/dev` (or `--base <ref>`).
+// `bun run ci:scope` writes what CI's jobs need to $GITHUB_OUTPUT (`code`, `checks`; a push's `range`, which the jobs
+// after it read as `SCOPE_RANGE`; a pull request's `record`, the name its run's record is uploaded under), and says it
+// either way. `bun run test:changed` and `bun run test:terminal:changed [runner's flags…]` run what a change reaches: a
+// pull request's merge commit against its base in CI, a push's range; here, your branch, committed or not, against
+// where it left `origin/dev` (or `--base <ref>`).
 
-import { appendFileSync, existsSync, readdirSync, readFileSync } from "node:fs";
+import { appendFileSync, existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, normalize } from "node:path";
+import { commit, gitOut, githubApi, pushRange, recordName } from "./ci-range.ts";
 
 const ROOT = join(import.meta.dir, "..");
+
+/**
+ * What a run's pass means, for the runs after it: a push's range starts at a commit whose run passed only when that
+ * commit's scope is this version (CIW-D1), and a pull request's record names it (CIW-D2). Raised when a change alters
+ * what a pass or a record covers — a pull request's run without macOS, say — so those made before stop counting.
+ * `scripts/ci-range.ts` reads it from each commit as written here, on one line.
+ */
+export const SCOPE_VERSION = 2;
 
 /** A file only the docs' checks read: the docs, the blueprint, the site's pages (not its packages), a top-level `.md`. */
 export const isDocs = (path: string): boolean =>
@@ -305,9 +316,9 @@ export function scriptFor(what: "test" | "terminal", s: Scope): string[] | null 
 }
 
 /**
- * A change's files. In CI: a pull request's merge commit against its base; a push's commits against the branch's head
- * before it (`SCOPE_BEFORE`, the event's `before`: none, or a branch just made, and it's everything). Here: the branch
- * against `base`'s fork point.
+ * A change's files. In CI: a pull request's merge commit against its base; a push's range (`SCOPE_RANGE`, `<from>..<to>`
+ * as `changes` worked it out; `all`, or anything else, and it's everything). Here: the branch against `base`'s fork
+ * point.
  */
 export function changedFiles(root = ROOT, base = "origin/dev"): string[] | null {
   const git = (...args: string[]) => {
@@ -317,8 +328,8 @@ export function changedFiles(root = ROOT, base = "origin/dev"): string[] | null 
   const event = process.env.GITHUB_EVENT_NAME;
   if (event === "pull_request") return git("diff", "--name-only", "HEAD^1", "HEAD");
   if (event === "push") {
-    const before = process.env.SCOPE_BEFORE ?? "";
-    return /^[0-9a-f]{7,40}$/.test(before) && !/^0+$/.test(before) ? git("diff", "--name-only", before, "HEAD") : null;
+    const range = /^([0-9a-f]{40})\.\.([0-9a-f]{40})$/.exec(process.env.SCOPE_RANGE ?? "");
+    return range ? git("diff", "--name-only", range[1] ?? "", range[2] ?? "") : null;
   }
   if (event !== undefined) return null;
   const fork = git("merge-base", base, "HEAD")?.[0];
@@ -346,10 +357,40 @@ if (import.meta.main) {
   const base = at >= 0 ? args.splice(at, 2)[1] : undefined;
   const [what, ...rest] = args;
   const here = process.cwd();
+  const event = process.env.GITHUB_EVENT_NAME;
+  const out = process.env.GITHUB_OUTPUT;
+  // `changes`, for a push: its range, worked out once and handed to the jobs after it (CIW-D1). `test`'s head before
+  // the push: for one to `test`, the event's `before`; for one to `dev`, `test` as fetched.
+  if (event === "push" && what === undefined) {
+    const testHead =
+      process.env.GITHUB_REF_NAME === "test"
+        ? (process.env.SCOPE_BEFORE ?? null)
+        : commit(here, "refs/remotes/origin/test");
+    const r = await pushRange(here, githubApi(), testHead);
+    for (const w of r.why) console.log(w);
+    if ("all" in r) console.log(`everything runs: ${r.all}`);
+    process.env.SCOPE_RANGE = "all" in r ? "all" : `${r.from}..${r.to}`;
+    if (out) appendFileSync(out, `range=${process.env.SCOPE_RANGE}\n`);
+  }
+  // A pull request's run: the name of its record, the tree it tests on its base (CIW-D2), and what the scope says in it.
+  if (event === "pull_request" && what === undefined) {
+    const [baseCommit, tree] = [gitOut(here, "rev-parse", "HEAD^1"), gitOut(here, "rev-parse", "HEAD^{tree}")];
+    if (baseCommit && tree && out) appendFileSync(out, `record=${recordName(SCOPE_VERSION, baseCommit, tree)}\n`);
+  }
   const files = changedFiles(here, base);
-  const docsOnly = files !== null && codeChanged(files) === null;
-  const s: Scope = docsOnly ? { all: null, tests: [], checks: [], why: [] } : scope(files, importGraph(here), here);
-  console.log(docsOnly ? `the docs only (${files?.length} files): the tests are skipped` : say(s, files));
+  // A push's range with nothing in it — the commit itself, or a tree a run passed already — runs nothing.
+  const nothing = event === "push" && files?.length === 0;
+  const docsOnly = files !== null && !nothing && codeChanged(files) === null;
+  const s: Scope =
+    docsOnly || nothing ? { all: null, tests: [], checks: [], why: [] } : scope(files, importGraph(here), here);
+  const said = nothing
+    ? "nothing changed since the tree a run passed: no test runs"
+    : docsOnly
+      ? `the docs only (${files?.length} files): the tests are skipped`
+      : say(s, files);
+  console.log(said);
+  if (event === "pull_request" && what === undefined && process.env.RUNNER_TEMP)
+    writeFileSync(join(process.env.RUNNER_TEMP, "ci-tested.txt"), `${said}\n`);
   if (what === "test" || what === "terminal") {
     const cmd = scriptFor(what, s);
     if (!cmd) console.log(`no ${what === "test" ? "test" : "terminal check"} reaches this change`);
@@ -359,8 +400,7 @@ if (import.meta.main) {
           .exitCode,
       );
   } else {
-    const out = process.env.GITHUB_OUTPUT;
     const checks = s.all !== null || s.checks === "all" || s.checks.length > 0;
-    if (out) appendFileSync(out, `code=${docsOnly ? "false" : "true"}\nchecks=${checks}\n`);
+    if (out) appendFileSync(out, `code=${docsOnly || nothing ? "false" : "true"}\nchecks=${checks}\n`);
   }
 }

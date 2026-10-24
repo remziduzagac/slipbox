@@ -440,12 +440,15 @@ export function workflowsOff(workflows: unknown[]): WorkflowOff[] {
 
 const BAD = new Set(["failure", "timed_out", "startup_failure"]);
 
-/** Workflows whose last finished run on `dev` or `main` failed: runs newest first, as GitHub lists them. */
+/**
+ * Workflows whose last finished run on `dev` or `main` failed: runs newest first, as GitHub lists them. A cancelled
+ * run says nothing (a push's gives way to the next, CIW-D4): the one before it counts.
+ */
 export function failingOnMain(workflows: unknown[], runs: unknown[]): Failing[] {
   const out: Failing[] = [];
   for (const w of workflows.map(obj)) {
     if (w.state !== "active") continue;
-    const last = runs.map(obj).find((r) => r.workflow_id === w.id);
+    const last = runs.map(obj).find((r) => r.workflow_id === w.id && r.conclusion !== "cancelled");
     if (last && BAD.has(str(last.conclusion)))
       out.push({ name: str(w.name), path: str(w.path), conclusion: str(last.conclusion), url: str(last.html_url) });
   }

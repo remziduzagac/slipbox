@@ -372,6 +372,15 @@ describe("the signals, from GitHub's answers", () => {
     expect(failingOnMain(workflows, runs)).toEqual([
       { name: "ci", path: ".github/workflows/ci.yml", conclusion: "failure", url: "r3" },
     ]);
+    // A cancelled run, a push's that gave way to the next (CIW-D4), hides nothing: the run before it counts.
+    const cancelled = [
+      { workflow_id: 5, conclusion: "cancelled", html_url: "r4" },
+      { workflow_id: 5, conclusion: "failure", html_url: "r0" },
+      { workflow_id: 1, conclusion: "success", html_url: "r1" },
+    ];
+    expect(failingOnMain(workflows, cancelled)).toEqual([
+      { name: "health", path: ".github/workflows/health.yml", conclusion: "failure", url: "r0" },
+    ]);
   });
 
   test("lychee's report, as the links job reduces it: the broken links and the timeouts", () => {
