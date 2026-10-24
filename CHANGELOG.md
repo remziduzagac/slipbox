@@ -15,6 +15,12 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
   mode, Lens mode and Source mode, to bind keys to.
 - **Window header** in `space u u`, or `ui.window_header = false`, hides the whole row and gives it to the note, as
   hiding the breadcrumb used to.
+- Report a problem from inside slipbox: `space r` (or `:report`) opens the bug form's questions in a window, with the
+  version, how slipbox was installed, the system, the terminal and its size, any multiplexer and SSH already filled
+  in. The screen as text, or where you were, goes in only when you add it, in full. `ctrl+s` sends it the way you
+  choose: the bug form in your browser, filled in; its address or the report copied (over SSH, to your own
+  clipboard); or posted with `gh` after a yes. slipbox itself sends nothing. `slipbox report` (and `--json`) prints
+  the same facts and the form's address, for an agent writing an issue.
 
 ### Changed
 

@@ -9,17 +9,18 @@ decisions.md.
 with what slipbox knows already in it, in the floating window (`3.20`) as a commit's message is (RPT-D1). Its text is
 the report exactly as it will leave; nothing leaves until you send it, and you send it, never slipbox (RPT-D3).
 
-**The window.** Kind `report`, a virtual Markdown buffer (`report:`) in source mode, made as the commit's is: outside
+**The window.** Kind `report`, a virtual Markdown buffer (`report`) in source mode, made as the commit's is: outside
 the app's buffers, so it's never in the unsaved list that stops a quit, never autosaved, never in the history or the
 session. The `Reporter` (`app.report`) keeps the buffer and its view while the window is closed. Titled "Report a
 problem"; its bottom border says ` ctrl+s sends it or adds the screen · esc · q leaves it ` (never the floating
-window's "writing back"). It opens typing, on the title's line; the first `esc` leaves typing, the next leaves the
-window. Its text:
+window's "writing back"); the status line names it `report`, with no "unsaved" mark, since it's never saved anywhere.
+A new one opens typing, on the title's line (empty, the line after the guide); the first `esc` leaves typing, the next
+leaves the window. Opened again, it's as it was left, not typing. Its text, the title typed:
 
 ````markdown
 <!-- Nothing has left yet. The next line is the title; ctrl+s sends it all, or adds the screen first. -->
 
-The title, one line
+Links lose their anchors
 
 ### What happened
 
@@ -29,7 +30,7 @@ The title, one line
 
 ### Version
 
-0.5.1 (stable channel, linux-arm64 build, Bun 1.3.1)
+0.5.1 (the installer's, stable channel, linux-arm64 build, Bun 1.3.1)
 
 ### Installed with
 
@@ -50,8 +51,8 @@ ghostty 1.2.0, TERM_PROGRAM herdsman 0.2.0, TERM xterm-ghostty, 236×60, inside 
 - `esc` leaves it; opened again, it's as you left it, the facts kept as edited. The draft is kept in memory only,
   never written to disk by slipbox, until `gh` has posted it or slipbox quits. (A copy you make is a copy: when no
   clipboard takes it, it's the state folder's `clipboard.txt`, as every copy's, and said.)
-- `ctrl+s` (`:w`) calls the buffer's own save, which opens the menu (§ Sending); the buffer counts as saved after,
-  which means nothing here and is never said as "sent".
+- `ctrl+s` (`:w`) is `note.save`, which, in the report as in the commit's window, calls the buffer's own save whether
+  it changed or not: that runs `help.report_send`, the menu (§ Sending). Never said as "saved" or "sent".
 
 **Reading it back.** The copy and `gh` send the text as you left it, the generated guide taken out (and for `gh`, the
 title line, which becomes its title); nothing in them is moved or joined. Only the address maps the text onto the
@@ -73,18 +74,21 @@ form's fields, by one rule, which also says where an added screen goes:
 
 **The facts** (`core/report.ts`, RPT-D1), the same as `slipbox report` prints:
 
-- **Version:** `VERSION`; the channel only for the installer's install (`readChannel`, which says stable when there's
-  no file, so never asked of another); the release's platform (`RELEASE.target`), or "from source or built by hand"
-  when there's no release; Bun's version.
+- **Version:** `VERSION`; how it was installed, in a word ("the installer's", "Homebrew's", "a release put in place by
+  hand", "from source or built by hand"), since the form's dropdown may not fill from the address (RPT-D3); the channel
+  only for the installer's install (`readChannel`, which says stable when there's no file, so never asked of
+  another); the release's platform (`RELEASE.target`); Bun's version.
 - **Installed with:** the form's own wording: "the installer (install.sh)", "Homebrew" (`installedBy`), "from
   source" (no `RELEASE`); a release's binary put somewhere by hand says so in words of its own.
-- **Platform:** the system's name and version (Linux's `/etc/os-release` `PRETTY_NAME`; macOS's
-  `SystemVersion.plist`), the kernel (`os.release()`), the processor (`process.arch`), and WSL when it's there
-  (`core/wsl.ts`).
+- **Platform:** the system's name and version (Linux's `/etc/os-release` `PRETTY_NAME`, else its `NAME` and
+  `VERSION`; macOS's `SystemVersion.plist`), the kernel (`os.release()`), the processor (`process.arch`), and WSL when
+  it's there (`core/wsl.ts`): `Ubuntu 24.04.1 LTS in WSL (Linux 5.15.167.4-microsoft-standard-WSL2), x64`.
 - **Terminal:** what the terminal answered when asked who it is (OpenTUI's `capabilities.terminal`, from XTVERSION;
   the TUI only), `TERM_PROGRAM` and its version, `TERM`, the size in cells, the multiplexer and SSH. The multiplexer is
-  OpenTUI's when it names one, else the environment's (`TMUX`, `ZELLIJ`, `STY`, `HERDSMAN_ENV`, `HERDR_ENV`): OpenTUI's
-  `none` or `unknown` never hides what the environment says. SSH is `SSH_CONNECTION`, `SSH_CLIENT` or `SSH_TTY` set, or
+  OpenTUI's when it names one, and the environment's (`TMUX`, `ZELLIJ`, `STY`, `HERDSMAN_ENV`, `HERDR_ENV`, each set
+  and not empty), each once: OpenTUI's `none` or `unknown` never hides what the environment says. The terminal's own
+  name is the XTVERSION answer's alone (OpenTUI's `from_xtversion`), else none: `TERM_PROGRAM` says it apart. Nothing
+  known at all, "not known". SSH is `SSH_CONNECTION`, `SSH_CLIENT` or `SSH_TTY` set, or
   OpenTUI's `remote`. These are presence only: an address, a socket path or a session's name is never written.
 - Each value from the environment or a file is sanitized (`2.9`) and cut to a line.
 
@@ -95,7 +99,9 @@ form's fields, by one rule, which also says where an added screen goes:
   the screen's size (`tui/canvas.ts`) beside the terminal's canvas, that frame only; the window opens on the next. Its
   rows, with their trailing blanks cut. A picture isn't text, and isn't in it.
 - **Where you were:** the window's file (its path in the vault, else from home, `~/…`), the cursor's line number and
-  that line's text, and whether it was rendered or source.
+  how it was shown (rendered, source, the lens open; nothing said for a file that isn't a note), then that line's
+  text: `handbook/operations-handbook.md, line 3, rendered`. A window with no file (a hover, none open): "no file was
+  open".
 
 `:report screen` or `:report where` (`help.report screen|where`), or the menu, adds one to the report, in full, in a
 ```` ```text ```` fence longer than any run of backticks inside, so a note's own fences can't end it, under a first
@@ -107,8 +113,10 @@ undo step: `u` takes it out. Added is its first line being in the text: deleted,
 entry is gone and the command says so. Opened again, the window keeps what was added; the screen kept is the newer
 one.
 
-**Sending** (`ctrl+s`, `:w`: `help.report_send`; RPT-D3, RPT-D4). A menu, titled with what it found (below), each
-entry with its key; only those this machine can do, and each says what it does with what:
+**Sending** (`ctrl+s`, `:w`: `help.report_send`; RPT-D3, RPT-D4). A menu, "Send the report — nothing has left yet",
+each entry with its key and run as its command (`help.report_send browser`, `help.report screen`, …); only those this
+machine can do, each saying what it does with what (the address's what it leaves out). Text that belongs to no field
+heads it, said, and `o` and `a` aren't there:
 
 | Key | Entry | Shown |
 | --- | --- | --- |
@@ -131,28 +139,29 @@ entry with its key; only those this machine can do, and each says what it does w
   else the facts alone; else none but the template. `o` and `a` say what they leave out ("filled in but What slipbox
   sees: v copies it"), and `c` copies everything. Text that belongs to no field (§ Reading it back) leaves `o` and `a`
   out, said.
-- **One copy at a time:** each entry puts one thing on the clipboard, never two in a row. `o` copies nothing when the
+- **One copy at a time:** each entry puts one thing on the clipboard, never two in a row; another asked for while one
+  is being made is refused ("still copying — wait for it"). `o` copies nothing when the
   browser opens; when it can't, it copies the address and says what's still left out (`v`, `c`). Each copy is said
   as `App.copy` says it — by OSC 52, which a terminal never confirms; by the system's tool; or written to
   `clipboard.txt` — and a copy refused (the clipboard busy) is said, never claimed.
 - **The browser** (`core/browser.ts`): `open` on macOS; in WSL, `wslview`, else `explorer.exe`; elsewhere `xdg-open`
   when there's a display (`DISPLAY`, `WAYLAND_DISPLAY`); none over SSH, where a browser would open on that machine,
   not yours — the entry isn't shown, and `a` copies the address to your terminal's clipboard (OSC 52). Run as an
-  argument vector (`13.2`), detached, nothing read from it; its exit waited for a few seconds: a failure copies the
-  address instead and says why (`explorer.exe` answers 1 when it worked: not taken for one). A link to the web is
-  still copied, never opened (§ Following links, unchanged): this is the one place slipbox opens a browser, because
-  it's what you chose.
+  argument vector (`13.2`) by the host's `runDetached`, nothing read from it; its exit waited for five seconds, one
+  that hasn't answered by then taken to have opened it: a failure copies the address instead and says why
+  (`explorer.exe` answers 1 when it worked: not taken for one). A link to the web is still copied, never opened
+  (§ Following links, unchanged): this is the one place slipbox opens a browser, because it's what you chose.
 - **gh** (`core/gh.ts`): nothing is run until you choose it. Then the account, as gh will use it, without the
   network: a token in `GH_TOKEN` or `GITHUB_TOKEN` comes before what gh keeps, so then it's "the account of
-  `GH_TOKEN`", unchecked; else the account gh keeps (`gh config get -h github.com user`); neither, and it says
-  `gh auth login` first. A yes-or-no names everything: `Post "<title>" on <repo> as <account>? Anyone can read it.`
-  On yes, the title and text
+  GH_TOKEN (not checked)"; else the account gh keeps (`gh config get -h github.com user`); neither, and it says
+  `gh auth login` first. gh is run with `GH_PROMPT_DISABLED=1`, so it never waits on a question of its own. A
+  yes-or-no names everything: `Post "<title>" on <repo> as <account>? Anyone can read it.` On yes, the title and text
   as they are then are posted — `gh issue create --repo <repo> --title <title> --body-file -`, the text after the
   title on its input — from the home folder (never the vault's, so no folder's settings reach it), waited for up to a
-  minute. While it posts, the window is closed and the report can't be opened or posted again ("posting with gh…").
-  Done: the issue's address said, the draft dropped. Failed: gh's first lines said, the draft kept. No answer in a
-  minute: the draft kept, and said that it may have posted — look at the issues before posting again. No title, or no
-  What happened, and it asks for them first.
+  minute. While it posts, the window is closed and the report can't be opened or posted again ("posting the report
+  with gh… — wait for it"). Done: the issue's address said, the draft dropped. Failed: gh's first lines said, the
+  draft kept. No answer in a minute: gh killed, the draft kept, and said that it may have posted — look at the issues
+  before posting again. No title, or no What happened, and it asks for them first.
 - The window stays open after the browser or a copy, to send again another way.
 
 **Commands.** `help.report` (`space r`, `:report`; CLI: `slipbox report`) opens the report, or with `screen` or
@@ -202,6 +211,8 @@ Previously: no rows for them.
 
 ## MODIFIED design/trust.md § What runs
 
+Its links are written as from this file; in trust.md they're `../../docs/…`, as they are there now.
+
 The first paragraph, in full:
 
 slipbox runs programs you chose: your editor, git, and the servers and linters found in your config, on `PATH`, in
@@ -219,12 +230,12 @@ In the second paragraph, the sentence on keys, in full:
 
 Nor may a folder's `[keys]` or `[aliases]` name a command that throws work away or runs a program (`shell.run`,
 `shell.filter`, `help.report_send`), so a clone can't put one on `ctrl+s` or `:wq` (`USER_ONLY`, each with its reason,
-and `VAULT_FORBIDDEN_COMMANDS` in `core/config.ts`; [configuration.md](../../docs/manual/configuration.md), "What
+and `VAULT_FORBIDDEN_COMMANDS` in `core/config.ts`; [configuration.md](../../../docs/manual/configuration.md), "What
 only your own file can set").
 
 Previously: Nor may a folder's `[keys]` or `[aliases]` name a command that throws work away or runs a program
 (`shell.run`, `shell.filter`), so a clone can't put one on `ctrl+s` or `:wq` (`USER_ONLY`, each with its reason, and
-`VAULT_FORBIDDEN_COMMANDS` in `core/config.ts`; [configuration.md](../../docs/manual/configuration.md), "What only
+`VAULT_FORBIDDEN_COMMANDS` in `core/config.ts`; [configuration.md](../../../docs/manual/configuration.md), "What only
 your own file can set").
 
 ## No design change: the bug form

@@ -291,7 +291,46 @@ Report a bug in slipbox's issues on GitHub, with the bug report form:
 A question, or an idea for slipbox, goes in its [Discussions](https://github.com/remziduzagac/slipbox/discussions)
 instead.
 
-A useful bug report holds:
+### From slipbox: `space r`
+
+`space r` (or `:report`, or "Report a problem" in help) opens a report in a floating window. It's the bug form's
+questions, with what slipbox knows already filled in:
+
+- its version, how you installed it and the releases it follows
+- your system and its processor
+- your terminal, its size, and any multiplexer or SSH between it and slipbox (only that it's there, never an address)
+
+You type the title on the first line, then what happened, what you expected and the steps under their headings. Every
+line is text you can change: cut a path or a name you'd rather not share.
+
+The screen as it was, as text, and where you were (the file, the cursor's line and its text) are kept, but they're in
+the report only when you add them. `ctrl+s` offers to, or `:report screen` and `:report where`. Added, it's there in
+full under "What slipbox sees", for you to read first; `u` takes it out again. A picture on the screen isn't text, and
+isn't in it.
+
+`ctrl+s` then sends it the way you choose. slipbox itself sends nothing:
+
+- **`o`**: the bug form opens in your browser, filled in. You read it there and press Submit.
+- **`a`**: the bug form's address, filled in, is copied. Over SSH there's no browser of yours to open, so this is the
+  way: your terminal puts it on your own machine's clipboard, to paste into your browser.
+- **`c`**: the report is copied as Markdown, to paste wherever you like.
+- **`g`**: with GitHub's `gh` installed, it's posted by `gh issue create`, after a yes that names the title, the
+  repository and the account. Anyone can read an issue.
+
+What's too long for an address (a screen, often) is left out of it, and said; `v` copies it, to paste into the form's
+"What slipbox sees". The report is kept until slipbox quits, or until `gh` has posted it: `esc` leaves it, `space r`
+opens it again as you left it. slipbox never writes it to disk. A copy you make with no clipboard to take it goes to
+`clipboard.txt` in slipbox's state folder, as every copy does, and says so.
+
+### From the command line: `slipbox report`
+
+`slipbox report` prints the same facts, and the bug form's address filled in with them, to open in your browser.
+`slipbox report --json` gives them to an agent writing an issue ([The command line](cli.md#report)). It works in any
+folder, even one whose settings are broken.
+
+### What a report holds
+
+A useful bug report holds the following. `space r` and `slipbox report` fill in the first two.
 
 - **The version**: `slipbox --version`, and how you installed it (a release, Homebrew, or from source).
 - **Your system and terminal**: the operating system, the terminal and its version, and any multiplexer (tmux, zellij)

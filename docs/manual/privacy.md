@@ -29,7 +29,8 @@ Built-in requests include:
 The settings are in your config file ([Configuration](configuration.md)).
 
 Installing slipbox and `slipbox upgrade` also download files when you ask them to
-([Installation](../guides/install.md)). Explicit Git fetch, pull and push contact your repositories
+([Installation](../guides/install.md)). A report (`space r`) reaches GitHub only through your browser or `gh`,
+when you send it ([below](#what-slipbox-never-sends)). Explicit Git fetch, pull and push contact your repositories
 [as described below](#git-and-your-repositories-remotes). Git can also fetch missing objects or LFS files as part
 of another operation. Language servers and other external programs may make their own requests; see
 [Programs slipbox runs](#what-slipbox-runs).
@@ -147,6 +148,10 @@ same from your shell. For example:
 - **No telemetry, no analytics, no crash reports.** slipbox does not collect telemetry or send analytics. Explicit
   operations can send data: Git push sends commits to a remote, and programs you run have their own behavior. Review
   exports and copied text before sharing.
+- **A report is sent by you, never by slipbox.** `space r` writes a report you read in full before anything leaves. It
+  goes only when you choose: in your browser, which you submit; copied, to paste; or by `gh`, after a yes. The screen,
+  and the note you were in, are in it only when you add them
+  ([Reporting a problem](troubleshooting.md#reporting-a-problem)).
 - **Bun's crash reports are off.** slipbox runs on Bun. When Bun crashes, it can send a report to Bun's developers.
   slipbox turns this off as it starts.
 
@@ -165,6 +170,9 @@ slipbox runs programs you chose, never one a folder names:
 - **Language servers and linters** for code, and **markdownlint-cli2** for notes ([Code](code.md)).
 - **Your shell**, for a command you type after `:!`.
 - **Your clipboard's tool** (`pbcopy`, `wl-copy`, `xclip`, `xsel`, or Windows' in WSL), to copy and paste.
+- **Your browser**, by your system's way of opening one (`open`, `xdg-open`, `wslview` or `explorer.exe`), when you
+  open the bug form from a report. Never over SSH, where it would open on that machine, not yours.
+- **`gh`**, when you post a report with it, after a yes.
 - **Bun**, which slipbox carries, to install a language server.
 - **`tar`**, when `slipbox upgrade` unpacks a release.
 
