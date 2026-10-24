@@ -162,3 +162,8 @@
     there, as any floating window does; the bug form's dropdown has no option for a release's binary put in place
     by hand (Version says it); the conflict's question asked again for any window opened over the merge screen, in
     `closeFloating`, not the report's alone.
+- **CI on the last head** (no review round: CI's two failures, both fixed). On a loaded runner `ctrl+s`, `g` and `j`
+  came in at once: `j` was counted before `g` was handled, so gh's question opened over it. The count starts at the
+  key that asked now (`Input.keyAt`), with a unit test of keys taken at once. And the check of a folder's keys read
+  the warning in the Messages list, which is 100 columns at most: macOS's `/private/tmp/…` folder pushed the key's
+  name past it, so the check copies the message and reads it whole.

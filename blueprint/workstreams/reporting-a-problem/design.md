@@ -174,10 +174,11 @@ heads it, said, and `o` and `a` aren't there:
   (`explorer.exe` answers 1 when it worked: not taken for one). A link to the web is still copied, never opened
   (§ Following links, unchanged): this is the one place slipbox opens a browser, because it's what you chose.
 - **gh** (`core/gh.ts`): nothing is run until you choose it. Then the account, as gh will use it, without the
-  network (no question opens for keys typed meanwhile: a `y` among them would answer it — said, `ctrl+s`, `g` asks
-  again): a token in `GH_TOKEN` or `GITHUB_TOKEN` comes before what gh keeps, so then it's "the account of
-  GH_TOKEN (not checked)"; else the account gh keeps (`gh config get -h github.com user`); neither, and it says
-  `gh auth login` first; gh not answering in five seconds, or not starting, said as that. gh is run as every helper is
+  network (no question opens for keys typed meanwhile, counted from the key that asked, so one sent with it counts
+  too: a `y` among them would answer it — said, `ctrl+s`, `g` asks again): a token in `GH_TOKEN` or `GITHUB_TOKEN`
+  comes before what gh keeps, so then it's "the account of GH_TOKEN (not checked)"; else the account gh keeps
+  (`gh config get -h github.com user`); neither, and it says `gh auth login` first; gh not answering in five
+  seconds, or not starting, said as that. gh is run as every helper is
   (`core/tool-process.ts`: its output capped, its process group stopped at its deadline and when slipbox ends), with
   `GH_PROMPT_DISABLED=1`, so it never waits on a question of its own. The report closed meanwhile, or something
   opened over it, and nothing is asked over that: said, `ctrl+s`, `g` asks again. A
