@@ -68,7 +68,7 @@ import {
   uninstallPlan,
   writeChannel,
 } from "../src/core/install.ts";
-import { libcCandidates } from "../src/core/crash-reports.ts";
+import { libcCandidates } from "../src/core/libc.ts";
 import {
   CHECK_EVERY_MS,
   channelsBase,
@@ -1731,6 +1731,7 @@ describe("updates (14.4)", () => {
 
   test("Bun's crash reports off at start, in the C environment, read back through libc: unless you set either switch (D221)", () => {
     const mod = join(ROOT, "src", "core", "crash-reports.ts");
+    const libcMod = join(ROOT, "src", "core", "libc.ts");
     // A process of its own, its environment as given; what libc's getenv says after, on its last line.
     const after = (env: Record<string, string>, first: string): string | null => {
       const base = Object.fromEntries(
@@ -1738,7 +1739,7 @@ describe("updates (14.4)", () => {
           ([k]) => !k.startsWith("BUN_CRASH_REPORT") && !k.startsWith("BUN_ENABLE_CRASH"),
         ),
       );
-      const script = `${first}\nconst { libc } = await import(${JSON.stringify(mod)});\nconsole.log(JSON.stringify(libc()?.getenv("BUN_ENABLE_CRASH_REPORTING") ?? null));`;
+      const script = `${first}\nconst { libc } = await import(${JSON.stringify(libcMod)});\nconsole.log(JSON.stringify(libc()?.getenv("BUN_ENABLE_CRASH_REPORTING") ?? null));`;
       const run = Bun.spawnSync([process.execPath, "-e", script], { env: { ...base, ...env }, cwd: ROOT });
       expect(run.stderr.toString()).toBe("");
       return JSON.parse(run.stdout.toString().trim().split("\n").at(-1)!);

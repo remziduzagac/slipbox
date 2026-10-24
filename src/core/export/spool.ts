@@ -5,6 +5,7 @@ import { mkdir, mkdtemp, open, rename, rm, stat } from "node:fs/promises";
 import { dirname, isAbsolute, join } from "node:path";
 import { climbsOut } from "../fsutil.ts";
 import { ensureCacheHome } from "../paths.ts";
+import { alive } from "../processes.ts";
 
 // Normal process exit (including the TUI's immediate quit) must not leave document copies behind.
 const privatePaths = new Set<string>();
@@ -20,16 +21,6 @@ function track(path: string): void {
         } catch {}
       }
     });
-  }
-}
-
-/** A process still running (or one this user can't signal: someone else's, so not ours to judge). */
-function alive(pid: number): boolean {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (err) {
-    return (err as NodeJS.ErrnoException).code === "EPERM";
   }
 }
 

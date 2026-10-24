@@ -6,6 +6,7 @@ import { readdirSync, unlinkSync } from "node:fs";
 import { join } from "node:path";
 import { ensureDir, readJson, writeJson } from "./fsutil.ts";
 import { type Keyed, stateDir } from "./paths.ts";
+import { alive } from "./processes.ts";
 
 interface StaleFile {
   pid: number;
@@ -28,15 +29,6 @@ export function writeDirty(v: Keyed, paths: string[], pid = process.pid): void {
   }
   ensureDir(join(stateDir(v), "dirty"));
   writeJson(file, { pid, updated: new Date().toISOString(), paths } satisfies StaleFile);
-}
-
-function alive(pid: number): boolean {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (err) {
-    return (err as NodeJS.ErrnoException).code === "EPERM";
-  }
 }
 
 export interface StaleEntry {

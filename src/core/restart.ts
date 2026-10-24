@@ -3,12 +3,12 @@
 // process with the screen given back, then this process replaced by the next binary (`execve`, UPG-D2), so the shell
 // sees one process throughout. Where `execve` can't be reached, the next one is started and waited for.
 
-import { dlopen, FFIType, ptr, read } from "bun:ffi";
+import { ptr } from "bun:ffi";
 import { accessSync, constants, existsSync, readdirSync, readFileSync, rmSync, statSync } from "node:fs";
 import { constants as os } from "node:os";
 import { isatty } from "node:tty";
-import { delimiter, isAbsolute, join, resolve } from "node:path";
-import { libcCandidates } from "./crash-reports.ts";
+import { join, resolve } from "node:path";
+import { libc } from "./libc.ts";
 import { atomicWrite } from "./fsutil.ts";
 import { homebrewPrefix, type InstalledBy } from "./install.ts";
 import { stateHome } from "./paths.ts";
@@ -90,12 +90,7 @@ function executable(file: string): boolean {
 export function startedPath(argv0: string, path: string, cwd: string): string | null {
   if (!argv0) return null;
   if (argv0.includes("/")) return resolve(cwd, argv0);
-  for (const dir of path.split(delimiter)) {
-    if (!dir) continue;
-    const file = join(isAbsolute(dir) ? dir : resolve(cwd, dir), argv0);
-    if (executable(file)) return file;
-  }
-  return null;
+  return Bun.which(argv0, { PATH: path, cwd });
 }
 
 /** What to start: a file, and its arguments, the first being its name. */
@@ -143,7 +138,7 @@ export function nextLaunch(opts: {
 const CLOSE_RANGE_CLOEXEC = 1 << 2;
 
 /**
- * This process replaced by `file`, run with `argv` and `env` (libc's `execve`, reached as D221's switch is): the same
+ * This process replaced by `file`, run with `argv` and `env` (libc's `execve`, `libc.ts`): the same
  * pid, process group and terminal. Descriptors above 2 are marked close-on-exec first where Linux's libc has
  * `close_range`, so none is carried into the next one; none is closed, so a failure leaves this process whole.
  * Returns only when it couldn't: why.
@@ -163,42 +158,14 @@ export function execInto(file: string, argv: string[], env: Record<string, strin
     });
     return a;
   };
-  for (const lib of libcCandidates()) {
-    let execve: (file: Buffer, argv: BigUint64Array, envp: BigUint64Array) => number;
-    try {
-      const { symbols } = dlopen(lib, EXECVE);
-      execve = (f, a, e) => symbols.execve(f, a, e);
-    } catch {
-      continue;
-    }
-    if (process.platform === "linux") {
-      try {
-        dlopen(lib, CLOSE_RANGE).symbols.close_range(3, 0xffffffff, CLOSE_RANGE_CLOEXEC);
-      } catch {
-        // an older libc: Bun's own descriptors are close-on-exec but one
-      }
-    }
-    const envp = Object.entries(env).flatMap(([k, v]) => (v === undefined ? [] : [`${k}=${v}`]));
-    execve(cstr(file), vec(argv), vec(envp));
-    return `execve failed${errno(lib)}`;
-  }
-  return "libc's execve couldn't be reached";
-}
-
-const EXECVE = { execve: { args: [FFIType.ptr, FFIType.ptr, FFIType.ptr], returns: FFIType.i32 } } as const;
-const CLOSE_RANGE = { close_range: { args: [FFIType.u32, FFIType.u32, FFIType.i32], returns: FFIType.i32 } } as const;
-
-/** libc's errno, said: `: errno 2`; empty when it can't be read. */
-function errno(lib: string): string {
-  try {
-    const where =
-      process.platform === "darwin"
-        ? dlopen(lib, { __error: { args: [], returns: FFIType.ptr } }).symbols.__error()
-        : dlopen(lib, { __errno_location: { args: [], returns: FFIType.ptr } }).symbols.__errno_location();
-    return where ? `: errno ${read.i32(where)}` : "";
-  } catch {
-    return "";
-  }
+  const c = libc();
+  if (!c) return "libc's execve couldn't be reached";
+  // An older libc has no close_range: Bun's own descriptors are close-on-exec but one.
+  c.closeRange?.(3, 0xffffffff, CLOSE_RANGE_CLOEXEC);
+  const envp = Object.entries(env).flatMap(([k, v]) => (v === undefined ? [] : [`${k}=${v}`]));
+  c.execve(cstr(file), vec(argv), vec(envp));
+  const errno = c.errno();
+  return `execve failed${errno === null ? "" : `: errno ${errno}`}`;
 }
 
 /** This process's children, by pid, as Linux lists them (`/proc`); an empty list elsewhere. */
@@ -231,13 +198,7 @@ const TCIFLUSH = process.platform === "darwin" ? 1 : 0;
 export function flushInput(): void {
   // The descriptor asked, not process.stdin: the TUI's renderer has let go of that stream by now.
   if (process.platform === "win32" || !isatty(0)) return;
-  for (const lib of libcCandidates())
-    try {
-      dlopen(lib, { tcflush: { args: [FFIType.i32, FFIType.i32], returns: FFIType.i32 } }).symbols.tcflush(0, TCIFLUSH);
-      return;
-    } catch {
-      // the next candidate
-    }
+  libc()?.tcflush(0, TCIFLUSH);
 }
 
 /** The terminal's signals, which reach the next slipbox too (one foreground group): this one ignores them while it

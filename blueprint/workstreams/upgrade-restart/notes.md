@@ -170,7 +170,11 @@ Logged, not fixed here (the review loop stops after this round):
 - **A second note write that fails** after the hand-over's upgrade leaves the first note to be read: the next slipbox
   says `restarted` though the upgrade failed (the failure said on the main screen, under the new one's).
 - **Copies left:** `alive()` beside `export/spool.ts`'s; `startedPath` beside `Bun.which` (which reads an empty `PATH`
-  entry as the folder, as POSIX does); libc opened again in `execInto`, `errno` and `flushInput`.
+  entry as the folder, as POSIX does); libc opened again in `execInto`, `errno` and `flushInput`. Fixed after all, at
+  the maintainer's word (2026-10-24): one `alive()` in `core/processes.ts` for `stale.ts`, `export/spool.ts` and
+  `update.ts` (there were three); `startedPath` by `Bun.which`; libc opened once a process in `core/libc.ts`, for the
+  crash reports' switch and the restart alike. The tests that read them pass: the two UPG files (63), the crash
+  reports', `stale.ts`'s and the spool's; `bun run test:terminal updates` 10/10.
 
 Tests after the round: `tests/tui-updates.test.ts` 42 and `tests/upgrade-restart.test.ts` 21 pass;
 `bun run test:terminal updates` 10/10.

@@ -237,8 +237,15 @@ Adds rows:
 | Module | Steps | Role |
 | --- | --- | --- |
 | `core/restart.ts` | UPG | the restart's note; the hand-over: the upgrade, the binary, `execve` into it |
+| `core/libc.ts` | UPG | libc through `bun:ffi`, opened once: `setenv` (D221), `execve`, `close_range`, `tcflush` |
+| `core/processes.ts` | UPG | whether a process still runs: a lock's holder, a TUI's unsaved notes, an export's spool |
 | `tui/dialog.ts` | UPG | the dialog: text, a select and checkboxes; its keys and clicks |
 | `tui/updates.ts` | UPG | the update offer, `app.upgrade`, `app.restart`, an upgrade underneath noticed |
+
+## MODIFIED design/distribution.md § Updates, Bun's own crash reports
+
+In "Bun's own crash reports", "libc's `setenv`, through `bun:ffi`" becomes "libc's `setenv`, through `bun:ffi`
+(`core/libc.ts`, which opens libc once a process for this and for a restart's `execve`)".
 
 ## MODIFIED design/how-it-works.md § Only the final draw step touches OpenTUI
 

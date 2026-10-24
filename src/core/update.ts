@@ -31,6 +31,7 @@ import {
 import { dirname, join } from "node:path";
 import { PREVIEW_TAG, pagesBase, type ReleaseBuild, retired, tagOf } from "./release.ts";
 import { type Channel, currentVersion, howToUpgrade, type InstalledBy, installedBy, readChannel } from "./install.ts";
+import { alive } from "./processes.ts";
 
 type Fetcher = (url: string, init?: RequestInit) => Promise<Response>;
 
@@ -339,15 +340,6 @@ export async function versionOf(bin: string, timeoutMs = 30_000, signal?: AbortS
 
 /** A lock older than this is taken over whoever holds it: an upgrade's download gives up after five minutes. */
 export const LOCK_STALE_MS = 15 * 60 * 1000;
-
-function alive(pid: number): boolean {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (err) {
-    return (err as NodeJS.ErrnoException).code === "EPERM";
-  }
-}
 
 /** The pid holding an install's upgrade lock — `held`, as read — when it's still running; null when the lock is
  *  stale. A lock that can't be read yet is held for a few seconds: it's being written. */
