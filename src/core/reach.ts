@@ -115,6 +115,21 @@ export class Reach implements VaultReach {
   }
 
   private knownCache: { at: number; list: KnownRoot[] } | null = null;
+  /**
+   * A root `discover` found, recorded in the machine's list (17.11) — or, not recording, or that failing, known to this
+   * reach all the same, its index read for the links it makes.
+   */
+  private remember(loc: VaultLocation, root: string): void {
+    if (this.record) {
+      try {
+        recordLocation(loc);
+        return;
+      } catch {}
+    }
+    // A worktree's notes count at its main checkout (17.19), which the list knows if anything does.
+    if (!loc.worktree) this.found.push({ key: loc.key, kind: "vault", path: root, seen: new Date().toISOString() });
+  }
+
   /** The roots `discover` found while it doesn't record them: known to it all the same, their indexes read. */
   private readonly found: KnownRoot[] = [];
 
@@ -269,14 +284,7 @@ export class Reach implements VaultReach {
       } catch {
         continue;
       }
-      if (this.record) {
-        try {
-          recordLocation(loc);
-        } catch {}
-      }
-      // A worktree's notes count at its main checkout (17.19), which the list knows if anything does.
-      else if (!loc.worktree)
-        this.found.push({ key: loc.key, kind: "vault", path: root, seen: new Date().toISOString() });
+      this.remember(loc, root);
       if (
         nested &&
         this.nested !== "none" &&

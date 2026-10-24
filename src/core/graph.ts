@@ -233,6 +233,8 @@ export class Graph {
     this.errors = walk.errors;
     // `$HOME` or `/` opened as a plain folder is listed, never indexed: nothing to keep (20.22).
     this.useCache = useCache && !isListed(this.loc);
+    // What it reads, by its stamp: written since by anyone (its thread, the background index, the CLI), it's newer.
+    this.indexStamp = this.useCache ? stampOf(this.cachePath) : "";
     const cached = this.useCache ? readJson<IndexFile | null>(this.cachePath, null) : null;
     this.indexRead = cached?.version === INDEX_VERSION;
     const old = this.indexRead ? cached!.entries : {};
@@ -280,7 +282,8 @@ export class Graph {
     this.tagCache = null;
     this.generation++;
     this.resolver.forgetNames();
-    this.cacheDirty = Object.keys(old).length !== reused;
+    // An index of this version written once at least: one with none, every note of it unreadable, has an empty one.
+    this.cacheDirty = Object.keys(old).length !== reused || (this.useCache && !this.indexRead);
     const toParse = this.unparsed.size;
     if (parse === "all") this.ensureAll();
     else if (this.cacheDirty && !toParse) this.writeCache();
@@ -319,6 +322,14 @@ export class Graph {
   }
 
   /** When the index on disk was last written (20.10): how fresh it is; null when there's none. */
+  /** The stamp of the index it was built from (`build`): "" for none. */
+  private indexStamp = "";
+
+  /** Its index on disk isn't the one it was built from: written since, by anyone. */
+  indexChanged(): boolean {
+    return this.useCache && stampOf(this.cachePath) !== this.indexStamp;
+  }
+
   indexedAt(): Date | null {
     try {
       return statSync(this.cachePath).mtime;
@@ -1361,6 +1372,16 @@ export function notIndexedSaid(why: string | null): string {
 
 export function openGraph(loc: VaultLocation, config: Config, useCache = true, parse: "all" | "lazy" = "all"): Graph {
   return new Graph(loc, config).build(useCache, parse);
+}
+
+/** A file's stamp, its mtime and size in a word: "" for none. */
+function stampOf(path: string): string {
+  try {
+    const st = statSync(path);
+    return `${st.mtimeMs}:${st.size}`;
+  } catch {
+    return "";
+  }
 }
 
 function isUnreadable(e: NoteEntry): boolean {

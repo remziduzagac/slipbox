@@ -665,7 +665,8 @@ vault). A folder link out of the vault is revealed in its own vault, as before (
   for changed settings asks nothing more (`Reach.reopen`): its answer came just now. Home's notes a graph here still
   lacks (one come since the thread's walk) are never parsed here, nor asked again: they wait for home's next peek
   (VV-D2) — asking again would never end for a note slipbox can't read; nor is home's graph built again for them unless
-  the thread wrote its index, which may hold them. Each answer brings the signature of the walk the thread made (its
+  its index was written since the graph was built (`Graph.indexChanged`: by its thread, a run another answer rode on,
+  the background index, the CLI), which may hold them. Each answer brings the signature of the walk the thread made (its
   notes' paths, mtimes and sizes, its other files, its folders, the vaults in it; the graph's own kept by its
   generation): when it differs from the graph's, or the graph has notes it didn't parse and isn't being parsed here, the
   links that vault follows are asked here too, and the graph is opened again in place from the index the thread wrote,

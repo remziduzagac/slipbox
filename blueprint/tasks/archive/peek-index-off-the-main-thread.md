@@ -449,3 +449,22 @@ changed in that vault since.
   failing, slipbox quitting, the machine's list failing, a note slipbox can't read), each fixed with its test. Another
   round would find more of the same kind; the merge's rule (three rounds of review and fixes, for a grown scope) is
   met three times over.
+- 2026-10-24: Rebased on dev with #59 (dev's hanging test fixed) and #54, and pushed (81f3cbd). At the main session's
+  word, the review loop carried on.
+- 2026-10-24: Review loop, round 10, on round 9's commits (30aab56..81f3cbd): Codex, 1 finding; the code-review
+  skill's agents, 12. Checked against the code:
+  - Codex's 1 and the code-review's 1, 3, 8 and 12, home's graph rebuilt for notes still to parse only when the
+    answer said written: verified, wrong. A catch-up riding on a run that wrote is told it didn't, so as not to stamp
+    twice; and an index written by anyone else (the background index, the CLI, another slipbox) was never read. The
+    gate now asks the index itself: written since the graph was built (`Graph.indexChanged`, by its stamp) — one stat,
+    and still no rebuild at each answer for a note slipbox can't read, whose index doesn't change.
+  - 2, a root found around a vault, its record failing: verified, not known to the reach at all. Known to it then, as
+    when it doesn't record (`Reach.remember`); 10, the copies of the guard, one helper for `discover`'s.
+  - 4, the relayout before the nested vaults' stamps: verified, a relayout failing skipped them. Stamped first.
+  - 5, a vault with no index whose every note slipbox can't read: verified, never indexed after round 9. A graph
+    that read no index of this version writes one.
+  - 6, the unreadable-note test failing as root: fixed, skipped there, as the repository's others are.
+  - 7, the guarded records said nowhere: accepted — the list's own writes fail as quietly; the CLI's `openVault`
+    still fails on it, as it chose. 9, two layouts when a parse here throws after one: rejected — it doesn't throw.
+    11, roots.md on the background index's walk: rejected — said a few lines before, where the walk in slices is.
+  Unit tests for each fixed one, mutation-checked (M137–M141, each caught). 96 unit tests.

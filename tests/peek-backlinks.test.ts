@@ -2236,7 +2236,7 @@ test("a root the machine's list opened, recorded when a link reaches it: that fa
   }
 });
 
-test("home's graph here with notes still to parse isn't built again at each answer: only when its thread wrote its index (VV-D2, #10)", async () => {
+test("home's graph here with notes still to parse isn't built again at each answer: only when its index was written since, by anyone (VV-D2, #10)", async () => {
   const home = realpathSync(mkdtempSync(join(sandbox, "home-")));
   const notes = join(home, "notes");
   mkdirSync(join(notes, ".slipbox"), { recursive: true });
@@ -2263,11 +2263,20 @@ test("home's graph here with notes still to parse isn't built again at each answ
     reply(sent.length - 1, same);
     await read(h);
     expect(built).toBe(0);
+    // Said written, the index the same: nothing to read again.
     keepCaughtUp(h.app, g);
     await Bun.sleep(0);
     reply(sent.length - 1, { ...same, wrote: true });
+    for (let i = 0; i < 20; i++) await Bun.sleep(1);
+    expect(built).toBe(0);
+    // Written by another (the background index, the CLI), said by nobody: read again.
+    openGraph(homeAt(home), DEFAULT_CONFIG, true);
+    keepCaughtUp(h.app, g);
+    await Bun.sleep(0);
+    reply(sent.length - 1, same);
     for (let i = 0; i < 100 && !built; i++) await Bun.sleep(1);
     expect(built).toBe(1);
+    expect(g.pendingCount).toBe(0);
   } finally {
     Graph.prototype.build = build;
     process.env.HOME = before;
@@ -2298,6 +2307,7 @@ test("the machine's list failing to record a root reached, or found around one: 
 });
 
 test("a note slipbox can't read doesn't have its vault's index written again at each run: nothing said written (#10)", async () => {
+  if (process.getuid?.() === 0) return; // root reads it all the same
   const { base, app } = twoVaults();
   const locked = join(app, "locked.md");
   writeFileSync(locked, "# Locked\n");
@@ -2311,5 +2321,113 @@ test("a note slipbox can't read doesn't have its vault's index written again at 
     });
   } finally {
     fs.chmodSync(locked, 0o644);
+  }
+});
+
+test("a graph of home held by another reach, its catch-up riding on a run that wrote home's index: it reads that index too (VV-D2, #10)", async () => {
+  const home = realpathSync(mkdtempSync(join(sandbox, "home-")));
+  const notes = join(home, "notes");
+  mkdirSync(join(notes, ".slipbox"), { recursive: true });
+  writeFileSync(join(notes, "index.md"), "# Index\n\n[the list](../todo.md)\n");
+  writeFileSync(join(home, "todo.md"), "# To do\n");
+  const before = process.env.HOME;
+  process.env.HOME = home;
+  stopBacklinkJobs();
+  const { sent, reply } = fakeThread();
+  try {
+    openGraph(homeAt(home), DEFAULT_CONFIG, true);
+    writeFileSync(join(home, "later.md"), "---\naliases: [Later On]\n---\n# Later\n"); // since home's index
+    const h = await harness({ root: notes, open: "index.md" });
+    const a = h.app.reach.graphAt(home, { known: true })!;
+    // Another reach's graph of home: a third vault's, say.
+    const other = new Reach(locateVault({ root: notes }), { thorough: false, readOnly: true });
+    const b = other.graphAt(home)!;
+    expect(a).not.toBe(b);
+    expect(b.pendingCount).toBeGreaterThan(0);
+    keepCaughtUp(h.app, a);
+    keepCaughtUp(h.app, b, () => other);
+    await Bun.sleep(0);
+    expect(sent).toHaveLength(1); // b's rides on a's
+    // The run writes home's index, the later note in it.
+    openGraph(homeAt(home), DEFAULT_CONFIG, true);
+    reply(0, { wrote: true, signature: vaultSignature(b), config: configSignature(b.config) });
+    for (let i = 0; i < 200 && (a.pendingCount || b.pendingCount); i++) await Bun.sleep(1);
+    expect(b.pendingCount).toBe(0);
+    expect(b.resolveLink({ kind: "wiki", target: "Later On" }, "todo.md").path).toBe("later.md");
+  } finally {
+    process.env.HOME = before;
+    stopBacklinkJobs();
+  }
+});
+
+test("a root found around a vault whose record in the machine's list fails is known to that reach all the same: its links counted (17.11, #10)", async () => {
+  const { base, app } = twoVaults();
+  const lab = join(realpathSync(app), "lab");
+  mkdirSync(join(lab, ".slipbox"), { recursive: true });
+  writeFileSync(join(lab, "n.md"), "# Lab\n\nBack to [design](../design.md).\n");
+  openGraph(locateVault({ root: lab }), DEFAULT_CONFIG, true); // its index, with the link
+  await onlyRootsUnder(base, async () => {
+    const g = openGraph(locateVault({ root: app }), DEFAULT_CONFIG, true, "lazy");
+    const spy = spyOn(vaultModule, "recordLocation").mockImplementation(() => {
+      throw new Error("the machine's list can't be written");
+    });
+    try {
+      const around = new Reach(g.loc);
+      around.discover(g);
+      expect(
+        around
+          .inbound(g)
+          .get("design.md")
+          ?.map((b) => b.from),
+      ).toContain(join(lab, "n.md"));
+    } finally {
+      spy.mockRestore();
+    }
+  });
+});
+
+test("nested vaults an answer built are stamped even when laying the screen out again fails (20.9, #10)", async () => {
+  const { base, notes, app } = twoVaults();
+  const lab = join(realpathSync(app), "lab");
+  mkdirSync(join(lab, ".slipbox"), { recursive: true });
+  stopBacklinkJobs();
+  const { sent, reply } = fakeThread();
+  try {
+    await onlyRootsUnder(base, async () => {
+      recordLocation(locateVault({ root: lab }));
+      const h = await harness({ root: notes, open: "index.md" });
+      await h.keys("tab", "enter");
+      const peek = peekOf(h.app)!;
+      const g = vaultGraph(h.app, app)!;
+      h.app.relayoutAll = () => {
+        throw new Error("can't lay out");
+      };
+      reply(sent.length - 1, {
+        others: [locateVault({ root: lab }).key],
+        signature: vaultSignature(g),
+        config: configSignature(g.config),
+      });
+      await peek.reading;
+      expect(readRoots().find((v) => v.path === lab)?.indexed).toBeString();
+    });
+  } finally {
+    stopBacklinkJobs();
+  }
+});
+
+test("a vault with no index whose every note slipbox can't read has one written all the same: it's indexed, not built at each peek (#10)", async () => {
+  if (process.getuid?.() === 0) return; // root reads them all the same
+  const { base, app } = twoVaults({}, false);
+  const index = join(cacheDir(locateVault({ root: app })), "index.json");
+  const notes = readdirSync(app).filter((n) => n.endsWith(".md"));
+  for (const n of notes) fs.chmodSync(join(app, n), 0o000);
+  try {
+    await onlyRootsUnder(base, async () => {
+      expect(existsSync(index)).toBe(false);
+      await backlinksThere({ root: app, rel: null });
+      expect(existsSync(index)).toBe(true);
+    });
+  } finally {
+    for (const n of notes) fs.chmodSync(join(app, n), 0o644);
   }
 });
