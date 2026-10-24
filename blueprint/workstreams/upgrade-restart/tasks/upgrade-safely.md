@@ -1,5 +1,5 @@
 ---
-status: todo
+status: review
 assignee: claude-23
 blocked_by: []
 created: "2026-10-24"
@@ -28,3 +28,15 @@ created: "2026-10-24"
 - Rests on: UPG-D2, UPG-D7; ../notes.md § Codex's critique, 3 and 4.
 
 ## Log
+
+- 2026-10-24: `upgrade` holds `<data>/upgrade.lock` (`lockUpgrades`), compares with what `current` names (status
+  `installed`), takes the channel's newest from `versions/`, keeps the new, the replaced and the running versions,
+  and takes an `AbortSignal` (`UpgradeCancelled`); `tar` and `--version` awaited children (`versionOf`, exported for
+  UPG-T6). What it says moved to `upgradeSaid` and `FROM_SOURCE`, for the CLI and the hand-over. Found while testing: a
+  child killed on a cancel can leave what it started holding its output open, so `versionOf` waits for the exit, not
+  the output's end (a cancel took 20 s before). A lock older than fifteen minutes is taken over too, and a running
+  version whose file another window removed is still the installer's (design.md § Updates, added).
+- 2026-10-24: `tests/upgrade-restart.test.ts`, 8 pass (62 expects); `tests/distribution.test.ts -t 'updates|Homebrew'`
+  12 pass; `tests/cli.test.ts -t 'upgrade from source'` passes; typecheck and lint clean. Mutations, each alone (no
+  lock; no comparison with current; no reuse; current's version not kept; no path fallback; the output awaited before
+  the exit; no last look before `current` moves): all seven caught.

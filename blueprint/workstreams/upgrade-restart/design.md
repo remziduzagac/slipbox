@@ -155,12 +155,16 @@ installs it` — on `preview`, …"; the rest as above.
 Adds, to `slipbox upgrade`'s paragraph, after "Any check failing changes nothing.":
 
 **One upgrade at a time.** An install's upgrades take turns: `<data>/upgrade.lock`, made only when there's none, holds
-the pid of the one running. Another finding it says `another upgrade is running (pid <n>)` and changes nothing; one
-left by a process that's gone is taken over, and what upgrades cut short left (`versions/.upgrade-*`) is removed.
+the pid of the one running and when it began. Another finding it says `another upgrade is running (pid <n>)` and
+changes nothing; one left by a process that's gone, or older than fifteen minutes (a download gives up after five), is
+taken over — one being written, not readable yet, is held for a few seconds — and what upgrades cut short left
+(`versions/.upgrade-*`, `current`'s link half made) is removed. A slipbox whose version another window's upgrade
+removed is still the installer's, by the path it ran from (Linux names it `… (deleted)`).
 
 **Against what's installed, not only what's running.** Holding the lock, `upgrade` reads the version `current` names: a
 slipbox still running an older version (a window not restarted yet) never moves `current` back. The newest the channel
-offers, not newer than `current`'s, installs nothing: `slipbox 0.6.0 is installed already (this is 0.5.0)`. The
+offers, not newer than `current`'s, installs nothing (`installed`, in `--json`'s `status`, with the version as
+`installed`): `slipbox 0.6.0 is installed already (this is 0.5.0)`. The
 channel's newest already in `versions/` — another window's upgrade, or one cut short after its folder was in place —
 is taken as it is once its binary says its version: `current` moved to it, nothing downloaded. What's kept is the new
 version, the one `current` named before, and the one running; any other is removed.
