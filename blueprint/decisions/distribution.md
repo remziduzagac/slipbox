@@ -274,7 +274,7 @@ it (ideas.md § Distribution).
 
 ## D258: A release's site deployed by a run on `main`, and every deployment read back (2026-10-23)
 
-> **Amended by D?1 (2026-10-24):** a `push` repeat isn't served either (#7), so every run but a preview's and one
+> **Amended by D265 (2026-10-24):** a `push` repeat isn't served either (#7), so every run but a preview's and one
 > by hand on `main` hands off to a run by hand on `main`, and `main` moving deploys nothing; the read-back reads a
 > marker of the run's own too.
 
@@ -299,7 +299,7 @@ for a preview, takes it. A deployment the site doesn't serve takes its run eleve
 answered 404 to one in that issue's reports); deploying by hand as a step of the release (the step 0.5.0 lacked); a
 query string to get past the site's cache (it isn't part of the cache's key: a new one is a hit).
 
-## D?1: Only a preview's run and a run by hand on `main` deploy the site, each read back by its own marker (2026-10-24)
+## D265: Only a preview's run and a run by hand on `main` deploy the site, each read back by its own marker (2026-10-24)
 
 **Decision:** `pages.yml` deploys in two kinds of run only: a preview's (`preview.yml`'s call, under its push to
 `test`), its commit's first deployment, and a run by hand on `main`. Every other run deploys nothing and starts a run by

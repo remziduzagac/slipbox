@@ -131,7 +131,7 @@ jobs:
           done
 
   # The site redeployed, in this run, so its `preview` channel names the preview just published: the commit's first
-  # deployment, which Pages serves under a push (D?1).
+  # deployment, which Pages serves under a push (D265).
   pages:
     needs: publish
     uses: ./.github/workflows/pages.yml # zizmor: ignore[self-repository]

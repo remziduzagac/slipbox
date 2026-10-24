@@ -715,7 +715,7 @@ describe("the workflows: one build for releases and previews, previews from test
 
   test("pages.yml: called, on a release published, by hand, never when main moves; Pages' grants only in its deploy", () => {
     const pages = workflow("pages.yml");
-    // D?1: main moves only for a release (D251), whose publishing deploys it: a release's docs go live with it.
+    // D265: main moves only for a release (D251), whose publishing deploys it: a release's docs go live with it.
     expect(Object.keys(pages.on).sort()).toEqual(["release", "workflow_call", "workflow_dispatch"]);
     expect(pages.on.release).toEqual({ types: ["published"] });
     expect(pages.concurrency).toEqual({ group: "pages", "cancel-in-progress": false });
@@ -744,7 +744,7 @@ describe("the workflows: one build for releases and previews, previews from test
     expect(deploys?.with).toEqual({ artifact_name: "github-pages-${{ github.run_attempt }}" });
   });
 
-  test("only a preview's run and a run by hand on main deploy; every other hands off to a run by hand on main (D?1)", () => {
+  test("only a preview's run and a run by hand on main deploy; every other hands off to a run by hand on main (D265)", () => {
     // A deployment of a commit deployed before is reported a success and never served under a `release` (0.5.0's
     // `stable` channel, D258) or a `push` (#7: a preview of `main`'s commit); a run by hand's is. A release's commit and
     // `main`'s, under D251, were always deployed by their preview; a preview's own is its commit's first.
@@ -801,7 +801,7 @@ describe("the workflows: one build for releases and previews, previews from test
     expect(needs(deploy!)).toEqual(["site"]);
   });
 
-  test("the site carries the run's own marker, beside the channels, for `deploy` to read back (D?1)", () => {
+  test("the site carries the run's own marker, beside the channels, for `deploy` to read back (D265)", () => {
     const site = workflow("pages.yml").jobs.site!;
     expect(site.outputs).toEqual({
       deployment: "${{ steps.marker.outputs.deployment }}",
@@ -948,7 +948,7 @@ describe("the workflows: one build for releases and previews, previews from test
     expect(unmarked.out).toContain("no marker was built");
   }, 30_000);
 
-  test("a re-run of `deploy` alone is refused: it might put back an older site (D?1)", () => {
+  test("a re-run of `deploy` alone is refused: it might put back an older site (D265)", () => {
     const steps = workflow("pages.yml").jobs.deploy?.steps ?? [];
     const guard = steps.findIndex((s) => s.name === "this run's site");
     expect(guard).toBeGreaterThanOrEqual(0);

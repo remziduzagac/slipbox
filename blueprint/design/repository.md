@@ -179,7 +179,7 @@ is read from the run's own commit, never the workspace; the finding is ignored i
 is never cancelled; `preview.yml` and `pages.yml` each run one at a time (`preview`, `pages`), never cancelled while
 running (one waiting gives way to a newer);
 `pages.yml`'s Pages grants are its `deploy` job's alone, and only a preview's run and a run by hand on `main` deploy:
-for any other, its `redeploy` job starts a run of it by hand on `main` (`actions: write`, D258, D?1), so
+for any other, its `redeploy` job starts a run of it by hand on `main` (`actions: write`, D258, D265), so
 `preview.yml`'s call grants that too. What each builds and publishes:
 [distribution.md](distribution.md) § Releases, § Previews, § Channels.
 

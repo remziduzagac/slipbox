@@ -15,7 +15,7 @@ Each claim is marked with its provenance, as the blueprint's README says.
   required status check, even passed; the rule is about checks alone, not commit statuses. Informed D257.
 - **A Pages deployment of a commit deployed before is reported a success and not served under a `release` or a `push`
   event;** a `workflow_dispatch` run's is, here from `main` and from `test`, whatever deployed the commit before, the
-  commit the site serves included. Informed D258 and D?1. Until 2026-10-24 this line had a `push` repeat served too,
+  commit the site serves included. Informed D258 and D265. Until 2026-10-24 this line had a `push` repeat served too,
   which no report showed, and #7 contradicts.
 - **The site keeps a file for ten minutes, whatever the query string,** so a deployment can be read back for certain
   only after that. Informed D258's eleven minutes.
@@ -107,7 +107,7 @@ Each claim is marked with its provenance, as the blueprint's README says.
 - Whether `main`'s ruleset takes D257's status: first seen at the next release's push (T10).
 - Whether a release's run by hand on `main` is served (D258): seen for 0.5.0's commit by hand on 2026-10-24, the site
   serving that commit or not; started by a release's run, first at the next one (T10).
-- Whether a `push` repeat from the ref that deployed the commit first is ever served: not tried. Under D?1 the only one
+- Whether a `push` repeat from the ref that deployed the commit first is ever served: not tried. Under D265 the only one
   is a preview's `pages / site` re-run after its deployment, and the read-back's failure points to a run by hand
   instead.
 - Whether an auto-triage rule's manifest criterion takes a path prefix, or only files by name: the form wasn't seen.

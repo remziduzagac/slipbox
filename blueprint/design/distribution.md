@@ -298,7 +298,7 @@ it), `preview` the newest published preview; a draft is neither, and a channel w
 of the asset differs). The site also holds the docs, at `docs/` (§ The documentation site), and its `index.html`
 sends a visitor there, with a link to the repository. It's deployed once a preview is published, when a release is
 published (a person publishes it), and by hand; not when `main` moves, which it does only for a release (D251), so a
-release's docs reach the site when it's published, unless a preview or a run by hand comes first (D?1). The site is
+release's docs reach the site when it's published, unless a preview or a run by hand comes first (D265). The site is
 always made from `main`'s scripts, whichever ref started the run, and from the releases as they are then, one
 deployment at a time: one running is never cancelled, so an older run never deploys over a newer one, and one waiting
 gives way to a newer, which builds from the same `main` and releases as they are then. Its build job only reads; the
@@ -309,7 +309,7 @@ takes deployments from `main`, `test` and `v*` tags only.
 Every other run — a release published, a run by hand on another ref — does nothing but start a run by hand on `main`
 (`redeploy`, `actions: write`), its log saying so, with a link to the runs on `main`. A deployment is named by its
 commit, and one of a commit deployed before is reported a success and never served when it's made under a `release` or a
-`push` (issue #7, actions/deploy-pages#383); a run by hand's is served (D258, D?1). A release's commit always was
+`push` (issue #7, actions/deploy-pages#383); a run by hand's is served (D258, D265). A release's commit always was
 deployed, by its preview (D251); a preview's is its commit's first. **Every deployment is read back:** the site holds a
 marker of the run's own, `deployment` (its ID and attempt), and once deployed, it, `stable` and `preview` are fetched
 from the site until they're what the build wrote (an empty line for a channel with none, which the site answers with a

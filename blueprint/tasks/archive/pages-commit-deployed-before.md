@@ -37,7 +37,7 @@ the deployments D258 relies on are served; then whatever fix that calls for.
 ## References
 
 - Delivers: design/distribution.md § Previews (the Pages site, a release's deployment).
-- Rests on: (GR-D14), (D251), (D258), (D?1); [research/github-behaviour.md](../../research/github-behaviour.md)
+- Rests on: (GR-D14), (D251), (D258), (D265); [research/github-behaviour.md](../../research/github-behaviour.md)
   § Pages; issue #7.
 
 ## Log
@@ -139,14 +139,14 @@ the deployments D258 relies on are served; then whatever fix that calls for.
 - 2026-10-24: Read: the dispatch API answers with the run's `workflow_run_id` (GitHub's REST docs); the health issue
   reports a workflow whose last run on `dev` or `main` failed (`scripts/health.ts:441`, `BRANCHES`).
 - 2026-10-24: Asked the maintainer: a preview keeps deploying in its own run; every other run but one by hand on `main`
-  hands off to a run by hand on `main`; every deployment reads back a marker of its own (D?1, amending D258). The
+  hands off to a run by hand on `main`; every deployment reads back a marker of its own (D265, amending D258). The
   hand-off doesn't wait for the run it starts (Codex's deadlock). Not chosen: every deployment by hand on `main`,
   previews too.
 - 2026-10-24: Built. `pages.yml`: `redeploy` runs unless the run is a preview's call (a push on `test`, which only
   `preview.yml`'s call can be) or by hand on `main`, never in a fork; `site` runs on exactly those two; a `marker` step
   writes `_site/deployment`, `<run ID>.<attempt>`, an output of `site`, so a re-run of `deploy` alone reads back the
   artifact's own; `served` fails at once with no marker built, reads the marker with the channels, and bounds curl (5 s
-  to connect, 10 in all). `preview.yml`'s comments. The record: D?1 with a note under D258, design/distribution.md
+  to connect, 10 in all). `preview.yml`'s comments. The record: D265 with a note under D258, design/distribution.md
   § Previews, design/repository.md § CI, research/github-behaviour.md (the `push` claim corrected, the experiment),
   `MAINTAINING.md` (§ Releasing step 11; § Previews: a re-run of a preview's `deploy` doesn't help), a line in T10.
 - 2026-10-24: Tests, `tests/release.test.ts`: the two jobs' `if`s evaluated (a small evaluator of GitHub's
@@ -168,19 +168,19 @@ the deployments D258 relies on are served; then whatever fix that calls for.
   slow site giving up in time (the count put back: 1,330 s, the test failing); (3) the research had cron runs as a
   `push` report, and the files' ETags the same: corrected. All three verified, all fixed.
 - 2026-10-24: Review, round 1, `/code-review`, nine findings, each checked against the code. Taken: the Log's line
-  over 120 columns; D?1's Cost had a run by hand on `test` make a preview a repeat, which D?1 hands to `main` now;
+  over 120 columns; D265's Cost had a run by hand on `test` make a preview a repeat, which D265 hands to `main` now;
   the slow-site bound fits one request a round, not three (a channel off): the worst case is the deadline, a sleep, a
   round and the message's request, 710 s with curl at ten; `settings.json`'s and `MAINTAINING.md`'s lines on which
   refs deploy, stale since D258 (a `v*` tag deploys nothing); the deploy job's timeout comment. For the maintainer:
   both experiments deployed a commit the site wasn't serving, so a rule "a repeat of the commit served isn't applied"
   fits slipbox's own evidence too (#383's dispatches against it are second-hand), and under it the next release's runs
-  by hand fail, D258's as well as D?1's: two runs by hand on `main` in a row would tell; and `main`'s push handed off
+  by hand fail, D258's as well as D265's: two runs by hand on `main` in a row would tell; and `main`'s push handed off
   puts a release's docs on the site at step 7, before it's published (D258's push repeat went unserved, so they went
   live with the release), and doubles the runs in the `pages` group, where a pending one is replaced by a newer.
   Not taken: writing the deploy condition once (`site` after `redeploy`, when it's skipped): the test's table holds
   the two `if`s complementary, and `needs` with `always()` brings cancellation's own rules; T24 a workstream, since it
   changes the design: D223 takes a small change as an issue and one pull request with its design file, as T12 did.
-- 2026-10-24: Asked the maintainer: the two runs by hand approved; `main`'s push trigger dropped (D?1, amending
+- 2026-10-24: Asked the maintainer: the two runs by hand approved; `main`'s push trigger dropped (D265, amending
   GR-D14 too).
 - 2026-10-24: The second experiment (ran): `pages.yml` by hand on `main` twice in a row. Run 40050527681 deployed
   5fe758f while the site served 71313f3: served at 01:36:26. Run 40050816202 deployed 5fe758f again at 01:40:21, the
@@ -191,13 +191,13 @@ the deployments D258 relies on are served; then whatever fix that calls for.
   and the deploy job's timeout comment say so and what's read back; the routing test's table keeps a push to `main`
   (no trigger starts one; one that did would hand off), and the triggers' test has none; the slow site's test runs a
   stale marker, no marker and a channel off, each within the deadline, a wait, a round and the message's request (the
-  plain no-marker and channel-off cases folded into it: the test took 13 s on a loaded machine, 5 s now); D?1's Cost
-  without the run by hand on `test`; D?1's Why with the four runs; notes under D258 and GR-D14; design § Previews,
+  plain no-marker and channel-off cases folded into it: the test took 13 s on a loaded machine, 5 s now); D265's Cost
+  without the run by hand on `test`; D265's Why with the four runs; notes under D258 and GR-D14; design § Previews,
   `MAINTAINING.md` (step 11; § Settings: only `main` and `test` deploy), `settings.json`'s line on the environment's
   refs (its words, not the setting). The concurrency finding goes with `main`'s push: a release's hand-off is the one
   left, as under D258.
 - 2026-10-24: Review, round 2. Codex: the design's and the pull request's "a release whose draft is deleted never shows
-  its docs" claims more than the code does (a preview builds the docs from `main` too): narrowed; D?1 and the pull
+  its docs" claims more than the code does (a preview builds the docs from `main` too): narrowed; D265 and the pull
   request had 0.5.0's push not served, which isn't recorded: said so. Both verified, both fixed.
 - 2026-10-24: Review, round 2, `/code-review`, eight findings, each checked. Taken: a re-run of `deploy` alone deploys
   its run's artifact again, which a run by hand serves, putting back an older site, and the read-back passes on its own
@@ -207,10 +207,10 @@ the deployments D258 relies on are served; then whatever fix that calls for.
   `deploy` has a deploy-pages step at all; design/repository.md's table still had `pages.yml` run on `main`'s docs;
   `holds` trimmed the `if`, hiding a `${{ }}` with a newline after it, which GitHub takes as true (turning `redeploy`'s
   `>-` into `>` now fails the routing test); "#7" in a workflow comment read as deploy-pages'. Not taken: narrowing
-  `github-pages` to `main` and `test` (a setting, the maintainer's; the pull request says so); numbering D?1 (a root
+  `github-pages` to `main` and `test` (a setting, the maintainer's; the pull request says so); numbering D265 (a root
   decision made on a branch is numbered when it's merged); the deploy condition written once (as in round 1).
 - 2026-10-24: Done, every acceptance criterion met: the repeats in today's flow shown served or made so (a preview's,
-  its commit's first; a run by hand, four times), the tests above holding `pages.yml` to it, the design and D?1 saying
+  its commit's first; a run by hand, four times), the tests above holding `pages.yml` to it, the design and D265 saying
   so. Moved to the archive with the pull request; its merge is the maintainer's acceptance.
 - 2026-10-24: CI on the pull request's first push: `terminal (ubuntu-24.04-arm)` failed one check, `links-and-files:
   view: a worktree kept outside the view chosen …` ("docs/ under each of the two"), which passed on `ubuntu-24.04`;
@@ -221,18 +221,18 @@ the deployments D258 relies on are served; then whatever fix that calls for.
 - 2026-10-24: Review, round 3: `/code-review` and the second reviewer, each finding checked. Taken: re-running a
   preview's `pages / site` re-runs `deploy` too, deploying its commit again under a push, not served: the read-back's
   failure now says so and names the run by hand on `main`, and `MAINTAINING.md` § Previews too; a run by hand on any
-  ref but `main` hands off, not only `test` or a tag: D?1, the design and the comment say "another ref"; `holds` read
+  ref but `main` hands off, not only `test` or a tag: D265, the design and the comment say "another ref"; `holds` read
   `true`, `false` and `null` as names and gave `&&`/`||` booleans, not GitHub's operands: literals, numbers and
   operands now, checked on forms like `… && 'full' || 'ci'`; nothing held curl to its bounds (the stub took the URL
   alone): each request's arguments are checked now, and taking the bounds out fails the test; GitHub runs a step with
-  no `shell` as `bash -e`, not `-eo pipefail`: `runStep` too; D?1 and the pull request had a read-back pass on
+  no `shell` as `bash -e`, not `-eo pipefail`: `runStep` too; D265 and the pull request had a read-back pass on
   `main`'s push for 0.5.0, which had none (5fe758f's `pages.yml` reads nothing back): said as what D258's would do;
   the design's "eleven minutes at most" is that and a last round; T10's Log had the runs out of order; the
   `deploy` job's comment on `v*` tags; a comment line of 130 columns. Not taken: a preview that repeats a commit after
   `dev` reached `main` without `test` (the ruleset gap left to the maintainer; its read-back fails, loudly); a loop
   guard for a tag named `main` (nothing makes one, and the `pages` group runs one at a time); `served`'s own check
   for no marker, now behind the guard's, kept so the read-back can't pass on an empty one by itself; the session's
-  notes on Codex's skips, which the maintainer asked for; and, again, `v*` in the environment, D?1's number, the
+  notes on Codex's skips, which the maintainer asked for; and, again, `v*` in the environment, D265's number, the
   condition written twice.
 - 2026-10-24: Review, round 4: Codex's part skipped again, Codex at its usage limit; a second reviewer does it.
 - 2026-10-24: Review, round 4. The second reviewer: no defect in the workflow, the scripts or the tests; the pull
@@ -245,7 +245,7 @@ the deployments D258 relies on are served; then whatever fix that calls for.
   out, the test fails); the guard's message, and the docs, said the re-run's site was older than any since, which
   holds only if one was deployed since: "perhaps older", and the run by hand builds it afresh; `holds` compared mixed
   types as strings and names by case: GitHub's loose equality (numbers for mixed types) and names ignoring case now,
-  checked. Not taken: D?1's number, and `v*` in `settings.json`'s expected environment (the setting is the
+  checked. Not taken: D265's number, and `v*` in `settings.json`'s expected environment (the setting is the
   maintainer's), as before.
 - 2026-10-24: Review, round 5: Codex's part skipped, Codex at its usage limit; a second reviewer does it.
 - 2026-10-24: Review, round 5, `/code-review` and the second reviewer (each resumed after a usage limit), each finding
@@ -260,34 +260,34 @@ the deployments D258 relies on are served; then whatever fix that calls for.
   nor `main`'s push's had `stable`, so which isn't recorded); 40050527681's creation time (01:36:19). Taken as
   recommended while the maintainer was away: the re-run guard kept, though a preview's run whose deployment failed
   before anything was deployed can't then go green (its `deploy` alone refused, a whole re-run stopped at `plan`): a
-  run by hand on `main` fixes the site, and a re-run that might put an older site back would pass; written in D?1's
+  run by hand on `main` fixes the site, and a re-run that might put an older site back would pass; written in D265's
   Cost and `MAINTAINING.md` § Previews. Not taken: steps run with `bash --noprofile --norc -eo pipefail` in the tests,
   since GitHub runs a step with no `shell` as `bash -e {0}` (its own log, run 40050816202's `site`: `shell:
-  /usr/bin/bash -e {0}`); the release's run waiting for the run it starts (D?1's Not chosen: it deadlocks); and, as
+  /usr/bin/bash -e {0}`); the release's run waiting for the run it starts (D265's Not chosen: it deadlocks); and, as
   before, `served`'s own empty-marker check, the condition written twice, `v*` in the environment.
 - 2026-10-24: Review, round 6: Codex's part skipped, Codex stopped at a menu in its pane after its usage limit; a second
   reviewer does it.
-- 2026-10-24: Review, round 6, both reviewers: no defect in the workflows or the tests. Taken: D?1's Cost and the pull
+- 2026-10-24: Review, round 6, both reviewers: no defect in the workflows or the tests. Taken: D265's Cost and the pull
   request had a preview's run, its deployment failed before anything was deployed, never go green, but re-running its
   `pages / site` re-runs `deploy` with a fresh marker: corrected; the slow-site bound and the timeout comment, since the
   failure message reads three files: 730 s now; the pull request's twelve minutes, which 40050527681 didn't have. Not
-  taken: the hand-off not waiting (D?1's Not chosen), the guard refusing a needless re-run (taken as recommended,
+  taken: the hand-off not waiting (D265's Not chosen), the guard refusing a needless re-run (taken as recommended,
   above), `refs/heads/Main` matching ignoring case (no such branch; the environment refuses it), `runStep`'s 20 s
-  against a 1.3 s file, and as before `v*`, D?1's number, `served`'s own check, the condition written twice.
+  against a 1.3 s file, and as before `v*`, D265's number, `served`'s own check, the condition written twice.
 - 2026-10-24: Rebased on `origin/dev` (#59, the hanging test fixed; #54) and pushed. Review, round 7: Codex's part
   skipped, Codex still stopped at a menu in its pane; a second reviewer does it.
 - 2026-10-24: Review, round 7, both reviewers, each finding checked. Taken: a re-run that builds the site again (`pages
   / site`, or every job of a run by hand) uploads a second `github-pages` artifact into the run, and deploy-pages takes
   the one artifact of its name in the whole run (`listArtifacts()` and a filter by name, refusing two; read, its source
   at `368f825`): the artifact is named by the attempt now, `github-pages-<attempt>`, upload and deploy alike, tested, so
-  the re-run D?1's Cost names works; after the deadline the report read the site again and could print a site served
+  the re-run D265's Cost names works; after the deadline the report read the site again and could print a site served
   while failing: one last read of all three now passes if it serves them, tested with the swap after the last round
   (the check taken out, the test fails); the job's timeout is tested against deploy-pages' ten minutes and the
   read-back's worst case; `MAINTAINING.md` step 11 named `stable` alone; `holds` took `constructor` for a literal
-  (`Object.hasOwn` now); a routing assertion the table already makes; the pull request's re-run note lacked D?1's
-  "before anything was deployed"; the research's Gap said D?1 makes no `push` repeat, but a preview's `pages / site`
+  (`Object.hasOwn` now); a routing assertion the table already makes; the pull request's re-run note lacked D265's
+  "before anything was deployed"; the research's Gap said D265 makes no `push` repeat, but a preview's `pages / site`
   re-run after its deployment is one, from the ref that deployed it first, never tried: the Gap, the failure message
-  and `MAINTAINING.md` say "may not serve". Not taken, as before: D?1's number, `v*`, the Log's notes on Codex's
+  and `MAINTAINING.md` say "may not serve". Not taken, as before: D265's number, `v*`, the Log's notes on Codex's
   skips (the maintainer's), `served`'s own check, the condition written twice.
 - 2026-10-24: Review, round 8: Codex's part skipped, Codex still stopped at a menu in its pane; a second reviewer does
   it.
@@ -296,7 +296,7 @@ the deployments D258 relies on are served; then whatever fix that calls for.
   workflows run, no test passing without its part. Recorded, for a follow-up:
   - Since the artifact is named by the attempt, a re-run of `deploy` alone finds no artifact of its attempt's name
     (deploy-pages: "No artifacts named …") and deploys nothing, guard or not: the guard only says why first. So the
-    reason D?1, the design, `MAINTAINING.md`, the guard's comment and its test's title give ("it would deploy the run's
+    reason D265, the design, `MAINTAINING.md`, the guard's comment and its test's title give ("it would deploy the run's
     site again, perhaps older") no longer describes what the code would do without it, and the choice taken as
     recommended in round 5 is settled by the naming. Either say so in those places, or have `deploy` take the artifact
     name from `site`'s output, which would make the guard the one refusing.

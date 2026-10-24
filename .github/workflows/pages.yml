@@ -5,7 +5,7 @@ name: pages
 # one line, `<tag> <SHA-256 of that release's install.sh>` — the highest stable release, the newest preview; none for
 # a channel with no release (`scripts/release.ts site`); and the docs at `docs/`, the site/ Starlight site built from
 # docs/ (DS), where the site's index sends a visitor. Deployed by preview.yml once a preview is published, in its own
-# run, and by a run by hand on main, which every other run starts instead of deploying (D258, D?1): when a release is
+# run, and by a run by hand on main, which every other run starts instead of deploying (D258, D265): when a release is
 # published (by a person: a release CI publishes starts no workflow), and by hand on another ref. Not when main moves:
 # main takes only test's commits, for a release (D251), and its docs reach the site when the release is published,
 # unless a preview or a run by hand comes first (every deployment builds from main).
@@ -27,7 +27,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # D258, D?1: a deployment of a commit deployed before is reported a success and never served when it's made under a
+  # D258, D265: a deployment of a commit deployed before is reported a success and never served when it's made under a
   # `release` or a `push` (actions/deploy-pages#383; this repository's #7); one made by hand is served. So only two
   # runs deploy: a preview's (preview.yml's call, the one push this workflow sees), its commit's first deployment, and
   # a run by hand on main. Any other — a release published, whose commit its preview deployed already (D251), a run by
@@ -95,7 +95,7 @@ jobs:
         run: |
           bun run site
           cp -R site/dist _site/docs
-      # D?1: the run's own mark on the site, which no other deployment has, so `deploy` can tell this one is served
+      # D265: the run's own mark on the site, which no other deployment has, so `deploy` can tell this one is served
       # even when the channels are what the site served already.
       - name: marker
         id: marker
@@ -103,7 +103,7 @@ jobs:
           echo "$GITHUB_RUN_ID.$GITHUB_RUN_ATTEMPT" >_site/deployment
           echo "deployment=$(cat _site/deployment)" >>"$GITHUB_OUTPUT"
       # Named by the attempt: deploy-pages takes the one artifact of its name in the whole run, so a re-run that builds
-      # the site again would otherwise find two and deploy neither (D?1).
+      # the site again would otherwise find two and deploy neither (D265).
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
           name: github-pages-${{ github.run_attempt }}
@@ -123,7 +123,7 @@ jobs:
       name: github-pages
       url: ${{ steps.deploy.outputs.page_url }}
     steps:
-      # D?1: a re-run of this job alone would deploy the run's artifact again, its site perhaps older than one deployed
+      # D265: a re-run of this job alone would deploy the run's artifact again, its site perhaps older than one deployed
       # since, and a repeat of its commit (served by hand, putting back the older site; under a push, not served).
       - name: this run's site
         env:
@@ -142,7 +142,7 @@ jobs:
         uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
         with:
           artifact_name: github-pages-${{ github.run_attempt }}
-      # D258, D?1: a deployment can be reported a success and not be served (actions/deploy-pages#383), as 0.5.0's was.
+      # D258, D265: a deployment can be reported a success and not be served (actions/deploy-pages#383), as 0.5.0's was.
       # The marker and the channels are read back from the site until they're what `site` built: for eleven minutes,
       # past the ten its cache keeps a file (a deployment empties the cache, and a query doesn't get past it), however
       # long the site takes to answer.
