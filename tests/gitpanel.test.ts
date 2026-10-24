@@ -2630,9 +2630,16 @@ describe("the panel's rows by what they are, not where they were: as rows come a
 
   test("scrolled past the list's end for the pointer's row: the scrollbar's thumb stays in the list", async () => {
     const root = crowded();
+    // On main, nothing of its own against a base: no This branch section, whose rows (these files again) come in their
+    // own time, below the pointer's row, and leave the list no end to scroll past (#77).
+    git(root, "switch", "-q", "main");
     const { app, frame } = await panel(root);
+    expect(app.gitPanel.aheadFiles()).toBeNull();
     const fileAt = (path: string) => rowOf(app, (r) => r.kind === "file" && r.entry.path === path);
-    expect(await until(() => (frame(), fileAt("n39.md") >= 0))).toBe(true);
+    // Every row below the files in before the wheel: the branches, the last to answer.
+    expect(await until(() => (frame(), fileAt("n39.md") >= 0 && rowOf(app, (r) => r.kind === "branch") >= 0))).toBe(
+      true,
+    );
     app.mouse.handle({ type: "scroll", x: 6, y: 20, button: 0, scroll: { direction: "down", delta: 20 } });
     frame();
     const list = app.geometry!.gitRows!;
