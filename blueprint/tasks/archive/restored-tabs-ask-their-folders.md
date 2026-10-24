@@ -330,6 +330,7 @@ folder before its tabs open, as a file opened by name has its folder asked for, 
   while nobody works, never holds the keys …` (it passed here five times out of five; this branch's code doesn't run in
   it). macOS's terminal job, this branch's check `links: … followed, its target not answering`: on macOS Bun finds a
   path's real path by opening it, so a folder you may not list has none, and a link to it leads nowhere (`linkTarget`
-  null): nothing to follow, the question never asked. The check returns there, as it does for root; the unit test drives
-  the case on both systems (`answer` given the target). Left for later, not this PR's: on macOS a link to a folder you
-  may not list is broken, not asked about (never read either way); on Linux it's asked, and doesn't answer.
+  null): nothing to follow, the question never asked. The check is skipped there, said why (`Skipped`: a check that
+  returned early fails for the commands it declares and never ran), as it is for root; the unit test drives the case on
+  both systems (`answer` given the target). Left for later, not this PR's: on macOS a link to a folder you may not list
+  is broken, not asked about (never read either way); on Linux it's asked, and doesn't answer.

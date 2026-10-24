@@ -2086,9 +2086,11 @@ const LINKED: Check[] = [
     covers: { cases: ["links/state", "safety"], commands: ["link.follow", "vault.links"] },
     options: { home: true, startAt: "home/notes/to-shelf.md", setup: shelf },
     run: async (s) => {
-      // Root lists any folder: a target that won't is only so for others. On macOS one you may not list has no real
-      // path either (Bun opens it to find it): the link leads nowhere, nothing to follow — the unit test's case alone.
-      if (process.getuid?.() === 0 || process.platform === "darwin") return;
+      if (process.getuid?.() === 0)
+        throw new Skipped("root lists any folder: a target that won't is only so for others");
+      // On macOS one you may not list has no real path either (Bun opens it to find it): the link leads nowhere.
+      if (process.platform === "darwin")
+        throw new Skipped("on macOS a folder you may not list leads nowhere: nothing to follow, the unit test's case");
       await toLink(s, "shelf/far.md");
       await s.keys("enter");
       await s.see(asked("~/shelf"));
