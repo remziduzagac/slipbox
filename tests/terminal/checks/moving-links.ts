@@ -745,6 +745,51 @@ export const MOVING_LINKS: Check[] = [
   },
   {
     area: "links-and-files",
+    name: "rename: a folder moved with links in it, each judged by where it leads after as the disk reads it — an absolute one into the folder left, said; a relative one through another link written",
+    covers: { cases: ["rename", "links/moves"], commands: ["rename.undo"] },
+    options: {
+      startAt: "v/a.md",
+      config: WIDE,
+      setup: (s) => {
+        const v = vault(
+          s,
+          {
+            "a.md": "# A\n",
+            "deep/k.md": "# K\n",
+            "box/shelf/t.md": "# T\n\n[a](../a.md)\n",
+            "shelf/inner/i.md": "# I\n",
+            "shelf/u.md": "# U\n\n[a](../a.md)\n",
+          },
+          '[walk]\nexclude = ["shelf/"]\n',
+        );
+        link(join(v, "box", "shelf", "t.md"), join(v, "box", "l.md")); // absolute, into the folder itself
+        link(join(v, "shelf", "inner"), join(v, "box", "lnk"));
+        link("lnk/../u.md", join(v, "box", "c.md")); // through another link, and back up
+      },
+    },
+    run: async (s) => {
+      const v = join(s.dir, "v");
+      await explorerOpen(s);
+      await moveRow(s, "box", "deep", "skipped box/l.md:3");
+      await s.see("leads elsewhere after");
+      s.expect(!s.text().includes("skipped box/c.md"), "box/c.md leads where it did: written");
+      await s.keys("enter");
+      await s.message("moved box/ → deep/box/");
+      s.expect(s.read(join(v, "deep", "box", "shelf", "t.md")) === "# T\n\n[a](../a.md)\n", "l.md's note left");
+      s.expect(
+        s.read(join(v, "shelf", "u.md")) === "# U\n\n[a](../../a.md)\n",
+        "c.md's note written for its new place",
+      );
+      await s.keys("escape");
+      await leader(s, "v", "shift+u");
+      await s.see("undo: deep/box/ → box/");
+      await s.keys("enter");
+      await s.message("moved deep/box/ back to");
+      s.expect(s.read(join(v, "shelf", "u.md")) === "# U\n\n[a](../a.md)\n", "undone: c.md's note as it was");
+    },
+  },
+  {
+    area: "links-and-files",
     name: "rename: in home, a folder moved with a followed link in it leaves the link's note as it is, said — not followed at its new place — and is undone",
     covers: { cases: ["rename", "links/state"], commands: ["rename.undo"] },
     options: {
@@ -778,6 +823,119 @@ export const MOVING_LINKS: Check[] = [
       await s.keys("enter");
       await s.message("moved b/a/ back to");
       s.expect(isLink(s.path("~/a/l.md")) && s.read(note) === "# S\n\n[z](../z.md)\n", "back, its note as it was");
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "rename: a data file and a link to it from another folder written for neither; a second name for a note by a hard link isn't one entry; a planned move whose note is gone refused; a folder moved with a followed link in it isn't read through there; a stale answer isn't one; a link with none moved says nothing lost",
+    covers: { cases: ["rename", "links/moves", "safety"], commands: ["note.rename"] },
+    options: {
+      startAt: "v/docs/x.md",
+      config: WIDE,
+      setup: (s) => {
+        const v = vault(
+          s,
+          {
+            "docs/real.json": '{"$ref": "./x.md"}\n',
+            "docs/x.md": "# X\n",
+            "other/x.md": "# OX\n",
+            "sub/h.md": "# H\n",
+            "g.md": "# G\n",
+            "index.md": "# Index\n\n[g](g.md)\n",
+            "b.md": "# B\n\n[s](a/out/s.md)\n",
+            "a/k.md": "# K\n",
+            "deep/k.md": "# K\n",
+            "shelf2/x.md": "# SX\n\n[b](../b.md)\n",
+            "pic.png": "PNG",
+            "box2/k.md": "# K\n",
+          },
+          '[walk]\nexclude = ["shelf2/"]\n',
+        );
+        link("../docs/real.json", join(v, "other", "alias.json"));
+        link("pic.png", join(v, "alias2.png")); // within the vault: no answer of its own
+        if (!existsSync(join(v, "sub", "h2.md"))) linkSync(join(v, "sub", "h.md"), join(v, "sub", "h2.md"));
+        if (!existsSync(join(s.dir, "out2"))) put(join(s.dir, "out2", "s.md"), "# S\n");
+        link(join(s.dir, "out2"), join(v, "a", "out"));
+        // f/l.md once followed to out2/s.md, its answer still for that; re-pointed into the vault since.
+        link(join(v, "shelf2", "x.md"), join(v, "f", "l.md"));
+        followed(s, [
+          [join(v, "a", "out"), join(s.dir, "out2")],
+          [join(v, "f", "l.md"), join(s.dir, "out2", "s.md")],
+          [join(v, "box2", "alias2.png"), join(s.dir, "out2")], // an old answer, for elsewhere, where alias2.png goes
+        ]);
+      },
+    },
+    run: async (s) => {
+      const v = join(s.dir, "v");
+      // The data file and its link from other/: written for neither, said.
+      await s.ex("mv docs/sub/x.md");
+      await s.see("skipped docs/real.json:1");
+      await s.see("reached as other/alias.json too");
+      await s.keys("enter");
+      await s.message("renamed docs/x.md → docs/sub/x.md");
+      s.expect(s.read(join(v, "docs", "real.json")) === '{"$ref": "./x.md"}\n', "the data file as it was");
+      // A note's second name in its folder, a hard link: another entry, so there, it's not written over.
+      await s.ex("e sub/h.md");
+      await opened(s, "sub/h.md");
+      await s.ex("mv sub/h2.md");
+      await s.message("sub/h2.md exists; not overwriting it");
+      // The command line's, beside the TUI: a plan saved, its note gone before it's applied.
+      const planned = cli(s, "mv", "g.md", "g2.md", "--plan");
+      const id = String((planned.data.plan as { id?: string } | undefined)?.id ?? planned.data.id ?? "");
+      rmSync(join(v, "g.md"));
+      const applied = cli(s, "apply", id);
+      s.expect(
+        applied.code === 5 && applied.error === "g.md isn't there any more; nothing changed",
+        `${applied.error}`,
+      );
+      s.expect(s.read(join(v, "index.md")) === "# Index\n\n[g](g.md)\n", "nothing written");
+      // A folder moved with a followed link in it: the link isn't followed at its new place, nothing read through it.
+      s.expect(cli(s, "mv", "a", "c").code === 0, "a moved to c");
+      const read = s.cliIn(v, "read", "c/out/s.md");
+      s.expect(read.code === 5, `c/out/s.md not read through the link not followed (${read.code})`);
+      // A stale answer isn't one: f/l.md leads into the vault now, so its note is written as its folder moves.
+      const f = cli(s, "mv", "f", "deep/f");
+      const said = (f.data.warnings as string[] | undefined) ?? [];
+      s.expect(f.code === 0 && !said.some((w) => w.includes("followed link moving")), `${f.error} ${said}`);
+      s.expect(s.read(join(v, "shelf2", "x.md")) === "# SX\n\n[b](../../b.md)\n", "its note written for its new place");
+      // A link with no answer moved where an old one for elsewhere is, the state folder unwritable: none of its own lost.
+      await withMode(join(s.dir, "state", "slipbox"), 0o500, async () => {
+        const m = cli(s, "mv", "alias2.png", "box2/");
+        const w = (m.data.warnings as string[] | undefined) ?? [];
+        s.expect(m.code === 0 && !w.some((x) => x.includes("couldn't be kept")), `${m.error} ${w}`);
+      });
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "rename: in home, an undo whose note is reached through a link not followed is refused before it's read, said",
+    covers: { cases: ["rename", "links/state", "safety"] },
+    options: {
+      startAt: "home/a.md",
+      config: WIDE,
+      setup: (s) => {
+        if (!s.exists("~/a.md")) {
+          s.write("~/a.md", "# A\n");
+          s.write("~/box/k.md", "# K\n");
+          put(join(s.dir, "out", "s.md"), "# S\n\n[a](../a.md)\n");
+        }
+        link(join(s.dir, "out"), s.path("~/outdir"));
+        followed(s, [[s.path("~/outdir"), join(s.dir, "out")]]);
+        // Home's own state folder, there from its first use: the rename's log written under the lock.
+        mkdirSync(join(s.dir, "state", "slipbox", vaultKey(s.home)), { recursive: true });
+      },
+    },
+    run: async (s) => {
+      // Moved where its answer can't be kept: the link moves, its note written through it for its new place.
+      await withMode(join(s.dir, "state", "slipbox"), 0o500, async () => {
+        const r = s.cliIn(s.home, "mv", "outdir", "box/outdir", "--json");
+        s.expect(r.code === 0, `moved (${r.code})`);
+      });
+      s.expect(s.read(join(s.dir, "out", "s.md")) === "# S\n\n[a](../../a.md)\n", "its note written through it");
+      // Its undo would read that note through the link, not followed at its new name: refused first, said.
+      const u = s.cliIn(s.home, "undo", "--json");
+      const error = JSON.parse(u.out || "{}").error?.message ?? "";
+      s.expect(u.code === 5 && error.includes("is reached through a link that isn't followed"), `${error}`);
     },
   },
   {

@@ -26,7 +26,7 @@ import {
   whereItLeads,
 } from "./rename-plan.ts";
 import { real } from "./rename-links.ts";
-import { isLink, moveLink } from "./symlinks.ts";
+import { blockingLink, isLink, moveLink } from "./symlinks.ts";
 
 // -------------------------------------------------------------------------------------------
 // Undoing (7.4)
@@ -68,8 +68,15 @@ export function planUndo(g: Graph): RenamePlan {
             : r.kind === "vault"
               ? `folder's naming as ${r.to}`
               : `rename of ${r.from}`;
+  // A link moved as a link moves back as one (D260); anything else, a link now where it went among them, as it moved.
+  const move = r.move
+    ? { from: r.move.to, to: r.move.from, dir: r.move.dir, ...(r.move.link ? { link: true } : {}) }
+    : null;
   const files: FileChange[] = [];
   for (const f of r.files) {
+    // Never read through a link not followed (VV-D6): one moved where its answer couldn't be kept, say.
+    if (blockingLink(g.loc, f.abs))
+      throw new RenameError(`${f.shown} is reached through a link that isn't followed: the ${what} can't be undone`);
     let now: string;
     try {
       now = readText(f.abs).text;
@@ -88,10 +95,6 @@ export function planUndo(g: Graph): RenamePlan {
       ...(f.also ? { also: f.also } : {}),
     });
   }
-  // A link moved as a link moves back as one (D260); anything else, a link now where it went among them, as it moved.
-  const move = r.move
-    ? { from: r.move.to, to: r.move.from, dir: r.move.dir, ...(r.move.link ? { link: true } : {}) }
-    : null;
   if (move && !(move.link ? entryAt : existsSync)(move.from))
     throw new RenameError(`${relative(g.root, move.from)} isn't there any more: the ${what} can't be undone`);
   if (move && entryAt(move.to) && !sameEntry(move.from, move.to))
@@ -189,18 +192,13 @@ export function applyPlan(g: Graph, plan: RenamePlan): Applied {
   /** A link planned as one moves as a link (D260): its entry, its answer with it, what it leads to staying. */
   const link = movesAsLink(plan);
   const warnings: string[] = [];
-  /** The link moved, its answer not kept where it is now: not followed there, so the index is walked again. */
-  let unfollowed = false;
+
   /** What moves, moved before anything is written — a link as a link: if it can't be, nothing has changed, the folders
    *  made for it gone. */
   const moveFirst = (from: string, to: string) => {
     try {
       if (!link) renameSync(from, to);
-      else {
-        const lost = moveLink(from, to);
-        if (lost) warnings.push(lost);
-        unfollowed = !!lost;
-      }
+      else warnings.push(...[moveLink(from, to)].filter((w) => w !== null));
     } catch (err) {
       for (let d = dirname(to); made && isInside(made, d); d = dirname(d)) {
         try {
@@ -249,6 +247,8 @@ export function applyPlan(g: Graph, plan: RenamePlan): Applied {
         );
       }
     }
+    // Gone since its plan (a plan saved, a preview left open): before anything is written.
+    if (!entryAt(mv.from)) throw new RenameError(`${g.shownPath(mv.from)} isn't there any more; nothing changed`);
   }
   /** The folder what moves goes into, made first: if it can't be (a file in the way, a folder shut), nothing is. */
   const makeInto = (to: string) => {
@@ -372,10 +372,16 @@ export function applyPlan(g: Graph, plan: RenamePlan): Applied {
     else g.removeAsset(from);
   }
   const touched = new Set([...written, ...(plan.moves ?? []).map(([, to]) => join(g.root, to))]);
+  /** A file the move put behind a link not followed: the index as the walk has it then, the link a row of its own. */
+  let unread = false;
   for (const abs of touched) {
     if (!isInside(g.root, abs)) continue;
-    // Through a link moved without its answer: not followed at its new name, so not read (VV-D6).
-    if (unfollowed && mv && (abs === mv.to || abs.startsWith(`${mv.to}/`))) continue;
+    // Through a link not followed (VV-D6) — one moved where its answer couldn't be kept, or one a folder's move took
+    // along, its answer staying where it was: never read, and the index walked again below.
+    if (blockingLink(g.loc, abs)) {
+      unread = true;
+      continue;
+    }
     // A moved vault's files are its own, not this vault's (18.7); so are a nested root's (17.17),
     // reindexed with the others.
     if (plan.vaults?.some(([, to]) => abs === to || abs.startsWith(`${to}/`))) continue;
@@ -405,8 +411,6 @@ export function applyPlan(g: Graph, plan: RenamePlan): Applied {
       ),
     ];
   }
-  // A link moved without its answer isn't followed at its new name (VV-D6): the index as the walk has it now, never
-  // read through it — the link a row of its own, not followed.
-  if (unfollowed) g.build(true, "lazy");
+  if (unread) g.build(true, "lazy");
   return { written, moved: mv ? { from: mv.from, to: mv.to } : null, warnings };
 }

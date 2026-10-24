@@ -3,7 +3,7 @@
 
 import { execFileSync } from "node:child_process";
 import { lstatSync } from "node:fs";
-import { dirname, join, posix, relative, sep } from "node:path";
+import { basename, dirname, join, posix, relative, sep } from "node:path";
 import { classify } from "./filetypes.ts";
 import { readText, realTarget } from "./fsutil.ts";
 import type { Graph } from "./graph.ts";
@@ -149,13 +149,14 @@ export class Collector {
   }
 
   /**
-   * The other names the vault's index has for the file at `abs` (D260), vault paths. Only a name a link leads, or one
-   * the vault reached (20.8), can share its file with another: the walk leaves out a link to a file it lists. Never
+   * The other names the vault's index has for the file at `abs` (D260), vault paths. A note named as itself has none
+   * but one the vault reached (20.8): the walk leaves out a link to a note it lists, though not to another file. Never
    * looked for through a followed link whose target hasn't answered: reading there could hang.
    */
   otherNames(abs: string): string[] {
     const rel = relative(this.g.root, abs).split(sep).join("/");
-    if (!this.throughLink(abs) && !this.g.reached.has(rel)) return [];
+    const note = classify(abs, this.g.config.walk.extensions).group === "note";
+    if (!this.throughLink(abs) && !this.g.reached.has(rel) && note) return [];
     if (!this.names) {
       this.names = new Map();
       const quiet = quietFollowed(this.g.root).map((l) => relative(this.rootReal!, l).split(sep).join("/"));
@@ -335,7 +336,9 @@ export function sameEntry(a: string, b: string): boolean {
   try {
     const x = lstatSync(a);
     const y = lstatSync(b);
-    return x.ino === y.ino && x.dev === y.dev;
+    // A second name for one file (a hard link) is another entry: one entry is in one folder, its name another case.
+    if (x.ino !== y.ino || x.dev !== y.dev || realTarget(dirname(a)) !== realTarget(dirname(b))) return false;
+    return basename(a).toLowerCase() === basename(b).toLowerCase();
   } catch {
     return false;
   }

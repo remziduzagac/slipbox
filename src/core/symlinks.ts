@@ -200,6 +200,7 @@ export function moveLink(from: string, to: string): string | null {
   try {
     keep(hit ? [...rest, { ...hit, link: now }] : rest);
   } catch (err) {
+    if (!hit) return null; // it had none to keep: an old one where it went is all that stays
     const why = (err as NodeJS.ErrnoException).code ?? String(err);
     return `${tildePath(to)}: the link moved, but its answer couldn't be kept for its new place (${why}); slipbox symlinks lists the answers kept`;
   }

@@ -8,10 +8,10 @@
 // rename-links.ts's; a folder named or made a vault is rename-vaults.ts's, a heading renamed
 // rename-heading.ts's; carrying a plan out and undoing it, rename-apply.ts's. All of it is imported from here.
 
-import { existsSync, readlinkSync, statSync } from "node:fs";
-import { dirname, isAbsolute, join, posix, relative, resolve, sep } from "node:path";
+import { existsSync, readlinkSync, realpathSync, statSync } from "node:fs";
+import { dirname, isAbsolute, join, parse, posix, relative, sep } from "node:path";
 import { classify } from "./filetypes.ts";
-import { entryAt, landsInside, realTarget } from "./fsutil.ts";
+import { entryAt, entryInside, realTarget } from "./fsutil.ts";
 import type { Backlink, Graph, NoteEntry, ResolvedLink } from "./graph.ts";
 import { extensionless, formatPathLink, normKey, pathForm, pathLink, type PathForm, pathNamed } from "./links.ts";
 import { readRoots } from "./registry.ts";
@@ -26,7 +26,7 @@ import {
   travelTogether,
 } from "./folders.ts";
 import { formatPointer, isPointer, parsePointer, resolvePointer } from "./pointer.ts";
-import { followedTarget, isLink } from "./symlinks.ts";
+import { isLink, linkAnswer } from "./symlinks.ts";
 import { findVaultRoot, isHome, isInside } from "./vault.ts";
 import { holdsNotes } from "./walk.ts";
 import {
@@ -61,7 +61,7 @@ function cleanTarget(g: Graph, input: string, holds: "file" | "folder" | "vault"
   if (never) throw new RenameError(`${input}: ${never}`);
   // A link there (the one moving, on a disk that ignores case) is its own entry, in its folder: not where it leads.
   const at = join(g.root, rel);
-  if (!landsInside(g.root, isLink(at) ? dirname(at) : at)) throw new RenameError(`${rel} would land outside the vault`);
+  if (!entryInside(g.root, at, true)) throw new RenameError(`${rel} would land outside the vault`);
   const where = fileInTheWay(g.root, rel);
   if (where) throw new RenameError(`${where} is a file: ${rel} can't go under it`);
   return rel;
@@ -77,7 +77,7 @@ function cleanTarget(g: Graph, input: string, holds: "file" | "folder" | "vault"
 function checkSource(g: Graph, rel: string, vaults = false): boolean {
   const abs = join(g.root, rel);
   const link = !vaults && isLink(abs);
-  if (!landsInside(g.root, link ? dirname(abs) : abs)) throw new RenameError(`${rel} resolves outside the vault`);
+  if (!entryInside(g.root, abs, link)) throw new RenameError(`${rel} resolves outside the vault`);
   return link;
 }
 
@@ -188,20 +188,41 @@ export function planFolderMove(g: Graph, fromDir: string, toInput: string): Rena
 function leftByFolderMove(from: string, to: string): (abs: string) => string | null {
   const fromReal = realTarget(from);
   const toReal = realTarget(to);
-  const moved = (p: string) =>
-    p === fromReal || p.startsWith(`${fromReal}${sep}`) ? toReal + p.slice(fromReal.length) : p;
+  const within = (p: string, dir: string) => p === dir || p.startsWith(`${dir}${sep}`);
+  const moved = (p: string) => (within(p, fromReal) ? toReal + p.slice(fromReal.length) : p);
+  /**
+   * Where the link `p`'s text leads once the folder has moved, as the disk will read it: a part at a time from the
+   * link's folder's new place, each name followed on the disk as it is — inside the folder where it is now — a `..` its
+   * parent; null where it reaches nothing (where the folder was, or what isn't there).
+   */
+  const leadsAfter = (p: string): string | null => {
+    const text = readlinkSync(p);
+    let at = isAbsolute(text) ? parse(text).root : moved(realTarget(dirname(p)));
+    for (const part of text.split(process.platform === "win32" ? /[\\/]/ : "/")) {
+      if (!part || part === ".") continue;
+      if (part === "..") {
+        at = dirname(at);
+        continue;
+      }
+      const next = join(at, part);
+      if (within(next, fromReal) && !within(next, toReal)) return null; // where the folder was: gone
+      try {
+        at = moved(realpathSync(within(next, toReal) ? fromReal + next.slice(toReal.length) : next));
+      } catch {
+        return null;
+      }
+    }
+    return at;
+  };
   return (abs) => {
     if (abs === from || !abs.startsWith(`${from}/`)) return null;
     const parts = relative(from, abs).split(sep);
     for (let i = 1; i <= parts.length; i++) {
       const p = join(from, ...parts.slice(0, i));
       if (!isLink(p)) continue;
-      if (followedTarget(p))
+      if (linkAnswer(p) === "follow")
         return "a followed link moving with its folder isn't followed at its new place: not rewritten";
-      const text = readlinkSync(p);
-      if (isAbsolute(text)) return null;
-      const after = resolve(moved(realTarget(dirname(p))), text);
-      return after === moved(realTarget(p))
+      return leadsAfter(p) === moved(realTarget(p))
         ? null
         : "a link moving with its folder leads elsewhere after: not rewritten";
     }

@@ -8213,6 +8213,155 @@ describe("plans write only inside the vault (VV-D6)", () => {
   );
 
   test(
+    "a folder moved with links in it, each judged by where it leads after, as the disk reads it: an absolute one into the folder left, said; a relative one through another link written",
+    homed(async () => {
+      const top = realpathSync(mkdtempSync(join(tmpdir(), "slipbox-inside-")));
+      const vault = join(top, "vault");
+      mkdirSync(join(vault, ".slipbox"), { recursive: true });
+      writeFileSync(join(vault, ".slipbox", "config.toml"), '[walk]\nexclude = ["shelf/"]\n');
+      writeFileSync(join(vault, "a.md"), "# A\n");
+      // An absolute link to a note in the folder itself: it leads nowhere once the folder has moved.
+      mkdirSync(join(vault, "box", "shelf"), { recursive: true });
+      writeFileSync(join(vault, "box", "shelf", "t.md"), "# T\n\n[a](../a.md)\n");
+      symlinkSync(join(vault, "box", "shelf", "t.md"), join(vault, "box", "l.md"));
+      // A relative one whose way goes through another link and back up: it leads where it did.
+      mkdirSync(join(vault, "shelf", "inner"), { recursive: true });
+      writeFileSync(join(vault, "shelf", "u.md"), "# U\n\n[a](../a.md)\n");
+      symlinkSync(join(vault, "shelf", "inner"), join(vault, "box", "lnk"));
+      symlinkSync("lnk/../u.md", join(vault, "box", "c.md"));
+      mkdirSync(join(vault, "deep"));
+      const r = await cli(["mv", "box", "deep/box"], vault);
+      expect(r.code).toBe(0);
+      expect(r.json.warnings).toContain(
+        "box/l.md:3: a link moving with its folder leads elsewhere after: not rewritten",
+      );
+      expect(readFileSync(join(vault, "deep", "box", "shelf", "t.md"), "utf8")).toBe("# T\n\n[a](../a.md)\n");
+      expect(r.json.warnings.filter((w: string) => w.startsWith("box/c.md"))).toEqual([]);
+      expect(readFileSync(join(vault, "shelf", "u.md"), "utf8")).toBe("# U\n\n[a](../../a.md)\n");
+      const undone = await cli(["undo"], vault);
+      expect([undone.code, undone.json.error?.message]).toEqual([0, undefined]);
+      expect(readFileSync(join(vault, "shelf", "u.md"), "utf8")).toBe("# U\n\n[a](../a.md)\n");
+    }),
+  );
+
+  test(
+    "a data file and a link to it from another folder: a rename writes it for neither, said",
+    homed(async () => {
+      const top = realpathSync(mkdtempSync(join(tmpdir(), "slipbox-inside-")));
+      const vault = join(top, "vault");
+      mkdirSync(join(vault, ".slipbox"), { recursive: true });
+      for (const d of ["docs", "other"]) mkdirSync(join(vault, d));
+      writeFileSync(join(vault, "docs", "real.json"), '{"$ref": "./x.md"}\n');
+      writeFileSync(join(vault, "docs", "x.md"), "# X\n");
+      writeFileSync(join(vault, "other", "x.md"), "# OX\n");
+      symlinkSync("../docs/real.json", join(vault, "other", "alias.json")); // from other/, its `./x.md` is other's
+      const r = await cli(["mv", "docs/x.md", "docs/sub/x.md"], vault);
+      expect(r.code).toBe(0);
+      expect(r.json.warnings).toContain(
+        "docs/real.json:1: reached as other/alias.json too, from another folder: not rewritten",
+      );
+      expect(readFileSync(join(vault, "docs", "real.json"), "utf8")).toBe('{"$ref": "./x.md"}\n');
+    }),
+  );
+
+  test(
+    "a move planned, its note gone before it's carried out: refused, nothing written; a rename onto a second name for the file (a hard link): refused",
+    homed(async () => {
+      const { vault } = await linked();
+      writeFileSync(join(vault, "index.md"), "# Index\n\n[a](a.md)\n");
+      const g = openGraph(locateVault({ root: vault }), DEFAULT_CONFIG, false);
+      const { planNoteRename } = await import("../src/core/rename.ts");
+      const plan = planNoteRename(g, "a.md", "b.md");
+      rmSync(join(vault, "a.md"));
+      expect(() => applyPlan(g, plan)).toThrow("a.md isn't there any more; nothing changed");
+      expect(readFileSync(join(vault, "index.md"), "utf8")).toBe("# Index\n\n[a](a.md)\n");
+      // Two names for one file (hard links) — another name in its folder, its name in another — aren't one entry: the
+      // second isn't the first's case-only rename.
+      mkdirSync(join(vault, "sub"));
+      writeFileSync(join(vault, "sub", "h.md"), "# H\n");
+      linkSync(join(vault, "sub", "h.md"), join(vault, "sub", "h2.md"));
+      linkSync(join(vault, "sub", "h.md"), join(vault, "h.md"));
+      for (const [to, why] of [
+        ["sub/h2.md", "sub/h2.md exists; not overwriting it"],
+        ["h.md", "h.md exists; not overwriting it"],
+      ] as const) {
+        const r = await cli(["mv", "sub/h.md", to], vault);
+        expect([r.code, r.json.error?.message]).toEqual([5, why]);
+      }
+      expect(readFileSync(join(vault, "sub", "h.md"), "utf8")).toBe("# H\n");
+    }),
+  );
+
+  test(
+    "a folder moved with a followed link out in it: nothing read through the link at its new place, not followed there; a stale answer isn't one",
+    homed(async () => {
+      const { top, vault } = await linked();
+      mkdirSync(join(top, "out2"));
+      writeFileSync(join(top, "out2", "s.md"), "# S\n");
+      mkdirSync(join(vault, "a"));
+      symlinkSync(join(top, "out2"), join(vault, "a", "out"));
+      setLinkAnswer(join(vault, "a", "out"), "follow");
+      await probe(join(top, "out2"));
+      writeFileSync(join(vault, "b.md"), "# B\n\n[s](a/out/s.md)\n");
+      const g = openGraph(locateVault({ root: vault }), DEFAULT_CONFIG, false);
+      expect(g.notes.has("a/out/s.md")).toBe(true);
+      const { planFolderMove } = await import("../src/core/rename.ts");
+      applyPlan(g, planFolderMove(g, "a", "c"));
+      expect([...g.notes.keys()].filter((r) => r.startsWith("c/out/"))).toEqual([]);
+      expect(g.skipped.some((x) => x.rel === "c/out")).toBe(true);
+      // A link once followed elsewhere, its answer for another target now: not followed, so judged by where it leads.
+      mkdirSync(join(vault, ".slipbox-free", "shelf"), { recursive: true });
+      const shelf = join(vault, "shelf2");
+      mkdirSync(shelf);
+      writeFileSync(join(vault, ".slipbox", "config.toml"), '[walk]\nexclude = ["shelf2/"]\n');
+      writeFileSync(join(shelf, "x.md"), "# X\n\n[b](../b.md)\n");
+      mkdirSync(join(vault, "f"));
+      symlinkSync(join(top, "out2", "s.md"), join(vault, "f", "l.md"));
+      setLinkAnswer(join(vault, "f", "l.md"), "follow"); // kept for out2/s.md
+      rmSync(join(vault, "f", "l.md"));
+      symlinkSync(join(shelf, "x.md"), join(vault, "f", "l.md")); // re-pointed into the vault
+      mkdirSync(join(vault, "deep"));
+      const r = await cli(["mv", "f", "deep/f"], vault);
+      expect(r.code).toBe(0);
+      expect(r.json.warnings.filter((w: string) => w.includes("followed link moving"))).toEqual([]);
+      expect(readFileSync(join(shelf, "x.md"), "utf8")).toBe("# X\n\n[b](../../b.md)\n");
+    }),
+  );
+
+  test(
+    "in home, an undo reads nothing through a link not followed: refused before it's read, said",
+    homed(async (home) => {
+      const top = realpathSync(mkdtempSync(join(tmpdir(), "slipbox-inside-")));
+      mkdirSync(join(top, "out"));
+      writeFileSync(join(top, "out", "s.md"), "# S\n\n[a](../a.md)\n");
+      writeFileSync(join(home, "a.md"), "# A\n");
+      mkdirSync(join(home, "box"));
+      symlinkSync(join(top, "out"), join(home, "outdir"));
+      setLinkAnswer(join(home, "outdir"), "follow");
+      await probe(join(top, "out"));
+      const shared = join(process.env.XDG_STATE_HOME!, "slipbox");
+      const g0 = openGraph(locateVault({ root: home }), DEFAULT_CONFIG, false);
+      mkdirSync(stateDir(g0.loc), { recursive: true });
+      const move = async () => {
+        chmodSync(shared, 0o500);
+        try {
+          expect((await cli(["mv", "outdir", "box/outdir"], home)).code).toBe(0);
+        } finally {
+          chmodSync(shared, 0o755);
+        }
+        expect(readFileSync(join(top, "out", "s.md"), "utf8")).toBe("# S\n\n[a](../../a.md)\n");
+      };
+      // The note it wrote is reached through the link, not followed at its new name: refused before it's read.
+      await move();
+      const r = await cli(["undo"], home);
+      expect(r.code).toBe(5);
+      expect(r.json.error.message).toBe(
+        "outdir/s.md is reached through a link that isn't followed: the move of outdir/ can't be undone",
+      );
+    }),
+  );
+
+  test(
     "a link to an image moved by its name: nothing said of its own links, which it has none of",
     homed(async () => {
       const { vault } = await linked();
@@ -12734,6 +12883,18 @@ describe("the symlinks you've answered: listed, and forgotten (VV-D6)", () => {
       // Its answer stayed where it was: moved back there (an undo), the link is followed again.
       expect(moveLink(join(w, "sub", "e"), join(w, "e"))).toBeNull();
       expect(linkAnswer(join(w, "e"))).toBe("follow");
+      // A link with no answer of its own, moved where an old one for elsewhere is, the state folder unwritable: no
+      // answer lost, so nothing said.
+      symlinkSync(join(top, "deep"), join(w, "sub", "h"));
+      setLinkAnswer(join(w, "sub", "h"), "follow");
+      rmSync(join(w, "sub", "h"));
+      symlinkSync("../far", join(w, "h"));
+      chmodSync(stateDir, 0o500);
+      try {
+        expect(moveLink(join(w, "h"), join(w, "sub", "h"))).toBeNull();
+      } finally {
+        chmodSync(stateDir, 0o755);
+      }
     } finally {
       process.env.XDG_STATE_HOME = state;
     }

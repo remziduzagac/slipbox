@@ -5,8 +5,7 @@
 import { statSync } from "node:fs";
 import { dirname, join, relative, sep } from "node:path";
 import { isPointer } from "../core/pointer.ts";
-import { landsInside, readText } from "../core/fsutil.ts";
-import { isLink } from "../core/symlinks.ts";
+import { entryInside, readText } from "../core/fsutil.ts";
 import { openVault } from "../core/reach.ts";
 import {
   type Applied,
@@ -247,8 +246,7 @@ function destArg(s: Session, to: string | undefined, into = false): string | und
     throw new CliError(`${to} is outside the vault (${s.loc.root})`, EXIT.refused);
   // Through a link out of the vault, followed or not, in home too: said as the TUI's move and copy say it (VV-D6).
   // A link there (the one moving, on a disk that ignores case) is its own entry: by its folder.
-  if (!landsInside(s.loc.root, isLink(abs) ? dirname(abs) : abs))
-    throw new CliError(`${rel} would land outside the vault`, EXIT.refused);
+  if (!entryInside(s.loc.root, abs, true)) throw new CliError(`${rel} would land outside the vault`, EXIT.refused);
   if (!rel) return "/";
   return to.endsWith("/") ? `${rel}/` : rel;
 }

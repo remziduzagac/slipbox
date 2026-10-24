@@ -382,35 +382,38 @@ of every read through a link out of the root; D220's writes stay for vaults.
   `skipped` row saying so, and `applyPlan` refuses a plan holding one, or moving anything from or to outside the vault
   (`outside`), before it writes: an undo and a saved plan are checked as they're carried out. What it writes it writes
   where it was read, found before anything moves: a file reached through a link, through the link, never over it; one
-  reached through a link that moves with its folder, a relative one leading out of it or a followed one (its answer
-  staying where it was), not at all — from its new place the link leads elsewhere, or isn't followed, so an edit for the
-  file is right for no name — left, and said; each in a folder it can write and search, or nothing is written. A file
-  reached by two names from two folders — two links, a note the vault reached and a link to it, or a note of another
-  vault (or of home) reached through a link, which its own vault reads from its own folder — is written for neither,
-  each reading its links its own way, and said; two in one folder edit it alike: written once, each name indexed again.
-  Another name is never looked for behind a followed link whose target has stopped answering (`quietFollowed`). A move's
-  source is checked as its destination is: a move, copy or delete whose source or destination crosses a link out of the
-  vault, or out of home, is refused in the CLI and the TUI, in home too, said the same: `… resolves outside the vault`
-  for what's moved, copied or deleted, `… would land outside the vault` for where it goes. A link named itself crosses
-  nothing when it moves: its entry is checked, in its folder by its real path (`entryInside` in `core/fsutil.ts`), and
-  it's renamed or moved as a link (`moveLink` in `core/symlinks.ts`; D260), what it leads to staying where it is; its
-  answer goes with it, in place of any kept where it goes — one without an answer leaves one there for where it leads,
-  an answer being a place and where it leads, as a link made there by hand would find it; one that can't be kept there
-  (the state folder unwritable) is said, and the index walked again, the link not followed at its new name — and a
-  relative one moved to another folder is written again there to lead where it did, from its own text, the plan and its
-  undo saying so (`movedLinkText`). Its plan's `move.link` says it moves as one, and its undo moves it back as one: a
-  link put where something else went is judged by where it leads. A link's own relative links are left, and said, when
-  another name the index holds, one the plan doesn't move with it, leads to the same file. A destination is one entry
-  (`sameEntry`): a link moved onto what it leads to, or onto another link to it, would go over something else, so it's
-  refused as any other there is; a link there is judged by its folder, as the one moving is on a disk that ignores case;
-  one whose new folder can't be made changes nothing, and one that can't be moved takes away the folders made for it. A
-  link inside a folder that moves is left as the folder's move leaves it; a link leading to a vault, or to a folder
-  holding one, isn't moved (`checkSource`'s `vaults`, `outside`), a vault being known by its real path; a copy or delete
-  of a link out is refused still. An export's default place, beside a note reached through a link out of the vault, is
-  refused; `--out` names one. Where links are looked at on a path's way (`blockingLink`): from the vault's or home's
-  folder; in Elsewhere every link on the way asks, from the folder you work in — the TUI's folder opened, the CLI's
-  current folder (`workDir`) — down; a path named outright outside it starts at its own folder, the file itself asking:
-  what's above the folder you work in is yours to name (macOS's `/tmp` and `/var` are links).
+  reached through a link that moves with its folder and leads elsewhere from its new place, its text read a part at a
+  time from there as the disk will read it, or a followed one (its answer staying where it was), not at all — an edit
+  for the file is right for no name — left, and said; nothing read, after, behind a link not followed (the index walked
+  again then), nor by an undo before it refuses; a move whose note is gone since its plan writes nothing; each in a
+  folder it can write and search, or nothing is written. A file reached by two names from two folders — two links, a
+  note the vault reached and a link to it, a file other than a note and a link to it, or a note of another vault (or of
+  home) reached through a link, which its own vault reads from its own folder — is written for neither, each reading its
+  links its own way, and said; two in one folder edit it alike: written once, each name indexed again. Another name is
+  never looked for behind a followed link whose target has stopped answering (`quietFollowed`). A move's source is
+  checked as its destination is: a move, copy or delete whose source or destination crosses a link out of the vault, or
+  out of home, is refused in the CLI and the TUI, in home too, said the same: `… resolves outside the vault` for what's
+  moved, copied or deleted, `… would land outside the vault` for where it goes. A link named itself crosses nothing when
+  it moves: its entry is checked, in its folder by its real path (`entryInside` in `core/fsutil.ts`), and it's renamed
+  or moved as a link (`moveLink` in `core/symlinks.ts`; D260), what it leads to staying where it is; its answer goes
+  with it, in place of any kept where it goes — one without an answer leaves one there for where it leads, an answer
+  being a place and where it leads, as a link made there by hand would find it; one that can't be kept there (the state
+  folder unwritable) is said, and the index walked again, the link not followed at its new name — and a relative one
+  moved to another folder is written again there to lead where it did, from its own text, the plan and its undo saying
+  so (`movedLinkText`). Its plan's `move.link` says it moves as one, and its undo moves it back as one: a link put where
+  something else went is judged by where it leads. A link's own relative links are left, and said, when another name the
+  index holds, one the plan doesn't move with it, leads to the same file. A destination is one entry (`sameEntry`; a
+  second name for its file, a hard link, is another): a link moved onto what it leads to, or onto another link to it,
+  would go over something else, so it's refused as any other there is; a link there is judged by its folder, as the one
+  moving is on a disk that ignores case; one whose new folder can't be made changes nothing, and one that can't be moved
+  takes away the folders made for it. A link inside a folder that moves is left as the folder's move leaves it; a link
+  leading to a vault, or to a folder holding one, isn't moved (`checkSource`'s `vaults`, `outside`), a vault being known
+  by its real path; a copy or delete of a link out is refused still. An export's default place, beside a note reached
+  through a link out of the vault, is refused; `--out` names one. Where links are looked at on a path's way
+  (`blockingLink`): from the vault's or home's folder; in Elsewhere every link on the way asks, from the folder you work
+  in — the TUI's folder opened, the CLI's current folder (`workDir`) — down; a path named outright outside it starts at
+  its own folder, the file itself asking: what's above the folder you work in is yours to name (macOS's `/tmp` and
+  `/var` are links).
 - **The CLI** refuses a read through a link not followed (`refuseUnfollowed`, exit 5: `… is reached through a link
   that isn't followed (~/notes/data → /mnt/disk/data): open it in slipbox to choose`) — a note however it's named
   (`resolveNote`, Elsewhere's listing holding a linked note as any other), a snippet `capture --ref --snippet` reads —

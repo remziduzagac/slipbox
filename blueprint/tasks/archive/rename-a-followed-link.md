@@ -243,31 +243,30 @@ to lead where it did (D260).
   changed`, its other file as it was. The TUI's cases are the terminal checks'. Reached unit tests: all but two pass —
   cli.test's `stat` (a linked worktree's name, by design) and render.test's `Mermaid … drawn while its library loads`,
   which fails alone too, the library loading before the first frame asks (a timing test; nothing here draws).
-- 2026-10-24: Reviewed again (round 3), by `/code-review` alone: Codex had reached its usage limit, and the maintainer
-  chose to go on without it this round. Thirteen findings, each tried against the code. Taken, each with a test that
-  fails without its fix, and a terminal check but where said: (1) a note the vault reached in a hidden folder, with a
-  link to it from another folder, was rewritten for its own folder, breaking the link's view of it: a reached name is
-  asked about its other names too (only a link's name or a reached one can share a file: the walk leaves out a link to a
-  file it lists); (2) a relative link inside a moved folder that leads out of it had its note rewritten for its new
-  folder, and written where it led before — right for no name, since from its new place the link leads elsewhere: that
-  note is left, and said, as D260 leaves links inside a moved folder as the move leaves them; this replaces round 1's
-  writing it where it was read, and its undo's record of where; (3) a followed link's case-only rename, on a disk that
-  ignores case, was refused through the link itself: a link at the destination is judged by its folder, in the plan,
-  `outside` and the CLI — tried on Linux with a second name for the link's own entry; (4) the lookup of other names
-  resolved every indexed name, behind a followed link to a disk that had stopped answering too, which could hang: names
-  behind such a link (`quietFollowed`, from the answers kept and the probes) are left out — a unit test only, a disk
-  that stops answering being nothing a terminal check can make; (5) a folder moved under a folder that can't be made
-  threw a raw error: refused, said (`makeInto`); (6) a link moved without its answer was read through at its new name
-  before the index was walked again: not read — a unit test only, the walk hiding it from the screen; (7) one call of
-  `landsHidden` reads each real path once; (8) the new checks are named so that CI's scope runs them for the files they
-  drive (`rename`, `naming` in their names). Not taken: a moved link's own change carrying `also` (run: with another
-  name staying in its folder, its own links are left and its links to itself aren't backlinks, so the other name's
-  change carries the edit); an undo in home of a link moved where its answer couldn't be kept, refused when the move
-  wrote the link's note (a refusal, said, the answer kept where it was: carrying it would need the undo to judge the
-  note as it will be reached after its move, which it can't see before); a note another vault reached in its own hidden
-  folder, reached here through that vault's link, left by this vault's plan (said: judging it needs that vault's index
-  and its other names); `entryInside` for `checkSource` (a plan's flag, against an entry just looked at); citing the
-  decision unnumbered.
+- 2026-10-24: Reviewed again (round 3), by `/code-review` (Codex's part skipped: it had reached its usage limit; see
+  below). Thirteen findings, each tried against the code. Taken, each with a test that fails without its fix, and a
+  terminal check but where said: (1) a note the vault reached in a hidden folder, with a link to it from another folder,
+  was rewritten for its own folder, breaking the link's view of it: a reached name is asked about its other names too
+  (only a link's name or a reached one can share a file: the walk leaves out a link to a file it lists); (2) a relative
+  link inside a moved folder that leads out of it had its note rewritten for its new folder, and written where it led
+  before — right for no name, since from its new place the link leads elsewhere: that note is left, and said, as D260
+  leaves links inside a moved folder as the move leaves them; this replaces round 1's writing it where it was read, and
+  its undo's record of where; (3) a followed link's case-only rename, on a disk that ignores case, was refused through
+  the link itself: a link at the destination is judged by its folder, in the plan, `outside` and the CLI — tried on
+  Linux with a second name for the link's own entry; (4) the lookup of other names resolved every indexed name, behind a
+  followed link to a disk that had stopped answering too, which could hang: names behind such a link (`quietFollowed`,
+  from the answers kept and the probes) are left out — a unit test only, a disk that stops answering being nothing a
+  terminal check can make; (5) a folder moved under a folder that can't be made threw a raw error: refused, said
+  (`makeInto`); (6) a link moved without its answer was read through at its new name before the index was walked again:
+  not read — a unit test only, the walk hiding it from the screen; (7) one call of `landsHidden` reads each real path
+  once; (8) the new checks are named so that CI's scope runs them for the files they drive (`rename`, `naming` in their
+  names). Not taken: a moved link's own change carrying `also` (run: with another name staying in its folder, its own
+  links are left and its links to itself aren't backlinks, so the other name's change carries the edit); an undo in home
+  of a link moved where its answer couldn't be kept, refused when the move wrote the link's note (a refusal, said, the
+  answer kept where it was: carrying it would need the undo to judge the note as it will be reached after its move,
+  which it can't see before); a note another vault reached in its own hidden folder, reached here through that vault's
+  link, left by this vault's plan (said: judging it needs that vault's index and its other names); `entryInside` for
+  `checkSource` (a plan's flag, against an entry just looked at); citing the decision unnumbered.
 - 2026-10-24: Round 3's fixes tried live in a scratch home, the release and then this worktree's CLI: renaming
   `.hidden/b.md` (reached) to `c.md` made the release write `.hidden/n.md` for its own folder, breaking `l.md`'s view of
   it, and here leaves it, said (`reached as l.md too, from another folder`); `slipbox mv a/docs docs`, a relative link
@@ -288,19 +287,42 @@ to lead where it did (D260).
   showed: that step is a plan saved and applied by the command line now, as an agent's two steps. Both found failing
   again with their fixes undone. A linters test failed on macOS too (`linters without a server …`, a message said once),
   nothing this change touches.
-- 2026-10-24: Rebased on `origin/dev` (0633e38) at the main session's word: `CHANGELOG.md` alone conflicted, both sides'
-  lines kept. Codex's part of round 3 was skipped (it had reached its usage limit, its pane showing a menu); by the
-  maintainer's rule for that, a second independent review takes its place: a fresh Claude reviewer, on the rebased
-  branch's whole diff, without `/code-review`'s round-3 findings.
-- 2026-10-24: The second review of round 3, a fresh Claude reviewer's in Codex's place: six findings, each tried against
-  the code, all taken, each with a unit test and a terminal check that fail without its fix but where said. (1) A note
-  of another vault, reached through a link (a link into a nested vault, or home's into a vault), was rewritten for the
-  link's reading of its links, breaking it in its own vault: it's that vault's by its own name now, left and said
-  (`ownPlace`) — so nothing is written through a link into another vault any more, and round 2's reindexing of one by
-  where it was written goes, with its test and check, which now see the note left; (2) in home, a folder moved with a
-  followed link in it had the link's note written for its new place, though its answer stays where it was, and the move
-  then couldn't be undone: that note is left, said, as a relative link leading out of the folder is; (3) CI's scope ran
-  no check of the link-text rules for a change to `symlinks.ts` alone: it runs the `rename` checks too; (4) a link to an
-  image moved by its name said its own links were left, when it has none: said only of a file that has links (unit and
-  the onto-target check); (5) the case-only check's last look held before the rename too: where case is ignored it reads
-  the folder's names now; (6) `sameFile`, unused, gone.
+- 2026-10-24: Rebased on `origin/dev` (0633e38): `CHANGELOG.md` alone conflicted, both sides' lines kept. Codex's part
+  of round 3 was skipped (it had reached its usage limit); by the maintainer's rule for that, a second independent
+  review takes its place, on the rebased branch's whole diff, without `/code-review`'s round-3 findings.
+- 2026-10-24: The second review of round 3, in Codex's place: six findings, each tried against the code, all taken, each
+  with a unit test and a terminal check that fail without its fix but where said. (1) A note of another vault, reached
+  through a link (a link into a nested vault, or home's into a vault), was rewritten for the link's reading of its
+  links, breaking it in its own vault: it's that vault's by its own name now, left and said (`ownPlace`) — so nothing is
+  written through a link into another vault any more, and round 2's reindexing of one by where it was written goes, with
+  its test and check, which now see the note left; (2) in home, a folder moved with a followed link in it had the link's
+  note written for its new place, though its answer stays where it was, and the move then couldn't be undone: that note
+  is left, said, as a relative link leading out of the folder is; (3) CI's scope ran no check of the link-text rules for
+  a change to `symlinks.ts` alone: it runs the `rename` checks too; (4) a link to an image moved by its name said its
+  own links were left, when it has none: said only of a file that has links (unit and the onto-target check); (5) the
+  case-only check's last look held before the rename too: where case is ignored it reads the folder's names now; (6)
+  `sameFile`, unused, gone.
+- 2026-10-24: Reviewed again (round 4, the last: the maintainer's rule allows a fourth round when the third found a real
+  bug, as it did), by Codex and `/code-review` independently: fifteen findings, each tried against the code. Taken, each
+  with a unit test and a terminal check that fail without its fix but where said: (1) a link in a moving folder was
+  judged by its text read lexically, so one going through another link and back up (`lnk/../u.md`) was taken to lead
+  elsewhere and its note left, and an absolute one into the folder itself taken to lead where it did, its note written
+  though it leads nowhere after, the undo then failing: each link's text is read a part at a time from its folder's new
+  place, as the disk will read it, where the folder was counting as gone; (2) a data file and a link to it from another
+  folder (the walk keeps a link to a file it lists, if that file isn't a note) was written for its own folder, breaking
+  the link's view: a plain file other than a note is asked about its other names too; (3) a planned move whose note was
+  gone since the plan wrote its backlinks, then threw: refused first, nothing written; (4) a folder moved with a
+  followed link in it had the index read through the link at its new place, its answer staying where it was: nothing is
+  read behind a link not followed, the index walked again then — so for a link moved where its answer couldn't be kept
+  too, in one rule (the terminal check sees the link not followed there; the index's reads are the unit test's); (5) an
+  undo read its notes through such a link before refusing: refused before it reads; (6) a rename onto a hard link of its
+  note was taken for a case-only rename, and left the old name with its old text: one entry is in one folder, its name
+  another case; (7) a link with no answer of its own moved where an old one for elsewhere was, the state folder
+  unwritable, was said to have lost its answer: nothing said; (8) a link with a stale answer, for where it led once, was
+  taken for followed: followed is its answer for where it leads; (9) the rule that a link is judged by its folder in one
+  place (`entryInside`), as the design says; (10) this Log's own wording kept to what was done, not how the work went.
+  Not taken, for later: the lookup of other names resolves every indexed name once a plan when it's needed, behind a
+  followed link that answered once too, which a disk slow since could make slow (the walk's own knowledge of its links
+  isn't in the index); the walk again after a move that left something behind a link not followed redoes the index's own
+  updates (rare: a followed link in a moved folder, or an answer that couldn't be kept); a moved link's own change
+  carrying `also`, which can't happen (round 3); real paths read more than once a file.
