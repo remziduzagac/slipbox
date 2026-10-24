@@ -440,5 +440,12 @@ changed in that vault since.
   `recordLocation` of `Reach` guarded; the docs on home's notes and walk. The fresh reviewer's 1, verified: a note
   slipbox can't read dirtied the index at each run, so every answer said written — no longer (`Graph.entry`). Rejected:
   retrying a failed record, the test's fixed wait, two stamps in one rare answer. Unit tests mutation-checked
-  (M131–M135). Not yet done: the fresh reviewer's 4 (roots.md's keeper of the walk brought up to date: the TUI's
-  `refreshHome`) and 5's order in `reopened`.
+  (M131–M136). The fresh reviewer's 4, roots.md crediting the background index with keeping the walk brought up to
+  date: fixed (the TUI in home keeps the one its walk's thread hands back, `refreshHome`). Its 5's order: `reopened`
+  points every buffer at the new graph before finding the roots around it (defensive: that finding can't throw now).
+  The note slipbox can't read is checked by the vault tests, the CLI's and the explorer's marks check (⚿) too.
+- 2026-10-24: The review loop stopped after round 9 — taken as recommended while the maintainer was away. Rounds 6 to
+  8 had Codex find no fault in the code; the code-review skill's findings have narrowed to failure paths (a rebuild
+  failing, slipbox quitting, the machine's list failing, a note slipbox can't read), each fixed with its test. Another
+  round would find more of the same kind; the merge's rule (three rounds of review and fixes, for a grown scope) is
+  met three times over.

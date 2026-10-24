@@ -354,10 +354,11 @@ function reopened(app: App, graph: Graph, reach: Reach): Graph | null {
   // Not opened anew (the vault gone since): the old kept, its buffers reading through it still.
   const fresh = reach.reopen(graph.root);
   if (!fresh) return null;
-  if (!fresh.reach) reachFrom(app, fresh);
   retired.add(graph);
   for (const b of everyBuffer(app))
     if (b.elsewhere?.graph === graph) b.elsewhere = { ...b.elsewhere, graph: fresh, rel: relative(fresh.root, b.abs) };
+  // Its reach last: every buffer reads through the new graph whatever finding the roots around it does.
+  if (!fresh.reach) reachFrom(app, fresh);
   return fresh;
 }
 
