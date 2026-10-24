@@ -8,6 +8,10 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 
 ### Added
 
+- Source mode highlights fenced code in its declared language and uses a bar cursor while typing. Set
+  `ui.relative_numbers` to `"source"` or `"both"` for relative line numbers in its gutter; `"both"` keeps the lens's
+  counters too. The default stays `"lens"`.
+
 - The documentation site says what slipbox is wherever it's met without being opened. Every page's title ends with
   "slipbox: read, review and edit what your coding agent writes, in your terminal", a link to the site or any page
   shows slipbox's picture when it's shared, and the site's address on its own, `/slipbox/`, says the same before it

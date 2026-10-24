@@ -1654,7 +1654,12 @@ the way the render reads it (a line with markup parsed alone), so their text and
 A source line is a row, wrapped at the last space that fits (wrapping on) or kept whole (off); the
 text column is the window's full width, readable width aside. Highlighting is light and per line:
 frontmatter, headings, rules, quote bars, list markers and task boxes, fenced code, inline code and
-links. Every row records, for each cell drawn, the offset in its source line it shows — a tab is
+links. Fenced code uses its declared language's syntax colours, with plain text for unknown languages (#81).
+The gutter keeps git and problem signs; `ui.relative_numbers` set to `source` or `both` shows other source lines'
+distance from the cursor's line, retaining the current line's absolute number. `lens` (the default) and `off` keep
+absolute source numbers; `both` also enables the lens's counters. The current line uses `cursor_line`; normal mode
+draws a block cursor, INSERT uses the terminal's bar cursor, hidden on leaving INSERT or covering it with an overlay.
+Every row records, for each cell drawn, the offset in its source line it shows — a tab is
 spaces up to the next stop, all mapping to the tab; a wide character is one cell two columns wide;
 a control character shows as `�` and never reaches the terminal; a CRLF's CR isn't shown — so a
 cursor column maps to an exact place in the text, which editing (next) builds on.

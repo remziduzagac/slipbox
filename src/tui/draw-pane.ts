@@ -219,7 +219,9 @@ export function drawPane(
   const barW = app.views.barWidth(view);
   // A layout of its own (a diff) has no gutter: no lines of a file to number.
   const numbers = app.ui.line_numbers && !view.buf.drawn;
-  const relativeNumbers = app.config.ui.relative_numbers === "lens";
+  const relative = app.config.ui.relative_numbers;
+  const relativeNumbers = relative === "lens" || relative === "both";
+  const sourceRelative = view.source && (relative === "source" || relative === "both");
   // Where each problem starts: the bar's sign there, or — beside line numbers, no bar — the number clicked.
   const barAt = barW || numbers ? barRows(layout, problems) : null;
   // A click on a sign (or a number) opens the Problems panel on the worst problem starting there.
@@ -303,7 +305,8 @@ export function drawPane(
     }
     if (numbers) {
       // A row the layout adds (the code view's blank between cells, a box's bottom, the lens's rules) has no number.
-      const num = line.src !== prevSrc && !line.decor ? String(line.src).padStart(gutter - barW - 2) : "";
+      const number = sourceRelative && line.src !== cursorSrc ? Math.abs(line.src - (cursorSrc ?? 1)) : line.src;
+      const num = line.src !== prevSrc && !line.decor ? String(number).padStart(gutter - barW - 2) : "";
       // A line with problems: its number in the worst one's colour, bold; where one starts, clicked as a sign is.
       const on = onLine.get(line.src);
       const role: Role = on
@@ -432,7 +435,7 @@ export function drawPane(
       to = between ? Number.POSITIVE_INFINITY : (right ? clip.right! : clip.x) + clip.off + clip.w;
     }
     if (isCursorRow && seen) {
-      drawCursor(c, textX - view.left - shift, y, line, view.cur.col, theme, to);
+      if (!view.insert || !c.cursor) drawCursor(c, textX - view.left - shift, y, line, view.cur.col, theme, to);
       if (view === app.view) geo.cursor = { x: textX - view.left - shift + view.cur.col, y };
     }
   }

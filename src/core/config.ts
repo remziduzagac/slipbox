@@ -101,7 +101,7 @@ export interface Config {
     line_numbers: boolean;
     /** The lens's counters: in a column of its own, each row's distance from the cursor's (the cursor's 0), vim's counts
      *  read off it (`5j`, `d3k`): "lens", or "off". */
-    relative_numbers: "lens" | "off";
+    relative_numbers: "lens" | "source" | "both" | "off";
     /** Wrap long lines to the pane; off, notes keep their natural width and scroll sideways. */
     wrap: boolean;
     /** Cap the text column at `readable_max` columns, centred. */
@@ -428,7 +428,7 @@ const ENUMS: Record<string, readonly string[]> = {
   "diagnostics.marks": ["off", "error", "warning", "info"],
   "diagnostics.severity": ["error", "warning", "info", "hint"],
   "ui.lines": ["light", "heavy"],
-  "ui.relative_numbers": ["lens", "off"],
+  "ui.relative_numbers": ["lens", "source", "both", "off"],
   "files.show": ["auto", "notes", "renderable", "all"],
   "editor.edit_in": ["source", "live"],
   "links.style": ["auto", "markdown", "wiki"],

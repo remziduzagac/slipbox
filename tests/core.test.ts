@@ -1062,6 +1062,19 @@ describe("source layout (4.13)", () => {
     expect(text(L.lines[2]!)).toBe("�[31mred"); // never a raw escape; no CR shown
     expect(L.lines[2]!.srcMap!.end).toBe(8);
   });
+  test("source fences use their language, keep their text, and recolour cached lines after a language edit", async () => {
+    const { newSourceCache } = await import("../src/core/layout/source.ts");
+    const cache = newSourceCache();
+    const opts = { width: 80, wrap: true, headings: "scan" as const };
+    const source = "~~~ts\nconst answer = 42;\n~~~\n# After\n";
+    const first = layoutSource(source, opts, cache);
+    expect(first.lines[1]!.spans).toContainEqual(expect.objectContaining({ text: "const", role: "syn_keyword" }));
+    expect(first.lines.map(text)).toEqual(["~~~ts", "const answer = 42;", "~~~", "# After"]);
+    const changed = layoutSource(source.replace("~~~ts", "~~~unknown-language"), opts, cache);
+    expect(changed.lines[1]!.spans.every((span) => span.role === "text")).toBe(true);
+    expect(changed).toEqual(layoutSource(source.replace("~~~ts", "~~~unknown-language"), opts));
+    expect(changed.headings.map((h) => h.text)).toEqual(["After"]);
+  });
   test("wrapping at the last space; each row knows where the next begins", () => {
     const L = layoutSource("one two three four\n", { width: 9, wrap: true, headings: [] });
     expect(L.lines.map(text)).toEqual(["one two ", "three ", "four"]);
@@ -1093,7 +1106,7 @@ describe("source layout (4.13)", () => {
     expect(roleAt(5, 13)).toBe("code_inline");
     expect(roleAt(5, 20)).toBe("link");
     expect(roleAt(6, 0)).toBe("code_label");
-    expect(roleAt(7, 0)).toBe("code_block");
+    expect(roleAt(7, 0)).toBe("syn_keyword");
     expect(L.headings).toEqual([{ level: 1, text: "Head", slug: "head", src: 4, line: 3 }]);
     expect(L.lines[3]!.heading).toBe(0);
   });

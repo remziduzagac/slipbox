@@ -80,7 +80,12 @@ A window shows its note one of three ways: rendered, in the lens, or as its Mark
 Press `ctrl+k` to see the window's note as its Markdown. `space n v` and `:source` do the same. Press it again to see
 the note rendered.
 
-The chip reads `SOURCE`. The cursor stays on its line across the switch.
+The chip reads `SOURCE`. The cursor stays on its line across the switch. Normal mode has a block cursor; INSERT has
+a bar. The current line is highlighted, and the gutter carries line numbers, git changes and problem marks.
+
+Set `ui.relative_numbers = "source"` to number other lines by their distance from the current line, keeping the
+current line's own number. `"both"` also keeps the lens's relative counters; the default, `"lens"`, uses absolute
+line numbers in source mode. `"off"` turns relative numbers off in both views.
 
 Everything else works as in the rendered note:
 
@@ -97,7 +102,7 @@ The Markdown is lightly highlighted:
 - headings
 - lists and task boxes
 - quotes
-- code
+- code, with fenced blocks highlighted in their declared language
 - links
 
 ### The lens

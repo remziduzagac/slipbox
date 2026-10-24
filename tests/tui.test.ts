@@ -2522,7 +2522,7 @@ describe("the lens (live preview: space n l, i/a/o with edit_in = live)", () => 
     }
   });
   test("its counters: each row's distance from the cursor's (0) in a column of its own, the lens's accent; the gutter its lines' numbers; relative_numbers = off: none", async () => {
-    for (const relative of ["lens", "off"] as const) {
+    for (const relative of ["lens", "both", "off"] as const) {
       const { h, v, goto, lens } = await setup((c) => ((c.ui.line_numbers = true), (c.ui.relative_numbers = relative)));
       goto("Para 7 with");
       await h.keys("space", "n", "l", "j");
@@ -2537,7 +2537,7 @@ describe("the lens (live preview: space n l, i/a/o with edit_in = live)", () => 
       const para = inside.find((r) => lineText(layout.lines[r]!).startsWith("Para 7"))!;
       // The gutter: the lines' own numbers, in the lens too.
       expect(gutter(para)).toBe(String(layout.lines[para]!.src));
-      if (relative === "lens") {
+      if (relative === "lens" || relative === "both") {
         expect(inside.map(counter)).toEqual(inside.map((r) => `${String(Math.abs(r - v.cur.row)).padStart(3)} `));
         expect(screen(para).slice(pane.textX + 4)).toMatch(/^Para 7 with \*\*bold\*\*\./); // its text after them
         const near = inside.find((r) => r !== v.cur.row)!;

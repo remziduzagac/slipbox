@@ -108,7 +108,7 @@ export class Lens {
     const lineCount = Math.max(1, starts.length - (buf.source.endsWith("\n") && starts.length > 1 ? 1 : 0));
     const texts = buf.lines();
     // Rows a run of lines takes in the lens (wrapped at the width its counters leave).
-    const textWidth = width - (this.app.config.ui.relative_numbers === "lens" ? LENS_COUNTERS : 0);
+    const textWidth = width - (["lens", "both"].includes(this.app.config.ui.relative_numbers) ? LENS_COUNTERS : 0);
     const rowsOf = (s: number, e: number) => {
       let n = 0;
       for (let k = s; k <= e; k++)
@@ -295,7 +295,7 @@ export class Lens {
       wrap,
       rule: this.app.glyphs.lensRule,
       editing,
-      ...(this.app.config.ui.relative_numbers === "lens" ? { counters: LENS_COUNTERS } : {}),
+      ...(["lens", "both"].includes(this.app.config.ui.relative_numbers) ? { counters: LENS_COUNTERS } : {}),
       ...(code ? { language: buf.kind.format, ...(spans ? { spans: (l: number) => spans.get(l) } : {}) } : {}),
     });
     base.composed = { key, layout };
