@@ -345,3 +345,37 @@ changed in that vault since.
   marker only the config names) passes either way — the thread's walk reads the markers from your config itself — but
   drives the case end to end. 78 unit tests; 31 of 31 peek terminal checks; dev's slow-disk and the saving ones, 15
   of 15.
+- 2026-10-24: Review loop, round 6, at e62754f: Codex, no fault in the code; two in the hand-over — the pull request's
+  body out of date (it was: brought up to date with this round), and the same-mtime case (round 5's 3) without a
+  terminal check (a terminal can't hold an index's mtime between the thread's write and this thread's read: listed as
+  unit-only, why said). The code-review skill's agents, 14 findings. Checked against the code:
+  - 1, a vault the widened search opened first (`known`) never caught up when a link later reaches it: verified — the
+    TUI's reach isn't `thorough`, so a name only a note changed since declares stayed unfound. `opened` is told when a
+    link first reaches a root the machine's list opened.
+  - 2, the thread keeping home's walk (`walk.json`): verified — T12's walks on other threads hand it back. Neither the
+    thread's graphs nor the TUI's reached ones keep it (`Graph.keepsWalk`); the background index does.
+  - 3, a nested vault new since the last peek stamped indexed before it's recorded, so never: verified. Stamped after
+    the rebuild has recorded it.
+  - 4, stale temporary files judged by this machine's clock alone, a share's minutes behind: verified, narrow. An hour
+    old now, not five minutes.
+  - 5, going into a peeked vault stopping the thread's build of it: rejected — that vault's index is the main
+    thread's from then on, so the thread mustn't write it; what it parsed is in the parse cache.
+  - 6, a kept tab asking a catch-up though its index isn't behind: rejected — the thread's walk asks the links the
+    vault follows first (VV-D6), and finds folders through them that this thread's walk leaves out until they answer.
+    Tried, and the tests that rest on it said so; the reason is in `makeView`'s comment now.
+  - 7, every view laid out again after an index written: accepted — a lens row's counts are backlinks, and it's only
+    when an index was written.
+  - 8, the thread walking each vault the note's vault names, for nothing: accepted, in the design's Not done with the
+    other vaults' indexes read again.
+  - 9, a rename plan's parse of other vaults never written: accepted — rare, kept in the parse cache, and caught up at
+    their next peek.
+  - 10, the sweep in `atomicWrite`: rejected, as in round 4.
+  - 11, a graph opened anew for its settings asking its catch-up again: verified. `Reach.reopen` tells nobody.
+  - 12, the thread started anew when the environment changes, though the context carries it: rejected — that covers
+    what a module reads once, when it starts.
+  - 13, a realpath at each slice of a parse here: rejected — a syscall beside a slice of parsing, on the path where the
+    thread failed.
+  - 14, the design's Not done saying the open catches up with git, and `vaultGraph`'s comment: fixed.
+  Unit tests for each fixed one, mutation-checked (M112–M119, each caught); a terminal check for the one a terminal
+  shows (a widened search, then a name: the old form's suggestion found), mutation-checked. 83 unit tests; 32 of 32
+  peek terminal checks.

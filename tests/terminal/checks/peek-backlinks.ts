@@ -18,8 +18,8 @@ import { loadConfig } from "../../../src/core/config.ts";
 import { openGraph } from "../../../src/core/graph.ts";
 import { vaultKey } from "../../../src/core/paths.ts";
 import { setLinkAnswer } from "../../../src/core/symlinks.ts";
-import { configFilesFor, recordLocation, rootAt } from "../../../src/core/vault.ts";
-import { type Check, explorerOpen, follow, leader } from "../check.ts";
+import { configFilesFor, initVault, recordLocation, rootAt } from "../../../src/core/vault.ts";
+import { type Check, explorerOpen, follow, leader, open } from "../check.ts";
 import { type Session, sleep } from "../session.ts";
 import { ARCHITECTURE } from "./links-and-files.ts";
 import { markOf } from "./vaults.ts";
@@ -519,7 +519,7 @@ export const PEEK_BACKLINKS: Check[] = [
       home: true,
       startAt: "home/notes/index.md",
       setup: (s) => {
-        const hour = new Date(Date.now() - 3_600_000);
+        const hour = new Date(Date.now() - 2 * 3_600_000);
         for (const f of staleTemps(s)) {
           mkdirSync(join(f, ".."), { recursive: true });
           writeFileSync(f, "{");
@@ -768,6 +768,49 @@ export const PEEK_BACKLINKS: Check[] = [
       await s.see("lab/n.md:3 — the architecture");
       // A vault of its own there as here: its index built, not its note taken for one of kestrel's.
       s.expect(existsSync(indexOf(s, join(s.home, "work", "kestrel", "lab"))), "lab's index built on the thread");
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "peek backlinks: a vault a widened search opened first, then reached by a name a note of it declares — caught up then, its index built on the thread, the name found (#10)",
+    covers: { cases: ["links/roots", "search", "vault"], commands: ["search.open"] },
+    alone: true,
+    options: {
+      home: true,
+      startAt: "home/notes/index.md",
+      setup: (s) => {
+        const far = join(s.home, "work", "lantern");
+        mkdirSync(far, { recursive: true });
+        s.write("~/work/lantern/far.md", "---\naliases: [Far Name]\n---\n# Far\n\nThe lantern's wick, trimmed.\n");
+        // Known on this machine by its name, as once it's been opened — its index not built.
+        inState(s, () => {
+          initVault(far, "lantern");
+          recordLocation(rootAt(far));
+        });
+      },
+    },
+    run: async (s) => {
+      // The search widened to every vault this machine knows: lantern opened from the machine's list.
+      await leader(s, "f", "s");
+      await s.type("wick");
+      await s.keys("ctrl+a");
+      await s.see("and the folders linked to it");
+      await s.keys("ctrl+a");
+      await s.see("~/work/lantern/far.md", 15_000);
+      await s.keys("escape");
+      // Then a note naming it: the old form's enter (21.11) reaches lantern by its name — the graph the search opened.
+      s.write("~/notes/by-name.md", "# By name\n\nSee [[lantern:Far Name]].\n");
+      await s.see("by-name.md", 5000); // in the explorer: the watcher has it
+      await open(s, "by-name");
+      await s.keys("tab");
+      await s.retry(
+        () => s.keys("enter"),
+        () => s.rowOf("slipbox://lantern/far.md") >= 0,
+        "the old form's suggestion naming the note the name finds",
+        1000,
+        SLOW,
+      );
+      s.expect(existsSync(indexOf(s, join(s.home, "work", "lantern"))), "lantern's index built on the thread");
     },
   },
 ];

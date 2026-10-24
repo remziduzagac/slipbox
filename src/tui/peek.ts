@@ -266,8 +266,6 @@ function caughtUp(app: App, graph: Graph, answer: BacklinksAnswer, holder: Holde
  */
 async function catchUp(app: App, asked: Graph, answer: BacklinksAnswer, holder: Holder): Promise<void> {
   if (app.quitting || !answer.indexed) return;
-  if (answer.wrote) noteIndexed(asked.loc.key);
-  for (const key of answer.others) noteIndexed(key);
   const others = answer.wrote || answer.others.length > 0;
   // This vault's backlinks from others read again, every view laid out with them, whatever becomes of the graph there:
   // an index just written may hold some (that vault's notes deleted, a vault nested in it built for the first time).
@@ -277,6 +275,10 @@ async function catchUp(app: App, asked: Graph, answer: BacklinksAnswer, holder: 
     app.explorer.invalidateTree();
   }
   if (!(await rebuilt(app, asked, answer, holder)) && others) relayout(app);
+  // Stamped indexed in the machine's list once the rebuild has recorded the vaults found in it: a nested one new since
+  // isn't in the list before.
+  if (answer.wrote) noteIndexed(asked.loc.key);
+  for (const key of answer.others) noteIndexed(key);
 }
 
 /** The graph held for `asked`'s vault caught up with the answer (`catchUp`): true when it was, and laid out again. */
@@ -493,8 +495,8 @@ export function peekTitle(
 }
 
 /**
- * Another vault's graph, as this one reaches it (opened once, its index refreshed): its links out, and other vaults'
- * links into it, read as its own vault reaches them.
+ * Another vault's graph, as this one reaches it (opened once, its index read; caught up on its thread): its links
+ * out, and other vaults' links into it, read as its own vault reaches them.
  */
 export function vaultGraph(app: App, root: string): Graph | null {
   const graph = app.reach.graphAt(root);

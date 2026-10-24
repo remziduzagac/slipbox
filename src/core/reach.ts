@@ -164,29 +164,43 @@ export class Reach implements VaultReach {
   /**
    * The graph of another root, opened on first use with its own config; its index refreshed. A root
    * reached is recorded as seen; one taken from the machine's list (`known`: a search of every root, a
-   * moved folder's relink) isn't — it's known already, and each would read as just opened.
+   * moved folder's relink) isn't — it's known already, and each would read as just opened. `opened` is told of a root
+   * reached, when it's first reached: one taken from the list before, once a link reaches it.
    */
   graphAt(root: string, opts: { known?: boolean } = {}): Graph | null {
     const key = real(root);
-    if (this.graphs.has(key)) return this.graphs.get(key)!;
-    let g: Graph | null = null;
+    if (this.graphs.has(key)) {
+      const g = this.graphs.get(key)!;
+      if (g && !opts.known && this.untold.delete(key)) this.opened?.(g);
+      return g;
+    }
+    const g = this.open(root, !!opts.known);
+    this.graphs.set(key, g);
+    if (g && opts.known) this.untold.add(key);
+    else if (g) this.opened?.(g);
+    return g;
+  }
+
+  /** Roots taken from the machine's list and not reached by a link since: `opened` not told of them yet. */
+  private readonly untold = new Set<string>();
+
+  /** A root's graph built: lazily, its index read, as this reach's graphs are. */
+  private open(root: string, known: boolean): Graph | null {
     try {
       // Home (VV-D2) by its kept walk; any other vault by its marker.
       const loc = vaultAt(root);
-      if (!opts.known && this.record) recordLocation(loc); // reached: known on this machine, its links counted (17.11)
+      if (!known && this.record) recordLocation(loc); // reached: known on this machine, its links counted (17.11)
       const config = loadConfig({ ...configFilesFor(loc) }).config;
-      const opened = new Graph(loc, config);
-      opened.writesIndex = !this.readOnly;
-      opened.writesState = !this.readOnly;
-      g = opened.build(true, "lazy");
+      const g = new Graph(loc, config);
+      g.writesIndex = !this.readOnly;
+      g.writesState = !this.readOnly;
+      g.keepsWalk = !this.readOnly;
+      g.build(true, "lazy");
       g.thorough = this.thorough;
+      return g;
     } catch {
-      g = null;
+      return null;
     }
-    this.graphs.set(key, g);
-    // Reached, not taken from the machine's list.
-    if (g && !opts.known) this.opened?.(g);
-    return g;
   }
 
   /** Another root's graph if it's been opened here, never opening it: undefined, not yet; null, it couldn't be. */
@@ -211,10 +225,9 @@ export class Reach implements VaultReach {
    */
   reopen(root: string): Graph | null {
     const key = real(root);
-    const was = this.graphs.get(key);
-    this.graphs.delete(key);
-    const g = this.graphAt(root);
-    if (!g && was) this.graphs.set(key, was);
+    // Recorded and told of already: `opened` would ask its catch-up again, the one answered just now.
+    const g = this.open(root, true);
+    if (g) this.graphs.set(key, g);
     return g;
   }
 

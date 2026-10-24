@@ -26,6 +26,7 @@ import {
 import { DEFAULT_CONFIG } from "../src/core/config.ts";
 import { atomicWrite, sweepTemps, tempPath, tempRandom } from "../src/core/fsutil.ts";
 import { Graph, openGraph } from "../src/core/graph.ts";
+import { walkHomeNow } from "../src/core/home.ts";
 import { cacheDir, stateDir } from "../src/core/paths.ts";
 import { Reach } from "../src/core/reach.ts";
 import { readRoots } from "../src/core/registry.ts";
@@ -1142,7 +1143,7 @@ test("a temporary file of the index left by a thread let go of mid-write is swep
   const fresh = join(dir, `.index.json.slipbox-1-8-cafebabe.tmp`);
   const other = join(dir, `.heads.json.slipbox-1-7-deadbeef.tmp`);
   for (const f of [old, fresh, other]) writeFileSync(f, "{");
-  const hour = new Date(Date.now() - 3_600_000);
+  const hour = new Date(Date.now() - 2 * 3_600_000);
   utimesSync(old, hour, hour);
   utimesSync(other, hour, hour);
   await onlyRootsUnder(base, async () => {
@@ -1190,7 +1191,7 @@ test("a vault whose settings changed and that can't be opened again: its buffers
       await h.keys("tab", "enter");
       const g = vaultGraph(h.app, app)!;
       // Opened again, it can't be (a graph that won't open).
-      h.app.reach.graphAt = () => null;
+      (h.app.reach as unknown as { open: () => null }).open = () => null;
       reply(sent.length - 1, { config: "other settings" });
       await read(h);
       expect(h.app.view!.buf.elsewhere?.graph).toBe(g);
@@ -1357,7 +1358,7 @@ test("another vault's graph this TUI reaches never writes its index here: its th
 test("a temporary file left beside a vault's index or its redirects is swept at their next write (#10)", () => {
   const { app } = twoVaults();
   const loc = locateVault({ root: app });
-  const hour = new Date(Date.now() - 3_600_000);
+  const hour = new Date(Date.now() - 2 * 3_600_000);
   const stale = (dir: string, name: string) => {
     mkdirSync(dir, { recursive: true });
     const f = join(dir, `.${name}.slipbox-1-7-deadbeef.tmp`);
@@ -1945,4 +1946,94 @@ test("the thread finds vaults by the root markers your config names, as this thr
   } finally {
     setRootMarkers(null);
   }
+});
+
+test("a vault first taken from the machine's list (a widened search), then reached by a link: its catch-up asked then (#10)", async () => {
+  const { base, notes, app } = twoVaults();
+  writeFileSync(join(app, "far.md"), "---\naliases: [Far Name]\n---\n# Far\n"); // since its index
+  stopBacklinkJobs();
+  const { sent } = fakeThread();
+  try {
+    await onlyRootsUnder(base, async () => {
+      const h = await harness({ root: notes, open: "index.md" });
+      const searched = h.app.reach.graphAt(app, { known: true })!;
+      await Bun.sleep(0);
+      expect(sent.filter((m) => m.root === searched.root)).toEqual([]);
+      expect(h.app.reach.graphAt(app)).toBe(searched);
+      await Bun.sleep(0);
+      expect(sent.filter((m) => m.root === searched.root).map((m) => m.rel)).toEqual([null]);
+      h.app.reach.graphAt(app);
+      await Bun.sleep(0);
+      expect(sent.filter((m) => m.root === searched.root)).toHaveLength(1);
+    });
+  } finally {
+    stopBacklinkJobs();
+  }
+});
+
+test("a graph opened anew for changed settings tells nobody it was opened: its catch-up was answered just now (#10)", async () => {
+  const { base, notes, app } = twoVaults();
+  await onlyRootsUnder(base, async () => {
+    const told: string[] = [];
+    const reach = new Reach(locateVault({ root: notes }), { opened: (g) => told.push(g.root) });
+    expect(reach.graphAt(app)).not.toBeNull();
+    expect(reach.reopen(app)).not.toBeNull();
+    expect(told).toHaveLength(1);
+  });
+});
+
+test("home's walk made on the thread, or by a graph that writes nothing of its vault's, is never kept there: the main thread keeps it (VV-D2, T12)", async () => {
+  const home = realpathSync(mkdtempSync(join(sandbox, "home-")));
+  const notes = join(home, "notes");
+  mkdirSync(join(notes, ".slipbox"), { recursive: true });
+  writeFileSync(join(notes, "index.md"), "# Index\n\n[the list](../todo.md)\n");
+  writeFileSync(join(home, "todo.md"), "# To do\n");
+  const before = process.env.HOME;
+  process.env.HOME = home;
+  try {
+    walkHomeNow(homeAt(home), DEFAULT_CONFIG); // its walk kept
+    openGraph(homeAt(home), DEFAULT_CONFIG, true); // and its index
+    const kept = join(cacheDir(homeAt(home)), "walk.json");
+    const was = readFileSync(kept, "utf8");
+    // A folder come since: the walk made now has it.
+    mkdirSync(join(home, "later"));
+    writeFileSync(join(home, "later", "a.md"), "# A\n");
+    expect((await backlinksThere({ root: home, rel: "todo.md" })).indexed).toBe(true);
+    expect(readFileSync(kept, "utf8")).toBe(was);
+    const reached = new Reach(locateVault({ root: notes }), { readOnly: true, record: false }).graphAt(home)!;
+    expect(reached.notes.has("later/a.md")).toBe(true);
+    expect(readFileSync(kept, "utf8")).toBe(was);
+  } finally {
+    process.env.HOME = before;
+  }
+});
+
+test("a vault nested in the peeked one since its last peek, built on the thread, is stamped indexed once it's recorded (20.9, #10)", async () => {
+  const { base, notes, app } = twoVaults();
+  await onlyRootsUnder(base, async () => {
+    const h = await harness({ root: notes, open: "index.md" });
+    await h.keys("tab", "enter");
+    await read(h);
+    await h.keys("esc");
+    const lab = join(realpathSync(app), "lab");
+    mkdirSync(join(lab, ".slipbox"), { recursive: true });
+    writeFileSync(join(lab, "n.md"), "# Lab\n");
+    await h.keys("enter");
+    await read(h);
+    expect(readRoots().find((v) => v.path === lab)?.indexed).toBeString();
+  });
+});
+
+test("a temporary file only minutes old isn't swept: another writer's, on a share whose clock is behind (#10)", () => {
+  const dir = mkdtempSync(join(sandbox, "skew-"));
+  const f = join(dir, ".index.json.slipbox-1-7-deadbeef.tmp");
+  writeFileSync(f, "{");
+  const minutes = new Date(Date.now() - 10 * 60_000);
+  utimesSync(f, minutes, minutes);
+  sweepTemps(dir, "index.json");
+  expect(existsSync(f)).toBe(true);
+  const hours = new Date(Date.now() - 2 * 3_600_000);
+  utimesSync(f, hours, hours);
+  sweepTemps(dir, "index.json");
+  expect(existsSync(f)).toBe(false);
 });

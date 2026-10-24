@@ -961,7 +961,9 @@ export class App {
     // Another vault's file shown — a tab kept from a peek, back with the session; not a buffer read for an edit, nor
     // the peek's own: its graph caught up on a thread, as a peek's is (#10), its index built if it has none, home's
     // excepted (VV-D2) — or a link by a name in a note changed since would never be found: the TUI never parses a
-    // vault whole to look (`thorough`). With its first view, not every split of it.
+    // vault whole to look (`thorough`). Even when its index here isn't behind its walk: the thread's walk asks the
+    // links its vault follows first (VV-D6), and finds the folders through them this walk leaves out until they answer.
+    // With its first view, not every split of it.
     if (buf.elsewhere?.graph && !buf.virtual && !caughtUpOnce.has(buf)) {
       caughtUpOnce.add(buf);
       keepCaughtUp(this, buf.elsewhere.graph);

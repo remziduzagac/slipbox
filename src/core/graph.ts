@@ -27,7 +27,15 @@ import { dataLinks, parseData } from "./data.ts";
 import { classify, extensionOf } from "./filetypes.ts";
 import { type AskedWhole, type HomeWalk, homeWalk, inFolders, walksInto } from "./home.ts";
 import { checkoutAt, findVaultRoot, isListed, isVaultRoot, type VaultLocation } from "./vault.ts";
-import { listDirectory, type NoteFile, type Skipped, type WalkCap, WalkFilter, walkVault } from "./walk.ts";
+import {
+  HOME_LIMITS,
+  listDirectory,
+  type NoteFile,
+  type Skipped,
+  type WalkCap,
+  WalkFilter,
+  walkVault,
+} from "./walk.ts";
 import { tagKey, tagName } from "./tags.ts";
 import {
   type LinkRef,
@@ -203,7 +211,10 @@ export class Graph {
     const t0 = performance.now();
     this.builds++;
     this.walkedAt = Date.now();
-    const home = this.loc.mode === "home" ? (given ?? homeWalk(this.loc, this.filter, this.asked)) : null;
+    const home =
+      this.loc.mode === "home"
+        ? (given ?? homeWalk(this.loc, this.filter, this.asked, HOME_LIMITS, this.keepsWalk))
+        : null;
     // What changed after home's walk began may be missing from it: the watcher looks at those folders again.
     if (home?.walked) this.walkedAt = home.walked;
     this.home = home
@@ -540,6 +551,12 @@ export class Graph {
    * link alone (#10): that vault's own request writes its state, on the thread.
    */
   writesState = true;
+
+  /**
+   * Home's: the walk it makes kept for the next (`walk.json`, VV-D2). False on another thread — a walk made there is
+   * handed back, never kept there (T12) — and for a graph that writes nothing of its vault's (`writesState`).
+   */
+  keepsWalk = true;
 
   /** Its index was read, of this version: false when there was none, or one another version wrote (unread). */
   indexRead = false;

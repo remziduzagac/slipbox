@@ -642,16 +642,17 @@ vault). A folder link out of the vault is revealed in its own vault, as before (
   vault is caught up once at a time: the catch-ups of a vault (a kept tab's, a graph reached for a link, each its own)
   ride on the request of that vault that runs, or that starts, every one answered by its one run, waiting again if it's
   taken back. The thread stopped (slipbox quitting, another vault gone into) asks nothing again. A temporary file older
-  than five minutes beside a vault's index, its redirects or its heads, left by a thread let go of mid-write, is swept
-  before the next write of it. Home with an index of another version's counts as none; one of this version whose every
-  note changed since is caught up. An answer has no size cap: a note linked from thousands lists them all. The thread
-  stops a minute after its last answer, when you go into another vault (whatever it works on is for the vault left), and
-  when slipbox quits; it's started anew when the environment it was started in changed. Home without an index: `Linked
-  from: ~ has no index here yet — o goes there, and finds them.`, none built — home's is built in slices while nobody
-  works (VV-D2). Elsewhere's: `no backlinks in Elsewhere — it has no index; a note in a vault or home has them.` The
-  thread failing: `Linked from: not worked out — <why>.`, and every request riding on that one hears so; the notes the
-  graph here lacks are then parsed here, as when the index can't be written — home's excepted, the background index's
-  (VV-D2).
+  than an hour beside a vault's index, its redirects or its heads, left by a thread let go of mid-write, is swept before
+  the next write of it (a write takes seconds; a network share's clock may be minutes off this machine's). Home with an
+  index of another version's counts as none; one of this version whose every note changed since is caught up. An answer
+  has no size cap: a note linked from thousands lists them all. The thread stops a minute after its last answer, when
+  you go into another vault (whatever it works on is for the vault left, or for the one gone into, whose index is the
+  main thread's from then on: what it parsed is kept in the parse cache), and when slipbox quits; it's started anew when
+  the environment it was started in changed. Home without an index: `Linked from: ~ has no index here yet — o goes
+  there, and finds them.`, none built — home's is built in slices while nobody works (VV-D2). Elsewhere's: `no backlinks
+  in Elsewhere — it has no index; a note in a vault or home has them.` The thread failing: `Linked from: not worked out
+  — <why>.`, and every request riding on that one hears so; the notes the graph here lacks are then parsed here, as when
+  the index can't be written — home's excepted, the background index's (VV-D2).
 - **Its graph here:** the graph the peek reads its links and embeds in is the one this vault reaches it by
   (`Reach.graphAt`, opened on the main thread: its walk and its index read), given a reach of its own. The TUI's `Reach`
   is never `thorough`: a link by a name the vault has no note of is laid out unresolved, not looked for by parsing the
@@ -699,14 +700,15 @@ worktree's file there in one.
 Not done:
 
 - The first peek into a vault opens its graph on the main thread, as `Reach` opens one: its config, its walk, its index
-  read and caught up with git — and again, from the index its thread wrote, when the vault changed. A big vault holds
-  the keys while that's read (0.15 s for 5,000 notes whose index is 65 MB): a vault's entries sent between threads
-  measured slower than read from disk (D259).
+  read (never caught up with git there: its thread does that) — and again, from the index its thread wrote, when the
+  vault changed. A big vault holds the keys while that's read (0.15 s for 5,000 notes whose index is 65 MB): a vault's
+  entries sent between threads measured slower than read from disk (D259).
 - A peek open isn't updated while its vault changes, nor is its graph watched: the next peek reads it as it is.
 - A tab of home's file, home without an index here, reads its links as home's walk names its notes, their aliases
   unknown, until a peek into home once the background index has built its index: nothing parses home whole here.
-- Each peek's thread reads every other vault's index again for the links into this one; a cache across peeks, by
-  each index's mtime, as the main thread's `Reach` keeps, is for later.
+- Each peek's thread reads every other vault's index again for the links into this one, and walks each vault its notes
+  name (`[[name:note]]`), reading its index, though a link into another vault is never a backlink of the note; a cache
+  across peeks, by each index's mtime, as the main thread's `Reach` keeps, is for later.
 
 ## Side panes: explorer (plan `3.7`), history, the git panel, Info, outline and footnotes
 

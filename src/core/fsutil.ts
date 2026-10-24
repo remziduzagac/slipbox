@@ -27,8 +27,11 @@ export function ensureDir(dir: string): void {
   mkdirSync(dir, { recursive: true });
 }
 
-/** How old a temporary file is, at least, once no write is still under way to it. */
-const STALE_TEMP_MS = 5 * 60_000;
+/**
+ * How old a temporary file is, at least, once no write is still under way to it: a write takes seconds, and a network
+ * share's clock may be minutes off this machine's — another writer's file just made can look minutes old.
+ */
+export const STALE_TEMP_MS = 60 * 60_000;
 
 /**
  * The temporary files `atomicWrite` left beside `name` in `dir` (`.<name>.slipbox-…tmp`) and no write is under way to
