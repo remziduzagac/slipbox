@@ -453,7 +453,8 @@ export const REPORTING: Check[] = [
       await s.keys("escape", "/");
       await s.type("### What happened");
       await s.keys("enter", "o");
-      await s.type("<!-- an aside, never closed");
+      // In a list item: a comment opening there is an HTML block too.
+      await s.type("1. <!-- the rest later, never closed");
       await s.keys("escape", "escape", "ctrl+s");
       await s.see(/a comment \(<!--\) is left open: github hides everything after it/i);
       s.expect(!s.text().includes("(a) Copy the bug form's address"), "no address while a comment is open");

@@ -73,7 +73,8 @@ form's fields, by one rule, which also says where an added screen goes:
   (GitHub hides a comment anyway). Before the first label, a comment is never the title, nor text the address would
   lose.
 - The title is the first line with text before the first label, a comment aside. A comment opens its line, as an HTML
-  block does, anywhere outside a fence; `<!--` later in a line is the line's own text (CommonMark), the title's as
+  block does, anywhere outside a fence — after a quote's `>` or a list item's marker too, and, in a line one holds, a
+  `<!--` later in it; `<!--` later in a paragraph's line is the line's own text (CommonMark), the title's as
   typed. Nothing in a comment, nor the rest of a line one starts, is a label or opens a fence; in a section it's the
   section's text, as written. Text after a comment's end on the title's line is the title; what's before the title
   there stays in `gh`'s body, so the body never opens a comment it doesn't close. Any other text there belongs to no

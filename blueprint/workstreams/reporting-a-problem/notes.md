@@ -145,3 +145,8 @@
     `core/report.ts`; a stale comment on `plan()` and the `posting` checks the menu and `send` can't reach; the facts
     gathered while a frame draws (a few small files read); and again `slipbox report` naming a folder `report`, and
     a flag on virtual buffers (both settled in round 1).
+- **Review, round 4** (the last, allowed as round 3 found real bugs) — a fresh Claude reviewer for Codex and
+  `/code-review`: a comment left open after a quote's `>`, a list item's marker, or a comment earlier on its line was
+  missed, so GitHub could still hide the facts (taken: caught now, with a tab-indented `<!--` and `<!-->` no longer
+  taken for one). The reviewer found the round-3 fixes otherwise sound: `postOf`, the conflict's question, the
+  virtual and read-only buffers, the keys' wait.

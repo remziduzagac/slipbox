@@ -291,6 +291,9 @@ export const TITLE_LINE = 2;
 /** A fence's opening line: its character and length (CommonMark: three or more, indented at most three). */
 const FENCE_OPEN = /^ {0,3}(`{3,}|~{3,})(.*)$/;
 
+/** A comment opening a line inside a quote or a list item: after its `>`, or its marker and a space. */
+const CONTAINED_COMMENT = /^(?: {0,3}(?:>|[-+*] |\d{1,9}[.)] ))+ *<!--/;
+
 const LABEL_ID = new Map<string, FieldId>(FORM_FIELDS.map((f) => [f.label, f.id]));
 
 /** A line that is a form label's heading, outside a fence: its field. */
@@ -357,15 +360,29 @@ export function readReport(text: string): ReadBack {
           line = line.slice(cut);
         }
       }
-      while (!comment && /^\s{0,3}<!--/.test(line)) {
+      while (!comment && /^ {0,3}<!--/.test(line)) {
         html = true;
-        const end = line.indexOf("-->", line.indexOf("<!--") + 4);
+        // `<!-->` and `<!--->` close themselves.
+        const end = line.indexOf("-->", line.indexOf("<!--") + 2);
         if (end < 0) {
           comment = true;
           line = "";
         } else {
           cut += end + 3;
           line = line.slice(end + 3);
+        }
+      }
+      // A comment opening after a quote's `>` or a list item's marker opens an HTML block there too; and in a line one
+      // holds, a `<!--` later in it is raw HTML: left open, it hides the rest as surely (CommonMark).
+      if (!comment && (html || CONTAINED_COMMENT.test(line))) {
+        html = true;
+        for (let at = line.indexOf("<!--"); at >= 0; ) {
+          const end = line.indexOf("-->", at + 2);
+          if (end < 0) {
+            comment = true;
+            break;
+          }
+          at = line.indexOf("<!--", end + 3);
         }
       }
     }

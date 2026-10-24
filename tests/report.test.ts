@@ -452,6 +452,21 @@ describe("adding the screen or the place (RPT-D2)", () => {
     ]);
   });
 
+  test("a comment opening in a list item, a quote, or after a comment on its line: open as surely", () => {
+    const open = (section: string) =>
+      readReport(`T\n\n### What happened\n\n${section}\n\n### Version\n\n0.5\n`).openComment;
+    expect(open("1. Open a note\n2. <!-- the rest later")).toBe(true);
+    expect(open("- <!-- a list's")).toBe(true);
+    expect(open("> <!-- quoted log")).toBe(true);
+    expect(open("> - <!-- nested")).toBe(true);
+    expect(open("<!-- x --> then <!-- y")).toBe(true);
+    // Not one: code indented by a tab, a comment that closes itself, `<!--` in a paragraph's text.
+    expect(open("\t<!-- code")).toBe(false);
+    expect(open("<!--> done")).toBe(false);
+    expect(open("<!---> done")).toBe(false);
+    expect(open("-<!-- text\nsee <!-- inline")).toBe(false);
+  });
+
   test("gh's body keeps a comment's end that shares the title's line: the body never opens a comment", () => {
     const text = "<!-- a note\nstill -->My title\n\n### What happened\n\nboom\n";
     const r = readReport(text);
