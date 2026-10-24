@@ -102,8 +102,11 @@ jobs:
         run: |
           echo "$GITHUB_RUN_ID.$GITHUB_RUN_ATTEMPT" >_site/deployment
           echo "deployment=$(cat _site/deployment)" >>"$GITHUB_OUTPUT"
+      # Named by the attempt: deploy-pages takes the one artifact of its name in the whole run, so a re-run that builds
+      # the site again would otherwise find two and deploy neither (D?1).
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
+          name: github-pages-${{ github.run_attempt }}
           path: _site
 
   # The deployment alone holds the Pages grants, in the `github-pages` environment, which only the refs it names
@@ -137,6 +140,8 @@ jobs:
           fi
       - id: deploy
         uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
+        with:
+          artifact_name: github-pages-${{ github.run_attempt }}
       # D258, D?1: a deployment can be reported a success and not be served (actions/deploy-pages#383), as 0.5.0's was.
       # The marker and the channels are read back from the site until they're what `site` built: for eleven minutes,
       # past the ten its cache keeps a file (a deployment empties the cache, and a query doesn't get past it), however
@@ -163,13 +168,21 @@ jobs:
             [ "$(date +%s)" -lt "$deadline" ] || break
             sleep 10
           done
+          # One last read of all three, what's reported being what was compared.
+          got_deployment=$(served deployment)
+          got_stable=$(served stable)
+          got_preview=$(served preview)
+          if [ "$got_deployment" = "$DEPLOYMENT" ] && [ "$got_stable" = "$STABLE" ] && [ "$got_preview" = "$PREVIEW" ]
+          then
+            echo "the site serves this deployment, $DEPLOYMENT, and the channels built"
+            exit 0
+          fi
           echo "after eleven minutes, the site doesn't serve what this deployment built:"
-          for file in deployment stable preview; do
-            case $file in deployment) built=$DEPLOYMENT ;; stable) built=$STABLE ;; *) built=$PREVIEW ;; esac
-            echo "  $file: built \"$built\", served \"$(served "$file")\""
-          done
+          echo "  deployment: built \"$DEPLOYMENT\", served \"$got_deployment\""
+          echo "  stable: built \"$STABLE\", served \"$got_stable\""
+          echo "  preview: built \"$PREVIEW\", served \"$got_preview\""
           if [ "$GITHUB_EVENT_NAME" = push ]; then
-            echo "Re-running this preview's pages / site deploys its commit again, which Pages doesn't serve under a"
+            echo "Re-running this preview's pages / site deploys its commit again, which Pages may not serve under a"
             echo "push, and re-running pages / deploy alone is refused: run pages.yml by hand on main instead."
           fi
           exit 1

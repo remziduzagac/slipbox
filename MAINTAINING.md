@@ -155,8 +155,8 @@ and `.github/workflows/pages.yml` the installer's site once it's published. The 
     through the `release` environment, and `pages.yml`, which starts a run of itself on `main` to deploy the site (a
     deployment under the release's own run isn't served, D258; only a preview's run and one by hand on `main` deploy,
     D?1: moving `main` in step 7 deploys nothing, so the release's docs go live now, unless a preview came first); that
-    run passes once the site serves the deployment's own marker and its `stable` channel names the release. Check the
-    tap's new commit, then `brew upgrade slipbox` on a machine that has it; and that
+    run passes once the site serves the deployment's own marker and the channels it built, its `stable` naming the
+    release. Check the tap's new commit, then `brew upgrade slipbox` on a machine that has it; and that
     `https://remziduzagac.github.io/slipbox/stable` names the new tag.
 12. **Try it as a user would:** `curl -fsSL https://remziduzagac.github.io/slipbox/install.sh | sh` on a clean machine,
     `slipbox upgrade --check` from the version before, and `slipbox --version` after.
@@ -193,7 +193,7 @@ after it, never before. It refuses deleting `test` and pushing anything that isn
   deployed after each one, in the preview's own run, and its `preview` channel names it; `slipbox upgrade` there takes
   the newer of it and the latest release. Stable installs, Homebrew and the `latest` release are untouched. If its site
   isn't served, re-running its `pages` jobs won't help (`deploy` alone is refused, its site perhaps older than one
-  deployed since, and with `site` its commit is deployed again, which Pages doesn't serve under a push): run
+  deployed since, and with `site` its commit is deployed again, which Pages may not serve under a push): run
   `gh workflow run pages.yml --ref main` instead, which builds the site afresh. The preview's own run stays failed.
 
 `test` only moves forward: its ruleset forbids deleting it or forcing it back. A preview that went wrong is followed by

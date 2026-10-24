@@ -107,7 +107,9 @@ Each claim is marked with its provenance, as the blueprint's README says.
 - Whether `main`'s ruleset takes D257's status: first seen at the next release's push (T10).
 - Whether a release's run by hand on `main` is served (D258): seen for 0.5.0's commit by hand on 2026-10-24, the site
   serving that commit or not; started by a release's run, first at the next one (T10).
-- Whether a `push` repeat is ever served (`main`'s push of a release's commit): not tried. D?1 makes none.
+- Whether a `push` repeat from the ref that deployed the commit first is ever served: not tried. Under D?1 the only one
+  is a preview's `pages / site` re-run after its deployment, and the read-back's failure points to a run by hand
+  instead.
 - Whether an auto-triage rule's manifest criterion takes a path prefix, or only files by name: the form wasn't seen.
 
 ## Sources

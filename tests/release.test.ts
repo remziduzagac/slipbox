@@ -501,7 +501,7 @@ function holds(expr: string | undefined, context: Record<string, unknown>): bool
     }
     if (t.startsWith("'")) return t.slice(1, -1);
     if (/^\d/.test(t)) return Number(t);
-    if (t in literals) return literals[t];
+    if (Object.hasOwn(literals, t)) return literals[t];
     if (/^[A-Za-z_]/.test(t) && tokens[at] !== "(")
       // A name that isn't there is null, as GitHub has it.
       return t.split(".").reduce<unknown>((v, k) => {
@@ -735,7 +735,13 @@ describe("the workflows: one build for releases and previews, previews from test
     // The docs (DS): the site built from docs/ by package.json's script, at docs/ beside the installer.
     expect(runs(site)).toContain("bun run site");
     expect(runs(site)).toContain("cp -R site/dist _site/docs");
-    expect(site.steps?.find((s) => s.uses?.startsWith("actions/upload-pages-artifact@"))?.with?.path).toBe("_site");
+    const upload = site.steps?.find((s) => s.uses?.startsWith("actions/upload-pages-artifact@"));
+    expect(upload?.with?.path).toBe("_site");
+    // Named by the attempt, the deploy taking that name: deploy-pages takes the one artifact of its name in the whole
+    // run, and a re-run that builds the site again uploads another.
+    expect(upload?.with?.name).toBe("github-pages-${{ github.run_attempt }}");
+    const deploys = pages.jobs.deploy?.steps?.find((s) => s.uses?.startsWith("actions/deploy-pages@"));
+    expect(deploys?.with).toEqual({ artifact_name: "github-pages-${{ github.run_attempt }}" });
   });
 
   test("only a preview's run and a run by hand on main deploy; every other hands off to a run by hand on main (D?1)", () => {
@@ -791,7 +797,6 @@ describe("the workflows: one build for releases and previews, previews from test
     // Its own run says where the deployment is: it deploys nothing itself.
     expect(handed.out).toContain("this run deploys nothing");
     expect(handed.out).toContain("https://github.com/o/r/actions/workflows/pages.yml?query=branch%3Amain");
-    expect(holds(site?.if, run("workflow_dispatch", "refs/heads/main"))).toBe(true);
     // Nothing deployed where `site` is skipped: `deploy` waits for it.
     expect(needs(deploy!)).toEqual(["site"]);
   });
@@ -839,7 +844,7 @@ describe("the workflows: one build for releases and previews, previews from test
     const readBack = (
       site: Record<string, string>,
       built: Record<string, string>,
-      { later, lag = 0 }: { later?: Record<string, string>; lag?: number } = {},
+      { later, lag = 0, swapAt }: { later?: Record<string, string>; lag?: number; swapAt?: number } = {},
     ) => {
       const dir = mkdtempSync(join(sandbox, "served-"));
       const start = 1_761_264_000;
@@ -857,14 +862,20 @@ describe("the workflows: one build for releases and previews, previews from test
       const tick = (by: string) => `t=$(cat "$FAKE/clock"); echo $((t + ${by})) >"$FAKE/clock"\n`;
       const stub = {
         date: '#!/bin/sh\ncat "$FAKE/clock"\n',
-        curl: `#!/bin/sh\n${tick("$LAG")}echo "$*" >>"$FAKE/curl-args"\nfor a; do url=$a; done\nf="$FAKE/site/\${url#"$SITE"}"\n[ -f "$f" ] || exit 22\ncat "$f"\n`,
-        sleep: `#!/bin/sh\n${tick("$1")}echo >>"$FAKE/slept"\nif [ -d "$FAKE/later" ]; then cp "$FAKE"/later/* "$FAKE/site/"; rm -r "$FAKE/later"; fi\n`,
+        curl: `#!/bin/sh\nif [ -n "$SWAP_AT" ] && [ -d "$FAKE/later" ] && [ "$(cat "$FAKE/clock")" -ge "$SWAP_AT" ]; then cp "$FAKE"/later/* "$FAKE/site/"; rm -r "$FAKE/later"; fi\n${tick("$LAG")}echo "$*" >>"$FAKE/curl-args"\nfor a; do url=$a; done\nf="$FAKE/site/\${url#"$SITE"}"\n[ -f "$f" ] || exit 22\ncat "$f"\n`,
+        sleep: `#!/bin/sh\n${tick("$1")}echo >>"$FAKE/slept"\nif [ -z "$SWAP_AT" ] && [ -d "$FAKE/later" ]; then cp "$FAKE"/later/* "$FAKE/site/"; rm -r "$FAKE/later"; fi\n`,
       };
       for (const [name, text] of Object.entries(stub)) {
         writeFileSync(join(stubs, name), text);
         chmodSync(join(stubs, name), 0o755);
       }
-      const env = { FAKE: dir, SITE: "https://example.test/slipbox/", LAG: String(lag), ...built };
+      const env = {
+        FAKE: dir,
+        SITE: "https://example.test/slipbox/",
+        LAG: String(lag),
+        SWAP_AT: swapAt === undefined ? "" : String(start + swapAt),
+        ...built,
+      };
       const { code, out } = runStep(served, env, dir, stubs);
       const slept = existsSync(join(dir, "slept"))
         ? readFileSync(join(dir, "slept"), "utf8").split("\n").length - 1
@@ -912,6 +923,18 @@ describe("the workflows: one build for releases and previews, previews from test
       expect(slow.took).toBeGreaterThanOrEqual(660);
       expect(slow.took).toBeLessThanOrEqual(660 + 10 + 3 * 10 + 3 * 10);
     }
+    // And the job's timeout holds deploy-pages' ten minutes and that worst case.
+    const timeout = (workflow("pages.yml").jobs.deploy as { "timeout-minutes"?: number })["timeout-minutes"] ?? 0;
+    expect(timeout * 60).toBeGreaterThanOrEqual(600 + 660 + 10 + 3 * 10 + 3 * 10);
+    // Served just after the last round, at the deadline's one last read: passed, not reported unserved.
+    const last = readBack({ deployment: "39964133295.1", stable, preview }, built, {
+      later: { deployment: "40045492245.1" },
+      lag: 1,
+      swapAt: 661,
+    });
+    expect(last.code).toBe(0);
+    expect(last.took).toBeGreaterThan(660);
+    expect(last.out).toContain("the site serves this deployment, 40045492245.1, and the channels built");
     // Served a while after the deployment says it's done.
     const later = readBack({ deployment: "39964133295.1", stable, preview }, built, {
       later: { deployment: "40045492245.1" },

@@ -307,8 +307,9 @@ hand on `main` instead (`redeploy`): a release published, as D258 has it, and no
 moving no longer starts `pages.yml`: it moves only for a release (D251), which deploys once it's published, so a
 release's docs go live with it. Every deployment also puts a marker of its own on the site, `deployment` (the run's ID
 and attempt), and reads it back with the channels, for eleven minutes by the clock; it fails when the site doesn't serve
-it. A re-run of the deploy job alone is refused, the marker an attempt older than the run's: it would deploy the run's
-site again, perhaps older than one deployed since. Amends D258 and GR-D14. Detail: design/distribution.md § Previews.
+it. The site's artifact is named by the run's attempt. A re-run of the deploy job alone is refused, the marker an
+attempt older than the run's: it would deploy the run's site again, perhaps older than one deployed since. Amends D258
+and GR-D14. Detail: design/distribution.md § Previews.
 
 **Why:** A deployment is named by its commit, and one of a commit deployed before is reported a success and not served
 under a `push` as well as a `release`: #7's preview, of the commit `main`'s push had deployed, wasn't, and nor was a
@@ -330,8 +331,9 @@ maintainer's call, 2026-10-24). A preview or a run by hand before the release is
 docs or the site reaches the site with the next preview or release, or a run by hand. A deployment that fails its
 read-back is fixed by a run by hand on `main`, never by re-running its deploy job alone; a preview's run whose
 deployment failed before anything was deployed goes green only by re-running its `pages / site`, which re-runs `deploy`
-with a fresh marker (taken as recommended while the maintainer was away, 2026-10-24: a refusal that's sometimes
-needless over a re-run that can put an older site back and pass). One more file on the site.
+with a fresh marker and an artifact of its own (each attempt's is named by the attempt, since deploy-pages takes the one
+artifact of its name in the whole run) (taken as recommended while the maintainer was away, 2026-10-24: a refusal that's
+sometimes needless over a re-run that can put an older site back and pass). One more file on the site.
 
 **Not chosen:** every deployment a run by hand on `main`, previews too (one rule, but a preview's run would pass with
 its site not served: the maintainer's call, 2026-10-24); `main`'s push kept, handed off (the docs live before the

@@ -271,6 +271,21 @@ the deployments D258 relies on are served; then whatever fix that calls for.
   request had a preview's run, its deployment failed before anything was deployed, never go green, but re-running its
   `pages / site` re-runs `deploy` with a fresh marker: corrected; the slow-site bound and the timeout comment, since the
   failure message reads three files: 730 s now; the pull request's twelve minutes, which 40050527681 didn't have. Not
-  taken: the hand-off not waiting (D?1's Not chosen), the guard refusing a needless re-run (taken as recommended, above),
-  `refs/heads/Main` matching ignoring case (no such branch; the environment refuses it), `runStep`'s 20 s against a
-  1.3 s file, and as before `v*`, D?1's number, `served`'s own check, the condition written twice.
+  taken: the hand-off not waiting (D?1's Not chosen), the guard refusing a needless re-run (taken as recommended,
+  above), `refs/heads/Main` matching ignoring case (no such branch; the environment refuses it), `runStep`'s 20 s
+  against a 1.3 s file, and as before `v*`, D?1's number, `served`'s own check, the condition written twice.
+- 2026-10-24: Rebased on `origin/dev` (#59, the hanging test fixed; #54) and pushed. Review, round 7: Codex's part
+  skipped, Codex still stopped at a menu in its pane; a second reviewer does it.
+- 2026-10-24: Review, round 7, both reviewers, each finding checked. Taken: a re-run that builds the site again (`pages
+  / site`, or every job of a run by hand) uploads a second `github-pages` artifact into the run, and deploy-pages takes
+  the one artifact of its name in the whole run (`listArtifacts()` and a filter by name, refusing two; read, its source
+  at `368f825`): the artifact is named by the attempt now, `github-pages-<attempt>`, upload and deploy alike, tested, so
+  the re-run D?1's Cost names works; after the deadline the report read the site again and could print a site served
+  while failing: one last read of all three now passes if it serves them, tested with the swap after the last round
+  (the check taken out, the test fails); the job's timeout is tested against deploy-pages' ten minutes and the
+  read-back's worst case; `MAINTAINING.md` step 11 named `stable` alone; `holds` took `constructor` for a literal
+  (`Object.hasOwn` now); a routing assertion the table already makes; the pull request's re-run note lacked D?1's
+  "before anything was deployed"; the research's Gap said D?1 makes no `push` repeat, but a preview's `pages / site`
+  re-run after its deployment is one, from the ref that deployed it first, never tried: the Gap, the failure message
+  and `MAINTAINING.md` say "may not serve". Not taken, as before: D?1's number, `v*`, the Log's notes on Codex's
+  skips (the maintainer's), `served`'s own check, the condition written twice.
