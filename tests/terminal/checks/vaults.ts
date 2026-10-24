@@ -416,9 +416,9 @@ const HOME: Check[] = [
       await quits(s);
       // In the notes vault: home's todo.md opened by its path goes into home, its tabs back with it.
       await s.restart({ startAt: "home/notes/index.md" });
-      await s.status(/ notes\b/);
+      await s.where(/^notes(?: ·|$)/);
       await s.ex(`e ${s.path("~/todo.md")}`);
-      await s.status(/ ~ .*todo\.md/, 5000);
+      await s.where("~", /todo\.md/, 5000);
       await s.see(tab(1, "bike-insurance.md"));
       await inSwitcher(s, "2025-policy", "household/archive/2025-policy.md");
       await s.keys("escape");
@@ -1374,7 +1374,7 @@ const ELSEWHERE: Check[] = [
     },
     run: async (s) => {
       const far = join(s.dir, "tmp", "plain", "data", "far.md");
-      await s.status(/ Elsewhere /);
+      await s.where("Elsewhere");
       // l: just looked at — read-only.
       await s.ex(`e ${far}`);
       await s.see("Just look", 5000);
@@ -1415,7 +1415,7 @@ const ELSEWHERE: Check[] = [
     },
     run: async (s) => {
       const far = join(s.dir, "tmp", "plain-agent", "data", "far.md");
-      await s.status(/ Elsewhere /);
+      await s.where("Elsewhere");
       await s.ex(`e ${far}`);
       await s.see("Just look", 5000);
       await s.keys("l");
@@ -1465,7 +1465,7 @@ const ELSEWHERE: Check[] = [
     },
     run: async (s) => {
       const far = join(s.dir, "tmp", "plain-typed", "data", "far.md");
-      await s.status(/ Elsewhere /);
+      await s.where("Elsewhere");
       await s.ex(`e ${far}`);
       await s.see("Just look", 5000);
       await s.keys("f");

@@ -2075,11 +2075,11 @@ const GIT: Check[] = [
     },
     run: async (s) => {
       // Open on only-here, left; main checked out, slipbox started there; only-here checked out while it runs.
-      await s.status(/kestrel · only-here +‹ docs\/only-here\.md/);
+      await s.where(/^kestrel · only-here\b/, /‹ docs\/only-here\.md/);
       await s.quit();
       gitOk(s, "main checked out", true, KESTREL, "checkout", "-q", "main");
       await s.restart({ startAt: "home/work/kestrel" });
-      await s.status(/kestrel · main /);
+      await s.where(/^kestrel · main\b/);
       gitOk(s, "only-here checked out from outside", true, KESTREL, "checkout", "-q", "only-here");
       await s.message("switched to branch only-here: its tabs are back", 5000);
       await opened(s, "docs/only-here.md");
