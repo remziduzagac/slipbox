@@ -3172,3 +3172,5 @@ Wide tables and code blocks to edit in place.
 ### help
 
 - `help.open` — All keys and commands — `notes/index.md` (command-specs.ts)
+- `help.report` — Report a problem — `notes/index.md` (command-specs.ts)
+- `help.report_send` — Send the report — `notes/index.md` (command-specs.ts)
