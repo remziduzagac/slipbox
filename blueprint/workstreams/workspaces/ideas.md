@@ -19,8 +19,8 @@
 ## Named workspaces
 
 - Workspaces of your own in one vault (`review`, `writing`), each its tabs and its layout, picked from a list
-  (Obsidian's). The issue says later, once the term exists; whether they stay a non-goal or go to the roadmap's Later
-  is the user's (open question 5). (2026-10-24)
+  (Obsidian's). The issue says later, once the term exists. (2026-10-24) Proposed not now: a non-goal, its line
+  reworded (WSP-D2).
 
 ## Where you are on the top bar
 

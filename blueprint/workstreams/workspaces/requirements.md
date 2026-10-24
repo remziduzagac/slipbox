@@ -15,8 +15,8 @@
 
 - Re-keying the working state: a workspace is kept per branch, per folder of home opened by name, and per vault, as
   the session is today (`src/tui/session.ts`). Nothing moves between `session.json`'s parts.
-- Named workspaces of your own (`review`, `writing`) in one vault, with a picker: not built here. Whether they stay a
-  non-goal or go to the roadmap's Later is the user's (notes.md, open question 5; ideas.md).
+- Named workspaces of your own (`review`, `writing`) in one vault, with a picker: a non-goal still, its line reworded
+  below (WSP-D2; ideas.md).
 - The scratch per workspace: it stays the vault's (WSP-D3; ideas.md).
 - Renaming `session.json`, the `Session` class or `ui.restore_session` (WSP-D6).
 - The CLI: nothing it prints names a workspace; `slipbox info` and `history` are unchanged.
@@ -68,9 +68,7 @@
 ### MODIFIED requirements.md § Non-goals
 
 The second bullet's "workspaces (restoring a session is not this)" becomes "named workspaces, Obsidian's, picked from a
-list (slipbox keeps one per place by itself: WSP-D1)": the word now names what slipbox restores. If the user moves
-named workspaces to Later (open question 5), the words go from this bullet instead, and Later gets them at
-consolidation.
+list (slipbox keeps one per place by itself: WSP-D1, WSP-D2)": the word now names what slipbox restores.
 
 Previously: "Obsidian's life-management features: daily notes, random note, the unique note creator
 (timestamp-titled notes: descriptive file names and renames that fix links instead), the audio recorder, workspaces

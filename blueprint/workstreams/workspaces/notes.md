@@ -93,7 +93,7 @@ checked against the file it named; all eight held, and all were taken:
    `docs/guides/making-it-yours.md:83`, `docs/manual/cli.md:1797`, and in the design the peek (`tui.md:594`), the branch
    click (`:959`), tracking (`:2250`), a rebase's state (`:2290`) and the purge (`distribution.md:414`). Added.
 8. **History:** the notes planned under D65, D77, D153, VV-D1 and VV-D2 are listed (design.md, last section), and
-   named workspaces are left undecided rather than scheduled.
+   named workspaces are left to the user rather than scheduled.
 
 **Its second look** (2026-10-24): six settled; three slips, all fixed: home's top comes after a saved branch, not
 before (`src/tui/session.ts:118-122`: a folder of home, then the branch's, then home's top, then the last tabs); a
@@ -101,6 +101,9 @@ clause still had a vault's settings deciding trust (design.md § State by vault)
 a hidden bar, not one too narrow. Nothing new beyond them.
 
 ### Open questions for the user
+
+Answered on 2026-10-24: each as proposed; the fifth, which had no proposal, as drafted (a non-goal, its line
+reworded), the roadmap being the maintainer's. Recorded as WSP-D1 to WSP-D6 in [decisions.md](decisions.md).
 
 1. **What a workspace holds** (WSP-D2): the tabs and windows, the rest shared by the vault's workspaces as today
    (proposed); or the panel layout per workspace too; or everything, as the issue listed.
@@ -115,7 +118,9 @@ a hidden bar, not one too narrow. Nothing new beyond them.
 6. **The status line** (WSP-D5): drops the branch with the vault, and says home's folder when it shows where
    (proposed).
 
-### Plan, once approved
+### Plan, as agreed
+
+The tasks are in [tasks/](tasks/README.md).
 
 - **WSP-T1, the words:** the docs and the glossary, the design's words as design.md lists them, the commands'
   descriptions, the two messages, the comments in `session.ts` and `position.ts`, the README's and the introduction's
@@ -132,3 +137,7 @@ a hidden bar, not one too narrow. Nothing new beyond them.
   beside `status()` in `tests/terminal/session.ts`; the 69 assertions moved, the ones that read the path too split.
 - **WSP-T3, landing:** `screen.md`, `git.md`, `vaults.md` and the guides; the screenshots retaken and looked at; the
   CHANGELOG; the notes under earlier decisions planned; the workstream complete.
+
+## Log
+
+- 2026-10-24: the design agreed; the decisions recorded, the workstream active, its tasks WSP-T1 to WSP-T3.

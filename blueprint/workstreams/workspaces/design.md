@@ -21,7 +21,7 @@ section's other text stays as it is.
   open, their widths, the Problems panel's height), the UI settings changed in the TUI, the palette's recent commands,
   the recent notes, the nvim picked for send. Personal too, in the same file, but the vault's, not one workspace's: a
   branch switch leaves them as they are. This narrows the issue's list, which put the panel layout and the UI
-  settings in the workspace; the narrowing is open question 1 in [notes.md](notes.md).
+  settings in the workspace; the narrowing is agreed (WSP-D2).
 - **Not kept at all:** the explorer's view. After a restore or a switch it's revealed from the note open, as today
   (`Session.restore`, § Going into a vault's "The view follows").
 - **Session** stays the code's word for the file that holds them, `session.json`, and the class that saves and restores
@@ -270,5 +270,6 @@ Dated notes, the entries themselves left as they are:
 - **VV-D1** ("vault" for every folder with a marker): "Clarified by WSP-D1: "workspace" now names the working state
   slipbox keeps in a place, not the folders; its Not chosen still holds for the content boundary."
 - **VV-D2** (home is a vault): "Clarified by WSP-D1: each folder of home opened by name keeps a workspace of its own."
-- **D33** (a shared workspace for humans and agents): none planned; terms.md's Workspace entry says the two apart. If
-  open question 4 rewords the README and the introduction, a note says so.
+- **D33** (a shared workspace for humans and agents): "Clarified by WSP-D1: users read workspace for the working state
+  kept in a place; slipbox as a whole is no longer called one in the README and the introduction, and terms.md says
+  the two apart."

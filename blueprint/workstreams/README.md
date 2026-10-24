@@ -4,7 +4,8 @@ Contained parts of the work, each a folder with its key in its README's H1: acti
 dropped and superseded ones in `archive/`. The roadmap gives their order.
 
 - Active: [TT](terminal-tests/README.md), the terminal tests headless and by feature;
-  [DOCS](documentation/README.md), the documentation learning path, topic ownership and reference.
+  [DOCS](documentation/README.md), the documentation learning path, topic ownership and reference;
+  [WSP](workspaces/README.md), workspaces named apart from the vault, and where you are on the top bar.
 - Complete on its branch, for consolidation: [HDR](window-header/README.md), the window header and its Read, Lens and
   Source buttons (#24).
 - Consolidated, in `archive/`: [DOC](archive/user-docs/README.md), the user documentation;

@@ -1,5 +1,5 @@
 ---
-status: draft
+status: active
 created: "2026-10-24"
 branch: feat/issue-25
 ---
@@ -14,12 +14,14 @@ per folder of home opened by name, and one in each other place; the docs still c
 top bar, whose middle is empty, shows the vault, its branch and the workspace when it isn't the vault's own, a click
 going to another vault or branch; the status line drops them while the bar says them.
 
-Drafted on 2026-10-24 from the issue and the code; its decisions, WSP-D1 to WSP-D6, are proposed in
-[notes.md](notes.md) and recorded in `decisions.md` once agreed.
+Drafted on 2026-10-24 from the issue and the code, critiqued by Codex, and agreed by the user the same day, each
+open question settled as proposed.
 
 - [requirements.md](requirements.md): its goals, what it builds on, its acceptance criteria and its changes to the
   root's requirements.
 - [design.md](design.md): its changes to the root's design.
+- [decisions.md](decisions.md): what was decided, and why (WSP-D1 to WSP-D6).
 - [notes.md](notes.md): how it was worked out, what the code does today, the decisions proposed and the questions
   open.
 - [ideas.md](ideas.md): the alternatives weighed, and what waits for later.
+- [tasks/](tasks/README.md): the work, a task per file.
