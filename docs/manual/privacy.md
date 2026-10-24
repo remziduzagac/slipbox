@@ -60,12 +60,12 @@ slipbox 0.3.0 is out (this is 0.2.0): slipbox upgrade installs it
   check that failed waits a day too.
 - **To turn it off**, set `update.check = false` in your own config file. Or set the environment variable
   `DO_NOT_TRACK` to anything but `0` or `false`.
-- **`:upgrade` asks when you ask,** whatever these say, as `slipbox upgrade` does.
-- **A newer version installed while slipbox runs** is noticed by looking at slipbox's own files on your machine. That
-  sends nothing, so slipbox offers the restart whatever these say.
 
   Only your own config counts here. slipbox ignores `update.check` in a folder's own settings, with a warning. So a
   folder you clone can't turn the check on, or off.
+- **`:upgrade` asks when you ask,** whatever these say, as `slipbox upgrade` does.
+- **A newer version installed while slipbox runs** is noticed by looking at slipbox's own files on your machine. That
+  sends nothing, so slipbox offers the restart whatever these say.
 
 Two environment variables point the check, and `slipbox upgrade`, somewhere else:
 

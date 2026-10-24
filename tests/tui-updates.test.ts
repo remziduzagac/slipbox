@@ -23,8 +23,26 @@ import { harness, makeSandbox, makeVault } from "./tui-harness.ts";
 
 const sandbox = makeSandbox();
 
+type H = Awaited<ReturnType<typeof harness>>;
+
+/** A harness on a clock of its own, the input last used `ago` ms before now. */
+async function clocked(ago = 0, opts: Parameters<typeof harness>[0] = {}) {
+  const clock = { now: 2_000_000_000_000 };
+  const h = await harness({ ...opts, now: () => clock.now });
+  h.app.lastInputAt = clock.now - ago;
+  return { h, clock };
+}
+
+/** What a dialog drops is past: it drew, and half a second went by — on the test's clock, else the real one. */
+const DROP = 520;
+async function shown(h: H, clock?: { now: number }): Promise<void> {
+  h.frame();
+  if (clock) clock.now += DROP;
+  else await Bun.sleep(DROP);
+}
+
 /** The update offer's shape: three choices, a checkbox that goes with the last. */
-function offer(h: Awaited<ReturnType<typeof harness>>, unasked = false) {
+function offer(h: H) {
   const answers: { choice: string; ticked: string[] }[] = [];
   let cancelled = 0;
   const o = openDialog(h.app, {
@@ -45,7 +63,6 @@ function offer(h: Awaited<ReturnType<typeof harness>>, unasked = false) {
       },
     ],
     escape: "not now",
-    unasked,
     done: (choice, ticked) => answers.push({ choice, ticked: [...ticked] }),
     cancel: () => cancelled++,
   });
@@ -68,8 +85,9 @@ describe("the dialog (UPG-T3)", () => {
   });
 
   test("keys: the cursor moves over the choices and the checkbox, marking a choice; space ticks; enter does it", async () => {
-    const h = await harness();
+    const { h, clock } = await clocked();
     const { o, answers } = offer(h);
+    await shown(h, clock);
     let f = await h.keys("j");
     expect(f).toContain("● Upgrade, restart later");
     expect(f).toContain("Upgrades beside the TUI; :restart starts it.");
@@ -87,21 +105,24 @@ describe("the dialog (UPG-T3)", () => {
     expect(h.app.overlay).toBeNull();
   });
 
-  test("a dimmed checkbox doesn't tick; with its choice, it's taken; up wraps to the last row", async () => {
-    const h = await harness();
+  test("a dimmed checkbox ticked marks the choice it goes with: Skip this version, Not now; up wraps to the last row", async () => {
+    const { h, clock } = await clocked();
     const { o, answers } = offer(h);
+    await shown(h, clock);
     await h.keys("k");
     expect(o.cursor).toBe(3);
     expect(o.chosen).toBe(0);
-    await h.keys("space");
-    expect(o.checkboxes[0]!.ticked).toBe(false);
-    await h.keys("k", "j", "space", "enter");
+    const f = await h.keys("space");
+    expect(o.checkboxes[0]!.ticked).toBe(true);
+    expect(f).toContain("● Not now");
+    await h.keys("enter");
     expect(answers).toEqual([{ choice: "not", ticked: ["skip"] }]);
   });
 
   test("esc cancels; a paste does nothing", async () => {
-    const h = await harness();
+    const { h, clock } = await clocked();
     const { cancelled } = offer(h);
+    await shown(h, clock);
     await h.app.input.handleKey(`${PASTE}not a note`);
     expect(h.app.overlay?.kind).toBe("dialog");
     await h.keys("escape");
@@ -109,63 +130,65 @@ describe("the dialog (UPG-T3)", () => {
     expect(cancelled()).toBe(1);
   });
 
-  test("the mouse: a click on a choice does it, on the checkbox ticks it, outside cancels", async () => {
-    const h = await harness();
+  test("the mouse: a click on a choice does it; on Skip this version ticks it and marks Not now; outside cancels", async () => {
+    const { h, clock } = await clocked();
     const { o, answers, cancelled } = offer(h);
-    h.frame();
+    await shown(h, clock);
     const rows = () => h.app.geometry!.choices!.rows;
     const click = (x: number, y: number) => h.app.mouse.handle({ type: "down", x, y, button: 0 });
     const box = rows()[3]!;
     click(box.x + 2, box.y);
-    expect(o.checkboxes[0]!.ticked).toBe(false); // dimmed: Upgrade and restart is marked
-    const not = rows()[2]!;
-    h.app.mouse.handle({ type: "move", x: not.x, y: not.y, button: 0 });
+    expect(o.checkboxes[0]!.ticked).toBe(true);
+    expect(o.chosen).toBe(2);
     expect(h.app.overlay).not.toBeNull();
+    const not = rows()[2]!;
     click(not.x + 2, not.y);
-    expect(answers).toEqual([{ choice: "not", ticked: [] }]);
+    expect(answers).toEqual([{ choice: "not", ticked: ["skip"] }]);
+    const later = offer(h);
+    await shown(h, clock);
+    click(rows()[1]!.x + 2, rows()[1]!.y);
+    expect(later.answers).toEqual([{ choice: "later", ticked: [] }]);
     const again = offer(h);
-    h.frame();
+    await shown(h, clock);
     click(0, 0);
     expect(h.app.overlay).toBeNull();
     expect(again.cancelled()).toBe(1);
     expect(cancelled()).toBe(0);
   });
 
-  test("opened on its own, it drops the keys and clicks that arrived in its first half second, by when they arrived", async () => {
-    let clock = 1_000_000;
-    const h = await harness({ now: () => clock });
-    const { o, answers } = offer(h, true);
-    // A key typed for the note as it opened: dropped, however late its turn comes.
-    clock += 300;
-    await h.keys("enter");
+  test("every dialog drops the keys and clicks that came before it was drawn, or in the half second after, by arrival", async () => {
+    const { h, clock } = await clocked();
+    const { o, answers } = offer(h);
+    // Not drawn yet: however late, a key doesn't answer it.
+    clock.now += 5000;
+    await h.app.input.handleKey("enter");
     expect(h.app.overlay).toBe(o as DialogOverlay);
-    await h.app.overlays.key(o, "enter", o.openedAt - 50);
-    expect(h.app.overlay).not.toBeNull();
+    // Drawn: what came before, and in the half second after, dropped.
     h.frame();
+    expect(o.drawnAt).toBe(clock.now);
+    await h.app.overlays.key(o, "enter", clock.now - 50);
+    clock.now += 300;
+    await h.keys("enter");
     const first = h.app.geometry!.choices!.rows[0]!;
     h.app.mouse.handle({ type: "down", x: first.x + 2, y: first.y, button: 0 });
     expect(answers).toEqual([]);
     // Half a second on: answered.
-    clock += 300;
+    clock.now += 300;
     await h.keys("j", "enter");
     expect(answers).toEqual([{ choice: "later", ticked: [] }]);
-    // Asked for: answered at once.
-    const asked = offer(h, false);
-    await h.keys("enter");
-    expect(asked.answers).toEqual([{ choice: "now", ticked: [] }]);
   });
 
-  test("a key that arrived as it opened is dropped though its turn comes later (queued behind one a parse held)", async () => {
-    let clock = 1_000_000;
-    const h = await harness({ now: () => clock });
-    const { o, answers } = offer(h, true);
+  test("a key that arrived as it showed is dropped though its turn comes later (queued behind one a parse held)", async () => {
+    const { h, clock } = await clocked();
+    const { o, answers } = offer(h);
+    h.frame();
     let parsed = () => {};
     const parse = new Promise<void>((r) => (parsed = r));
     h.app.views.parses.add(parse);
-    clock += 50;
+    clock.now += 50;
     const first = h.app.input.handleKey("j");
     const second = h.app.input.handleKey("enter");
-    clock += 2000;
+    clock.now += 2000;
     h.app.views.parses.delete(parse);
     parsed();
     await Promise.all([first, second]);
@@ -185,16 +208,15 @@ describe("the dialog (UPG-T3)", () => {
   });
 
   test("ASCII's glyphs: (*) and ( ), [ ] and [x]", async () => {
-    const h = await harness({ config: (c) => (c.render.glyphs = "ascii") });
+    const { h, clock } = await clocked(0, { config: (c) => (c.render.glyphs = "ascii") });
     offer(h);
+    await shown(h, clock);
     const f = await h.keys("j", "j", "j", "space");
     expect(f).toContain("(*) Not now");
     expect(f).toContain("( ) Upgrade and restart");
     expect(f).toContain("[x] Skip this version");
   });
 });
-
-type H = Awaited<ReturnType<typeof harness>>;
 
 /** A newest release answered: its SHA256SUMS naming a pack of `version`; every address asked kept. */
 function releasesOf(version: string | null) {
@@ -236,14 +258,6 @@ function withEnv(h: H, over: Partial<UpdateEnv> = {}, check = { on: true }): Upd
   return env;
 }
 
-/** A harness on a clock of its own, the input last used `ago` ms before now. */
-async function clocked(ago = 0) {
-  const clock = { now: 2_000_000_000_000 };
-  const h = await harness({ now: () => clock.now });
-  h.app.lastInputAt = clock.now - ago;
-  return { h, clock };
-}
-
 const found = { version: "0.6.0", said: "slipbox 0.6.0 is out (this is 0.5.0): slipbox upgrade installs it" };
 
 describe("the update offer (UPG-T4)", () => {
@@ -254,11 +268,14 @@ describe("the update offer (UPG-T4)", () => {
     expect(h.app.messages.at(-1)?.text).toBe(found.said);
     expect(h.app.toasts.some((t) => t.text === found.said)).toBe(false);
     expect(h.app.overlay).toBeNull();
-    // Typing: inserting, a selection, a sequence pending — each holds it back, however long since the last key.
+    // Typing: inserting, a selection, a sequence pending, an operator or a count waiting — each holds it back, however
+    // long since the last key.
     for (const [into, out] of [
       ["i", "escape"],
       ["v", "escape"],
       ["space", "escape"],
+      ["d", "escape"],
+      ["3", "escape"],
     ]) {
       await h.keys(into!);
       clock.now += QUIET_MS + 1;
@@ -309,7 +326,7 @@ describe("the update offer (UPG-T4)", () => {
       expect(f).toContain(`● ${choice}`);
       expect(f).toContain("○ Not now");
       expect(f).not.toContain("Upgrade and restart");
-      clock.now += DROP;
+      await shown(h, clock);
       await h.keys("enter");
       expect(h.copied).toContain(copied);
     }
@@ -319,7 +336,7 @@ describe("the update offer (UPG-T4)", () => {
     const { h, clock } = await clocked(QUIET_MS);
     const env = withEnv(h);
     h.app.updates.found(found);
-    clock.now += DROP;
+    await shown(h, clock);
     await h.keys("k", "k", "j", "space", "enter");
     const stateFile = join(env.stateDir, "update.json");
     expect(JSON.parse(readFileSync(stateFile, "utf8")).skipped).toBe("0.6.0");
@@ -343,7 +360,7 @@ describe("the update offer (UPG-T4)", () => {
     const said = { ok: true, data: { status: "upgraded", from: "0.5.0", latest: "0.6.0", removed: [] } };
     const env = withEnv(h, { execPath: fakeSlipbox(said) });
     h.app.updates.found(found);
-    clock.now += DROP;
+    await shown(h, clock);
     await h.keys("j", "enter");
     expect(h.app.messages.at(-1)?.text).toBe("upgrading to 0.6.0…");
     await h.app.updates.background!.done;
@@ -361,7 +378,7 @@ describe("the update offer (UPG-T4)", () => {
   });
 
   test(":upgrade asks now, whatever the check says, and offers what it finds — a skipped one too; nothing newer, said; from source, nothing asked", async () => {
-    const { h } = await clocked();
+    const { h, clock } = await clocked();
     const latest = releasesOf("0.6.0");
     const env = withEnv(h, { env: { DO_NOT_TRACK: "1" }, fetcher: latest.fetcher }, { on: false });
     writeFileSync(join(env.stateDir, "update.json"), JSON.stringify({ skipped: "0.6.0" }));
@@ -370,7 +387,8 @@ describe("the update offer (UPG-T4)", () => {
     expect(latest.asked).toEqual(["https://github.com/o/r/releases/latest/download/SHA256SUMS"]);
     expect(h.app.overlay?.kind).toBe("dialog");
     expect(h.frame()).toContain("slipbox 0.6.0 is out");
-    // Asked for: answered at once, keys not dropped.
+    // Nothing typed while it asked: opened at once.
+    await shown(h, clock);
     await h.keys("escape");
     expect(h.app.overlay).toBeNull();
     expect(JSON.parse(readFileSync(join(env.stateDir, "update.json"), "utf8"))).toMatchObject({ latest: "0.6.0" });
@@ -393,8 +411,8 @@ describe("the update offer (UPG-T4)", () => {
     expect(none.asked).toEqual([]);
   });
 
-  test(":upgrade, the newest installed already underneath: the restart offered instead", async () => {
-    const { h } = await clocked();
+  test(":upgrade, the newest installed already underneath: the restart offered instead, and counted as offered", async () => {
+    const { h, clock } = await clocked();
     const data = mkdtempSync(join(sandbox, "data-"));
     mkdirSync(join(data, "versions", "0.6.0"), { recursive: true });
     symlinkSync("versions/0.6.0", join(data, "current"));
@@ -403,13 +421,64 @@ describe("the update offer (UPG-T4)", () => {
     const f = h.frame();
     expect(f).toContain("slipbox 0.6.0 is installed");
     expect(f).toContain("● Restart now");
+    await shown(h, clock);
     await h.keys("j", "enter");
     expect(h.app.messages.at(-1)?.text).toBe("slipbox 0.6.0 is installed: :restart starts it");
+    // Not offered again by itself, ten seconds on.
+    await h.app.updates.lookUnderneath();
+    clock.now += QUIET_MS;
+    h.app.updates.tick();
+    expect(h.app.overlay).toBeNull();
+  });
+
+  test(":upgrade typed into while it asks: its offer waits for quiet, and what was typed never answers it", async () => {
+    const { h, clock } = await clocked();
+    let answer = (_: Response) => {};
+    const fetcher = () => new Promise<Response>((r) => (answer = r));
+    withEnv(h, { fetcher });
+    await h.keys(":", ..."upgrade".split(""), "enter");
+    clock.now += 200;
+    await h.keys("i", "x");
+    answer(new Response(`${"a".repeat(64)}  slipbox-0.6.0-linux-x64.tar.gz\n`));
+    await Bun.sleep(20);
+    expect(h.app.overlay).toBeNull();
+    await h.keys("enter", "escape");
+    clock.now += QUIET_MS;
+    h.app.updates.tick();
+    expect(h.frame()).toContain("slipbox 0.6.0 is out");
+  });
+
+  test("two waiting: the daily check's offer and a restart underneath, each shown in turn, neither lost", async () => {
+    const { h, clock } = await clocked();
+    const data = mkdtempSync(join(sandbox, "data-"));
+    for (const v of ["0.5.0", "0.5.5"]) mkdirSync(join(data, "versions", v), { recursive: true });
+    symlinkSync("versions/0.5.5", join(data, "current"));
+    withEnv(h, { data });
+    h.app.updates.found(found);
+    await h.app.updates.lookUnderneath();
+    clock.now += QUIET_MS;
+    h.app.updates.tick();
+    expect(h.frame()).toContain("slipbox 0.6.0 is out");
+    await shown(h, clock);
+    await h.keys("escape");
+    clock.now += QUIET_MS;
+    h.app.updates.tick();
+    expect(h.frame()).toContain("slipbox 0.5.5 is installed");
+  });
+
+  test("Upgrade, restart later with this binary gone (another window's upgrade removed it): current's runs it", async () => {
+    const { h } = await clocked();
+    const data = mkdtempSync(join(sandbox, "data-"));
+    const said = { ok: true, data: { status: "upgraded", from: "0.5.0", latest: "0.6.0", removed: [] } };
+    mkdirSync(join(data, "versions", "0.5.5"), { recursive: true });
+    renameSync(fakeSlipbox(said), join(data, "versions", "0.5.5", "slipbox"));
+    symlinkSync("versions/0.5.5", join(data, "current"));
+    withEnv(h, { data, execPath: join(sandbox, "removed", "slipbox") });
+    h.app.updates.upgradeBeside("0.6.0");
+    await h.app.updates.background!.done;
+    expect(h.app.messages.at(-1)?.text).toBe("slipbox 0.6.0 is installed (this is 0.5.0): :restart starts it");
   });
 });
-
-/** What an unasked dialog drops is past. */
-const DROP = 520;
 
 describe("restarting (UPG-T5)", () => {
   test("nothing unsaved: its note — where it is, this window's session — written, and slipbox quit as quitting does", async () => {
@@ -429,19 +498,21 @@ describe("restarting (UPG-T5)", () => {
   });
 
   test("notes unsaved: asked first, naming them — Cancel restarts nothing; Save and restart saves them, then restarts", async () => {
-    const h = await harness();
+    const { h, clock } = await clocked();
     withEnv(h);
     await h.keys("i", "X", "escape");
     await h.app.updates.restart();
-    let f = h.frame();
+    const f = h.frame();
     expect(f).toContain("Restart");
     expect(f).toContain("1 note is unsaved: index.md.");
     expect(f).toContain("● Save and restart");
+    await shown(h, clock);
     await h.keys("escape");
     expect(h.quit.called).toBe(false);
     expect(h.app.dirtyBuffers()).toHaveLength(1);
     await h.app.updates.restart();
-    f = await h.keys("enter");
+    await shown(h, clock);
+    await h.keys("enter");
     expect(h.app.dirtyBuffers()).toHaveLength(0);
     expect(readFileSync(join(h.root, "index.md"), "utf8")).toStartWith("X");
     expect(h.quit.called).toBe(true);
@@ -449,7 +520,7 @@ describe("restarting (UPG-T5)", () => {
   });
 
   test("a note that can't be saved stops it there, as :wqa stops, saying which: nothing quits", async () => {
-    const h = await harness();
+    const { h, clock } = await clocked();
     withEnv(h);
     await h.keys("i", "X", "escape");
     await h.app.run("window.split_side");
@@ -458,6 +529,7 @@ describe("restarting (UPG-T5)", () => {
     writeFileSync(join(h.root, "index.md"), "changed on disk meanwhile, by another hand\n");
     await h.app.updates.restart();
     expect(h.frame()).toContain("2 notes are unsaved: index.md, notes/alpha.md.");
+    await shown(h, clock);
     await h.keys("enter");
     expect(h.quit.called).toBe(false);
     expect(h.app.messages.some((m) => m.text === "the restart stopped: index.md isn't saved")).toBe(true);
@@ -469,11 +541,52 @@ describe("restarting (UPG-T5)", () => {
     const { h, clock } = await clocked(QUIET_MS);
     withEnv(h);
     h.app.updates.found(found);
-    clock.now += DROP;
+    await shown(h, clock);
     await h.keys("enter");
     await Bun.sleep(10);
     expect(h.quit.called).toBe(true);
     expect(takeNote({ pid: process.pid, ppid: -1 })?.upgrade).toBe("0.6.0");
+  });
+
+  test("the question opened by Upgrade and restart's enter isn't answered by a second enter, nor a double click", async () => {
+    for (const how of ["keys", "clicks"]) {
+      const { h, clock } = await clocked(QUIET_MS);
+      withEnv(h);
+      await h.keys("i", "X", "escape");
+      clock.now += QUIET_MS;
+      h.app.updates.found(found);
+      await shown(h, clock);
+      if (how === "keys") await h.keys("enter", "enter");
+      else {
+        const row = h.app.geometry!.choices!.rows[0]!;
+        for (let i = 0; i < 2; i++) {
+          h.app.mouse.handle({ type: "down", x: row.x + 2, y: row.y, button: 0 });
+          h.frame();
+        }
+      }
+      await Bun.sleep(10);
+      expect(h.frame()).toContain("1 note is unsaved: index.md.");
+      expect(h.quit.called).toBe(false);
+    }
+  });
+
+  test("a restart waiting for an upgrade beside the TUI, typed into meanwhile: its question waits for quiet", async () => {
+    const { h, clock } = await clocked();
+    withEnv(h, {
+      execPath: fakeSlipbox({ ok: true, data: { status: "upgraded", from: "0.5.0", latest: "0.6.0", removed: [] } }, 1),
+    });
+    await h.keys("i", "X", "escape");
+    h.app.updates.upgradeBeside("0.6.0");
+    const restarting = h.app.updates.restart();
+    clock.now += 100;
+    await h.keys("i", "Y");
+    await restarting;
+    expect(h.app.overlay).toBeNull();
+    expect(h.app.view?.insert).toBeTruthy();
+    await h.keys("escape");
+    clock.now += QUIET_MS;
+    h.app.updates.tick();
+    expect(h.frame()).toContain("1 note is unsaved: index.md.");
   });
 
   test("an upgrade beside the TUI is waited for, saying so", async () => {
@@ -583,7 +696,7 @@ describe("an upgrade underneath (UPG-T6)", () => {
     expect(f).toContain("This is 0.5.0.");
     expect(f).toContain("● Restart now");
     expect(f).not.toContain("Skip this version");
-    clock.now += DROP;
+    await shown(h, clock);
     await h.keys("j", "enter");
     expect(h.app.messages.at(-1)?.text).toBe("slipbox 0.6.0 is installed: :restart starts it");
     // Once.
@@ -591,6 +704,23 @@ describe("an upgrade underneath (UPG-T6)", () => {
     clock.now += QUIET_MS;
     h.app.updates.tick();
     expect(h.app.overlay).toBeNull();
+  });
+
+  test("the installer's: a version newer than this one installed already at start — gone back to on purpose — isn't offered", async () => {
+    const { h, clock } = await clocked(QUIET_MS);
+    const data = mkdtempSync(join(sandbox, "data-"));
+    for (const v of ["0.5.0", "0.6.0", "0.7.0"]) mkdirSync(join(data, "versions", v), { recursive: true });
+    symlinkSync("versions/0.6.0", join(data, "current"));
+    withEnv(h, { data });
+    h.app.updates.start();
+    await h.app.updates.lookUnderneath();
+    clock.now += QUIET_MS;
+    h.app.updates.tick();
+    expect(h.app.overlay).toBeNull();
+    relink("versions/0.7.0", join(data, "current"));
+    await h.app.updates.lookUnderneath();
+    h.app.updates.tick();
+    expect(h.frame()).toContain("slipbox 0.7.0 is installed");
   });
 
   test("this window's own background upgrade isn't offered again: its message said it", async () => {

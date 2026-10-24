@@ -6,10 +6,11 @@
 import { dlopen, FFIType, ptr, read } from "bun:ffi";
 import { accessSync, constants, existsSync, readdirSync, readFileSync, rmSync, statSync } from "node:fs";
 import { constants as os } from "node:os";
+import { isatty } from "node:tty";
 import { delimiter, isAbsolute, join, resolve } from "node:path";
 import { libcCandidates } from "./crash-reports.ts";
 import { atomicWrite } from "./fsutil.ts";
-import type { InstalledBy } from "./install.ts";
+import { homebrewPrefix, type InstalledBy } from "./install.ts";
 import { stateHome } from "./paths.ts";
 
 /** What a restart leaves for the slipbox it starts. `place` and `session` are the TUI's own, kept as it wrote them. */
@@ -131,7 +132,7 @@ export function nextLaunch(opts: {
     return at(executable(current) ? current : running);
   }
   if (opts.by === "homebrew") {
-    const prefix = /^(.*)\/Cellar\/slipbox\/[^/]+\/bin\/slipbox$/.exec(running)?.[1];
+    const prefix = homebrewPrefix(running);
     const opt = prefix ? join(prefix, "opt", "slipbox", "bin", "slipbox") : null;
     return at(opt && executable(opt) ? opt : running);
   }
@@ -200,6 +201,52 @@ function errno(lib: string): string {
   }
 }
 
+/** This process's children, by pid, as Linux lists them (`/proc`); an empty list elsewhere. */
+function children(): number[] {
+  const pids: number[] = [];
+  try {
+    for (const task of readdirSync("/proc/self/task")) {
+      const listed = readFileSync(`/proc/self/task/${task}/children`, "utf8").trim();
+      if (listed) pids.push(...listed.split(/\s+/).map(Number));
+    }
+  } catch {}
+  return pids;
+}
+
+/**
+ * The children quitting stopped (language servers, a shell job), waited for until they've ended and been reaped, and
+ * those that won't, killed: after `execve` the process is the new slipbox's, which never reaps what it didn't start,
+ * so one left would stay a zombie as long as it runs. Linux only; elsewhere at once.
+ */
+export async function childrenEnded(withinMs = 1000): Promise<void> {
+  const until = Date.now() + withinMs;
+  while (children().length && Date.now() < until) await Bun.sleep(20);
+  const left = children();
+  if (!left.length) return;
+  for (const pid of left)
+    try {
+      process.kill(pid, "SIGKILL");
+    } catch {}
+  const killed = Date.now() + 500;
+  while (children().length && Date.now() < killed) await Bun.sleep(20);
+}
+
+/** `tcflush`'s queue of what was typed but not read: Linux's `TCIFLUSH`, and BSD's (macOS). */
+const TCIFLUSH = process.platform === "darwin" ? 1 : 0;
+
+/** What was typed at the terminal while the hand-over ran, thrown away: never keys for the next slipbox. */
+export function flushInput(): void {
+  // The descriptor asked, not process.stdin: the TUI's renderer has let go of that stream by now.
+  if (process.platform === "win32" || !isatty(0)) return;
+  for (const lib of libcCandidates())
+    try {
+      dlopen(lib, { tcflush: { args: [FFIType.i32, FFIType.i32], returns: FFIType.i32 } }).symbols.tcflush(0, TCIFLUSH);
+      return;
+    } catch {
+      // the next candidate
+    }
+}
+
 /** The terminal's signals, which reach the next slipbox too (one foreground group): this one ignores them while it
  *  waits. */
 const TERMINAL_SIGNALS = ["SIGINT", "SIGQUIT", "SIGTSTP"] as const;
@@ -229,6 +276,11 @@ export async function startAndWait(
   }
 }
 
+async function settleForNext(): Promise<void> {
+  await childrenEnded();
+  flushInput();
+}
+
 function onSigint(cancel: () => void): () => void {
   process.on("SIGINT", cancel);
   return () => process.off("SIGINT", cancel);
@@ -248,6 +300,8 @@ export async function handOver(opts: {
   say: (line: string) => void;
   dir?: string;
   exec?: typeof execInto;
+  /** Before the next one starts: children reaped, typing thrown away. A test's own stands in. */
+  settle?: () => Promise<void>;
   /** What cancels the upgrade: `ctrl+c`, its SIGINT. Returns its own removal. */
   onCancel?: (cancel: () => void) => () => void;
 }): Promise<number> {
@@ -276,6 +330,7 @@ export async function handOver(opts: {
   } catch {
     // the next one comes back as a start does
   }
+  await (opts.settle ?? settleForNext)();
   const launch = opts.launch(failed);
   const why = (opts.exec ?? execInto)(launch.file, launch.argv, opts.env);
   const code = await startAndWait(launch, opts.env, opts.say);

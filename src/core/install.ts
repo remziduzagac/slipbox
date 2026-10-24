@@ -15,6 +15,20 @@ export type Stores = Record<StoreKind, string>;
  *  way — from source, or a binary put somewhere by hand. */
 export type InstalledBy = "installer" | "homebrew" | "other";
 
+/** Homebrew's prefix, when `file` is a slipbox in its Cellar (`<prefix>/Cellar/slipbox/<keg>/bin/slipbox`); else null. */
+export function homebrewPrefix(file: string): string | null {
+  return /^(.*)\/Cellar\/slipbox\/[^/]+\/bin\/slipbox$/.exec(file)?.[1] ?? null;
+}
+
+/** The version the installer's `<data>/current` names, or null. */
+export function currentVersion(data: string): string | null {
+  try {
+    return /^versions\/([^/]+)$/.exec(readlinkSync(join(data, "current")))?.[1] ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export function installedBy(execPath: string, data: string, version: string): InstalledBy {
   let real = execPath;
   try {
@@ -23,7 +37,7 @@ export function installedBy(execPath: string, data: string, version: string): In
   try {
     if (real === realpathSync(join(data, "versions", version, "slipbox"))) return "installer";
   } catch {}
-  return /\/Cellar\/slipbox\/[^/]+\/bin\/slipbox$/.test(real) ? "homebrew" : "other";
+  return homebrewPrefix(real) !== null ? "homebrew" : "other";
 }
 
 /** How to get a newer one, by how this one was put here. */
@@ -102,10 +116,7 @@ export function installation(data: string): Installation {
         .filter((v) => !v.endsWith(".new") && !v.startsWith("."))
         .sort()
     : [];
-  let current: string | null = null;
-  try {
-    current = /^versions\/([^/]+)$/.exec(readlinkSync(join(data, "current")))?.[1] ?? null;
-  } catch {}
+  const current = currentVersion(data);
   let link: string | null = null;
   let foreignLink: string | null = null;
   try {

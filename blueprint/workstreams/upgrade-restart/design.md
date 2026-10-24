@@ -12,13 +12,15 @@ answer handed to it.
 
 **It waits for a quiet moment**, as it opens on its own. Quiet is one test (`app.updates`' `quiet`, over the input's
 own state): no key in flight or waiting its turn (one waiting on a note's parse counts), none for two seconds
-(`lastInputAt`, set as a key arrives), nothing pending (a key sequence, the which-key popup), nothing being typed into —
-not inserting, no visual selection, no panel's filter (the explorer's, the outline's, Problems', the history's), not
-the git panel's message — and nothing open over the windows (a list, a prompt, a dialog, a floating window, the Save
-As window, the merge screen). Keys, pastes and clicks that arrive in its first half second, or arrived before it and
-wait their turn, are dropped, so one meant for a note never answers it: each carries the time it arrived, taken as it's
-queued. Just before it opens, your config's `[update] check` and `DO_NOT_TRACK` are read again: an offer waiting when
-the check was turned off (the config reloaded) is dropped. A slipbox quit before it opens is asked at the next check.
+(`lastInputAt`, set as a key arrives), nothing pending (a key sequence, the which-key popup, an operator waiting for its
+motion, a count, a character awaited by `f`, `t` or `r`), nothing being typed into — not inserting, no visual
+selection, no panel's filter (the explorer's, the outline's, Problems', the history's), not the git panel's message —
+and nothing open over the windows (a list, a prompt, a dialog, a floating window, the Save As window, the merge
+screen). What waits for quiet waits in turn, each once: the daily check's offer, a restart offered underneath, the
+restart's question (§ Restarting); one never takes another's place. Like every dialog (tui.md § Overlays), it drops what
+arrives before it's drawn and in the half second after, so a key meant for a note never answers it. Just before it
+opens, your config's `[update] check` and `DO_NOT_TRACK` are read again: an offer waiting when the check was turned off
+(the config reloaded) is dropped. A slipbox quit before it opens is asked at the next check.
 
 **What it says:** its title `slipbox 0.6.0 is out`, or `slipbox 0.6.0-preview.202610121530.g1a2b3c4 is out on the
 preview channel`; its text `This is 0.5.0.` What it offers is by how this slipbox was installed (`installedBy`):
@@ -27,7 +29,8 @@ preview channel`; its text `This is 0.5.0.` What it offers is by how this slipbo
   - **Upgrade and restart:** slipbox quit, upgraded and started again where you were, notes unsaved asked about first
     (§ Restarting).
   - **Upgrade, restart later:** the upgrade runs now, beside the TUI: `slipbox upgrade --json`, the running binary's
-    own (`process.execPath`), with this environment. A process of its own, so the download, its sum, the unpacking and
+    own (`process.execPath`; `<data>/current/slipbox` when another window's upgrade removed it), with this
+    environment. A process of its own, so the download, its sum, the unpacking and
     the new binary's run never hold the screen up. The TUI says `upgrading to 0.6.0…`, then `slipbox 0.6.0 is installed
     (this is 0.5.0): :restart starts it`, or, as an error, `the upgrade to 0.6.0 failed: <why>`. Quitting meanwhile
     leaves it to finish (UPG-D7): it's what you asked for, and the next start runs what it installed. So it
@@ -41,7 +44,8 @@ preview channel`; its text `This is 0.5.0.` What it offers is by how this slipbo
   and slipbox offers to restart once this file has changed.`; its choices **Copy the releases' address** and **Not
   now**. Copied, never opened, as a URL followed is (tui.md § Following links: a browser over SSH would be wrong).
 
-**And one checkbox**, for any install, **Skip this version**: taken with Not now only, dimmed with another choice.
+**And one checkbox**, for any install, **Skip this version**: taken with Not now only, dimmed with another choice;
+ticked, it marks Not now.
 `update.json` keeps it (`skipped`), and a check finding it, or anything not newer, offers nothing; a newer one is
 offered; it's said, `slipbox 0.6.0 skipped: the next newer one is offered`. There's no checkbox to stop the checks
 (UPG-D1): your own config's `[update] check = false`, or `DO_NOT_TRACK`, does that, as it does today, and the TUI never
@@ -53,9 +57,11 @@ writes your config. A copy is said as any copy is (`copied brew upgrade slipbox`
 the newest version…` and asks now, as the daily check asks (`askNewest`) — one request, two on `preview`, the keys going
 on meanwhile — and offers what it finds as above, a version you skipped included
 (UPG-D6). You asked, so it asks whatever `[update] check` and `DO_NOT_TRACK` say, as `slipbox upgrade` does; the time
-it asked is kept in `update.json`, as the daily check's is, so the next daily check is a day later. It opens the offer
-at once (its own keys answered it, so it waits for no quiet). The newest installed already, underneath this one (§ An
-upgrade underneath): its restart is offered instead, Restart now or Not now. Nothing newer: `slipbox 0.5.0 is the
+it asked is kept in `update.json`, as the daily check's is, so the next daily check is a day later. Its answer comes
+after a wait: the offer opens at once when nothing was typed or clicked since `:upgrade`, else once the TUI is quiet, so
+keys typed meanwhile never answer it; one of the same version waiting for quiet already is the same offer. The newest
+installed already, underneath this one (§ An upgrade underneath): its restart is offered instead, Restart now or Not
+now, counted as offered. Nothing newer: `slipbox 0.5.0 is the
 newest` (on `preview`, `the newest release or preview`). Nothing found: `couldn't find the newest version at
 <releases>`, as an error. From source (no release
 build) it asks nothing and says what `slipbox upgrade` says: `this slipbox runs from source (or was built by hand): it
@@ -81,7 +87,10 @@ back to be sure; one that can't be written stops the restart, said, and nothing 
 does — running work stopped (exports, shell jobs, language servers, the threads), the session and positions saved —
 and starts again in the same terminal: into the newest version installed (§ An upgrade underneath), else the same.
 Upgrade and restart (§ The update offer) is the same with the upgrade in between. While an upgrade runs beside the TUI
-(Upgrade, restart later), a restart waits for it, saying so.
+(Upgrade, restart later), a restart waits for it, saying so; then it goes on at once when nothing was typed or clicked
+meanwhile, else once the TUI is quiet. The question about notes unsaved, opened by the very key or click that chose the
+restart, drops what arrives before it's drawn and in the half second after: a second `enter`, a double click, never
+answers it.
 
 **The screen given back first.** OpenTUI's `destroy` finishes later when a frame is being drawn, and its native
 teardown (raw mode off, the main screen back, mouse reporting off) comes after its `destroy` event: the hand-over waits
@@ -89,12 +98,13 @@ for that event, then a turn of the event loop, before it writes a line or replac
 
 **The hand-over** (`core/restart.ts`; UPG-D2) runs in the same process, in order:
 
-1. **The upgrade**, when asked for: `slipbox: upgrading to 0.6.0… (ctrl+c cancels)`, then `upgrade`'s work (§
-   Updates) done by the version that was running, as `slipbox upgrade` does it, and what `slipbox upgrade` says after
-   it (`slipbox: slipbox 0.5.0 → 0.6.0; 0.5.0 is kept, to go back to`). `ctrl+c` during it cancels it up to its commit,
-   `current` moving: the download stopped, or, once it's downloaded, `current` left as it was; after the commit, the
-   upgrade is done and said. A failure or a cancel says `slipbox: the upgrade to 0.6.0 failed: <why> — starting
-   slipbox again` (`cancelled`, for a cancel).
+1. **The upgrade**, when asked for: `slipbox: upgrading to 0.6.0… (ctrl+c cancels)`, then `upgrade`'s work (§ Updates)
+   done by the version that was running, as `slipbox upgrade` does it, and what `slipbox upgrade` says after it
+   (`slipbox: slipbox 0.5.0 → 0.6.0; 0.5.0 is kept, to go back to`). `ctrl+c` during it cancels it up to its commit,
+   `current` moving: the releases' lookup or the download stopped at once, or, once it's downloaded, `current` left as
+   it was; after the commit, the upgrade is done and said. `tar` and the new binary's `--version` run in a session of
+   their own, so the terminal's `ctrl+c` reaches the hand-over alone, which ends them. A failure or a cancel says
+   `slipbox: the upgrade to 0.6.0 failed: <why> — starting slipbox again` (`cancelled`, for a cancel).
 2. **The note** given the upgrade's outcome, and the time, now.
 3. **Which binary:** the installer's install, `<data>/current/slipbox` — after a failed upgrade, the file that was
    running (`process.execPath`), or `current` when that's gone; Homebrew's, `<prefix>/opt/slipbox/bin/slipbox`,
@@ -103,7 +113,11 @@ for that event, then a turn of the event loop, before it writes a line or replac
    another file is followed; from source, Bun with the same script.
 4. **The same arguments**, `process.argv.slice(2)` for a compiled binary (`slice(1)` from source, the script first),
    and the environment as it is now.
-5. **`execve`**, through `bun:ffi` and libc as D221's switch is set: the process becomes the new slipbox, with the same
+5. **Before it starts:** the children quitting stopped (language servers, a shell job) waited for, a second at most,
+   and reaped — those still running then killed, half a second more — since the new slipbox in this process never
+   reaps what it didn't start, and one left would stay a zombie as long as it runs (Linux, by `/proc`; elsewhere not
+   waited for). Then what was typed at the terminal meanwhile is thrown away (`tcflush`): never keys for the new one.
+6. **`execve`**, through `bun:ffi` and libc as D221's switch is set: the process becomes the new slipbox, with the same
    pid, process group and terminal, so the shell's job never ended and its job control stays right (research.md).
    Descriptors aren't closed, so a failed call leaves this process whole: on Linux, where libc has `close_range`, every
    one above 2 is marked close-on-exec first; elsewhere they're left, Bun's own close-on-exec but one (`/dev/urandom`,
@@ -111,7 +125,7 @@ for that event, then a turn of the event loop, before it writes a line or replac
    Windows, which has none (`14.14`–`14.17`) — the new one is started with the terminal handed down and waited for;
    this process ignores the terminal's signals meanwhile, which reach the new one in the same foreground group, and
    ends with its exit code. Its note is then found by its parent's pid.
-6. **Nothing starts** (the binary gone, or not runnable): `slipbox: couldn't start <file>: <why>`, then `slipbox:
+7. **Nothing starts** (the binary gone, or not runnable): `slipbox: couldn't start <file>: <why>`, then `slipbox:
    nothing started (<why execve failed>)`, and it exits 1, at the shell's prompt.
 
 **Coming back.** A TUI starting looks for its note (`restart/<pid>.json`, else `<ppid>.json`), takes it — read and
@@ -129,7 +143,8 @@ written meanwhile. It says
 A release build looks, every ten seconds, at where its next version would be — on this machine, nothing sent, so
 whatever `[update] check` and `DO_NOT_TRACK` say (UPG-D5):
 
-- the installer's install: the version `<data>/current` names;
+- the installer's install: the version `<data>/current` names — once it changed from the one it named at start: a
+  version newer than this one already there then (you went back to the older one kept, on purpose) isn't offered;
 - Homebrew's: where `<prefix>/opt/slipbox` leads (`…/Cellar/slipbox/<keg>`), and once that changes, the binary's
   `--version` asked: a keg's name may carry Homebrew's revision (`0.6.0_1`);
 - one put here by hand: the path it was started by, where it leads and that file's size, time and inode; once any of
@@ -164,7 +179,9 @@ Adds, to `slipbox upgrade`'s paragraph, after "Any check failing changes nothing
 **One upgrade at a time.** An install's upgrades take turns: `<data>/upgrade.lock`, made only when there's none, holds
 the pid of the one running and when it began. Another finding it says `another upgrade is running (pid <n>)` and
 changes nothing; one left by a process that's gone, or older than fifteen minutes (a download gives up after five), is
-taken over — one being written, not readable yet, is held for a few seconds — and what upgrades cut short left
+taken over — moved aside first, then removed only if it's still the one read as stale, another's put back, so two
+taking over at once can't both go on; one being written, not readable yet, is held for a few seconds — and what
+upgrades cut short left
 (`versions/.upgrade-*`, `current`'s link half made) is removed. A slipbox whose version another window's upgrade
 removed is still the installer's, by the path it ran from (Linux names it `… (deleted)`).
 
@@ -198,11 +215,13 @@ checkboxes; `esc` says what it does: `not now`, `cancel`). The marks are glyphs 
 
 - `↑` / `↓`, `j` / `k`, `tab` / `shift+tab` and `ctrl+n` / `ctrl+p` move the cursor over the choices, then the
   checkboxes, wrapping; on a choice, the cursor marks it.
-- `space` ticks or unticks the checkbox under the cursor; a dimmed one stays as it is.
+- `space` ticks or unticks the checkbox under the cursor; a dimmed one is ticked, and the choice it goes with marked.
 - `enter` does the choice marked, with the checkboxes as they are; `esc` cancels, as the dialog says.
-- A click on a choice marks it and does it; a click on a checkbox ticks or unticks it; a click outside is `esc`.
-- One that opens on its own drops the keys, pastes and clicks that arrive in its first half second, by when they
-  arrived (each its own time, taken as it's queued), not when they're handled.
+- A click on a choice marks it and does it; a click on a checkbox ticks or unticks it, as `space` does; a click outside
+  is `esc`.
+- Every dialog drops the keys, pastes and clicks that arrive before it's first drawn and in the half second after, by
+  when they arrived (each its own time, taken as it's queued), not when they're handled: one meant for a note, or for
+  the dialog that opened it, never answers it.
 
 ## MODIFIED design/how-it-works.md § Module map
 
@@ -230,14 +249,14 @@ Previously: `$XDG_STATE_HOME/slipbox/update.json` (when it last asked, what it f
 ## MODIFIED design/testing.md § The terminal tests
 
 Adds a check file, `updates` (`tests/terminal/checks/updates.ts`), of the offer, `:upgrade`, and the restart with its
-question about notes unsaved, driving real release builds (`tests/terminal/releases.ts`): two of the checkout, built
-for this machine (no `--target`, which would download Bun's runtime) with `SLIPBOX_RELEASE` defined, once a run before
-the workers start, when a chosen check says `releases` — the runner tells its workers where (`SLIPBOX_TERMINAL_RELEASES`)
-— the second from a copy of the sources whose `version.ts` says the next patch version, so the slipbox that comes back
-is the new one. A check installs the first in its own data folder as the installer lays it out (linked, not copied),
-as Homebrew does (a keg and `opt`), or put by hand, and starts it: the harness's `bin` starts a given binary in place
-of `bun src/main.ts`. The second is a release served from a folder (`SLIPBOX_RELEASES_URL=file://{releases}`, its pack
-and `SHA256SUMS`), or from a local server holding the pack back three seconds, for quitting during a background upgrade
-(its address in the session's `extraEnv`, which a check's `setup` fills): the shell's prompt back at once, the version
+question about notes unsaved, driving real release builds (`tests/terminal/releases.ts`): two of the checkout, built for
+this machine (no `--target`, which would download Bun's runtime) with `SLIPBOX_RELEASE` defined, once a run before the
+workers start, when a chosen check says `releases` — the runner tells its workers where (`SLIPBOX_TERMINAL_RELEASES`) —
+the second from a copy of the sources whose `version.ts` says the next patch version, so the slipbox that comes back is
+the new one. A check installs the first in its own data folder as the installer lays it out (linked, not copied), as
+Homebrew does (a keg and `opt`), or put by hand, and starts it: the harness's `bin` starts a given binary in place of
+`bun src/main.ts`. The second is a release served from a folder (`SLIPBOX_RELEASES_URL=file://{releases}`, its pack and
+`SHA256SUMS`), or from a local server holding the pack back three seconds, for quitting during a background upgrade (its
+address in the session's `extraEnv`, which a check's `setup` fills): the shell's prompt back at once, the version
 installed after. On Linux, `/proc/<pid>/exe` shows the process runs the new file itself, not waiting on a child.
 `:restart`'s question about notes unsaved is checked from source.

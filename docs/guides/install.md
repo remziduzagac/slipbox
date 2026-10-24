@@ -243,7 +243,7 @@ as it opens don't answer it. What it offers depends on how you installed slipbox
 **Installed with Homebrew:** it copies `brew upgrade slipbox`, to run in a shell. **Put somewhere by hand:** it copies
 the address of the releases. Either way, once the new version is in place, slipbox offers to restart into it.
 
-Tick **Skip this version** with Not now, and that version isn't offered again; a newer one is. `esc` is Not now.
+Tick **Skip this version**, which marks Not now, and that version isn't offered again; a newer one is. `esc` is Not now.
 
 `:upgrade` asks at once, even with the daily check off, and offers what it finds, a skipped version included. A
 version installed while slipbox runs, from another terminal or by `brew upgrade`, is noticed within seconds and offered

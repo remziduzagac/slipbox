@@ -2,9 +2,10 @@
 // framed like the other popups (`draw-overlays.ts` draws it). The update offer is its first, a restart's question
 // about notes unsaved its second. The cursor moves over the choices, then the checkboxes (`↑`/`↓`, `j`/`k`, `tab`,
 // `ctrl+n`/`ctrl+p`, wrapping), marking a choice it lands on; `space` ticks a checkbox; `enter` does the choice
-// marked; `esc` cancels. A click on a choice does it, on a checkbox ticks it, outside cancels. One that opens on its
-// own drops the keys, pastes and clicks that arrived in its first half second, by when each arrived — one meant for a
-// note never answers it.
+// marked; `esc` cancels. A click on a choice does it, on a checkbox ticks it, outside cancels; ticking a checkbox
+// that goes with another choice marks that choice. Every dialog drops the keys, pastes and clicks that arrived before
+// it was drawn or in the half second after, by when each arrived: one meant for a note, or for the dialog it followed
+// (a second `enter`, a double click), never answers it.
 
 import type { App } from "./app.ts";
 
@@ -36,15 +37,15 @@ export interface DialogOverlay {
   cursor: number;
   /** What `esc` does, said in the keys' row: `not now`, `cancel`. */
   escape: string;
-  /** When it opened; opened on its own (`unasked`), what arrives before half a second on is dropped. */
-  openedAt: number;
-  unasked: boolean;
+  /** When it was first drawn (`draw-overlays.ts`); null until then. What arrives before half a second after is
+   *  dropped. */
+  drawnAt: number | null;
   /** The choice done, with the checkboxes ticked (a dimmed one never is). */
   done(choice: string, ticked: Set<string>): void;
   cancel?(): void;
 }
 
-/** What arrives this soon after an unasked dialog opens is dropped. */
+/** What arrives this soon after a dialog is first drawn is dropped. */
 export const DROP_MS = 500;
 
 /** The dialog opened over everything: the first choice marked, the cursor on it. */
@@ -56,7 +57,6 @@ export function openDialog(
     choices: DialogChoice[];
     checkboxes?: DialogCheckbox[];
     escape?: string;
-    unasked?: boolean;
     done: DialogOverlay["done"];
     cancel?: () => void;
   },
@@ -70,8 +70,7 @@ export function openDialog(
     chosen: 0,
     cursor: 0,
     escape: opts.escape ?? "cancel",
-    openedAt: app.now(),
-    unasked: opts.unasked ?? false,
+    drawnAt: null,
     done: opts.done,
     cancel: opts.cancel,
   };
@@ -84,9 +83,9 @@ export function dimmed(o: DialogOverlay, box: DialogCheckbox): boolean {
   return !!box.with && !box.with.includes(o.choices[o.chosen]?.id ?? "");
 }
 
-/** What arrived at `at` is too early to answer it: before it opened, or in its first half second. */
+/** What arrived at `at` is too early to answer it: before it was drawn, or in the half second after. */
 export function tooEarly(o: DialogOverlay, at: number): boolean {
-  return o.unasked && at < o.openedAt + DROP_MS;
+  return o.drawnAt === null || at < o.drawnAt + DROP_MS;
 }
 
 /** The help of the row under the cursor. */
@@ -101,9 +100,19 @@ function moveTo(o: DialogOverlay, row: number): void {
   if (o.cursor < o.choices.length) o.chosen = o.cursor;
 }
 
+/** A checkbox ticked or unticked; one dimmed is ticked, and the choice it goes with marked: Skip this version, ticked,
+ *  marks Not now. */
 function tick(o: DialogOverlay, i: number): void {
   const box = o.checkboxes[i];
-  if (box && !dimmed(o, box)) box.ticked = !box.ticked;
+  if (!box) return;
+  if (dimmed(o, box)) {
+    const goes = o.choices.findIndex((c) => box.with?.includes(c.id));
+    if (goes < 0) return;
+    o.chosen = goes;
+    box.ticked = true;
+    return;
+  }
+  box.ticked = !box.ticked;
 }
 
 function finish(app: App, o: DialogOverlay): void {

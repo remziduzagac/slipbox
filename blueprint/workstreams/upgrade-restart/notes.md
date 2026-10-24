@@ -46,9 +46,9 @@ Codex read the draft against the code (`tmp/issue/codex-request-1.md`); twelve f
 
 A second round (2026-10-24) found 1, 2, 4–6 and 8–11 settled, and three things more, all taken: `upgrade` runs `tar` and
 the new binary's `--version` synchronously, so a cancel isn't seen until it has committed — they become awaited
-children, with a last look for a cancel before `current` moves; `lastInputAt` is one time, overwritten by each key — each
-key carries its own; and a background upgrade outliving the TUI needs to be unreferenced and to write its answer to a
-file, not a pipe. Whether it should outlive the TUI at all was open question 7 (UPG-D7).
+children, with a last look for a cancel before `current` moves; `lastInputAt` is one time, overwritten by each key —
+each key carries its own; and a background upgrade outliving the TUI needs to be unreferenced and to write its answer
+to a file, not a pipe. Whether it should outlive the TUI at all was open question 7 (UPG-D7).
 
 ## The maintainer's answers (2026-10-24)
 
@@ -82,3 +82,55 @@ the seven answers above; nothing since has needed a question.
 Codex's part was skipped: asked to review `git diff origin/dev...` (`tmp/issue/codex-review-1.md`), it had hit its
 usage limit and stopped at a menu. A fresh Claude reviewer did its part from the same request, then `/code-review`
 reviewed the branch.
+
+### Round 1's findings
+
+Two lists, `/code-review`'s fourteen and the fresh reviewer's ten, merged into sixteen; each checked against the code.
+All are taken, each fixed with a test where it's behaviour:
+
+1. **A dialog answered by typing.** `:upgrade` opens its offer after a network wait, and `:restart` its question after
+   waiting for a background upgrade, with no quiet and no drop, over whatever is open: keys typed meanwhile answer them
+   (both reviewers). The restart's question opens inside the key or click that chose the restart, so a second `enter`
+   or a double click answers it unread. Verified by reading `Updates.check`, `restart`, `dialog.ts`'s `tooEarly`.
+2. **`quiet()` ignores vim's pending operator, count and awaited character** (`vim.ts`'s `idle()` reads them): `d`, a
+   pause, the offer, `esc`, then `j` deletes two lines.
+3. **One `waiting` slot:** a restart offer underneath overwrites the daily offer, and the other way round (one then
+   never shown again); `:upgrade` leaves a waiting offer to open again; its restart offer isn't counted as offered.
+4. **Taking over a stale lock races** (both reviewers): read, judged stale, removed, then made — a second taker can
+   remove the first one's new lock.
+5. **`ctrl+c` doesn't reach the release lookup** (both reviewers), and the terminal's SIGINT reaches `tar` and the new
+   binary's `--version` too, which can end them before the cancel is seen: said as their failure, not `cancelled`.
+6. **An installer's install running an older version on purpose** (the one kept, to go back to) is offered `current`'s
+   restart at every start: nothing tells what was there at start from a change.
+7. **Upgrade, restart later runs this binary,** which another window's upgrade may have removed.
+8. **`versionOf` waits for the output's end after a clean exit:** a binary leaving a child holding it waits for ever,
+   and no upgrade underneath is noticed again.
+9. **Keys typed during the hand-over** reach the restarted slipbox as commands.
+10. **Children not reaped before `execve`** (language servers sent TERM a moment before) stay as zombies of the new one.
+11. **Skip this version can't be ticked with the mouse:** dimmed unless Not now is marked, and clicking Not now does it.
+12. **The half-second drop counts from when the dialog is set,** not drawn: a slow frame shortens it.
+13. **`src/cli/install.ts` runs no terminal check,** though the TUI now runs `slipbox upgrade --json`.
+14. **Copies:** the version pattern and Homebrew's layout written three times; `installation()` read every ten seconds
+    where `current` alone is needed; the one-second timer running from source.
+15. **`privacy.md`:** the new bullets split "To turn it off" from its paragraph.
+16. **Lines past 120 columns** in the workstream's files (markdownlint passes them: nothing past the column is a space).
+
+Each fixed, with a test that fails without it (mutation-checked, fourteen in the unit tests): every dialog drops
+what comes before it's first drawn and in the half second after (`drawnAt`; the question after Upgrade and restart's
+`enter` or a double click); `quiet` holds for vim's pending too (`calm`); a queue in place of the slot, each shown once,
+`:upgrade`'s restart offer counted; what a command's answer opens after a wait (`whenAnswered`) opens at once only when
+nothing was typed since, else once quiet; the installer's `current` at start is no upgrade underneath (`startedWith`);
+Upgrade, restart later runs `current`'s binary when this one is gone; the stale lock moved aside, removed only if it's
+still the one read (`takeOver`); the cancel given to the releases' lookup, `tar` and `--version` in a session of their
+own; `versionOf` reads a second at most after the exit; children waited for and reaped before the next starts
+(`childrenEnded`); what was typed meanwhile flushed (`flushInput`, by `tcflush`). A ticked Skip marks Not now, by key or
+click. `install.ts` reaches the `updates` checks; `privacy.md`'s bullets mended; three lines over 120 rewrapped; the
+version pattern, Homebrew's layout and `current`'s link read in one place each (`isVersion`, `homebrewPrefix`,
+`currentVersion`), the timer started for a release build alone.
+
+A new terminal check types `:qa` while the hand-over downloads: the new slipbox goes on. It failed at first for the
+check's own reason — `s.keys("enter")` waits for a frame, and none came until the new slipbox drew, so the keys went
+in after the hand-over; traced, then sent raw. It fails without the flush. Tests: `tests/tui-updates.test.ts` and
+`tests/upgrade-restart.test.ts` 51 pass; `bun run test:terminal updates` 9/10 before that check's fix, then it alone
+1/1.
+

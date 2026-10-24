@@ -31,10 +31,12 @@ import {
 import {
   LOCK_STALE_MS,
   lockUpgrades,
+  takeOver,
   UpgradeCancelled,
   UpgradeError,
   upgrade,
   upgradeSaid,
+  versionOf,
 } from "../src/core/update.ts";
 
 setDefaultTimeout(30_000);
@@ -135,6 +137,22 @@ describe("upgrade, against what's installed (UPG-T1)", () => {
     expect(() => lockUpgrades(data)).toThrow(UpgradeError);
   });
 
+  test("taking over a stale lock removes that one alone: a lock another made in its place meanwhile is put back", () => {
+    const data = layout(["1.0.0"], "1.0.0");
+    const lock = join(data, "upgrade.lock");
+    const stale = JSON.stringify({ pid: 1, at: 0 });
+    const fresh = JSON.stringify({ pid: process.pid, at: Date.now() });
+    // Read as stale, then made again by another before this one moved it.
+    writeFileSync(lock, fresh);
+    takeOver(lock, stale, 4242);
+    expect(readFileSync(lock, "utf8")).toBe(fresh);
+    expect(ls(data)).toEqual(["current", "upgrade.lock", "versions"]);
+    // Still the stale one: removed.
+    writeFileSync(lock, stale);
+    takeOver(lock, stale, 4242);
+    expect(existsSync(lock)).toBe(false);
+  });
+
   test("never back: a window running an older version finds the newest installed already, and changes nothing", async () => {
     const data = layout(["1.0.0", "2.0.0"], "2.0.0");
     const execPath = join(data, "versions", "1.0.0", "slipbox");
@@ -204,6 +222,34 @@ describe("upgrade, against what's installed (UPG-T1)", () => {
     expect(upgradeSaid({ ...r, status: "available" }, "preview")).toBe(
       "slipbox 2.0.0 is out on the preview channel (this is 1.0.0): slipbox upgrade installs it",
     );
+  });
+
+  test("a binary leaving a child holding its output: its version read a second after it exits, never waited on for ever", async () => {
+    const bin = join(mkdtempSync(join(sandbox, "held-")), "slipbox");
+    writeFileSync(bin, "#!/bin/sh\necho 'slipbox 2.0.0'\nsleep 30 &\nexit 0\n");
+    chmodSync(bin, 0o755);
+    const started = Date.now();
+    await versionOf(bin, 10_000);
+    expect(Date.now() - started).toBeLessThan(5000);
+  });
+
+  test("cancelled while the releases are asked for: at once, not when the request gives up", async () => {
+    const data = layout(["1.0.0"], "1.0.0");
+    const asked: string[] = [];
+    const fetcher = (url: string, init?: RequestInit) =>
+      new Promise<Response>((_, reject) => {
+        asked.push(url);
+        init?.signal?.addEventListener("abort", () => reject(new Error("aborted")));
+      });
+    const cancel = new AbortController();
+    const execPath = join(data, "versions", "1.0.0", "slipbox");
+    const started = Date.now();
+    const asking = upgrade({ release, version: "1.0.0", data, execPath, env: {}, fetcher, signal: cancel.signal });
+    while (!asked.length) await Bun.sleep(10);
+    cancel.abort();
+    await expect(asking).rejects.toBeInstanceOf(UpgradeCancelled);
+    expect(Date.now() - started).toBeLessThan(5000);
+    expect(readlinkSync(join(data, "current"))).toBe("versions/1.0.0");
   });
 
   test("cancelled before current moves — while downloading, while the new binary runs — nothing in use changes", async () => {
@@ -370,7 +416,7 @@ console.log("returned: " + execInto("/bin/sh", ["sh", "-c", script], { ...proces
         return { file: "/bin/sh", argv: ["sh", "-c", `exit ${code}`] };
       };
     const refused = () => "refused";
-    const base = { env: process.env, say: (l: string) => said.push(l), dir, exec: refused };
+    const base = { env: process.env, say: (l: string) => said.push(l), dir, exec: refused, settle: async () => {} };
     // Upgraded, then started and waited for: its exit code.
     const upgraded = note({ upgrade: "2.0.0" });
     const code = await handOver({
@@ -435,5 +481,31 @@ console.log("returned: " + execInto("/bin/sh", ["sh", "-c", script], { ...proces
     expect(none).toBe(1);
     expect(said[0]).toStartWith(`slipbox: couldn't start ${join(dir, "gone")}`);
     expect(said[1]).toBe("slipbox: nothing started (refused)");
+  });
+});
+
+describe("before the next slipbox starts (UPG, round 1)", () => {
+  test("the children quitting stopped are waited for and reaped: none is left a zombie of the next one", () => {
+    if (process.platform !== "linux") return;
+    const helper = join(mkdtempSync(join(sandbox, "reap-")), "helper.ts");
+    const restart = resolve(import.meta.dir, "../src/core/restart.ts");
+    writeFileSync(
+      helper,
+      `import { childrenEnded, execInto } from ${JSON.stringify(restart)};
+// A child still running as the hand-over begins (a language server told to stop), ending a moment later.
+Bun.spawn(["sleep", "0.3"]);
+if (process.argv[2] === "reap") await childrenEnded(3000);
+// The next one is Bun, as a restart's is: it never reaps a child it didn't start.
+const next = 'await Bun.sleep(1000); console.log(Bun.spawnSync(["ps", "-o", "stat=,comm=", "--ppid", String(process.pid)]).stdout.toString())';
+execInto(process.execPath, ["bun", "-e", next], process.env);
+`,
+    );
+    const states = (how: string) =>
+      Bun.spawnSync([process.execPath, helper, how], { stdin: "ignore", stdout: "pipe", stderr: "pipe" })
+        .stdout.toString()
+        .trim();
+    // Without: the child ends under the next one, which never reaps it.
+    expect(states("not")).toContain("Z");
+    expect(states("reap")).not.toContain("Z");
   });
 });

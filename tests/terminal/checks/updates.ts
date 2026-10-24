@@ -93,6 +93,29 @@ async function said(s: Session, text: string, timeout?: number): Promise<string>
   return whole;
 }
 
+/** When each check's slow server was first asked for the pack (`slowReleases`): the download under way. */
+const packAsked: Promise<void>[] = [];
+
+/** The releases served from a local server, the pack held back `holdMs`: its address put in the session's env. */
+function slowReleases(s: Session, holdMs: number): void {
+  const r = builds();
+  let asked = () => {};
+  packAsked.push(new Promise<void>((resolve) => (asked = resolve)));
+  const sums = readFileSync(join(r.releases, "latest", "download", "SHA256SUMS"));
+  const server = Bun.serve({
+    hostname: "127.0.0.1",
+    port: 0,
+    async fetch(req) {
+      const path = new URL(req.url).pathname;
+      if (path.endsWith("/SHA256SUMS")) return new Response(sums);
+      asked();
+      await sleep(holdMs);
+      return new Response(Bun.file(join(r.releases, path)));
+    },
+  });
+  s.extraEnv.SLIPBOX_RELEASES_URL = `http://127.0.0.1:${server.port}`;
+}
+
 /** `:restart`, from the `:` line. */
 const restart = (s: Session) => s.ex("restart");
 
@@ -144,12 +167,14 @@ export const UPDATES: Check[] = [
       await restart(s);
       await s.see("1 note is unsaved: home.md.");
       s.expect(s.rowOf("● Save and restart") >= 0, "Save and restart offered, and marked");
+      await sleep(PAST_THE_DROP);
       await s.keys("escape");
       await s.notSee("1 note is unsaved");
       s.expect(!s.read("home.md").includes("Unsaved here."), "Cancel saved nothing");
       const pid = s.pid();
       await restart(s);
       await s.see("1 note is unsaved: home.md.");
+      await sleep(PAST_THE_DROP);
       await s.keys("enter");
       await restarted(s, VERSION, VERSION);
       s.expect(s.read("home.md").includes("Unsaved here."), "Save and restart saved it");
@@ -181,6 +206,7 @@ export const UPDATES: Check[] = [
       s.expect(s.rowOf("is out") < 0, "the check off: nothing offered");
       await s.ex("upgrade");
       await s.see(`slipbox ${r.new} is out`);
+      await sleep(PAST_THE_DROP);
       await s.keys("enter");
       const whole = await said(s, `the upgrade to ${r.new} failed: the download's SHA-256 is`, 30_000);
       s.expect(whole.endsWith(`— this is ${r.old}`), `said as the version that was running: ${whole}`);
@@ -189,7 +215,7 @@ export const UPDATES: Check[] = [
   },
   {
     area: "outside-and-code",
-    name: "updates: Not now, and Skip this version — kept, and :upgrade offers it all the same",
+    name: "updates: Not now, and Skip this version — ticking it marks Not now — kept; :upgrade offers it all the same",
     covers: { commands: ["app.upgrade"] },
     releases: true,
     options: INSTALLED,
@@ -202,13 +228,15 @@ export const UPDATES: Check[] = [
       s.expect(state().skipped === undefined, "Not now skips nothing");
       await s.ex("upgrade");
       await s.see(`slipbox ${r.new} is out`);
-      await s.keys("k", "k", "j", "space");
+      await sleep(PAST_THE_DROP);
+      await s.keys("k", "space");
       await s.see("☑ Skip this version");
       await s.keys("enter");
       await said(s, `slipbox ${r.new} skipped: the next newer one is offered`);
       s.expect(state().skipped === r.new, `skipped kept: ${JSON.stringify(state())}`);
       await s.ex("upgrade");
       await s.see(`slipbox ${r.new} is out`);
+      await sleep(PAST_THE_DROP);
       await s.keys("escape");
       s.expect(current(s) === r.old, "nothing installed");
     },
@@ -240,19 +268,7 @@ export const UPDATES: Check[] = [
       setup: (s) => {
         installed(s);
         // The releases served slowly: the pack held back three seconds.
-        const r = builds();
-        const sums = readFileSync(join(r.releases, "latest", "download", "SHA256SUMS"));
-        const server = Bun.serve({
-          hostname: "127.0.0.1",
-          port: 0,
-          async fetch(req) {
-            const path = new URL(req.url).pathname;
-            if (path.endsWith("/SHA256SUMS")) return new Response(sums);
-            await sleep(3000);
-            return new Response(Bun.file(join(r.releases, path)));
-          },
-        });
-        s.extraEnv.SLIPBOX_RELEASES_URL = `http://127.0.0.1:${server.port}`;
+        slowReleases(s, 3000);
       },
     },
     async run(s) {
@@ -269,6 +285,36 @@ export const UPDATES: Check[] = [
       const end = performance.now() + 60_000;
       while (current(s) !== r.new && performance.now() < end) await sleep(200);
       s.expect(current(s) === r.new, `the upgrade to ${r.new} finished after it: current names ${current(s)}`);
+    },
+  },
+  {
+    area: "outside-and-code",
+    name: "updates: keys typed while the hand-over upgrades are thrown away, never commands for the new version",
+    covers: { commands: ["app.restart"] },
+    releases: true,
+    options: {
+      ...INSTALLED,
+      env: {},
+      setup: (s) => {
+        installed(s);
+        slowReleases(s, 3000);
+      },
+    },
+    async run(s) {
+      const r = builds();
+      await offered(s, r);
+      // Sent, not waited on: slipbox quits, and no frame comes until the new one draws.
+      s.term.write("\r");
+      // The hand-over downloading (its server asked for the pack, held three seconds): no slipbox reads the terminal.
+      await Promise.race([packAsked[0], sleep(15_000).then(() => s.expect(false, "the pack asked for"))]);
+      // Typed at the terminal meanwhile: would quit the new one, were it read.
+      s.term.write(":qa\r");
+      await restarted(s, r.new, r.old);
+      await sleep(1500);
+      s.expect(!s.exited(), "the new slipbox still running: what was typed meanwhile was thrown away");
+      // And it answers keys typed now.
+      await restart(s);
+      await restarted(s, r.new, r.new);
     },
   },
   {
@@ -346,6 +392,7 @@ export const UPDATES: Check[] = [
       // Asked again: the same offer, at once.
       await s.ex("upgrade");
       await s.see("● Copy the releases' address");
+      await sleep(PAST_THE_DROP);
       await s.keys("escape");
       // A newer one put in its place, as you would: beside it, then moved over it.
       place(r.newBin, join(s.dir, "bin", "slipbox.new"));

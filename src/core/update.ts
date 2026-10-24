@@ -17,6 +17,7 @@
 import { createHash } from "node:crypto";
 import {
   existsSync,
+  linkSync,
   mkdirSync,
   readdirSync,
   readFileSync,
@@ -29,7 +30,7 @@ import {
 } from "node:fs";
 import { dirname, join } from "node:path";
 import { PREVIEW_TAG, pagesBase, type ReleaseBuild, retired, tagOf } from "./release.ts";
-import { type Channel, howToUpgrade, type InstalledBy, installation, installedBy, readChannel } from "./install.ts";
+import { type Channel, currentVersion, howToUpgrade, type InstalledBy, installedBy, readChannel } from "./install.ts";
 
 type Fetcher = (url: string, init?: RequestInit) => Promise<Response>;
 
@@ -52,6 +53,13 @@ export interface Latest {
 
 /** A version as releases are named: `1.2.3`, `1.2.3-preview.…`. */
 const SEMVER = /^\d+\.\d+\.\d+(-[0-9A-Za-z.]+)?$/;
+
+/** Whether `s` is a version as releases are named. */
+export const isVersion = (s: string): boolean => SEMVER.test(s);
+
+/** A request's limit, and the cancel asked for (the hand-over's `ctrl+c`) when there is one. */
+const limited = (timeoutMs: number, signal?: AbortSignal): AbortSignal =>
+  signal ? AbortSignal.any([signal, AbortSignal.timeout(timeoutMs)]) : AbortSignal.timeout(timeoutMs);
 
 /** The release a `SHA256SUMS` is of, and its pack for a target; null when it has none. */
 export function latestIn(sums: string, target: string): Latest | null {
@@ -77,10 +85,11 @@ export async function fetchLatest(
   target: string,
   fetcher: Fetcher = fetch,
   timeoutMs = 10_000,
+  signal?: AbortSignal,
 ): Promise<Latest | null> {
   try {
     const res = await fetcher(`${base}/latest/download/SHA256SUMS`, {
-      signal: AbortSignal.timeout(timeoutMs),
+      signal: limited(timeoutMs, signal),
       redirect: "follow",
     });
     if (!res.ok) return null;
@@ -109,9 +118,10 @@ export async function fetchPreview(
   target: string,
   fetcher: Fetcher = fetch,
   timeoutMs = 10_000,
+  signal?: AbortSignal,
 ): Promise<Candidate | null> {
   try {
-    const get = (url: string) => fetcher(url, { signal: AbortSignal.timeout(timeoutMs), redirect: "follow" });
+    const get = (url: string) => fetcher(url, { signal: limited(timeoutMs, signal), redirect: "follow" });
     const named = await get(`${channels}/preview`);
     if (!named.ok) return null;
     const tag = previewIn(await named.text());
@@ -136,14 +146,15 @@ export async function fetchNewest(opts: {
   target: string;
   fetcher?: Fetcher;
   timeoutMs?: number;
+  signal?: AbortSignal;
 }): Promise<Candidate | null> {
-  const stable = fetchLatest(opts.releases, opts.target, opts.fetcher, opts.timeoutMs).then((l) =>
+  const stable = fetchLatest(opts.releases, opts.target, opts.fetcher, opts.timeoutMs, opts.signal).then((l) =>
     l ? { ...l, tag: tagOf(l.version) } : null,
   );
   if (opts.channel !== "preview") return stable;
   const [s, p] = await Promise.all([
     stable,
-    fetchPreview(opts.channels, opts.releases, opts.target, opts.fetcher, opts.timeoutMs),
+    fetchPreview(opts.channels, opts.releases, opts.target, opts.fetcher, opts.timeoutMs, opts.signal),
   ]);
   if (!s || !p) return s ?? p;
   return isNewer(p.version, s.version) ? p : s;
@@ -304,16 +315,20 @@ export function upgradeSaid(r: UpgradeResult, channel: Channel): string {
 /** What a binary says to `--version`, asked in a child; null when it couldn't run, or took longer than `timeoutMs`. */
 export async function versionOf(bin: string, timeoutMs = 30_000, signal?: AbortSignal): Promise<string | null> {
   try {
+    // A session of its own: the terminal's ctrl+c reaches only the hand-over, which cancels it (`signal`).
     const child = Bun.spawn([bin, "--version"], {
       stdin: "ignore",
       stdout: "pipe",
       stderr: "ignore",
       timeout: timeoutMs,
       signal,
+      detached: true,
     });
-    // Its exit waited for, not its output's end: what it started may hold that open after it's killed.
+    // Its exit waited for, then its output a second at most: what it started may hold that open.
     const out = new Response(child.stdout).text();
-    return (await child.exited) === 0 && !signal?.aborted ? (await out).trim() : null;
+    if ((await child.exited) !== 0 || signal?.aborted) return null;
+    const said = await Promise.race([out, Bun.sleep(1000).then(() => null)]);
+    return said === null ? null : said.trim();
   } catch {
     return null;
   }
@@ -331,13 +346,13 @@ function alive(pid: number): boolean {
   }
 }
 
-/** The pid holding an install's upgrade lock, when it's still running; null when the lock is stale or not there. A
- *  lock that can't be read yet is held for a few seconds — it's being written. */
-function lockHolder(lock: string, now: number): number | null {
+/** The pid holding an install's upgrade lock — `held`, as read — when it's still running; null when the lock is
+ *  stale. A lock that can't be read yet is held for a few seconds: it's being written. */
+function lockHolder(held: string, lock: string, now: number): number | null {
   try {
-    const held = JSON.parse(readFileSync(lock, "utf8")) as { pid?: unknown; at?: unknown };
-    if (typeof held.pid !== "number" || typeof held.at !== "number") return null;
-    return now - held.at < LOCK_STALE_MS && alive(held.pid) ? held.pid : null;
+    const h = JSON.parse(held) as { pid?: unknown; at?: unknown };
+    if (typeof h.pid !== "number" || typeof h.at !== "number") return null;
+    return now - h.at < LOCK_STALE_MS && alive(h.pid) ? h.pid : null;
   } catch {
     try {
       return now - statSync(lock).mtimeMs < 5000 ? -1 : null;
@@ -348,24 +363,52 @@ function lockHolder(lock: string, now: number): number | null {
 }
 
 /**
+ * A stale lock taken out of the way — that one alone: moved aside, then removed when it's still what was read as stale;
+ * one another upgrade has just made in its place is put back. Two taking over at once can't both go on.
+ */
+export function takeOver(lock: string, stale: string, pid = process.pid): void {
+  const aside = `${lock}.${pid}`;
+  try {
+    renameSync(lock, aside);
+  } catch {
+    return;
+  }
+  let moved = "";
+  try {
+    moved = readFileSync(aside, "utf8");
+  } catch {}
+  if (moved !== stale)
+    try {
+      linkSync(aside, lock);
+    } catch {}
+  rmSync(aside, { force: true });
+}
+
+/**
  * An install's upgrades take turns: `<data>/upgrade.lock`, made only when there's none, holds the pid of the one
- * running. Another finding it is refused; one left by a process that's gone is taken over, and what upgrades cut short
- * left — their work folders, `current`'s link half made — removed. Returns the lock's release.
+ * running. Another finding it is refused; one left by a process that's gone is taken over (`takeOver`), and what
+ * upgrades cut short left — their work folders, `current`'s link half made — removed. Returns the lock's release.
  */
 export function lockUpgrades(data: string, pid = process.pid): () => void {
   const lock = join(data, "upgrade.lock");
-  for (let takenOver = false; ; takenOver = true) {
+  for (let tries = 0; ; tries++) {
     try {
       writeFileSync(lock, `${JSON.stringify({ pid, at: Date.now() })}\n`, { flag: "wx" });
       break;
     } catch (err) {
       if ((err as NodeJS.ErrnoException).code !== "EEXIST")
         throw new UpgradeError(`couldn't lock ${lock}: ${(err as Error).message}`);
-      const other = lockHolder(lock, Date.now());
-      if (other !== null || takenOver)
-        throw new UpgradeError(`another upgrade is running${other !== null && other > 0 ? ` (pid ${other})` : ""}`);
-      rmSync(lock, { force: true });
     }
+    let held: string;
+    try {
+      held = readFileSync(lock, "utf8");
+    } catch {
+      continue; // gone meanwhile: made again
+    }
+    const other = lockHolder(held, lock, Date.now());
+    if (other !== null || tries >= 3)
+      throw new UpgradeError(`another upgrade is running${other !== null && other > 0 ? ` (pid ${other})` : ""}`);
+    takeOver(lock, held, pid);
   }
   const versions = join(data, "versions");
   for (const e of existsSync(versions) ? readdirSync(versions) : [])
@@ -437,6 +480,7 @@ export async function upgrade(opts: {
       target: opts.release.target,
       fetcher,
       timeoutMs: 30_000,
+      signal,
     });
     if (signal?.aborted) throw new UpgradeCancelled();
     if (!latest)
@@ -448,7 +492,7 @@ export async function upgrade(opts: {
     const result = { from: opts.version, latest: latest.version, removed: [] as string[] };
     if (!isNewer(latest.version, opts.version)) return { status: "current", ...result };
     // What `current` names, newer than this one: a newest no newer than it installs nothing.
-    const before = installation(opts.data).current;
+    const before = currentVersion(opts.data);
     const named = before && SEMVER.test(before) ? before : null;
     if (named && named !== opts.version && !isNewer(latest.version, named))
       return { status: "installed", ...result, installed: named };
@@ -514,6 +558,7 @@ async function download(
       stdout: "ignore",
       stderr: "pipe",
       signal,
+      detached: true,
     });
     const tarSaid = new Response(tar.stderr).text();
     const tarCode = await tar.exited;

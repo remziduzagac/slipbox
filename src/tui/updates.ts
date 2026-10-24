@@ -5,9 +5,19 @@
 // (`core/restart.ts`) and quits; `tui/run.ts` hands over once the screen is given back, and the slipbox that starts
 // takes the note and comes back where you were.
 
-import { closeSync, mkdirSync, openSync, readdirSync, readFileSync, realpathSync, rmSync, statSync } from "node:fs";
+import {
+  closeSync,
+  existsSync,
+  mkdirSync,
+  openSync,
+  readdirSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  statSync,
+} from "node:fs";
 import { join } from "node:path";
-import { type Channel, type InstalledBy, installation } from "../core/install.ts";
+import { type Channel, currentVersion, homebrewPrefix, type InstalledBy } from "../core/install.ts";
 import type { SessionState } from "../core/position.ts";
 import type { ReleaseBuild } from "../core/release.ts";
 import { type RestartNote, writeNote } from "../core/restart.ts";
@@ -18,6 +28,7 @@ import {
   FROM_SOURCE,
   type Found,
   isNewer,
+  isVersion,
   releasesBase,
   skipVersion,
   type UpgradeResult,
@@ -66,8 +77,12 @@ export class Updates {
 
   /** `tui/run.ts` sets it; without it (a test's App, unless it sets one) nothing is checked or offered. */
   env: UpdateEnv | null = null;
-  /** Found, waiting for a quiet moment to be offered. */
-  private waiting: { version: string; restartOnly: boolean } | null = null;
+  /** What waits for a quiet moment to be shown, in turn, each once (by its key): an offer, a restart's, the restart's
+   *  question after waiting for an upgrade. */
+  private queue: { key: string; show: () => void }[] = [];
+  /** The installer's `current` at start: what was installed then is no upgrade underneath — a version you went back to
+   *  on purpose isn't offered to leave again. */
+  private startedWith: string | null = null;
   /** The upgrade running beside the TUI (Upgrade, restart later). */
   background: { version: string; done: Promise<void> } | null = null;
   /** The versions this window's own background upgrade installed: said already, never offered again underneath. */
@@ -86,10 +101,10 @@ export class Updates {
     return join(this.env!.stateDir, "update.json");
   }
 
-  /** The daily check started, and the offer looked at every second while it waits for quiet. */
+  /** A release build's: the daily check started, and every second what waits looked at, every ten what's underneath. */
   start(): void {
     const env = this.env;
-    if (!env) return;
+    if (!env?.release) return;
     this.clearLeftovers(env.stateDir);
     void dailyUpdateCheck({
       release: env.release,
@@ -106,6 +121,7 @@ export class Updates {
     // What's there now is this one: never started to ask it.
     const where = this.watched(env);
     if (where && sameFile(where, env.execPath)) this.underneath = { stamp: stampOf(where) ?? "", version: env.version };
+    if (env.by === "installer") this.startedWith = currentVersion(env.data);
     this.timer = setInterval(() => this.tick(), 1000);
     (this.timer as { unref?: () => void }).unref?.();
   }
@@ -133,7 +149,7 @@ export class Updates {
   /** Where Homebrew's or a hand-put slipbox's next version would be: `opt`'s binary, or the path it was started by. */
   private watched(env: UpdateEnv): string | null {
     if (env.by === "homebrew") {
-      const prefix = /^(.*)\/Cellar\/slipbox\/[^/]+\/bin\/slipbox$/.exec(env.execPath)?.[1];
+      const prefix = homebrewPrefix(env.execPath);
       return prefix ? join(prefix, "opt", "slipbox", "bin", "slipbox") : null;
     }
     return env.by === "other" ? env.startedBy : null;
@@ -151,11 +167,9 @@ export class Updates {
     this.looking = true;
     try {
       const seen = await this.versionUnderneath(env);
-      if (!seen || !isNewer(seen, env.version) || this.offeredUnderneath.has(seen)) return;
+      if (!seen || !isNewer(seen, env.version) || seen === this.startedWith || this.offeredUnderneath.has(seen)) return;
       if (this.mine.has(seen) || this.background?.version === seen) return;
-      this.offeredUnderneath.add(seen);
-      this.waiting = { version: seen, restartOnly: true };
-      this.tryOffer();
+      this.whenQuiet(`restart:${seen}`, () => this.offerRestart(seen));
     } finally {
       this.looking = false;
     }
@@ -163,8 +177,8 @@ export class Updates {
 
   private async versionUnderneath(env: UpdateEnv): Promise<string | null> {
     if (env.by === "installer") {
-      const current = installation(env.data).current;
-      return current && SEMVER.test(current) ? current : null;
+      const current = currentVersion(env.data);
+      return current && isVersion(current) ? current : null;
     }
     const where = this.watched(env);
     const stamp = where ? stampOf(where) : null;
@@ -172,47 +186,73 @@ export class Updates {
     if (this.underneath?.stamp === stamp) return this.underneath.version;
     const said = await versionOf(where, 10_000);
     const version = /^slipbox (\S+)$/.exec(said ?? "")?.[1] ?? null;
-    this.underneath = { stamp, version: version && SEMVER.test(version) ? version : null };
+    this.underneath = { stamp, version: version && isVersion(version) ? version : null };
     return this.underneath.version;
   }
 
   /** What the daily check found: its line kept in the messages list, and the offer opened once the TUI is quiet. */
   found(f: Found): void {
     this.app.listMessage("info", f.said);
-    this.waiting = { version: f.version, restartOnly: false };
+    // Dropped when your config or DO_NOT_TRACK turned the check off meanwhile.
+    this.whenQuiet(`offer:${f.version}`, () => {
+      if (this.env?.checkOn() && !doNotTrack(this.env.env)) this.offer(f.version);
+    });
+  }
+
+  /**
+   * Nothing going on that a dialog would cut into: nothing pending — a key sequence, the which-key popup, an operator,
+   * a count or a character awaited — nothing being typed into — not inserting, no visual selection, no panel's filter,
+   * not the git panel's message — and nothing open over the windows.
+   */
+  private calm(): boolean {
+    const a = this.app;
+    if (a.quitting || a.overlay || a.floating) return false;
+    if (a.pending.length || a.input.whichKey || a.panels.resizeMode) return false;
+    if (a.vim.count || a.vim.op || a.vim.awaitChar) return false;
+    if (a.allViews().some((v) => v.insert || v.visual !== null)) return false;
+    return !(a.sidebar.filtering || a.outline.filtering || a.problems.list().filtering || a.gitPanel.typing);
+  }
+
+  /** Quiet (UPG): calm, no key in flight or waiting its turn, and none for two seconds. */
+  quiet(now = this.app.now()): boolean {
+    return this.calm() && !this.app.input.busy && now - this.app.lastInputAt >= QUIET_MS;
+  }
+
+  /** `show` once the TUI is quiet, in turn after what waits already; one of the same key waiting already is enough. */
+  private whenQuiet(key: string, show: () => void): void {
+    if (!this.queue.some((q) => q.key === key)) this.queue.push({ key, show });
     this.tryOffer();
   }
 
   /**
-   * Quiet (UPG): no key in flight or waiting its turn, none for two seconds, nothing pending, nothing being typed into
-   * — not inserting, no visual selection, no panel's filter, not the git panel's message — and nothing open over the
-   * windows.
+   * What a command asked for, shown when its answer came after a wait (`:upgrade`'s request, a restart waiting for an
+   * upgrade): at once when nothing was typed or clicked since it was asked, else once the TUI is quiet — keys typed
+   * meanwhile never answer it.
    */
-  quiet(now = this.app.now()): boolean {
-    const a = this.app;
-    if (a.quitting || a.overlay || a.floating) return false;
-    if (a.input.busy || a.pending.length || a.input.whichKey || a.panels.resizeMode) return false;
-    if (now - a.lastInputAt < QUIET_MS) return false;
-    if (a.allViews().some((v) => v.insert || v.visual !== null)) return false;
-    if (a.sidebar.filtering || a.outline.filtering || a.problems.list().filtering || a.gitPanel.typing) return false;
-    return true;
+  private whenAnswered(askedAt: number, key: string, show: () => void): void {
+    if (this.app.lastInputAt > askedAt || !this.calm()) return this.whenQuiet(key, show);
+    this.forget(key);
+    show();
+    this.app.host.requestRender();
   }
 
-  /** The offer waiting, opened when the TUI is quiet; dropped when your config or DO_NOT_TRACK turned the check off
-   *  meanwhile (the restart's alone sends nothing: UPG-D5). */
+  private forget(key: string): void {
+    this.queue = this.queue.filter((q) => q.key !== key);
+  }
+
+  /** The first that waits, shown once the TUI is quiet. */
   tryOffer(now = this.app.now()): void {
-    const w = this.waiting;
-    const env = this.env;
-    if (!w || !env || !this.quiet(now)) return;
-    this.waiting = null;
-    if (w.restartOnly) this.offerRestart(w.version, true);
-    else if (env.checkOn() && !doNotTrack(env.env)) this.offer(w.version, true);
+    const next = this.queue[0];
+    if (!next || !this.quiet(now)) return;
+    this.queue.shift();
+    next.show();
     this.app.host.requestRender();
   }
 
   /** The offer of a newer version, by how this slipbox was installed. */
-  offer(version: string, unasked: boolean): void {
+  offer(version: string): void {
     const env = this.env!;
+    this.forget(`offer:${version}`);
     const title = `slipbox ${version} is out${env.channel === "preview" ? " on the preview channel" : ""}`;
     const not = { id: "not", label: "Not now", help: "Asked again at the next check, a day on." };
     const skip = {
@@ -233,7 +273,7 @@ export class Updates {
       else if (choice === "brew") void this.app.copy("brew upgrade slipbox", true, "brew upgrade slipbox");
       else if (choice === "address") void this.app.copy(releases, true, releases);
     };
-    const base = { title, checkboxes: [skip], escape: "not now", unasked, done };
+    const base = { title, checkboxes: [skip], escape: "not now", done };
     if (env.by === "installer")
       openDialog(this.app, {
         ...base,
@@ -272,9 +312,11 @@ export class Updates {
       });
   }
 
-  /** A newer version installed underneath this one, offered as the restart alone. */
-  offerRestart(version: string, unasked: boolean): void {
+  /** A newer version installed underneath this one, offered as the restart alone: once, however it came. */
+  offerRestart(version: string): void {
     const env = this.env!;
+    this.forget(`restart:${version}`);
+    this.offeredUnderneath.add(version);
     const later = () => this.app.message("info", `slipbox ${version} is installed: :restart starts it`);
     openDialog(this.app, {
       title: `slipbox ${version} is installed`,
@@ -288,7 +330,6 @@ export class Updates {
         { id: "not", label: "Not now", help: ":restart starts it when you choose." },
       ],
       escape: "not now",
-      unasked,
       done: (choice) => (choice === "restart" ? void this.restart(null) : later()),
       cancel: later,
     });
@@ -299,8 +340,8 @@ export class Updates {
   installedNewer(): string | null {
     const env = this.env;
     if (!env) return null;
-    const v = env.by === "installer" ? installation(env.data).current : (this.underneath?.version ?? null);
-    return v && SEMVER.test(v) && isNewer(v, env.version) ? v : null;
+    const v = env.by === "installer" ? currentVersion(env.data) : (this.underneath?.version ?? null);
+    return v && isVersion(v) && isNewer(v, env.version) ? v : null;
   }
 
   /**
@@ -310,6 +351,7 @@ export class Updates {
   async check(): Promise<void> {
     const env = this.env;
     if (!env?.release) return this.app.message("info", FROM_SOURCE);
+    const askedAt = this.app.lastInputAt;
     this.app.message("info", "asking for the newest version…");
     const latest = await askNewest({
       release: env.release,
@@ -326,13 +368,14 @@ export class Updates {
         `couldn't find the newest version at ${releasesBase(env.release.repo, env.env)}`,
       );
     const underneath = this.installedNewer();
-    if (underneath && !isNewer(latest, underneath)) return this.offerRestart(underneath, false);
+    if (underneath && !isNewer(latest, underneath))
+      return this.whenAnswered(askedAt, `restart:${underneath}`, () => this.offerRestart(underneath));
     if (!isNewer(latest, env.version))
       return this.app.message(
         "info",
         `slipbox ${env.version} is the newest${env.channel === "preview" ? " release or preview" : ""}`,
       );
-    this.offer(latest, false);
+    this.whenAnswered(askedAt, `offer:${latest}`, () => this.offer(latest));
   }
 
   /**
@@ -344,12 +387,14 @@ export class Updates {
     const env = this.env!;
     if (this.background) return this.app.message("info", `upgrading to ${this.background.version} already`);
     const file = join(env.stateDir, `upgrade-${process.pid}.json`);
+    // This binary, unless another window's upgrade removed it: then the one installed.
+    const bin = existsSync(env.execPath) ? env.execPath : join(env.data, "current", "slipbox");
     let child: ReturnType<typeof Bun.spawn>;
     try {
       mkdirSync(env.stateDir, { recursive: true });
       const fd = openSync(file, "w");
       try {
-        child = Bun.spawn([env.execPath, "upgrade", "--json"], {
+        child = Bun.spawn([bin, "upgrade", "--json"], {
           stdin: "ignore",
           stdout: fd,
           stderr: "ignore",
@@ -406,11 +451,18 @@ export class Updates {
     if (!this.env) return this.app.message("error", "slipbox can restart only in the terminal it runs in");
     if (this.app.quitting || this.restartNote) return;
     if (this.background) {
+      const askedAt = this.app.lastInputAt;
       this.app.message("info", `waiting for the upgrade to ${this.background.version} to finish…`);
       this.app.host.requestRender();
       await this.background.done;
-      if (this.app.quitting) return;
+      if (this.app.quitting || this.restartNote) return;
+      return this.whenAnswered(askedAt, "restart", () => this.ask(upgrade));
     }
+    this.ask(upgrade);
+  }
+
+  /** Notes unsaved asked about first (UPG-D3), then the note left and slipbox quit. */
+  private ask(upgrade: string | null): void {
     for (const v of this.app.allViews()) if (v.insert) stopInsert(this.app, v);
     const unsaved = this.unsaved();
     if (!unsaved.length) return this.leave(upgrade);
@@ -473,9 +525,6 @@ export class Updates {
     return { mode: this.app.loc.mode, root: this.app.loc.root, homeFolder: this.app.homeFolder };
   }
 }
-
-/** A version as releases are named. */
-const SEMVER = /^\d+\.\d+\.\d+(-[0-9A-Za-z.]+)?$/;
 
 /** A file as it is now — where its links lead, its size, time and inode — or null when it isn't there. */
 function stampOf(file: string): string | null {
