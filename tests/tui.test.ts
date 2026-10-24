@@ -15921,31 +15921,94 @@ describe("linters without a server (19.19)", () => {
   };
 
   test("a file's linters: findings beside their lines as it opens; one reading its input again once typing pauses, one reading the file once saved", async () => {
-    const root = makeVault();
-    writeFileSync(join(root, "Dockerfile"), "FROM x\nRUN BAD\n");
-    const h = await harness({ root, open: "Dockerfile", config: linters });
-    const shown = () =>
-      h.app.problems.ofView(h.app.view!).map((p) => `${p.start.line} ${p.severity} ${p.source}: ${p.message}`);
-    expect(await until(() => (h.frame(), shown().length === 2))).toBe(true);
-    expect(shown().sort()).toEqual(["2 error fake: found BAD", "2 warning saved: saved BAD"]);
-    expect(h.frame()).toMatch(/[┃│] ✖2 {2}RUN BAD/); // the bar: the worse one's sign and its two, beside its line
-    // Not installed: said once.
-    expect(h.app.messages.filter((m) => m.text.includes("linter gone: slipbox-no-such-linter not found")).length).toBe(
-      1,
-    );
-    // Typed: the input's linter again after the pause; the file's waits for the save. A line Dockerfile's grammar
-    // reads (16.21): no syntax error of its own among the findings.
-    await h.keys("shift+g", "o", "R", "U", "N", "space", "B", "A", "D", "escape");
-    expect(await until(() => (h.frame(), shown().length === 2))).toBe(true);
-    expect(shown().sort()).toEqual(["2 error fake: found BAD", "3 error fake: found BAD"]);
-    await h.keys("ctrl+s");
-    expect(await until(() => (h.frame(), shown().length === 4))).toBe(true);
-    expect(
-      shown()
-        .filter((p) => p.includes("saved"))
-        .sort(),
-    ).toEqual(["2 warning saved: saved BAD", "3 warning saved: saved BAD"]);
-    expect(h.app.messages.filter((m) => m.text.includes("linter gone")).length).toBe(1); // still once
+    // Each linter's answer lands on its own, in whatever order they end: the two found are held here until a frame is
+    // drawn, the one not installed until their findings are; the order a busy machine gave on CI (#6).
+    const servers = await import("../src/core/servers/linters.ts");
+    const run = servers.runLinter;
+    let found = () => {};
+    let release = () => {};
+    const first = new Promise<void>((go) => (found = go));
+    const held = new Promise<void>((go) => (release = go));
+    const spy = spyOn(servers, "runLinter").mockImplementation((async (def, ...rest) => {
+      await (def.name === "gone" ? held : first);
+      return run(def, ...rest);
+    }) as typeof run);
+    let restore = () => {};
+    try {
+      const root = makeVault();
+      writeFileSync(join(root, "Dockerfile"), "FROM x\nRUN BAD\n");
+      const h = await harness({ root, open: "Dockerfile", config: linters });
+      const shown = () =>
+        h.app.problems.ofView(h.app.view!).map((p) => `${p.start.line} ${p.severity} ${p.source}: ${p.message}`);
+      const gone = () => h.app.messages.filter((m) => m.text.includes("linter gone")).length;
+      // Drawn as they come: the view laid out again and a frame asked for once the two have answered, the third still
+      // running (it was only once all three had).
+      h.frame();
+      let asked = 0;
+      const render = h.app.host.requestRender;
+      restore = () => void (h.app.host.requestRender = render);
+      h.app.host.requestRender = () => void asked++;
+      found();
+      expect(await until(() => h.app.view!.buf.linterProblems.size === 2)).toBe(true);
+      expect(h.app.view!.layoutKey).toBe("");
+      expect(asked).toBeGreaterThan(0);
+      restore();
+      expect(await until(() => (h.frame(), shown().length === 2))).toBe(true);
+      expect(shown().sort()).toEqual(["2 error fake: found BAD", "2 warning saved: saved BAD"]);
+      expect(h.frame()).toMatch(/[┃│] ✖2 {2}RUN BAD/); // the bar: the worse one's sign and its two, beside its line
+      // Not installed: said once, when its run ends.
+      expect(gone()).toBe(0);
+      release();
+      expect(await until(() => gone() === 1)).toBe(true);
+      expect(
+        h.app.messages.filter((m) => m.text.includes("linter gone: slipbox-no-such-linter not found")).length,
+      ).toBe(1);
+      // Typed: the input's linter again after the pause; the file's waits for the save. A line Dockerfile's grammar
+      // reads (16.21): no syntax error of its own among the findings.
+      await h.keys("shift+g", "o", "R", "U", "N", "space", "B", "A", "D", "escape");
+      expect(await until(() => (h.frame(), shown().length === 2))).toBe(true);
+      expect(shown().sort()).toEqual(["2 error fake: found BAD", "3 error fake: found BAD"]);
+      await h.keys("ctrl+s");
+      expect(await until(() => (h.frame(), shown().length === 4))).toBe(true);
+      expect(
+        shown()
+          .filter((p) => p.includes("saved"))
+          .sort(),
+      ).toEqual(["2 warning saved: saved BAD", "3 warning saved: saved BAD"]);
+      expect(gone()).toBe(1); // still once
+    } finally {
+      restore();
+      found();
+      release();
+      spy.mockRestore();
+    }
+  });
+
+  test("a linter whose run throws ends that run all the same: the file is linted again once typing pauses", async () => {
+    // Its run ended in an exception, not an answer: the others' answers are kept, and the next run isn't held back as
+    // if this one were still going.
+    const servers = await import("../src/core/servers/linters.ts");
+    const run = servers.runLinter;
+    let threw = false;
+    const spy = spyOn(servers, "runLinter").mockImplementation((async (def, ...rest) => {
+      if (def.name === "saved" && !threw) {
+        threw = true;
+        throw new Error("the linter's run went wrong");
+      }
+      return run(def, ...rest);
+    }) as typeof run);
+    try {
+      const root = makeVault();
+      writeFileSync(join(root, "Dockerfile"), "FROM x\nRUN BAD\n");
+      const h = await harness({ root, open: "Dockerfile", config: linters });
+      const shown = () =>
+        h.app.problems.ofView(h.app.view!).map((p) => `${p.start.line} ${p.severity} ${p.source}: ${p.message}`);
+      expect(await until(() => (h.frame(), threw && shown().includes("2 error fake: found BAD")))).toBe(true);
+      await h.keys("shift+g", "o", "R", "U", "N", "space", "B", "A", "D", "escape");
+      expect(await until(() => (h.frame(), shown().includes("3 error fake: found BAD")))).toBe(true);
+    } finally {
+      spy.mockRestore();
+    }
   });
 
   test("one not installed, failing for two files at once, is said once", async () => {
@@ -18059,6 +18122,11 @@ describe("commands run by your shell (25.7)", () => {
     expect(h.app.overlay).toBeNull();
     expect(h.app.view!.buf.rel).toBe("c1.md");
     expect(h.app.currentLayout(h.app.view!).lines[h.app.view!.cur.row]!.src).toBe(5);
+    // Its errors among its output where it wrote them, however quickly: through one pipe (D264). Read from two, every
+    // line of one came before every line of the other.
+    await ex(h, "!i=0; while [ $i -lt 20 ]; do echo o$i; echo e$i >&2; i=$((i+1)); done");
+    expect(list(h).items.map((i) => i.label)).toEqual(Array.from({ length: 20 }, (_, i) => [`o${i}`, `e${i}`]).flat());
+    await h.keys("escape");
     // A failing one says so in its title; one printing nothing, in a message.
     await ex(h, "!echo no; exit 4");
     expect(list(h).title).toBe("$ echo no; exit 4 — exit 4");
@@ -18121,6 +18189,17 @@ describe("commands run by your shell (25.7)", () => {
     await ex(h, ".!tr a-z A-Z");
     expect(h.app.view!.buf.source).toBe("pear\nAPPLE\nfig\n");
     await ex(h, "1,2!rev");
+    expect(h.app.view!.buf.source).toBe("raep\nELPPA\nfig\n");
+    // More than a window keeps (2 MB), less than a filter takes (32 MB): put in, not refused.
+    await ex(h, "3!head -c 2200000 /dev/zero | tr '\\0' x | fold -w 100");
+    expect(h.app.messages.at(-1)?.text).toBe("1 line through head -c 2200000 /dev/zero | tr '\\0' x | fold -w 100");
+    expect(h.app.view!.buf.source.length).toBe("raep\nELPPA\n".length + 2_200_000 + 22_000);
+    await h.keys("u");
+    expect(h.app.view!.buf.source).toBe("raep\nELPPA\nfig\n");
+    // What it writes to its errors stays out of the lines it gives back (a window's merges them, D264).
+    await ex(h, "3!echo warning >&2; tr a-z A-Z");
+    expect(h.app.view!.buf.source).toBe("raep\nELPPA\nFIG\n");
+    await h.keys("u");
     expect(h.app.view!.buf.source).toBe("raep\nELPPA\nfig\n");
     // A failing filter: the lines as they were, its output shown.
     await ex(h, "%!echo bad >&2; exit 2");

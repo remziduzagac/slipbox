@@ -23,6 +23,8 @@ const until = async (ok: () => boolean, ms = 3000) => {
   return ok();
 };
 const reap = (pid: number) => {
+  // Never 0: a pid the tool didn't print reads as 0, and signalling 0 or -0 is this process's own group — the runner.
+  if (!(pid > 0)) return;
   for (const target of [-pid, pid])
     try {
       process.kill(target, "SIGKILL");
@@ -106,6 +108,7 @@ describe.skipIf(process.platform === "win32")("a tool's process group", () => {
     expect(result.error).toContain("deadline");
     const helper = Number(result.stdout.trim());
     try {
+      expect(helper).toBeGreaterThan(0); // its pid printed: 0 would be this process's own group
       expect(await until(() => !alive(helper, false))).toBe(true);
     } finally {
       reap(helper);
@@ -118,8 +121,11 @@ describe.skipIf(process.platform === "win32")("a tool's process group", () => {
     const result = await run(source, { timeoutMs: 300, graceMs: 20 });
     const helper = Number(result.stdout.trim());
     try {
+      expect(helper).toBeGreaterThan(0); // its pid printed: 0 would be this process's own group
       expect(result.error).toContain("deadline");
-      expect(Date.now() - t).toBeLessThan(2500); // the deadline, the grace and the cutoff's 100 ms; not its 20 s
+      // The deadline, the grace and the cutoff's 100 ms, 0.42 s; not the helper's 20 s. Bounded halfway between, a wide
+      // margin for a slow runner (4.4 s on CI's macOS, #6).
+      expect(Date.now() - t).toBeLessThan(10_000);
       expect(alive(helper, false)).toBe(true); // not slipbox's group: left alone
     } finally {
       reap(helper);
@@ -133,6 +139,7 @@ describe.skipIf(process.platform === "win32")("a tool's process group", () => {
     expect(result.error).toBeUndefined();
     const helper = Number(result.stdout.trim());
     try {
+      expect(helper).toBeGreaterThan(0); // its pid printed: 0 would be this process's own group
       expect(await until(() => !alive(helper, false))).toBe(true);
     } finally {
       reap(helper);

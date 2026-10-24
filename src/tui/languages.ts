@@ -443,22 +443,28 @@ export class Languages {
         );
         buf.linted = { typed: version, saved: buf.dirty ? buf.linted.saved : version };
         this.linterRuns.set(buf, "running");
-        void Promise.all(
-          due.map(async (d) => {
-            const root = linterRoot(d, buf.abs, project);
-            if (!root) return void buf.linterProblems.delete(d.name); // the project doesn't ask for it
-            const r = await runLinter(d, buf.abs, text, root, undefined, this.tools.signal);
-            if ("problems" in r) buf.linterProblems.set(d.name, { version, list: r.problems });
-            else if ("skipped" in r) {
-              buf.linterProblems.delete(d.name); // none shown for this text, and the linter kept
-              this.saySkipped(`linter ${d.name}`, buf, r.skipped);
-            } else this.linterCouldNot(d, r.failed, r.detail);
-          }),
-        ).then(() => {
-          this.linterRuns.delete(buf);
+        // Each linter's answer drawn as it comes: a slow one beside it holds back no other's findings.
+        const drawn = () => {
           for (const v of this.app.allViews()) if (v.buf === buf) v.layoutKey = "";
           this.app.host.requestRender();
-        });
+        };
+        // Settled whatever each did: one that threw leaves the next run free to start, never the file unlinted.
+        void Promise.allSettled(
+          due.map(async (d) => {
+            try {
+              const root = linterRoot(d, buf.abs, project);
+              if (!root) return void buf.linterProblems.delete(d.name); // the project doesn't ask for it
+              const r = await runLinter(d, buf.abs, text, root, undefined, this.tools.signal);
+              if ("problems" in r) buf.linterProblems.set(d.name, { version, list: r.problems });
+              else if ("skipped" in r) {
+                buf.linterProblems.delete(d.name); // none shown for this text, and the linter kept
+                this.saySkipped(`linter ${d.name}`, buf, r.skipped);
+              } else this.linterCouldNot(d, r.failed, r.detail);
+            } finally {
+              drawn();
+            }
+          }),
+        ).then(() => this.linterRuns.delete(buf));
       },
       buf.linted.typed >= 0 || buf.linted.saved >= 0 ? 500 : 0,
     );

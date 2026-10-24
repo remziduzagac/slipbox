@@ -52,9 +52,12 @@ export interface ShellResult {
   signal: string | null;
   /** Standard output and error, in the order they came: as a window shows it. */
   output: string;
+  /** Standard output alone; merged, the same as `output` (one pipe). */
   stdout: string;
-  /** More than the window keeps (`output`), or than a filter takes (`stdout`): the rest dropped. */
+  /** More than the window keeps (`output`): the rest dropped. */
   truncated: boolean;
+  /** More than a filter takes (`stdout`): the rest dropped. */
+  stdoutTruncated: boolean;
   ms: number;
 }
 
@@ -64,7 +67,10 @@ export const STDOUT_MAX = 32 * 1024 * 1024;
 
 /**
  * Run a command by your shell (`$SHELL`, else `/bin/sh`) in `cwd`, `input` its standard input (none: nothing to read).
- * `stop` ends it — and, run by a shell, what the shell started — and `done` says how it went.
+ * `stop` ends it — and, run by a shell, what the shell started — and `done` says how it went. `merged`: its standard
+ * error through its standard output's pipe, so what it prints comes in the order it reached the pipe (D264); two pipes,
+ * read as each has something, can come either way. (A program that holds its output back while it isn't writing to
+ * a terminal, as many do, still writes it late: only a terminal of its own would change that.)
  */
 export function runShell(
   command: string,
@@ -72,14 +78,21 @@ export function runShell(
     cwd: string;
     input?: string;
     env?: Record<string, string>;
-    /** Each piece of its output as it's read, and from which stream: in the order the output keeps. */
+    merged?: boolean;
+    /** Each piece of its output as it's read, and from which stream (merged: all of it standard output's): in the order
+     *  the output keeps. */
     onOutput?: (text: string, stream: "stdout" | "stderr") => void;
   },
 ): { done: Promise<ShellResult>; stop: () => void } {
   const t0 = performance.now();
   const shell = process.env.SHELL || "/bin/sh";
+  // Merged, `/bin/sh` — by its path, as the shell's own fallback is — points the shell's standard error at its standard
+  // output and becomes it (`exec`: the same process, group and exit), the shell given `-c` and the command as ever: fish
+  // or nu as well as a POSIX shell.
+  const program = opts.merged ? "/bin/sh" : shell;
+  const args = opts.merged ? ["-c", 'exec "$0" -c "$1" 2>&1', shell, command] : ["-c", command];
   // A process group of its own: stopping it stops what it started too.
-  const child = spawn(shell, ["-c", command], {
+  const child = spawn(program, args, {
     cwd: opts.cwd,
     env: { ...process.env, ...opts.env },
     stdio: [opts.input === undefined ? "ignore" : "pipe", "pipe", "pipe"],
@@ -87,18 +100,17 @@ export function runShell(
   });
   let output = "";
   let stdout = "";
-  let truncated = false;
-  const take = (chunk: Buffer, out: boolean) => {
-    const text = chunk.toString("utf8");
+  // Each against its own limit: a filter's output isn't refused for being more than a window keeps, and a last piece
+  // past the limit counts as cut as much as one after it.
+  const take = (text: string, out: boolean) => {
     opts.onOutput?.(text, out ? "stdout" : "stderr");
-    if (output.length < OUTPUT_MAX) output += text;
-    else truncated = true;
-    if (!out) return;
-    if (stdout.length < STDOUT_MAX) stdout += text;
-    else truncated = true;
+    if (output.length <= OUTPUT_MAX) output += text;
+    if (!out || opts.merged) return; // merged, standard output is `output`
+    if (stdout.length <= STDOUT_MAX) stdout += text;
   };
-  child.stdout!.on("data", (c: Buffer) => take(c, true));
-  child.stderr!.on("data", (c: Buffer) => take(c, false));
+  // Decoded as streams: a character cut across two reads is kept whole, never two replacement characters.
+  child.stdout!.setEncoding("utf8").on("data", (text: string) => take(text, true));
+  child.stderr!.setEncoding("utf8").on("data", (text: string) => take(text, false));
   if (opts.input !== undefined) {
     // A command that doesn't read it all (head) closes its end: not an error of ours.
     child.stdin!.on("error", () => {});
@@ -117,8 +129,9 @@ export function runShell(
         code,
         signal,
         output: output.slice(0, OUTPUT_MAX),
-        stdout: stdout.slice(0, STDOUT_MAX),
-        truncated,
+        stdout: opts.merged ? output.slice(0, OUTPUT_MAX) : stdout.slice(0, STDOUT_MAX),
+        truncated: output.length > OUTPUT_MAX,
+        stdoutTruncated: opts.merged ? output.length > OUTPUT_MAX : stdout.length > STDOUT_MAX,
         ms: performance.now() - t0,
       });
     child.on("error", (err) => {

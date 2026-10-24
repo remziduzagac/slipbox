@@ -149,7 +149,8 @@ language's `linters` names its own. Each runs as efm runs it: through the shell,
 its `root-markers` (with `require-marker`, only where there is one; else from the file's project), the project's own
 copy first in a vault you trust (`node_modules/.bin`, `.venv/bin`, `venv/bin`, `vendor/bin` before `PATH`); its output
 and errors read together, each line by the first format matching it whole; and an exit of 0 is nothing found, unless
-`lint-ignore-exit-code`. A finding about another file is passed over; one about `-`, `stdin` or `<stdin>` is this
+`lint-ignore-exit-code`. A file's linters run side by side, each one's findings drawn as it answers: a slow one holds
+back no other's. A finding about another file is passed over; one about `-`, `stdin` or `<stdin>` is this
 file's. Built in, each only where the project has its config: **hadolint** for Dockerfiles (`.hadolint.yaml`) and
 **yamllint** for YAML (`.yamllint`). One not installed is said once (`linter hadolint: hadolint not found — …`), and
 tried again when the config changes; `[lint] enabled = "off"` runs none. One printing more than slipbox reads for a
