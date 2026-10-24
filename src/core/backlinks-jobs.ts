@@ -14,6 +14,7 @@ import { cacheDir, stateDir } from "./paths.ts";
 import { Reach } from "./reach.ts";
 import { probeFollowed } from "./symlinks.ts";
 import { configFilesFor, vaultAt } from "./vault.ts";
+import { walkContext } from "./worker-context.ts";
 import { WorkerRequestError, WorkerRequests } from "./worker-requests.ts";
 import { workerUrl } from "./workers.ts";
 
@@ -214,8 +215,10 @@ function pump(): void {
   const over = () => {
     if (running === mine) running = null;
   };
+  // What this thread knows, as it is now, taken as the thread's own (T12): the root markers your config names — else
+  // its walk finds other vaults than this one does — its environment, and the followed links' answers.
   channel()
-    .request<unknown>({ ...job.request }, { signal: abort.signal })
+    .request<unknown>({ ...job.request, context: walkContext() }, { signal: abort.signal })
     .then((a) => checked(a, job.request))
     .then(
       (a) => {

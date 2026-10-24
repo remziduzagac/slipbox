@@ -748,4 +748,26 @@ export const PEEK_BACKLINKS: Check[] = [
       await s.until(() => markOf(s, "nest") === "●", SLOW, "nest, its index built: ●");
     },
   },
+  {
+    area: "links-and-files",
+    name: "peek backlinks: a vault nested in kestrel by a root marker only your config names — found as a vault on the thread too, its index built, its link listed (21.1, #10)",
+    covers: { cases: ["links/backlinks", "vault"], commands: ["link.follow"] },
+    options: {
+      home: true,
+      startAt: "home/notes/index.md",
+      config: '[walk]\nroot_markers = [".git", ".slipbox", ".mark"]\n',
+      setup: (s) => {
+        mkdirSync(join(s.home, "work", "kestrel", "lab", ".mark"), { recursive: true });
+        s.write("~/work/kestrel/lab/n.md", "# Lab\n\nAbout [the architecture](../docs/architecture.md).\n");
+      },
+    },
+    run: async (s) => {
+      await follow(s, ARCHITECTURE);
+      await s.see(TITLE, 5000);
+      await listed(s);
+      await s.see("lab/n.md:3 — the architecture");
+      // A vault of its own there as here: its index built, not its note taken for one of kestrel's.
+      s.expect(existsSync(indexOf(s, join(s.home, "work", "kestrel", "lab"))), "lab's index built on the thread");
+    },
+  },
 ];

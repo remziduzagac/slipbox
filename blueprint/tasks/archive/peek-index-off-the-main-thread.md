@@ -336,3 +336,12 @@ changed in that vault since.
   Unit tests for each fixed one, mutation-checked (M98–M110, each caught); a terminal check for the one a terminal
   shows (a nested vault's explorer row, no index then indexed), mutation-checked. 77 unit tests; 30 of 30 peek
   terminal checks.
+- 2026-10-24: Rebased on dev's walk threads (#47, T12): the branch squashed into one commit first, its thirteen
+  replaying through the same files; the files only this branch changes checked identical after. `atomicWrite`'s
+  temporary name, changed by both, keeps this branch's (the process, the thread, a random part, opened exclusively).
+  T12's `walkContext` showed what the backlinks' thread lacked: the root markers your config names, kept per thread
+  (`setRootMarkers`), so its `findVaultRoot` and `rootAt` went by the defaults. Each request now carries the context,
+  as the walk's do. Its unit test catches the fix undone (M111); its terminal check (a vault nested in kestrel by a
+  marker only the config names) passes either way — the thread's walk reads the markers from your config itself — but
+  drives the case end to end. 78 unit tests; 31 of 31 peek terminal checks; dev's slow-disk and the saving ones, 15
+  of 15.

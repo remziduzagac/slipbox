@@ -32,7 +32,7 @@ import { readRoots } from "../src/core/registry.ts";
 import { planMakeVault, planUnmakeVault } from "../src/core/rename-vaults.ts";
 import { Redirects } from "../src/core/redirects.ts";
 import { forgetProbes, setLinkAnswer } from "../src/core/symlinks.ts";
-import { homeAt, initVault, locateVault, recordLocation } from "../src/core/vault.ts";
+import { homeAt, initVault, locateVault, recordLocation, setRootMarkers } from "../src/core/vault.ts";
 import { keepCaughtUp, peekOf, peekProbe, vaultGraph } from "../src/tui/peek.ts";
 import { type Harness, harness, makeSandbox, onlyRootsUnder } from "./tui-harness.ts";
 
@@ -1926,5 +1926,23 @@ test("an answer that changes nothing of the graph here still has its redirects r
     });
   } finally {
     stopBacklinkJobs();
+  }
+});
+
+test("the thread finds vaults by the root markers your config names, as this thread does (21.1, #10)", async () => {
+  const { base, app } = twoVaults();
+  // A vault nested in app by a marker only your config names.
+  const lab = join(realpathSync(app), "lab");
+  mkdirSync(join(lab, ".mark"), { recursive: true });
+  writeFileSync(join(lab, "n.md"), "# Lab\n\nBack to [design](../design.md).\n");
+  setRootMarkers([".slipbox", ".mark"]);
+  try {
+    await onlyRootsUnder(base, async () => {
+      const a = await askBacklinks({ root: app, rel: "design.md" });
+      // Found there as a vault of its own, and built: not taken for app's own notes.
+      expect(a?.indexed && a.others).toEqual([locateVault({ root: lab }).key]);
+    });
+  } finally {
+    setRootMarkers(null);
   }
 });

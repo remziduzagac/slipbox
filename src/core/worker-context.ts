@@ -1,7 +1,7 @@
-// What the TUI's walk and listing threads (T12) can't see for themselves, carried with each request and taken as theirs
-// before it's answered: the environment naming slipbox's own folders (a worker has the one the process started with,
-// not the one now: a test's `HOME`), the root markers your config names, and what the followed links' targets answered
-// (VV-D6: never asked there).
+// What the TUI's walk and listing threads (T12), and its backlinks' (#10), can't see for themselves, carried with each
+// request and taken as theirs before it's answered: the environment naming slipbox's own folders (a worker has the one
+// the process started with, not the one now: a test's `HOME`), the root markers your config names, and what the
+// followed links' targets answered (VV-D6: never asked there).
 
 import { probeAnswers, takeProbeAnswers } from "./symlinks.ts";
 import { rootMarkers, setRootMarkers } from "./vault.ts";

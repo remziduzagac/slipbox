@@ -631,24 +631,27 @@ vault). A folder link out of the vault is revealed in its own vault, as before (
   reads alone (`readOnly`), this TUI's own among them: their indexes, their redirects and the commit they caught up with
   are written by their own requests, never there; nor is one parsed whole for a name (`thorough: false`), as where a
   link into one lands is no backlink of this note. A vault nested in it built for the first time is the exception — but
-  not this TUI's own vault, which the request names (`own`). One request runs at a time. A peek's newest waits behind
-  the one running, an older one waiting dropped. A newer peek's request takes back what runs for another vault — its
-  thread let go, what it parsed kept in the parse cache: a catch-up taken back waits again, after the peeks'; a peek's
-  is answered null (its peek is gone), and its vault's catch-up asked again, to wait. What runs for its own vault it
-  waits for: that work is its own, and the index it writes is read at once. A request taken back mid-run may have
-  written its vault's index: the next answer for that vault that reads it says it was written. A vault is caught up once
-  at a time: the catch-ups of a vault (a kept tab's, a graph reached for a link, each its own) ride on the request of
-  that vault that runs, or that starts, every one answered by its one run, waiting again if it's taken back. The thread
-  stopped (slipbox quitting, another vault gone into) asks nothing again. A temporary file older than five minutes
-  beside a vault's index, its redirects or its heads, left by a thread let go of mid-write, is swept before the next
-  write of it. Home with an index of another version's counts as none; one of this version whose every note changed
-  since is caught up. An answer has no size cap: a note linked from thousands lists them all. The thread stops a minute
-  after its last answer, when you go into another vault (whatever it works on is for the vault left), and when slipbox
-  quits; it's started anew when the environment it was started in changed. Home without an index: `Linked from: ~ has no
-  index here yet — o goes there, and finds them.`, none built — home's is built in slices while nobody works (VV-D2).
-  Elsewhere's: `no backlinks in Elsewhere — it has no index; a note in a vault or home has them.` The thread failing:
-  `Linked from: not worked out — <why>.`, and every request riding on that one hears so; the notes the graph here lacks
-  are then parsed here, as when the index can't be written — home's excepted, the background index's (VV-D2).
+  not this TUI's own vault, which the request names (`own`). Each request carries what this thread knows, taken as the
+  thread's own (`walkContext`, as the walk's threads' do, T12): the root markers your config names — else its walk finds
+  other vaults than this one does — its environment, and the followed links' answers. One request runs at a time. A
+  peek's newest waits behind the one running, an older one waiting dropped. A newer peek's request takes back what runs
+  for another vault — its thread let go, what it parsed kept in the parse cache: a catch-up taken back waits again,
+  after the peeks'; a peek's is answered null (its peek is gone), and its vault's catch-up asked again, to wait. What
+  runs for its own vault it waits for: that work is its own, and the index it writes is read at once. A request taken
+  back mid-run may have written its vault's index: the next answer for that vault that reads it says it was written. A
+  vault is caught up once at a time: the catch-ups of a vault (a kept tab's, a graph reached for a link, each its own)
+  ride on the request of that vault that runs, or that starts, every one answered by its one run, waiting again if it's
+  taken back. The thread stopped (slipbox quitting, another vault gone into) asks nothing again. A temporary file older
+  than five minutes beside a vault's index, its redirects or its heads, left by a thread let go of mid-write, is swept
+  before the next write of it. Home with an index of another version's counts as none; one of this version whose every
+  note changed since is caught up. An answer has no size cap: a note linked from thousands lists them all. The thread
+  stops a minute after its last answer, when you go into another vault (whatever it works on is for the vault left), and
+  when slipbox quits; it's started anew when the environment it was started in changed. Home without an index: `Linked
+  from: ~ has no index here yet — o goes there, and finds them.`, none built — home's is built in slices while nobody
+  works (VV-D2). Elsewhere's: `no backlinks in Elsewhere — it has no index; a note in a vault or home has them.` The
+  thread failing: `Linked from: not worked out — <why>.`, and every request riding on that one hears so; the notes the
+  graph here lacks are then parsed here, as when the index can't be written — home's excepted, the background index's
+  (VV-D2).
 - **Its graph here:** the graph the peek reads its links and embeds in is the one this vault reaches it by
   (`Reach.graphAt`, opened on the main thread: its walk and its index read), given a reach of its own. The TUI's `Reach`
   is never `thorough`: a link by a name the vault has no note of is laid out unresolved, not looked for by parsing the
