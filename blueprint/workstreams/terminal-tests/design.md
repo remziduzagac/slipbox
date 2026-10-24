@@ -64,7 +64,8 @@ name…]`) runs the chosen checks concurrently, as many as the machine has cores
 (`worker.ts`): two of Bun's pseudo-terminals in one process can cross their output (Bun 1.4.2), and a check that
 crashes takes only itself down. A check has two minutes. The run goes to its end, then reports every failure with
 its screen, a summary by area, and how many commands the checks ran; a check that declares a command it never ran
-fails. `--repeat` runs each check that many times in the same pool, to show a flaky one.
+fails. `--repeat` runs each check that many times in the same pool, to show a flaky one. A check quarantined (§
+Strategy, flaky tests) is never started: it's reported skipped, with its issue (T31).
 
 **The checks** (`tests/terminal/checks/<area>.ts`) are one feature each, small related ones grouped, named by it under
 one of five areas (reading, editing, navigating, links and files, the outside and code), each declaring the reference

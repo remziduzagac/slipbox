@@ -25,7 +25,17 @@ export interface Check {
   alone?: boolean;
   /** Drives the two release builds of this checkout (release-builds.ts, UPG): the runner makes them once, first. */
   releases?: boolean;
+  /**
+   * Fails at random, tracked by this issue (`"#73"`), a comment above saying how: the runner skips it, never started,
+   * and reports it skipped with its issue. Its run stays as it was; its fix removes this (testing.md § Strategy).
+   */
+  quarantined?: `#${number}`;
   run: (s: Session) => Promise<void>;
+}
+
+/** Why the runner skips a check without starting it, or null to run it: quarantined, said with its issue. */
+export function notRun(c: Check): string | null {
+  return c.quarantined ? `quarantined by ${c.quarantined}` : null;
 }
 
 /**

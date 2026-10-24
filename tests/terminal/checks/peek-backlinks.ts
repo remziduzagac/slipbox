@@ -640,6 +640,9 @@ export const PEEK_BACKLINKS: Check[] = [
     area: "links-and-files",
     name: "peek backlinks: a vault nested in this one, never indexed — its links among this note's backlinks, its index built on the thread (#10)",
     covers: { cases: ["links/backlinks", "vault"], commands: ["backlinks.open"] },
+    // Fails at random on CI's macOS runner, on `dev` itself (run 40106060865): timed out at about 34 s, waiting for the
+    // nested vault's link among the backlinks.
+    quarantined: "#74",
     options: {
       home: true,
       startAt: "home/notes/index.md",

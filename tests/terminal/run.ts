@@ -10,7 +10,7 @@ import { appendFileSync, existsSync, mkdtempSync, readFileSync, rmSync } from "n
 import { availableParallelism, tmpdir } from "node:os";
 import { join } from "node:path";
 import { COMMAND_SPECS } from "../../src/core/command-specs.ts";
-import type { Check } from "./check.ts";
+import { type Check, notRun } from "./check.ts";
 import { CHECK_FILES, CHECKS } from "./checks/index.ts";
 import { buildAndRecord } from "./release-builds.ts";
 import type { WorkerResult } from "./worker.ts";
@@ -39,7 +39,10 @@ const chosen = CHECKS.filter(
 );
 
 if (list) {
-  for (const c of chosen) console.log(`${c.area}: ${c.name}`);
+  for (const c of chosen) {
+    const why = notRun(c);
+    console.log(`${c.area}: ${c.name}${why ? ` (${why})` : ""}`);
+  }
   process.exit(0);
 }
 
@@ -57,8 +60,9 @@ process.on("SIGINT", () => {
   process.exit(130);
 });
 
-// The two release builds the checks of upgrading drive (UPG): made once, before any worker starts, when one is chosen.
-const releases = chosen.some((c) => c.releases) ? join(scratch, "releases") : null;
+// The two release builds the checks of upgrading drive (UPG): made once, before any worker starts, when one that runs
+// is chosen.
+const releases = chosen.some((c) => c.releases && !notRun(c)) ? join(scratch, "releases") : null;
 let releasesFailed: string | null = null;
 if (releases) {
   const t0 = Date.now();
@@ -74,6 +78,8 @@ if (releases) {
 async function runOne(check: Check, n: number): Promise<Result> {
   const out = join(scratch, `${n}.json`);
   const t0 = Date.now();
+  const unrun = notRun(check);
+  if (unrun) return { check, outcome: "skip", ms: 0, commands: [], detail: unrun };
   if (check.releases && releasesFailed)
     return { check, outcome: "fail", ms: 0, commands: [], detail: `the release builds failed: ${releasesFailed}` };
   const w = Bun.spawn(
