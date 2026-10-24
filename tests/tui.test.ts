@@ -10182,12 +10182,14 @@ describe("vaults in the TUI (17.x)", () => {
       const found = () => sizes.map((x) => x.found);
       const shown = () => h.app.completion?.shown.map((i) => i.label) ?? [];
       try {
-        for (const k of "[x](tod") await h.keys(k);
+        // An item's text holds its whole path, and a temporary folder's name can hold any letters (under `run-To-…`,
+        // every item matched "to"): the target reaches a `.`, which no such name holds.
+        for (const k of "[x](todo.m") await h.keys(k);
         expect(shown()).toEqual(["todo.md"]);
         // The named folders read once for the list, not once per other vault's note.
         expect(named).toBe(1);
         // Each key ranks only what the last one matched: the whole list for `t`, then fewer.
-        expect(among()).toHaveLength(3);
+        expect(among()).toHaveLength(6);
         expect(among().slice(1)).toEqual(found().slice(0, -1));
         expect(among().at(-1)).toBeLessThan(among()[0]!);
         // Past any match: nothing shown, and typing on reads nothing again, nor ranks anything.
@@ -10206,7 +10208,7 @@ describe("vaults in the TUI (17.x)", () => {
         // tab while nothing shows isn't the popup's: it indents the line, as with no popup. The target moved, the
         // same list.
         await h.keys("q", "tab");
-        expect(h.app.view!.buf.source).toEndWith("\n  [x](todq\n");
+        expect(h.app.view!.buf.source).toEndWith("\n  [x](todo.mq\n");
         expect(reads).toBe(1);
         // The link ended, the next one reads them again: a note indexed since is offered.
         await h.keys("backspace", "backspace", ")", "space");
@@ -10238,15 +10240,17 @@ describe("vaults in the TUI (17.x)", () => {
     }
     const list = h.app.completion;
     expect(list?.shown.map((i) => i.detail)).toEqual(["todo.md"]);
-    for (const k of "qq") await h.keys(k);
+    // Past any match by a `~`, which no path here holds: a temporary folder's name could hold "toq", and tab would take
+    // the item.
+    for (const k of "~~") await h.keys(k);
     expect(h.app.completion).toBe(list);
     expect(list?.shown).toEqual([]);
     await h.keys("backspace", "backspace");
     expect(h.app.completion).toBe(list);
     expect(list?.shown.map((i) => i.detail)).toEqual(["todo.md"]);
     // An indent (tab while nothing shows) moves the target: the same list.
-    await h.keys("q", "tab");
-    expect(h.app.view!.buf.source).toEndWith("\n  [[toq\n");
+    await h.keys("~", "tab");
+    expect(h.app.view!.buf.source).toEndWith("\n  [[to~\n");
     expect(h.app.completion).toBe(list);
     // Its target ended: gone.
     await h.keys("backspace", "]");

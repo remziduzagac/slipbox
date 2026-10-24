@@ -33,8 +33,9 @@ export interface SteppedIndex {
   step(budgetMs: number): boolean;
   /** The vault, once it's opened: what the machine's lists record of it. */
   readonly opened: Opened | null;
-  /** Its last answer, once it's done or found no vault; null until then, and when it failed. */
-  readonly result: Extract<IndexAnswer, { done: true }> | { vault: false } | null;
+  /** Its last answer, once it's done or found no vault — what it opened in `opened` alone; null until then, and when it
+   *  failed. */
+  readonly result: Omit<Extract<IndexAnswer, { done: true }>, "opened"> | { vault: false } | null;
   /** Why it stopped with no answer (its thread gave up on it, or it couldn't be opened); null when it didn't. */
   readonly failed: string | null;
   /** Its answer awaited from another thread: stepping it again does nothing until it's there. */
@@ -144,9 +145,16 @@ class IndexHere implements SteppedIndex {
 
 /** An index's answer taken (`SteppedIndex`): what it opened, and its end — true once it's ended. */
 export function takeAnswer(into: { opened: Opened | null; result: SteppedIndex["result"] }, a: IndexAnswer): boolean {
-  if (a.vault && a.opened) into.opened = a.opened;
-  if (a.vault && !a.done) return false;
-  into.result = a;
+  if (!a.vault) {
+    into.result = a;
+    return true;
+  }
+  if (a.opened) into.opened = a.opened;
+  if (!a.done) return false;
+  // What it opened comes with the slice that opened it, the last one too when one slice did it all: kept apart, never
+  // in its end, which is then the same however its work fell across slices — here or on the walk's thread.
+  const { opened: _, ...end } = a;
+  into.result = end;
   return true;
 }
 

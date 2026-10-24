@@ -729,6 +729,36 @@ describe("the walk's thread takes what the walk here takes (T12)", () => {
       setRootMarkers(null);
     }
   });
+
+  test("an index's end is the same however its work fell across slices: what it opened told apart, never in its end", async () => {
+    const root = tree({ ".slipbox/config.toml": "", "a.md": "# A\n", "b.md": "# B\n\n[a](a.md)\n" });
+    /** The vault indexed in slices of `budget`: what it opened, its end, and how many slices it took here. */
+    const indexed = async (w: Walker, budget: number) => {
+      const i = w.index({ root });
+      let slices = 1;
+      while (i.step(budget)) {
+        if (!i.waiting) slices++;
+        await Bun.sleep(1);
+      }
+      return { slices, end: { opened: i.opened, result: i.result, failed: i.failed } };
+    };
+    // Opened and ended in one slice; opened in one, ended in a later one (no time left once it's opened): which of
+    // the two a walk makes is the time it took, as a loaded machine or a thread just started can tell.
+    const whole = await indexed(HERE, 60_000);
+    const sliced = await indexed(HERE, 0);
+    expect(whole.slices).toBe(1);
+    expect(sliced.slices).toBeGreaterThan(1);
+    expect(whole.end.opened?.key).toBeString();
+    expect(sliced.end).toEqual(whole.end);
+    expect(whole.end.result).toEqual({ vault: true, done: true, notes: 2, nested: [] });
+    // On the walk's thread, in one slice: the same.
+    const thread = new WalkThread();
+    try {
+      expect((await indexed(thread, 60_000)).end).toEqual(whole.end);
+    } finally {
+      thread.stop();
+    }
+  });
 });
 
 describe("the explorer's listings off the main thread (T12, #9)", () => {
