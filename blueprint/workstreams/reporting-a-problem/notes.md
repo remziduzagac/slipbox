@@ -149,4 +149,16 @@
   `/code-review`: a comment left open after a quote's `>`, a list item's marker, or a comment earlier on its line was
   missed, so GitHub could still hide the facts (taken: caught now, with a tab-indented `<!--` and `<!-->` no longer
   taken for one). The reviewer found the round-3 fixes otherwise sound: `postOf`, the conflict's question, the
-  virtual and read-only buffers, the keys' wait.
+  virtual and read-only buffers, the keys' wait. `/code-review`, twelve:
+  - taken, real bugs: gh's question could open while you typed on, and a `y` typed would post a public issue (it
+    opens now only if no key came while gh was asked); an edit that saves after it (a link put in, a footnote added)
+    opened the menu and left the report "saved", after which a task toggled there failed (ctrl+s opens the menu
+    itself; a task in a virtual buffer flips in its text); the checks faked no WSL opener, so on WSL one could open
+    a real browser; `fenced` spread every backtick run into `Math.max`, which a minified line overflows (a loop). And
+    the docs' "the title on the first line" (it's the line after the guide), and a stale comment in `readReport`.
+  - left for later: a `<!--` opening a list item's continuation indented four spaces; `2. <!--` in a paragraph taken
+    for a list item, so refused though GitHub shows it; quitting asks nothing about a report typed (as RPT-D1 has
+    it: kept for the session, quit not refused); opening the report over the commit editor drops a message typed
+    there, as any floating window does; the bug form's dropdown has no option for a release's binary put in place
+    by hand (Version says it); the conflict's question asked again for any window opened over the merge screen, in
+    `closeFloating`, not the report's alone.

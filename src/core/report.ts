@@ -342,8 +342,9 @@ export function readReport(text: string): ReadBack {
   let titleCol = 0;
   for (let i = 0; i < lines.length; i++) {
     const raw = lines[i]!;
-    // A comment (the guide among them: GitHub hides them) opens a line, as an HTML block does, and runs to its `-->`:
-    // `<!--` later in a line is the line's own text (CommonMark), the title's as typed. Nothing in one is a label or
+    // A comment (the guide among them: GitHub hides them) opens a line, as an HTML block does — after a quote's `>` or a
+    // list item's marker too — and runs to its `-->`; in a line one holds, a later `<!--` opens another. In a
+    // paragraph's line, `<!--` is the line's own text (CommonMark), the title's as typed. Nothing in one is a label or
     // opens a fence, nor does the rest of a line one starts — the line is the block's. Above the first label it's no
     // text, neither the title nor text the address would lose; in a section it's the section's, as written.
     let line = raw;
@@ -445,7 +446,9 @@ export const WHERE_SAID = "Where it was:";
 
 /** Text in a `text` fence longer than any run of backticks in it, so a note's own fences can't end it. */
 export function fenced(body: string): string {
-  const longest = Math.max(0, ...[...body.matchAll(/`+/g)].map((m) => m[0].length));
+  // A loop, not a spread: a minified line can hold more runs than a call's arguments may be.
+  let longest = 0;
+  for (const m of body.matchAll(/`+/g)) longest = Math.max(longest, m[0].length);
   const f = "`".repeat(Math.max(3, longest + 1));
   return `${f}text\n${body.replace(/\n+$/, "")}\n${f}`;
 }

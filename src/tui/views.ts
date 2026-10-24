@@ -396,8 +396,8 @@ export class Views {
     // Read-only (a peek, a hover, a file as it was in git): its file is never written from here.
     if (buf.readOnly) return this.app.message("info", buf.readOnly);
     if (buf.deleted) return this.app.message("warn", `${buf.key} was deleted on disk — nothing to toggle`);
-    if (buf.dirty) {
-      // Unsaved changes: toggle in the buffer (an undo step), not on disk under them.
+    if (buf.dirty || buf.virtual) {
+      // Unsaved changes, or no file at all (a report): toggle in the buffer (an undo step), not on disk under them.
       const r = toggleTask(new TextEncoder().encode(buf.source), task.line);
       if (!r) return this.app.message("warn", `line ${task.line} has no task marker`);
       const at =

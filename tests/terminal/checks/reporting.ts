@@ -5,6 +5,7 @@
 import { chmodSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { type Check, HANDBOOK, leader } from "../check.ts";
+import { isWsl } from "../../../src/core/wsl.ts";
 import type { Session } from "../session.ts";
 
 /** The report's window's frame, on screen while it's open. */
@@ -54,10 +55,11 @@ function onDisk(s: Session): string {
   return out;
 }
 
-/** The browser's opener here: macOS's own, else a display's. Both are faked, so no check ever opens a real browser. */
-const OPENER = process.platform === "darwin" ? "open" : "xdg-open";
+/** The browser's opener here: macOS's own, WSL's, else a display's. Every one is faked, so no check ever opens a real
+ *  browser. */
+const OPENER = process.platform === "darwin" ? "open" : isWsl() ? "wslview" : "xdg-open";
 const fakeOpeners = (s: Session, answer: string) => {
-  for (const name of ["open", "xdg-open"]) fake(s, name, answer);
+  for (const name of ["open", "xdg-open", "wslview", "explorer.exe"]) fake(s, name, answer);
 };
 
 /** The PATH the fakes come first on. */
@@ -391,6 +393,10 @@ export const REPORTING: Check[] = [
       await s.message("the report was closed");
       s.expect(!s.text().includes("Anyone can read it."), "no question over the note");
       await leader(s, "r");
+      // A key while gh is asked (any: the unit test types on, a y among it): no question opens for it to answer.
+      await s.keys("ctrl+s", "g", "j");
+      await s.message("gh is ready");
+      s.expect(!s.text().includes("Anyone can read it."), "no question after a key typed meanwhile");
       await s.keys("ctrl+s", "g");
       await s.see("Anyone can read it.");
       await s.keys("y");

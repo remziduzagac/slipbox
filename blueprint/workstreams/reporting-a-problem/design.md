@@ -54,8 +54,9 @@ ghostty 1.2.0, TERM_PROGRAM herdsman 0.2.0, TERM xterm-ghostty, 236×60, inside 
 - `esc` leaves it; opened again, it's as you left it, the facts kept as edited. The draft is kept in memory only,
   never written to disk by slipbox, until `gh` has posted it or slipbox quits. (A copy you make is a copy: when no
   clipboard takes it, it's the state folder's `clipboard.txt`, as every copy's, and said.)
-- `ctrl+s` (`:w`) is `note.save`, which, in the report as in the commit's window, calls the buffer's own save whether
-  it changed or not: that runs `help.report_send`, the menu (§ Sending). Never said as "saved" or "sent". `:w!`
+- `ctrl+s` (`:w`) is `note.save`, which in the report runs `help.report_send`, the menu (§ Sending), changed or not.
+  The buffer's own save — which an edit that saves after it calls too (a link put in, a footnote added) — has nothing
+  to write, and opens nothing. Never said as "saved" or "sent". A task toggled in it flips in its text. `:w!`
   (`note.save_force`) on any virtual buffer is `:w`, and `App.writeBuffer` refuses a virtual buffer: the floating
   window's text is never written to its name on disk (said). A task toggled in a read-only window — a peek, a
   hover — is refused, said, its file never written from there.
@@ -173,7 +174,8 @@ heads it, said, and `o` and `a` aren't there:
   (`explorer.exe` answers 1 when it worked: not taken for one). A link to the web is still copied, never opened
   (§ Following links, unchanged): this is the one place slipbox opens a browser, because it's what you chose.
 - **gh** (`core/gh.ts`): nothing is run until you choose it. Then the account, as gh will use it, without the
-  network: a token in `GH_TOKEN` or `GITHUB_TOKEN` comes before what gh keeps, so then it's "the account of
+  network (no question opens for keys typed meanwhile: a `y` among them would answer it — said, `ctrl+s`, `g` asks
+  again): a token in `GH_TOKEN` or `GITHUB_TOKEN` comes before what gh keeps, so then it's "the account of
   GH_TOKEN (not checked)"; else the account gh keeps (`gh config get -h github.com user`); neither, and it says
   `gh auth login` first; gh not answering in five seconds, or not starting, said as that. gh is run as every helper is
   (`core/tool-process.ts`: its output capped, its process group stopped at its deadline and when slipbox ends), with

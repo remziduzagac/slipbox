@@ -300,8 +300,9 @@ questions, with what slipbox knows already filled in:
 - your system and its processor
 - your terminal, its size, and any multiplexer or SSH between it and slipbox (only that it's there, never an address)
 
-You type the title on the first line, then what happened, what you expected and the steps under their headings. Every
-line is text you can change: cut a path or a name you'd rather not share.
+You type the title on the line after its first one, a comment saying nothing has left yet (the cursor is there), then
+what happened, what you expected and the steps under their headings. Every line is text you can change: cut a path or
+a name you'd rather not share.
 
 The screen as it was, as text, and where you were (the file, the cursor's line and its text) are kept, but they're in
 the report only when you add them. `ctrl+s` offers to, or `:report screen` and `:report where`. Added, it's there in

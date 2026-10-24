@@ -179,8 +179,9 @@ export class Reporter {
     if (!this.view) {
       const buf = new NoteBuffer(null, "report:", "report");
       buf.kind = { group: "note", format: "markdown" };
-      // ctrl+s (`:w`): the menu, as `help.report_send`. Never written anywhere: it's kept in memory only (RPT-D1).
-      buf.virtual = { save: () => (void this.app.run("help.report_send"), true) };
+      // Never written anywhere: it's kept in memory only (RPT-D1). Its save, which an edit that saves after it (a link
+      // inserted, a footnote added) calls too, has nothing to do; ctrl+s (`:w`) opens the menu itself (note.save).
+      buf.virtual = { save: () => true };
       const terminal = this.app.host.terminal?.() ?? null;
       const size = { cols: this.app.width, rows: this.app.height };
       buf.loadText(reportText(factFields(reportFacts(factSources({ terminal, size })))));
@@ -373,11 +374,14 @@ export class Reporter {
     if ("why" in first) return this.app.message("warn", first.why);
     const repo = reportRepo();
     const home = existsSync(this.app.home) ? this.app.home : homedir();
+    const keys = this.app.input.keysSeen;
     const who = await ghAccount(gh, { env: process.env, home });
     if ("why" in who) return this.app.message("warn", who.why);
     // While gh was asked, the report closed, or something else opened over it: nothing asked over that, said.
     if (this.openView() !== v) return this.app.message("info", "the report was closed: ctrl+s, g in it asks again");
-    if (this.app.overlay) return this.app.message("info", "gh is ready: ctrl+s, g in the report asks again");
+    // Nor over keys typed meanwhile: a `y` among them would answer it, and post (still typing, say).
+    if (this.app.overlay || this.app.input.keysSeen !== keys)
+      return this.app.message("info", "gh is ready: ctrl+s, g in the report asks again");
     // The report as it is now, after the wait for gh: what the question names is what's posted.
     const post = ready();
     if ("why" in post) return this.app.message("warn", post.why);

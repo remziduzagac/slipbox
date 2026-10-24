@@ -2,12 +2,23 @@
 // sending — each way faked: the browser's opener by the host, gh by a script on PATH.
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { chmodSync, existsSync, mkdirSync, readdirSync, readFileSync, utimesSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  utimesSync,
+  writeFileSync,
+} from "node:fs";
+import { isWsl } from "../src/core/wsl.ts";
 import { join } from "node:path";
 import { canonKey } from "../src/core/commands.ts";
 import { tildePath } from "../src/core/names.ts";
 import { GUIDE, readReport, SCREEN_INTRO, WHERE_INTRO } from "../src/core/report.ts";
 import { NoteBuffer } from "../src/tui/buffer.ts";
+import { placeAt } from "../src/tui/editing.ts";
 import type { ListOverlay } from "../src/tui/app.ts";
 import { TextCanvas } from "../src/tui/canvas.ts";
 import { type Harness, harness, makeSandbox, makeVault } from "./tui-harness.ts";
@@ -28,8 +39,8 @@ function allText(dir: string): string {
 }
 
 const PATH = process.env.PATH;
-/** The browser's opener here: macOS's own, else a display's (the WSL case on Linux alone). */
-const OPENER = process.platform === "darwin" ? "open" : "xdg-open";
+/** The browser's opener here: macOS's own, WSL's, else a display's. */
+const OPENER = process.platform === "darwin" ? "open" : isWsl() ? "wslview" : "xdg-open";
 afterEach(() => {
   process.env.PATH = PATH;
 });
@@ -374,6 +385,26 @@ describe("the screen and where you were (RPT-D2)", () => {
     expect(v.buf.source).toBe("one!\n");
   });
 
+  test("an edit that saves after it (a link put in) never opens the menu; a task in the report toggles in its text", async () => {
+    const h = await harness();
+    await h.keys("space", "r", "escape");
+    const v = h.app.view!;
+    const at = text(h).indexOf("### What happened\n\n") + "### What happened\n\n".length;
+    // As a link inserted from the picker, or a footnote added, is: edits, then a save.
+    h.app.views.applyNoteEdits([{ at, length: 0, text: "- [ ] a task" }], "edited");
+    h.frame();
+    expect(h.app.overlay).toBeNull();
+    expect(text(h)).toContain("- [ ] a task");
+    // Saved (nothing to write), so clean: toggled in its text all the same, there being no file.
+    expect(v.buf.dirty).toBe(false);
+    const line = text(h).split("\n").indexOf("- [ ] a task");
+    placeAt(h.app, v, v.buf.lineStarts()[line]!);
+    h.frame();
+    await h.app.run("task.toggle");
+    expect(text(h)).toContain("- [x] a task");
+    expect(said(h)).not.toContain("can't read");
+  });
+
   test("the menu adds them too: s and w", async () => {
     const h = await harness();
     await h.keys("space", "r", "escape", "ctrl+s", "s");
@@ -400,7 +431,7 @@ describe("sending (RPT-D3, RPT-D4)", () => {
     Object.assign(process.env, { DISPLAY: ":0", SSH_CONNECTION: "", SSH_CLIENT: "", SSH_TTY: "", ...env });
     const bin = join(sandbox, `bin-${Math.random().toString(36).slice(2)}`);
     mkdirSync(bin);
-    for (const p of ["xdg-open", "open"]) {
+    for (const p of ["xdg-open", "open", "wslview"]) {
       writeFileSync(join(bin, p), "#!/bin/sh\nexit 0\n");
       chmodSync(join(bin, p), 0o755);
     }
@@ -467,6 +498,8 @@ describe("sending (RPT-D3, RPT-D4)", () => {
   test.if(process.platform === "linux")("WSL: explorer.exe's 1 isn't a failure", async () => {
     const wsl = await withOpener(1, { WSL_DISTRO_NAME: "Ubuntu" });
     try {
+      // explorer.exe when there's no wslview.
+      rmSync(join(process.env.PATH!, "wslview"));
       writeFileSync(join(process.env.PATH!, "explorer.exe"), "#!/bin/sh\nexit 1\n");
       chmodSync(join(process.env.PATH!, "explorer.exe"), 0o755);
       await wsl.h.keys("space", "r", "escape");
@@ -662,6 +695,23 @@ describe("gh (RPT-D4)", () => {
     await h.keys("y");
     for (let i = 0; i < 100 && h.app.report.posting; i++) await Bun.sleep(20);
     expect(readFileSync(join(dir, "argv"), "utf8")).toContain("--title\nNew title\n");
+  });
+
+  test("keys typed while gh was asked (typing on, say): the question not opened, so a y among them posts nothing", async () => {
+    const dir = fakeGh("echo https://github.com/remziduzagac/slipbox/issues/80", "sleep 0.4; echo octo-cat");
+    const h = await harness();
+    h.app.home = join(dir, "home");
+    await report(h, "Crash", "it froze");
+    // ctrl+s while typing, g, and typing on: "...yes".
+    await h.keys("A");
+    const asking = h.app.run("help.report_send gh");
+    await Bun.sleep(50);
+    await type(h, " yes");
+    await asking;
+    expect(h.app.overlay).toBeNull();
+    expect(said(h)).toBe("gh is ready: ctrl+s, g in the report asks again");
+    await h.keys("y");
+    expect(readdirSync(dir)).not.toContain("argv");
   });
 
   test("closed, or something opened over it, while gh was asked: nothing asked over that, said", async () => {

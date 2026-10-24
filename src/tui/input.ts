@@ -127,6 +127,7 @@ export class Input {
    */
   handleKey(key: string): Promise<void> {
     this.app.lastInputAt = this.app.now();
+    this.keysSeen++;
     const start = () => {
       this.keysInFlight++;
       return this.processKey(key).finally(() => this.keysInFlight--);
@@ -137,6 +138,8 @@ export class Input {
   }
 
   private keyQueue: Promise<void> = Promise.resolve();
+  /** Keys taken so far: a question asked after a wait opens only if none came meanwhile (a report's gh). */
+  keysSeen = 0;
   private keysInFlight = 0;
 
   /** Handle a key now, not queued: `.` replays its keys through this, inside its own turn. */

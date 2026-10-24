@@ -364,6 +364,13 @@ describe("reading it back", () => {
 });
 
 describe("adding the screen or the place (RPT-D2)", () => {
+  test("fenced: a line of a minified file, its backtick runs past a call's arguments, doesn't break it", () => {
+    // A million runs: past what a spread into Math.max takes in Bun (measured).
+    const body = "a`".repeat(1_000_000);
+    expect(() => fenced(body)).not.toThrow();
+    expect(fenced(body)).toStartWith("```text\n");
+  });
+
   test("fenced past a note's own fences, under its first line", () => {
     expect(fenced("a\n```\nb\n```")).toBe("````text\na\n```\nb\n```\n````");
     expect(fenced("plain")).toBe("```text\nplain\n```");
