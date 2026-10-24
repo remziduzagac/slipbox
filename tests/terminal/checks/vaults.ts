@@ -882,7 +882,7 @@ const UNWALKED_HOME: Check[] = [
       },
     },
     run: async (s) => {
-      await s.status(/ ~ /);
+      await s.where("~");
       await untilListed(s, "own", "fresh/own.md");
       await neverListed(s, "Deep in", "fresh/deep/x.md", "a folder made before the start: nothing below it read");
       // A shell's history rewritten in ~, by a file put in its place: nothing taken in.
@@ -902,7 +902,7 @@ const UNWALKED_HOME: Check[] = [
     covers: { cases: ["vault", "watching", "explorer", "switcher"], commands: ["switcher.open"] },
     options: { home: true, startAt: "home", config: UNWALKED_QUICK, setup: journal },
     run: async (s) => {
-      await s.status(/ ~ /);
+      await s.where("~");
       // A folder cloned into ~: listed, home's walk to come, nothing in it read.
       s.write("~/cloned/x/deep.md", "# Deep in cloned\n");
       await explorerOpen(s);
@@ -928,7 +928,7 @@ const UNWALKED_HOME: Check[] = [
     covers: { cases: ["vault", "watching", "explorer", "switcher"], commands: ["switcher.open"] },
     options: { home: true, startAt: "home", config: UNWALKED_QUICK, setup: journal },
     run: async (s) => {
-      await s.status(/ ~ /);
+      await s.where("~");
       s.write("~/journal/saved.md", "# Saved\n");
       await untilListed(s, "Saved", "journal/saved.md");
       await untilListed(s, "Journal", "journal/index.md");
@@ -993,7 +993,7 @@ const UNWALKED_HOME: Check[] = [
     covers: { cases: ["vault", "watching", "switcher"], commands: ["switcher.open"] },
     options: { home: true, startAt: "home/journal", config: UNWALKED_QUICK, setup: journal },
     run: async (s) => {
-      await s.status(/ ~ .*journal\/index\.md/);
+      await s.where("~ › journal", /journal\/index\.md/); // its own workspace (WSP-D4)
       // `slipbox ~/journal`: walked whole; a folder made in it, taken in at once.
       s.write("~/journal/fresh/sub/f.md", "# Fresh day\n");
       await untilListed(s, "Fresh day", "journal/fresh/sub/f.md");
