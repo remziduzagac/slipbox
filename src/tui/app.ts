@@ -1275,6 +1275,7 @@ export class App {
     const c = this.report.canvas(canvas);
     try {
       this.geometry = drawApp(this, c);
+      this.mouse.rehover();
       this.report.drawn();
     } catch (err) {
       // A drawing bug must never take the app down: report it, and say so on screen too (the

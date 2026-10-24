@@ -229,12 +229,16 @@ export class Panels {
     this.app.sidebar.filter = "";
     this.app.sidebar.pinned = false;
     if (view === "explorer") this.app.explorer.reveal();
-    else if (view === "git")
-      this.app.sidebar.selected = Math.max(
-        0,
-        this.app.gitPanel.rows().findIndex((r) => r.kind !== "heading" && r.kind !== "note"),
+    else if (view === "git") {
+      const rows = this.app.gitPanel.rows();
+      this.app.gitPanel.place(
+        Math.max(
+          0,
+          rows.findIndex((r) => r.kind !== "heading" && r.kind !== "note"),
+        ),
+        rows,
       );
-    else
+    } else
       this.app.sidebar.selected = Math.max(
         0,
         this.app.history.rows().findIndex((r) => r.here),
@@ -260,6 +264,8 @@ export class Panels {
     s.filtering = false;
     const saved = this.leftPositions.get(view);
     Object.assign(s, saved ?? { selected: 0, scroll: 0, left: 0, pinned: false, filter: "" });
+    // The explorer's rows changed while it wasn't shown: its selection put where it goes now, not at its old index.
+    if (view === "explorer") this.app.explorer.shownAgain();
     return !!saved;
   }
 
@@ -365,6 +371,11 @@ export class Panels {
           ? this.app.gitPanel.rows()
           : this.app.history.rows();
     const typed = keyChar(key);
+    // Moved by the user: in the git panel, theirs, followed as its repositories are sorted.
+    const pick = (i: number) =>
+      this.app.leftView === "git" ? this.app.gitPanel.select(i, rows as PanelRow[], true) : void (s.selected = i);
+    // From the row drawn selected: in the git panel, rows may have come above it since (D261).
+    const at = () => (this.app.leftView === "git" ? this.app.gitPanel.selectedIn(rows as PanelRow[]) : s.selected);
     const done = () => {
       s.filter = "";
       s.filtering = false;
@@ -377,7 +388,9 @@ export class Panels {
         if (this.app.leftView === "explorer") this.app.explorer.reveal();
         return;
       case "enter": {
-        const row = rows[s.selected];
+        // In the git panel, the row drawn selected: gone since, nothing — the filter still typed.
+        const row =
+          rows[this.app.leftView === "git" ? this.app.gitPanel.steady.selected(rows as PanelRow[]) : s.selected];
         if (!row) return;
         if (this.app.leftView === "git") {
           // The rows stay filtered, the keys the panel's again: enter does what it does on the row (esc clears it).
@@ -411,14 +424,12 @@ export class Panels {
       case "ctrl+n":
       case "ctrl+j":
       case "tab":
-        s.selected = Math.min(rows.length - 1, s.selected + 1);
-        return;
+        return pick(Math.min(rows.length - 1, at() + 1));
       case "up":
       case "ctrl+p":
       case "ctrl+k":
       case "shift+tab":
-        s.selected = Math.max(0, s.selected - 1);
-        return;
+        return pick(Math.max(0, at() - 1));
       case "backspace":
         s.filter = [...(s.filter ?? "")].slice(0, -1).join("");
         break;
@@ -456,6 +467,8 @@ export class Panels {
           ? next.findIndex((r) => (r as PanelRow).kind !== "heading" && (r as PanelRow).kind !== "note")
           : next.findIndex((r) => !(r as HistoryRow).heading),
     );
+    // The git panel's first match stays the first as its repositories are sorted.
+    if (this.app.leftView === "git") this.app.gitPanel.place(s.selected, next as PanelRow[]);
   }
 
   /** Focus never stays on a hidden pane (after zen, a config reload, a resize): back to the note. */

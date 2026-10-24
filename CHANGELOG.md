@@ -118,6 +118,16 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
   selecting text, resizing panes — where your next key would have answered them; slipbox says so instead, to ask again.
   An answer that comes after you've gone into another vault no longer takes you into a new worktree or selects anything
   there, and a branch file's diff you've moved past no longer says anything.
+- The git panel's rows no longer move under the pointer or the selection as git answers, so a click opens what you
+  aimed at. Its repositories keep their order while the pointer rests on the panel's rows; when rows arrive above the
+  one under the pointer, the list scrolls to keep it on its line; the row you selected stays selected; and a click or a
+  key acts on the row you saw, or on nothing if it's gone.
+- Outside a repository, the git panel's **More in home** unfolds and folds again by `enter` or a click. It answered "not
+  in a git repository" instead.
+- In a repository, with a row under **Other repositories** selected, the git panel's own keys work again: `i` types the
+  message, `c` commits, `f` fetches. They did nothing there.
+- Back in the explorer after the git panel, its selection is on the note you opened meanwhile, or on the folder the
+  view zoomed out from, not on whatever row came to the place it had; filtered, the match you had selected stays.
 
 ## [0.5.0] - 2026-10-22
 

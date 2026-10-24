@@ -25,6 +25,28 @@ export class Mouse {
 
   /** Id of the clickable region under the mouse, for hover highlighting. */
   hover: string | null = null;
+  /** Where the pointer was last reported, a new object each time: the git panel's rows hold while it's on them. */
+  at: { x: number; y: number } | null = null;
+
+  /** The pointer, where it was last reported, inside `r`. */
+  over(r: { x: number; y: number; w: number; h: number } | null | undefined): boolean {
+    return !!this.at && !!r && inRect(r, this.at.x, this.at.y);
+  }
+
+  /**
+   * A frame drawn: what's under the pointer, where it was last reported, by that frame — rows drawn since may have come
+   * under it without its moving; drawn again when that's changed, to show it.
+   */
+  rehover(): void {
+    const g = this.app.geometry;
+    const at = this.at;
+    if (!g || !at || !this.app.ui.mouse) return;
+    const id = g.hot.find((h) => inRect(h, at.x, at.y))?.id ?? null;
+    // What the frame drew as under the pointer: the git panel draws by its rows as they are now.
+    const drew = g.gitHover !== undefined ? g.gitHover : this.hover;
+    this.hover = id;
+    if (id !== drew) this.app.host.requestRender();
+  }
 
   private lastClick: { x: number; y: number; at: number; count: number } | null = null;
   private drag:
@@ -48,6 +70,7 @@ export class Mouse {
     ctrl?: boolean;
   }): void {
     if (ev.type !== "move") this.app.lastInputAt = this.app.now();
+    this.at = { x: ev.x, y: ev.y };
     // A wheel spun (12.7): pictures held back from its first tick until it rests.
     if (ev.type === "scroll") this.app.pictures.wheelAt = this.app.now();
     // A big note still parsing (15.1): a click or a scroll would land on its placeholder.

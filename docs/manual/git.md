@@ -253,6 +253,11 @@ By mouse:
 - A right click opens a row's menu: what its keys do, and Show it in the explorer, Copy its path, and A note for the
   agent, which adds the file to the scratch for you to write about.
 
+The panel's rows don't move under you as git answers. When rows arrive or go above the one the pointer rests on, the
+list scrolls so that row stays on its line. The row you selected stays selected wherever it goes. A click or a key acts
+on the row you saw, and on nothing if it's gone since. Rows can still move when they'd have to go above the top, when
+the pointer is on the scrollbar, or when you scroll, filter or move the selection yourself.
+
 A staged file opens up into its changes against the last commit. A changed one opens up into its changes against
 what's staged, as the file is on disk.
 
@@ -719,10 +724,16 @@ attention:
 4. clean
 
 A worktree is listed under its repository, as one. In a folder of home, the repositories elsewhere in home are folded
-and counted under **More in home**.
+and counted under **More in home**; `enter` or a click on it unfolds them.
 
 Each says its state at its end: its uncommitted files (`✎3`), ahead of its upstream and behind it, or `clean`. git is
 asked only about the rows on screen, in the background, and again when you open the panel.
+
+The list isn't sorted under the pointer. While the pointer you've moved onto the panel's rows rests there, the
+repositories keep their order as git answers, and they're sorted again once it moves off them, not when you press a key.
+A row you've moved the selection to stays selected when they're sorted, whether it's a repository, a checkout or a file.
+When the panel picks the row itself, it stays the first: the first row as the panel opens with no selection of yours to
+come back to, or a filter's first match.
 
 - `enter`, or a click, opens a repository up in place: its checkouts, the main one `●` and each worktree `⎇` by its
   branch, and their uncommitted files. A file shows its diff against its last commit.

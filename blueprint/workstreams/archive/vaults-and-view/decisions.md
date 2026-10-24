@@ -150,6 +150,9 @@ wide in some terminals.
 
 ## VV-D10: The git panel follows the vault (2026-10-14)
 
+> **Detailed by D261 (2026-10-23):** the repositories are sorted only as the panel's drawn, never while the pointer
+> is on its rows; the selection stays on its row as they're sorted.
+
 **Decision:** Source control shows the current vault's repository in full, when it is one (GIT's panel), and under it,
 folded, the other repositories in the view; the current vault not a repository, those repositories are the panel.
 Each is ordered by what needs attention (something to review, changes, ahead or behind, clean), opened up in place

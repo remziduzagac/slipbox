@@ -16,6 +16,7 @@ import { paneScrollbar } from "./draw-pane.ts";
 import type { PanelRow } from "./gitpanel.ts";
 import { GIT_MARK } from "./draw-overlays.ts";
 import { rowActions } from "./gitmouse.ts";
+import { hotRow } from "./gitsteady.ts";
 
 /**
  * A file's state letter's colour (26.2): git's status letters, and the explorer's marks (`GIT_MARK`) in the explorer's
@@ -34,11 +35,8 @@ const LETTER_ROLE: Record<string, Role> = {
   "!": "git_conflict",
 };
 
-/** The pointer's row, from the hover's id (`git:row:3`, `git:act:3:stage`); null off the panel's rows. */
-function hoveredRow(app: App): number | null {
-  const m = /^git:(?:row|act|bb):(\d+)/.exec(app.mouse.hover ?? "");
-  return m ? Number(m[1]) : null;
-}
+/** The pointer's row, from a hover's id (`git:row:3`, `git:act:3:stage`); null off the panel's rows. */
+const hoveredRow = (hover: string | null): number | null => hotRow(hover)?.index ?? null;
 
 /** Text in rows of `width` columns at most, cut where it must be (a message's lines in the box). */
 function wrapped(text: string, width: number): string[] {
@@ -94,14 +92,19 @@ export function drawGitPanel(app: App, c: Canvas, pane: Rect, bg: Color | null, 
   rect = filterRow(app, c, rect, s, focused, bg, geo);
   const footer = rect.h >= 8;
   const list = footer ? { ...rect, h: rect.h - 2 } : rect;
-  const rows = p.rows();
+  const rows = p.drawnRows();
+  geo.gitRows = list;
   followSelection(s, rows.length, list.h);
   // Never on a line that only says something: the first row that's a row, when there's one.
   if (rows[s.selected]?.kind === "note") {
     const next = rows.findIndex((r) => r.kind !== "note");
-    if (next >= 0) s.selected = next;
+    if (next >= 0) p.place(next, rows);
   }
-  const hovered = hoveredRow(app);
+  // The row under a resting pointer back on its line (D261); what the pointer's on, as these rows have it.
+  p.steady.settle(rows, list);
+  const hover = p.steady.hotNow(app.mouse.hover, rows);
+  geo.gitHover = hover;
+  const hovered = hoveredRow(hover);
   for (let i = 0; i < list.h; i++) {
     const idx = s.scroll + i;
     const row = rows[idx];
@@ -109,10 +112,13 @@ export function drawGitPanel(app: App, c: Canvas, pane: Rect, bg: Color | null, 
     drawRow(app, c, row, idx, { x: list.x, y: list.y + i, w: list.w - 1 }, bg, geo, {
       selected: idx === s.selected && focused,
       hovered: idx === hovered,
+      hover,
     });
   }
-  paneScrollbar(app, c, list, rows.length, s.scroll, "sidebar", focused, bg, geo);
+  // Scrolled past the list's end (a resting pointer's row kept on its line, D261): the blank there counts.
+  paneScrollbar(app, c, list, Math.max(rows.length, s.scroll + list.h), s.scroll, "sidebar", focused, bg, geo);
   if (footer) drawFooter(app, c, { x: rect.x, y: rect.y + rect.h - 2, w: rect.w, h: 2 }, rows[s.selected], bg, geo);
+  p.steady.done(rows, list);
   return list;
 }
 
@@ -209,7 +215,7 @@ function drawRow(
   r: { x: number; y: number; w: number },
   bg: Color | null,
   geo: Geometry,
-  how: { selected: boolean; hovered: boolean },
+  how: { selected: boolean; hovered: boolean; hover: string | null },
 ): void {
   const theme = app.theme;
   const g = app.glyphs;
@@ -218,9 +224,7 @@ function drawRow(
   if (how.selected) c.fill(r.x, r.y, r.w, 1, st.bg);
   const dim = { ...roleStyle(theme, "dim", rowBg), bg: rowBg };
   const button = (id: string) =>
-    app.mouse.hover === id
-      ? roleStyle(theme, "hover", rowBg)
-      : { ...roleStyle(theme, "topbar_button", rowBg), bg: rowBg };
+    how.hover === id ? roleStyle(theme, "hover", rowBg) : { ...roleStyle(theme, "topbar_button", rowBg), bg: rowBg };
   // Its buttons first, at its end, so the text stops short of them (and they're found first under the pointer).
   const acts = row.kind === "heading" || how.hovered || how.selected ? rowActions(app, row) : [];
   let end = r.x + r.w;
@@ -261,7 +265,7 @@ function drawRow(
       case "note":
         return put(row.text, dim);
       case "heading": {
-        const folded = app.gitPanel.folded.has(row.section) && !app.sidebar.filter;
+        const folded = app.gitPanel.folded.has(row.section) && !app.gitPanel.filter();
         if (row.section === "older") x += 2;
         return put(`${folded ? g.foldClosed : g.foldOpen} ${row.label}`, { ...dim, bold: true });
       }
@@ -391,7 +395,9 @@ function drawFooter(app: App, c: Canvas, r: Rect, row: PanelRow | undefined, bg:
   let x = r.x + 1;
   const end = r.x + r.w - 1;
   const p = app.gitPanel;
-  const pointed = p.typing ? { key: "ctrl+enter", desc: "commits · enter: the editor · esc: done" } : p.pointedAt();
+  const pointed = p.typing
+    ? { key: "ctrl+enter", desc: "commits · enter: the editor · esc: done" }
+    : p.pointedAt(geo.gitHover ?? null);
   const pairs: [string, string][] = pointed ? [[pointed.key ?? "", pointed.desc]] : p.footer(row);
   for (const [key, what] of pairs) {
     const need = (key ? stringWidth(key) + 1 : 0) + stringWidth(what);

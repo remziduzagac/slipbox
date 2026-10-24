@@ -12,6 +12,7 @@ import { stageChange, stageFile } from "../core/gitstage.ts";
 import type { App, View } from "./app.ts";
 import type { PanelRow } from "./gitpanel.ts";
 import { revertChange } from "./gitchanges.ts";
+import { hotRow } from "./gitsteady.ts";
 
 /** A row's button: its glyph, the panel's action it runs, what it does (the footer says it, with its key). */
 export interface RowAction {
@@ -85,22 +86,21 @@ export function pointedAt(app: App, id: string | null): { key: string | null; de
     const b = p.buttons().find((x) => x.id === btn[1]);
     return b ? { key: p.keyFor(b.action), desc: `${b.label.replace(/^[^\p{L}]+\s/u, "")}: ${b.desc}` } : null;
   }
-  const act = /^git:act:(\d+):(.+)$/.exec(id);
-  if (act) {
-    const row = p.rows()[Number(act[1])];
-    const a = row ? rowActions(app, row).find((x) => x.action === act[2]) : undefined;
-    return a ? { key: p.keyFor(a.action), desc: a.desc } : null;
-  }
-  const bb = /^git:bb:(\d+):(.+)$/.exec(id);
-  if (bb) {
-    const row = p.rows()[Number(bb[1])];
-    const b = row?.kind === "bbuttons" ? row.buttons.find((x) => x.action === bb[2]) : undefined;
+  const h = hotRow(id);
+  if (h && h.prefix !== "git:row:") {
+    const row = p.rows()[h.index];
+    const what = h.rest.slice(1);
+    if (h.prefix === "git:act:") {
+      const a = row ? rowActions(app, row).find((x) => x.action === what) : undefined;
+      return a ? { key: p.keyFor(a.action), desc: a.desc } : null;
+    }
+    const b = row?.kind === "bbuttons" ? row.buttons.find((x) => x.action === what) : undefined;
     const key =
-      bb[2] === "go"
+      what === "go"
         ? p.keyFor("go")
-        : bb[2] === "merge"
+        : what === "merge"
           ? p.keyFor("merge")
-          : bb[2] === "remove"
+          : what === "remove"
             ? p.keyFor("discard")
             : null;
     return b ? { key, desc: b.label } : null;
@@ -115,7 +115,6 @@ export function gitClick(app: App, id: string, clicks: number): boolean {
   if (!id.startsWith("git:")) return false;
   const p = app.gitPanel;
   p.touched++;
-  const s = app.sidebar;
   app.region = "sidebar";
   p.typing = id === "git:box";
   if (id === "git:box") return true;
@@ -129,44 +128,37 @@ export function gitClick(app: App, id: string, clicks: number): boolean {
     if (b) p.action(b.action);
     return true;
   }
-  const act = /^git:act:(\d+):(.+)$/.exec(id);
-  if (act) {
-    s.selected = Number(act[1]);
-    p.action(act[2]!);
-    return true;
+  // A row's: the one the last frame drew there, wherever it is now; gone since, nothing (D261).
+  const h = hotRow(id);
+  if (!h) return true;
+  const rows = p.rows();
+  const i = p.steady.rowAt(h.index, rows);
+  const r = rows[i];
+  if (!r || r.kind === "note") return true;
+  p.select(i, rows);
+  const what = h.rest.slice(1);
+  if (h.prefix === "git:act:") p.action(what);
+  else if (h.prefix === "git:bb:") {
+    if (r.kind === "bbuttons") p.branches.button(r.branch, what);
   }
-  const bb = /^git:bb:(\d+):(.+)$/.exec(id);
-  if (bb) {
-    const row = p.rows()[Number(bb[1])];
-    s.selected = Number(bb[1]);
-    if (row?.kind === "bbuttons") p.branches.button(row.branch, bb[2]!);
-    return true;
-  }
-  const row = /^git:row:(\d+)$/.exec(id);
-  if (row) {
-    const i = Number(row[1]);
-    const r = p.rows()[i];
-    if (!r || r.kind === "note") return true;
-    s.selected = i;
-    // A branch's lines and its buttons' row: selected, nothing more — its buttons are their own.
-    if (r.kind === "bbuttons" || r.kind === "bline" || r.kind === "bsub") return true;
-    // One click: what enter does (a file's diff, a heading folded, a branch opened up); a second, what o does.
-    p.action(clicks >= 2 && r.kind !== "heading" && r.kind !== "branch" && r.kind !== "repo" ? "go" : "open");
-    return true;
-  }
+  // A branch's lines and its buttons' row: selected, nothing more — its buttons are their own.
+  else if (r.kind === "bbuttons" || r.kind === "bline" || r.kind === "bsub") return true;
+  // One click: what enter does (a file's diff, a heading folded, a branch opened up); a second, what o does.
+  else p.action(clicks >= 2 && r.kind !== "heading" && r.kind !== "branch" && r.kind !== "repo" ? "go" : "open");
   return true;
 }
 
 /** A right click on the panel's row: its menu, where the pointer is. */
 export function gitRightClick(app: App, id: string | null, x: number, y: number): boolean {
-  const m = /^git:(?:row|act|bb):(\d+)/.exec(id ?? "");
-  if (!m) return false;
+  const h = hotRow(id);
+  if (!h) return false;
   app.gitPanel.touched++;
-  const i = Number(m[1]);
-  const row = app.gitPanel.rows()[i];
+  const rows = app.gitPanel.rows();
+  const i = app.gitPanel.steady.rowAt(h.index, rows);
+  const row = rows[i];
   if (!row || row.kind === "note" || row.kind === "heading") return true;
   app.region = "sidebar";
-  app.sidebar.selected = i;
+  app.gitPanel.select(i, rows);
   app.gitPanel.menu(row, { x, y });
   return true;
 }

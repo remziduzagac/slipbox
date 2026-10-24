@@ -148,7 +148,7 @@ export function fileChanges(app: App, e: StatusEntry, section: GitSection): GitC
  */
 export function workRows(app: App): (HeadingRow | WorkRow)[] {
   const s = sections(app.git.entries ?? []);
-  const q = app.sidebar.filter ?? "";
+  const q = app.gitPanel.filter();
   const rows: (HeadingRow | WorkRow)[] = [];
   for (const section of ["conflicted", "staged", "unstaged", "untracked"] as const) {
     const files = s[section].filter((e) => !q || match(q, e.path));
@@ -197,10 +197,7 @@ function after(app: App, why: GitDone, said: string, follow?: string): void {
   void app.git.refreshNow().then(() => {
     // The file staged or unstaged is selected where it went, so `u` or `s` takes it straight back: its row number
     // left alone, the list re-sorted under it, the selection landed on whatever came there (found trying 26.2 live).
-    if (follow !== undefined) {
-      const i = app.gitPanel.rows().findIndex((r) => r.kind === "file" && r.entry.path === follow);
-      if (i >= 0) app.sidebar.selected = i;
-    }
+    if (follow !== undefined) app.gitPanel.selectWhere((r) => r.kind === "file" && r.entry.path === follow);
     app.host.requestRender();
   });
 }
@@ -364,9 +361,9 @@ export function workAction(app: App, row: WorkRow, action: string): void {
       return;
     case "collapse":
       if (row.kind === "change")
-        app.sidebar.selected = app.gitPanel
-          .rows()
-          .findIndex((r) => r.kind === "file" && r.section === row.section && r.entry.path === row.entry.path);
+        app.gitPanel.selectWhere(
+          (r) => r.kind === "file" && r.section === row.section && r.entry.path === row.entry.path,
+        );
       app.git.opened.delete(`${row.section}:${row.entry.path}`);
       return;
     case "open":

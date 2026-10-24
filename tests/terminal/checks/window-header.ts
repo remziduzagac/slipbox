@@ -26,18 +26,26 @@ function cellAt(s: Session, y: number, at: number): { x: number; y: number; styl
 
 /**
  * Window `nth`'s mode button `label`, as the screen shows it, counting the headers' button groups from the top left
- * (windows side by side share a row, stacked ones don't): its cell and style, or null when it isn't drawn.
+ * (windows side by side share a row, stacked ones don't): its cell and style, and the header's background (the cell
+ * before the first button's, whose label starts with a space), or null when it isn't drawn.
  */
-function modeButton(s: Session, label: ModeLabel, nth = 0): { x: number; y: number; style: StyledRun } | null {
+function modeButton(
+  s: Session,
+  label: ModeLabel,
+  nth = 0,
+): { x: number; y: number; style: StyledRun; band: string | null } | null {
   const rows = s.screen();
   const groups = rows
     .slice(0, -1)
     .flatMap((r, y) =>
-      MODE_GROUPS.flatMap((g) => [...r.matchAll(g.re)].map((m) => ({ y, at: m.index! + g.at[label] }))),
+      MODE_GROUPS.flatMap((g) =>
+        [...r.matchAll(g.re)].map((m) => ({ y, start: m.index!, at: m.index! + g.at[label] })),
+      ),
     )
     .sort((a, b) => a.y - b.y || a.at - b.at);
   const g = groups[nth];
-  return g ? cellAt(s, g.y, g.at) : null;
+  const cell = g ? cellAt(s, g.y, g.at) : null;
+  return g && cell ? { ...cell, band: cellAt(s, g.y, g.start - 2)?.style.bg ?? null } : null;
 }
 
 /** Whether row `y` shows, between indexes `from` and `to`, a mode button's selected letter drawn alone: bold, no other. */
@@ -56,9 +64,15 @@ async function clickMode(s: Session, label: ModeLabel, nth = 0): Promise<void> {
   await s.send(`\x1b[<0;${b!.x + 1};${b!.y + 1}m`);
 }
 
-/** Window `nth`'s selected mode: the one button drawn bold. */
+/**
+ * Window `nth`'s selected mode: the one button drawn bold on the header's own background. The hovered one is bold too,
+ * lit: the pointer stays where it clicked, and a button it rests on lights once a click there would switch.
+ */
 const selectedMode = (s: Session, nth = 0) =>
-  (["Read", "Lens", "Source"] as const).filter((l) => modeButton(s, l, nth)?.style.bold);
+  (["Read", "Lens", "Source"] as const).filter((l) => {
+    const b = modeButton(s, l, nth);
+    return !!b?.style.bold && b.style.bg === b.band;
+  });
 
 export const WINDOW_HEADER: Check[] = [
   {

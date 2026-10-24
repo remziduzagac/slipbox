@@ -87,8 +87,47 @@ export class Explorer {
     const parts = rel.split("/");
     for (let i = 1; i < parts.length; i++) this.expanded.add(parts.slice(0, i).join("/"));
     this.invalidateTree();
-    const at = this.rows().findIndex((r) => r.path === rel);
-    if (at >= 0) this.app.sidebar.selected = at;
+    // Hidden, its rows aren't under the filter of the view shown: the path looked for in its tree.
+    const at = (this.shown() ? this.rows() : this.treeRows()).findIndex((r) => r.path === rel);
+    if (at < 0) return;
+    if (this.shown()) this.app.sidebar.selected = at;
+    else this.hold(rel);
+  }
+
+  /**
+   * The explorer is the left panel's view: only then are the panel's selection, scroll and pin its own to set — the
+   * git panel's are kept to by their rows (D261); its own, its rows changed meanwhile, are put right when it's shown
+   * again (`later`, `shownAgain`).
+   */
+  private shown(): boolean {
+    return this.app.leftView === "explorer";
+  }
+
+  /**
+   * Where the selection goes when the explorer's shown again, its rows having changed while it wasn't (a note revealed,
+   * the view zoomed out to hold it, its folder gone): a row's path, else the first — not the index it had, which is
+   * another row's now. For the vault it was noted in.
+   */
+  private later: { root: string; path: string | null } | null = null;
+
+  /** Its selection to go to `path` (or the first row) when it's shown again; `keep`, unless one's noted already. */
+  private hold(path: string | null, keep = false): void {
+    if (keep && this.later?.root === this.app.loc.root) return;
+    this.later = { root: this.app.loc.root, path };
+  }
+
+  /**
+   * Shown again, its place restored (`switchLeftView`): the selection put where `later` says, scrolled to — not in
+   * another vault, nor under a filter, whose rows are every note matching it, the same whatever the view.
+   */
+  shownAgain(): void {
+    const later = this.later;
+    this.later = null;
+    if (!later || later.root !== this.app.loc.root || this.app.sidebar.filter) return;
+    this.app.sidebar.pinned = false;
+    this.app.sidebar.scroll = 0;
+    if (later.path === null) this.app.sidebar.selected = 0;
+    else this.selectRow(later.path, 0);
   }
 
   /**
@@ -534,6 +573,10 @@ export class Explorer {
     const out = isInside(dir, from);
     if (out) for (let d = from; d !== dir; d = dirname(d)) this.expanded.add(this.rowPath(d));
     this.invalidateTree();
+    if (!this.shown()) {
+      this.hold(out ? this.rowPath(from) : null);
+      return;
+    }
     this.app.sidebar.pinned = false;
     this.app.sidebar.scroll = 0;
     if (out) this.selectRow(this.rowPath(from), 0);
@@ -579,7 +622,8 @@ export class Explorer {
     this.top = common;
     this.trail = dir;
     this.invalidateTree();
-    this.app.sidebar.scroll = 0;
+    if (this.shown()) this.app.sidebar.scroll = 0;
+    else this.hold(null, true);
     return true;
   }
 
@@ -814,9 +858,11 @@ export class Explorer {
     const gone = this.top;
     this.top = nearest(gone);
     if (!isInside(this.top, this.trail)) this.trail = this.top;
-    this.app.sidebar.pinned = false;
-    this.app.sidebar.scroll = 0;
-    this.app.sidebar.selected = 0;
+    if (this.shown()) {
+      this.app.sidebar.pinned = false;
+      this.app.sidebar.scroll = 0;
+      this.app.sidebar.selected = 0;
+    } else this.hold(null);
     this.app.message("info", `${tildePath(gone)} isn't there any more: the view is on ${tildePath(this.top)}`);
   }
 
@@ -905,7 +951,7 @@ export class Explorer {
    * unless it was gone to (`zoom`): the view then zooms out to hold it (VV-D5).
    */
   reveal(rel?: string | null, open = false, zoom = false): void {
-    this.app.sidebar.pinned = false;
+    if (this.shown()) this.app.sidebar.pinned = false;
     const v = this.app.view;
     const abs =
       rel === undefined
@@ -923,6 +969,10 @@ export class Explorer {
     for (let d = open ? abs : dirname(abs); d !== view && isInside(view, d); d = dirname(d))
       this.expanded.add(this.rowPath(d));
     this.invalidateTree();
+    if (!this.shown()) {
+      this.hold(abs === view ? null : this.rowPath(abs));
+      return;
+    }
     if (abs === view) this.app.sidebar.selected = 0;
     else this.selectRow(this.rowPath(abs));
   }
