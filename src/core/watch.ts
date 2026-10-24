@@ -28,7 +28,7 @@ import {
 } from "node:fs";
 import { join, relative, sep } from "node:path";
 import { under, walksInto } from "./home.ts";
-import { symlinkVerdict, type WalkFilter } from "./walk.ts";
+import { parentOf, SETTLE_MS, settled, symlinkVerdict, type WalkFilter } from "./walk.ts";
 
 export interface WatchChange {
   rel: string;
@@ -101,13 +101,6 @@ interface Settling {
   /** Whether moves are followed: home's walk still to make. */
   following: boolean;
 }
-
-/**
- * How long after a directory changes its mtime can't tell a later change apart: a coarse clock (FAT's
- * 2 s, HFS+'s 1 s, Linux's tick) can give the next change the same mtime. A directory read that soon
- * after its change is listed again on the next tick.
- */
-const SETTLE_MS = 2000;
 
 /** A known note that went (`flush`): where it was, its time and size then, and the tick it went in. */
 interface Went {
@@ -823,17 +816,6 @@ function dirMtime(path: string): number | null {
   } catch {
     return null;
   }
-}
-
-/** A directory's mtime as its stamp, when what it holds was read at `readAt`; -1, to list it again on
- *  the next tick, when that was too soon after it changed (`SETTLE_MS`) or it couldn't be stat'ed. */
-function settled(mtime: number | null, readAt: number): number {
-  return mtime === null || mtime >= readAt - SETTLE_MS ? -1 : mtime;
-}
-
-function parentOf(rel: string): string {
-  const slash = rel.lastIndexOf("/");
-  return slash >= 0 ? rel.slice(0, slash) : "";
 }
 
 function statOrNull(path: string): { mtimeMs: number; size: number } | null {

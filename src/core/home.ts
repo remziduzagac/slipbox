@@ -16,9 +16,14 @@ import {
   ANOTHER_DISK,
   HOME_LIMITS,
   LINK_REASON,
+  lost,
   type NoteFile,
+  parentOf,
+  RELIST,
+  SETTLE_MS,
   type Skipped,
   SlicedWalk,
+  type Stamp,
   type WalkCap,
   WalkFilter,
   type WalkLimits,
@@ -40,6 +45,12 @@ interface KeptWalk {
   assets: string[];
   dirs: string[];
   skipped: Skipped[];
+  /**
+   * Each folder's stamp as the walk saw it, in `dirs`' order (`Stamp`: its mtime, -1 to list it again, and its ctime);
+   * null when it isn't known — a folder of a walk an earlier version kept, not listed since. None in a walk an earlier
+   * version kept (#12).
+   */
+  times?: (Stamp | null)[];
 }
 
 /** Home's walk, to build its graph from. */
@@ -89,18 +100,28 @@ export function keepHomeWalk(
       assets: walk.assets,
       dirs: walk.dirs,
       skipped: walk.skipped.filter((s) => !s.reason.startsWith(TOO_LARGE)),
+      times: walk.dirs.map((d) => walk.times?.get(d) ?? null),
     } satisfies KeptWalk);
   } catch {}
 }
 
 const strings = (v: unknown): string[] => (Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : []);
 
-/** How soon after a folder changes its time can't tell a later change apart (a coarse clock), as the watcher has it. */
-const SETTLE_MS = 2000;
+/** Each folder's stamp as the walk kept saw it (`KeptWalk.times`), by its path: those known. */
+function keptTimes(kept: KeptWalk): Map<string, Stamp> {
+  const times = new Map<string, Stamp>();
+  const { dirs, times: list } = kept;
+  // Read beside its folders, before either is sorted or sifted: a list that doesn't match them says nothing.
+  if (!Array.isArray(dirs) || !Array.isArray(list) || list.length !== dirs.length) return times;
+  dirs.forEach((d, i) => {
+    const t = list[i];
+    if (typeof d === "string" && Array.isArray(t) && t.length === 2 && t.every(Number.isFinite)) times.set(d, t);
+  });
+  return times;
+}
 
 /** Whether `rel` is the folder `dir` or in it (`""`: home's top, holding everything). */
 export const under = (rel: string, dir: string): boolean => dir === "" || rel === dir || rel.startsWith(`${dir}/`);
-const parentOf = (rel: string) => (rel.includes("/") ? rel.slice(0, rel.lastIndexOf("/")) : "");
 const isDir = (abs: string) => {
   try {
     return statSync(abs).isDirectory();
@@ -144,7 +165,7 @@ export function homeWalk(
     loc.root,
     filter,
     { notes: Number.POSITIVE_INFINITY, folders: Number.POSITIVE_INFINITY },
-    { from, known: covered },
+    { from, known: covered, stamped: false },
   );
   while (w.step(1000)) {}
   const more = w.result!;
@@ -239,7 +260,8 @@ export function walksInto(root: string, filter: WalkFilter, rel: string): boolea
 /**
  * Home's walk as it was kept, brought up to now — freshness checked, not assumed (VV-D2): each folder looked at again,
  * since its time moves when what's in it comes or goes. One gone, or become a vault, is dropped with all it held; one
- * changed since the walk is listed again, what came and went in it taken, a folder new in it walked; a vault the walk
+ * changed since the walk — its time not the one the walk saw, set back too (#12) — is listed again, what came and went
+ * in it taken, a folder new in it walked; a vault the walk
  * found that is one no more is walked now, as home's. Each note's size and time is read again — one gone dropped, one
  * grown past `walk.max_file_size` skipped, as the walk would. A folder where another disk is mounted since is dropped
  * with all it held, never looked at, and one that's no longer a mount is walked. What changed is kept, for the next.
@@ -264,6 +286,14 @@ function keptWalk(
   const relist: string[] = [];
   const became: Skipped[] = [];
   const dirs: string[] = [];
+  const keptStamps = keptTimes(kept);
+  /** The folders' stamps, kept with the walk if it's kept again: those listed again stamped as they're listed. */
+  const times = new Map<string, Stamp>();
+  /** The folders listed again for their stamp alone — set back, put back, or only their ctime moved (a chmod) — not
+   *  for a time moved on past the walk, which "newer than the walk" listed again too. */
+  const stampOnly: string[] = [];
+  /** Folders and notes the walk loses without seeing them gone (unreadable, not to be looked at): tried again (#12). */
+  const unread: string[] = [];
   for (const d of strings(kept.dirs).sort()) {
     if (dropped.some((x) => under(d, x))) continue;
     const abs = join(root, d);
@@ -290,15 +320,23 @@ function keptWalk(
       }
     }
     let mtime: number;
+    let ctime: number;
     try {
       const st = statSync(abs);
       if (!st.isDirectory()) throw new Error("not a folder");
       mtime = st.mtimeMs;
-    } catch {
+      ctime = st.ctimeMs;
+    } catch (err) {
       dropped.push(d);
+      if (lost(err)) unread.push(d); // there, but not to be looked at: a permission, a policy, a disk's error
       continue;
     }
-    const changed = mtime >= walked - SETTLE_MS;
+    // Changed since the walk: its time or its ctime isn't the one the walk saw (`Stamp`) — set back too, as `cp -a`,
+    // `rsync -a` or an archive unpacked with its times leave it, or a disk whose clock is behind; put back to exactly
+    // its stamp, its ctime moved all the same (#12). Its stamp not known (a walk an earlier version kept): newer than
+    // the walk.
+    const stamp = keptStamps.get(d);
+    const changed = stamp === undefined ? mtime >= walked - SETTLE_MS : mtime !== stamp[0] || ctime !== stamp[1];
     // A marker comes into a folder, its time moves: only a changed one can have become a vault.
     if (changed && d && isVaultRoot(abs)) {
       dropped.push(d);
@@ -306,7 +344,10 @@ function keptWalk(
       continue;
     }
     dirs.push(d);
+    if (changed && stamp !== undefined && !(mtime > stamp[0] && mtime >= walked - SETTLE_MS)) stampOnly.push(d);
     if (changed) relist.push(d);
+    // One unchanged keeps its stamp — none, its time not known, so that it's never taken as seen without being listed.
+    else if (stamp !== undefined) times.set(d, stamp);
   }
   const keptSkipped = (
     Array.isArray(kept.skipped)
@@ -334,6 +375,8 @@ function keptWalk(
       relist.push(parent);
   }
   const relisted = new Set(relist);
+  // Each listed again, for whatever reason, is stamped as it's listed; until then, or if it can't be, to list again.
+  for (const d of relist) times.set(d, RELIST);
   /** Kept as the walk had it: not in a folder dropped, nor directly in one listed again (that listing has it). */
   const keep = (rel: string) => !dropped.some((x) => under(rel, x)) && !relisted.has(parentOf(rel));
   const former = keptSkipped.filter(
@@ -353,6 +396,8 @@ function keptWalk(
     if (!isLink(abs)) return true;
     const v = symlinkVerdict(abs, realRoot);
     if (!v.kept && v.reason) skipped.push({ rel, reason: v.reason, ...(v.link ? { link: v.link } : {}) });
+    // Its target can't be looked at now (gone, a disk taken away): its folder to list again, so it's back with it (#12).
+    if (!v.kept && (v.reason === "broken symlink" || v.reason === null)) unread.push(rel);
     return v.kept;
   };
   const files: NoteFile[] = [];
@@ -364,12 +409,24 @@ function keptWalk(
       if (!st.isFile()) continue;
       if (st.size > filter.maxFileSize) skipped.push({ rel, reason: `${TOO_LARGE} (${st.size} bytes)` });
       else files.push({ rel, abs, size: st.size, mtimeMs: st.mtimeMs });
-    } catch {}
+    } catch (err) {
+      if (lost(err)) unread.push(rel); // there, not to be looked at: its folder to list again
+    }
   }
   const assets = strings(kept.assets).filter((rel) => keep(rel) && linkKept(rel));
   // The folders listed again, and the vaults that are home's again, walked now: what's new in them — as far as the
   // cap's room left (the folders listed again always: they were listed before), and said when it's reached.
-  const from = [...relist, ...former.filter((s) => isDir(join(root, s.rel))).map((s) => s.rel)];
+  // Looked at as the walk goes into it, through a link it follows too: one that can't be, lost, is tried again.
+  const back: string[] = [];
+  for (const s of former) {
+    try {
+      if (statSync(join(root, s.rel)).isDirectory()) back.push(s.rel);
+    } catch (err) {
+      // There, but not to be looked at — or a link whose target is gone for now (a disk taken away): tried again.
+      if (lost(err) || isLink(join(root, s.rel))) unread.push(s.rel);
+    }
+  }
+  const from = [...relist, ...back];
   if (from.length) {
     const folders = Math.max(from.length, limits.folders - dirs.length + relist.length);
     const w = new SlicedWalk(root, filter, { ...limits, folders }, { from, known: new Set(dirs) });
@@ -379,8 +436,19 @@ function keptWalk(
     assets.push(...more.assets);
     skipped.push(...more.skipped);
     for (const d of more.dirs) if (!relisted.has(d)) dirs.push(d);
+    for (const [d, t] of more.times ?? []) times.set(d, t);
+    const unreached = new Set(w.rest()); // left for the cap, not unreadable
+    for (const d of back) if (!more.times?.has(d) && !unreached.has(d)) unread.push(d);
     if (w.capped && capped !== "notes") capped = w.capped;
   }
+  // What the walk lost without seeing it gone — a folder or a note it may not look at, a vault home's again it couldn't
+  // read — isn't in it: the folder holding each to list again, so each is tried again at each build till it can be
+  // (#12).
+  const inWalk = new Set(dirs);
+  for (const d of unread) if (inWalk.has(parentOf(d))) times.set(parentOf(d), RELIST);
+  // One listed again for its stamp alone, and stamped now (not to list again: unreadable, or changed just now): the
+  // walk kept again for it, or it would be listed again at every build (#12).
+  const byStamp = stampOnly.some((d) => (times.get(d)?.[0] ?? -1) !== -1);
   // As far as the cap: the notes nearest the top.
   if (files.length > limits.notes) {
     files.sort((a, b) => nearer(a.rel, b.rel));
@@ -393,9 +461,10 @@ function keptWalk(
     assets.length = limits.assets;
   }
   files.sort((a, b) => (a.rel < b.rel ? -1 : a.rel > b.rel ? 1 : 0));
-  const walk: WalkResult = { files, assets, dirs: dirs.length ? dirs : [""], skipped, errors: [] };
-  // Kept again only when it says something else: a folder whose time moved (a shell's history rewritten in `~`)
-  // without a note coming or going isn't worth writing it.
+  const walk: WalkResult = { files, assets, dirs: dirs.length ? dirs : [""], skipped, errors: [], times };
+  // Kept again only when it says something else: a folder whose time moved on (a shell's history rewritten in `~`)
+  // without a note coming or going isn't worth writing it, listed again till then. One listed again for its stamp
+  // alone (`byStamp`: seldom) is, its new stamp with it, or it would be listed again at every build (#12).
   const big = skipped.filter((s) => s.reason.startsWith(TOO_LARGE)).map((s) => s.rel);
   const said = (list: unknown) =>
     (Array.isArray(list) ? (list as Skipped[]) : [])
@@ -406,13 +475,17 @@ function keptWalk(
     !same(assets, strings(kept.assets)) ||
     !same(dirs, strings(kept.dirs)) ||
     !same(said(skipped), said(kept.skipped)) ||
-    capped !== (kept.capped ?? null);
-  if (changed && persist) keepHomeWalk(loc, walk, capped, now, filter);
+    capped !== (kept.capped ?? null) ||
+    byStamp;
+  // Home's top not looked at (its stat failed: a disk's error, a folder above it not searched): nothing of home was
+  // seen, so the walk kept stays as it was rather than be kept empty (#12).
+  const keptAgain = changed && !dropped.includes("");
+  if (keptAgain && persist) keepHomeWalk(loc, walk, capped, now, filter);
   return {
     walk,
-    walked: changed ? now : walked,
+    walked: keptAgain ? now : walked,
     capped,
-    ...(changed && !persist ? { unkept: { walk, capped, walked: now } } : {}),
+    ...(keptAgain && !persist ? { unkept: { walk, capped, walked: now } } : {}),
   };
 }
 
@@ -447,15 +520,29 @@ export function vaultsPastCap(dir: string, filter: WalkFilter): { vaults: string
   return out;
 }
 
-/** Whether `kept` is a walk of home's made under `filter`'s settings (its signature), to build from. */
-function fits(kept: KeptWalk | null, filter: WalkFilter): kept is KeptWalk {
-  return kept?.version === 1 && Array.isArray(kept.notes) && kept.filter === filter.signature();
+/** Whether `kept` is a walk of home's to build from: made under `filter`'s settings (its signature), and holding home's
+ *  top (one that couldn't read it holds none of home, and is made again, #12). */
+function fits(kept: KeptWalk | null, filter?: WalkFilter): kept is KeptWalk {
+  return (
+    kept?.version === 1 &&
+    Array.isArray(kept.notes) &&
+    (!filter || kept.filter === filter.signature()) &&
+    strings(kept.dirs).includes("")
+  );
 }
 
-/** Whether home has a walk kept — one made under `config`'s settings, when it's given. */
-export function homeWalkKept(loc: Pick<VaultLocation, "root" | "key">, config?: Pick<Config, "walk">): boolean {
+/**
+ * Whether home has a walk kept — one made under `config`'s settings, when it's given; `stamped`, with every folder's
+ * stamp (#12): not an earlier version's walk, nor one kept again from it, which the command line walks again, once.
+ */
+export function homeWalkKept(
+  loc: Pick<VaultLocation, "root" | "key">,
+  config?: Pick<Config, "walk">,
+  stamped = false,
+): boolean {
   const kept = readJson<KeptWalk | null>(homeWalkFile(loc), null);
-  return config ? fits(kept, homeFilter(loc, config)) : kept?.version === 1;
+  if (!fits(kept, config && homeFilter(loc, config))) return false;
+  return !stamped || keptTimes(kept).size === strings(kept.dirs).length;
 }
 
 /** Home's filter (VV-D2): its skip list, your config's extensions, exclusions and size cap. */

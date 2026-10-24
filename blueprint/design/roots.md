@@ -85,17 +85,37 @@ polls it while it's open, as it polls every open file the graph doesn't know.
 breadth first, entries by name) while nobody is working — in the TUI on the walk's own thread (§ The index) — and kept
 in its cache folder (`walk.json`, `keepHomeWalk`; `core/home.ts`). Its graph is built from the walk kept (`homeWalk`),
 brought up to now as a build is (freshness checked, not assumed): each folder kept is statted; one changed since the
-walk is listed again (what came and went, a folder new in it walked); one gone, or become a vault, is dropped with what
-it held; a vault the walk found that is none any more is walked as home's; each note is statted again (gone, dropped;
-grown past the size cap, skipped), and one that is a link kept only while the walk would keep it (`symlinkVerdict`:
-pointed elsewhere, it asks again, whatever its folder's time says; § Links followed only when you say so). What changed
-is kept again (not a folder whose time moved alone: a shell's history rewritten in `~`). The graph's `walkedAt` is the
-walk's, so the watcher lists again the folders changed since. So an agent's note made in home is there at its next
-command, and a folder made a vault by hand (`git init`) leaves home. The walk is kept with its filter's settings
-(`WalkFilter.signature`: the note extensions, `walk.exclude`, the root markers, where Downloads is): kept under others,
-it's no walk of home's, so a `[walk]` setting changed is home never walked, its walk made again (the TUI's reload asks
-for it; the background index makes a walk under way again; the CLI walks it at once). Never walked, home is its top
-alone (`walkTop`): its notes and files, the vaults in it, its folders listed but not looked into.
+walk is listed again (what came and went, a folder new in it walked). Changed is a stamp other than the walk's for it:
+its time and its ctime when the walk listed it, kept with it (`times`, a `Stamp`, taken before the folder is read; its
+time `settled`, as the watcher stamps its folders), so a time set back counts too (`cp -a`, `rsync -a`, an archive
+unpacked with its times, a disk whose clock is behind), even put back to exactly its stamp (setting a time moves the
+ctime), and a folder listed within two seconds of its change is stamped to list again, a coarse clock giving the next
+change the same time (its ctime counts for this when in whole seconds, a coarse clock's: `stampOf`). A walk kept by an
+earlier version has no stamps: its folders are changed when newer than the walk, as then, until each is listed again and
+stamped, or home is walked again — which the command line does at once, as the first time, for a walk where any folder
+has no stamp, an earlier version's or one kept again from it (`homeWalkKept`, stamped), and the TUI's background index
+on its next pass; a plan across home (`openVault`, the TUI's too) goes by the walk kept as it is. A walk that couldn't
+read home's top holds none of home: it's no walk of home's (`fits`), as one under other settings isn't, so the TUI shows
+home's top and its walk is made again, and the command line and a plan across home walk home at once; a build that
+couldn't look at home's top at all keeps no walk, the one kept staying as it was. A folder that can't be read when it's
+listed (a vault home's again too, or one through a link whose target is gone for now) isn't in the walk: the folder
+holding it is stamped to list again, so it's tried again at each build till it can be read (a chmod moves no time the
+walk keeps); so is the folder of a note that can't be looked at, and of a link whose target can't be now (gone, a disk
+taken away, not searched), till it's back. One gone, or become a vault, is dropped with what it held; a vault the walk
+found that is none any more is walked as home's; each note is statted again (gone, dropped; grown past the size cap,
+skipped), and one that is a link kept only while the walk would keep it (`symlinkVerdict`: pointed elsewhere, it asks
+again, whatever its folder's time says; § Links followed only when you say so). What changed is kept again, with the
+stamps of the folders listed; so is a folder listed again for its stamp alone (set back, put back, or only its ctime
+moved: a chmod; not a time moved on past the walk) with nothing in it changed, once the listing stamps it (not one it
+couldn't read), or it would be listed again at every build. One whose time only moved on (a shell's history rewritten in
+`~`) isn't worth writing the walk for: it's listed again at each build until something else is kept, as before the
+stamps. The graph's `walkedAt` is the walk's, so the watcher lists again the folders changed since. So an agent's note
+made in home is there at its next command, and a folder made a vault by hand (`git init`) leaves home. The walk is kept
+with its filter's settings (`WalkFilter.signature`: the note extensions, `walk.exclude`, the root markers, where
+Downloads is): kept under others, it's no walk of home's, so a `[walk]` setting changed is home never walked, its walk
+made again (the TUI's reload asks for it; the background index makes a walk under way again; the CLI walks it at once).
+Never walked, home is its top alone (`walkTop`): its notes and files, the vaults in it, its folders listed but not
+looked into.
 
 A folder of home asked for by name is what was asked for: opened (`slipbox ~/notes`), or a file in it opened, it's
 walked at once when home's walk doesn't cover it (never made, or stopped at its cap: a walk capped covers no folder
@@ -170,10 +190,15 @@ background index, only when opened, and nor is a vault whose own folder is hidde
 repository `~/build` with no note at its top), in home or nested in a vault: the skip list and the busy folders are
 checked before the markers. Link completion offers other vaults' notes, not home's. A slow disk that's home's own
 filesystem still holds the TUI up where it's read on the main thread (§ The index, "Not done"). Freshness is by a
-folder's time: a folder whose time is set back after its notes changed (an archive unpacked with its times, `cp -a`,
-`rsync -a`) isn't listed again, its notes waiting for home's next walk or `slipbox index --refresh ~` (the TUI's reindex
-reads the walk kept). Tabs of home's top restored in a folder its walk hasn't reached open as files the graph doesn't
-know, until it does.
+folder's time and ctime: on a file system that keeps no ctime of its own, a folder whose time is put back to exactly the
+walk's stamp after its notes changed isn't listed again, its notes waiting for home's next walk or
+`slipbox index --refresh ~` (the TUI's reindex reads the walk kept). The two seconds are by this machine's clock, so on
+a disk whose clock is behind and whose times are coarse, a second change within the same tick of its clock is missed
+too. A ctime is settled only when in whole seconds, so where a kernel moves file times once a tick (Linux before 6.13),
+a time put back, the listing, and the same time put back with a note, all within that tick (a few milliseconds), is
+missed as well. The watcher goes by a folder's time alone (`src/core/watch.ts`), so one it polls, not watches, put back
+so while the TUI is open, waits for the next build. Tabs of home's top restored in a folder its walk hasn't reached open
+as files the graph doesn't know, until it does.
 
 ## Elsewhere
 

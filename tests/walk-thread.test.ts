@@ -9,12 +9,14 @@ import {
   readFileSync,
   realpathSync,
   renameSync,
+  statSync,
   symlinkSync,
+  utimesSync,
   writeFileSync,
 } from "node:fs";
 import { dirname, join } from "node:path";
 import { DEFAULT_CONFIG } from "../src/core/config.ts";
-import { type HomeWalk, homeFilter, homeWalk, homeWalkFile, keepHomeWalk } from "../src/core/home.ts";
+import { type HomeWalk, homeFilter, homeWalk, homeWalkFile, keepHomeWalk, walkHomeNow } from "../src/core/home.ts";
 import { probe, setLinkAnswer } from "../src/core/symlinks.ts";
 import { homeAt, setRootMarkers } from "../src/core/vault.ts";
 import { SlicedWalk, setFolderReader } from "../src/core/walk.ts";
@@ -675,6 +677,8 @@ describe("the walk's thread takes what the walk here takes (T12)", () => {
             const i = w.index({ root: home, home: sliced.handOver(1), config });
             while (i.step(50)) await Bun.sleep(1);
             const { walked: _, ...kept } = JSON.parse(readFileSync(homeWalkFile(loc), "utf8"));
+            // Each folder's stamp kept (#12): whether it's to list again is by when each walk listed it, as `walked` is.
+            kept.times = kept.times?.map((t: unknown) => Array.isArray(t));
             return { kept, result: i.result };
           };
           const homeKept = (await each(keptBy)) as {
@@ -708,11 +712,14 @@ describe("the walk's thread takes what the walk here takes (T12)", () => {
           // Home's walk kept, a note come since: brought up to now the same, what changed handed back unkept.
           keepHomeWalk(loc, homeResult, here.capped, Date.now() - 60_000, filter());
           writeFileSync(join(home, "docs", "later.md"), "# Later\n");
-          // When it was walked aside: each takes the time it's made at.
+          // When it was walked aside: each takes the time it's made at, and stamps its folders by it (#12) — which ones
+          // it stamps, the same on either.
+          const stamped = (w: HomeWalk["walk"]) => ({ ...w, times: w.times && [...w.times.keys()].sort() });
           const untimed = (h: HomeWalk) => ({
             ...h,
+            walk: stamped(h.walk),
             walked: 0,
-            ...(h.unkept ? { unkept: { ...h.unkept, walked: 0 } } : {}),
+            ...(h.unkept ? { unkept: { ...h.unkept, walk: stamped(h.unkept.walk), walked: 0 } } : {}),
           });
           const kept = untimed(homeWalk(loc, filter(), ["z/y"], undefined, false));
           expect(untimed(await thread.homeWalk(loc, filter().settings, ["z/y"]))).toEqual(kept);
@@ -728,6 +735,31 @@ describe("the walk's thread takes what the walk here takes (T12)", () => {
     } finally {
       setRootMarkers(null);
     }
+  });
+
+  test("the walk's thread hands back each folder's stamp as it made it: its mtime and its ctime (#12)", async () => {
+    const home = tree({ "a.md": "# A\n", "docs/d.md": "# D\n" });
+    await inHome(home, async () => {
+      const loc = homeAt(home);
+      const hour = new Date(Date.now() - 3_600_000);
+      for (const d of ["", "docs"]) utimesSync(join(home, d), hour, hour);
+      walkHomeNow(loc, DEFAULT_CONFIG);
+      // A note in docs, its time then set back: listed again on the thread, and stamped with its time and ctime there.
+      writeFileSync(join(home, "docs", "e.md"), "# E\n");
+      const back = new Date(Date.now() - 7_200_000);
+      utimesSync(join(home, "docs"), back, back);
+      const thread = new WalkThread();
+      try {
+        const h = await thread.homeWalk(loc, homeFilter(loc, DEFAULT_CONFIG).settings, []);
+        const st = statSync(join(home, "docs"));
+        expect(h.unkept?.walk.times?.get("docs")).toEqual([st.mtimeMs, st.ctimeMs]);
+        // Home's top, unchanged, with the stamp the walk kept had for it.
+        const kept = JSON.parse(readFileSync(homeWalkFile(loc), "utf8"));
+        expect(h.unkept?.walk.times?.get("")).toEqual(kept.times[kept.dirs.indexOf("")]);
+      } finally {
+        thread.stop();
+      }
+    });
   });
 
   test("an index's end is the same however its work fell across slices: what it opened told apart, never in its end", async () => {

@@ -38,6 +38,62 @@ export interface WalkResult {
   dirs: string[];
   skipped: Skipped[];
   errors: string[];
+  /** Home's walk (`SlicedWalk`, VV-D2): each folder's stamp as it was listed (`dirStamp`), by its path. */
+  times?: Map<string, Stamp>;
+}
+
+/**
+ * How long after a directory changes its mtime can't tell a later change apart: a coarse clock (FAT's
+ * 2 s, HFS+'s 1 s, Linux's tick) can give the next change the same mtime. A directory read that soon
+ * after its change is listed again.
+ */
+export const SETTLE_MS = 2000;
+
+/** A directory's mtime as its stamp, when what it holds was read at `readAt`; -1, to list it again, when that was too
+ *  soon after it changed (`SETTLE_MS`) or it couldn't be stat'ed. The watcher's, and home's walk kept (#12). */
+export function settled(mtime: number | null, readAt: number): number {
+  return mtime === null || mtime >= readAt - SETTLE_MS ? -1 : mtime;
+}
+
+/**
+ * A folder's stamp in home's walk kept (#12): its mtime and its ctime as it was listed, which moves whenever its time
+ * is set — so one put back to exactly its stamp still tells; `RELIST` (-1), to list it again (`stampOf`).
+ */
+export type Stamp = readonly [mtime: number, ctime: number];
+
+/** A stat that failed for something other than its target's being gone: it's there, not to be looked at (#12). */
+export function lost(err: unknown): boolean {
+  const code = (err as NodeJS.ErrnoException).code;
+  return code !== undefined && code !== "ENOENT" && code !== "ENOTDIR";
+}
+
+/** The folder holding `rel` (`""`: the top). */
+export function parentOf(rel: string): string {
+  const slash = rel.lastIndexOf("/");
+  return slash >= 0 ? rel.slice(0, slash) : "";
+}
+
+/** The stamp of a folder to list again. */
+export const RELIST: Stamp = [-1, -1];
+
+/**
+ * A folder's stamp from its times, read at `readAt`: `RELIST` when its mtime is too recent to tell a later change
+ * apart (`settled`), or its ctime is in whole seconds — a coarse clock's (HFS+, ext3, ext4's small inodes, many network
+ * shares), where a later change within the second can leave it as it was — and as recent.
+ */
+export function stampOf(mtimeMs: number, ctimeMs: number, readAt: number): Stamp {
+  const coarse = ctimeMs % 1000 === 0 && ctimeMs >= readAt - SETTLE_MS;
+  return settled(mtimeMs, readAt) === -1 || coarse ? RELIST : [mtimeMs, ctimeMs];
+}
+
+/** A folder's stamp, read at `readAt` — before what it holds is read; `RELIST` when it can't be stat'ed. */
+export function dirStamp(path: string, readAt: number): Stamp {
+  try {
+    const st = statSync(path);
+    return stampOf(st.mtimeMs, st.ctimeMs, readAt);
+  } catch {
+    return RELIST;
+  }
 }
 
 const ALWAYS_SKIPPED = new Set([".git", MARKER]);
@@ -436,8 +492,12 @@ interface WalkState {
 }
 
 /** `mounts`: the mount table read again for this walk — not for one that goes on from another (home's folders listed
- *  again, or asked for: the build's own walk read it). */
-function startWalk(root: string, filter: WalkFilter, sorted = false, maxAssets = Infinity, mounts = true): WalkState {
+ *  again, or asked for: the build's own walk read it). `stamped`: each folder's time kept as it's listed (`times`). */
+function startWalk(
+  root: string,
+  filter: WalkFilter,
+  { sorted = false, maxAssets = Infinity, mounts = true, stamped = false } = {},
+): WalkState {
   let realRoot = root;
   try {
     realRoot = realpathSync(root);
@@ -446,6 +506,7 @@ function startWalk(root: string, filter: WalkFilter, sorted = false, maxAssets =
   if (mounts) filter.readMounts();
   filter.newWalk(); // the busy-named folders looked into again (D237)
   const out: WalkResult = { files: [], assets: [], dirs: [], skipped: [], errors: [] };
+  if (stamped) out.times = new Map();
   return { root, realRoot, filter, out, links: new Map(), sorted, followed: new Set(), maxAssets };
 }
 
@@ -491,7 +552,8 @@ export type WalkCap = "notes" | "folders";
 /**
  * A walk made a slice at a time (VV-D2: home's, while nobody is working), breadth first — the folders nearest the top
  * before deeper ones, so a cap leaves out the deepest — as far as `limits` allows. `step` works for a while; `result`
- * is the walk once it's done, `capped` what stopped it short.
+ * is the walk once it's done, `capped` what stopped it short. Each folder listed is stamped (`times`), for home's
+ * walk kept to tell one changed since.
  */
 export class SlicedWalk {
   private readonly st: WalkState;
@@ -501,14 +563,15 @@ export class SlicedWalk {
   capped: WalkCap | null = null;
 
   /** `from`: the folders to list, the top by default — a walk going on from another, whose mount table it takes;
-   *  `known`: folders walked already, never gone into again. */
+   *  `known`: folders walked already, never gone into again; `stamped: false`, for a walk never kept: no stamps. */
   constructor(
     root: string,
     filter: WalkFilter,
     readonly limits: WalkLimits = HOME_LIMITS,
-    private readonly opts: { from?: string[]; known?: ReadonlySet<string> } = {},
+    private readonly opts: { from?: string[]; known?: ReadonlySet<string>; stamped?: boolean } = {},
   ) {
-    this.st = startWalk(root, filter, true, limits.assets, !opts.from);
+    const { stamped = true } = opts;
+    this.st = startWalk(root, filter, { sorted: true, maxAssets: limits.assets, mounts: !opts.from, stamped });
     this.queue = [...(opts.from ?? [""])];
   }
 
@@ -530,9 +593,16 @@ export class SlicedWalk {
     do {
       if (this.next >= this.queue.length) return this.finish(null);
       if (out.dirs.length >= this.limits.folders) return this.finish("folders");
-      listDir(this.st, this.queue[this.next++]!, (rel) => {
+      const dir = this.queue[this.next++]!;
+      const listed = out.dirs.length;
+      listDir(this.st, dir, (rel) => {
         if (!this.opts.known?.has(rel)) this.queue.push(rel);
       });
+      // One that couldn't be read isn't in the walk: the folder holding it stamped to list again, so it's tried again
+      // at each build till it can be read — a chmod moves no time the walk keeps (#12). Not one the walk had: that one
+      // is to list again itself.
+      if (out.times && dir && out.dirs.length === listed && !this.opts.known?.has(dir) && out.times.has(parentOf(dir)))
+        out.times.set(parentOf(dir), RELIST);
       // Past the cap, not at it: a walk of exactly so many notes left nothing out.
       if (out.files.length > this.limits.notes) {
         out.files.length = this.limits.notes;
@@ -559,7 +629,7 @@ export class SlicedWalk {
  * looked into.
  */
 export function walkTop(root: string, filter: WalkFilter): WalkResult {
-  const st = startWalk(root, filter, true);
+  const st = startWalk(root, filter, { sorted: true });
   listDir(st, "", (rel) => st.out.dirs.push(rel));
   return finishWalk(st);
 }
@@ -596,6 +666,8 @@ export function setFolderReader(read: ((abs: string) => Dirent[]) | null): void 
 /** One folder listed: its notes and files kept, each folder of it given to `descend`, a vault in it skipped. */
 function listDir(st: WalkState, dirRel: string, descend: (rel: string) => void): void {
   const { root, filter, out } = st;
+  // Stamped before it's read: a change while it's read moves its time past the stamp.
+  const stamp = out.times && dirStamp(join(root, dirRel), Date.now());
   let entries: Dirent[];
   try {
     entries = folderReader(join(root, dirRel));
@@ -605,6 +677,7 @@ function listDir(st: WalkState, dirRel: string, descend: (rel: string) => void):
   }
   if (st.sorted) entries.sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
   out.dirs.push(dirRel);
+  if (stamp) out.times?.set(dirRel, stamp);
   for (const entry of entries) {
     const rel = dirRel ? `${dirRel}/${entry.name}` : entry.name;
     const abs = join(root, rel);
@@ -681,6 +754,9 @@ function handleSymlink(abs: string, rel: string, st: WalkState, descend: (rel: s
   const { filter, out, realRoot } = st;
   const v = symlinkVerdict(abs, realRoot);
   if (!v.kept) {
+    // Home's walk: a link whose target can't be looked at now (gone, a disk taken away, not searched) — its folder to
+    // list again, so it's looked at again at each build, and walked once its target is back (#12).
+    if (out.times && (v.reason === "broken symlink" || v.reason === null)) out.times.set(parentOf(rel), RELIST);
     if (v.reason && (!v.special || filter.isNoteName(rel.slice(rel.lastIndexOf("/") + 1))))
       out.skipped.push({ rel, reason: v.reason, ...(v.link ? { link: v.link } : {}) });
     return;
@@ -717,6 +793,8 @@ function addFile(abs: string, rel: string, filter: WalkFilter, out: WalkResult):
     out.files.push({ rel, abs, size: st.size, mtimeMs: st.mtimeMs });
   } catch (err) {
     out.errors.push(`${rel}: ${(err as NodeJS.ErrnoException).code ?? (err as Error).message}`);
+    // Home's walk: a note there but not to be looked at — its folder to list again, so it's tried again (#12).
+    if (lost(err) && out.times) out.times.set(parentOf(rel), RELIST);
   }
 }
 
