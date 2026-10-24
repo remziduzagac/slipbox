@@ -389,8 +389,8 @@ So:
   #54; #42's own test hung every pull request's run until #59): CHANGELOG.md's lines merged, `dev`'s first; the tests
   this reaches pass.
 - 2026-10-24: round 6 of the review, the last: the maintainer now asks for three rounds at most, and a round past the
-  third only to end the one in hand. The code-review skill's, and a fresh reviewer's in the second reviewer's place
-  (Codex stopped at a menu asking to run `gh pr view`; its part skipped, as the maintainer said, not answered for it).
+  third only to end the one in hand. The code-review skill's, a fresh reviewer's in the second reviewer's place (Codex
+  stopped at a menu asking to run `gh pr view`, not answered for it), and Codex's own once its menu was answered.
   - Real, fixed, each with its test: `Overlays.keysGo` missed where `dispatchKey` sends a key that something is
     waiting for — a command of the note's (an operator, a count, `f`'s character), visual mode, resizing panes — so
     Remove…'s question could open over them, the next key answering it (both reviewers); a unit test makes each by its
@@ -411,9 +411,16 @@ So:
     you've gone into another vault (that vault is often another checkout of the same repository, whose Branches it
     updates); one token for every late answer's checks (each answer checks what it would change — a question your keys,
     a selection the panel's use, going into a worktree both).
+  - From Codex: two cases with a unit test and no terminal check. A removal done once another checkout is gone into
+    now has one (the removal held by a file-system monitor in its checkout alone; the branch, opened up there, stays
+    so). A new worktree git is stopped making has one and a unit test of `newWorktreeLater` (a trusted hook printing
+    more than slipbox reads: said stopped, kept with its base, listed and selected).
   - Mutation-checked: each fix undone (six of `keysGo`'s, the news test's against a `listed` waiting for the newest
     list, `whileDrawing` without `finally`), its unit test fails; the terminal check fails without `keysGo`'s command or
-    resize line. Then the reached unit tests, the terminal checks and `check:docs` pass.
+    resize line; the removal's check fails without `still(removing)`; with a stop not known as one, the unit test and
+    the check fail. Not caught: `newWorktreeLater`'s early `left` on a stop — stopped in the hook, the worktree already
+    holds the branch and `git branch -D` refuses it anyway; a stop before that is a window no test opens. Then the
+    reached unit tests, the terminal checks and `check:docs` pass.
 - Follow-up, found by the terminal checks, older than this change: a hook's refusal is said as git's first line, not
   the hook's — `git: Preparing worktree (new branch 'agent/x')`, `… made, but git: Switched to branch 'agent/x'` —
   since `gitReason` (`src/core/gitremote.ts`) falls back to the first line when there's no `fatal:` or `error:` one.

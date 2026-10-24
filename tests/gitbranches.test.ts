@@ -508,6 +508,17 @@ describe("worktrees made and removed (GIT-D9)", () => {
       // Checked out in its worktree: `git branch -D` won't delete it.
       expect(hooked.left).toBe(true);
       expect(git(root, "branch", "--list", "hooked")).toBe("+ hooked\n");
+      // A hook printing more than slipbox reads of git: git stopped partway, said so, and the branch it made left.
+      writeFileSync(
+        join(root, ".git", "hooks", "post-checkout"),
+        "#!/bin/sh\nhead -c 70000000 /dev/zero | tr '\\0' x >&2\n",
+        { mode: 0o755 },
+      );
+      const stopped = await newWorktreeLater(root, join(dir, "c"), "stopped", "main");
+      expect(stopped.why).toStartWith("git printed more than slipbox reads, and was stopped: ");
+      expect(stopped.why).toContain("may hold a worktree half checked out");
+      expect(stopped.left).toBe(true);
+      expect(git(root, "branch", "--list", "stopped")).toContain("stopped");
     } finally {
       setTrust(root, null);
       if (state === undefined) delete process.env.XDG_STATE_HOME;

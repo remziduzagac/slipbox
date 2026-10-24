@@ -16,6 +16,7 @@ import {
   commit,
   gitOk,
   isSelected,
+  lastMessage,
   on,
   panelRow,
   put,
@@ -222,6 +223,70 @@ export const GIT_BRANCHES: Check[] = [
       await s.type("agent/status");
       await s.keys("enter");
       await s.status(/ · agent\/status /);
+    },
+  },
+  {
+    area: "outside-and-code",
+    name: "git branches: a new worktree git is stopped making (a hook printing more than slipbox reads, the vault trusted) — said so, the branch kept with its base, listed and selected",
+    covers: { cases: ["git", "multiple-roots"], commands: ["git.view"] },
+    options: repoAt(
+      (s) => {
+        trail(s);
+        branchWith(s, "dev", { "dev.md": "# Dev\n" });
+        put(s, TRAIL, { ".git/hooks/post-checkout": "#!/bin/sh\nhead -c 70000000 /dev/zero | tr '\\0' x >&2\n" });
+        chmodSync(s.path(`${TRAIL}/.git/hooks/post-checkout`), 0o755);
+      },
+      { config: TRUSTED },
+    ),
+    run: async (s) => {
+      await toPanel(s);
+      // From dev, in a new worktree: git checked it out, then was stopped while the hook printed. Kept, its base dev.
+      await newBranch(s, "agent/stopped", "dev");
+      await s.until(() => isSelected(s, "agent/stopped"), undefined, "agent/stopped selected");
+      await panelRow(s, "Against dev");
+      const got = await lastMessage(s, "and was stopped");
+      s.expect(
+        got.startsWith("git: git printed more than slipbox reads, and was stopped: ") &&
+          got.includes("trail-agent-stopped may hold a worktree half checked out"),
+        `said it was stopped, and what it may have left (${got})`,
+      );
+    },
+  },
+  {
+    area: "outside-and-code",
+    name: "git branches: a worktree's removal done once another checkout is gone into — its branch, opened up there, stays opened up",
+    covers: { cases: ["git", "multiple-roots"], commands: ["git.view", "git.worktrees"] },
+    options: repoAt(
+      (s) => {
+        trail(s);
+        worktree(s, "agent/done");
+        worktree(s, "agent/ahead");
+        // A file-system monitor that takes four seconds in agent/done's checkout alone, the vault and its worktrees
+        // trusted (so git runs it): the removal's own look at what's changed there waits for it, while the keys go on.
+        put(s, TRAIL, { ".git/slow-monitor": '#!/bin/sh\ncase "$PWD" in *agent-done*) sleep 4 ;; esac\nexit 1\n' });
+        chmodSync(s.path(`${TRAIL}/.git/slow-monitor`), 0o755);
+        gitOk(s, TRAIL, "config", "core.fsmonitor", s.path(`${TRAIL}/.git/slow-monitor`));
+      },
+      {
+        config: `${WIDE}[trust]\nroots = ["{home}/work/trail", "{home}/work/trail-agent-done", "{home}/work/trail-agent-ahead"]\n`,
+      },
+    ),
+    run: async (s) => {
+      await toPanel(s);
+      await on(s, "agent/done");
+      await branchButton(s, "agent/done", "[Remove…]");
+      await s.see("Remove the worktree ~/work/trail-agent-done?");
+      // Removed, its branch kept; then into agent/ahead's checkout by :worktrees, in the same keys, before git is done.
+      await s.keys("enter", ":", ..."worktrees", "enter", ..."agent/ahead", "enter");
+      await s.status(/trail-agent-ahead · agent\/ahead /);
+      s.expect(s.rowOf("removed the worktree") < 0, "gone into agent/ahead's checkout before git removed the worktree");
+      await toPanel(s);
+      // Done there: agent/done, merged and in no worktree now, among the older ones — unfolded, still opened up.
+      await panelRow(s, "▸ Merged or older (1)");
+      await said(s, "removed the worktree", "removed the worktree ~/work/trail-agent-done; agent/done kept");
+      await on(s, "Merged or older");
+      await panelRow(s, "▾ Merged or older");
+      await panelRow(s, "[Open in a worktree]");
     },
   },
   {
