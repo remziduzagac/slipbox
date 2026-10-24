@@ -333,7 +333,8 @@ and a drag of its scrollbar. Click it, or press `z p`, again to fit it to the wi
 - A picture's own size is at most one million pixels and 2,048 pixels a side, what slipbox prepares for the screen. A
   bigger one is shown at the most of it that's prepared.
 - With the lens open, a click changes a picture's size and leaves the cursor where it is.
-- With wrapping off, a picture at its own size scrolls sideways with the window.
+- With wrapping off, a picture at its own size scrolls sideways with the window: a sideways wheel, the window's
+  scrollbar, `z h` and `z l` move them both.
 
 - slipbox draws PNG, JPEG, WebP and GIF files. It draws SVG drawings too, turning them into pixels once, at their
   own size.

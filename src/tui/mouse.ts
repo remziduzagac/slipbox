@@ -584,7 +584,7 @@ export class Mouse {
     const d = this.drag!;
     this.drag = null;
     if (d.kind === "picture") {
-      // As any click: the selection, and visual mode, end.
+      // As any click: a selection, and visual mode, end — whether the picture's still there or not.
       d.view.visual = null;
       d.view.sel = null;
       return this.app.pictures.toggle(d.view, d.row, d.file);

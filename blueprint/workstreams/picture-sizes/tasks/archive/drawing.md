@@ -1,5 +1,5 @@
 ---
-status: review
+status: done
 assignee: claude-52
 blocked_by: [PIC-T2]
 tracker: [gh:#52]
@@ -41,3 +41,5 @@ while a window's size changes.
   shortcut; a sideways step counts for sixel. Each piece undone once fails its test.
 - 2026-10-24, review round 1: a drawing's indent from its first row (it was the first row shown); only pictures of a
   file in `Geometry.pictures`; an SVG rasterised once at its own size. notes.md § Review, round 1.
+- 2026-10-24, review round 2: the rest only for a resize that changes a picture in sight; a code block's sideways
+  offset no step for sixel; an SVG read once per change of its file.

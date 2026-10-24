@@ -1119,7 +1119,7 @@ it back to the terminal.
 | a note, the wheel | scrolls (a sideways wheel scrolls sideways when wrapping is off) |
 | a code block too wide, a sideways wheel, or the wheel with `shift` | scrolls the block sideways |
 | a picture | a click shows it at its own size, and another fits it to the window again |
-| a picture at its own size, a sideways wheel, or the wheel with `shift` | scrolls the picture sideways |
+| a picture at its own size, a sideways wheel or the wheel with `shift` | scrolls it sideways (unwrapped, the window) |
 | the tab strip, the wheel | switches to the next or the previous tab |
 | the explorer | a click selects a note, a double-click opens it as a tab, and a click on a folder folds or unfolds it |
 | the explorer's breadcrumb | a click on a folder zooms the view to it ([Files](files.md#the-view)) |

@@ -134,3 +134,37 @@ the code (file and line) before it was taken:
   or by history; wrapping off with the lens open. 7/7. The resets on a file between are caught by the unit tests: the
   running app drops a note's buffer once no window shows it, so a check passes either way.
 
+## Review, round 2 (2026-10-24), the last
+
+Codex was still at its menu: a fresh Claude reviewer took its part again, beside `/code-review`, on the rebased diff.
+The maintainer asked that evening for at most three rounds, the round in hand finished and then the hand-over; this
+round is the last. Checked against the code, then:
+
+- **Taken, fixed, each with a unit test that fails without its fix** (`tmp/issue/mutations.log`):
+  - a size that holds its room's rows exactly came out a row more from a rounding hair (a 4,000 × 3,000 photo, 28 rows
+    in a room of 27; the floor 13 rows): rounded up less 1e-9;
+  - with sixel, a code block scrolled sideways held a view's pictures back: only pictures' own offsets count as a step;
+  - any resize held every picture back for 120 ms, a click on one then missed: only one that changes a picture in
+    sight's size does, and a toggle never;
+  - a release on a picture gone since the press toggled the one now on its row: nothing;
+  - `z p` in visual mode stretched the selection to the `▣` line: it ends it, as a click does;
+  - `z p` on an undrawn picture's line, with the lens open, in source mode, and `z h` on a drawing said the wrong
+    thing: each says what's so;
+  - an SVG file was read and hashed at every layout: once per change of the file;
+  - two tests that couldn't fail (`view.height` set where sizing reads `pictureRows`): they set what's read;
+  - the docs said the wheel with `shift` scrolls a picture with wrapping off: the window does, the docs say so;
+    `pictureKey` declared on the note's render options; a test measured text by code points (`stringWidth` now).
+- **Not taken, for later** (small; none wrong in what users see today, or rare):
+  - a renamed note drops its pictures back to fitted (a new buffer; a code block's offset is lost the same way);
+  - in a pane narrower than the layout's least width with wrapping on, a picture just wider than the window neither
+    scrolls nor fits;
+  - the decoding budget is written twice, in `images.ts` and in `opentui.ts`'s worker: one source would keep them in
+    step;
+  - a note without pictures is laid out twice on its first draw (`asksPictures` unknown before), and a remote picture
+    never fetched still counts as asking;
+  - a caption is wrapped twice, to count and to draw; the lens builds the pictures' key at every layout;
+    `pictureRows` is worked out twice in `draw-pane.ts`.
+- **Terminal checks:** `z p` in visual mode and on an undrawn picture's line in the first check; the lens check opens
+  the lens view itself now (an `i` then `escape` had closed it) below the picture, and checks `z p`'s message there.
+  7/7. The lens's `extent` is caught by its unit test: the lens's own rows were wider than the picture there.
+

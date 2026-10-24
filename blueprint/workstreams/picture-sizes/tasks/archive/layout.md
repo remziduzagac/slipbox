@@ -1,5 +1,5 @@
 ---
-status: review
+status: done
 assignee: claude-52
 blocked_by: [PIC-T1]
 tracker: [gh:#52]
@@ -49,3 +49,4 @@ Lay a note's pictures out for the window that shows it: its room, its rows, the 
 - 2026-10-24, review round 1: the lens keeps its lines when only the pictures' key changes; its composed layout
   keeps `extent`; pictures are fitted to the window's rows with find's row closed (`View.pictureRows`); the own set
   is dropped where a window's file changes (`App.open`, `showLoc`). notes.md § Review, round 1.
+- 2026-10-24, review round 2: `pictureKey` declared on `NoteRenderOptions`.

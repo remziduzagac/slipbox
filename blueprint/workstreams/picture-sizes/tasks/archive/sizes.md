@@ -1,5 +1,5 @@
 ---
-status: review
+status: done
 assignee: claude-52
 blocked_by: []
 tracker: [gh:#52]
@@ -37,3 +37,4 @@ whether they differ. Drawings (`DRAWING_ROWS`) keep their own sizing.
   `tests/pictures.test.ts` § a picture's two sizes. Undone once each, the floor, the height bound, the caption's rows
   and the budget fail their tests (`tmp/issue/mutations.log`).
 - 2026-10-24, review round 1: Obsidian's `|0` is the file's own size, not NaN.
+- 2026-10-24, review round 2: a size that holds its room's rows exactly no longer comes out a row more.

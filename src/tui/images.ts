@@ -49,7 +49,9 @@ export function pictureSizes(
 ): { fit: Cells; own: Cells } {
   const b = Math.min(1, SCREEN_SIDE / w, SCREEN_SIDE / h, Math.sqrt(SCREEN_PIXELS / (w * h)));
   const [pw, ph] = [w * b, h * b];
-  const rowsOf = (cols: number) => Math.max(1, Math.ceil((cols * cell.width * ph) / pw / cell.height));
+  // (Less a hair before rounding up: the budget's scale is irrational, and a column count that holds exactly `r` rows
+  // would otherwise come out `r + 1e-15` rows, one row more than its room.)
+  const rowsOf = (cols: number) => Math.max(1, Math.ceil((cols * cell.width * ph) / pw / cell.height - 1e-9));
   // The columns `rows` rows hold, a fraction.
   const colsOf = (rows: number) => (rows * cell.height * pw) / ph / cell.width;
   const ownCols = Math.max(1, Math.ceil(pw / cell.width));

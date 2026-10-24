@@ -1,5 +1,5 @@
 ---
-status: review
+status: done
 assignee: claude-52
 blocked_by: []
 related: [PIC-T4]
@@ -32,3 +32,5 @@ The user docs and the changelog say what users see.
   (Added, Changed). `docs/images/obsidian-home.png` retaken: `dal.png` at Obsidian's 300 pixels, 38 columns (it was
   30, under the 12-row cap). `bun run test:docs` passes.
 - 2026-10-24, review round 1: reading.md says an SVG is turned into pixels once, at its own size.
+- 2026-10-24, review round 2: keys.md and reading.md say the wheel and `z h` / `z l` move the window with wrapping
+  off.

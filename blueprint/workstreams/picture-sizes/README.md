@@ -1,5 +1,5 @@
 ---
-status: active
+status: complete
 created: "2026-10-24"
 branch: feat/issue-52
 ---
@@ -18,4 +18,7 @@ and the code blocks that scroll sideways (D233).
 - [research.md](research.md): what the code and the protocols allow, read before designing.
 - [decisions.md](decisions.md): PIC-D1 to PIC-D6, taken as recommended while the maintainer was away.
 - [notes.md](notes.md): how it was discussed, the options weighed, Codex's critique.
-- [tasks/](tasks/README.md): the work, a task per file.
+- [tasks/](tasks/README.md): the work, a task per file, all done.
+
+Complete (2026-10-24): built, tested and reviewed in two rounds (notes.md), in pull request #61; waiting for the
+maintainer to confirm PIC-D1 to PIC-D6 and to consolidate it into the root's requirements and design.

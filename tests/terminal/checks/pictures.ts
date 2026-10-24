@@ -79,7 +79,7 @@ const ALT = "The route planner on a laptop";
 export const PICTURES: Check[] = [
   {
     area: "reading",
-    name: "pictures: fitted to the window; a click or z p shows one at its own size, z h, z l and the wheel scroll it, a click fits it again",
+    name: "pictures: fitted to the window; a click or z p shows one at its own size, z h, z l and the wheel scroll it, a click fits it again; one not there says why",
     covers: { cases: ["inline"], commands: ["picture.size", "picture.scroll_left", "picture.scroll_right"] },
     options: { home: true, startAt: NOTES, size: { cols: 100, rows: 40 }, graphics: true },
     run: async (s) => {
@@ -114,6 +114,15 @@ export const PICTURES: Check[] = [
       await drawn(s, (p) => p.rows.length > rows, "z p: at its own size");
       await s.keys("z", "p");
       await drawn(s, (p) => p.rows.length === rows, "z p again: fitted");
+      // z p in visual mode, from its ▣ line: the selection ends, the picture at its own size.
+      await s.keys("v", "z", "p");
+      await drawn(s, (p) => p.rows.length > rows, "z p in visual mode: at its own size");
+      await s.until(() => !/VISUAL/.test(s.statusLine()), undefined, "visual mode ended");
+      // On the ▣ line of a picture that isn't there: why it isn't drawn.
+      await s.keys("/");
+      await s.type("The offline banner");
+      await s.keys("enter", "escape", "z", "p");
+      await s.message(/isn't drawn/);
     },
   },
   {
@@ -252,13 +261,21 @@ export const PICTURES: Check[] = [
       const fitted = await drawn(s, (p) => p.rows.includes(0) && left(p) === 0, "the screenshot drawn");
       await click(s, fitted.x + 3, fitted.y + 2);
       await s.message(/own size/);
-      const own = await drawn(s, (p) => p.rows.length > fitted.rows.length, "at its own size");
-      // The lens open on the paragraph above it; the wheel sideways over the picture, to the window's end.
-      await s.keys("k", "k", "i", "escape");
+      await drawn(s, (p) => p.rows.length > fitted.rows.length, "at its own size");
+      // The lens open on the paragraph below it; z p says a click does it there; the wheel sideways over the picture,
+      // to the window's end.
+      // (Below the picture: the lens grows downward first, and the picture above stays drawn.)
+      await s.keys("/");
+      await s.type("When you have no signal");
+      await s.keys("enter", "escape");
+      await leader(s, "n", "l");
+      await s.keys("z", "p");
+      await s.message(/lens open/);
+      const shown = await drawn(s, (p) => p.rows.length > 0, "the picture still drawn above the lens");
       // A notch at a time: the window may go on past it (the lens's own rows can be wider).
       let edge = false;
       for (let k = 0; k < 40 && !edge; k++) {
-        await s.send(`\x1b[<67;${own.x + 4};${own.y + 3}M`);
+        await s.send(`\x1b[<67;${shown.x + 4};${shown.y + 1}M`);
         await s.settle();
         const p = first(s);
         edge = !!p && Math.max(...p.cols) === 168;

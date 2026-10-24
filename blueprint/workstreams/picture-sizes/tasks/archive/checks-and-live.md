@@ -1,5 +1,5 @@
 ---
-status: review
+status: done
 assignee: claude-52
 blocked_by: []
 related: [PIC-T1, PIC-T2, PIC-T3, PIC-T4]
@@ -42,3 +42,5 @@ Every case driven through slipbox in a headless terminal with Kitty's graphics, 
   (a scratch worktree at the base): not this work's.
 - 2026-10-24, review round 1: three checks more (find and visual mode; a file shown as its source between; wrapping
   off with the lens open), 7/7; CI's scope runs every check for the picture files, which others share.
+- 2026-10-24, review round 2: the first check covers `z p` in visual mode and an undrawn picture; the lens check
+  opens the lens view itself. 7/7.

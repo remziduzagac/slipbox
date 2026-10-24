@@ -9733,7 +9733,7 @@ describe("pictures (12.x)", () => {
       const past = 13;
       expect(rows).toBeGreaterThan(past + 1);
       // Centred, as from its top: its indent is its first row's alone.
-      const indent = layout.lines[first]!.spans.reduce((w, sp) => w + [...sp.text].length, 0);
+      const indent = layout.lines[first]!.spans.reduce((w, sp) => w + stringWidth(sp.text), 0);
       expect(indent).toBeGreaterThan(0);
       h.app.view!.top = first + past;
       const x = h.app.geometry!.panes[0]!.textX + indent;
@@ -9753,6 +9753,9 @@ describe("pictures (12.x)", () => {
       h.app.mouse.handle({ type: "up", x: pane.textX + 2, y, button: 0 });
       expect(h.app.view!.cur.row).toBe(first);
       expect(h.app.messages.some((m) => m.text.includes("no picture here"))).toBe(false);
+      // z l on it: no picture of a file to scroll, said so (not "it fits the window").
+      await h.keys("z", "l");
+      expect(h.app.messages.at(-1)!.text).toContain("no picture here");
     });
     test("rasterised once: drawn from the cache after, not rasterised again", async () => {
       const { h, layout } = await at("# D\n\n![chart](chart.svg)\n", undefined, { "chart.svg": SVG });

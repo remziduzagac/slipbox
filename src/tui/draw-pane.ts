@@ -436,7 +436,7 @@ export function drawPane(
       if (view === app.view) geo.cursor = { x: textX - view.left - shift + view.cur.col, y };
     }
   }
-  if (c.image && app.pictures.now(view)) drawPictures(app, c, view, layout, shown, body.y, textX, textW, geo);
+  if (c.image && app.pictures.now(view, layout)) drawPictures(app, c, view, layout, shown, body.y, textX, textW, geo);
 
   if (hbar) {
     const r = { x: textX, y: body.y + body.h, w: textW, h: 1 };

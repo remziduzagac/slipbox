@@ -1,5 +1,5 @@
 ---
-status: review
+status: done
 assignee: claude-52
 blocked_by: [PIC-T2]
 tracker: [gh:#52]
@@ -38,3 +38,5 @@ A click on a picture, `z p`, `z h` and `z l`, and the wheel and the bar of a pic
   (a unit test and a check).
 - 2026-10-24, review round 1: a click ends a selection and visual mode; the release finds its picture by file; a
   click on a drawing places the cursor again. notes.md § Review, round 1.
+- 2026-10-24, review round 2: `z p` ends visual mode; a release on a gone picture toggles nothing; the messages say
+  what's so (undrawn, the lens, source mode, a drawing).

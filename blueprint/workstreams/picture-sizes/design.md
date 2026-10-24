@@ -111,7 +111,9 @@ After § UI settings (and its § Code blocks that scroll):
 >   link. A picture whose two sizes are one (it fits whole) stays as it is, and the message says so. With the lens
 >   open, a click changes its size and leaves the cursor, and the lens, where they are: on the picture's line, the lens
 >   would show its markdown instead. Where no pictures are drawn (a terminal that draws none, `[render] images =
->   "never"`), `z p` says so rather than where to go. The `z` group's which-key line names `p`, `h` and `l`.
+>   "never"`), `z p` says so rather than where to go; on the `▣` line of a picture not drawn (not found, not
+>   fetched), why; with the lens open or in source mode, where it acts. The `z` group's which-key line names `p`, `h`
+>   and `l`.
 > - **Scrolled sideways.** Wider than its room, it scrolls as a code block does (§ Code blocks that scroll), its frame
 >   rows a block of their own — its `▣` rows aren't in it, but name it, so the cursor on them never moves its offset:
 >   a sideways wheel or trackpad over it, or the wheel with `shift`, 6 columns a notch; its `▄` bar, on the row under
@@ -127,10 +129,12 @@ After § UI settings (and its § Code blocks that scroll):
 >   offset is kept as a code block's (by its line and how many blocks start there), clamped as the window narrows.
 > - **A window resized** fits its fitted pictures again; one at its own size stays so, its offset clamped, and once
 >   it fits whole its bar goes — it's still at its own size should the window narrow again. Once a window has been
->   drawn, a change to its size holds its pictures back, whatever the protocol, until the size has rested 120 ms,
->   then draws them at the size it ended at: a separator dragged sends Kitty each picture once. The rest is the
+>   drawn, a change to its size that changes the size of a picture in sight holds its pictures back, whatever the
+>   protocol, until the size has rested 120 ms, then draws them at the size it ended at: a separator dragged sends
+>   Kitty each picture once. A resize that leaves every picture in sight its size (a panel opened beside a picture
+>   bound by its width) holds nothing back, nor does a picture shown at another size by a click. The rest is the
 >   window's own, beside the rest after quick scrolling, and checked before Kitty's placeholders, which never wait for
->   scrolling.
+>   scrolling; for that rest, a step sideways is a picture's own offset or the window's, never a code block's.
 > - **Wrapping off.** The window scrolls sideways as a whole (§ Screen layout). A picture is fitted to the window,
 >   not to the note's natural width. One at its own size scrolls with the window, with no bar of its own: the
 >   window's sideways extent reaches its right edge, the prose laid out as it was, and `z h` and `z l` then scroll the

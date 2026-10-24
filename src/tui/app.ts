@@ -171,8 +171,9 @@ export interface View {
   /** First row on screen. */
   top: number;
   /** Its pictures (12.7): where they were last drawn (its top, how far it and its pictures are scrolled sideways),
-   *  when it last scrolled, and whether they wait for it to rest; its size, and when that last changed (PIC-D5). */
-  pictures?: { top: string; at: number; wait: boolean; size?: string; sizedAt?: number };
+   *  when it last scrolled, and whether they wait for it to rest; its size, the sizes of those in sight, and when a
+   *  resize last changed one (PIC-D5). */
+  pictures?: { top: string; at: number; wait: boolean; size?: string; sizes?: Map<string, string>; sizedAt?: number };
   /** The pictures it shows at their own size (PIC-D4), by their files, while it shows `buf`: another note shown, they're
    *  fitted again. */
   picturesOwn?: { buf: NoteBuffer; files: Set<string> };

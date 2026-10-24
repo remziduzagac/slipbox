@@ -3,7 +3,7 @@
 // drawing of the part that shows.
 
 import { describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, statSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, statSync, utimesSync, writeFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import { OptimizedBuffer } from "@opentui/core";
 import { loadRasterizer } from "../src/core/svg.ts";
@@ -167,7 +167,7 @@ describe("fitted to its window (PIC-D1)", () => {
     // Without pictures: the same layout whatever the height.
     const plain = await open({ md: `# P\n\n${PARAS.join("\n\n")}\n` });
     const before = layoutOf(plain.h);
-    plain.v.height -= 7;
+    plain.v.pictureRows = (plain.v.pictureRows ?? plain.v.height) - 7;
     expect(layoutOf(plain.h)).toBe(before);
   });
   test("one only in an embedded note asks for the window's height too", async () => {
@@ -347,7 +347,7 @@ describe("how long it stays at its own size (PIC-D4)", () => {
     h.app.watch.reloadBuffer(v.buf);
     expect(rowsOf(layoutOf(h)).p.own).toBe(true);
     // Resized: still at its own size.
-    v.height = 20;
+    v.pictureRows = 20;
     expect(rowsOf(layoutOf(h)).p.own).toBe(true);
     // Another note, then back: fitted.
     writeFileSync(join(root, "q.md"), "# Q\n\nElse.\n");
@@ -728,5 +728,133 @@ describe("found in review (PIC, round 1)", () => {
     const drawn = drawAt(80);
     expect(drawn).toHaveLength(1);
     expect(drawn[0]!.cols).toBe(rowsOf(layoutOf(h)).p.cols);
+  });
+});
+
+describe("found in review (PIC, round 2)", () => {
+  test("a size that holds its room's rows exactly is that many rows, not one more; the floor is 12 rows", () => {
+    // 4,000 × 3,000 in 27 rows: 72 columns hold exactly 27 rows — never 28 from a rounding hair.
+    expect(pictureSizes(4000, 3000, { cols: 300, rows: 27 }, CELL).fit.rows).toBeLessThanOrEqual(27);
+    expect(pictureSizes(2560, 768, { cols: 300, rows: 5 }, CELL).fit.rows).toBe(FLOOR_ROWS);
+    for (const [w, h] of [
+      [1600, 800],
+      [800, 1600],
+      [1920, 768],
+      [1440, 720],
+      [3000, 1200],
+    ] as const)
+      for (let rows = 13; rows < 60; rows++) {
+        const { fit } = pictureSizes(w, h, { cols: 400, rows }, CELL);
+        // (A tall picture at the 20-column floor is taller than its room by design.)
+        expect([w, h, rows, fit.rows <= rows || fit.cols === FLOOR_COLS]).toEqual([w, h, rows, true]);
+      }
+  });
+  test("with sixel, a code block scrolled sideways doesn't hold the view's pictures back", async () => {
+    const code = `\`\`\`\n${"x".repeat(300)}\n\`\`\``;
+    const md = `# P\n\n${code}\n\n![a screenshot](shot.png)\n\nAfter.\n`;
+    const { h, v } = await open({ md });
+    let t = 10_000;
+    (h.app as unknown as { now: () => number }).now = () => t;
+    v.pictures = undefined;
+    expect(h.canvas().images).toHaveLength(1);
+    const row = layoutOf(h).lines.findIndex((l) => l.scroll && !l.pic);
+    const pane = h.app.geometry!.panes[0]!;
+    for (let k = 0; k < 3; k++) {
+      t += 20;
+      h.app.mouse.handle({
+        type: "scroll",
+        x: pane.textX + 5,
+        y: pane.y + row - v.top,
+        button: 0,
+        scroll: { direction: "right", delta: 1 },
+      });
+      expect(h.canvas().images).toHaveLength(1);
+    }
+    expect(h.app.code.offset(v, layoutOf(h), row)).toBeGreaterThan(0);
+  });
+  test("z p on the ▣ line of a picture that isn't drawn says why; z p in visual mode ends it", async () => {
+    const { h, v } = await open({
+      md: `# P\n\n![gone](missing.png)\n\n![a screenshot](shot.png)\n\n${PARAS.join("\n\n")}\n`,
+    });
+    h.app.moveCursor(v, { row: layoutOf(h).lines.findIndex((l) => lineText(l).includes("▣ gone")), col: 0 });
+    await h.keys("z", "p");
+    expect(h.app.messages.at(-1)!.text).toContain("isn't drawn");
+    h.app.moveCursor(v, { row: layoutOf(h).lines.findIndex((l) => lineText(l).includes("Paragraph 2,")), col: 0 });
+    await h.keys("v", "k", "k", "k");
+    h.app.moveCursor(v, { row: rowsOf(layoutOf(h)).caption[0]!, col: 0 }, { extend: true });
+    expect(v.visual).toBe("char");
+    await h.keys("z", "p");
+    expect(v.visual).toBeNull();
+    expect(v.sel).toBeNull();
+    expect(rowsOf(layoutOf(h)).p.own).toBe(true);
+  });
+  test("an SVG's file is read once while it's unchanged: a height changed lays it out without reading it again", async () => {
+    await loadRasterizer();
+    const root = makeVault();
+    const svg =
+      '<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1600"><rect width="800" height="1600"/></svg>';
+    writeFileSync(join(root, "p.md"), "# P\n\n![a drawing](tall.svg)\n");
+    writeFileSync(join(root, "tall.svg"), svg);
+    // A whole second for its time, so it can be set back exactly.
+    utimesSync(join(root, "tall.svg"), 1_700_000_000, 1_700_000_000);
+    const h = await harness({ root, open: "p.md", width: 100, height: 40, images: terminal({}) });
+    const drawn = () => layoutOf(h).lines.find((l) => l.image)?.image;
+    for (let i = 0; i < 60 && !drawn(); i++) {
+      await Bun.sleep(50);
+      h.app.view!.buf.invalidateLayouts();
+    }
+    const first = drawn()!;
+    // Its text gone from the file, its time kept: what's read and kept is the SVG that was there.
+    const file = join(root, "tall.svg");
+    writeFileSync(file, "not an svg any more, and longer than it was so the size changes too");
+    utimesSync(file, 1_700_000_000, 1_700_000_000);
+    h.app.view!.pictureRows = 20;
+    const after = drawn()!;
+    expect(after.src).toBe(first.src);
+    expect(after.rows).toBeLessThan(first.rows);
+  });
+});
+
+describe("found in review (PIC, round 2, the rest)", () => {
+  test("a resize that leaves the pictures in sight their size holds nothing back", async () => {
+    // Bound by its width: a shorter window leaves it its size.
+    const { h, v } = await open({ height: 60, placeholders: true });
+    let t = 10_000;
+    (h.app as unknown as { now: () => number }).now = () => t;
+    const drawAt = (rows: number) => {
+      const c = new TextCanvas(100, rows);
+      h.app.draw(c);
+      return c.images;
+    };
+    v.pictures = undefined;
+    const before = drawAt(60);
+    expect(before).toHaveLength(1);
+    t += 1000;
+    const after = drawAt(56);
+    expect(after).toHaveLength(1);
+    expect(after[0]!.wide).toBe(before[0]!.wide);
+  });
+  test("a release on a picture gone since the press toggles nothing, not the picture now on its row", async () => {
+    const md = (first: boolean) =>
+      `# P\n\n${first ? "![first](shot.png)\n\n" : ""}![second](other.png)\n\n${PARAS.join("\n\n")}\n`;
+    const { h, v, root } = await open({ md: md(true), files: { "shot.png": SHOT, "other.png": SHOT } });
+    const r = drawnRect(h);
+    h.app.mouse.handle({ type: "down", x: r.x + 1, y: r.y + 1, button: 0 });
+    writeFileSync(join(root, "p.md"), md(false));
+    h.app.watch.reloadBuffer(v.buf);
+    layoutOf(h);
+    h.app.mouse.handle({ type: "up", x: r.x + 1, y: r.y + 1, button: 0 });
+    expect(rowsOf(layoutOf(h), "other.png").p.own).toBeUndefined();
+  });
+  test("z p with the lens open, or in source mode, says where it acts", async () => {
+    const { h, v } = await open({ config: (c) => (c.editor.edit_in = "live") });
+    h.app.moveCursor(v, { row: layoutOf(h).lines.findIndex((l) => lineText(l).includes("Paragraph 3,")), col: 0 });
+    await h.keys("i", "escape");
+    v.live = true;
+    await h.keys("z", "p");
+    expect(h.app.messages.at(-1)!.text).toContain("with the lens open");
+    h.app.lens.setViewMode(v, "source");
+    await h.keys("z", "p");
+    expect(h.app.messages.at(-1)!.text).toContain("rendered view");
   });
 });
