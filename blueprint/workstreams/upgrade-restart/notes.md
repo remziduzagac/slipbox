@@ -70,3 +70,15 @@ The open questions, asked one at a time, each with what was proposed and the oth
 design.md, requirements.md and ideas.md were changed to match: the checkbox, its config editor (`core/config-edit.ts`)
 and the change to tui.md § UI settings gone; the restart's question added to § Restarting and the dialog; `:upgrade`
 added to § The update offer.
+
+## Taken as recommended while the maintainer was away (2026-10-24)
+
+The maintainer was away from the morning of 2026-10-24's work on, and asked for the recommended option wherever a
+question would have gone to them, recorded where its answer would go. The design itself was approved before that, with
+the seven answers above; nothing since has needed a question.
+
+## The review (2026-10-24)
+
+Codex's part was skipped: asked to review `git diff origin/dev...` (`tmp/issue/codex-review-1.md`), it had hit its
+usage limit and stopped at a menu. A fresh Claude reviewer did its part from the same request, then `/code-review`
+reviewed the branch.

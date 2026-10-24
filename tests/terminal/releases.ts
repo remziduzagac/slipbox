@@ -64,7 +64,8 @@ export function buildReleases(dir: string): Releases {
   rmSync(copy, { recursive: true, force: true });
   mkdirSync(copy);
   cpSync(join(REPO, "src"), join(copy, "src"), { recursive: true });
-  for (const f of ["package.json", "tsconfig.json"]) if (existsSync(join(REPO, f))) cpSync(join(REPO, f), join(copy, f));
+  for (const f of ["package.json", "tsconfig.json"])
+    if (existsSync(join(REPO, f))) cpSync(join(REPO, f), join(copy, f));
   // What the sources import from beside them: the packages, the grammars, the skill.
   for (const d of ["node_modules", "grammars", "skills"]) symlinkSync(join(REPO, d), join(copy, d));
   const versionFile = join(copy, "src", "version.ts");
