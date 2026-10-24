@@ -156,6 +156,10 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 - A task toggled (`ctrl+l`) in a note you're just looking at through a symlink isn't written through it, and in a
   vault a note too big to index, opened through a symlink you follow, is never saved through it. 0.5.0 wrote both
   where the link leads, out of the vault.
+- An export says it's written as soon as its file is in place, before its temporary files are removed, and Cancel
+  export chosen meanwhile says no export is running. It said nothing, and the export went on to say it was written.
+  A warning that those files couldn't be removed is now the newest message, no longer pushed down at once by the
+  export's.
 
 ## [0.5.0] - 2026-10-22
 

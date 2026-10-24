@@ -28,12 +28,14 @@ An export prepares in the background, so you can keep reading and editing. Its m
 assembling or writing. It takes as long as it needs: a long book, or many photos to convert, can take minutes. Two
 exports prepare at once, and one you start while two are preparing waits its turn. To stop unfinished exports before the
 completed document is published, open the command palette (`:`) and choose **Cancel export**. Quitting stops them too.
-The command line waits for its export to finish.
+Once its file is in place, an export is over and says so: Cancel export then says no export is running. The command
+line waits for its export to finish.
 
 Export output is prepared in temporary files in slipbox's cache folder, then copied into place without holding a second
 complete copy in the interface's memory. This needs extra disk space there; the temporary files are removed when the job
-finishes or is cancelled. Individual pictures and Word's encoder can still need substantial memory. Large notes and
-books are not rejected by a fixed export-size or time limit.
+finishes or is cancelled. If they can't be removed once the file is written, a warning says so after the export's own
+message. Individual pictures and Word's encoder can still need substantial memory. Large notes and books are not
+rejected by a fixed export-size or time limit.
 
 ## Exporting a note
 

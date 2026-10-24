@@ -49,10 +49,13 @@ CLI and TUI use `prepareExport` and `PreparedExport.publish`.
 Two jobs run at once; another waits its turn, in order, and is never refused. A job has no deadline: a long book, or
 many pictures to convert, takes as long as it needs. Cancellation or a worker failure settles it, terminates its worker
 and removes its staged files. The named `note.export_cancel` command cancels every TUI job, running or waiting; quitting
-cancels them too. The target's note/overwrite checks run again in the owning CLI/TUI immediately before publication. The
-check runs again after copying and immediately before each rename. The TUI keeps the original graph and its state
-directory even if the user changes roots while the job runs. A queued progress message or result cannot revive a settled
-job.
+cancels them too. A TUI job is over as soon as a cancel can no longer stop it (its document's rename begun, the signal
+not read again), or once its publication fails or is stopped, and says so before its staging is cleared: a cancel from
+then on finds none running (`no export is running`), and the cleanup's warning, if it fails, comes after what the job
+said. One that fails or is stopped while it's prepared says so once its staging is removed. The target's note/overwrite
+checks run again in the owning CLI/TUI immediately before publication. The check runs again after copying and
+immediately before each rename. The TUI keeps the original graph and its state directory even if the user changes roots
+while the job runs. A queued progress message or result cannot revive a settled job.
 
 ### Output streaming and publication
 
@@ -157,7 +160,9 @@ lower retained output memory; these single-run timings are evidence of the trade
 - Unsaved notes are saved first, as every hand-off does (`4.10`), since the export reads the notes from disk. One that
   can't be saved stops it, said as `space s c` says it: `export: x.md changed on disk while unsaved — ␣ n c resolves
   it first`.
-- While it's written, `exporting to rep.docx…`; then `exported rep.md to rep.docx (Word (.docx))`, or why it wasn't.
+- While it's written, `exporting to rep.docx…`; then `exported rep.md to rep.docx (Word (.docx))` as soon as the file
+  is in place, or why it wasn't. A cleanup that fails after that, once the export has reached publication, says
+  `export cleanup: …`, the newest message (§ Background jobs).
 
 ## Earlier exports
 

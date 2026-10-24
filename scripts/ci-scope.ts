@@ -108,7 +108,7 @@ export const SAMPLES_FOR: Record<string, { tests: string[]; checks: string[] }> 
   // A script the spelling checks preload into slipbox, to hold its spell checker's thread: named by a check, it would
   // count as the checks' harness; theirs, not every check's.
   "tests/terminal/spell-hold.ts": { tests: [], checks: ["spelling"] },
-  // Likewise the script an export check preloads, to hold an export's staging before it's cleared.
+  // Likewise the script an export check preloads, to hold an export's staging before it's cleared, or its publication.
   "tests/terminal/export-hold.ts": { tests: [], checks: ["export"] },
 };
 

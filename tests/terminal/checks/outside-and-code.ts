@@ -162,6 +162,23 @@ async function format(s: Session, note: string, name: string): Promise<void> {
   await s.keys("enter");
 }
 
+/** Where `tests/terminal/export-hold.ts`, preloaded, holds the first export: "waiting", then "let go". */
+const hold = (s: Session) =>
+  existsSync(join(s.dir, "hold-state")) ? readFileSync(join(s.dir, "hold-state"), "utf8") : "";
+/** The preload that holds the first export's cleanup (with `EXPORT_HOLD_AT: "publication"`, its publication) till the
+ *  check lets it go (`hold-go`), and its files. */
+const HOLD = {
+  preload: "tests/terminal/export-hold.ts",
+  env: { EXPORT_HOLD_GO: "{dir}/hold-go", EXPORT_HOLD_STATE: "{dir}/hold-state" },
+};
+
+/** Cancel export, from the palette. */
+async function cancelExport(s: Session): Promise<void> {
+  await s.keys(":");
+  await s.type("Cancel export");
+  await s.keys("enter");
+}
+
 const CONFLICT = "changed on disk, and you have unsaved changes";
 /** An agent's line appended to the meeting note. */
 const append = (s: Session, line: string) => s.write(MEETING, `${s.read(MEETING)}\n${line}\n`);
@@ -1494,9 +1511,8 @@ export const OUTSIDE_AND_CODE: Check[] = [
     name: "export: where you exported last — kept once the file is written, so the window opened while its staging is cleared opens there; one that can't be written leaves it as it was",
     covers: { commands: ["note.export"] },
     options: {
-      // The export's staging cleared only when the check says (`tests/terminal/export-hold.ts`, preloaded).
-      preload: "tests/terminal/export-hold.ts",
-      env: { EXPORT_HOLD_GO: "{dir}/hold-go", EXPORT_HOLD_STATE: "{dir}/hold-state" },
+      // The export's staging cleared only when the check says.
+      ...HOLD,
       // A folder to export into, one that can't be written.
       setup: (s) => {
         for (const dir of ["out", "ro"]) mkdirSync(s.path(dir));
@@ -1504,16 +1520,14 @@ export const OUTSIDE_AND_CODE: Check[] = [
     },
     run: async (s) => {
       const window = /[│┃] out\/ +[│┃]/; // the window's folder: out/
-      const held = () => (existsSync(join(s.dir, "hold-state")) ? readFileSync(join(s.dir, "hold-state"), "utf8") : "");
-      // Into out/: the file written, its staging held, the export not over.
+      // Into out/: the file written, its staging held.
       await format(s, "home.md", "word");
       await s.see("Name: home.docx");
       await s.keys("ctrl+u");
       await s.type("out/home.docx");
       await s.keys("enter");
       await exported(s, "out/home.docx", "PK\x03\x04");
-      await s.until(() => held() === "waiting", 15000, "the export's staging held");
-      await s.notSee("exported home.md", 500);
+      await s.until(() => hold(s) === "waiting", 15000, "the export's staging held");
       // The window opened meanwhile: at out/, Last export among the places.
       await format(s, "home.md", "word");
       await s.see(window);
@@ -1521,7 +1535,7 @@ export const OUTSIDE_AND_CODE: Check[] = [
       await s.keys("escape");
       await s.notSee("Name: home.docx");
       writeFileSync(join(s.dir, "hold-go"), "");
-      await s.message("exported home.md");
+      await s.until(() => hold(s) === "let go", 15000, "the export's staging let go");
       // Into a folder that can't be written: said, and not where you exported last.
       chmodSync(s.path("ro"), 0o555);
       try {
@@ -1539,6 +1553,86 @@ export const OUTSIDE_AND_CODE: Check[] = [
       await s.see("Last export");
       await s.keys("escape");
       await s.notSee("Name: home.docx");
+    },
+  },
+  {
+    area: "outside-and-code",
+    name: "export: over once its file is written — said while its staging is cleared, Cancel export then finding none running; a cleanup that fails said after it, the newest",
+    covers: { commands: ["note.export", "note.export_cancel"] },
+    // The export's staging cleared only when the check says.
+    options: HOLD,
+    run: async (s) => {
+      await format(s, "home.md", "word");
+      await s.see("Name: home.docx");
+      await s.keys("enter");
+      await exported(s, "home.docx", "PK\x03\x04");
+      await s.until(() => hold(s) === "waiting", 15000, "the export's staging held");
+      // Said while its staging is still being cleared; over, so Cancel export finds none running.
+      await s.message("exported home.md to home.docx (Word (.docx))");
+      await cancelExport(s);
+      await s.message("no export is running");
+      // The cleanup fails: its folder can't be removed from the cache's `exports/`. Said last, the box at the top.
+      const exports = join(s.dir, "cache", "slipbox", "exports");
+      chmodSync(exports, 0o555);
+      try {
+        writeFileSync(join(s.dir, "hold-go"), "");
+        await s.message("export cleanup:");
+        // The newest box: above every other still showing (each shows for 4 s), the export's own above all.
+        const others = ["exported home.md", "no export is running"].map((m) => s.rowOf(m)).filter((row) => row >= 0);
+        s.expect(
+          others.every((row) => s.rowOf("export cleanup:") < row),
+          "the cleanup's warning the newest box",
+        );
+      } finally {
+        // As slipbox makes it, owner-only.
+        chmodSync(exports, 0o700);
+      }
+    },
+  },
+  {
+    area: "outside-and-code",
+    name: "export: over once a cancel can't stop it — Cancel export as its publication returns finds none running",
+    covers: { commands: ["note.export", "note.export_cancel"] },
+    // The first publication held once it has put its document in place, before the export goes on.
+    options: { ...HOLD, env: { ...HOLD.env, EXPORT_HOLD_AT: "publication" } },
+    run: async (s) => {
+      await format(s, "home.md", "word");
+      await s.see("Name: home.docx");
+      await s.keys("enter");
+      await exported(s, "home.docx", "PK\x03\x04");
+      await s.until(() => hold(s) === "waiting", 15000, "the publication held");
+      await cancelExport(s);
+      await s.message("no export is running");
+      writeFileSync(join(s.dir, "hold-go"), "");
+      await s.message("exported home.md to home.docx (Word (.docx))");
+    },
+  },
+  {
+    area: "outside-and-code",
+    name: "export: one that can't be written is over once it says so — Cancel export while its staging is cleared finds none running",
+    covers: { commands: ["note.export", "note.export_cancel"] },
+    options: {
+      // The export's staging cleared only when the check says.
+      ...HOLD,
+      // A folder that can't be written.
+      setup: (s) => mkdirSync(s.path("ro")),
+    },
+    run: async (s) => {
+      chmodSync(s.path("ro"), 0o555);
+      try {
+        await format(s, "home.md", "word");
+        await s.see("Name: home.docx");
+        await s.keys("ctrl+u");
+        await s.type("ro/home.docx");
+        await s.keys("enter");
+        await s.until(() => hold(s) === "waiting", 15000, "the export's staging held");
+        await s.message(/ro\/home\.docx not written/);
+        await cancelExport(s);
+        await s.message("no export is running");
+      } finally {
+        writeFileSync(join(s.dir, "hold-go"), "");
+        chmodSync(s.path("ro"), 0o755);
+      }
     },
   },
   {
