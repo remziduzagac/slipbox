@@ -56,7 +56,7 @@ export function whereOf(app: App): Where {
     vaultPath: !named && !elsewhere,
     folder: loc.mode === "home" && app.homeFolder ? sanitize(app.homeFolder) : null,
     sep: g.sep,
-    branch: branch === null ? null : sanitize(branch),
+    branch: branch ? sanitize(branch) : null,
     at: !!(named && loc.worktree),
     track: branch && t?.branch === branch ? trackText(t, g.gitAhead, g.gitBehind) : "",
     op: op?.text ?? "",
@@ -65,7 +65,9 @@ export function whereOf(app: App): Where {
 
 /** The parts joined: `◈ kestrel · main ↑2`, `◈ ~ › notes`, `◈ kestrel@feat rebasing 2/5`, `Elsewhere`. */
 export function whereText(w: Where): WhereText {
-  const branch = w.branch === null ? "" : w.at ? `@${w.branch}` : ` · ${w.branch}`;
+  // No branch, or an empty one (a rebase's `head-name` of `refs/heads/` alone): nothing after the vault but what's
+  // under way.
+  const branch = !w.branch ? "" : w.at ? `@${w.branch}` : ` · ${w.branch}`;
   return {
     vault: `${w.glyph}${w.vault}${w.folder ? ` ${w.sep} ${w.folder}` : ""}`,
     branch: `${branch}${w.track ? ` ${w.track}` : ""}${w.op ? ` ${w.op}` : ""}`,
@@ -73,51 +75,41 @@ export function whereText(w: Where): WhereText {
 }
 
 /**
- * Where you are, cut to `width` columns, a step at a time, each only while it still doesn't fit (WSP-D4): a path is
- * cut from the front, the vault's then the workspace's, to 12 columns each; the branch's ahead and behind and its
- * operation go; the branch is cut from its end, to 8 columns, then goes; the workspace goes; the vault is cut, a name
- * from its end and a path from the front, to 6 columns. Narrower still: null, nothing drawn.
+ * Where you are, cut to `width` columns (WSP-D4), giving up a part at a time, each only once what's left can't fit: the
+ * branch's ahead and behind and its operation, then the branch, then the workspace. At each stage the parts left are cut
+ * from their whole text, only as far as they must: a path from the front, the vault's then the workspace's, to 12
+ * columns each; then, once ahead and behind are gone, the branch from its end, to 8. Last, with the vault alone, it's
+ * cut to 6, a name from its end and a path from the front. Narrower still: null, nothing drawn.
  */
 export function fitWhere(w: Where, width: number): WhereText | null {
-  const s = { ...w };
-  const over = () => {
-    const t = whereText(s);
-    return stringWidth(t.vault) + stringWidth(t.branch) - width;
-  };
-  // A part cut by what's over, never below `min` columns.
-  const cut = (text: string, fromFront: boolean, min: number) => {
-    const target = Math.max(min, stringWidth(text) - over());
-    if (target >= stringWidth(text)) return text;
-    return fromFront ? truncateStart(text, target) : truncate(text, target);
-  };
-  const steps = [
-    () => {},
-    () => {
-      if (s.vaultPath) s.vault = cut(s.vault, true, 12);
-    },
-    () => {
-      if (s.folder) s.folder = cut(s.folder, true, 12);
-    },
-    () => {
-      s.track = "";
-      s.op = "";
-    },
-    () => {
-      if (s.branch) s.branch = cut(s.branch, false, 8);
-    },
-    () => {
-      s.branch = null;
-    },
-    () => {
-      s.folder = null;
-    },
-    () => {
-      s.vault = cut(s.vault, s.vaultPath, 6);
-    },
+  const stages: Partial<Where>[] = [
+    {},
+    { track: "", op: "" },
+    { track: "", op: "", branch: null },
+    { track: "", op: "", branch: null, folder: null },
   ];
-  for (const step of steps) {
-    step();
+  for (const [i, stage] of stages.entries()) {
+    const s: Where = { ...w, ...stage };
+    const over = () => {
+      const t = whereText(s);
+      return stringWidth(t.vault) + stringWidth(t.branch) - width;
+    };
+    if (s.vaultPath) s.vault = cut(s.vault, true, 12, over());
+    if (s.folder) s.folder = cut(s.folder, true, 12, over());
+    if (i === 1 && s.branch) s.branch = cut(s.branch, false, 8, over());
     if (over() <= 0) return whereText(s);
+    if (i === stages.length - 1) {
+      // From the whole name: what's over were it whole.
+      s.vault = cut(w.vault, s.vaultPath, 6, over() - stringWidth(s.vault) + stringWidth(w.vault));
+      if (over() <= 0) return whereText(s);
+    }
   }
   return null;
+}
+
+/** `text` made `over` columns narrower, never below `min`: a path from the front (its last folders kept), else its end. */
+function cut(text: string, fromFront: boolean, min: number, over: number): string {
+  const target = Math.max(min, stringWidth(text) - over);
+  if (target >= stringWidth(text)) return text;
+  return fromFront ? truncateStart(text, target) : truncate(text, target);
 }

@@ -58,17 +58,27 @@ describe("where you are, cut to fit (WSP-D4)", () => {
     return f ? f.vault + f.branch : null;
   };
 
-  test("a step at a time: the path from the front, to 12 columns; the track and the operation; the branch, to 8, then gone; the vault, to 6; then nothing", () => {
+  test("a part at a time: the path from the front, to 12 columns; the track and the operation; the branch, to 8, then gone; the vault, to 6; then nothing", () => {
     expect(fit(parts, 61)).toBe("◈ ~/src/a-long-experiment · feature/long-branch ↑2 ↓1 merging");
     expect(fit(parts, 60)).toBe("◈ …src/a-long-experiment · feature/long-branch ↑2 ↓1 merging");
     expect(fit(parts, 50)).toBe("◈ …-experiment · feature/long-branch ↑2 ↓1 merging");
-    expect(fit(parts, 49)).toBe("◈ …-experiment · feature/long-branch");
+    // The track and the operation gone, the path has its room back: each stage cuts from the whole text.
+    expect(fit(parts, 49)).toBe("◈ ~/src/a-long-experiment · feature/long-branch");
+    expect(fit(parts, 46)).toBe("◈ …src/a-long-experiment · feature/long-branch");
     expect(fit(parts, 35)).toBe("◈ …-experiment · feature/long-bran…");
     expect(fit(parts, 25)).toBe("◈ …-experiment · feature…");
-    expect(fit(parts, 24)).toBe("◈ …-experiment");
+    expect(fit(parts, 24)).toBe("◈ …src/a-long-experiment");
+    expect(fit(parts, 20)).toBe("◈ …a-long-experiment");
+    expect(fit(parts, 14)).toBe("◈ …-experiment");
     expect(fit(parts, 13)).toBe("◈ …experiment");
     expect(fit(parts, 8)).toBe("◈ …iment");
     expect(fit(parts, 7)).toBeNull();
+  });
+
+  test("an empty branch, as a rebase's `refs/heads/` alone gives: nothing after the vault but what's under way", () => {
+    const empty = { ...parts, vault: "kestrel", vaultPath: false, branch: "", track: "", op: "rebasing 1/2" };
+    expect(fit(empty, 80)).toBe("◈ kestrel rebasing 1/2");
+    expect(fit({ ...empty, at: true }, 80)).toBe("◈ kestrel rebasing 1/2");
   });
 
   test("the vault's part and the branch's apart: the two click targets", () => {

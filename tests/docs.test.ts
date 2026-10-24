@@ -405,16 +405,20 @@ describe("the user documentation (DOC)", () => {
   test("workspace, never session, for what slipbox keeps of your work in a place: the docs, the README, the skill, the messages (WSP-D1)", async () => {
     const files = [...userDocs(), join(TOP, "README.md"), join(TOP, "skills", "slipbox", "SKILL.md")];
     expect(files.flatMap((f) => sessionsForWorkspaces(read(f)).map((r) => `${relative(TOP, f)}:${r}`))).toEqual([]);
-    expect(
-      (await messages()).filter((m) => WORKING_SESSION.test(m.text)).map((m) => `${m.where}: ${m.text}`),
-    ).toEqual([]);
+    expect((await messages()).filter((m) => WORKING_SESSION.test(m.text)).map((m) => `${m.where}: ${m.text}`)).toEqual(
+      [],
+    );
     // The check catches what it looks for, and leaves a sitting and the names that keep the word alone.
     expect(
       sessionsForWorkspaces(
         "Its session, scratch and trash came along.\nA first session; between sessions.\n" +
           "`ui.restore_session` and `session.json` stay.\nIt is kept in the session.\nThe palette's session choices.\n",
       ),
-    ).toEqual(["1: Its session, scratch and trash came along.", "4: It is kept in the session.", "5: The palette's session choices."]);
+    ).toEqual([
+      "1: Its session, scratch and trash came along.",
+      "4: It is kept in the session.",
+      "5: The palette's session choices.",
+    ]);
   }, 60_000); // every source file parsed, when the tests above haven't
 
   test("no link into the blueprint", () => {

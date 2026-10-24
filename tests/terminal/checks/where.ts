@@ -4,30 +4,15 @@
 // `Session.where`: home and its folders, Elsewhere and a vault by its path (vaults.ts, links-and-files.ts), a branch
 // switched while slipbox runs (links-and-files.ts), a rebase and a merge under way (source-control.ts).
 
-import { spawnSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import { type Check, leader } from "../check.ts";
 import { SIZE, type Session } from "../session.ts";
-import { repoAt, TRAIL, trail } from "./source-control.ts";
-
-/** git in a folder of the check's home, that must end well: its output, trimmed. */
-function git(s: Session, cwd: string, ...args: string[]): string {
-  const env: Record<string, string> = {};
-  for (const [k, v] of Object.entries(process.env)) if (v !== undefined && !k.startsWith("GIT_")) env[k] = v;
-  const r = spawnSync("git", ["-C", s.path(cwd), ...args], {
-    encoding: "utf8",
-    env: { ...env, HOME: s.home, LC_ALL: "C" },
-  });
-  s.expect(r.status === 0, `git ${args.join(" ")} (exit ${r.status})\n${r.stderr}`);
-  return r.stdout.trim();
-}
+import { gitOk as git, mouse, repoAt, TRAIL, trail } from "./source-control.ts";
 
 /** A click on `needle` in screen row `y`: on its second column, past a glyph whatever width the terminal gives it. */
 async function clickAt(s: Session, y: number, needle: string): Promise<void> {
   const row = s.screen()[y]!;
-  const x = Bun.stringWidth(row.slice(0, row.indexOf(needle))) + 2;
-  await s.send(`\x1b[<0;${x};${y + 1}M`);
-  await s.send(`\x1b[<0;${x};${y + 1}m`);
+  await mouse(s, Bun.stringWidth(row.slice(0, row.indexOf(needle))) + 2, y);
 }
 
 /** A click on `needle` on the top bar. */

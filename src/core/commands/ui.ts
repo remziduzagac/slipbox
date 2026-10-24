@@ -32,7 +32,7 @@ export const UI_SPECS: CommandSpec[] = [
     id: "ui.top_bar",
     title: "Top bar",
     cli: I,
-    desc: "Shows or hides the top bar (the palette chip, the folder's state)",
+    desc: "Shows or hides the top bar (the palette chip, where you are, the vault's state)",
   },
   {
     id: "ui.spell",

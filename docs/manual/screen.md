@@ -58,8 +58,10 @@ button sits on it too.
   detached head shows its commit.
 
 It sits in the middle of the screen, moved aside only as far as the chip and the right end need. When the bar is short
-of room, it's cut a step at a time: a long path first, from the front (`◈ …/research/notes`), then the ahead and
-behind, then the branch, then the workspace, and the vault's name last. On a very narrow screen it isn't shown.
+of room, a long path is cut first, from the front, keeping its end (`◈ …earch/notes`). Then it gives up a part at a
+time: the ahead and behind and a merge or rebase under way, then the branch (cut first, then gone), then the workspace.
+The vault's name is cut last. Each part given up gives a cut path its room back. On a very narrow screen it isn't
+shown.
 
 Click the vault to list the named folders you've opened, and press `enter` to go into one. In a git repository, click
 the branch for the branches: pull, push and fetch first, then the branches to check one out.

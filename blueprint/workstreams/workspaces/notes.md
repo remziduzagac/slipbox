@@ -166,3 +166,16 @@ The tasks are in [tasks/](tasks/README.md).
   reachable: `indexing…` is drawn only while it leaves the chip 12 columns, so the bar's span is at least 8, enough for
   the vault cut to 6; and a screen with room on the status line has far more on the bar). Codex's pane then showed its
   usage limit's menu: its later parts (a second look) are skipped, a fresh reviewer taking them.
+- 2026-10-24, `/code-review` (a fresh reviewer, in Codex's place for the second look): twelve findings. Taken: three
+  tests still read where you are off the status line (`gitpanel.test.ts`'s click of `status:branch`, the `:name
+  cooking` and `--root` checks), now the top bar's; `tests/docs.test.ts` formatted (the lint, now run over every file
+  changed, was green only on the others); `fitWhere` was greedy, a path left cut after a later step freed room: now it
+  gives up a part at a time, each stage cutting from the whole text (its test's widths say so); the docs' path example
+  folder-aligned where the code cuts by columns (`…earch/notes` now), and the order said fully; `ui.top_bar`'s
+  description and its config comment naming where you are; two lines of CASES.md; an empty branch (a rebase's
+  `refs/heads/`) drawing a dangling `·`, now nothing, with a test; three home checks that accepted any folder of home,
+  now `~` exactly (a note opened is home's own workspace: `how.folder` is set only for a folder revealed); the new
+  check file's git and click helpers, now source-control.ts's. Not taken: deriving the status line's rule from the
+  frame's draw order (`geo.whereOnTop`, set by the top bar): the order is fixed in `draw.ts`, the bar drawn after the
+  windows (it needs to know whether one drew the outline's button) and before the status line, the field's comment
+  says so, and computing the span twice would duplicate the bar's layout.

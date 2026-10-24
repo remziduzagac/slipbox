@@ -254,7 +254,7 @@ const HOME: Check[] = [
       // Its note opened: into home (VV-D4), the note open there.
       await explorerRow(s, "bike-insurance\\.md");
       await s.keys("enter");
-      await s.where(/^~(?: › .+)?$/, /household\/bike-insurance\.md/, 5000);
+      await s.where("~", /household\/bike-insurance\.md/, 5000); // a note of it opened: home's own
       // household walked as it was gone into: its note a folder down known, home's walk still to make.
       await s.keys("ctrl+p");
       await s.see(/Open (note|\()/);

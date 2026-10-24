@@ -2301,7 +2301,7 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
   `work/product/okrs/2026-q4.md` (test 'after a merge or a pull: git's renames are evidence')
 - Branch switch is not a merge — `.build/kestrel.toml`, `work/kestrel/docs/sync.md` (5.9; test 'a branch switch isn't a
   merge'; 'the index written on another branch')
-- Detached HEAD — `.build/kestrel.toml` (5.9, status line shows branch; slipbox://x@branch)
+- Detached HEAD — `.build/kestrel.toml` (5.9, the top bar shows its commit; slipbox://x@branch)
 - Worktree: same repo, its own state by its path — `.build/kestrel.toml`, `notes/weekly/2026-W41.md`,
   `work/kestrel/src/sync/retry.ts` (17.19; test 'a worktree without .slipbox/…'; 'links: x:path from elsewhere means
   the main checkout')
@@ -2904,7 +2904,7 @@ The same notes, one per tab.
 - `git.skip` — Skip this commit (rebase) — `work/kestrel/src/sync/retry.ts` (command-specs.ts)
 - `git.abort` — Abort the merge or rebase — `work/kestrel/src/sync/retry.ts` (command-specs.ts)
 - the agent's worktree (agent/sync-retry) rebased onto main, main having changed a line of `src/sync/retry.ts` its
-  first commit changed: stopped there, the merge screen, `rebasing 1/2` on the status line, theirs taken, continued;
+  first commit changed: stopped there, the merge screen, `rebasing 1/2` on the top bar, theirs taken, continued;
   aborted, the branch as it was; the conflicting commit skipped — `work/kestrel/src/sync/retry.ts` (GIT's design.md Pull
   and rebase (GIT-D6); tests 'pulling where both sides moved, and rebasing (GIT-D6)')
 

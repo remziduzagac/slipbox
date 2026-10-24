@@ -1086,7 +1086,7 @@ const ROOTS: Check[] = [
         `${readFileSync(config, "utf8")}idle_seconds = 1\n\n[walk]\nroot_markers = [".git", ".slipbox"]\n`,
       );
       await s.restart({ startAt: "home/hobbies/cooking/Home.md" });
-      await s.where(/^~(?: › .+)?$/, /‹ hobbies\/cooking\/Home\.md/);
+      await s.where("~", /‹ hobbies\/cooking\/Home\.md/);
       await explorerOpen(s);
       await s.until(() => listed(s, /\scooking$/), 20_000, "cooking, a folder of home's tree");
       s.expect(!/cooking/.test(crumbs(s)), `the view at home: ${crumbs(s)}`);
@@ -1181,7 +1181,7 @@ const ROOTS: Check[] = [
       await s.see("~ › Downloads/sync-worker-2026-09-22.log.md", 5000);
       await s.keys("o");
       await s.notSee(PEEK_HINT);
-      await s.where(/^~(?: › .+)?$/, /‹ Downloads\/sync-worker-2026-09-22\.log\.md/, 5000);
+      await s.where("~", /‹ Downloads\/sync-worker-2026-09-22\.log\.md/, 5000);
       await s.see("§ sync-worker log, 2026-09-22", 10000); // read and drawn
       await s.keys("ctrl+o");
       await s.where(/^notes\b/, /2026-09-22\.md/, 5000);
@@ -1375,7 +1375,7 @@ const NAMED: Check[] = [
     run: async (s) => {
       await s.ex("name cooking");
       await s.message("is named cooking (.slipbox/"); // the box wraps the rest
-      await s.status(/ cooking /);
+      await s.where(/^cooking\b/);
       s.expect(
         readFileSync(s.path("~/hobbies/cooking/.slipbox/config.toml"), "utf8").includes('name = "cooking"'),
         "the name written into .slipbox/",
