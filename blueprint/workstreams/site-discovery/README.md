@@ -1,5 +1,5 @@
 ---
-status: active
+status: complete
 created: "2026-10-24"
 branch: feat/issue-66
 ---

@@ -4,7 +4,7 @@
 // site writes it beside the installer; check-meta.ts checks it. It imports about.ts alone, and that nothing: pages.yml
 // runs release.ts before any package is installed.
 
-import { DESCRIPTION, fullTitle, headTags, SENTENCE } from "./about.ts";
+import { DESCRIPTION, fullTitle, headTags, LINE } from "./about.ts";
 
 /** Text made safe for HTML, in an attribute's quotes or between tags. */
 export function escapeHtml(s: string): string {
@@ -42,7 +42,7 @@ export function rootPage(site: string, repository: string): string {
     tag("link", { rel: "icon", href: "docs/logo.svg", type: "image/svg+xml" }),
   ];
   const body =
-    `<p>slipbox: ${escapeHtml(SENTENCE)} Read <a href="docs/">its documentation</a>, ` +
+    `<p>slipbox: ${escapeHtml(LINE)}. Read <a href="docs/">its documentation</a>, ` +
     `<a href="docs/guides/install/">install it</a>, or see <a href="${escapeHtml(repository)}">its repository</a>.</p>`;
   return `<!doctype html>\n<html lang="en">\n<head>\n${head.join("\n")}\n</head>\n<body>\n${body}\n</body>\n</html>\n`;
 }

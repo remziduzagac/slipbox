@@ -8,6 +8,13 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 
 ### Added
 
+- The documentation site says what slipbox is wherever it's met without being opened. Every page's title ends with
+  "slipbox: read, review and edit what your coding agent writes, in your terminal", a link to the site or any page
+  shows slipbox's picture when it's shared, and the site's address on its own, `/slipbox/`, says the same before it
+  sends you on to the docs.
+- The docs for agents: `llms.txt` at the docs' root, a line per page, and every page's text in one file beside it,
+  `llms-full.txt`.
+
 - Each window's header, the row above its note, has three buttons for how the window shows the note: **Read**,
   **Lens** and **Source**. The bright one is the window's mode, as the status line says it; a click switches straight
   to another, from source mode to the lens too. A mode the file can't be shown in is in italics, and a click on it says
@@ -32,6 +39,10 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
   installed while slipbox runs, from another terminal or by `brew upgrade`, is offered as a restart.
 
 ### Changed
+
+- slipbox describes itself by what you do with it: "Read, review and edit what your coding agent writes, in your
+  terminal", in its README, its help, its package, its Homebrew formula and its docs, instead of "the terminal
+  companion for coding agents".
 
 - **Breadcrumb** in `space u u`, and `ui.breadcrumb = false`, hide only the headings now. The window header stays, with
   its buttons and, in a split, the window's name. To hide the whole row as before, use **Window header**

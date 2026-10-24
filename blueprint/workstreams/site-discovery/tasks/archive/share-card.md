@@ -1,5 +1,5 @@
 ---
-status: todo
+status: done
 assignee: claude
 blocked_by: [SEO-T1]
 tracker: [gh:#66]
@@ -29,3 +29,8 @@ chunks. The gathering copies it to `site/public/share-card.png` (ignored).
 - Rests on: (SEO-D4).
 
 ## Log
+
+- 2026-10-24: `toPng` takes `Fonts`; `pngSize` exported. First take: the line broke into four lines, "terminal."
+  alone; second: three lines at 34px, the column centred, the screenshot from x 560 — looked at, 214 KB, written to
+  `assets/`. Its chunks' CRCs checked with Python's `zlib`. `withText` first added a second chunk for a key already
+  there; the test caught it, and it replaces it now. Mutation: the line changed, the stale-card test fails.

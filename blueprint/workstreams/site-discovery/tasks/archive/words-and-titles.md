@@ -1,5 +1,5 @@
 ---
-status: todo
+status: done
 assignee: claude
 blocked_by: []
 tracker: [gh:#66]
@@ -30,3 +30,8 @@ from `fullTitle`. `astro.config.mjs` takes its description and the card's head t
 - Rests on: (SEO-D1), (SEO-D2).
 
 ## Log
+
+- 2026-10-24: `about.ts` holds the words; `cardTags` became `headTags`, since it gives the `describedby` link too.
+  The middleware also makes the home's `og:type` `website`. Built: the home's, a page's and the 404's titles and heads
+  read back from `site/dist` as designed; the header still says slipbox. Tests: `tests/site.test.ts`, "what it says
+  slipbox is".

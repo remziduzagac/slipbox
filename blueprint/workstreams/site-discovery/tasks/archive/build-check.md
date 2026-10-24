@@ -1,5 +1,5 @@
 ---
-status: todo
+status: done
 assignee: claude
 blocked_by: [SEO-T2, SEO-T3, SEO-T4]
 tracker: [gh:#66]
@@ -27,3 +27,7 @@ which `pages.yml` runs over `_site` before it deploys.
 - Rests on: (SEO-D6).
 
 ## Log
+
+- 2026-10-24: run over a copy of the Pages site (`site/dist` as `docs/`, the root from `writeSite`), whole it passes;
+  with a page's `og:image`, a page's `describedby`, a page's full title, the card, `llms.txt`, `llms-full.txt` or the
+  root's description removed, one at a time, it fails naming that one. `pages.yml` runs it with `--pages _site`.

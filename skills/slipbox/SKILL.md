@@ -13,8 +13,8 @@ description: >-
 
 # slipbox
 
-slipbox is the user's terminal companion for coding agents: they read, review and edit in its TUI
-what you write; you use its CLI. Both see the same files: **disk is the contract**. You never see
+slipbox is where the user reads, reviews and edits what you write, in their terminal: its TUI is
+theirs; you use its CLI. Both see the same files: **disk is the contract**. You never see
 the user's unsaved state, and the TUI reloads a note the moment you write it.
 
 ## Before anything

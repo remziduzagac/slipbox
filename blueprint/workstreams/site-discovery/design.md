@@ -8,7 +8,8 @@ After § The documentation site.
 edit what your coding agent writes, in your terminal" (SEO-D1); a description of at most 160 characters for search
 results ("slipbox is a terminal app to read, review and edit what your coding agent writes: Markdown and code
 rendered, and edited where you read them."); the card's file, size and alt text; and what's made from them:
-`fullTitle(page, home)`, a page's title, and `cardTags(base)`, the card's head tags for a site at `base`. The site's
+`fullTitle(page, home)`, a page's title, and `headTags(docs)`, the card's head tags and the link to `llms.txt` for
+docs at `docs`. The site's
 config, its route middleware, the gathering, the root's page, the card's script and the build's check all take them
 from there. Where slipbox describes itself outside the site (SEO-D1, § Where slipbox describes itself),
 `tests/docs.test.ts` reads each file as text and holds it to the same line.
@@ -28,7 +29,7 @@ its bold here; the screenshots keep DejaVu Sans Mono), and embeds the screenshot
 into the PNG, as `tEXt` chunks, the line and the SHA-256 of the logo and of the screenshot. `tests/site.test.ts` fails
 when one differs from what's committed now, naming which and saying to run `bun run share-card` and look at the card;
 it also holds the card to its size and its byte limit. The gathering copies the card into the site, as it does the
-logo (`public/share-card.png`). Every page's head gets, from the config's `head` (`cardTags`): `og:image` (an absolute
+logo (`public/share-card.png`). Every page's head gets, from the config's `head` (`headTags`): `og:image` (an absolute
 address, the site's and the base's: `https://remziduzagac.github.io/slipbox/docs/share-card.png`), `og:image:type`,
 `og:image:width`, `og:image:height`, `og:image:alt` and `twitter:image:alt`; Starlight already asks for the large card
 (`twitter:card`).
@@ -49,8 +50,9 @@ rel="describedby">`, as llmstxt.org proposes.
   anchors (`<a id="…"></a>` lines) are left out. About 650 KB.
 
 **The root** (SEO-D3), `/slipbox/`, is still an instant redirect to `docs/`, which Google takes as permanent, so the
-docs home is what it indexes. `site/scripts/root.ts`' `rootPage(base)`, which imports only `about.ts`, writes it;
-`release.ts site`'s `writeSite` calls it with the repository's Pages site (`pagesBase`), as before. Every value in it
+docs home is what it indexes. `site/scripts/root.ts`' `rootPage(site, repository)`, which imports only `about.ts`,
+writes it; `release.ts site`'s `writeSite` calls it with the repository's Pages site (`pagesBase`) and its address on
+GitHub. Every value in it
 is escaped for HTML. Its head: `<html lang="en">`, a viewport, the docs home's title and description, a canonical link
 to `docs/`, `og:type` `website`, `og:title`, `og:description`, `og:url` (the docs home), `og:site_name`, the card's
 tags, `twitter:card`, `<link rel="describedby">` to `docs/llms.txt`, and the logo as its icon. Its body: one line saying
@@ -113,12 +115,13 @@ users and sharers will notice.
 
 ## Tests
 
-- `tests/site.test.ts`: `fullTitle`, the home's and a page's; `cardTags`; `llms.txt`'s sections, lines and Optional
+- `tests/site.test.ts`: `fullTitle`, the home's and a page's; `headTags`; `llms.txt`'s sections, lines and Optional
   group from a small map; `llms-full.txt`'s pages, order, sources and absolute links (anchors included), compatibility
   anchors left out; the card's size, byte limit, line and inputs' hashes; the home's front matter without a
-  description.
-- `tests/release.test.ts`: `writeSite`'s `index.html` is `rootPage`'s for the repository's Pages site; `rootPage`
-  escapes its values; `root.ts` and `about.ts` import only `node:` modules and each other.
+  description; `root.ts` and `about.ts` importing only `node:` modules and each other; `check-meta`'s findings, a part
+  missing at a time, on a small built site.
+- `tests/release.test.ts`: `writeSite`'s `index.html` is `rootPage`'s for the repository's Pages site; `rootPage`'s
+  head and body; it escapes its values.
 - `tests/docs.test.ts`: the line where SEO-D1 puts it, each file read as text.
 - `check-meta.ts`, checked by running it over a built site with each part removed once, to see it fail.
 - No terminal check: nothing in the TUI changes. `slipbox help`'s first line, if it changes, is the CLI's tests'.

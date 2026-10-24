@@ -107,8 +107,7 @@ export function withText(png: Uint8Array, entries: Record<string, string>): Uint
     view.setUint32(8 + data.length, Bun.hash.crc32(chunk.subarray(4, 8 + data.length)));
     parts.push(chunk);
   }
-  for (const c of rest)
-    if (c.type !== "tEXt" || !(keyOf(c.data) in entries)) parts.push(png.subarray(c.at, c.end));
+  for (const c of rest) if (c.type !== "tEXt" || !(keyOf(c.data) in entries)) parts.push(png.subarray(c.at, c.end));
   return Buffer.concat(parts);
 }
 

@@ -52,7 +52,7 @@ function safeJson(value: unknown): string {
 
 export const JSON_SCHEMA = 1;
 
-export const HELP = `slipbox ${VERSION} — the terminal companion for coding agents
+export const HELP = `slipbox ${VERSION} — read, review and edit what your coding agent writes, in your terminal
 
 Usage:
   slipbox [path]                    open the TUI (needs a terminal); also: slipbox open [path]

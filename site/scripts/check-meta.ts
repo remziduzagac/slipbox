@@ -100,7 +100,9 @@ export function problems(dist: string, mapText: string, root: string): string[] 
   else {
     const size = pngSize(new Uint8Array(readFileSync(card)));
     if (size?.width !== CARD.width || size?.height !== CARD.height)
-      found.push(`${CARD.file} is ${size ? `${size.width} by ${size.height}` : "no PNG"}, not ${CARD.width} by ${CARD.height}`);
+      found.push(
+        `${CARD.file} is ${size ? `${size.width} by ${size.height}` : "no PNG"}, not ${CARD.width} by ${CARD.height}`,
+      );
   }
 
   const map = readMap(mapText).flatMap((g) => g.pages);

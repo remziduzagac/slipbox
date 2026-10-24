@@ -1,10 +1,12 @@
 # slipbox documentation
 
-Read, review and edit notes and code in your terminal. Start on your own files, then add Git review, exports or a
-coding-agent workflow when useful. The full-screen terminal interface (TUI) can hold unsaved edits; the command-line
-interface (CLI) reads the files you have saved.
+Read, review and edit what your coding agent writes, in your terminal. slipbox works on your own notes and code too:
+start on your own files, then add Git review, exports or a coding-agent workflow when useful. The full-screen terminal
+interface (TUI) can hold unsaved edits; the command-line interface (CLI) reads the files you have saved.
 
-The [documentation website](https://remziduzagac.github.io/slipbox/docs/) has the same pages with search.
+The [documentation website](https://remziduzagac.github.io/slipbox/docs/) has the same pages with search. An agent can
+read them as [llms.txt](https://remziduzagac.github.io/slipbox/docs/llms.txt), a line per page, or all at once in
+[llms-full.txt](https://remziduzagac.github.io/slipbox/docs/llms-full.txt).
 
 ## Start here
 

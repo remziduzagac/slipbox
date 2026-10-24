@@ -1,5 +1,5 @@
 ---
-status: todo
+status: done
 assignee: claude
 blocked_by: [SEO-T1]
 tracker: [gh:#66]
@@ -26,3 +26,7 @@ writes it with the repository's Pages site.
 - Rests on: (SEO-D3).
 
 ## Log
+
+- 2026-10-24: `rootPage(site, repository)`, not `rootPage(base)`: the repository's address was needed too. The
+  import rule's test is in `tests/site.test.ts`, which reads `site/` (D230's guard put it there). Mutations: values
+  unescaped, `writeSite` not using it, both caught.

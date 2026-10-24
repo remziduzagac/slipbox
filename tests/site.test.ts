@@ -21,6 +21,7 @@ import { CARD, DESCRIPTION, DOCS_URL, fullTitle, headTags, LINE, SENTENCE } from
 import { headOf, problems, rootProblems } from "../site/scripts/check-meta.ts";
 import { type LlmsPage, llmsFull, llmsTxt } from "../site/scripts/llms.ts";
 import { rootPage } from "../site/scripts/root.ts";
+import { valueImportsOf } from "../scripts/check-boundary.ts";
 import { pngSize } from "../scripts/screenshot.ts";
 import { CARD_FILE, cardSvg, madeFrom, madeFromNow, textOf, withText, wrap } from "../scripts/share-card.ts";
 
@@ -229,7 +230,21 @@ describe("the docs' site: what it says slipbox is (SEO-D1, SEO-D2)", () => {
     expect(config).toContain("head: headTags(DOCS_URL),");
     expect(config).toContain('routeMiddleware: "./src/route-data.ts"');
     const middleware = readFileSync(join(import.meta.dir, "..", "site", "src", "route-data.ts"), "utf8");
-    expect(middleware).toContain('fullTitle(route.entry.data.title, home)');
+    expect(middleware).toContain("fullTitle(route.entry.data.title, home)");
+  });
+
+  test("the root's page and its words import nothing but each other and node's own: pages.yml runs release.ts first", () => {
+    const site = join(import.meta.dir, "..", "site", "scripts");
+    for (const [file, allowed] of [
+      ["root.ts", ["./about.ts"]],
+      ["about.ts", []],
+    ] as const) {
+      const imports = valueImportsOf(readFileSync(join(site, file), "utf8"));
+      expect(
+        imports.filter((i) => !i.startsWith("node:") && !(allowed as readonly string[]).includes(i)),
+        file,
+      ).toEqual([]);
+    }
   });
 
   test("the home has no description of its own, so it takes the site's", () => {
@@ -251,7 +266,9 @@ describe("the docs' site: the share card (SEO-D4)", () => {
     const made = madeFrom(card);
     const now = madeFromNow();
     for (const what of ["line", "logo", "screenshot"] as const)
-      expect(made[what], `the card's ${what} has changed: run \`bun run share-card\` and look at the card`).toBe(now[what]);
+      expect(made[what], `the card's ${what} has changed: run \`bun run share-card\` and look at the card`).toBe(
+        now[what],
+      );
   });
 
   test("what a card was made from: text chunks after its header, read back; a key written again replaces its chunk", () => {
@@ -384,7 +401,10 @@ describe("the docs' site: the build's check of what it tells search engines and 
     writeFileSync(join(dist, "guides", "quick-start", "index.html"), page("Quick start"));
     copyFileSync(join(import.meta.dir, "..", "assets", "share-card.png"), join(dist, CARD.file));
     writeFileSync(join(dist, "llms.txt"), `# slipbox\n\n- [Quick start](${DOCS_URL}guides/quick-start/): fast.\n`);
-    writeFileSync(join(dist, "llms-full.txt"), `# slipbox documentation\n\n# Quick start\nSource: ${DOCS_URL}guides/quick-start/\n`);
+    writeFileSync(
+      join(dist, "llms-full.txt"),
+      `# slipbox documentation\n\n# Quick start\nSource: ${DOCS_URL}guides/quick-start/\n`,
+    );
     spoil(dist);
     try {
       return problems(dist, MAP, ROOT);

@@ -14,7 +14,6 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { valueImportsOf } from "../scripts/check-boundary.ts";
 import { sbom } from "../scripts/check-deps.ts";
 import { scriptFor } from "../scripts/ci-scope.ts";
 import {
@@ -426,7 +425,9 @@ describe("the channels (GR-D14)", () => {
     expect(readFileSync(join(out, "index.html"), "utf8")).toContain('url=docs/">'); // the docs, beside it
     expect(readFileSync(join(out, "index.html"), "utf8")).toContain('href="https://github.com/o/r"');
     // The root's page is root.ts', for the repository's Pages site (SEO-D3).
-    expect(readFileSync(join(out, "index.html"), "utf8")).toBe(rootPage("https://o.github.io/r", "https://github.com/o/r"));
+    expect(readFileSync(join(out, "index.html"), "utf8")).toBe(
+      rootPage("https://o.github.io/r", "https://github.com/o/r"),
+    );
     expect(() => writeSite(out, "o/$(r)", { stable: null, preview: null })).toThrow("not a repository");
   });
 
@@ -447,6 +448,7 @@ describe("the channels (GR-D14)", () => {
     has(`<meta property="og:image:alt" content="${escapeHtml(CARD.alt)}">`);
     has('<meta name="twitter:card" content="summary_large_image">');
     has('<link rel="describedby" href="https://o.github.io/r/docs/llms.txt">');
+    has(`<p>slipbox: ${LINE}. Read <a href="docs/">its documentation</a>`);
     has('<a href="docs/guides/install/">');
     has('<a href="https://github.com/o/r">');
   });
@@ -459,19 +461,6 @@ describe("the channels (GR-D14)", () => {
     // The card's alt has quotes in it: written whole, inside its attribute.
     expect(CARD.alt).toContain('"');
     expect(rootPage("https://o.github.io/r", "https://github.com/o/r")).not.toContain(`content="${CARD.alt}"`);
-  });
-
-  test("the root's page and its words import nothing but each other and node's own: pages.yml runs release.ts first", () => {
-    const site = join(import.meta.dir, "..", "site", "scripts");
-    for (const [file, allowed] of [
-      ["root.ts", ["./about.ts"]],
-      ["about.ts", []],
-    ] as const) {
-      const imports = valueImportsOf(readFileSync(join(site, file), "utf8"));
-      expect(imports.filter((i) => !i.startsWith("node:") && !(allowed as readonly string[]).includes(i)), file).toEqual(
-        [],
-      );
-    }
   });
 
   test("the previews kept: the newest ten published; the older ones are the ones to delete", () => {

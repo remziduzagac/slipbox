@@ -1,5 +1,5 @@
 ---
-status: todo
+status: done
 assignee: claude
 blocked_by: [SEO-T1]
 tracker: [gh:#66]
@@ -27,3 +27,8 @@ full text absolute, a page's own anchors included; compatibility anchors left ou
 - Rests on: (SEO-D5).
 
 ## Log
+
+- 2026-10-24: a name clash — `gather.ts`' own `SITE` (the site's folder) shadowed `about.ts`' — made the first
+  addresses file paths; imported as `ORIGIN`. The full text's `Source:` is each page's address, the agent guide's too,
+  while `llms.txt` links the guide's Markdown (the build's check found the two disagreeing). 35 pages, about 706 KB.
+  Mutations: anchors left relative, the reference not under Optional, both caught.

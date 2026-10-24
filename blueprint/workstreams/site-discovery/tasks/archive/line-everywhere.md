@@ -1,5 +1,5 @@
 ---
-status: todo
+status: done
 assignee: claude
 blocked_by: [SEO-T1]
 tracker: [gh:#66]
@@ -27,3 +27,7 @@ map, "What is slipbox?", the skill. The docs home's agent section and the docs m
 - Rests on: (SEO-D1).
 
 ## Log
+
+- 2026-10-24: the README's paragraph after the line no longer repeats it; "What is slipbox?" leads with the line, then
+  your own Markdown and code, and puts "beside a coding agent" before "on your own". The skill's line is the agent's
+  view: where the user reads, reviews and edits what you write. Mutation: the README's old line back, caught.
