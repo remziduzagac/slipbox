@@ -18,7 +18,7 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 import { type Channel, currentVersion, homebrewPrefix, type InstalledBy } from "../core/install.ts";
-import type { SessionState } from "../core/position.ts";
+import { type SessionState, sessionFrom } from "../core/position.ts";
 import type { ReleaseBuild } from "../core/release.ts";
 import { type RestartNote, writeNote } from "../core/restart.ts";
 import {
@@ -89,6 +89,9 @@ export class Updates {
   readonly mine = new Set<string>();
   /** The restart asked for, its note written: `tui/run.ts` hands over to it once the TUI has quit. */
   restartNote: RestartNote | null = null;
+  /** `:upgrade` asking, or a restart waiting for an upgrade beside the TUI: asked again meanwhile, nothing more. */
+  private checking = false;
+  private restarting = false;
   private timer: ReturnType<typeof setInterval> | null = null;
   private ticks = 0;
   /** What was last seen where the next version would be (UPG-T6): the file's stamp, and the version it said. */
@@ -168,7 +171,8 @@ export class Updates {
     try {
       const seen = await this.versionUnderneath(env);
       if (!seen || !isNewer(seen, env.version) || seen === this.startedWith || this.offeredUnderneath.has(seen)) return;
-      if (this.mine.has(seen) || this.background?.version === seen) return;
+      // This window's own upgrade, running or done, is said by its message: whatever version it installs.
+      if (this.mine.has(seen) || this.background) return;
       this.whenQuiet(`restart:${seen}`, () => this.offerRestart(seen));
     } finally {
       this.looking = false;
@@ -218,9 +222,12 @@ export class Updates {
     return this.calm() && !this.app.input.busy && now - this.app.lastInputAt >= QUIET_MS;
   }
 
-  /** `show` once the TUI is quiet, in turn after what waits already; one of the same key waiting already is enough. */
+  /** `show` once the TUI is quiet, in turn after what waits already; one of the same key waiting already takes this
+   *  `show` in its place, the later asking's (`:upgrade`'s, which offers whatever the check's switches say). */
   private whenQuiet(key: string, show: () => void): void {
-    if (!this.queue.some((q) => q.key === key)) this.queue.push({ key, show });
+    const waiting = this.queue.find((q) => q.key === key);
+    if (waiting) waiting.show = show;
+    else this.queue.push({ key, show });
     this.tryOffer();
   }
 
@@ -351,14 +358,18 @@ export class Updates {
   async check(): Promise<void> {
     const env = this.env;
     if (!env?.release) return this.app.message("info", FROM_SOURCE);
+    if (this.checking) return this.app.message("info", "asking for the newest version already");
     const askedAt = this.app.lastInputAt;
     this.app.message("info", "asking for the newest version…");
+    this.checking = true;
     const latest = await askNewest({
       release: env.release,
       env: env.env,
       stateFile: this.stateFile,
       channel: env.channel,
       fetcher: env.fetcher,
+    }).finally(() => {
+      this.checking = false;
     });
     if (this.app.quitting) return;
     this.app.host.requestRender();
@@ -451,12 +462,17 @@ export class Updates {
     if (!this.env) return this.app.message("error", "slipbox can restart only in the terminal it runs in");
     if (this.app.quitting || this.restartNote) return;
     if (this.background) {
+      if (this.restarting) return;
       const askedAt = this.app.lastInputAt;
       this.app.message("info", `waiting for the upgrade to ${this.background.version} to finish…`);
       this.app.host.requestRender();
-      await this.background.done;
+      this.restarting = true;
+      await this.background.done.finally(() => {
+        this.restarting = false;
+      });
       if (this.app.quitting || this.restartNote) return;
-      return this.whenAnswered(askedAt, "restart", () => this.ask(upgrade));
+      // Through `restart` again when it's shown: an upgrade started meanwhile is waited for too.
+      return this.whenAnswered(askedAt, "restart", () => void this.restart(upgrade));
     }
     this.ask(upgrade);
   }
@@ -559,8 +575,8 @@ export function cameBack(note: RestartNote, version: string): CameBack {
     p && typeof p.root === "string" && (p.mode === "vault" || p.mode === "home" || p.mode === "folder")
       ? { mode: p.mode, root: p.root, homeFolder: typeof p.homeFolder === "string" ? p.homeFolder : null }
       : null;
-  const s = note.session as Partial<SessionState> | null;
-  const session = s && Array.isArray(s.tabs) ? (s as SessionState) : null;
+  // Read as the session file is: another version wrote it.
+  const session = sessionFrom(note.session);
   const failed = note.outcome && !note.outcome.ok ? note.outcome.why : null;
   return {
     place,

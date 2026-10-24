@@ -1,5 +1,5 @@
 ---
-status: review
+status: done
 assignee: claude-23
 blocked_by: []
 created: "2026-10-24"

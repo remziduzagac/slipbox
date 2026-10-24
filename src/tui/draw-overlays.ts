@@ -326,10 +326,14 @@ export function drawChoiceDialog(app: App, c: Canvas, o: DialogOverlay, mainY: n
   o.drawnAt ??= app.now();
   // Never wider than the screen: a narrow terminal shows it whole, its rows cut short.
   const w = Math.max(8, Math.min(dialogWidth(W), W - 2));
-  const text = wrapWords(sanitize(o.text.trim()), w - 4).slice(0, 6);
-  const helpRows = choiceHelpRows(o, w);
+  let text = wrapWords(sanitize(o.text.trim()), w - 4).slice(0, 6);
+  let helpRows = choiceHelpRows(o, w);
   const boxes = o.checkboxes.length;
-  const h = 2 + text.length + 1 + o.choices.length + (boxes ? 1 + boxes : 0) + (helpRows ? 1 + helpRows : 0);
+  const height = () => 2 + text.length + 1 + o.choices.length + (boxes ? 1 + boxes : 0) + (helpRows ? 1 + helpRows : 0);
+  // A short screen: the help goes first, then the text's lines but one, so the choices and the keys stay on it.
+  if (height() > mainH) helpRows = 0;
+  if (height() > mainH) text = text.slice(0, Math.max(1, text.length - (height() - mainH)));
+  const h = height();
   const x = Math.floor((W - w) / 2);
   const y = mainY + Math.max(0, Math.min(2, mainH - h));
   const bg = roleStyle(theme, "overlay", null);

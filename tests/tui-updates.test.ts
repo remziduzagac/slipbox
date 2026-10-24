@@ -13,6 +13,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
+import { COMMAND_SPECS } from "../src/core/command-specs.ts";
 import { takeNote } from "../src/core/restart.ts";
 import { dailyUpdateCheck, FROM_SOURCE } from "../src/core/update.ts";
 import { saveSession, loadSession } from "../src/core/position.ts";
@@ -791,5 +792,128 @@ describe("an upgrade underneath (UPG-T6)", () => {
     clock.now += QUIET_MS;
     h.app.updates.tick();
     expect(h.app.overlay).toBeNull();
+  });
+});
+
+describe("round 2 (UPG)", () => {
+  const slow = (version: string) =>
+    fakeSlipbox({ ok: true, data: { status: "upgraded", from: "0.5.0", latest: version, removed: [] } }, 1);
+
+  test("a restart waiting for quiet goes through restart again: an upgrade started meanwhile is waited for too", async () => {
+    const { h, clock } = await clocked();
+    withEnv(h, { execPath: slow("0.6.0") });
+    await h.keys("i", "X", "escape");
+    h.app.updates.upgradeBeside("0.6.0");
+    const restarting = h.app.updates.restart();
+    clock.now += 100;
+    await h.keys("i", "Y");
+    await restarting;
+    // Queued; meanwhile another upgrade starts beside the TUI.
+    withEnv(h, { execPath: slow("0.7.0") });
+    h.app.updates.upgradeBeside("0.7.0");
+    await h.keys("escape");
+    clock.now += QUIET_MS;
+    h.app.updates.tick();
+    expect(h.app.messages.at(-1)?.text).toBe("waiting for the upgrade to 0.7.0 to finish…");
+    expect(h.app.overlay).toBeNull();
+    await h.app.updates.background!.done;
+    await Bun.sleep(10);
+    expect(h.frame()).toContain("1 note is unsaved: index.md.");
+    expect(h.quit.called).toBe(false);
+  });
+
+  test("nothing underneath is offered while this window's own upgrade runs, whatever version it installs", async () => {
+    const { h, clock } = await clocked(QUIET_MS);
+    const data = mkdtempSync(join(sandbox, "data-"));
+    for (const v of ["0.5.0", "0.7.0"]) mkdirSync(join(data, "versions", v), { recursive: true });
+    symlinkSync("versions/0.5.0", join(data, "current"));
+    withEnv(h, { data, execPath: slow("0.7.0") });
+    h.app.updates.start();
+    h.app.updates.upgradeBeside("0.6.0");
+    relink("versions/0.7.0", join(data, "current"));
+    await h.app.updates.lookUnderneath();
+    clock.now += QUIET_MS;
+    h.app.updates.tick();
+    expect(h.app.overlay).toBeNull();
+    await h.app.updates.background!.done;
+  });
+
+  test(":upgrade's answer, waiting where the daily check's offer of the same version waits, is offered: the check off", async () => {
+    const { h, clock } = await clocked();
+    const check = { on: true };
+    withEnv(h, { fetcher: releasesOf("0.6.0").fetcher }, check);
+    h.app.updates.found(found);
+    await h.keys("i");
+    check.on = false;
+    await h.app.updates.check();
+    await h.keys("escape");
+    clock.now += QUIET_MS;
+    h.app.updates.tick();
+    expect(h.frame()).toContain("slipbox 0.6.0 is out");
+  });
+
+  test(":upgrade asked twice before it's answered: one offer", async () => {
+    const { h, clock } = await clocked();
+    let answer = (_: Response) => {};
+    const asked: string[] = [];
+    const fetcher = (url: string) => (asked.push(url), new Promise<Response>((r) => (answer = r)));
+    withEnv(h, { fetcher });
+    const first = h.app.updates.check();
+    await h.app.updates.check();
+    expect(h.app.messages.at(-1)?.text).toBe("asking for the newest version already");
+    expect(asked).toHaveLength(1);
+    answer(new Response(`${"a".repeat(64)}  slipbox-0.6.0-linux-x64.tar.gz\n`));
+    await first;
+    expect(h.frame()).toContain("slipbox 0.6.0 is out");
+    await shown(h, clock);
+    await h.keys("escape");
+    clock.now += QUIET_MS;
+    h.app.updates.tick();
+    expect(h.app.overlay).toBeNull();
+  });
+
+  test(":restart asked twice while it waits for an upgrade: one question", async () => {
+    const { h, clock } = await clocked();
+    withEnv(h, { execPath: slow("0.6.0") });
+    await h.keys("i", "X", "escape");
+    h.app.updates.upgradeBeside("0.6.0");
+    const first = h.app.updates.restart();
+    await h.app.updates.restart();
+    await first;
+    expect(h.frame()).toContain("1 note is unsaved: index.md.");
+    await shown(h, clock);
+    await h.keys("escape");
+    clock.now += QUIET_MS;
+    h.app.updates.tick();
+    expect(h.app.overlay).toBeNull();
+  });
+
+  test("a short screen: the help, then the text's lines go, so the choices and the keys stay on it", async () => {
+    const { h } = await clocked(0, { height: 13 });
+    offer(h);
+    const rows = h.frame().split("\n");
+    expect(rows).toHaveLength(13);
+    expect(rows.some((r) => r.includes("● Upgrade and restart"))).toBe(true);
+    expect(rows.some((r) => r.includes("☐ Skip this version"))).toBe(true);
+    expect(rows.some((r) => r.includes("enter: do it"))).toBe(true);
+  });
+
+  test("a restart's note's session is read as the session file is: what this version can't read dropped", () => {
+    const note = (session: unknown) => ({
+      pid: 1,
+      at: Date.now(),
+      from: "0.5.0",
+      upgrade: null,
+      outcome: null,
+      place: null,
+      session,
+    });
+    const back = cameBack(note({ version: 1, tabs: [{ panes: [{ path: 5 }, { path: "a.md" }] }, "junk"] }), "0.6.0");
+    expect(back.session?.tabs.map((t) => t.panes.map((p) => p.path))).toEqual([["a.md"]]);
+    expect(cameBack(note({ version: 2, tabs: [] }), "0.6.0").session).toBeNull();
+  });
+
+  test(":upgrade's command line is slipbox upgrade --check: it asks, installs nothing", () => {
+    expect(COMMAND_SPECS.find((c) => c.id === "app.upgrade")?.cli).toBe("slipbox upgrade --check");
   });
 });

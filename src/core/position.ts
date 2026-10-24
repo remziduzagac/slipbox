@@ -356,7 +356,13 @@ export function sessionFile(place: StatePlace): string {
 
 /** Load the session, dropping anything malformed rather than failing to start. */
 export function loadSession(place: StatePlace): SessionState | null {
-  const s = readJson<SessionState | null>(sessionFile(place), null);
+  return sessionFrom(readJson<unknown>(sessionFile(place), null));
+}
+
+/** A session as read — the file's, a restart's note's (UPG: another version may have written it) — checked, anything
+ *  malformed dropped; null when it isn't one this version reads. */
+export function sessionFrom(v: unknown): SessionState | null {
+  const s = v as SessionState | null;
   if (!s || typeof s !== "object" || s.version !== 1 || !Array.isArray(s.tabs)) return null;
   const tabs = sessionTabs(s.tabs);
   const folders = tabSets(s.folders);

@@ -288,6 +288,8 @@ export interface UpgradeResult {
   latest: string;
   /** For `installed`: the version `current` names. */
   installed?: string;
+  /** For `upgraded`: the version `current` named before, kept to go back to (this one's, or a newer one installed). */
+  replaced?: string;
   /** Versions removed, beyond the one replaced (kept). */
   removed: string[];
 }
@@ -308,21 +310,22 @@ export function upgradeSaid(r: UpgradeResult, channel: Channel): string {
     case "available":
       return sayOut(r.latest, r.from, channel, "slipbox upgrade installs it");
     case "upgraded":
-      return `slipbox ${r.from} → ${r.latest}; ${r.from} is kept, to go back to${r.removed.length ? ` (${r.removed.join(", ")} removed)` : ""}`;
+      return `slipbox ${r.from} → ${r.latest}; ${r.replaced ?? r.from} is kept, to go back to${r.removed.length ? ` (${r.removed.join(", ")} removed)` : ""}`;
   }
 }
 
 /** What a binary says to `--version`, asked in a child; null when it couldn't run, or took longer than `timeoutMs`. */
 export async function versionOf(bin: string, timeoutMs = 30_000, signal?: AbortSignal): Promise<string | null> {
   try {
-    // A session of its own: the terminal's ctrl+c reaches only the hand-over, which cancels it (`signal`).
+    // With a cancel, a session of its own: the terminal's ctrl+c reaches only the hand-over, which cancels it. Without
+    // one (the command line's `slipbox upgrade`), in the terminal's group, which ctrl+c ends with it.
     const child = Bun.spawn([bin, "--version"], {
       stdin: "ignore",
       stdout: "pipe",
       stderr: "ignore",
       timeout: timeoutMs,
       signal,
-      detached: true,
+      detached: !!signal,
     });
     // Its exit waited for, then its output a second at most: what it started may hold that open.
     const out = new Response(child.stdout).text();
@@ -410,10 +413,13 @@ export function lockUpgrades(data: string, pid = process.pid): () => void {
       throw new UpgradeError(`another upgrade is running${other !== null && other > 0 ? ` (pid ${other})` : ""}`);
     takeOver(lock, held, pid);
   }
+  // What upgrades cut short left: what can't be removed now is left, never the lock held for good.
   const versions = join(data, "versions");
-  for (const e of existsSync(versions) ? readdirSync(versions) : [])
-    if (e.startsWith(".upgrade-")) rmSync(join(versions, e), { recursive: true, force: true });
-  for (const e of readdirSync(data)) if (/^current\.\d+$/.test(e)) rmSync(join(data, e), { force: true });
+  try {
+    for (const e of existsSync(versions) ? readdirSync(versions) : [])
+      if (e.startsWith(".upgrade-")) rmSync(join(versions, e), { recursive: true, force: true });
+    for (const e of readdirSync(data)) if (/^current\.\d+$/.test(e)) rmSync(join(data, e), { force: true });
+  } catch {}
   return () => {
     try {
       if ((JSON.parse(readFileSync(lock, "utf8")) as { pid?: unknown }).pid === pid) rmSync(lock, { force: true });
@@ -518,7 +524,7 @@ export async function upgrade(opts: {
       rmSync(join(versions, old), { recursive: true, force: true });
       result.removed.push(old);
     }
-    return { status: "upgraded", ...result };
+    return { status: "upgraded", ...result, ...(named && named !== opts.version ? { replaced: named } : {}) };
   } finally {
     unlock();
   }
@@ -558,7 +564,7 @@ async function download(
       stdout: "ignore",
       stderr: "pipe",
       signal,
-      detached: true,
+      detached: !!signal,
     });
     const tarSaid = new Response(tar.stderr).text();
     const tarCode = await tar.exited;

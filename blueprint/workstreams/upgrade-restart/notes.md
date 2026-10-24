@@ -134,3 +134,43 @@ in after the hand-over; traced, then sent raw. It fails without the flush. Tests
 `tests/upgrade-restart.test.ts` 51 pass; `bun run test:terminal updates` 9/10 before that check's fix, then it alone
 1/1.
 
+
+### Round 2 (2026-10-24, after the rebase on `origin/dev` and the draft PR, #63)
+
+Codex's part skipped again: its pane still stopped at its usage limit's menu. A fresh Claude reviewer did its part on
+`git diff origin/dev...` beside `/code-review`, each without the other's findings.
+
+`/code-review` found fifteen, the fresh reviewer three, one of them the same (`childrenEnded`'s kill): seventeen,
+each checked against the code. Fixed, each with a test that fails without it (twelve mutations, all caught):
+
+1. **A restart killed children quitting leaves running** (both reviewers): an editor handed a note (`runDetached`), a git
+   commit, pull or checkout running in the background. `childrenEnded` waits for them a second, and kills none.
+2. **`execve` skipped the process's exit hooks:** an export's spool copies and temp files stayed. They run first now.
+3. **A leftover that couldn't be removed left the lock held** (and after `execve`, by a pid still alive).
+4. **`tar` and `--version` in a session of their own on every path,** round 1's change: `slipbox upgrade` from the
+   command line, `ctrl+c`'d, left them running. Only with a cancel to end them now.
+5. **A restart waiting for quiet went straight to its question,** never looking again for an upgrade started meanwhile.
+6. **This window's own upgrade was judged by the version offered;** a newer one out by then was offered underneath.
+7. **The queue kept the first asking's way:** `:upgrade`'s answer, where the daily check's offer of the same version
+   waited, was dropped with the check off.
+8. **`:upgrade`, or a waiting `:restart`, asked twice** queued a second dialog.
+9. **The dialog ran off a short screen.**
+10. **"X is kept, to go back to" named the version running,** not the one `current` named (`replaced`, in `--json` too).
+11. **The note's session wasn't read as the session file is** (`sessionFrom`): a later version's shape could have thrown
+    after the screen was taken.
+12. **`:upgrade`'s command line said `slipbox upgrade`,** which installs: `slipbox upgrade --check`.
+13. **The design had `:wqa`'s order wrong** (each note, then the properties): the design fixed.
+14. **The `versionOf` test claimed more than it checked:** it says now that the version is given up, and checks so.
+
+Logged, not fixed here (the review loop stops after this round):
+
+- **The offer marks Upgrade and restart:** an `enter` meant for a note, pressed more than half a second after the
+  offer shows, upgrades and restarts (both reviewers). Which choice is marked is the maintainer's to say; Not now marked
+  would make a stray `enter` harmless. A question for the maintainer.
+- **A second note write that fails** after the hand-over's upgrade leaves the first note to be read: the next slipbox
+  says `restarted` though the upgrade failed (the failure said on the main screen, under the new one's).
+- **Copies left:** `alive()` beside `export/spool.ts`'s; `startedPath` beside `Bun.which` (which reads an empty `PATH`
+  entry as the folder, as POSIX does); libc opened again in `execInto`, `errno` and `flushInput`.
+
+Tests after the round: `tests/tui-updates.test.ts` 42 and `tests/upgrade-restart.test.ts` 21 pass;
+`bun run test:terminal updates` 10/10.

@@ -367,7 +367,7 @@ export const FILE_SPECS: CommandSpec[] = [
   {
     id: "app.upgrade",
     title: "Check for a newer slipbox",
-    cli: "slipbox upgrade",
+    cli: "slipbox upgrade --check",
     desc: "Asks now whether a newer version is out, and offers it",
   },
 ];

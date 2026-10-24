@@ -19,6 +19,7 @@ import {
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import {
+  childrenEnded,
   handOver,
   type Launch,
   nextLaunch,
@@ -197,8 +198,16 @@ describe("upgrade, against what's installed (UPG-T1)", () => {
     const { fetcher } = releases(fakePack("2.0.0"));
     const execPath = join(data, "versions", "1.0.0", "slipbox");
     const r = await upgrade({ release, version: "1.0.0", data, execPath, env: {}, fetcher });
-    expect(r).toEqual({ status: "upgraded", from: "1.0.0", latest: "2.0.0", removed: ["0.8.0", "0.9.0"] });
+    expect(r).toEqual({
+      status: "upgraded",
+      from: "1.0.0",
+      latest: "2.0.0",
+      replaced: "1.5.0",
+      removed: ["0.8.0", "0.9.0"],
+    });
     expect(ls(join(data, "versions"))).toEqual(["1.0.0", "1.5.0", "2.0.0"]);
+    // What's said keeps the one replaced, not the one running.
+    expect(upgradeSaid(r, "stable")).toBe("slipbox 1.0.0 → 2.0.0; 1.5.0 is kept, to go back to (0.8.0, 0.9.0 removed)");
   });
 
   test("the version running removed by another window's upgrade: still the installer's, by its path", async () => {
@@ -224,13 +233,40 @@ describe("upgrade, against what's installed (UPG-T1)", () => {
     );
   });
 
-  test("a binary leaving a child holding its output: its version read a second after it exits, never waited on for ever", async () => {
+  test("a binary leaving a child holding its output: given up a second after it exits, never waited on for ever", async () => {
     const bin = join(mkdtempSync(join(sandbox, "held-")), "slipbox");
     writeFileSync(bin, "#!/bin/sh\necho 'slipbox 2.0.0'\nsleep 30 &\nexit 0\n");
     chmodSync(bin, 0o755);
     const started = Date.now();
-    await versionOf(bin, 10_000);
+    expect(await versionOf(bin, 10_000)).toBeNull();
     expect(Date.now() - started).toBeLessThan(5000);
+  });
+
+  test("without a cancel, the children stay in the terminal's group (ctrl+c ends them); with one, a session of their own", async () => {
+    if (process.platform === "win32") return;
+    const bin = join(mkdtempSync(join(sandbox, "group-")), "slipbox");
+    writeFileSync(bin, "#!/bin/sh\necho \"slipbox $(ps -o pgid= -p $$ | tr -d ' ')\"\n");
+    chmodSync(bin, 0o755);
+    const ours = Bun.spawnSync(["ps", "-o", "pgid=", "-p", String(process.pid)])
+      .stdout.toString()
+      .trim();
+    expect(await versionOf(bin, 10_000)).toBe(`slipbox ${ours}`);
+    expect(await versionOf(bin, 10_000, new AbortController().signal)).not.toBe(`slipbox ${ours}`);
+  });
+
+  test("leftovers that can't be removed are left: the lock is never held for good", () => {
+    if (process.getuid?.() === 0) return;
+    const data = layout(["1.0.0"], "1.0.0");
+    mkdirSync(join(data, "versions", ".upgrade-9", "x"), { recursive: true });
+    writeFileSync(join(data, "versions", ".upgrade-9", "x", "f"), "half");
+    chmodSync(join(data, "versions", ".upgrade-9", "x"), 0o555);
+    try {
+      const release = lockUpgrades(data);
+      release();
+      expect(existsSync(join(data, "upgrade.lock"))).toBe(false);
+    } finally {
+      chmodSync(join(data, "versions", ".upgrade-9", "x"), 0o755);
+    }
   });
 
   test("cancelled while the releases are asked for: at once, not when the request gives up", async () => {
@@ -416,7 +452,14 @@ console.log("returned: " + execInto("/bin/sh", ["sh", "-c", script], { ...proces
         return { file: "/bin/sh", argv: ["sh", "-c", `exit ${code}`] };
       };
     const refused = () => "refused";
-    const base = { env: process.env, say: (l: string) => said.push(l), dir, exec: refused, settle: async () => {} };
+    const base = {
+      env: process.env,
+      say: (l: string) => said.push(l),
+      dir,
+      exec: refused,
+      settle: async () => {},
+      exiting: () => {},
+    };
     // Upgraded, then started and waited for: its exit code.
     const upgraded = note({ upgrade: "2.0.0" });
     const code = await handOver({
@@ -507,5 +550,46 @@ execInto(process.execPath, ["bun", "-e", next], process.env);
     // Without: the child ends under the next one, which never reaps it.
     expect(states("not")).toContain("Z");
     expect(states("reap")).not.toContain("Z");
+  });
+});
+
+describe("before the next slipbox starts (UPG, round 2)", () => {
+  test("a child still running after the wait is left running, never killed: an editor handed a note, a git commit", async () => {
+    const child = Bun.spawn(["sleep", "3"]);
+    const started = Date.now();
+    await childrenEnded(200);
+    expect(Date.now() - started).toBeLessThan(2500);
+    // A kill would show once Bun has reaped it: given a moment.
+    await Bun.sleep(200);
+    expect(child.signalCode).toBeNull();
+    expect(child.exitCode).toBeNull();
+    child.kill();
+  });
+
+  test("what runs as a process exits runs before execve, which ends it without: an export's spool removed", () => {
+    if (process.platform === "win32") return;
+    const dir = mkdtempSync(join(sandbox, "exit-"));
+    const helper = join(dir, "helper.ts");
+    const restart = resolve(import.meta.dir, "../src/core/restart.ts");
+    writeFileSync(
+      helper,
+      `import { writeFileSync } from "node:fs";
+import { handOver } from ${JSON.stringify(restart)};
+process.on("exit", () => writeFileSync(${JSON.stringify(join(dir, "cleaned"))}, "yes"));
+const note = { pid: process.pid, at: Date.now(), from: "1", upgrade: null, outcome: null, place: null, session: null };
+await handOver({
+  note,
+  upgrade: null,
+  launch: () => ({ file: "/bin/sh", argv: ["sh", "-c", "exit 0"] }),
+  env: process.env,
+  say: () => {},
+  dir: ${JSON.stringify(dir)},
+  settle: async () => {},
+});
+`,
+    );
+    const r = Bun.spawnSync([process.execPath, helper], { stdin: "ignore", stdout: "pipe", stderr: "pipe" });
+    expect(r.exitCode).toBe(0);
+    expect(existsSync(join(dir, "cleaned"))).toBe(true);
   });
 });

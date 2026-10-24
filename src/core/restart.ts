@@ -214,21 +214,14 @@ function children(): number[] {
 }
 
 /**
- * The children quitting stopped (language servers, a shell job), waited for until they've ended and been reaped, and
- * those that won't, killed: after `execve` the process is the new slipbox's, which never reaps what it didn't start,
- * so one left would stay a zombie as long as it runs. Linux only; elsewhere at once.
+ * The children quitting stopped (language servers, a shell job) waited for, a second at most, until they've ended and
+ * been reaped: after `execve` the process is the new slipbox's, which never reaps what it didn't start, so one ending
+ * later stays a zombie as long as it runs. Never killed: what goes on running is meant to (an editor slipbox handed a
+ * note to, an upgrade beside it). Linux only; elsewhere at once.
  */
 export async function childrenEnded(withinMs = 1000): Promise<void> {
   const until = Date.now() + withinMs;
   while (children().length && Date.now() < until) await Bun.sleep(20);
-  const left = children();
-  if (!left.length) return;
-  for (const pid of left)
-    try {
-      process.kill(pid, "SIGKILL");
-    } catch {}
-  const killed = Date.now() + 500;
-  while (children().length && Date.now() < killed) await Bun.sleep(20);
 }
 
 /** `tcflush`'s queue of what was typed but not read: Linux's `TCIFLUSH`, and BSD's (macOS). */
@@ -302,6 +295,8 @@ export async function handOver(opts: {
   exec?: typeof execInto;
   /** Before the next one starts: children reaped, typing thrown away. A test's own stands in. */
   settle?: () => Promise<void>;
+  /** This process's exit hooks, run before it's replaced: `process.emit("exit")`. A test's own stands in. */
+  exiting?: () => void;
   /** What cancels the upgrade: `ctrl+c`, its SIGINT. Returns its own removal. */
   onCancel?: (cancel: () => void) => () => void;
 }): Promise<number> {
@@ -332,6 +327,8 @@ export async function handOver(opts: {
   }
   await (opts.settle ?? settleForNext)();
   const launch = opts.launch(failed);
+  // What would run as this process exits, run now: `execve` ends it without them (an export's spool, its temp files).
+  (opts.exiting ?? (() => process.emit("exit", 0)))();
   const why = (opts.exec ?? execInto)(launch.file, launch.argv, opts.env);
   const code = await startAndWait(launch, opts.env, opts.say);
   if (code !== null) return code;
