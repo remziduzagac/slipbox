@@ -315,7 +315,7 @@ describe("the supply chain's gates (14.10)", () => {
     ])
       expect([f, isDocs(f)]).toEqual([f, false]);
     const ci = Bun.YAML.parse(readFileSync(join(ROOT, ".github", "workflows", "ci.yml"), "utf8")) as {
-      jobs: Record<string, { needs?: string; if?: string; steps?: { run?: string }[] }>;
+      jobs: Record<string, { needs?: string; if?: string; steps?: { id?: string; run?: string }[] }>;
     };
     for (const [job, output] of [
       ["test", "code"],
@@ -326,22 +326,31 @@ describe("the supply chain's gates (14.10)", () => {
         "changes",
         `\${{ needs.changes.outputs.${output} == 'true' }}`,
       ]);
-    expect(ci.jobs.changes?.steps?.at(-1)?.run).toBe("bun run ci:scope");
+    expect(ci.jobs.changes?.steps?.find((s) => s.id === "scope")?.run).toBe("bun run ci:scope");
     expect(ci.jobs.lint?.steps?.map((s) => s.run)).toContain("bun run test:docs");
   });
 
-  test("ci:scope: code=false for a pull request's merge commit of the docs alone; true for code, a push, an unread diff", () => {
+  test("ci:scope: code=false for a pull request's merge commit of the docs alone; true for code, an unread diff", () => {
     const repo = mkdtempSync(join(sandbox, "scope-"));
     const git = (...args: string[]) => Bun.spawnSync(["git", "-C", repo, ...args], { env: gitEnv });
     const gitEnv = { ...process.env, GIT_AUTHOR_NAME: "t", GIT_AUTHOR_EMAIL: "t@t", GIT_COMMITTER_NAME: "t" };
     let runs = 0;
+    // What it writes for the jobs, less a pull request's record and a push's range (tests/ci-range.test.ts).
     const scope = (event: string, before = "") => {
       const out = join(sandbox, `scope-out-${++runs}`);
       Bun.spawnSync([process.execPath, join(ROOT, "scripts", "ci-scope.ts")], {
         cwd: repo,
-        env: { ...gitEnv, GITHUB_EVENT_NAME: event, GITHUB_OUTPUT: out, SCOPE_BEFORE: before },
+        env: {
+          ...gitEnv,
+          GITHUB_EVENT_NAME: event,
+          GITHUB_OUTPUT: out,
+          SCOPE_BEFORE: before,
+          GH_TOKEN: "",
+          GITHUB_REF_NAME: "dev",
+          RUNNER_TEMP: sandbox,
+        },
       });
-      return readFileSync(out, "utf8");
+      return readFileSync(out, "utf8").replace(/^(record|range)=.*\n/gm, "");
     };
     const head = () => Bun.spawnSync(["git", "-C", repo, "rev-parse", "HEAD"]).stdout.toString().trim();
     const commit = (message: string) => {
@@ -357,16 +366,13 @@ describe("the supply chain's gates (14.10)", () => {
     writeFileSync(join(repo, "docs", "x.md"), "# x\n");
     commit("docs");
     expect(scope("pull_request")).toBe("code=false\nchecks=false\n");
-    // A push to `dev` or `test`: its commits since the branch's head before it (D251); a branch just made has none, and
-    // a run by hand is everything.
-    expect(scope("push", base)).toBe("code=false\nchecks=false\n");
-    expect(scope("push")).toBe("code=true\nchecks=true\n");
-    expect(scope("push", "0000000000000000000000000000000000000000")).toBe("code=true\nchecks=true\n");
+    // A push with no run to read where its range starts, and no `test`: everything (CIW-D1; tests/ci-range.test.ts). A
+    // run by hand is everything.
+    expect(scope("push", base)).toBe("code=true\nchecks=true\n");
     expect(scope("workflow_dispatch", base)).toBe("code=true\nchecks=true\n");
     writeFileSync(join(repo, "a.ts"), "2\n");
     commit("code");
     expect(scope("pull_request")).toBe("code=true\nchecks=true\n"); // a file nothing names: everything
-    expect(scope("push", base)).toBe("code=true\nchecks=true\n");
   });
 
   test("the import graph: what a file imports, a worker it starts, what it imports that isn't code, a path it names", () => {
