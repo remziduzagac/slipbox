@@ -346,7 +346,7 @@ describe("the screen and where you were (RPT-D2)", () => {
     expect(said(h)).toBe(`peek:${file} is the floating window's, not a file: not written`);
   });
 
-  test("opened over the merge screen of the conflict prompt's (m): the prompt comes back, over the report", async () => {
+  test("opened over the merge screen of the conflict prompt's (m): its question back once typing stops, never under the title", async () => {
     const root = makeVault();
     const file = join(root, "c.md");
     writeFileSync(file, "one\n");
@@ -361,8 +361,17 @@ describe("the screen and where you were (RPT-D2)", () => {
     expect(h.app.floating?.kind).toBe("merge");
     await h.keys("space", "r");
     expect(h.app.floating?.kind).toBe("report");
-    expect((h.app.overlay as ListOverlay).title).toContain("changed on disk");
+    // Typing its title: the letters are the title's, never the question's answers (m, l, k, d).
+    expect(h.app.overlay).toBeNull();
+    await type(h, "my title, loaded");
+    expect(text(h).split("\n")[2]).toBe("my title, loaded");
+    expect(v.buf.source).toBe("one!\n");
     expect(v.buf.dirty).toBe(true);
+    // Typing stopped: the question again, as for any conflict that comes while typing.
+    await h.keys("escape", "j");
+    expect((h.app.overlay as ListOverlay).title).toContain("changed on disk");
+    expect(h.app.floating?.kind).toBe("report");
+    expect(v.buf.source).toBe("one!\n");
   });
 
   test("the menu adds them too: s and w", async () => {

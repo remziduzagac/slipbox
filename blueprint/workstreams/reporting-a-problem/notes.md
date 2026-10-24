@@ -127,3 +127,21 @@
     title cut at it (only a comment opening its line hides the rest); `space r` over the merge screen of the conflict
     prompt dropped the prompt (it comes back now). Not taken from the last: a diff window's `back` on the same path
     (it reads git again and can reopen a window over the report).
+- **Review, round 3** (the last: the maintainer's rule, three rounds, a fourth only for a real bug) — `/code-review`
+  and a fresh Claude reviewer for Codex:
+  - taken, real bugs: `gh`'s body dropped a comment's `-->` sharing the title's line, so GitHub would hide the whole
+    body; a comment left open inside a section went unseen, and GitHub would hide the facts after it; round 2's
+    merge-screen fix reopened the conflict question as the report opened typing, so the title's letters answered it
+    (`m`, `l`…) and could replace unsaved text — the question now waits until typing stops, as any conflict's does.
+    With them, in the same code: the rest of a line a comment starts is the comment's; a peek's place named. And
+    two CHANGELOG lines for the two released bugs fixed here (`:w!` in a floating window; `ctrl+l` in a peek), and
+    MODIFIED entries for design/tui.md § Writing notes.
+  - smaller, left for later (not in this pull request): "where you were" from a properties, merge or diff window
+    says no file was open (only a peek's buffer names one); a comment left open in What slipbox sees refuses the
+    address though that field is a code block (gh's refusal is right); an intro line inside a fence of your own
+    unfences the inner one for the address; the browser's opener found by today's `PATH` but run by its name; a
+    second `ctrl+s g` during the first's account check says "gh is ready" while the question is up; the place's
+    rule shared with `Git.commitDone` (one helper, or `panels.fixRegion`); `overSsh` beside `isWsl` instead of in
+    `core/report.ts`; a stale comment on `plan()` and the `posting` checks the menu and `send` can't reach; the facts
+    gathered while a frame draws (a few small files read); and again `slipbox report` naming a folder `report`, and
+    a flag on virtual buffers (both settled in round 1).

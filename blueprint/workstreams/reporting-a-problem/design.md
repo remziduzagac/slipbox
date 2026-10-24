@@ -16,7 +16,8 @@ problem"; its bottom border says ` ctrl+s sends it or adds the screen · esc · 
 window's "writing back"); the status line names it `report`, with no "unsaved" mark, since it's never saved anywhere.
 A new one opens typing, on the title's line (empty, the line after the guide); the first `esc` leaves typing, the next
 leaves the window, and focus goes back where it was opened from (the explorer, say). Opened over the merge screen of
-the conflict prompt's (m), that prompt comes back over it, as leaving the merge screen brings it. Opened again, it's
+the conflict prompt's (m), that question is asked again once typing stops, as for any conflict that comes while you
+type — never over the report as it opens typing, where the title's letters would answer it. Opened again, it's
 as it was left, not typing. Its text, the title typed:
 
 ````markdown
@@ -72,8 +73,10 @@ form's fields, by one rule, which also says where an added screen goes:
   (GitHub hides a comment anyway). Before the first label, a comment is never the title, nor text the address would
   lose.
 - The title is the first line with text before the first label, a comment aside. A comment opens its line, as an HTML
-  block does; `<!--` later in a line is the line's own text (CommonMark), the title's as typed. Text after a comment
-  on its line counts; nothing in a comment opens a fence. Any other text there belongs to no
+  block does, anywhere outside a fence; `<!--` later in a line is the line's own text (CommonMark), the title's as
+  typed. Nothing in a comment, nor the rest of a line one starts, is a label or opens a fence; in a section it's the
+  section's text, as written. Text after a comment's end on the title's line is the title; what's before the title
+  there stays in `gh`'s body, so the body never opens a comment it doesn't close. Any other text there belongs to no
   field: the address would lose it, so the menu says so and offers the copy and `gh` only (below), until it's moved
   under a heading.
 - What slipbox sees: its generated outer fence is taken off for the address (the form fences that field itself);
@@ -111,7 +114,8 @@ form's fields, by one rule, which also says where an added screen goes:
   the window under it; `:report screen` and `:report where` asked before it both add theirs.
   A frame whose drawing failed is kept as the screen that says so, and the report opens all the same: it's wanted
   most then.
-- **Where you were:** the window's file (its path in the vault, else from home, `~/…`), the cursor's line number and
+- **Where you were:** the window's file (its path in the vault, else from home, `~/…`; a peek's, its vault's name and
+  its path there), the cursor's line number and
   how it was shown (rendered, source, the lens open; nothing said for a file that isn't a note), then that line's
   text: `handbook/operations-handbook.md, line 3, rendered`. A window with no file (a hover, none open): "no file was
   open".
@@ -152,9 +156,9 @@ heads it, said, and `o` and `a` aren't there:
   redirect). In order: every field; else every field but `output`, which `v` copies; else the title and the facts;
   else the facts alone; else none but the template. `o` and `a` say what they leave out ("filled in but What slipbox
   sees: v copies it"), and `c` copies everything. Text that belongs to no field (§ Reading it back) leaves `o` and `a`
-  out, said. So does a fence left open, where each field ends isn't clear, and a comment (`<!--`) left open above the
-  labels, which GitHub would hide the rest behind (the menu's first line says which); the comment also stops `gh`
-  and an added screen.
+  out, said. So does a fence left open, where each field ends isn't clear, and a comment (`<!--`) left open anywhere,
+  which GitHub would hide the rest behind, the facts among it (the menu's first line says which); the comment also
+  stops `gh` and an added screen.
 - **One copy at a time:** each entry puts one thing on the clipboard, never two in a row; another asked for while one
   is being made is refused ("still copying — wait for it"). `o` copies nothing when the
   browser opens; when it can't, it copies the address and says what's still left out (`v`, `c`). Each copy is said
@@ -228,6 +232,42 @@ Rows added, after `core/skill.ts` and after `cli/install.ts`:
 | `cli/report.ts` | RPT | `report`, run before any vault is looked for |
 
 Previously: no rows for them.
+
+## MODIFIED design/tui.md § Writing notes
+
+Its first paragraph, in full:
+
+Every write goes one way (`writeBuffer`; D142): the file is replaced atomically (a temp file in the same
+folder, then a rename) keeping its permissions; a symlinked note is written through to its target,
+and a target outside the vault is refused (`7.5`) — in home, a link you followed is written through wherever it
+leads, and in Elsewhere what the file system allows (VV-D6; [roots.md](../../design/roots.md) § Links followed only when
+you say so); the watcher is told the write is its own; the buffer reloads, its windows keeping their anchors, so the
+cursor stays put. A virtual buffer (`3.20`: a note's properties, a commit's message, a peek, a report) is no file:
+`writeBuffer` refuses it, said, and `:w!` on one is `:w`, its own save (RPT, found by its review).
+
+Previously: Every write goes one way (`writeBuffer`; D142): the file is replaced atomically (a temp file in the same
+folder, then a rename) keeping its permissions; a symlinked note is written through to its target, and a target
+outside the vault is refused (`7.5`) — in home, a link you followed is written through wherever it leads, and in
+Elsewhere what the file system allows (VV-D6; [roots.md](../../design/roots.md) § Links followed only when you say
+so); the watcher is told the write is its own; the buffer reloads, its windows keeping their anchors, so the cursor
+stays put.
+
+The paragraph on task checkboxes, in full:
+
+**Task checkboxes** (`4.11`) are the first write. `ctrl+l` (`space n t`), or a click on the checkbox, flips the task
+item holding the cursor — the innermost, from any of its rows; in source mode and the lens, the one holding the
+cursor's line, found in the parse — as a one-byte edit to the file's bytes, so a BOM, CRLF endings and even invalid
+UTF-8 survive untouched. If the file changed on disk since it was shown, it is reloaded instead and nothing is written
+(its lines may have moved). With unsaved changes it flips the mark in the text on screen instead — an undo step, left
+unsaved ("done ✓ (unsaved)") — never on disk under them. In a read-only window — a peek, a hover, a file as it was in
+git — it's refused, said: that file is never written from there.
+
+Previously: **Task checkboxes** (`4.11`) are the first write. `ctrl+l` (`space n t`), or a click on the checkbox,
+flips the task item holding the cursor — the innermost, from any of its rows; in source mode and the lens, the one
+holding the cursor's line, found in the parse — as a one-byte edit to the file's bytes, so a BOM, CRLF endings and
+even invalid UTF-8 survive untouched. If the file changed on disk since it was shown, it is reloaded instead and
+nothing is written (its lines may have moved). With unsaved changes it flips the mark in the text on screen instead —
+an undo step, left unsaved ("done ✓ (unsaved)") — never on disk under them.
 
 ## MODIFIED design/trust.md § What runs
 

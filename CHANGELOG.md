@@ -42,6 +42,10 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 - A file's linters each show their findings as soon as they answer. A slow linter beside a quick one kept the quick
   one's findings off the screen until it had answered too, for up to its 30-second limit, unless something else
   redrew the screen.
+- `:w!` in a floating window (a note's properties, a commit's message, a hover) no longer writes its text to a stray
+  file named after it, beside the note or where slipbox was started: it does what `:w` does there.
+- `ctrl+l` in a peek no longer ticks the task in the peeked note, which can be another vault's: a peek is read-only,
+  and says so.
 - A slow disk, such as a network share or a drive that's asleep, no longer freezes the screen while the background
   index walks and indexes your home folder and the vaults in it, or while the explorer lists a folder outside the vault
   you're in. Both read the disk in the background now: a folder being listed says `listing…` until it answers, and

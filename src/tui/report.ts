@@ -169,8 +169,12 @@ export class Reporter {
   private show(adds: Add[]): void {
     const was = this.app.floating;
     if (was && !this.app.overlays.closeFloating()) return;
-    // The merge screen of the conflict prompt's (M)erge: its prompt back, over the report, as leaving it brings it.
-    if (was?.kind === "merge") mergeClosed(this.app, was.merge);
+    // The merge screen of the conflict prompt's (M)erge: its question asked again once typing stops, as a conflict
+    // that comes while typing is — never over the report as it opens typing, where its letters would answer it.
+    if (was?.kind === "merge") {
+      if (was.merge.prompt) was.merge.prompt.buf.conflictWaiting = true;
+      else mergeClosed(this.app, was.merge);
+    }
     const fresh = !this.view;
     if (!this.view) {
       const buf = new NoteBuffer(null, "report:", "report");

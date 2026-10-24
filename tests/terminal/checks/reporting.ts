@@ -461,6 +461,39 @@ export const REPORTING: Check[] = [
   },
   {
     area: "navigating",
+    name: "report: opened over a conflict's merge screen, its title's letters are the title's; the question after",
+    covers: { cases: ["help", "conflict"], commands: ["help.report", "view.source"] },
+    options: {
+      size: { cols: 120, rows: 34 },
+      open: "conflict.md",
+      setup: (s) => s.write("conflict.md", "one\n"),
+    },
+    run: async (s) => {
+      // Yours and theirs on the same line: the merge screen, not a clean merge.
+      await s.ex("source");
+      await s.status("SOURCE");
+      await s.keys("g", "g", "shift+a");
+      await s.status("INSERT");
+      await s.type("!");
+      await s.keys("escape");
+      s.write("conflict.md", "one#\n");
+      await s.see("changed on disk, and you have unsaved changes", 5000);
+      await s.keys("m");
+      await s.see("Merge — ");
+      await leader(s, "r");
+      await s.see(WINDOW);
+      // m, l, d: each a choice of the question, were it there.
+      await s.type("my loaded draft");
+      await s.see(/ 3 {2}my loaded draft/);
+      s.expect(!s.text().includes("changed on disk, and you have"), "no question while the title is typed");
+      await s.keys("escape", "j");
+      await s.see("changed on disk, and you have unsaved changes");
+      // The question's box over the report's title: its text under it.
+      s.expect(s.text().includes("### What you expected"), "the report still there under the question");
+    },
+  },
+  {
+    area: "navigating",
     name: "report: a folder's keys can't send a report, which runs a program: ignored, said",
     covers: { cases: ["config"] },
     options: {
