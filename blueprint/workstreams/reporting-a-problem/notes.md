@@ -120,4 +120,10 @@
     padded by width.
   - not taken: as in round 1 (GitHub's fence, the virtual-buffer flag, the shared helpers), and a general gate in
     the key loop for features that open on the next frame (one feature has one: premature).
-  - Codex's part of round 2 was done by a fresh Claude reviewer: Codex was at its usage limit.
+  - Codex's part of round 2 was done by a fresh Claude reviewer (Codex was at its usage limit). Its three, all
+    checked and taken: What slipbox sees, unfenced for the form's field, could still end GitHub's own code block
+    (raised in each round; settled now by CommonMark's rule that a fence's end is indented three spaces at most: a
+    line that could end one is indented four there); `<!--` later in a line was taken for an open comment, the
+    title cut at it (only a comment opening its line hides the rest); `space r` over the merge screen of the conflict
+    prompt dropped the prompt (it comes back now). Not taken from the last: a diff window's `back` on the same path
+    (it reads git again and can reopen a window over the report).

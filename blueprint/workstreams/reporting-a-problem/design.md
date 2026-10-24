@@ -15,7 +15,8 @@ session. The `Reporter` (`app.report`) keeps the buffer and its view while the w
 problem"; its bottom border says ` ctrl+s sends it or adds the screen · esc · q leaves it ` (never the floating
 window's "writing back"); the status line names it `report`, with no "unsaved" mark, since it's never saved anywhere.
 A new one opens typing, on the title's line (empty, the line after the guide); the first `esc` leaves typing, the next
-leaves the window, and focus goes back where it was opened from (the explorer, say). Opened again, it's as it was
+leaves the window, and focus goes back where it was opened from (the explorer, say). Opened over the merge screen of
+the conflict prompt's (m), that prompt comes back over it, as leaving the merge screen brings it. Opened again, it's as it was
 left, not typing. Its text, the title typed:
 
 ````markdown
@@ -70,12 +71,15 @@ form's fields, by one rule, which also says where an added screen goes:
 - The generated guide comment is left out of the copy and `gh`'s body only as generated; edited, it's kept as text
   (GitHub hides a comment anyway). Before the first label, a comment is never the title, nor text the address would
   lose.
-- The title is the first line with text before the first label, a comment aside (text after a comment on its line
-  counts; nothing in a comment opens a fence). Any other text there belongs to no
+- The title is the first line with text before the first label, a comment aside. A comment opens its line, as an HTML
+  block does; `<!--` later in a line is the line's own text (CommonMark), the title's as typed. Text after a comment
+  on its line counts; nothing in a comment opens a fence. Any other text there belongs to no
   field: the address would lose it, so the menu says so and offers the copy and `gh` only (below), until it's moved
   under a heading.
 - What slipbox sees: its generated outer fence is taken off for the address (the form fences that field itself);
-  fences you wrote, and text around them, are kept.
+  fences you wrote, and text around them, are kept — and any line that could end a fence (a note's own in the screen
+  or the place, or yours) is indented four spaces there, which no fence's end may be (CommonMark), so nothing in it
+  ends the form's own block early, whatever fence GitHub picks. The copy and `gh` keep it as written.
 
 **The facts** (`core/report.ts`, RPT-D1), the same as `slipbox report` prints:
 

@@ -32,6 +32,7 @@ import { sanitize } from "../core/sanitize.ts";
 import { NoteBuffer } from "./buffer.ts";
 import { type Canvas, TextCanvas } from "./canvas.ts";
 import { placeAt, startInsert, stopInsert } from "./editing.ts";
+import { mergeClosed } from "./mergescreen.ts";
 import type { App, ListItem, Region, View } from "./app.ts";
 
 /** What `:report` adds; what `help.report_send` sends by. */
@@ -163,7 +164,10 @@ export class Reporter {
 
   /** The window, opened: the report kept, else a new one, typing on its title's line. */
   private show(adds: Add[]): void {
-    if (this.app.floating && !this.app.overlays.closeFloating()) return;
+    const was = this.app.floating;
+    if (was && !this.app.overlays.closeFloating()) return;
+    // The merge screen of the conflict prompt's (M)erge: its prompt back, over the report, as leaving it brings it.
+    if (was?.kind === "merge") mergeClosed(this.app, was.merge);
     const fresh = !this.view;
     if (!this.view) {
       const buf = new NoteBuffer(null, "report:", "report");

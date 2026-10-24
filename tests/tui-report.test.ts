@@ -2,7 +2,7 @@
 // sending — each way faked: the browser's opener by the host, gh by a script on PATH.
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { chmodSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, readdirSync, readFileSync, utimesSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { canonKey } from "../src/core/commands.ts";
 import { tildePath } from "../src/core/names.ts";
@@ -10,7 +10,7 @@ import { GUIDE, readReport, SCREEN_INTRO, WHERE_INTRO } from "../src/core/report
 import { NoteBuffer } from "../src/tui/buffer.ts";
 import type { ListOverlay } from "../src/tui/app.ts";
 import { TextCanvas } from "../src/tui/canvas.ts";
-import { type Harness, harness, makeSandbox } from "./tui-harness.ts";
+import { type Harness, harness, makeSandbox, makeVault } from "./tui-harness.ts";
 
 const sandbox = makeSandbox();
 
@@ -327,6 +327,25 @@ describe("the screen and where you were (RPT-D2)", () => {
     // And writing it any other way is refused, said.
     expect(h.app.writeBuffer(buf, "- [x] one\n")).toBe(false);
     expect(said(h)).toBe(`peek:${file} is the floating window's, not a file: not written`);
+  });
+
+  test("opened over the merge screen of the conflict prompt's (m): the prompt comes back, over the report", async () => {
+    const root = makeVault();
+    const file = join(root, "c.md");
+    writeFileSync(file, "one\n");
+    const h = await harness({ root, open: "c.md" });
+    const v = h.app.view!;
+    await h.keys("g", "g", "shift+a", "!", "escape");
+    writeFileSync(file, "one#\n");
+    const future = Date.now() / 1000 + 5;
+    utimesSync(file, future, future);
+    h.app.watch.reloadBuffer(v.buf);
+    await h.keys("m");
+    expect(h.app.floating?.kind).toBe("merge");
+    await h.keys("space", "r");
+    expect(h.app.floating?.kind).toBe("report");
+    expect((h.app.overlay as ListOverlay).title).toContain("changed on disk");
+    expect(v.buf.dirty).toBe(true);
   });
 
   test("the menu adds them too: s and w", async () => {
@@ -685,7 +704,7 @@ describe("gh (RPT-D4)", () => {
     await h2.app.run("help.report_send gh");
     expect(said(h2)).toBe("gh has no account for github.com here — gh auth login first");
     // A comment left open: GitHub would hide what's after it, so not posted.
-    h2.app.view!.buf.edit(text(h2).indexOf("Crash") + "Crash".length, 0, " <!-- unclosed");
+    h2.app.view!.buf.edit(text(h2).indexOf("Crash") + "Crash".length, 0, "\n<!-- unclosed");
     await h2.app.run("help.report_send gh");
     expect(said(h2)).toBe("gh: a comment (<!--) is left open: GitHub hides everything after it — close it with -->");
   });

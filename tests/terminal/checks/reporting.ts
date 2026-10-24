@@ -343,6 +343,26 @@ export const REPORTING: Check[] = [
   },
   {
     area: "navigating",
+    name: "report: where you were on a fence's line: in the address, nothing that can end the form's own code block",
+    covers: { cases: ["help"], commands: ["help.report", "help.report_send", "view.source", "cursor.goto_line"] },
+    options: { size: { cols: 120, rows: 34 }, open: "software/pipeline-cookbook.md" },
+    run: async (s) => {
+      await s.ex("source");
+      await s.status("SOURCE");
+      await s.ex("34");
+      await s.status(/L34:/);
+      await s.ex("report where");
+      await s.see("Where it was:");
+      await s.keys("ctrl+s", "a");
+      await s.until(() => s.clipboard().startsWith("https://github.com/"), 5000, "the address copied");
+      const output = new URL(s.clipboard().trim()).searchParams.get("output") ?? "";
+      s.expect(output.includes("software/pipeline-cookbook.md, line 34, source"), `where it was: ${output}`);
+      s.expect(!output.split("\n").some((l) => /^ {0,3}(`{3,}|~{3,})/.test(l)), `no fence's end in it: ${output}`);
+      s.expect(output.includes("\n    ```"), "the fence's line kept, indented");
+    },
+  },
+  {
+    area: "navigating",
     name: "report: gh failing: its words said, the draft kept; closed while gh was asked, said",
     covers: { cases: ["help"], commands: ["help.report", "help.report_send"] },
     options: {
@@ -410,7 +430,10 @@ export const REPORTING: Check[] = [
       await s.status("FILES");
       await leader(s, "r");
       await s.see(WINDOW);
-      await s.type("Crash <!-- see below");
+      // A comment opening its own line, never closed: GitHub would hide the rest.
+      await s.type("Crash");
+      await s.keys("enter");
+      await s.type("<!-- see below");
       await s.keys("escape", "ctrl+s");
       await s.see(/a comment \(<!--\) is left open: github hides everything after it/i);
       s.expect(!s.text().includes("(a) Copy the bug form's address"), "no address while a comment is open");

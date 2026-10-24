@@ -347,14 +347,19 @@ describe("reading it back", () => {
     expect(readReport("<!-- one\ntwo -->\nTitle\n### What happened\n").title).toBe("Title");
   });
 
-  test("What slipbox sees: slipbox's fences taken off for the address, yours and the text around them kept", () => {
+  test("What slipbox sees in the form's field: slipbox's fences off, and no line left that could end GitHub's", () => {
     const mine = "my words\n\n```sh\nslipbox doctor\n```";
     const text = add(typed("T").replace(/\n$/, `\n\n### What slipbox sees\n\n${mine}\n`), SCREEN);
     const out = readReport(text).fields.output!;
-    expect(out.startsWith(`${mine}\n\nThe screen, 80×24, as the report opened:\n\nslipbox · home.md`)).toBe(true);
+    // GitHub puts the field in a code block of its own (render: text): a fence's end is indented 3 spaces at most.
+    expect(
+      out.startsWith("my words\n\n    ```sh\nslipbox doctor\n    ```\n\nThe screen, 80×24, as the report opened:"),
+    ).toBe(true);
     expect(out).not.toContain("````");
-    expect(out).toContain("```js\nlet x = 1\n```");
-    expect(out).toContain("```sh\nslipbox doctor\n```");
+    expect(out).toContain("    ```js\nlet x = 1\n    ```");
+    expect(out.split("\n").some((l) => /^ {0,3}(`{3,}|~{3,})/.test(l))).toBe(false);
+    // The copy keeps it as written, slipbox's longer fence and all.
+    expect(sentText(text)).toContain("````text\nslipbox · home.md\n### Version\n```js");
   });
 });
 
@@ -413,9 +418,17 @@ describe("adding the screen or the place (RPT-D2)", () => {
   });
 
   test("a comment left open above the labels: GitHub hides the rest, so no address and nothing added", () => {
-    const text = "Crash <!-- see below\n\n### What happened\n\na\n";
+    const text = "Crash\n<!-- see below\n\n### What happened\n\na\n";
     const r = readReport(text);
     expect([r.title, r.openComment]).toEqual(["Crash", true]);
+    // Later in a line, <!-- is the line's own text (CommonMark): the title as typed, nothing hidden.
+    const inline = readReport("Export drops <!-- comments\n\n### What happened\n\na\n");
+    expect([inline.title, inline.openComment, inline.fields.happened]).toEqual([
+      "Export drops <!-- comments",
+      false,
+      "a",
+    ]);
+    expect(noAddress(inline)).toBeNull();
     expect(noAddress(r)).toBe("a comment (<!--) is left open: GitHub hides everything after it — close it with -->");
     expect(addressPlan("me/slipbox", r)).toBeNull();
     expect(placeAttachment(text, SCREEN)).toEqual({

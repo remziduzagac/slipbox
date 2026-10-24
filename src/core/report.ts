@@ -338,7 +338,8 @@ export function readReport(text: string): ReadBack {
   for (let i = 0; i < lines.length; i++) {
     let line = lines[i]!;
     // Before the first label, a comment (the guide among them: GitHub hides them) is no text — neither the title nor
-    // text the address would lose — and nothing in it opens a fence. Text after one on its line is the line's.
+    // text the address would lose — and nothing in it opens a fence. A comment opens a line, as an HTML block does;
+    // `<!--` later in a line is the line's own text (CommonMark), the title's as typed. Text after one is the line's.
     if (!current && !fence) {
       if (comment) {
         const end = line.indexOf("-->");
@@ -346,11 +347,14 @@ export function readReport(text: string): ReadBack {
         comment = false;
         line = line.slice(end + 3);
       }
-      line = line.replace(/<!--.*?-->/g, "");
-      const open = line.indexOf("<!--");
-      if (open >= 0) {
-        comment = true;
-        line = line.slice(0, open);
+      while (/^\s{0,3}<!--/.test(line)) {
+        const end = line.indexOf("-->");
+        if (end < 0) {
+          comment = true;
+          line = "";
+          break;
+        }
+        line = line.slice(end + 3);
       }
     }
     if (!fence) {
@@ -393,7 +397,7 @@ export function readReport(text: string): ReadBack {
       .map((s) => s.join("\n").trim())
       .filter(Boolean)
       .join("\n\n");
-    if (joined) fields[id] = id === "output" ? unfenceAttachments(joined) : joined;
+    if (joined) fields[id] = id === "output" ? inertFences(unfenceAttachments(joined)) : joined;
   }
   return { title, titleLine, stray, fields, seen, openFence: fence !== null, openComment: comment, added };
 }
@@ -418,6 +422,13 @@ export function fenced(body: string): string {
 /** An attachment: its first line, then its text fenced. */
 export function attachment(intro: string, body: string): string {
   return `${intro}\n\n${fenced(body)}`;
+}
+
+/** What slipbox sees in the form's field, which GitHub puts in a code block of its own (`render: text`): a line that
+ *  could end a fence — a note's own, or yours — indented four spaces, which no fence's end may be (CommonMark), so
+ *  nothing in it ends that block early, whatever fence GitHub picks. */
+function inertFences(text: string): string {
+  return text.replace(/^( {0,3})(`{3,}|~{3,})/gm, "    $1$2");
 }
 
 /** What slipbox sees for the address: the fences slipbox put around an attachment taken off (the form fences that
