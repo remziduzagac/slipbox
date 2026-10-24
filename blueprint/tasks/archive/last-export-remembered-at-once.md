@@ -1,5 +1,5 @@
 ---
-status: doing
+status: done
 assignee: claude-39
 tracker: [gh:#39]
 created: "2026-10-24"
@@ -95,3 +95,13 @@ the cleanup is slow, the window opened in between falls back to beside the note.
   be met live needs a hook in slipbox; the unit test holds it back instead.
 - 2026-10-24: The maintainer's choice: no test hook in slipbox to slow the cleanup for a terminal check. The held
   cleanup is the unit test's; the terminal checks drive the export, the reopen, and the failed and cancelled exports.
+- 2026-10-24: Typecheck, lint and `check:docs` clean. The scratch home in `tmp/issue/home` held the reference set's
+  broken TypeScript (`work/kestrel`), which `tsc` read; deleted, rebuilt elsewhere if needed.
+- 2026-10-24: Reviewed before the pull request, twice and independently: a fresh Claude reviewer (Codex's part, Codex
+  at its usage limit) and `/code-review`. Neither found a fault. Checked and holding: a cleanup that throws still
+  leaves the folder kept and the message shown, as on `dev`; two exports at once, the last published wins (on `dev`,
+  the last cleaned up); a quit after `publish` keeps the folder now. The new terminal check's last `see` reads the
+  window opened again (the format list hides the one before). Not taken: awaiting `pending` when an assertion fails
+  in the held-cleanup test, which the file's other tests don't either. For the pull request: the row the terminal
+  checks can't force (the held cleanup) said, and the failed and cancelled exports named as cases its live tries
+  added, tests only.
