@@ -288,3 +288,19 @@ to lead where it did (D260).
   showed: that step is a plan saved and applied by the command line now, as an agent's two steps. Both found failing
   again with their fixes undone. A linters test failed on macOS too (`linters without a server …`, a message said once),
   nothing this change touches.
+- 2026-10-24: Rebased on `origin/dev` (0633e38) at the main session's word: `CHANGELOG.md` alone conflicted, both sides'
+  lines kept. Codex's part of round 3 was skipped (it had reached its usage limit, its pane showing a menu); by the
+  maintainer's rule for that, a second independent review takes its place: a fresh Claude reviewer, on the rebased
+  branch's whole diff, without `/code-review`'s round-3 findings.
+- 2026-10-24: The second review of round 3, a fresh Claude reviewer's in Codex's place: six findings, each tried against
+  the code, all taken, each with a unit test and a terminal check that fail without its fix but where said. (1) A note
+  of another vault, reached through a link (a link into a nested vault, or home's into a vault), was rewritten for the
+  link's reading of its links, breaking it in its own vault: it's that vault's by its own name now, left and said
+  (`ownPlace`) — so nothing is written through a link into another vault any more, and round 2's reindexing of one by
+  where it was written goes, with its test and check, which now see the note left; (2) in home, a folder moved with a
+  followed link in it had the link's note written for its new place, though its answer stays where it was, and the move
+  then couldn't be undone: that note is left, said, as a relative link leading out of the folder is; (3) CI's scope ran
+  no check of the link-text rules for a change to `symlinks.ts` alone: it runs the `rename` checks too; (4) a link to an
+  image moved by its name said its own links were left, when it has none: said only of a file that has links (unit and
+  the onto-target check); (5) the case-only check's last look held before the rename too: where case is ignored it reads
+  the folder's names now; (6) `sameFile`, unused, gone.

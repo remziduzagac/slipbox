@@ -290,7 +290,7 @@ export function applyPlan(g: Graph, plan: RenamePlan): Applied {
   // Other vaults' files written: their indexes learn it now, as when they're next opened — the
   // backlinks they give, and the next plan, read the links they hold now.
   const others = new Set<string>();
-  for (const abs of [...written, ...at.values()]) {
+  for (const abs of written) {
     const root = findVaultRoot(abs);
     if (root && real(root) !== real(g.root)) others.add(root);
   }

@@ -66,7 +66,7 @@ export const CHECKS_FOR: [RegExp, string[]][] = [
   // Vaults, home and Elsewhere; a link followed out; the peek (VV).
   [/^src\/core\/(home|mounts)\.ts$/, ["home", "Elsewhere"]],
   [/^src\/tui\/vaults\.ts$/, ["vaults", "home", "Elsewhere", "roots", "named folders"]],
-  [/^src\/core\/symlinks\.ts$/, ["links"]],
+  [/^src\/core\/symlinks\.ts$/, ["links", "rename"]],
   [/^src\/tui\/peek\.ts$/, ["peek"]],
   // Replace, and renames with the links they rewrite.
   [/^src\/core\/(replace|replace-files)\.ts$/, ["replace", "find"]],

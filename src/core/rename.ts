@@ -26,7 +26,7 @@ import {
   travelTogether,
 } from "./folders.ts";
 import { formatPointer, isPointer, parsePointer, resolvePointer } from "./pointer.ts";
-import { isLink } from "./symlinks.ts";
+import { followedTarget, isLink } from "./symlinks.ts";
 import { findVaultRoot, isHome, isInside } from "./vault.ts";
 import { holdsNotes } from "./walk.ts";
 import {
@@ -179,12 +179,13 @@ export function planFolderMove(g: Graph, fromDir: string, toInput: string): Rena
 }
 
 /**
- * A folder moving from `from` to `to` with a relative link in it that leads out of it (D260): left as the move leaves
- * it, it leads elsewhere from its new place, so an edit for the file it reaches now is right for no name — that file
- * left, and said. A file is judged by the first link on its way under the folder; where it leads after is read from
- * the link's own text, from its folder's new place.
+ * What a folder moving from `from` to `to` leaves of the files it reaches through a link in it (D260), its links left
+ * as the move leaves them: a followed one, its answer staying where it was, isn't followed at its new place; a
+ * relative one leading out of the folder leads elsewhere from there. An edit for the file it reaches now would be
+ * right for no name: that file left, and said. A file is judged by the first link on its way under the folder; where
+ * a relative one leads after is read from its own text, from its folder's new place.
  */
-function leadsElsewhere(from: string, to: string): (abs: string) => string | null {
+function leftByFolderMove(from: string, to: string): (abs: string) => string | null {
   const fromReal = realTarget(from);
   const toReal = realTarget(to);
   const moved = (p: string) =>
@@ -195,6 +196,8 @@ function leadsElsewhere(from: string, to: string): (abs: string) => string | nul
     for (let i = 1; i <= parts.length; i++) {
       const p = join(from, ...parts.slice(0, i));
       if (!isLink(p)) continue;
+      if (followedTarget(p))
+        return "a followed link moving with its folder isn't followed at its new place: not rewritten";
       const text = readlinkSync(p);
       if (isAbsolute(text)) return null;
       const after = resolve(moved(realTarget(dirname(p))), text);
@@ -229,7 +232,7 @@ function planMove(
   const c = new Collector(g);
   const abs = (rel: string) => join(g.root, rel);
   const mv = head.move;
-  if (mv?.dir && !mv.link) c.leave = leadsElsewhere(mv.from, mv.to);
+  if (mv?.dir && !mv.link) c.leave = leftByFolderMove(mv.from, mv.to);
   /** What the plan says beside its edits. */
   const said: string[] = [];
   /** Where a file will be: its new place if it moves (a folder's, a root nested in it too), else where it is. */
@@ -256,7 +259,8 @@ function planMove(
     if (posix.dirname(fromRel) === posix.dirname(toRel) && !crosses) continue;
     // A link's note is what it leads to (D260): reached by another name too, one this plan doesn't move with it, its
     // own links are that name's as much, so left as they are, and said.
-    const also = isLink(abs(fromRel)) ? (c.otherNames(abs(fromRel)).find((r) => !moves.has(r)) ?? null) : null;
+    const linked = isLink(abs(fromRel)) && classify(fromRel, g.config.walk.extensions).group !== "binary"; // links of its own
+    const also = linked ? (c.otherNames(abs(fromRel)).find((r) => !moves.has(r)) ?? null) : null;
     if (also) {
       said.push(`${fromRel}: what it leads to is ${also} too: its own links left as they are`);
       continue;

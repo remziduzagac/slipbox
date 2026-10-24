@@ -497,6 +497,10 @@ export const MOVING_LINKS: Check[] = [
       const onto = cli(s, "mv", "alias.png", "img.png");
       s.expect(onto.code === 5 && onto.error === "img.png exists; not overwriting it", `${onto.error}`);
       s.expect(s.read(join(v, "img.png")) === "PNG" && isLink(join(v, "alias.png")), "nothing put over img.png");
+      // Moved into box, it says nothing of its own links: an image has none.
+      const imaged = cli(s, "mv", "alias.png", "box/");
+      const said = (imaged.data.warnings as string[] | undefined) ?? [];
+      s.expect(imaged.code === 0 && !said.some((w) => w.includes("its own links")), `${imaged.error} ${said}`);
       s.expect(isLink(join(v, "l1.md")) && isLink(join(v, "l2.md")), "both links as they were");
       // Planned, then a link leading nowhere put where it goes: refused as it's carried out. A plan saved and applied
       // by the command line, as an agent's two steps: the TUI's preview would race the watcher's look at the link.
@@ -569,7 +573,7 @@ export const MOVING_LINKS: Check[] = [
   },
   {
     area: "links-and-files",
-    name: "nested roots: a rename writing a file through a link into a vault nested in this one: that vault's index learns it",
+    name: "nested roots: a rename reaching a note of a vault nested in this one through a link leaves it, said: its own vault reads its links otherwise",
     covers: { cases: ["rename", "multiple-roots"], commands: ["note.rename"] },
     options: {
       startAt: "v/t.md",
@@ -578,27 +582,20 @@ export const MOVING_LINKS: Check[] = [
         const v = vault(s, {
           "t.md": "# T\n",
           "sub/n/.slipbox/config.toml": "",
+          "sub/n/t.md": "# NT\n", // its own `t.md`, as it reads the link
           "sub/n/n.md": "# N\n\n[t](t.md)\n",
         });
         link("sub/n/n.md", join(v, "alias.md"));
-        s.cliIn(join(v, "sub", "n"), "backlinks", "n.md"); // its index, as of before the rename
       },
     },
     run: async (s) => {
       const v = join(s.dir, "v");
-      /** What the nested vault's index says n.md links to, read from its cache. */
-      const nestedSays = (target: string) =>
-        (readdirSync(join(s.dir, "cache"), { recursive: true }) as string[])
-          .filter((f) => f.endsWith("index.json"))
-          .map((f) => JSON.parse(readFileSync(join(s.dir, "cache", f), "utf8")).entries?.["n.md"])
-          .some((e?: { links: { target: string }[] }) => e?.links.some((l) => l.target === target));
-      await s.until(() => nestedSays("t.md"), 20_000, "the nested vault indexed, n.md linking t.md");
       await s.ex("mv u.md");
-      await s.see("t.md → u.md: 1 change in 1 file");
+      await s.see("skipped alias.md:3");
+      await s.see("reached as sub/n/n.md too, from another folder");
       await s.keys("enter");
       await s.message("renamed t.md → u.md");
-      s.expect(s.read(join(v, "sub", "n", "n.md")) === "# N\n\n[t](u.md)\n", "written through the link");
-      await s.until(() => nestedSays("u.md"), 10_000, "the nested vault's index: n.md linking u.md");
+      s.expect(s.read(join(v, "sub", "n", "n.md")) === "# N\n\n[t](t.md)\n", "the nested vault's note as it was");
     },
   },
   {
@@ -739,7 +736,48 @@ export const MOVING_LINKS: Check[] = [
       await renameRow(s, "Outer", "outer", "Outer/ → outer/");
       await s.keys("enter");
       await s.message("moved Outer/ → outer/");
-      s.expect(isLink(join(v, "outer")), "a link still");
+      // Where case is ignored, the one entry's name is its new case now; elsewhere the two names were one entry already.
+      const names = readdirSync(v);
+      if (!names.includes("OUTER") && names.includes("Outer") && names.includes("outer"))
+        s.expect(isLink(join(v, "outer")), "a link still");
+      else s.expect(names.includes("outer") && !names.includes("Outer") && isLink(join(v, "outer")), `${names}`);
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "rename: in home, a folder moved with a followed link in it leaves the link's note as it is, said — not followed at its new place — and is undone",
+    covers: { cases: ["rename", "links/state"], commands: ["rename.undo"] },
+    options: {
+      startAt: "home/z.md",
+      config: WIDE,
+      setup: (s) => {
+        if (!s.exists("~/z.md")) {
+          s.write("~/z.md", "# Z\n");
+          s.write("~/b/k.md", "# K\n");
+          put(join(s.dir, "out", "s.md"), "# S\n\n[z](../z.md)\n");
+        }
+        link(join(s.dir, "out", "s.md"), s.path("~/a/l.md"));
+        followed(s, [[s.path("~/a/l.md"), join(s.dir, "out", "s.md")]]);
+      },
+    },
+    run: async (s) => {
+      const note = join(s.dir, "out", "s.md");
+      await explorerOpen(s);
+      // Home walked only where it's asked: a, unfolded, is read whole.
+      await explorerRow(s, "a");
+      await s.keys("l");
+      await s.see("l.md");
+      await moveRow(s, "a", "b", "skipped a/l.md:3");
+      await s.see("isn't followed at its new place");
+      await s.keys("enter");
+      await s.message("moved a/ → b/a/");
+      s.expect(s.read(note) === "# S\n\n[z](../z.md)\n", "the link's note as it was");
+      await s.keys("escape");
+      await leader(s, "v", "shift+u");
+      await s.see("undo: b/a/ → a/");
+      await s.keys("enter");
+      await s.message("moved b/a/ back to");
+      s.expect(isLink(s.path("~/a/l.md")) && s.read(note) === "# S\n\n[z](../z.md)\n", "back, its note as it was");
     },
   },
   {

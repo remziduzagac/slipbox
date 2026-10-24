@@ -2,7 +2,7 @@
 // the collector that reads each file once and edits it in turn, and the git trees that have changes already (7.3).
 
 import { execFileSync } from "node:child_process";
-import { lstatSync, statSync } from "node:fs";
+import { lstatSync } from "node:fs";
 import { dirname, join, posix, relative, sep } from "node:path";
 import { classify } from "./filetypes.ts";
 import { readText, realTarget } from "./fsutil.ts";
@@ -168,6 +168,20 @@ export class Collector {
     return (this.names.get(realTarget(abs)) ?? []).filter((r) => r !== rel);
   }
 
+  /**
+   * How the file at `abs` is named in a place of its own, when a link leads it out of the one its name is in (D260): a
+   * note of another vault, or of home, by its own path there, as shown; null when it lands in the place it's named in,
+   * or in none (Elsewhere: no index names it).
+   */
+  private ownPlace(abs: string): string | null {
+    if (!this.throughLink(abs)) return null;
+    const real = realTarget(abs);
+    const lands = vaultOf(real);
+    const named = vaultOf(abs);
+    if (!lands || (named && realTarget(named) === realTarget(lands))) return null;
+    return shownFor(this.g, real);
+  }
+
   /** Why the file at `abs` isn't rewritten, for its skipped rows. */
   private reason(abs: string): string {
     return this.why.get(abs) ?? "can't be read";
@@ -192,9 +206,10 @@ export class Collector {
         return null;
       }
       // Reached by another name too, from another folder: its links read otherwise there, so an edit made for one is
-      // wrong for the other — left, and said (D260).
+      // wrong for the other — left, and said (D260). A note another vault holds, reached through a link, is that
+      // vault's by its own name.
       const folder = posix.dirname(relative(this.g.root, abs).split(sep).join("/"));
-      const elsewhere = this.otherNames(abs).find((r) => posix.dirname(r) !== folder);
+      const elsewhere = this.ownPlace(abs) ?? this.otherNames(abs).find((r) => posix.dirname(r) !== folder);
       if (elsewhere) {
         this.why.set(abs, `reached as ${elsewhere} too, from another folder: not rewritten`);
         return null;
@@ -310,17 +325,6 @@ export function dirtyTrees(paths: string[]): string[] {
 /** A path the walk lists only when it's reached (20.8): something hidden on its way. A busy folder is the filter's. */
 export function walkSkips(rel: string): boolean {
   return rel.split("/").some((s) => s.startsWith("."));
-}
-
-/** Whether two paths are one file (a case-only rename on a case-insensitive disk): by inode, not by name. */
-export function sameFile(a: string, b: string): boolean {
-  try {
-    const x = statSync(a);
-    const y = statSync(b);
-    return x.ino === y.ino && x.dev === y.dev;
-  } catch {
-    return false;
-  }
 }
 
 /**
