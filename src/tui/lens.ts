@@ -17,6 +17,13 @@ export function unparsedText(buf: NoteBuffer): string {
   return `${buf.name} doesn't parse — ${buf.parsed.error}: source mode`;
 }
 
+/** The modes as the window header's buttons name them (HDR-D2), in order: the mode, its hit area's name, its label. */
+export const MODES: readonly { mode: ViewMode; id: "read" | "lens" | "source"; label: string }[] = [
+  { mode: "rendered", id: "read", label: "Read" },
+  { mode: "live", id: "lens", label: "Lens" },
+  { mode: "source", id: "source", label: "Source" },
+];
+
 /** The mode a window is in. */
 export function viewMode(view: View): ViewMode {
   return view.source ? "source" : view.live ? "live" : "rendered";

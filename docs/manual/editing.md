@@ -169,8 +169,8 @@ Either way, `ctrl+k` and `space n l` open the other one, as do the window header
 Data files (JSON, YAML, TOML, INI, CSV and the like) open rendered. The lens edits them one card at a time: a key and
 the values under it, or a few rows of a table.
 
-If a data file stops parsing while you edit it, it switches to source mode when you stop typing. `space n v` renders it
-again once it parses.
+If a data file stops parsing while you edit it, it switches to source mode when you stop typing. `space n v`, or the
+window header's Read, renders it again once it parses.
 
 Other text files open in source mode, since they have no rendered view. Code has a view of its own ([Code](code.md)).
 [Reading](reading.md) says how each kind of file is shown.

@@ -438,8 +438,9 @@ export function themeFromPalette(
     // Toggle buttons sit on whatever they're drawn on: dim while off, bright while on.
     topbar_button: { fg: p.comment },
     topbar_button_on: { fg: p.fg_strong, bold: true },
-    // Fainter than an unused one, so a disabled button reads as such (HDR-D2).
-    topbar_button_disabled: { fg: p.surface2 },
+    // Fainter than an unused one, halfway to the band's own shade, and in italics: it reads as disabled, not as missing
+    // (HDR-D6).
+    topbar_button_disabled: { fg: blend(p.comment, p.surface2, 0.5), italic: true },
     topbar_chip: { fg: p.purple, bold: true },
     hover: { fg: p.fg_strong, bg: p.surface2, bold: true },
     breadcrumb_band: { bg: blend(p.surface, p.bg, 0.35) }, // the breadcrumb row's background

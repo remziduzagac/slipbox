@@ -32,16 +32,17 @@ type Button = {
   state: "selected" | "enabled" | "disabled";
 };
 
-/** Window `w`'s mode buttons as drawn: each one's label and whether it's selected, enabled or disabled, by its colour. */
+/**
+ * Window `w`'s mode buttons as drawn: each one's label and whether it's selected (bold), disabled (in italics, in every
+ * theme) or enabled — by its attributes, so the same in every theme, the terminal's and none too.
+ */
 function buttons(h: Harness, w = 0): Button[] {
   const c = h.canvas(); // one frame, drawn once: the buttons as it shows them
-  const r = h.app.theme.roles;
   return h.app
     .geometry!.hot.filter((b) => b.id.startsWith(`mode:${w}:`))
     .map((b) => {
-      const fg = c.styles[b.y]![b.x + 1]!.fg;
-      const state =
-        fg === r.topbar_button_on.fg ? "selected" : fg === r.topbar_button_disabled.fg ? "disabled" : "enabled";
+      const st = c.styles[b.y]![b.x + 1]!;
+      const state = st.bold ? "selected" : st.italic ? "disabled" : "enabled";
       return {
         ...b,
         label: c.rows[b.y]!.slice(b.x, b.x + b.w)
@@ -232,6 +233,14 @@ describe("modes a window can't switch to are disabled (HDR-D2)", () => {
   test("data that parses has all three; data that doesn't, Source alone, a click warning why", async () => {
     const ok = await harness({ open: YAML, width: 120, height: 30 });
     expect(states(ok)).toBe("Read:selected Lens:enabled Source:enabled");
+    // The lens names the file's own format, by the button and by an editing key alike.
+    click(ok, "lens");
+    expect(lastMessage(ok)?.text).toBe("the lens: the YAML around the cursor — esc closes it");
+    click(ok, "read");
+    ok.app.config.editor.edit_in = "live";
+    await ok.keys("i");
+    expect(lastMessage(ok)?.text).toBe("the lens: the YAML around the cursor — the key again edits it, esc closes it");
+    await ok.keys("escape");
     const bad = await harness({ open: BROKEN, width: 120, height: 30 });
     expect(states(bad)).toBe("Read:disabled Lens:disabled Source:selected");
     click(bad, "lens");
@@ -434,6 +443,24 @@ describe("modes a window can't switch to are disabled (HDR-D2)", () => {
 });
 
 describe("the buttons' hover, and what covers them", () => {
+  test("a floating window over the header: its buttons under it can't be clicked, nor act on the floating one", async () => {
+    const h = await harness({ open: NOTE, width: 120, height: 30 });
+    h.frame();
+    const under = h.app.geometry!.hot.find((b) => b.id === "mode:0:source")!;
+    openDiff(h.app, { before: "a\nb\n", now: "a\nc\n", path: "x.txt", title: "x.txt" });
+    h.frame();
+    const f = h.app.geometry!.floating!;
+    const inside = (b: { x: number; y: number }) => b.x >= f.x && b.x < f.x + f.w && b.y >= f.y && b.y < f.y + f.h;
+    expect(inside(under)).toBe(true); // the diff's window lies over the header's Source
+    expect(h.app.geometry!.hot.filter((b) => b.id.startsWith("mode:") && inside(b))).toEqual([]);
+    const before = h.app.messages.length;
+    h.app.mouse.handle({ type: "down", x: under.x + 1, y: under.y, button: 0 });
+    h.app.mouse.handle({ type: "up", x: under.x + 1, y: under.y, button: 0 });
+    expect(h.app.floating?.kind).toBe("diff");
+    expect(h.app.messages.length).toBe(before);
+    expect(viewMode(h.app.tab!.views[0]!)).toBe("rendered");
+  });
+
   test("an enabled button is drawn hovered under the mouse; the selected and a disabled one never are", async () => {
     const h = await textHarness();
     const hover = h.app.theme.roles.hover.bg;
@@ -492,16 +519,44 @@ describe("room: the buttons give way before the breadcrumb's innermost heading (
     ]);
   });
 
-  test("crumbLeast: the icon and a space, the innermost heading up to 8 columns, `… ›` before it from two headings", () => {
-    const g = { crumb: "›", crumbIcon: "§" };
-    expect(crumbLeast([], g)).toBe(0);
-    // Never under the 4 columns a breadcrumb is drawn in: a heading one column wide keeps its place too.
-    expect(crumbLeast([{ text: "A" }], g)).toBe(4);
-    expect(modeButtons(25, crumbLeast([{ text: "A" }], g))).toBe("letters");
-    expect(crumbLeast([{ text: "Brew" }], g)).toBe(2 + 4);
-    expect(crumbLeast([{ text: "Brewing coffee" }], g)).toBe(2 + 8);
-    expect(crumbLeast([{ text: "Coffee" }, { text: "Brewing coffee" }], g)).toBe(2 + 4 + 8);
-    expect(crumbLeast([{ text: "A" }, { text: "B" }, { text: "Grind" }], g)).toBe(2 + 4 + 5);
+  test("crumbLeast: room for the icon and a space, `… ›` and 8 columns of a heading, whatever the headings (HDR-D7)", () => {
+    expect(crumbLeast({ crumb: "›", crumbIcon: "§" })).toBe(2 + 4 + 8);
+    expect(crumbLeast({ crumb: ">", crumbIcon: "#" })).toBe(2 + 4 + 8);
+    // A heading one column wide keeps its place too: never under the 4 columns a breadcrumb is drawn in.
+    expect(modeButtons(25, crumbLeast({ crumb: "›", crumbIcon: "§" }))).toBe("letters");
+  });
+
+  test("the buttons keep their form as the cursor goes from heading to heading, in a window just narrow enough", async () => {
+    const h = await harness({ open: NOTE, width: 160, height: 40 });
+    const v = h.app.view!;
+    /** The buttons' labels in a window `w` wide with nothing else on its header (no name, no ▤). */
+    const form = (w: number) => {
+      const c = new TextCanvas(w, 30);
+      const geo: Geometry = {
+        ...{ panes: [], sidebar: null, outline: null, sidebarPane: null, outlinePane: null, tabs: [], overlay: null },
+        ...{ hot: [], separators: [], scrollbars: [], tabStrip: null, popup: null, crumbAnchors: {}, rules: [] },
+        verticals: [],
+      };
+      drawPane(h.app, c, v, { x: 0, y: 0, w, h: 30 }, true, false, false, false, geo);
+      const bs = geo.hot.filter((b) => b.id.startsWith("mode:"));
+      return bs
+        .map((b) =>
+          c.rows[b.y]!.slice(b.x, b.x + b.w)
+            .join("")
+            .trim(),
+        )
+        .join(" ");
+    };
+    // 33 columns: full labels beside a top heading alone (8 columns of it), the letters beside a nested one's, had the
+    // room followed the cursor; it follows the file (HDR-D7), so one form wherever the cursor is.
+    const seen = new Map<string, string>();
+    for (let k = 0; k < 80; k++) {
+      await h.keys("j", "j", "j");
+      const crumbs = h.app.outlineView.breadcrumb(v);
+      seen.set(crumbs.map((c) => c.text).join(" › "), form(33));
+    }
+    expect(new Set([...seen.keys()].map((k) => k.split(" › ").length)).size).toBeGreaterThan(1); // depths varied
+    expect(new Set(seen.values())).toEqual(new Set(["R L S"]));
   });
 
   test("a split narrowed: full, then letters, then the selected letter; the name and ▤ keep their places", async () => {

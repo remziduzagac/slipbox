@@ -18,6 +18,9 @@ no alias.
 
 ## HDR-D2: Read, Lens and Source, a radio group on the header (2026-10-24)
 
+> **Amended by HDR-D6 (2026-10-24):** a disabled button is in italics in every theme, its colour halfway from an
+> enabled one's to `surface2`.
+>
 > **Amended by HDR-D5 (2026-10-24):** without colour a disabled button is dim and italic, no longer the same as an
 > enabled one.
 
@@ -53,6 +56,9 @@ text still can. The key keeps its name and intent; its narrower effect is a CHAN
 
 ## HDR-D4: The buttons give way before the breadcrumb's innermost heading does (2026-10-24)
 
+> **Detailed by HDR-D7 (2026-10-24):** the least room is the file's (14 columns while it has headings), not the
+> headings the cursor is under, so a window's form changes only with its width.
+
 **Decision:** In a narrow header the breadcrumb folds first, down to its innermost heading cut to 8 columns (with `§`,
 and `… ›` before it when there are two or more); then the buttons shorten to `R` `L` `S`, then to the selected one's
 letter; then the breadcrumb folds on to `…` or nothing. The selected letter goes only where it doesn't fit beside the
@@ -66,6 +72,8 @@ notes.md, question 4).
 
 ## HDR-D5: Without colour, a disabled button is dim and italic (2026-10-24)
 
+> **Extended by HDR-D6 (2026-10-24):** italics mark a disabled button in every theme.
+
 > Taken as recommended while the maintainer was away (2026-10-24); theirs to confirm or change.
 
 **Decision:** In the `mono` theme (`NO_COLOR`), `topbar_button_disabled` is dim and italic, so a mode the file can't be
@@ -76,3 +84,33 @@ the review before the pull request found it, and ACCESSIBILITY.md has the `mono`
 and underlines. A terminal that draws no italics shows it dim, as before.
 
 **Not chosen:** keeping the two alike (HDR-D2's Cost as first agreed).
+
+## HDR-D6: A disabled button is in italics in every theme, fainter than an enabled one (2026-10-24)
+
+> Taken as recommended while the maintainer was away (2026-10-24); theirs to confirm or change.
+
+**Decision:** `topbar_button_disabled` is italic in every theme; in a theme of its own palette its colour is halfway
+from an enabled button's (`comment`) to `surface2`; in the terminal's palette it is colour 8, dim, as before; without
+colour, dim, as before (HDR-D5). The docs name a disabled button by its italics. Amends HDR-D2's style and extends
+HDR-D5.
+
+**Why:** The review of the pull request (both reviewers) found `surface2` on the header's band barely legible, about
+1.5:1, reading as missing rather than disabled; halfway to `comment` it is about 1.5 to 2.9:1 across the built-in
+themes, and the italics tell it from an enabled button in every theme, as without colour.
+
+**Not chosen:** `surface2` alone (HDR-D2 as first agreed).
+
+## HDR-D7: The breadcrumb's least room is the file's, not the cursor's (2026-10-24)
+
+> Taken as recommended while the maintainer was away (2026-10-24); theirs to confirm or change.
+
+**Decision:** While the breadcrumb shows and the file has headings, the room the buttons leave it before they shorten
+is always that of its narrowest form but `…` alone — the icon and a space, `… ›`, 8 columns of a heading (14
+columns) — whatever headings the cursor is under; with none in the file, or the breadcrumb hidden, none. Details
+HDR-D4.
+
+**Why:** With the room worked out from the headings the cursor was under, a window near the edge changed its buttons'
+form, and moved their places, as the cursor went from heading to heading (the review of the pull request); now a
+window's form changes only with its width.
+
+**Cost:** A file whose headings are all short keeps a few columns more for the breadcrumb than it needs.

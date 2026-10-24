@@ -511,7 +511,7 @@ file, such as `$ref`, `$schema`, `extends`, `include` and `import`, are links to
 reach nothing. [Links and backlinks](links-and-vaults.md) has how such links count.
 
 A data file that doesn't parse can't be drawn. It opens as text, with the error in a message. Once it parses again,
-`ctrl+k` draws it.
+`ctrl+k`, or the window header's Read, draws it.
 
 ## Other files
 

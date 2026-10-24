@@ -282,7 +282,15 @@ export function drawApp(app: App, c: Canvas): Geometry {
   // over the status line). A question — anything a prompt asks — floats in a window of its own
   // (a screen too small for it: over the status line; in zen, the screen's last row); find's is
   // in its window when that window had room for its find row.
-  if (app.floating) geo.floating = drawFloating(app, c, mainY, mainH, geo);
+  if (app.floating) {
+    // What lies under the floating window can't be clicked through it (a window header's button under its margin):
+    // only its own hit areas, drawn after, stay.
+    const under = geo.hot.length;
+    geo.floating = drawFloating(app, c, mainY, mainH, geo);
+    const own = geo.hot.splice(under);
+    coverHot(geo, geo.floating);
+    geo.hot.push(...own);
+  }
   const prompt = app.overlay?.kind === "prompt" && !(app.overlay.view && geo.findInWindow) ? app.overlay : null;
   const float = W >= TOAST_MIN_W && mainH >= 5;
   const dialog = prompt && W >= DIALOG_MIN_W && mainH >= dialogHeight(prompt, dialogWidth(W)) ? prompt : null;
@@ -524,18 +532,12 @@ const CRUMB_MIN = 8;
 const CRUMB_FLOOR = 4;
 
 /**
- * The columns a breadcrumb keeps before the mode's buttons beside it shorten (HDR-D4): its icon and a space, then its
- * innermost heading cut to `CRUMB_MIN`, after `… ›` when there are two or more — crumbLayout's narrowest form but `…`
- * alone; never fewer than drawBreadcrumb draws in. 0 with no headings.
+ * The columns a breadcrumb keeps before the mode's buttons beside it shorten (HDR-D4, HDR-D7): room for its icon and a
+ * space, `… ›` and an innermost heading cut to `CRUMB_MIN` — crumbLayout's narrowest form but `…` alone — whatever the
+ * headings the cursor is under, so the buttons don't change form as it moves; never fewer than drawBreadcrumb draws in.
  */
-export function crumbLeast(crumbs: { text: string }[], glyphs: { crumb: string; crumbIcon: string }): number {
-  const n = crumbs.length;
-  if (!n) return 0;
-  const last = Math.min(CRUMB_MIN, stringWidth(crumbs[n - 1]!.text));
-  return Math.max(
-    CRUMB_FLOOR,
-    stringWidth(glyphs.crumbIcon) + 1 + (n >= 2 ? 1 + stringWidth(` ${glyphs.crumb} `) : 0) + last,
-  );
+export function crumbLeast(glyphs: { crumb: string; crumbIcon: string }): number {
+  return Math.max(CRUMB_FLOOR, stringWidth(glyphs.crumbIcon) + 1 + 1 + stringWidth(` ${glyphs.crumb} `) + CRUMB_MIN);
 }
 
 /**

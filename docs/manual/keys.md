@@ -1068,7 +1068,7 @@ it back to the terminal.
 | `▤` on the right rail (without it, on the window header or the top bar) | shows the outline, focused, or hides it |
 | `¹` on the right rail | shows the footnotes, focused, or hides them |
 | the top bar's `slipbox` | opens the command palette |
-| a window header's `Read` / `Lens` / `Source` | shows it rendered, in the lens or as written; faintest, says why not |
+| a window header's `Read` / `Lens` / `Source` | shows it rendered, in the lens or as written; one in italics, why not |
 | a heading in a window's breadcrumb | scrolls that window to it, and focuses it |
 | the breadcrumb's icon / its `…` | finds a heading / lists the headings the cursor is under |
 | a tab | switches to it, a drag moves it, and a middle-click or its `×` closes it |

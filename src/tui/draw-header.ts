@@ -5,26 +5,19 @@ import type { App, View } from "./app.ts";
 import { type Canvas, drawText } from "./canvas.ts";
 import { type Rect, type Geometry, pageBg, roleStyle, button, drawBreadcrumb, crumbLeast } from "./draw.ts";
 import { truncate, stringWidth } from "../core/width.ts";
-import { type ViewMode, viewMode } from "./lens.ts";
-
-/** The modes' buttons, in order: the mode, its hit area's name, its label (its letter, shortened). */
-export const MODE_BUTTONS: readonly { mode: ViewMode; id: "read" | "lens" | "source"; label: string }[] = [
-  { mode: "rendered", id: "read", label: "Read" },
-  { mode: "live", id: "lens", label: "Lens" },
-  { mode: "source", id: "source", label: "Source" },
-];
+import { MODES, viewMode } from "./lens.ts";
 
 /** The buttons' forms, widest first: every label, every letter, the selected one's letter alone; none. */
 export type ModeForm = "full" | "letters" | "selected" | "none";
 
 /** A label, or its letter, as drawn: a space either side. */
-const labelOf = (m: (typeof MODE_BUTTONS)[number], form: ModeForm) => ` ${form === "full" ? m.label : m.label[0]} `;
+const labelOf = (m: (typeof MODES)[number], form: ModeForm) => ` ${form === "full" ? m.label : m.label[0]} `;
 
 /** Each form's width: every label, every letter, one letter (the widest, whichever is selected). */
 const FORM_WIDTH: Record<Exclude<ModeForm, "none">, number> = {
-  full: MODE_BUTTONS.reduce((a, m) => a + stringWidth(labelOf(m, "full")), 0),
-  letters: MODE_BUTTONS.reduce((a, m) => a + stringWidth(labelOf(m, "letters")), 0),
-  selected: Math.max(...MODE_BUTTONS.map((m) => stringWidth(labelOf(m, "selected")))),
+  full: MODES.reduce((a, m) => a + stringWidth(labelOf(m, "full")), 0),
+  letters: MODES.reduce((a, m) => a + stringWidth(labelOf(m, "letters")), 0),
+  selected: Math.max(...MODES.map((m) => stringWidth(labelOf(m, "selected")))),
 };
 
 /**
@@ -74,10 +67,12 @@ export function drawWindowHeader(
     const role = app.panels.outlineShown ? "topbar_button_on" : "topbar_button";
     button(app, c, end, { y, h: 1 }, label, role, "btn:outline", geo, bg);
   }
-  // The layout first (the breadcrumb asks for it; else asked here): laying the window out can change its mode (a file
-  // that stopped parsing goes to source mode once typing ends), and the buttons say the mode it's in.
-  const crumbs = app.ui.breadcrumb ? app.outlineView.breadcrumb(view) : (app.currentLayout(view), []);
-  const least = crumbLeast(crumbs, app.glyphs);
+  // The layout first: laying the window out can change its mode (a file that stopped parsing goes to source mode once
+  // typing ends), and the buttons say the mode it's in.
+  const layout = app.currentLayout(view);
+  const crumbs = app.ui.breadcrumb ? app.outlineView.breadcrumb(view, layout) : [];
+  // The breadcrumb's least room is the file's, not the cursor's (HDR-D7): the buttons keep their form as it moves.
+  const least = app.ui.breadcrumb && layout.headings.length ? crumbLeast(app.glyphs) : 0;
   const form = modeButtons(end - x, least);
   const start = form === "none" ? end : end - FORM_WIDTH[form];
   drawModeButtons(app, c, view, start, y, form, bg, geo);
@@ -103,7 +98,7 @@ function drawModeButtons(
   if (form === "none") return;
   const now = viewMode(view);
   const index = app.tab!.views.indexOf(view);
-  for (const m of MODE_BUTTONS) {
+  for (const m of MODES) {
     const selected = m.mode === now;
     if (form === "selected" && !selected) continue;
     const disabled = !selected && !!app.lens.refusal(view, m.mode, true);

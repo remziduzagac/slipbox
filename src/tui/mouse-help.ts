@@ -31,7 +31,7 @@ export const MOUSE_HELP: [string, string[], string][] = [
   [
     "Switch a window's mode",
     ["click"],
-    "On a window's header: Read, Lens or Source shows it rendered, in the lens or as written, and focuses it; a faint one (italic without colour) says why it can't",
+    "On a window's header: Read, Lens or Source shows it rendered, in the lens or as written, and focuses it; one in italics says why it can't",
   ],
   [
     "Jump to a heading",

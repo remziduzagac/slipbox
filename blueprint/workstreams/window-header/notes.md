@@ -328,3 +328,34 @@ here, and the work go on.
   `#3b4261`); the left's Read clicked: both in source mode, "doesn't parse" once in the messages list.
 - Round 2: Codex's part skipped again: still at its approval menu, under 5% of its usage limit; a fresh Claude
   reviewer and `/code-review` on the diff after round 1's fixes.
+- Round 2's findings: the stand-in reviewer's 3 bugs (one reproduced), 3 test gaps, 3 docs points; `/code-review`'s 9
+  (one reproduced). Merged and checked, each:
+  - **Taken, with tests that fail without them** (mutations in `tmp/issue/mutations-7.json`, `-7b.json`; the
+    which-key and the peek terminal checks fail without their covers, checked):
+    - A click inside a floating window, over a header button under its margin (a diff's, a peek filled with `z`),
+      reached the button, and the command then acted on the floating window. What lies under the floating window is
+      now covered, its own hit areas aside (`drawApp`); the breadcrumb's were reachable the same way, now not.
+    - The buttons changed form, and moved, as the cursor went from heading to heading near the edge: the least room
+      is the file's now (HDR-D7, taken as recommended while the maintainer was away).
+    - A disabled button barely legible (both reviewers, about 1.5:1): in italics in every theme, halfway to an enabled
+      one's colour (HDR-D6, taken as recommended while the maintainer was away); the test helper reads attributes, not
+      colours, so it holds in every theme.
+    - The lens said "markdown" for YAML, now one click away: `lensWhat`, the file's own format, for the button and
+      the editing keys.
+    - The which-key terminal check passed with the click going through (escape closed the lens); now it checks no lens
+      opened and none was said. A terminal check for the peek over the header, and one for the form held as the
+      cursor moves.
+    - Cleanups: `MODES` in `lens.ts`, not a drawing module; the status chip by `viewMode`; the change sign's click by
+      `focusWindow`; the layout asked for plainly, not in a comma expression; `outlineView.breadcrumb` takes the
+      layout the header has.
+    - Docs: "since slipbox last checked it"; italics name a disabled button; reading.md and editing.md name Read where
+      a data file parses again.
+  - **Not taken:**
+    - The other window on a data file judged mid-typing (`views.ts` decides per window): older than this change, as
+      round 1 found; recorded in [ideas.md](ideas.md).
+    - A once-per-version guard where "doesn't parse" is said: as in round 1 (a second explicit request would say
+      nothing); the duplicate it would also stop shows only in the messages list, the toast being merged already.
+    - The root's `design/tui.md` still describing the breadcrumb row: it changes when HDR is consolidated, as the
+      framework has it.
+    - One frame in a split where a window drawn before the other parsed shows its Read lit: the next frame agrees.
+- Terminal checks after round 2's fixes: the header's fifteen and the settings check, 16 of 16.

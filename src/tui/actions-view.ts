@@ -174,11 +174,7 @@ function switchMode(a: App, v: View, mode: ViewMode): void {
   const code = a.isCodeDocument(v.buf);
   if (v.source)
     a.message("info", `source — ${v.buf.kind.group === "note" ? "the note's markdown" : "the file as written"}`);
-  else if (v.live)
-    a.message(
-      "info",
-      `the lens: the ${v.buf.kind.group === "text" ? "code" : "markdown"} around the cursor — esc closes it`,
-    );
+  else if (v.live) a.message("info", `the lens: the ${E.lensWhat(v.buf)} around the cursor — esc closes it`);
   else a.message("info", code ? "the code as a document" : "rendered");
 }
 

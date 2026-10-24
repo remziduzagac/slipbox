@@ -10,7 +10,7 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 
 - Each window's header, the row above its note, has three buttons for how the window shows the note: **Read**,
   **Lens** and **Source**. The bright one is the window's mode, as the status line says it; a click switches straight
-  to another, from source mode to the lens too. A mode the file can't be shown in is fainter, and a click on it says
+  to another, from source mode to the lens too. A mode the file can't be shown in is in italics, and a click on it says
   why: a plain text file and a data file that doesn't parse have only Source. The command palette has them as Read
   mode, Lens mode and Source mode, to bind keys to.
 - **Window header** in `space u u`, or `ui.window_header = false`, hides the whole row and gives it to the note, as

@@ -17,7 +17,7 @@ import { codeBlocks } from "./code.ts";
 import { selectable } from "./overlays.ts";
 import { taskMarkAt } from "./views.ts";
 import { linkAt } from "./linking.ts";
-import { MODE_BUTTONS } from "./draw-header.ts";
+import { MODES } from "./lens.ts";
 
 /** The mouse: clicks, drags, the wheel. */
 export class Mouse {
@@ -317,11 +317,8 @@ export class Mouse {
     if (hot?.startsWith("gsign:")) {
       const pane = g.panes.find((p) => p.x <= ev.x && ev.x < p.x + p.w && p.y <= ev.y && ev.y < p.y + p.h);
       const t = this.app.tab;
-      if (pane && t && !this.app.floating && t.views.includes(pane.view)) {
-        t.active = t.views.indexOf(pane.view);
-        this.app.region = "content";
+      if (pane && t && !this.app.floating && this.focusWindow(t.views.indexOf(pane.view)))
         signClick(this.app, pane.view, Number(hot.slice(6)), { x: ev.x + 1, y: ev.y });
-      }
       return;
     }
     if (hot && !hot.startsWith("tab:")) return this.clickHot(hot);
@@ -703,7 +700,7 @@ export class Mouse {
         // as by every click), then its mode's command run: it switches, says why it can't, or (the selected one) does
         // nothing.
         const [w, which] = arg.split(":");
-        const b = MODE_BUTTONS.find((m) => m.id === which);
+        const b = MODES.find((m) => m.id === which);
         const v = b ? this.focusWindow(Number(w)) : null;
         if (!b || !v) break;
         // Ending typing in this file may have said why already, in this window or another on it (data that stopped

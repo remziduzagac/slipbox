@@ -2,7 +2,7 @@
 // can't be shown in, a split narrowed, hover and which-key over them; in the editing area, where `view.*` is, in a file
 // of its own, editing.ts being near the size limit.
 
-import { type Check, explorerOpen, leader, open, opened } from "../check.ts";
+import { type Check, explorerOpen, follow, leader, open, opened } from "../check.ts";
 import { type Session, type StyledRun, WAIT } from "../session.ts";
 import { at, findText, ready, SEPT1 } from "./editing.ts";
 
@@ -217,6 +217,7 @@ export const WINDOW_HEADER: Check[] = [
       const enabled = modeButton(s, "Lens")!.style.fg;
       await leader(s, "n", "l");
       await s.status("LENS");
+      await s.message("the lens: the YAML around the cursor"); // a data file's own format, not "markdown"
       await s.keys("i");
       await s.status("INSERT");
       await s.type(": [x");
@@ -326,6 +327,10 @@ export const WINDOW_HEADER: Check[] = [
       );
       await s.send(`\x1b[<0;${at.x + 1};${at.y + 1}M`);
       await s.send(`\x1b[<0;${at.x + 1};${at.y + 1}m`);
+      await s.settle();
+      s.expect(!s.statusLine().includes("LENS"), "the click under the popup opened the lens");
+      // Nor said it had: no message floats up saying so (the messages list has no room in 14 rows).
+      s.expect(!s.text().includes("the lens:"), "the click under the popup said it opened the lens");
       await s.keys("escape");
       await s.status("READ");
       // A text file: its disabled Read never lit.
@@ -419,6 +424,55 @@ export const WINDOW_HEADER: Check[] = [
       await s.until(() => modeButton(s, "Read")!.style.fg !== dimmed, WAIT, "Read lit once the broken line went");
       await clickMode(s, "Read");
       await s.status("READ");
+    },
+  },
+  {
+    area: "editing",
+    name: "window header: a narrow window's buttons keep their form as its cursor goes from the top to a nested heading",
+    covers: { cases: ["window-header", "windows"], commands: ["window.split_side", "cursor.top", "cursor.bottom"] },
+    options: { ...at("~/notes/meetings/all-hands-archive.md"), size: { cols: 160, rows: 34 } },
+    run: async (s) => {
+      await ready(s);
+      await s.keys("ctrl+w", "v");
+      await s.until(() => modeButton(s, "Read", 1) !== null, WAIT, "two headers, side by side");
+      // Narrowed just until one window's buttons are letters: the edge where the form would flip.
+      await leader(s, "w", "r");
+      await s.status("RESIZE");
+      const letters = () => s.screen().some((r) => /\bR {2}L {2}S\b/.test(r));
+      await s.retry(() => s.keys("l"), letters, "the letters, as a window narrows", 50);
+      await s.keys("escape");
+      // That window focused: to the top (no heading over the cursor) and the bottom (under nested ones), the letters
+      // stay — the room the breadcrumb keeps is the file's, not the cursor's (HDR-D7).
+      const row = s.screen().find((r) => /\bR {2}L {2}S\b/.test(r))!;
+      const narrowLeft = row.search(/\bR {2}L {2}S\b/) < row.search(/Read {2}Lens {2}Source/);
+      await s.keys("ctrl+w", narrowLeft ? "h" : "l");
+      for (const keys of [["g", "g"], ["shift+g"], ["g", "g"]]) {
+        await s.keys(...keys);
+        await s.settle();
+        s.expect(letters(), `the narrow window's buttons changed form after ${keys.join(" ")}`);
+      }
+    },
+  },
+  {
+    area: "editing",
+    name: "window header: a peek filling the screen over the header — a click where Source was moves nothing under it",
+    covers: { cases: ["window-header", "mouse", "vault"] },
+    options: { ...at("~/notes/index.md"), config: "[ui]\nsidebar = false\n" },
+    run: async (s) => {
+      await ready(s);
+      await s.until(() => selectedMode(s).join() === "Read", WAIT, "Read selected on the note");
+      const at = modeButton(s, "Source")!;
+      // A link into kestrel, read in a peek; z fills the screen with it, over the header's row.
+      await follow(s, "architecture. The");
+      await s.see("o go there · t keep as a tab", 5000);
+      await s.keys("z");
+      await s.until(() => modeButton(s, "Source") === null, WAIT, "the header's buttons under the peek");
+      await s.send(`\x1b[<0;${at.x + 1};${at.y + 1}M`);
+      await s.send(`\x1b[<0;${at.x + 1};${at.y + 1}m`);
+      await s.settle();
+      s.expect(!s.statusLine().includes("SOURCE"), "the click under the peek switched a window to source mode");
+      s.expect(!s.text().includes("source —"), "the click under the peek said a window went to source mode");
+      await s.see("o go there · t keep as a tab");
     },
   },
 ];

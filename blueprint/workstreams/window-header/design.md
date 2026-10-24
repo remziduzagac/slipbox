@@ -58,15 +58,19 @@ count that only grows) and the files it ended typing in; the words are `unparsed
 click focuses its window as a heading's does (`Mouse.focusWindow`). The hit areas are
 `mode:<window>:<read|lens|source>`, the window's index checked as a heading's is; the selected and the disabled keep
 theirs, without `hover`. The which-key popup over the header hides them as it hides the headings'
-(`draw-overlays.ts`).
+(`draw-overlays.ts`), and so does the floating window, whose margins can lie over the header's row: what lies under it
+can't be clicked through it, its own hit areas aside (`drawApp`). The modes' table, `MODES`, is `lens.ts`'s, beside
+`ViewMode`, for the header, the mouse and the status chip alike. The lens's message names what it shows: a note's
+markdown, code, a data file's own format (`the YAML`; `lensWhat`).
 
 **Room** (HDR-D4). The header's row, from the right: `▤` where it is, then the buttons, then the breadcrumb between
 the name and them. The buttons are three labels side by side, each with a space either side: ` Read ` ` Lens `
 ` Source `, 20 columns; shortened, ` R ` ` L ` ` S `, 9; at the least, the selected one's letter alone, 3. The
 breadcrumb is drawn in the columns between the name and the buttons less one at each end, as now, and folds into them
-as before. The buttons take the widest form that leaves the breadcrumb its least room: what its innermost heading
-needs cut to 8 columns, with the icon and its space, and `… ›` before it when there are two headings or more (2 + 4 +
-8 = 14 columns at most; nothing when it has no headings or is hidden). Past that, the breadcrumb folds further, as
+as before. The buttons take the widest form that leaves the breadcrumb its least room: its narrowest form but `…`
+alone — the icon and its space, `… ›`, and 8 columns of a heading, 14 columns — while the file has headings, whatever
+headings the cursor is under, so a window's form changes only with its width (HDR-D7); nothing when the file has no
+headings or the breadcrumb is hidden. Past that, the breadcrumb folds further, as
 `crumbLayout` does, until only `…` or nothing is left; the selected letter goes only where it doesn't fit beside the
 name and `▤` (a split's window squeezed to its narrowest, about 12 columns). `modeButtons` (`draw-header.ts`) picks
 the form, from the breadcrumb's least room, `crumbLeast`, beside `crumbLayout`. The name keeps its place (cut to half
@@ -90,8 +94,8 @@ right end; when no window shows a header, it moves to the right end of the top b
 The header has its own background, `breadcrumb_band` (`surface` blended into the page at 35%; the role keeps its
 name, HDR-D1). The breadcrumb's icon is `breadcrumb_icon` (blue), outer headings `breadcrumb` (dim), separators
 `breadcrumb_sep` (faint), and the heading the cursor is in `breadcrumb_current` (bold). A disabled button is
-`topbar_button_disabled` (`surface2`; in the terminal's palette colour 8, as an enabled one, and without colour, dim
-and italic, HDR-D5).
+`topbar_button_disabled`: in italics in every theme, its colour halfway from an enabled one's to `surface2` (in the
+terminal's palette colour 8, dim; without colour, dim; HDR-D5, HDR-D6).
 
 Rules run above and below the header. The rule above is the frame's rule under the tab strip; the lower window of a
 stacked split draws its own.
