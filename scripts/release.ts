@@ -45,6 +45,7 @@
 import { createHash } from "node:crypto";
 import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { basename, join, resolve } from "node:path";
+import { rootPage } from "../site/scripts/root.ts";
 import { PREVIEW_TAG, PREVIEW_VERSION, pagesBase, retired, tagOf } from "../src/core/release.ts";
 import { checkDeps, notices, sbom } from "./check-deps.ts";
 
@@ -501,7 +502,7 @@ export async function channelFiles(
 
 /** The Pages site's own files written into `out`, beside the bootstrap and the docs: the channel files — none for a
  *  channel with no release — and `index.html`, which sends a visitor to the docs (`docs/`, the site the pages workflow
- *  builds from site/). Their paths. */
+ *  builds from site/) and says what slipbox is (site/scripts/root.ts, SEO-D3). Their paths. */
 export function writeSite(out: string, repo: string, channels: { stable: string | null; preview: string | null }) {
   if (repoOf(repo) !== repo) throw new Error(`not a repository: ${repo}`);
   mkdirSync(out, { recursive: true });
@@ -512,10 +513,7 @@ export function writeSite(out: string, repo: string, channels: { stable: string 
     writeFileSync(join(out, name), text);
     written.push(join(out, name));
   }
-  writeFileSync(
-    join(out, "index.html"),
-    `<!doctype html>\n<meta charset="utf-8">\n<title>slipbox</title>\n<meta http-equiv="refresh" content="0; url=docs/">\n<p><a href="docs/">slipbox's documentation</a>, and <a href="https://github.com/${repo}">its repository</a>.</p>\n`,
-  );
+  writeFileSync(join(out, "index.html"), rootPage(pagesBase(repo), `https://github.com/${repo}`));
   return [...written, join(out, "index.html")];
 }
 

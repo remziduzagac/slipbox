@@ -95,6 +95,10 @@ jobs:
         run: |
           bun run site
           cp -R site/dist _site/docs
+      # SEO-D6: what the site tells search engines, shared links and agents, checked on the site about to be deployed:
+      # the root's page `release.ts site` wrote, and the docs beside it.
+      - name: check
+        run: bun --no-install site/scripts/check-meta.ts --pages _site
       # D265: the run's own mark on the site, which no other deployment has, so `deploy` can tell this one is served
       # even when the channels are what the site served already.
       - name: marker

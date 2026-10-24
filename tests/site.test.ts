@@ -2,12 +2,14 @@
 // the site's addresses, a page's title and description. The build itself runs in CI's `site` job (`bun run site`).
 
 import { describe, expect, test } from "bun:test";
-import { mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
+import { copyFileSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   copyCard,
   copyLogo,
+  llmsText,
+  llmsUrl,
   pageUrl,
   readLegacyPages,
   readMap,
@@ -16,6 +18,9 @@ import {
   splitPage,
 } from "../site/scripts/gather.ts";
 import { CARD, DESCRIPTION, DOCS_URL, fullTitle, headTags, LINE, SENTENCE } from "../site/scripts/about.ts";
+import { headOf, problems, rootProblems } from "../site/scripts/check-meta.ts";
+import { type LlmsPage, llmsFull, llmsTxt } from "../site/scripts/llms.ts";
+import { rootPage } from "../site/scripts/root.ts";
 import { pngSize } from "../scripts/screenshot.ts";
 import { CARD_FILE, cardSvg, madeFrom, madeFromNow, textOf, withText, wrap } from "../scripts/share-card.ts";
 
@@ -280,5 +285,161 @@ describe("the docs' site: the share card (SEO-D4)", () => {
       rmSync(dir, { recursive: true, force: true });
     }
     expect(SENTENCE).toBe("Read, review and edit what your coding agent writes, in your terminal.");
+  });
+});
+
+describe("the docs' site: the docs for agents (SEO-D5)", () => {
+  const page = (title: string, path: string, text = `About ${title}.`): LlmsPage => ({
+    title,
+    url: llmsUrl(path),
+    source: `https://remziduzagac.github.io${pageUrl(path)}`,
+    description: `${title}, described.`,
+    text,
+  });
+  const groups = [
+    { label: "Start here", pages: [page("Quick start", "guides/quick-start.md")] },
+    { label: "Reference", pages: [page("Keys", "manual/keys.md")] },
+    { label: "For agents", pages: [page("Agent guide", "agent-guide.md")] },
+  ];
+
+  test("llms.txt: slipbox's name, the description, what it's for, then a line per page; the reference last, as Optional", () => {
+    const text = llmsTxt(groups, 700 * 1024);
+    expect(text.startsWith(`# slipbox\n\n> ${DESCRIPTION}\n\n`)).toBe(true);
+    expect(text).toContain("made for the person working beside a coding agent");
+    expect(text).toContain("`slipbox skill`");
+    expect(text).toContain(`[llms-full.txt](${DOCS_URL}llms-full.txt) (about 700 KB)`);
+    const headings = [...text.matchAll(/^## (.+)$/gm)].map((m) => m[1]);
+    expect(headings).toEqual(["Start here", "For agents", "Optional"]);
+    expect(text).toContain(
+      "- [Quick start](https://remziduzagac.github.io/slipbox/docs/guides/quick-start/): Quick start, described.",
+    );
+    // The agent guide's line points to its Markdown, which the site serves as it is.
+    expect(text).toContain(`- [Agent guide](${DOCS_URL}agent-guide.md): Agent guide, described.`);
+    expect(text.indexOf("## Optional")).toBeLessThan(text.indexOf("[Keys]"));
+  });
+
+  test("llms-full.txt: every page in the map's order, each its title, its address and its text", () => {
+    const text = llmsFull(groups);
+    expect(text.startsWith(`# slipbox documentation\n\n> ${DESCRIPTION}\n\n`)).toBe(true);
+    const titles = [...text.matchAll(/^# (.+)$/gm)].map((m) => m[1]);
+    expect(titles).toEqual(["slipbox documentation", "Quick start", "Keys", "Agent guide"]);
+    expect(text).toContain("# Keys\n\nSource: https://remziduzagac.github.io/slipbox/docs/manual/keys/\n\nAbout Keys.");
+    // A page's source is its page, the agent guide's too, though llms.txt links its Markdown.
+    expect(text).toContain("Source: https://remziduzagac.github.io/slipbox/docs/agent-guide/\n");
+  });
+
+  test("a page's text for agents: every link absolute, its own anchors too; code and compatibility anchors aside", () => {
+    const site = [
+      '<a id="earlier-title"></a>',
+      "",
+      "See [keys](/slipbox/docs/manual/keys/#leader), [below](#steps) and ![a shot](/slipbox/docs/images/x.png).",
+      "Elsewhere: [GitHub](https://github.com/x) and `[code](#not-a-link)`.",
+      "",
+      "```sh",
+      "slipbox /home/you/notes",
+      "```",
+    ].join("\n");
+    expect(llmsText(site, "guides/install.md")).toBe(
+      [
+        "",
+        "See [keys](https://remziduzagac.github.io/slipbox/docs/manual/keys/#leader), " +
+          "[below](https://remziduzagac.github.io/slipbox/docs/guides/install/#steps) and " +
+          "![a shot](https://remziduzagac.github.io/slipbox/docs/images/x.png).",
+        "Elsewhere: [GitHub](https://github.com/x) and `[code](#not-a-link)`.",
+        "",
+        "```sh",
+        "slipbox /home/you/notes",
+        "```",
+      ].join("\n"),
+    );
+  });
+
+  test("where llms.txt sends an agent: a page's address, the agent guide's Markdown", () => {
+    expect(llmsUrl("manual/keys.md")).toBe("https://remziduzagac.github.io/slipbox/docs/manual/keys/");
+    expect(llmsUrl("agent-guide.md")).toBe("https://remziduzagac.github.io/slipbox/docs/agent-guide.md");
+  });
+});
+
+describe("the docs' site: the build's check of what it tells search engines and agents (SEO-D6)", () => {
+  const ROOT = rootPage("https://remziduzagac.github.io/slipbox", "https://github.com/remziduzagac/slipbox");
+  const MAP = "## Start here\n\n- [Quick start](guides/quick-start.md): fast.\n";
+  const page = (title: string, home = false) =>
+    [
+      `<html><head><title>${fullTitle(title, home)}</title>`,
+      `<meta property="og:title" content="${title}"/>`,
+      `<meta name="description" content="${home ? DESCRIPTION : "A page."}"/>`,
+      ...headTags(DOCS_URL).map(
+        (t) =>
+          `<${t.tag} ${Object.entries(t.attrs)
+            .map(([k, v]) => `${k}="${v.replaceAll('"', "&quot;")}"`)
+            .join(" ")}/>`,
+      ),
+      "</head></html>",
+    ].join("\n");
+  /** A built site with everything in it, which `spoil` then breaks. */
+  const site = (spoil: (dist: string) => void = () => {}) => {
+    const dist = mkdtempSync(join(tmpdir(), "slipbox-meta-"));
+    mkdirSync(join(dist, "guides", "quick-start"), { recursive: true });
+    writeFileSync(join(dist, "index.html"), page("slipbox documentation", true));
+    writeFileSync(join(dist, "guides", "quick-start", "index.html"), page("Quick start"));
+    copyFileSync(join(import.meta.dir, "..", "assets", "share-card.png"), join(dist, CARD.file));
+    writeFileSync(join(dist, "llms.txt"), `# slipbox\n\n- [Quick start](${DOCS_URL}guides/quick-start/): fast.\n`);
+    writeFileSync(join(dist, "llms-full.txt"), `# slipbox documentation\n\n# Quick start\nSource: ${DOCS_URL}guides/quick-start/\n`);
+    spoil(dist);
+    try {
+      return problems(dist, MAP, ROOT);
+    } finally {
+      rmSync(dist, { recursive: true, force: true });
+    }
+  };
+
+  test("a site with everything: nothing to say", () => {
+    expect(site()).toEqual([]);
+    expect(rootProblems(ROOT)).toEqual([]);
+  });
+
+  test("each part missing is named: a page's tag or title, the card, either llms file, a page left out", () => {
+    const quick = (dist: string) => join(dist, "guides", "quick-start", "index.html");
+    const edit = (dist: string, from: RegExp, to: string) =>
+      writeFileSync(quick(dist), readFileSync(quick(dist), "utf8").replace(from, to));
+    expect(site((d) => edit(d, /<meta property="og:image" [^>]*>/, ""))).toEqual([
+      "guides/quick-start/index.html: no og:image",
+    ]);
+    expect(site((d) => edit(d, /<link rel="describedby"[^>]*>/, ""))).toEqual([
+      "guides/quick-start/index.html: no describedby",
+    ]);
+    expect(site((d) => edit(d, /<title>[^<]*<\/title>/, "<title>Quick start | slipbox</title>"))[0]).toContain(
+      'its title is "Quick start | slipbox"',
+    );
+    expect(site((d) => edit(d, /<meta name="description"[^>]*>/, ""))).toEqual([
+      "guides/quick-start/index.html: no description",
+    ]);
+    expect(site((d) => rmSync(join(d, CARD.file)))).toEqual(["no share-card.png: the share card every page names"]);
+    expect(site((d) => writeFileSync(join(d, CARD.file), "not a png"))[0]).toContain("share-card.png is no PNG");
+    expect(site((d) => rmSync(join(d, "llms.txt")))).toEqual(["no llms.txt"]);
+    expect(site((d) => rmSync(join(d, "llms-full.txt")))).toEqual(["no llms-full.txt"]);
+    expect(site((d) => writeFileSync(join(d, "llms.txt"), "# slipbox\n"))).toEqual([
+      "llms.txt leaves out guides/quick-start.md",
+    ]);
+    expect(site((d) => writeFileSync(join(d, "llms-full.txt"), "# slipbox documentation\n"))).toEqual([
+      "llms-full.txt leaves out guides/quick-start.md",
+    ]);
+  });
+
+  test("the root's page: its title, description, canonical link, refresh and card, each named when missing", () => {
+    expect(rootProblems(ROOT.replace(/<meta name="description"[^>]*>/, ""))).toEqual([
+      "the root's page: its description isn't the site's",
+    ]);
+    expect(rootProblems(ROOT.replace(/<link rel="canonical"[^>]*>/, ""))[0]).toContain("no canonical link");
+    expect(rootProblems(ROOT.replace(/<meta http-equiv="refresh"[^>]*>/, ""))).toEqual([
+      "the root's page: no refresh to docs/",
+    ]);
+    expect(rootProblems("")).toContain("the root's page: no og:image");
+  });
+
+  test("a head read back: its title and tags, entities decoded", () => {
+    const head = headOf('<title>A &amp; B</title><meta property="og:image:alt" content="say &quot;hi&quot;"/>');
+    expect(head.title).toBe("A & B");
+    expect(head.tags).toEqual([{ tag: "meta", attrs: { property: "og:image:alt", content: 'say "hi"' } }]);
   });
 });

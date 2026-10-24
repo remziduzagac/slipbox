@@ -5,10 +5,12 @@
 
 import { DESCRIPTION, DOCS_URL } from "./about.ts";
 
-/** A page as the files list it: its title, its address, its description and its Markdown. */
+/** A page as the files list it: its title, where llms.txt links it (its Markdown, where the site serves that), its
+ *  address, its description and its Markdown. */
 export interface LlmsPage {
   title: string;
   url: string;
+  source: string;
   description: string;
   text: string;
 }
@@ -26,7 +28,7 @@ export function llmsFull(groups: { label: string; pages: LlmsPage[] }[]): string
     `Every page of slipbox's documentation (${DOCS_URL}), in the order of its map, each under its title with its ` +
       `address. The index is ${DOCS_URL}llms.txt.`,
   ];
-  const pages = groups.flatMap((g) => g.pages).map((p) => `# ${p.title}\n\nSource: ${p.url}\n\n${p.text.trim()}`);
+  const pages = groups.flatMap((g) => g.pages).map((p) => `# ${p.title}\n\nSource: ${p.source}\n\n${p.text.trim()}`);
   return `${[head.join("\n"), ...pages].join("\n\n---\n\n")}\n`;
 }
 

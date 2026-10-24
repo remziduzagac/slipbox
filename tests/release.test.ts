@@ -14,6 +14,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { valueImportsOf } from "../scripts/check-boundary.ts";
 import { sbom } from "../scripts/check-deps.ts";
 import { scriptFor } from "../scripts/ci-scope.ts";
 import {
@@ -42,6 +43,8 @@ import {
   utcMinute,
   writeSite,
 } from "../scripts/release.ts";
+import { CARD, DESCRIPTION, LINE } from "../site/scripts/about.ts";
+import { escapeHtml, rootPage } from "../site/scripts/root.ts";
 
 const ROOT = resolve(import.meta.dir, "..");
 const sandbox = mkdtempSync(join(tmpdir(), "slipbox-release-"));
@@ -422,7 +425,53 @@ describe("the channels (GR-D14)", () => {
     expect(readFileSync(join(out, "install.sh"), "utf8")).toBe("#!/bin/sh\n");
     expect(readFileSync(join(out, "index.html"), "utf8")).toContain('url=docs/">'); // the docs, beside it
     expect(readFileSync(join(out, "index.html"), "utf8")).toContain('href="https://github.com/o/r"');
+    // The root's page is root.ts', for the repository's Pages site (SEO-D3).
+    expect(readFileSync(join(out, "index.html"), "utf8")).toBe(rootPage("https://o.github.io/r", "https://github.com/o/r"));
     expect(() => writeSite(out, "o/$(r)", { stable: null, preview: null })).toThrow("not a repository");
+  });
+
+  test("the root's page: a redirect to the docs whose head says what slipbox is, and shows its card (SEO-D3)", () => {
+    const html = rootPage("https://o.github.io/r", "https://github.com/o/r");
+    const has = (s: string) => expect(html).toContain(s);
+    has('<html lang="en">');
+    has('<meta name="viewport" content="width=device-width, initial-scale=1">');
+    has(`<title>slipbox: ${LINE}</title>`);
+    has(`<meta name="description" content="${escapeHtml(DESCRIPTION)}">`);
+    has('<link rel="canonical" href="https://o.github.io/r/docs/">');
+    has('<meta http-equiv="refresh" content="0; url=docs/">');
+    has('<meta property="og:type" content="website">');
+    has('<meta property="og:url" content="https://o.github.io/r/docs/">');
+    has(`<meta property="og:image" content="https://o.github.io/r/docs/${CARD.file}">`);
+    has(`<meta property="og:image:width" content="${CARD.width}">`);
+    has(`<meta property="og:image:height" content="${CARD.height}">`);
+    has(`<meta property="og:image:alt" content="${escapeHtml(CARD.alt)}">`);
+    has('<meta name="twitter:card" content="summary_large_image">');
+    has('<link rel="describedby" href="https://o.github.io/r/docs/llms.txt">');
+    has('<a href="docs/guides/install/">');
+    has('<a href="https://github.com/o/r">');
+  });
+
+  test("the root's page escapes what it writes", () => {
+    expect(escapeHtml(`a "b" & <c> 'd'`)).toBe("a &quot;b&quot; &amp; &lt;c&gt; &#39;d&#39;");
+    expect(rootPage("https://o.github.io/r", 'https://x/"><script>')).toContain(
+      'href="https://x/&quot;&gt;&lt;script&gt;"',
+    );
+    // The card's alt has quotes in it: written whole, inside its attribute.
+    expect(CARD.alt).toContain('"');
+    expect(rootPage("https://o.github.io/r", "https://github.com/o/r")).not.toContain(`content="${CARD.alt}"`);
+  });
+
+  test("the root's page and its words import nothing but each other and node's own: pages.yml runs release.ts first", () => {
+    const site = join(import.meta.dir, "..", "site", "scripts");
+    for (const [file, allowed] of [
+      ["root.ts", ["./about.ts"]],
+      ["about.ts", []],
+    ] as const) {
+      const imports = valueImportsOf(readFileSync(join(site, file), "utf8"));
+      expect(imports.filter((i) => !i.startsWith("node:") && !(allowed as readonly string[]).includes(i)), file).toEqual(
+        [],
+      );
+    }
   });
 
   test("the previews kept: the newest ten published; the older ones are the ones to delete", () => {

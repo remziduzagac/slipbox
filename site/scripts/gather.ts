@@ -180,7 +180,13 @@ function gather(): void {
       const text = rewriteLinks(body, (t) => rewriteTarget(t, page, isDir));
       writeFileSync(out, front + text);
       items.push({ slug: page.replace(/\.md$/, "") });
-      listed.push({ title, url: llmsUrl(page), description, text: llmsText(text, page) });
+      listed.push({
+        title,
+        url: llmsUrl(page),
+        source: `${ORIGIN}${pageUrl(page)}`,
+        description,
+        text: llmsText(text, page),
+      });
       pages++;
     }
     // The compatibility pages, the group without a label, are earlier addresses: neither in the sidebar nor the llms.
