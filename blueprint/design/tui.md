@@ -217,9 +217,10 @@ each framed in its level's colour with its glyph first — `✗` error, `!` warn
 and wrapped to three rows. Each shows 4 s (8 s an error) from the frame that first draws it — one said while slipbox
 was busy, a start indexing, isn't gone before it's seen (#40); the same message again refreshes its box
 rather than stacking a second. A message asks for its frame as it's said, whatever says it — a key's command, git
-answering in the background (D263) — so it never waits for the next key. One said while a frame is painted
+answering in the background (D263) — so it doesn't wait for the next key. One said while a frame is painted
 (`App.whileDrawing`, around the host's whole paint) asks for no frame: OpenTUI would draw again at once for it, and
-something said on every frame would keep drawing; it shows on the next frame. Clicking one opens the
+something said on every frame would keep drawing; it shows on the next frame drawn, which may be the next key's (a
+spell checker's missing dictionary, said as a note is drawn). Clicking one opens the
 messages list and clears the boxes. Popups
 and questions draw over them. On a screen too small for a box (under 30 columns), a message takes
 over the status line while it shows.
@@ -944,9 +945,10 @@ keys.
   into, opened up or selected there (`still`: `Vaults.visits`, counted each time a vault is gone into, so one gone into
   again is another visit) — and a list opened once git answers never opens while something else has your keys since it
   was asked (`Overlays.busy`, where `Input.dispatchKey` sends them: a question, a key sequence begun, a window over the
-  note, typing in a note, the commit's message or a filter — not where they went as it was asked), where a key meant for
-  that would answer it: it says so, and you ask again. Nor is a worktree made by Open in a worktree gone into then: `o`
-  goes into it.
+  note, typing in a note, the commit's message or a filter, a command of the note's waiting for its next key (an
+  operator, a count, `f`'s character), visual mode, resizing panes — not where they went as it was asked), where a key
+  meant for that would answer it: it says so, and you ask again. Nor is a worktree made by Open in a worktree gone into
+  then: `o` goes into it.
 - **Remove…** (`remove`): refused, said why, for a worktree with uncommitted files (`not removed: ~/x has 2
   uncommitted files — commit or discard them there first`) and for a branch not merged into its base (`… isn't merged
   into dev — 1 commit of its own; merge it first`); else asked — Remove it, keep the branch; Remove it and the branch

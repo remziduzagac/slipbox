@@ -449,6 +449,21 @@ export const GIT_BRANCHES: Check[] = [
       await s.see(/not asked|asked over what/);
       s.expect(s.rowOf("Remove it, keep") < 0, "no question over the key sequence begun");
       await s.keys("escape");
+      // A command of the note's waiting for its next key (f, for its character), and resizing panes: not asked over
+      // either.
+      for (const [wait, what] of [
+        [["ctrl+w", "l", "f"], "f waiting for its character"],
+        [["space", "w", "r"], "resizing panes"],
+      ] as const) {
+        await s.notSee(/not asked|asked over what/);
+        await toPanel(s);
+        await on(s, "⎇ agent/done");
+        await s.until(() => isSelected(s, "agent/done"), undefined, "agent/done selected");
+        await s.keys(".", "down", "down", "down", "enter", ...wait);
+        await s.see(/not asked|asked over what/);
+        s.expect(s.rowOf("Remove it, keep") < 0, `no question over ${what}`);
+        await s.keys("escape");
+      }
     },
   },
   {

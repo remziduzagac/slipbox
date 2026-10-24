@@ -59,12 +59,12 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 - In the git panel's Branches, what git did before it refused shows at once: a worktree removed while its branch was
   kept, a new branch made but not checked out, or one whose new worktree was stopped or refused by a hook, which now
   keeps its base too. A new branch is selected once it's listed, its section unfolded to it, so `o` goes into its
-  worktree when it has one; not if you've moved the selection meanwhile, or the filter hides it.
+  worktree when it has one; not if you've used the panel meanwhile, it isn't showing, or its filter hides the branch.
 - Remove…'s question and Merge…'s menu no longer open over what you turned to while git was answering — another
-  question, a note or the commit's message being typed in, a filter, a key sequence — where your next key would have
-  answered them; slipbox says so instead, to ask again. An answer that comes after you've gone into another vault no
-  longer takes you into a new worktree or selects anything there, and a branch file's diff you've moved past no longer
-  says anything.
+  question, a note or the commit's message being typed in, a filter, a key sequence, a command waiting for its next key,
+  selecting text, resizing panes — where your next key would have answered them; slipbox says so instead, to ask again.
+  An answer that comes after you've gone into another vault no longer takes you into a new worktree or selects anything
+  there, and a branch file's diff you've moved past no longer says anything.
 
 ## [0.5.0] - 2026-10-22
 

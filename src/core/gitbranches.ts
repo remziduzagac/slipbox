@@ -21,7 +21,7 @@ import {
   worktreeRecords,
   worktreeRecordsLater,
 } from "./gitops.ts";
-import { failureOf, inEnglish } from "./gitremote.ts";
+import { failureOf, inEnglish, stopOf } from "./gitremote.ts";
 import { isTrusted } from "./trust.ts";
 import { isBusyName } from "./walk.ts";
 
@@ -373,8 +373,7 @@ export function checkedOutLater(root: string, args: string[], left: string, ms =
     // git's words in English, as the remote's commands have them (`failureOf`).
     execFile("git", gitArgs(root, args), { ...OPTS, timeout: ms, env: inEnglish(process.env) }, (err, out, stderr) => {
       if (!err) return done({ why: null, stopped: false });
-      const e = err as { code?: unknown; killed?: boolean };
-      const stopped = !!e.killed || e.code === "ERR_CHILD_PROCESS_STDIO_MAXBUFFER";
+      const stopped = stopOf(err) !== null;
       const said = failureOf(err, stderr, out);
       done({ why: stopped ? `${said}: ${left}` : said, stopped });
     });

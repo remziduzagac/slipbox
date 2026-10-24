@@ -121,7 +121,8 @@ export class Overlays {
   /**
    * Where your keys go now besides the app's own commands, as `Input.dispatchKey` sends them: a question, a key
    * sequence begun, a filter typed in (the left panel's, the outline's, Problems'), the git panel's message box, a
-   * window over the note (a diff, the peek), the note in insert mode; "" for none.
+   * window over the note (a diff, the peek), the note in insert mode, a command of the note's waiting for its next key
+   * (an operator, a count, `f`'s character), visual mode, resizing panes; "" for none.
    */
   keysGo(): string {
     const app = this.app;
@@ -135,6 +136,10 @@ export class Overlays {
       return "Problems' filter";
     if (app.region === "content" && app.floating) return "window";
     if (app.region === "content" && app.view?.insert) return "note";
+    const vim = app.vim;
+    if (app.region === "content" && (vim.op || vim.count || vim.awaitChar)) return "command";
+    if (app.panels.resizeMode) return "resize";
+    if (app.region === "content" && app.view?.visual) return "visual";
     return "";
   }
 

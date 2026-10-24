@@ -17142,6 +17142,14 @@ describe("what keymap.md and tui.md promise (review: docs against the tests)", (
     frames = 0;
     h.app.whileDrawing(() => h.app.message("info", "said while painting"));
     expect(frames).toBe(0);
+    // A paint that fails outside App.draw (the host's own part of it): over all the same, the next message asks.
+    expect(() =>
+      h.app.whileDrawing(() => {
+        throw new Error("the host's paint failed");
+      }),
+    ).toThrow("the host's paint failed");
+    h.app.message("info", "said after a failed paint");
+    expect(frames).toBe(1);
   });
 
   test("selection keys: shift+ctrl+end / home to the note's ends, shift+ctrl+down by paragraph, shift+pagedown by page", async () => {

@@ -383,6 +383,37 @@ So:
   export of `origin/dev`, no D263 in it; there it passes as it is, six of seven, the seventh the same flake). No
   frame's timing is involved: what fails is which items match. The test, #34's, depends on the random name of the
   temporary folder having no two z's; a follow-up for it, not this change's.
+- 2026-10-24: CI on the rebased head again: two other changes' flaky tests, re-run green — `walk-thread.test.ts`'s
+  thread-against-here test (`opened` in one answer only; fixed in `dev` by #54) and, in #34's test, the `tod` step on a
+  temporary path holding "to" (fixed in `dev` by #49 and #54). Rebased on `dev` as it moved (#42, #49, then #59 and
+  #54; #42's own test hung every pull request's run until #59): CHANGELOG.md's lines merged, `dev`'s first; the tests
+  this reaches pass.
+- 2026-10-24: round 6 of the review, the last: the maintainer now asks for three rounds at most, and a round past the
+  third only to end the one in hand. The code-review skill's, and a fresh reviewer's in the second reviewer's place
+  (Codex stopped at a menu asking to run `gh pr view`; its part skipped, as the maintainer said, not answered for it).
+  - Real, fixed, each with its test: `Overlays.keysGo` missed where `dispatchKey` sends a key that something is
+    waiting for — a command of the note's (an operator, a count, `f`'s character), visual mode, resizing panes — so
+    Remove…'s question could open over them, the next key answering it (both reviewers); a unit test makes each by its
+    keys, and the terminal check of Remove… adds `f` in the note and resize mode. The test of git's news while a branch
+    is made passed for the wrong reason: nothing drew while `listed` waited, so no news came then — the news now comes
+    after every answer once it waits, and the test asks it settled before the news stopped. `whileDrawing`'s `finally`
+    had no test failing without it (`drawFrame` catches its own errors): a paint that throws, then a message that must
+    ask for its frame. "git was stopped" was told twice — `stopOf` in `gitremote.ts`, which `failureOf` and
+    `checkedOutLater` share. The design said a message never waits for the next key, which one said while a frame is
+    painted can (a spell checker's missing dictionary); the manual and CHANGELOG said a new branch isn't selected if
+    you've moved the selection, where any use of the panel, or the panel not showing, counts.
+  - Rejected: the row selected when the branch was asked for in place of `touched`, one refresh-and-draw for the
+    copies across slipbox, and the rows built once (each rejected in an earlier round, for the same reasons); `busy`'s
+    `since` "dead" (Merge… with the panel's filter on passes it) and open to another thing of the same kind (a click
+    ends a key sequence, `mouse.ts`; a list's accept closes it first; the filters, the message box and the note are one
+    each); `listed` on a list kept when the checkout goes away (nothing is selected without the Branches heading); the
+    list's promise unhandled if git's reads threw (as on `dev`, and they return null instead); Remove…'s relisting once
+    you've gone into another vault (that vault is often another checkout of the same repository, whose Branches it
+    updates); one token for every late answer's checks (each answer checks what it would change — a question your keys,
+    a selection the panel's use, going into a worktree both).
+  - Mutation-checked: each fix undone (six of `keysGo`'s, the news test's against a `listed` waiting for the newest
+    list, `whileDrawing` without `finally`), its unit test fails; the terminal check fails without `keysGo`'s command or
+    resize line. Then the reached unit tests, the terminal checks and `check:docs` pass.
 - Follow-up, found by the terminal checks, older than this change: a hook's refusal is said as git's first line, not
   the hook's — `git: Preparing worktree (new branch 'agent/x')`, `… made, but git: Switched to branch 'agent/x'` —
   since `gitReason` (`src/core/gitremote.ts`) falls back to the first line when there's no `fatal:` or `error:` one.

@@ -961,37 +961,33 @@ describe("the branches (GIT-D9, GIT-D10, GIT-D13)", () => {
     expect(app.gitPanel.branches.opened.has("agent/c")).toBe(false);
   });
 
-  test("a new branch made while git has news after every answer: selected once the news stops, lists asked meanwhile", async () => {
+  test("a new branch made while git has news after every answer: selected once a list asked since is shown, the news going on", async () => {
     const root = repo();
     const { app, frame, keys } = await panel(root);
-    // News before each list of the branches is asked, while the branch is made and five times more: each list asked
-    // overtaken by the next.
-    const bv = app.gitPanel.branches as unknown as { branches: () => unknown; list: { generation: number } | null };
-    const branches = bv.branches.bind(bv);
+    // News as each answer asks for its frame, five times, once the branch made waits to be listed: the list it waits for
+    // is no longer the newest by the time it's shown.
     let news = 0;
-    const asked = new Set<number>();
-    bv.branches = () => {
+    (app.host as { requestRender: () => void }).requestRender = () => {
       if (news > 0) {
         news--;
         app.git.generation++;
       }
-      const got = branches();
-      if (bv.list) asked.add(bv.list.generation);
-      return got;
     };
-    const say = app.message.bind(app);
-    app.message = (...m: Parameters<App["message"]>) => {
-      say(...m);
-      if (m[1].startsWith("making ")) news = 5;
+    const bv = app.gitPanel.branches as unknown as { listed: () => Promise<boolean> };
+    const listed = bv.listed.bind(bv);
+    // How much news came while it waited; on a loaded machine each list's answer takes a while.
+    let during = -1;
+    bv.listed = () => {
+      news = 5;
+      return listed().then((ok) => ((during = 5 - news), ok));
     };
-    const before = app.git.generation;
-    // Waited for as what the branch made waits for (`listed`): on a loaded machine each list's answer takes a while.
-    const settled = listings(app);
     await newBranch(app, keys, "agent/busy", "main");
-    expect(await until(() => settled() > 0, 25_000)).toBe(true);
+    expect(await until(() => during >= 0, 25_000)).toBe(true);
     frame();
     expect(selectedBranch(app)).toBe("agent/busy");
-    expect([...asked].filter((g) => g > before).length).toBeGreaterThanOrEqual(5);
+    // Settled with news come, and before it stopped: never waiting for git to be quiet.
+    expect(during).toBeGreaterThan(0);
+    expect(during).toBeLessThan(5);
   });
 
   test("a new branch made, the panel's filter not matching it: nothing unfolded, nothing selected", async () => {
@@ -1143,6 +1139,84 @@ describe("the branches (GIT-D9, GIT-D10, GIT-D13)", () => {
     expect(await until(() => weighed() > 0)).toBe(true);
     expect(app.overlay).toBeNull();
     app.pending.length = 0;
+  });
+
+  test("Remove…'s question, git answering while a command of the note's waits for its next key (an operator, a count, f's character), in visual mode or resizing panes: not asked over it", async () => {
+    const root = repo();
+    worktree(root, "agent/done", "main");
+    const { app, frame, keys } = await panel(root);
+    expect(await until(() => (frame(), !!branchOf(app, "agent/done")))).toBe(true);
+    await app.run("view.source");
+    const weighed = guarded(app);
+    const vim = app.vim;
+    const view = app.view!;
+    // Each made by its keys in the note, taken away while Remove… is asked from the panel, put back before git answers.
+    const away =
+      <T>(get: () => T, set: (v: T) => void, none: T) =>
+      () => {
+        const was = get();
+        set(none);
+        return () => set(was);
+      };
+    const waits = [
+      {
+        make: () => keys("d"),
+        take: away(
+          () => vim.op,
+          (v) => (vim.op = v),
+          null,
+        ),
+      },
+      {
+        make: () => keys("3"),
+        take: away(
+          () => vim.count,
+          (v) => (vim.count = v),
+          "",
+        ),
+      },
+      {
+        make: () => keys("f"),
+        take: away(
+          () => vim.awaitChar,
+          (v) => (vim.awaitChar = v),
+          null,
+        ),
+      },
+      {
+        make: () => keys("v"),
+        take: away(
+          () => view.visual,
+          (v) => (view.visual = v),
+          null,
+        ),
+      },
+      {
+        make: () => app.run("window.resize_mode"),
+        take: away(
+          () => app.panels.resizeMode,
+          (v) => (app.panels.resizeMode = v),
+          false,
+        ),
+      },
+    ];
+    for (const w of waits) {
+      app.region = "content";
+      await w.make();
+      expect(app.overlays.keysGo()).not.toBe("");
+      const put = w.take();
+      app.region = "sidebar";
+      expect(app.overlays.keysGo()).toBe("");
+      const before = weighed();
+      app.gitPanel.branches.button(branchOf(app, "agent/done")!, "remove");
+      app.region = "content";
+      put();
+      expect(await until(() => weighed() > before)).toBe(true);
+      expect(app.overlay).toBeNull();
+      expect(app.messages.at(-1)?.text).toEndWith("— not asked over what you were doing: ask again");
+      await keys("escape");
+      expect(app.overlays.keysGo()).toBe("");
+    }
   });
 
   test("Open in a worktree, a question opened before git answers: not gone into from under it — o goes into it", async () => {
