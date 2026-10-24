@@ -29,6 +29,14 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
   is working, as the manual says. 0.5.0 read them on the spot, which could take thousands of notes in at once.
 - A folder deleted or moved away outside slipbox takes its files with it from the index, not only its notes: a link or
   embed to a data or text file in it is said broken at once. 0.5.0 kept them until the folder's vault was walked again.
+- In your home folder, notes brought into a folder that sets its time back, as `cp -a`, `rsync -a` or unpacking an
+  archive with its times do, are found the next time home is opened or a command runs there, even when the folder's
+  time is put back to exactly what it was. They used to wait for home's next walk or `slipbox index --refresh ~`. A
+  home walked by an earlier version gets this once it's walked again: by the first command run there, or by the TUI's
+  background index.
+- In your home folder, a folder slipbox couldn't read when it walked home has its notes found once it can be read, at
+  the next command or start. They used to wait for home's next walk. A home walked by an earlier version gets this once
+  it's walked again, as above.
 
 ## [0.5.0] - 2026-10-22
 

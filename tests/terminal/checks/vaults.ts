@@ -4,12 +4,15 @@
 
 import { spawnSync } from "node:child_process";
 import {
+  chmodSync,
   existsSync,
   lstatSync,
   mkdirSync,
+  readdirSync,
   readFileSync,
   renameSync,
   rmSync,
+  statSync,
   symlinkSync,
   utimesSync,
   writeFileSync,
@@ -26,7 +29,7 @@ import {
   open,
   opened,
 } from "../check.ts";
-import { CheckFailed, type Session } from "../session.ts";
+import { CheckFailed, type Session, Skipped } from "../session.ts";
 import { ARCHITECTURE, crumbs, lastMessage, listed, PEEK_HINT, toLink } from "./links-and-files.ts";
 
 /**
@@ -133,6 +136,63 @@ function homeFolders(s: Session): void {
   s.write("~/garden/seeds.md", "# Seeds\n\nWhat to sow in spring.\n");
   const before = new Date(Date.now() - 3_600_000);
   for (const d of ["", "garden", "household", "household/archive"]) utimesSync(join(s.home, d), before, before);
+}
+
+/** Home's folders (`homeFolders`), then walked and kept by the command line, as an agent's first command there walks
+ *  it; `more` changes home after that. Setup runs at every start: this, once. */
+function homeWalked(s: Session, more?: (s: Session) => void): void {
+  const once = join(s.dir, "home-walked"); // not a file of home's: a folder of it may not be readable by then
+  if (existsSync(once)) return;
+  writeFileSync(once, "");
+  homeFolders(s);
+  s.cliIn("~/", "ls");
+  more?.(s);
+}
+
+/** Home's walk kept, in the check's cache (`walk.json`, VV-D2). */
+function walkJson(s: Session): string {
+  const cache = join(s.dir, "cache");
+  const rel = (readdirSync(cache, { recursive: true }) as string[]).find((f) => f.endsWith("walk.json"));
+  if (!rel) throw new CheckFailed("home's walk isn't kept");
+  return join(cache, rel);
+}
+
+/** The stamp home's walk kept has for folder `d` (its mtime and ctime): null when it has none, undefined when the
+ *  folder isn't in the walk (#12). */
+function stampOf(s: Session, d: string): [number, number] | null | undefined {
+  const kept = JSON.parse(readFileSync(walkJson(s), "utf8"));
+  const i = kept.dirs.indexOf(d);
+  return i < 0 ? undefined : (kept.times?.[i] ?? null);
+}
+
+/** Home's walk kept as if it had seen folder `d` as it is now: its stamp its mtime and ctime (#12). */
+function restampOf(s: Session, d: string): void {
+  const file = walkJson(s);
+  const kept = JSON.parse(readFileSync(file, "utf8"));
+  const i = kept.dirs.indexOf(d);
+  if (i < 0) throw new CheckFailed(`${d || "home's top"} isn't in the walk kept`);
+  const st = statSync(d ? s.path(`~/${d}`) : s.home);
+  kept.times[i] = [st.mtimeMs, st.ctimeMs];
+  writeFileSync(file, JSON.stringify(kept));
+}
+
+/** A tool run as a person runs it in a shell (`cp -a`, `tar`), failing the check when it fails. */
+function shell(cmd: string, ...args: string[]): void {
+  const r = spawnSync(cmd, args, { encoding: "utf8" });
+  if (r.status !== 0) throw new CheckFailed(`${cmd} ${args.join(" ")}: exit ${r.status}\n${r.stderr}`);
+}
+
+/** The quick switcher, `name` typed: `rel` listed, or (`listed: false`) not, once it has settled. */
+async function switcherShows(s: Session, name: string, rel: string, listed = true): Promise<void> {
+  await s.keys("ctrl+p");
+  await s.see(/Open (note|\()/);
+  await s.type(name);
+  if (listed) await s.see(rel);
+  else {
+    await s.settle();
+    s.expect(s.rowOf(rel) < 0, `${rel} not in the switcher's list`);
+  }
+  await s.keys("escape");
 }
 
 /** The shelf: a folder of home outside the notes vault, linked from it (`~/notes/shelf`), and a note there through the
@@ -270,6 +330,485 @@ const HOME: Check[] = [
       // In home's tree, Downloads itself: ⊘.
       await s.keys("-");
       await s.until(() => /^~ ›/.test(crumbs(s)) && markOf(s, "Downloads") === "⊘", 3000, "Downloads ⊘ in home's tree");
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "home: a folder whose time was set back is listed again — cp -a, tar x, a clock behind, a time put back exactly, a folder made a vault, a time ahead: at the next start of a folder of home, and at the next command",
+    covers: { cases: ["vault", "switcher"], commands: ["switcher.open"] },
+    options: { home: true, startAt: "home/household", config: UNWALKED, setup: (s) => homeWalked(s) },
+    run: async (s) => {
+      await s.status(/ ~ .*household\/bike-insurance\.md/);
+      await quits(s);
+      // slipbox closed. cp -a of a backup into ~/garden: a note, and garden's time the backup's, older than the walk.
+      const older = new Date(Date.now() - 2 * 3_600_000);
+      const backup = join(s.dir, "backup", "garden");
+      mkdirSync(backup, { recursive: true });
+      writeFileSync(join(backup, "compost.md"), "# Compost\n\nTurned every two weeks.\n");
+      utimesSync(backup, older, older);
+      shell("cp", "-a", `${backup}/.`, s.path("~/garden"));
+      // tar x of an archive over ~/household: a note in its archive, the folders' times the archive's.
+      const arc = join(s.dir, "arc");
+      mkdirSync(join(arc, "household", "archive"), { recursive: true });
+      writeFileSync(join(arc, "household", "archive", "2024-policy.md"), "# The policy before\n\nTwo renewals back.\n");
+      for (const d of ["household/archive", "household"]) utimesSync(join(arc, d), older, older);
+      shell("tar", "-C", arc, "-cf", join(s.dir, "arc.tar"), "household");
+      shell("tar", "-C", s.home, "-xf", join(s.dir, "arc.tar"));
+      s.expect(statSync(s.path("~/garden")).mtimeMs === older.getTime(), "garden's time set back by cp -a");
+      // household opened by name again: home's walk kept covers it, and lists again the folders whose time moved back.
+      await s.restart();
+      await s.status(/ ~ .*household\/bike-insurance\.md/);
+      await switcherShows(s, "compost", "garden/compost.md");
+      await switcherShows(s, "2024-policy", "household/archive/2024-policy.md");
+      await quits(s);
+      // The walk the TUI kept (made on its own thread): garden's stamp as it was listed, its time and ctime.
+      const g = statSync(s.path("~/garden"));
+      s.expect(
+        JSON.stringify(stampOf(s, "garden")) === JSON.stringify([g.mtimeMs, g.ctimeMs]),
+        "garden's stamp kept whole",
+      );
+      // A disk whose clock is behind: a note in ~/household, its time moved, but to before the walk.
+      s.write("~/household/insurer.md", "# Insurer\n\nTheir number, and the policy's.\n");
+      const behind = new Date(Date.now() - 30_000);
+      utimesSync(s.path("~/household"), behind, behind);
+      // ~'s own: a note, and its time put back to exactly the one the walk kept: its ctime moved all the same.
+      const top = stampOf(s, "");
+      if (!top || top[0] === -1) throw new CheckFailed("home's top has no stamp of its time");
+      s.write("~/put-back.md", "# Put back\n\nCame in, its folder's time restored.\n");
+      utimesSync(s.home, new Date(top[0]), new Date(top[0]));
+      s.expect(statSync(s.home).mtimeMs === top[0], "home's time put back to exactly its stamp");
+      // garden made a vault (git init), its time set back as if nothing had come: it leaves home.
+      mkdirSync(s.path("~/garden/.git"));
+      utimesSync(s.path("~/garden"), older, older);
+      // The command line, at its next command: the notes there, garden's gone.
+      const ls = s.cliIn("~/", "ls").out.split("\n");
+      for (const n of ["household/insurer.md", "put-back.md", "household/archive/2024-policy.md"])
+        s.expect(ls.includes(n), `ls lists ${n}`);
+      s.expect(!ls.some((n) => n.startsWith("garden/")), "garden made a vault: none of its notes home's");
+      // A folder whose time is too recent to tell a later change apart — ahead of this machine's clock (a disk whose
+      // clock is ahead), as one just changed: a note in it, the walk kept with it stamped to list again; so a note come
+      // later, its time the same, is found.
+      const ahead = new Date(Date.now() + 60_000);
+      s.write("~/household/archive/2023-policy.md", "# The first policy\n\nThree renewals back.\n");
+      utimesSync(s.path("~/household/archive"), ahead, ahead);
+      s.expect(s.cliIn("~/", "ls").out.split("\n").includes("household/archive/2023-policy.md"), "ls lists it");
+      s.expect(stampOf(s, "household/archive")?.[0] === -1, "household/archive stamped to list again");
+      s.write("~/household/archive/2022-policy.md", "# The one before\n\nFour renewals back.\n");
+      utimesSync(s.path("~/household/archive"), ahead, ahead);
+      s.expect(s.cliIn("~/", "ls").out.split("\n").includes("household/archive/2022-policy.md"), "ls lists it");
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "home: a folder whose time was set back with nothing new in it — the walk kept again with its new time, so the next start doesn't list it again",
+    covers: { cases: ["vault", "switcher"], commands: ["switcher.open"] },
+    options: { home: true, startAt: "home", config: UNWALKED, setup: (s) => homeWalked(s) },
+    run: async (s) => {
+      await s.status(/ ~ /);
+      await quits(s);
+      const garden = s.path("~/garden");
+      // cp -a of a backup holding the same notes: garden's time the backup's — before its stamp, then after it but
+      // still before the walk (a backup made since). Each time the command line lists garden again, and keeps the
+      // walk again with garden's new time.
+      const backup = join(s.dir, "backup", "garden");
+      mkdirSync(backup, { recursive: true });
+      for (const n of ["plan.md", "seeds.md"]) writeFileSync(join(backup, n), readFileSync(join(garden, n)));
+      for (const ago of [90, 30]) {
+        const at = new Date(Date.now() - ago * 60_000);
+        utimesSync(backup, at, at);
+        shell("cp", "-a", `${backup}/.`, garden);
+        s.expect(s.cliIn("~/", "ls").out.includes("garden/plan.md"), "ls lists garden's notes");
+        s.expect(stampOf(s, "garden")?.[0] === at.getTime(), `garden's stamp its time now (${ago} minutes back)`);
+      }
+      // As a walk made in slices leaves it, begun two hours back, before garden was listed: garden set back to before
+      // its stamp but after the walk began is kept again all the same.
+      const file = walkJson(s);
+      const begun = JSON.parse(readFileSync(file, "utf8"));
+      writeFileSync(file, JSON.stringify({ ...begun, walked: new Date(Date.now() - 2 * 3_600_000).toISOString() }));
+      const between = new Date(Date.now() - 60 * 60_000);
+      utimesSync(backup, between, between);
+      shell("cp", "-a", `${backup}/.`, garden);
+      s.expect(s.cliIn("~/", "ls").out.includes("garden/plan.md"), "ls lists garden's notes");
+      s.expect(stampOf(s, "garden")?.[0] === between.getTime(), "garden's stamp its time now (an hour back)");
+      // household's time moved on past the walk's start and its stamp, nothing new in it (a shell's history written
+      // over): listed again, as "newer than the walk" listed it, and the walk not written again for it.
+      const since = JSON.parse(readFileSync(file, "utf8"));
+      writeFileSync(file, JSON.stringify({ ...since, walked: new Date(Date.now() - 2 * 3_600_000).toISOString() }));
+      const before = readFileSync(file, "utf8");
+      const recent = new Date(Date.now() - 30_000);
+      utimesSync(s.path("~/household"), recent, recent);
+      s.expect(s.cliIn("~/", "ls").out.includes("household/bike-insurance.md"), "ls lists household's notes");
+      s.expect(readFileSync(file, "utf8") === before, "the walk not written again for a time moved on");
+      // Not listed again at the next start: a note taken out of the walk kept stays out of the switcher — the walk's
+      // folders and their stamps in another order, each stamp staying with its folder.
+      const kept = JSON.parse(readFileSync(file, "utf8"));
+      kept.dirs.push(kept.dirs.shift());
+      kept.times.push(kept.times.shift());
+      writeFileSync(
+        file,
+        JSON.stringify({ ...kept, notes: kept.notes.filter((n: string) => n !== "garden/seeds.md") }),
+      );
+      await s.restart();
+      await s.status(/ ~ /);
+      await switcherShows(s, "plan", "garden/plan.md");
+      await switcherShows(s, "seeds", "garden/seeds.md", false);
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "home: a walk an earlier version kept, without its folders' times — the TUI goes by it as before; the command line walks home again, once, and a note whose folder was set back is found",
+    covers: { cases: ["vault", "switcher"], commands: ["switcher.open"] },
+    options: {
+      home: true,
+      startAt: "home",
+      config: UNWALKED,
+      setup: (s) =>
+        homeWalked(s, () => {
+          // As an earlier version kept it: no stamps. Then a note in garden, its time set back.
+          const file = walkJson(s);
+          const { times: _, ...kept } = JSON.parse(readFileSync(file, "utf8"));
+          writeFileSync(file, JSON.stringify(kept));
+          s.write("~/garden/late.md", "# Late\n\nBrought in from a backup.\n");
+          const older = new Date(Date.now() - 2 * 3_600_000);
+          utimesSync(s.path("~/garden"), older, older);
+        }),
+    },
+    run: async (s) => {
+      await s.status(/ ~ /);
+      // The TUI goes by the walk as an earlier version did: garden's time older than the walk, not listed again.
+      await switcherShows(s, "late", "garden/late.md", false);
+      await quits(s);
+      // A note in household, so the TUI keeps the walk again: household stamped, garden still not.
+      s.write("~/household/renewal.md", "# Renewal\n\nDue in March.\n");
+      await s.restart();
+      await s.status(/ ~ /);
+      await switcherShows(s, "renewal", "household/renewal.md");
+      await quits(s);
+      s.expect(
+        Array.isArray(stampOf(s, "household")) && stampOf(s, "garden") === null,
+        "household stamped, garden not",
+      );
+      // The command line walks home again, once, as the first time: the note found, every folder stamped.
+      s.expect(s.cliIn("~/", "ls").out.split("\n").includes("garden/late.md"), "ls lists garden/late.md");
+      const kept = JSON.parse(readFileSync(walkJson(s), "utf8"));
+      s.expect(
+        kept.dirs.every((_: string, i: number) => Array.isArray(kept.times?.[i])),
+        "every folder stamped",
+      );
+      await s.restart();
+      await s.status(/ ~ /);
+      await switcherShows(s, "late", "garden/late.md");
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "home: a folder that can't be read for a while — listed again at each start till it can, the walk not written for it each time; readable again, its notes back",
+    covers: { cases: ["vault", "switcher"], commands: ["switcher.open"] },
+    options: { home: true, startAt: "home", config: UNWALKED, setup: (s) => homeWalked(s) },
+    run: async (s) => {
+      if (process.getuid?.() === 0) throw new Skipped("root reads every folder");
+      await s.status(/ ~ /);
+      await quits(s);
+      const garden = s.path("~/garden");
+      chmodSync(garden, 0o000);
+      try {
+        // Its ctime moved by the chmod: the command line lists it again, and can't read it — its notes out meanwhile.
+        // Home's top listed again too (a note in it, its time then set back): read, it keeps the stamp it was read with.
+        s.write("~/sown.md", "# Sown\n\nWhat went in this spring.\n");
+        const back = new Date(Date.now() - 2 * 3_600_000);
+        utimesSync(s.home, back, back);
+        const ls = s.cliIn("~/", "ls").out;
+        s.expect(!ls.includes("garden/") && ls.includes("sown.md"), "garden's notes out, sown.md in");
+        s.expect(stampOf(s, "garden")?.[0] === -1, "garden to list again");
+        s.expect(stampOf(s, "")?.[0] === back.getTime(), "home's top keeps its own stamp");
+        const at = readFileSync(walkJson(s), "utf8");
+        // The next start lists it again, and still can't read it: the walk not written again for it.
+        await s.restart();
+        await s.status(/ ~ /);
+        await switcherShows(s, "plan", "garden/plan.md", false);
+        await quits(s);
+        s.expect(readFileSync(walkJson(s), "utf8") === at, "the walk not written again");
+      } finally {
+        chmodSync(garden, 0o755);
+      }
+      // Readable again: listed again, its notes back.
+      await s.restart();
+      await s.status(/ ~ /);
+      await switcherShows(s, "plan", "garden/plan.md");
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "home: a walk an earlier version kept — a vault in home previewed as part of it from the TUI goes by that walk, home not walked again for want of its stamps",
+    covers: { cases: ["vault", "links/state"], commands: ["vault.unmake"] },
+    options: {
+      home: true,
+      startAt: "home/notes/index.md",
+      config: UNWALKED,
+      setup: (s) =>
+        homeWalked(s, () => {
+          const file = walkJson(s);
+          const { times: _, ...kept } = JSON.parse(readFileSync(file, "utf8"));
+          writeFileSync(file, JSON.stringify(kept));
+        }),
+    },
+    run: async (s) => {
+      await s.status(/ notes .*index\.md/);
+      // notes made part of home: the plan across home, from the walk kept as it is — previewed, not carried out.
+      await leader(s, "v", "shift+m");
+      await s.see(/notes\/ → part of .*: \d+ changes? in \d+ files?/, 10000);
+      await s.keys("escape");
+      s.expect(s.exists("~/notes/.slipbox"), "notes still a vault of its own");
+      // A walk of home would have stamped every folder: garden, unchanged, has none still.
+      s.expect(stampOf(s, "garden") === null, "home not walked again: garden without a stamp");
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "home: a folder that can't be read when home is walked — tried again at each start; made readable, its notes found at the next command",
+    covers: { cases: ["vault", "switcher"], commands: ["switcher.open"] },
+    options: {
+      home: true,
+      startAt: "home",
+      config: UNWALKED,
+      setup: (s) => {
+        const once = join(s.dir, "home-folders"); // not a file of home's: garden may not be readable by then
+        if (existsSync(once)) return;
+        writeFileSync(once, "");
+        homeFolders(s);
+      },
+    },
+    run: async (s) => {
+      if (process.getuid?.() === 0) throw new Skipped("root reads every folder");
+      await s.status(/ ~ /);
+      await quits(s);
+      const garden = s.path("~/garden");
+      try {
+        // garden unreadable as the command line walks home for the first time: not in the walk at all, and the folder
+        // holding it, home's top, stamped to list again.
+        chmodSync(garden, 0o000);
+        s.expect(!s.cliIn("~/", "ls").out.includes("garden/"), "garden unreadable: none of its notes listed");
+        s.expect(stampOf(s, "garden") === undefined && stampOf(s, "")?.[0] === -1, "home's top stamped to list again");
+        // Each start tries garden again, and still can't read it: the walk not written again for it.
+        const at = readFileSync(walkJson(s), "utf8");
+        await s.restart();
+        await s.status(/ ~ /);
+        await switcherShows(s, "plan", "garden/plan.md", false);
+        await quits(s);
+        s.expect(readFileSync(walkJson(s), "utf8") === at, "the walk not written again");
+        // Made readable (a chmod moves no time the walk keeps): found at the next command, and the next start.
+        chmodSync(garden, 0o755);
+        s.expect(s.cliIn("~/", "ls").out.split("\n").includes("garden/plan.md"), "ls lists garden/plan.md");
+      } finally {
+        chmodSync(garden, 0o755);
+      }
+      await s.restart();
+      await s.status(/ ~ /);
+      await switcherShows(s, "plan", "garden/plan.md");
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "home: a vault of home that's home's again, unreadable then — tried again at each command; made readable, its notes found",
+    covers: { cases: ["vault", "switcher"], commands: ["switcher.open"] },
+    options: { home: true, startAt: "home", config: UNWALKED, setup: (s) => homeWalked(s) },
+    run: async (s) => {
+      if (process.getuid?.() === 0) throw new Skipped("root reads every folder");
+      await s.status(/ ~ /);
+      await quits(s);
+      // ~/plot made a vault (git init): the command line keeps it as a vault of its own.
+      s.write("~/plot/.git/HEAD", "ref: refs/heads/main\n");
+      s.write("~/plot/beds.md", "# Beds\n\nFour, by the fence.\n");
+      s.expect(!s.cliIn("~/", "ls").out.includes("plot/"), "plot a vault of its own: none of its notes home's");
+      // Home's top, listed just after plot came, is to list again: its time set back, the next command stamps it.
+      const back = new Date(Date.now() - 3_600_000);
+      utimesSync(s.home, back, back);
+      s.cliIn("~/", "ls");
+      s.expect(stampOf(s, "")?.[0] === back.getTime(), "home's top stamped with its time");
+      const plot = s.path("~/plot");
+      try {
+        // Its marker gone, and it can't be read (searched, not listed): home's again, and tried again from home's top.
+        rmSync(join(plot, ".git"), { recursive: true, force: true });
+        chmodSync(plot, 0o311);
+        s.expect(!s.cliIn("~/", "ls").out.includes("plot/"), "plot unreadable: none of its notes listed");
+        s.expect(stampOf(s, "")?.[0] === -1, "home's top stamped to list again");
+        chmodSync(plot, 0o755);
+        s.expect(s.cliIn("~/", "ls").out.split("\n").includes("plot/beds.md"), "ls lists plot/beds.md");
+      } finally {
+        chmodSync(plot, 0o755);
+      }
+      await s.restart();
+      await s.status(/ ~ /);
+      await switcherShows(s, "beds", "plot/beds.md");
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "home: a walk that couldn't read home's top — no walk of home's: the TUI shows home's top, the command line walks it again at its next command",
+    covers: { cases: ["vault"] },
+    options: {
+      home: true,
+      startAt: "home",
+      config: UNWALKED,
+      setup: (s) => {
+        const once = join(s.dir, "home-walked");
+        if (existsSync(once) || process.getuid?.() === 0) return;
+        writeFileSync(once, "");
+        homeFolders(s);
+        chmodSync(s.home, 0o311); // searched, not listed
+        try {
+          s.cliIn("~/", "ls");
+        } finally {
+          chmodSync(s.home, 0o755);
+        }
+      },
+    },
+    run: async (s) => {
+      if (process.getuid?.() === 0) throw new Skipped("root reads every folder");
+      // The TUI, its top readable again: home's top shown, as for a walk under other settings, not an empty home.
+      await s.status(/ ~ /);
+      await switcherShows(s, "todo", "todo.md");
+      await quits(s);
+      s.expect(JSON.parse(readFileSync(walkJson(s), "utf8")).dirs.length === 0, "the walk kept holds no folder");
+      s.expect(s.cliIn("~/", "ls").out.split("\n").includes("household/bike-insurance.md"), "ls walks home again");
+      s.expect(Array.isArray(stampOf(s, "")), "home's top stamped");
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "home: a folder or a note of home that can't be looked at any more — tried again from the folder holding it, not dropped for good; looked at again, its notes back",
+    covers: { cases: ["vault", "switcher"], commands: ["switcher.open"] },
+    options: { home: true, startAt: "home", config: UNWALKED, setup: (s) => homeWalked(s) },
+    run: async (s) => {
+      if (process.getuid?.() === 0) throw new Skipped("root reads every folder");
+      await s.status(/ ~ /);
+      await quits(s);
+      const household = s.path("~/household");
+      try {
+        // household readable, not searched: its archive can't be statted, as a permission, a policy or a disk's error
+        // can have it. The walk kept as if it had seen household so: the archive alone lost, household to list again.
+        chmodSync(household, 0o600);
+        restampOf(s, "household");
+        s.expect(!s.cliIn("~/", "ls").out.includes("household/archive/"), "the archive's notes out");
+        s.expect(stampOf(s, "household")?.[0] === -1, "household stamped to list again");
+        chmodSync(household, 0o755);
+        s.expect(s.cliIn("~/", "ls").out.split("\n").includes("household/archive/2025-policy.md"), "ls lists it");
+      } finally {
+        chmodSync(household, 0o755);
+      }
+      const garden = s.path("~/garden");
+      try {
+        // garden the same: its notes can't be statted, garden to list again — and listed again, still, while they can't.
+        chmodSync(garden, 0o600);
+        restampOf(s, "garden");
+        s.expect(!s.cliIn("~/", "ls").out.includes("garden/"), "garden's notes out");
+        s.expect(stampOf(s, "garden")?.[0] === -1, "garden stamped to list again");
+        s.cliIn("~/", "ls");
+        s.expect(stampOf(s, "garden")?.[0] === -1, "garden still to list again");
+        chmodSync(garden, 0o755);
+        s.expect(s.cliIn("~/", "ls").out.split("\n").includes("garden/plan.md"), "ls lists garden/plan.md");
+      } finally {
+        chmodSync(garden, 0o755);
+      }
+      await s.restart();
+      await s.status(/ ~ /);
+      await switcherShows(s, "2025-policy", "household/archive/2025-policy.md");
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "home: a walk that couldn't read home's top — a vault in home previewed as part of it from the TUI walks home again for the plan",
+    covers: { cases: ["vault", "links/state"], commands: ["vault.unmake"] },
+    options: {
+      home: true,
+      startAt: "home/notes/index.md",
+      config: UNWALKED,
+      setup: (s) => {
+        const once = join(s.dir, "home-walked");
+        if (existsSync(once) || process.getuid?.() === 0) return;
+        writeFileSync(once, "");
+        homeFolders(s);
+        chmodSync(s.home, 0o311); // searched, not listed
+        try {
+          s.cliIn("~/", "ls");
+        } finally {
+          chmodSync(s.home, 0o755);
+        }
+      },
+    },
+    run: async (s) => {
+      if (process.getuid?.() === 0) throw new Skipped("root reads every folder");
+      await s.status(/ notes .*index\.md/);
+      s.expect(JSON.parse(readFileSync(walkJson(s), "utf8")).dirs.length === 0, "the walk kept holds no folder");
+      // The plan across home, previewed, not carried out: from a walk of home made for it, not the empty one.
+      await leader(s, "v", "shift+m");
+      await s.see(/notes\/ → part of .*: \d+ changes? in \d+ files?/, 10000);
+      await s.keys("escape");
+      s.expect(Array.isArray(stampOf(s, "garden")), "home walked again for the plan: garden stamped");
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "home: a vault and a folder of home through a link the walk follows, its target away for a while (a disk taken away, not searched) — found again when it's back",
+    covers: { cases: ["vault"] },
+    options: {
+      home: true,
+      startAt: "home",
+      config: UNWALKED,
+      setup: (s) => {
+        const once = join(s.dir, "home-walked");
+        if (existsSync(once)) return;
+        writeFileSync(once, "");
+        homeFolders(s);
+        // ~/lnk leads to a vault on another disk, followed, as the question's f keeps it.
+        const proj = join(s.dir, "disk", "proj");
+        mkdirSync(join(proj, ".git"), { recursive: true });
+        writeFileSync(join(proj, "p.md"), "# P\n\nOn the other disk.\n");
+        symlinkSync(proj, s.path("~/lnk"));
+        mkdirSync(join(s.dir, "state", "slipbox"), { recursive: true });
+        writeFileSync(
+          join(s.dir, "state", "slipbox", "links.json"),
+          JSON.stringify({
+            version: 1,
+            links: [{ link: s.path("~/lnk"), target: proj, answer: "follow", at: "2026-10-24" }],
+          }),
+        );
+        s.cliIn("~/", "ls");
+      },
+    },
+    run: async (s) => {
+      if (process.getuid?.() === 0) throw new Skipped("root reads every folder");
+      await s.status(/ ~ /);
+      await quits(s);
+      const disk = join(s.dir, "disk");
+      const proj = join(disk, "proj");
+      s.expect(stampOf(s, "") !== undefined && !s.cliIn("~/", "ls").out.includes("lnk/"), "lnk a vault of its own");
+      // The disk taken away: the link there, what it leads to not. Home's top to list again, command after command.
+      renameSync(proj, join(disk, "proj-away"));
+      s.cliIn("~/", "ls");
+      s.cliIn("~/", "ls");
+      s.expect(stampOf(s, "")?.[0] === -1, "home's top to list again, lnk's target away");
+      // Back, its marker gone meanwhile: home's again, its note found.
+      renameSync(join(disk, "proj-away"), proj);
+      rmSync(join(proj, ".git"), { recursive: true });
+      s.expect(s.cliIn("~/", "ls").out.split("\n").includes("lnk/p.md"), "ls lists lnk/p.md");
+      try {
+        // The disk not searched, home's top listed again meanwhile (a note in it, its time set back): lnk's note out,
+        // and home's top to list again till it can be looked at.
+        chmodSync(disk, 0o600);
+        s.write("~/sown.md", "# Sown\n\nWhat went in this spring.\n");
+        const back = new Date(Date.now() - 2 * 3_600_000);
+        utimesSync(s.home, back, back);
+        s.expect(!s.cliIn("~/", "ls").out.includes("lnk/"), "lnk's note out");
+        s.cliIn("~/", "ls");
+        s.expect(stampOf(s, "")?.[0] === -1, "home's top to list again, lnk's target not searched");
+      } finally {
+        chmodSync(disk, 0o755);
+      }
+      s.expect(s.cliIn("~/", "ls").out.split("\n").includes("lnk/p.md"), "lnk/p.md back once its disk is searched");
+      await s.restart();
+      await s.status(/ ~ /);
+      await switcherShows(s, "p.md", "lnk/p.md");
     },
   },
 ];

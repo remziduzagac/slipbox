@@ -14574,8 +14574,11 @@ describe("the background auto-index in the TUI (20.9)", () => {
       expect(f.app.graph.linksOf("notes/inbox.md").map((l) => [l.resolvedKind, l.path])).toEqual([
         ["note", "notes/ideas/coffee.md"],
       ]);
-      // Home walked and kept: the folder's in that walk, never walked a second time — a note come since, its folder's
-      // time set back as if nothing had, isn't seen.
+      // Home walked and kept: the folder's in that walk, never walked whole a second time — a note come since is found
+      // by the walk kept, which lists the folder again, its time set back as if nothing had come all the same (#12).
+      // Its time well before the walk, so the walk stamps it with that time, not to list again.
+      const twoHours = new Date(Date.now() - 7_200_000);
+      utimesSync(join(home, "notes"), twoHours, twoHours);
       const job = h.app.watch.indexJob()!;
       await stepToEnd(job);
       await h.app.watch.homeRefreshed;
@@ -14585,11 +14588,13 @@ describe("the background auto-index in the TUI (20.9)", () => {
       utimesSync(join(home, "notes"), hour, hour);
       const again = await harness({ loc, open: null, folder: join(home, "notes") });
       expect(again.app.graph.home?.walked).not.toBeNull();
+      expect(again.app.graph.home?.asked).toBeUndefined();
       expect(again.app.graph.notes.has("notes/inbox.md")).toBe(true);
-      expect(again.app.graph.notes.has("notes/late.md")).toBe(false);
+      expect(again.app.graph.notes.has("notes/late.md")).toBe(true);
       expect(again.app.view?.buf.rel).toBe("notes/inbox.md");
       await again.app.run("vault.reindex");
-      expect(again.app.graph.notes.has("notes/late.md")).toBe(false);
+      expect(again.app.graph.home?.asked).toBeUndefined();
+      expect(again.app.graph.notes.has("notes/late.md")).toBe(true);
     } finally {
       process.env.HOME = before;
     }
