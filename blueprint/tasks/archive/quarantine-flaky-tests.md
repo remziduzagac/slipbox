@@ -1,5 +1,5 @@
 ---
-status: doing
+status: done
 assignee: claude-76
 blocked_by: []
 related: [T23]
@@ -43,7 +43,9 @@ testing design says, until each is fixed; the terminal checks' runner gains the 
 ## Log
 
 - 2026-10-24: Validated, from CI's logs (`gh run view --job <id> --log`, kept in `tmp/issue/ci/`): #73's check failed
-  on `terminal (ubuntu-24.04)`, job 120903950535 (PR #71), 33 s, timed out; #74's on `terminal (macos-15)` on `dev` at
+  on PR #71: on `terminal (ubuntu-24.04-arm)`, job 120896065125, 3.3 s in, `:w` refused but the Messages list looked
+  up after it never opened (the last commands run `palette.open, note.save, help.report`); on `terminal
+  (ubuntu-24.04)`, job 120903950535, 33 s in, slipbox not exiting cleanly; #74's on `terminal (macos-15)` on `dev` at
   0c97f5c, run 40106060865, "timed out waiting for the nested vault's link among the backlinks"; #75's first test on
   `test (macos-15)` on `dev` at c5d6407, run 40089628823; its second on `test (macos-15)`, PR #70 at 4ce5e0c, run
   40104659534. None of them changed on `origin/dev` since (42e879d), none quarantined; `grep -rn quarantined tests/`
@@ -64,7 +66,7 @@ testing design says, until each is fixed; the terminal checks' runner gains the 
   skips it before any worker, makes no release builds for it, and lists it as quarantined; the two checks carry it,
   their runs unchanged; `blueprint/design/testing.md` § Strategy and TT's design (the runner) say so.
 - 2026-10-24: Ran, once each (the maintainer's call: one test pass): the runner's two tests pass
-  (`tests/terminal-harness.test.ts`, "the runner (T31)"); undone one at a time, each part fails its test — the skip
+  ("the runner (T31)", then in `tests/terminal-harness.test.ts`); undone one at a time, each part fails its test — the skip
   (the checks reach a worker, which can't find them: "its worker died"), the list (no issue said), the release filter
   (two release builds made, 5 s). `tests/walk-thread.test.ts`: 42 pass, 2 skip. `tests/terminal-coverage.test.ts`:
   10 pass. `SLIPBOX_TERMINAL_JOBS=2 bun run test:terminal peek-backlinks`: 23 passed, 1 skipped (#74's).
@@ -72,3 +74,27 @@ testing design says, until each is fixed; the terminal checks' runner gains the 
   `#74`), `0/0 checks passed …, 2 skipped`; `--list` names their issues; `grep -rn "quarantined:" tests/` lists the two
   checks and the two tests, nothing else. No terminal check of this: the change is the runner's, which drives no
   slipbox; the spawn test is its check. The typecheck, the lint, `check:docs` and `check:size` pass.
+- 2026-10-24: Review, one round (the maintainer's call): `/code-review`, and a fresh Claude reviewer started before
+  the maintainer made `/code-review` the round's only reviewer. Consolidated, each verified:
+  - Real, the runner's test naming `run.ts` by its path broke `tests/distribution.test.ts` ("a pull request runs the
+    tests …", D239), which this change's CI wouldn't have run (code-review): ran, `scripts/release.ts` now reached by
+    the harness's test too, through `run.ts` and `release-builds.ts`. The edge is real (the runner imports the release
+    script), so the expectation names the runner's test; and that test moved to a small file of its own,
+    `tests/terminal-runner.test.ts`, so a change to a check file no longer reaches the harness's 37 tests (code-review).
+    Ran after: both pass.
+  - Real, #73's note (both): job 120896065125 failed 3.3 s in, not 33 s, and its keys went astray after `:w`, which was
+    refused as it should be — the Messages list looked up after it never opened, the needle typed into the report
+    window; only job 120903950535 ran 33 s, slipbox not exiting cleanly. Ran, read again from the job's log (`(3327
+    ms)`, the screen). The note and this Log say what was seen, no cause. #74's "on `dev` too" now "on `dev` itself".
+  - Real, the runner spawned without `env`, so without the TMPDIR `tests/setup.ts` sets (code-review): passed. The
+    `--list` test compares standard output alone (code-review). The field typed as `` `#${number}` ``, so tsc refuses
+    one with no issue (code-review). The design says a headless check (`tests/terminal/checks/`): the real-terminal
+    checks' runner (`tests/terminal/herdr/`) has no quarantine (code-review).
+  - Not taken: the coverage test counting a quarantined check's commands and cases (code-review) — it's still the
+    check that covers them, and each of the two's is covered by 22 to 74 others; a check made the only one of a command
+    while quarantined is a question for then. `ci-scope.ts` running `tests/distribution.test.ts` only through what it
+    imports, not when the graph changes (code-review) — older than this change, a follow-up. The release builds'
+    assertion passing if the builds throw (the Claude reviewer) — they build here and on CI, shown failing with the
+    filter undone.
+- 2026-10-24: Done: every acceptance criterion met (the four quarantined, their assertions unchanged; the runner's
+  quarantine tested, failing without it; the design). Moved to `archive/`; the merge is the maintainer's acceptance.

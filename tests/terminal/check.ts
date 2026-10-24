@@ -29,7 +29,7 @@ export interface Check {
    * Fails at random, tracked by this issue (`"#73"`), a comment above saying how: the runner skips it, never started,
    * and reports it skipped with its issue. Its run stays as it was; its fix removes this (testing.md § Strategy).
    */
-  quarantined?: string;
+  quarantined?: `#${number}`;
   run: (s: Session) => Promise<void>;
 }
 

@@ -100,11 +100,11 @@ its own listed (`onlyRootsUnder` in `tests/tui-harness.ts`), or it slows with ea
 that fails at random has a cause, in the code or in the test. It is fixed, the failure shown before the fix (in the bad
 order, or on a slowed machine: `taskset -c 0` puts the process and its parse workers on one CPU) and gone after. While
 it can't be, it is quarantined: a test by `test.skip`, with a `// quarantined: <issue>` comment saying how it fails,
-its assertions as they were; a terminal check the same way, by its `quarantined` field set to its issue (`"#73"`), a
-comment saying how it fails, its run as it was: the runner never starts it, and reports it skipped with its issue
-(`tests/terminal/run.ts`). `bun test` and the runner count them as skipped, and `grep -rn "quarantined:" tests/` lists
-them all; each comes back with its fix, which removes its quarantine. An assertion is never deleted or loosened to make
-a test pass.
+its assertions as they were; a headless terminal check (`tests/terminal/checks/`) the same way, by its `quarantined`
+field set to its issue (`"#73"`), a comment saying how it fails, its run as it was: the runner never starts it, and
+reports it skipped with its issue (`tests/terminal/run.ts`). `bun test` and the runner count them as skipped, and
+`grep -rn "quarantined:" tests/` lists them all; each comes back with its fix, which removes its quarantine. An
+assertion is never deleted or loosened to make a test pass.
 
 **CI runs the suite on Linux and macOS** (GR-D9): for a pull request, the tests and the terminal checks its files
 reach (D239), the docs' tests only for one of the docs alone (D230), and a push to `dev` or `test` the same for its

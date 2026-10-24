@@ -1,4 +1,4 @@
-// Preloaded into the runner by its own test (tests/terminal-harness.test.ts): checks made up for it, quarantined, joined
+// Preloaded into the runner by its own test (tests/terminal-runner.test.ts): checks made up for it, quarantined, joined
 // to the registry before run.ts reads it. Never started: a worker, which loads no preload, wouldn't find them. Imported
 // by nothing, so they never join the registry of a test's own process.
 

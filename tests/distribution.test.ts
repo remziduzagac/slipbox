@@ -456,9 +456,10 @@ describe("the supply chain's gates (14.10)", () => {
       expect(git.tests).not.toContain("tests/release.test.ts");
       expect(git.checks).toEqual(["git"]);
     }
-    // The release script: its tests, and the checks of upgrading, which drive release builds of it, alone.
+    // The release script: its tests, the runner's (which makes release builds of it), and the checks of upgrading, which
+    // drive those builds, alone.
     expect(of("scripts/release.ts")).toMatchObject({
-      tests: ["tests/distribution.test.ts", "tests/release.test.ts"],
+      tests: ["tests/distribution.test.ts", "tests/release.test.ts", "tests/terminal-runner.test.ts"],
       checks: ["updates"],
     });
     // The builds' record, which every check's session reads: every check.
