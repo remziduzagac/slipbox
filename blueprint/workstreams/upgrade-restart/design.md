@@ -135,7 +135,8 @@ whatever `[update] check` and `DO_NOT_TRACK` say (UPG-D5):
 - one put here by hand: the path it was started by, where it leads and that file's size, time and inode; once any of
   them changes, the file's `--version` asked.
 
-A version is asked of a binary in a child, ten seconds at most. One newer than this — `slipbox upgrade` in another
+A version is asked of a binary in a child, ten seconds at most, and only once what's there changed: what's there at
+start is this binary, never started to ask it. One newer than this — `slipbox upgrade` in another
 terminal, another window's restart, `brew upgrade`, a file copied over — is offered as the restart alone, waiting for
 quiet as the offer does: `slipbox 0.6.0 is installed`, `This is 0.5.0.`, **Restart now** and **Not now**, no
 checkboxes. Once for each version: after Not now, `slipbox 0.6.0 is installed: :restart starts it`. This window's own

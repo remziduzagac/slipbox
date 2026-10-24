@@ -1,7 +1,17 @@
 // The TUI's side of upgrading and restarting (UPG): the dialog of choices and checkboxes; the update offer, `:upgrade`;
 // `:restart`, its question about notes unsaved, its note, and coming back.
 import { describe, expect, test } from "bun:test";
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, symlinkSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import { takeNote } from "../src/core/restart.ts";
 import { dailyUpdateCheck, FROM_SOURCE } from "../src/core/update.ts";
@@ -204,9 +214,12 @@ function withEnv(h: H, over: Partial<UpdateEnv> = {}, check = { on: true }): Upd
     channel: "stable",
     data: mkdtempSync(join(sandbox, "data-")),
     execPath: fakeSlipbox({ ok: true, data: { status: "current", from: "0.5.0", latest: "0.5.0", removed: [] } }),
+    startedBy: null,
     stateDir: mkdtempSync(join(sandbox, "state-")),
     env: {},
     checkOn: () => check.on,
+    // Never the network: a test's daily check is refused, unless the test answers it.
+    fetcher: async (url) => Promise.reject(new Error(`no network in a test (${url})`)),
     ...over,
   };
   h.app.updates.env = env;
@@ -517,5 +530,126 @@ describe("restarting (UPG-T5)", () => {
     if (typeof start === "number") throw new Error(`exit ${start}`);
     expect(start.loc.root).toBe(root);
     expect(start.restarted?.session).toBeNull();
+  });
+});
+
+/** A binary answering `--version` with `slipbox <version>`, each run noted in `<file>.runs`. */
+function binary(file: string, version: string): string {
+  mkdirSync(join(file, ".."), { recursive: true });
+  writeFileSync(file, `#!/bin/sh\necho run >> '${file}.runs'\necho 'slipbox ${version}'\n`);
+  chmodSync(file, 0o755);
+  return file;
+}
+
+/** `link` made to lead to `to`, in one step, as an installer or brew moves it. */
+function relink(to: string, link: string): void {
+  rmSync(`${link}.new`, { force: true });
+  symlinkSync(to, `${link}.new`);
+  renameSync(`${link}.new`, link);
+}
+
+/** How many times a binary was run. */
+const runsOf = (file: string) =>
+  existsSync(`${file}.runs`) ? readFileSync(`${file}.runs`, "utf8").split("\n").length - 1 : 0;
+
+describe("an upgrade underneath (UPG-T6)", () => {
+  test("the installer's current moved by another terminal: the restart offered once, when quiet — whatever the check says", async () => {
+    const { h, clock } = await clocked(QUIET_MS);
+    const data = mkdtempSync(join(sandbox, "data-"));
+    for (const v of ["0.5.0", "0.6.0"]) mkdirSync(join(data, "versions", v), { recursive: true });
+    symlinkSync("versions/0.5.0", join(data, "current"));
+    withEnv(h, { data, env: { DO_NOT_TRACK: "1" } }, { on: false });
+    h.app.updates.start();
+    await h.app.updates.lookUnderneath();
+    expect(h.app.overlay).toBeNull();
+    relink("versions/0.6.0", join(data, "current"));
+    h.app.lastInputAt = clock.now;
+    await h.app.updates.lookUnderneath();
+    expect(h.app.overlay).toBeNull();
+    clock.now += QUIET_MS;
+    h.app.updates.tick();
+    const f = h.frame();
+    expect(f).toContain("slipbox 0.6.0 is installed");
+    expect(f).toContain("This is 0.5.0.");
+    expect(f).toContain("● Restart now");
+    expect(f).not.toContain("Skip this version");
+    clock.now += DROP;
+    await h.keys("j", "enter");
+    expect(h.app.messages.at(-1)?.text).toBe("slipbox 0.6.0 is installed: :restart starts it");
+    // Once.
+    await h.app.updates.lookUnderneath();
+    clock.now += QUIET_MS;
+    h.app.updates.tick();
+    expect(h.app.overlay).toBeNull();
+  });
+
+  test("this window's own background upgrade isn't offered again: its message said it", async () => {
+    const { h, clock } = await clocked(QUIET_MS);
+    const data = mkdtempSync(join(sandbox, "data-"));
+    mkdirSync(join(data, "versions", "0.6.0"), { recursive: true });
+    symlinkSync("versions/0.6.0", join(data, "current"));
+    withEnv(h, { data });
+    h.app.updates.mine.add("0.6.0");
+    await h.app.updates.lookUnderneath();
+    clock.now += QUIET_MS;
+    h.app.updates.tick();
+    expect(h.app.overlay).toBeNull();
+  });
+
+  test("Homebrew's: its opt link moved to a new keg — a revision in its name — the binary asked its version", async () => {
+    const { h, clock } = await clocked(QUIET_MS);
+    const prefix = mkdtempSync(join(sandbox, "brew-"));
+    const keg = binary(join(prefix, "Cellar", "slipbox", "0.5.0", "bin", "slipbox"), "0.5.0");
+    binary(join(prefix, "Cellar", "slipbox", "0.6.0_1", "bin", "slipbox"), "0.6.0");
+    mkdirSync(join(prefix, "opt"));
+    symlinkSync("../Cellar/slipbox/0.5.0", join(prefix, "opt", "slipbox"));
+    withEnv(h, { by: "homebrew", execPath: keg });
+    h.app.updates.start();
+    await h.app.updates.lookUnderneath();
+    expect(h.app.updates.installedNewer()).toBeNull();
+    relink("../Cellar/slipbox/0.6.0_1", join(prefix, "opt", "slipbox"));
+    await h.app.updates.lookUnderneath();
+    clock.now += QUIET_MS;
+    h.app.updates.tick();
+    expect(h.frame()).toContain("slipbox 0.6.0 is installed");
+    expect(h.app.updates.installedNewer()).toBe("0.6.0");
+  });
+
+  test("put here by hand: the path it was started by, a file copied over it or its link moved, asked its version", async () => {
+    for (const how of ["copied", "linked"]) {
+      const { h, clock } = await clocked(QUIET_MS);
+      const dir = mkdtempSync(join(sandbox, "hand-"));
+      const running = binary(join(dir, "slipbox-0.5.0"), "0.5.0");
+      const started = join(dir, "slipbox");
+      symlinkSync(running, started);
+      withEnv(h, { by: "other", execPath: running, startedBy: started });
+      h.app.updates.start();
+      // What's there is this one, and unchanged: never started to ask it.
+      await h.app.updates.lookUnderneath();
+      await h.app.updates.lookUnderneath();
+      expect(runsOf(running)).toBe(0);
+      expect(h.app.overlay).toBeNull();
+      if (how === "linked") relink(binary(join(dir, "slipbox-0.6.0"), "0.6.0"), started);
+      else writeFileSync(running, "#!/bin/sh\necho 'slipbox 0.6.0'\n# a newer build, longer\n");
+      await h.app.updates.lookUnderneath();
+      await h.app.updates.lookUnderneath();
+      // Asked once, when it changed.
+      if (how === "linked") expect(runsOf(join(dir, "slipbox-0.6.0"))).toBe(1);
+      clock.now += QUIET_MS;
+      h.app.updates.tick();
+      expect(h.frame()).toContain("slipbox 0.6.0 is installed");
+    }
+  });
+
+  test("from source, nothing is looked at", async () => {
+    const { h, clock } = await clocked(QUIET_MS);
+    const data = mkdtempSync(join(sandbox, "data-"));
+    mkdirSync(join(data, "versions", "0.6.0"), { recursive: true });
+    symlinkSync("versions/0.6.0", join(data, "current"));
+    withEnv(h, { data, release: null });
+    await h.app.updates.lookUnderneath();
+    clock.now += QUIET_MS;
+    h.app.updates.tick();
+    expect(h.app.overlay).toBeNull();
   });
 });

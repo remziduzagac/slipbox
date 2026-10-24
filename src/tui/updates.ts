@@ -5,7 +5,7 @@
 // (`core/restart.ts`) and quits; `tui/run.ts` hands over once the screen is given back, and the slipbox that starts
 // takes the note and comes back where you were.
 
-import { closeSync, mkdirSync, openSync, readdirSync, readFileSync, rmSync, statSync } from "node:fs";
+import { closeSync, mkdirSync, openSync, readdirSync, readFileSync, realpathSync, rmSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { type Channel, type InstalledBy, installation } from "../core/install.ts";
 import type { SessionState } from "../core/position.ts";
@@ -22,6 +22,7 @@ import {
   skipVersion,
   type UpgradeResult,
   upgradeSaid,
+  versionOf,
 } from "../core/update.ts";
 import type { VaultMode } from "../core/vault.ts";
 import type { App, Level } from "./app.ts";
@@ -39,6 +40,8 @@ export interface UpdateEnv {
   data: string;
   /** This binary: `slipbox upgrade --json` is run with it. */
   execPath: string;
+  /** The file it was started by, as the shell found it (`startedPath`): one put by hand is watched there. */
+  startedBy: string | null;
   /** slipbox's state folder: `update.json`, a background upgrade's answer. */
   stateDir: string;
   env: Record<string, string | undefined>;
@@ -72,6 +75,12 @@ export class Updates {
   /** The restart asked for, its note written: `tui/run.ts` hands over to it once the TUI has quit. */
   restartNote: RestartNote | null = null;
   private timer: ReturnType<typeof setInterval> | null = null;
+  private ticks = 0;
+  /** What was last seen where the next version would be (UPG-T6): the file's stamp, and the version it said. */
+  private underneath: { stamp: string; version: string | null } | null = null;
+  private looking = false;
+  /** The versions installed underneath offered already: each once. */
+  private readonly offeredUnderneath = new Set<string>();
 
   private get stateFile(): string {
     return join(this.env!.stateDir, "update.json");
@@ -94,6 +103,9 @@ export class Updates {
     }).then((f) => {
       if (f) this.found(f);
     });
+    // What's there now is this one: never started to ask it.
+    const where = this.watched(env);
+    if (where && sameFile(where, env.execPath)) this.underneath = { stamp: stampOf(where) ?? "", version: env.version };
     this.timer = setInterval(() => this.tick(), 1000);
     (this.timer as { unref?: () => void }).unref?.();
   }
@@ -114,7 +126,54 @@ export class Updates {
       if (this.timer) clearInterval(this.timer);
       return;
     }
+    if (++this.ticks % 10 === 0) void this.lookUnderneath();
     this.tryOffer();
+  }
+
+  /** Where Homebrew's or a hand-put slipbox's next version would be: `opt`'s binary, or the path it was started by. */
+  private watched(env: UpdateEnv): string | null {
+    if (env.by === "homebrew") {
+      const prefix = /^(.*)\/Cellar\/slipbox\/[^/]+\/bin\/slipbox$/.exec(env.execPath)?.[1];
+      return prefix ? join(prefix, "opt", "slipbox", "bin", "slipbox") : null;
+    }
+    return env.by === "other" ? env.startedBy : null;
+  }
+
+  /**
+   * An upgrade underneath (UPG-T6), looked at every ten seconds — this machine's files only, so whatever the check's
+   * switches say (UPG-D5): the version the installer's `current` names; Homebrew's `opt` binary, or the path a hand-put
+   * one was started by, asked its version once its link or file changed. One newer than this is offered as the restart
+   * alone, once; this window's own background upgrade is said already.
+   */
+  async lookUnderneath(): Promise<void> {
+    const env = this.env;
+    if (!env?.release || this.looking) return;
+    this.looking = true;
+    try {
+      const seen = await this.versionUnderneath(env);
+      if (!seen || !isNewer(seen, env.version) || this.offeredUnderneath.has(seen)) return;
+      if (this.mine.has(seen) || this.background?.version === seen) return;
+      this.offeredUnderneath.add(seen);
+      this.waiting = { version: seen, restartOnly: true };
+      this.tryOffer();
+    } finally {
+      this.looking = false;
+    }
+  }
+
+  private async versionUnderneath(env: UpdateEnv): Promise<string | null> {
+    if (env.by === "installer") {
+      const current = installation(env.data).current;
+      return current && SEMVER.test(current) ? current : null;
+    }
+    const where = this.watched(env);
+    const stamp = where ? stampOf(where) : null;
+    if (!where || !stamp) return null;
+    if (this.underneath?.stamp === stamp) return this.underneath.version;
+    const said = await versionOf(where, 10_000);
+    const version = /^slipbox (\S+)$/.exec(said ?? "")?.[1] ?? null;
+    this.underneath = { stamp, version: version && SEMVER.test(version) ? version : null };
+    return this.underneath.version;
   }
 
   /** What the daily check found: its line kept in the messages list, and the offer opened once the TUI is quiet. */
@@ -235,12 +294,13 @@ export class Updates {
     });
   }
 
-  /** The newest version installed underneath this one, when it's newer: the installer's `current`. */
+  /** The newest version installed underneath this one, when it's newer: the installer's `current`, or what was last
+   *  seen of Homebrew's or a hand-put one. */
   installedNewer(): string | null {
     const env = this.env;
-    if (env?.by !== "installer") return null;
-    const current = installation(env.data).current;
-    return current && /^\d+\.\d+\.\d+/.test(current) && isNewer(current, env.version) ? current : null;
+    if (!env) return null;
+    const v = env.by === "installer" ? installation(env.data).current : (this.underneath?.version ?? null);
+    return v && SEMVER.test(v) && isNewer(v, env.version) ? v : null;
   }
 
   /**
@@ -411,6 +471,28 @@ export class Updates {
   /** Where this window is: the vault, home's folder by name, or Elsewhere's folder. */
   place(): Place {
     return { mode: this.app.loc.mode, root: this.app.loc.root, homeFolder: this.app.homeFolder };
+  }
+}
+
+/** A version as releases are named. */
+const SEMVER = /^\d+\.\d+\.\d+(-[0-9A-Za-z.]+)?$/;
+
+/** A file as it is now — where its links lead, its size, time and inode — or null when it isn't there. */
+function stampOf(file: string): string | null {
+  try {
+    const real = realpathSync(file);
+    const st = statSync(real);
+    return `${real}:${st.size}:${st.mtimeMs}:${st.ino}`;
+  } catch {
+    return null;
+  }
+}
+
+function sameFile(a: string, b: string): boolean {
+  try {
+    return realpathSync(a) === realpathSync(b);
+  } catch {
+    return false;
   }
 }
 

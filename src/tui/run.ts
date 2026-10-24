@@ -240,6 +240,7 @@ export async function runTui(argv: string[]): Promise<number> {
     channel: by === "installer" ? readChannel(dataHome()) : "stable",
     data: dataHome(),
     execPath: process.execPath,
+    startedBy,
     stateDir: stateHome(),
     env: process.env,
     checkOn: () => loadConfig({ configFile: start.configFile }).config.update.check,
