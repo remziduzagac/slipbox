@@ -266,6 +266,8 @@ export function registerActions(app: App): void {
       });
     },
     "help.open": (a) => openHelp(a),
+    "help.report": (a, arg) => a.report.open(arg),
+    "help.report_send": (a, arg) => a.report.send(arg),
     "app.quit": (a) => a.saving.requestQuit(),
   };
   for (const t of UI_TOGGLES) impl[t.id] = (a) => toggle(a, t.key, t.title);

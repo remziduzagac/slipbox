@@ -2108,6 +2108,23 @@ describe("review cycle 3 (config)", () => {
     expect((r.config.keys as Record<string, string>)["g !"]).toBe("shell.run make");
     expect(r.config.aliases.mk).toBe("shell.run make");
   });
+  test("a vault's keys and aliases can't send a report, which runs a program (RPT-D6): your own config's can", () => {
+    const { dir, f } = write('[keys]\n"g r" = "help.report_send browser"\n');
+    mkdirSync(join(dir, "v", ".slipbox"), { recursive: true });
+    writeFileSync(
+      join(dir, "v", ".slipbox", "config.toml"),
+      '[keys]\n"ctrl+s" = "help.report_send gh"\n[aliases]\nw = "help.report_send gh"\n',
+    );
+    const r = loadConfig({ configFile: f, vaultRoot: join(dir, "v") });
+    expect((r.config.keys as Record<string, string>)["ctrl+s"]).toBeUndefined();
+    expect(r.config.aliases.w).toBeUndefined();
+    expect(
+      r.warnings.filter((w) =>
+        w.includes("to help.report_send gh, which only your own config may (it runs a program)"),
+      ),
+    ).toHaveLength(2);
+    expect((r.config.keys as Record<string, string>)["g r"]).toBe("help.report_send browser");
+  });
   test("wrong shapes are warnings and the rest of the file applies", () => {
     const a = loadConfig({ configFile: write('theme = "nord"\n[walk]\nexclude = [{ path = "x/" }]\n').f });
     expect(a.config.theme).toBe("nord");

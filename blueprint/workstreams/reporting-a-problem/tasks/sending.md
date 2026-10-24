@@ -1,5 +1,5 @@
 ---
-status: todo
+status: done
 assignee: claude-5
 blocked_by: [RPT-T3, RPT-T4]
 created: "2026-10-24"

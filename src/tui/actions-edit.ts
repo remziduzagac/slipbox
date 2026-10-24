@@ -166,8 +166,10 @@ export function editActions(): Record<string, Run> {
     "note.save": (a) =>
       withView(a, (v) => {
         // The commit editor's ctrl+s commits, its message changed or not: a commit git refused is tried again (26.3).
-        // The merge screen's saves the file as settled, as its `w` does (GIT-D5): its own text never changes.
-        if ((a.floating?.kind === "commit" || a.floating?.kind === "merge") && a.floating.view === v && v.buf.virtual)
+        // The merge screen's saves the file as settled, as its `w` does (GIT-D5): its own text never changes. A
+        // report's opens its menu, changed or not (RPT-D1).
+        const k = a.floating?.kind;
+        if ((k === "commit" || k === "merge" || k === "report") && a.floating?.view === v && v.buf.virtual)
           return void v.buf.virtual.save(v.buf.source);
         if (!v.buf.dirty && !v.buf.changedOnDisk())
           return a.message("info", `${a.displayName(v.buf)} has no changes to save`);

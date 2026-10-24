@@ -891,7 +891,25 @@ A vault is the folder slipbox works in. [Vaults, home and Elsewhere](vaults.md) 
 | --- | --- |
 | `?`, `space ?` | help: every key, by group, searchable (`enter` runs a command) |
 | `space m` | the messages slipbox has shown |
+| `space r` | report a problem: the bug form, its facts filled in, sent only as you say ([below](#inside-a-report)) |
 | `space q q`, `ctrl+q` | quit (refused while a note is unsaved, which it names) |
+
+### Inside a report
+
+`space r` (or `:report`) opens a report in the floating window, typing on its title's line. It's text like any, every
+editing key there; what's in it is what leaves. Nothing leaves until you choose how
+([Reporting a problem](troubleshooting.md#reporting-a-problem)).
+
+| Keys | What |
+| --- | --- |
+| `ctrl+s`, `:w` | how to send it, as this machine can: the keys below |
+| `o` | in that menu, open the bug form in your browser, filled in (not over SSH, nor without a display) |
+| `a` / `c` | copy the bug form's address, filled in / copy the report, as Markdown |
+| `v` | copy What slipbox sees, when it doesn't fit in the address |
+| `g` | post it with `gh`, after a yes naming the repository, the title and the account |
+| `s` / `w` | add the screen as text / where you were (the file, the line and its text), in full |
+| `u` | take out what was just added, as any edit |
+| `esc`, `q` | leave it, kept as it is until slipbox quits (`esc` twice while typing) |
 
 ### Inside Problems
 
