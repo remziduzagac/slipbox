@@ -326,3 +326,10 @@ folder before its tabs open, as a file opened by name has its folder asked for, 
   graph's folders (as a rescan does; T19's listed folders are among them), the claim's link lookups at each poll (a few
   stats; skipping them would leave a conflict settled with theirs read-only until a build), `tabFolders`' and
   `toRestore`'s repeats (decided before), the build listeners' empty catch (the change listeners' own).
+- 2026-10-24: CI on round 7's head: green but two jobs. Linux's test job, one failure in T12's `home's walk, stepped
+  while nobody works, never holds the keys …` (it passed here five times out of five; this branch's code doesn't run in
+  it). macOS's terminal job, this branch's check `links: … followed, its target not answering`: on macOS Bun finds a
+  path's real path by opening it, so a folder you may not list has none, and a link to it leads nowhere (`linkTarget`
+  null): nothing to follow, the question never asked. The check returns there, as it does for root; the unit test drives
+  the case on both systems (`answer` given the target). Left for later, not this PR's: on macOS a link to a folder you
+  may not list is broken, not asked about (never read either way); on Linux it's asked, and doesn't answer.
