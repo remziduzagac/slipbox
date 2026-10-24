@@ -323,3 +323,8 @@ here, and the work go on.
       Changed, with what to do.
     - A terminal check for the no-colour style: the headless terminal's runs keep colours and bold, not italics.
 - Terminal checks after round 1's fixes: the header's thirteen and the settings check, 14 of 14.
+- Tried live after round 1's fixes (a fresh copy of the reference set, its own XDG folders): `regions.yaml` split, the
+  left in source mode, typing `:[x` in the right's lens: both windows' Read lit (`#565f89`, not the disabled
+  `#3b4261`); the left's Read clicked: both in source mode, "doesn't parse" once in the messages list.
+- Round 2: Codex's part skipped again: still at its approval menu, under 5% of its usage limit; a fresh Claude
+  reviewer and `/code-review` on the diff after round 1's fixes.
