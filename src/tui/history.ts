@@ -80,6 +80,8 @@ export class History {
     this.touchRecent(buf.key);
     Object.assign(view, {
       buf,
+      // Another note: its pictures fitted again (PIC-D4).
+      ...(buf !== before ? { picturesOwn: undefined } : {}),
       topAnchor: loc.anchor,
       curAnchor: loc.cursor ?? { anchor: loc.anchor, sub: 0, col: 0 },
       layoutKey: "",

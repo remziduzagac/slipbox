@@ -36,3 +36,4 @@ whether they differ. Drawings (`DRAWING_ROWS`) keep their own sizing.
   rounded down, so the floor is 12 rows, not 13 (the docs' screenshot in 9 rows: 43 × 12). Tests:
   `tests/pictures.test.ts` § a picture's two sizes. Undone once each, the floor, the height bound, the caption's rows
   and the budget fail their tests (`tmp/issue/mutations.log`).
+- 2026-10-24, review round 1: Obsidian's `|0` is the file's own size, not NaN.

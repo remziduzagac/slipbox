@@ -40,3 +40,5 @@ Every case driven through slipbox in a headless terminal with Kitty's graphics, 
   at its own size 35 (that terminal's cells), `z p` alternating in the message log; `z p` off a `▣` line, the message.
 - 2026-10-24: `tests/render.test.ts`'s "Mermaid … drawn while its library loads" fails here on this branch's base too
   (a scratch worktree at the base): not this work's.
+- 2026-10-24, review round 1: three checks more (find and visual mode; a file shown as its source between; wrapping
+  off with the lens open), 7/7; CI's scope runs every check for the picture files, which others share.

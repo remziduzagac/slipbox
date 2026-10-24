@@ -554,7 +554,8 @@ function embedsAlone(children: PhrasingContent[], src: number, ctx: Ctx, width: 
     if (e) out.push(...embedFrame(r, e, at, ctx, width));
     else {
       const from = pictureSource(r.node);
-      const p = from ? askPicture(from, width, ctx, captionRows(r.node, at, ctx, width, base)) : null;
+      const p =
+        from && ctx.opts.picture ? askPicture(from, width, ctx, captionRows(r.node, at, ctx, width, base)) : null;
       out.push(...pictureRows(r.node, p, at, ctx, width, base));
     }
   }

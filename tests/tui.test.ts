@@ -9665,7 +9665,7 @@ describe("pictures (12.x)", () => {
       }
       return { h, layout };
     };
-    test("an SVG picture: rasterised into the cache at the size it's drawn, from its own size — as a PNG would be", async () => {
+    test("an SVG picture: rasterised into the cache at its own size, and drawn as a PNG would be", async () => {
       const { layout } = await at("# D\n\n![chart](chart.svg)\n", undefined, { "chart.svg": SVG });
       // 400 × 200 in 8 × 16 cells: 50 by 13, rasterised 400 pixels wide.
       const p = layout.lines.find((l) => l.image)!.image!;
@@ -9732,8 +9732,27 @@ describe("pictures (12.x)", () => {
       const rows = layout.lines[first]!.image!.rows;
       const past = 13;
       expect(rows).toBeGreaterThan(past + 1);
+      // Centred, as from its top: its indent is its first row's alone.
+      const indent = layout.lines[first]!.spans.reduce((w, sp) => w + [...sp.text].length, 0);
+      expect(indent).toBeGreaterThan(0);
       h.app.view!.top = first + past;
-      expect(h.canvas().images).toEqual([expect.objectContaining({ skip: past, total: rows })]);
+      const x = h.app.geometry!.panes[0]!.textX + indent;
+      expect(h.canvas().images).toEqual([expect.objectContaining({ x, skip: past, total: rows })]);
+    });
+    test("a click on a drawing places the cursor, as on its rows before: it's no picture to show at its own size", async () => {
+      const { h, layout } = await at(
+        "# D\n\nText.\n\n```mermaid\ngraph TD\n  A --> B\n```\n\nAfter.\n",
+        (c) => (c.render.mermaid = "picture"),
+      );
+      const first = layout.lines.findIndex((l) => l.image);
+      h.canvas();
+      expect(h.app.geometry!.pictures).toEqual([]);
+      const pane = h.app.geometry!.panes[0]!;
+      const y = pane.y + first - h.app.view!.top;
+      h.app.mouse.handle({ type: "down", x: pane.textX + 2, y, button: 0 });
+      h.app.mouse.handle({ type: "up", x: pane.textX + 2, y, button: 0 });
+      expect(h.app.view!.cur.row).toBe(first);
+      expect(h.app.messages.some((m) => m.text.includes("no picture here"))).toBe(false);
     });
     test("rasterised once: drawn from the cache after, not rasterised again", async () => {
       const { h, layout } = await at("# D\n\n![chart](chart.svg)\n", undefined, { "chart.svg": SVG });

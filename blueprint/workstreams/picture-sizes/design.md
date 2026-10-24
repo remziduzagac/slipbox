@@ -49,10 +49,18 @@ sends them again as that changes), a step of scrolling draws a view's pictures, 
 within 120 ms of the last) don't, nor a wheel's from its first tick — their rows stay — and they're drawn once it
 rests."
 
+In the same paragraph, the sentence on SVG, from "An SVG (12.15, D127)", its rasterising:
+
+> … is rasterised by resvg (WebAssembly) once, at its own size within the budget, into the cache, and drawn as a PNG
+> is, scaled to the size it's drawn at: a window resized rasterises nothing again (PIC).
+
+Previously: "… is rasterised by resvg (WebAssembly) at the size it's drawn, from its own size, into the cache, and drawn
+as a PNG is".
+
 In the paragraph on the budgets (from "Math input is at most 32 KiB"), after "…sides no larger than 2,048":
 
 > — the most of a picture the screen shows, fitted or at its own size (above), so a size never needs a picture decoded
-> again; an SVG is rasterised again for each width it's drawn at, as before, its own size one more
+> or rasterised again
 
 ## MODIFIED design/tui.md § Buffers, views, tabs, windows
 
@@ -92,11 +100,13 @@ After § UI settings (and its § Code blocks that scroll):
 > - **What it's fitted to.** The window's room: its text columns less what's before the picture (a list's indent, a
 >   quote's bar, an embed's frame) — with wrapping on, the layout's room for the block; with wrapping off, the
 >   window's, not the note's natural width — and its rows less the picture's `▣` rows, however many its alt text
->   wraps to.
+>   wraps to. Its rows are the window's as they are with find's row closed, so opening find doesn't size it again.
 > - **At its own size.** A click on a picture — pressed on the cells it's drawn in, not the blank beside it, a quote's
 >   bar or its scrollbar, and released without moving — puts the cursor on its `▣` line and shows it at its own size;
 >   another click fits it to the window again. The press is the picture's before the cursor is placed, and never
->   counts toward a double-click; one that moves becomes a selection, as a drag from those rows always did. `z p`
+>   counts toward a double-click; like any click, it ends a selection and visual mode. The release finds the picture
+>   by its file, should the note have been laid out again since the press. One that moves becomes a selection, as a
+>   drag from those rows always did. A drawing slipbox made is no such picture: a click on it places the cursor. `z p`
 >   (`picture.size`, PIC-D3) does the same from its `▣` line, which the cursor reaches as any row, and `tab` as a
 >   link. A picture whose two sizes are one (it fits whole) stays as it is, and the message says so. With the lens
 >   open, a click changes its size and leaves the cursor, and the lens, where they are: on the picture's line, the lens
@@ -111,7 +121,8 @@ After § UI settings (and its § Code blocks that scroll):
 > - **How long.** It's the window's, by the picture's file as found (an SVG's own file, not its rasterised PNG; a
 >   picture on the internet by its address): kept while the window shows the note — scrolled away and back, the lens
 >   opened and closed, an edit or an agent's write that moves it, a resize — and dropped when the window shows
->   another note. It isn't saved in the session; a window split off starts with its pictures fitted. The same file
+>   another file, opened or gone to by its history, a code file or a source view included. It isn't saved in the
+>   session; a window split off starts with its pictures fitted. The same file
 >   twice in a note is at its own size in both places, each at its own (two Obsidian sizes, two sizes). Its sideways
 >   offset is kept as a code block's (by its line and how many blocks start there), clamped as the window narrows.
 > - **A window resized** fits its fitted pictures again; one at its own size stays so, its offset clamped, and once

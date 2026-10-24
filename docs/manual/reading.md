@@ -335,8 +335,8 @@ and a drag of its scrollbar. Click it, or press `z p`, again to fit it to the wi
 - With the lens open, a click changes a picture's size and leaves the cursor where it is.
 - With wrapping off, a picture at its own size scrolls sideways with the window.
 
-- slipbox draws PNG, JPEG, WebP and GIF files. It draws SVG drawings too, turning them into pixels at the size
-  they're shown.
+- slipbox draws PNG, JPEG, WebP and GIF files. It draws SVG drawings too, turning them into pixels once, at their
+  own size.
 - A picture embedded by name, as Obsidian writes it (`![[grinder.png]]`), is found as a link by name is found.
 - Obsidian's sizes are kept. `![[grinder.png|300]]` is 300 pixels wide, and `|240x180` is the box it fits in.
 - A picture in an [embedded note](#embedded-notes) is drawn there too.

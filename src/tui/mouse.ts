@@ -32,7 +32,7 @@ export class Mouse {
     | { kind: "tab"; index: number }
     | { kind: "separator"; sep: import("./draw.ts").Separator }
     | { kind: "scrollbar"; bar: import("./draw.ts").ScrollbarGeom }
-    | { kind: "picture"; view: View; row: number; x: number; y: number; ctrl: boolean }
+    | { kind: "picture"; view: View; row: number; file: string; x: number; y: number; ctrl: boolean }
     | null = null;
 
   /** Everything visible is clickable (docs/manual/keys.md, "Mouse"). */
@@ -450,7 +450,7 @@ export class Mouse {
     const pic = g.pictures.find((p) => p.view === pane.view && inRect(p, ev.x, ev.y));
     if (pic && clicks === 1) {
       this.lastClick = null;
-      this.drag = { kind: "picture", view: pane.view, row: pic.row, x: ev.x, y: ev.y, ctrl: !!ev.ctrl };
+      this.drag = { kind: "picture", view: pane.view, row: pic.row, file: pic.file, x: ev.x, y: ev.y, ctrl: !!ev.ctrl };
       return;
     }
     this.press(ev, pane, clicks);
@@ -583,7 +583,12 @@ export class Mouse {
   private up(): void {
     const d = this.drag!;
     this.drag = null;
-    if (d.kind === "picture") return this.app.pictures.toggle(d.view, d.row);
+    if (d.kind === "picture") {
+      // As any click: the selection, and visual mode, end.
+      d.view.visual = null;
+      d.view.sel = null;
+      return this.app.pictures.toggle(d.view, d.row, d.file);
+    }
     if (d.kind !== "select") return;
     if (d.moved && d.view.sel) {
       const text = this.app.views.selectionText(d.view);

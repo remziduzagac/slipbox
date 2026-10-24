@@ -217,5 +217,14 @@ export function composeLive(rendered: Layout, old: Block, active: Block, lines: 
     if (l.srcMap || !l.spans.some((s) => s.link !== undefined)) continue;
     out[r] = { ...l, spans: l.spans.map((s) => (s.link === undefined ? s : { ...s, link: index.get(s.link) })) };
   }
-  return { lines: out, links, headings, width: Math.max(rendered.width, source.width) };
+  const width = Math.max(rendered.width, source.width);
+  return {
+    lines: out,
+    links,
+    headings,
+    width,
+    // The note's picture at its own size past its width (wrapping off, PIC-D6), and that it asks for pictures (PIC).
+    ...(rendered.extent && rendered.extent > width ? { extent: rendered.extent } : {}),
+    ...(rendered.pictures ? { pictures: true } : {}),
+  };
 }

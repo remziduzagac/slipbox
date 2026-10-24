@@ -36,3 +36,5 @@ A click on a picture, `z p`, `z h` and `z l`, and the wheel and the bar of a pic
   cells (`Geometry.pictures`) until release: still, a toggle; moved, the press a text press and the drag a selection.
   Found live: `z p` where no pictures are drawn said to go to a `▣` line though the cursor was on one; it now says why
   (a unit test and a check).
+- 2026-10-24, review round 1: a click ends a selection and visual mode; the release finds its picture by file; a
+  click on a drawing places the cursor again. notes.md § Review, round 1.

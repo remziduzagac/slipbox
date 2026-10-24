@@ -39,3 +39,5 @@ while a window's size changes.
   scrolled sideways. Placeholders: sent at the whole size, rows from a column (`placeholderRow(row, cols, left)`);
   OpenTUI's path: the source rectangle from both edges. `Pictures.now`: the size rest first, then the placeholders'
   shortcut; a sideways step counts for sixel. Each piece undone once fails its test.
+- 2026-10-24, review round 1: a drawing's indent from its first row (it was the first row shown); only pictures of a
+  file in `Geometry.pictures`; an SVG rasterised once at its own size. notes.md § Review, round 1.

@@ -46,3 +46,6 @@ Lay a note's pictures out for the window that shows it: its room, its rows, the 
   render (`lens.ts`) take the pictures' key.
 - 2026-10-24: found while testing: with the lens open, moving the cursor to the picture's line opens the lens on its
   markdown; the click leaves the cursor there instead (design.md, the click's bullet).
+- 2026-10-24, review round 1: the lens keeps its lines when only the pictures' key changes; its composed layout
+  keeps `extent`; pictures are fitted to the window's rows with find's row closed (`View.pictureRows`); the own set
+  is dropped where a window's file changes (`App.open`, `showLoc`). notes.md § Review, round 1.

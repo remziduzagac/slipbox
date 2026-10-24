@@ -51,8 +51,6 @@ export const CHECKS_FOR: [RegExp, string[]][] = [
   [/^src\/core\/servers\//, ["language servers", "lint", "problems"]],
   [/^src\/core\/lint\.ts$/, ["lint", "problems"]],
   [/^src\/tui\/(actions-lsp|problems|draw-problems)\.ts$/, ["language servers", "lint", "problems"]],
-  // Pictures: their sizes, the window's at their own size, Kitty's placeholders (#52).
-  [/^src\/tui\/(pictures|images|placeholders)\.ts$/, ["pictures"]],
   // Spelling, off unless asked for.
   [/^src\/core\/(spell|spell-thread|spell-worker|hunspell)\.ts$/, ["spelling"]],
   [/^src\/tui\/spelling\.ts$/, ["spelling"]],

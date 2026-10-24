@@ -176,6 +176,8 @@ export interface View {
   /** The pictures it shows at their own size (PIC-D4), by their files, while it shows `buf`: another note shown, they're
    *  fitted again. */
   picturesOwn?: { buf: NoteBuffer; files: Set<string> };
+  /** Its text rows were its find row closed: what its pictures are fitted to (PIC), so find doesn't resize them. */
+  pictureRows?: number;
   cur: Pos;
   /** Column to return to when moving through shorter rows. */
   goal: number;
@@ -1098,7 +1100,12 @@ export class App {
     this.history.remember(view);
     const before = view.buf;
     if (view.insert) stopInsert(this, view);
-    Object.assign(view, this.makeView(buf, anchor), { back: view.back, fwd: [] });
+    // Another note: its pictures fitted again (PIC-D4), even one the window shows as source or code between.
+    Object.assign(view, this.makeView(buf, anchor), {
+      back: view.back,
+      fwd: [],
+      picturesOwn: buf === before ? view.picturesOwn : undefined,
+    });
     this.lens.fitMode(view, before);
     this.region = "content";
     this.explorer.reveal(undefined, false, true);

@@ -4,7 +4,7 @@
 import { existsSync, mkdirSync, renameSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { basename, join } from "node:path";
-import type { Layout, Picture } from "../core/layout/ir.ts";
+import { extentOf, type Layout, type Picture } from "../core/layout/ir.ts";
 import type { PictureSource, RenderOptions } from "../core/layout/render.ts";
 import { type Rasterizer, rasterizer } from "../core/svg.ts";
 import { pictureLocator } from "../core/note.ts";
@@ -47,7 +47,7 @@ export class Pictures {
     const where = scrolledTo(view);
     // Not scrolled yet: its first step is a step, however soon it comes.
     const p = (view.pictures ??= { top: where, at: -Infinity, wait: false });
-    const size = `${view.width}x${view.height}`;
+    const size = `${view.width}x${view.pictureRows ?? view.height}`;
     if (p.size !== undefined && p.size !== size) {
       p.sizedAt = now;
       this.later();
@@ -90,9 +90,10 @@ export class Pictures {
    * it stays on screen as the picture grows below it — and the picture at its own size, or fitted to its window again.
    * With the lens open, the cursor stays, and the lens with it: on the picture's line it would show its markdown.
    */
-  toggle(view: View, row: number): void {
+  toggle(view: View, row: number, file?: string): void {
     const layout = this.app.currentLayout(view);
-    const at = pictureAt(layout, row);
+    // A click's picture by its file: the note laid out again since the press (a fetch landing), its row may have moved.
+    const at = file ? (pictureNear(layout, row, file) ?? pictureAt(layout, row)) : pictureAt(layout, row);
     if (!at?.p.file) return this.app.message("info", this.none());
     const caption = captionOf(layout, at.first);
     if (!view.live) this.app.moveCursor(view, { row: caption, col: linkCol(layout, caption) });
@@ -121,7 +122,7 @@ export class Pictures {
       return this.app.code.setOffset(view, layout, at.first, this.app.code.offset(view, layout, at.first) + step);
     }
     const cols = this.app.views.textColumns(view);
-    const extent = Math.max(layout.width, layout.extent ?? 0);
+    const extent = extentOf(layout);
     if (!this.app.ui.wrap && at.p.own && extent > cols) {
       view.left = Math.max(0, Math.min(extent - cols, view.left + dir * Math.max(1, Math.floor(cols / 4))));
       return;
@@ -204,9 +205,10 @@ export class Pictures {
     const own = this.ownFiles(view);
     // The window's room (PIC-D1, PIC-D6): its text columns — with wrapping off, fewer than the layout's — and its rows.
     const excess = Math.max(0, width - this.app.views.textColumns(view));
-    const rows = view.height > 0 ? view.height : Number.POSITIVE_INFINITY;
+    const tall = view.pictureRows ?? view.height;
+    const rows = tall > 0 ? tall : Number.POSITIVE_INFINITY;
     const wrap = this.app.ui.wrap;
-    const sized = `${rows}:${excess}:${wrap ? 1 : 0}:${[...own].join("\u0001")}`;
+    const sized = `${rows}:${excess}:${wrap ? 1 : 0}:${[...own].sort().join("\u0001")}`;
     return {
       key: `${cell.width}x${cell.height}|${JSON.stringify(drawings)}${buf.asksPictures === false ? "" : `|${sized}`}`,
       sized,
@@ -238,10 +240,12 @@ export class Pictures {
         const size = svg ? (r?.size(svg) ?? null) : images.size(path);
         if (!size || size.width <= 0 || size.height <= 0) return null;
         // Obsidian's size, `|300` its width and `|240x180` the box it fits in, in place of its own; proportions kept.
-        const px =
+        const given =
           "file" in from && from.size
             ? Math.min(from.size.width, from.size.height ? (from.size.height * size.width) / size.height : Infinity)
-            : size.width;
+            : 0;
+        // (`|0`, a size of nothing: its own instead.)
+        const px = given > 0 ? given : size.width;
         const room = { cols: Math.max(1, width - excess), rows: rows - caption };
         const sizes = pictureSizes(px, (px * size.height) / size.width, room, cell);
         const toggles = sizes.fit.cols !== sizes.own.cols || sizes.fit.rows !== sizes.own.rows;
@@ -258,7 +262,8 @@ export class Pictures {
           ...(whole && wrap && cols > width ? { scrolls: true } : {}),
         };
         if (!svg) return p;
-        const png = r && this.rasterized(svg, cols * cell.width, r);
+        // Rasterised once, at its own size, and drawn scaled as a PNG is: a window resized rasterises nothing again.
+        const png = r && this.rasterized(svg, sizes.own.cols * cell.width, r);
         return png ? { ...p, src: png } : null;
       },
     };
@@ -349,6 +354,16 @@ const NO_PICTURE = "no picture here: put the cursor on a picture's ▣ line (tab
 export function pictureAt(layout: Layout, row: number): { p: Picture; first: number } | null {
   const at = layout.lines[row]?.pic;
   return at ? { p: at.p, first: row - at.row } : null;
+}
+
+/** The picture of `file` whose first row drawn over is nearest `row`, or null. */
+function pictureNear(layout: Layout, row: number, file: string): { p: Picture; first: number } | null {
+  let best: { p: Picture; first: number } | null = null;
+  layout.lines.forEach((l, i) => {
+    if (l.pic?.row === 0 && l.pic.p.file === file && (!best || Math.abs(i - row) < Math.abs(best.first - row)))
+      best = { p: l.pic.p, first: i };
+  });
+  return best;
 }
 
 /** A picture's first `▣` row, from its first row drawn over. */

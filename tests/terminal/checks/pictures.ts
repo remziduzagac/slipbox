@@ -3,7 +3,7 @@
 // drawn, which part of it shows, and where. In the reading area; reading.ts is past the size limit.
 
 import { placeholderCell } from "../../../src/tui/placeholders.ts";
-import type { Check } from "../check.ts";
+import { type Check, leader } from "../check.ts";
 import type { Session } from "../session.ts";
 
 const NOTES = "home/work/product/releases/2.3-notes.md";
@@ -184,6 +184,86 @@ export const PICTURES: Check[] = [
       await toPicture(s, ALT);
       await s.keys("z", "p");
       await s.message(/no pictures drawn/);
+    },
+  },
+  {
+    area: "reading",
+    name: "pictures: opening find leaves one its size; a click on one in visual mode ends the selection",
+    covers: { cases: ["inline"] },
+    options: { home: true, startAt: NOTES, size: { cols: 120, rows: 24 }, graphics: true },
+    run: async (s) => {
+      await s.status("2.3-notes.md");
+      await toPicture(s, ALT);
+      // A short window: the picture fitted to its height.
+      const fitted = await drawn(s, (p) => p.rows.includes(0) && left(p) === 0, "the screenshot drawn");
+      await s.keys("/");
+      await s.settle();
+      const shown = first(s);
+      s.expect(!!shown && width(shown) === width(fitted), `find open, the picture as wide as before\n${s.dump()}`);
+      await s.keys("escape");
+      // Visual mode, then a click on the picture: the selection ends, the picture at its own size.
+      await s.keys("v", "j");
+      await s.status("VISUAL");
+      await click(s, fitted.x + 3, fitted.y + 2);
+      await s.message(/own size/);
+      await s.until(() => !/VISUAL/.test(s.statusLine()), undefined, "visual mode ended");
+    },
+  },
+  {
+    area: "reading",
+    name: "pictures: a file shown as its source between, opened or by history, fits one at its own size again",
+    covers: { cases: ["inline"] },
+    options: { home: true, startAt: NOTES, size: { cols: 120, rows: 40 }, graphics: true },
+    run: async (s) => {
+      await s.see("Plan on a laptop");
+      await toPicture(s, ALT);
+      const fitted = await drawn(s, (p) => p.rows.includes(0), "the screenshot drawn");
+      await click(s, fitted.x + 3, fitted.y + 2);
+      await s.message(/own size/);
+      await drawn(s, (p) => p.rows.length > fitted.rows.length, "at its own size");
+      // A text file shown as its source in the window, then the note opened again: fitted again.
+      await s.ex("e prd/plan");
+      await s.status(/prd\/plan|plan ›/);
+      await s.ex("e releases/2.3-notes.md");
+      await s.status("2.3-notes.md");
+      await toPicture(s, ALT);
+      const again = await drawn(s, (p) => p.rows.length === fitted.rows.length && width(p) === width(fitted), "fitted");
+      // At its own size again; back to the text file, and forward, by the window's history alone: fitted again.
+      await click(s, again.x + 3, again.y + 2);
+      await drawn(s, (p) => p.rows.length > fitted.rows.length, "at its own size again");
+      await s.keys("ctrl+o");
+      await s.status(/prd\/plan|plan ›/);
+      await leader(s, "h", "n");
+      await s.status("2.3-notes.md");
+      await toPicture(s, ALT);
+      await drawn(s, (p) => p.rows.length === fitted.rows.length && width(p) === width(fitted), "fitted, forward");
+    },
+  },
+  {
+    area: "reading",
+    name: "pictures: wrapping off and the lens open, the window still scrolls to a picture's right edge",
+    covers: { cases: ["inline"] },
+    options: { home: true, startAt: NOTES, size: { cols: 120, rows: 40 }, graphics: true },
+    run: async (s) => {
+      await s.see("Plan on a laptop");
+      await s.keys("alt+z");
+      await s.message(/wrap/i);
+      await toPicture(s, ALT);
+      const fitted = await drawn(s, (p) => p.rows.includes(0) && left(p) === 0, "the screenshot drawn");
+      await click(s, fitted.x + 3, fitted.y + 2);
+      await s.message(/own size/);
+      const own = await drawn(s, (p) => p.rows.length > fitted.rows.length, "at its own size");
+      // The lens open on the paragraph above it; the wheel sideways over the picture, to the window's end.
+      await s.keys("k", "k", "i", "escape");
+      // A notch at a time: the window may go on past it (the lens's own rows can be wider).
+      let edge = false;
+      for (let k = 0; k < 40 && !edge; k++) {
+        await s.send(`\x1b[<67;${own.x + 4};${own.y + 3}M`);
+        await s.settle();
+        const p = first(s);
+        edge = !!p && Math.max(...p.cols) === 168;
+      }
+      s.expect(edge, `the picture's last column in sight\n${s.dump()}`);
     },
   },
 ];

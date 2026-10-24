@@ -92,3 +92,45 @@ such, and that the work go on, the design's approval included. Each is theirs to
 - How long: the window's, while it shows the note (PIC-D4).
 - `z h` and `z l` for code blocks: not in PIC (PIC-D3).
 - The design: taken as approved; the workstream active.
+
+## Review, round 1 (2026-10-24)
+
+Codex was at its usage limit, a menu waiting in its pane: its part went to a fresh Claude reviewer, with Codex's brief
+and none of the other review's findings; `/code-review` ran beside it. Both lists, merged, each finding checked against
+the code (file and line) before it was taken:
+
+- **Taken, fixed, each with a unit test that fails without its fix** (`tmp/issue/mutations.log`):
+  - a drawing (Mermaid, maths) scrolled past its top was drawn at the text's left edge: its indent is its first row's
+    (`draw-pane.ts`), so the first row is read, not the first shown;
+  - a click on a drawing was taken for a picture's and said "no picture here": only pictures of a file are a click's;
+  - the lens's composed layout dropped `extent`, so wrapping off with the lens open the window couldn't reach an own-size
+    picture's right edge (`live.ts`);
+  - the lens reopened on the cursor's block whenever the pictures' key changed (a height, a toggle): now on its lines;
+  - opening find took two rows from the window, so a picture fitted to its height was sized again and held back for a
+    moment: pictures are fitted to the window's rows with find's row closed (`View.pictureRows`);
+  - Obsidian's `|0` gave a size of NaN: a size of nothing is the file's own;
+  - a click on a picture in visual mode extended the selection to its line: it ends it, as any click;
+  - a window that showed a code file or a source view between kept the picture at its own size: the own set is dropped
+    where a window's file changes (`App.open`, the history's `showLoc`);
+  - a release resolved its picture by the press's row, stale if the note was laid out again between: by its file;
+  - an SVG was rasterised again at every size a resize passed: once, at its own size, drawn scaled (design.md);
+  - CI's scope ran only the picture checks for `pictures.ts`, `images.ts` and `placeholders.ts`, which diagrams, web
+    pictures and every view's drawing share: the entry is gone, so they run every check;
+  - smaller: a caption measured where no picture is asked for; the own set's key depending on the order of toggles
+    (sorted); `extentOf` written out again in `scrollSideways`.
+- **Gaps in the tests, filled:** a drawing's position and its click; a quote's bar and the scrollbar beside a picture;
+  the lens opened and closed, and an edit typed above; a drag drawn once at its end; wrapping off with the lens open;
+  the toggle with as many rows now checks what's drawn too.
+- **Not taken:**
+  - the root's `design/rendering.md` still says 12 rows: the workstream holds its changes until it's consolidated, as
+    the blueprint's process has it (D210); consolidation is the maintainer's;
+  - `asksPictures` set by the last layout: it costs one more layout on a note's first open, and the parse alone can't
+    say whether an embedded note draws a picture;
+  - re-rendering every picture block on a toggle (one key for all): a toggle is a click, and a per-picture key would
+    need the render to know each picture's file before asking for it;
+  - with wrapping off, the natural-width probe and the real layout share the block cache's key when the note is 2,000
+    columns wide: there before PIC, and a note that wide is rare; left as it is.
+- **Terminal checks added:** opening find and a click in visual mode; a file shown as its source between, opened again
+  or by history; wrapping off with the lens open. 7/7. The resets on a file between are caught by the unit tests: the
+  running app drops a note's buffer once no window shows it, so a check passes either way.
+

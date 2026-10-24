@@ -160,7 +160,7 @@ describe("fitted to its window (PIC-D1)", () => {
     expect(a!.height).toBeLessThan(30);
     expect(pa.rows).toBeLessThanOrEqual(a!.height - 1);
     // The other made taller by hand: its own size for it.
-    b!.height = 45;
+    b!.pictureRows = 45;
     const pb = rowsOf(h.app.currentLayout(b!)).p;
     expect(pb.rows).toBeGreaterThan(pa.rows);
     expect(rowsOf(h.app.currentLayout(a!)).p.rows).toBe(pa.rows);
@@ -180,7 +180,7 @@ describe("fitted to its window (PIC-D1)", () => {
     const v = h.app.view!;
     const rows = rowsOf(layoutOf(h)).p.rows;
     expect(layoutOf(h).pictures).toBe(true);
-    v.height = 20;
+    v.pictureRows = 20;
     expect(rowsOf(layoutOf(h)).p.rows).toBeLessThan(rows);
   });
 });
@@ -274,7 +274,7 @@ describe("at its own size, by a click or z p (PIC-D3)", () => {
     // The window's height changed, the lens still open: fitted again for it.
     click(h, drawnRect(h).x + 1, drawnRect(h).y);
     const was = rowsOf(layoutOf(h)).p.rows;
-    v.height = 14;
+    v.pictureRows = 14;
     expect(rowsOf(layoutOf(h)).p.rows).toBeLessThan(was);
   });
 });
@@ -334,7 +334,7 @@ describe("scrolled sideways (PIC-D3)", () => {
 
 describe("how long it stays at its own size (PIC-D4)", () => {
   test("scrolled away and back, an edit above it, the window resized: still; another note shown and back: fitted", async () => {
-    const { h, v, root } = await open();
+    const { h, v, root } = await open({ placeholders: true });
     const r = drawnRect(h);
     click(h, r.x + 1, r.y + 1);
     await h.keys("ctrl+d", "ctrl+d", "g", "g");
@@ -355,6 +355,18 @@ describe("how long it stays at its own size (PIC-D4)", () => {
     h.frame();
     h.app.open("p.md");
     h.frame();
+    expect(rowsOf(layoutOf(h)).p.own).toBeUndefined();
+    // Back, then forward, through the window's history alone: likewise.
+    await h.keys("g", "g");
+    const third = drawnRect(h);
+    click(h, third.x + 1, third.y + 1);
+    expect(rowsOf(layoutOf(h)).p.own).toBe(true);
+    await h.app.run("history.back");
+    h.frame();
+    expect(basename(h.app.view!.buf.abs)).toBe("q.md");
+    await h.app.run("history.forward");
+    h.frame();
+    expect(basename(h.app.view!.buf.abs)).toBe("p.md");
     expect(rowsOf(layoutOf(h)).p.own).toBeUndefined();
   });
   test("one file at two Obsidian sizes: both at their own sizes, each its own", async () => {
@@ -390,6 +402,8 @@ test("a toggle that leaves the note's rows as many still places the window's cur
   expect(rowsOf(after, "banner.png").p.own).toBe(true);
   expect(after.lines.length).toBe(before.lines.length);
   expect(v.layoutKey).not.toBe(key);
+  // And it's drawn so: its whole 101 columns sent, the window's part of them shown.
+  expect(h.canvas().images).toEqual([expect.objectContaining({ wide: 101, left: 0 })]);
 });
 
 describe("wrapping off (PIC-D6)", () => {
@@ -550,4 +564,169 @@ test("with sixel, quick steps sideways hold a view's pictures back, as quick ste
   expect(drawn()).toBe(false); // quick: held back
   t += PICTURES_REST_MS + 1;
   expect(drawn()).toBe(true);
+});
+
+describe("found in review (PIC, round 1)", () => {
+  test("wrapping off, the lens open: the window still reaches the edge of a picture at its own size", async () => {
+    const md = `# P\n\n${"wide ".repeat(25)}\n\n![a screenshot](shot.png)\n\n${PARAS.join("\n\n")}\n`;
+    const { h, v } = await open({ md, config: (c) => ((c.ui.wrap = false), (c.editor.edit_in = "live")) });
+    const r = drawnRect(h);
+    click(h, r.x + 1, r.y + 1);
+    h.app.moveCursor(v, { row: layoutOf(h).lines.findIndex((l) => lineText(l).includes("Paragraph 3,")), col: 0 });
+    await h.keys("i");
+    expect(v.live).toBe(true);
+    expect(layoutOf(h).extent).toBe(169);
+    await h.keys("escape");
+  });
+  test("the lens keeps the lines it grew to when the window's height sizes its pictures again", async () => {
+    const { h, v } = await open({ config: (c) => (c.editor.edit_in = "live") });
+    h.app.moveCursor(v, { row: layoutOf(h).lines.findIndex((l) => lineText(l).includes("Paragraph 3,")), col: 0 });
+    await h.keys("i", "escape");
+    v.live = true;
+    await h.keys("+", "+");
+    const grown = v.liveBase!.active;
+    v.pictureRows = 14;
+    layoutOf(h);
+    expect(v.liveBase!.active).toEqual(grown);
+  });
+  test("opening find doesn't size a picture again, nor hold it back", async () => {
+    const { h, v } = await open({ height: 24, placeholders: true });
+    const before = rowsOf(layoutOf(h)).p;
+    expect(before.rows).toBeLessThan(28); // fitted to the window's height
+    await h.keys("/");
+    expect(h.app.overlay?.kind === "prompt" || !!v.find).toBe(true);
+    h.frame();
+    expect(rowsOf(layoutOf(h)).p).toMatchObject({ cols: before.cols, rows: before.rows });
+    expect(h.canvas().images.length).toBe(1);
+  });
+  test("an Obsidian size of nothing, `|0`, is its own size, never NaN", async () => {
+    const { h } = await open({ md: "# P\n\n![[shot.png|0]]\n" });
+    const { p } = rowsOf(layoutOf(h));
+    expect(Number.isFinite(p.cols) && Number.isFinite(p.rows)).toBe(true);
+    expect(p.cols).toBe(Math.min(169, layoutOf(h).width));
+  });
+  test("a click on a picture in visual mode ends the selection, as any click does", async () => {
+    const { h, v } = await open();
+    await h.keys("v", "j", "j");
+    expect(v.visual).toBe("char");
+    const r = drawnRect(h);
+    click(h, r.x + 1, r.y + 1);
+    expect(v.visual).toBeNull();
+    expect(v.sel).toBeNull();
+    expect(rowsOf(layoutOf(h)).p.own).toBe(true);
+  });
+  test("another note shown between, as source or code, fits the picture again", async () => {
+    const { h, root } = await open({ placeholders: true });
+    writeFileSync(join(root, "tool.ts"), "export const x = 1;\n");
+    const r = drawnRect(h);
+    click(h, r.x + 1, r.y + 1);
+    expect(rowsOf(layoutOf(h)).p.own).toBe(true);
+    h.app.open("tool.ts");
+    h.frame();
+    await h.app.run("history.back");
+    h.frame();
+    expect(basename(h.app.view!.buf.abs)).toBe("p.md");
+    expect(rowsOf(layoutOf(h)).p.own).toBeUndefined();
+    // Opened again rather than gone back to: likewise.
+    const again = drawnRect(h);
+    click(h, again.x + 1, again.y + 1);
+    expect(rowsOf(layoutOf(h)).p.own).toBe(true);
+    h.app.open("tool.ts");
+    h.frame();
+    h.app.open("p.md");
+    h.frame();
+    expect(rowsOf(layoutOf(h)).p.own).toBeUndefined();
+    // Back to the code file, then forward, through the window's history alone: likewise.
+    await h.keys("g", "g");
+    const third = drawnRect(h);
+    click(h, third.x + 1, third.y + 1);
+    expect(rowsOf(layoutOf(h)).p.own).toBe(true);
+    await h.app.run("history.back");
+    h.frame();
+    expect(basename(h.app.view!.buf.abs)).toBe("tool.ts");
+    await h.app.run("history.forward");
+    h.frame();
+    expect(rowsOf(layoutOf(h)).p.own).toBeUndefined();
+  });
+  test("a click whose picture moved between the press and the release still shows that picture at its own size", async () => {
+    const { h, v, root } = await open();
+    const r = drawnRect(h);
+    h.app.mouse.handle({ type: "down", x: r.x + 1, y: r.y + 1, button: 0 });
+    // An agent's write above it, read before the release: the picture three rows lower.
+    writeFileSync(
+      join(root, "p.md"),
+      `# P\n\nAn added line.\n\nAnother.\n\nText before.\n\n![a screenshot](shot.png)\n\n${PARAS.join("\n\n")}\n`,
+    );
+    h.app.watch.reloadBuffer(v.buf);
+    layoutOf(h);
+    h.app.mouse.handle({ type: "up", x: r.x + 1, y: r.y + 1, button: 0 });
+    expect(rowsOf(layoutOf(h)).p.own).toBe(true);
+  });
+  test("an SVG is rasterised once, at its own size: fitted smaller, or the window resized, the same PNG", async () => {
+    await loadRasterizer();
+    const root = makeVault();
+    const svg =
+      '<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="800"><rect width="1600" height="800" fill="#3080f0"/></svg>';
+    writeFileSync(join(root, "p.md"), "# P\n\n![a drawing](wide.svg)\n");
+    writeFileSync(join(root, "wide.svg"), svg);
+    const h = await harness({ root, open: "p.md", width: 100, height: 40, images: terminal({}) });
+    // The rasteriser's work is a background job: laid out again until it's in.
+    const drawn = () => layoutOf(h).lines.find((l) => l.image)?.image;
+    for (let i = 0; i < 60 && !drawn(); i++) {
+      await Bun.sleep(50);
+      h.app.view!.buf.invalidateLayouts();
+    }
+    const p = drawn()!;
+    expect(p.cols).toBeLessThan(200);
+    // Its own size within the budget: 1,600 × 800 is past a megapixel, so 177 columns, 1,416 pixels.
+    const own = pictureSizes(1600, 800, { cols: 1, rows: 1 }, CELL).own.cols * CELL.width;
+    expect(own).toBe(1416);
+    expect(p.src).toMatch(new RegExp(`svg-[0-9a-f]{32}-${own}\\.png$`));
+    h.app.view!.pictureRows = 12;
+    expect(rowsOf(layoutOf(h), "wide.svg").p.src).toBe(p.src);
+  });
+  test("a click on a quote's bar, or on the window's scrollbar beside a picture, isn't the picture's", async () => {
+    const md = `# P\n\n> ![quoted](shot.png)\n\n${PARAS.join("\n\n")}\n`;
+    const { h } = await open({ md });
+    const r = drawnRect(h);
+    expect(r.x).toBeGreaterThan(h.app.geometry!.panes[0]!.textX);
+    click(h, h.app.geometry!.panes[0]!.textX, r.y + 1);
+    expect(rowsOf(layoutOf(h)).p.own).toBeUndefined();
+    const bar = h.app.geometry!.scrollbars.find((b) => !b.horizontal && b.view)!;
+    click(h, bar.x, r.y + 1);
+    expect(rowsOf(layoutOf(h)).p.own).toBeUndefined();
+  });
+  test("at its own size through the lens opened and closed, and an edit typed above it", async () => {
+    const { h, v } = await open({ config: (c) => (c.editor.edit_in = "live") });
+    const r = drawnRect(h);
+    click(h, r.x + 1, r.y + 1);
+    h.app.moveCursor(v, { row: layoutOf(h).lines.findIndex((l) => lineText(l).includes("Text before.")), col: 0 });
+    await h.keys("i");
+    if (!v.insert) await h.keys("i");
+    expect(v.insert).toBeTruthy();
+    await h.keys("x", "y", "z", "escape", "escape");
+    expect(v.buf.source).toContain("xyzText before.");
+    expect(v.live).toBeFalsy();
+    expect(rowsOf(layoutOf(h)).p.own).toBe(true);
+  });
+  test("a separator dragged: the picture drawn once it rests, at the size the window ended at", async () => {
+    const { h, v } = await open({ placeholders: true });
+    let t = 10_000;
+    (h.app as unknown as { now: () => number }).now = () => t;
+    const drawAt = (w: number) => {
+      const c = new TextCanvas(w, 40);
+      h.app.draw(c);
+      return c.images;
+    };
+    v.pictures = undefined;
+    drawAt(100);
+    for (const w of [96, 92, 88, 84, 80]) {
+      t += 16;
+      expect(drawAt(w)).toEqual([]);
+    }
+    t += PICTURES_REST_MS + 1;
+    const drawn = drawAt(80);
+    expect(drawn).toHaveLength(1);
+    expect(drawn[0]!.cols).toBe(rowsOf(layoutOf(h)).p.cols);
+  });
 });

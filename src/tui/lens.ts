@@ -231,14 +231,7 @@ export class Lens {
     // A cell's ✎ (24.13): the lens on its lines.
     const asked = view.lensRange;
     view.lensRange = undefined;
-    if (
-      !base ||
-      base.width !== width ||
-      base.wrap !== wrap ||
-      base.codeScroll !== this.app.code.scrolls() ||
-      base.pictures !== (pictures?.key ?? "") ||
-      asked
-    )
+    if (!base || base.width !== width || base.wrap !== wrap || base.codeScroll !== this.app.code.scrolls() || asked)
       base = fresh(asked);
     else if (buf.version !== base.version) {
       // Typed into the lens, the rest untouched: the same render, the lens longer or shorter.
@@ -266,6 +259,9 @@ export class Lens {
       } else base = fresh(view.insert ? [Math.min(base.active[0], line), Math.max(base.active[1], line)] : base.active); // typing never sits outside it
     }
     if (!view.insert && base.renderedVersion !== buf.version) base = fresh(base.active);
+    // Its pictures sized again (the window's height, one at its own size): the note around it laid out again, the lens
+    // on the lines it was on.
+    else if (base.pictures !== (pictures?.key ?? "")) base = fresh(base.active);
     // `+` / `-`: a block more (below, or above at the note's end), or the one farthest from the
     // cursor less; the size it comes to is kept.
     const step = view.lensStep;

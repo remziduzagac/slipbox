@@ -31,3 +31,4 @@ The user docs and the changelog say what users see.
   wrapping off, the rest on resizing), `docs/manual/keys.md` (Scrolling: `z p`, `z h` / `z l`; the mouse), CHANGELOG
   (Added, Changed). `docs/images/obsidian-home.png` retaken: `dal.png` at Obsidian's 300 pixels, 38 columns (it was
   30, under the 12-row cap). `bun run test:docs` passes.
+- 2026-10-24, review round 1: reading.md says an SVG is turned into pixels once, at its own size.

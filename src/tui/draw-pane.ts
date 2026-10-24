@@ -57,13 +57,19 @@ export function drawPane(
     // first, and a layout at a stale size scrolls the view to fit it (a restored session lost its
     // place). The same arithmetic as the rows drawn below.
     let h = rect.h - (header ? (ruleAbove ? 2 : 3) : titled ? 1 : 0);
+    // Its rows were the find row closed: what its pictures are fitted to (PIC), so opening find doesn't resize them.
+    let whole = h;
     if ((typing || view.find) && h > 6) h -= typing?.replace ? 3 : 2;
     if (!app.ui.wrap && h > 3) h -= 1;
+    if (!app.ui.wrap && whole > 3) whole -= 1;
     if (h > 0 && rect.w > 6) {
       view.height = h;
+      view.pictureRows = whole;
       view.width = rect.w - 1;
     }
   }
+  // The rows the find row (and its rule) take from the window, while it shows.
+  let findRows = 0;
   if (header) {
     const y = drawWindowHeader(app, c, view, rect, { titled, ruleAbove, topRight, active }, geo);
     body = { x: rect.x, y: y + 2, w: rect.w, h: rect.y + rect.h - y - 2 };
@@ -176,6 +182,7 @@ export function drawPane(
     geo.rules.push({ y: y + rows, x0: body.x, x1: body.x + body.w });
     if (typing) geo.findInWindow = true;
     body = { ...body, y: y + rows + 1, h: body.h - rows - 1 };
+    findRows = rows + 1;
   }
   // Wrapping off: the last row is the horizontal scrollbar's (kept even when the note fits, so
   // the text doesn't jump).
@@ -183,6 +190,7 @@ export function drawPane(
   if (hbar) body = { ...body, h: body.h - 1 };
   if (body.h <= 0 || body.w <= 6) return;
   view.height = body.h;
+  view.pictureRows = body.h + findRows;
   // The last column is the scrollbar's; before it, the git signs' when they sit at the right edge (#22).
   const signsRight = app.views.signsRight(view);
   view.width = body.w - 1 - signsRight;
@@ -722,8 +730,12 @@ function drawPictures(
     const pic = at.p;
     let rows = 0;
     while (i + rows < shown.length && shown[i + rows] === row + rows && at.row + rows < pic.rows) rows++;
-    // Where its row's text starts: past a list's indent, a quote's bar, an embedded note's (12.14).
-    const indent = layout.lines[row]!.spans.reduce((w, s) => w + stringWidth(s.text), 0);
+    // Where its first row's text starts: past a list's indent, a quote's bar, an embedded note's (12.14); a drawing's
+    // centring is on its first row alone.
+    const indent = (layout.lines[row - at.row] ?? layout.lines[row]!).spans.reduce(
+      (w, s) => w + stringWidth(s.text),
+      0,
+    );
     const s = layout.lines[row]!.scroll;
     // Its columns on screen, from the text's left edge, and the first of its own that shows.
     let from: number;
@@ -741,7 +753,9 @@ function drawPictures(
     if (to > from) {
       const crop = { skip: at.row, total: pic.rows, left, wide: pic.cols };
       c.image!(x + from, top + i, to - from, rows, pic.src, crop);
-      geo.pictures.push({ x: x + from, y: top + i, w: to - from, h: rows, view, row: row - at.row });
+      // A picture of a file is the click's; a drawing slipbox made isn't (a click on it places the cursor, as ever).
+      if (pic.file)
+        geo.pictures.push({ x: x + from, y: top + i, w: to - from, h: rows, view, row: row - at.row, file: pic.file });
     }
     i += rows - 1;
   }
