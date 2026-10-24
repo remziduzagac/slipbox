@@ -479,6 +479,7 @@ These are the roles of the screen most worth changing:
 | `border` | the frame, the panes' borders and the rules |
 | `topbar_chip` | the `slipbox` chip |
 | `topbar_group` | the faint background of each top-bar group |
+| `picture_caption` | a standalone picture caption's background |
 | `topbar_button`, `topbar_button_on` | the rails', the top bar's and the window header's buttons: off and on |
 | `topbar_button_disabled` | a window header's button for a mode the file can't be shown in (in italics) |
 | `rail` | the rails' tint (its `bg`); with none, as under `NO_COLOR`, a rail is drawn with a border |

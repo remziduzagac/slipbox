@@ -2,6 +2,7 @@
 // Unicode placeholders: each cell names the picture's row and column it shows, so a check sees how big a picture is
 // drawn, which part of it shows, and where. In the reading area; reading.ts is past the size limit.
 
+import { stringWidth } from "../../../src/core/width.ts";
 import { placeholderCell } from "../../../src/tui/placeholders.ts";
 import { type Check, leader } from "../check.ts";
 import type { Session } from "../session.ts";
@@ -66,17 +67,50 @@ async function click(s: Session, x: number, y: number): Promise<void> {
   await s.send(`\x1b[<0;${x + 1};${y + 1}m`);
 }
 
-/** To the picture's ▣ line, at the window's top: the picture whole below it, fitted. */
+/** From the caption, k reaches the first image row; put it at the window's top. */
 async function toPicture(s: Session, alt: string): Promise<void> {
   await s.keys("/");
   await s.type(alt);
-  await s.keys("enter", "escape", "z", "t");
-  await s.until(() => s.rowOf(alt) >= 0 && s.rowOf(alt) < 14, undefined, `${alt} near the window's top`);
+  await s.keys("enter", "escape", "k", "z", "t");
+  await s.settle();
 }
 
 const ALT = "The route planner on a laptop";
 
 export const PICTURES: Check[] = [
+  {
+    area: "reading",
+    name: "picture captions: boxed, multiline alt flattened, separate copy buttons without image support",
+    covers: { cases: ["inline"], commands: ["picture.copy_path", "picture.copy_caption", "picture.copy_image"] },
+    options: {
+      home: true,
+      startAt: "home/notes/caption-probe.md",
+      setup: (s) => {
+        s.write(
+          "~/notes/caption-probe.md",
+          "![First caption line\nsecond caption line](caption.png)\n\nInline ![small](caption.png) stays inline.\n",
+        );
+      },
+    },
+    run: async (s) => {
+      await s.see("First caption line second caption line");
+      await s.see("⧉p");
+      await s.see("⧉a");
+      await s.see("⧉i");
+      const button = async (label: string) => {
+        await s.see(label);
+        const row = s.rowOf(label);
+        const text = s.screen()[row]!;
+        await click(s, stringWidth(text.slice(0, text.indexOf(label))), row);
+      };
+      await button("⧉a");
+      await s.until(() => s.clipboard() === "First caption line second caption line", 3000, "alt text copied");
+      await button("⧉p");
+      await s.until(() => s.clipboard() === s.path("~/notes/caption.png"), 3000, "picture path copied");
+      await button("⧉i");
+      await s.message("image not copied");
+    },
+  },
   {
     area: "reading",
     name: "pictures: fitted to the window; a click or z p shows one at its own size, z h, z l and the wheel scroll it, a click fits it again; one not there says why",

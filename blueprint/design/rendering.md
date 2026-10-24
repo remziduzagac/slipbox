@@ -75,7 +75,8 @@ the file's text (DF-D17): `a %%note%% b` reads `a b`, `oil %%note%%.` reads `oil
 leaves no row, and a comment over blank lines (§ Obsidian's highlights and comments) no rows. Rows keep their source
 lines. Links render as their text; the URL follows as `<url>` when colour is off or `render.show_urls` asks. Images
 render as `▣ alt`, and alt text plus path stay the floor (12.x, D101): a picture alone in its paragraph, a local image
-file (PNG, JPEG, WebP, GIF), is drawn under its `▣ alt` line where the terminal draws images — Kitty graphics or sixel,
+file (PNG, JPEG, WebP, GIF), is drawn above its boxed `▣ alt` caption where the terminal draws images —
+Kitty graphics or sixel,
 as OpenTUI finds it asking, never blocks of colour (D126) — sized to the text width, its proportions kept, at most 12
 rows, from where its `▣ alt` text starts (past a list's bullet, a quote's bar); scrolled half out of sight, the part
 that shows. One embedded by name, `![[dal.png]]` (12.13, D103), is drawn the same, found as its link is (anywhere in the
@@ -84,7 +85,8 @@ proportions kept. An SVG (12.15, D127) — by its name, or a picture fetched tol
 resvg (WebAssembly) at the size it's drawn, from its own size, into the cache, and drawn as a PNG is; it fetches nothing
 it links to. One in an embedded note (12.14) is found from where that note is — its path from its folder, its name from
 its place in its vault — and drawn inside its frame. Beside text, or where the terminal draws none (`[render] images =
-"never"` too): `▣ alt` alone. Where the terminal speaks Kitty graphics, a picture is sent to it once (12.7, D102) —
+"never"` too): the caption box alone. Where the terminal speaks Kitty graphics, a picture is sent to it
+once (12.7, D102) —
 compressed, at the pixels it's drawn in, with a virtual placement of its cells — and drawn as Kitty's Unicode
 placeholders: each cell U+10EEEE in the picture's id's colour, its row and column as combining marks. They're text, so
 scrolling moves them and the terminal the picture with them: nothing is sent again, nothing waits. The last 48 are kept
@@ -550,3 +552,12 @@ never made, or cached, from the fallback. The pool's workers stop after a minute
 A spelling check that fails leaves its words unknown, never taken as right, and its warning is said once; an answer is
 held to 16 MiB, the default for a worker's requests (`core/worker-requests.ts`). The words are asked again on a draw two
 seconds or more later. These are budgets for requests and held input, not OS-enforced limits on a worker's memory.
+
+## Standalone picture captions (#83)
+
+A standalone picture has a wrapped caption box below its image; without a drawable image the box stands alone.
+Inline pictures retain paragraph layout. Alt-text newlines become spaces. The picture_caption theme role supplies
+the faint background; box glyphs follow the active glyph set. Buttons copy path, alt text and image separately via
+picture.copy_path, picture.copy_caption and picture.copy_image. Native image copying uses optional wl-copy, xclip or
+osascript; OSC 52 remains text only. Clicking a picture ends visual selection and leaves its caption link unfocused.
+The first image row is a cursor stop, keeping the image in view across explicit size changes.

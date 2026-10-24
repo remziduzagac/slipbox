@@ -8,6 +8,10 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 
 ### Added
 
+- Standalone pictures have wrapped caption boxes below them, with separate buttons for path, alt text and image
+  copying. Image copying uses an optional native clipboard helper. Alt-text line breaks become spaces, and picture
+  clicks clear selection without leaving the caption highlighted.
+
 - Info ends with an Export row for notes. Enter, a click or `x` offers the formats; the row remembers the last output
   path, and `y` copies it.
 

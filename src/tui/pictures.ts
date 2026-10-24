@@ -1,16 +1,16 @@
+import { copyImage } from "../core/clipboard.ts";
 // Pictures in the TUI (12.x): what a note's images, diagrams and maths are drawn as for the terminal, the ones on
 // the internet fetched, and when they're drawn — held back while a view scrolls quickly (12.7).
 
 import { existsSync, mkdirSync, renameSync, statSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
-import { basename, join } from "node:path";
+import { basename, join, relative } from "node:path";
 import { extentOf, type Layout, type Picture } from "../core/layout/ir.ts";
 import type { PictureSource, RenderOptions } from "../core/layout/render.ts";
 import { type Rasterizer, rasterizer } from "../core/svg.ts";
 import { pictureLocator } from "../core/note.ts";
 import { cacheHome, ensureCacheHome } from "../core/paths.ts";
 import { colorHex, type Role } from "../core/theme/index.ts";
-import { stringWidth } from "../core/width.ts";
 import { fitPicture, pictureSizes, RemoteImages, svgText } from "./images.ts";
 import type { App, View } from "./app.ts";
 import { codeBlocks } from "./code.ts";
@@ -99,8 +99,40 @@ export class Pictures {
     return view.picturesOwn.files;
   }
 
+  async copy(view: View, row: number, what: "path" | "caption" | "image"): Promise<void> {
+    const line = this.app.currentLayout(view).lines[row];
+    const caption = line?.caption;
+    if (!caption) return this.app.message("info", "no picture caption here");
+    if (what === "caption") {
+      await this.app.copy(caption.text);
+      return;
+    }
+    const abs = caption.from ?? view.buf.abs;
+    const rel = caption.from ? relative(this.app.graph.root, caption.from) : view.buf.rel;
+    const found = pictureLocator(
+      this.app.graph,
+      rel,
+      abs,
+    )(caption.kind === "embed" ? { name: caption.target, size: null } : { url: caption.target });
+    const file =
+      line?.pic?.p.file ?? (found && "file" in found ? found.file : found && "url" in found ? found.url : null);
+    if (!file) return this.app.message("info", "picture path not found");
+    if (what === "path") {
+      await this.app.copy(file);
+      return;
+    }
+    const local = /^https?:/.test(file) ? this.remote.cached(file) : file;
+    const method = local ? await copyImage(local) : null;
+    this.app.message(
+      method ? "info" : "warn",
+      method
+        ? `image copied with ${method}`
+        : "image not copied: fetch it first, and install wl-copy, xclip or osascript for this format",
+    );
+  }
+
   /**
-   * A click on a picture, or `z p` on its `▣` line (PIC-D3): the cursor to its `▣` line — the keys act on it next, and
+   * A click on a picture, or `z p` on its `▣` line (PIC-D3): the cursor to its first image row — the keys act on it next, and
    * it stays on screen as the picture grows below it — and the picture at its own size, or fitted to its window again.
    * With the lens open, the cursor stays, and the lens with it: on the picture's line it would show its markdown.
    */
@@ -113,8 +145,7 @@ export class Pictures {
     // As any click: a selection, and visual mode, end — never extended to the ▣ line.
     view.visual = null;
     view.sel = null;
-    const caption = captionOf(layout, at.first);
-    if (!view.live) this.app.moveCursor(view, { row: caption, col: linkCol(layout, caption) });
+    if (!view.live) this.app.moveCursor(view, { row: at.first, col: 0 });
     const name = basename(at.p.file);
     if (!at.p.toggles) return this.app.message("info", `${name} is whole at its own size already`);
     const files = this.ownFiles(view);
@@ -123,6 +154,8 @@ export class Pictures {
       files.add(at.p.file);
       this.app.message("info", `${name} at its own size — z p fits it to the window again`);
     }
+    // An explicit size change draws immediately, even when its new layout moves the viewport.
+    view.pictures = undefined;
     this.app.host.requestRender();
   }
 
@@ -414,24 +447,6 @@ function pictureNear(layout: Layout, row: number, file: string): { p: Picture; f
       best = { p: l.pic.p, first: i };
   });
   return best;
-}
-
-/** A picture's first `▣` row, from its first row drawn over. */
-function captionOf(layout: Layout, first: number): number {
-  const p = layout.lines[first]?.pic?.p;
-  let row = first;
-  while (row > 0 && layout.lines[row - 1]?.pic?.p === p && (layout.lines[row - 1]?.pic?.row ?? 0) < 0) row--;
-  return row;
-}
-
-/** The column a row's first link starts at: a `▣ alt`'s, past a list's bullet, a quote's bar. */
-function linkCol(layout: Layout, row: number): number {
-  let col = 0;
-  for (const span of layout.lines[row]?.spans ?? []) {
-    if (span.link !== undefined) return col;
-    col += stringWidth(span.text);
-  }
-  return 0;
 }
 
 /** The pictures in sight in a view, each by its file (a drawing by its PNG) and the size it's drawn at. */

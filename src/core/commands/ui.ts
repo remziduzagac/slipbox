@@ -5,6 +5,19 @@ import type { CommandSpec } from "../command-specs";
 const I = null; // interaction: needs a human at a terminal
 
 export const UI_SPECS: CommandSpec[] = [
+  {
+    id: "picture.copy_path",
+    title: "Copy picture path",
+    cli: null,
+    desc: "Copies the caption's picture path or address",
+  },
+  { id: "picture.copy_caption", title: "Copy picture caption", cli: null, desc: "Copies the picture's alt text" },
+  {
+    id: "picture.copy_image",
+    title: "Copy picture image",
+    cli: null,
+    desc: "Copies image bytes with an optional system clipboard helper",
+  },
   // ui
   { id: "ui.list", title: "UI settings", cli: I, desc: "Lists every UI setting and its value" },
   { id: "theme.pick", title: "Theme", cli: I, desc: "Picks a theme, previewed live" },

@@ -410,6 +410,28 @@ export function drawPane(
         x += w;
       }
     }
+    if (line.caption?.top) {
+      const index = app.tab?.views.indexOf(view) ?? -1;
+      let edge = textX + Math.min(layout.width, textW) - 1;
+      for (const [action, letter] of [
+        ["image", "i"],
+        ["caption", "a"],
+        ["path", "p"],
+      ] as const) {
+        const text = ` ${app.glyphs.cellCopy}${letter} `;
+        const w = stringWidth(text);
+        edge -= w;
+        if (edge < textX + 1) break;
+        const id = `caption:${index}:${row}:${action}`;
+        const style = roleStyle(
+          theme,
+          app.mouse.hover === id ? "hover" : "image",
+          theme.roles.picture_caption.bg ?? page,
+        );
+        drawText(c, edge, y, text, style);
+        geo.hot.push({ id, x: edge, y, w, h: 1 });
+      }
+    }
     // An oversized lens's rules say how much of it is out of sight: ↑ above, ↓ below.
     if ((line.lens === "top" || line.lens === "bottom") && hidden.length) {
       const first = layout.lines.findIndex((l) => l.lens === "source");

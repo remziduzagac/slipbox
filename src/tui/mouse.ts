@@ -551,6 +551,7 @@ export class Mouse {
     // A press on a picture that moves: a selection from where it was pressed, as before pictures were clicked.
     if (this.drag?.kind === "picture") {
       const { view, x, y, ctrl } = this.drag;
+      if (ev.x === x && ev.y === y) return;
       const pane = g.panes.find((p) => p.view === view);
       this.drag = null;
       if (!pane) return;
@@ -699,6 +700,12 @@ export class Mouse {
       case "fn":
         return this.app.footnotes.add();
       // A code cell's button (24.13): `action:line`.
+      case "caption": {
+        const [window, row, action] = arg.split(":");
+        const view = this.app.floating?.view ?? this.focusWindow(Number(window));
+        if (view && ["path", "caption", "image"].includes(action!)) void this.app.run(`picture.copy_${action} ${row}`);
+        break;
+      }
       case "cell": {
         const [action, line] = arg.split(":");
         return this.app.code.cellAction(action!, Number(line));

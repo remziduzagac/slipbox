@@ -347,9 +347,11 @@ describe("blocks and inlines (2.2)", () => {
       { name: "flip.JPG", size: { width: 240, height: 180 } },
       { name: "dal.png", size: null },
     ]);
-    // Each under its `▣ name` line, as a picture by its path is.
+    // Each picture precedes its boxed caption.
     const rows = l.lines.map((x) => (x.image ? "picture" : x.spans.map((s) => s.text).join("")));
-    expect(rows.slice(0, 4)).toEqual([`${unicode.image} dal.png`, "picture", "", ""]);
+    expect(rows.slice(0, 2)).toEqual(["picture", ""]);
+    expect(l.lines[2]!.caption?.top).toBe(true);
+    expect(rows[3]).toContain(`${unicode.image} dal.png`);
   });
   test("source lines survive wrapping (3.5 anchors on them)", () => {
     const layout = renderMarkdown("# H\n\npara one\nline two\n\nsecond para\n", {

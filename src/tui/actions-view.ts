@@ -50,6 +50,9 @@ export function viewActions(): Record<string, Run> {
     "scroll.top": (a) => withView(a, (v) => a.views.scrollCursorTo(v, "top")),
     "scroll.bottom": (a) => withView(a, (v) => a.views.scrollCursorTo(v, "bottom")),
     // The picture on the cursor's ▣ line (PIC-D3): at its own size or fitted to the window; scrolled sideways.
+    "picture.copy_path": (a, arg) => withView(a, (v) => a.pictures.copy(v, Number(arg ?? v.cur.row), "path")),
+    "picture.copy_caption": (a, arg) => withView(a, (v) => a.pictures.copy(v, Number(arg ?? v.cur.row), "caption")),
+    "picture.copy_image": (a, arg) => withView(a, (v) => a.pictures.copy(v, Number(arg ?? v.cur.row), "image")),
     "picture.size": (a) => withView(a, (v) => a.pictures.toggle(v, v.cur.row)),
     "picture.scroll_left": (a) => withView(a, (v) => a.pictures.scrollSideways(v, -1)),
     "picture.scroll_right": (a) => withView(a, (v) => a.pictures.scrollSideways(v, 1)),
