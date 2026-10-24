@@ -195,3 +195,24 @@ The cases, each with a unit test (U) and a terminal check (T):
 - 2026-10-24: existing tests that turned the row off with `ui.breadcrumb = false` now use `ui.window_header = false`
   (`tests/tui.test.ts`: the outline button on the top bar; a split's names on their own rows); the breadcrumb's own
   test checks that the header stays.
+- 2026-10-24: the terminal checks (HDR-T5): four in `tests/terminal/checks/editing.ts` (the buttons following the
+  mode and clicked; a click while typing; disabled modes saying why; a split narrowed) and the settings check in
+  `navigating.ts` extended (the breadcrumb hidden keeps the header; the header hidden and back; zen). With the 39
+  neighbouring checks (breadcrumb, windows, splits, the mouse, settings, the status line, zen, the session, code's
+  and data's breadcrumbs, the lens, source mode): 44 of 44 pass (`SLIPBOX_TERMINAL_JOBS=2`). Found on the way:
+  `work/kestrel/config/broken-flags.json` parses (JSON is read as jsonc, a trailing comma allowed), though
+  `examples/home/CASES.md` lists it among the data files that don't; the check uses `broken-ingress.yaml`.
+- 2026-10-24: tried live, this worktree's slipbox on a copy of the reference set (`tmp/issue/home`, its own XDG
+  folders), in an 18-column pane and a 120-column tab: Read selected on opening; `ctrl+k` selects Source; a click on
+  Lens from Source opens the lens on the cursor's line, LENS on the chip; Read; the selected Read clicked, nothing;
+  typing in the lens, a click on Source ends it, the text kept and the tab unsaved; a text file
+  (`requirements.txt`): Read and Lens drawn disabled, a click saying "has no rendered view: source mode"; Breadcrumb
+  off keeps the header and its buttons, Window header off gives the row to the text, both back; in the 18-column
+  pane the letters show. In a split at 120 columns with the explorer (windows about 42 columns), only the selected
+  letter shows: the split's name takes up to half the row (as before), and the breadcrumb keeps its least room
+  (HDR-D4). Put to the user.
+- 2026-10-24: the docs (HDR-T6): `docs/manual/screen.md` § The window header, with § Read, Lens and Source and
+  § The breadcrumb under it (`#the-breadcrumb` lands still); the map, splits, the side panes, the UI settings and
+  zen's list; `keys.md` (the mouse, `space u u`, zen, the modes' table), `configuration.md` (`window_header`, the
+  roles), `editing.md`, the mouse help, CHANGELOG (Added, Changed). `bun run shots`: 29 taken, 27 changed, each looked
+  at; the empty box for 🚲 in two of them was there before (no font here draws it).

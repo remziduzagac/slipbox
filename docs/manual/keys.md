@@ -538,6 +538,7 @@ A key that starts an edit works from the rendered note too. Its first press open
 | --- | --- |
 | this window's note as Markdown, or rendered again | `ctrl+k`, `space n v` |
 | the lens, at the cursor (`esc` closes it) | `space n l` |
+| this window rendered, in the lens or as written, whatever it shows now | the header's `Read`, `Lens`, `Source` |
 | the lens a block bigger / smaller / back to its own size | `+` / `-` / `=` |
 | type before / after the cursor | `i` / `a` |
 | type at the line's first character that isn't a space / at its end | `shift+i` / `shift+a` |
@@ -690,11 +691,11 @@ With spelling on (`space u s`), these keys work:
 
 | Keys | What |
 | --- | --- |
-| `space u u` | every UI setting with its value, to pick one and change it (the breadcrumb, code blocks: no key) |
+| `space u u` | every UI setting with its value, to change one (window header, breadcrumb, code blocks: no key) |
 | `space u t` | pick a theme, previewed as you move (`esc` puts it back) |
 | `space u g` | pick the glyphs: nerd, unicode, ascii or auto, previewed |
 | `space u shift+w` | readable width: the text in a centred column, [`ui.readable_max`](configuration.md) wide (100) |
-| `space u z` | zen: no bars, panels, tabs or breadcrumbs, and readable width on |
+| `space u z` | zen: no bars, panels, tabs or window headers, and readable width on |
 | `space u l` | the cursor's row highlighted, or not |
 | `space u n` | line numbers on the left |
 | `space u w`, `alt+z` | wrap long lines, on at first (when off, a wide note scrolls sideways) |
@@ -1064,9 +1065,10 @@ it back to the terminal.
 | `◷` on the left rail | shows the history, focused, or hides it |
 | `±` on the left rail | shows source control, the git panel, focused, or hides it |
 | `ℹ` on the right rail | shows Info, focused, or hides it |
-| `▤` on the right rail (without it, on the breadcrumb or the top bar) | shows the outline, focused, or hides it |
+| `▤` on the right rail (without it, on the window header or the top bar) | shows the outline, focused, or hides it |
 | `¹` on the right rail | shows the footnotes, focused, or hides them |
 | the top bar's `slipbox` | opens the command palette |
+| a window header's `Read` / `Lens` / `Source` | shows it rendered, in the lens or as written; dimmed, says why not |
 | a heading in a window's breadcrumb | scrolls that window to it, and focuses it |
 | the breadcrumb's icon / its `…` | finds a heading / lists the headings the cursor is under |
 | a tab | switches to it, a drag moves it, and a middle-click or its `×` closes it |

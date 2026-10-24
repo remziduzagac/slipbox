@@ -22,8 +22,9 @@ From the top:
 - **The tab strip** has a tab for each note you have open.
 - **The explorer**, on the left, shows the folder's notes and files as a tree. The column of buttons at the left edge
   is the **left rail**.
-- **The window**, in the middle, shows the note. Above the note is its **breadcrumb**: the headings the cursor is
-  under. The numbers down its left side are the note's line numbers. Its last column is its scrollbar.
+- **The window**, in the middle, shows the note. Above the note is its **window header**: the **breadcrumb**, the
+  headings the cursor is under, and the **Read**, **Lens** and **Source** buttons, which switch how the window shows
+  the note. The numbers down its left side are the note's line numbers. Its last column is its scrollbar.
 - **The outline**, on the right, shows the note's headings. The buttons at the right edge are the **right rail**.
 - **The status line**, at the bottom, shows the mode, the file, and where you are in it.
 
@@ -120,7 +121,7 @@ window on the right.
 When the windows would have fewer than 80 columns between them, a side-by-side split is drawn one above the other. A
 stacked split too short for two windows shows only the active one.
 
-In a split, each window names its file at the start of its breadcrumb row. The name is bright in the active window.
+In a split, each window names its file at the start of its header. The name is bright in the active window.
 
 `q` closes the window. On a tab's last window, it closes the tab. On the very last tab, it does nothing but remind you
 that `ctrl+q` quits.
@@ -209,8 +210,8 @@ These settings set up the panes:
 
 Without the left rail, the explorer's `≡` sits on the top bar. The history and source control open with their keys.
 
-Without the right rail, the outline's `▤` sits at the right end of the breadcrumb. Info and the footnotes open with
-their keys.
+Without the right rail, the outline's `▤` sits at the right end of the window header. Info and the footnotes open
+with their keys.
 
 ### Narrow terminals
 
@@ -300,19 +301,54 @@ To make it taller or shorter, drag its top rule. Or give it the keys and use res
 What the problems are and where they come from is in [Code](code.md). Broken links, and how to repair them, are in
 [Links and backlinks](links-and-vaults.md).
 
-## The breadcrumb
+## The window header
 
-Each window has a breadcrumb row above the note. It shows `§`, then the headings the cursor is under, from the
-outermost in. For example: `§ Coffee › Brewing › Grind`. When they don't all fit, the middle ones fold into `…`.
+Each window has a header, a row between two lines above the note. From the left, it holds:
+
+- in a split, the window's file name, bright in the active window
+- the breadcrumb: the headings the cursor is under
+- the **Read**, **Lens** and **Source** buttons
+- in the window at the top right, without the right rail, the outline's `▤`
+
+To hide the breadcrumb alone, turn off **Breadcrumb** in `space u u`, or set `ui.breadcrumb = false`. The header stays,
+with its buttons. To hide the whole header and give its row to the note, turn off **Window header**, or set
+`ui.window_header = false`. A split's windows then have their names on rows of their own, and `▤` moves to the top bar.
+A window shorter than 8 rows has no header, and neither does zen mode.
+
+### Read, Lens and Source
+
+The three buttons show how the window shows its file, and switch it:
+
+| Button | The window shows | Keys |
+| --- | --- | --- |
+| **Read** | the note rendered, as a page; code as a document | `esc` closes the lens; `ctrl+k` leaves source mode |
+| **Lens** | the note rendered, with the lens open on the block the cursor is in | `space n l` |
+| **Source** | the file as written: a note's Markdown | `ctrl+k`, `space n v` |
+
+The bright one is the window's mode, the same one the status line's chip names. Click another to switch to it straight
+away. From Source, Lens opens the lens without showing the page first. Clicking the bright one changes nothing.
+
+While you type, the button of the mode you're typing in stays bright, though the chip says `INSERT`. A click stops
+typing first, as every click does. Your unsaved changes stay.
+
+A dimmed button is a mode the file can't be shown in. A text file, and a data file that doesn't parse, have only
+Source. A click on a dimmed one says why.
+
+In a narrow window, the breadcrumb folds first, down to the heading the cursor is in. Then the buttons shorten to `R`
+`L` `S`, and at last only the bright one is left.
+
+The command palette has them too: Read mode, Lens mode and Source mode.
+
+### The breadcrumb
+
+The breadcrumb shows `§`, then the headings the cursor is under, from the outermost in. For example:
+`§ Coffee › Brewing › Grind`. When they don't all fit, the middle ones fold into `…`.
 
 - Click a heading to scroll the window to it.
 - Click `§` to find a heading in the note by typing part of it (`space f o` does the same).
 - Click `…`, or press `space f b`, to see the whole path as a list. Type to filter it, and press `enter` to jump.
 
 In a data file, the breadcrumb shows its sections and keys. In a code file, it shows its definitions.
-
-A window shorter than 8 rows has no breadcrumb, and neither does zen mode. To hide it everywhere, turn off
-**Breadcrumb** in `space u u`, or set `ui.breadcrumb = false`.
 
 ## The status line
 
@@ -529,7 +565,8 @@ change it.
 | Wrap long lines | `space u w`, `alt+z` | off, a note keeps its own width and scrolls sideways |
 | Show link URLs | `space u r` | prints a web link's address after its text |
 | Mouse | `space u m` | off, the terminal has the mouse |
-| Breadcrumb | (only in the list) | the heading path at the top of each window |
+| Window header | (only in the list) | the row atop each window: a split's name, the breadcrumb, Read, Lens, Source |
+| Breadcrumb | (only in the list) | the heading path on each window's header |
 | Top bar | `space u b` | the bar at the top |
 | Problems bar | `space u d` | a column beside the text with each line's problems |
 | Spelling | `space u s` | misspelt words marked |
@@ -547,7 +584,7 @@ scratch are in [Editing](editing.md). Problems and code cells are in [Code](code
 - the top bar
 - the tabs
 - the rails
-- the breadcrumb
+- the window headers
 - the status line
 - the lines between them
 

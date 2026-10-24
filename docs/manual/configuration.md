@@ -83,7 +83,8 @@ outline_width = 32             # 8–200; drawn as the explorer is
 split_ratio = 0.5              # 0.2–0.8: the first window's share of a split
 top_bar = true                 # the bar along the top: the slipbox chip, the vault's state; space u b
 lines = "light"                # the frame's lines: light (─ │) | heavy (━ ┃)
-breadcrumb = true              # the headings the cursor is under, atop each window
+window_header = true           # the row atop each window: a split's name, the breadcrumb, Read · Lens · Source, ▤
+breadcrumb = true              # the headings the cursor is under, on each window's header
 left_rail = true               # a column of buttons down the left edge: the explorer's ≡
 right_rail = true              # a column of buttons down the right edge: the outline's ▤
 mouse = true                   # clicks, the wheel and dragging; space u m
@@ -476,7 +477,8 @@ These are the roles of the screen most worth changing:
 | --- | --- |
 | `border` | the frame, the panes' borders and the rules |
 | `topbar_chip` | the `slipbox` chip |
-| `topbar_button`, `topbar_button_on` | the rails' and the top bar's buttons, a pane closed and open |
+| `topbar_button`, `topbar_button_on` | the rails', the top bar's and the window header's buttons: off and on |
+| `topbar_button_disabled` | a window header's button for a mode the file can't be shown in |
 | `rail` | the rails' tint (its `bg`); with none, as under `NO_COLOR`, a rail is drawn with a border |
 | `gutter` | the shade of the problems bar and the line numbers (its `bg`) |
 | `git_sign_add`, `git_sign_change`, `git_sign_delete` | the gutter's signs for lines added, changed and deleted |
@@ -489,7 +491,8 @@ These are the roles of the screen most worth changing:
 | `tab`, `tab_active`, `tab_active_idle` | tabs; the active one with and without focus |
 | `pane_title`, `pane_title_active` | the Explorer's and the Outline's titles, unfocused and focused |
 | `breadcrumb`, `breadcrumb_current` | the breadcrumb's headings, and the one the cursor is under |
-| `breadcrumb_band`, `breadcrumb_icon`, `breadcrumb_sep` | the breadcrumb's background, icon and separators |
+| `breadcrumb_band` | the window header's background (and, drawn as bands, the code view's cells) |
+| `breadcrumb_icon`, `breadcrumb_sep` | the breadcrumb's icon and separators |
 | `tree_guide` | the explorer's and the outline's tree lines |
 | `sidebar_root` | in the explorer, a folder that is a vault of its own |
 | `sidebar_mark` | in the explorer, a row's mark that it's indexed, at its end |
@@ -515,9 +518,9 @@ Every role, by what it colours:
   `pane_title_active`, `overlay`, `overlay_border`, `overlay_selected`, `overlay_match`, `overlay_dim`, `overlay_group`,
   `keycap`, `keycap_selected`, `selection`, `bracket_match`, `error`, `warn`, `info`, `scrollbar`, `scrollbar_track`,
   `cursor`, `cursor_line`, `line_number`, `line_number_current`, `gutter`, `cell_line`, `which_key_key`,
-  `which_key_group`, `topbar`, `topbar_button`, `topbar_button_on`, `topbar_chip`, `hover`, `breadcrumb`,
-  `breadcrumb_current`, `breadcrumb_sep`, `breadcrumb_icon`, `breadcrumb_band`, `tree_guide`, `rail`, `lens`,
-  `lens_band`, `lens_edit`, `lens_band_edit`.
+  `which_key_group`, `topbar`, `topbar_button`, `topbar_button_on`, `topbar_button_disabled`, `topbar_chip`, `hover`,
+  `breadcrumb`, `breadcrumb_current`, `breadcrumb_sep`, `breadcrumb_icon`, `breadcrumb_band`, `tree_guide`, `rail`,
+  `lens`, `lens_band`, `lens_edit`, `lens_band_edit`.
 
 ## Indentation: `.editorconfig`
 
