@@ -5,9 +5,8 @@ dropped and superseded ones in `archive/`. The roadmap gives their order.
 
 - Active: [TT](terminal-tests/README.md), the terminal tests headless and by feature;
   [DOCS](documentation/README.md), the documentation learning path, topic ownership and reference.
-- Complete on their branches, for consolidation: [HDR](window-header/README.md), the window header and its Read, Lens
-  and Source buttons (#24); [WSP](workspaces/README.md), workspaces named apart from the vault, and where you are on the
-  top bar (#25); [UPG](upgrade-restart/README.md), upgrading and restarting from the TUI (#23);
+- Complete on their branches, for consolidation: [UPG](upgrade-restart/README.md), upgrading and restarting from the
+  TUI (#23);
   [SEO](site-discovery/README.md), the docs site found, shared and read by agents (#66);
   [CIW](ci-waits/README.md), a push tests since the last run that passed, and `test` nothing `dev` passed (#65, items
   5 and 7; the issue's other items its tasks for later).
@@ -16,3 +15,5 @@ dropped and superseded ones in `archive/`. The roadmap gives their order.
   greenrepo; [DS](archive/docs-site/README.md), the documentation site; [VV](archive/vaults-and-view/README.md), vaults
   and the explorer's view, and [GIT](archive/git-review/README.md), reviewing, diffing and merging what an agent
   changed, both consolidated 2026-10-17 while their docs tasks (VV-T9, GIT-T8) are written.
+- Consolidated 2026-10-25: [HDR](archive/window-header/README.md), the window header and its mode buttons (#24);
+  [WSP](archive/workspaces/README.md), workspaces apart from vaults and where you are on the top bar (#25).

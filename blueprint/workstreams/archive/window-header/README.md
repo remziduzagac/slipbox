@@ -1,5 +1,5 @@
 ---
-status: complete
+status: consolidated
 created: "2026-10-24"
 branch: feat/issue-24
 ---
@@ -19,3 +19,6 @@ ok").
 - [notes.md](notes.md): how it was discussed, Codex's critique, the cases to test, and the log.
 - [ideas.md](ideas.md): what could come later, open.
 - [tasks/](tasks/README.md): the work, a task per file.
+
+Consolidated 2026-10-25: requirements and design applied to the root; the implemented header and top bar
+checked against the code. Decisions and completed tasks remain here for their stable IDs.

@@ -90,6 +90,9 @@ what replaced them.
   code.
 - **The merge screen**: git's conflicts in a file settled a card at a time, yours and theirs against the base
   (GIT-D5). [tui.md](tui.md) § Git.
+- **Mode** (a window’s): how it shows its file: Read, Lens or Source, one at a time; switched by the header’s
+  buttons, `ctrl+k` and `space n l` (HDR-D2). Not vim’s normal, insert or visual mode.
+  [tui.md](tui.md) § Screen layout.
 - **Named folder**: a vault a pointer can name, by its `.slipbox/` name, else its repository's remote.
   [roots.md](roots.md) § Named folders.
 - **No-vault**: the design's word for Elsewhere (VV-D3).
@@ -143,6 +146,8 @@ what replaced them.
 - **Which-key**: the popup listing the keys a pending sequence can take next. [tui.md](tui.md) § Screen layout.
 - **Wikilink**: `[[name]]` or `[[path#heading|text]]`, a link by name or path, within its vault.
   [links.md](links.md) § Wikilinks.
+- **Window header**: the row atop each window: in a split its file’s name, the breadcrumb, the mode’s buttons,
+  and `▤` without the right rail (HDR-D1). [tui.md](tui.md) § Screen layout.
 - **Workspace**: your tabs and windows in a place — the splits, each window's note, cursor and history: one per branch
   of a git checkout, one per folder of home opened by name and home's own, else the vault's own; personal, in
   slipbox's state, never in the vault (WSP-D1, WSP-D2). Not VS Code's workspace, the folders a window opened (a vault,

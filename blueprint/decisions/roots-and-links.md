@@ -580,6 +580,9 @@ the vaults linked to or from it, under a divider, then everything indexed, only 
 
 ## D65: The status line names the vault and its branch; the explorer has roots (20.14, 20.15, 2026-10-02)
 
+> **2026-10-25:** Amended by WSP-D4, WSP-D5: the top bar names the vault and branch; the status line does so only
+> while the bar does not. They are still shown once.
+
 > **Partly superseded by VV-D5 (2026-10-14):** the explorer is one tree, its view a part of it, a breadcrumb above it:
 > no roots beside the tree, none pinned, none added by following a link. The status line still names the vault and its
 > branch.
@@ -770,6 +773,9 @@ back the same session, since both have the root `project/`; a worktree, another 
 name`) is the remedy.
 
 ## D77: The screen shows what the file says (21.9, 2026-10-05)
+
+> **2026-10-25:** Amended by WSP-D4: where the file is appears on the top bar, else the status line while hidden or
+> too narrow; its forms stay unchanged.
 
 > **Partly superseded by VV-D5 (2026-10-14):** the explorer shows what's opened as a view of one tree, a breadcrumb
 > above it, not the root of what's opened with a folder followed into beside it. Home is shown as `~` and no-vault as

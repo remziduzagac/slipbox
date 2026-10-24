@@ -52,7 +52,7 @@ Code, in `src/tui/`:
 ━━━━━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━  ← the frame's top rule
  ≡  Explorer   ┃ 1 index × ┃ 2 alpha × ┃                             ┃ +3  ← left rail (tinted) · explorer ┃ tab strip
  ◷             ┣━━━━━━━━━━━┻━━━━━━━━━━━┻━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━┻━━━  ← the strip's rule, the outline under it
-    ▾ notes    ┃ § Heading › Sub                  ┃ Outline            ▤   ← breadcrumb (tinted) ┃ outline · right rail
+    ▾ notes    ┃ § Heading › Sub  Read Lens Source┃ Outline            ▤   ← window header (tinted) ┃ outline · rail
     ├─  beta   ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
     └─  alpha  ┃ ▌ Sub                            ┃ ▾ Heading              ← explorer ┃ note ┃ outline
                ┃ Text with the █ursor on it…      ┃ └─  Sub                ← (both panes optional)
@@ -113,34 +113,94 @@ Toggle buttons have no fill of their own: their glyph is dim (`topbar_button`) w
 UI settings (`space u u`, remembered like the other settings; the note gains its row, `:` still opens the palette,
 the indexing state isn't shown, and the status line says where you are); zen mode hides it too.
 
-**The breadcrumb** tops each window, between two rules. It starts with an icon (`§`, ascii `#`) that
-opens the heading finder when clicked, then the chain of headings that window's cursor is under,
-each cut to 40 columns. When they don't all fit, the middle collapses into `…`: the first heading,
-`…`, and as many of the innermost as fit; then only the first and the last, cut (down to 8 columns
-each); then `…` and the last; then `…` alone. Clicking `…` (or `space f b`) opens the whole path as
-a dropdown hanging under the breadcrumb, centred across the screen, at least half its width (60 to
-100 columns) and room for 8 entries between blank rows, framed like the other popups: one heading
-per row, each hanging off the one above with `└─`, the current one marked `here` and selected.
-Typing filters it, as in every list (the filter's row sits under the title); the arrows and `ctrl+n`
-/ `ctrl+p` move, `enter` or a click jumps there as a breadcrumb click does, `esc` or a click outside
-closes it. In a split it shares the window's title row, after the file name. Clicking a heading
-focuses that window, puts its cursor on the heading, and scrolls the heading to the window's first
-row (as far as the note's end allows). The row stays reserved above the first heading, so the text
-doesn't jump. `ui.breadcrumb = false` removes it; zen mode and windows under 8 rows drop it. Without
-the right rail (below), the `▤` button sits at the breadcrumb's right end; when no window shows a
-breadcrumb either, it moves to the right end of the top bar (with neither, in zen or with
-`ui.top_bar = false`, the outline opens with `space o`). Without a breadcrumb there are no header
-rules, the outline starts at the top of the content, and a split window gets a plain title row
-(`tab` / `tab_active`).
+**The window header** tops each window, between two rules: in a split the window's file name, then the breadcrumb,
+then at its right the mode's buttons, and at the far right of the window at the top right, without the right rail,
+the outline's `▤` (HDR-D1). In a split the name is `strong` in the active window and `dim` in the other, cut to half
+the row. `ui.window_header = false` removes it, as do "Window header" in the UI settings list and the palette; zen
+mode, the floating window and windows under 8 rows have none (HDR-D3). Without a header there are no header rules,
+the outline starts at the top of the content, and a split window gets a plain title row (`tab` / `tab_active`). It is
+drawn by `drawWindowHeader` (`src/tui/draw-header.ts`), which `drawPane` calls.
 
-The breadcrumb row has its own background, `breadcrumb_band` (`surface` blended into the page
-at 35%). The icon is `breadcrumb_icon` (blue), outer headings `breadcrumb` (dim), separators
-`breadcrumb_sep` (faint), and the heading the cursor is in `breadcrumb_current` (bold). In a
-split, the file name comes first on the same row: `strong` in the active window, `dim` in the
-other.
+**The mode's buttons**, `Read`, `Lens` and `Source`, are the window's three modes, the rendered view, the lens and
+source mode, as a radio group (HDR-D2). Exactly one is selected: the window's mode (`view.source`: Source,
+`view.live`: Lens, else Read), drawn `topbar_button_on`; the others are `topbar_button`, and `hover` under the mouse.
+They are drawn from the window's own flags each frame, after its layout is asked for, since laying a window out can
+change its mode without `setViewMode` (a data file that stopped parsing goes to source mode once typing ends,
+`views.ts`; a window given another file, `Lens.fitMode`): nothing about them is kept between frames. Two windows on one
+file each have their own. Typing isn't a mode: while typing, the button of the mode it's in stays selected, as the chip
+says `INSERT`. A mode the window can't switch to (`Lens.refusal(view, mode)`, the one place `setViewMode`'s refusals
+are decided, returning the message and its level and saying nothing itself) is disabled: drawn
+`topbar_button_disabled`, never `hover` (`button()`'s `hovers`). The header asks every frame, so it asks
+`Lens.canSwitch`, which never parses: a data file whose text changed since its last parse (`NoteBuffer.parseCurrent`)
+is taken to parse, its Read and Lens lit, until a parse says otherwise — a click's, which asks of the text as it is,
+or a switch's. So no keystroke or edit parses a data file in source mode, whatever its size or however many windows show
+it, and data is never judged mid-typing (an open quote is normal there). The selected one
+is never disabled: it's the mode the window is in, even where the window couldn't switch to it now (typing in the
+lens on data that stopped parsing: Lens selected, until typing ends and the window goes to source mode, said). A file
+with no rendered view (a text file; code not in a
+language the view maps, or `[render] code = "source"`; data that doesn't parse) has only Source; a drawn buffer (a
+diff, a review, the merge screen) can switch to nothing, but it shows only in the floating window, which has no
+header. A read-only file, a peek kept as a tab, a file Elsewhere and the scratch in the window on the right have all
+three, as their modes do today. The labels are the same for every file: for code, Read is the code as a document and
+Lens a cell's source; Source is always the file as written.
 
-Rules run above and below it. The rule above is the frame's rule under the tab strip; the lower
-window of a stacked split draws its own.
+**A click** on a button, like every click, first ends typing (`mouse.ts`: its undo step closes, the unsaved changes
+kept in the buffer), then focuses the button's window and its content region, as a heading's click does, so the
+status chip, which describes the focused window, agrees. Then, on another enabled button, it runs that mode's named
+command, `view.mode_read`, `view.mode_lens` or `view.mode_source`, which switches straight there through
+`Lens.setViewMode` (Lens from Source never passes through Read) and says what the window shows now, in the toggles'
+words. On the selected button it changes nothing more: a radio group never deselects. On a disabled one it says why,
+in `setViewMode`'s words; the command says it, as it does any refusal. One click never says a thing twice: where ending
+typing in this file, in this window or another on it, said why already (data that stopped parsing goes to source mode),
+the click adds nothing: while a click is handled, each message it says is said once (`App.sayingOnce`), its words
+`unparsedText`'s wherever they're said; a second click is its own, and says them again. A click focuses its window as
+a heading's does (`Mouse.focusWindow`). The hit areas are
+`mode:<window>:<read|lens|source>`, the window's index checked as a heading's is; the selected and the disabled keep
+theirs, without `hover`. The which-key popup over the header hides them as it hides the headings'
+(`draw-overlays.ts`), and so does the floating window, whose margins can lie over the header's row: what lies under it
+can't be clicked through it, its own hit areas aside (`drawApp`), and completion's popup, which can hang over a
+stacked split's lower header. The modes' table, `MODES`, with `ViewMode` and `viewMode`, is `modes.ts`'s, a module
+that imports nothing at load (the lens and the header import each other through the app), for the header, the
+mouse, the lens and the status chip (its chip the selected button's label) alike; the header asks `Lens.canSwitch`,
+`refusal` without its words. The lens's message names what it shows: a note's
+markdown, code, a data file's own format (`the YAML`; `lensWhat`).
+
+**Room** (HDR-D4). The header's row, from the right: `▤` where it is, then the buttons, then the breadcrumb between
+the name and them. The buttons are three labels side by side, each with a space either side: ` Read ` ` Lens `
+` Source `, 20 columns; shortened, ` R ` ` L ` ` S `, 9; at the least, the selected one's letter alone, 3. The
+breadcrumb is drawn in the columns between the name and the buttons less one at each end, as now, and folds into them
+as before. The buttons take the widest form that leaves the breadcrumb its least room: its narrowest form but `…`
+alone — the icon and its space, `… ›`, and 8 columns of a heading, 14 columns — while the breadcrumb shows, whatever
+headings the cursor is under and whatever the mode (a window's headings depend on it), so a window's form changes
+only with its width (HDR-D7, HDR-D8); nothing when the breadcrumb is hidden. Past that, the breadcrumb folds further, as
+`crumbLayout` does, until only `…` or nothing is left; the selected letter goes only where it doesn't fit beside the
+name and `▤` (a split's window squeezed to its narrowest, about 12 columns). `modeButtons` (`draw-header.ts`) picks
+the form, from the breadcrumb's least room, `crumbLeast`, beside `crumbLayout`. The name keeps its place (cut to half
+the row, as now), and `▤` its.
+
+**The breadcrumb**, on the header after the name, starts with an icon (`§`, ascii `#`) that opens the heading finder
+when clicked, then the chain of headings that window's cursor is under, each cut to 40 columns. When they don't all
+fit, the middle collapses into `…`: the first heading, `…`, and as many of the innermost as fit; then only the first
+and the last, cut (down to 8 columns each); then `…` and the last; then `…` alone. Clicking `…` (or `space f b`) opens
+the whole path as a dropdown hanging under the header, centred across the screen, at least half its width (60 to 100
+columns) and room for 8 entries between blank rows, framed like the other popups: one heading per row, each hanging
+off the one above with `└─`, the current one marked `here` and selected. Typing filters it, as in every list (the
+filter's row sits under the title); the arrows and `ctrl+n` / `ctrl+p` move, `enter` or a click jumps there as a
+breadcrumb click does, `esc` or a click outside closes it. Clicking a heading focuses that window, puts its cursor on
+the heading, and scrolls the heading to the window's first row (as far as the note's end allows). The header stays
+above the first heading, so the text doesn't jump. `ui.breadcrumb = false` hides the breadcrumb alone: the header
+keeps its name, its buttons and `▤` (HDR-D3). Without the right rail (below), the `▤` button sits at the header's
+right end; when no window shows a header, it moves to the right end of the top bar (with neither, in zen or with
+`ui.top_bar = false`, the outline opens with `space o`).
+
+The header has its own background, `breadcrumb_band` (`surface` blended into the page at 35%; the role keeps its
+name, HDR-D1). The breadcrumb's icon is `breadcrumb_icon` (blue), outer headings `breadcrumb` (dim), separators
+`breadcrumb_sep` (faint), and the heading the cursor is in `breadcrumb_current` (bold). A disabled button is
+`topbar_button_disabled`: in italics in every theme, its colour halfway from an enabled one's to `surface2` (in the
+terminal's palette colour 8, dim; without colour, dim; HDR-D5, HDR-D6).
+
+Rules run above and below the header. The rule above is the frame's rule under the tab strip; the lower window of a
+stacked split draws its own.
 
 **The tab strip** sits under the top bar whenever a note is open, even with a single tab, on the
 page's background like the top bar and the status line. A tab reads ` N name `: its number, the file
@@ -211,7 +271,7 @@ counters and a code cell's border and padding before it aren't text, so they are
 window's find row, not here.
 
 **Find** (`/`, `ctrl+f`) belongs to a window, so it's typed there: a row of its own under the
-breadcrumb (or at the window's top when there's none), `› query` with the match count at its right
+window header (or at the window's top when there's none), `› query` with the match count at its right
 (`2/7`, `no matches`, `not a regex`) and two toggles before it, clickable and bright while on — `.*`
 regex (`alt+r`) and `ab` whole words (`alt+w`), kept for the window's next search, and `⇄`
 (`alt+h`), which opens and closes the replace row (below); a rule under it.
@@ -237,7 +297,7 @@ same two rows ask at each match, `replace? y n a q` where the buttons were.
 
 **Messages and questions never take a row of their own,** so the note never changes height for them.
 Messages float as boxes at the top right of the content, hanging from the rule under the chrome at
-the top of the window under them (its breadcrumb, find and replace rows, which stay in sight),
+the top of the window under them (its header, find and replace rows, which stay in sight),
 newest on top and stacked down, four at most:
 each framed in its level's colour with its glyph first — `✗` error, `!` warning, `·` info (ascii
 `x`, `!`, `-`; an info message that starts with its own symbol, such as `↻`, keeps just that) —
@@ -273,7 +333,8 @@ and its last row holds the same `▄` bar (only while they overflow). A code blo
 dragged; in a side pane that focuses the pane and pins its scroll, like the wheel. A horizontal
 wheel or trackpad scrolls a side pane sideways as it does the note.
 
-**Hover.** Buttons, tabs and their `×`, `+N`, breadcrumb headings and icon, the top bar's vault and branch, the
+**Hover.** Buttons (the header’s mode buttons but the selected and the disabled), tabs and their `×`, `+N`, breadcrumb
+headings and icon, the top bar's vault and branch, the
 status path and which-key entries are drawn in the `hover` role while the mouse is over them. Rows in lists and
 panes show their selection instead. After each frame what's under the pointer is worked out again from where it
 last was, moved or clicked (`Mouse.rehover`, D261), and the frame drawn again once when that changed: whatever
@@ -329,7 +390,8 @@ Notes open as buffers, shown in tabs, with one split (D141):
   workspace, the widths and the height for the vault, across its workspaces.
   Side by side falls back to stacked below 80 content columns (a fixed width, not `ui.narrow_width`), and a stacked
   split too short for two windows (under 6 rows) shows only the active one. With a split, each window names its note on
-  its breadcrumb row, bright in the active window. Pane widths stay between 12 columns and half the terminal, and
+  its header, bright in the active window (on a row of its own when the header is off). Pane widths stay between 12
+  columns and half the terminal, and
   together leave the note at least 24; a split's ratio stays between 15% and 85%.
 
 ## Positions (plans `3.4`, `3.5`, `3.15`)
@@ -513,7 +575,8 @@ The explorer makes and changes files by keys and by buttons, on the selected row
   preview, links fixed). Going into another vault forgets what was copied or cut, and `u`'s last delete.
 - **The selected row's menu:** while the explorer has focus, the selected row has one button at its end, under the
   title's buttons: `…` (Nerd: three dots; ascii `...`). It opens a menu hanging from it (`.` opens it by key, from the
-  row), titled with the row's name, each entry with its key in the explorer, which picks it there too: for a folder "Zoom
+  row), titled with the row's name, each entry with its key in the explorer, which picks it there too: for a folder
+  "Zoom
   in here" (`z`), "New note here" and "New folder here", then "Rename", "Move to…", "Copy", "Cut", "Copy path"
   (`shift+y`, the row's whole path), for a folder "Give it .slipbox/" (a nested
   vault's: "Make it part of the vault holding it"), "Paste … here" (when something is copied or cut), "Delete" (a nested
@@ -1251,8 +1314,8 @@ keys.
 Each pane starts with its view's title ("Explorer", "History", "Source control", "Info", "Outline", "Footnotes") and a
 blank row before the list — the explorer's breadcrumb, there — panes under 8 rows skipping both. The explorer runs from
 under the frame's top rule, beside the tab strip. The outline starts right under the tab strip too, beside the note's
-windows: their breadcrumbs and rules stop at its border (which meets the breadcrumb's rule in `┫`), and its title sits
-level with the breadcrumb. The outline's button (`▤`) is on the right rail, bright while the outline is open.
+windows: their headers and rules stop at its border (which meets the header's rule in `┫`), and its title sits
+level with the window header. The outline's button (`▤`) is on the right rail, bright while the outline is open.
 
 **The rails** (`ui.left_rail`, `ui.right_rail`, both on by default) are columns of buttons at the
 edges, one button per row from the top. Each is a tinted column (the `rail` role, a shade darker than
@@ -1264,10 +1327,10 @@ rules it meets. Each is generic: a place for buttons, whatever they open.
   strip. It holds the left panel's views, the explorer's `≡`, the history's `◷` (ascii `~`) and source control's `±`
   (ascii `+`), the panel opening beside it. Without it, `≡` is the top bar's and the history opens with `space h h`.
   (The Problems panel, at the bottom, opens from the status line.)
-- **The right rail** runs from under the tab strip's rule, its first button level with the breadcrumb. It holds the
+- **The right rail** runs from under the tab strip's rule, its first button level with the window header. It holds the
   right panel's views: the Info's `ℹ` (Nerd: an i in a circle; ascii `i`), under it the outline's `▤`, then the
   footnotes' superscript (Nerd: `x²`; unicode `¹`; ascii `^`); the panel opens beside it. Without it, `▤` sits at the
-  breadcrumb's right end, and the Info and the footnotes open with `space n i` and `space n f`.
+  window header's right end, and the Info and the footnotes open with `space n i` and `space n f`.
 
 Every width (the panes, the note, the narrow cutoff) is shared out after the rails' columns.
 Zen mode hides both.
@@ -1422,9 +1485,10 @@ These are the `space u` toggles and pickers (list in [keys.md](../../docs/manual
 - the cursor-row band
 - source line numbers in a gutter (on by default)
 - the problems bar, and the problems marked in the text (below, "Problems where they are") — the bar and the numbers
-  on a shade of their own down the window (`gutter`, halfway from the page to the breadcrumb row's shade, the two
+  on a shade of their own down the window (`gutter`, halfway from the page to the window header's shade, the two
   framing the text), then a column of the page's before the text
-- the breadcrumb (no key of its own: the `space u u` list, or the palette)
+- the window header (no key of its own: the `space u u` list, or the palette; HDR-D3)
+- the breadcrumb on it (likewise)
 - wrapping (below)
 - code blocks too wide: scrolled sideways or wrapped (no key of its own; below)
 - link URLs
@@ -1577,8 +1641,9 @@ inside them, never through a shell, so a file name can't become a command; a tem
 
 ## Source mode (plan `4.13`)
 
-`space n v` (`:source`) shows a window's note as its raw markdown, and again rendered; the status
-chip reads `SOURCE`. It is another layout of the same note (`core/layout/source.ts`; D146), so everything
+`space n v` and `ctrl+k` (`:source`) switch a window's note between its raw markdown and the
+rendered view, and the header's Source button (`view.mode_source`) sets it (HDR-D2); the status chip reads `SOURCE`. It
+is another layout of the same note (`core/layout/source.ts`; D146), so everything
 built on the layout works the same in both: the cursor keys, find and `*`, visual selection and
 copy, the mouse, wrapping, line numbers, the scrollbars. The cursor stays on its source line across
 the switch, and the outline and breadcrumb keep working. Their headings are the parse's while the
@@ -1606,10 +1671,12 @@ blank lines after it, so the blocks cover the note.
 
 **The session.** `i` `a` `o` and the other editing keys open the lens in normal mode (`[editor] edit_in =
 "live"`, the default: D224), the block as written, and edit on their second press — as `esc esc` leaves, typing
-first, then the lens; `space n l` (`:live`) opens it too. A yank isn't an edit: it goes on at once.
+first, then the lens; `space n l` (`:live`) opens it too, and the header's Lens button (`view.mode_lens`) from any
+mode, source mode included (HDR-D2). A yank isn't an edit: it goes on at once.
 The chip reads `LENS` (`INSERT` while typing). `esc` from typing goes to normal mode with the lens
 still open — the vim commands work on what's in it — and `esc` in normal mode closes it: everything
-renders again. Reading, there is no lens and the keys are the reading keys. (With `edit_in =
+renders again, as does the header's Read button (`view.mode_read`). Reading, there is no lens and the keys are the
+reading keys. (With `edit_in =
 "source"`, an editing key switches the window and edits at once: source mode has nothing to show
 first.)
 
@@ -1709,12 +1776,14 @@ the only one (`16.16`, `16.17`; D112): Org and AsciiDoc files open as text.
   stops parsing while edited goes there when insert mode ends (never mid-typing: an open quote is
   normal while a value is typed), and `space n v` renders it again once it parses (`16.14`).
 - **Text files open in source mode**, highlighted by their language; no markdown headings are looked for in them. They
-  have no rendered view: `space n v` and the lens say so and stay in source mode. A window that was in source mode only
+  have no rendered view: `space n v` and the lens say so and stay in source mode; the header's Read and Lens
+  buttons are disabled, a click saying so (HDR-D2). A window that was in source mode only
   for such a file renders again when it opens a note (a link, `history.back`). **Code in a language the code view maps**
   (`24.9`: the 13 grammars with definitions; D125, D130) opens as a notebook instead — its comments and documentation
   as prose, each definition a cell with buttons, its imports folded, every token as written — and `space n v` switches
   it to source mode and back; editing opens the lens on the cursor's line, doc comment or imports, or source mode
   (`[editor] edit_in`), as for a note. `[render] code = "source"` opens it in source mode.
+  The same disabled buttons apply to data that doesn't parse and code configured as source.
   [code-view.md](code-view.md) has the view.
 - **Source code through tree-sitter** (`16.6`–`16.9`, `16.18`–`16.23`; D109, D123: TypeScript, TSX, JavaScript,
   Python, shell, Lua, Go, Rust, Swift, HTML, CSS, SCSS, PHP, Dockerfile, Vue, Svelte, Astro, Ruby, C, C++). A `.h` is

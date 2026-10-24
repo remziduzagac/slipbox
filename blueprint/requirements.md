@@ -30,9 +30,9 @@ between them, edit them, and hand their notes to agents, while agents read and c
 
 - A markdown previewer with extras, or Obsidian without the GUI (D33).
 - Obsidian's life-management features: daily notes, random note, the unique note creator (timestamp-titled notes:
-  descriptive file names and renames that fix links instead), the audio recorder, workspaces (restoring a session is
-  not this), the web viewer. Nor what a terminal can't hold or slipbox doesn't need: Canvas, Graph view, Slides, Sync,
-  Publish, Bases, File recovery (D1, D33).
+  descriptive file names and renames that fix links instead), the audio recorder, named workspaces, Obsidian's, picked
+  from a list (slipbox keeps one per place by itself: WSP-D1, WSP-D2), the web viewer. Nor what a terminal can't hold or
+  slipbox doesn't need: Canvas, Graph view, Slides, Sync, Publish, Bases, File recovery (D1, D33).
 - All of vim, or an IDE: vim's marks, macros, named registers and block selection aren't wanted (D146, D155).
 - Lint rules of slipbox's own, and installing native language servers or linters: the system is the user's (D160,
   D162).
@@ -51,6 +51,9 @@ between them, edit them, and hand their notes to agents, while agents read and c
   defaults carried over from the user's nvim; the line under the cursor stays rendered (D7, D89, D96, D97).
 - Themes are built in, Tokyo Night by default; light themes genuinely work; a theme switches live, with a preview, and
   no restart; a mode follows the terminal's own colours; `NO_COLOR` gives something readable (D91–D95).
+- Each window has a header: in a split its file's name, the breadcrumb of the headings the cursor is under, its mode as
+  three buttons (Read, Lens, Source) of which one is selected and a click switches to another, and the outline's button
+  where the rail doesn't have it. The breadcrumb and the header each hide on their own (HDR-D1, HDR-D2, HDR-D3).
 - An embedded note is drawn in place, read-only (D113). Pictures are drawn where the terminal can (asked of the
   terminal, never read from `$TERM`, and never required), and Mermaid and maths in the terminal's own characters
   first, as pictures by choice, in the theme's colours (D100, D126, D127).
@@ -78,12 +81,12 @@ design/document-types.md.
 
 - A file's vault is its nearest folder holding `.git`, `.slipbox/`, `.obsidian/` or `.zk/`, however it is opened; else
   home (`~`), a vault without a marker, its index with a skip list; else no-vault, shown as Elsewhere, which has no
-  index. Every file is in exactly one; choosing a file of another vault goes into it, its tabs its own (D58, D69, D80,
-  VV-D1–VV-D4).
+  index. Every file is in exactly one; choosing a file of another vault goes into it, and into your workspace there
+  (D58, D69, D80, VV-D1–VV-D4, WSP-D1).
 - A link leading out of a vault or home is followed only when the user says so, the answer kept by slipbox, never by
   the vault, and never to write out of a vault (VV-D6).
 - Opening a folder writes nothing into it: nothing derived or personal lives in the user's folders. Reading positions,
-  sessions, the scratch and the trash stay on the machine, kept by path (D39, D58, D76).
+  workspaces, the scratch and the trash stay on the machine, kept by path (D39, D58, D76, WSP-D1).
 - Every link form other tools write is read: a path relative to the file, `/` from the vault's top, a path without its
   extension, a folder, a wikilink with its aliases and attachments, `file://`, `~/`, a link in front matter, the
   repository's own hosting URL (D68, D70, D71, D81, D85, D87). One matcher decides where a fragment lands (D84).
@@ -106,13 +109,16 @@ How: design/roots.md; design/links.md; design/trust.md § Links you follow.
 - The explorer shows the file system as one tree, the view starting at what's opened, a breadcrumb saying what's
   above, zoomed out when going elsewhere and in when asked; vaults, links, the index's state and git marked on each
   row; files on screen are shown by path, as the file says (D77, VV-D5, VV-D8, VV-D9).
+- Where you are is on screen, once, while there's room: the vault, its branch, and the workspace when it isn't the
+  vault's own, on the top bar, else on the status line; a click goes to another vault or another branch
+  (WSP-D4, WSP-D5).
 - Another vault's file is read in a peek, going there a choice (VV-D7).
 - Search is slipbox's own, in the core, shared by the TUI and the CLI, and always answers, from the index or a scan:
   words, phrases, prefixes, exclusions, titles, tags and folders, ranked; a hit opens where most of its words are
   (D114–D118). `find` lists every match of a literal or a regex beside it (D119). Search covers the vault, the vaults
   linked to or from it, or everything indexed (D64, D79).
 
-How: design/tui.md § Following links, § The peek, § Side panes, § Overlays; design/search.md.
+How: design/tui.md § Screen layout, § Following links, § The peek, § Side panes, § Overlays; design/search.md.
 
 ## Editing
 
