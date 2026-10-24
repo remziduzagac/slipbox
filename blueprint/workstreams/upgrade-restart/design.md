@@ -85,11 +85,12 @@ for that event, then a turn of the event loop, before it writes a line or replac
 
 **The hand-over** (`core/restart.ts`; UPG-D2) runs in the same process, in order:
 
-1. **The upgrade**, when asked for: `slipbox: upgrading to 0.6.0…`, then `upgrade`'s work (§ Updates) done by the
-   version that was running, as `slipbox upgrade` does it, and what `slipbox upgrade` says after it. `ctrl+c` during it
-   cancels it up to its commit, `current` moving: the download stopped, or, once it's downloaded, `current` left as it
-   was; after the commit, the upgrade is done and said. A failure or a cancel says `slipbox: the upgrade to 0.6.0
-   failed: <why> — starting slipbox again`.
+1. **The upgrade**, when asked for: `slipbox: upgrading to 0.6.0… (ctrl+c cancels)`, then `upgrade`'s work (§
+   Updates) done by the version that was running, as `slipbox upgrade` does it, and what `slipbox upgrade` says after
+   it (`slipbox: slipbox 0.5.0 → 0.6.0; 0.5.0 is kept, to go back to`). `ctrl+c` during it cancels it up to its commit,
+   `current` moving: the download stopped, or, once it's downloaded, `current` left as it was; after the commit, the
+   upgrade is done and said. A failure or a cancel says `slipbox: the upgrade to 0.6.0 failed: <why> — starting
+   slipbox again` (`cancelled`, for a cancel).
 2. **The note** given the upgrade's outcome, and the time, now.
 3. **Which binary:** the installer's install, `<data>/current/slipbox` — after a failed upgrade, the file that was
    running (`process.execPath`), or `current` when that's gone; Homebrew's, `<prefix>/opt/slipbox/bin/slipbox`,
@@ -106,7 +107,8 @@ for that event, then a turn of the event loop, before it writes a line or replac
    Windows, which has none (`14.14`–`14.17`) — the new one is started with the terminal handed down and waited for;
    this process ignores the terminal's signals meanwhile, which reach the new one in the same foreground group, and
    ends with its exit code. Its note is then found by its parent's pid.
-6. **Nothing starts** (the binary gone, or not runnable): it says why and exits 1, at the shell's prompt.
+6. **Nothing starts** (the binary gone, or not runnable): `slipbox: couldn't start <file>: <why>`, then `slipbox:
+   nothing started (<why execve failed>)`, and it exits 1, at the shell's prompt.
 
 **Coming back.** A TUI starting looks for its note (`restart/<pid>.json`, else `<ppid>.json`), takes it — read and
 removed; one older than two minutes is ignored — and comes back where you were (UPG-D4). The arguments are the same;

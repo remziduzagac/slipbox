@@ -1,5 +1,5 @@
 ---
-status: todo
+status: review
 assignee: claude-23
 blocked_by: []
 created: "2026-10-24"
@@ -29,3 +29,15 @@ What a restart writes for the slipbox it starts, and how the process becomes the
 - Rests on: UPG-D2, UPG-D4; ../research.md.
 
 ## Log
+
+- 2026-10-24: `src/core/restart.ts`: `RestartNote`, `writeNote` (atomic, read back), `takeNote` (this pid, else the
+  parent's; stale or unreadable removed; others' older than a day cleared), `startedPath`, `nextLaunch`, `execInto`
+  (`execve` by FFI; `close_range` marking descriptors above 2 close-on-exec on Linux; errno said on failure),
+  `startAndWait` (the terminal's signals ignored while it waits; 128 + a signal's number), `handOver`. The note's
+  place and session are opaque to core: the TUI's own types stay in `src/tui/` (`check:boundary` ok). The cancel's
+  source is an option, `ctrl+c`'s SIGINT by default: a test can't emit SIGINT without ending Bun's test runner.
+- 2026-10-24: `tests/upgrade-restart.test.ts`, 13 pass (101 expects), the `execve` one in a child Bun from source: the
+  same pid before and after, exit 7 the shell's, no `/dev/urandom` carried on Linux (seen carried with the marking
+  off). Mutations, each alone (no close-on-exec; the parent's note not taken; a stale note taken; `current` after a
+  failed upgrade; Homebrew's keg, not `opt`; the path started by ignored; the note not written in the hand-over; no
+  start-and-wait fallback): all eight caught. macOS's `execve` runs on CI's macOS runner (the same test).
