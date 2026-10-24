@@ -157,8 +157,14 @@ export class PreparedExport {
     return new PreparedExport(dir, out);
   }
 
-  /** Copy with backpressure and cancellation, then atomically publish attachments first and the document last. */
-  async publish(target: string, revalidate: () => void, signal?: AbortSignal): Promise<string[]> {
+  /** Copy with backpressure and cancellation, then atomically publish attachments first and the document last;
+   *  `published` is told as soon as the document is in place, before the temporaries are cleared. */
+  async publish(
+    target: string,
+    revalidate: () => void,
+    signal?: AbortSignal,
+    published?: () => void,
+  ): Promise<string[]> {
     if (this.disposed) throw Error("export staging disposed");
     signal?.throwIfAborted();
     revalidate();
@@ -218,6 +224,7 @@ export class PreparedExport {
         revalidate();
         await rename(file.temp, file.target);
       }
+      published?.();
       return files;
     } finally {
       for (const file of temps) {

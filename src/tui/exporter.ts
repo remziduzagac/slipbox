@@ -202,6 +202,8 @@ export class Exporter {
             exportTarget(graph, rels[0]!, format, target, graph.root, force);
           },
           controller.signal,
+          // Over once the document is in place: a cancel from then on finds none running (#68).
+          () => this.jobs.delete(controller),
         );
         // Where it went, for "Where you exported last": as soon as it's there, not once its staging is cleared, so the
         // window opened meanwhile opens there.
@@ -216,7 +218,7 @@ export class Exporter {
           );
         return;
       } finally {
-        // Over once it's written, or has failed or stopped: a cancel from now on finds none running (#68).
+        // Over, written or not: a cancel from now on finds none running (#68).
         this.jobs.delete(controller);
       }
       const beside = files.length ? `, ${files.length} file${files.length === 1 ? "" : "s"} beside it` : "";

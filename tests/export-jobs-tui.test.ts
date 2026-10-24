@@ -135,6 +135,29 @@ test("an export is over once its file is written: said then, its staging cleared
   }
 });
 
+test("an export is over once its document is in place, before publication has cleared its temporaries: a cancel then finds none running", async () => {
+  const root = makeVault();
+  writeFileSync(join(root, "exported.md"), "# Export\n\nOne\n");
+  const h = await harness({ root, open: "exported.md" });
+  const publish = PreparedExport.prototype.publish;
+  // Cancelled after the document's rename, while publication clears its temporaries and returns.
+  PreparedExport.prototype.publish = async function (this: PreparedExport, ...args) {
+    const files = await publish.apply(this, args);
+    h.app.run("note.export_cancel");
+    return files;
+  };
+  try {
+    await h.app.exporter.write(["exported.md"], formatFor("docx")!, join(root, "exported.docx"));
+  } finally {
+    PreparedExport.prototype.publish = publish;
+  }
+  expect(h.app.messages.slice(-2).map((m) => m.text)).toEqual([
+    "no export is running",
+    "exported exported.md to exported.docx (Word (.docx))",
+  ]);
+  expect(existsSync(join(root, "exported.docx"))).toBe(true);
+});
+
 test("a cleanup that fails is said after the export, the newest message", async () => {
   const root = makeVault();
   writeFileSync(join(root, "exported.md"), "# Export\n\nOne\n");

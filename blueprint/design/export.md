@@ -49,12 +49,13 @@ CLI and TUI use `prepareExport` and `PreparedExport.publish`.
 Two jobs run at once; another waits its turn, in order, and is never refused. A job has no deadline: a long book, or
 many pictures to convert, takes as long as it needs. Cancellation or a worker failure settles it, terminates its worker
 and removes its staged files. The named `note.export_cancel` command cancels every TUI job, running or waiting; quitting
-cancels them too. A TUI job is over once publication returns, fails or is stopped, and says so then; its staging is
-cleared after, so a cancel during the cleanup finds none running (`no export is running`), and the cleanup's warning, if
-it fails, comes after what the job said. The target's note/overwrite checks run again in the owning CLI/TUI immediately
-before publication. The check runs again after copying and immediately before each rename. The TUI keeps the original
-graph and its state directory even if the user changes roots while the job runs. A queued progress message or result
-cannot revive a settled job.
+cancels them too. A TUI job is over as soon as its document is in place, or once its publication fails or is stopped,
+and says so before its staging is cleared: a cancel from then on finds none running (`no export is running`), and the
+cleanup's warning, if it fails, comes after what the job said. One that fails or is stopped while it's prepared says so
+once its staging is removed. The target's note/overwrite checks run again in the owning CLI/TUI immediately before
+publication. The check runs again after copying and immediately before each rename. The TUI keeps the original graph and
+its state directory even if the user changes roots while the job runs. A queued progress message or result cannot revive
+a settled job.
 
 ### Output streaming and publication
 

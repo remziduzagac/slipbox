@@ -28,8 +28,10 @@ on a narrow screen, and the first of the boxes on a wide one.
   `exported … to …`: a unit test holds the cleanup back (`PreparedExport.prototype.dispose`), and fails without the fix.
 - `exported … to …` is said while the cleanup is still held, and a cleanup that fails leaves `export cleanup: …` as the
   last message: unit tests, failing without the fix.
-- A failed or cancelled export says why and ends then too, its cleanup after: a cancel during its cleanup finds none
-  running.
+- The export is over as soon as its document is in place, before publication clears its temporaries and returns: a
+  cancel then says `no export is running` (a unit test cancels as publication returns).
+- An export that fails or is cancelled while it's published says why and ends then too, its cleanup after: a cancel
+  during its cleanup finds none running.
 - The folder is still kept as where you exported last as soon as publication returns (T25's tests hold).
 - Terminal checks drive the held cleanup: the export said while it's held, Cancel export saying none is running.
 - design/export.md says when an export ends; the CHANGELOG has a line.
@@ -37,7 +39,9 @@ on a narrow screen, and the first of the boxes on a wide one.
 ## Out of scope
 
 - The CLI's export (`src/cli/`), which awaits its cleanup before it exits and has no cancel but a signal.
-- `PreparedExport.publish`'s own clearing of its temporaries (`src/core/export/spool.ts`).
+- An export that fails or is cancelled while it's prepared: `ExportJob.prepare` (`src/core/export/jobs.ts`) removes
+  its staging before it settles, so the TUI says why only after that, and a removal that fails replaces the export's
+  error. Core code the CLI shares, as on `dev`.
 
 ## References
 
@@ -49,11 +53,12 @@ on a narrow screen, and the first of the boxes on a wide one.
 - 2026-10-24: Read the cause as the issue gives it, and it holds: `Exporter.write` (`src/tui/exporter.ts`) deletes the
   job from `jobs` in its `finally`, after `await output.dispose()`, and says `exported … to …` after the `finally`.
   `cancel()` says `no export is running` only when `jobs` is empty; otherwise it aborts a signal that nothing reads once
-  `publish` has returned. Two things the issue doesn't say. Messages are boxes, newest first, four at most, each for
-  4 s (`App.message`): on a screen 30 columns or wider, the cleanup's warning still shows, under `exported …`; only
-  narrower, where the newest alone goes over the bottom line, is it replaced. And the same window is there for an
-  export that fails in `publish`, or is cancelled during it: its `not written` or `export cancelled` is said in the
-  `catch`, then the `finally` awaits the cleanup with the job still in `jobs`, so a cancel then says nothing too.
+  `publish` has returned. Two things the issue doesn't say. Messages are boxes, newest first, four at most, each for 4 s
+  (`App.message`): on a screen 30 columns wide or more (and a content area 5 rows high), the cleanup's warning still
+  shows, under `exported …`; only smaller, where the newest alone goes over the bottom line, is it replaced. And the
+  same window is there for an export that fails in `publish`, or is cancelled during it: its `not written` or `export
+  cancelled` is said in the `catch`, then the `finally` awaits the cleanup with the job still in `jobs`, so a cancel
+  then says nothing too.
 - 2026-10-24: Not a gap: the early `return` after `prepareExport` says nothing on an abort, but `PreparedExport.take`
   ends with `signal?.throwIfAborted()` and only microtasks follow, so no key can cancel there; it's the quit's way out.
 - 2026-10-24: Reproduced on `dev`'s code with unit tests in `tests/export-jobs-tui.test.ts`, the cleanup held
@@ -91,3 +96,29 @@ on a narrow screen, and the first of the boxes on a wide one.
   unheld: `exported home.md to home.html`, its staging gone, the first's left (it couldn't be removed) and removed at
   quit. Restarted, into a read-only `ro/`: `✗ export: ro/home.docx not written — EACCES: …` while held; Cancel export,
   `no export is running`; let go, the staging gone.
+- 2026-10-24: The reviewer, on the reading and the plan (and the fix, which was in by then): the reading right, and
+  the code right on every path (both `return`s go through both `finally`s; `output` is set whenever there's staging
+  to clear; a throw while the message is made still clears it; nothing else reads `jobs`; the queue's turn is given
+  back when the worker ends, before publication; no test or check took `exported …` to mean the staging was gone).
+  Verified, and taken:
+  - `publish` itself (`src/core/export/spool.ts`) awaits `rm` of every temporary, already renamed, after the
+    document's rename and its last check of the signal: a cancel there was taken and ignored, `exported …` after it,
+    the window longer the more files beside the document. Reproduced: a unit test whose `publish` cancels as it
+    returns, failing on the fix as it was. Fixed by telling the TUI as soon as the document is in place: `publish`
+    takes a `published` callback, called after the last rename, before the temporaries are cleared, and the TUI's ends
+    the job there. The CLI passes none. A terminal check too: `export-hold.ts` takes `EXPORT_HOLD_AT=publication`, the
+    first publication held once it has returned, before the TUI goes on.
+  - The design's sentence and this task's criterion said a failed or stopped export ends before its staging is
+    cleared: true while it's published, not while it's prepared, where `ExportJob.prepare` removes the staging before
+    it settles. Narrowed, and that path put out of scope above.
+  - The check's `exports/` folder put back as slipbox makes it, `0o700`, not `0o755`.
+- 2026-10-24: The reviewer's, not taken: skipping `publish`'s `rm` of temporaries already renamed (with the job ended at
+  the last rename, the cancel no longer meets them; core code, and only time saved); the early `return` after
+  prepare made `quitting` alone, so an abort there goes on to `publish`'s own check and says `export cancelled` (no key
+  reaches it, see above); the order check in "export: over once its file is written — …" leaning on the `no export is
+  running` box still showing (said under a second before the warning, which shows for 4 s; the unit test checks the
+  order as `transient`); a failed prepare's cleanup turning its error into `export cancelled` when a cancel lands in
+  it, and a failed removal replacing the error (on `dev` too, in core code: out of scope).
+- 2026-10-24: Ran: tests/export-jobs-tui.test.ts and tests/export-streaming.test.ts (23 pass); the four checks that hold
+  an export (4/4). Mutation-checked, each undone after: `publish` not calling `published` fails the new unit test;
+  the TUI passing no callback fails the new check.

@@ -1579,8 +1579,27 @@ export const OUTSIDE_AND_CODE: Check[] = [
         await s.see("no export is running");
         s.expect(s.rowOf("export cleanup:") < s.rowOf("no export is running"), "the cleanup's warning the newest box");
       } finally {
-        chmodSync(exports, 0o755);
+        // As slipbox makes it, owner-only.
+        chmodSync(exports, 0o700);
       }
+    },
+  },
+  {
+    area: "outside-and-code",
+    name: "export: over once its document is in place — Cancel export while publication finishes (its temporaries cleared) finds none running",
+    covers: { commands: ["note.export", "note.export_cancel"] },
+    // The first publication held once its document is in place, before it returns.
+    options: { ...HOLD, env: { ...HOLD.env, EXPORT_HOLD_AT: "publication" } },
+    run: async (s) => {
+      await format(s, "home.md", "word");
+      await s.see("Name: home.docx");
+      await s.keys("enter");
+      await exported(s, "home.docx", "PK\x03\x04");
+      await s.until(() => hold(s) === "waiting", 15000, "the publication held");
+      await cancelExport(s);
+      await s.message("no export is running");
+      writeFileSync(join(s.dir, "hold-go"), "");
+      await s.message("exported home.md to home.docx (Word (.docx))");
     },
   },
   {
