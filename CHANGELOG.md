@@ -38,9 +38,9 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
   the new size when you stop.
 - Where you are is on the top bar now, in its middle: the vault, its branch, and a folder of home you opened by name
   (`◈ kestrel · main ↑2`, `◈ ~ › notes`, `Elsewhere`). Click the vault to go into another named folder, or the branch
-  for the branches, pull, push and fetch. The status line names the vault only while the top bar is hidden, so the
-  file's path has its room. On a narrow screen the top bar cuts it a step at a time: a long path first, then the
-  branch, the vault's name last.
+  for the branches, pull, push and fetch. The status line names the vault only while the top bar doesn't show it, so the
+  file's path has its room. On a narrow screen the top bar cuts it a step at a time: a long path first, then the branch,
+  the vault's name last.
 - What slipbox brings back of your work in a place, your tabs and windows, is called your workspace, apart from the
   vault: a vault is what's shared, its notes and settings, and a workspace is yours, kept on your machine. Each branch
   and each folder of home opened by name has one, as before; the docs and messages say workspace where they said

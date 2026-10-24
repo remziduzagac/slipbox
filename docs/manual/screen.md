@@ -399,9 +399,9 @@ The status line describes the file in the focused window. From the left:
 
   While you're in the middle of a key sequence, the chip shows what you've pressed so far instead: `␣ l` after
   `space l`, `C-w` after `ctrl+w`, `2d` after `2 d`.
-- **Where you are**, dimmed, only while the top bar is hidden: the vault and its branch, as [the top
-  bar](#the-top-bar) says them, without the `◈` (`~/notes · main`, `~ › notes`, `Elsewhere`). Click it for the
-  branches. While the top bar shows, it says where you are, and the status line leaves the room to the file's path.
+- **Where you are**, dimmed, only while the top bar doesn't show it (hidden, or too narrow): the vault and its branch,
+  as [the top bar](#the-top-bar) says them, without the `◈` (`~/notes · main`, `~ › notes`, `Elsewhere`). Click it for
+  the branches. While the top bar shows, it says where you are, and the status line leaves the room to the file's path.
 - **The file's path**, between `‹` and `›`. These two go back and forward in the window's history, as a browser's
   arrows do. Each is bright when there's somewhere to go. Hovering over one says where. Clicking the path lists the
   window's history above it, with **Copy path** first.

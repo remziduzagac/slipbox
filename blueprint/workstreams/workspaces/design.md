@@ -66,9 +66,9 @@ Previously: `slipbox` at the left and `indexing 3…` at the right, the middle e
 >   is drawn, and the status line says where if it has the room (below). **Clicked**, two targets, each a hot region
 >   only while its part is drawn: the vault's (the glyph, the name, and the workspace after it, `◈ ~ › notes`) lists the
 >   named folders, seen last first, and `enter` goes into one (`space v v`, § Going into a vault), from Elsewhere too;
->   the branch's (from its `·` or a worktree's `@` through the operation: `· main ↑2 merging`, `@feat`), in a
->   repository, opens the branches' menu as the status line's did (GIT-D8): Pull while there's an upstream not gone,
->   Push, Fetch and the git panel, then the branches;
+>   the branch's (from the space before its `·`, or a worktree's `@`, through the operation: `· main ↑2 merging`,
+>   `@feat`), in a repository, opens the branches' menu as the status line's did (GIT-D8): Pull while there's an
+>   upstream not gone, Push, Fetch and the git panel, then the branches;
 > - at the right end, the vault's state (`indexing N…`), dropped when fewer than 12 columns are left.
 >
 > Toggle buttons have no fill of their own: their glyph is dim (`topbar_button`) while the pane is closed and bright

@@ -168,17 +168,18 @@ workspace keeps them.
   views), `RESIZE`, or what's pending: keys of a sequence in short form (`␣ l`,
   `C-w`), or an operator, a count, or a key waiting for its character (`2d`, `di`, `dT`, `r`, `2f`);
 - where you are, and its branch, dimmed, **only while the top bar doesn't say it** (WSP-D5): the bar hidden
-  (`ui.top_bar = false`, `space u b`; zen has neither bar), or too narrow for even the vault, a guard: a bar that narrow
-  leaves the status line no room either. The same parts as the top bar's, without the glyph (`20.14`, `21.9`; D65, D77;
-  `whereOf` in `tui/where.ts`): the vault's name if it has one, else its path — `research · main`,
-  `~/src/experiment · main` (no remote), `notes` — home as `~`, a folder of home opened by name after it (`~ › notes`),
-  and Elsewhere as `Elsewhere` (VV-D2, VV-D3); then the branch checked out now (a detached head: its commit), a named
-  worktree as `research@refactor`; then, a branch with an upstream not gone, how far it's ahead of it and behind it as
-  of the last fetch, only what isn't zero (`research · main ↑2 ↓1`; ascii `+2 -1`; GIT-D4); then a merge or a rebase
-  under way (`kestrel · main merging`, `kestrel@agent/sync-retry rebasing 2/5`, a rebase's branch named rather than its
-  detached commit; GIT-D6). Clicked, in a repository, the whole of it opens the branches' menu (§ Side panes), as
-  before: unlike the top bar's, it has no vault target. At most 40 columns, cut as the top bar's is; it's the first to
-  go when the path would be left fewer than 24 columns, so on a narrow screen neither bar may say where;
+  (`ui.top_bar = false`, `space u b`; zen has neither bar), or too narrow for even the vault: with a note open, a bar
+  that narrow leaves the status line no room either; with none, the status line has the row and says it. The same parts
+  as the top bar's, without the glyph (`20.14`, `21.9`; D65, D77; `whereOf` in `tui/where.ts`): the vault's name if it
+  has one, else its path — `research · main`, `~/src/experiment · main` (no remote), `notes` — home as `~`, a folder of
+  home opened by name after it (`~ › notes`), and Elsewhere as `Elsewhere` (VV-D2, VV-D3); then the branch checked out
+  now (a detached head: its commit), a named worktree as `research@refactor`; then, a branch with an upstream not gone,
+  how far it's ahead of it and behind it as of the last fetch, only what isn't zero (`research · main ↑2 ↓1`; ascii
+  `+2 -1`; GIT-D4); then a merge or a rebase under way (`kestrel · main merging`,
+  `kestrel@agent/sync-retry rebasing 2/5`, a rebase's branch named rather than its detached commit; GIT-D6). Clicked, in
+  a repository, the whole of it opens the branches' menu (§ Side panes), as before: unlike the top bar's, it has no
+  vault target. At most 40 columns, cut as the top bar's is; it's the first to go when the path would be left fewer than
+  24 columns, so on a narrow screen neither bar may say where;
 - the note's path between back and forward, as an address bar's: `‹ notes/people/kenji-mori.md ›`. `‹` and `›` go
   back and forward in the focused window's history, each bright when there's somewhere to go, dim when not; hovered,
   one says where, above it (`back: home.md › Start here`; back past the vault's first place, the vault before). A click
@@ -196,17 +197,17 @@ workspace keeps them.
   any), `⚠ not watching` when the watcher failed, `○ not watching` when it is off. It is
   dropped when the line is too short.
 
-On the right it shows the link under the cursor and its status (`→ beta.md (resolved)`) in the rendered view
-(in source mode and the lens the row is the link's own text, so none is named), then, while the explorer has the
-keys and its cursor is on a `⊘` row, why that row isn't indexed (`⊘ not indexed: generated (node_modules),
-git-ignored`; VV-D9, D244: `Marks.selectedWhy`) — gone when the cursor moves off, cut to the room left after the
-words and the link are dropped, drawn after the mode chip when no file is open — then
-the note's words (`1,234 words`; the selection's in visual mode, `12 words selected`; frontmatter
-not counted, each Han or kana character a word; dropped first when short of room), then
-`tab N/M` when there are two or more tabs, then `L<source line>:<column>` and the percentage (`all`
-when the note fits), which always shows — the source line of the text under the cursor (a rendered paragraph's row
-holds several), and its column in the row's own text: the lens's counters and a code cell's border and padding before
-it aren't text, so they aren't counted. Find's progress is in its window's find row, not here.
+On the right it shows the link under the cursor and its status (`→ beta.md (resolved)`) in the rendered view (in source
+mode and the lens the row is the link's own text, so none is named), then, while the explorer has the keys and its
+cursor is on a `⊘` row, why that row isn't indexed (`⊘ not indexed: generated (node_modules), git-ignored`; VV-D9, D244:
+`Marks.selectedWhy`) — gone when the cursor moves off, cut to the room left after the words and the link are dropped,
+drawn after the mode chip when no file is open (after where you are, when the status line says it) — then the note's
+words (`1,234 words`; the selection's in visual mode, `12 words selected`; frontmatter not counted, each Han or kana
+character a word; dropped first when short of room), then `tab N/M` when there are two or more tabs, then
+`L<source line>:<column>` and the percentage (`all` when the note fits), which always shows — the source line of the
+text under the cursor (a rendered paragraph's row holds several), and its column in the row's own text: the lens's
+counters and a code cell's border and padding before it aren't text, so they aren't counted. Find's progress is in its
+window's find row, not here.
 
 **Find** (`/`, `ctrl+f`) belongs to a window, so it's typed there: a row of its own under the
 breadcrumb (or at the window's top when there's none), `› query` with the match count at its right

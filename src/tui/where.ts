@@ -77,7 +77,7 @@ export function whereText(w: Where): WhereText {
 /**
  * Where you are, cut to `width` columns (WSP-D4), giving up a part at a time, each only once what's left can't fit: the
  * branch's ahead and behind, then the branch, then a merge or a rebase under way (a sign that something's to finish,
- * kept longest after the vault), then the workspace. At each stage the parts left are cut from their whole text, only as
+ * kept after the branch), then the workspace. At each stage the parts left are cut from their whole text, only as
  * far as they must: a path from the front, the vault's then the workspace's, to 12 columns each; then, once ahead and
  * behind are gone, the branch from its end, to 8. Last, with the vault alone, it's cut to 6, a name from its end and a
  * path from the front. Narrower still: null, nothing drawn.

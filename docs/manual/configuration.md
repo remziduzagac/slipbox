@@ -620,8 +620,9 @@ keeps its own. It's yours: kept in slipbox's state, never in the vault's setting
 On every start, and at every reload, a change is kept only while that setting in your files still has the value it
 replaced. So editing the setting always wins. The TUI never writes your settings file.
 
-With `ui.restore_session` on, the vault also brings back whether the explorer and the outline are open, and their
-widths, whichever of its workspaces you open.
+With `ui.restore_session` on, a workspace brought back also brings back whether the explorer and the outline are open,
+and their widths, as the vault last had them. A workspace with no tabs kept yet, such as a folder of home opened by
+name for the first time, starts with your settings' panes.
 
 <a id="slipboxs-own-variables"></a>
 <a id="variables-slipbox-reads"></a>

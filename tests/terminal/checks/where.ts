@@ -7,7 +7,7 @@
 import { randomBytes } from "node:crypto";
 import { type Check, leader } from "../check.ts";
 import { SIZE, type Session } from "../session.ts";
-import { columnOf, git as gitRun, gitOk as git, mouse, put, repoAt, TRAIL, trail } from "./source-control.ts";
+import { columnOf, git, gitOk, mouse, put, repoAt, TRAIL, trail } from "./source-control.ts";
 
 /** A click on `needle` in screen row `y`: on its second column, past a glyph whatever width the terminal gives it. */
 async function clickAt(s: Session, y: number, needle: string): Promise<void> {
@@ -62,14 +62,14 @@ function wideNamed(s: Session): void {
 /** ~/work/trail with agent's commit rebased onto main's, begun in a terminal and stopped at their conflict. */
 function rebaseStopped(s: Session): void {
   trail(s, { "route.md": "# Route\n\nOne way.\n" });
-  git(s, TRAIL, "switch", "-q", "-c", "agent");
+  gitOk(s, TRAIL, "switch", "-q", "-c", "agent");
   put(s, TRAIL, { "route.md": "# Route\n\nThe agent's way.\n" });
-  git(s, TRAIL, "commit", "-q", "-am", "Agent's way");
-  git(s, TRAIL, "switch", "-q", "main");
+  gitOk(s, TRAIL, "commit", "-q", "-am", "Agent's way");
+  gitOk(s, TRAIL, "switch", "-q", "main");
   put(s, TRAIL, { "route.md": "# Route\n\nMain's way.\n" });
-  git(s, TRAIL, "commit", "-q", "-am", "Main's way");
-  git(s, TRAIL, "switch", "-q", "agent");
-  s.expect(gitRun(s, TRAIL, "rebase", "main").code !== 0, "the rebase stopped at the conflict");
+  gitOk(s, TRAIL, "commit", "-q", "-am", "Main's way");
+  gitOk(s, TRAIL, "switch", "-q", "agent");
+  s.expect(git(s, TRAIL, "rebase", "main").code !== 0, "the rebase stopped at the conflict");
 }
 
 export const WHERE: Check[] = [
@@ -93,7 +93,7 @@ export const WHERE: Check[] = [
     covers: { cases: ["git", "mouse"] },
     options: repoAt((s) => {
       trail(s);
-      git(s, TRAIL, "branch", "topic");
+      gitOk(s, TRAIL, "branch", "topic");
     }),
     run: async (s) => {
       await s.where(/^~\/work\/trail · main$/);
@@ -132,10 +132,10 @@ export const WHERE: Check[] = [
     covers: { cases: ["git"] },
     options: repoAt((s) => {
       trail(s);
-      git(s, TRAIL, "switch", "-q", "--detach");
+      gitOk(s, TRAIL, "switch", "-q", "--detach");
     }),
     run: async (s) => {
-      const commit = git(s, TRAIL, "rev-parse", "--short=7", "HEAD");
+      const commit = gitOk(s, TRAIL, "rev-parse", "--short=7", "HEAD");
       await s.where(`~/work/trail · ${commit}`);
     },
   },

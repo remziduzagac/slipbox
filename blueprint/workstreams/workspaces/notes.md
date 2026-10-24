@@ -204,3 +204,19 @@ The tasks are in [tasks/](tasks/README.md).
     branch's. Tried live on a scratch home in the scratchpad: a rebase begun in a terminal on the top bar, and on the
     status line with the bar hidden; `~/Downloads` with no note open, the bar hidden, the status line saying `~ ›
     Downloads`.
+- 2026-10-24, the review loop's round 2, the last (the maintainer's rule: at most three rounds in all, counting the
+  two reviews before the pull request; a fourth only for a real bug): `/code-review` and a fresh Claude reviewer
+  again. Neither found a bug in the code: no wrong behaviour, crash or lost data. Fixed, all words, the docs and design
+  made true to the code: with no note open, a bar too narrow for the vault leaves the status line the row, and it says
+  where you are (as WSP-D5 has it), where screen.md, the CHANGELOG and the design said only while the bar was hidden,
+  or that the status line had no room; `configuration.md` said the panes come back whichever workspace you open, but
+  `Session.restore` brings them back only with a workspace whose tabs open (one with none yet starts with your
+  settings'); `fitWhere`'s comment had the operation outlasting the workspace; the design's why-text placement with
+  no note open; the workstream design.md's branch target; an ASCII sample in `terminal-harness.test.ts` (`·` is drawn
+  `-`); the check file's `git`/`gitOk` named as source-control.ts names them. Left, small, not in this pull request:
+  - with the bar hidden and no note open, the explorer row's `⊘` reason comes after where you are, cut to what's left;
+  - `drawWhere`'s and `drawWhereOnStatus`'s hover-and-hot-region code repeats `button()`'s in `draw.ts`;
+  - `fitWhere` rebuilds and measures the joined text on each try (about twenty measures a frame; a part's width
+    measured once would do), and `whereOf` reads HEAD and the rebase state even when the bar is too narrow to draw it;
+  - the status line's rule rides on `geo.whereOnTop`, which the top bar sets: right while `draw.ts` draws the bar
+    first, as it must (the bar needs the windows drawn), but a decision made once in `drawApp` would not depend on it.
