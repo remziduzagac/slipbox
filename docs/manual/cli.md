@@ -1844,7 +1844,8 @@ slipbox report --json
 
 It runs wherever you are, before any vault is looked for. So it works in a folder whose settings are broken, reads no
 vault's settings, and writes nothing. SSH and a multiplexer are said only as being there, never by their addresses or
-sessions. The terminal's size is given only when the output is a terminal.
+sessions. The terminal's size is given only when the output is a terminal. Like every command's name, `report` is
+the command: a folder named `report` opens as `slipbox ./report`.
 
 With `--json`, the data is `{facts, fields, body, url}`:
 

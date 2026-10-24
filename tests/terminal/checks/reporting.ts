@@ -2,7 +2,7 @@
 // added on your say; sent by the browser, a copy or gh — each program a fake on the check's PATH, the clipboard its
 // file. In the navigating area, as help's: its own file, navigating.ts being past the size limit.
 
-import { chmodSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { type Check, HANDBOOK, leader } from "../check.ts";
 import type { Session } from "../session.ts";
@@ -54,6 +54,12 @@ function onDisk(s: Session): string {
   return out;
 }
 
+/** The browser's opener here: macOS's own, else a display's. Both are faked, so no check ever opens a real browser. */
+const OPENER = process.platform === "darwin" ? "open" : "xdg-open";
+const fakeOpeners = (s: Session, answer: string) => {
+  for (const name of ["open", "xdg-open"]) fake(s, name, answer);
+};
+
 /** The PATH the fakes come first on. */
 const FAKES = { PATH: `{dir}/bin:${process.env.PATH ?? "/usr/bin:/bin"}` };
 
@@ -90,7 +96,13 @@ export const REPORTING: Check[] = [
       await s.type("report a problem");
       await s.keys("enter");
       await s.see("It froze on opening");
+      // `:w!` has no file to force: it's `:w`, the menu.
+      await s.ex("w!");
+      await s.see(MENU);
+      await s.keys("escape");
       s.expect(!onDisk(s).includes("It froze on opening"), "the report on no disk");
+      const ran = join(import.meta.dir, "..", "..", "..");
+      s.expect(!existsSync(join(ran, "report:")) && !existsSync(join(ran, "report")), "nor where slipbox ran");
       // Quitting isn't refused by it, nor asks.
       await s.keys("escape");
       await s.ex("qa");
@@ -138,7 +150,7 @@ export const REPORTING: Check[] = [
     options: {
       size: { cols: 120, rows: 34 },
       env: { ...FAKES, DISPLAY: ":9" },
-      setup: (s) => fake(s, "xdg-open", "exit 0"),
+      setup: (s) => fakeOpeners(s, "exit 0"),
     },
     run: async (s) => {
       await leader(s, "r");
@@ -147,8 +159,8 @@ export const REPORTING: Check[] = [
       await s.see(MENU);
       await s.see("(o) Open the bug form in your browser, filled in");
       await s.keys("o");
-      await s.until(() => kept(s, "xdg-open", "argv") !== "", 5000, "xdg-open to be run");
-      const url = new URL(kept(s, "xdg-open", "argv").trim());
+      await s.until(() => kept(s, OPENER, "argv") !== "", 5000, `${OPENER} to be run`);
+      const url = new URL(kept(s, OPENER, "argv").trim());
       s.expect(url.origin === "https://github.com", `the bug form's address: ${url.href}`);
       s.expect(url.searchParams.get("title") === "Links lose their anchors", "the title in it");
       s.expect(url.searchParams.get("template") === "bug_report.yml", "the bug form");
@@ -170,7 +182,7 @@ export const REPORTING: Check[] = [
     options: {
       size: { cols: 120, rows: 34 },
       env: { ...FAKES, DISPLAY: ":9", SSH_CONNECTION: "203.0.113.9 52144 198.51.100.4 22" },
-      setup: (s) => fake(s, "xdg-open", "exit 0"),
+      setup: (s) => fakeOpeners(s, "exit 0"),
     },
     run: async (s) => {
       await leader(s, "r");
@@ -183,7 +195,7 @@ export const REPORTING: Check[] = [
       s.expect(!s.text().includes("(o) Open the bug form"), "no browser to open over SSH");
       await s.keys("a");
       await s.until(() => s.clipboard().startsWith("https://github.com/"), 5000, "the address copied");
-      s.expect(kept(s, "xdg-open", "argv") === "", "no browser run over SSH");
+      s.expect(kept(s, OPENER, "argv") === "", "no browser run over SSH");
     },
   },
   {
@@ -251,6 +263,12 @@ export const REPORTING: Check[] = [
       await s.keys("escape", "ctrl+s", "s");
       await s.message("a fence is left open");
       s.expect(!s.text().includes("The screen, 120×34"), "not added while a fence is open");
+      // Nor an address made: where each field ends isn't clear.
+      await s.keys("ctrl+s");
+      // A header, drawn in capitals.
+      await s.see(/a fence is left open: where each field ends isn't clear/i);
+      s.expect(!s.text().includes("(a) Copy the bug form's address"), "no address while a fence is open");
+      await s.keys("escape");
       // Closed, and a What slipbox sees of your own, in the middle, with a heading of your own after it.
       await s.keys("o");
       await s.type("```");
@@ -282,7 +300,7 @@ export const REPORTING: Check[] = [
     options: {
       size: { cols: 120, rows: 34 },
       env: { ...FAKES, DISPLAY: ":9" },
-      setup: (s) => fake(s, "xdg-open", "exit 3"),
+      setup: (s) => fakeOpeners(s, "exit 3"),
     },
     run: async (s) => {
       await leader(s, "r");
@@ -299,7 +317,7 @@ export const REPORTING: Check[] = [
       await s.until(() => s.clipboard().startsWith("https://github.com/"), 8000, "the address copied instead");
       const url = new URL(s.clipboard().trim());
       s.expect(url.searchParams.get("title") === "Too long" && !url.searchParams.has("output"), "all but the screen");
-      s.expect(kept(s, "xdg-open", "argv").trim() === url.href, "the opener was given the same address");
+      s.expect(kept(s, OPENER, "argv").trim() === url.href, "the opener was given the same address");
       await leader(s, "m");
       await s.type("exited with 3");
       await s.see(/ 1\/1 ┘/);
@@ -308,7 +326,7 @@ export const REPORTING: Check[] = [
   },
   {
     area: "navigating",
-    name: "report: gh failing: its words said, the draft kept",
+    name: "report: gh failing: its words said, the draft kept; closed while gh was asked, said",
     covers: { cases: ["help"], commands: ["help.report", "help.report_send"] },
     options: {
       size: { cols: 120, rows: 34 },
@@ -318,7 +336,7 @@ export const REPORTING: Check[] = [
         mkdirSync(join(s.dir, "bin"), { recursive: true });
         writeFileSync(
           at,
-          "#!/bin/sh\nif [ \"$1\" = config ]; then echo octo-cat; exit 0; fi\ncat >/dev/null\necho 'HTTP 422: Validation Failed' >&2\nexit 1\n",
+          "#!/bin/sh\nif [ \"$1\" = config ]; then sleep 1; echo octo-cat; exit 0; fi\ncat >/dev/null\necho 'HTTP 422: Validation Failed' >&2\nexit 1\n",
         );
         chmodSync(at, 0o755);
       },
@@ -330,7 +348,13 @@ export const REPORTING: Check[] = [
       await s.type("### What happened");
       await s.keys("enter", "o");
       await s.type("it froze");
-      await s.keys("escape", "ctrl+s", "g");
+      // Closed while gh is asked for its account (a second, here): nothing asked over what's there, said.
+      // The first esc clears the search that found What happened; the next leaves the window.
+      await s.keys("escape", "ctrl+s", "g", "escape", "escape");
+      await s.message("the report was closed");
+      s.expect(!s.text().includes("Anyone can read it."), "no question over the note");
+      await leader(s, "r");
+      await s.keys("ctrl+s", "g");
       await s.see("Anyone can read it.");
       await s.keys("y");
       await s.message("HTTP 422");

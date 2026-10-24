@@ -1,8 +1,8 @@
 // Reporting a problem in the TUI (RPT): the report's window, the screen and place kept and added on your say, and its
 // sending — each way faked: the browser's opener by the host, gh by a script on PATH.
 
-import { afterEach, describe, expect, test } from "bun:test";
-import { chmodSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { chmodSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tildePath } from "../src/core/names.ts";
 import { GUIDE, SCREEN_INTRO, WHERE_INTRO } from "../src/core/report.ts";
@@ -26,6 +26,8 @@ function allText(dir: string): string {
 }
 
 const PATH = process.env.PATH;
+/** The browser's opener here: macOS's own, else a display's (the WSL case on Linux alone). */
+const OPENER = process.platform === "darwin" ? "open" : "xdg-open";
 afterEach(() => {
   process.env.PATH = PATH;
 });
@@ -312,7 +314,7 @@ describe("sending (RPT-D3, RPT-D4)", () => {
       await h.keys("escape");
       await h.app.run("help.report_send browser");
       expect(ran).toHaveLength(1);
-      expect(ran[0]![0]).toBe("xdg-open");
+      expect(ran[0]![0]).toBe(OPENER);
       const url = new URL(ran[0]![1]!);
       expect(url.searchParams.get("title")).toBe("Crash");
       expect(url.searchParams.get("template")).toBe("bug_report.yml");
@@ -330,17 +332,20 @@ describe("sending (RPT-D3, RPT-D4)", () => {
     }
   });
 
-  test("the opener failing: the address copied instead, why said; explorer.exe's 1 isn't a failure", async () => {
+  test("the opener failing: the address copied instead, why said", async () => {
     const { h, restore } = await withOpener(3);
     try {
       await h.keys("space", "r", "escape");
       await h.app.run("help.report_send browser");
       expect(h.copied.at(-1)).toStartWith("https://github.com/");
       await Bun.sleep(50);
-      expect(said(h)).toContain("xdg-open exited with 3");
+      expect(said(h)).toContain(`${OPENER} exited with 3`);
     } finally {
       restore();
     }
+  });
+
+  test.if(process.platform === "linux")("WSL: explorer.exe's 1 isn't a failure", async () => {
     const wsl = await withOpener(1, { WSL_DISTRO_NAME: "Ubuntu" });
     try {
       writeFileSync(join(process.env.PATH!, "explorer.exe"), "#!/bin/sh\nexit 1\n");
@@ -399,15 +404,60 @@ describe("sending (RPT-D3, RPT-D4)", () => {
       await h.keys("escape");
       await h.app.run("help.report_send address");
       expect(said(h)).toBe(
-        "text above the first heading belongs to no field: move it under one, or c copies the report",
+        "report: text above the first heading belongs to no field: the address would lose it — move it under one; c copies the report",
       );
     } finally {
       restore();
     }
   });
+
+  test("a fence left open: no address, said in the menu; the copy and gh still", async () => {
+    const { h, restore } = await withOpener(0);
+    try {
+      await h.keys("space", "r");
+      await type(h, "Crash");
+      await h.keys("escape", "/");
+      await type(h, "### What happened");
+      await h.keys("enter", "o");
+      await type(h, "```");
+      await h.keys("escape", "ctrl+s");
+      const o = h.app.overlay as ListOverlay;
+      expect(o.items[0]!.label).toBe("A fence is left open: where each field ends isn't clear — close it");
+      expect(o.items.map((i) => i.hotkey).filter(Boolean)).toEqual(["c", "s", "w"]);
+      await h.keys("escape");
+      await h.app.run("help.report_send browser");
+      expect(h.copied).toEqual([]);
+    } finally {
+      restore();
+    }
+  });
+
+  test(":w! in the report writes nothing anywhere: it's :w, the menu", async () => {
+    const h = await harness();
+    await h.keys("space", "r");
+    await type(h, "never on disk");
+    await h.keys("escape");
+    await h.app.run("note.save_force");
+    expect((h.app.overlay as ListOverlay).title).toBe("Send the report — nothing has left yet");
+    expect(allText(sandbox)).not.toContain("never on disk");
+    // Its name was `report:`, written where slipbox ran, before (#5's review).
+    for (const name of ["report", "report:"]) expect(existsSync(join(process.cwd(), name))).toBe(false);
+    // Nor through any other way of writing a buffer.
+    expect(h.app.writeBuffer(h.app.view!.buf, "never on disk either")).toBe(false);
+  });
 });
 
 describe("gh (RPT-D4)", () => {
+  // A token in the environment names its own account: none, here, but the fakes'.
+  const tokens = { GH_TOKEN: process.env.GH_TOKEN, GITHUB_TOKEN: process.env.GITHUB_TOKEN };
+  beforeEach(() => {
+    delete process.env.GH_TOKEN;
+    delete process.env.GITHUB_TOKEN;
+  });
+  afterEach(() => {
+    for (const [k, v] of Object.entries(tokens)) if (v !== undefined) process.env[k] = v;
+  });
+
   /** A fake gh on PATH: what it's given kept in `dir`, its answer to `issue create` as told. */
   function fakeGh(answer: string, account = "echo octo-cat") {
     const dir = join(sandbox, `gh-${Math.random().toString(36).slice(2)}`);
@@ -493,6 +543,41 @@ describe("gh (RPT-D4)", () => {
     await h.keys("y");
     for (let i = 0; i < 100 && h.app.report.posting; i++) await Bun.sleep(20);
     expect(readFileSync(join(dir, "argv"), "utf8")).toContain("--title\nNew title\n");
+  });
+
+  test("closed, or something opened over it, while gh was asked: nothing asked over that, said", async () => {
+    const dir = fakeGh("echo https://github.com/remziduzagac/slipbox/issues/79", "sleep 0.4; echo octo-cat");
+    const h = await harness();
+    h.app.home = join(dir, "home");
+    await report(h, "Crash", "it froze");
+    const asking = h.app.run("help.report_send gh");
+    await Bun.sleep(50);
+    await h.keys("escape");
+    await asking;
+    expect(h.app.overlay).toBeNull();
+    expect(said(h)).toBe("the report was closed: ctrl+s, g in it asks again");
+    await h.keys("space", "r");
+    const again = h.app.run("help.report_send gh");
+    await Bun.sleep(50);
+    await h.keys(":");
+    const palette = h.app.overlay;
+    await again;
+    expect(h.app.overlay).toBe(palette);
+    expect(said(h)).toBe("gh is ready: ctrl+s, g in the report asks again");
+    expect(readdirSync(dir)).not.toContain("argv");
+  });
+
+  test("opening it failing, from the frame's drawing: said, and drawing goes on", async () => {
+    const h = await harness();
+    const make = h.app.makeView.bind(h.app);
+    h.app.makeView = () => {
+      throw new Error("no view");
+    };
+    await h.app.run("help.report");
+    expect(() => h.app.draw(new TextCanvas(120, 30))).not.toThrow();
+    expect(said(h)).toBe("report: couldn't open it: no view");
+    h.app.makeView = make;
+    expect(h.app.floating).toBeNull();
   });
 
   test("failed: gh's words said, the draft kept; no account, or no title or What happened, asked first", async () => {

@@ -16,6 +16,7 @@ import {
   factFields,
   factSources,
   LABEL,
+  noAddress,
   placeAttachment,
   postOf,
   readReport,
@@ -91,7 +92,12 @@ export class Reporter {
     this.wanted = null;
     this.screen = { text: t.toString().replace(/\n+$/, ""), cols: t.width, rows: t.height };
     this.where = w.where;
-    this.show(w.add);
+    // Called from drawing, which must never fail on its account: a failure to open is said, not thrown.
+    try {
+      this.show(w.add);
+    } catch (err) {
+      this.app.message("error", `report: couldn't open it: ${(err as Error).message}`);
+    }
     this.app.host.requestRender();
   }
 
@@ -193,12 +199,8 @@ export class Reporter {
     const { plan, read } = this.plan(text);
     const leaves = plan?.left.length ? leftSaid(plan.left) : "";
     const items: ListItem[] = [];
-    if (!plan)
-      items.push({
-        label: "Text above the first heading belongs to no field: the address would lose it — move it under one",
-        header: true,
-        data: null,
-      });
+    const why = noAddress(read);
+    if (why) items.push({ label: `${why[0]!.toUpperCase()}${why.slice(1)}`, header: true, data: null });
     if (plan && this.opener() && this.app.host.runDetached)
       items.push({
         label: "(o) Open the bug form in your browser, filled in",
@@ -265,11 +267,7 @@ export class Reporter {
     const { plan, read } = this.plan(text);
     if (how === "copy") return this.copy(sentText(text), "the report");
     if (how === "gh") return this.post();
-    if (!plan)
-      return this.app.message(
-        "warn",
-        "text above the first heading belongs to no field: move it under one, or c copies the report",
-      );
+    if (!plan) return this.app.message("warn", `report: ${noAddress(read)}; c copies the report`);
     const leaves = plan.left.length ? ` (${leftSaid(plan.left)})` : "";
     if (how === "address") return this.copy(plan.url, `the bug form's address${leaves}`);
     if (how === "seen") {
@@ -306,19 +304,25 @@ export class Reporter {
     if (!gh) return this.app.message("warn", "gh isn't on PATH");
     const v = this.openView();
     if (!v) return;
-    const ready = () => !!postOf(v.buf.source).title && !!readReport(v.buf.source).fields.happened;
+    /** The title and text to post, when there are both a title and What happened. */
+    const ready = () => {
+      const r = readReport(v.buf.source);
+      return r.title && r.fields.happened ? postOf(v.buf.source, r) : null;
+    };
     const missing = "gh: write a title (the line after the guide) and What happened first";
     if (!ready()) return this.app.message("warn", missing);
     const repo = reportRepo();
     const home = existsSync(this.app.home) ? this.app.home : homedir();
-    const account = await ghAccount(gh, { env: process.env, home });
-    if (!account) return this.app.message("warn", "gh has no account for github.com here — gh auth login first");
-    if (this.openView() !== v) return;
+    const who = await ghAccount(gh, { env: process.env, home });
+    if ("why" in who) return this.app.message("warn", who.why);
+    // While gh was asked, the report closed, or something else opened over it: nothing asked over that, said.
+    if (this.openView() !== v) return this.app.message("info", "the report was closed: ctrl+s, g in it asks again");
+    if (this.app.overlay) return this.app.message("info", "gh is ready: ctrl+s, g in the report asks again");
     // The report as it is now, after the wait for gh: what the question names is what's posted.
-    if (!ready()) return this.app.message("warn", missing);
-    const post = postOf(v.buf.source);
+    const post = ready();
+    if (!post) return this.app.message("warn", missing);
     this.app.overlays.confirm(
-      sanitize(`Post "${post.title}" on ${repo} as ${account}? Anyone can read it.`),
+      sanitize(`Post "${post.title}" on ${repo} as ${who.account}? Anyone can read it.`),
       () => void this.postNow(gh, repo, home, post),
     );
     this.app.host.requestRender();

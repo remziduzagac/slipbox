@@ -9,6 +9,7 @@ import { type Channel, installedBy, readChannel } from "./install.ts";
 import { dataHome } from "./paths.ts";
 import { RELEASE, type ReleaseBuild } from "./release.ts";
 import { sanitize } from "./sanitize.ts";
+import { truncate } from "./width.ts";
 import { isWsl } from "./wsl.ts";
 import { VERSION } from "../version.ts";
 
@@ -140,7 +141,7 @@ function oneLine(s: string | undefined | null, max = 120): string | null {
   const line = sanitize(s ?? "")
     .split("\n")[0]!
     .trim();
-  return line ? (line.length > max ? `${line.slice(0, max - 1)}…` : line) : null;
+  return line ? truncate(line, max) : null;
 }
 
 /** The system's own name and version: Linux's `/etc/os-release`, macOS's `SystemVersion.plist`. */
@@ -322,7 +323,7 @@ export interface ReadBack {
 export function readReport(text: string): ReadBack {
   const lines = text.split("\n");
   const parts = new Map<FieldId, string[][]>();
-  let fence: { ch: string; len: number } | null = null;
+  let fence: { close: RegExp } | null = null;
   let comment = false;
   let current: string[] | null = null;
   let currentId: FieldId | null = null;
@@ -332,7 +333,23 @@ export function readReport(text: string): ReadBack {
   let seen: { heading: number; end: number } | null = null;
   const added = { screen: false, where: false };
   for (let i = 0; i < lines.length; i++) {
-    const line = lines[i]!;
+    let line = lines[i]!;
+    // Before the first label, a comment (the guide among them: GitHub hides them) is no text — neither the title nor
+    // text the address would lose — and nothing in it opens a fence. Text after one on its line is the line's.
+    if (!current && !fence) {
+      if (comment) {
+        const end = line.indexOf("-->");
+        if (end < 0) continue;
+        comment = false;
+        line = line.slice(end + 3);
+      }
+      line = line.replace(/<!--.*?-->/g, "");
+      const open = line.indexOf("<!--");
+      if (open >= 0) {
+        comment = true;
+        line = line.slice(0, open);
+      }
+    }
     if (!fence) {
       if (SCREEN_LINE.test(line)) added.screen = true;
       if (line === WHERE_SAID) added.where = true;
@@ -346,24 +363,20 @@ export function readReport(text: string): ReadBack {
       continue;
     }
     if (fence) {
-      const close = new RegExp(`^ {0,3}${fence.ch === "`" ? "`" : "~"}{${fence.len},}\\s*$`);
-      if (close.test(line)) fence = null;
+      if (fence.close.test(line)) fence = null;
     } else {
       const open = FENCE_OPEN.exec(line);
-      // A backtick fence's info string never holds a backtick (CommonMark): such a line is text.
-      if (open && !(open[1]![0] === "`" && open[2]!.includes("`"))) fence = { ch: open[1]![0]!, len: open[1]!.length };
+      // A backtick fence's info string never holds a backtick (CommonMark): such a line is text. Closed by a line of
+      // its character, at least as long.
+      if (open && !(open[1]![0] === "`" && open[2]!.includes("`")))
+        fence = { close: new RegExp(`^ {0,3}${open[1]![0] === "`" ? "`" : "~"}{${open[1]!.length},}\\s*$`) };
     }
     if (current) {
       current.push(line);
       if (currentId === "output" && seen && line.trim()) seen.end = i + 1;
       continue;
     }
-    // Before the first label: comments (the guide among them: GitHub hides them), the title, and any other text.
-    const isComment = comment || /^\s*<!--/.test(line);
-    if (isComment) {
-      comment = !line.includes("-->");
-      continue;
-    }
+    // Before the first label: the title, and any other text.
     if (!line.trim()) continue;
     if (titleLine < 0) {
       title = line.trim();
@@ -455,8 +468,7 @@ export function sentText(text: string): string {
 }
 
 /** What gh posts: the title, and the text after it, as you left them (the guide out). */
-export function postOf(text: string): { title: string; body: string } {
-  const r = readReport(text);
+export function postOf(text: string, r: ReadBack = readReport(text)): { title: string; body: string } {
   const lines = text.split("\n");
   if (r.titleLine >= 0) lines.splice(r.titleLine, 1);
   return {
@@ -479,10 +491,18 @@ export interface AddressPlan {
   left: (FieldId | "title")[];
 }
 
+/** Why the report as it is makes no address, or null: a fence left open makes where each field ends unclear; text
+ *  that belongs to no field would be lost. */
+export function noAddress(r: ReadBack): string | null {
+  if (r.openFence) return "a fence is left open: where each field ends isn't clear — close it";
+  if (r.stray) return "text above the first heading belongs to no field: the address would lose it — move it under one";
+  return null;
+}
+
 /** The address, filled in as far as it fits: every field; else all but What slipbox sees; else the title and the
- *  facts; else the facts; else the template alone. Null when text belongs to no field: it would be lost. */
+ *  facts; else the facts; else the template alone. Null when the report makes none (`noAddress`). */
 export function addressPlan(repo: string, r: ReadBack, max = ADDRESS_MAX): AddressPlan | null {
-  if (r.stray) return null;
+  if (noAddress(r)) return null;
   const all: Partial<Record<FieldId | "title", string>> = { title: r.title, ...r.fields };
   const has = (Object.keys(all) as (FieldId | "title")[]).filter((k) => all[k]);
   const steps: (FieldId | "title")[][] = [

@@ -52,7 +52,9 @@ ghostty 1.2.0, TERM_PROGRAM herdsman 0.2.0, TERM xterm-ghostty, 236×60, inside 
   never written to disk by slipbox, until `gh` has posted it or slipbox quits. (A copy you make is a copy: when no
   clipboard takes it, it's the state folder's `clipboard.txt`, as every copy's, and said.)
 - `ctrl+s` (`:w`) is `note.save`, which, in the report as in the commit's window, calls the buffer's own save whether
-  it changed or not: that runs `help.report_send`, the menu (§ Sending). Never said as "saved" or "sent".
+  it changed or not: that runs `help.report_send`, the menu (§ Sending). Never said as "saved" or "sent". `:w!`
+  (`note.save_force`) on any virtual buffer is `:w`, and `App.writeBuffer` refuses a virtual buffer: the floating
+  window's text is never written to its name on disk.
 
 **Reading it back.** The copy and `gh` send the text as you left it, the generated guide taken out (and for `gh`, the
 title line, which becomes its title); nothing in them is moved or joined. Only the address maps the text onto the
@@ -66,7 +68,8 @@ form's fields, by one rule, which also says where an added screen goes:
 - The generated guide comment is left out of the copy and `gh`'s body only as generated; edited, it's kept as text
   (GitHub hides a comment anyway). Before the first label, a comment is never the title, nor text the address would
   lose.
-- The title is the first line with text before the first label, a comment aside. Any other text there belongs to no
+- The title is the first line with text before the first label, a comment aside (text after a comment on its line
+  counts; nothing in a comment opens a fence). Any other text there belongs to no
   field: the address would lose it, so the menu says so and offers the copy and `gh` only (below), until it's moved
   under a heading.
 - What slipbox sees: its generated outer fence is taken off for the address (the form fences that field itself);
@@ -140,7 +143,7 @@ heads it, said, and `o` and `a` aren't there:
   redirect). In order: every field; else every field but `output`, which `v` copies; else the title and the facts;
   else the facts alone; else none but the template. `o` and `a` say what they leave out ("filled in but What slipbox
   sees: v copies it"), and `c` copies everything. Text that belongs to no field (§ Reading it back) leaves `o` and `a`
-  out, said.
+  out, said. So does a fence left open: where each field ends isn't clear (the menu's first line says which).
 - **One copy at a time:** each entry puts one thing on the clipboard, never two in a row; another asked for while one
   is being made is refused ("still copying — wait for it"). `o` copies nothing when the
   browser opens; when it can't, it copies the address and says what's still left out (`v`, `c`). Each copy is said
@@ -156,7 +159,10 @@ heads it, said, and `o` and `a` aren't there:
 - **gh** (`core/gh.ts`): nothing is run until you choose it. Then the account, as gh will use it, without the
   network: a token in `GH_TOKEN` or `GITHUB_TOKEN` comes before what gh keeps, so then it's "the account of
   GH_TOKEN (not checked)"; else the account gh keeps (`gh config get -h github.com user`); neither, and it says
-  `gh auth login` first. gh is run with `GH_PROMPT_DISABLED=1`, so it never waits on a question of its own. A
+  `gh auth login` first; gh not answering in five seconds, or not starting, said as that. gh is run as every helper is
+  (`core/tool-process.ts`: its output capped, its process group stopped at its deadline and when slipbox ends), with
+  `GH_PROMPT_DISABLED=1`, so it never waits on a question of its own. The report closed meanwhile, or something
+  opened over it, and nothing is asked over that: said, `ctrl+s`, `g` asks again. A
   yes-or-no names everything: `Post "<title>" on <repo> as <account>? Anyone can read it.`, the title and text read
   once the account is known, and on yes those are posted — `gh issue create --repo github.com/<repo> --title <title>
   --body-file -` (github.com by name, as the account was read and the bug form is, whatever `GH_HOST` says), the text

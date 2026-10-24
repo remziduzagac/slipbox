@@ -177,6 +177,8 @@ export function editActions(): Record<string, Run> {
       }),
     "note.save_force": (a) =>
       withView(a, (v) => {
+        // A virtual buffer (the floating window's: a commit's message, a report) has no file to force: `:w!` is `:w`.
+        if (v.buf.virtual) return a.run("note.save");
         if (a.writeBuffer(v.buf, v.buf.contentToSave(), true))
           a.message("info", `saved ${a.displayName(v.buf)}${a.files.notIndexed(v.buf.abs)} over the file on disk`);
       }),

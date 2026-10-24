@@ -25,6 +25,7 @@ import {
   fenced,
   formAddress,
   GUIDE,
+  noAddress,
   placeAttachment,
   postOf,
   REPO,
@@ -200,6 +201,12 @@ describe("the facts (RPT-D1)", () => {
     }
     const remote = { name: null, version: null, multiplexer: null, remote: true };
     expect(reportFacts(sources({ env: {}, terminal: remote })).terminal.ssh).toBe(true);
+  });
+
+  test("a long value is cut by its characters' width, never inside one", () => {
+    const f = reportFacts(sources({ env: { TERM_PROGRAM: `${"x".repeat(117)}😀😀😀` } }));
+    expect(f.terminal.program!.endsWith("x😀…")).toBe(true);
+    expect(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/.test(f.terminal.program!)).toBe(false);
   });
 
   test("a value with escapes, or lines, is sanitized to one line", () => {
@@ -393,6 +400,13 @@ describe("adding the screen or the place (RPT-D2)", () => {
     expect(readReport(add(one, SCREEN)).added).toEqual({ screen: true, where: true });
   });
 
+  test("a comment before the first heading is no text, and opens no fence; the text after one on its line is", () => {
+    const r = readReport("<!-- draft --> Crash on open\n\n### What happened\n\na\n");
+    expect([r.title, r.stray]).toEqual(["Crash on open", false]);
+    const fenced = readReport("<!-- one\n```\ntwo -->\nTitle\n\n### Version\n\n1\n");
+    expect([fenced.title, fenced.openFence, fenced.fields.version]).toEqual(["Title", false, "1"]);
+  });
+
   test("refused while a fence is left open, anywhere", () => {
     const open = typed("T", { "What happened": "```\nunclosed" });
     expect(readReport(open).openFence).toBe(true);
@@ -447,6 +461,13 @@ describe("the address's plan (RPT-D3)", () => {
     const p4 = plan(typed("T").replace("TERM xterm", "y".repeat(6000)));
     expect(p4.left).toEqual(["title", "version", "install", "platform", "terminal"]);
     expect(params(p4.url)).toEqual(["template"]);
+  });
+
+  test("a fence left open: no address, said, since where each field ends isn't clear", () => {
+    const open = readReport(typed("T", { "What happened": "```\nunclosed" }));
+    expect(addressPlan("me/slipbox", open)).toBeNull();
+    expect(noAddress(open)).toBe("a fence is left open: where each field ends isn't clear — close it");
+    expect(noAddress(readReport(typed("T")))).toBeNull();
   });
 
   test("text that belongs to no field: no address, since it would be lost", () => {
@@ -523,19 +544,32 @@ describe("gh (RPT-D4)", () => {
 
   test("the account: GH_TOKEN's or GITHUB_TOKEN's, unchecked and nothing run; else gh's own; else none", async () => {
     const f = fakeGh('[ "$1 $2 $3 $4 $5 $6" = "config get -h github.com user " ] && echo octo-cat');
-    expect(await ghAccount(f.gh, { env: { GH_TOKEN: "x" }, home: f.home })).toBe(
-      "the account of GH_TOKEN (not checked)",
-    );
-    expect(await ghAccount(f.gh, { env: { GITHUB_TOKEN: "x" }, home: f.home })).toBe(
-      "the account of GITHUB_TOKEN (not checked)",
-    );
+    expect(await ghAccount(f.gh, { env: { GH_TOKEN: "x" }, home: f.home })).toEqual({
+      account: "the account of GH_TOKEN (not checked)",
+    });
+    expect(await ghAccount(f.gh, { env: { GITHUB_TOKEN: "x" }, home: f.home })).toEqual({
+      account: "the account of GITHUB_TOKEN (not checked)",
+    });
     expect(existsSync(join(f.dir, "argv"))).toBe(false);
-    expect(await ghAccount(f.gh, { env: {}, home: f.home })).toBe("octo-cat");
+    expect(await ghAccount(f.gh, { env: {}, home: f.home })).toEqual({ account: "octo-cat" });
     expect(f.got().argv).toBe("config\nget\n-h\ngithub.com\nuser\n");
     const none = fakeGh("exit 1");
-    expect(await ghAccount(none.gh, { env: {}, home: none.home })).toBeNull();
+    expect(await ghAccount(none.gh, { env: {}, home: none.home })).toEqual({
+      why: "gh has no account for github.com here — gh auth login first",
+    });
     const empty = fakeGh("echo");
-    expect(await ghAccount(empty.gh, { env: {}, home: empty.home })).toBeNull();
+    expect(await ghAccount(empty.gh, { env: {}, home: empty.home })).toEqual({
+      why: "gh has no account for github.com here — gh auth login first",
+    });
+  });
+
+  test("the account not said in time, or gh not starting: said as that, not as no account", async () => {
+    const slow = fakeGh("sleep 5");
+    expect(await ghAccount(slow.gh, { env: {}, home: slow.home, timeout: 200 })).toEqual({
+      why: "gh didn't say its account in time",
+    });
+    const gone = await ghAccount(join(slow.dir, "nothing"), { env: {}, home: slow.home });
+    expect("why" in gone && gone.why.startsWith("gh couldn't run: ")).toBe(true);
   });
 
   test("a post: its argument vector, the body on its input, from the home folder, no prompts; its address", async () => {
