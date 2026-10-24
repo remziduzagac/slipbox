@@ -17,11 +17,14 @@ export const MODE_BUTTONS: readonly { mode: ViewMode; id: "read" | "lens" | "sou
 /** The buttons' forms, widest first: every label, every letter, the selected one's letter alone; none. */
 export type ModeForm = "full" | "letters" | "selected" | "none";
 
-/** Each label, or letter, with a space either side. */
+/** A label, or its letter, as drawn: a space either side. */
+const labelOf = (m: (typeof MODE_BUTTONS)[number], form: ModeForm) => ` ${form === "full" ? m.label : m.label[0]} `;
+
+/** Each form's width: every label, every letter, one letter (the widest, whichever is selected). */
 const FORM_WIDTH: Record<Exclude<ModeForm, "none">, number> = {
-  full: MODE_BUTTONS.reduce((a, m) => a + m.label.length + 2, 0),
-  letters: MODE_BUTTONS.length * 3,
-  selected: 3,
+  full: MODE_BUTTONS.reduce((a, m) => a + stringWidth(labelOf(m, "full")), 0),
+  letters: MODE_BUTTONS.reduce((a, m) => a + stringWidth(labelOf(m, "letters")), 0),
+  selected: Math.max(...MODE_BUTTONS.map((m) => stringWidth(labelOf(m, "selected")))),
 };
 
 /**
@@ -31,7 +34,8 @@ const FORM_WIDTH: Record<Exclude<ModeForm, "none">, number> = {
 export function modeButtons(room: number, least: number): ModeForm {
   // The breadcrumb's columns are those between the name and the buttons less one at each end.
   const keep = least > 0 ? least + 2 : 0;
-  for (const form of ["full", "letters", "selected"] as const) if (FORM_WIDTH[form] + keep <= room) return form;
+  if (FORM_WIDTH.full + keep <= room) return "full";
+  if (FORM_WIDTH.letters + keep <= room) return "letters";
   return room >= FORM_WIDTH.selected ? "selected" : "none";
 }
 
@@ -70,10 +74,9 @@ export function drawWindowHeader(
     const role = app.panels.outlineShown ? "topbar_button_on" : "topbar_button";
     button(app, c, end, { y, h: 1 }, label, role, "btn:outline", geo, bg);
   }
-  // The layout first: laying the window out can change its mode (a file that stopped parsing goes to source mode once
-  // typing ends), and the buttons say the mode it's in.
-  app.currentLayout(view);
-  const crumbs = app.ui.breadcrumb ? app.outlineView.breadcrumb(view) : [];
+  // The layout first (the breadcrumb asks for it; else asked here): laying the window out can change its mode (a file
+  // that stopped parsing goes to source mode once typing ends), and the buttons say the mode it's in.
+  const crumbs = app.ui.breadcrumb ? app.outlineView.breadcrumb(view) : (app.currentLayout(view), []);
   const least = crumbLeast(crumbs, app.glyphs);
   const form = modeButtons(end - x, least);
   const start = form === "none" ? end : end - FORM_WIDTH[form];
@@ -103,20 +106,10 @@ function drawModeButtons(
   for (const m of MODE_BUTTONS) {
     const selected = m.mode === now;
     if (form === "selected" && !selected) continue;
-    const label = ` ${form === "full" ? m.label : m.label[0]} `;
+    const disabled = !selected && !!app.lens.refusal(view, m.mode, true);
+    const role = selected ? "topbar_button_on" : disabled ? "topbar_button_disabled" : "topbar_button";
     const id = `mode:${index}:${m.id}`;
-    if (!selected && !app.lens.refusal(view, m.mode)) {
-      x += button(app, c, x, { y, h: 1 }, label, "topbar_button", id, geo, bg);
-      continue;
-    }
-    const w = drawText(
-      c,
-      x,
-      y,
-      label,
-      roleStyle(app.theme, selected ? "topbar_button_on" : "topbar_button_disabled", bg),
-    );
-    geo.hot.push({ id, x, y, w, h: 1 });
-    x += w;
+    // Hovered only where a click switches: the selected one's changes nothing, a disabled one's says why.
+    x += button(app, c, x, { y, h: 1 }, labelOf(m, form), role, id, geo, bg, Infinity, !selected && !disabled);
   }
 }

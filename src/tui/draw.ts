@@ -379,7 +379,8 @@ export const mid = (b: Band) => b.y + Math.floor(b.h / 2);
 
 /**
  * A clickable label filling the bar's full height, drawn with the hover role while the mouse is
- * over it. `role` null draws the text on the bar's own background.
+ * over it, unless `hovers` is false (a click that changes nothing, or can't). `role` null draws the text on the bar's
+ * own background.
  */
 export function button(
   app: App,
@@ -392,9 +393,10 @@ export function button(
   geo: Geometry,
   barBg: Color | null,
   maxW = Number.POSITIVE_INFINITY,
+  hovers = true,
 ): number {
   const theme = app.theme;
-  const st = roleStyle(theme, app.mouse.hover === id ? "hover" : role, barBg);
+  const st = roleStyle(theme, hovers && app.mouse.hover === id ? "hover" : role, barBg);
   const w = Math.min(stringWidth(text), maxW);
   if (w <= 0) return 0;
   c.fill(x, band.y, w, band.h, st.bg ?? null);
@@ -478,7 +480,7 @@ export function drawBreadcrumb(
   geo: Geometry,
 ): void {
   const theme = app.theme;
-  if (!crumbs.length || x1 - x0 < 4) return;
+  if (!crumbs.length || x1 - x0 < CRUMB_FLOOR) return;
   const index = app.tab!.views.indexOf(view);
   const sep = ` ${app.glyphs.crumb} `;
   // The icon opens the heading finder.
@@ -518,17 +520,22 @@ export function drawBreadcrumb(
 
 /** Below this, a heading is cut no further: the breadcrumb drops it instead. */
 const CRUMB_MIN = 8;
+/** Fewer columns than this, and no breadcrumb is drawn at all. */
+const CRUMB_FLOOR = 4;
 
 /**
  * The columns a breadcrumb keeps before the mode's buttons beside it shorten (HDR-D4): its icon and a space, then its
  * innermost heading cut to `CRUMB_MIN`, after `… ›` when there are two or more — crumbLayout's narrowest form but `…`
- * alone. 0 with no headings.
+ * alone; never fewer than drawBreadcrumb draws in. 0 with no headings.
  */
 export function crumbLeast(crumbs: { text: string }[], glyphs: { crumb: string; crumbIcon: string }): number {
   const n = crumbs.length;
   if (!n) return 0;
   const last = Math.min(CRUMB_MIN, stringWidth(crumbs[n - 1]!.text));
-  return stringWidth(glyphs.crumbIcon) + 1 + (n >= 2 ? 1 + stringWidth(` ${glyphs.crumb} `) : 0) + last;
+  return Math.max(
+    CRUMB_FLOOR,
+    stringWidth(glyphs.crumbIcon) + 1 + (n >= 2 ? 1 + stringWidth(` ${glyphs.crumb} `) : 0) + last,
+  );
 }
 
 /**

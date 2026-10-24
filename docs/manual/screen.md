@@ -331,8 +331,8 @@ away. From Source, Lens opens the lens without showing the page first. Clicking 
 While you type, the button of the mode you're typing in stays bright, though the chip says `INSERT`. A click stops
 typing first, as every click does. Your unsaved changes stay.
 
-A dimmed button is a mode the file can't be shown in. A text file, and a data file that doesn't parse, have only
-Source. A click on a dimmed one says why.
+A dimmed button is a mode the file can't be shown in. A plain text file, code in a language without the code view (or
+with `render.code = "source"`), and a data file that doesn't parse have only Source. A click on a dimmed one says why.
 
 In a narrow window, the breadcrumb folds first, down to the heading the cursor is in. Then the buttons shorten to `R`
 `L` `S`, and at last only the bright one is left.

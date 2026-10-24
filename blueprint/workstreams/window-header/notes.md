@@ -216,3 +216,58 @@ The cases, each with a unit test (U) and a terminal check (T):
   zen's list; `keys.md` (the mouse, `space u u`, zen, the modes' table), `configuration.md` (`window_header`, the
   roles), `editing.md`, the mouse help, CHANGELOG (Added, Changed). `bun run shots`: 29 taken, 27 changed, each looked
   at; the empty box for 🚲 in two of them was there before (no font here draws it).
+
+## Review before the pull request (2026-10-24)
+
+Codex's review of `git diff origin/dev...` (`tmp/issue/codex-review-1.md`, not in git), each finding checked:
+
+- **A one-column heading vanishes before the buttons shorten**: `crumbLeast` gives 3 for `§ A`, but `drawBreadcrumb`
+  draws nothing in fewer than 4 columns; in 25 columns the buttons stay full and the heading goes. Checked: true
+  (least 3, the full form at 25, 3 columns left). To fix: the least room never under the drawing's floor.
+- **The narrow-split check would pass with no buttons at all**: it checks that `R  L  S` went, not that the selected
+  `S` stayed. Checked: true. To fix: the selected letter, bold, in the window's own columns.
+- **Terminal coverage short of the matrix**: data that stops parsing while typed (and the two clicks that needed
+  `shownModes`), a reload into broken data with the breadcrumb hidden, `[render] code = "source"`, a window given
+  another file, the scratch on the right, a stacked split's lower header, hover, the which-key popup, and settings
+  restored by a real restart have unit tests only; the session test checks the override, not a restore. Checked:
+  true. To add.
+- **`FORM_WIDTH` measures labels by `.length`**, not `width.ts` (`src/tui/draw-header.ts`). True; ASCII labels, so no
+  bug, but the rule is the rule. To fix.
+- Not taken: none.
+- Found meanwhile, not this change's: `tests/render.test.ts` "Mermaid (12.10) > drawn while its library loads" fails
+  here every time, and the same on an export of `origin/dev` (the library is in already when the first render asks).
+  Left alone; the full run on `test` will say whether it's this machine's.
+
+`/code-review`'s review of the same diff (15 findings; three it reproduced with throwaway tests), merged with Codex's:
+
+- **Taken, each with a test that fails without it** (mutations in `tmp/issue/mutations-4.json`):
+  - A data file re-parsed on every keystroke in source mode: the header asked `Lens.refusal` of Read and Lens, and
+    `canRender` parses a changed text. Now the header asks with `drawing`: while typed into, or 128K characters and
+    more, a data file goes by its last parse (`NoteBuffer.lastParsed`); a click asks of the text as it is. While
+    typing, Read follows the last parse, not a mid-typing break (design.md). Tests: no parse while typing; a big file
+    edited in normal mode, no parse; a click on its Read renders.
+  - One click said a warning twice across windows: a split on one data file, the other window's typing ended by the
+    click and broke it. The same window's case was guarded by `Mouse.shownModes`; both now by what the click said
+    since it began (`App.said`), which also drops `shownModes` (it kept closed windows' views alive until the next
+    click). The click runs the mode's command, which says a refusal itself. Tests: the cross-window split, the two
+    same-window clicks; the terminal check fails without it ("said 2 times", checked).
+  - The breadcrumb's least room under its 4-column floor (Codex's first): `CRUMB_FLOOR`, shared. Test at 25 columns.
+  - `FORM_WIDTH` by `stringWidth`; `modeButtons`' dead branch gone; the buttons drawn by `button()` alone, with a
+    `hovers` flag, not a copy of it; the layout asked for in the header only when the breadcrumb, which asks for it,
+    is hidden (one pass fewer a frame).
+  - The docs said a text file has only Source, though code with the code view has all three: "a plain text file, code
+    in a language without the code view (or `render.code = "source"`)".
+  - HDR listed in `blueprint/workstreams/README.md` and `blueprint/README.md`.
+  - Terminal checks for the cases with unit tests only (Codex's third): data broken while typed and Read clicked (said
+    once, by the messages list), broken on disk with the breadcrumb hidden, `[render] code = "source"` and a window
+    given a note and back, the scratch on the right and a stacked split's lower window, hover and the which-key
+    popup, and the header setting remembered across a restart. The narrow split's check now finds the selected
+    letter itself, bold, in the narrow window's columns, whichever window the resize narrowed. The unit tests: a real
+    restore of `window_header`, and the which-key test now shows the popup lies over buttons before it hides them.
+- **Not taken:**
+  - Without colour a disabled button looks like an enabled one (`mono`, `NO_COLOR`): the cost HDR-D2 records, agreed;
+    put to the user as a possible follow-up (dim and italic, say).
+  - Moving the "stopped parsing, to source mode" switch out of `layoutFor` into the end of typing: it predates this
+    change and serves reloads too; the click's dedupe covers what the header needed, and the move would change every
+    path that lays a window out, beyond #24.
+- Terminal checks after the fixes: the header's eight and the settings check, 9 of 9.

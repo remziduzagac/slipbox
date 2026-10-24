@@ -106,26 +106,39 @@ const MODE_GROUPS = [
 ] as const;
 type ModeLabel = "Read" | "Lens" | "Source";
 
+/** The style of the character at index `at` of screen row `y`, and its column. */
+function cellAt(s: Session, y: number, at: number): { x: number; y: number; style: StyledRun } | null {
+  const row = s.screen()[y]!;
+  let n = 0;
+  for (const r of s.runs()[y]!) {
+    if (at < n + r.text.length) return { x: Bun.stringWidth(row.slice(0, at)), y, style: r };
+    n += r.text.length;
+  }
+  return null;
+}
+
 /**
- * Window `nth`'s mode button `label`, as the screen shows it (windows side by side share the header's row, left to
- * right): its cell and style, or null when it isn't drawn.
+ * Window `nth`'s mode button `label`, as the screen shows it, counting the headers' button groups from the top left
+ * (windows side by side share a row, stacked ones don't): its cell and style, or null when it isn't drawn.
  */
 function modeButton(s: Session, label: ModeLabel, nth = 0): { x: number; y: number; style: StyledRun } | null {
   const rows = s.screen();
-  for (const g of MODE_GROUPS) {
-    for (let y = 0; y < rows.length - 1; y++) {
-      const found = [...rows[y]!.matchAll(g.re)];
-      const m = found[nth];
-      if (!m) continue;
-      const at = m.index! + g.at[label];
-      let n = 0;
-      for (const r of s.runs()[y]!) {
-        if (at < n + r.text.length) return { x: Bun.stringWidth(rows[y]!.slice(0, at)), y, style: r };
-        n += r.text.length;
-      }
-    }
-  }
-  return null;
+  const groups = rows
+    .slice(0, -1)
+    .flatMap((r, y) =>
+      MODE_GROUPS.flatMap((g) => [...r.matchAll(g.re)].map((m) => ({ y, at: m.index! + g.at[label] }))),
+    )
+    .sort((a, b) => a.y - b.y || a.at - b.at);
+  const g = groups[nth];
+  return g ? cellAt(s, g.y, g.at) : null;
+}
+
+/** Whether row `y` shows, between indexes `from` and `to`, a mode button's selected letter drawn alone: bold, no other. */
+function selectedLetterAlone(s: Session, y: number, from: number, to: number, letter: "R" | "L" | "S"): boolean {
+  const part = s.screen()[y]!.slice(from, to);
+  if (/\bR {2}L {2}S\b/.test(part)) return false;
+  const at = part.lastIndexOf(` ${letter} `);
+  return at >= 0 && !!cellAt(s, y, from + at + 1)?.style.bold;
 }
 
 /** A click (SGR's reports, as a terminal sends them) on window `nth`'s mode button. */
@@ -1567,18 +1580,157 @@ export const EDITING: Check[] = [
         "the letters, as the window narrows",
         50,
       );
-      await s.retry(
-        () => s.keys("l"),
-        () =>
-          !/\bR {2}L {2}S\b/.test(
-            shown()
-              .split("\n")
-              .find((r) => /Read {2}Lens {2}Source/.test(r)) ?? "",
-          ),
-        "the selected letter alone, narrower still",
-        50,
-      );
+      // Narrower still: the narrow window's selected letter alone, bold, in its own columns — the left's Read before
+      // the wide one's buttons, or the right's Source after them, whichever the resize narrowed.
+      const lone = () => {
+        const y = s.screen().findIndex((r) => /Read {2}Lens {2}Source/.test(r));
+        if (y < 0) return false;
+        const row = s.screen()[y]!;
+        const at = row.search(/Read {2}Lens {2}Source/);
+        return selectedLetterAlone(s, y, 0, at, "R") || selectedLetterAlone(s, y, at + 18, row.length, "S");
+      };
+      await s.retry(() => s.keys("l"), lone, "the selected letter alone, bold, narrower still", 50);
+      // Both windows still name their file first on the header.
+      const row = s.screen().find((r) => /Read {2}Lens {2}Source/.test(r))!;
+      s.expect((row.match(/meetings/g) ?? []).length === 2, `both windows' names on the header row: ${row}`);
       await s.keys("escape");
+    },
+  },
+  {
+    area: "editing",
+    name: "window header: data broken while typed in the lens, Read clicked — source mode, said once; broken on disk, Source at once",
+    covers: {
+      cases: ["window-header", "data", "watching"],
+      commands: ["view.live", "view.mode_read", "messages.open"],
+    },
+    options: at("~/work/kestrel/config/regions.yaml"),
+    run: async (s) => {
+      const FILE = "~/work/kestrel/config/regions.yaml";
+      const BROKEN = "regions.yaml doesn't parse";
+      await ready(s);
+      await s.until(() => selectedMode(s).join() === "Read", WAIT, "Read selected on a YAML file that parses");
+      const enabled = modeButton(s, "Lens")!.style.fg;
+      await leader(s, "n", "l");
+      await s.status("LENS");
+      await s.keys("i");
+      await s.status("INSERT");
+      await s.type(": [x");
+      // Read clicked: typing ends, the window goes to source mode, and that it doesn't parse is said once.
+      await clickMode(s, "Read");
+      await s.status("SOURCE");
+      await s.message(BROKEN);
+      await s.ex("messages");
+      await s.see("Messages");
+      // The list's entries (each with its level and time), not the floating box that says it too.
+      const said = () => s.screen().filter((r) => r.includes(BROKEN) && /warn \d\d:\d\d:\d\d/.test(r)).length;
+      s.expect(said() === 1, `said once in the messages list, not ${said()} times:\n${s.text()}`);
+      await s.keys("escape");
+      // Undone, it parses again; Read. Then broken on disk, with the breadcrumb hidden: Source, the others disabled.
+      await s.keys("u");
+      await clickMode(s, "Read");
+      await s.status("READ");
+      await s.keys(":");
+      await s.type("Breadcrumb");
+      await s.keys("enter");
+      await s.message("Breadcrumb: off");
+      s.write(FILE, "regions: [eu, us\n");
+      await s.status("SOURCE");
+      await s.until(() => selectedMode(s).join() === "Source", WAIT, "Source selected once the file stopped parsing");
+      for (const label of ["Read", "Lens"] as const)
+        s.expect(modeButton(s, label)!.style.fg !== enabled, `${label} disabled: drawn as an enabled one`);
+    },
+  },
+  {
+    area: "editing",
+    name: "window header: code as source by [render] code, Source alone; a window given a note has Read again, and back",
+    covers: { cases: ["window-header", "code-files", "history"], commands: ["view.mode_read", "history.back"] },
+    options: { ...at("~/work/kestrel/tools/greeter/greeter.py"), config: '[render]\ncode = "source"\n' },
+    run: async (s) => {
+      await ready(s);
+      await s.status("SOURCE");
+      await s.until(() => selectedMode(s).join() === "Source", WAIT, "Source selected: code shown as source");
+      await clickMode(s, "Read");
+      await s.message("greeter.py has no rendered view: source mode");
+      // A note in the same window: Read again; the enabled buttons' colour, to tell the disabled ones by.
+      await open(s, "README.md");
+      await s.until(() => selectedMode(s).join() === "Read", WAIT, "Read selected on a note");
+      const enabled = modeButton(s, "Lens")!.style.fg;
+      await s.keys("ctrl+o");
+      await opened(s, "tools/greeter/greeter.py");
+      await s.until(() => selectedMode(s).join() === "Source", WAIT, "Source selected on the code again");
+      for (const label of ["Read", "Lens"] as const)
+        s.expect(modeButton(s, label)!.style.fg !== enabled, `${label} disabled on the code: drawn as an enabled one`);
+    },
+  },
+  {
+    area: "editing",
+    name: "window header: the scratch on the right and a stacked split's lower window, each with buttons of its own",
+    covers: {
+      cases: ["window-header", "scratch", "windows"],
+      commands: ["scratch.open", "window.split_stacked", "view.mode_source", "view.mode_lens", "window.close"],
+    },
+    options: { ...at("~/notes/meetings/all-hands-archive.md"), config: '[capture]\nopen_in = "right"\n' },
+    run: async (s) => {
+      await ready(s);
+      await leader(s, "s", "s");
+      await s.until(() => modeButton(s, "Read", 1) !== null, WAIT, "the scratch on the right, its header's buttons");
+      await clickMode(s, "Source", 1);
+      await s.status("SOURCE");
+      s.expect(selectedMode(s, 0).join() === "Read", `the note still Read: ${selectedMode(s, 0)}`);
+      s.expect(selectedMode(s, 1).join() === "Source", `the scratch in Source: ${selectedMode(s, 1)}`);
+      await s.keys("q"); // the scratch's window closed
+      await s.until(() => modeButton(s, "Read", 1) === null, WAIT, "one window again");
+      // Stacked: the lower window's header has its own.
+      await s.keys("ctrl+w", "s");
+      await s.until(() => modeButton(s, "Read", 1) !== null, WAIT, "two headers, stacked");
+      const [upper, lower] = [modeButton(s, "Read", 0)!, modeButton(s, "Read", 1)!];
+      s.expect(lower.y > upper.y, `the second header below the first (rows ${upper.y}, ${lower.y})`);
+      await clickMode(s, "Lens", 1);
+      await s.status("LENS");
+      s.expect(selectedMode(s, 0).join() === "Read", `the upper window still Read: ${selectedMode(s, 0)}`);
+      s.expect(selectedMode(s, 1).join() === "Lens", `the lower window in the lens: ${selectedMode(s, 1)}`);
+    },
+  },
+  {
+    area: "editing",
+    name: "window header: hover lights a button a click switches to, never the selected or a disabled one; under which-key, nothing",
+    covers: { cases: ["window-header", "mouse", "which-key"] },
+    options: { ...at("~/notes/meetings/all-hands-archive.md"), size: { cols: 120, rows: 14 } },
+    run: async (s) => {
+      await ready(s);
+      await s.until(() => selectedMode(s).join() === "Read", WAIT, "Read selected");
+      /** The pointer moved over window 0's `label` (SGR's motion report), and that button's background then. */
+      const hoverOver = async (label: ModeLabel) => {
+        const b = modeButton(s, label)!;
+        await s.send(`\x1b[<35;${b.x + 1};${b.y + 1}M`);
+        return () => modeButton(s, label)!.style.bg;
+      };
+      const band = modeButton(s, "Lens")!.style.bg;
+      const lens = await hoverOver("Lens");
+      await s.until(() => lens() !== band, WAIT, "Lens lit under the pointer");
+      const read = await hoverOver("Read");
+      await s.until(() => lens() === band, WAIT, "Lens unlit once the pointer left it");
+      s.expect(read() === band, "the selected Read never lit");
+      // Which-key over the header: a click where Lens is goes nowhere.
+      const at = modeButton(s, "Lens")!;
+      await s.keys("space");
+      await s.until(
+        () => !s.statusLine().includes("READ"),
+        WAIT,
+        "the leader pending, its popup up (no mode on the chip)",
+      );
+      await s.send(`\x1b[<0;${at.x + 1};${at.y + 1}M`);
+      await s.send(`\x1b[<0;${at.x + 1};${at.y + 1}m`);
+      await s.keys("escape");
+      await s.status("READ");
+      // A text file: its disabled Read never lit.
+      await s.restart({ startAt: "home/work/kestrel/api/requirements.txt" });
+      await ready(s);
+      await s.until(() => selectedMode(s).join() === "Source", WAIT, "Source selected in a text file");
+      const textBand = modeButton(s, "Source")!.style.bg;
+      const disabled = await hoverOver("Read");
+      await s.settle();
+      s.expect(disabled() === textBand, "the disabled Read never lit");
     },
   },
 ];

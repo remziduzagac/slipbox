@@ -7,6 +7,7 @@ import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { commandGroup, COMMAND_SPECS } from "../src/core/command-specs.ts";
 import { TextCanvas } from "../src/tui/canvas.ts";
+import { BACKGROUND_PARSE } from "../src/tui/buffer.ts";
 import { crumbLeast, type Geometry } from "../src/tui/draw.ts";
 import { modeButtons } from "../src/tui/draw-header.ts";
 import { drawPane } from "../src/tui/draw-pane.ts";
@@ -239,7 +240,7 @@ describe("modes a window can't switch to are disabled (HDR-D2)", () => {
     expect(lastMessage(bad)?.text).toMatch(/^broken-config\.json doesn't parse — .+: source mode$/);
   });
 
-  test("data that stops parsing while typed in the lens: Lens kept, Read disabled; Source once typing ends", async () => {
+  test("data that stops parsing while typed in the lens: Lens kept, Read by the last parse; Source once typing ends", async () => {
     // With the breadcrumb off too: nothing else asks for the layout before the buttons are drawn.
     for (const breadcrumb of [true, false]) {
       const h = await harness({
@@ -251,11 +252,49 @@ describe("modes a window can't switch to are disabled (HDR-D2)", () => {
       const v = h.app.view!;
       await h.keys("i", "i", ":", " ", "[", "x");
       expect(v.insert).toBe(true);
-      expect(h.app.canRender(v.buf)).toBe(false);
-      expect(states(h)).toBe("Read:disabled Lens:selected Source:enabled");
+      // While it's typed into, the buttons go by the last parse (it parsed): never judged mid-typing.
+      expect(states(h)).toBe("Read:enabled Lens:selected Source:enabled");
       await h.keys("escape");
+      expect(h.app.canRender(v.buf)).toBe(false);
       expect(states(h)).toBe("Read:disabled Lens:disabled Source:selected");
     }
+  });
+
+  test("typing in a data file's source parses it no more than before: the header asks no parse of a keystroke", async () => {
+    const h = await harness({ open: YAML, width: 120, height: 30 });
+    const v = h.app.view!;
+    await h.keys("ctrl+k", "o");
+    expect(v.insert).toBe(true);
+    const parsedAt = () => (v.buf as unknown as { parsedVersion: number }).parsedVersion;
+    const before = parsedAt();
+    for (const k of ["a", ":", " ", "b"]) {
+      await h.keys(k);
+      h.frame();
+    }
+    expect(v.buf.version).toBeGreaterThan(before);
+    expect(parsedAt()).toBe(before);
+    // Typing over, a small file's buttons are of the text as it is: it parses.
+    await h.keys("escape");
+    h.frame();
+    expect(parsedAt()).toBe(v.buf.version);
+  });
+
+  test("a big data file's source: edits in normal mode parse it no more either; the buttons go by its last parse", async () => {
+    const h = await harness({ open: NOTE, width: 120, height: 30 });
+    const big = `${Array.from({ length: 9000 }, (_, i) => `key${i}: "value number ${i} of a big file"`).join("\n")}\n`;
+    expect(big.length).toBeGreaterThan(BACKGROUND_PARSE);
+    writeFileSync(join(h.root, "big.yaml"), big);
+    await h.app.run("note.open big.yaml");
+    const v = h.app.view!;
+    await h.keys("ctrl+k");
+    const parsedAt = () => (v.buf as unknown as { parsedVersion: number }).parsedVersion;
+    const before = parsedAt();
+    await h.keys("x", "x");
+    expect(states(h)).toBe("Read:enabled Lens:enabled Source:selected");
+    expect(parsedAt()).toBe(before);
+    // A click asks of the text as it is.
+    click(h, "read");
+    expect(viewMode(v)).toBe("rendered");
   });
 
   test("the selected Lens clicked while typing on data that stopped parsing: typing ends, and it's said once", async () => {
@@ -270,16 +309,37 @@ describe("modes a window can't switch to are disabled (HDR-D2)", () => {
     expect(h.app.messages.slice(before).map((m) => m.level)).toEqual(["warn"]);
   });
 
-  test("the disabled Read clicked while typing there: typing ends, the window goes to source mode, said once", async () => {
+  test("Read clicked while typing on data that stopped parsing: typing ends, the window goes to source mode, said once", async () => {
     const h = await harness({ open: YAML, width: 120, height: 30, config: (c) => (c.editor.edit_in = "live") });
     const v = h.app.view!;
     await h.keys("i", "i", ":", " ", "[", "x");
-    expect(states(h)).toBe("Read:disabled Lens:selected Source:enabled");
     const before = h.app.messages.length;
     click(h, "read");
     h.frame();
     expect(viewMode(v)).toBe("source");
     expect(h.app.messages.slice(before).map((m) => m.level)).toEqual(["warn"]);
+  });
+
+  test("in a split on one data file, a click in one window while the other's typing breaks it: said once", async () => {
+    const h = await harness({ open: YAML, width: 200, height: 30, config: (c) => (c.editor.edit_in = "live") });
+    await h.keys("ctrl+w", "v");
+    const t = h.app.tab!;
+    const [left, right] = [t.views[0]!, t.views[1]!];
+    // The left in source mode; the right typing in the lens, breaking the data.
+    t.active = 0;
+    await h.keys("ctrl+k");
+    t.active = 1;
+    await h.keys("i", "i", ":", " ", "[", "x");
+    expect(right.insert).toBe(true);
+    const before = h.app.messages.length;
+    click(h, "read", 0); // the left's Read: ending the right's typing says the data doesn't parse
+    h.frame();
+    expect(viewMode(left)).toBe("source");
+    expect(viewMode(right)).toBe("source");
+    expect(h.app.messages.slice(before).map((m) => m.level)).toEqual(["warn"]);
+    // Clicked again: said again (a click of its own).
+    click(h, "read", 0);
+    expect(h.app.messages.slice(before).map((m) => m.level)).toEqual(["warn", "warn"]);
   });
 
   test("a file that stops parsing on a reload: the first frame's buttons say source mode, the breadcrumb off too", async () => {
@@ -345,12 +405,16 @@ describe("the buttons' hover, and what covers them", () => {
 
   test("the which-key popup over the header: no button under it can be clicked", async () => {
     const h = await harness({ open: NOTE, width: 120, height: 14 });
+    h.frame();
+    const before = h.app.geometry!.hot.filter((b) => b.id.startsWith("mode:"));
     await h.keys("space");
     h.frame();
     const popup = h.app.geometry!.popup!;
     expect(popup).toBeTruthy();
     const under = (b: { x: number; y: number; w: number }) =>
       b.y >= popup.y && b.y < popup.y + popup.h && b.x + b.w > popup.x && b.x < popup.x + popup.w;
+    // The popup lies over the header's buttons (some at least), and none of those can be clicked through it.
+    expect(before.filter(under).length).toBeGreaterThan(0);
     expect(h.app.geometry!.hot.filter((b) => b.id.startsWith("mode:") && under(b))).toEqual([]);
   });
 });
@@ -382,6 +446,9 @@ describe("room: the buttons give way before the breadcrumb's innermost heading (
   test("crumbLeast: the icon and a space, the innermost heading up to 8 columns, `… ›` before it from two headings", () => {
     const g = { crumb: "›", crumbIcon: "§" };
     expect(crumbLeast([], g)).toBe(0);
+    // Never under the 4 columns a breadcrumb is drawn in: a heading one column wide keeps its place too.
+    expect(crumbLeast([{ text: "A" }], g)).toBe(4);
+    expect(modeButtons(25, crumbLeast([{ text: "A" }], g))).toBe("letters");
     expect(crumbLeast([{ text: "Brew" }], g)).toBe(2 + 4);
     expect(crumbLeast([{ text: "Brewing coffee" }], g)).toBe(2 + 8);
     expect(crumbLeast([{ text: "Coffee" }, { text: "Brewing coffee" }], g)).toBe(2 + 4 + 8);
@@ -484,6 +551,13 @@ describe("the two settings (HDR-D3)", () => {
     expect(lastMessage(h)?.text).toBe("Window header: off");
     expect(h.app.settings.uiOverrides.window_header).toEqual({ value: false, base: true });
     expect(buttons(h)).toEqual([]);
+    // Saved, and back on the next start in that folder.
+    h.app.session.save();
+    const again = await harness({ root: h.root, open: NOTE, width: 120, height: 30 });
+    expect(again.app.ui.window_header).toBe(false);
+    expect(buttons(again)).toEqual([]);
+    await again.app.run("ui.window_header");
+    again.app.session.save();
     await h.app.run("ui.window_header");
     expect(buttons(h).length).toBe(3);
     await h.app.run("ui.list");

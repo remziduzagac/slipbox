@@ -730,11 +730,15 @@ export const NAVIGATING: Check[] = [
         await s.until(() => s.text().includes("§ ") === shown, 3000, `the breadcrumb ${shown ? "back" : "hidden"}`);
         await s.see(HEADER);
       }
-      // The window header: the whole row, the breadcrumb on it included.
+      // The window header: the whole row, the breadcrumb on it included; remembered across a restart.
       for (const shown of [false, true]) {
         await palette("Window header", shown);
         await s.until(() => HEADER.test(s.text()) === shown, 3000, `the header ${shown ? "back" : "gone"}`);
         await s.until(() => s.text().includes("§ ") === shown, 3000, `the breadcrumb ${shown ? "back" : "gone"}`);
+        if (shown) continue;
+        await s.restart();
+        await s.see("Halden Ridge Observatory");
+        s.expect(!HEADER.test(s.text()), "the header still gone after a restart: remembered in the session");
       }
       // Zen mode has no header.
       await leader(s, "u", "z");

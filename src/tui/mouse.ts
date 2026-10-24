@@ -17,7 +17,6 @@ import { selectable } from "./overlays.ts";
 import { taskMarkAt } from "./views.ts";
 import { linkAt } from "./linking.ts";
 import { MODE_BUTTONS } from "./draw-header.ts";
-import { type ViewMode, viewMode } from "./lens.ts";
 
 /** The mouse: clicks, drags, the wheel. */
 export class Mouse {
@@ -25,8 +24,8 @@ export class Mouse {
 
   /** Id of the clickable region under the mouse, for hover highlighting. */
   hover: string | null = null;
-  /** Each window's mode as the click that's being handled found it, before it ended typing. */
-  private shownModes?: Map<View, ViewMode>;
+  /** Messages said before the click being handled began (`App.said`): what it said itself comes after. */
+  private saidBefore = 0;
 
   private lastClick: { x: number; y: number; at: number; count: number } | null = null;
   private drag:
@@ -83,9 +82,8 @@ export class Mouse {
     if (ev.type === "scroll") return this.wheel(ev, g);
     if (ev.type === "down") {
       // A click ends typing (its undo step closes), and a half-typed sequence (space, then the
-      // click) unless it's on the which-key popup's own entries; then does what it does. Ending typing can switch a
-      // window's mode (data that stopped parsing goes to source mode, said): a header's button goes by the mode shown.
-      this.shownModes = new Map(this.app.allViews().map((v) => [v, viewMode(v)]));
+      // click) unless it's on the which-key popup's own entries; then does what it does.
+      this.saidBefore = this.app.said;
       for (const v of this.app.allViews()) if (v.insert) stopInsert(this.app, v);
       const hot = hotAt()?.id ?? null;
       if (this.app.pending.length && !hot?.startsWith("wk:")) this.app.input.clearPending();
@@ -697,7 +695,8 @@ export class Mouse {
       }
       case "mode": {
         // mode:<window>:<read|lens|source> — the header's buttons (HDR-D2): that window focused (typing ended already,
-        // as by every click), then switched by the mode's command, told why not, or left as it is (the selected one).
+        // as by every click), then its mode's command run: it switches, says why it can't, or (the selected one) does
+        // nothing.
         const [w, which] = arg.split(":");
         const t = this.app.tab;
         const v = t?.views[Number(w)];
@@ -705,12 +704,12 @@ export class Mouse {
         if (!t || !v || !b) break;
         t.active = Number(w);
         this.app.region = "content";
-        // Ending typing switched the window already (data that stopped parsing, to source mode), and said so: nothing
-        // more, or one click says it twice. (The selected one's command does nothing.)
-        if ((this.shownModes?.get(v) ?? viewMode(v)) !== viewMode(v)) break;
+        // Ending typing may have said why already, in this window or another on the file (data that stopped parsing
+        // goes to source mode): one click never says it twice.
         const refused = this.app.lens.refusal(v, b.mode);
-        if (refused) this.app.message(refused.level, refused.text);
-        else void this.app.run(`view.mode_${b.id}`);
+        const said = this.app.messages.slice(Math.max(0, this.app.messages.length - (this.app.said - this.saidBefore)));
+        if (refused && said.some((m) => m.text === refused.text)) break;
+        void this.app.run(`view.mode_${b.id}`);
         break;
       }
       case "crumbmore": {

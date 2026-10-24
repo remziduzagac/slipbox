@@ -6,7 +6,7 @@ import { cellBlocks } from "../core/layout/code.ts";
 import { type Block, blockAt, blockRanges, composeLive, LENS_COUNTERS, sectionRanges } from "../core/layout/live.ts";
 import type { Layout } from "../core/layout/ir.ts";
 import { stringWidth } from "../core/width.ts";
-import type { NoteBuffer } from "./buffer.ts";
+import { BACKGROUND_PARSE, type NoteBuffer } from "./buffer.ts";
 import type { App, View } from "./app.ts";
 
 /** A window's mode: the rendered view (Read), live preview (the lens) or source mode. */
@@ -304,20 +304,25 @@ export class Lens {
 
   /**
    * Why a window can't switch to `mode` (HDR-D2), said by `setViewMode` and drawn as a disabled button on its header;
-   * null when it can, or is in it. It says nothing itself.
+   * null when it can, or is in it. It says nothing itself. `drawing`: for the header, which asks every frame — a data
+   * file changed since its last parse goes by that parse while it's typed into, or when it's big, so a keystroke never
+   * parses it (a click asks again, of the text as it is).
    */
-  refusal(view: View, mode: ViewMode): { level: "info" | "warn"; text: string } | null {
+  refusal(view: View, mode: ViewMode, drawing = false): { level: "info" | "warn"; text: string } | null {
     if (viewMode(view) === mode) return null;
-    if (view.buf.drawn) return { level: "info", text: "a diff is drawn one way" };
-    if (mode === "source" || this.app.canRender(view.buf)) return null;
-    const group = view.buf.kind.group;
+    const buf = view.buf;
+    if (buf.drawn) return { level: "info", text: "a diff is drawn one way" };
+    if (mode === "source") return null;
+    const last = drawing && buf.kind.group === "data" && (view.insert || buf.source.length >= BACKGROUND_PARSE);
+    if (last ? !buf.lastParsed.error : this.app.canRender(buf)) return null;
+    const group = buf.kind.group;
     const why =
       group === "data"
-        ? `doesn't parse — ${view.buf.parsed.error}`
+        ? `doesn't parse — ${(last ? buf.lastParsed : buf.parsed).error}`
         : group === "text"
           ? "has no rendered view"
           : "has no rendered view yet";
-    return { level: group === "data" ? "warn" : "info", text: `${view.buf.name} ${why}: source mode` };
+    return { level: group === "data" ? "warn" : "info", text: `${buf.name} ${why}: source mode` };
   }
 
   /** A window's mode: rendered, source (the markdown), or live preview. The cursor keeps its line. */
