@@ -271,3 +271,5 @@ Codex's review of `git diff origin/dev...` (`tmp/issue/codex-review-1.md`, not i
     change and serves reloads too; the click's dedupe covers what the header needed, and the move would change every
     path that lays a window out, beyond #24.
 - Terminal checks after the fixes: the header's eight and the settings check, 9 of 9.
+- 2026-10-24: every task done and in `tasks/archive/`; the acceptance criteria met (requirements.md); the workstream
+  complete, for the maintainer to consolidate.

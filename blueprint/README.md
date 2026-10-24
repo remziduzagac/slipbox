@@ -40,8 +40,8 @@ search's improvements.
   a newcomer can follow, [VV](workstreams/archive/vaults-and-view/README.md), vaults and the explorer's view, and
   [GIT](workstreams/archive/git-review/README.md), reviewing, diffing and merging what an agent changed, are
   consolidated, in `workstreams/archive/` (VV's and GIT's docs tasks still being written).
-  [HDR](workstreams/window-header/README.md), the window header and its Read, Lens and Source buttons, is active on
-  its branch (#24).
+  [HDR](workstreams/window-header/README.md), the window header and its Read, Lens and Source buttons, is complete on
+  its branch, for consolidation (#24).
 
 ## How things are recorded
 
