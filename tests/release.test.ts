@@ -479,6 +479,99 @@ const workflow = (name: string) =>
 const needs = (j: Job) => [j.needs ?? []].flat().sort();
 const runs = (j: Job) => (j.steps ?? []).map((s) => s.run ?? "").join("\n");
 
+/** A job's `if`, evaluated as GitHub does: `!`, `&&` and `||` (each giving back an operand, as GitHub's do), `==` and
+ *  `!=` (strings compared ignoring case), parentheses, quoted strings, numbers, `true`, `false`, `null` and the
+ *  context's dotted names; no functions. Anything around the `${{ }}`, a newline a YAML block keeps included, makes it
+ *  a string, which GitHub takes as true: refused. */
+function holds(expr: string | undefined, context: Record<string, unknown>): boolean {
+  const body = /^\$\{\{([\s\S]*)\}\}$/.exec(expr ?? "")?.[1];
+  if (body === undefined) throw new Error(`not an expression: ${expr}`);
+  const tokens = body.match(/'[^']*'|&&|\|\||==|!=|!|\(|\)|\d+(?:\.\d+)?|[A-Za-z_][\w.-]*|\S/g) ?? [];
+  const literals: Record<string, unknown> = { true: true, false: false, null: null };
+  let at = 0;
+  const fail = (): never => {
+    throw new Error(`can't read ${JSON.stringify(tokens[at])} in ${expr}`);
+  };
+  const primary = (): unknown => {
+    const t = tokens[at++] ?? fail();
+    if (t === "(") {
+      const v = or();
+      if (tokens[at++] !== ")") fail();
+      return v;
+    }
+    if (t.startsWith("'")) return t.slice(1, -1);
+    if (/^\d/.test(t)) return Number(t);
+    if (Object.hasOwn(literals, t)) return literals[t];
+    if (/^[A-Za-z_]/.test(t) && tokens[at] !== "(")
+      // A name that isn't there is null, as GitHub has it.
+      return t.split(".").reduce<unknown>((v, k) => {
+        if (v === null || typeof v !== "object") return null;
+        const key = Object.keys(v).find((name) => name.toLowerCase() === k.toLowerCase());
+        return key === undefined ? null : ((v as Record<string, unknown>)[key] ?? null);
+      }, context);
+    return fail();
+  };
+  const unary = (): unknown => {
+    if (tokens[at] !== "!") return primary();
+    at++;
+    return !unary();
+  };
+  // GitHub's numbers for a comparison of two types: null 0, booleans 0 and 1, a string's number ('' 0); anything else
+  // (an object, an array) NaN.
+  const number = (v: unknown): number =>
+    v === null ? 0 : typeof v === "boolean" || typeof v === "number" || typeof v === "string" ? Number(v) : Number.NaN;
+  const comparison = (): unknown => {
+    const left = unary();
+    const op = tokens[at];
+    if (op !== "==" && op !== "!=") return left;
+    at++;
+    const right = unary();
+    // Strings ignoring case; any other two of different types as numbers (null 0, true 1, '' 0, 'x' NaN).
+    const same =
+      typeof left === "string" && typeof right === "string"
+        ? left.toLowerCase() === right.toLowerCase()
+        : typeof left === typeof right
+          ? left === right
+          : number(left) === number(right);
+    return op === "==" ? same : !same;
+  };
+  const and = (): unknown => {
+    let v = comparison();
+    while (tokens[at] === "&&") {
+      at++;
+      const right = comparison();
+      v = v ? right : v;
+    }
+    return v;
+  };
+  const or = (): unknown => {
+    let v = and();
+    while (tokens[at] === "||") {
+      at++;
+      const right = and();
+      v = v ? v : right;
+    }
+    return v;
+  };
+  const v = or();
+  if (at !== tokens.length) fail();
+  return Boolean(v);
+}
+
+/** A step's script run as GitHub runs one with no `shell` on Linux (`bash -e`), with the environment given and the
+ *  commands in `stubs` first on PATH; in `cwd`. */
+function runStep(step: Step | undefined, env: Record<string, string>, cwd: string, stubs?: string) {
+  const script = join(cwd, "step.sh");
+  writeFileSync(script, step?.run ?? "exit 99");
+  const PATH = [stubs, "/usr/bin", "/bin"].filter(Boolean).join(":");
+  const r = Bun.spawnSync(["bash", "-e", script], {
+    env: { ...env, PATH },
+    cwd,
+    timeout: 20_000,
+  });
+  return { code: r.exitCode, out: r.stdout.toString() + r.stderr.toString() };
+}
+
 describe("a Mac's binary signed again (14.13)", () => {
   test("ad hoc, by codesign, when built on a Mac; never elsewhere, nor another platform's", () => {
     expect(signArgs("/x/slipbox", "darwin-arm64", "darwin")).toEqual([
@@ -620,14 +713,11 @@ describe("the workflows: one build for releases and previews, previews from test
     expect(writers.map(([id]) => id).sort()).toEqual(["prune", "publish"]);
   });
 
-  test("pages.yml: called, on a release published, on the bootstrap, the docs or the site changed on main, by hand; Pages' grants only in its deploy", () => {
+  test("pages.yml: called, on a release published, by hand, never when main moves; Pages' grants only in its deploy", () => {
     const pages = workflow("pages.yml");
-    expect(Object.keys(pages.on).sort()).toEqual(["push", "release", "workflow_call", "workflow_dispatch"]);
+    // D265: main moves only for a release (D251), whose publishing deploys it: a release's docs go live with it.
+    expect(Object.keys(pages.on).sort()).toEqual(["release", "workflow_call", "workflow_dispatch"]);
     expect(pages.on.release).toEqual({ types: ["published"] });
-    expect(pages.on.push).toEqual({
-      branches: ["main"],
-      paths: ["scripts/bootstrap*", "docs/**", "site/**", ".github/workflows/pages.yml"],
-    });
     expect(pages.concurrency).toEqual({ group: "pages", "cancel-in-progress": false });
     for (const [id, job] of Object.entries(pages.jobs)) {
       const grants = Object.keys(job.permissions ?? {}).filter((p) => p === "pages" || p === "id-token");
@@ -645,37 +735,238 @@ describe("the workflows: one build for releases and previews, previews from test
     // The docs (DS): the site built from docs/ by package.json's script, at docs/ beside the installer.
     expect(runs(site)).toContain("bun run site");
     expect(runs(site)).toContain("cp -R site/dist _site/docs");
-    expect(site.steps?.find((s) => s.uses?.startsWith("actions/upload-pages-artifact@"))?.with?.path).toBe("_site");
+    const upload = site.steps?.find((s) => s.uses?.startsWith("actions/upload-pages-artifact@"));
+    expect(upload?.with?.path).toBe("_site");
+    // Named by the attempt, the deploy taking that name: deploy-pages takes the one artifact of its name in the whole
+    // run, and a re-run that builds the site again uploads another.
+    expect(upload?.with?.name).toBe("github-pages-${{ github.run_attempt }}");
+    const deploys = pages.jobs.deploy?.steps?.find((s) => s.uses?.startsWith("actions/deploy-pages@"));
+    expect(deploys?.with).toEqual({ artifact_name: "github-pages-${{ github.run_attempt }}" });
   });
 
-  test("a release's site deployed by a run by hand on main; every deployment reads its channels back (D258)", () => {
-    // Under a `release` event, a deployment of a commit deployed before is reported a success and never served
-    // (actions/deploy-pages#383): 0.5.0's `stable` channel wasn't, its commit deployed already by its preview.
+  test("only a preview's run and a run by hand on main deploy; every other hands off to a run by hand on main (D265)", () => {
+    // A deployment of a commit deployed before is reported a success and never served under a `release` (0.5.0's
+    // `stable` channel, D258) or a `push` (#7: a preview of `main`'s commit); a run by hand's is. A release's commit and
+    // `main`'s, under D251, were always deployed by their preview; a preview's own is its commit's first.
+    // The evaluator itself, on forms GitHub reads its own way: an operand given back, literals, a number.
+    const ctx = { github: { event_name: "workflow_dispatch" } };
+    expect(holds("${{ github.event_name == 'workflow_dispatch' && 'full' || 'ci' }}", ctx)).toBe(true);
+    expect(holds("${{ false || 'x' == 'X' }}", ctx)).toBe(true);
+    expect(holds("${{ true && null }}", ctx)).toBe(false);
+    expect(holds("${{ 0 || '' }}", ctx)).toBe(false);
+    expect(() => holds("${{ always() }}", ctx)).toThrow("can't read");
+    expect(holds("${{ github.EVENT_NAME == 'WORKFLOW_DISPATCH' }}", ctx)).toBe(true);
+    expect(holds("${{ true == 'true' }}", ctx)).toBe(false);
+    expect(holds("${{ null == '' && 0 == '' && null == 0 && true == 1 }}", ctx)).toBe(true);
+    expect(holds("${{ github.missing == '' && github.missing == null }}", ctx)).toBe(true);
+    expect(holds("${{ github == 0 }}", ctx)).toBe(false);
     const pages = workflow("pages.yml");
-    const redeploy = pages.jobs.redeploy!;
-    expect(redeploy.if).toBe("${{ github.event_name == 'release' && !github.event.repository.fork }}");
-    expect(redeploy.permissions).toEqual({ actions: "write" });
-    expect(runs(redeploy)).toBe('gh workflow run pages.yml --repo "$GITHUB_REPOSITORY" --ref main');
-    // Nothing built or deployed under the release's own run: `deploy` waits for `site`, skipped there.
-    expect(pages.jobs.site?.if).toBe("${{ !github.event.repository.fork && github.event_name != 'release' }}");
-    expect(needs(pages.jobs.deploy!)).toEqual(["site"]);
-    // The channels as built, read back from the site, once deployed, until it serves them.
-    expect(pages.jobs.site?.outputs).toEqual({
+    const { redeploy, site, deploy } = pages.jobs;
+    const run = (event_name: string, ref: string, fork = false) => ({
+      github: { event_name, ref, event: { repository: { fork } } },
+    });
+    const starts = [
+      ["a preview's call, under its push to test", run("push", "refs/heads/test"), "site"],
+      ["by hand on main", run("workflow_dispatch", "refs/heads/main"), "site"],
+      // No trigger starts this one now; one that did would hand off.
+      ["a push to main", run("push", "refs/heads/main"), "redeploy"],
+      ["a release published", run("release", "refs/tags/v1.2.3"), "redeploy"],
+      ["by hand on test", run("workflow_dispatch", "refs/heads/test"), "redeploy"],
+      ["by hand on a tag", run("workflow_dispatch", "refs/tags/v1.2.3"), "redeploy"],
+    ] as const;
+    for (const [what, context, job] of starts) {
+      expect([holds(redeploy?.if, context), holds(site?.if, context)], what).toEqual([
+        job === "redeploy",
+        job === "site",
+      ]);
+      // Never in a fork: its Pages isn't this one's.
+      const fork = run(context.github.event_name, context.github.ref, true);
+      expect([holds(redeploy?.if, fork), holds(site?.if, fork)], `${what}, in a fork`).toEqual([false, false]);
+    }
+    // The run handed to is one by hand on main, which deploys and hands nothing on.
+    expect(redeploy?.permissions).toEqual({ actions: "write" });
+    const dir = mkdtempSync(join(sandbox, "redeploy-"));
+    const stubs = join(dir, "bin");
+    mkdirSync(stubs);
+    writeFileSync(join(stubs, "gh"), '#!/bin/sh\necho "$*" >"$FAKE/gh"\n');
+    chmodSync(join(stubs, "gh"), 0o755);
+    const env = { FAKE: dir, GITHUB_REPOSITORY: "o/r", GITHUB_SERVER_URL: "https://github.com", GH_TOKEN: "t" };
+    const handed = runStep(redeploy?.steps?.[0], env, dir, stubs);
+    expect(handed.code).toBe(0);
+    expect(readFileSync(join(dir, "gh"), "utf8")).toBe("workflow run pages.yml --repo o/r --ref main\n");
+    // Its own run says where the deployment is: it deploys nothing itself.
+    expect(handed.out).toContain("this run deploys nothing");
+    expect(handed.out).toContain("https://github.com/o/r/actions/workflows/pages.yml?query=branch%3Amain");
+    // Nothing deployed where `site` is skipped: `deploy` waits for it.
+    expect(needs(deploy!)).toEqual(["site"]);
+  });
+
+  test("the site carries the run's own marker, beside the channels, for `deploy` to read back (D265)", () => {
+    const site = workflow("pages.yml").jobs.site!;
+    expect(site.outputs).toEqual({
+      deployment: "${{ steps.marker.outputs.deployment }}",
       stable: "${{ steps.site.outputs.stable }}",
       preview: "${{ steps.site.outputs.preview }}",
     });
-    expect(runs(pages.jobs.site!)).toContain('echo "$channel=$(cat "_site/$channel" 2>/dev/null || true)"');
-    const steps = pages.jobs.deploy?.steps ?? [];
-    const deploy = steps.findIndex((s) => s.uses?.startsWith("actions/deploy-pages@"));
-    const served = steps.findIndex((s) => s.name === "served");
-    expect(deploy).toBeGreaterThanOrEqual(0);
-    expect(served).toBeGreaterThan(deploy);
-    expect(steps[served]?.env).toEqual({
+    expect(runs(site)).toContain('echo "$channel=$(cat "_site/$channel" 2>/dev/null || true)"');
+    const steps = site.steps ?? [];
+    const marker = steps.findIndex((s) => s.name === "marker");
+    expect(marker).toBeGreaterThan(steps.findIndex((s) => s.name === "docs"));
+    expect(marker).toBeLessThan(steps.findIndex((s) => s.uses?.startsWith("actions/upload-pages-artifact@")));
+    // Run: the run's ID and attempt, in the site and as the step's output.
+    const dir = mkdtempSync(join(sandbox, "marker-"));
+    mkdirSync(join(dir, "_site"));
+    const output = join(dir, "output");
+    writeFileSync(output, "");
+    const env = { GITHUB_RUN_ID: "40045492245", GITHUB_RUN_ATTEMPT: "2", GITHUB_OUTPUT: output };
+    expect(runStep(steps[marker], env, dir)).toEqual({ code: 0, out: "" });
+    expect(readFileSync(join(dir, "_site", "deployment"), "utf8")).toBe("40045492245.2\n");
+    expect(readFileSync(output, "utf8")).toBe("deployment=40045492245.2\n");
+  });
+
+  test("a deployment passes once the site serves its marker and channels; a stale marker fails, the channels alike (#7)", () => {
+    const steps = workflow("pages.yml").jobs.deploy?.steps ?? [];
+    const served = steps.find((s) => s.name === "served");
+    const deploys = steps.findIndex((s) => s.uses?.startsWith("actions/deploy-pages@"));
+    expect(deploys).toBeGreaterThanOrEqual(0);
+    expect(steps.indexOf(served!)).toBeGreaterThan(deploys);
+    expect(served?.env).toEqual({
       SITE: "${{ steps.deploy.outputs.page_url }}",
+      DEPLOYMENT: "${{ needs.site.outputs.deployment }}",
       STABLE: "${{ needs.site.outputs.stable }}",
       PREVIEW: "${{ needs.site.outputs.preview }}",
     });
-    expect(steps[served]?.run).toContain('[ "$(served stable)" = "$STABLE" ] && [ "$(served preview)" = "$PREVIEW" ]');
+    // The site, as files `curl` answers from (a 404, curl's 22, for one missing), each request taking `lag` seconds,
+    // and `later`'s served once the step has waited once. The clock is a file: `date` reads it, `sleep` and `curl`
+    // move it on, and nothing waits.
+    const stable = "v1.2.3 aaa";
+    const preview = "preview-202610231322-71313f3 bbb";
+    const readBack = (
+      site: Record<string, string>,
+      built: Record<string, string>,
+      { later, lag = 0, swapAt }: { later?: Record<string, string>; lag?: number; swapAt?: number } = {},
+    ) => {
+      const dir = mkdtempSync(join(sandbox, "served-"));
+      const start = 1_761_264_000;
+      writeFileSync(join(dir, "clock"), `${start}\n`);
+      for (const [where, files] of [
+        ["site", site],
+        ["later", later],
+      ] as const) {
+        if (!files) continue;
+        mkdirSync(join(dir, where));
+        for (const [name, text] of Object.entries(files)) writeFileSync(join(dir, where, name), `${text}\n`);
+      }
+      const stubs = join(dir, "bin");
+      mkdirSync(stubs);
+      const tick = (by: string) => `t=$(cat "$FAKE/clock"); echo $((t + ${by})) >"$FAKE/clock"\n`;
+      const stub = {
+        date: '#!/bin/sh\ncat "$FAKE/clock"\n',
+        curl: `#!/bin/sh\nif [ -n "$SWAP_AT" ] && [ -d "$FAKE/later" ] && [ "$(cat "$FAKE/clock")" -ge "$SWAP_AT" ]; then cp "$FAKE"/later/* "$FAKE/site/"; rm -r "$FAKE/later"; fi\n${tick("$LAG")}echo "$*" >>"$FAKE/curl-args"\nfor a; do url=$a; done\nf="$FAKE/site/\${url#"$SITE"}"\n[ -f "$f" ] || exit 22\ncat "$f"\n`,
+        sleep: `#!/bin/sh\n${tick("$1")}echo >>"$FAKE/slept"\nif [ -z "$SWAP_AT" ] && [ -d "$FAKE/later" ]; then cp "$FAKE"/later/* "$FAKE/site/"; rm -r "$FAKE/later"; fi\n`,
+      };
+      for (const [name, text] of Object.entries(stub)) {
+        writeFileSync(join(stubs, name), text);
+        chmodSync(join(stubs, name), 0o755);
+      }
+      const env = {
+        FAKE: dir,
+        SITE: "https://example.test/slipbox/",
+        LAG: String(lag),
+        SWAP_AT: swapAt === undefined ? "" : String(start + swapAt),
+        ...built,
+      };
+      const { code, out } = runStep(served, env, dir, stubs);
+      const slept = existsSync(join(dir, "slept"))
+        ? readFileSync(join(dir, "slept"), "utf8").split("\n").length - 1
+        : 0;
+      const took = Number(readFileSync(join(dir, "clock"), "utf8")) - start;
+      // Every request bounded: a site that hangs can't hold the job past its timeout.
+      const asked = join(dir, "curl-args");
+      const requests = existsSync(asked) ? readFileSync(asked, "utf8").trim().split("\n") : [];
+      for (const args of requests)
+        expect(args).toStartWith("-fsS --connect-timeout 5 --max-time 10 https://example.test/");
+      return { code, slept, took, out };
+    };
+    const built = { DEPLOYMENT: "40045492245.1", STABLE: stable, PREVIEW: preview, GITHUB_EVENT_NAME: "push" };
+    // Served at once.
+    const now = readBack({ deployment: "40045492245.1", stable, preview }, built);
+    expect([now.code, now.slept]).toEqual([0, 0]);
+    expect(now.out).toContain("the site serves this deployment, 40045492245.1, and the channels built");
+    // #7: the channels are what the site served already (a release's commit pushed to main, its preview's), but the
+    // files are the deployment before: never served, failing after eleven minutes, no longer passing at once.
+    const stale = readBack({ deployment: "39964133295.1", stable, preview }, built);
+    expect([stale.code, stale.slept, stale.took]).toEqual([1, 66, 660]);
+    expect(stale.out).toContain('deployment: built "40045492245.1", served "39964133295.1"');
+    expect(stale.out).toContain(`stable: built "${stable}", served "${stable}"`);
+    expect(stale.out).toContain(`preview: built "${preview}", served "${preview}"`);
+    // A preview's run (a push) is told a re-run won't help; a run by hand, which is the remedy, isn't.
+    expect(stale.out).toContain("Re-running this preview's pages / site deploys its commit again");
+    const byHand = readBack(
+      { deployment: "39964133295.1", stable, preview },
+      { ...built, GITHUB_EVENT_NAME: "workflow_dispatch" },
+      { lag: 10 },
+    );
+    expect(byHand.code).toBe(1);
+    expect(byHand.out).not.toMatch(/re-run/i);
+    // A site slow to answer (ten seconds a request, curl's bound) still gives up after eleven minutes, at most a wait,
+    // a round of three requests and the message's three later: within the job's 25 minutes, with deploy-pages' ten.
+    // With the marker the deployment before's; with no marker at all (a site deployed before markers); with the
+    // marker this one's and a channel off: each fails.
+    for (const site of [
+      { deployment: "39964133295.1", stable, preview },
+      { stable, preview } as Record<string, string>,
+      { deployment: "40045492245.1", stable, preview: "preview-202610222311-95570ea ccc" },
+    ]) {
+      const slow = readBack(site, built, { lag: 10 });
+      expect(slow.code).toBe(1);
+      expect(slow.took).toBeGreaterThanOrEqual(660);
+      expect(slow.took).toBeLessThanOrEqual(660 + 10 + 3 * 10 + 3 * 10);
+    }
+    // And the job's timeout holds deploy-pages' ten minutes and that worst case.
+    const timeout = (workflow("pages.yml").jobs.deploy as { "timeout-minutes"?: number })["timeout-minutes"] ?? 0;
+    expect(timeout * 60).toBeGreaterThanOrEqual(600 + 660 + 10 + 3 * 10 + 3 * 10);
+    // Served just after the last round, at the deadline's one last read: passed, not reported unserved.
+    const last = readBack({ deployment: "39964133295.1", stable, preview }, built, {
+      later: { deployment: "40045492245.1" },
+      lag: 1,
+      swapAt: 661,
+    });
+    expect(last.code).toBe(0);
+    expect(last.took).toBeGreaterThan(660);
+    expect(last.out).toContain("the site serves this deployment, 40045492245.1, and the channels built");
+    // Served a while after the deployment says it's done.
+    const later = readBack({ deployment: "39964133295.1", stable, preview }, built, {
+      later: { deployment: "40045492245.1" },
+    });
+    expect([later.code, later.slept]).toEqual([0, 1]);
+    // A channel with no release has no file, which reads back as the empty line built.
+    expect(readBack({ deployment: "40045492245.1", preview }, { ...built, STABLE: "" }).code).toBe(0);
+    // Nothing to read back without a marker built: fails at once.
+    const unmarked = readBack({ deployment: "", stable, preview }, { ...built, DEPLOYMENT: "" });
+    expect([unmarked.code, unmarked.slept]).toEqual([1, 0]);
+    expect(unmarked.out).toContain("no marker was built");
+  }, 30_000);
+
+  test("a re-run of `deploy` alone is refused: it might put back an older site (D265)", () => {
+    const steps = workflow("pages.yml").jobs.deploy?.steps ?? [];
+    const guard = steps.findIndex((s) => s.name === "this run's site");
+    expect(guard).toBeGreaterThanOrEqual(0);
+    expect(guard).toBeLessThan(steps.findIndex((s) => s.uses?.startsWith("actions/deploy-pages@")));
+    expect(steps[guard]?.env).toEqual({ DEPLOYMENT: "${{ needs.site.outputs.deployment }}" });
+    const dir = mkdtempSync(join(sandbox, "guard-"));
+    const attempt = (marker: string, n: string) =>
+      runStep(steps[guard], { DEPLOYMENT: marker, GITHUB_RUN_ID: "40045492245", GITHUB_RUN_ATTEMPT: n }, dir);
+    // The run's first attempt, and a re-run of every job, `site` building its site again: deployed.
+    expect(attempt("40045492245.1", "1")).toEqual({ code: 0, out: "" });
+    expect(attempt("40045492245.2", "2")).toEqual({ code: 0, out: "" });
+    // A re-run of `deploy` alone: `site`'s outputs, and its artifact, are attempt 1's.
+    const rerun = attempt("40045492245.1", "2");
+    expect(rerun.code).toBe(1);
+    expect(rerun.out).toContain("a re-run of deploy alone, with the site attempt 1 built");
+    expect(rerun.out).toContain("Run pages.yml by hand on main instead");
+    // No marker built at all.
+    expect(attempt("", "1")).toEqual({ code: 1, out: "no marker was built: nothing to deploy and read back\n" });
   });
 
   test("a job calling a workflow grants it at least what its jobs ask: GitHub won't start it otherwise", () => {

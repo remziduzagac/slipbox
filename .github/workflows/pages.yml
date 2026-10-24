@@ -4,22 +4,17 @@ name: pages
 # change: `install.sh`, the bootstrap (`scripts/bootstrap.ts`), and the channels it reads, `stable` and `preview`, each
 # one line, `<tag> <SHA-256 of that release's install.sh>` — the highest stable release, the newest preview; none for
 # a channel with no release (`scripts/release.ts site`); and the docs at `docs/`, the site/ Starlight site built from
-# docs/ (DS), where the site's index sends a visitor. Deployed by preview.yml once a preview is published, when the
-# bootstrap, the docs or the site change on main, by hand, and when a release is published (by a person: a release CI
-# publishes starts no workflow), by a run by hand on main that the release's run starts (D258). A deployment passes
-# once the site serves the channels it built.
+# docs/ (DS), where the site's index sends a visitor. Deployed by preview.yml once a preview is published, in its own
+# run, and by a run by hand on main, which every other run starts instead of deploying (D258, D265): when a release is
+# published (by a person: a release CI publishes starts no workflow), and by hand on another ref. Not when main moves:
+# main takes only test's commits, for a release (D251), and its docs reach the site when the release is published,
+# unless a preview or a run by hand comes first (every deployment builds from main).
+# A deployment passes once the site serves the run's own marker, `deployment`, and the channels it built.
 # Every action pinned by its commit, a week old when taken (14.10); values reach the shell through env, never inline.
 on:
   workflow_call:
   release:
     types: [published]
-  push:
-    branches: [main]
-    paths:
-      - "scripts/bootstrap*"
-      - "docs/**"
-      - "site/**"
-      - ".github/workflows/pages.yml"
   workflow_dispatch:
 
 # No permission by default; each job grants what it needs, and says why (GR-D9). No cache is restored anywhere in it.
@@ -32,11 +27,16 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # D258: a release published is deployed by a run of this workflow by hand, on main, which this job starts. A
-  # deployment made under a `release` event is reported a success and never served when its commit was deployed before
-  # (actions/deploy-pages#383), as a release's always is, by its preview (D251); one made by hand is served.
+  # D258, D265: a deployment of a commit deployed before is reported a success and never served when it's made under a
+  # `release` or a `push` (actions/deploy-pages#383; this repository's #7); one made by hand is served. So only two
+  # runs deploy: a preview's (preview.yml's call, the one push this workflow sees), its commit's first deployment, and
+  # a run by hand on main. Any other — a release published, whose commit its preview deployed already (D251), a run by
+  # hand on another ref — deploys nothing: this job starts a run by hand on main instead. `site` runs on the opposite.
   redeploy:
-    if: ${{ github.event_name == 'release' && !github.event.repository.fork }}
+    if: >-
+      ${{ !github.event.repository.fork
+      && !(github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
+      && !(github.event_name == 'push' && github.ref == 'refs/heads/test') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
@@ -45,20 +45,29 @@ jobs:
       - name: run on main
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh workflow run pages.yml --repo "$GITHUB_REPOSITORY" --ref main
+        run: |
+          gh workflow run pages.yml --repo "$GITHUB_REPOSITORY" --ref main
+          runs="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/workflows/pages.yml?query=branch%3Amain"
+          echo "this run deploys nothing: the run by hand on main just started, with main's pages.yml, deploys the site"
+          echo "and reads it back. Its result is there, not here: $runs"
 
   # The site, from main's bootstrap whichever ref started the run, and the releases as they are now; the docs under
   # docs/, built by the site's own packages (site/package.json, installed under site/bunfig.toml's gates: no install
   # script runs). No other dependency is installed.
   site:
-    # Never in a fork: its Pages isn't this one's; nor for a release, which `redeploy` hands to a run by hand.
-    if: ${{ !github.event.repository.fork && github.event_name != 'release' }}
+    # Never in a fork: its Pages isn't this one's; and only in the runs that deploy, which `redeploy` hands the rest to.
+    if: >-
+      ${{ !github.event.repository.fork
+      && ((github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
+      || (github.event_name == 'push' && github.ref == 'refs/heads/test')) }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
       contents: read # to check out main, and list the releases
-    # The channels' lines as built, for `deploy` to read back from the site: empty for a channel with no release.
+    # What `deploy` reads back from the site: the run's marker, and the channels' lines as built, empty for a channel
+    # with no release.
     outputs:
+      deployment: ${{ steps.marker.outputs.deployment }}
       stable: ${{ steps.site.outputs.stable }}
       preview: ${{ steps.site.outputs.preview }}
     steps:
@@ -86,16 +95,26 @@ jobs:
         run: |
           bun run site
           cp -R site/dist _site/docs
+      # D265: the run's own mark on the site, which no other deployment has, so `deploy` can tell this one is served
+      # even when the channels are what the site served already.
+      - name: marker
+        id: marker
+        run: |
+          echo "$GITHUB_RUN_ID.$GITHUB_RUN_ATTEMPT" >_site/deployment
+          echo "deployment=$(cat _site/deployment)" >>"$GITHUB_OUTPUT"
+      # Named by the attempt: deploy-pages takes the one artifact of its name in the whole run, so a re-run that builds
+      # the site again would otherwise find two and deploy neither (D265).
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
+          name: github-pages-${{ github.run_attempt }}
           path: _site
 
   # The deployment alone holds the Pages grants, in the `github-pages` environment, which only the refs it names
-  # reach: main, test and v* tags (.github/upkeep/settings.json).
+  # reach: main, test and v* tags (.github/upkeep/settings.json), though no run on a tag deploys now.
   deploy:
     needs: site
     runs-on: ubuntu-24.04
-    # deploy-pages waits ten minutes at most, and reading the channels back eleven more.
+    # deploy-pages waits ten minutes at most, reading the deployment back eleven more, then two rounds of requests.
     timeout-minutes: 25
     permissions:
       pages: write # to deploy the site
@@ -104,25 +123,66 @@ jobs:
       name: github-pages
       url: ${{ steps.deploy.outputs.page_url }}
     steps:
+      # D265: a re-run of this job alone would deploy the run's artifact again, its site perhaps older than one deployed
+      # since, and a repeat of its commit (served by hand, putting back the older site; under a push, not served).
+      - name: this run's site
+        env:
+          DEPLOYMENT: ${{ needs.site.outputs.deployment }}
+        run: |
+          if [ -z "$DEPLOYMENT" ]; then
+            echo "no marker was built: nothing to deploy and read back"
+            exit 1
+          fi
+          if [ "$DEPLOYMENT" != "$GITHUB_RUN_ID.$GITHUB_RUN_ATTEMPT" ]; then
+            echo "this is a re-run of deploy alone, with the site attempt ${DEPLOYMENT##*.} built, which may be older"
+            echo "than the one deployed since. Run pages.yml by hand on main instead, which builds the site afresh."
+            exit 1
+          fi
       - id: deploy
         uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
-      # D258: a deployment can be reported a success and not be served (actions/deploy-pages#383), as 0.5.0's was. The
-      # channels are read back from the site until they're what `site` built: eleven minutes at most, past the ten its
-      # cache keeps a file (a deployment empties the cache, and a query doesn't get past it).
+        with:
+          artifact_name: github-pages-${{ github.run_attempt }}
+      # D258, D265: a deployment can be reported a success and not be served (actions/deploy-pages#383), as 0.5.0's was.
+      # The marker and the channels are read back from the site until they're what `site` built: for eleven minutes,
+      # past the ten its cache keeps a file (a deployment empties the cache, and a query doesn't get past it), however
+      # long the site takes to answer.
       - name: served
         env:
           SITE: ${{ steps.deploy.outputs.page_url }}
+          DEPLOYMENT: ${{ needs.site.outputs.deployment }}
           STABLE: ${{ needs.site.outputs.stable }}
           PREVIEW: ${{ needs.site.outputs.preview }}
         run: |
-          served() { curl -fsS "$SITE$1" 2>/dev/null || true; }
-          for _ in $(seq 66); do
-            if [ "$(served stable)" = "$STABLE" ] && [ "$(served preview)" = "$PREVIEW" ]; then
-              echo "the site serves the channels built"
+          if [ -z "$DEPLOYMENT" ]; then
+            echo "no marker was built: nothing to read back"
+            exit 1
+          fi
+          served() { curl -fsS --connect-timeout 5 --max-time 10 "$SITE$1" 2>/dev/null || true; }
+          deadline=$(($(date +%s) + 660))
+          while :; do
+            if [ "$(served deployment)" = "$DEPLOYMENT" ] && [ "$(served stable)" = "$STABLE" ] &&
+              [ "$(served preview)" = "$PREVIEW" ]; then
+              echo "the site serves this deployment, $DEPLOYMENT, and the channels built"
               exit 0
             fi
+            [ "$(date +%s)" -lt "$deadline" ] || break
             sleep 10
           done
-          echo "after eleven minutes, the site doesn't serve the channels built:"
-          echo "stable \"$STABLE\", preview \"$PREVIEW\""
+          # One last read of all three, what's reported being what was compared.
+          got_deployment=$(served deployment)
+          got_stable=$(served stable)
+          got_preview=$(served preview)
+          if [ "$got_deployment" = "$DEPLOYMENT" ] && [ "$got_stable" = "$STABLE" ] && [ "$got_preview" = "$PREVIEW" ]
+          then
+            echo "the site serves this deployment, $DEPLOYMENT, and the channels built"
+            exit 0
+          fi
+          echo "after eleven minutes, the site doesn't serve what this deployment built:"
+          echo "  deployment: built \"$DEPLOYMENT\", served \"$got_deployment\""
+          echo "  stable: built \"$STABLE\", served \"$got_stable\""
+          echo "  preview: built \"$PREVIEW\", served \"$got_preview\""
+          if [ "$GITHUB_EVENT_NAME" = push ]; then
+            echo "Re-running this preview's pages / site deploys its commit again, which Pages may not serve under a"
+            echo "push, and re-running pages / deploy alone is refused: run pages.yml by hand on main instead."
+          fi
           exit 1

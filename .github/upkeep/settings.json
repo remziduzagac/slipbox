@@ -81,7 +81,7 @@
     {
       "endpoint": "repos/{repo}/environments/github-pages/deployment-branch-policies",
       "reader": "workflow",
-      "about": "Pages deployed from `main` (by hand, the bootstrap changed), `test` (a preview), `v*` tags (a release)",
+      "about": "Pages deployed from `main` (by hand, and a release's run by hand) and `test` (a preview); a `v*` tag's run hands off to `main`",
       "expect": {
         "branch_policies": [
           { "name": "main", "type": "branch" },

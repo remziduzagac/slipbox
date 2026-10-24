@@ -162,7 +162,7 @@ The other workflows keep the same rules:
 | `build.yml` | called | every platform built, packed, given its SBOM, summed, attested |
 | `release.yml` | a `v*` tag | the tag and changelog checked, `build.yml`, the draft |
 | `preview.yml` | a push to `test` | the preview planned, `build.yml`, the pre-release, the pruning, `pages.yml` |
-| `pages.yml` | called; a release published; the bootstrap, `docs/`, `site/` on `main`; by hand | the Pages site |
+| `pages.yml` | called; a release published; by hand | the Pages site |
 | `homebrew.yml` | a release published | the formula into the tap, through the `release` environment |
 | `audit.yml` | weekly; `bun.lock` or the accepted list changed; by hand | `bun run audit` |
 | `health.yml` | weekly; by hand | the health issue (§ The weekly health check) |
@@ -176,10 +176,11 @@ what its jobs ask). A same-repository call is `./.github/workflows/<file>`: zizm
 GitHub's newer `$/` form, which means the same, but actionlint 1.7.12 doesn't read it yet (rhysd/actionlint#711), and
 checks a call's inputs and permissions against the workflow called only in the `./` form, which for a reusable workflow
 is read from the run's own commit, never the workspace; the finding is ignored inline, with that reason. A release run
-is never cancelled; `preview.yml` and `pages.yml` each run one at a time (`preview`, `pages`), never cancelled;
-`pages.yml`'s Pages grants are its `deploy` job's alone, and for a release it deploys nothing: its `redeploy` job starts
-a run of it by hand on `main` (`actions: write`, D258), so `preview.yml`'s call grants that too. What each builds and
-publishes:
+is never cancelled; `preview.yml` and `pages.yml` each run one at a time (`preview`, `pages`), never cancelled while
+running (one waiting gives way to a newer);
+`pages.yml`'s Pages grants are its `deploy` job's alone, and only a preview's run and a run by hand on `main` deploy:
+for any other, its `redeploy` job starts a run of it by hand on `main` (`actions: write`, D258, D265), so
+`preview.yml`'s call grants that too. What each builds and publishes:
 [distribution.md](distribution.md) § Releases, § Previews, § Channels.
 
 Beside the workflows, GitHub's own: CodeQL's default setup scans the code (`javascript-typescript`) and the workflows

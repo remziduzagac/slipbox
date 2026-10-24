@@ -165,6 +165,10 @@ took near half an hour each: "I agree we should not run full suite in previews".
 
 > **Amended by D258 (2026-10-23):** a release published is deployed by a run of `pages.yml` by hand on `main`, which
 > the release's run starts, and every deployment reads the channels back from the site.
+>
+> **Amended by D265 (2026-10-24):** not deployed when the bootstrap changes on `main` (it moves only for a release,
+> which deploys when published); only a preview's run and a run by hand on `main` deploy, each reading back a marker of
+> its own.
 
 **Decision:** `curl -fsSL https://remziduzagac.github.io/slipbox/install.sh | sh` installs slipbox; `sh -s --
 --preview`, the newest preview. The Pages `install.sh` is a bootstrap: it reads the channel's file from Pages (`stable`,

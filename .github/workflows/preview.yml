@@ -130,12 +130,14 @@ jobs:
             gh release delete "$tag" --repo "$GITHUB_REPOSITORY" --cleanup-tag --yes
           done
 
-  # The site redeployed, so its `preview` channel names the preview just published.
+  # The site redeployed, in this run, so its `preview` channel names the preview just published: the commit's first
+  # deployment, which Pages serves under a push (D265).
   pages:
     needs: publish
     uses: ./.github/workflows/pages.yml # zizmor: ignore[self-repository]
-    # The most pages.yml's jobs may have: its build reads, its deploy alone deploys, and its redeploy, which runs for a
-    # release alone, starts it again; GitHub checks every job's grants, whichever runs.
+    # The most pages.yml's jobs may have: its build reads, its deploy alone deploys, and its redeploy, which runs for
+    # every run but a preview's and one by hand on main, starts it again; GitHub checks every job's grants, whichever
+    # runs.
     permissions:
       actions: write # to run pages.yml by hand, on main (its redeploy: never for a preview)
       contents: read # to check out main, and list the releases
