@@ -225,7 +225,7 @@ const HOME: Check[] = [
       await s.see("Bike insurance");
       // The view at the folder opened, home above it.
       await explorerOpen(s);
-      await s.until(() => /^household ›$/.test(crumbs(s)), 3000, "the breadcrumb: household ›");
+      await s.until(() => /^~ › household ›$/.test(crumbs(s)), 3000, "the breadcrumb: ~ › household ›");
       await s.keys("escape");
       // Its notes, a folder down too, known at once — and only its: another folder of home isn't walked.
       await s.keys("ctrl+p");
@@ -647,7 +647,7 @@ const HOME: Check[] = [
     covers: { cases: ["vault", "switcher"], commands: ["switcher.open"] },
     options: { home: true, startAt: "home/household", config: UNWALKED, setup: (s) => homeWalked(s) },
     run: async (s) => {
-      await s.where(/^~(?: |$)/, /household\/bike-insurance\.md/);
+      await s.where("household", /household\/bike-insurance\.md/);
       await quits(s);
       // slipbox closed. cp -a of a backup into ~/garden: a note, and garden's time the backup's, older than the walk.
       const older = new Date(Date.now() - 2 * 3_600_000);
@@ -666,7 +666,7 @@ const HOME: Check[] = [
       s.expect(statSync(s.path("~/garden")).mtimeMs === older.getTime(), "garden's time set back by cp -a");
       // household opened by name again: home's walk kept covers it, and lists again the folders whose time moved back.
       await s.restart();
-      await s.where(/^~(?: |$)/, /household\/bike-insurance\.md/);
+      await s.where("household", /household\/bike-insurance\.md/);
       await switcherShows(s, "compost", "garden/compost.md");
       await switcherShows(s, "2024-policy", "household/archive/2024-policy.md");
       await quits(s);

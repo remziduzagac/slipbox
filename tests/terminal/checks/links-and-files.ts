@@ -1373,7 +1373,7 @@ const NAMED: Check[] = [
   },
   {
     area: "links-and-files",
-    name: "naming: :name gives the cooking vault a name its pointer finds; the vault words are gone (21.10, 21.12)",
+    name: "naming: :name names the cooking vault, its pointer resolves, and vaults lists it (21.10)",
     covers: { cases: ["links/named-folders", "rename", "links/state"], commands: ["folder.name"] },
     options: { home: true, startAt: "home/hobbies/cooking/Home.md" },
     run: async (s) => {
@@ -1386,7 +1386,11 @@ const NAMED: Check[] = [
       );
       const r = JSON.parse(s.cliIn("~/notes", "resolve", "slipbox://cooking/Home.md", "--json").out).data;
       s.expect(r.status === "resolved" && r.name === "cooking", `the pointer: ${JSON.stringify(r)}`);
-      s.expect(s.cliIn("~/notes", "vaults").code === 2, "slipbox vaults is gone");
+      const vaults = JSON.parse(s.cliIn("~/notes", "vaults", "--json").out).data;
+      s.expect(
+        vaults.some((row: { label: string }) => row.label === "cooking"),
+        "slipbox vaults includes the named vault",
+      );
       s.expect(s.cliIn("~/notes", "vault-moved").code === 2, "slipbox vault-moved is gone");
       const info = JSON.parse(s.cliIn("~/hobbies/cooking", "info", "--json").out).data;
       s.expect(

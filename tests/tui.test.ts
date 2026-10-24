@@ -15708,7 +15708,7 @@ describe("a branch switch as one event (5.9)", () => {
     const root = mkdtempSync(join(sandbox, "late-git-"));
     mkdirSync(join(root, ".slipbox"));
     writeFileSync(join(root, "a.md"), "# A\n");
-    const h = await harness({ root, open: "a.md" });
+    const h = await harness({ root, open: "a.md", width: 2 * stringWidth(root) + 80 });
     expect(topRow(h.frame())).not.toContain("⎇");
     if (git(root, "init", "-q", "-b", "main").exitCode !== 0) return;
     const later = Date.now() + 5_000; // the next look for a repository

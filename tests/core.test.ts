@@ -1081,7 +1081,7 @@ describe("source layout (4.13)", () => {
     expect(first.lines[1]!.spans).toContainEqual(expect.objectContaining({ text: "const", role: "syn_keyword" }));
     expect(first.lines.map(text)).toEqual(["~~~ts", "const answer = 42;", "~~~", "# After"]);
     const changed = layoutSource(source.replace("~~~ts", "~~~unknown-language"), opts, cache);
-    expect(changed.lines[1]!.spans.every((span) => span.role === "text")).toBe(true);
+    expect(changed.lines[1]!.spans.every((span) => span.role === "code_block")).toBe(true);
     expect(changed).toEqual(layoutSource(source.replace("~~~ts", "~~~unknown-language"), opts));
     expect(changed.headings.map((h) => h.text)).toEqual(["After"]);
   });

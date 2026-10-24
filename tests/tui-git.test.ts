@@ -16,6 +16,7 @@ import {
 import { basename, delimiter, dirname, join, relative } from "node:path";
 import { type ListOverlay, App } from "../src/tui/app.ts";
 import type { Line } from "../src/core/layout/ir.ts";
+import { stringWidth } from "../src/core/width.ts";
 import { makeSandbox, makeVault, harness, onlyRootsUnder, statusRow, topRow, type Harness } from "./tui-harness.ts";
 
 const sandbox = makeSandbox();
@@ -45,18 +46,19 @@ describe("git worktrees in the TUI (17.19)", () => {
   test("the top bar: the vault's name and its branch, a worktree names its vault and branch once (VB-D3); :folders groups its repository", async () => {
     const l = layout();
     if (!l) return;
-    const main = await harness({ root: l.x, open: "index.md" });
+    const width = 2 * stringWidth(l.wts) + 100; // room for full location items, independent of the temp prefix
+    const main = await harness({ root: l.x, open: "index.md", width });
     const name = main.app.loc.name!;
     expect(topRow(main.frame())).toContain(`◈ ${name} │ ⎇ main`);
     expect(topRow(main.frame()).match(/⎇/g)).toHaveLength(1);
     expect(statusRow(main.frame())).not.toContain(name); // said once (WSP-D5)
-    const feat = await harness({ root: join(l.wts, "feat"), open: "index.md" });
+    const feat = await harness({ root: join(l.wts, "feat"), open: "index.md", width });
     expect(topRow(feat.frame())).toContain(`◈ ${name} │ ⎇ feat`);
     expect(topRow(feat.frame()).match(/⎇/g)).toHaveLength(1);
-    await harness({ root: join(l.wts, "fix"), open: "index.md" }); // seen too
+    await harness({ root: join(l.wts, "fix"), open: "index.md", width }); // seen too
     // From elsewhere: :folders lists it once, by its name — its worktrees are its branches, not copies (21.6).
     const { tildePath } = await import("../src/core/names.ts");
-    const other = await harness({ open: "index.md" });
+    const other = await harness({ open: "index.md", width });
     await other.app.run("folders.open");
     const items = (other.app.overlay as ListOverlay).items.filter((i) => i.label === name && i.header);
     expect(items.map((i) => i.detail)).toEqual([tildePath(l.x)]);
@@ -137,7 +139,7 @@ describe("git worktrees in the TUI (17.19)", () => {
     expect(h.app.overlay).toBeNull();
     await h.app.run("folders.open");
     const list = h.app.overlay as ListOverlay;
-    const at = list.items.findIndex((i) => i.label === `f${tag}`);
+    const at = list.items.findIndex((item) => (item.data as { root?: string } | null)?.root === one);
     expect(
       list.items
         .filter((item) => item.label === `f${tag}`)
@@ -147,7 +149,7 @@ describe("git worktrees in the TUI (17.19)", () => {
     expect(list.items[at]).toMatchObject({ detail: tildePath(one) });
     list.selected = at;
     await h.keys("enter");
-    // Into the copy its links open; a second copy here, never chosen: asked which, once (21.6).
+    // Into the selected copy; pointer-copy preference is asked independently, once (21.6).
     expect(h.app.loc.root).toBe(one);
     expect((h.app.overlay as ListOverlay).title).toBe(`f${tag}: 2 copies on this machine — which do links to it open?`);
     await h.keys("escape");

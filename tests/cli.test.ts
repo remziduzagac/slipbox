@@ -809,8 +809,10 @@ describe("the vault and the tool", () => {
       id: expect.stringMatching(/^[0-9a-f]{16}$/),
     });
     expect(slipbox(["info"], { cwd: fresh }).out).toContain("name      clifresh");
-    // The vault words are gone (21.12): `folders` lists the named ones.
-    expect(slipbox(["vaults"]).code).toBe(2);
+    // Vaults lists known workspaces; folders retains pointer names and copy defaults.
+    const known = slipbox(["vaults", "--json"]);
+    expect(known.code).toBe(0);
+    expect(known.json.data.some((row: { data: { root: string } | null }) => row.data?.root === fresh)).toBe(true);
     expect(slipbox(["vault-moved"]).code).toBe(2);
     expect(
       slipbox(["folders", "--json"]).json.data.some(
