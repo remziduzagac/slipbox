@@ -545,7 +545,7 @@ export class App {
         | { kind: "peek"; peek: Peek }
         | { kind: "review"; review: Review }
         | { kind: "merge"; merge: MergeState }
-        | { kind: "report" }
+        | { kind: "report"; from: Region }
       ) & { view: View; title: string })
     | null = null;
   /** Completion's popup while typing (19.16), and the signature being typed. */
@@ -1129,7 +1129,10 @@ export class App {
   /** Write a buffer's file and take the result back in; false (with a message) if refused. */
   writeBuffer(buf: NoteBuffer, content: string | Uint8Array, saving = false): boolean {
     // A virtual buffer (3.20) is no file: its text goes where it belongs by its own save, never to its name on disk.
-    if (buf.virtual) return false;
+    if (buf.virtual) {
+      this.message("warn", `${this.displayName(buf)} is the floating window's, not a file: not written`);
+      return false;
+    }
     // A vault note stays inside the vault; a file from outside it (the scratch) inside its folder. Through a link
     // you follow, home's and Elsewhere's are written where it leads; a vault's never out of it (VV-D6).
     const root = buf.rel !== null ? this.loc.root : dirname(buf.abs);

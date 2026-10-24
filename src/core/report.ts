@@ -157,7 +157,7 @@ function systemName(platform: string, read: (file: string) => string): string | 
     const v = new RegExp(`^${k}=(.*)$`, "m").exec(release)?.[1]?.trim();
     return v?.replace(/^(["'])(.*)\1$/, "$2");
   };
-  return oneLine(value("PRETTY_NAME") ?? [value("NAME"), value("VERSION")].filter(Boolean).join(" "));
+  return oneLine(value("PRETTY_NAME") || [value("NAME"), value("VERSION")].filter(Boolean).join(" "));
 }
 
 /** The multiplexers between the terminal and slipbox, by their own variables: presence only, never a socket's path or
@@ -295,7 +295,8 @@ const LABEL_ID = new Map<string, FieldId>(FORM_FIELDS.map((f) => [f.label, f.id]
 
 /** A line that is a form label's heading, outside a fence: its field. */
 function labelOf(line: string): FieldId | undefined {
-  const m = /^### (.+?)\s*$/.exec(line);
+  // Its closing hashes, if any, aren't its text (CommonMark).
+  const m = /^### (.+?)(?:\s+#+)?\s*$/.exec(line);
   return m ? LABEL_ID.get(m[1]!) : undefined;
 }
 
@@ -312,6 +313,8 @@ export interface ReadBack {
   seen: { heading: number; end: number } | null;
   /** A fence still open where the text ends: where anything after it belongs isn't clear. */
   openFence: boolean;
+  /** A comment (`<!--`) still open where the text ends, before the first label: GitHub hides everything after it. */
+  openComment: boolean;
   /** The screen, and where you were, added: their first lines there, outside any fence (a note's own line that reads
    *  the same, inside an added screen or place, isn't one). */
   added: { screen: boolean; where: boolean };
@@ -362,6 +365,7 @@ export function readReport(text: string): ReadBack {
       if (id === "output") seen = { heading: i, end: i + 1 };
       continue;
     }
+    const fenced = fence !== null;
     if (fence) {
       if (fence.close.test(line)) fence = null;
     } else {
@@ -376,9 +380,9 @@ export function readReport(text: string): ReadBack {
       if (currentId === "output" && seen && line.trim()) seen.end = i + 1;
       continue;
     }
-    // Before the first label: the title, and any other text.
+    // Before the first label: the title, and any other text — a fence's lines never the title.
     if (!line.trim()) continue;
-    if (titleLine < 0) {
+    if (titleLine < 0 && !fenced && !fence) {
       title = line.trim();
       titleLine = i;
     } else stray = true;
@@ -391,7 +395,7 @@ export function readReport(text: string): ReadBack {
       .join("\n\n");
     if (joined) fields[id] = id === "output" ? unfenceAttachments(joined) : joined;
   }
-  return { title, titleLine, stray, fields, seen, openFence: fence !== null, added };
+  return { title, titleLine, stray, fields, seen, openFence: fence !== null, openComment: comment, added };
 }
 
 /** What an added screen and place begin with: added is this line being in the text. */
@@ -442,9 +446,13 @@ function unfenceAttachments(text: string): string {
  * wherever that section is; with no such section, a new one at the end. Refused while a fence is left open, so it
  * never lands in another field or another fence. One edit: `at`, in the text's UTF-16 offsets, and what goes there.
  */
-export function placeAttachment(text: string, block: string): { at: number; insert: string } | { refused: string } {
-  const r = readReport(text);
+export function placeAttachment(
+  text: string,
+  block: string,
+  r: ReadBack = readReport(text),
+): { at: number; insert: string } | { refused: string } {
   if (r.openFence) return { refused: "a fence is left open in the report: close it first" };
+  if (r.openComment) return { refused: "a comment (<!--) is left open in the report: close it with --> first" };
   const lines = text.split("\n");
   const offset = (line: number) => lines.slice(0, line).reduce((n, l) => n + l.length + 1, 0);
   if (r.seen) {
@@ -463,7 +471,10 @@ export function placeAttachment(text: string, block: string): { at: number; inse
 /** The report as it's copied, and as gh posts it: as you left it, the generated guide alone taken out. */
 export function sentText(text: string): string {
   const lines = text.split("\n");
-  if (lines[0] === GUIDE) lines.splice(0, lines[1] === "" ? 2 : 1);
+  // Wherever it is above the first label: a title typed above it leaves it the guide.
+  const first = lines.findIndex((l) => labelOf(l) !== undefined);
+  const at = lines.indexOf(GUIDE);
+  if (at >= 0 && (first < 0 || at < first)) lines.splice(at, lines[at + 1] === "" ? 2 : 1);
   return lines.join("\n");
 }
 
@@ -494,6 +505,7 @@ export interface AddressPlan {
 /** Why the report as it is makes no address, or null: a fence left open makes where each field ends unclear; text
  *  that belongs to no field would be lost. */
 export function noAddress(r: ReadBack): string | null {
+  if (r.openComment) return "a comment (<!--) is left open: GitHub hides everything after it — close it with -->";
   if (r.openFence) return "a fence is left open: where each field ends isn't clear — close it";
   if (r.stray) return "text above the first heading belongs to no field: the address would lose it — move it under one";
   return null;

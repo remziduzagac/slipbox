@@ -155,6 +155,9 @@ describe("the facts (RPT-D1)", () => {
     // os-release without PRETTY_NAME: its name and version.
     const named = sources({}, { "/etc/os-release": 'NAME=Fedora\nVERSION="41 (Workstation Edition)"\n' });
     expect(reportFacts(named).system.name).toBe("Fedora 41 (Workstation Edition)");
+    // PRETTY_NAME there but empty: its name and version all the same.
+    const empty = sources({}, { "/etc/os-release": 'PRETTY_NAME=""\nNAME=Foo\nVERSION=1\n' });
+    expect(reportFacts(empty).system.name).toBe("Foo 1");
   });
 
   test("the terminal: its answer, TERM_PROGRAM and its version, TERM, the size", () => {
@@ -338,6 +341,8 @@ describe("reading it back", () => {
     expect([r.title, r.stray]).toEqual(["Crash", false]);
     expect(sentText(edited).startsWith("<!-- Nothing yet.")).toBe(true);
     expect(sentText(typed("Crash")).startsWith("Crash\n\n### What happened")).toBe(true);
+    // A title typed above it: the guide still left out, as gh's body leaves it.
+    expect(sentText(`Crash\n${reportText(FIELDS)}`)).not.toContain("<!--");
     // A comment over lines too.
     expect(readReport("<!-- one\ntwo -->\nTitle\n### What happened\n").title).toBe("Title");
   });
@@ -405,6 +410,23 @@ describe("adding the screen or the place (RPT-D2)", () => {
     expect([r.title, r.stray]).toEqual(["Crash on open", false]);
     const fenced = readReport("<!-- one\n```\ntwo -->\nTitle\n\n### Version\n\n1\n");
     expect([fenced.title, fenced.openFence, fenced.fields.version]).toEqual(["Title", false, "1"]);
+  });
+
+  test("a comment left open above the labels: GitHub hides the rest, so no address and nothing added", () => {
+    const text = "Crash <!-- see below\n\n### What happened\n\na\n";
+    const r = readReport(text);
+    expect([r.title, r.openComment]).toEqual(["Crash", true]);
+    expect(noAddress(r)).toBe("a comment (<!--) is left open: GitHub hides everything after it — close it with -->");
+    expect(addressPlan("me/slipbox", r)).toBeNull();
+    expect(placeAttachment(text, SCREEN)).toEqual({
+      refused: "a comment (<!--) is left open in the report: close it with --> first",
+    });
+  });
+
+  test("a label with closing hashes is the label; a fence above the labels is never the title", () => {
+    expect(readReport("T\n\n### What happened ###\n\na\n").fields.happened).toBe("a");
+    const fenced = readReport("```\ncode\n```\nTitle\n### What happened\n\na\n");
+    expect([fenced.title, fenced.stray]).toEqual(["Title", true]);
   });
 
   test("refused while a fence is left open, anywhere", () => {

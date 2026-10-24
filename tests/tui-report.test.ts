@@ -6,7 +6,8 @@ import { chmodSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileS
 import { join } from "node:path";
 import { canonKey } from "../src/core/commands.ts";
 import { tildePath } from "../src/core/names.ts";
-import { GUIDE, SCREEN_INTRO, WHERE_INTRO } from "../src/core/report.ts";
+import { GUIDE, readReport, SCREEN_INTRO, WHERE_INTRO } from "../src/core/report.ts";
+import { NoteBuffer } from "../src/tui/buffer.ts";
 import type { ListOverlay } from "../src/tui/app.ts";
 import { TextCanvas } from "../src/tui/canvas.ts";
 import { type Harness, harness, makeSandbox } from "./tui-harness.ts";
@@ -79,6 +80,37 @@ describe("the report's window (RPT-D1)", () => {
     await type(h, "report a problem");
     await h.keys("enter");
     expect(h.app.floating?.kind).toBe("report");
+  });
+
+  test("left, focus goes back where it was opened from: the explorer", async () => {
+    const h = await harness();
+    const region = () => h.app.region;
+    h.app.region = "sidebar";
+    h.frame();
+    await h.keys("space", "r");
+    expect(region()).toBe("content");
+    await h.keys("escape", "escape");
+    expect(h.app.floating).toBeNull();
+    expect(region()).toBe("sidebar");
+  });
+
+  test("asked twice before its frame (screen, then where): both added", async () => {
+    const h = await harness();
+    await h.app.run("help.report screen");
+    await h.app.run("help.report where");
+    h.frame();
+    expect(readReport(text(h)).added).toEqual({ screen: true, where: true });
+  });
+
+  test("no frame after space r: the keys after it wait a moment, once, then go on as before", async () => {
+    const h = await harness();
+    await h.app.run("help.report");
+    const t0 = Date.now();
+    await h.app.input.handleKey(canonKey("j"));
+    expect(Date.now() - t0).toBeGreaterThanOrEqual(200);
+    const t1 = Date.now();
+    await h.app.input.handleKey(canonKey("k"));
+    expect(Date.now() - t1).toBeLessThan(150);
   });
 
   test("esc twice leaves it; opened again, it's as it was left", async () => {
@@ -267,6 +299,34 @@ describe("the screen and where you were (RPT-D2)", () => {
     expect(h.app.floating?.kind).toBe("report");
     expect(text(h)).toContain("The screen, 120×30, as the report opened:\n\n```text\nslipbox: drawing failed: boom");
     h.app.git.vaultStatus = status;
+  });
+
+  test("the screen asked for with none kept: said, never the place in its stead", async () => {
+    const h = await harness();
+    await h.keys("space", "r", "escape");
+    (h.app.report as unknown as { screen: null }).screen = null;
+    await h.app.run("help.report screen");
+    expect(said(h)).toBe("no screen kept: space r keeps one as it opens");
+    expect(readReport(text(h)).added).toEqual({ screen: false, where: false });
+  });
+
+  test("a read-only window over a real file (a peek): a task toggled there is refused, said; the file kept", async () => {
+    const h = await harness();
+    const file = join(h.root, "notes", "tasks.md");
+    writeFileSync(file, "- [ ] one\n");
+    const buf = new NoteBuffer(null, file, `peek:${file}`);
+    buf.kind = { group: "note", format: "markdown" };
+    buf.virtual = { save: () => true };
+    buf.readOnly = "a peek is read-only — o goes there, to edit it";
+    buf.loadText("- [ ] one\n");
+    h.app.floating = { kind: "hover", view: h.app.makeView(buf), title: "Peek" };
+    h.frame();
+    await h.app.run("task.toggle");
+    expect(said(h)).toBe("a peek is read-only — o goes there, to edit it");
+    expect(readFileSync(file, "utf8")).toBe("- [ ] one\n");
+    // And writing it any other way is refused, said.
+    expect(h.app.writeBuffer(buf, "- [x] one\n")).toBe(false);
+    expect(said(h)).toBe(`peek:${file} is the floating window's, not a file: not written`);
   });
 
   test("the menu adds them too: s and w", async () => {
@@ -624,5 +684,9 @@ describe("gh (RPT-D4)", () => {
     fakeGh("true", "exit 1");
     await h2.app.run("help.report_send gh");
     expect(said(h2)).toBe("gh has no account for github.com here — gh auth login first");
+    // A comment left open: GitHub would hide what's after it, so not posted.
+    h2.app.view!.buf.edit(text(h2).indexOf("Crash") + "Crash".length, 0, " <!-- unclosed");
+    await h2.app.run("help.report_send gh");
+    expect(said(h2)).toBe("gh: a comment (<!--) is left open: GitHub hides everything after it — close it with -->");
   });
 });

@@ -13,6 +13,7 @@ import {
   reportFacts,
   reportRepo,
 } from "../core/report.ts";
+import { stringWidth } from "../core/width.ts";
 import type { Io, Result } from "./common.ts";
 
 export function report(io: Io): Result {
@@ -21,9 +22,9 @@ export function report(io: Io): Result {
   const facts = reportFacts(factSources({ env: io.env, size }));
   const fields = factFields(facts);
   const url = formAddress(reportRepo(), fields);
-  const width = Math.max(...FACT_IDS.map((id) => LABEL[id].length));
+  const width = Math.max(...FACT_IDS.map((id) => stringWidth(LABEL[id])));
   const human = [
-    ...FACT_IDS.map((id) => `${LABEL[id].padEnd(width)}  ${fields[id]}`),
+    ...FACT_IDS.map((id) => `${LABEL[id]}${" ".repeat(width - stringWidth(LABEL[id]))}  ${fields[id]}`),
     "",
     "The bug form, these filled in (nothing has been sent):",
     url,

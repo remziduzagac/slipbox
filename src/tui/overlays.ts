@@ -33,6 +33,8 @@ export class Overlays {
       this.app.message("info", f.amend ? "not amended" : "not committed");
       this.app.git.commitDone(f.from);
     }
+    // A report left (RPT-D1): back where it was opened from.
+    if (f.kind === "report") this.app.report.closed(f.from);
     // A review closed (GIT-D3): what it did, said.
     if (f.kind === "review") reviewEnded(this.app, f.review);
     return true;

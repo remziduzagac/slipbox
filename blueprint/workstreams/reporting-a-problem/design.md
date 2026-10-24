@@ -15,7 +15,8 @@ session. The `Reporter` (`app.report`) keeps the buffer and its view while the w
 problem"; its bottom border says ` ctrl+s sends it or adds the screen · esc · q leaves it ` (never the floating
 window's "writing back"); the status line names it `report`, with no "unsaved" mark, since it's never saved anywhere.
 A new one opens typing, on the title's line (empty, the line after the guide); the first `esc` leaves typing, the next
-leaves the window. Opened again, it's as it was left, not typing. Its text, the title typed:
+leaves the window, and focus goes back where it was opened from (the explorer, say). Opened again, it's as it was
+left, not typing. Its text, the title typed:
 
 ````markdown
 <!-- Nothing has left yet. The next line is the title; ctrl+s sends it all, or adds the screen first. -->
@@ -54,7 +55,8 @@ ghostty 1.2.0, TERM_PROGRAM herdsman 0.2.0, TERM xterm-ghostty, 236×60, inside 
 - `ctrl+s` (`:w`) is `note.save`, which, in the report as in the commit's window, calls the buffer's own save whether
   it changed or not: that runs `help.report_send`, the menu (§ Sending). Never said as "saved" or "sent". `:w!`
   (`note.save_force`) on any virtual buffer is `:w`, and `App.writeBuffer` refuses a virtual buffer: the floating
-  window's text is never written to its name on disk.
+  window's text is never written to its name on disk (said). A task toggled in a read-only window — a peek, a
+  hover — is refused, said, its file never written from there.
 
 **Reading it back.** The copy and `gh` send the text as you left it, the generated guide taken out (and for `gh`, the
 title line, which becomes its title); nothing in them is moved or joined. Only the address maps the text onto the
@@ -101,7 +103,8 @@ form's fields, by one rule, which also says where an added screen goes:
   it closed, the messages showing as they were — drawn as every frame is and kept as text too, onto a `TextCanvas` of
   the screen's size (`tui/canvas.ts`) beside the terminal's canvas, that frame only; the window opens on the next. Its
   rows, with their trailing blanks cut. A picture isn't text, and isn't in it. Keys after the command wait for that
-  frame (a quarter of a second at most), so a paste or keys sent at once go to the report, never the window under it.
+  frame (a quarter of a second at most, and then no more), so a paste or keys sent at once go to the report, never
+  the window under it; `:report screen` and `:report where` asked before it both add theirs.
   A frame whose drawing failed is kept as the screen that says so, and the report opens all the same: it's wanted
   most then.
 - **Where you were:** the window's file (its path in the vault, else from home, `~/…`), the cursor's line number and
@@ -145,7 +148,9 @@ heads it, said, and `o` and `a` aren't there:
   redirect). In order: every field; else every field but `output`, which `v` copies; else the title and the facts;
   else the facts alone; else none but the template. `o` and `a` say what they leave out ("filled in but What slipbox
   sees: v copies it"), and `c` copies everything. Text that belongs to no field (§ Reading it back) leaves `o` and `a`
-  out, said. So does a fence left open: where each field ends isn't clear (the menu's first line says which).
+  out, said. So does a fence left open, where each field ends isn't clear, and a comment (`<!--`) left open above the
+  labels, which GitHub would hide the rest behind (the menu's first line says which); the comment also stops `gh`
+  and an added screen.
 - **One copy at a time:** each entry puts one thing on the clipboard, never two in a row; another asked for while one
   is being made is refused ("still copying — wait for it"). `o` copies nothing when the
   browser opens; when it can't, it copies the address and says what's still left out (`v`, `c`). Each copy is said

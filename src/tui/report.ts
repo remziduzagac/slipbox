@@ -32,7 +32,7 @@ import { sanitize } from "../core/sanitize.ts";
 import { NoteBuffer } from "./buffer.ts";
 import { type Canvas, TextCanvas } from "./canvas.ts";
 import { placeAt, startInsert, stopInsert } from "./editing.ts";
-import type { App, ListItem, View } from "./app.ts";
+import type { App, ListItem, Region, View } from "./app.ts";
 
 /** What `:report` adds; what `help.report_send` sends by. */
 export const REPORT_ADDS = ["screen", "where"] as const;
@@ -50,8 +50,9 @@ export class Reporter {
   private screen: { text: string; cols: number; rows: number } | null = null;
   /** Where you were as the report last opened: the file, the cursor's line and its text. */
   private where = "";
-  /** The report waits for the next frame, which is kept as text too; then it opens, adding what was asked. */
-  private wanted: { add: Add | null; where: string } | null = null;
+  /** The report waits for the next frame, which is kept as text too; then it opens, adding what was asked (each ask
+   *  before that frame, in turn). */
+  private wanted: { adds: Add[]; where: string } | null = null;
   private teed: TextCanvas | null = null;
   /** Settled once the waited-for frame has opened the report: the keys after `space r` wait for it. */
   private opening: { done: Promise<void>; settle: () => void } | null = null;
@@ -91,7 +92,16 @@ export class Reporter {
    */
   waitForWindow(): Promise<void> | null {
     const o = this.opening;
-    return o ? Promise.race([o.done, new Promise<void>((r) => setTimeout(r, 250))]) : null;
+    if (!o) return null;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    // No frame in that moment (the renderer stepped aside for an editor): the keys after it wait no more.
+    const late = new Promise<void>((r) => {
+      timer = setTimeout(() => {
+        if (this.opening === o) this.opening = null;
+        r();
+      }, 250);
+    });
+    return Promise.race([o.done, late]).finally(() => clearTimeout(timer));
   }
 
   /** A frame drawn: the one the report waited for is kept, and the report opens on the next. */
@@ -105,7 +115,7 @@ export class Reporter {
     this.where = w.where;
     // Called from drawing, which must never fail on its account: a failure to open is said, not thrown.
     try {
-      this.show(w.add);
+      this.show(w.adds);
     } catch (err) {
       this.app.message("error", `report: couldn't open it: ${(err as Error).message}`);
     }
@@ -125,7 +135,12 @@ export class Reporter {
       if (add) this.add(add as Add);
       return;
     }
-    this.wanted = { add: (add || null) as Add | null, where: this.whereNow() };
+    // Asked again before the frame came: what each asked for is added.
+    if (this.wanted) {
+      if (add) this.wanted.adds.push(add as Add);
+      return;
+    }
+    this.wanted = { adds: add ? [add as Add] : [], where: this.whereNow() };
     let settle = () => {};
     const done = new Promise<void>((r) => (settle = r));
     this.opening = { done, settle };
@@ -138,13 +153,16 @@ export class Reporter {
     const v = this.app.view;
     if (!v || v.buf.virtual) return "no file was open";
     const line = this.app.cursorLine(v);
-    const text = v.buf.source.split("\n")[line - 1] ?? "";
+    // The cursor's line alone, not the note split into all of its lines.
+    const starts = v.buf.lineStarts();
+    const from = starts[line - 1] ?? 0;
+    const text = v.buf.source.slice(from, starts[line] ?? v.buf.source.length).replace(/\r?\n$/, "");
     const shown = v.buf.kind.group !== "note" ? "" : v.live ? ", the lens open" : v.source ? ", source" : ", rendered";
     return sanitize(`${v.buf.rel ?? tildePath(v.buf.abs)}, line ${line}${shown}\n${text}`);
   }
 
   /** The window, opened: the report kept, else a new one, typing on its title's line. */
-  private show(add: Add | null): void {
+  private show(adds: Add[]): void {
     if (this.app.floating && !this.app.overlays.closeFloating()) return;
     const fresh = !this.view;
     if (!this.view) {
@@ -158,11 +176,17 @@ export class Reporter {
       this.view = this.app.makeView(buf, { ...TOP }, { anchor: { ...TOP }, sub: 0, col: 0 });
     }
     const fv = this.view;
-    this.app.floating = { kind: "report", view: fv, title: "Report a problem" };
+    const from = this.app.region;
+    this.app.floating = { kind: "report", view: fv, title: "Report a problem", from };
     this.app.lens.setViewMode(fv, "source");
     this.app.region = "content";
     if (fresh) startInsert(this.app, fv, (v) => v.buf.lineStarts()[TITLE_LINE] ?? 0);
-    if (add) this.add(add);
+    for (const add of adds) this.add(add);
+  }
+
+  /** The window left: back where it was opened from — a side panel, when it's still there. */
+  closed(from: Region): void {
+    this.app.region = from === "sidebar" && !this.app.panels.sidebarShown ? "content" : from;
   }
 
   /** The screen, or where you were, added to the report: in full, fenced, at the end of What slipbox sees; one undo
@@ -172,14 +196,16 @@ export class Reporter {
     if (!v) return;
     const text = v.buf.source;
     const s = this.screen;
-    if (readReport(text).added[kind])
+    const r = readReport(text);
+    if (r.added[kind])
       return this.app.message(
         "info",
         `${kind === "screen" ? "the screen" : "where you were"} is in the report already`,
       );
+    if (kind === "screen" && !s) return this.app.message("info", "no screen kept: space r keeps one as it opens");
     const block =
       kind === "screen" && s ? attachment(screenIntro(s.cols, s.rows), s.text) : attachment(WHERE_SAID, this.where);
-    const p = placeAttachment(text, block);
+    const p = placeAttachment(text, block, r);
     if ("refused" in p) return this.app.message("warn", `report: ${p.refused}`);
     stopInsert(this.app, v);
     v.buf.edit(p.at, 0, p.insert, p.at);
@@ -280,9 +306,10 @@ export class Reporter {
     if (!how) return this.menu();
     if (this.posting) return this.app.message("info", "posting the report with gh… — wait for it");
     const text = v.buf.source;
-    const { plan, read } = this.plan(text);
+    // The copy and gh want no address: made only for the rest.
     if (how === "copy") return this.copy(sentText(text), "the report");
     if (how === "gh") return this.post();
+    const { plan, read } = this.plan(text);
     if (!plan) return this.app.message("warn", `report: ${noAddress(read)}; c copies the report`);
     const leaves = plan.left.length ? ` (${leftSaid(plan.left)})` : "";
     if (how === "address") return this.copy(plan.url, `the bug form's address${leaves}`);
@@ -295,7 +322,9 @@ export class Reporter {
     const opener = this.opener();
     const run = this.app.host.runDetached;
     if (!opener || !run) return this.copy(plan.url, `the bug form's address — no browser to open here${leaves}`);
-    const code = await Promise.race([run(opener.argv(plan.url)), Bun.sleep(OPENER_WAIT).then(() => "waited" as const)]);
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const waited = new Promise<"waited">((r) => (timer = setTimeout(() => r("waited"), OPENER_WAIT)));
+    const code = await Promise.race([run(opener.argv(plan.url)), waited]).finally(() => clearTimeout(timer));
     if (code === "waited" || (typeof code === "number" && opener.ok.includes(code)))
       return this.app.message("info", `the bug form is opening in your browser${leaves}`);
     const why = typeof code === "number" ? `${opener.name} exited with ${code}` : `${opener.name}: ${code}`;
@@ -320,13 +349,17 @@ export class Reporter {
     if (!gh) return this.app.message("warn", "gh isn't on PATH");
     const v = this.openView();
     if (!v) return;
-    /** The title and text to post, when there are both a title and What happened. */
-    const ready = () => {
+    /** The title and text to post, or why not yet: no title or What happened; a comment left open, which would hide
+     *  the rest on GitHub. */
+    const ready = (): { title: string; body: string } | { why: string } => {
       const r = readReport(v.buf.source);
-      return r.title && r.fields.happened ? postOf(v.buf.source, r) : null;
+      if (r.openComment) return { why: `gh: ${noAddress(r)}` };
+      if (!r.title || !r.fields.happened)
+        return { why: "gh: write a title (the line after the guide) and What happened first" };
+      return postOf(v.buf.source, r);
     };
-    const missing = "gh: write a title (the line after the guide) and What happened first";
-    if (!ready()) return this.app.message("warn", missing);
+    const first = ready();
+    if ("why" in first) return this.app.message("warn", first.why);
     const repo = reportRepo();
     const home = existsSync(this.app.home) ? this.app.home : homedir();
     const who = await ghAccount(gh, { env: process.env, home });
@@ -336,7 +369,7 @@ export class Reporter {
     if (this.app.overlay) return this.app.message("info", "gh is ready: ctrl+s, g in the report asks again");
     // The report as it is now, after the wait for gh: what the question names is what's posted.
     const post = ready();
-    if (!post) return this.app.message("warn", missing);
+    if ("why" in post) return this.app.message("warn", post.why);
     this.app.overlays.confirm(
       sanitize(`Post "${post.title}" on ${repo} as ${who.account}? Anyone can read it.`),
       () => void this.postNow(gh, repo, home, post),
@@ -349,7 +382,11 @@ export class Reporter {
     if (!v || this.posting) return;
     this.posting = true;
     stopInsert(this.app, v);
-    if (this.app.floating?.view === v) this.app.floating = null;
+    const f = this.app.floating;
+    if (f?.kind === "report" && f.view === v) {
+      this.app.floating = null;
+      this.closed(f.from);
+    }
     this.app.message("info", "posting the report with gh…");
     this.app.host.requestRender();
     const r = await ghPost(gh, { repo, ...post }, { env: process.env, home });

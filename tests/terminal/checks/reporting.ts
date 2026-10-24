@@ -402,6 +402,25 @@ export const REPORTING: Check[] = [
   },
   {
     area: "navigating",
+    name: "report: a comment left open is said in the menu, no address made; left, focus is back in the explorer",
+    covers: { cases: ["help"], commands: ["help.report", "help.report_send", "explorer.cycle"] },
+    options: { size: { cols: 120, rows: 34 } },
+    run: async (s) => {
+      await leader(s, "e");
+      await s.status("FILES");
+      await leader(s, "r");
+      await s.see(WINDOW);
+      await s.type("Crash <!-- see below");
+      await s.keys("escape", "ctrl+s");
+      await s.see(/a comment \(<!--\) is left open: github hides everything after it/i);
+      s.expect(!s.text().includes("(a) Copy the bug form's address"), "no address while a comment is open");
+      await s.keys("escape", "escape");
+      await s.notSee(WINDOW);
+      await s.status("FILES");
+    },
+  },
+  {
+    area: "navigating",
     name: "report: a folder's keys can't send a report, which runs a program: ignored, said",
     covers: { cases: ["config"] },
     options: {
