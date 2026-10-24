@@ -111,7 +111,7 @@ jobs:
   deploy:
     needs: site
     runs-on: ubuntu-24.04
-    # deploy-pages waits ten minutes at most, and reading the deployment back eleven more, and a round of requests.
+    # deploy-pages waits ten minutes at most, reading the deployment back eleven more, then two rounds of requests.
     timeout-minutes: 25
     permissions:
       pages: write # to deploy the site

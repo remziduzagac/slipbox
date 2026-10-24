@@ -899,7 +899,7 @@ describe("the workflows: one build for releases and previews, previews from test
     expect(byHand.code).toBe(1);
     expect(byHand.out).not.toMatch(/re-run/i);
     // A site slow to answer (ten seconds a request, curl's bound) still gives up after eleven minutes, at most a wait,
-    // a round of three requests and the message's one later: within the job's 25 minutes, with deploy-pages' ten.
+    // a round of three requests and the message's three later: within the job's 25 minutes, with deploy-pages' ten.
     // With the marker the deployment before's; with no marker at all (a site deployed before markers); with the
     // marker this one's and a channel off: each fails.
     for (const site of [
@@ -910,7 +910,7 @@ describe("the workflows: one build for releases and previews, previews from test
       const slow = readBack(site, built, { lag: 10 });
       expect(slow.code).toBe(1);
       expect(slow.took).toBeGreaterThanOrEqual(660);
-      expect(slow.took).toBeLessThanOrEqual(660 + 10 + 3 * 10 + 10);
+      expect(slow.took).toBeLessThanOrEqual(660 + 10 + 3 * 10 + 3 * 10);
     }
     // Served a while after the deployment says it's done.
     const later = readBack({ deployment: "39964133295.1", stable, preview }, built, {

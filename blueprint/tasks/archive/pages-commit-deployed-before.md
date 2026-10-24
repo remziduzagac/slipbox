@@ -265,3 +265,12 @@ the deployments D258 relies on are served; then whatever fix that calls for.
   since GitHub runs a step with no `shell` as `bash -e {0}` (its own log, run 40050816202's `site`: `shell:
   /usr/bin/bash -e {0}`); the release's run waiting for the run it starts (D?1's Not chosen: it deadlocks); and, as
   before, `served`'s own empty-marker check, the condition written twice, `v*` in the environment.
+- 2026-10-24: Review, round 6: Codex's part skipped, Codex stopped at a menu in its pane after its usage limit; a second
+  reviewer does it.
+- 2026-10-24: Review, round 6, both reviewers: no defect in the workflows or the tests. Taken: D?1's Cost and the pull
+  request had a preview's run, its deployment failed before anything was deployed, never go green, but re-running its
+  `pages / site` re-runs `deploy` with a fresh marker: corrected; the slow-site bound and the timeout comment, since the
+  failure message reads three files: 730 s now; the pull request's twelve minutes, which 40050527681 didn't have. Not
+  taken: the hand-off not waiting (D?1's Not chosen), the guard refusing a needless re-run (taken as recommended, above),
+  `refs/heads/Main` matching ignoring case (no such branch; the environment refuses it), `runStep`'s 20 s against a
+  1.3 s file, and as before `v*`, D?1's number, `served`'s own check, the condition written twice.

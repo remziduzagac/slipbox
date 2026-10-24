@@ -328,10 +328,10 @@ maintainer's call, 2026-10-24). A preview or a run by hand before the release is
 
 **Cost:** A run by hand elsewhere becomes two runs, a minute apart, like a release's. A change to the bootstrap, the
 docs or the site reaches the site with the next preview or release, or a run by hand. A deployment that fails its
-read-back is fixed by a run by hand on `main`, never by re-running its deploy job; a preview's run whose deployment
-failed stays failed, even one that failed before anything was deployed, since its deploy job alone can't be re-run and a
-re-run of the whole preview stops at its plan (taken as recommended while the maintainer was away, 2026-10-24: a refusal
-that's sometimes needless over a re-run that can put an older site back and pass). One more file on the site.
+read-back is fixed by a run by hand on `main`, never by re-running its deploy job alone; a preview's run whose
+deployment failed before anything was deployed goes green only by re-running its `pages / site`, which re-runs `deploy`
+with a fresh marker (taken as recommended while the maintainer was away, 2026-10-24: a refusal that's sometimes
+needless over a re-run that can put an older site back and pass). One more file on the site.
 
 **Not chosen:** every deployment a run by hand on `main`, previews too (one rule, but a preview's run would pass with
 its site not served: the maintainer's call, 2026-10-24); `main`'s push kept, handed off (the docs live before the
