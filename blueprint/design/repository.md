@@ -162,7 +162,7 @@ The other workflows keep the same rules:
 | `build.yml` | called | every platform built, packed, given its SBOM, summed, attested |
 | `release.yml` | a `v*` tag | the tag and changelog checked, `build.yml`, the draft |
 | `preview.yml` | a push to `test` | the preview planned, `build.yml`, the pre-release, the pruning, `pages.yml` |
-| `pages.yml` | called; a release published; the bootstrap, `docs/`, `site/` on `main`; by hand | the Pages site |
+| `pages.yml` | called; a release published; by hand | the Pages site |
 | `homebrew.yml` | a release published | the formula into the tap, through the `release` environment |
 | `audit.yml` | weekly; `bun.lock` or the accepted list changed; by hand | `bun run audit` |
 | `health.yml` | weekly; by hand | the health issue (§ The weekly health check) |

@@ -27,7 +27,7 @@ concurrency:
 
 jobs:
   # D258, D?1: a deployment of a commit deployed before is reported a success and never served when it's made under a
-  # `release` or a `push` (actions/deploy-pages#383, #7); one made by hand is served. So only two runs deploy: a
+  # `release` or a `push` (actions/deploy-pages#383; this repository's #7); one made by hand is served. So only two runs deploy: a
   # preview's (preview.yml's call, the one push this workflow sees), its commit's first deployment, and a run by hand
   # on main. Any other — a release published, whose commit its preview deployed already (D251), a run by hand on
   # `test` or a tag — deploys nothing: this job starts a run by hand on main instead. `site` runs on the opposite.
@@ -60,7 +60,7 @@ jobs:
     permissions:
       contents: read # to check out main, and list the releases
     # What `deploy` reads back from the site: the run's marker, and the channels' lines as built, empty for a channel
-    # with no release. The artifact's own, so a re-run of `deploy` alone reads back the files it deploys again.
+    # with no release.
     outputs:
       deployment: ${{ steps.marker.outputs.deployment }}
       stable: ${{ steps.site.outputs.stable }}
@@ -115,6 +115,21 @@ jobs:
       name: github-pages
       url: ${{ steps.deploy.outputs.page_url }}
     steps:
+      # D?1: a re-run of this job alone would deploy the run's artifact again, its site older than any deployed since,
+      # and a repeat of its commit (served by hand, putting back the older site; under a push, not served at all).
+      - name: this run's site
+        env:
+          DEPLOYMENT: ${{ needs.site.outputs.deployment }}
+        run: |
+          if [ -z "$DEPLOYMENT" ]; then
+            echo "no marker was built: nothing to deploy and read back"
+            exit 1
+          fi
+          if [ "$DEPLOYMENT" != "$GITHUB_RUN_ID.$GITHUB_RUN_ATTEMPT" ]; then
+            echo "this is a re-run of deploy alone, its site built by attempt ${DEPLOYMENT##*.}: it would deploy"
+            echo "that older site again. Run pages.yml by hand on main instead, which builds the site afresh."
+            exit 1
+          fi
       - id: deploy
         uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
       # D258, D?1: a deployment can be reported a success and not be served (actions/deploy-pages#383), as 0.5.0's was.

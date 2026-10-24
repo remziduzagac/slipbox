@@ -480,9 +480,10 @@ const needs = (j: Job) => [j.needs ?? []].flat().sort();
 const runs = (j: Job) => (j.steps ?? []).map((s) => s.run ?? "").join("\n");
 
 /** A job's `if`, evaluated as GitHub does for the forms the workflows use: `!`, `&&`, `||`, `==` and `!=` (strings
- *  compared ignoring case), parentheses, quoted strings and the context's dotted names. */
+ *  compared ignoring case), parentheses, quoted strings and the context's dotted names. Anything around the `${{ }}`,
+ *  a newline a YAML block keeps included, makes it a string, which GitHub takes as true: refused. */
 function holds(expr: string | undefined, context: Record<string, unknown>): boolean {
-  const body = /^\$\{\{([\s\S]*)\}\}$/.exec((expr ?? "").trim())?.[1];
+  const body = /^\$\{\{([\s\S]*)\}\}$/.exec(expr ?? "")?.[1];
   if (body === undefined) throw new Error(`not an expression: ${expr}`);
   const tokens = body.match(/'[^']*'|&&|\|\||==|!=|!|\(|\)|[A-Za-z_][\w.-]*|\S/g) ?? [];
   let at = 0;
@@ -776,7 +777,9 @@ describe("the workflows: one build for releases and previews, previews from test
   test("a deployment passes once the site serves its marker and channels; a stale marker fails, the channels alike (#7)", () => {
     const steps = workflow("pages.yml").jobs.deploy?.steps ?? [];
     const served = steps.find((s) => s.name === "served");
-    expect(steps.indexOf(served!)).toBeGreaterThan(steps.findIndex((s) => s.uses?.startsWith("actions/deploy-pages@")));
+    const deploys = steps.findIndex((s) => s.uses?.startsWith("actions/deploy-pages@"));
+    expect(deploys).toBeGreaterThanOrEqual(0);
+    expect(steps.indexOf(served!)).toBeGreaterThan(deploys);
     expect(served?.env).toEqual({
       SITE: "${{ steps.deploy.outputs.page_url }}",
       DEPLOYMENT: "${{ needs.site.outputs.deployment }}",
@@ -860,6 +863,27 @@ describe("the workflows: one build for releases and previews, previews from test
     expect([unmarked.code, unmarked.slept]).toEqual([1, 0]);
     expect(unmarked.out).toContain("no marker was built");
   }, 30_000);
+
+  test("a re-run of `deploy` alone is refused: it would put back the run's older site (D?1)", () => {
+    const steps = workflow("pages.yml").jobs.deploy?.steps ?? [];
+    const guard = steps.findIndex((s) => s.name === "this run's site");
+    expect(guard).toBeGreaterThanOrEqual(0);
+    expect(guard).toBeLessThan(steps.findIndex((s) => s.uses?.startsWith("actions/deploy-pages@")));
+    expect(steps[guard]?.env).toEqual({ DEPLOYMENT: "${{ needs.site.outputs.deployment }}" });
+    const dir = mkdtempSync(join(sandbox, "guard-"));
+    const attempt = (marker: string, n: string) =>
+      runStep(steps[guard], { DEPLOYMENT: marker, GITHUB_RUN_ID: "40045492245", GITHUB_RUN_ATTEMPT: n }, dir);
+    // The run's first attempt, and a re-run of every job, `site` building its site again: deployed.
+    expect(attempt("40045492245.1", "1")).toEqual({ code: 0, out: "" });
+    expect(attempt("40045492245.2", "2")).toEqual({ code: 0, out: "" });
+    // A re-run of `deploy` alone: `site`'s outputs, and its artifact, are attempt 1's.
+    const rerun = attempt("40045492245.1", "2");
+    expect(rerun.code).toBe(1);
+    expect(rerun.out).toContain("a re-run of deploy alone, its site built by attempt 1");
+    expect(rerun.out).toContain("Run pages.yml by hand on main instead");
+    // No marker built at all.
+    expect(attempt("", "1")).toEqual({ code: 1, out: "no marker was built: nothing to deploy and read back\n" });
+  });
 
   test("a job calling a workflow grants it at least what its jobs ask: GitHub won't start it otherwise", () => {
     const level = { none: 0, read: 1, write: 2 } as Record<string, number>;

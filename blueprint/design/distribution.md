@@ -298,8 +298,8 @@ it), `preview` the newest published preview; a draft is neither, and a channel w
 of the asset differs). The site also holds the docs, at `docs/` (§ The documentation site), and its `index.html`
 sends a visitor there, with a link to the repository. It's deployed once a preview is published, when a release is
 published (a person publishes it), and by hand; not when `main` moves, which it does only for a release (D251), so a
-release's docs reach the site when it's published, and a release whose draft is deleted never shows its docs (D?1). The
-site is always made from `main`'s scripts, whichever ref started the run, and from the releases as they are then, one
+release's docs reach the site when it's published, unless a preview or a run by hand comes first (D?1). The site is
+always made from `main`'s scripts, whichever ref started the run, and from the releases as they are then, one
 deployment at a time, never cancelled, so an older run never deploys over a newer one. Its build job only reads; the
 Pages grants (`pages: write`, `id-token: write`) are its deploy job's alone, in the `github-pages` environment, which
 takes deployments from `main`, `test` and `v*` tags only.
@@ -313,8 +313,9 @@ first. **Every deployment is read back:** the site holds a marker of the run's o
 and once deployed, it, `stable` and `preview` are fetched from the site until they're what the build wrote (an empty
 line for a channel with none, which the site answers with a 404), for eleven minutes at most, past the ten the site's
 cache keeps a file, and the run fails if they never are. The marker is in no other deployment, so channels the site
-served already don't pass for this one. A deployment empties the cache; a query string doesn't get past it, not being
-part of its key.
+served already don't pass for this one. A re-run of the deploy job alone is refused (the marker built by an earlier
+attempt than the run's): it would deploy the run's site again, older than any since. A deployment empties the cache; a
+query string doesn't get past it, not being part of its key.
 
 ## The documentation site
 

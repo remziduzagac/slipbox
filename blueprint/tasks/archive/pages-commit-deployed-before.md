@@ -196,6 +196,23 @@ the deployments D258 relies on are served; then whatever fix that calls for.
   `MAINTAINING.md` (step 11; § Settings: only `main` and `test` deploy), `settings.json`'s line on the environment's
   refs (its words, not the setting). The concurrency finding goes with `main`'s push: a release's hand-off is the one
   left, as under D258.
+- 2026-10-24: Review, round 2. Codex: the design's and the pull request's "a release whose draft is deleted never shows
+  its docs" claims more than the code does (a preview builds the docs from `main` too): narrowed; D?1 and the pull
+  request had 0.5.0's push not served, which isn't recorded: said so. Both verified, both fixed.
+- 2026-10-24: Review, round 2, `/code-review`, eight findings, each checked. Taken: a re-run of `deploy` alone deploys
+  its run's artifact again, which a run by hand serves, putting back an older site, and the read-back passes on its own
+  marker: `deploy`'s first step now refuses one (the marker built by an earlier attempt than the run's) and names the
+  run by hand on `main` to make instead, with a test running the step (an attempt's own marker, a re-run of every job, a
+  re-run of `deploy` alone, no marker), which fails with the comparison taken out; the test no longer asserted that
+  `deploy` has a deploy-pages step at all; design/repository.md's table still had `pages.yml` run on `main`'s docs;
+  `holds` trimmed the `if`, hiding a `${{ }}` with a newline after it, which GitHub takes as true (turning `redeploy`'s
+  `>-` into `>` now fails the routing test); "#7" in a workflow comment read as deploy-pages'. Not taken: narrowing
+  `github-pages` to `main` and `test` (a setting, the maintainer's; the pull request says so); numbering D?1 (a root
+  decision made on a branch is numbered when it's merged); the deploy condition written once (as in round 1).
 - 2026-10-24: Done, every acceptance criterion met: the repeats in today's flow shown served or made so (a preview's,
   its commit's first; a run by hand, four times), the tests above holding `pages.yml` to it, the design and D?1 saying
   so. Moved to the archive with the pull request; its merge is the maintainer's acceptance.
+- 2026-10-24: CI on the pull request's first push: `terminal (ubuntu-24.04-arm)` failed one check, `links-and-files:
+  view: a worktree kept outside the view chosen …` ("docs/ under each of the two"), which passed on `ubuntu-24.04`;
+  nothing in slipbox changes here (a change to `.github/` runs every check), so not this change's. The test jobs run
+  into `dev`'s hanging `tui.test.ts` check since #42, fixed elsewhere.

@@ -307,26 +307,27 @@ by hand on `main` instead (`redeploy`): a release published, as D258 has it, and
 `main` moving no longer starts `pages.yml`: it moves only for a release (D251), which deploys once it's published, so
 a release's docs go live with it. Every deployment also puts a marker of its own on the site, `deployment` (the run's
 ID and attempt), and reads it back with the channels, for eleven minutes by the clock; it fails when the site doesn't
-serve it. Amends D258 and GR-D14. Detail: design/distribution.md § Previews.
+serve it. A re-run of the deploy job alone is refused, the marker an attempt older than the run's: it would deploy the
+run's site again, older than any since. Amends D258 and GR-D14. Detail: design/distribution.md § Previews.
 
 **Why:** A deployment is named by its commit, and one of a commit deployed before is reported a success and not served
 under a `push` as well as a `release`: #7's preview, of the commit `main`'s push had deployed, wasn't, and nor was a
 tag's push in actions/deploy-pages#383; no report has a `push` repeat served. Under D251, `main` takes only `test`'s
-commits, each deployed by its preview, so `main`'s push deployed nothing, and its read-back passed on the channels the
-preview had served. A run by hand was served in every report, and here four times, on 2026-10-24: on `main`, of 0.5.0's
-commit, deployed before from `test`, `main` and `v0.5.0`; on `test`, of 71313f3, deployed before from `test`; and on
-`main` twice in a row, the second deploying the commit the site was serving, as a release's run by hand does
-([research/github-behaviour.md](../research/github-behaviour.md) § Pages, T24). A preview's own deployment is its
-commit's first, served whatever the event, so it stays in the preview's run, which fails when its site isn't served.
-The marker is in no other deployment, so the read-back can no longer pass on channels the site served already.
-Dropping `main`'s push: handed off, it would put a release's docs on the site when `main` moves, before the release is
-built and published, and keep them there if its draft were deleted; and it doubled the runs in the `pages` group,
-where a newer pending run replaces an older one (the maintainer's call, 2026-10-24).
+commits, each deployed by its preview, so `main`'s push was such a repeat, and its read-back passed on the channels the
+preview had served whether it was served or not (0.5.0's isn't recorded). A run by hand was served in every report, and
+here four times, on 2026-10-24: on `main`, of 0.5.0's commit, deployed before from `test`, `main` and `v0.5.0`; on
+`test`, of 71313f3, deployed before from `test`; and on `main` twice in a row, the second deploying the commit the site
+was serving, as a release's run by hand does ([research/github-behaviour.md](../research/github-behaviour.md) § Pages,
+T24). A preview's own deployment is its commit's first, served whatever the event, so it stays in the preview's run,
+which fails when its site isn't served. The marker is in no other deployment, so the read-back can no longer pass on
+channels the site served already. Dropping `main`'s push: handed off, it would put a release's docs on the site when
+`main` moves, before the release is built and published; and it doubled the runs in the `pages` group, where a newer
+pending run replaces an older one (the maintainer's call, 2026-10-24). A preview or a run by hand before the release is
+published still builds the docs from `main`, as every deployment does.
 
 **Cost:** A run by hand elsewhere becomes two runs, a minute apart, like a release's. A change to the bootstrap, the
-docs or the site reaches the site with the next preview or release, or a run by hand. A preview's deployment of a
-commit deployed before (a re-run of its `deploy`) isn't served, and its run fails after eleven minutes; a run by hand
-on `main` serves it. One more file on the site.
+docs or the site reaches the site with the next preview or release, or a run by hand. A deployment that fails its
+read-back is fixed by a run by hand on `main`, never by re-running its deploy job. One more file on the site.
 
 **Not chosen:** every deployment a run by hand on `main`, previews too (one rule, but a preview's run would pass with
 its site not served: the maintainer's call, 2026-10-24); `main`'s push kept, handed off (the docs live before the
