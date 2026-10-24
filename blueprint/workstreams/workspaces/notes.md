@@ -220,3 +220,13 @@ The tasks are in [tasks/](tasks/README.md).
     measured once would do), and `whereOf` reads HEAD and the rebase state even when the bar is too narrow to draw it;
   - the status line's rule rides on `geo.whereOnTop`, which the top bar sets: right while `draw.ts` draws the bar
     first, as it must (the bar needs the windows drawn), but a decision made once in `drawApp` would not depend on it.
+- 2026-10-24, rebased on `dev` once GitHub said the pull request conflicted: the window header (#57, HDR) had come in.
+  Both sides kept where they met (the status line's mode chip and where you are on it; the mouse table's header
+  buttons and the bar's two targets; the CHANGELOG's entries under one Changed; the check files' index). With the
+  header, `ui.breadcrumb = false` no longer puts the outline's button on the top bar, `ui.window_header = false` does:
+  the unit test and the terminal check that keep where you are clear of that button turn the header off now. The
+  screenshots, retaken by both, taken again with both. CI on the round's last head had failed on macOS alone, in this
+  branch's "the vault clicked" test: the folders list lacked the vault opened just before, though the same test passed
+  on macOS at 74fc86f, and five runs here all pass. Not found why: the vault is recorded as it opens, nothing else in
+  the run writes the list, and only a write that failed would lose it (`writeFolders` swallows its errors). Its
+  assertion now prints the list it had, for the next time.

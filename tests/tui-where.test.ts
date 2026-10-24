@@ -207,7 +207,7 @@ describe("where you are on the top bar (WSP-D4)", () => {
   test("kept 2 columns clear of the chip, the outline's button and indexing…, moved only as far as it must", async () => {
     const root = named("a-vault-named-at-some-length", true);
     if (!root) return;
-    // The left rail off: the explorer's button before the chip. The right rail and the breadcrumb off: the outline's
+    // The left rail off: the explorer's button before the chip. The right rail and the window header off: the outline's
     // button on the bar.
     const h = await harness({
       root,
@@ -215,7 +215,7 @@ describe("where you are on the top bar (WSP-D4)", () => {
       config: (c) => {
         c.ui.left_rail = false;
         c.ui.right_rail = false;
-        c.ui.breadcrumb = false;
+        c.ui.window_header = false;
       },
     });
     h.app.indexing = 3;
@@ -265,8 +265,8 @@ describe("where you are on the top bar (WSP-D4)", () => {
     click(h, "top:vault");
     const list = h.app.overlay as ListOverlay;
     expect(list.title).toMatch(/^Folders \(\d+\) — enter goes into one$/);
+    expect(list.items.map((it) => it.label)).toContain("kestrel"); // failing, it says what the list had
     const i = list.items.findIndex((it) => it.label === "kestrel");
-    expect(i).toBeGreaterThanOrEqual(0);
     await h.keys(...Array<string>(i).fill("down"), "enter");
     expect(h.app.loc.root).toBe(kestrel!);
     expect(topRow(h.frame())).toContain(`${h.app.glyphs.vault} kestrel`); // its config's glyphs, the harness's left

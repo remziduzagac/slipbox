@@ -200,12 +200,12 @@ export const WHERE: Check[] = [
   },
   {
     area: "navigating",
-    name: "where you are: beside the outline's button on the top bar (no breadcrumb, no right rail), kept clear of it; too narrow, the bar holds the button alone",
+    name: "where you are: beside the outline's button on the top bar (no window header, no right rail), kept clear of it; too narrow, the bar holds the button alone",
     covers: { cases: ["width", "ui"] },
     options: {
       home: true,
       startAt: "home/work/kestrel/README.md",
-      config: "[ui]\nbreadcrumb = false\nright_rail = false\n",
+      config: "[ui]\nwindow_header = false\nright_rail = false\n",
     },
     run: async (s) => {
       await s.where(/^kestrel · main\b/);
