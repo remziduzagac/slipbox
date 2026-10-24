@@ -45,12 +45,13 @@ export class Following {
   /**
    * The link keeping `abs` from being read here (VV-D6): one on its way leading out of the vault open — out of home,
    * any in Elsewhere — that you haven't followed nor are looking at. Null when none, or when `abs` is another vault's
-   * (read in a peek, as that vault has it).
+   * (read in a peek, as that vault has it). `answered`: only a link followed whose target answered lets it by — one
+   * looked at keeps it, as one followed does while `follow` asks its target, or once it gave up.
    */
-  blocked(abs: string): { link: string; target: string | null } | null {
+  blocked(abs: string, answered = false): { link: string; target: string | null } | null {
     const loc = this.app.loc;
     if (loc.mode !== "folder" && !isInside(loc.root, abs)) return null;
-    return blockingLink(loc, abs, { looking: (k) => this.looking.has(k) });
+    return blockingLink(loc, abs, answered ? { answering: true } : { looking: (k) => this.looking.has(k) });
   }
 
   /**
@@ -160,14 +161,14 @@ export class Following {
    * The windows read-only as read through a link not followed (VV-D6) — looked at, or forgotten — whose link is
    * followed now: writable, and the vault's once the graph knows it (`App.claim`) — in a vault only then, as a write
    * there never lands outside it through a link; in home and Elsewhere at once. One changed while nothing read it
-   * through the link is read again first, which claims it (`Watch.reloadBuffer`): never writable showing what's no longer
-   * there. With unsaved changes, the conflict prompt decides between the two (5.5).
+   * through the link is read again first, which claims it (`Watch.reloadBuffer`): never writable showing what's no
+   * longer there. With unsaved changes, the conflict prompt asked at once decides between the two (5.5).
    */
   private lift(): void {
     for (const buf of this.app.buffers.values()) {
       if (!buf.throughLink || this.blocked(buf.abs) || this.lookedAt(buf.abs)) continue;
-      if (buf.changedOnDisk() && !buf.dirty) this.app.watch.reloadBuffer(buf);
-      else this.app.claim(buf);
+      if (buf.changedOnDisk()) this.app.watch.reloadBuffer(buf);
+      if (buf.throughLink) this.app.claim(buf);
     }
   }
 

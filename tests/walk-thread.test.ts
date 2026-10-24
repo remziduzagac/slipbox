@@ -632,13 +632,50 @@ describe("the TUI's walks on their own thread (T12, #9)", () => {
       await stepToEnd(h.app.watch.indexJob()!);
       const builds = h.app.graph.builds;
       // Meanwhile a branch's tabs brought back as it's checked out, in `notes`, walked whole already: nothing built.
-      const anchor = { heading: null, headingIndex: 0, offset: 0, line: 0 };
-      h.app.vaults.askTabs([{ panes: [{ path: "notes/sub/x.md", anchor }], active: 0 }]);
-      expect(h.app.graph.builds).toBe(builds);
-      await h.app.watch.homeRefreshed;
+      const walks = spyOn(WalkThread.prototype, "homeWalk");
+      try {
+        const anchor = { heading: null, headingIndex: 0, offset: 0, line: 0 };
+        h.app.vaults.askTabs([{ panes: [{ path: "notes/sub/x.md", anchor }], active: 0 }]);
+        expect(h.app.graph.builds).toBe(builds);
+        await h.app.watch.homeRefreshed;
+        // Its walk covers the folder too: taken, never walked again for it.
+        expect(walks).toHaveBeenCalledTimes(0);
+      } finally {
+        walks.mockRestore();
+      }
       expect(h.app.graph.home?.walked).not.toBeNull();
       expect(h.app.graph.notes.has("other/deep/o.md")).toBe(true);
     });
+  });
+
+  test("home's walk answered on its thread, stopped at its cap, a folder asked for meanwhile, nothing built: walked again with it (#13)", async () => {
+    const home = tree({ "a.md": "# A\n", "slow/s.md": "# S\n", "notes/n.md": "# N\n", "later/l.md": "# L\n" });
+    setWalkWorker(slowWorker);
+    const real = WalkThread.prototype.homeWalk;
+    // Its first answer stopped at home's cap, which covers no folder whole.
+    const walks = spyOn(WalkThread.prototype, "homeWalk").mockImplementation(async function (
+      this: WalkThread,
+      ...args: Parameters<WalkThread["homeWalk"]>
+    ) {
+      const w = await real.apply(this, args);
+      return walks.mock.calls.length === 1 ? { ...w, capped: "notes" as const } : w;
+    });
+    try {
+      await inHome(home, async () => {
+        const h = await harness({ loc: homeAt(home), open: "notes/n.md" });
+        await stepToEnd(h.app.watch.indexJob()!);
+        expect(walks).toHaveBeenCalledTimes(1);
+        // As a folder asked for that home's walk was taken to cover: in the asked list, the graph not built.
+        (h.app.graph as unknown as { asked: string[] }).asked.push("later");
+        await h.app.watch.homeRefreshed;
+        expect(walks).toHaveBeenCalledTimes(2);
+        expect(walks.mock.calls[1]![2]).toContain("later");
+        expect(h.app.graph.home?.walked).not.toBeNull();
+        expect(h.app.graph.notes.has("later/l.md")).toBe(true);
+      });
+    } finally {
+      walks.mockRestore();
+    }
   });
 });
 

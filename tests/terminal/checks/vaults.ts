@@ -32,7 +32,7 @@ import {
   opened,
 } from "../check.ts";
 import { CheckFailed, type Session, Skipped, sleep } from "../session.ts";
-import { ARCHITECTURE, crumbs, lastMessage, listed, PEEK_HINT, toLink } from "./links-and-files.ts";
+import { ARCHITECTURE, crumbs, lastMessage, listed, messagesSaying, PEEK_HINT, toLink } from "./links-and-files.ts";
 
 /**
  * Home never walked while a check runs: the background index off, and the TUI's own walk of home, made while nobody
@@ -443,7 +443,8 @@ const HOME: Check[] = [
         git(s, s.home, "commit", "-q", "-m", "home");
         git(s, s.home, "checkout", "-q", "-b", "feat");
         s.write("~/household/2026/quote.md", "# Quote\n\nThe third, for [the insurance](../bike-insurance.md).\n");
-        git(s, s.home, "add", "-f", "household/2026/quote.md");
+        s.write("~/household/bike-insurance.md", `${s.read("~/household/bike-insurance.md")}\nRenewed on feat.\n`);
+        git(s, s.home, "add", "-f", "household/2026/quote.md", "household/bike-insurance.md");
         git(s, s.home, "commit", "-q", "-m", "a quote");
         git(s, s.home, "checkout", "-q", "main");
       },
@@ -468,6 +469,15 @@ const HOME: Check[] = [
       git(s, s.home, "checkout", "-q", "feat");
       await s.message("switched to branch feat: its tabs are back", 5000);
       await s.see(tab(3, "plan.md"));
+      // The note open on main's tab, changed by the checkout: read again once — after the tabs' folders were walked,
+      // never before git's batch and again with it.
+      await sleep(1500);
+      const said = await messagesSaying(
+        s,
+        "bike-insurance.md changed",
+        /bike-insurance\.md changed on disk — reloaded/,
+      );
+      s.expect(said === 1, `the open note read again once, not ${said} times`);
       await inSwitcher(s, "seeds", "garden/seeds.md");
       await s.keys("escape");
       await leader(s, "f", "s");
@@ -1435,6 +1445,53 @@ const ELSEWHERE: Check[] = [
       );
     },
   },
+  {
+    area: "links-and-files",
+    name: "Elsewhere: a link followed, its note typed into, forgotten, changed by an agent, followed again — yours kept, asked which to keep",
+    covers: { cases: ["vault", "links/state", "reload"], commands: ["note.open", "vault.links"] },
+    options: {
+      startAt: "tmp/plain-typed/a.md",
+      // Never autosaved meanwhile: what's typed stays unsaved.
+      config: "[editor]\nautosave_ms = 600000\n",
+      setup: (s) => {
+        const plain = join(s.dir, "tmp", "plain-typed");
+        if (existsSync(join(plain, "a.md"))) return;
+        mkdirSync(join(s.dir, "tmp", "out-typed"), { recursive: true });
+        writeFileSync(join(s.dir, "tmp", "out-typed", "far.md"), "# Far\n\nKept out of the way.\n");
+        mkdirSync(plain, { recursive: true });
+        writeFileSync(join(plain, "a.md"), "# A\n");
+        symlinkOnce(join(s.dir, "tmp", "out-typed"), join(plain, "data"));
+      },
+    },
+    run: async (s) => {
+      const far = join(s.dir, "tmp", "plain-typed", "data", "far.md");
+      await s.status(/ Elsewhere /);
+      await s.ex(`e ${far}`);
+      await s.see("Just look", 5000);
+      await s.keys("f");
+      await s.message("following", 5000);
+      // Typed on a new line at its end: the lens, then typing in it.
+      await s.keys("G", "o");
+      await s.status("LENS");
+      await s.keys("o");
+      await s.status("INSERT");
+      await s.type("Typed.");
+      await s.keys("escape");
+      await s.ex("symlinks");
+      await s.see("Symlinks you've answered");
+      await s.keys("enter");
+      await s.message("forgot", 5000);
+      writeFileSync(join(s.dir, "tmp", "out-typed", "far.md"), "# Far\n\nRewritten by an agent.\n");
+      // Followed again: what you typed kept, and which to keep asked.
+      await s.ex(`e ${far}`);
+      await s.see("Just look", 5000);
+      await s.keys("f");
+      // Its title cut short by the long path: the prompt by its choices.
+      await s.see("(k) Keep yours", 5000);
+      await s.see("Typed.");
+      await s.keys("escape");
+    },
+  },
 ];
 
 // --- the view ---------------------------------------------------------------------------------------------------
@@ -1947,9 +2004,12 @@ const LINKED: Check[] = [
       await opened(s, "shelf/big.md");
       // Opened through the link followed, the vault not taking it: typed into, saved — refused, as a note the vault
       // takes through a link is.
-      await s.keys("i");
-      await s.until(() => /^\s*(INSERT|LENS)\b/.test(s.statusLine()), 3000, "i to edit");
-      await s.type("Typed here. ");
+      // Typed on a new line at its end: the lens, then typing in it.
+      await s.keys("G", "o");
+      await s.status("LENS");
+      await s.keys("o");
+      await s.status("INSERT");
+      await s.type("Typed here.");
       await s.keys("escape");
       await s.ex("w");
       s.expect((await lastMessage(s, "resolves outside")).includes("resolves outside the vault"), ":w refused");
@@ -1963,6 +2023,8 @@ const LINKED: Check[] = [
     options: {
       home: true,
       startAt: "home/notes/to-tasks.md",
+      // Autosave soon after the last key: it would ask about a change out there, reading it through the link.
+      config: "[editor]\nautosave_ms = 1000\n",
       setup: (s) => {
         if (!s.exists("~/shelf/tasks.md")) s.write("~/shelf/tasks.md", "# Tasks\n\n- [ ] Shelve it.\n");
         if (!s.exists("~/notes/to-tasks.md"))
@@ -1986,7 +2048,7 @@ const LINKED: Check[] = [
       await opened(s, "shelf/tasks.md");
       await s.keys("shift+g");
       await s.keys("ctrl+l");
-      s.expect((await lastMessage(s, "not written")).includes("tasks.md not written"), "the toggle refused");
+      s.expect((await lastMessage(s, "not toggled")).includes("tasks.md: not toggled"), "the toggle refused");
       s.expect(s.read("~/shelf/tasks.md") === kept, "the task not toggled through the link");
       // Followed, typed into, then forgotten: what's typed isn't written through the link, :w or not.
       await forget();
@@ -1997,14 +2059,95 @@ const LINKED: Check[] = [
       await s.see(asked("~/shelf"));
       await s.keys("f");
       await opened(s, "shelf/tasks.md");
-      await s.keys("i");
-      await s.until(() => /^\s*(INSERT|LENS)\b/.test(s.statusLine()), 3000, "i to edit: followed");
-      await s.type("Typed here. ");
+      // Typed on a new line at its end: the lens, then typing in it.
+      await s.keys("G", "o");
+      await s.status("LENS");
+      await s.keys("o");
+      await s.status("INSERT");
+      await s.type("Typed here.");
       await s.keys("escape");
       await forget();
+      // Changed out there, its task toggled here: nothing read through the link forgotten, nothing toggled.
+      s.write("~/shelf/tasks.md", "# Tasks\n\n- [ ] Shelve it.\n- [ ] Changed out there.\n");
+      await sleep(2500);
+      s.expect(!s.screen().some((r) => r.includes("you have unsaved changes")), "no conflict asked: theirs not read");
+      await s.keys("k");
+      await s.keys("ctrl+l");
+      s.expect((await lastMessage(s, "not toggled")).includes("tasks.md: not toggled"), "the toggle refused");
+      await s.notSee("Changed out there.");
       await s.ex("w");
       s.expect((await lastMessage(s, "not written")).includes("tasks.md not written"), ":w refused");
-      s.expect(s.read("~/shelf/tasks.md") === kept, "nothing typed written through the link forgotten");
+      s.expect(!s.read("~/shelf/tasks.md").includes("Typed here."), "nothing typed written through the link forgotten");
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "links: a note looked at through a link, followed, its target not answering — not followed for now, still read-only",
+    covers: { cases: ["links/state", "safety"], commands: ["link.follow", "vault.links"] },
+    options: { home: true, startAt: "home/notes/to-shelf.md", setup: shelf },
+    run: async (s) => {
+      // Root lists any folder: a target that won't is only so for others.
+      if (process.getuid?.() === 0) return;
+      await toLink(s, "shelf/far.md");
+      await s.keys("enter");
+      await s.see(asked("~/shelf"));
+      await s.keys("l");
+      await opened(s, "shelf/far.md");
+      await s.ex("symlinks");
+      await s.see("Symlinks you've answered");
+      await s.keys("enter");
+      await s.message("forgot", 5000);
+      await s.keys("ctrl+o");
+      await opened(s, "to-shelf.md");
+      // The shelf lists nothing now (its files still read and written): asked, it doesn't answer.
+      chmodSync(s.path("~/shelf"), 0o300);
+      try {
+        await toLink(s, "shelf/far.md");
+        await s.keys("enter");
+        await s.see(asked("~/shelf"));
+        await s.keys("f");
+        await sleep(4500);
+        s.expect((await lastMessage(s, "didn't answer")).endsWith("not followed for now"), "not followed for now");
+        // The polls meanwhile lift nothing: opened again, it's read-only as it was.
+        await sleep(2500);
+        await s.ex(`e ${s.path("~/notes/shelf/far.md")}`);
+        await opened(s, "shelf/far.md");
+        await s.keys("i");
+        s.expect((await lastMessage(s, "not editing")).endsWith("— not editing"), "i refused: still read-only");
+      } finally {
+        chmodSync(s.path("~/shelf"), 0o755);
+      }
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "links: a note looked at through a file link, the link made a note of the vault's own — indexed, and its window takes typing",
+    covers: { cases: ["links/state", "watching"], commands: ["note.open"] },
+    options: {
+      home: true,
+      startAt: "home/notes/to-shelf.md",
+      setup: (s) => {
+        shelf(s);
+        symlinkOnce(s.path("~/shelf/far.md"), s.path("~/notes/far-link.md"));
+      },
+    },
+    run: async (s) => {
+      await s.ex("e far-link.md");
+      await s.see(/follow it\?/, 5000);
+      await s.keys("l");
+      await opened(s, "far-link.md");
+      await s.see("A note kept on the shelf.");
+      // The link replaced by a note of the vault's own, as an editor or git would.
+      rmSync(s.path("~/notes/far-link.md"));
+      s.write("~/notes/far-link.md", "# Far link\n\nThe vault's own now.\n");
+      await s.see("The vault's own now.", 5000);
+      await inSwitcher(s, "far-link", "far-link.md");
+      await s.keys("escape");
+      await s.keys("G", "o");
+      await s.status("LENS");
+      await s.keys("o");
+      await s.status("INSERT");
+      await s.keys("escape");
     },
   },
   {

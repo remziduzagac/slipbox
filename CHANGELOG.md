@@ -143,6 +143,7 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
   the vault indexes the note, and is never saved through the link, as a vault never writes outside itself. Once you
   forget the link, nothing more is read through it, and nothing you typed is written through it.
 - A reindex (`space v r`) reads again an open note changed while nobody watched, once git has finished writing.
+- An open note that git changes is reloaded once, however many times what git wrote names it.
 - A task toggled (`ctrl+l`) in a note you're just looking at through a symlink isn't written through it, and in a
   vault a note too big to index, opened through a symlink you follow, is never saved through it. 0.5.0 wrote both
   where the link leads, out of the vault.

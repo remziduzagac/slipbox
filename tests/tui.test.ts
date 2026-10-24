@@ -31,7 +31,7 @@ import { type Config, DEFAULT_CONFIG } from "../src/core/config.ts";
 import { openGraph } from "../src/core/graph.ts";
 import { locateVault } from "../src/core/vault.ts";
 import { tildePath } from "../src/core/paths.ts";
-import { linkAnswer, probe, setLinkAnswer } from "../src/core/symlinks.ts";
+import { linkAnswer, linkKey, probe, setLinkAnswer } from "../src/core/symlinks.ts";
 import { type ListOverlay, App, type Host } from "../src/tui/app.ts";
 import { dateText, listFolder, placeOf, type SaveAsOverlay, sizeText } from "../src/tui/saveas.ts";
 import { placeIn } from "../src/tui/shellrun.ts";
@@ -15039,6 +15039,53 @@ describe("the background auto-index in the TUI (20.9)", () => {
     }
   });
 
+  test("home a repository, a branch checked out as its batch lands: an open note it changed read again once, after its tabs' build (VV-D2, D153, #13)", async () => {
+    const { homeAt } = await import("../src/core/vault.ts");
+    const home = homeWithFolders();
+    const loc = homeAt(home);
+    const git = (...args: string[]) =>
+      Bun.spawnSync([
+        "git",
+        "-c",
+        "user.email=t@example.invalid",
+        "-c",
+        "user.name=t",
+        "-c",
+        "commit.gpgsign=false",
+        "-C",
+        home,
+        ...args,
+      ]).exitCode;
+    if (git("init", "-q", "-b", "main") !== 0) return;
+    expect(git("add", "-A")).toBe(0);
+    expect(git("commit", "-q", "-m", "start")).toBe(0);
+    expect(git("checkout", "-q", "-b", "feat")).toBe(0);
+    writeFileSync(join(home, "README.md"), "# Home\n\nAs feat has it.\n");
+    expect(git("commit", "-q", "-am", "feat's README")).toBe(0);
+    expect(git("checkout", "-q", "main")).toBe(0);
+    const on = (c: Config) => (c.ui.restore_session = true);
+    const before = process.env.HOME;
+    process.env.HOME = home;
+    try {
+      // feat's tabs, kept: README.md and a note of `notes`, a folder home's walk hasn't reached.
+      const first = await harness({ loc, open: "README.md", config: on });
+      first.app.openInNewTab("notes/inbox.md");
+      first.app.session.save("feat");
+      const h = await harness({ loc, open: "README.md", config: on });
+      expect(h.app.git.checkHead()).toBe(false);
+      expect(git("checkout", "-q", "feat")).toBe(0);
+      // The watcher's batch for what git wrote: the switch seen first, its tabs back, their folder walked, then the
+      // batch — the note read again once, never before the batch and again with it.
+      h.app.feed.receive({ changes: [{ rel: "README.md", kind: "changed", isNote: true }], rescan: false });
+      expect(h.app.messages.some((m) => m.text === "switched to branch feat: its tabs are back")).toBe(true);
+      expect(h.app.graph.notes.has("notes/inbox.md")).toBe(true);
+      expect(h.app.buffers.get("README.md")!.source).toBe("# Home\n\nAs feat has it.\n");
+      expect(h.app.messages.filter((m) => m.text.endsWith("README.md changed on disk — reloaded"))).toHaveLength(1);
+    } finally {
+      process.env.HOME = before;
+    }
+  });
+
   test("home's tabs brought back as a branch is checked out, their folders walked: search finds their notes (VV-D2, #13)", async () => {
     const { homeAt } = await import("../src/core/vault.ts");
     const home = homeWithFolders();
@@ -15403,6 +15450,22 @@ describe("the background auto-index in the TUI (20.9)", () => {
     rmSync(join(root, ".git", "index.lock"));
     await new Promise((r) => setTimeout(r, 400));
     expect(index.source).toBe("# Index\n\nRewritten by git.\n");
+    expect(h.app.messages.filter((m) => m.text.endsWith("changed on disk — reloaded"))).toHaveLength(1);
+  });
+
+  test("a batch naming an open note twice (held while git wrote): read again once, as its last change has it (D153, #13)", async () => {
+    const root = makeVault();
+    const h = await harness({ root, open: "index.md" });
+    const index = h.app.view!.buf;
+    writeFileSync(join(root, "index.md"), "# Index\n\nRewritten twice.\n");
+    h.app.watch.applyChanges({
+      changes: [
+        { rel: "index.md", kind: "changed", isNote: true },
+        { rel: "index.md", kind: "changed", isNote: true },
+      ],
+      rescan: false,
+    });
+    expect(index.source).toBe("# Index\n\nRewritten twice.\n");
     expect(h.app.messages.filter((m) => m.text.endsWith("changed on disk — reloaded"))).toHaveLength(1);
   });
 
@@ -20683,6 +20746,111 @@ describe("links followed only when you say so (VV-D6)", () => {
     expect(readFileSync(join(out, "far.md"), "utf8")).toBe(big);
   });
 
+  test("home: a note looked at through a link, followed, its target not answering: still read-only, the poll lifts nothing (VV-D6, #13)", async () => {
+    // Root reads any folder: a target that won't list is only so for others.
+    if (process.getuid?.() === 0) return;
+    const { homeAt } = await import("../src/core/vault.ts");
+    const top = realpathSync(mkdtempSync(join(sandbox, "homelinks-")));
+    const home = join(top, "home");
+    const out = join(top, "out");
+    mkdirSync(home);
+    mkdirSync(out);
+    writeFileSync(join(home, "a.md"), "# A\n");
+    writeFileSync(join(out, "far.md"), "# Far\n\nFrom far away.\n");
+    symlinkSync(out, join(home, "data"));
+    const link = join(home, "data");
+    const before = process.env.HOME;
+    process.env.HOME = home;
+    try {
+      const h = await harness({ loc: homeAt(home), open: "a.md" });
+      h.app.following.looking.add(linkKey(link));
+      h.app.open(join(link, "far.md"));
+      const far = h.app.view!.buf;
+      expect(far.throughLink).toBe(true);
+      // The target lists nothing (its file still read and written): asked, it doesn't answer.
+      chmodSync(out, 0o300);
+      try {
+        h.app.following.answer(link, out, "follow");
+        await h.app.following.settled();
+        expect(h.app.messages.at(-1)?.text).toContain("not followed for now");
+        h.app.watch.poll();
+        expect([far.throughLink, far.readOnly]).toEqual([
+          true,
+          `just looking: ${tildePath(link)} isn't followed — read-only`,
+        ]);
+        far.edit(0, 0, "Typed. ");
+        expect(h.app.saving.save(far)).toBe(false);
+        expect(readFileSync(join(out, "far.md"), "utf8")).toBe("# Far\n\nFrom far away.\n");
+      } finally {
+        chmodSync(out, 0o755);
+      }
+    } finally {
+      process.env.HOME = before;
+    }
+  });
+
+  test("a note looked at through a file link, the link made a note of the vault's own: indexed, and the window its note (VV-D6, #13)", async () => {
+    const top = realpathSync(mkdtempSync(join(sandbox, "links-")));
+    const root = join(top, "vault");
+    const out = join(top, "out");
+    mkdirSync(join(root, ".slipbox"), { recursive: true });
+    mkdirSync(out);
+    writeFileSync(join(root, "index.md"), "# Index\n\n[far](far.md)\n");
+    writeFileSync(join(out, "far.md"), "# Far\n");
+    symlinkSync(join(out, "far.md"), join(root, "far.md"));
+    const h = await harness({ root, open: "index.md" });
+    h.app.following.looking.add(linkKey(join(root, "far.md")));
+    h.app.open("far.md");
+    const far = h.app.view!.buf;
+    expect(far.throughLink).toBe(true);
+    // The link replaced by a note of the vault's own, as an editor or git would: the watcher's news of it taken.
+    rmSync(join(root, "far.md"));
+    writeFileSync(join(root, "far.md"), "# Far, here now\n");
+    h.app.watch.applyChanges({ changes: [{ rel: "far.md", kind: "created", isNote: true }], rescan: false });
+    expect(h.app.graph.notes.has("far.md")).toBe(true);
+    h.app.watch.poll();
+    expect([far.source, far.rel, far.throughLink, far.readOnly]).toEqual(["# Far, here now\n", "far.md", false, null]);
+  });
+
+  test("a link followed, its note open, then forgotten: a task toggled in it reads nothing through the link (VV-D6, #13)", async () => {
+    const { root, link, out } = linked();
+    writeFileSync(join(out, "far.md"), "# Far\n\n- [ ] one\n");
+    setLinkAnswer(link, "follow");
+    await probe(out);
+    const h = await harness({ root, open: "index.md" });
+    await h.app.run("note.open data/far.md");
+    const far = h.app.view!.buf;
+    h.app.following.forget(link);
+    writeFileSync(join(out, "far.md"), "# Far\n\n- [ ] one\n- [ ] changed out there\n");
+    h.app.views.toggleTaskAt(h.app.view!, { line: 3, end: 3, checked: false });
+    expect(far.source).toBe("# Far\n\n- [ ] one\n");
+    expect(h.app.messages.at(-1)?.text).toContain("not toggled");
+  });
+
+  test("a link followed, its note edited, forgotten, changed out there: saved or autosaved, nothing read through the link to compare (VV-D6, #13)", async () => {
+    const { root, link, out } = linked();
+    setLinkAnswer(link, "follow");
+    await probe(out);
+    const h = await harness({ root, open: "index.md" });
+    await h.app.run("note.open data/far.md");
+    const far = h.app.view!.buf;
+    far.edit(0, 0, "Typed. ");
+    h.app.following.forget(link);
+    // Autosave leaves it be, saying nothing: the window says why it's read-only.
+    const said = h.app.messages.length;
+    h.app.saving.autosave();
+    expect(h.app.messages.length).toBe(said);
+    writeFileSync(join(out, "far.md"), "# Far\n\nChanged out there.\n");
+    // No conflict asked about, however it comes: theirs would be read through the link.
+    h.app.saving.autosave();
+    h.app.saving.conflictPrompt(far);
+    expect(h.app.overlay).toBeNull();
+    expect(h.app.saving.save(far)).toBe(false);
+    expect(h.app.overlay).toBeNull();
+    expect(h.app.messages.at(-1)?.text).toContain("data/far.md not written: ");
+    expect([far.source, far.dirty]).toEqual(["Typed. # Far\n\nFrom far away.\n", true]);
+  });
+
   test("Elsewhere: a note just looked at through a link, the link forgotten, then followed: writable again (VV-D3, #13)", async () => {
     const { elsewhereAt } = await import("../src/core/vault.ts");
     const top = realpathSync(mkdtempSync(join(sandbox, "plain-")));
@@ -20765,6 +20933,33 @@ describe("links followed only when you say so (VV-D6)", () => {
     changed("looked");
     await follow("two");
     expect([looked.source, looked.throughLink, forgot.source]).toEqual(["# looked\n", true, "# forgot\n"]);
+  });
+
+  test("Elsewhere: a link followed, typed into, forgotten, changed by an agent, followed again: the conflict prompt asks at once (VV-D3, 5.5, #13)", async () => {
+    const { elsewhereAt } = await import("../src/core/vault.ts");
+    const top = realpathSync(mkdtempSync(join(sandbox, "plain-")));
+    const plain = join(top, "plain");
+    const out = join(top, "out");
+    mkdirSync(plain);
+    mkdirSync(out);
+    writeFileSync(join(plain, "a.md"), "# A\n");
+    writeFileSync(join(out, "far.md"), "# Far\n");
+    symlinkSync(out, join(plain, "data"));
+    const link = join(plain, "data");
+    setLinkAnswer(link, "follow");
+    const h = await harness({ loc: elsewhereAt(plain), open: null });
+    h.app.open(join(link, "far.md"));
+    const far = h.app.view!.buf;
+    far.edit(0, 0, "Typed. ");
+    h.app.following.forget(link);
+    writeFileSync(join(out, "far.md"), "# Far\n\nRewritten by an agent.\n");
+    h.app.following.answer(link, out, "follow");
+    await h.app.following.settled();
+    // Writable again, yours kept, and asked now which to keep — not at the next poll.
+    expect([far.readOnly, far.throughLink, far.source]).toEqual([null, false, "Typed. # Far\n"]);
+    expect((h.app.overlay as ListOverlay | null)?.title).toEndWith(
+      "far.md changed on disk, and you have unsaved changes",
+    );
   });
 
   test("a followed link's target asked at the start, in the background: walked once it answers", async () => {

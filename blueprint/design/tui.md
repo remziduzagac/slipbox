@@ -1913,14 +1913,17 @@ rather than rebuilt (`5.8`; D137).
   and the watcher told it's heard a note (`VaultWatcher.heard`), so its sweep doesn't say it again; one it can't stat (a
   folder on the way locked, made a file) is gone, never an error. One told gone that comes back, reached before (20.8),
   is reached again, as opening it reaches it. A build the watcher is synced to tells it of every open note changed
-  before, the watched too, the same way, through the feed (`Watch.rebuilt`). A file the graph comes to know while it's
-  open is the vault's from then, its window, unsaved text and undo kept (`App.claim`: at each build, at a change to that
-  file, as it's read again, and at each poll): a note a branch brings, its tab back before the batch that brings it; one
-  in a folder of home walked since; one reached. Never one changed on disk since it was read: the poll reads it again
-  first. A link forgotten, the notes open through it are no longer the vault's and read-only, and news of them heard
-  late is dropped; the link followed again (`Following.lift`), they're writable — in a vault only once it takes them, as
-  a write there never lands outside it; in home and Elsewhere at once — one changed meanwhile read again first. One read
-  through a link not followed is never written (`App.writeBuffer`).
+  before, the watched too, the same way, through the feed (`Watch.rebuilt`), after what the feed is applying (a branch's
+  tabs built for as its switch is seen: `VaultFeed.whenApplied`), and a batch reloads each open note once. A file the
+  graph comes to know while it's open is the vault's from then, its window, unsaved text and undo kept (`App.claim`: at
+  each build, at a change to that file, as it's read again, and at each poll): a note a branch brings, its tab back
+  before the batch that brings it; one in a folder of home walked since; one reached. Never one changed on disk since it
+  was read: the poll reads it again first. A link forgotten, the notes open through it are no longer the vault's and
+  read-only, and news of them heard late is dropped while their path still goes through the link; the link followed
+  again, its target answering (`Following.lift`), they're writable — in a vault only once it takes them, as a write
+  there never lands outside it; in home and Elsewhere at once — one changed meanwhile read again first. One read through
+  a link not followed is never written (`App.writeBuffer`), nor read through it to toggle a task or to ask about a
+  change out there (the conflict prompt).
 - **What git does lands as one change** (`5.9`, `5.10`; D153): while git holds its index lock (a checkout, a merge, a
   rebase, a commit) the watcher's news waits; when it lets go, everything it changed is applied together. HEAD is
   looked at each second and with each batch: when it moved, `switched to branch feat` — and that branch's tabs back

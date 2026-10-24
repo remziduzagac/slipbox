@@ -952,7 +952,8 @@ export class App {
    * (past `walk.max_file_size`) stays read-only. In home and Elsewhere, a write through a followed link is allowed.
    */
   private claimThroughLink(b: NoteBuffer): boolean {
-    if (this.following.blocked(b.abs) || this.following.lookedAt(b.abs)) return false;
+    // Its link followed, and its target answered: never while it's looked at, nor asked, nor once it gave up.
+    if (this.following.blocked(b.abs, true)) return false;
     const known = !isAbsolute(b.key) && this.graph.known(b.key) && !b.changedOnDisk();
     if (this.loc.mode === "vault" && !known) return false;
     b.throughLink = false;

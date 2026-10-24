@@ -304,3 +304,25 @@ folder before its tabs open, as a file opened by name has its folder asked for, 
   parse (dev's rule). Ran: tests/tui.test.ts's `#13` and VV-D6 tests (56), vault's and the walk thread's `#13` and
   `#16` (27), the docs' and coverage tests (34), 29 terminal checks, every fix undone once (`tmp/issue/mut/run-r6*.py`,
   `term-r6*.py`), the typecheck, the lint, `check:docs`.
+- 2026-10-24: Rebased on `dev` again (#59, the hang in a test of T19's; #54) and pushed: CI green but macOS's test job,
+  one failure in T12's `… keeps a file reached meanwhile as reached …` (its second refresh answered within the test's
+  quarter of a slow read on a loaded runner; it passed here three times out of three, and on Linux): a test of T12's
+  that times its thread, not this branch's.
+- 2026-10-24: Review loop, round 7, the last (the maintainer's rule: at most three rounds, the round in hand the last
+  when past them): the code-review skill, and a fresh Claude reviewer in Codex's place (Codex's part skipped, as in
+  rounds 4 to 6). Verified and fixed, each with a unit test red without it and a terminal check: a branch's tabs built
+  for inside the feed's flush made `rebuilt`'s poll apply its batch inside the one git wrote, reloading an open note
+  twice (`VaultFeed.whenApplied`; a batch reloads each open note once, as its last change has it); home's walk asked for
+  again though its answer covered the folders asked for since (taken when it covers them, as `askFolders` has it);
+  following a link again gave the conflict prompt only at the next poll in Elsewhere (`lift` reads every changed window
+  again, yours kept); the poll lifted a window whose link was followed while its target was asked, or gave up
+  (`blocked(abs, true)`: only a followed target that answered lets it by); news for a path dropped though it's no link
+  any more (dropped only while it still goes through the link); a task toggled read through a link not followed
+  (refused); found as its check ran, autosave and a save asked about a change out there for such a window, the prompt
+  reading theirs through the link (`save` refuses as `writeBuffer` does, autosave leaves it, `conflictPrompt` never
+  asks for one). Three terminal checks typed into the lens, not insert mode (passing on their keys' edits): they type
+  now. Two checks drive what they can't tell apart from the poll (Elsewhere's conflict asked at once; T12's walk).
+  Rejected: the build's `since` and the poll each reading a changed note (a few reads), the reindex's sync to the
+  graph's folders (as a rescan does; T19's listed folders are among them), the claim's link lookups at each poll (a few
+  stats; skipping them would leave a conflict settled with theirs read-only until a build), `tabFolders`' and
+  `toRestore`'s repeats (decided before), the build listeners' empty catch (the change listeners' own).
