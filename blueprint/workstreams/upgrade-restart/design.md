@@ -1,8 +1,7 @@
 # Design changes
 
 Each change names the root's design section it lands in at consolidation; the root's files change only when UPG is
-consolidated. Until the maintainer agrees the decisions behind them (notes.md § Open questions), they cite the
-proposals in ideas.md; once agreed, the decisions' IDs (UPG-D1, …, and the root's `D?1`).
+consolidated. They cite the decisions behind them, UPG-D1 to UPG-D7 (decisions.md).
 
 ## ADDED design/distribution.md § The update offer
 
@@ -19,20 +18,19 @@ the git panel's message — and nothing open over the windows (a list, a prompt,
 As window, the merge screen). Keys, pastes and clicks that arrive in its first half second, or arrived before it and
 wait their turn, are dropped, so one meant for a note never answers it: each carries the time it arrived, taken as it's
 queued. Just before it opens, your config's `[update] check` and `DO_NOT_TRACK` are read again: an offer waiting when
-the check was turned off (a reload, `D?1`'s checkbox in another window) is dropped. A slipbox quit before it opens is
-asked at the next check.
+the check was turned off (the config reloaded) is dropped. A slipbox quit before it opens is asked at the next check.
 
 **What it says:** its title `slipbox 0.6.0 is out`, or `slipbox 0.6.0-preview.202610121530.g1a2b3c4 is out on the
 preview channel`; its text `This is 0.5.0.` What it offers is by how this slipbox was installed (`installedBy`):
 
 - **The installer's** — a select of three, the first marked:
-  - **Upgrade and restart:** what's unsaved saved, slipbox quit, upgraded and started again where you were (§
-    Restarting).
+  - **Upgrade and restart:** slipbox quit, upgraded and started again where you were, notes unsaved asked about first
+    (§ Restarting).
   - **Upgrade, restart later:** the upgrade runs now, beside the TUI: `slipbox upgrade --json`, the running binary's
     own (`process.execPath`), with this environment. A process of its own, so the download, its sum, the unpacking and
     the new binary's run never hold the screen up. The TUI says `upgrading to 0.6.0…`, then `slipbox 0.6.0 is installed
     (this is 0.5.0): :restart starts it`, or, as an error, `the upgrade to 0.6.0 failed: <why>`. Quitting meanwhile
-    leaves it to finish (open question 7): it's what you asked for, and the next start runs what it installed. So it
+    leaves it to finish (UPG-D7): it's what you asked for, and the next start runs what it installed. So it
     outlives the TUI: in a process group of its own (the terminal's signals never reach it), not waited for by the
     TUI's exit (unreferenced), its answer written to a file, `$XDG_STATE_HOME/slipbox/upgrade-<pid>.json`, never a pipe
     whose reader may be gone; the TUI reads the file when the child exits, then removes it.
@@ -43,32 +41,35 @@ preview channel`; its text `This is 0.5.0.` What it offers is by how this slipbo
   and slipbox offers to restart once this file has changed.`; its choices **Copy the releases' address** and **Not
   now**. Copied, never opened, as a URL followed is (tui.md § Following links: a browser over SSH would be wrong).
 
-**And two checkboxes**, for any install:
+**And one checkbox**, for any install, **Skip this version**: taken with Not now only, dimmed with another choice.
+`update.json` keeps it (`skipped`), and a check finding it, or anything not newer, offers nothing; a newer one is
+offered. There's no checkbox to stop the checks (UPG-D1): your own config's `[update] check = false`, or
+`DO_NOT_TRACK`, does that, as it does today, and the TUI never writes your config.
 
-- **Skip this version** — taken with Not now only, dimmed with another choice: `update.json` keeps it (`skipped`), and a
-  check finding it, or anything not newer, offers nothing; a newer one is offered.
-- **Keep checking daily** — ticked. Unticked, whatever the choice, `check = false` is written under `[update]` in your
-  own config (`D?1`): the file the TUI read yours from — `--config`'s, else `SLIPBOX_CONFIG`'s, else `config.toml` in
-  slipbox's config folder (`userConfigFile`, `XDG_CONFIG_HOME` honoured). It's said, `update checks are off: written to
-  ~/.config/slipbox/config.toml`, and the config's reload applies it.
+`esc`, or a click outside, is Not now with nothing kept.
 
-`esc`, or a click outside, is Not now with nothing written.
-
-**Writing `[update] check`** (`core/config-edit.ts`) edits one line and leaves the rest of the file as it was, its
-comments and order kept: a `check = …` under `[update]` replaced in place, a comment after it kept; an `[update]` table
-without one given the line under its header; a top-level `update.check = …` replaced; no table at all, `[update]` and
-the line added at the end, the file and its folder made when there's none. Anything else (an inline table, a value
-split across lines) is left alone, and the TUI says the line to write by hand. The edited text is parsed before it's
-written — it must say `update.check = false`, and everything else as it did. A config that's a link (dotfiles kept by
-Stow) has its target edited and stays a link: the target written beside itself and renamed over itself, as
-`atomicWrite` writes. The file is read again just before the rename: changed since it was read, it's left alone and
-said.
+**Asked for: `:upgrade`** (`app.upgrade`; no key of its own; `slipbox upgrade` its CLI equivalent) asks now, as the
+daily check asks — one request, two on `preview` — and offers what it finds as above, a version you skipped included
+(UPG-D6). You asked, so it asks whatever `[update] check` and `DO_NOT_TRACK` say, as `slipbox upgrade` does; the time
+it asked is kept in `update.json`, as the daily check's is, so the next daily check is a day later. It opens the offer
+at once (its own keys answered it, so it waits for no quiet). The newest installed already, underneath this one (§ An
+upgrade underneath): its restart is offered instead, Restart now or Not now. Nothing newer: `slipbox 0.5.0 is the
+newest` (on `preview`, `the newest release or preview`). A failure says why, as an error. From source (no release
+build) it asks nothing and says what `slipbox upgrade` says: `this slipbox runs from source (or was built by hand): it
+has no releases to follow — update its checkout`.
 
 ## ADDED design/distribution.md § Restarting
 
-**`app.restart`** (`:restart`; no key of its own; an interaction, with no CLI equivalent) restarts slipbox. What's
-unsaved is saved as `:wqa` saves it — the properties editor's text first, then each unsaved note through `writeBuffer`
-— and one that can't be (changed on disk: its conflict prompt opens; not valid UTF-8) stops the restart, saying which.
+**`app.restart`** (`:restart`; no key of its own; an interaction, with no CLI equivalent) restarts slipbox.
+
+**Notes unsaved are asked about first** (UPG-D3), in the dialog: its title `Restart`, its text `2 notes are unsaved:
+todo.md, ideas.md.` (the first three named, then `and 4 more`), its choices **Save and restart**, marked, and
+**Cancel**; `esc` is Cancel. The properties editor's text not applied yet counts as unsaved. Save and restart saves as
+`:wqa` saves — the properties editor's text first, then each unsaved note through `writeBuffer` — and one that can't be
+(changed on disk: its conflict prompt opens; not valid UTF-8) stops the restart, saying which, and nothing quits.
+Cancel restarts nothing; from the update offer, that version is asked about again at the next check, or by `:upgrade`.
+With nothing unsaved, it doesn't ask.
+
 Then **the note** for the slipbox that starts is written, `$XDG_STATE_HOME/slipbox/restart/<pid>.json`: the place to
 come back to (the location's mode and root, home's folder opened by name), this window's session as `Session.save`
 writes it — its tabs, windows, positions, the panes' sizes — the version it was, and the upgrade asked for. It's read
@@ -82,7 +83,7 @@ Upgrade and restart (§ The update offer) is the same with the upgrade in betwee
 teardown (raw mode off, the main screen back, mouse reporting off) comes after its `destroy` event: the hand-over waits
 for that event, then a turn of the event loop, before it writes a line or replaces the process.
 
-**The hand-over** (`core/restart.ts`) runs in the same process, in order:
+**The hand-over** (`core/restart.ts`; UPG-D2) runs in the same process, in order:
 
 1. **The upgrade**, when asked for: `slipbox: upgrading to 0.6.0…`, then `upgrade`'s work (§ Updates) done by the
    version that was running, as `slipbox upgrade` does it, and what `slipbox upgrade` says after it. `ctrl+c` during it
@@ -108,18 +109,19 @@ for that event, then a turn of the event loop, before it writes a line or replac
 6. **Nothing starts** (the binary gone, or not runnable): it says why and exits 1, at the shell's prompt.
 
 **Coming back.** A TUI starting looks for its note (`restart/<pid>.json`, else `<ppid>.json`), takes it — read and
-removed; one older than two minutes is ignored — and comes back where you were. The arguments are the same; the note
-gives the place, so the arguments' path and `--root` give way to it, and `--base`, a start's instruction already kept
-for its branch (`baseAtOpen`), isn't applied again — another vault's, it would measure the wrong repository, and a ref
-gone since would stop the start. The session restored is the note's, whatever `ui.restore_session` and a note named
-say, and never `session.json`'s, which another window on the same vault may have written meanwhile. It says
+removed; one older than two minutes is ignored — and comes back where you were (UPG-D4). The arguments are the same;
+the note gives the place, so the arguments' path and `--root` give way to it, and `--base`, a start's instruction
+already kept for its branch (`baseAtOpen`), isn't applied again — another vault's, it would measure the wrong
+repository, and a ref gone since would stop the start. The session restored is the note's, whatever
+`ui.restore_session` and a note named say, and never `session.json`'s, which another window on the same vault may have
+written meanwhile. It says
 `restarted: slipbox 0.6.0 (was 0.5.0)` — its own version, the one that started — or, as an error, `the upgrade to
 0.6.0 failed: <why> — this is 0.5.0`.
 
 ## ADDED design/distribution.md § An upgrade underneath
 
 A release build looks, every ten seconds, at where its next version would be — on this machine, nothing sent, so
-whatever `[update] check` and `DO_NOT_TRACK` say:
+whatever `[update] check` and `DO_NOT_TRACK` say (UPG-D5):
 
 - the installer's install: the version `<data>/current` names;
 - Homebrew's: where `<prefix>/opt/slipbox` leads (`…/Cellar/slipbox/<keg>`), and once that changes, the binary's
@@ -174,8 +176,9 @@ consistent: `current` names a complete version, the old one or the new.
 
 Adds, after the which-key popup:
 
-**The dialog** (`tui/dialog.ts`) asks a question with controls of its own: a select and checkboxes. The update offer
-is its first (distribution.md § The update offer). Framed like the other popups, its title in its top border, it shows
+**The dialog** (`tui/dialog.ts`) asks a question with controls of its own: a select, and checkboxes when it has any.
+The update offer is its first (distribution.md § The update offer), and a restart's question about notes unsaved its
+second (§ Restarting). Framed like the other popups, its title in its top border, it shows
 its text, wrapped; its select's choices, one a row, the one chosen marked `●` and the others `○` (`(*)` and `( )` in
 ASCII's glyphs); its checkboxes, `☑` or `☐` as a task's (`[x]`, `[ ]`), one the chosen choice doesn't take dimmed; and,
 under a rule, what the row under the cursor does. Its keys are in its bottom border: `enter do it · space tick · esc
@@ -189,16 +192,6 @@ not now`.
 - One that opens on its own drops the keys, pastes and clicks that arrive in its first half second, by when they
   arrived (each its own time, taken as it's queued), not when they're handled.
 
-## MODIFIED design/tui.md § UI settings
-
-The last sentence of "Persistence", whole:
-
-Editing the config therefore always wins, and the TUI never writes your config, but for one key, on your word:
-`[update] check`, written `false` when you untick "Keep checking daily" in the update offer (`D?1`;
-distribution.md § The update offer).
-
-Previously: "Editing the config therefore always wins, and the TUI never writes your config."
-
 ## MODIFIED design/how-it-works.md § Module map
 
 Adds rows:
@@ -206,9 +199,8 @@ Adds rows:
 | Module | Steps | Role |
 | --- | --- | --- |
 | `core/restart.ts` | UPG | the restart's note; the hand-over: the upgrade, the binary, `execve` into it |
-| `core/config-edit.ts` | UPG | `[update] check` written into your own config, the rest of the file as it was |
 | `tui/dialog.ts` | UPG | the dialog: text, a select and checkboxes; its keys and clicks |
-| `tui/updates.ts` | UPG | the update offer, `app.restart`, an upgrade underneath noticed |
+| `tui/updates.ts` | UPG | the update offer, `app.upgrade`, `app.restart`, an upgrade underneath noticed |
 
 ## MODIFIED design/how-it-works.md § Only the final draw step touches OpenTUI
 
@@ -225,7 +217,8 @@ Previously: `$XDG_STATE_HOME/slipbox/update.json` (when it last asked, what it f
 
 ## MODIFIED design/testing.md § The terminal tests
 
-Adds a check, `updates`, of the offer and the restart, driving real release builds: two of the checkout, built once a
+Adds a check, `updates`, of the offer, `:upgrade`, and the restart with its question about notes unsaved, driving real
+release builds: two of the checkout, built once a
 run before the checks' workers start (`--define SLIPBOX_RELEASE`), the second from a copy of the sources whose
 `version.ts` says a newer version, so the slipbox that comes back is the new one. Quitting during a background
 upgrade is checked with the release served slowly (a local server): the shell's prompt back at once, the version
