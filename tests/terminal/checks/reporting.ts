@@ -112,6 +112,23 @@ export const REPORTING: Check[] = [
   },
   {
     area: "navigating",
+    name: "report: keys sent at once with space r land in it, never in the note under it",
+    covers: { cases: ["help"], commands: ["help.report"] },
+    options: { size: { cols: 120, rows: 34 } },
+    run: async (s) => {
+      await s.see("Halden Ridge Observatory");
+      await s.send(" rBurst title");
+      await s.see(WINDOW);
+      await s.see(/ 3 {2}Burst title/);
+      await s.status("INSERT");
+      await s.keys("escape", "escape");
+      await s.notSee(WINDOW);
+      await s.status("READ");
+      s.expect(!s.text().includes("Burst title"), "nothing of it in the note");
+    },
+  },
+  {
+    area: "navigating",
     name: "report: the screen as text and where you were, added in full on your say, the palette not in it; u takes it out",
     covers: { cases: ["help"], commands: ["help.report", "help.report_send", "edit.undo"] },
     options: { size: { cols: 120, rows: 34 }, open: HANDBOOK },

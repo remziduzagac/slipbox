@@ -100,8 +100,10 @@ form's fields, by one rule, which also says where an added screen goes:
 - **The screen as text:** the frame drawn after the command ran — the palette, help or the which-key popup that ran
   it closed, the messages showing as they were — drawn as every frame is and kept as text too, onto a `TextCanvas` of
   the screen's size (`tui/canvas.ts`) beside the terminal's canvas, that frame only; the window opens on the next. Its
-  rows, with their trailing blanks cut. A picture isn't text, and isn't in it. A frame whose drawing failed is kept
-  as the screen that says so, and the report opens all the same: it's wanted most then.
+  rows, with their trailing blanks cut. A picture isn't text, and isn't in it. Keys after the command wait for that
+  frame (a quarter of a second at most), so a paste or keys sent at once go to the report, never the window under it.
+  A frame whose drawing failed is kept as the screen that says so, and the report opens all the same: it's wanted
+  most then.
 - **Where you were:** the window's file (its path in the vault, else from home, `~/…`), the cursor's line number and
   how it was shown (rendered, source, the lens open; nothing said for a file that isn't a note), then that line's
   text: `handbook/operations-handbook.md, line 3, rendered`. A window with no file (a hover, none open): "no file was

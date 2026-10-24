@@ -4,6 +4,7 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { chmodSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { canonKey } from "../src/core/commands.ts";
 import { tildePath } from "../src/core/names.ts";
 import { GUIDE, SCREEN_INTRO, WHERE_INTRO } from "../src/core/report.ts";
 import type { ListOverlay } from "../src/tui/app.ts";
@@ -52,6 +53,19 @@ describe("the report's window (RPT-D1)", () => {
     // Never "unsaved": it's never saved anywhere.
     expect(frame.split("\n").at(-1)).toContain("‹ report ›");
     expect((await h.keys("escape")).split("\n").at(-1)).not.toContain("unsaved");
+  });
+
+  test("keys sent at once with space r land in the report, never in the note under it", async () => {
+    const h = await harness();
+    const note = h.app.tabView!.buf.source;
+    const burst = Promise.all(["space", "r", "B", "u", "r", "s", "t"].map((k) => h.app.input.handleKey(canonKey(k))));
+    // The frame the report opens on comes after the keys, as a terminal's would.
+    setTimeout(() => h.frame(), 30);
+    await burst;
+    h.frame();
+    expect(h.app.floating?.kind).toBe("report");
+    expect(text(h).split("\n")[2]).toBe("Burst");
+    expect(h.app.tabView!.buf.source).toBe(note);
   });
 
   test(":report and help's Report a problem open it too", async () => {

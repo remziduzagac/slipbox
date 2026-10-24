@@ -141,6 +141,9 @@ export class Input {
 
   /** Handle a key now, not queued: `.` replays its keys through this, inside its own turn. */
   async processKey(key: string): Promise<void> {
+    // A report waiting for its frame (`space r`): the keys after it are its (RPT-D2). Else no wait: a key acts at once.
+    const report = this.app.report.waitForWindow();
+    if (report) await report;
     // A big note still parsing (15.1): the key acts on it once it's there, not on its placeholder.
     while (this.app.views.parses.size) await Promise.all(this.app.views.parses);
     this.app.panels.fixRegion();

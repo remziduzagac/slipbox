@@ -53,6 +53,8 @@ export class Reporter {
   /** The report waits for the next frame, which is kept as text too; then it opens, adding what was asked. */
   private wanted: { add: Add | null; where: string } | null = null;
   private teed: TextCanvas | null = null;
+  /** Settled once the waited-for frame has opened the report: the keys after `space r` wait for it. */
+  private opening: { done: Promise<void>; settle: () => void } | null = null;
   /** A copy of the report's under way: one at a time. */
   private copying = false;
   /** gh posting it: the report can't be opened, or posted, again meanwhile. */
@@ -83,6 +85,15 @@ export class Reporter {
     };
   }
 
+  /**
+   * The keys after `space r` wait for the window (`Input.processKey`): a paste, or keys sent at once, would reach the
+   * window under it before the frame that opens it. A moment at most, should no frame come.
+   */
+  waitForWindow(): Promise<void> | null {
+    const o = this.opening;
+    return o ? Promise.race([o.done, new Promise<void>((r) => setTimeout(r, 250))]) : null;
+  }
+
   /** A frame drawn: the one the report waited for is kept, and the report opens on the next. */
   drawn(): void {
     const t = this.teed;
@@ -98,6 +109,8 @@ export class Reporter {
     } catch (err) {
       this.app.message("error", `report: couldn't open it: ${(err as Error).message}`);
     }
+    this.opening?.settle();
+    this.opening = null;
     this.app.host.requestRender();
   }
 
@@ -113,6 +126,9 @@ export class Reporter {
       return;
     }
     this.wanted = { add: (add || null) as Add | null, where: this.whereNow() };
+    let settle = () => {};
+    const done = new Promise<void>((r) => (settle = r));
+    this.opening = { done, settle };
     this.app.host.requestRender();
   }
 
