@@ -13,8 +13,8 @@ On the page:
 - pictures, diagrams and maths are drawn where the terminal allows
 
 The Markdown itself is always one key away. `ctrl+k` shows the note as source, and pressing it again brings the page
-back. Changing the Markdown is [Editing](editing.md). The parts of the screen around the note are in
-[The screen](screen.md).
+back; so do the Read and Source buttons on the window's header. Changing the Markdown is [Editing](editing.md). The
+parts of the screen around the note are in [The screen](screen.md).
 
 ## Moving through a note
 

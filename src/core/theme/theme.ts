@@ -510,7 +510,8 @@ export function terminalTheme(): Theme {
     topbar: { fg: a(7) },
     topbar_button: { fg: a(8) },
     topbar_button_on: { fg: a(15), bold: true },
-    topbar_button_disabled: { fg: a(8), dim: true },
+    // The palette's own colour 8 for both: told apart by dim and italics, as without colour (HDR-D5).
+    topbar_button_disabled: { fg: a(8), dim: true, italic: true },
     topbar_chip: { fg: a(5), bold: true },
     hover: { fg: a(0), bg: a(7), bold: true },
     breadcrumb_band: { bg: a(0) },

@@ -32,9 +32,10 @@ file each have their own. Typing isn't a mode: while typing, the button of the m
 says `INSERT`. A mode the window can't switch to (`Lens.refusal(view, mode)`, the one place `setViewMode`'s refusals
 are decided, returning the message and its level and saying nothing itself) is disabled: drawn
 `topbar_button_disabled`, never `hover` (`button()`'s `hovers`). The header asks every frame, so it asks with
-`drawing`: a data file whose text changed since its last parse goes by that parse while it's typed into, or when it's
-big (`BACKGROUND_PARSE`, 128K characters), so a keystroke never parses it — data is never judged mid-typing (an open
-quote is normal there), and a big file's parse is no keystroke's; a click asks of the text as it is. The selected one
+`drawing` and never parses: a data file whose text changed since its last parse (`NoteBuffer.parseCurrent`) is taken
+to parse, its Read and Lens lit, until a parse says otherwise — a click's, which asks of the text as it is, or a
+switch's. So no keystroke or edit parses a data file in source mode, whatever its size or however many windows show
+it, and data is never judged mid-typing (an open quote is normal there). The selected one
 is never disabled: it's the mode the window is in, even where the window couldn't switch to it now (typing in the
 lens on data that stopped parsing: Lens selected, until typing ends and the window goes to source mode, said). A file
 with no rendered view (a text file; code not in a
@@ -51,8 +52,10 @@ command, `view.mode_read`, `view.mode_lens` or `view.mode_source`, which switche
 `Lens.setViewMode` (Lens from Source never passes through Read) and says what the window shows now, in the toggles'
 words. On the selected button it changes nothing more: a radio group never deselects. On a disabled one it says why,
 in `setViewMode`'s words; the command says it, as it does any refusal. One click never says a thing twice: where ending
-typing said why already, in this window or another on the same file (data that stopped parsing goes to source mode),
-the click adds nothing (the messages said since it began: `App.said`, a count that only grows). The hit areas are
+typing in this file, in this window or another on it, said why already (data that stopped parsing goes to source mode),
+the click adds nothing — `Mouse.clicking` holds, while a click is handled, the messages said before it (`App.said`, a
+count that only grows) and the files it ended typing in; the words are `unparsedText`'s, wherever they're said. A
+click focuses its window as a heading's does (`Mouse.focusWindow`). The hit areas are
 `mode:<window>:<read|lens|source>`, the window's index checked as a heading's is; the selected and the disabled keep
 theirs, without `hover`. The which-key popup over the header hides them as it hides the headings'
 (`draw-overlays.ts`).
@@ -87,7 +90,8 @@ right end; when no window shows a header, it moves to the right end of the top b
 The header has its own background, `breadcrumb_band` (`surface` blended into the page at 35%; the role keeps its
 name, HDR-D1). The breadcrumb's icon is `breadcrumb_icon` (blue), outer headings `breadcrumb` (dim), separators
 `breadcrumb_sep` (faint), and the heading the cursor is in `breadcrumb_current` (bold). A disabled button is
-`topbar_button_disabled` (`surface2`; without colour, dim and italic, HDR-D5).
+`topbar_button_disabled` (`surface2`; in the terminal's palette colour 8, as an enabled one, and without colour, dim
+and italic, HDR-D5).
 
 Rules run above and below the header. The rule above is the frame's rule under the tab strip; the lower window of a
 stacked split draws its own.

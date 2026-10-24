@@ -6,11 +6,16 @@ import { cellBlocks } from "../core/layout/code.ts";
 import { type Block, blockAt, blockRanges, composeLive, LENS_COUNTERS, sectionRanges } from "../core/layout/live.ts";
 import type { Layout } from "../core/layout/ir.ts";
 import { stringWidth } from "../core/width.ts";
-import { BACKGROUND_PARSE, type NoteBuffer } from "./buffer.ts";
+import type { NoteBuffer } from "./buffer.ts";
 import type { App, View } from "./app.ts";
 
 /** A window's mode: the rendered view (Read), live preview (the lens) or source mode. */
 export type ViewMode = "rendered" | "source" | "live";
+
+/** What's said of a data file that doesn't parse, each place it's said: one wording, so one click can tell it said it. */
+export function unparsedText(buf: NoteBuffer): string {
+  return `${buf.name} doesn't parse — ${buf.parsed.error}: source mode`;
+}
 
 /** The mode a window is in. */
 export function viewMode(view: View): ViewMode {
@@ -23,8 +28,7 @@ export class Lens {
 
   /** A data file that opens in source mode because it doesn't parse (16.14): the error said. */
   saySourceWhy(buf: NoteBuffer): void {
-    const error = buf.kind.group === "data" ? buf.parsed.error : null;
-    if (error) this.app.message("warn", `${buf.name} doesn't parse — ${error}: source mode`);
+    if (buf.kind.group === "data" && buf.parsed.error) this.app.message("warn", unparsedText(buf));
   }
 
   /**
@@ -304,25 +308,20 @@ export class Lens {
 
   /**
    * Why a window can't switch to `mode` (HDR-D2), said by `setViewMode` and drawn as a disabled button on its header;
-   * null when it can, or is in it. It says nothing itself. `drawing`: for the header, which asks every frame — a data
-   * file changed since its last parse goes by that parse while it's typed into, or when it's big, so a keystroke never
-   * parses it (a click asks again, of the text as it is).
+   * null when it can, or is in it. It says nothing itself. `drawing`: for the header, which asks every frame and so
+   * never parses — a data file changed since its last parse is taken to parse, its Read and Lens not dimmed, until a
+   * parse says otherwise (a click's asks of the text as it is).
    */
   refusal(view: View, mode: ViewMode, drawing = false): { level: "info" | "warn"; text: string } | null {
     if (viewMode(view) === mode) return null;
     const buf = view.buf;
     if (buf.drawn) return { level: "info", text: "a diff is drawn one way" };
     if (mode === "source") return null;
-    const last = drawing && buf.kind.group === "data" && (view.insert || buf.source.length >= BACKGROUND_PARSE);
-    if (last ? !buf.lastParsed.error : this.app.canRender(buf)) return null;
-    const group = buf.kind.group;
-    const why =
-      group === "data"
-        ? `doesn't parse — ${(last ? buf.lastParsed : buf.parsed).error}`
-        : group === "text"
-          ? "has no rendered view"
-          : "has no rendered view yet";
-    return { level: group === "data" ? "warn" : "info", text: `${buf.name} ${why}: source mode` };
+    if (drawing && buf.kind.group === "data" && !buf.parseCurrent) return null;
+    if (this.app.canRender(buf)) return null;
+    if (buf.kind.group === "data") return { level: "warn", text: unparsedText(buf) };
+    const why = buf.kind.group === "text" ? "has no rendered view" : "has no rendered view yet";
+    return { level: "info", text: `${buf.name} ${why}: source mode` };
   }
 
   /** A window's mode: rendered, source (the markdown), or live preview. The cursor keeps its line. */

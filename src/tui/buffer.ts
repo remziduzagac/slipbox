@@ -270,9 +270,9 @@ export class NoteBuffer {
     return true;
   }
 
-  /** The last parse, of the current text or an earlier one: never parsed for (the window header's buttons, HDR-D2). */
-  get lastParsed(): ParsedNote {
-    return this.parsedNote;
+  /** Whether `parsed` is of the text as it is now, so reading it costs no parse (the window header asks, HDR-D2). */
+  get parseCurrent(): boolean {
+    return this.parsedVersion === this.version;
   }
 
   /** The parse of the current text, redone only when the text changed since. */

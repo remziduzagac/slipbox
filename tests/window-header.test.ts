@@ -3,7 +3,7 @@
 // the buttons give way in a narrow window (HDR-D4). Driven headlessly through the harness (tests/tui-harness.ts).
 
 import { describe, expect, test } from "bun:test";
-import { writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { commandGroup, COMMAND_SPECS } from "../src/core/command-specs.ts";
 import { TextCanvas } from "../src/tui/canvas.ts";
@@ -260,39 +260,43 @@ describe("modes a window can't switch to are disabled (HDR-D2)", () => {
     }
   });
 
-  test("typing in a data file's source parses it no more than before: the header asks no parse of a keystroke", async () => {
-    const h = await harness({ open: YAML, width: 120, height: 30 });
+  test("the header never parses a data file: typing, normal-mode edits, typing in a split's other window", async () => {
+    const h = await harness({ open: YAML, width: 200, height: 30 });
     const v = h.app.view!;
-    await h.keys("ctrl+k", "o");
-    expect(v.insert).toBe(true);
     const parsedAt = () => (v.buf as unknown as { parsedVersion: number }).parsedVersion;
-    const before = parsedAt();
-    for (const k of ["a", ":", " ", "b"]) {
-      await h.keys(k);
-      h.frame();
-    }
-    expect(v.buf.version).toBeGreaterThan(before);
-    expect(parsedAt()).toBe(before);
-    // Typing over, a small file's buttons are of the text as it is: it parses.
-    await h.keys("escape");
-    h.frame();
-    expect(parsedAt()).toBe(v.buf.version);
-  });
-
-  test("a big data file's source: edits in normal mode parse it no more either; the buttons go by its last parse", async () => {
-    const h = await harness({ open: NOTE, width: 120, height: 30 });
-    const big = `${Array.from({ length: 9000 }, (_, i) => `key${i}: "value number ${i} of a big file"`).join("\n")}\n`;
-    expect(big.length).toBeGreaterThan(BACKGROUND_PARSE);
-    writeFileSync(join(h.root, "big.yaml"), big);
-    await h.app.run("note.open big.yaml");
-    const v = h.app.view!;
     await h.keys("ctrl+k");
-    const parsedAt = () => (v.buf as unknown as { parsedVersion: number }).parsedVersion;
+    h.frame();
     const before = parsedAt();
-    await h.keys("x", "x");
+    // Typing, then out of it, then edits in normal mode: the text changes, no parse, Read and Lens not dimmed.
+    await h.keys("o", "a", ":", " ", "[", "escape", "x", "x");
+    expect(v.buf.version).toBeGreaterThan(before);
     expect(states(h)).toBe("Read:enabled Lens:enabled Source:selected");
     expect(parsedAt()).toBe(before);
-    // A click asks of the text as it is.
+    // A split on it, both in source mode, typing in one: neither window's header parses (making the window did, once).
+    await h.keys("ctrl+w", "v");
+    const split = parsedAt();
+    const t = h.app.tab!;
+    t.active = 1;
+    await h.keys("o", "b", ":", " ", "[");
+    expect(t.views[1]!.insert).toBe(true);
+    expect([states(h, 0), states(h, 1)]).toEqual([
+      "Read:enabled Lens:enabled Source:selected",
+      "Read:enabled Lens:enabled Source:selected",
+    ]);
+    expect(t.views[1]!.buf.version).toBeGreaterThan(split);
+    expect(parsedAt()).toBe(split);
+  });
+
+  test("a data file that opened broken, fixed in source mode: Read and Lens no longer dimmed; a click renders it", async () => {
+    const h = await harness({ open: NOTE, width: 120, height: 30 });
+    const body = Array.from({ length: 9000 }, (_, i) => `key${i}: "value number ${i} of a big file"`).join("\n");
+    expect(body.length).toBeGreaterThan(BACKGROUND_PARSE); // big: the size makes no difference
+    writeFileSync(join(h.root, "big.yaml"), `a: : [x\n${body}\n`);
+    await h.app.run("note.open big.yaml");
+    const v = h.app.view!;
+    expect(states(h)).toBe("Read:disabled Lens:disabled Source:selected");
+    await h.keys("g", "g", "d", "d"); // the broken line gone
+    expect(states(h)).toBe("Read:enabled Lens:enabled Source:selected");
     click(h, "read");
     expect(viewMode(v)).toBe("rendered");
   });
@@ -317,6 +321,51 @@ describe("modes a window can't switch to are disabled (HDR-D2)", () => {
     click(h, "read");
     h.frame();
     expect(viewMode(v)).toBe("source");
+    expect(h.app.messages.slice(before).map((m) => m.level)).toEqual(["warn"]);
+  });
+
+  test("two files of one name, both broken: a click on one's Read, the other's typing ended by it, says each", async () => {
+    const h = await harness({ open: NOTE, width: 200, height: 30, config: (c) => (c.editor.edit_in = "live") });
+    for (const d of ["a", "b"]) mkdirSync(join(h.root, d), { recursive: true });
+    writeFileSync(join(h.root, "a/data.yaml"), "a: 1\n");
+    writeFileSync(join(h.root, "b/data.yaml"), ":[x\na: 1\n");
+    await h.app.run("note.open b/data.yaml");
+    await h.keys("ctrl+w", "v");
+    await h.app.run("note.open a/data.yaml");
+    const t = h.app.tab!;
+    const [b, a] = [t.views[0]!, t.views[1]!];
+    expect([b.buf.name, a.buf.name, viewMode(b)]).toEqual(["data.yaml", "data.yaml", "source"]);
+    // a typed into until it reads as b does: the same words for both.
+    await h.keys("i", "i", ":", "[", "x", "enter");
+    expect(a.insert).toBe(true);
+    expect(a.buf.source).toBe(b.buf.source);
+    const before = h.app.messages.length;
+    click(h, "read", 0); // b's Read: ending a's typing says a doesn't parse; b's own refusal is said too
+    h.frame();
+    expect(viewMode(a)).toBe("source");
+    expect(h.app.messages.slice(before).map((m) => m.level)).toEqual(["warn", "warn"]);
+  });
+
+  test("a click on a header button focuses its window and the content, from a panel too", async () => {
+    const h = await harness({ open: NOTE, width: 160, height: 30 });
+    await h.keys("space", "e"); // the explorer has the keys
+    expect(h.app.region).toBe("sidebar");
+    click(h, "source");
+    expect(h.app.region).toBe("content");
+    expect(viewMode(h.app.view!)).toBe("source");
+    await h.keys("space", "e");
+    expect(h.app.region).toBe("sidebar");
+    click(h, "source"); // the selected one: the focus all the same
+    expect(h.app.region).toBe("content");
+  });
+
+  test("a header button's click handled outside a mouse event says its refusal, whatever the last click said", async () => {
+    const h = await harness({ open: YAML, width: 120, height: 30, config: (c) => (c.editor.edit_in = "live") });
+    await h.keys("i", "i", ":", "[", "x");
+    click(h, "read"); // typing ended, the file said not to parse: once, by this click
+    expect(viewMode(h.app.view!)).toBe("source");
+    const before = h.app.messages.length;
+    h.app.mouse.clickHot("mode:0:lens"); // no click under way: its refusal is said
     expect(h.app.messages.slice(before).map((m) => m.level)).toEqual(["warn"]);
   });
 
@@ -599,6 +648,11 @@ describe("the two settings (HDR-D3)", () => {
     expect([attrs("Read"), attrs("Lens")]).toEqual(["bold", "dim"]);
     await h.app.run(`note.open ${TEXT}`);
     expect([attrs("Read"), attrs("Source")]).toEqual(["dim italic", "bold"]);
+    // The terminal's own palette: colour 8 for both, told apart likewise.
+    const term = await harness({ open: TEXT, width: 120, height: 30, themeName: "terminal" });
+    const r = term.app.theme.roles;
+    expect([r.topbar_button.fg, r.topbar_button_disabled.fg]).toEqual([r.topbar_button_disabled.fg, "ansi:8"]);
+    expect([r.topbar_button_disabled.dim, r.topbar_button_disabled.italic]).toEqual([true, true]);
   });
 
   test("[colors] breadcrumb_band still colours the header (HDR-D1)", async () => {

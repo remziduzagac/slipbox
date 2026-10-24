@@ -287,3 +287,39 @@ here, and the work go on.
 - 2026-10-24: HDR-D5 built: `topbar_button_disabled` dim and italic in `mono`; a unit test (it fails without the
   change, checked); no terminal check, since the headless terminal's runs keep colours and bold, not italics or dim.
   ACCESSIBILITY.md says it.
+- 2026-10-24: CI on the pull request (#57): terminal checks 350 of 351 on Linux x64, all on macOS and Linux ARM; the
+  one, "view: a worktree kept outside the view chosen" (the explorer, VV-D5), passed here at once: load, not this
+  change. The test jobs wait on dev's hanging test (#42's), fixed apart.
+
+## The pull request's review loop (2026-10-24)
+
+- Round 1: Codex's part skipped: it stopped at an approval menu in its pane (to read the pull request's body from
+  GitHub), with under 5% of its usage limit left; a fresh Claude reviewer does its part, as the maintainer asked,
+  beside `/code-review`, each on the whole diff, neither given the other's findings.
+- Round 1's findings: the stand-in reviewer's 2 bugs, 4 test gaps, 3 docs points; `/code-review`'s 11, three
+  reproduced. Merged and checked, each:
+  - **Taken, each with a unit test and a terminal check that fail without it** (mutations in
+    `tmp/issue/mutations-6.json`; the split's terminal check fails without the fix, checked):
+    - The header's parse rule (both reviews): it still parsed a data file on every keystroke in a split (the
+      window not typing asked `canRender`), on every normal-mode edit of a small file (161 ms a key on a 124K YAML),
+      and a big file fixed in source mode kept Read and Lens dimmed. Now the header never parses: a data file changed
+      since its last parse is taken to parse, its buttons lit, until a parse — a click's, a switch's — says otherwise.
+    - One click's dedupe matched words alone: two files of one name, one's typing ended by a click on the other's
+      Read, lost the second's refusal. Now only for the files the click ended typing in; the words come from one
+      place (`unparsedText`), since three built them apart; the click's state is cleared after it (`clickHot` called
+      outside a click no longer reads an old one).
+    - In the terminal theme a disabled button differed from an enabled one by dim alone: dim and italic (HDR-D5).
+    - The focus to the content region untested (a click from the explorer); the split; the colour role and a big file
+      fixed in a terminal; the header's checks moved to `tests/terminal/checks/window-header.ts` (editing.ts was
+      1,738 lines); `Mouse.focusWindow` for the five clicks that focused a window alike.
+    - Docs: "dimmed" named the enabled buttons too (now the faintest, in italics without colour); `▤` moves to the top
+      bar only without the right rail; reading.md and code.md name the buttons.
+  - **Not taken:**
+    - A once-per-version guard where "doesn't parse" is said (`/code-review`'s altitude point): it would also
+      silence a second explicit request (`ctrl+k` again on a broken file), and the double warning it names — two
+      rendered windows on one data file, the other switching to source mode mid-typing, then the typing one on
+      `esc` — predates this change (`views.ts`, per window). Recorded in [ideas.md](ideas.md).
+    - Marking the narrower `ui.breadcrumb` as breaking, or a notice for it: the issue asks for a CHANGELOG line under
+      Changed, with what to do.
+    - A terminal check for the no-colour style: the headless terminal's runs keep colours and bold, not italics.
+- Terminal checks after round 1's fixes: the header's thirteen and the settings check, 14 of 14.

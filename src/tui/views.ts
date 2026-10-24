@@ -14,7 +14,7 @@ import type { NoteBuffer } from "./buffer.ts";
 import { cells, clampPos, type Pos, snap, ordered } from "./cursor.ts";
 import type { App, View } from "./app.ts";
 import { editable, type Selection } from "./app.ts";
-import { isHidden } from "./lens.ts";
+import { isHidden, unparsedText } from "./lens.ts";
 import { computeFind } from "./search.ts";
 
 /** Views: layout, anchors, cursor and selection, scrolling. */
@@ -64,9 +64,8 @@ export class Views {
     // A data file that stopped parsing (16.14) goes to source mode, the error said — when insert
     // mode ends, never mid-typing (an open quote is normal while a value is typed).
     if (!view.source && !view.insert && !this.app.canRender(view.buf)) {
-      const error = view.buf.kind.group === "data" ? view.buf.parsed.error : null;
       Object.assign(view, { source: true, live: false, liveBase: undefined, layoutKey: "" });
-      if (error) this.app.message("warn", `${view.buf.name} doesn't parse — ${error}: source mode`);
+      if (view.buf.kind.group === "data" && view.buf.parsed.error) this.app.message("warn", unparsedText(view.buf));
     }
     // Source mode: the whole text column (no readable width), less one for a cursor after a full
     // row's end; unwrapped, as long as the longest line.

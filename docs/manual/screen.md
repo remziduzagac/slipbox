@@ -312,7 +312,8 @@ Each window has a header, a row between two lines above the note. From the left,
 
 To hide the breadcrumb alone, turn off **Breadcrumb** in `space u u`, or set `ui.breadcrumb = false`. The header stays,
 with its buttons. To hide the whole header and give its row to the note, turn off **Window header**, or set
-`ui.window_header = false`. A split's windows then have their names on rows of their own, and `▤` moves to the top bar.
+`ui.window_header = false`. A split's windows then have their names on rows of their own, and without the right rail
+`▤` moves to the top bar.
 A window shorter than 8 rows has no header, and neither does zen mode.
 
 ### Read, Lens and Source
@@ -331,8 +332,10 @@ away. From Source, Lens opens the lens without showing the page first. Clicking 
 While you type, the button of the mode you're typing in stays bright, though the chip says `INSERT`. A click stops
 typing first, as every click does. Your unsaved changes stay.
 
-A dimmed button is a mode the file can't be shown in. A plain text file, code in a language without the code view (or
-with `render.code = "source"`), and a data file that doesn't parse have only Source. A click on a dimmed one says why.
+The faintest buttons (in italics without colour) are modes the file can't be shown in. A plain text file, code in a
+language without the code view (or with `render.code = "source"`), and a data file that doesn't parse have only Source.
+A click on one of those says why. A data file you've changed since slipbox last read it keeps Read and Lens lit: the
+click finds out, and says so if it doesn't parse.
 
 In a narrow window, the breadcrumb folds first, down to the heading the cursor is in. Then the buttons shorten to `R`
 `L` `S`, and at last only the bright one is left.
