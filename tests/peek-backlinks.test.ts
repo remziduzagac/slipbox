@@ -1,6 +1,6 @@
 // A peek's backlinks (VV-D7, D259; design/tui.md § The peek): worked out on a thread of their own, the note shown at
 // once; as the other vault is now, at each peek; its index built when it has none.
-import { afterEach, expect, spyOn, test } from "bun:test";
+import { afterEach, expect, mock, spyOn, test } from "bun:test";
 import * as fs from "node:fs";
 import {
   existsSync,
@@ -88,6 +88,8 @@ async function parsedHere<T>(run: () => Promise<T>): Promise<{ result: T; roots:
 const factory = backlinkThread.factory;
 afterEach(() => {
   backlinkThread.factory = factory;
+  // A harness's app outlives its test (a lazy load lays it out later): nothing of it is left patched.
+  mock.restore();
 });
 
 test("a later peek lists the backlinks the other vault has now, not those of the first peek (#10)", async () => {
@@ -1708,10 +1710,10 @@ test("an answer that wrote an index but changes nothing of the graph here still 
       const g = h.app.reach.graphAt(app, { known: true })!;
       let laidOut = 0;
       const relayoutAll = h.app.relayoutAll.bind(h.app);
-      h.app.relayoutAll = () => {
+      spyOn(h.app, "relayoutAll").mockImplementation(() => {
         laidOut++;
         relayoutAll();
-      };
+      });
       keepCaughtUp(h.app, g);
       await Bun.sleep(0);
       reply(sent.length - 1, { wrote: true, signature: vaultSignature(g), config: configSignature(g.config) });
@@ -1798,10 +1800,10 @@ test("an answer that wrote an index makes the explorer's rows again: a vault's s
       const g = h.app.reach.graphAt(app, { known: true })!;
       let made = 0;
       const invalidate = h.app.explorer.invalidateTree.bind(h.app.explorer);
-      h.app.explorer.invalidateTree = () => {
+      spyOn(h.app.explorer, "invalidateTree").mockImplementation(() => {
         made++;
         invalidate();
-      };
+      });
       keepCaughtUp(h.app, g);
       await Bun.sleep(0);
       reply(sent.length - 1, { signature: vaultSignature(g), config: configSignature(g.config) });
@@ -2118,10 +2120,10 @@ test("the vault an answer wrote the index of is stamped indexed even when catchi
       };
       let laidOut = 0;
       const relayoutAll = h.app.relayoutAll.bind(h.app);
-      h.app.relayoutAll = () => {
+      spyOn(h.app, "relayoutAll").mockImplementation(() => {
         laidOut++;
         relayoutAll();
-      };
+      });
       try {
         reply(sent.length - 1, { wrote: true, config: configSignature(g.config) });
         await read(h);
@@ -2163,9 +2165,9 @@ test("nested vaults an answer built aren't stamped once slipbox is quitting (#10
       reply(sent.length - 1, { others: [locateVault({ root: lab }).key], config: configSignature(g.config) });
       await Bun.sleep(0);
       let laidOut = 0;
-      h.app.relayoutAll = () => {
+      spyOn(h.app, "relayoutAll").mockImplementation(() => {
         laidOut++;
-      };
+      });
       h.app.quitting = true;
       open();
       await peek.reading;
@@ -2399,9 +2401,9 @@ test("nested vaults an answer built are stamped even when laying the screen out 
       await h.keys("tab", "enter");
       const peek = peekOf(h.app)!;
       const g = vaultGraph(h.app, app)!;
-      h.app.relayoutAll = () => {
+      spyOn(h.app, "relayoutAll").mockImplementation(() => {
         throw new Error("can't lay out");
-      };
+      });
       reply(sent.length - 1, {
         others: [locateVault({ root: lab }).key],
         signature: vaultSignature(g),
