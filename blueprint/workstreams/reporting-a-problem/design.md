@@ -16,8 +16,8 @@ problem"; its bottom border says ` ctrl+s sends it or adds the screen · esc · 
 window's "writing back"); the status line names it `report`, with no "unsaved" mark, since it's never saved anywhere.
 A new one opens typing, on the title's line (empty, the line after the guide); the first `esc` leaves typing, the next
 leaves the window, and focus goes back where it was opened from (the explorer, say). Opened over the merge screen of
-the conflict prompt's (m), that prompt comes back over it, as leaving the merge screen brings it. Opened again, it's as it was
-left, not typing. Its text, the title typed:
+the conflict prompt's (m), that prompt comes back over it, as leaving the merge screen brings it. Opened again, it's
+as it was left, not typing. Its text, the title typed:
 
 ````markdown
 <!-- Nothing has left yet. The next line is the title; ctrl+s sends it all, or adds the screen first. -->
