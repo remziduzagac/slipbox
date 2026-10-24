@@ -269,3 +269,223 @@ export function formAddress(repo: string, fields: Partial<Record<FieldId | "titl
   }
   return `https://github.com/${repo}/issues/new?${q}`;
 }
+
+// ---------------------------------------------------------------------------------------------
+// The report's text (RPT-D1): what's sent is the text as you left it; only the address maps it onto the form's fields,
+// by one rule, which also says where an added screen goes (design: § Reading it back).
+
+/** The report's first line: left out of what's sent while it's as generated. */
+export const GUIDE =
+  "<!-- Nothing has left yet. The next line is the title; ctrl+s sends it all, or adds the screen first. -->";
+
+/** The report as it opens: the guide, the title's line to type on, the form's questions, the facts. */
+export function reportText(fields: FactFields): string {
+  const ask = ["happened", "expected", "steps"] as const;
+  return `${GUIDE}\n\n\n\n${ask.map((id) => `### ${LABEL[id]}\n\n\n\n`).join("")}${factsMarkdown(fields)}`;
+}
+
+/** The line the title is typed on, in the text as it opens. */
+export const TITLE_LINE = 2;
+
+/** A fence's opening line: its character and length (CommonMark: three or more, indented at most three). */
+const FENCE_OPEN = /^ {0,3}(`{3,}|~{3,})(.*)$/;
+
+const LABEL_ID = new Map<string, FieldId>(FORM_FIELDS.map((f) => [f.label, f.id]));
+
+/** A line that is a form label's heading, outside a fence: its field. */
+function labelOf(line: string): FieldId | undefined {
+  const m = /^### (.+?)\s*$/.exec(line);
+  return m ? LABEL_ID.get(m[1]!) : undefined;
+}
+
+export interface ReadBack {
+  /** The title: the first line of text before the first label (a comment aside). */
+  title: string;
+  /** The title's line, or -1. */
+  titleLine: number;
+  /** Text before the first label that isn't the title: no field holds it, so the address would lose it. */
+  stray: boolean;
+  /** Each field's text, its sections joined; What slipbox sees with its generated fences taken off. */
+  fields: Partial<Record<FieldId, string>>;
+  /** Where the last What slipbox sees section is: its heading's line, and the line after its last line of text. */
+  seen: { heading: number; end: number } | null;
+  /** A fence still open where the text ends: where anything after it belongs isn't clear. */
+  openFence: boolean;
+}
+
+/** The report's text read back, by its lines: headings count only outside fences (`### Version` in a screen is the
+ *  screen's); a section is a label's heading to the next one; a heading of your own, or a label renamed, is text of
+ *  the section above; a label twice, the two joined; a label deleted, its field empty; the order yours. */
+export function readReport(text: string): ReadBack {
+  const lines = text.split("\n");
+  const parts = new Map<FieldId, string[][]>();
+  let fence: { ch: string; len: number } | null = null;
+  let comment = false;
+  let current: string[] | null = null;
+  let currentId: FieldId | null = null;
+  let title = "";
+  let titleLine = -1;
+  let stray = false;
+  let seen: { heading: number; end: number } | null = null;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]!;
+    const id = fence ? undefined : labelOf(line);
+    if (id) {
+      current = [];
+      currentId = id;
+      parts.set(id, [...(parts.get(id) ?? []), current]);
+      if (id === "output") seen = { heading: i, end: i + 1 };
+      continue;
+    }
+    if (fence) {
+      const close = new RegExp(`^ {0,3}${fence.ch === "`" ? "`" : "~"}{${fence.len},}\\s*$`);
+      if (close.test(line)) fence = null;
+    } else {
+      const open = FENCE_OPEN.exec(line);
+      // A backtick fence's info string never holds a backtick (CommonMark): such a line is text.
+      if (open && !(open[1]![0] === "`" && open[2]!.includes("`"))) fence = { ch: open[1]![0]!, len: open[1]!.length };
+    }
+    if (current) {
+      current.push(line);
+      if (currentId === "output" && seen && line.trim()) seen.end = i + 1;
+      continue;
+    }
+    // Before the first label: comments (the guide among them: GitHub hides them), the title, and any other text.
+    const isComment = comment || /^\s*<!--/.test(line);
+    if (isComment) {
+      comment = !line.includes("-->");
+      continue;
+    }
+    if (!line.trim()) continue;
+    if (titleLine < 0) {
+      title = line.trim();
+      titleLine = i;
+    } else stray = true;
+  }
+  const fields: Partial<Record<FieldId, string>> = {};
+  for (const [id, sections] of parts) {
+    const joined = sections
+      .map((s) => s.join("\n").trim())
+      .filter(Boolean)
+      .join("\n\n");
+    if (joined) fields[id] = id === "output" ? unfenceAttachments(joined) : joined;
+  }
+  return { title, titleLine, stray, fields, seen, openFence: fence !== null };
+}
+
+/** What an added screen and place begin with: added is this line being in the text. */
+export const SCREEN_INTRO = /^The screen, \d+×\d+, as the report opened:$/m;
+export const WHERE_INTRO = /^Where it was:$/m;
+
+export function screenIntro(cols: number, rows: number): string {
+  return `The screen, ${cols}×${rows}, as the report opened:`;
+}
+export const WHERE_SAID = "Where it was:";
+
+/** Text in a `text` fence longer than any run of backticks in it, so a note's own fences can't end it. */
+export function fenced(body: string): string {
+  const longest = Math.max(0, ...[...body.matchAll(/`+/g)].map((m) => m[0].length));
+  const f = "`".repeat(Math.max(3, longest + 1));
+  return `${f}text\n${body.replace(/\n+$/, "")}\n${f}`;
+}
+
+/** An attachment: its first line, then its text fenced. */
+export function attachment(intro: string, body: string): string {
+  return `${intro}\n\n${fenced(body)}`;
+}
+
+/** What slipbox sees for the address: the fences slipbox put around an attachment taken off (the form fences that
+ *  field itself); fences you wrote, and the text around them, kept. */
+function unfenceAttachments(text: string): string {
+  const lines = text.split("\n");
+  const out: string[] = [];
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]!;
+    out.push(line);
+    if (!(SCREEN_INTRO.test(line) || WHERE_INTRO.test(line))) continue;
+    // Its fence, after a blank line: the opening dropped, and the closing of the same length.
+    const at = lines[i + 1] === "" ? i + 2 : i + 1;
+    const open = /^(`{3,})text$/.exec(lines[at] ?? "");
+    if (!open) continue;
+    const close = lines.indexOf(open[1]!, at + 1);
+    if (close < 0) continue;
+    out.push(...lines.slice(i + 1, at), ...lines.slice(at + 1, close));
+    i = close;
+  }
+  return out.join("\n");
+}
+
+/**
+ * An attachment put into the report: at the end of What slipbox sees as `readReport` finds it, before the next label
+ * wherever that section is; with no such section, a new one at the end. Refused while a fence is left open, so it
+ * never lands in another field or another fence. One edit: `at`, in the text's UTF-16 offsets, and what goes there.
+ */
+export function placeAttachment(text: string, block: string): { at: number; insert: string } | { refused: string } {
+  const r = readReport(text);
+  if (r.openFence) return { refused: "a fence is left open in the report: close it first" };
+  const lines = text.split("\n");
+  const offset = (line: number) => lines.slice(0, line).reduce((n, l) => n + l.length + 1, 0);
+  if (r.seen) {
+    // After the section's last text (its heading, if it has none), a blank line between.
+    const at = offset(r.seen.end);
+    const next = lines[r.seen.end];
+    const after = next !== undefined && next.trim() !== "" ? "\n" : "";
+    if (at > text.length) return { at: text.length, insert: `${text.endsWith("\n") ? "" : "\n"}\n${block}\n` };
+    return { at, insert: `\n${block}\n${after}` };
+  }
+  // At the text's end, before its last newlines: they stay the end.
+  const end = text.replace(/\n*$/, "");
+  return { at: end.length, insert: `\n\n### ${LABEL.output}\n\n${block}${end.length < text.length ? "" : "\n"}` };
+}
+
+/** The report as it's copied, and as gh posts it: as you left it, the generated guide alone taken out. */
+export function sentText(text: string): string {
+  const lines = text.split("\n");
+  if (lines[0] === GUIDE) lines.splice(0, lines[1] === "" ? 2 : 1);
+  return lines.join("\n");
+}
+
+/** What gh posts: the title, and the text after it, as you left them (the guide out). */
+export function postOf(text: string): { title: string; body: string } {
+  const r = readReport(text);
+  const lines = text.split("\n");
+  if (r.titleLine >= 0) lines.splice(r.titleLine, 1);
+  return {
+    title: r.title,
+    body: `${sentText(lines.join("\n"))
+      .replace(/^\s*\n/, "")
+      .replace(/\s+$/, "")}\n`,
+  };
+}
+
+// ---------------------------------------------------------------------------------------------
+// The address's plan (RPT-D3): what it holds, what it leaves out, and why — measured on the encoded address.
+
+/** At most this many characters, encoded: about 5,500 survive GitHub's sign-in redirect (measured; research.md). */
+export const ADDRESS_MAX = 5000;
+
+export interface AddressPlan {
+  url: string;
+  /** The fields with text that it leaves out, the title among them: each copied by another entry. */
+  left: (FieldId | "title")[];
+}
+
+/** The address, filled in as far as it fits: every field; else all but What slipbox sees; else the title and the
+ *  facts; else the facts; else the template alone. Null when text belongs to no field: it would be lost. */
+export function addressPlan(repo: string, r: ReadBack, max = ADDRESS_MAX): AddressPlan | null {
+  if (r.stray) return null;
+  const all: Partial<Record<FieldId | "title", string>> = { title: r.title, ...r.fields };
+  const has = (Object.keys(all) as (FieldId | "title")[]).filter((k) => all[k]);
+  const steps: (FieldId | "title")[][] = [
+    has,
+    has.filter((k) => k !== "output"),
+    has.filter((k) => k === "title" || (FACT_IDS as readonly string[]).includes(k)),
+    has.filter((k) => (FACT_IDS as readonly string[]).includes(k)),
+    [],
+  ];
+  for (const keep of steps) {
+    const url = formAddress(repo, Object.fromEntries(keep.map((k) => [k, all[k]])));
+    if (url.length <= max || !keep.length) return { url, left: has.filter((k) => !keep.includes(k)) };
+  }
+  return null;
+}

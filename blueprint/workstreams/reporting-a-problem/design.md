@@ -62,8 +62,10 @@ form's fields, by one rule, which also says where an added screen goes:
 - A section is a form label's `###` heading, matched exactly, to the next one. A heading of your own (`### Logs`), or
   a label renamed, is text of the section above it; a label twice, the two joined; a label deleted, its field empty;
   the order is yours.
-- The generated guide comment is left out only as generated; edited, it's text (GitHub hides a comment anyway).
-- The title is the first line with text after the guide, before the first label. Any other text there belongs to no
+- The generated guide comment is left out of the copy and `gh`'s body only as generated; edited, it's kept as text
+  (GitHub hides a comment anyway). Before the first label, a comment is never the title, nor text the address would
+  lose.
+- The title is the first line with text before the first label, a comment aside. Any other text there belongs to no
   field: the address would lose it, so the menu says so and offers the copy and `gh` only (below), until it's moved
   under a heading.
 - What slipbox sees: its generated outer fence is taken off for the address (the form fences that field itself);

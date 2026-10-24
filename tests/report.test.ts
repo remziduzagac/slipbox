@@ -5,15 +5,29 @@ import { mkdirSync, mkdtempSync, readFileSync, symlinkSync, writeFileSync } from
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
+  ADDRESS_MAX,
+  addressPlan,
+  attachment,
   type FactSources,
   FORM_FIELDS,
   factFields,
   factSources,
   factsMarkdown,
+  fenced,
   formAddress,
+  GUIDE,
+  placeAttachment,
+  postOf,
   REPO,
+  readReport,
   reportFacts,
   reportRepo,
+  reportText,
+  SCREEN_INTRO,
+  screenIntro,
+  sentText,
+  TITLE_LINE,
+  WHERE_SAID,
 } from "../src/core/report.ts";
 
 const OS_RELEASE = 'NAME="Ubuntu"\nVERSION="24.04.1 LTS (Noble Numbat)"\nPRETTY_NAME="Ubuntu 24.04.1 LTS"\nID=ubuntu\n';
@@ -224,5 +238,198 @@ describe("the bug form (RPT-D3)", () => {
   test("the repository: the release's, else slipbox's own (RPT-D7)", () => {
     expect(reportRepo(RELEASE)).toBe("someone/slipbox");
     expect(reportRepo(null)).toBe(REPO);
+  });
+});
+
+const FIELDS = { version: "0.5.1 (from source)", install: "from source", platform: "Linux", terminal: "TERM xterm" };
+
+/** The report as it opens, with what's typed: the title, and each question's text by its label. */
+function typed(title: string, answers: Record<string, string> = {}): string {
+  const lines = reportText(FIELDS).split("\n");
+  lines[TITLE_LINE] = title;
+  let text = lines.join("\n");
+  for (const [label, answer] of Object.entries(answers))
+    text = text.replace(`### ${label}\n\n`, `### ${label}\n\n${answer}`);
+  return text;
+}
+
+/** An attachment put in, as the window puts it: one edit. */
+function add(text: string, block: string): string {
+  const p = placeAttachment(text, block);
+  if ("refused" in p) throw new Error(p.refused);
+  return text.slice(0, p.at) + p.insert + text.slice(p.at);
+}
+
+const SCREEN = attachment(screenIntro(80, 24), "slipbox · home.md\n### Version\n```js\nlet x = 1\n```");
+
+describe("the report's text (RPT-D1)", () => {
+  test("it opens with the guide, the title's line, the form's questions and the facts", () => {
+    const text = reportText(FIELDS);
+    const lines = text.split("\n");
+    expect(lines[0]).toBe(GUIDE);
+    expect(lines[TITLE_LINE]).toBe("");
+    expect(text).toContain("### What happened\n\n\n\n### What you expected\n\n\n\n### Steps to make it happen\n");
+    expect(text.endsWith(factsMarkdown(FIELDS))).toBe(true);
+    // Nothing of the screen or the place in it.
+    expect(text).not.toContain("What slipbox sees");
+    const r = readReport(text);
+    expect([r.title, r.stray, r.seen, r.openFence]).toEqual(["", false, null, false]);
+    expect(r.fields).toEqual(FIELDS);
+  });
+});
+
+describe("reading it back", () => {
+  test("headings count only outside fences: a screen holding ### Version is the screen's", () => {
+    const r = readReport(add(typed("It froze", { "What happened": "nothing drew" }), SCREEN));
+    expect(r.fields.version).toBe(FIELDS.version);
+    expect(r.fields.output).toContain("### Version");
+    expect(r.fields.happened).toBe("nothing drew");
+    // In a tilde fence too, and a longer one.
+    const tilde = readReport(`T\n\n### What happened\n\n~~~~\n### Version\n~~~\n~~~~\n`);
+    expect(tilde.fields).toEqual({ happened: "~~~~\n### Version\n~~~\n~~~~" });
+  });
+
+  test("a label renamed is text of the section above; deleted, its field empty; doubled, joined; reordered, kept", () => {
+    const renamed = readReport(typed("T", { "What happened": "a" }).replace("### What you expected", "### Expected"));
+    expect(renamed.fields.happened).toBe("a\n\n### Expected");
+    expect(renamed.fields.expected).toBeUndefined();
+    const deleted = readReport(typed("T").replace("### Platform\n\nLinux\n\n", ""));
+    expect(deleted.fields.platform).toBeUndefined();
+    expect(deleted.fields.install).toBe("from source");
+    const doubled = readReport(`${typed("T", { "What happened": "first" })}\n### What happened\n\nsecond\n`);
+    expect(doubled.fields.happened).toBe("first\n\nsecond");
+    const reordered = readReport("T\n\n### Terminal\n\nkitty\n\n### What happened\n\nit broke\n");
+    expect(reordered.fields).toEqual({ terminal: "kitty", happened: "it broke" });
+    // A heading of one's own is text of its section.
+    const own = readReport("T\n\n### What happened\n\na\n\n### Logs\n\nb\n");
+    expect(own.fields.happened).toBe("a\n\n### Logs\n\nb");
+  });
+
+  test("the title, and text before the first label that no field holds", () => {
+    expect(readReport(typed("  Crash on open  ")).title).toBe("Crash on open");
+    const stray = readReport(typed("Crash").replace("Crash\n", "Crash\nmore words\n"));
+    expect([stray.title, stray.stray]).toEqual(["Crash", true]);
+    // No title, no label: everything is stray but the first line.
+    expect(readReport("just words\nand more\n").stray).toBe(true);
+    expect(readReport("").title).toBe("");
+  });
+
+  test("the guide: left out as generated; edited, kept as text, but a comment is never the title or stray", () => {
+    const edited = typed("Crash").replace("Nothing has left yet.", "Nothing yet.");
+    const r = readReport(edited);
+    expect([r.title, r.stray]).toEqual(["Crash", false]);
+    expect(sentText(edited).startsWith("<!-- Nothing yet.")).toBe(true);
+    expect(sentText(typed("Crash")).startsWith("Crash\n\n### What happened")).toBe(true);
+    // A comment over lines too.
+    expect(readReport("<!-- one\ntwo -->\nTitle\n### What happened\n").title).toBe("Title");
+  });
+
+  test("What slipbox sees: slipbox's fences taken off for the address, yours and the text around them kept", () => {
+    const mine = "my words\n\n```sh\nslipbox doctor\n```";
+    const text = add(typed("T").replace(/\n$/, `\n\n### What slipbox sees\n\n${mine}\n`), SCREEN);
+    const out = readReport(text).fields.output!;
+    expect(out.startsWith(`${mine}\n\nThe screen, 80×24, as the report opened:\n\nslipbox · home.md`)).toBe(true);
+    expect(out).not.toContain("````");
+    expect(out).toContain("```js\nlet x = 1\n```");
+    expect(out).toContain("```sh\nslipbox doctor\n```");
+  });
+});
+
+describe("adding the screen or the place (RPT-D2)", () => {
+  test("fenced past a note's own fences, under its first line", () => {
+    expect(fenced("a\n```\nb\n```")).toBe("````text\na\n```\nb\n```\n````");
+    expect(fenced("plain")).toBe("```text\nplain\n```");
+    expect(fenced("x ````````` y")).toStartWith("``````````text\n");
+    expect(attachment(WHERE_SAID, "notes/a.md:3")).toBe("Where it was:\n\n```text\nnotes/a.md:3\n```");
+  });
+
+  test("with no What slipbox sees, a new section at the end; once there, at its end", () => {
+    const one = add(typed("T"), SCREEN);
+    expect(one.endsWith(`### Terminal\n\nTERM xterm\n\n### What slipbox sees\n\n${SCREEN}\n`)).toBe(true);
+    const where = attachment(WHERE_SAID, "home.md:1");
+    const two = add(one, where);
+    expect(two.endsWith(`### What slipbox sees\n\n${SCREEN}\n\n${where}\n`)).toBe(true);
+    expect(SCREEN_INTRO.test(two)).toBe(true);
+    // Each a single edit, at the end of the text.
+    const p = placeAttachment(one, where);
+    expect("at" in p && p.at).toBe(one.length);
+  });
+
+  test("into an edited draft: What slipbox sees in the middle, after a heading of your own, empty", () => {
+    const middle = "T\n\n### What happened\n\na\n\n### What slipbox sees\n\nmine\n\n### Version\n\n1\n";
+    const m = add(middle, SCREEN);
+    expect(m).toBe(`T\n\n### What happened\n\na\n\n### What slipbox sees\n\nmine\n\n${SCREEN}\n\n### Version\n\n1\n`);
+    expect(readReport(m).fields.version).toBe("1");
+    const own = "T\n\n### What slipbox sees\n\nmine\n\n### Logs\n\nlog\n### Version\n\n1\n";
+    expect(add(own, SCREEN)).toBe(
+      `T\n\n### What slipbox sees\n\nmine\n\n### Logs\n\nlog\n\n${SCREEN}\n\n### Version\n\n1\n`,
+    );
+    const empty = "T\n\n### What slipbox sees\n### Version\n\n1";
+    expect(add(empty, SCREEN)).toBe(`T\n\n### What slipbox sees\n\n${SCREEN}\n\n### Version\n\n1`);
+    // Doubled: the last.
+    const twice = "### What slipbox sees\n\na\n\n### Version\n\n1\n\n### What slipbox sees\n\nb";
+    expect(add(twice, SCREEN)).toBe(
+      `### What slipbox sees\n\na\n\n### Version\n\n1\n\n### What slipbox sees\n\nb\n\n${SCREEN}\n`,
+    );
+  });
+
+  test("refused while a fence is left open, anywhere", () => {
+    const open = typed("T", { "What happened": "```\nunclosed" });
+    expect(readReport(open).openFence).toBe(true);
+    expect(placeAttachment(open, SCREEN)).toEqual({ refused: "a fence is left open in the report: close it first" });
+  });
+});
+
+describe("sent as written", () => {
+  test("the copy and gh's body keep renamed, doubled and moved headings as they are; the title is gh's own", () => {
+    const text = `${GUIDE}\n\nCrash\n\n### Terminal\n\nkitty\n\n### What happened\n\na\n\n### Expected\n\nb\n\n### What happened\n\nc\n`;
+    expect(sentText(text)).toBe(text.slice(GUIDE.length + 2));
+    const post = postOf(text);
+    expect(post.title).toBe("Crash");
+    expect(post.body).toBe(
+      "### Terminal\n\nkitty\n\n### What happened\n\na\n\n### Expected\n\nb\n\n### What happened\n\nc\n",
+    );
+  });
+});
+
+describe("the address's plan (RPT-D3)", () => {
+  const plan = (text: string, max?: number) => addressPlan("me/slipbox", readReport(text), max)!;
+  const params = (url: string) => [...new URL(url).searchParams.keys()];
+
+  test("every field by id, encoded, while it fits", () => {
+    const text = add(typed("Crash & burn", { "What happened": "100% broke\n\n#1" }), SCREEN);
+    const p = plan(text);
+    expect(p.left).toEqual([]);
+    expect(params(p.url)).toEqual([
+      "template",
+      "title",
+      "version",
+      "install",
+      "platform",
+      "terminal",
+      "happened",
+      "output",
+    ]);
+    expect(new URL(p.url).searchParams.get("happened")).toBe("100% broke\n\n#1");
+    expect(p.url.length).toBeLessThanOrEqual(ADDRESS_MAX);
+  });
+
+  test("each step of the plan: all but What slipbox sees, the title and facts, the facts, the template", () => {
+    const big = attachment(screenIntro(80, 24), "x".repeat(6000));
+    const p1 = plan(add(typed("T", { "What happened": "a" }), big));
+    expect(p1.left).toEqual(["output"]);
+    expect(params(p1.url)).toContain("happened");
+    const p2 = plan(typed("T", { "What happened": "é".repeat(2000) }));
+    expect(p2.left).toEqual(["happened"]);
+    expect(params(p2.url)).toEqual(["template", "title", "version", "install", "platform", "terminal"]);
+    const p3 = plan(typed("é".repeat(1000), { "What happened": "a" }), 4000);
+    expect(p3.left).toEqual(["title", "happened"]);
+    const p4 = plan(typed("T").replace("TERM xterm", "y".repeat(6000)));
+    expect(p4.left).toEqual(["title", "version", "install", "platform", "terminal"]);
+    expect(params(p4.url)).toEqual(["template"]);
+  });
+
+  test("text that belongs to no field: no address, since it would be lost", () => {
+    expect(addressPlan("me/slipbox", readReport(typed("T").replace("T\n", "T\nstray\n")))).toBeNull();
   });
 });

@@ -1,5 +1,5 @@
 ---
-status: doing
+status: done
 assignee: claude-5
 blocked_by: [RPT-T1]
 created: "2026-10-24"
