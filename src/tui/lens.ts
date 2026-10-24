@@ -177,6 +177,8 @@ export class Lens {
     // is the lens's, whatever the unit.
     const code = this.app.isCodeDocument(buf);
     const fits = (s: number, e: number) => rowsOf(s, e) <= maxRows;
+    // Its pictures as this window shows them (PIC): their key changed, the note around the lens is laid out again.
+    const pictures = code ? undefined : this.app.pictures.forView(view, width);
     const fresh = (prev?: Block): LiveBase => {
       const rendered = code
         ? buf.codeLayout(width, wrap, this.app.glyphs, this.app.ui.code_cells, this.app.code.cellProblems(view))
@@ -185,7 +187,7 @@ export class Lens {
             this.app.glyphs,
             this.app.ui.urls,
             buf.rel ? this.app.graph : null,
-            this.app.pictures.forBuffer(buf),
+            pictures,
             this.app.code.scrolls(),
           );
       let blocks = code ? buf.codeBlocks(lineCount) : blockRanges(buf.parsed.tree, lineCount);
@@ -214,6 +216,7 @@ export class Lens {
         width,
         wrap,
         codeScroll: this.app.code.scrolls(),
+        pictures: pictures?.key ?? "",
         renderedVersion: buf.version,
         version: buf.version,
         blocks,
@@ -256,6 +259,9 @@ export class Lens {
       } else base = fresh(view.insert ? [Math.min(base.active[0], line), Math.max(base.active[1], line)] : base.active); // typing never sits outside it
     }
     if (!view.insert && base.renderedVersion !== buf.version) base = fresh(base.active);
+    // Its pictures sized again (the window's height, one at its own size): the note around it laid out again, the lens
+    // on the lines it was on.
+    else if (base.pictures !== (pictures?.key ?? "")) base = fresh(base.active);
     // `+` / `-`: a block more (below, or above at the note's end), or the one farthest from the
     // cursor less; the size it comes to is kept.
     const step = view.lensStep;
@@ -445,6 +451,8 @@ export interface LiveBase {
   wrap: boolean;
   /** Its code blocks too wide kept whole, to scroll sideways (`[render] code_wrap`). */
   codeScroll: boolean;
+  /** Its pictures' key, as its window showed them (PIC). */
+  pictures: string;
   /** The buffer version the render was made from, and the one the block was last matched to. */
   renderedVersion: number;
   version: number;

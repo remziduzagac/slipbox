@@ -10,6 +10,7 @@ import { LEFT_OUT_NAVIGATING, NAVIGATING } from "./navigating.ts";
 import { PEEK_BACKLINKS } from "./peek-backlinks.ts";
 import { LEFT_OUT_OUTSIDE_AND_CODE, OUTSIDE_AND_CODE } from "./outside-and-code.ts";
 import { PANELS } from "./panels.ts";
+import { PICTURES } from "./pictures.ts";
 import { LEFT_OUT_READING, READING } from "./reading.ts";
 import { REPORTING } from "./reporting.ts";
 import { SLOW_DISK } from "./slow-disk.ts";
@@ -46,6 +47,9 @@ export const CHECK_FILES: Record<string, Check[]> = {
   "git-branches": GIT_BRANCHES,
   // Reporting a problem (RPT): help's, in the navigating area, navigating.ts being past the size limit.
   reporting: REPORTING,
+  // Pictures sized to their window, at their own size on a click (#52): in the reading area, reading.ts being past the
+  // size limit.
+  pictures: PICTURES,
 };
 
 export const CHECKS: Check[] = Object.values(CHECK_FILES).flat();

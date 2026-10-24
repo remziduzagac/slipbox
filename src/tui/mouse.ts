@@ -13,6 +13,7 @@ import type { App, View } from "./app.ts";
 import { editable } from "./app.ts";
 import { type LeftView, LEFT_VIEWS } from "./panels.ts";
 import { codeBlocks } from "./code.ts";
+import { extentOf } from "../core/layout/ir.ts";
 import { selectable } from "./overlays.ts";
 import { taskMarkAt } from "./views.ts";
 import { linkAt } from "./linking.ts";
@@ -31,6 +32,7 @@ export class Mouse {
     | { kind: "tab"; index: number }
     | { kind: "separator"; sep: import("./draw.ts").Separator }
     | { kind: "scrollbar"; bar: import("./draw.ts").ScrollbarGeom }
+    | { kind: "picture"; view: View; row: number; file: string; x: number; y: number; ctrl: boolean }
     | null = null;
 
   /** Everything visible is clickable (docs/manual/keys.md, "Mouse"). */
@@ -196,7 +198,10 @@ export class Mouse {
         const layout = this.app.currentLayout(pane.view);
         pane.view.left = Math.max(
           0,
-          Math.min(Math.max(0, layout.width - this.app.views.textColumns(pane.view)), pane.view.left + side * n * 2),
+          Math.min(
+            Math.max(0, extentOf(layout) - this.app.views.textColumns(pane.view)),
+            pane.view.left + side * n * 2,
+          ),
         );
       }
       return;
@@ -440,6 +445,23 @@ export class Mouse {
     const t = this.app.tab!;
     if (!this.app.floating) t.active = t.views.indexOf(pane.view);
     this.app.region = "content";
+    // On a picture's drawn cells (PIC-D3): the picture's, before the cursor is placed — released still, it's shown at
+    // its own size or fitted again; moved, a selection, as a drag from its rows always was. Never part of a double-click.
+    const pic = g.pictures.find((p) => p.view === pane.view && inRect(p, ev.x, ev.y));
+    if (pic && clicks === 1) {
+      this.lastClick = null;
+      this.drag = { kind: "picture", view: pane.view, row: pic.row, file: pic.file, x: ev.x, y: ev.y, ctrl: !!ev.ctrl };
+      return;
+    }
+    this.press(ev, pane, clicks);
+  }
+
+  /** A press on a window's text: the cursor there, a word or a row selected, or a drag's start. */
+  private press(
+    ev: { x: number; y: number; ctrl?: boolean },
+    pane: import("./draw.ts").PaneGeom,
+    clicks: number,
+  ): void {
     const view = pane.view;
     const layout = this.app.currentLayout(view);
     const shown = this.app.lens.screenRows(view, layout);
@@ -492,6 +514,15 @@ export class Mouse {
   }
 
   private dragTo(ev: { x: number; y: number }, g: Geometry): void {
+    // A press on a picture that moves: a selection from where it was pressed, as before pictures were clicked.
+    if (this.drag?.kind === "picture") {
+      const { view, x, y, ctrl } = this.drag;
+      const pane = g.panes.find((p) => p.view === view);
+      this.drag = null;
+      if (!pane) return;
+      this.press({ x, y, ctrl }, pane, 1);
+      if (!this.drag) return;
+    }
     const d = this.drag!;
     if (d.kind === "tab") {
       const over = g.tabs.find((t) => ev.x >= t.x && ev.x < t.x + t.w);
@@ -552,6 +583,12 @@ export class Mouse {
   private up(): void {
     const d = this.drag!;
     this.drag = null;
+    if (d.kind === "picture") {
+      // As any click: a selection, and visual mode, end — whether the picture's still there or not.
+      d.view.visual = null;
+      d.view.sel = null;
+      return this.app.pictures.toggle(d.view, d.row, d.file);
+    }
     if (d.kind !== "select") return;
     if (d.moved && d.view.sel) {
       const text = this.app.views.selectionText(d.view);

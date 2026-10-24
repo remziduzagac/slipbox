@@ -51,10 +51,11 @@ export function idColor(id: number): string {
   return `#${id.toString(16).padStart(6, "0")}`;
 }
 
-/** Row `row` of a picture `cols` wide, as its placeholder cells, each with its row and column marks. */
-export function placeholderRow(row: number, cols: number): string {
+/** Row `row` of a picture, `cols` of its cells from column `left` (PIC: scrolled sideways), each with its row and
+ *  column marks. */
+export function placeholderRow(row: number, cols: number, left = 0): string {
   let out = "";
-  for (let c = 0; c < cols; c++) out += PLACEHOLDER + mark(row) + mark(c);
+  for (let c = left; c < left + cols; c++) out += PLACEHOLDER + mark(row) + mark(c);
   return out;
 }
 

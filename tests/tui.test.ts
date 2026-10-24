@@ -62,7 +62,7 @@ import { lineOf, offsetOf } from "../src/tui/editing.ts";
 import { DEFAULT_ALIASES, DEFAULT_GROUPS, DEFAULT_KEYS, keyChar, keyName, parseGroup } from "../src/tui/keys.ts";
 import { MOUSE_HELP } from "../src/tui/mouse-help.ts";
 import { codeBlocks } from "../src/tui/code.ts";
-import { PICTURE_ROWS, PICTURES_REST_MS } from "../src/tui/pictures.ts";
+import { PICTURES_REST_MS } from "../src/tui/pictures.ts";
 import {
   makeSandbox,
   makeVault,
@@ -9295,18 +9295,18 @@ describe("pictures (12.x)", () => {
     });
     return { h, v: h.app.view!, root };
   };
-  test("a local picture alone in its paragraph: its ▣ alt line, then the rows it's drawn over — sized to its proportions, at most 12 rows; beside text, on the internet, or missing: ▣ alt alone", async () => {
+  test("a local picture alone in its paragraph: its ▣ alt line, then the rows it's drawn over — sized to its proportions, fitted to its window; beside text, on the internet, or missing: ▣ alt alone", async () => {
     const { h, v, root } = await open();
     const layout = h.app.currentLayout(v);
     const alt = layout.lines.findIndex((l) => l.spans.some((s) => s.text === "▣ chart"));
-    // 400 × 200 pixels in 8 × 16 cells: 50 columns by 13 rows, past 12 — so 12 rows, 48 columns.
+    // 400 × 200 pixels in 8 × 16 cells: 50 columns by 13 rows, its own size, which the window has room for.
     expect(layout.lines[alt + 1]).toMatchObject({
       decor: true,
       spans: [],
-      image: { src: join(root, "chart.png"), cols: 48, rows: 12 },
+      image: { src: join(root, "chart.png"), cols: 50, rows: 13 },
     });
-    expect(layout.lines.slice(alt + 2, alt + 13).every((l) => l.decor && !l.spans.length && !l.image)).toBe(true);
-    expect(layout.lines[alt + 13]!.spans.length).toBe(0); // the gap after the paragraph
+    expect(layout.lines.slice(alt + 2, alt + 14).every((l) => l.decor && !l.spans.length && !l.image)).toBe(true);
+    expect(layout.lines[alt + 14]!.spans.length).toBe(0); // the gap after the paragraph
     // Drawn over its rows, from the text column.
     const c = h.canvas();
     const pane = h.app.geometry!.panes[0]!;
@@ -9314,11 +9314,13 @@ describe("pictures (12.x)", () => {
       {
         x: pane.textX,
         y: pane.y + alt + 1 - v.top,
-        cols: 48,
-        rows: 12,
+        cols: 50,
+        rows: 13,
         src: join(root, "chart.png"),
         skip: 0,
-        total: 12,
+        total: 13,
+        left: 0,
+        wide: 50,
       },
     ]);
     // An image beside text, or on the internet: its ▣ alt line alone.
@@ -9366,7 +9368,7 @@ describe("pictures (12.x)", () => {
     v.top = first + 5;
     const c = h.canvas();
     const pane = h.app.geometry!.panes[0]!;
-    expect(c.images).toEqual([expect.objectContaining({ y: pane.y, rows: 7, skip: 5, total: 12 })]);
+    expect(c.images).toEqual([expect.objectContaining({ y: pane.y, rows: 8, skip: 5, total: 13 })]);
   });
   test("where the terminal draws no images, or [render] images = never: the note as it was — ▣ alt and its path, nothing more", async () => {
     for (const [supported, setting] of [
@@ -9399,10 +9401,12 @@ describe("pictures (12.x)", () => {
     const h = await harness({ root, open: "gallery/n.md", width: 100, height: 40, images: terminal(true, sizes) });
     const layout = h.app.currentLayout(h.app.view!);
     const chart = join(root, "shots", "chart.png");
-    // 400 × 200 in 8 × 16 cells: its own size 48 × 12 (12 rows at most); 80 pixels wide, 10 × 3; 64 by 32, 8 × 2.
-    const drawn = layout.lines.filter((l) => l.image).map((l) => [l.src, l.image]);
+    // 400 × 200 in 8 × 16 cells: its own size 50 × 13; 80 pixels wide, 10 × 3; 64 by 32, 8 × 2.
+    const drawn = layout.lines
+      .filter((l) => l.image)
+      .map((l) => [l.src, { src: l.image!.src, cols: l.image!.cols, rows: l.image!.rows }]);
     expect(drawn).toEqual([
-      [3, { src: chart, cols: 48, rows: 12 }],
+      [3, { src: chart, cols: 50, rows: 13 }],
       [5, { src: chart, cols: 10, rows: 3 }],
       [7, { src: chart, cols: 8, rows: 2 }],
       [14, { src: chart, cols: 10, rows: 3 }],
@@ -9443,10 +9447,12 @@ describe("pictures (12.x)", () => {
     const layout = h.app.currentLayout(h.app.view!);
     const sub = join(root, "frames", "sub");
     // Inside its frame: two columns narrower than the note, each embed's.
-    expect(layout.lines.filter((l) => l.image).map((l) => l.image)).toEqual([
-      { src: join(sub, "chart.png"), cols: 48, rows: 12 },
+    expect(
+      layout.lines.filter((l) => l.image).map((l) => ({ src: l.image!.src, cols: l.image!.cols, rows: l.image!.rows })),
+    ).toEqual([
+      { src: join(sub, "chart.png"), cols: 50, rows: 13 },
       { src: join(sub, "spot.png"), cols: 10, rows: 3 },
-      { src: join(sub, "deep", "chart.png"), cols: 48, rows: 12 },
+      { src: join(sub, "deep", "chart.png"), cols: 50, rows: 13 },
     ]);
     // Drawn past its frame's bar, where its ▣ alt line's text starts.
     const bars = [...altAt(layout, "▣ chart"), ...altAt(layout, "▣ spot.png"), ...altAt(layout, "▣ deep chart")];
@@ -9540,7 +9546,7 @@ describe("pictures (12.x)", () => {
         return Array.from({ length: buf.height }, (_, y) => cells.slice(y * buf.width, (y + 1) * buf.width).join(""));
       };
       await pictures.prepare(file);
-      pictures.draw(buf, 2, 1, 4, 2, file, { skip: 0, total: 2 });
+      pictures.draw(buf, 2, 1, 4, 2, file, { skip: 0, total: 2, left: 0, wide: 4 });
       expect(written).toHaveLength(1);
       // 64 × 32 pixels into 4 × 2 cells of 8 × 16: sent at the 32 × 16 it's drawn.
       expect(written[0]).toContain(",s=32,v=16,");
@@ -9553,7 +9559,7 @@ describe("pictures (12.x)", () => {
       expect([cells.width, ...cells.fg.toInts().slice(0, 3)]).toEqual([4, (id >> 16) & 255, (id >> 8) & 255, id & 255]);
       // Scrolled: its second row at the top — the same picture, nothing sent.
       buf.clear();
-      pictures.draw(buf, 2, 0, 4, 1, file, { skip: 1, total: 2 });
+      pictures.draw(buf, 2, 0, 4, 1, file, { skip: 1, total: 2, left: 0, wide: 4 });
       expect(written).toHaveLength(1);
       expect(lines()[0]).toStartWith(`  ${placeholderRow(1, 4)} `);
       // Quitting lets it go.
@@ -9576,18 +9582,18 @@ describe("pictures (12.x)", () => {
       const idOf = (f: string) => pictureId(`${f}\u0000${statSync(f).mtimeMs}`, 1, 1);
       for (const f of files.slice(0, 48)) {
         await pictures.prepare(f);
-        pictures.draw(buf, 0, 0, 1, 1, f, { skip: 0, total: 1 });
+        pictures.draw(buf, 0, 0, 1, 1, f, { skip: 0, total: 1, left: 0, wide: 1 });
       }
       // The first drawn again is the newest: the second is the oldest when the 49th comes.
       await pictures.prepare(files[0]!);
-      pictures.draw(buf, 0, 0, 1, 1, files[0]!, { skip: 0, total: 1 });
+      pictures.draw(buf, 0, 0, 1, 1, files[0]!, { skip: 0, total: 1, left: 0, wide: 1 });
       await pictures.prepare(files[48]!);
-      pictures.draw(buf, 0, 0, 1, 1, files[48]!, { skip: 0, total: 1 });
+      pictures.draw(buf, 0, 0, 1, 1, files[48]!, { skip: 0, total: 1, left: 0, wide: 1 });
       expect(written.filter((w) => w.startsWith("\x1b_Ga=d"))).toEqual([release(idOf(files[1]!))]);
       // Wider than its columns can be numbered: OpenTUI's own path.
       const wide = OptimizedBuffer.create(400, 2, "unicode");
       const sent = written.length;
-      pictures.draw(wide, 0, 0, 298, 1, files[2]!, { skip: 0, total: 1 });
+      pictures.draw(wide, 0, 0, 298, 1, files[2]!, { skip: 0, total: 1, left: 0, wide: 298 });
       expect(written.length).toBe(sent);
       expect(new TextDecoder().decode(wide.getRealCharBytes())).not.toContain(PH);
       wide.destroy();
@@ -9598,7 +9604,7 @@ describe("pictures (12.x)", () => {
       expect(sixel.usesPlaceholders()).toBe(false);
       buf.clear();
       const before = written.length;
-      sixel.draw(buf, 0, 0, 1, 1, files[1]!, { skip: 0, total: 1 });
+      sixel.draw(buf, 0, 0, 1, 1, files[1]!, { skip: 0, total: 1, left: 0, wide: 1 });
       expect(written.length).toBe(before);
       expect(new TextDecoder().decode(buf.getRealCharBytes(true))).not.toContain(PH);
       buf.destroy();
@@ -9659,14 +9665,14 @@ describe("pictures (12.x)", () => {
       }
       return { h, layout };
     };
-    test("an SVG picture: rasterised into the cache at the size it's drawn, from its own size — as a PNG would be", async () => {
+    test("an SVG picture: rasterised into the cache at its own size, and drawn as a PNG would be", async () => {
       const { layout } = await at("# D\n\n![chart](chart.svg)\n", undefined, { "chart.svg": SVG });
-      // 400 × 200 in 8 × 16 cells: 50 by 13, past 12 rows — 12 rows, 48 columns, rasterised 384 pixels wide.
+      // 400 × 200 in 8 × 16 cells: 50 by 13, rasterised 400 pixels wide.
       const p = layout.lines.find((l) => l.image)!.image!;
       // (Bun's toMatchObject writes an asymmetric matcher into what it matched: `src` read first.)
       const src = p.src;
-      expect(p).toMatchObject({ cols: 48, rows: 12, src: expect.stringMatching(/svg-[0-9a-f]{32}-384\.png$/) });
-      expect(pngWidth(src)).toBe(384);
+      expect(p).toMatchObject({ cols: 50, rows: 13, src: expect.stringMatching(/svg-[0-9a-f]{32}-400\.png$/) });
+      expect(pngWidth(src)).toBe(400);
     });
     test("a picture fetched and kept by its address is told an SVG by how it starts; a name says it", () => {
       const dir = mkdtempSync(join(sandbox, "svgs-"));
@@ -9695,7 +9701,7 @@ describe("pictures (12.x)", () => {
       const t = h.app.theme;
       const fg = colorHex(t.roles.text.fg ?? t.fg, "?");
       const of = (r: keyof typeof t.roles) => colorHex(t.roles[r].fg ?? fg, fg);
-      const pictures = h.app.pictures.forBuffer(h.app.view!.buf)!;
+      const pictures = h.app.pictures.forView(h.app.view!, 80)!;
       expect(pictures.drawings!.colors).toEqual({
         bg: colorHex(t.bg, "?"),
         fg,
@@ -9709,12 +9715,12 @@ describe("pictures (12.x)", () => {
       const retina = await at(mermaid, (c) => (c.render.mermaid = "picture"), {}, { width: 16, height: 34 });
       const drawn = retina.layout.lines.find((l) => l.image)!.image!;
       const r = (await loadRasterizer())!;
-      const colors = retina.h.app.pictures.forBuffer(retina.h.app.view!.buf)!.drawings!.colors;
+      const colors = retina.h.app.pictures.forView(retina.h.app.view!, 80)!.drawings!.colors;
       const own = r.size(mermaidSvg("graph TD\n  A --> B", colors, rasterizer()!.family)!)!;
       expect(drawn.cols).toBe(Math.ceil((own.width * 34 * 0.8) / 13 / 16));
       const text = await at(mermaid);
       expect(text.layout.lines.some((l) => l.image)).toBe(false);
-      expect(text.h.app.pictures.forBuffer(text.h.app.view!.buf)!.key).not.toBe(pictures.key); // a choice changed: laid out again
+      expect(text.h.app.pictures.forView(text.h.app.view!, 80)!.key).not.toBe(pictures.key); // a choice changed: laid out again
     });
     test("a drawing taller than a picture may be: scrolled past its top, the rest still drawn", async () => {
       const chain = Array.from({ length: 8 }, (_, i) => `N${i}[Step ${i}]`).join(" --> ");
@@ -9724,9 +9730,32 @@ describe("pictures (12.x)", () => {
       );
       const first = layout.lines.findIndex((l) => l.image);
       const rows = layout.lines[first]!.image!.rows;
-      expect(rows).toBeGreaterThan(PICTURE_ROWS + 2);
-      h.app.view!.top = first + PICTURE_ROWS + 1;
-      expect(h.canvas().images).toEqual([expect.objectContaining({ skip: PICTURE_ROWS + 1, total: rows })]);
+      const past = 13;
+      expect(rows).toBeGreaterThan(past + 1);
+      // Centred, as from its top: its indent is its first row's alone.
+      const indent = layout.lines[first]!.spans.reduce((w, sp) => w + stringWidth(sp.text), 0);
+      expect(indent).toBeGreaterThan(0);
+      h.app.view!.top = first + past;
+      const x = h.app.geometry!.panes[0]!.textX + indent;
+      expect(h.canvas().images).toEqual([expect.objectContaining({ x, skip: past, total: rows })]);
+    });
+    test("a click on a drawing places the cursor, as on its rows before: it's no picture to show at its own size", async () => {
+      const { h, layout } = await at(
+        "# D\n\nText.\n\n```mermaid\ngraph TD\n  A --> B\n```\n\nAfter.\n",
+        (c) => (c.render.mermaid = "picture"),
+      );
+      const first = layout.lines.findIndex((l) => l.image);
+      h.canvas();
+      expect(h.app.geometry!.pictures).toEqual([]);
+      const pane = h.app.geometry!.panes[0]!;
+      const y = pane.y + first - h.app.view!.top;
+      h.app.mouse.handle({ type: "down", x: pane.textX + 2, y, button: 0 });
+      h.app.mouse.handle({ type: "up", x: pane.textX + 2, y, button: 0 });
+      expect(h.app.view!.cur.row).toBe(first);
+      expect(h.app.messages.some((m) => m.text.includes("no picture here"))).toBe(false);
+      // z l on it: no picture of a file to scroll, said so (not "it fits the window").
+      await h.keys("z", "l");
+      expect(h.app.messages.at(-1)!.text).toContain("no picture here");
     });
     test("rasterised once: drawn from the cache after, not rasterised again", async () => {
       const { h, layout } = await at("# D\n\n![chart](chart.svg)\n", undefined, { "chart.svg": SVG });

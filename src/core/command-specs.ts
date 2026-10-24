@@ -42,7 +42,7 @@ export function commandSpec(id: string): CommandSpec | undefined {
  * docs/manual/keys.md, in its order. The first group whose pattern matches an id wins.
  */
 export const COMMAND_GROUPS: { title: string; ids: RegExp }[] = [
-  { title: "Cursor", ids: /^(cursor|scroll)\./ },
+  { title: "Cursor", ids: /^(cursor|scroll|picture)\./ },
   { title: "Selection & copy", ids: /^(visual\.(char|line|swap|yank|exit)$|copy\.|app\.escape$)/ },
   { title: "Links & history", ids: /^(link\.|links\.|backlinks\.|peek\.|history\.|change\.|lsp\.)/ },
   { title: "Windows", ids: /^window\./ },

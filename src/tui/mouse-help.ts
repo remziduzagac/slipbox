@@ -17,9 +17,14 @@ export const MOUSE_HELP: [string, string[], string][] = [
   ["Select a word / a row", ["double-click", "triple-click"], "Selects the word or the whole row, and copies it"],
   ["Tick a task", ["click"], "On its box (☐ / ☑): ticks or unticks it"],
   [
+    "A picture at its own size",
+    ["click"],
+    "On a picture: shows it at its own size, scrolled sideways where it's wider than the window; again, fits it to the window",
+  ],
+  [
     "Scroll",
     ["wheel"],
-    "Scrolls the note (sideways too, when wrapping is off), a panel (its selection stays) or a list (its selection moves only to stay in view); over a code block too wide, a sideways wheel or shift with it scrolls the block; over the tab strip, switches tabs",
+    "Scrolls the note (sideways too, when wrapping is off), a panel (its selection stays) or a list (its selection moves only to stay in view); over a code block too wide or a picture at its own size, a sideways wheel or shift with it scrolls it; over the tab strip, switches tabs",
   ],
   // Around them.
   [

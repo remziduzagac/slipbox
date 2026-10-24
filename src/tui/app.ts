@@ -170,8 +170,15 @@ export interface View {
   buf: NoteBuffer;
   /** First row on screen. */
   top: number;
-  /** Its pictures (12.7): the top they were last drawn at, when it last scrolled, and whether they wait for it to rest. */
-  pictures?: { top: number; at: number; wait: boolean };
+  /** Its pictures (12.7): where they were last drawn (its top, how far it and its pictures are scrolled sideways),
+   *  when it last scrolled, and whether they wait for it to rest; its size, the sizes of those in sight, and when a
+   *  resize last changed one (PIC-D5). */
+  pictures?: { top: string; at: number; wait: boolean; size?: string; sizes?: Map<string, string>; sizedAt?: number };
+  /** The pictures it shows at their own size (PIC-D4), by their files, while it shows `buf`: another note shown, they're
+   *  fitted again. */
+  picturesOwn?: { buf: NoteBuffer; files: Set<string> };
+  /** Its text rows were its find row closed: what its pictures are fitted to (PIC), so find doesn't resize them. */
+  pictureRows?: number;
   cur: Pos;
   /** Column to return to when moving through shorter rows. */
   goal: number;
@@ -1094,7 +1101,12 @@ export class App {
     this.history.remember(view);
     const before = view.buf;
     if (view.insert) stopInsert(this, view);
-    Object.assign(view, this.makeView(buf, anchor), { back: view.back, fwd: [] });
+    // Another note: its pictures fitted again (PIC-D4), even one the window shows as source or code between.
+    Object.assign(view, this.makeView(buf, anchor), {
+      back: view.back,
+      fwd: [],
+      picturesOwn: buf === before ? view.picturesOwn : undefined,
+    });
     this.lens.fitMode(view, before);
     this.region = "content";
     this.explorer.reveal(undefined, false, true);

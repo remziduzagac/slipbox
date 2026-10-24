@@ -589,6 +589,7 @@ describe("room: the buttons give way before the breadcrumb's innermost heading (
         ...{ panes: [], sidebar: null, outline: null, sidebarPane: null, outlinePane: null, tabs: [], overlay: null },
         ...{ hot: [], separators: [], scrollbars: [], tabStrip: null, popup: null, crumbAnchors: {}, rules: [] },
         verticals: [],
+        pictures: [],
       };
       drawPane(h.app, c, v, { x: 0, y: 0, w, h: 30 }, true, false, false, false, geo);
       const bs = geo.hot.filter((b) => b.id.startsWith("mode:"));
@@ -622,6 +623,7 @@ describe("room: the buttons give way before the breadcrumb's innermost heading (
         ...{ panes: [], sidebar: null, outline: null, sidebarPane: null, outlinePane: null, tabs: [], overlay: null },
         ...{ hot: [], separators: [], scrollbars: [], tabStrip: null, popup: null, crumbAnchors: {}, rules: [] },
         verticals: [],
+        pictures: [],
       };
       drawPane(h.app, c, v, { x: 0, y: 0, w, h: 30 }, true, false, false, false, geo);
       const bs = geo.hot.filter((b) => b.id.startsWith("mode:"));
@@ -780,6 +782,7 @@ describe("the two settings (HDR-D3)", () => {
         ...{ panes: [], sidebar: null, outline: null, sidebarPane: null, outlinePane: null, tabs: [], overlay: null },
         ...{ hot: [], separators: [], scrollbars: [], tabStrip: null, popup: null, crumbAnchors: {}, rules: [] },
         verticals: [],
+        pictures: [],
       };
       drawPane(h.app, c, v, { x: 0, y: 0, w: 80, h: rows }, true, false, false, false, geo);
       return geo.hot.filter((b) => b.id.startsWith("mode:")).length;

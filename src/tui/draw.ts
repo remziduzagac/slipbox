@@ -80,6 +80,9 @@ export interface Geometry {
   hot: Hot[];
   separators: Separator[];
   scrollbars: ScrollbarGeom[];
+  /** The pictures drawn (PIC), each where it shows: a click there is the picture's — its window, its first row drawn
+   *  over. */
+  pictures: (Rect & { view: View; row: number; file: string })[];
   tabStrip: Rect | null;
   /** The which-key popup, with its margin: clicks there never reach what's under it. */
   popup: Rect | null;
@@ -151,6 +154,7 @@ export function drawApp(app: App, c: Canvas): Geometry {
     hot: [],
     separators: [],
     scrollbars: [],
+    pictures: [],
     tabStrip: null,
     popup: null,
     crumbAnchors: {},

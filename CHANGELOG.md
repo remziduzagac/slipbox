@@ -21,6 +21,9 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
   choose: the bug form in your browser, filled in; its address or the report copied (over SSH, to your own
   clipboard); or posted with `gh` after a yes. slipbox itself sends nothing. `slipbox report` (and `--json`) prints
   the same facts and the form's address, for an agent writing an issue.
+- A picture at its own size: click it, or press `z p` on its `▣` line. A picture wider than the window then scrolls
+  sideways on its own, with a scrollbar under it, by `z h` and `z l`, a sideways wheel or the wheel with `shift`, and
+  the text around it stays as it was. Click it or press `z p` again to fit it to the window.
 
 ### Changed
 
@@ -29,6 +32,10 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
   (`ui.window_header = false`).
 - A peek into a vault with no index here builds one, and lists the note's backlinks when it's done, instead of saying
   there are none to show yet. Your home folder's index is still left to the background index.
+- A picture is fitted to its window rather than drawn at most 12 rows tall: as wide as the text column, never larger
+  than its own size, and no taller than the window, so a wide screenshot is drawn as wide as the text beside it. It's
+  never made smaller than 12 rows tall or 20 columns wide. While you resize a window, its pictures wait and are drawn at
+  the new size when you stop.
 
 ### Fixed
 

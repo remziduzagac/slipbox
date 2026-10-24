@@ -1,5 +1,6 @@
-// The commands that move and view (`cursor.*`, `scroll.*`, `visual.*`, `view.*`, `lens.*`): the cursor's motions,
-// with vim's counts in source mode; scrolling; visual mode; the view's mode and the lens's size.
+// The commands that move and view (`cursor.*`, `scroll.*`, `picture.*`, `visual.*`, `view.*`, `lens.*`): the cursor's
+// motions, with vim's counts in source mode; scrolling; a picture's size; visual mode; the view's mode and the lens's
+// size.
 
 import { type Run, lay, withView } from "./actions.ts";
 import * as C from "./cursor.ts";
@@ -48,6 +49,10 @@ export function viewActions(): Record<string, Run> {
     "scroll.center": (a) => withView(a, (v) => a.views.scrollCursorTo(v, "center")),
     "scroll.top": (a) => withView(a, (v) => a.views.scrollCursorTo(v, "top")),
     "scroll.bottom": (a) => withView(a, (v) => a.views.scrollCursorTo(v, "bottom")),
+    // The picture on the cursor's ▣ line (PIC-D3): at its own size or fitted to the window; scrolled sideways.
+    "picture.size": (a) => withView(a, (v) => a.pictures.toggle(v, v.cur.row)),
+    "picture.scroll_left": (a) => withView(a, (v) => a.pictures.scrollSideways(v, -1)),
+    "picture.scroll_right": (a) => withView(a, (v) => a.pictures.scrollSideways(v, 1)),
     "cursor.goto_line": (a, arg) =>
       withView(a, (v) => {
         const go = (text: string) => {

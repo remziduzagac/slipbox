@@ -39,6 +39,8 @@ export interface NoteRenderOptions {
   drawings?: RenderOptions["drawings"];
   /** A code block too wide keeps its lines whole, to scroll sideways: see RenderOptions.codeScroll. */
   codeScroll?: boolean;
+  /** What its pictures are sized for besides the width (PIC): see RenderOptions.pictureKey. */
+  pictureKey?: string;
 }
 
 export function linkResolver(graph: Graph | null, rel: string | null) {

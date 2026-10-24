@@ -124,6 +124,8 @@ window's edge. [Reading](reading.md) says more.
 | half a page down / up, the cursor along | `ctrl+d` / `ctrl+u` |
 | a page down / up, the cursor along | `pagedown` / `pageup` |
 | the cursor's line to the window's middle / top / bottom | `z z` / `z t` / `z b` |
+| the picture on the cursor's `▣` line at its own size, or fitted to the window again | `z p` |
+| that picture at its own size, a quarter of the window left / right | `z h` / `z l` |
 
 ## Selection and copy
 
@@ -1116,6 +1118,8 @@ it back to the terminal.
 | a note, double / triple click | selects and copies the word / the row |
 | a note, the wheel | scrolls (a sideways wheel scrolls sideways when wrapping is off) |
 | a code block too wide, a sideways wheel, or the wheel with `shift` | scrolls the block sideways |
+| a picture | a click shows it at its own size, and another fits it to the window again |
+| a picture at its own size, a sideways wheel or the wheel with `shift` | scrolls it sideways (unwrapped, the window) |
 | the tab strip, the wheel | switches to the next or the previous tab |
 | the explorer | a click selects a note, a double-click opens it as a tab, and a click on a folder folds or unfolds it |
 | the explorer's breadcrumb | a click on a folder zooms the view to it ([Files](files.md#the-view)) |

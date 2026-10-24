@@ -73,6 +73,8 @@ export class NoteBuffer {
   private readonly parseCache = newParseCache();
   /** The render's blocks, reused across edits and reloads (only a changed block renders again). */
   private renderCache = newRenderCache();
+  /** Whether its last layout with pictures asked for one, its own or an embedded note's (PIC); unknown before. */
+  asksPictures?: boolean;
 
   /** The linter's findings (3.21), and the version of the text they're for (the file as saved); `skipped`: that run's
    *  findings weren't shown (its output past slipbox's limit), and why. */
@@ -628,6 +630,9 @@ export class NoteBuffer {
     pictures?: {
       picture: NonNullable<NoteRenderOptions["picture"]>;
       key: string;
+      /** What the pictures are sized for besides the width (PIC): a kept block with a picture is laid out again when
+       *  it changes. */
+      sized?: string;
       drawings?: NoteRenderOptions["drawings"];
     },
     codeScroll = false,
@@ -646,10 +651,14 @@ export class NoteBuffer {
           glyphs,
           showUrls,
           codeScroll,
-          ...(pictures ? { picture: pictures.picture, drawings: pictures.drawings } : {}),
+          ...(pictures
+            ? { picture: pictures.picture, drawings: pictures.drawings, pictureKey: pictures.sized ?? "" }
+            : {}),
         },
         this.renderCache,
       );
+      // Whether it asks for pictures (PIC): then its window's rows are part of its key.
+      if (pictures) this.asksPictures = !!l.pictures;
       for (const p of l.embedded ?? []) this.embedded.add(p);
       // Keep the last few widths (a drag back and forth, a toggle and back): evict the oldest.
       if (this.layouts.size >= 6) this.layouts.delete(this.layouts.keys().next().value!);

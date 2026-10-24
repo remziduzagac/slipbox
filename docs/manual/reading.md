@@ -317,11 +317,27 @@ Inside a paragraph, tags such as `<kbd>`, `<sup>` and `<mark>` are dropped, and 
 A picture is always drawn as a line naming it: `▣` and its alt text. For example, `![A grinder](grinder.png)` is
 `▣ A grinder`.
 
-Where the terminal can draw pictures, a picture on a paragraph of its own is also drawn under that line. It's sized to
-the text column, with its proportions kept, and at most 12 rows tall. A picture beside other text stays its `▣` line.
+Where the terminal can draw pictures, a picture on a paragraph of its own is also drawn under that line. It's fitted to
+its window, with its proportions kept: as wide as the text column, never larger than its own size, and no taller than
+the window, so it shows whole with its `▣` line. In a short window, or for a tall and narrow picture, it's never made
+smaller than 12 rows tall or 20 columns wide: it's taller than the window then, and you scroll past it as you scroll
+past text. A picture beside other text stays its `▣` line.
 
-- slipbox draws PNG, JPEG, WebP and GIF files. It draws SVG drawings too, turning them into pixels at the size
-  they're shown.
+**At its own size.** Click a picture, or press `z p` with the cursor on its `▣` line, to see it at its own size. The
+text around it stays as it was. A picture wider than the window scrolls sideways on its own, with a scrollbar under
+it: `z h` and `z l` scroll it a quarter of the window at a time, and so do a sideways wheel, the wheel with `shift`,
+and a drag of its scrollbar. Click it, or press `z p`, again to fit it to the window.
+
+- A picture stays at its own size while its window shows the note, through scrolling, edits and resizing. Another note
+  in the window, and it's fitted again.
+- A picture's own size is at most one million pixels and 2,048 pixels a side, what slipbox prepares for the screen. A
+  bigger one is shown at the most of it that's prepared.
+- With the lens open, a click changes a picture's size and leaves the cursor where it is.
+- With wrapping off, a picture at its own size scrolls sideways with the window: a sideways wheel, the window's
+  scrollbar, `z h` and `z l` move them both.
+
+- slipbox draws PNG, JPEG, WebP and GIF files. It draws SVG drawings too, turning them into pixels once, at their
+  own size.
 - A picture embedded by name, as Obsidian writes it (`![[grinder.png]]`), is found as a link by name is found.
 - Obsidian's sizes are kept. `![[grinder.png|300]]` is 300 pixels wide, and `|240x180` is the box it fits in.
 - A picture in an [embedded note](#embedded-notes) is drawn there too.
@@ -331,7 +347,8 @@ the text column, with its proportions kept, and at most 12 rows tall. A picture 
 the Kitty graphics protocol or sixel, as kitty, Ghostty, WezTerm and foot do. They're never drawn as blocks of coloured
 characters. In a terminal that speaks neither, a picture is its `▣` line alone.
 
-With sixel, pictures can disappear while you scroll quickly, and come back when you stop.
+While you resize a window, its pictures wait, and are drawn at its new size when you stop. With sixel, pictures can
+also disappear while you scroll quickly, and come back when you stop.
 
 Pictures and mathematical displays prepare in the background; their text stays visible until they are ready.
 A drawing that takes more than three seconds or exceeds the display limits keeps its text instead.
