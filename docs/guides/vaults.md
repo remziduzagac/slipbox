@@ -31,7 +31,8 @@ Open a note inside a repository or notes vault, for example:
 slipbox ~/work/kestrel/docs/sync.md
 ```
 
-Check the vault's name or path in the status line. Its tabs and scratch belong to that vault. In the explorer,
+Check the vault's name or path in the middle of the top bar. Your tabs there, your workspace, and its scratch belong
+to that vault. In the explorer,
 `esc` returns to the document; `space e` opens or focuses the explorer again.
 
 ## Look outside the current view
@@ -41,7 +42,7 @@ which part of the filesystem you are viewing. Seeing a sibling repository does n
 
 1. Zoom out until two repositories or notes folders are visible.
 2. Expand a sibling to look at its files, or press `enter` on its vault row to go there.
-3. Check that the status line changed to the new vault.
+3. Check that the top bar changed to the new vault.
 4. Press `ctrl+o` to return. Your earlier vault's tabs are restored.
 
 ![The explorer zoomed out to ~/work, its breadcrumb reading ~ › work › ◈ kestrel. Two repositories, infra and kestrel,
@@ -55,8 +56,8 @@ Follow a link that crosses into another vault. It opens a read-only peek, leavin
 Try `esc` to close it, then follow it again and use `o` to go into that vault. `ctrl+o` comes back.
 
 ![A peek over notes' index: kestrel's docs/architecture.md drawn in a large floating window titled kestrel ›
-docs/architecture.md, its bottom border reading o go there · t keep as a tab · z fill · esc closes, the status line
-still in notes](../images/vaults-peek.png)
+docs/architecture.md, its bottom border reading o go there · t keep as a tab · z fill · esc closes, the top bar still
+in notes](../images/vaults-peek.png)
 
 Some links lead through symlinks or outside known places. Read the question before allowing one: consent changes
 which files slipbox can follow. The [symlink rules](../manual/vaults.md#links-that-lead-out) explain the scope.
@@ -83,7 +84,7 @@ leads](../images/vaults-link-question.png)
 slipbox ~/work/kestrel
 ```
 
-You're in kestrel. The status line says `kestrel · main`, and the breadcrumb `~ › work › ◈ kestrel ›`. Press `-`, and
+You're in kestrel. The top bar says `◈ kestrel · main`, and the breadcrumb `~ › work › ◈ kestrel ›`. Press `-`, and
 the view zooms out to `~/work`. kestrel is highlighted, its tree under it, and the two others are beside it, each with
 its branch dimmed at its end:
 
@@ -96,8 +97,8 @@ its branch dimmed at its end:
 ```
 
 - `l` on `product` unfolds it in place, to look in.
-- `enter` on it goes into product, with its own tabs. The status line says `product · feature/okrs`, and the view
-  stays at `~/work`.
+- `enter` on it goes into product, with your workspace there. The top bar says `◈ product · feature/okrs`, and the
+  view stays at `~/work`.
 - `ctrl+o` comes back into kestrel, its tabs as you left them.
 - The git panel (`space g`) in kestrel is kestrel's, the other two folded under it, in Other repositories.
 
@@ -202,7 +203,7 @@ In `notes`:
 
 - `/` at a path's start, and a wikilink's name, reach the notes' own.
 - The explorer lists its notes and data files, as `files.show` does in a folder with `.slipbox/`. `a` shows the rest.
-- The status line says `kestrel-notes · main`: its git is the repository's, and you commit from the git panel as in
+- The top bar says `◈ kestrel-notes · main`: its git is the repository's, and you commit from the git panel as in
   kestrel.
 
 `shift+v` on the folder in kestrel's explorer, or `slipbox deinit notes`, makes it part of kestrel again.
@@ -224,7 +225,7 @@ In `notes`:
 slipbox /etc/nginx/nginx.conf
 ```
 
-You're in Elsewhere. The status line says `Elsewhere ‹ /etc/nginx/nginx.conf ›`.
+You're in Elsewhere. The top bar says `Elsewhere`, and the status line `‹ /etc/nginx/nginx.conf ›`.
 
 - **You may not write it**, so it opens read-only, and slipbox says why:
   `/etc/nginx/nginx.conf is read-only: you may not write it (no permission)`. slipbox never asks for more rights.
@@ -247,11 +248,11 @@ open `/mnt/backup` next week, and `nginx.conf`'s tab is there.
 
 ## Check your context
 
-Before searching, renaming a file or collecting references, glance at the vault shown in the status line. A change
+Before searching, renaming a file or collecting references, glance at the vault shown on the top bar. A change
 of explorer view alone is not a change of vault. `slipbox info` can report the current folder's context from the CLI.
 
-![kestrel's docs/architecture.md in a tab of its own, gone into from a link in notes: the status line reads kestrel ·
-main, with the back arrow before the file's path](../images/vaults-links.png)
+![kestrel's docs/architecture.md in a tab of its own, gone into from a link in notes: the top bar reads ◈ kestrel ·
+main, the status line the back arrow before the file's path](../images/vaults-links.png)
 
 **Next:** [Coming from Obsidian or zk](from-obsidian-or-zk.md), if that is where your notes already live. Otherwise
 continue with [Reviewing changes with Git](code-and-git.md).

@@ -1089,6 +1089,8 @@ it back to the terminal.
 | `¹` on the right rail | shows the footnotes, focused, or hides them |
 | the top bar's `slipbox` | opens the command palette |
 | a window header's `Read` / `Lens` / `Source` | shows it rendered, in the lens or as written; one in italics, why not |
+| the top bar's vault | lists the named folders, and `enter` goes into one |
+| the top bar's branch | in a repository: pull, push and fetch, then the branches to check one out |
 | a heading in a window's breadcrumb | scrolls that window to it, and focuses it |
 | the breadcrumb's icon / its `…` | finds a heading / lists the headings the cursor is under |
 | a tab | switches to it, a drag moves it, and a middle-click or its `×` closes it |
@@ -1098,7 +1100,7 @@ it back to the terminal.
 | a task's box (`☐` / `☑`) | ticks or unticks it |
 | the status line's `‹` / `›` | back / forward in the window's history |
 | the status line's path | lists the window's history, with Copy path first |
-| the status line's vault and branch | in a repository: pull, push and fetch, then the branches to check one out |
+| the status line's vault and branch, while the top bar is hidden | the same as the top bar's branch |
 | a change's sign in the gutter | shows the change, with Revert and Stage |
 | the status line's problems | the Problems panel on This file (on All when the file has none), or closes it |
 | a sign in the problems bar, a coloured line number | the Problems panel, on that problem |

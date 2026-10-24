@@ -15,7 +15,7 @@ export function branchAt(path: string): string | null {
   return h.branch ?? h.commit?.slice(0, 7) ?? null;
 }
 
-/** What no-vault is called where you read it (VV-D3): the status line, the messages, a peek's title. */
+/** What no-vault is called where you read it (VV-D3): the top bar, the messages, a peek's title. */
 export const ELSEWHERE = "Elsewhere";
 
 /**

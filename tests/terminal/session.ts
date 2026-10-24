@@ -84,6 +84,24 @@ export interface SessionOptions {
 /** What a session is made with, once: its folders and config, and its terminal. A restart can't change them. */
 const MADE_ONCE = ["home", "config", "size", "keyboard", "graphics", "frameMax", "readSize"] as const;
 
+/**
+ * Where you are, read off a top bar's row (WSP-D4): what's between the `slipbox` chip and the right end's items (the
+ * vault's state, `indexing 3…`, and the outline's button), each 3 or more columns apart from it, the vault's glyph left
+ * out; empty when the middle says nothing, or there's no bar (no chip on the row).
+ */
+export function whereOnBar(bar: string): string {
+  // No chip: the bar is hidden (or zen), the row something else's.
+  const chip = bar.indexOf("slipbox");
+  if (chip < 0) return "";
+  const parts = bar
+    .slice(chip + "slipbox".length)
+    .trim()
+    .split(/ {3,}/)
+    // The vault's state, `…` drawn `~` in ASCII; a button, one glyph.
+    .filter((p) => p && !/^indexing \d+[…~]$/.test(p) && [...p].length > 1);
+  return (parts[0] ?? "").replace(/^[^\p{L}\p{N}~…/.\s] /u, "");
+}
+
 export class CheckFailed extends Error {}
 
 /** What the check needs isn't there (said why): skipped, named — never a silent pass. */
@@ -520,6 +538,26 @@ export class Session {
     const has = () =>
       typeof needle === "string" ? this.statusLine().includes(needle) : needle.test(this.statusLine());
     await this.until(has, timeout, `the status line to show ${needle}`);
+  }
+
+  /**
+   * Where you are, as the top bar's middle says it (WSP-D4), the vault's glyph left out: `kestrel · main ↑2`,
+   * `~ › notes`, `kestrel@agent/sync-retry`, `Elsewhere`; empty while it says nothing. Its parts are a space apart, and
+   * 3 or more from the chip and the right end's items.
+   */
+  whereText(): string {
+    return whereOnBar(this.topBar());
+  }
+
+  /**
+   * Wait for the top bar to say where you are (`whereText`): a string is the whole of it, a RegExp is tested against
+   * it. With `status`, the status line shows that at the same time (the file there, say).
+   */
+  async where(needle: string | RegExp, status?: string | RegExp | null, timeout = WAIT): Promise<void> {
+    const test = (n: string | RegExp, s: string, whole: boolean) =>
+      typeof n === "string" ? (whole ? s === n : s.includes(n)) : n.test(s);
+    const has = () => test(needle, this.whereText(), true) && (!status || test(status, this.statusLine(), false));
+    await this.until(has, timeout, `the top bar to say where: ${needle}${status ? `, the status line ${status}` : ""}`);
   }
 
   /** A message showing: in its floating box (a long one wraps, so the needle is kept short). */

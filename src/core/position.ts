@@ -303,16 +303,17 @@ export interface SessionTab {
   pinned?: boolean;
 }
 
-/** A set of tabs kept apart, and when it was left: a branch's (5.9), a folder of home's (VV-D2). */
+/** A workspace kept apart (WSP-D1), and when it was left: a branch's (5.9), a folder of home's (VV-D2). */
 export interface TabSet {
   tabs: SessionTab[];
   activeTab: number;
   at: string;
 }
 
+/** A vault's `session.json`: its workspaces, and what they share (WSP-D2): the panes, the UI overrides, the recents. */
 export interface SessionState {
   version: 1;
-  /** The tabs as they were last — whatever the branch, or the folder of home. */
+  /** The tabs as they were last — whatever the branch, or the folder of home: the vault's own workspace. */
   tabs: SessionTab[];
   activeTab: number;
   /** The tabs each branch had when it was left (5.9): a switch back brings them back. */

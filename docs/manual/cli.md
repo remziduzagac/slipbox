@@ -1795,7 +1795,7 @@ slipbox uninstall --purge --yes
 - `--yes`: remove them. Without it, it only lists.
 - `--purge`: slipbox's four folders too:
   - your settings
-  - its state (sessions, the scratch, the trash)
+  - its state (workspaces, the scratch, the trash)
   - its data (your own words, the language servers it installed)
   - its cache
 

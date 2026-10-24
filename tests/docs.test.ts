@@ -134,6 +134,21 @@ function rootsForVaults(text: string): string[] {
 const saysRoot = (message: string) =>
   /\s/.test(message) && NOT_VAULT.test(message.replace(ROOT_NAMES, "").replace(ROOT_ELSEWHERE, ""));
 
+/**
+ * "Session" for what slipbox keeps of your work in a place, which what users read calls a workspace (WSP-D1): its
+ * session, your sessions, kept in the session, a session choice. A sitting stays a session (a first session, between
+ * sessions), and so do the names that keep the word, shown as code: `ui.restore_session`, `session.json`.
+ */
+const WORKING_SESSION =
+  /\b(?:its|your|their|the vault's|the folder's|home's|one|own) sessions?\b|\bsessions?, (?:the )?(?:scratch|tabs|cursors)\b|\b(?:kept|remembered|saved) in the session\b|\bsession (?:choices?|overrides?)\b|\brestores? (?:its|the) session\b/i;
+
+/** Where a doc says session for a workspace, as `line: text`; code, fenced or a span, left out. */
+function sessionsForWorkspaces(text: string): string[] {
+  const kept = text.replace(/^(```|~~~)[^\n]*\n[\s\S]*?^\1[ \t]*$/gm, blank).replace(/(`+)[\s\S]*?[^`]\1(?!`)/g, blank);
+  const lines = text.split("\n");
+  return kept.split("\n").flatMap((line, i) => (WORKING_SESSION.test(line) ? [`${i + 1}: ${lines[i]!.trim()}`] : []));
+}
+
 let messagesRead: Promise<{ where: string; text: string }[]> | undefined;
 /**
  * What slipbox can print: every string in its source, a template's substitutions left out, and the strings of the
@@ -386,6 +401,25 @@ describe("the user documentation (DOC)", () => {
     expect(saysRoot("--root x isn't a vault; [trust] roots lists it; walk.root_markers; :root { }")).toBe(false);
     expect(saysRoot("root")).toBe(false); // a value: the JSON's `mode`, a change's kind
   }, 60_000); // every source file parsed, when the test above hasn't
+
+  test("workspace, never session, for what slipbox keeps of your work in a place: the docs, the README, the skill, the messages (WSP-D1)", async () => {
+    const files = [...userDocs(), join(TOP, "README.md"), join(TOP, "skills", "slipbox", "SKILL.md")];
+    expect(files.flatMap((f) => sessionsForWorkspaces(read(f)).map((r) => `${relative(TOP, f)}:${r}`))).toEqual([]);
+    expect((await messages()).filter((m) => WORKING_SESSION.test(m.text)).map((m) => `${m.where}: ${m.text}`)).toEqual(
+      [],
+    );
+    // The check catches what it looks for, and leaves a sitting and the names that keep the word alone.
+    expect(
+      sessionsForWorkspaces(
+        "Its session, scratch and trash came along.\nA first session; between sessions.\n" +
+          "`ui.restore_session` and `session.json` stay.\nIt is kept in the session.\nThe palette's session choices.\n",
+      ),
+    ).toEqual([
+      "1: Its session, scratch and trash came along.",
+      "4: It is kept in the session.",
+      "5: The palette's session choices.",
+    ]);
+  }, 60_000); // every source file parsed, when the tests above haven't
 
   test("no link into the blueprint", () => {
     expect(

@@ -22,7 +22,7 @@ Obsidian's and zk's links, tags, aliases and link settings are read as those app
 opens unchanged ([Coming from Obsidian or zk](../guides/from-obsidian-or-zk.md)).
 
 **Opening a folder writes nothing into it.** What slipbox keeps for itself is in four folders of its own, outside your
-notes. That's its index, your sessions, the trash and the scratch ([Where slipbox keeps
+notes. That's its index, your workspaces, the trash and the scratch ([Where slipbox keeps
 things](environment-and-storage.md#where-slipbox-keeps-things)).
 
 It writes into your folders only what you ask for:

@@ -62,7 +62,7 @@ the vault found, its config, the vault recorded as seen, and the graph. Recordin
 opens, so a named folder moved here by hand has its cache adopted first (`21.8`, [roots.md](roots.md) § State by
 vault). The App is told what that found, and doesn't record the vault a second time, which would find nothing moved.
 
-Shutdown saves positions and the session whatever ends the process: `ctrl+q`, or `SIGTERM`, `SIGHUP`,
+Shutdown saves positions and the workspace whatever ends the process: `ctrl+q`, or `SIGTERM`, `SIGHUP`,
 `SIGINT`, `SIGQUIT` or `SIGPIPE`.
 
 Everything else is testable headlessly with `TextCanvas` (see [testing.md](testing.md)).
@@ -265,7 +265,7 @@ The CLI's commands are the user's reference, [cli.md](../../docs/manual/cli.md);
 | `core/commands.ts` | 0.8 | `CommandRegistry` and `Keymap` |
 | `core/command-specs.ts` | 0.8, parity | the `CommandSpec` type and `COMMAND_SPECS`, built from `core/commands/*.ts` |
 | `core/commands/*.ts` | 0.8, parity, D235 | every command id with its CLI equivalent, by area |
-| `core/position.ts` | 3.4, 3.5, 3.15 | anchors, reading positions, session file |
+| `core/position.ts` | 3.4, 3.5, 3.15 | anchors, reading positions, the session file (the workspaces) |
 | `core/watch.ts` | 5.1, 5.2 | per-directory watcher, debounce, polling fallbacks |
 | `core/vault-feed.ts` | 5.1, 5.9, 5.10 | the watcher's news into a graph, held while git writes (TUI) |
 | `core/capture.ts` | 8.2–8.4 | scratch location, reference format, append |
@@ -321,7 +321,7 @@ The CLI's commands are the user's reference, [cli.md](../../docs/manual/cli.md);
 | `tui/gitpanel.ts` | GIT-D8, GIT-D12 | the git panel: its top, buttons, rows, keys and footer; `space g` |
 | `tui/gitbranchview.ts` | GIT-D9, GIT-D10 | the git panel's branches: worktrees, bases; made, removed, merged |
 | `tui/gitreposview.ts` | VV-D10, GIT-D11 | the git panel's repositories in the view, ordered by what needs attention |
-| `tui/gitmouse.ts` | GIT-D8 | the git panel by mouse; the status line's branch; a change's sign in the gutter |
+| `tui/gitmouse.ts` | GIT-D8 | the git panel by mouse; the branch where you are; a change's sign in the gutter |
 | `tui/diffview.ts` | GIT-D2, GIT-D7 | the diff window: blocks or lines, side by side; `tab`, `enter`, `esc` |
 | `tui/review.ts` | GIT-D3 | the review: a hunk at a time, kept, reverted, noted; its keys |
 | `tui/mergescreen.ts` | GIT-D5 | the merge screen: a card a conflict, the result, saved and staged; its keys |
@@ -339,6 +339,7 @@ The CLI's commands are the user's reference, [cli.md](../../docs/manual/cli.md);
 | `tui/spelling.ts` | 25.6 | misspelt words where a window shows them: the marks, `] s`, `z =`, `z g` |
 | `tui/completion.ts` | 19.16, 20.13, 25.5 | completion as typed: a server's items, links' targets, open files' words |
 | `tui/saveas.ts` | 10.14 | the Save As window an export opens: places, the folder's entries, the name; its keys |
+| `tui/where.ts` | WSP-D4, WSP-D5 | where you are, on the top bar or the status line: vault, workspace, branch, cut |
 
 ## Data flow for one note
 
@@ -445,7 +446,7 @@ and data each have a folder of their own, and a vault's cache and state are kept
 | parse cache, shared (`20.11`) | `$XDG_CACHE_HOME/slipbox/parsed.db` (by content) |
 | pictures (`12.12`, `12.15`) | `$XDG_CACHE_HOME/slipbox/images/` (a file per web address; SVGs as drawn, by width) |
 | reading positions (`21.8`) | `$XDG_STATE_HOME/slipbox/positions.json` (by file, the machine's) |
-| session | `$XDG_STATE_HOME/slipbox/<key>/session.json` |
+| workspaces (WSP-D1) | `$XDG_STATE_HOME/slipbox/<key>/session.json` |
 | where an export went last (`10.14`) | `$XDG_STATE_HOME/slipbox/<key>/export.json` |
 | branch heads seen (`20.21`) | `$XDG_STATE_HOME/slipbox/<key>/heads.json` (each branch's last commit) |
 | clipboard fallback (no OSC 52 or clipboard tool) | `$XDG_STATE_HOME/slipbox/<key>/clipboard.txt` |

@@ -138,7 +138,7 @@ export interface UninstallPlan {
 
 const KEPT: Record<StoreKind, string> = {
   config: "your settings and themes",
-  state: "your sessions, the scratch, the trash, undo, reading positions, named folders",
+  state: "your workspaces, the scratch, the trash, undo, reading positions, named folders",
   data: "your own words (spelling), language servers installed for you",
   cache: "indexes and pictures, all made again when missing",
 };

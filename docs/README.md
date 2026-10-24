@@ -38,7 +38,7 @@ Understand a part of the product: how it works, ordinary operations and importan
 - [Finding and replacing](manual/finding.md): switcher, search, find/replace, tags, document types and outline.
 - [Files and folders](manual/files.md): explorer, create, copy, rename, move, trash and link updates.
 - [Links and backlinks](manual/links-and-vaults.md): forms, resolution, backlinks, repairs and conventions.
-- [Vaults, home and Elsewhere](manual/vaults.md): boundaries, sessions, names, worktrees and symlink consent.
+- [Vaults, home and Elsewhere](manual/vaults.md): boundaries, workspaces, names, worktrees and symlink consent.
 - [Scratch and context](manual/scratch-and-context.md): gather references, excerpts and related files to share.
 - [Code and language tools](manual/code.md): code cells, servers, linters, completion and diagnostics.
 - [Git](manual/git.md): changes, staging, commits, branches, review, merge and rebase.

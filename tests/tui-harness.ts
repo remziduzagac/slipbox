@@ -17,6 +17,7 @@ import { openGraph } from "../src/core/graph.ts";
 import { locateVault } from "../src/core/vault.ts";
 import { App, type Host } from "../src/tui/app.ts";
 import { TextCanvas } from "../src/tui/canvas.ts";
+import { whereOf, whereText } from "../src/tui/where.ts";
 import type { Line } from "../src/core/layout/ir.ts";
 
 /** The sandbox of the file running, which `makeSandbox` sets. */
@@ -198,6 +199,11 @@ export const lineText = (l: Line) => {
 };
 export const statusRow = (frame: string) => frame.split("\n").at(-1)!;
 export const topRow = (frame: string) => frame.split("\n")[0]!;
+/** Where you are (WSP-D4), uncut and without the glyph, as the status line says it: `research · main`, `Elsewhere`. */
+export const whereNow = (h: Harness) => {
+  const t = whereText({ ...whereOf(h.app), glyph: "" });
+  return t.vault + t.branch;
+};
 export const rowStarting = (h: Harness, prefix: string) =>
   h.app.currentLayout(h.app.view!).lines.findIndex((l) =>
     l.spans

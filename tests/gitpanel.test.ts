@@ -299,10 +299,10 @@ describe("space g, the status line's branch, a change's sign (GIT-D8, GIT-D12)",
     expect(app.panels.sidebarShown).toBe(false);
   });
 
-  test("the status line's vault and branch clicked: push and fetch, then the branches; one picked, checked out", async () => {
+  test("the top bar's branch clicked: push and fetch, then the branches; one picked, checked out", async () => {
     const root = repo();
     const { app, click } = await panel(root, "a.md", false);
-    click("status:branch");
+    click("top:branch");
     const list = app.overlay as ListOverlay;
     expect(list.title).toStartWith("Branches (2)");
     expect(list.items.map((i) => i.label)).toEqual([

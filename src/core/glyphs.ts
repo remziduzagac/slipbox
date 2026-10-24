@@ -131,7 +131,7 @@ export interface Glyphs {
   gitChange: string;
   gitDelete: string;
   gitTopDelete: string;
-  /** The status line's branch, ahead of its upstream and behind it (26.6): `main ↑2 ↓1`. */
+  /** The branch where you are, ahead of its upstream and behind it (26.6): `main ↑2 ↓1`. */
   gitAhead: string;
   gitBehind: string;
   /** The status line's back and forward, around the path; the place you're at, in its history. */

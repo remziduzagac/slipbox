@@ -13,9 +13,34 @@ import type { Role, Color } from "../core/theme/theme.ts";
 import { SEVERITIES, worst } from "../core/diagnostics.ts";
 import { severityGlyph, SEVERITY_ROLE } from "./draw-pane.ts";
 import { MODES, type ViewMode, viewMode } from "./modes.ts";
+import { fitWhere, whereOf } from "./where.ts";
 
 /** The chip for a window's mode: the button its header has selected, by its label (HDR-D2). */
 const CHIP = Object.fromEntries(MODES.map((m) => [m.mode, ` ${m.label.toUpperCase()} `])) as Record<ViewMode, string>;
+
+/**
+ * Where you are on the status line (WSP-D5), in `room` columns from `x`, while the top bar doesn't say it: the same parts
+ * as the bar's, without the glyph, dim; in a repository, clicked, the branches' menu (GIT-D8). The columns it took, its
+ * two spaces after it included; none when it isn't drawn (the bar says it, or fewer than 8 columns).
+ */
+function drawWhereOnStatus(app: App, c: Canvas, x: number, band: Band, geo: Geometry, room: number): number {
+  const fit = room >= 8 && !geo.whereOnTop ? fitWhere({ ...whereOf(app), glyph: "" }, room) : null;
+  if (!fit) return 0;
+  const theme = app.theme;
+  const bg = roleStyle(theme, "status", pageBg(theme)).bg;
+  const dim = { ...roleStyle(theme, "status_dim", bg), bg };
+  const id = app.git.checkout ? "status:branch" : null;
+  const y = mid(band);
+  const w = drawText(
+    c,
+    x,
+    y,
+    fit.vault + fit.branch,
+    id && app.mouse.hover === id ? roleStyle(theme, "hover", bg) : dim,
+  );
+  if (id) geo.hot.push({ id, x, y: band.y, w, h: band.h });
+  return w + drawText(c, x + w, y, "  ", dim);
+}
 
 export function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void {
   const theme = app.theme;
@@ -60,7 +85,10 @@ export function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void
   const whyText = why ? `${app.glyphs.markNotIndexed} not indexed: ${sanitize(why)}  ` : "";
   const dim = { ...roleStyle(theme, "status_dim", st.bg), bg: st.bg };
   if (!view) {
-    if (whyText) drawText(c, x + 1, y, truncate(whyText.trimEnd(), Math.max(0, c.width - x - 2)), dim);
+    // No note open (a folder with none, home's left out): where you are all the same, while the top bar doesn't say it.
+    x += 1;
+    x += drawWhereOnStatus(app, c, x, band, geo, Math.min(40, c.width - x - 1));
+    if (whyText) drawText(c, x, y, truncate(whyText.trimEnd(), Math.max(0, c.width - x - 1)), dim);
     return;
   }
   const buf = view.buf;
@@ -110,25 +138,9 @@ export function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void
 
   const rightW = stringWidth(right) + 1;
   x += drawText(c, x, y, " ", st);
-  // The root, by name or path, and its branch (20.14, 21.9), while the path keeps a readable width (it goes before the path does).
-  // Where the file is (21.9), in the room the path leaves it — at most 40 columns.
-  const rootRoom = Math.min(40, c.width - x - rightW - 4 - 24);
-  const vault = rootRoom >= 8 ? app.git.vaultStatus(rootRoom) : "";
-  if (vault) {
-    // In a repository, clicked: the branches, pull and push (GIT-D8).
-    const id = app.git.checkout ? "status:branch" : null;
-    const w = drawText(
-      c,
-      x,
-      y,
-      sanitize(vault),
-      id && app.mouse.hover === id
-        ? roleStyle(theme, "hover", st.bg)
-        : { ...roleStyle(theme, "status_dim", st.bg), bg: st.bg },
-    );
-    if (id) geo.hot.push({ id, x, y: band.y, w, h: band.h });
-    x += w + drawText(c, x + w, y, "  ", { ...roleStyle(theme, "status_dim", st.bg), bg: st.bg });
-  }
+  // Where the file is (21.9): the vault, by name or path, and its branch (20.14), only while the top bar doesn't say it
+  // (WSP-D5), and while the path keeps a readable width (it goes before the path does) — at most 40 columns.
+  x += drawWhereOnStatus(app, c, x, band, geo, Math.min(40, c.width - x - rightW - 4 - 24));
   const pathId = "status:path";
   // The path shrinks to leave room for its marker (reloaded / deleted) and the right-hand side;
   // the watch marker after it is dropped when it doesn't fit.

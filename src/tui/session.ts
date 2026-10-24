@@ -1,5 +1,7 @@
-// The session: the tabs, windows and UI overrides kept per vault and branch and restored on start, and the state
-// published for the command line — the notes unsaved here (9.9), what's on screen.
+// The session: a vault's workspaces (WSP-D1, WSP-D2) — the tabs and windows kept per branch, per folder of home opened
+// by name, else the vault's last — and what they share (the panes, the UI overrides, the recents), kept and restored
+// on start; and the state published for the command line — the notes unsaved here (9.9), what's on screen. The code
+// keeps the word session (WSP-D6); users read workspace.
 
 import { writeDirty } from "../core/stale.ts";
 import {
@@ -16,7 +18,7 @@ import { listThemes } from "../core/theme/index.ts";
 import type { App, View, UiState } from "./app.ts";
 import { uiDefaults } from "./app.ts";
 
-/** The session kept and restored, and the state published for the CLI. */
+/** The workspaces kept and restored, and the state published for the CLI. */
 export class Session {
   constructor(readonly app: App) {}
 

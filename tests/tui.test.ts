@@ -72,6 +72,7 @@ import {
   lineText,
   statusRow,
   topRow,
+  whereNow,
   rowStarting,
   stepToEnd,
   type Harness,
@@ -3475,7 +3476,7 @@ describe("top bar, tab strip, status line", () => {
     const h = await harness({ open: "notes/alpha.md", width: 160 });
     h.app.moveCursor(h.app.view!, { row: rowStarting(h, "Back to"), col: 0 });
     const f = h.frame();
-    expect(topRow(f)).not.toContain("Section One"); // the top bar's middle stays empty
+    expect(topRow(f)).not.toContain("Section One"); // the top bar's middle says where you are, not the heading
     const pane = h.app.geometry!.panes[0]!;
     const rows = f.split("\n");
     expect(rows[pane.y - 2]).toMatch(/§ Alpha › Section One/);
@@ -11113,8 +11114,8 @@ describe("vaults in the TUI (17.x)", () => {
     ]);
     expect(h.frame()).toContain("◈ box");
     expect(h.frame()).toContain("◈ code");
-    expect(h.app.git.vaultStatus()).toBe("Elsewhere"); // one place, wherever it's opened (VV-D3)
-    expect(statusRow(h.frame())).toContain("Elsewhere");
+    expect(whereNow(h)).toBe("Elsewhere"); // one place, wherever it's opened (VV-D3)
+    expect(topRow(h.frame())).toContain("Elsewhere");
     h.app.vaults.enterRoot(h.app.explorer.rows()[0]!);
     expect(h.app.loc).toMatchObject({ mode: "vault", root: join(dir, "box") });
   });
@@ -14908,35 +14909,42 @@ describe("a branch switch as one event (5.9)", () => {
     mkdirSync(join(root, ".slipbox"));
     writeFileSync(join(root, "a.md"), "# A\n");
     const h = await harness({ root, open: "a.md" });
-    expect(statusRow(h.frame())).not.toContain(" · ");
+    expect(topRow(h.frame())).not.toContain(" · ");
     if (git(root, "init", "-q", "-b", "main").exitCode !== 0) return;
     const later = Date.now() + 5_000; // the next look for a repository
     (h.app as unknown as { now: () => number }).now = () => later;
-    expect(h.app.git.checkHead()).toBe(true); // news for the status line (20.14)
-    expect(statusRow(h.frame())).toContain(" · main");
+    expect(h.app.git.checkHead()).toBe(true); // news for the top bar (20.14)
+    expect(topRow(h.frame())).toContain(" · main");
     expect(h.app.messages.some((m) => m.text.startsWith("switched"))).toBe(false); // not a switch
   });
 
-  test("the status line says where the file is (21.9): an unnamed root by its path, cut from the front to fit, the branch kept; Elsewhere by its name", async () => {
+  test("where the file is (21.9, WSP-D4, WSP-D5): an unnamed vault by its path, cut from the front to fit, the branch kept; the status line's only while the top bar is hidden, at most 40 columns; Elsewhere by its name", async () => {
     const { elsewhereAt } = await import("../src/core/vault.ts");
     const root = join(mkdtempSync(join(sandbox, "a-folder-with-a-rather-long-name-")), "experiment");
     mkdirSync(root);
     writeFileSync(join(root, "a.md"), "# A\n");
     if (git(root, "init", "-q", "-b", "main").exitCode !== 0) return;
-    const h = await harness({ root, open: "a.md" });
+    const h = await harness({ root, open: "a.md", width: 70 });
     expect(h.app.loc.name).toBeNull(); // no remote, no .slipbox/ name
-    const row = statusRow(h.frame());
-    expect(row).toMatch(/ …[^ ]*\/experiment · main /); // its last folders, and the branch
-    expect(row).not.toContain(root); // too long for its 40 columns
-    expect(h.app.git.vaultStatus(200)).toBe(`${root} · main`);
-    // However wide the screen, at most 40 columns: the note's own path comes first.
+    expect(whereNow(h)).toBe(`${root} · main`);
+    const top = topRow(h.frame());
+    expect(top).toMatch(/◈ …[^ ]*\/experiment · main/); // its last folders, and the branch
+    expect(top).not.toContain(root);
+    expect(statusRow(h.frame())).not.toContain("experiment"); // said once
+    // Room enough: the whole path.
     const wide = await harness({ root, open: "a.md", width: 300 });
-    expect(statusRow(wide.frame())).not.toContain(root);
+    expect(topRow(wide.frame())).toContain(`◈ ${root} · main`);
+    // The top bar hidden: the status line says it, however wide the screen at most 40 columns, the note's own path
+    // first.
+    wide.app.ui.top_bar = false;
+    const row = statusRow(wide.frame());
+    expect(row).toMatch(/ …[^ ]*\/experiment · main /);
+    expect(row).not.toContain(root);
     // Outside home and every vault: Elsewhere, no branch (VV-D3).
     const plain = mkdtempSync(join(sandbox, "plain-status-"));
     writeFileSync(join(plain, "p.md"), "# P\n");
     const p = await harness({ loc: elsewhereAt(plain), open: "p.md" });
-    expect(p.app.git.vaultStatus(200)).toBe("Elsewhere");
+    expect(whereNow(p)).toBe("Elsewhere");
   });
 
   test("started again, each branch opens on its own tabs", async () => {
@@ -19261,18 +19269,18 @@ describe("the remote's commands and stash (26.6)", () => {
   const list = (h: Harness) => h.app.overlay as ListOverlay;
   const type = (s: string) => [...s].map((ch) => (ch === " " ? "space" : ch));
 
-  test("fetch, the status line's ↓; a pull, unsaved notes saved or kept first, then fast-forwarded", async () => {
+  test("fetch, the branch's ↓; a pull, unsaved notes saved or kept first, then fast-forwarded", async () => {
     await isolated(async () => {
       const { root, other } = withRemote();
       commit(other, "b.md", "theirs\n");
       git(other, "push", "-q");
       const h = await harness({ root, open: "a.md", width: 120, height: 40 });
       await h.app.git.refreshNow();
-      expect(h.app.git.vaultStatus()).toEndWith(" · main");
+      expect(whereNow(h)).toEndWith(" · main");
       await h.app.run("git.fetch");
       expect(h.app.messages.some((m) => m.text === "fetching…")).toBe(true);
       expect(await said(h, "fetched: main is 1 commit behind origin/main — p pulls (:pull)")).toBe(true);
-      expect(await until(() => h.app.git.vaultStatus().endsWith(" · main ↓1"))).toBe(true);
+      expect(await until(() => whereNow(h).endsWith(" · main ↓1"))).toBe(true);
       // Unsaved: asked first, as a branch switch asks; cancelled, nothing pulled.
       const a = h.app.view!.buf;
       a.edit(0, 0, "edited ");
@@ -19291,7 +19299,7 @@ describe("the remote's commands and stash (26.6)", () => {
       expect(await said(h, /^pulled: main fast-forwarded to [0-9a-f]+$/)).toBe(true);
       expect(readFileSync(join(root, "b.md"), "utf8")).toBe("theirs\n");
       expect(readFileSync(join(root, "a.md"), "utf8")).toBe("edited a\n");
-      expect(await until(() => h.app.git.vaultStatus().endsWith(" · main"))).toBe(true);
+      expect(await until(() => whereNow(h).endsWith(" · main"))).toBe(true);
       // Nothing more: said so.
       await h.app.run("git.pull");
       expect(await said(h, "main is up to date with origin/main")).toBe(true);
@@ -19307,7 +19315,7 @@ describe("the remote's commands and stash (26.6)", () => {
       const h = await harness({ root, open: "a.md", width: 120, height: 40 });
       const head = git(root, "rev-parse", "HEAD");
       await h.app.run("git.fetch");
-      expect(await until(() => h.app.git.vaultStatus().endsWith(" · main ↑1 ↓1"))).toBe(true);
+      expect(await until(() => whereNow(h).endsWith(" · main ↑1 ↓1"))).toBe(true);
       await h.app.run("git.pull");
       expect(await until(() => h.app.overlay?.kind === "list")).toBe(true);
       expect(list(h).items.map((i) => i.label)).toEqual([
@@ -19326,11 +19334,11 @@ describe("the remote's commands and stash (26.6)", () => {
       commit(root, "a.md", "mine\n");
       const h = await harness({ root, open: "a.md", width: 120, height: 40 });
       await h.app.git.refreshNow();
-      expect(h.app.git.vaultStatus()).toEndWith(" · main ↑1");
+      expect(whereNow(h)).toEndWith(" · main ↑1");
       await h.app.run("git.push");
       expect(await said(h, "pushed main to origin/main — this vault isn't trusted, so no hook ran")).toBe(true);
       expect(git(bare, "rev-parse", "main")).toBe(git(root, "rev-parse", "HEAD"));
-      expect(await until(() => h.app.git.vaultStatus().endsWith(" · main"))).toBe(true);
+      expect(await until(() => whereNow(h).endsWith(" · main"))).toBe(true);
       // A new branch: asked; no, nothing; yes, pushed and tracked.
       git(root, "switch", "-q", "-c", "topic");
       await h.app.run("git.push");
@@ -19423,15 +19431,17 @@ describe("Elsewhere: no-vault (VV-D3)", () => {
     return dir;
   };
 
-  test("opened there: Elsewhere on the status line, its files by their whole paths, and what needs an index said missing", async () => {
+  test("opened there: Elsewhere on the top bar, its files by their whole paths, and what needs an index said missing", async () => {
     const { elsewhereAt } = await import("../src/core/vault.ts");
     const dir = nowhere();
     writeFileSync(join(dir, "broken.md"), "[gone](gone.md)\n"); // a link that reaches nothing: never counted here
     const h = await harness({ loc: elsewhereAt(dir, join(dir, "b.md")), open: join(dir, "b.md") });
     expect(h.app.view!.buf.key).toBe(join(dir, "b.md"));
     expect(h.app.view!.buf.readOnly).toBeNull();
-    expect(h.app.git.vaultStatus()).toBe("Elsewhere");
-    expect(statusRow(h.frame())).toMatch(/Elsewhere .*b\.md/);
+    expect(whereNow(h)).toBe("Elsewhere");
+    expect(topRow(h.frame())).toContain("Elsewhere");
+    expect(statusRow(h.frame())).toMatch(/b\.md/);
+    expect(statusRow(h.frame())).not.toContain("Elsewhere"); // said once (WSP-D5)
     // No index: backlinks and search say so, never an empty list.
     await h.app.run("backlinks.open");
     expect(h.app.overlay).toBeNull();

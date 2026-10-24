@@ -872,9 +872,9 @@ export const NAVIGATING: Check[] = [
     run: async (s) => {
       await s.status("meetings/2026-09-14-weekly.md");
       // --root: started with no path in a folder that is no root (the check's own), halden all the same — its
-      // session back (the weekly note), where that folder alone would open as a plain folder.
+      // workspace back (the weekly note), where that folder alone would open as a plain folder.
       await s.restart({ args: ["--root", s.vault], startAt: null, cwd: "" });
-      await s.status(/\bhalden\b.*2026-09-14-weekly\.md/);
+      await s.where(/^halden(?: ·|$)/, /2026-09-14-weekly\.md/);
       s.expect(s.rowOf(/Folders \(\d+\)/) < 0, "halden opened, not the named folders' list");
     },
   },

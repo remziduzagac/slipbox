@@ -205,7 +205,7 @@ export function fileActions(): Record<string, Run> {
           return a.message("warn", (err as Error).message);
         }
         recordFolder(a.loc.root);
-        // Its name from now on: the status line, the Info, what pointers are written with (21.9).
+        // Its name from now on: the top bar, the Info, what pointers are written with (21.9).
         a.loc = rootAt(a.loc.root);
         a.message("info", `${tildePath(a.loc.root)} is named ${name} (.slipbox/ made to hold it)`);
       };

@@ -318,15 +318,16 @@ describe("the screen and where you were (RPT-D2)", () => {
 
   test("drawing failing: the report opens all the same, the frame saying so kept", async () => {
     const h = await harness();
-    const status = h.app.git.vaultStatus.bind(h.app.git);
-    h.app.git.vaultStatus = () => {
+    // Something drawing calls: where you are on the top bar reads the branch.
+    const branch = h.app.git.branch.bind(h.app.git);
+    h.app.git.branch = () => {
       throw new Error("boom");
     };
     await h.app.run("help.report screen");
     h.app.draw(new TextCanvas(120, 30));
     expect(h.app.floating?.kind).toBe("report");
     expect(text(h)).toContain("The screen, 120×30, as the report opened:\n\n```text\nslipbox: drawing failed: boom");
-    h.app.git.vaultStatus = status;
+    h.app.git.branch = branch;
   });
 
   test("the screen asked for with none kept: said, never the place in its stead", async () => {

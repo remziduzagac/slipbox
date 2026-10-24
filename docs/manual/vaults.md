@@ -1,7 +1,8 @@
 # Vaults, home and Elsewhere
 
-A vault determines a file's search and link context, settings and session. The explorer's view is the part of the
-filesystem you are looking at; changing that view does not combine independent vaults.
+A vault determines a file's search and link context and its settings. Your workspace there, the tabs and windows
+you have open, is yours, kept for each vault apart. The explorer's view is the part of the filesystem you are looking
+at; changing that view does not combine independent vaults.
 
 This chapter explains the model and its rules. For a practical session moving between two places, follow
 [Working across folders and vaults](../guides/vaults.md).
@@ -29,12 +30,12 @@ The vault decides:
 - how the links slipbox writes there look (see [Conventions](links-and-vaults.md#how-a-folder-writes-links))
 - what is indexed and searched first. Opening any note or folder in a vault opens the whole vault.
 - its settings, when it has a `.slipbox/config.toml` (see [Configuration](configuration.md))
-- its session, its trash and its history, which slipbox keeps in its own state folder, never in yours
+- your workspaces there, its trash and its history, which slipbox keeps in its own state folder, never in yours
 
 A note has one vault, however you open it. Opening a file deep in a repository opens the repository, from its top.
 
-The status line shows which vault you are in, by its name (below) or its path. `space v i` (`slipbox info`) tells you
-more about it.
+The top bar shows which vault you are in, by its name (below) or its path, and its branch; click the vault to go into
+another ([The screen](screen.md#the-top-bar)). `space v i` (`slipbox info`) tells you more about it.
 
 On the command line, a command works in the vault of the note it names, or of the current folder. `--root` says where
 to start ([The command line](cli.md)).
@@ -52,18 +53,36 @@ A few rules keep vaults predictable:
 - **Several markers in one folder make one vault.** Its settings and name come from `.slipbox/`.
 - **Which markers count** is `walk.root_markers`. Only your own config may set it, since it decides where vaults are.
 
+### Vaults and workspaces
+
+A vault is what's shared: its notes, its links and index, its name, and its settings in `.slipbox/config.toml`, which
+travel with it. Whether you trust a vault is always yours to say, in slipbox's answers on your machine or in your own
+config. A vault's settings can't say it for you.
+
+Your **workspace** is your working state in a place: the tabs you have open and the pinned ones, their splits, and each
+window's note, cursor and history. It's personal, kept in slipbox's state folder, never in the vault. A vault has one
+or more:
+
+- in a git repository, each branch has its own, once you've left it
+- in home, each folder you open by name has its own, beside home's own
+- otherwise, the vault keeps the tabs you last had open
+
+Switching vaults switches workspaces. Switching branches switches the workspace within the vault. The panes' layout,
+your UI settings, and the notes and commands used lately are the vault's, shared by its workspaces. [Where you
+were](screen.md#where-you-were) has what each keeps.
+
 ### Home
 
 Your home folder, `~`, is a vault of its own, home. Its notes are those in your home folder that no other vault holds:
 a list at its top, a letter in `Documents`. Start slipbox in your home folder, or open a note of home's, and home is
-the vault you are in. The status line names it `~`. A link from another vault to a note of home's opens it in a peek,
+the vault you are in. The top bar names it `◈ ~`. A link from another vault to a note of home's opens it in a peek,
 as any other vault's does: `~ › todo.md`, and `o` goes into home.
 
 Home is a vault as the others are. Its notes have backlinks, `/` starts from your home folder, and a wikilink's name
-matches its notes. It has its own session, with its tabs, and each folder of it you open by name, such as
-`slipbox ~/notes`, keeps tabs of its own there: open `~/work` and `~/notes` in turn, and each brings back what you had
-open in it. `slipbox ~` brings back home's own. Its settings are your own config, since it has no `.slipbox/` to hold
-any. It has git only when your home folder is itself a repository.
+matches its notes. It has its own workspace, and each folder of it you open by name, such as `slipbox ~/notes`, has a
+workspace of its own, which the top bar names (`◈ ~ › notes`): open `~/work` and `~/notes` in turn, and each brings
+back what you had open in it. `slipbox ~` brings back home's own. Its settings are your own config, since it has no
+`.slipbox/` to hold any. It has git only when your home folder is itself a repository.
 
 Home's index leaves out what isn't your notes:
 
@@ -111,11 +130,11 @@ the same, and home then holds its notes and no others. When home is full, the me
 ### Elsewhere
 
 A file outside your home folder and outside every vault is in Elsewhere: another drive, a share, `/etc`. Elsewhere is
-one place for the whole machine. It has one set of tabs, wherever its files are, and your own settings.
+one place for the whole machine. It has one workspace, wherever its files are, and your own settings.
 
 Open a folder or a file there (`slipbox /etc/nginx`), or choose one in the explorer, and slipbox is in Elsewhere. The
-status line says so: `Elsewhere ‹ /etc/nginx/nginx.conf ›`. Going into a vault brings back that vault's tabs, and coming
-back brings back Elsewhere's.
+top bar says so: `Elsewhere`. Going into a vault brings back your workspace there, and coming back brings back
+Elsewhere's.
 
 Elsewhere has no index, so what needs one isn't there. slipbox says so, rather than showing an empty list:
 
@@ -239,7 +258,7 @@ Elsewhere, by any of these:
 - `ctrl+click` on a link into it
 - a vault, or a file of one, picked in the explorer
 - a repository or a worktree in the git panel, `o` on it, or a branch's `[Open]` ([Git](git.md))
-- a named folder picked from `space v v`
+- a named folder picked from `space v v`, or from the list the top bar's vault opens when clicked
 - `:e` with the path of one of its notes, or a pointer
 
 Following a link, a pointer, a backlink or a search hit into another vault only peeks at the note. Nothing switches
@@ -249,7 +268,7 @@ slipbox becomes that vault's, as if you had started it there. You get:
 
 - its settings
 - its index
-- its session, with its tabs
+- your workspace there, with its tabs
 - the note open where you were reading it
 
 A message names the vault you are now in.
@@ -264,10 +283,10 @@ A message names the vault you are now in.
 
 ### Worktrees
 
-A git worktree (made with `git worktree add`) is a vault of its own, with its own session, scratch and history. That's
-because a worktree is usually a separate task, often an agent's.
+A git worktree (made with `git worktree add`) is a vault of its own, with its own workspaces, scratch and history.
+That's because a worktree is usually a separate task, often an agent's.
 
-The status line shows a worktree by its repository's name and its branch: `website@fix-menu`.
+The top bar shows a worktree by its repository's name and its branch: `◈ website@fix-menu`.
 
 A worktree's notes are copies of the main checkout's, so their links don't count as backlinks.
 
@@ -305,7 +324,7 @@ each is also known by its full one, `github.com/you/website`.
 A name is never the folder's own name, and never its path, since neither travels.
 
 A folder with neither has no name. That's the case for an Obsidian vault or a zk notebook on its own, or a repository
-with no remote. Links reach such a folder by relative path, and the status line shows its path.
+with no remote. Links reach such a folder by relative path, and the top bar shows its path.
 
 A name is letters, digits, `.`, `_` and `-`, compared without regard to case. It lives in `.slipbox/config.toml`:
 
@@ -394,7 +413,7 @@ Moving or renaming a named folder on disk needs no link edited. Its pointers nam
 Only relative links between it and other folders break. The relink offers each one's pointer (see
 [Repairs](links-and-vaults.md#repairs)).
 
-You may open a named folder where it now is. If slipbox is sure it's the same folder, its session, scratch, trash and
+You may open a named folder where it now is. If slipbox is sure it's the same folder, its workspaces, scratch, trash and
 reading positions come along, and a message says so. slipbox is sure when the folder's id or remote is at the new
 place, and nothing is left at the old one.
 

@@ -5,8 +5,9 @@ dropped and superseded ones in `archive/`. The roadmap gives their order.
 
 - Active: [TT](terminal-tests/README.md), the terminal tests headless and by feature;
   [DOCS](documentation/README.md), the documentation learning path, topic ownership and reference.
-- Complete on its branch, for consolidation: [HDR](window-header/README.md), the window header and its Read, Lens and
-  Source buttons (#24).
+- Complete on their branches, for consolidation: [HDR](window-header/README.md), the window header and its Read, Lens
+  and Source buttons (#24); [WSP](workspaces/README.md), workspaces named apart from the vault, and where you are on the
+  top bar (#25).
 - Consolidated, in `archive/`: [DOC](archive/user-docs/README.md), the user documentation;
   [DF](archive/doc-findings/README.md), what writing it found; [GR](archive/greenrepo/README.md), the repository to
   greenrepo; [DS](archive/docs-site/README.md), the documentation site; [VV](archive/vaults-and-view/README.md), vaults

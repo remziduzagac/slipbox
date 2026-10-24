@@ -44,12 +44,12 @@ export const SHOTS: Shot[] = [
     options: { ...HOME("notes/index.md"), config: NO_EXPLORER },
     take: async (s) => {
       await s.status("index.md");
-      // The link into kestrel followed, then `o` from the peek: kestrel's note in a tab of its own, the status line
-      // naming kestrel and its branch, and its back arrow the way home to notes.
+      // The link into kestrel followed, then `o` from the peek: kestrel's note in a tab of its own, the top bar naming
+      // kestrel and its branch, and the status line's back arrow the way home to notes.
       await follow(s, "architecture. The");
       await s.see("o go there · t keep as a tab", 5000);
       await s.keys("o");
-      await s.status("kestrel");
+      await s.where(/^kestrel(?: ·|$)/);
       await s.status("architecture.md");
       // What going in says, gone: kestrel's own config's warnings, and the message naming where it is.
       await quiet(s);

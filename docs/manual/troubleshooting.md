@@ -26,7 +26,8 @@ Run it in your notes folder, or name a folder with `--root ~/notes`. It shows sl
 - **links**: how the folder writes links, as slipbox has worked it out.
 - **theme**: the theme in use.
 - **config**: the config files read, in the order they apply.
-- **cache**, **state** and **scratch**: where slipbox keeps this folder's index, its session and trash, and the scratch.
+- **cache**, **state** and **scratch**: where slipbox keeps this folder's index, your workspaces there and its
+  trash, and the scratch.
 - **skipped**: the files it left out, and why. A file may be too large, be a link that leads outside the folder, or be a
   folder of notes inside this one.
 

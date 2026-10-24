@@ -81,7 +81,7 @@ sidebar_width = 30             # 8–200; drawn from 12 to half the terminal, le
 outline = false                # the outline open on the right on a wide terminal
 outline_width = 32             # 8–200; drawn as the explorer is
 split_ratio = 0.5              # 0.2–0.8: the first window's share of a split
-top_bar = true                 # the bar along the top: the slipbox chip, the vault's state; space u b
+top_bar = true                 # the bar along the top: the chip, where you are, the vault's state; space u b
 lines = "light"                # the frame's lines: light (─ │) | heavy (━ ┃)
 window_header = true           # the row atop each window: a split's name, the breadcrumb, Read · Lens · Source, ▤
 breadcrumb = true              # the headings the cursor is under, on each window's header
@@ -614,13 +614,15 @@ started with until slipbox starts again.
 You can change some settings in the TUI: the theme with `space u t`, and wrapping, line numbers, zen and the others in
 `space u u`.
 
-A change applies at once. It is kept in the vault's session, with the setting it replaced. Another vault keeps its own.
+A change applies at once. It is kept for the vault, across its workspaces, with the setting it replaced. Another vault
+keeps its own. It's yours: kept in slipbox's state, never in the vault's settings or your config.
 
 On every start, and at every reload, a change is kept only while that setting in your files still has the value it
 replaced. So editing the setting always wins. The TUI never writes your settings file.
 
-With `ui.restore_session` on, the session also brings back whether the explorer and the outline are open, and their
-widths.
+With `ui.restore_session` on, a workspace brought back also brings back whether the explorer and the outline are open,
+and their widths, as the vault last had them. A workspace with no tabs kept yet, such as a folder of home opened by
+name for the first time, starts with your settings' panes.
 
 <a id="slipboxs-own-variables"></a>
 <a id="variables-slipbox-reads"></a>

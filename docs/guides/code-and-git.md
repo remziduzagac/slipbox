@@ -20,8 +20,9 @@ or worktree to compare; substitute its names and paths. A reading-only review do
 slipbox ~/code/app
 ```
 
-Check the repository and branch in the status line. Open a changed file with `ctrl+p`, and press `space g` for the
-Git panel. Compare what the panel reports with `git status` in your shell if you are unsure which checkout is active.
+Check the repository and branch in the middle of the top bar. Open a changed file with `ctrl+p`, and press `space g`
+for the Git panel. Compare what the panel reports with `git status` in your shell if you are unsure which checkout is
+active.
 
 For code navigation and diagnostics, use [Code and language tools](../manual/code.md). Trust affects whether project
 hooks and tools may run; read [Privacy and trust](../manual/privacy.md#trust) before enabling them.
@@ -151,7 +152,7 @@ merges as if it had started from `main` as it is now.
    `Rebase fix/retry onto main? Its 3 commits replayed after main's 2 new.`
 2. git won't rebase over uncommitted changes. If the agent's worktree still has some, the question offers to set them
    aside and bring them back: `Stash your changes, rebase fix/retry onto main, put them back?` Press `y`.
-3. The rebase runs in the background. While it's under way, the status line says so: `rebasing 2/3`.
+3. The rebase runs in the background. While it's under way, the top bar says so after the branch: `rebasing 2/3`.
 4. If a commit doesn't replay cleanly, the rebase stops there, and the merge screen opens on its conflict
    ([below](#settle-a-conflict-on-the-merge-screen)). Settle it, save it and stage it. Then press `shift+r` again, and
    Continue (`c`). Abort (`a`) puts the branch back where it was.
@@ -223,7 +224,7 @@ slipbox reaches a remote only when you ask, and each of these runs in the backgr
 
 | In the git panel | What it does |
 | --- | --- |
-| `f` | Fetches. The status line then shows how far the branch is behind its upstream: `main ↓3` |
+| `f` | Fetches. The top bar then shows how far the branch is behind its upstream: `main ↓3` |
 | `p` | Pulls. When both sides have new commits, it asks: merge, rebase, or nothing |
 | `shift+p` | Pushes. A branch with no upstream is asked whether to push it to `origin` and track it there |
 | `z` | Lists the stashes, under "Stash the changes…". `enter` on one pops, applies or drops it |

@@ -106,7 +106,7 @@ export class Session {
         ? ` — its move broke links on ${broken} line${broken === 1 ? "" : "s"}: slipbox relink fixes them (--dry-run shows how)`
         : "";
       this.warnings.push(
-        `${rootLabel(loc)} moved here from ${carriedFrom}: its sessions, scratch, trash and reading positions came along${fix}`,
+        `${rootLabel(loc)} moved here from ${carriedFrom}: its workspaces, scratch, trash and reading positions came along${fix}`,
       );
     }
   }

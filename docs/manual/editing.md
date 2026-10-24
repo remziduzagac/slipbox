@@ -33,7 +33,7 @@ Three keys are all you need to go between the two:
 - `esc` stops typing. Your keys are commands again. A second `esc` closes the lens.
 - `ctrl+s` saves, typing or not.
 
-The chip at the left of the status line says where you are:
+The chip at the left of the status line says what has the keys:
 
 - `INSERT` while you type
 - `SOURCE` in source mode

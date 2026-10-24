@@ -48,7 +48,7 @@ export function parseTrack(header: string): Track | null {
   };
 }
 
-/** The status line's ahead and behind (`↑2 ↓1`): only what isn't zero; nothing without an upstream, or in step. */
+/** The ahead and behind after the branch where you are (`↑2 ↓1`): only what isn't zero; nothing without an upstream, or in step. */
 export function trackText(t: Track | null, ahead = "↑", behind = "↓"): string {
   if (!t?.upstream || t.gone) return "";
   return [t.ahead ? `${ahead}${t.ahead}` : "", t.behind ? `${behind}${t.behind}` : ""].filter(Boolean).join(" ");
