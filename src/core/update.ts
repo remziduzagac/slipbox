@@ -163,6 +163,23 @@ interface CheckState {
   checked?: number;
   /** What it found then. */
   latest?: string;
+  /** A version you skipped (UPG): neither it nor any not newer is offered. */
+  skipped?: string;
+}
+
+function readState(stateFile: string): CheckState {
+  try {
+    return JSON.parse(readFileSync(stateFile, "utf8")) as CheckState;
+  } catch {
+    return {};
+  }
+}
+
+function writeState(stateFile: string, s: CheckState): void {
+  try {
+    mkdirSync(dirname(stateFile), { recursive: true });
+    writeFileSync(stateFile, `${JSON.stringify(s)}\n`);
+  } catch {}
 }
 
 /** What's said of a newer one: the channel named when it's `preview`, then how to get it. */
@@ -170,11 +187,51 @@ export function sayOut(newest: string, current: string, channel: Channel, how: s
   return `slipbox ${newest} is out${channel === "preview" ? " on the preview channel" : ""} (this is ${current}): ${how}`;
 }
 
+/** A newer version found: it, and what's said of it. */
+export interface Found {
+  version: string;
+  said: string;
+}
+
+/** The version you skipped (Skip this version, UPG), or null. */
+export function skippedVersion(stateFile: string): string | null {
+  return readState(stateFile).skipped ?? null;
+}
+
+/** A version skipped: neither it nor any not newer is offered by the daily check. */
+export function skipVersion(stateFile: string, version: string): void {
+  writeState(stateFile, { ...readState(stateFile), skipped: version });
+}
+
+/**
+ * The newest its channel offers, asked for now, whatever the check's switches say — the daily check's request, and
+ * `:upgrade`'s (UPG-D6) — the time kept before asking, so a failure waits a day too; null when it can't be said.
+ */
+export async function askNewest(opts: {
+  release: ReleaseBuild;
+  env: Record<string, string | undefined>;
+  stateFile: string;
+  now?: number;
+  fetcher?: Fetcher;
+  channel?: Channel;
+}): Promise<string | null> {
+  const now = opts.now ?? Date.now();
+  writeState(opts.stateFile, { ...readState(opts.stateFile), checked: now });
+  const latest = await fetchNewest({
+    channel: opts.channel ?? "stable",
+    releases: releasesBase(opts.release.repo, opts.env),
+    channels: channelsBase(opts.release.repo, opts.env),
+    target: opts.release.target,
+    fetcher: opts.fetcher,
+  });
+  if (latest) writeState(opts.stateFile, { ...readState(opts.stateFile), checked: now, latest: latest.version });
+  return latest?.version ?? null;
+}
+
 /**
  * The TUI's daily check: when it's due — a release build, `[update] check` on in your config, no DO_NOT_TRACK, a day
- * since the last — the newest its channel offers asked for, and what to say when it's newer than this one; null
- * otherwise. The time is kept before asking, so a failure waits a day too. `channel`: the installer's install's;
- * any other follows stable releases.
+ * since the last — the newest its channel offers asked for, and what's found when it's newer than this one, and newer
+ * than a version you skipped; null otherwise. `channel`: the installer's install's; any other follows stable releases.
  */
 export async function dailyUpdateCheck(opts: {
   release: ReleaseBuild | null;
@@ -186,34 +243,20 @@ export async function dailyUpdateCheck(opts: {
   fetcher?: Fetcher;
   by?: InstalledBy;
   channel?: Channel;
-}): Promise<string | null> {
+}): Promise<Found | null> {
   if (!opts.release || !opts.enabled || doNotTrack(opts.env)) return null;
   const now = opts.now ?? Date.now();
-  let state: CheckState = {};
-  try {
-    state = JSON.parse(readFileSync(opts.stateFile, "utf8")) as CheckState;
-  } catch {}
+  const state = readState(opts.stateFile);
   if (typeof state.checked === "number" && now - state.checked < CHECK_EVERY_MS && now >= state.checked) return null;
-  const save = (s: CheckState) => {
-    try {
-      mkdirSync(dirname(opts.stateFile), { recursive: true });
-      writeFileSync(opts.stateFile, `${JSON.stringify(s)}\n`);
-    } catch {}
-  };
-  save({ ...state, checked: now });
   const channel = opts.channel ?? "stable";
-  const latest = await fetchNewest({
-    channel,
-    releases: releasesBase(opts.release.repo, opts.env),
-    channels: channelsBase(opts.release.repo, opts.env),
-    target: opts.release.target,
-    fetcher: opts.fetcher,
-  });
-  if (!latest) return null;
-  save({ checked: now, latest: latest.version });
-  return isNewer(latest.version, opts.version)
-    ? sayOut(latest.version, opts.version, channel, howToUpgrade(opts.by ?? "installer", opts.release.repo))
-    : null;
+  const latest = await askNewest({ ...opts, release: opts.release, now, channel });
+  if (!latest || !isNewer(latest, opts.version)) return null;
+  const skipped = skippedVersion(opts.stateFile);
+  if (skipped && !isNewer(latest, skipped)) return null;
+  return {
+    version: latest,
+    said: sayOut(latest, opts.version, channel, howToUpgrade(opts.by ?? "installer", opts.release.repo)),
+  };
 }
 
 export class UpgradeError extends Error {}

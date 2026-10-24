@@ -150,6 +150,11 @@ export class Input {
   keyAt = 0;
   private keysInFlight = 0;
 
+  /** A key being handled, or waiting its turn (one waiting on a note's parse counts). */
+  get busy(): boolean {
+    return this.keysInFlight > 0;
+  }
+
   /** Handle a key now, not queued: `.` replays its keys through this, inside its own turn. `at`: when it arrived. */
   async processKey(key: string, at = this.app.now()): Promise<void> {
     // A report waiting for its frame (`space r`): the keys after it are its (RPT-D2). Else no wait: a key acts at once.

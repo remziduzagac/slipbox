@@ -1781,9 +1781,10 @@ describe("updates (14.4)", () => {
     expect(asked).toBe(0);
     expect(existsSync(stateFile)).toBe(false);
     const now = 1_800_000_000_000;
-    expect(await dailyUpdateCheck({ ...base, now })).toBe(
-      "slipbox 0.3.0 is out (this is 0.2.0): slipbox upgrade installs it",
-    );
+    expect(await dailyUpdateCheck({ ...base, now })).toEqual({
+      version: "0.3.0",
+      said: "slipbox 0.3.0 is out (this is 0.2.0): slipbox upgrade installs it",
+    });
     expect(JSON.parse(readFileSync(stateFile, "utf8"))).toEqual({ checked: now, latest: "0.3.0" });
     // Within the day: not asked again.
     expect(await dailyUpdateCheck({ ...base, now: now + CHECK_EVERY_MS - 1 })).toBeNull();
@@ -1934,7 +1935,7 @@ describe("how slipbox was installed, and what's said for it (14.3)", () => {
     const release = { repo: "o/r", target: "linux-x64" };
     expect(
       await dailyUpdateCheck({ release, version: "0.2.0", enabled: true, env: {}, stateFile, fetcher, by: "homebrew" }),
-    ).toBe("slipbox 0.3.0 is out (this is 0.2.0): brew upgrade slipbox installs it");
+    ).toEqual({ version: "0.3.0", said: "slipbox 0.3.0 is out (this is 0.2.0): brew upgrade slipbox installs it" });
     const base = mkdtempSync(join(sandbox, "brew-"));
     const cellar = join(base, "Cellar", "slipbox", "0.2.0", "bin", "slipbox");
     mkdirSync(join(cellar, ".."), { recursive: true });
@@ -2384,7 +2385,7 @@ describe("channels: the installer on Pages, and which releases an install follow
           fetcher: answering(files),
           channel,
         });
-      expect(await check("preview")).toBe(
+      expect((await check("preview"))?.said).toBe(
         `slipbox ${PREVIEW} is out on the preview channel (this is 1.2.3): slipbox upgrade installs it`,
       );
       expect(await check("stable")).toBeNull();

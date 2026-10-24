@@ -43,18 +43,21 @@ preview channel`; its text `This is 0.5.0.` What it offers is by how this slipbo
 
 **And one checkbox**, for any install, **Skip this version**: taken with Not now only, dimmed with another choice.
 `update.json` keeps it (`skipped`), and a check finding it, or anything not newer, offers nothing; a newer one is
-offered. There's no checkbox to stop the checks (UPG-D1): your own config's `[update] check = false`, or
-`DO_NOT_TRACK`, does that, as it does today, and the TUI never writes your config.
+offered; it's said, `slipbox 0.6.0 skipped: the next newer one is offered`. There's no checkbox to stop the checks
+(UPG-D1): your own config's `[update] check = false`, or `DO_NOT_TRACK`, does that, as it does today, and the TUI never
+writes your config. A copy is said as any copy is (`copied brew upgrade slipbox`).
 
 `esc`, or a click outside, is Not now with nothing kept.
 
-**Asked for: `:upgrade`** (`app.upgrade`; no key of its own; `slipbox upgrade` its CLI equivalent) asks now, as the
-daily check asks — one request, two on `preview` — and offers what it finds as above, a version you skipped included
+**Asked for: `:upgrade`** (`app.upgrade`; no key of its own; `slipbox upgrade` its CLI equivalent) says `asking for
+the newest version…` and asks now, as the daily check asks (`askNewest`) — one request, two on `preview`, the keys going
+on meanwhile — and offers what it finds as above, a version you skipped included
 (UPG-D6). You asked, so it asks whatever `[update] check` and `DO_NOT_TRACK` say, as `slipbox upgrade` does; the time
 it asked is kept in `update.json`, as the daily check's is, so the next daily check is a day later. It opens the offer
 at once (its own keys answered it, so it waits for no quiet). The newest installed already, underneath this one (§ An
 upgrade underneath): its restart is offered instead, Restart now or Not now. Nothing newer: `slipbox 0.5.0 is the
-newest` (on `preview`, `the newest release or preview`). A failure says why, as an error. From source (no release
+newest` (on `preview`, `the newest release or preview`). Nothing found: `couldn't find the newest version at
+<releases>`, as an error. From source (no release
 build) it asks nothing and says what `slipbox upgrade` says: `this slipbox runs from source (or was built by hand): it
 has no releases to follow — update its checkout`.
 
@@ -73,7 +76,8 @@ With nothing unsaved, it doesn't ask.
 Then **the note** for the slipbox that starts is written, `$XDG_STATE_HOME/slipbox/restart/<pid>.json`: the place to
 come back to (the location's mode and root, home's folder opened by name), this window's session as `Session.save`
 writes it — its tabs, windows, positions, the panes' sizes — the version it was, and the upgrade asked for. It's read
-back to be sure; one that can't be written stops the restart, said, and nothing quits. Then slipbox quits as quitting
+back to be sure; one that can't be written stops the restart, said, and nothing quits. A restart that stops says why:
+`the restart stopped: index.md isn't saved`, `… its note couldn't be written (<why>)`. Then slipbox quits as quitting
 does — running work stopped (exports, shell jobs, language servers, the threads), the session and positions saved —
 and starts again in the same terminal: into the newest version installed (§ An upgrade underneath), else the same.
 Upgrade and restart (§ The update offer) is the same with the upgrade in between. While an upgrade runs beside the TUI

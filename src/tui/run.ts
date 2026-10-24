@@ -7,17 +7,23 @@ import { loadConfig } from "../core/config.ts";
 import { Graph, openGraph } from "../core/graph.ts";
 import { sanitize } from "../core/sanitize.ts";
 import { setWidthMethod } from "../core/width.ts";
-import { appendFileSync } from "node:fs";
+import { appendFileSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { dataHome, stateHome } from "../core/paths.ts";
 import { installedBy, readChannel } from "../core/install.ts";
 import { RELEASE } from "../core/release.ts";
-import { dailyUpdateCheck } from "../core/update.ts";
+import { upgrade, upgradeSaid } from "../core/update.ts";
+import { handOver, nextLaunch, startedPath, takeNote } from "../core/restart.ts";
 import { windowsDriveNote } from "../core/wsl.ts";
 import { VERSION } from "../version.ts";
 import {
+  elsewhereAt,
+  homeAt,
+  isHome,
+  isVaultRoot,
   locateVault,
   recordLocation,
+  rootAt,
   configFilesFor,
   setRootMarkers,
   VaultError,
@@ -26,6 +32,7 @@ import {
 import { setTrustedRoots } from "../core/trust.ts";
 import { baseAtOpen } from "../core/gitbase.ts";
 import { App, type AppOptions } from "./app.ts";
+import { type CameBack, cameBack, type Place } from "./updates.ts";
 import { keyName } from "./keys.ts";
 import type { Canvas } from "./canvas.ts";
 import { AppRenderable, Pictures, toRGBA } from "./opentui.ts";
@@ -33,12 +40,26 @@ import { AppRenderable, Pictures, toRGBA } from "./opentui.ts";
 /** What the App starts with, all found before the screen is taken. */
 export type Start = Omit<AppOptions, "host">;
 
+/** Where a restart left off (UPG-D4), when it's still there: its vault, home, or Elsewhere's folder. */
+function placed(p: Place): VaultLocation | null {
+  try {
+    if (!statSync(p.root).isDirectory()) return null;
+  } catch {
+    return null;
+  }
+  if (p.mode === "home") return isHome(p.root) ? homeAt(p.root) : null;
+  if (p.mode === "folder") return elsewhereAt(p.root);
+  return isVaultRoot(p.root) ? rootAt(p.root) : null;
+}
+
 /**
  * Everything before the screen is taken: the root found (one that can't be is said in a line, and the
  * exit code returned), its config, the machine told it has seen the root — a named folder moved here by
  * hand adopting its state before the graph opens on it, and the App told it moved (21.8) — the graph.
+ * Started by a restart (`back`, UPG-D4): where it left off, in place of the arguments' path and `--root`, its window's
+ * session, and `--base` not applied again — a start's instruction, already kept for its branch.
  */
-export function prepare(argv: string[]): Start | number {
+export function prepare(argv: string[], back: CameBack | null = null): Start | number {
   const args = parseArgs(argv);
   const path = args.positional[0];
   // Where roots are (21.1), and which may run their own code (23.x), are your config's to say,
@@ -46,9 +67,10 @@ export function prepare(argv: string[]): Start | number {
   const yours = loadConfig({ configFile: flag(args, "config") }).config;
   setRootMarkers(yours.walk.root_markers);
   setTrustedRoots(yours.trust.roots);
+  const at = back?.place ? placed(back.place) : null;
   let loc: VaultLocation;
   try {
-    loc = locateVault({ root: flag(args, "root"), path });
+    loc = at ?? locateVault({ root: flag(args, "root"), path });
   } catch (err) {
     // A path that isn't there, a --root that isn't one: said in a line, as the CLI says it, before
     // the screen is taken — and its exit code, the CLI's EXIT.notFound.
@@ -61,7 +83,7 @@ export function prepare(argv: string[]): Start | number {
   const notes: string[] = [];
   // `--base <ref>` (GIT-D10, D255): the branch here measured against it, kept as "Compare against…" keeps it. A ref
   // that names no commit is said in a line, as a missing path is, before the screen is taken.
-  const base = flag(args, "base");
+  const base = at ? undefined : flag(args, "base");
   if (base !== undefined) {
     const kept = baseAtOpen(loc.root, base);
     if ("error" in kept) {
@@ -84,18 +106,32 @@ export function prepare(argv: string[]): Start | number {
     graph: loc.mode === "home" ? new Graph(loc, loaded.config) : openGraph(loc, loaded.config, true, "lazy"),
     warnings,
     notes,
-    open: loc.file ?? null,
+    open: at ? null : (loc.file ?? null),
     themeName: flag(args, "theme"),
     configFile: flag(args, "config"),
-    // A folder opened: the explorer's view starts there, in its vault (VV-D5).
-    folder: path && !loc.file ? resolve(path) : undefined,
+    // A folder opened: the explorer's view starts there, in its vault (VV-D5); a restart's, home's folder it had open.
+    folder: at
+      ? at.mode === "home" && back?.place?.homeFolder
+        ? join(at.root, back.place.homeFolder)
+        : undefined
+      : path && !loc.file
+        ? resolve(path)
+        : undefined,
     recorded,
+    ...(back ? { restarted: { session: at ? back.session : null, said: back.said } } : {}),
   };
 }
 
+/** Whether this is a compiled binary: its modules are inside it (`bun build --compile`'s file system). */
+const COMPILED = /^file:\/\/\/(\$bunfs|[A-Za-z]:\/~BUN)\//.test(import.meta.url);
+
 export async function runTui(argv: string[]): Promise<number> {
-  const start = prepare(argv);
+  // A restart's note (UPG): where to come back to, and this window's session.
+  const note = takeNote({ pid: process.pid, ppid: process.ppid });
+  const start = prepare(argv, note ? cameBack(note, VERSION) : null);
   if (typeof start === "number") return start;
+  // The file slipbox was started by, as the shell found it, asked before anything changes: a restart starts it again.
+  const startedBy = startedPath(process.argv0, process.env.PATH ?? "", process.cwd());
 
   const renderer = await createCliRenderer({
     exitOnCtrlC: false,
@@ -109,6 +145,8 @@ export async function runTui(argv: string[]): Promise<number> {
     kittyImageTransport: "zlib",
   });
 
+  // OpenTUI's teardown — raw mode off, the main screen back, the mouse let go — ends after its `destroy` event.
+  const destroyed = new Promise<void>((r) => renderer.once("destroy", () => r()));
   let resolveDone: (code: number) => void = () => {};
   const done = new Promise<number>((r) => (resolveDone = r));
   const cell = () => {
@@ -192,21 +230,21 @@ export async function runTui(argv: string[]): Promise<number> {
   });
 
   // A release's daily update check (14.4): your own config's say, never a folder's — a network request is yours to
-  // allow — and DO_NOT_TRACK's. Said when there's a newer one; the CLI never asks. The installer's install follows its
-  // channel (GR-D15); any other, stable releases.
-  const yours = loadConfig({ configFile: start.configFile }).config;
+  // allow — and DO_NOT_TRACK's. Offered when there's a newer one (UPG); the CLI never asks. The installer's install
+  // follows its channel (GR-D15); any other, stable releases.
   const by = installedBy(process.execPath, dataHome(), VERSION);
-  void dailyUpdateCheck({
+  app.updates.env = {
     release: RELEASE,
     version: VERSION,
-    enabled: yours.update.check,
-    env: process.env,
-    stateFile: join(stateHome(), "update.json"),
     by,
     channel: by === "installer" ? readChannel(dataHome()) : "stable",
-  }).then((said) => {
-    if (said) app.message("info", said);
-  });
+    data: dataHome(),
+    execPath: process.execPath,
+    stateDir: stateHome(),
+    env: process.env,
+    checkOn: () => loadConfig({ configFile: start.configFile }).config.update.check,
+  };
+  app.updates.start();
 
   renderer.useMouse = app.ui.mouse;
   // Only when it changes: setBackgroundColor requests another render, so calling it on every
@@ -280,5 +318,40 @@ export async function runTui(argv: string[]): Promise<number> {
   for (const s of signals) process.once(s, onSignal);
   const code = await done;
   for (const s of signals) process.off(s, onSignal);
-  return code;
+  const restart = app.updates.restartNote;
+  const env = app.updates.env;
+  if (!restart || !env) return code;
+  // A restart (UPG-D2): once the screen is given back, the upgrade asked for, then the next slipbox in this process.
+  await destroyed;
+  await new Promise((r) => setTimeout(r, 0));
+  process.stdin.pause();
+  const release = RELEASE;
+  return handOver({
+    note: restart,
+    upgrade:
+      restart.upgrade && release
+        ? (signal) =>
+            upgrade({
+              release,
+              version: VERSION,
+              data: env.data,
+              execPath: process.execPath,
+              env: process.env,
+              signal,
+            }).then((r) => upgradeSaid(r, env.channel))
+        : null,
+    launch: (upgradeFailed) =>
+      nextLaunch({
+        by: env.by,
+        data: env.data,
+        execPath: process.execPath,
+        argv0: process.argv0,
+        startedBy,
+        script: COMPILED ? null : (process.argv[1] ?? null),
+        upgradeFailed,
+        args: process.argv.slice(2),
+      }),
+    env: process.env,
+    say: (line) => process.stderr.write(sanitize(`${line}\n`)),
+  });
 }
