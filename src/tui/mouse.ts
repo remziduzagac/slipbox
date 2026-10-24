@@ -6,6 +6,7 @@ import * as R from "./replacing.ts";
 import { branchMenu, gitClick, gitRightClick, signClick } from "./gitmouse.ts";
 import { stringWidth } from "../core/width.ts";
 import { saveAsMouse } from "./saveas.ts";
+import { dialogMouse } from "./dialog.ts";
 import { clampPos, type Pos, wordAt } from "./cursor.ts";
 import type { Geometry } from "./draw.ts";
 import { prettyKey } from "./keys.ts";
@@ -130,6 +131,10 @@ export class Mouse {
           ev.type === "down" ? (g.hot.find((h) => inRect(h, ev.x, ev.y))?.id ?? null) : null,
         );
       else if (ev.type === "down") this.app.overlays.close(true);
+      return;
+    }
+    if (o.kind === "dialog") {
+      if (g.choices) dialogMouse(this.app, o, ev, g.choices);
       return;
     }
     // The find row's own buttons work while typing in it.

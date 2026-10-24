@@ -56,6 +56,7 @@ import { sanitize } from "../core/sanitize.ts";
 import { truncate } from "../core/width.ts";
 import { registerActions } from "./actions.ts";
 import type { SaveAsOverlay } from "./saveas.ts";
+import type { DialogOverlay } from "./dialog.ts";
 import { NoteBuffer } from "./buffer.ts";
 import { type Canvas, drawText } from "./canvas.ts";
 import { clampPos, type Pos } from "./cursor.ts";
@@ -327,7 +328,7 @@ export interface PromptOverlay {
   toggles?: { view: View; label: () => string };
 }
 
-export type Overlay = ListOverlay | PromptOverlay | SaveAsOverlay;
+export type Overlay = ListOverlay | PromptOverlay | SaveAsOverlay | DialogOverlay;
 
 export interface SidePaneState {
   /** Preference on wide terminals: shown beside the content. */

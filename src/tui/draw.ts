@@ -14,6 +14,7 @@ import type { App, View } from "./app.ts";
 import { type Canvas, drawText } from "./canvas.ts";
 import { prettyKey } from "./keys.ts";
 import type { SaveAsGeometry } from "./saveas.ts";
+import type { DialogGeometry } from "./dialog.ts";
 import { LEFT_VIEWS, RIGHT_VIEWS } from "./panels.ts";
 import { fitWhere, whereOf } from "./where.ts";
 import { drawPane, drawCompletion, drawSignature } from "./draw-pane.ts";
@@ -27,6 +28,7 @@ import {
   dialogWidth,
   dialogHeight,
   drawDialog,
+  drawChoiceDialog,
   drawMenu,
   drawWhichKey,
   drawList,
@@ -115,6 +117,8 @@ export interface Geometry {
   saveas?: SaveAsGeometry | null;
   /** The top bar said where you are (WSP-D4): the status line, drawn after it, leaves it out (WSP-D5). */
   whereOnTop?: boolean;
+  /** A dialog of choices (UPG): its box and its rows, for clicks. */
+  choices?: DialogGeometry | null;
 }
 
 export const CHANGE_MARKER_MS = 3000;
@@ -337,6 +341,7 @@ export function drawApp(app: App, c: Canvas): Geometry {
           : drawList(app, c, o, mainY, mainH);
   }
   if (app.overlay?.kind === "saveas") geo.saveas = drawSaveAs(app, c, app.overlay, mainY, mainH, geo);
+  if (app.overlay?.kind === "dialog") geo.choices = drawChoiceDialog(app, c, app.overlay, mainY, mainH);
   if (dialog) geo.dialog = drawDialog(app, c, dialog, mainY, mainH, geo);
   return geo;
 }

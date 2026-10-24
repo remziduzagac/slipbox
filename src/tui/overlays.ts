@@ -5,6 +5,7 @@ import * as R from "./replacing.ts";
 import { cancelGitRead } from "./gitquery.ts";
 import { TOP } from "../core/position.ts";
 import { saveAsKey } from "./saveas.ts";
+import { dialogKey } from "./dialog.ts";
 import { NoteBuffer } from "./buffer.ts";
 import { keyChar } from "./keys.ts";
 import type { App, View, ListItem, ListOverlay, Overlay, PromptOverlay } from "./app.ts";
@@ -204,8 +205,9 @@ export class Overlays {
     void Promise.resolve(o.change?.(o.text)).finally(() => this.app.host.requestRender());
   }
 
-  async key(o: Overlay, key: string): Promise<void> {
+  async key(o: Overlay, key: string, at = this.app.now()): Promise<void> {
     if (o.kind === "saveas") return saveAsKey(this.app, o, key);
+    if (o.kind === "dialog") return dialogKey(this.app, o, key, at);
     // Replacing: closing the rows keeps the search, the cursor and the edits (nothing to cancel).
     if (o.kind === "prompt" && o.replace?.confirm && o.view) return R.confirmKey(this.app, o, o.view, key);
     if (o.kind === "prompt" && o.replace && (key === "escape" || key === "ctrl+c" || key === "ctrl+g")) {

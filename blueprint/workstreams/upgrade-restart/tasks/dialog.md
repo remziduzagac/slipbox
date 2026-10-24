@@ -1,5 +1,5 @@
 ---
-status: todo
+status: review
 assignee: claude-23
 blocked_by: []
 created: "2026-10-24"
@@ -26,3 +26,15 @@ A pop-up with text, a select and checkboxes, its keys and clicks: design.md § M
 - Rests on: UPG-D1, UPG-D3; ../notes.md § Codex's critique, 7.
 
 ## Log
+
+- 2026-10-24: `src/tui/dialog.ts` (`openDialog`, `dialogKey`, `dialogMouse`, `dimmed`, `tooEarly`), drawn by
+  `drawChoiceDialog` in `draw-overlays.ts`; `DialogOverlay` joins `Overlay`; `choiceOn`/`choiceOff` added to each
+  glyph set. Each key carries the time it arrived: `Input.handleKey` takes it, `processKey` and `dispatchKey` pass it,
+  `Overlays.key` gives it to the dialog; a click's is when it's handled (clicks aren't queued). A paste does nothing
+  in a dialog. The test harness takes a clock (`now`).
+- 2026-10-24: `tests/tui-updates.test.ts`, 8 pass (41 expects): the drawing, the keys, a dimmed checkbox, esc and a
+  paste, the mouse, the drop by arrival (keys, a click), a key queued behind one a parse held, ASCII's glyphs. Near
+  it: `tests/core.test.ts -t glyph` 5 pass, `tests/tui.test.ts -t 'paste|prompt|question|Save As|save as|dialog|
+  overlay'` 32 pass. Mutations, each alone (nothing dropped; the arrival time not carried — missed by a held key
+  alone, caught once a second key queued behind it; a dimmed checkbox taken; a dimmed checkbox ticking; moving not
+  marking; a click outside not cancelling; clicks not dropped): all seven caught.

@@ -187,8 +187,9 @@ The update offer is its first (distribution.md § The update offer), and a resta
 second (§ Restarting). Framed like the other popups, its title in its top border, it shows
 its text, wrapped; its select's choices, one a row, the one chosen marked `●` and the others `○` (`(*)` and `( )` in
 ASCII's glyphs); its checkboxes, `☑` or `☐` as a task's (`[x]`, `[ ]`), one the chosen choice doesn't take dimmed; and,
-under a rule, what the row under the cursor does. Its keys are in its bottom border: `enter do it · space tick · esc
-not now`.
+under a rule, what the row under the cursor does (as many rows as the longest help needs, at most three, so it keeps
+its height). Its keys are in its bottom border: `enter: do it · space: tick · esc: not now` (`space` only with
+checkboxes; `esc` says what it does: `not now`, `cancel`). The marks are glyphs of each set (`choiceOn`, `choiceOff`).
 
 - `↑` / `↓`, `j` / `k`, `tab` / `shift+tab` and `ctrl+n` / `ctrl+p` move the cursor over the choices, then the
   checkboxes, wrapping; on a choice, the cursor marks it.
