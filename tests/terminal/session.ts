@@ -18,6 +18,7 @@ import { tmpdir } from "node:os";
 import { isAbsolute, join } from "node:path";
 import { buildHome } from "../../scripts/build-home.ts";
 import type { Keyboard } from "./keys.ts";
+import { releasesBuilt } from "./releases.ts";
 import { HeadlessTerminal, type StyledRun } from "./terminal.ts";
 
 export type { StyledRun } from "./terminal.ts";
@@ -62,8 +63,11 @@ export interface SessionOptions {
   cwd?: string;
   /** More arguments, before the path (`--theme`, `nord`). */
   args?: string[];
-  /** More environment (`SLIPBOX_GLYPHS: "ascii"`); `{dir}` is the check's folder. */
+  /** More environment (`SLIPBOX_GLYPHS: "ascii"`); `{dir}` is the check's folder, `{releases}` the run's release
+   *  builds' releases folder (releases.ts). */
   env?: Record<string, string>;
+  /** A binary started in place of `bun src/main.ts` (a release build, UPG); `{dir}` is the check's folder. */
+  bin?: string;
   /** A script of the tests' that Bun preloads into slipbox (`--preload`; slipbox's own process, not the CLI's): to hold
    *  it mid-work, say. A path from the repository, or absolute; `{dir}` is the check's folder. */
   preload?: string;
@@ -114,6 +118,8 @@ export class Session {
   readonly home: string;
   readonly trace: string;
   readonly term: HeadlessTerminal;
+  /** More environment a check's `setup` knows only then (a server's address): slipbox starts with it. */
+  readonly extraEnv: Record<string, string> = {};
 
   constructor(readonly opts: SessionOptions = {}) {
     // The terminal first: an option it refuses leaves no folder behind.
@@ -167,7 +173,13 @@ export class Session {
       // Its own config, whatever the shell exports (SLIPBOX_CONFIG would win over XDG_CONFIG_HOME).
       SLIPBOX_CONFIG: `${this.dir}/config/slipbox/config.toml`,
       SLIPBOX_CLIPBOARD: "file", // copies land in the state dir, not on your clipboard
-      ...Object.fromEntries(Object.entries(this.opts.env ?? {}).map(([k, v]) => [k, v.replaceAll("{dir}", this.dir)])),
+      ...Object.fromEntries(
+        Object.entries(this.opts.env ?? {}).map(([k, v]) => [
+          k,
+          v.replaceAll("{dir}", this.dir).replaceAll("{releases}", releasesBuilt()?.releases ?? "{releases}"),
+        ]),
+      ),
+      ...this.extraEnv,
     };
   }
 
@@ -200,7 +212,10 @@ export class Session {
     // Bun by its own path: with $HOME the check's, nothing may depend on finding it.
     const script = this.opts.preload?.replaceAll("{dir}", this.dir);
     const preload = script ? ["--preload", isAbsolute(script) ? script : join(REPO, script)] : [];
-    const argv = [process.execPath, ...preload, join(REPO, "src", "main.ts"), ...(this.opts.args ?? []), ...file];
+    const bin = this.opts.bin?.replaceAll("{dir}", this.dir);
+    const argv = bin
+      ? [bin, ...(this.opts.args ?? []), ...file]
+      : [process.execPath, ...preload, join(REPO, "src", "main.ts"), ...(this.opts.args ?? []), ...file];
     // What the slipbox before wrote is drawn first: its queries' answers, and its keyboard flags, are its own.
     await this.until(() => this.term.drawn, undefined, "the terminal to draw what the slipbox before wrote");
     this.term.spawn(argv, { cwd, env: this.processEnv() });

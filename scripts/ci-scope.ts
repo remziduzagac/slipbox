@@ -75,6 +75,8 @@ export const CHECKS_FOR: [RegExp, string[]][] = [
   [/^src\/tui\/renaming\.ts$/, ["rename", "naming"]],
   // Features of a window or a command of their own.
   [/^src\/tui\/palette\.ts$/, ["palette", "help", "which-key"]],
+  // Upgrading and restarting (UPG): the update offer, its dialog, the restart's note and hand-over.
+  [/^src\/(core\/(update|restart)|tui\/(updates|dialog))\.ts$/, ["updates"]],
   [/^src\/tui\/outline\.ts$/, ["outline"]],
   [/^src\/tui\/scratch\.ts$/, ["scratch"]],
   [/^src\/tui\/info\.ts$/, ["info"]],

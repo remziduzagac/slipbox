@@ -16,6 +16,7 @@ import { LEFT_OUT_READING, READING } from "./reading.ts";
 import { REPORTING } from "./reporting.ts";
 import { SLOW_DISK } from "./slow-disk.ts";
 import { SOURCE_CONTROL } from "./source-control.ts";
+import { UPDATES } from "./updates.ts";
 import { VAULTS } from "./vaults.ts";
 import { WINDOW_HEADER } from "./window-header.ts";
 import { WHERE } from "./where.ts";
@@ -56,6 +57,8 @@ export const CHECK_FILES: Record<string, Check[]> = {
   where: WHERE,
   // The git panel holding still as git answers (D261): source control's too, in a file of its own.
   "git-steady": GIT_STEADY,
+  // Upgrading and restarting (UPG): two release builds of this checkout, made once a run.
+  updates: UPDATES,
 };
 
 export const CHECKS: Check[] = Object.values(CHECK_FILES).flat();
