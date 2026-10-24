@@ -6,7 +6,17 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
 import { COMMAND_SPECS } from "../src/core/command-specs.ts";
-import { EXPLORER, explorerClosed, explorerOpen, MODES, mode, modeOf, OUTLINE, opened } from "./terminal/check.ts";
+import {
+  EXPLORER,
+  explorerClosed,
+  explorerOpen,
+  inSwitcher,
+  MODES,
+  mode,
+  modeOf,
+  OUTLINE,
+  opened,
+} from "./terminal/check.ts";
 import { encodeKey } from "./terminal/keys.ts";
 import { REPO, Session, type SessionOptions, whereOnBar } from "./terminal/session.ts";
 import { HeadlessTerminal } from "./terminal/terminal.ts";
@@ -384,6 +394,52 @@ describe("what the checks share (check.ts)", () => {
       s.cleanup();
     }
   });
+
+  // A quick switcher beside an explorer that has a row of `by-name.md` from the start, as one read from the disk has a
+  // note just written; the switcher's list has the note's own row only once LISTED exists, as the graph has the note
+  // only once the watcher's batch has come. Each ctrl+p it takes is a `p` in OPENS.
+  const switcher = [
+    "stty -echo -icanon min 1 time 0",
+    "shown=0",
+    "draw() {",
+    "  printf '\\033[?2026h\\033[2J\\033[H      by-name.md            │ index.md'",
+    "  if [ $shown = 1 ]; then",
+    "    printf '\\033[3;30H┌─ Open note (2) ──────────┐'",
+    "    if [ -e \"$LISTED\" ]; then row='by-name.md  By name '; else row='index.md            '; fi",
+    "    printf '\\033[4;30H│ %s     │' \"$row\"",
+    "    printf '\\033[5;30H└──────────────────────────┘'",
+    "  fi",
+    "  printf '\\033[?2026l'",
+    "}",
+    "draw",
+    'while c=$(dd bs=1 count=1 2>/dev/null) && [ -n "$c" ]; do',
+    '  if [ "$c" = "$(printf \'\\020\')" ]; then shown=1; printf p >> "$OPENS"',
+    '  elif [ "$c" = "$(printf \'\\033\')" ]; then shown=0; fi',
+    "  draw; printf 'key\\nframe\\n' >> \"$T\"",
+    "done",
+  ].join("\n");
+
+  test("inSwitcher waits for the switcher's own row of a note, not the explorer's, and past 5 s (#69)", async () => {
+    const s = new Session();
+    const listed = join(s.dir, "listed");
+    const opens = join(s.dir, "opens");
+    try {
+      s.term.spawn(["sh", "-c", switcher], { cwd: "/", env: { ...env, T: s.trace, LISTED: listed, OPENS: opens } });
+      await until(() => s.rowOf("by-name.md") >= 0, "the explorer's row");
+      // Listed later than the 5 s inSwitcher once gave up after: a loaded runner's watcher can be that late.
+      const later = setTimeout(() => writeFileSync(listed, ""), 5500);
+      try {
+        await inSwitcher(s, "by-name", "by-name.md");
+      } finally {
+        clearTimeout(later);
+      }
+      expect(existsSync(listed)).toBe(true);
+      expect(readFileSync(opens, "utf8").length).toBeGreaterThan(1);
+      expect(s.rowOf("│ by-name.md  By name")).toBeGreaterThanOrEqual(0);
+    } finally {
+      s.cleanup();
+    }
+  }, 30_000);
 
   // The explorer as `space e` cycles it (panels.ts: opened and focused, focused, closed), on a screen behind its own
   // trace: a key is in the trace at once with a frame after it, but what it did is drawn LAG ms later, as a loaded

@@ -20,7 +20,7 @@ import { openGraph } from "../../../src/core/graph.ts";
 import { vaultKey } from "../../../src/core/paths.ts";
 import { setLinkAnswer } from "../../../src/core/symlinks.ts";
 import { configFilesFor, initVault, recordLocation, rootAt } from "../../../src/core/vault.ts";
-import { type Check, explorerOpen, follow, leader, open } from "../check.ts";
+import { type Check, explorerOpen, follow, inSwitcher, leader, opened } from "../check.ts";
 import { type Session, sleep } from "../session.ts";
 import { ARCHITECTURE } from "./links-and-files.ts";
 import { markOf } from "./vaults.ts";
@@ -779,6 +779,9 @@ export const PEEK_BACKLINKS: Check[] = [
     options: {
       home: true,
       startAt: "home/notes/index.md",
+      // The watcher slow to tell, as a loaded runner's is: the note written below is in the explorer, from the disk,
+      // well before the switcher lists it (#69).
+      config: "[watch]\ndebounce_ms = 1500\n",
       setup: (s) => {
         const far = join(s.home, "work", "lantern");
         mkdirSync(far, { recursive: true });
@@ -801,8 +804,10 @@ export const PEEK_BACKLINKS: Check[] = [
       await s.keys("escape");
       // Then a note naming it: the old form's enter (21.11) reaches lantern by its name — the graph the search opened.
       s.write("~/notes/by-name.md", "# By name\n\nSee [[lantern:Far Name]].\n");
-      await s.see("by-name.md", 5000); // in the explorer: the watcher has it
-      await open(s, "by-name");
+      await s.see("by-name.md", 5000); // in the explorer, from the disk; in the switcher once the watcher tells
+      await inSwitcher(s, "by-name", "by-name.md");
+      await s.keys("enter");
+      await opened(s, "by-name.md");
       await s.keys("tab");
       await s.retry(
         () => s.keys("enter"),
