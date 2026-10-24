@@ -471,3 +471,13 @@ changed in that vault since.
 - 2026-10-24: The review loop stopped after round 10, by the maintainer's rule for it: at most three rounds, and past
   them the round in hand is the last. Round 11's review of round 10's commit was stopped as it began. What comes of it
   goes here, not into the pull request.
+- 2026-10-24: CI at 9afbee5: one of this branch's tests left the harness's app with a throwing `relayoutAll`, and an
+  app outlives its test (every lazy load lays it out), so a later file's loads failed (302 tests, from the main
+  session). The tests that patched the app's methods use spies now, restored after each test.
+- 2026-10-24: Left for later, from Codex's answer to round 11 (after the loop stopped; not in the pull request):
+  - Home's graph here, with notes still to parse, misses an index rewritten within the same mtime tick at the same
+    size (a coarse clock, an alias changed for one as long): the note's name stays unfound until the next change. A
+    stamp of the index's identity, or the answer saying the run wrote it to every rider too, would close it.
+  - `Reach.remember` falls back to `found` only when recording throws; the list's own writes fail quietly
+    (`writeRoots` returns false), so a nested vault the list can't take isn't counted for its links. `recordLocation`
+    saying whether it recorded would let it fall back then too.
