@@ -3,6 +3,7 @@
 
 import { spawnSync } from "node:child_process";
 import {
+  chmodSync,
   cpSync,
   existsSync,
   mkdirSync,
@@ -1372,9 +1373,63 @@ export const OUTSIDE_AND_CODE: Check[] = [
       s.expect(s.exists("~/work/q3"), "the new folder made");
       await s.keys("tab", "enter");
       await exported(s, "~/work/q3/home.docx", "PK\x03\x04");
-      // Next time the window opens where this one went.
+      // The export ended, not only its file there: the file is there a moment before its folder is remembered.
+      await s.message("exported home.md");
+      // Next time the window opens where this one went (its folder at its top, not the message's path).
       await format(s, "home.md", "word");
-      await s.see("~/work/q3/");
+      await s.see(/[│┃] ~\/work\/q3\/ +[│┃]/);
+      await s.see("Last export");
+      await s.keys("escape");
+      await s.notSee("Name: home.docx");
+    },
+  },
+  {
+    area: "outside-and-code",
+    name: "export: where you exported last — kept once the file is written, so the window opened while its staging is cleared opens there; one that can't be written leaves it as it was",
+    covers: { commands: ["note.export"] },
+    options: {
+      // The export's staging cleared only when the check says (`tests/terminal/export-hold.ts`, preloaded).
+      preload: "tests/terminal/export-hold.ts",
+      env: { EXPORT_HOLD_GO: "{dir}/hold-go", EXPORT_HOLD_STATE: "{dir}/hold-state" },
+      // A folder to export into, one that can't be written.
+      setup: (s) => {
+        for (const dir of ["out", "ro"]) mkdirSync(s.path(dir));
+      },
+    },
+    run: async (s) => {
+      const window = /[│┃] out\/ +[│┃]/; // the window's folder: out/
+      const held = () => (existsSync(join(s.dir, "hold-state")) ? readFileSync(join(s.dir, "hold-state"), "utf8") : "");
+      // Into out/: the file written, its staging held, the export not over.
+      await format(s, "home.md", "word");
+      await s.see("Name: home.docx");
+      await s.keys("ctrl+u");
+      await s.type("out/home.docx");
+      await s.keys("enter");
+      await exported(s, "out/home.docx", "PK\x03\x04");
+      await s.until(() => held() === "waiting", 15000, "the export's staging held");
+      await s.notSee("exported home.md", 500);
+      // The window opened meanwhile: at out/, Last export among the places.
+      await format(s, "home.md", "word");
+      await s.see(window);
+      await s.see("Last export");
+      await s.keys("escape");
+      await s.notSee("Name: home.docx");
+      writeFileSync(join(s.dir, "hold-go"), "");
+      await s.message("exported home.md");
+      // Into a folder that can't be written: said, and not where you exported last.
+      chmodSync(s.path("ro"), 0o555);
+      try {
+        await format(s, "home.md", "word");
+        await s.see(window);
+        await s.keys("ctrl+u");
+        await s.type("../ro/home.docx");
+        await s.keys("enter");
+        await s.message(/ro\/home\.docx not written/);
+      } finally {
+        chmodSync(s.path("ro"), 0o755);
+      }
+      await format(s, "home.md", "word");
+      await s.see(window);
       await s.see("Last export");
       await s.keys("escape");
       await s.notSee("Name: home.docx");

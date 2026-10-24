@@ -202,6 +202,11 @@ export class Exporter {
         },
         controller.signal,
       );
+      // Where it went, for "Where you exported last": as soon as it's there, not once its staging is cleared, so the
+      // window opened meanwhile opens there.
+      try {
+        writeJson(join(stateDir(graph.loc), "export.json"), { dir: dirname(target) });
+      } catch {}
     } catch (err) {
       if (!this.app.quitting)
         this.app.message(
@@ -222,10 +227,6 @@ export class Exporter {
       "info",
       `exported ${rels.length === 1 ? rels[0] : `${rels.length} notes`} to ${shown} (${format.title}${why ? `, not indexed: ${why}` : ""})${beside}`,
     );
-    // Where it went, for "Where you exported last".
-    try {
-      writeJson(join(stateDir(graph.loc), "export.json"), { dir: dirname(target) });
-    } catch {}
     this.app.host.requestRender();
   }
 }

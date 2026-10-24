@@ -1,9 +1,10 @@
 import { expect, test } from "bun:test";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { PreparedExport, ExportSpool } from "../src/core/export/spool.ts";
 import { ExportJob } from "../src/core/export/jobs.ts";
 import { formatFor } from "../src/core/export/index.ts";
+import type { SaveAsOverlay } from "../src/tui/saveas.ts";
 import { harness, makeSandbox, makeVault } from "./tui-harness.ts";
 
 makeSandbox();
@@ -47,6 +48,62 @@ test("an export started while another runs is written too, not refused", async (
   expect(readFileSync(join(root, "second.export.md"), "utf8")).toContain("# Export");
 });
 
+test("the folder exported to is remembered once the file is written: the window opened while its staging is cleared opens there", async () => {
+  const root = makeVault();
+  writeFileSync(join(root, "exported.md"), "# Export\n\nOne\n");
+  mkdirSync(join(root, "out"));
+  const h = await harness({ root, open: "exported.md" });
+  const previous = PreparedExport.prototype.dispose;
+  // The staging's cleanup held back, as a slow or loaded disk may hold it, till the window has been opened again.
+  let release!: () => void;
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  let cleaning = false;
+  PreparedExport.prototype.dispose = async function (this: PreparedExport) {
+    cleaning = true;
+    await held;
+    return previous.call(this);
+  };
+  let pending: Promise<void> | undefined;
+  try {
+    pending = h.app.exporter.write(["exported.md"], formatFor("docx")!, join(root, "out", "exported.docx"));
+    for (const t = Date.now(); !cleaning && Date.now() - t < 25_000; ) await Bun.sleep(10);
+    expect([cleaning, existsSync(join(root, "out", "exported.docx"))]).toEqual([true, true]);
+    expect(h.app.messages.at(-1)?.text).not.toStartWith("exported");
+    await h.keys("space", "n", "o", "enter");
+    const o = h.app.overlay as SaveAsOverlay;
+    expect(o.kind).toBe("saveas");
+    expect(o.dir).toBe(join(root, "out"));
+    expect(o.places.map((p) => p.label)).toContain("Last export");
+    await h.keys("escape");
+    release();
+    await pending;
+    expect(h.app.messages.at(-1)?.text).toBe("exported exported.md to out/exported.docx (Word (.docx))");
+  } finally {
+    // Let go and over, whatever failed: nothing of it left to run into the next test.
+    release();
+    await pending;
+    PreparedExport.prototype.dispose = previous;
+  }
+});
+
+test("an export that can't be written isn't kept as where you exported last", async () => {
+  const root = makeVault();
+  writeFileSync(join(root, "exported.md"), "# Export\n\nOne\n");
+  mkdirSync(join(root, "ro"));
+  const h = await harness({ root, open: "exported.md" });
+  chmodSync(join(root, "ro"), 0o555);
+  try {
+    await h.app.exporter.write(["exported.md"], formatFor("docx")!, join(root, "ro", "exported.docx"));
+  } finally {
+    chmodSync(join(root, "ro"), 0o755);
+  }
+  expect(h.app.messages.at(-1)?.text).toStartWith("export: ro/exported.docx not written — ");
+  // The export over, its staging cleared: nothing kept.
+  expect(h.app.exporter.lastDir()).toBeNull();
+});
+
 test("Cancel export stops every export running, none written; with none running, it says so", async () => {
   const root = makeVault();
   writeFileSync(join(root, "exported.md"), "# Export\n\nOne\n");
@@ -66,6 +123,7 @@ test("Cancel export stops every export running, none written; with none running,
     await Promise.all(both);
     expect(h.app.messages.at(-1)).toMatchObject({ level: "info", text: "export cancelled" });
     expect([existsSync(join(root, "first.html")), existsSync(join(root, "second.export.md"))]).toEqual([false, false]);
+    expect(h.app.exporter.lastDir()).toBeNull();
     h.app.run("note.export_cancel");
     expect(h.app.messages.at(-1)).toMatchObject({ level: "info", text: "no export is running" });
   } finally {

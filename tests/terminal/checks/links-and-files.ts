@@ -6,6 +6,7 @@ import {
   chmodSync,
   cpSync,
   existsSync,
+  mkdirSync,
   readdirSync,
   readFileSync,
   renameSync,
@@ -2804,16 +2805,18 @@ const NOTES: Check[] = [
   },
   {
     area: "links-and-files",
-    name: "notes: an export cancelled — a long note as a PDF, stopped from the palette before it's written",
+    name: "notes: an export cancelled — a long note as a PDF, stopped from the palette before it's written; not where you exported last",
     covers: { commands: ["note.export_cancel"] },
     options: {
       open: "long.md",
-      // Long enough that its PDF takes seconds: the cancel comes first.
-      setup: (s) =>
+      // Long enough that its PDF takes seconds: the cancel comes first. A folder to export it into.
+      setup: (s) => {
         s.write(
           "long.md",
           `# Long\n\n${Array.from({ length: 24_000 }, (_, i) => `Paragraph ${i} of a long note, a while as a PDF.\n`).join("\n")}`,
-        ),
+        );
+        mkdirSync(s.path("later"));
+      },
     },
     run: async (s) => {
       await s.keys(":");
@@ -2825,12 +2828,24 @@ const NOTES: Check[] = [
       await s.type("pdf");
       await s.keys("enter");
       await s.see("Name: long.pdf");
+      await s.keys("ctrl+u");
+      await s.type("later/long.pdf");
       await s.keys("enter");
       await s.keys(":");
       await s.type("Cancel export");
       await s.keys("enter");
       await s.message("export cancelled");
-      s.expect(!s.exists("long.pdf"), "the PDF not written");
+      s.expect(!s.exists("later/long.pdf"), "the PDF not written");
+      // Nor kept as where you exported last: the window opens beside the note, no Last export.
+      await leader(s, "n", "o");
+      await s.see("Export long.md as");
+      await s.type("pdf");
+      await s.keys("enter");
+      await s.see("Name: long.pdf");
+      await s.see(/[│┃] \.\/ +[│┃]/);
+      await s.notSee("Last export", 500);
+      await s.keys("escape");
+      await s.notSee("Name: long.pdf");
     },
   },
   {

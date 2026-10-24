@@ -470,6 +470,7 @@ describe("the supply chain's gates (14.10)", () => {
       checks: [],
     });
     expect(of("tests/terminal/spell-hold.ts")).toMatchObject({ tests: [], checks: ["spelling"] });
+    expect(of("tests/terminal/export-hold.ts")).toMatchObject({ tests: [], checks: ["export"] });
     // A snapshot: its test. The lint's config: the lint alone.
     expect(of("tests/__snapshots__/render.test.ts.snap")).toMatchObject({
       tests: ["tests/render.test.ts"],
