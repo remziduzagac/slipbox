@@ -88,3 +88,36 @@
 - **The user approved the design as proposed:** `space r`; `gh` now; a report's copy goes to `clipboard.txt` when no
   clipboard takes it, as every copy's, and said; the frame after the command. The dropdown stays as proposed (passed,
   and said in Version). Recorded as RPT-D1 to RPT-D7; the workstream is active, its tasks in `tasks/`.
+
+## Built (2026-10-24)
+
+- **Tasks RPT-T1 to RPT-T6** built in turn, each with unit tests and terminal checks
+  (`tests/terminal/checks/reporting.ts`); the rules mutation-checked (each undone once, a test failing).
+- **Found while building:** a copy returned before it was made, so the next was refused as still copying; a gh whose
+  child held its output open kept a timed-out post waiting; keys sent at once with `space r` (a paste, a macro)
+  reached the note under the report before the frame that opens it. Each fixed, with a test.
+- **Review, round 1** — Codex (five findings, all taken): gh's `--repo` named github.com, as the account and the bug
+  form are, whatever `GH_HOST` says; what the yes-or-no names is what's posted; "added" only outside fences; a draw
+  that fails still opens the report; terminal checks for the cases only unit-tested. `/code-review` (fifteen):
+  - taken: `:w!` wrote a floating window's text to a file named after it (the commit's and properties' windows'
+    too, in dev) — `writeBuffer` refuses a virtual buffer and `:w!` on one is `:w`; the browser tests assumed Linux
+    and the checks faked only `xdg-open`; opening from a draw guarded; no address while a fence is open; a token in
+    the tests' environment; a comment before the labels; `slipbox report` shadowing a folder named so, said in the
+    docs; gh's account lookup timing out said as such; the window closed or covered during it; gh run through
+    `runTool`; `oneLine` cut by width; the fence's regex built once.
+  - not taken: GitHub's own fence for a `render: text` field, which a bare ``` line in the screen or place can close
+    (GitHub picks that fence; the text arrives intact, and the copy and gh keep slipbox's longer one); a flag on
+    virtual buffers in place of the kind lists in `note.save` and the status line (they follow the commit's and the
+    merge screen's existing pattern: a refactor of its own); shared helpers for a list's "a, b and c" and a
+    read-or-empty (inline or private where they are).
+- **Review, round 2** — `/code-review` (fifteen):
+  - taken: a comment left open above the labels hid them all — no address, no screen added, gh refused, said; the
+    `writeBuffer` refusal said, and a task toggled in a read-only window (a peek, which in dev wrote the peeked file)
+    refused, said; a screen asked for with none kept; focus back where the report was opened; an empty
+    `PRETTY_NAME`; a label with closing hashes; a fence above the labels never the title; the guide left out of the
+    copy wherever it is; the keys' wait once only when no frame comes, and asks before the frame all added; the
+    cursor's line read alone; no address planned for the copy or gh; the opener's timer cleared; the CLI's labels
+    padded by width.
+  - not taken: as in round 1 (GitHub's fence, the virtual-buffer flag, the shared helpers), and a general gate in
+    the key loop for features that open on the next frame (one feature has one: premature).
+  - Codex's part of round 2 was done by a fresh Claude reviewer: Codex was at its usage limit.
