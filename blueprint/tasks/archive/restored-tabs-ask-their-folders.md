@@ -339,3 +339,8 @@ folder before its tabs open, as a file opened by name has its folder asked for, 
   vaults manual keep #35's lines and this branch's. Ran: tests/tui.test.ts's `#13` and VV-D6 tests (63), vault's and
   the walk thread's (438), core's (308), the 32 terminal checks the branch reaches, the typecheck, the lint,
   `check:docs`.
+- 2026-10-24: Rebased on `dev` once more, the pull request conflicting again (#36, a followed link renamed or moved
+  as a link): `design/roots.md`'s paragraph on what a yes allows keeps #36's words and this branch's. Ran: the same
+  tests (63, and vault's, the walk thread's and core's: 772), the 32 terminal checks, the typecheck, the lint,
+  `check:docs`. CI on the head before: green but macOS's test job, T12's `home's walk, stepped while nobody works …`,
+  a flaky test also seen on dev.
