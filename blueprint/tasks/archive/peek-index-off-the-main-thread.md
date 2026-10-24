@@ -434,3 +434,11 @@ changed in that vault since.
     backlinks' thread's test exercises.
   Unit tests for each fixed one, mutation-checked (M127–M130, each caught; M124, round 7's, retired with the ask it
   checked). 89 unit tests; the home, deletion and nested-vault terminal checks, 4 of 4.
+- 2026-10-24: Review loop, round 9, on round 8's commit (3508127): Codex's part skipped (out of its credit) — done by a
+  fresh Claude reviewer; the code-review skill's agents, 12 findings. Fixed: the relayout when a rebuild fails, and
+  none while quitting (in `relayout`); home's graph built again only when the thread wrote its index; every
+  `recordLocation` of `Reach` guarded; the docs on home's notes and walk. The fresh reviewer's 1, verified: a note
+  slipbox can't read dirtied the index at each run, so every answer said written — no longer (`Graph.entry`). Rejected:
+  retrying a failed record, the test's fixed wait, two stamps in one rare answer. Unit tests mutation-checked
+  (M131–M135). Not yet done: the fresh reviewer's 4 (roots.md's keeper of the walk brought up to date: the TUI's
+  `refreshHome`) and 5's order in `reopened`.

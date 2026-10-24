@@ -2,7 +2,6 @@
 // once; as the other vault is now, at each peek; its index built when it has none.
 import { afterEach, expect, spyOn, test } from "bun:test";
 import * as fs from "node:fs";
-import * as vaultModule from "../src/core/vault.ts";
 import {
   existsSync,
   mkdirSync,
@@ -35,6 +34,8 @@ import { planMakeVault, planUnmakeVault } from "../src/core/rename-vaults.ts";
 import { Redirects } from "../src/core/redirects.ts";
 import { forgetProbes, setLinkAnswer } from "../src/core/symlinks.ts";
 import { homeAt, initVault, locateVault, recordLocation, setRootMarkers } from "../src/core/vault.ts";
+import * as vaultModule from "../src/core/vault.ts";
+import * as fsutil from "../src/core/fsutil.ts";
 import { keepCaughtUp, peekOf, peekProbe, vaultGraph } from "../src/tui/peek.ts";
 import { type Harness, harness, makeSandbox, onlyRootsUnder } from "./tui-harness.ts";
 
@@ -2082,10 +2083,10 @@ test("several roots stamped indexed at once: each stamped, the machine's list wr
     for (const root of [notes, app]) recordLocation(locateVault({ root }));
     const keys = [notes, app].map((root) => locateVault({ root }).key);
     let writes = 0;
-    const rename = fs.renameSync;
-    const spy = spyOn(fs, "renameSync").mockImplementation((from, to) => {
-      writes++;
-      return rename(from, to);
+    const write = fsutil.writeJson;
+    const spy = spyOn(fsutil, "writeJson").mockImplementation((path, value) => {
+      if (path.endsWith("roots.json")) writes++;
+      return write(path, value);
     });
     try {
       noteIndexed(keys, new Date("2026-10-24T05:00:00Z"));
@@ -2115,6 +2116,12 @@ test("the vault an answer wrote the index of is stamped indexed even when catchi
         if (this === g) throw new Error("can't be read");
         return build.apply(this, args);
       };
+      let laidOut = 0;
+      const relayoutAll = h.app.relayoutAll.bind(h.app);
+      h.app.relayoutAll = () => {
+        laidOut++;
+        relayoutAll();
+      };
       try {
         reply(sent.length - 1, { wrote: true, config: configSignature(g.config) });
         await read(h);
@@ -2122,6 +2129,8 @@ test("the vault an answer wrote the index of is stamped indexed even when catchi
         Graph.prototype.build = build;
       }
       expect(readRoots().find((v) => v.key === g.loc.key)?.indexed).toBeString();
+      // Every view laid out again all the same: this vault's backlinks from it are read again.
+      expect(laidOut).toBeGreaterThan(0);
     });
   } finally {
     stopBacklinkJobs();
@@ -2224,5 +2233,83 @@ test("a root the machine's list opened, recorded when a link reaches it: that fa
     });
   } finally {
     stopBacklinkJobs();
+  }
+});
+
+test("home's graph here with notes still to parse isn't built again at each answer: only when its thread wrote its index (VV-D2, #10)", async () => {
+  const home = realpathSync(mkdtempSync(join(sandbox, "home-")));
+  const notes = join(home, "notes");
+  mkdirSync(join(notes, ".slipbox"), { recursive: true });
+  writeFileSync(join(notes, "index.md"), "# Index\n\n[the list](../todo.md)\n");
+  writeFileSync(join(home, "todo.md"), "# To do\n");
+  const before = process.env.HOME;
+  process.env.HOME = home;
+  stopBacklinkJobs();
+  const { sent, reply } = fakeThread();
+  const build = Graph.prototype.build;
+  try {
+    openGraph(homeAt(home), DEFAULT_CONFIG, true);
+    writeFileSync(join(home, "later.md"), "# Later\n"); // since home's index: to parse in the graph here
+    const h = await harness({ root: notes, open: "index.md" });
+    await h.keys("tab", "enter");
+    const g = vaultGraph(h.app, home)!;
+    expect(g.pendingCount).toBeGreaterThan(0);
+    let built = 0;
+    Graph.prototype.build = function (this: Graph, ...args) {
+      if (this === g) built++;
+      return build.apply(this, args);
+    };
+    const same = { signature: vaultSignature(g), config: configSignature(g.config) };
+    reply(sent.length - 1, same);
+    await read(h);
+    expect(built).toBe(0);
+    keepCaughtUp(h.app, g);
+    await Bun.sleep(0);
+    reply(sent.length - 1, { ...same, wrote: true });
+    for (let i = 0; i < 100 && !built; i++) await Bun.sleep(1);
+    expect(built).toBe(1);
+  } finally {
+    Graph.prototype.build = build;
+    process.env.HOME = before;
+    stopBacklinkJobs();
+  }
+});
+
+test("the machine's list failing to record a root reached, or found around one: its graph opened, its roots found all the same (17.11, #10)", async () => {
+  const { base, notes, app } = twoVaults();
+  const lab = join(realpathSync(app), "lab");
+  mkdirSync(join(lab, ".slipbox"), { recursive: true });
+  writeFileSync(join(lab, "n.md"), "# Lab\n");
+  await onlyRootsUnder(base, async () => {
+    const spy = spyOn(vaultModule, "recordLocation").mockImplementation(() => {
+      throw new Error("the machine's list can't be written");
+    });
+    try {
+      const reach = new Reach(locateVault({ root: notes }), { thorough: false });
+      const g = reach.graphAt(app);
+      expect(g).not.toBeNull();
+      const around = new Reach(g!.loc, { nested: "open" });
+      expect(() => around.discover(g!)).not.toThrow();
+      expect(around.held(lab)).toBeTruthy();
+    } finally {
+      spy.mockRestore();
+    }
+  });
+});
+
+test("a note slipbox can't read doesn't have its vault's index written again at each run: nothing said written (#10)", async () => {
+  const { base, app } = twoVaults();
+  const locked = join(app, "locked.md");
+  writeFileSync(locked, "# Locked\n");
+  fs.chmodSync(locked, 0o000);
+  try {
+    await onlyRootsUnder(base, async () => {
+      const first = await backlinksThere({ root: app, rel: "design.md" });
+      const second = await backlinksThere({ root: app, rel: "design.md" });
+      expect(first.indexed && first.wrote).toBe(false);
+      expect(second.indexed && second.wrote).toBe(false);
+    });
+  } finally {
+    fs.chmodSync(locked, 0o644);
   }
 });

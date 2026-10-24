@@ -75,10 +75,10 @@ export interface ReachOptions {
   opened?: (g: Graph) => void;
   /**
    * The graphs it opens write nothing of their vaults' — their indexes, their redirects, the commit they caught up
-   * with — but home's walk, kept as every graph on the main thread keeps it (`Graph.keepsWalk`).
-   * The TUI's: its backlinks' thread writes them, off the keys (#10). A backlinks' thread's, reading another vault for a
-   * link alone: that vault's own request writes its state, or the main thread does. A nested root's first index
-   * (`nested`) is written all the same.
+   * with — but home's walk, kept as every graph on the main thread keeps it (`Graph.keepsWalk`). The TUI's: its
+   * backlinks' thread writes them, off the keys (#10). A backlinks' thread's, reading another vault for a link alone:
+   * that vault's own request writes its state, or the main thread does. A nested root's first index (`nested`) is
+   * written all the same.
    */
   readOnly?: boolean;
   /** Roots whose state another thread holds (the TUI's own vault, for its backlinks' thread): never indexed here. */
@@ -197,7 +197,12 @@ export class Reach implements VaultReach {
     try {
       // Home (VV-D2) by its kept walk; any other vault by its marker.
       const loc = vaultAt(root);
-      if (!known && this.record) recordLocation(loc); // reached: known on this machine, its links counted (17.11)
+      // Reached: known on this machine, its links counted (17.11) — opened all the same if the list can't say so.
+      if (!known && this.record) {
+        try {
+          recordLocation(loc);
+        } catch {}
+      }
       const config = loadConfig({ ...configFilesFor(loc) }).config;
       const g = new Graph(loc, config);
       g.writesIndex = !this.readOnly;
@@ -264,7 +269,11 @@ export class Reach implements VaultReach {
       } catch {
         continue;
       }
-      if (this.record) recordLocation(loc);
+      if (this.record) {
+        try {
+          recordLocation(loc);
+        } catch {}
+      }
       // A worktree's notes count at its main checkout (17.19), which the list knows if anything does.
       else if (!loc.worktree)
         this.found.push({ key: loc.key, kind: "vault", path: root, seen: new Date().toISOString() });

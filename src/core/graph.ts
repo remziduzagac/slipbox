@@ -509,7 +509,8 @@ export class Graph {
       this.notes.set(rel, e);
       this.unparsed.delete(rel);
       this.reachLinked(e);
-      this.cacheDirty = true;
+      // One it can't read is never written to the index: its index the same, not written again for it at each open.
+      if (!isUnreadable(e)) this.cacheDirty = true;
       this.backlinkCache = null;
       this.tagCache = null;
       this.generation++;
@@ -556,7 +557,7 @@ export class Graph {
   /**
    * Home's: the walk it makes kept for the next (`walk.json`, VV-D2) — by a graph on the main thread. One built on a
    * thread of a peek's backlinks or an export's keeps nothing: the main thread's may be newer. (The background index
-   * keeps its own, on the walk's thread, T12.)
+   * keeps its own, on the walk's thread, and the TUI in home the one its walk's thread hands back, T12.)
    */
   keepsWalk = isMainThread;
 

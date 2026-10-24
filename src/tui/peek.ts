@@ -275,9 +275,12 @@ async function catchUp(app: App, asked: Graph, answer: BacklinksAnswer, holder: 
     app.graph.othersChanged();
     app.explorer.invalidateTree();
   }
+  let laidOut = false;
   try {
-    if (!(await rebuilt(app, asked, answer, holder)) && others && !app.quitting) relayout(app);
+    laidOut = await rebuilt(app, asked, answer, holder);
   } finally {
+    // Laid out again whatever the rebuild did, failed included.
+    if (others && !laidOut) relayout(app);
     // The vaults nested in it stamped indexed once the rebuild has recorded those found: one new since isn't in the
     // machine's list before. Not once slipbox is quitting.
     if (answer.others.length && !app.quitting) noteIndexed(answer.others);
@@ -300,7 +303,10 @@ async function rebuilt(
   graph.forgetRedirects();
   const settings = answer.config !== configSignature(graph.config);
   // Its walk the thread's, every note parsed — or being parsed here, which a rebuild would start again.
-  if (!settings && answer.signature === signatureOf(graph) && (!graph.pendingCount || parsing.has(graph))) return false;
+  // Home's notes still to parse are never parsed here (VV-D2): an index just written may hold them, else a rebuild
+  // reads the same — at each answer, for a note slipbox can't read, which stays to parse.
+  const pending = !!graph.pendingCount && !parsing.has(graph) && (graph.loc.mode !== "home" || answer.wrote);
+  if (!settings && answer.signature === signatureOf(graph) && !pending) return false;
   // The links it follows asked here too, as its thread asked them (VV-D6): else this walk leaves out what that one has.
   await peekProbe.followed(graph.root);
   if (app.quitting || holder()?.held(graph.root) !== graph) return false;
@@ -364,6 +370,8 @@ const retired = new WeakSet<Graph>();
  * this vault's own notes may reach a note of it by a name it has only now.
  */
 function relayout(app: App): void {
+  // Not a screen going away.
+  if (app.quitting) return;
   for (const b of everyBuffer(app)) b.invalidateLayouts();
   app.relayoutAll();
   app.host.requestRender();
