@@ -186,7 +186,7 @@ export function drawApp(app: App, c: Canvas): Geometry {
   // outline, and one across their bottom; with tabs, another under the strip, over the note and
   // the outline. Zen has none.
   const frame = !zen;
-  const mainY = frame ? head + 1 + (tabBar ? 2 : 0) : 0;
+  const mainY = frame ? head + 1 + (tabBar ? 2 : 0) : head;
   const mainH = H - mainY - (frame ? 1 : 0) - status;
   // The Problems panel (1.7), across the whole width under the windows and the side panes, over the
   // frame's bottom rule: its tabs' row and its list, under a rule of its own that a drag resizes. As high as

@@ -704,7 +704,7 @@ export const NAVIGATING: Check[] = [
   },
   {
     area: "navigating",
-    name: "settings: the top bar, the breadcrumb and the window header hidden and shown again; zen has no header",
+    name: "settings: breadcrumb and window header hidden and shown again; zen keeps the permanent bar",
     covers: {
       cases: ["ui", "breadcrumb", "window-header"],
       commands: ["ui.breadcrumb", "ui.window_header", "ui.zen", "palette.open"],

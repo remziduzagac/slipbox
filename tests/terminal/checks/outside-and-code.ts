@@ -1197,11 +1197,14 @@ export const OUTSIDE_AND_CODE: Check[] = [
       const answered = Date.now() - asked;
       await s.keys("escape");
       await s.notSee("Commands");
-      // zen, no top bar, no explorer; line numbers on: the note's first rows numbered 1, 2, 3.
-      s.expect(!s.text().includes("Explorer") && !s.topBar().includes("slipbox"), "no explorer, no top bar (zen)");
+      // Zen keeps the permanent bar, hides the explorer; the note's first rows below it are numbered 1, 2, 3.
+      s.expect(
+        !s.text().includes("Explorer") && s.topBar().includes("slipbox"),
+        "zen hides the explorer and retains the permanent bar",
+      );
       const numbers = s
         .screen()
-        .slice(0, 3)
+        .slice(1, 4)
         .map((r) => /^\s*(\d+)\s/.exec(r)?.[1]);
       s.expect(numbers.join(",") === "1,2,3", `line numbers in the gutter (${numbers.join(",")})`);
       // Its leader is backslash: \\ m, the messages — none a warning or an error (each row ends with its level and

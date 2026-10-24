@@ -2733,6 +2733,7 @@ existing last export directory. Code and data files have no Export row.
 ### Compact status and task lifetimes (VB-D1, VB-D3)
 
 When space is short, shorten the view segment to R/R·L/S, then the vim mode to N/I/V/V-L before the file name.
-Without a window the chip says NORMAL. The outline button remains on the top bar if no header or right rail carries
+Without a window the chip says NORMAL. In zen the content starts below the permanent bar, reserving its row.
+The outline button remains on the top bar if no header or right rail carries
 it. An upgrade remains after dismissing its offer, but clears when skipped, installed or no longer newer.
 Cancelling an index warns that search and backlinks may be incomplete and offers reindex as the retry.

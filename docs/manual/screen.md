@@ -41,7 +41,8 @@ and marks look different. See [Glyphs](reading.md#glyphs).
 
 ## The top bar
 
-The top bar is always visible, including in zen mode. Click `slipbox` at the left to open the
+The top bar is always visible, including in zen mode, with the note beginning below it. Click `slipbox` at the left
+to open the
 [command palette](#the-command-palette).
 
 The middle block says **where you are**, with a dim separator between each clickable item:

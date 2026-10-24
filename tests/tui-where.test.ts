@@ -161,3 +161,13 @@ test("a real index job cancelled from the list warns and can resume", async () =
   expect(h.app.graph.pendingCount).toBe(0);
   expect(h.app.background.tasks.size).toBe(0);
 });
+
+test("zen reserves the permanent bar's row so the first note row remains visible", async () => {
+  const root = named("zen-first")!;
+  const h = await harness({ root, config: (config) => (config.ui.zen = true) });
+  const canvas = h.canvas();
+  const pane = h.app.geometry!.panes[0]!;
+  expect(pane.y).toBeGreaterThan(0);
+  expect(canvas.line(pane.y)).toContain("Index");
+  expect(canvas.line(0)).toContain("slipbox");
+});
