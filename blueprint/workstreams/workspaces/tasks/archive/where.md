@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: done
 assignee: claude-cli
 blocked_by: []
 created: "2026-10-24"
@@ -30,3 +30,11 @@ WSP-D4 and WSP-D5.
   name. A `where()` helper beside `status()` in `tests/terminal/session.ts`; the checks that read the vault off the
   status line read it with it.
 - Tried live, on the reference set or a scratch home.
+
+## Done (2026-10-24)
+
+`src/tui/where.ts`; the top bar's middle and its two targets (`drawWhere` in `draw.ts`, `top:vault` and `top:branch`
+in `mouse.ts`); the status line's only while the bar didn't say it (`geo.whereOnTop`); `vaultStatus` gone. Unit tests in
+`tests/tui-where.test.ts`, the old ones moved; terminal checks in `tests/terminal/checks/where.ts`, `whereOnBar` and
+`Session.where` for the 40 checks that read the vault, all run green; undoing the status line's rule fails two unit
+tests. Tried live (notes.md, Log).

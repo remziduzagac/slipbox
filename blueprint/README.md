@@ -35,7 +35,7 @@ search's improvements.
 - [workstreams/](workstreams/README.md): contained parts of the work; the roadmap gives their order. Active:
   [TT](workstreams/terminal-tests/README.md), the terminal tests headless and by feature,
   [DOCS](workstreams/documentation/README.md), the documentation learning path and reference, and
-  [WSP](workstreams/workspaces/README.md), workspaces and where you are on the top bar. DOC, the user
+  [WSP](workstreams/workspaces/README.md), workspaces and where you are on the top bar (complete). DOC, the user
   documentation, DF, what writing it found, [GR](workstreams/archive/greenrepo/README.md), the repository to
   greenrepo, published and released, [DS](workstreams/archive/docs-site/README.md), the documentation site and docs
   a newcomer can follow, [VV](workstreams/archive/vaults-and-view/README.md), vaults and the explorer's view, and

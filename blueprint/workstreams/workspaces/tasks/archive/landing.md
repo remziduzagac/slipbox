@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: done
 assignee: claude-cli
 blocked_by: [WSP-T1, WSP-T2]
 created: "2026-10-24"
@@ -19,3 +19,10 @@ created: "2026-10-24"
 ## Acceptance criteria
 
 - `bun run typecheck`, the lint and `check:docs` pass; the docs say it without the blueprint's IDs.
+
+## Done (2026-10-24)
+
+The docs and guides, the mouse table and help, the CHANGELOG under Changed, the 29 screenshots retaken and looked at,
+`check:docs` and the typecheck green; reviewed by Codex, then `/code-review` (notes.md, Log). The workstream complete:
+consolidation (the root requirements' changes, the notes under D65, D77, D153, VV-D1, VV-D2 and D33) is the
+maintainer's.

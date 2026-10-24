@@ -1,5 +1,5 @@
 ---
-status: active
+status: done
 assignee: claude-cli
 blocked_by: []
 created: "2026-10-24"
@@ -27,3 +27,12 @@ The words of WSP-D1 and WSP-D2.
 - "session" is left in the docs only where it means a sitting, a process's or a picture's, and in
   `ui.restore_session` and `session.json`; `tests/docs.test.ts` holds the docs to it.
 - `check:docs` passes.
+
+## Done (2026-10-24)
+
+Workspace in the docs, the glossary (Workspace and Where you are), the README and the introduction (slipbox no longer
+called a workspace), the messages (a named folder moved by hand, the purge's list), Quit's and Fetch's descriptions,
+the comments in `session.ts` and `position.ts`, and the design (`tui.md`, `roots.md`, `terms.md`, `how-it-works.md`,
+`distribution.md`, `rendering.md`'s one). `tests/docs.test.ts` keeps "session" for the working state out of the docs,
+the README, the skill and the messages, checked by putting the old message back once. The root requirements' changes
+wait for consolidation.
