@@ -16,6 +16,7 @@ import { codeBlocks } from "./code.ts";
 import { selectable } from "./overlays.ts";
 import { taskMarkAt } from "./views.ts";
 import { linkAt } from "./linking.ts";
+import { MODES } from "./modes.ts";
 
 /** The mouse: clicks, drags, the wheel. */
 export class Mouse {
@@ -80,10 +81,13 @@ export class Mouse {
     if (ev.type === "down") {
       // A click ends typing (its undo step closes), and a half-typed sequence (space, then the
       // click) unless it's on the which-key popup's own entries; then does what it does.
-      for (const v of this.app.allViews()) if (v.insert) stopInsert(this.app, v);
-      const hot = hotAt()?.id ?? null;
-      if (this.app.pending.length && !hot?.startsWith("wk:")) this.app.input.clearPending();
-      return this.down(ev, g, hot);
+      // What the click says is said once: ending typing may say a file doesn't parse, and the click's command the same.
+      return this.app.sayingOnce(() => {
+        for (const v of this.app.allViews()) if (v.insert) stopInsert(this.app, v);
+        const hot = hotAt()?.id ?? null;
+        if (this.app.pending.length && !hot?.startsWith("wk:")) this.app.input.clearPending();
+        return this.down(ev, g, hot);
+      });
     }
     if (ev.type === "drag" && this.drag) return this.dragTo(ev, g);
     if ((ev.type === "up" || ev.type === "drag-end") && this.drag) return this.up();
@@ -304,11 +308,8 @@ export class Mouse {
     if (hot?.startsWith("gsign:")) {
       const pane = g.panes.find((p) => p.x <= ev.x && ev.x < p.x + p.w && p.y <= ev.y && ev.y < p.y + p.h);
       const t = this.app.tab;
-      if (pane && t && !this.app.floating && t.views.includes(pane.view)) {
-        t.active = t.views.indexOf(pane.view);
-        this.app.region = "content";
+      if (pane && t && !this.app.floating && this.focusWindow(t.views.indexOf(pane.view)))
         signClick(this.app, pane.view, Number(hot.slice(6)), { x: ev.x + 1, y: ev.y });
-      }
       return;
     }
     if (hot && !hot.startsWith("tab:")) return this.clickHot(hot);
@@ -654,12 +655,8 @@ export class Mouse {
       case "crumb": {
         // crumb:<window>:<row> — that window scrolls to the heading, and takes the focus.
         const [w, row] = arg.split(":").map(Number) as [number, number];
-        const t = this.app.tab;
-        const v = t?.views[w];
-        if (!t || !v) break;
-        t.active = w;
-        this.app.region = "content";
-        this.app.outlineView.revealHeading(v, row);
+        const v = this.focusWindow(w);
+        if (v) this.app.outlineView.revealHeading(v, row);
         break;
       }
       case "findrep": {
@@ -689,22 +686,26 @@ export class Mouse {
         else typing?.change?.(typing.text);
         break;
       }
-      case "crumbmore": {
-        const t = this.app.tab;
-        if (!t?.views[Number(arg)]) break;
-        t.active = Number(arg);
-        this.app.region = "content";
-        void this.app.run("breadcrumb.path");
+      case "mode": {
+        // mode:<window>:<read|lens|source> — the header's buttons (HDR-D2): that window focused (typing ended already,
+        // as by every click), then its mode's command run: it switches, says why it can't, or (the selected one) does
+        // nothing.
+        const [w, which] = arg.split(":");
+        const b = MODES.find((m) => m.id === which);
+        // A floating window opened since the frame clicked was drawn: the commands act on it, not on this window.
+        if (this.app.floating) break;
+        const v = b ? this.focusWindow(Number(w)) : null;
+        if (!b || !v) break;
+        // Its refusal said once, if ending typing said it already (`App.sayingOnce`).
+        void this.app.run(`view.mode_${b.id}`);
         break;
       }
-      case "crumbicon": {
-        const t = this.app.tab;
-        if (!t?.views[Number(arg)]) break;
-        t.active = Number(arg);
-        this.app.region = "content";
-        void this.app.run("outline.pick");
+      case "crumbmore":
+        if (this.focusWindow(Number(arg))) void this.app.run("breadcrumb.path");
         break;
-      }
+      case "crumbicon":
+        if (this.focusWindow(Number(arg))) void this.app.run("outline.pick");
+        break;
       case "status":
         // The path: its window's history, and Copy path; the arrows around it, back and forward.
         if (arg === "path" && this.app.view) this.app.history.openPathMenu();
@@ -728,6 +729,16 @@ export class Mouse {
         void this.app.run("messages.open");
         break;
     }
+  }
+
+  /** The tab's window `w`, focused with the content region, as a click on its header does; null when there's none. */
+  private focusWindow(w: number): View | null {
+    const t = this.app.tab;
+    const v = t?.views[w];
+    if (!t || !v) return null;
+    t.active = w;
+    this.app.region = "content";
+    return v;
   }
 }
 

@@ -42,6 +42,7 @@ outline_width = 36
 split_ratio = 0.6
 top_bar = false
 lines = "heavy"
+window_header = true
 breadcrumb = false
 left_rail = false
 right_rail = false
@@ -423,6 +424,7 @@ sidebar_vault = { bold = true, underline = true }
 "leader ; e n" = "ui.spell"
 "leader ; e o" = "ui.scratch_in"
 "leader ; e p" = "ui.code_wrap"
+"leader ; e q" = "ui.window_header"
 "leader ; V a" = "spell.next"
 "leader ; V b" = "spell.prev"
 "leader ; V c" = "spell.suggest"
@@ -483,6 +485,9 @@ sidebar_vault = { bold = true, underline = true }
 "leader ; d i" = "note.edit"
 "leader ; A a" = "view.source"
 "leader ; A b" = "view.live"
+"leader ; A c" = "view.mode_read"
+"leader ; A d" = "view.mode_lens"
+"leader ; A e" = "view.mode_source"
 "leader ; r a" = "lens.grow"
 "leader ; r b" = "lens.shrink"
 "leader ; r c" = "lens.reset"

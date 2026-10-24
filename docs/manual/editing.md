@@ -71,6 +71,10 @@ A few things work differently from a desktop editor:
 
 ## Source mode and the lens
 
+A window shows its note one of three ways: rendered, in the lens, or as its Markdown in source mode. The **Read**,
+**Lens** and **Source** buttons on its header show which, and a click switches straight to another
+([The window header](screen.md#read-lens-and-source)).
+
 ### Source mode
 
 Press `ctrl+k` to see the window's note as its Markdown. `space n v` and `:source` do the same. Press it again to see
@@ -158,15 +162,15 @@ The editing keys are `i`, `a`, `o` and their capitals. On a rendered note, an ed
 
 With `"live"`, `esc` `esc` leaves the way you came. The first `esc` stops typing, and the second closes the lens.
 
-Either way, `ctrl+k` and `space n l` open the other one.
+Either way, `ctrl+k` and `space n l` open the other one, as do the window header's buttons.
 
 ### Files beyond notes
 
 Data files (JSON, YAML, TOML, INI, CSV and the like) open rendered. The lens edits them one card at a time: a key and
 the values under it, or a few rows of a table.
 
-If a data file stops parsing while you edit it, it switches to source mode when you stop typing. `space n v` renders it
-again once it parses.
+If a data file stops parsing while you edit it, it switches to source mode when you stop typing. `space n v`, or the
+window header's Read, renders it again once it parses.
 
 Other text files open in source mode, since they have no rendered view. Code has a view of its own ([Code](code.md)).
 [Reading](reading.md) says how each kind of file is shown.

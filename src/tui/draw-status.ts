@@ -12,6 +12,10 @@ import { sanitize } from "../core/sanitize.ts";
 import type { Role, Color } from "../core/theme/theme.ts";
 import { SEVERITIES, worst } from "../core/diagnostics.ts";
 import { severityGlyph, SEVERITY_ROLE } from "./draw-pane.ts";
+import { MODES, type ViewMode, viewMode } from "./modes.ts";
+
+/** The chip for a window's mode: the button its header has selected, by its label (HDR-D2). */
+const CHIP = Object.fromEntries(MODES.map((m) => [m.mode, ` ${m.label.toUpperCase()} `])) as Record<ViewMode, string>;
 
 export function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void {
   const theme = app.theme;
@@ -47,11 +51,7 @@ export function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void
                       : " OUTLINE "
                   : view?.insert
                     ? " INSERT "
-                    : view?.source
-                      ? " SOURCE "
-                      : view?.live
-                        ? " LENS "
-                        : " READ ";
+                    : CHIP[view ? viewMode(view) : "rendered"];
   const chipSt = roleStyle(theme, "status_accent", page);
   c.fill(0, band.y, stringWidth(chip), band.h, chipSt.bg ?? null);
   let x = drawText(c, 0, y, chip, chipSt);

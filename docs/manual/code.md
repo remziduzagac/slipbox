@@ -31,6 +31,7 @@ Other code opens in source mode: HTML, CSS, SCSS, Dockerfiles, and Vue, Svelte a
 | Key or setting | What it does |
 | --- | --- |
 | `space n v` | Switches the file on screen between the code view and source mode |
+| Read, Lens, Source | The window header's buttons: the code view, a cell's source in the lens, the file as written |
 | `render.code = "source"` | Opens all code in source mode ([Configuration](configuration.md)) |
 
 Take this TypeScript file, `src/shelf.ts`:

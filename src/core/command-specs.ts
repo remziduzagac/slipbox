@@ -55,7 +55,7 @@ export const COMMAND_GROUPS: { title: string; ids: RegExp }[] = [
   },
   {
     title: "Editing",
-    ids: /^(task\.|edit\.|spell\.|shell\.|visual\.(delete|change|indent|outdent|comment)$|view\.(source|live)$|lens\.|note\.(save|save_all|save_force|revert|resolve)$|app\.(save_quit|quit_force)$)/,
+    ids: /^(task\.|edit\.|spell\.|shell\.|visual\.(delete|change|indent|outdent|comment)$|view\.(source|live|mode_read|mode_lens|mode_source)$|lens\.|note\.(save|save_all|save_force|revert|resolve)$|app\.(save_quit|quit_force)$)/,
   },
   { title: "UI", ids: /^(ui\.|theme\.|glyphs\.)/ },
   { title: "Scratch", ids: /^(scratch\.|context\.copy$)/ },

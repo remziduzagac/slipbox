@@ -33,8 +33,9 @@ the terminal and its own selection.
   colours, so a high-contrast palette you set there shows through. Your own base16 or base24 scheme works as a theme,
   and `[colors]` changes the colour of any single part of the screen.
 - **No colour at all.** The `mono` theme, which `NO_COLOR` turns on, uses only bold, dim, italics and underlines. Links
-  are underlined, the cursor is shown in reverse video, the focused pane's title and the active tab are underlined, and
-  the columns of buttons at the sides get a border where a theme would tint them.
+  are underlined, the cursor is shown in reverse video, the focused pane's title and the active tab are underlined, the
+  columns of buttons at the sides get a border where a theme would tint them, and a window header's button for a mode
+  the file can't be shown in is in italics.
 - **Plain characters.** Icons, bullets and lines come from a glyph set: `nerd`, `unicode`, or `ascii`, which uses only
   the characters every font has. `space u g` picks one; by default, where the locale isn't UTF-8, slipbox picks `ascii`
   itself.

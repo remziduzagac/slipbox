@@ -146,6 +146,8 @@ export const ROLES = [
   "topbar",
   "topbar_button",
   "topbar_button_on",
+  // a button that can't be used: a mode the window's file has no view for, on its header (HDR-D2)
+  "topbar_button_disabled",
   "topbar_chip",
   "hover",
   "breadcrumb",
@@ -425,7 +427,7 @@ export function themeFromPalette(
     // A code cell's lines — its box's, the tree's between a class and its members (24.13): a step brighter than the
     // frame's and the rules', so a cell stands out from the chrome around it; the indent guides in its code stay quiet.
     cell_line: { fg: blend(p.surface2, p.fg_dim, 0.35) },
-    // The gutter (the problems bar, the line numbers): halfway from the page to the breadcrumb row's shade, the two
+    // The gutter (the problems bar, the line numbers): halfway from the page to the window header's shade, the two
     // framing the text, the gutter the quieter — not the rails' and code blocks' dark, which a code block beside it
     // would run into.
     gutter: { bg: blend(p.surface, p.bg, 0.175) },
@@ -436,9 +438,12 @@ export function themeFromPalette(
     // Toggle buttons sit on whatever they're drawn on: dim while off, bright while on.
     topbar_button: { fg: p.comment },
     topbar_button_on: { fg: p.fg_strong, bold: true },
+    // Fainter than an unused one, halfway from its colour to surface2's, and in italics: it reads as disabled, not as
+    // missing (HDR-D6).
+    topbar_button_disabled: { fg: blend(p.comment, p.surface2, 0.5), italic: true },
     topbar_chip: { fg: p.purple, bold: true },
     hover: { fg: p.fg_strong, bg: p.surface2, bold: true },
-    breadcrumb_band: { bg: blend(p.surface, p.bg, 0.35) }, // the breadcrumb row's background
+    breadcrumb_band: { bg: blend(p.surface, p.bg, 0.35) }, // the window header's background
     // The rails: a tinted column instead of a bordered one (the tab strip's shade).
     rail: { bg: p.bg_dark },
     // The lens's rules and label: the accent, bold — clearer than any frame line.
@@ -506,6 +511,8 @@ export function terminalTheme(): Theme {
     topbar: { fg: a(7) },
     topbar_button: { fg: a(8) },
     topbar_button_on: { fg: a(15), bold: true },
+    // The palette's own colour 8 for both: told apart by dim and italics, as without colour (HDR-D5).
+    topbar_button_disabled: { fg: a(8), dim: true, italic: true },
     topbar_chip: { fg: a(5), bold: true },
     hover: { fg: a(0), bg: a(7), bold: true },
     breadcrumb_band: { bg: a(0) },
@@ -560,6 +567,7 @@ export function monoTheme(): Theme {
   roles.tab_active_idle = { bold: true };
   roles.tab_active = { bold: true, underline: true };
   roles.topbar_button = { dim: true };
+  roles.topbar_button_disabled = { dim: true, italic: true }; // not an unused one's dim alone: it can't be used (HDR-D5)
   // Links and code must still read as such without colour, and a link's status must show.
   roles.link = { underline: true };
   roles.wikilink = { underline: true };

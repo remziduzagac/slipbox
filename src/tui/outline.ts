@@ -18,9 +18,12 @@ export class OutlineView {
   }
 
   /** The headings the cursor is in, outermost first: each window's breadcrumb. */
-  breadcrumb(view = this.app.view): { text: string; line: number }[] {
-    if (!view) return [];
-    const hs = this.app.currentLayout(view).headings;
+  breadcrumb(
+    view = this.app.view,
+    layout = view ? this.app.currentLayout(view) : null,
+  ): { text: string; line: number }[] {
+    if (!view || !layout) return [];
+    const hs = layout.headings;
     const chain: { text: string; line: number; level: number }[] = [];
     for (const h of hs) {
       if (h.line > view.cur.row) break;

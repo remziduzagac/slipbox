@@ -494,6 +494,7 @@ describe("what the manual promises of the code (DOC)", () => {
       "slipbox",
       "palette",
       "breadcrumb",
+      "Lens",
       "+N",
       "×",
       "middle-click",

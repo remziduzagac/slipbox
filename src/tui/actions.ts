@@ -47,6 +47,7 @@ const UI_TOGGLES: { key: keyof UiState; id: string; title: string }[] = [
   { key: "wrap", id: "ui.wrap", title: "Wrap long lines" },
   { key: "urls", id: "ui.urls", title: "Show link URLs" },
   { key: "mouse", id: "ui.mouse", title: "Mouse" },
+  { key: "window_header", id: "ui.window_header", title: "Window header" },
   { key: "breadcrumb", id: "ui.breadcrumb", title: "Breadcrumb" },
   { key: "top_bar", id: "ui.top_bar", title: "Top bar" },
   { key: "problems_bar", id: "ui.problems_bar", title: "Problems bar" },

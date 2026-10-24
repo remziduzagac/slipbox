@@ -270,6 +270,11 @@ export class NoteBuffer {
     return true;
   }
 
+  /** Whether `parsed` is of the text as it is now, so reading it costs no parse (the window header asks, HDR-D2). */
+  get parseCurrent(): boolean {
+    return this.parsedVersion === this.version;
+  }
+
   /** The parse of the current text, redone only when the text changed since. */
   get parsed(): ParsedNote {
     if (this.parsedVersion !== this.version) {

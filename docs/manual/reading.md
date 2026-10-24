@@ -13,8 +13,8 @@ On the page:
 - pictures, diagrams and maths are drawn where the terminal allows
 
 The Markdown itself is always one key away. `ctrl+k` shows the note as source, and pressing it again brings the page
-back. Changing the Markdown is [Editing](editing.md). The parts of the screen around the note are in
-[The screen](screen.md).
+back; so do the Read and Source buttons on the window's header. Changing the Markdown is [Editing](editing.md). The
+parts of the screen around the note are in [The screen](screen.md).
 
 ## Moving through a note
 
@@ -511,7 +511,7 @@ file, such as `$ref`, `$schema`, `extends`, `include` and `import`, are links to
 reach nothing. [Links and backlinks](links-and-vaults.md) has how such links count.
 
 A data file that doesn't parse can't be drawn. It opens as text, with the error in a message. Once it parses again,
-`ctrl+k` draws it.
+`ctrl+k`, or the window header's Read, draws it.
 
 ## Other files
 

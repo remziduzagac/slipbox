@@ -346,6 +346,8 @@ export interface UiState {
   zen: boolean;
   mouse: boolean;
   urls: boolean;
+  /** The row atop each window (HDR-D3), and the breadcrumb on it. */
+  window_header: boolean;
   breadcrumb: boolean;
   top_bar: boolean;
   /** The problems bar beside the text (19.9), and the problems' text marked (19.10). */
@@ -375,6 +377,7 @@ export function uiDefaults(c: Config): UiState {
     readable_width: c.ui.readable_width,
     zen: c.ui.zen,
     mouse: c.ui.mouse,
+    window_header: c.ui.window_header,
     breadcrumb: c.ui.breadcrumb,
     top_bar: c.ui.top_bar,
     problems_bar: c.diagnostics.bar !== "off",
@@ -482,6 +485,8 @@ export class App {
   overlay: Overlay | null = null;
   pending: string[] = [];
   messages: Message[] = [];
+  /** While a click is handled (`sayingOnce`): the messages it has said, by level and words. */
+  private saidInClick: Set<string> | null = null;
   /** The messages showing as floating boxes, newest first (each for 4 s, 8 s an error, from when it's first drawn). */
   toasts: Message[] = [];
   private toastTimer: ReturnType<typeof setTimeout> | null = null;
@@ -764,7 +769,24 @@ export class App {
   // -------------------------------------------------------------------------------------------
   // Messages (3.13)
 
+  /**
+   * `fn`, a click's handling, each message it says said once (HDR-D2): ending typing can say a data file doesn't parse,
+   * and the click's own command the same words; a second click is its own, and says them again.
+   */
+  sayingOnce<T>(fn: () => T): T {
+    const was = this.saidInClick;
+    this.saidInClick = new Set();
+    try {
+      return fn();
+    } finally {
+      this.saidInClick = was;
+    }
+  }
+
   message(level: Level, text: string): void {
+    const said = `${level} ${text}`;
+    if (this.saidInClick?.has(said)) return;
+    this.saidInClick?.add(said);
     const m = { level, text, at: this.now() };
     this.messages.push(m);
     if (this.messages.length > MESSAGE_LIMIT) this.messages.shift();

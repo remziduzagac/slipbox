@@ -8,6 +8,14 @@ import type { Layout } from "../core/layout/ir.ts";
 import { stringWidth } from "../core/width.ts";
 import type { NoteBuffer } from "./buffer.ts";
 import type { App, View } from "./app.ts";
+import { type ViewMode, viewMode } from "./modes.ts";
+
+export { MODES, type ViewMode, viewMode } from "./modes.ts";
+
+/** What's said of a data file that doesn't parse, each place it's said: one wording, so one click can tell it said it. */
+export function unparsedText(buf: NoteBuffer): string {
+  return `${buf.name} doesn't parse — ${buf.parsed.error}: source mode`;
+}
 
 /** The lens, live preview and source mode. */
 export class Lens {
@@ -15,8 +23,7 @@ export class Lens {
 
   /** A data file that opens in source mode because it doesn't parse (16.14): the error said. */
   saySourceWhy(buf: NoteBuffer): void {
-    const error = buf.kind.group === "data" ? buf.parsed.error : null;
-    if (error) this.app.message("warn", `${buf.name} doesn't parse — ${error}: source mode`);
+    if (buf.kind.group === "data" && buf.parsed.error) this.app.message("warn", unparsedText(buf));
   }
 
   /**
@@ -294,20 +301,45 @@ export class Lens {
     this.setViewMode(view, on ? "source" : "rendered");
   }
 
+  /**
+   * Why a window can't switch to `mode` (HDR-D2), said by `setViewMode`, drawn as a disabled button on its header
+   * (`canSwitch`); null when it can, or is in it. It says nothing itself. The header asks every frame and so never
+   * parses: there a data file changed since its last parse is taken to parse, its Read and Lens lit, until a parse
+   * says otherwise (a click's asks of the text as it is).
+   */
+  refusal(view: View, mode: ViewMode): { level: "info" | "warn"; text: string } | null {
+    const buf = view.buf;
+    const why = this.refusedBy(view, mode, false);
+    if (!why) return null;
+    if (why === "drawn") return { level: "info", text: "a diff is drawn one way" };
+    if (why === "unparsed") return { level: "warn", text: unparsedText(buf) };
+    return {
+      level: "info",
+      text: `${buf.name} ${buf.kind.group === "text" ? "has no rendered view" : "has no rendered view yet"}: source mode`,
+    };
+  }
+
+  /** Whether a window can switch to `mode`, for its header's buttons: `refusal` without its words (drawing: never parses). */
+  canSwitch(view: View, mode: ViewMode): boolean {
+    return !this.refusedBy(view, mode, true);
+  }
+
+  /** Why `refusal` refuses, if it does: a drawn buffer, data that doesn't parse, a file with no rendered view. */
+  private refusedBy(view: View, mode: ViewMode, drawing: boolean): "drawn" | "unparsed" | "unrendered" | null {
+    if (viewMode(view) === mode) return null;
+    const buf = view.buf;
+    if (buf.drawn) return "drawn";
+    if (mode === "source") return null;
+    if (drawing && buf.kind.group === "data" && !buf.parseCurrent) return null;
+    if (this.app.canRender(buf)) return null;
+    return buf.kind.group === "data" ? "unparsed" : "unrendered";
+  }
+
   /** A window's mode: rendered, source (the markdown), or live preview. The cursor keeps its line. */
-  setViewMode(view: View, mode: "rendered" | "source" | "live"): void {
-    const now = view.source ? "source" : view.live ? "live" : "rendered";
-    if (now === mode) return;
-    if (view.buf.drawn) return this.app.message("info", "a diff is drawn one way");
-    if (mode !== "source" && !this.app.canRender(view.buf)) {
-      const why =
-        view.buf.kind.group === "data"
-          ? `doesn't parse — ${view.buf.parsed.error}`
-          : view.buf.kind.group === "text"
-            ? "has no rendered view"
-            : "has no rendered view yet";
-      return this.app.message(view.buf.kind.group === "data" ? "warn" : "info", `${view.buf.name} ${why}: source mode`);
-    }
+  setViewMode(view: View, mode: ViewMode): void {
+    if (viewMode(view) === mode) return;
+    const refused = this.refusal(view, mode);
+    if (refused) return this.app.message(refused.level, refused.text);
     if (view.insert) stopInsert(this.app, view);
     this.app.history.remember(view);
     // On a row of the file's text, the cursor keeps its character, not its column (a code cell's rows are framed).

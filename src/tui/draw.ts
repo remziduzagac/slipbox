@@ -2,8 +2,8 @@
 // the which-key popup and overlays. Viewport-only: only the rows on screen are drawn. This file
 // lays the screen out and draws its frame — the top bar, the tabs, the rails, the breadcrumb, the
 // rules between panes; each region's own drawing is a draw-*.ts of its own (D235): the windows'
-// (draw-pane.ts), the side panels' (draw-panels.ts), the Problems panel's, the status line's, what
-// floats over the windows (draw-overlays.ts).
+// (draw-pane.ts, their headers draw-header.ts), the side panels' (draw-panels.ts), the Problems
+// panel's, the status line's, what floats over the windows (draw-overlays.ts).
 //
 // Returns the geometry of what was drawn, which the mouse handler hit-tests against.
 
@@ -95,6 +95,8 @@ export interface Geometry {
   dialog?: Rect | null;
   /** The floating editor's box (3.20), with its margin. */
   floating?: Rect | null;
+  /** Completion's popup (19.16): no hit area under it can be clicked through it. */
+  completion?: Rect | null;
   /** Where the active window's cursor is on screen: completion's popup hangs from it (19.16). */
   cursor?: { x: number; y: number } | null;
   /** The Problems panel (1.7), at the bottom, under its rule: clicks and the wheel there are its. */
@@ -282,7 +284,17 @@ export function drawApp(app: App, c: Canvas): Geometry {
   // over the status line). A question — anything a prompt asks — floats in a window of its own
   // (a screen too small for it: over the status line; in zen, the screen's last row); find's is
   // in its window when that window had room for its find row.
-  if (app.floating) geo.floating = drawFloating(app, c, mainY, mainH, geo);
+  if (app.floating) {
+    // What lies under the floating window can't be clicked through it (a window header's button under its margin):
+    // only its own hit areas, drawn after, stay.
+    const under = geo.hot;
+    geo.hot = [];
+    geo.floating = drawFloating(app, c, mainY, mainH, geo);
+    const own = geo.hot;
+    geo.hot = under;
+    coverHot(geo, geo.floating);
+    geo.hot.push(...own);
+  }
   const prompt = app.overlay?.kind === "prompt" && !(app.overlay.view && geo.findInWindow) ? app.overlay : null;
   const float = W >= TOAST_MIN_W && mainH >= 5;
   const dialog = prompt && W >= DIALOG_MIN_W && mainH >= dialogHeight(prompt, dialogWidth(W)) ? prompt : null;
@@ -297,8 +309,11 @@ export function drawApp(app: App, c: Canvas): Geometry {
   // Completion's popup and the signature being typed (19.16), from the cursor, over the text.
   if (geo.cursor && app.view?.insert && !app.overlay) {
     if (app.signature?.view === app.view) drawSignature(app, c, geo.cursor, mainY);
-    if (app.completion?.view === app.view && app.completion.shown.length)
-      drawCompletion(app, c, geo.cursor, mainY, mainY + mainH);
+    if (app.completion?.view === app.view && app.completion.shown.length) {
+      // Over the text, and over whatever lies under it: another window's header, its buttons (HDR-D2).
+      geo.completion = drawCompletion(app, c, geo.cursor, mainY, mainY + mainH);
+      coverHot(geo, geo.completion);
+    }
   }
   if (app.overlay?.kind === "list") {
     const o = app.overlay;
@@ -379,7 +394,8 @@ export const mid = (b: Band) => b.y + Math.floor(b.h / 2);
 
 /**
  * A clickable label filling the bar's full height, drawn with the hover role while the mouse is
- * over it. `role` null draws the text on the bar's own background.
+ * over it, unless `hovers` is false (a click that changes nothing, or can't). `role` null draws the text on the bar's
+ * own background.
  */
 export function button(
   app: App,
@@ -392,9 +408,10 @@ export function button(
   geo: Geometry,
   barBg: Color | null,
   maxW = Number.POSITIVE_INFINITY,
+  hovers = true,
 ): number {
   const theme = app.theme;
-  const st = roleStyle(theme, app.mouse.hover === id ? "hover" : role, barBg);
+  const st = roleStyle(theme, hovers && app.mouse.hover === id ? "hover" : role, barBg);
   const w = Math.min(stringWidth(text), maxW);
   if (w <= 0) return 0;
   c.fill(x, band.y, w, band.h, st.bg ?? null);
@@ -405,7 +422,7 @@ export function button(
 
 /**
  * The top bar: the explorer button and the app chip on the left, the root's state (indexing) on
- * the right; the middle is left empty. (The outline's button is on the breadcrumb row.)
+ * the right; the middle is left empty. (The outline's button is on the window header.)
  */
 function drawTopBar(app: App, c: Canvas, band: Band, geo: Geometry): void {
   const theme = app.theme;
@@ -430,8 +447,8 @@ function drawTopBar(app: App, c: Canvas, band: Band, geo: Geometry): void {
       ) + 1;
   x += button(app, c, x, band, " slipbox ", "topbar_chip", "btn:palette", geo, bar.bg);
 
-  // Right side, laid out from the far right inwards. The outline's button is on the breadcrumb,
-  // or here when no window drew one (breadcrumb off, a window too short for it).
+  // Right side, laid out from the far right inwards. The outline's button is on a window's header,
+  // or here when no window drew one (the header off, a window too short for it).
   let rx = c.width - 1;
   if (app.tab && !geo.hot.some((h) => h.id === "btn:outline")) {
     const label = icon(g.outlineButton);
@@ -462,14 +479,15 @@ function drawTopBar(app: App, c: Canvas, band: Band, geo: Geometry): void {
 }
 
 /**
- * A window's outline breadcrumb: the headings its cursor is under, each clickable. When they don't
- * all fit, the middle collapses into `…` (click: the whole path as a dropdown); then the texts are
- * cut; then the first goes too, then the last, leaving only `…`.
+ * A window's outline breadcrumb, on its header: `crumbs`, the headings its cursor is under, each clickable. When they
+ * don't all fit, the middle collapses into `…` (click: the whole path as a dropdown); then the texts are cut; then the
+ * first goes too, then the last, leaving only `…`.
  */
 export function drawBreadcrumb(
   app: App,
   c: Canvas,
   view: View,
+  crumbs: { text: string; line: number }[],
   x0: number,
   x1: number,
   y: number,
@@ -477,8 +495,7 @@ export function drawBreadcrumb(
   geo: Geometry,
 ): void {
   const theme = app.theme;
-  const crumbs = app.outlineView.breadcrumb(view);
-  if (!crumbs.length || x1 - x0 < 4) return;
+  if (!crumbs.length || x1 - x0 < CRUMB_FLOOR) return;
   const index = app.tab!.views.indexOf(view);
   const sep = ` ${app.glyphs.crumb} `;
   // The icon opens the heading finder.
@@ -518,6 +535,18 @@ export function drawBreadcrumb(
 
 /** Below this, a heading is cut no further: the breadcrumb drops it instead. */
 const CRUMB_MIN = 8;
+/** Fewer columns than this, and no breadcrumb is drawn at all. */
+const CRUMB_FLOOR = 4;
+
+/**
+ * The columns a breadcrumb keeps before the mode's buttons beside it shorten (HDR-D4, HDR-D7): room for its icon and a
+ * space, `… ›` and an innermost heading cut to `CRUMB_MIN` — crumbLayout's narrowest form but `…` alone — whatever the
+ * headings the cursor is under or the mode, so the buttons don't change form as either does (well over the 4 columns
+ * drawBreadcrumb draws in).
+ */
+export function crumbLeast(glyphs: { crumb: string; crumbIcon: string }): number {
+  return stringWidth(glyphs.crumbIcon) + 1 + 1 + stringWidth(` ${glyphs.crumb} `) + CRUMB_MIN;
+}
 
 /**
  * Which headings a breadcrumb shows in `room` columns, each with its width, and where `…` stands

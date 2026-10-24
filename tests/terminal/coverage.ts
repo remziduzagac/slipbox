@@ -123,6 +123,7 @@ const CASE_OWNERS: Record<string, Area | "cli"> = {
       "changes",
       "lens",
       "source-mode",
+      "window-header",
       "tasks",
       "save",
       "autosave",

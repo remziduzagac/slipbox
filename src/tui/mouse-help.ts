@@ -29,6 +29,11 @@ export const MOUSE_HELP: [string, string[], string][] = [
   ],
   ["Open the command palette", ["click"], "On the top bar's slipbox"],
   [
+    "Switch a window's mode",
+    ["click"],
+    "On a window's header: Read, Lens or Source shows it rendered, in the lens or as written, and focuses it; one in italics says why it can't",
+  ],
+  [
     "Jump to a heading",
     ["click"],
     "On a heading in a window's breadcrumb: scrolls that window to it and focuses it; the breadcrumb's icon finds a heading, its … lists the ones the cursor is under",

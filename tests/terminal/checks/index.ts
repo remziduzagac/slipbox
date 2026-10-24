@@ -11,6 +11,7 @@ import { LEFT_OUT_READING, READING } from "./reading.ts";
 import { SLOW_DISK } from "./slow-disk.ts";
 import { SOURCE_CONTROL } from "./source-control.ts";
 import { VAULTS } from "./vaults.ts";
+import { WINDOW_HEADER } from "./window-header.ts";
 
 /** Each file's checks, by its name: `bun run test:terminal <name>` runs them. */
 export const CHECK_FILES: Record<string, Check[]> = {
@@ -31,6 +32,8 @@ export const CHECK_FILES: Record<string, Check[]> = {
   panels: PANELS,
   // A slow disk read off the main thread (T12): home's walk, the background index, the explorer's listings.
   "slow-disk": SLOW_DISK,
+  // The window header's buttons (HDR), in the editing area: their own file, editing.ts being near the size limit.
+  "window-header": WINDOW_HEADER,
 };
 
 export const CHECKS: Check[] = Object.values(CHECK_FILES).flat();

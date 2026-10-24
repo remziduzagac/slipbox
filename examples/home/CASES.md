@@ -1203,8 +1203,23 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
 - follow link into split (ctrl+enter), explorer s opens in the other window — `notes/index.md`,
   `notes/projects/kestrel-v2-3.md` (link.follow\_split; test 'explorer s opens in the other window when a split is
   there already')
-- window title/breadcrumb row in a split with long file names and many headings —
-  `notes/meetings/all-hands-archive.md`, `work/product/prd/route-sharing.md` (tui.md Breadcrumb)
+- window header in a split with long file names and many headings —
+  `notes/meetings/all-hands-archive.md`, `work/product/prd/route-sharing.md` (tui.md The window header)
+
+### window-header
+
+- the mode's buttons, Read · Lens · Source, one selected (the window's mode), following ctrl+k, space n l, esc and
+  typing; a click switches straight there (Lens from Source), the chip agreeing; the selected one changes nothing;
+  a click while typing ends it, the unsaved text kept — `notes/meetings/all-hands-archive.md`,
+  `work/kestrel/docs/qa/render-torture.md` (tui.md The window header, HDR-D2; tests 'the window header's mode buttons')
+- modes a file has no view for, disabled, a click saying why: a text file and data that doesn't parse (Source alone),
+  code as a document (all three) — `work/kestrel/api/requirements.txt`, `work/infra/k8s/broken-ingress.yaml`,
+  `work/kestrel/tools/greeter/greeter.py` (HDR-D2; tests 'modes a window can't switch to are disabled')
+- narrow windows: full labels, then `R L S`, then the selected letter, the breadcrumb keeping its innermost heading
+  first; the split's name and ▤ in their places — `notes/meetings/all-hands-archive.md` (HDR-D4; tests 'room')
+- `ui.breadcrumb = false` keeps the header and its buttons; `ui.window_header = false` removes the row, the split's
+  names on rows of their own, ▤ on the top bar; zen and windows under 8 rows have none —
+  `notes/meetings/all-hands-archive.md` (HDR-D3; tests 'the two settings')
 
 ### breadcrumb
 
@@ -2994,6 +3009,8 @@ The same notes, one per tab.
   (command-specs.ts)
 - `ui.wrap` — Wrap long lines — `work/kestrel/docs/qa/render-torture.md`, `notes/meetings/all-hands-archive.md`
   (command-specs.ts)
+- `ui.window_header` — Window header — `work/kestrel/docs/qa/render-torture.md`, `notes/meetings/all-hands-archive.md`
+  (command-specs.ts)
 - `ui.breadcrumb` — Breadcrumb — `work/kestrel/docs/qa/render-torture.md`, `notes/meetings/all-hands-archive.md`
   (command-specs.ts)
 - `ui.top_bar` — Top bar — `work/kestrel/docs/qa/render-torture.md`, `notes/meetings/all-hands-archive.md`
@@ -3054,6 +3071,12 @@ The same notes, one per tab.
   (command-specs.ts)
 - `view.live` — Lens / rendered — `work/kestrel/docs/qa/render-torture.md`, `work/kestrel/docs/qa/theme-showcase.md`
   (command-specs.ts)
+- `view.mode_read` — Read mode — `work/kestrel/docs/qa/render-torture.md`, `work/kestrel/config/app.toml`
+  (command-specs.ts; the window header's Read)
+- `view.mode_lens` — Lens mode — `work/kestrel/docs/qa/render-torture.md`, `work/kestrel/config/app.toml`
+  (command-specs.ts; the window header's Lens)
+- `view.mode_source` — Source mode — `work/kestrel/docs/qa/render-torture.md`, `work/kestrel/config/app.toml`
+  (command-specs.ts; the window header's Source)
 
 ### lens
 

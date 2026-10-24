@@ -4,7 +4,8 @@
 
 import type { App, View, Tab } from "./app.ts";
 import { type Canvas, drawText } from "./canvas.ts";
-import { type Rect, type Geometry, pageBg, roleStyle, button, drawBreadcrumb, markStyle } from "./draw.ts";
+import { type Rect, type Geometry, pageBg, roleStyle, button, markStyle } from "./draw.ts";
+import { drawWindowHeader } from "./draw-header.ts";
 import { truncate, stringWidth, truncateStart, graphemes, graphemeWidth } from "../core/width.ts";
 import { ordered, cells } from "./cursor.ts";
 import { type Problem, type Severity, SEVERITIES, atLeast, worst } from "../core/diagnostics.ts";
@@ -29,7 +30,7 @@ function paneIsActive(app: App, view: View): boolean {
 }
 
 /**
- * One window. `topRight`: the window at the top right, whose breadcrumb carries the outline's
+ * One window. `topRight`: the window at the top right, whose header carries the outline's
  * button when there's no right rail.
  */
 export function drawPane(
@@ -48,14 +49,15 @@ export function drawPane(
   const page = pageBg(theme);
   const active = paneIsActive(app, view);
   let body = rect;
-  // The header: a split window's title, then the breadcrumb, then a blank row before the text.
-  const crumbs = app.ui.breadcrumb && !app.ui.zen && rect.h >= 8 && app.floating?.view !== view;
+  // The window header (HDR-D1, HDR-D3): between two rules, a split window's name, the breadcrumb, the mode's
+  // buttons and ▤; none in zen, in a window under 8 rows or in the floating one.
+  const header = app.ui.window_header && !app.ui.zen && rect.h >= 8 && app.floating?.view !== view;
   const typing = app.overlay?.kind === "prompt" && app.overlay.view === view ? app.overlay : null;
   {
-    // The window's text size, set before anything lays it out: the breadcrumb asks for the layout
+    // The window's text size, set before anything lays it out: the header asks for the layout
     // first, and a layout at a stale size scrolls the view to fit it (a restored session lost its
     // place). The same arithmetic as the rows drawn below.
-    let h = rect.h - (crumbs ? (ruleAbove ? 2 : 3) : titled ? 1 : 0);
+    let h = rect.h - (header ? (ruleAbove ? 2 : 3) : titled ? 1 : 0);
     if ((typing || view.find) && h > 6) h -= typing?.replace ? 3 : 2;
     if (!app.ui.wrap && h > 3) h -= 1;
     if (h > 0 && rect.w > 6) {
@@ -63,42 +65,8 @@ export function drawPane(
       view.width = rect.w - 1;
     }
   }
-  if (crumbs) {
-    // A rule, the title (in a split) and breadcrumb row on its own background, a rule. The top
-    // rule is the frame's when the window is at the top.
-    const hw = rect.w;
-    const rule = (y: number, w: number) => {
-      drawText(c, rect.x, y, app.glyphs.hbar.repeat(w), roleStyle(theme, "border", page), w);
-      geo.rules.push({ y, x0: rect.x, x1: rect.x + w });
-    };
-    const y = ruleAbove ? rect.y : rect.y + 1;
-    if (!ruleAbove) rule(rect.y, rect.w);
-    const bg = roleStyle(theme, "breadcrumb_band", page).bg;
-    c.fill(rect.x, y, hw, 1, bg);
-    let x = rect.x;
-    if (titled) {
-      const name = ` ${truncate(app.displayName(view.buf), Math.floor(rect.w / 2))} `;
-      x += drawText(c, x, y, name, { ...roleStyle(theme, active ? "strong" : "dim", bg), bg }, rect.w);
-    }
-    let end = rect.x + hw;
-    if (topRight && !app.panels.rightRailWidth) {
-      // The outline's button, at the far right (on the rail instead, when it shows).
-      const label = ` ${app.glyphs.outlineButton} `;
-      end -= stringWidth(label);
-      button(
-        app,
-        c,
-        end,
-        { y, h: 1 },
-        label,
-        app.panels.outlineShown ? "topbar_button_on" : "topbar_button",
-        "btn:outline",
-        geo,
-        bg,
-      );
-    }
-    drawBreadcrumb(app, c, view, x + 1, end - 1, y, bg, geo);
-    rule(y + 1, hw);
+  if (header) {
+    const y = drawWindowHeader(app, c, view, rect, { titled, ruleAbove, topRight, active }, geo);
     body = { x: rect.x, y: y + 2, w: rect.w, h: rect.y + rect.h - y - 2 };
   } else if (titled) {
     const st = roleStyle(theme, active ? "tab_active" : "tab", page);
@@ -518,7 +486,7 @@ export function drawHScrollbar(
 }
 
 /** Completion's popup (19.16): up to ten items under the cursor (above it when there's no room), the chosen one marked, each item's detail dimmed beside it. */
-export function drawCompletion(app: App, c: Canvas, at: { x: number; y: number }, top: number, bottom: number): void {
+export function drawCompletion(app: App, c: Canvas, at: { x: number; y: number }, top: number, bottom: number): Rect {
   const comp = app.completion!;
   const theme = app.theme;
   const rows = Math.min(10, comp.shown.length);
@@ -546,6 +514,7 @@ export function drawCompletion(app: App, c: Canvas, at: { x: number; y: number }
         detailW,
       );
   });
+  return { x: x0, y: y0, w, h: rows };
 }
 
 /** The signature being typed (19.16): one line above the cursor, its active parameter marked. */

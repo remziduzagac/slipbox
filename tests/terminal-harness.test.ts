@@ -10,6 +10,7 @@ import { EXPLORER, explorerClosed, explorerOpen, MODES, mode, modeOf, OUTLINE, o
 import { encodeKey } from "./terminal/keys.ts";
 import { REPO, Session, type SessionOptions } from "./terminal/session.ts";
 import { HeadlessTerminal } from "./terminal/terminal.ts";
+import { MODES as WINDOW_MODES } from "../src/tui/modes.ts";
 
 describe("keys as a terminal sends them", () => {
   test("Kitty's protocol: escape a sequence of its own; ctrl and alt as CSI u; text, shifted or not, as itself", () => {
@@ -458,7 +459,12 @@ describe("what the checks share (check.ts)", () => {
     expect(from).toBeGreaterThan(0);
     expect(to).toBeGreaterThan(from);
     const chips = src.slice(from, to);
-    expect([...chips.matchAll(/" ([A-Z][A-Z-]+) "/g)].map((c) => c[1]).sort()).toEqual([...MODES].sort());
+    // A window's own modes are its header's buttons' labels (src/tui/modes.ts), the chip naming the one selected.
+    expect(chips).toContain("CHIP[");
+    const windows = WINDOW_MODES.map((m) => m.label.toUpperCase());
+    expect([...[...chips.matchAll(/" ([A-Z][A-Z-]+) "/g)].map((c) => c[1]), ...windows].sort()).toEqual(
+      [...MODES].sort(),
+    );
   });
 
   test("the status line's mode is its chip when it names one, never the keys pending or an operator's", () => {

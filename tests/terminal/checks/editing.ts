@@ -20,13 +20,13 @@ import {
 import { REPO, type Session, type SessionOptions, WAIT } from "../session.ts";
 
 /** The reference set, slipbox started on one of its files (`~/notes/…`, as the checks name it). */
-const at = (rel: string): SessionOptions => ({ home: true, startAt: `home/${rel.slice(2)}` });
+export const at = (rel: string): SessionOptions => ({ home: true, startAt: `home/${rel.slice(2)}` });
 
 /**
  * Slipbox taking keys: at start it can still be reading the vault for a moment after its first frame, the keys
  * waiting their turn. An escape (harmless while reading) is seen run before the check's own keys go.
  */
-async function ready(s: Session): Promise<void> {
+export async function ready(s: Session): Promise<void> {
   await s.keys("escape");
   await s.until(() => s.commands().includes("app.escape"), 15000, "slipbox to take keys");
 }
@@ -65,7 +65,7 @@ function ownDictionary(s: Session, lang: string): void {
   cpSync(files.dic, join(s.dir, "dict", `${lang}.dic`));
 }
 /** The cursor onto the first match of `text` below it: found, the find row closed. */
-async function findText(s: Session, text: string): Promise<void> {
+export async function findText(s: Session, text: string): Promise<void> {
   await s.keys("/");
   await s.type(text);
   await s.keys("enter", "escape");
@@ -97,7 +97,8 @@ const order = (s: Session) =>
     .sort((a, b) => s.rowOf(a) - s.rowOf(b))
     .map((t) => t.split(":")[0]!);
 
-const SEPT1 = "~/notes/daily/2026-09-01.md";
+export const SEPT1 = "~/notes/daily/2026-09-01.md";
+
 const OCT5 = "~/notes/daily/2026-10-05.md";
 
 export const EDITING: Check[] = [
