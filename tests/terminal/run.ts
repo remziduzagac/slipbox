@@ -12,6 +12,7 @@ import { join } from "node:path";
 import { COMMAND_SPECS } from "../../src/core/command-specs.ts";
 import type { Check } from "./check.ts";
 import { CHECK_FILES, CHECKS } from "./checks/index.ts";
+import { buildAndRecord } from "./release-builds.ts";
 import type { WorkerResult } from "./worker.ts";
 
 const args = process.argv.slice(2);
@@ -56,10 +57,25 @@ process.on("SIGINT", () => {
   process.exit(130);
 });
 
+// The two release builds the checks of upgrading drive (UPG): made once, before any worker starts, when one is chosen.
+const releases = chosen.some((c) => c.releases) ? join(scratch, "releases") : null;
+let releasesFailed: string | null = null;
+if (releases) {
+  const t0 = Date.now();
+  try {
+    const r = buildAndRecord(releases);
+    console.log(`release builds of ${r.old} and ${r.new} made, for the checks of upgrading (${Date.now() - t0} ms)`);
+  } catch (err) {
+    releasesFailed = (err as Error).message;
+  }
+}
+
 /** One check, in a worker process of its own (worker.ts); what it said, or why it said nothing. */
 async function runOne(check: Check, n: number): Promise<Result> {
   const out = join(scratch, `${n}.json`);
   const t0 = Date.now();
+  if (check.releases && releasesFailed)
+    return { check, outcome: "fail", ms: 0, commands: [], detail: `the release builds failed: ${releasesFailed}` };
   const w = Bun.spawn(
     [
       process.execPath,
@@ -71,6 +87,7 @@ async function runOne(check: Check, n: number): Promise<Result> {
     {
       stdout: "pipe",
       stderr: "pipe",
+      env: { ...process.env, ...(releases ? { SLIPBOX_TERMINAL_RELEASES: releases } : {}) },
     },
   );
   workers.add(w);

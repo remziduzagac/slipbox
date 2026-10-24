@@ -95,6 +95,10 @@ export interface Opts {
   images?: Host["images"];
   /** The network (12.12), as a stand-in: none unless given — a test never reaches the real one. */
   fetch?: Host["fetch"];
+  /** The app's clock: `Date.now` unless given. */
+  now?: () => number;
+  /** Started by a restart (UPG): the session its note kept, and what's said. */
+  restarted?: import("../src/tui/app.ts").AppOptions["restarted"];
 }
 
 export async function harness(opts: Opts = {}): Promise<Harness> {
@@ -136,6 +140,8 @@ export async function harness(opts: Opts = {}): Promise<Harness> {
     configFile: opts.configFile,
     themeName: opts.themeName,
     folder: opts.folder,
+    now: opts.now,
+    restarted: opts.restarted,
   });
   // Never the machine's own nvims.
   app.handoff.nvimDiscovery = () => [];

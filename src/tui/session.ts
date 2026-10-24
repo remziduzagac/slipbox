@@ -100,6 +100,16 @@ export class Session {
     if (!s) return false;
     const set = this.tabsOf(s);
     if (!set) return false;
+    return this.apply(s, set);
+  }
+
+  /** A window's own session restored, as a restart's note keeps it (UPG-D4): never `session.json`'s, which another
+   *  window on the vault may have written meanwhile. */
+  restoreFrom(s: SessionState): boolean {
+    return this.apply(s, s);
+  }
+
+  private apply(s: SessionState, set: Pick<TabSet, "tabs" | "activeTab">): boolean {
     this.openTabs(set.tabs, set.activeTab);
     if (!this.app.tabs.length) return false;
     this.app.sidebar.visible = s.sidebar;
@@ -158,11 +168,10 @@ export class Session {
     for (const t of this.app.tabs) t.active = Math.max(0, Math.min(t.active, t.views.length - 1));
   }
 
-  /** The session saved: the tabs, as the last ones and as `branch`'s (by default, HEAD's as last seen). */
-  save(branch: string | null = this.app.git.head?.branch ?? null): void {
+  /** This window's session as it is now: what `save` keeps, and what a restart's note carries (UPG). */
+  snapshot(): SessionState {
     for (const v of this.app.allViews()) this.app.history.remember(v);
-    this.app.positions.save();
-    const s: SessionState = {
+    return {
       version: 1,
       tabs: this.app.tabs.map((t) => ({
         panes: t.views.map((v) => ({
@@ -188,6 +197,12 @@ export class Session {
       recent_notes: this.app.history.recentNotes,
       ...(this.app.handoff.remoteServer ? { remote_server: this.app.handoff.remoteServer } : {}),
     };
+  }
+
+  /** The session saved: the tabs, as the last ones and as `branch`'s (by default, HEAD's as last seen). */
+  save(branch: string | null = this.app.git.head?.branch ?? null): void {
+    const s = this.snapshot();
+    this.app.positions.save();
     const before = loadSession(this.app.loc);
     const at = new Date(this.app.now()).toISOString();
     const set = { tabs: s.tabs, activeTab: s.activeTab, at };

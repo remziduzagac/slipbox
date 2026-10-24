@@ -167,6 +167,9 @@ export function registerActions(app: App): void {
       a.saving.requestQuit();
     },
     "app.quit_force": (a) => a.saving.requestQuit(true),
+    // Upgrading and restarting (UPG): never awaited, so the keys go on while it asks or waits.
+    "app.restart": (a) => void a.updates.restart(),
+    "app.upgrade": (a) => void a.updates.check(),
     "palette.open": (a) => openPalette(a),
     // Your shell (25.7): what you type, run; lines filtered through it. Without the command, the `:` line asks it.
     "shell.run": (a, arg) => (arg?.trim() ? shellRun(a, arg) : openPalette(a, "!")),

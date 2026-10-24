@@ -38,7 +38,9 @@ of another operation. Language servers and other external programs may make thei
 ### The update check
 
 A slipbox installed from a release, by its installer or by Homebrew, asks once a day whether there's a newer release.
-When there is, the message line says so, and how to get it:
+When there is, it offers it in a small window: to upgrade and restart, or how to get it
+([When a newer version is out](../guides/install.md#when-a-newer-version-is-out)). The messages list keeps a line saying
+so:
 
 ```text
 slipbox 0.3.0 is out (this is 0.2.0): slipbox upgrade installs it
@@ -61,6 +63,9 @@ slipbox 0.3.0 is out (this is 0.2.0): slipbox upgrade installs it
 
   Only your own config counts here. slipbox ignores `update.check` in a folder's own settings, with a warning. So a
   folder you clone can't turn the check on, or off.
+- **`:upgrade` asks when you ask,** whatever these say, as `slipbox upgrade` does.
+- **A newer version installed while slipbox runs** is noticed by looking at slipbox's own files on your machine. That
+  sends nothing, so slipbox offers the restart whatever these say.
 
 Two environment variables point the check, and `slipbox upgrade`, somewhere else:
 

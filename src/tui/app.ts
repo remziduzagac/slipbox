@@ -56,6 +56,7 @@ import { sanitize } from "../core/sanitize.ts";
 import { truncate } from "../core/width.ts";
 import { registerActions } from "./actions.ts";
 import type { SaveAsOverlay } from "./saveas.ts";
+import type { DialogOverlay } from "./dialog.ts";
 import { NoteBuffer } from "./buffer.ts";
 import { type Canvas, drawText } from "./canvas.ts";
 import { clampPos, type Pos } from "./cursor.ts";
@@ -95,6 +96,8 @@ import { Vaults, carried } from "./vaults.ts";
 import { Renaming } from "./renaming.ts";
 import { Speller } from "./spelling.ts";
 import { Following } from "./following.ts";
+import { Updates } from "./updates.ts";
+import type { SessionState } from "../core/position.ts";
 
 export interface Host {
   requestRender(): void;
@@ -327,7 +330,7 @@ export interface PromptOverlay {
   toggles?: { view: View; label: () => string };
 }
 
-export type Overlay = ListOverlay | PromptOverlay | SaveAsOverlay;
+export type Overlay = ListOverlay | PromptOverlay | SaveAsOverlay | DialogOverlay;
 
 export interface SidePaneState {
   /** Preference on wide terminals: shown beside the content. */
@@ -455,6 +458,8 @@ export interface AppOptions {
   recorded?: { carriedFrom: string | null };
   /** The explorer's listings read off the main thread (T12): the TUI's; a test's App reads them at once. */
   listOffThread?: boolean;
+  /** Started by a restart (UPG): this window's session, from its note, and what's said of it. */
+  restarted?: { session: SessionState | null; said: { level: Level; text: string } };
 }
 
 /** Buffers of another vault's file whose vault a view of them has had caught up (`makeView`, #10). */
@@ -650,6 +655,8 @@ export class App {
   readonly following = new Following(this);
   /** Reporting a problem (RPT): the report's window, the screen kept for it, its sending. */
   readonly report = new Reporter(this);
+  /** The update offer, `:upgrade`, `:restart` (UPG). */
+  readonly updates = new Updates(this);
 
   constructor(opts: AppOptions) {
     this.loc = opts.loc;
@@ -724,7 +731,11 @@ export class App {
     this.history.recentNotes = (loadSession(this.loc)?.recent_notes ?? []).slice(0, RECENT_NOTES_MAX);
     this.session.restoreUiOverrides();
     if (opts.themeName) this.ui.theme = opts.themeName; // an explicit theme beats a remembered one
-    const restored = !opts.open && this.config.ui.restore_session && this.session.restore();
+    // A restart comes back with the window's own session, from its note, whatever restore_session says (UPG-D4).
+    if (opts.restarted) this.message(opts.restarted.said.level, opts.restarted.said.text);
+    const restored = opts.restarted?.session
+      ? this.session.restoreFrom(opts.restarted.session)
+      : !opts.open && this.config.ui.restore_session && this.session.restore();
     this.settings.applyTheme();
     this.glyphs = this.settings.glyphSet(this.ui.glyphs);
     if (!restored) {
@@ -819,9 +830,7 @@ export class App {
     const said = `${level} ${text}`;
     if (this.saidInClick?.has(said)) return;
     this.saidInClick?.add(said);
-    const m = { level, text, at: this.now() };
-    this.messages.push(m);
-    if (this.messages.length > MESSAGE_LIMIT) this.messages.shift();
+    const m = this.listMessage(level, text);
     // The same message again (a key held down) refreshes its box rather than stacking another.
     this.toasts = [m, ...this.toasts.filter((t) => t.text !== text || t.level !== level)].slice(0, TOAST_LIMIT);
     this.scheduleToasts();
@@ -840,6 +849,14 @@ export class App {
     } finally {
       this.drawing--;
     }
+  }
+
+  /** Said to the messages list alone, no box: kept for the record (UPG: the daily check's line, its offer shown). */
+  listMessage(level: Level, text: string): Message {
+    const m = { level, text, at: this.now() };
+    this.messages.push(m);
+    if (this.messages.length > MESSAGE_LIMIT) this.messages.shift();
+    return m;
   }
 
   /** How long a message shows. */

@@ -36,7 +36,7 @@ Some of them need a few more words:
 | Variable | What slipbox reads it for |
 | --- | --- |
 | `NO_COLOR` | When set, and not empty: no colour |
-| `DO_NOT_TRACK` | When set, and not `0` or `false`: no update check |
+| `DO_NOT_TRACK` | When set, and not `0` or `false`: no update check (`:upgrade` still asks, when you ask) |
 | `XDG_CONFIG_HOME` | slipbox's config folder |
 | `XDG_CACHE_HOME` | slipbox's cache folder |
 | `XDG_STATE_HOME` | slipbox's state folder |
@@ -130,7 +130,9 @@ For the machine:
 | `autoindex.json` | How far the background index has got |
 | `activity` | When the command line last ran |
 | `plans/` | Plans saved with `--plan`, for `slipbox apply`. Each is removed once applied |
-| `update.json` | When the update check last asked, and what it found |
+| `update.json` | When the update check last asked, what it found, and a version you skipped |
+| `restart/` | What a restart leaves for the slipbox it starts: where you were, and your tabs. Read and removed by it |
+| `upgrade-<pid>.json` | What an upgrade running while you work said, until slipbox reads it |
 
 For each vault, in `<key>/`:
 
@@ -153,6 +155,7 @@ For each vault, in `<key>/`:
 | `tools/` | Language servers and markdownlint-cli2 installed from npm, each at the version slipbox pins |
 | `spell/words.txt` | Your own words |
 | `versions/`, `current` | slipbox itself, when its installer installed it |
+| `upgrade.lock` | While an upgrade runs: so that two never run at once |
 | `channel` | The releases it follows (`slipbox channel`) |
 
 The cache can be deleted while slipbox isn't running. All of it is rebuilt.

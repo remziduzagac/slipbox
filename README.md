@@ -69,7 +69,8 @@ curl -fsSL https://remziduzagac.github.io/slipbox/install.sh | sh -s -- --previe
 The first line installs the latest release. The second installs the newest preview, a build of what the next release
 will hold.
 
-`slipbox upgrade` keeps it current. `slipbox channel` says whether it follows previews, and changes that.
+`slipbox upgrade` keeps it current, and slipbox offers a newer version when one is out: it upgrades and restarts where
+you were. `slipbox channel` says whether it follows previews, and changes that.
 
 With Homebrew, run `brew install remziduzagac/tap/slipbox`. Intel Macs aren't supported any more:
 0.3.0 was the last release built for them.

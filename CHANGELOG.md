@@ -24,6 +24,12 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 - A picture at its own size: click it, or press `z p` on its `▣` line. A picture wider than the window then scrolls
   sideways on its own, with a scrollbar under it, by `z h` and `z l`, a sideways wheel or the wheel with `shift`, and
   the text around it stays as it was. Click it or press `z p` again to fit it to the window.
+- When a newer version is out, slipbox offers it in a small window rather than a message: upgrade and restart, upgrade
+  now and restart later, or not now, with a box to skip that version. Upgrade and restart installs it and starts it in
+  the same terminal, where you were, with your tabs and windows; a failed upgrade starts the version you had and says
+  why. Homebrew's install copies `brew upgrade slipbox`, one put by hand the releases' address. `:restart` starts
+  slipbox again, asking first about notes with unsaved changes; `:upgrade` asks for a newer version at once. A version
+  installed while slipbox runs, from another terminal or by `brew upgrade`, is offered as a restart.
 
 ### Changed
 
@@ -47,6 +53,9 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
   session.
 - When your home folder's index is full, the message names the folders it holds whole as the folders open (`~/notes,
   the folder open, is whole`): the one you opened by name, and those of the tabs slipbox brought back.
+- `slipbox upgrade` runs one at a time per install, never moves back to an older version than the one installed, and
+  keeps the version running as well as the one it replaced. A version already downloaded is installed without
+  downloading it again.
 
 ### Fixed
 

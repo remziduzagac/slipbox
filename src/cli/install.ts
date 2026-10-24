@@ -17,7 +17,7 @@ import {
   uninstallPlan,
   writeChannel,
 } from "../core/install.ts";
-import { sayOut, upgrade as upgradeTo, UpgradeError } from "../core/update.ts";
+import { FROM_SOURCE, upgradeSaid, upgrade as upgradeTo, UpgradeError } from "../core/update.ts";
 import { installSkill, SKILL, SKILL_NAME, SkillRefused } from "../core/skill.ts";
 import { EXIT, CliError, type Handler } from "./common.ts";
 
@@ -26,11 +26,7 @@ export const INSTALL_COMMANDS: Record<string, Handler> = {
   // A release moved to the latest one (14.4), as the installer would; with --check, only told whether there is one.
   // The installer's install only: one run from source, or put there another way, is said so.
   async upgrade(s) {
-    if (!RELEASE)
-      throw new CliError(
-        "this slipbox runs from source (or was built by hand): it has no releases to follow — update its checkout",
-        EXIT.error,
-      );
+    if (!RELEASE) throw new CliError(FROM_SOURCE, EXIT.error);
     try {
       const r = await upgradeTo({
         release: RELEASE,
@@ -40,15 +36,7 @@ export const INSTALL_COMMANDS: Record<string, Handler> = {
         env: s.io.env,
         check: has(s.args, "check"),
       });
-      const channel = readChannel(dataHome());
-      const human =
-        r.status === "current"
-          ? r.latest === r.from
-            ? `slipbox ${r.from} is the latest\n`
-            : `slipbox ${r.from} is newer than the latest ${channel === "preview" ? "release or preview" : "release"}, ${r.latest}: it stays until a newer one\n`
-          : r.status === "available"
-            ? `${sayOut(r.latest, r.from, channel, "slipbox upgrade installs it")}\n`
-            : `slipbox ${r.from} → ${r.latest}; ${r.from} is kept, to go back to${r.removed.length ? ` (${r.removed.join(", ")} removed)` : ""}\n`;
+      const human = `${upgradeSaid(r, readChannel(dataHome()))}\n`;
       return { data: r, human };
     } catch (err) {
       if (err instanceof UpgradeError) throw new CliError(err.message, EXIT.error);

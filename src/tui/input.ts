@@ -95,6 +95,8 @@ export class Input {
       }
       return;
     }
+    // A dialog has nothing to type into.
+    if (o.kind === "dialog") return;
     if (o.kind === "prompt") {
       // Into the field being typed in: the replace field when it has focus; none in a yes/no
       // question or while each match is confirmed (keys there are answers, not text).
@@ -126,12 +128,14 @@ export class Input {
    * another is still being handled (a fast typist, a paste, a command that awaits) waits its turn.
    */
   handleKey(key: string): Promise<void> {
-    this.app.lastInputAt = this.app.now();
+    // When it arrived, not when its turn comes: a dialog that opens on its own drops what arrived as it opened.
+    const arrived = this.app.now();
+    this.app.lastInputAt = arrived;
     const at = ++this.keysSeen;
     const start = () => {
       this.keysInFlight++;
       this.keyAt = at;
-      return this.processKey(key).finally(() => this.keysInFlight--);
+      return this.processKey(key, arrived).finally(() => this.keysInFlight--);
     };
     // Nothing in flight: start now (a click's key acts at once); else after the ones before it.
     this.keyQueue = this.keysInFlight === 0 ? start() : this.keyQueue.then(start);
@@ -146,8 +150,13 @@ export class Input {
   keyAt = 0;
   private keysInFlight = 0;
 
-  /** Handle a key now, not queued: `.` replays its keys through this, inside its own turn. */
-  async processKey(key: string): Promise<void> {
+  /** A key being handled, or waiting its turn (one waiting on a note's parse counts). */
+  get busy(): boolean {
+    return this.keysInFlight > 0;
+  }
+
+  /** Handle a key now, not queued: `.` replays its keys through this, inside its own turn. `at`: when it arrived. */
+  async processKey(key: string, at = this.app.now()): Promise<void> {
     // A report waiting for its frame (`space r`): the keys after it are its (RPT-D2). Else no wait: a key acts at once.
     const report = this.app.report.waitForWindow();
     if (report) await report;
@@ -155,7 +164,7 @@ export class Input {
     while (this.app.views.parses.size) await Promise.all(this.app.views.parses);
     this.app.panels.fixRegion();
     try {
-      await this.dispatchKey(key);
+      await this.dispatchKey(key, at);
     } catch (err) {
       this.app.message("error", (err as Error).message);
     }
@@ -311,9 +320,9 @@ export class Input {
     }
   }
 
-  private async dispatchKey(key: string): Promise<void> {
+  private async dispatchKey(key: string, at: number): Promise<void> {
     if (key.startsWith(PASTE)) return this.pasteNow(key.slice(PASTE.length));
-    if (this.app.overlay) return this.app.overlays.key(this.app.overlay, key);
+    if (this.app.overlay) return this.app.overlays.key(this.app.overlay, key, at);
     if (
       this.app.region === "sidebar" &&
       this.app.panels.sidebarShown &&

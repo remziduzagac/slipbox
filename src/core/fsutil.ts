@@ -15,6 +15,7 @@ import {
   readFileSync,
   realpathSync,
   renameSync,
+  rmSync,
   statSync,
   unlinkSync,
   writeSync,
@@ -293,6 +294,24 @@ export function readJson<T>(path: string, fallback: T): T {
 
 export function writeJson(path: string, value: unknown): void {
   atomicWrite(path, JSON.stringify(value, null, 2) + "\n");
+}
+
+/** The files in `dir` that `match` names, last changed more than `ms` ago, removed; what can't be read or removed is
+ *  left. A state folder's leftovers: a restart's notes, background upgrades' answers (UPG). */
+export function removeOlderThan(dir: string, ms: number, match = /^/, now = Date.now()): void {
+  let names: string[];
+  try {
+    names = readdirSync(dir);
+  } catch {
+    return;
+  }
+  for (const e of names) {
+    if (!match.test(e)) continue;
+    const file = join(dir, e);
+    try {
+      if (now - statSync(file).mtimeMs > ms) rmSync(file, { force: true });
+    } catch {}
+  }
 }
 
 /**

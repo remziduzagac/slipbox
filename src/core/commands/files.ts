@@ -358,4 +358,16 @@ export const FILE_SPECS: CommandSpec[] = [
     desc: "In the report (ctrl+s, :w): the bug form in your browser, its address or the report copied, or posted with gh",
   },
   { id: "app.quit", title: "Quit", cli: I, desc: "Saves positions and the workspace, then quits" },
+  {
+    id: "app.restart",
+    title: "Restart slipbox",
+    cli: I,
+    desc: "Starts slipbox again where you are, as the newest version installed; asks first about notes unsaved",
+  },
+  {
+    id: "app.upgrade",
+    title: "Check for a newer slipbox",
+    cli: "slipbox upgrade --check",
+    desc: "Asks now whether a newer version is out, and offers it",
+  },
 ];

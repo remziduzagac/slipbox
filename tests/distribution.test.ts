@@ -68,7 +68,7 @@ import {
   uninstallPlan,
   writeChannel,
 } from "../src/core/install.ts";
-import { libcCandidates } from "../src/core/crash-reports.ts";
+import { libcCandidates } from "../src/core/libc.ts";
 import {
   CHECK_EVERY_MS,
   channelsBase,
@@ -401,8 +401,12 @@ describe("the supply chain's gates (14.10)", () => {
         'const DEEP = join(FIX, "deep");',
         'join(DEEP, "d.md");',
       ].join("\n"),
-      "tests/terminal/run.ts": 'import "./checks/index.ts";\n',
+      "tests/terminal/run.ts": 'import "./checks/index.ts";\nimport "./release-builds.ts";\n',
       "tests/terminal/worker.ts": 'import "./session.ts";\n',
+      // The release builds: a file of the harness only the checks of upgrading use.
+      "tests/terminal/release-builds.ts": 'import "../../scripts/release.ts";\n',
+      "scripts/release.ts": "export {};\n",
+      "tests/release.test.ts": 'import "../scripts/release.ts";\n',
       "tests/terminal/checks/index.ts": 'import "./one.ts";\n',
       "tests/terminal/checks/one.ts": 'import { REPO } from "../session.ts";\nexport { REPO };\n',
       "tests/terminal/session.ts":
@@ -436,6 +440,9 @@ describe("the supply chain's gates (14.10)", () => {
     expect(of("examples/home/m.md").all).toEqual(expect.any(String)); // one nothing names: everything
     expect(of("notes/x.txt").all).toEqual(expect.any(String));
     expect(of("src/core/gone.ts")).toMatchObject({ all: null, tests: [], checks: [] }); // what used it changed too
+    // What reaches the harness only through a file of it some checks use: those checks, not every one.
+    expect(of("scripts/release.ts")).toMatchObject({ tests: ["tests/release.test.ts"], checks: ["updates"] });
+    expect(of("tests/terminal/release-builds.ts")).toMatchObject({ tests: [], checks: ["updates"] });
   });
 
   test("a pull request runs the tests and the terminal checks its files reach (D239)", () => {
@@ -449,8 +456,13 @@ describe("the supply chain's gates (14.10)", () => {
       expect(git.tests).not.toContain("tests/release.test.ts");
       expect(git.checks).toEqual(["git"]);
     }
-    expect(of("scripts/release.ts")).toMatchObject({ tests: ["tests/distribution.test.ts", "tests/release.test.ts"] });
-    expect(of("scripts/release.ts")).toMatchObject({ checks: [] });
+    // The release script: its tests, and the checks of upgrading, which drive release builds of it, alone.
+    expect(of("scripts/release.ts")).toMatchObject({
+      tests: ["tests/distribution.test.ts", "tests/release.test.ts"],
+      checks: ["updates"],
+    });
+    // The builds' record, which every check's session reads: every check.
+    expect(of("tests/terminal/releases.ts")).toMatchObject({ checks: "all" });
     // The explorer's listings, every folder a level at a time and the facts its rows' marks read: those features' checks.
     expect(of("src/core/listing.ts")).toMatchObject({
       checks: expect.arrayContaining(["Elsewhere", "marks", "slow disk", "view"]),
@@ -1731,6 +1743,7 @@ describe("updates (14.4)", () => {
 
   test("Bun's crash reports off at start, in the C environment, read back through libc: unless you set either switch (D221)", () => {
     const mod = join(ROOT, "src", "core", "crash-reports.ts");
+    const libcMod = join(ROOT, "src", "core", "libc.ts");
     // A process of its own, its environment as given; what libc's getenv says after, on its last line.
     const after = (env: Record<string, string>, first: string): string | null => {
       const base = Object.fromEntries(
@@ -1738,7 +1751,7 @@ describe("updates (14.4)", () => {
           ([k]) => !k.startsWith("BUN_CRASH_REPORT") && !k.startsWith("BUN_ENABLE_CRASH"),
         ),
       );
-      const script = `${first}\nconst { libc } = await import(${JSON.stringify(mod)});\nconsole.log(JSON.stringify(libc()?.getenv("BUN_ENABLE_CRASH_REPORTING") ?? null));`;
+      const script = `${first}\nconst { libc } = await import(${JSON.stringify(libcMod)});\nconsole.log(JSON.stringify(libc()?.getenv("BUN_ENABLE_CRASH_REPORTING") ?? null));`;
       const run = Bun.spawnSync([process.execPath, "-e", script], { env: { ...base, ...env }, cwd: ROOT });
       expect(run.stderr.toString()).toBe("");
       return JSON.parse(run.stdout.toString().trim().split("\n").at(-1)!);
@@ -1781,9 +1794,10 @@ describe("updates (14.4)", () => {
     expect(asked).toBe(0);
     expect(existsSync(stateFile)).toBe(false);
     const now = 1_800_000_000_000;
-    expect(await dailyUpdateCheck({ ...base, now })).toBe(
-      "slipbox 0.3.0 is out (this is 0.2.0): slipbox upgrade installs it",
-    );
+    expect(await dailyUpdateCheck({ ...base, now })).toEqual({
+      version: "0.3.0",
+      said: "slipbox 0.3.0 is out (this is 0.2.0): slipbox upgrade installs it",
+    });
     expect(JSON.parse(readFileSync(stateFile, "utf8"))).toEqual({ checked: now, latest: "0.3.0" });
     // Within the day: not asked again.
     expect(await dailyUpdateCheck({ ...base, now: now + CHECK_EVERY_MS - 1 })).toBeNull();
@@ -1934,7 +1948,7 @@ describe("how slipbox was installed, and what's said for it (14.3)", () => {
     const release = { repo: "o/r", target: "linux-x64" };
     expect(
       await dailyUpdateCheck({ release, version: "0.2.0", enabled: true, env: {}, stateFile, fetcher, by: "homebrew" }),
-    ).toBe("slipbox 0.3.0 is out (this is 0.2.0): brew upgrade slipbox installs it");
+    ).toEqual({ version: "0.3.0", said: "slipbox 0.3.0 is out (this is 0.2.0): brew upgrade slipbox installs it" });
     const base = mkdtempSync(join(sandbox, "brew-"));
     const cellar = join(base, "Cellar", "slipbox", "0.2.0", "bin", "slipbox");
     mkdirSync(join(cellar, ".."), { recursive: true });
@@ -2384,7 +2398,7 @@ describe("channels: the installer on Pages, and which releases an install follow
           fetcher: answering(files),
           channel,
         });
-      expect(await check("preview")).toBe(
+      expect((await check("preview"))?.said).toBe(
         `slipbox ${PREVIEW} is out on the preview channel (this is 1.2.3): slipbox upgrade installs it`,
       );
       expect(await check("stable")).toBeNull();

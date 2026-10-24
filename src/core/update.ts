@@ -1,8 +1,10 @@
 // Updates (plan 14.4). The latest release is found from its `SHA256SUMS` — one small file; its packs' names carry the
 // version, and its lines the sum each download is checked against. `slipbox upgrade` installs the latest as
 // install.sh would (`core/install.ts`): a folder of its own in `versions/`, checked and run before `current` moves to
-// it; the version it replaced is kept until the next. The TUI asks once a day, and says when there's a newer one —
-// never the CLI, which agents call; never with DO_NOT_TRACK set, or `[update] check = false` in your own config.
+// it; the version it replaced is kept until the next. An install's upgrades take turns (`<data>/upgrade.lock`), never
+// move `current` back to an older version, and can be cancelled until `current` moves (UPG). The TUI asks once a day,
+// and says when there's a newer one — never the CLI, which agents call; never with DO_NOT_TRACK set, or
+// `[update] check = false` in your own config.
 //
 // An install follows a channel (GR-D15, `<data>/channel`): `stable`, the latest release as above; `preview`, the
 // newest of that and the newest preview, which the Pages site's `preview` file names (`<tag> <sha256 of its
@@ -15,18 +17,22 @@
 import { createHash } from "node:crypto";
 import {
   existsSync,
+  linkSync,
   mkdirSync,
   readdirSync,
   readFileSync,
   realpathSync,
   renameSync,
   rmSync,
+  statSync,
   symlinkSync,
   writeFileSync,
 } from "node:fs";
-import { dirname, join } from "node:path";
+import { join } from "node:path";
 import { PREVIEW_TAG, pagesBase, type ReleaseBuild, retired, tagOf } from "./release.ts";
-import { type Channel, howToUpgrade, type InstalledBy, installedBy, readChannel } from "./install.ts";
+import { type Channel, currentVersion, howToUpgrade, type InstalledBy, installedBy, readChannel } from "./install.ts";
+import { readJson, writeJson } from "./fsutil.ts";
+import { alive } from "./processes.ts";
 
 type Fetcher = (url: string, init?: RequestInit) => Promise<Response>;
 
@@ -47,6 +53,16 @@ export interface Latest {
   sha256: string;
 }
 
+/** A version as releases are named: `1.2.3`, `1.2.3-preview.…`. */
+const SEMVER = /^\d+\.\d+\.\d+(-[0-9A-Za-z.]+)?$/;
+
+/** Whether `s` is a version as releases are named. */
+export const isVersion = (s: string): boolean => SEMVER.test(s);
+
+/** A request's limit, and the cancel asked for (the hand-over's `ctrl+c`) when there is one. */
+const limited = (timeoutMs: number, signal?: AbortSignal): AbortSignal =>
+  signal ? AbortSignal.any([signal, AbortSignal.timeout(timeoutMs)]) : AbortSignal.timeout(timeoutMs);
+
 /** The release a `SHA256SUMS` is of, and its pack for a target; null when it has none. */
 export function latestIn(sums: string, target: string): Latest | null {
   for (const line of sums.split("\n")) {
@@ -55,7 +71,7 @@ export function latestIn(sums: string, target: string): Latest | null {
     const rest = m?.[3] ?? "";
     if (!m || !rest.endsWith(`-${target}`)) continue;
     const version = rest.slice(0, -(target.length + 1));
-    if (/^\d+\.\d+\.\d+(-[0-9A-Za-z.]+)?$/.test(version)) return { version, asset: m[2]!, sha256: m[1]! };
+    if (SEMVER.test(version)) return { version, asset: m[2]!, sha256: m[1]! };
   }
   return null;
 }
@@ -71,10 +87,11 @@ export async function fetchLatest(
   target: string,
   fetcher: Fetcher = fetch,
   timeoutMs = 10_000,
+  signal?: AbortSignal,
 ): Promise<Latest | null> {
   try {
     const res = await fetcher(`${base}/latest/download/SHA256SUMS`, {
-      signal: AbortSignal.timeout(timeoutMs),
+      signal: limited(timeoutMs, signal),
       redirect: "follow",
     });
     if (!res.ok) return null;
@@ -103,9 +120,10 @@ export async function fetchPreview(
   target: string,
   fetcher: Fetcher = fetch,
   timeoutMs = 10_000,
+  signal?: AbortSignal,
 ): Promise<Candidate | null> {
   try {
-    const get = (url: string) => fetcher(url, { signal: AbortSignal.timeout(timeoutMs), redirect: "follow" });
+    const get = (url: string) => fetcher(url, { signal: limited(timeoutMs, signal), redirect: "follow" });
     const named = await get(`${channels}/preview`);
     if (!named.ok) return null;
     const tag = previewIn(await named.text());
@@ -130,14 +148,15 @@ export async function fetchNewest(opts: {
   target: string;
   fetcher?: Fetcher;
   timeoutMs?: number;
+  signal?: AbortSignal;
 }): Promise<Candidate | null> {
-  const stable = fetchLatest(opts.releases, opts.target, opts.fetcher, opts.timeoutMs).then((l) =>
+  const stable = fetchLatest(opts.releases, opts.target, opts.fetcher, opts.timeoutMs, opts.signal).then((l) =>
     l ? { ...l, tag: tagOf(l.version) } : null,
   );
   if (opts.channel !== "preview") return stable;
   const [s, p] = await Promise.all([
     stable,
-    fetchPreview(opts.channels, opts.releases, opts.target, opts.fetcher, opts.timeoutMs),
+    fetchPreview(opts.channels, opts.releases, opts.target, opts.fetcher, opts.timeoutMs, opts.signal),
   ]);
   if (!s || !p) return s ?? p;
   return isNewer(p.version, s.version) ? p : s;
@@ -157,6 +176,19 @@ interface CheckState {
   checked?: number;
   /** What it found then. */
   latest?: string;
+  /** A version you skipped (UPG): neither it nor any not newer is offered. */
+  skipped?: string;
+}
+
+function readState(stateFile: string): CheckState {
+  return readJson<CheckState>(stateFile, {});
+}
+
+/** Replaced whole, never written in place: another window reading it meanwhile sees it before or after, never torn. */
+function writeState(stateFile: string, s: CheckState): void {
+  try {
+    writeJson(stateFile, s);
+  } catch {}
 }
 
 /** What's said of a newer one: the channel named when it's `preview`, then how to get it. */
@@ -164,11 +196,51 @@ export function sayOut(newest: string, current: string, channel: Channel, how: s
   return `slipbox ${newest} is out${channel === "preview" ? " on the preview channel" : ""} (this is ${current}): ${how}`;
 }
 
+/** A newer version found: it, and what's said of it. */
+export interface Found {
+  version: string;
+  said: string;
+}
+
+/** The version you skipped (Skip this version, UPG), or null. */
+export function skippedVersion(stateFile: string): string | null {
+  return readState(stateFile).skipped ?? null;
+}
+
+/** A version skipped: neither it nor any not newer is offered by the daily check. */
+export function skipVersion(stateFile: string, version: string): void {
+  writeState(stateFile, { ...readState(stateFile), skipped: version });
+}
+
+/**
+ * The newest its channel offers, asked for now, whatever the check's switches say — the daily check's request, and
+ * `:upgrade`'s (UPG-D6) — the time kept before asking, so a failure waits a day too; null when it can't be said.
+ */
+export async function askNewest(opts: {
+  release: ReleaseBuild;
+  env: Record<string, string | undefined>;
+  stateFile: string;
+  now?: number;
+  fetcher?: Fetcher;
+  channel?: Channel;
+}): Promise<string | null> {
+  const now = opts.now ?? Date.now();
+  writeState(opts.stateFile, { ...readState(opts.stateFile), checked: now });
+  const latest = await fetchNewest({
+    channel: opts.channel ?? "stable",
+    releases: releasesBase(opts.release.repo, opts.env),
+    channels: channelsBase(opts.release.repo, opts.env),
+    target: opts.release.target,
+    fetcher: opts.fetcher,
+  });
+  if (latest) writeState(opts.stateFile, { ...readState(opts.stateFile), checked: now, latest: latest.version });
+  return latest?.version ?? null;
+}
+
 /**
  * The TUI's daily check: when it's due — a release build, `[update] check` on in your config, no DO_NOT_TRACK, a day
- * since the last — the newest its channel offers asked for, and what to say when it's newer than this one; null
- * otherwise. The time is kept before asking, so a failure waits a day too. `channel`: the installer's install's;
- * any other follows stable releases.
+ * since the last — the newest its channel offers asked for, and what's found when it's newer than this one, and newer
+ * than a version you skipped; null otherwise. `channel`: the installer's install's; any other follows stable releases.
  */
 export async function dailyUpdateCheck(opts: {
   release: ReleaseBuild | null;
@@ -180,54 +252,180 @@ export async function dailyUpdateCheck(opts: {
   fetcher?: Fetcher;
   by?: InstalledBy;
   channel?: Channel;
-}): Promise<string | null> {
+}): Promise<Found | null> {
   if (!opts.release || !opts.enabled || doNotTrack(opts.env)) return null;
   const now = opts.now ?? Date.now();
-  let state: CheckState = {};
-  try {
-    state = JSON.parse(readFileSync(opts.stateFile, "utf8")) as CheckState;
-  } catch {}
+  const state = readState(opts.stateFile);
   if (typeof state.checked === "number" && now - state.checked < CHECK_EVERY_MS && now >= state.checked) return null;
-  const save = (s: CheckState) => {
-    try {
-      mkdirSync(dirname(opts.stateFile), { recursive: true });
-      writeFileSync(opts.stateFile, `${JSON.stringify(s)}\n`);
-    } catch {}
-  };
-  save({ ...state, checked: now });
   const channel = opts.channel ?? "stable";
-  const latest = await fetchNewest({
-    channel,
-    releases: releasesBase(opts.release.repo, opts.env),
-    channels: channelsBase(opts.release.repo, opts.env),
-    target: opts.release.target,
-    fetcher: opts.fetcher,
-  });
-  if (!latest) return null;
-  save({ checked: now, latest: latest.version });
-  return isNewer(latest.version, opts.version)
-    ? sayOut(latest.version, opts.version, channel, howToUpgrade(opts.by ?? "installer", opts.release.repo))
-    : null;
+  const latest = await askNewest({ ...opts, release: opts.release, now, channel });
+  if (!latest || !isNewer(latest, opts.version)) return null;
+  const skipped = skippedVersion(opts.stateFile);
+  if (skipped && !isNewer(latest, skipped)) return null;
+  return {
+    version: latest,
+    said: sayOut(latest, opts.version, channel, howToUpgrade(opts.by ?? "installer", opts.release.repo)),
+  };
 }
 
 export class UpgradeError extends Error {}
 
+/** An upgrade cancelled before `current` moved: nothing in use changed. */
+export class UpgradeCancelled extends UpgradeError {
+  constructor() {
+    super("cancelled");
+  }
+}
+
 export interface UpgradeResult {
-  status: "upgraded" | "current" | "available";
+  /** `installed`: the newest is installed already, `current` naming it, but this slipbox is older (a window not
+   *  restarted yet); nothing done. */
+  status: "upgraded" | "current" | "installed" | "available";
   from: string;
   /** The latest release's version. */
   latest: string;
+  /** For `installed`: the version `current` names. */
+  installed?: string;
+  /** For `upgraded`: the version `current` named before, kept to go back to (this one's, or a newer one installed). */
+  replaced?: string;
   /** Versions removed, beyond the one replaced (kept). */
   removed: string[];
 }
 
-/** Runs a binary and says what it printed; null when it couldn't run. */
-function versionOf(bin: string): string | null {
+/** What's said when slipbox runs from source, where there are no releases: by `slipbox upgrade`, and `:upgrade`. */
+export const FROM_SOURCE =
+  "this slipbox runs from source (or was built by hand): it has no releases to follow — update its checkout";
+
+/** What `slipbox upgrade` says of what it did, and the restart's hand-over after it. */
+export function upgradeSaid(r: UpgradeResult, channel: Channel): string {
+  switch (r.status) {
+    case "current":
+      return r.latest === r.from
+        ? `slipbox ${r.from} is the latest`
+        : `slipbox ${r.from} is newer than the latest ${channel === "preview" ? "release or preview" : "release"}, ${r.latest}: it stays until a newer one`;
+    case "installed":
+      return `slipbox ${r.installed} is installed already (this is ${r.from})`;
+    case "available":
+      return sayOut(r.latest, r.from, channel, "slipbox upgrade installs it");
+    case "upgraded":
+      return `slipbox ${r.from} → ${r.latest}; ${r.replaced ?? r.from} is kept, to go back to${r.removed.length ? ` (${r.removed.join(", ")} removed)` : ""}`;
+  }
+}
+
+/** What a binary says to `--version`, asked in a child; null when it couldn't run, or took longer than `timeoutMs`. */
+export async function versionOf(bin: string, timeoutMs = 30_000, signal?: AbortSignal): Promise<string | null> {
   try {
-    const r = Bun.spawnSync([bin, "--version"], { stdout: "pipe", stderr: "pipe", timeout: 30_000 });
-    return r.exitCode === 0 ? r.stdout.toString().trim() : null;
+    // With a cancel, a session of its own: the terminal's ctrl+c reaches only the hand-over, which cancels it. Without
+    // one (the command line's `slipbox upgrade`), in the terminal's group, which ctrl+c ends with it.
+    const child = Bun.spawn([bin, "--version"], {
+      stdin: "ignore",
+      stdout: "pipe",
+      stderr: "ignore",
+      timeout: timeoutMs,
+      signal,
+      detached: !!signal,
+    });
+    // Its exit waited for, then its output a second at most: what it started may hold that open.
+    const out = new Response(child.stdout).text();
+    if ((await child.exited) !== 0 || signal?.aborted) return null;
+    const said = await Promise.race([out, Bun.sleep(1000).then(() => null)]);
+    return said === null ? null : said.trim();
   } catch {
     return null;
+  }
+}
+
+/** A lock older than this is taken over whoever holds it: an upgrade's download gives up after five minutes. */
+export const LOCK_STALE_MS = 15 * 60 * 1000;
+
+/** The pid holding an install's upgrade lock — `held`, as read — when it's still running; null when the lock is
+ *  stale. A lock that can't be read yet is held for a few seconds: it's being written. */
+function lockHolder(held: string, lock: string, now: number): number | null {
+  try {
+    const h = JSON.parse(held) as { pid?: unknown; at?: unknown };
+    if (typeof h.pid !== "number" || typeof h.at !== "number") return null;
+    return now - h.at < LOCK_STALE_MS && alive(h.pid) ? h.pid : null;
+  } catch {
+    try {
+      return now - statSync(lock).mtimeMs < 5000 ? -1 : null;
+    } catch {
+      return null;
+    }
+  }
+}
+
+/**
+ * A stale lock taken out of the way — that one alone: moved aside, then removed when it's still what was read as stale;
+ * one another upgrade has just made in its place is put back. Two taking over at once can't both go on.
+ */
+export function takeOver(lock: string, stale: string, pid = process.pid): void {
+  const aside = `${lock}.${pid}`;
+  try {
+    renameSync(lock, aside);
+  } catch {
+    return;
+  }
+  let moved = "";
+  try {
+    moved = readFileSync(aside, "utf8");
+  } catch {}
+  if (moved !== stale)
+    try {
+      linkSync(aside, lock);
+    } catch {}
+  rmSync(aside, { force: true });
+}
+
+/**
+ * An install's upgrades take turns: `<data>/upgrade.lock`, made only when there's none, holds the pid of the one
+ * running. Another finding it is refused; one left by a process that's gone is taken over (`takeOver`), and what
+ * upgrades cut short left — their work folders, `current`'s link half made — removed. Returns the lock's release.
+ */
+export function lockUpgrades(data: string, pid = process.pid): () => void {
+  const lock = join(data, "upgrade.lock");
+  for (let tries = 0; ; tries++) {
+    try {
+      writeFileSync(lock, `${JSON.stringify({ pid, at: Date.now() })}\n`, { flag: "wx" });
+      break;
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== "EEXIST")
+        throw new UpgradeError(`couldn't lock ${lock}: ${(err as Error).message}`);
+    }
+    let held: string;
+    try {
+      held = readFileSync(lock, "utf8");
+    } catch {
+      continue; // gone meanwhile: made again
+    }
+    const other = lockHolder(held, lock, Date.now());
+    if (other !== null || tries >= 3)
+      throw new UpgradeError(`another upgrade is running${other !== null && other > 0 ? ` (pid ${other})` : ""}`);
+    takeOver(lock, held, pid);
+  }
+  // What upgrades cut short left: what can't be removed now is left, never the lock held for good.
+  const versions = join(data, "versions");
+  try {
+    for (const e of existsSync(versions) ? readdirSync(versions) : [])
+      if (e.startsWith(".upgrade-")) rmSync(join(versions, e), { recursive: true, force: true });
+    for (const e of readdirSync(data)) if (/^current\.\d+$/.test(e)) rmSync(join(data, e), { force: true });
+  } catch {}
+  return () => {
+    try {
+      if ((JSON.parse(readFileSync(lock, "utf8")) as { pid?: unknown }).pid === pid) rmSync(lock, { force: true });
+    } catch {}
+  };
+}
+
+/** Whether `execPath` is the installer's binary of `version` in `versions` — by its path when the file's gone (another
+ *  window's upgrade removed the version it's running; Linux then names it `… (deleted)`). */
+function inLayout(execPath: string, versions: string, version: string): boolean {
+  try {
+    return realpathSync(execPath) === realpathSync(join(versions, version, "slipbox"));
+  } catch {}
+  try {
+    return execPath.replace(/ \(deleted\)$/, "") === join(realpathSync(versions), version, "slipbox");
+  } catch {
+    return false;
   }
 }
 
@@ -237,6 +435,11 @@ function versionOf(bin: string): string | null {
  * told of it. The pack's SHA-256 must be its SHA256SUMS line's and its binary must say its version before `current`
  * moves; the version replaced is kept, any older removed. A platform no longer released for (an Intel Mac, D238) is
  * told so, and the last release built for it, before anything is asked for.
+ *
+ * Against what's installed, not only what's running (UPG): it holds the install's lock, never moves `current` to a
+ * version older than the one it names (a window still running an older one), takes the channel's newest from
+ * `versions/` when it's there, and keeps the new version, the one `current` named, and the one running. `signal`
+ * cancels it until `current` moves: its commit.
  */
 export async function upgrade(opts: {
   release: ReleaseBuild;
@@ -246,55 +449,101 @@ export async function upgrade(opts: {
   env?: Record<string, string | undefined>;
   check?: boolean;
   fetcher?: Fetcher;
+  signal?: AbortSignal;
 }): Promise<UpgradeResult> {
   const gone = retired(opts.release.target);
   if (gone) throw new UpgradeError(gone);
   const fetcher = opts.fetcher ?? fetch;
   const versions = join(opts.data, "versions");
-  let installed = false;
-  try {
-    installed = realpathSync(opts.execPath) === realpathSync(join(versions, opts.version, "slipbox"));
-  } catch {}
-  if (!installed) {
+  if (!inLayout(opts.execPath, versions, opts.version)) {
     if (installedBy(opts.execPath, opts.data, opts.version) === "homebrew")
       throw new UpgradeError("this slipbox is Homebrew's: brew upgrade slipbox");
     throw new UpgradeError(
       `this slipbox (${opts.execPath}) wasn't installed by its installer: upgrade it the way it was installed`,
     );
   }
-  const base = releasesBase(opts.release.repo, opts.env);
-  const channel = readChannel(opts.data);
-  const channels = channelsBase(opts.release.repo, opts.env);
-  const latest = await fetchNewest({
-    channel,
-    releases: base,
-    channels,
-    target: opts.release.target,
-    fetcher,
-    timeoutMs: 30_000,
-  });
-  if (!latest)
-    throw new UpgradeError(
-      channel === "preview"
-        ? `couldn't find the latest release's ${opts.release.target} build at ${base}, nor the newest preview's (${channels}/preview)`
-        : `couldn't find the latest release's ${opts.release.target} build at ${base}`,
-    );
-  const result = { from: opts.version, latest: latest.version, removed: [] as string[] };
-  if (!isNewer(latest.version, opts.version)) return { status: "current", ...result };
-  if (opts.check) return { status: "available", ...result };
+  const signal = opts.signal;
+  const unlock = opts.check ? () => {} : lockUpgrades(opts.data);
+  try {
+    const base = releasesBase(opts.release.repo, opts.env);
+    const channel = readChannel(opts.data);
+    const channels = channelsBase(opts.release.repo, opts.env);
+    const latest = await fetchNewest({
+      channel,
+      releases: base,
+      channels,
+      target: opts.release.target,
+      fetcher,
+      timeoutMs: 30_000,
+      signal,
+    });
+    if (signal?.aborted) throw new UpgradeCancelled();
+    if (!latest)
+      throw new UpgradeError(
+        channel === "preview"
+          ? `couldn't find the latest release's ${opts.release.target} build at ${base}, nor the newest preview's (${channels}/preview)`
+          : `couldn't find the latest release's ${opts.release.target} build at ${base}`,
+      );
+    const result = { from: opts.version, latest: latest.version, removed: [] as string[] };
+    if (!isNewer(latest.version, opts.version)) return { status: "current", ...result };
+    // What `current` names, newer than this one: a newest no newer than it installs nothing.
+    const before = currentVersion(opts.data);
+    const named = before && SEMVER.test(before) ? before : null;
+    if (named && named !== opts.version && !isNewer(latest.version, named))
+      return { status: "installed", ...result, installed: named };
+    if (opts.check) return { status: "available", ...result };
 
+    const v = latest.version;
+    // The channel's newest already here — another window's upgrade, or one cancelled after its folder was in place:
+    // taken as it is once its binary says its version.
+    const here = join(versions, v, "slipbox");
+    if (!(existsSync(here) && (await versionOf(here, 30_000, signal)) === `slipbox ${v}`))
+      await download(latest, `${base}/download/${latest.tag}/${latest.asset}`, versions, fetcher, signal);
+    // The last look for a cancel: after it, `current` moves and the upgrade is done.
+    if (signal?.aborted) throw new UpgradeCancelled();
+    // `current` moved in one step: a link made beside it, renamed over it.
+    const next = join(opts.data, `current.${process.pid}`);
+    rmSync(next, { force: true });
+    symlinkSync(`versions/${v}`, next);
+    renameSync(next, join(opts.data, "current"));
+    // Kept: the new one, the one replaced (to go back to), the one running; any other goes. The upgrade is done:
+    // one that can't be removed (still running somewhere, read-only) is left, not a failure.
+    const keep = new Set([v, opts.version, ...(before ? [before] : [])]);
+    for (const old of readdirSync(versions).sort()) {
+      if (keep.has(old) || old.startsWith(".")) continue;
+      try {
+        rmSync(join(versions, old), { recursive: true, force: true });
+        result.removed.push(old);
+      } catch {}
+    }
+    return { status: "upgraded", ...result, ...(named && named !== opts.version ? { replaced: named } : {}) };
+  } finally {
+    unlock();
+  }
+}
+
+/** A release's pack downloaded, its sum checked, unpacked and its binary run, then moved into `versions/<version>`
+ *  complete; a work folder of its own meanwhile, removed whatever happens. */
+async function download(
+  latest: Candidate,
+  url: string,
+  versions: string,
+  fetcher: Fetcher,
+  signal: AbortSignal | undefined,
+): Promise<void> {
   const v = latest.version;
   const work = join(versions, `.upgrade-${process.pid}`);
   rmSync(work, { recursive: true, force: true });
   mkdirSync(work, { recursive: true });
   try {
-    const url = `${base}/download/${latest.tag}/${latest.asset}`;
     let bytes: Uint8Array;
     try {
-      const res = await fetcher(url, { signal: AbortSignal.timeout(300_000), redirect: "follow" });
+      const limit = AbortSignal.timeout(300_000);
+      const res = await fetcher(url, { signal: signal ? AbortSignal.any([signal, limit]) : limit, redirect: "follow" });
       if (!res.ok) throw new Error(`answered ${res.status}`);
       bytes = new Uint8Array(await res.arrayBuffer());
     } catch (err) {
+      if (signal?.aborted) throw new UpgradeCancelled();
       throw new UpgradeError(`couldn't download ${url}: ${(err as Error).message}`);
     }
     const got = createHash("sha256").update(bytes).digest("hex");
@@ -302,10 +551,22 @@ export async function upgrade(opts: {
       throw new UpgradeError(`the download's SHA-256 is ${got}, not the release's ${latest.sha256}: nothing changed`);
     const pack = join(work, latest.asset);
     writeFileSync(pack, bytes);
-    const tar = Bun.spawnSync(["tar", "-xzf", pack, "-C", work], { stdout: "ignore", stderr: "pipe" });
-    if (tar.exitCode !== 0) throw new UpgradeError(`couldn't unpack ${latest.asset}: ${tar.stderr.toString().trim()}`);
+    const tar = Bun.spawn(["tar", "-xzf", pack, "-C", work], {
+      stdin: "ignore",
+      stdout: "ignore",
+      stderr: "pipe",
+      signal,
+      detached: !!signal,
+    });
+    const tarSaid = new Response(tar.stderr).text();
+    const tarCode = await tar.exited;
+    if (signal?.aborted) throw new UpgradeCancelled();
+    if (tarCode !== 0) throw new UpgradeError(`couldn't unpack ${latest.asset}: ${(await tarSaid).trim()}`);
     const unpacked = join(work, latest.asset.replace(/\.tar\.gz$/, ""));
-    const said = existsSync(join(unpacked, "slipbox")) ? versionOf(join(unpacked, "slipbox")) : null;
+    const said = existsSync(join(unpacked, "slipbox"))
+      ? await versionOf(join(unpacked, "slipbox"), 30_000, signal)
+      : null;
+    if (signal?.aborted) throw new UpgradeCancelled();
     if (said !== `slipbox ${v}`)
       throw new UpgradeError(
         said === null
@@ -317,16 +578,4 @@ export async function upgrade(opts: {
   } finally {
     rmSync(work, { recursive: true, force: true });
   }
-  // `current` moved in one step: a link made beside it, renamed over it.
-  const next = join(opts.data, `current.${process.pid}`);
-  rmSync(next, { force: true });
-  symlinkSync(`versions/${v}`, next);
-  renameSync(next, join(opts.data, "current"));
-  // The one replaced is kept, to go back to; any older goes.
-  for (const old of readdirSync(versions).sort()) {
-    if (old === v || old === opts.version || old.startsWith(".")) continue;
-    rmSync(join(versions, old), { recursive: true, force: true });
-    result.removed.push(old);
-  }
-  return { status: "upgraded", ...result };
 }

@@ -996,6 +996,8 @@ export const DEFAULT_ALIASES: Record<string, string> = {
   xa: "app.save_quit",
   x: "app.save_quit",
   "q!": "app.quit_force",
+  restart: "app.restart",
+  upgrade: "app.upgrade",
   "e!": "note.revert",
   open: "note.open",
   theme: "theme.set",

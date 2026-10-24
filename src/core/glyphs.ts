@@ -13,6 +13,9 @@ export interface Glyphs {
   checkDone: string;
   checkTodo: string;
   checkOther: string;
+  /** A dialog's choice, marked or not (UPG). */
+  choiceOn: string;
+  choiceOff: string;
   quoteBar: string;
   rule: string;
   /** Box drawing for tables: corners, tees, lines. Header separator uses `hh`/`hx`. */
@@ -176,6 +179,8 @@ const unicode: Glyphs = {
   checkDone: "☑",
   checkTodo: "☐",
   checkOther: "◪",
+  choiceOn: "●",
+  choiceOff: "○",
   quoteBar: "▎",
   rule: "─",
   box: {
@@ -345,6 +350,8 @@ const ascii: Glyphs = {
   checkDone: "[x]",
   checkTodo: "[ ]",
   checkOther: "[-]",
+  choiceOn: "(*)",
+  choiceOff: "( )",
   quoteBar: "|",
   rule: "-",
   box: {
