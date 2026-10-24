@@ -170,7 +170,7 @@ The window keeps `alt+r` and `alt+w` for its next search.
 The search is plain text by default, and smart about case. Lower case matches either case, and a capital matches only
 itself.
 
-In a rendered note, the search matches the text as you see it, so `**bold**` is found by `bold`. In source mode, it
+In a rendered note, the search matches the text as you see it, so `**bold**` is found by `bold`. In SOURCE view, it
 matches the Markdown.
 
 There is no backward-search key, as `?` is help. Search with `/`, then press `shift+n`.
@@ -191,7 +191,7 @@ To go to a line by its number, press `ctrl+g` (or `space f l`), or type `:42`.
 
 Press `ctrl+h` to add a replace row under the find row. `space f r` does the same, and so does `tab` from the find row.
 
-Replacing works on the Markdown. So a rendered window switches to editing first, to source mode or the lens, as
+Replacing works on the Markdown. So a rendered window switches to editing first, to SOURCE view or the lens, as
 `editor.edit_in` says ([Configuration](configuration.md)).
 
 | Press | To |

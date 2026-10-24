@@ -49,7 +49,7 @@ isn't on a link, `enter` follows the first link on its row.
 | `space h n` | Goes forward again |
 | `y l` (`space l y`) | Copies the link's target: the full path of the file it reaches, or the link as written |
 
-In source mode and in the lens, you see the Markdown itself. There, `enter` reads the link around the cursor from the
+In SOURCE view and in the lens, you see the Markdown itself. There, `enter` reads the link around the cursor from the
 text.
 
 A link inside an embedded note is followed from that note, as if you had opened it.

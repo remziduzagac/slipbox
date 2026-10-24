@@ -8,6 +8,15 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 
 ### Added
 
+- The status chip keeps READ or SOURCE beside NORMAL, INSERT, VISUAL or V-LINE, so Escape visibly returns to
+  NORMAL. The header uses compact R/L/S buttons: READ and SOURCE select a view; L toggles the lens within READ.
+  View switches are silent. Rendering defaults for notes, code and data choose the opening view without removing
+  READ. The explorer's zoom is named separately from a window's view.
+
+- Source mode highlights fenced code in its declared language and uses a bar cursor while typing. Set
+  `ui.relative_numbers` to `"source"` or `"both"` for relative line numbers in its gutter; `"both"` keeps the lens's
+  counters too. The default stays `"lens"`.
+
 - The documentation site says what slipbox is wherever it's met without being opened. Every page's title ends with
   "slipbox: read, review and edit what your coding agent writes, in your terminal", a link to the site or any page
   shows slipbox's picture when it's shared, and the site's address on its own, `/slipbox/`, says the same before it

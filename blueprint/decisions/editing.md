@@ -286,6 +286,8 @@ text around the span is no longer the rename's to take back.
 
 ## D153: A branch switch is one event (5.9, 5.10, 2026-10-01)
 
+> **2026-10-25:** Clarified by WSP-D1: each branch’s tabs are its workspace; nothing changed in what is kept.
+
 **Decision:** git's own lock decides when to look: the watcher's news is held while `index.lock` exists and applied
 together after, and autosave waits it out too (5.10). HEAD, read from `.git` each second and with each batch, decides
 what it was:

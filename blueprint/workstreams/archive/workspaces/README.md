@@ -1,5 +1,5 @@
 ---
-status: complete
+status: consolidated
 created: "2026-10-24"
 branch: feat/issue-25
 ---
@@ -15,9 +15,8 @@ top bar, whose middle was empty, shows the vault, its branch and the workspace w
 going to another vault or branch; the status line drops them while the bar says them.
 
 Drafted on 2026-10-24 from the issue and the code, critiqued by Codex, and agreed by the user the same day, each
-open question settled as proposed; built the same day (WSP-T1 to WSP-T3, done). Complete: the design files say it
-already; consolidation is left, the root requirements' changes (requirements.md § Changes) and the notes under earlier
-decisions (design.md, last section).
+open question settled as proposed; built the same day (WSP-T1 to WSP-T3, done). Consolidated 2026-10-25:
+its design was already in the root; the remaining requirements and notes under earlier decisions are now applied.
 
 - [requirements.md](requirements.md): its goals, what it builds on, its acceptance criteria and its changes to the
   root's requirements.
@@ -27,3 +26,6 @@ decisions (design.md, last section).
   open.
 - [ideas.md](ideas.md): the alternatives weighed, and what waits for later.
 - [tasks/](tasks/README.md): the work, a task per file.
+
+Consolidated 2026-10-25: requirements and design applied to the root; the implemented header and top bar
+checked against the code. Decisions and completed tasks remain here for their stable IDs.

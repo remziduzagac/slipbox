@@ -165,7 +165,8 @@ The cases, each with a unit test (U) and a terminal check (T):
 - **Room**: `modeButtons` at each boundary (20, 9, 3, 0 columns left; no headings; one heading; two or more; a heading
   under 8 columns); in a window: full, letters, the selected letter alone, the name and `▤` in their places (U; T a
   split narrowed with `<` until the letters show).
-- **`ui.breadcrumb = false`**: the header kept, its name, buttons and `▤`, no `§`, no anchor (`space f b` centred), find's
+- **`ui.breadcrumb = false`**: the header kept, its name, buttons and `▤`, no `§`, no anchor (`space f b` centred),
+  find's
   row under the header (U, T).
 - **`ui.window_header = false`**: no row, the split's names on their own rows, `▤` on the top bar, find's row at the
   window's top; with the breadcrumb on or off; both remembered in the session (U, T).

@@ -43,11 +43,13 @@ unavailable.
 
 [Details](vaults.md#elsewhere)
 
-## The explorer's view
+<a id="the-explorers-view"></a>
+
+## The explorer's zoom
 
 The part of the filesystem currently shown in the explorer. Zooming that view does not combine the vaults it displays.
 
-[Details](files.md#the-view)
+[Details](files.md#the-zoom)
 
 ## The index
 

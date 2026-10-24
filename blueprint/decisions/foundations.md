@@ -485,6 +485,9 @@ naming what is left out tells the agent to ask.
 
 ## D33: A shared workspace for humans and agents over plain files (2026-10-02)
 
+> **2026-10-25:** Clarified by WSP-D1: workspace also names the personal working state kept in a place; the user
+> introduction no longer calls slipbox itself a workspace. The glossary distinguishes the two.
+
 > **Clarified by D226 (2026-10-13):** slipbox is described as the terminal companion for coding agents; the shared
 > workspace is how it is one.
 

@@ -6,21 +6,10 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
 import { COMMAND_SPECS } from "../src/core/command-specs.ts";
-import {
-  EXPLORER,
-  explorerClosed,
-  explorerOpen,
-  inSwitcher,
-  MODES,
-  mode,
-  modeOf,
-  OUTLINE,
-  opened,
-} from "./terminal/check.ts";
+import { EXPLORER, explorerClosed, explorerOpen, inSwitcher, mode, modeOf, OUTLINE, opened } from "./terminal/check.ts";
 import { encodeKey } from "./terminal/keys.ts";
 import { REPO, Session, type SessionOptions, WAIT, whereOnBar } from "./terminal/session.ts";
 import { HeadlessTerminal } from "./terminal/terminal.ts";
-import { MODES as WINDOW_MODES } from "../src/tui/modes.ts";
 
 describe("keys as a terminal sends them", () => {
   test("Kitty's protocol: escape a sequence of its own; ctrl and alt as CSI u; text, shifted or not, as itself", () => {
@@ -531,19 +520,14 @@ describe("what the checks share (check.ts)", () => {
     return { s, presses };
   };
 
-  test("the modes are the chips the status line draws (draw-status.ts)", () => {
-    const src = readFileSync(join(import.meta.dir, "..", "src", "tui", "draw-status.ts"), "utf8");
-    // The chip's expression, from its name to the next statement's: both found, in that order.
-    const [from, to] = [src.indexOf("const chip = "), src.indexOf("const chipSt")];
-    expect(from).toBeGreaterThan(0);
-    expect(to).toBeGreaterThan(from);
-    const chips = src.slice(from, to);
-    // A window's own modes are its header's buttons' labels (src/tui/modes.ts), the chip naming the one selected.
-    expect(chips).toContain("CHIP[");
-    const windows = WINDOW_MODES.map((m) => m.label.toUpperCase());
-    expect([...[...chips.matchAll(/" ([A-Z][A-Z-]+) "/g)].map((c) => c[1]), ...windows].sort()).toEqual(
-      [...MODES].sort(),
-    );
+  test("the paired view/mode chip keeps panel focus and pending keys distinguishable", () => {
+    expect(modeOf(" SOURCE │ INSERT  ‹ note.md ›")).toBe("INSERT");
+    expect(modeOf(" SOURCE │ NORMAL  ‹ note.md ›")).toBe("SOURCE");
+    expect(modeOf(" READ·LENS │ NORMAL  ‹ note.md ›")).toBe("LENS");
+    expect(modeOf(" READ-LENS | INSERT  < note.md >")).toBe("INSERT");
+    expect(modeOf(" READ │ NORMAL  FILES  ‹ note.md ›")).toBe("FILES");
+    expect(modeOf(" READ │ NORMAL  ␣  ‹ note.md ›")).toBeNull();
+    expect(modeOf(" READ │ NORMAL  2d  ‹ note.md ›")).toBeNull();
   });
 
   test("the status line's mode is its chip when it names one, never the keys pending or an operator's", () => {

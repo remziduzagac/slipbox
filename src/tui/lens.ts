@@ -21,6 +21,21 @@ export function unparsedText(buf: NoteBuffer): string {
 export class Lens {
   constructor(readonly app: App) {}
 
+  /** Opening defaults select a presentation without changing its availability (VB-D2). */
+  renderByDefault(buf: NoteBuffer): boolean {
+    if (buf.drawn) return true;
+    if (buf.kind.group === "note") return this.app.config.render.notes;
+    if (buf.kind.group === "data") return this.app.config.render.data;
+    return this.app.config.render.code !== false && this.app.config.render.code !== "source";
+  }
+
+  /** Initial presentation, explaining only an unavailable READ view. */
+  opensInSource(buf: NoteBuffer): boolean {
+    if (this.app.canRender(buf)) return !this.renderByDefault(buf);
+    this.saySourceWhy(buf);
+    return true;
+  }
+
   /** A data file that opens in source mode because it doesn't parse (16.14): the error said. */
   saySourceWhy(buf: NoteBuffer): void {
     if (buf.kind.group === "data" && buf.parsed.error) this.app.message("warn", unparsedText(buf));
@@ -52,12 +67,13 @@ export class Lens {
    */
   fitMode(view: View, before: NoteBuffer): void {
     if (view.buf !== before) this.resetForBuffer(view);
-    const forced = !this.app.canRender(before);
+    const forced = !this.app.canRender(before) || !this.renderByDefault(before);
     if (!this.app.canRender(view.buf)) {
       const was = view.source; // already so from makeView, which said why
       Object.assign(view, { source: true, live: false, liveBase: undefined });
       if (!was) this.saySourceWhy(view.buf);
-    } else if (forced) Object.assign(view, { source: false, live: false, liveBase: undefined });
+    } else if (!this.renderByDefault(view.buf)) Object.assign(view, { source: true, live: false, liveBase: undefined });
+    else if (forced) Object.assign(view, { source: false, live: false, liveBase: undefined });
   }
 
   /**
@@ -108,7 +124,7 @@ export class Lens {
     const lineCount = Math.max(1, starts.length - (buf.source.endsWith("\n") && starts.length > 1 ? 1 : 0));
     const texts = buf.lines();
     // Rows a run of lines takes in the lens (wrapped at the width its counters leave).
-    const textWidth = width - (this.app.config.ui.relative_numbers === "lens" ? LENS_COUNTERS : 0);
+    const textWidth = width - (["lens", "both"].includes(this.app.config.ui.relative_numbers) ? LENS_COUNTERS : 0);
     const rowsOf = (s: number, e: number) => {
       let n = 0;
       for (let k = s; k <= e; k++)
@@ -295,7 +311,7 @@ export class Lens {
       wrap,
       rule: this.app.glyphs.lensRule,
       editing,
-      ...(this.app.config.ui.relative_numbers === "lens" ? { counters: LENS_COUNTERS } : {}),
+      ...(["lens", "both"].includes(this.app.config.ui.relative_numbers) ? { counters: LENS_COUNTERS } : {}),
       ...(code ? { language: buf.kind.format, ...(spans ? { spans: (l: number) => spans.get(l) } : {}) } : {}),
     });
     base.composed = { key, layout };
@@ -364,7 +380,7 @@ export class Lens {
 
   /** The mode the editing keys switch a rendered window to (`[editor] edit_in`), code's document view too (24.8). */
   editMode(_view?: View | null): "source" | "live" {
-    return this.app.config.editor.edit_in === "live" ? "live" : "source";
+    return this.app.config.editor.edit_in === "source" ? "source" : "live";
   }
 
   // The lens's inner window (4.15): a lens taller than `lens_max` of the window shows that many of

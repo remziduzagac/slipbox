@@ -9,7 +9,7 @@ In most languages, slipbox draws a code file as a document to read like a note:
 - its documentation as prose
 - its imports folded away
 
-A key away is the file as written, in source mode.
+A key away is the file as written, in SOURCE view.
 
 Behind both, slipbox talks to the language servers and linters you'd use in an editor. It asks them for the file's
 problems, what's under the cursor, jumps, renames and completion.
@@ -26,13 +26,13 @@ cell](../images/code-and-git-code-view.png)
 A code file opens in the code view when slipbox maps its language. The languages it maps are TypeScript, TSX,
 JavaScript (JSX too), Python, Go, Rust, Swift, PHP, Ruby, C, C++, Lua and Bash.
 
-Other code opens in source mode: HTML, CSS, SCSS, Dockerfiles, and Vue, Svelte and Astro components.
+Other code opens in SOURCE view: HTML, CSS, SCSS, Dockerfiles, and Vue, Svelte and Astro components.
 
 | Key or setting | What it does |
 | --- | --- |
-| `space n v` | Switches the file on screen between the code view and source mode |
+| `space n v` | Switches the file on screen between the code view and SOURCE view |
 | Read, Lens, Source | The window header's buttons: the code view, a cell's source in the lens, the file as written |
-| `render.code = "source"` | Opens all code in source mode ([Configuration](configuration.md)) |
+| `render.code = false` | Opens all code in SOURCE view ([Configuration](configuration.md)) |
 
 Take this TypeScript file, `src/shelf.ts`:
 
@@ -213,10 +213,10 @@ cursor goes to the first changed cell. Press it again to open every cell.
 The cursor moves over the text of the cells, never their borders. The one exception is a folded cell's header, its one
 row, where `z a` opens it again.
 
-The outline (`space o`) and the breadcrumb list the definitions, as in source mode. `] ]` and `[ [` move from one to
+The outline (`space o`) and the breadcrumb list the definitions, as in SOURCE view. `] ]` and `[ [` move from one to
 the next.
 
-Editing works as in a rendered note. [Editing](editing.md) has the lens and source mode.
+Editing works as in a rendered note. [Editing](editing.md) has the lens and SOURCE view.
 
 | Keys | What it does |
 | --- | --- |
@@ -227,11 +227,13 @@ Editing works as in a rendered note. [Editing](editing.md) has the lens and sour
 
 The lens shows the cell's lines as written, highlighted, with the code view around it.
 
-With `editor.edit_in = "source"`, the editing keys switch the window to source mode, and type there instead.
+With `editor.edit_in = "source"`, the editing keys switch the window to SOURCE view, and type there instead.
 
-## Source mode for code
+<a id="source-mode-for-code"></a>
 
-In source mode, a code file is the file as written, highlighted by its language.
+## SOURCE view for code
+
+In SOURCE view, a code file is the file as written, highlighted by its language.
 
 slipbox parses these languages itself: TypeScript, TSX, JavaScript, Python, Bash, Lua, Go, Rust, Swift, PHP, Ruby, C,
 C++, HTML, CSS, SCSS, Dockerfiles, and Vue, Svelte and Astro components. Others are highlighted line by line.
@@ -263,7 +265,7 @@ broken. Once a language server has answered, its own errors take their place.
 
 ## Links in code
 
-In source mode, these are links in a code file, and `enter` follows them:
+In SOURCE view, these are links in a code file, and `enter` follows them:
 
 - a URL
 - a path with an extension that names a file of the vault
@@ -274,7 +276,7 @@ opens that line, as in `./retry.ts:12`.
 Paths count in comments and in strings, so you can follow an import's path too.
 
 The code view draws a comment's paths as links too, beside its URLs and Markdown links. `enter` follows them as in
-source mode.
+SOURCE view.
 
 Code has no wikilinks.
 
@@ -628,7 +630,7 @@ A file's problems come from every source alike:
 
 - its language servers
 - its linters
-- slipbox's own syntax check, in source mode and the code view
+- slipbox's own syntax check, in SOURCE view and the code view
 - for a note, slipbox's checks of its links, and the note linter's findings
 
 A note's own problems are these:

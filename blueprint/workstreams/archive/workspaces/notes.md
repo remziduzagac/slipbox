@@ -86,7 +86,8 @@ checked against the file it named; all eight held, and all were taken:
 5. **Click boundaries:** which target owns `·`, `@` and the operation, hot regions only for parts drawn, the status
    line's fallback click still the branches' alone, and Pull only with an upstream (`gitmouse.ts:181`). Taken.
 6. **The test matrix:** a terminal check for every case, not four scenarios; a helper of its own for the top bar,
-   `status()` left as it is, and assertions that read the vault with the path split (`tests/terminal/checks/vaults.ts:151`).
+   `status()` left as it is, and assertions that read the vault with the path split
+  (`tests/terminal/checks/vaults.ts:151`).
    Taken in the acceptance criteria and the plan below.
 7. **The sweep missed:** the Quit and Fetch commands' descriptions (`src/core/commands/files.ts:329`,
    `src/core/commands/git.ts:54`), `docs/README.md:41`, `docs/agent-guide.md:85`, `docs/manual/customization.md:188`,

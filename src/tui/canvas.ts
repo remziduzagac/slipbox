@@ -11,6 +11,8 @@ import { graphemes, graphemeWidth } from "../core/width.ts";
 export interface Canvas {
   readonly width: number;
   readonly height: number;
+  /** The terminal cursor while typing; null hides it. Normal mode draws its block in the cells. */
+  cursor?(at: { x: number; y: number } | null): void;
   fill(x: number, y: number, w: number, h: number, bg: Color | null): void;
   /** Draw one grapheme at a cell. `w` is its display width from the one width function. */
   cell(x: number, y: number, g: string, w: number, style: CellStyle): void;
@@ -120,6 +122,10 @@ export function drawText(
 
 /** In-memory canvas: characters only, plus the style of each cell for assertions. */
 export class TextCanvas implements Canvas {
+  nativeCursor: { x: number; y: number } | null = null;
+  cursor(at: { x: number; y: number } | null): void {
+    this.nativeCursor = at;
+  }
   asciiGlyphs?: boolean;
   /** The pictures drawn, as asked (12.x): the tests read them. */
   readonly images: ({ x: number; y: number; cols: number; rows: number; src: string } & Crop)[] = [];

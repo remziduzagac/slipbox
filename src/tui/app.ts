@@ -1099,8 +1099,7 @@ export class App {
       height: this.height,
       width: this.width,
       left: 0,
-      // A data or text file opens in source mode (16.4); data files render once they can (16.11).
-      ...(this.canRender(buf) ? {} : (this.lens.saySourceWhy(buf), { source: true })),
+      ...(this.lens.opensInSource(buf) ? { source: true } : {}),
     };
   }
 
@@ -1115,9 +1114,9 @@ export class App {
     return buf.kind.group === "note" || this.isCodeDocument(buf); // every note format has a reader (16.2)
   }
 
-  /** Code that renders as a document (24.x): a language the view maps, unless `[render] code` says source. */
+  /** Code that renders as a document (24.x): a language the view maps, independent of its opening default. */
   isCodeDocument(buf: NoteBuffer): boolean {
-    if (buf.kind.group !== "text" || this.config.render.code !== "document") return false;
+    if (buf.kind.group !== "text") return false;
     const g = grammarFor(buf.kind.format, extensionOf(buf.name));
     return !!g && DOCUMENT_GRAMMARS.has(g);
   }

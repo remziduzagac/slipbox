@@ -742,9 +742,9 @@ export const EXPLORER_ACTION_INFO: Record<string, { title: string; desc: string 
   menu: { title: "Actions…", desc: "The selected row's menu, as its … button opens it: rename, move, delete, copy…" },
   zoom_in: {
     title: "Zoom in",
-    desc: "The view shows the selected folder or vault (a file's, its folder); the breadcrumb leads back up",
+    desc: "The explorer zooms to the selected folder or vault (a file's, its folder); the breadcrumb leads back up",
   },
-  zoom_out: { title: "Zoom out", desc: "The view shows the folder holding it, the folder it showed unfolded" },
+  zoom_out: { title: "Zoom out", desc: "The explorer zooms to the folder holding it, the folder it showed unfolded" },
   close: { title: "Close the explorer", desc: "Closes it; focus returns to the note" },
   leave: { title: "Back to the note", desc: "Focuses the note; the explorer stays open" },
 };

@@ -197,7 +197,7 @@ Under them are its sections, each under a heading that `enter` or a click folds 
   the panel shows, so an agent's committed work is never "nothing changed".
 - **This file**: the note on screen's diff against the base, its history, and who changed the cursor's line.
 - **Branches**: the repository's branches, their worktrees marked ([Branches](#branches)).
-- **Other repositories**: the others in the explorer's view, folded
+- **Other repositories**: the others in the explorer's zoom, folded
   ([The repositories around you](#the-repositories-around-you)).
 
 Each changed file shows its state letter, coloured. After its name comes its folder, dimmed. The letters are:
@@ -712,7 +712,7 @@ checked out.
 ## The repositories around you
 
 The git panel follows the vault you're in. In a repository, it's that repository's, and under it, folded, are the other
-repositories in the explorer's view: **Other repositories**.
+repositories in the explorer's zoom: **Other repositories**.
 
 In a vault that isn't a repository, those repositories are the panel. That's home, a vault without git, or a folder
 outside every vault. It says how many the view holds (`~/code holds 3 repositories`), and lists them by what needs

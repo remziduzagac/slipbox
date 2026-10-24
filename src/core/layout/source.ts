@@ -288,14 +288,16 @@ function highlightLine(raw: string, state: string, i: number): { roles: Role[]; 
   }
   const f = /^\s{0,3}(`{3,}|~{3,})/.exec(text);
   if (state.startsWith("c")) {
-    const fence = state.slice(1);
+    const [fence, language] = state.slice(1).split(":");
     paint(0, text.length, "code_block");
-    const closes = f && f[1]![0] === fence[0] && f[1]!.length >= fence.length && !text.slice(f[0].length).trim();
+    const closes = f && f[1]![0] === fence![0] && f[1]!.length >= fence!.length && !text.slice(f[0].length).trim();
+    if (!closes && language) return { roles: codeLine(raw, language).roles, out: state };
     return { roles, out: closes ? "" : state };
   }
   if (f) {
     paint(0, text.length, "code_label");
-    return { roles, out: `c${f[1]!}` };
+    const language = /^(\S+)/.exec(text.slice(f[0].length).trim())?.[1] ?? "";
+    return { roles, out: `c${f[1]!}:${language}` };
   }
   const h = /^\s{0,3}(#{1,6})(\s|$)/.exec(text);
   if (h) {

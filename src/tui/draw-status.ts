@@ -12,11 +12,8 @@ import { sanitize } from "../core/sanitize.ts";
 import type { Role, Color } from "../core/theme/theme.ts";
 import { SEVERITIES, worst } from "../core/diagnostics.ts";
 import { severityGlyph, SEVERITY_ROLE } from "./draw-pane.ts";
-import { MODES, type ViewMode, viewMode } from "./modes.ts";
-import { fitWhere, whereOf } from "./where.ts";
 
-/** The chip for a window's mode: the button its header has selected, by its label (HDR-D2). */
-const CHIP = Object.fromEntries(MODES.map((m) => [m.mode, ` ${m.label.toUpperCase()} `])) as Record<ViewMode, string>;
+import { fitWhere, whereOf } from "./where.ts";
 
 /**
  * Where you are on the status line (WSP-D5), in `room` columns from `x`, while the top bar doesn't say it: the same parts
@@ -76,10 +73,33 @@ export function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void
                       : " OUTLINE "
                   : view?.insert
                     ? " INSERT "
-                    : CHIP[view ? viewMode(view) : "rendered"];
-  const chipSt = roleStyle(theme, "status_accent", page);
-  c.fill(0, band.y, stringWidth(chip), band.h, chipSt.bg ?? null);
-  let x = drawText(c, 0, y, chip, chipSt);
+                    : " NORMAL ";
+  let x = 0;
+  if (view) {
+    const label = view.source ? " SOURCE " : view.live ? " READ·LENS " : " READ ";
+    const role = view.source ? "view_source" : view.live ? "view_lens" : "view_read";
+    const style = roleStyle(theme, role, st.bg);
+    c.fill(0, band.y, stringWidth(label), band.h, style.bg ?? st.bg);
+    x += drawText(c, x, y, label, style);
+    x += drawText(c, x, y, app.glyphs.mode === "ascii" ? "|" : "│", roleStyle(theme, "status_dim", st.bg));
+  }
+  const mode = view?.insert
+    ? " INSERT "
+    : view?.visual === "line"
+      ? " V-LINE "
+      : view?.visual
+        ? " VISUAL "
+        : " NORMAL ";
+  const chipSt = roleStyle(
+    theme,
+    view ? (view.insert ? "mode_insert" : view.visual ? "mode_visual" : "mode_normal") : "status_accent",
+    page,
+  );
+  const shown = view ? mode : chip;
+  c.fill(x, band.y, stringWidth(shown), band.h, chipSt.bg ?? null);
+  x += drawText(c, x, y, shown, chipSt);
+  if (view && chip !== mode) x += drawText(c, x, y, chip, roleStyle(theme, "status_accent", st.bg));
+  const chipWidth = x;
   // The explorer's row under the cursor not indexed (`⊘`, VV-D9): why, while the cursor is on it.
   const why = app.explorer.marks.selectedWhy();
   const whyText = why ? `${app.glyphs.markNotIndexed} not indexed: ${sanitize(why)}  ` : "";
@@ -123,7 +143,7 @@ export function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void
       : `→ ${link.kind === "wiki" || link.kind === "embed" ? `[[${link.target}${link.heading ? `#${link.heading}` : ""}]]` : link.target} (${link.status}${landed ? `, ${landed}` : ""})  `
     : "";
   const markerW = stringWidth(pathMarker(app, view));
-  const room = c.width - stringWidth(chip) - 2 - Math.min(16, stringWidth(app.displayName(view.buf))) - markerW;
+  const room = c.width - chipWidth - 2 - Math.min(16, stringWidth(app.displayName(view.buf))) - markerW;
   const fits = (s: string) => stringWidth(s) + 1 <= room;
   let right = `${linkText}${whyText}${words}${tabs}${pos}`;
   if (!fits(right)) right = `${linkText}${whyText}${tabs}${pos}`;

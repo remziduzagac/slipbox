@@ -146,7 +146,7 @@ With wrapping on, a code block too wide for the window scrolls sideways on its o
 - a paragraph of nothing else
 - a block of several paragraphs, from a line that starts with `%%` to one that ends with it
 
-Source mode and the lens show comments as written. A link in a comment still counts as one of the note's links, though
+SOURCE view and the lens show comments as written. A link in a comment still counts as one of the note's links, though
 it isn't drawn.
 
 A link shows its text, coloured by whether it reaches anything:
@@ -271,7 +271,7 @@ maths falls back to scrolls too.
 
 `render.code_wrap = "wrap"`, or Code blocks in `space u u`, wraps the lines instead: a line too long carries on in the
 next row, marked `↪`. With wrapping off (`space u w`), the whole window scrolls sideways and a code block moves with
-it. The Markdown, in source mode and in the lens, follows wrapping alone.
+it. The Markdown, in SOURCE view and in the lens, follows wrapping alone.
 
 ### Footnotes
 
@@ -535,7 +535,7 @@ A data file that doesn't parse can't be drawn. It opens as text, with the error 
 - **Text files**, any other file that holds text, open as text, highlighted by their language. Org and AsciiDoc files
   are text files to slipbox.
 - **Code** in a language slipbox's code view knows opens in the code view. Its comments are drawn as prose, and each
-  definition is a cell. That is [Code](code.md). `render.code = "source"` opens code as text instead.
+  definition is a cell. That is [Code](code.md). `render.code = false` opens code as text instead.
 - **Binary files**, such as pictures, PDFs and archives, never open. A link to one copies its path. A file named like
   text that holds binary bytes is treated the same.
 

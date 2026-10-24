@@ -148,6 +148,7 @@ export function keyText(app: App, key: string): string {
 }
 
 export function drawApp(app: App, c: Canvas): Geometry {
+  c.cursor?.(null);
   // ASCII glyphs: what a console without Unicode can draw, every text drawn (drawText).
   c.asciiGlyphs = app.glyphs.mode === "ascii";
   const theme = app.theme;
@@ -343,6 +344,7 @@ export function drawApp(app: App, c: Canvas): Geometry {
   if (app.overlay?.kind === "saveas") geo.saveas = drawSaveAs(app, c, app.overlay, mainY, mainH, geo);
   if (app.overlay?.kind === "dialog") geo.choices = drawChoiceDialog(app, c, app.overlay, mainY, mainH);
   if (dialog) geo.dialog = drawDialog(app, c, dialog, mainY, mainH, geo);
+  if (geo.cursor && app.view?.insert && !app.overlay && app.region === "content") c.cursor?.(geo.cursor);
   return geo;
 }
 

@@ -8,7 +8,8 @@ section's other text stays as it is.
 - **Vault**, as now: the content boundary, and the unit you trust. What a file's links, `/`, a wikilink's names, the
   convention, the index and search are measured from; its name; its settings (`.slipbox/config.toml`), which are
   shared and travel with it. Whether you trust it is yours, never its own say: a vault's config can't set `[trust]`
-  (`core/config.ts`), and the answers are in slipbox's state or your config ([trust.md](../../design/trust.md); WSP-D1).
+  (`core/config.ts`), and the answers are in slipbox's state or your config ([trust.md](../../../design/trust.md);
+  WSP-D1).
 - **Workspace**: your tabs and windows in a place: the tabs and the active one, the pinned ones, each tab's split with
   its orientation and ratio, each window's note, cursor and history. Personal: kept in slipbox's state folder, never in
   the vault (WSP-D1). A vault has one or more (WSP-D2), found in this order (`Session.tabsOf`): in home, a folder
@@ -114,7 +115,8 @@ the vault, across its workspaces." Previously: "… when one is focused, and all
 **Saved state** becomes:
 
 > - **Reading position** per note, cursor included, in `positions.json` in the state dir: one file for the machine,
->   each note by its absolute path and the vault it was read from (D76; [roots.md](../../design/roots.md) § State by vault).
+>   each note by its absolute path and the vault it was read from (D76; [roots.md](../../../design/roots.md) § State by
+> vault).
 > - **Workspaces** (WSP-D1, WSP-D2): a workspace is the tabs and the active one, the pinned ones, splits with their
 >   orientation and ratio, and each window's note, cursor and history (its last 50 places each way). A vault keeps its
 >   workspaces in its `session.json` (the `Session`, `tui/session.ts`), found in this order: in home, one per folder
@@ -131,7 +133,8 @@ the vault, across its workspaces." Previously: "… when one is focused, and all
 >   what's open, which becomes its own.
 > - **Each folder of home's workspace** (VV-D2): each folder of home opened by name (`slipbox ~/notes`, a folder
 >   revealed; the 30 left most recently) has a workspace of its own beside home's own (its top's), so each brings back
->   its own tabs; one it has none for opens its own note ([roots.md](../../design/roots.md) § Home). The top bar names it
+>   its own tabs; one it has none for opens its own note ([roots.md](../../../design/roots.md) § Home). The top bar
+> names it
 >   (`◈ ~ › notes`).
 
 Previously: "**Session:** tabs and the active tab, splits with their orientation and ratio, cursors, each window's
@@ -192,11 +195,12 @@ scratch, …", and so does the purge's list in `core/install.ts`.
 ## MODIFIED design/roots.md § State by vault
 
 Its opening becomes: "Personal state is kept in the state folder, never in the folder it is about (D39, D76; where each
-file lives: [how-it-works.md](../../design/how-it-works.md) § Storage). The vault's folder holds what is shared: its
+file lives: [how-it-works.md](../../../design/how-it-works.md) § Storage). The vault's folder holds what is shared: its
 notes and its settings (`.slipbox/config.toml`), which travel with it; whether you trust it, your workspaces there and
 what they share, are yours (WSP-D1):"
 
-The first bullet becomes: "**By vault:** its workspaces and what they share (`session.json`; [tui.md](../../design/tui.md)
+The first bullet becomes: "**By vault:** its workspaces and what they share (`session.json`;
+[tui.md](../../../design/tui.md)
 § Positions), the scratch, trash, undo log, staleness, moves seen and branch heads seen are kept under the vault's key
 (§ Storage keys): home's by its path, as any vault's; Elsewhere's under its one key, `elsewhere`, wherever it was
 opened (VV-D3). Opening `project/` or `project/docs/` brings back the same workspaces, since both are in the vault
@@ -235,11 +239,12 @@ one session, each folder of it opened by name keeps its own tabs (§ Home)."; "I
   branch of a git checkout, one per folder of home opened by name and home's own, else the vault's own; personal, in
   slipbox's state, never in the vault (WSP-D1, WSP-D2). Not VS Code's workspace, the folders a window opened (a vault,
   here); Obsidian's workspaces, saved layouts, are nearer, though slipbox keeps one per place by itself. Nor D33's
-  "shared workspace", slipbox as a whole. [tui.md](../../design/tui.md) § Positions."
+  "shared workspace", slipbox as a whole. [tui.md](../../../design/tui.md) § Positions."
 - ADDED **Where you are**: "the vault, its branch and a workspace other than the vault's own, on the top bar, else on
-  the status line (WSP-D4, WSP-D5). [tui.md](../../design/tui.md) § Screen layout."
+  the status line (WSP-D4, WSP-D5). [tui.md](../../../design/tui.md) § Screen layout."
 - MODIFIED **Session**: "the file a vault's workspaces are kept in, with what they share (`session.json`, the
-  `Session`); users read workspace (WSP-D6). [tui.md](../../design/tui.md) § Positions." Previously: "a vault's tabs, splits,
+  `Session`); users read workspace (WSP-D6). [tui.md](../../../design/tui.md) § Positions." Previously: "a vault's tabs,
+  splits,
   cursors and pane widths, restored when slipbox starts there."
 - MODIFIED **The current vault**: "the vault whose workspace is shown". Previously: "the vault whose tabs are shown".
 - MODIFIED **Retired** adds: "**session**, for what slipbox restores: a workspace (WSP-D1); the word stays in
@@ -247,7 +252,8 @@ one session, each folder of it opened by name keeps its own tabs (§ Home)."; "I
 
 ## MODIFIED design/how-it-works.md § Storage
 
-- The table's row `session` becomes `workspaces (WSP-D1)`, its path the same, `$XDG_STATE_HOME/slipbox/<key>/session.json`.
+- The table's row `session` becomes `workspaces (WSP-D1)`, its path the same,
+  `$XDG_STATE_HOME/slipbox/<key>/session.json`.
 - "Shutdown saves positions and the session" becomes "Shutdown saves positions and the workspace".
 - The module table's row for `core/position.ts`: "anchors, reading positions, the session file (the workspaces)".
 
