@@ -335,7 +335,7 @@ interface Placed {
 }
 
 /** A PNG's size, from its header. */
-function pngSize(png: Uint8Array): { width: number; height: number } {
+export function pngSize(png: Uint8Array): { width: number; height: number } {
   const view = new DataView(png.buffer, png.byteOffset, png.byteLength);
   if (png.byteLength < 24 || view.getUint32(0) !== 0x89504e47) throw new Error("a screenshot's picture must be a PNG");
   return { width: view.getUint32(16), height: view.getUint32(20) };
@@ -442,14 +442,24 @@ export function toSvg(screen: Cell[][], o: Options = {}): string {
 
 let ready: Promise<void> | null = null;
 
-/** The SVG as a PNG, `scale` times its size. */
-export async function toPng(svg: string, scale = 2): Promise<Uint8Array> {
+/** The fonts an SVG's text is drawn with: DejaVu's faces, by file name, and the family text without one takes. */
+export interface Fonts {
+  faces: string[];
+  family: string;
+}
+
+/** The SVG as a PNG, `scale` times its size; its text in DejaVu Sans Mono, the screenshots', or in `fonts`. */
+export async function toPng(
+  svg: string,
+  scale = 2,
+  fonts: Fonts = { faces: FACES, family: "DejaVu Sans Mono" },
+): Promise<Uint8Array> {
   // resvg's WebAssembly is loaded once a process.
   ready ??= initWasm(readFileSync(wasm));
   await ready;
-  const fontBuffers = FACES.map((f) => new Uint8Array(readFileSync(`${FONT_DIR}/${f}`)));
+  const fontBuffers = fonts.faces.map((f) => new Uint8Array(readFileSync(`${FONT_DIR}/${f}`)));
   const r = new Resvg(svg, {
-    font: { fontBuffers, defaultFontFamily: "DejaVu Sans Mono", monospaceFamily: "DejaVu Sans Mono" },
+    font: { fontBuffers, defaultFontFamily: fonts.family, monospaceFamily: "DejaVu Sans Mono" },
     fitTo: { mode: "zoom", value: scale },
   });
   const image = r.render();

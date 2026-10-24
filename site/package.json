@@ -6,7 +6,7 @@
   "scripts": {
     "gather": "bun scripts/gather.ts",
     "dev": "bun scripts/gather.ts && bun --bun astro dev",
-    "build": "bun scripts/gather.ts && bun --bun astro build && bun scripts/check-links.ts"
+    "build": "bun scripts/gather.ts && bun --bun astro build && bun scripts/check-links.ts && bun scripts/check-meta.ts"
   },
   "dependencies": {
     "@astrojs/starlight": "0.42.6",

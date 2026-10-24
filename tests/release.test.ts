@@ -42,6 +42,8 @@ import {
   utcMinute,
   writeSite,
 } from "../scripts/release.ts";
+import { CARD, DESCRIPTION, LINE } from "../site/scripts/about.ts";
+import { escapeHtml, rootPage } from "../site/scripts/root.ts";
 
 const ROOT = resolve(import.meta.dir, "..");
 const sandbox = mkdtempSync(join(tmpdir(), "slipbox-release-"));
@@ -422,7 +424,43 @@ describe("the channels (GR-D14)", () => {
     expect(readFileSync(join(out, "install.sh"), "utf8")).toBe("#!/bin/sh\n");
     expect(readFileSync(join(out, "index.html"), "utf8")).toContain('url=docs/">'); // the docs, beside it
     expect(readFileSync(join(out, "index.html"), "utf8")).toContain('href="https://github.com/o/r"');
+    // The root's page is root.ts', for the repository's Pages site (SEO-D3).
+    expect(readFileSync(join(out, "index.html"), "utf8")).toBe(
+      rootPage("https://o.github.io/r", "https://github.com/o/r"),
+    );
     expect(() => writeSite(out, "o/$(r)", { stable: null, preview: null })).toThrow("not a repository");
+  });
+
+  test("the root's page: a redirect to the docs whose head says what slipbox is, and shows its card (SEO-D3)", () => {
+    const html = rootPage("https://o.github.io/r", "https://github.com/o/r");
+    const has = (s: string) => expect(html).toContain(s);
+    has('<html lang="en">');
+    has('<meta name="viewport" content="width=device-width, initial-scale=1">');
+    has(`<title>slipbox: ${LINE}</title>`);
+    has(`<meta name="description" content="${escapeHtml(DESCRIPTION)}">`);
+    has('<link rel="canonical" href="https://o.github.io/r/docs/">');
+    has('<meta http-equiv="refresh" content="0; url=docs/">');
+    has('<meta property="og:type" content="website">');
+    has('<meta property="og:url" content="https://o.github.io/r/docs/">');
+    has(`<meta property="og:image" content="https://o.github.io/r/docs/${CARD.file}">`);
+    has(`<meta property="og:image:width" content="${CARD.width}">`);
+    has(`<meta property="og:image:height" content="${CARD.height}">`);
+    has(`<meta property="og:image:alt" content="${escapeHtml(CARD.alt)}">`);
+    has('<meta name="twitter:card" content="summary_large_image">');
+    has('<link rel="describedby" href="https://o.github.io/r/docs/llms.txt">');
+    has(`<p>slipbox: ${LINE}. Read <a href="docs/">its documentation</a>`);
+    has('<a href="docs/guides/install/">');
+    has('<a href="https://github.com/o/r">');
+  });
+
+  test("the root's page escapes what it writes", () => {
+    expect(escapeHtml(`a "b" & <c> 'd'`)).toBe("a &quot;b&quot; &amp; &lt;c&gt; &#39;d&#39;");
+    expect(rootPage("https://o.github.io/r", 'https://x/"><script>')).toContain(
+      'href="https://x/&quot;&gt;&lt;script&gt;"',
+    );
+    // The card's alt has quotes in it: written whole, inside its attribute.
+    expect(CARD.alt).toContain('"');
+    expect(rootPage("https://o.github.io/r", "https://github.com/o/r")).not.toContain(`content="${CARD.alt}"`);
   });
 
   test("the previews kept: the newest ten published; the older ones are the ones to delete", () => {
@@ -822,6 +860,18 @@ describe("the workflows: one build for releases and previews, previews from test
     expect(runStep(steps[marker], env, dir)).toEqual({ code: 0, out: "" });
     expect(readFileSync(join(dir, "_site", "deployment"), "utf8")).toBe("40045492245.2\n");
     expect(readFileSync(output, "utf8")).toBe("deployment=40045492245.2\n");
+  });
+
+  test("the site's job runs main's files, the workflow the caller's: it runs no script of its own beyond those two", () => {
+    // A preview's run is test's pages.yml over main's checkout: a step running a file new since the last release fails
+    // until the next one brings it to main, and no preview deploys. The site's build runs its own checks (SEO-D6).
+    const site = workflow("pages.yml").jobs.site!;
+    expect(site.steps?.find((s) => s.uses?.startsWith("actions/checkout@"))?.with?.ref).toBe("main");
+    const files = runs(site)
+      .split(/\s+/)
+      .filter((word) => /\.(?:ts|js|mjs)$/.test(word));
+    expect(files).toEqual(["scripts/bootstrap.ts", "scripts/release.ts"]);
+    expect(runs(site)).toContain("bun run site\n");
   });
 
   test("a deployment passes once the site serves its marker and channels; a stale marker fails, the channels alike (#7)", () => {

@@ -29,6 +29,7 @@ import { MOUSE_HELP } from "../src/tui/mouse-help.ts";
 import { placeholderRow } from "../src/tui/placeholders.ts";
 import { allShots } from "./terminal/shot.ts";
 import legacyAnchors from "./fixtures/documentation/legacy-anchors.json";
+import { LINE } from "../site/scripts/about.ts";
 import { readLegacyPages, readMap } from "../site/scripts/gather.ts";
 
 const TOP = join(import.meta.dir, "..");
@@ -556,6 +557,32 @@ describe("what the manual promises of the code (DOC)", () => {
       "question",
     ];
     for (const t of things) expect([t, help.includes(t), chapter.includes(t)]).toEqual([t, true, true]);
+  });
+});
+
+describe("how slipbox describes itself (SEO-D1)", () => {
+  const read = (file: string) => readFileSync(join(TOP, file), "utf8");
+  // Each file read as text: the help's line, the formula's desc, the package's description, the README's first line.
+  const WHOLE = ["README.md", "package.json", "src/cli/cli.ts", "scripts/homebrew.template.rb", "docs/README.md"];
+
+  test("one line, the site's, wherever slipbox says what it is", () => {
+    for (const file of WHOLE) expect(read(file).toLowerCase(), file).toContain(LINE);
+    expect(read("README.md")).toContain(`**${LINE[0]!.toUpperCase()}${LINE.slice(1)}.**`);
+    // "What is slipbox?" leads with it too, then what else it opens.
+    expect(read("docs/manual/introduction.md")).toContain("read, review and edit what your coding agent writes");
+    // The Homebrew formula's desc: no more than brew's 80 characters.
+    expect(/^\s*desc "([^"]*)"/m.exec(read("scripts/homebrew.template.rb"))![1]!.length).toBeLessThanOrEqual(80);
+  });
+
+  test("the line it replaced is gone from every place that said it", () => {
+    for (const file of [
+      ...WHOLE,
+      "docs/manual/introduction.md",
+      "skills/slipbox/SKILL.md",
+      "site/astro.config.mjs",
+      "site/scripts/about.ts",
+    ])
+      expect(read(file), file).not.toMatch(/companion for coding agents|terminal companion/i);
   });
 });
 

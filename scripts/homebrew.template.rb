@@ -1,7 +1,7 @@
 # slipbox's Homebrew formula (plan 14.3), made for one release by scripts/release.ts: its version, and each pack's
 # address and SHA-256, written in. .github/workflows/homebrew.yml puts it in the tap once the release is published.
 class Slipbox < Formula
-  desc "Terminal companion for coding agents"
+  desc "Read, review and edit what your coding agent writes, in your terminal"
   homepage "https://github.com/@REPO@"
   version "@VERSION@"
   license "Apache-2.0"

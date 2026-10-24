@@ -5,10 +5,10 @@
     src="https://github.com/remziduzagac/slipbox/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI status"></a>
 </p>
 
-**The terminal companion for coding agents.**
+**Read, review and edit what your coding agent writes, in your terminal.**
 
-Read, review and edit notes and code in your terminal. Keep documents readable while making focused edits with the
-lens. Use slipbox on your own files, and add agent integration when it helps.
+Keep documents readable while making focused edits with the lens. Use slipbox on your own notes and code too, and add
+agent integration when it helps.
 
 ![slipbox on a repository's design doc: the agent's change marked beside its lines, the lens open on its new line while
 you type, and the scratch on the right holding the code and the decision it cited](docs/images/readme-hero.png)
