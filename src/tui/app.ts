@@ -23,7 +23,7 @@ import { stopSyntaxThread } from "../core/syntax-thread.ts";
 import { onLoaded } from "../core/lazy.ts";
 import { classify, extensionOf } from "../core/filetypes.ts";
 import { accessSync, appendFileSync, constants as fsConstants } from "node:fs";
-import { dirname, join, relative } from "node:path";
+import { dirname, isAbsolute, join, relative } from "node:path";
 import { climbsOut, folderUnreadable, WriteRefused, writeNote } from "../core/fsutil.ts";
 import { linkSaid, writesThrough } from "../core/symlinks.ts";
 import { writeDirty } from "../core/stale.ts";
@@ -406,6 +406,12 @@ export function uiDefaults(c: Config): UiState {
   };
 }
 
+/** A file you may read but not write (VV-D5), said as its window's read-only reason; null when you may write it. */
+export function lockedSaid(key: string, abs: string): string | null {
+  const locked = fileUnwritable(abs);
+  return locked ? `${tildePath(key)} is read-only: ${locked}` : null;
+}
+
 /** Why a file can't be written, when it can be read (VV-D5): not by you, or not in its folder; null when it can. */
 export function fileUnwritable(path: string): string | null {
   try {
@@ -651,9 +657,6 @@ export class App {
     if (opts.listOffThread) this.explorer.listings = new Listings(this, true);
     this.config = opts.config;
     this.graph = opts.graph;
-    // A folder of home opened by name, or a file's (VV-D2): what was asked for, its notes there at once, home walked
-    // or not — and a folder's own tabs, or its own note, not home's.
-    this.vaults.ask(opts.folder ?? null, opts.open ? this.absOf(opts.open) : null);
     // This machine sees the root (17.6); a named folder moved here by hand brought its state (21.8).
     const { carriedFrom } = opts.recorded ?? recordLocation(opts.loc);
     // The vaults it reaches never parsed whole here (`thorough`): that holds the keys. Caught up on a thread instead.
@@ -663,7 +666,6 @@ export class App {
     this.host = opts.host;
     this.configFile = opts.configFile;
     this.live = opts.watch !== false;
-    this.watch.followGraph();
     this.explicitTheme = opts.themeName;
     // Each config file's last good contents, so a typo saved mid-edit keeps what it said (reload).
     this.settings.origins = loadConfig({
@@ -684,6 +686,15 @@ export class App {
       headMoved: (was, now, moves) => this.git.headMoved(was, now, moves),
       gitNews: () => this.git.refresh(),
     });
+    // A folder of home opened by name, or a file's (VV-D2): what was asked for, its notes there at once, home walked
+    // or not — and a folder's own tabs, or its own note, not home's. The tabs brought back too, their folders asked for
+    // with it (the branch's, now HEAD is known): the graph built once. Then search, on it.
+    this.vaults.ask(
+      opts.folder ?? null,
+      opts.open ? this.absOf(opts.open) : null,
+      !opts.open && opts.config.ui.restore_session,
+    );
+    this.watch.followGraph();
     this.ui = uiDefaults(opts.config);
     if (opts.themeName) this.ui.theme = opts.themeName;
     if (process.env.NO_COLOR) this.ui.theme = "mono";
@@ -909,6 +920,55 @@ export class App {
     return pathOrRel.startsWith("/") ? pathOrRel : join(this.loc.root, pathOrRel);
   }
 
+  /**
+   * Buffers opened before the graph knew their file — a note a branch brings, its tab back before the watcher says so;
+   * one in a folder of home not walked yet, one reached — given their vault path now it does: their links and
+   * backlinks. Each build calls it (`Watch.followGraph`); a change to one file claims that file's buffer, and one read
+   * again is claimed then (`Watch.reloadBuffer`, `Watch.poll`).
+   */
+  claimKnown(): void {
+    for (const b of this.buffers.values()) this.claim(b);
+  }
+
+  /**
+   * One buffer given its vault path, when the graph knows its file; true when it was. Not one changed on disk since it
+   * was read: the poll reads it again first, then claims it, so it never shows what the file no longer says
+   * (`Watch.poll`). One read-only as read through a link not followed (VV-D6) is the vault's only once that link is
+   * followed (`claimThroughLink`).
+   */
+  claim(b: NoteBuffer): boolean {
+    if (b.virtual || b.elsewhere) return false;
+    if (b.throughLink) return this.claimThroughLink(b);
+    if (b.rel !== null || isAbsolute(b.key) || !this.graph.known(b.key) || b.changedOnDisk()) return false;
+    b.rel = b.key;
+    this.claimed(b);
+    return true;
+  }
+
+  /**
+   * A window read-only as read through a link not followed (VV-D6), looked at or forgotten, whose link is followed now
+   * (`Following.follow`): writable, unless the file itself isn't, and the vault's once the graph knows it. In a vault,
+   * only once it's the vault's note: a write there never lands outside it through a link, so one the graph doesn't take
+   * (past `walk.max_file_size`) stays read-only. In home and Elsewhere, a write through a followed link is allowed.
+   */
+  private claimThroughLink(b: NoteBuffer): boolean {
+    // Its link followed, and its target answered: never while it's looked at, nor asked, nor once it gave up.
+    if (this.following.blocked(b.abs, true)) return false;
+    const known = !isAbsolute(b.key) && this.graph.known(b.key) && !b.changedOnDisk();
+    if (this.loc.mode === "vault" && !known) return false;
+    b.throughLink = false;
+    b.readOnly = lockedSaid(b.key, b.abs);
+    if (known) b.rel = b.key;
+    this.claimed(b);
+    return true;
+  }
+
+  /** A buffer claimed in the middle of anything (a render reaching a file): drawn again, its links and backlinks. */
+  private claimed(b: NoteBuffer): void {
+    b.invalidateLayouts();
+    this.host.requestRender();
+  }
+
   /** Buffer for a vault-relative or absolute path. Keyed by path, not graph membership. */
   buffer(pathOrRel: string): NoteBuffer | null {
     const abs = pathOrRel.startsWith("/") ? pathOrRel : join(this.loc.root, pathOrRel);
@@ -919,7 +979,7 @@ export class App {
     let buf = this.buffers.get(key);
     if (!buf) {
       // Inside the vault, a note or any file the walk saw has its vault path (the watcher, saves).
-      const known = inside && (this.graph.notes.has(relRaw) || this.graph.filePaths().includes(relRaw));
+      const known = inside && this.graph.known(relRaw);
       const rel = known ? relRaw : null;
       const kind = classify(abs, this.config.walk.extensions);
       if (kind.group === "binary") {
@@ -948,15 +1008,16 @@ export class App {
       if (buf.invalidUtf8) this.message("warn", `${buf.key}: not valid UTF-8; invalid bytes shown as �`);
       // A file you may read but not write opens all the same, read-only, and says so (VV-D5); another vault's is
       // read-only here already, for its own reason.
-      const locked = buf.elsewhere ? null : fileUnwritable(abs);
+      const locked = buf.elsewhere ? null : lockedSaid(buf.key, abs);
       if (locked) {
-        buf.readOnly = `${tildePath(buf.key)} is read-only: ${locked}`;
+        buf.readOnly = locked;
         this.message("info", buf.readOnly);
       }
       // Read through a link you're only looking at (VV-D6): read-only, and never indexed — it isn't the vault's.
       const look = buf.elsewhere ? null : this.following.lookedAt(abs);
       if (look) {
         buf.readOnly = `just looking: ${tildePath(look)} isn't followed — read-only`;
+        buf.throughLink = true;
       }
       this.buffers.set(key, buf);
     }
@@ -1145,9 +1206,17 @@ export class App {
       this.message("warn", `${this.displayName(buf)} is the floating window's, not a file: not written`);
       return false;
     }
-    // A vault note stays inside the vault; a file from outside it (the scratch) inside its folder. Through a link
-    // you follow, home's and Elsewhere's are written where it leads; a vault's never out of it (VV-D6).
-    const root = buf.rel !== null ? this.loc.root : dirname(buf.abs);
+    // Read through a link not followed now (VV-D6: looked at, or forgotten with unsaved text): never written through it.
+    if (buf.throughLink) {
+      this.message("warn", `${buf.key} not written: ${buf.readOnly ?? "read through a link not followed"}`);
+      return false;
+    }
+    // A vault's file stays inside the vault, one its graph doesn't know too (past `walk.max_file_size`); a file from
+    // outside it (the scratch) inside its folder. Through a link you follow, home's and Elsewhere's are written where it
+    // leads; a vault's never out of it (VV-D6).
+    const inVault =
+      buf.rel !== null || (this.loc.mode === "vault" && !buf.elsewhere && isInside(this.loc.root, buf.abs));
+    const root = inVault ? this.loc.root : dirname(buf.abs);
     const through = this.loc.mode !== "vault" && !buf.elsewhere && writesThrough(this.loc, buf.abs);
     let written: ReturnType<typeof writeNote>;
     try {

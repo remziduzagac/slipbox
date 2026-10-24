@@ -575,7 +575,7 @@ export function describeCap(cap: WalkCap, asked?: AskedWhole): string {
   const n = (x: number) => x.toLocaleString("en-US");
   const names = asked?.folders.map((f) => `~/${f}`) ?? [];
   const named = names.length > 1 ? `${names.slice(0, -1).join(", ")} and ${names.at(-1)}` : names[0];
-  const opened = names.length > 1 ? "the folders you opened" : "the folder you opened";
+  const opened = names.length > 1 ? "the folders open" : "the folder open";
   if (cap === "notes" && asked && named && asked.notes >= HOME_LIMITS.notes)
     return `home's index is full: it holds ${n(asked.notes)} notes, all in ${named}, ${opened} — the rest aren't indexed`;
   const said =

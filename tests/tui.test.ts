@@ -31,7 +31,7 @@ import { type Config, DEFAULT_CONFIG } from "../src/core/config.ts";
 import { openGraph } from "../src/core/graph.ts";
 import { locateVault } from "../src/core/vault.ts";
 import { tildePath } from "../src/core/paths.ts";
-import { linkAnswer, probe, setLinkAnswer } from "../src/core/symlinks.ts";
+import { linkAnswer, linkKey, probe, setLinkAnswer } from "../src/core/symlinks.ts";
 import { type ListOverlay, App, type Host } from "../src/tui/app.ts";
 import { dateText, listFolder, placeOf, type SaveAsOverlay, sizeText } from "../src/tui/saveas.ts";
 import { placeIn } from "../src/tui/shellrun.ts";
@@ -14724,7 +14724,7 @@ describe("the background auto-index in the TUI (20.9)", () => {
       (h.app.watch as unknown as { homeIndexed(capped: "notes"): void }).homeIndexed("notes");
       await h.app.watch.homeRefreshed;
       expect(h.app.messages.at(-1)?.text).toBe(
-        "home's index is full: it holds 10,000 notes, those nearest the top — the rest aren't indexed; ~/notes, the folder you opened, is whole",
+        "home's index is full: it holds 10,000 notes, those nearest the top — the rest aren't indexed; ~/notes, the folder open, is whole",
       );
     } finally {
       process.env.HOME = before;
@@ -14737,7 +14737,7 @@ describe("the background auto-index in the TUI (20.9)", () => {
     const home = homeWithFolders();
     const loc = homeAt(home);
     const on = (c: Config) => (c.ui.restore_session = true);
-    // Each tab's note by its path in home: one of a folder home's walk hasn't reached is no note of its graph yet.
+    // Each tab's note by its path in home.
     const open = (h: Harness) => h.app.tabs.map((t) => relative(home, t.views[t.active]!.buf.abs));
     const before = process.env.HOME;
     process.env.HOME = home;
@@ -14768,6 +14768,786 @@ describe("the background auto-index in the TUI (20.9)", () => {
     } finally {
       process.env.HOME = before;
     }
+  });
+
+  test("home's tabs brought back, in folders its walk hasn't reached: their folders walked at once, their notes known (VV-D2, #13)", async () => {
+    const { homeAt } = await import("../src/core/vault.ts");
+    const home = homeWithFolders();
+    const loc = homeAt(home);
+    const on = (c: Config) => (c.ui.restore_session = true);
+    const before = process.env.HOME;
+    process.env.HOME = home;
+    try {
+      const first = await harness({ loc, open: null, config: on });
+      first.app.openInNewTab("notes/inbox.md");
+      first.app.openInNewTab("other/p.md");
+      first.app.session.save();
+      const h = await harness({ loc, open: null, config: on });
+      expect(h.app.graph.home?.walked).toBeNull();
+      // Each brought back as a note of home's: its vault path, its links resolved, its backlinks there.
+      expect(h.app.tabs.map((t) => t.views[t.active]!.buf.rel)).toEqual(["README.md", "notes/inbox.md", "other/p.md"]);
+      expect(h.app.graph.linksOf("notes/inbox.md").map((l) => [l.resolvedKind, l.path])).toEqual([
+        ["note", "notes/ideas/coffee.md"],
+      ]);
+      expect(h.app.graph.backlinks("notes/ideas/coffee.md").map((b) => b.from)).toEqual(["notes/inbox.md"]);
+      expect(h.app.graph.notes.has("other/o.md")).toBe(true);
+    } finally {
+      process.env.HOME = before;
+    }
+  });
+
+  test("home's tabs brought back: one build for all their folders, a split's other window's too; a file gone, or one home leaves out, walks nothing (VV-D2, #13)", async () => {
+    const { homeAt } = await import("../src/core/vault.ts");
+    const { Graph } = await import("../src/core/graph.ts");
+    const { sessionFile } = await import("../src/core/position.ts");
+    const home = homeWithFolders();
+    mkdirSync(join(home, "Downloads"));
+    writeFileSync(join(home, "Downloads", "list.md"), "# List\n");
+    mkdirSync(join(home, "old"));
+    writeFileSync(join(home, "old", "kept.md"), "# Kept\n");
+    const loc = homeAt(home);
+    const on = (c: Config) => (c.ui.restore_session = true);
+    const before = process.env.HOME;
+    process.env.HOME = home;
+    const build = spyOn(Graph.prototype, "build");
+    try {
+      const first = await harness({ loc, open: null, config: on });
+      first.app.session.save();
+      const file = sessionFile(loc);
+      const kept = JSON.parse(readFileSync(file, "utf8"));
+      const pane = (path: string) => ({ ...kept.tabs[0].panes[0], path });
+      const tabs = [
+        { panes: [pane("README.md"), pane("other/o.md")], active: 0, orientation: "side", ratio: 0.5 },
+        { panes: [pane("notes/ideas/coffee.md")], active: 0 },
+        { panes: [pane("notes/inbox.md")], active: 0 },
+        { panes: [pane("Downloads/list.md")], active: 0 },
+        { panes: [pane("old/gone.md")], active: 0 },
+      ];
+      kept.folders[""].tabs = tabs;
+      writeFileSync(file, JSON.stringify(kept));
+      build.mockClear();
+      const h = await harness({ loc, open: null, config: on });
+      // Its graph opened, then built once more for the tabs' folders: `notes` holds `notes/ideas`.
+      expect(build).toHaveBeenCalledTimes(2);
+      expect(h.app.graph.home?.asked?.folders.toSorted()).toEqual(["notes", "other"]);
+      expect(h.app.tabs.map((t) => t.views.map((v) => v.buf.rel))).toEqual([
+        ["README.md", "other/o.md"],
+        ["notes/ideas/coffee.md"],
+        ["notes/inbox.md"],
+        // Opened, never indexed (home's skip list), as before.
+        [null],
+      ]);
+      expect(h.app.graph.notes.has("Downloads/list.md")).toBe(false);
+      // A folder home's walk never goes into isn't asked for at all: nothing to walk.
+      expect(h.app.graph.askedFolders).not.toContain("Downloads");
+      // A file gone: its tab isn't brought back, and its folder isn't walked for it.
+      expect(h.app.graph.notes.has("old/kept.md")).toBe(false);
+      // Not live (a test's app): no background parse started by the build.
+      expect(h.app.indexing).toBe(0);
+    } finally {
+      build.mockRestore();
+      process.env.HOME = before;
+    }
+  });
+
+  test("home's tab behind a link out of home not followed: nothing asked for it, nothing read through it (VV-D2, VV-D6, #13)", async () => {
+    const { homeAt } = await import("../src/core/vault.ts");
+    const { sessionFile } = await import("../src/core/position.ts");
+    const home = homeWithFolders();
+    const shelf = realpathSync(mkdtempSync(join(sandbox, "shelf-")));
+    writeFileSync(join(shelf, "far.md"), "# Far\n");
+    symlinkSync(shelf, join(home, "shelf"));
+    const loc = homeAt(home);
+    const on = (c: Config) => (c.ui.restore_session = true);
+    const before = process.env.HOME;
+    process.env.HOME = home;
+    try {
+      const first = await harness({ loc, open: null, config: on });
+      first.app.session.save();
+      const file = sessionFile(loc);
+      const kept = JSON.parse(readFileSync(file, "utf8"));
+      const pane = (path: string) => ({ ...kept.tabs[0].panes[0], path });
+      kept.folders[""].tabs = [
+        { panes: [pane("README.md")], active: 0 },
+        { panes: [pane("shelf/far.md")], active: 0 },
+      ];
+      writeFileSync(file, JSON.stringify(kept));
+      const h = await harness({ loc, open: null, config: on });
+      expect(h.app.tabs.map((t) => t.views[t.active]!.buf.rel)).toEqual(["README.md"]);
+      expect(h.app.graph.askedFolders).toEqual([]);
+    } finally {
+      process.env.HOME = before;
+    }
+  });
+
+  test("a folder of home opened by name, its tabs in a folder of it: no second build (VV-D2, #13)", async () => {
+    const { homeAt } = await import("../src/core/vault.ts");
+    const { Graph } = await import("../src/core/graph.ts");
+    const home = homeWithFolders();
+    const loc = homeAt(home);
+    const on = (c: Config) => (c.ui.restore_session = true);
+    const before = process.env.HOME;
+    process.env.HOME = home;
+    const build = spyOn(Graph.prototype, "build");
+    try {
+      const first = await harness({ loc, open: null, folder: join(home, "notes"), config: on });
+      first.app.openInNewTab("notes/ideas/coffee.md");
+      first.app.session.save();
+      build.mockClear();
+      mkdirSync(join(home, "notes", "deep"));
+      writeFileSync(join(home, "notes", "deep", "d.md"), "# D\n");
+      const h = await harness({ loc, open: null, folder: join(home, "notes"), config: on });
+      // Its graph opened, then built once with `notes` walked whole: `notes/ideas` is in it.
+      expect(build).toHaveBeenCalledTimes(2);
+      expect(h.app.tabs.map((t) => t.views[t.active]!.buf.rel)).toEqual(["notes/inbox.md", "notes/ideas/coffee.md"]);
+      // A branch's tab, later, in `notes/deep`, listed in `notes` walked whole: no build for it.
+      build.mockClear();
+      const anchor = { heading: null, headingIndex: 0, offset: 0, line: 0 };
+      h.app.session.openTabs([{ panes: [{ path: "notes/deep/d.md", anchor }], active: 0 }], 0);
+      expect(build).toHaveBeenCalledTimes(0);
+      expect(h.app.tabs.at(-1)!.views[0]!.buf.rel).toBe("notes/deep/d.md");
+    } finally {
+      build.mockRestore();
+      process.env.HOME = before;
+    }
+  });
+
+  test("a tab brought back in a folder made since a folder holding it was walked: walked then (VV-D2, #13)", async () => {
+    const { homeAt } = await import("../src/core/vault.ts");
+    const home = homeWithFolders();
+    const before = process.env.HOME;
+    process.env.HOME = home;
+    try {
+      const h = await harness({ loc: homeAt(home), open: null, folder: join(home, "notes") });
+      mkdirSync(join(home, "notes", "new"));
+      writeFileSync(join(home, "notes", "new", "topic.md"), "# Topic\n\nFrom [the inbox](../inbox.md).\n");
+      // A branch's tabs, say, brought back before the watcher has said: `notes` was walked, `notes/new` wasn't there.
+      const anchor = { heading: null, headingIndex: 0, offset: 0, line: 0 };
+      h.app.tabs = [];
+      h.app.session.openTabs([{ panes: [{ path: "notes/new/topic.md", anchor }], active: 0 }], 0);
+      expect(h.app.tabs.map((t) => t.views[t.active]!.buf.rel)).toEqual(["notes/new/topic.md"]);
+      expect(h.app.graph.backlinks("notes/inbox.md").map((b) => b.from)).toEqual(["notes/new/topic.md"]);
+    } finally {
+      process.env.HOME = before;
+    }
+  });
+
+  test("home's walk kept, stopped at its cap: a tab brought back has its folder walked all the same (VV-D2, #13)", async () => {
+    const { homeAt } = await import("../src/core/vault.ts");
+    const { walkHomeNow } = await import("../src/core/home.ts");
+    const home = homeWithFolders();
+    const loc = homeAt(home);
+    const on = (c: Config) => (c.ui.restore_session = true);
+    const before = process.env.HOME;
+    process.env.HOME = home;
+    try {
+      const first = await harness({ loc, open: null, config: on });
+      first.app.openInNewTab("notes/inbox.md");
+      first.app.session.save();
+      // Breadth first, the cap reached in `notes`: it's listed, `notes/ideas` isn't. The folders' times an hour back, so
+      // the walk kept is read as it was, none listed again.
+      const hour = new Date(Date.now() - 3_600_000);
+      for (const d of ["", "notes", "notes/ideas", "other"]) utimesSync(join(home, d), hour, hour);
+      expect(walkHomeNow(loc, first.app.config, { notes: 2, folders: 100 }).capped).toBe("notes");
+      const h = await harness({ loc, open: null, config: on });
+      expect(h.app.graph.home?.walked).not.toBeNull();
+      expect(h.app.graph.home?.capped).toBe("notes");
+      // `notes` walked whole for its tab: a walk stopped at its cap covers no folder it listed.
+      expect(h.app.graph.home?.asked?.folders).toEqual(["notes"]);
+      expect(h.app.tabs.map((t) => t.views[t.active]!.buf.rel)).toEqual(["README.md", "notes/inbox.md"]);
+      expect(h.app.graph.linksOf("notes/inbox.md").map((l) => [l.resolvedKind, l.path])).toEqual([
+        ["note", "notes/ideas/coffee.md"],
+      ]);
+    } finally {
+      process.env.HOME = before;
+    }
+  });
+
+  test("into home from a vault, its tabs brought back: their folders walked at once (VV-D2, #13)", async () => {
+    const { homeAt } = await import("../src/core/vault.ts");
+    const { Graph } = await import("../src/core/graph.ts");
+    const home = homeWithFolders();
+    const vault = makeVault();
+    const on = (c: Config) => (c.ui.restore_session = true);
+    const before = process.env.HOME;
+    process.env.HOME = home;
+    try {
+      const first = await harness({ loc: homeAt(home), open: null, config: on });
+      first.app.openInNewTab("notes/inbox.md");
+      first.app.session.save();
+      const h = await harness({ root: vault, open: "index.md", config: on });
+      // A note of `other` opened by choice: into home, its tabs back, `notes`'s note among them — home's graph built
+      // once, `other` and `notes` walked in it.
+      const build = spyOn(Graph.prototype, "build");
+      try {
+        expect(h.app.vaults.intoOther(join(home, "other", "o.md"))).toBe(true);
+        expect(build).toHaveBeenCalledTimes(1);
+      } finally {
+        build.mockRestore();
+      }
+      expect(h.app.loc).toMatchObject({ mode: "home", root: home });
+      expect(h.app.tabs.map((t) => t.views[t.active]!.buf.rel)).toEqual(["README.md", "notes/inbox.md", "other/o.md"]);
+      expect(h.app.graph.linksOf("notes/inbox.md").map((l) => [l.resolvedKind, l.path])).toEqual([
+        ["note", "notes/ideas/coffee.md"],
+      ]);
+    } finally {
+      process.env.HOME = before;
+    }
+  });
+
+  test("home a repository, a branch's tabs brought back as it's checked out: their folders walked at once (VV-D2, 5.9, #13)", async () => {
+    const { homeAt } = await import("../src/core/vault.ts");
+    const home = homeWithFolders();
+    const loc = homeAt(home);
+    const git = (...args: string[]) =>
+      Bun.spawnSync([
+        "git",
+        "-c",
+        "user.email=t@example.invalid",
+        "-c",
+        "user.name=t",
+        "-c",
+        "commit.gpgsign=false",
+        "-C",
+        home,
+        ...args,
+      ]).exitCode;
+    if (git("init", "-q", "-b", "main") !== 0) return;
+    expect(git("add", "-A")).toBe(0);
+    expect(git("commit", "-q", "-m", "start")).toBe(0);
+    expect(git("branch", "feat")).toBe(0);
+    const on = (c: Config) => (c.ui.restore_session = true);
+    const before = process.env.HOME;
+    process.env.HOME = home;
+    try {
+      // feat's tabs, kept: home's top and a note of `notes`.
+      const first = await harness({ loc, open: "README.md", config: on });
+      first.app.openInNewTab("notes/inbox.md");
+      first.app.session.save("feat");
+      const h = await harness({ loc, open: "README.md", config: on });
+      expect(h.app.git.checkHead()).toBe(false);
+      expect(h.app.graph.notes.has("notes/inbox.md")).toBe(false);
+      expect(git("checkout", "-q", "feat")).toBe(0);
+      expect(h.app.git.checkHead()).toBe(true);
+      expect(h.app.messages.at(-1)!.text).toBe("switched to branch feat: its tabs are back");
+      expect(h.app.tabs.map((t) => t.views[t.active]!.buf.rel)).toEqual(["README.md", "notes/inbox.md"]);
+      expect(h.app.graph.linksOf("notes/inbox.md").map((l) => [l.resolvedKind, l.path])).toEqual([
+        ["note", "notes/ideas/coffee.md"],
+      ]);
+    } finally {
+      process.env.HOME = before;
+    }
+  });
+
+  test("home a repository, a branch checked out as its batch lands: an open note it changed read again once, after its tabs' build (VV-D2, D153, #13)", async () => {
+    const { homeAt } = await import("../src/core/vault.ts");
+    const home = homeWithFolders();
+    const loc = homeAt(home);
+    const git = (...args: string[]) =>
+      Bun.spawnSync([
+        "git",
+        "-c",
+        "user.email=t@example.invalid",
+        "-c",
+        "user.name=t",
+        "-c",
+        "commit.gpgsign=false",
+        "-C",
+        home,
+        ...args,
+      ]).exitCode;
+    if (git("init", "-q", "-b", "main") !== 0) return;
+    expect(git("add", "-A")).toBe(0);
+    expect(git("commit", "-q", "-m", "start")).toBe(0);
+    expect(git("checkout", "-q", "-b", "feat")).toBe(0);
+    writeFileSync(join(home, "README.md"), "# Home\n\nAs feat has it.\n");
+    expect(git("commit", "-q", "-am", "feat's README")).toBe(0);
+    expect(git("checkout", "-q", "main")).toBe(0);
+    const on = (c: Config) => (c.ui.restore_session = true);
+    const before = process.env.HOME;
+    process.env.HOME = home;
+    try {
+      // feat's tabs, kept: README.md and a note of `notes`, a folder home's walk hasn't reached.
+      const first = await harness({ loc, open: "README.md", config: on });
+      first.app.openInNewTab("notes/inbox.md");
+      first.app.session.save("feat");
+      const h = await harness({ loc, open: "README.md", config: on });
+      expect(h.app.git.checkHead()).toBe(false);
+      expect(git("checkout", "-q", "feat")).toBe(0);
+      // The watcher's batch for what git wrote: the switch seen first, its tabs back, their folder walked, then the
+      // batch — the note read again once, never before the batch and again with it.
+      h.app.feed.receive({ changes: [{ rel: "README.md", kind: "changed", isNote: true }], rescan: false });
+      expect(h.app.messages.some((m) => m.text === "switched to branch feat: its tabs are back")).toBe(true);
+      expect(h.app.graph.notes.has("notes/inbox.md")).toBe(true);
+      expect(h.app.buffers.get("README.md")!.source).toBe("# Home\n\nAs feat has it.\n");
+      expect(h.app.messages.filter((m) => m.text.endsWith("README.md changed on disk — reloaded"))).toHaveLength(1);
+    } finally {
+      process.env.HOME = before;
+    }
+  });
+
+  test("home's tabs brought back as a branch is checked out, their folders walked: search finds their notes (VV-D2, #13)", async () => {
+    const { homeAt } = await import("../src/core/vault.ts");
+    const home = homeWithFolders();
+    const loc = homeAt(home);
+    const on = (c: Config) => {
+      c.ui.restore_session = true;
+      c.search.engine = "auto";
+    };
+    const before = process.env.HOME;
+    process.env.HOME = home;
+    try {
+      const h = await harness({ loc, open: null, config: on });
+      await h.app.search.whenIndexed();
+      // A branch's tabs brought back as it's checked out, `notes`'s note among them: walked then, search following.
+      const anchor = { heading: null, headingIndex: 0, offset: 0, line: 0 };
+      h.app.session.openTabs([{ panes: [{ path: "notes/inbox.md", anchor }], active: 0 }], 0);
+      await h.app.search.whenIndexed();
+      const found = h.app.search.query("coffee");
+      expect(found.engine).toBe("index");
+      expect(found.hits.map((x) => x.path).toSorted()).toEqual(["notes/ideas/coffee.md", "notes/inbox.md"]);
+    } finally {
+      process.env.HOME = before;
+    }
+  });
+
+  test("slipbox started in home: its graph built once, with the folder opened and its tabs' folders (VV-D2, #13)", async () => {
+    const { homeAt } = await import("../src/core/vault.ts");
+    const { Graph } = await import("../src/core/graph.ts");
+    const { prepare } = await import("../src/tui/run.ts");
+    const home = homeWithFolders();
+    const loc = homeAt(home);
+    const on = (c: Config) => (c.ui.restore_session = true);
+    const before = process.env.HOME;
+    process.env.HOME = home;
+    const build = spyOn(Graph.prototype, "build");
+    try {
+      const first = await harness({ loc, open: null, folder: join(home, "notes"), config: on });
+      first.app.openInNewTab("other/p.md");
+      first.app.session.save();
+      build.mockClear();
+      // As slipbox starts: `prepare`, then the screen, which builds the graph.
+      const start = prepare([join(home, "notes")]);
+      if (typeof start === "number") throw new Error(`exit ${start}`);
+      const app = new App({ ...start, host: { requestRender() {}, osc52: () => true, quit() {} }, watch: false });
+      expect(build).toHaveBeenCalledTimes(1);
+      expect(app.graph.home?.asked?.folders.toSorted()).toEqual(["notes", "other"]);
+      expect(app.tabs.map((t) => t.views[t.active]!.buf.rel)).toEqual(["notes/inbox.md", "other/p.md"]);
+    } finally {
+      build.mockRestore();
+      process.env.HOME = before;
+    }
+  });
+
+  test("slipbox ~ started, nothing asked for: home's graph built all the same, once, by the screen (VV-D2, #13)", async () => {
+    const { Graph } = await import("../src/core/graph.ts");
+    const { prepare } = await import("../src/tui/run.ts");
+    const home = homeWithFolders();
+    const before = process.env.HOME;
+    process.env.HOME = home;
+    const build = spyOn(Graph.prototype, "build");
+    try {
+      const start = prepare([home]);
+      if (typeof start === "number") throw new Error(`exit ${start}`);
+      expect(build).toHaveBeenCalledTimes(0);
+      const app = new App({ ...start, host: { requestRender() {}, osc52: () => true, quit() {} }, watch: false });
+      expect(build).toHaveBeenCalledTimes(1);
+      expect(app.view!.buf.rel).toBe("README.md");
+    } finally {
+      build.mockRestore();
+      process.env.HOME = before;
+    }
+  });
+
+  test("slipbox started in a vault: its graph built once, before the screen, never again by it (#13)", async () => {
+    const { Graph } = await import("../src/core/graph.ts");
+    const { prepare } = await import("../src/tui/run.ts");
+    const root = makeVault();
+    const build = spyOn(Graph.prototype, "build");
+    try {
+      const start = prepare([join(root, "index.md")]);
+      if (typeof start === "number") throw new Error(`exit ${start}`);
+      // Built before the screen is taken: a long build never holds a blank screen.
+      expect(start.graph.notes.has("index.md")).toBe(true);
+      const app = new App({ ...start, host: { requestRender() {}, osc52: () => true, quit() {} }, watch: false });
+      expect(build).toHaveBeenCalledTimes(1);
+      expect(app.view!.buf.rel).toBe("index.md");
+      expect(app.graph.notes.size).toBeGreaterThan(1);
+    } finally {
+      build.mockRestore();
+    }
+  });
+
+  test("home: a buffer open before its folder was walked is home's note once it is — a tab brought back, home's walk (VV-D2, #13)", async () => {
+    const { homeAt } = await import("../src/core/vault.ts");
+    const home = homeWithFolders();
+    const before = process.env.HOME;
+    process.env.HOME = home;
+    try {
+      const h = await harness({ loc: homeAt(home), open: null });
+      // Opened before: a place in a window's history gone back to, say.
+      const inbox = h.app.buffer("notes/inbox.md")!;
+      const p = h.app.buffer("other/p.md")!;
+      expect([inbox.rel, p.rel]).toEqual([null, null]);
+      // A branch's tabs brought back as it's checked out, that note among them: the same buffer, home's note now. Not
+      // live (a test's app): the build starts no background parse.
+      const anchor = { heading: null, headingIndex: 0, offset: 0, line: 0 };
+      h.app.session.openTabs([{ panes: [{ path: "notes/inbox.md", anchor }], active: 0 }], 0);
+      expect(h.app.indexing).toBe(0);
+      expect(h.app.tabs.at(-1)!.views[0]!.buf).toBe(inbox);
+      expect(inbox.rel).toBe("notes/inbox.md");
+      expect(h.app.graph.linksOf("notes/inbox.md").map((l) => [l.resolvedKind, l.path])).toEqual([
+        ["note", "notes/ideas/coffee.md"],
+      ]);
+      // Home's walk made, reaching `other`: its buffer too.
+      await stepToEnd(h.app.watch.indexJob()!);
+      await h.app.watch.homeRefreshed;
+      expect(p.rel).toBe("other/p.md");
+    } finally {
+      process.env.HOME = before;
+    }
+  });
+
+  test("home: a buffer open before its folder was walked, changed on disk since it was read: read again as the build follows, then home's note (VV-D2, #13)", async () => {
+    const { homeAt } = await import("../src/core/vault.ts");
+    const home = homeWithFolders();
+    const before = process.env.HOME;
+    process.env.HOME = home;
+    try {
+      const h = await harness({ loc: homeAt(home), open: null });
+      const p = h.app.buffer("other/p.md")!;
+      expect([p.rel, p.source]).toEqual([null, "# P\n"]);
+      // Changed by someone else before the poll looked: the poll looks no more once it's home's note.
+      writeFileSync(join(home, "other", "p.md"), "# P\n\nChanged elsewhere.\n");
+      const anchor = { heading: null, headingIndex: 0, offset: 0, line: 0 };
+      h.app.session.openTabs([{ panes: [{ path: "other/p.md", anchor }], active: 0 }], 0);
+      // The build that walks its folder reads it again, then makes it home's note: never its old text as the vault's.
+      expect([p.rel, p.source]).toEqual(["other/p.md", "# P\n\nChanged elsewhere.\n"]);
+    } finally {
+      process.env.HOME = before;
+    }
+  });
+
+  test("a note open, then left out by a [walk] setting, changed by an agent: read again, never indexed again (#13)", async () => {
+    const root = makeVault();
+    mkdirSync(join(root, "parked"));
+    writeFileSync(join(root, "parked", "p.md"), "# P\n");
+    const h = await harness({ root, open: "parked/p.md" });
+    const p = h.app.view!.buf;
+    expect(p.rel).toBe("parked/p.md");
+    // The vault's own [walk] (it comes before yours) leaves parked/ out now.
+    const own = join(root, ".slipbox", "config.toml");
+    writeFileSync(own, readFileSync(own, "utf8").replace(/^exclude = .*$/m, 'exclude = ["drafts/", "parked/"]'));
+    h.app.settings.reload("file changed");
+    expect(h.app.graph.notes.has("parked/p.md")).toBe(false);
+    writeFileSync(join(root, "parked", "p.md"), "# P\n\nTo [the index](../index.md).\n");
+    expect(h.app.watch.poll()).toBe(true);
+    expect(p.source).toBe("# P\n\nTo [the index](../index.md).\n");
+    // Neither a note nor any file of the graph's.
+    expect(h.app.graph.known("parked/p.md")).toBe(false);
+  });
+
+  test("a hidden note reached in a folder the watcher watches: polled all the same, the graph told (#13)", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, ".draft.md"), "# Draft\n");
+    const h = await harness({ root, open: "index.md" });
+    await h.app.run("note.open .draft.md");
+    const draft = h.app.view!.buf;
+    expect(draft.rel).toBe(".draft.md");
+    writeFileSync(join(root, ".draft.md"), "# Draft\n\nTo [the index](index.md).\n");
+    expect(h.app.watch.poll()).toBe(true);
+    expect(draft.source).toBe("# Draft\n\nTo [the index](index.md).\n");
+    expect(h.app.graph.linksOf(".draft.md").map((l) => l.path)).toEqual(["index.md"]);
+  });
+
+  test("a reached note changed: the poll tells the watcher it heard it, so its sweep says it no second time (#13)", async () => {
+    const root = makeVault();
+    mkdirSync(join(root, ".stash"));
+    writeFileSync(join(root, ".stash", "h.md"), "# Hidden\n");
+    const h = await harness({ root, open: "index.md", watch: true });
+    try {
+      await h.app.run("note.open .stash/h.md");
+      const heard = spyOn(h.app.watcher!, "heard");
+      writeFileSync(join(root, ".stash", "h.md"), "# Hidden\n\nRewritten.\n");
+      expect(h.app.watch.poll()).toBe(true);
+      expect(heard).toHaveBeenCalledWith(".stash/h.md", expect.objectContaining({ size: 21 }));
+      heard.mockRestore();
+    } finally {
+      h.app.quit();
+    }
+  });
+
+  test("a buffer the conflict left with the disk's text, the graph knowing it since: home's note at the next poll (#13)", async () => {
+    const { homeAt } = await import("../src/core/vault.ts");
+    const home = homeWithFolders();
+    const before = process.env.HOME;
+    process.env.HOME = home;
+    try {
+      const h = await harness({ loc: homeAt(home), open: null });
+      const p = h.app.buffer("other/p.md")!;
+      writeFileSync(join(home, "other", "p.md"), "# P\n\nTheirs.\n");
+      // The graph comes to know it while it's changed on disk: not claimed yet.
+      h.app.graph.askFolders([join(home, "other")]);
+      expect(p.rel).toBeNull();
+      // The disk's text taken (as a conflict's "theirs" takes it), not by reloadBuffer: the next poll claims it.
+      p.load();
+      h.app.watch.poll();
+      expect(p.rel).toBe("other/p.md");
+    } finally {
+      process.env.HOME = before;
+    }
+  });
+
+  test("a change to one file claims its own buffer, not every buffer open (#13)", async () => {
+    const root = makeVault();
+    mkdirSync(join(root, ".stash"));
+    for (const n of ["a", "b", "c"]) writeFileSync(join(root, ".stash", `${n}.md`), `# ${n}\n`);
+    const h = await harness({ root, open: "index.md" });
+    for (const n of ["a", "b", "c"]) expect(h.app.buffer(`.stash/${n}.md`)!.rel).toBeNull();
+    const claim = spyOn(h.app, "claim");
+    try {
+      h.app.graph.reachFile(".stash/b.md", { keep: true });
+      expect(claim).toHaveBeenCalledTimes(1);
+      expect(h.app.buffer(".stash/b.md")!.rel).toBe(".stash/b.md");
+    } finally {
+      claim.mockRestore();
+    }
+  });
+
+  test("a reached note changed while git holds its index lock: told to the graph once git lets go (5.10, #13)", async () => {
+    const root = makeVault();
+    if (Bun.spawnSync(["git", "init", "-q", "-b", "main", root]).exitCode !== 0) return;
+    mkdirSync(join(root, ".stash"));
+    writeFileSync(join(root, ".stash", "h.md"), "# Hidden\n");
+    const h = await harness({ root, open: "index.md" });
+    await h.app.run("note.open .stash/h.md");
+    expect(h.app.view!.buf.rel).toBe(".stash/h.md");
+    writeFileSync(join(root, ".git", "index.lock"), "");
+    writeFileSync(join(root, ".stash", "h.md"), "# Hidden\n\nTo [the index](../index.md).\n");
+    h.app.watch.poll();
+    // Held while git writes, as the watcher's news is.
+    expect(h.app.graph.linksOf(".stash/h.md")).toEqual([]);
+    rmSync(join(root, ".git", "index.lock"));
+    await new Promise((r) => setTimeout(r, 400));
+    expect(h.app.graph.linksOf(".stash/h.md").map((l) => l.path)).toEqual(["index.md"]);
+  });
+
+  test("a reached note's folder made a file, or unreadable: the poll takes it as gone, never throws (#13)", async () => {
+    const root = makeVault();
+    for (const d of [".stash", ".locked"]) {
+      mkdirSync(join(root, d));
+      writeFileSync(join(root, d, "h.md"), "# Hidden\n");
+    }
+    const h = await harness({ root, open: "index.md" });
+    await h.app.run("note.open .stash/h.md");
+    const stash = h.app.view!.buf;
+    await h.app.run("note.open .locked/h.md");
+    const locked = h.app.view!.buf;
+    expect([stash.rel, locked.rel]).toEqual([".stash/h.md", ".locked/h.md"]);
+    rmSync(join(root, ".stash"), { recursive: true });
+    writeFileSync(join(root, ".stash"), "A file now.\n");
+    expect(() => h.app.watch.poll()).not.toThrow();
+    expect(stash.deleted).toBe(true);
+    // Root reads any folder: a locked one is only locked for others.
+    if (process.getuid?.() === 0) return;
+    chmodSync(join(root, ".locked"), 0o000);
+    try {
+      expect(() => h.app.watch.poll()).not.toThrow();
+      expect(locked.deleted).toBe(true);
+    } finally {
+      chmodSync(join(root, ".locked"), 0o755);
+    }
+  });
+
+  test("a reached note deleted, then made again while open: reached again, its links found (20.8, #13)", async () => {
+    const root = makeVault();
+    mkdirSync(join(root, ".stash"));
+    writeFileSync(join(root, ".stash", "h.md"), "# Hidden\n\nTo [the index](../index.md).\n");
+    const h = await harness({ root, open: "index.md" });
+    await h.app.run("note.open .stash/h.md");
+    const buf = h.app.view!.buf;
+    rmSync(join(root, ".stash", "h.md"));
+    h.app.watch.poll();
+    expect([buf.deleted, h.app.graph.known(".stash/h.md")]).toEqual([true, false]);
+    writeFileSync(join(root, ".stash", "h.md"), "# Hidden again\n\nTo [the index](../index.md).\n");
+    h.app.watch.poll();
+    expect([buf.source, buf.rel, h.app.graph.known(".stash/h.md")]).toEqual([
+      "# Hidden again\n\nTo [the index](../index.md).\n",
+      ".stash/h.md",
+      true,
+    ]);
+    expect(h.app.graph.backlinks("index.md").map((b) => b.from)).toContain(".stash/h.md");
+  });
+
+  test("a reached note with unsaved changes, changed on disk: told to the graph once, not at every poll (#13)", async () => {
+    const root = makeVault();
+    mkdirSync(join(root, ".stash"));
+    writeFileSync(join(root, ".stash", "h.md"), "# Hidden\n");
+    const h = await harness({ root, open: "index.md" });
+    await h.app.run("note.open .stash/h.md");
+    await h.keys("shift+g", "o");
+    await h.keys(..."typed".split(""));
+    await h.keys("escape");
+    expect(h.app.view!.buf.dirty).toBe(true);
+    writeFileSync(join(root, ".stash", "h.md"), "# Hidden\n\nRewritten.\n");
+    const updated = spyOn(h.app.graph, "updateFile");
+    try {
+      h.app.watch.poll();
+      h.app.watch.poll();
+      expect(updated).toHaveBeenCalledTimes(1);
+    } finally {
+      updated.mockRestore();
+    }
+  });
+
+  test("a buffer the graph comes to know mid-anything (a file reached): drawn again (#13)", async () => {
+    const root = makeVault();
+    mkdirSync(join(root, ".stash"));
+    writeFileSync(join(root, ".stash", "h.md"), "# Hidden\n");
+    const h = await harness({ root, open: "index.md" });
+    const hidden = h.app.buffer(".stash/h.md")!;
+    expect(hidden.rel).toBeNull();
+    const drawn = spyOn(h.app.host, "requestRender");
+    try {
+      h.app.graph.reachFile(".stash/h.md", { keep: true });
+      expect(hidden.rel).toBe(".stash/h.md");
+      expect(drawn).toHaveBeenCalled();
+    } finally {
+      drawn.mockRestore();
+    }
+  });
+
+  test("a build listener that throws: the build ends all the same, the others told (#13)", async () => {
+    const h = await harness({ open: "index.md" });
+    const told: number[] = [];
+    h.app.graph.onBuild(() => {
+      throw new Error("a listener's own bug");
+    });
+    h.app.graph.onBuild(() => told.push(1));
+    expect(() => h.app.graph.build(false, "lazy")).not.toThrow();
+    expect(told).toEqual([1]);
+  });
+
+  test("space v r: an open note changed while nobody watched is read again (#13)", async () => {
+    const root = makeVault();
+    const h = await harness({ root, open: "index.md" });
+    const index = h.app.view!.buf;
+    writeFileSync(join(root, "index.md"), "# Index\n\nRewritten by an agent.\n");
+    await h.app.run("vault.reindex");
+    expect(index.source).toBe("# Index\n\nRewritten by an agent.\n");
+  });
+
+  test("space v r while git holds its index lock: an open note git changed is read again once git lets go, not before (D153, #13)", async () => {
+    const root = makeVault();
+    if (Bun.spawnSync(["git", "init", "-q", "-b", "main", root]).exitCode !== 0) return;
+    const h = await harness({ root, open: "index.md" });
+    const index = h.app.view!.buf;
+    writeFileSync(join(root, ".git", "index.lock"), "");
+    writeFileSync(join(root, "index.md"), "# Index\n\nRewritten by git.\n");
+    await h.app.run("vault.reindex");
+    // What git does lands as one change: nothing read again while it writes.
+    expect(index.source).not.toContain("Rewritten");
+    rmSync(join(root, ".git", "index.lock"));
+    await new Promise((r) => setTimeout(r, 400));
+    expect(index.source).toBe("# Index\n\nRewritten by git.\n");
+    expect(h.app.messages.filter((m) => m.text.endsWith("changed on disk — reloaded"))).toHaveLength(1);
+  });
+
+  test("a batch naming an open note twice (held while git wrote): read again once, as its last change has it (D153, #13)", async () => {
+    const root = makeVault();
+    const h = await harness({ root, open: "index.md" });
+    const index = h.app.view!.buf;
+    writeFileSync(join(root, "index.md"), "# Index\n\nRewritten twice.\n");
+    h.app.watch.applyChanges({
+      changes: [
+        { rel: "index.md", kind: "changed", isNote: true },
+        { rel: "index.md", kind: "changed", isNote: true },
+      ],
+      rescan: false,
+    });
+    expect(index.source).toBe("# Index\n\nRewritten twice.\n");
+    expect(h.app.messages.filter((m) => m.text.endsWith("changed on disk — reloaded"))).toHaveLength(1);
+  });
+
+  test("a reached file the graph takes as a note since (walk.extensions), changed: told to the graph as a note (#13)", async () => {
+    const root = makeVault();
+    mkdirSync(join(root, ".stash"));
+    writeFileSync(join(root, ".stash", "x.txt"), "plain\n");
+    const h = await harness({ root, open: "index.md" });
+    await h.app.run("note.open .stash/x.txt");
+    const x = h.app.view!.buf;
+    expect(h.app.graph.notes.has(".stash/x.txt")).toBe(false);
+    // Text files are notes now (the vault's own [walk]); the file reached again, a note of the new graph.
+    const own = join(root, ".slipbox", "config.toml");
+    writeFileSync(own, readFileSync(own, "utf8").replace("[walk]", '[walk]\nextensions = ["md", "txt"]'));
+    h.app.settings.reload("file changed");
+    await h.app.run("note.open .stash/x.txt");
+    expect(h.app.graph.notes.has(".stash/x.txt")).toBe(true);
+    writeFileSync(join(root, ".stash", "x.txt"), "plain, to [the index](../index.md)\n");
+    h.app.watch.poll();
+    expect(h.app.graph.linksOf(".stash/x.txt").map((l) => l.path)).toEqual(["index.md"]);
+    expect(x.source).toBe("plain, to [the index](../index.md)\n");
+  });
+
+  test("space v r: a note made while nobody watched is searched after the reindex (#13)", async () => {
+    const root = makeVault();
+    const h = await harness({ root, open: "index.md", config: (c) => (c.search.engine = "auto") });
+    await h.app.search.whenIndexed();
+    writeFileSync(join(root, "late.md"), "# Late\n\nA zanzibar crossing.\n");
+    await h.app.run("vault.reindex");
+    await h.app.search.whenIndexed();
+    const found = h.app.search.query("zanzibar");
+    expect(found.engine).toBe("index");
+    expect(found.hits.map((x) => x.path)).toEqual(["late.md"]);
+  });
+
+  test("a buffer open before the vault's graph knew its file is the vault's once it does — :e reaching it, a reindex, a [walk] setting (#13)", async () => {
+    const root = makeVault();
+    mkdirSync(join(root, "parked"));
+    writeFileSync(join(root, "parked", "d.md"), "# D\n\nTo [the index](../index.md).\n");
+    writeFileSync(join(root, "parked", "e.md"), "# E\n");
+    mkdirSync(join(root, ".stash"));
+    writeFileSync(join(root, ".stash", "h.md"), "# Hidden\n");
+    const cfg = join(mkdtempSync(join(sandbox, "cfg-")), "config.toml");
+    writeFileSync(cfg, '[walk]\nexclude = ["parked/"]\n');
+    const h = await harness({
+      root,
+      open: "index.md",
+      configFile: cfg,
+      config: (c) => (c.walk.exclude = ["parked/"]),
+    });
+    // Left out by the walk, opened before (a window's history, say): no vault path.
+    const d = h.app.buffer("parked/d.md")!;
+    const e = h.app.buffer("parked/e.md")!;
+    const hidden = h.app.buffer(".stash/h.md")!;
+    expect([d.rel, hidden.rel]).toEqual([null, null]);
+    // :e reaching one in a hidden folder (20.8): the same buffer, the vault's.
+    await h.app.run("note.open .stash/h.md");
+    expect(h.app.view!.buf).toBe(hidden);
+    expect(hidden.rel).toBe(".stash/h.md");
+    // No watcher looks in .stash: the poll still does, its change read, and the graph told.
+    writeFileSync(join(root, ".stash", "h.md"), "# Hidden\n\nChanged by an agent, to [the index](../index.md).\n");
+    expect(h.app.watch.poll()).toBe(true);
+    expect(hidden.source).toBe("# Hidden\n\nChanged by an agent, to [the index](../index.md).\n");
+    expect(h.app.graph.linksOf(".stash/h.md").map((l) => [l.resolvedKind, l.path])).toEqual([["note", "index.md"]]);
+    // A note made while nobody watched, its buffer open first, then a reindex.
+    writeFileSync(join(root, "late.md"), "# Late\n");
+    const late = h.app.buffer("late.md")!;
+    expect(late.rel).toBeNull();
+    await h.app.run("vault.reindex");
+    expect(late.rel).toBe("late.md");
+    // A [walk] setting that takes parked/ in, the note changed on disk meanwhile: the new graph knows it, the buffer
+    // waits for the poll to read it again — then it's the vault's note.
+    writeFileSync(join(root, "parked", "d.md"), "# D\n\nAgain, to [the index](../index.md).\n");
+    writeFileSync(cfg, "[walk]\nexclude = []\n");
+    h.app.settings.reload("file changed");
+    expect(h.app.graph.notes.has("parked/d.md")).toBe(true);
+    // One unchanged is the vault's note at once, as the new graph is followed.
+    expect(e.rel).toBe("parked/e.md");
+    expect([d.rel, d.source]).toEqual([null, "# D\n\nTo [the index](../index.md).\n"]);
+    h.app.watch.poll();
+    expect([d.rel, d.source]).toEqual(["parked/d.md", "# D\n\nAgain, to [the index](../index.md).\n"]);
+    expect(h.app.graph.backlinks("index.md").map((b) => b.from)).toContain("parked/d.md");
   });
 
   test("a folder of home opened by name lists the vaults in it at once, home never walked: a repository's row, one deeper's (VV-D2)", async () => {
@@ -14838,6 +15618,30 @@ describe("a branch switch as one event (5.9)", () => {
     return root;
   };
   const shown = (h: Harness) => h.app.tabs.map((t) => t.views.map((v) => v.buf.rel).join("|"));
+
+  test("a branch's tab of a note only it has, back before the watcher says the note came: the vault's note once it does (#13)", async () => {
+    const root = repo();
+    if (!root) return;
+    const on = (c: Config) => (c.ui.restore_session = true);
+    expect(git(root, "checkout", "-q", "-b", "feat").exitCode).toBe(0);
+    writeFileSync(join(root, "c.md"), "# C\n\nTo [a](a.md).\n");
+    git(root, "add", "-A");
+    expect(git(root, "-c", "commit.gpgsign=false", "commit", "-q", "-m", "c").exitCode).toBe(0);
+    const f = await harness({ root, open: "c.md", config: on });
+    f.app.session.save("feat");
+    expect(git(root, "checkout", "-q", "main").exitCode).toBe(0);
+    const h = await harness({ root, open: "a.md", config: on });
+    expect(h.app.git.checkHead()).toBe(false);
+    expect(git(root, "checkout", "-q", "feat").exitCode).toBe(0);
+    // HEAD seen first, as the feed sees it before the batch the checkout brings: feat's tab back, c.md no note yet.
+    expect(h.app.git.checkHead()).toBe(true);
+    const c = h.app.tabs[0]!.views[0]!.buf;
+    expect([c.key, c.rel]).toEqual(["c.md", null]);
+    // The watcher's batch: c.md came. The tab's note is the vault's, its link resolved.
+    h.app.watch.applyChanges({ changes: [{ rel: "c.md", kind: "created", isNote: true }], rescan: false });
+    expect(c.rel).toBe("c.md");
+    expect(h.app.graph.linksOf("c.md").map((l) => [l.resolvedKind, l.path])).toEqual([["note", "a.md"]]);
+  });
 
   test("each branch keeps its tabs: switching back brings them back; not over an unsaved note", async () => {
     const root = repo();
@@ -19798,6 +20602,364 @@ describe("links followed only when you say so (VV-D6)", () => {
     // Gone into another vault: what was looked at is behind you.
     h.app.vaults.switchVault(locateVault({ root: makeVault() }), null);
     expect(h.app.following.looking.size).toBe(0);
+  });
+
+  test("a note just looked at through a link: not the vault's, read-only, while it's looked at; the link followed, the vault's and writable (#13)", async () => {
+    const { root, link, out } = linked();
+    const h = await harness({ root, open: "index.md" });
+    await h.keys("tab", "enter");
+    await h.keys("l");
+    const far = h.app.view!.buf;
+    expect([far.abs, far.rel, far.throughLink]).toEqual([join(link, "far.md"), null, true]);
+    // Still looked at, the vault built again: not the vault's.
+    await h.app.run("vault.reindex");
+    expect([far.rel, far.readOnly]).toEqual([null, `just looking: ${tildePath(link)} isn't followed — read-only`]);
+    // Forgotten, then followed as the question answers it: the same buffer, the vault's note, writable.
+    h.app.following.forget(link);
+    h.app.following.answer(link, out, "follow");
+    await h.app.following.settled();
+    expect(h.app.graph.notes.has("data/far.md")).toBe(true);
+    expect([far.rel, far.readOnly, far.throughLink]).toEqual(["data/far.md", null, false]);
+  });
+
+  test("a vault: a note too big to index, looked at through a link, then followed: still read-only, never written out of the vault (VV-D6, #13)", async () => {
+    const { root, link, out } = linked();
+    writeFileSync(join(out, "far.md"), `# Far\n\n${"A long line of a big note. ".repeat(40)}\n`);
+    const h = await harness({ root, open: "index.md", config: (c) => (c.walk.max_file_size = 500) });
+    await h.keys("tab", "enter");
+    await h.keys("l");
+    const far = h.app.view!.buf;
+    expect(far.throughLink).toBe(true);
+    h.app.following.forget(link);
+    h.app.following.answer(link, out, "follow");
+    await h.app.following.settled();
+    // Followed, but the vault doesn't take it (past walk.max_file_size): no vault path, so still read-only.
+    expect(h.app.graph.notes.has("data/far.md")).toBe(false);
+    expect([far.rel, far.throughLink]).toEqual([null, true]);
+    expect(far.readOnly).not.toBeNull();
+  });
+
+  test("a link followed, its note open, then forgotten: read-only, nothing read through it; followed again, the window writable (#13)", async () => {
+    const { root, link, out } = linked();
+    setLinkAnswer(link, "follow");
+    await probe(out);
+    const h = await harness({ root, open: "index.md" });
+    expect(h.app.graph.notes.has("data/far.md")).toBe(true);
+    await h.app.run("note.open data/far.md");
+    const far = h.app.view!.buf;
+    expect([far.rel, far.readOnly]).toEqual(["data/far.md", null]);
+    h.app.following.forget(link);
+    expect(far.readOnly).toContain("isn't followed now");
+    // Changed out there while forgotten: the poll reads nothing through the link.
+    writeFileSync(join(out, "far.md"), "# Far\n\nChanged out there.\n");
+    expect(h.app.watch.poll()).toBe(false);
+    expect(far.source).toBe("# Far\n\nFrom far away.\n");
+    // Followed again, as the question answers it: the vault walked through it, the window read again and writable.
+    h.app.following.answer(link, out, "follow");
+    await h.app.following.settled();
+    expect([far.rel, far.readOnly, far.throughLink]).toEqual(["data/far.md", null, false]);
+    expect(far.source).toBe("# Far\n\nChanged out there.\n");
+  });
+
+  test("a link followed, then forgotten, news of its note heard late: nothing read or indexed through it, still read-only (#13)", async () => {
+    const { root, link, out } = linked();
+    setLinkAnswer(link, "follow");
+    await probe(out);
+    const h = await harness({ root, open: "index.md" });
+    await h.app.run("note.open data/far.md");
+    const far = h.app.view!.buf;
+    h.app.following.forget(link);
+    const said = far.readOnly;
+    expect(said).toContain("isn't followed now");
+    // No longer the vault's: nothing polls or indexes it through the link.
+    expect(far.rel).toBeNull();
+    // A change heard before it was forgotten, said after: neither the graph nor the window takes it.
+    const updated = spyOn(h.app.graph, "updateFile");
+    h.app.watch.applyChanges({ changes: [{ rel: "data/far.md", kind: "changed", isNote: true }], rescan: false });
+    expect(updated).not.toHaveBeenCalled();
+    updated.mockRestore();
+    expect([far.readOnly, far.throughLink]).toEqual([said, true]);
+    writeFileSync(join(out, "far.md"), "# Far\n\nChanged out there.\n");
+    h.app.watch.applyChanges({ changes: [{ rel: "data/far.md", kind: "changed", isNote: true }], rescan: false });
+    expect([far.source, far.readOnly]).toEqual(["# Far\n\nFrom far away.\n", said]);
+  });
+
+  test("a link followed, its note edited, then forgotten: its unsaved text never written through it (VV-D6, #13)", async () => {
+    const { root, link, out } = linked();
+    setLinkAnswer(link, "follow");
+    await probe(out);
+    const h = await harness({ root, open: "index.md" });
+    await h.app.run("note.open data/far.md");
+    const far = h.app.view!.buf;
+    far.edit(0, 0, "Typed. ");
+    h.app.following.forget(link);
+    // Neither saved nor autosaved, nor a task toggled: a vault never writes out of itself, and the link isn't followed.
+    expect(h.app.saving.save(far)).toBe(false);
+    h.app.saving.autosave();
+    expect(h.app.writeBuffer(far, "# Far\n\nToggled.\n")).toBe(false);
+    expect(readFileSync(join(out, "far.md"), "utf8")).toBe("# Far\n\nFrom far away.\n");
+    expect(h.app.messages.at(-1)?.text).toContain("data/far.md not written: ");
+  });
+
+  test("home: a link out of it followed, its note edited, then forgotten: its unsaved text never written through it (VV-D6, #13)", async () => {
+    const { homeAt } = await import("../src/core/vault.ts");
+    const top = realpathSync(mkdtempSync(join(sandbox, "homelinks-")));
+    const home = join(top, "home");
+    const out = join(top, "out");
+    mkdirSync(home);
+    mkdirSync(out);
+    writeFileSync(join(home, "a.md"), "# A\n");
+    writeFileSync(join(out, "far.md"), "# Far\n\nFrom far away.\n");
+    symlinkSync(out, join(home, "data"));
+    const link = join(home, "data");
+    setLinkAnswer(link, "follow");
+    await probe(out);
+    const before = process.env.HOME;
+    process.env.HOME = home;
+    try {
+      const h = await harness({ loc: homeAt(home), open: "a.md" });
+      h.app.open(join(link, "far.md"));
+      const far = h.app.view!.buf;
+      far.edit(0, 0, "Typed. ");
+      h.app.following.forget(link);
+      h.app.saving.autosave();
+      expect(h.app.saving.save(far)).toBe(false);
+      expect(readFileSync(join(out, "far.md"), "utf8")).toBe("# Far\n\nFrom far away.\n");
+    } finally {
+      process.env.HOME = before;
+    }
+  });
+
+  test("a vault's followed link to a note too big to index, opened: never written out of the vault (VV-D6, #13)", async () => {
+    const { root, link, out } = linked();
+    const big = `# Far\n\n${"A long line of a big note. ".repeat(40)}\n`;
+    writeFileSync(join(out, "far.md"), big);
+    setLinkAnswer(link, "follow");
+    await probe(out);
+    const h = await harness({ root, open: "index.md", config: (c) => (c.walk.max_file_size = 500) });
+    await h.app.run("note.open data/far.md");
+    const far = h.app.view!.buf;
+    expect(far.rel).toBeNull();
+    far.edit(0, 0, "Typed. ");
+    expect(h.app.saving.save(far)).toBe(false);
+    expect(h.app.messages.at(-1)?.text).toContain("resolves outside the vault");
+    expect(readFileSync(join(out, "far.md"), "utf8")).toBe(big);
+  });
+
+  test("home: a note looked at through a link, followed, its target not answering: still read-only, the poll lifts nothing (VV-D6, #13)", async () => {
+    // Root reads any folder: a target that won't list is only so for others.
+    if (process.getuid?.() === 0) return;
+    const { homeAt } = await import("../src/core/vault.ts");
+    const top = realpathSync(mkdtempSync(join(sandbox, "homelinks-")));
+    const home = join(top, "home");
+    const out = join(top, "out");
+    mkdirSync(home);
+    mkdirSync(out);
+    writeFileSync(join(home, "a.md"), "# A\n");
+    writeFileSync(join(out, "far.md"), "# Far\n\nFrom far away.\n");
+    symlinkSync(out, join(home, "data"));
+    const link = join(home, "data");
+    const before = process.env.HOME;
+    process.env.HOME = home;
+    try {
+      const h = await harness({ loc: homeAt(home), open: "a.md" });
+      h.app.following.looking.add(linkKey(link));
+      h.app.open(join(link, "far.md"));
+      const far = h.app.view!.buf;
+      expect(far.throughLink).toBe(true);
+      // The target lists nothing (its file still read and written): asked, it doesn't answer.
+      chmodSync(out, 0o300);
+      try {
+        h.app.following.answer(link, out, "follow");
+        await h.app.following.settled();
+        expect(h.app.messages.at(-1)?.text).toContain("not followed for now");
+        h.app.watch.poll();
+        expect([far.throughLink, far.readOnly]).toEqual([
+          true,
+          `just looking: ${tildePath(link)} isn't followed — read-only`,
+        ]);
+        far.edit(0, 0, "Typed. ");
+        expect(h.app.saving.save(far)).toBe(false);
+        expect(readFileSync(join(out, "far.md"), "utf8")).toBe("# Far\n\nFrom far away.\n");
+      } finally {
+        chmodSync(out, 0o755);
+      }
+    } finally {
+      process.env.HOME = before;
+    }
+  });
+
+  test("a note looked at through a file link, the link made a note of the vault's own: indexed, and the window its note (VV-D6, #13)", async () => {
+    const top = realpathSync(mkdtempSync(join(sandbox, "links-")));
+    const root = join(top, "vault");
+    const out = join(top, "out");
+    mkdirSync(join(root, ".slipbox"), { recursive: true });
+    mkdirSync(out);
+    writeFileSync(join(root, "index.md"), "# Index\n\n[far](far.md)\n");
+    writeFileSync(join(out, "far.md"), "# Far\n");
+    symlinkSync(join(out, "far.md"), join(root, "far.md"));
+    const h = await harness({ root, open: "index.md" });
+    h.app.following.looking.add(linkKey(join(root, "far.md")));
+    h.app.open("far.md");
+    const far = h.app.view!.buf;
+    expect(far.throughLink).toBe(true);
+    // The link replaced by a note of the vault's own, as an editor or git would: the watcher's news of it taken.
+    rmSync(join(root, "far.md"));
+    writeFileSync(join(root, "far.md"), "# Far, here now\n");
+    h.app.watch.applyChanges({ changes: [{ rel: "far.md", kind: "created", isNote: true }], rescan: false });
+    expect(h.app.graph.notes.has("far.md")).toBe(true);
+    h.app.watch.poll();
+    expect([far.source, far.rel, far.throughLink, far.readOnly]).toEqual(["# Far, here now\n", "far.md", false, null]);
+  });
+
+  test("a link followed, its note open, then forgotten: a task toggled in it reads nothing through the link (VV-D6, #13)", async () => {
+    const { root, link, out } = linked();
+    writeFileSync(join(out, "far.md"), "# Far\n\n- [ ] one\n");
+    setLinkAnswer(link, "follow");
+    await probe(out);
+    const h = await harness({ root, open: "index.md" });
+    await h.app.run("note.open data/far.md");
+    const far = h.app.view!.buf;
+    h.app.following.forget(link);
+    writeFileSync(join(out, "far.md"), "# Far\n\n- [ ] one\n- [ ] changed out there\n");
+    h.app.views.toggleTaskAt(h.app.view!, { line: 3, end: 3, checked: false });
+    expect(far.source).toBe("# Far\n\n- [ ] one\n");
+    expect(h.app.messages.at(-1)?.text).toContain("not toggled");
+  });
+
+  test("a link followed, its note edited, forgotten, changed out there: saved or autosaved, nothing read through the link to compare (VV-D6, #13)", async () => {
+    const { root, link, out } = linked();
+    setLinkAnswer(link, "follow");
+    await probe(out);
+    const h = await harness({ root, open: "index.md" });
+    await h.app.run("note.open data/far.md");
+    const far = h.app.view!.buf;
+    far.edit(0, 0, "Typed. ");
+    h.app.following.forget(link);
+    // Autosave leaves it be, saying nothing: the window says why it's read-only.
+    const said = h.app.messages.length;
+    h.app.saving.autosave();
+    expect(h.app.messages.length).toBe(said);
+    writeFileSync(join(out, "far.md"), "# Far\n\nChanged out there.\n");
+    // No conflict asked about, however it comes: theirs would be read through the link.
+    h.app.saving.autosave();
+    h.app.saving.conflictPrompt(far);
+    expect(h.app.overlay).toBeNull();
+    expect(h.app.saving.save(far)).toBe(false);
+    expect(h.app.overlay).toBeNull();
+    expect(h.app.messages.at(-1)?.text).toContain("data/far.md not written: ");
+    expect([far.source, far.dirty]).toEqual(["Typed. # Far\n\nFrom far away.\n", true]);
+  });
+
+  test("Elsewhere: a note just looked at through a link, the link forgotten, then followed: writable again (VV-D3, #13)", async () => {
+    const { elsewhereAt } = await import("../src/core/vault.ts");
+    const top = realpathSync(mkdtempSync(join(sandbox, "plain-")));
+    const plain = join(top, "plain");
+    const out = join(top, "out");
+    mkdirSync(plain);
+    mkdirSync(out);
+    writeFileSync(join(plain, "a.md"), "# A\n");
+    writeFileSync(join(out, "far.md"), "# Far\n");
+    symlinkSync(out, join(plain, "data"));
+    const link = join(plain, "data");
+    const h = await harness({ loc: elsewhereAt(plain), open: null });
+    h.app.open(join(link, "far.md"));
+    expect((h.app.overlay as ListOverlay).title).toContain("follow it?");
+    await h.keys("l");
+    const far = h.app.view!.buf;
+    expect([far.readOnly, far.throughLink]).toEqual([
+      `just looking: ${tildePath(link)} isn't followed — read-only`,
+      true,
+    ]);
+    h.app.following.forget(link);
+    h.app.following.answer(link, out, "follow");
+    await h.app.following.settled();
+    expect([far.readOnly, far.throughLink]).toEqual([null, false]);
+  });
+
+  test("Elsewhere: a note looked at through a link, changed by an agent, then followed: read again at once, writable (VV-D3, #13)", async () => {
+    const { elsewhereAt } = await import("../src/core/vault.ts");
+    const top = realpathSync(mkdtempSync(join(sandbox, "plain-")));
+    const plain = join(top, "plain");
+    const out = join(top, "out");
+    mkdirSync(plain);
+    mkdirSync(out);
+    writeFileSync(join(plain, "a.md"), "# A\n");
+    writeFileSync(join(out, "far.md"), "# Far\n");
+    symlinkSync(out, join(plain, "data"));
+    const link = join(plain, "data");
+    const h = await harness({ loc: elsewhereAt(plain), open: null });
+    h.app.open(join(link, "far.md"));
+    await h.keys("l");
+    const far = h.app.view!.buf;
+    expect(far.throughLink).toBe(true);
+    // Nothing reads it through the link while it's only looked at: an agent's change waits.
+    writeFileSync(join(out, "far.md"), "# Far\n\nRewritten by an agent.\n");
+    h.app.following.answer(link, out, "follow");
+    await h.app.following.settled();
+    // Followed: read again before it takes typing (no poll yet), never writable showing what's no longer there.
+    expect([far.source, far.readOnly, far.throughLink]).toEqual(["# Far\n\nRewritten by an agent.\n", null, false]);
+  });
+
+  test("Elsewhere: a link followed, the others not: a note forgotten, or one looked at, changed by an agent, still not read through theirs (VV-D6, #13)", async () => {
+    const { elsewhereAt } = await import("../src/core/vault.ts");
+    const top = realpathSync(mkdtempSync(join(sandbox, "plain-")));
+    const plain = join(top, "plain");
+    mkdirSync(plain);
+    writeFileSync(join(plain, "a.md"), "# A\n");
+    for (const d of ["forgot", "looked", "one", "two"]) {
+      mkdirSync(join(top, d));
+      writeFileSync(join(top, d, `${d}.md`), `# ${d}\n`);
+      symlinkSync(join(top, d), join(plain, d));
+    }
+    const changed = (d: string) => writeFileSync(join(top, d, `${d}.md`), `# ${d}\n\nRewritten by an agent.\n`);
+    const follow = async (d: string) => {
+      h.app.following.answer(join(plain, d), join(top, d), "follow");
+      await h.app.following.settled();
+    };
+    setLinkAnswer(join(plain, "forgot"), "follow");
+    const h = await harness({ loc: elsewhereAt(plain), open: null });
+    // Followed, open, then forgotten; another link followed, nothing looked at.
+    h.app.open(join(plain, "forgot", "forgot.md"));
+    const forgot = h.app.view!.buf;
+    h.app.following.forget(join(plain, "forgot"));
+    changed("forgot");
+    await follow("one");
+    expect([forgot.source, forgot.throughLink]).toEqual(["# forgot\n", true]);
+    // One looked at; another followed.
+    h.app.open(join(plain, "looked", "looked.md"));
+    await h.keys("l");
+    const looked = h.app.view!.buf;
+    changed("looked");
+    await follow("two");
+    expect([looked.source, looked.throughLink, forgot.source]).toEqual(["# looked\n", true, "# forgot\n"]);
+  });
+
+  test("Elsewhere: a link followed, typed into, forgotten, changed by an agent, followed again: the conflict prompt asks at once (VV-D3, 5.5, #13)", async () => {
+    const { elsewhereAt } = await import("../src/core/vault.ts");
+    const top = realpathSync(mkdtempSync(join(sandbox, "plain-")));
+    const plain = join(top, "plain");
+    const out = join(top, "out");
+    mkdirSync(plain);
+    mkdirSync(out);
+    writeFileSync(join(plain, "a.md"), "# A\n");
+    writeFileSync(join(out, "far.md"), "# Far\n");
+    symlinkSync(out, join(plain, "data"));
+    const link = join(plain, "data");
+    setLinkAnswer(link, "follow");
+    const h = await harness({ loc: elsewhereAt(plain), open: null });
+    h.app.open(join(link, "far.md"));
+    const far = h.app.view!.buf;
+    far.edit(0, 0, "Typed. ");
+    h.app.following.forget(link);
+    writeFileSync(join(out, "far.md"), "# Far\n\nRewritten by an agent.\n");
+    h.app.following.answer(link, out, "follow");
+    await h.app.following.settled();
+    // Writable again, yours kept, and asked now which to keep — not at the next poll.
+    expect([far.readOnly, far.throughLink, far.source]).toEqual([null, false, "Typed. # Far\n"]);
+    expect((h.app.overlay as ListOverlay | null)?.title).toEndWith(
+      "far.md changed on disk, and you have unsaved changes",
+    );
   });
 
   test("a followed link's target asked at the start, in the background: walked once it answers", async () => {

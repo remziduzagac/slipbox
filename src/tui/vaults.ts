@@ -7,10 +7,10 @@ import { dirname, isAbsolute, join, posix, relative } from "node:path";
 import { writeDirty } from "../core/stale.ts";
 import { loadConfig } from "../core/config.ts";
 import { Graph } from "../core/graph.ts";
-import { leftOutOfHome } from "../core/home.ts";
+import { leftOutOfHome, walksInto } from "../core/home.ts";
 import { lintCommand } from "../core/lint.ts";
 import { slipboxOwn } from "../core/paths.ts";
-import { type Anchor, type CursorAnchor, loadSession, PositionStore } from "../core/position.ts";
+import { type Anchor, type CursorAnchor, loadSession, PositionStore, type SessionTab } from "../core/position.ts";
 import { stopBacklinkJobs } from "../core/backlinks-jobs.ts";
 import { openVault } from "../core/reach.ts";
 import { tuiReach } from "./peek.ts";
@@ -64,12 +64,43 @@ export class Vaults {
 
   /**
    * What's asked for, entering the vault open (VV-D2) — the one way in, from the start or a switch, a folder revealed
-   * alike: a folder of home, by name (`folder`) or a file's (`open`; both absolute), its notes there at once
-   * (`Graph.askFolder`). The one named is `app.homeFolder`, home's path for it: its own tabs, its own first note.
+   * alike: a folder of home, by name (`folder`) or a file's (`open`; both absolute), its notes there at once — and,
+   * `restoring`, the folders of the tabs the session brings back (`askTabs`). The graph, not built yet as the TUI starts
+   * or goes into a vault, is built here, once for them all (`Graph.askFolders`). The one named is `app.homeFolder`,
+   * home's path for it: its own tabs, its own first note.
    */
-  ask(folder: string | null, open: string | null): void {
-    const asked = this.app.graph.askFolder(folder ?? (open ? dirname(open) : this.app.loc.root));
-    this.app.homeFolder = folder ? asked : null;
+  ask(folder: string | null, open: string | null, restoring = false): void {
+    const g = this.app.graph;
+    this.app.homeFolder = folder ? g.homePath(folder) : null;
+    const tabs = restoring && this.app.loc.mode === "home" ? this.tabFolders(this.app.session.toRestore()) : [];
+    g.askFolders([folder ?? (open ? dirname(open) : this.app.loc.root), ...tabs]);
+  }
+
+  /**
+   * Tabs a session brings back into home (VV-D2), before they open — a branch's, when it's checked out: each file's
+   * folder asked for, as a file opened by name has its own, so each is a note of home's, its links and backlinks there.
+   * The graph built again once for them all, what follows it follows (`Watch.rebuilt`).
+   */
+  askTabs(tabs: readonly SessionTab[]): void {
+    if (this.app.graph.askFolders(this.tabFolders(tabs))) this.app.watch.rebuilt();
+  }
+
+  /**
+   * The folders of home a session's tabs are in, every window's (VV-D2); none in a vault. A file gone is no reason to
+   * walk its folder, and one behind a link not followed (VV-D6) isn't looked at: it doesn't open. A folder home's walk
+   * never goes into (`~/Downloads`, the scratch's) isn't asked for: there's nothing to walk.
+   */
+  private tabFolders(tabs: readonly SessionTab[]): string[] {
+    if (this.app.loc.mode !== "home") return [];
+    const g = this.app.graph;
+    return tabs
+      .flatMap((t) => t.panes.map((p) => this.app.absOf(p.path)))
+      .filter((abs) => !this.app.following.blocked(abs) && existsSync(abs))
+      .map((abs) => dirname(abs))
+      .filter((dir) => {
+        const rel = g.homePath(dir);
+        return rel !== null && walksInto(g.root, g.filter, rel);
+      });
   }
 
   /** What's said when no note opens: a folder of home its index leaves out (`~/Downloads`) says why (VV-D2). */
@@ -266,11 +297,11 @@ export class Vaults {
     // Whatever the backlinks' thread works on is for the vault left: its answers would find nobody (#10).
     stopBacklinkJobs();
     this.app.reach = tuiReach(this.app, target);
-    this.app.graph = new Graph(target, this.app.config).build(true, "lazy");
+    this.app.graph = new Graph(target, this.app.config);
     this.app.graph.reach = this.app.reach;
-    // A folder of home gone into, by name or a file's (VV-D2): its notes there at once, as when slipbox starts there.
-    this.ask(how.folder ?? null, open);
-    this.app.watch.followGraph();
+    // Built as what's asked for is (VV-D2): a folder of home gone into, by name or a file's, and the tabs brought back,
+    // their notes there at once, as when slipbox starts there.
+    this.ask(how.folder ?? null, open, this.app.config.ui.restore_session);
     if (this.app.live) this.app.loadCodeGrammars();
     for (const e of this.app.graph.errors) this.app.message("warn", e);
     this.app.positions = new PositionStore(target);
@@ -278,6 +309,8 @@ export class Vaults {
     for (const buffer of this.app.buffers.values()) buffer.cancelParse();
     this.app.languages.stopSyntax(); // its code files' passes too: the thread's for the next vault's
     this.app.buffers.clear();
+    // Followed once the vault left has no buffers here: none of its is this graph's.
+    this.app.watch.followGraph();
     this.app.tabs = [];
     this.app.activeTab = 0;
     this.app.overlay = null;

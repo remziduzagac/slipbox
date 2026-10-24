@@ -395,6 +395,12 @@ export class Views {
   toggleTaskAt(view: View, task = this.taskAt(view)): void {
     if (!task) return this.app.message("info", "no task here — ctrl+l toggles a list item's [ ]");
     const buf = view.buf;
+    // Read through a link not followed now (VV-D6): nothing read or written through it, nor its text changed.
+    if (buf.throughLink)
+      return this.app.message(
+        "warn",
+        `${buf.key}: not toggled — ${buf.readOnly ?? "read through a link not followed"}`,
+      );
     // Read-only (a peek, a hover, a file as it was in git): its file is never written from here.
     if (buf.readOnly) return this.app.message("info", buf.readOnly);
     if (buf.deleted) return this.app.message("warn", `${buf.key} was deleted on disk — nothing to toggle`);

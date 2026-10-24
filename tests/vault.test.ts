@@ -1064,6 +1064,50 @@ describe("review cycle 5 (the watcher's polling fallbacks)", () => {
       w.close();
     }
   });
+  test("what the watcher sees on its own, and a change heard elsewhere said no second time by its sweep (#13)", async () => {
+    const { VaultWatcher } = await import("../src/core/watch.ts");
+    const { WalkFilter } = await import("../src/core/walk.ts");
+    const dir = mkdtempSync(join(tmpdir(), "slipbox-heard-"));
+    mkdirSync(join(dir, ".stash"));
+    writeFileSync(join(dir, "a.md"), "one\n");
+    writeFileSync(join(dir, ".draft.md"), "draft\n");
+    writeFileSync(join(dir, ".stash", "h.md"), "hidden\n");
+    writeFileSync(join(dir, ".stash", "k.md"), "kept\n");
+    const stampOf = (rel: string) => statSync(join(dir, rel)).mtimeMs;
+    const changed: string[] = [];
+    const w = new VaultWatcher({
+      root: dir,
+      filter: new WalkFilter(dir, DEFAULT_CONFIG.walk),
+      dirs: [""],
+      debounceMs: 20,
+      pollMs: 100, // the sweep of every known note each 15th tick: 1.5 s
+      known: new Map(["a.md", ".stash/h.md", ".stash/k.md"].map((r) => [r, stampOf(r)])),
+      onBatch: (b) => changed.push(...b.changes.map((c) => c.rel)),
+      onDegraded: () => {},
+    });
+    try {
+      // Its folder watched and its name taken: seen. A hidden name in it, or a folder not watched: not. A folder polled
+      // (its watch failed) has its notes looked at, nothing else.
+      expect([w.sees("a.md"), w.sees(".draft.md"), w.sees(".stash/h.md")]).toEqual([true, false, false]);
+      (w as unknown as { polled: Set<string> }).polled.add("sub");
+      expect([w.sees("sub/n.md"), w.sees("sub/d.json")]).toEqual([true, false]);
+      // Heard of a file that's no note: not kept by its stamp, so never swept.
+      w.heard(".stash/d.json", { mtimeMs: 1, size: 1 });
+      // Both rewritten (a later second, a new size); h.md's change heard elsewhere, k.md's not: the sweep says k.md's.
+      await Bun.sleep(1100);
+      writeFileSync(join(dir, ".stash", "h.md"), "hidden, rewritten\n");
+      writeFileSync(join(dir, ".stash", "k.md"), "kept, rewritten\n");
+      w.heard(".stash/h.md", statSync(join(dir, ".stash", "h.md")));
+      await until(() => changed.includes(".stash/k.md"), 4000);
+      await Bun.sleep(300);
+      expect(changed).toContain(".stash/k.md");
+      expect(changed).not.toContain(".stash/h.md");
+      expect(changed).not.toContain(".stash/d.json");
+    } finally {
+      w.close();
+    }
+  });
+
   test("a folder that can't be watched is polled: its new and changed notes still come", async () => {
     const { VaultWatcher } = await import("../src/core/watch.ts");
     const { WalkFilter } = await import("../src/core/walk.ts");
@@ -7107,10 +7151,10 @@ describe("home, a vault without a marker (VV-D2)", () => {
       expect(w.asked).toEqual({ folders: ["w/notes"], notes: 4 });
       // Said as the cap is, the folder said to be whole.
       expect(describeCap("notes", w.asked)).toBe(
-        "home's index is full: it holds 10,000 notes, those nearest the top — the rest aren't indexed; ~/w/notes, the folder you opened, is whole",
+        "home's index is full: it holds 10,000 notes, those nearest the top — the rest aren't indexed; ~/w/notes, the folder open, is whole",
       );
       expect(describeCap("folders", { folders: ["a", "b"], notes: 2 })).toBe(
-        "home's walk stopped at 5,000 folders, those nearest the top — the notes deeper aren't indexed; ~/a and ~/b, the folders you opened, are whole",
+        "home's walk stopped at 5,000 folders, those nearest the top — the notes deeper aren't indexed; ~/a and ~/b, the folders open, are whole",
       );
     });
   });
@@ -7164,7 +7208,7 @@ describe("home, a vault without a marker (VV-D2)", () => {
       expect(w.capped).toBe("notes");
       expect(w.asked).toEqual({ folders: ["big"], notes: 5 });
       expect(describeCap("notes", { folders: ["big"], notes: 12_345 })).toBe(
-        "home's index is full: it holds 12,345 notes, all in ~/big, the folder you opened — the rest aren't indexed",
+        "home's index is full: it holds 12,345 notes, all in ~/big, the folder open — the rest aren't indexed",
       );
     });
   });
@@ -7174,7 +7218,8 @@ describe("home, a vault without a marker (VV-D2)", () => {
     await withHome({ "a.md": "# A\n", "x/y/deep.md": "# D\n", "w/notes/n.md": "# N\n" }, (home) => {
       walkHomeNow(homeAt(home), DEFAULT_CONFIG);
       const g = openGraph(homeAt(home), DEFAULT_CONFIG, true, "lazy");
-      expect(g.askFolder(join(home, "w", "notes"))).toBe("w/notes");
+      g.askFolders([join(home, "w", "notes")]);
+      expect(g.askedFolders).toEqual(["w/notes"]);
       for (const n of ["z.md", "w/notes/new.md"]) writeFileSync(join(home, n), "# N\n");
       const created = (rel: string) => ({ rel, kind: "created" as const, isNote: true });
       // Home holds 3 at most here: z.md, home's own, is left to its walk; new.md comes, x/y/deep.md making room.
@@ -7244,7 +7289,7 @@ describe("home, a vault without a marker (VV-D2)", () => {
       const hour = new Date(Date.now() - 3_600_000);
       for (const d of ["", "Documents", "notes", "notes/d0", "notes/d1"]) utimesSync(join(home, d), hour, hour);
       const g = openGraph(homeAt(home), DEFAULT_CONFIG, true, "lazy");
-      g.askFolder(join(home, "notes")); // `slipbox ~/notes`: walked whole
+      g.askFolders([join(home, "notes")]); // `slipbox ~/notes`: walked whole
       expect(g.home?.walked).toBeNull();
       const known = new Map([...g.notes.values()].map((n) => [n.rel, n.mtimeMs] as [string, number]));
       // touched/ changed just now, however long the setup took: inside the two seconds the watcher looks again.
@@ -7546,10 +7591,10 @@ describe("home, a vault without a marker (VV-D2)", () => {
         utimesSync(join(home, d), hour, hour);
       const g = openGraph(homeAt(home), DEFAULT_CONFIG, true, "lazy");
       // Both asked for by name: walked whole, their notes known.
-      g.askFolder(join(home, "kept"));
-      g.askFolder(join(home, "held"));
-      g.askFolder(join(home, "third"));
-      g.askFolder(join(home, "fifth"));
+      g.askFolders([join(home, "kept")]);
+      g.askFolders([join(home, "held")]);
+      g.askFolders([join(home, "third")]);
+      g.askFolders([join(home, "fifth")]);
       const known = new Map([...g.notes.values()].map((n) => [n.rel, n.mtimeMs] as [string, number]));
       const sizes = new Map([...known.keys()].map((rel) => [rel, statSync(join(home, rel)).size] as [string, number]));
       const { w, look, reported } = await watchHome(home, g, { known, sizes, kinds: true });
@@ -7627,7 +7672,7 @@ describe("home, a vault without a marker (VV-D2)", () => {
       const hour = new Date(Date.now() - 3_600_000);
       for (const d of ["", "kept", "kept/sub"]) utimesSync(join(home, d), hour, hour);
       const g = openGraph(homeAt(home), DEFAULT_CONFIG, true, "lazy");
-      g.askFolder(join(home, "kept"));
+      g.askFolders([join(home, "kept")]);
       const known = new Map([...g.notes.values()].map((n) => [n.rel, n.mtimeMs] as [string, number]));
       const sizes = new Map([...known.keys()].map((rel) => [rel, statSync(join(home, rel)).size] as [string, number]));
       const { w, look } = await watchHome(home, g, { known, sizes, kinds: true });

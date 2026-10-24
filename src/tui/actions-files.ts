@@ -89,10 +89,8 @@ export function fileActions(): Record<string, Run> {
     "note.properties": (a) => a.properties.open(),
     "vault.reindex": (a) => {
       a.graph.build(true, "lazy");
-      a.watch.indexInBackground();
-      a.explorer.invalidateTree();
-      for (const b of a.buffers.values()) b.invalidateLayouts();
-      a.relayoutAll();
+      // What follows a build: the watcher, the background parse, search, the explorer and the layouts.
+      a.watch.rebuilt();
       a.message("info", `reindexed ${a.graph.notes.size} notes in ${a.graph.stats.ms.toFixed(0)} ms`);
     },
     "note.delete": (a) => {

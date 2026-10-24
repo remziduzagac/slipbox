@@ -3,16 +3,16 @@
 
 import { existsSync, statSync } from "node:fs";
 import { basename, join } from "node:path";
-import { readText } from "../core/fsutil.ts";
+import { readText, stamp } from "../core/fsutil.ts";
 import { offsetOf } from "./editing.ts";
 import { planRelink } from "../core/rename.ts";
 import { activityFile, AutoIndex, autoIndexFile } from "../core/autoindex.ts";
 import { loadConfig } from "../core/config.ts";
-import { describeCap, type HomeWalk, keepHomeWalk } from "../core/home.ts";
+import { describeCap, type HomeWalk, inFolders, keepHomeWalk, walksInto } from "../core/home.ts";
 import { HOME_LIMITS, type WalkCap } from "../core/walk.ts";
 import { homeFolder, isListed } from "../core/vault.ts";
 import { applyToGraph } from "../core/vault-feed.ts";
-import { VaultWatcher, type WatchBatch } from "../core/watch.ts";
+import { VaultWatcher, type WatchBatch, type WatchChange, watchTakes } from "../core/watch.ts";
 import { walkFailure, walkThread } from "../core/walk-thread.ts";
 import { newParseCache } from "../core/parse.ts";
 import { parseInBackground } from "../core/parse-pool.ts";
@@ -81,10 +81,25 @@ export class Watch {
   }
 
   private stopEmbedFeed: (() => void) | null = null;
+  private stopAdoptFeed: (() => void) | null = null;
   private stopRetargetFeed: (() => void) | null = null;
 
-  /** A new graph (the vault opened, switched, walked again): the search index and embeds follow it. */
+  /** A new graph (the vault opened, switched, walked again): the search index and embeds follow it, and the buffers
+   *  open before it knew their files are its notes as it comes to know them — at each build and each change. */
   followGraph(): void {
+    this.stopAdoptFeed?.();
+    const g = this.app.graph;
+    const stopBuild = g.onBuild(() => this.app.claimKnown());
+    // A change to one file: its buffer alone, if one is open.
+    const stopChange = g.onChange((c) => {
+      const b = this.app.buffers.get(c.kind === "moved" ? c.to : c.path);
+      if (b) this.app.claim(b);
+    });
+    this.stopAdoptFeed = () => {
+      stopBuild();
+      stopChange();
+    };
+    this.app.claimKnown();
     this.app.search.start();
     // A note coming or going sent links by name elsewhere: said, never silent.
     this.stopRetargetFeed?.();
@@ -97,7 +112,6 @@ export class Watch {
     });
     // A note drawn inside another (1.11) changed: whatever shows it lays out again.
     this.stopEmbedFeed?.();
-    const g = this.app.graph;
     this.stopEmbedFeed = g.onChange((c) => {
       const paths = c.kind === "moved" ? [c.from, c.to] : [c.path];
       const abs = new Set(paths.map((p) => g.abs(p)));
@@ -269,7 +283,8 @@ export class Watch {
    * Home's walk made and its index written (VV-D2): while home is the vault open, its graph built again from them —
    * what came, what went — and its cap said when it's reached: the walk's, or the one the folders asked for by name
    * bring it to, those said to be whole. The walk kept is brought up to now on the walk's thread (T12), and taken only
-   * while nothing else built the graph since, nor asked for another folder: else what's here is newer. A file that
+   * while nothing else built the graph since, nor asked for a folder it doesn't cover: else what's here is newer — or,
+   * one asked for that built nothing, home's walk asked for again with it. A file that
    * came, went or changed in it meanwhile — the watcher's, or slipbox's own write — may be newer than what the thread
    * read: taken in again over the walk, as the watcher takes a change in.
    */
@@ -302,7 +317,17 @@ export class Watch {
     }
     const now = this.app.graph;
     if (this.app.quitting || at !== this.homeRefresh || this.app.loc !== loc || now !== graph) return;
-    if (now.builds !== builds || now.askedFolders.join("\0") !== asked.join("\0")) return;
+    if (now.builds !== builds) return;
+    // Folders asked for since, that built nothing (home's walk covers them: a branch's tabs, say): taken when this walk
+    // covers them too, as `Graph.askFolders` has it; else home's walk asked for again with them, never left unwalked.
+    const covers = (rel: string) =>
+      (home.walked !== null && !home.capped && home.walk.dirs.includes(rel)) ||
+      inFolders(rel, home.asked?.folders ?? []) ||
+      !walksInto(now.root, now.filter, rel);
+    if (!now.askedFolders.filter((f) => !asked.includes(f)).every(covers)) {
+      this.homeIndexed(capped);
+      return this.homeRefreshed;
+    }
     if (home.unkept) keepHomeWalk(loc, home.unkept.walk, home.unkept.capped, home.unkept.walked, now.filter);
     this.homeBuilt(home, capped, [...since]);
   }
@@ -339,17 +364,30 @@ export class Watch {
         this.app.config.walk.max_file_size,
       );
     keep();
+    this.rebuilt();
+    const home = this.app.graph.home;
+    const cap = home?.capped ?? capped;
+    if (cap) this.app.message("warn", describeCap(cap, home?.asked));
+    this.app.host.requestRender();
+  }
+
+  /**
+   * The graph built again while it's open (VV-D2: home's walk made, folders of home asked for): the watcher, the
+   * background parse, search and the layouts follow it.
+   */
+  rebuilt(): void {
     this.app.watcher?.sync(this.app.graph.dirs, this.knownFromGraph(), this.sizesFromGraph());
-    this.indexInBackground();
+    // The watcher knows the files as built: an open note changed before it said so is read again, or never would be —
+    // told to the graph as the poll tells one, through the feed (held while git writes: what git does lands as one
+    // change, D153), after what the feed is applying (a branch's tabs built for as its switch is seen).
+    this.app.feed.whenApplied(() => this.poll(true));
+    // Not in an app that isn't live (a test's), which starts no background parse.
+    if (this.app.live) this.indexInBackground();
     // The notes the walk found, searched too: the search index caught up with them.
     this.app.search.start();
     this.app.explorer.invalidateTree();
     for (const b of this.app.buffers.values()) b.invalidateLayouts();
     this.app.relayoutAll();
-    const home = this.app.graph.home;
-    const cap = home?.capped ?? capped;
-    if (cap) this.app.message("warn", describeCap(cap, home?.asked));
-    this.app.host.requestRender();
   }
 
   /** Poll what the vault watcher cannot see: files open from outside the vault (the scratch), or from
@@ -358,16 +396,7 @@ export class Watch {
     const t = setInterval(
       () => {
         if (this.app.quitting) return clearInterval(t);
-        let changed = false;
-        for (const buf of this.app.buffers.values()) {
-          // Not the graph's, so no watcher sees it: outside the vault (the scratch), or a file of it the walk leaves
-          // out — in home, one in Downloads or a hidden folder (VV-D2).
-          if (buf.rel !== null) continue;
-          if (buf.changedOnDisk()) {
-            this.reloadBuffer(buf);
-            changed = true;
-          }
-        }
+        let changed = this.poll();
         if (this.app.settings.changedOnDisk()) {
           this.app.settings.reload("file changed");
           changed = true;
@@ -381,7 +410,67 @@ export class Watch {
     (t as { unref?: () => void }).unref?.();
   }
 
-  applyChanges(batch: WatchBatch): void {
+  /**
+   * The open files no watcher sees, looked at (each second, `startPolling`): outside the vault (the scratch), or a file
+   * of it the walk leaves out — in home, one in Downloads or a hidden folder (VV-D2) — or one the graph knows that the
+   * watcher doesn't take (`VaultWatcher.sees`: reached, 20.8, in a folder it doesn't watch, or hidden or ignored in one
+   * it does). Never one read through a link neither followed nor looked at (VV-D6). Changed on disk: one the graph
+   * knows told to it as the watcher would, through the feed (held while git writes, 5.10), once for each change, and
+   * the watcher told it's heard, so its sweep says it no second time; any other read again. Unchanged, one the graph
+   * knows now is claimed (`App.claim`): a conflict settled with the disk's text leaves it so. True when one was read or
+   * told. `all`: the files the watcher sees too (a build it was synced to, `rebuilt`).
+   */
+  poll(all = false): boolean {
+    let changed = false;
+    const told: WatchChange[] = [];
+    let dirs: Set<string> | null = null;
+    // Without a watcher (watching off, or a test's app), what one would see: the graph's folders, its filter's names.
+    const sees = (rel: string) =>
+      this.app.watcher
+        ? this.app.watcher.sees(rel)
+        : watchTakes(this.app.graph.filter, rel, (dirs ??= new Set(this.app.graph.dirs)));
+    for (const buf of this.app.buffers.values()) {
+      const rel = buf.rel;
+      if (!all && rel !== null && sees(rel)) continue;
+      if (!buf.elsewhere && this.app.following.blocked(buf.abs)) continue;
+      if (buf.changedOnDisk()) {
+        if (rel !== null && this.app.graph.known(rel)) {
+          // Told once: one with unsaved changes isn't read again until its conflict is settled, so it stays changed.
+          // Unreadable (a folder on the way locked, made a file, a mount gone) is gone, as the buffer has it.
+          const st = stamp(buf.abs);
+          const at = st ? `${st.mtimeMs}:${st.size}` : "gone";
+          if (this.toldAt.get(buf) !== at) {
+            this.toldAt.set(buf, at);
+            this.app.watcher?.heard(rel, st);
+            if (!st) this.toldGone.add(buf);
+            told.push({ rel, kind: st ? "changed" : "deleted", isNote: this.app.graph.notes.has(rel) });
+            changed = true;
+          }
+        } else {
+          // Told gone, back since (one reached, 20.8): reached again, as opening it reaches it.
+          if (rel !== null && this.toldGone.delete(buf)) this.app.graph.reachFile(rel, { keep: true });
+          this.reloadBuffer(buf);
+          changed = true;
+        }
+      } else if (rel === null) this.app.claim(buf);
+    }
+    if (told.length) this.app.feed.receive({ changes: told, rescan: false });
+    return changed;
+  }
+
+  /** Each polled file's stamp as last told to the graph (`poll`). */
+  private readonly toldAt = new WeakMap<NoteBuffer, string>();
+  /** The polled files told gone (`poll`): reached again when they're back (20.8). */
+  private readonly toldGone = new WeakSet<NoteBuffer>();
+
+  applyChanges(given: WatchBatch): void {
+    // A change to a note open only through a link not followed now (VV-D6: heard before it was forgotten): never read —
+    // while its path is still through it (one made a note of the vault's own since is the vault's).
+    const through = (rel: string) => {
+      const b = this.app.buffers.get(rel);
+      return !!b?.throughLink && !!(this.app.following.blocked(b.abs) || this.app.following.lookedAt(b.abs));
+    };
+    const batch: WatchBatch = { ...given, changes: given.changes.filter((c) => !through(c.rel)) };
     // The panes' selections are row indexes: an agent's new or deleted note, or a heading added
     // above, would move them to another item. Kept by what they select, not where.
     const keep = this.rememberSelections();
@@ -472,9 +561,15 @@ export class Watch {
         this.walkHomeAgain();
       }
     }
+    // An open note reloads — a data or text file too, like a note (16.4) — and a big one still
+    // does when it's out of the index. One gone again before it was looked at comes as deleted.
+    // Once a batch, as its last change has it: batches held while git wrote may name it more than once.
+    const last = new Map<string, WatchChange>();
     for (const c of batch.changes) {
-      // An open note reloads — a data or text file too, like a note (16.4) — and a big one still
-      // does when it's out of the index. One gone again before it was looked at comes as deleted.
+      last.delete(c.rel);
+      last.set(c.rel, c);
+    }
+    for (const c of last.values()) {
       const buf = this.app.buffers.get(c.rel);
       if (!buf || (c.isNote && c.kind !== "deleted" && !existsSync(buf.abs))) continue;
       this.reloadBuffer(buf, c.kind === "deleted");
@@ -534,5 +629,7 @@ export class Watch {
     if (typing) buf.beginStep(offsetOf(this.app, typing));
     this.app.message("info", `↻ ${this.app.displayName(buf)} changed on disk — reloaded`);
     setTimeout(() => this.app.host.requestRender(), 3100).unref?.();
+    // Read as it is now: the vault's, the graph knowing it (`App.claim`).
+    this.app.claim(buf);
   }
 }

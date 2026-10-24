@@ -1901,11 +1901,29 @@ rather than rebuilt (`5.8`; D137).
   looks is said deleted all the same: a layout drawn meanwhile may have found it on the disk (a path link resolves by
   its file before the index knows it), and draws its link red again.
 - **New directories** are watched through their whole depth, except in home before its walk ([roots.md](roots.md) §
-  Home): there only those in a folder you opened are; one new at home's top is watched alone, a note moved into one it
-  sees is followed there, and the rest is the walk's. A folder gone takes the notes and the other files known in it with
-  it. A `.gitignore` change rescans, and open notes that changed during the rescan reload.
-- **Files the graph doesn't know** — outside the vault (the scratch in the state dir), in what the walk leaves out,
-  in home's skip list — are polled while open.
+  Home): there only those in a folder asked for by name (one you opened, a tab's brought back) are; one new at home's
+  top is watched alone, a note moved into one it sees is followed there, and the rest is the walk's. A folder gone takes
+  the notes and the other files known in it with it. A `.gitignore` change rescans, and open notes that changed during
+  the rescan reload.
+- **Files no watcher sees** — outside the vault (the scratch in the state dir), in what the walk leaves out, in home's
+  skip list, and one the graph knows that the watcher doesn't take (`VaultWatcher.sees`: reached, `20.8`, in a folder it
+  doesn't watch, hidden or ignored in one it does, or no note in a folder it polls) — are polled while open
+  (`Watch.poll`), never one read through a link not followed (VV-D6). One the graph knows, changed, is told to it as the
+  watcher would tell it, through the feed (held while git writes), once a change, as the graph has it (note or file),
+  and the watcher told it's heard a note (`VaultWatcher.heard`), so its sweep doesn't say it again; one it can't stat (a
+  folder on the way locked, made a file) is gone, never an error. One told gone that comes back, reached before (20.8),
+  is reached again, as opening it reaches it. A build the watcher is synced to tells it of every open note changed
+  before, the watched too, the same way, through the feed (`Watch.rebuilt`), after what the feed is applying (a branch's
+  tabs built for as its switch is seen: `VaultFeed.whenApplied`), and a batch reloads each open note once. A file the
+  graph comes to know while it's open is the vault's from then, its window, unsaved text and undo kept (`App.claim`: at
+  each build, at a change to that file, as it's read again, and at each poll): a note a branch brings, its tab back
+  before the batch that brings it; one in a folder of home walked since; one reached. Never one changed on disk since it
+  was read: the poll reads it again first. A link forgotten, the notes open through it are no longer the vault's and
+  read-only, and news of them heard late is dropped while their path still goes through the link; the link followed
+  again, its target answering (`Following.lift`), they're writable — in a vault only once it takes them, as a write
+  there never lands outside it; in home and Elsewhere at once — one changed meanwhile read again first. One read through
+  a link not followed is never written (`App.writeBuffer`), nor read through it to toggle a task or to ask about a
+  change out there (the conflict prompt).
 - **What git does lands as one change** (`5.9`, `5.10`; D153): while git holds its index lock (a checkout, a merge, a
   rebase, a commit) the watcher's news waits; when it lets go, everything it changed is applied together. HEAD is
   looked at each second and with each batch: when it moved, `switched to branch feat` — and that branch's tabs back

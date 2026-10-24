@@ -45,6 +45,9 @@ export class Saving {
       this.app.message("error", `${buf.key} isn't valid UTF-8 — not saving over it`);
       return false;
     }
+    // Read through a link not followed now (VV-D6): refused as `writeBuffer` refuses it, before anything looks at the
+    // file through the link.
+    if (buf.throughLink) return this.app.writeBuffer(buf, buf.contentToSave(), true);
     // A note deleted on disk that's there again (an agent recreated it) is a change like any:
     // never written over without asking.
     if (buf.deleted && existsSync(buf.abs)) buf.deleted = false;
@@ -86,6 +89,8 @@ export class Saving {
    * against the version you started from, marking what both changed.
    */
   conflictPrompt(buf: NoteBuffer): void {
+    // Theirs is read through the link, which isn't followed now (VV-D6): nothing to compare until it is (it's lifted).
+    if (buf.throughLink && this.app.following.blocked(buf.abs, true)) return;
     // Not while you type, into it or any note: letters meant for the text would pick l, k, d or m.
     // It opens once typing has stopped (processKey).
     if (this.app.allViews().some((v) => v.insert)) {
@@ -204,7 +209,7 @@ export class Saving {
         later = true;
         continue;
       }
-      if (buf.conflictKept || buf.markers || buf.invalidUtf8 || buf.deleted) continue;
+      if (buf.conflictKept || buf.markers || buf.invalidUtf8 || buf.deleted || buf.throughLink) continue;
       if (buf.changedOnDisk()) {
         this.conflictPrompt(buf);
         continue;

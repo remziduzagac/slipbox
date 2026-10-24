@@ -160,20 +160,38 @@ export class VaultFeed {
   /** The held batches applied as one — a switch that came with them seen first, and their files
    *  not taken for moves (a note only one branch has comes and goes; nothing moved). */
   flush(): void {
-    const batches = this.held;
-    this.held = [];
-    this.checkHead();
-    if (!batches.length) return;
-    const toWalk = batches.flatMap((b) => b.toWalk ?? []);
-    const merged: WatchBatch = {
-      changes: batches.flatMap((b) => b.changes),
-      rescan: batches.some((b) => b.rescan),
-      ...(toWalk.length ? { toWalk } : {}),
-    };
-    this.o.gitNews?.();
-    if (this.o.now() - this.switchedAt < SWITCH_SETTLE_MS) this.o.graph().pauseMoves(() => this.o.apply(merged));
-    else this.o.apply(merged);
+    this.applying = true;
+    try {
+      const batches = this.held;
+      this.held = [];
+      this.checkHead();
+      if (!batches.length) return;
+      const toWalk = batches.flatMap((b) => b.toWalk ?? []);
+      const merged: WatchBatch = {
+        changes: batches.flatMap((b) => b.changes),
+        rescan: batches.some((b) => b.rescan),
+        ...(toWalk.length ? { toWalk } : {}),
+      };
+      this.o.gitNews?.();
+      if (this.o.now() - this.switchedAt < SWITCH_SETTLE_MS) this.o.graph().pauseMoves(() => this.o.apply(merged));
+      else this.o.apply(merged);
+    } finally {
+      this.applying = false;
+      for (const fn of this.afterApplied.splice(0)) fn();
+    }
   }
+
+  /**
+   * `fn` now — or, asked while held batches are being applied (a switch seen first, its tabs back, the graph built
+   * for them), once they are: what git wrote lands before what's looked at after a build.
+   */
+  whenApplied(fn: () => void): void {
+    if (this.applying) this.afterApplied.push(fn);
+    else fn();
+  }
+
+  private applying = false;
+  private readonly afterApplied: (() => void)[] = [];
 
   /** HEAD looked at (a poll, each batch): true when it moved, or a repository appeared or went.
    *  Not while git still writes, nor mid-rebase: then it hasn't finished moving (a rebase lands as

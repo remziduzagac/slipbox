@@ -156,21 +156,34 @@ export class Graph {
   }
 
   /**
-   * A folder of home asked for by name (VV-D2: `slipbox ~/notes`, or a file in it), by its whole path: its notes known
-   * now. Home's walk not covering it yet — never made, or its cap reached short of it — the graph is built again with
-   * the folder walked, as it is at each build after until the walk covers it (`homeWalk`). Home's path for it; null in
-   * a vault, or for home's top.
+   * Folders of home asked for by name (VV-D2: `slipbox ~/notes`, a file in it, the tabs a session brings back, each
+   * one's), by their whole paths: their notes known now. Those home's walk doesn't cover yet — never made, or its cap
+   * reached short of them — have the graph built again once for them all, as it is at each build after until the walk
+   * covers them (`homeWalk`); a graph not built yet is built now, whatever is asked. True when it was built.
    */
-  askFolder(abs: string): string | null {
+  askFolders(abs: readonly string[]): boolean {
+    let walk = this.builds === 0;
+    for (const a of abs) {
+      const rel = this.homePath(a);
+      if (rel === null || this.asked.includes(rel)) continue;
+      this.asked.push(rel);
+      // Listed by the build, as home's walk had it: a walk that stopped at its cap covers no folder whole, since one it
+      // listed may hold folders it didn't; a folder walked whole, asked for before, covers those in it.
+      const covered =
+        this.dirs.includes(rel) &&
+        ((this.home?.walked != null && !this.home.capped) || inFolders(rel, this.home?.asked?.folders ?? []));
+      if (!covered && walksInto(this.root, this.filter, rel)) walk = true;
+    }
+    // Never built: with the index kept, as `openGraph` builds.
+    if (walk) this.build(this.builds > 0 ? this.useCache : true, "lazy");
+    return walk;
+  }
+
+  /** Home's path for a folder of home, by its whole path; null in a vault, for home's top, or outside it. */
+  homePath(abs: string): string | null {
     if (this.loc.mode !== "home") return null;
     const rel = relative(this.root, abs).split(sep).join("/");
-    if (!rel || climbsOut(rel) || isAbsolute(rel)) return null;
-    if (this.asked.includes(rel)) return rel;
-    this.asked.push(rel);
-    // A walk that stopped at its cap covers no folder whole: one it listed may hold folders it didn't.
-    const covered = this.home?.walked != null && !this.home.capped && this.dirs.includes(rel);
-    if (!covered && walksInto(this.root, this.filter, rel)) this.build(this.useCache, "lazy");
-    return rel;
+    return !rel || climbsOut(rel) || isAbsolute(rel) ? null : rel;
   }
 
   /**
@@ -205,7 +218,7 @@ export class Graph {
    * not yet parsed are stubs until `entry()`, `ensureAll()` or `parseSome()` fills them.
    *
    * Home (VV-D2) is never walked here: its walk is the one kept (`homeWalk`), the folders asked for that it doesn't
-   * cover walked with it (`askFolder`), or `given` — one just made, a slice at a time, by the background index or the
+   * cover walked with it (`askFolders`), or `given` — one just made, a slice at a time, by the background index or the
    * TUI.
    */
   build(useCache = true, parse: "all" | "lazy" = "all", given?: HomeWalk): this {
@@ -295,11 +308,26 @@ export class Graph {
       gone,
       ms: performance.now() - t0,
     };
+    for (const fn of this.buildListeners) {
+      try {
+        fn();
+      } catch {}
+    }
     return this;
   }
 
-  /** How many times it's been built: a walk made elsewhere since the last (T12) is older than what it holds. */
+  /** How many times it's been built: a walk made elsewhere since the last (T12) is older than what it holds. None: the
+   *  TUI's is first built as the folders asked for are (`askFolders`). */
   builds = 0;
+
+  private readonly buildListeners = new Set<() => void>();
+
+  /** After each build: what the graph knows may be new (the TUI's buffers opened before it knew their files). */
+  onBuild(fn: () => void): () => void {
+    this.buildListeners.add(fn);
+    return () => this.buildListeners.delete(fn);
+  }
+
   private readonly unparsed = new Map<string, NoteFile>();
   private useCache = false;
   private cacheDirty = false;

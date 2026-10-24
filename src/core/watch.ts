@@ -177,6 +177,29 @@ export class VaultWatcher {
     this.ensurePollTimer();
   }
 
+  /**
+   * Whether a change to the file `rel` reaches this watcher on its own: degraded, it polls every open file; else its
+   * folder is watched (or polled) and its name one its filter takes — a hidden or ignored file in a watched folder isn't.
+   */
+  sees(rel: string): boolean {
+    if (this.degraded) return true;
+    return watchTakes(this.opts.filter, rel, this.watchers, this.polled);
+  }
+
+  /** A change to `rel` heard elsewhere (the TUI's poll of a file no watch sees): known at this stamp, so a sweep or a
+   *  folder listed again doesn't say it a second time; gone, known no more. */
+  heard(rel: string, st: { mtimeMs: number; size: number } | null): void {
+    // Notes alone are known by their stamps (as `noteOwnWrite` keeps them): another file isn't swept.
+    if (!this.opts.filter.isNoteName(rel.slice(rel.lastIndexOf("/") + 1))) return;
+    if (!st) {
+      this.opts.known.delete(rel);
+      this.sizes.delete(rel);
+      return;
+    }
+    this.opts.known.set(rel, st.mtimeMs);
+    this.sizes.set(rel, st.size);
+  }
+
   /** After a rescan: watch exactly `dirs`, and adopt the new graph's notes as known. */
   sync(dirs: string[], known: Map<string, number>, sizes?: Map<string, number>): void {
     // Home's walk kept: nothing left to it any more — what the watcher left, and moves to follow, forgotten.
@@ -816,6 +839,21 @@ function dirMtime(path: string): number | null {
   } catch {
     return null;
   }
+}
+
+/**
+ * Whether a watch of `watched` folders (and `polled` ones, whose notes alone are looked at) takes a change to the file
+ * `rel`: its folder one of them, and its name one the filter takes — a hidden or ignored file in it isn't.
+ */
+export function watchTakes(
+  filter: Pick<WalkFilter, "exclusion" | "isNoteName">,
+  rel: string,
+  watched: { has(dir: string): boolean },
+  polled: { has(dir: string): boolean } = new Set(),
+): boolean {
+  const dir = parentOf(rel);
+  const name = rel.slice(rel.lastIndexOf("/") + 1);
+  return (watched.has(dir) || (polled.has(dir) && filter.isNoteName(name))) && filter.exclusion(rel, false) === null;
 }
 
 function statOrNull(path: string): { mtimeMs: number; size: number } | null {

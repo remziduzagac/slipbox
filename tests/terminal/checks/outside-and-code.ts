@@ -25,6 +25,7 @@ import {
   explorerRow,
   exported,
   HANDBOOK,
+  inSwitcher,
   type LeftOut,
   leader,
   MEETING,
@@ -38,6 +39,7 @@ import {
   TSC,
 } from "../check.ts";
 import { type Session, sleep } from "../session.ts";
+import { messagesSaying } from "./links-and-files.ts";
 
 const KENJI = "people/kenji-mori.md";
 /** The reference set's share links (kestrel's web app): a type error on purpose, a function used from another file. */
@@ -94,19 +96,6 @@ function numberStyle(s: Session, n: number, text: string) {
 function indexCached(s: Session): boolean {
   const dir = join(s.dir, "cache", "slipbox");
   return existsSync(dir) && readdirSync(dir).some((k) => existsSync(join(dir, k, "index.json")));
-}
-
-/** In the switcher: reopened until it lists `path` (it lists what the vault had when it opened). */
-async function inSwitcher(s: Session, query: string, path: string): Promise<void> {
-  const end = Date.now() + 5000;
-  for (;;) {
-    await s.keys("ctrl+p");
-    await s.see(/Open (note|\()/);
-    await s.type(query);
-    if (s.rowOf(path) >= 0) return;
-    await s.keys("escape");
-    s.expect(Date.now() < end, `the switcher to list ${path}`);
-  }
 }
 
 /** A built-in theme's colour for a role's foreground (the user's theme folder never asked). */
@@ -551,6 +540,97 @@ export const OUTSIDE_AND_CODE: Check[] = [
       await s.see("third desk, by the door");
       await s.until(() => !s.statusLine().includes("unsaved"), 3000, "back at the file's text: nothing unsaved");
       s.expect(s.read(KENJI).includes("third desk, by the door"), "nothing written: the file is still theirs");
+    },
+  },
+  {
+    area: "outside-and-code",
+    name: "watching: a note reached in a hidden folder, changed by an agent, reloads once — looked at where no watcher is (20.8)",
+    covers: { cases: ["watching"], commands: ["note.open", "backlinks.open"] },
+    options: {
+      // The watcher's sweep each 3 s (15 ticks of 200 ms): soon enough to see it doesn't say the change again.
+      config: "[watch]\npoll_ms = 200\n",
+      setup: (s) => {
+        if (!s.exists(".stash/kept.md")) s.write(".stash/kept.md", "# Kept aside\n\nNothing here yet.\n");
+        if (!s.exists(".aside.md")) s.write(".aside.md", "# Aside\n\nA hidden note at the top.\n");
+      },
+    },
+    run: async (s) => {
+      // :e reaches it: the vault's note from now on, its folder still hidden from the watcher. Started again, the
+      // index brings it back, and the watcher knows it too (its sweep stats every note it knows).
+      await s.ex("e .stash/kept.md");
+      await opened(s, ".stash/kept.md");
+      await s.restart();
+      await s.ex("e .stash/kept.md");
+      await opened(s, ".stash/kept.md");
+      await s.see("Nothing here yet.");
+      s.write(".stash/kept.md", "# Kept aside\n\nAn agent wrote here, to [home](../home.md).\n");
+      await s.see("An agent wrote here", 5000);
+      await s.status("↻ reloaded");
+      // Said once: the watcher's sweep, which knows the note too, doesn't say it again.
+      await sleep(4000);
+      const said = await messagesSaying(s, "kept.md changed", /kept\.md changed on disk — reloaded/);
+      s.expect(said === 1, `the reload said once, not ${said} times`);
+      // The index told too: the new link's in it, and home.md's backlinks list the note.
+      await s.ex("e home.md");
+      await opened(s, "home.md");
+      await leader(s, "l", "b");
+      await s.see(/Linking to home\.md/, 5000);
+      await s.see(/\.stash\/kept\.md\s+home\b/);
+      await s.keys("escape");
+      // A hidden note in a folder the watcher watches (the top): its name the watch doesn't take, the poll does.
+      await s.ex("e .aside.md");
+      await opened(s, ".aside.md");
+      s.write(".aside.md", "# Aside\n\nRewritten by an agent.\n");
+      await s.see("Rewritten by an agent.", 5000);
+    },
+  },
+  {
+    area: "outside-and-code",
+    name: "watching: a note reached in a hidden folder, deleted and made again by an agent — read again and indexed again, its backlink there",
+    covers: { cases: ["watching"], commands: ["note.open", "backlinks.open"] },
+    options: {
+      setup: (s) => {
+        if (!s.exists(".stash/back.md")) s.write(".stash/back.md", "# Back\n\nTo [home](../home.md).\n");
+      },
+    },
+    run: async (s) => {
+      await s.ex("e .stash/back.md");
+      await opened(s, ".stash/back.md");
+      // Gone, then made again while it's open: no watcher sees its folder, the poll does.
+      rmSync(s.path(".stash/back.md"));
+      await s.message(/back\.md was deleted on disk/, 5000);
+      s.write(".stash/back.md", "# Back again\n\nTo [home](../home.md), once more.\n");
+      await s.see("once more", 5000);
+      // Reached again, as opening it reaches it: in the index, home.md's backlinks list it — its row, its link's text
+      // beside it (the messages name its path too).
+      await s.ex("e home.md");
+      await opened(s, "home.md");
+      await leader(s, "l", "b");
+      await s.see(/Linking to home\.md/, 5000);
+      await s.see(/\.stash\/back\.md\s+home\b/, 3000);
+      await s.keys("escape");
+    },
+  },
+  {
+    area: "outside-and-code",
+    name: "watching: a note reached in a hidden folder, the folder made a file by an agent — said deleted, slipbox goes on",
+    covers: { cases: ["watching"], commands: ["note.open"] },
+    options: {
+      setup: (s) => {
+        if (!s.exists(".junk/gone.md")) s.write(".junk/gone.md", "# Gone soon\n");
+      },
+    },
+    run: async (s) => {
+      await s.ex("e .junk/gone.md");
+      await opened(s, ".junk/gone.md");
+      // The folder made a file: looking at the note through it fails (ENOTDIR), and is taken as the note gone.
+      rmSync(s.path(".junk"), { recursive: true });
+      s.write(".junk", "A file now.\n");
+      await s.message(/gone\.md was deleted on disk/, 5000);
+      // Still here, answering.
+      await s.keys("ctrl+p");
+      await s.see(/Open \(\d+ notes/, 5000);
+      await s.keys("escape");
     },
   },
   {
@@ -1099,6 +1179,32 @@ export const OUTSIDE_AND_CODE: Check[] = [
       await s.status("• unsaved");
       rmSync(lock);
       await s.file(NOTE, (t) => t.includes("Under the lock."), "autosaved once git let go");
+    },
+  },
+  {
+    area: "outside-and-code",
+    name: "index: space v r while git holds its index lock — an open note git changed is read again once git lets go, once",
+    covers: { cases: ["index", "reload"], commands: ["vault.reindex"] },
+    // Not watching: only the reindex reads the note again.
+    options: { home: true, startAt: "home/work/product/roadmap/q4.md", config: "[watch]\nenabled = false\n" },
+    run: async (s) => {
+      const NOTE = "~/work/product/roadmap/q4.md";
+      await s.status("q4.md");
+      // git mid-checkout: the note rewritten under its lock, then a reindex.
+      const lock = s.path("~/work/product/.git/index.lock");
+      writeFileSync(lock, "");
+      writeFileSync(s.path(NOTE), `${s.read(NOTE)}\nA line git wrote.\n`);
+      await leader(s, "v", "r");
+      await s.message(/reindexed \d+ notes/, 5000);
+      await s.keys("shift+g");
+      await sleep(1500);
+      s.expect(!s.screen().some((r) => r.includes("A line git wrote.")), "not read again while git holds index.lock");
+      rmSync(lock);
+      await s.message(/q4\.md changed on disk — reloaded/, 5000);
+      await s.keys("shift+g");
+      await s.see("A line git wrote.", 5000);
+      const said = await messagesSaying(s, "q4.md changed", /q4\.md changed on disk — reloaded/);
+      s.expect(said === 1, `read again once (${said} times)`);
     },
   },
   {

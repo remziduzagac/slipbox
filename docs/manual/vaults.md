@@ -107,10 +107,11 @@ by the TUI while home is open and the background index is off. Until then, home 
 you opened: `slipbox ~/notes` walks `~/notes` at once, so its notes, and the vaults in it, are there, and its own note
 opens, one directly in it before one in a folder of it. `slipbox ~/notes/inbox.md` walks the note's folder the same
 way, and so does going into a folder of home from another vault, by opening a note of it or following a link to it.
-Meanwhile a note saved at home's top, in a folder directly in it, or anywhere in the folder you opened comes as it's
-saved; one deeper waits for the walk. The walk is kept, so opening home never walks it again: the files it found are
-looked at, and a folder that changed is listed again, one whose time was set back too, as `cp -a`, `rsync -a` or
-unpacking an archive with its times leave it, even to exactly the time slipbox kept for it: setting a folder's time
+The tabs slipbox brings back in home walk theirs too: a note you left open has its links and backlinks as it opens.
+Meanwhile a note saved at home's top, in a folder directly in it, or anywhere in the folder you opened or a tab's folder
+comes as it's saved; one deeper waits for the walk. The walk is kept, so opening home never walks it again: the files it
+found are looked at, and a folder that changed is listed again, one whose time was set back too, as `cp -a`, `rsync -a`
+or unpacking an archive with its times leave it, even to exactly the time slipbox kept for it: setting a folder's time
 moves its change time. Where the file system keeps no change time, such a folder looks unchanged, and its notes wait for
 the next walk. A folder slipbox couldn't read is tried again each time, and its notes come once it can be read. The
 command line walks home the first time it needs to, and once more after an upgrade from a version that kept no folder
@@ -121,11 +122,11 @@ Home's index holds 10,000 notes at most, and its walk lists 5,000 folders at mos
 slipbox says so when it stops there, in a message, in `space v i`, in `slipbox info` and in
 `slipbox index --refresh ~`.
 
-The folder you opened is indexed whole, however deep it is. Its notes count toward the 10,000: home's deepest other
-notes make room for them, so a full home still holds 10,000. A note you make in it while home is full is indexed too,
-and home's deepest other note leaves for it. A folder that holds more than 10,000 notes by itself is indexed whole all
-the same, and home then holds its notes and no others. When home is full, the message adds that the folder is whole:
-`~/notes, the folder you opened, is whole`.
+The folder you opened is indexed whole, however deep it is, and so is the folder of each tab brought back. Its notes
+count toward the 10,000: home's deepest other notes make room for them, so a full home still holds 10,000. A note you
+make in it while home is full is indexed too, and home's deepest other note leaves for it. A folder that holds more than
+10,000 notes by itself is indexed whole all the same, and home then holds its notes and no others. When home is full,
+the message adds that the folders open are whole: `~/notes, the folder open, is whole`.
 
 ### Elsewhere
 

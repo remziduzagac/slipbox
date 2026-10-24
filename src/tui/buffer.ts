@@ -162,9 +162,14 @@ export class NoteBuffer {
   /** The code view's cells folded to their header (24.13), by their first line. */
   readonly codeFolded = new Set<number>();
 
+  /** Read-only as read through a link not followed (VV-D6), looked at or forgotten: writable, and the vault's, only once
+   *  the link is followed (`Following.lift`). */
+  throughLink = false;
+
   constructor(
-    /** Vault-relative path, or null for a file outside the vault (e.g. the scratch). */
-    readonly rel: string | null,
+    /** Vault-relative path, or null for a file outside the vault (the scratch) or one the graph doesn't know yet: given
+     *  its path once it does (`App.claimKnown`). */
+    public rel: string | null,
     readonly abs: string,
     /** Vault-relative path for anything inside the vault, else the absolute path. */
     readonly key: string = rel ?? abs,
