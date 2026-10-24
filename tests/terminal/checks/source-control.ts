@@ -48,7 +48,7 @@ function git(s: Session, cwd: string, ...args: string[]): { code: number; out: s
 }
 
 /** git that must end well: its output, trimmed; git's own words in the failure when it doesn't. */
-function gitOk(s: Session, cwd: string, ...args: string[]): string {
+export function gitOk(s: Session, cwd: string, ...args: string[]): string {
   const r = git(s, cwd, ...args);
   s.expect(r.code === 0, `git ${args.join(" ")} (exit ${r.code})\n${r.out.trim()}`);
   return r.out.trim();
@@ -60,7 +60,7 @@ export function put(s: Session, at: string, files: Record<string, string>): void
 }
 
 /** Files written, and committed on the branch checked out there. */
-function commit(s: Session, at: string, files: Record<string, string>, message: string): void {
+export function commit(s: Session, at: string, files: Record<string, string>, message: string): void {
   put(s, at, files);
   gitOk(s, at, "add", "-A");
   gitOk(s, at, "commit", "-q", "-m", message);
@@ -130,7 +130,7 @@ function panelPart(s: Session, row: number): string {
 }
 
 /** The panel's first row showing `needle`, or -1. */
-function rowWith(s: Session, needle: string | RegExp): number {
+export function rowWith(s: Session, needle: string | RegExp): number {
   return s
     .screen()
     .findIndex((_, i) =>
@@ -139,7 +139,7 @@ function rowWith(s: Session, needle: string | RegExp): number {
 }
 
 /** The panel's first row showing `needle`, waited for. */
-async function panelRow(s: Session, needle: string | RegExp): Promise<number> {
+export async function panelRow(s: Session, needle: string | RegExp): Promise<number> {
   await s.until(() => rowWith(s, needle) >= 0, undefined, `the git panel to show ${needle}`);
   return rowWith(s, needle);
 }
@@ -163,7 +163,7 @@ export function bgIn(s: Session, holding: string, piece: string): string | null 
 }
 
 /** Whether the panel draws the row showing `needle` as the one selected. */
-const isSelected = (s: Session, needle: string) =>
+export const isSelected = (s: Session, needle: string) =>
   rowWith(s, needle) >= 0 && bgIn(s, needle, needle) === bgOf("sidebar_selected");
 
 /**
@@ -171,7 +171,7 @@ const isSelected = (s: Session, needle: string) =>
  * heading) a `j` a row down to it — the rows counted on the screen and the keys pressed at once, never one decided on
  * a screen that hasn't caught up with the last — then seen selected.
  */
-async function selectRow(s: Session, needle: string): Promise<void> {
+export async function selectRow(s: Session, needle: string): Promise<void> {
   const target = await panelRow(s, needle);
   // Past the rail: a section's heading starts with its fold's glyph. Above the first, only lines that say something.
   const first = s.screen().findIndex((_, i) => /^\s*[▾▸] /.test(panelPart(s, i).slice(3)));
@@ -184,7 +184,7 @@ async function selectRow(s: Session, needle: string): Promise<void> {
 const columnOf = (row: string, at: number) => Bun.stringWidth(row.slice(0, at)) + 1;
 
 /** A mouse event at a cell (`y` the screen's row, from 0): a press and a release, or the pointer moved there. */
-async function mouse(s: Session, x: number, y: number, how: "click" | "move" = "click"): Promise<void> {
+export async function mouse(s: Session, x: number, y: number, how: "click" | "move" = "click"): Promise<void> {
   if (how === "move") return s.send(`\x1b[<35;${x};${y + 1}M`);
   await s.send(`\x1b[<0;${x};${y + 1}M`);
   await s.send(`\x1b[<0;${x};${y + 1}m`);
@@ -210,7 +210,7 @@ async function rowButton(s: Session, needle: string, glyph: string): Promise<voi
 }
 
 /** A branch's button (`[Remove…]`), the branch opened up: the first row under the branch's that shows it. */
-async function branchButton(s: Session, branch: string, label: string): Promise<void> {
+export async function branchButton(s: Session, branch: string, label: string): Promise<void> {
   const top = await panelRow(s, branch);
   const at = () => s.screen().findIndex((_, i) => i > top && panelPart(s, i).includes(label));
   await s.until(() => at() > top, undefined, `${label} under ${branch}`);
@@ -223,7 +223,7 @@ async function branchButton(s: Session, branch: string, label: string): Promise<
  * The newest message holding `needle`, whole — its box wraps a long one, the Messages list cuts it: the list filtered
  * to it, enter copies it.
  */
-async function lastMessage(s: Session, needle: string): Promise<string> {
+export async function lastMessage(s: Session, needle: string): Promise<string> {
   await leader(s, "m");
   await s.see("Messages");
   await s.type(needle);
@@ -233,7 +233,7 @@ async function lastMessage(s: Session, needle: string): Promise<string> {
 }
 
 /** A message said, whole: found by words of its own (`find`, which pick it out among those said). */
-async function said(s: Session, find: string, whole: string): Promise<void> {
+export async function said(s: Session, find: string, whole: string): Promise<void> {
   const got = await lastMessage(s, find);
   s.expect(got === whole, `said: ${whole}\n(the newest holding "${find}": ${got})`);
 }
@@ -371,7 +371,7 @@ const PANEL: Check[] = [
 // Branches and worktrees (GIT-D9, GIT-D10, GIT-D13).
 
 /** A worktree of the trail for a new branch, beside it as `[git] worktrees` puts one: its path. */
-function worktree(s: Session, branch: string, from = "main"): string {
+export function worktree(s: Session, branch: string, from = "main"): string {
   const at = `${TRAIL}-${branch.replace(/\//g, "-")}`;
   gitOk(s, TRAIL, "worktree", "add", "-q", "-b", branch, s.path(at), from);
   return at;

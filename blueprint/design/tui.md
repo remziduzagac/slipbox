@@ -216,7 +216,12 @@ each framed in its level's colour with its glyph first — `✗` error, `!` warn
 `x`, `!`, `-`; an info message that starts with its own symbol, such as `↻`, keeps just that) —
 and wrapped to three rows. Each shows 4 s (8 s an error) from the frame that first draws it — one said while slipbox
 was busy, a start indexing, isn't gone before it's seen (#40); the same message again refreshes its box
-rather than stacking a second. Clicking one opens the messages list and clears the boxes. Popups
+rather than stacking a second. A message asks for its frame as it's said, whatever says it — a key's command, git
+answering in the background (D263) — so it doesn't wait for the next key. One said while a frame is painted
+(`App.whileDrawing`, around the host's whole paint) asks for no frame: OpenTUI would draw again at once for it, and
+something said on every frame would keep drawing; it shows on the next frame drawn, which may be the next key's (a
+spell checker's missing dictionary, said as a note is drawn). Clicking one opens the
+messages list and clears the boxes. Popups
 and questions draw over them. On a screen too small for a box (under 30 columns), a message takes
 over the status line while it shows.
 
@@ -919,10 +924,31 @@ keys.
   first), Just make it. In a worktree, one command, `git worktree add --no-track -b <name> -- <folder> <from>`
   (`newWorktreeLater`): git makes the branch before it looks at the folder, so a branch it made for a folder it then
   refused is deleted again; else `git branch --no-track <name> <from>`, then `git switch` (no hook in a vault not
-  trusted, `gitArgs`); its base kept (`keepBase`); it's opened up and selected. A checkout — a switch, a worktree made
-  or removed — runs in the background (`checkoutLater`) with ten minutes to finish, not fifteen seconds: a big tree, or
-  a trusted vault's LFS filters, take a while; stopped, the message says what it may have left (a worktree half
-  checked out, a folder partly deleted).
+  trusted, `gitArgs`); its base kept (`keepBase`); it's opened up and, once a list of the branches asked for since is
+  shown (`listed`; with git's news faster than it lists them, an answer overtaken by a newer question is shown meanwhile
+  — never one from before, a failure or another repository's), selected, its section unfolded to it (one just made from
+  its base is merged, so folded with the older ones) — with the git panel showing, nothing done in it since the branch
+  was asked for (`GitPanel.touched`, a key, its filter's too, a click or the wheel: the panel keeping its selection
+  within rows that went isn't you), the Branches shown and the panel's filter matching it; else it's left as you put it.
+  Selected, it's brought into sight (the panel unpinned). A checkout — a switch, a worktree made or removed — runs in
+  the background (`checkoutLater`) with ten minutes to finish, not fifteen seconds: a big tree, or a trusted vault's LFS
+  filters, take a while; stopped, the message says what it may have left (a worktree half checked out, a folder partly
+  deleted). Refused, git may have done some of it, so the branches are asked again all the same: a worktree removed and
+  its branch kept (`git branch -d` asks for it to be merged into its upstream, or, with none, here — not into its base);
+  a worktree made by Open in a worktree and refused by a hook once checked out; a branch made and its switch refused,
+  shown as a made one is, HEAD seen at once either way (a hook can refuse once it's switched); a worktree stopped
+  partway, or refused by a hook once checked out (`git branch -D` can't delete the branch a worktree has), whose branch
+  is still there (`newWorktreeLater`'s `left`: a branch there before is never one it made) keeps its base and is shown,
+  git's refusal said and nothing claimed done. What git answers is drawn as it lands: a message asks for its own frame
+  (D263), and a list opened once git answers asks for its own (`Overlays.openListLater`: Compare against…, Remove…'s
+  question, Merge…'s menu). An answer that comes once you've gone into another vault only says itself — nothing gone
+  into, opened up or selected there (`still`: `Vaults.visits`, counted each time a vault is gone into, so one gone into
+  again is another visit) — and a list opened once git answers never opens while something else has your keys since it
+  was asked (`Overlays.busy`, where `Input.dispatchKey` sends them: a question, a key sequence begun, a window over the
+  note, typing in a note, the commit's message or a filter, a command of the note's waiting for its next key (an
+  operator, a count, `f`'s character), visual mode, resizing panes — not where they went as it was asked), where a key
+  meant for that would answer it: it says so, and you ask again. Nor is a worktree made by Open in a worktree gone into
+  then: `o` goes into it.
 - **Remove…** (`remove`): refused, said why, for a worktree with uncommitted files (`not removed: ~/x has 2
   uncommitted files — commit or discard them there first`) and for a branch not merged into its base (`… isn't merged
   into dev — 1 commit of its own; merge it first`); else asked — Remove it, keep the branch; Remove it and the branch
@@ -958,7 +984,8 @@ keys.
   when the terminal gets the focus back (VV-D10).
 - **The status line's branch** (`status:branch`, in a repository): the branches list (`openBranches`) with Pull (while
   there's an upstream not gone; its count when behind), Push (or Push, and track it on origin), Fetch and The git panel
-  before the branches.
+  before the branches. A switch refused (`checkedOut`) still reads HEAD and the files again: a hook can refuse once
+  it's switched.
 - **A change's sign in the gutter**, clicked (`gsign:<line>`, GIT-D12): a menu at the sign — `line 12, against what's
   staged`, Revert it (`r`, `revertChange`: as `git.change_undo`, unsaved, one undo step), Stage it (`s`, `stageSign`:
   the index given the change's lines as they are now, an untracked file staged whole, refused while the file is

@@ -113,6 +113,7 @@ export function pointedAt(app: App, id: string | null): { key: string | null; de
 export function gitClick(app: App, id: string, clicks: number): boolean {
   if (!id.startsWith("git:")) return false;
   const p = app.gitPanel;
+  p.touched++;
   const s = app.sidebar;
   app.region = "sidebar";
   p.typing = id === "git:box";
@@ -159,6 +160,7 @@ export function gitClick(app: App, id: string, clicks: number): boolean {
 export function gitRightClick(app: App, id: string | null, x: number, y: number): boolean {
   const m = /^git:(?:row|act|bb):(\d+)/.exec(id ?? "");
   if (!m) return false;
+  app.gitPanel.touched++;
   const i = Number(m[1]);
   const row = app.gitPanel.rows()[i];
   if (!row || row.kind === "note" || row.kind === "heading") return true;

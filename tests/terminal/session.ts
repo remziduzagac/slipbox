@@ -264,6 +264,11 @@ export class Session {
     return readFileSync(this.trace, "utf8").split("\n");
   }
 
+  /** How many frames slipbox has painted so far: none while it has nothing new to draw. */
+  framesPainted(): number {
+    return this.traced().filter((l) => l === "frame").length;
+  }
+
   /** How many keys and pastes slipbox has handled so far. */
   private handled(): number {
     return this.traced().filter((l) => l === "key").length;

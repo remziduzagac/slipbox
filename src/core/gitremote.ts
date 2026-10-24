@@ -111,12 +111,17 @@ export function inEnglish(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
   return out;
 }
 
-/** Why a git run in the background failed: what it printed, else that it printed too much, or took too long. */
-export function failureOf(err: unknown, stderr: string, stdout: string): string {
+/** How a git run in the background was stopped, if it was: it printed too much, or took too long; null if it wasn't. */
+export function stopOf(err: unknown): string | null {
   const e = err as { code?: unknown; killed?: boolean };
   if (e.code === "ERR_CHILD_PROCESS_STDIO_MAXBUFFER") return "git printed more than slipbox reads, and was stopped";
   if (e.killed) return "git took too long, and was stopped";
-  return gitReason(stderr, stdout);
+  return null;
+}
+
+/** Why a git run in the background failed: what it printed, else that it printed too much, or took too long. */
+export function failureOf(err: unknown, stderr: string, stdout: string): string {
+  return stopOf(err) ?? gitReason(stderr, stdout);
 }
 
 /**

@@ -209,23 +209,25 @@ export async function runTui(argv: string[]): Promise<number> {
   const trace = process.env.SLIPBOX_TRACE;
   const handled = trace ? () => appendFileSync(trace, "key\n") : () => {};
   const painted = trace ? () => appendFileSync(trace, "frame\n") : () => {};
-  const paint = (canvas: Canvas) => {
-    if (renderer.widthMethod !== counted) {
-      counted = renderer.widthMethod;
-      setWidthMethod(counted === "wcwidth" ? "wcwidth" : "unicode");
-      app.widthsChanged();
-    }
-    if (picturesNow() !== picturesSeen) {
-      picturesSeen = picturesNow();
-      app.pictures.changed();
-    }
-    if (app.theme.bg !== bg) {
-      bg = app.theme.bg;
-      renderer.setBackgroundColor(toRGBA(bg === "default" ? null : bg, false));
-    }
-    app.draw(canvas);
-    painted();
-  };
+  // The whole of it one frame painted: a message said in any of it asks for no other (`App.whileDrawing`).
+  const paint = (canvas: Canvas) =>
+    app.whileDrawing(() => {
+      if (renderer.widthMethod !== counted) {
+        counted = renderer.widthMethod;
+        setWidthMethod(counted === "wcwidth" ? "wcwidth" : "unicode");
+        app.widthsChanged();
+      }
+      if (picturesNow() !== picturesSeen) {
+        picturesSeen = picturesNow();
+        app.pictures.changed();
+      }
+      if (app.theme.bg !== bg) {
+        bg = app.theme.bg;
+        renderer.setBackgroundColor(toRGBA(bg === "default" ? null : bg, false));
+      }
+      app.draw(canvas);
+      painted();
+    });
   const view = new AppRenderable(renderer, paint, pictures);
   renderer.root.add(view);
   view.onMouse = (e) => {

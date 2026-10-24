@@ -218,6 +218,8 @@ export class Mouse {
     } else if (!over && g.sidebarPane && inRect(g.sidebarPane, ev.x, ev.y)) {
       this.app.sidebar.scroll = Math.max(0, this.app.sidebar.scroll + dir * n);
       this.app.sidebar.pinned = true;
+      // Scrolled, the git panel's been used (`GitPanel.touched`): where you've scrolled it, it stays.
+      if (this.app.leftView === "git") this.app.gitPanel.touched++;
     } else if (pane) {
       // Over an oversized lens: its inside scrolls first; at its end, the page (4.15).
       const v = pane.view;

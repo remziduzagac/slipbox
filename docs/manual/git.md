@@ -591,7 +591,8 @@ its name.
 - **Open**, or `o`, goes into the worktree, a vault of its own. You land at the same note when it's there, else at its
   top folder. `ctrl+o` comes back.
 - **Check out here** checks the branch out in this checkout.
-- **Open in a worktree** makes a worktree for the branch, in the folder `git.worktrees` names, and goes into it.
+- **Open in a worktree** makes a worktree for the branch, in the folder `git.worktrees` names, and goes into it. If
+  you've opened a question or started typing by the time git is done, it stays where you are, and `o` goes into it.
 - **Merge…**, or `m`, merges the branch into its base. It offers the links the merge would break first
   ([Reviewing a merge](#reviewing-a-merge)), then the merge itself, run where the base is checked out: here, or in its
   worktree. Into another branch… picks another. A merge that conflicts stops, git's words said, its files under
@@ -606,7 +607,13 @@ its name.
 3. Where it goes: **In a new worktree** (the default), in the folder `git.worktrees` names; **In a new worktree, in
    another folder…**, typed; **Check it out here**; or **Just make it**.
 
-If git can't make the worktree, say because its folder is taken, the branch isn't made either.
+If git can't make the worktree, say because its folder is taken, the branch isn't made either. If git won't switch to a
+branch checked out here, say because a change of yours would be overwritten, the branch is made and you stay where you
+are. Either way, slipbox shows git's reason as soon as it answers. If git makes the worktree and then stops, or a hook
+of a vault you trust refuses it once it's checked out, the branch stays, with its worktree and its base.
+
+The branch made is opened up and selected in Branches, unless you've used the panel meanwhile (a key, a click, the
+wheel), it isn't showing, or its filter hides the branch. Made in a worktree, `o` then goes into it.
 
 slipbox keeps the branch it was made from as its base ([The base of each branch](#the-base-of-each-branch)).
 
@@ -629,7 +636,8 @@ If a note has unsaved changes, slipbox asks first. You can:
   [Editing](editing.md) covers a file changed on disk while you edit it.
 - Cancel.
 
-If git refuses the switch because it would overwrite a change of yours, slipbox says why in git's words.
+If git refuses the switch because it would overwrite a change of yours, slipbox says why in git's words, as soon as git
+answers.
 
 However a branch is switched, here or in a terminal, slipbox takes it as one change. It doesn't take it as a storm of
 files coming and going. It says `switched to branch …`.
@@ -667,15 +675,21 @@ It's `"{parent}/{repo}-{branch}"` as it comes: beside the repository, as `~/code
 - its branch is merged into its base, so nothing of its own would be left only there
 - it has no uncommitted files
 
-Otherwise it's refused, and slipbox says why. Asked, you can keep the branch, or remove it too. Removing a worktree
-deletes the files git ignores there too, as git does. The question names them first, notes before other files, such as
-`also deletes 2 ignored notes: local/draft.md, local/b.md`. What tools build, such as `node_modules` or `dist`, isn't
-listed. You can't remove the worktree you're in, even when you opened it through a link to its folder. A worktree whose
-folder is gone, deleted by hand, says so on its branch, with **Prune**, which has git forget it.
+Otherwise it's refused, and slipbox says why. Asked, you can keep the branch, or remove it too. git removes a branch
+only when it's merged into its upstream, or, with none, into the branch checked out where you are, so it may keep it,
+and slipbox says so and lists it without its worktree. The question waits for git. If by then you've opened another
+question, are typing (in a note, the commit's message or a filter), started a key sequence, left a command waiting for
+its next key (`d`, a count, `f`), are selecting text or resizing panes, or are reading a diff, it doesn't open, and
+slipbox says so: ask again. Gone into another vault, it doesn't open either. Merge… waits the same way. Removing a
+worktree deletes the files git ignores there too, as git does. The question names them first, notes before other files,
+such as `also deletes 2 ignored notes: local/draft.md, local/b.md`. What tools build, such as `node_modules` or `dist`,
+isn't listed. You can't remove the worktree you're in, even when you opened it through a link to its folder. A worktree
+whose folder is gone, deleted by hand, says so on its branch, with **Prune**, which has git forget it.
 
 Checking a branch out, and making or removing a worktree, run in the background, so a big checkout doesn't hold
-slipbox up. If git takes more than ten minutes, slipbox stops it and says what it may have left, such as a worktree
-half checked out.
+slipbox up. If git refuses to make or remove a worktree, slipbox shows git's reason once it answers, with no key to
+press. If git takes more than ten minutes, slipbox stops it and says what it may have left, such as a worktree half
+checked out.
 
 `:worktrees` lists the repository's checkouts by branch:
 

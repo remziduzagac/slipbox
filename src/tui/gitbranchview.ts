@@ -100,11 +100,43 @@ interface BranchFiles {
   uncommitted: StatusEntry[] | null;
 }
 
+/**
+ * The branches as git last listed them, and which are merged: asked at `generation` of `root`, `asking` while that
+ * answer isn't in; `answered`, the generation of the answer shown — an earlier one meanwhile.
+ */
+export interface BranchList {
+  root: string;
+  generation: number;
+  branches: Branch[] | null;
+  merged: Set<string>;
+  asking: Promise<void> | null;
+  answered: number;
+}
+
+/**
+ * The list git's answer to `asked` is shown on, `now` the list asked last: `asked` itself while it's the last; else, a
+ * newer question overtaking it, that one while what it shows is older (the same repository's, an earlier answer) — git's
+ * news never leaves the list on one from before. A failure (null) is never shown: what's listed stays. Null: not shown.
+ */
+export function shownOn(now: BranchList | null, asked: BranchList, branches: Branch[] | null): BranchList | null {
+  if (branches === null) return null;
+  if (now === asked) return asked;
+  if (!now || now.root !== asked.root || now.answered >= asked.generation) return null;
+  return now;
+}
+
+/** Where a branch was asked for: the vault's visit (`Vaults.visits`), and how much you'd done in the panel by then
+ *  (`GitPanel.touched`). */
+interface Asked {
+  visit: number;
+  touched: number;
+}
+
 /** The branches' state: their list, which are merged, each one's figures, the ones opened up. */
 export class BranchView {
   constructor(readonly app: App) {}
 
-  private list: { key: string; branches: Branch[] | null; merged: Set<string> } | null = null;
+  private list: BranchList | null = null;
   private stats = new Map<string, { key: string; stats: BranchStats | null; asking: boolean }>();
   private files = new Map<string, BranchFiles>();
   /** The branches opened up, by name. */
@@ -119,11 +151,21 @@ export class BranchView {
   branches(): { branches: Branch[]; merged: Set<string> } | null {
     const c = this.app.git.checkout;
     if (!c) return null;
-    const key = this.key();
-    if (this.list?.key !== key) {
-      const asked = { key, branches: this.list?.branches ?? null, merged: this.list?.merged ?? new Set<string>() };
+    const root = this.app.loc.root;
+    const generation = this.app.git.generation;
+    if (this.list?.root !== root || this.list.generation !== generation) {
+      // What's shown meanwhile: the last answer, the same repository's only.
+      const had = this.list?.root === root ? this.list : null;
+      const asked: BranchList = {
+        root,
+        generation,
+        branches: had?.branches ?? null,
+        merged: had?.merged ?? new Set<string>(),
+        asking: null,
+        answered: had?.answered ?? -1,
+      };
       this.list = asked;
-      void (async () => {
+      asked.asking = (async () => {
         const branches = await branchesLater(c);
         const kept = keptBases(c);
         const git = this.app.config.git;
@@ -140,13 +182,40 @@ export class BranchView {
           const of = k ? [k] : candidates(b.name, git);
           if (of.some((x) => into.get(x)?.has(b.name))) merged.add(b.name);
         }
-        if (this.list !== asked) return;
-        asked.branches = branches;
-        asked.merged = merged;
+        const shown = shownOn(this.list, asked, branches);
+        if (!shown) return;
+        shown.branches = branches;
+        shown.merged = merged;
+        shown.answered = asked.generation;
         this.app.host.requestRender();
-      })();
+      })().finally(() => {
+        asked.asking = null;
+      });
     }
     return this.list.branches ? { branches: this.list.branches, merged: this.list.merged } : null;
+  }
+
+  /**
+   * Once a list of the branches asked for since this was called is shown — the repository as it is now, or newer:
+   * true, unless the vault was left meanwhile or git couldn't list them. What a branch just made waits for, to be
+   * selected. Each round waits for one of git's answers; with nothing asked, nothing to wait for.
+   */
+  async listed(): Promise<boolean> {
+    const visit = this.app.vaults.visits;
+    const since = this.app.git.generation;
+    while (true) {
+      this.branches();
+      const asked = this.list;
+      if (!asked) return false;
+      if (asked.answered >= since) return asked.branches !== null;
+      if (!asked.asking) return false;
+      try {
+        await asked.asking;
+      } catch {
+        return false;
+      }
+      if (!this.still(visit)) return false;
+    }
   }
 
   /** The branch checked out here, as git last listed it. */
@@ -324,10 +393,7 @@ export class BranchView {
         return;
       case "collapse":
         this.opened.delete(b.name);
-        this.app.sidebar.selected = Math.max(
-          0,
-          this.app.gitPanel.rows().findIndex((r) => r.kind === "branch" && r.branch.name === b.name),
-        );
+        this.app.sidebar.selected = Math.max(0, this.rowOf(b.name));
         return;
       case "go":
         return b.worktree?.gone
@@ -388,7 +454,7 @@ export class BranchView {
           void switchLater(c.root, b.name).then((why) => {
             if (why) app.message("warn", `git: ${why}`);
             app.git.checkHead();
-            void app.git.refreshNow().then(() => app.host.requestRender());
+            this.relisted();
           });
         });
       case "worktree":
@@ -403,7 +469,7 @@ export class BranchView {
         const why = pruneWorktrees(c.root);
         if (why) return app.message("warn", `git: ${why}`);
         app.message("info", "pruned: the worktrees whose folders are gone are forgotten");
-        return void app.git.refreshNow().then(() => app.host.requestRender());
+        return this.relisted();
       }
       case "new":
         return this.newBranch(b.name);
@@ -441,6 +507,8 @@ export class BranchView {
     const back = backToPanel(app);
     if (row.against === "uncommitted" && b.worktree) {
       before = (await showLater({ root: b.worktree.path }, "HEAD", row.path, query.signal)) ?? "";
+      // Overtaken meanwhile (another diff asked for, the vault left): nothing read or said for this one.
+      if (!query.current()) return;
       const read = readForDiff(join(b.worktree.path, row.path));
       if (typeof read !== "string") return app.message("info", `${row.path}: ${read.why}`);
       now = read;
@@ -473,23 +541,27 @@ export class BranchView {
     const c = app.git.checkout;
     const got = this.branches();
     if (!c || !got) return;
+    const visit = app.vaults.visits;
+    const keys = app.overlays.keysGo();
     void remoteBranchesLater(c).then((remotes) => {
-      // Moved on meanwhile (another repository, another question open): nothing pops up over it.
-      if (app.git.checkout !== c || app.overlay) return;
+      // Moved on meanwhile (another vault): nothing; your keys gone elsewhere since: nothing pops up there.
+      if (!this.still(visit)) return;
       const kept = keptBases(c)[b.name];
       const others = got.branches.map((x) => x.name).filter((n) => n !== b.name);
-      app.overlays.openList({
-        title: `Compare ${sanitize(b.name)} against…`,
-        items: [
-          ...(kept ? [{ label: "The base guessed from [git] bases", detail: `now ${kept}, kept`, data: null }] : []),
-          ...others.map((n) => ({ label: sanitize(n), detail: n === kept ? "kept" : "", data: n })),
-          ...remotes.map((n) => ({ label: sanitize(n), detail: n === kept ? "remote, kept" : "remote", data: n })),
-          { label: "A branch, tag or commit…", detail: "typed: v2.3, a commit, HEAD~3", data: TYPED },
-        ],
-        accept: (item) =>
-          item.data === TYPED ? this.compareTyped(b) : this.compareWith(b, item.data as string | null),
-      });
-      app.host.requestRender();
+      app.overlays.openListLater(
+        {
+          title: `Compare ${sanitize(b.name)} against…`,
+          items: [
+            ...(kept ? [{ label: "The base guessed from [git] bases", detail: `now ${kept}, kept`, data: null }] : []),
+            ...others.map((n) => ({ label: sanitize(n), detail: n === kept ? "kept" : "", data: n })),
+            ...remotes.map((n) => ({ label: sanitize(n), detail: n === kept ? "remote, kept" : "remote", data: n })),
+            { label: "A branch, tag or commit…", detail: "typed: v2.3, a commit, HEAD~3", data: TYPED },
+          ],
+          accept: (item) =>
+            item.data === TYPED ? this.compareTyped(b) : this.compareWith(b, item.data as string | null),
+        },
+        keys,
+      );
     });
   }
 
@@ -499,12 +571,13 @@ export class BranchView {
     const c = app.git.checkout;
     if (!c) return;
     app.overlays.prompt(`compare ${sanitize(b.name)} against: `, (typed) => {
+      const visit = app.vaults.visits;
+      // Said as it comes (D263): what's kept, or why not.
       void resolveBaseLater(c, typed).then((asked) => {
-        if (app.git.checkout !== c) return;
+        if (!this.still(visit)) return;
         if ("error" in asked) app.message("warn", asked.error);
         else if (asked.full === `refs/heads/${b.name}`) app.message("info", `${b.name} can't be its own base`);
         else this.compareWith(b, asked.base, asked.commit ? typed.trim() : undefined);
-        app.host.requestRender();
       });
     });
   }
@@ -542,23 +615,28 @@ export class BranchView {
     if (b.here || mine === there || mine.startsWith(`${there}${sep}`))
       return app.message("info", "the worktree you're in can't be removed from here: go into another first");
     if (w.main) return app.message("info", "the main checkout isn't a worktree to remove");
-    void Promise.all([this.ask(b), ignoredLater(w.path)]).then(([st, ignored]) =>
-      this.answered(() => {
-        if (!st) return app.message("warn", "git couldn't say where the branch stands");
-        if (st.dirty)
-          return app.message(
-            "warn",
-            `not removed: ${tildePath(w.path)} has ${st.dirty} uncommitted file${st.dirty === 1 ? "" : "s"} — commit or discard them there first`,
-          );
-        if (!st.base || !st.merged)
-          return app.message(
-            "warn",
-            `not removed: ${b.name} isn't merged into ${st.base ?? "its base"} — ${st.ahead} commit${st.ahead === 1 ? "" : "s"} of its own; merge it first`,
-          );
-        // What git deletes with it, unasked: its ignored notes and files (D61: an ignored note is the vault's).
-        const also = ignored ? ignoredText(ignored) : "";
-        const detail = also ? `also deletes ${sanitize(also)}` : undefined;
-        app.overlays.openList({
+    const visit = app.vaults.visits;
+    const keys = app.overlays.keysGo();
+    // What git says is said, wherever you are by then; the question only where it was asked.
+    void Promise.all([this.ask(b), ignoredLater(w.path)]).then(([st, ignored]) => {
+      if (!st) return app.message("warn", "git couldn't say where the branch stands");
+      if (st.dirty)
+        return app.message(
+          "warn",
+          `not removed: ${tildePath(w.path)} has ${st.dirty} uncommitted file${st.dirty === 1 ? "" : "s"} — commit or discard them there first`,
+        );
+      if (!st.base || !st.merged)
+        return app.message(
+          "warn",
+          `not removed: ${b.name} isn't merged into ${st.base ?? "its base"} — ${st.ahead} commit${st.ahead === 1 ? "" : "s"} of its own; merge it first`,
+        );
+      // Moved on meanwhile (another vault): nothing; your keys gone elsewhere since: nothing pops up there.
+      if (!this.still(visit)) return;
+      // What git deletes with it, unasked: its ignored notes and files (D61: an ignored note is the vault's).
+      const also = ignored ? ignoredText(ignored) : "";
+      const detail = also ? `also deletes ${sanitize(also)}` : undefined;
+      app.overlays.openListLater(
+        {
           title: `Remove the worktree ${tildePath(w.path)}?`,
           filterable: false,
           items: [
@@ -572,29 +650,46 @@ export class BranchView {
           ],
           accept: (item) => {
             if (item.data === "cancel") return;
+            const removing = app.vaults.visits;
             app.message("info", `removing the worktree ${tildePath(w.path)}…`);
             void removeWorktreeLater(c.root, w.path, item.data === "both" ? b.name : null).then((why) => {
-              if (why) return app.message("warn", `git: ${why}`);
-              this.opened.delete(b.name);
-              app.message(
-                "info",
-                `removed the worktree ${tildePath(w.path)}${item.data === "both" ? `, and ${b.name}` : `; ${b.name} kept`}`,
-              );
-              void app.git.refreshNow().then(() => app.host.requestRender());
+              if (why) app.message("warn", `git: ${why}`);
+              else {
+                // Folded again here only: a branch of that name opened up in a vault gone into meanwhile is its own.
+                if (this.still(removing)) this.opened.delete(b.name);
+                app.message(
+                  "info",
+                  `removed the worktree ${tildePath(w.path)}${item.data === "both" ? `, and ${b.name}` : `; ${b.name} kept`}`,
+                );
+              }
+              // Refused, git may have done some of it — the worktree removed and its branch kept, a folder partly
+              // deleted: listed again all the same.
+              this.relisted();
             });
           },
-        });
-      }),
-    );
+        },
+        keys,
+      );
+    });
   }
 
   /**
-   * What a branch's button says or asks once git's answer is in, in the background (Remove…, Merge…): drawn as it
-   * comes, not left for whatever draws next — a key, another answer.
+   * Still where an answer from git was asked for, as it comes: in that visit of that vault (`Vaults.visits`), never
+   * left meanwhile — gone into again, it's another.
    */
-  private answered(then: () => void): void {
-    then();
-    this.app.host.requestRender();
+  private still(visit: number): boolean {
+    return this.app.vaults.visits === visit;
+  }
+
+  /** The repository asked again once git has changed it, refused or not; the vault's as it is now. */
+  private relisted(): void {
+    void this.app.git.refreshNow().then(() => this.app.host.requestRender());
+  }
+
+  /** A branch's row in the panel's rows (as it lists them now, unless given), by its name; -1 when it doesn't show
+   *  (folded, filtered). */
+  private rowOf(name: string, rows = this.app.gitPanel.rows()): number {
+    return rows.findIndex((r) => r.kind === "branch" && r.branch.name === name);
   }
 
   /** "Open in a worktree": a worktree made for a branch checked out nowhere, in the folder `[git] worktrees` names; gone into. */
@@ -604,12 +699,21 @@ export class BranchView {
     if (!c) return;
     const folder = worktreeFolder(app.config.git.worktrees, c.main ?? c.root, b.name);
     this.askFolder(folder, (to) => {
+      const visit = app.vaults.visits;
+      const keys = app.overlays.keysGo();
       app.message("info", `checking ${b.name} out at ${tildePath(to)}…`);
       void addWorktreeLater(c.root, to, b.name).then((why) => {
-        if (why) return app.message("warn", `git: ${why}`);
-        app.message("info", `${b.name} is in a worktree at ${tildePath(to)}`);
+        if (why) app.message("warn", `git: ${why}`);
+        else app.message("info", `${b.name} is in a worktree at ${tildePath(to)}`);
+        // Moved on meanwhile (another vault): said, and nothing more — never gone into from wherever you are now.
+        // Refused, a worktree stopped partway, or refused by a hook once checked out, may be there: listed again.
+        if (!this.still(visit)) return;
         void app.git.refreshNow().then(() => {
           app.host.requestRender();
+          if (why || !this.still(visit)) return;
+          // Something else has your keys by now (a question, typing): not taken from it, the vault left under it.
+          if (app.overlays.busy(keys))
+            return app.message("info", `${b.name}'s worktree not gone into — o goes into it`);
           this.goInto({ ...b, worktree: { path: to, main: false, gone: false } });
         });
       });
@@ -687,14 +791,43 @@ export class BranchView {
       keepBase(c, name, from);
       return true;
     };
-    const done = (said: string) => {
-      app.message("info", said);
+    // The branch made, opened up and, once git lists it, selected — in the vault it was asked for in still, each step
+    // of the way. Selected only with the git panel showing and nothing done in it since (a key, a click): used
+    // meanwhile, its selection stays where you put it — a row moved by the panel itself (rows coming and going, the
+    // selection kept within them) isn't you. Unfolded to (one just made from its base is merged, so folded with the
+    // older ones), once it's listed and never against the panel's filter.
+    const shown = (at: Asked) => {
+      if (!this.still(at.visit)) return;
       this.opened.add(name);
-      void app.git.refreshNow().then(() => {
-        const i = app.gitPanel.rows().findIndex((r) => r.kind === "branch" && r.branch.name === name);
-        if (i >= 0) app.sidebar.selected = i;
+      void app.git.refreshNow().then(async () => {
+        if (!this.still(at.visit) || !(await this.listed())) return;
         app.host.requestRender();
+        if (!app.panels.sidebarShown || app.leftView !== "git" || app.gitPanel.touched !== at.touched) return;
+        const rows = app.gitPanel.rows();
+        // Listed, and the panel showing its branches (not "asking git…"): else nothing to unfold to.
+        const list = this.list?.branches;
+        if (!list?.some((b) => b.name === name)) return;
+        if (!rows.some((r) => r.kind === "heading" && r.section === "branches")) return;
+        const q = app.sidebar.filter ?? "";
+        if (q && !match(q, name)) return;
+        let i = this.rowOf(name, rows);
+        if (i < 0) {
+          // Folded: the Branches, or the merged and older among them, as the panel orders them.
+          const merged = this.list?.merged ?? new Set<string>();
+          const older = orderBranches(list, (b) => merged.has(b.name), app.now()).folded.some((b) => b.name === name);
+          app.gitPanel.folded.delete("branches");
+          if (older) app.gitPanel.folded.delete("older");
+          i = this.rowOf(name);
+        }
+        if (i < 0) return;
+        app.sidebar.selected = i;
+        // Brought into sight, as a key's move would.
+        app.sidebar.pinned = false;
       });
+    };
+    const done = (said: string, at: Asked) => {
+      app.message("info", said);
+      shown(at);
     };
     app.overlays.openList({
       title: `${sanitize(name)} from ${sanitize(from)}: where?`,
@@ -707,13 +840,20 @@ export class BranchView {
       ],
       accept: (item) => {
         const how = item.data as string;
+        const at: Asked = { visit: app.vaults.visits, touched: app.gitPanel.touched };
         // The branch and its worktree in one: a folder git won't take leaves no branch behind.
         const inWorktree = (to: string) => {
           app.message("info", `making ${name} in a new worktree at ${tildePath(to)}…`);
-          void newWorktreeLater(c.root, to, name, from).then((why) => {
-            if (why) return app.message("warn", `git: ${why}`);
-            keepBase(c, name, from);
-            done(`made ${name} from ${from}, in a new worktree at ${tildePath(to)} — o goes into it`);
+          void newWorktreeLater(c.root, to, name, from).then(({ why, left }) => {
+            // Made, or refused once made and left — stopped partway, a hook refusing once checked out: the branch
+            // keeps its base. Refused with nothing left (a branch there before isn't one it made): listed again.
+            if (!why || left) keepBase(c, name, from);
+            if (!why)
+              return done(`made ${name} from ${from}, in a new worktree at ${tildePath(to)} — o goes into it`, at);
+            app.message("warn", `git: ${why}`);
+            // Left: shown as a made one is — git's refusal said, nothing claimed done.
+            if (!left) return this.relisted();
+            shown(at);
           });
         };
         if (how === "worktree") return inWorktree(folder);
@@ -726,13 +866,18 @@ export class BranchView {
           if (o?.kind === "prompt") o.text = tildePath(folder);
           return;
         }
-        if (how === "make") return make() && done(`made ${name} from ${from}`);
+        if (how === "make") return make() && done(`made ${name} from ${from}`, at);
         app.git.beforeCheckout(() => {
           if (!make()) return;
           void switchLater(c.root, name).then((why) => {
-            if (why) return app.message("warn", `${name} made, but git: ${why}`);
+            // Refused or not, HEAD may have moved (stopped partway; a hook refusing once switched): seen at once.
             app.git.checkHead();
-            done(`made ${name} from ${from}, and checked it out`);
+            if (why) {
+              // Made all the same, only not checked out (or not all of it): shown as one just made is.
+              app.message("warn", `${name} made, but git: ${why}`);
+              return shown(at);
+            }
+            done(`made ${name} from ${from}, and checked it out`, at);
           });
         });
       },
@@ -748,45 +893,52 @@ export class BranchView {
     const c = app.git.checkout;
     const got = this.branches();
     if (!c || !got) return;
+    const visit = app.vaults.visits;
+    const keys = app.overlays.keysGo();
     const st = await this.ask(b);
-    this.answered(() => this.mergeAsked(b, st, got.branches));
+    this.mergeAsked(b, st, got.branches, visit, keys);
   }
 
   /** Merge…'s menu, once its base is known: the links it would break, the merge itself, or into another branch. */
-  private mergeAsked(b: Branch, st: BranchStats | null, branches: Branch[]): void {
+  private mergeAsked(b: Branch, st: BranchStats | null, branches: Branch[], visit: number, keys: string): void {
     const app = this.app;
-    const c = app.git.checkout;
-    if (!c) return;
     const into = st?.base;
+    // Said wherever you are by then; the menu only where it was asked.
     if (!into) return app.message("info", `${b.name} has no base to merge into — Compare against… sets one`);
+    const c = app.git.checkout;
+    // Moved on meanwhile (another vault): nothing; your keys gone elsewhere since: nothing pops up there.
+    if (!c || !this.still(visit)) return;
     const target = branches.find((x) => x.name === into);
     const where = target?.here ? c.root : target?.worktree && !target.worktree.gone ? target.worktree.path : null;
-    app.overlays.openList({
-      title: `Merge ${sanitize(b.name)} into ${sanitize(into)}`,
-      filterable: false,
-      items: [
-        { label: "The links it would break", detail: "git's result, nothing changed", data: "review" },
-        where
-          ? {
-              label: `Merge it${target?.here ? "" : ` in ${tildePath(where)}`}`,
-              detail: `${st!.ahead} commit${st!.ahead === 1 ? "" : "s"}`,
-              data: "merge",
-            }
-          : {
-              label: `Merge it: check out ${sanitize(into)} first`,
-              detail: "it's checked out nowhere",
-              data: "nowhere",
-            },
-        { label: "Into another branch…", data: "other" },
-      ],
-      accept: (item) => {
-        if (item.data === "review") return app.git.showMergeReview({ from: b.name, into });
-        if (item.data === "nowhere")
-          return app.message("info", `${into} isn't checked out anywhere: check it out, then merge ${b.name} there`);
-        if (item.data === "other") return this.mergeInto(b, branches);
-        this.runMerge(b.name, into, where!, !!target?.here);
+    app.overlays.openListLater(
+      {
+        title: `Merge ${sanitize(b.name)} into ${sanitize(into)}`,
+        filterable: false,
+        items: [
+          { label: "The links it would break", detail: "git's result, nothing changed", data: "review" },
+          where
+            ? {
+                label: `Merge it${target?.here ? "" : ` in ${tildePath(where)}`}`,
+                detail: `${st!.ahead} commit${st!.ahead === 1 ? "" : "s"}`,
+                data: "merge",
+              }
+            : {
+                label: `Merge it: check out ${sanitize(into)} first`,
+                detail: "it's checked out nowhere",
+                data: "nowhere",
+              },
+          { label: "Into another branch…", data: "other" },
+        ],
+        accept: (item) => {
+          if (item.data === "review") return app.git.showMergeReview({ from: b.name, into });
+          if (item.data === "nowhere")
+            return app.message("info", `${into} isn't checked out anywhere: check it out, then merge ${b.name} there`);
+          if (item.data === "other") return this.mergeInto(b, branches);
+          this.runMerge(b.name, into, where!, !!target?.here);
+        },
       },
-    });
+      keys,
+    );
   }
 
   /** Into another branch than its base: picked, then as Merge… goes on. */
@@ -819,7 +971,7 @@ export class BranchView {
           );
         else app.message("warn", `git: ${sanitize(r.why)}`);
         if (here) app.git.checkHead();
-        void app.git.refreshNow().then(() => app.host.requestRender());
+        this.relisted();
       });
     };
     if (here) app.git.beforeCheckout(go, { verb: "merge", noun: "the merge", done: "merged" });

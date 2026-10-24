@@ -504,6 +504,8 @@ export class App {
   watcher: VaultWatcher | null = null;
   ui: UiState;
   private drawFailed = false;
+  /** Frames being painted, by `whileDrawing`: a message said meanwhile asks for no other (`message`). */
+  private drawing = 0;
   /** The terminal's title as last told (host.setTitle). */
   private termTitle: string | null = null;
 
@@ -793,6 +795,21 @@ export class App {
     // The same message again (a key held down) refreshes its box rather than stacking another.
     this.toasts = [m, ...this.toasts.filter((t) => t.text !== text || t.level !== level)].slice(0, TOAST_LIMIT);
     this.scheduleToasts();
+    // Drawn as it's said, wherever from: a key's command, or git answering in the background, with nothing else to
+    // draw it (D263). Said while a frame is painted, it waits for the next, as before: OpenTUI draws again at once for a
+    // request made while it draws, so something said on every frame would keep drawing. Said before the host is there
+    // (starting up), the first frame draws it.
+    if (!this.drawing) this.host?.requestRender();
+  }
+
+  /** `paint` as one frame is painted: a message said in it asks for no other frame (`message`). */
+  whileDrawing<T>(paint: () => T): T {
+    this.drawing++;
+    try {
+      return paint();
+    } finally {
+      this.drawing--;
+    }
   }
 
   /** How long a message shows. */
@@ -1198,7 +1215,12 @@ export class App {
     this.height = height;
   }
 
+  /** A frame drawn on `canvas`: what's said while it's drawn asks for no other (`whileDrawing`). */
   draw(canvas: Canvas): void {
+    this.whileDrawing(() => this.drawFrame(canvas));
+  }
+
+  private drawFrame(canvas: Canvas): void {
     this.width = canvas.width;
     this.height = canvas.height;
     this.panels.fixRegion();

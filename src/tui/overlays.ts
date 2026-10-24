@@ -118,6 +118,55 @@ export class Overlays {
     this.app.overlay = o;
   }
 
+  /**
+   * Where your keys go now besides the app's own commands, as `Input.dispatchKey` sends them: a question, a key
+   * sequence begun, a filter typed in (the left panel's, the outline's, Problems'), the git panel's message box, a
+   * window over the note (a diff, the peek), the note in insert mode, a command of the note's waiting for its next key
+   * (an operator, a count, `f`'s character), visual mode, resizing panes; "" for none.
+   */
+  keysGo(): string {
+    const app = this.app;
+    if (app.overlay) return "question";
+    if (app.pending.length) return "sequence";
+    const left = app.region === "sidebar" && app.panels.sidebarShown;
+    if (left && app.sidebar.filtering) return "filter";
+    if (left && app.leftView === "git" && app.gitPanel.typing) return "message";
+    if (app.region === "outline" && app.panels.outlineShown && app.outline.filtering) return "outline's filter";
+    if (app.region === "problems" && app.problems.panel.shown && app.problems.list().filtering)
+      return "Problems' filter";
+    if (app.region === "content" && app.floating) return "window";
+    if (app.region === "content" && app.view?.insert) return "note";
+    const vim = app.vim;
+    if (app.region === "content" && (vim.op || vim.count || vim.awaitChar)) return "command";
+    if (app.panels.resizeMode) return "resize";
+    if (app.region === "content" && app.view?.visual) return "visual";
+    return "";
+  }
+
+  /**
+   * Whether something else has your keys since `since` (`keysGo` then, as something was asked for): a list opened now
+   * would take them from it, a key meant for that answering the list. Where they went then isn't "else".
+   */
+  busy(since = ""): boolean {
+    const now = this.keysGo();
+    return now !== "" && now !== since;
+  }
+
+  /**
+   * A list opened once something answers in the background (git, a helper), asked for when your keys went to `since`:
+   * drawn as it comes, as a message is (D263), and never while something else has them (`busy`) — then it isn't opened,
+   * and said so, to ask again; false.
+   */
+  openListLater(opts: Parameters<Overlays["openList"]>[0], since = ""): boolean {
+    if (this.busy(since)) {
+      this.app.message("info", `${opts.title} — not asked over what you were doing: ask again`);
+      return false;
+    }
+    this.openList(opts);
+    this.app.host.requestRender();
+    return true;
+  }
+
   prompt(
     label: string,
     accept: (text: string) => unknown,

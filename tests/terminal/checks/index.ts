@@ -2,6 +2,7 @@
 
 import { CLI_CASES, type Check, type LeftOut } from "../check.ts";
 import { EDITING, LEFT_OUT_EDITING } from "./editing.ts";
+import { GIT_BRANCHES } from "./git-branches.ts";
 import { GIT_DIFF } from "./git-diff.ts";
 import { LEFT_OUT_LINKS_AND_FILES, LINKS_AND_FILES } from "./links-and-files.ts";
 import { MOVING_LINKS } from "./moving-links.ts";
@@ -37,6 +38,8 @@ export const CHECK_FILES: Record<string, Check[]> = {
   "slow-disk": SLOW_DISK,
   // The window header's buttons (HDR), in the editing area: their own file, editing.ts being near the size limit.
   "window-header": WINDOW_HEADER,
+  // What the branches do once git answers in the background (D263): source control's too, in a file of their own.
+  "git-branches": GIT_BRANCHES,
 };
 
 export const CHECKS: Check[] = Object.values(CHECK_FILES).flat();

@@ -34,7 +34,6 @@ export function beginGitRead(app: App, label: string, watchIndex = false) {
   const location = app.loc.root;
   const overlay = app.overlay;
   app.message("info", `${label}…`);
-  app.host.requestRender();
   return {
     signal: controller.signal,
     current: () =>

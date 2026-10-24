@@ -92,6 +92,9 @@ export class GitPanel {
   /** The branches (GIT-D9) and the repositories in the view (VV-D10): their state, what they ask of git. */
   readonly branches: BranchView;
   readonly repos: RepoView;
+  /** Counted each time you act in the panel, by a key or a click: a branch made, selected once git lists it, isn't
+   *  selected over a panel you've been using since (`BranchView.newWhere`). */
+  touched = 0;
   /** The message box's text (GIT-D8), and whether keys go to it. */
   message = "";
   typing = false;
@@ -357,6 +360,7 @@ export class GitPanel {
   /** The rows' actions, run by the panel's keys (`[keys.git]`): moving, folding, the row's own, the panel's. */
   action(action: string): void | Promise<void> {
     const app = this.app;
+    this.touched++;
     const s = app.sidebar;
     const rows = this.rows();
     const ok = (i: number) => !!rows[i] && rows[i]!.kind !== "note";
