@@ -17,6 +17,7 @@
     "test:docs": "bun test --timeout 30000 ./tests/docs.test.ts ./tests/site.test.ts",
     "test:terminal": "bun tests/terminal/run.ts",
     "test:changed": "bun scripts/ci-scope.ts test",
+    "diag:6": "bash scripts/diag-6.sh",
     "test:terminal:changed": "bun scripts/ci-scope.ts terminal",
     "test:herdr": "bun tests/terminal/herdr/run.ts",
     "shots": "bun tests/terminal/shots.ts",

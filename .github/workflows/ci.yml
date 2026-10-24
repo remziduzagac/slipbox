@@ -114,20 +114,9 @@ jobs:
           cache: false
           minimum_release_age: 7d
       - run: bun install --frozen-lockfile
-      - name: typecheck
-        run: bun run typecheck
-      # Plan 0.3: the core never imports the TUI. This is what keeps the CLI face free of the terminal renderer.
-      - name: boundary
-        run: bun run check:boundary
-      # Plan 14.10: exact versions, the install gates, licences — this platform's OpenTUI package's too — pinned
-      # actions.
-      - name: dependencies
-        run: bun run check:deps
-      # A pull request's or a push's: the tests its files reach (D239); a run by hand's, every one.
-      - name: tests
-        env:
-          SCOPE_BEFORE: ${{ github.event.before }}
-        run: bun run test:changed
+      # Temporary, never merged: #6's diagnostic.
+      - name: diagnostic
+        run: bun run diag:6 unit
 
   # TT-D6: the terminal tests — slipbox driven by keys in a headless terminal, read off the screen — on each system
   # slipbox ships for, each runner running a check per core. A failing check's screen is in the job's log.
@@ -137,7 +126,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-24.04, ubuntu-24.04-arm, macos-15]
+        os: [ubuntu-24.04, macos-15]
     runs-on: ${{ matrix.os }}
     # About five minutes on a 10-core machine, a check per core; a runner has 3 or 4.
     timeout-minutes: 45
@@ -157,9 +146,8 @@ jobs:
         # A pull request's or a push's: the checks its files reach (D239); a run by hand's, every one. A runner is slower
         # than the machine a check was written on: each wait gets at least 30 s (a wait that passes returns at once).
         env:
-          SCOPE_BEFORE: ${{ github.event.before }}
           SLIPBOX_TERMINAL_WAIT: "30000"
-        run: bun run test:terminal:changed
+        run: bun run diag:6 terminal
 
   # The docs' site (site/), built from docs/ as the pages workflow builds it: every page gathered, every link within it
   # landing. Its own packages, under its own install gates (site/bunfig.toml).
