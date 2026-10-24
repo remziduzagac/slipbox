@@ -28,9 +28,10 @@ import {
   symlinkSync,
   writeFileSync,
 } from "node:fs";
-import { dirname, join } from "node:path";
+import { join } from "node:path";
 import { PREVIEW_TAG, pagesBase, type ReleaseBuild, retired, tagOf } from "./release.ts";
 import { type Channel, currentVersion, howToUpgrade, type InstalledBy, installedBy, readChannel } from "./install.ts";
+import { readJson, writeJson } from "./fsutil.ts";
 import { alive } from "./processes.ts";
 
 type Fetcher = (url: string, init?: RequestInit) => Promise<Response>;
@@ -180,17 +181,13 @@ interface CheckState {
 }
 
 function readState(stateFile: string): CheckState {
-  try {
-    return JSON.parse(readFileSync(stateFile, "utf8")) as CheckState;
-  } catch {
-    return {};
-  }
+  return readJson<CheckState>(stateFile, {});
 }
 
+/** Replaced whole, never written in place: another window reading it meanwhile sees it before or after, never torn. */
 function writeState(stateFile: string, s: CheckState): void {
   try {
-    mkdirSync(dirname(stateFile), { recursive: true });
-    writeFileSync(stateFile, `${JSON.stringify(s)}\n`);
+    writeJson(stateFile, s);
   } catch {}
 }
 
@@ -509,12 +506,15 @@ export async function upgrade(opts: {
     rmSync(next, { force: true });
     symlinkSync(`versions/${v}`, next);
     renameSync(next, join(opts.data, "current"));
-    // Kept: the new one, the one replaced (to go back to), the one running; any other goes.
+    // Kept: the new one, the one replaced (to go back to), the one running; any other goes. The upgrade is done:
+    // one that can't be removed (still running somewhere, read-only) is left, not a failure.
     const keep = new Set([v, opts.version, ...(before ? [before] : [])]);
     for (const old of readdirSync(versions).sort()) {
       if (keep.has(old) || old.startsWith(".")) continue;
-      rmSync(join(versions, old), { recursive: true, force: true });
-      result.removed.push(old);
+      try {
+        rmSync(join(versions, old), { recursive: true, force: true });
+        result.removed.push(old);
+      } catch {}
     }
     return { status: "upgraded", ...result, ...(named && named !== opts.version ? { replaced: named } : {}) };
   } finally {

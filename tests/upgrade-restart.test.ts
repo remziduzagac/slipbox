@@ -12,6 +12,7 @@ import {
   readlinkSync,
   realpathSync,
   rmSync,
+  statSync,
   symlinkSync,
   utimesSync,
   writeFileSync,
@@ -32,6 +33,8 @@ import {
 import {
   LOCK_STALE_MS,
   lockUpgrades,
+  skippedVersion,
+  skipVersion,
   takeOver,
   UpgradeCancelled,
   UpgradeError,
@@ -208,6 +211,32 @@ describe("upgrade, against what's installed (UPG-T1)", () => {
     expect(ls(join(data, "versions"))).toEqual(["1.0.0", "1.5.0", "2.0.0"]);
     // What's said keeps the one replaced, not the one running.
     expect(upgradeSaid(r, "stable")).toBe("slipbox 1.0.0 → 2.0.0; 1.5.0 is kept, to go back to (0.8.0, 0.9.0 removed)");
+  });
+
+  test("an old version that can't be removed is left: the upgrade is done, not failed", async () => {
+    if (process.getuid?.() === 0) return; // root removes it anyway
+    const data = layout(["0.9.0", "1.0.0", "1.5.0"], "1.5.0");
+    const stuck = join(data, "versions", "0.9.0");
+    chmodSync(stuck, 0o555);
+    try {
+      const { fetcher } = releases(fakePack("2.0.0"));
+      const execPath = join(data, "versions", "1.0.0", "slipbox");
+      const r = await upgrade({ release, version: "1.0.0", data, execPath, env: {}, fetcher });
+      expect(r).toMatchObject({ status: "upgraded", latest: "2.0.0", replaced: "1.5.0", removed: [] });
+      expect(readlinkSync(join(data, "current"))).toBe("versions/2.0.0");
+      expect(ls(join(data, "versions"))).toEqual(["0.9.0", "1.0.0", "1.5.0", "2.0.0"]);
+    } finally {
+      chmodSync(stuck, 0o755);
+    }
+  });
+
+  test("update.json replaced whole, never written in place: a window reading it meanwhile never sees it torn", () => {
+    const file = join(mkdtempSync(join(sandbox, "state-")), "update.json");
+    skipVersion(file, "1.0.0");
+    const first = statSync(file).ino;
+    skipVersion(file, "1.1.0");
+    expect(statSync(file).ino).not.toBe(first);
+    expect(skippedVersion(file)).toBe("1.1.0");
   });
 
   test("the version running removed by another window's upgrade: still the installer's, by its path", async () => {

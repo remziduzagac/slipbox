@@ -1,6 +1,6 @@
 // Upgrading and restarting from the TUI (UPG): the update offer and its choices, the restart into the new version where
 // you were, an upgrade underneath offered as the restart. They drive two real release builds of this checkout
-// (releases.ts, made once a run): the first installed in the check's data folder as the installer lays it out — or as
+// (release-builds.ts, once a run): the first installed in the check's data folder as the installer lays it out — or as
 // Homebrew does, or put somewhere by hand — the second served as a release from a folder. One, the restart's question
 // about notes unsaved, runs from source.
 

@@ -5,18 +5,9 @@
 // (`core/restart.ts`) and quits; `tui/run.ts` hands over once the screen is given back, and the slipbox that starts
 // takes the note and comes back where you were.
 
-import {
-  closeSync,
-  existsSync,
-  mkdirSync,
-  openSync,
-  readdirSync,
-  readFileSync,
-  realpathSync,
-  rmSync,
-  statSync,
-} from "node:fs";
+import { closeSync, existsSync, mkdirSync, openSync, readFileSync, realpathSync, rmSync, statSync } from "node:fs";
 import { join } from "node:path";
+import { removeOlderThan } from "../core/fsutil.ts";
 import { type Channel, currentVersion, homebrewPrefix, type InstalledBy } from "../core/install.ts";
 import { type SessionState, sessionFrom } from "../core/position.ts";
 import type { ReleaseBuild } from "../core/release.ts";
@@ -108,7 +99,8 @@ export class Updates {
   start(): void {
     const env = this.env;
     if (!env?.release) return;
-    this.clearLeftovers(env.stateDir);
+    // Background upgrades' answers left by a TUI that quit before they came, a day old.
+    removeOlderThan(env.stateDir, 24 * 60 * 60 * 1000, /^upgrade-\d+\.json$/);
     void dailyUpdateCheck({
       release: env.release,
       version: env.version,
@@ -127,17 +119,6 @@ export class Updates {
     if (env.by === "installer") this.startedWith = currentVersion(env.data);
     this.timer = setInterval(() => this.tick(), 1000);
     (this.timer as { unref?: () => void }).unref?.();
-  }
-
-  /** Background upgrades' answers left by a TUI that quit before they came (a day old). */
-  private clearLeftovers(dir: string): void {
-    try {
-      for (const e of readdirSync(dir)) {
-        if (!/^upgrade-\d+\.json$/.test(e)) continue;
-        const file = join(dir, e);
-        if (Date.now() - statSync(file).mtimeMs > 24 * 60 * 60 * 1000) rmSync(file, { force: true });
-      }
-    } catch {}
   }
 
   tick(): void {
@@ -173,6 +154,8 @@ export class Updates {
       if (!seen || !isNewer(seen, env.version) || seen === this.startedWith || this.offeredUnderneath.has(seen)) return;
       // This window's own upgrade, running or done, is said by its message: whatever version it installs.
       if (this.mine.has(seen) || this.background) return;
+      // An offer waiting of this version, or an older one, is out of date: it's installed; the restart starts it.
+      this.queue = this.queue.filter((q) => !q.key.startsWith("offer:") || isNewer(q.key.slice(6), seen));
       this.whenQuiet(`restart:${seen}`, () => this.offerRestart(seen));
     } finally {
       this.looking = false;
@@ -197,6 +180,8 @@ export class Updates {
   /** What the daily check found: its line kept in the messages list, and the offer opened once the TUI is quiet. */
   found(f: Found): void {
     this.app.listMessage("info", f.said);
+    // Installed underneath already, its restart waiting: not offered again as out.
+    if (this.queue.some((q) => q.key.startsWith("restart:") && !isNewer(f.version, q.key.slice(8)))) return;
     // Dropped when your config or DO_NOT_TRACK turned the check off meanwhile.
     this.whenQuiet(`offer:${f.version}`, () => {
       if (this.env?.checkOn() && !doNotTrack(this.env.env)) this.offer(f.version);
@@ -479,6 +464,8 @@ export class Updates {
 
   /** Notes unsaved asked about first (UPG-D3), then the note left and slipbox quit. */
   private ask(upgrade: string | null): void {
+    // A restart waiting for quiet is this one, answered now: it never comes back by itself.
+    this.forget("restart");
     for (const v of this.app.allViews()) if (v.insert) stopInsert(this.app, v);
     const unsaved = this.unsaved();
     if (!unsaved.length) return this.leave(upgrade);

@@ -9,7 +9,7 @@ import { constants as os } from "node:os";
 import { isatty } from "node:tty";
 import { join, resolve } from "node:path";
 import { libc } from "./libc.ts";
-import { atomicWrite } from "./fsutil.ts";
+import { atomicWrite, removeOlderThan } from "./fsutil.ts";
 import { homebrewPrefix, type InstalledBy } from "./install.ts";
 import { stateHome } from "./paths.ts";
 
@@ -67,12 +67,7 @@ export function takeNote(opts: { pid: number; ppid: number; now?: number; dir?: 
     rmSync(file, { force: true });
     if (found) break;
   }
-  try {
-    for (const e of readdirSync(dir)) {
-      const file = join(dir, e);
-      if (now - statSync(file).mtimeMs > 24 * 60 * 60 * 1000) rmSync(file, { force: true });
-    }
-  } catch {}
+  removeOlderThan(dir, 24 * 60 * 60 * 1000, /^/, now);
   return found;
 }
 

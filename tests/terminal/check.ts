@@ -23,7 +23,7 @@ export interface Check {
   options?: SessionOptions;
   /** Timed against the clock (an answer within so long): run by itself, after the others, not among them. */
   alone?: boolean;
-  /** Drives the two release builds of this checkout (releases.ts, UPG): the runner makes them once, first. */
+  /** Drives the two release builds of this checkout (release-builds.ts, UPG): the runner makes them once, first. */
   releases?: boolean;
   run: (s: Session) => Promise<void>;
 }

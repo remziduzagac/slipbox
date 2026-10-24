@@ -6,10 +6,12 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
   renameSync,
   rmSync,
   symlinkSync,
+  utimesSync,
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
@@ -467,6 +469,52 @@ describe("the update offer (UPG-T4)", () => {
     expect(h.frame()).toContain("slipbox 0.5.5 is installed");
   });
 
+  test("an offer and a restart underneath of the same version: the restart alone, whichever came first", async () => {
+    const { h, clock } = await clocked();
+    const data = mkdtempSync(join(sandbox, "data-"));
+    for (const v of ["0.5.0", "0.6.0"]) mkdirSync(join(data, "versions", v), { recursive: true });
+    symlinkSync("versions/0.5.0", join(data, "current"));
+    withEnv(h, { data });
+    // The daily check's offer first, then 0.6.0 installed by another terminal.
+    h.app.updates.found(found);
+    relink("versions/0.6.0", join(data, "current"));
+    await h.app.updates.lookUnderneath();
+    clock.now += QUIET_MS;
+    h.app.updates.tick();
+    expect(h.frame()).toContain("slipbox 0.6.0 is installed");
+    await shown(h, clock);
+    await h.keys("escape");
+    clock.now += QUIET_MS;
+    h.app.updates.tick();
+    expect(h.app.overlay).toBeNull();
+    // The restart waiting first, then the daily check's offer.
+    const second = await clocked();
+    withEnv(second.h, { data: mkdtempSync(join(sandbox, "data-")) });
+    const d2 = second.h.app.updates.env!.data;
+    for (const v of ["0.5.0", "0.6.0"]) mkdirSync(join(d2, "versions", v), { recursive: true });
+    symlinkSync("versions/0.6.0", join(d2, "current"));
+    await second.h.app.updates.lookUnderneath();
+    second.h.app.updates.found(found);
+    second.clock.now += QUIET_MS;
+    second.h.app.updates.tick();
+    expect(second.h.frame()).toContain("slipbox 0.6.0 is installed");
+    await shown(second.h, second.clock);
+    await second.h.keys("escape");
+    second.clock.now += QUIET_MS;
+    second.h.app.updates.tick();
+    expect(second.h.app.overlay).toBeNull();
+  });
+
+  test("a background upgrade's answer left a day ago is cleared at start; a fresh one, and the check's file, stay", async () => {
+    const h = await harness();
+    const env = withEnv(h, {}, { on: false });
+    for (const f of ["upgrade-1.json", "upgrade-2.json", "update.json"]) writeFileSync(join(env.stateDir, f), "{}");
+    const old = (Date.now() - 2 * 24 * 60 * 60 * 1000) / 1000;
+    for (const f of ["upgrade-1.json", "update.json"]) utimesSync(join(env.stateDir, f), old, old);
+    h.app.updates.start();
+    expect(readdirSync(env.stateDir).sort()).toEqual(["update.json", "upgrade-2.json"]);
+  });
+
   test("Upgrade, restart later with this binary gone (another window's upgrade removed it): current's runs it", async () => {
     const { h } = await clocked();
     const data = mkdtempSync(join(sandbox, "data-"));
@@ -588,6 +636,36 @@ describe("restarting (UPG-T5)", () => {
     clock.now += QUIET_MS;
     h.app.updates.tick();
     expect(h.frame()).toContain("1 note is unsaved: index.md.");
+  });
+
+  test("a restart waiting for quiet, then :restart asked and cancelled: it doesn't come back, nor restart once saved", async () => {
+    const { h, clock } = await clocked();
+    withEnv(h, {
+      execPath: fakeSlipbox({ ok: true, data: { status: "upgraded", from: "0.5.0", latest: "0.6.0", removed: [] } }, 1),
+    });
+    h.app.updates.upgradeBeside("0.6.0");
+    const restarting = h.app.updates.restart();
+    clock.now += 100;
+    await h.keys("i", "X");
+    await restarting;
+    expect(h.app.overlay).toBeNull();
+    // Waiting for quiet. Asked again, by its message's :restart: a note unsaved, so asked about; Cancel.
+    await h.keys("escape", ":", ..."restart", "enter");
+    expect(h.frame()).toContain("1 note is unsaved: index.md.");
+    await shown(h, clock);
+    await h.keys("escape");
+    expect(h.app.overlay).toBeNull();
+    clock.now += QUIET_MS;
+    h.app.updates.tick();
+    expect(h.app.overlay).toBeNull();
+    // The note saved, and a pause: nothing restarts.
+    await h.keys(":", "w", "enter");
+    expect(h.app.dirtyBuffers()).toHaveLength(0);
+    clock.now += QUIET_MS;
+    h.app.updates.tick();
+    await Bun.sleep(10);
+    expect(h.quit.called).toBe(false);
+    expect(h.app.overlay).toBeNull();
   });
 
   test("an upgrade beside the TUI is waited for, saying so", async () => {

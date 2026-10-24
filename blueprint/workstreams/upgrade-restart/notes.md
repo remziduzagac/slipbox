@@ -190,3 +190,39 @@ CI on `fd32030` failed two test files, both this branch's:
   harness only some checks use is now `HARNESS_FOR`'s, in `scripts/ci-scope.ts`: what reaches the harness only through
   it runs those checks, `updates` here. The `updates` check reads the pack's name from the builds' record, no longer
   from `scripts/release.ts` itself. The two D239 tests fail without `HARNESS_FOR` (mutation-checked).
+
+## Round 3
+
+The third and last round, at the maintainer's call since the scope grew. Codex was still at its usage limit (a menu in
+its pane), so a fresh Claude reviewer did its part beside `/code-review`, each on `git diff origin/dev...HEAD`, the
+upgrade and restart paths first. Thirteen findings, merged into twelve.
+
+Fixed, each with a test that fails without it (mutation-checked):
+
+1. **A restart waiting for quiet came back after a later `:restart` was cancelled** (both reviews), or restarted unasked
+   once the notes were saved: a restart asked now drops the one waiting (`ask`).
+2. **The same version offered twice:** the daily check's offer and the restart of the same version installed underneath
+   were both queued. An offer not newer than a restart waiting is dropped, or never queued.
+3. **An old version that couldn't be removed failed the upgrade** after `current` had moved: the hand-over said it
+   failed and started the old binary. It's left now, the upgrade done.
+4. **`update.json` was written in place:** a window reading it meanwhile could lose the version you skipped. It's
+   replaced whole (`writeJson`).
+5. **`HARNESS_FOR` was too wide:** `tests/terminal/releases.ts` held both the builder and what every check's session
+   reads. The builder is `release-builds.ts` now, `HARNESS_FOR`'s; `releases.ts`, every check's.
+
+Also done, being small and in hand: the day-old sweep of a state folder written once (`removeOlderThan` in
+`core/fsutil.ts`) for the restart's notes and background upgrades' answers, with a test of the latter.
+
+Logged, not fixed here:
+
+- **`esc` drops a ticked Skip this version,** as the design says (`esc`, or a click outside, is Not now with nothing
+  kept). Whether a ticked Skip should be kept by `esc` is the maintainer's to say.
+- **A descriptor of Bun's that isn't close-on-exec survives each `execve` on macOS** (and on a libc without
+  `close_range`): one more a restart. Marking it by `fcntl` through FFI is unsafe on Apple Silicon (variadic).
+- **`docs/manual/cli.md`'s `--json` doesn't list `replaced`,** the version kept to go back to.
+
+Rejected, with why: exit hooks run twice when `execve` fails (the spool's and the language servers' are `once`, and
+`stopAllNow` finds nothing the second time); a paused stdin taking the fallback child's keys (the reviewer's probe:
+it doesn't); `blueprint/design/distribution.md` not updated (the workstream's MODIFIED notes, applied at consolidation).
+
+Tests after the round: the five test files these reach, 189 pass; `bun run test:terminal updates` 10/10.

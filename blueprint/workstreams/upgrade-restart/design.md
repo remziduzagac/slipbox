@@ -263,9 +263,9 @@ Previously: `$XDG_STATE_HOME/slipbox/update.json` (when it last asked, what it f
 ## MODIFIED design/testing.md § The terminal tests
 
 Adds a check file, `updates` (`tests/terminal/checks/updates.ts`), of the offer, `:upgrade`, and the restart with its
-question about notes unsaved, driving real release builds (`tests/terminal/releases.ts`): two of the checkout, built for
-this machine (no `--target`, which would download Bun's runtime) with `SLIPBOX_RELEASE` defined, once a run before the
-workers start, when a chosen check says `releases` — the runner tells its workers where (`SLIPBOX_TERMINAL_RELEASES`) —
+question about notes unsaved, driving real release builds (`tests/terminal/release-builds.ts`; where they are, which
+every check's session reads, `releases.ts`): two of the checkout, built for this machine (no `--target`, which would
+download Bun's runtime) with `SLIPBOX_RELEASE` defined, once a run before the workers start, when a chosen check says `releases` — the runner tells its workers where (`SLIPBOX_TERMINAL_RELEASES`) —
 the second from a copy of the sources whose `version.ts` says the next patch version, so the slipbox that comes back is
 the new one. A check installs the first in its own data folder as the installer lays it out (linked, not copied), as
 Homebrew does (a keg and `opt`), or put by hand, and starts it: the harness's `bin` starts a given binary in place of
@@ -279,5 +279,5 @@ installed after. On Linux, `/proc/<pid>/exe` shows the process runs the new file
 
 In "What a change reaches", "every check for the harness and the samples the checks' home is built from." becomes
 "every check for the harness and the samples the checks' home is built from, but a file of the harness only some checks
-use runs theirs (`HARNESS_FOR`): what reaches the harness only through the release builds (`tests/terminal/releases.ts`,
-which load `scripts/release.ts`) runs the checks of upgrading, `updates`."
+use runs theirs (`HARNESS_FOR`): what reaches the harness only through the builder of the release builds
+(`tests/terminal/release-builds.ts`, which loads `scripts/release.ts`) runs the checks of upgrading, `updates`."

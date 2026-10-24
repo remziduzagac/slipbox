@@ -12,7 +12,7 @@ import { join } from "node:path";
 import { COMMAND_SPECS } from "../../src/core/command-specs.ts";
 import type { Check } from "./check.ts";
 import { CHECK_FILES, CHECKS } from "./checks/index.ts";
-import { buildAndRecord } from "./releases.ts";
+import { buildAndRecord } from "./release-builds.ts";
 import type { WorkerResult } from "./worker.ts";
 
 const args = process.argv.slice(2);

@@ -120,7 +120,7 @@ const HARNESS = ["tests/terminal/run.ts", "tests/terminal/worker.ts"];
  * Files of the checks' harness that only some checks use, and those checks: a change that reaches the harness only
  * through one runs them, not every check. The checkout's release builds, which the checks of upgrading drive (UPG).
  */
-const HARNESS_FOR: Record<string, string[]> = { "tests/terminal/releases.ts": ["updates"] };
+const HARNESS_FOR: Record<string, string[]> = { "tests/terminal/release-builds.ts": ["updates"] };
 /** What every test and check depends on: the packages, the toolchain, the workflows. */
 const EVERYTHING = /^(package\.json|bun\.lock|bunfig\.toml|tsconfig\.json|mise\.toml|mise\.lock|\.github\/)/;
 /** What only the lint job reads, which runs on every change. */
