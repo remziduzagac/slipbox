@@ -223,9 +223,34 @@ something. Before 1.0, that's an upgrade to a new minor version, such as `0.2.1`
 [Versions](../manual/versions.md) says what each kind of release may change.
 
 A release build asks once a day, while you use it, whether a newer release is out. On previews, it asks about a newer
-preview too. If there is one, it says so in a message. It sends nothing about you. To turn it off, set
-`update.check = false` in your settings, or set `DO_NOT_TRACK` in your environment. The
-[privacy chapter](../manual/privacy.md) has what slipbox sends, and when.
+preview too. It sends nothing about you. To turn it off, set `update.check = false` in your settings, or set
+`DO_NOT_TRACK` in your environment. The [privacy chapter](../manual/privacy.md) has what slipbox sends, and when.
+
+### When a newer version is out
+
+When there is one, slipbox offers it in a small window, once you've stopped typing for a moment. Keys you were typing
+as it opens don't answer it. What it offers depends on how you installed slipbox.
+
+**Installed with the installer:**
+
+- **Upgrade and restart:** slipbox quits as it does, installs the new version as `slipbox upgrade` does, and starts it
+  in the same terminal. You come back where you were: the same folder, tabs, windows and places in your notes. While
+  it installs, `ctrl+c` cancels; a failed or cancelled upgrade starts the version you had, and says why.
+- **Upgrade, restart later:** the new version is installed while you go on working, and a message says when it's
+  ready. `:restart` starts it when you choose. Quitting before it's done leaves it to finish: the next start runs it.
+- **Not now:** asked again at the next check, a day later.
+
+**Installed with Homebrew:** it copies `brew upgrade slipbox`, to run in a shell. **Put somewhere by hand:** it copies
+the address of the releases. Either way, once the new version is in place, slipbox offers to restart into it.
+
+Tick **Skip this version** with Not now, and that version isn't offered again; a newer one is. `esc` is Not now.
+
+`:upgrade` asks at once, even with the daily check off, and offers what it finds, a skipped version included. A
+version installed while slipbox runs, from another terminal or by `brew upgrade`, is noticed within seconds and offered
+as a restart alone.
+
+`:restart` starts slipbox again, as the newest version installed, where you are. Notes with unsaved changes are asked
+about first: **Save and restart** saves them as `:wqa` does; **Cancel** restarts nothing.
 
 ## Uninstalling
 

@@ -149,8 +149,8 @@ auto_install = true            # your file only. Servers published on npm, and m
                                # pins
 
 [update]                       # your file only
-check = true                   # a release's TUI asks once a day whether there's a newer release, and says so;
-                               # DO_NOT_TRACK turns it off too. The command line never asks
+check = true                   # a release's TUI asks once a day whether there's a newer release, and offers it;
+                               # DO_NOT_TRACK turns it off too. The command line never asks; :upgrade asks anyway
 
 [context]                      # the context bundle: space s c, slipbox context
 depth = 1                      # 0–5: links followed out from the note; 1, what it links to; 0, none

@@ -122,7 +122,7 @@ then the other vaults it finds there. So links from one vault to another count a
 
 slipbox has no account and no telemetry. Built-in background or on-demand requests include:
 
-- the daily check for a newer release, in a release you installed, and only in the TUI
+- the daily check for a newer release, in a release you installed, and only in the TUI; `:upgrade` asks when you ask
 - installing a language server from npm, the first time one is needed
 - fetching a picture on the web, which asks first by default
 

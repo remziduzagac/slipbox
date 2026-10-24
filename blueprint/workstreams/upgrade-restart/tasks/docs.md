@@ -1,5 +1,5 @@
 ---
-status: todo
+status: review
 assignee: claude-23
 blocked_by: [UPG-T4, UPG-T5, UPG-T6]
 created: "2026-10-24"
@@ -22,3 +22,11 @@ What users will see, said where they read about updates, without the blueprint's
 - Delivers: ../requirements.md § Acceptance criteria (the user docs and the CHANGELOG).
 
 ## Log
+
+- 2026-10-24: `docs/guides/install.md` § When a newer version is out (the offer by install, Skip, `:upgrade`,
+  `:restart` and its question); `privacy.md` (the window, `:upgrade` asking when asked, the restart offer sending
+  nothing); `configuration.md`'s `[update]`; `environment-and-storage.md` (`update.json`'s skip, `restart/`,
+  `upgrade-<pid>.json`, `upgrade.lock`, `DO_NOT_TRACK`); `how-it-works.md`; `keys.md`'s `:restart`, `:upgrade`;
+  `cli.md`'s `upgrade` (one at a time, never back, `installed`); the README; the CHANGELOG's Added and Changed.
+  `bun run test:docs` 36 pass; `check:docs` passes (278 files, links, spelling). No screenshot shows the update
+  message.

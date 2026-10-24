@@ -955,6 +955,8 @@ Your configuration's [`[aliases]`](configuration.md) adds more commands, or rena
 | `:qa`, `:qall` | quit |
 | `:wq`, `:x`, `:wqa`, `:xa` | save every changed note and quit |
 | `:q!` | quit without saving |
+| `:restart` | start slipbox again, as the newest version installed, where you are; asks first about unsaved notes |
+| `:upgrade` | ask now whether a newer slipbox is out, and offer it |
 | `:e <note>`, `:open <note>` | open a note, or any text file here, by its path |
 | `:vs [note]` / `:sp [note]` | split side by side / stacked, the note in the new window |
 | `:tabnew [note]` | a new tab, with this note or the one named |

@@ -1740,7 +1740,12 @@ With `--json`, the data is `[{id, title, cli, desc}]`. `cli` is `null` for an in
 ### `upgrade`
 
 Installs the latest release, when slipbox was put here by its installer. The release is checked before it's used. The
-version it replaces is kept.
+version it replaces is kept, and so is the one running.
+
+One upgrade runs at a time: another started meanwhile says `another upgrade is running` and changes nothing. It never
+installs a version older than the one installed: a slipbox still running an older version, left open in another
+terminal, says `slipbox 0.6.0 is installed already (this is 0.5.0)`. A version already downloaded is installed without
+downloading it again.
 
 When slipbox follows previews ([`channel`](#channel)), `upgrade` installs the newest of the latest release and the
 newest preview. [Installation](../guides/install.md) covers installing.
@@ -1755,7 +1760,8 @@ slipbox upgrade
 Installed by Homebrew, it says that `brew upgrade slipbox` does it. Run from source, it says there are no releases to
 follow. Both are exit 1. The command line never checks for updates by itself ([Privacy](privacy.md)).
 
-With `--json`, the data is `{status, from, latest, removed[]}`. `status` is `upgraded`, `current` or `available`.
+With `--json`, the data is `{status, from, latest, removed[]}`. `status` is `upgraded`, `current`, `available`, or
+`installed`, with the version installed as `installed`.
 
 ### `channel`
 
