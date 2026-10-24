@@ -692,6 +692,8 @@ export class Mouse {
         // nothing.
         const [w, which] = arg.split(":");
         const b = MODES.find((m) => m.id === which);
+        // A floating window opened since the frame clicked was drawn: the commands act on it, not on this window.
+        if (this.app.floating) break;
         const v = b ? this.focusWindow(Number(w)) : null;
         if (!b || !v) break;
         // Its refusal said once, if ending typing said it already (`App.sayingOnce`).

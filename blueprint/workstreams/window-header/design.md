@@ -31,10 +31,10 @@ change its mode without `setViewMode` (a data file that stopped parsing goes to 
 file each have their own. Typing isn't a mode: while typing, the button of the mode it's in stays selected, as the chip
 says `INSERT`. A mode the window can't switch to (`Lens.refusal(view, mode)`, the one place `setViewMode`'s refusals
 are decided, returning the message and its level and saying nothing itself) is disabled: drawn
-`topbar_button_disabled`, never `hover` (`button()`'s `hovers`). The header asks every frame, so it asks with
-`drawing` and never parses: a data file whose text changed since its last parse (`NoteBuffer.parseCurrent`) is taken
-to parse, its Read and Lens lit, until a parse says otherwise — a click's, which asks of the text as it is, or a
-switch's. So no keystroke or edit parses a data file in source mode, whatever its size or however many windows show
+`topbar_button_disabled`, never `hover` (`button()`'s `hovers`). The header asks every frame, so it asks
+`Lens.canSwitch`, which never parses: a data file whose text changed since its last parse (`NoteBuffer.parseCurrent`)
+is taken to parse, its Read and Lens lit, until a parse says otherwise — a click's, which asks of the text as it is,
+or a switch's. So no keystroke or edit parses a data file in source mode, whatever its size or however many windows show
 it, and data is never judged mid-typing (an open quote is normal there). The selected one
 is never disabled: it's the mode the window is in, even where the window couldn't switch to it now (typing in the
 lens on data that stopped parsing: Lens selected, until typing ends and the window goes to source mode, said). A file

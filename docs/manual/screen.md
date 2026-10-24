@@ -339,8 +339,8 @@ A click on one of those says why. A data file you've changed since slipbox last 
 click finds out, and says so if it doesn't parse.
 
 In a narrow window, the breadcrumb folds first, keeping room for the heading the cursor is in. Then the buttons shorten
-to `R` `L` `S`, and at last only the bright one is left. Which of these a window shows depends on its width alone, so
-the buttons stay where they are as you move and switch.
+to `R` `L` `S`, and at last only the bright one is left. Which of these a window shows depends on its width, and in a
+split on its file's name, never on where the cursor is or the mode: the buttons stay put as you move and switch.
 
 The command palette has them too: Read mode, Lens mode and Source mode.
 

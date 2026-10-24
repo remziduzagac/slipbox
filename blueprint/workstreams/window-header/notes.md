@@ -401,3 +401,22 @@ here, and the work go on.
   `tests/terminal-harness.test.ts` reads the status chip's expression in `draw-status.ts` as text, and the mode chips
   had moved to `CHIP` (from `MODES`). The test now takes a window's modes from `MODES`; missed here, since it names the
   file by path rather than importing it.
+- Round 4, the last (round 3 having found real bugs; the maintainer's rule: at most three rounds, a fourth only so):
+  Codex, back from its limit, and `/code-review`, on the pushed diff; only real bugs taken, the rest noted.
+- Round 4's findings: Codex no bug, two wording points; `/code-review` 12, one a real bug. Taken, as the maintainer's
+  rule allows in a last round, only that and two sentences of this change's own that were false:
+  - A click landing between a key that opens a floating window (the floating scratch, a peek) and the next frame hit
+    a header button on the old geometry, and its command switched the floating window: the click does nothing while a
+    floating window is open. A unit test fails without it (checked); no terminal check, since a click between a key
+    and the next frame can't be timed in a terminal.
+  - The docs said the buttons' form depends on the window's width alone: in a split, its file's name counts too. The
+    design said the header asks `refusal` with `drawing`: it asks `Lens.canSwitch`.
+- Round 4's smaller findings, left for later (not in the pull request):
+  - `lensWhat` names a data file by its reader's format, so `.env`, `.properties`, `.cfg` and `.conf` say "the INI",
+    `.jsonc` "the JSON"; `view.mode_lens`'s description says "markdown" for every file.
+  - Altitude, as in earlier rounds: `App.sayingOnce` relies on the two places saying the same words (they share
+    `unparsedText`, and `views.ts` could call `saySourceWhy`); the header must ask for the layout before its buttons
+    while `layoutFor` can switch a mode; `crumbLeast` restates `drawBreadcrumb`'s spacing; `button()`'s positional
+    `hovers`; `canSwitch` asked for Read and Lens alike; `lens.ts` re-exporting `modes.ts`.
+  - Whether the narrower `ui.breadcrumb` deserves `!`: the issue asked for a CHANGELOG line under Changed.
+  - Two files of one name, broken alike, saying their shared words once (taken in round 3, as designed).

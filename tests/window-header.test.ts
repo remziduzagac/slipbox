@@ -483,6 +483,20 @@ describe("the buttons' hover, and what covers them", () => {
     expect([viewMode(t.views[0]!), viewMode(t.views[1]!)]).toEqual(["rendered", "live"]);
   });
 
+  test("a header button clicked in a frame drawn before a floating window opened: neither window switches", async () => {
+    const h = await harness({ open: NOTE, width: 120, height: 30 });
+    h.frame();
+    const stale = h.app.geometry!.hot.find((b) => b.id === "mode:0:lens")!;
+    // The floating scratch opens (a key's work); the click comes before the next frame, on the old geometry.
+    await h.app.run("scratch.open");
+    expect(h.app.floating?.kind).toBe("scratch");
+    const f = h.app.floating!.view;
+    h.app.mouse.handle({ type: "down", x: stale.x + 1, y: stale.y, button: 0 });
+    h.app.mouse.handle({ type: "up", x: stale.x + 1, y: stale.y, button: 0 });
+    expect(h.app.floating?.view).toBe(f);
+    expect([viewMode(f), viewMode(h.app.tab!.views[0]!)]).toEqual(["rendered", "rendered"]);
+  });
+
   test("a floating window over the header: its buttons under it can't be clicked, nor act on the floating one", async () => {
     const h = await harness({ open: NOTE, width: 120, height: 30 });
     h.frame();
