@@ -485,8 +485,8 @@ export class App {
   overlay: Overlay | null = null;
   pending: string[] = [];
   messages: Message[] = [];
-  /** How many messages have been said: a count that only grows, where the list drops its oldest. */
-  said = 0;
+  /** While a click is handled (`sayingOnce`): the messages it has said, by level and words. */
+  private saidInClick: Set<string> | null = null;
   /** The messages showing as floating boxes, newest first (each for 4 s, 8 s an error, from when it's first drawn). */
   toasts: Message[] = [];
   private toastTimer: ReturnType<typeof setTimeout> | null = null;
@@ -769,9 +769,25 @@ export class App {
   // -------------------------------------------------------------------------------------------
   // Messages (3.13)
 
+  /**
+   * `fn`, a click's handling, each message it says said once (HDR-D2): ending typing can say a data file doesn't parse,
+   * and the click's own command the same words; a second click is its own, and says them again.
+   */
+  sayingOnce<T>(fn: () => T): T {
+    const was = this.saidInClick;
+    this.saidInClick = new Set();
+    try {
+      return fn();
+    } finally {
+      this.saidInClick = was;
+    }
+  }
+
   message(level: Level, text: string): void {
+    const said = `${level} ${text}`;
+    if (this.saidInClick?.has(said)) return;
+    this.saidInClick?.add(said);
     const m = { level, text, at: this.now() };
-    this.said++;
     this.messages.push(m);
     if (this.messages.length > MESSAGE_LIMIT) this.messages.shift();
     // The same message again (a key held down) refreshes its box rather than stacking another.

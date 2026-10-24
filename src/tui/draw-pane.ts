@@ -486,7 +486,7 @@ export function drawHScrollbar(
 }
 
 /** Completion's popup (19.16): up to ten items under the cursor (above it when there's no room), the chosen one marked, each item's detail dimmed beside it. */
-export function drawCompletion(app: App, c: Canvas, at: { x: number; y: number }, top: number, bottom: number): void {
+export function drawCompletion(app: App, c: Canvas, at: { x: number; y: number }, top: number, bottom: number): Rect {
   const comp = app.completion!;
   const theme = app.theme;
   const rows = Math.min(10, comp.shown.length);
@@ -514,6 +514,7 @@ export function drawCompletion(app: App, c: Canvas, at: { x: number; y: number }
         detailW,
       );
   });
+  return { x: x0, y: y0, w, h: rows };
 }
 
 /** The signature being typed (19.16): one line above the cursor, its active parameter marked. */

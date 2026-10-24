@@ -12,7 +12,7 @@ import { crumbLeast, type Geometry } from "../src/tui/draw.ts";
 import { modeButtons } from "../src/tui/draw-header.ts";
 import { drawPane } from "../src/tui/draw-pane.ts";
 import { openDiff } from "../src/tui/diffview.ts";
-import { type ViewMode, viewMode } from "../src/tui/lens.ts";
+import { unparsedText, type ViewMode, viewMode } from "../src/tui/lens.ts";
 import { type Harness, harness, makeSandbox, statusRow } from "./tui-harness.ts";
 
 makeSandbox();
@@ -333,7 +333,7 @@ describe("modes a window can't switch to are disabled (HDR-D2)", () => {
     expect(h.app.messages.slice(before).map((m) => m.level)).toEqual(["warn"]);
   });
 
-  test("two files of one name, both broken: a click on one's Read, the other's typing ended by it, says each", async () => {
+  test("two files of one name, both broken: a click on one's Read, the other's typing ended by it — the words once", async () => {
     const h = await harness({ open: NOTE, width: 200, height: 30, config: (c) => (c.editor.edit_in = "live") });
     for (const d of ["a", "b"]) mkdirSync(join(h.root, d), { recursive: true });
     writeFileSync(join(h.root, "a/data.yaml"), "a: 1\n");
@@ -349,10 +349,10 @@ describe("modes a window can't switch to are disabled (HDR-D2)", () => {
     expect(a.insert).toBe(true);
     expect(a.buf.source).toBe(b.buf.source);
     const before = h.app.messages.length;
-    click(h, "read", 0); // b's Read: ending a's typing says a doesn't parse; b's own refusal is said too
+    click(h, "read", 0); // b's Read: ending a's typing says a doesn't parse; b's refusal, the same words, once
     h.frame();
     expect(viewMode(a)).toBe("source");
-    expect(h.app.messages.slice(before).map((m) => m.level)).toEqual(["warn", "warn"]);
+    expect(h.app.messages.slice(before).map((m) => m.text)).toEqual([unparsedText(b.buf)]);
   });
 
   test("a click on a header button focuses its window and the content, from a panel too", async () => {
@@ -423,13 +423,16 @@ describe("modes a window can't switch to are disabled (HDR-D2)", () => {
 
   test("a drawn buffer can switch to nothing, and its floating window has no header", async () => {
     const h = await harness({ open: NOTE, width: 120, height: 30 });
-    openDiff(h.app, { before: "a\nb\n", now: "a\nc\n", path: "x.txt", title: "x.txt" });
+    const lines = (w: string) => Array.from({ length: 20 }, (_, i) => `${w} ${i}`).join("\n");
+    openDiff(h.app, { before: lines("was"), now: lines("now"), path: "x.txt", title: "x.txt" });
     const f = h.app.floating!.view;
     expect(f.buf.drawn).toBeDefined();
     for (const m of ["source", "live"] as const)
       expect(h.app.lens.refusal(f, m)).toEqual({ level: "info", text: "a diff is drawn one way" });
     expect(h.app.lens.refusal(f, viewMode(f))).toBeNull(); // the mode it's in is never refused
     h.frame();
+    // Tall enough for a header (8 rows and more): only its being the floating window keeps it off.
+    expect(h.app.geometry!.panes.find((p) => p.view === f)!.h).toBeGreaterThanOrEqual(8);
     expect(h.app.geometry!.hot.filter((b) => b.id.startsWith("mode:-1:"))).toEqual([]);
   });
 
@@ -443,6 +446,43 @@ describe("modes a window can't switch to are disabled (HDR-D2)", () => {
 });
 
 describe("the buttons' hover, and what covers them", () => {
+  test("completion's popup over another window's header: its buttons under it can't be clicked", async () => {
+    const h = await harness({ open: NOTE, width: 100, height: 40 });
+    await h.keys("ctrl+w", "s"); // stacked: the lower window's header under the upper's last row
+    const t = h.app.tab!;
+    t.active = 0;
+    h.frame();
+    const lower = h.app.geometry!.hot.filter((b) => b.id.startsWith("mode:1:"));
+    expect(lower.length).toBe(3);
+    await h.keys("shift+l", "shift+a", "[", "[");
+    expect(h.app.view!.insert).toBe(true);
+    h.frame();
+    const pop = h.app.geometry!.completion!;
+    expect(pop).toBeTruthy();
+    const under = (b: { x: number; y: number; w: number }) =>
+      b.y >= pop.y && b.y < pop.y + pop.h && b.x + b.w > pop.x && b.x < pop.x + pop.w;
+    const covered = lower.filter(under);
+    expect(covered.length).toBeGreaterThan(0); // the popup lies over the lower header's buttons
+    expect(h.app.geometry!.hot.filter((b) => b.id.startsWith("mode:1:") && under(b))).toEqual([]);
+    const b = covered[0]!;
+    h.app.mouse.handle({ type: "down", x: b.x + 1, y: b.y, button: 0 });
+    h.app.mouse.handle({ type: "up", x: b.x + 1, y: b.y, button: 0 });
+    expect(h.app.view!.insert).toBeFalsy(); // the click ended typing, as every click does
+    expect(t.active).toBe(0);
+    expect(viewMode(t.views[1]!)).toBe("rendered");
+  });
+
+  test("a stacked split's lower window: its own header's buttons, its own mode", async () => {
+    const h = await harness({ open: NOTE, width: 120, height: 40 });
+    await h.keys("ctrl+w", "s");
+    const t = h.app.tab!;
+    const [upper, lower] = [buttons(h, 0), buttons(h, 1)];
+    expect(lower[0]!.y).toBeGreaterThan(upper[0]!.y);
+    click(h, "lens", 1);
+    expect(t.active).toBe(1);
+    expect([viewMode(t.views[0]!), viewMode(t.views[1]!)]).toEqual(["rendered", "live"]);
+  });
+
   test("a floating window over the header: its buttons under it can't be clicked, nor act on the floating one", async () => {
     const h = await harness({ open: NOTE, width: 120, height: 30 });
     h.frame();
@@ -524,6 +564,38 @@ describe("room: the buttons give way before the breadcrumb's innermost heading (
     expect(crumbLeast({ crumb: ">", crumbIcon: "#" })).toBe(2 + 4 + 8);
     // A heading one column wide keeps its place too: never under the 4 columns a breadcrumb is drawn in.
     expect(modeButtons(25, crumbLeast({ crumb: "›", crumbIcon: "§" }))).toBe("letters");
+  });
+
+  test("the buttons keep their form as the mode changes: a data file's Read and Source alike (HDR-D8)", async () => {
+    const h = await harness({ open: YAML, width: 160, height: 40 });
+    const v = h.app.view!;
+    const form = (w: number) => {
+      const c = new TextCanvas(w, 30);
+      const geo: Geometry = {
+        ...{ panes: [], sidebar: null, outline: null, sidebarPane: null, outlinePane: null, tabs: [], overlay: null },
+        ...{ hot: [], separators: [], scrollbars: [], tabStrip: null, popup: null, crumbAnchors: {}, rules: [] },
+        verticals: [],
+      };
+      drawPane(h.app, c, v, { x: 0, y: 0, w, h: 30 }, true, false, false, false, geo);
+      const bs = geo.hot.filter((b) => b.id.startsWith("mode:"));
+      return bs
+        .map((b) =>
+          c.rows[b.y]!.slice(b.x, b.x + b.w)
+            .join("")
+            .trim(),
+        )
+        .join(" ");
+    };
+    // Its rendered layout has headings (the parse's), its source layout none: the room must not follow them.
+    expect(h.app.currentLayout(v).headings.length).toBeGreaterThan(0);
+    /** The form, whichever letter is selected. */
+    const shape = (f: string) => (f.includes("Read") ? "full" : f === "R L S" ? "letters" : f ? "selected" : "none");
+    const widths = [26, 30, 33, 38];
+    const read = widths.map((w) => shape(form(w)));
+    expect(new Set(read).size).toBeGreaterThan(1); // the widths span the forms
+    await h.keys("ctrl+k");
+    expect(viewMode(v)).toBe("source");
+    expect(widths.map((w) => shape(form(w)))).toEqual(read);
   });
 
   test("the buttons keep their form as the cursor goes from heading to heading, in a window just narrow enough", async () => {
@@ -608,6 +680,16 @@ describe("room: the buttons give way before the breadcrumb's innermost heading (
       }
     }
     expect(lettersSeen).toBe(true);
+  });
+});
+
+describe("loading the header's modules", () => {
+  test("each loads first on its own: no import cycle runs one before what it needs (lens.ts and the header's modes)", () => {
+    const top = join(import.meta.dir, "..");
+    for (const m of ["lens", "modes", "draw-header", "draw-pane", "mouse", "draw-status", "actions-view"]) {
+      const r = Bun.spawnSync([process.execPath, "-e", `await import("./src/tui/${m}.ts")`], { cwd: top });
+      expect(`${m}: ${r.exitCode} ${r.stderr.toString().trim().split("\n")[0] ?? ""}`).toBe(`${m}: 0 `);
+    }
   });
 });
 

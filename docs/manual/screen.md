@@ -314,7 +314,8 @@ To hide the breadcrumb alone, turn off **Breadcrumb** in `space u u`, or set `ui
 with its buttons. To hide the whole header and give its row to the note, turn off **Window header**, or set
 `ui.window_header = false`. A split's windows then have their names on rows of their own, and without the right rail
 `▤` moves to the top bar.
-A window shorter than 8 rows has no header, and neither does zen mode.
+A window shorter than 8 rows has no header, and neither does zen mode, nor a floating window (a peek, the floating
+scratch, a diff).
 
 ### Read, Lens and Source
 
@@ -337,8 +338,9 @@ language without the code view (or with `render.code = "source"`), and a data fi
 A click on one of those says why. A data file you've changed since slipbox last checked it keeps Read and Lens lit: the
 click finds out, and says so if it doesn't parse.
 
-In a narrow window, the breadcrumb folds first, down to the heading the cursor is in. Then the buttons shorten to `R`
-`L` `S`, and at last only the bright one is left.
+In a narrow window, the breadcrumb folds first, keeping room for the heading the cursor is in. Then the buttons shorten
+to `R` `L` `S`, and at last only the bright one is left. Which of these a window shows depends on its width alone, so
+the buttons stay where they are as you move and switch.
 
 The command palette has them too: Read mode, Lens mode and Source mode.
 

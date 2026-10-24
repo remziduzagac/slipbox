@@ -445,7 +445,7 @@ export const WINDOW_HEADER: Check[] = [
       // stay — the room the breadcrumb keeps is the file's, not the cursor's (HDR-D7).
       const row = s.screen().find((r) => /\bR {2}L {2}S\b/.test(r))!;
       const narrowLeft = row.search(/\bR {2}L {2}S\b/) < row.search(/Read {2}Lens {2}Source/);
-      await s.keys("ctrl+w", narrowLeft ? "h" : "l");
+      await clickMode(s, "Read", narrowLeft ? 0 : 1); // its own selected Read: the narrow window focused, nothing else
       for (const keys of [["g", "g"], ["shift+g"], ["g", "g"]]) {
         await s.keys(...keys);
         await s.settle();
@@ -473,6 +473,60 @@ export const WINDOW_HEADER: Check[] = [
       s.expect(!s.statusLine().includes("SOURCE"), "the click under the peek switched a window to source mode");
       s.expect(!s.text().includes("source —"), "the click under the peek said a window went to source mode");
       await s.see("o go there · t keep as a tab");
+    },
+  },
+  {
+    area: "editing",
+    name: "window header: a narrow window on a data file keeps its buttons' form as its mode goes from Read to Source and back",
+    covers: { cases: ["window-header", "data", "windows"], commands: ["window.split_side", "view.source"] },
+    // The demo vault's targets.yaml: rendered, it has the parse's headings; as written, none.
+    options: { open: "software/halley/targets.yaml", size: { cols: 160, rows: 34 } },
+    run: async (s) => {
+      await ready(s);
+      await s.keys("ctrl+w", "v");
+      await s.until(() => modeButton(s, "Read", 1) !== null, WAIT, "two headers, side by side");
+      await leader(s, "w", "r");
+      await s.status("RESIZE");
+      const letters = () => s.screen().some((r) => /\bR {2}L {2}S\b/.test(r));
+      await s.retry(() => s.keys("l"), letters, "the letters, as a window narrows", 50);
+      await s.keys("escape");
+      const row = s.screen().find((r) => /\bR {2}L {2}S\b/.test(r))!;
+      const narrowLeft = row.search(/\bR {2}L {2}S\b/) < row.search(/Read {2}Lens {2}Source/);
+      await clickMode(s, "Read", narrowLeft ? 0 : 1); // its own selected Read: the narrow window focused, nothing else
+      // Its source has no headings where its rendered view has the parse's: the room the breadcrumb keeps is its own
+      // (HDR-D8), so the letters stay.
+      for (const mode of ["SOURCE", "READ"]) {
+        await s.keys("ctrl+k");
+        await s.status(mode);
+        await s.settle();
+        s.expect(letters(), `the narrow window's buttons changed form in ${mode}`);
+      }
+    },
+  },
+  {
+    area: "editing",
+    name: "window header: completion's popup over a stacked split's lower header — a click there switches nothing under it",
+    covers: {
+      cases: ["window-header", "windows", "editing"],
+      commands: ["window.split_stacked", "cursor.screen_bottom"],
+    },
+    options: { ...at("~/notes/meetings/all-hands-archive.md"), size: { cols: 100, rows: 40 } },
+    run: async (s) => {
+      await ready(s);
+      await s.keys("ctrl+w", "s");
+      await s.until(() => modeButton(s, "Read", 1) !== null, WAIT, "two headers, stacked");
+      await clickMode(s, "Read", 0); // the upper window focused, by its own selected Read
+      const lower = modeButton(s, "Source", 1)!;
+      // At the end of the upper window's last row, a link begun: its popup hangs below, over the lower header.
+      await s.keys("shift+l", "shift+a", "shift+a");
+      await s.status("INSERT");
+      await s.type("[[");
+      await s.until(() => modeButton(s, "Source", 1) === null, WAIT, "the popup over the lower header's Source");
+      await s.send(`\x1b[<0;${lower.x + 1};${lower.y + 1}M`);
+      await s.send(`\x1b[<0;${lower.x + 1};${lower.y + 1}m`);
+      await s.settle();
+      await s.until(() => modeButton(s, "Source", 1) !== null, WAIT, "the lower header seen again, typing ended");
+      s.expect(selectedMode(s, 1).join() === "Read", `the lower window switched: ${selectedMode(s, 1)}`);
     },
   },
 ];

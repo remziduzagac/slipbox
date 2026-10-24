@@ -102,6 +102,9 @@ themes, and the italics tell it from an enabled button in every theme, as withou
 
 ## HDR-D7: The breadcrumb's least room is the file's, not the cursor's (2026-10-24)
 
+> **Corrected by HDR-D8 (2026-10-24):** the least room is the breadcrumb's own, whether or not the file has headings,
+> since a window's headings depend on its mode.
+
 > Taken as recommended while the maintainer was away (2026-10-24); theirs to confirm or change.
 
 **Decision:** While the breadcrumb shows and the file has headings, the room the buttons leave it before they shorten
@@ -114,3 +117,18 @@ form, and moved their places, as the cursor went from heading to heading (the re
 window's form changes only with its width.
 
 **Cost:** A file whose headings are all short keeps a few columns more for the breadcrumb than it needs.
+
+## HDR-D8: The breadcrumb's least room is its own, whatever the mode (2026-10-24)
+
+> Taken as recommended while the maintainer was away (2026-10-24); theirs to confirm or change.
+
+**Decision:** While the breadcrumb shows, the room the buttons leave it before they shorten is always its narrowest
+form but `…` alone (14 columns), whether or not the file has headings, in whichever mode; with the breadcrumb hidden,
+none. Corrects HDR-D7, which took it from the file's headings.
+
+**Why:** The headings a window has depend on its mode: a data file's rendered view has the parse's, its source those
+of the syntax outline once it comes, or none; so with HDR-D7 a click on Source could change the buttons' form and move
+them under the pointer (the review of the pull request, round 3). Now the form changes only with the window's width,
+or with the breadcrumb shown or hidden.
+
+**Cost:** A file with no headings at all keeps the breadcrumb's room in a narrow window too.

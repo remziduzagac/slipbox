@@ -53,14 +53,17 @@ command, `view.mode_read`, `view.mode_lens` or `view.mode_source`, which switche
 words. On the selected button it changes nothing more: a radio group never deselects. On a disabled one it says why,
 in `setViewMode`'s words; the command says it, as it does any refusal. One click never says a thing twice: where ending
 typing in this file, in this window or another on it, said why already (data that stopped parsing goes to source mode),
-the click adds nothing — `Mouse.clicking` holds, while a click is handled, the messages said before it (`App.said`, a
-count that only grows) and the files it ended typing in; the words are `unparsedText`'s, wherever they're said. A
-click focuses its window as a heading's does (`Mouse.focusWindow`). The hit areas are
+the click adds nothing: while a click is handled, each message it says is said once (`App.sayingOnce`), its words
+`unparsedText`'s wherever they're said; a second click is its own, and says them again. A click focuses its window as
+a heading's does (`Mouse.focusWindow`). The hit areas are
 `mode:<window>:<read|lens|source>`, the window's index checked as a heading's is; the selected and the disabled keep
 theirs, without `hover`. The which-key popup over the header hides them as it hides the headings'
 (`draw-overlays.ts`), and so does the floating window, whose margins can lie over the header's row: what lies under it
-can't be clicked through it, its own hit areas aside (`drawApp`). The modes' table, `MODES`, is `lens.ts`'s, beside
-`ViewMode`, for the header, the mouse and the status chip alike. The lens's message names what it shows: a note's
+can't be clicked through it, its own hit areas aside (`drawApp`), and completion's popup, which can hang over a
+stacked split's lower header. The modes' table, `MODES`, with `ViewMode` and `viewMode`, is `modes.ts`'s, a module
+that imports nothing at load (the lens and the header import each other through the app), for the header, the
+mouse, the lens and the status chip (its chip the selected button's label) alike; the header asks `Lens.canSwitch`,
+`refusal` without its words. The lens's message names what it shows: a note's
 markdown, code, a data file's own format (`the YAML`; `lensWhat`).
 
 **Room** (HDR-D4). The header's row, from the right: `▤` where it is, then the buttons, then the breadcrumb between
@@ -68,9 +71,9 @@ the name and them. The buttons are three labels side by side, each with a space 
 ` Source `, 20 columns; shortened, ` R ` ` L ` ` S `, 9; at the least, the selected one's letter alone, 3. The
 breadcrumb is drawn in the columns between the name and the buttons less one at each end, as now, and folds into them
 as before. The buttons take the widest form that leaves the breadcrumb its least room: its narrowest form but `…`
-alone — the icon and its space, `… ›`, and 8 columns of a heading, 14 columns — while the file has headings, whatever
-headings the cursor is under, so a window's form changes only with its width (HDR-D7); nothing when the file has no
-headings or the breadcrumb is hidden. Past that, the breadcrumb folds further, as
+alone — the icon and its space, `… ›`, and 8 columns of a heading, 14 columns — while the breadcrumb shows, whatever
+headings the cursor is under and whatever the mode (a window's headings depend on it), so a window's form changes
+only with its width (HDR-D7, HDR-D8); nothing when the breadcrumb is hidden. Past that, the breadcrumb folds further, as
 `crumbLayout` does, until only `…` or nothing is left; the selected letter goes only where it doesn't fit beside the
 name and `▤` (a split's window squeezed to its narrowest, about 12 columns). `modeButtons` (`draw-header.ts`) picks
 the form, from the breadcrumb's least room, `crumbLeast`, beside `crumbLayout`. The name keeps its place (cut to half

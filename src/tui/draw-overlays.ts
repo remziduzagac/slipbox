@@ -675,7 +675,7 @@ export const GIT_MARK: Record<GitState, string> = {
 /**
  * A list as a dropdown hanging under `anchor` (the breadcrumb's `…`): framed like the other
  * popups, as wide as its rows, entries indented as a tree. Keys, clicks and the wheel are the
- * list's. The margin row above it lies on the rule under the breadcrumb, which stays visible.
+ * list's. The margin row above it lies on the rule under the window header, which stays visible.
  */
 export function drawDropdown(
   app: App,

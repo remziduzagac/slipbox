@@ -8,25 +8,13 @@ import type { Layout } from "../core/layout/ir.ts";
 import { stringWidth } from "../core/width.ts";
 import type { NoteBuffer } from "./buffer.ts";
 import type { App, View } from "./app.ts";
+import { type ViewMode, viewMode } from "./modes.ts";
 
-/** A window's mode: the rendered view (Read), live preview (the lens) or source mode. */
-export type ViewMode = "rendered" | "source" | "live";
+export { MODES, type ViewMode, viewMode } from "./modes.ts";
 
 /** What's said of a data file that doesn't parse, each place it's said: one wording, so one click can tell it said it. */
 export function unparsedText(buf: NoteBuffer): string {
   return `${buf.name} doesn't parse — ${buf.parsed.error}: source mode`;
-}
-
-/** The modes as the window header's buttons name them (HDR-D2), in order: the mode, its hit area's name, its label. */
-export const MODES: readonly { mode: ViewMode; id: "read" | "lens" | "source"; label: string }[] = [
-  { mode: "rendered", id: "read", label: "Read" },
-  { mode: "live", id: "lens", label: "Lens" },
-  { mode: "source", id: "source", label: "Source" },
-];
-
-/** The mode a window is in. */
-export function viewMode(view: View): ViewMode {
-  return view.source ? "source" : view.live ? "live" : "rendered";
 }
 
 /** The lens, live preview and source mode. */
@@ -314,21 +302,37 @@ export class Lens {
   }
 
   /**
-   * Why a window can't switch to `mode` (HDR-D2), said by `setViewMode` and drawn as a disabled button on its header;
-   * null when it can, or is in it. It says nothing itself. `drawing`: for the header, which asks every frame and so
-   * never parses — a data file changed since its last parse is taken to parse, its Read and Lens not dimmed, until a
-   * parse says otherwise (a click's asks of the text as it is).
+   * Why a window can't switch to `mode` (HDR-D2), said by `setViewMode`, drawn as a disabled button on its header
+   * (`canSwitch`); null when it can, or is in it. It says nothing itself. The header asks every frame and so never
+   * parses: there a data file changed since its last parse is taken to parse, its Read and Lens lit, until a parse
+   * says otherwise (a click's asks of the text as it is).
    */
-  refusal(view: View, mode: ViewMode, drawing = false): { level: "info" | "warn"; text: string } | null {
+  refusal(view: View, mode: ViewMode): { level: "info" | "warn"; text: string } | null {
+    const buf = view.buf;
+    const why = this.refusedBy(view, mode, false);
+    if (!why) return null;
+    if (why === "drawn") return { level: "info", text: "a diff is drawn one way" };
+    if (why === "unparsed") return { level: "warn", text: unparsedText(buf) };
+    return {
+      level: "info",
+      text: `${buf.name} ${buf.kind.group === "text" ? "has no rendered view" : "has no rendered view yet"}: source mode`,
+    };
+  }
+
+  /** Whether a window can switch to `mode`, for its header's buttons: `refusal` without its words (drawing: never parses). */
+  canSwitch(view: View, mode: ViewMode): boolean {
+    return !this.refusedBy(view, mode, true);
+  }
+
+  /** Why `refusal` refuses, if it does: a drawn buffer, data that doesn't parse, a file with no rendered view. */
+  private refusedBy(view: View, mode: ViewMode, drawing: boolean): "drawn" | "unparsed" | "unrendered" | null {
     if (viewMode(view) === mode) return null;
     const buf = view.buf;
-    if (buf.drawn) return { level: "info", text: "a diff is drawn one way" };
+    if (buf.drawn) return "drawn";
     if (mode === "source") return null;
     if (drawing && buf.kind.group === "data" && !buf.parseCurrent) return null;
     if (this.app.canRender(buf)) return null;
-    if (buf.kind.group === "data") return { level: "warn", text: unparsedText(buf) };
-    const why = buf.kind.group === "text" ? "has no rendered view" : "has no rendered view yet";
-    return { level: "info", text: `${buf.name} ${why}: source mode` };
+    return buf.kind.group === "data" ? "unparsed" : "unrendered";
   }
 
   /** A window's mode: rendered, source (the markdown), or live preview. The cursor keeps its line. */

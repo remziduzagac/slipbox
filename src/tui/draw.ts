@@ -95,6 +95,8 @@ export interface Geometry {
   dialog?: Rect | null;
   /** The floating editor's box (3.20), with its margin. */
   floating?: Rect | null;
+  /** Completion's popup (19.16): no hit area under it can be clicked through it. */
+  completion?: Rect | null;
   /** Where the active window's cursor is on screen: completion's popup hangs from it (19.16). */
   cursor?: { x: number; y: number } | null;
   /** The Problems panel (1.7), at the bottom, under its rule: clicks and the wheel there are its. */
@@ -285,9 +287,11 @@ export function drawApp(app: App, c: Canvas): Geometry {
   if (app.floating) {
     // What lies under the floating window can't be clicked through it (a window header's button under its margin):
     // only its own hit areas, drawn after, stay.
-    const under = geo.hot.length;
+    const under = geo.hot;
+    geo.hot = [];
     geo.floating = drawFloating(app, c, mainY, mainH, geo);
-    const own = geo.hot.splice(under);
+    const own = geo.hot;
+    geo.hot = under;
     coverHot(geo, geo.floating);
     geo.hot.push(...own);
   }
@@ -305,8 +309,11 @@ export function drawApp(app: App, c: Canvas): Geometry {
   // Completion's popup and the signature being typed (19.16), from the cursor, over the text.
   if (geo.cursor && app.view?.insert && !app.overlay) {
     if (app.signature?.view === app.view) drawSignature(app, c, geo.cursor, mainY);
-    if (app.completion?.view === app.view && app.completion.shown.length)
-      drawCompletion(app, c, geo.cursor, mainY, mainY + mainH);
+    if (app.completion?.view === app.view && app.completion.shown.length) {
+      // Over the text, and over whatever lies under it: another window's header, its buttons (HDR-D2).
+      geo.completion = drawCompletion(app, c, geo.cursor, mainY, mainY + mainH);
+      coverHot(geo, geo.completion);
+    }
   }
   if (app.overlay?.kind === "list") {
     const o = app.overlay;
@@ -534,10 +541,11 @@ const CRUMB_FLOOR = 4;
 /**
  * The columns a breadcrumb keeps before the mode's buttons beside it shorten (HDR-D4, HDR-D7): room for its icon and a
  * space, `… ›` and an innermost heading cut to `CRUMB_MIN` — crumbLayout's narrowest form but `…` alone — whatever the
- * headings the cursor is under, so the buttons don't change form as it moves; never fewer than drawBreadcrumb draws in.
+ * headings the cursor is under or the mode, so the buttons don't change form as either does (well over the 4 columns
+ * drawBreadcrumb draws in).
  */
 export function crumbLeast(glyphs: { crumb: string; crumbIcon: string }): number {
-  return Math.max(CRUMB_FLOOR, stringWidth(glyphs.crumbIcon) + 1 + 1 + stringWidth(` ${glyphs.crumb} `) + CRUMB_MIN);
+  return stringWidth(glyphs.crumbIcon) + 1 + 1 + stringWidth(` ${glyphs.crumb} `) + CRUMB_MIN;
 }
 
 /**

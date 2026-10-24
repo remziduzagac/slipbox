@@ -10,14 +10,13 @@ import { clampPos, type Pos, wordAt } from "./cursor.ts";
 import type { Geometry } from "./draw.ts";
 import { prettyKey } from "./keys.ts";
 import type { App, View } from "./app.ts";
-import type { NoteBuffer } from "./buffer.ts";
 import { editable } from "./app.ts";
 import { type LeftView, LEFT_VIEWS } from "./panels.ts";
 import { codeBlocks } from "./code.ts";
 import { selectable } from "./overlays.ts";
 import { taskMarkAt } from "./views.ts";
 import { linkAt } from "./linking.ts";
-import { MODES } from "./lens.ts";
+import { MODES } from "./modes.ts";
 
 /** The mouse: clicks, drags, the wheel. */
 export class Mouse {
@@ -25,11 +24,6 @@ export class Mouse {
 
   /** Id of the clickable region under the mouse, for hover highlighting. */
   hover: string | null = null;
-  /**
-   * While a click is handled: the messages said before it (`App.said`), and the files it ended typing in — what ending
-   * typing said of them is this click's own. Null outside a click.
-   */
-  private clicking: { saidBefore: number; typedIn: Set<NoteBuffer> } | null = null;
 
   private lastClick: { x: number; y: number; at: number; count: number } | null = null;
   private drag:
@@ -87,16 +81,13 @@ export class Mouse {
     if (ev.type === "down") {
       // A click ends typing (its undo step closes), and a half-typed sequence (space, then the
       // click) unless it's on the which-key popup's own entries; then does what it does.
-      const typing = this.app.allViews().filter((v) => v.insert);
-      this.clicking = { saidBefore: this.app.said, typedIn: new Set(typing.map((v) => v.buf)) };
-      try {
-        for (const v of typing) stopInsert(this.app, v);
+      // What the click says is said once: ending typing may say a file doesn't parse, and the click's command the same.
+      return this.app.sayingOnce(() => {
+        for (const v of this.app.allViews()) if (v.insert) stopInsert(this.app, v);
         const hot = hotAt()?.id ?? null;
         if (this.app.pending.length && !hot?.startsWith("wk:")) this.app.input.clearPending();
         return this.down(ev, g, hot);
-      } finally {
-        this.clicking = null;
-      }
+      });
     }
     if (ev.type === "drag" && this.drag) return this.dragTo(ev, g);
     if ((ev.type === "up" || ev.type === "drag-end") && this.drag) return this.up();
@@ -703,14 +694,7 @@ export class Mouse {
         const b = MODES.find((m) => m.id === which);
         const v = b ? this.focusWindow(Number(w)) : null;
         if (!b || !v) break;
-        // Ending typing in this file may have said why already, in this window or another on it (data that stopped
-        // parsing goes to source mode): one click never says it twice.
-        const c = this.clicking;
-        const refused = this.app.lens.refusal(v, b.mode);
-        if (refused && c?.typedIn.has(v.buf)) {
-          const said = this.app.messages.slice(Math.max(0, this.app.messages.length - (this.app.said - c.saidBefore)));
-          if (said.some((m) => m.text === refused.text)) break;
-        }
+        // Its refusal said once, if ending typing said it already (`App.sayingOnce`).
         void this.app.run(`view.mode_${b.id}`);
         break;
       }

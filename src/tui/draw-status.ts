@@ -12,10 +12,10 @@ import { sanitize } from "../core/sanitize.ts";
 import type { Role, Color } from "../core/theme/theme.ts";
 import { SEVERITIES, worst } from "../core/diagnostics.ts";
 import { severityGlyph, SEVERITY_ROLE } from "./draw-pane.ts";
-import { type ViewMode, viewMode } from "./lens.ts";
+import { MODES, type ViewMode, viewMode } from "./modes.ts";
 
-/** The chip for a window's mode: the one its header's buttons have selected (HDR-D2). */
-const CHIP: Record<ViewMode, string> = { rendered: " READ ", live: " LENS ", source: " SOURCE " };
+/** The chip for a window's mode: the button its header has selected, by its label (HDR-D2). */
+const CHIP = Object.fromEntries(MODES.map((m) => [m.mode, ` ${m.label.toUpperCase()} `])) as Record<ViewMode, string>;
 
 export function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void {
   const theme = app.theme;

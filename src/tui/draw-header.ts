@@ -5,7 +5,7 @@ import type { App, View } from "./app.ts";
 import { type Canvas, drawText } from "./canvas.ts";
 import { type Rect, type Geometry, pageBg, roleStyle, button, drawBreadcrumb, crumbLeast } from "./draw.ts";
 import { truncate, stringWidth } from "../core/width.ts";
-import { MODES, viewMode } from "./lens.ts";
+import { MODES, viewMode } from "./modes.ts";
 
 /** The buttons' forms, widest first: every label, every letter, the selected one's letter alone; none. */
 export type ModeForm = "full" | "letters" | "selected" | "none";
@@ -71,8 +71,10 @@ export function drawWindowHeader(
   // typing ends), and the buttons say the mode it's in.
   const layout = app.currentLayout(view);
   const crumbs = app.ui.breadcrumb ? app.outlineView.breadcrumb(view, layout) : [];
-  // The breadcrumb's least room is the file's, not the cursor's (HDR-D7): the buttons keep their form as it moves.
-  const least = app.ui.breadcrumb && layout.headings.length ? crumbLeast(app.glyphs) : 0;
+  // The breadcrumb's least room is its own, not its headings' nor the mode's (HDR-D7, HDR-D8): the buttons keep their
+  // form as the cursor moves and the mode changes; only the window's width, and the breadcrumb shown or hidden, change
+  // it.
+  const least = app.ui.breadcrumb ? crumbLeast(app.glyphs) : 0;
   const form = modeButtons(end - x, least);
   const start = form === "none" ? end : end - FORM_WIDTH[form];
   drawModeButtons(app, c, view, start, y, form, bg, geo);
@@ -101,7 +103,7 @@ function drawModeButtons(
   for (const m of MODES) {
     const selected = m.mode === now;
     if (form === "selected" && !selected) continue;
-    const disabled = !selected && !!app.lens.refusal(view, m.mode, true);
+    const disabled = !selected && !app.lens.canSwitch(view, m.mode);
     const role = selected ? "topbar_button_on" : disabled ? "topbar_button_disabled" : "topbar_button";
     const id = `mode:${index}:${m.id}`;
     // Hovered only where a click switches: the selected one's changes nothing, a disabled one's says why.

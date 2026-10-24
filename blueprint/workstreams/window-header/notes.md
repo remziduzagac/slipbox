@@ -363,3 +363,37 @@ here, and the work go on.
   and `/code-review` on the diff after round 2's fixes (committed, not pushed: CI waits on #59).
 - 2026-10-24: the screenshots retaken after round 2's fixes: none changed but one by a row of scroll (run to run, not
   this change), kept as it was; no picture shows a disabled button.
+- Round 3's findings: the stand-in reviewer's 2 bugs (both reproduced), 3 test gaps, 3 docs points; `/code-review`'s 11
+  (two reproduced). Merged and checked, each:
+  - **Taken, with tests that fail without them** (mutations in `tmp/issue/mutations-8.json`; the narrow window's and the
+    completion's terminal checks fail without their fixes, checked):
+    - Loading `lens.ts` first crashed (`MODES` before its initialisation: lens.ts and draw-header.ts import each other
+      through the app): the modes are in `modes.ts`, which imports nothing at load; a test loads each of the header's
+      modules first, on its own.
+    - The buttons changed form with the mode (a data file's rendered view has headings, its source none until the
+      syntax outline comes): the least room is the breadcrumb's own (HDR-D8, correcting HDR-D7, taken as recommended
+      while the maintainer was away). The unit test is the regression test; the terminal check can't fail without
+      it, since in a running slipbox the syntax outline gives the source its headings at once.
+    - A click on completion's popup reached a stacked split's lower header under it, and switched that window: the
+      popup covers what lies under it, as the floating window does.
+    - One click's "said once" is now `App.sayingOnce`, each message a click says said once, in place of the click's
+      counter and the files it ended typing in (the review's altitude point, the third time; this form says a second
+      click's messages again, which answered the objection to the others). Two files of one name, broken alike, now
+      give their shared words once.
+    - The header asks `Lens.canSwitch`, no words built a frame; the status chip from `MODES`; the floating cover keeps
+      what the floating window draws apart, however it draws; `crumbLeast`'s dead floor gone.
+    - Tests: a stacked split's lower header (unit), a diff long enough that only the floating window keeps its header
+      off. Round 2's narrow-window check focused a window by `ctrl+w h`, which isn't bound: it now focuses it by its
+      own selected button, and fails without HDR-D7's fix (checked).
+    - Docs: the narrow window's sentence after HDR-D7 and HDR-D8; floating windows have no header; three comments
+      still said "breadcrumb row".
+  - **Not taken:**
+    - A click on completion's popup reaching nothing under it at all (only the cover is needed for the header; a
+      click there moving the cursor in the text under it is older than HDR).
+    - Mapping an existing `ui.breadcrumb = false` to `ui.window_header = false`: the issue asks for the narrower
+      meaning, with a CHANGELOG line under Changed.
+    - The problems bar's sign click focusing as `focusWindow` does: the Problems panel takes the keys there, on
+      purpose.
+    - More contrast for a disabled button: fainter than an enabled one it must be, and enabled ones are 1.6 to 4:1 in
+      the built-in themes; the italics carry the difference.
+- Terminal checks after round 3's fixes: the header's seventeen and the settings check, 18 of 18.
