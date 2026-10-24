@@ -96,14 +96,15 @@ the frame's rule under it gives it the same half row of air the tab strip and th
   clamped into that span, so it moves right or left only as far as it must. **Short of room,** cut in this order, each
   step only while it still doesn't fit: a path is cut from the front (the vault's, then the workspace's, to 12 columns
   each, `…earch/notes`, each step cutting from the whole text, so a part given up gives a path its room back); the
-  branch's ahead and behind and its operation go; the branch is cut from its end, to 8 columns, then goes; the workspace
-  goes; the vault's name is cut, a name from its end and a path from the front, to 6 columns. Narrower still, nothing is
-  drawn, and the status line says where if it has the room (below). **Clicked**, two targets, each a hot region only
-  while its part is drawn: the vault's (`top:vault`: the glyph, the name, and the workspace after it, `◈ ~ › notes`)
-  lists the named folders, seen last first, and `enter` goes into one (`space v v`, § Going into a vault), from
-  Elsewhere too; the branch's (`top:branch`: from its `·` or a worktree's `@` through the operation:
-  `· main ↑2 merging`, `@feat`), in a repository, opens the branches' menu as the status line's did (GIT-D8): Pull while
-  there's an upstream not gone, Push, Fetch and the git panel, then the branches;
+  branch's ahead and behind go; the branch is cut from its end, to 8 columns, then goes; a merge or a rebase under way
+  goes (kept after the branch, a sign that something's to finish); the workspace goes; the vault's name is cut, a name
+  from its end and a path from the front, to 6 columns. Narrower still, nothing is drawn, and the status line says where
+  if it has the room (below). **Clicked**, two targets, each a hot region only while its part is drawn: the vault's
+  (`top:vault`: the glyph, the name, and the workspace after it, `◈ ~ › notes`) lists the named folders, seen last
+  first, and `enter` goes into one (`space v v`, § Going into a vault), from Elsewhere too; the branch's (`top:branch`:
+  from the space before its `·`, or a worktree's `@`, through the operation: `· main ↑2 merging`, `@feat`), in a
+  repository, opens the branches' menu as the status line's did (GIT-D8): Pull while there's an upstream not gone, Push,
+  Fetch and the git panel, then the branches;
 - at the right end, the vault's state (`indexing N…`), dropped when fewer than 12 columns are left.
 
 Toggle buttons have no fill of their own: their glyph is dim (`topbar_button`) while the pane is closed and bright
@@ -167,17 +168,17 @@ workspace keeps them.
   views), `RESIZE`, or what's pending: keys of a sequence in short form (`␣ l`,
   `C-w`), or an operator, a count, or a key waiting for its character (`2d`, `di`, `dT`, `r`, `2f`);
 - where you are, and its branch, dimmed, **only while the top bar doesn't say it** (WSP-D5): the bar hidden
-  (`ui.top_bar = false`, `space u b`) or too narrow for even the vault (zen has neither bar). The same parts as the
-  top bar's, without the glyph (`20.14`, `21.9`; D65, D77; `whereOf` in `tui/where.ts`): the vault's name if it has
-  one, else its path — `research · main`, `~/src/experiment · main` (no remote), `notes` — home as `~`, a folder of
-  home opened by name after it (`~ › notes`), and Elsewhere as `Elsewhere` (VV-D2, VV-D3); then the branch checked
-  out now (a detached head: its commit), a named worktree as `research@refactor`; then, a branch with an upstream
-  not gone, how far it's ahead of it and behind it as of the last fetch, only what isn't zero
-  (`research · main ↑2 ↓1`; ascii `+2 -1`; GIT-D4); then a merge or a rebase under way (`kestrel · main merging`,
-  `kestrel@agent/sync-retry rebasing 2/5`, a rebase's branch named rather than its detached commit; GIT-D6).
-  Clicked, in a repository, the whole of it opens the branches' menu (§ Side panes), as before: unlike the top
-  bar's, it has no vault target. At most 40 columns, cut as the top bar's is; it's the first to go when the path
-  would be left fewer than 24 columns, so on a narrow screen neither bar may say where;
+  (`ui.top_bar = false`, `space u b`; zen has neither bar), or too narrow for even the vault, a guard: a bar that narrow
+  leaves the status line no room either. The same parts as the top bar's, without the glyph (`20.14`, `21.9`; D65, D77;
+  `whereOf` in `tui/where.ts`): the vault's name if it has one, else its path — `research · main`,
+  `~/src/experiment · main` (no remote), `notes` — home as `~`, a folder of home opened by name after it (`~ › notes`),
+  and Elsewhere as `Elsewhere` (VV-D2, VV-D3); then the branch checked out now (a detached head: its commit), a named
+  worktree as `research@refactor`; then, a branch with an upstream not gone, how far it's ahead of it and behind it as
+  of the last fetch, only what isn't zero (`research · main ↑2 ↓1`; ascii `+2 -1`; GIT-D4); then a merge or a rebase
+  under way (`kestrel · main merging`, `kestrel@agent/sync-retry rebasing 2/5`, a rebase's branch named rather than its
+  detached commit; GIT-D6). Clicked, in a repository, the whole of it opens the branches' menu (§ Side panes), as
+  before: unlike the top bar's, it has no vault target. At most 40 columns, cut as the top bar's is; it's the first to
+  go when the path would be left fewer than 24 columns, so on a narrow screen neither bar may say where;
 - the note's path between back and forward, as an address bar's: `‹ notes/people/kenji-mori.md ›`. `‹` and `›` go
   back and forward in the focused window's history, each bright when there's somewhere to go, dim when not; hovered,
   one says where, above it (`back: home.md › Start here`; back past the vault's first place, the vault before). A click

@@ -108,7 +108,7 @@ export const SLOW_DISK: Check[] = [
         }),
     },
     run: async (s) => {
-      await s.where(/^~\/notes\b/, /index\.md/);
+      await s.where(/^~\/notes(?: ·|$)/, /index\.md/);
       await keysAnswered(s, () => progress(s).passFinished !== null);
       s.expect(progress(s).indexed >= 2, `the vaults found indexed: ${JSON.stringify(progress(s))}`);
       // Home's own note, and the vault's it found, each a backlink of the index.
@@ -165,7 +165,7 @@ export const SLOW_DISK: Check[] = [
       setup: (s) => smallHome(s),
     },
     run: async (s) => {
-      await s.where(/^~\/notes\b/, /index\.md/);
+      await s.where(/^~\/notes(?: ·|$)/, /index\.md/);
       await s.message("home's walk gave up", 20_000);
       const said = await lastMessage(s, "gave up");
       s.expect(
@@ -369,7 +369,7 @@ export const SLOW_DISK: Check[] = [
       await s.keys("escape");
       await follow(s, "the other vault's note");
       await s.keys("o");
-      await s.where(/^~\/other\b/, /o\.md/, 5000);
+      await s.where(/^~\/other(?: ·|$)/, /o\.md/, 5000);
       await explorerOpen(s);
       await s.until(() => listed(s, /\saaa$/) && listed(s, /\szzz$/), 10_000, "home's rows, after the vault changed");
     },
@@ -391,7 +391,7 @@ export const SLOW_DISK: Check[] = [
       },
     },
     run: async (s) => {
-      await s.where(/^~\/notes\b/, /index\.md/);
+      await s.where(/^~\/notes(?: ·|$)/, /index\.md/);
       await s.until(
         () => progress(s).current?.endsWith("/found") === true && progress(s).found > 0,
         30_000,

@@ -42,7 +42,7 @@ function gitEnv(s: Session): Record<string, string> {
 }
 
 /** git in a folder (`~/…`, or a whole path); its exit and what it said. */
-function git(s: Session, cwd: string, ...args: string[]): { code: number; out: string } {
+export function git(s: Session, cwd: string, ...args: string[]): { code: number; out: string } {
   const r = spawnSync("git", ["-C", s.path(cwd), ...args], { encoding: "utf8", env: gitEnv(s) });
   return { code: r.status ?? -1, out: `${r.stdout}${r.stderr}` };
 }
@@ -181,7 +181,7 @@ export async function selectRow(s: Session, needle: string): Promise<void> {
 }
 
 /** The column (from 1) of the character at `at` in a row: the width before it, as the terminal lays it out. */
-const columnOf = (row: string, at: number) => Bun.stringWidth(row.slice(0, at)) + 1;
+export const columnOf = (row: string, at: number) => Bun.stringWidth(row.slice(0, at)) + 1;
 
 /** A mouse event at a cell (`y` the screen's row, from 0): a press and a release, or the pointer moved there. */
 export async function mouse(s: Session, x: number, y: number, how: "click" | "move" = "click"): Promise<void> {

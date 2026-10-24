@@ -7,12 +7,12 @@
 import { randomBytes } from "node:crypto";
 import { type Check, leader } from "../check.ts";
 import { SIZE, type Session } from "../session.ts";
-import { gitOk as git, mouse, repoAt, TRAIL, trail } from "./source-control.ts";
+import { columnOf, git as gitRun, gitOk as git, mouse, put, repoAt, TRAIL, trail } from "./source-control.ts";
 
 /** A click on `needle` in screen row `y`: on its second column, past a glyph whatever width the terminal gives it. */
 async function clickAt(s: Session, y: number, needle: string): Promise<void> {
   const row = s.screen()[y]!;
-  await mouse(s, Bun.stringWidth(row.slice(0, row.indexOf(needle))) + 2, y);
+  await mouse(s, columnOf(row, row.indexOf(needle)) + 1, y);
 }
 
 /** A click on `needle` on the top bar. */
@@ -59,6 +59,19 @@ function wideNamed(s: Session): void {
   s.write("~/kaiso/index.md", "# 索引\n\nノートの一覧。\n");
 }
 
+/** ~/work/trail with agent's commit rebased onto main's, begun in a terminal and stopped at their conflict. */
+function rebaseStopped(s: Session): void {
+  trail(s, { "route.md": "# Route\n\nOne way.\n" });
+  git(s, TRAIL, "switch", "-q", "-c", "agent");
+  put(s, TRAIL, { "route.md": "# Route\n\nThe agent's way.\n" });
+  git(s, TRAIL, "commit", "-q", "-am", "Agent's way");
+  git(s, TRAIL, "switch", "-q", "main");
+  put(s, TRAIL, { "route.md": "# Route\n\nMain's way.\n" });
+  git(s, TRAIL, "commit", "-q", "-am", "Main's way");
+  git(s, TRAIL, "switch", "-q", "agent");
+  s.expect(gitRun(s, TRAIL, "rebase", "main").code !== 0, "the rebase stopped at the conflict");
+}
+
 export const WHERE: Check[] = [
   {
     area: "links-and-files",
@@ -66,7 +79,7 @@ export const WHERE: Check[] = [
     covers: { cases: ["vault", "mouse"], commands: ["folders.open"] },
     options: { home: true, startAt: "home/notes/index.md", setup: (s) => void s.cliIn("~/work/kestrel", "ls") },
     run: async (s) => {
-      await s.where(/^notes\b/);
+      await s.where(/^notes(?: ·|$)/);
       await onTopBar(s, "notes");
       await s.see(/Folders \(\d+\) — enter goes into one/);
       await s.type("kestrel");
@@ -155,6 +168,34 @@ export const WHERE: Check[] = [
       clear(s);
       await s.resize(SIZE.cols, SIZE.rows);
       await s.where(/^kestrel · main\b/);
+    },
+  },
+  {
+    area: "outside-and-code",
+    name: "where you are: a rebase under way on a narrow bar — kept after the branch is gone, the sign that something's to finish",
+    covers: { cases: ["git", "width"] },
+    options: repoAt(rebaseStopped),
+    run: async (s) => {
+      await s.where("~/work/trail · agent rebasing 1/1");
+      await indexed(s);
+      await s.resize(40, SIZE.rows);
+      await s.where("~/work/trail rebasing 1/1");
+      clear(s);
+      await s.resize(SIZE.cols, SIZE.rows);
+      await s.where("~/work/trail · agent rebasing 1/1");
+    },
+  },
+  {
+    area: "navigating",
+    name: "where you are: no note open (home's Downloads, left out) — the bar hidden, the status line says it all the same",
+    covers: { cases: ["vault", "ui", "status"], commands: ["ui.top_bar"] },
+    options: { home: true, startAt: "home/Downloads" },
+    run: async (s) => {
+      await s.where("~ › Downloads");
+      s.expect(!s.statusLine().includes("Downloads"), `the status line leaves it to the bar:\n${s.statusLine()}`);
+      await leader(s, "u", "b");
+      await s.until(() => !s.topBar().includes("slipbox"), 3000, "the top bar gone");
+      await s.status(/ ~ › Downloads(?: |$)/);
     },
   },
   {

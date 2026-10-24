@@ -11,7 +11,7 @@ import { trackText } from "../core/gitremote.ts";
 import { sanitize } from "../core/sanitize.ts";
 import { stringWidth, truncate, truncateStart } from "../core/width.ts";
 
-/** Where you are, in parts, each sanitized. */
+/** Where you are, in parts: every name and word sanitized; the glyph and the separator are slipbox's own. */
 export interface Where {
   /** The vault's glyph and a space before its name; empty for Elsewhere (no vault), and on the status line. */
   glyph: string;
@@ -58,8 +58,8 @@ export function whereOf(app: App): Where {
     sep: g.sep,
     branch: branch ? sanitize(branch) : null,
     at: !!(named && loc.worktree),
-    track: branch && t?.branch === branch ? trackText(t, g.gitAhead, g.gitBehind) : "",
-    op: op?.text ?? "",
+    track: branch && t?.branch === branch ? sanitize(trackText(t, g.gitAhead, g.gitBehind)) : "",
+    op: sanitize(op?.text ?? ""),
   };
 }
 
@@ -76,17 +76,19 @@ export function whereText(w: Where): WhereText {
 
 /**
  * Where you are, cut to `width` columns (WSP-D4), giving up a part at a time, each only once what's left can't fit: the
- * branch's ahead and behind and its operation, then the branch, then the workspace. At each stage the parts left are cut
- * from their whole text, only as far as they must: a path from the front, the vault's then the workspace's, to 12
- * columns each; then, once ahead and behind are gone, the branch from its end, to 8. Last, with the vault alone, it's
- * cut to 6, a name from its end and a path from the front. Narrower still: null, nothing drawn.
+ * branch's ahead and behind, then the branch, then a merge or a rebase under way (a sign that something's to finish,
+ * kept longest after the vault), then the workspace. At each stage the parts left are cut from their whole text, only as
+ * far as they must: a path from the front, the vault's then the workspace's, to 12 columns each; then, once ahead and
+ * behind are gone, the branch from its end, to 8. Last, with the vault alone, it's cut to 6, a name from its end and a
+ * path from the front. Narrower still: null, nothing drawn.
  */
 export function fitWhere(w: Where, width: number): WhereText | null {
   const stages: Partial<Where>[] = [
     {},
-    { track: "", op: "" },
-    { track: "", op: "", branch: null },
-    { track: "", op: "", branch: null, folder: null },
+    { track: "" },
+    { track: "", branch: null },
+    { track: "", branch: null, op: "" },
+    { track: "", branch: null, op: "", folder: null },
   ];
   for (const [i, stage] of stages.entries()) {
     const s: Where = { ...w, ...stage };
@@ -99,8 +101,9 @@ export function fitWhere(w: Where, width: number): WhereText | null {
     if (i === 1 && s.branch) s.branch = cut(s.branch, false, 8, over());
     if (over() <= 0) return whereText(s);
     if (i === stages.length - 1) {
-      // From the whole name: what's over were it whole.
-      s.vault = cut(w.vault, s.vaultPath, 6, over() - stringWidth(s.vault) + stringWidth(w.vault));
+      // The vault alone, cut from its whole name.
+      s.vault = w.vault;
+      s.vault = cut(s.vault, s.vaultPath, 6, over());
       if (over() <= 0) return whereText(s);
     }
   }

@@ -45,6 +45,12 @@ captured; a worktree already gives a task its own.
 
 ## WSP-D4: Where you are is on the top bar (2026-10-24)
 
+> **Refined (2026-10-24), taken as recommended in the pull request's review, for the maintainer to confirm or
+> reverse:** a merge or a rebase under way is no longer given up with ahead and behind, but after the branch: a review
+> found that on a narrow bar it went first, and with the status line yielding to the bar, nothing on screen said a
+> rebase was under way. The order now: ahead and behind, the branch (cut, then gone), the operation, the workspace, the
+> vault's name.
+
 **Decision:** The top bar's middle says where you are: `◈` and the vault by name or path, home `◈ ~`, Elsewhere
 `Elsewhere` without the glyph; then home's folder opened by name (`◈ ~ › notes`); then the branch as the status line
 wrote it (`· main ↑2 ↓1`, `merging`, `rebasing 2/5`, a worktree's `@feat`, a detached head's commit). Centred on the

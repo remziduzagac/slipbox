@@ -49,7 +49,7 @@ export const SHOTS: Shot[] = [
       await follow(s, "architecture. The");
       await s.see("o go there · t keep as a tab", 5000);
       await s.keys("o");
-      await s.where(/^kestrel\b/);
+      await s.where(/^kestrel(?: ·|$)/);
       await s.status("architecture.md");
       // What going in says, gone: kestrel's own config's warnings, and the message naming where it is.
       await quiet(s);

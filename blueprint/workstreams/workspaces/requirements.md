@@ -19,7 +19,8 @@
   below (WSP-D2; ideas.md).
 - The scratch per workspace: it stays the vault's (WSP-D3; ideas.md).
 - Renaming `session.json`, the `Session` class or `ui.restore_session` (WSP-D6).
-- The CLI: nothing it prints names a workspace; `slipbox info` and `history` are unchanged.
+- The CLI: nothing it does changes; `slipbox info` and `history` are unchanged. Two of its messages said session for
+  what's kept, a named folder moved by hand and the purge's list, and say workspaces (WSP-D1).
 
 ## Builds on
 

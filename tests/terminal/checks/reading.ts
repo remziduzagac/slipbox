@@ -1017,7 +1017,7 @@ export const READING: Check[] = [
       await opened(s, "src/sync/queue.ts");
       await followLink(s, "../../docs/sync.md");
       await opened(s, "docs/sync.md");
-      await s.where(/^kestrel\b/);
+      await s.where(/^kestrel(?: ·|$)/);
     },
   },
   {
@@ -1513,7 +1513,7 @@ export const READING: Check[] = [
         return [...body.matchAll(re)].length.toLocaleString("en");
       };
       // Where you are on the top bar, so not here (WSP-D5): the mode, then the file.
-      await s.where(/^notes\b/, /^ READ +‹ projects\/kestrel-v2-3\.md › +[✖⚠] \d+ +● watching /);
+      await s.where(/^notes(?: ·|$)/, /^ READ +‹ projects\/kestrel-v2-3\.md › +[✖⚠] \d+ +● watching /);
       await s.status(new RegExp(` ${count("~/notes/projects/kestrel-v2-3.md")} words +L1:1 0% *$`));
       await s.keys("G");
       await s.status(/ 100% *$/);

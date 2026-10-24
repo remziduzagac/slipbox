@@ -316,16 +316,16 @@ const LINKS: Check[] = [
       await opened(s, "prd/route-sharing.md");
       // The handbook is a vault of its own inside the repository: its `/glossary.md` is its own.
       await s.restart({ startAt: "home/work/product/handbook/how-we-write.md" });
-      await s.status(/handbook.*how-we-write\.md/);
+      await s.where(/^handbook(?: ·|$)/, /how-we-write\.md/);
       await follow(s, "the glossary");
-      await s.status(/handbook/);
+      await s.where(/^handbook(?: ·|$)/);
       await opened(s, "glossary.md");
       // Started with --root at the repository, a note of the handbook is still the handbook's.
       await s.restart({
         args: ["--root", `${s.home}/work/product`],
         startAt: "home/work/product/handbook/how-we-write.md",
       });
-      await s.status(/handbook.*how-we-write\.md/);
+      await s.where(/^handbook(?: ·|$)/, /how-we-write\.md/);
       // A link to a folder: the explorer, there, the folder unfolded.
       await s.restart({ args: [], startAt: "home/notes/research/link-styles.md" });
       await follow(s, "the projects");
@@ -777,7 +777,7 @@ const ROOTS: Check[] = [
       await s.message(/kestrel — /);
       await s.where(/^kestrel · main\b/, /‹ docs\/architecture\.md/, 5000);
       await s.keys("ctrl+o");
-      await s.where(/^notes\b/, /index\.md/, 5000);
+      await s.where(/^notes(?: ·|$)/, /index\.md/, 5000);
       // A pointer to a name this machine has never seen: said so, nothing opened.
       await follow(s, "the secret project");
       await s.message("isn't on this machine yet");
@@ -907,13 +907,13 @@ const ROOTS: Check[] = [
     },
     run: async (s) => {
       // The repository's top is the root (20.3): named by its remote, the note by its path in it.
-      await s.where(/^infra\b/, /README\.md/);
+      await s.where(/^infra(?: ·|$)/, /README\.md/);
       s.expect(!s.text().includes("make it a vault?"), "nothing offered");
       // Its links followed within it.
       await toLink(s, "k8s/api.yaml");
       await s.keys("enter");
       await opened(s, "k8s/api.yaml");
-      await s.where(/^infra\b/);
+      await s.where(/^infra(?: ·|$)/);
       await s.quit();
       s.expect(!s.exists("~/work/infra/.slipbox"), "no .slipbox/ made in the repository");
       s.expect(
@@ -981,7 +981,7 @@ const ROOTS: Check[] = [
       await s.type("notes");
       await s.keys("enter");
       await s.message(" notes — ");
-      await s.where(/^notes\b/);
+      await s.where(/^notes(?: ·|$)/);
       await s.keys("ctrl+o");
       await s.where("Elsewhere", /stray-note\.md/, 5000);
     },
@@ -1026,7 +1026,7 @@ const ROOTS: Check[] = [
       // notes is a vault of its own: enter goes into it.
       await explorerRow(s, "notes");
       await s.keys("enter");
-      await s.where(/^notes\b/, /index\.md/, 5000);
+      await s.where(/^notes(?: ·|$)/, /index\.md/, 5000);
       // Across roots by a relative path: a peek, o into the kestrel repository, its top the root; back.
       await s.keys("escape");
       await follow(s, ARCHITECTURE);
@@ -1034,7 +1034,7 @@ const ROOTS: Check[] = [
       await s.keys("o");
       await s.where(/^kestrel · main\b/, /‹ docs\/architecture\.md/, 5000);
       await s.keys("ctrl+o");
-      await s.where(/^notes\b/, /index\.md/, 5000);
+      await s.where(/^notes(?: ·|$)/, /index\.md/, 5000);
     },
   },
   {
@@ -1052,7 +1052,7 @@ const ROOTS: Check[] = [
     run: async (s) => {
       // .obsidian/ makes cooking a root: unnamed, shown by its path (21.9); its own tree in the explorer, the
       // breadcrumb naming it a vault (VV-D5).
-      await s.where(/^~\/hobbies\/cooking\b/, /‹ Home\.md/);
+      await s.where(/^~\/hobbies\/cooking(?: ·|$)/, /‹ Home\.md/);
       await explorerOpen(s);
       await s.until(() => listed(s, /\sRecipes$/), 3000, "cooking's own tree");
       await s.until(() => /^~ › hobbies › \S+ cooking ›$/.test(crumbs(s)), 3000, "the breadcrumb: cooking a vault");
@@ -1066,12 +1066,12 @@ const ROOTS: Check[] = [
       await s.until(() => listed(s, /202608151900-index\.md$/), 3000, "cycling unfolded");
       await explorerRow(s, "202608151900-index\\.md");
       await s.keys("enter");
-      await s.where(/^~\/hobbies\/cycling\b/, /‹ 202608151900-index\.md/, 5000);
+      await s.where(/^~\/hobbies\/cycling(?: ·|$)/, /‹ 202608151900-index\.md/, 5000);
       await explorerOpen(s);
       await s.until(() => listed(s, /\scooking$/), 3000, "the explorer still in hobbies");
       // .zk/ makes cycling one.
       await s.restart({ startAt: "home/hobbies/cycling/202608151900-index.md" });
-      await s.where(/^~\/hobbies\/cycling\b/, /‹ 202608151900-index\.md/);
+      await s.where(/^~\/hobbies\/cycling(?: ·|$)/, /‹ 202608151900-index\.md/);
       await s.quit();
       // Opened, read, quit: neither has a file more or less, a byte changed in size — no .slipbox/ made.
       const was = before.get(s)!;
@@ -1163,17 +1163,17 @@ const ROOTS: Check[] = [
     covers: { cases: ["links/named-folders", "links/roots", "vault"], commands: ["folders.open"] },
     options: { home: true, startAt: "home/notes/index.md" },
     run: async (s) => {
-      await s.where(/^notes\b/); // named by its .slipbox/
+      await s.where(/^notes(?: ·|$)/); // named by its .slipbox/
       s.cliIn("~/hobbies/photography", "ls"); // known here
       await leader(s, "v", "v");
       await s.see(/Folders \(\d+\)/);
       await s.type("photography");
       await s.keys("enter");
       await s.message(" photography — "); // as the switch says it: name — path
-      await s.where(/^photography\b/);
+      await s.where(/^photography(?: ·|$)/);
       // An Obsidian vault with no .slipbox/ name and no remote: its path, from home.
       await s.restart({ startAt: "home/hobbies/cooking/Home.md" });
-      await s.where(/^~\/hobbies\/cooking\b/);
+      await s.where(/^~\/hobbies\/cooking(?: ·|$)/);
       // A file of home's (VV-D2) a link leads to, out of this vault: peeked at, home naming it (VV-D7); o goes into
       // home, the note open there; ctrl+o back.
       await s.restart({ startAt: "home/notes/daily/2026-09-22.md" });
@@ -1184,7 +1184,7 @@ const ROOTS: Check[] = [
       await s.where("~", /‹ Downloads\/sync-worker-2026-09-22\.log\.md/, 5000);
       await s.see("§ sync-worker log, 2026-09-22", 10000); // read and drawn
       await s.keys("ctrl+o");
-      await s.where(/^notes\b/, /2026-09-22\.md/, 5000);
+      await s.where(/^notes(?: ·|$)/, /2026-09-22\.md/, 5000);
       // A file of Elsewhere's a link leads to: peeked at, Elsewhere naming it; o goes into Elsewhere, its tabs.
       s.write("~/notes/daily/2026-09-22.md", `[elsewhere](${join(s.dir, "elsewhere", "stray-note.md")})\n`);
       await s.restart({ startAt: "home/notes/daily/2026-09-22.md", setup: downloadsElsewhere });
@@ -1345,7 +1345,7 @@ const NAMED: Check[] = [
       await s.see("photography › trips/", 5000); // a peek (VV-D7): o goes into photography
       await s.keys("o");
       await s.notSee(PEEK_HINT);
-      await s.where(/^photography\b/);
+      await s.where(/^photography(?: ·|$)/);
       await s.see("Kyoto"); // the trip's index, in the photography folder
       // kestrel's sync doc: Sam's notes (the notes folder), and the agent's copy on its branch — its worktree.
       s.cliIn("~/notes", "ls");
@@ -1354,7 +1354,7 @@ const NAMED: Check[] = [
       await s.see("notes › projects/sync-rewrite.md", 5000);
       await s.keys("o");
       await s.notSee(PEEK_HINT);
-      await s.where(/^notes\b/);
+      await s.where(/^notes(?: ·|$)/);
       await opened(s, "projects/sync-rewrite.md");
       await s.restart({ startAt: "home/work/kestrel/docs/sync.md" });
       await s.keys("/");
@@ -1375,7 +1375,7 @@ const NAMED: Check[] = [
     run: async (s) => {
       await s.ex("name cooking");
       await s.message("is named cooking (.slipbox/"); // the box wraps the rest
-      await s.where(/^cooking\b/);
+      await s.where(/^cooking(?: ·|$)/);
       s.expect(
         readFileSync(s.path("~/hobbies/cooking/.slipbox/config.toml"), "utf8").includes('name = "cooking"'),
         "the name written into .slipbox/",
@@ -1405,7 +1405,7 @@ const NAMED: Check[] = [
       await s.see(/name halden → halden2: \d+ changes? in \d+ files?/);
       await s.keys("enter");
       await s.message("named the folder halden → halden2");
-      await s.where(/^halden2\b/);
+      await s.where(/^halden2(?: ·|$)/);
       s.expect(s.read(".slipbox/config.toml").includes('name = "halden2"'), "the new name in .slipbox/");
       s.expect(s.read("outreach/index.md") === outreach, "the nested root's paths out as they were");
     },
@@ -1428,12 +1428,12 @@ const NAMED: Check[] = [
       await follow(s, "qualified.");
       await s.see("kestrel › docs/architecture.md", 5000); // a peek (VV-D7): o goes there
       await s.keys("o");
-      await s.where(/^kestrel\b/);
+      await s.where(/^kestrel(?: ·|$)/);
       await opened(s, "docs/architecture.md");
       s.expect(!/engine-spike/.test(s.whereText()), `kestrel, not the spike:\n${s.topBar()}`);
       // A hosting URL to the repository, from product's README: the same copy, at its top.
       await s.restart({ startAt: "home/work/product/README.md" });
-      await s.where(/^product\b/);
+      await s.where(/^product(?: ·|$)/);
       await s.keys("/");
       await s.type("code is in");
       await s.keys("enter", "escape", "tab");
@@ -1441,7 +1441,7 @@ const NAMED: Check[] = [
       await s.keys("enter");
       await s.see("kestrel › README.md", 5000);
       await s.keys("o");
-      await s.where(/^kestrel\b/);
+      await s.where(/^kestrel(?: ·|$)/);
       await opened(s, "README.md");
       s.expect(!/engine-spike/.test(s.whereText()), `kestrel, not the spike:\n${s.topBar()}`);
     },
@@ -1496,7 +1496,7 @@ const NAMED: Check[] = [
         await s.see("product › prd/route-sharing.md", 5000); // a peek (VV-D7), at its top; o goes there
         await s.keys("o");
         await opened(s, "prd/route-sharing.md");
-        await s.where(/^product\b/);
+        await s.where(/^product(?: ·|$)/);
         await s.status(/L1:/);
         await s.message(said);
         s.expect(
@@ -2885,7 +2885,7 @@ const PEEK: Check[] = [
       await follow(s, ARCHITECTURE);
       await s.see(title, 5000);
       await s.see(PEEK_HINT);
-      await s.where(/^notes\b/, /kestrel: docs\/architecture\.md/);
+      await s.where(/^notes(?: ·|$)/, /kestrel: docs\/architecture\.md/);
       // Its backlinks: kestrel has no index here yet, so the peek builds it on a thread of its own, and lists them
       // when it's done (D259), notes' among them: at its end, then at the list's once it's there.
       await s.keys("shift+g");
@@ -2911,7 +2911,7 @@ const PEEK: Check[] = [
       await s.keys("t");
       await s.notSee(PEEK_HINT);
       await s.see("kestrel: architecture.md");
-      await s.where(/^notes\b/, /kestrel: docs\/architecture\.md/);
+      await s.where(/^notes(?: ·|$)/, /kestrel: docs\/architecture\.md/);
       await s.keys("i");
       await s.message("read-only here: kestrel's");
       // o: from the note's tab, peeked at again, gone into — kestrel's own tabs; ctrl+o, back in notes.
@@ -2926,7 +2926,7 @@ const PEEK: Check[] = [
       await s.see("~/notes/index.md", 10000);
       await s.keys("escape");
       await s.keys("ctrl+o");
-      await s.where(/^notes\b/, /index\.md/, 5000);
+      await s.where(/^notes(?: ·|$)/, /index\.md/, 5000);
       await follow(s, ARCHITECTURE);
       await s.see(title, 5000);
       // Worked out on their thread, they come under the note (#10): at its end, then at the list's once it's there.
@@ -2950,19 +2950,19 @@ const PEEK: Check[] = [
       await s.see("ctrl+o back");
       await s.keys("ctrl+o");
       await s.see("kestrel › docs/architecture.md", 5000);
-      await s.where(/^notes\b/);
+      await s.where(/^notes(?: ·|$)/);
       // This vault's: the peek closes, the note opens in the tabs, as usual.
       await follow(s, "sync-rewrite in his");
       await s.notSee(PEEK_HINT, 5000);
       await opened(s, "projects/sync-rewrite.md");
-      await s.where(/^notes\b/);
+      await s.where(/^notes(?: ·|$)/);
       // A third vault's, from product's PRD peeked at: the peek moves on, into kestrel.
       await s.restart({ startAt: "home/notes/meetings/2026-09-05-feedback-synthesis.md" });
       await follow(s, "the pricing section");
       await s.see("product › prd/route-sharing.md", 5000);
       await follow(s, "the feature doc");
       await s.see("kestrel › docs/features/route-sharing.md", 5000);
-      await s.where(/^notes\b/);
+      await s.where(/^notes(?: ·|$)/);
       await s.keys("ctrl+o");
       await s.see("product › prd/route-sharing.md", 5000);
     },
@@ -3013,7 +3013,7 @@ const PEEK: Check[] = [
       await sleep(600); // past a double-click
       await click("outreach — the public", 16);
       await s.message(" outreach — "); // as the switch says it: name — path
-      await s.status(/ outreach .*index\.md/);
+      await s.where(/^outreach(?: ·|$)/, /index\.md/);
       s.expect(!s.text().includes(PEEK_HINT), "no peek on the way");
     },
   },

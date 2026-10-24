@@ -242,7 +242,7 @@ const HOME: Check[] = [
     covers: { cases: ["vault", "explorer", "switcher"], commands: ["switcher.open"] },
     options: { home: true, startAt: "home/notes/index.md", config: UNWALKED, setup: homeFolders },
     run: async (s) => {
-      await s.where(/^notes\b/, /index\.md/);
+      await s.where(/^notes(?: ·|$)/, /index\.md/);
       await explorerOpen(s);
       await s.until(() => /^~ › \S+ notes ›$/.test(crumbs(s)), 3000, "the view at notes");
       // -: the view at ~, home's folders listed a level at a time; household unfolded in place.
@@ -1029,7 +1029,7 @@ const ELSEWHERE: Check[] = [
     options: { home: true, startAt: "home/notes/index.md", setup: downloadsElsewhere },
     run: async (s) => {
       // notes: two tabs. (Not inbox.md: notes' config makes it its scratch, shown as `scratch`.)
-      await s.where(/^notes\b/, /index\.md/);
+      await s.where(/^notes(?: ·|$)/, /index\.md/);
       await s.keys("ctrl+t", "c");
       await s.see(tab(2, "index.md"));
       await open(s, "sync-rewrite");
@@ -1043,7 +1043,7 @@ const ELSEWHERE: Check[] = [
       // Back: notes, its two tabs, at the note left.
       await s.keys("ctrl+o");
       await opened(s, "projects/sync-rewrite.md");
-      await s.where(/^notes\b/);
+      await s.where(/^notes(?: ·|$)/);
       await s.see(tab(1, "index.md"));
       await s.see(tab(2, "sync-rewrite.md"));
       await s.notSee(tab("\\d", "stray-note.md"));

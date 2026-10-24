@@ -60,14 +60,15 @@ Previously: `slipbox` at the left and `indexing 3…` at the right, the middle e
 >   centred on the screen, then clamped into that span, so it moves right or left only as far as it must. **Short of
 >   room,** cut in this order, each step only while it still doesn't fit: a path is cut from the front (the vault's,
 >   then the workspace's, to 12 columns each, `…earch/notes`, each step cutting from the whole text, so a part given up
->   gives a path its room back); the branch's ahead and behind and its operation go; the branch is cut from its end, to
->   8 columns, then goes; the workspace goes; the vault's name is cut, a name from its end and a path from the front, to
->   6 columns. Narrower still, nothing is drawn, and the status line says where if it has the room (below). **Clicked**,
->   two targets, each a hot region only while its part is drawn: the vault's (the glyph, the name, and the workspace
->   after it, `◈ ~ › notes`) lists the named folders, seen last first, and `enter` goes into one (`space v v`, § Going
->   into a vault), from Elsewhere too; the branch's (from its `·` or a worktree's `@` through the operation:
->   `· main ↑2 merging`, `@feat`), in a repository, opens the branches' menu as the status line's did (GIT-D8): Pull
->   while there's an upstream not gone, Push, Fetch and the git panel, then the branches;
+>   gives a path its room back); the branch's ahead and behind go; the branch is cut from its end, to 8 columns, then
+>   goes; a merge or a rebase under way goes (kept after the branch, a sign that something's to finish); the workspace
+>   goes; the vault's name is cut, a name from its end and a path from the front, to 6 columns. Narrower still, nothing
+>   is drawn, and the status line says where if it has the room (below). **Clicked**, two targets, each a hot region
+>   only while its part is drawn: the vault's (the glyph, the name, and the workspace after it, `◈ ~ › notes`) lists the
+>   named folders, seen last first, and `enter` goes into one (`space v v`, § Going into a vault), from Elsewhere too;
+>   the branch's (from its `·` or a worktree's `@` through the operation: `· main ↑2 merging`, `@feat`), in a
+>   repository, opens the branches' menu as the status line's did (GIT-D8): Pull while there's an upstream not gone,
+>   Push, Fetch and the git panel, then the branches;
 > - at the right end, the vault's state (`indexing N…`), dropped when fewer than 12 columns are left.
 >
 > Toggle buttons have no fill of their own: their glyph is dim (`topbar_button`) while the pane is closed and bright

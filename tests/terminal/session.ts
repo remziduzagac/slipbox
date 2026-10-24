@@ -87,14 +87,18 @@ const MADE_ONCE = ["home", "config", "size", "keyboard", "graphics", "frameMax",
 /**
  * Where you are, read off a top bar's row (WSP-D4): what's between the `slipbox` chip and the right end's items (the
  * vault's state, `indexing 3…`, and the outline's button), each 3 or more columns apart from it, the vault's glyph left
- * out; empty when the middle says nothing.
+ * out; empty when the middle says nothing, or there's no bar (no chip on the row).
  */
 export function whereOnBar(bar: string): string {
+  // No chip: the bar is hidden (or zen), the row something else's.
   const chip = bar.indexOf("slipbox");
-  const parts = (chip < 0 ? bar : bar.slice(chip + "slipbox".length))
+  if (chip < 0) return "";
+  const parts = bar
+    .slice(chip + "slipbox".length)
     .trim()
     .split(/ {3,}/)
-    .filter((p) => p && !/^indexing \d+…$/.test(p) && [...p].length > 1);
+    // The vault's state, `…` drawn `~` in ASCII; a button, one glyph.
+    .filter((p) => p && !/^indexing \d+[…~]$/.test(p) && [...p].length > 1);
   return (parts[0] ?? "").replace(/^[^\p{L}\p{N}~…/.\s] /u, "");
 }
 

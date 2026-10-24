@@ -179,3 +179,28 @@ The tasks are in [tasks/](tasks/README.md).
   frame's draw order (`geo.whereOnTop`, set by the top bar): the order is fixed in `draw.ts`, the bar drawn after the
   windows (it needs to know whether one drew the outline's button) and before the status line, the field's comment
   says so, and computing the span twice would duplicate the bar's layout.
+- 2026-10-24, the pull request (#60) up; its review loop, round 1: `/code-review` and a fresh Claude reviewer, each
+  without the other's findings (Codex not used, at the user's word). Merged and checked against the code:
+  - **Verified, fixed:** a merge or rebase under way was given up with ahead and behind, before the branch was even
+    cut, so on a narrow bar nothing said it (both reviews): now it outlasts the branch, refining WSP-D4's order (a note
+    under it, taken as recommended, for the maintainer to confirm); unit tests and a terminal check (a rebase begun in
+    a terminal, the bar at 40 columns), undoing it fails them. With the bar hidden and no note open, the status line
+    returned before where you are: now it says it (a unit test and a check, `~/Downloads`), undoing it fails the test.
+    The checks' `whereOnBar` read row 0 with no bar there and missed ASCII's `indexing 3~` (both reviews): now empty
+    without the chip, with tests. `/^kestrel\b/` and the like also matched `kestrel@…`: the checks now want a `·` or
+    the end. Track and operation now pass `sanitize`; the requirements' CLI non-goal said nothing the CLI prints
+    names a workspace, though two of its messages now do; the last stage's arithmetic simplified; `columnOf` reused;
+    the design's branch target named from the space before `·`, and its fallback for a bar too narrow called a guard
+    (it leaves the status line no room either); `editing.md`'s mode chip no longer "says where you are". A test that
+    rewrote HEAD twice dates the writes apart (`headOf` rereads on the mtime alone).
+  - **Rejected:** the status line's rule read from a flag the top bar sets (as before: the order is fixed, the
+    field says so); the status line showing what the bar dropped (it would say the vault twice, against WSP-D5's
+    "once"); the branches' menu as a named command (it's the status line's click of GIT-D8, moved, not new);
+    measuring the parts once (a few short strings a frame); `whereOf` reading HEAD each frame (the status line's
+    `vaultStatus` did the same); ASCII's `#` shared by the vault, the outline's button and the breadcrumb (the set's
+    own, its place tells them apart).
+  - CI on the first push: the terminal checks failed on two checks still reading `handbook` and `outreach` off the
+    status line (moved now), and macOS's unit tests on the export window's places, a known flake (#39), not this
+    branch's. Tried live on a scratch home in the scratchpad: a rebase begun in a terminal on the top bar, and on the
+    status line with the bar hidden; `~/Downloads` with no note open, the bar hidden, the status line saying `~ ›
+    Downloads`.

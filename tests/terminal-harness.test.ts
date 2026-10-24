@@ -623,5 +623,11 @@ describe("where you are, read off the top bar (whereOnBar)", () => {
     expect(whereOnBar(" slipbox      ▤")).toBe("");
     expect(whereOnBar(" slipbox      indexing 3…   ▤")).toBe("");
     expect(whereOnBar(" slipbox")).toBe("");
+    // No bar: the row is the frame's rule, or a note's first line in zen.
+    expect(whereOnBar("─────────────────────┬──────────")).toBe("");
+    expect(whereOnBar("   notes on kestrel   and more")).toBe("");
+    // ASCII: `…` is drawn `~`, the glyph `#`.
+    expect(whereOnBar(" slipbox      indexing 3~   #")).toBe("");
+    expect(whereOnBar(" slipbox   # kestrel . main   indexing 3~")).toBe("kestrel . main");
   });
 });

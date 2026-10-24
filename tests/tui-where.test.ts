@@ -3,7 +3,7 @@
 // two click targets, and the status line saying it only while the top bar doesn't.
 
 import { describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, realpathSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, realpathSync, utimesSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { ListOverlay } from "../src/tui/app.ts";
 import { fitWhere, type Where } from "../src/tui/where.ts";
@@ -58,21 +58,30 @@ describe("where you are, cut to fit (WSP-D4)", () => {
     return f ? f.vault + f.branch : null;
   };
 
-  test("a part at a time: the path from the front, to 12 columns; the track and the operation; the branch, to 8, then gone; the vault, to 6; then nothing", () => {
+  test("a part at a time: the path from the front, to 12 columns; ahead and behind; the branch, to 8, then gone; the operation; the vault, to 6; then nothing", () => {
     expect(fit(parts, 61)).toBe("◈ ~/src/a-long-experiment · feature/long-branch ↑2 ↓1 merging");
     expect(fit(parts, 60)).toBe("◈ …src/a-long-experiment · feature/long-branch ↑2 ↓1 merging");
     expect(fit(parts, 50)).toBe("◈ …-experiment · feature/long-branch ↑2 ↓1 merging");
-    // The track and the operation gone, the path has its room back: each stage cuts from the whole text.
-    expect(fit(parts, 49)).toBe("◈ ~/src/a-long-experiment · feature/long-branch");
-    expect(fit(parts, 46)).toBe("◈ …src/a-long-experiment · feature/long-branch");
-    expect(fit(parts, 35)).toBe("◈ …-experiment · feature/long-bran…");
-    expect(fit(parts, 25)).toBe("◈ …-experiment · feature…");
-    expect(fit(parts, 24)).toBe("◈ …src/a-long-experiment");
+    // Ahead and behind gone, the path has its room back: each stage cuts from the whole text.
+    expect(fit(parts, 49)).toBe("◈ …-long-experiment · feature/long-branch merging");
+    expect(fit(parts, 40)).toBe("◈ …-experiment · feature/long-b… merging");
+    expect(fit(parts, 33)).toBe("◈ …-experiment · feature… merging");
+    // A merge under way outlasts the branch: something's to finish (the review's finding, 2026-10-24).
+    expect(fit(parts, 30)).toBe("◈ …c/a-long-experiment merging");
+    expect(fit(parts, 23)).toBe("◈ …g-experiment merging");
     expect(fit(parts, 20)).toBe("◈ …a-long-experiment");
     expect(fit(parts, 14)).toBe("◈ …-experiment");
     expect(fit(parts, 13)).toBe("◈ …experiment");
     expect(fit(parts, 8)).toBe("◈ …iment");
     expect(fit(parts, 7)).toBeNull();
+  });
+
+  test("a worktree mid-rebase on a narrow bar: the rebase kept after the branch is gone", () => {
+    const wt = { ...parts, vault: "kestrel", vaultPath: false, branch: "agent/sync-retry", at: true, track: "" };
+    const rebasing = { ...wt, op: "rebasing 2/5" };
+    expect(fit(rebasing, 40)).toBe("◈ kestrel@agent/sync-retry rebasing 2/5");
+    expect(fit(rebasing, 30)).toBe("◈ kestrel rebasing 2/5");
+    expect(fit(rebasing, 21)).toBe("◈ kestrel");
   });
 
   test("an empty branch, as a rebase's `refs/heads/` alone gives: nothing after the vault but what's under way", () => {
@@ -142,10 +151,17 @@ describe("where you are on the top bar (WSP-D4)", () => {
     expect(whereNow(h)).toBe(`${root} · main`);
     const b = hot(h, "top:branch")!;
     expect(h.canvas().styles[b.y]![b.x + 2]!.fg).toBe(h.app.theme.roles.status_dim.fg!);
-    git(root, "switch", "-q", "-c", "topic");
+    // Each switch dates HEAD apart: headOf reads it again when its mtime moves, and two writes in one clock tick
+    // could share one.
+    const switched = (n: number, ...args: string[]) => {
+      git(root, "switch", "-q", ...args);
+      const at = new Date(Date.now() + n * 1000);
+      utimesSync(join(root, ".git", "HEAD"), at, at);
+    };
+    switched(1, "-c", "topic");
     expect(topRow(h.frame())).toContain(" · topic");
     // A detached head: its commit.
-    git(root, "switch", "-q", "--detach");
+    switched(2, "--detach");
     const commit = git(root, "rev-parse", "--short=7", "HEAD").stdout.toString().trim();
     expect(topRow(h.frame())).toContain(` · ${commit}`);
   });
@@ -303,6 +319,24 @@ describe("where you are on the status line, only while the top bar doesn't say i
       });
       expect(statusRow(h.frame())).toContain("~ › notes");
       expect(statusRow(h.frame())).not.toContain("◈");
+    } finally {
+      process.env.HOME = before;
+    }
+  });
+
+  test("no note open (a folder of home with none), the bar hidden: the status line says where all the same", async () => {
+    const { homeAt } = await import("../src/core/vault.ts");
+    const home = realpathSync(mkdtempSync(join(sandbox, "home-")));
+    mkdirSync(join(home, "empty"));
+    const before = process.env.HOME;
+    process.env.HOME = home;
+    try {
+      const h = await harness({ loc: homeAt(home), open: null, folder: join(home, "empty") });
+      expect(h.app.view).toBeNull();
+      expect(topRow(h.frame())).toContain("◈ ~ › empty");
+      expect(statusRow(h.frame())).not.toContain("empty");
+      h.app.ui.top_bar = false;
+      expect(statusRow(h.frame())).toContain("~ › empty");
     } finally {
       process.env.HOME = before;
     }
