@@ -234,3 +234,16 @@ the deployments D258 relies on are served; then whatever fix that calls for.
   for no marker, now behind the guard's, kept so the read-back can't pass on an empty one by itself; the session's
   notes on Codex's skips, which the maintainer asked for; and, again, `v*` in the environment, D?1's number, the
   condition written twice.
+- 2026-10-24: Review, round 4: Codex's part skipped again, Codex at its usage limit; a second reviewer does it.
+- 2026-10-24: Review, round 4. The second reviewer: no defect in the workflow, the scripts or the tests; the pull
+  request had a release's hand-off run 5fe758f's `pages.yml`, but step 7 has moved `main` to the release by then:
+  fixed, with "within ten seconds" for the runs' times. `/code-review`, seven, each checked. Taken: "one deployment at
+  a time, never cancelled" (older text, in the paragraph rewritten): one waiting gives way to a newer, so said there
+  and in design/repository.md; a run handing off said nothing of where the deployment is: its log says so now, with a
+  link to the runs on `main`, and the step is run in a test with `gh` stubbed; the read-back's failure gave the
+  preview's re-run advice to a run by hand on `main` too: only under a push now, tested both ways (the condition taken
+  out, the test fails); the guard's message, and the docs, said the re-run's site was older than any since, which
+  holds only if one was deployed since: "perhaps older", and the run by hand builds it afresh; `holds` compared mixed
+  types as strings and names by case: GitHub's loose equality (numbers for mixed types) and names ignoring case now,
+  checked. Not taken: D?1's number, and `v*` in `settings.json`'s expected environment (the setting is the
+  maintainer's), as before.

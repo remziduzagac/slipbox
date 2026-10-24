@@ -44,7 +44,11 @@ jobs:
       - name: run on main
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh workflow run pages.yml --repo "$GITHUB_REPOSITORY" --ref main
+        run: |
+          gh workflow run pages.yml --repo "$GITHUB_REPOSITORY" --ref main
+          runs="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/workflows/pages.yml?query=branch%3Amain"
+          echo "this run deploys nothing: the site is deployed, and read back, by the run by hand on main just started,"
+          echo "with main's pages.yml: $runs"
 
   # The site, from main's bootstrap whichever ref started the run, and the releases as they are now; the docs under
   # docs/, built by the site's own packages (site/package.json, installed under site/bunfig.toml's gates: no install
@@ -115,8 +119,8 @@ jobs:
       name: github-pages
       url: ${{ steps.deploy.outputs.page_url }}
     steps:
-      # D?1: a re-run of this job alone would deploy the run's artifact again, its site older than any deployed since,
-      # and a repeat of its commit (served by hand, putting back the older site; under a push, not served at all).
+      # D?1: a re-run of this job alone would deploy the run's artifact again, its site perhaps older than one deployed
+      # since, and a repeat of its commit (served by hand, putting back the older site; under a push, not served).
       - name: this run's site
         env:
           DEPLOYMENT: ${{ needs.site.outputs.deployment }}
@@ -126,8 +130,8 @@ jobs:
             exit 1
           fi
           if [ "$DEPLOYMENT" != "$GITHUB_RUN_ID.$GITHUB_RUN_ATTEMPT" ]; then
-            echo "this is a re-run of deploy alone, its site built by attempt ${DEPLOYMENT##*.}: it would deploy"
-            echo "that older site again. Run pages.yml by hand on main instead, which builds the site afresh."
+            echo "this is a re-run of deploy alone, with the site attempt ${DEPLOYMENT##*.} built, which may be older"
+            echo "than the one deployed since. Run pages.yml by hand on main instead, which builds the site afresh."
             exit 1
           fi
       - id: deploy
@@ -160,6 +164,8 @@ jobs:
           done
           echo "after eleven minutes, the site doesn't serve this deployment:"
           echo "deployment \"$DEPLOYMENT\" (served: \"$(served deployment)\"), stable \"$STABLE\", preview \"$PREVIEW\""
-          echo "A preview's run re-run deploys its commit again, which Pages doesn't serve under a push: run pages.yml"
-          echo "by hand on main instead."
+          if [ "$GITHUB_EVENT_NAME" = push ]; then
+            echo "A re-run of this preview's run deploys its commit again, which Pages doesn't serve under a push: run"
+            echo "pages.yml by hand on main instead."
+          fi
           exit 1

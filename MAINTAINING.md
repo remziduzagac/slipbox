@@ -192,9 +192,9 @@ after it, never before. It refuses deleting `test` and pushing anything that isn
 - **Who it reaches:** those who installed with `sh -s -- --preview`, or ran `slipbox channel set preview`. Pages is
   deployed after each one, in the preview's own run, and its `preview` channel names it; `slipbox upgrade` there takes
   the newer of it and the latest release. Stable installs, Homebrew and the `latest` release are untouched. If its
-  site isn't served, re-running its `pages` jobs doesn't help (`deploy` alone is refused, its site older than any
-  since, and with `site` its commit is deployed again, which Pages doesn't serve under a push): run
-  `gh workflow run pages.yml --ref main` instead.
+  site isn't served, re-running its `pages` jobs won't help (`deploy` alone is refused, its site perhaps older than
+  one deployed since, and with `site` its commit is deployed again, which Pages doesn't serve under a push): run
+  `gh workflow run pages.yml --ref main` instead, which builds the site afresh.
 
 `test` only moves forward: its ruleset forbids deleting it or forcing it back. A preview that went wrong is followed by
 another, from a fixed `dev`.

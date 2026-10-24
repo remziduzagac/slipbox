@@ -308,7 +308,7 @@ moving no longer starts `pages.yml`: it moves only for a release (D251), which d
 release's docs go live with it. Every deployment also puts a marker of its own on the site, `deployment` (the run's ID
 and attempt), and reads it back with the channels, for eleven minutes by the clock; it fails when the site doesn't serve
 it. A re-run of the deploy job alone is refused, the marker an attempt older than the run's: it would deploy the run's
-site again, older than any since. Amends D258 and GR-D14. Detail: design/distribution.md § Previews.
+site again, perhaps older than one deployed since. Amends D258 and GR-D14. Detail: design/distribution.md § Previews.
 
 **Why:** A deployment is named by its commit, and one of a commit deployed before is reported a success and not served
 under a `push` as well as a `release`: #7's preview, of the commit `main`'s push had deployed, wasn't, and nor was a

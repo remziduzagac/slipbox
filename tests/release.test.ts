@@ -503,7 +503,11 @@ function holds(expr: string | undefined, context: Record<string, unknown>): bool
     if (/^\d/.test(t)) return Number(t);
     if (t in literals) return literals[t];
     if (/^[A-Za-z_]/.test(t) && tokens[at] !== "(")
-      return t.split(".").reduce<unknown>((v, k) => (v as Record<string, unknown> | undefined)?.[k], context);
+      return t.split(".").reduce<unknown>((v, k) => {
+        if (v === null || typeof v !== "object") return undefined;
+        const key = Object.keys(v).find((name) => name.toLowerCase() === k.toLowerCase());
+        return key === undefined ? undefined : (v as Record<string, unknown>)[key];
+      }, context);
     return fail();
   };
   const unary = (): unknown => {
@@ -516,7 +520,14 @@ function holds(expr: string | undefined, context: Record<string, unknown>): bool
     const op = tokens[at];
     if (op !== "==" && op !== "!=") return left;
     at++;
-    const same = String(left).toLowerCase() === String(unary()).toLowerCase();
+    const right = unary();
+    // Strings ignoring case; any other two of different types as numbers (null 0, true 1, '' 0, 'x' NaN).
+    const same =
+      typeof left === "string" && typeof right === "string"
+        ? left.toLowerCase() === right.toLowerCase()
+        : typeof left === typeof right
+          ? left === right
+          : Number(left) === Number(right);
     return op === "==" ? same : !same;
   };
   const and = (): unknown => {
@@ -733,6 +744,9 @@ describe("the workflows: one build for releases and previews, previews from test
     expect(holds("${{ true && null }}", ctx)).toBe(false);
     expect(holds("${{ 0 || '' }}", ctx)).toBe(false);
     expect(() => holds("${{ always() }}", ctx)).toThrow("can't read");
+    expect(holds("${{ github.EVENT_NAME == 'WORKFLOW_DISPATCH' }}", ctx)).toBe(true);
+    expect(holds("${{ true == 'true' }}", ctx)).toBe(false);
+    expect(holds("${{ null == '' && 0 == '' && null == 0 && true == 1 }}", ctx)).toBe(true);
     const pages = workflow("pages.yml");
     const { redeploy, site, deploy } = pages.jobs;
     const run = (event_name: string, ref: string, fork = false) => ({
@@ -758,7 +772,18 @@ describe("the workflows: one build for releases and previews, previews from test
     }
     // The run handed to is one by hand on main, which deploys and hands nothing on.
     expect(redeploy?.permissions).toEqual({ actions: "write" });
-    expect(runs(redeploy!)).toBe('gh workflow run pages.yml --repo "$GITHUB_REPOSITORY" --ref main');
+    const dir = mkdtempSync(join(sandbox, "redeploy-"));
+    const stubs = join(dir, "bin");
+    mkdirSync(stubs);
+    writeFileSync(join(stubs, "gh"), '#!/bin/sh\necho "$*" >"$FAKE/gh"\n');
+    chmodSync(join(stubs, "gh"), 0o755);
+    const env = { FAKE: dir, GITHUB_REPOSITORY: "o/r", GITHUB_SERVER_URL: "https://github.com", GH_TOKEN: "t" };
+    const handed = runStep(redeploy?.steps?.[0], env, dir, stubs);
+    expect(handed.code).toBe(0);
+    expect(readFileSync(join(dir, "gh"), "utf8")).toBe("workflow run pages.yml --repo o/r --ref main\n");
+    // Its own run says where the deployment is: it deploys nothing itself.
+    expect(handed.out).toContain("this run deploys nothing");
+    expect(handed.out).toContain("https://github.com/o/r/actions/workflows/pages.yml?query=branch%3Amain");
     expect(holds(site?.if, run("workflow_dispatch", "refs/heads/main"))).toBe(true);
     // Nothing deployed where `site` is skipped: `deploy` waits for it.
     expect(needs(deploy!)).toEqual(["site"]);
@@ -845,7 +870,7 @@ describe("the workflows: one build for releases and previews, previews from test
         expect(args).toStartWith("-fsS --connect-timeout 5 --max-time 10 https://example.test/");
       return { code, slept, took, out };
     };
-    const built = { DEPLOYMENT: "40045492245.1", STABLE: stable, PREVIEW: preview };
+    const built = { DEPLOYMENT: "40045492245.1", STABLE: stable, PREVIEW: preview, GITHUB_EVENT_NAME: "push" };
     // Served at once.
     const now = readBack({ deployment: "40045492245.1", stable, preview }, built);
     expect([now.code, now.slept]).toEqual([0, 0]);
@@ -855,7 +880,15 @@ describe("the workflows: one build for releases and previews, previews from test
     const stale = readBack({ deployment: "39964133295.1", stable, preview }, built);
     expect([stale.code, stale.slept, stale.took]).toEqual([1, 66, 660]);
     expect(stale.out).toContain('deployment "40045492245.1" (served: "39964133295.1")');
-    expect(stale.out).toContain("run pages.yml\nby hand on main instead");
+    // A preview's run (a push) is told a re-run won't help; a run by hand, which is the remedy, isn't.
+    expect(stale.out).toContain("A re-run of this preview's run deploys its commit again");
+    const byHand = readBack(
+      { deployment: "39964133295.1", stable, preview },
+      { ...built, GITHUB_EVENT_NAME: "workflow_dispatch" },
+      { lag: 10 },
+    );
+    expect(byHand.code).toBe(1);
+    expect(byHand.out).not.toContain("re-run");
     // A site slow to answer (ten seconds a request, curl's bound) still gives up after eleven minutes, at most a wait,
     // a round of three requests and the message's one later: within the job's 25 minutes, with deploy-pages' ten.
     // With the marker the deployment before's; with no marker at all (a site deployed before markers); with the
@@ -898,7 +931,7 @@ describe("the workflows: one build for releases and previews, previews from test
     // A re-run of `deploy` alone: `site`'s outputs, and its artifact, are attempt 1's.
     const rerun = attempt("40045492245.1", "2");
     expect(rerun.code).toBe(1);
-    expect(rerun.out).toContain("a re-run of deploy alone, its site built by attempt 1");
+    expect(rerun.out).toContain("a re-run of deploy alone, with the site attempt 1 built");
     expect(rerun.out).toContain("Run pages.yml by hand on main instead");
     // No marker built at all.
     expect(attempt("", "1")).toEqual({ code: 1, out: "no marker was built: nothing to deploy and read back\n" });
