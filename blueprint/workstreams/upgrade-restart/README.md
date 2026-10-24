@@ -1,5 +1,5 @@
 ---
-status: draft
+status: active
 created: "2026-10-24"
 branch: feat/issue-23
 ---
@@ -17,5 +17,6 @@ tabs, windows and positions. A slipbox upgraded underneath a running one offers 
 - [design.md](design.md): its changes to the root's design.
 - [decisions.md](decisions.md): what the maintainer agreed, UPG-D1 to UPG-D7.
 - [ideas.md](ideas.md): the ways the hand-over could take the terminal, and the other alternatives weighed.
-- [notes.md](notes.md): how it was discussed, and the questions open for the maintainer.
+- [notes.md](notes.md): how it was discussed, and the maintainer's answers.
 - [research.md](research.md): what was tried on this machine: a compiled Bun replacing itself by `execve`.
+- [tasks/](tasks/README.md): its tasks, UPG-T1 to UPG-T8.
