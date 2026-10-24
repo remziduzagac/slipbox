@@ -222,15 +222,17 @@ export function drawFloating(app: App, c: Canvas, mainY: number, mainH: number, 
         ? ` ${tab}${f.diff.go ? "enter goes to the line · " : ""}esc · q ${f.diff.back ? "goes back" : "closes"} `
         : f.kind === "commit"
           ? ` ctrl+s ${f.amend ? "amends" : "commits"} · esc · q leaves it `
-          : f.kind === "scratch"
-            ? " esc · q closes, saved "
-            : f.kind === "peek"
-              ? ` o go there · t keep as a tab · z ${f.peek.full ? "smaller" : "fill"}${f.peek.back.length ? " · ctrl+o back" : ""} · esc closes `
-              : f.kind === "review"
-                ? " esc ends the review "
-                : f.kind === "merge"
-                  ? ` esc ${f.merge.prompt ? "goes back to the question" : "closes, what's settled kept"} `
-                  : ` esc · q closes, writing back · ctrl+s writes `;
+          : f.kind === "report"
+            ? " ctrl+s sends it or adds the screen · esc · q leaves it "
+            : f.kind === "scratch"
+              ? " esc · q closes, saved "
+              : f.kind === "peek"
+                ? ` o go there · t keep as a tab · z ${f.peek.full ? "smaller" : "fill"}${f.peek.back.length ? " · ctrl+o back" : ""} · esc closes `
+                : f.kind === "review"
+                  ? " esc ends the review "
+                  : f.kind === "merge"
+                    ? ` esc ${f.merge.prompt ? "goes back to the question" : "closes, what's settled kept"} `
+                    : ` esc · q closes, writing back · ctrl+s writes `;
   const bottom = `${b.bl}${b.h.repeat(Math.max(0, w - 2 - stringWidth(hint)))}`;
   drawText(c, x, y + h - 1, bottom, border);
   drawText(c, x + stringWidth(bottom), y + h - 1, truncate(hint, w - stringWidth(bottom) - 1) + b.br, dim);

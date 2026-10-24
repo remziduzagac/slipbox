@@ -62,6 +62,8 @@ export interface Io {
   stdin: () => Promise<string>;
   isTTY: boolean;
   columns: number | undefined;
+  /** The terminal's rows, when stdout is one (`slipbox report`'s size). */
+  rows?: number | undefined;
   cwd: string;
   env: NodeJS.ProcessEnv;
 }

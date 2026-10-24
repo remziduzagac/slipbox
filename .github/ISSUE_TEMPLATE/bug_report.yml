@@ -5,14 +5,14 @@ body:
   - type: markdown
     attributes:
       value: >-
-        Thanks for reporting it. Show it on a small example note, never on your own private notes: an issue is
-        public. A security problem goes privately, as
+        Thanks for reporting it. In slipbox, `space r` fills these fields in, and `slipbox report` prints them. Show
+        it on a small example note, never on your own private notes: an issue is public. A security problem goes privately, as
         [the security policy](https://github.com/remziduzagac/slipbox/security/policy) says, never here.
   - type: input
     id: version
     attributes:
       label: Version
-      description: What `slipbox --version` prints.
+      description: What `slipbox --version` prints (`slipbox report` prints it with the fields below).
       placeholder: slipbox 0.2.0
     validations:
       required: true
@@ -73,6 +73,6 @@ body:
     attributes:
       label: What slipbox sees
       description: >-
-        For language servers, `slipbox doctor <file>`; for a folder's behaviour, `slipbox info`. Remove any path
-        you'd rather not share.
+        The screen as text, which `space r` adds when you ask; for language servers, `slipbox doctor <file>`; for a
+        folder's behaviour, `slipbox info`. Remove any path you'd rather not share.
       render: text

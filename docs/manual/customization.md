@@ -94,8 +94,8 @@ These come from your own file only. In a folder's file, each is ignored, with a 
 - **`walk.root_markers`.** Where vaults are is settled before any folder's file is read.
 - **`git.worktrees`.** Where slipbox makes a worktree's folder, outside the vault, is yours to say.
 - **A key or alias bound to a command that throws work away or runs a program:** `app.quit_force`, `note.revert`,
-  `note.save_force`, `scratch.clear`, `shell.run` and `shell.filter`. A clone can't put a quit without saving on
-  `ctrl+s`, or a program of its choosing on `:wq`. Your own file may: `"g m" = "shell.run make"`.
+  `note.save_force`, `scratch.clear`, `shell.run`, `shell.filter` and `help.report_send`. A clone can't put a quit
+  without saving on `ctrl+s`, or a program of its choosing on `:wq`. Your own file may: `"g m" = "shell.run make"`.
 
 A folder's file may give a language server only its settings (`config`). They reach the server only in a vault you
 trust, as a project's `.vscode/settings.json` would. Some servers' settings name programs to run.

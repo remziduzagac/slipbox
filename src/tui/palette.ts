@@ -23,6 +23,7 @@ import { parseSubstitute } from "../core/replace.ts";
 import { parseBang } from "../core/shell.ts";
 import { rank } from "./match.ts";
 import { MOUSE_HELP } from "./mouse-help.ts";
+import { REPORT_ADDS, REPORT_SENDS } from "./report.ts";
 
 // ---------------------------------------------------------------------------------------------
 // The `:` prompt: matching commands, plus exact aliases that win, plus argument completion.
@@ -44,6 +45,10 @@ function argCandidates(a: App, cmd: string): string[] | null {
       return listThemes().map((t) => t.name);
     case "glyphs.set":
       return ["nerd", "unicode", "ascii", "auto"];
+    case "help.report":
+      return [...REPORT_ADDS];
+    case "help.report_send":
+      return [...REPORT_SENDS];
     case "note.export":
       return FORMATS.map((f) => f.name);
     case "tag.list":

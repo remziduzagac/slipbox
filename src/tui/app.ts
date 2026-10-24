@@ -86,6 +86,8 @@ import { Input } from "./input.ts";
 import { Mouse } from "./mouse.ts";
 import { Exporter } from "./exporter.ts";
 import { Scratch } from "./scratch.ts";
+import { Reporter } from "./report.ts";
+import type { TerminalAnswer } from "../core/report.ts";
 import { Watch } from "./watch.ts";
 import { Session } from "./session.ts";
 import { Saving } from "./saving.ts";
@@ -120,6 +122,8 @@ export interface Host {
   /** The network, for pictures on the internet (12.12): fetch's own, unless the host stands in (the tests' never
    *  reaches it). */
   fetch?(url: string, init: RequestInit): Promise<Response>;
+  /** What the terminal said of itself, as the renderer found it asking: a report's facts (RPT). Absent: nothing. */
+  terminal?(): TerminalAnswer | null;
 }
 
 export type Level = "info" | "warn" | "error";
@@ -528,7 +532,7 @@ export class App {
   readonly explicitTheme: string | undefined;
   /**
    * The floating window (3.20): a view over the windows, of text that isn't a file of its own — a note's frontmatter,
-   * a hover, a commit's message, the scratch, a diff, a peek, a review, the merge screen — with every editing key there
+   * a hover, a commit's message, the scratch, a diff, a peek, a review, the merge screen, a report — with every editing key there
    * is; closed (esc, q, :q) or saved (ctrl+s, :w), its text goes back where it came from, as one undo step there.
    */
   floating:
@@ -541,6 +545,7 @@ export class App {
         | { kind: "peek"; peek: Peek }
         | { kind: "review"; review: Review }
         | { kind: "merge"; merge: MergeState }
+        | { kind: "report"; from: Region }
       ) & { view: View; title: string })
     | null = null;
   /** Completion's popup while typing (19.16), and the signature being typed. */
@@ -630,6 +635,8 @@ export class App {
   readonly renaming = new Renaming(this);
   /** Links out of the vault, followed only when you say so (VV-D6). */
   readonly following = new Following(this);
+  /** Reporting a problem (RPT): the report's window, the screen kept for it, its sending. */
+  readonly report = new Reporter(this);
 
   constructor(opts: AppOptions) {
     this.loc = opts.loc;
@@ -1121,6 +1128,11 @@ export class App {
 
   /** Write a buffer's file and take the result back in; false (with a message) if refused. */
   writeBuffer(buf: NoteBuffer, content: string | Uint8Array, saving = false): boolean {
+    // A virtual buffer (3.20) is no file: its text goes where it belongs by its own save, never to its name on disk.
+    if (buf.virtual) {
+      this.message("warn", `${this.displayName(buf)} is the floating window's, not a file: not written`);
+      return false;
+    }
     // A vault note stays inside the vault; a file from outside it (the scratch) inside its folder. Through a link
     // you follow, home's and Elsewhere's are written where it leads; a vault's never out of it (VV-D6).
     const root = buf.rel !== null ? this.loc.root : dirname(buf.abs);
@@ -1246,16 +1258,20 @@ export class App {
       this.termTitle = title;
       this.host.setTitle?.(title);
     }
+    // A report waiting for the screen: this frame kept as text too, and the report opened on the next (RPT-D2) — the
+    // frame saying drawing failed among them: a report is wanted most then.
+    const c = this.report.canvas(canvas);
     try {
-      this.geometry = drawApp(this, canvas);
+      this.geometry = drawApp(this, c);
+      this.report.drawn();
     } catch (err) {
       // A drawing bug must never take the app down: report it, and say so on screen too (the
       // message line may be what failed to draw).
       const text = `drawing failed: ${(err as Error).message}`;
       if (!this.drawFailed) this.message("error", text);
       this.drawFailed = true;
-      canvas.fill(0, 0, canvas.width, canvas.height, null);
-      drawText(canvas, 0, 0, truncate(`slipbox: ${text} — resize, or esc`, canvas.width), {
+      c.fill(0, 0, canvas.width, canvas.height, null);
+      drawText(c, 0, 0, truncate(`slipbox: ${text} — resize, or esc`, canvas.width), {
         fg: "default",
         bg: null,
         bold: true,
@@ -1264,6 +1280,7 @@ export class App {
         strike: false,
         dim: false,
       });
+      this.report.drawn();
       return;
     }
     this.drawFailed = false;

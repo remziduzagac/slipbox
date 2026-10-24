@@ -11,6 +11,7 @@ import { PEEK_BACKLINKS } from "./peek-backlinks.ts";
 import { LEFT_OUT_OUTSIDE_AND_CODE, OUTSIDE_AND_CODE } from "./outside-and-code.ts";
 import { PANELS } from "./panels.ts";
 import { LEFT_OUT_READING, READING } from "./reading.ts";
+import { REPORTING } from "./reporting.ts";
 import { SLOW_DISK } from "./slow-disk.ts";
 import { SOURCE_CONTROL } from "./source-control.ts";
 import { VAULTS } from "./vaults.ts";
@@ -43,6 +44,8 @@ export const CHECK_FILES: Record<string, Check[]> = {
   "window-header": WINDOW_HEADER,
   // What the branches do once git answers in the background (D263): source control's too, in a file of their own.
   "git-branches": GIT_BRANCHES,
+  // Reporting a problem (RPT): help's, in the navigating area, navigating.ts being past the size limit.
+  reporting: REPORTING,
 };
 
 export const CHECKS: Check[] = Object.values(CHECK_FILES).flat();

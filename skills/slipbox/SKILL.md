@@ -236,6 +236,16 @@ Reference forms: `path:42`, `path:42-50`, `path:42:10-30` (line 42, columns 10â€
 Paths inside the project are stored relative to it. Each entry follows a `---` rule; with a reference, the text is
 the note on it (`**Note:**`): say what it's for.
 
+## Reporting a problem in slipbox
+
+When slipbox itself does something wrong and the user wants it reported, run `slipbox report --json` first. It needs
+no vault. `data.fields` holds the bug form's facts by their ids (`version`, `install`, `platform`, `terminal`), and
+`data.body` the same facts as the form's Markdown sections. `data.url` is the form's address, filled in with them.
+
+Write what happened, what was expected and the steps under the form's headings (`### What happened`, `### What you
+expected`, `### Steps to make it happen`), on a small example, never the user's private notes. Show the user all of
+it before it goes anywhere: an issue is public. A security problem never goes in an issue: `SECURITY.md` says where.
+
 ## Don'ts
 
 - Don't parse human output; use `--json`.

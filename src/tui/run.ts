@@ -163,6 +163,20 @@ export async function runTui(argv: string[]): Promise<number> {
           renderer.requestRender();
         }
       },
+      // A report's facts (RPT): what the terminal answered, as OpenTUI found it asking — copied, so nothing else
+      // touches OpenTUI. Its name only from XTVERSION (else it's TERM_PROGRAM's, said apart); its "none" no finding.
+      terminal: () => {
+        const c = renderer.capabilities;
+        if (!c) return null;
+        const t = c.terminal;
+        const xt = !!t?.from_xtversion;
+        return {
+          name: xt ? t.name || null : null,
+          version: xt ? t.version || null : null,
+          multiplexer: c.multiplexer === "none" || c.multiplexer === "unknown" ? null : c.multiplexer,
+          remote: !!c.remote,
+        };
+      },
       // An editor elsewhere: no terminal of ours, not waited for.
       runDetached: async (argv) => {
         try {

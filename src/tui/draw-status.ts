@@ -234,6 +234,8 @@ export function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void
  *  `short`: in symbols only, for a narrow screen. */
 function pathMarker(app: App, view: View, short = false): string {
   const buf = view.buf;
+  // A report is never saved anywhere (RPT-D1): typed in, it's no more "unsaved" than it was.
+  if (app.floating?.kind === "report" && app.floating.view === view) return "";
   const changed = buf.changedAt && app.now() - buf.changedAt < CHANGE_MARKER_MS;
   if (short) return buf.deleted ? " ✖" : buf.conflictKept ? " • ⚠" : buf.dirty ? " •" : changed ? " ↻" : "";
   return buf.deleted

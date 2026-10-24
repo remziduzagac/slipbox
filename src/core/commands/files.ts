@@ -345,5 +345,17 @@ export const FILE_SPECS: CommandSpec[] = [
     cli: "slipbox commands",
     desc: "Lists every key and command, searchable",
   },
+  {
+    id: "help.report",
+    title: "Report a problem",
+    cli: "slipbox report",
+    desc: "A bug report in the floating window, the facts filled in: write what happened, ctrl+s sends it (:report screen adds the screen)",
+  },
+  {
+    id: "help.report_send",
+    title: "Send the report",
+    cli: null,
+    desc: "In the report (ctrl+s, :w): the bug form in your browser, its address or the report copied, or posted with gh",
+  },
   { id: "app.quit", title: "Quit", cli: I, desc: "Saves positions and the session, then quits" },
 ];

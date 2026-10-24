@@ -541,6 +541,8 @@ sidebar_vault = { bold = true, underline = true }
 "leader ; D a" = "config.reload"
 "leader ; K a" = "messages.open"
 "leader ; H a" = "help.open"
+"leader ; H b" = "help.report"
+"leader ; H c" = "help.report_send"
 "leader ; n d" = "app.quit"
 
 [keys.source]

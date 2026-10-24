@@ -295,6 +295,7 @@ files and the environment variables.
 | [`channel`](#channel) | Which releases slipbox follows: stable ones, or previews too |
 | [`uninstall`](#uninstall) | Remove what the installer put here |
 | [`skill`](#skill) | The skill for agents: printed, or installed where an agent finds it |
+| [`report`](#report) | What a bug report asks for, and the bug form's address filled in with it |
 | [`help`](#help) | This list, in the terminal |
 
 ## Reading
@@ -1823,6 +1824,37 @@ With `--json`, the data is `{name, version, text}`. With `--install`, it's `{pat
 
 - `status` is `created`, `updated` (an earlier slipbox's skill was there), `replaced` (with `--force`) or `unchanged`.
 - `link` is the `{path, to}` it replaced, else `null`.
+
+### `report`
+
+Prints what slipbox's bug form asks for, a line each:
+
+- its version, how it was installed and the releases it follows;
+- the system and its processor;
+- the terminal: `TERM_PROGRAM`, `TERM`, and any multiplexer or SSH between it and slipbox.
+
+After them, the bug form's address with those fields filled in, to open in your browser. Nothing is sent: what
+happened, and how to make it happen, are yours to write. In slipbox, `space r` opens a report with the same facts
+([Reporting a problem](troubleshooting.md#reporting-a-problem)).
+
+```bash
+slipbox report
+slipbox report --json
+```
+
+It runs wherever you are, before any vault is looked for. So it works in a folder whose settings are broken, reads no
+vault's settings, and writes nothing. SSH and a multiplexer are said only as being there, never by their addresses or
+sessions. The terminal's size is given only when the output is a terminal. Like every command's name, `report` is
+the command: a folder named `report` opens as `slipbox ./report`.
+
+With `--json`, the data is `{facts, fields, body, url}`:
+
+- `facts`: `{version, channel, installedBy, release, bun, system, terminal}`. `installedBy` is `installer`,
+  `homebrew`, `other` (a release's binary put in place by hand) or `source`. `channel` is `null` except for the
+  installer's install.
+- `fields`: the bug form's fields by their ids (`version`, `install`, `platform`, `terminal`).
+- `body`: those as the form's Markdown sections, ready for `gh issue create --body-file`.
+- `url`: the bug form's address, filled in.
 
 ### `help`
 
