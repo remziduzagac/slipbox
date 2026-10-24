@@ -4,10 +4,11 @@ name: pages
 # change: `install.sh`, the bootstrap (`scripts/bootstrap.ts`), and the channels it reads, `stable` and `preview`, each
 # one line, `<tag> <SHA-256 of that release's install.sh>` — the highest stable release, the newest preview; none for
 # a channel with no release (`scripts/release.ts site`); and the docs at `docs/`, the site/ Starlight site built from
-# docs/ (DS), where the site's index sends a visitor. Deployed by preview.yml once a preview is published, when the
-# bootstrap, the docs or the site change on main, by hand, and when a release is published (by a person: a release CI
-# publishes starts no workflow), by a run by hand on main that the release's run starts (D258). A deployment passes
-# once the site serves the channels it built.
+# docs/ (DS), where the site's index sends a visitor. Deployed by preview.yml once a preview is published, in its own
+# run, and by a run by hand on main, which every other run starts instead of deploying (D258, D?1): when the
+# bootstrap, the docs or the site change on main, when a release is published (by a person: a release CI publishes
+# starts no workflow), and by hand on another ref. A deployment passes once the site serves the run's own marker,
+# `deployment`, and the channels it built.
 # Every action pinned by its commit, a week old when taken (14.10); values reach the shell through env, never inline.
 on:
   workflow_call:
@@ -32,11 +33,16 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # D258: a release published is deployed by a run of this workflow by hand, on main, which this job starts. A
-  # deployment made under a `release` event is reported a success and never served when its commit was deployed before
-  # (actions/deploy-pages#383), as a release's always is, by its preview (D251); one made by hand is served.
+  # D258, D?1: a deployment of a commit deployed before is reported a success and never served when it's made under a
+  # `release` or a `push` (actions/deploy-pages#383, #7); one made by hand is served. So only two runs deploy: a
+  # preview's (preview.yml's call, the one push on `test`), its commit's first deployment, and a run by hand on main.
+  # Any other — a release published or main's push, whose commit its preview deployed already (D251), a run by hand on
+  # `test` or a tag — deploys nothing: this job starts a run by hand on main instead. `site` runs on the opposite.
   redeploy:
-    if: ${{ github.event_name == 'release' && !github.event.repository.fork }}
+    if: >-
+      ${{ !github.event.repository.fork
+      && !(github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
+      && !(github.event_name == 'push' && github.ref == 'refs/heads/test') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
@@ -51,14 +57,19 @@ jobs:
   # docs/, built by the site's own packages (site/package.json, installed under site/bunfig.toml's gates: no install
   # script runs). No other dependency is installed.
   site:
-    # Never in a fork: its Pages isn't this one's; nor for a release, which `redeploy` hands to a run by hand.
-    if: ${{ !github.event.repository.fork && github.event_name != 'release' }}
+    # Never in a fork: its Pages isn't this one's; and only in the runs that deploy, which `redeploy` hands the rest to.
+    if: >-
+      ${{ !github.event.repository.fork
+      && ((github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
+      || (github.event_name == 'push' && github.ref == 'refs/heads/test')) }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
       contents: read # to check out main, and list the releases
-    # The channels' lines as built, for `deploy` to read back from the site: empty for a channel with no release.
+    # What `deploy` reads back from the site: the run's marker, and the channels' lines as built, empty for a channel
+    # with no release. The artifact's own, so a re-run of `deploy` alone reads back the files it deploys again.
     outputs:
+      deployment: ${{ steps.marker.outputs.deployment }}
       stable: ${{ steps.site.outputs.stable }}
       preview: ${{ steps.site.outputs.preview }}
     steps:
@@ -86,6 +97,13 @@ jobs:
         run: |
           bun run site
           cp -R site/dist _site/docs
+      # D?1: the run's own mark on the site, which no other deployment has, so `deploy` can tell this one is served
+      # even when the channels are what the site served already.
+      - name: marker
+        id: marker
+        run: |
+          echo "$GITHUB_RUN_ID.$GITHUB_RUN_ATTEMPT" >_site/deployment
+          echo "deployment=$(cat _site/deployment)" >>"$GITHUB_OUTPUT"
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
           path: _site
@@ -106,23 +124,29 @@ jobs:
     steps:
       - id: deploy
         uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
-      # D258: a deployment can be reported a success and not be served (actions/deploy-pages#383), as 0.5.0's was. The
-      # channels are read back from the site until they're what `site` built: eleven minutes at most, past the ten its
-      # cache keeps a file (a deployment empties the cache, and a query doesn't get past it).
+      # D258, D?1: a deployment can be reported a success and not be served (actions/deploy-pages#383), as 0.5.0's was.
+      # The marker and the channels are read back from the site until they're what `site` built: eleven minutes at
+      # most, past the ten its cache keeps a file (a deployment empties the cache, and a query doesn't get past it).
       - name: served
         env:
           SITE: ${{ steps.deploy.outputs.page_url }}
+          DEPLOYMENT: ${{ needs.site.outputs.deployment }}
           STABLE: ${{ needs.site.outputs.stable }}
           PREVIEW: ${{ needs.site.outputs.preview }}
         run: |
-          served() { curl -fsS "$SITE$1" 2>/dev/null || true; }
+          if [ -z "$DEPLOYMENT" ]; then
+            echo "no marker was built: nothing to read back"
+            exit 1
+          fi
+          served() { curl -fsS --connect-timeout 5 --max-time 10 "$SITE$1" 2>/dev/null || true; }
           for _ in $(seq 66); do
-            if [ "$(served stable)" = "$STABLE" ] && [ "$(served preview)" = "$PREVIEW" ]; then
-              echo "the site serves the channels built"
+            if [ "$(served deployment)" = "$DEPLOYMENT" ] && [ "$(served stable)" = "$STABLE" ] &&
+              [ "$(served preview)" = "$PREVIEW" ]; then
+              echo "the site serves this deployment, $DEPLOYMENT, and the channels built"
               exit 0
             fi
             sleep 10
           done
-          echo "after eleven minutes, the site doesn't serve the channels built:"
-          echo "stable \"$STABLE\", preview \"$PREVIEW\""
+          echo "after eleven minutes, the site doesn't serve this deployment:"
+          echo "deployment \"$DEPLOYMENT\" (served: \"$(served deployment)\"), stable \"$STABLE\", preview \"$PREVIEW\""
           exit 1

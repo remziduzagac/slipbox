@@ -274,6 +274,9 @@ it (ideas.md § Distribution).
 
 ## D258: A release's site deployed by a run on `main`, and every deployment read back (2026-10-23)
 
+> **Amended by D?1 (2026-10-24):** a `push` repeat isn't served either (#7), so every run but a preview's and one
+> by hand on `main` hands off to a run by hand on `main`; the read-back reads a marker of the run's own too.
+
 **Decision:** When a release is published, `pages.yml` deploys nothing under the `release` event: that run's one job,
 `redeploy` (`actions: write`), starts a run of the workflow by hand on `main`, which builds and deploys the site as any
 run does. Every deployment then reads `stable` and `preview` back from the site until they're the lines it built, for
@@ -294,3 +297,32 @@ for a preview, takes it. A deployment the site doesn't serve takes its run eleve
 **Not chosen:** naming a deployment other than by its commit (deploy-pages takes no other name, and the Pages API
 answered 404 to one in that issue's reports); deploying by hand as a step of the release (the step 0.5.0 lacked); a
 query string to get past the site's cache (it isn't part of the cache's key: a new one is a hit).
+
+## D?1: Only a preview's run and a run by hand on `main` deploy the site, each read back by its own marker (2026-10-24)
+
+**Decision:** `pages.yml` deploys in two kinds of run only: a preview's (`preview.yml`'s call, under its push to
+`test`), its commit's first deployment, and a run by hand on `main`. Every other run deploys nothing and starts a run
+by hand on `main` instead (`redeploy`): a release published, as D258 has it, and now `main`'s push of the bootstrap,
+the docs or the site, and a run by hand on `test` or a tag. Every deployment also puts a marker of its own on the
+site, `deployment` (the run's ID and attempt), and reads it back with the channels; it fails when the site doesn't
+serve it. Amends D258. Detail: design/distribution.md § Previews.
+
+**Why:** A deployment is named by its commit, and one of a commit deployed before is reported a success and not served
+under a `push` as well as a `release`: #7's preview, of the commit `main`'s push had deployed, wasn't, and nor was a
+tag's push in actions/deploy-pages#383; no report has a `push` repeat served. Under D251, `main` takes only `test`'s
+commits, each deployed by its preview, so `main`'s push deployed nothing, and its read-back passed on the channels the
+preview had served. A run by hand was served in every report, and here twice, on 2026-10-24: on `main`, of 0.5.0's
+commit, deployed before from `test`, `main` and `v0.5.0`, as the next release's commit will have been; and on `test`
+([research/github-behaviour.md](../research/github-behaviour.md) § Pages, T24). A preview's own deployment is its
+commit's first, served whatever the event, so it stays in the preview's run, which fails when its site isn't served.
+The marker is in no other deployment, so the read-back can no longer pass on channels the site served already.
+
+**Cost:** `main`'s push and a run by hand elsewhere become two runs, a minute apart, like a release's. A preview's
+deployment of a commit deployed before (a re-run of its `deploy`, or a run by hand on `test` before it) isn't served,
+and its run fails after eleven minutes; a run by hand on `main` serves it. One more file on the site.
+
+**Not chosen:** every deployment a run by hand on `main`, previews too (one rule, but a preview's run would pass with
+its site not served: the maintainer's call, 2026-10-24); asking Pages first whether the commit was deployed
+(`pages/deployments/<sha>` answers an empty status for one never deployed; an answer nothing documents, a check that
+can race the deployment, and a second path); a hand-off that waits for the run it starts (it deadlocks in the `pages`
+concurrency group, and a newer pending run replaces one waited for).

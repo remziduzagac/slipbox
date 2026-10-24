@@ -39,3 +39,6 @@ Release as `MAINTAINING.md` § Releasing says, with nothing bypassed, and watch 
 - 2026-10-23: The preview of 71313f3 (run 39964133295), the first deployment to read its channels back, passed its
   `served` step at the first read; `redeploy` was skipped, as for any preview. That checks the read-back alone, not a
   release's run on `main`.
+- 2026-10-24: T24 ran `pages.yml` by hand on `main` (run 40045492245): 5fe758f, deployed before from `test`, `main`
+  and `v0.5.0`, as the next release's commit will have been, was served. D258's run by hand holds outside a release;
+  the release's own run starting it, under D?1's `redeploy`, is still to be seen here.

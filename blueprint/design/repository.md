@@ -177,9 +177,9 @@ GitHub's newer `$/` form, which means the same, but actionlint 1.7.12 doesn't re
 checks a call's inputs and permissions against the workflow called only in the `./` form, which for a reusable workflow
 is read from the run's own commit, never the workspace; the finding is ignored inline, with that reason. A release run
 is never cancelled; `preview.yml` and `pages.yml` each run one at a time (`preview`, `pages`), never cancelled;
-`pages.yml`'s Pages grants are its `deploy` job's alone, and for a release it deploys nothing: its `redeploy` job starts
-a run of it by hand on `main` (`actions: write`, D258), so `preview.yml`'s call grants that too. What each builds and
-publishes:
+`pages.yml`'s Pages grants are its `deploy` job's alone, and only a preview's run and a run by hand on `main` deploy:
+for any other, its `redeploy` job starts a run of it by hand on `main` (`actions: write`, D258, D?1), so
+`preview.yml`'s call grants that too. What each builds and publishes:
 [distribution.md](distribution.md) § Releases, § Previews, § Channels.
 
 Beside the workflows, GitHub's own: CodeQL's default setup scans the code (`javascript-typescript`) and the workflows
