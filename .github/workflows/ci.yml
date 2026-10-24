@@ -24,10 +24,14 @@ on:
 permissions: {}
 
 # A pull request's superseded run is cancelled, and a push's still going when its branch is pushed again: the next
-# push's range holds its commits (CIW-D4). A run by hand, the full run among them, and a merge group's are in groups of
-# their own, never cancelled nor replaced.
+# push's range holds its commits (CIW-D4). A push's run re-run, a run by hand, the full run among them, and a merge
+# group's are in groups of their own, never cancelled nor replaced: an older commit's run re-run can't cancel the
+# branch's newest.
 concurrency:
-  group: ci-${{ github.event.pull_request.number || (github.event_name == 'push' && github.ref) || github.run_id }}
+  group: >-
+    ci-${{ github.event.pull_request.number
+    || (github.event_name == 'push' && github.run_attempt == '1' && github.ref)
+    || github.run_id }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' || github.event_name == 'push' }}
 
 jobs:
@@ -87,7 +91,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          fetch-depth: 0 # a pull request's merge commit and its base, or a push's commits since the branch's last head
+          fetch-depth: 0 # a pull request's merge commit and its base, or a push's history back to the run that passed
       - uses: jdx/mise-action@2d8d4cafcbd33be2ea37d2b6f5ad595363d1f1ca # v5.1.1
         with:
           install_args: bun
@@ -104,6 +108,7 @@ jobs:
       # shortcut, and nothing else. The runner's own token uploads it: no grant.
       - if: ${{ steps.scope.outputs.record != '' }}
         continue-on-error: true
+        timeout-minutes: 1
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: ${{ steps.scope.outputs.record }}

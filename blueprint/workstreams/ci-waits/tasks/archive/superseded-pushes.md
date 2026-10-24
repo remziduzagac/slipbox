@@ -26,3 +26,7 @@ request and a push.
 - 2026-10-24: `ci.yml`'s concurrency. Test: the group and `cancel-in-progress` evaluated as GitHub's expressions for a
   pull request, a push, a run by hand on `test` and a merge group. Mutation: the group as `github.ref` alone (a run by
   hand on `test` sharing a push's group), caught.
+- 2026-10-24, the code's review: a push's run re-run is in a group of its own (`github.run_attempt == '1'` for the
+  branch's group), so an older commit's re-run can't cancel the newest. Test: a push's attempt 2 in `ci-<run id>`;
+  mutation (the attempt left out) caught. The health check passes over a cancelled run for the one before it
+  (`scripts/health.ts`'s `failingOnMain`); test and mutation, caught.

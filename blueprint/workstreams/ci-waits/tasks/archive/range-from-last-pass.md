@@ -53,3 +53,6 @@ outputs instead of `github.event.before`.
 - Live, in the right pane, against the repository's own runs (read-only, the maintainer's token): as a push to `dev`,
   "none of the 20 commits whose runs passed is behind it with this scope", then everything: `test`'s head
   (`71313f3`) is of the scope before — the first run under it, as designed. As a push to `test`, the same.
+- 2026-10-24, the code's review: an element of the runs' list that isn't one is passed over; the log says "which runs
+  passed is unknown" when they can't be read, not that none passed; `test`'s head read with `commit()`. Tests for
+  each; mutations caught.

@@ -52,6 +52,11 @@ A push whose range doesn't start at its own commit looks for the record of its c
   any other branch's run wrote names a tree its own head doesn't make. A fork's run is held to the same; a fork's
   workflow that wrote a false record would be in the tree, merged.
 
+The lookup has ninety seconds, the fetch the time that's left: past them it finds none, so a slow API, a fetch that
+doesn't answer or a flood of records of one name tests more, never ends `changes` at its five minutes. An element of a
+list the API gives that isn't what it should be is passed over. The upload has a minute of its own, so a slow one
+gives up and `changes`, which the tests wait on, goes on.
+
 Then the push's range ends at its parent: what landed before it that no passing run covered; nothing, when the parent
 is where the range starts. The two cover the whole: the pull request's run tested what the squash changed, on the
 squash's own tree, with its workflow and rules; the push tests what came before, on the same tree. Today every pull
@@ -73,14 +78,16 @@ So:
 
 **The log** says where the range starts, and why: `since 1a2b3c4: run <url> passed`, `since test's head 1a2b3c4: no
 run of this scope has passed yet`, `everything: no run of this scope has passed, and test's head is of another`,
-`the runs can't be read (<why>): …`, `5d6e7f8's tree passed in pull request run <url> on its parent: only
-1a2b3c4..9f8e7d6`.
+`the runs that passed can't be read`, then `since test's head 1a2b3c4: which runs passed is unknown`, `5d6e7f8's tree
+passed in pull request run <url> on its parent: only 1a2b3c4..9f8e7d6`.
 
 **Superseded pushes** (CIW-D4). A push's run still going when its branch is pushed again is cancelled, as a
 pull request's is: the group is the pull request's number, else the branch for a push, else the run's own
-(`ci-${{ github.event.pull_request.number || (github.event_name == 'push' && github.ref) || github.run_id }}`), and
-`cancel-in-progress` is true for a pull request and a push. A run by hand, the full run on `test` among them, and a
-merge group's are in groups of their own, never cancelled nor replaced. With the range from the last pass, the
+(`ci-${{ github.event.pull_request.number || (github.event_name == 'push' && github.run_attempt == '1' &&
+github.ref) || github.run_id }}`), and `cancel-in-progress` is true for a pull request and a push. A push's run re-run,
+a run by hand, the full run on `test` among them, and a merge group's are in groups of their own, never cancelled nor
+replaced: an older commit's run re-run can't cancel the branch's newest, which would leave its head without a `ci`
+check `test` takes. With the range from the last pass, the
 cancelled run's commits are the next run's, and a burst of merges holds one run's macOS runners, not one per merge.
 Its cost: on a day of merges every few minutes, with a run taking forty, no run on `dev` passes until the merging
 stops, so `test` can't move till then.
@@ -99,8 +106,8 @@ head needs none in a public repository, and failing, tests more. No job gains a 
   stays.
 - "A pull request's superseded run is cancelled; every other run, a push or a run by hand among them, finishes (its
   concurrency group is the run's own)" becomes "A pull request's superseded run is cancelled, and so is a
-  push's still going when its branch is pushed again (§ What a push tests; CIW-D4); a run by hand and a merge group's
-  finish, each in a group of its own".
+  push's still going when its branch is pushed again (§ What a push tests; CIW-D4); a push's run re-run, a run by hand
+  and a merge group's finish, each in a group of its own".
 - In "No permission by default", "— `contents: read` to check out, the aggregator nothing" becomes "— `contents: read`
   to check out, `changes` `actions: read` too, to read the runs that passed and the records, the aggregator nothing".
 
@@ -108,6 +115,13 @@ Previously, in the `changes` bullet: "or a push to `dev` or `test` (its commits 
 the event's `before`)"; "A pull request's superseded run is cancelled; every other run, a push or a run by hand among
 them, finishes (its concurrency group is the run's own)"; "each job grants its own with a comment saying why —
 `contents: read` to check out, the aggregator nothing".
+
+## MODIFIED design/repository.md § The weekly health check
+
+In the `collect` bullet, "each workflow's last finished run on `dev` or `main` (D251)" becomes "each workflow's last
+finished run on `dev` or `main`, one cancelled passed over (D251; a push's gives way to the next, CIW-D4)".
+
+Previously: "each workflow's last finished run on `dev` or `main` (D251)".
 
 ## MODIFIED design/testing.md § Strategy (`0.4`)
 

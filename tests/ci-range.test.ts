@@ -4,7 +4,7 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { type Api, githubApi, pushRange, recordName, versionAt } from "../scripts/ci-range.ts";
+import { type Api, githubApi, pushRange, recordName, recordRun, versionAt } from "../scripts/ci-range.ts";
 import { changedFiles, SCOPE_VERSION } from "../scripts/ci-scope.ts";
 
 const ROOT = join(import.meta.dir, "..");
@@ -123,6 +123,11 @@ describe("a push's range: since the last run that passed (CIW-D1)", () => {
     r.commit({ "a.ts": "3" }, 2);
     expect(range(await pushRange(r.dir, fakeApi({ passes: [old] }).api, null))).toEqual({ all: true });
     expect(range(await pushRange(r.dir, fakeApi({ passes: [old, mid] }).api, null))).toMatchObject({ from: mid });
+    // An element that isn't a run is passed over, not a crash that fails the run.
+    const odd: Api = async () => ({
+      workflow_runs: [null, 3, { head_sha: mid, conclusion: "success", html_url: "u" }],
+    });
+    expect(range(await pushRange(r.dir, odd, null))).toMatchObject({ from: mid });
     // The version raised: the passes of the one before stop counting.
     r.commit({ "a.ts": "4" }, 3);
     expect(range(await pushRange(r.dir, fakeApi({ passes: [mid] }).api, null))).toEqual({ all: true });
@@ -151,8 +156,16 @@ describe("a push's range: since the last run that passed (CIW-D1)", () => {
     // The runs unreadable, or no token to read them: test's head, said so.
     const unread = await pushRange(r.dir, fakeApi({ passes: null }).api, t);
     expect(range(unread)).toEqual({ from: t, to: head });
-    expect(unread.why[0]).toBe("the runs that passed can't be read");
+    expect(unread.why).toEqual([
+      "the runs that passed can't be read",
+      `since test's head ${t.slice(0, 7)}: which runs passed is unknown`,
+    ]);
     expect((await pushRange(r.dir, null, t)).why[0]).toBe("no token to read the runs that passed");
+    expect(await pushRange(r.dir, null, old)).toEqual({
+      all: "which runs passed is unknown, and test's head is of another, or not behind it",
+      why: ["no token to read the runs that passed"],
+    });
+    expect(await pushRange(r.dir, none, old)).toMatchObject({ all: expect.stringMatching(/^no run of this scope/) });
     // A commit whose scope says no version: nothing it says can be trusted.
     r.write({ "scripts/ci-scope.ts": "// gone\n" });
     r.git("commit", "-qam", "no version");
@@ -244,6 +257,14 @@ describe("a merge doesn't test again what its pull request's run passed (CIW-D2)
     expect(
       range(await pushRange(r.dir, fakeApi({ passes: [p], records: both, runs: { 7: {}, 8: {} } }).api, null)),
     ).toEqual({ from: p, to: p });
+    // An element that isn't a record is passed over.
+    const runs = { 7: {}, 8: {} };
+    const f = fakeApi({ passes: [p], records: both, runs });
+    const odd: Api = async (path) => {
+      const got = (await f.api(path)) as { artifacts?: unknown[] } | null;
+      return path.startsWith("actions/artifacts") ? { artifacts: [null, 3, ...(got?.artifacts ?? [])] } : got;
+    };
+    expect(await recordRun(odd, r.dir, name, p, r.tree(s))).toBe("pr-run/7");
     // Past the first page.
     const many = { [name]: [...Array.from({ length: 100 }, () => ({ id: 8, head: x })), { id: 7, head: h }] };
     expect(
@@ -267,6 +288,25 @@ describe("a merge doesn't test again what its pull request's run passed (CIW-D2)
     );
     const f = fakeApi({ passes: [p], records: { [name]: [{ id: 7, head: h }] }, runs: { 7: {} } });
     expect(range(await pushRange(ci, f.api, null))).toEqual({ from: p, to: p });
+  });
+
+  test("past its time the lookup gives up, finding none: a slow API, or a fetch that doesn't answer", async () => {
+    const { r, p, h, s, name } = merged();
+    const f = fakeApi({ passes: [p], records: { [name]: [{ id: 7, head: h }] }, runs: { 7: {} } });
+    expect(await recordRun(f.api, r.dir, name, p, r.tree(s))).toBe("pr-run/7");
+    const late = fakeApi({ passes: [p], records: { [name]: [{ id: 7, head: h }] }, runs: { 7: {} } });
+    expect(await recordRun(late.api, r.dir, name, p, r.tree(s), Date.now() - 1)).toBeNull();
+    expect(late.asked).toEqual([]);
+    // The head missing, and an origin that never answers: the fetch is stopped when the time's up.
+    const ci = join(sandbox, `hung-${Date.now()}`);
+    expect(
+      Bun.spawnSync(["git", "clone", "-q", "--no-local", "--single-branch", "--branch", "dev", r.dir, ci]).success,
+    ).toBe(true);
+    Bun.spawnSync(["git", "-C", ci, "config", "protocol.ext.allow", "always"]);
+    Bun.spawnSync(["git", "-C", ci, "remote", "set-url", "origin", "ext::sleep 30"]);
+    const start = Date.now();
+    expect(await recordRun(f.api, ci, name, p, r.tree(s), Date.now() + 500)).toBeNull();
+    expect(Date.now() - start).toBeLessThan(4000);
   });
 });
 
@@ -383,6 +423,8 @@ describe("the workflow hands the range on (CIW-D1–CIW-D4)", () => {
     expect(build).toContain(`uses: ${upload?.uses}`);
     expect(upload?.if).toBe("${{ steps.scope.outputs.record != '' }}");
     expect(upload?.["continue-on-error"]).toBe(true);
+    // Its own timeout: a slow upload gives up, and `changes`, which the tests wait on, goes on.
+    expect(upload?.["timeout-minutes"]).toBe(1);
     expect(upload?.with).toMatchObject({
       name: "${{ steps.scope.outputs.record }}",
       path: "${{ runner.temp }}/ci-tested.txt",
@@ -411,7 +453,7 @@ describe("the workflow hands the range on (CIW-D1–CIW-D4)", () => {
           .replace(/\b(\w+)\./g, "$1?.")};`,
       )(github);
     const of = (event_name: string, more: object = {}) => {
-      const github = { event_name, ref: "refs/heads/dev", run_id: 99, event: {}, ...more };
+      const github = { event_name, ref: "refs/heads/dev", run_id: 99, run_attempt: "1", event: {}, ...more };
       return {
         group: String(ci.concurrency.group).replace(/\$\{\{.*\}\}/s, (e) => String(evaluate(e, github))),
         cancel: evaluate(ci.concurrency["cancel-in-progress"], github),
@@ -422,6 +464,8 @@ describe("the workflow hands the range on (CIW-D1–CIW-D4)", () => {
       cancel: true,
     });
     expect(of("push")).toEqual({ group: "ci-refs/heads/dev", cancel: true });
+    // A push's run re-run, an older commit's say, in a group of its own: it can't cancel the branch's newest run.
+    expect(of("push", { run_attempt: "2" })).toEqual({ group: "ci-99", cancel: true });
     // A run by hand, the full run on `test` among them, in a group of its own: a push to `test` can't cancel it.
     expect(of("workflow_dispatch", { ref: "refs/heads/test" })).toEqual({ group: "ci-99", cancel: false });
     expect(of("merge_group", { ref: "refs/heads/gh-readonly-queue/dev/x" })).toEqual({ group: "ci-99", cancel: false });

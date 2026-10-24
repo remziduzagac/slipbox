@@ -62,11 +62,14 @@ wait on `changes` to save under a minute.
 
 **Decision:** A push's run still going when its branch is pushed again is cancelled, as a pull request's is: `ci`'s
 concurrency group is the pull request's number, else the branch for a push, else the run's own, cancelling for a pull
-request and a push. A run by hand, the full run among them, and a merge group's are never cancelled nor replaced.
+request and a push. A push's run re-run, a run by hand, the full run among them, and a merge group's are in groups of
+their own, never cancelled nor replaced. The weekly health check passes over a cancelled run for the one before it.
 Amends GR-D9's "a pull request's superseded run cancelled" and design/repository.md § CI's "every other run … finishes".
 
 **Why:** The maintainer's choice, 2026-10-24. With CIW-D1 a cancelled run's commits are the next run's, so cancelling
-loses no cover, and a burst of merges holds one run's macOS runners, not one per merge.
+loses no cover, and a burst of merges holds one run's macOS runners, not one per merge. A re-run in the branch's group
+would cancel its newest run, leaving its head with no `ci` check for `test` to take; and a cancelled run, last on
+`dev`, would hide from the health check the failure before it.
 
 **Cost:** On a day of merges every few minutes, with a run taking forty, no run on `dev` passes until the merging stops,
 and `test` can't move until then.

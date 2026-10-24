@@ -54,8 +54,8 @@ change reaches, on Linux and macOS (D239). A push to `dev` runs the same for wha
 run passed, so a run cancelled or failed leaves nothing out of the next (CIW-D1), less what the pull request's run
 passed on the same tree: when that run passed on the `dev` it merged into, and that `dev`'s own run passed, the push
 tests nothing (CIW-D2). A push's run still going when `dev` moves again gives way to the newer one, which tests both
-(CIW-D4). No approval is required, since there is no second person to give one. From `dev`, work goes on to `test` and
-`main` (§ From dev to a release).
+(CIW-D4); a run re-run gives way to nothing, nor makes another give way. No approval is required, since there is no
+second person to give one. From `dev`, work goes on to `test` and `main` (§ From dev to a release).
 
 - **Who:** agents and collaborators work on a branch and open the pull request; the maintainer merges it, or asks an
   agent to review and merge it. Agents merge, run the full suite, move `test` or `main` and release only when the

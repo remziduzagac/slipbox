@@ -17,7 +17,7 @@
 
 import { appendFileSync, existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, normalize } from "node:path";
-import { gitOut, githubApi, pushRange, recordName } from "./ci-range.ts";
+import { commit, gitOut, githubApi, pushRange, recordName } from "./ci-range.ts";
 
 const ROOT = join(import.meta.dir, "..");
 
@@ -365,7 +365,7 @@ if (import.meta.main) {
     const testHead =
       process.env.GITHUB_REF_NAME === "test"
         ? (process.env.SCOPE_BEFORE ?? null)
-        : gitOut(here, "rev-parse", "--verify", "--quiet", "refs/remotes/origin/test^{commit}");
+        : commit(here, "refs/remotes/origin/test");
     const r = await pushRange(here, githubApi(), testHead);
     for (const w of r.why) console.log(w);
     if ("all" in r) console.log(`everything runs: ${r.all}`);

@@ -61,3 +61,32 @@ upload's place and pin, failing towards testing more — are in design.md, and i
   other items as CIW-T5 to CIW-T9, for later.
 - **Said, not this change's:** `dev`'s live ruleset lets an admin bypass in a pull request, which the committed one
   doesn't (research.md § Rulesets); the pull request's body says "Part of #65", the issue's other items still open.
+
+## The code's review (2026-10-24)
+
+One pass, by one reviewer (`/code-review`): the maintainer's choice, with Codex not used; no second round. Eleven
+findings:
+
+1. An older push's run re-run joins the branch's group and cancels its newest run, leaving its head without the `ci`
+   check `test` takes: fixed — a re-run (`run_attempt` past 1) is in a group of its own (CIW-D4), tested.
+2. The API's calls and the fetch inside `changes`' five minutes could end the job, failing the run, instead of testing
+   more: fixed — the record lookup has ninety seconds, the fetch what's left of them, tested with an origin that never
+   answers.
+3. The upload had no timeout of its own, in the job the tests wait on: fixed — a minute, `continue-on-error`, tested.
+4. An element of the API's lists that isn't an object would throw, failing the run: fixed — passed over, tested for
+   the runs and the records.
+5. The health check reads each workflow's last finished run, now often a push's cancelled one, which would hide the
+   failure before it: fixed — a cancelled run is passed over, tested.
+6. The log said "no run of this scope has passed" when the runs couldn't be read: fixed — "which runs passed is
+   unknown", tested.
+7. The comment on `changes`' checkout still spoke of a push's commits since the branch's last head: fixed.
+8. Reading the `ci` check's conclusion, not the run's, would close the second between them: not taken — the run's
+   ends later, so a push to `test` in that second tests again, which is safe (CIW-D3's cost).
+9. The range handed to `changedFiles` as a parameter, not `SCOPE_RANGE`: not taken — the variable is how `test` and
+   `terminal` get it from `changes`, so one way in for every job.
+10. `commit()` exported and used for `test`'s head in `ci-scope.ts`: taken. `changedFiles`' own git helper, which
+    splits lines, stays.
+11. The scope test's `before` argument, unused since a push no longer reads it: removed.
+
+Each fix's test was undone once and caught (`tmp/` mutation log); the guard on the records' elements and the deadline
+before a page each needed a test of their own first.

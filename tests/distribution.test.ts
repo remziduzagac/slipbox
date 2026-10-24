@@ -336,7 +336,7 @@ describe("the supply chain's gates (14.10)", () => {
     const gitEnv = { ...process.env, GIT_AUTHOR_NAME: "t", GIT_AUTHOR_EMAIL: "t@t", GIT_COMMITTER_NAME: "t" };
     let runs = 0;
     // What it writes for the jobs, less a pull request's record and a push's range (tests/ci-range.test.ts).
-    const scope = (event: string, before = "") => {
+    const scope = (event: string) => {
       const out = join(sandbox, `scope-out-${++runs}`);
       Bun.spawnSync([process.execPath, join(ROOT, "scripts", "ci-scope.ts")], {
         cwd: repo,
@@ -344,7 +344,6 @@ describe("the supply chain's gates (14.10)", () => {
           ...gitEnv,
           GITHUB_EVENT_NAME: event,
           GITHUB_OUTPUT: out,
-          SCOPE_BEFORE: before,
           GH_TOKEN: "",
           GITHUB_REF_NAME: "dev",
           RUNNER_TEMP: sandbox,
@@ -352,7 +351,6 @@ describe("the supply chain's gates (14.10)", () => {
       });
       return readFileSync(out, "utf8").replace(/^(record|range)=.*\n/gm, "");
     };
-    const head = () => Bun.spawnSync(["git", "-C", repo, "rev-parse", "HEAD"]).stdout.toString().trim();
     const commit = (message: string) => {
       git("add", ".");
       git("-c", "user.email=t@t", "commit", "-qm", message);
@@ -360,7 +358,6 @@ describe("the supply chain's gates (14.10)", () => {
     git("init", "-q");
     writeFileSync(join(repo, "a.ts"), "1\n");
     commit("base");
-    const base = head();
     expect(scope("pull_request")).toBe("code=true\nchecks=true\n"); // no parent: the diff can't be read
     mkdirSync(join(repo, "docs"));
     writeFileSync(join(repo, "docs", "x.md"), "# x\n");
@@ -368,8 +365,8 @@ describe("the supply chain's gates (14.10)", () => {
     expect(scope("pull_request")).toBe("code=false\nchecks=false\n");
     // A push with no run to read where its range starts, and no `test`: everything (CIW-D1; tests/ci-range.test.ts). A
     // run by hand is everything.
-    expect(scope("push", base)).toBe("code=true\nchecks=true\n");
-    expect(scope("workflow_dispatch", base)).toBe("code=true\nchecks=true\n");
+    expect(scope("push")).toBe("code=true\nchecks=true\n");
+    expect(scope("workflow_dispatch")).toBe("code=true\nchecks=true\n");
     writeFileSync(join(repo, "a.ts"), "2\n");
     commit("code");
     expect(scope("pull_request")).toBe("code=true\nchecks=true\n"); // a file nothing names: everything

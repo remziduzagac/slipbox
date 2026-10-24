@@ -39,7 +39,8 @@ export function gitOut(root: string, ...args: string[]): string | null {
 }
 
 /** The commit `rev` names, in full, or null. */
-const commit = (root: string, rev: string) => gitOut(root, "rev-parse", "--verify", "--quiet", `${rev}^{commit}`);
+export const commit = (root: string, rev: string) =>
+  gitOut(root, "rev-parse", "--verify", "--quiet", `${rev}^{commit}`);
 
 /** The scope's version a commit declares in its `scripts/ci-scope.ts`, or null. */
 export function versionAt(root: string, rev: string): number | null {
@@ -53,12 +54,12 @@ async function passes(api: Api): Promise<Map<string, string> | null> {
   const res = (await api(
     "actions/workflows/ci.yml/runs?event=push&status=success&exclude_pull_requests=true&per_page=100",
   )) as {
-    workflow_runs?: { head_sha?: unknown; conclusion?: unknown; html_url?: unknown }[];
+    workflow_runs?: ({ head_sha?: unknown; conclusion?: unknown; html_url?: unknown } | null)[];
   } | null;
   if (!Array.isArray(res?.workflow_runs)) return null;
   const out = new Map<string, string>();
   for (const r of res.workflow_runs)
-    if (r.conclusion === "success" && isHash(r.head_sha) && !out.has(r.head_sha))
+    if (r?.conclusion === "success" && isHash(r.head_sha) && !out.has(r.head_sha))
       out.set(r.head_sha, String(r.html_url));
   return out;
 }
@@ -66,7 +67,8 @@ async function passes(api: Api): Promise<Map<string, string> | null> {
 /**
  * The run of a pull request whose record (CIW-D2) says it passed `tree` on `parent`, and whose head merged onto `parent`
  * makes `tree`: its address, or null. Every record of the name is read; one whose run is going, failed or isn't a pull
- * request's run of `ci.yml`, or whose head makes another tree, is passed over.
+ * request's run of `ci.yml`, or whose head makes another tree, is passed over. Past `deadline` it stops, finding none,
+ * so a slow API or fetch tests more, never ends `changes` at its timeout.
  */
 export async function recordRun(
   api: Api,
@@ -74,16 +76,19 @@ export async function recordRun(
   name: string,
   parent: string,
   tree: string,
+  deadline = Date.now() + 90_000,
 ): Promise<string | null> {
   for (let page = 1; page <= 10; page++) {
+    if (Date.now() >= deadline) return null;
     const res = (await api(`actions/artifacts?name=${name}&per_page=100&page=${page}`)) as {
-      artifacts?: { expired?: unknown; workflow_run?: { id?: unknown; head_sha?: unknown } }[];
+      artifacts?: ({ expired?: unknown; workflow_run?: { id?: unknown; head_sha?: unknown } } | null)[];
     } | null;
     if (!Array.isArray(res?.artifacts)) return null;
     for (const a of res.artifacts) {
-      const id = a.workflow_run?.id;
-      const head = a.workflow_run?.head_sha;
-      if (a.expired !== false || typeof id !== "number" || !isHash(head)) continue;
+      const id = a?.workflow_run?.id;
+      const head = a?.workflow_run?.head_sha;
+      if (a?.expired !== false || typeof id !== "number" || !isHash(head)) continue;
+      if (Date.now() >= deadline) return null;
       const run = (await api(`actions/runs/${id}`)) as Record<string, unknown> | null;
       if (
         run?.event !== "pull_request" ||
@@ -92,8 +97,13 @@ export async function recordRun(
         run.conclusion !== "success"
       )
         continue;
-      // Its head, which a merged pull request's branch no longer holds: fetched by its hash.
-      if (!commit(root, head)) gitOut(root, "fetch", "--quiet", "--no-tags", "origin", head);
+      // Its head, which a merged pull request's branch no longer holds: fetched by its hash, in the time left.
+      if (!commit(root, head))
+        Bun.spawnSync(["git", "-C", root, "fetch", "--quiet", "--no-tags", "origin", head], {
+          stdout: "ignore",
+          stderr: "ignore",
+          timeout: Math.max(1, deadline - Date.now()),
+        });
       if (commit(root, head) && gitOut(root, "merge-tree", "--write-tree", parent, head)?.split("\n")[0] === tree)
         return String(run.html_url);
     }
@@ -129,10 +139,11 @@ export async function pushRange(root: string, api: Api | null, testHead: string 
   if (passed && !from) why.push(`none of the ${passed.size} commits whose runs passed is behind it with this scope`);
   if (!from) {
     const t = isHash(testHead) ? commit(root, testHead) : null;
+    const none = passed ? "no run of this scope has passed" : "which runs passed is unknown";
     if (!t || gitOut(root, "merge-base", "--is-ancestor", t, head) === null || versionAt(root, t) !== version)
-      return { all: "no run of this scope has passed, and test's head is of another, or not behind it", why };
+      return { all: `${none}, and test's head is of another, or not behind it`, why };
     from = t;
-    why.push(`since test's head ${t.slice(0, 7)}: no run of this scope has passed${passed ? " yet" : ""}`);
+    why.push(`since test's head ${t.slice(0, 7)}: ${none}${passed ? " yet" : ""}`);
   }
   let to = head;
   const parent = commit(root, "HEAD^1");

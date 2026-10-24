@@ -50,3 +50,7 @@ tree; the range then ends at the parent.
   passed.
 - Live, in the right pane: `ci:scope` as a pull request on this branch wrote
   `record=ci-tested-v2-42e879d…-917a019…` and the scope's text.
+- 2026-10-24, the code's review: the lookup stops after ninety seconds, finding none, and the fetch has the time left
+  (an origin that never answers, in the test, given up in under a second); the records' elements that aren't records
+  passed over; the upload's own one-minute timeout. Tests for each; mutations caught, the deadline before a page once
+  a test checked no page was asked for.
