@@ -321,6 +321,36 @@ export const OUTSIDE_AND_CODE: Check[] = [
   },
   {
     area: "outside-and-code",
+    name: "linters: a quick one's finding shows while a slow one beside it still runs (19.19)",
+    covers: { cases: ["lint", "problems"] },
+    // Two linters of the user's own for Dockerfiles: one finding `apt-get install` without `-y` at once, one asleep.
+    options: {
+      open: "Dockerfile",
+      setup: (s) => s.write("Dockerfile", "FROM x\nRUN apt-get install gcc\n"),
+      config: [
+        "[lint]",
+        'enabled = "auto"', // the default, which the checks turn off unless a check says
+        "[linter.quick]",
+        `lint-command = ${JSON.stringify("grep -n 'apt-get install' | sed 's/^\\([0-9]*\\):.*/stdin:\\1:1: [error] install without -y/'; exit 1")}`,
+        'lint-formats = ["%f:%l:%c: [%trror] %m"]',
+        "[linter.slow]",
+        'lint-command = "sleep 25"',
+        "[[language]]",
+        'name = "dockerfile"',
+        'linters = ["quick", "slow"]',
+        "",
+      ].join("\n"),
+    },
+    run: async (s) => {
+      // No key pressed: the quick one's finding is on the status line while the slow one still sleeps — long before
+      // its 25 s are up, when its answer would draw the screen anyway (CI's waits are 30 s at least).
+      const t0 = Date.now();
+      await s.status(signed("{error} 1"), 10_000);
+      s.expect(Date.now() - t0 < 15_000, `the quick one's finding shown while the slow one ran: ${Date.now() - t0} ms`);
+    },
+  },
+  {
+    area: "outside-and-code",
     name: "lint: as it flows — a finding after a save, hidden while unsaved, gone once fixed and saved",
     covers: { cases: ["lint"], commands: ["note.save"] },
     // A stand-in linter in markdownlint-cli2's format: a line with TODO is a finding.
@@ -1136,6 +1166,20 @@ export const OUTSIDE_AND_CODE: Check[] = [
         rows.every((r, i) => r >= 0 && (i === 0 || r > rows[i - 1]!)),
         `its lines in the order written, rows ${rows.join(", ")}`,
       );
+      await s.keys("escape");
+    },
+  },
+  {
+    area: "outside-and-code",
+    name: "shell: :!cmd's window keeps a character the command printed in two halves whole",
+    covers: { commands: ["shell.run"] },
+    options: { open: MEETING },
+    run: async (s) => {
+      // An em dash's first two bytes, then, a moment later, its last: one character, never two replacement ones.
+      await s.ex("!printf '\\342\\200'; sleep 0.3; printf '\\224 dash\\n'");
+      await s.see(/\$ printf .* — exit 0/, 5000);
+      await s.see("— dash");
+      s.expect(!s.text().includes("\uFFFD"), "no replacement character on the screen");
       await s.keys("escape");
     },
   },

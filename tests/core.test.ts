@@ -4963,6 +4963,33 @@ describe("commands run by your shell (25.7)", () => {
     }
   });
 
+  test("a character cut across two reads is kept whole, on either stream, merged or not", async () => {
+    const { runShell } = await import("../src/core/shell.ts");
+    const was = process.env.SHELL;
+    process.env.SHELL = "/bin/sh";
+    try {
+      const dir = mkdtempSync(join(tmpdir(), "slipbox-shell-"));
+      // An em dash's first two bytes, then its last, apart enough to be read apart: decoded a read at a time, each half
+      // was a replacement character.
+      for (const [to, merged] of [
+        ["", false],
+        [" >&2", false],
+        ["", true],
+        [" >&2", true],
+      ] as const) {
+        const r = await runShell(`printf '\\342\\200'${to}; sleep 0.2; printf '\\224 dash\\n'${to}`, {
+          cwd: dir,
+          merged,
+        }).done;
+        expect(r.output).toBe("— dash\n");
+        expect(r.stdout).toBe(to && !merged ? "" : "— dash\n");
+      }
+    } finally {
+      if (was === undefined) delete process.env.SHELL;
+      else process.env.SHELL = was;
+    }
+  });
+
   test("merged (a window's, D?1): its errors through its output's pipe, in the order written — your shell given -c and the command, its exit, its signal; stopped, what it started too", async () => {
     const { runShell } = await import("../src/core/shell.ts");
     const was = process.env.SHELL;
@@ -4990,14 +5017,27 @@ describe("commands run by your shell (25.7)", () => {
       delete process.env.SHELL;
       expect((await runShell("echo $0", { cwd: dir, merged: true }).done).output).toBe("/bin/sh\n");
       process.env.SHELL = "/bin/sh";
-      // Ended by a signal: said so. Stopped: the shell and the sleep it started.
+      // Ended by a signal: said so. Stopped once both its sleeps have started: the shell and both sleeps gone (a length
+      // of sleep no other process here has, to find them by).
       expect((await runShell("kill -TERM $$", { cwd: dir, merged: true }).done).signal).toBe("SIGTERM");
-      const job = runShell("sleep 30 & sleep 30; echo never", { cwd: dir, merged: true });
-      await Bun.sleep(100);
+      const sleeps = () =>
+        Bun.spawnSync(["ps", "-A", "-o", "command="])
+          .stdout.toString()
+          .split("\n")
+          .filter((line) => /(^|\/)sleep 30\.731$/.test(line.trim())).length; // the sleeps, not the shell running them
+      let started = false;
+      const job = runShell("sleep 30.731 & sleep 30.731 & echo started; wait; echo never", {
+        cwd: dir,
+        merged: true,
+        onOutput: (text) => (started ||= text.includes("started")),
+      });
+      for (const t = Date.now(); !(started && sleeps() === 2) && Date.now() - t < 10_000; ) await Bun.sleep(20);
+      expect(sleeps()).toBe(2);
       job.stop();
       const stopped = await job.done;
-      expect(stopped).toMatchObject({ signal: "SIGTERM", output: "" });
-      expect(stopped.ms).toBeLessThan(5000);
+      expect(stopped).toMatchObject({ signal: "SIGTERM", output: "started\n" });
+      for (const t = Date.now(); sleeps() > 0 && Date.now() - t < 10_000; ) await Bun.sleep(20);
+      expect(sleeps()).toBe(0);
     } finally {
       if (was === undefined) delete process.env.SHELL;
       else process.env.SHELL = was;

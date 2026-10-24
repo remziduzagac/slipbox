@@ -157,3 +157,42 @@ shown before the fix, and gone after.
   been seen to since. Their next failure is noted on #6 with its run and log. One mechanism found for the pictures': two
   pictures sharing an id (24 bits, about 1 run in 10,000 for its 49), which would also draw the wrong picture in use;
   left as a follow-up, as it can't be shown to be the cause. Taken as recommended while the maintainer was away.
+- 2026-10-24: Review, round 1, of the branch's first commit: `/code-review`, and in Codex's place a fresh Claude
+  reviewer — Codex's part skipped, its usage limit reached (a menu in its pane at the prompt).
+- 2026-10-24: Round 1's findings, the two reviews consolidated, each verified:
+  - Real, the docs and D?1 claiming the window shows a command's lines "as a terminal shows them" (both): ran,
+    Python's `print("out")` then `print("err", file=sys.stderr)` comes back `err`, `out` through one pipe, its output
+    held back while it isn't writing to a terminal. Reworded: in the order the lines reach the pipe; a terminal of
+    its own for each command added to D?1's Not chosen.
+  - Real, a character cut across two reads decoded as two replacement characters (code-review): ran, an em dash
+    printed in two writes came back `��`, merged or not, on either stream — older than this change, and a filter
+    puts it in the note. Fixed: each stream decoded as a stream (`setEncoding`). Taken in, so the scope grew.
+  - Real, a failed filter's window lists its output and errors as read (both): by construction, its two pipes.
+    Said so in the design and D?1; a filter's lines must stay its standard output alone.
+  - Real, merged, every chunk kept twice, in `output` (2 MB) and `stdout` (32 MB), the second read by nothing
+    (code-review). Fixed: merged, `stdout` is `output`.
+  - Real, the clipboard test's `finished` could never be written within it, and its pid check was skipped when no
+    pid came in a second (code-review). Fixed: the helper's own command line, in `ps`, seen gone.
+  - Real, a pid the tool didn't print reads as 0, and `reap(0)` signals the test runner's own process group
+    (`tests/tool-process.test.ts`, the second reviewer): by reading, `process.kill(0, …)` is the caller's group.
+    Fixed: `reap` never signals a pid that isn't positive, and the tests ask for the pid first.
+  - Real, a slow linter keeps the others' findings off the screen until it has answered (the second reviewer): the
+    layout reset and the frame asked for came after `Promise.all`. Fixed: each linter's answer drawn as it lands;
+    a unit test and a terminal check.
+  - Real, the core test's stop could pass before the shell had started its sleeps, and only the terminal check
+    showed `shellRun` passing `merged` (the second reviewer). Fixed: the stop once both sleeps run, both seen gone;
+    a TUI test of 20 lines by turns through `shellRun`.
+  - Taken from the second reviewer over code-review's: `/bin/sh` by its path, not `sh` from `PATH`, as the shell's
+    own fallback is; and on macOS a `DYLD_*` variable doesn't reach the command through `/bin/sh`, in D?1's Cost.
+  - Not taken: `merged` derived from `input` (code-review) — a window's run and a filter's are what D?1 tells apart,
+    said where they're started; the `D?1` placeholder (code-review) — numbered when merged, as the brief says; the
+    bounds "patching the symptom" (code-review) — testing.md's wide margin for a timeout's test, and neither test is
+    about latency (why the timers ran late on CI's macOS, the whole suite in one process, is not known); a
+    successful filter's errors not shown (code-review) — as before this change, the design's choice; `SHLVL` one
+    higher under `/bin/sh` (both) — nothing reads it.
+- 2026-10-24: Round 1's fixes, each undone once: stream decoding off, the cut em dash fails; the redraw only after
+  all, the linters test fails on the layout and the frame not asked for; the clipboard's kill off, its helper is seen
+  still running; `shellRun` without `merged`, the 20 lines by turns fail; the stop signalling the shell alone, the
+  sleeps are seen left. The new terminal checks pass (the shell's 5, the linters' 1); the linters' check passes with
+  its fix undone too — opening the file, other work draws the screen within a second — so the unit test is the one
+  that fails without it, and the check covers the case.

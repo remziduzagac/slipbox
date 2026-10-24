@@ -632,7 +632,8 @@ You can also type part of any command's name and pick it from the list ([The scr
 As in vim, `:!` runs a command by your shell (`$SHELL`), in the vault's top folder.
 
 **Running.** `:!make` runs the command and shows what it prints in a window titled with how the command ended. Its
-errors are among its output, where it printed them, as a terminal shows them.
+errors are listed among its output, in the order the command wrote them. Some programs hold their output back until
+they end when it isn't going to a terminal: their errors can come first.
 
 `enter` on a line that names a file and a line opens that file there. Such a line looks like `notes/inbox.md:12`, as
 `grep -n` and compilers print them.

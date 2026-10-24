@@ -15905,14 +15905,16 @@ describe("linters without a server (19.19)", () => {
   };
 
   test("a file's linters: findings beside their lines as it opens; one reading its input again once typing pauses, one reading the file once saved", async () => {
-    // Each linter's answer lands on its own, in whatever order they end: the one not installed is held here until the
-    // others' findings are shown, the order a busy machine gave on CI (#6).
+    // Each linter's answer lands on its own, in whatever order they end: the two found are held here until a frame is
+    // drawn, the one not installed until their findings are; the order a busy machine gave on CI (#6).
     const servers = await import("../src/core/servers/linters.ts");
     const run = servers.runLinter;
+    let found = () => {};
     let release = () => {};
+    const first = new Promise<void>((go) => (found = go));
     const held = new Promise<void>((go) => (release = go));
     const spy = spyOn(servers, "runLinter").mockImplementation((async (def, ...rest) => {
-      if (def.name === "gone") await held;
+      await (def.name === "gone" ? held : first);
       return run(def, ...rest);
     }) as typeof run);
     try {
@@ -15922,6 +15924,17 @@ describe("linters without a server (19.19)", () => {
       const shown = () =>
         h.app.problems.ofView(h.app.view!).map((p) => `${p.start.line} ${p.severity} ${p.source}: ${p.message}`);
       const gone = () => h.app.messages.filter((m) => m.text.includes("linter gone")).length;
+      // Drawn as they come: the view laid out again and a frame asked for once the two have answered, the third still
+      // running (it was only once all three had).
+      h.frame();
+      let asked = 0;
+      const render = h.app.host.requestRender;
+      h.app.host.requestRender = () => void asked++;
+      found();
+      expect(await until(() => h.app.view!.buf.linterProblems.size === 2)).toBe(true);
+      expect(h.app.view!.layoutKey).toBe("");
+      expect(asked).toBeGreaterThan(0);
+      h.app.host.requestRender = render;
       expect(await until(() => (h.frame(), shown().length === 2))).toBe(true);
       expect(shown().sort()).toEqual(["2 error fake: found BAD", "2 warning saved: saved BAD"]);
       expect(h.frame()).toMatch(/[┃│] ✖2 {2}RUN BAD/); // the bar: the worse one's sign and its two, beside its line
@@ -15946,6 +15959,7 @@ describe("linters without a server (19.19)", () => {
       ).toEqual(["2 warning saved: saved BAD", "3 warning saved: saved BAD"]);
       expect(gone()).toBe(1); // still once
     } finally {
+      found();
       release();
       spy.mockRestore();
     }
@@ -18011,6 +18025,11 @@ describe("commands run by your shell (25.7)", () => {
     expect(h.app.overlay).toBeNull();
     expect(h.app.view!.buf.rel).toBe("c1.md");
     expect(h.app.currentLayout(h.app.view!).lines[h.app.view!.cur.row]!.src).toBe(5);
+    // Its errors among its output where it wrote them, however quickly: through one pipe (D?1). Read from two, every
+    // line of one came before every line of the other.
+    await ex(h, "!i=0; while [ $i -lt 20 ]; do echo o$i; echo e$i >&2; i=$((i+1)); done");
+    expect(list(h).items.map((i) => i.label)).toEqual(Array.from({ length: 20 }, (_, i) => [`o${i}`, `e${i}`]).flat());
+    await h.keys("escape");
     // A failing one says so in its title; one printing nothing, in a message.
     await ex(h, "!echo no; exit 4");
     expect(list(h).title).toBe("$ echo no; exit 4 — exit 4");

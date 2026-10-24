@@ -443,6 +443,11 @@ export class Languages {
         );
         buf.linted = { typed: version, saved: buf.dirty ? buf.linted.saved : version };
         this.linterRuns.set(buf, "running");
+        // Each linter's answer drawn as it comes: a slow one beside it holds back no other's findings.
+        const drawn = () => {
+          for (const v of this.app.allViews()) if (v.buf === buf) v.layoutKey = "";
+          this.app.host.requestRender();
+        };
         void Promise.all(
           due.map(async (d) => {
             const root = linterRoot(d, buf.abs, project);
@@ -453,11 +458,11 @@ export class Languages {
               buf.linterProblems.delete(d.name); // none shown for this text, and the linter kept
               this.saySkipped(`linter ${d.name}`, buf, r.skipped);
             } else this.linterCouldNot(d, r.failed, r.detail);
+            drawn();
           }),
         ).then(() => {
           this.linterRuns.delete(buf);
-          for (const v of this.app.allViews()) if (v.buf === buf) v.layoutKey = "";
-          this.app.host.requestRender();
+          drawn();
         });
       },
       buf.linted.typed >= 0 || buf.linted.saved >= 0 ? 500 : 0,
