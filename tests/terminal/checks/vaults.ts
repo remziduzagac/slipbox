@@ -1983,6 +1983,10 @@ const LINKED: Check[] = [
     area: "links-and-files",
     name: "links: a note too big to index, through a link followed, typed into and saved — never written: a vault never writes out of itself",
     covers: { cases: ["links/state", "safety"], commands: ["link.follow"] },
+    // Fails at random on CI's Linux runners, about 33 s in: ":w refused" not seen, the `escape` before `:w` read late
+    // (the last commands run `palette.open, note.save, help.report`; job 120896065125), or slipbox not exiting cleanly
+    // (job 120903950535).
+    quarantined: "#73",
     options: {
       home: true,
       startAt: "home/notes/to-big.md",
