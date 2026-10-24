@@ -38,3 +38,6 @@ A pop-up with text, a select and checkboxes, its keys and clicks: design.md § M
   overlay'` 32 pass. Mutations, each alone (nothing dropped; the arrival time not carried — missed by a held key
   alone, caught once a second key queued behind it; a dimmed checkbox taken; a dimmed checkbox ticking; moving not
   marking; a click outside not cancelling; clicks not dropped): all seven caught.
+- 2026-10-24: tried live (a release build in a pane 18 columns wide): the dialog never narrower than a question's
+  window (24), its left edge off the screen, its marks cut. Now never wider than the screen less two; a test at 18
+  columns reads its border and each mark, and fails without the fix (checked).

@@ -174,6 +174,16 @@ describe("the dialog (UPG-T3)", () => {
     expect(h.app.overlay?.kind).toBe("dialog");
   });
 
+  test("a terminal narrower than it would be: drawn whole, its rows cut short, its marks there", async () => {
+    const h = await harness({ width: 18, height: 30 });
+    offer(h);
+    const rows = h.frame().split("\n");
+    // Its left border on screen, and each row's mark after it.
+    expect(rows.some((r) => /^.[│┃] ● Upgrade/.test(r))).toBe(true);
+    expect(rows.some((r) => /^.[│┃] ○ Not now/.test(r))).toBe(true);
+    expect(rows.some((r) => /^.[│┃] ☐ Skip/.test(r))).toBe(true);
+  });
+
   test("ASCII's glyphs: (*) and ( ), [ ] and [x]", async () => {
     const h = await harness({ config: (c) => (c.render.glyphs = "ascii") });
     offer(h);

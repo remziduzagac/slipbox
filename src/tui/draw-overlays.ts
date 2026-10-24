@@ -322,7 +322,8 @@ function choiceHelpRows(o: DialogOverlay, w: number): number {
 export function drawChoiceDialog(app: App, c: Canvas, o: DialogOverlay, mainY: number, mainH: number): DialogGeometry {
   const theme = app.theme;
   const W = c.width;
-  const w = dialogWidth(W);
+  // Never wider than the screen: a narrow terminal shows it whole, its rows cut short.
+  const w = Math.max(8, Math.min(dialogWidth(W), W - 2));
   const text = wrapWords(sanitize(o.text.trim()), w - 4).slice(0, 6);
   const helpRows = choiceHelpRows(o, w);
   const boxes = o.checkboxes.length;
