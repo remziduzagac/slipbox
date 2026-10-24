@@ -4,7 +4,8 @@ Contained parts of the work, each a folder with its key in its README's H1: acti
 dropped and superseded ones in `archive/`. The roadmap gives their order.
 
 - Active: [TT](terminal-tests/README.md), the terminal tests headless and by feature;
-  [DOCS](documentation/README.md), the documentation learning path, topic ownership and reference.
+  [DOCS](documentation/README.md), the documentation learning path, topic ownership and reference;
+  [VB](views-and-bars/README.md), views and modes, the top bar, vaults and workspaces (#82, #85, #86).
 - Complete on their branches, for consolidation: [UPG](upgrade-restart/README.md), upgrading and restarting from the
   TUI (#23);
   [SEO](site-discovery/README.md), the docs site found, shared and read by agents (#66);

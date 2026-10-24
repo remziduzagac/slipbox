@@ -33,8 +33,9 @@ search's improvements.
 
 - [tasks/](tasks/README.md): small work not worth a workstream; open tasks are its files.
 - [workstreams/](workstreams/README.md): contained parts of the work; the roadmap gives their order. Active:
-  [TT](workstreams/terminal-tests/README.md), the terminal tests headless and by feature, and
-  [DOCS](workstreams/documentation/README.md), the documentation learning path and reference.
+  [TT](workstreams/terminal-tests/README.md), the terminal tests headless and by feature,
+  [DOCS](workstreams/documentation/README.md), the documentation learning path and reference, and
+  [VB](workstreams/views-and-bars/README.md), views and modes, the top bar, vaults and workspaces (#82, #85, #86).
   Consolidated in `workstreams/archive/`: DOC, the user documentation; DF, what writing it found;
   [GR](workstreams/archive/greenrepo/README.md), the repository to greenrepo;
   [DS](workstreams/archive/docs-site/README.md), the documentation site;
