@@ -227,6 +227,9 @@ bun run e2e find replace     # only the scenarios whose names contain these
   paced by what the screen shows, not by the clock: the agent replay script's first pause is held until the explorer
   shows its note. The few checks timed against the clock (`alone`) take their bound from the runner they're on: the
   kitchen-sink check's key must be answered sooner than that runner parses, on one thread, the 6 MB note being indexed.
+  What a check waits for is what its next key needs (T29): a note written from outside is in the explorer, read from
+  the disk, before the watcher's batch puts it in the quick switcher's list, so a check opens one through
+  `inSwitcher`, which reopens the switcher until its list has the note's own row.
 - **The terminal itself.** A scenario reads what the terminal draws with its colours (`styleOf`,
   `runs`), its title, the pid of slipbox in it (`signal` sends it SIGTERM or SIGHUP), pastes as a
   terminal does (bracketed), quits and starts again on the same state (`restart`), and resizes the

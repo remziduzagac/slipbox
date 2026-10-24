@@ -693,6 +693,25 @@ export const OUTSIDE_AND_CODE: Check[] = [
   },
   {
     area: "outside-and-code",
+    name: "watching: a note an agent writes at the vault's top — in the explorer from the disk at once, in the switcher once the watcher tells, opened from it (#69)",
+    covers: { cases: ["watching", "explorer"], commands: ["switcher.open", "explorer.toggle_hidden"] },
+    // The watcher slow to tell, as a loaded runner's is.
+    options: { config: "[watch]\ndebounce_ms = 3000\n" },
+    run: async (s) => {
+      s.write("arrival.md", "# Arrival\n\nWritten by an agent.\n");
+      // The explorer's tree made again before the watcher has told (hidden files shown, then not): its row is the
+      // disk's, while the switcher doesn't list the note yet.
+      await s.ex("hidden");
+      await s.ex("hidden");
+      await s.see("arrival.md");
+      await inSwitcher(s, "arrival", "arrival.md");
+      await s.keys("enter");
+      await opened(s, "arrival.md");
+      await s.see("Written by an agent.");
+    },
+  },
+  {
+    area: "outside-and-code",
     name: "watching: an agent's prepend keeps the cursor on its line",
     covers: { cases: ["watching"], commands: ["cursor.goto_line"] },
     options: { open: HANDBOOK },
