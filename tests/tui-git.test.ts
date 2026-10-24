@@ -135,7 +135,13 @@ describe("git worktrees in the TUI (17.19)", () => {
     await h.app.run("folders.open");
     const list = h.app.overlay as ListOverlay;
     const at = list.items.findIndex((i) => i.label === `f${tag}`);
-    expect(list.items[at]).toMatchObject({ detail: tildePath(one), hint: "2 copies" });
+    expect(
+      list.items
+        .filter((item) => item.label === `f${tag}`)
+        .map((item) => item.detail)
+        .sort(),
+    ).toEqual([tildePath(one), tildePath(two)].sort());
+    expect(list.items[at]).toMatchObject({ detail: tildePath(one) });
     list.selected = at;
     await h.keys("enter");
     // Into the copy its links open; a second copy here, never chosen: asked which, once (21.6).

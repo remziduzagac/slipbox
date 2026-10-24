@@ -7,3 +7,5 @@ Implementation order follows the batch: #82, #86, #85.
 - [VB-T3](T3.md): Vaults and workspace switching (#85).
 - [VB-T4](T4.md): Home folders in the vault list (#85).
 - [VB-T5](T5.md): Worktrees grouped by repository (#85).
+
+- [VB-T6](T6.md): label git workspaces by their vault (VB-D6).

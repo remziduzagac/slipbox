@@ -1,7 +1,7 @@
 // docs/guides/vaults.md: the explorer zoomed out past the vault you're in, its breadcrumb and its rows' marks; a peek
 // into another vault; a folder's symlinks as the explorer shows them, and the question one leading out asks.
 
-import { explorerOpen, follow } from "../check.ts";
+import { explorerOpen, follow, leader } from "../check.ts";
 import { HOME, quiet, type Shot } from "../shot.ts";
 
 /** A wider explorer, so a row's marks and what describes it (a branch, where a link leads) fit beside its name. */
@@ -11,6 +11,28 @@ const WIDE = "[ui]\nsidebar_width = 50\n";
 const NO_EXPLORER = "[ui]\nsidebar = false\n";
 
 export const SHOTS: Shot[] = [
+  {
+    name: "vaults-list",
+    options: HOME("notes/index.md"),
+    take: async (s) => {
+      s.cliIn("~/work/kestrel", "ls");
+      s.cliIn("~/work/kestrel-agent-sync-retry", "ls");
+      await leader(s, "v", "v");
+      await s.see("Vaults — enter goes into one; / filters");
+    },
+  },
+  {
+    name: "vaults-unsaved-switch",
+    options: HOME("notes/index.md"),
+    take: async (s) => {
+      await s.keys("ctrl+k", "i");
+      await s.type("A note in progress. ");
+      await s.keys("escape", ":");
+      await s.type(`e ${s.path("~/work/kestrel/README.md")}`);
+      await s.keys("enter");
+      await s.see("Unsaved notes — change vault?");
+    },
+  },
   {
     name: "vaults-explorer",
     options: { ...HOME("work/kestrel/README.md"), config: WIDE },

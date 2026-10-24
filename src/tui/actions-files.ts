@@ -171,6 +171,9 @@ export function fileActions(): Record<string, Run> {
         if (arg) return a.renaming.preview(() => planHeadingRename(a.graph, rel, h.text, arg));
         a.renaming.promptHeading(rel, h.text);
       }),
+    "vault.switch_save": (a) => a.vaults.chooseSwitch("save"),
+    "vault.switch_discard": (a) => a.vaults.chooseSwitch("discard"),
+    "vault.switch_stay": (a) => a.vaults.chooseSwitch("stay"),
     "folders.open": (a) => a.vaults.openFolders(),
     "folders.default": (a) => a.vaults.chooseDefaultCopy(),
     // A root's trust (23.x): the root you opened, or the shown file's project when it's elsewhere.

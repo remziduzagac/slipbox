@@ -79,7 +79,7 @@ export const WHERE: Check[] = [
     covers: { cases: ["ui", "status", "mouse"], commands: ["explorer.focus", "ui.zen"] },
     options: { home: true, startAt: "home/work/kestrel/README.md" },
     run: async (s) => {
-      await s.until(() => /≡ .*│ ◈ main │ ⎇ main/.test(s.topBar()), 5000, "zoom, workspace and branch");
+      await s.until(() => /≡ .*│ ◈ kestrel │ ⎇ main/.test(s.topBar()), 5000, "zoom, workspace and branch");
       await leader(s, "e");
       await onTopBar(s, "≡");
       await s.see("Explorer");
@@ -87,7 +87,11 @@ export const WHERE: Check[] = [
       await s.see(/Branches \(\d+\) — enter: check one out/);
       await s.keys("escape");
       await leader(s, "u", "z");
-      await s.until(() => s.topBar().includes("slipbox") && s.topBar().includes("◈ main"), 3000, "bar retained in zen");
+      await s.until(
+        () => s.topBar().includes("slipbox") && s.topBar().includes("◈ kestrel"),
+        3000,
+        "bar retained in zen",
+      );
     },
   },
   {

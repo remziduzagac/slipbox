@@ -2468,6 +2468,33 @@ const GIT_PANEL: Check[] = [
 ];
 
 export const VAULTS: Check[] = [
+  {
+    area: "links-and-files",
+    name: "vault switch choices: stay keeps edits, discard goes; vault list includes destinations",
+    covers: { cases: ["vault", "edit"], commands: ["folders.open", "vault.switch_stay", "vault.switch_discard"] },
+    options: { home: true, startAt: "home/notes/index.md" },
+    run: async (s) => {
+      await s.status("index.md");
+      await s.keys("ctrl+k", "i");
+      await s.type("probe ");
+      await s.keys("escape", ":");
+      await s.type(`e ${s.path("~/work/kestrel/README.md")}`);
+      await s.keys("enter");
+      await s.see("Unsaved notes — change vault?");
+      await s.see("Save all and go");
+      await s.see("Discard and go");
+      await s.keys("c");
+      await s.status("unsaved");
+      await s.keys(":");
+      await s.type(`e ${s.path("~/work/kestrel/README.md")}`);
+      await s.keys("enter");
+      await s.see("Unsaved notes — change vault?");
+      await s.keys("d");
+      await s.status("README.md");
+      await leader(s, "v", "v");
+      await s.see("Vaults — enter goes into one; / filters");
+    },
+  },
   ...HOME,
   ...UNWALKED_HOME,
   ...ELSEWHERE,

@@ -1,3 +1,4 @@
+import { vaultChoices } from "./vault-list.ts";
 // Vaults in the TUI (17.x, VV): switching into another and back, a folder made a vault or unmade, the named folders
 // and their copies (21.x).
 
@@ -61,6 +62,23 @@ export class Vaults {
   /** Counted each time a vault is gone into: an answer that comes later, from git, knows whether it's still where it
    *  was asked (`BranchView.still`), the same vault never left — gone into again, it's another visit. */
   visits = 0;
+
+  private pendingSwitch: {
+    target: VaultLocation;
+    open: string | null;
+    anchor?: Anchor;
+    how: { back?: boolean; folder?: string };
+  } | null = null;
+
+  chooseSwitch(choice: "save" | "discard" | "stay"): void {
+    const pending = this.pendingSwitch;
+    this.pendingSwitch = null;
+    if (!pending || choice === "stay") return;
+    if (choice === "save") {
+      for (const buffer of this.app.dirtyBuffers()) if (!this.app.saving.save(buffer)) return;
+    }
+    this.switchVault(pending.target, pending.open, pending.anchor, { ...pending.how, discard: true });
+  }
 
   /**
    * What's asked for, entering the vault open (VV-D2) — the one way in, from the start or a switch, a folder revealed
@@ -239,16 +257,33 @@ export class Vaults {
   /**
    * Become another root's TUI, as if started there (17.10): its config, index, watcher, reading
    * positions and session — with `open` open (an absolute path), or the session's tabs. Leaving
-   * saves this one's as quitting does. Refused while a note is unsaved: it would be left behind.
+   * saves this one's as quitting does. Unsaved notes ask to save all, discard or stay.
    * `folder`: a folder of home gone into by name (VV-D2: a folder revealed), as `slipbox ~/notes` opens it.
    */
   switchVault(
     target: VaultLocation,
     open: string | null,
     anchor?: Anchor,
-    how: { back?: boolean; folder?: string } = {},
+    how: { back?: boolean; folder?: string; discard?: boolean } = {},
   ): boolean {
-    if (!this.app.saving.canLeave()) return false;
+    if (this.app.floating && !this.app.overlays.closeFloating()) return false;
+    if (!how.discard && this.app.dirtyBuffers().length) {
+      this.pendingSwitch = { target, open, anchor, how };
+      this.app.overlays.openList({
+        title: "Unsaved notes — change vault?",
+        filterable: false,
+        items: [
+          { label: "Save all and go", hotkey: "s", data: "save" },
+          { label: "Discard and go", hotkey: "d", data: "discard" },
+          { label: "Stay", hotkey: "c", data: "stay" },
+        ],
+        accept: (item) => this.app.run(`vault.switch_${item.data}`),
+        cancel: () => {
+          this.pendingSwitch = null;
+        },
+      });
+      return false;
+    }
     cancelGitRead(this.app);
     const v = this.app.view;
     const folder = this.app.homeFolder !== null ? join(this.app.loc.root, this.app.homeFolder) : undefined;
@@ -272,6 +307,23 @@ export class Vaults {
     this.app.following.left();
     // The explorer's unfolded folders, by their whole paths: the vault's own are its paths in it.
     const unfolded = [...this.app.explorer.expanded].map((k) => this.app.explorer.rowAbs({ path: k }));
+    // Release every owner of notes and index data before restoring the destination's workspace.
+    this.app.background.cancelAll();
+    this.app.exporter.cancel(true);
+    this.app.search.stop();
+    this.app.languages.leaveVault();
+    this.app.geometry = null;
+    this.app.mouse.leaveVault();
+    this.app.views.parses.clear();
+    this.app.completion = null;
+    this.app.signature = null;
+    this.app.snippet = null;
+    this.app.floating = null;
+    this.app.overlay = null;
+    this.app.indexing = 0;
+    for (const buffer of this.app.buffers.values()) buffer.cancelParse();
+    this.app.buffers.clear();
+    this.app.tabs = [];
     // Enter.
     this.app.loc = target;
     this.visits++;
@@ -395,6 +447,7 @@ export class Vaults {
     this.app.session.publishState();
     this.app.settings.recordStamps();
     if (this.app.live) {
+      this.app.languages.startServers();
       if (this.app.config.watch.enabled) this.app.watch.startWatcher();
       this.app.watch.indexInBackground();
       this.app.git.refresh();
@@ -535,22 +588,15 @@ export class Vaults {
 
   /** The named folders (`:folders`, `space v v`): enter goes into one (17.10). */
   openFolders(): void {
-    const choices = this.folderChoices();
-    if (!choices.length)
-      return this.app.message(
-        "info",
-        "no other named folders here yet: a .slipbox/ name (:name), or a repository's remote, names one",
-      );
+    const choices = vaultChoices();
     this.app.overlays.openList({
-      title: `Folders (${choices.length}) — enter goes into one`,
-      items: choices.map((c) => ({
-        label: c.name,
-        detail: tildePath(c.path),
-        hint: c.folder.copies.length > 1 ? `${c.folder.copies.length} copies` : undefined,
-        data: c.path,
-      })),
+      title: "Vaults — enter goes into one; / filters",
+      slashFilter: true,
+      items: choices,
+      keepGroups: true,
       accept: (item) => {
-        this.switchVault(rootAt(item.data as string), null);
+        const choice = item.data as { root: string; folder?: string };
+        this.switchVault(vaultAt(choice.root), null, undefined, { folder: choice.folder });
       },
     });
   }

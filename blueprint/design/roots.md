@@ -178,10 +178,10 @@ past the cap. The cap's message, said as the graph built again after home's walk
 (`describeCap`'s `asked`): `…; ~/notes, the folder open, is whole`; past the cap alone, `home's index is full:
 it holds 12,345 notes, all in ~/big, the folder open — the rest aren't indexed`.
 
-**What's shown.** The top bar names home `◈ ~`, the status line `~` while the bar is hidden; `info` says `mode` `home`
+**What's shown.** The top bar names home `◈ ~`; `info` says `mode` `home`
 (an addition to schema 1's values), the Info view and `stat` `home (~)`. Started in `~`, nothing opens over the
 explorer: home is the vault. Each folder of home opened by name is a workspace of its own, kept beside home's own (its
-top's), the top bar naming it (`◈ ~ › notes`; `folders`, by home's path for it, as `branches` keeps a branch's;
+top's), the top bar naming it (`◈ notes`; `folders`, by home's path for it, as `branches` keeps a branch's;
 `SESSION_FOLDERS`), as it had before home was a vault; `slipbox ~`, and a switch into home by a note, bring back the
 top's, and the way back the folder's it left (`App.homeFolder`). The top's tabs from before folders kept theirs are kept
 as its own the first time one does. Started on a folder of home with no tabs of its own yet, the folder's own

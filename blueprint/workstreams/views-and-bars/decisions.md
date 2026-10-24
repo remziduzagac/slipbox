@@ -42,3 +42,9 @@ The vaults popup includes every known vault, named or unnamed, most recent first
 Home folders opened by name appear and are marked as home's. Worktrees group beneath their repository.
 Reason: unnamed vaults must remain reachable, and many worktrees must not overwhelm the list.
 Source: issue #85; its home-folder and worktree questions are settled as above.
+
+## VB-D6: A git workspace is labelled by its vault (#85, #86)
+
+Agreed 2026-10-25. Show the vault's name in the workspace item, with its branch in the adjacent git item:
+`◈ kestrel │ ⎇ main`. The branch is said once. Home folders keep their folder name, and home's top keeps `~`.
+This changes only the label: workspaces still belong to their vault, with one per branch in a git checkout.

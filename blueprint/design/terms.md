@@ -141,8 +141,8 @@ what replaced them.
   still holds a buffer with its own cursor, top row, selection and find; a **tab** holds one, or two in a split.
   [tui.md](tui.md) § Buffers, views, tabs, windows.
 - **The walk**: the listing of a vault's files, shared by the index and the watcher. [roots.md](roots.md) § The walk.
-- **Where you are**: the vault, its branch and a workspace other than the vault's own, on the top bar, else on the
-  status line (WSP-D4, WSP-D5). [tui.md](tui.md) § Screen layout.
+- **Where you are**: explorer zoom, workspace and git, grouped on the permanent top bar (VB-D3, VB-D6).
+  [tui.md](tui.md) § Screen layout.
 - **Which-key**: the popup listing the keys a pending sequence can take next. [tui.md](tui.md) § Screen layout.
 - **Wikilink**: `[[name]]` or `[[path#heading|text]]`, a link by name or path, within its vault.
   [links.md](links.md) § Wikilinks.

@@ -237,10 +237,23 @@ export const FILE_SPECS: CommandSpec[] = [
     desc: "The section the cursor is in: every link to it rewritten wherever it's reached, after a preview",
   },
   {
+    id: "vault.switch_save",
+    title: "Save all and change vault",
+    cli: null,
+    desc: "Saves unsaved notes before the pending switch",
+  },
+  {
+    id: "vault.switch_discard",
+    title: "Discard and change vault",
+    cli: null,
+    desc: "Leaves unsaved notes behind for the pending switch",
+  },
+  { id: "vault.switch_stay", title: "Stay in this vault", cli: null, desc: "Cancels the pending vault switch" },
+  {
     id: "folders.open",
-    title: "Folders: go into a named one",
-    cli: "slipbox folders",
-    desc: "The named folders this machine knows, each by the name pointers use; enter goes into the copy its links open (back returns)",
+    title: "Vaults: go into one",
+    cli: "slipbox vaults",
+    desc: "Every known vault and home workspace, worktrees grouped under their repository; enter goes into one",
   },
   {
     id: "root.trust",

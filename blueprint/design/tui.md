@@ -407,9 +407,9 @@ own vault, D81). The TUI becomes that vault's, as if started there — its confi
 reading positions and your workspace there, whose tabs come back, with the note open (at its heading). What git said of
 the vault left is forgotten — its files' states, the git panel's files, where its branch stood, those opened up — and
 the git panel's message box is emptied: a message typed in one vault is never committed in another. Leaving saves the
-one before as quitting does. **Refused while a note is unsaved** (`unsaved: … — save (:wa) or revert before leaving`):
-it would be left behind. The properties editor closes first, writing its edits into the note — or, while it asks (they
-don't parse, or changed meanwhile), nothing switches. **Looking never moves you** (VV-D7): following a link into another
+one before as quitting does. Unsaved notes ask Save all and go, Discard and go, or Stay (VB-D4); all saves must
+succeed before leaving. The properties editor closes first, writing its edits into the note — or, while it asks,
+nothing switches. **Looking never moves you** (VV-D7): following a link into another
 vault, a backlink from one and another vault's search hit open a peek instead, going there a choice (§ The peek).
 
 **Back returns.** `back` (`ctrl+o`) from the first place in a vault goes to the vault before, at the note and place
@@ -422,9 +422,10 @@ to the common parent (§ Side panes); where the tree can't show the vault (its p
 `.claude/worktrees/`), the view moves to the vault. Started in a folder outside every vault (`slipbox /srv/x`),
 Elsewhere's, or in `~`, home, nothing opens over the explorer: the launcher of D50 is gone.
 
-**The named folders** (`space v v`, `:folders`, `folders.open`; `slipbox folders`), from anywhere: each by the name
-pointers give it (`21.6`; D74) and the copy its links open here, those seen last first; `enter` goes into that copy. A
-repository's worktrees are its branches, not copies: listed once. **Which copy** a folder's links open (`space v
+**The vaults** (`space v v`, `:folders`, `folders.open`; `slipbox vaults`) list every known vault, named or not,
+most recent first. Home's folders appear as home workspaces, and worktrees group under their repository. `/` starts
+filtering; `enter` goes into the selected vault or home folder. Pointer lookup remains independent (VB-D5).
+**Which copy** a folder's links open (`space v
 shift+v`, `:folders-default`, `folders.default`; `slipbox folders default`): this folder's copies — its repository's, a
 clone with a `.slipbox/` name of its own among them (DF-D30) —, else a pick of the folders with two. **Names** here, on
 `space v i`, the Info view and messages are each vault's name as
@@ -648,7 +649,7 @@ vault). A folder link out of the vault is revealed in its own vault, as before (
   selection and `y` as in any rendered note. The keymap has no table of its own in the config: a key for its commands
   is bound in `[keys]`.
 - **`o` (`peek.go`):** into its vault as a switch does (`switchVault`, at the cursor's place in the peek), the trail
-  kept, so `ctrl+o` comes back; refused while a note is unsaved, the peek staying. Outside every vault, into Elsewhere,
+  kept, so `ctrl+o` comes back; unsaved notes ask to save all, discard or stay. Outside every vault, into Elsewhere,
   the file editable there (VV-D3). On a tab kept from a peek, from the palette: the same, into that file's vault.
 - **`t` (`peek.tab`):** a tab here of the file (`buffer`'s path-keyed buffer beside the vault), at the peek's place. A
   file of another vault is read-only whenever it's open here (`markElsewhere`: `read-only here: kestrel's — go into
@@ -2703,3 +2704,14 @@ separate policies for git mutations.
 Opening defaults (VB-D2): `render.notes`, `render.code` and `render.data` are true by default. False opens SOURCE;
 READ and its lens remain available where supported. Legacy code `"document"`/`"source"` reads as true/false, and
 `editor.edit_in = "live"` reads as `"lens"`.
+
+## Vault-switch ownership (VB-D4, VB-T3–T5)
+
+The switch resolves floating properties edits first, then asks Save all and go, Discard and go, or Stay. Each choice
+runs its named vault.switch command. Save uses Saving.save through App.writeBuffer and proceeds only if all saves
+succeed. The outgoing workspace is persisted; its geometry, completion, snippet, buffers, views, search list and
+index, language timers and servers and background tasks are released before restoration. Return history retains
+paths and positions only. A repeated-switch ownership test checks notes, parses and indexes, including stale geometry.
+
+The Vaults popup uses known roots independently of named pointer lookup. It sorts by recent use, includes unnamed
+vaults and home-folder workspaces, and groups worktrees under their repository. Filtering keeps group context.

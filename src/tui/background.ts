@@ -41,6 +41,10 @@ export class Background {
     this.timer = null;
   }
 
+  cancelAll(): void {
+    for (const id of [...this.tasks.keys()]) this.cancel(id);
+  }
+
   open(): void {
     this.app.overlays.openList({
       title: "Background work — enter: cancel",

@@ -11009,7 +11009,7 @@ describe("vaults in the TUI (17.x)", () => {
     expect(h.copied.at(-1)).toBe(join(app, "pic.png"));
   });
 
-  test("a switch is refused while a note is unsaved; each vault keeps its own tabs (17.10)", async () => {
+  test("a switch asks while a note is unsaved; each vault keeps its own tabs (17.10)", async () => {
     const { notes, app } = await twoVaults();
     const h = await harness({ root: notes, open: "index.md" });
     await h.keys("space", "n", "v", "shift+a", "!", "escape");
@@ -11017,7 +11017,8 @@ describe("vaults in the TUI (17.x)", () => {
     await h.app.run("history.back"); // nothing: no earlier place, no vault before
     h.app.vaults.switchVault(locateVault({ root: app }), join(app, "design.md"));
     expect(h.app.loc.root).toBe(notes);
-    expect(h.app.messages.at(-1)!.text).toContain("unsaved: index.md");
+    expect((h.app.overlay as ListOverlay).title).toBe("Unsaved notes — change vault?");
+    await h.keys("c");
     await h.keys("ctrl+s");
     expect(h.app.vaults.switchVault(locateVault({ root: app }), join(app, "design.md"))).toBe(true);
     await h.app.run("tab.new");
@@ -12537,7 +12538,7 @@ describe("the explorer's file operations and buttons (18.x)", () => {
       n: "Name this folder, as pointers name it",
       t: "The trash",
       u: "Restore the last deleted",
-      v: "Folders: go into a named one",
+      v: "Vaults: go into one",
       "shift+v": "Which copy a folder's links open",
     });
     expect(await group("v")).not.toHaveProperty("d"); // a new folder is space d n now

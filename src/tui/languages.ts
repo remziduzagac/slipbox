@@ -202,6 +202,8 @@ export class Languages {
     else this.app.message("info", `${tildePath(at)} kept safe: nothing of its own runs — :trust trusts it`);
   }
 
+  private exitRegistered = false;
+
   /** The manager started: it starts each server when a file first needs it. */
   startServers(): void {
     if (this.servers || !this.app.config.lsp.enabled) return;
@@ -233,7 +235,10 @@ export class Languages {
       },
     });
     // Exiting without quitting (a signal): the servers go too.
-    process.once("exit", () => this.servers?.killAll());
+    if (!this.exitRegistered) {
+      this.exitRegistered = true;
+      process.once("exit", () => this.servers?.killAll());
+    }
   }
 
   /**
@@ -455,7 +460,9 @@ export class Languages {
             try {
               const root = linterRoot(d, buf.abs, project);
               if (!root) return void buf.linterProblems.delete(d.name); // the project doesn't ask for it
-              const r = await runLinter(d, buf.abs, text, root, undefined, this.tools.signal);
+              const signal = this.tools.signal;
+              const r = await runLinter(d, buf.abs, text, root, undefined, signal);
+              if (signal.aborted) return;
               if ("problems" in r) buf.linterProblems.set(d.name, { version, list: r.problems });
               else if ("skipped" in r) {
                 buf.linterProblems.delete(d.name); // none shown for this text, and the linter kept
@@ -496,9 +503,27 @@ export class Languages {
   }
 
   /** Cancels the lint, linter and install runs under way when the screen quits: none is left running behind it. */
-  private readonly tools = new AbortController();
+  private tools = new AbortController();
   /** Runs whose findings weren't shown, by linter and file: said once. */
   private readonly skippedSaid = new Set<string>();
+
+  leaveVault(): void {
+    this.stopSyntax();
+    for (const timer of this.serverTimers.values()) clearTimeout(timer);
+    this.serverTimers.clear();
+    for (const pending of this.linterRuns.values()) if (pending !== "running") clearTimeout(pending.timer);
+    this.linterRuns.clear();
+    for (const pending of this.lintRuns.values()) if (pending !== "running") clearTimeout(pending);
+    this.lintRuns.clear();
+    this.tools.abort();
+    this.tools = new AbortController();
+    this.servers?.cancelInstalls();
+    this.servers?.killAll();
+    this.servers = null;
+    this.triggerCache.clear();
+    this.pendingTrust = null;
+    this.vaultLint = { running: false, issues: null };
+  }
 
   /** The screen quitting: every lint, linter and install run under way stopped. */
   stopTools(): void {
@@ -542,6 +567,7 @@ export class Languages {
         const signal = this.tools.signal;
         void runLint(cmd, [buf.abs], this.app.loc.root, undefined, this.sayInstalling, signal).then((issues) => {
           this.lintRuns.delete(buf);
+          if (signal.aborted) return;
           if (issues === null) return this.lintFailed();
           if (!Array.isArray(issues)) {
             // None shown for this text, and not linted again until it's saved again: lint stays on.
@@ -575,11 +601,14 @@ export class Languages {
       .sort()
       .map((rel) => join(this.app.loc.root, rel));
     this.vaultLint = { running: true, issues: this.vaultLint.issues };
+    const signal = this.tools.signal;
+    const root = this.app.loc.root;
     void (async () => {
       const all: LintIssue[] = [];
       for (let i = 0; i < files.length; i += 300) {
         const batch = files.slice(i, i + 300);
-        const got = await runLint(cmd, batch, this.app.loc.root, undefined, this.sayInstalling, this.tools.signal);
+        const got = await runLint(cmd, batch, root, undefined, this.sayInstalling, signal);
+        if (signal.aborted) return;
         if (got === null) {
           this.vaultLint = { running: false, issues: null };
           this.lintFailed();

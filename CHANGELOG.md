@@ -8,6 +8,10 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 
 ### Added
 
+- Switching vaults asks to save all, discard or stay, and releases the outgoing notes, parses and index. The vault
+  list includes unnamed vaults, home workspaces and worktrees grouped under their repository; returning restores
+  the workspace from disk.
+
 - The permanent top bar groups explorer zoom, workspace and git state, with separate click targets and changed-file
   count. Background indexing, exports, fetches and language servers starting have a task list with individual cancel;
   an available upgrade stays visible. The bar remains in zen; `space u b` is removed and `ui.top_bar` is retired.

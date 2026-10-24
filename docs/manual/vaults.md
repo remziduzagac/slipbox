@@ -276,18 +276,20 @@ A message names the vault you are now in.
 
 - **Back returns.** `ctrl+o` from the first place you visited in a vault takes you back to the vault before. You are
   at the note and place you left. A chain of switches unwinds one at a time.
-- **Unsaved notes stop a switch.** slipbox refuses to leave a vault while a note in it is unsaved, and names the note.
+- **Unsaved notes ask before a switch.** Choose **Save all and go**, **Discard and go**, or **Stay**. A failed save
+  keeps you in the current vault. Properties edits are resolved first.
   Save it (`:wa` saves them all) or revert it first.
 - **The explorer shows where you went.** It's one tree: going into a vault outside its view zooms the view out to the
   folder holding both, the two unfolded and the vault you are in now highlighted ([Files](files.md#the-zoom)).
-- **The named folders** are a key away: `space v v` lists them, wherever you started, and `enter` goes into one.
+- **Every known vault** is a key away: `space v v` lists them, named or not, and `enter` goes into one.
 
 ### Worktrees
 
 A git worktree (made with `git worktree add`) is a vault of its own, with its own workspaces, scratch and history.
 That's because a worktree is usually a separate task, often an agent's.
 
-The top bar shows a worktree by its repository's name and its branch: `◈ website@fix-menu`.
+The top bar shows its workspace and branch: `◈ website │ ⎇ fix-menu`. The vault list groups worktrees under
+their repository.
 
 A worktree's notes are copies of the main checkout's, so their links don't count as backlinks.
 
@@ -404,8 +406,13 @@ the same `id` in `.slipbox/`.
 - **Different `.slipbox/` folders** with one name stay ambiguous until one is renamed. Following a pointer by that name
   asks which, and offers the renaming.
 
-`space v v` (`:folders`) lists the named folders this machine knows, the ones seen last first. `enter` goes into one,
-and `ctrl+o` comes back. `slipbox folders` lists them with their copies.
+`space v v` (`:folders`), or a click on the top bar's workspace, opens **Vaults**. Every known vault appears,
+named or not, most recent first. Worktrees appear under their repository. Folders of home opened by name appear
+marked as home's workspaces. `/` filters; `enter` goes into the selected vault or home folder; `ctrl+o` comes back.
+![The vault list, with worktrees grouped under their repository](../images/vaults-list.png)
+
+The outgoing workspace is saved on disk; its notes, parses and index are released from memory. Returning loads its
+files again. `slipbox vaults` lists known vaults; `slipbox folders` remains the named pointers and their copies.
 
 ### A named folder moved
 

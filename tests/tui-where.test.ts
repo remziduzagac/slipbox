@@ -151,7 +151,7 @@ describe("permanent location bar (VB-T2)", () => {
     const h = await harness({ root, width: 200 });
     writeFileSync(join(root, "index.md"), "# Changed\n");
     await h.app.git.refreshNow();
-    expect(topRow(h.frame())).toContain("◈ main");
+    expect(topRow(h.frame())).toContain("◈ osprey");
     expect(topRow(h.frame())).toContain("⎇ main");
     expect(topRow(h.frame())).toContain("● 1");
     const branch = hot(h, "top:branch")!;

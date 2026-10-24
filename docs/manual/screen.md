@@ -48,7 +48,8 @@ The middle block says **where you are**, with a dim separator between each click
 
 - **Explorer zoom**, after `≡`: the folder the explorer shows. Click to open and focus the explorer at that zoom.
 - **Workspace**, after `◈`: its name, without the vault prefix. A named folder of home shows `◈ notes`; a branch
-  workspace shows `◈ main`. The vault is in [Info](#the-info-view). Click the workspace to open the vault list.
+  workspace shows the vault name, `◈ kestrel`. The vault is in [Info](#the-info-view). Click the workspace to open
+  the vault list.
 - **Git branch**, after `⎇`, dimmed, with ahead and behind counts, and any merge or rebase under way. A detached head
   shows its commit. Click for the branches menu: pull, push and fetch, then branches to check out.
 - **Changed files**, `● 3`, in the changed-file colour: the number of files changed in the working tree. Click to

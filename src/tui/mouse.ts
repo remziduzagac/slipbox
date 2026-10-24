@@ -58,6 +58,12 @@ export class Mouse {
     | { kind: "picture"; view: View; row: number; file: string; x: number; y: number; ctrl: boolean }
     | null = null;
 
+  leaveVault(): void {
+    this.drag = null;
+    this.lastClick = null;
+    this.hover = null;
+  }
+
   /** Everything visible is clickable (docs/manual/keys.md, "Mouse"). */
   handle(ev: {
     type: string;

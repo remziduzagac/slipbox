@@ -13,7 +13,7 @@ type Item = { text: string; id: string; role: Role; compact?: string };
 export function locationItems(app: App): Item[] {
   const w = whereOf(app);
   const g = app.glyphs;
-  const workspace = app.homeFolder ?? (app.loc.mode === "home" ? "~" : (w.branch ?? w.vault));
+  const workspace = app.homeFolder ?? (app.loc.mode === "home" ? "~" : w.vault);
   const count = new Set(app.git.entries?.map((entry) => entry.path)).size;
   return [
     { text: `${g.explorerButton} ${sanitize(tildePath(app.explorer.top))}`, id: "top:zoom", role: "topbar" },

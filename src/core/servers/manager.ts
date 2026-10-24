@@ -330,6 +330,8 @@ export class ServerManager {
   killAll(): void {
     this.closed = true;
     for (const r of this.running.values()) r.client?.kill();
+    this.docs.clear();
+    this.running.clear();
   }
 
   /**
