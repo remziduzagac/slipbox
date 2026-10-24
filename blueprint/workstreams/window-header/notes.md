@@ -359,3 +359,7 @@ here, and the work go on.
       framework has it.
     - One frame in a split where a window drawn before the other parsed shows its Read lit: the next frame agrees.
 - Terminal checks after round 2's fixes: the header's fifteen and the settings check, 16 of 16.
+- Round 3: Codex's part skipped again: past its menu, it hit its usage limit (until 12:51); a fresh Claude reviewer
+  and `/code-review` on the diff after round 2's fixes (committed, not pushed: CI waits on #59).
+- 2026-10-24: the screenshots retaken after round 2's fixes: none changed but one by a row of scroll (run to run, not
+  this change), kept as it was; no picture shows a disabled button.
