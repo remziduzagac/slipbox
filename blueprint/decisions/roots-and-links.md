@@ -1112,6 +1112,38 @@ reached (one index lookup) for a path at a hidden name.
 indexing what's listed (a dotfiles folder's every file); `.git` listed with the rest (git's own, thousands of files);
 the switcher and find following the setting (they'd list files the index doesn't hold, which no search finds).
 
+## D259: A peek's backlinks on a thread of their own, fresh at each peek; a missing index built (2026-10-23)
+
+**Decision:** A peek into another vault shows the note at once, and its backlinks when they're ready: worked out on a
+worker thread, which opens the vault afresh at each peek — its walk, its index caught up with what changed since and
+written again — and, when the vault has no index here, builds it, the backlinks shown when it's done. A vault reached
+by a link (`[[name:note]]`, a name a note declares) whose index lacks some of its notes, or has none, is caught up, or
+built, on the same thread, the link resolved a moment later (the maintainer's choice, 2026-10-23, over leaving it
+unresolved until the vault is indexed some other way). Home is left out of that: its index is built in slices while
+nobody works (VV-D2), and a peek says it has none yet. The graph the peek
+reads its links and embeds in stays opened on the main thread, its walk and its index read, and is opened again from
+the fresh index when the vault changed; the TUI's reached graphs are no longer `thorough`, so a layout never parses a
+vault whole; a tab of another vault's file has its vault caught up on the thread too. A peek open isn't updated while
+its vault changes: the next one is fresh. As built: `core/backlinks-jobs.ts`, `core/backlinks-worker.ts`, `Reach`'s
+`thorough` and `record` options, `tui/peek.ts`; design/tui.md § The peek. Decided by an issue (#10) and one pull
+request (D223).
+
+**Why:** The first peek into a big vault held the keys while it was read: for 5,000 notes, a third changed since the
+index, 2.8 s parsing them and resolving every link, after 0.14 s opening it. And the graph was kept, its backlinks
+worked out once, so a later peek showed those of the first, whatever had changed there. On the thread, the keys answer
+while it works (within 0.4 s while that vault's index was built), and opening the vault afresh at each peek costs the
+screen nothing. The maintainer chose that a vault without an index gets one, rather than a peek with no backlinks
+until you go there.
+
+**Cost:** The open stays on the main thread — 0.15 s for 5,000 notes whose index is 65 MB — and is made again when the
+vault changed: a structured clone of those entries measured 0.26 s, more than reading them from disk. A peek's
+backlinks come a moment after its note even when nothing changed (0.65 s for those 5,000 notes). A big vault never
+indexed keeps a core busy while it's built (8 s for 5,000 notes), and quitting meanwhile loses the work.
+
+**Not chosen:** watching the other vault while a peek shows it, a second watcher for a peek left open; building nothing
+for a vault without an index, as VV-D7 had it; the open moved to the thread too, the peek's links drawn unresolved
+until it answered.
+
 ## D260: A link renamed or moved itself moves as a link, its answer with it (#11, 2026-10-23)
 
 **Decision:** A symlink named itself in a rename or a move — the explorer's `r` and `m`, `space n m`, `slipbox mv` — is

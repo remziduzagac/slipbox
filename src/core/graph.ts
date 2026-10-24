@@ -12,7 +12,7 @@ import { statSync } from "node:fs";
 import { commentLinks, grammar, grammarFor, grammarNow, linkTokens, parseSyntax, type Grammar } from "./syntax.ts";
 import { basename, isAbsolute, join, posix, relative, sep } from "node:path";
 import type { Config } from "./config.ts";
-import { climbsOut, ensureDir, readJson, readText, writeJson } from "./fsutil.ts";
+import { climbsOut, ensureDir, readJson, readText, sweepTemps, writeJson } from "./fsutil.ts";
 import { blockingLink } from "./symlinks.ts";
 import { countForms, type FormCounts } from "./convention.ts";
 import { LinkIndex, normKey, onDisk, type Resolution } from "./links.ts";
@@ -222,7 +222,8 @@ export class Graph {
     // `$HOME` or `/` opened as a plain folder is listed, never indexed: nothing to keep (20.22).
     this.useCache = useCache && !isListed(this.loc);
     const cached = this.useCache ? readJson<IndexFile | null>(this.cachePath, null) : null;
-    const old = cached?.version === INDEX_VERSION ? cached.entries : {};
+    this.indexRead = cached?.version === INDEX_VERSION;
+    const old = this.indexRead ? cached!.entries : {};
     let reused = 0;
     this.notes.clear();
     this.unparsed.clear();
@@ -249,7 +250,7 @@ export class Graph {
     this.index = new LinkIndex(this.notes.keys());
     // Notes the index had that the walk no longer finds: moved, if one new file has the same text —
     // unless the index was written on another branch (5.9): a note only one branch has is no move.
-    if (this.useCache && (cached?.branch === undefined || cached.branch === this.branchNow())) {
+    if (this.useCache && this.writesState && (cached?.branch === undefined || cached.branch === this.branchNow())) {
       const vanished = Object.values(old).filter((e) => !this.notes.has(e.rel));
       if (vanished.length)
         this.detectMoves(
@@ -258,7 +259,7 @@ export class Graph {
         );
     }
     // And git's renames, when HEAD moved on the branch since this copy last looked (20.21).
-    if (this.useCache) this.catchUpWithGit();
+    if (this.useCache && this.writesState) this.catchUpWithGit();
     // An editor's unsaved text stays over the new walk's entries (11.8); a note gone takes its own.
     const texts = [...this.overlays].map(([rel, o]) => [rel, o.text] as const);
     this.overlays.clear();
@@ -524,9 +525,36 @@ export class Graph {
     if (this.cacheDirty) this.writeCache();
   }
 
+  /** When this graph last wrote its index (`writeCache`); null: it hasn't — nothing to write, or the write failed. */
+  writtenAt: number | null = null;
+
+  /**
+   * It writes its index (`writeCache`): false for another vault's graph the TUI reaches (#10), whose index its
+   * backlinks' thread writes — written here, a big one would hold the keys while it's turned to text.
+   */
+  writesIndex = true;
+
+  /**
+   * It writes its vault's state besides its index: the moves it finds (its redirects), the commit it caught up with
+   * (`catchUpWithGit`). False for another vault's graph the TUI reaches, and for one a backlinks' thread reads for a
+   * link alone (#10): that vault's own request writes its state, on the thread.
+   */
+  writesState = true;
+
+  /** Its index was read, of this version: false when there was none, or one another version wrote (unread). */
+  indexRead = false;
+
+  /**
+   * Its index is behind its walk: notes to parse, or entries gone or changed that it hasn't written — one that doesn't
+   * write its own (`writesIndex`) has it caught up elsewhere (#10).
+   */
+  get indexBehind(): boolean {
+    return this.useCache && (this.cacheDirty || this.unparsed.size > 0);
+  }
+
   private writeCache(): void {
+    if (!this.useCache || !this.writesIndex) return;
     this.cacheDirty = false;
-    if (!this.useCache) return;
     const entries: Record<string, NoteEntry> = {};
     // A read failure is not a fact about the note: never cache it (chmod does not touch mtime).
     for (const [rel, e] of this.notes)
@@ -534,12 +562,15 @@ export class Graph {
     try {
       ensureCacheHome();
       ensureDir(cacheDir(this.loc));
+      // A temporary file of it a write let go of left behind (a thread stopped mid-write): gone once it's old.
+      sweepTemps(cacheDir(this.loc), "index.json");
       writeJson(this.cachePath, {
         version: INDEX_VERSION,
         entries,
         branch: this.branchNow(),
         reached: [...this.reached],
       } satisfies IndexFile);
+      this.writtenAt = Date.now();
     } catch (err) {
       this.errors.push(`cache: ${(err as Error).message}`);
     }
@@ -549,6 +580,22 @@ export class Graph {
   // Moves (17.12)
 
   private redirectStore: Redirects | null | undefined;
+
+  /**
+   * Another root's index changed since this one's backlinks were worked out (its backlinks' thread wrote it, #10):
+   * the links of other roots into this one read again when next asked, and what's worked out from them (`generation`:
+   * a note's info, its count of links in).
+   */
+  othersChanged(): void {
+    this.reach?.othersChanged?.();
+    this.backlinkCache = null;
+    this.generation++;
+  }
+
+  /** The redirects read from disk again when next asked: another thread may have written them since (#10). */
+  forgetRedirects(): void {
+    this.redirectStore = undefined;
+  }
 
   /** The vault's redirects, from its state; none for `$HOME` or `/` opened as a plain folder (never indexed). */
   get redirects(): Redirects | null {
@@ -620,6 +667,7 @@ export class Graph {
     const kept = Object.entries(seen).slice(-199);
     try {
       ensureDir(stateDir(this.loc));
+      sweepTemps(stateDir(this.loc), "heads.json");
       writeJson(file, { version: 1, branches: Object.fromEntries([...kept, [branch, commit]]) });
     } catch {}
     return moves;

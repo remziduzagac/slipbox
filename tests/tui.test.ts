@@ -35,6 +35,7 @@ import { linkAnswer, probe, setLinkAnswer } from "../src/core/symlinks.ts";
 import { type ListOverlay, App, type Host } from "../src/tui/app.ts";
 import { dateText, listFolder, placeOf, type SaveAsOverlay, sizeText } from "../src/tui/saveas.ts";
 import { placeIn } from "../src/tui/shellrun.ts";
+import { peekOf } from "../src/tui/peek.ts";
 import { setTrust } from "../src/core/trust.ts";
 import type { PanelRow } from "../src/tui/gitpanel.ts";
 import type { NvimServer } from "../src/core/nvim.ts";
@@ -10881,7 +10882,8 @@ describe("vaults in the TUI (17.x)", () => {
       expect(h.app.loc.root).toBe(notes);
       expect(h.app.floating?.kind).toBe("peek");
       expect(h.app.view!.buf.abs).toBe(join(app, "links.md"));
-      // links.md's own backlinks, from app's index, after its text.
+      // links.md's own backlinks, from app's index, after its text, once their thread has worked them out (#10).
+      await peekOf(h.app)!.reading;
       const text = h.app.view!.buf.source;
       expect(text).toContain("**Linked from** (1):");
       expect(text).toContain("[design.md:3](<design.md#L3>) — links");
@@ -10892,7 +10894,7 @@ describe("vaults in the TUI (17.x)", () => {
       await h.keys("enter");
       expect(h.app.view!.buf.abs).toBe(join(app, "design.md"));
       expect(h.app.view!.curAnchor.anchor.line).toBe(3);
-      // A vault with no index here: said how to see them, nothing indexed for it.
+      // A vault with no index here: built for the peek, its backlinks shown when it's done (D259).
       const bare = join(base, "bare");
       mkdirSync(bare);
       writeFileSync(join(bare, "b.md"), "# B\n");
@@ -10902,7 +10904,9 @@ describe("vaults in the TUI (17.x)", () => {
       await h.app.run("note.open to-bare.md");
       await h.keys("tab", "enter");
       expect(h.app.view!.buf.abs).toBe(join(bare, "b.md"));
-      expect(h.app.view!.buf.source).toContain(`**Linked from:** tbare${n} has no index here yet`);
+      expect(h.app.view!.buf.source).toContain(`**Linked from:** tbare${n} has no index here yet — building it`);
+      await peekOf(h.app)!.reading;
+      expect(h.app.view!.buf.source).toContain("**Linked from:** no note links here.");
     });
   });
 
@@ -19456,6 +19460,7 @@ describe("out of the vault open, the links of the place a file is in: the peek, 
       const h = await harness({ root: notes, open: "to.md" });
       await h.keys("tab", "enter");
       expect(peeked(h)?.abs).toBe(join(other, "target.md"));
+      await peekOf(h.app)!.reading;
       expect(h.frame()).not.toContain("](<");
       for (const [name, shown] of [
         ["x>y.md", "x>y.md:3"],
@@ -19470,6 +19475,7 @@ describe("out of the vault open, the links of the place a file is in: the peek, 
         expect(peeked(h)?.abs).toBe(join(other, name));
         expect(h.app.view!.curAnchor.anchor.line).toBe(3);
         await h.keys("ctrl+o");
+        await peekOf(h.app)!.reading;
       }
     });
   });

@@ -103,6 +103,9 @@ the same rule for any link that leads somewhere unasked.
 
 ## VV-D7: Looking never moves you: the peek (2026-10-14)
 
+> **Amended by D259 (2026-10-23):** a peek's backlinks are worked out on a thread of their own, fresh at each peek; a
+> vault with no index here gets one built for the peek, home's excepted.
+
 **Decision:** Following a link that leads out of the current vault opens a peek: a large floating window, the note
 rendered, read-only, found in with `/`, copied from. `esc` closes it; `o` goes there (VV-D4); `t` keeps it as a tab
 here, read-only, marked with its vault's name; `z` fills the screen. Inside it, a link to the peeked note's vault

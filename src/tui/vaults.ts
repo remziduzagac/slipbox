@@ -11,7 +11,9 @@ import { leftOutOfHome } from "../core/home.ts";
 import { lintCommand } from "../core/lint.ts";
 import { slipboxOwn } from "../core/paths.ts";
 import { type Anchor, type CursorAnchor, loadSession, PositionStore } from "../core/position.ts";
-import { openVault, Reach } from "../core/reach.ts";
+import { stopBacklinkJobs } from "../core/backlinks-jobs.ts";
+import { openVault } from "../core/reach.ts";
+import { tuiReach } from "./peek.ts";
 import {
   type Applied,
   applyPlan,
@@ -256,7 +258,9 @@ export class Vaults {
     this.app.languages.vaultLint = { running: false, issues: null };
     this.app.languages.relint();
     for (const w of loaded.warnings) this.app.message("warn", w);
-    this.app.reach = new Reach(target);
+    // Whatever the backlinks' thread works on is for the vault left: its answers would find nobody (#10).
+    stopBacklinkJobs();
+    this.app.reach = tuiReach(this.app, target);
     this.app.graph = new Graph(target, this.app.config).build(true, "lazy");
     this.app.graph.reach = this.app.reach;
     // A folder of home gone into, by name or a file's (VV-D2): its notes there at once, as when slipbox starts there.

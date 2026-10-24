@@ -3,7 +3,7 @@
 
 import { dirname, join, relative, sep } from "node:path";
 import { Graph } from "../core/graph.ts";
-import { Reach } from "../core/reach.ts";
+import { reachedAgain, tuiReach } from "./peek.ts";
 import { planConvert } from "../core/convert.ts";
 import {
   type Ambiguous,
@@ -194,8 +194,10 @@ export class Renaming {
     if (plan.makeVault || plan.unmakeVault) {
       // A vault made or unmade (18.11): the walk changed where it was (applyPlan rebuilt the index);
       // the machine's vaults, as reached from here, too.
-      this.app.reach = new Reach(this.app.loc);
+      this.app.reach = tuiReach(this.app, this.app.loc);
       this.app.graph.reach = this.app.reach;
+      // Other vaults' files open here, as the new reach reaches them (#10).
+      reachedAgain(this.app);
       if (this.app.live) this.app.watch.indexInBackground();
     }
     if (plan.vaults?.length) {
@@ -214,9 +216,10 @@ export class Renaming {
     if (renamedConfig === vaultConfigFile(this.app.loc.root)) {
       this.app.loc = rootAt(this.app.loc.root);
       recordLocation(this.app.loc);
-      this.app.reach = new Reach(this.app.loc);
+      this.app.reach = tuiReach(this.app, this.app.loc);
       this.app.graph = new Graph(this.app.loc, this.app.config, this.app.graph.askedFolders).build(true, "lazy");
       this.app.graph.reach = this.app.reach;
+      reachedAgain(this.app);
       this.app.watch.followGraph();
       if (this.app.live) this.app.watch.indexInBackground();
     }

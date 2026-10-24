@@ -151,6 +151,7 @@ The CLI's commands are the user's reference, [cli.md](../../docs/manual/cli.md);
 | `core/gitops.ts` | 5.11–5.14, 23.6 | git run for what `.git` can't say cheaply: status, changes, a file at a commit |
 | `core/mergereview.ts` | 20.21 | before a merge: the links `git merge-tree`'s result would break, each cause and fix |
 | `core/reach.ts` | 17.9–17.11 | other vaults: paths out of the vault, their backlinks here, a peek's graph; `[[x:…]]` |
+| `core/backlinks-jobs.ts` | D259 | a peek's backlinks in a worker (`backlinks-worker.ts`), its vault caught up there |
 | `core/redirects.ts` | 17.12 | moves seen, by content hash; where an old path went |
 | `core/rename.ts` | 7.1–7.3, 17.15, 20.19 | renames and moves: each link rewritten as byte-range edits, previewed |
 | `core/rename-plan.ts` | 7.2, 7.3 | a plan's shape; its edits collected, each file read once; git trees with changes |
@@ -330,7 +331,7 @@ The CLI's commands are the user's reference, [cli.md](../../docs/manual/cli.md);
 | `tui/explorer-disk.ts` | VV-D8 | the explorer's rows the walk doesn't give: what it leaves out or hasn't reached |
 | `tui/listings.ts` | T12 | the folders the explorer lists a level at a time: read off the main thread, kept, again |
 | `tui/marks.ts` | VV-D9, D244 | a row's marks: the index's state, what describes the row; why it isn't indexed |
-| `tui/peek.ts` | VV-D7 | the peek: another vault's file read in place; `o`, `t`, `z`; its backlinks |
+| `tui/peek.ts` | VV-D7, D259 | the peek: another vault's file read in place; `o`, `t`, `z`; its backlinks, asked |
 | `tui/following.ts` | VV-D6 | the question a link not followed asks; follow, just look, no; the probe |
 | `tui/gitchanges.ts` | 26.1 | `] c`, `[ c` to a change against what's staged; its preview; one undone |
 | `tui/shellrun.ts` | 25.7 | `:!cmd`'s output window, `:{range}!cmd`'s lines replaced, one command at a time |

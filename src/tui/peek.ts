@@ -5,25 +5,36 @@
 
 import { existsSync } from "node:fs";
 import { dirname, isAbsolute, join, relative } from "node:path";
+import {
+  askBacklinks,
+  backlinkStops,
+  type BacklinkRow,
+  type BacklinksAnswer,
+  configSignature,
+  vaultSignature,
+} from "../core/backlinks-jobs.ts";
 import { classify } from "../core/filetypes.ts";
 import { readText } from "../core/fsutil.ts";
 import type { Graph } from "../core/graph.ts";
 import { ELSEWHERE, rootLabel, tildePath } from "../core/names.ts";
 import type { Anchor, CursorAnchor } from "../core/position.ts";
 import { Reach } from "../core/reach.ts";
+import { noteIndexed } from "../core/registry.ts";
 import { sanitize } from "../core/sanitize.ts";
-import { linkSaid } from "../core/symlinks.ts";
-import { isInside, locateVault, type VaultLocation, vaultAt } from "../core/vault.ts";
+import { linkSaid, probeFollowed } from "../core/symlinks.ts";
+import { isInside, locateVault, type VaultLocation, vaultOf } from "../core/vault.ts";
 import { stringWidth, truncate, truncateStart } from "../core/width.ts";
 import type { App, View } from "./app.ts";
 import { NoteBuffer } from "./buffer.ts";
+import { parseInSlices } from "./watch.ts";
 
-/** A place a peek showed, for `ctrl+o` inside it. */
+/** A place a peek showed, for `ctrl+o` inside it: with the backlinks it listed, shown again at once when it's back. */
 interface Place {
   abs: string;
   loc: VaultLocation;
   top: Anchor;
   cursor: CursorAnchor;
+  rows?: BacklinkRow[];
 }
 
 export interface Peek {
@@ -40,6 +51,10 @@ export interface Peek {
   full: boolean;
   /** Not read: a link of its place's on its way isn't followed there (VV-D6) — the peek says so, and `o` goes there. */
   unread?: boolean;
+  /** Its note's backlinks being worked out on their thread (#10): settled once they're shown, or the peek moved on. */
+  reading?: Promise<void>;
+  /** The backlinks it lists, once they've come; or those it listed when last here, until they come again. */
+  rows?: BacklinkRow[];
 }
 
 /**
@@ -147,18 +162,317 @@ function show(app: App, p: Omit<Peek, "label">, text: string, anchor?: Anchor, c
   buf.readOnly = "a peek is read-only — o goes there, to edit it";
   buf.elsewhere = { vault: label, graph, rel };
   const markdown = !p.unread && buf.kind.group === "note" && buf.kind.format === "markdown";
+  // A note's backlinks, from its vault's index; one without, built for the peek — but home's, built in slices while
+  // nobody works (VV-D2).
+  const ask = markdown && graph && rel !== null && (indexed || graph.loc.mode !== "home") ? { graph, rel } : null;
+  // Back at a place (`ctrl+o`), the list it showed there, until its thread's comes: the cursor there finds its row.
   buf.loadText(
-    markdown && graph && rel !== null
-      ? withBacklinks(text, p.abs, label, indexed ? graph : null, rel)
-      : markdown && p.loc.mode === "folder"
-        ? withoutIndex(text)
-        : text,
+    ask
+      ? withBacklinks(text, p.abs, label, p.rows ?? (indexed ? "reading" : "building"))
+      : markdown && graph && rel !== null
+        ? withBacklinks(text, p.abs, label, "none")
+        : markdown && p.loc.mode === "folder"
+          ? withoutIndex(text)
+          : text,
   );
   const view = app.makeView(buf, anchor ? { ...anchor } : undefined, cursor);
   const peek: Peek = { ...p, label };
   const title = peekTitle({ ...p, label }, rel);
   app.floating = { kind: "peek", view, title, peek };
   app.region = "content";
+  if (ask) peek.reading = readBacklinks(app, peek, ask.graph, text, ask.rel);
+}
+
+/**
+ * The peeked note's backlinks, worked out on their thread (#10, D259), shown under its text when they come — the note
+ * read as it was when peeked at, not the buffer's text with the line saying they're coming — if the peek still shows
+ * it; then, whatever it shows by then, the graph its links are read in caught up, laid out again. Never rejected:
+ * nothing awaits it but a test.
+ */
+async function readBacklinks(app: App, peek: Peek, graph: Graph, text: string, rel: string): Promise<void> {
+  let state: BacklinksState;
+  let answer: BacklinksAnswer | null = null;
+  const stops = backlinkStops();
+  try {
+    answer = await askBacklinks({ root: graph.root, rel, own: app.loc.root });
+    if (!answer) {
+      // Its peek gone before its turn, or taken back from its thread for a newer peek's: the vault still caught up —
+      // its index built, if it had none — after the peeks'; not when the thread was stopped (slipbox quitting, another
+      // vault gone into), nor when this TUI let go of the graph.
+      if (!app.quitting && backlinkStops() === stops && app.reach.held(graph.root) === graph) keepCaughtUp(app, graph);
+      return;
+    }
+    state = answer.indexed ? answer.rows! : "none";
+  } catch (e) {
+    state = { failed: e instanceof Error ? e.message : String(e) };
+    // Its thread failed (it couldn't start, it crashed, its time ran out): the notes the graph here lacks parsed here,
+    // in slices, so the links its note makes are found all the same.
+    parseHere(app, graph, () => app.reach);
+  }
+  try {
+    const f = app.floating;
+    // The same peek (a rename may have given this TUI another reach since: its rows stand).
+    if (!app.quitting && f?.kind === "peek" && f.peek === peek) {
+      // The list it shows now, kept with its place for `ctrl+o`: none, when it says why there's none.
+      peek.rows = Array.isArray(state) ? state : undefined;
+      f.view.buf.loadText(withBacklinks(text, peek.abs, peek.label, state));
+      f.view.layoutKey = "";
+      app.host.requestRender();
+    }
+    // Its rows first, then the graph here: its probe may wait on a disk, its rebuild read the vault's index.
+    if (answer) await caughtUp(app, graph, answer);
+  } catch {}
+}
+
+/** How the links a vault follows are asked whether they answer, here (a test holds the answer back). */
+export const peekProbe = { followed: probeFollowed };
+
+/**
+ * Each vault's catch-ups here, one after another (#10): an answer that comes while another's catch-up awaits its probe
+ * is read against the graph that one leaves, never against one it let go of.
+ */
+const catching = new WeakMap<App, Map<string, Promise<void>>>();
+
+/**
+ * Where a graph of another vault is held: this TUI's reach, as it is when asked (a rename may have made it anew) — or a
+ * peeked vault's own reach, for a third vault that vault's links reach, while that vault's graph is held itself; null,
+ * let go of.
+ */
+type Holder = () => Reach | null;
+
+/**
+ * Another vault's graph, read on the main thread for its links (`vaultGraph`), caught up with what its thread just
+ * read — after any catch-up of that vault still under way (`catching`).
+ */
+function caughtUp(app: App, graph: Graph, answer: BacklinksAnswer, holder: Holder = () => app.reach): Promise<void> {
+  let byRoot = catching.get(app);
+  if (!byRoot) catching.set(app, (byRoot = new Map()));
+  const root = graph.root;
+  const step = (byRoot.get(root) ?? Promise.resolve()).then(() => catchUp(app, graph, answer, holder));
+  const settled = step.catch(() => {});
+  byRoot.set(root, settled);
+  void settled.then(() => {
+    if (byRoot.get(root) === settled) byRoot.delete(root);
+  });
+  return step;
+}
+
+/**
+ * The graph held now for `asked`'s vault (`holder`), against the answer (#10) — the answer is of the vault on disk, and
+ * a rename may have given this TUI another reach since, whose graph of that vault it then catches up; none held
+ * (another vault gone into since), nothing. Its walk changed, or it has notes it didn't parse that its index has now:
+ * opened again from that index, the roots in and around it found again, every view laid out again. Its settings
+ * changed since it was opened: opened anew with them.
+ */
+async function catchUp(app: App, asked: Graph, answer: BacklinksAnswer, holder: Holder): Promise<void> {
+  if (app.quitting || !answer.indexed) return;
+  if (answer.wrote) noteIndexed(asked.loc.key);
+  for (const key of answer.others) noteIndexed(key);
+  const others = answer.wrote || answer.others.length > 0;
+  // This vault's backlinks from others read again, every view laid out with them, whatever becomes of the graph there:
+  // an index just written may hold some (that vault's notes deleted, a vault nested in it built for the first time).
+  // The explorer's rows too: a vault's says whether it has an index.
+  if (others) {
+    app.graph.othersChanged();
+    app.explorer.invalidateTree();
+  }
+  if (!(await rebuilt(app, asked, answer, holder)) && others) relayout(app);
+}
+
+/** The graph held for `asked`'s vault caught up with the answer (`catchUp`): true when it was, and laid out again. */
+async function rebuilt(
+  app: App,
+  asked: Graph,
+  answer: Extract<BacklinksAnswer, { indexed: true }>,
+  holder: Holder,
+): Promise<boolean> {
+  // The one held now — never opened for this — and an answer caught up before this one may have opened it anew.
+  const reach = holder();
+  const graph = reach?.held(asked.root);
+  if (!reach || !graph) return false;
+  // Its redirects read again when next asked: its thread, catching it up, may have found moves and written them — the
+  // only one that does (`readOnly`).
+  graph.forgetRedirects();
+  const settings = answer.config !== configSignature(graph.config);
+  // Its walk the thread's, every note parsed — or being parsed here, which a rebuild would start again.
+  if (!settings && answer.signature === signatureOf(graph) && (!graph.pendingCount || parsing.has(graph))) return false;
+  // The links it follows asked here too, as its thread asked them (VV-D6): else this walk leaves out what that one has.
+  await peekProbe.followed(graph.root);
+  if (app.quitting || holder()?.held(graph.root) !== graph) return false;
+  let g: Graph | null = graph;
+  if (settings) g = reopened(app, graph, reach);
+  else {
+    // A graph a link opened has no reach of its own yet: given one now, the walk made.
+    const was = graph.reach ? nestedIn(graph) : null;
+    graph.build(true, "lazy");
+    // The roots in and around it found only then, or when the vaults in it changed: each found is recorded in the
+    // machine's list, its file read and written again — not for an answer that changes nothing.
+    if (nestedIn(graph) !== was) reachFrom(app, graph);
+  }
+  if (!g) return false;
+  relayout(app);
+  // Notes its index still lacks: the thread couldn't write it (a full disk, a cache folder read-only).
+  parseHere(app, g, holder);
+  return true;
+}
+
+/**
+ * Another vault's notes the graph here lacks, parsed here as this vault's own are — a slice at a time, a big one on the
+ * parse threads, never all at once — when its thread can't give them (#10): it couldn't write the index, or couldn't
+ * run. Stopped once the graph is let go of: one opened anew with other settings has its own parse.
+ */
+function parseHere(app: App, graph: Graph, holder: Holder): void {
+  // Home's are parsed while nobody works, by the background index (VV-D2): never here meanwhile.
+  if (graph.loc.mode === "home") return;
+  if (!graph.pendingCount || parsing.has(graph) || app.quitting || holder()?.held(graph.root) !== graph) return;
+  parsing.add(graph);
+  parseInSlices(() => graph, {
+    stopped: () => app.quitting || retired.has(graph) || holder()?.held(graph.root) !== graph,
+    done: () => {
+      parsing.delete(graph);
+      relayout(app);
+    },
+  });
+}
+
+/**
+ * Another vault's graph opened anew, with its settings as they are now: let go of, every buffer reading through it
+ * given the new one. Its settings are fixed when it's made, and with others it walks and resolves differently.
+ */
+function reopened(app: App, graph: Graph, reach: Reach): Graph | null {
+  // Not opened anew (the vault gone since): the old kept, its buffers reading through it still.
+  const fresh = reach.reopen(graph.root);
+  if (!fresh) return null;
+  if (!fresh.reach) reachFrom(app, fresh);
+  retired.add(graph);
+  for (const b of everyBuffer(app))
+    if (b.elsewhere?.graph === graph) b.elsewhere = { ...b.elsewhere, graph: fresh, rel: relative(fresh.root, b.abs) };
+  return fresh;
+}
+
+/** Other vaults' graphs being parsed here, a slice at a time (`catchUp`); and those let go of, opened anew. */
+const parsing = new WeakSet<Graph>();
+const retired = new WeakSet<Graph>();
+
+/**
+ * Every view laid out again once another vault's graph here caught up: a peek's or a kept tab's reads through it, and
+ * this vault's own notes may reach a note of it by a name it has only now.
+ */
+function relayout(app: App): void {
+  for (const b of everyBuffer(app)) b.invalidateLayouts();
+  app.relayoutAll();
+  app.host.requestRender();
+}
+
+/** Every buffer open here: in the tabs, and the peek's. */
+function everyBuffer(app: App): Set<NoteBuffer> {
+  return new Set([...app.buffers.values(), ...app.allViews().map((v) => v.buf)]);
+}
+
+/** A graph's walk signature here, kept by its generation: `vaultSignature` sorts and hashes the whole walk. */
+const signatures = new WeakMap<Graph, { generation: number; signature: string }>();
+
+function signatureOf(graph: Graph): string {
+  const hit = signatures.get(graph);
+  if (hit?.generation === graph.generation) return hit.signature;
+  const signature = vaultSignature(graph);
+  signatures.set(graph, { generation: graph.generation, signature });
+  return signature;
+}
+
+/** The vaults nested in a vault, as its walk found them, in a word. */
+function nestedIn(graph: Graph): string {
+  return graph.nestedRoots().sort().join("\0");
+}
+
+/**
+ * The TUI's reach of other vaults (#10): never `thorough` — a vault is never parsed whole here to look for a name — and
+ * each graph it opens for a link with notes its index lacks caught up on the backlinks' thread (`keepCaughtUp`), its
+ * index built if it has none (home's excepted, VV-D2), the screen laid out again then: a name only those notes declare
+ * is found a moment later. Not one taken from the machine's list (a search of every vault, a relink): no link
+ * reached it.
+ */
+export function tuiReach(app: App, loc: VaultLocation): Reach {
+  // Their state — indexes, redirects, the commit caught up with — written by the thread, never here (nor `git diff`
+  // run here to find moves); a vault nested in this one with none, built there too.
+  return new Reach(loc, {
+    thorough: false,
+    readOnly: true,
+    nested: "open",
+    opened: reachedFor(app, () => app.reach),
+  });
+}
+
+/**
+ * The `opened` of a reach of the TUI's: asked once what opened it is done — a peek opening it asks of the vault itself,
+ * and the catch-up rides on it — when its index is behind: notes to parse, or notes gone that it still lists, links
+ * from them counted here. Not this TUI's own vault, reached from another (`[[here:note]]`): its index is its own
+ * graph's, indexed in the background here, and its state is written on this thread alone.
+ */
+function reachedFor(app: App, holder: Holder): (g: Graph) => void {
+  return (g) =>
+    queueMicrotask(() => {
+      if (g.indexBehind && g.loc.key !== app.loc.key) keepCaughtUp(app, g, holder);
+    });
+}
+
+/**
+ * This TUI's reach made anew (a rename made or unmade a vault): every buffer of another vault's file — a kept tab's,
+ * the peek's — given that vault's graph as the new reach opens it, and laid out again; the old reach's graphs are let
+ * go, never caught up again.
+ */
+export function reachedAgain(app: App): void {
+  const fresh = new Set<Graph>();
+  for (const b of everyBuffer(app)) {
+    const e = b.elsewhere;
+    if (!e?.graph) continue;
+    retired.add(e.graph);
+    // Where its file is now: a vault unmade, its file is this vault's, or none's — read without a vault's links, never
+    // opened as a vault it isn't any more.
+    const root = vaultOf(b.abs);
+    const graph = root === e.graph.root ? vaultGraph(app, root) : null;
+    b.elsewhere = { ...e, graph, rel: graph ? relative(graph.root, b.abs) : null };
+    if (graph) fresh.add(graph);
+  }
+  relayout(app);
+  // Each caught up, as the old was — its index built if it has none, home's excepted (VV-D2): what the old one's
+  // catch-up was doing, its answer, comes to the new one too.
+  for (const g of fresh) keepCaughtUp(app, g);
+}
+
+/**
+ * Another vault's graph, reaching from its own vault (the TUI's way: laid out as it's parsed, never parsed whole here
+ * first). The roots nested in it and around it recorded here: its backlinks' thread reads them from the machine's
+ * list, and indexes those without an index, writing to the list nothing itself (`backlinks-jobs.ts`).
+ */
+function reachFrom(app: App, graph: Graph): void {
+  // A third vault its links reach, caught up as this TUI's are: held by this reach, as the graph has it then — while
+  // this TUI holds the graph itself, not retired.
+  const holder: Holder = () =>
+    !retired.has(graph) && app.reach.held(graph.root) === graph ? (graph.reach as Reach) : null;
+  const reach = new Reach(graph.loc, {
+    thorough: false,
+    readOnly: true,
+    nested: "none",
+    opened: reachedFor(app, holder),
+  });
+  graph.reach = reach;
+  reach.discover(graph);
+}
+
+/**
+ * A tab of another vault's file (`markElsewhere`): that vault's index caught up on the thread, and the graph its links
+ * are read in with it — as a peek's are (#10).
+ */
+export function keepCaughtUp(app: App, graph: Graph, holder: Holder = () => app.reach): void {
+  if (app.quitting) return;
+  void askBacklinks({ root: graph.root, rel: null, own: app.loc.root })
+    .then(
+      (answer) => (answer ? caughtUp(app, graph, answer, holder) : undefined),
+      // Its thread failed: the notes the graph here lacks parsed here, in slices.
+      () => parseHere(app, graph, holder),
+    )
+    .catch(() => {});
 }
 
 /**
@@ -184,7 +498,7 @@ export function peekTitle(
  */
 export function vaultGraph(app: App, root: string): Graph | null {
   const graph = app.reach.graphAt(root);
-  if (graph && !graph.reach) graph.reach = new Reach(vaultAt(root));
+  if (graph && !graph.reach) reachFrom(app, graph);
   return graph;
 }
 
@@ -200,23 +514,30 @@ function visible(s: string): string {
 }
 
 /**
- * A note's text and, under a rule, its backlinks (`graph`, its vault's, when it has an index): each a link to the
- * line linking here, from the note's folder — a link inside the peek like any. Without an index, how to see them.
+ * Where a peeked note's backlinks are (#10): being read from its vault's index, or its index being built, on their
+ * thread; none to show (home without an index); shown; or not worked out, and why.
  */
-function withBacklinks(text: string, abs: string, label: string, graph: Graph | null, rel: string): string {
+type BacklinksState = "reading" | "building" | "none" | BacklinkRow[] | { failed: string };
+
+/**
+ * A note's text and, under a rule, its backlinks: each a link to the line linking here, from the note's folder — a
+ * link inside the peek like any. While they're worked out, or without them, a line saying so.
+ */
+function withBacklinks(text: string, abs: string, label: string, state: BacklinksState): string {
   const end = text.endsWith("\n") ? "" : "\n";
-  if (!graph)
-    return `${text}${end}\n---\n\n**Linked from:** ${md(label)} has no index here yet — \`o\` goes there, and finds them.\n`;
-  const list = graph.backlinks(rel);
-  if (!list.length) return `${text}${end}\n---\n\n**Linked from:** no note links here.\n`;
-  const rows = list.map((b) => {
-    const from = isAbsolute(b.from) ? b.from : join(graph.root, b.from);
+  const said = (s: string) => `${text}${end}\n---\n\n**Linked from:** ${s}\n`;
+  if (state === "reading") return said(`reading ${md(label)}'s index…`);
+  if (state === "building")
+    return said(`${md(label)} has no index here yet — building it; they're shown when it's done.`);
+  if (state === "none") return said(`${md(label)} has no index here yet — \`o\` goes there, and finds them.`);
+  if (!Array.isArray(state)) return said(`not worked out — ${md(visible(state.failed))}.`);
+  if (!state.length) return said("no note links here.");
+  const rows = state.map((b) => {
     // What would end the `<…>` or its line, or start a fragment, percent-encoded: a file's name can hold any of them.
-    const href = relative(dirname(abs), from).replace(/[%#<>\x00-\x1f\x7f]/g, (c) => encodeURIComponent(c));
-    const shown = visible(graph.shownPath(from));
-    return `- [${md(shown)}:${b.line}](<${href}#L${b.line}>)${b.text ? ` — ${md(b.text)}` : ""}`;
+    const href = relative(dirname(abs), b.from).replace(/[%#<>\x00-\x1f\x7f]/g, (c) => encodeURIComponent(c));
+    return `- [${md(visible(b.shown))}:${b.line}](<${href}#L${b.line}>)${b.text ? ` — ${md(b.text)}` : ""}`;
   });
-  return `${text}${end}\n---\n\n**Linked from** (${list.length}):\n\n${rows.join("\n")}\n`;
+  return `${text}${end}\n---\n\n**Linked from** (${state.length}):\n\n${rows.join("\n")}\n`;
 }
 
 /** A note of Elsewhere's (VV-D3) and, under a rule, why it has no backlinks: Elsewhere has no index. */
@@ -229,7 +550,13 @@ function withoutIndex(text: string): string {
 function here(app: App): Place | null {
   const f = app.floating;
   if (f?.kind !== "peek") return null;
-  return { abs: f.peek.abs, loc: f.peek.loc, top: { ...f.view.topAnchor }, cursor: { ...f.view.curAnchor } };
+  return {
+    abs: f.peek.abs,
+    loc: f.peek.loc,
+    top: { ...f.view.topAnchor },
+    cursor: { ...f.view.curAnchor },
+    ...(f.peek.rows ? { rows: f.peek.rows } : {}),
+  };
 }
 
 /** `ctrl+o` (back) and forward inside the peek: the file a link moved it from, where it was read. */
@@ -260,7 +587,15 @@ export function peekStep(app: App, dir: "back" | "forward"): void {
   const fwd = dir === "back" ? [...p.fwd, to] : p.fwd;
   show(
     app,
-    { abs: place.abs, loc: place.loc, back, fwd, full: p.full, ...(b ? { unread: true } : {}) },
+    {
+      abs: place.abs,
+      loc: place.loc,
+      back,
+      fwd,
+      full: p.full,
+      ...(b ? { unread: true } : {}),
+      ...(place.rows && !b ? { rows: place.rows } : {}),
+    },
     text,
     place.top,
     place.cursor,

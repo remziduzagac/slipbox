@@ -21,6 +21,8 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 - **Breadcrumb** in `space u u`, and `ui.breadcrumb = false`, hide only the headings now. The window header stays, with
   its buttons and, in a split, the window's name. To hide the whole row as before, use **Window header**
   (`ui.window_header = false`).
+- A peek into a vault with no index here builds one, and lists the note's backlinks when it's done, instead of saying
+  there are none to show yet. Your home folder's index is still left to the background index.
 
 ### Fixed
 
@@ -42,6 +44,9 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
   plan, stopped half done. Nothing is changed now, and it says why.
 - Renaming a note onto another name the same file has, a hard link, said it was done and left the old name as it was.
   It's refused now, as moving onto anything else already there is.
+- A peek into another vault shows the note at once, its backlinks listed when they're ready. The first peek into a big
+  vault held every key while that vault was read. A later peek lists them as the vault is then: they were those of the
+  first peek, whatever had changed there since.
 - A release is on the installer's site as soon as it's published, so `curl … | sh` and `slipbox upgrade` on the stable
   channel find it at once. 0.5.0's wasn't until the site was deployed again, an hour later.
 - With `render.mermaid = "picture"` on a machine without a sans font (DejaVu, Liberation, Noto, Arial or Helvetica), a

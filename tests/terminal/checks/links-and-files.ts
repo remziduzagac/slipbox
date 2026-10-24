@@ -2881,9 +2881,12 @@ const PEEK: Check[] = [
       await s.see(title, 5000);
       await s.see(PEEK_HINT);
       await s.status(/ notes .*kestrel: docs\/architecture\.md/);
-      // Its backlinks: kestrel has no index here yet, so how to see them.
+      // Its backlinks: kestrel has no index here yet, so the peek builds it on a thread of its own, and lists them
+      // when it's done (D259), notes' among them: at its end, then at the list's once it's there.
       await s.keys("shift+g");
-      await s.see("kestrel has no index here yet — o goes there, and finds them.");
+      await s.see(/Linked from \(\d+\):/, 10000);
+      await s.keys("shift+g");
+      await s.see(/~\/notes\/index\.md:41 — architecture/);
       // esc: closed, exactly where you were.
       await s.keys("escape");
       await s.notSee(PEEK_HINT);
@@ -2921,8 +2924,10 @@ const PEEK: Check[] = [
       await s.status(/ notes .*index\.md/, 5000);
       await follow(s, ARCHITECTURE);
       await s.see(title, 5000);
+      // Worked out on their thread, they come under the note (#10): at its end, then at the list's once it's there.
       await s.keys("shift+g");
-      await s.see(/Linked from \(\d+\):/);
+      await s.see(/Linked from \(\d+\):/, 10000);
+      await s.keys("shift+g");
       await s.see(/~\/notes\/index\.md:41 — architecture/);
     },
   },

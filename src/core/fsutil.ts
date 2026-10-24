@@ -11,6 +11,7 @@ import {
   lstatSync,
   mkdirSync,
   openSync,
+  readdirSync,
   readFileSync,
   realpathSync,
   renameSync,
@@ -20,9 +21,45 @@ import {
 } from "node:fs";
 import { randomBytes } from "node:crypto";
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
+import { threadId } from "node:worker_threads";
 
 export function ensureDir(dir: string): void {
   mkdirSync(dir, { recursive: true });
+}
+
+/** How old a temporary file is, at least, once no write is still under way to it. */
+const STALE_TEMP_MS = 5 * 60_000;
+
+/**
+ * The temporary files `atomicWrite` left beside `name` in `dir` (`.<name>.slipbox-…tmp`) and no write is under way to
+ * any more: a thread let go of mid-write (#10), a process stopped, leaves one behind.
+ */
+export function sweepTemps(dir: string, name: string, now = Date.now()): void {
+  let names: string[];
+  try {
+    names = readdirSync(dir);
+  } catch {
+    return;
+  }
+  for (const n of names) {
+    if (!n.startsWith(`.${name}.slipbox-`) || !n.endsWith(".tmp")) continue;
+    try {
+      if (now - statSync(join(dir, n)).mtimeMs > STALE_TEMP_MS) unlinkSync(join(dir, n));
+    } catch {}
+  }
+}
+
+/** The random part of a temporary file's name (`tempPath`; a test's own repeats). */
+export const tempRandom = { next: (): string => randomBytes(4).toString("hex") };
+
+/**
+ * Where `atomicWrite` writes `path` first, beside it: a name of its own, whatever else writes the file — another
+ * process, another thread of this one (the walk's, T12; one writing another vault's index, #10) — by the process,
+ * the thread and a random part, as the export's spool names its own; no longer than the process and the millisecond
+ * made it, so a file's name near the system's limit still writes.
+ */
+export function tempPath(path: string): string {
+  return join(dirname(path), `.${basename(path)}.slipbox-${process.pid}-${threadId}-${tempRandom.next()}.tmp`);
 }
 
 /**
@@ -33,26 +70,47 @@ export function ensureDir(dir: string): void {
 export function atomicWrite(path: string, content: string | Uint8Array): Stamp {
   const dir = dirname(path);
   ensureDir(dir);
-  // Its own name, whatever else writes there in the same millisecond: another process, or another thread of this one
-  // (the walk's, T12), which shares its process id.
-  const tmp = join(
-    dir,
-    `.${basename(path)}.slipbox-${process.pid}-${Date.now()}-${randomBytes(4).toString("hex")}.tmp`,
-  );
   // A file being replaced keeps its permissions.
   let mode = 0o644;
   try {
     mode = statSync(path).mode & 0o7777;
   } catch {}
-  const fd = openSync(tmp, "w", mode);
+  // Made anew, never anything already at its name opened: a name taken, another.
+  let tmp = tempPath(path);
+  let fd: number;
+  for (let tries = 1; ; tries++) {
+    try {
+      fd = openSync(tmp, "wx", mode);
+      break;
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== "EEXIST" || tries >= 8) throw err;
+      tmp = tempPath(path);
+    }
+  }
   let written: Stamp;
   try {
     writeSync(fd, typeof content === "string" ? Buffer.from(content, "utf8") : content);
     fsyncSync(fd);
     const st = fstatSync(fd);
     written = { mtimeMs: st.mtimeMs, size: st.size };
-  } finally {
+  } catch (err) {
+    // A write that failed (a full disk) leaves nothing half-written behind it, and says why: not the close failing
+    // after it (a failing disk, a network's).
+    try {
+      closeSync(fd);
+    } catch {}
+    try {
+      unlinkSync(tmp);
+    } catch {}
+    throw err;
+  }
+  try {
     closeSync(fd);
+  } catch (err) {
+    try {
+      unlinkSync(tmp);
+    } catch {}
+    throw err;
   }
   try {
     chmodSync(tmp, mode); // the umask may have narrowed it

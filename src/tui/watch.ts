@@ -18,6 +18,58 @@ import { newParseCache } from "../core/parse.ts";
 import { parseInBackground } from "../core/parse-pool.ts";
 import { BACKGROUND_PARSE, type NoteBuffer } from "./buffer.ts";
 import type { App } from "./app.ts";
+import type { Graph } from "../core/graph.ts";
+
+/**
+ * A graph's notes not parsed yet, parsed between frames, a slice at a time (5.1): a big note on other threads first
+ * (15.1), the main thread only putting its chunks together — parsed here whole, one would hold every key for seconds;
+ * where threads can't start, it's parsed here after all. `graph` is asked again at each slice; `slice` hears how many
+ * are left after each, `done` that none is.
+ */
+export function parseInSlices(
+  graph: () => Graph,
+  opts: { stopped: () => boolean; slice?: (left: number) => void; done: () => void },
+): void {
+  const elsewhere = new Set<string>();
+  const failed = new Set<string>();
+  const tick = () => {
+    if (opts.stopped()) return;
+    for (const f of graph().unparsedOver(BACKGROUND_PARSE)) {
+      if (elsewhere.has(f.rel) || failed.has(f.rel)) continue;
+      let text: string;
+      try {
+        text = readText(f.abs).text;
+      } catch {
+        continue; // unreadable: the parse here says so
+      }
+      const chunks = newParseCache();
+      elsewhere.add(f.rel);
+      void parseInBackground(text, chunks)
+        .catch(() => false)
+        .then((ok) => {
+          elsewhere.delete(f.rel);
+          if (opts.stopped()) return;
+          // The threads couldn't: parsed here after all (parseSome) — never indexed from a parse that failed.
+          if (!ok) return void failed.add(f.rel);
+          let now: string;
+          try {
+            now = readText(f.abs).text;
+          } catch {
+            return void failed.add(f.rel); // unreadable now: the parse here says so
+          }
+          // Changed while it parsed: its new text goes to the threads on the next tick, not parsed here with
+          // chunks of the old.
+          if (now === text) graph().entry(f.rel, chunks);
+        });
+    }
+    const left = graph().parseSome(12, elsewhere);
+    opts.slice?.(left);
+    // Only notes parsing elsewhere left: look again in a while, not every millisecond.
+    if (left) return void setTimeout(tick, left > elsewhere.size ? 1 : 50);
+    opts.done();
+  };
+  setTimeout(tick, 1);
+}
 
 /** The watcher, polling, indexing in the background, and reloads. */
 export class Watch {
@@ -71,58 +123,23 @@ export class Watch {
     if (!total) return;
     this.app.indexing = total;
     const t0 = this.app.now();
-    // A big note parses on other threads first (15.1), the main thread only putting its chunks
-    // together: parsed here whole, one would hold every key for seconds. Where threads can't
-    // start, it's parsed here after all.
-    const elsewhere = new Set<string>();
-    const failed = new Set<string>();
-    const tick = () => {
-      if (this.app.quitting) return;
-      for (const f of this.app.graph.unparsedOver(BACKGROUND_PARSE)) {
-        if (elsewhere.has(f.rel) || failed.has(f.rel)) continue;
-        let text: string;
-        try {
-          text = readText(f.abs).text;
-        } catch {
-          continue; // unreadable: the parse here says so
-        }
-        const chunks = newParseCache();
-        elsewhere.add(f.rel);
-        void parseInBackground(text, chunks)
-          .catch(() => false)
-          .then((ok) => {
-            elsewhere.delete(f.rel);
-            if (this.app.quitting) return;
-            // The threads couldn't: parsed here after all (parseSome) — never indexed from a parse that failed.
-            if (!ok) return void failed.add(f.rel);
-            let now: string;
-            try {
-              now = readText(f.abs).text;
-            } catch {
-              return void failed.add(f.rel); // unreadable now: the parse here says so
-            }
-            // Changed while it parsed: its new text goes to the threads on the next tick, not parsed here with
-            // chunks of the old.
-            if (now === text) this.app.graph.entry(f.rel, chunks);
-          });
-      }
-      const left = this.app.graph.parseSome(12, elsewhere);
-      this.app.indexing = left;
-      if (left) {
-        // Only notes parsing elsewhere left: look again in a while, not every millisecond.
-        setTimeout(tick, left > elsewhere.size ? 1 : 50);
-        if (total > 200) this.app.host.requestRender();
-        return;
-      }
-      this.app.explorer.invalidateTree();
-      // A link that reaches a note by its alias resolves only now that every note is parsed (17.7).
-      for (const b of this.app.buffers.values()) b.invalidateLayouts();
-      this.app.relayoutAll();
-      if (total > 200)
-        this.app.message("info", `indexed ${total} notes in ${((this.app.now() - t0) / 1000).toFixed(1)} s`);
-      this.app.host.requestRender();
-    };
-    setTimeout(tick, 1);
+    // This vault's graph as it is at each slice: switched to another, the pass goes on with that one's notes.
+    parseInSlices(() => this.app.graph, {
+      stopped: () => this.app.quitting,
+      slice: (left) => {
+        this.app.indexing = left;
+        if (left && total > 200) this.app.host.requestRender();
+      },
+      done: () => {
+        this.app.explorer.invalidateTree();
+        // A link that reaches a note by its alias resolves only now that every note is parsed (17.7).
+        for (const b of this.app.buffers.values()) b.invalidateLayouts();
+        this.app.relayoutAll();
+        if (total > 200)
+          this.app.message("info", `indexed ${total} notes in ${((this.app.now() - t0) / 1000).toFixed(1)} s`);
+        this.app.host.requestRender();
+      },
+    });
   }
 
   /** Once the background pass over this vault's notes is done, however long it takes (tests). */
