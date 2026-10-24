@@ -8,6 +8,11 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 
 ### Added
 
+- The status chip keeps READ or SOURCE beside NORMAL, INSERT, VISUAL or V-LINE, so Escape visibly returns to
+  NORMAL. The header uses compact R/L/S buttons: READ and SOURCE select a view; L toggles the lens within READ.
+  View switches are silent. Rendering defaults for notes, code and data choose the opening view without removing
+  READ. The explorer's zoom is named separately from a window's view.
+
 - Source mode highlights fenced code in its declared language and uses a bar cursor while typing. Set
   `ui.relative_numbers` to `"source"` or `"both"` for relative line numbers in its gutter; `"both"` keeps the lens's
   counters too. The default stays `"lens"`.

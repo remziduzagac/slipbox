@@ -49,8 +49,8 @@ what replaced them.
   [rendering.md](rendering.md) § Blocks and inlines.
 - **Elsewhere**: no-vault as users read it: every file outside home and every vault, one place for the machine, with
   its own tabs and no index (VV-D3). The code's mode `folder`. [roots.md](roots.md) § Elsewhere.
-- **The explorer's view**: the part of the file system the explorer shows, one tree zoomed in and out along its
-  breadcrumb (VV-D5); not a window's view, below. [tui.md](tui.md) § Side panes.
+- **The explorer's zoom**: the part of the file system the explorer shows, one tree zoomed in and out along its
+  breadcrumb (VV-D5); distinct from a window's READ or SOURCE view (VB-D1). [tui.md](tui.md) § Side panes.
 - **Face**: a front end on the core: the TUI or the CLI. [how-it-works.md](how-it-works.md) § One core, two faces.
 - **The fixture vault**: `tests/fixtures/vault/`, the cases the samples lack. [testing.md](testing.md) § The fixture
   vault.
@@ -90,8 +90,7 @@ what replaced them.
   code.
 - **The merge screen**: git's conflicts in a file settled a card at a time, yours and theirs against the base
   (GIT-D5). [tui.md](tui.md) § Git.
-- **Mode** (a window’s): how it shows its file: Read, Lens or Source, one at a time; switched by the header’s
-  buttons, `ctrl+k` and `space n l` (HDR-D2). Not vim’s normal, insert or visual mode.
+- **Mode**: vim's NORMAL, INSERT, VISUAL or V-LINE, distinct from the window's view (VB-D1).
   [tui.md](tui.md) § Screen layout.
 - **Named folder**: a vault a pointer can name, by its `.slipbox/` name, else its repository's remote.
   [roots.md](roots.md) § Named folders.
@@ -121,7 +120,7 @@ what replaced them.
   (VV-D9); why one is `⊘`, on the status line and in Info (D244). [tui.md](tui.md) § Side panes.
 - **Session**: the file a vault's workspaces are kept in, with what they share (`session.json`, the `Session`); users
   read workspace (WSP-D6). [tui.md](tui.md) § Positions.
-- **Source mode**: a note shown as its raw markdown: another layout of the same note. [tui.md](tui.md) § Source mode.
+- **SOURCE view**: a note shown as its raw markdown: another layout of the same note. [tui.md](tui.md) § SOURCE view.
 - **Skip list**: what home's walk leaves out instead of a `.gitignore`: hidden and system folders, `Downloads`, the busy
   folders, files not notes or text (VV-D2). [roots.md](roots.md) § Home.
 - **Staleness file**: `dirty/<pid>.json` in a vault's state, listing the notes a TUI holds unsaved, which the CLI
@@ -138,8 +137,9 @@ what replaced them.
   code's, `core/vault.ts` and `vault.init`. [roots.md](roots.md) § Vaults and markers.
 - **Vault marker**: `.git`, `.slipbox/`, `.obsidian/` or `.zk/` (`walk.root_markers`).
   [roots.md](roots.md) § Vaults and markers.
-- **View**: a window: a buffer with its own cursor, top row, selection and find; a **tab** holds one, or two in a
-  split. [tui.md](tui.md) § Buffers, views, tabs, windows.
+- **View**: a window's READ or SOURCE presentation; the lens is a toggle within READ (VB-D1). The code's `View`
+  still holds a buffer with its own cursor, top row, selection and find; a **tab** holds one, or two in a split.
+  [tui.md](tui.md) § Buffers, views, tabs, windows.
 - **The walk**: the listing of a vault's files, shared by the index and the watcher. [roots.md](roots.md) § The walk.
 - **Where you are**: the vault, its branch and a workspace other than the vault's own, on the top bar, else on the
   status line (WSP-D4, WSP-D5). [tui.md](tui.md) § Screen layout.
@@ -167,7 +167,7 @@ Older decisions use these; the design doesn't.
 - **plain folder**, **loose file**: a folder, a file, outside every vault, opened by its path: Elsewhere now, and a
   file of it is Elsewhere's, never opened beside a vault's notes (VV-D3); `~` is home (VV-D2).
 - **the roots beside the tree**, **pinned roots** (`:pin-root`): the explorer's other roots (D65, D77): gone; the
-  explorer's view holds them (VV-D5).
+  explorer's zoom holds them (VV-D5).
 - **the LSP face** (`slipbox lsp`): removed; editors' own markdown servers follow path links, and agents use the CLI
   (D67).
 - **root**, **root marker**, **trusted root**: a vault, a vault marker, a trusted vault (VV-D1, reversing D79's choice

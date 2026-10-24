@@ -118,7 +118,7 @@ Return to `inbox.md` with `ctrl+p`. Find `Try the new` with `ctrl+f` and press `
 ![inbox.md with the lens open, a new task, Order more beans, typed in it, the status line reading INSERT and
 unsaved](../images/getting-started-editing.png)
 
-The next guide explains the lens, source mode and typing as separate parts of the workflow. For now, check that
+The next guide explains the lens, SOURCE view and typing as separate parts of the workflow. For now, check that
 your saved change is visible when you open the file in another editor. The file itself changed, not a private copy.
 
 ## Tick a task
@@ -141,4 +141,4 @@ Press `ctrl+q` to quit. When you open the folder again, slipbox brings back your
 Your notes remain normal files and can be used by any editor.
 
 **Next:** [Reading and editing in slipbox](lens.md), a deliberate walkthrough of rendered reading, the lens,
-source mode, typing and saving. After that, [work across folders and vaults](vaults.md).
+SOURCE view, typing and saving. After that, [work across folders and vaults](vaults.md).

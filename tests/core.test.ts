@@ -2190,7 +2190,7 @@ describe("what manual/configuration.md promises", () => {
       ["render", "show_urls", "never"],
       ["capture", "location", "root"],
       ["ui", "lines", "heavy"],
-      ["editor", "edit_in", "live"],
+      ["editor", "edit_in", "lens"],
       ["files", "show", "all"],
       ["git", "signs_at", "window_right"],
       ["git", "diff", "source"],

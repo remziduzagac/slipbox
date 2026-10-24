@@ -1,7 +1,7 @@
 # Vaults, home and Elsewhere
 
 A vault determines a file's search and link context and its settings. Your workspace there, the tabs and windows
-you have open, is yours, kept for each vault apart. The explorer's view is the part of the filesystem you are looking
+you have open, is yours, kept for each vault apart. The explorer's zoom is the part of the filesystem you are looking
 at; changing that view does not combine independent vaults.
 
 This chapter explains the model and its rules. For a practical session moving between two places, follow
@@ -279,7 +279,7 @@ A message names the vault you are now in.
 - **Unsaved notes stop a switch.** slipbox refuses to leave a vault while a note in it is unsaved, and names the note.
   Save it (`:wa` saves them all) or revert it first.
 - **The explorer shows where you went.** It's one tree: going into a vault outside its view zooms the view out to the
-  folder holding both, the two unfolded and the vault you are in now highlighted ([Files](files.md#the-view)).
+  folder holding both, the two unfolded and the vault you are in now highlighted ([Files](files.md#the-zoom)).
 - **The named folders** are a key away: `space v v` lists them, wherever you started, and `enter` goes into one.
 
 ### Worktrees
@@ -431,5 +431,5 @@ slipbox learns where folders are by opening them, and from the background index 
 A link into another vault can open a read-only peek. `esc` closes it, `t` keeps it in a tab, and `o` goes into that
 vault. See [Following a link](links-and-vaults.md#following-a-link) for the complete behavior.
 
-The explorer's zoom and breadcrumbs are described in [Files and folders](files.md#the-view). The vault's boundary
+The explorer's zoom and breadcrumbs are described in [Files and folders](files.md#the-zoom). The vault's boundary
 and the explorer's visible folder are separate concepts.

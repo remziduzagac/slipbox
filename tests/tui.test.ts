@@ -2490,9 +2490,7 @@ describe("the lens (live preview: space n l, i/a/o with edit_in = live)", () => 
     await h.keys("i");
     expect(v.live).toBe(true);
     expect(v.insert).toBeFalsy();
-    expect(h.app.messages.at(-1)!.text).toBe(
-      "the lens: the markdown around the cursor — the key again edits it, esc closes it",
-    );
+    expect(h.app.messages.some((m) => m.text.startsWith("the lens:"))).toBe(false);
     expect(rows()[lens().top]).toContain("source · lines");
     await h.keys("i");
     expect(v.insert).toBe(true);
@@ -2832,7 +2830,7 @@ describe("the lens (live preview: space n l, i/a/o with edit_in = live)", () => 
     // a: the lens on the cursor's block, not source mode; the cursor on the same character, the column the text's.
     await h.keys("a");
     expect([v.live, v.source, !!v.insert]).toEqual([true, false, false]);
-    expect(status()).toMatch(/ LENS .* L3:1 /);
+    expect(status()).toMatch(/ READ·LENS .* L3:1 /);
     await h.keys("f", "b");
     expect(status()).toMatch(/ L3:6 /); // the b of [b]: its sixth column, the counters' four not counted
     // a again types after the cursor, in the note.
@@ -2844,7 +2842,7 @@ describe("the lens (live preview: space n l, i/a/o with edit_in = live)", () => 
     // esc leaves typing, the lens still open; esc again: the render.
     await h.keys("escape");
     expect([v.live, !!v.insert]).toEqual([true, false]);
-    expect(status()).toMatch(/ LENS .* L3:7 /); // back onto the X
+    expect(status()).toMatch(/ READ·LENS .* L3:7 /); // back onto the X
     await h.keys("escape");
     expect([v.live, v.source]).toEqual([false, false]);
     expect(status()).toContain(" READ ");
@@ -2852,7 +2850,7 @@ describe("the lens (live preview: space n l, i/a/o with edit_in = live)", () => 
     // space n l opens it too, on the same line.
     await h.keys("space", "n", "l");
     expect(v.live).toBe(true);
-    expect(status()).toMatch(/ LENS .* L3:\d+ /);
+    expect(status()).toMatch(/ READ·LENS .* L3:\d+ /);
     // Without the setting, the default ("source", as the manual says): a switches to source mode and types at once.
     const d = await open();
     const dv = d.app.view!;
@@ -5284,11 +5282,11 @@ describe("scratch (space s)", () => {
     expect(h.frame()).toContain("▌ Ideas");
     // The lens, typing in it: esc stops typing, esc again leaves the lens, the scratch still open.
     await h.keys("j", "j", "i");
-    expect(status()).toMatch(/^ LENS /);
+    expect(status()).toMatch(/^ READ·LENS /);
     await h.keys("i");
-    expect(status()).toMatch(/^ INSERT /);
+    expect(status()).toMatch(/^ (?:SOURCE|READ·LENS) │ INSERT /);
     await h.keys("escape");
-    expect([h.app.floating?.kind, status()]).toEqual(["scratch", expect.stringMatching(/^ LENS /)]);
+    expect([h.app.floating?.kind, status()]).toEqual(["scratch", expect.stringMatching(/^ READ·LENS /)]);
     await h.keys("escape");
     expect([h.app.floating?.kind, status()]).toEqual(["scratch", expect.stringMatching(/^ READ /)]);
     // A find: esc ends it first.
@@ -5307,11 +5305,14 @@ describe("scratch (space s)", () => {
     const h = await harness({ open: "notes/alpha.md", width: 120, config: (c) => (c.editor.edit_in = "live") });
     const status = () => h.frame().split("\n").at(-1)!;
     await h.keys("space", "s", "a");
-    expect([h.app.floating?.kind, status()]).toEqual(["scratch", expect.stringMatching(/^ INSERT /)]);
+    expect([h.app.floating?.kind, status()]).toEqual([
+      "scratch",
+      expect.stringMatching(/^ (?:SOURCE|READ·LENS) │ INSERT /),
+    ]);
     // One message, saying how to go on: not the lens's own.
     expect(h.app.toasts.map((m) => m.text)).toEqual(["added to the scratch; add a note, esc then q closes it"]);
     await h.keys("d", "o", "escape");
-    expect([h.app.floating?.kind, status()]).toEqual(["scratch", expect.stringMatching(/^ LENS /)]);
+    expect([h.app.floating?.kind, status()]).toEqual(["scratch", expect.stringMatching(/^ READ·LENS /)]);
     await h.keys("q");
     expect([h.app.floating, readFileSync(h.app.scratch.location().path, "utf8")]).toEqual([
       null,
@@ -6880,7 +6881,7 @@ describe("files beyond notes (16.3–16.5)", () => {
     await h.keys("a");
     expect(paths()).not.toContain("run.py");
   });
-  test("a code file opens in source mode, highlighted, and has no render; a note after it renders", async () => {
+  test("a code file opens in SOURCE by default, highlighted, with READ available; a note after it renders", async () => {
     // Code as [render] code = "source" opens it (Python has the code view by default, 24.x).
     const h = await harness({ root: await setup(), config: (c) => (c.render.code = "source") });
     await h.app.run("note.open links-out.md");
@@ -6894,9 +6895,9 @@ describe("files beyond notes (16.3–16.5)", () => {
     const layout = h.app.currentLayout(v);
     expect(layout.lines[0]!.spans.some((s) => s.role === "syn_keyword")).toBe(true); // `def`
     expect(layout.headings).toEqual([]); // `# …` in Python is no heading
-    await h.keys("space", "n", "v"); // toggling off source: refused
-    expect(v.source).toBe(true);
-    expect(h.app.messages.at(-1)!.text).toContain("no rendered view");
+    await h.keys("space", "n", "v"); // opening default does not disable READ
+    expect(v.source).toBe(false);
+    expect(h.app.isCodeDocument(v.buf)).toBe(true);
     await h.app.run("history.back");
     expect(v.buf.rel).toBe("links-out.md");
     expect(v.source).toBe(false); // the note renders again
@@ -7677,9 +7678,7 @@ describe("code as a notebook (24.x, 24.13)", () => {
     h.app.placeAtLine(v, 19, 3);
     await h.keys("i");
     expect(v.live).toBe(true);
-    expect(h.app.messages.at(-1)!.text).toBe(
-      "the lens: the code around the cursor — the key again edits it, esc closes it",
-    );
+    expect(h.app.messages.some((m) => m.text.startsWith("the lens:"))).toBe(false);
     const lens = h.app.currentLayout(v).lines.filter((l) => l.lens === "source");
     expect(lens.map(lineText)).toContain("    return this.notes.get(rel);");
     expect(lens.find((l) => l.src === 20)!.spans.find((sp) => sp.text.includes("return"))!.role).toBe("syn_keyword");
@@ -7698,15 +7697,15 @@ describe("code as a notebook (24.x, 24.13)", () => {
     const v = h.app.view!;
     await h.keys("space", "n", "v");
     expect(v.source).toBe(true);
-    expect(h.app.messages.at(-1)!.text).toBe("source — the file as written");
+    expect(h.app.messages.some((m) => m.text.startsWith("source —"))).toBe(false);
     expect(h.app.currentLayout(v).cells).toBeUndefined();
     await h.keys("space", "n", "v");
     expect(v.source).toBeFalsy();
-    expect(h.app.messages.at(-1)!.text).toBe("the code as a document");
+    expect(h.app.messages.some((m) => m.text === "the code as a document")).toBe(false);
     await h.keys("i");
     expect(v.source).toBe(true);
     expect(v.insert).toBe(true); // to source mode, typing at once: no lens to show first
-    expect(h.app.messages.at(-1)!.text).toBe("source — editing the file");
+    expect(h.app.messages.some((m) => m.text.startsWith("source —"))).toBe(false);
     const plain = await open({ config: (c) => (c.render.code = "source") });
     expect(plain.app.view!.source).toBe(true);
     // Go is drawn as a document (24.9); CSS, which has no definitions to be cells, in source mode.

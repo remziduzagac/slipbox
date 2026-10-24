@@ -1,7 +1,7 @@
 # The TUI
 
 The reader — it browses, renders, selects and copies text, holds several notes and follows external changes (D26,
-D137) — and the editor: task checkboxes, hand-off to `$EDITOR` or a running nvim, source mode with a vim-shaped normal
+D137) — and the editor: task checkboxes, hand-off to `$EDITOR` or a running nvim, SOURCE view with a vim-shaped normal
 mode, the lens (live preview), saving, autosave and the conflict prompt (D134, D144). Every write to a note goes
 through one path ("Writing notes"); besides notes it writes its own state and the scratch.
 
@@ -13,7 +13,7 @@ Code, in `src/tui/`:
 | --- | --- |
 | `app.ts` | the model: the shared state (tabs, windows, buffers, panels, the overlay, messages) and the wiring |
 | `settings.ts`, `session.ts` | the keymaps, theme, glyphs, UI settings, live reload; the workspaces kept and restored |
-| `views.ts`, `lens.ts`, `code.ts` | a window's layout, cursor and scrolling; the lens and source mode; code blocks |
+| `views.ts`, `lens.ts`, `code.ts` | a window's layout, cursor and scrolling; the lens and SOURCE view; code blocks |
 | `input.ts`, `mouse.ts` | keys and pastes, dispatched in order, the which-key popup; clicks, drags, the wheel |
 | `overlays.ts`, `properties.ts` | lists, prompts and dialogs; the properties editor in the floating window |
 | `panels.ts`, `history.ts` | the side panels, their widths and filters; the history |
@@ -121,53 +121,26 @@ mode, the floating window and windows under 8 rows have none (HDR-D3). Without a
 the outline starts at the top of the content, and a split window gets a plain title row (`tab` / `tab_active`). It is
 drawn by `drawWindowHeader` (`src/tui/draw-header.ts`), which `drawPane` calls.
 
-**The mode's buttons**, `Read`, `Lens` and `Source`, are the window's three modes, the rendered view, the lens and
-source mode, as a radio group (HDR-D2). Exactly one is selected: the window's mode (`view.source`: Source,
-`view.live`: Lens, else Read), drawn `topbar_button_on`; the others are `topbar_button`, and `hover` under the mouse.
-They are drawn from the window's own flags each frame, after its layout is asked for, since laying a window out can
-change its mode without `setViewMode` (a data file that stopped parsing goes to source mode once typing ends,
-`views.ts`; a window given another file, `Lens.fitMode`): nothing about them is kept between frames. Two windows on one
-file each have their own. Typing isn't a mode: while typing, the button of the mode it's in stays selected, as the chip
-says `INSERT`. A mode the window can't switch to (`Lens.refusal(view, mode)`, the one place `setViewMode`'s refusals
-are decided, returning the message and its level and saying nothing itself) is disabled: drawn
-`topbar_button_disabled`, never `hover` (`button()`'s `hovers`). The header asks every frame, so it asks
-`Lens.canSwitch`, which never parses: a data file whose text changed since its last parse (`NoteBuffer.parseCurrent`)
-is taken to parse, its Read and Lens lit, until a parse says otherwise — a click's, which asks of the text as it is,
-or a switch's. So no keystroke or edit parses a data file in source mode, whatever its size or however many windows show
-it, and data is never judged mid-typing (an open quote is normal there). The selected one
-is never disabled: it's the mode the window is in, even where the window couldn't switch to it now (typing in the
-lens on data that stopped parsing: Lens selected, until typing ends and the window goes to source mode, said). A file
-with no rendered view (a text file; code not in a
-language the view maps, or `[render] code = "source"`; data that doesn't parse) has only Source; a drawn buffer (a
-diff, a review, the merge screen) can switch to nothing, but it shows only in the floating window, which has no
-header. A read-only file, a peek kept as a tab, a file Elsewhere and the scratch in the window on the right have all
-three, as their modes do today. The labels are the same for every file: for code, Read is the code as a document and
-Lens a cell's source; Source is always the file as written.
+**The view buttons** (VB-D1) are ` R `, ` L ` and ` S ` in every glyph set. READ and SOURCE form a radio pair;
+LENS is a toggle beside READ, selected alongside it. LENS clicked in SOURCE opens READ with its lens on; clicked
+again it closes the lens, keeping READ. Each window keeps its own flags. Selected buttons use `view_read`,
+`view_source` and `view_lens`; disabled buttons use `topbar_button_disabled`, enabled buttons `topbar_button`.
+A click first ends typing and focuses the window, keeping unsaved text, then runs `view.mode_read`,
+`view.mode_lens` (toggle) or `view.mode_source`. Successful switches are silent; refusals still explain why.
 
-**A click** on a button, like every click, first ends typing (`mouse.ts`: its undo step closes, the unsaved changes
-kept in the buffer), then focuses the button's window and its content region, as a heading's click does, so the
-status chip, which describes the focused window, agrees. Then, on another enabled button, it runs that mode's named
-command, `view.mode_read`, `view.mode_lens` or `view.mode_source`, which switches straight there through
-`Lens.setViewMode` (Lens from Source never passes through Read) and says what the window shows now, in the toggles'
-words. On the selected button it changes nothing more: a radio group never deselects. On a disabled one it says why,
-in `setViewMode`'s words; the command says it, as it does any refusal. One click never says a thing twice: where ending
-typing in this file, in this window or another on it, said why already (data that stopped parsing goes to source mode),
-the click adds nothing: while a click is handled, each message it says is said once (`App.sayingOnce`), its words
-`unparsedText`'s wherever they're said; a second click is its own, and says them again. A click focuses its window as
-a heading's does (`Mouse.focusWindow`). The hit areas are
-`mode:<window>:<read|lens|source>`, the window's index checked as a heading's is; the selected and the disabled keep
-theirs, without `hover`. The which-key popup over the header hides them as it hides the headings'
-(`draw-overlays.ts`), and so does the floating window, whose margins can lie over the header's row: what lies under it
-can't be clicked through it, its own hit areas aside (`drawApp`), and completion's popup, which can hang over a
-stacked split's lower header. The modes' table, `MODES`, with `ViewMode` and `viewMode`, is `modes.ts`'s, a module
-that imports nothing at load (the lens and the header import each other through the app), for the header, the
-mouse, the lens and the status chip (its chip the selected button's label) alike; the header asks `Lens.canSwitch`,
-`refusal` without its words. The lens's message names what it shows: a note's
-markdown, code, a data file's own format (`the YAML`; `lensWhat`).
+`Lens.canSwitch` is the header's parse-free availability check, `Lens.refusal` the command's refusal with its text.
+Data changed since its last parse stays available until a switch checks it. Typing never parses it or switches
+its presentation mid-edit. Data that does not parse, plain text and unsupported code have only SOURCE. Rendering
+settings select the opening view and do not disable supported READ or its lens. Drawn buffers cannot switch.
+
+The hit areas remain `mode:<window>:<read|lens|source>` for compatibility, checked and focused by the mouse.
+Disabled and selected buttons keep their targets without hover. Which-key, completion popups and floating windows
+occlude the header's targets as before. `modes.ts` keeps the internal `ViewMode` compatibility values (`rendered`,
+`live`, `source`) without runtime imports, shared by the lens, mouse and header.
 
 **Room** (HDR-D4). The header's row, from the right: `▤` where it is, then the buttons, then the breadcrumb between
-the name and them. The buttons are three labels side by side, each with a space either side: ` Read ` ` Lens `
-` Source `, 20 columns; shortened, ` R ` ` L ` ` S `, 9; at the least, the selected one's letter alone, 3. The
+the name and them. The buttons are three letters side by side, each with a space either side: ` R ` ` L ` ` S `, 9 columns;
+at the least, the selected view's letter alone, 3. The
 breadcrumb is drawn in the columns between the name and the buttons less one at each end, as now, and folds into them
 as before. The buttons take the widest form that leaves the breadcrumb its least room: its narrowest form but `…`
 alone — the icon and its space, `… ›`, and 8 columns of a heading, 14 columns — while the breadcrumb shows, whatever
@@ -224,10 +197,10 @@ workspace keeps them.
 
 **The status line** is about the file. From left to right:
 
-- a mode chip: `READ`, `SOURCE`, `LENS`, `INSERT`, `VISUAL`, `V-LINE`, `FILES` (the explorer or the
-  history), `GIT` (the git panel), `PROBLEMS` (the bottom panel), `OUTLINE`, `FOOTNOTES`, `INFO` (the right panel's
-  views), `RESIZE`, or what's pending: keys of a sequence in short form (`␣ l`,
-  `C-w`), or an operator, a count, or a key waiting for its character (`2d`, `di`, `dT`, `r`, `2f`);
+- a view segment (`READ`, `READ·LENS`, `SOURCE`) beside a vim mode segment (`NORMAL`, `INSERT`, `VISUAL`, `V-LINE`),
+  divided by `│` (`|` in ASCII, whose lens label is `READ-LENS`). The roles are `view_read`, `view_lens`,
+  `view_source` and `mode_normal`, `mode_insert`, `mode_visual`. Panel focus, resize and pending keys appear alongside
+  them, keeping both segments visible (VB-D1);
 - where you are, and its branch, dimmed, **only while the top bar doesn't say it** (WSP-D5): the bar hidden
   (`ui.top_bar = false`, `space u b`; zen has neither bar), or too narrow for even the vault: with a note open, a bar
   that narrow leaves the status line no room either; with none, the status line has the row and says it. The same parts
@@ -282,7 +255,7 @@ two rows while it's there. A window too short for it asks in a question's window
 
 **Replace** (`ctrl+h`, `space f r`, or `tab` from the find field) is the same find row with a second
 row under it: `⇄ replacement` with `replace` and `all` buttons at its right, the rule under both. It works on the
-markdown, so a rendered window switches to editing first (`editor.edit_in`: source mode or the lens)
+markdown, so a rendered window switches to editing first (`editor.edit_in`: SOURCE view or the lens)
 and every match is a real place in the file. `tab` / `ctrl+h` and `shift+tab` move between the two
 fields. In the replace field `enter` replaces the match at the cursor (or the next one) and moves on,
 `alt+enter` or `alt+a` replaces them all as one undo step, `ctrl+n` / `ctrl+p` move between matches
@@ -367,7 +340,7 @@ A reading cursor sits on the rendered text, like vim's normal mode.
 
 **Selection.** A selection is an anchor plus the cursor. It's extended by `shift`+movement or by visual mode (`v` by
 character, `shift+v` by whole row); `o` swaps the ends, and `esc` clears it. A mouse drag makes one too, copied on
-release. In source mode or the lens, one made by a drag or by `shift`+movement is a visual selection (as vim's mouse
+release. In SOURCE view or the lens, one made by a drag or by `shift`+movement is a visual selection (as vim's mouse
 makes one; DF-D15, DF-D28), so `d`, `c`, `x`, `>`, `<` and `y` act on it (`backspace` and `delete` as `d`, D231), any
 movement extends it and `esc` leaves it;
 an operator's shifted motion (`d shift+right`) leaves none behind. While typing, `shift`+movement selects as a desktop
@@ -660,7 +633,7 @@ peeks (§ The peek).
 
 `enter` follows the link under the cursor, or else the row's first link; `ctrl+enter` (`space l t`) follows it into
 a new tab, as a browser's ctrl+click does, and `ctrl+w f` (`space l s`) into the split; a link out of the vault peeks
-there too. In source mode and inside
+there too. In SOURCE view and inside
 the lens, where rows are the markdown itself, `enter` and `space l f` / `s` read the link around the
 cursor from the text (`[text](url)`, `![alt](path)`, `[[name]]`, `21.3`); in a text file, a URL or a path naming a
 file of the vault (`16.10`); a click there places the cursor for editing. A click follows a link
@@ -1099,7 +1072,7 @@ keys.
   writer that didn't say — starts afresh. Of another repository (outside one, another folder's list: the view's once its
   repositories are found, the last one's drawn until then, `RepoView.listedDir`), nothing selected or pointed at before
   is looked for, between frames too (a key or a click before its rows are drawn does nothing, but on a pick made there
-  since, which its first frame follows too); in a checkout, the explorer's view changing changes nothing, its rows the
+  since, which its first frame follows too); in a checkout, the explorer's zoom changing changes nothing, its rows the
   checkout's; another note open changes nothing (This file's rows are known by what they do). **The row under a resting
   pointer** stays on its line (`settle`): the pointer holding the rows (on them, not their scrollbar's column, reported
   since they showed, the mouse on), the scroll is set so that row is where the last frame drew it, past the list's end
@@ -1187,7 +1160,7 @@ keys.
   background; in a vault not trusted no hook, `commit.gpgSign=false`); a conflict said, `git merge --abort` named — or,
   checked out nowhere, said so; Into another branch… among those checked out here or in a worktree.
 - **The repositories in the view** (VV-D10, GIT-D11; `tui/gitreposview.ts`, `core/gitrepos.ts`) are found under the
-  explorer's view (`explorer.top`, else the vault) three folders down (`reposUnder`, `REPO_DEPTH`), 2,000 folders at
+  explorer's zoom (`explorer.top`, else the vault) three folders down (`reposUnder`, `REPO_DEPTH`), 2,000 folders at
   most, in the background: not into a hidden folder, a busy one (`busyFolderAt`, VV-D8, D237) or a repository, whose
   folders are its own; a checkout's `.git` makes it one, and a worktree found beside its main checkout is grouped under
   it, by its repository's shared git folder (`groupRepos`, `repoKey`). Found again each time the panel is shown
@@ -1256,7 +1229,7 @@ keys.
   frontmatter's and text's), **Links** (links and how many are unresolved, backlinks, headings, footnotes, tasks done;
   how links are written here, `21.4` — `writes`, its `path` and `.md`, then `from` what said them, or each part's
   source after it, `y` copying it whole). `enter` opens what a row names: a property's line in the frontmatter
-  (source mode: its own line; rendered, the row that shows it), a tag's notes, the links or backlinks list, the outline
+  (SOURCE view: its own line; rendered, the row that shows it), a tag's notes, the links or backlinks list, the outline
   or the footnotes view; any other row copies its value, as `y` does. The vault's own information — its name and the
   other copies of it this machine knows (`21.6`), its notes, index (when it was written, what was reached outside the
   walk, `20.10`; home's cap) and watcher, the background index — is `space v i`'s window: a vault isn't a file. Names
@@ -1264,7 +1237,7 @@ keys.
   n i`, the `ℹ` button, `slipbox stat` (its `root`, `name` and `properties` too). `e` edits the properties (below).
 - **The properties editor** (`3.20`; D151): `e` in the Info view, or `space n shift+p`, opens the note's frontmatter —
   YAML or TOML, as the note has it — in a floating window over the others: framed, titled "Properties — note (YAML)", as
-  tall as its text. Inside is a window like any — a view of a buffer that isn't a file — in source mode, with every
+  tall as its text. Inside is a window like any — a view of a buffer that isn't a file — in SOURCE view, with every
   editing key there is; the keys and commands act on it while it's open. `esc` (in normal mode), `q` or `:q` close it,
   writing its text back when it changed, and a click outside its box does too (that click does nothing else: a tab or a
   pane under it isn't reached); `ctrl+s` (`:w`) writes it back and keeps it open, as does `:wa` (after a yes to a
@@ -1295,7 +1268,7 @@ keys.
   numbers them), then the ones nothing refers to: `[label]` and the definition's text (the definition's label), and
   at the right how many references it has (`2×`), `unused`, or `no definition`. `l` unfolds a footnote into its
   references, each with its line and that line's text; `enter` (or a click) jumps to the definition or that
-  reference — in a rendered window onto the reference or definition as drawn, in source mode to the text. While not
+  reference — in a rendered window onto the reference or definition as drawn, in SOURCE view to the text. While not
   focused it follows the cursor: the footnote the cursor's line refers to or defines. It never scrolls sideways: a
   long row is cut, so its count stays. `/` filters (see Filter). `space n f`, its button, `:footnotes`;
   `slipbox footnotes <note>` gives the same ([cli.md](../../docs/manual/cli.md)).
@@ -1385,7 +1358,7 @@ past theirs), so the content behind never runs up to the edge.
 - **Search** (`6.5`, `6.9`; `space f s`, `:search words`): the vault's notes ranked by the words as they're typed — as
   `slipbox search` ranks them ([search.md](search.md); [cli.md](../../docs/manual/cli.md) § `search`) — each a row:
   `path:line`, the section's heading and the line, its words marked, `+n` for the file's other sections with some of
-  them. `enter` opens it on that line (rendered, at the line's start; in source mode, on the word). The index is the
+  them. `enter` opens it on that line (rendered, at the line's start; in SOURCE view, on the word). The index is the
   app's to keep: opened (or made) as the vault opens and brought up to the files in idle slices — the list says
   `the folder is being indexed: n of m files…` the first time, and fills when it's done — then each file again as the
   graph hears it change (a save here, the watcher, a rename, a CLI write). An unsaved note is searched as it's shown, in
@@ -1571,9 +1544,9 @@ and a Mermaid diagram too wide to draw at its closest.
   cursor in it — until the cursor next moves. A click lands on the character drawn under the pointer.
 - **Find** brings a match past the edge into sight, the whole match where it fits, else from its start.
 - **Copy** takes the rows' text, and a row is a whole line: never only the part on screen. Cut and paste are the
-  lens's and source mode's, which show the Markdown.
+  lens's and SOURCE view's, which show the Markdown.
 
-Not here: source mode and the lens draw the Markdown, which `ui.wrap` alone wraps; with wrapping off a note is laid out
+Not here: SOURCE view and the lens draw the Markdown, which `ui.wrap` alone wraps; with wrapping off a note is laid out
 at its natural width with every line of code whole, and the whole window scrolls (above), a block only following it —
 it never scrolls on its own then. `code_wrap = "wrap"` wraps each long line at the block's width, its rows after the
 first marked `↪`, as `slipbox render` always does. The code view's cells are the file, broken at their structure
@@ -1609,7 +1582,7 @@ so); the watcher is told the write is its own; the
 buffer reloads, its windows keeping their anchors, so the cursor stays put.
 
 **Task checkboxes** (`4.11`) are the first write. `ctrl+l` (`space n t`), or a click on the
-checkbox, flips the task item holding the cursor — the innermost, from any of its rows; in source mode and the lens,
+checkbox, flips the task item holding the cursor — the innermost, from any of its rows; in SOURCE view and the lens,
 the one holding the cursor's line, found in the parse — as a one-byte edit to the file's bytes, so a BOM, CRLF
 endings and even invalid UTF-8 survive untouched.
 If the file changed on disk since it was shown, it is reloaded instead and nothing is written (its
@@ -1639,7 +1612,7 @@ the picked nvim's socket. Every template is split into arguments and `{file}` / 
 inside them, never through a shell, so a file name can't become a command; a template without
 `{file}` gets the file appended, except a remote one.
 
-## Source mode (plan `4.13`)
+## SOURCE view (plan `4.13`)
 
 `space n v` and `ctrl+k` (`:source`) switch a window's note between its raw markdown and the
 rendered view, and the header's Source button (`view.mode_source`) sets it (HDR-D2); the status chip reads `SOURCE`. It
@@ -1649,7 +1622,7 @@ copy, the mouse, wrapping, line numbers, the scrollbars. The cursor stays on its
 the switch, and the outline and breadcrumb keep working. Their headings are the parse's while the
 text is saved; while it's being edited they're scanned from the text, each ATX heading line read
 the way the render reads it (a line with markup parsed alone), so their text and slugs — and a
-`#fragment` followed from source mode — are the render's.
+`#fragment` followed from SOURCE view — are the render's.
 
 A source line is a row, wrapped at the last space that fits (wrapping on) or kept whole (off); the
 text column is the window's full width, readable width aside. Highlighting is light and per line:
@@ -1675,14 +1648,14 @@ the top one is labelled with its lines (`━━ source · lines 12–18 ━━`)
 blank lines after it, so the blocks cover the note.
 
 **The session.** `i` `a` `o` and the other editing keys open the lens in normal mode (`[editor] edit_in =
-"live"`, the default: D224), the block as written, and edit on their second press — as `esc esc` leaves, typing
+"lens"`, the default: D224), the block as written, and edit on their second press — as `esc esc` leaves, typing
 first, then the lens; `space n l` (`:live`) opens it too, and the header's Lens button (`view.mode_lens`) from any
-mode, source mode included (HDR-D2). A yank isn't an edit: it goes on at once.
+mode, SOURCE view included (HDR-D2). A yank isn't an edit: it goes on at once.
 The chip reads `LENS` (`INSERT` while typing). `esc` from typing goes to normal mode with the lens
 still open — the vim commands work on what's in it — and `esc` in normal mode closes it: everything
 renders again, as does the header's Read button (`view.mode_read`). Reading, there is no lens and the keys are the
 reading keys. (With `edit_in =
-"source"`, an editing key switches the window and edits at once: source mode has nothing to show
+"source"`, an editing key switches the window and edits at once: SOURCE view has nothing to show
 first.)
 
 **Its tint.** The rows of markdown between the rules have a background of their own (`lens_band`, a
@@ -1758,7 +1731,7 @@ link, or to just look this once: asked the first time it's opened, the CLI refus
 
 A note is read by its format's reader (`core/readers.ts`, `16.2`; D110): each parses into the same mdast
 tree — so the index, the render, the lens and the outline work alike for every format — and says
-what source mode reads off the raw lines: its headings and the link around the cursor. Markdown's is
+what SOURCE view reads off the raw lines: its headings and the link around the cursor. Markdown's is
 the only one (`16.16`, `16.17`; D112): Org and AsciiDoc files open as text.
 
 - **Opening.** A data or text file opens from the explorer, `ctrl+p`, `:e path`, or a link to it
@@ -1772,22 +1745,22 @@ the only one (`16.16`, `16.17`; D112): Org and AsciiDoc files open as text.
   its whole path; one in a vault nested in this one goes into that vault, as its row does. Info says why it isn't
   indexed, a file no row lists (under a hidden folder) by the walk's reason for its path (`Marks.whyAt`).
 - **Data files open rendered** (`16.11`–`16.13`, D108; [rendering.md](rendering.md) § Data files), with
-  source mode a key away and the lens editing a card at a time: in YAML and JSON a key with the
+  SOURCE view a key away and the lens editing a card at a time: in YAML and JSON a key with the
   plain values listed right under it (`defaults` and its settings), in TOML and INI one key — never
   padded with pieces of the next card, and moving to the next card rather than gathering them. A
   table's records are blocks of their own: in a CSV or TSV the lens is `lens_min_rows` records
   around the cursor, sliding a record at a time, never the whole table. A data file that doesn't
-  parse opens in source mode, the error said each time it opens (a link, `:e`, history); one that
+  parse opens in SOURCE view, the error said each time it opens (a link, `:e`, history); one that
   stops parsing while edited goes there when insert mode ends (never mid-typing: an open quote is
   normal while a value is typed), and `space n v` renders it again once it parses (`16.14`).
-- **Text files open in source mode**, highlighted by their language; no markdown headings are looked for in them. They
-  have no rendered view: `space n v` and the lens say so and stay in source mode; the header's Read and Lens
-  buttons are disabled, a click saying so (HDR-D2). A window that was in source mode only
+- **Text files open in SOURCE view**, highlighted by their language; no markdown headings are looked for in them. They
+  have no rendered view: `space n v` and the lens say so and stay in SOURCE view; the header's Read and Lens
+  buttons are disabled, a click saying so (HDR-D2). A window that was in SOURCE view only
   for such a file renders again when it opens a note (a link, `history.back`). **Code in a language the code view maps**
   (`24.9`: the 13 grammars with definitions; D125, D130) opens as a notebook instead — its comments and documentation
   as prose, each definition a cell with buttons, its imports folded, every token as written — and `space n v` switches
-  it to source mode and back; editing opens the lens on the cursor's line, doc comment or imports, or source mode
-  (`[editor] edit_in`), as for a note. `[render] code = "source"` opens it in source mode.
+  it to SOURCE view and back; editing opens the lens on the cursor's line, doc comment or imports, or SOURCE view
+  (`[editor] edit_in`), as for a note. `[render] code = false` opens it in SOURCE view.
   The same disabled buttons apply to data that doesn't parse and code configured as source.
   [code-view.md](code-view.md) has the view.
 - **Source code through tree-sitter** (`16.6`–`16.9`, `16.18`–`16.23`; D109, D123: TypeScript, TSX, JavaScript,
@@ -1855,7 +1828,7 @@ the only one (`16.16`, `16.17`; D112): Org and AsciiDoc files open as text.
   the explorer): a name, from the current note's folder — or the explorer's selected folder when it
   has focus, or the vault's top with a leading `/` — and folders on the way are made. `.md` is added
   unless the name has a known extension (`.toml`, `.py`…). A note starts with its title (`# Name`),
-  opens, and is typed into on the line after the blank one, in the lens or source mode as `edit_in` says (at once:
+  opens, and is typed into on the line after the blank one, in the lens or SOURCE view as `edit_in` says (at once:
   making it was the editing key's first press); an existing file just opens. Nothing is made outside the vault, through
   a symlink or otherwise. A note in a vault
   nested in this one is made there and opens in that vault; one under a folder the walk leaves out (`walk.exclude`)
@@ -1868,12 +1841,12 @@ the only one (`16.16`, `16.17`; D112): Org and AsciiDoc files open as text.
 
 ## Editing (plans `4.3`, `4.4`, `4.5`)
 
-Editing is in source mode (D146): `i`, `a`, `o` and their capitals (in [keys.md](../../docs/manual/keys.md)) start
+Editing is in SOURCE view (D146): `i`, `a`, `o` and their capitals (in [keys.md](../../docs/manual/keys.md)) start
 typing, switching a rendered window to source first (D105). A level of indentation is the file's (`25.1`; D155): its
 `.editorconfig`, else its own lines, else its language ([configuration.md](../../docs/manual/configuration.md) §
 Indentation: `.editorconfig`). `%` goes to the matching bracket (`core/brackets.ts`, `25.3`): of its kind, the pairs
 nested between counted, across lines, by the text alone — a bracket in a string or a comment counts too, as in vim. In
-source mode the bracket at the cursor and its match are marked (`bracket_match`); while typing, the one just before the
+SOURCE view the bracket at the cursor and its match are marked (`bracket_match`); while typing, the one just before the
 cursor. The buffer's `source` is the truth; every change is `NoteBuffer.edit`, one undo step each, except that an insert
 session (from `i` to `esc`) is one step. The cursor is a place in the text found through the source layout's `srcMap`
 (`editing.ts`), so tabs, wide characters and wrapped rows edit exactly where they show.
@@ -1883,7 +1856,7 @@ vim's insert mode uses here (`editing.ts`, `insertKey`). `ctrl+z` and `ctrl+y` u
 was typed so far closes as a step of its own, the undo or redo runs, and a new step opens at the cursor, so text typed
 after an undo ends the redo, as in a desktop editor; `.` then repeats what's typed from there, as an `i` would have
 started it. The page keys move the cursor a window's height less two rows, over rows of text only (the lens's rules
-stop them, as they stop the arrows), and in source mode scroll the view as far, as reading's page keys do;
+stop them, as they stop the arrows), and in SOURCE view scroll the view as far, as reading's page keys do;
 `ctrl+home` and `ctrl+end` go to the note's start and end, as `cmd+up` and `cmd+down`. `shift` with any of typing's
 moves (the arrows, `home` and `end`, the page keys, the word keys, the `cmd` arrows and `ctrl+a` / `ctrl+e`) selects:
 the window's selection, anchored where the cursor was, its ends between characters as the cursor is while typing, so
@@ -1912,7 +1885,7 @@ A changed note is **unsaved** until `:w` / `ctrl+s` (D138): `• unsaved` by its
 `writeBuffer` (atomic, inside the vault) and keeps the file's BOM and line endings — a CRLF file
 gets CRLF for new lines too; a file that isn't valid UTF-8 can't be edited or saved over. Parsing
 waits until something needs it (the rendered view), so typing never re-parses the note; while it's
-unsaved, source mode's outline comes from a quick scan of the text's headings.
+unsaved, SOURCE view's outline comes from a quick scan of the text's headings.
 
 **Outside changes and conflicts** (`4.5`, `5.5`–`5.7`). A clean note that changes on disk reloads,
 and the reload is one more undo step: `u` brings back what was there before an agent rewrote it (and
@@ -2065,7 +2038,7 @@ name it, never a vault's (D166).
   counted in the bar and on the status line, its line's number in `warn`, the Problems panel saying what
   (`⚠ 3:5  line-length: Line length [Expected: 80]  markdownlint MD013`).
 - **The vault** is linted when the Problems panel's All tab opens: its **Lint** section lists the findings by note, and
-  a note's own run keeps its rows current. `enter` on one opens the note at that line (in source mode, its column); on a
+  a note's own run keeps its rows current. `enter` on one opens the note at that line (in SOURCE view, its column); on a
   note's row, at its first.
 - **A linter that can't run** (not installed, failing without a finding, too slow, or ended by a signal) is said once,
   and not tried again until the config changes.
@@ -2160,8 +2133,8 @@ properties a server lists.
 
 ## Problems where they are (plans `19.8`–`19.11`)
 
-A file's problems, from every source alike (D167), show where they are, in source mode, the lens and the rendered
-view: its syntax errors (`16.9`; in source mode and the code view, out of insert, for the text as it is; DF-D10), the
+A file's problems, from every source alike (D167), show where they are, in SOURCE view, the lens and the rendered
+view: its syntax errors (`16.9`; in SOURCE view and the code view, out of insert, for the text as it is; DF-D10), the
 linter's findings (`3.21`; for the text they were found in), a note's own (`11.5`: a link that reaches nothing or
 several notes, a `#heading` or `#^block` its note hasn't, git's conflict markers; while the note is as saved, since the
 vault's index has the file's), its language servers' (`19.1`; for the text they were found in — typing hides them until
@@ -2184,7 +2157,7 @@ least that shows, so a vault's notes not written yet — information — don't m
 - **The marks** (`[diagnostics] marks`): where each problem is, underlined in its severity's colour
   (`problem_error`, `problem_warn`, `problem_info`; a syntax error keeps `syntax_error`), for the problems at least as
   bad as its level: `"error"` (the default), `"warning"`, `"info"` (all), or `"off"`; `space u shift+d` cycles off →
-  errors → warnings → all (an older `true` reads as all, `false` as off). Source mode and the lens know each
+  errors → warnings → all (an older `true` reads as all, `false` as off). SOURCE view and the lens know each
   character's place: the problem's own characters. The rendered view knows each piece of text's line: a link's
   problem marks the link as drawn, any other the text its lines became. A link that reaches nothing or several notes
   keeps its own colour and underline whatever the level (`link_unresolved`, `link_ambiguous`), and the Problems
@@ -2225,7 +2198,7 @@ the status line), `esc` handing them back to the note and `q` closing it.
   `enter`). Under the first three, the notes with such links, and under a note its problems: the line and the link as
   written, in the link's colour (a finding: its line, rule and what's wrong). `enter` or a click opens the note there in
   a tab of its own — or switches to the tab showing it, a place pushed onto its history — the cursor on the problem's
-  line, on the link as drawn (in source mode, on its text); a note's row (an orphan's too) opens at its first. As in the
+  line, on the link as drawn (in SOURCE view, on its text); a note's row (an orphan's too) opens at its first. As in the
   explorer, `o` opens it in this window instead, `s` in the split's other. It takes the explorer's keys (`l` / `h`
   unfold and fold a section); `/` filters — its `› text` after the tabs' titles — keeping the problems whose note, line
   or link matches (a conflict or an orphan by its path) under their headings, unfolded; a note's change shows at once.
@@ -2372,7 +2345,7 @@ margins.
   changed run loses the white space at its ends, unless that's all it is, and runs with only white space between them
   are one.
 - **Drawn** (`layoutDiff`): a row a line, its sign and a space before it (`-` in `diff_del`, `+` in `diff_add`), its
-  text highlighted as source mode highlights it — a note's Markdown over the whole text, so a fence's or the front
+  text highlighted as SOURCE view highlights it — a note's Markdown over the whole text, so a fence's or the front
   matter's lines read as theirs; code a line at a time, only the lines shown. A changed row is on its sign's tint (the
   row's `fill`, each span's `bg`), its changed words on `diff_del_word` or `diff_add_word` — found cell by cell, by
   the offset each of the highlighted row's cells shows (`srcMap`), so a tab and a combining mark after it shift no
@@ -2388,7 +2361,7 @@ margins.
   wraps a long line, `↪` in the gutter of its rows after the first; wrapping off, the rows are whole and the window
   scrolls.
 - **The window:** a read-only buffer with a layout of its own (`NoteBuffer.drawn`), its text a line a row. It has no
-  gutter, line numbers on or not, and no source mode or lens: switching says "a diff is drawn one way". `enter` on a
+  gutter, line numbers on or not, and no SOURCE view or lens: switching says "a diff is drawn one way". `enter` on a
   line closes it and opens the file there, when the file is there and in the vault; the conflict prompt's, a branch's
   and another repository's go back instead. `esc`, `q` and `:q` go back to what opened it: the git panel, the changes'
   list, the prompt. Two texts the same are said ("no differences from main"), and go back; two whose only change no
@@ -2697,7 +2670,7 @@ Keys reach layers, each owning some of them (D99, D105):
 | pane | keys of the focused side pane | explorer, history, git panel, outline |
 | visual | selection keys, and movement extends | `v`, `shift+v` |
 | floating | a peek's, a review's, the merge screen's, a diff's own keys | `o`, `y`, `t`, `tab` |
-| source | source mode's and the lens's own keys, before the reading ones | `x`, `d`, `p`, `.` |
+| source | SOURCE view's and the lens's own keys, before the reading ones | `x`, `d`, `p`, `.` |
 | normal | everything else | cursor, links, tabs |
 
 Every binding names a registry command (D11), and config remaps all of them. Editing keys work only where the
@@ -2706,12 +2679,12 @@ switch the window to source first (D105). The conventions that settle collisions
 D128) are the user's to read: [keys.md](../../docs/manual/keys.md) § Conventions.
 
 **Dispatch order:** a paste first, then an overlay, then a pane's filter while typing in it, then insert mode's
-keys (the completion popup's first), then a key awaited as a character (after `f`, `t`, `r`), then — in source mode
+keys (the completion popup's first), then a key awaited as a character (after `f`, `t`, `r`), then — in SOURCE view
 and the lens — counts and an operator's motion around the rest (`vim.ts`), then resize mode's keys (any other key
 leaves resize mode and runs as usual), then a pending sequence (where `esc` cancels and `backspace` goes up a level),
 then the focused pane's keymap (explorer, git panel or outline), then visual mode's — else, in a peek, a review, the
 merge screen or a diff window, its own keys (`DEFAULT_PEEK_KEYS`, `DEFAULT_REVIEW_KEYS`, `DEFAULT_MERGE_KEYS`,
-`DEFAULT_DIFF_KEYS`) —, then source mode's own (`[keys.source]`, in an editable window outside visual mode), then the
+`DEFAULT_DIFF_KEYS`) —, then SOURCE view's own (`[keys.source]`, in an editable window outside visual mode), then the
 normal keymap. Only keymaps at or above the one holding a
 binding can make a key a prefix: visual mode's `y` doesn't wait for the normal keymap's `y y`. When a key is
 both a binding and a prefix, slipbox waits `input.which_key_delay_ms` for the next key, then
@@ -2723,7 +2696,7 @@ runs the binding.
   toggling a pane, zen, wrap or line numbers, a terminal resize — about 4 ms for a thousand-line
   note and 70 ms for twenty thousand. A buffer keeps its last six widths, so going back and forth
   is cached. Edits, reloads and leaving the lens reuse what didn't change (the parse by chunk, the
-  render by block, source mode by line: [how-it-works.md](how-it-works.md) § Performance, measured, "Big notes";
+  render by block, SOURCE view by line: [how-it-works.md](how-it-works.md) § Performance, measured, "Big notes";
   D120).
 - **A big note's first open reads for a moment** (plan `15.1`; D120): with 128 KB or more to parse, it parses on other
   threads — the window says `reading big.md — 20,000 lines…` for about a third of a second at twenty thousand
@@ -2754,3 +2727,7 @@ to another branch's file, and `esc` back to the list a diff came from all return
 typed after it act on what it opened. Completion requests a repaint. The base a diff is taken against is the branch's
 own; on a detached HEAD, `[git] base` or main/master, and one not there is named. These reads do not change the
 separate policies for git mutations.
+
+Opening defaults (VB-D2): `render.notes`, `render.code` and `render.data` are true by default. False opens SOURCE;
+READ and its lens remain available where supported. Legacy code `"document"`/`"source"` reads as true/false, and
+`editor.edit_in = "live"` reads as `"lens"`.

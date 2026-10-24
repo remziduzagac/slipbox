@@ -111,11 +111,11 @@ window's edge. [Reading](reading.md) says more.
 | previous / next heading | `[ [` / `] ]` | `alt+up` / `alt+down` |
 | previous / next paragraph | `{` / `}` | `ctrl+up` / `ctrl+down` |
 | the window's top / middle / bottom row | `shift+h` / `shift+m` / `shift+l` | |
-| the matching bracket (source mode and the lens) | `%` | |
+| the matching bracket (SOURCE view and the lens) | `%` | |
 | onto the next / previous character you type, on the row | `f` / `shift+f` | |
 | up to the next / previous character you type | `t` / `shift+t` | |
 | the last `f` or `t` again / the other way | `;` / `,` | |
-| a line by its number | `42 g g`, `42 shift+g` (source mode) | `ctrl+g`, `space f l`, `:42` |
+| a line by its number | `42 g g`, `42 shift+g` (SOURCE view) | `ctrl+g`, `space f l`, `:42` |
 
 ### Scrolling
 
@@ -146,7 +146,7 @@ window's edge. [Reading](reading.md) says more.
 | in visual mode, leave and copy nothing (the same `v` or `shift+v` too) | `esc` |
 | clear the selection, or else close the floating editor or the lens, clear find, or go back to the note | `esc` |
 
-In source mode and the lens, a selection made with `shift` or a drag is a visual mode selection. Visual mode's keys act
+In SOURCE view and the lens, a selection made with `shift` or a drag is a visual mode selection. Visual mode's keys act
 on it ([Visual mode in source](#visual-mode-in-source)), and any move extends it.
 
 While you type, `shift` with a move selects as in a desktop editor ([Typing](#typing)).
@@ -165,7 +165,7 @@ While you type, `shift` with a move selects as in a desktop editor ([Typing](#ty
 
 A cut and a paste are edits. From the rendered note, the window switches to editing first.
 
-In source mode and the lens, `y` is vim's yank. So `y y` copies the line, and `y p` and `y r` work only while reading.
+In SOURCE view and the lens, `y` is vim's yank. So `y y` copies the line, and `y p` and `y r` work only while reading.
 The palette has them everywhere.
 
 In vim, `ctrl+v` starts a block selection and `ctrl+x` makes a number less. Here they are paste and cut.
@@ -350,7 +350,7 @@ Moving selects a row and opens nothing. [Files](files.md) explains what each of 
 | `j` / `k`, `down` / `up` | select the next / previous row |
 | `enter` | open the note as a tab (or go to its tab), fold or unfold a folder, or go into another vault |
 | `l`, `right` | open the note as a tab (or go to its tab), or unfold a folder or a vault |
-| `z` | zoom in: the view shows the selected folder, or a selected file's folder ([Files](files.md#the-view)) |
+| `z` | zoom in: the view shows the selected folder, or a selected file's folder ([Files](files.md#the-zoom)) |
 | `-` | zoom out: the view shows the folder holding it |
 | `o` | open the note in this window, in place of what it shows |
 | `h`, `left` | fold the folder, or go to the folder holding the row |
@@ -526,13 +526,13 @@ In the replace row:
 
 You edit in one of two places:
 
-- source mode, which shows the note as Markdown
+- SOURCE view, which shows the note as Markdown
 - the lens, which shows the block at the cursor as Markdown and the rest rendered
 
 [Editing](editing.md) explains both.
 
 A key that starts an edit works from the rendered note too. Its first press opens the lens, and the second edits. With
-`editor.edit_in = "source"`, it switches the window to source mode instead.
+`editor.edit_in = "source"`, it switches the window to SOURCE view instead.
 
 ### Modes, undo and saving
 
@@ -558,7 +558,7 @@ The `:` commands for saving and quitting (`:w`, `:wq`, `:q!` and the rest) are i
 
 ### Normal mode in source
 
-These keys belong to source mode and the lens. In your configuration, they are under
+These keys belong to SOURCE view and the lens. In your configuration, they are under
 [`[keys.source]`](configuration.md). While you read, they do nothing.
 
 | What | Keys |
@@ -1126,7 +1126,7 @@ it back to the terminal.
 | a picture at its own size, a sideways wheel or the wheel with `shift` | scrolls it sideways (unwrapped, the window) |
 | the tab strip, the wheel | switches to the next or the previous tab |
 | the explorer | a click selects a note, a double-click opens it as a tab, and a click on a folder folds or unfolds it |
-| the explorer's breadcrumb | a click on a folder zooms the view to it ([Files](files.md#the-view)) |
+| the explorer's breadcrumb | a click on a folder zooms the view to it ([Files](files.md#the-zoom)) |
 | the history | a click selects, a double-click goes there |
 | source control (the git panel) | a file's row shows its diff, a double-click opens it; a heading folds or unfolds |
 | source control, under the pointer | a row's buttons: `+` stage, `−` unstage, `↺` discard, `⧉` its diff |

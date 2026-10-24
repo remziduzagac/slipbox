@@ -586,7 +586,7 @@ export class Explorer {
   /** `-`: the view a folder up (VV-D5), the folder it showed unfolded in it and selected. */
   zoomOut(): void {
     const up = dirname(this.top);
-    if (up === this.top) return this.app.message("info", "the view shows everything: nothing is above /");
+    if (up === this.top) return this.app.message("info", "the explorer is zoomed out fully: nothing is above /");
     this.zoomTo(up);
   }
 

@@ -7,10 +7,7 @@ import { type Session, type StyledRun, WAIT } from "../session.ts";
 import { at, findText, ready, SEPT1 } from "./editing.ts";
 
 // The window header's mode buttons (HDR-D2): `Read  Lens  Source`, shortened `R  L  S`, on the row atop each window.
-const MODE_GROUPS = [
-  { re: /Read {2}Lens {2}Source/g, at: { Read: 0, Lens: 6, Source: 12 } },
-  { re: /\bR {2}L {2}S\b/g, at: { Read: 0, Lens: 3, Source: 6 } },
-] as const;
+const MODE_GROUPS = [{ re: /\bR {2}L {2}S\b/g, at: { Read: 0, Lens: 3, Source: 6 } }] as const;
 type ModeLabel = "Read" | "Lens" | "Source";
 
 /** The style of the character at index `at` of screen row `y`, and its column. */
@@ -93,14 +90,12 @@ export const WINDOW_HEADER: Check[] = [
       // Source to Lens in one click, never through Read; the chip agrees.
       await clickMode(s, "Lens");
       await s.status("LENS");
-      await s.message("the lens: the markdown around the cursor");
-      await s.until(() => selectedMode(s).join() === "Lens", WAIT, "Lens selected after its click");
+      await s.until(() => selectedMode(s).join() === "Read,Lens", WAIT, "Lens selected after its click");
       await s.keys("escape"); // esc closes the lens
       await s.status("READ");
       await s.until(() => selectedMode(s).join() === "Read", WAIT, "Read selected after esc");
       await clickMode(s, "Source");
       await s.status("SOURCE");
-      await s.message("source — the note's markdown");
       await clickMode(s, "Read");
       await s.status("READ");
       // The selected one: nothing changes.
@@ -108,7 +103,7 @@ export const WINDOW_HEADER: Check[] = [
       await s.status("READ");
       await leader(s, "n", "l");
       await s.status("LENS");
-      await s.until(() => selectedMode(s).join() === "Lens", WAIT, "Lens selected after space n l");
+      await s.until(() => selectedMode(s).join() === "Read,Lens", WAIT, "Lens selected after space n l");
     },
   },
   {
@@ -125,8 +120,10 @@ export const WINDOW_HEADER: Check[] = [
       await s.status("INSERT");
       await s.type("Zq");
       // Typing isn't a mode: Lens stays selected.
-      s.expect(selectedMode(s).join() === "Lens", `Lens selected while typing: ${selectedMode(s)}`);
-      // The selected Lens: typing ends, the lens stays.
+      s.expect(selectedMode(s).join() === "Read,Lens", `Lens selected while typing: ${selectedMode(s)}`);
+      // LENS toggles off; clicking it again opens the lens for the next insert.
+      await clickMode(s, "Lens");
+      await s.status("READ │ NORMAL");
       await clickMode(s, "Lens");
       await s.status("LENS");
       await s.keys("i");
@@ -135,7 +132,8 @@ export const WINDOW_HEADER: Check[] = [
       // Another mode: typing ends, the window switches, the text is the buffer's still (unsaved).
       await clickMode(s, "Source");
       await s.status("SOURCE");
-      await s.see("ZWxq"); // typing ended steps the cursor back onto the q, as vim's esc does
+      await s.see("Zq");
+      await s.see("Wx"); // both edits survive closing and reopening the lens, then switching to SOURCE
       await s.see(/\d+ 2026-09-01\.md •/); // the tab: unsaved
       s.expect(!s.read(SEPT1).includes("Zq"), "nothing written to the file");
     },
@@ -152,9 +150,7 @@ export const WINDOW_HEADER: Check[] = [
       const enabled = modeButton(s, "Lens")!.style.fg;
       await clickMode(s, "Lens");
       await s.status("LENS");
-      await s.message("the lens: the code around the cursor");
       await clickMode(s, "Read");
-      await s.message("the code as a document");
       // A text file: Source alone.
       await s.restart({ startAt: "home/work/kestrel/api/requirements.txt" });
       await ready(s);
@@ -202,15 +198,15 @@ export const WINDOW_HEADER: Check[] = [
       // Narrower still: the narrow window's selected letter alone, bold, in its own columns — the left's Read before
       // the wide one's buttons, or the right's Source after them, whichever the resize narrowed.
       const lone = () => {
-        const y = s.screen().findIndex((r) => /Read {2}Lens {2}Source/.test(r));
+        const y = s.screen().findIndex((r) => /\bR {2}L {2}S\b/.test(r));
         if (y < 0) return false;
         const row = s.screen()[y]!;
-        const at = row.search(/Read {2}Lens {2}Source/);
-        return selectedLetterAlone(s, y, 0, at, "R") || selectedLetterAlone(s, y, at + 18, row.length, "S");
+        const at = row.search(/\bR {2}L {2}S\b/);
+        return selectedLetterAlone(s, y, 0, at, "R") || selectedLetterAlone(s, y, at + 7, row.length, "S");
       };
       await s.retry(() => s.keys("l"), lone, "the selected letter alone, bold, narrower still", 50);
       // Both windows still name their file first on the header.
-      const row = s.screen().find((r) => /Read {2}Lens {2}Source/.test(r))!;
+      const row = s.screen().find((r) => /\bR {2}L {2}S\b/.test(r))!;
       s.expect((row.match(/meetings/g) ?? []).length === 2, `both windows' names on the header row: ${row}`);
       await s.keys("escape");
     },
@@ -231,7 +227,6 @@ export const WINDOW_HEADER: Check[] = [
       const enabled = modeButton(s, "Lens")!.style.fg;
       await leader(s, "n", "l");
       await s.status("LENS");
-      await s.message("the lens: the YAML around the cursor"); // a data file's own format, not "markdown"
       await s.keys("i");
       await s.status("INSERT");
       await s.type(": [x");
@@ -270,16 +265,15 @@ export const WINDOW_HEADER: Check[] = [
       await s.status("SOURCE");
       await s.until(() => selectedMode(s).join() === "Source", WAIT, "Source selected: code shown as source");
       await clickMode(s, "Read");
-      await s.message("greeter.py has no rendered view: source mode");
+      await s.status("READ │ NORMAL");
       // A note in the same window: Read again; the enabled buttons' colour, to tell the disabled ones by.
       await open(s, "README.md");
       await s.until(() => selectedMode(s).join() === "Read", WAIT, "Read selected on a note");
       const enabled = modeButton(s, "Lens")!.style.fg;
       await s.keys("ctrl+o");
       await opened(s, "tools/greeter/greeter.py");
-      await s.until(() => selectedMode(s).join() === "Source", WAIT, "Source selected on the code again");
-      for (const label of ["Read", "Lens"] as const)
-        s.expect(modeButton(s, label)!.style.fg !== enabled, `${label} disabled on the code: drawn as an enabled one`);
+      await s.until(() => selectedMode(s).join() === "Source", WAIT, "Source default restored on the code again");
+      s.expect(modeButton(s, "Lens")!.style.fg === enabled, "lens remains available on code opened in SOURCE");
     },
   },
   {
@@ -308,7 +302,7 @@ export const WINDOW_HEADER: Check[] = [
       await clickMode(s, "Lens", 1);
       await s.status("LENS");
       s.expect(selectedMode(s, 0).join() === "Read", `the upper window still Read: ${selectedMode(s, 0)}`);
-      s.expect(selectedMode(s, 1).join() === "Lens", `the lower window in the lens: ${selectedMode(s, 1)}`);
+      s.expect(selectedMode(s, 1).join() === "Read,Lens", `the lower window in the lens: ${selectedMode(s, 1)}`);
     },
   },
   {
@@ -334,11 +328,7 @@ export const WINDOW_HEADER: Check[] = [
       // Which-key over the header: a click where Lens is goes nowhere.
       const at = modeButton(s, "Lens")!;
       await s.keys("space");
-      await s.until(
-        () => !s.statusLine().includes("READ"),
-        WAIT,
-        "the leader pending, its popup up (no mode on the chip)",
-      );
+      await s.until(() => /(?:␣|SPC)/.test(s.statusLine()), WAIT, "the leader pending beside the view and mode");
       await s.send(`\x1b[<0;${at.x + 1};${at.y + 1}M`);
       await s.send(`\x1b[<0;${at.x + 1};${at.y + 1}m`);
       await s.settle();
@@ -381,8 +371,8 @@ export const WINDOW_HEADER: Check[] = [
       await s.type(":[x");
       await s.settle();
       // Mid-typing, neither header judges it: Read lit in both.
-      for (const w of [0, 1])
-        s.expect(modeButton(s, "Read", w)!.style.fg === enabled, `window ${w}'s Read dimmed mid-typing`);
+      s.expect(modeButton(s, "Read", 0)!.style.fg === enabled, "left Read stays available mid-typing");
+      s.expect(modeButton(s, "Read", 1)!.style.bold, "right READ stays selected alongside LENS mid-typing");
       // The left's Read: ending the right's typing says the file doesn't parse; the click says it no more.
       await clickMode(s, "Read", 0);
       await s.message(BROKEN);
@@ -458,7 +448,7 @@ export const WINDOW_HEADER: Check[] = [
       // That window focused: to the top (no heading over the cursor) and the bottom (under nested ones), the letters
       // stay — the room the breadcrumb keeps is the file's, not the cursor's (HDR-D7).
       const row = s.screen().find((r) => /\bR {2}L {2}S\b/.test(r))!;
-      const narrowLeft = row.search(/\bR {2}L {2}S\b/) < row.search(/Read {2}Lens {2}Source/);
+      const narrowLeft = [...row.matchAll(/\bR {2}L {2}S\b/g)].length > 1;
       await clickMode(s, "Read", narrowLeft ? 0 : 1); // its own selected Read: the narrow window focused, nothing else
       for (const keys of [["g", "g"], ["shift+g"], ["g", "g"]]) {
         await s.keys(...keys);
@@ -505,7 +495,7 @@ export const WINDOW_HEADER: Check[] = [
       await s.retry(() => s.keys("l"), letters, "the letters, as a window narrows", 50);
       await s.keys("escape");
       const row = s.screen().find((r) => /\bR {2}L {2}S\b/.test(r))!;
-      const narrowLeft = row.search(/\bR {2}L {2}S\b/) < row.search(/Read {2}Lens {2}Source/);
+      const narrowLeft = [...row.matchAll(/\bR {2}L {2}S\b/g)].length > 1;
       await clickMode(s, "Read", narrowLeft ? 0 : 1); // its own selected Read: the narrow window focused, nothing else
       // Its source has no headings where its rendered view has the parse's: the room the breadcrumb keeps is its own
       // (HDR-D8), so the letters stay.
@@ -530,6 +520,7 @@ export const WINDOW_HEADER: Check[] = [
       await s.keys("ctrl+w", "s");
       await s.until(() => modeButton(s, "Read", 1) !== null, WAIT, "two headers, stacked");
       await clickMode(s, "Read", 0); // the upper window focused, by its own selected Read
+      await s.until(() => modeButton(s, "Source", 1) !== null, WAIT, "the lower SOURCE target visible before typing");
       const lower = modeButton(s, "Source", 1)!;
       // At the end of the upper window's last row, a link begun: its popup hangs below, over the lower header.
       await s.keys("shift+l", "shift+a", "shift+a");

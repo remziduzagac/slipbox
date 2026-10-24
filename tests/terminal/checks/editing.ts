@@ -115,12 +115,13 @@ export const EDITING: Check[] = [
         await ready(s);
         await source(s);
         await s.keys("i");
-        await s.status("INSERT");
+        await s.status("SOURCE │ INSERT");
         await s.type("escape probe");
         await s.send("\x1b");
         await s.until(() => !s.statusLine().includes("INSERT"), 1500, "raw Escape leaves INSERT before another key");
+        await s.status("SOURCE │ NORMAL");
         await s.keys("v");
-        await s.status("VISUAL");
+        await s.status("SOURCE │ VISUAL");
         await s.keys("escape");
         s.expect(!s.statusLine().includes("VISUAL"), "Escape leaves VISUAL before another key");
         await s.keys("escape");

@@ -8,16 +8,15 @@ import { truncate, stringWidth } from "../core/width.ts";
 import { MODES, viewMode } from "./modes.ts";
 
 /** The buttons' forms, widest first: every label, every letter, the selected one's letter alone; none. */
-export type ModeForm = "full" | "letters" | "selected" | "none";
+export type ModeForm = "letters" | "selected" | "none";
 
 /** A label, or its letter, as drawn: a space either side. */
-const labelOf = (m: (typeof MODES)[number], form: ModeForm) => ` ${form === "full" ? m.label : m.label[0]} `;
+const labelOf = (m: (typeof MODES)[number]) => ` ${m.label[0]} `;
 
 /** Each form's width: every label, every letter, one letter (the widest, whichever is selected). */
 const FORM_WIDTH: Record<Exclude<ModeForm, "none">, number> = {
-  full: MODES.reduce((a, m) => a + stringWidth(labelOf(m, "full")), 0),
-  letters: MODES.reduce((a, m) => a + stringWidth(labelOf(m, "letters")), 0),
-  selected: Math.max(...MODES.map((m) => stringWidth(labelOf(m, "selected")))),
+  letters: MODES.reduce((a, m) => a + stringWidth(labelOf(m)), 0),
+  selected: Math.max(...MODES.map((m) => stringWidth(labelOf(m)))),
 };
 
 /**
@@ -27,7 +26,6 @@ const FORM_WIDTH: Record<Exclude<ModeForm, "none">, number> = {
 export function modeButtons(room: number, least: number): ModeForm {
   // The breadcrumb's columns are those between the name and the buttons less one at each end.
   const keep = least > 0 ? least + 2 : 0;
-  if (FORM_WIDTH.full + keep <= room) return "full";
   if (FORM_WIDTH.letters + keep <= room) return "letters";
   return room >= FORM_WIDTH.selected ? "selected" : "none";
 }
@@ -101,12 +99,20 @@ function drawModeButtons(
   const now = viewMode(view);
   const index = app.tab!.views.indexOf(view);
   for (const m of MODES) {
-    const selected = m.mode === now;
-    if (form === "selected" && !selected) continue;
+    const selected = m.mode === "rendered" ? !view.source : m.mode === now;
+    if (form === "selected" && m.mode !== (view.source ? "source" : "rendered")) continue;
     const disabled = !selected && !app.lens.canSwitch(view, m.mode);
-    const role = selected ? "topbar_button_on" : disabled ? "topbar_button_disabled" : "topbar_button";
+    const role = selected
+      ? m.mode === "source"
+        ? "view_source"
+        : m.mode === "live"
+          ? "view_lens"
+          : "view_read"
+      : disabled
+        ? "topbar_button_disabled"
+        : "topbar_button";
     const id = `mode:${index}:${m.id}`;
     // Hovered only where a click switches: the selected one's changes nothing, a disabled one's says why.
-    x += button(app, c, x, { y, h: 1 }, labelOf(m, form), role, id, geo, bg, Infinity, !selected && !disabled);
+    x += button(app, c, x, { y, h: 1 }, labelOf(m), role, id, geo, bg, Infinity, !selected && !disabled);
   }
 }

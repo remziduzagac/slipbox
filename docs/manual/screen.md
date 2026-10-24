@@ -342,30 +342,24 @@ scratch, a diff).
 
 ### Read, Lens and Source
 
-The three buttons show how the window shows its file, and switch it:
+The header has three compact buttons, `R`, `L` and `S`, each padded for clicking:
 
-| Button | The window shows | Keys |
+| Button | Action | Keys |
 | --- | --- | --- |
-| **Read** | the note rendered, as a page; code as a document | `esc` closes the lens; `ctrl+k` leaves source mode |
-| **Lens** | the note rendered, with the lens open on the block the cursor is in | `space n l` |
-| **Source** | the file as written: a note's Markdown | `ctrl+k`, `space n v` |
+| **R** (READ) | Shows the file rendered, closing the lens | `esc` closes the lens; `ctrl+k` leaves SOURCE |
+| **L** (LENS) | Toggles the lens within READ | `space n l` |
+| **S** (SOURCE) | Shows the file as written | `ctrl+k`, `space n v` |
 
-The bright one is the window's mode, the same one the status line's chip names. Click another to switch to it straight
-away. From Source, Lens opens the lens without showing the page first. Clicking the bright one changes nothing.
+READ and SOURCE are a radio pair: one stays selected. With the lens open, both READ and LENS are lit.
+Clicking LENS in SOURCE opens READ with the lens on. Clicking LENS again closes it, leaving READ.
+The view stays visible while you type or select. A click stops typing first; your unsaved changes stay.
+Successful switches are silent. An unavailable READ or lens button is dim and italic; clicking it explains why.
+Plain text, unsupported code and data that does not parse have only SOURCE. A rendering default set to false
+opens SOURCE while keeping supported READ and its lens available.
 
-While you type, the button of the mode you're typing in stays bright, though the chip says `INSERT`. A click stops
-typing first, as every click does. Your unsaved changes stay.
-
-A button in italics, fainter than the others, is a mode the file can't be shown in. A plain text file, code in a
-language without the code view (or with `render.code = "source"`), and a data file that doesn't parse have only Source.
-A click on one of those says why. A data file you've changed since slipbox last checked it keeps Read and Lens lit: the
-click finds out, and says so if it doesn't parse.
-
-In a narrow window, the breadcrumb folds first, keeping room for the heading the cursor is in. Then the buttons shorten
-to `R` `L` `S`, and at last only the bright one is left. Which of these a window shows depends on its width, and in a
-split on its file's name, never on where the cursor is or the mode: the buttons stay put as you move and switch.
-
-The command palette has them too: Read mode, Lens mode and Source mode.
+In a narrow window the breadcrumb folds, then only the selected view's letter remains. Button positions depend
+on the window's width and file name, keeping them steady as you move the cursor.
+The command palette has Read view, Toggle lens and Source view too.
 
 ### The breadcrumb
 
@@ -382,23 +376,10 @@ In a data file, the breadcrumb shows its sections and keys. In a code file, it s
 
 The status line describes the file in the focused window. From the left:
 
-- **The mode**, in a coloured chip:
-
-  | Chip | What has the keys |
-  | --- | --- |
-  | `READ` | the note, drawn as a page |
-  | `SOURCE` | the note's Markdown, in source mode |
-  | `LENS` | the note, with the lens open on the block being edited |
-  | `INSERT` | typing |
-  | `VISUAL`, `V-LINE` | a selection, by character or by whole rows |
-  | `FILES` | the left panel: the explorer or the history |
-  | `GIT` | the left panel: source control, the git panel |
-  | `OUTLINE`, `FOOTNOTES`, `INFO` | the right panel's view |
-  | `PROBLEMS` | the Problems panel |
-  | `RESIZE` | resize mode |
-
-  While you're in the middle of a key sequence, the chip shows what you've pressed so far instead: `␣ l` after
-  `space l`, `C-w` after `ctrl+w`, `2d` after `2 d`.
+- **The view and mode**, in two coloured segments: `READ │ NORMAL`, `READ·LENS │ INSERT` or `SOURCE │ VISUAL`.
+  The first segment stays visible while typing or selecting. The second is vim's `NORMAL`, `INSERT`, `VISUAL` or
+  `V-LINE`. In ASCII the divider is `|` and the lens label is `READ-LENS`. Panel focus (`FILES`, `GIT`, `INFO`,
+  `OUTLINE`, `FOOTNOTES`, `PROBLEMS`), `RESIZE` and pending keys appear alongside them.
 - **Where you are**, dimmed, only while the top bar doesn't show it (hidden, or too narrow): the vault and its branch,
   as [the top bar](#the-top-bar) says them, without the `◈` (`~/notes · main`, `~ › notes`, `Elsewhere`). Click it for
   the branches. While the top bar shows, it says where you are, and the status line leaves the room to the file's path.

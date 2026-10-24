@@ -42,8 +42,8 @@ While it has the keys:
 | `enter` | Open the note in a tab (or the tab showing it). Fold or unfold a folder. Go into another vault |
 | `l`, `right` | Open the note in a tab. Unfold a folder or a vault |
 | `h`, `left` | Fold a folder, or go to the folder holding the selection |
-| `z` | Zoom in: the view shows the selected folder (on a file, its folder) |
-| `-` | Zoom out: the view shows the folder holding this one |
+| `z` | Zoom in: the explorer shows the selected folder (on a file, its folder) |
+| `-` | Zoom out: the explorer shows the folder holding this one |
 | `o` | Open the note in this window, in place of the one it shows |
 | `s` | Open it in the other window of a split, splitting first |
 | `/` | Filter: type to narrow the tree, the folders kept. `enter` opens, `esc` clears |
@@ -58,47 +58,49 @@ With the mouse:
 
 - A click on a folder folds or unfolds it.
 - A click on a note selects it, and a double click opens it in a tab.
-- A click on a folder in the breadcrumb zooms the view to it (below).
+- A click on a folder in the breadcrumb zooms the explorer to it (below).
 - The explorer's title has two buttons: a new note and a new folder.
 - While the explorer has the keys, the selected row has a button at its end, `…`. It opens the same menu as `.`, with
   every action this chapter describes, each with its key.
 
 A row ends with marks: what slipbox has indexed, and what git sees changed ([below](#a-rows-marks)).
 
-### The view
+<a id="the-view"></a>
 
-The explorer shows your files as one tree, from `/` down. What you see of it is the view: one folder and what's in it.
+### The zoom
 
-The view starts at the folder you opened. `slipbox ~/work/kestrel/docs` shows `docs`, in the vault `kestrel`. Opened on
+The explorer shows your files as one tree, from `/` down. What you see of it is the zoom: one folder and what's in it.
+
+The zoom starts at the folder you opened. `slipbox ~/work/kestrel/docs` shows `docs`, in the vault `kestrel`. Opened on
 a note, it starts at the note's vault.
 
-Above the tree, a breadcrumb says where the view is:
+Above the tree, a breadcrumb says where the zoom is:
 
 ```text
 ~ › work › ◈ kestrel › docs ›
 ```
 
-- `~` is your home folder. With the view outside it, the breadcrumb starts at `/`, and your home folder has its name.
+- `~` is your home folder. With the zoom outside it, the breadcrumb starts at `/`, and your home folder has its name.
 - A vault has its icon. The vault you are in is highlighted.
-- A click on a folder in it zooms the view to that folder.
+- A click on a folder in it zooms the zoom to that folder.
 
 You zoom in and out yourself:
 
 - `z` zooms in on the selected folder. On a file, it zooms in on the file's folder.
 - `-` zooms out a level. The folder you were in stays unfolded and selected. At `/`, there's nothing above, and
   slipbox says so.
-- After zooming out, the breadcrumb keeps the folders you came from, dimmed after the view. A click on one zooms back
+- After zooming out, the breadcrumb keeps the folders you came from, dimmed after the zoom. A click on one zooms back
   in.
 
-The view also zooms out by itself when you go somewhere outside it: you open a note there, you follow a link to a file
+The zoom also zooms out by itself when you go somewhere outside it: you open a note there, you follow a link to a file
 there, or you go into another vault. It becomes the folder holding both places, with only the paths to the two
-unfolded, and the breadcrumb leads on to where you went. It never zooms in by itself. Going into a vault the view
-already holds leaves the view where it is, the folders down to the vault unfolded.
+unfolded, and the breadcrumb leads on to where you went. It never zooms in by itself. Going into a vault the zoom
+already holds leaves the zoom where it is, the folders down to the vault unfolded.
 
 Hidden folders aren't in the tree. So going into a vault inside one, such as an agent's worktree in
-`.claude/worktrees/`, moves the view to that vault.
+`.claude/worktrees/`, moves the zoom to that vault.
 
-A folder you rename or move takes the view along when the view is on it. One deleted, or renamed outside slipbox,
+A folder you rename or move takes the zoom along when the zoom is on it. One deleted, or renamed outside slipbox,
 gives way to the nearest folder still there, and slipbox says so.
 
 Zoomed out past the vault you are in, the explorer lists folders one level at a time:
@@ -124,7 +126,7 @@ minutes. It's read again a minute later, not before; a folder `l` refuses is rea
 next `l` once you may read it. Another disk mounted in a folder, such as a network share, is listed by its name alone:
 nothing of it is read until you unfold it.
 
-[Working across folders and vaults](../guides/vaults.md) shows the view at work, with examples.
+[Working across folders and vaults](../guides/vaults.md) shows the zoom at work, with examples.
 
 ### A row's marks
 
@@ -277,7 +279,7 @@ explorer's selected folder instead, or beside the selected file. The question sa
 - **`.md` is added**, unless the name ends in a data or code file's extension slipbox knows (`.toml`, `.json`,
   `.py`…). So `tasks.toml` is made as it is written.
 - **A new note starts with its title,** `# coffee`. It opens with you typing on the line after the blank one, in the
-  lens. With `editor.edit_in = "source"`, it opens in source mode instead.
+  lens. With `editor.edit_in = "source"`, it opens in SOURCE view instead.
 - **A name that is already there** opens that file, and makes nothing.
 - **A name where slipbox would never find the note** is refused: in a folder tools fill that `.gitignore` leaves out,
   or deeper in one with no note at its top, such as `target/debug/plan`.
