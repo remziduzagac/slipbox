@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { PreparedExport, ExportSpool } from "../src/core/export/spool.ts";
 import { ExportJob } from "../src/core/export/jobs.ts";
@@ -65,8 +65,9 @@ test("the folder exported to is remembered once the file is written: the window 
     await held;
     return previous.call(this);
   };
+  let pending: Promise<void> | undefined;
   try {
-    const pending = h.app.exporter.write(["exported.md"], formatFor("docx")!, join(root, "out", "exported.docx"));
+    pending = h.app.exporter.write(["exported.md"], formatFor("docx")!, join(root, "out", "exported.docx"));
     for (const t = Date.now(); !cleaning && Date.now() - t < 25_000; ) await Bun.sleep(10);
     expect([cleaning, existsSync(join(root, "out", "exported.docx"))]).toEqual([true, true]);
     expect(h.app.messages.at(-1)?.text).not.toStartWith("exported");
@@ -80,9 +81,27 @@ test("the folder exported to is remembered once the file is written: the window 
     await pending;
     expect(h.app.messages.at(-1)?.text).toBe("exported exported.md to out/exported.docx (Word (.docx))");
   } finally {
+    // Let go and over, whatever failed: nothing of it left to run into the next test.
     release();
+    await pending;
     PreparedExport.prototype.dispose = previous;
   }
+});
+
+test("an export that can't be written isn't kept as where you exported last", async () => {
+  const root = makeVault();
+  writeFileSync(join(root, "exported.md"), "# Export\n\nOne\n");
+  mkdirSync(join(root, "ro"));
+  const h = await harness({ root, open: "exported.md" });
+  chmodSync(join(root, "ro"), 0o555);
+  try {
+    await h.app.exporter.write(["exported.md"], formatFor("docx")!, join(root, "ro", "exported.docx"));
+  } finally {
+    chmodSync(join(root, "ro"), 0o755);
+  }
+  expect(h.app.messages.at(-1)?.text).toStartWith("export: ro/exported.docx not written — ");
+  // The export over, its staging cleared: nothing kept.
+  expect(h.app.exporter.lastDir()).toBeNull();
 });
 
 test("Cancel export stops every export running, none written; with none running, it says so", async () => {

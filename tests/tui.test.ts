@@ -11762,8 +11762,6 @@ describe("vaults in the TUI (17.x)", () => {
       expect(await until(() => h.app.messages.at(-1)!.level === "error")).toBe(true);
       expect(h.app.messages.at(-1)!.text).toStartWith("export: ro/rep.docx not written — ");
       expect(readdirSync(join(root, "ro"))).toEqual([]);
-      // Nor remembered as where you exported last.
-      expect(h.app.exporter.lastDir()).toBeNull();
     } finally {
       chmodSync(join(root, "ro"), 0o755);
     }

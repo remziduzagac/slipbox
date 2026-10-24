@@ -25,8 +25,9 @@ the cleanup is slow, the window opened in between falls back to beside the note.
 - The folder is remembered as soon as `publish` returns, before the staging is cleared: a test holds the cleanup back,
   opens the window again meanwhile and expects the last export's folder. It fails without the fix.
 - The places test waits for the export to end ("exported … to"), not for the file, as the other export tests do.
-- A failed or cancelled export still remembers nothing: unit tests, and a terminal check that drives both after an
-  export that was written.
+- A terminal check holds the cleanup the same way (a script of the tests' preloaded into slipbox) and opens the window
+  meanwhile.
+- A failed or cancelled export still remembers nothing: unit tests, and terminal checks that drive both.
 - The terminal check that reopens the window after an export waits for the export to end, as the places test does.
 - design/export.md § Asking for one says when the folder is remembered.
 
@@ -68,7 +69,8 @@ the cleanup is slow, the window opened in between falls back to beside the note.
 - 2026-10-24: Found while trying it: on `dev` the "exported … to" message and `export.json` came in the same tick, so
   someone reading the screen never saw them disagree. The window opened while it said `writing…` opened at the
   previous folder, and it still does until the file is in place. The fix helps a slow cleanup (the file there, the
-  folder not yet kept) and a quit during the cleanup (the folder now kept). Too small to notice: no CHANGELOG line.
+  folder not yet kept) and slipbox killed during the cleanup (the folder kept now); a quit waited for the cleanup on
+  `dev` too (nothing in the TUI calls `process.exit`). Too small to notice: no CHANGELOG line.
 - 2026-10-24: Fixed. `Exporter.write` keeps the folder in `export.json` as soon as `publish` returns, in the `try` and
   in its own `try {} catch {}`, before the `finally` disposes of the staging; the message stays where it was. The
   places test waits for "exported … to", as the other export tests in its block do.
@@ -92,16 +94,49 @@ the cleanup is slow, the window opened in between falls back to beside the note.
   there. A 24,000-paragraph note as a PDF into `~/work`, cancelled from the palette while `writing…`: no file,
   `export.json` still Downloads. The same PDF left to finish, a loop in the shell sending `space n o enter` the
   moment `~/work/long.pdf` appeared: the window at `~/work/`, "Last export" marked. A cleanup held back long enough to
-  be met live needs a hook in slipbox; the unit test holds it back instead.
-- 2026-10-24: The maintainer's choice: no test hook in slipbox to slow the cleanup for a terminal check. The held
-  cleanup is the unit test's; the terminal checks drive the export, the reopen, and the failed and cancelled exports.
+  be met live needs it held from inside slipbox's process.
+- 2026-10-24: The maintainer's choice: no test hook in slipbox to slow the cleanup for a terminal check. (Asked on a
+  wrong premise, corrected below: a check can hold it with a script of the tests' preloaded, no code in slipbox.)
 - 2026-10-24: Typecheck, lint and `check:docs` clean. The scratch home in `tmp/issue/home` held the reference set's
   broken TypeScript (`work/kestrel`), which `tsc` read; deleted, rebuilt elsewhere if needed.
-- 2026-10-24: Reviewed before the pull request, twice and independently: a fresh Claude reviewer (Codex's part, Codex
-  at its usage limit) and `/code-review`. Neither found a fault. Checked and holding: a cleanup that throws still
-  leaves the folder kept and the message shown, as on `dev`; two exports at once, the last published wins (on `dev`,
-  the last cleaned up); a quit after `publish` keeps the folder now. The new terminal check's last `see` reads the
-  window opened again (the format list hides the one before). Not taken: awaiting `pending` when an assertion fails
-  in the held-cleanup test, which the file's other tests don't either. For the pull request: the row the terminal
-  checks can't force (the held cleanup) said, and the failed and cancelled exports named as cases its live tries
-  added, tests only.
+- 2026-10-24: Draft pull request #67 opened. Its body first said the review found nothing: that was taken from
+  summaries that came in before the two reviews had finished; corrected on the pull request once their reports came.
+- 2026-10-24: Review, round 1: a fresh Claude reviewer (Codex's part, Codex at its usage limit) and `/code-review`, each
+  on its own, on `d98bc1d` and `57898e9`. Both found the fix itself right on every path: success; a failure or a cancel
+  in `prepare` or `publish`; a quit or cancel between them; a cleanup that throws (warned, folder kept, as on `dev`);
+  the root changed meanwhile (`graph.loc`); two exports at once (the last published wins; on `dev`, the last cleaned
+  up). Verified, and fixed:
+  - A terminal check of the held cleanup needs no code in slipbox: the harness preloads a script of the tests' into
+    slipbox's process (`preload`), as `tests/terminal/spell-hold.ts` does. Asked again with that premise; the
+    maintainer chose the check. `tests/terminal/export-hold.ts` holds the first export's `dispose` until the check
+    writes a file, its state in another; the check "export: where you exported last — kept once the file is written,
+    so the window opened while its staging is cleared opens there; one that can't be written leaves it as it was" opens
+    the window during the hold (at `out/`, "Last export"), then exports into a folder it can't write. Listed in
+    `scripts/ci-scope.ts`'s `SAMPLES_FOR` (and `tests/distribution.test.ts`), named in design/testing.md.
+  - "export: the window's keys …" looked for `~/work/q3/` anywhere on the screen, which the "exported … to
+    ~/work/q3/home.docx" message satisfies, and waiting for that message made it certain to be there: it now looks for
+    the window's folder at its top (`/[│┃] ~\/work\/q3\/ +[│┃]/`).
+  - The failed export's `lastDir()` check in tests/tui.test.ts ran as soon as the error showed, before the cleanup
+    ended, so a folder kept after the cleanup would pass it: moved to tests/export-jobs-tui.test.ts, "an export that
+    can't be written isn't kept as where you exported last", the `write` awaited.
+  - The held-cleanup test awaits its export in `finally`, so nothing of it runs into the next test when it fails.
+  - The cancel's case was a copy of "notes: an export cancelled"'s note and steps: that check now cancels an export
+    into `later/` and finds the window beside the note, no "Last export"; the new check has no cancel of its own.
+  - The quit claim (above, corrected): `dev` kept the folder on a quit too.
+  - design/export.md said the folder is kept "once the files are in place", but `publish`'s own `finally` clears its
+    temporaries after the last rename, and said a cancelled export leaves it, though a cancel during the cleanup
+    doesn't: it now says "as soon as publication returns" and "cancelled before it's written".
+- 2026-10-24: Round 1, not taken: `/code-review`'s "a quit during the cleanup keeps the folder now, untested" (not new:
+  see above); "the held test's 25 s poll outlasts bun's 5 s timeout" (the harness sets 30 s, `tests/tui-harness.ts`);
+  "the cancel check races a fast runner" (the same timing as the cancel check on `dev`, kept in one place now);
+  `outside-and-code.ts` over 1,500 lines (1,539 on `dev`, 1,517 now; `check:size` reads `src/`); skipping `publish`'s
+  `rm` of temporaries already renamed (core code the CLI shares, and only a test polling for the file meets that gap).
+  `/code-review`'s "end the export when `publish` returns" (the job dropped, the message shown then, so a cancel during
+  the cleanup isn't silently taken, and a cleanup warning isn't replaced at once): on `dev` too; the maintainer chose a
+  follow-up issue, #68.
+- 2026-10-24: Round 1's fixes mutation-checked, each undone after: `dev`'s `exporter.ts` fails the held-cleanup unit
+  test and the new terminal check; the folder kept before the export starts fails the awaited failed-export test, the
+  cancel unit test, the new check (at the failed export) and the cancel check; kept after the cleanup, always, fails
+  all of those. Ran: tests/export-jobs-tui.test.ts (5 pass); distribution's "a pull request runs the tests …"; the
+  places test and "an export that can't be written" in tests/tui.test.ts; the terminal checks `export:`, `notes:
+  exported`, `notes: an export cancelled` (12/12, `SLIPBOX_TERMINAL_JOBS=2`); the typecheck, the lint, `check:docs`.
