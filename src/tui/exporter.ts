@@ -202,7 +202,7 @@ export class Exporter {
             exportTarget(graph, rels[0]!, format, target, graph.root, force);
           },
           controller.signal,
-          // Over once the document is in place: a cancel from then on finds none running (#68).
+          // Over once a cancel can't stop it, its document's rename begun: from then on, none is running (#68).
           () => this.jobs.delete(controller),
         );
         // Where it went, for "Where you exported last": as soon as it's there, not once its staging is cleared, so the

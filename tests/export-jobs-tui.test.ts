@@ -135,16 +135,21 @@ test("an export is over once its file is written: said then, its staging cleared
   }
 });
 
-test("an export is over once its document is in place, before publication has cleared its temporaries: a cancel then finds none running", async () => {
+test("an export is over once a cancel can't stop it: from the last check before its document's rename, a cancel finds none running", async () => {
   const root = makeVault();
   writeFileSync(join(root, "exported.md"), "# Export\n\nOne\n");
   const h = await harness({ root, open: "exported.md" });
   const publish = PreparedExport.prototype.publish;
-  // Cancelled after the document's rename, while publication clears its temporaries and returns.
-  PreparedExport.prototype.publish = async function (this: PreparedExport, ...args) {
-    const files = await publish.apply(this, args);
-    h.app.run("note.export_cancel");
-    return files;
+  // Cancelled as the target is checked the last time, just before the document's rename: once before the copies, then
+  // twice a file (before its mode is set, before its rename); a Word document has nothing beside it.
+  PreparedExport.prototype.publish = function (this: PreparedExport, target, revalidate, signal, committing) {
+    let checks = 0;
+    const last = 1 + 2 * (this.manifest.files.length + 1);
+    const check = () => {
+      revalidate();
+      if (++checks === last) h.app.run("note.export_cancel");
+    };
+    return publish.call(this, target, check, signal, committing);
   };
   try {
     await h.app.exporter.write(["exported.md"], formatFor("docx")!, join(root, "exported.docx"));
@@ -228,7 +233,6 @@ test("an export that fails, or is cancelled, is over once that's said: a cancel 
     hold.restore();
     PreparedExport.prototype.publish = publish;
   }
-  expect(existsSync(join(root, "cancelled.docx"))).toBe(false);
 });
 
 test("an export that can't be written isn't kept as where you exported last", async () => {

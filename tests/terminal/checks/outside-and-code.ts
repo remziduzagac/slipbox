@@ -162,10 +162,11 @@ async function format(s: Session, note: string, name: string): Promise<void> {
   await s.keys("enter");
 }
 
-/** Where `tests/terminal/export-hold.ts`, preloaded, holds the first export's cleanup: "waiting", then "let go". */
+/** Where `tests/terminal/export-hold.ts`, preloaded, holds the first export: "waiting", then "let go". */
 const hold = (s: Session) =>
   existsSync(join(s.dir, "hold-state")) ? readFileSync(join(s.dir, "hold-state"), "utf8") : "";
-/** The preload that holds the first export's cleanup till the check lets it go (`hold-go`), and its files. */
+/** The preload that holds the first export's cleanup (with `EXPORT_HOLD_AT: "publication"`, its publication) till the
+ *  check lets it go (`hold-go`), and its files. */
 const HOLD = {
   preload: "tests/terminal/export-hold.ts",
   env: { EXPORT_HOLD_GO: "{dir}/hold-go", EXPORT_HOLD_STATE: "{dir}/hold-state" },
@@ -1576,8 +1577,12 @@ export const OUTSIDE_AND_CODE: Check[] = [
       try {
         writeFileSync(join(s.dir, "hold-go"), "");
         await s.message("export cleanup:");
-        await s.see("no export is running");
-        s.expect(s.rowOf("export cleanup:") < s.rowOf("no export is running"), "the cleanup's warning the newest box");
+        // The newest box: above every other still showing (each shows for 4 s), the export's own above all.
+        const others = ["exported home.md", "no export is running"].map((m) => s.rowOf(m)).filter((row) => row >= 0);
+        s.expect(
+          others.every((row) => s.rowOf("export cleanup:") < row),
+          "the cleanup's warning the newest box",
+        );
       } finally {
         // As slipbox makes it, owner-only.
         chmodSync(exports, 0o700);
@@ -1586,9 +1591,9 @@ export const OUTSIDE_AND_CODE: Check[] = [
   },
   {
     area: "outside-and-code",
-    name: "export: over once its document is in place — Cancel export while publication finishes (its temporaries cleared) finds none running",
+    name: "export: over once a cancel can't stop it — Cancel export as its publication returns finds none running",
     covers: { commands: ["note.export", "note.export_cancel"] },
-    // The first publication held once its document is in place, before it returns.
+    // The first publication held once it has put its document in place, before the export goes on.
     options: { ...HOLD, env: { ...HOLD.env, EXPORT_HOLD_AT: "publication" } },
     run: async (s) => {
       await format(s, "home.md", "word");

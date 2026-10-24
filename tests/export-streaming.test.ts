@@ -116,6 +116,63 @@ test("publication yields to cancellation before replacing the destination and re
   await prepared.dispose();
 });
 
+test("publication says when a cancel can no longer stop it: once, as the document's rename begins; never when it doesn't get there", async () => {
+  const dir = own(await PreparedExport.directory());
+  const dest = own(fs.mkdtempSync(join(tmpdir(), "export-commit-")));
+  const target = join(dest, "report.md");
+  const spool = new ExportSpool(dir);
+  await spool.document(async (sink) => sink(new TextEncoder().encode("new")));
+  spool.attachment("picture.png", (sink) => sink(new Uint8Array([1, 2, 3])));
+  const prepared = await PreparedExport.take(dir, spool.manifest);
+  try {
+    // Told after the picture is in place, the document not yet; the signal never read again.
+    const told: string[][] = [];
+    const abort = new AbortController();
+    await prepared.publish(
+      target,
+      () => {},
+      abort.signal,
+      () => {
+        told.push(
+          fs
+            .readdirSync(dest)
+            .filter((f) => !f.endsWith(".tmp"))
+            .sort(),
+        );
+        abort.abort();
+      },
+    );
+    expect(told).toEqual([["picture.png"]]);
+    expect(fs.readFileSync(target, "utf8")).toBe("new");
+    // Stopped before it gets there, or its target refused on the way: never told.
+    let never = 0;
+    const stopped = new AbortController();
+    stopped.abort();
+    await expect(
+      prepared.publish(
+        target,
+        () => {},
+        stopped.signal,
+        () => never++,
+      ),
+    ).rejects.toThrow();
+    let checks = 0;
+    await expect(
+      prepared.publish(
+        target,
+        () => {
+          if (++checks === 2) throw Error("destination changed");
+        },
+        undefined,
+        () => never++,
+      ),
+    ).rejects.toThrow("changed");
+    expect(never).toBe(0);
+  } finally {
+    await prepared.dispose();
+  }
+});
+
 test("destination policy is checked again after copying, before any document is replaced", async () => {
   const dir = own(await PreparedExport.directory());
   const dest = own(fs.mkdtempSync(join(tmpdir(), "export-race-")));

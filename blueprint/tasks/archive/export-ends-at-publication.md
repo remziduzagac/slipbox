@@ -28,8 +28,9 @@ on a narrow screen, and the first of the boxes on a wide one.
   `exported … to …`: a unit test holds the cleanup back (`PreparedExport.prototype.dispose`), and fails without the fix.
 - `exported … to …` is said while the cleanup is still held, and a cleanup that fails leaves `export cleanup: …` as the
   last message: unit tests, failing without the fix.
-- The export is over as soon as its document is in place, before publication clears its temporaries and returns: a
-  cancel then says `no export is running` (a unit test cancels as publication returns).
+- The export is over as soon as a cancel can no longer stop it, its document's rename begun: a cancel from the last
+  check before that rename says `no export is running` (a unit test cancels there; a test of `publish` pins when it
+  says so).
 - An export that fails or is cancelled while it's published says why and ends then too, its cleanup after: a cancel
   during its cleanup finds none running.
 - The folder is still kept as where you exported last as soon as publication returns (T25's tests hold).
@@ -122,3 +123,45 @@ on a narrow screen, and the first of the boxes on a wide one.
 - 2026-10-24: Ran: tests/export-jobs-tui.test.ts and tests/export-streaming.test.ts (23 pass); the four checks that hold
   an export (4/4). Mutation-checked, each undone after: `publish` not calling `published` fails the new unit test;
   the TUI passing no callback fails the new check.
+- 2026-10-24: The maintainer's choice: Codex isn't used from now on. Its part (the plan's challenge, the second review,
+  a hard problem) goes to a fresh Claude reviewer, as it already did for this task's plan and its review round.
+- 2026-10-24: Draft pull request #70. Review, round 1, on `bf04c6e` (the archive commit after it): `/code-review` and a
+  fresh Claude reviewer, each on its own. The second found no bug: the code right on every path. Consolidated and
+  verified against the code; taken:
+  - A cancel during the document's rename: `publish` reads the signal for the last time before it, but told the TUI
+    only after it, so such a cancel was still taken and ignored. Reproduced (a test whose target check cancels as it's
+    made the last time, before the document's rename). The callback, now `committing`, is called right after that last
+    read, before the document's last check and rename; the job ends there. Its tests pin where: in
+    tests/export-jobs-tui.test.ts, "an export is over once a cancel can't stop it: …" (replacing the one that cancelled
+    after `publish` returned, which a callback called too late would pass); in tests/export-streaming.test.ts,
+    "publication says when a cancel can no longer stop it: …" (once, the picture beside it in place and the document
+    not; never when stopped or refused before). Both fail with the callback after the rename. The terminal check holds
+    as publication returns, which a preload can do without patching the filesystem: named so, "export: over once a
+    cancel can't stop it — Cancel export as its publication returns finds none running".
+  - The manual said a cleanup's warning comes after the export's message, and design/export.md § Asking for one said
+    so of every cleanup: not of an export stopped or failed while it's prepared (`ExportJob.prepare` removes its
+    staging itself). Both narrowed to an export whose file is written, or that reached publication.
+  - Stale wording: `export-hold.ts`'s header ("the export not yet over"), the check file's `hold` and `HOLD` docs,
+    `scripts/ci-scope.ts`'s comment and design/testing.md naming only the window's check and the cleanup's hold.
+  - The order check in "export: over once its file is written — …" compared the warning with `no export is running`,
+    always older, so it couldn't fail, and needed that box still showing: it now puts the warning above every other
+    box still showing, the export's own first.
+  - `existsSync(cancelled.docx)` after a stubbed publication that writes nothing: removed.
+- 2026-10-24: Round 1, not taken:
+  - A cancel during a failed publication's own cleanup (its temporaries' `rm`), or a failed prepare's, says `export
+    cancelled` rather than the error, the message chosen by the signal: on `dev` too; the export isn't written either
+    way, and the cancel did what it was asked.
+  - An `rm` of a temporary already renamed that fails other than ENOENT makes `publish` reject after the document is
+    in place: `not written` for a file that is. On `dev` too, and it needs the folder's search permission taken away
+    between the rename and the `rm`; skipping those `rm`s (both reviewers' suggestion, for this and for the N+1 awaits)
+    can't be tested without a hook in the filesystem, and with the job ended before the rename it no longer touches
+    the cancel. A follow-up, if wanted.
+  - Attachments left in place when a cancel lands between their renames: the design says so (§ Output streaming and
+    publication).
+  - The callback in core's API rather than `publish` returning straight after the last rename: returning sooner can't
+    close the window of the rename itself; only the point where the signal is last read can.
+  - `tests/terminal/checks/outside-and-code.ts` past 1,500 lines: 1,700 on `dev`; the rule and `check:size` are for
+    `src/` (`tests/tui.test.ts` is past 21,000).
+- 2026-10-24: Ran: tests/export-jobs-tui.test.ts and tests/export-streaming.test.ts (24 pass); the terminal checks
+  `export:`, `notes: exported`, `notes: an export cancelled` (15/15, `SLIPBOX_TERMINAL_JOBS=2`); the typecheck, the lint,
+  `check:docs`. The maintainer's call: one round, then handed over.

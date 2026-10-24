@@ -33,9 +33,9 @@ line waits for its export to finish.
 
 Export output is prepared in temporary files in slipbox's cache folder, then copied into place without holding a second
 complete copy in the interface's memory. This needs extra disk space there; the temporary files are removed when the job
-finishes or is cancelled, and a warning comes after the export's own message if they can't be. Individual pictures and
-Word's encoder can still need substantial memory. Large notes and books are not rejected by a fixed export-size or time
-limit.
+finishes or is cancelled. If they can't be removed once the file is written, a warning says so after the export's own
+message. Individual pictures and Word's encoder can still need substantial memory. Large notes and books are not
+rejected by a fixed export-size or time limit.
 
 ## Exporting a note
 

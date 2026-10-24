@@ -1,9 +1,8 @@
 // Preloaded into slipbox by a terminal check (its session's `preload`): the first export's staging is cleared
 // (`PreparedExport.dispose`) only once the check creates EXPORT_HOLD_GO, so the check can act while the export's file is
-// there and the export not yet over; the hold's state written to EXPORT_HOLD_STATE as it changes ("waiting", then
+// there and its staging not yet cleared; the hold's state written to EXPORT_HOLD_STATE as it changes ("waiting", then
 // "let go"). With EXPORT_HOLD_AT=publication, the first publication (`PreparedExport.publish`) returns only then
-// instead: its document in place, as a slow disk holds it while it clears its temporaries. A check's tool: slipbox
-// itself never reads these.
+// instead: its document in place, the export not yet told. A check's tool: slipbox itself never reads these.
 
 import { existsSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { PreparedExport } from "../../src/core/export/spool.ts";

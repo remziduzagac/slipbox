@@ -158,12 +158,13 @@ export class PreparedExport {
   }
 
   /** Copy with backpressure and cancellation, then atomically publish attachments first and the document last;
-   *  `published` is told as soon as the document is in place, before the temporaries are cleared. */
+   *  `committing` is told once `signal` is read for the last time, as the document's rename begins: from then on, a
+   *  cancel can't stop it. */
   async publish(
     target: string,
     revalidate: () => void,
     signal?: AbortSignal,
-    published?: () => void,
+    committing?: () => void,
   ): Promise<string[]> {
     if (this.disposed) throw Error("export staging disposed");
     signal?.throwIfAborted();
@@ -211,7 +212,7 @@ export class PreparedExport {
           await source.close();
         }
       }
-      for (const file of temps) {
+      for (const [i, file] of temps.entries()) {
         signal?.throwIfAborted();
         revalidate();
         const handle = await open(file.temp, "r+");
@@ -221,10 +222,10 @@ export class PreparedExport {
           await handle.close();
         }
         signal?.throwIfAborted();
+        if (i === temps.length - 1) committing?.();
         revalidate();
         await rename(file.temp, file.target);
       }
-      published?.();
       return files;
     } finally {
       for (const file of temps) {
