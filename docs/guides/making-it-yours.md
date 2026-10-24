@@ -80,7 +80,8 @@ Your own file supplies personal defaults. A vault can carry `.slipbox/config.tom
 that vault. A folder's settings cannot name programs to run, trust itself or decide network permissions.
 
 Follow [Customization](../manual/customization.md#a-folders-settings) for precedence before adding a vault file.
-A live picker/session choice and a saved config value are different; editing the file can override a session choice.
+A choice made in the TUI, in a picker or `space u u`, and a saved config value are different; editing the file can
+override a choice made in the TUI.
 
 ## Your editor
 

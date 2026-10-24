@@ -28,15 +28,19 @@ what git does, such as an interactive rebase or a cherry-pick, you run git yours
 A git repository is a vault by itself. Open any file in it, and slipbox opens the repository from its top folder.
 [Vaults, home and Elsewhere](vaults.md) explains vaults.
 
-The status line shows the vault and the branch checked out. For example, it shows `app · main` for a repository named
-`app` by its remote. A worktree of a named folder shows as its name and branch, as in `app@fix/retry`. Click them, and
-slipbox lists the branches, with pull, push and fetch first.
+The top bar shows the vault and the branch checked out. For example, it shows `◈ app · main` for a repository named
+`app` by its remote. A worktree of a named folder shows as its name and branch, as in `◈ app@fix/retry`. Click the
+branch, and slipbox lists the branches, with pull, push and fetch first. With the top bar hidden, the status line shows
+them instead, and clicking them does the same.
 
-When the branch has an upstream, the status line also shows how far the branch is ahead of it and behind it, as of the
-last fetch: `app · main ↑2 ↓1` has two commits to push and one to pull. Nothing shows when they're in step.
+When the branch has an upstream, the top bar also shows how far the branch is ahead of it and behind it, as of the last
+fetch: `app · main ↑2 ↓1` has two commits to push and one to pull. Nothing shows when they're in step.
 
-While a merge or a rebase is under way, the status line says so after the branch: `app · main merging`, or
+While a merge or a rebase is under way, the top bar says so after the branch: `app · main merging`, or
 `app · fix/retry rebasing 2/5` at the second of five commits.
+
+Each branch keeps your workspace, the tabs you had open on it: switching branches brings back the other branch's
+([Where you were](screen.md#where-you-were)).
 
 The examples in this chapter use that repository, `~/code/app`, as [Code](code.md) does.
 
@@ -172,7 +176,7 @@ the status line says `GIT`. `space g` again closes it. It works by mouse as by k
 
 At its top:
 
-- the repository and its branch, clicked as the status line's are: the branches, pull, push and fetch
+- the repository and its branch, clicked as the top bar's branch is: the branches, pull, push and fetch
 - where the branch stands: how far it's ahead of its base and behind it (`↑5 on main`), and against its upstream
   (`↑1 origin/main`), or that it has none yet (`not pushed`)
 - the message box, for a commit's message ([Committing](#committing)). Going into another vault empties it, so a
@@ -343,7 +347,7 @@ Each runs in the background, so slipbox never waits on the network. A message sa
 failed. Those words are git's English, whatever your language settings: slipbox reads them to know what happened, such
 as a pull that can't fast-forward. A remote whose name starts with `-` is refused before git runs, and said.
 
-- **Fetch** gets the remote's new commits without touching your files. The status line then shows how far the branch is
+- **Fetch** gets the remote's new commits without touching your files. The top bar then shows how far the branch is
   behind its upstream, as in `main ↓3`.
 - **Pull** brings those commits into the branch. When the branch has no commits of its own that the upstream lacks, it
   fast-forwards. When both sides have new commits, slipbox asks how to bring them together
@@ -516,9 +520,9 @@ them on the merge screen (`x` in the git panel, or `:resolve`), then drop the st
 
 ## A merge or a rebase under way
 
-While a merge or a rebase is under way, the status line says so, and the git panel has Continue, Skip (for a rebase)
+While a merge or a rebase is under way, the top bar says so, and the git panel has Continue, Skip (for a rebase)
 and Abort buttons. A cherry-pick or a revert you started in a terminal (`git cherry-pick`, `git revert`) counts too,
-when it stops at a conflict, or between the commits of a series: the status line says `cherry-picking` or
+when it stops at a conflict, or between the commits of a series: the top bar says `cherry-picking` or
 `reverting`, and the same buttons are there. `shift+r` in the git panel, or `:rebase`, offers the same:
 
 | Key | Command | What it does |
@@ -622,7 +626,7 @@ Branches at once, `⎇` and its folder; the agent's commits show there against i
 
 ### Switching branches
 
-The status line's branch, clicked, lists the local branches, with pull, push and fetch first. So does the palette's
+The top bar's branch, clicked, lists the local branches, with pull, push and fetch first. So does the palette's
 Branches. The one checked out is marked `here`.
 
 - `enter` on another branch checks it out.
@@ -644,7 +648,8 @@ files coming and going. It says `switched to branch …`.
 
 Notes that only one branch has come and go. They aren't taken for moves.
 
-Each branch keeps its own tabs. The ones you had open on a branch come back when you switch to it, as long as:
+Each branch keeps its own workspace, its tabs. The ones you had open on a branch come back when you switch to it, as
+long as:
 
 - `ui.restore_session` is on ([Configuration](configuration.md))
 - nothing is unsaved

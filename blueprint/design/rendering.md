@@ -447,7 +447,7 @@ semantic mapping and typography: strong text uses `fg`, inline code uses `fg` on
 `fg_dark`, and borders use `fg_gutter`; syntax accents come from each variant's own palette (D254, amending D96).
 
 Themes are built in (D91), hand-tuned or from base16 data (D92). In the TUI, `NO_COLOR` wins over any theme setting,
-session or picker choice (D95). Without colour the
+UI override or picker choice (D95). Without colour the
 scrollbar's track is blank so the thumb shows, and the current note or section is bold.
 
 **User themes:** any base16 or base24 scheme file (`*.yaml`, either the current `palette:` format

@@ -561,5 +561,5 @@ export class Vaults {
 
 /** A named folder moved here by hand, its state along (21.8): said once. */
 export function carried(loc: VaultLocation, from: string): string {
-  return `${rootLabel(loc)} moved here from ${tildePath(from)}: its sessions, scratch, trash and reading positions came along`;
+  return `${rootLabel(loc)} moved here from ${tildePath(from)}: its workspaces, scratch, trash and reading positions came along`;
 }

@@ -1,6 +1,6 @@
 # What is slipbox?
 
-slipbox is a terminal workspace for reading, reviewing and editing Markdown and code. Open the files you already
+slipbox is a terminal app for reading, reviewing and editing Markdown and code. Open the files you already
 have: notes, project documentation, a repository, an Obsidian vault or a zk notebook.
 
 You can use it on your own, or beside a coding agent. The full-screen interface is for you; the command line gives

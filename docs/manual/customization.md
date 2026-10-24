@@ -185,7 +185,7 @@ aliases](configuration.md#keys-aliases-and-groups),
 ## Check what applied
 
 `slipbox info` lists the settings sources for a folder. Warnings identify an unknown key or invalid value. A running
-TUI reloads saved settings; [Reloading](configuration.md#reloading) describes session choices and file precedence.
+TUI reloads saved settings; [Reloading](configuration.md#reloading) describes choices made in the TUI and file precedence.
 
 Your own settings decide which tools and network operations are allowed. A folder cannot trust itself or name a
 program to run. Read [Privacy and trust](privacy.md) before enabling project tools.

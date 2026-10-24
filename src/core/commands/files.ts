@@ -357,5 +357,5 @@ export const FILE_SPECS: CommandSpec[] = [
     cli: null,
     desc: "In the report (ctrl+s, :w): the bug form in your browser, its address or the report copied, or posted with gh",
   },
-  { id: "app.quit", title: "Quit", cli: I, desc: "Saves positions and the session, then quits" },
+  { id: "app.quit", title: "Quit", cli: I, desc: "Saves positions and the workspace, then quits" },
 ];

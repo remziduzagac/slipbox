@@ -141,3 +141,17 @@ The tasks are in [tasks/](tasks/README.md).
 ## Log
 
 - 2026-10-24: the design agreed; the decisions recorded, the workstream active, its tasks WSP-T1 to WSP-T3.
+- 2026-10-24: WSP-T2 built: `src/tui/where.ts` (the parts and their cutting), the top bar's middle and its two targets,
+  the status line's rule; `vaultStatus` gone. Unit tests in `tests/tui-where.test.ts` (each cutting step, each place,
+  the span, hover, the clicks, the status line's rule), the old ones moved to the top bar; terminal checks in
+  `tests/terminal/checks/where.ts` (the two clicks, a worktree's, a detached head, a narrow screen, the bar hidden and
+  zen, a wide-character name), and 40 existing checks reading the vault with `Session.where`, a merge under way added
+  to the merge screen's. Undoing the status line's rule fails two unit tests.
+- 2026-10-24, tried live on a scratch home (`bun scripts/build-home.ts tmp/issue/home`, its state apart): notes'
+  vault clicked, its list, `enter` into kestrel, the bar `kestrel · main`; the branch clicked, the menu, a branch
+  picked, checked out, the bar following; switched back from a terminal, followed, its tabs back; `space u b`, the
+  status line saying `kestrel · jo/release-notes-wording`; zen, neither; `~/household` by name, `~ › household`; a file
+  outside home, `Elsewhere`. The scratch home sits inside this worktree, so notes (no repository of its own) showed
+  this branch, as any folder inside a repository does. One slip: the CLI's `ls`, run from the worktree rather than
+  from kestrel, named this repository, whose list then led into the main checkout; slipbox only read it (its git
+  reads take no optional locks, its state was the try's own) and was quit at once, the try's state removed.

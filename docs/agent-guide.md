@@ -82,7 +82,7 @@ If they come from Obsidian or zk, their vault or notebook opens as it is. See
 
 - The person's settings: `~/.config/slipbox/config.toml`.
 - A vault's own settings: `.slipbox/config.toml` in that vault. These can't run programs or reach the network.
-- `space u u` lists the settings that change for the session, and `space u t` picks a theme.
+- `space u u` lists the settings you can change in the TUI, kept for the vault, and `space u t` picks a theme.
 
 Every setting is in [Configuration](https://remziduzagac.github.io/slipbox/docs/manual/configuration/). Themes, keys
 and fonts are in [Making slipbox yours](https://remziduzagac.github.io/slipbox/docs/guides/making-it-yours/).

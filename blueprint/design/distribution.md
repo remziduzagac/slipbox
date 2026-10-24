@@ -421,7 +421,7 @@ link, to file a report yourself.
 - **The installer's files**: the link `bin-link` names — only while it's still the installer's link to
   `<data>/current/slipbox`; anything else there is left and said — then `versions/`, `current`, `bin-link` and
   `channel`.
-- **With `--purge`**, slipbox's four folders (`14.9`) as well: settings and themes; state — sessions, the scratch, the
+- **With `--purge`**, slipbox's four folders (`14.9`) as well: settings and themes; state — workspaces, the scratch, the
   trash, undo, reading positions, named folders, said so, as they're yours; data — your own words, installed language
   servers; and the cache. Without it they're listed as kept.
 

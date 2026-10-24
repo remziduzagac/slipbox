@@ -15,8 +15,8 @@ you type, and the scratch on the right holding the code and the decision it cite
 
 slipbox sits beside Claude Code, Codex, or any agent that runs shell commands. Follow an idea from the first plan to
 the code that implements it. Read comfortably, review what changed, and make edits of your own. Tables fit the window,
-and code is highlighted. Pictures, diagrams and maths sit alongside your writing. Themes, keys and settings make the
-workspace yours.
+and code is highlighted. Pictures, diagrams and maths sit alongside your writing. Themes, keys and settings make it
+yours.
 
 Editing is **intuitive yet innovative**. The lens opens the Markdown around your cursor for editing, while the rest
 stays rendered. Stay where you were reading, keep the surrounding document in view, and focus on the change.

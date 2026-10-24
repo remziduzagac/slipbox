@@ -1185,7 +1185,7 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
 
 ### history
 
-- back/forward stacks across link follows, heading jumps, note opens, 200 deep, kept 50 in session —
+- back/forward stacks across link follows, heading jumps, note opens, 200 deep, kept 50 in the workspace —
   `notes/daily/2026-10-01.md`, `notes/index.md` (tui.md History 3.6; history.\*)
 - history list: here marked, click selects, enter jumps, recent here section with 'tab N' and times —
   `notes/daily/2026-10-01.md`, `notes/projects/kestrel-v2-3.md` (history.list; tests 'history: notes read in other
@@ -1554,8 +1554,8 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
   plain folder 'v' goes into it — `Downloads/stray-note.md`, `notes/.slipbox/config.toml` (vault.init, vault.unmake
   18\.11)
 - switching vaults by link/backlink/picker/explorer; back returns through a chain; refused when unsaved; each vault
-  keeps own tabs and config — `Downloads/stray-note.md`, `notes/index.md` (Switching vaults 17.10)
-- a named folder moved by hand: its sessions, scratch, trash and positions come along, nothing asked; two copies gone,
+  keeps own workspaces and config — `Downloads/stray-note.md`, `notes/index.md` (Switching vaults 17.10)
+- a named folder moved by hand: its workspaces, scratch, trash and positions come along, nothing asked; two copies gone,
   or an unnamed root, start fresh; a worktree moved by git found by its name — `notes/.slipbox/config.toml`,
   `Downloads/notes-backup-2026-07/.slipbox/config.toml` (21.8)
 - root names: .slipbox name over the remote's, never the folder's own; unnamed shown by path; worktree name@branch —
@@ -1625,9 +1625,9 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
 - config reload: keys, leader, aliases, groups, theme, \[colors\], render, walk, watch settings; broken file keeps
   defaults; typo mid-edit keeps last good — `work/infra/dotfiles/slipbox/config.toml`,
   `work/kestrel/docs/qa/theme-showcase.md` (Configuration reload)
-- session restore: tabs, splits ratio, cursors, scroll with breadcrumb, explorer/outline widths, UI overrides, recent
-  commands, history 50, restore\_session off — `notes/index.md`, `work/infra/dotfiles/slipbox/config.toml` (Positions
-  Saved state; tests 'session restore')
+- workspace restore: tabs, splits ratio, cursors, scroll with breadcrumb, history 50; shared by the vault's
+  workspaces: explorer/outline widths, UI overrides, recent commands; restore\_session off — `notes/index.md`,
+  `work/infra/dotfiles/slipbox/config.toml` (Positions Saved state; tests 'session restore')
 - editor hand-off: space n e suspends and reloads changed file; space n s to running nvim; picker of several nvims;
   remembered; template editors — `work/infra/dotfiles/slipbox/config.toml`, `work/kestrel/docs/dev-setup.md` (Handing
   off 4.1/4.2/4.12)
@@ -1704,6 +1704,11 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
 - status line: mode chips (READ SOURCE LENS INSERT VISUAL V-LINE FILES OUTLINE RESIZE), pending keys, markers (unsaved,
   differs from disk, reloaded, deleted), link under cursor with status, words, tab N/M, L:col, percentage, narrow
   dropping order — `notes/projects/kestrel-v2-3.md`, `work/kestrel/docs/qa/render-torture.md` (The status line)
+- where you are, the top bar's middle: a vault by name or path, home `~` and a folder of it by name (`~ › household`),
+  Elsewhere, a worktree's `name@branch`, a detached head, ahead/behind, a merge or rebase under way; centred, cut to
+  fit in order, clear of the chip and the right end; the vault clicked lists the named folders, the branch the
+  branches; on the status line only while the bar is hidden, neither in zen — `notes/index.md`,
+  `work/kestrel/README.md`, `hobbies/cooking/Home.md` (Screen layout, the top bar)
 
 ### words
 

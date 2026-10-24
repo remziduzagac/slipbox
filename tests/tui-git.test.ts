@@ -459,7 +459,7 @@ describe("git worktrees in the TUI (17.19)", () => {
       expect(
         h.app.messages.some((m) =>
           m.text.startsWith(
-            `${tag} moved here from ${tildePath(dir)}: its sessions, scratch, trash and reading positions came along`,
+            `${tag} moved here from ${tildePath(dir)}: its workspaces, scratch, trash and reading positions came along`,
           ),
         ),
       ).toBe(true);

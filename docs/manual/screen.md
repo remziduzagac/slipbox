@@ -17,8 +17,8 @@ line](../images/screen-map.png)
 
 From the top:
 
-- **The top bar** holds the `slipbox` chip, which opens the command palette. At its right end, it shows the folder's
-  state while slipbox indexes it (`indexing 3…`).
+- **The top bar** holds the `slipbox` chip, which opens the command palette. In its middle, it says where you are:
+  the vault and its branch. At its right end, it shows the vault's state while slipbox indexes it (`indexing 3…`).
 - **The tab strip** has a tab for each note you have open.
 - **The explorer**, on the left, shows the folder's notes and files as a tree. The column of buttons at the left edge
   is the **left rail**.
@@ -41,12 +41,32 @@ and marks look different. See [Glyphs](reading.md#glyphs).
 
 ## The top bar
 
-The top bar holds the `slipbox` chip. Click it to open the [command palette](#the-command-palette). While the folder
-is being indexed, the bar also shows how far that has got. Without the left rail, the explorer's `≡` button sits on it
-too.
+The top bar holds the `slipbox` chip. Click it to open the [command palette](#the-command-palette). While the vault
+is being indexed, the bar also shows how far that has got, at its right end. Without the left rail, the explorer's `≡`
+button sits on it too.
+
+**Where you are** is in the middle of the bar:
+
+- **The vault**, after `◈`: its name if it has one, or else its path (`◈ ~/notes`). Home is `◈ ~`. A file outside
+  home and every vault says `Elsewhere`, without the `◈`, since it's in no vault. [Vaults, home and
+  Elsewhere](vaults.md#names-and-pointers) explains names.
+- **Your workspace**, when it isn't the vault's own. A folder of home you opened by name has a workspace of its own,
+  shown after home: `◈ ~ › notes`.
+- **The branch**, dimmed, in a git repository: `◈ kestrel · main`. A worktree shows its branch after the vault's name:
+  `◈ kestrel@fix-menu`. A branch with an upstream shows how far it's ahead of it and behind it, as of the last fetch
+  (`· main ↑2 ↓1`). A merge or a rebase under way is said after it (`· main merging`, `· fix rebasing 2/5`). A
+  detached head shows its commit.
+
+It sits in the middle of the screen, moved aside only as far as the chip and the right end need. When the bar is short
+of room, it's cut a step at a time: a long path first, from the front (`◈ …/research/notes`), then the ahead and
+behind, then the branch, then the workspace, and the vault's name last. On a very narrow screen it isn't shown.
+
+Click the vault to list the named folders you've opened, and press `enter` to go into one. In a git repository, click
+the branch for the branches: pull, push and fetch first, then the branches to check one out.
 
 `space u b` hides the top bar and shows it again. `ui.top_bar = false` hides it from the start. With the bar hidden,
-the note gains its row, and `:` still opens the palette. See [Configuration](configuration.md) for every `ui` setting.
+the note gains its row, `:` still opens the palette, and the status line says where you are instead. See
+[Configuration](configuration.md) for every `ui` setting.
 
 ## Tabs
 
@@ -152,7 +172,8 @@ Side panes stay between 12 columns and half the screen, always leaving the note 
 `=` evens the split. It puts the panes back to `ui.sidebar_width` and `ui.outline_width`, and the Problems panel back
 to a third of the screen.
 
-Sizes are kept in the session. `ui.split_ratio` is the first window's share of a new split, half by default.
+A split's size is kept in your workspace, and the panes' sizes for the vault. `ui.split_ratio` is the first
+window's share of a new split, half by default.
 
 You can change resize mode's keys under `[keys.resize]` in [Configuration](configuration.md).
 
@@ -376,11 +397,9 @@ The status line describes the file in the focused window. From the left:
 
   While you're in the middle of a key sequence, the chip shows what you've pressed so far instead: `␣ l` after
   `space l`, `C-w` after `ctrl+w`, `2d` after `2 d`.
-- **The vault**, dimmed. It's the vault's name if it has one, or else its path (`~/notes`). Home is `~`, and a file
-  outside home and every vault says `Elsewhere`. In a git repository, the branch checked out comes after it
-  (`~/notes · main`). [Vaults, home and Elsewhere](vaults.md#names-and-pointers) explains names.
-  A branch with an upstream shows how far it's ahead of it and behind it, as of the last fetch (`~/notes · main ↑2 ↓1`).
-  A merge or a rebase under way is said after it (`~/notes · main merging`, `~/notes · fix rebasing 2/5`).
+- **Where you are**, dimmed, only while the top bar is hidden: the vault and its branch, as [the top
+  bar](#the-top-bar) says them, without the `◈` (`~/notes · main`, `~ › notes`, `Elsewhere`). Click it for the
+  branches. While the top bar shows, it says where you are, and the status line leaves the room to the file's path.
 - **The file's path**, between `‹` and `›`. These two go back and forward in the window's history, as a browser's
   arrows do. Each is bright when there's somewhere to go. Hovering over one says where. Clicking the path lists the
   window's history above it, with **Copy path** first.
@@ -410,6 +429,7 @@ At the right end:
   far down the window is (`all` when the whole note fits).
 
 When the line is short, the word count goes first, then the link, then the tab count. The position always stays.
+Where you are, when the status line shows it, goes before the path does.
 
 ## Messages and questions
 
@@ -596,8 +616,9 @@ scratch are in [Editing](editing.md). Problems and code cells are in [Code](code
 It also turns readable width on. The side panes still open on demand, over the note. To come back, press `space u z`
 again, or type `:zen`.
 
-**What a change keeps.** A change applies at once. It's remembered in the folder's session, so it's still there the
-next time you open the folder.
+**What a change keeps.** A change applies at once. It's remembered for the vault, across its workspaces, so it's
+still there the next time you open it. It's yours: kept in slipbox's state on your machine, never in the vault's
+settings or in your config file.
 
 Each change is remembered with the setting it replaced. If you later edit that setting in your config file, the file
 wins again. slipbox never writes your config.
@@ -614,26 +635,28 @@ that heading instead.
 
 The place is kept by the heading it's under. So text added above it, by you or by an agent, doesn't move you.
 
-**The session.** When you start slipbox on a folder rather than a note (`slipbox`, or `slipbox ~/notes`), it reopens
-your tabs as you left them:
-
-- their splits and sizes
-- each window's cursor and its history (the last 50 places back and forward)
-- whether the explorer and the outline were open, and how wide
-
+**Your workspace.** A workspace is your tabs and windows in a place: the tabs and the pinned ones, their splits and
+sizes, and each window's note, cursor and history (the last 50 places back and forward). When you start slipbox on a
+folder rather than a note (`slipbox`, or `slipbox ~/notes`), it reopens your workspace there as you left it.
 `ui.restore_session = false` turns this off.
 
-When you start slipbox with a note, it opens that note instead. With no session to restore, it opens `index.md`,
+When you start slipbox with a note, it opens that note instead. With no workspace to restore, it opens `index.md`,
 `README.md` or `home.md`, whichever the folder has. If it has none of them, it opens the folder's first note.
 
-The palette's recent commands and your [UI settings](#ui-settings) come back on every start.
+A vault's workspaces share the rest: whether the explorer and the outline are open, and how wide, the Problems
+panel's height, your [UI settings](#ui-settings), the palette's recent commands and the notes read lately. The recent
+commands and the UI settings come back on every start.
 
-**Each branch's tabs.** In a git repository, slipbox keeps the tabs each branch had when you left it. It keeps them
-for the 30 branches left most recently.
+**Each branch's workspace.** In a git repository, each branch keeps the workspace it had when you left it. slipbox
+keeps them for the 30 branches left most recently.
 
 Starting on a branch opens its tabs. Switching branches while slipbox runs, in slipbox or in another terminal, brings
 back the new branch's tabs. A note with unsaved changes keeps everything as it is, and slipbox says so. This needs
 `ui.restore_session` on.
 
-The session is the folder's own. Another folder has its own. Where slipbox keeps it on your machine is in
-[Where slipbox keeps things](environment-and-storage.md#where-slipbox-keeps-things).
+**Each folder of home's workspace.** In home, each folder you open by name (`slipbox ~/notes`) has a workspace of its
+own, beside home's own. The top bar names it: `◈ ~ › notes`.
+
+Your workspaces are yours and the vault's alone: another vault has its own, and a worktree, a vault of its own, has
+its own too. slipbox keeps them in its state folder on your machine, never in the vault. Where is in [Where slipbox
+keeps things](environment-and-storage.md#where-slipbox-keeps-things).

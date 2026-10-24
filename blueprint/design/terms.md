@@ -35,7 +35,7 @@ what replaced them.
   tool, its notes, else slipbox's own. [links.md](links.md) § Conventions.
 - **Copy**: one copy of a named folder on this machine (a clone, a synced folder); its **default copy** is the one its
   pointers open. A worktree is not a copy. [roots.md](roots.md) § Named folders.
-- **The current vault**: the vault whose tabs are shown; choosing a file of another goes into it (VV-D4).
+- **The current vault**: the vault whose workspace is shown; choosing a file of another goes into it (VV-D4).
   [tui.md](tui.md) § Going into a vault.
 - **Data file**: TOML, INI, YAML, JSON or CSV, rendered as a document and edited as text.
   [rendering.md](rendering.md) § Data files.
@@ -116,8 +116,8 @@ what replaced them.
   [how-it-works.md](how-it-works.md) § Storage.
 - **Row marks**: an explorer row's columns at its right: the index's state, git's mark, what describes the row
   (VV-D9); why one is `⊘`, on the status line and in Info (D244). [tui.md](tui.md) § Side panes.
-- **Session**: a vault's tabs, splits, cursors and pane widths, restored when slipbox starts there.
-  [tui.md](tui.md) § Positions.
+- **Session**: the file a vault's workspaces are kept in, with what they share (`session.json`, the `Session`); users
+  read workspace (WSP-D6). [tui.md](tui.md) § Positions.
 - **Source mode**: a note shown as its raw markdown: another layout of the same note. [tui.md](tui.md) § Source mode.
 - **Skip list**: what home's walk leaves out instead of a `.gitignore`: hidden and system folders, `Downloads`, the busy
   folders, files not notes or text (VV-D2). [roots.md](roots.md) § Home.
@@ -131,15 +131,23 @@ what replaced them.
   lists. [trust.md](trust.md) § Trusting a vault.
 - **Vault**: the nearest folder above a file holding a vault marker, else home; what `/`, a wikilink's names, the
   convention and settings are measured from. Every file is in exactly one vault, home, or Elsewhere (VV-D1, VV-D4). The
-  word users read and the code's, `core/vault.ts` and `vault.init`. [roots.md](roots.md) § Vaults and markers.
+  content boundary and the unit you trust, whether you trust it being yours (WSP-D1). The word users read and the
+  code's, `core/vault.ts` and `vault.init`. [roots.md](roots.md) § Vaults and markers.
 - **Vault marker**: `.git`, `.slipbox/`, `.obsidian/` or `.zk/` (`walk.root_markers`).
   [roots.md](roots.md) § Vaults and markers.
 - **View**: a window: a buffer with its own cursor, top row, selection and find; a **tab** holds one, or two in a
   split. [tui.md](tui.md) § Buffers, views, tabs, windows.
 - **The walk**: the listing of a vault's files, shared by the index and the watcher. [roots.md](roots.md) § The walk.
+- **Where you are**: the vault, its branch and a workspace other than the vault's own, on the top bar, else on the
+  status line (WSP-D4, WSP-D5). [tui.md](tui.md) § Screen layout.
 - **Which-key**: the popup listing the keys a pending sequence can take next. [tui.md](tui.md) § Screen layout.
 - **Wikilink**: `[[name]]` or `[[path#heading|text]]`, a link by name or path, within its vault.
   [links.md](links.md) § Wikilinks.
+- **Workspace**: your tabs and windows in a place — the splits, each window's note, cursor and history: one per branch
+  of a git checkout, one per folder of home opened by name and home's own, else the vault's own; personal, in
+  slipbox's state, never in the vault (WSP-D1, WSP-D2). Not VS Code's workspace, the folders a window opened (a vault,
+  here); Obsidian's workspaces, saved layouts, are nearer, though slipbox keeps one per place by itself. Nor D33's
+  "shared workspace", slipbox as a whole. [tui.md](tui.md) § Positions.
 - **Worktree**: a git worktree: its repository at a branch, a vault of its own, shown as `name@branch`.
   [roots.md](roots.md) § Worktrees.
 
@@ -166,6 +174,8 @@ Older decisions use these; the design doesn't.
   `make_vault`, `unmake_vault` and `sidebar_vault`, are still read as them, unwarned (DF-D22; `OLD_VALUES` in
   `core/config.ts`, `OLD_ROLES` in `core/theme/theme.ts`).
 - **scope** (D55, never built): the vault (D56, D80).
+- **session**, for what slipbox restores: a workspace (WSP-D1); the word stays in `ui.restore_session` and
+  `session.json`.
 - **Scout**: now trailscout, a project of its own; the outside search engine waits for its SDK (D124). Search still
   cuts sections as scout does (D116).
 - **`[[vault:note]]`**, **`vault:path`**: a pointer, `slipbox://name/path`, in files; a path on screen (D60, D75, D79).

@@ -82,7 +82,7 @@ What it keeps, it keeps in four folders of its own, XDG's, on macOS too:
 | --- | --- | --- |
 | config | `$XDG_CONFIG_HOME/slipbox`, else `~/.config/slipbox` | your settings and your themes |
 | cache | `$XDG_CACHE_HOME/slipbox`, else `~/.cache/slipbox` | indexes and pictures: rebuilt when missing |
-| state | `$XDG_STATE_HOME/slipbox`, else `~/.local/state/slipbox` | sessions, the scratch, the trash, your answers |
+| state | `$XDG_STATE_HOME/slipbox`, else `~/.local/state/slipbox` | workspaces, the scratch, the trash, your answers |
 | data | `$XDG_DATA_HOME/slipbox`, else `~/.local/share/slipbox` | tools installed, your words, slipbox itself |
 
 A vault has a folder of its own in the cache folder, and another in the state folder. Both are named by the vault's
@@ -136,7 +136,7 @@ For each vault, in `<key>/`:
 
 | File | What it holds |
 | --- | --- |
-| `session.json` | Tabs, splits and panes, the settings changed in the TUI, the notes and commands used lately |
+| `session.json` | Your workspaces (tabs and splits), and what they share: panes, settings changed in the TUI, recents |
 | `scratch.md` | The scratch, unless `capture.location` puts it in the vault |
 | `trash/` | What you deleted, to restore, for 30 days. `trash.json` lists it |
 | `renames.json` | The last 20 renames and moves, to undo |

@@ -45,7 +45,7 @@ A vault is never managed, and none is needed: a folder without a marker is home'
 - whether two files travel together, and what a named folder is (§ Named folders; [links.md](links.md) § Between
   folders);
 - its settings, when it holds a `.slipbox/config.toml` (§ Settings);
-- which session and state are the file's (§ State by vault).
+- which workspaces and state are the file's (§ State by vault).
 
 Home answers the same, without a name, pointers or settings of its own (§ Home); Elsewhere answers none of what needs
 an index (§ Elsewhere).
@@ -59,7 +59,7 @@ of another goes into it, its tabs becoming the TUI's; following a link to one pe
 Home (`~`) is a vault without a marker (VV-D2; `homeAt` in `core/vault.ts`, its mode `home`, beside `vault` and
 `folder`). Its files are those in `~` that no other vault holds: the vaults inside home are boundaries of its walk, as
 nested vaults are, and a link from another vault into one of them is that vault's backlink, never home's. Its state is
-keyed as any vault's, by its path (`vaultKey(~)`, the key `~` had as a plain folder: its session carried over); its
+keyed as any vault's, by its path (`vaultKey(~)`, the key `~` had as a plain folder: its workspaces carried over); its
 settings are the user's alone (`configFilesFor` gives none of its own); it has no name and no pointers, and `init` and
 `name` refuse it; its git is `~`'s own repository only, when `~` is one (`checkoutAt`). A folder of home given a
 `.slipbox/` (`init`, `space v m`) has its links across the new boundary fixed, as in any vault, and `deinit` makes a
@@ -172,20 +172,20 @@ past the cap. The cap's message, said as the graph built again after home's walk
 (`describeCap`'s `asked`): `…; ~/notes, the folder you opened, is whole`; past the cap alone, `home's index is full:
 it holds 12,345 notes, all in ~/big, the folder you opened — the rest aren't indexed`.
 
-**What's shown.** The status line names home `~`; `info` says `mode` `home` (an addition to schema 1's values), the
-Info view and `stat` `home (~)`. Started in `~`, nothing opens over the explorer: home is the vault. Each folder of
-home opened by name has its own tabs, kept in home's session beside its top's (`folders`, by home's path for it, as
-`branches` keeps a branch's; `SESSION_FOLDERS`), as it had before home was a vault; `slipbox ~`, and a switch into
-home by a note, bring back the top's, and the way back the folder's it left (`App.homeFolder`). The top's tabs from
-before folders kept theirs are kept as its own the first time one does. Started on a folder of home with no tabs of
-its own yet, the folder's own `index.md`, `README.md` or `home.md` opens, else its first note by path, one directly in
-it before one in a folder of it, never another of home's (`defaultNote`); none, nothing opens, and one home's index
-leaves out says why (`~/Downloads: left out of home's index (Downloads)`; else `no notes in ~/x`). A vault's folder
-opens the vault's, its one session (VV-D5: a vault is one project). The
-explorer is home's tree from its walk, and what home's skip list leaves out is listed there, never indexed
-([tui.md](tui.md) § Side panes). A link, a backlink or a search hit from another vault into a note of home's peeks at
-it as at any vault's, titled `~ › todo.md`; slipbox's own files under `~` (`slipboxOwn`: the scratch in its state
-folder) are no note of home's, opened as they are, never gone into.
+**What's shown.** The top bar names home `◈ ~`, the status line `~` while the bar is hidden; `info` says `mode` `home`
+(an addition to schema 1's values), the Info view and `stat` `home (~)`. Started in `~`, nothing opens over the
+explorer: home is the vault. Each folder of home opened by name is a workspace of its own, kept beside home's own (its
+top's), the top bar naming it (`◈ ~ › notes`; `folders`, by home's path for it, as `branches` keeps a branch's;
+`SESSION_FOLDERS`), as it had before home was a vault; `slipbox ~`, and a switch into home by a note, bring back the
+top's, and the way back the folder's it left (`App.homeFolder`). The top's tabs from before folders kept theirs are kept
+as its own the first time one does. Started on a folder of home with no tabs of its own yet, the folder's own
+`index.md`, `README.md` or `home.md` opens, else its first note by path, one directly in it before one in a folder of
+it, never another of home's (`defaultNote`); none, nothing opens, and one home's index leaves out says why
+(`~/Downloads: left out of home's index (Downloads)`; else `no notes in ~/x`). A vault's folder opens the vault's
+workspace (VV-D5: a vault is one project). The explorer is home's tree from its walk, and what home's skip list leaves
+out is listed there, never indexed ([tui.md](tui.md) § Side panes). A link, a backlink or a search hit from another
+vault into a note of home's peeks at it as at any vault's, titled `~ › todo.md`; slipbox's own files under `~`
+(`slipboxOwn`: the scratch in its state folder) are no note of home's, opened as they are, never gone into.
 
 Not done: the vaults inside a folder home's skip list leaves out (a clone in `~/Downloads`) are no longer found by the
 background index, only when opened, and nor is a vault whose own folder is hidden or is a busy folder (`~/.dotfiles`, a
@@ -206,9 +206,9 @@ as files the graph doesn't know, until it does.
 
 Every file outside home that no vault holds is in no-vault, which users read as Elsewhere (VV-D3; `elsewhereAt` in
 `core/vault.ts`, mode `folder` as the code's and the JSON's word): `/etc`, another disk, a share. Elsewhere is opened
-from a folder — the one opened, or the file's own — where its paths start (`root`), but it is one place for the
-machine: one key, `elsewhere` (`ELSEWHERE_KEY`), so one session, one set of tabs, one scratch and trash, wherever its
-files are. It isn't kept in the machine's list (`roots.json`): there's no index to find again.
+from a folder — the one opened, or the file's own — where its paths start (`root`), but it is one place for the machine:
+one key, `elsewhere` (`ELSEWHERE_KEY`), so one workspace, one scratch and trash, wherever its files are. It isn't kept
+in the machine's list (`roots.json`): there's no index to find again.
 
 Nothing in Elsewhere needs an index, and nothing that does is offered there, each said so rather than shown empty: it
 is listed a folder at a time, never walked (`isListed`: the graph lists the folder opened's notes, `listDirectory`; the
@@ -218,9 +218,9 @@ watcher watches that folder alone); no backlinks (`space l b`, the Info view's c
 Its settings are yours; `/` is the filesystem's root; a wikilink has no names to match. A peek at its file (a link from
 a vault) says under a note that it has no backlinks, and why.
 
-**What's shown.** The status line names it `Elsewhere` (`ELSEWHERE` in `core/names.ts`; `rootLabel` in messages, a
-peek's title and the Info view), the path beside it whole: its buffers are keyed by their absolute paths, wherever the
-folder opened is. Going in says `Elsewhere — /etc/nginx`. `info` says
+**What's shown.** The top bar names it `Elsewhere` (the status line, while the bar is hidden; `ELSEWHERE` in
+`core/names.ts`; `rootLabel` in messages, a peek's title and the Info view), the path beside it whole: its buffers are
+keyed by their absolute paths, wherever the folder opened is. Going in says `Elsewhere — /etc/nginx`. `info` says
 `vault  Elsewhere — <folder> (outside home and every vault: no index)`, `stat` and the Info view `Elsewhere`. The
 explorer in Elsewhere has no tree of its own: every folder is listed a level at a time (`outsideRows`), by its whole
 path, the view starting at the folder opened.
@@ -454,9 +454,9 @@ of every read through a link out of the root; D220's writes stay for vaults.
   them says agents see what's followed (`agentsWarning`): search, the context bundle and the CLI's answers. Follow:
   kept, the target probed, the vault walked again (`walkAgain`), then what was asked done. Just look: read-only (`just
   looking: … isn't followed — read-only`), never indexed; a folder listed a level at a time. No: kept; opening it again
-  asks again. A path through a link not followed opened otherwise (a session's tab, `:e`) isn't read, said so or
-  asked. In the explorer a link row says where it leads, and whether it's followed ([tui.md](tui.md) § Side panes);
-  out of the vault open, by the rule of the place it's in (`locationAt`), and unfolding one not followed there asks
+  asks again. A path through a link not followed opened otherwise (a workspace's tab, `:e`) isn't read, said so or
+  asked. In the explorer a link row says where it leads, and whether it's followed ([tui.md](tui.md) § Side panes); out
+  of the vault open, by the rule of the place it's in (`locationAt`), and unfolding one not followed there asks
   (`gate`'s `there`). Elsewhere's listing shows a linked note as any other; only opening it asks. A peek (VV-D7), and
   `t` and `ctrl+o` in one, read by the rule of the place peeked into (`Following.blockedThere`): through a link it
   hasn't followed, the peek says so instead of reading (`Not read here: …`), `t` keeps nothing, and `o` goes there,
@@ -610,13 +610,13 @@ rewrites the pointer. Names are compared case aside.
 
 ## How a vault is named and shown
 
-A vault is told by the name pointers use (its `.slipbox/` name, else its remote's), else by its path (`~/…`); a
-worktree of a named repository as `name@branch`, a detached head by its short commit; home as `~`, and Elsewhere as
-`Elsewhere` (D77, VV-D2, VV-D3; `rootLabel` in `core/names.ts`). Never by its folder's own name, and never in a file.
-The status line, the explorer's vault rows, the named folders list, `slipbox info` and the CLI's `root` and `name` show
-it so ([tui.md](tui.md) § Screen layout, § Side panes, § Going into a vault;
-[docs/manual/cli.md](../../docs/manual/cli.md) § `resolve`). Files in lists (backlinks, search results, pickers,
-hovers) are shown by path, from the vault's top ([rendering.md](rendering.md) § Blocks and inlines).
+A vault is told by the name pointers use (its `.slipbox/` name, else its remote's), else by its path (`~/…`); a worktree
+of a named repository as `name@branch`, a detached head by its short commit; home as `~`, and Elsewhere as `Elsewhere`
+(D77, VV-D2, VV-D3; `rootLabel` in `core/names.ts`). Never by its folder's own name, and never in a file. The top bar
+(the status line while it's hidden), the explorer's vault rows, the named folders list, `slipbox info` and the CLI's
+`root` and `name` show it so ([tui.md](tui.md) § Screen layout, § Side panes, § Going into a vault;
+[docs/manual/cli.md](../../docs/manual/cli.md) § `resolve`). Files in lists (backlinks, search results, pickers, hovers)
+are shown by path, from the vault's top ([rendering.md](rendering.md) § Blocks and inlines).
 
 What the CLI prints for a person says vault, as the TUI and the docs do (VV-D1); its JSON keeps root in its values,
 whose `schema` stays 1 (DF-D9): `info`'s `mode` is `root`, `home` or `folder` (Elsewhere); a change's `kind` is `root`
@@ -641,12 +641,12 @@ in the TUI, `ctrl+a` in search widens it a step at a time ([tui.md](tui.md) § O
 
 ## Worktrees
 
-A linked worktree (`git worktree add`) is a vault of its own: its own state and cache, its own session, scratch,
-positions and indexes, since worktrees are an agent's task, each its own context (D54). Which checkout a folder is
-comes from the files under `.git` (`core/git.ts`): a worktree's `.git` is a file naming `.git/worktrees/<name>`, whose
-`commondir` is the repository's; a submodule's has no `commondir`, and is a repository of its own. Never a git
-process, and never where the folder is: `project/worktrees/x/feat` is a worktree of `project/x` as surely as
-`x/.worktrees/feat` would be.
+A linked worktree (`git worktree add`) is a vault of its own: its own state and cache, its own workspaces, scratch,
+positions and indexes, since worktrees are an agent's task, each its own context (D54). Which checkout a folder is comes
+from the files under `.git` (`core/git.ts`): a worktree's `.git` is a file naming `.git/worktrees/<name>`, whose
+`commondir` is the repository's; a submodule's has no `commondir`, and is a repository of its own. Never a git process,
+and never where the folder is: `project/worktrees/x/feat` is a worktree of `project/x` as surely as `x/.worktrees/feat`
+would be.
 
 - **State by path:** each checkout's state is its path's, the main checkout's and every worktree's apart (D76). A
   worktree moved by `git worktree move` is found by git's name for it, and its state carried to the new path, only
@@ -664,20 +664,22 @@ process, and never where the folder is: `project/worktrees/x/feat` is a worktree
   repository beside the main one, wherever the worktree is kept ([links.md](links.md) § Paths).
 - **A worktree that is gone** (merged, removed) has its cache removed at once; its state, an agent's scratch, a month
   after it was last seen (`pruneWorktrees` in `core/registry.ts`).
-- The status line, the explorer's row and the git panel show a worktree's branch (`research@refactor`, `⎇ feat`). A
+- The top bar, the explorer's row and the git panel show a worktree's branch (`research@refactor`, `⎇ feat`). A
   branch switch inside one checkout is one event (D153; [tui.md](tui.md) § External changes). The git panel lists the
   branches with their worktrees, makes and removes them (GIT-D9; [tui.md](tui.md) § Side panes).
 
 ## State by vault
 
 Personal state is kept in the state folder, never in the folder it is about (D39, D76; where each file lives:
-[how-it-works.md](how-it-works.md) § Storage):
+[how-it-works.md](how-it-works.md) § Storage). The vault's folder holds what is shared: its notes and its settings
+(`.slipbox/config.toml`), which travel with it; whether you trust it, your workspaces there and what they share, are
+yours (WSP-D1):
 
-- **By vault:** the session, scratch, trash, undo log, staleness, moves seen and branch heads seen are kept under the
-  vault's key (§ Storage keys): home's by its path, as any vault's; Elsewhere's under its one key, `elsewhere`, wherever
-  it was opened (VV-D3). Opening `project/` or `project/docs/` brings back the same session, since both are in the vault
-  `project/`; a worktree, another path, has its own. In home's one session, each folder of it opened by name keeps
-  its own tabs (§ Home).
+- **By vault:** its workspaces and what they share (`session.json`; [tui.md](tui.md) § Positions), the scratch,
+  trash, undo log, staleness, moves seen and branch heads seen are kept under the vault's key (§ Storage keys): home's
+  by its path, as any vault's; Elsewhere's under its one key, `elsewhere`, wherever it was opened (VV-D3). Opening
+  `project/` or `project/docs/` brings back the same workspaces, since both are in the vault `project/`; a worktree,
+  another path, has its own. In home, each folder of it opened by name is a workspace of its own (§ Home).
 - **Reading positions are by file:** one `positions.json` for the machine, each note by its absolute path and the vault
   it was read from, so a note opened from another vault, or from a folder inside its vault, is where it was left. A
   vault's history lists its own files and those read from it. The newest 5,000 are kept.
@@ -688,12 +690,12 @@ Personal state is kept in the state folder, never in the folder it is about (D39
   followed only when you say so), the vaults you trust (`trust.json`, [trust.md](trust.md)), and each branch's base
   (`bases.json`, by repository: [tui.md](tui.md) § Git).
 - **A named folder moved by hand takes its state along** when it is sure: its `.slipbox/` id or remote at a new path,
-  nothing left at the old one, and exactly one such copy gone, also when the background index found it at the new
-  path first (`movedFrom` in `core/folders.ts`, `recordLocation` in `core/vault.ts`). Its cache, session, scratch,
-  trash, undo log and positions move to the new key; the move is kept with its entry in `roots.json`, for the relink,
-  which is offered at once ([links.md](links.md) § Repairs). That isn't a guess, so nothing is asked. A worktree
-  moved by `git worktree move` is found as § Worktrees says. Any other move (an unnamed vault, two copies gone) starts
-  fresh; naming the vault (`slipbox name`) lets it be found again.
+  nothing left at the old one, and exactly one such copy gone, also when the background index found it at the new path
+  first (`movedFrom` in `core/folders.ts`, `recordLocation` in `core/vault.ts`). Its cache, workspaces, scratch, trash,
+  undo log and positions move to the new key; the move is kept with its entry in `roots.json`, for the relink, which is
+  offered at once ([links.md](links.md) § Repairs). That isn't a guess, so nothing is asked. A worktree moved by
+  `git worktree move` is found as § Worktrees says. Any other move (an unnamed vault, two copies gone) starts fresh;
+  naming the vault (`slipbox name`) lets it be found again.
 - **State does not travel between machines;** reading position is machine-local anyway.
 - **Older state is moved once:** the instances' list (`vaults.json`, D59) is read into `roots.json` the first time
   slipbox runs, each instance's state and cache moved from its key to its path's, and the old list removed; a vault's

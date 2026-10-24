@@ -137,8 +137,8 @@ CLI commands and other programs see saved files. They cannot read the text you h
 
 ## Leave and continue
 
-Press `ctrl+q` to quit. When you open the folder again, slipbox can restore its session. Your notes remain normal
-files and can be used by any editor.
+Press `ctrl+q` to quit. When you open the folder again, slipbox brings back your workspace there: the tabs you left.
+Your notes remain normal files and can be used by any editor.
 
 **Next:** [Reading and editing in slipbox](lens.md), a deliberate walkthrough of rendered reading, the lens,
 source mode, typing and saving. After that, [work across folders and vaults](vaults.md).

@@ -14,10 +14,27 @@ notes.
 
 ## Vault
 
-A folder that provides a file's link, search, settings and session context. A repository, Obsidian vault or zk
-notebook is recognized by its marker.
+A folder that provides a file's link and search context and its settings, shared with whoever has the folder. A
+repository, Obsidian vault or zk notebook is recognized by its marker. Whether you trust a vault is always your own
+answer, never its settings'.
 
 [Details](vaults.md#vaults)
+
+## Workspace
+
+Your tabs and windows in a place: the splits, and each window's note, cursor and history. slipbox keeps one for each
+branch of a repository, and one for each folder of home you open by name, in its own state on your machine, never in
+the vault. Unlike VS Code's workspace, it isn't a set of folders (that's a vault here); unlike Obsidian's, you don't
+save or pick it: slipbox keeps it for you.
+
+[Details](vaults.md#vaults-and-workspaces)
+
+## Where you are
+
+The vault, its branch, and your workspace when it isn't the vault's own, shown in the middle of the top bar
+(`◈ kestrel · main`, `◈ ~ › notes`). Click the vault to go into another, or the branch for the branches.
+
+[Details](screen.md#the-top-bar)
 
 ## Elsewhere
 

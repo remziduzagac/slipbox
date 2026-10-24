@@ -614,13 +614,14 @@ started with until slipbox starts again.
 You can change some settings in the TUI: the theme with `space u t`, and wrapping, line numbers, zen and the others in
 `space u u`.
 
-A change applies at once. It is kept in the vault's session, with the setting it replaced. Another vault keeps its own.
+A change applies at once. It is kept for the vault, across its workspaces, with the setting it replaced. Another vault
+keeps its own. It's yours: kept in slipbox's state, never in the vault's settings or your config.
 
 On every start, and at every reload, a change is kept only while that setting in your files still has the value it
 replaced. So editing the setting always wins. The TUI never writes your settings file.
 
-With `ui.restore_session` on, the session also brings back whether the explorer and the outline are open, and their
-widths.
+With `ui.restore_session` on, the vault also brings back whether the explorer and the outline are open, and their
+widths, whichever of its workspaces you open.
 
 <a id="slipboxs-own-variables"></a>
 <a id="variables-slipbox-reads"></a>
