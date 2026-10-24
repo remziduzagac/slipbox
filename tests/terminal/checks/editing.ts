@@ -17,7 +17,7 @@ import {
   pos,
   SCRATCH_FLOATING,
 } from "../check.ts";
-import { REPO, type Session, type SessionOptions, WAIT } from "../session.ts";
+import { REPO, type Session, type SessionOptions, type StyledRun, WAIT } from "../session.ts";
 
 /** The reference set, slipbox started on one of its files (`~/notes/…`, as the checks name it). */
 const at = (rel: string): SessionOptions => ({ home: true, startAt: `home/${rel.slice(2)}` });
@@ -98,6 +98,47 @@ const order = (s: Session) =>
     .map((t) => t.split(":")[0]!);
 
 const SEPT1 = "~/notes/daily/2026-09-01.md";
+
+// The window header's mode buttons (HDR-D2): `Read  Lens  Source`, shortened `R  L  S`, on the row atop each window.
+const MODE_GROUPS = [
+  { re: /Read {2}Lens {2}Source/g, at: { Read: 0, Lens: 6, Source: 12 } },
+  { re: /\bR {2}L {2}S\b/g, at: { Read: 0, Lens: 3, Source: 6 } },
+] as const;
+type ModeLabel = "Read" | "Lens" | "Source";
+
+/**
+ * Window `nth`'s mode button `label`, as the screen shows it (windows side by side share the header's row, left to
+ * right): its cell and style, or null when it isn't drawn.
+ */
+function modeButton(s: Session, label: ModeLabel, nth = 0): { x: number; y: number; style: StyledRun } | null {
+  const rows = s.screen();
+  for (const g of MODE_GROUPS) {
+    for (let y = 0; y < rows.length - 1; y++) {
+      const found = [...rows[y]!.matchAll(g.re)];
+      const m = found[nth];
+      if (!m) continue;
+      const at = m.index! + g.at[label];
+      let n = 0;
+      for (const r of s.runs()[y]!) {
+        if (at < n + r.text.length) return { x: Bun.stringWidth(rows[y]!.slice(0, at)), y, style: r };
+        n += r.text.length;
+      }
+    }
+  }
+  return null;
+}
+
+/** A click (SGR's reports, as a terminal sends them) on window `nth`'s mode button. */
+async function clickMode(s: Session, label: ModeLabel, nth = 0): Promise<void> {
+  const b = modeButton(s, label, nth);
+  s.expect(!!b, `window ${nth}'s ${label} button on screen to click`);
+  await s.send(`\x1b[<0;${b!.x + 1};${b!.y + 1}M`);
+  await s.send(`\x1b[<0;${b!.x + 1};${b!.y + 1}m`);
+}
+
+/** Window `nth`'s selected mode: the one button drawn bold. */
+const selectedMode = (s: Session, nth = 0) =>
+  (["Read", "Lens", "Source"] as const).filter((l) => modeButton(s, l, nth)?.style.bold);
 const OCT5 = "~/notes/daily/2026-10-05.md";
 
 export const EDITING: Check[] = [
@@ -1400,6 +1441,144 @@ export const EDITING: Check[] = [
       s.expect(s.osc52().length === 0, `a copy made: ${JSON.stringify(s.osc52())}`);
       s.expect(!/pwned/.test(s.title()) && s.title() === title, `the title changed: ${JSON.stringify(s.title())}`);
       s.expect(s.topBar().includes("slipbox"), "the top bar still drawn: the screen never cleared");
+    },
+  },
+  {
+    area: "editing",
+    name: "window header: Read · Lens · Source follow the mode; a click switches straight there, the chip agreeing",
+    covers: {
+      cases: ["window-header", "mouse", "status"],
+      commands: ["view.mode_read", "view.mode_lens", "view.mode_source", "view.source", "view.live"],
+    },
+    options: at("~/notes/meetings/all-hands-archive.md"),
+    run: async (s) => {
+      await ready(s);
+      await s.until(() => selectedMode(s).join() === "Read", WAIT, "Read selected on opening");
+      // The keys move the selection.
+      await s.keys("ctrl+k");
+      await s.status("SOURCE");
+      await s.until(() => selectedMode(s).join() === "Source", WAIT, "Source selected after ctrl+k");
+      // Source to Lens in one click, never through Read; the chip agrees.
+      await clickMode(s, "Lens");
+      await s.status("LENS");
+      await s.message("the lens: the markdown around the cursor");
+      await s.until(() => selectedMode(s).join() === "Lens", WAIT, "Lens selected after its click");
+      await s.keys("escape"); // esc closes the lens
+      await s.status("READ");
+      await s.until(() => selectedMode(s).join() === "Read", WAIT, "Read selected after esc");
+      await clickMode(s, "Source");
+      await s.status("SOURCE");
+      await s.message("source — the note's markdown");
+      await clickMode(s, "Read");
+      await s.status("READ");
+      // The selected one: nothing changes.
+      await clickMode(s, "Read");
+      await s.status("READ");
+      await leader(s, "n", "l");
+      await s.status("LENS");
+      await s.until(() => selectedMode(s).join() === "Lens", WAIT, "Lens selected after space n l");
+    },
+  },
+  {
+    area: "editing",
+    name: "window header: a click while typing ends it, the unsaved text kept; the selected one only ends typing",
+    covers: { cases: ["window-header", "mouse"], commands: ["view.mode_source", "view.live", "edit.insert"] },
+    options: at(SEPT1),
+    run: async (s) => {
+      await ready(s);
+      await findText(s, "Lunch: walk");
+      await leader(s, "n", "l");
+      await s.status("LENS");
+      await s.keys("i");
+      await s.status("INSERT");
+      await s.type("Zq");
+      // Typing isn't a mode: Lens stays selected.
+      s.expect(selectedMode(s).join() === "Lens", `Lens selected while typing: ${selectedMode(s)}`);
+      // The selected Lens: typing ends, the lens stays.
+      await clickMode(s, "Lens");
+      await s.status("LENS");
+      await s.keys("i");
+      await s.status("INSERT");
+      await s.type("Wx");
+      // Another mode: typing ends, the window switches, the text is the buffer's still (unsaved).
+      await clickMode(s, "Source");
+      await s.status("SOURCE");
+      await s.see("ZWxq"); // typing ended steps the cursor back onto the q, as vim's esc does
+      await s.see(/\d+ 2026-09-01\.md •/); // the tab: unsaved
+      s.expect(!s.read(SEPT1).includes("Zq"), "nothing written to the file");
+    },
+  },
+  {
+    area: "editing",
+    name: "window header: a text file and broken data have Source alone, the others disabled and saying why",
+    covers: { cases: ["window-header", "text-files", "data"], commands: ["view.mode_read", "view.mode_lens"] },
+    options: at("~/work/kestrel/tools/greeter/greeter.py"),
+    run: async (s) => {
+      await ready(s);
+      // Code as a document: all three, Read selected; an enabled button's colour, to tell a disabled one by.
+      await s.until(() => selectedMode(s).join() === "Read", WAIT, "Read selected in a code document");
+      const enabled = modeButton(s, "Lens")!.style.fg;
+      await clickMode(s, "Lens");
+      await s.status("LENS");
+      await s.message("the lens: the code around the cursor");
+      await clickMode(s, "Read");
+      await s.message("the code as a document");
+      // A text file: Source alone.
+      await s.restart({ startAt: "home/work/kestrel/api/requirements.txt" });
+      await ready(s);
+      await s.status("SOURCE");
+      await s.until(() => selectedMode(s).join() === "Source", WAIT, "Source selected in a text file");
+      for (const l of ["Read", "Lens"] as const)
+        s.expect(modeButton(s, l)!.style.fg !== enabled, `${l} disabled in a text file: drawn as an enabled one`);
+      await clickMode(s, "Read");
+      await s.message("requirements.txt has no rendered view: source mode");
+      await s.status("SOURCE");
+      // Data that doesn't parse: Source alone, a click warning why.
+      await s.restart({ startAt: "home/work/infra/k8s/broken-ingress.yaml" });
+      await ready(s);
+      await s.status("SOURCE");
+      await s.until(() => selectedMode(s).join() === "Source", WAIT, "Source selected in broken data");
+      s.expect(modeButton(s, "Lens")!.style.fg !== enabled, "Lens disabled in broken data");
+      await clickMode(s, "Lens");
+      await s.message("broken-ingress.yaml doesn't parse"); // the parser's words after it wrap in the box
+      await s.status("SOURCE");
+    },
+  },
+  {
+    area: "editing",
+    name: "window header: a split narrowed, its buttons shorten to R L S, then the selected letter; each its own",
+    covers: { cases: ["window-header", "windows"], commands: ["window.split_side", "view.mode_source"] },
+    options: { ...at("~/notes/meetings/all-hands-archive.md"), size: { cols: 160, rows: 34 } },
+    run: async (s) => {
+      await ready(s);
+      await s.keys("ctrl+w", "v");
+      await s.until(() => modeButton(s, "Read", 1) !== null, WAIT, "two headers, side by side");
+      // The right window, Source; the left still Read: each window its own.
+      await clickMode(s, "Source", 1);
+      await s.status("SOURCE");
+      s.expect(selectedMode(s, 0).join() === "Read", `the left window still Read: ${selectedMode(s, 0)}`);
+      // Narrowed by resize mode: the right window's buttons shorten, then only its selected letter is left.
+      await leader(s, "w", "r");
+      await s.status("RESIZE");
+      const shown = () => s.screen().join("\n");
+      await s.retry(
+        () => s.keys("l"),
+        () => /\bR {2}L {2}S\b/.test(shown()),
+        "the letters, as the window narrows",
+        50,
+      );
+      await s.retry(
+        () => s.keys("l"),
+        () =>
+          !/\bR {2}L {2}S\b/.test(
+            shown()
+              .split("\n")
+              .find((r) => /Read {2}Lens {2}Source/.test(r)) ?? "",
+          ),
+        "the selected letter alone, narrower still",
+        50,
+      );
+      await s.keys("escape");
     },
   },
 ];

@@ -703,8 +703,11 @@ export const NAVIGATING: Check[] = [
   },
   {
     area: "navigating",
-    name: "settings: the top bar and the breadcrumb hidden and shown again",
-    covers: { cases: ["ui", "breadcrumb"], commands: ["ui.top_bar", "ui.breadcrumb", "palette.open"] },
+    name: "settings: the top bar, the breadcrumb and the window header hidden and shown again; zen has no header",
+    covers: {
+      cases: ["ui", "breadcrumb", "window-header"],
+      commands: ["ui.top_bar", "ui.breadcrumb", "ui.window_header", "ui.zen", "palette.open"],
+    },
     run: async (s) => {
       s.expect(s.topBar().includes("slipbox"), "the top bar showing to begin with");
       await leader(s, "u", "b");
@@ -712,15 +715,32 @@ export const NAVIGATING: Check[] = [
       await s.until(() => !s.topBar().includes("slipbox"), 3000, "the top bar gone");
       await leader(s, "u", "b");
       await s.until(() => s.topBar().includes("slipbox"), 3000, "the top bar back");
-      // The breadcrumb has no key: the palette (or the list) toggles it.
+      // The breadcrumb has no key: the palette (or the list) toggles it. Hidden, the header stays, with its buttons.
+      const HEADER = /Read {2}Lens {2}Source/;
       await s.see("§ Halden Ridge Observatory");
-      for (const shown of [false, true]) {
+      await s.see(HEADER);
+      const palette = async (title: string, shown: boolean) => {
         await s.keys(":");
-        await s.type("Breadcrumb");
+        await s.type(title);
         await s.keys("enter");
-        await s.message(`Breadcrumb: ${shown ? "on" : "off"}`);
+        await s.message(`${title}: ${shown ? "on" : "off"}`);
+      };
+      for (const shown of [false, true]) {
+        await palette("Breadcrumb", shown);
         await s.until(() => s.text().includes("§ ") === shown, 3000, `the breadcrumb ${shown ? "back" : "hidden"}`);
+        await s.see(HEADER);
       }
+      // The window header: the whole row, the breadcrumb on it included.
+      for (const shown of [false, true]) {
+        await palette("Window header", shown);
+        await s.until(() => HEADER.test(s.text()) === shown, 3000, `the header ${shown ? "back" : "gone"}`);
+        await s.until(() => s.text().includes("§ ") === shown, 3000, `the breadcrumb ${shown ? "back" : "gone"}`);
+      }
+      // Zen mode has no header.
+      await leader(s, "u", "z");
+      await s.notSee(HEADER);
+      await leader(s, "u", "z");
+      await s.see(HEADER);
     },
   },
   {
