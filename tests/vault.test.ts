@@ -7289,7 +7289,7 @@ describe("home, a vault without a marker (VV-D2)", () => {
       const hour = new Date(Date.now() - 3_600_000);
       for (const d of ["", "Documents", "notes", "notes/d0", "notes/d1"]) utimesSync(join(home, d), hour, hour);
       const g = openGraph(homeAt(home), DEFAULT_CONFIG, true, "lazy");
-      g.askFolder(join(home, "notes")); // `slipbox ~/notes`: walked whole
+      g.askFolders([join(home, "notes")]); // `slipbox ~/notes`: walked whole
       expect(g.home?.walked).toBeNull();
       const known = new Map([...g.notes.values()].map((n) => [n.rel, n.mtimeMs] as [string, number]));
       // touched/ changed just now, however long the setup took: inside the two seconds the watcher looks again.
@@ -7591,10 +7591,10 @@ describe("home, a vault without a marker (VV-D2)", () => {
         utimesSync(join(home, d), hour, hour);
       const g = openGraph(homeAt(home), DEFAULT_CONFIG, true, "lazy");
       // Both asked for by name: walked whole, their notes known.
-      g.askFolder(join(home, "kept"));
-      g.askFolder(join(home, "held"));
-      g.askFolder(join(home, "third"));
-      g.askFolder(join(home, "fifth"));
+      g.askFolders([join(home, "kept")]);
+      g.askFolders([join(home, "held")]);
+      g.askFolders([join(home, "third")]);
+      g.askFolders([join(home, "fifth")]);
       const known = new Map([...g.notes.values()].map((n) => [n.rel, n.mtimeMs] as [string, number]));
       const sizes = new Map([...known.keys()].map((rel) => [rel, statSync(join(home, rel)).size] as [string, number]));
       const { w, look, reported } = await watchHome(home, g, { known, sizes, kinds: true });
@@ -7672,7 +7672,7 @@ describe("home, a vault without a marker (VV-D2)", () => {
       const hour = new Date(Date.now() - 3_600_000);
       for (const d of ["", "kept", "kept/sub"]) utimesSync(join(home, d), hour, hour);
       const g = openGraph(homeAt(home), DEFAULT_CONFIG, true, "lazy");
-      g.askFolder(join(home, "kept"));
+      g.askFolders([join(home, "kept")]);
       const known = new Map([...g.notes.values()].map((n) => [n.rel, n.mtimeMs] as [string, number]));
       const sizes = new Map([...known.keys()].map((rel) => [rel, statSync(join(home, rel)).size] as [string, number]));
       const { w, look } = await watchHome(home, g, { known, sizes, kinds: true });
