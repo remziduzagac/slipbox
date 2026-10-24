@@ -264,6 +264,10 @@ sidebar_vault = { bold = true, underline = true }
 "leader ; t a" = "scroll.center"
 "leader ; t b" = "scroll.top"
 "leader ; t c" = "scroll.bottom"
+# pictures, past the letters
+"leader ; 2 a" = "picture.size"
+"leader ; 2 b" = "picture.scroll_left"
+"leader ; 2 c" = "picture.scroll_right"
 "leader ; h a" = "visual.char"
 "leader ; h b" = "visual.line"
 "leader ; h c" = "visual.swap"
