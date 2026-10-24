@@ -1,5 +1,5 @@
 ---
-status: doing
+status: done
 assignee: claude-5
 created: "2026-10-24"
 ---

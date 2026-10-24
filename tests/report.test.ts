@@ -1,7 +1,16 @@
 // A bug report (RPT): the facts slipbox knows, the report's text read back, and the bug form's address.
 
 import { describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, readFileSync, symlinkSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -29,6 +38,8 @@ import {
   TITLE_LINE,
   WHERE_SAID,
 } from "../src/core/report.ts";
+import { browserOpener, type OpenerSources, openerSources } from "../src/core/browser.ts";
+import { ghAccount, ghPath, ghPost } from "../src/core/gh.ts";
 
 const OS_RELEASE = 'NAME="Ubuntu"\nVERSION="24.04.1 LTS (Noble Numbat)"\nPRETTY_NAME="Ubuntu 24.04.1 LTS"\nID=ubuntu\n';
 const PLIST = `<?xml version="1.0" encoding="UTF-8"?>
@@ -431,5 +442,135 @@ describe("the address's plan (RPT-D3)", () => {
 
   test("text that belongs to no field: no address, since it would be lost", () => {
     expect(addressPlan("me/slipbox", readReport(typed("T").replace("T\n", "T\nstray\n")))).toBeNull();
+  });
+});
+
+describe("the browser (RPT-D3)", () => {
+  const opener = (over: Partial<OpenerSources>, has: string[] = ["xdg-open", "wslview", "explorer.exe"]) =>
+    browserOpener(
+      openerSources({ platform: "linux", wsl: false, remote: false, env: {}, onPath: (p) => has.includes(p), ...over }),
+    );
+  const url = "https://github.com/me/slipbox/issues/new?template=bug_report.yml&title=a%20b";
+
+  test("macOS: open, the address one argument", () => {
+    const o = opener({ platform: "darwin" })!;
+    expect([o.name, o.argv(url), o.ok]).toEqual(["open", ["open", url], [0]]);
+  });
+
+  test("WSL: wslview, else explorer.exe, whose 1 means it opened", () => {
+    expect(opener({ wsl: true })!.name).toBe("wslview");
+    const e = opener({ wsl: true }, ["explorer.exe"])!;
+    expect([e.argv(url), e.ok]).toEqual([
+      ["explorer.exe", url],
+      [0, 1],
+    ]);
+    expect(opener({ wsl: true }, [])).toBeNull();
+  });
+
+  test("Linux: xdg-open with a display, none without one, or without xdg-open", () => {
+    expect(opener({ env: { DISPLAY: ":0" } })!.argv(url)).toEqual(["xdg-open", url]);
+    expect(opener({ env: { WAYLAND_DISPLAY: "wayland-0" } })!.name).toBe("xdg-open");
+    expect(opener({ env: {} })).toBeNull();
+    expect(opener({ env: { DISPLAY: ":0" } }, [])).toBeNull();
+  });
+
+  test("over SSH, none: by its variables, or OpenTUI's finding", () => {
+    expect(opener({ platform: "darwin", env: { SSH_CONNECTION: "203.0.113.9 1 198.51.100.4 22" } })).toBeNull();
+    expect(opener({ env: { DISPLAY: "localhost:10.0", SSH_TTY: "/dev/pts/1" } })).toBeNull();
+    expect(opener({ platform: "darwin", remote: true })).toBeNull();
+  });
+});
+
+describe("gh (RPT-D4)", () => {
+  /** A fake gh: it keeps what it was given, and answers as told. */
+  function fakeGh(answer: string): {
+    gh: string;
+    dir: string;
+    home: string;
+    got: () => { argv: string; cwd: string; input: string };
+  } {
+    const dir = mkdtempSync(join(tmpdir(), "slipbox-gh-"));
+    const home = join(dir, "home");
+    mkdirSync(home);
+    const gh = join(dir, "gh");
+    writeFileSync(
+      gh,
+      `#!/bin/sh\nprintf '%s\\n' "$@" > "${dir}/argv"\npwd > "${dir}/cwd"\nprintf '%s' "$GH_PROMPT_DISABLED" > "${dir}/prompt"\ncat > "${dir}/input"\n${answer}\n`,
+    );
+    chmodSync(gh, 0o755);
+    const got = () => ({
+      argv: readFileSync(join(dir, "argv"), "utf8"),
+      cwd: readFileSync(join(dir, "cwd"), "utf8").trim(),
+      input: readFileSync(join(dir, "input"), "utf8"),
+    });
+    return { gh, dir, home, got };
+  }
+
+  test("found on PATH as it is now, or not", () => {
+    const { dir } = fakeGh("true");
+    expect(ghPath({ PATH: dir })).toBe(join(dir, "gh"));
+    expect(ghPath({ PATH: join(dir, "home") })).toBeNull();
+  });
+
+  test("the account: GH_TOKEN's or GITHUB_TOKEN's, unchecked and nothing run; else gh's own; else none", async () => {
+    const f = fakeGh('[ "$1 $2 $3 $4 $5 $6" = "config get -h github.com user " ] && echo octo-cat');
+    expect(await ghAccount(f.gh, { env: { GH_TOKEN: "x" }, home: f.home })).toBe(
+      "the account of GH_TOKEN (not checked)",
+    );
+    expect(await ghAccount(f.gh, { env: { GITHUB_TOKEN: "x" }, home: f.home })).toBe(
+      "the account of GITHUB_TOKEN (not checked)",
+    );
+    expect(existsSync(join(f.dir, "argv"))).toBe(false);
+    expect(await ghAccount(f.gh, { env: {}, home: f.home })).toBe("octo-cat");
+    expect(f.got().argv).toBe("config\nget\n-h\ngithub.com\nuser\n");
+    const none = fakeGh("exit 1");
+    expect(await ghAccount(none.gh, { env: {}, home: none.home })).toBeNull();
+    const empty = fakeGh("echo");
+    expect(await ghAccount(empty.gh, { env: {}, home: empty.home })).toBeNull();
+  });
+
+  test("a post: its argument vector, the body on its input, from the home folder, no prompts; its address", async () => {
+    const f = fakeGh("echo 'Creating issue in me/slipbox'; echo https://github.com/me/slipbox/issues/42");
+    const body = '### What happened\n\n`$(rm -rf ~)` and "quotes"\n';
+    const r = await ghPost(f.gh, { repo: "me/slipbox", title: "It's -h broken", body }, { env: {}, home: f.home });
+    expect(r).toEqual({ ok: true, url: "https://github.com/me/slipbox/issues/42" });
+    const got = f.got();
+    expect(got.argv).toBe("issue\ncreate\n--repo\nme/slipbox\n--title\nIt's -h broken\n--body-file\n-\n");
+    expect(got.input).toBe(body);
+    expect(got.cwd).toBe(realpathSync(f.home));
+    expect(readFileSync(join(f.dir, "prompt"), "utf8")).toBe("1");
+  });
+
+  test("failed: gh's first lines; timed out: said, so it may have posted", async () => {
+    const f = fakeGh("echo 'HTTP 401: Bad credentials' >&2; echo 'try gh auth login' >&2; echo third >&2; exit 1");
+    expect(await ghPost(f.gh, { repo: "a/b", title: "t", body: "b" }, { env: {}, home: f.home })).toEqual({
+      ok: false,
+      why: "HTTP 401: Bad credentials — try gh auth login",
+      timedOut: false,
+    });
+    const slow = fakeGh('echo $$ > "$(dirname "$0")/pid"; sleep 5');
+    const t0 = Date.now();
+    const r = await ghPost(slow.gh, { repo: "a/b", title: "t", body: "b" }, { env: {}, home: slow.home, timeout: 300 });
+    expect(r).toEqual({ ok: false, why: "gh didn't answer in a minute", timedOut: true });
+    expect(Date.now() - t0).toBeLessThan(3000);
+    // And it's killed, not left running.
+    const pid = Number(readFileSync(join(slow.dir, "pid"), "utf8"));
+    const alive = () => {
+      try {
+        process.kill(pid, 0);
+        return true;
+      } catch {
+        return false;
+      }
+    };
+    for (let i = 0; i < 40 && alive(); i++) await Bun.sleep(25);
+    expect(alive()).toBe(false);
+    // A gh that can't start: said, not thrown.
+    const gone = await ghPost(
+      join(slow.dir, "nothing"),
+      { repo: "a/b", title: "t", body: "b" },
+      { env: {}, home: slow.home },
+    );
+    expect(gone.ok).toBe(false);
   });
 });
