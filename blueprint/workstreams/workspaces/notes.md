@@ -229,4 +229,6 @@ The tasks are in [tasks/](tasks/README.md).
   branch's "the vault clicked" test: the folders list lacked the vault opened just before, though the same test passed
   on macOS at 74fc86f, and five runs here all pass. Not found why: the vault is recorded as it opens, nothing else in
   the run writes the list, and only a write that failed would lose it (`writeFolders` swallows its errors). Its
-  assertion now prints the list it had, for the next time.
+  assertion now prints the list it had, for the next time. CI on the rebased head then failed eleven of home's terminal
+  checks on Linux: #35's, merged without a conflict, waited for `~` on the status line (twenty waits, two of them for
+  `notes`); they read where you are off the top bar now, as the rest do, the path still off the status line.

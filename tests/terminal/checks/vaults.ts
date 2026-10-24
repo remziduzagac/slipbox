@@ -339,7 +339,7 @@ const HOME: Check[] = [
     covers: { cases: ["vault", "switcher"], commands: ["switcher.open"] },
     options: { home: true, startAt: "home/household", config: UNWALKED, setup: (s) => homeWalked(s) },
     run: async (s) => {
-      await s.status(/ ~ .*household\/bike-insurance\.md/);
+      await s.where(/^~(?: |$)/, /household\/bike-insurance\.md/);
       await quits(s);
       // slipbox closed. cp -a of a backup into ~/garden: a note, and garden's time the backup's, older than the walk.
       const older = new Date(Date.now() - 2 * 3_600_000);
@@ -358,7 +358,7 @@ const HOME: Check[] = [
       s.expect(statSync(s.path("~/garden")).mtimeMs === older.getTime(), "garden's time set back by cp -a");
       // household opened by name again: home's walk kept covers it, and lists again the folders whose time moved back.
       await s.restart();
-      await s.status(/ ~ .*household\/bike-insurance\.md/);
+      await s.where(/^~(?: |$)/, /household\/bike-insurance\.md/);
       await switcherShows(s, "compost", "garden/compost.md");
       await switcherShows(s, "2024-policy", "household/archive/2024-policy.md");
       await quits(s);
@@ -405,7 +405,7 @@ const HOME: Check[] = [
     covers: { cases: ["vault", "switcher"], commands: ["switcher.open"] },
     options: { home: true, startAt: "home", config: UNWALKED, setup: (s) => homeWalked(s) },
     run: async (s) => {
-      await s.status(/ ~ /);
+      await s.where(/^~(?: |$)/);
       await quits(s);
       const garden = s.path("~/garden");
       // cp -a of a backup holding the same notes: garden's time the backup's — before its stamp, then after it but
@@ -450,7 +450,7 @@ const HOME: Check[] = [
         JSON.stringify({ ...kept, notes: kept.notes.filter((n: string) => n !== "garden/seeds.md") }),
       );
       await s.restart();
-      await s.status(/ ~ /);
+      await s.where(/^~(?: |$)/);
       await switcherShows(s, "plan", "garden/plan.md");
       await switcherShows(s, "seeds", "garden/seeds.md", false);
     },
@@ -475,14 +475,14 @@ const HOME: Check[] = [
         }),
     },
     run: async (s) => {
-      await s.status(/ ~ /);
+      await s.where(/^~(?: |$)/);
       // The TUI goes by the walk as an earlier version did: garden's time older than the walk, not listed again.
       await switcherShows(s, "late", "garden/late.md", false);
       await quits(s);
       // A note in household, so the TUI keeps the walk again: household stamped, garden still not.
       s.write("~/household/renewal.md", "# Renewal\n\nDue in March.\n");
       await s.restart();
-      await s.status(/ ~ /);
+      await s.where(/^~(?: |$)/);
       await switcherShows(s, "renewal", "household/renewal.md");
       await quits(s);
       s.expect(
@@ -497,7 +497,7 @@ const HOME: Check[] = [
         "every folder stamped",
       );
       await s.restart();
-      await s.status(/ ~ /);
+      await s.where(/^~(?: |$)/);
       await switcherShows(s, "late", "garden/late.md");
     },
   },
@@ -508,7 +508,7 @@ const HOME: Check[] = [
     options: { home: true, startAt: "home", config: UNWALKED, setup: (s) => homeWalked(s) },
     run: async (s) => {
       if (process.getuid?.() === 0) throw new Skipped("root reads every folder");
-      await s.status(/ ~ /);
+      await s.where(/^~(?: |$)/);
       await quits(s);
       const garden = s.path("~/garden");
       chmodSync(garden, 0o000);
@@ -525,7 +525,7 @@ const HOME: Check[] = [
         const at = readFileSync(walkJson(s), "utf8");
         // The next start lists it again, and still can't read it: the walk not written again for it.
         await s.restart();
-        await s.status(/ ~ /);
+        await s.where(/^~(?: |$)/);
         await switcherShows(s, "plan", "garden/plan.md", false);
         await quits(s);
         s.expect(readFileSync(walkJson(s), "utf8") === at, "the walk not written again");
@@ -534,7 +534,7 @@ const HOME: Check[] = [
       }
       // Readable again: listed again, its notes back.
       await s.restart();
-      await s.status(/ ~ /);
+      await s.where(/^~(?: |$)/);
       await switcherShows(s, "plan", "garden/plan.md");
     },
   },
@@ -554,7 +554,7 @@ const HOME: Check[] = [
         }),
     },
     run: async (s) => {
-      await s.status(/ notes .*index\.md/);
+      await s.where(/^notes(?: |$)/, /index\.md/);
       // notes made part of home: the plan across home, from the walk kept as it is — previewed, not carried out.
       await leader(s, "v", "shift+m");
       await s.see(/notes\/ → part of .*: \d+ changes? in \d+ files?/, 10000);
@@ -581,7 +581,7 @@ const HOME: Check[] = [
     },
     run: async (s) => {
       if (process.getuid?.() === 0) throw new Skipped("root reads every folder");
-      await s.status(/ ~ /);
+      await s.where(/^~(?: |$)/);
       await quits(s);
       const garden = s.path("~/garden");
       try {
@@ -593,7 +593,7 @@ const HOME: Check[] = [
         // Each start tries garden again, and still can't read it: the walk not written again for it.
         const at = readFileSync(walkJson(s), "utf8");
         await s.restart();
-        await s.status(/ ~ /);
+        await s.where(/^~(?: |$)/);
         await switcherShows(s, "plan", "garden/plan.md", false);
         await quits(s);
         s.expect(readFileSync(walkJson(s), "utf8") === at, "the walk not written again");
@@ -604,7 +604,7 @@ const HOME: Check[] = [
         chmodSync(garden, 0o755);
       }
       await s.restart();
-      await s.status(/ ~ /);
+      await s.where(/^~(?: |$)/);
       await switcherShows(s, "plan", "garden/plan.md");
     },
   },
@@ -615,7 +615,7 @@ const HOME: Check[] = [
     options: { home: true, startAt: "home", config: UNWALKED, setup: (s) => homeWalked(s) },
     run: async (s) => {
       if (process.getuid?.() === 0) throw new Skipped("root reads every folder");
-      await s.status(/ ~ /);
+      await s.where(/^~(?: |$)/);
       await quits(s);
       // ~/plot made a vault (git init): the command line keeps it as a vault of its own.
       s.write("~/plot/.git/HEAD", "ref: refs/heads/main\n");
@@ -639,7 +639,7 @@ const HOME: Check[] = [
         chmodSync(plot, 0o755);
       }
       await s.restart();
-      await s.status(/ ~ /);
+      await s.where(/^~(?: |$)/);
       await switcherShows(s, "beds", "plot/beds.md");
     },
   },
@@ -667,7 +667,7 @@ const HOME: Check[] = [
     run: async (s) => {
       if (process.getuid?.() === 0) throw new Skipped("root reads every folder");
       // The TUI, its top readable again: home's top shown, as for a walk under other settings, not an empty home.
-      await s.status(/ ~ /);
+      await s.where(/^~(?: |$)/);
       await switcherShows(s, "todo", "todo.md");
       await quits(s);
       s.expect(JSON.parse(readFileSync(walkJson(s), "utf8")).dirs.length === 0, "the walk kept holds no folder");
@@ -682,7 +682,7 @@ const HOME: Check[] = [
     options: { home: true, startAt: "home", config: UNWALKED, setup: (s) => homeWalked(s) },
     run: async (s) => {
       if (process.getuid?.() === 0) throw new Skipped("root reads every folder");
-      await s.status(/ ~ /);
+      await s.where(/^~(?: |$)/);
       await quits(s);
       const household = s.path("~/household");
       try {
@@ -712,7 +712,7 @@ const HOME: Check[] = [
         chmodSync(garden, 0o755);
       }
       await s.restart();
-      await s.status(/ ~ /);
+      await s.where(/^~(?: |$)/);
       await switcherShows(s, "2025-policy", "household/archive/2025-policy.md");
     },
   },
@@ -739,7 +739,7 @@ const HOME: Check[] = [
     },
     run: async (s) => {
       if (process.getuid?.() === 0) throw new Skipped("root reads every folder");
-      await s.status(/ notes .*index\.md/);
+      await s.where(/^notes(?: |$)/, /index\.md/);
       s.expect(JSON.parse(readFileSync(walkJson(s), "utf8")).dirs.length === 0, "the walk kept holds no folder");
       // The plan across home, previewed, not carried out: from a walk of home made for it, not the empty one.
       await leader(s, "v", "shift+m");
@@ -779,7 +779,7 @@ const HOME: Check[] = [
     },
     run: async (s) => {
       if (process.getuid?.() === 0) throw new Skipped("root reads every folder");
-      await s.status(/ ~ /);
+      await s.where(/^~(?: |$)/);
       await quits(s);
       const disk = join(s.dir, "disk");
       const proj = join(disk, "proj");
@@ -808,7 +808,7 @@ const HOME: Check[] = [
       }
       s.expect(s.cliIn("~/", "ls").out.split("\n").includes("lnk/p.md"), "lnk/p.md back once its disk is searched");
       await s.restart();
-      await s.status(/ ~ /);
+      await s.where(/^~(?: |$)/);
       await switcherShows(s, "p.md", "lnk/p.md");
     },
   },
