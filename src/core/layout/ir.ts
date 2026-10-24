@@ -61,6 +61,9 @@ export interface Line {
   /** A picture's first row (12.x): the file, and the columns and rows it takes — this row and the `rows - 1` after
    *  it, blank frame rows the drawing puts the image over. */
   image?: Picture;
+  /** Any row of a picture (PIC): the picture, and which of its rows this is — its `▣` rows before 0 (the last at -1),
+   *  the rows it's drawn over from 0, and its bar, when it scrolls sideways, at `rows`. */
+  pic?: { p: Picture; row: number };
   /** A row of a code block too wide for its room, laid out whole to scroll sideways rather than wrap
    *  (`[render] code_wrap = "scroll"`): see CodeScroll. */
   scroll?: CodeScroll;
@@ -119,6 +122,16 @@ export interface Picture {
   src: string;
   cols: number;
   rows: number;
+  /** Where it's from, as found — an SVG's own file, not its PNG; one on the internet by its address: what a window
+   *  keeps at its own size by (PIC-D4). A drawing slipbox makes has none. */
+  file?: string;
+  /** Shown at its own size (PIC-D3), not fitted to its window. */
+  own?: boolean;
+  /** Its two sizes differ: a click, or `z p`, changes it. */
+  toggles?: boolean;
+  /** At its own size and wider than its room, with wrapping on: its rows scroll sideways on their own, a bar under
+   *  them. */
+  scrolls?: boolean;
 }
 
 export type LinkKind = "wiki" | "embed" | "markdown" | "image" | "footnote" | "tag";
@@ -163,8 +176,19 @@ export interface Layout {
   embedded?: string[];
   /** What it waited for, a module still loading (16.6; Mermaid's, 12.10): laid out again when that's in. */
   pending?: string[];
+  /** It asked for a picture, its own or an embedded note's (PIC): its window's rows and its pictures at their own
+   *  size are part of its key. */
+  pictures?: boolean;
+  /** Wider than `width`: a picture at its own size past the note's natural width, wrapping off (PIC-D6) — how far the
+   *  window scrolls sideways. */
+  extent?: number;
   /** The code view's cells (24.13): each one's lines, its title, and its definition's name (where references start). */
   cells?: { from: number; to: number; title: string; name?: { line: number; column: number } }[];
+}
+
+/** How wide a layout is to scroll sideways across, wrapping off: its width, or past it to a picture's edge (PIC-D6). */
+export function extentOf(layout: Layout): number {
+  return Math.max(layout.width, layout.extent ?? 0);
 }
 
 export function spanWidthText(spans: Span[]): string {

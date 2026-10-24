@@ -177,6 +177,8 @@ export class Lens {
     // is the lens's, whatever the unit.
     const code = this.app.isCodeDocument(buf);
     const fits = (s: number, e: number) => rowsOf(s, e) <= maxRows;
+    // Its pictures as this window shows them (PIC): their key changed, the note around the lens is laid out again.
+    const pictures = code ? undefined : this.app.pictures.forView(view, width);
     const fresh = (prev?: Block): LiveBase => {
       const rendered = code
         ? buf.codeLayout(width, wrap, this.app.glyphs, this.app.ui.code_cells, this.app.code.cellProblems(view))
@@ -185,7 +187,7 @@ export class Lens {
             this.app.glyphs,
             this.app.ui.urls,
             buf.rel ? this.app.graph : null,
-            this.app.pictures.forBuffer(buf),
+            pictures,
             this.app.code.scrolls(),
           );
       let blocks = code ? buf.codeBlocks(lineCount) : blockRanges(buf.parsed.tree, lineCount);
@@ -214,6 +216,7 @@ export class Lens {
         width,
         wrap,
         codeScroll: this.app.code.scrolls(),
+        pictures: pictures?.key ?? "",
         renderedVersion: buf.version,
         version: buf.version,
         blocks,
@@ -228,7 +231,14 @@ export class Lens {
     // A cell's ✎ (24.13): the lens on its lines.
     const asked = view.lensRange;
     view.lensRange = undefined;
-    if (!base || base.width !== width || base.wrap !== wrap || base.codeScroll !== this.app.code.scrolls() || asked)
+    if (
+      !base ||
+      base.width !== width ||
+      base.wrap !== wrap ||
+      base.codeScroll !== this.app.code.scrolls() ||
+      base.pictures !== (pictures?.key ?? "") ||
+      asked
+    )
       base = fresh(asked);
     else if (buf.version !== base.version) {
       // Typed into the lens, the rest untouched: the same render, the lens longer or shorter.
@@ -445,6 +455,8 @@ export interface LiveBase {
   wrap: boolean;
   /** Its code blocks too wide kept whole, to scroll sideways (`[render] code_wrap`). */
   codeScroll: boolean;
+  /** Its pictures' key, as its window showed them (PIC). */
+  pictures: string;
   /** The buffer version the render was made from, and the one the block was last matched to. */
   renderedVersion: number;
   version: number;

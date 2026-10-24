@@ -56,9 +56,9 @@ Asked of the sidekick, `tmp/issue/codex-design-request.md`; each point checked a
 - **One scale, said exactly:** the floors raise one proportional scale, never rows and columns apart; the `▣` rows
   subtracted are as many as the alt text wraps to (`render.ts:569`). In design.md § MODIFIED rendering.md. Examples, at
   8 × 16-pixel cells and a 100-column room (*ours*): the docs' screenshot (1,734 × 950, 169 × 47 cells within the
-  budget) in a 40-row window, 100 × 28, its own 169 × 47; in a 10-row window, the floor's 44 × 12; a phone's (1,170 ×
+  budget) in a 40-row window, 100 × 28, its own 169 × 47; in a 10-row window, the floor's 43 × 12; a phone's (1,170 ×
   2,532, 85 × 92 in the budget) in 40 rows, 36 × 39, its own taller than the window; an infographic (800 × 10,000,
-  21 × 128 in the budget) in 40 rows, the 20-column floor's 20 × 125, taller than the window by design.
+  21 × 132 in the budget) in 40 rows, the 20-column floor's 20 × 125, taller than the window by design.
 - **Sizes and identities apart:** Obsidian's size may enlarge a smaller file (`pictures.ts:151`), as before; the
   budget bounds that too. A picture's identity is its file as found, never an SVG's PNG, whose path changes with the
   width (`pictures.ts:156`); "nothing decoded again" said only of decoding, an SVG rasterised per width as before.

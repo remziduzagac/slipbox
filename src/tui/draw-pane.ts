@@ -17,9 +17,8 @@ import type { Role, Color, Theme } from "../core/theme/theme.ts";
 import { LENS_COUNTERS } from "../core/layout/live.ts";
 import { sanitize } from "../core/sanitize.ts";
 import type { Glyphs } from "../core/glyphs.ts";
-import { type CodeScroll, type Line, type Layout, scrolledCol, scrolledInSight } from "../core/layout/ir.ts";
+import { type CodeScroll, extentOf, type Line, type Layout, scrolledCol, scrolledInSight } from "../core/layout/ir.ts";
 import type { CommentLink } from "../core/syntax.ts";
-import { DRAWING_ROWS } from "./pictures.ts";
 import { spanStyle } from "../core/layout/style.ts";
 
 function paneIsActive(app: App, view: View): boolean {
@@ -203,7 +202,7 @@ export function drawPane(
   const sel = view.sel ? { range: ordered(view.sel.anchor, view.cur), line: view.sel.line } : null;
   const textW = Math.max(1, body.x + body.w - 1 - signsRight - textX);
   // Wrapping off: never scrolled past what this width can show (after a resize, say).
-  view.left = app.ui.wrap ? 0 : Math.max(0, Math.min(view.left, Math.max(0, layout.width - textW)));
+  view.left = app.ui.wrap ? 0 : Math.max(0, Math.min(view.left, Math.max(0, extentOf(layout) - textW)));
   const cursorSrc = layout.lines[view.cur.row]?.src;
 
   // The file's problems (19.8): by each source line they cover, and in the bar by the row that line starts on.
@@ -429,14 +428,14 @@ export function drawPane(
       if (view === app.view) geo.cursor = { x: textX - view.left - shift + view.cur.col, y };
     }
   }
-  if (c.image && view.left === 0 && app.pictures.now(view)) drawPictures(c, layout, shown, body.y, textX, textW);
+  if (c.image && app.pictures.now(view)) drawPictures(app, c, view, layout, shown, body.y, textX, textW, geo);
 
   if (hbar) {
     const r = { x: textX, y: body.y + body.h, w: textW, h: 1 };
     c.fill(body.x, r.y, body.w, 1, page);
-    if (layout.width > textW) {
-      drawHScrollbar(app, c, r, layout.width, view.left, active, page);
-      geo.scrollbars.push({ ...r, view, total: layout.width, horizontal: true });
+    if (extentOf(layout) > textW) {
+      drawHScrollbar(app, c, r, extentOf(layout), view.left, active, page);
+      geo.scrollbars.push({ ...r, view, total: extentOf(layout), horizontal: true });
     }
   }
   // Scrollbar in the last column.
@@ -700,28 +699,50 @@ function offsetMarks(
 }
 
 /**
- * A note's pictures (12.x), over the blank rows the layout keeps for them: each from its first row on screen — one whose
- * top is scrolled away (up to DRAWING_ROWS rows back, the tallest a picture is), cut there — to its last on screen.
+ * A note's pictures (12.x), over the blank rows the layout keeps for them: each from its first row on screen — its
+ * rows name it, so one whose top is scrolled away is found however tall it is (PIC) — to its last, and of its columns
+ * the ones that show: past its own offset where it scrolls on its own, else in the window, scrolled sideways or not
+ * (PIC-D6). Each drawn is a place a click finds it.
  */
-function drawPictures(c: Canvas, layout: Layout, shown: number[], top: number, x: number, textW: number): void {
+function drawPictures(
+  app: App,
+  c: Canvas,
+  view: View,
+  layout: Layout,
+  shown: number[],
+  top: number,
+  x: number,
+  textW: number,
+  geo: Geometry,
+): void {
   for (let i = 0; i < shown.length; i++) {
     const row = shown[i]!;
-    let start = row;
-    let pic = layout.lines[row]?.image;
-    if (!pic && i === 0)
-      for (let k = 1; k < DRAWING_ROWS && row - k >= 0; k++) {
-        const p = layout.lines[row - k]?.image;
-        if (!p) continue;
-        if (row - k + p.rows > row) [start, pic] = [row - k, p];
-        break;
-      }
-    if (!pic) continue;
-    const skip = row - start;
+    const at = layout.lines[row]?.pic;
+    if (!at || at.row < 0 || at.row >= at.p.rows) continue;
+    const pic = at.p;
     let rows = 0;
-    while (i + rows < shown.length && rows < pic.rows - skip && shown[i + rows] === row + rows) rows++;
+    while (i + rows < shown.length && shown[i + rows] === row + rows && at.row + rows < pic.rows) rows++;
     // Where its row's text starts: past a list's indent, a quote's bar, an embedded note's (12.14).
-    const at = layout.lines[start]!.spans.reduce((w, s) => w + stringWidth(s.text), 0);
-    c.image!(x + at, top + i, Math.min(pic.cols, textW - at), rows, pic.src, { skip, total: pic.rows });
+    const indent = layout.lines[row]!.spans.reduce((w, s) => w + stringWidth(s.text), 0);
+    const s = layout.lines[row]!.scroll;
+    // Its columns on screen, from the text's left edge, and the first of its own that shows.
+    let from: number;
+    let to: number;
+    let left: number;
+    if (s) {
+      left = app.code.offset(view, layout, row);
+      from = indent;
+      to = Math.min(indent + pic.cols - left, s.x + s.w, textW);
+    } else {
+      from = Math.max(indent, view.left) - view.left;
+      to = Math.min(indent + pic.cols, view.left + textW) - view.left;
+      left = Math.max(0, view.left - indent);
+    }
+    if (to > from) {
+      const crop = { skip: at.row, total: pic.rows, left, wide: pic.cols };
+      c.image!(x + from, top + i, to - from, rows, pic.src, crop);
+      geo.pictures.push({ x: x + from, y: top + i, w: to - from, h: rows, view, row: row - at.row });
+    }
     i += rows - 1;
   }
 }

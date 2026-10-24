@@ -53,7 +53,7 @@ test("pictures drawn every frame stay decoded: with ten on screen, the decoding 
   const stop = onLoaded((name) => void (name === "pictures" && decoded++));
   try {
     const frame = async () => {
-      for (const f of files) pictures.draw(buf, 0, 0, 1, 1, f, { skip: 0, total: 1 });
+      for (const f of files) pictures.draw(buf, 0, 0, 1, 1, f, { skip: 0, total: 1, left: 0, wide: 1 });
       await settle();
     };
     // Eight decoded at a time, and finished ones kept within the jobs' budget until a frame takes them: a few frames.
@@ -88,11 +88,11 @@ test("the picture drawn every frame is kept while 24 others are drawn once each:
     // Each frame: the first, and the next of the others, twice (decoded, then taken).
     for (const f of files.slice(1)) {
       for (let twice = 0; twice < 2; twice++) {
-        for (const g of [files[0]!, f]) pictures.draw(buf, 0, 0, 1, 1, g, { skip: 0, total: 1 });
+        for (const g of [files[0]!, f]) pictures.draw(buf, 0, 0, 1, 1, g, { skip: 0, total: 1, left: 0, wide: 1 });
         await settle();
       }
     }
-    pictures.draw(buf, 0, 0, 1, 1, files[0]!, { skip: 0, total: 1 });
+    pictures.draw(buf, 0, 0, 1, 1, files[0]!, { skip: 0, total: 1, left: 0, wide: 1 });
     await settle();
     expect(decoded).toBe(files.length);
   } finally {

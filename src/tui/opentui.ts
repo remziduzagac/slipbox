@@ -18,7 +18,7 @@ import {
 } from "@opentui/core";
 import type { CellStyle } from "../core/layout/style.ts";
 import type { Color } from "../core/theme/theme.ts";
-import { type Canvas, glyphCell } from "./canvas.ts";
+import { type Canvas, type Crop, glyphCell } from "./canvas.ts";
 import { idColor, MAX_PLACEHOLDER_CELLS, pictureId, placeholderRow, release, transmit } from "./placeholders.ts";
 
 const colors = new Map<string, RGBA>();
@@ -100,28 +100,26 @@ export class Pictures {
     await this.jobs.settle();
   }
 
-  draw(
-    buf: OptimizedBuffer,
-    x: number,
-    y: number,
-    cols: number,
-    rows: number,
-    src: string,
-    crop: { skip: number; total: number },
-  ): void {
+  draw(buf: OptimizedBuffer, x: number, y: number, cols: number, rows: number, src: string, crop: Crop): void {
     const protocol = this.protocol();
     const image = protocol ? this.image(src) : null;
-    if (!protocol || !image || rows <= 0) return;
-    if (this.usesPlaceholders() && cols <= MAX_PLACEHOLDER_CELLS && crop.total <= MAX_PLACEHOLDER_CELLS) {
-      const id = this.send(src, image, cols, crop.total);
+    if (!protocol || !image || rows <= 0 || cols <= 0) return;
+    // Sent, and placed, whole (PIC): the part that shows is drawn as those of its cells, so scrolling sends nothing.
+    if (this.usesPlaceholders() && crop.wide <= MAX_PLACEHOLDER_CELLS && crop.total <= MAX_PLACEHOLDER_CELLS) {
+      const id = this.send(src, image, crop.wide, crop.total);
       if (id === null) return;
       const fg = RGBA.fromHex(idColor(id));
-      for (let k = 0; k < rows; k++) buf.drawText(placeholderRow(crop.skip + k, cols), x, y + k, fg);
+      for (let k = 0; k < rows; k++) buf.drawText(placeholderRow(crop.skip + k, cols, crop.left), x, y + k, fg);
       return;
     }
-    const top = Math.round((image.height * crop.skip) / crop.total);
-    const tall = Math.max(1, Math.min(image.height - top, Math.round((image.height * rows) / crop.total)));
-    buf.drawImage(image, x, y, cols, rows, undefined, undefined, 0, top, image.width, tall, protocol);
+    // OpenTUI's path: the source rectangle of the part that shows, both its edges from the cells', so parts drawn
+    // side by side meet.
+    const edge = (at: number, of: number, px: number) => Math.round((px * at) / of);
+    const top = edge(crop.skip, crop.total, image.height);
+    const tall = Math.max(1, Math.min(image.height, edge(crop.skip + rows, crop.total, image.height)) - top);
+    const left = edge(crop.left, crop.wide, image.width);
+    const wide = Math.max(1, Math.min(image.width, edge(crop.left + cols, crop.wide, image.width)) - left);
+    buf.drawImage(image, x, y, cols, rows, undefined, undefined, left, top, wide, tall, protocol);
   }
 
   /**
@@ -237,7 +235,7 @@ export class BufferCanvas implements Canvas {
   ascii(x: number, y: number, text: string, s: CellStyle): void {
     this.buf.drawText(text, x, y, toRGBA(s.fg, true), toRGBA(s.bg, false), attrs(s));
   }
-  image(x: number, y: number, cols: number, rows: number, src: string, crop: { skip: number; total: number }): void {
+  image(x: number, y: number, cols: number, rows: number, src: string, crop: Crop): void {
     this.pictures?.draw(this.buf, x, y, cols, rows, src, crop);
   }
 }

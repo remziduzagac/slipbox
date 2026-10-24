@@ -1,5 +1,5 @@
 ---
-status: todo
+status: review
 assignee: claude-52
 blocked_by: [PIC-T2]
 tracker: [gh:#52]
@@ -30,3 +30,9 @@ A click on a picture, `z p`, `z h` and `z l`, and the wheel and the bar of a pic
 - Rests on: PIC-D3, PIC-D4.
 
 ## Log
+
+- 2026-10-24: `picture.size`, `picture.scroll_left`, `picture.scroll_right` in `motion.ts`, done in `actions-view.ts`,
+  bound `z p`, `z h`, `z l`; the `z` group's which-key line names them. The mouse keeps a press on a picture's drawn
+  cells (`Geometry.pictures`) until release: still, a toggle; moved, the press a text press and the drag a selection.
+  Found live: `z p` where no pictures are drawn said to go to a `▣` line though the cursor was on one; it now says why
+  (a unit test and a check).

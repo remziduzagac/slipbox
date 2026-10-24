@@ -71,6 +71,10 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
   `hobbies/photography/images/harbour-01.jpg`, `hobbies/photography/walks/2026-09-07-harbour.md`,
   `notes/meetings/2026-08-26-route-sharing-design-review.md`, `work/kestrel/README.md`,
   `work/product/releases/2.3-notes.md` (rendering.md Images; instrument-inventory photos)
+- Pictures sized to their window: a wide screenshot fitted to the window's text width and its height, never under 12
+  rows or 20 columns; a click or `z p` shows it at its own size, scrolled sideways under a bar of its own (`z h`, `z l`,
+  the wheel), and again fits it; in an embedded note too — `work/product/assets/route-planner-2.3.png`,
+  `work/product/releases/2.3-notes.md`, `work/product/releases/2.3-plan.md` (rendering.md Images; issue #52)
 - Inline HTML tags dropped, text kept: \<kbd\>, \<sup\>, \<sub\>, \<mark\>, \<span style\>, \<b\>, \<i\>, \<u\> —
   `work/kestrel/docs/qa/theme-showcase.md`, `work/product/releases/2.3-notes.md` (rendering.md Inline)
 - Inline HTML comment in a paragraph and across lines — `notes/daily/2026-08-31.md`,
@@ -2503,6 +2507,12 @@ A long note: headings, paragraphs, pages to move through; the daily note has the
 - `scroll.center` — Cursor's line to the middle — `notes/meetings/all-hands-archive.md` (command-specs.ts)
 - `scroll.top` — Cursor's line to the top — `notes/meetings/all-hands-archive.md` (command-specs.ts)
 - `scroll.bottom` — Cursor's line to the bottom — `notes/meetings/all-hands-archive.md` (command-specs.ts)
+
+### picture
+
+- `picture.size` — Picture at its own size, or fitted — `work/product/releases/2.3-notes.md` (command-specs.ts)
+- `picture.scroll_left` — Scroll the picture left — `work/product/releases/2.3-notes.md` (command-specs.ts)
+- `picture.scroll_right` — Scroll the picture right — `work/product/releases/2.3-notes.md` (command-specs.ts)
 
 ### visual
 

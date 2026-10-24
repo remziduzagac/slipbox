@@ -164,6 +164,10 @@ export const DEFAULT_KEYS: Record<string, string> = {
   "z z": "scroll.center",
   "z t": "scroll.top",
   "z b": "scroll.bottom",
+  // a picture at its own size, and scrolled sideways (PIC-D3; vim's zh and zl scroll sideways)
+  "z p": "picture.size",
+  "z h": "picture.scroll_left",
+  "z l": "picture.scroll_right",
   "ctrl+g": "cursor.goto_line",
   "leader f l": "cursor.goto_line",
   // moving lines (VS Code's alt+up/down are the heading jumps here; JetBrains' keys, then)
@@ -954,7 +958,7 @@ export const DEFAULT_GROUPS: Record<string, string> = {
   "ctrl+w": "window: split, focus, move, resize",
   "ctrl+t": "tabs: open, switch, reorder, close",
   g: "go: top (g), definition (d), type (y), implementations (I), references (r), link (f x), tabs (t T), changes (; ,), last insert (i)",
-  z: "scroll: the cursor's line to the middle (z), top (t), bottom (b); spelling: suggestions (=), add the word (g); fold the cell (a)",
+  z: "scroll: the cursor's line to the middle (z), top (t), bottom (b); a picture: its own size (p), sideways (h, l); spelling: suggestions (=), add the word (g); fold the cell (a)",
   "[": "previous: heading ([), link (l), misspelt word (s), change (c), note of this type (t)",
   "]": "next: heading (]), link (l), misspelt word (s), change (c), note of this type (t)",
 };

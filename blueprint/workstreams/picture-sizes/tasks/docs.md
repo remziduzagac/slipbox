@@ -1,5 +1,5 @@
 ---
-status: todo
+status: review
 assignee: claude-52
 blocked_by: []
 related: [PIC-T4]
@@ -26,3 +26,8 @@ The user docs and the changelog say what users see.
 - Delivers: requirements.md § Acceptance criteria (the docs).
 
 ## Log
+
+- 2026-10-24: `docs/manual/reading.md` § Pictures (fitted, the floor, at its own size, how long, the budget, the lens,
+  wrapping off, the rest on resizing), `docs/manual/keys.md` (Scrolling: `z p`, `z h` / `z l`; the mouse), CHANGELOG
+  (Added, Changed). `docs/images/obsidian-home.png` retaken: `dal.png` at Obsidian's 300 pixels, 38 columns (it was
+  30, under the 12-row cap). `bun run test:docs` passes.

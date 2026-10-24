@@ -23,9 +23,46 @@ import { looksLikeSvg } from "../core/svg.ts";
 /** An SVG read for drawing is at most this big (12.15). */
 const MAX_SVG_BYTES = 8 * 1024 * 1024;
 
+/** The most of a picture the screen shows (PIC-D2): what's decoded for it, a megapixel and 2,048 pixels a side. */
+export const SCREEN_PIXELS = 1_000_000;
+export const SCREEN_SIDE = 2048;
+/** The least a picture is shrunk to fit its window's height (PIC-D1): 12 rows tall, or 20 columns wide. */
+export const FLOOR_ROWS = 12;
+export const FLOOR_COLS = 20;
+
+export interface Cells {
+  cols: number;
+  rows: number;
+}
+
 /**
- * A picture's cells at most `width` columns wide: `w` × `h` pixels in cells of the terminal's, proportions kept, at most
- * `maxRows` rows (narrower then).
+ * A picture's two sizes in cells (PIC-D1, PIC-D2): `own`, its `w` × `h` pixels brought within the screen's budget; and
+ * `fit`, that at one scale — never larger, at most `room.cols` wide, and within that at most `room.rows` tall (its
+ * window's rows less its `▣` rows), but never under the floor, 12 rows or 20 columns, unless its own size or its room
+ * is smaller. Proportions kept: its rows follow from its columns.
+ */
+export function pictureSizes(
+  w: number,
+  h: number,
+  room: Cells,
+  cell: { width: number; height: number },
+): { fit: Cells; own: Cells } {
+  const b = Math.min(1, SCREEN_SIDE / w, SCREEN_SIDE / h, Math.sqrt(SCREEN_PIXELS / (w * h)));
+  const [pw, ph] = [w * b, h * b];
+  const rowsOf = (cols: number) => Math.max(1, Math.ceil((cols * cell.width * ph) / pw / cell.height));
+  // The columns `rows` rows hold, a fraction.
+  const colsOf = (rows: number) => (rows * cell.height * pw) / ph / cell.width;
+  const ownCols = Math.max(1, Math.ceil(pw / cell.width));
+  const widest = Math.max(1, Math.min(ownCols, room.cols));
+  const tall = Math.floor(colsOf(Math.max(1, room.rows)));
+  const floor = Math.max(Math.floor(colsOf(FLOOR_ROWS)), FLOOR_COLS);
+  const cols = Math.max(1, Math.min(widest, Math.max(tall, floor)));
+  return { own: { cols: ownCols, rows: rowsOf(ownCols) }, fit: { cols, rows: rowsOf(cols) } };
+}
+
+/**
+ * A drawing's cells (12.16, 12.17) at most `width` columns wide: `w` × `h` pixels in cells of the terminal's,
+ * proportions kept, at most `maxRows` rows (narrower then).
  */
 export function fitPicture(
   w: number,

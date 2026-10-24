@@ -98,7 +98,10 @@ After § UI settings (and its § Code blocks that scroll):
 >   another click fits it to the window again. The press is the picture's before the cursor is placed, and never
 >   counts toward a double-click; one that moves becomes a selection, as a drag from those rows always did. `z p`
 >   (`picture.size`, PIC-D3) does the same from its `▣` line, which the cursor reaches as any row, and `tab` as a
->   link. A picture whose two sizes are one (it fits whole) stays as it is, and the message says so.
+>   link. A picture whose two sizes are one (it fits whole) stays as it is, and the message says so. With the lens
+>   open, a click changes its size and leaves the cursor, and the lens, where they are: on the picture's line, the lens
+>   would show its markdown instead. Where no pictures are drawn (a terminal that draws none, `[render] images =
+>   "never"`), `z p` says so rather than where to go. The `z` group's which-key line names `p`, `h` and `l`.
 > - **Scrolled sideways.** Wider than its room, it scrolls as a code block does (§ Code blocks that scroll), its frame
 >   rows a block of their own — its `▣` rows aren't in it, but name it, so the cursor on them never moves its offset:
 >   a sideways wheel or trackpad over it, or the wheel with `shift`, 6 columns a notch; its `▄` bar, on the row under

@@ -1,5 +1,5 @@
 ---
-status: todo
+status: review
 assignee: claude-52
 blocked_by: []
 tracker: [gh:#52]
@@ -30,3 +30,9 @@ whether they differ. Drawings (`DRAWING_ROWS`) keep their own sizing.
 - Rests on: PIC-D1, PIC-D2; research.md § Sizing today.
 
 ## Log
+
+- 2026-10-24: `pictureSizes` in `src/tui/images.ts`: its own size within the budget, then one scale bounded by the
+  room's columns and rows, raised to the floor; `fitPicture` kept for drawings alone. The row floor's columns are
+  rounded down, so the floor is 12 rows, not 13 (the docs' screenshot in 9 rows: 43 × 12). Tests:
+  `tests/pictures.test.ts` § a picture's two sizes. Undone once each, the floor, the height bound, the caption's rows
+  and the budget fail their tests (`tmp/issue/mutations.log`).

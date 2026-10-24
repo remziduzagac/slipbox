@@ -5,7 +5,7 @@ import { readRegular } from "../core/fsutil.ts";
 import { taskHolding, toggleTask } from "../core/tasks.ts";
 import { cannotEdit, lineOf, offsetOf, placeAt, typedSelection } from "./editing.ts";
 import { matchBracket } from "../core/brackets.ts";
-import type { Layout } from "../core/layout/ir.ts";
+import { extentOf, type Layout } from "../core/layout/ir.ts";
 import { layoutWidth } from "../core/note.ts";
 import { type Anchor, anchorAt, type CursorAnchor, rowFor } from "../core/position.ts";
 import type { TextEdit } from "../core/footnotes.ts";
@@ -83,6 +83,8 @@ export class Views {
     this.app.languages.ensureLint(view.buf);
     this.app.languages.ensureLinters(view.buf);
     this.app.languages.ensureServers(view.buf);
+    // Its pictures as this window shows them (PIC): their key places its cursor and top again, though the rows be as many.
+    const pictures = !drawn && !view.source && !view.live && !code ? this.app.pictures.forView(view, width) : undefined;
     const layout = drawn
       ? drawn(width, { glyphs: this.app.glyphs, wrap: this.app.ui.wrap, codeScroll: this.app.code.scrolls() })
       : view.source
@@ -102,11 +104,11 @@ export class Views {
                 this.app.glyphs,
                 this.app.ui.urls,
                 view.buf.rel ? this.app.graph : null,
-                this.app.pictures.forBuffer(view.buf),
+                pictures,
                 this.app.code.scrolls(),
               );
     const block = view.live && view.liveBase ? `${view.liveBase.active[0]}-${view.liveBase.active[1]}` : "";
-    const key = `${view.source ? "s" : view.live ? "l" : "r"}${block}:${width}:${this.app.glyphs.mode}:${this.app.ui.urls}:${layout.lines.length}:${view.buf.version}:${view.height}`;
+    const key = `${view.source ? "s" : view.live ? "l" : "r"}${block}:${width}:${this.app.glyphs.mode}:${this.app.ui.urls}:${layout.lines.length}:${view.buf.version}:${view.height}:${view.live ? (view.liveBase?.pictures ?? "") : (pictures?.key ?? "")}`;
     if (view.layoutKey !== key) {
       view.layoutKey = key;
       view.cur = this.cursorFromAnchor(layout, view.curAnchor, view.insert);
@@ -296,7 +298,7 @@ export class Views {
       const margin = Math.min(4, Math.floor(w / 4));
       if (view.cur.col < view.left + margin) view.left = view.cur.col - margin;
       else if (view.cur.col > view.left + w - 1 - margin) view.left = view.cur.col - w + 1 + margin;
-      view.left = Math.max(0, Math.min(view.left, Math.max(0, layout.width - w)));
+      view.left = Math.max(0, Math.min(view.left, Math.max(0, extentOf(layout) - w)));
     }
   }
 

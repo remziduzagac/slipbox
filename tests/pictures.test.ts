@@ -1,0 +1,553 @@
+// Pictures sized to their window, shown at their own size on a click (PIC, issue #52): the two sizes, the layout's
+// rows for them, the click, the keys and the wheel, how long a picture stays at its own size, wrapping off, and the
+// drawing of the part that shows.
+
+import { describe, expect, test } from "bun:test";
+import { mkdirSync, mkdtempSync, statSync, writeFileSync } from "node:fs";
+import { basename, join } from "node:path";
+import { OptimizedBuffer } from "@opentui/core";
+import { loadRasterizer } from "../src/core/svg.ts";
+import type { Layout, Line } from "../src/core/layout/ir.ts";
+import type { Host, View } from "../src/tui/app.ts";
+import { TextCanvas } from "../src/tui/canvas.ts";
+import { FLOOR_COLS, FLOOR_ROWS, pictureSizes } from "../src/tui/images.ts";
+import { Pictures as OpenTuiPictures } from "../src/tui/opentui.ts";
+import { PICTURES_REST_MS } from "../src/tui/pictures.ts";
+import { pictureId, placeholderCell, placeholderRow } from "../src/tui/placeholders.ts";
+import { harness, type Harness, lineText, makeSandbox, makeVault } from "./tui-harness.ts";
+
+const sandbox = makeSandbox();
+
+const CELL = { width: 8, height: 16 };
+/** The docs' screenshots' size: 1,734 × 950 pixels, decoded 1,351 × 740 — 169 × 47 cells its own. */
+const SHOT = { width: 1734, height: 950 };
+
+describe("a picture's two sizes (PIC-D1, PIC-D2)", () => {
+  test("fitted to its room's columns, never wider than its own size", () => {
+    const { own, fit } = pictureSizes(SHOT.width, SHOT.height, { cols: 100, rows: 39 }, CELL);
+    expect(own).toEqual({ cols: 169, rows: 47 });
+    expect(fit).toEqual({ cols: 100, rows: 28 });
+    // Smaller than its room: its own size, both.
+    const small = pictureSizes(400, 200, { cols: 100, rows: 39 }, CELL);
+    expect(small.own).toEqual({ cols: 50, rows: 13 });
+    expect(small.fit).toEqual(small.own);
+  });
+  test("no taller than its window's rows less its ▣ rows, narrower then — never under the floor", () => {
+    // A phone's screenshot, 1,170 × 2,532 (85 × 92 its own), in 39 rows: 36 × 39.
+    expect(pictureSizes(1170, 2532, { cols: 100, rows: 39 }, CELL).fit).toEqual({ cols: 36, rows: 39 });
+    // 9 rows for it: the floor's 12 rows, taller than the window.
+    expect(pictureSizes(SHOT.width, SHOT.height, { cols: 100, rows: 9 }, CELL).fit).toEqual({
+      cols: 43,
+      rows: FLOOR_ROWS,
+    });
+    // Tall and narrow, 800 × 10,000: the floor's 20 columns, its rows far past the window's.
+    const tall = pictureSizes(800, 10_000, { cols: 100, rows: 39 }, CELL);
+    expect(tall.own).toEqual({ cols: 21, rows: 132 });
+    expect(tall.fit).toEqual({ cols: FLOOR_COLS, rows: 125 });
+    // The floor is never past its own size, nor past its room.
+    expect(pictureSizes(80, 40, { cols: 100, rows: 2 }, CELL).fit).toEqual({ cols: 10, rows: 3 });
+    expect(pictureSizes(SHOT.width, SHOT.height, { cols: 30, rows: 5 }, CELL).fit.cols).toBe(30);
+    // No rows known (a window not drawn yet): the width alone.
+    expect(pictureSizes(SHOT.width, SHOT.height, { cols: 100, rows: Number.POSITIVE_INFINITY }, CELL).fit).toEqual({
+      cols: 100,
+      rows: 28,
+    });
+  });
+  test("within the screen's budget, a megapixel and 2,048 a side: its own size no bigger", () => {
+    // 4,000 × 3,000: a megapixel's worth, 1,155 × 866.
+    expect(pictureSizes(4000, 3000, { cols: 300, rows: 100 }, CELL).own).toEqual({ cols: 145, rows: 55 });
+    // A banner 5,000 wide: 2,048 a side.
+    expect(pictureSizes(5000, 100, { cols: 300, rows: 100 }, CELL).own).toEqual({ cols: 256, rows: 3 });
+    // A size the note gives that enlarges a smaller file: kept, within the budget.
+    expect(pictureSizes(3000, 1500, { cols: 400, rows: 100 }, CELL).own.cols).toBe(177);
+  });
+});
+
+/** A terminal that draws pictures, its cells 8 × 16; the files' sizes as it would read them. */
+const terminal = (sizes: Record<string, { width: number; height: number }>, placeholders = false): Host["images"] => ({
+  supported: () => true,
+  size: (path) => sizes[basename(path)] ?? null,
+  cell: () => CELL,
+  ...(placeholders ? { placeholders: () => true } : {}),
+});
+
+const PARAS = Array.from({ length: 40 }, (_, i) => `Paragraph ${i + 1}, long enough to wrap in a narrow window.`);
+
+/** A note with the screenshot between paragraphs, in a terminal `width` × `height`. */
+async function open(
+  opts: {
+    md?: string;
+    width?: number;
+    height?: number;
+    files?: Record<string, { width: number; height: number }>;
+    config?: Parameters<typeof harness>[0] extends infer O ? (O extends { config?: infer C } ? C : never) : never;
+    placeholders?: boolean;
+  } = {},
+): Promise<{ h: Harness; v: View; root: string }> {
+  const root = makeVault();
+  const md = opts.md ?? `# P\n\nText before.\n\n![a screenshot](shot.png)\n\n${PARAS.join("\n\n")}\n`;
+  writeFileSync(join(root, "p.md"), md);
+  const files = opts.files ?? { "shot.png": SHOT };
+  for (const f of Object.keys(files)) writeFileSync(join(root, f), "a stand-in: its size is the terminal's to say");
+  const h = await harness({
+    root,
+    open: "p.md",
+    width: opts.width ?? 100,
+    height: opts.height ?? 40,
+    images: terminal(files, opts.placeholders),
+    ...(opts.config ? { config: opts.config } : {}),
+  });
+  return { h, v: h.app.view!, root };
+}
+
+const layoutOf = (h: Harness) => h.app.currentLayout(h.app.view!);
+/** The rows of the picture drawn from `src`'s file: its ▣ rows, the rows it's drawn over, its bar. */
+const rowsOf = (layout: Layout, file = "shot.png") => {
+  const rows = layout.lines.flatMap((l, i) => (l.pic && basename(l.pic.p.file ?? "") === file ? [i] : []));
+  const first = rows.find((i) => layout.lines[i]!.pic!.row === 0)!;
+  return { rows, first, p: layout.lines[first]!.pic!.p, caption: rows.filter((i) => layout.lines[i]!.pic!.row < 0) };
+};
+/** Its rect where it's drawn, from the last frame. */
+const drawnRect = (h: Harness) => h.app.geometry!.pictures[0]!;
+const click = (h: Harness, x: number, y: number) => {
+  h.app.mouse.handle({ type: "down", x, y, button: 0 });
+  h.app.mouse.handle({ type: "up", x, y, button: 0 });
+  return h.frame();
+};
+const textOfRows = (layout: Layout) => layout.lines.filter((l) => !l.pic).map(lineText);
+
+describe("fitted to its window (PIC-D1)", () => {
+  test("its window's text width, never wider than its own size; its height within the window's less its ▣ line", async () => {
+    const { h, v } = await open();
+    const layout = layoutOf(h);
+    const { p, caption } = rowsOf(layout);
+    expect(p.cols).toBe(Math.min(169, layout.width));
+    expect(p.rows).toBeLessThanOrEqual(v.height - caption.length);
+    expect(p).toMatchObject({ toggles: true });
+    expect(p.own).toBeUndefined();
+    // Drawn whole where it is.
+    expect(h.canvas().images).toEqual([expect.objectContaining({ cols: p.cols, rows: p.rows, left: 0, wide: p.cols })]);
+  });
+  test("a short window: fitted to its height, never under 12 rows — taller than the window then", async () => {
+    const { h, v } = await open({ height: 12 });
+    const { p } = rowsOf(layoutOf(h));
+    expect(v.height).toBeLessThan(FLOOR_ROWS);
+    expect(p.rows).toBe(FLOOR_ROWS);
+    const tall = await open({ height: 30 });
+    const fitted = rowsOf(layoutOf(tall.h)).p;
+    expect(fitted.rows).toBeLessThanOrEqual(tall.v.height - 1);
+    expect(fitted.rows).toBeGreaterThan(FLOOR_ROWS);
+  });
+  test("a ▣ line that wraps leaves the picture that many rows fewer", async () => {
+    const alt = Array.from({ length: 12 }, (_, i) => `word${i}`).join(" ");
+    const { h, v } = await open({
+      md: `# P\n\n![${alt}](tall.png)\n`,
+      files: { "tall.png": { width: 1170, height: 2532 } },
+      width: 50,
+    });
+    const { p, caption } = rowsOf(layoutOf(h), "tall.png");
+    expect(caption.length).toBeGreaterThan(1);
+    expect(p.rows).toBeLessThanOrEqual(v.height - caption.length);
+    expect(p.rows).toBeGreaterThan(v.height - caption.length - 2);
+  });
+  test("two windows of different heights on one note size it each for itself; a note without pictures isn't laid out again for a height", async () => {
+    // 4:3, 1,155 × 866 in the budget: bounded by a short window's height before the floor.
+    const { h } = await open({ height: 50, files: { "shot.png": { width: 1600, height: 1200 } } });
+    await h.app.run("window.split_stacked");
+    h.frame();
+    const [a, b] = h.app.tab!.views;
+    const pa = rowsOf(h.app.currentLayout(a!)).p;
+    expect(a!.height).toBeLessThan(30);
+    expect(pa.rows).toBeLessThanOrEqual(a!.height - 1);
+    // The other made taller by hand: its own size for it.
+    b!.height = 45;
+    const pb = rowsOf(h.app.currentLayout(b!)).p;
+    expect(pb.rows).toBeGreaterThan(pa.rows);
+    expect(rowsOf(h.app.currentLayout(a!)).p.rows).toBe(pa.rows);
+    // Without pictures: the same layout whatever the height.
+    const plain = await open({ md: `# P\n\n${PARAS.join("\n\n")}\n` });
+    const before = layoutOf(plain.h);
+    plain.v.height -= 7;
+    expect(layoutOf(plain.h)).toBe(before);
+  });
+  test("one only in an embedded note asks for the window's height too", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "inner.md"), "# Inner\n\n![a screenshot](shot.png)\n");
+    writeFileSync(join(root, "host.md"), "# Host\n\n![[inner]]\n");
+    writeFileSync(join(root, "shot.png"), "x");
+    const phone = { "shot.png": { width: 1170, height: 2532 } };
+    const h = await harness({ root, open: "host.md", width: 100, height: 40, images: terminal(phone) });
+    const v = h.app.view!;
+    const rows = rowsOf(layoutOf(h)).p.rows;
+    expect(layoutOf(h).pictures).toBe(true);
+    v.height = 20;
+    expect(rowsOf(layoutOf(h)).p.rows).toBeLessThan(rows);
+  });
+});
+
+describe("at its own size, by a click or z p (PIC-D3)", () => {
+  test("a click on it: the cursor to its ▣ line, the picture at its own size, scrolled sideways under a bar of its own; the text as it was", async () => {
+    const { h, v } = await open();
+    const before = layoutOf(h);
+    const r = drawnRect(h);
+    h.app.moveCursor(v, { row: before.lines.length - 1, col: 0 });
+    click(h, r.x + 2, r.y + 1);
+    const after = layoutOf(h);
+    const { p, first, caption, rows } = rowsOf(after);
+    expect(p).toMatchObject({ cols: 169, rows: 47, own: true, scrolls: true });
+    // Its rows scroll as a code block's do, a bar under them.
+    expect(after.lines[first]!.scroll).toEqual({ x: 0, w: after.width, total: 169 });
+    expect(after.lines[rows.at(-1)!]!.scroll).toMatchObject({ part: "bar" });
+    expect(after.lines[caption[0]!]!.scroll).toBeUndefined();
+    // Nothing reflowed: the text's rows are the same, the picture's longer.
+    expect(textOfRows(after)).toEqual(textOfRows(before));
+    expect(v.cur.row).toBe(caption[0]!);
+    expect(h.app.messages.at(-1)!.text).toContain("at its own size");
+    // Again: fitted.
+    const again = drawnRect(h);
+    click(h, again.x + 1, again.y);
+    expect(rowsOf(layoutOf(h)).p).toMatchObject({ cols: Math.min(169, before.width) });
+    expect(rowsOf(layoutOf(h)).p.own).toBeUndefined();
+    expect(layoutOf(h).lines.length).toBe(before.lines.length);
+  });
+  test("z p from its ▣ line does the same; elsewhere it says how", async () => {
+    const { h, v } = await open();
+    const { caption } = rowsOf(layoutOf(h));
+    h.app.moveCursor(v, { row: caption[0]!, col: 0 });
+    await h.keys("z", "p");
+    expect(rowsOf(layoutOf(h)).p.own).toBe(true);
+    await h.keys("z", "p");
+    expect(rowsOf(layoutOf(h)).p.own).toBeUndefined();
+    h.app.moveCursor(v, { row: 0, col: 0 });
+    await h.keys("z", "p");
+    expect(h.app.messages.at(-1)!.text).toContain("no picture here");
+  });
+  test("where no pictures are drawn, z p on a ▣ line says why, not where to go", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "p.md"), "# P\n\n![a screenshot](shot.png)\n");
+    writeFileSync(join(root, "shot.png"), "x");
+    const h = await harness({ root, open: "p.md", width: 100, height: 40 });
+    const v = h.app.view!;
+    h.app.moveCursor(v, { row: layoutOf(h).lines.findIndex((l) => lineText(l).includes("▣")), col: 0 });
+    await h.keys("z", "p");
+    expect(h.app.messages.at(-1)!.text).toContain("no pictures drawn");
+  });
+  test("one already whole at its own size stays, and says so", async () => {
+    const { h } = await open({ files: { "shot.png": { width: 400, height: 200 } } });
+    const r = drawnRect(h);
+    click(h, r.x, r.y);
+    expect(rowsOf(layoutOf(h)).p.own).toBeUndefined();
+    expect(h.app.messages.at(-1)!.text).toContain("whole at its own size already");
+  });
+  test("a drag from it selects, as before; beside it, nothing toggles; quick clicks are two clicks, never a double-click", async () => {
+    const { h, v } = await open();
+    const r = drawnRect(h);
+    h.app.mouse.handle({ type: "down", x: r.x + 1, y: r.y + 1, button: 0 });
+    h.app.mouse.handle({ type: "drag", x: r.x + 1, y: r.y + 30, button: 0 });
+    h.app.mouse.handle({ type: "up", x: r.x + 1, y: r.y + 30, button: 0 });
+    expect(rowsOf(layoutOf(h)).p.own).toBeUndefined();
+    expect(v.sel).not.toBeNull();
+    // Past its right edge, on its row: the text's click, not the picture's.
+    v.sel = null;
+    click(h, r.x + r.w + 1, r.y + 1);
+    expect(rowsOf(layoutOf(h)).p.own).toBeUndefined();
+    // Twice quickly: at its own size, then fitted.
+    click(h, r.x + 1, r.y + 1);
+    expect(rowsOf(layoutOf(h)).p.own).toBe(true);
+    click(h, r.x + 1, r.y + 1);
+    expect(rowsOf(layoutOf(h)).p.own).toBeUndefined();
+  });
+  test("with the lens open, a click toggles it and leaves the cursor, and the lens, where they are", async () => {
+    const { h, v } = await open({ config: (c) => (c.editor.edit_in = "live") });
+    // The lens below the picture, which stays drawn above it.
+    h.app.moveCursor(v, { row: layoutOf(h).lines.findIndex((l) => lineText(l).includes("Paragraph 3,")), col: 0 });
+    await h.keys("i");
+    expect(v.live).toBe(true);
+    const lens = v.liveBase!.active;
+    const on = layoutOf(h).lines[v.cur.row]!.src;
+    const r = drawnRect(h);
+    click(h, r.x + 1, r.y + 1);
+    // The cursor on its line still, the lens on its lines: only the picture above them grew.
+    expect(layoutOf(h).lines[v.cur.row]!.src).toBe(on);
+    expect(v.liveBase!.active).toEqual(lens);
+    expect(rowsOf(layoutOf(h)).p.own).toBe(true);
+    // The window's height changed, the lens still open: fitted again for it.
+    click(h, drawnRect(h).x + 1, drawnRect(h).y);
+    const was = rowsOf(layoutOf(h)).p.rows;
+    v.height = 14;
+    expect(rowsOf(layoutOf(h)).p.rows).toBeLessThan(was);
+  });
+});
+
+describe("scrolled sideways (PIC-D3)", () => {
+  const atOwn = async () => {
+    const o = await open({ placeholders: true });
+    const r = drawnRect(o.h);
+    click(o.h, r.x + 1, r.y + 1);
+    return o;
+  };
+  test("z l and z h, a quarter of its room a press, kept within it; drawn from the column that shows", async () => {
+    const { h } = await atOwn();
+    const { first } = rowsOf(layoutOf(h));
+    const w = layoutOf(h).lines[first]!.scroll!.w;
+    await h.keys("z", "l");
+    const step = Math.floor(w / 4);
+    expect(h.app.code.offset(h.app.view!, layoutOf(h), first)).toBe(step);
+    expect(h.canvas().images).toEqual([
+      expect.objectContaining({ left: step, wide: 169, cols: Math.min(w, 169 - step) }),
+    ]);
+    for (let k = 0; k < 10; k++) await h.keys("z", "l");
+    expect(h.app.code.offset(h.app.view!, layoutOf(h), first)).toBe(169 - w);
+    expect(h.canvas().images).toEqual([expect.objectContaining({ left: 169 - w, cols: w })]);
+    for (let k = 0; k < 10; k++) await h.keys("z", "h");
+    expect(h.app.code.offset(h.app.view!, layoutOf(h), first)).toBe(0);
+  });
+  test("fitted, z l says it scrolls at its own size; the wheel sideways and its bar move it too", async () => {
+    const { h, v } = await open({ placeholders: true });
+    h.app.moveCursor(v, { row: rowsOf(layoutOf(h)).caption[0]!, col: 0 });
+    await h.keys("z", "l");
+    expect(h.app.messages.at(-1)!.text).toContain("z p shows it at its own size");
+    await h.keys("z", "p");
+    const { first } = rowsOf(layoutOf(h));
+    const r = drawnRect(h);
+    h.app.mouse.handle({
+      type: "scroll",
+      x: r.x + 3,
+      y: r.y + 3,
+      button: 0,
+      scroll: { direction: "down", delta: 1 },
+      shift: true,
+    });
+    expect(h.app.code.offset(v, layoutOf(h), first)).toBe(6);
+    h.app.mouse.handle({ type: "scroll", x: r.x + 3, y: r.y + 3, button: 0, scroll: { direction: "right", delta: 1 } });
+    expect(h.app.code.offset(v, layoutOf(h), first)).toBe(12);
+    // Its bar, on the row under it: dragged to its end.
+    v.top = first + 20;
+    h.frame();
+    const bar = h.app.geometry!.scrollbars.find((b) => b.block !== undefined)!;
+    expect(bar).toBeDefined();
+    h.app.mouse.handle({ type: "down", x: bar.x + bar.w - 1, y: bar.y, button: 0 });
+    h.app.mouse.handle({ type: "up", x: bar.x + bar.w - 1, y: bar.y, button: 0 });
+    expect(h.app.code.offset(v, layoutOf(h), first)).toBe(169 - bar.w);
+  });
+});
+
+describe("how long it stays at its own size (PIC-D4)", () => {
+  test("scrolled away and back, an edit above it, the window resized: still; another note shown and back: fitted", async () => {
+    const { h, v, root } = await open();
+    const r = drawnRect(h);
+    click(h, r.x + 1, r.y + 1);
+    await h.keys("ctrl+d", "ctrl+d", "g", "g");
+    expect(rowsOf(layoutOf(h)).p.own).toBe(true);
+    // An agent's write above it: the file read again, the picture moved down a line.
+    writeFileSync(
+      join(root, "p.md"),
+      `# P\n\nA line an agent added.\n\nText before.\n\n![a screenshot](shot.png)\n\n${PARAS.join("\n\n")}\n`,
+    );
+    h.app.watch.reloadBuffer(v.buf);
+    expect(rowsOf(layoutOf(h)).p.own).toBe(true);
+    // Resized: still at its own size.
+    v.height = 20;
+    expect(rowsOf(layoutOf(h)).p.own).toBe(true);
+    // Another note, then back: fitted.
+    writeFileSync(join(root, "q.md"), "# Q\n\nElse.\n");
+    h.app.open("q.md");
+    h.frame();
+    h.app.open("p.md");
+    h.frame();
+    expect(rowsOf(layoutOf(h)).p.own).toBeUndefined();
+  });
+  test("one file at two Obsidian sizes: both at their own sizes, each its own", async () => {
+    const md = "# P\n\n![[shot.png|300]]\n\n![[shot.png]]\n";
+    const { h } = await open({ md });
+    const layout = layoutOf(h);
+    const ps = layout.lines.filter((l) => l.image).map((l) => l.image!);
+    expect(ps.map((p) => p.cols)).toEqual([38, Math.min(169, layout.width)]);
+    click(h, h.app.geometry!.pictures[1]!.x + 1, h.app.geometry!.pictures[1]!.y + 1);
+    const own = layoutOf(h)
+      .lines.filter((l) => l.image)
+      .map((l) => l.image!);
+    expect(own.map((p) => [p.cols, !!p.own])).toEqual([
+      [38, true],
+      [169, true],
+    ]);
+  });
+});
+
+test("a toggle that leaves the note's rows as many still places the window's cursor and top again", async () => {
+  // A banner one row tall either way, wrapping off: no bar of its own, the same count of rows.
+  const md = `# P\n\n${"wide ".repeat(25)}\n\n![a banner](banner.png)\n\nAfter.\n`;
+  const { h, v } = await open({
+    md,
+    files: { "banner.png": { width: 808, height: 16 } },
+    config: (c) => (c.ui.wrap = false),
+  });
+  const before = layoutOf(h);
+  const key = v.layoutKey;
+  const r = drawnRect(h);
+  click(h, r.x, r.y);
+  const after = layoutOf(h);
+  expect(rowsOf(after, "banner.png").p.own).toBe(true);
+  expect(after.lines.length).toBe(before.lines.length);
+  expect(v.layoutKey).not.toBe(key);
+});
+
+describe("wrapping off (PIC-D6)", () => {
+  const wide = `# P\n\n${"wide ".repeat(25)}\n\n![a screenshot](shot.png)\n\n${PARAS.join("\n\n")}\n`;
+  test("fitted to the window, not the note's natural width; at its own size, the window reaches its edge, and it's drawn cropped while scrolled sideways", async () => {
+    const { h, v } = await open({ md: wide, config: (c) => (c.ui.wrap = false), placeholders: true });
+    const cols = h.app.views.textColumns(v);
+    const layout = layoutOf(h);
+    expect(layout.width).toBeGreaterThan(cols);
+    expect(rowsOf(layout).p.cols).toBeLessThanOrEqual(cols);
+    const r = drawnRect(h);
+    click(h, r.x + 1, r.y + 1);
+    const own = layoutOf(h);
+    expect(rowsOf(own).p).toMatchObject({ cols: 169, own: true });
+    expect(rowsOf(own).p.scrolls).toBeUndefined();
+    expect(own.extent).toBe(169);
+    // z l scrolls the window.
+    await h.keys("z", "l");
+    expect(v.left).toBe(Math.floor(cols / 4));
+    expect(h.canvas().images).toEqual([expect.objectContaining({ left: v.left, wide: 169 })]);
+    v.left = 169 - cols;
+    expect(h.canvas().images).toEqual([expect.objectContaining({ left: 169 - cols, cols })]);
+  });
+});
+
+describe("drawing the part that shows", () => {
+  test("a picture taller than 60 rows, scrolled past its top, is still found and drawn", async () => {
+    const { h, v } = await open({
+      md: "# P\n\n![tall](tall.png)\n\nAfter.\n",
+      files: { "tall.png": { width: 800, height: 4000 } },
+    });
+    const r = drawnRect(h);
+    click(h, r.x + 1, r.y + 1);
+    const { first, p } = rowsOf(layoutOf(h), "tall.png");
+    expect(p.rows).toBeGreaterThan(70);
+    v.top = first + 70;
+    expect(h.canvas().images).toEqual([expect.objectContaining({ skip: 70, total: p.rows })]);
+  });
+  test("a window resized holds its pictures back until its size rests, as placeholders too (PIC-D5)", async () => {
+    const { h, v } = await open({ placeholders: true });
+    let t = 10_000;
+    (h.app as unknown as { now: () => number }).now = () => t;
+    const draw = (w: number, ht: number) => {
+      const c = new TextCanvas(w, ht);
+      h.app.draw(c);
+      return c.images.length > 0;
+    };
+    v.pictures = undefined;
+    expect(draw(100, 40)).toBe(true);
+    t += 1000;
+    expect(draw(90, 40)).toBe(false);
+    t += 40;
+    expect(draw(80, 40)).toBe(false);
+    t += PICTURES_REST_MS + 1;
+    expect(draw(80, 40)).toBe(true);
+  });
+});
+
+/** A layout's picture rows run on unbroken: each the one before's next, from its ▣ rows to its bar. */
+function picturesWhole(lines: Line[]): boolean {
+  return lines.every((l, i) => {
+    const before = lines[i - 1]?.pic;
+    return !l.pic || before?.p !== l.pic.p || l.pic.row === before.row + 1;
+  });
+}
+
+test("an embedded note's picture toggles too, and scrolls inside its frame", async () => {
+  const root = makeVault();
+  mkdirSync(join(root, "sub"));
+  writeFileSync(join(root, "sub", "inner.md"), "# Inner\n\n![a screenshot](shot.png)\n");
+  writeFileSync(join(root, "host.md"), "# Host\n\n![[inner]]\n");
+  writeFileSync(join(root, "sub", "shot.png"), "x");
+  const h = await harness({ root, open: "host.md", width: 100, height: 60, images: terminal({ "shot.png": SHOT }) });
+  const r = h.app.geometry!.pictures[0]!;
+  click(h, r.x + 1, r.y + 1);
+  const layout = layoutOf(h);
+  const { p, first } = rowsOf(layout);
+  expect(p.own).toBe(true);
+  // Past the frame's bar.
+  expect(layout.lines[first]!.scroll!.x).toBe(2);
+  expect(picturesWhole(layout.lines)).toBe(true);
+});
+
+describe("drawn through OpenTUI, from its whole size", () => {
+  const png = async (w: number, h: number) => {
+    const r = (await loadRasterizer())!;
+    const file = join(mkdtempSync(join(sandbox, "pic-")), "p.png");
+    writeFileSync(
+      file,
+      r.png(
+        `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}"><rect width="${w}" height="${h}" fill="#08f"/></svg>`,
+        w,
+      )!,
+    );
+    return file;
+  };
+  test("as placeholders: sent once at its whole size; scrolled sideways, its cells from the column that shows, nothing sent", async () => {
+    const file = await png(160, 32);
+    const written: string[] = [];
+    const pictures = new OpenTuiPictures(() => "kitty", { write: (s) => written.push(s), cell: () => CELL });
+    const buf = OptimizedBuffer.create(20, 4, "unicode");
+    try {
+      await pictures.prepare(file);
+      pictures.draw(buf, 0, 0, 8, 2, file, { skip: 0, total: 2, left: 0, wide: 20 });
+      expect(written).toHaveLength(1);
+      expect(written[0]).toContain(",c=20,r=2,");
+      expect(written[0]).toContain(`,i=${pictureId(`${file}\u0000${statSync(file).mtimeMs}`, 20, 2)},`);
+      buf.clear();
+      pictures.draw(buf, 0, 0, 8, 2, file, { skip: 0, total: 2, left: 12, wide: 20 });
+      expect(written).toHaveLength(1);
+      const text = new TextDecoder().decode(buf.getRealCharBytes());
+      expect(text).toContain(placeholderRow(0, 8, 12));
+      expect(text).toContain(placeholderRow(1, 8, 12));
+    } finally {
+      pictures.releaseAll();
+      buf.destroy();
+    }
+  });
+  test("a row of placeholders from a column: each cell its row's and its own column's marks", () => {
+    const cells = placeholderRow(3, 4, 10).match(/\u{10EEEE}[^\u{10EEEE}]*/gu)!;
+    expect(cells.map(placeholderCell)).toEqual([10, 11, 12, 13].map((col) => ({ row: 3, col })));
+  });
+  test("OpenTUI's own path: the source rectangle of the part that shows, rows and columns, its edges from the cells'", async () => {
+    const file = await png(160, 64);
+    const pictures = new OpenTuiPictures(() => "sixel");
+    const buf = OptimizedBuffer.create(40, 8, "unicode");
+    const asked: unknown[][] = [];
+    (buf as unknown as { drawImage: (...a: unknown[]) => boolean }).drawImage = (...a: unknown[]) => {
+      asked.push(a.slice(1, 11));
+      return true;
+    };
+    try {
+      await pictures.prepare(file);
+      // Of its 20 × 4 cells, columns 5 to 15 and rows 1 to 3: pixels 40 to 120 across, 16 to 64 down.
+      pictures.draw(buf, 2, 1, 10, 3, file, { skip: 1, total: 4, left: 5, wide: 20 });
+      expect(asked).toEqual([[2, 1, 10, 3, undefined, undefined, 40, 16, 80, 48]]);
+    } finally {
+      pictures.releaseAll();
+      buf.destroy();
+    }
+  });
+});
+
+test("with sixel, quick steps sideways hold a view's pictures back, as quick steps down do (12.7)", async () => {
+  const o = await open();
+  const r = drawnRect(o.h);
+  click(o.h, r.x + 1, r.y + 1);
+  let t = 10_000;
+  (o.h.app as unknown as { now: () => number }).now = () => t;
+  o.v.pictures = undefined;
+  const drawn = () => o.h.canvas().images.length > 0;
+  expect(drawn()).toBe(true);
+  t += 1000;
+  await o.h.keys("z", "l");
+  expect(o.h.canvas().images.length).toBe(1); // a step: drawn
+  t += 30;
+  await o.h.keys("z", "l");
+  expect(drawn()).toBe(false); // quick: held back
+  t += PICTURES_REST_MS + 1;
+  expect(drawn()).toBe(true);
+});

@@ -1,5 +1,5 @@
 ---
-status: todo
+status: review
 assignee: claude-52
 blocked_by: [PIC-T1]
 tracker: [gh:#52]
@@ -36,3 +36,13 @@ Lay a note's pictures out for the window that shows it: its room, its rows, the 
 - Rests on: PIC-D1, PIC-D4, PIC-D6; research.md § Layout and caches.
 
 ## Log
+
+- 2026-10-24: `Pictures.forView(view, width)` replaces `forBuffer`: the room (wrapping off, the window's text columns,
+  not the layout's), the rows, the files at their own size; the key holds them only for a note whose last layout asked
+  for a picture (`NoteBuffer.asksPictures`). `render.ts`: captions measured before the picture is asked for (a
+  throwaway context, so no link is counted twice); every row of a picture carries `pic`; one at its own size and wider
+  than its room has scroll rows and a bar row; the block cache keeps a picture's block with the `pictureKey` it was
+  sized for; `Layout.pictures` and `Layout.extent` (wrapping off). The window's key (`views.ts`) and the lens's kept
+  render (`lens.ts`) take the pictures' key.
+- 2026-10-24: found while testing: with the lens open, moving the cursor to the picture's line opens the lens on its
+  markdown; the click leaves the cursor there instead (design.md, the click's bullet).

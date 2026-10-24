@@ -1,5 +1,5 @@
 ---
-status: todo
+status: review
 assignee: claude-52
 blocked_by: [PIC-T2]
 tracker: [gh:#52]
@@ -33,3 +33,9 @@ while a window's size changes.
 - Rests on: PIC-D5, PIC-D6; research.md § Drawing.
 
 ## Log
+
+- 2026-10-24: `Crop` (`skip`, `total`, `left`, `wide`) on `Canvas.image`; `drawPictures` finds a picture by its rows'
+  `pic`, crops columns by the block's offset or, wrapping off, the window's; pictures drawn while the window is
+  scrolled sideways. Placeholders: sent at the whole size, rows from a column (`placeholderRow(row, cols, left)`);
+  OpenTUI's path: the source rectangle from both edges. `Pictures.now`: the size rest first, then the placeholders'
+  shortcut; a sideways step counts for sixel. Each piece undone once fails its test.

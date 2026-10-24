@@ -4793,6 +4793,16 @@
    ]
   },
   {
+   "path": "work/product/assets/route-planner-2.3.png",
+   "purpose": "Screenshot of the route planner on a laptop, 1,734 × 950: wider than a window's text, as the docs' screenshots are.",
+   "cases": [
+    "inline: Pictures sized to their window: a… — 1,734 × 950",
+    "classify: Binary files by extension never open:… — png"
+   ],
+   "links": [],
+   "notes": "Binary."
+  },
+  {
    "path": "work/product/assets/share-sheet.png",
    "purpose": "Screenshot of the share sheet.",
    "cases": [
@@ -5010,10 +5020,12 @@
    "cases": [
     "notes: Realistic document types as notes: PRD,… — release notes",
     "inline: Images: with alt, empty alt, missing… — screenshots, one missing",
-    "inline: Inline HTML tags dropped, text kept:… — <kbd>⌘</kbd>, <sup>, <mark>"
+    "inline: Inline HTML tags dropped, text kept:… — <kbd>⌘</kbd>, <sup>, <mark>",
+    "inline: Pictures sized to their window: a… — a wide screenshot, the route planner"
    ],
    "links": [
     "../assets/share-sheet.png",
+    "../assets/route-planner-2.3.png",
     "../assets/offline-banner.png (missing on purpose)"
    ]
   },
@@ -5022,11 +5034,13 @@
    "purpose": "Release plan for 2.3: dates, owners, checklist, rollout table.",
    "cases": [
     "lists: Task items: [ ], [x], [X], nested 4 deep,… — ordered tasks keep numbers",
-    "notes: Realistic document types as notes: PRD,… — release plan"
+    "notes: Realistic document types as notes: PRD,… — release plan",
+    "inline: Pictures sized to their window: a… — the notes' section embedded, its screenshot in the frame"
    ],
    "links": [
     "2.3-notes.md",
-    "slipbox://kestrel/CHANGELOG.md"
+    "slipbox://kestrel/CHANGELOG.md",
+    "![[2.3-notes#Plan on a laptop]]"
    ]
   },
   {

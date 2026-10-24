@@ -3,15 +3,15 @@
 
 import { existsSync, mkdirSync, renameSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
-import { join } from "node:path";
-import type { Picture } from "../core/layout/ir.ts";
+import { basename, join } from "node:path";
+import type { Layout, Picture } from "../core/layout/ir.ts";
 import type { PictureSource, RenderOptions } from "../core/layout/render.ts";
 import { type Rasterizer, rasterizer } from "../core/svg.ts";
 import { pictureLocator } from "../core/note.ts";
 import { cacheHome, ensureCacheHome } from "../core/paths.ts";
 import { colorHex, type Role } from "../core/theme/index.ts";
-import type { NoteBuffer } from "./buffer.ts";
-import { fitPicture, RemoteImages, svgText } from "./images.ts";
+import { stringWidth } from "../core/width.ts";
+import { fitPicture, pictureSizes, RemoteImages, svgText } from "./images.ts";
 import type { App, View } from "./app.ts";
 
 /** Pictures (12.x): drawn, fetched, and held back while a view scrolls. */
@@ -35,28 +35,103 @@ export class Pictures {
   }
 
   /**
-   * Whether a view's pictures are drawn this frame (12.7). As Unicode placeholders, always: they're text. Otherwise —
-   * OpenTUI's own picture path, which numbers pictures by the order they're drawn in and sends them again as that
-   * changes — a step of scrolling draws them, but quick steps after it (a key held) don't, nor a wheel's from its
-   * first tick: their rows stay, and they're drawn once it rests.
+   * Whether a view's pictures are drawn this frame (12.7). Its size changed since its first frame (PIC-D5): not until
+   * the size has rested, whatever the protocol — a picture fitted to it is sent at the size it ends at, not at every
+   * size on the way. Else, as Unicode placeholders, always: they're text. Otherwise — OpenTUI's own picture path, which
+   * numbers pictures by the order they're drawn in and sends them again as that changes — a step of scrolling, down,
+   * up or sideways, draws them, but quick steps after it (a key held) don't, nor a wheel's from its first tick: their
+   * rows stay, and they're drawn once it rests.
    */
   now(view: View): boolean {
-    if (this.app.host.images?.placeholders?.()) return true;
     const now = this.app.now();
-    const p = view.pictures;
+    const where = scrolledTo(view);
     // Not scrolled yet: its first step is a step, however soon it comes.
-    if (!p) view.pictures = { top: view.top, at: -Infinity, wait: false };
-    else if (p.top !== view.top) {
+    const p = (view.pictures ??= { top: where, at: -Infinity, wait: false });
+    const size = `${view.width}x${view.height}`;
+    if (p.size !== undefined && p.size !== size) {
+      p.sizedAt = now;
+      this.later();
+    }
+    p.size = size;
+    if (now - (p.sizedAt ?? -Infinity) < PICTURES_REST_MS) return false;
+    if (this.app.host.images?.placeholders?.()) return true;
+    if (p.top !== where) {
       p.wait = now - p.at < PICTURES_REST_MS || now - this.wheelAt < PICTURES_REST_MS;
-      p.top = view.top;
+      p.top = where;
       p.at = now;
-      if (p.wait) {
-        // A frame when it has rested, to draw them.
-        if (this.timer) clearTimeout(this.timer);
-        this.timer = setTimeout(() => this.app.host.requestRender(), PICTURES_REST_MS + 10);
-      }
+      if (p.wait) this.later();
     } else if (p.wait && now - p.at >= PICTURES_REST_MS) p.wait = false;
-    return !view.pictures!.wait;
+    return !p.wait;
+  }
+
+  /** A frame when the view has rested, to draw its pictures. */
+  private later(): void {
+    if (this.timer) clearTimeout(this.timer);
+    this.timer = setTimeout(() => this.app.host.requestRender(), PICTURES_REST_MS + 10);
+  }
+
+  /** Why there's no picture at the cursor: none drawn at all (the terminal draws none, or `[render] images` says
+   *  never), or the cursor isn't on one's `▣` line. */
+  private none(): string {
+    const drawn = this.app.config.render.images !== "never" && !!this.app.host.images?.supported();
+    return drawn
+      ? NO_PICTURE
+      : 'no pictures drawn: the terminal draws none, or [render] images = "never" — ▣ and its text stand in';
+  }
+
+  /** The pictures a window shows at their own size (PIC-D4), by their files: its own while it shows its note. */
+  ownFiles(view: View): Set<string> {
+    if (view.picturesOwn?.buf !== view.buf) view.picturesOwn = { buf: view.buf, files: new Set() };
+    return view.picturesOwn.files;
+  }
+
+  /**
+   * A click on a picture, or `z p` on its `▣` line (PIC-D3): the cursor to its `▣` line — the keys act on it next, and
+   * it stays on screen as the picture grows below it — and the picture at its own size, or fitted to its window again.
+   * With the lens open, the cursor stays, and the lens with it: on the picture's line it would show its markdown.
+   */
+  toggle(view: View, row: number): void {
+    const layout = this.app.currentLayout(view);
+    const at = pictureAt(layout, row);
+    if (!at?.p.file) return this.app.message("info", this.none());
+    const caption = captionOf(layout, at.first);
+    if (!view.live) this.app.moveCursor(view, { row: caption, col: linkCol(layout, caption) });
+    const name = basename(at.p.file);
+    if (!at.p.toggles) return this.app.message("info", `${name} is whole at its own size already`);
+    const files = this.ownFiles(view);
+    if (files.delete(at.p.file)) this.app.message("info", `${name} fitted to the window`);
+    else {
+      files.add(at.p.file);
+      this.app.message("info", `${name} at its own size — z p fits it to the window again`);
+    }
+    this.app.host.requestRender();
+  }
+
+  /**
+   * `z h` / `z l` (PIC-D3): the picture on the cursor's `▣` line, at its own size and wider than its room, a quarter of
+   * its room sideways; with wrapping off, where it scrolls with the window, the window.
+   */
+  scrollSideways(view: View, dir: -1 | 1): void {
+    const layout = this.app.currentLayout(view);
+    const at = pictureAt(layout, view.cur.row);
+    if (!at) return this.app.message("info", this.none());
+    const s = layout.lines[at.first]?.scroll;
+    if (s) {
+      const step = dir * Math.max(1, Math.floor(s.w / 4));
+      return this.app.code.setOffset(view, layout, at.first, this.app.code.offset(view, layout, at.first) + step);
+    }
+    const cols = this.app.views.textColumns(view);
+    const extent = Math.max(layout.width, layout.extent ?? 0);
+    if (!this.app.ui.wrap && at.p.own && extent > cols) {
+      view.left = Math.max(0, Math.min(extent - cols, view.left + dir * Math.max(1, Math.floor(cols / 4))));
+      return;
+    }
+    this.app.message(
+      "info",
+      at.p.toggles && !at.p.own
+        ? "fitted to the window: z p shows it at its own size, to scroll"
+        : "it fits the window: nothing to scroll",
+    );
   }
 
   /** Pictures on the internet (12.12), fetched into the cache: there, the notes laid out again; failed, why. */
@@ -101,15 +176,21 @@ export class Pictures {
   }
 
   /**
-   * A note's pictures (12.x): where the terminal draws images and `[render] images` lets it, an image file — found as
-   * the note's links are, or fetched from the internet (12.12); an SVG rasterised (12.15) — sized to the width, its
-   * proportions kept, at most PICTURE_ROWS rows; else none, `▣ alt` the floor. And what slipbox draws as pictures, as
-   * chosen (12.16, 12.17): `drawings`, in the theme's colours.
+   * A note's pictures as `view` shows them, laid out `width` columns wide (12.x): where the terminal draws images and
+   * `[render] images` lets it, an image file — found as the note's links are, or fetched from the internet (12.12); an
+   * SVG rasterised (12.15) — fitted to the window (PIC-D1: its text columns, its rows less the picture's `▣` rows), or
+   * at its own size where the window shows it so (PIC-D4); else none, `▣ alt` the floor. And what slipbox draws as
+   * pictures, as chosen (12.16, 12.17): `drawings`, in the theme's colours. `sized` is what the pictures are sized for
+   * besides the width; the key holds it for a note that asks for pictures.
    */
-  forBuffer(buf: NoteBuffer):
+  forView(
+    view: View,
+    width: number,
+  ):
     | {
-        picture: (from: PictureSource, width: number) => Picture | null;
+        picture: (from: PictureSource, width: number, caption?: number) => Picture | null;
         key: string;
+        sized: string;
         drawings?: RenderOptions["drawings"];
       }
     | undefined {
@@ -117,17 +198,26 @@ export class Pictures {
     if (this.app.config.render.images === "never" || !images?.supported()) return undefined;
     const cell = images.cell() ?? { width: 8, height: 16 };
     const drawings = this.drawings();
+    const buf = view.buf;
     // Found as the note's links are (12.13): a path from its folder, a name from where it is.
     const locate = pictureLocator(this.app.graph, buf.rel, buf.abs);
+    const own = this.ownFiles(view);
+    // The window's room (PIC-D1, PIC-D6): its text columns — with wrapping off, fewer than the layout's — and its rows.
+    const excess = Math.max(0, width - this.app.views.textColumns(view));
+    const rows = view.height > 0 ? view.height : Number.POSITIVE_INFINITY;
+    const wrap = this.app.ui.wrap;
+    const sized = `${rows}:${excess}:${wrap ? 1 : 0}:${[...own].join("\u0001")}`;
     return {
-      key: `${cell.width}x${cell.height}|${JSON.stringify(drawings)}`,
+      key: `${cell.width}x${cell.height}|${JSON.stringify(drawings)}${buf.asksPictures === false ? "" : `|${sized}`}`,
+      sized,
       drawings,
-      picture: (asked, width) => {
+      picture: (asked, width, caption = 1) => {
         const from = locate(asked);
         if (!from) return null;
         if ("svg" in from) return this.drawnPicture(from.svg, from.kind, width, cell);
         let path: string;
-        if ("file" in from) path = from.file;
+        let file: string;
+        if ("file" in from) path = file = from.file;
         else {
           // On the internet (12.12): drawn once it's fetched — `show` fetches it now, `ask` (its site said yes to) too.
           const url = from.url;
@@ -140,6 +230,7 @@ export class Pictures {
             return null;
           }
           path = cached;
+          file = url;
         }
         // An SVG (12.15): rasterised at the size it's drawn, its own size its natural one.
         const svg = svgText(path);
@@ -151,10 +242,24 @@ export class Pictures {
           "file" in from && from.size
             ? Math.min(from.size.width, from.size.height ? (from.size.height * size.width) / size.height : Infinity)
             : size.width;
-        const { cols, rows } = fitPicture(px, (px * size.height) / size.width, width, cell, PICTURE_ROWS);
-        if (!svg) return { src: path, cols, rows };
+        const room = { cols: Math.max(1, width - excess), rows: rows - caption };
+        const sizes = pictureSizes(px, (px * size.height) / size.width, room, cell);
+        const toggles = sizes.fit.cols !== sizes.own.cols || sizes.fit.rows !== sizes.own.rows;
+        const whole = own.has(file);
+        const { cols, rows: tall } = whole ? sizes.own : sizes.fit;
+        const p: Picture = {
+          src: path,
+          cols,
+          rows: tall,
+          file,
+          ...(whole ? { own: true } : {}),
+          ...(toggles ? { toggles: true } : {}),
+          // Wider than its room: it scrolls sideways on its own — with wrapping off, with the window (PIC-D6).
+          ...(whole && wrap && cols > width ? { scrolls: true } : {}),
+        };
+        if (!svg) return p;
         const png = r && this.rasterized(svg, cols * cell.width, r);
-        return png ? { src: png, cols, rows } : null;
+        return png ? { ...p, src: png } : null;
       },
     };
   }
@@ -231,11 +336,41 @@ export class Pictures {
   }
 }
 
-/** A picture's most rows (12.x): a big screenshot never takes the page over. */
-export const PICTURE_ROWS = 12;
 /** At most this many rows for what slipbox draws as a picture (12.16, 12.17): a diagram may be tall. */
 export const DRAWING_ROWS = 60;
 /** A terminal's words are about this much of its cell's height: what a drawing's are sized to. */
 const TEXT_EM = 0.8;
 /** How long a view rests from quick scrolling before its pictures are drawn again (12.7). */
 export const PICTURES_REST_MS = 120;
+
+const NO_PICTURE = "no picture here: put the cursor on a picture's ▣ line (tab goes from link to link)";
+
+/** Where a layout's row is in a picture (PIC): the picture, and its first row drawn over (its rows' 0). */
+export function pictureAt(layout: Layout, row: number): { p: Picture; first: number } | null {
+  const at = layout.lines[row]?.pic;
+  return at ? { p: at.p, first: row - at.row } : null;
+}
+
+/** A picture's first `▣` row, from its first row drawn over. */
+function captionOf(layout: Layout, first: number): number {
+  const p = layout.lines[first]?.pic?.p;
+  let row = first;
+  while (row > 0 && layout.lines[row - 1]?.pic?.p === p && (layout.lines[row - 1]?.pic?.row ?? 0) < 0) row--;
+  return row;
+}
+
+/** The column a row's first link starts at: a `▣ alt`'s, past a list's bullet, a quote's bar. */
+function linkCol(layout: Layout, row: number): number {
+  let col = 0;
+  for (const span of layout.lines[row]?.spans ?? []) {
+    if (span.link !== undefined) return col;
+    col += stringWidth(span.text);
+  }
+  return 0;
+}
+
+/** Where a view is scrolled to, its pictures with it: its top, how far it and each block in it are scrolled sideways. */
+function scrolledTo(view: View): string {
+  const sideways = view.codeLeft?.buf === view.buf ? [...view.codeLeft.at.values()].join(",") : "";
+  return `${view.top}:${view.left}:${sideways}`;
+}

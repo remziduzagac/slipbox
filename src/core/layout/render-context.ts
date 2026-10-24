@@ -23,6 +23,8 @@ export interface Ctx {
   embedded: Set<string>;
   /** What its blocks waited for, a module still loading (16.6): a block that did is never kept. */
   pending: Set<string>;
+  /** Whether its blocks asked for a picture (PIC): such a block is kept with what its pictures were sized for. */
+  asks: { picture: boolean };
   /** Inside an embed: its links are at the embed's line, and resolved from the embedded note. */
   linkSrc?: number;
   linkFrom?: string;

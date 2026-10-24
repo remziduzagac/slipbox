@@ -1,4 +1,4 @@
-// Command specs: the cursor, scrolling, selection and copy, links and history.
+// Command specs: the cursor, scrolling, a picture's size, selection and copy, links and history.
 
 import type { CommandSpec } from "../command-specs";
 
@@ -90,6 +90,24 @@ export const MOTION_SPECS: CommandSpec[] = [
     title: "Cursor's line to the bottom",
     cli: I,
     desc: "Scrolls so the cursor's line is the last on screen (vim's zb)",
+  },
+  {
+    id: "picture.size",
+    title: "Picture at its own size, or fitted",
+    cli: I,
+    desc: "The picture on the cursor's ▣ line at its own size, scrolled sideways where it's wider; again, fitted to the window (a click does the same)",
+  },
+  {
+    id: "picture.scroll_left",
+    title: "Scroll the picture left",
+    cli: I,
+    desc: "Scrolls the picture on the cursor's ▣ line, at its own size, a quarter of the window to the left (vim's zh)",
+  },
+  {
+    id: "picture.scroll_right",
+    title: "Scroll the picture right",
+    cli: I,
+    desc: "Scrolls the picture on the cursor's ▣ line, at its own size, a quarter of the window to the right (vim's zl)",
   },
   // selection and copy
   { id: "visual.char", title: "Visual mode (characters)", cli: I, desc: "Starts selecting by character as you move" },

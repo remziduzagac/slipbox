@@ -55,9 +55,13 @@ export interface RenderOptions {
   embed?: (target: string, heading: string | null, block: string | null, kind?: "embed" | "image") => Embedded | null;
   /** The note being drawn (absolute): an embed of it, however deep, is a loop. */
   embedFrom?: string;
-  /** A picture alone in its paragraph (12.x), drawn under its `▣ alt` line: its file and the cells it takes at most
-   *  `width` columns wide — or null (not a local image, no images here): its `▣ alt` alone, the floor. */
-  picture?: (from: PictureSource, width: number) => Picture | null;
+  /** A picture alone in its paragraph (12.x), drawn under its `▣ alt` line: its file and the cells it takes, fitted
+   *  to `width` columns and its window less its `▣` line's `caption` rows (PIC-D1), or at its own size — or null (not
+   *  a local image, no images here): its `▣ alt` alone, the floor. */
+  picture?: (from: PictureSource, width: number, caption?: number) => Picture | null;
+  /** What `picture` sizes for besides the width (PIC): a window's rows, the pictures it shows at their own size. A
+   *  kept block that asked for a picture is laid out again when it changes. */
+  pictureKey?: string;
   /** Mermaid and a display's maths drawn as pictures (12.16, 12.17), as chosen where pictures are: in these colours. */
   drawings?: { mermaid: boolean; math: boolean; colors: DrawingColors & { math: string } };
   /** A code block too wide for its room keeps its lines whole, to scroll sideways in the window (`[render] code_wrap
@@ -132,6 +136,8 @@ interface CachedBlock {
   headings: Omit<LayoutHeading, "line">[];
   /** The block's first source line when it was rendered. */
   src: number;
+  /** What its pictures were sized for (`pictureKey`), when it asked for one. */
+  pictures?: string;
 }
 
 export function newRenderCache(): RenderCache {
@@ -153,6 +159,7 @@ export function renderTree(
     embedChain: opts.embedFrom ? [opts.embedFrom] : [],
     embedded: new Set(),
     pending: new Set(),
+    asks: { picture: false },
   };
   collectDefinitions(tree, ctx);
   const width = Math.max(8, opts.width);
@@ -167,12 +174,26 @@ export function renderTree(
   for (const node of tree.children) {
     const origin = (node as unknown as Record<symbol, object | undefined>)[ORIGIN];
     let hit = origin ? cache.blocks.get(origin) : undefined;
+    // One whose pictures were sized for another window, or other pictures at their own size (PIC): laid out again.
+    if (hit?.pictures !== undefined && hit.pictures !== (opts.pictureKey ?? "")) hit = undefined;
+    if (hit?.pictures !== undefined) ctx.asks.picture = true;
     if (!hit) {
       // Rendered on its own: its links and headings numbered from 0, renumbered when placed.
-      const own: Ctx = { ...ctx, links: [], headings: [], embedded: new Set(), pending: new Set() };
+      const own: Ctx = {
+        ...ctx,
+        links: [],
+        headings: [],
+        embedded: new Set(),
+        pending: new Set(),
+        asks: { picture: false },
+      };
       const rows = block(node, own, width, TEXT, frontmatter);
       if (rows === null) continue;
       hit = { lines: rows, links: own.links, headings: own.headings, src: srcOf(node) };
+      if (own.asks.picture) {
+        hit.pictures = opts.pictureKey ?? "";
+        ctx.asks.picture = true;
+      }
       // A block with an embed draws another note, which changes on its own: never kept (1.11).
       for (const p of own.embedded) ctx.embedded.add(p);
       // One drawn while what it needs loads (a diagram as its code): never kept either.
@@ -208,10 +229,17 @@ function placed(line: Line, delta: number, linkBase: number, headBase: number): 
 
 function finish(lines: Line[], ctx: Ctx, width: number): Layout {
   const out = finishRows(lines, ctx, width);
+  // A picture at its own size that doesn't scroll on its own (wrapping off, PIC-D6): as far as its right edge.
+  let extent = width;
+  for (const line of lines)
+    if (line.image && !line.scroll)
+      extent = Math.max(extent, line.spans.reduce((w, s) => w + stringWidth(s.text), 0) + line.image.cols);
   return {
     ...out,
     ...(ctx.embedded.size ? { embedded: [...ctx.embedded] } : {}),
     ...(ctx.pending.size ? { pending: [...ctx.pending] } : {}),
+    ...(ctx.asks.picture ? { pictures: true } : {}),
+    ...(extent > width ? { extent } : {}),
   };
 }
 
@@ -526,7 +554,8 @@ function embedsAlone(children: PhrasingContent[], src: number, ctx: Ctx, width: 
     if (e) out.push(...embedFrame(r, e, at, ctx, width));
     else {
       const from = pictureSource(r.node);
-      out.push(...pictureRows(r.node, from ? askPicture(from, width, ctx) : null, at, ctx, width, base));
+      const p = from ? askPicture(from, width, ctx, captionRows(r.node, at, ctx, width, base)) : null;
+      out.push(...pictureRows(r.node, p, at, ctx, width, base));
     }
   }
   return out;
@@ -550,25 +579,49 @@ function picturesAlone(children: PhrasingContent[], src: number, ctx: Ctx, width
         .length
   )
     return null;
-  const drawn = images.map(({ c, from }) => ({ c, p: askPicture(from, width, ctx) }));
+  const drawn = images.map(({ c, from }) => {
+    const at = c.position?.start.line ?? src;
+    return { c, at, p: askPicture(from, width, ctx, captionRows(c, at, ctx, width, base)) };
+  });
   if (!drawn.some((d) => d.p)) return null;
-  return drawn.flatMap(({ c, p }) => pictureRows(c, p, c.position?.start.line ?? src, ctx, width, base));
+  return drawn.flatMap(({ c, at, p }) => pictureRows(c, p, at, ctx, width, base));
+}
+
+/** How many rows a picture's `▣ alt` line wraps to (PIC-D1): what its window has less for the picture. */
+function captionRows(c: PhrasingContent, at: number, ctx: Ctx, width: number, base: Style): number {
+  return Math.max(1, wrapSpans(inline([c], { ...ctx, links: [] }, base, at), width).length);
 }
 
 /** A picture asked for: an SVG's (12.15) waits for its rasteriser — the layout says so, and is made again when it's in. */
-function askPicture(from: PictureSource, width: number, ctx: Ctx): Picture | null {
+function askPicture(from: PictureSource, width: number, ctx: Ctx, caption = 1): Picture | null {
   if (!ctx.opts.picture) return null;
+  ctx.asks.picture = true;
   const named = "url" in from ? from.url.split(/[?#]/)[0]! : "name" in from ? from.name : "";
   if (/\.svg$/i.test(named) && !rasterizer()) ctx.pending.add(RESVG);
-  return ctx.opts.picture(from, width);
+  return ctx.opts.picture(from, width, caption);
 }
 
-/** A picture's `▣ alt` line (anything else's reference), then — where it's drawn — the rows its image is drawn over:
- *  blank frame rows, the first carrying the picture. */
+/**
+ * A picture's `▣ alt` line (anything else's reference), then — where it's drawn — the rows its image is drawn over:
+ * blank frame rows, the first carrying the picture; each of them naming it (PIC). At its own size and wider than its
+ * room, its frame rows scroll sideways as a code block's do, and one more frame row under them holds its bar.
+ */
 function pictureRows(c: PhrasingContent, p: Picture | null, at: number, ctx: Ctx, width: number, base: Style): Line[] {
-  const out: Line[] = wrapSpans(inline([c], ctx, base, at), width).map((row) => ({ spans: row, src: at }));
-  if (p)
-    for (let k = 0; k < p.rows; k++) out.push({ spans: [], src: at, decor: true, ...(k === 0 ? { image: p } : {}) });
+  const caption: Line[] = wrapSpans(inline([c], ctx, base, at), width).map((row) => ({ spans: row, src: at }));
+  if (!p) return caption;
+  const out = caption.map((l, k): Line => ({ ...l, pic: { p, row: k - caption.length } }));
+  const scroll: CodeScroll | undefined = p.scrolls ? { x: 0, w: width, total: p.cols } : undefined;
+  for (let k = 0; k < p.rows; k++)
+    out.push({
+      spans: [],
+      src: at,
+      decor: true,
+      pic: { p, row: k },
+      ...(k === 0 ? { image: p } : {}),
+      ...(scroll ? { scroll } : {}),
+    });
+  if (scroll)
+    out.push({ spans: [], src: at, decor: true, pic: { p, row: p.rows }, scroll: { ...scroll, part: "bar" } });
   return out;
 }
 
@@ -646,6 +699,7 @@ function embedFrame(w: EmbedRef, e: Embedded, src: number, ctx: Ctx, width: numb
       embedChain: [...ctx.embedChain, e.path],
       embedded: ctx.embedded,
       pending: ctx.pending,
+      asks: ctx.asks,
       linkSrc: ctx.linkSrc ?? src,
       linkFrom: e.from,
     };
@@ -670,9 +724,9 @@ function embedFrame(w: EmbedRef, e: Embedded, src: number, ctx: Ctx, width: numb
 /** An embedded note's pictures (12.14): found from where it is, then drawn as the note showing it draws its own. */
 function embeddedPictures(picture: RenderOptions["picture"], locate: Embedded["locate"]): RenderOptions["picture"] {
   if (!picture || !locate) return undefined;
-  return (from, width) => {
+  return (from, width, caption) => {
     const found = locate(from);
-    return found ? picture(found, width) : null;
+    return found ? picture(found, width, caption) : null;
   };
 }
 
@@ -689,8 +743,8 @@ function drawing(svg: string, kind: "diagram" | "math", src: number, ctx: Ctx, w
     { length: p.rows },
     (_, k): Line =>
       k === 0
-        ? { spans: [{ text: " ".repeat(indent), role: "text", attrs: 0 }], src, image: p }
-        : { spans: [], src, decor: true },
+        ? { spans: [{ text: " ".repeat(indent), role: "text", attrs: 0 }], src, image: p, pic: { p, row: 0 } }
+        : { spans: [], src, decor: true, pic: { p, row: k } },
   );
 }
 
