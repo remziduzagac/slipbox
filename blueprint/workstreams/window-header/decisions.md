@@ -18,6 +18,9 @@ no alias.
 
 ## HDR-D2: Read, Lens and Source, a radio group on the header (2026-10-24)
 
+> **Amended by HDR-D5 (2026-10-24):** without colour a disabled button is dim and italic, no longer the same as an
+> enabled one.
+
 **Decision:** Each window's header shows `Read`, `Lens` and `Source`, exactly one selected: the window's mode, drawn
 from its flags each frame after its layout. A click, which like every click ends typing first, focuses the window and,
 on another enabled button, runs that mode's command, which switches straight there through `Lens.setViewMode` and says
@@ -60,3 +63,16 @@ name and `▤`.
 
 **Not chosen:** the buttons shortening only once the breadcrumb is down to `§ …` (the issue's order, read strictly;
 notes.md, question 4).
+
+## HDR-D5: Without colour, a disabled button is dim and italic (2026-10-24)
+
+> Taken as recommended while the maintainer was away (2026-10-24); theirs to confirm or change.
+
+**Decision:** In the `mono` theme (`NO_COLOR`), `topbar_button_disabled` is dim and italic, so a mode the file can't be
+shown in reads differently from one a click switches to (dim) and from the selected one (bold). Amends HDR-D2's Cost.
+
+**Why:** Without it, a disabled button and an enabled one looked the same without colour, and only the click told;
+the review before the pull request found it, and ACCESSIBILITY.md has the `mono` theme show state by bold, dim, italics
+and underlines. A terminal that draws no italics shows it dim, as before.
+
+**Not chosen:** keeping the two alike (HDR-D2's Cost as first agreed).

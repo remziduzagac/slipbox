@@ -273,3 +273,15 @@ Codex's review of `git diff origin/dev...` (`tmp/issue/codex-review-1.md`, not i
 - Terminal checks after the fixes: the header's eight and the settings check, 9 of 9.
 - 2026-10-24: every task done and in `tasks/archive/`; the acceptance criteria met (requirements.md); the workstream
   complete, for the maintainer to consolidate.
+
+## Taken as recommended while the maintainer was away (2026-10-24)
+
+The maintainer, away until morning, asked that a question for them be answered by the recommended option, recorded
+here, and the work go on.
+
+- **A split at 120 columns with the explorer open shows only the selected letter** (found live): HDR-D4 kept as
+  agreed, the split's name keeping its place, as the issue asks; a shorter name or another order recorded in
+  [ideas.md](ideas.md) for later. Taken as recommended while the maintainer was away.
+- **Without colour, a disabled button looked like an enabled one** (the review's finding, HDR-D2's Cost): dim and
+  italic now (HDR-D5). Taken as recommended while the maintainer was away.
+- 2026-10-24: HDR-D5 built: `topbar_button_disabled` dim and italic in `mono`; a unit test (it fails without the change, checked); no terminal check, since the headless terminal's runs keep colours and bold, not italics or dim. ACCESSIBILITY.md says it.

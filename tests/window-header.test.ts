@@ -588,6 +588,19 @@ describe("the two settings (HDR-D3)", () => {
     expect(drawn(8)).toBe(3);
   });
 
+  test("without colour, a disabled button is dim and italic, an enabled one dim, the selected one bold (HDR-D5)", async () => {
+    const h = await harness({ open: NOTE, width: 120, height: 30, themeName: "mono" });
+    writeFileSync(join(h.root, TEXT), "plain\n");
+    const attrs = (label: string) => {
+      const b = buttons(h).find((x) => x.label === label)!;
+      const st = h.canvas().styles[b.y]![b.x + 1]!;
+      return [st.bold && "bold", st.dim && "dim", st.italic && "italic"].filter(Boolean).join(" ");
+    };
+    expect([attrs("Read"), attrs("Lens")]).toEqual(["bold", "dim"]);
+    await h.app.run(`note.open ${TEXT}`);
+    expect([attrs("Read"), attrs("Source")]).toEqual(["dim italic", "bold"]);
+  });
+
   test("[colors] breadcrumb_band still colours the header (HDR-D1)", async () => {
     const h = await harness({
       open: NOTE,

@@ -87,7 +87,7 @@ right end; when no window shows a header, it moves to the right end of the top b
 The header has its own background, `breadcrumb_band` (`surface` blended into the page at 35%; the role keeps its
 name, HDR-D1). The breadcrumb's icon is `breadcrumb_icon` (blue), outer headings `breadcrumb` (dim), separators
 `breadcrumb_sep` (faint), and the heading the cursor is in `breadcrumb_current` (bold). A disabled button is
-`topbar_button_disabled` (`surface2`; without colour, dim).
+`topbar_button_disabled` (`surface2`; without colour, dim and italic, HDR-D5).
 
 Rules run above and below the header. The rule above is the frame's rule under the tab strip; the lower window of a
 stacked split draws its own.

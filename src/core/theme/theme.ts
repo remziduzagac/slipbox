@@ -565,7 +565,7 @@ export function monoTheme(): Theme {
   roles.tab_active_idle = { bold: true };
   roles.tab_active = { bold: true, underline: true };
   roles.topbar_button = { dim: true };
-  roles.topbar_button_disabled = { dim: true }; // as an unused one: without colour, only its click tells (HDR-D2)
+  roles.topbar_button_disabled = { dim: true, italic: true }; // not an unused one's dim alone: it can't be used (HDR-D5)
   // Links and code must still read as such without colour, and a link's status must show.
   roles.link = { underline: true };
   roles.wikilink = { underline: true };

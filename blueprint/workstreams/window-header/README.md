@@ -17,4 +17,5 @@ ok").
 - [design.md](design.md): its changes to the root's design.
 - [decisions.md](decisions.md): what was decided, and why.
 - [notes.md](notes.md): how it was discussed, Codex's critique, the cases to test, and the log.
+- [ideas.md](ideas.md): what could come later, open.
 - [tasks/](tasks/README.md): the work, a task per file.
