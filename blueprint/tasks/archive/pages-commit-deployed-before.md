@@ -289,3 +289,24 @@ the deployments D258 relies on are served; then whatever fix that calls for.
   re-run after its deployment is one, from the ref that deployed it first, never tried: the Gap, the failure message
   and `MAINTAINING.md` say "may not serve". Not taken, as before: D?1's number, `v*`, the Log's notes on Codex's
   skips (the maintainer's), `served`'s own check, the condition written twice.
+- 2026-10-24: Review, round 8: Codex's part skipped, Codex still stopped at a menu in its pane; a second reviewer does
+  it.
+- 2026-10-24: Review, round 8, the last (the maintainer's rule: at most three rounds, the one in hand the last when
+  past them; smaller findings recorded here, not taken into the pull request). Both reviewers: no defect in how the
+  workflows run, no test passing without its part. Recorded, for a follow-up:
+  - Since the artifact is named by the attempt, a re-run of `deploy` alone finds no artifact of its attempt's name
+    (deploy-pages: "No artifacts named …") and deploys nothing, guard or not: the guard only says why first. So the
+    reason D?1, the design, `MAINTAINING.md`, the guard's comment and its test's title give ("it would deploy the run's
+    site again, perhaps older") no longer describes what the code would do without it, and the choice taken as
+    recommended in round 5 is settled by the naming. Either say so in those places, or have `deploy` take the artifact
+    name from `site`'s output, which would make the guard the one refusing.
+  - A preview's run re-run after the release's hand-off (or a run by hand on `main`) deployed its commit makes a `push`
+    repeat, unserved: the site is right, the preview's run stays red, its read-back saying so.
+  - The hand-off's log says the run it started has the result, but a newer run entering the `pages` group cancels a
+    waiting one; the newer run deploys the site then.
+  - `gh workflow run pages.yml --ref v0.5.0` runs that tag's older `pages.yml`, which deploys under a run by hand, and
+    the `github-pages` environment still takes `v*` tags: one more reason for the maintainer to narrow it to `main` and
+    `test` (and `settings.json`'s expectation with it). `MAINTAINING.md` § Settings still calls `main`, `test` and
+    `v*` the refs `pages.yml` runs from, where it runs by hand from any ref now.
+  - Cleanups: the read-back's comparison written twice (the loop and the last read); and, as before, `served`'s own
+    empty-marker check, the deploy condition written twice.
