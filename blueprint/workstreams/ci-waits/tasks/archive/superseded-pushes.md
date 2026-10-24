@@ -1,5 +1,5 @@
 ---
-status: todo
+status: done
 assignee: claude
 blocked_by: []
 tracker: [gh:#65]
@@ -20,3 +20,9 @@ request and a push.
 
 - Delivers: design.md § What a push tests (superseded pushes).
 - Rests on: (CIW-D4).
+
+## Log
+
+- 2026-10-24: `ci.yml`'s concurrency. Test: the group and `cancel-in-progress` evaluated as GitHub's expressions for a
+  pull request, a push, a run by hand on `test` and a merge group. Mutation: the group as `github.ref` alone (a run by
+  hand on `test` sharing a push's group), caught.

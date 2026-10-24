@@ -1,5 +1,5 @@
 ---
-status: active
+status: complete
 created: "2026-10-24"
 branch: ci/issue-65
 ---
@@ -12,6 +12,10 @@ tests what changed since the last commit whose run passed, however many runs wer
 skips what a pull request's run already tested on the same tree; and moving `dev` to `test` tests nothing `dev`
 passed. The issue's other items (the Linux jobs sharded, `CHECKS_FOR` mapping more of the app, macOS kept for what
 needs it, macOS after Linux, the slowest tests watched) are tasks for later, not done here.
+
+Complete for items 5 and 7, the scope the maintainer set (2026-10-24): CIW-T1 to CIW-T4 are done. CIW-T5 to CIW-T9,
+the issue's other items, stay open; at consolidation they're carried up, as root tasks or a workstream of their own,
+as the maintainer chooses.
 
 - [requirements.md](requirements.md): its goals, what it builds on, its acceptance criteria, and its changes to the
   root's requirements.

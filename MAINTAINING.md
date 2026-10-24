@@ -50,8 +50,12 @@ GitHub's releases are, with `SLIPBOX_RELEASES_URL`. A person able to take over w
 
 Every change reaches `dev`, the default branch, through a pull request: the rules on `dev` require one, and require the
 `ci` check to pass. For a pull request, `ci` runs the lint, the typecheck, and the tests and the terminal checks its
-change reaches, on Linux and macOS (D239); a push to `dev` runs the same on the merged commit. No approval is required,
-since there is no second person to give one. From `dev`, work goes on to `test` and `main` (§ From dev to a release).
+change reaches, on Linux and macOS (D239). A push to `dev` runs the same for what changed since the last commit whose
+run passed, so a run cancelled or failed leaves nothing out of the next (CIW-D1), less what the pull request's run
+passed on the same tree: when that run passed on the `dev` it merged into, and that `dev`'s own run passed, the push
+tests nothing (CIW-D2). A push's run still going when `dev` moves again gives way to the newer one, which tests both
+(CIW-D4). No approval is required, since there is no second person to give one. From `dev`, work goes on to `test` and
+`main` (§ From dev to a release).
 
 - **Who:** agents and collaborators work on a branch and open the pull request; the maintainer merges it, or asks an
   agent to review and merge it. Agents merge, run the full suite, move `test` or `main` and release only when the
@@ -78,8 +82,10 @@ fast-forward: nothing is committed to them directly, and their rulesets forbid d
 
 - **`dev`**: every pull request, merged once its review and its `ci` check pass (§ Merging a change).
 - **`test`**, to try it: when a batch of work is ready, `dev` is moved to `test`. That publishes a preview to install
-  and try by hand (§ Previews), and runs again, on Linux and macOS, what changed since `test` last moved. What trying
-  it finds becomes an issue, fixed by a pull request into `dev`, and `test` moves again.
+  and try by hand (§ Previews). Its `ci` tests nothing `dev` passed: for a commit whose run on `dev` passed, no test and
+  no terminal check, only the lint and the site's build (CIW-D3). Move it once that run has ended, not only its `ci`
+  check, which ends a second before: pushed in between, it tests again. What trying it finds becomes an issue, fixed
+  by a pull request into `dev`, and `test` moves again.
 
   ```bash
   git fetch origin && git push origin origin/dev:test
@@ -174,8 +180,9 @@ A preview is what `test` has, built and published before it's released, for tryi
 git fetch origin && git push origin origin/dev:test
 ```
 
-`test`'s ruleset takes only a commit whose `ci` check passed, as every commit on `dev` has once its run is done: push
-after it, never before. It refuses deleting `test` and pushing anything that isn't a fast-forward.
+`test`'s ruleset takes only a commit whose `ci` check passed, as a commit on `dev` has once its run passed: push after
+it, never before. A run that gave way to a newer push leaves its commit without one: push the newer commit, once its run
+passed. It refuses deleting `test` and pushing anything that isn't a fast-forward.
 
 - **Its version** is the release to come's, with the commit's UTC time and hash after it: `slipbox --version` says
   `0.3.0-preview.202610121530.g1a2b3c4`, which sorts after the previews before it and before 0.3.0. Its tag is

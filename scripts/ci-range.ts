@@ -126,6 +126,7 @@ export async function pushRange(root: string, api: Api | null, testHead: string 
         break;
       }
     }
+  if (passed && !from) why.push(`none of the ${passed.size} commits whose runs passed is behind it with this scope`);
   if (!from) {
     const t = isHash(testHead) ? commit(root, testHead) : null;
     if (!t || gitOut(root, "merge-base", "--is-ancestor", t, head) === null || versionAt(root, t) !== version)

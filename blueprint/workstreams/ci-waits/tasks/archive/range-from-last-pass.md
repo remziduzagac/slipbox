@@ -1,5 +1,5 @@
 ---
-status: doing
+status: done
 assignee: claude
 blocked_by: []
 tracker: [gh:#65]
@@ -35,3 +35,21 @@ outputs instead of `github.event.before`.
 - Delivers: design.md § What a push tests (the last run that passed, with none, nothing to test); requirements.md
   § Goals.
 - Rests on: (CIW-D1), (CIW-D3); research.md § Runs.
+
+## Log
+
+- 2026-10-24: `scripts/ci-range.ts` (`pushRange`, `versionAt`, `githubApi`), `SCOPE_VERSION` and `SCOPE_RANGE` in
+  `scripts/ci-scope.ts`, `changes`' `range` output in `ci.yml`. A push's empty range runs nothing (`code` and `checks`
+  false), where an empty diff of a pull request still runs everything (D230).
+- Tests, `tests/ci-range.test.ts`: the nearest pass, a failed run listed anyway, a pass off the line; a pass of another
+  version, the version raised, hashes that aren't; `test`'s head of the version, of another, all zeros, unknown, ahead;
+  the runs unreadable, no token, a commit with no version; `changedFiles` given a range, an empty one, `all` and
+  garbage; `ci:scope` spawned as `changes` for a push against a fake API server (`GITHUB_API_URL`): the docs since a
+  pass, nothing for a commit that passed (a push to `test`), everything with none; the workflow's permissions, token
+  and `SCOPE_RANGE`. `tests/distribution.test.ts`' scope test: a push with nothing to read its range from runs
+  everything. 15 and 5 pass.
+- Mutations, each undone once and caught by its test: the version check on a pass and on `test`'s head, the success
+  filter, the empty range running nothing, `SCOPE_RANGE` read back as `before`, the token for a pull request.
+- Live, in the right pane, against the repository's own runs (read-only, the maintainer's token): as a push to `dev`,
+  "none of the 20 commits whose runs passed is behind it with this scope", then everything: `test`'s head
+  (`71313f3`) is of the scope before — the first run under it, as designed. As a push to `test`, the same.
