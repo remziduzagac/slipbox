@@ -88,11 +88,12 @@ by the TUI while home is open and the background index is off. Until then, home 
 you opened: `slipbox ~/notes` walks `~/notes` at once, so its notes, and the vaults in it, are there, and its own note
 opens, one directly in it before one in a folder of it. `slipbox ~/notes/inbox.md` walks the note's folder the same
 way, and so does going into a folder of home from another vault, by opening a note of it or following a link to it.
-The walk is kept, so opening home never walks it again: the files it found are looked at, and a folder that changed is
-listed again. A folder whose time was set back after its notes changed, as unpacking an archive with its times does,
-isn't, and its notes wait for the next walk. The command line walks home the first time it needs to, and
-`slipbox index --refresh ~` walks it again. Changing `walk.extensions`, `walk.exclude` or `walk.root_markers` walks
-home again too.
+Meanwhile a note saved at home's top, in a folder directly in it, or anywhere in the folder you opened comes as it's
+saved; one deeper waits for the walk. The walk is kept, so opening home never walks it again: the files it found are
+looked at, and a folder that changed is listed again. A folder whose time was set back after its notes changed, as
+unpacking an archive with its times does, isn't, and its notes wait for the next walk. The command line walks home the
+first time it needs to, and `slipbox index --refresh ~` walks it again. Changing `walk.extensions`, `walk.exclude` or
+`walk.root_markers` walks home again too.
 
 Home's index holds 10,000 notes at most, and its walk lists 5,000 folders at most, those nearest the top first.
 slipbox says so when it stops there, in a message, in `space v i`, in `slipbox info` and in

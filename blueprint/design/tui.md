@@ -1694,8 +1694,10 @@ rather than rebuilt (`5.8`; D137).
   refresh. A red link turns resolved when its note appears. A note written and removed between two of the watcher's
   looks is said deleted all the same: a layout drawn meanwhile may have found it on the disk (a path link resolves by
   its file before the index knows it), and draws its link red again.
-- **New directories** are watched through their whole depth. A `.gitignore` change rescans, and
-  open notes that changed during the rescan reload.
+- **New directories** are watched through their whole depth, except in home before its walk ([roots.md](roots.md) §
+  Home): there only those in a folder you opened are; one new at home's top is watched alone, a note moved into one it
+  sees is followed there, and the rest is the walk's. A folder gone takes the notes and the other files known in it with
+  it. A `.gitignore` change rescans, and open notes that changed during the rescan reload.
 - **Files the graph doesn't know** — outside the vault (the scratch in the state dir), in what the walk leaves out,
   in home's skip list — are polled while open.
 - **What git does lands as one change** (`5.9`, `5.10`; D153): while git holds its index lock (a checkout, a merge, a
