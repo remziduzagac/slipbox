@@ -178,3 +178,15 @@ Logged, not fixed here (the review loop stops after this round):
 
 Tests after the round: `tests/tui-updates.test.ts` 42 and `tests/upgrade-restart.test.ts` 21 pass;
 `bun run test:terminal updates` 10/10.
+
+## CI after the rebase
+
+CI on `fd32030` failed two test files, both this branch's:
+
+- **The reference set** (`examples/home`, new on `dev`) wants every command a case in `CASES.md` and a `leader ;`
+  binding in the kitchen-sink config: `app.restart` and `app.upgrade` have both now (`leader ; n e`, `leader ; n f`).
+- **What a change reaches** (D239): the checks' harness loads the release builds (`tests/terminal/releases.ts`), which
+  load `scripts/release.ts`, so a change to the release script would have run every terminal check. A file of the
+  harness only some checks use is now `HARNESS_FOR`'s, in `scripts/ci-scope.ts`: what reaches the harness only through
+  it runs those checks, `updates` here. The `updates` check reads the pack's name from the builds' record, no longer
+  from `scripts/release.ts` itself. The two D239 tests fail without `HARNESS_FOR` (mutation-checked).

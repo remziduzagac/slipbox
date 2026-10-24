@@ -2,10 +2,11 @@
 // pages, a Markdown file at the top — runs only the docs' own tests, in the lint job (D230). Any other runs the tests
 // and the terminal checks its files reach (D239): a test that uses a changed file — imports it, at any depth, or names
 // it by its path — and, of the terminal checks, a changed check file's, or those `CHECKS_FOR` names for a changed
-// file of the app's; all of them for a file of the app's it doesn't list, or for the checks' harness and samples. The
-// packages, the toolchain, the workflows, and a file nothing names run everything; so do a merge group, a run by hand
-// (the `full` run `main` requires, D251) and a diff that can't be read; the lint's own configs, only the lint. A push
-// to `dev` or `test` is scoped as a pull request is, by its commits since the branch's last head.
+// file of the app's; all of them for a file of the app's it doesn't list, or for the checks' harness and samples (but
+// a file of the harness `HARNESS_FOR` names, which only some checks use: theirs). The packages, the toolchain, the
+// workflows, and a file nothing names run everything; so do a merge group, a run by hand (the `full` run `main`
+// requires, D251) and a diff that can't be read; the lint's own configs, only the lint. A push to `dev` or `test` is
+// scoped as a pull request is, by its commits since the branch's last head.
 //
 // `bun run ci:scope` writes what CI's jobs need to $GITHUB_OUTPUT (`code`, `checks`), and says it either way.
 // `bun run test:changed` and `bun run test:terminal:changed [runner's flags…]` run what a change reaches: a pull
@@ -115,6 +116,11 @@ export const SAMPLES_FOR: Record<string, { tests: string[]; checks: string[] }> 
 const CHECK_FILE = /^tests\/terminal\/checks\/(?!index\.ts$)([\w-]+)\.ts$/;
 /** Where the terminal checks start: the runner and its workers. */
 const HARNESS = ["tests/terminal/run.ts", "tests/terminal/worker.ts"];
+/**
+ * Files of the checks' harness that only some checks use, and those checks: a change that reaches the harness only
+ * through one runs them, not every check. The checkout's release builds, which the checks of upgrading drive (UPG).
+ */
+const HARNESS_FOR: Record<string, string[]> = { "tests/terminal/releases.ts": ["updates"] };
 /** What every test and check depends on: the packages, the toolchain, the workflows. */
 const EVERYTHING = /^(package\.json|bun\.lock|bunfig\.toml|tsconfig\.json|mise\.toml|mise\.lock|\.github\/)/;
 /** What only the lint job reads, which runs on every change. */
@@ -182,14 +188,18 @@ export function importGraph(root = ROOT): Map<string, string[]> {
   return graph;
 }
 
-/** Everything `from` uses, itself included, at any depth. */
-export function reach(graph: Map<string, string[]>, from: string[]): Set<string> {
+/** Everything `from` uses, itself included, at any depth; nothing past a file of `stop`. */
+export function reach(
+  graph: Map<string, string[]>,
+  from: string[],
+  stop: ReadonlySet<string> = new Set(),
+): Set<string> {
   const seen = new Set<string>();
   const todo = [...from];
   for (let f = todo.pop(); f !== undefined; f = todo.pop()) {
     if (seen.has(f)) continue;
     seen.add(f);
-    todo.push(...(graph.get(f) ?? []));
+    if (!stop.has(f)) todo.push(...(graph.get(f) ?? []));
   }
   return seen;
 }
@@ -214,7 +224,10 @@ export function scope(files: string[] | null, graph = importGraph(), root = ROOT
   for (const [f, uses] of graph) for (const u of uses) users.set(u, [...(users.get(u) ?? []), f]);
   const usedBy = (from: string[]) => reach(users, from);
   const app = reach(graph, ["src/main.ts"]);
-  const harness = [...reach(graph, HARNESS)].filter((f) => !f.startsWith("src/") && !CHECK_FILE.test(f));
+  const helpers = new Set(Object.keys(HARNESS_FOR));
+  const harness = [...reach(graph, HARNESS, helpers)].filter(
+    (f) => !f.startsWith("src/") && !CHECK_FILE.test(f) && !helpers.has(f),
+  );
   const skipped = new Set(docsTests(root));
 
   const tests = new Set<string>();
@@ -262,7 +275,10 @@ export function scope(files: string[] | null, graph = importGraph(), root = ROOT
       } else for (const [, pieces] of named) for (const p of pieces) checks.add(p);
       continue;
     }
-    if (harness.some((h) => reached.has(h))) {
+    // Through a file of the harness only some checks use, those checks.
+    const near = reach(users, nodes, helpers);
+    for (const h of helpers) if (near.has(h)) for (const c of HARNESS_FOR[h] ?? []) checks.add(c);
+    if (harness.some((h) => near.has(h))) {
       allChecks = true;
       why.push(`${f}: every check (the checks' harness, or their samples)`);
     }

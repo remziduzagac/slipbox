@@ -274,3 +274,10 @@ Homebrew does (a keg and `opt`), or put by hand, and starts it: the harness's `b
 address in the session's `extraEnv`, which a check's `setup` fills): the shell's prompt back at once, the version
 installed after. On Linux, `/proc/<pid>/exe` shows the process runs the new file itself, not waiting on a child.
 `:restart`'s question about notes unsaved is checked from source.
+
+## MODIFIED design/repository.md § CI
+
+In "What a change reaches", "every check for the harness and the samples the checks' home is built from." becomes
+"every check for the harness and the samples the checks' home is built from, but a file of the harness only some checks
+use runs theirs (`HARNESS_FOR`): what reaches the harness only through the release builds (`tests/terminal/releases.ts`,
+which load `scripts/release.ts`) runs the checks of upgrading, `updates`."

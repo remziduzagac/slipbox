@@ -548,6 +548,8 @@ sidebar_vault = { bold = true, underline = true }
 "leader ; H b" = "help.report"
 "leader ; H c" = "help.report_send"
 "leader ; n d" = "app.quit"
+"leader ; n e" = "app.restart"
+"leader ; n f" = "app.upgrade"
 
 [keys.source]
 "ctrl+d" = "edit.delete_char"

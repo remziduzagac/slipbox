@@ -17,7 +17,6 @@ import {
   writeFileSync,
 } from "node:fs";
 import { dirname, join } from "node:path";
-import { assetName } from "../../../scripts/release.ts";
 import { VERSION } from "../../../src/version.ts";
 import { type Check, open } from "../check.ts";
 import { type Releases, releasesBuilt } from "../releases.ts";
@@ -194,7 +193,7 @@ export const UPDATES: Check[] = [
         installed(s);
         // The releases, their sum wrong.
         const r = builds();
-        const pack = assetName(r.new, r.target);
+        const pack = r.pack;
         place(join(r.releases, "download", `v${r.new}`, pack), join(s.dir, "bad", "download", `v${r.new}`, pack));
         mkdirSync(join(s.dir, "bad", "latest", "download"), { recursive: true });
         writeFileSync(join(s.dir, "bad", "latest", "download", "SHA256SUMS"), `${"0".repeat(64)}  ${pack}\n`);

@@ -401,8 +401,12 @@ describe("the supply chain's gates (14.10)", () => {
         'const DEEP = join(FIX, "deep");',
         'join(DEEP, "d.md");',
       ].join("\n"),
-      "tests/terminal/run.ts": 'import "./checks/index.ts";\n',
+      "tests/terminal/run.ts": 'import "./checks/index.ts";\nimport "./releases.ts";\n',
       "tests/terminal/worker.ts": 'import "./session.ts";\n',
+      // The release builds: a file of the harness only the checks of upgrading use.
+      "tests/terminal/releases.ts": 'import "../../scripts/release.ts";\n',
+      "scripts/release.ts": "export {};\n",
+      "tests/release.test.ts": 'import "../scripts/release.ts";\n',
       "tests/terminal/checks/index.ts": 'import "./one.ts";\n',
       "tests/terminal/checks/one.ts": 'import { REPO } from "../session.ts";\nexport { REPO };\n',
       "tests/terminal/session.ts":
@@ -436,6 +440,9 @@ describe("the supply chain's gates (14.10)", () => {
     expect(of("examples/home/m.md").all).toEqual(expect.any(String)); // one nothing names: everything
     expect(of("notes/x.txt").all).toEqual(expect.any(String));
     expect(of("src/core/gone.ts")).toMatchObject({ all: null, tests: [], checks: [] }); // what used it changed too
+    // What reaches the harness only through a file of it some checks use: those checks, not every one.
+    expect(of("scripts/release.ts")).toMatchObject({ tests: ["tests/release.test.ts"], checks: ["updates"] });
+    expect(of("tests/terminal/releases.ts")).toMatchObject({ tests: [], checks: ["updates"] });
   });
 
   test("a pull request runs the tests and the terminal checks its files reach (D239)", () => {
@@ -449,8 +456,16 @@ describe("the supply chain's gates (14.10)", () => {
       expect(git.tests).not.toContain("tests/release.test.ts");
       expect(git.checks).toEqual(["git"]);
     }
-    expect(of("scripts/release.ts")).toMatchObject({ tests: ["tests/distribution.test.ts", "tests/release.test.ts"] });
-    expect(of("scripts/release.ts")).toMatchObject({ checks: [] });
+    // The release script: its tests, the harness's (which loads it), and the checks that drive release builds alone.
+    expect(of("scripts/release.ts")).toMatchObject({
+      tests: [
+        "tests/distribution.test.ts",
+        "tests/release.test.ts",
+        "tests/terminal-coverage.test.ts",
+        "tests/terminal-harness.test.ts",
+      ],
+      checks: ["updates"],
+    });
     // The explorer's listings, every folder a level at a time and the facts its rows' marks read: those features' checks.
     expect(of("src/core/listing.ts")).toMatchObject({
       checks: expect.arrayContaining(["Elsewhere", "marks", "slow disk", "view"]),

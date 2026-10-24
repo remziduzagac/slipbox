@@ -2545,6 +2545,8 @@ A long note: headings, paragraphs, pages to move through; the daily note has the
 - `app.save_quit` — Save and quit — `notes/index.md` (command-specs.ts)
 - `app.quit_force` — Quit without saving — `notes/index.md` (command-specs.ts)
 - `app.quit` — Quit — `notes/index.md` (command-specs.ts)
+- `app.restart` — Restart slipbox — `notes/index.md` (command-specs.ts)
+- `app.upgrade` — Check for a newer slipbox — `notes/index.md` (command-specs.ts)
 
 ### copy
 

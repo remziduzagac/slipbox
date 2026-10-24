@@ -18,9 +18,10 @@ export interface Releases {
   /** This checkout's version, and its binary. */
   old: string;
   oldBin: string;
-  /** The newer one's version, its binary unpacked, and the releases' folder serving its pack. */
+  /** The newer one's version, its binary unpacked, its pack's name, and the releases' folder serving the pack. */
   new: string;
   newBin: string;
+  pack: string;
   releases: string;
 }
 
@@ -77,12 +78,13 @@ export function buildReleases(dir: string): Releases {
   rmSync(copy, { recursive: true, force: true });
   // Its pack, and the releases laid out as GitHub's: `latest/download/SHA256SUMS`, `download/v<version>/<pack>`.
   const releases = join(dir, "releases");
-  const pack = join(releases, "download", `v${next}`, assetName(next, target));
+  const packName = assetName(next, target);
+  const pack = join(releases, "download", `v${next}`, packName);
   mkdirSync(join(releases, "download", `v${next}`), { recursive: true });
   run(["tar", "-czf", pack, "-C", dir, name], dir);
   mkdirSync(join(releases, "latest", "download"), { recursive: true });
   writeFileSync(join(releases, "latest", "download", "SHA256SUMS"), sha256sums([pack]));
-  return { dir, target, old, oldBin, new: next, newBin: join(stage, "slipbox"), releases };
+  return { dir, target, old, oldBin, new: next, newBin: join(stage, "slipbox"), pack: packName, releases };
 }
 
 /** The builds a run made, as its workers find them; null when none were. */
