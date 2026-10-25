@@ -332,8 +332,9 @@ the window less its caption. In a short window, or for a tall, narrow picture, i
 
 **At its own size.** Click a picture, or press `z p` with the cursor on its `▣` line, to see it at its own size. The
 text around it stays as it was. A picture wider than the window scrolls sideways on its own, with a scrollbar under
-it: `z h` and `z l` scroll it a quarter of the window at a time, and so do a sideways wheel, the wheel with `shift`,
-and a drag of its scrollbar. Click it, or press `z p`, again to fit it to the window.
+it: `z h` and `z l` scroll it a quarter of its visible width at a time. A sideways wheel or the wheel with `shift`
+scrolls six columns per notch; its scrollbar can be clicked or dragged. Click it, or press `z p`, again to fit it
+to the window.
 
 - A picture stays at its own size while its window shows the note, through scrolling, edits and resizing. Another note
   in the window, and it's fitted again.

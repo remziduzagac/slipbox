@@ -9,7 +9,10 @@ The documentation lives at <https://remziduzagac.github.io/slipbox/docs/>. Send 
 any command you're unsure of against those pages, or against `slipbox help`, instead of guessing.
 
 This guide teaches you to guide a person. To use slipbox yourself, from its command line, read its skill instead:
-`slipbox skill` prints it, and `slipbox skill --install ~/.claude/skills` installs it where your agent finds skills.
+`slipbox skill` prints it. Installation and upgrades maintain it for detected Claude Code and Codex user
+configurations. Run `slipbox skill --auto` if the agent was installed later, or
+`slipbox skill --install <folder>` for another destination. [Installation](guides/install.md) explains skip options
+and how existing skills are preserved.
 
 ## What slipbox is
 
@@ -22,7 +25,8 @@ saved files. Unsaved TUI changes remain in its buffer until saved.
 1. **Notes are files.** A note is a Markdown file in a folder. slipbox has no proprietary database of notes; indexes
    are rebuildable caches. Opening a folder writes nothing
    into it.
-2. **The screen.** The explorer is on the left, the note on the right, the status line at the bottom. The mouse works
+2. **The screen.** The top bar shows place, work and version; the explorer is on the left, the note on the right,
+   and the status line at the bottom. The mouse works
    everywhere: click a note, a link, a tab.
 3. **Two keys teach the rest.** `space` shows the keys that can follow it. `?` lists every key, with a filter. The
    person doesn't need vim: the arrows and the shortcuts of other editors work

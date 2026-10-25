@@ -23,7 +23,7 @@ Four keys have no match in a desktop editor. Learn these, and the rest of this p
 | `?` | Lists every key. Type to filter the list |
 
 slipbox shows a note rendered, and a key there is a command, not a letter typed. For example, `q` closes the tab. To
-type, press `i` first. The chip at the left of the status line says `INSERT` while you type.
+type, press `i` first. The chip at the left of the status line shows the view beside `INSERT` while you type.
 
 The lens shows the Markdown around the cursor, with the rest of the note still rendered. [Editing](../manual/editing.md)
 says more about it.

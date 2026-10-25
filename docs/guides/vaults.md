@@ -35,9 +35,11 @@ Check the vault's name or path in the middle of the top bar. Your tabs there, yo
 to that vault. In the explorer,
 `esc` returns to the document; `space e` opens or focuses the explorer again.
 
-## Look outside the current view
+<a id="look-outside-the-current-view"></a>
 
-Focus the explorer. `-` zooms its view out one folder; `z` zooms into a selected folder. The breadcrumb tells you
+## Look outside the current zoom
+
+Focus the explorer. `-` zooms out one folder; `z` zooms into a selected folder. The breadcrumb tells you
 which part of the filesystem you are viewing. Seeing a sibling repository does not add its notes to the current vault.
 
 1. Zoom out until two repositories or notes folders are visible.
@@ -84,8 +86,8 @@ leads](../images/vaults-link-question.png)
 slipbox ~/work/kestrel
 ```
 
-You're in kestrel. The top bar says `◈ kestrel · main`, and the breadcrumb `~ › work › ◈ kestrel ›`. Press `-`, and
-the view zooms out to `~/work`. kestrel is highlighted, its tree under it, and the two others are beside it, each with
+You're in kestrel. The top bar says `◈ kestrel │ ⎇ main`, and the breadcrumb `~ › work › ◈ kestrel ›`. Press `-`, and
+the zoom moves out to `~/work`. kestrel is highlighted, its tree under it, and the two others are beside it, each with
 its branch dimmed at its end:
 
 ```text
@@ -97,12 +99,13 @@ its branch dimmed at its end:
 ```
 
 - `l` on `product` unfolds it in place, to look in.
-- `enter` on it goes into product, with your workspace there. The top bar says `◈ product · feature/okrs`, and the
-  view stays at `~/work`.
+- `enter` on it goes into product, with your workspace there. The top bar says `◈ product │ ⎇ feature/okrs`, and the
+  zoom stays at `~/work`.
 - `ctrl+o` comes back into kestrel, its tabs as you left them.
 - The git panel (`space g`) in kestrel is kestrel's, the other two folded under it, in Other repositories.
 
-Started on the folder itself, `slipbox ~/work`, you're in home, with the view at `~/work`. The rows are the same, once
+Started on the folder itself, `slipbox ~/work`, you're in home, with the explorer zoomed to `~/work`. The rows are the
+same, once
 home's walk has found the repositories ([Home](../manual/vaults.md#home)). The git panel there says `~/work holds 3
 repositories`, the one
 that needs you most first.
@@ -203,7 +206,7 @@ In `notes`:
 
 - `/` at a path's start, and a wikilink's name, reach the notes' own.
 - The explorer lists its notes and data files, as `files.show` does in a folder with `.slipbox/`. `a` shows the rest.
-- The top bar says `◈ kestrel-notes · main`: its git is the repository's, and you commit from the git panel as in
+- The top bar says `◈ kestrel-notes │ ⎇ main`: its git is the repository's, and you commit from the git panel as in
   kestrel.
 
 `shift+v` on the folder in kestrel's explorer, or `slipbox deinit notes`, makes it part of kestrel again.
@@ -249,10 +252,10 @@ open `/mnt/backup` next week, and `nginx.conf`'s tab is there.
 ## Check your context
 
 Before searching, renaming a file or collecting references, glance at the vault shown on the top bar. A change
-of explorer view alone is not a change of vault. `slipbox info` can report the current folder's context from the CLI.
+of explorer zoom alone is not a change of vault. `slipbox info` can report the current folder's context from the CLI.
 
-![kestrel's docs/architecture.md in a tab of its own, gone into from a link in notes: the top bar reads ◈ kestrel ·
-main, the status line the back arrow before the file's path](../images/vaults-links.png)
+![kestrel's docs/architecture.md in a tab of its own, gone into from a link in notes: the top bar reads ◈ kestrel │
+⎇ main, the status line the back arrow before the file's path](../images/vaults-links.png)
 
 **Next:** [Coming from Obsidian or zk](from-obsidian-or-zk.md), if that is where your notes already live. Otherwise
 continue with [Reviewing changes with Git](code-and-git.md).

@@ -269,6 +269,16 @@ function commandsLeftOut(chapter: string): string[] {
 }
 
 describe("the user documentation (DOC)", () => {
+  test("the user docs do not describe a hidden top bar or its retired status fallback", () => {
+    const stale = userDocs().flatMap((file) => {
+      const text = read(file).replace(/\s+/g, " ");
+      return /with the top bar hidden|while the top bar is hidden|top bar, else on the status line/i.test(text)
+        ? [relative(TOP, file)]
+        : [];
+    });
+    expect(stale).toEqual([]);
+  });
+
   test("every document is there, and the map links each", () => {
     const map = read(join(DOCS, "README.md"));
     const pages = [...readMap(map).flatMap((group) => group.pages), ...readLegacyPages(map)];

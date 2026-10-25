@@ -28,16 +28,15 @@ what git does, such as an interactive rebase or a cherry-pick, you run git yours
 A git repository is a vault by itself. Open any file in it, and slipbox opens the repository from its top folder.
 [Vaults, home and Elsewhere](vaults.md) explains vaults.
 
-The top bar shows the vault and the branch checked out. For example, it shows `◈ app · main` for a repository named
-`app` by its remote. A worktree of a named folder shows as its name and branch, as in `◈ app@fix/retry`. Click the
-branch, and slipbox lists the branches, with pull, push and fetch first. With the top bar hidden, the status line shows
-them instead, and clicking them does the same.
+The permanent top bar separates explorer zoom, workspace and git. For a repository named `app`, the workspace
+shows `◈ app` and the adjacent branch shows `⎇ main`. A worktree keeps the same vault label beside its own branch,
+as in `◈ app │ ⎇ fix/retry`. Click the branch for pull, push and fetch, then the branches to check out.
 
 When the branch has an upstream, the top bar also shows how far the branch is ahead of it and behind it, as of the last
-fetch: `app · main ↑2 ↓1` has two commits to push and one to pull. Nothing shows when they're in step.
+fetch: `◈ app │ ⎇ main ↑2 ↓1` has two commits to push and one to pull. Nothing shows when they're in step.
 
-While a merge or a rebase is under way, the top bar says so after the branch: `app · main merging`, or
-`app · fix/retry rebasing 2/5` at the second of five commits.
+While a merge or a rebase is under way, the top bar says so after the branch: `⎇ main merging`, or
+`⎇ fix/retry rebasing 2/5` at the second of five commits.
 
 Each branch keeps your workspace, the tabs you had open on it: switching branches brings back the other branch's
 ([Where you were](screen.md#where-you-were)).
