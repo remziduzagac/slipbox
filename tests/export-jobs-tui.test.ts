@@ -287,6 +287,13 @@ test("a real export restarted from background work stops the first and publishes
   writeFileSync(join(root, "exported.md"), "# Export\n\nOne\n");
   const h = await harness({ root, open: "exported.md" });
   const target = join(root, "restarted.html");
+  const write = h.app.exporter.write.bind(h.app.exporter);
+  const writes: Promise<void>[] = [];
+  h.app.exporter.write = (...args) => {
+    const done = write(...args);
+    writes.push(done);
+    return done;
+  };
   const prepare = ExportJob.prototype.prepare;
   let calls = 0;
   ExportJob.prototype.prepare = function (request, options) {
@@ -300,7 +307,10 @@ test("a real export restarted from background work stops the first and publishes
     const id = [...h.app.background.tasks.keys()][0]!;
     await h.app.run(`background.restart ${id}`);
     await pending;
-    for (let i = 0; i < 500 && h.app.background.tasks.size; i++) await Bun.sleep(10);
+    // Work ends before the asynchronous rename, once cancellation can no longer stop publication.
+    // Wait for the replacement operation itself, including publication and staging cleanup.
+    expect(writes).toHaveLength(2);
+    await Promise.all(writes);
     expect(calls).toBe(2);
     expect(readFileSync(target, "utf8")).toContain("One");
     expect(h.app.background.recent.map((task) => task.outcome)).toEqual(["done", "stopped"]);
