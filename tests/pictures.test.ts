@@ -101,6 +101,42 @@ async function open(
 }
 
 const layoutOf = (h: Harness) => h.app.currentLayout(h.app.view!);
+
+describe("caption spacing and placement", () => {
+  for (const caption of ["bottom", "top"] as const) {
+    test(`${caption}: one blank row between caption and image, with lookup and clicks on the image`, async () => {
+      const { h, v } = await open({
+        md: "![Chart](shot.png)\n",
+        config: (c) => {
+          c.render.caption = caption;
+        },
+      });
+      const layout = layoutOf(h);
+      const first = layout.lines.findIndex((line) => !!line.image);
+      const p = layout.lines[first]!.image!;
+      const captions = layout.lines.flatMap((line, i) => (line.caption ? [i] : []));
+      const gap = caption === "top" ? first - 1 : first + p.rows;
+      expect(layout.lines[gap]!.spans).toEqual([]);
+      expect(layout.lines[gap]!.caption).toBeUndefined();
+      expect(caption === "top" ? captions.at(-1) : captions[0]).toBe(caption === "top" ? gap - 1 : gap + 1);
+      for (const i of captions) expect(i - layout.lines[i]!.pic!.row).toBe(first);
+      h.app.moveCursor(v, { row: captions[0]!, col: 0 });
+      await h.keys("z", "p");
+      expect(layoutOf(h).lines.some((line) => line.image?.own)).toBe(true);
+      h.app.quit();
+    });
+  }
+  test("a setting change invalidates both layout caches; undrawn images keep their caption alone", async () => {
+    const { h } = await open({ md: "![Chart](shot.png)\n" });
+    expect(layoutOf(h).lines[0]!.image).toBeDefined();
+    h.app.config.render.caption = "top";
+    expect(layoutOf(h).lines[0]!.caption).toBeDefined();
+    h.app.config.render.images = "never";
+    const alone = layoutOf(h);
+    expect(alone.lines.every((line) => !!line.caption)).toBe(true);
+    h.app.quit();
+  });
+});
 /** The rows of the picture drawn from `src`'s file: its ▣ rows, the rows it's drawn over, its bar. */
 const rowsOf = (layout: Layout, file = "shot.png") => {
   const rows = layout.lines.flatMap((l, i) => (l.pic && basename(l.pic.p.file ?? "") === file ? [i] : []));
@@ -148,7 +184,7 @@ describe("fitted to its window (PIC-D1)", () => {
     const { p, caption } = rowsOf(layoutOf(h), "tall.png");
     expect(caption.length).toBeGreaterThan(1);
     expect(p.rows).toBeLessThanOrEqual(v.height - caption.length);
-    expect(p.rows).toBeGreaterThan(v.height - caption.length - 2);
+    expect(p.rows).toBeGreaterThan(v.height - caption.length - 3);
   });
   test("two windows of different heights on one note size it each for itself; a note without pictures isn't laid out again for a height", async () => {
     // 4:3, 1,155 × 866 in the budget: bounded by a short window's height before the floor.

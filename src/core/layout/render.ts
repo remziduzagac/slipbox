@@ -63,6 +63,7 @@ export interface RenderOptions {
   /** What `picture` sizes for besides the width (PIC): a window's rows, the pictures it shows at their own size. A
    *  kept block that asked for a picture is laid out again when it changes. */
   pictureKey?: string;
+  caption?: "bottom" | "top";
   /** Mermaid and a display's maths drawn as pictures (12.16, 12.17), as chosen where pictures are: in these colours. */
   drawings?: { mermaid: boolean; math: boolean; colors: DrawingColors & { math: string } };
   /** A code block too wide for its room keeps its lines whole, to scroll sideways in the window (`[render] code_wrap
@@ -165,7 +166,7 @@ export function renderTree(
   collectDefinitions(tree, ctx);
   const width = Math.max(8, opts.width);
   if (!cache) return finish(blocks(tree.children, ctx, width, TEXT, frontmatter), ctx, width);
-  const key = `${width}|${opts.glyphs.mode}|${opts.showUrls ? 1 : 0}|${opts.codeScroll ? 1 : 0}|${[...ctx.definitions].join("\u0001")}`;
+  const key = `${width}|${opts.glyphs.mode}|${opts.showUrls ? 1 : 0}|${opts.codeScroll ? 1 : 0}|${opts.caption ?? "bottom"}|${[...ctx.definitions].join("\u0001")}`;
   if (cache.key !== key) {
     cache.key = key;
     cache.blocks = new WeakMap();
@@ -589,7 +590,7 @@ function picturesAlone(children: PhrasingContent[], src: number, ctx: Ctx, width
 
 /** How many rows a picture's `▣ alt` line wraps to (PIC-D1): what its window has less for the picture. */
 function captionRows(c: PhrasingContent, at: number, ctx: Ctx, width: number, base: Style): number {
-  return pictureCaption(c, at, { ...ctx, links: [] }, width, base).length;
+  return pictureCaption(c, at, { ...ctx, links: [] }, width, base).length + 1;
 }
 
 /** A picture asked for: an SVG's (12.15) waits for its rasteriser — the layout says so, and is made again when it's in. */
@@ -622,9 +623,10 @@ function pictureRows(c: PhrasingContent, p: Picture | null, at: number, ctx: Ctx
     });
   if (scroll)
     out.push({ spans: [], src: at, decor: true, pic: { p, row: p.rows }, scroll: { ...scroll, part: "bar" } });
-  const start = out.length;
-  out.push(...caption.map((line, k): Line => ({ ...line, pic: { p, row: start + k } })));
-  return out;
+  const gap: Line = { spans: [], src: at, decor: true };
+  const rows = ctx.opts.caption === "top" ? [...caption, gap, ...out] : [...out, gap, ...caption];
+  const first = ctx.opts.caption === "top" ? caption.length + 1 : 0;
+  return rows.map((line, i) => ({ ...line, pic: { p, row: i - first } }));
 }
 
 /** Where a picture is drawn from: a markdown image's URL, or a picture embedded by name (`![[dal.png|300]]`) and the

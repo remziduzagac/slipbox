@@ -574,7 +574,18 @@ The linter reads the file. So a note is linted when it opens and just after each
 Typing hides its findings until the next save. If it prints more than slipbox reads (16 MiB) for a note, none of that
 run's findings show, a warning says why once, and the next save lints it again.
 
-Each finding is a warning:
+By default, slipbox hides line-length findings (MD013) where the view handles the width: paragraphs, lists and
+quotes when wrapping is on, table rows always, and fenced code when `render.code_wrap = "wrap"`. With wrapping off,
+long prose lines warn again. Fences scroll by default, so their long lines still warn.
+
+Set `lint.follow_view = false` to show every finding, or `lint.ignore = ["MD033"]` to hide chosen rules. Both settings
+may live in a vault's `.slipbox/config.toml`, even one you don't trust. They change only what slipbox shows; your
+linter's configuration and its results in CI or another editor stay the same.
+
+Problems says how many findings are hidden and why. Press `a` in the panel to show them all, including ignored
+rules, and again to hide them. The status count and marks follow the findings shown.
+
+Each visible finding is a warning:
 
 - counted on the status line
 - its line number coloured

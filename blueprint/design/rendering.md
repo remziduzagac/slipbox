@@ -555,7 +555,10 @@ seconds or more later. These are budgets for requests and held input, not OS-enf
 
 ## Standalone picture captions (#83)
 
-A standalone picture has a wrapped caption box below its image; without a drawable image the box stands alone.
+A standalone picture has a wrapped caption box below its image by default; `render.caption = "top"` puts it above
+(#91, LC-T1). One blank row separates the box from the image and its optional scrollbar, reserved when fitting its
+height. Without a drawable image the box stands alone without that row. Picture coordinates remain relative to the
+first image row (negative above it); placement participates in both layout caches.
 Inline pictures retain paragraph layout. Alt-text newlines become spaces. The picture_caption theme role supplies
 the faint background; box glyphs follow the active glyph set. Buttons copy path, alt text and image separately via
 picture.copy_path, picture.copy_caption and picture.copy_image. Native image copying uses optional wl-copy, xclip or

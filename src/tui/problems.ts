@@ -4,6 +4,8 @@
 import { join, relative } from "node:path";
 import { placeAt } from "./editing.ts";
 import type { LinkProblem } from "../core/graph.ts";
+import { visibleLint, type LintVisibility } from "../core/lint-visibility.ts";
+import { parseMarkdown, type ParsedNote } from "../core/parse.ts";
 import type { LintIssue } from "../core/lint.ts";
 import { srcAt } from "../core/layout/ir.ts";
 import {
@@ -35,6 +37,77 @@ export class Problems {
   };
   /** The Problems panel's folded sections (All), by name (1.7). */
   folded = new Set<string>();
+  showAllLint = false;
+  private vaultParses = new Map<string, ParsedNote | null>();
+  private vaultIssues: LintIssue[] | null = null;
+  private vaultGeneration = -1;
+
+  /** Visibility is recalculated from retained findings whenever view settings change. */
+  private lintVisibility(issues: readonly LintIssue[], parsed: ParsedNote | null): LintVisibility {
+    return visibleLint(
+      issues,
+      parsed,
+      this.app.config.lint,
+      { wrap: this.app.ui.wrap, codeWrap: this.app.config.render.code_wrap === "wrap" },
+      this.showAllLint,
+    );
+  }
+
+  private fileLint(view: View): LintVisibility {
+    const buf = view.buf;
+    return this.lintVisibility(buf.lint?.issues ?? [], buf.kind.group === "note" ? buf.parsed : null);
+  }
+
+  private vaultLint(): LintVisibility {
+    const issues = this.app.languages.vaultLint.issues ?? null;
+    if (issues !== this.vaultIssues || this.app.graph.generation !== this.vaultGeneration) {
+      this.vaultParses.clear();
+      this.vaultIssues = issues;
+      this.vaultGeneration = this.app.graph.generation;
+    }
+    const shown: LintIssue[] = [];
+    const hidden: LintVisibility["hidden"] = new Map();
+    const files = new Map<string, LintIssue[]>();
+    for (const issue of issues ?? []) {
+      const list = files.get(issue.file) ?? [];
+      list.push(issue);
+      files.set(issue.file, list);
+    }
+    for (const [file, list] of files) {
+      if (!this.vaultParses.has(file)) {
+        let parsed: ParsedNote | null = null;
+        try {
+          parsed = parseMarkdown(readText(file).text);
+        } catch {
+          /* Unreadable files keep their findings. */
+        }
+        this.vaultParses.set(file, parsed);
+      }
+      const result = this.lintVisibility(list, this.vaultParses.get(file)!);
+      shown.push(...result.shown);
+      for (const [reason, count] of result.hidden) hidden.set(reason, (hidden.get(reason) ?? 0) + count);
+    }
+    return { shown, hidden };
+  }
+
+  hiddenCaption(): string {
+    const v = this.app.view;
+    const result =
+      this.panel.tab === "all"
+        ? this.vaultLint()
+        : v && v.buf.lint?.version === v.buf.version
+          ? this.fileLint(v)
+          : null;
+    const reasons = [...(result?.hidden ?? [])].map(
+      ([reason, count]) => `${count} ${this.showAllLint ? "revealed" : "hidden"}: ${reason}`,
+    );
+    return reasons.length ? `${reasons.join("; ")} (a: ${this.showAllLint ? "hide again" : "show all"})` : "";
+  }
+
+  toggleLint(): void {
+    this.showAllLint = !this.showAllLint;
+    this.panel.file.selected = this.panel.file.scroll = this.panel.all.selected = this.panel.all.scroll = 0;
+  }
 
   /** A note's own problems — its links, its conflicts — kept until the vault or the note changes. */
   private readonly noteCache = new WeakMap<NoteBuffer, { key: string; list: Problem[] }>();
@@ -60,7 +133,7 @@ export class Problems {
     )
       out.push(...syntaxProblems(syn.errors));
     if (buf.lint?.issues.length && (any || buf.lint.version === buf.version))
-      out.push(...lintProblems(buf.lint.issues));
+      out.push(...lintProblems(this.fileLint(view).shown));
     // Its language servers' (19.1), for the text they were found in: typing hides them until they answer again.
     for (const p of buf.serverProblems.values()) if (any || p.version === buf.version) out.push(...p.list);
     // Its linters' (19.19), likewise: one reading the file, until it's saved and run again.
@@ -185,6 +258,7 @@ export class Problems {
   /** The panel's keys: the explorer's moves, `tab` between its tabs; This file's moves take the cursor to the problem. */
   panelAction(action: string): void {
     const p = this.panel;
+    if (action === "show_all") return void this.app.run("problems.show_all");
     if (action === "switch") {
       if (p.tab === "file") this.open("all");
       else p.tab = "file";
@@ -245,12 +319,7 @@ export class Problems {
     const conflicts = [...(this.app.git.states ?? [])].filter(([, st]) => st === "conflict").length;
     const frontmatter = frontmatterFindings(this.app.graph).reduce((n, f) => n + f.problems.length, 0);
     return (
-      p.broken.length +
-      p.ambiguous.length +
-      p.fragile.length +
-      frontmatter +
-      (this.app.languages.vaultLint.issues?.length ?? 0) +
-      conflicts
+      p.broken.length + p.ambiguous.length + p.fragile.length + frontmatter + this.vaultLint().shown.length + conflicts
     );
   }
 
@@ -360,7 +429,7 @@ export class Problems {
     }
     // Lint (3.21): the linter's findings over the vault, by note; while it runs, said so.
     if (this.app.languages.lintCmd || this.app.languages.vaultLint.issues) {
-      const all = this.app.languages.vaultLint.issues;
+      const all = this.app.languages.vaultLint.issues ? this.vaultLint().shown : null;
       const rows = (all ?? [])
         .map((i) => ({
           i,

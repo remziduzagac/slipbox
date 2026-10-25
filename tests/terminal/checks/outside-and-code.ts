@@ -312,6 +312,50 @@ export const OUTSIDE_AND_CODE: Check[] = [
   },
 
   // --- linters ------------------------------------------------------------------------------------
+
+  ...[
+    { wrap: true, code: "scroll", follow: true, ignore: false, count: 2, hidden: 2 },
+    { wrap: false, code: "scroll", follow: true, ignore: false, count: 3, hidden: 1 },
+    { wrap: true, code: "wrap", follow: true, ignore: false, count: 1, hidden: 3 },
+    { wrap: false, code: "wrap", follow: true, ignore: false, count: 2, hidden: 2 },
+    { wrap: true, code: "wrap", follow: false, ignore: false, count: 4, hidden: 0 },
+    { wrap: true, code: "scroll", follow: true, ignore: true, count: 1, hidden: 3 },
+  ].map(
+    (settings): Check => ({
+      area: "editing",
+      name: `lint visibility: wrap=${settings.wrap}, code=${settings.code}, follow=${settings.follow}, ignore=${settings.ignore}`,
+      covers: { cases: ["lint", "problems"], commands: ["problems.show_all"] },
+      options: {
+        home: true,
+        startAt: "home/notes/lint-visibility.md",
+        config: `[ui]\nwrap = ${settings.wrap}\n[render]\ncode_wrap = "${settings.code}"\n[lint]\nenabled = "on"\nfollow_view = ${settings.follow}\nignore = ${settings.ignore ? '["MD033"]' : "[]"}\ncommand = ["sh", "-c", ${JSON.stringify(`for f; do case "$f" in */lint-visibility.md) for line in 3 7 10; do printf '%s:%s:1 error MD013/line-length Long line\\n' "$f" "$line"; done; printf '%s:3:1 error MD033/no-inline-html Inline HTML\\n' "$f";; esac; done; exit 1`)}, "lint"]\n`,
+        setup: (s) =>
+          s.write(
+            "~/notes/lint-visibility.md",
+            "# Visibility\n\nParagraph\n\n| A |\n| - |\n| B |\n\n```ts\nlong code\n```\n",
+          ),
+      },
+      run: async (s) => {
+        await s.status(signed(`{warning} ${settings.count}`), 10000);
+        await leader(s, "n", "q");
+        await s.see(`This file (${settings.count})`);
+        if (settings.hidden) {
+          await s.see("hidden:");
+          await s.see("a: show all");
+          await s.keys("a");
+          await s.see("This file (4)");
+          await s.see("revealed:");
+          await s.keys("a");
+          await s.see(`This file (${settings.count})`);
+        } else {
+          await s.notSee("hidden:");
+          await s.keys("a");
+          await s.see("This file (4)");
+        }
+      },
+    }),
+  ),
+
   {
     area: "outside-and-code",
     name: "lint: a stand-in linter's finding — on the status line, beside its line (its number, or the bar's sign), marked at a level; in Problems, enter goes to its line",
@@ -321,7 +365,7 @@ export const OUTSIDE_AND_CODE: Check[] = [
     },
     // markdownlint-cli2's output, from sh: one finding, on home.md's line 3.
     options: {
-      config: `[lint]\nenabled = "on"\ncommand = ["sh", "-c", ${JSON.stringify(`for f; do case "$f" in */home.md) printf '%s:3:6 error MD013/line-length Line length [Expected: 80]\\n' "$f";; esac; done; exit 1`)}, "lint"]\n`,
+      config: `[lint]\nfollow_view = false\nenabled = "on"\ncommand = ["sh", "-c", ${JSON.stringify(`for f; do case "$f" in */home.md) printf '%s:3:6 error MD013/line-length Line length [Expected: 80]\\n' "$f";; esac; done; exit 1`)}, "lint"]\n`,
     },
     run: async (s) => {
       await s.status(signed("{warning} 1"), 6000); // how many of each severity (19.8); the linter runs once the note opens

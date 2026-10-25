@@ -206,6 +206,7 @@ export class Lens {
             buf.rel ? this.app.graph : null,
             pictures,
             this.app.code.scrolls(),
+            this.app.config.render.caption,
           );
       let blocks = code ? buf.codeBlocks(lineCount) : blockRanges(buf.parsed.tree, lineCount);
       let unit: ((at: number) => Block | null) | undefined;
@@ -233,6 +234,7 @@ export class Lens {
         width,
         wrap,
         codeScroll: this.app.code.scrolls(),
+        caption: this.app.config.render.caption,
         pictures: pictures?.key ?? "",
         renderedVersion: buf.version,
         version: buf.version,
@@ -248,7 +250,14 @@ export class Lens {
     // A cell's ✎ (24.13): the lens on its lines.
     const asked = view.lensRange;
     view.lensRange = undefined;
-    if (!base || base.width !== width || base.wrap !== wrap || base.codeScroll !== this.app.code.scrolls() || asked)
+    if (
+      !base ||
+      base.width !== width ||
+      base.wrap !== wrap ||
+      base.codeScroll !== this.app.code.scrolls() ||
+      base.caption !== this.app.config.render.caption ||
+      asked
+    )
       base = fresh(asked);
     else if (buf.version !== base.version) {
       // Typed into the lens, the rest untouched: the same render, the lens longer or shorter.
@@ -468,6 +477,7 @@ export interface LiveBase {
   wrap: boolean;
   /** Its code blocks too wide kept whole, to scroll sideways (`[render] code_wrap`). */
   codeScroll: boolean;
+  caption: "bottom" | "top";
   /** Its pictures' key, as its window showed them (PIC). */
   pictures: string;
   /** The buffer version the render was made from, and the one the block was last matched to. */

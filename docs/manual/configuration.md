@@ -48,6 +48,7 @@ code = true                   # supported code opens in READ; false opens SOURCE
 data = true                   # data that parses opens in READ; false opens SOURCE
 code_cells = "box"             # the code view's cells: box (framed) | band (on a tint); space u c switches
 code_wrap = "scroll"           # a code block too wide, in the TUI: scroll (sideways, its lines whole) | wrap (↪)
+caption = "bottom"            # caption box below or above a drawn picture: bottom | top
 images = "auto"                # a note's pictures: auto (drawn where the terminal can) | never
 images_remote = "ask"          # your file only. Pictures on the internet: ask (enter fetches one) | show (fetched as
                                # the note opens) | never (neither fetched nor drawn)
@@ -179,6 +180,9 @@ enabled = "auto"               # auto (markdownlint-cli2 where there's a markdow
                                # ~/.markdownlint-cli2.jsonc; your command always) | on | off (nor any [linter])
 command = []                   # []: markdownlint-cli2, found or installed; else your linter's arguments, the
                                # files added at the end; your file only
+
+follow_view = true             # hide MD013 where prose wraps, tables fit, or fenced code wraps
+ignore = []                    # rules hidden in slipbox only, e.g. ["MD033"]; safe in a vault
 
 [watch]                        # noticing what changes on disk
 enabled = true

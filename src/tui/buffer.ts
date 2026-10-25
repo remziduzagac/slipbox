@@ -641,8 +641,9 @@ export class NoteBuffer {
       drawings?: NoteRenderOptions["drawings"];
     },
     codeScroll = false,
+    caption: "bottom" | "top" = "bottom",
   ): Layout {
-    const key = `${width}:${glyphs.mode}:${showUrls ? 1 : 0}:${codeScroll ? 1 : 0}:${pictures?.key ?? "-"}`;
+    const key = `${width}:${glyphs.mode}:${showUrls ? 1 : 0}:${codeScroll ? 1 : 0}:${pictures?.key ?? "-"}:${caption}`;
     let l = this.layouts.get(key);
     if (!l) {
       // Another vault's file: its links and embeds read in its own vault.
@@ -656,6 +657,7 @@ export class NoteBuffer {
           glyphs,
           showUrls,
           codeScroll,
+          caption,
           ...(pictures
             ? { picture: pictures.picture, drawings: pictures.drawings, pictureKey: pictures.sized ?? "" }
             : {}),

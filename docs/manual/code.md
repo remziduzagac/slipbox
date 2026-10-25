@@ -697,7 +697,9 @@ count opens it on the file's problems, or on the vault's when the file has none.
 The Problems panel opens across the bottom of the screen. [The screen](screen.md#the-problems-panel) has its keys, and
 how to resize it.
 
-It has two tabs, **This file** and **All**.
+It has two tabs, **This file** and **All**. Each says how many lint findings are hidden and why, with `a` to reveal
+all of them or hide them again. This includes rules in `lint.ignore`. The status line counts only findings shown;
+[Problems as you write](editing.md#problems-as-you-write) explains the defaults.
 
 **This file** (`space n q`) lists every problem of the file on screen, in order. Each problem shows:
 

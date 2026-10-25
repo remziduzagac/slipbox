@@ -78,6 +78,32 @@ async function toPicture(s: Session, alt: string): Promise<void> {
 const ALT = "The route planner on a laptop";
 
 export const PICTURES: Check[] = [
+  ...(["bottom", "top"] as const).map(
+    (caption): Check => ({
+      area: "reading",
+      name: `picture caption placement: ${caption}, one row of space`,
+      covers: { cases: ["inline"] },
+      options: {
+        home: true,
+        startAt: "home/notes/caption-placement.md",
+        graphics: true,
+        config: `[render]\ncaption = "${caption}"\n`,
+        setup: (s) => s.write("~/notes/caption-placement.md", "![Placement](../hobbies/cooking/attachments/dal.png)\n"),
+      },
+      run: async (s) => {
+        await s.see("Placement");
+        await s.until(() => pictures(s).length === 1, 10000, "picture drawn beside its caption");
+        const cells = s.term.cells();
+        const ys = cells.flatMap((line, y) => (line.some((cell) => !!placeholderCell(cell.text)) ? [y] : []));
+        const text = cells.map((line) => line.map((cell) => cell.text).join(""));
+        const label = text.findIndex((line) => line.includes("Placement"));
+        const gap = caption === "top" ? Math.min(...ys) - 1 : Math.max(...ys) + 1;
+        s.expect(caption === "top" ? label < gap : label > gap, "caption on its configured side");
+        s.expect(!/Placement|[┌┐└┘]/.test(text[gap] ?? ""), "blank gap between picture and caption box");
+      },
+    }),
+  ),
+
   {
     area: "reading",
     name: "picture captions: boxed, multiline alt flattened, separate copy buttons without image support",

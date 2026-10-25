@@ -51,7 +51,11 @@ export function drawProblemsPanel(app: App, c: Canvas, rect: Rect, geo: Geometry
   }
   // The list, a blank row above and below it when there's room.
   const pad = rect.h >= 6 ? 1 : 0;
-  const list = { x: rect.x, y: rect.y + 1 + pad, w: rect.w, h: rect.h - 1 - 2 * pad };
+  const hidden = app.problems.hiddenCaption();
+  if (hidden) drawText(c, rect.x + 1, rect.y + 1, sanitize(hidden), roleStyle(theme, "dim", bg), rect.w - 2);
+  const extra = hidden ? 1 : 0;
+  const list = { x: rect.x, y: rect.y + 1 + pad + extra, w: rect.w, h: Math.max(0, rect.h - 1 - 2 * pad - extra) };
+  if (!list.h) return rect;
   if (p.tab === "all") drawAllProblems(app, c, list, bg, geo);
   else drawFileProblems(app, c, list, app.problems.fileRows(), bg, geo);
   return rect;

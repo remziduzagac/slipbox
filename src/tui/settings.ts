@@ -75,7 +75,7 @@ export class Settings {
     this.app.explorerKeys = new Keymap(DEFAULT_EXPLORER_KEYS, explorer ?? {}, this.app.leader);
     this.app.gitKeys = new Keymap(DEFAULT_GIT_KEYS, git ?? {}, this.app.leader);
     this.app.problemsKeys = new Keymap(
-      { ...DEFAULT_EXPLORER_KEYS, tab: "switch", "shift+tab": "switch" },
+      { ...DEFAULT_EXPLORER_KEYS, a: "show_all", tab: "switch", "shift+tab": "switch" },
       explorer ?? {},
       this.app.leader,
     );
