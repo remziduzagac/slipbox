@@ -115,6 +115,7 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 ### Fixed
 
 - Preserve Markdown paragraphs inside preformatted HTML containers.
+- Preserve nested HTML line breaks inside preformatted containers in READ and document exports.
 
 - The agent guide's Markdown on the documentation site, which an agent can fetch on its own, links the other pages by
   their full addresses. Its links were relative to the docs folder and led nowhere on the site.

@@ -78,3 +78,9 @@ test("preformatted HTML containers export intervening Markdown paragraphs", asyn
   expect(html).toContain("First bold paragraph.");
   expect(html).toContain("Second paragraph.");
 });
+
+test("preformatted HTML exports nested hard breaks", async () => {
+  const doc = await document("<pre>first<br><b>second<br/>third</b><BR />fourth</pre>");
+  const html = new TextDecoder().decode(await toHtml(doc));
+  expect(html).toContain("first\nsecond\nthird\nfourth");
+});

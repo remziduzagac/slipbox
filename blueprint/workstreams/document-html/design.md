@@ -63,3 +63,4 @@ resets for both ANSI and TUI output; document writers use equivalent scoped styl
 
 Preformatted containers extract text recursively from intervening Markdown blocks, retaining paragraph breaks
 and formatted text instead of discarding parent nodes without a direct value.
+Nested br elements contribute hard line breaks during the same extraction for rendering and semantic exports.

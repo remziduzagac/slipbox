@@ -54,6 +54,7 @@ declare module "mdast" {
   }
   interface Data {
     html?: HtmlPresentation;
+    htmlSourceLines?: number[];
     id?: string;
   }
 }
@@ -130,9 +131,42 @@ function nodeLiteral(node: Nodes): string {
 function literal(children: HtmlChild[]): string {
   return children
     .map((c) =>
-      "text" in c ? c.text : "node" in c ? nodeLiteral(c.node) : OMIT_HTML.has(c.tag) ? "" : literal(c.children),
+      "text" in c
+        ? c.text
+        : "node" in c
+          ? nodeLiteral(c.node)
+          : OMIT_HTML.has(c.tag)
+            ? ""
+            : c.tag === "br"
+              ? "\n"
+              : literal(c.children),
     )
     .join("");
+}
+
+/** A generated hard break changes the displayed row, never the physical source line. */
+function preformatted(children: HtmlChild[]): { value: string; lines: number[] } {
+  let value = "";
+  const lines: number[] = [];
+  let row = 0;
+  const append = (text: string, line: number, endLine = line) => {
+    for (const [i, part] of text.split("\n").entries()) {
+      if (i) row++;
+      if (lines[row] === undefined || part) lines[row] = Math.min(line + i, endLine);
+    }
+    value += text;
+  };
+  const visit = (items: HtmlChild[]) => {
+    for (const c of items) {
+      if ("text" in c) append(c.text, c.position.start.line);
+      else if ("node" in c) append(nodeLiteral(c.node), c.node.position?.start.line ?? 1, c.node.position?.end.line);
+      else if (OMIT_HTML.has(c.tag)) continue;
+      else if (c.tag === "br") append("\n", c.position.start.line);
+      else visit(c.children);
+    }
+  };
+  visit(children);
+  return { value, lines };
 }
 function phrasing(children: HtmlChild[], theme?: "light" | "dark", pre = false): PhrasingContent[] {
   const out: PhrasingContent[] = [];
@@ -251,8 +285,10 @@ function content(children: HtmlChild[], theme?: "light" | "dark"): RootContent[]
         data,
       });
     else if (c.tag === "hr") out.push({ type: "thematicBreak", position });
-    else if (c.tag === "pre" || data.html?.pre) out.push({ type: "code", value: literal(c.children), position, data });
-    else if (c.tag === "details") {
+    else if (c.tag === "pre" || data.html?.pre) {
+      const pre = preformatted(c.children);
+      out.push({ type: "code", value: pre.value, position, data: { ...data, htmlSourceLines: pre.lines } });
+    } else if (c.tag === "details") {
       const summary = c.children.find((n): n is HtmlElement => "tag" in n && n.tag === "summary");
       out.push({
         type: "htmlDetails",

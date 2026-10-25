@@ -259,3 +259,22 @@ test("preformatted containers retain Markdown blocks between HTML fragments", ()
   expect(value).toContain("First bold paragraph.");
   expect(value).toContain("Second paragraph.");
 });
+
+test("preformatted HTML retains nested hard breaks", () => {
+  const value = text("<pre>first<br><b>second<br/>third</b><BR />fourth</pre>");
+  for (const word of ["first", "second", "third", "fourth"]) expect(value).toContain(word);
+  const rows = value.split("\n").filter((line) => line.trim());
+  expect(rows).toHaveLength(4);
+  const layout = renderMarkdown("<pre>first<br><b>second<br/>third</b><BR />fourth</pre>", options);
+  expect(
+    layout.lines
+      .filter((line) => line.spans.some((span) => /first|second|third|fourth/.test(span.text)))
+      .map((line) => line.src),
+  ).toEqual([1, 1, 1, 1]);
+  const mapped = renderMarkdown("<pre>first&#10;second\n<!-- hidden\ncomment --><b>third<br>fourth</b></pre>", options);
+  expect(
+    mapped.lines
+      .filter((line) => line.spans.some((span) => /first|second|third|fourth/.test(span.text)))
+      .map((line) => line.src),
+  ).toEqual([1, 1, 3, 3]);
+});

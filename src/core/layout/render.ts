@@ -463,7 +463,16 @@ function blockNow(node: RootContent, ctx: Ctx, width: number, base: Style, fm?: 
         }
         return codeBlock(node.value, node.lang, srcOf(node), ctx, width, fenced ? 1 : 0, d?.why ?? "drawing…");
       }
-      return codeBlock(node.value, node.lang ?? null, srcOf(node), ctx, width, fenced ? 1 : 0);
+      return codeBlock(
+        node.value,
+        node.lang ?? null,
+        srcOf(node),
+        ctx,
+        width,
+        fenced ? 1 : 0,
+        undefined,
+        node.data?.htmlSourceLines,
+      );
     }
     case "blockquote":
     case "list": {
@@ -861,6 +870,7 @@ function codeBlock(
   width: number,
   firstLine = 1,
   note?: string,
+  originalLines?: number[],
 ): Line[] {
   const g = ctx.opts.glyphs;
   const code = sanitize(value);
@@ -887,7 +897,7 @@ function codeBlock(
     ctx.opts.codeScroll && widest > inner ? { x: 1, w: inner, total: widest } : undefined;
   out.push({ spans: top, src, fill: "code_block", ...(scroll ? { scroll: { ...scroll, part: "top" } } : {}) });
   sourceLines.forEach((text, i) => {
-    const lineSrc = src + firstLine + i;
+    const lineSrc = originalLines?.[i] ?? src + firstLine + i;
     const spans: Span[] = tokens?.[i]?.length
       ? tokens[i]!.map((t) => ({ text: t.text, role: t.role ?? "code_block", attrs: 0, src: lineSrc }))
       : [{ text, role: "code_block", attrs: 0, src: lineSrc }];
@@ -907,7 +917,7 @@ function codeBlock(
   });
   out.push({
     spans: [],
-    src: src + sourceLines.length + 1,
+    src: originalLines?.at(-1) ?? src + sourceLines.length + 1,
     fill: "code_block",
     ...(scroll ? { scroll: { ...scroll, part: "bar" } } : {}),
   });

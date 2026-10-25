@@ -707,5 +707,6 @@ tokens in a fragment, READ shows a content-limit marker. Malformed nesting close
 elements end at the fragment boundary. The original source stays available.
 
 Preformatted HTML containers also retain paragraphs recognized as Markdown between blank lines.
+Nested br elements remain hard line breaks inside preformatted content.
 
 [Exports](export.md) preserve HTML differently from READ.
