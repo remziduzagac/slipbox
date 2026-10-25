@@ -121,8 +121,7 @@ installer accept `--no-skill`; `SLIPBOX_NO_SKILL=1` skips automatic writes every
 `skill --auto` after committing `current`, so its skill matches its commands; `upgrade --no-skill` skips this.
 Failures are reported without undoing the binary installation. TUI background completion and foreground restart
 messages retain skill reports, including destinations, refusals and skips. `tests/skill-lifecycle.test.ts` exercises
-the lifecycle;
-`tests/distribution.test.ts` checks the packed binary prints the source's file.
+the lifecycle; `tests/distribution.test.ts` checks the packed binary prints the source's file.
 
 CI does it on a tag `v<version>`. `.github/workflows/release.yml` checks first that the tag is the version's and that
 the changelog has its section, then calls `.github/workflows/build.yml`, the build it shares with previews (§ Previews),
@@ -307,14 +306,9 @@ published release tagged `v<x.y.z>` of the highest version (the newest, unless a
 it), `preview` the newest published preview; a draft is neither, and a channel with no release has no file
 (`release.ts site`: the releases from `gh api`, each installer downloaded and hashed, refused when GitHub's own digest
 of the asset differs). The site also holds the docs, at `docs/` (§ The documentation site), and its `index.html`
-sends a visitor there, with a link to the repository. It's deployed once a preview is published, when a release is
-published (a person publishes it), and by hand; not when `main` moves, which it does only for a release (D251), so a
-release's docs reach the site when it's published, unless a preview or a run by hand comes first (D265). The site is
-always made from `main`'s scripts, whichever ref started the run, and from the releases as they are then, one
-deployment at a time: one running is never cancelled, so an older run never deploys over a newer one, and one waiting
-gives way to a newer, which builds from the same `main` and releases as they are then. Its build job only reads; the
-Pages grants (`pages: write`, `id-token: write`) are its deploy job's alone, in the `github-pages` environment, which
-takes deployments from `main`, `test` and `v*` tags only.
+(`site/scripts/root.ts`)
+sends a visitor there at once, its head saying what slipbox is to a search engine and a link preview (§ What the site
+tells search engines and agents).
 
 **Where it's deployed:** in a preview's own run (`preview.yml`'s call), and in a run of `pages.yml` by hand on `main`.
 Every other run — a release published, a run by hand on another ref — does nothing but start a run by hand on `main`
@@ -347,14 +341,116 @@ nor its libvips (LGPL-3.0) is installed.
 title and its first paragraph its description; the links between the docs become the site's addresses
 (`../manual/keys.md#leader` → `/slipbox/docs/manual/keys/#leader`), a link to a repository file outside `docs/` goes to
 it on GitHub, code is left as it is; each page's edit link opens its file in `docs/`. The screenshots are copied in, and
-the agent guide is also served as its Markdown (`/slipbox/docs/agent-guide.md`), for an agent to read. What's
-gathered isn't committed. The home (`site/src/content/docs/index.mdx`) is the site's own: the paths, the buttons, the
-agent prompt, the cards (DS-D3).
+the agent guide is also served as Markdown (`/slipbox/docs/agent-guide.md`) with absolute links. The gathering
+also writes `llms.txt` and `llms-full.txt` and copies the share card (§ What the site tells search engines and agents).
+What's
+gathered isn't committed. Compatibility page paths are declared as `legacy-page` comments in the same docs map.
+They are built and searchable but absent from the primary sidebar; `readLegacyPages` validates their path shape.
+`splitPage` keeps explicit earlier-section anchors in the body while skipping them when extracting a description.
+The home (`site/src/content/docs/index.mdx`) is the site's own: the paths, the buttons, the
+first-use sequence, workflow cards and lookup routes (DS-D3, DOCS-D2).
 
-**Built** by `bun run site` (the site's install, then `gather`, `astro build` under Bun, and
+**Built** by `bun run site` (the site's install, then `gather`, `astro build` under Bun,
 `site/scripts/check-links.ts`, which fails on a link within the site to a page or heading that isn't there, or to a
-path on the domain outside it but the installer's files). CI's `site` job runs it on every change, inside the
+path on the domain outside it but the installer's files, and `site/scripts/check-meta.ts`, § What the site tells
+search engines and agents). CI's `site` job runs it on every change, inside the
 required `ci` check; `pages.yml` runs it and puts the site at `_site/docs/`.
+
+## Documentation structure
+
+The docs map orders Start here, Guides, Using slipbox, Reference, Help and project information, and For agents.
+Guides begin with Working with slipbox and the dedicated Reading and editing in slipbox walkthrough; the guide
+sequence follows DOCS-D2. Topic pages own explanations; references own exact lookup. Moved material has onward links,
+with earlier addresses and anchors retained by the compatibility fixture in `tests/fixtures/documentation/`.
+
+`tests/docs.test.ts` checks links, earlier anchors, complete command/key coverage, and that every screenshot recipe's
+picture is shown, the site home's included (or described by a placeholder until it is taken). `tests/site.test.ts`
+checks groups, guide order, map coverage including compatibility pages, and page metadata. The screenshots are taken
+from their recipes in `tests/terminal/shots/` once the text they illustrate is settled (DOCS-D3, DOCS-T2).
+
+### Keeping the tour and captures in step
+
+`examples/guide/slipbox-tour/` is the tour's sample vault, including its `.slipbox/` marker. The executable
+documentation
+test compares the guide setup's two notes and marker with this sample before running the agent write. A change to the
+tour's notes or steps updates that folder and its recipes in `tests/terminal/shots/<doc>.ts`. When changed text alters
+what a capture shows, retake it with `bun run shots <name>` and inspect the PNG before committing.
+
+## What the site tells search engines and agents
+
+**The words** are kept once, in `site/scripts/about.ts`, which imports nothing: slipbox's line, "read, review and
+edit what your coding agent writes, in your terminal" (SEO-D1); a description of at most 160 characters for search
+results ("slipbox is a terminal app to read, review and edit what your coding agent writes: Markdown and code
+rendered, and edited where you read them."); the card's file, size and alt text; and what's made from them:
+`fullTitle(page, home)`, a page's title, and `headTags(docs)`, the card's head tags and the link to `llms.txt` for
+docs at `docs`. The site's
+config, its route middleware, the gathering, the root's page, the card's script and the build's check all take them
+from there. Where slipbox describes itself outside the site (SEO-D1, § Where slipbox describes itself),
+`tests/docs.test.ts` reads each file as text and holds it to the same line.
+
+**Titles** (SEO-D2). Starlight's `title` stays `slipbox`: it's the header's text and `og:site_name`. A route
+middleware (`site/src/route-data.ts`, Starlight's `routeMiddleware`) sets every page's `<title>` to `<the page's
+title> | slipbox: <the line>`, the 404's included, and the home's to `slipbox: <the line>`. The home's front matter
+loses its own description, so Starlight gives it the site's (`description` in the config, from `about.ts`); its
+visible heading and text don't change. `og:title` stays the page's own title, and a page's description its first
+paragraph, as now.
+
+**The card** (SEO-D4), `assets/share-card.png`, 1,200 by 630 and at most 1 MB: the logo and the name at the left,
+the line beneath, and the README's screenshot (`docs/images/readme-hero.png`) on the right, cut off by the card's right
+edge, on the logo's dark blue. `scripts/share-card.ts` (`bun run share-card`) draws it as an SVG and
+rasterises it with `scripts/screenshot.ts`' `toPng`, which gains a choice of fonts and default family (DejaVu Sans and
+its bold here; the screenshots keep DejaVu Sans Mono), and embeds the screenshot as `toSvg` embeds a picture. It writes
+into the PNG, as `iTXt` chunks (UTF-8, so a line beyond Latin-1 reads back as written), the line and the SHA-256 of the
+logo and of the screenshot. `tests/site.test.ts` fails
+when one differs from what's committed now, naming which and saying to run `bun run share-card` and look at the card;
+it also holds the card to its size and its byte limit. The gathering copies the card into the site, as it does the
+logo (`public/share-card.png`). Every page's head gets, from the config's `head` (`headTags`): `og:image` (an absolute
+address, the site's and the base's: `https://remziduzagac.github.io/slipbox/docs/share-card.png`), `og:image:type`,
+`og:image:width`, `og:image:height`, `og:image:alt` and `twitter:image:alt`; Starlight already asks for the large card
+(`twitter:card`).
+
+**For agents** (SEO-D5): the gathering writes `llms.txt` and `llms-full.txt` into `public/`, so they're served at
+the docs' root (`site/scripts/llms.ts`, which `gather.ts` calls). Every page's head points to `llms.txt` with `<link
+rel="describedby">`, as llmstxt.org proposes.
+
+- `llms.txt`: `# slipbox`; the description as a blockquote; a paragraph saying slipbox is for the person beside the
+  agent and that an agent can use it too, that these docs follow the newest release while `slipbox skill` prints the
+  skill of the version installed, and that the full text is in `llms-full.txt`, with its size; then an H2 per group of
+  the docs map, in its order, a line per page, `- [<title>](<absolute address>): <its description>`, the agent guide's
+  line linking its Markdown (`agent-guide.md`), which the paragraph names too. The Reference group goes under
+  `## Optional`, the proposal's section for what an agent may skip; a map with no Reference group stops the gathering,
+  since the paragraph promises the section. The compatibility pages aren't listed.
+- `llms-full.txt`: `# slipbox documentation` and the same blockquote, then every page of the map in its order, each
+  `# <title>`, a `Source: <absolute address>` line and its Markdown as gathered, every link and picture made absolute:
+  the site's `/slipbox/docs/…` addresses prefixed by its origin, and a page's own anchors (`#…`) by its address. The
+  compatibility anchors (`<a id="…"></a>` lines) are left out. About 700 KB.
+
+**The root** (SEO-D3), `/slipbox/`, is still an instant redirect to `docs/`, which Google takes as permanent, so the
+docs home is what it indexes. `site/scripts/root.ts`' `rootPage(site, repository)`, which imports only `about.ts`,
+writes it; `release.ts site`'s `writeSite` calls it with the repository's Pages site (`pagesBase`) and its address on
+GitHub. Every value in it
+is escaped for HTML. Its head: `<html lang="en">`, a viewport, the docs home's title and description, a canonical link
+to `docs/`, `og:type` `website`, `og:title`, `og:description`, `og:url` (the docs home), `og:site_name`, the card's
+tags, `twitter:card`, `<link rel="describedby">` to `docs/llms.txt`, and the logo as its icon. Its body: one line saying
+what slipbox is, linking the docs, the install guide and the repository, for a reader whose browser doesn't follow the
+refresh. A test holds `root.ts` and `about.ts` to importing only `node:` modules and each other: `pages.yml` runs
+`release.ts` before any package is installed.
+
+**The check** (SEO-D6), `site/scripts/check-meta.ts`, the site's build's last step, after `check-links.ts`, reads the
+built docs and fails, listing each problem, when:
+
+- a page lacks its full title, its description, its `describedby` link or any of the card's tags, or a tag's value
+  differs from `about.ts`'; the home's description isn't the site's;
+- the card isn't in the built site, or its size (read from its PNG header) isn't what the tags say;
+- `llms.txt` or `llms-full.txt` is missing, or leaves out a page of the docs map;
+- the root's page lacks its title, description, canonical link, refresh, `describedby` link or the card's tags;
+- the agent guide's Markdown links anything by a relative address.
+
+In the site's build there's no root yet, so it checks `rootPage`'s for the site's own base, and CI's `site` job runs it
+on every change, inside the required check; `tests/release.test.ts` holds `writeSite` to writing `rootPage`'s page.
+`pages.yml` runs no step of its own for it: its `site` job checks out `main` while a preview's run takes test's
+workflow, so a step running a file newer than the last release would fail every preview until the next one. Once a
+release brings the build's check to `main`, `pages.yml`'s `bun run site` runs it before each deployment.
 
 ## Channels
 
@@ -398,9 +494,10 @@ tests' folder through `file://`), the installer's too.
 
 **The daily check** is the TUI's, never the CLI's — agents call the CLI. It asks only when this is a release build,
 `[update] check` is on in your own config (it is by default; a folder's config can't turn it on, or off, and is warned
-of when it tries: a network request is yours to allow; DF-D23), `DO_NOT_TRACK` isn't set (anything but `0` or `false`),
-and a day has passed since the last time (`$XDG_STATE_HOME/slipbox/update.json`, kept before asking, so a failure waits
-a day too). A newer release is said in the message line: `slipbox 0.3.0 is out (this is 0.2.0): slipbox upgrade installs
+of when it tries: a network request is yours to allow; DF-D23), `DO_NOT_TRACK` isn't set (anything but `0` or
+`false`), and a day has passed since the last time (`$XDG_STATE_HOME/slipbox/update.json`, kept before asking, so a
+failure waits a day too). A newer release, unless it's one you skipped or older, is offered in a pop-up (§ The update
+offer); the messages list keeps what was said of it: `slipbox 0.3.0 is out (this is 0.2.0): slipbox upgrade installs
 it` — on `preview`, `slipbox 0.3.0-preview.202610121530.g1a2b3c4 is out on the preview channel (this is 0.2.0): …`;
 `brew upgrade slipbox` for Homebrew's, and the releases' address for a binary put somewhere by hand. It follows the
 installer's install's channel; any other install's, stable releases.
@@ -411,20 +508,208 @@ built for it, asking for nothing (exit 1). From source, or a binary the installe
 and does nothing. Otherwise, as the installer would: the pack downloaded, its SHA-256 checked against its `SHA256SUMS`
 line, unpacked beside the others, its binary run — it must say its version — and only then `current` moved, in one
 step (a link made beside it and renamed over it). Before that commit, the new version's `previous.json` records `{
-version: <the version current replaced> }` for About's informational predecessor (VB-D7). The version replaced is
-kept, to go back to (`ln -sfn versions/<old> <data>/current`); any older one is removed. Any check failing changes
+version: <the version current replaced> }` for About's informational predecessor (VB-D7). The version replaced and the
+running version are
+kept, to go back to (`ln -sfn versions/<old> <data>/current`); other older versions are removed. Any check failing
+changes
 nothing. Nothing found on `preview` says where it looked, the releases and the site's `preview`. When the version
 installed is newer than what's offered — a preview, back on `stable` — it's current, and said so: `slipbox <version>
 is newer than the latest release, <latest>: it stays until a newer one`.
 
+**One upgrade at a time.** An install's upgrades take turns: `<data>/upgrade.lock`, made only when there's none, holds
+the pid of the one running and when it began. Another finding it says `another upgrade is running (pid <n>)` and changes
+nothing; one left by a process that's gone, or older than fifteen minutes (a download gives up after five), is taken
+over — moved aside first, then removed only if it's still the one read as stale, another's put back, so two taking over
+at once can't both go on; one being written, not readable yet, is held for a few seconds — and what upgrades cut short
+left (`versions/.upgrade-*`, `current`'s link half made) is removed, what can't be left — never the lock held for good.
+A slipbox whose version another window's upgrade removed is still the installer's, by the path it ran from (Linux names
+it `… (deleted)`).
+
+**Against what's installed, not only what's running.** Holding the lock, `upgrade` reads the version `current` names: a
+slipbox still running an older version (a window not restarted yet) never moves `current` back. The newest the channel
+offers, not newer than `current`'s, installs nothing (`installed`, in `--json`'s `status`, with the version as
+`installed`): `slipbox 0.6.0 is installed already (this is 0.5.0)`. The
+channel's newest already in `versions/` — another window's upgrade, or one cut short after its folder was in place —
+is taken as it is once its binary says its version: `current` moved to it, nothing downloaded. What's kept is the new
+version, the one `current` named before, and the one running; any other is removed.
+
+**Its commit is `current` moving.** An upgrade can be cancelled (the hand-over's `ctrl+c`, § Restarting) up to it:
+the download stopped, or the work's folder removed. So that a cancel is seen while it unpacks and runs the new binary,
+`tar` and the binary's `--version` are children it awaits, never run synchronously, and it looks for a cancel last just
+before `current` moves; a version's folder already moved into `versions/` is left there,
+complete, for the next upgrade to take. After it, the upgrade is done. One killed at any point leaves the install
+consistent: `current` names a complete version, the old one or the new.
+
 **Bun's own crash reports** are off (D221): on macOS and Windows a crashing Bun sends a report to `bun.report` unless
 told not to, and a compiled binary is no different. Bun's crash handler reads its switch when it crashes, from the C
 environment, which `process.env` doesn't write to; so the first thing `src/main.ts` does, for the TUI and the CLI
-alike, is `core/crash-reports.ts`'s `crashReportsOff`: libc's `setenv`, through `bun:ffi`, puts
+alike, is `core/crash-reports.ts`'s `crashReportsOff`: libc's `setenv`, through `bun:ffi`
+(`core/libc.ts`, opened once for this and restart's `execve`), puts
 `BUN_ENABLE_CRASH_REPORTING=0` there — libc found as glibc's `libc.so.6`, musl's loader (`/lib/ld-musl-<arch>.so.1`)
 or macOS's `libSystem.B.dylib`. It's left alone when you set `BUN_ENABLE_CRASH_REPORTING` or `BUN_CRASH_REPORT_URL`
 yourself (an empty one counts as unset), and libc not reached changes nothing, silently. A crash still prints Bun's
 link, to file a report yourself.
+
+## The update offer
+
+When the daily check (§ Updates) finds a version newer than this one, and newer than one you skipped, the TUI asks in a
+pop-up, the dialog (tui.md § Overlays), rather than saying so in the message line. The line it said before goes to the
+messages list. The offer is `tui/updates.ts`'s (`app.updates`); the check is started by `tui/run.ts`, as now, and its
+answer handed to it.
+
+**It waits for a quiet moment**, as it opens on its own. Quiet is one test (`app.updates`' `quiet`, over the input's own
+state): no key in flight or waiting its turn (one waiting on a note's parse counts), none for two seconds
+(`lastInputAt`, set as a key arrives), nothing pending (a key sequence, the which-key popup, an operator waiting for its
+motion, a count, a character awaited by `f`, `t` or `r`), nothing being typed into — not inserting, no visual selection,
+no panel's filter (the explorer's, the outline's, Problems', the history's), not the git panel's message — and nothing
+open over the windows (a list, a prompt, a dialog, a floating window, the Save As window, the merge screen). What waits
+for quiet waits in turn, each once: the daily check's offer, a restart offered underneath, the restart's question (§
+Restarting); one never takes another's place, and one asked for again while it waits takes the later asking's way
+(`:upgrade`'s offer, whatever the check's switches say). Like every dialog (tui.md § Overlays), it drops what arrives
+before it's drawn and in the half second after, so a key meant for a note never answers it. Just before it opens, your
+config's `[update] check` and `DO_NOT_TRACK` are read again: an offer waiting when the check was turned off (the config
+reloaded) is dropped. A slipbox quit before it opens is asked at the next check.
+
+**What it says:** its title `slipbox 0.6.0 is out`, or `slipbox 0.6.0-preview.202610121530.g1a2b3c4 is out on the
+preview channel`; its text `This is 0.5.0.` What it offers is by how this slipbox was installed (`installedBy`):
+
+- **The installer's** — a select of three, the first marked:
+  - **Upgrade and restart:** slipbox quit, upgraded and started again where you were, notes unsaved asked about first
+    (§ Restarting).
+  - **Upgrade, restart later:** the upgrade runs now, beside the TUI: `slipbox upgrade --json`, the running binary's
+    own (`process.execPath`; `<data>/current/slipbox` when another window's upgrade removed it), with this
+    environment. A process of its own, so the download, its sum, the unpacking and
+    the new binary's run never hold the screen up. The TUI says `upgrading to 0.6.0…`, then `slipbox 0.6.0 is installed
+    (this is 0.5.0): :restart starts it`, or, as an error, `the upgrade to 0.6.0 failed: <why>`. Quitting meanwhile
+    leaves it to finish (UPG-D7): it's what you asked for, and the next start runs what it installed. So it
+    outlives the TUI: in a process group of its own (the terminal's signals never reach it), not waited for by the
+    TUI's exit (unreferenced), its answer written to a file, `$XDG_STATE_HOME/slipbox/upgrade-<pid>.json`, never a pipe
+    whose reader may be gone; the TUI reads the file when the child exits, then removes it.
+  - **Not now:** nothing; asked again at the next check, a day on.
+- **Homebrew's** — its text goes on `Homebrew's: brew upgrade slipbox upgrades it, and slipbox offers to restart once it
+  has.`; its choices **Copy `brew upgrade slipbox`** and **Not now**.
+- **One put here by hand** — its text goes on `Put here by hand: the releases are at https://github.com/<repo>/releases,
+  and slipbox offers to restart once this file has changed.`; its choices **Copy the releases' address** and **Not
+  now**. Copied, never opened, as a URL followed is (tui.md § Following links: a browser over SSH would be wrong).
+
+**And one checkbox**, for any install, **Skip this version**: taken with Not now only, dimmed with another choice;
+ticked, it marks Not now.
+`update.json` keeps it (`skipped`), and a check finding it, or anything not newer, offers nothing; a newer one is
+offered; it's said, `slipbox 0.6.0 skipped: the next newer one is offered`. There's no checkbox to stop the checks
+(UPG-D1): your own config's `[update] check = false`, or `DO_NOT_TRACK`, does that, as it does today, and the TUI never
+writes your config. A copy is said as any copy is (`copied brew upgrade slipbox`).
+
+`esc`, or a click outside, is Not now with nothing kept.
+
+**Asked for: `:upgrade`** (`app.upgrade`; no key of its own; `slipbox upgrade --check` its CLI equivalent) says `asking
+for the newest version…` and asks now, as the daily check asks (`askNewest`) — one request, two on `preview`, the keys
+going on meanwhile; asked again before it's answered, `asking for the newest version already` — and offers what it finds
+as above, a version you skipped included (UPG-D6). You asked, so it asks whatever `[update] check` and `DO_NOT_TRACK`
+say, as `slipbox upgrade` does; the time it asked is kept in `update.json`, as the daily check's is, so the next daily
+check is a day later. Its answer comes after a wait: the offer opens at once when nothing was typed or clicked since
+`:upgrade`, else once the TUI is quiet, so keys typed meanwhile never answer it; one of the same version waiting for
+quiet already is the same offer. The newest installed already, underneath this one (§ An upgrade underneath): its
+restart is offered instead, Restart now or Not now, counted as offered. Nothing newer: `slipbox 0.5.0 is the newest` (on
+`preview`, `the newest release or preview`). Nothing found: `couldn't find the newest version at <releases>`, as an
+error. From source (no release build) it asks nothing and says what `slipbox upgrade` says: `this slipbox runs from
+source (or was built by hand): it has no releases to follow — update its checkout`.
+
+## Restarting
+
+**`app.restart`** (`:restart`; no key of its own; an interaction, with no CLI equivalent) restarts slipbox.
+
+**Notes unsaved are asked about first** (UPG-D3), in the dialog: its title `Restart`, its text `2 notes are unsaved:
+todo.md, ideas.md.` (the first three named, then `and 4 more`), its choices **Save and restart**, marked, and
+**Cancel**; `esc` is Cancel. The properties editor's text not applied yet counts as unsaved. Save and restart saves as
+`:wqa` saves — each unsaved note through `writeBuffer`, then the properties editor's text — and one that can't be
+(changed on disk: its conflict prompt opens; not valid UTF-8) stops the restart, saying which, and nothing quits.
+Cancel restarts nothing; from the update offer, that version is asked about again at the next check, or by `:upgrade`.
+With nothing unsaved, it doesn't ask.
+
+Then **the note** for the slipbox that starts is written, `$XDG_STATE_HOME/slipbox/restart/<pid>.json`: the place to
+come back to (the location's mode and root, home's folder opened by name), this window's session as `Session.save`
+writes it — its tabs, windows, positions, the panes' sizes — the version it was, and the upgrade asked for. It's read
+back to be sure; one that can't be written stops the restart, said, and nothing quits. A restart that stops says why:
+`the restart stopped: index.md isn't saved`, `… its note couldn't be written (<why>)`. Then slipbox quits as quitting
+does — running work stopped (exports, shell jobs, language servers, the threads), the session and positions saved —
+and starts again in the same terminal: into the newest version installed (§ An upgrade underneath), else the same.
+Upgrade and restart (§ The update offer) is the same with the upgrade in between. While an upgrade runs beside the TUI
+(Upgrade, restart later), a restart waits for it, saying so; then it goes on at once when nothing was typed or clicked
+meanwhile, else once the TUI is quiet. The question about notes unsaved, opened by the very key or click that chose the
+restart, drops what arrives before it's drawn and in the half second after: a second `enter`, a double click, never
+answers it.
+
+**The screen given back first.** OpenTUI's `destroy` finishes later when a frame is being drawn, and its native
+teardown (raw mode off, the main screen back, mouse reporting off) comes after its `destroy` event: the hand-over waits
+for that event, then a turn of the event loop, before it writes a line or replaces the process.
+
+**The hand-over** (`core/restart.ts`; UPG-D2) runs in the same process, in order:
+
+1. **The upgrade**, when asked for: `slipbox: upgrading to 0.6.0… (ctrl+c cancels)`, then `upgrade`'s work (§ Updates)
+   done by the version that was running, as `slipbox upgrade` does it, and what `slipbox upgrade` says after it
+   (`slipbox: slipbox 0.5.0 → 0.6.0; 0.5.0 is kept, to go back to`). `ctrl+c` during it cancels it up to its commit,
+   `current` moving: the releases' lookup or the download stopped at once, or, once it's downloaded, `current` left as
+   it was; after the commit, the upgrade is done and said. `tar` and the new binary's `--version` run in a session of
+   their own when there's a cancel to end them (the hand-over's), so the terminal's `ctrl+c` reaches the hand-over
+   alone; without one — the command line's `slipbox upgrade` — they stay in the terminal's group, which `ctrl+c` ends
+   with it. A failure or a cancel says
+   `slipbox: the upgrade to 0.6.0 failed: <why> — starting slipbox again` (`cancelled`, for a cancel).
+2. **The note** given the upgrade's outcome, and the time, now.
+3. **Which binary:** the installer's install, `<data>/current/slipbox` — after a failed upgrade, the file that was
+   running (`process.execPath`), or `current` when that's gone; Homebrew's, `<prefix>/opt/slipbox/bin/slipbox`,
+   Homebrew's link to the version it has now, as the running file's keg may be gone; one put here by hand, the path it
+   was started by (`argv0` with a slash, else found on `PATH` as the shell found it, at start), so a link moved to
+   another file is followed; from source, Bun with the same script.
+4. **The same arguments**, `process.argv.slice(2)` for a compiled binary (`slice(1)` from source, the script first),
+   and the environment as it is now.
+5. **Before it starts:** the children quitting stopped (language servers, a shell job) waited for, a second at most,
+   and reaped, since the new slipbox in this process never reaps what it didn't start, and one ending later stays a
+   zombie as long as it runs (Linux, by `/proc`; elsewhere not waited for). None is killed: what goes on running is
+   meant to — an editor handed a note, a git commit or pull quitting leaves to finish, an upgrade beside the TUI. Then
+   what was typed at the terminal meanwhile is thrown away (`tcflush`): never keys for the new one; and what runs as a
+   process exits (`process.on("exit")`: an export's spool and temp files removed) is run, since `execve` ends this one
+   without it.
+6. **`execve`**, through `bun:ffi` and libc as D221's switch is set: the process becomes the new slipbox, with the same
+   pid, process group and terminal, so the shell's job never ended and its job control stays right (research.md).
+   Descriptors aren't closed, so a failed call leaves this process whole: on Linux, where libc has `close_range`, every
+   one above 2 is marked close-on-exec first; elsewhere they're left, Bun's own close-on-exec but one (`/dev/urandom`,
+   one more a restart). Where `execve` can't be reached (libc not found by FFI, or the call fails) — and on native
+   Windows, which has none (`14.14`–`14.17`) — the new one is started with the terminal handed down and waited for;
+   this process ignores the terminal's signals meanwhile, which reach the new one in the same foreground group, and
+   ends with its exit code. Its note is then found by its parent's pid.
+7. **Nothing starts** (the binary gone, or not runnable): `slipbox: couldn't start <file>: <why>`, then `slipbox:
+   nothing started (<why execve failed>)`, and it exits 1, at the shell's prompt.
+
+**Coming back.** A TUI starting looks for its note (`restart/<pid>.json`, else `<ppid>.json`), takes it — read and
+removed; one older than two minutes is ignored — and comes back where you were (UPG-D4). The arguments are the same;
+the note gives the place, so the arguments' path and `--root` give way to it, and `--base`, a start's instruction
+already kept for its branch (`baseAtOpen`), isn't applied again — another vault's, it would measure the wrong
+repository, and a ref gone since would stop the start. The session restored is the note's, whatever
+`ui.restore_session` and a note named say, and never `session.json`'s, which another window on the same vault may have
+written meanwhile — read as the session file is, anything this version can't read dropped: another version wrote it.
+It says
+`restarted: slipbox 0.6.0 (was 0.5.0)` — its own version, the one that started — or, as an error, `the upgrade to
+0.6.0 failed: <why> — this is 0.5.0`.
+
+## An upgrade underneath
+
+A release build looks, every ten seconds, at where its next version would be — on this machine, nothing sent, so
+whatever `[update] check` and `DO_NOT_TRACK` say (UPG-D5):
+
+- the installer's install: the version `<data>/current` names — once it changed from the one it named at start: a
+  version newer than this one already there then (you went back to the older one kept, on purpose) isn't offered;
+- Homebrew's: where `<prefix>/opt/slipbox` leads (`…/Cellar/slipbox/<keg>`), and once that changes, the binary's
+  `--version` asked: a keg's name may carry Homebrew's revision (`0.6.0_1`);
+- one put here by hand: the path it was started by, where it leads and that file's size, time and inode; once any of
+  them changes, the file's `--version` asked.
+
+A version is asked of a binary in a child, ten seconds at most, and only once what's there changed: what's there at
+start is this binary, never started to ask it. One newer than this — `slipbox upgrade` in another
+terminal, another window's restart, `brew upgrade`, a file copied over — is offered as the restart alone, waiting for
+quiet as the offer does: `slipbox 0.6.0 is installed`, `This is 0.5.0.`, **Restart now** and **Not now**, no
+checkboxes. Once for each version: after Not now, `slipbox 0.6.0 is installed: :restart starts it`. This window's own
+upgrade (Upgrade, restart later) isn't offered again: its message said it — nothing underneath is looked at while it
+runs, whatever version it installs.
 
 ## Uninstalling
 

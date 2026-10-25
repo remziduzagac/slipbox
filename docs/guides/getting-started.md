@@ -77,10 +77,13 @@ slipbox ~/slipbox-tour/inbox.md
 This opens Inbox directly. Opening a folder instead can restore the note you last read there.
 
 The document is rendered on the right. The explorer lists files on the left. The tab names `inbox.md`, and the
-status line says `READ`. Click a row or use the arrow keys to put the reading cursor there.
+status chip says `READ │ NORMAL`. Click a row or use the arrow keys to put the reading cursor there.
 
 ![slipbox open on Inbox in ~/slipbox-tour: the explorer on the left, inbox.md rendered with its two tasks and the coffee
-link, the status line reading READ](../images/getting-started-first.png)
+link, the status chip reading READ and NORMAL](../images/getting-started-first.png)
+
+The top bar keeps your place, background work count and running version visible. `space b` opens the work list;
+`space a` opens version and upgrade information. You can leave both for later in this tour.
 
 Two discovery keys are worth trying now: `space` opens the action groups, and `?` lists bindings. Press `esc` to
 close either. There is no need to memorize the full keymap.

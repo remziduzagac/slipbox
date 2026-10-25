@@ -268,7 +268,37 @@ function commandsLeftOut(chapter: string): string[] {
   return out;
 }
 
+describe("blueprint consolidation", () => {
+  test("requirements keep their title and one current introduction", () => {
+    const text = read(join(TOP, "blueprint/requirements.md"));
+    expect(text.startsWith("# Requirements\n\n")).toBe(true);
+    expect(text.match(/^slipbox is /gm)).toHaveLength(1);
+    expect(text).toContain("slipbox is for a developer working beside coding agents");
+  });
+
+  test("link examples retain their literal destinations when blueprint files move", () => {
+    for (const file of ["design/tui.md", "workstreams/archive/vaults-and-view/design.md"]) {
+      expect(read(join(TOP, "blueprint", file))).toContain(
+        "`[~/notes/index.md:41](<../../../notes/index.md#L41>) — architecture`",
+      );
+    }
+    for (const file of ["design/tui.md", "design/links.md", "decisions/roots-and-links.md"]) {
+      expect(read(join(TOP, "blueprint", file))).toContain("`[t](docs/)`");
+    }
+  });
+});
+
 describe("the user documentation (DOC)", () => {
+  test("the user docs do not describe a hidden top bar or its retired status fallback", () => {
+    const stale = userDocs().flatMap((file) => {
+      const text = read(file).replace(/\s+/g, " ");
+      return /with the top bar hidden|while the top bar is hidden|top bar, else on the status line/i.test(text)
+        ? [relative(TOP, file)]
+        : [];
+    });
+    expect(stale).toEqual([]);
+  });
+
   test("every document is there, and the map links each", () => {
     const map = read(join(DOCS, "README.md"));
     const pages = [...readMap(map).flatMap((group) => group.pages), ...readLegacyPages(map)];

@@ -10,6 +10,9 @@ It covers every grammar slipbox parses that has definitions (D130): TypeScript, 
 Swift, PHP, Ruby, C, C++, Lua and Bash. Markup and config (HTML, Vue, Svelte, Astro, CSS, SCSS, Dockerfile) open in
 SOURCE view, and every file keeps it (`space n v`). What's next is at the end.
 
+`render.code` is a boolean opening default, true by default; false opens SOURCE while supported READ remains
+available. Legacy "document" and "source" values map to true and false (VB-D2).
+
 ## The rule: code's tokens verbatim, whitespace and decoration ours, comments as prose
 
 Every token of code is drawn as it is written (D125). Nothing is replaced (no `->` drawn as `→`), hidden for good or

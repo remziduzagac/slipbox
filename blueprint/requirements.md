@@ -1,10 +1,10 @@
 # Requirements
 
-slipbox is the terminal companion for coding agents, for a developer working with them in a terminal, often over SSH
-on the machine that holds the repository, where nothing beyond the terminal can be assumed (D3, D226). It lets them
-read markdown and any other text file well in that terminal, review what an agent changed, follow and search the links
-between them, edit them, and hand their notes to agents, while agents read and change the same files through a CLI
-(D33).
+slipbox is for a developer working beside coding agents in a terminal, often over SSH on the machine that holds the
+repository, where nothing beyond the terminal can be assumed: they read, review and edit what their agent writes in it
+(D3, D226, SEO-D1). It lets them read markdown and any other text file well in that terminal, review what an agent
+changed, follow and search the links between them, edit them, and hand their notes to agents, while agents read and
+change the same files through a CLI (D33).
 
 ## Goals
 
@@ -51,14 +51,36 @@ between them, edit them, and hand their notes to agents, while agents read and c
   defaults carried over from the user's nvim; the line under the cursor stays rendered (D7, D89, D96, D97).
 - Themes are built in, Tokyo Night by default; light themes genuinely work; a theme switches live, with a preview, and
   no restart; a mode follows the terminal's own colours; `NO_COLOR` gives something readable (D91–D95).
-- Each window has a header: in a split its file's name, the breadcrumb of the headings the cursor is under, its mode as
-  three buttons (Read, Lens, Source) of which one is selected and a click switches to another, and the outline's button
-  where the rail doesn't have it. The breadcrumb and the header each hide on their own (HDR-D1, HDR-D2, HDR-D3).
+- Each window has READ or SOURCE as its view, with LENS toggled inside READ. Its header shows the radio pair and
+  lens toggle, alongside the file and breadcrumb; its status chip shows view and vim mode together, in their own
+  theme colours. Successful switches are silent; refusals explain why. Breadcrumb and header visibility remain
+  independent (HDR-D1, HDR-D3, VB-D1).
+- The top bar is permanent, including zen: palette, explorer zoom, workspace and git, work count (including zero)
+  and running version. Each item is a separate target; narrowing preserves zoom and workspace longest. Work opens
+  live progress and supported controls; About shows version/channel, recorded predecessor and upgrade information.
+  Recent outcomes and older failures remain available. The retired top-bar setting gives one notice (VB-D3, VB-D7).
 - An embedded note is drawn in place, read-only (D113). Pictures are drawn where the terminal can (asked of the
-  terminal, never read from `$TERM`, and never required), and Mermaid and maths in the terminal's own characters
-  first, as pictures by choice, in the theme's colours (D100, D126, D127).
+  terminal, never read from `$TERM`, and never required), sized to their window — its text width, their height
+  bounded by its — never larger than their own size, never shrunk past a floor; a click shows one at its own size,
+  scrolled sideways where it's wider than the window. Mermaid and maths are drawn in the terminal's own characters
+  first, as pictures by choice, in the theme's colours (D100, D126, D127, PIC-D1–PIC-D3).
 - A reading position survives a resize, and an agent's insert above it (D98). Notes open as buffers, shown in tabs,
   with one split (D141).
+
+- Completed Markdown lint findings are filtered only for presentation. `lint.follow_view = true` hides MD013 on
+  wrapped paragraphs, lists and quotes, table rows, and fenced code interiors when code wrapping is active.
+  Unknown block kinds and fence delimiters remain visible; `lint.ignore = []` names ignored rule IDs. Both are safe
+  in vault config. Problems explains hidden counts; `a` reveals all findings, including ignored rules, and toggles
+  back. Marks and status counts use visible findings (LC-D1, `3.21`).
+- `render.caption` selects bottom (default) or top for a standalone picture's box. One blank row separates caption
+  and drawable image, including its scrollbar; without a drawable image the box stands alone (LC-T1, `12.x`).
+
+- Document HTML supports paragraphs/containers, breaks, headings, inline formatting, links, images and picture
+  alternatives, preformatted text and disclosures. Unknown tags retain readable children. Supported inline styles
+  map to theme semantics and bounded dimensions; source and edits retain original bytes and ranges. No executable
+  content, stylesheet fetching or browser layout is introduced (HTML-D1–HTML-D4).
+- Semantic exports preserve supported HTML content with disclosures expanded. Markdown exports preserve HTML's
+  original spelling and spacing, omitting only non-document content (HTML-D5).
 
 How: design/rendering.md; design/tui.md § Screen layout, § Positions.
 
@@ -73,6 +95,10 @@ How: design/rendering.md; design/tui.md § Screen layout, § Positions.
 - Code reads as a document, every token as written; every file keeps its source mode (D125, D130).
 - Notes of a kind (an agent skill's `SKILL.md`, an ADR) are known by where they are: their frontmatter's rules checked,
   their order and status read, with nothing written or kept (D133).
+
+- `render.notes`, `render.code` and `render.data` are boolean opening defaults, true by default. False opens SOURCE
+  without disabling supported READ or the lens. Legacy code values and `editor.edit_in = "live"` stay readable
+  (VB-D2).
 
 How: design/tui.md § Files beyond notes; design/rendering.md § Data files; design/code-view.md;
 design/document-types.md.
@@ -100,18 +126,21 @@ design/document-types.md.
   is found from evidence, and the relink is offered; before a merge, the links it would break are shown (D63, D66,
   D78, D143, D152).
 
+- Switching vaults with unsaved edits asks Save all and go, Discard and go, or Stay; saves must succeed first.
+  The outgoing notes, parses and index are released; workspace state on disk supports return. The switch list
+  includes unnamed vaults, home folders marked as home's, and worktrees grouped by repository (VB-D4, VB-D5).
+
 How: design/roots.md; design/links.md; design/trust.md § Links you follow.
 
 ## Navigating and search
 
 - Links are followed, with history back and forward; backlinks, the outline, the quick switcher and the command
   palette are a key away (D11, D27).
-- The explorer shows the file system as one tree, the view starting at what's opened, a breadcrumb saying what's
+- The explorer shows the file system as one tree, the zoom starting at what's opened, a breadcrumb saying what's
   above, zoomed out when going elsewhere and in when asked; vaults, links, the index's state and git marked on each
   row; files on screen are shown by path, as the file says (D77, VV-D5, VV-D8, VV-D9).
-- Where you are is on screen, once, while there's room: the vault, its branch, and the workspace when it isn't the
-  vault's own, on the top bar, else on the status line; a click goes to another vault or another branch
-  (WSP-D4, WSP-D5).
+- Where you are is on the top bar: explorer zoom, workspace labelled by its vault (or home folder), and git branch,
+  with separate mouse targets. The status line has no location fallback (VB-D3, VB-D6, VB-D7).
 - Another vault's file is read in a peek, going there a choice (VV-D7).
 - Search is slipbox's own, in the core, shared by the TUI and the CLI, and always answers, from the index or a scan:
   words, phrases, prefixes, exclusions, titles, tags and folders, ranked; a hit opens where most of its words are
@@ -240,45 +269,60 @@ How: docs/manual/keys.md; docs/manual/configuration.md; design/tui.md § Modes a
   makes one by moving the `test` branch (GR-D13). An install follows a channel, the releases or the previews as well,
   chosen by the installer (`--preview`) or `slipbox channel set` (GR-D15).
 - `slipbox upgrade` installs the newest its channel offers; the TUI checks for it once a day, on by default (D199,
-  GR-D15). Homebrew gets a formula with each release, never a preview, into a tap once there is one, and an install
-  brew made is left to brew (D204, GR-D18).
+  GR-D15), or when `:upgrade` asks, and offers it in a pop-up: upgrade and restart, upgrade now and restart later, or
+  not now, skipping the version there; nothing installed without a yes (UPG-D6). A restart asks before saving what's
+  unsaved, quits as quitting does and starts the new version in the same terminal, where you were (UPG-D2–UPG-D4); a
+  newer version installed underneath a running slipbox is offered as a restart (UPG-D5). Homebrew gets a formula with
+  each release, never a preview, into a tap once there is one, and an install brew made is left to brew (D204,
+  GR-D18).
+- A problem is reported from inside slipbox, in a key (`space r`, `:report`, help's "Report a problem"): a window
+  asks what happened, what was expected and how to make it happen, with what slipbox knows already filled in — its
+  version, how it was installed and its channel, the system and processor, the terminal, its size, any multiplexer and
+  SSH (RPT-D1).
+- The window's text is the report as it will leave, every field shown and editable; the screen as text, or the note
+  and the cursor's line, is in it only when you add it, and then in full (RPT-D2).
+- You send it, never slipbox: the bug form opened in your browser with its fields filled in, its address or the
+  report copied where there's no browser to open (SSH), or, with `gh` on the machine, posted by `gh issue create`
+  after a yes to what it will post. slipbox's own network call stays the update check (RPT-D3, RPT-D4, D199).
+- `slipbox report` prints the same facts, and `--json`, for an agent writing an issue; no vault needed, no network
+  (RPT-D5).
 
-How: design/distribution.md; the workflows that build and publish: design/repository.md § CI.
+- Install and upgrade install or refresh the matching bundled skill for detected Claude Code and Codex user
+  configurations, unless skipped by flag or environment. Identical skills stay unchanged; foreign or linked skills
+  stay untouched and are reported. Uninstall previews recognized skill files and removes only those after consent,
+  rechecking ownership and links (ASI-D1–ASI-D3).
+
+How: design/tui.md § Reporting a problem; docs/manual/troubleshooting.md § Reporting a problem.
 
 ## Documentation
 
-- slipbox ships user documentation in Markdown in `docs/`: guides for the tasks a newcomer meets, and a manual
-  covering every key, setting, command and behaviour, written for users, without the blueprint's IDs and never
-  linking into it; the blueprint links to the docs, not the reverse (DOC-D1, DOC-D2, DOC-D3).
-- The docs are also a website on GitHub Pages, `https://<owner>.github.io/<name>/docs/`: built from `docs/`, their one
-  source, by Starlight, with search, deployed with the installer (DS-D1, DS-D2). Its home starts each kind of reader
-  on their own path; a quick start, a concepts page and an agent guide, which a person's own agent reads to walk them
-  through slipbox, are pages of their own (DS-D3). The pages a newcomer reads first give a familiar key before vim's,
-  and a page lists those keys (DS-D6).
-- They read easily: short sentences, one idea each, steps as numbered steps, tables for what is looked up (DS-D4). The
-  reference chapters (keys, configuration, the command line) stay written by hand, their lists held whole by the tests
-  (DS-D5).
-- A change users will see updates the docs in the same piece of work. `tests/docs.test.ts` keeps them whole: every
-  link and anchor landing, every CLI command and flag and every default key in the manual, no ID; the configuration
-  chapter's defaults are tested against the code's.
-- They're written for a person at a terminal who knows Markdown, not necessarily vim: what slipbox does now, in plain
-  words, each subject explained in one chapter and linked from the rest. The agent skill stays the agents' guide,
-  checked against the CLI chapter (DOC-D4).
-- The guides and the screen chapter carry screenshots, made by a script from slipbox itself on the reference set and
-  retaken when the UI changes, by anyone, in one command (DF-D19, D236).
-- The manual opens with a how-it-works chapter, the ideas and promises users rely on, linking the chapters rather than
-  repeating them, and has a versions chapter, the versioning policy (GR-D16). Troubleshooting's "Reporting a problem"
-  names the issue tracker and its bug form, sends questions and ideas to Discussions (GR-D17), and security problems
-  to the security policy.
-- Beside `docs/`, the repository's own documents: the changelog, the maintaining procedures, the security policy,
-  accessibility, architecture and the issue forms, each written for its own readers, kept with the code like the rest
-  and free of the blueprint's IDs (GR-D1). The README's first screen says what slipbox is, its status, where to get
-  help and how it is maintained, without naming the maintainer (D227).
+- User documentation lives in Markdown in `docs/`, with one navigation map, `docs/README.md`, shared by GitHub and
+  the Starlight site. User docs contain no blueprint IDs or links into the blueprint (DOC-D1–DOC-D4, DS-D1–DS-D6).
+- The reader-facing groups are Start here, Guides, Using slipbox, Reference, Help and project information, and
+  For agents. The primary learning path is introduction, installation, quick start, Working with slipbox, then the
+  dedicated Reading and editing in slipbox guide. The agreed guide sequence is recorded in DOCS-D2.
+- Guides teach complete tasks from stated prerequisites to a checked outcome. Topic pages own full explanations;
+  reference owns exact keys, commands, settings, variables and paths. The glossary provides short definitions and
+  links. Familiar keys come before vim-specific alternatives where both exist (DS-D4, DS-D6, DOCS-D2).
+- The first reading/editing guide teaches rendered view, the lens, whole-source view, typing and saving as distinct
+  parts of one workflow. It is second after the general first-session guide (DOCS-D2).
+- CLI and agent explanations distinguish saved files from unsaved TUI buffers. Shared files do not imply access to
+  unsaved text; warnings about unsaved files are advice, not locks (DOCS-D2).
+- Earlier page addresses and section anchors remain valid when explanations move. Compatibility pages have explicit
+  declarations in the docs map and are built without adding competing sidebar entries (DOCS-D2).
+- Changes visible to users update the docs in the same piece of work. Tests preserve command/flag, default-key,
+  mouse and configuration coverage, navigation order, earlier anchors and working internal links (DS-D5, DOCS-D2).
+- The guides and the screen chapter carry screenshots, made by a script from slipbox itself on the sample folders and
+  retaken when the UI changes, by anyone, in one command (DF-D19, D236). While text is being restructured, a
+  described placeholder may stand in until the text settles and the capture is taken (DOCS-D3, DOCS-T2).
+- The site is built from those Markdown pages with search. The home presents one primary first-use path, then
+  workflows and lookup routes. Agent-facing onboarding and the raw agent-guide endpoint remain available; the
+  installed `slipbox skill` remains the agent's CLI contract (DS-D1–DS-D3, DOCS-D2).
+- The repository's README is a concise front door. Maintainer, architecture, security and accessibility policies
+  remain written for their own audiences, linked from user-facing explanations rather than copied (GR-D1, D227).
 
-How: docs/README.md; workstreams/archive/docs-site/requirements.md § How they are written (DS-D4, replacing DOC's
-rules where they differ: workstreams/archive/user-docs/requirements.md § How they are written); the site:
-design/distribution.md § The documentation site; the screenshots: design/testing.md § The terminal tests; the
-repository's documents: design/repository.md § The repository's documents.
+How: docs/README.md; design/distribution.md § The documentation site and § Documentation structure; the writing
+principles in workstreams/archive/docs-site/requirements.md § How they are written.
 
 ## The repository
 
@@ -295,7 +339,10 @@ repository's documents: design/repository.md § The repository's documents.
   format and lint, zizmor and actionlint over the workflows, the docs' lint, spelling and links, and the tests (GR-D7,
   GR-D9). Its toolchain is pinned once, in `mise.toml` (GR-D11).
 - CI is hardened and runs on Linux and macOS: no permission by default, each job's grants explained, actions pinned by
-  their commit, no credentials kept, timeouts, a pull request's superseded run cancelled, nothing cached (GR-D9).
+  their commit, no credentials kept, timeouts, a pull request's superseded run cancelled, nothing cached (GR-D9). A
+  push to `dev` or `test` tests what changed since the last commit whose run passed, less what a pull request's run
+  passed on the same tree, so a run on `dev` that passed means every commit up to it did, and `test` tests nothing
+  `dev` passed (CIW-D1, CIW-D2, CIW-D3).
 - Releases are made by CI from a tag only the maintainer may push, as a draft the maintainer checks and publishes:
   every asset attested, each pack with its SBOM, the notes from the changelog (GR-D9, GR-D18). Previews are built by
   the same workflow from `test` (GR-D13); the installer and the channels are served by the repository's Pages site
@@ -307,7 +354,24 @@ repository's documents: design/repository.md § The repository's documents.
 
 How: design/repository.md; the maintainer's procedures: `MAINTAINING.md`.
 
+## The site found and shared
+
+- The docs site says what slipbox is wherever it's met without being opened: every page's title names slipbox and
+  says you read, review and edit what your coding agent writes with it, in your terminal, and the docs home's
+  description says what it does, in the words slipbox describes itself with (SEO-D1, SEO-D2).
+- A link to the site's root or any page shows slipbox's picture when it's shared (SEO-D4); the root says what
+  slipbox is to a search engine, and sends a visitor on to the docs (SEO-D3).
+- Agents find the docs as `llms.txt` at the docs' root, a line per page, and their full text in `llms-full.txt`,
+  rebuilt with the site (SEO-D5).
+- The site's build fails when any of these goes missing (SEO-D6).
+
+How: design/distribution.md § What the site tells search engines and agents.
+
 ## Quality goals
+
+- **Every feature checked in a terminal** (TT-D2–TT-D4): by the keys a keyboard sends and the screen drawn, one
+  check per feature, headless and in parallel, in CI on Linux and macOS; a command or reference-set area no check
+  covers fails a test unless explicitly left out with its reason (design/testing.md § The terminal tests).
 
 - **Rendering at least as good as leaf's** (D4, D25, D88, D89). Checked by slipbox replacing leaf for reading `docs/`,
   phase 1's finish line, and by the render tests: every demo note at six widths, in both glyph sets, with no row past

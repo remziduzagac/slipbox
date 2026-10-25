@@ -289,7 +289,7 @@ Previously (exact parent text at local `9b3854c`; recheck before consolidation):
 | [D39–D40](../../decisions/roots-and-links.md) | Storage separation and one walk |
 | [VV design](../archive/vaults-and-view/design.md) | Home, explorer view, peek and proposed link permissions |
 | [GIT design](../archive/git-review/design.md) | Diff foundation, remote commands and remaining review work |
-| [TT](../terminal-tests/README.md) | Terminal coverage retained alongside engine tests |
+| [TT](../archive/terminal-tests/README.md) | Terminal coverage retained alongside engine tests |
 
 ### Relationship to existing work
 

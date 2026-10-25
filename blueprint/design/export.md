@@ -195,10 +195,10 @@ markdown tree, made ready for a writer, which never looks anything up.
   `notes-report`), and its title is the note's (frontmatter `title`, else its first heading, else its file name).
 - **The document's title, author, date and language** come from the first note: its title, its frontmatter's `author`
   (or `authors`, joined), `date` and `lang` (or `language`).
-- **Dropped:** frontmatter, link definitions, HTML blocks and Obsidian's comments (DF-D17: in a line, the white space
+- **Dropped:** frontmatter, link definitions and Obsidian's comments (DF-D17: in a line, the white space
   where one was made one; a paragraph of them; one over blank lines) — what a reader of the note never sees isn't in
-  what's sent. HTML in a line: `<br>` is a break, any other tag goes, and the words between tags stay. Nothing a note
-  holds runs in a document made of it.
+  what's sent. HTML document content uses the shared bounded adapter (HTML-D1, HTML-D5); scripts, styles and other
+  non-document content are omitted. Nothing a note holds runs in a document made of it.
 - **Embeds** are drawn in when a paragraph holds only embeds: `![[note]]`, `![[note#Heading]]`, `![[note#^block]]`
   and `![](note.md)`. Each is drawn in as its blocks, made ready from where its note is (its links and pictures read
   from its folder), up to three deep. An embed of a note already being drawn in is its link instead: no loop.
@@ -225,6 +225,14 @@ markdown tree, made ready for a writer, which never looks anything up.
 Every format draws on paper the same way (`style.ts`): GitHub's light colours, code coloured by the role highlighting
 gives a token, a callout's bar in its kind's colour, a task's box `☐` or `☑`, an Obsidian highlight on a marker's
 yellow (`<mark>` in HTML and an EPUB, Word's yellow highlight, a PDF's tint; DF-D17), a chapter starting a new page.
+
+## Document HTML in exports (HTML-D5)
+
+Non-Markdown assembly adapts supported HTML to semantic nodes, with all disclosure bodies expanded. Markdown
+exports preserve original HTML bytes, spelling and spacing, removing only omitted non-document content. The shared
+tokenizer identifies omission ranges; consumers do not parse HTML independently. Relative HTML paths are not
+rewritten and HTML-only assets are not copied for Markdown. Semantic formats resolve images through the shared
+locator and cached-only reads; each page writer applies its own alignment and percentage bounds.
 
 ## Word (`10.4`)
 

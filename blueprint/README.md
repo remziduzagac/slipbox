@@ -1,10 +1,11 @@
 ---
-synced_with: dev@71313f3
+synced_with: dev@7c2e3c6
 ---
 
 # slipbox blueprint
 
-slipbox is the terminal companion for coding agents: a shared workspace for humans and agents over plain files, where a
+slipbox is where you read, review and edit what your coding agent writes, in your terminal: a shared workspace for
+humans and agents over plain files, where a
 person in the TUI reads, reviews and edits what an agent on the CLI writes, both seeing the same files, the same links
 and the same answers (D33, D226). It is TypeScript on Bun,
 one core with two faces, compiled into one binary (D5, D8). Every phase on the roadmap is built, extensibility aside,
@@ -32,24 +33,9 @@ search's improvements.
 - [design/](design/README.md): how it works now.
 
 - [tasks/](tasks/README.md): small work not worth a workstream; open tasks are its files.
-- [workstreams/](workstreams/README.md): contained parts of the work; the roadmap gives their order. Active:
-  [HTML](workstreams/document-html/README.md), document HTML in Markdown (#90),
-  [TT](workstreams/terminal-tests/README.md), the terminal tests headless and by feature,
-  [DOCS](workstreams/documentation/README.md), the documentation learning path and reference, and
-  [VB](workstreams/views-and-bars/README.md), views and modes, the top bar, vaults and workspaces
-  (#82, #85, #86, #94), and
-  [ASI](workstreams/agent-skill-install/README.md), installing and maintaining the agent skill (#50).
-  Consolidated in `workstreams/archive/`: DOC, the user documentation; DF, what writing it found;
-  [GR](workstreams/archive/greenrepo/README.md), the repository to greenrepo;
-  [DS](workstreams/archive/docs-site/README.md), the documentation site;
-  [VV](workstreams/archive/vaults-and-view/README.md), vaults and the explorer's view;
-  [GIT](workstreams/archive/git-review/README.md), reviewing, diffing and merging;
-  [HDR](workstreams/archive/window-header/README.md), the window header (#24), and
-  [WSP](workstreams/archive/workspaces/README.md), workspaces and where you are (#25), consolidated 2026-10-25.
-  VV's and GIT's docs tasks are still being written.
-
-[LC](workstreams/lint-and-captions/README.md), lint visibility and caption placement (#91), is in implementation
-and review.
+- [workstreams/](workstreams/README.md): contained parts of the work; the roadmap gives their order.
+  ENG is a draft, not built. Completed workstreams are consolidated into the root and retained in
+  `workstreams/archive/`; the workstream index records each status and archive location.
 
 ## How things are recorded
 

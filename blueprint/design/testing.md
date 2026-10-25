@@ -3,11 +3,16 @@
 `bun run test` runs the headless tests (`bun test --timeout 30000`), and `bun run check` adds the typecheck, the
 boundary, the supply chain's gates, Biome, the workflows' and the docs' checks ([repository.md](repository.md) § The
 check). CI runs them all on Linux and macOS (`.github/workflows/ci.yml`; [repository.md](repository.md) § CI).
-`bun run e2e` runs the terminal tests, slipbox itself in a herdr pane (below). A run's temporary files — the tests'
-vaults, the CLI's — go in one folder of its own, removed when it ends (`tests/setup.ts`, preloaded by `bunfig.toml`);
+`bun run test:terminal` drives slipbox headless through a terminal, in parallel and in CI (TT-D2–TT-D6; below). A run's
+temporary
+files — the tests' vaults, the CLI's — go in one folder of its own, removed when it ends (`tests/setup.ts`, preloaded by
+`bunfig.toml`);
 one that stopped short (`--bail`, a crash) is removed by the next run, its process gone.
 
 ## Strategy (`0.4`)
+
+The terminal tests form a layer beside the headless unit tests: `bun run test` drives the model,
+`bun run test:terminal` drives slipbox through a terminal (TT-D6). Both run in CI, scoped to the change (D239).
 
 The layout stage is pure, so the renderer is snapshot-tested on its output. The TUI model draws
 through a `Canvas`, so it is driven headlessly: keys in, a character grid out. Only one test goes
@@ -107,9 +112,13 @@ reports it skipped with its issue (`tests/terminal/run.ts`). `bun test` and the 
 assertion is never deleted or loosened to make a test pass.
 
 **CI runs the suite on Linux and macOS** (GR-D9): for a pull request, the tests and the terminal checks its files
-reach (D239), the docs' tests only for one of the docs alone (D230), and a push to `dev` or `test` the same for its
-commits; every test and check in the full run, `ci` run by hand on `test` (`full`), which a commit needs before `main`
-takes it and a release builds it (D251). The scripts `bun run check` runs, split into jobs ([repository.md](repository.md)
+reach (D239), the docs' tests only for one of the docs alone (D230), and a push to `dev` or `test` the same for what
+changed since the last passing run, less what a pull
+request's run passed on the same tree: nothing for `dev` moved to `test`
+([repository.md](repository.md) § What a push tests); every test and check in the full run, `ci` run by hand on `test`
+(`full`), which a commit needs before `main`
+takes it and a release builds it (D251). The scripts `bun run check` runs, split into jobs
+([repository.md](repository.md)
 § CI). While working: your change's own tests and its feature's terminal check (`bun run test:terminal <its name>`),
 then `bun run test:changed` for what else it reaches — never the whole suite. A failure the full run finds is fixed
 by a pull request of its own, into `dev`.
@@ -167,7 +176,7 @@ change to a note can be checked against what it has to keep covering. The TUI te
 into a temporary fixture vault as `samples/` (without its marker, which would make it a nested
 vault). The demo vault is named `halden` and holds two nested vaults, `outreach/` and
 `outreach/school-visits/`, linked every way across (its `about-this-vault.md`, "Nested vaults"): the
-material for trying nested vaults by hand, and the e2e scenario "nested roots".
+material for trying nested vaults by hand, and the terminal checks of nested vaults.
 
 ## The reference set: `examples/home/`
 
@@ -181,10 +190,13 @@ tests, the design docs and the roadmap) and the files that cover it. Halden is i
 `.build/<repo>.toml` — commits, branches, merges, a worktree, a remote. `bun scripts/build-home.ts <dir>` copies the
 set to `<dir>/home` and halden to `<dir>/vault`, replays each history with git (its `main` checked to end at the
 folder as committed), and makes from `.build/extras.toml` the files that can't be committed: hostile names, symlinks,
-a file over the size cap, an unreadable one. The e2e scenarios of `world-*.ts` build a fresh copy and use it as `$HOME`
+a file over the size cap, an unreadable one. The terminal checks build a fresh copy and use it as `$HOME`
 (`home`), and the tests check it: the build (`tests/home.test.ts`), that the set stays complete, that every data file
 parses or fails as it means to, that every note renders inside its width at four widths (`tests/render.test.ts`),
 and that no open in place gave its folders this machine's identity.
+
+Each reference-set area is covered by a terminal check or explicitly left out with its reason (TT-D4).
+Checks take their content from `examples/`, extending the samples when a case is missing (TT-D5).
 
 **Git state a check makes.** A terminal check takes its notes and files from the samples, but the git state it needs
 it makes itself, with git, in its own home (D241): a repository's history and branches, a worktree, a bare repository
@@ -192,93 +204,112 @@ as its remote, a conflict from a real merge or rebase, a rebase stopped. The sou
 (`tests/terminal/checks/source-control.ts`, and `git-diff.ts` beside it) do so; the histories the set has for itself
 stay in `.build/`.
 
-## The terminal tests (`bun run e2e`)
+## The terminal tests (`bun run test:terminal`)
 
-The headless tests drive the model; these drive slipbox itself in a real terminal, a herdr pane,
-by the keys a keyboard would send, and check what the screen shows. They catch what the model
-can't: how keys are encoded (`ctrl+h` versus backspace, an escape read as alt), timing, and what
-is really drawn. They need herdr, so they are a developer's tool, not part of `bun run check` or
-CI; slipbox itself never needs herdr.
+**The headless terminal** (`tests/terminal/terminal.ts`). A check's slipbox runs in a pseudo-terminal of Bun's own
+(`Bun.Terminal`), its output fed to a headless xterm (`@xterm/headless`), which keeps the screen: each row's text,
+each cell's colours (true colour as `#rrggbb`, the palette as its SGR code) and boldness, the cursor. It answers what
+slipbox asks a terminal at start as a modern one does: the cursor's place and the device's attributes (xterm's own
+answers), its colours (OSC 10 and 11, a dark scheme), and the Kitty keyboard protocol, whose flags slipbox pushes (5:
+disambiguate, alternate keys). It keeps the title (OSC 0 and 2) and every OSC 52 copy, and everything slipbox wrote,
+for checks of what's sent (pictures, by their protocol's bytes). Each read of the output is decoded as it comes, a
+character cut at its end kept for the next, and xterm is given the text, never the bytes: xterm 6.0.0 drops a
+character a read cuts after a 0x80 byte (an em dash read as `E2 80`, then `94`; xterm.js#6003, fixed after 6.0.0),
+which puts the rest of its row a cell to the left, under cells slipbox then leaves as they are (T22). A byte that is no
+character shows as U+FFFD, as in a terminal. A check can read the output a set number of bytes at a time
+(`readSize`); one at a time cuts every character. Its widths are a terminal's that keeps grapheme clusters
+whole (kitty, libghostty, WezTerm: a ZWJ family, a flag, an emoji and its selector are one cluster, measured by Bun),
+not xterm's own Unicode 6 table, where most emoji are one cell and what slipbox drew past them would drift. A resize
+changes both sizes and sends slipbox SIGWINCH itself: Bun's child has the pseudo-terminal as its files but not as its
+controlling terminal (Bun 1.4.2), so the kernel tells it nothing — nor sends a hangup when the terminal closes, which
+a check sends with `signal`. Rows are read up to the width: narrowed, xterm keeps cells past it.
 
-```sh
-bun run e2e                  # a pane split off this one; closed at the end
-bun run e2e --tab            # a tab of its own, as big as the window
-bun run e2e --pane w1:p2     # that pane (also SLIPBOX_E2E_PANE); it must be at a shell prompt
-bun run e2e find replace     # only the scenarios whose names contain these
-```
+**Keys** (`tests/terminal/keys.ts`) go in by name (`j`, `ctrl+q`, `alt+shift+down`, `escape`) as a terminal encodes
+them: Kitty's way once slipbox has pushed its flags — `escape` is `CSI 27 u`, never the start of `alt+…`, so no key
+waits on a clock — or a legacy terminal's (control characters, an escape before alt, xterm's modifyOtherKeys for what
+legacy can't say). A check about the legacy path asks for that keyboard; there an escape is seen taking effect before
+the next key goes.
 
-- **Isolated.** Each scenario gets a fresh copy of the demo vault — or the reference set built, its
-  home folder as `$HOME` (`home`) — and its own config, state, cache and data directories (its own
-  list of vaults). Nothing in the repo or in your own setup is touched, and a given pane that is
-  running slipbox is refused rather than typed into. A scenario can put files beside the vault
-  (`beside`: another vault, a folder outside every vault), run the CLI before slipbox starts (`setup`: `init`
-  that vault), and start slipbox another way: elsewhere (`startAt`), with no path (`startAt: null`), from
-  a folder (`cwd`), with flags (`args`) or environment (`env`), or expecting it to fail (`noWait`). A check that
-  must hold slipbox mid-work has Bun preload a script of the tests' into slipbox's own process, not the CLI's
-  (`preload`): the spelling checks of a dictionary still loading and of one that won't load preload
-  `tests/terminal/spell-hold.ts`, which holds the spell checker's thread (`holdBuild`) until the check writes a file,
-  and writes the hold's state to another; the export checks that act while an export's staging is cleared (the window
-  opened then, Cancel export, a cleanup that fails) preload `tests/terminal/export-hold.ts`, which holds the first
-  export's cleanup (`PreparedExport.dispose`) the same way, or, with `EXPORT_HOLD_AT=publication`, its publication
-  once its document is in place.
-- **Waits, never sleeps.** Every check waits (up to a timeout) for the screen to agree: a row that
-  contains something, the status line's mode, a message's floating box, a file on disk. Only a check
-  that something *doesn't* happen — no autosave mid-insert, no popup before its delay — waits out a
-  stated while. A wait, and the quiet after a key, hold only between frames: slipbox marks each frame
-  with synchronized output (mode 2026), and a screen read before a frame ends is part the last one,
-  part the next (#73). A frame not ended within a second is read as it is. A program a check runs beside slipbox is
-  paced by what the screen shows, not by the clock: the agent replay script's first pause is held until the explorer
-  shows its note. The few checks timed against the clock (`alone`) take their bound from the runner they're on: the
-  kitchen-sink check's key must be answered sooner than that runner parses, on one thread, the 6 MB note being indexed.
-  What a check waits for is what its next key needs (T29): a note written from outside is in the explorer, read from
-  the disk, before the watcher's batch puts it in the quick switcher's list, so a check opens one through
-  `inSwitcher`, which reopens the switcher until its list has the note's own row.
-- **The terminal itself.** A scenario reads what the terminal draws with its colours (`styleOf`,
-  `runs`), its title, the pid of slipbox in it (`signal` sends it SIGTERM or SIGHUP), pastes as a
-  terminal does (bracketed), quits and starts again on the same state (`restart`), and resizes the
-  pane for real (`zoom`, which needs the pane sized by its tab's layout: a client attached).
-- **A slow disk, stood in for** (T12): `SLIPBOX_SLOW_DISK=<folder name>:<ms>[:<deadline ms>]` makes a folder of that
-  name take so long to list, on whichever thread lists it (`slowDisk` in `core/walk.ts`), and shortens the walk's and
-  the listings' threads' deadlines to the third: the disk a check can't mount. `tests/terminal/checks/slow-disk.ts`
-  drives the TUI with it; the unit tests hold a folder up on a thread of their own (`setFolderReader`, a worker of
-  their own: `tests/fixtures/walk/`). What such a check says comes at once is timed by the check itself, against a
-  bound short of the slow folder's time: `Session.until` waits at least `SLIPBOX_TERMINAL_WAIT`, whatever it's asked.
-- **Coverage is measured.** slipbox appends each command it runs to `SLIPBOX_TRACE`; the runner
-  lists the commands no scenario ran (a run split over panes adds them to `SLIPBOX_E2E_RAN`, read
-  together after), and every command is run today. That says a command was
-  reached, not that its effect was checked: each scenario checks its effects itself (the exact text
-  a sequence of edits leaves, what a copy put on the clipboard file, a count on the find row), and a
-  check that would pass with the feature broken is a bug in the scenario.
-- **Size.** herdr owns the pane's size, which the runner asks the shell for and never sets.
-  Scenarios that need room (docked panes, splits) say so and are skipped, named, in a smaller pane;
-  one whose need shows only as it runs throws `Skipped` with the reason — never a silent pass.
-- **Keys.** Single characters are typed as themselves; keys herdr has no name for (the page keys,
-  `ctrl+end`) are sent as the escape sequences a terminal sends. An escape with keys after it waits to be seen taking
-  effect (the screen changing, a second at most): read together with the next key — a loaded machine reads late, a
-  pause or not — it would be alt+key. A start waits for the screen to settle before the first key.
-- **Not the mouse.** herdr passes no mouse events through, so clicks, the wheel and drags stay
-  covered by the headless tests only.
+**A session** (`tests/terminal/session.ts`) is one check's slipbox: a fresh copy of the demo vault, or the reference
+set built (`home`); its own config, state, cache, data, home and temporary folders (`XDG_*`, `HOME`, `TMPDIR`), with
+lint, language servers and the background index off unless the check's config turns them on; slipbox started by
+Bun's own path in a terminal of 236×85 unless the check asks for another size, with nothing of the environment but
+`PATH`. It drives (`keys`, `type`, `paste`, `ex`, `send`, `resize`, `signal`, `restart`, `quit`) and reads (`screen`,
+`statusLine`, `runs`, `styleOf`, `title`, `osc52`, `after`: what slipbox printed on its way out). A restart keeps what
+the session was made with — its folders, config and terminal (asked to change them, it refuses) — and cuts off the
+slipbox before once what it wrote is drawn, stopped if it still runs and its terminal closed, so nothing it or a child
+writes later shows. Every check waits for the screen to agree (`until`, `see`, `status`), never a fixed time; a wait
+gets at least ten seconds whatever the check asked (`SLIPBOX_TERMINAL_WAIT`), since a machine with a check on every core
+is slower than the one a check was written on, and a wait that passes returns at once. What lands only once slipbox is
+ready (spelling's dictionaries, loading in the background) is tried again until it does (`retry`): a key pressed early
+does nothing.
 
-| File | Covers |
-| --- | --- |
-| `tests/e2e/run.ts` | the runner: the pane, the loop, the report |
-| `tests/e2e/herdr.ts` | a herdr pane, driven: keys and text in, the screen out |
-| `tests/e2e/session.ts` | one scenario's slipbox, and the checks |
-| `tests/e2e/helpers.ts` | what scenarios share: the cursor's place, opening a note, leader keys |
-| `tests/e2e/scenarios.ts` | the app's own scenarios, by area, on halden |
-| `tests/e2e/world-git.ts` | the reference set's vaults and real git: `$HOME`, markers, a worktree, a conflict |
-| `tests/e2e/world-content.ts` | the set's content: every grammar, data, hostile text, wide characters, big files |
-| `tests/e2e/world-terminal.ts` | slipbox as a process: start-up forms, signals, restore, keys, pastes, colours |
-| `tests/e2e/world-outside.ts` | the world changing under it: the watcher, the CLI beside it, config, autosave |
-| `tests/e2e/world-links.ts` | links as `21.x` reads them: `/` from a vault's top, no extension, folders, wikilinks |
-| `tests/e2e/world-export.ts` | the export window: formats, the window's keys, replacing, notes in order, `:export` |
-| `tests/e2e/world-fixes.ts` | what writing the docs found, fixed (below) |
-| `tests/terminal/shots.ts` | the docs' screenshots (DF-D19, D236): slipbox headless at 120×34, its screens drawn |
-| `scripts/screenshot.ts` | a screen read with its colours, drawn as a PNG into `docs/images/` |
+**In step with slipbox.** On a loaded machine slipbox reads a key late and draws late: a check that reads the screen
+right after sending keys can read the frame before them, and act on it (the link under the cursor, the line it's
+on). So with `SLIPBOX_TRACE` set, slipbox writes, beside each command run, a `key` line once it has handled a key or
+a paste and a `frame` line for each frame it paints (src/tui/run.ts); `keys`, `type` and `paste` return once every
+key sent is handled and a frame painted after the last (a named key is one key, typed text one per code point, a
+paste one), then once nothing more is written for 40 ms. A check timed against the clock (an answer within two
+seconds while it indexes) says `alone` and runs by itself after the others, where it times slipbox, not the machine.
 
-`world-fixes.ts` covers what writing the docs found, fixed: typing without vim, reload, the trash, moves, clones, the
-code view's links and errors, Obsidian's highlights and comments, a folder's network settings, the Save As window's
-folders.
+A check that must hold slipbox mid-work has Bun preload a script of the tests' into slipbox's own process, not the CLI's
+(`preload`): the spelling checks of a dictionary still loading and of one that won't load preload
+`tests/terminal/spell-hold.ts`, which holds the spell checker's thread (`holdBuild`) until the check writes a file,
+and writes the hold's state to another; the export checks that act while an export's staging is cleared (the window
+opened then, Cancel export, a cleanup that fails) preload `tests/terminal/export-hold.ts`, which holds the first
+export's cleanup (`PreparedExport.dispose`) the same way, or, with `EXPORT_HOLD_AT=publication`, its publication
+once its document is in place.
+
+**A slow disk, stood in for** (T12): `SLIPBOX_SLOW_DISK=<folder name>:<ms>[:<deadline ms>]` makes a folder of that
+name take so long to list, on whichever thread lists it (`slowDisk` in `core/walk.ts`), and shortens the walk's and
+the listings' threads' deadlines to the third: the disk a check can't mount. `tests/terminal/checks/slow-disk.ts`
+drives the TUI with it; the unit tests hold a folder up on a thread of their own (`setFolderReader`, a worker of
+their own: `tests/fixtures/walk/`). What such a check says comes at once is timed by the check itself, against a
+bound short of the slow folder's time: `Session.until` waits at least `SLIPBOX_TERMINAL_WAIT`, whatever it's asked.
+
+
+**The runner** (`tests/terminal/run.ts`, `bun run test:terminal [--jobs N] [--repeat N] [--keep] [--list] [area or
+name…]`) runs the chosen checks concurrently, as many as the machine has cores, each in a worker process of its own
+(`worker.ts`): two of Bun's pseudo-terminals in one process can cross their output (Bun 1.4.2), and a check that
+crashes takes only itself down. A check has two minutes. The run goes to its end, then reports every failure with
+its screen, a summary by area, and how many commands the checks ran; a check that declares a command it never ran
+fails. `--repeat` runs each check that many times in the same pool, to show a flaky one. A check quarantined (§
+Strategy, flaky tests) is never started: it's reported skipped, with its issue (T31).
+
+**The checks** (`tests/terminal/checks/<area>.ts`) are one feature each, small related ones grouped, named by it under
+one of five areas (reading, editing, navigating, links and files, the outside and code), each declaring the reference
+set's areas it covers (`CASES.md`'s headings) and the commands it runs for their effect (TT-D3). Source control's —
+the git panel, its branches and worktrees, the diff window, the review, the merge screen, rebasing, the remote — are
+the outside and code's, in files of their own (`source-control.ts`; the diff window's later edges in `git-diff.ts`,
+the first file being near its size limit): each makes its repository with git in its own folder (commits, branches,
+a worktree, a bare repository as the remote, a conflict from a real merge or rebase).
+
+**Coverage** (`tests/terminal/coverage.ts`, tests/terminal-coverage.test.ts in `bun run test`): every command and every
+area of `CASES.md` (its "By area" part) is covered by a check, or left out, with its reason, in its area's file; the
+command line's own areas are left out together (tests/cli.test.ts covers them). Each command group and each area has
+an owner, the area whose task covers it, and the report groups what's uncovered by owner; a name a check or a list
+gives that doesn't exist, and a left-out entry a check covers, are said too (TT-D4).
+
+The check file `updates` (`tests/terminal/checks/updates.ts`), of the offer, `:upgrade`, and the restart with its
+question about notes unsaved, driving real release builds (`tests/terminal/release-builds.ts`; where they are, which
+every check's session reads, `releases.ts`): two of the checkout, built for this machine (no `--target`, which would
+download Bun's runtime) with `SLIPBOX_RELEASE` defined, once a run before the workers start, when a chosen check says
+`releases` — the runner tells its workers where (`SLIPBOX_TERMINAL_RELEASES`) — the second from a copy of the sources
+whose `version.ts` says the next patch version, so the slipbox that comes back is the new one. A check installs the
+first in its own data folder as the installer lays it out (linked, not copied), as Homebrew does (a keg and `opt`), or
+put by hand, and starts it: the harness's `bin` starts a given binary in place of `bun src/main.ts`. The second is a
+release served from a folder (`SLIPBOX_RELEASES_URL=file://{releases}`, its pack and `SHA256SUMS`), or from a local
+server holding the pack back three seconds, for quitting during a background upgrade (its address in the session's
+`extraEnv`, which a check's `setup` fills): the shell's prompt back at once, the version installed after. On Linux,
+`/proc/<pid>/exe` shows the process runs the new file itself, not waiting on a child. `:restart`'s question about notes
+unsaved is checked from source.
+
+**What needs a real terminal** (`tests/terminal/herdr/`) runs in a herdr pane, as the terminal tests once all did:
+two checks of the emulator's word against a real terminal's (`bun run test:herdr --pane <id>`): the keys a real one
+sends (escape then a key, ctrl, alt, a bracketed paste), and the widths a real one draws (names in their own scripts,
+every row the pane's width, the explorer's border in one column down every page). Pictures drawn by the terminal
+(Kitty's graphics) aren't checked anywhere: the headless checks see what slipbox sends. The docs' screenshots are
+taken in the headless terminal (D236; `bun run shots`, the root's design/testing.md § The terminal tests).
 
 **The docs' screenshots** (DF-D19, D236): `bun run shots` (`tests/terminal/shots.ts`) drives slipbox in the
 headless terminal (`tests/terminal/terminal.ts`) sized 120×34, as the terminal tests do, on the reference set or the

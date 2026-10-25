@@ -3,7 +3,7 @@
 The walkthrough of the whole system, end to end: one core and its two faces, the parts it is made of, how the CLI and
 the TUI share the disk, the modules, a note's way from its bytes to the screen, what slipbox depends on, where it
 keeps its files, and what it costs. Each part has a design file of its own, linked where the part is described
-below; [terms.md](terms.md) defines the words, and [the decisions](../decisions/) give the reasons.
+below; [terms.md](terms.md) defines the words, and [the decisions](../decisions) give the reasons.
 
 ## One core, two faces
 
@@ -55,7 +55,7 @@ controller of its own) and `src/tui/draw.ts` (painting, its regions in `draw-*.t
 | File | What it does with OpenTUI |
 | --- | --- |
 | `src/tui/opentui.ts` | `Canvas` over `OptimizedBuffer`; the full-screen `Renderable`; a worker decoding pictures |
-| `src/tui/run.ts` | `createCliRenderer`, key, paste and mouse events, resize, OSC 52, shutdown |
+| `src/tui/run.ts` | renderer creation, input, resize, OSC 52, shutdown and restart after screen teardown |
 
 What comes before the screen is taken is `run.ts`'s `prepare`, which needs no terminal (a test calls it):
 the vault found, its config, the vault recorded as seen, and the graph. Recording comes before the graph
@@ -168,6 +168,9 @@ The CLI's commands are the user's reference, [cli.md](../../docs/manual/cli.md);
 | `core/footnotes.ts` | 3.17 | a note's footnotes: labels, definitions, references, in GFM's order |
 | `core/tags.ts` | 1.6 | micromark tokenizer for `#tag`; tag names and keys (the graph's tag index) |
 | `core/parse.ts` | 1.3 | remark + gfm + frontmatter + wikilinks; headings, slugs |
+| `core/html.ts`, `html-adapter.ts` | HTML | bounded tokenizer, omission ranges and semantic document adapter |
+| `core/html-export.ts`, `html-markdown.ts` | HTML | semantic export and lossless Markdown HTML runs |
+| `tui/html.ts` | HTML | per-buffer disclosure state and revealing navigation targets |
 | `core/obsidian.ts` | DF-D17 | Obsidian's `==highlight==` and `%%comment%%`, read into the tree; a block comment too |
 | `core/parse-pool.ts` | 15.1 | a big note's chunks parsed on up to four workers (`parse-worker.ts`), into its cache |
 | `core/workers.ts` | 15.1, 25.6 | where a worker's script is, from the source or in the compiled binary (D232) |
@@ -288,7 +291,17 @@ The CLI's commands are the user's reference, [cli.md](../../docs/manual/cli.md);
 | `core/release.ts` | 14.2 | what a release build was told when built; how a preview is named; the Pages site |
 | `core/install.ts` | 14.8 | the installer's layout read; how slipbox was installed; its channel; `uninstall`'s plan |
 | `core/update.ts` | 14.4 | the newest the channel offers, from its sums; the daily check; `upgrade` |
+| `core/restart.ts` | UPG | the restart's note; the hand-over: the upgrade, the binary, `execve` into it |
+| `core/libc.ts` | UPG | libc through `bun:ffi`, opened once: `setenv` (D221), `execve`, `close_range`, `tcflush` |
+| `core/processes.ts` | UPG | whether a process still runs: a lock's holder, a TUI's unsaved notes, an export's spool |
+| `tui/dialog.ts` | UPG | the dialog: text, a select and checkboxes; its keys and clicks |
+| `tui/updates.ts` | UPG | the update offer, `app.upgrade`, `app.restart`, an upgrade underneath noticed |
 | `core/skill.ts` | GR-D10 | the skill for agents, built in: printed; installed, never over another's file or a link |
+| `core/skill-lifecycle.ts` | ASI | detected user skill folders, safe refresh and uninstall ownership checks |
+| `core/report.ts` | RPT | a bug report's facts (slipbox, the system, the terminal); its text read back; the address |
+| `core/browser.ts` | RPT | a browser opened on an address, by platform; none over SSH |
+| `core/gh.ts` | RPT | `gh` found, its account read, `gh issue create` run |
+| `cli/report.ts` | RPT | `report`, run before any vault is looked for |
 | `core/wsl.ts` | 14.12 | WSL known; Windows' drives from its mounts; their fonts; notes on one, said |
 | `core/stale.ts` | 9.9 | advisory list of unsaved paths, pid-stamped: the TUI writes it, the CLI reads it |
 | `cli/cli.ts` | 9.1–9.6 | the CLI face: the dispatcher, the help, each command's arguments and flags; `--json` |
@@ -457,7 +470,9 @@ and data each have a folder of their own, and a vault's cache and state are kept
 | the trash (`18.4`) | `$XDG_STATE_HOME/slipbox/<key>/trash/` (`trash.json`, an item per folder; kept 30 days: DF-D14) |
 | the background index (`20.9`) | `$XDG_STATE_HOME/slipbox/autoindex.json` (its place), `activity` (CLI last used) |
 | saved plans (`20.18`, `--plan`) | `$XDG_STATE_HOME/slipbox/plans/<id>.json` (for `slipbox apply`; gone once applied) |
-| the update check (`14.4`) | `$XDG_STATE_HOME/slipbox/update.json` (when it last asked, what it found) |
+| the update check (`14.4`) | `$XDG_STATE_HOME/slipbox/update.json` (last check, findings, skipped version) |
+| A restart’s note (UPG) | `$XDG_STATE_HOME/slipbox/restart/<pid>.json`; place, session and versions; read and removed |
+| Upgrade lock (UPG) | `<data>/upgrade.lock`; the upgrade process’s pid |
 | language servers installed (`19.5`, `14.11`) | `$XDG_DATA_HOME/slipbox/tools/<package>/<lock>/` (each from its lock) |
 | your own words, spelling's (`25.6`) | `$XDG_DATA_HOME/slipbox/spell/words.txt` |
 | the cache's tag (`14.9`) | `$XDG_CACHE_HOME/slipbox/CACHEDIR.TAG`: backup tools skip the cache |

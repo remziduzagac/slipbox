@@ -45,7 +45,8 @@ and the status line's mode waited for together. Never pressed again on a screen 
 
 ## References
 
-- Delivers: workstreams/terminal-tests/design.md § MODIFIED design/testing.md § The terminal tests (every check waits
+- Delivers: workstreams/archive/terminal-tests/design.md § MODIFIED design/testing.md § The terminal tests (every check
+  waits
   for the screen to agree; in step with slipbox).
 - Rests on: (TT-D2), (TT-D3); the git panel's `toPanel`, fixed the same way before the repository restarted.
 

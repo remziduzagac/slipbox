@@ -18,7 +18,8 @@ line](../images/screen-map.png)
 From the top:
 
 - **The top bar** holds the `slipbox` chip, which opens the command palette. In its middle, it says where you are:
-  the explorer zoom, workspace and git state. At its right end, it shows background work and an available upgrade.
+  the explorer zoom, workspace and git state. At its right end, it always shows the work count and running version;
+  an arrow marks an available upgrade.
 - **The tab strip** has a tab for each note you have open.
 - **The explorer**, on the left, shows the folder's notes and files as a tree. The column of buttons at the left edge
   is the **left rail**.

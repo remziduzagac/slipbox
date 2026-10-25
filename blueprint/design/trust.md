@@ -10,7 +10,8 @@ trust its vault (D172); and what a link may reach: nothing out of its vault or h
 
 slipbox runs programs you chose: your editor, git, and the servers and linters found in your config, on `PATH`, in
 your install folders (Mason's `bin`, `~/.cargo/bin`, `~/go/bin`, `~/.local/bin`) or installed by slipbox itself
-(D172). In a vault you trust, a folder's own tools run too, each as it would anywhere else: its own defaults, the
+(D172); and, when you send a report, your system's way of opening a browser, or `gh` once you've said yes (RPT-D3,
+RPT-D4). In a vault you trust, a folder's own tools run too, each as it would anywhere else: its own defaults, the
 folder's settings, its own copy.
 
 Trusted or not, a folder's config never names a program to run, nor lets slipbox reach the network: `editor.command`,
@@ -19,7 +20,8 @@ server or linter slipbox doesn't build in, are your own config's only, and so is
 `render.images_remote`, `lsp.auto_install` and `update.check`, since fetching a note's web pictures tells their sites
 who read what, installing fetches from npm, and the update check asks slipbox's releases (DF-D1, DF-D23). A folder's
 file that sets one is ignored, with a warning, whichever way it sets it. Nor may a folder's `[keys]` or `[aliases]`
-name a command that throws work away or runs a program (`shell.run`, `shell.filter`), so a clone can't put one on
+name a command that throws work away or runs a program (`shell.run`, `shell.filter`, `help.report_send`), so a clone
+can't put one on
 `ctrl+s` or `:wq` (`USER_ONLY`, each with its reason, and `VAULT_FORBIDDEN_COMMANDS` in `core/config.ts`;
 [configuration.md](../../docs/manual/configuration.md), "What only your own file can set"). A folder may set its
 branches' bases (`[git] base`, `[git] bases`), as a team's repository does; each is a branch's name, checked before git

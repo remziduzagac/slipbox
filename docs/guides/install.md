@@ -246,6 +246,11 @@ A release build asks once a day, while you use it, whether a newer release is ou
 preview too. It sends nothing about you. To turn it off, set `update.check = false` in your settings, or set
 `DO_NOT_TRACK` in your environment. The [privacy chapter](../manual/privacy.md) has what slipbox sends, and when.
 
+The top bar always shows the version you are running, shortening a preview to `0.5.2-P`. Click it or press
+`space a` for the full version and channel, the previous version recorded by the last installer upgrade, and any
+available upgrade. The release notes address can be copied from that popup. A package-manager install shows its
+upgrade command. The previous version is informational; upgrading always moves forward.
+
 ### When a newer version is out
 
 When there is one, slipbox offers it in a small window, once you've stopped typing for a moment. Keys you were typing
@@ -309,8 +314,3 @@ removed; other files stay. Skills in other, manually chosen folders must be remo
 2. Remove the launcher (`rm ~/.local/bin/slipbox`).
 3. Remove the skill's link, if you made one (`rm ~/.claude/skills/slipbox`).
 4. Remove the source folder.
-
-The top bar always shows the version you are running, shortening a preview to `0.5.2-P`. Click it or press
-`space a` for the full version and channel, the previous version recorded by the last installer upgrade, and any
-available upgrade. The release notes address can be copied from that popup. A package-manager install shows its
-upgrade command. The previous version is informational; upgrading always moves forward.

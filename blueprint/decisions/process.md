@@ -72,7 +72,8 @@ items (ideas.md § Process).
 
 ## D223: A small change by an issue and one pull request (2026-10-13)
 
-**Decision:** A small feature or fix (a setting, a key, a window) is a GitHub issue and one pull request that changes the
+**Decision:** A small feature or fix (a setting, a key, a window) is a GitHub issue and one pull request that changes
+the
 code, its tests, the docs and the design file it touches together, with a decision recorded where it settles
 something; a workstream is for work that spans several areas or changes how the project works. The issue says what's
 asked; the pull request's body names it.
@@ -157,6 +158,10 @@ terminal tests trust (TT-D2), which the real-terminal set checks in herdr.
 
 ## D239: A pull request runs the tests and the terminal checks its change reaches; main runs them all (2026-10-17)
 
+> **Amended by CIW-D1–CIW-D4 (2026-10-26):** pushes test since the nearest passing run of the same scope,
+> less a verified passing pull-request tree on its base; moving a passing dev commit to test repeats no tests.
+> Superseded push runs are cancelled; their commits remain in the next range.
+
 > **Amended by D251 (2026-10-17):** a push to `dev` or `test` runs what its commits reach, as a pull request does;
 > everything runs in the full run, by hand on `test`, which `main` requires; a release isn't tested again.
 
@@ -224,6 +229,10 @@ typecheck together (2026-10-17), fixed within the hour.
 **Not chosen:** a merge queue (an organisation's repository first); branches required up to date.
 
 ## D251: dev, test, then main: tested as it moves, everything before a release (2026-10-17)
+
+> **Amended by CIW-D1–CIW-D4 (2026-10-26):** pushes test since the nearest passing run of the same scope,
+> less a verified passing pull-request tree on its base; moving a passing dev commit to test repeats no tests.
+> Superseded push runs are cancelled; their commits remain in the next range.
 
 > **Amended by D257 (2026-10-23):** `main`'s ruleset sees `full` as a commit status the run by hand posts once it
 > passed: a ruleset counts no check a run by hand reports.

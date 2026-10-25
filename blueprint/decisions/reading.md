@@ -207,6 +207,10 @@ whatever the answer.
 
 ## D102: Pictures sized from the cell, sent once, scrolled as text (12.6–12.9, 2026-09-25)
 
+> **Amended by PIC-D1–PIC-D6 (2026-10-26):** pictures fit their window above a size floor; their own size is
+> bounded by the existing decoding budget. Size toggling and sideways scrolling belong to the window. Kitty sends
+> once per size after resize rest; sixel draws only the visible source rectangle.
+
 **Decision:** Designed in from the start:
 
 - sizing from the cell's pixel geometry; a picture reserves its rows, and text does not wrap around it;

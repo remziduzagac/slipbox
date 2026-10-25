@@ -45,6 +45,9 @@ captured; a worktree already gives a task its own.
 
 ## WSP-D4: Where you are is on the top bar (2026-10-24)
 
+> **Amended by VB-D3, VB-D6 and VB-D7 (2026-10-26):** the permanent top bar separates zoom, workspace and
+> git; a git workspace is labelled by its vault. Work count and running version are always present.
+
 > **Refined (2026-10-24), taken as recommended in the pull request's review, for the maintainer to confirm or
 > reverse:** a merge or a rebase under way is no longer given up with ahead and behind, but after the branch: a review
 > found that on a narrow bar it went first, and with the status line yielding to the bar, nothing on screen said a
@@ -65,6 +68,9 @@ folders, as `space v v`; the branch (from its `·` or `@`) opens the branches' m
 way to write what the docs show one way).
 
 ## WSP-D5: The status line says where only while the top bar doesn't (2026-10-24)
+
+> **Superseded by VB-D3 (2026-10-26):** the top bar is permanent, including zen; the status line has no
+> location fallback. The retired `ui.top_bar` setting produces one notice.
 
 **Decision:** The status line names the vault and its branch only while the top bar doesn't: hidden
 (`ui.top_bar = false`, `space u b`), or too narrow for even the vault; zen has neither bar. The vault and the branch

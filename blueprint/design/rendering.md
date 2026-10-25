@@ -51,7 +51,7 @@ the blocks itself, inlines in `render-inline.ts`, tables in `render-table.ts`, f
 | table | the allocator below |
 | thematic break | a rule across the width |
 | frontmatter | a "properties" block: aligned rows, a long key cut with `…`; a value's `[[link]]` a link; raw: broken |
-| html block | shown dim, verbatim; comments (each `<!-- -->` on its own) hidden; a lone `<br>` is a blank row |
+| html block | document semantics through the shared bounded adapter; comments and executable content omitted |
 | footnote | `[1]` reference; the definition as `1.` with a hanging indent, its paragraphs apart |
 | tag | `#name` in the `tag` role, followable: Obsidian's tags (`1.6`, D53; [links.md](links.md) § Tags) |
 | highlight | `==text==` (Obsidian): its text in the `highlight` role, a marker's yellow behind it, what's inside too |
@@ -75,25 +75,45 @@ the file's text (DF-D17): `a %%note%% b` reads `a b`, `oil %%note%%.` reads `oil
 leaves no row, and a comment over blank lines (§ Obsidian's highlights and comments) no rows. Rows keep their source
 lines. Links render as their text; the URL follows as `<url>` when colour is off or `render.show_urls` asks. Images
 render as `▣ alt`, and alt text plus path stay the floor (12.x, D101): a picture alone in its paragraph, a local image
-file (PNG, JPEG, WebP, GIF), is drawn above its boxed `▣ alt` caption where the terminal draws images —
+file (PNG, JPEG, WebP, GIF), is drawn with its boxed `▣ alt` caption (below by default, § Standalone picture captions)
+where images are drawn —
 Kitty graphics or sixel,
-as OpenTUI finds it asking, never blocks of colour (D126) — sized to the text width, its proportions kept, at most 12
-rows, from where its `▣ alt` text starts (past a list's bullet, a quote's bar); scrolled half out of sight, the part
-that shows. One embedded by name, `![[dal.png]]` (12.13, D103), is drawn the same, found as its link is (anywhere in the
+as OpenTUI finds it asking, never blocks of colour (D126) — fitted to its window (tui.md § Pictures in a window), from
+where its `▣ alt` text
+starts (past a list's bullet, a quote's bar, an embedded note's frame). Its own size is its pixels, or the size the
+note gives it (Obsidian's `|300`, `|240x180`, which may enlarge a smaller file, as before), proportions kept, then
+brought within the screen's decoding budget (below: one megapixel, 2,048 a side), which no picture on the screen
+exceeds, fitted or not. Fitted, it's drawn at one scale of that own size: at most 1, and at most what its room's
+columns allow; within that, what its window's height less its `▣` rows allows, but never less than the floor, the
+larger of what makes it 12 rows tall and what makes it 20 columns wide (PIC-D1, PIC-D2). So it's never larger than its
+own size or its room; in a window too short, or for a picture too tall and narrow, the floor wins and the picture is
+taller than the window, scrolled by as text is. Shown at its own size (a click, a key), it's at scale 1 whatever its
+room, as tall as it is; wider than its room, its frame rows scroll sideways on their own as a code block's do, and
+one more frame row under it holds its bar. Each of its rows — its `▣` rows, its frame rows, its bar — names the
+picture and which of its rows it is, so it's found whole from any of them; scrolled half out of sight, rows or
+columns, the part that shows. One embedded by name, `![[dal.png]]` (12.13, D103), is drawn the same, found as its link
+is (anywhere in the
 vault, the nearest of two; two tied, neither): Obsidian's `|300` its width in pixels, `|240x180` the box it fits in, its
 proportions kept. An SVG (12.15, D127) — by its name, or a picture fetched told by how it starts — is rasterised by
-resvg (WebAssembly) at the size it's drawn, from its own size, into the cache, and drawn as a PNG is; it fetches nothing
+resvg (WebAssembly) once, at its own size within the budget, into the cache, and drawn as a PNG is, scaled to its
+drawn size: resizing a window rasterises nothing again (PIC); it fetches nothing
 it links to. One in an embedded note (12.14) is found from where that note is — its path from its folder, its name from
 its place in its vault — and drawn inside its frame. Beside text, or where the terminal draws none (`[render] images =
-"never"` too): the caption box alone. Where the terminal speaks Kitty graphics, a picture is sent to it
-once (12.7, D102) —
-compressed, at the pixels it's drawn in, with a virtual placement of its cells — and drawn as Kitty's Unicode
-placeholders: each cell U+10EEEE in the picture's id's colour, its row and column as combining marks. They're text, so
-scrolling moves them and the terminal the picture with them: nothing is sent again, nothing waits. The last 48 are kept
-in the terminal; quitting lets them go. With sixel (OpenTUI's own picture path, which numbers pictures by the order
-they're drawn in and sends them again as that changes), a step of scrolling draws a view's pictures, but quick steps
-after it (a key held: within 120 ms of the last) don't, nor a wheel's from its first tick — their rows stay — and
-they're drawn once it rests. A picture on the internet (12.12) is fetched only as `[render] images_remote` says, in your
+"never"` too): the caption box alone. Where the terminal speaks Kitty graphics, a picture is sent to it once per size
+(12.7, D102) — compressed, at the
+pixels it's drawn in, with a virtual placement of its cells — and drawn as Kitty's Unicode placeholders: each cell
+U+10EEEE in the picture's id's colour, its row and column as combining marks. They're text, so scrolling moves them
+and the terminal the picture with them: nothing is sent again, nothing waits. The placement and the id are the
+picture's whole size; the part that shows is drawn as the cells of those rows and columns, so scrolled sideways a
+row's cells start at the column that shows, and nothing is sent either. Past 297 rows or columns, which the marks
+can't name, it takes OpenTUI's path. A window resized sizes its pictures again, each sent at its new size once the
+size has rested (tui.md § Pictures in a window). The last 48 are kept in the terminal; quitting lets them go. With
+sixel (OpenTUI's own picture path, which numbers pictures by the order they're drawn in and sends them again as that
+changes), a step of scrolling — down, up or sideways — draws a view's pictures, but quick steps after it (a key held:
+within 120 ms of the last) don't, nor a wheel's from its first tick — their rows stay — and they're drawn once it
+rests. OpenTUI's path is given the picture's whole size and the source rectangle of the part that shows, both its
+edges rounded from the cells', so a frame encodes no more of a picture than its window holds. A picture on the internet
+(12.12) is fetched only as `[render] images_remote` says, in your
 own config (DF-D1): `ask` (the default) — its link, until `enter` on it asks to fetch it, this once or from its site
 without asking (until slipbox quits); `show` — fetched as the note's laid out; `never` — neither fetched nor drawn,
 `enter` copying its address. Fetched (into the cache, a file per address: an image's content type, at most 20 MB, within
@@ -119,7 +139,8 @@ clears its queued jobs and retained images. CLI/export retain their explicit awa
 
 Math input is at most 32 KiB, SVG input 8 MiB, generated output 8 MiB, and each completed-job cache 16 MiB or 512
 entries. Native files are at most 20 MiB; inspection accepts dimensions up to 16,384 per side and 16 million pixels, as
-an SVG's size does on the screen. Screen decoding returns at most one million pixels, with sides no larger than 2,048;
+an SVG's size does on the screen. Screen decoding returns at most one million pixels, with sides no larger than 2,048 —
+the most of a picture the screen shows, fitted or at its own size (PIC-D2);
 the adapter retains the 24 such decoded images drawn last (96 MB of pixels), so the pictures on screen are never decoded
 again while they show. SVG rasterization targets at most four million pixels and width 4,096. These are application
 budgets, not an operating-system memory sandbox or native-fault containment.
@@ -228,6 +249,77 @@ or a list item's, at the end of its text, or the table, quote or list on the lin
   render as a reference.
 - **Untouched elsewhere.** Search, backlinks and the context bundle are unchanged by an embed: it is a link, and
   its text belongs to its note (D113).
+
+## Document HTML (`2.2`, HTML-D1–HTML-D4)
+
+Supported tags: p, div, span, br, hr, h1–h6, strong/b, em/i, u/ins, s/del, code/kbd/samp/pre/mark, a, img,
+picture/source and details/summary. Unknown tags retain children. HTML text is literal, never reparsed as Markdown.
+
+Dimensions accept positive integer pixels, bare or with `px`; width and max-width additionally
+accept integer percentages from 1 to 100. Height accepts pixels only. Valid inline declarations override attributes;
+invalid declarations are ignored. Width and height bound a containing box, max-width further caps it, and intrinsic
+aspect ratio and existing image limits always apply. Alignment is left, center or right, inherited by children.
+Font weight is normal or bold; font style normal or italic; text decoration underline, line-through or none.
+White space accepts pre. Other declarations have no effect. Semantic colors come from the selected theme.
+
+Select the first supported source matching prefers-color-scheme light or dark. Only one simple
+URL is accepted in srcset; multiple candidates, other media queries and unsupported MIME types are skipped.
+Without an explicit theme, or without a supported match, use img. Never render multiple alternatives together.
+Existing image formats and SVG handling apply; HTML never bypasses ask/show/never or fetches a stylesheet.
+Links around pictures remain the action for both graphics and fallback. Theme changes invalidate selection.
+
+TUI details respect open initially, with a named keyboard command to toggle the summary.
+Following a fragment into collapsed content expands every containing disclosure. Noninteractive CLI and exports
+always expose the body. HTML headings participate in normal outline and slug navigation; an explicit id wins.
+Existing explicit anchors remain valid. State belongs to the current document, not a global HTML engine.
+
+Names are ASCII and case-insensitive. Attributes keep their first occurrence; quoted greater-than signs stay inside
+the value. Named and numeric semicolon-terminated entities decode through the existing entity table, with invalid
+numeric scalars replaced. An unmatched end tag is ignored, matching ancestors close intervening open elements, and
+EOF closes remaining elements. Comments run to their close or fragment EOF. Depth is capped at 64, flattening deeper
+opens; 50,000 tokens cap semantic adaptation, with an explicit content-limit marker for a block. Markdown's omission
+filter streams every token without that semantic cap, preserving all non-omitted original bytes.
+
+The entity decoder is promoted from an existing transitive dependency at its installed exact version (1.3.0, MIT);
+its sole dependency is character-entities (MIT), already in remark's graph. No parser dependency or external binary
+is added. Local measurements: decoder module 634 bytes, existing entity table 37,342 bytes, minified tokenizer bundle
+39,604 bytes. The lockfile adds only the root dependency declaration, with no new package entries.
+
+HTML fragments share a stack across adjacent Markdown AST nodes: raw HTML text remains literal, while Markdown
+blocks the Markdown parser already recognized between HTML fragments keep their parsed meaning. This handles the
+ordinary blank lines inside details without a second Markdown parse. Original positions are retained for every
+translated node and disclosure range. Theme and disclosure overrides are explicit layout cache inputs; translated
+trees are held weakly by original parse tree and theme. Ordinary Markdown trees keep their identity.
+
+The TUI's Html controller owns weak per-buffer overrides, cleared when a buffer's version changes. Enter on a summary
+runs html.details_toggle; the palette exposes Toggle HTML details. Fragment, outline and explicit source-line placement
+expand containing disclosures before laying out and landing on original source lines. Source/lens editing still uses
+the original parse and source, not translated text. A linked graphic's click and Enter run link.follow.
+
+Assembly keeps a separate original-HTML node view only for chapters with HTML, including embedded HTML. Markdown
+serializes those runs directly from original source ranges; semantic formats consume translated nodes. HTML images
+resolve through the same locator and cached-only export reads as Markdown images. Page-format differences remain:
+container alignment and percentage bounds use each writer's page layout, while pixel bounds and inline semantics
+are preserved. Relative paths inside lossless Markdown HTML are not rewritten and HTML-only assets are not copied.
+
+HTML heading and anchor extraction uses index generation 13. Generation 12 vault indexes and content-cache keys are
+not reused: unchanged files must acquire their HTML headings on upgrade. This applies HTML-D1 without changing
+storage paths or the cache schema; both stale-cache layers have regression coverage.
+
+Five fresh Bun processes measured the tokenizer module import at a median of 2.78 ms locally.
+This is the complete module import, not a claimed startup delta; remark already loads the shared entity table.
+
+The layout IR carries explicit attribute resets alongside additive flags, so normal/none can override a theme's
+bold, italic or underline while preserving semantic colors. The existing shared span-style resolver applies these
+resets for both ANSI and TUI output; document writers use equivalent scoped styles.
+
+Preformatted containers extract text recursively from intervening Markdown blocks, retaining paragraph breaks
+and formatted text instead of discarding parent nodes without a direct value.
+Nested br elements contribute hard line breaks during the same extraction for rendering and semantic exports.
+The selected theme is initialized before session tabs restore their saved positions and reveal enclosing disclosures.
+For large notes, disclosure reveal waits for the background parser before reading the tree; it never forces a parse
+on the screen thread. A changed buffer version discards a deferred reveal.
+
 
 ## Data files (plans `16.11`–`16.14`)
 

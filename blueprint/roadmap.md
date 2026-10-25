@@ -7,8 +7,8 @@ Vaults and the explorer's view (VV) and reviewing, diffing and merging (GIT) are
 (2026-10-17), and in 0.4.0. Next: native Windows
 (`14.14`–`14.17`); and, open in ideas.md, the skill as an npx package for common harnesses and how agents and slipbox
 work together (§ Agent surface), and search's improvements (§ Search).
-Automatic installation and maintenance of the bundled skill (#50) is in
-[ASI](workstreams/agent-skill-install/README.md), extending `14.4`, `14.7` and `14.8`.
+Automatic installation and maintenance of the bundled skill (#50) is built and consolidated as
+[ASI](workstreams/archive/agent-skill-install/README.md), extending `14.4`, `14.7` and `14.8`.
 
 Each step's ID is the plan's stable item ID: cite it (`3.3`, `10.1`) rather than restating the work. Phases and
 clusters differ: a cluster groups related items in dependency order, and its line in italics says which phase it
@@ -368,7 +368,8 @@ Order: `12.7` checked, then `12.10`, `12.11`, `12.15`, `12.16`, `12.17`.
   its link.
 - **12.5** Constraint: alt text plus path is the floor; a note never becomes unreadable (requirements.md
   § Constraints).
-- [x] **12.6** Sizing from cell pixel geometry: the text width, proportions kept, at most 12 rows.
+- [x] **12.6** Sizing from cell pixel geometry: fitted to the window above a floor, proportions kept; own-size toggle
+  and sideways scrolling (PIC-D1–PIC-D6, consolidated 2026-10-26).
 - [x] **12.7** Sent once, drawn as Kitty's Unicode placeholders: text that scrolls; sixel waits on scroll.
 - [x] **12.8** Scroll behaviour: a picture cut where it scrolls out of sight.
 - [x] **12.9** Decode cache keyed by path and mtime.
@@ -627,8 +628,9 @@ was added 2026-10-09 at the user's asking.*
 
 *Not a phase. Accepted 2026-10-13; started once #26, the lens's regression, is fixed.*
 
-- [ ] **[Terminal tests, headless and by feature](workstreams/terminal-tests/README.md)** (TT): the terminal tests on
-  Bun's pseudo-terminal and a headless xterm, in parallel and in CI on Linux and macOS; one check per feature, tied to
+- [x] **[Terminal tests, headless and by feature](workstreams/archive/terminal-tests/README.md)** (TT): the terminal
+  tests on Bun's pseudo-terminal and a headless xterm, in parallel and in CI on Linux and macOS; one check per feature,
+  tied to
   the reference set's cases, coverage checked; content from the sample folders only.
 
 ## The documentation site
@@ -689,10 +691,33 @@ current requirements or product behavior. Start any resulting design change thro
 
 ## Documentation people can follow
 
-*Not a phase. Accepted 2026-10-19 (DOCS-D2); implementation and review in progress.*
+*Not a phase. Accepted 2026-10-19 (DOCS-D2); merged and in use; consolidated 2026-10-26.*
 
-- [ ] **[Documentation people can follow](workstreams/documentation/README.md)** (DOCS): implement and review the
-  agreed learning path, guides, topic pages and reference, then retake the screenshots for it (DOCS-T2).
+- [x] **[Documentation people can follow](workstreams/archive/documentation/README.md)** (DOCS): the agreed learning
+path,
+  guides, topic pages, reference and screenshots (DOCS-T1, DOCS-T2).
+
+## Features consolidated 2026-10-26
+
+- [x] **[PIC](workstreams/archive/picture-sizes/README.md)**: consolidated into the root on 2026-10-26.
+- [x] **[RPT](workstreams/archive/reporting-a-problem/README.md)**: consolidated into the root on 2026-10-26.
+- [x] **[UPG](workstreams/archive/upgrade-restart/README.md)**: consolidated into the root on 2026-10-26.
+- [x] **[VB](workstreams/archive/views-and-bars/README.md)**: consolidated into the root on 2026-10-26.
+- [x] **[LC](workstreams/archive/lint-and-captions/README.md)**: consolidated into the root on 2026-10-26.
+- [x] **[ASI](workstreams/archive/agent-skill-install/README.md)**: consolidated into the root on 2026-10-26.
+- [x] **[HTML](workstreams/archive/document-html/README.md)**: consolidated into the root on 2026-10-26.
+- [x] **[SEO](workstreams/archive/site-discovery/README.md)**: consolidated into the root on 2026-10-26.
+- [x] **[CIW](workstreams/archive/ci-waits/README.md)**: consolidated into the root on 2026-10-26.
+
+## CI waiting times left open (#65)
+
+Items 5 and 7 are consolidated as CIW. The remaining work is tracked in the root tasks:
+
+- [ ] **[CIW-T8: macOS starts after Linux passes](tasks/ciw-macos-after-linux.md)**.
+- [ ] **[CIW-T7: macOS kept for what needs it](tasks/ciw-macos-for-what-needs-it.md)**.
+- [ ] **[CIW-T6: More of the app's files mapped in `CHECKS_FOR`](tasks/ciw-map-more-files.md)**.
+- [ ] **[CIW-T5: The Linux jobs split across runners](tasks/ciw-shard-linux.md)**.
+- [ ] **[CIW-T9: The slowest tests found and kept in check](tasks/ciw-slowest-tests.md)**.
 
 ## Later
 

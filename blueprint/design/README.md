@@ -2,7 +2,7 @@
 
 How slipbox works now: its concepts, its parts and how they fit. Design is current truth, kept true to the code: a
 change of behaviour changes the matching file in the same commit (D206). Why each part is built so is in
-[the decisions](../decisions/), which every file cites by ID.
+[the decisions](../decisions), which every file cites by ID.
 
 1. [terms.md](terms.md): the vocabulary, each word with the section that defines it.
 2. [how-it-works.md](how-it-works.md): the whole system, end to end: faces, parts, modules, storage, performance.
@@ -25,7 +25,7 @@ change of behaviour changes the matching file in the same commit (D206). Why eac
 15. [repository.md](repository.md): the repository itself: its documents, the check, CI, the dependencies' upkeep,
     the settings, the weekly health check.
 
-The user's references are outside the blueprint, in [docs/](../../docs/): [keys.md](../../docs/manual/keys.md),
+The user's references are outside the blueprint, in [docs/](../../docs): [keys.md](../../docs/manual/keys.md),
 [configuration.md](../../docs/manual/configuration.md) and [cli.md](../../docs/manual/cli.md). The keys beside vim's, VS
 Code's and Obsidian's are research: [keymap-comparison.md](../research/keymap-comparison.md).
 

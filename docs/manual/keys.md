@@ -927,10 +927,18 @@ The Problems panel lies across the bottom, in two tabs: This file (`space n q`) 
 | `tab`, `shift+tab` | the other tab |
 | `g g` / `shift+g` | the first / last row |
 | `/` | filter the tab's problems |
+| `a` | show all lint findings, including hidden and ignored rules; press again to restore filtering |
 | `q` | close the panel |
 | `esc` | back to the note |
 
 On a section's heading in All, `enter`, `o` and `s` fold or unfold it.
+
+### Work and version
+
+| Keys | What |
+| --- | --- |
+| `space b` | background work, live controls and recent outcomes |
+| `space a` | About slipbox: full version, channel and upgrade information |
 
 ## The `:` prompt
 
@@ -956,8 +964,6 @@ Your configuration's [`[aliases]`](configuration.md) adds more commands, or rena
 | `:wq`, `:x`, `:wqa`, `:xa` | save every changed note and quit |
 | `:q!` | quit without saving |
 | `:restart` | start slipbox again, as the newest version installed, where you are; asks first about unsaved notes |
-| `space b` | background work, live controls and recent outcomes |
-| `space a` | About slipbox: full version, channel and upgrade information |
 | `:upgrade` | ask now whether a newer slipbox is out, and offer it |
 | `:e <note>`, `:open <note>` | open a note, or any text file here, by its path |
 | `:vs [note]` / `:sp [note]` | split side by side / stacked, the note in the new window |
@@ -1085,7 +1091,7 @@ it back to the terminal.
 
 | Where | What a click does |
 | --- | --- |
-| `≡` on the left rail (without the rail, on the top bar) | shows the explorer, focused, or hides it |
+| `≡` on the left rail | shows the explorer, focused, or hides it |
 | `◷` on the left rail | shows the history, focused, or hides it |
 | `±` on the left rail | shows source control, the git panel, focused, or hides it |
 | `ℹ` on the right rail | shows Info, focused, or hides it |
@@ -1095,7 +1101,9 @@ it back to the terminal.
 | the top bar's version or upgrade arrow | opens About slipbox |
 | the top bar's `slipbox` | opens the command palette |
 | a window header's `Read` / `Lens` / `Source` | shows it rendered, in the lens or as written; one in italics, why not |
-| the top bar's vault | lists the named folders, and `enter` goes into one |
+| the top bar's explorer zoom | opens and focuses the explorer |
+| the top bar's changed-file count | opens source control |
+| the top bar's workspace | lists all known vaults and home workspaces; `enter` goes into one |
 | the top bar's branch | in a repository: pull, push and fetch, then the branches to check one out |
 | a heading in a window's breadcrumb | scrolls that window to it, and focuses it |
 | the breadcrumb's icon / its `…` | finds a heading / lists the headings the cursor is under |
@@ -1106,7 +1114,6 @@ it back to the terminal.
 | a task's box (`☐` / `☑`) | ticks or unticks it |
 | the status line's `‹` / `›` | back / forward in the window's history |
 | the status line's path | lists the window's history, with Copy path first |
-| the status line's vault and branch, while the top bar is hidden | the same as the top bar's branch |
 | a change's sign in the gutter | shows the change, with Revert and Stage |
 | the status line's problems | the Problems panel on This file (on All when the file has none), or closes it |
 | a sign in the problems bar, a coloured line number | the Problems panel, on that problem |

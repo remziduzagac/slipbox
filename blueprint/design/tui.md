@@ -17,7 +17,7 @@ Code, in `src/tui/`:
 | `input.ts`, `mouse.ts` | keys and pastes, dispatched in order, the which-key popup; clicks, drags, the wheel |
 | `overlays.ts`, `properties.ts` | lists, prompts and dialogs; the properties editor in the floating window |
 | `panels.ts`, `history.ts` | the side panels, their widths and filters; the history |
-| `explorer.ts`, `explorer-disk.ts`, `marks.ts` | the explorer, one tree and its view; what the walk leaves out; marks |
+| `explorer.ts`, `explorer-disk.ts`, `marks.ts` | the explorer, one tree and its zoom; what the walk leaves out; marks |
 | `following.ts`, `peek.ts` | links followed only when you say so; the peek at another vault's file |
 | `git.ts`, `info.ts`, `outline.ts`, `footnotes.ts` | git's state, changes and commits; Info; the outline; footnotes |
 | `gitpanel.ts`, `gitview.ts`, `gitmouse.ts`, `draw-git.ts` | the git panel: rows, keys, buttons, footer; mouse |
@@ -30,6 +30,7 @@ Code, in `src/tui/`:
 | `renaming.ts`, `linking.ts`, `search.ts` | renames previewed; links under the cursor, inserted; search, tags, types |
 | `watch.ts`, `saving.ts` | the watcher, polling, indexing, reloads; saving, autosave, conflicts, quitting |
 | `pictures.ts`, `exporter.ts`, `handoff.ts`, `scratch.ts` | pictures; export; hand-offs to an editor; scratch |
+| `report.ts` | reporting a problem: the window, the screen and place kept, sending (§ Reporting a problem) |
 | `actions.ts`, `actions-*.ts` | the command implementations, by area; `registerActions` registers them all |
 | `palette.ts` | the command palette and the help list |
 | `buffer.ts` | a note's text, its undo steps, unsaved state, and cached layouts |
@@ -48,11 +49,11 @@ Code, in `src/tui/`:
 ## Screen layout (plan `3.1`)
 
 ```text
- slipbox                    ◈ notes · main ↑2           indexing 3…     ← permanent top bar
+ slipbox                    ◈ notes · main ↑2            0  0.5.0     ← permanent top bar
 ━━━━━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━  ← the frame's top rule
  ≡  Explorer   ┃ 1 index × ┃ 2 alpha × ┃                             ┃ +3  ← left rail (tinted) · explorer ┃ tab strip
  ◷             ┣━━━━━━━━━━━┻━━━━━━━━━━━┻━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━┻━━━  ← the strip's rule, the outline under it
-    ▾ notes    ┃ § Heading › Sub  Read Lens Source┃ Outline            ▤   ← window header (tinted) ┃ outline · rail
+    ▾ notes    ┃ § Heading › Sub       R L S┃ Outline            ▤   ← window header (tinted) ┃ outline · rail
     ├─  beta   ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
     └─  alpha  ┃ ▌ Sub                            ┃ ▾ Heading              ← explorer ┃ note ┃ outline
                ┃ Text with the █ursor on it…      ┃ └─  Sub                ← (both panes optional)
@@ -62,7 +63,7 @@ Code, in `src/tui/`:
         │     Opens the link…      Moves to the…│ ┃
         └──────────── backspace up · esc cancel ┘ ┃
 ━━━━━━━━━━━━━━━┻━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┻━━━━━━━━━━━━━━━━━━━━━━  ← the frame's bottom rule
- READ  notes/alpha.md ↻ reloaded  ● watching  → beta.md (resolved)  L12:7 40%  ← status line
+ READ │ NORMAL  alpha.md ↻ reloaded  ● watching  → beta.md (resolved)  L12:7 40%  ← status line
 ```
 
 **The frame.** Right under the top bar, a `━` rule in the `border` role runs across the top of
@@ -82,10 +83,11 @@ folder open in its place: told when it changes, its control characters stripped.
 **The top bar** is permanent, including zen (VB-D3, VB-T2, #86). `draw-topbar.ts` draws the grouped items:
 
 - the `slipbox` palette chip at left;
-- the central location block: explorer zoom (`top:zoom`, `explorer.focus`), workspace without the vault prefix
+- the central location block: explorer zoom (`top:zoom`, `explorer.focus`), workspace labelled by its vault, or home
+  folder
   (`top:vault`, `folders.open`), branch with tracking and operation (`top:branch`, branches menu), changed-file count
-  (`top:changed`, `git.focus`). The vault remains in Info. A workspace is the home folder, branch, home or vault
-  fallback;
+  (`top:changed`, `git.focus`). The vault remains in Info. Workspace ownership remains per branch, home folder, home or
+  vault fallback (VB-D4, VB-D6);
 - at right, the permanent work count (`top:work`, `background.open`, `space b`), dim at zero and bright otherwise,
   and running version (`top:version`, `app.about`, `space a`), shortened to `x.y.z-P` for previews. An available
   upgrade adds an arrow (`top:upgrade`, `app.about`) in the theme's green `upgrade_available` role (VB-D7, VB-T7).
@@ -110,7 +112,7 @@ its release notes link (`app.release_notes`, copies the address) and `app.upgrad
 `ui.top_bar` is retired with a notice, removed from settings and keys. The status line has no location fallback.
 
 **The window header** tops each window, between two rules: in a split the window's file name, then the breadcrumb,
-then at its right the mode's buttons, and at the far right of the window at the top right, without the right rail,
+then at its right the view buttons, and at the far right of the window at the top right, without the right rail,
 the outline's `▤` (HDR-D1). In a split the name is `strong` in the active window and `dim` in the other, cut to half
 the row. `ui.window_header = false` removes it, as do "Window header" in the UI settings list and the palette; zen
 mode, the floating window and windows under 8 rows have none (HDR-D3). Without a header there are no header rules,
@@ -285,7 +287,9 @@ horizontal bar: a `▄` track and thumb under the text (ascii `-` and `#`), draw
 wider than the window; the row stays reserved when it isn't, so the text doesn't jump. A side pane
 whose rows are wider than it scrolls sideways too: its rows are clipped instead of cut with `…`,
 and its last row holds the same `▄` bar (only while they overflow). A code block that scrolls sideways has its own
-`▄` bar on its last row, under its code (§ Code blocks that scroll). Every bar can be clicked and
+`▄` bar on its last row, under its code (§ Code blocks that scroll). A picture shown at its own size that is wider than
+its room has its own `▄` bar on the row under it
+(§ Pictures in a window). Every bar can be clicked and
 dragged; in a side pane that focuses the pane and pins its scroll, like the wheel. A horizontal
 wheel or trackpad scrolls a side pane sideways as it does the note.
 
@@ -334,9 +338,13 @@ once: the second click, landing in the note it opened, is swallowed.
 
 Notes open as buffers, shown in tabs, with one split (D141):
 
-- **Buffer:** one open file, with its source, parse, and layouts by width. Buffers are
-  internal: there is no buffer list. They're keyed by path, so a note deleted on disk keeps
-  its buffer.
+- **Buffer:** one open file, with its source, parse, and layouts by width — and, for a note that asks for a picture
+  (its own, or an embedded note's), by its window's room for pictures, its height, and the pictures it shows at their
+  own size (§ Pictures in a window), so two windows on one note each size its pictures for themselves. A block that
+  asks for a picture is kept in the block cache with what its pictures were sized for, and laid out again where that
+  differs; other blocks are kept as before, and a note that asks for none isn't laid out again when only its window's
+  height changes. Buffers are internal: there is no buffer list. They're keyed by path, so a note deleted on disk
+  keeps its buffer.
 - **View** (a window): a buffer plus its own cursor, top row, selection, find and history.
   Two windows may show one buffer.
 - **Tab:** one window, or two in a split, with an orientation (side by side, or stacked) and a ratio (the first window's
@@ -428,10 +436,11 @@ vault, a backlink from one and another vault's search hit open a peek instead, g
 you left; each switch is remembered, so a chain of them unwinds one by one. From a vault gone into from a tab kept from
 a peek, back goes into the vault it was kept in.
 
-**The view follows** (VV-D5): the explorer's unfolded folders are kept by their absolute paths, then given the new
-vault's keys; a view holding the new vault stays, the folders down to the vault unfolded; one not holding it zooms out
+**The zoom follows** (VV-D5, VB-D1): the explorer's unfolded folders are kept by their absolute paths, then given the
+new
+vault's keys; a zoom holding the new vault stays, the folders down to the vault unfolded; one not holding it zooms out
 to the common parent (§ Side panes); where the tree can't show the vault (its path has a hidden folder: a worktree in
-`.claude/worktrees/`), the view moves to the vault. Started in a folder outside every vault (`slipbox /srv/x`),
+`.claude/worktrees/`), the zoom moves to the vault. Started in a folder outside every vault (`slipbox /srv/x`),
 Elsewhere's, or in `~`, home, nothing opens over the explorer: the launcher of D50 is gone.
 
 **The vaults** (`space v v`, `:folders`, `folders.open`; `slipbox vaults`) list every known vault, named or not,
@@ -1319,6 +1328,217 @@ their width, leaving at least 6 of the note) and close after a pick. The wide-te
 Over the note, a pane's border and margin belong to it (clicks there focus it); the side panes take clicks and the wheel
 before the note's borders and scrollbars, and the outline, drawn over the explorer, before the explorer.
 
+## Reporting a problem
+
+`space r`, `:report` or help's "Report a problem" (`help.report`) opens the report: what you'd write in the bug form,
+with what slipbox knows already in it, in the floating window (`3.20`) as a commit's message is (RPT-D1). Its text is
+the report exactly as it will leave; nothing leaves until you send it, and you send it, never slipbox (RPT-D3).
+
+**The window.** Kind `report`, a virtual Markdown buffer (`report`) in SOURCE view, made as the commit's is: outside
+the app's buffers, so it's never in the unsaved list that stops a quit, never autosaved, never in the history or the
+session. The `Reporter` (`app.report`) keeps the buffer and its view while the window is closed. Titled "Report a
+problem"; its bottom border says ` ctrl+s sends it or adds the screen · esc · q leaves it ` (never the floating
+window's "writing back"); the status line names it `report`, with no "unsaved" mark, since it's never saved anywhere.
+A new one opens typing, on the title's line (empty, the line after the guide); the first `esc` leaves typing, the next
+leaves the window, and focus goes back where it was opened from (the explorer, say). Opened over the merge screen of
+the conflict prompt's (m), that question is asked again once typing stops, as for any conflict that comes while you
+type — never over the report as it opens typing, where the title's letters would answer it. Opened again, it's
+as it was left, not typing. Its text, the title typed:
+
+````markdown
+<!-- Nothing has left yet. The next line is the title; ctrl+s sends it all, or adds the screen first. -->
+
+Links lose their anchors
+
+### What happened
+
+### What you expected
+
+### Steps to make it happen
+
+### Version
+
+0.5.1 (the installer's, stable channel, linux-arm64 build, Bun 1.3.1)
+
+### Installed with
+
+the installer (install.sh)
+
+### Platform
+
+Ubuntu 24.04.1 LTS (Linux 7.2.9), arm64
+
+### Terminal
+
+ghostty 1.2.0, TERM_PROGRAM herdsman 0.2.0, TERM xterm-ghostty, 236×60, inside herdsman, over SSH
+````
+
+- The headings are the bug form's own labels (`.github/ISSUE_TEMPLATE/bug_report.yml`), so what's copied or posted
+  reads as an issue the form made, and the address's fields are read back from it (below).
+- Every fact is text like the rest: cut a path or a name you'd rather not share. `u` undoes, as anywhere.
+- `esc` leaves it; opened again, it's as you left it, the facts kept as edited. The draft is kept in memory only,
+  never written to disk by slipbox, until `gh` has posted it or slipbox quits. (A copy you make is a copy: when no
+  clipboard takes it, it's the state folder's `clipboard.txt`, as every copy's, and said.)
+- `ctrl+s` (`:w`) is `note.save`, which in the report runs `help.report_send`, the menu (§ Sending), changed or not.
+  The buffer's own save — which an edit that saves after it calls too (a link put in, a footnote added) — has nothing
+  to write, and opens nothing. Never said as "saved" or "sent". A task toggled in it flips in its text. `:w!`
+  (`note.save_force`) on any virtual buffer is `:w`, and `App.writeBuffer` refuses a virtual buffer: the floating
+  window's text is never written to its name on disk (said). A task toggled in a read-only window — a peek, a
+  hover — is refused, said, its file never written from there.
+
+**Reading it back.** The copy and `gh` send the text as you left it, the generated guide taken out (and for `gh`, the
+title line, which becomes its title); nothing in them is moved or joined. Only the address maps the text onto the
+form's fields, by one rule, which also says where an added screen goes:
+
+- Headings count only outside fences (```` ``` ```` and `~~~`, any length): a screen holding `### Version` is the
+  screen's text.
+- A section is a form label's `###` heading, matched exactly, to the next one. A heading of your own (`### Logs`), or
+  a label renamed, is text of the section above it; a label twice, the two joined; a label deleted, its field empty;
+  the order is yours.
+- The generated guide comment is left out of the copy and `gh`'s body only as generated; edited, it's kept as text
+  (GitHub hides a comment anyway). Before the first label, a comment is never the title, nor text the address would
+  lose.
+- The title is the first line with text before the first label, a comment aside. A comment opens its line, as an HTML
+  block does, anywhere outside a fence — after a quote's `>` or a list item's marker too, and, in a line one holds, a
+  `<!--` later in it; `<!--` later in a paragraph's line is the line's own text (CommonMark), the title's as
+  typed. Nothing in a comment, nor the rest of a line one starts, is a label or opens a fence; in a section it's the
+  section's text, as written. Text after a comment's end on the title's line is the title; what's before the title
+  there stays in `gh`'s body, so the body never opens a comment it doesn't close. Any other text there belongs to no
+  field: the address would lose it, so the menu says so and offers the copy and `gh` only (below), until it's moved
+  under a heading.
+- What slipbox sees: its generated outer fence is taken off for the address (the form fences that field itself);
+  fences you wrote, and text around them, are kept — and any line that could end a fence (a note's own in the screen
+  or the place, or yours) is indented four spaces there, which no fence's end may be (CommonMark), so nothing in it
+  ends the form's own block early, whatever fence GitHub picks. The copy and `gh` keep it as written.
+
+**The facts** (`core/report.ts`, RPT-D1), the same as `slipbox report` prints:
+
+- **Version:** `VERSION`; how it was installed, in a word ("the installer's", "Homebrew's", "a release put in place by
+  hand", "from source or built by hand"), since the form's dropdown may not fill from the address (RPT-D3); the channel
+  only for the installer's install (`readChannel`, which says stable when there's no file, so never asked of
+  another); the release's platform (`RELEASE.target`); Bun's version.
+- **Installed with:** the form's own wording: "the installer (install.sh)", "Homebrew" (`installedBy`), "from
+  source" (no `RELEASE`); a release's binary put somewhere by hand says so in words of its own.
+- **Platform:** the system's name and version (Linux's `/etc/os-release` `PRETTY_NAME`, else its `NAME` and
+  `VERSION`; macOS's `SystemVersion.plist`), the kernel (`os.release()`), the processor (`process.arch`), and WSL when
+  it's there (`core/wsl.ts`): `Ubuntu 24.04.1 LTS in WSL (Linux 5.15.167.4-microsoft-standard-WSL2), x64`.
+- **Terminal:** what the terminal answered when asked who it is (OpenTUI's `capabilities.terminal`, from XTVERSION;
+  the TUI only), `TERM_PROGRAM` and its version, `TERM`, the size in cells, the multiplexer and SSH. The multiplexer is
+  OpenTUI's when it names one, and the environment's (`TMUX`, `ZELLIJ`, `STY`, `HERDSMAN_ENV`, `HERDR_ENV`, each set
+  and not empty), each once: OpenTUI's `none` or `unknown` never hides what the environment says. The terminal's own
+  name is the XTVERSION answer's alone (OpenTUI's `from_xtversion`), else none: `TERM_PROGRAM` says it apart. Nothing
+  known at all, "not known". SSH is `SSH_CONNECTION`, `SSH_CLIENT` or `SSH_TTY` set, or
+  OpenTUI's `remote`. These are presence only: an address, a socket path or a session's name is never written.
+- Each value from the environment or a file is sanitized (`2.9`) and cut to a line.
+
+**What you saw, if you add it** (RPT-D2). slipbox keeps two things when the report opens, and puts neither in it:
+
+- **The screen as text:** the frame drawn after the command ran — the palette, help or the which-key popup that ran
+  it closed, the messages showing as they were — drawn as every frame is and kept as text too, onto a `TextCanvas` of
+  the screen's size (`tui/canvas.ts`) beside the terminal's canvas, that frame only; the window opens on the next. Its
+  rows, with their trailing blanks cut. A picture isn't text, and isn't in it. Keys after the command wait for that
+  frame (a quarter of a second at most, and then no more), so a paste or keys sent at once go to the report, never
+  the window under it; `:report screen` and `:report where` asked before it both add theirs.
+  A frame whose drawing failed is kept as the screen that says so, and the report opens all the same: it's wanted
+  most then.
+- **Where you were:** the window's file (its path in the vault, else from home, `~/…`; a peek's, its vault's name and
+  its path there), the cursor's line number and
+  how it was shown (rendered, source, the lens open; nothing said for a file that isn't a note), then that line's
+  text: `handbook/operations-handbook.md, line 3, rendered`. A window with no file (a hover, none open): "no file was
+  open".
+
+`:report screen` or `:report where` (`help.report screen|where`), or the menu, adds one to the report, in full, in a
+```` ```text ```` fence longer than any run of backticks inside, so a note's own fences can't end it, under a first
+line of its own (`The screen, 236×60, as the report opened:`, `Where it was:`). It goes at the end of the `### What
+slipbox sees` section as § Reading it back finds it, before the next label wherever that section is; with no such
+section, a new one at the end of the text. A fence left open anywhere outside one makes that end unclear: it's
+refused, saying to close the fence first, so the screen never lands inside another field or another fence. It's one
+undo step: `u` takes it out. Added is its first line being in the text, outside any fence (the same words in a note's
+line, inside an added screen or place, don't count): deleted, it can be added again; there, the entry is gone and the
+command says so. Opened again, the window keeps what was added; the screen kept is the newer
+one.
+
+**Sending** (`ctrl+s`, `:w`: `help.report_send`; RPT-D3, RPT-D4). A menu, "Send the report — nothing has left yet",
+each entry with its key and run as its command (`help.report_send browser`, `help.report screen`, …); only those this
+machine can do, each saying what it does with what (the address's what it leaves out). Text that belongs to no field
+heads it, said, and `o` and `a` aren't there:
+
+| Key | Entry | Shown |
+| --- | --- | --- |
+| `o` | Open the bug form in your browser, filled in | a browser can be opened here |
+| `a` | Copy the bug form's address, filled in | always |
+| `v` | Copy What slipbox sees, to paste into its field | it doesn't fit in the address |
+| `c` | Copy the report, as Markdown | always |
+| `g` | Post it with gh | `gh` on `PATH` |
+| `s` | Add the screen as text | not added yet |
+| `w` | Add where you were | not added yet |
+
+- **The address** is `https://github.com/<repo>/issues/new?template=bug_report.yml` and a parameter per field, by the
+  form's ids (`title`, `version`, `install`, `platform`, `terminal`, `happened`, `expected`, `steps`, `output`),
+  encoded as `URLSearchParams` does. No `labels`: a reporter can't label, and the form labels it `bug` itself.
+  `install` is passed though a dropdown may not take it from the address (RPT research, Gaps): Version says how it was
+  installed too. `<repo>` is the release's (`RELEASE.repo`), else slipbox's own, `remziduzagac/slipbox` (RPT-D7).
+- **Its plan** (`core/report.ts`: the address, what it leaves out, and why), made when the menu opens, the length
+  measured on the encoded address: at most 5,000 characters (RPT research: about 5,500 survives GitHub's sign-in
+  redirect). In order: every field; else every field but `output`, which `v` copies; else the title and the facts;
+  else the facts alone; else none but the template. `o` and `a` say what they leave out ("filled in but What slipbox
+  sees: v copies it"), and `c` copies everything. Text that belongs to no field (§ Reading it back) leaves `o` and `a`
+  out, said. So does a fence left open, where each field ends isn't clear, and a comment (`<!--`) left open anywhere,
+  which GitHub would hide the rest behind, the facts among it (the menu's first line says which); the comment also
+  stops `gh` and an added screen.
+- **One copy at a time:** each entry puts one thing on the clipboard, never two in a row; another asked for while one
+  is being made is refused ("still copying — wait for it"). `o` copies nothing when the
+  browser opens; when it can't, it copies the address and says what's still left out (`v`, `c`). Each copy is said
+  as `App.copy` says it — by OSC 52, which a terminal never confirms; by the system's tool; or written to
+  `clipboard.txt` — and a copy refused (the clipboard busy) is said, never claimed.
+- **The browser** (`core/browser.ts`): `open` on macOS; in WSL, `wslview`, else `explorer.exe`; elsewhere `xdg-open`
+  when there's a display (`DISPLAY`, `WAYLAND_DISPLAY`); none over SSH, where a browser would open on that machine,
+  not yours — the entry isn't shown, and `a` copies the address to your terminal's clipboard (OSC 52). Run as an
+  argument vector (`13.2`) by the host's `runDetached`, nothing read from it; its exit waited for five seconds, one
+  that hasn't answered by then taken to have opened it: a failure copies the address instead and says why
+  (`explorer.exe` answers 1 when it worked: not taken for one). A link to the web is still copied, never opened
+  (§ Following links, unchanged): this is the one place slipbox opens a browser, because it's what you chose.
+- **gh** (`core/gh.ts`): nothing is run until you choose it. Then the account, as gh will use it, without the
+  network (no question opens for keys typed meanwhile, counted from the key that asked, so one sent with it counts
+  too: a `y` among them would answer it — said, `ctrl+s`, `g` asks again): a token in `GH_TOKEN` or `GITHUB_TOKEN`
+  comes before what gh keeps, so then it's "the account of GH_TOKEN (not checked)"; else the account gh keeps
+  (`gh config get -h github.com user`); neither, and it says `gh auth login` first; gh not answering in five
+  seconds, or not starting, said as that. gh is run as every helper is
+  (`core/tool-process.ts`: its output capped, its process group stopped at its deadline and when slipbox ends), with
+  `GH_PROMPT_DISABLED=1`, so it never waits on a question of its own. The report closed meanwhile, or something
+  opened over it, and nothing is asked over that: said, `ctrl+s`, `g` asks again. A
+  yes-or-no names everything: `Post "<title>" on <repo> as <account>? Anyone can read it.`, the title and text read
+  once the account is known, and on yes those are posted — `gh issue create --repo github.com/<repo> --title <title>
+  --body-file -` (github.com by name, as the account was read and the bug form is, whatever `GH_HOST` says), the text
+  after the title on its input — from the home folder (never the vault's, so no folder's settings reach it), waited
+  for up to a minute. While it posts, the window is closed and the report can't be opened or posted again ("posting
+  the report with gh… — wait for it"). Done: the issue's address said, the draft dropped. Failed: gh's first lines
+  said, the draft kept. No answer in a minute: gh killed, the draft kept, and said that it may have posted — look at
+  the issues before posting again. No title, or no What happened, and it asks for them first.
+- The window stays open after the browser or a copy, to send again another way.
+
+**Commands.** `help.report` (`space r`, `:report`; CLI: `slipbox report`) opens the report, or with `screen` or
+`where` adds that to it; `help.report_send` (`ctrl+s` and `:w` in the window; no CLI) opens the menu, or with
+`browser`, `address`, `seen` (`v`), `copy` or `gh` sends that way. `:report`, a space typed, lists its arguments;
+each command refuses an argument it doesn't know. Outside a report, `help.report_send` says how to start one, and
+`help.report screen|where` opens it with that added. `help.report_send` is your own config's only
+(`VAULT_FORBIDDEN_COMMANDS`, as one that runs a program): a folder's `[keys]` or `[aliases]` can't bind it
+(design/trust.md § What runs).
+
+**From the CLI** (RPT-D5). `slipbox report` prints the facts as the bug form asks them, a line each, and the form's
+address filled in with them; nothing typed, no screen. It's run before any vault is looked for (as `--version` is):
+no config of a vault read, no state written, nothing reaching the network. `--json`: `{ facts, fields, body, url }` —
+`facts` structured (`version`, `channel`, `installedBy`, `release`, `bun`, `system`, `terminal`), `fields` by the
+form's ids (`version`, `install`, `platform`, `terminal`), `body` the facts' sections as Markdown, ready for `gh issue
+create --body-file`, and `url`. The terminal's size is stdout's when it's a terminal, else left out; the CLI never asks
+the terminal who it is. The skill for agents (`core/skill.ts`) names it: an agent writing an issue runs `slipbox
+report --json` first.
+
+Code: `tui/report.ts` (the `Reporter`, `app.report`: the window, the frame and place kept, the menu, sending),
+`core/report.ts` (the facts, the report's text, reading it back, the address's plan), `core/browser.ts`,
+`core/gh.ts`, `cli/report.ts` (`slipbox report`, dispatched by `cli/cli.ts` before the session); the host's
+`terminal()` (`tui/run.ts`) hands the TUI a plain copy of OpenTUI's answer, so nothing else touches OpenTUI.
+
 ## Overlays
 
 One list component serves every picker. Like every floating window, it has a margin in its own
@@ -1436,6 +1656,25 @@ any other key leaves").
 feedback all go to one place: a floating box briefly, the messages list permanently (the last
 500).
 
+**The dialog** (`tui/dialog.ts`) asks a question with controls of its own: a select, and checkboxes when it has any.
+The update offer is its first (distribution.md § The update offer), and a restart's question about notes unsaved its
+second (distribution.md § Restarting). Framed like the other popups, its title in its top border, it shows
+its text, wrapped; its select's choices, one a row, the one chosen marked `●` and the others `○` (`(*)` and `( )` in
+ASCII's glyphs); its checkboxes, `☑` or `☐` as a task's (`[x]`, `[ ]`), one the chosen choice doesn't take dimmed; and,
+under a rule, what the row under the cursor does (as many rows as the longest help needs, at most three, so it keeps
+its height). Its keys are in its bottom border: `enter: do it · space: tick · esc: not now` (`space` only with
+checkboxes; `esc` says what it does: `not now`, `cancel`). The marks are glyphs of each set (`choiceOn`, `choiceOff`).
+
+- `↑` / `↓`, `j` / `k`, `tab` / `shift+tab` and `ctrl+n` / `ctrl+p` move the cursor over the choices, then the
+  checkboxes, wrapping; on a choice, the cursor marks it.
+- `space` ticks or unticks the checkbox under the cursor; a dimmed one is ticked, and the choice it goes with marked.
+- `enter` does the choice marked, with the checkboxes as they are; `esc` cancels, as the dialog says.
+- A click on a choice marks it and does it; a click on a checkbox ticks or unticks it, as `space` does; a click outside
+  is `esc`.
+- Every dialog drops the keys, pastes and clicks that arrive before it's first drawn and in the half second after, by
+  when they arrived (each its own time, taken as it's queued), not when they're handled: one meant for a note, or for
+  the dialog that opened it, never answers it.
+
 ## UI settings
 
 These are the `space u` toggles and pickers (list in [keys.md](../../docs/manual/keys.md)):
@@ -1540,6 +1779,69 @@ it never scrolls on its own then. `code_wrap = "wrap"` wraps each long line at t
 first marked `↪`, as `slipbox render` always does. The code view's cells are the file, broken at their structure
 (code-view.md § What it looks like), not a code block.
 
+## Pictures in a window
+
+A note's picture is sized for the window it's in: fitted to it (rendering.md § Blocks and inlines), or at its own
+size by choice. What the window shows at its own size, and its pictures' rest, are kept by `tui/pictures.ts`; the
+sizes are worked out by `tui/images.ts`; the rows laid out by `core/layout/render.ts`; the drawing done by
+`tui/draw-pane.ts`, `tui/opentui.ts` and `tui/placeholders.ts`; the commands are `src/core/commands/motion.ts`'s,
+done in `tui/actions-view.ts`.
+
+- **What it's fitted to.** The window's room: its text columns less what's before the picture (a list's indent, a
+  quote's bar, an embed's frame) — with wrapping on, the layout's room for the block; with wrapping off, the
+  window's, not the note's natural width — and its rows less the caption rows, however many its alt text
+  wraps to, and the one-row gap for a drawable picture (LC-T1). Its rows are the window's as they are with find's row
+  closed, so opening find doesn't size it again.
+- **At its own size.** A click on a picture — pressed on the cells it's drawn in, not the blank beside it, a quote's
+  bar or its scrollbar, and released without moving — puts the cursor on its first image row and shows it at its own
+  size; another click fits it to the window again. The press is the picture's before the cursor is placed, and never
+  counts toward a double-click; like any click, it ends a selection and visual mode. The release finds the picture
+  by its file, should the note have been laid out again since the press. One that moves becomes a selection, as a
+  drag from those rows always did. A drawing slipbox made is no such picture: a click on it places the cursor. `z p`
+  (`picture.size`, PIC-D3) does the same from its `▣` line, which the cursor reaches as any row, and `tab` as a
+  link. A picture whose two sizes are one (it fits whole) stays as it is, and the message says so. With the lens
+  open, a click changes its size and leaves the cursor, and the lens, where they are: on the picture's line, the lens
+  would show its markdown instead. Where no pictures are drawn (a terminal that draws none, `[render] images =
+  "never"`), `z p` says so rather than where to go; on the `▣` line of a picture not drawn (not found, not
+  fetched), why; with the lens open or in source mode, where it acts. The `z` group's which-key line names `p`, `h`
+  and `l`.
+- **Scrolled sideways.** Wider than its room, it scrolls as a code block does (§ Code blocks that scroll), its frame
+  rows a block of their own — its `▣` rows aren't in it, but name it, so the cursor on them never moves its offset:
+  a sideways wheel or trackpad over it, or the wheel with `shift`, 6 columns a notch; its `▄` bar, on the row under
+  it, clicked or dragged; `z h` and `z l` (`picture.scroll_left`, `picture.scroll_right`, PIC-D3) a quarter of
+  its room a press, from its `▣` line. The sideways offset stays where it was left; cursor placement does not reset it.
+  Its rows are frame rows, blank under the picture: no `‹ ›` marks, nothing copied, nothing found.
+- **How long.** It's the window's, by the picture's file as found (an SVG's own file, not its rasterised PNG; a
+  picture on the internet by its address): kept while the window shows the note — scrolled away and back, the lens
+  opened and closed, an edit or an agent's write that moves it, a resize — and dropped when the window shows
+  another file, opened or gone to by its history, a code file or a source view included. It isn't saved in the
+  session; a window split off starts with its pictures fitted. The same file
+  twice in a note is at its own size in both places, each at its own (two Obsidian sizes, two sizes). Its sideways
+  offset is kept as a code block's (by its line and how many blocks start there), clamped as the window narrows.
+- **A window resized** fits its fitted pictures again; one at its own size stays so, its offset clamped, and once
+  it fits whole its bar goes — it's still at its own size should the window narrow again. Once a window has been
+  drawn, a change to its size that changes the size of a picture in sight holds its pictures back, whatever the
+  protocol, until the size has rested 120 ms, then draws them at the size it ended at: a separator dragged sends
+  Kitty each picture once. A resize that leaves every picture in sight its size (a panel opened beside a picture
+  bound by its width) holds nothing back, nor does a picture shown at another size by a click. The rest is the
+  window's own, beside the rest after quick scrolling, and checked before Kitty's placeholders, which never wait for
+  scrolling; for that rest, a step sideways is a picture's own offset or the window's, never a code block's.
+- **Wrapping off.** The window scrolls sideways as a whole (§ Screen layout). A picture is fitted to the window,
+  not to the note's natural width. One at its own size scrolls with the window, with no bar of its own: the
+  window's sideways extent reaches its right edge, the prose laid out as it was, and `z h` and `z l` then scroll the
+  window. Pictures are drawn, cropped, while the window is scrolled sideways, where they used to wait for its left
+  edge.
+- **The layout's key.** The window's own key, which places its cursor and top again, includes its pictures' key, so
+  a toggle that leaves the note's rows as many is still seen. The lens keeps the note's render around it while its
+  block is typed into; it's made again when the pictures' key changes, as when the width does.
+- **The cost.** With Kitty's placeholders, a picture is sent once per size: a resize sends it once, after resting;
+  shown at its own size, once; scrolled sideways, never. With sixel, a view's pictures are drawn again as it
+  scrolls, down, up or sideways, as before; each frame encodes the part that shows, at most the window's pixels —
+  more than a 12-row picture took, no more than a window's. Decoding doesn't change.
+- **Not pictures here:** drawings slipbox makes (Mermaid, maths, `12.16`, `12.17`) keep their sizing, at most 60
+  rows; a click on one does what it did.
+
+
 ## Configuration reload
 
 The configuration reloads **by itself** when a config file is saved: the user file, the enclosing
@@ -1565,17 +1867,18 @@ so a typo saved mid-edit changes nothing until it's fixed.
 Every write goes one way (`writeBuffer`; D142): the file is replaced atomically (a temp file in the same
 folder, then a rename) keeping its permissions; a symlinked note is written through to its target,
 and a target outside the vault is refused (`7.5`) — in home, a link you followed is written through wherever it
-leads, and in Elsewhere what the file system allows (VV-D6; [roots.md](roots.md) § Links followed only when you say
-so); the watcher is told the write is its own; the
-buffer reloads, its windows keeping their anchors, so the cursor stays put.
+leads, and in Elsewhere what the file system allows (VV-D6; [roots.md](roots.md) § Links followed only when
+you say so); the watcher is told the write is its own; the buffer reloads, its windows keeping their anchors, so the
+cursor stays put. A virtual buffer (`3.20`: a note's properties, a commit's message, a peek, a report) is no file:
+`writeBuffer` refuses it, said, and `:w!` on one is `:w`, its own save (RPT, found by its review).
 
-**Task checkboxes** (`4.11`) are the first write. `ctrl+l` (`space n t`), or a click on the
-checkbox, flips the task item holding the cursor — the innermost, from any of its rows; in SOURCE view and the lens,
-the one holding the cursor's line, found in the parse — as a one-byte edit to the file's bytes, so a BOM, CRLF
-endings and even invalid UTF-8 survive untouched.
-If the file changed on disk since it was shown, it is reloaded instead and nothing is written (its
-lines may have moved). With unsaved changes it flips the mark in the text on screen instead — an undo
-step, left unsaved ("done ✓ (unsaved)") — never on disk under them.
+**Task checkboxes** (`4.11`) are the first write. `ctrl+l` (`space n t`), or a click on the checkbox, flips the task
+item holding the cursor — the innermost, from any of its rows; in SOURCE view and the lens, the one holding the
+cursor's line, found in the parse — as a one-byte edit to the file's bytes, so a BOM, CRLF endings and even invalid
+UTF-8 survive untouched. If the file changed on disk since it was shown, it is reloaded instead and nothing is written
+(its lines may have moved). With unsaved changes it flips the mark in the text on screen instead — an undo step, left
+unsaved ("done ✓ (unsaved)") — never on disk under them. In a read-only window — a peek, a hover, a file as it was in
+git — it's refused, said: that file is never written from there.
 
 **Handing off to another editor** (`4.1`, `4.2`, `4.12`; D145) comes in two kinds, both opening the note at
 the cursor's source line. `space n e` steps aside: the renderer suspends, the editor
@@ -2010,7 +2313,8 @@ produces one error message, `⚠ not watching` in the status line, and polling o
 
 ## The lint surface (plan `3.21`)
 
-[LC-D1](../workstreams/lint-and-captions/decisions.md) (#91) filters the presentation after the run, keeping every raw
+[LC-D1](../workstreams/archive/lint-and-captions/decisions.md) (#91) filters the presentation after the run, keeping
+every raw
 finding. `lint.follow_view = true` hides MD013 on paragraphs, lists and quotes when `ui.wrap` is on, table rows always,
 and fence interiors when wrapping is on and the active code-wrap setting is `wrap`. Other block kinds and fence
 delimiters keep their findings.

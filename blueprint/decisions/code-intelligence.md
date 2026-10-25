@@ -15,7 +15,8 @@ embarrassing to add after someone else finds it.
 
 ## D160: slipbox runs your linter rather than shipping one (3.21, 2026-10-01)
 
-> **Amended by [LC-D1](../workstreams/lint-and-captions/decisions.md) (2026-10-25):** completed findings are filtered
+> **Amended by [LC-D1](../workstreams/archive/lint-and-captions/decisions.md) (2026-10-25):** completed findings are
+> filtered
 > for the configured view, with explicit ignored rules, hidden counts and a key to reveal all; the linter is unchanged.
 
 > **Amended by D163 (2026-10-01):** a project's linters without a language server join through the lint surface.
@@ -219,6 +220,9 @@ folder can still choose what a server runs; what the project's own tools do is t
 **Not chosen:** a question per folder or repository, or a list of trusted places (ideas.md § Trust).
 
 ## D172: Run nothing of a folder's own unless you trust its root (23.1, 23.2, 2026-10-07)
+
+> **Detailed by RPT-D3, RPT-D4 and RPT-D6 (2026-10-26):** reporting can launch the system browser or post with
+> `gh` after confirmation. A vault cannot bind the sending command through its keys or aliases.
 
 **Decision:** slipbox runs programs you chose: your editor, git, and the servers and linters found in your config, on
 `PATH`, in your install folders (Mason's, `~/.cargo/bin`, `~/go/bin`, `~/.local/bin`) or installed by slipbox itself.

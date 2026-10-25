@@ -118,6 +118,9 @@ a darwin binary ad hoc, and cross-compiling has broken that signature before.
 
 ## D199: A daily update check, on by default, sending nothing identifying (14.4, 2026-10-10)
 
+> **Amended by UPG-D1–UPG-D7 (2026-10-26):** the daily check offers an upgrade in a dialog, with explicit
+> upgrade/restart choices and skip. `:upgrade` asks on demand. A newer local install offers restart without a request.
+
 > **Detailed by D221 (2026-10-11):** Bun's own crash reports are turned off at start.
 >
 > **Amended by GR-D15 (2026-10-12):** the check, and `slipbox upgrade`, follow the install's channel: on `preview`,
