@@ -30,13 +30,18 @@ export class Search {
   /** The search list on screen, refreshed when the index is ready. */
   private list: ListOverlay | null = null;
 
-  /** The index opened (or made) and caught up in the background; the graph's changes followed. */
-  start(): void {
+  stop(): void {
     this.stopFeed?.();
     this.stopFeed = null;
     this.index?.close();
     this.index = null;
     this.job = null;
+    this.list = null;
+  }
+
+  /** The index opened (or made) and caught up in the background; the graph's changes followed. */
+  start(): void {
+    this.stop();
     if (isListed(this.app.loc) || this.app.config.search.engine === "scan") return;
     const idx = SearchIndex.open(this.app.loc);
     if (!idx) return;

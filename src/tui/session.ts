@@ -31,7 +31,7 @@ export class Session {
       .dirtyBuffers()
       .map((b) => b.key)
       .sort();
-    const key = paths.join("\n");
+    const key = `${this.app.loc.root}\0${paths.join("\n")}`;
     if (key === this.lastDirty) return;
     this.lastDirty = key;
     try {

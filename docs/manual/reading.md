@@ -146,7 +146,7 @@ With wrapping on, a code block too wide for the window scrolls sideways on its o
 - a paragraph of nothing else
 - a block of several paragraphs, from a line that starts with `%%` to one that ends with it
 
-Source mode and the lens show comments as written. A link in a comment still counts as one of the note's links, though
+SOURCE view and the lens show comments as written. A link in a comment still counts as one of the note's links, though
 it isn't drawn.
 
 A link shows its text, coloured by whether it reaches anything:
@@ -271,7 +271,7 @@ maths falls back to scrolls too.
 
 `render.code_wrap = "wrap"`, or Code blocks in `space u u`, wraps the lines instead: a line too long carries on in the
 next row, marked `↪`. With wrapping off (`space u w`), the whole window scrolls sideways and a code block moves with
-it. The Markdown, in source mode and in the lens, follows wrapping alone.
+it. The Markdown, in SOURCE view and in the lens, follows wrapping alone.
 
 ### Footnotes
 
@@ -314,14 +314,19 @@ Inside a paragraph, tags such as `<kbd>`, `<sup>` and `<mark>` are dropped, and 
 
 ## Pictures
 
-A picture is always drawn as a line naming it: `▣` and its alt text. For example, `![A grinder](grinder.png)` is
-`▣ A grinder`.
+A picture on a paragraph of its own has a boxed caption **under** it: `▣` and its alt text, wrapped to the window.
+A line break inside the alt text becomes a space. When the terminal cannot draw the picture, or
+`render.images = "never"`, the caption stands alone. A picture beside other text stays inline, as `▣ alt`.
 
-Where the terminal can draw pictures, a picture on a paragraph of its own is also drawn under that line. It's fitted to
-its window, with its proportions kept: as wide as the text column, never larger than its own size, and no taller than
-the window, so it shows whole with its `▣` line. In a short window, or for a tall and narrow picture, it's never made
-smaller than 12 rows tall or 20 columns wide: it's taller than the window then, and you scroll past it as you scroll
-past text. A picture beside other text stays its `▣` line.
+The box's top-right buttons copy the **path** (`⧉p`), **alt text** (`⧉a`) and **image** (`⧉i`) separately.
+Image copying needs an optional native clipboard helper: `wl-copy` on Wayland, `xclip` on X11, or `osascript` on macOS
+for PNG, JPEG and TIFF. OSC 52 carries text only. A remote image must be fetched before its image can be copied.
+
+![A picture and its boxed caption](../images/obsidian-home.png)
+
+The picture fits its window with proportions kept: no wider than the text column or its own size, and no taller than
+the window less its caption. In a short window, or for a tall, narrow picture, it stays at least 12 rows tall or
+20 columns wide, and you scroll past it as text.
 
 **At its own size.** Click a picture, or press `z p` with the cursor on its `▣` line, to see it at its own size. The
 text around it stays as it was. A picture wider than the window scrolls sideways on its own, with a scrollbar under
@@ -345,7 +350,7 @@ and a drag of its scrollbar. Click it, or press `z p`, again to fit it to the wi
 
 **Which terminals draw them.** slipbox asks the terminal when it starts. Pictures are drawn in a terminal that speaks
 the Kitty graphics protocol or sixel, as kitty, Ghostty, WezTerm and foot do. They're never drawn as blocks of coloured
-characters. In a terminal that speaks neither, a picture is its `▣` line alone.
+characters. In a terminal that speaks neither, a picture is its caption box alone.
 
 While you resize a window, its pictures wait, and are drawn at its new size when you stop. With sixel, pictures can
 also disappear while you scroll quickly, and come back when you stop.
@@ -535,7 +540,7 @@ A data file that doesn't parse can't be drawn. It opens as text, with the error 
 - **Text files**, any other file that holds text, open as text, highlighted by their language. Org and AsciiDoc files
   are text files to slipbox.
 - **Code** in a language slipbox's code view knows opens in the code view. Its comments are drawn as prose, and each
-  definition is a cell. That is [Code](code.md). `render.code = "source"` opens code as text instead.
+  definition is a cell. That is [Code](code.md). `render.code = false` opens code as text instead.
 - **Binary files**, such as pictures, PDFs and archives, never open. A link to one copies its path. A file named like
   text that holds binary bytes is treated the same.
 

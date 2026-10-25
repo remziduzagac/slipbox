@@ -105,7 +105,7 @@ const layoutOf = (h: Harness) => h.app.currentLayout(h.app.view!);
 const rowsOf = (layout: Layout, file = "shot.png") => {
   const rows = layout.lines.flatMap((l, i) => (l.pic && basename(l.pic.p.file ?? "") === file ? [i] : []));
   const first = rows.find((i) => layout.lines[i]!.pic!.row === 0)!;
-  return { rows, first, p: layout.lines[first]!.pic!.p, caption: rows.filter((i) => layout.lines[i]!.pic!.row < 0) };
+  return { rows, first, p: layout.lines[first]!.pic!.p, caption: rows.filter((i) => !!layout.lines[i]!.caption) };
 };
 /** Its rect where it's drawn, from the last frame. */
 const drawnRect = (h: Harness) => h.app.geometry!.pictures[0]!;
@@ -193,15 +193,15 @@ describe("at its own size, by a click or z p (PIC-D3)", () => {
     h.app.moveCursor(v, { row: before.lines.length - 1, col: 0 });
     click(h, r.x + 2, r.y + 1);
     const after = layoutOf(h);
-    const { p, first, caption, rows } = rowsOf(after);
+    const { p, first, caption } = rowsOf(after);
     expect(p).toMatchObject({ cols: 169, rows: 47, own: true, scrolls: true });
     // Its rows scroll as a code block's do, a bar under them.
     expect(after.lines[first]!.scroll).toEqual({ x: 0, w: after.width, total: 169 });
-    expect(after.lines[rows.at(-1)!]!.scroll).toMatchObject({ part: "bar" });
+    expect(after.lines[first + p.rows]!.scroll).toMatchObject({ part: "bar" });
     expect(after.lines[caption[0]!]!.scroll).toBeUndefined();
     // Nothing reflowed: the text's rows are the same, the picture's longer.
     expect(textOfRows(after)).toEqual(textOfRows(before));
-    expect(v.cur.row).toBe(caption[0]!);
+    expect(v.cur.row).toBe(first);
     expect(h.app.messages.at(-1)!.text).toContain("at its own size");
     // Again: fitted.
     const again = drawnRect(h);
@@ -856,5 +856,63 @@ describe("found in review (PIC, round 2, the rest)", () => {
     h.app.lens.setViewMode(v, "source");
     await h.keys("z", "p");
     expect(h.app.messages.at(-1)!.text).toContain("rendered view");
+  });
+});
+
+describe("picture caption regressions (#83)", () => {
+  test("alt text line breaks become spaces and the caption box follows the image", async () => {
+    const { h } = await open({ md: "![First line\nsecond line](shot.png)\n" });
+    const layout = layoutOf(h);
+    const caption = layout.lines.findIndex((line) => line.caption?.top);
+    const image = layout.lines.findIndex((line) => line.image);
+    expect(caption).toBeGreaterThan(image + layout.lines[image]!.image!.rows - 1);
+    expect(layout.lines[caption]!.caption!.text).toBe("First line second line");
+    expect(
+      layout.lines
+        .filter((line) => line.caption)
+        .map(lineText)
+        .join(" "),
+    ).toContain("First line second line");
+    expect(layout.lines[caption]!.fill).toBe("picture_caption");
+  });
+
+  test("a picture click does not leave its caption link highlighted, including a stationary drag event", async () => {
+    const { linkAt } = await import("../src/tui/linking.ts");
+    const { h, v } = await open({ md: "![A screenshot](shot.png)\n" });
+    for (let i = 0; i < 2; i++) {
+      const r = drawnRect(h);
+      h.app.mouse.handle({ type: "down", x: r.x + 1, y: r.y + 1, button: 0 });
+      if (i === 1) h.app.mouse.handle({ type: "drag", x: r.x + 1, y: r.y + 1, button: 0 });
+      h.app.mouse.handle({ type: "up", x: r.x + 1, y: r.y + 1, button: 0 });
+      h.frame();
+      expect(v.sel).toBeNull();
+      expect(v.visual).toBeNull();
+      expect(linkAt(layoutOf(h), v.cur.row, v.cur.col)).toBe(-1);
+    }
+  });
+
+  test("caption stands alone without images; its path and alt text buttons copy separately; inline images stay inline", async () => {
+    const { h, root } = await open({
+      md: "![Caption text](shot.png)\n\nBefore ![inline](shot.png) after.\n",
+      config: (c) => {
+        c.render.images = "never";
+      },
+    });
+    expect(layoutOf(h).lines.filter((line) => line.caption?.top)).toHaveLength(1);
+    expect(layoutOf(h).lines.some((line) => line.image)).toBe(false);
+    const buttons = h.app.geometry!.hot.filter((hot) => hot.id.startsWith("caption:"));
+    expect(buttons).toHaveLength(3);
+    const path = buttons.find((hot) => hot.id.endsWith(":path"))!;
+    click(h, path.x, path.y);
+    expect(h.copied.at(-1)).toBe(join(root, "shot.png"));
+    const alt = buttons.find((hot) => hot.id.endsWith(":caption"))!;
+    click(h, alt.x, alt.y);
+    expect(h.copied.at(-1)).toBe("Caption text");
+    expect(
+      layoutOf(h)
+        .lines.filter((line) => !line.caption)
+        .map(lineText)
+        .join(" "),
+    ).toContain("Before ▣ inline after.");
   });
 });

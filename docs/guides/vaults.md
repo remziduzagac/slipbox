@@ -143,7 +143,7 @@ To review the agent's work from your checkout:
 3. `[Open]` goes into the worktree, at the note you were on if the branch has it. Or `:worktrees` lists the checkouts,
    and `enter` goes into one.
 
-Going in, the explorer's view zooms out to `~`, the folder holding both checkouts. Only the paths to the two are
+Going in, the explorer's zoom zooms out to `~`, the folder holding both checkouts. Only the paths to the two are
 unfolded, and the breadcrumb leads on to where you went:
 
 ```text
@@ -163,7 +163,7 @@ In home, the git panel lists the worktree under kestrel, as one repository. `◆
 files: work for you to review.
 
 When an agent keeps its worktree inside the repository, in `.claude/worktrees/`, it's a vault inside kestrel. `.claude`
-is a hidden folder, so going into the worktree moves the explorer's view to the worktree itself.
+is a hidden folder, so going into the worktree moves the explorer's zoom to the worktree itself.
 
 ### A notes vault inside a repository
 

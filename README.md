@@ -114,7 +114,7 @@ everything else, and `?` lists every key. These are the keys to start with:
 | Split the window | `ctrl+w v` |
 | Open a new tab | `ctrl+t c` |
 | Open the lens, then start typing there | `i`, `a` or `o`, then the same key again |
-| Show the whole note as Markdown (source mode), and back | `ctrl+k` (or `space n v`) |
+| Show the whole note as Markdown (SOURCE view), and back | `ctrl+k` (or `space n v`) |
 | Open the git panel: review, commit, pull and push | `space g` |
 | Save | `ctrl+s` |
 | Tick a task | `ctrl+l` (or `space n t`, or a click) |

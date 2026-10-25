@@ -347,9 +347,11 @@ describe("blocks and inlines (2.2)", () => {
       { name: "flip.JPG", size: { width: 240, height: 180 } },
       { name: "dal.png", size: null },
     ]);
-    // Each under its `▣ name` line, as a picture by its path is.
+    // Each picture precedes its boxed caption.
     const rows = l.lines.map((x) => (x.image ? "picture" : x.spans.map((s) => s.text).join("")));
-    expect(rows.slice(0, 4)).toEqual([`${unicode.image} dal.png`, "picture", "", ""]);
+    expect(rows.slice(0, 2)).toEqual(["picture", ""]);
+    expect(l.lines[2]!.caption?.top).toBe(true);
+    expect(rows[3]).toContain(`${unicode.image} dal.png`);
   });
   test("source lines survive wrapping (3.5 anchors on them)", () => {
     const layout = renderMarkdown("# H\n\npara one\nline two\n\nsecond para\n", {
@@ -1527,7 +1529,7 @@ describe("a diff's rows as drawn (GIT-D2)", () => {
     const now = before.replace("echo one", "echo two").replace("## Retry budget", "## Retry limit");
     const l = diff(before, now, { language: null });
     // In the fence: its code, though the line read alone would be a heading.
-    expect(at(l, "  # a comment", "a comment")?.role).toBe("code_block");
+    expect(at(l, "  # a comment", "a comment")?.role).toBe("syn_comment");
     expect(at(l, "+ echo two", "two")).toEqual({ role: "code_block", bg: "diff_add_word" });
     // A heading: its level's colour, the word changed marked.
     expect(at(l, "+ ## Retry limit", "Retry")).toEqual({ role: "h2", bg: "diff_add" });

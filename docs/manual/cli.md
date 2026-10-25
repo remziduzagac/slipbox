@@ -1332,6 +1332,20 @@ there is exit 2.
 With `--json`, the data is [a change](#moving-copying-and-deleting), with `kind` `root`. For a repository given a
 `.slipbox/`, it's `{root, name, id, created}`, `root` the vault's path.
 
+### `vaults`
+
+Lists the known vaults and saved home workspaces, newest first, as the TUI's vault list does. Worktrees are grouped
+under their repository; folders opened by name in home are marked as home's workspaces. Missing paths are omitted.
+
+```bash
+slipbox vaults
+slipbox vaults --json
+```
+
+With `--json`, the data is an array of rows: `{label, detail, hint?, indent?, header?, data}`. Repository headers have
+`header: true` and `data: null`; selectable rows have `data: {root, folder?}`, with absolute paths. `folder` selects a
+home workspace. Pointer names and default copies remain in `folders`.
+
 ### `folders`
 
 Lists the named folders this machine knows. For each, it shows the name, its copies, and the copy links open (`*`).

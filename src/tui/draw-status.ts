@@ -12,35 +12,6 @@ import { sanitize } from "../core/sanitize.ts";
 import type { Role, Color } from "../core/theme/theme.ts";
 import { SEVERITIES, worst } from "../core/diagnostics.ts";
 import { severityGlyph, SEVERITY_ROLE } from "./draw-pane.ts";
-import { MODES, type ViewMode, viewMode } from "./modes.ts";
-import { fitWhere, whereOf } from "./where.ts";
-
-/** The chip for a window's mode: the button its header has selected, by its label (HDR-D2). */
-const CHIP = Object.fromEntries(MODES.map((m) => [m.mode, ` ${m.label.toUpperCase()} `])) as Record<ViewMode, string>;
-
-/**
- * Where you are on the status line (WSP-D5), in `room` columns from `x`, while the top bar doesn't say it: the same parts
- * as the bar's, without the glyph, dim; in a repository, clicked, the branches' menu (GIT-D8). The columns it took, its
- * two spaces after it included; none when it isn't drawn (the bar says it, or fewer than 8 columns).
- */
-function drawWhereOnStatus(app: App, c: Canvas, x: number, band: Band, geo: Geometry, room: number): number {
-  const fit = room >= 8 && !geo.whereOnTop ? fitWhere({ ...whereOf(app), glyph: "" }, room) : null;
-  if (!fit) return 0;
-  const theme = app.theme;
-  const bg = roleStyle(theme, "status", pageBg(theme)).bg;
-  const dim = { ...roleStyle(theme, "status_dim", bg), bg };
-  const id = app.git.checkout ? "status:branch" : null;
-  const y = mid(band);
-  const w = drawText(
-    c,
-    x,
-    y,
-    fit.vault + fit.branch,
-    id && app.mouse.hover === id ? roleStyle(theme, "hover", bg) : dim,
-  );
-  if (id) geo.hot.push({ id, x, y: band.y, w, h: band.h });
-  return w + drawText(c, x + w, y, "  ", dim);
-}
 
 export function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void {
   const theme = app.theme;
@@ -76,18 +47,43 @@ export function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void
                       : " OUTLINE "
                   : view?.insert
                     ? " INSERT "
-                    : CHIP[view ? viewMode(view) : "rendered"];
-  const chipSt = roleStyle(theme, "status_accent", page);
-  c.fill(0, band.y, stringWidth(chip), band.h, chipSt.bg ?? null);
-  let x = drawText(c, 0, y, chip, chipSt);
+                    : " NORMAL ";
+  let x = 0;
+  let label = view ? (view.source ? " SOURCE " : view.live ? ` READ${app.glyphs.lensJoin}LENS ` : " READ ") : "";
+  let mode = view?.insert ? " INSERT " : view?.visual === "line" ? " V-LINE " : view?.visual ? " VISUAL " : " NORMAL ";
+  const reserve = view ? Math.min(16, stringWidth(app.displayName(view.buf))) + 24 : 0;
+  if (view && stringWidth(label + mode) + 1 + reserve > c.width)
+    label = view.source ? " S " : view.live ? ` R${app.glyphs.lensJoin}L ` : " R ";
+  if (view && stringWidth(label + mode) + 1 + reserve > c.width)
+    mode = view.insert ? " I " : view.visual === "line" ? " V-L " : view.visual ? " V " : " N ";
+  if (view) {
+    const role = view.source ? "view_source" : view.live ? "view_lens" : "view_read";
+    const style = roleStyle(theme, role, st.bg);
+    c.fill(0, band.y, stringWidth(label), band.h, style.bg ?? st.bg);
+    x += drawText(c, x, y, label, style);
+    x += drawText(c, x, y, app.glyphs.groupSeparator, roleStyle(theme, "status_dim", st.bg));
+  }
+  const chipSt = roleStyle(
+    theme,
+    view ? (view.insert ? "mode_insert" : view.visual ? "mode_visual" : "mode_normal") : "status_accent",
+    page,
+  );
+  const shown = view ? mode : chip;
+  c.fill(x, band.y, stringWidth(shown), band.h, chipSt.bg ?? null);
+  x += drawText(c, x, y, shown, chipSt);
+  if (
+    view &&
+    chip.trim() !== (view.insert ? "INSERT" : view.visual === "line" ? "V-LINE" : view.visual ? "VISUAL" : "NORMAL")
+  )
+    x += drawText(c, x, y, chip, roleStyle(theme, "status_accent", st.bg));
+  const chipWidth = x;
   // The explorer's row under the cursor not indexed (`⊘`, VV-D9): why, while the cursor is on it.
   const why = app.explorer.marks.selectedWhy();
   const whyText = why ? `${app.glyphs.markNotIndexed} not indexed: ${sanitize(why)}  ` : "";
   const dim = { ...roleStyle(theme, "status_dim", st.bg), bg: st.bg };
   if (!view) {
-    // No note open (a folder with none, home's left out): where you are all the same, while the top bar doesn't say it.
+    // Without a note, only the selected explorer row's explanation follows the chip; location stays on the top bar.
     x += 1;
-    x += drawWhereOnStatus(app, c, x, band, geo, Math.min(40, c.width - x - 1));
     if (whyText) drawText(c, x, y, truncate(whyText.trimEnd(), Math.max(0, c.width - x - 1)), dim);
     return;
   }
@@ -123,7 +119,7 @@ export function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void
       : `→ ${link.kind === "wiki" || link.kind === "embed" ? `[[${link.target}${link.heading ? `#${link.heading}` : ""}]]` : link.target} (${link.status}${landed ? `, ${landed}` : ""})  `
     : "";
   const markerW = stringWidth(pathMarker(app, view));
-  const room = c.width - stringWidth(chip) - 2 - Math.min(16, stringWidth(app.displayName(view.buf))) - markerW;
+  const room = c.width - chipWidth - 2 - Math.min(16, stringWidth(app.displayName(view.buf))) - markerW;
   const fits = (s: string) => stringWidth(s) + 1 <= room;
   let right = `${linkText}${whyText}${words}${tabs}${pos}`;
   if (!fits(right)) right = `${linkText}${whyText}${tabs}${pos}`;
@@ -138,9 +134,7 @@ export function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void
 
   const rightW = stringWidth(right) + 1;
   x += drawText(c, x, y, " ", st);
-  // Where the file is (21.9): the vault, by name or path, and its branch (20.14), only while the top bar doesn't say it
-  // (WSP-D5), and while the path keeps a readable width (it goes before the path does) — at most 40 columns.
-  x += drawWhereOnStatus(app, c, x, band, geo, Math.min(40, c.width - x - rightW - 4 - 24));
+  // The status line keeps the file; the permanent top bar carries location (VB-D3).
   const pathId = "status:path";
   // The path shrinks to leave room for its marker (reloaded / deleted) and the right-hand side;
   // the watch marker after it is dropped when it doesn't fit.

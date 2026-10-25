@@ -9,7 +9,7 @@
 
 import { headingLabel, parseMarkdown, slugify } from "../parse.ts";
 import type { Span as SyntaxSpan } from "../syntax.ts";
-import { highlight } from "./highlight.ts";
+import { highlight, type Token } from "./highlight.ts";
 import { graphemes, graphemeWidth } from "../width.ts";
 import type { Layout, LayoutHeading, Line, Span } from "./ir.ts";
 import type { Role } from "../theme/theme.ts";
@@ -56,6 +56,7 @@ export interface SourceCache {
   texts: string[];
   /** The highlighter's state at each line's start ("" none, "fm0"/"fm" frontmatter, "c…" code). */
   states: string[];
+  syntax?: string[];
   /** Each line's rows, its natural width, and the ATX heading it is (outside code). */
   rows: Line[][];
   naturals: number[];
@@ -74,6 +75,8 @@ export function layoutSource(source: string, opts: SourceLayoutOptions, cache: S
   if (!opts.slice && texts.length > 1 && texts[texts.length - 1] === "") texts.pop(); // a final newline ends the last line
   const width = opts.wrap ? Math.max(1, opts.width) : Number.POSITIVE_INFINITY;
   const lang = opts.language ?? null;
+  const fences = lang ? new Map<number, Token[]>() : fenceTokens(texts);
+  const syntax = texts.map((_, i) => JSON.stringify(fences.get(i) ?? null));
   const cacheKey = `${width}:${tab}:${lang ?? "md"}`;
   const old = cache.key === cacheKey ? cache : newSourceCache();
   const O = old.texts;
@@ -87,7 +90,14 @@ export function layoutSource(source: string, opts: SourceLayoutOptions, cache: S
     return (s?.length ? s.map((x) => `${x.kind}${x.from}-${x.to}`).join(",") : "") + (own ? `@${own}` : "");
   };
   let pre = 0;
-  while (pre < n && pre < O.length && texts[pre] === O[pre] && (!lang || old.states[pre] === sig(pre + 1))) pre++;
+  while (
+    pre < n &&
+    pre < O.length &&
+    texts[pre] === O[pre] &&
+    (!lang || old.states[pre] === sig(pre + 1)) &&
+    old.syntax?.[pre] === syntax[pre]
+  )
+    pre++;
   let suf = 0;
   while (suf < n - pre && suf < O.length - pre && texts[n - 1 - suf] === O[O.length - 1 - suf]) suf++;
   const states: string[] = old.states.slice(0, pre);
@@ -110,6 +120,7 @@ export function layoutSource(source: string, opts: SourceLayoutOptions, cache: S
       tab,
       lang ? (opts.languageAt?.(i + 1) ?? lang) : lang,
       lineSpans,
+      fences.get(i),
     );
     states.push(state);
     rows.push(built.rows);
@@ -125,21 +136,20 @@ export function layoutSource(source: string, opts: SourceLayoutOptions, cache: S
   for (; i < n; i++) {
     const o = i - shift;
     if (lang) state = sig(i + 1); // code: each line's own state, from tree-sitter's spans
-    if (old.states[o] !== state) {
+    if (old.states[o] !== state || old.syntax?.[o] !== syntax[i]) {
       lay(i);
       continue;
     }
-    for (; i < n; i++) {
-      const o2 = i - shift;
-      states.push(old.states[o2]!);
-      naturals.push(old.naturals[o2]!);
-      heads.push(old.heads[o2] ?? null);
-      const r = old.rows[o2]!;
-      const src = i + 1;
-      rows.push(shift === 0 ? r : r.map((row) => ({ ...row, src, spans: row.spans.map((sp) => ({ ...sp, src })) })));
-    }
+    states.push(old.states[o]!);
+    naturals.push(old.naturals[o]!);
+    heads.push(old.heads[o] ?? null);
+    const r = old.rows[o]!;
+    const src = i + 1;
+    rows.push(shift === 0 ? r : r.map((row) => ({ ...row, src, spans: row.spans.map((sp) => ({ ...sp, src })) })));
+    state = nextState(old, o, texts[i]!);
   }
-  Object.assign(cache, { key: cacheKey, texts, states, rows, naturals, heads });
+
+  Object.assign(cache, { key: cacheKey, texts, states, syntax, rows, naturals, heads });
   const lines: Line[] = [];
   const firstRow: number[] = [];
   let natural = 0;
@@ -177,9 +187,10 @@ function layoutLine(
   tab: number,
   lang: string | null = null,
   spans?: SyntaxSpan[],
+  tokens?: Token[],
 ): { rows: Line[]; natural: number; out: string } {
   const src = i + 1;
-  const hl = lang ? codeLine(raw, lang, spans) : highlightLine(raw, state, i);
+  const hl = lang ? codeLine(raw, lang, spans) : highlightLine(raw, state, i, tokens);
   const text = raw.endsWith("\r") ? raw.slice(0, -1) : raw; // CRLF: the CR isn't shown
   const cells: Cell[] = [];
   let col = 0;
@@ -202,6 +213,7 @@ function layoutLine(
   }
   const rows: Line[] = wrapCells(cells, width).map((row) => ({
     spans: toSpans(row.cells, src),
+    ...(!lang && state.startsWith("c") ? { fill: "code_block" as const } : {}),
     src,
     srcMap: { cells: row.cells.map((c) => c.at), end: row.end ?? text.length },
   }));
@@ -266,7 +278,7 @@ function codeLine(raw: string, lang: string, spans?: SyntaxSpan[]): { roles: Rol
  * from line to line — "fm0" (a first line of "---"), "fm" (inside frontmatter), "c<fence>" (inside
  * fenced code), "" (neither). Anything it doesn't know is text.
  */
-function highlightLine(raw: string, state: string, i: number): { roles: Role[]; out: string } {
+function highlightLine(raw: string, state: string, i: number, tokens?: Token[]): { roles: Role[]; out: string } {
   const text = raw.replace(/\r$/, "");
   const roles: Role[] = new Array(raw.length).fill("text");
   const paint = (from: number, to: number, role: Role) => {
@@ -288,14 +300,22 @@ function highlightLine(raw: string, state: string, i: number): { roles: Role[]; 
   }
   const f = /^\s{0,3}(`{3,}|~{3,})/.exec(text);
   if (state.startsWith("c")) {
-    const fence = state.slice(1);
+    const [fence, language] = state.slice(1).split(":");
     paint(0, text.length, "code_block");
-    const closes = f && f[1]![0] === fence[0] && f[1]!.length >= fence.length && !text.slice(f[0].length).trim();
+    const closes = f && f[1]![0] === fence![0] && f[1]!.length >= fence!.length && !text.slice(f[0].length).trim();
+    if (!closes && language) {
+      let at = 0;
+      for (const token of tokens ?? []) {
+        if (token.role) paint(at, at + token.text.length, token.role);
+        at += token.text.length;
+      }
+    }
     return { roles, out: closes ? "" : state };
   }
   if (f) {
     paint(0, text.length, "code_label");
-    return { roles, out: `c${f[1]!}` };
+    const language = /^(\S+)/.exec(text.slice(f[0].length).trim())?.[1] ?? "";
+    return { roles, out: `c${f[1]!}:${language}` };
   }
   const h = /^\s{0,3}(#{1,6})(\s|$)/.exec(text);
   if (h) {
@@ -381,4 +401,24 @@ function headingOfLine(raw: string): LineHeading | null {
   if (node?.type !== "heading") return null;
   const id = (node.data as { id?: string } | undefined)?.id;
   return { level: node.depth, ...headingLabel(node), ...(id ? { id } : {}) };
+}
+
+/** Highlight whole fences so comments and strings retain their context across source rows. */
+function fenceTokens(texts: string[]): Map<number, Token[]> {
+  const result = new Map<number, Token[]>();
+  let state = texts[0]?.replace(/\r$/, "") === "---" ? "fm0" : "";
+  for (let i = 0; i < texts.length; i++) {
+    const before = state;
+    state = highlightLine(texts[i]!, state, i).out;
+    if (!state.startsWith("c") || before.startsWith("c")) continue;
+    const language = state.slice(1).split(":")[1];
+    const start = i + 1;
+    let end = start;
+    while (end < texts.length && highlightLine(texts[end]!, state, end).out !== "") end++;
+    const tokens = highlight(texts.slice(start, end).join("\n"), language);
+    tokens?.forEach((line, offset) => result.set(start + offset, line));
+    i = end;
+    state = "";
+  }
+  return result;
 }

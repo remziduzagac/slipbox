@@ -22,6 +22,8 @@ import {
 import { mergeSettings, vscodeSettings, vscodeSettingsFile } from "./vscode.ts";
 
 export interface ManagerOptions {
+  /** Track initialization; cancellation stops this server before it becomes ready. */
+  starting?: (label: string, cancel: () => void) => () => void;
   /** The servers and languages in effect (the config's over the built-in). */
   table: () => ServerTable;
   /** Yours alone — the built-in under your own config, no folder's: a server's settings in a root you
@@ -328,6 +330,8 @@ export class ServerManager {
   killAll(): void {
     this.closed = true;
     for (const r of this.running.values()) r.client?.kill();
+    this.docs.clear();
+    this.running.clear();
   }
 
   /**
@@ -354,57 +358,71 @@ export class ServerManager {
   }
 
   private async start(r: Running, found: Found | null): Promise<LanguageClient | null> {
-    let f = found;
-    // slipbox's own install under an older lock (14.11): installed again first, when installing is on.
-    if (f?.behind && r.def.npm && this.o.autoInstall()) f = null;
-    if (!f) {
-      if (!(await this.install(r.def, found?.behind))) return null;
-      f = findServer(r.def, r.root);
-      if (!f) return null;
-    }
-    const yours = this.o.userTable?.().servers[r.def.name] ?? r.def;
-    const { environment, initOptions } = startOf(r.def, r.root);
-    const client = new LanguageClient(
-      {
-        name: r.def.name,
-        argv: f.argv,
-        env: { ...f.env, ...environment },
-        settings: settingsFor(r.def, r.root, yours),
-        initOptions,
-        root: r.root,
-        timeoutMs: this.o.requestTimeoutMs,
-      },
-      {
-        diagnostics: (uri, diagnostics, version) => {
-          if (!uri.startsWith("file:")) return;
-          const path = fileURLToPath(uri);
-          // A server limited away from diagnostics for this file's language says nothing here.
-          const doc = this.docs.get(path);
-          if (doc && !does(r.def, doc.lang, "diagnostics")) return;
-          this.o.problems(
-            path,
-            r.def.name,
-            version,
-            diagnostics.map((d) => problemOf(d, r.def.name)),
-            diagnostics,
-          );
-        },
-        log: (text) => this.o.log?.(text),
-        notice: (text) => this.o.message("warn", text),
-        exited: (expected, why, stoppedByClient) => {
-          if (!expected) this.crashed(r, why, stoppedByClient);
-        },
-        applyEdit: (edit) => this.o.applyEdit?.(edit) ?? false,
-      },
-    );
-    r.client = client;
+    let cancelled = false;
+    const finished = this.o.starting?.(`Starting ${r.def.name}`, () => {
+      cancelled = true;
+      void r.client?.stop();
+    });
     try {
-      await client.start();
-    } catch (err) {
-      this.o.message("error", `${r.def.name}: ${(err as Error).message}`);
-      return null;
+      let f = found;
+      // slipbox's own install under an older lock (14.11): installed again first, when installing is on.
+      if (f?.behind && r.def.npm && this.o.autoInstall()) f = null;
+      if (!f) {
+        if (!(await this.install(r.def, found?.behind))) return null;
+        f = findServer(r.def, r.root);
+        if (!f) return null;
+      }
+      if (cancelled || this.ending.signal.aborted) return null;
+      const yours = this.o.userTable?.().servers[r.def.name] ?? r.def;
+      const { environment, initOptions } = startOf(r.def, r.root);
+      const client = new LanguageClient(
+        {
+          name: r.def.name,
+          argv: f.argv,
+          env: { ...f.env, ...environment },
+          settings: settingsFor(r.def, r.root, yours),
+          initOptions,
+          root: r.root,
+          timeoutMs: this.o.requestTimeoutMs,
+        },
+        {
+          diagnostics: (uri, diagnostics, version) => {
+            if (!uri.startsWith("file:")) return;
+            const path = fileURLToPath(uri);
+            // A server limited away from diagnostics for this file's language says nothing here.
+            const doc = this.docs.get(path);
+            if (doc && !does(r.def, doc.lang, "diagnostics")) return;
+            this.o.problems(
+              path,
+              r.def.name,
+              version,
+              diagnostics.map((d) => problemOf(d, r.def.name)),
+              diagnostics,
+            );
+          },
+          log: (text) => this.o.log?.(text),
+          notice: (text) => this.o.message("warn", text),
+          exited: (expected, why, stoppedByClient) => {
+            if (!expected && !cancelled) this.crashed(r, why, stoppedByClient);
+          },
+          applyEdit: (edit) => this.o.applyEdit?.(edit) ?? false,
+        },
+      );
+      r.client = client;
+      try {
+        await client.start();
+        if (cancelled || this.ending.signal.aborted) {
+          void client.stop();
+          return null;
+        }
+      } catch (err) {
+        this.o.message("error", `${r.def.name}: ${(err as Error).message}`);
+        return null;
+      }
+      return client;
+    } finally {
+      finished?.();
     }
-    return client;
   }
 
   /** An npm server installed into slipbox's folder from its lock (14.11), once a session — over an older install of

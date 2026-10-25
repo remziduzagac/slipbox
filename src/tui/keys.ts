@@ -243,7 +243,6 @@ export const DEFAULT_KEYS: Record<string, string> = {
   "alt+z": "ui.wrap",
   "leader u r": "ui.urls",
   "leader u m": "ui.mouse",
-  "leader u b": "ui.top_bar",
   "leader u d": "ui.problems_bar",
   "leader u shift+d": "ui.problem_marks",
   "leader u c": "ui.code_cells",
@@ -591,12 +590,19 @@ export const DEFAULT_FOOTNOTE_KEYS: Record<string, string> = {
 export const FOOTNOTE_ACTIONS = [...PANE_ACTIONS, "add", "edit", "delete", "rename"];
 
 /** Keys inside the Info view (3.19): the outline's, and `y` to copy a row's value. */
-export const DEFAULT_INFO_KEYS: Record<string, string> = { ...PANE_KEYS, y: "copy", e: "edit" };
+export const DEFAULT_INFO_KEYS: Record<string, string> = { ...PANE_KEYS, y: "copy", e: "edit", x: "export" };
 
-export const INFO_ACTIONS = [...PANE_ACTIONS, "copy", "edit"];
+export const INFO_ACTIONS = [...PANE_ACTIONS, "copy", "edit", "export"];
 
 /** What the Info view's actions do, for help and which-key. */
-export const INFO_ACTION_INFO: Record<string, { title: string; desc: string }> = {
+export const INFO_ACTION_INFO: Record<
+  string,
+  {
+    title: string;
+    desc: string;
+  }
+> = {
+  export: { title: "Export the note", desc: "Offers export formats for the current note" },
   down: { title: "Move down", desc: "Selects the next row" },
   up: { title: "Move up", desc: "Selects the previous row" },
   jump: {
@@ -742,9 +748,9 @@ export const EXPLORER_ACTION_INFO: Record<string, { title: string; desc: string 
   menu: { title: "Actions…", desc: "The selected row's menu, as its … button opens it: rename, move, delete, copy…" },
   zoom_in: {
     title: "Zoom in",
-    desc: "The view shows the selected folder or vault (a file's, its folder); the breadcrumb leads back up",
+    desc: "The explorer zooms to the selected folder or vault (a file's, its folder); the breadcrumb leads back up",
   },
-  zoom_out: { title: "Zoom out", desc: "The view shows the folder holding it, the folder it showed unfolded" },
+  zoom_out: { title: "Zoom out", desc: "The explorer zooms to the folder holding it, the folder it showed unfolded" },
   close: { title: "Close the explorer", desc: "Closes it; focus returns to the note" },
   leave: { title: "Back to the note", desc: "Focuses the note; the explorer stays open" },
 };

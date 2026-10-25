@@ -297,7 +297,7 @@ placeholders with no picture named are left blank.
 ## Timings (`bun scripts/bench.ts`)
 
 `scripts/bench.ts` generates notes of 1,000 and 20,000 lines (and one of 20,000 tasks) in a temporary vault and times
-what grows with a note: opening it, moving, typing in source mode and the lens, leaving the lens, a reload, a width
+what grows with a note: opening it, moving, typing in SOURCE view and the lens, leaving the lens, a reload, a width
 change, the CLI's `task`, `read`, `render`, `find` and `backlinks`, and the background index's longest slice on the
 main thread. `bun scripts/bench.ts lens k20` runs only the cases whose names contain any of those words, and skips the
 work of the cases it leaves out. It isn't part of `bun run check`: timings depend on the machine. The incremental

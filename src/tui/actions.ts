@@ -49,7 +49,6 @@ const UI_TOGGLES: { key: keyof UiState; id: string; title: string }[] = [
   { key: "mouse", id: "ui.mouse", title: "Mouse" },
   { key: "window_header", id: "ui.window_header", title: "Window header" },
   { key: "breadcrumb", id: "ui.breadcrumb", title: "Breadcrumb" },
-  { key: "top_bar", id: "ui.top_bar", title: "Top bar" },
   { key: "problems_bar", id: "ui.problems_bar", title: "Problems bar" },
   { key: "spell", id: "ui.spell", title: "Spelling" },
 ];
@@ -169,6 +168,13 @@ export function registerActions(app: App): void {
     "app.quit_force": (a) => a.saving.requestQuit(true),
     // Upgrading and restarting (UPG): never awaited, so the keys go on while it asks or waits.
     "app.restart": (a) => void a.updates.restart(),
+    "background.open": (a) => a.background.open(),
+    "background.cancel": (a, id) => a.background.cancel(id),
+    "explorer.focus": (a) => {
+      a.panels.switchLeftView("explorer");
+      a.panels.showSidebar(true);
+      a.region = "sidebar";
+    },
     "app.upgrade": (a) => void a.updates.check(),
     "palette.open": (a) => openPalette(a),
     // Your shell (25.7): what you type, run; lines filtered through it. Without the command, the `:` line asks it.

@@ -32,7 +32,7 @@ const inMode = (s: Session, m: string) => s.until(() => mode(s) === m, undefined
 export const PANELS: Check[] = [
   {
     area: "navigating",
-    name: "which-key: the leader's popup names the explorer and the outline, never read as their titles; while keys wait, no mode",
+    name: "which-key: the leader's popup names the explorer and the outline, never read as their titles; while keys wait, view and mode remain",
     covers: { cases: ["which-key", "explorer", "outline"] },
     options: { open: HANDBOOK },
     run: async (s) => {
@@ -53,7 +53,7 @@ export const PANELS: Check[] = [
       s.expect(!EXPLORER.test(s.screen()[line]!), "EXPLORER not on the popup's line");
       s.expect(s.rowOf(/Outline/) >= 0 && s.rowOf(OUTLINE) < 0, "OUTLINE not on the popup's line, the outline closed");
       // The leader pending: its chip, ␣, where the mode was.
-      s.expect(/^ ␣ /.test(s.statusLine()) && mode(s) === null, `the leader pending, no mode: ${s.statusLine()}`);
+      s.expect(/NORMAL  ␣ /.test(s.statusLine()) && mode(s) === null, `the leader pending, no mode: ${s.statusLine()}`);
       await s.keys("escape");
       await inMode(s, "READ");
     },
@@ -131,7 +131,7 @@ export const PANELS: Check[] = [
   },
   {
     area: "navigating",
-    name: "status line: the mode's chip, and in its place keys waiting — F for its character, d then T — read as no mode",
+    name: "status line: the mode's chip, and beside it keys waiting — F for its character, d then T — view and mode stay visible",
     covers: { cases: ["status", "source-mode"], commands: ["view.source"] },
     options: { open: HANDBOOK },
     run: async (s) => {
@@ -143,7 +143,7 @@ export const PANELS: Check[] = [
         [["d", "T"], " dT "],
       ] as const) {
         await s.keys(...keys);
-        await s.until(() => s.statusLine().startsWith(chip), undefined, `${chip.trim()} on the status line`);
+        await s.until(() => s.statusLine().includes(`NORMAL ${chip}`), undefined, `${chip.trim()} on the status line`);
         s.expect(mode(s) === null, `${chip.trim()} waiting, no mode: ${s.statusLine()}`);
         await s.keys("escape");
         await inMode(s, "SOURCE");
@@ -152,7 +152,7 @@ export const PANELS: Check[] = [
   },
   {
     area: "navigating",
-    name: "glyphs: in ASCII the explorer's title and border, and the leader pending as SPC, no mode; the helpers as in Unicode",
+    name: "glyphs: in ASCII the explorer's title and border, and the leader pending as SPC beside view and mode; the helpers as in Unicode",
     covers: { cases: ["glyphs", "explorer", "which-key"], commands: ["explorer.cycle"] },
     options: { open: HANDBOOK, env: { SLIPBOX_GLYPHS: "ascii" } },
     run: async (s) => {
@@ -162,8 +162,8 @@ export const PANELS: Check[] = [
       await s.keys("space");
       await s.see("Explorer: open, focus, close");
       s.expect(
-        /^ SPC /.test(s.statusLine()) && mode(s) === null,
-        `the leader pending as SPC, no mode: ${s.statusLine()}`,
+        /NORMAL  SPC /.test(s.statusLine()) && mode(s) === null,
+        `the leader pending as SPC beside view and mode: ${s.statusLine()}`,
       );
       s.expect(
         !EXPLORER.test(s.screen()[s.rowOf("Explorer: open, focus, close")]!),

@@ -241,7 +241,12 @@ export type RemoteDone =
 const NETWORK_MS = 10 * 60_000;
 
 /** A git command that may reach the remote or change the files, run in the background. */
-function runLater(c: Pick<Checkout, "root">, args: string[], network: boolean): Promise<RemoteDone> {
+function runLater(
+  c: Pick<Checkout, "root">,
+  args: string[],
+  network: boolean,
+  signal?: AbortSignal,
+): Promise<RemoteDone> {
   const trusted = isTrusted(c.root);
   let env: NodeJS.ProcessEnv = { ...process.env, GIT_TERMINAL_PROMPT: "0" };
   if (network) {
@@ -284,7 +289,13 @@ function runLater(c: Pick<Checkout, "root">, args: string[], network: boolean): 
       "git",
       [...signing, ...gitArgs(c.root, guarded)],
       // git's words in English: what it said is matched (a pull's "Not possible to fast-forward", a conflict).
-      { encoding: "utf8", env: inEnglish(env), timeout: network ? NETWORK_MS : 120_000, maxBuffer: 16 * 1024 * 1024 },
+      {
+        signal,
+        encoding: "utf8",
+        env: inEnglish(env),
+        timeout: network ? NETWORK_MS : 120_000,
+        maxBuffer: 16 * 1024 * 1024,
+      },
       (err, out, stderr) => {
         if (!err) return done({ ok: true, out, err: stderr });
         const why = failureOf(err, stderr, out);
@@ -295,8 +306,8 @@ function runLater(c: Pick<Checkout, "root">, args: string[], network: boolean): 
 }
 
 /** Fetched: the branch's remote, else origin (git's own choice). */
-export function fetchLater(c: Pick<Checkout, "root">): Promise<RemoteDone> {
-  return runLater(c, ["fetch"], true);
+export function fetchLater(c: Pick<Checkout, "root">, signal?: AbortSignal): Promise<RemoteDone> {
+  return runLater(c, ["fetch"], true, signal);
 }
 
 /** The newest stash's commit, or null: an autostash git kept is a new one (`withAutostash`). */

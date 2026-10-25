@@ -368,6 +368,9 @@ describe("the update offer (UPG-T4)", () => {
     expect(h.app.messages.at(-1)?.text).toBe("upgrading to 0.6.0…");
     await h.app.updates.background!.done;
     expect(h.app.messages.at(-1)?.text).toBe("slipbox 0.6.0 is installed (this is 0.5.0): :restart starts it");
+    expect(h.app.updates.available).toBeNull();
+    h.app.updates.found(found);
+    expect(h.app.updates.available).toBeNull();
     expect(existsSync(join(env.stateDir, `upgrade-${process.pid}.json`))).toBe(false);
     expect(h.app.updates.mine.has("0.6.0")).toBe(true);
     // Failed: said, as an error.
@@ -523,6 +526,8 @@ describe("the update offer (UPG-T4)", () => {
     renameSync(fakeSlipbox(said), join(data, "versions", "0.5.5", "slipbox"));
     symlinkSync("versions/0.5.5", join(data, "current"));
     withEnv(h, { data, execPath: join(sandbox, "removed", "slipbox") });
+    h.app.updates.found(found);
+    expect(h.app.updates.available).toBe("0.6.0");
     h.app.updates.upgradeBeside("0.6.0");
     await h.app.updates.background!.done;
     expect(h.app.messages.at(-1)?.text).toBe("slipbox 0.6.0 is installed (this is 0.5.0): :restart starts it");
@@ -994,4 +999,26 @@ describe("round 2 (UPG)", () => {
   test(":upgrade's command line is slipbox upgrade --check: it asks, installs nothing", () => {
     expect(COMMAND_SPECS.find((c) => c.id === "app.upgrade")?.cli).toBe("slipbox upgrade --check");
   });
+});
+
+test("the bar keeps a checked upgrade after closing, clears skipped, installed and current versions", async () => {
+  const { h, clock } = await clocked(QUIET_MS + 1);
+  withEnv(h, releasesOf("0.6.0"));
+  await h.app.updates.check();
+  expect(h.app.updates.available).toBe("0.6.0");
+  await shown(h, clock);
+  await h.keys("escape");
+  expect(h.app.updates.available).toBe("0.6.0");
+  h.app.updates.offer("0.6.0");
+  const dialog = h.app.overlay as DialogOverlay;
+  dialog.done("not", new Set(["skip"]));
+  expect(h.app.updates.available).toBeNull();
+  h.app.updates.offer("0.6.0");
+  h.app.updates.offerRestart("0.6.0");
+  expect(h.app.updates.available).toBeNull();
+  h.app.overlay = null;
+  h.app.updates.available = "0.6.0";
+  withEnv(h, releasesOf("0.5.0"));
+  await h.app.updates.check();
+  expect(h.app.updates.available).toBeNull();
 });

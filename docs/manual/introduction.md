@@ -16,7 +16,7 @@ A rendered note looks like a document: headings, tables, links and code blocks h
 files stay Markdown. The reading cursor follows the text, and the mouse and familiar editor shortcuts work.
 
 When you want to change a part, open the **lens**. That part shows its source while the rest stays rendered.
-Switch to **source mode** when you want the whole file as text. Typing is a separate state: you can inspect either
+Switch to **SOURCE view** when you want the whole file as text. Typing is a separate state: you can inspect either
 view before starting to type.
 
 The [reading and editing guide](../guides/lens.md) teaches how these fit together.

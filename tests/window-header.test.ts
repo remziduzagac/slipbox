@@ -56,7 +56,7 @@ function buttons(h: Harness, w = 0): Button[] {
 /** The selected button's label, and every button's state, as `Read:selected Lens:enabled …`. */
 const states = (h: Harness, w = 0) =>
   buttons(h, w)
-    .map((b) => `${b.label}:${b.state}`)
+    .map((b) => `${({ R: "Read", L: "Lens", S: "Source" } as Record<string, string>)[b.label] ?? b.label}:${b.state}`)
     .join(" ");
 
 /** A click (down and up) on window `w`'s button for `which`. */
@@ -91,7 +91,7 @@ function spyModes(h: Harness): ViewMode[] {
 }
 
 describe("the window header's mode buttons (HDR-D2)", () => {
-  test("Read · Lens · Source, one selected, following ctrl+k, space n l, esc and the editing keys", async () => {
+  test("READ and SOURCE radio pair, LENS toggle, following ctrl+k, space n l, esc and the editing keys", async () => {
     const h = await harness({ open: NOTE, width: 120, height: 30, config: (c) => (c.editor.edit_in = "live") });
     expect(states(h)).toBe("Read:selected Lens:enabled Source:enabled");
     await h.keys("ctrl+k");
@@ -99,16 +99,16 @@ describe("the window header's mode buttons (HDR-D2)", () => {
     await h.keys("ctrl+k");
     expect(states(h)).toBe("Read:selected Lens:enabled Source:enabled");
     await h.keys("space", "n", "l");
-    expect(states(h)).toBe("Read:enabled Lens:selected Source:enabled");
+    expect(states(h)).toBe("Read:selected Lens:selected Source:enabled");
     await h.keys("escape"); // esc in normal mode closes the lens
     expect(states(h)).toBe("Read:selected Lens:enabled Source:enabled");
     // An editing key opens the lens (edit_in = live), and its second press types: typing isn't a mode.
     await h.keys("i", "i");
     expect(h.app.view!.insert).toBe(true);
     expect(statusRow(h.frame())).toContain("INSERT");
-    expect(states(h)).toBe("Read:enabled Lens:selected Source:enabled");
+    expect(states(h)).toBe("Read:selected Lens:selected Source:enabled");
     await h.keys("escape");
-    expect(states(h)).toBe("Read:enabled Lens:selected Source:enabled");
+    expect(states(h)).toBe("Read:selected Lens:selected Source:enabled");
   });
 
   test("edit_in = source: an editing key selects Source, kept while typing", async () => {
@@ -118,16 +118,11 @@ describe("the window header's mode buttons (HDR-D2)", () => {
     expect(states(h)).toBe("Read:enabled Lens:enabled Source:selected");
   });
 
-  test("every switch by a click goes straight there, says what the toggles say, and the chip agrees", async () => {
+  test("every switch by a click goes straight there silently, and the chip agrees", async () => {
     const h = await harness({ open: NOTE, width: 120, height: 30 });
     const v = h.app.view!;
     const asked = spyModes(h);
-    const CHIP = { rendered: "READ", live: "LENS", source: "SOURCE" } as const;
-    const SAID = {
-      rendered: "rendered",
-      live: "the lens: the markdown around the cursor — esc closes it",
-      source: "source — the note's markdown",
-    } as const;
+    const CHIP = { rendered: "READ", live: "READ·LENS", source: "SOURCE" } as const;
     const BUTTON = { rendered: "read", live: "lens", source: "source" } as const;
     const modes: ViewMode[] = ["rendered", "live", "source"];
     for (const from of modes)
@@ -138,7 +133,7 @@ describe("the window header's mode buttons (HDR-D2)", () => {
         click(h, BUTTON[to]);
         expect(viewMode(v)).toBe(to);
         expect(asked).toEqual([to]); // Lens from Source never through Read, and so on
-        expect(lastMessage(h)?.text).toBe(SAID[to]);
+        expect(lastMessage(h)).toBeUndefined();
         expect(statusRow(h.frame())).toContain(` ${CHIP[to]} `);
       }
   });
@@ -153,7 +148,7 @@ describe("the window header's mode buttons (HDR-D2)", () => {
     await h.keys("i", "i", "Z", "q");
     expect(v.insert).toBe(true);
     click(h, "lens");
-    expect(viewMode(v)).toBe("live");
+    expect(viewMode(v)).toBe("rendered");
     expect(v.insert).toBeFalsy();
     expect(v.buf.dirty).toBe(true);
     expect(v.buf.source).toContain("Zq");
@@ -215,19 +210,20 @@ describe("modes a window can't switch to are disabled (HDR-D2)", () => {
     }
   });
 
-  test("code as a document has all three; [render] code = source makes it as a text file", async () => {
+  test("code rendering default opens SOURCE while READ and its lens stay available", async () => {
     const doc = await harness({ open: PYTHON, width: 120, height: 30 });
     expect(states(doc)).toBe("Read:selected Lens:enabled Source:enabled");
     click(doc, "lens");
-    expect(lastMessage(doc)?.text).toBe("the lens: the code around the cursor — esc closes it");
+    expect(lastMessage(doc)).toBeUndefined();
     click(doc, "read");
-    expect(lastMessage(doc)?.text).toBe("the code as a document");
+    expect(lastMessage(doc)).toBeUndefined();
     click(doc, "source");
-    expect(lastMessage(doc)?.text).toBe("source — the file as written");
-    const src = await harness({ open: PYTHON, width: 120, height: 30, config: (c) => (c.render.code = "source") });
-    expect(states(src)).toBe("Read:disabled Lens:disabled Source:selected");
+    expect(lastMessage(doc)).toBeUndefined();
+    const src = await harness({ open: PYTHON, width: 120, height: 30, config: (c) => (c.render.code = false) });
+    expect(states(src)).toBe("Read:enabled Lens:enabled Source:selected");
     click(src, "read");
-    expect(lastMessage(src)?.text).toBe("reduce.py has no rendered view: source mode");
+    expect(viewMode(src.app.view!)).toBe("rendered");
+    expect(lastMessage(src)).toBeUndefined();
   });
 
   test("data that parses has all three; data that doesn't, Source alone, a click warning why", async () => {
@@ -235,11 +231,11 @@ describe("modes a window can't switch to are disabled (HDR-D2)", () => {
     expect(states(ok)).toBe("Read:selected Lens:enabled Source:enabled");
     // The lens names the file's own format, by the button and by an editing key alike.
     click(ok, "lens");
-    expect(lastMessage(ok)?.text).toBe("the lens: the YAML around the cursor — esc closes it");
+    expect(lastMessage(ok)).toBeUndefined();
     click(ok, "read");
     ok.app.config.editor.edit_in = "live";
     await ok.keys("i");
-    expect(lastMessage(ok)?.text).toBe("the lens: the YAML around the cursor — the key again edits it, esc closes it");
+    expect(lastMessage(ok)).toBeUndefined();
     await ok.keys("escape");
     const bad = await harness({ open: BROKEN, width: 120, height: 30 });
     expect(states(bad)).toBe("Read:disabled Lens:disabled Source:selected");
@@ -262,7 +258,7 @@ describe("modes a window can't switch to are disabled (HDR-D2)", () => {
       await h.keys("i", "i", ":", " ", "[", "x");
       expect(v.insert).toBe(true);
       // While it's typed into, the buttons go by the last parse (it parsed): never judged mid-typing.
-      expect(states(h)).toBe("Read:enabled Lens:selected Source:enabled");
+      expect(states(h)).toBe("Read:selected Lens:selected Source:enabled");
       await h.keys("escape");
       expect(h.app.canRender(v.buf)).toBe(false);
       expect(states(h)).toBe("Read:disabled Lens:disabled Source:selected");
@@ -553,7 +549,7 @@ describe("room: the buttons give way before the breadcrumb's innermost heading (
   test("modeButtons: the widest form that leaves the breadcrumb its least room and margins, else the selected letter", () => {
     // No breadcrumb: full from 20 columns, letters from 9, the selected letter from 3.
     expect([20, 19, 9, 8, 3, 2].map((r) => modeButtons(r, 0))).toEqual([
-      "full",
+      "letters",
       "letters",
       "letters",
       "selected",
@@ -562,7 +558,7 @@ describe("room: the buttons give way before the breadcrumb's innermost heading (
     ]);
     // A breadcrumb wanting 14 columns, and one at each end: full from 36, letters from 25, the selected letter from 19.
     expect([36, 35, 25, 24, 19, 18, 3, 2].map((r) => modeButtons(r, 14))).toEqual([
-      "full",
+      "letters",
       "letters",
       "letters",
       "selected",
@@ -605,7 +601,7 @@ describe("room: the buttons give way before the breadcrumb's innermost heading (
     expect(h.app.currentLayout(v).headings.length).toBeGreaterThan(0);
     /** The form, whichever letter is selected. */
     const shape = (f: string) => (f.includes("Read") ? "full" : f === "R L S" ? "letters" : f ? "selected" : "none");
-    const widths = [26, 30, 33, 38];
+    const widths = [16, 20, 26, 38];
     const read = widths.map((w) => shape(form(w)));
     expect(new Set(read).size).toBeGreaterThan(1); // the widths span the forms
     await h.keys("ctrl+k");
@@ -672,7 +668,7 @@ describe("room: the buttons give way before the breadcrumb's innermost heading (
       expect(row.slice(pane.x, pane.x + 8)).toBe(` ${h.app.displayName(t.views[1]!.buf).slice(0, 7)}`);
       if (bs.length) expect(bs.at(-1)!.x + bs.at(-1)!.w).toBe(out.x);
     }
-    expect([...forms]).toEqual(expect.arrayContaining(["Read Lens Source", "R L S", "R"]));
+    expect([...forms]).toEqual(expect.arrayContaining(["R L S", "R"]));
   });
 
   test("the breadcrumb keeps its innermost heading while the buttons shorten; then it folds on", async () => {
@@ -795,7 +791,7 @@ describe("the two settings (HDR-D3)", () => {
     const h = await harness({ open: NOTE, width: 120, height: 30, themeName: "mono" });
     writeFileSync(join(h.root, TEXT), "plain\n");
     const attrs = (label: string) => {
-      const b = buttons(h).find((x) => x.label === label)!;
+      const b = buttons(h).find((x) => x.label === label[0])!;
       const st = h.canvas().styles[b.y]![b.x + 1]!;
       return [st.bold && "bold", st.dim && "dim", st.italic && "italic"].filter(Boolean).join(" ");
     };

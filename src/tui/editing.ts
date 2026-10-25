@@ -142,15 +142,7 @@ export function toEditing(app: App, view: View): boolean {
   if (editable(view)) return true;
   const mode = app.lens.editMode(view);
   app.lens.setViewMode(view, mode);
-  if (mode === "live") {
-    app.message(
-      "info",
-      `the lens: the ${lensWhat(view.buf)} around the cursor — the key again edits it, esc closes it`,
-    );
-    return false;
-  }
-  app.message("info", `source — editing the ${view.buf.kind.group === "note" ? "markdown" : "file"}`);
-  return true;
+  return mode !== "live";
 }
 
 /** Enter insert mode at offset `at` (switching the window to editing first: the lens's first press only opens it). */

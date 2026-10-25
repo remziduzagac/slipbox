@@ -1,3 +1,4 @@
+import { branchMenu } from "./gitmouse.ts";
 // The commands of windows, tabs and panels (`window.*`, `tab.*`, `history.*`, the panels' and source control's):
 // splits and tabs, each window's history, the side panels' views, the Problems panel, git's changes.
 
@@ -175,6 +176,12 @@ export function paneActions(): Record<string, Run> {
     "git.diff_view": (a) =>
       a.floating?.kind === "review" ? reviewSwitch(a) : a.floating?.kind === "merge" ? mergeSwitch(a) : diffSwitch(a),
     // The working tree's changes against what's staged (26.1).
+    "git.focus": (a) => {
+      a.panels.switchLeftView("git");
+      a.panels.showSidebar(true);
+      a.region = "sidebar";
+    },
+    "git.menu": (a) => branchMenu(a),
     "git.view": (a) => a.panels.openLeftView("git", "cycle"),
     "git.commit": (a) => a.git.openCommitEditor(false),
     "git.blame": (a) => blameHere(a),

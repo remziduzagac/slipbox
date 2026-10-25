@@ -16,6 +16,7 @@ import {
 import { basename, delimiter, dirname, join, relative } from "node:path";
 import { type ListOverlay, App } from "../src/tui/app.ts";
 import type { Line } from "../src/core/layout/ir.ts";
+import { stringWidth } from "../src/core/width.ts";
 import { makeSandbox, makeVault, harness, onlyRootsUnder, statusRow, topRow, type Harness } from "./tui-harness.ts";
 
 const sandbox = makeSandbox();
@@ -42,27 +43,31 @@ describe("git worktrees in the TUI (17.19)", () => {
     return { base, x, wts };
   };
 
-  test("the top bar: the vault's name and its branch, a worktree as name@branch (20.14, 21.9, WSP-D4); :folders lists the repository once", async () => {
+  test("the top bar: the vault's name and its branch, a worktree names its vault and branch once (VB-D3); :folders groups its repository", async () => {
     const l = layout();
     if (!l) return;
-    const main = await harness({ root: l.x, open: "index.md" });
+    const width = 2 * stringWidth(l.wts) + 100; // room for full location items, independent of the temp prefix
+    const main = await harness({ root: l.x, open: "index.md", width });
     const name = main.app.loc.name!;
-    expect(topRow(main.frame())).toContain(`◈ ${name} · main`);
-    expect(topRow(main.frame())).not.toContain("⎇");
+    expect(topRow(main.frame())).toContain(`◈ ${name} │ ⎇ main`);
+    expect(topRow(main.frame()).match(/⎇/g)).toHaveLength(1);
     expect(statusRow(main.frame())).not.toContain(name); // said once (WSP-D5)
-    const feat = await harness({ root: join(l.wts, "feat"), open: "index.md" });
-    expect(topRow(feat.frame())).toContain(`◈ ${name}@feat`);
-    expect(topRow(feat.frame())).not.toContain(" · ");
-    await harness({ root: join(l.wts, "fix"), open: "index.md" }); // seen too
+    const feat = await harness({ root: join(l.wts, "feat"), open: "index.md", width });
+    expect(topRow(feat.frame())).toContain(`◈ ${name} │ ⎇ feat`);
+    expect(topRow(feat.frame()).match(/⎇/g)).toHaveLength(1);
+    await harness({ root: join(l.wts, "fix"), open: "index.md", width }); // seen too
     // From elsewhere: :folders lists it once, by its name — its worktrees are its branches, not copies (21.6).
     const { tildePath } = await import("../src/core/names.ts");
-    const other = await harness({ open: "index.md" });
+    const other = await harness({ open: "index.md", width });
     await other.app.run("folders.open");
-    const items = (other.app.overlay as ListOverlay).items.filter((i) => i.label === name);
+    const items = (other.app.overlay as ListOverlay).items.filter((i) => i.label === name && i.header);
     expect(items.map((i) => i.detail)).toEqual([tildePath(l.x)]);
+    expect((other.app.overlay as ListOverlay).items.some((item) => item.label === "main" && item.indent === 1)).toBe(
+      true,
+    );
     // A checkout switched to another branch: the top bar follows it.
     git(join(l.wts, "feat"), "checkout", "-q", "-b", "feat-2");
-    expect(topRow(feat.frame())).toContain(`${name}@feat-2`);
+    expect(topRow(feat.frame())).toContain(`${name} │ ⎇ feat-2`);
   });
 
   test("a second copy of a folder opened: which one links to its name open — asked once, remembered; dismissed, the first stays (21.6)", async () => {
@@ -134,11 +139,17 @@ describe("git worktrees in the TUI (17.19)", () => {
     expect(h.app.overlay).toBeNull();
     await h.app.run("folders.open");
     const list = h.app.overlay as ListOverlay;
-    const at = list.items.findIndex((i) => i.label === `f${tag}`);
-    expect(list.items[at]).toMatchObject({ detail: tildePath(one), hint: "2 copies" });
+    const at = list.items.findIndex((item) => (item.data as { root?: string } | null)?.root === one);
+    expect(
+      list.items
+        .filter((item) => item.label === `f${tag}`)
+        .map((item) => item.detail)
+        .sort(),
+    ).toEqual([tildePath(one), tildePath(two)].sort());
+    expect(list.items[at]).toMatchObject({ detail: tildePath(one) });
     list.selected = at;
     await h.keys("enter");
-    // Into the copy its links open; a second copy here, never chosen: asked which, once (21.6).
+    // Into the selected copy; pointer-copy preference is asked independently, once (21.6).
     expect(h.app.loc.root).toBe(one);
     expect((h.app.overlay as ListOverlay).title).toBe(`f${tag}: 2 copies on this machine — which do links to it open?`);
     await h.keys("escape");
@@ -906,7 +917,7 @@ describe("git in the TUI: marks, what changed, a note's diff, worktrees, conflic
     git(root, "commit", "-q", "-m", "feat's");
     const wt = `${root}-other`;
     git(root, "worktree", "add", "-q", "-b", "other", wt, "main");
-    const h = await harness({ root, open: "notes/b.md" });
+    const h = await harness({ root, open: "notes/b.md", width: 2 * stringWidth(wt) + 100 });
     await h.app.run("git.worktrees");
     const list = h.app.overlay as ListOverlay;
     expect(list.items.map((i) => [i.label, i.detail])).toEqual([
@@ -917,7 +928,7 @@ describe("git in the TUI: marks, what changed, a note's diff, worktrees, conflic
     expect(h.app.loc.root).toBe(wt);
     expect(h.app.view!.buf.rel).toBe("notes/b.md"); // the same note, there
     expect(h.app.view!.buf.source).toBe("# B\n"); // as the other branch has it
-    expect(topRow(h.frame())).toContain("@other"); // the worktree, by its branch (20.14)
+    expect(topRow(h.frame())).toContain(`${h.app.glyphs.branch} other`); // the worktree, by its branch (20.14)
   });
 
   test("a merge's conflicts in Problems: each file at its first marker; enter goes there", async () => {
@@ -1970,7 +1981,7 @@ describe("git's review, merge screen, pull and rebase (GIT-D3, GIT-D5, GIT-D6)",
     test("a merge settled on the merge screen, then concluded: the top bar says it; shift+r offers continue, abort", async () => {
       await isolated(async () => {
         const root = conflicted();
-        const h = await harness({ root, open: "sync.md", width: 120, height: 50 });
+        const h = await harness({ root, open: "sync.md", width: 2 * stringWidth(root) + 120, height: 50 });
         await h.app.git.refreshNow();
         await h.app.run("git.merge_screen");
         await h.keys("o", "t", "w", "s");
@@ -2046,7 +2057,7 @@ describe("git's review, merge screen, pull and rebase (GIT-D3, GIT-D5, GIT-D6)",
     test("shift+r rebases onto the base: asked, stopped at a conflict, the merge screen, the top bar; continued", async () => {
       await isolated(async () => {
         const root = behind();
-        const h = await harness({ root, open: "b.md", width: 120, height: 50 });
+        const h = await harness({ root, open: "b.md", width: 2 * stringWidth(root) + 120, height: 50 });
         await h.app.run("git.view");
         await h.app.git.refreshNow();
         await h.keys("shift+r");
@@ -2180,7 +2191,7 @@ describe("git's review, merge screen, pull and rebase (GIT-D3, GIT-D5, GIT-D6)",
         // Both of other's commits, in a terminal: it stops at the first.
         git(root, "cherry-pick", "other~1", "other");
         expect(git(root, "status", "--porcelain")).toBe("UU a.md");
-        const h = await harness({ root, open: "a.md", width: 120, height: 50 });
+        const h = await harness({ root, open: "a.md", width: 2 * stringWidth(root) + 120, height: 50 });
         await h.app.run("git.view");
         await h.app.git.refreshNow();
         expect(topRow(h.frame())).toContain("main cherry-picking");
@@ -2240,7 +2251,7 @@ describe("git's review, merge screen, pull and rebase (GIT-D3, GIT-D5, GIT-D6)",
         // Reverting the first, the line changed again since: a conflict.
         git(root, "revert", "--no-edit", "HEAD~1");
         expect(git(root, "status", "--porcelain")).toBe("UU a.md");
-        const h = await harness({ root, open: "a.md", width: 120, height: 50 });
+        const h = await harness({ root, open: "a.md", width: 2 * stringWidth(root) + 120, height: 50 });
         await h.app.git.refreshNow();
         expect(topRow(h.frame())).toContain("main reverting");
         await h.app.run("git.rebase");

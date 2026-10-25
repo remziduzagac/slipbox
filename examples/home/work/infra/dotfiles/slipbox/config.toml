@@ -5,11 +5,13 @@
 theme = "kestrel-dark"          # our own, in themes/kestrel-dark.yaml; slipbox's built-ins work too
 
 [render]
+notes = true
+data = true
 inset = 3
 max_width = 110                 # the text column in the TUI; 0 would be the full pane
 glyphs = "unicode"              # our terminal font has no Nerd glyphs
 show_urls = "always"
-code = "document"               # code opens as a document (24.x) where its language is mapped
+code = true               # code opens as a document (24.x) where its language is mapped
 code_cells = "box"              # the code view's cells in boxes, or on bands
 code_wrap = "scroll"            # a code block too wide scrolls sideways (our trees and logs keep their columns)
 images = "auto"                 # pictures in notes, where the terminal draws them
@@ -40,7 +42,6 @@ sidebar_width = 36
 outline = true
 outline_width = 36
 split_ratio = 0.6
-top_bar = false
 lines = "heavy"
 window_header = true
 breadcrumb = false
@@ -217,6 +218,17 @@ topbar_chip = { fg = "#2e3440", bg = "#88c0d0", bold = true }
 sidebar_vault = { bold = true, underline = true }
 
 [keys]                          # one binding per command, ctrl+j, and some real ones
+"leader ; 0 a" = "git.focus"
+"leader ; 0 b" = "git.menu"
+"leader ; 0 c" = "picture.copy_path"
+"leader ; 0 d" = "picture.copy_caption"
+"leader ; 0 e" = "picture.copy_image"
+"leader ; 0 f" = "background.open"
+"leader ; 0 g" = "background.cancel"
+"leader ; 0 h" = "explorer.focus"
+"leader ; 0 i" = "vault.switch_save"
+"leader ; 0 j" = "vault.switch_discard"
+"leader ; 0 k" = "vault.switch_stay"
 "ctrl+j" = "cursor.down"
 "alt+down" = "window.focus_down"
 "ctrl+alt+h" = "history.back"
@@ -419,7 +431,6 @@ sidebar_vault = { bold = true, underline = true }
 "leader ; e e" = "ui.line_numbers"
 "leader ; e f" = "ui.wrap"
 "leader ; e g" = "ui.breadcrumb"
-"leader ; e h" = "ui.top_bar"
 "leader ; e i" = "ui.problems_bar"
 "leader ; e j" = "ui.problem_marks"
 "leader ; e k" = "ui.urls"

@@ -68,6 +68,8 @@ export class Updates {
 
   /** `tui/run.ts` sets it; without it (a test's App, unless it sets one) nothing is checked or offered. */
   env: UpdateEnv | null = null;
+  /** Latest available release, kept on the bar after its offer closes. */
+  available: string | null = null;
   /** What waits for a quiet moment to be shown, in turn, each once (by its key): an offer, a restart's, the restart's
    *  question after waiting for an upgrade. */
   private queue: { key: string; show: () => void }[] = [];
@@ -156,6 +158,7 @@ export class Updates {
       if (this.mine.has(seen) || this.background) return;
       // An offer waiting of this version, or an older one, is out of date: it's installed; the restart starts it.
       this.queue = this.queue.filter((q) => !q.key.startsWith("offer:") || isNewer(q.key.slice(6), seen));
+      this.clearInstalled(seen);
       this.whenQuiet(`restart:${seen}`, () => this.offerRestart(seen));
     } finally {
       this.looking = false;
@@ -179,9 +182,11 @@ export class Updates {
 
   /** What the daily check found: its line kept in the messages list, and the offer opened once the TUI is quiet. */
   found(f: Found): void {
-    this.app.listMessage("info", f.said);
-    // Installed underneath already, its restart waiting: not offered again as out.
+    if ([...this.mine].some((version) => !isNewer(f.version, version))) return;
     if (this.queue.some((q) => q.key.startsWith("restart:") && !isNewer(f.version, q.key.slice(8)))) return;
+    this.available = f.version;
+    this.app.host.requestRender();
+    this.app.listMessage("info", f.said);
     // Dropped when your config or DO_NOT_TRACK turned the check off meanwhile.
     this.whenQuiet(`offer:${f.version}`, () => {
       if (this.env?.checkOn() && !doNotTrack(this.env.env)) this.offer(f.version);
@@ -243,6 +248,7 @@ export class Updates {
 
   /** The offer of a newer version, by how this slipbox was installed. */
   offer(version: string): void {
+    this.available = version;
     const env = this.env!;
     this.forget(`offer:${version}`);
     const title = `slipbox ${version} is out${env.channel === "preview" ? " on the preview channel" : ""}`;
@@ -258,6 +264,7 @@ export class Updates {
     const done = (choice: string, ticked: Set<string>) => {
       if (ticked.has("skip")) {
         skipVersion(this.stateFile, version);
+        if (this.available === version) this.available = null;
         this.app.message("info", `slipbox ${version} skipped: the next newer one is offered`);
       }
       if (choice === "now") void this.restart(version);
@@ -307,6 +314,7 @@ export class Updates {
   /** A newer version installed underneath this one, offered as the restart alone: once, however it came. */
   offerRestart(version: string): void {
     const env = this.env!;
+    this.clearInstalled(version);
     this.forget(`restart:${version}`);
     this.offeredUnderneath.add(version);
     const later = () => this.app.message("info", `slipbox ${version} is installed: :restart starts it`);
@@ -366,11 +374,14 @@ export class Updates {
     const underneath = this.installedNewer();
     if (underneath && !isNewer(latest, underneath))
       return this.whenAnswered(askedAt, `restart:${underneath}`, () => this.offerRestart(underneath));
-    if (!isNewer(latest, env.version))
+    if (!isNewer(latest, env.version)) {
+      this.available = null;
       return this.app.message(
         "info",
         `slipbox ${env.version} is the newest${env.channel === "preview" ? " release or preview" : ""}`,
       );
+    }
+    this.available = latest;
     this.whenAnswered(askedAt, `offer:${latest}`, () => this.offer(latest));
   }
 
@@ -424,11 +435,17 @@ export class Updates {
     const r = said.ok ? said.data : undefined;
     if (r && (r.status === "upgraded" || r.status === "installed")) {
       const v = r.status === "installed" ? (r.installed ?? r.latest) : r.latest;
+      this.clearInstalled(v);
       this.mine.add(v);
       this.app.message("info", `slipbox ${v} is installed (this is ${env.version}): :restart starts it`);
     } else if (r) this.app.message("info", upgradeSaid(r, env.channel));
     else this.app.message("error", `the upgrade to ${version} failed: ${said.error?.message ?? "it said nothing"}`);
     this.app.host.requestRender();
+  }
+
+  private clearInstalled(version: string): void {
+    this.queue = this.queue.filter((item) => !item.key.startsWith("offer:") || isNewer(item.key.slice(6), version));
+    if (this.available && !isNewer(this.available, version)) this.available = null;
   }
 
   /** The notes unsaved here, by name; the properties being edited count. */

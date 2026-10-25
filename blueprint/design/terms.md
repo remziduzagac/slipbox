@@ -49,8 +49,8 @@ what replaced them.
   [rendering.md](rendering.md) § Blocks and inlines.
 - **Elsewhere**: no-vault as users read it: every file outside home and every vault, one place for the machine, with
   its own tabs and no index (VV-D3). The code's mode `folder`. [roots.md](roots.md) § Elsewhere.
-- **The explorer's view**: the part of the file system the explorer shows, one tree zoomed in and out along its
-  breadcrumb (VV-D5); not a window's view, below. [tui.md](tui.md) § Side panes.
+- **The explorer's zoom**: the part of the file system the explorer shows, one tree zoomed in and out along its
+  breadcrumb (VV-D5); distinct from a window's READ or SOURCE view (VB-D1). [tui.md](tui.md) § Side panes.
 - **Face**: a front end on the core: the TUI or the CLI. [how-it-works.md](how-it-works.md) § One core, two faces.
 - **The fixture vault**: `tests/fixtures/vault/`, the cases the samples lack. [testing.md](testing.md) § The fixture
   vault.
@@ -90,6 +90,8 @@ what replaced them.
   code.
 - **The merge screen**: git's conflicts in a file settled a card at a time, yours and theirs against the base
   (GIT-D5). [tui.md](tui.md) § Git.
+- **Mode**: vim's NORMAL, INSERT, VISUAL or V-LINE, distinct from the window's view (VB-D1).
+  [tui.md](tui.md) § Screen layout.
 - **Named folder**: a vault a pointer can name, by its `.slipbox/` name, else its repository's remote.
   [roots.md](roots.md) § Named folders.
 - **No-vault**: the design's word for Elsewhere (VV-D3).
@@ -118,7 +120,7 @@ what replaced them.
   (VV-D9); why one is `⊘`, on the status line and in Info (D244). [tui.md](tui.md) § Side panes.
 - **Session**: the file a vault's workspaces are kept in, with what they share (`session.json`, the `Session`); users
   read workspace (WSP-D6). [tui.md](tui.md) § Positions.
-- **Source mode**: a note shown as its raw markdown: another layout of the same note. [tui.md](tui.md) § Source mode.
+- **SOURCE view**: a note shown as its raw markdown: another layout of the same note. [tui.md](tui.md) § SOURCE view.
 - **Skip list**: what home's walk leaves out instead of a `.gitignore`: hidden and system folders, `Downloads`, the busy
   folders, files not notes or text (VV-D2). [roots.md](roots.md) § Home.
 - **Staleness file**: `dirty/<pid>.json` in a vault's state, listing the notes a TUI holds unsaved, which the CLI
@@ -135,20 +137,24 @@ what replaced them.
   code's, `core/vault.ts` and `vault.init`. [roots.md](roots.md) § Vaults and markers.
 - **Vault marker**: `.git`, `.slipbox/`, `.obsidian/` or `.zk/` (`walk.root_markers`).
   [roots.md](roots.md) § Vaults and markers.
-- **View**: a window: a buffer with its own cursor, top row, selection and find; a **tab** holds one, or two in a
-  split. [tui.md](tui.md) § Buffers, views, tabs, windows.
+- **View**: a window's READ or SOURCE presentation; the lens is a toggle within READ (VB-D1). The code's `View`
+  still holds a buffer with its own cursor, top row, selection and find; a **tab** holds one, or two in a split.
+  [tui.md](tui.md) § Buffers, views, tabs, windows.
 - **The walk**: the listing of a vault's files, shared by the index and the watcher. [roots.md](roots.md) § The walk.
-- **Where you are**: the vault, its branch and a workspace other than the vault's own, on the top bar, else on the
-  status line (WSP-D4, WSP-D5). [tui.md](tui.md) § Screen layout.
+- **Where you are**: explorer zoom, workspace and git, grouped on the permanent top bar (VB-D3, VB-D6).
+  [tui.md](tui.md) § Screen layout.
 - **Which-key**: the popup listing the keys a pending sequence can take next. [tui.md](tui.md) § Screen layout.
 - **Wikilink**: `[[name]]` or `[[path#heading|text]]`, a link by name or path, within its vault.
   [links.md](links.md) § Wikilinks.
+- **Window header**: the row atop each window: in a split its file’s name, the breadcrumb, the mode’s buttons,
+  and `▤` without the right rail (HDR-D1). [tui.md](tui.md) § Screen layout.
 - **Workspace**: your tabs and windows in a place — the splits, each window's note, cursor and history: one per branch
   of a git checkout, one per folder of home opened by name and home's own, else the vault's own; personal, in
   slipbox's state, never in the vault (WSP-D1, WSP-D2). Not VS Code's workspace, the folders a window opened (a vault,
   here); Obsidian's workspaces, saved layouts, are nearer, though slipbox keeps one per place by itself. Nor D33's
   "shared workspace", slipbox as a whole. [tui.md](tui.md) § Positions.
-- **Worktree**: a git worktree: its repository at a branch, a vault of its own, shown as `name@branch`.
+- **Worktree**: a git worktree: its repository at a branch, a vault of its own, shown as `name@branch` outside the
+  permanent bar, which separates the vault name and branch (VB-D6).
   [roots.md](roots.md) § Worktrees.
 
 ## Retired
@@ -162,7 +168,7 @@ Older decisions use these; the design doesn't.
 - **plain folder**, **loose file**: a folder, a file, outside every vault, opened by its path: Elsewhere now, and a
   file of it is Elsewhere's, never opened beside a vault's notes (VV-D3); `~` is home (VV-D2).
 - **the roots beside the tree**, **pinned roots** (`:pin-root`): the explorer's other roots (D65, D77): gone; the
-  explorer's view holds them (VV-D5).
+  explorer's zoom holds them (VV-D5).
 - **the LSP face** (`slipbox lsp`): removed; editors' own markdown servers follow path links, and agents use the CLI
   (D67).
 - **root**, **root marker**, **trusted root**: a vault, a vault marker, a trusted vault (VV-D1, reversing D79's choice

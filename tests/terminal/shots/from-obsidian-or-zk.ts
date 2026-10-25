@@ -10,6 +10,10 @@ export const SHOTS: Shot[] = [
     take: async (s) => {
       await s.status("Home.md");
       await s.see("properties");
+      await s.keys(":");
+      await s.type("18");
+      await s.keys("enter", "ctrl+d");
+      await s.see("⧉p");
     },
   },
 ];

@@ -102,6 +102,64 @@ export const SEPT1 = "~/notes/daily/2026-09-01.md";
 const OCT5 = "~/notes/daily/2026-10-05.md";
 
 export const EDITING: Check[] = [
+  ...(["kitty", "legacy"] as const).map(
+    (keyboard): Check => ({
+      area: "editing",
+      name: `source Escape: INSERT, VISUAL and NORMAL act without another key (${keyboard})`,
+      covers: {
+        cases: ["source-mode", "editing", "selection"],
+        commands: ["view.source", "edit.insert", "visual.char", "visual.exit"],
+      },
+      options: { open: MEETING, keyboard },
+      run: async (s) => {
+        await ready(s);
+        await source(s);
+        await s.keys("i");
+        await s.status("SOURCE │ INSERT");
+        await s.type("escape probe");
+        await s.send("\x1b");
+        await s.until(() => !s.statusLine().includes("INSERT"), 1500, "raw Escape leaves INSERT before another key");
+        await s.status("SOURCE │ NORMAL");
+        await s.keys("v");
+        await s.status("SOURCE │ VISUAL");
+        await s.keys("escape");
+        s.expect(!s.statusLine().includes("VISUAL"), "Escape leaves VISUAL before another key");
+        await s.keys("escape");
+        await s.status("SOURCE");
+        s.expect(!/INSERT|VISUAL/.test(s.statusLine()), "Escape in NORMAL keeps SOURCE in normal mode");
+      },
+    }),
+  ),
+  {
+    area: "editing",
+    name: "source editor: relative gutter and terminal bar while typing",
+    covers: { cases: ["source-mode", "editing"], commands: ["view.source", "edit.insert", "note.edit"] },
+    options: {
+      open: MEETING,
+      config: '[ui]\nrelative_numbers = "both"\n[editor]\ncommand = "sh -c \'echo CURSOR-EDITOR-PROBE\'"\n',
+    },
+    run: async (s) => {
+      await ready(s);
+      await source(s);
+      await s.keys("j", "j", "i");
+      await s.status("INSERT");
+      s.expect(s.term.output.includes("\x1b[6 q"), "typing uses a steady terminal bar");
+      await s.keys("escape");
+      s.expect(!s.statusLine().includes("INSERT"), "Escape restores normal mode");
+      const start = s.term.output.length;
+      await leader(s, "n", "e");
+      await s.until(
+        () => s.term.output.slice(start).includes("CURSOR-EDITOR-PROBE"),
+        3000,
+        "editor ran while renderer suspended",
+      );
+      const beforeEditor = s.term.output.slice(start).split("CURSOR-EDITOR-PROBE")[0]!;
+      s.expect(/\x1b\[(?:0)? q/.test(beforeEditor), "suspend restores cursor before the outside editor");
+      await s.status("NORMAL");
+      await s.quit();
+      s.expect(/\x1b\[(?:0)? q/.test(s.term.output), "quit restores the terminal cursor style");
+    },
+  },
   // --- motions --------------------------------------------------------------------------------
   {
     area: "editing",

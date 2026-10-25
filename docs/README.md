@@ -18,7 +18,7 @@ read them from its `llms.txt`, a line per page, or all at once from its `llms-fu
 Follow a practical workflow from its prerequisites to a checked result. Begin with the first two.
 
 - [Working with slipbox](guides/getting-started.md): a first session with two linked notes and a saved change.
-- [Reading and editing in slipbox](guides/lens.md): rendered reading, the lens, source mode, typing and saving.
+- [Reading and editing in slipbox](guides/lens.md): rendered reading, the lens, SOURCE view, typing and saving.
 - [Working across folders and vaults](guides/vaults.md): look elsewhere, enter another vault and return.
 - [Coming from Obsidian or zk](guides/from-obsidian-or-zk.md): check your existing notes and link conventions.
 - [Reviewing changes with Git](guides/code-and-git.md): inspect changes, review a branch and check the result.
@@ -35,7 +35,7 @@ Understand a part of the product: how it works, ordinary operations and importan
 - [How slipbox works](manual/how-it-works.md): files, buffers, vaults, caches and the saved-file boundary.
 - [The screen and navigation](manual/screen.md): focus, modes, panels, tabs, windows, mouse and history.
 - [Reading notes and documents](manual/reading.md): rendered text, selection, tables, images, math and diagrams.
-- [Editing: the lens and source mode](manual/editing.md): editing behavior, saving, undo and external changes.
+- [Editing: the lens and SOURCE view](manual/editing.md): editing behavior, saving, undo and external changes.
 - [Finding and replacing](manual/finding.md): switcher, search, find/replace, tags, document types and outline.
 - [Files and folders](manual/files.md): explorer, create, copy, rename, move, trash and link updates.
 - [Links and backlinks](manual/links-and-vaults.md): forms, resolution, backlinks, repairs and conventions.

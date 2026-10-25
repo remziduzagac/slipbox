@@ -2,6 +2,7 @@
 // vault named (21.10), the named folders this machine knows, with the copy links open (21.6), and the symlinks answered
 // (VV-D6).
 
+import { knownVaults } from "../core/vault-list.ts";
 import { existsSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import {
@@ -35,6 +36,21 @@ import { renameResult } from "./files.ts";
 
 /** Vaults: one made or taken apart, named; the named folders. */
 export const VAULT_COMMANDS: Record<string, Handler> = {
+  vaults(_s, rest) {
+    if (rest.length) throw new UsageError("vaults takes no arguments");
+    const entries = knownVaults();
+    return {
+      data: entries,
+      human: entries.length
+        ? `${entries
+            .map(
+              (entry) =>
+                `${"  ".repeat(entry.indent ?? 0)}${entry.label}${entry.hint ? ` (${entry.hint})` : ""}  ${entry.detail}`,
+            )
+            .join("\n")}\n`
+        : "no known vaults yet\n",
+    };
+  },
   async init(s, rest) {
     const dir = rest[0] ?? flag(s.args, "root") ?? s.io.cwd;
     const name = flag(s.args, "name");

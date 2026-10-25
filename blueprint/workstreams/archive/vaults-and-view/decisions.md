@@ -5,6 +5,9 @@ work starts.
 
 ## VV-D1: "Vault" for every folder with a marker (2026-10-14)
 
+> **2026-10-25:** Clarified by WSP-D1: workspace names the working state kept in a place, not the folders; the content
+> boundary remains the vault.
+
 **Decision:** A vault is a folder holding `.slipbox/`, `.obsidian/`, `.zk/` or `.git`: any git repository is a vault,
 an Obsidian vault and a zk notebook too. A vault has its own tabs, index (links, backlinks, search), settings and git.
 "Root", "plain folder" and "loose file" leave everything users read: the docs, the messages, the status line, the
@@ -18,6 +21,8 @@ such a folder, and the code's word.
 **Not chosen:** "workspace", which VS Code's users know as a window's set of folders; "project", which reads as code.
 
 ## VV-D2: Home is a vault, without a marker (2026-10-14)
+
+> **2026-10-25:** Clarified by WSP-D1: each folder of home opened by name keeps a workspace of its own.
 
 > **Detailed by D248 (2026-10-17):** a folder of home opened by name is walked whole, and its notes count against
 > home's cap of 10,000: home's deepest other notes make room for them, and one holding more than the cap alone is

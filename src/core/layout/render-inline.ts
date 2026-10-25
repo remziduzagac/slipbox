@@ -122,7 +122,7 @@ export function inline(nodes: PhrasingContent[], ctx: Ctx, style: Style, src: nu
         case "image":
         case "imageReference": {
           const url = n.type === "image" ? n.url : (ctx.definitions.get(n.identifier.toLowerCase()) ?? "");
-          const alt = n.alt || url.split("/").pop() || "image";
+          const alt = sanitize(n.alt || url.split("/").pop() || "image").replace(/\s*\n\s*/g, " ");
           // Inside a link (a badge: [![alt](img)](url)) the image is that link's text: it follows
           // the link, not the image.
           const id =

@@ -23,16 +23,17 @@ answer, never its settings'.
 ## Workspace
 
 Your tabs and windows in a place: the splits, and each window's note, cursor and history. slipbox keeps one for each
-branch of a repository, and one for each folder of home you open by name, in its own state on your machine, never in
-the vault. Unlike VS Code's workspace, it isn't a set of folders (that's a vault here); unlike Obsidian's, you don't
+branch of a repository, one for each folder of home you open by name, and home's own; otherwise the vault's own.
+A workspace belongs to its vault. Changing vault restores that vault's workspace from state on your machine. Unlike
+VS Code's workspace, it isn't a set of folders (that's a vault here); unlike Obsidian's, you don't
 save or pick it: slipbox keeps it for you.
 
 [Details](vaults.md#vaults-and-workspaces)
 
 ## Where you are
 
-The vault, its branch, and your workspace when it isn't the vault's own, shown in the middle of the top bar
-(`◈ kestrel · main`, `◈ ~ › notes`). Click the vault to go into another, or the branch for the branches.
+The explorer zoom, your workspace and git state, shown in the middle of the top bar
+(`≡ ~/work/kestrel │ ◈ kestrel │ ⎇ main`). Click the workspace for the vault list, or the branch for the branches.
 
 [Details](screen.md#the-top-bar)
 
@@ -43,11 +44,16 @@ unavailable.
 
 [Details](vaults.md#elsewhere)
 
-## The explorer's view
+<a id="the-explorers-view"></a>
 
-The part of the filesystem currently shown in the explorer. Zooming that view does not combine the vaults it displays.
+## The explorer's zoom
 
-[Details](files.md#the-view)
+The part of the filesystem currently shown in the explorer. The zoom can be wider or narrower than the vault and
+workspace. Zooming does not change your workspace or combine
+the vaults it displays. `z`, `-` and breadcrumb clicks change only the explorer zoom. Opening a folder under home
+by name restores that folder's saved workspace; these are separate actions.
+
+[Details](files.md#the-zoom)
 
 ## The index
 

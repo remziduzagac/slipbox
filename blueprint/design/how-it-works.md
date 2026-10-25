@@ -104,7 +104,7 @@ that order:
 - **Rendering** ([rendering.md](rendering.md)): a note's markdown tree laid out as rows for a width: blocks, tables,
   wrapping, themes, glyphs; pure, so the CLI's `render` and the TUI draw the same (§ Data flow for one note).
 - **The TUI** ([tui.md](tui.md)): the reader and the editor: panes, buffers and tabs, the explorer and its view, the
-  peek, source mode and the lens, saving, autosave and the conflict prompt, external changes, git: the git panel, diffs,
+  peek, SOURCE view and the lens, saving, autosave and the conflict prompt, external changes, git: the git panel, diffs,
   the review, the merge screen; files beyond notes too. Its keys are the user's reference,
   [keys.md](../../docs/manual/keys.md).
 - **Code as a notebook** ([code-view.md](code-view.md)): a source file rendered as a document, a cell per
@@ -508,7 +508,7 @@ the whole-note work — the first open, a change of width — short:
 - **The render caches blocks** (`renderTree`): each top-level block's rows are kept by a token
   the parse gives the block, which survives the chunk being moved by an edit above it; a moved
   block is copied to its new place and renumbered, not rendered again.
-- **Source mode lays out changed lines** (`layoutSource`): the lines before and after an edit are
+- **SOURCE view lays out changed lines** (`layoutSource`): the lines before and after an edit are
   reused, shifted when lines were added or taken away; the highlighter's per-line state says where
   reuse may resume. Headings are found line by line as it goes.
 - **A big note parses on other threads** (`core/parse-pool.ts`): when what's left to parse of a note is 128 KB or
@@ -532,7 +532,7 @@ Measured with `bun scripts/bench.ts` (median, this machine, 2026-10-01):
 | open: the first frame | 50 ms | 30 ms (`reading…`; was 790, the whole parse) |
 | open: the note drawn | 50 ms | 380 ms (was 790) |
 | move the cursor (`j`) | 1 ms | 1 ms |
-| type a key in source mode | 1.3 ms | 13–18 ms |
+| type a key in SOURCE view | 1.3 ms | 13–18 ms |
 | type a key in the lens | 2 ms | 18 ms |
 | leave insert mode in the lens | 5–10 ms | 40 ms (was 80; 1,453 before the chunks) |
 | a reload after an agent's write | 5 ms | 45–50 ms (was 70; 1,418 before the chunks) |

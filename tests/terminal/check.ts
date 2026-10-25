@@ -231,6 +231,12 @@ export const MODES = new Set(
  * operator's, a prompt over the line.
  */
 export function modeOf(statusLine: string): string | null {
+  const pair = /^ (READ(?:[·-]LENS)?|SOURCE) [│|] (NORMAL|INSERT|VISUAL|V-LINE) (.*)$/.exec(statusLine);
+  if (pair) {
+    const context = /^ (\S+) /.exec(pair[3]!)?.[1];
+    if (context && context !== "‹" && context !== "<") return MODES.has(context) ? context : null;
+    return pair[2] !== "NORMAL" ? pair[2]! : pair[1]!.includes("LENS") ? "LENS" : pair[1]!;
+  }
   const chip = /^ (\S+) /.exec(statusLine)?.[1];
   return chip && MODES.has(chip) ? chip : null;
 }

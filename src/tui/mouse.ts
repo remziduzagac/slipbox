@@ -3,7 +3,7 @@
 
 import { stopInsert } from "./editing.ts";
 import * as R from "./replacing.ts";
-import { branchMenu, gitClick, gitRightClick, signClick } from "./gitmouse.ts";
+import { gitClick, gitRightClick, signClick } from "./gitmouse.ts";
 import { stringWidth } from "../core/width.ts";
 import { saveAsMouse } from "./saveas.ts";
 import { dialogMouse } from "./dialog.ts";
@@ -57,6 +57,12 @@ export class Mouse {
     | { kind: "scrollbar"; bar: import("./draw.ts").ScrollbarGeom }
     | { kind: "picture"; view: View; row: number; file: string; x: number; y: number; ctrl: boolean }
     | null = null;
+
+  leaveVault(): void {
+    this.drag = null;
+    this.lastClick = null;
+    this.hover = null;
+  }
 
   /** Everything visible is clickable (docs/manual/keys.md, "Mouse"). */
   handle(ev: {
@@ -545,6 +551,7 @@ export class Mouse {
     // A press on a picture that moves: a selection from where it was pressed, as before pictures were clicked.
     if (this.drag?.kind === "picture") {
       const { view, x, y, ctrl } = this.drag;
+      if (ev.x === x && ev.y === y) return;
       const pane = g.panes.find((p) => p.view === view);
       this.drag = null;
       if (!pane) return;
@@ -693,6 +700,12 @@ export class Mouse {
       case "fn":
         return this.app.footnotes.add();
       // A code cell's button (24.13): `action:line`.
+      case "caption": {
+        const [window, row, action] = arg.split(":");
+        const view = this.app.floating?.view ?? this.focusWindow(Number(window));
+        if (view && ["path", "caption", "image"].includes(action!)) void this.app.run(`picture.copy_${action} ${row}`);
+        break;
+      }
       case "cell": {
         const [action, line] = arg.split(":");
         return this.app.code.cellAction(action!, Number(line));
@@ -775,14 +788,16 @@ export class Mouse {
         break;
       // Where you are on the top bar (WSP-D4): the vault, the named folders to go into; the branch, the branches' menu.
       case "top":
-        if (arg === "vault") void this.app.run("folders.open");
-        else if (arg === "branch") branchMenu(this.app);
+        if (arg === "zoom") void this.app.run("explorer.focus");
+        else if (arg === "changed") void this.app.run("git.focus");
+        else if (arg === "work") void this.app.run("background.open");
+        else if (arg === "upgrade") void this.app.run("app.upgrade");
+        else if (arg === "vault") void this.app.run("folders.open");
+        else if (arg === "branch") void this.app.run("git.menu");
         break;
       case "status":
         // The path: its window's history, and Copy path; the arrows around it, back and forward.
         if (arg === "path" && this.app.view) this.app.history.openPathMenu();
-        // The vault and its branch (GIT-D8): the branches, pull and push.
-        else if (arg === "branch") branchMenu(this.app);
         else if (arg === "back" || arg === "forward") this.app.history.go(arg);
         else if (arg === "message") void this.app.run("messages.open");
         // The file's problems: the Problems panel on This file (1.7) — on All when it has none; open there, closed.

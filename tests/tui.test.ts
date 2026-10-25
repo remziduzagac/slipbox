@@ -1,3 +1,4 @@
+import { vaultChoices } from "../src/tui/vault-list.ts";
 // The TUI model, driven headlessly: keys in (canonical names, as the keymap writes them),
 // TextCanvas out. Plus one run through OpenTUI's test renderer for real key parsing.
 // The harness is tests/tui-harness.ts; source control's worktrees, marks, diffs, review, merge, pull and rebase
@@ -1199,7 +1200,7 @@ describe("the left rail", () => {
     // Without it, ≡ is back in the top bar.
     const n = await harness({ width: 140, height: 30, config: (c) => (c.ui.left_rail = false) });
     n.frame();
-    expect(n.app.geometry!.hot.find((r) => r.id === "btn:explorer")!.y).toBe(0);
+    expect(n.app.geometry!.hot.find((r) => r.id === "top:zoom")!.y).toBe(0);
   });
 });
 
@@ -2490,9 +2491,7 @@ describe("the lens (live preview: space n l, i/a/o with edit_in = live)", () => 
     await h.keys("i");
     expect(v.live).toBe(true);
     expect(v.insert).toBeFalsy();
-    expect(h.app.messages.at(-1)!.text).toBe(
-      "the lens: the markdown around the cursor — the key again edits it, esc closes it",
-    );
+    expect(h.app.messages.some((m) => m.text.startsWith("the lens:"))).toBe(false);
     expect(rows()[lens().top]).toContain("source · lines");
     await h.keys("i");
     expect(v.insert).toBe(true);
@@ -2522,7 +2521,7 @@ describe("the lens (live preview: space n l, i/a/o with edit_in = live)", () => 
     }
   });
   test("its counters: each row's distance from the cursor's (0) in a column of its own, the lens's accent; the gutter its lines' numbers; relative_numbers = off: none", async () => {
-    for (const relative of ["lens", "off"] as const) {
+    for (const relative of ["lens", "both", "off"] as const) {
       const { h, v, goto, lens } = await setup((c) => ((c.ui.line_numbers = true), (c.ui.relative_numbers = relative)));
       goto("Para 7 with");
       await h.keys("space", "n", "l", "j");
@@ -2537,7 +2536,7 @@ describe("the lens (live preview: space n l, i/a/o with edit_in = live)", () => 
       const para = inside.find((r) => lineText(layout.lines[r]!).startsWith("Para 7"))!;
       // The gutter: the lines' own numbers, in the lens too.
       expect(gutter(para)).toBe(String(layout.lines[para]!.src));
-      if (relative === "lens") {
+      if (relative === "lens" || relative === "both") {
         expect(inside.map(counter)).toEqual(inside.map((r) => `${String(Math.abs(r - v.cur.row)).padStart(3)} `));
         expect(screen(para).slice(pane.textX + 4)).toMatch(/^Para 7 with \*\*bold\*\*\./); // its text after them
         const near = inside.find((r) => r !== v.cur.row)!;
@@ -2832,7 +2831,7 @@ describe("the lens (live preview: space n l, i/a/o with edit_in = live)", () => 
     // a: the lens on the cursor's block, not source mode; the cursor on the same character, the column the text's.
     await h.keys("a");
     expect([v.live, v.source, !!v.insert]).toEqual([true, false, false]);
-    expect(status()).toMatch(/ LENS .* L3:1 /);
+    expect(status()).toMatch(/ READ·LENS .* L3:1 /);
     await h.keys("f", "b");
     expect(status()).toMatch(/ L3:6 /); // the b of [b]: its sixth column, the counters' four not counted
     // a again types after the cursor, in the note.
@@ -2844,7 +2843,7 @@ describe("the lens (live preview: space n l, i/a/o with edit_in = live)", () => 
     // esc leaves typing, the lens still open; esc again: the render.
     await h.keys("escape");
     expect([v.live, !!v.insert]).toEqual([true, false]);
-    expect(status()).toMatch(/ LENS .* L3:7 /); // back onto the X
+    expect(status()).toMatch(/ READ·LENS .* L3:7 /); // back onto the X
     await h.keys("escape");
     expect([v.live, v.source]).toEqual([false, false]);
     expect(status()).toContain(" READ ");
@@ -2852,7 +2851,7 @@ describe("the lens (live preview: space n l, i/a/o with edit_in = live)", () => 
     // space n l opens it too, on the same line.
     await h.keys("space", "n", "l");
     expect(v.live).toBe(true);
-    expect(status()).toMatch(/ LENS .* L3:\d+ /);
+    expect(status()).toMatch(/ READ·LENS .* L3:\d+ /);
     // Without the setting, the default ("source", as the manual says): a switches to source mode and types at once.
     const d = await open();
     const dv = d.app.view!;
@@ -3170,13 +3169,13 @@ describe("top bar, tab strip, status line", () => {
     const page = h.app.theme.roles.text.bg ?? h.app.theme.bg;
     expect(h.app.theme.roles.topbar.bg).toBeUndefined();
     expect(h.canvas().styles[chipR.y]![chipR.x + 2]!.bg).toBe(page);
-    expect(h.canvas().styles[0]![80]?.bg ?? page).toBe(page);
+    expect(h.canvas().styles[0]![80]?.bg).toBe(h.app.theme.roles.topbar_group.bg!);
     expect(h.frame().split("\n")[1]!.startsWith("━━━━")).toBe(true);
-    const ex = hot(h, "btn:explorer");
-    click(h, ex.x, ex.y);
-    expect(h.app.panels.sidebarShown).toBe(false);
+    const ex = hot(h, "top:zoom");
+    h.app.panels.showSidebar(false);
     click(h, ex.x, ex.y);
     expect(h.app.panels.sidebarShown).toBe(true);
+    expect(h.app.region).toBe("sidebar");
     const ol = hot(h, "btn:outline");
     expect(ol.x + ol.w).toBe(160); // far right, the rail's second button: Info's is first (3.19), level with the breadcrumb
     expect(hot(h, "btn:info").y).toBe(h.app.geometry!.panes[0]!.y - 2);
@@ -3197,12 +3196,10 @@ describe("top bar, tab strip, status line", () => {
     h.app.mouse.handle({ type: "move", x: 80, y: 10, button: 0 });
     expect(h.app.mouse.hover).toBeNull();
   });
-  test("top_bar = false removes it; zen hides it", async () => {
-    const off = await harness({ config: (c) => (c.ui.top_bar = false) });
-    expect(off.frame().split("\n").slice(0, 3).join("\n")).not.toContain("slipbox");
+  test("zen retains the permanent top bar", async () => {
     const zen = await harness({ config: (c) => (c.ui.zen = true) });
-    zen.frame();
-    expect(zen.app.geometry!.hot.some((r) => r.id === "btn:explorer")).toBe(false);
+    expect(topRow(zen.frame())).toContain("slipbox");
+    expect(zen.app.geometry!.hot.some((r) => r.id === "top:zoom")).toBe(true);
   });
   test("tab strip under the top bar, even with one tab: click, ×, middle-click, wheel, drag", async () => {
     const h = await harness({ width: 160 });
@@ -3575,11 +3572,11 @@ describe("top bar, tab strip, status line", () => {
     expect(lines.join("\n")).not.toContain("§");
     // The header keeps its row and its buttons (HDR-D3).
     const header = h.app.geometry!.panes[0]!.y - 2;
-    expect(lines[header]).toMatch(/Read {2}Lens {2}Source/);
+    expect(lines[header]).toMatch(/R {2}L {2}S/);
     await h.keys("/", "D", "2");
     lines = h.frame().split("\n");
     // The find row under the header's rule, its own rule under it, then the text.
-    expect(lines[header]).toMatch(/Read {2}Lens {2}Source/);
+    expect(lines[header]).toMatch(/R {2}L {2}S/);
     expect(lines[header + 2]).toMatch(/› D2/);
     expect(lines[h.app.geometry!.panes[0]!.y - 2]).toMatch(/› D2/);
     await h.keys("escape", "escape");
@@ -3639,18 +3636,10 @@ describe("top bar, tab strip, status line", () => {
     await h.keys("escape", "escape");
     expect(h.app.view!.find).toBeNull();
     expect(h.app.view!.height).toBe(height); // the row gone with the search
-    // The top bar can go (space u b, a UI setting): the note gains its row, messages still float.
-    await h.keys("space", "u", "b");
-    expect(h.app.ui.top_bar).toBe(false);
-    f = lines();
-    expect(h.app.view!.height).toBe(height + 1);
-    expect(f[0]).not.toContain("slipbox");
-    h.app.message("warn", "careful");
-    f = lines();
-    expect(f.join("\n")).toContain("! careful");
-    expect(f.at(-1)).toContain("READ");
-    await h.app.run("ui.top_bar");
+    // The permanent bar keeps its row while messages float.
     expect(lines()[0]).toContain("slipbox");
+    h.app.message("warn", "careful");
+    expect(lines().join("\n")).toContain("! careful");
     // Too narrow for a box: a message takes over the status line for its while.
     const n = await harness({ open: "notes/alpha.md", width: 28, height: 24 });
     n.frame();
@@ -5284,11 +5273,11 @@ describe("scratch (space s)", () => {
     expect(h.frame()).toContain("▌ Ideas");
     // The lens, typing in it: esc stops typing, esc again leaves the lens, the scratch still open.
     await h.keys("j", "j", "i");
-    expect(status()).toMatch(/^ LENS /);
+    expect(status()).toMatch(/^ READ·LENS /);
     await h.keys("i");
-    expect(status()).toMatch(/^ INSERT /);
+    expect(status()).toMatch(/^ (?:SOURCE|READ·LENS) │ INSERT /);
     await h.keys("escape");
-    expect([h.app.floating?.kind, status()]).toEqual(["scratch", expect.stringMatching(/^ LENS /)]);
+    expect([h.app.floating?.kind, status()]).toEqual(["scratch", expect.stringMatching(/^ READ·LENS /)]);
     await h.keys("escape");
     expect([h.app.floating?.kind, status()]).toEqual(["scratch", expect.stringMatching(/^ READ /)]);
     // A find: esc ends it first.
@@ -5307,11 +5296,14 @@ describe("scratch (space s)", () => {
     const h = await harness({ open: "notes/alpha.md", width: 120, config: (c) => (c.editor.edit_in = "live") });
     const status = () => h.frame().split("\n").at(-1)!;
     await h.keys("space", "s", "a");
-    expect([h.app.floating?.kind, status()]).toEqual(["scratch", expect.stringMatching(/^ INSERT /)]);
+    expect([h.app.floating?.kind, status()]).toEqual([
+      "scratch",
+      expect.stringMatching(/^ (?:SOURCE|READ·LENS) │ INSERT /),
+    ]);
     // One message, saying how to go on: not the lens's own.
     expect(h.app.toasts.map((m) => m.text)).toEqual(["added to the scratch; add a note, esc then q closes it"]);
     await h.keys("d", "o", "escape");
-    expect([h.app.floating?.kind, status()]).toEqual(["scratch", expect.stringMatching(/^ LENS /)]);
+    expect([h.app.floating?.kind, status()]).toEqual(["scratch", expect.stringMatching(/^ READ·LENS /)]);
     await h.keys("q");
     expect([h.app.floating, readFileSync(h.app.scratch.location().path, "utf8")]).toEqual([
       null,
@@ -5758,7 +5750,7 @@ describe("review cycle 1 (TUI)", () => {
       [["shift+t"], " T "],
     ] as const) {
       await h.keys(...keys);
-      expect(statusRow(h.frame()).slice(0, chip.length)).toBe(chip);
+      expect(statusRow(h.frame())).toContain(`NORMAL ${chip}`);
       await h.keys("escape");
     }
     await h.keys("space", "n", "v");
@@ -5768,7 +5760,7 @@ describe("review cycle 1 (TUI)", () => {
       [["d", "shift+t"], " dT "],
     ] as const) {
       await h.keys(...keys);
-      expect(statusRow(h.frame()).slice(0, chip.length)).toBe(chip);
+      expect(statusRow(h.frame())).toContain(`NORMAL ${chip}`);
       await h.keys("escape");
     }
   });
@@ -6292,7 +6284,7 @@ describe("review cycle 3 (TUI)", () => {
       rows.forEach((r, y) => {
         r.forEach((ch, x) => {
           // A tee pointing down with a line above it should have been a cross.
-          if ((ch === "┬" || ch === "┳") && y > 0 && "│┃┼╋├┤┣┫┬┳".includes(rows[y - 1]![x] ?? " "))
+          if ((ch === "┬" || ch === "┳") && y > 1 && "│┃┼╋├┤┣┫┬┳".includes(rows[y - 1]![x] ?? " "))
             throw new Error(`${width}: ${ch} under a line at ${x},${y}`);
           if (ch === "┬" || ch === "┳") checked++;
         });
@@ -6880,9 +6872,9 @@ describe("files beyond notes (16.3–16.5)", () => {
     await h.keys("a");
     expect(paths()).not.toContain("run.py");
   });
-  test("a code file opens in source mode, highlighted, and has no render; a note after it renders", async () => {
+  test("a code file opens in SOURCE by default, highlighted, with READ available; a note after it renders", async () => {
     // Code as [render] code = "source" opens it (Python has the code view by default, 24.x).
-    const h = await harness({ root: await setup(), config: (c) => (c.render.code = "source") });
+    const h = await harness({ root: await setup(), config: (c) => (c.render.code = false) });
     await h.app.run("note.open links-out.md");
     const v = h.app.view!;
     const links = h.app.currentLayout(v).links;
@@ -6894,9 +6886,9 @@ describe("files beyond notes (16.3–16.5)", () => {
     const layout = h.app.currentLayout(v);
     expect(layout.lines[0]!.spans.some((s) => s.role === "syn_keyword")).toBe(true); // `def`
     expect(layout.headings).toEqual([]); // `# …` in Python is no heading
-    await h.keys("space", "n", "v"); // toggling off source: refused
-    expect(v.source).toBe(true);
-    expect(h.app.messages.at(-1)!.text).toContain("no rendered view");
+    await h.keys("space", "n", "v"); // opening default does not disable READ
+    expect(v.source).toBe(false);
+    expect(h.app.isCodeDocument(v.buf)).toBe(true);
     await h.app.run("history.back");
     expect(v.buf.rel).toBe("links-out.md");
     expect(v.source).toBe(false); // the note renders again
@@ -7677,9 +7669,7 @@ describe("code as a notebook (24.x, 24.13)", () => {
     h.app.placeAtLine(v, 19, 3);
     await h.keys("i");
     expect(v.live).toBe(true);
-    expect(h.app.messages.at(-1)!.text).toBe(
-      "the lens: the code around the cursor — the key again edits it, esc closes it",
-    );
+    expect(h.app.messages.some((m) => m.text.startsWith("the lens:"))).toBe(false);
     const lens = h.app.currentLayout(v).lines.filter((l) => l.lens === "source");
     expect(lens.map(lineText)).toContain("    return this.notes.get(rel);");
     expect(lens.find((l) => l.src === 20)!.spans.find((sp) => sp.text.includes("return"))!.role).toBe("syn_keyword");
@@ -7698,16 +7688,16 @@ describe("code as a notebook (24.x, 24.13)", () => {
     const v = h.app.view!;
     await h.keys("space", "n", "v");
     expect(v.source).toBe(true);
-    expect(h.app.messages.at(-1)!.text).toBe("source — the file as written");
+    expect(h.app.messages.some((m) => m.text.startsWith("source —"))).toBe(false);
     expect(h.app.currentLayout(v).cells).toBeUndefined();
     await h.keys("space", "n", "v");
     expect(v.source).toBeFalsy();
-    expect(h.app.messages.at(-1)!.text).toBe("the code as a document");
+    expect(h.app.messages.some((m) => m.text === "the code as a document")).toBe(false);
     await h.keys("i");
     expect(v.source).toBe(true);
     expect(v.insert).toBe(true); // to source mode, typing at once: no lens to show first
-    expect(h.app.messages.at(-1)!.text).toBe("source — editing the file");
-    const plain = await open({ config: (c) => (c.render.code = "source") });
+    expect(h.app.messages.some((m) => m.text.startsWith("source —"))).toBe(false);
+    const plain = await open({ config: (c) => (c.render.code = false) });
     expect(plain.app.view!.source).toBe(true);
     // Go is drawn as a document (24.9); CSS, which has no definitions to be cells, in source mode.
     const go = await open({}, "tool.go", "package main\n\nfunc f() int { return 1 }\n");
@@ -8373,7 +8363,7 @@ describe("source files through tree-sitter (16.6–16.9)", () => {
     const root = makeVault();
     writeFileSync(join(root, "box.ts"), TS);
     // Source mode, as [render] code = "source" opens code (the code view, 24.x, has tests of its own).
-    const h = await harness({ root, open: "box.ts", width: 100, config: (c) => (c.render.code = "source") });
+    const h = await harness({ root, open: "box.ts", width: 100, config: (c) => (c.render.code = false) });
     const v = h.app.view!;
     expect(v.source).toBe(true);
     await settle(h);
@@ -8392,7 +8382,7 @@ describe("source files through tree-sitter (16.6–16.9)", () => {
   test("a syntax error is marked out of insert, the status line counting it", async () => {
     const root = makeVault();
     writeFileSync(join(root, "bad.py"), "def f(:\n    pass\n\nx = 1\n");
-    const h = await harness({ root, open: "bad.py", width: 100, config: (c) => (c.render.code = "source") });
+    const h = await harness({ root, open: "bad.py", width: 100, config: (c) => (c.render.code = false) });
     await settle(h);
     const errs = h.app.view!.buf.syntax!.errors;
     expect(errs.length).toBeGreaterThan(0);
@@ -8516,7 +8506,7 @@ describe("the explorer's view (VV-D5)", () => {
     h.app.explorer.zoomTo("/");
     await h.keys("-");
     expect(h.app.explorer.top).toBe("/");
-    expect(h.app.messages.at(-1)!.text).toBe("the view shows everything: nothing is above /");
+    expect(h.app.messages.at(-1)!.text).toBe("the explorer is zoomed out fully: nothing is above /");
   });
 
   test("the breadcrumb above home names the view: from /, home by its name, the trail in home past it", async () => {
@@ -8785,7 +8775,7 @@ describe("links in code comments in the TUI (16.10)", () => {
     const root = makeVault();
     writeFileSync(join(root, "lib.py"), "a = 1\nb = 2\nc = 3\n");
     writeFileSync(join(root, "run.py"), "# see lib.py:3 and notes/alpha.md\nx = 1\n");
-    const h = await harness({ root, open: "run.py", width: 100, config: (c) => (c.render.code = "source") });
+    const h = await harness({ root, open: "run.py", width: 100, config: (c) => (c.render.code = false) });
     const v = h.app.view!;
     for (let i = 0; i < 100 && v.buf.syntax?.version !== v.buf.version; i++) {
       h.frame();
@@ -9296,25 +9286,29 @@ describe("pictures (12.x)", () => {
     });
     return { h, v: h.app.view!, root };
   };
-  test("a local picture alone in its paragraph: its ▣ alt line, then the rows it's drawn over — sized to its proportions, fitted to its window; beside text, on the internet, or missing: ▣ alt alone", async () => {
+  test("a local picture alone in its paragraph: its image rows, then a caption box — sized to its proportions, fitted to its window; beside text, on the internet, or missing: ▣ alt alone", async () => {
     const { h, v, root } = await open();
     const layout = h.app.currentLayout(v);
-    const alt = layout.lines.findIndex((l) => l.spans.some((s) => s.text === "▣ chart"));
+    const picture = layout.lines.findIndex((line) => line.image);
+    const alt = layout.lines.findIndex((line) => line.caption?.text === "chart");
+    expect(alt).toBeGreaterThan(picture + 12);
     // 400 × 200 pixels in 8 × 16 cells: 50 columns by 13 rows, its own size, which the window has room for.
-    expect(layout.lines[alt + 1]).toMatchObject({
-      decor: true,
+    expect(layout.lines[picture]).toMatchObject({
+      decor: false,
       spans: [],
       image: { src: join(root, "chart.png"), cols: 50, rows: 13 },
     });
-    expect(layout.lines.slice(alt + 2, alt + 14).every((l) => l.decor && !l.spans.length && !l.image)).toBe(true);
-    expect(layout.lines[alt + 14]!.spans.length).toBe(0); // the gap after the paragraph
+    expect(layout.lines.slice(picture + 1, picture + 13).every((l) => l.decor && !l.spans.length && !l.image)).toBe(
+      true,
+    );
+    expect(layout.lines[alt + 3]!.spans.length).toBe(0); // the gap after the paragraph
     // Drawn over its rows, from the text column.
     const c = h.canvas();
     const pane = h.app.geometry!.panes[0]!;
     expect(c.images).toEqual([
       {
         x: pane.textX,
-        y: pane.y + alt + 1 - v.top,
+        y: pane.y + picture - v.top,
         cols: 50,
         rows: 13,
         src: join(root, "chart.png"),
@@ -9380,8 +9374,9 @@ describe("pictures (12.x)", () => {
       const layout = h.app.currentLayout(v);
       expect(layout.lines.some((l) => l.image)).toBe(false);
       const alt = layout.lines.findIndex((l) => l.spans.some((s) => s.text === "▣ chart"));
-      expect(layout.lines[alt + 1]!.spans.length).toBe(0); // the paragraph's gap, then the next
-      expect(layout.lines[alt + 2]!.spans.map((s) => s.text).join("")).toContain("After,");
+      expect(layout.lines[alt + 1]!.caption?.text).toBe("chart"); // the caption's closing border
+      expect(layout.lines[alt + 2]!.spans.length).toBe(0); // the paragraph gap
+      expect(layout.lines[alt + 3]!.spans.map((s) => s.text).join("")).toContain("After,");
       expect(h.canvas().images).toEqual([]);
     }
   });
@@ -9414,7 +9409,7 @@ describe("pictures (12.x)", () => {
       [16, { src: join(root, "nested-vault", "inner.png"), cols: 10, rows: 3 }], // a root inside this one: its path
     ]);
     // The tied name and the one beside text: their ▣ name alone; the note beside a picture framed in place.
-    expect(layout.lines.some((l) => lineText(l) === "▣ twin.png")).toBe(true);
+    expect(layout.lines.some((l) => lineText(l).includes("▣ twin.png"))).toBe(true);
     expect(layout.lines.some((l) => lineText(l).includes("Beside ▣ chart.png text."))).toBe(true);
     expect(layout.lines.some((l) => lineText(l).includes("Hello."))).toBe(true);
   });
@@ -9422,7 +9417,7 @@ describe("pictures (12.x)", () => {
   const altAt = (layout: Layout, alt: string) =>
     layout.lines.flatMap((l) => {
       const k = l.spans.findIndex((sp) => sp.text === alt);
-      return k < 0 ? [] : [l.spans.slice(0, k).reduce((w, sp) => w + [...sp.text].length, 0)];
+      return k < 0 ? [] : [l.spans.slice(0, k).reduce((w, sp) => w + stringWidth(sp.text), 0) - 2];
     });
   const drawnAt = (h: Harness) => h.canvas().images.map((im) => im.x - h.app.geometry!.panes[0]!.textX);
   test("a picture in an embedded note (12.14): found from where that note is — its path from its folder, its name from its place — and drawn inside its frame, an embed's in an embed's too", async () => {
@@ -11020,7 +11015,7 @@ describe("vaults in the TUI (17.x)", () => {
     expect(h.copied.at(-1)).toBe(join(app, "pic.png"));
   });
 
-  test("a switch is refused while a note is unsaved; each vault keeps its own tabs (17.10)", async () => {
+  test("a switch asks while a note is unsaved; each vault keeps its own tabs (17.10)", async () => {
     const { notes, app } = await twoVaults();
     const h = await harness({ root: notes, open: "index.md" });
     await h.keys("space", "n", "v", "shift+a", "!", "escape");
@@ -11028,7 +11023,8 @@ describe("vaults in the TUI (17.x)", () => {
     await h.app.run("history.back"); // nothing: no earlier place, no vault before
     h.app.vaults.switchVault(locateVault({ root: app }), join(app, "design.md"));
     expect(h.app.loc.root).toBe(notes);
-    expect(h.app.messages.at(-1)!.text).toContain("unsaved: index.md");
+    expect((h.app.overlay as ListOverlay).title).toBe("Unsaved notes — change vault?");
+    await h.keys("c");
     await h.keys("ctrl+s");
     expect(h.app.vaults.switchVault(locateVault({ root: app }), join(app, "design.md"))).toBe(true);
     await h.app.run("tab.new");
@@ -11156,7 +11152,7 @@ describe("vaults in the TUI (17.x)", () => {
       expect(start.loc.mode).toBe("folder");
       const host: Host = { requestRender() {}, osc52: () => true, quit() {} };
       const started = new App({ ...start, host, watch: false });
-      expect(started.vaults.folderChoices().length).toBeGreaterThan(0); // there are named folders to list
+      expect(vaultChoices().length).toBeGreaterThan(0); // there are named folders to list
       expect(started.overlay).toBeNull();
       started.quit();
       // space v v: the named folders, from anywhere; enter goes into one.
@@ -12548,7 +12544,7 @@ describe("the explorer's file operations and buttons (18.x)", () => {
       n: "Name this folder, as pointers name it",
       t: "The trash",
       u: "Restore the last deleted",
-      v: "Folders: go into a named one",
+      v: "Vaults: go into one",
       "shift+v": "Which copy a folder's links open",
     });
     expect(await group("v")).not.toHaveProperty("d"); // a new folder is space d n now
@@ -15712,17 +15708,17 @@ describe("a branch switch as one event (5.9)", () => {
     const root = mkdtempSync(join(sandbox, "late-git-"));
     mkdirSync(join(root, ".slipbox"));
     writeFileSync(join(root, "a.md"), "# A\n");
-    const h = await harness({ root, open: "a.md" });
-    expect(topRow(h.frame())).not.toContain(" · ");
+    const h = await harness({ root, open: "a.md", width: 2 * stringWidth(root) + 80 });
+    expect(topRow(h.frame())).not.toContain("⎇");
     if (git(root, "init", "-q", "-b", "main").exitCode !== 0) return;
     const later = Date.now() + 5_000; // the next look for a repository
     (h.app as unknown as { now: () => number }).now = () => later;
     expect(h.app.git.checkHead()).toBe(true); // news for the top bar (20.14)
-    expect(topRow(h.frame())).toContain(" · main");
+    expect(topRow(h.frame())).toContain("⎇ main");
     expect(h.app.messages.some((m) => m.text.startsWith("switched"))).toBe(false); // not a switch
   });
 
-  test("where the file is (21.9, WSP-D4, WSP-D5): an unnamed vault by its path, cut from the front to fit, the branch kept; the status line's only while the top bar is hidden, at most 40 columns; Elsewhere by its name", async () => {
+  test("where the file is (VB-D3): the unnamed vault path shrinks on the permanent bar; the status line keeps the file; Elsewhere by its name", async () => {
     const { elsewhereAt } = await import("../src/core/vault.ts");
     const root = join(mkdtempSync(join(sandbox, "a-folder-with-a-rather-long-name-")), "experiment");
     mkdirSync(root);
@@ -15730,20 +15726,15 @@ describe("a branch switch as one event (5.9)", () => {
     if (git(root, "init", "-q", "-b", "main").exitCode !== 0) return;
     const h = await harness({ root, open: "a.md", width: 70 });
     expect(h.app.loc.name).toBeNull(); // no remote, no .slipbox/ name
-    expect(whereNow(h)).toBe(`${root} · main`);
+    expect(whereNow(h)).toBe(`${root} │ main`);
     const top = topRow(h.frame());
-    expect(top).toMatch(/◈ …[^ ]*\/experiment · main/); // its last folders, and the branch
+    expect(top).toMatch(/◈ …[^ ]*\/experiment/); // branch gives way before location
     expect(top).not.toContain(root);
     expect(statusRow(h.frame())).not.toContain("experiment"); // said once
     // Room enough: the whole path.
-    const wide = await harness({ root, open: "a.md", width: 300 });
-    expect(topRow(wide.frame())).toContain(`◈ ${root} · main`);
-    // The top bar hidden: the status line says it, however wide the screen at most 40 columns, the note's own path
-    // first.
-    wide.app.ui.top_bar = false;
-    const row = statusRow(wide.frame());
-    expect(row).toMatch(/ …[^ ]*\/experiment · main /);
-    expect(row).not.toContain(root);
+    const wide = await harness({ root, open: "a.md", width: 2 * stringWidth(root) + 100 });
+    expect(topRow(wide.frame())).toContain(`◈ ${root} │ ⎇ main`);
+    expect(statusRow(wide.frame())).not.toContain(root);
     // Outside home and every vault: Elsewhere, no branch (VV-D3).
     const plain = mkdtempSync(join(sandbox, "plain-status-"));
     writeFileSync(join(plain, "p.md"), "# P\n");
@@ -20080,11 +20071,11 @@ describe("the remote's commands and stash (26.6)", () => {
       git(other, "push", "-q");
       const h = await harness({ root, open: "a.md", width: 120, height: 40 });
       await h.app.git.refreshNow();
-      expect(whereNow(h)).toEndWith(" · main");
+      expect(whereNow(h)).toEndWith(" │ main");
       await h.app.run("git.fetch");
       expect(h.app.messages.some((m) => m.text === "fetching…")).toBe(true);
       expect(await said(h, "fetched: main is 1 commit behind origin/main — p pulls (:pull)")).toBe(true);
-      expect(await until(() => whereNow(h).endsWith(" · main ↓1"))).toBe(true);
+      expect(await until(() => whereNow(h).endsWith(" │ main ↓1"))).toBe(true);
       // Unsaved: asked first, as a branch switch asks; cancelled, nothing pulled.
       const a = h.app.view!.buf;
       a.edit(0, 0, "edited ");
@@ -20103,7 +20094,7 @@ describe("the remote's commands and stash (26.6)", () => {
       expect(await said(h, /^pulled: main fast-forwarded to [0-9a-f]+$/)).toBe(true);
       expect(readFileSync(join(root, "b.md"), "utf8")).toBe("theirs\n");
       expect(readFileSync(join(root, "a.md"), "utf8")).toBe("edited a\n");
-      expect(await until(() => whereNow(h).endsWith(" · main"))).toBe(true);
+      expect(await until(() => whereNow(h).endsWith(" │ main"))).toBe(true);
       // Nothing more: said so.
       await h.app.run("git.pull");
       expect(await said(h, "main is up to date with origin/main")).toBe(true);
@@ -20119,7 +20110,7 @@ describe("the remote's commands and stash (26.6)", () => {
       const h = await harness({ root, open: "a.md", width: 120, height: 40 });
       const head = git(root, "rev-parse", "HEAD");
       await h.app.run("git.fetch");
-      expect(await until(() => whereNow(h).endsWith(" · main ↑1 ↓1"))).toBe(true);
+      expect(await until(() => whereNow(h).endsWith(" │ main ↑1 ↓1"))).toBe(true);
       await h.app.run("git.pull");
       expect(await until(() => h.app.overlay?.kind === "list")).toBe(true);
       expect(list(h).items.map((i) => i.label)).toEqual([
@@ -20138,11 +20129,11 @@ describe("the remote's commands and stash (26.6)", () => {
       commit(root, "a.md", "mine\n");
       const h = await harness({ root, open: "a.md", width: 120, height: 40 });
       await h.app.git.refreshNow();
-      expect(whereNow(h)).toEndWith(" · main ↑1");
+      expect(whereNow(h)).toEndWith(" │ main ↑1");
       await h.app.run("git.push");
       expect(await said(h, "pushed main to origin/main — this vault isn't trusted, so no hook ran")).toBe(true);
       expect(git(bare, "rev-parse", "main")).toBe(git(root, "rev-parse", "HEAD"));
-      expect(await until(() => whereNow(h).endsWith(" · main"))).toBe(true);
+      expect(await until(() => whereNow(h).endsWith(" │ main"))).toBe(true);
       // A new branch: asked; no, nothing; yes, pushed and tracked.
       git(root, "switch", "-q", "-c", "topic");
       await h.app.run("git.push");

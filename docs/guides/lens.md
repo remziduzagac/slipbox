@@ -4,8 +4,8 @@
 <a id="how-much-it-holds"></a>
 <a id="vims-keys-in-the-lens"></a>
 
-slipbox lets you read a rendered document, expose part of its source with the lens, or see the whole file in source
-mode. Typing is a separate state. This guide follows one note through all three views so you can choose where to work.
+slipbox has two views: READ and SOURCE. The lens toggles within READ, exposing the source around the cursor.
+Vim mode (NORMAL, INSERT or VISUAL) is shown beside the view. This guide follows one note through those choices.
 
 You need an installed slipbox and a small Markdown note. The Coffee note from
 [Working with slipbox](getting-started.md#make-two-practice-notes) is suitable. Save any existing edits before starting.
@@ -16,14 +16,14 @@ Think of two choices:
 
 | Choice | Options |
 | --- | --- |
-| How much source do I want to see? | None: rendered; part: lens; all: source mode |
+| How much source do I want to see? | None: rendered; part: lens; all: SOURCE view |
 | Am I typing? | Navigate/inspect first, then enter INSERT to change text |
 
 The lens is a section of source inside the rendered document. It is not a separate file or a second version of the
-note. Source mode changes the whole window's presentation; it does not by itself start typing either.
+note. SOURCE view changes the whole window's presentation; it does not by itself start typing either.
 
 ![The Coffee note in two windows: on the left rendered, the lens open on Brewing showing its Markdown and Beans still
-rendered below it; on the right the whole file in source mode](../images/reading-editing-views.png)
+rendered below it; on the right the whole file in SOURCE view](../images/reading-editing-views.png)
 
 ## Read the rendered document
 
@@ -80,21 +80,23 @@ Leaving INSERT or closing the lens does not mean the file was saved. Saving does
 
 `ctrl+z` undoes and `ctrl+y` redoes. Save after undoing if the file on disk should reflect the undo.
 
-## When to use it, and when source mode
+<a id="when-to-use-it-and-when-source-mode"></a>
+
+## When to use it, and when SOURCE view
 
 Use the lens for a local change while keeping a long document in view: a paragraph, list item, table or code block.
-Use source mode to inspect or edit Markdown across the whole file.
+Use SOURCE view to inspect or edit Markdown across the whole file.
 
 1. From reading, press `ctrl+k`. The status says `SOURCE`, and the whole note shows its Markdown.
 2. Move to the text to change. You are still navigating; no edit happened merely by switching views.
-3. Press `i` or `a` to start typing. In source mode, this goes straight into INSERT.
+3. Press `i` or `a` to start typing. In SOURCE view, this goes straight into INSERT.
 4. Type, press `esc` to stop, and `ctrl+s` to save.
 5. Press `ctrl+k` again to return to rendered reading.
 
-If the lens is open when you switch, source mode takes its place; the two are not nested editors. Cursor positions
+If the lens is open when you switch, SOURCE view takes its place; the two are not nested editors. Cursor positions
 refer to the file's source lines across the views.
 
-![Inbox in two windows: rendered on the left, and on the right in source mode, its heading's #, the tasks' - [ ] and the
+![Inbox in two windows: rendered on the left, and on the right in SOURCE view, its heading's #, the tasks' - [ ] and the
 link's destination showing, the status line reading SOURCE](../images/reading-editing-source.png)
 
 ## Move it, and grow it

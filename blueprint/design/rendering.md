@@ -60,7 +60,7 @@ the blocks itself, inlines in `render-inline.ts`, tables in `render-table.ts`, f
 
 **Headings** are linked to by their text (inline code included; footnote marks and images left out, the spaces around
 them kept, so `## Setup [^1] notes` is `setup--notes` as on GitHub; trimmed at the ends) — one text for the render, the
-graph and source mode's scan, which the outline and breadcrumb draw on one row, white space folded — and slugged
+graph and SOURCE view's scan, which the outline and breadcrumb draw on one row, white space folded — and slugged
 GitHub's way — letters, marks, numbers, `_` and `-` kept, so a Devanagari heading keeps its vowel signs — with repeats
 numbered as GitHub numbers them (`#setup-1` is the second "Setup"). A trailing `{#id …}` (Pandoc, MkDocs, Docusaurus) is
 the heading's explicit id, not drawn; `<a id="x">` and `<a name="x">` are anchors too. Where a fragment lands is
@@ -70,12 +70,13 @@ no-break space (U+00A0, U+2007, U+202F) is never a place to wrap.
 **Inline:** `**strong**` gets the `strong` role, which has an explicitly lighter foreground, because bold alone does not
 read as bold in a terminal (plan `2.7`). Also: `*emphasis*`, `~~strike~~`, Obsidian's `==highlight==` in the `highlight`
 role, on its background — a link or code inside it too —, and `` `code` `` in the `code_inline` role with its own
-background. Obsidian's `%%comments%%` are hidden while reading, shown as typed in source mode and the lens, which draw
+background. Obsidian's `%%comments%%` are hidden while reading, shown as typed in SOURCE view and the lens, which draw
 the file's text (DF-D17): `a %%note%% b` reads `a b`, `oil %%note%%.` reads `oil.`, a paragraph of nothing but comments
 leaves no row, and a comment over blank lines (§ Obsidian's highlights and comments) no rows. Rows keep their source
 lines. Links render as their text; the URL follows as `<url>` when colour is off or `render.show_urls` asks. Images
 render as `▣ alt`, and alt text plus path stay the floor (12.x, D101): a picture alone in its paragraph, a local image
-file (PNG, JPEG, WebP, GIF), is drawn under its `▣ alt` line where the terminal draws images — Kitty graphics or sixel,
+file (PNG, JPEG, WebP, GIF), is drawn above its boxed `▣ alt` caption where the terminal draws images —
+Kitty graphics or sixel,
 as OpenTUI finds it asking, never blocks of colour (D126) — sized to the text width, its proportions kept, at most 12
 rows, from where its `▣ alt` text starts (past a list's bullet, a quote's bar); scrolled half out of sight, the part
 that shows. One embedded by name, `![[dal.png]]` (12.13, D103), is drawn the same, found as its link is (anywhere in the
@@ -84,7 +85,8 @@ proportions kept. An SVG (12.15, D127) — by its name, or a picture fetched tol
 resvg (WebAssembly) at the size it's drawn, from its own size, into the cache, and drawn as a PNG is; it fetches nothing
 it links to. One in an embedded note (12.14) is found from where that note is — its path from its folder, its name from
 its place in its vault — and drawn inside its frame. Beside text, or where the terminal draws none (`[render] images =
-"never"` too): `▣ alt` alone. Where the terminal speaks Kitty graphics, a picture is sent to it once (12.7, D102) —
+"never"` too): the caption box alone. Where the terminal speaks Kitty graphics, a picture is sent to it
+once (12.7, D102) —
 compressed, at the pixels it's drawn in, with a virtual placement of its cells — and drawn as Kitty's Unicode
 placeholders: each cell U+10EEEE in the picture's id's colour, its row and column as combining marks. They're text, so
 scrolling moves them and the terminal the picture with them: nothing is sent again, nothing waits. The last 48 are kept
@@ -264,7 +266,7 @@ the breadcrumb, `[x](file.toml#section)`, find and the lens work unchanged:
   data file shows among the backlinks of what it points at, and `slipbox links` lists them. No
   wikilinks: data files have no such convention.
 - **CSV and TSV** are one table: quoted fields (with `""` and newlines inside), the first row the
-  header, rows padded to the widest; past 2,000 rows the rest are counted, and source mode shows
+  header, rows padded to the widest; past 2,000 rows the rest are counted, and SOURCE view shows
   them.
 
 TOML, INI and `.env` are read line by line (their structure is lines), TOML validated by
@@ -273,9 +275,9 @@ after a backslash when the next line is indented. YAML and JSON come from `yaml`
 which keeps positions and comments; JSON is validated by `JSON.parse`, read as editors read
 `tsconfig.json` (jsonc): `//` and `/* */` comments and trailing commas allowed. `.json5` is read
 the same way, as JSONC: JSON5's own syntax (unquoted keys, single quotes, hex numbers) is reported
-as a parse error and the file opens in source mode. **Nothing is ever re-serialized**: edits are
+as a parse error and the file opens in SOURCE view. **Nothing is ever re-serialized**: edits are
 always on the text, so comments, order and formatting survive. A file that doesn't parse has no
-render (`16.14`): its error is shown and source mode opens.
+render (`16.14`): its error is shown and SOURCE view opens.
 
 ## The wikilink tokenizer
 
@@ -496,7 +498,7 @@ highlight.js with about 25 common languages (`bash`, `typescript`, `lua`, `pytho
 auto-detection is slow and often wrong. Scopes map to the `syn_*` roles. It lives in the core, so
 `slipbox render` and the TUI highlight identically.
 
-Source files in source mode use it too, a line at a time, with tree-sitter (`core/syntax.ts`,
+Source files in SOURCE view use it too, a line at a time, with tree-sitter (`core/syntax.ts`,
 `16.7`, D109) painting over it the parts of lines inside a string or comment that spans lines — which a
 line alone can't know — and, in a file of several languages (`16.22`: a component's script and style), saying which
 language each line is in (`languageAt`; D122). See [tui.md](tui.md) § Files beyond notes.
@@ -504,7 +506,7 @@ language each line is in (`languageAt`; D122). See [tui.md](tui.md) § Files bey
 ## Diffs
 
 A diff has layouts of its own beside the note's, which they leave unchanged (GIT-D2, GIT-D7): its lines
-(`core/layout/diff.ts`), a row a line, highlighted as source mode highlights the file, its changed words tinted more
+(`core/layout/diff.ts`), a row a line, highlighted as SOURCE view highlights the file, its changed words tinted more
 strongly than their line; a note's **before and after** (`core/layout/blockdiff.ts`), each changed block laid out
 twice, lightly formatted (headings, emphasis, links as they read, a list's marker, a table's cells, a quote's bar), in
 a `before` and an `after` frame, the removed words marked in the first and the added in the second (a block too big to
@@ -550,3 +552,12 @@ never made, or cached, from the fallback. The pool's workers stop after a minute
 A spelling check that fails leaves its words unknown, never taken as right, and its warning is said once; an answer is
 held to 16 MiB, the default for a worker's requests (`core/worker-requests.ts`). The words are asked again on a draw two
 seconds or more later. These are budgets for requests and held input, not OS-enforced limits on a worker's memory.
+
+## Standalone picture captions (#83)
+
+A standalone picture has a wrapped caption box below its image; without a drawable image the box stands alone.
+Inline pictures retain paragraph layout. Alt-text newlines become spaces. The picture_caption theme role supplies
+the faint background; box glyphs follow the active glyph set. Buttons copy path, alt text and image separately via
+picture.copy_path, picture.copy_caption and picture.copy_image. Native image copying uses optional wl-copy, xclip or
+osascript; OSC 52 remains text only. Clicking a picture ends visual selection and leaves its caption link unfocused.
+The first image row is a cursor stop, keeping the image in view across explicit size changes.

@@ -35,14 +35,15 @@ search's improvements.
 - [workstreams/](workstreams/README.md): contained parts of the work; the roadmap gives their order. Active:
   [TT](workstreams/terminal-tests/README.md), the terminal tests headless and by feature,
   [DOCS](workstreams/documentation/README.md), the documentation learning path and reference, and
-  [WSP](workstreams/workspaces/README.md), workspaces and where you are on the top bar (complete). DOC, the user
-  documentation, DF, what writing it found, [GR](workstreams/archive/greenrepo/README.md), the repository to
-  greenrepo, published and released, [DS](workstreams/archive/docs-site/README.md), the documentation site and docs
-  a newcomer can follow, [VV](workstreams/archive/vaults-and-view/README.md), vaults and the explorer's view, and
-  [GIT](workstreams/archive/git-review/README.md), reviewing, diffing and merging what an agent changed, are
-  consolidated, in `workstreams/archive/` (VV's and GIT's docs tasks still being written).
-  [HDR](workstreams/window-header/README.md), the window header and its Read, Lens and Source buttons, is complete on
-  its branch, for consolidation (#24).
+  [VB](workstreams/views-and-bars/README.md), views and modes, the top bar, vaults and workspaces (#82, #85, #86).
+  Consolidated in `workstreams/archive/`: DOC, the user documentation; DF, what writing it found;
+  [GR](workstreams/archive/greenrepo/README.md), the repository to greenrepo;
+  [DS](workstreams/archive/docs-site/README.md), the documentation site;
+  [VV](workstreams/archive/vaults-and-view/README.md), vaults and the explorer's view;
+  [GIT](workstreams/archive/git-review/README.md), reviewing, diffing and merging;
+  [HDR](workstreams/archive/window-header/README.md), the window header (#24), and
+  [WSP](workstreams/archive/workspaces/README.md), workspaces and where you are (#25), consolidated 2026-10-25.
+  VV's and GIT's docs tasks are still being written.
 
 ## How things are recorded
 

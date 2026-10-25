@@ -237,3 +237,52 @@ export async function readClipboardAsync(fallbackDir: string, signal?: AbortSign
   }
   return null;
 }
+
+/** Image bytes need a native clipboard helper; OSC 52 carries text only. */
+export async function copyImage(path: string): Promise<string | null> {
+  if (process.env.SLIPBOX_CLIPBOARD === "file") return null;
+  const { extname } = await import("node:path");
+  const { readRegular } = await import("./fsutil.ts");
+  const ext = extname(path).toLowerCase();
+  let mime = (
+    {
+      ".png": "image/png",
+      ".jpg": "image/jpeg",
+      ".jpeg": "image/jpeg",
+      ".gif": "image/gif",
+      ".webp": "image/webp",
+      ".svg": "image/svg+xml",
+      ".tif": "image/tiff",
+      ".tiff": "image/tiff",
+    } as Record<string, string>
+  )[ext];
+  let bytes: Buffer;
+  try {
+    bytes = readRegular(path, 32 * 1024 * 1024);
+  } catch {
+    return null;
+  }
+  // Remote images have hashed cache names without extensions.
+  if (bytes.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))) mime = "image/png";
+  else if (bytes[0] === 255 && bytes[1] === 216) mime = "image/jpeg";
+  else if (/^GIF8[79]a/.test(bytes.subarray(0, 6).toString("ascii"))) mime = "image/gif";
+  else if (bytes.subarray(0, 4).toString("ascii") === "RIFF" && bytes.subarray(8, 12).toString("ascii") === "WEBP")
+    mime = "image/webp";
+  else if (/<svg(?:\s|>)/i.test(bytes.subarray(0, 2048).toString("utf8"))) mime = "image/svg+xml";
+  if (!mime) return null;
+  if (process.env.WAYLAND_DISPLAY && (await clipboardTool(["wl-copy", "--type", mime], bytes)) !== null)
+    return "wl-copy";
+  if (
+    process.env.DISPLAY &&
+    (await clipboardTool(["xclip", "-selection", "clipboard", "-t", mime, "-i"], bytes)) !== null
+  )
+    return "xclip";
+  if (process.platform === "darwin" && ["image/png", "image/jpeg", "image/tiff"].includes(mime)) {
+    const type = mime === "image/png" ? "PNGf" : mime === "image/jpeg" ? "JPEG" : "TIFF";
+    const script = `on run argv
+set the clipboard to (read POSIX file (item 1 of argv) as «class ${type}»)
+end run`;
+    if ((await clipboardTool(["osascript", "-e", script, path], undefined)) !== null) return "osascript";
+  }
+  return null;
+}

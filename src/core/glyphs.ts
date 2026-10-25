@@ -8,6 +8,13 @@ import type { GlyphMode } from "./config.ts";
 
 export interface Glyphs {
   mode: Exclude<GlyphMode, "auto">;
+  groupSeparator: string;
+  groupLeft: string;
+  groupRight: string;
+  workSpinner: string[];
+  upgrade: string;
+  changed: string;
+  lensJoin: string;
   heading: [string, string, string, string, string, string];
   bullets: string[];
   checkDone: string;
@@ -174,6 +181,13 @@ export interface Glyphs {
 
 const unicode: Glyphs = {
   mode: "unicode",
+  groupSeparator: "│",
+  groupLeft: " ",
+  groupRight: " ",
+  workSpinner: ["◴", "◷", "◶", "◵"],
+  upgrade: "⇡",
+  changed: "●",
+  lensJoin: "·",
   heading: ["▌", "▌", "▌", "▌", "▌", "▌"],
   bullets: ["•", "◦", "▪", "▫"],
   checkDone: "☑",
@@ -314,6 +328,8 @@ const nerd: Glyphs = {
   cellScratch: "\u{eb05}", // nf-cod-pin
   pin: "\u{f0403}", // nf-md-pin
   mode: "nerd",
+  groupLeft: "\ue0b6",
+  groupRight: "\ue0b4",
   // Same icons as render-markdown in the nvim config this replaces.
   heading: ["󰲡 ", "󰲣 ", "󰲥 ", "󰲧 ", "󰲩 ", "󰲫 "],
   checkDone: "󰱒",
@@ -345,6 +361,13 @@ const nerd: Glyphs = {
 
 const ascii: Glyphs = {
   mode: "ascii",
+  groupSeparator: "|",
+  groupLeft: " ",
+  groupRight: " ",
+  workSpinner: ["~"],
+  upgrade: "^",
+  changed: "*",
+  lensJoin: "-",
   heading: ["#", "##", "###", "####", "#####", "######"],
   bullets: ["*", "-", "+", "-"],
   checkDone: "[x]",

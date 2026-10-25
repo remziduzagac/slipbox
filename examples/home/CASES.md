@@ -2592,7 +2592,7 @@ A long note: headings, paragraphs, pages to move through; the daily note has the
   (command-specs.ts)
 - `spell.add` — Add the word to your words — `notes/reading/okuma-notlari.md`,
   `notes/reading/maps-and-territories.md` (command-specs.ts)
-- `folders.open` — Folders: go into a named one — `notes/.slipbox/config.toml`, `work/product/README.md`
+- `folders.open` — Vaults: go into one — `notes/.slipbox/config.toml`, `work/product/README.md`
   (command-specs.ts; 21.10)
 - `folders.default` — Which copy a folder's links open — `notes/.slipbox/config.toml`,
   `Downloads/notes-backup-2026-07/.slipbox/config.toml` (command-specs.ts; 21.10)
@@ -3030,7 +3030,6 @@ The same notes, one per tab.
   (command-specs.ts)
 - `ui.breadcrumb` — Breadcrumb — `work/kestrel/docs/qa/render-torture.md`, `notes/meetings/all-hands-archive.md`
   (command-specs.ts)
-- `ui.top_bar` — Top bar — `work/kestrel/docs/qa/render-torture.md`, `notes/meetings/all-hands-archive.md`
   (command-specs.ts)
 - `ui.problems_bar` — Problems bar — `work/kestrel/docs/qa/render-torture.md`, `notes/meetings/all-hands-archive.md`
   (command-specs.ts)
@@ -3088,11 +3087,11 @@ The same notes, one per tab.
   (command-specs.ts)
 - `view.live` — Lens / rendered — `work/kestrel/docs/qa/render-torture.md`, `work/kestrel/docs/qa/theme-showcase.md`
   (command-specs.ts)
-- `view.mode_read` — Read mode — `work/kestrel/docs/qa/render-torture.md`, `work/kestrel/config/app.toml`
+- `view.mode_read` — Read view — `work/kestrel/docs/qa/render-torture.md`, `work/kestrel/config/app.toml`
   (command-specs.ts; the window header's Read)
-- `view.mode_lens` — Lens mode — `work/kestrel/docs/qa/render-torture.md`, `work/kestrel/config/app.toml`
+- `view.mode_lens` — Toggle lens — `work/kestrel/docs/qa/render-torture.md`, `work/kestrel/config/app.toml`
   (command-specs.ts; the window header's Lens)
-- `view.mode_source` — Source mode — `work/kestrel/docs/qa/render-torture.md`, `work/kestrel/config/app.toml`
+- `view.mode_source` — Source view — `work/kestrel/docs/qa/render-torture.md`, `work/kestrel/config/app.toml`
   (command-specs.ts; the window header's Source)
 
 ### lens
@@ -3191,3 +3190,25 @@ Wide tables and code blocks to edit in place.
 - `help.open` — All keys and commands — `notes/index.md` (command-specs.ts)
 - `help.report` — Report a problem — `notes/index.md` (command-specs.ts)
 - `help.report_send` — Send the report — `notes/index.md` (command-specs.ts)
+
+- `git.focus` — Focus source control — `work/kestrel/docs/qa/render-torture.md`
+
+- `git.menu` — Branches menu — `work/kestrel/docs/qa/render-torture.md`
+
+- `picture.copy_path` — Copy picture path — `work/kestrel/docs/qa/render-torture.md`
+
+- `picture.copy_caption` — Copy picture caption — `work/kestrel/docs/qa/render-torture.md`
+
+- `picture.copy_image` — Copy picture image — `work/kestrel/docs/qa/render-torture.md`
+
+- `background.open` — Background work — `work/kestrel/docs/qa/render-torture.md`
+
+- `background.cancel` — Cancel background task — `work/kestrel/docs/qa/render-torture.md`
+
+- `explorer.focus` — Focus explorer — `work/kestrel/docs/qa/render-torture.md`
+
+- `vault.switch_save` — Save all and change vault — `work/kestrel/docs/qa/render-torture.md`
+
+- `vault.switch_discard` — Discard and change vault — `work/kestrel/docs/qa/render-torture.md`
+
+- `vault.switch_stay` — Stay in this vault — `work/kestrel/docs/qa/render-torture.md`

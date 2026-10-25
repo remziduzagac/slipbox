@@ -1017,7 +1017,7 @@ export const READING: Check[] = [
       await opened(s, "src/sync/queue.ts");
       await followLink(s, "../../docs/sync.md");
       await opened(s, "docs/sync.md");
-      await s.where(/^kestrel(?: ·|$)/);
+      await s.where(/^kestrel(?: │|$)/);
     },
   },
   {
@@ -1513,23 +1513,23 @@ export const READING: Check[] = [
         return [...body.matchAll(re)].length.toLocaleString("en");
       };
       // Where you are on the top bar, so not here (WSP-D5): the mode, then the file.
-      await s.where(/^notes(?: ·|$)/, /^ READ +‹ projects\/kestrel-v2-3\.md › +[✖⚠] \d+ +● watching /);
+      await s.where(/^notes(?: │|$)/, /^ READ │ NORMAL +‹ projects\/kestrel-v2-3\.md › +[✖⚠] \d+ +● watching /);
       await s.status(new RegExp(` ${count("~/notes/projects/kestrel-v2-3.md")} words +L1:1 0% *$`));
       await s.keys("G");
       await s.status(/ 100% *$/);
       await s.keys("g", "g");
       // The lens, typing, unsaved.
       await s.keys("i");
-      await s.status(/^ LENS /);
+      await s.status(/^ READ·LENS │ NORMAL /);
       await s.keys("j", "i");
-      await s.status(/^ INSERT /);
+      await s.status(/^ READ·LENS │ INSERT /);
       await s.type("x");
       await s.status(/› • unsaved /);
       await s.keys("escape", "escape");
-      await s.status(/^ READ .*› • unsaved /);
+      await s.status(/^ READ │ NORMAL .*› • unsaved /);
       // A selection: its words.
       await s.keys("v", "e");
-      await s.status(/^ VISUAL .* \d+ words? selected /);
+      await s.status(/^ READ │ VISUAL .* \d+ words? selected /);
       await s.keys("escape");
       // Han and kana: a word each.
       await s.ex("e daily/2026-08-24.md");
@@ -1569,15 +1569,23 @@ export const READING: Check[] = [
     covers: { cases: ["notes"], commands: ["type.list", "type.next", "type.prev"] },
     options: { home: true, startAt: "home/work/kestrel/docs/adr/0002-route-engine-in-rust.md" },
     run: async (s) => {
-      // The lists take each note's title from the index: built first (a loaded machine builds it late), else a note
-      // not yet read is listed by its file's name.
-      await s.until(() => !s.topBar().includes("indexing"), 30000, "the index built");
       await leader(s, "f", "d");
       await s.see("Document types");
       await s.see(/adr\s+4 notes/);
       await s.keys("escape");
-      await s.ex("type adr");
-      await s.see("adr — 4 notes");
+      // A list captures the titles indexed when it opens. Reopen until every title is ready; the top bar's
+      // spinner reports work without the old "indexing" label.
+      await s.retry(
+        async () => {
+          if (s.rowOf("adr — 4 notes") >= 0) await s.keys("escape");
+          await s.ex("type adr");
+          await s.see("adr — 4 notes");
+        },
+        () => [1, 2, 3, 4].every((n) => s.rowOf(`ADR ${n}:`) >= 0),
+        "all four indexed ADR titles",
+        1000,
+        30_000,
+      );
       await s.see(/1 +ADR 1: Offline-first sync with an op log +accepted · docs\/adr\/0001-offline-first-sync\.md/);
       await s.see(/4 +ADR 4: A retry budget for the sync queue +proposed · docs\/adr\/0004-retry-budget\.md/);
       await s.keys("escape");
@@ -1663,7 +1671,7 @@ export const READING: Check[] = [
       // The lens on its lines whole.
       await line(s, badge);
       await leader(s, "k", "e");
-      await s.status(/^ LENS /);
+      await s.status(/^ READ·LENS │ NORMAL /);
       await s.see(`source · lines ${badge}–${end}`);
     },
   },

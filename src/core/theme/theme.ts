@@ -93,6 +93,12 @@ export const ROLES = [
   "border",
   "status",
   "status_accent",
+  "view_read",
+  "view_source",
+  "view_lens",
+  "mode_normal",
+  "mode_insert",
+  "mode_visual",
   "status_dim",
   "sidebar",
   "sidebar_dir",
@@ -149,6 +155,8 @@ export const ROLES = [
   // a button that can't be used: a mode the window's file has no view for, on its header (HDR-D2)
   "topbar_button_disabled",
   "topbar_chip",
+  "topbar_group",
+  "picture_caption",
   "hover",
   "breadcrumb",
   "breadcrumb_current",
@@ -370,6 +378,12 @@ export function themeFromPalette(
     // The tab strip and the status line sit on the page, like the top bar.
     status: { fg: p.fg_dim },
     status_accent: { fg: p.bg, bg: p.blue, bold: true },
+    view_read: { fg: p.blue, bold: true },
+    view_source: { fg: p.teal, bold: true },
+    view_lens: { fg: p.purple, bold: true },
+    mode_normal: { fg: p.bg, bg: p.blue, bold: true },
+    mode_insert: { fg: p.bg, bg: p.green, bold: true },
+    mode_visual: { fg: p.bg, bg: p.magenta, bold: true },
     status_dim: { fg: p.comment },
     sidebar: { fg: p.fg_dim, bg: p.bg },
     sidebar_dir: { fg: p.blue },
@@ -442,6 +456,8 @@ export function themeFromPalette(
     // missing (HDR-D6).
     topbar_button_disabled: { fg: blend(p.comment, p.surface2, 0.5), italic: true },
     topbar_chip: { fg: p.purple, bold: true },
+    topbar_group: { bg: blend(p.surface, p.bg, 0.35) },
+    picture_caption: { bg: blend(p.surface, p.bg, 0.35) },
     hover: { fg: p.fg_strong, bg: p.surface2, bold: true },
     breadcrumb_band: { bg: blend(p.surface, p.bg, 0.35) }, // the window header's background
     // The rails: a tinted column instead of a bordered one (the tab strip's shade).
@@ -514,6 +530,8 @@ export function terminalTheme(): Theme {
     // The palette's own colour 8 for both: told apart by dim and italics, as without colour (HDR-D5).
     topbar_button_disabled: { fg: a(8), dim: true, italic: true },
     topbar_chip: { fg: a(5), bold: true },
+    topbar_group: { bg: a(0) },
+    picture_caption: { bg: a(0) },
     hover: { fg: a(0), bg: a(7), bold: true },
     breadcrumb_band: { bg: a(0) },
     rail: { bg: a(0) },

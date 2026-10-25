@@ -1,13 +1,13 @@
-# Editing: the lens and source mode
+# Editing: the lens and SOURCE view
 
 slipbox edits the Markdown itself. What you change is the text of the file, and nothing else.
 
-You can see a whole note as Markdown while you edit it. That is source mode. Or you can see only the part you are
+You can see a whole note as Markdown while you edit it. That is SOURCE view. Or you can see only the part you are
 working on as Markdown, with the rest of the note still rendered around it. That is the lens.
 
 This chapter covers:
 
-- source mode and the lens
+- SOURCE view and the lens
 - the keys for typing and changing text
 - saving
 - what happens when someone else changes a file you are editing
@@ -33,11 +33,9 @@ Three keys are all you need to go between the two:
 - `esc` stops typing. Your keys are commands again. A second `esc` closes the lens.
 - `ctrl+s` saves, typing or not.
 
-The chip at the left of the status line says what has the keys:
-
-- `INSERT` while you type
-- `SOURCE` in source mode
-- `LENS` in the lens
+The chip at the left of the status line keeps the view and vim mode together: `READ │ NORMAL`,
+`READ·LENS │ INSERT` or `SOURCE │ VISUAL`. Escape changes INSERT to NORMAL without hiding the view.
+A second Escape closes the lens when it is open.
 
 | To | Press |
 | --- | --- |
@@ -56,7 +54,7 @@ The chip at the left of the status line says what has the keys:
 | Replace the selection | Type, or paste |
 | Delete the selection | `backspace` or `delete` |
 | Copy / cut / paste | `ctrl+c` / `ctrl+x` / `ctrl+v` |
-| See the whole note as Markdown, and back | `ctrl+k` (source mode) |
+| See the whole note as Markdown, and back | `ctrl+k` (SOURCE view) |
 
 A few things work differently from a desktop editor:
 
@@ -69,18 +67,27 @@ A few things work differently from a desktop editor:
   pastes after the cursor, or over the selection. A copied line goes under the cursor's line.
 - **Unsaved changes are saved for you** after 30 seconds without a key pressed ([Saving](#saving)).
 
-## Source mode and the lens
+<a id="source-mode-and-the-lens"></a>
 
-A window shows its note one of three ways: rendered, in the lens, or as its Markdown in source mode. The **Read**,
-**Lens** and **Source** buttons on its header show which, and a click switches straight to another
+## SOURCE view and the lens
+
+A window has two views: READ, the rendered file, and SOURCE, the file as written. The lens is a toggle within
+READ. The header's `R` and `S` buttons choose the view; `L` toggles the lens beside READ
 ([The window header](screen.md#read-lens-and-source)).
 
-### Source mode
+<a id="source-mode"></a>
+
+### SOURCE view
 
 Press `ctrl+k` to see the window's note as its Markdown. `space n v` and `:source` do the same. Press it again to see
 the note rendered.
 
-The chip reads `SOURCE`. The cursor stays on its line across the switch.
+The chip reads `SOURCE`. The cursor stays on its line across the switch. Normal mode has a block cursor; INSERT has
+a bar. The current line is highlighted, and the gutter carries line numbers, git changes and problem marks.
+
+Set `ui.relative_numbers = "source"` to number other lines by their distance from the current line, keeping the
+current line's own number. `"both"` also keeps the lens's relative counters; the default, `"lens"`, uses absolute
+line numbers in SOURCE view. `"off"` turns relative numbers off in both views.
 
 Everything else works as in the rendered note:
 
@@ -97,7 +104,7 @@ The Markdown is lightly highlighted:
 - headings
 - lists and task boxes
 - quotes
-- code
+- code, with fenced blocks highlighted in their declared language
 - links
 
 ### The lens
@@ -158,7 +165,7 @@ The editing keys are `i`, `a`, `o` and their capitals. On a rendered note, an ed
 | `editor.edit_in` | What an editing key does |
 | --- | --- |
 | `"live"`, the default | The first press opens the lens on the cursor's block, and the second edits |
-| `"source"` | The window switches to source mode, and the key edits at once |
+| `"source"` | The window switches to SOURCE view, and the key edits at once |
 
 With `"live"`, `esc` `esc` leaves the way you came. The first `esc` stops typing, and the second closes the lens.
 
@@ -169,10 +176,10 @@ Either way, `ctrl+k` and `space n l` open the other one, as do the window header
 Data files (JSON, YAML, TOML, INI, CSV and the like) open rendered. The lens edits them one card at a time: a key and
 the values under it, or a few rows of a table.
 
-If a data file stops parsing while you edit it, it switches to source mode when you stop typing. `space n v`, or the
+If a data file stops parsing while you edit it, it switches to SOURCE view when you stop typing. `space n v`, or the
 window header's Read, renders it again once it parses.
 
-Other text files open in source mode, since they have no rendered view. Code has a view of its own ([Code](code.md)).
+Other text files open in SOURCE view, since they have no rendered view. Code has a view of its own ([Code](code.md)).
 [Reading](reading.md) says how each kind of file is shown.
 
 Two kinds of file can't be edited:
@@ -260,7 +267,7 @@ A reload from disk is a step too. When an agent rewrites a note you have open, `
 
 `g ;` and `g ,` go back and forth through the places you changed. `g i` starts typing again where you last stopped.
 
-You select and copy the same way in a rendered note, in source mode and in the lens. Cutting and pasting change the
+You select and copy the same way in a rendered note, in SOURCE view and in the lens. Cutting and pasting change the
 text, so they work on the Markdown.
 
 **Selecting.**
@@ -271,7 +278,7 @@ text, so they work on the Markdown.
 - `v` and `shift+v` start selecting by character or by whole rows ([The vim keys](#the-vim-keys)).
 - `esc` clears the selection.
 
-In source mode and the lens, a selection made with `shift` or a drag is visual mode's. Then:
+In SOURCE view and the lens, a selection made with `shift` or a drag is visual mode's. Then:
 
 - `backspace`, `delete`, `d` or `x` deletes it
 - `c` types in its place
@@ -296,12 +303,12 @@ Three more copies are about the note rather than its text, while you read:
 after the cursor, or over the selection. A copied line goes under the cursor's line.
 
 On a rendered note with nothing selected, they first switch the window to editing, as `editor.edit_in` says. A
-selection made on the rendered page can be copied. Cutting it or pasting over it needs source mode or the lens.
+selection made on the rendered page can be copied. Cutting it or pasting over it needs SOURCE view or the lens.
 
 Your terminal's own paste (`ctrl+shift+v`, `cmd+v`) types the text while you type. Otherwise it puts the text as
 `ctrl+v` does.
 
-**The clipboard.** Every copy and cut goes to your system clipboard. So does every delete in source mode, as in vim
+**The clipboard.** Every copy and cut goes to your system clipboard. So does every delete in SOURCE view, as in vim
 with `clipboard=unnamedplus`.
 
 slipbox copies two ways at once:
@@ -328,7 +335,7 @@ If you know vim, you know most of this already:
 
 The chip shows the mode (`INSERT`, `VISUAL`) and what is waiting for its next key (`2d`, `di`).
 
-The operators and the other keys below are source mode's and the lens's. In a rendered note, `i`, `a`, `o` and their
+The operators and the other keys below are SOURCE view's and the lens's. In a rendered note, `i`, `a`, `o` and their
 capitals switch to editing first. `d`, `c`, `x` or `p` do nothing there.
 
 **Operators** wait for a motion or a text object, and act on what it covers:
@@ -379,7 +386,7 @@ system clipboard, as in vim with `clipboard=unnamedplus`. `p` puts what the clip
 
 A selection made with `shift` and a move, or with a drag, starts visual mode too.
 
-[Keys](keys.md) lists every key, and they can be changed. Source mode's keys are `[keys.source]` in your configuration,
+[Keys](keys.md) lists every key, and they can be changed. SOURCE view's keys are `[keys.source]` in your configuration,
 and visual mode's are `[keys.visual]` ([Configuration](configuration.md)).
 
 ### Where it isn't vim
@@ -489,7 +496,7 @@ the box do the same.
 
 In a list of tasks inside tasks, it ticks the innermost one, from any of its rows.
 
-It works in the rendered note, with no need to edit. It works in source mode and the lens too, on any line of the task.
+It works in the rendered note, with no need to edit. It works in SOURCE view and the lens too, on any line of the task.
 
 - On a note without unsaved changes, the tick is written to the file at once. Only that character changes.
 - On a note with unsaved changes, it changes the text on screen instead, as an undo step. The note stays unsaved, and
@@ -621,7 +628,7 @@ Either way, what you changed is written into the note and saved. A note without 
 | `:q`, `:quit` | Close the window (the tab, with its last window). On the very last one, quit |
 | `:q!` | Quit, throwing unsaved changes away |
 | `:e!` | Reload the note from disk, dropping your changes (`u` brings them back) |
-| `:source` / `:lens` | Source mode / the lens, on or off |
+| `:source` / `:lens` | SOURCE view / the lens, on or off |
 | `:42` | Go to line 42 |
 | `:s/old/new/`, `:%s/old/new/g` | Substitute, on this line / in the whole note ([Finding things](finding.md)) |
 | `:!cmd`, `:%!cmd` | Run a command / filter lines through one (next section) |

@@ -43,7 +43,9 @@ inset = 4                      # 0–40: columns kept clear right of the text (a
 max_width = 0                  # 0–1000: the TUI's text column at most this wide; 0, the whole window
 glyphs = "auto"                # icons and marks: auto (from the terminal) | nerd | unicode | ascii
 show_urls = "auto"             # a link's address after its text: auto (only without colour) | always | never
-code = "document"              # a code file opens: document (the code view, where its language has one) | source
+notes = true                  # Markdown opens in READ; false opens SOURCE
+code = true                   # supported code opens in READ; false opens SOURCE
+data = true                   # data that parses opens in READ; false opens SOURCE
 code_cells = "box"             # the code view's cells: box (framed) | band (on a tint); space u c switches
 code_wrap = "scroll"           # a code block too wide, in the TUI: scroll (sideways, its lines whole) | wrap (↪)
 images = "auto"                # a note's pictures: auto (drawn where the terminal can) | never
@@ -81,7 +83,6 @@ sidebar_width = 30             # 8–200; drawn from 12 to half the terminal, le
 outline = false                # the outline open on the right on a wide terminal
 outline_width = 32             # 8–200; drawn as the explorer is
 split_ratio = 0.5              # 0.2–0.8: the first window's share of a split
-top_bar = true                 # the bar along the top: the chip, where you are, the vault's state; space u b
 lines = "light"                # the frame's lines: light (─ │) | heavy (━ ┃)
 window_header = true           # the row atop each window: a split's name, the breadcrumb, Read · Lens · Source, ▤
 breadcrumb = true              # the headings the cursor is under, on each window's header
@@ -92,7 +93,7 @@ narrow_width = 90              # 0–1000: on a terminal narrower, the explorer 
 restore_session = true         # started on a folder rather than a note, the tabs and splits you left
 cursorline = true              # a band on the cursor's row; space u l
 line_numbers = true            # each row's line in the file, in a gutter; space u n
-relative_numbers = "lens"      # lens (in the lens, each row's distance from the cursor's) | off
+relative_numbers = "lens"      # lens | source | both | off; source uses relative line numbers in its gutter
 wrap = true                    # lines wrapped to the window; false: they keep their width, scrolled sideways
 readable_width = false         # the text column at most readable_max wide, centred; space u shift+w
 readable_max = 100             # 20–1000
@@ -161,7 +162,7 @@ limit = 25                     # 1–500: at most this many files; the rest are 
 command = ""                   # space n e: your editor, run here while slipbox waits; "": $VISUAL, else $EDITOR,
                                # else vi; your file only (see Commands in settings)
 autosave_ms = 30000            # 0–3600000: a changed note saved after this long without a key; 0, never
-edit_in = "live"               # where i, a, o… take a rendered window: live (the lens) | source
+edit_in = "lens"               # where i, a, o… take a rendered window: lens | source
 lens_min_rows = 6              # 1–200: the lens takes in the blocks around the cursor up to at least this many rows…
 lens_max = 0.5                 # 0.1–1: …and stops at this share of the window
 auto_pairs = false             # typing ( [ { " ' or ` puts its closing pair after the cursor
@@ -220,7 +221,7 @@ require-marker = true          # …and only where there is one
 "g m" = "shell.run make"       # a command with its argument; one that runs a program, in your file only
 "ctrl+o" = ""                  # ctrl+o does nothing now
 
-[keys.source]                  # source mode's own keys, tried before [keys] (x deletes a character there)
+[keys.source]                  # SOURCE view's own keys, tried before [keys] (x deletes a character there)
 [keys.visual]                  # visual mode (the moving keys extend the selection by themselves)
 "shift+y" = "visual.yank"
 
@@ -290,7 +291,7 @@ command that doesn't exist is reported too.
 
 Each of the other tables holds the keys of one place, and is tried before `[keys]` there:
 
-- `[keys.source]` holds source mode's own keys.
+- `[keys.source]` holds SOURCE view's own keys.
 - `[keys.visual]` holds visual mode's.
 - `[keys.explorer]` holds the explorer's, and the Problems panel's. They are bound to its actions: `down`, `up`,
   `open_tab`, `expand`, `open`, `collapse`, `open_split`, `top`, `bottom`, `filter`, `all_files`, `toggle_hidden`,
@@ -477,6 +478,8 @@ These are the roles of the screen most worth changing:
 | --- | --- |
 | `border` | the frame, the panes' borders and the rules |
 | `topbar_chip` | the `slipbox` chip |
+| `topbar_group` | the faint background of each top-bar group |
+| `picture_caption` | a standalone picture caption's background |
 | `topbar_button`, `topbar_button_on` | the rails', the top bar's and the window header's buttons: off and on |
 | `topbar_button_disabled` | a window header's button for a mode the file can't be shown in (in italics) |
 | `rail` | the rails' tint (its `bg`); with none, as under `NO_COLOR`, a rail is drawn with a border |
@@ -641,3 +644,7 @@ Variables and their exact meanings are in [Environment and storage locations](en
 
 Paths for configuration, cache, state and data are listed in
 [Environment and storage locations](environment-and-storage.md#where-slipbox-keeps-things).
+
+Rendering settings choose the opening view; READ stays available for supported files when they are false.
+The legacy `render.code` values `"document"` and `"source"` are read as true and false.
+The old `editor.edit_in = "live"` is still read as `"lens"`.

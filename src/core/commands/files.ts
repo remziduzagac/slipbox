@@ -45,19 +45,19 @@ export const FILE_SPECS: CommandSpec[] = [
   // The window header's buttons (HDR-D2): each sets a mode; in that mode already, nothing.
   {
     id: "view.mode_read",
-    title: "Read mode",
+    title: "Read view",
     cli: I,
     desc: "Shows this window's file rendered (code as a document), as the header's Read does; the cursor stays on its line",
   },
   {
     id: "view.mode_lens",
-    title: "Lens mode",
+    title: "Toggle lens",
     cli: I,
-    desc: "Opens the lens in this window, from source mode too, as the header's Lens does: the block the cursor is in as its markdown",
+    desc: "Toggles the lens in READ, from SOURCE too, as the header's Lens does: the block the cursor is in as its markdown",
   },
   {
     id: "view.mode_source",
-    title: "Source mode",
+    title: "Source view",
     cli: I,
     desc: "Shows this window's file as written, as the header's Source does; the cursor stays on its line",
   },
@@ -237,10 +237,23 @@ export const FILE_SPECS: CommandSpec[] = [
     desc: "The section the cursor is in: every link to it rewritten wherever it's reached, after a preview",
   },
   {
+    id: "vault.switch_save",
+    title: "Save all and change vault",
+    cli: null,
+    desc: "Saves unsaved notes before the pending switch",
+  },
+  {
+    id: "vault.switch_discard",
+    title: "Discard and change vault",
+    cli: null,
+    desc: "Leaves unsaved notes behind for the pending switch",
+  },
+  { id: "vault.switch_stay", title: "Stay in this vault", cli: null, desc: "Cancels the pending vault switch" },
+  {
     id: "folders.open",
-    title: "Folders: go into a named one",
-    cli: "slipbox folders",
-    desc: "The named folders this machine knows, each by the name pointers use; enter goes into the copy its links open (back returns)",
+    title: "Vaults: go into one",
+    cli: "slipbox vaults",
+    desc: "Every known vault and home workspace, worktrees grouped under their repository; enter goes into one",
   },
   {
     id: "root.trust",

@@ -55,7 +55,7 @@ A click puts the cursor where you click. The wheel scrolls.
 | Select | `shift` with a key that moves, or a drag |
 | Select a word / a row | A double-click / a triple-click |
 | Copy / cut / paste | `ctrl+c` / `ctrl+x` / `ctrl+v` |
-| Delete the selection | `backspace` or `delete`, in the lens or source mode |
+| Delete the selection | `backspace` or `delete`, in the lens or SOURCE view |
 | Clear the selection | `esc` |
 
 A drag, a double-click and a triple-click also copy what they select, as a terminal does.
@@ -129,6 +129,6 @@ A few keys do something else here than in a desktop editor.
 ## Next
 
 - [Quick start](quick-start.md): open a folder, find your way, edit a note.
-- [Editing](../manual/editing.md): typing, the lens and source mode.
+- [Editing](../manual/editing.md): typing, the lens and SOURCE view.
 - [Keys](../manual/keys.md): every key, vim's among them.
 - [Making slipbox yours](making-it-yours.md): change any key.

@@ -15,6 +15,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { stringWidth } from "../src/core/width.ts";
 import { canonKey } from "../src/core/commands.ts";
 import { DEFAULT_CONFIG } from "../src/core/config.ts";
 import { openGraph } from "../src/core/graph.ts";
@@ -76,7 +77,7 @@ const until = async (ok: () => boolean, ms = 10_000) => {
 };
 
 /** The app on `root`, `open` open, the git panel open and focused (unless `show` is false), git's answer in. */
-async function panel(root: string, open: string | null = "a.md", show = true) {
+async function panel(root: string, open: string | null = "a.md", show = true, width = 140) {
   const config = structuredClone(DEFAULT_CONFIG);
   config.ui.restore_session = false;
   config.lint.enabled = "off";
@@ -94,7 +95,7 @@ async function panel(root: string, open: string | null = "a.md", show = true) {
     watch: false,
   });
   const frame = () => {
-    const c = new TextCanvas(140, 40);
+    const c = new TextCanvas(width, 40);
     app.draw(c);
     return c.toString();
   };
@@ -310,7 +311,8 @@ describe("space g, the status line's branch, a change's sign (GIT-D8, GIT-D12)",
 
   test("the top bar's branch clicked: push and fetch, then the branches; one picked, checked out", async () => {
     const root = repo();
-    const { app, click } = await panel(root, "a.md", false);
+    writeFileSync(join(root, ".slipbox", "config.toml"), '[vault]\nname = "review"\n');
+    const { app, click } = await panel(root, "a.md", false, 2 * stringWidth(root) + 100);
     click("top:branch");
     const list = app.overlay as ListOverlay;
     expect(list.title).toStartWith("Branches (2)");

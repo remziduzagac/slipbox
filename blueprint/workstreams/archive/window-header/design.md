@@ -195,6 +195,6 @@ Previously: "They have no rendered view: `space n v` and the lens say so and sta
 
 - **Mode** (a window's): how it shows its file: Read (the rendered view), Lens (rendered, the blocks around the
   cursor as their source) or Source (source mode); one at a time, switched by the header's buttons, `ctrl+k` and
-  `space n l` (HDR-D2). Not vim's modes (normal, insert, visual). [tui.md](../../design/tui.md) § Screen layout.
+  `space n l` (HDR-D2). Not vim's modes (normal, insert, visual). [tui.md](../../../design/tui.md) § Screen layout.
 - **Window header**: the row atop each window: in a split its file's name, the breadcrumb, the mode's buttons, and
-  `▤` without the right rail (HDR-D1). [tui.md](../../design/tui.md) § Screen layout.
+  `▤` without the right rail (HDR-D1). [tui.md](../../../design/tui.md) § Screen layout.

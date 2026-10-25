@@ -218,6 +218,7 @@ export class BufferCanvas implements Canvas {
   constructor(
     private readonly buf: OptimizedBuffer,
     private readonly pictures?: Pictures,
+    private readonly context?: RenderContext,
   ) {}
   get width(): number {
     return this.buf.width;
@@ -231,6 +232,10 @@ export class BufferCanvas implements Canvas {
   }
   cell(x: number, y: number, g: string, _w: number, s: CellStyle): void {
     this.buf.drawText(glyphCell(this, g), x, y, toRGBA(s.fg, true), toRGBA(s.bg, false), attrs(s));
+  }
+  cursor(at: { x: number; y: number } | null): void {
+    this.context?.setCursorStyle({ style: "line", blinking: false });
+    this.context?.setCursorPosition(at ? at.x + 1 : 0, at ? at.y + 1 : 0, at !== null);
   }
   ascii(x: number, y: number, text: string, s: CellStyle): void {
     this.buf.drawText(text, x, y, toRGBA(s.fg, true), toRGBA(s.bg, false), attrs(s));
@@ -251,7 +256,7 @@ export class AppRenderable extends Renderable {
   }
 
   protected override renderSelf(buffer: OptimizedBuffer): void {
-    this.paint(new BufferCanvas(buffer, this.pictures));
+    this.paint(new BufferCanvas(buffer, this.pictures, this.ctx));
   }
 }
 

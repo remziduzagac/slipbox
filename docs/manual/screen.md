@@ -18,7 +18,7 @@ line](../images/screen-map.png)
 From the top:
 
 - **The top bar** holds the `slipbox` chip, which opens the command palette. In its middle, it says where you are:
-  the vault and its branch. At its right end, it shows the vault's state while slipbox indexes it (`indexing 3…`).
+  the explorer zoom, workspace and git state. At its right end, it shows background work and an available upgrade.
 - **The tab strip** has a tab for each note you have open.
 - **The explorer**, on the left, shows the folder's notes and files as a tree. The column of buttons at the left edge
   is the **left rail**.
@@ -41,34 +41,34 @@ and marks look different. See [Glyphs](reading.md#glyphs).
 
 ## The top bar
 
-The top bar holds the `slipbox` chip. Click it to open the [command palette](#the-command-palette). While the vault
-is being indexed, the bar also shows how far that has got, at its right end. Without the left rail, the explorer's `≡`
-button sits on it too.
+The top bar is always visible, including in zen mode, with the note beginning below it. Click `slipbox` at the left
+to open the
+[command palette](#the-command-palette).
 
-**Where you are** is in the middle of the bar:
+The middle block says **where you are**, with a dim separator between each clickable item:
 
-- **The vault**, after `◈`: its name if it has one, or else its path (`◈ ~/notes`). Home is `◈ ~`. A file outside
-  home and every vault says `Elsewhere`, without the `◈`, since it's in no vault. [Vaults, home and
-  Elsewhere](vaults.md#names-and-pointers) explains names.
-- **Your workspace**, when it isn't the vault's own. A folder of home you opened by name has a workspace of its own,
-  shown after home: `◈ ~ › notes`.
-- **The branch**, dimmed, in a git repository: `◈ kestrel · main`. A worktree shows its branch after the vault's name:
-  `◈ kestrel@fix-menu`. A branch with an upstream shows how far it's ahead of it and behind it, as of the last fetch
-  (`· main ↑2 ↓1`). A merge or a rebase under way is said after it (`· main merging`, `· fix rebasing 2/5`). A
-  detached head shows its commit.
+- **Explorer zoom**, after `≡`: the folder the explorer shows. Click to open and focus the explorer at that zoom.
+- **Workspace**, after `◈`: its name, without the vault prefix. A named folder of home shows `◈ notes`; a branch
+  workspace shows the vault name, `◈ kestrel`. The vault is in [Info](#the-info-view). Click the workspace to open
+  the vault list.
+- **Git branch**, after `⎇`, dimmed, with ahead and behind counts, and any merge or rebase under way. A detached head
+  shows its commit. Click for the branches menu: pull, push and fetch, then branches to check out.
+- **Changed files**, `● 3`, in the changed-file colour: the number of files changed in the working tree. Click to
+  open source control.
 
-It sits in the middle of the screen, moved aside only as far as the chip and the right end need. When the bar is short
-of room, a long path is cut first, from the front, keeping its end (`◈ …earch/notes`). Then it gives up a part at a
-time: the ahead and behind, then the branch (cut first, then gone), then a merge or rebase under way, then the
-workspace. The vault's name is cut last. Each part given up gives a cut path its room back. On a very narrow screen it
-isn't shown.
+Each group has a faint background. Nerd Font groups have rounded ends; Unicode and ASCII groups have plain ends.
+Only the item under the mouse lights up.
 
-Click the vault to list the named folders you've opened, and press `enter` to go into one. In a git repository, click
-the branch for the branches: pull, push and fetch first, then the branches to check one out.
+Two blocks appear at the right when needed. **Background work** has a spinner and a count: indexing, exports,
+git fetches and language servers starting. Click it to list the tasks; select one and press `enter` to cancel that
+one. **A newer slipbox** shows `⇡` and its version in the accent colour. Click for the upgrade offer; closing the
+offer leaves the version visible. Skipping that version, installing it, or finding it is already current clears it.
+Cancelling indexing warns that search and backlinks may be incomplete; `:reindex` tries again.
 
-`space u b` hides the top bar and shows it again. `ui.top_bar = false` hides it from the start. With the bar hidden,
-the note gains its row, `:` still opens the palette, and the status line says where you are instead. See
-[Configuration](configuration.md) for every `ui` setting.
+Short of room, the right blocks shrink to icons, then disappear. Git loses ahead and behind, then its branch is cut
+and dropped, then the changed count goes. Zoom and workspace stay; long paths lose their front, keeping their end.
+
+The retired `ui.top_bar` setting gives a notice and is ignored. The status line keeps its room for the file.
 
 ## Tabs
 
@@ -231,7 +231,7 @@ These settings set up the panes:
 | `ui.sidebar_width` and `ui.outline_width` | the explorer's and the outline's widths, 30 and 32 columns |
 | `ui.left_rail` and `ui.right_rail` | the rails (both on) |
 
-Without the left rail, the explorer's `≡` sits on the top bar. The history and source control open with their keys.
+The top bar's zoom always opens and focuses the explorer. The history and source control open with their keys.
 
 Without the right rail, the outline's `▤` sits at the right end of the window header. Info and the footnotes open
 with their keys.
@@ -273,8 +273,13 @@ The Info view tells you what the file on screen is. It follows you to the next f
 - a tag's notes
 - the list of links or backlinks
 - the outline or the footnotes
+- **Export…**, at the end for notes: choose an export format; its value shows the last output path, which `y` copies
 
 On any other row, `enter` copies its value, as `y` does on every row.
+
+`x` in Info exports the note through the same format picker. Code and data files have no Export row.
+
+![Export at the end of Info](../images/screen-info-export.png)
 
 `e` opens the properties editor. It's a floating window with the note's front matter to edit as text. See
 [Editing](editing.md).
@@ -342,30 +347,24 @@ scratch, a diff).
 
 ### Read, Lens and Source
 
-The three buttons show how the window shows its file, and switch it:
+The header has three compact buttons, `R`, `L` and `S`, each padded for clicking:
 
-| Button | The window shows | Keys |
+| Button | Action | Keys |
 | --- | --- | --- |
-| **Read** | the note rendered, as a page; code as a document | `esc` closes the lens; `ctrl+k` leaves source mode |
-| **Lens** | the note rendered, with the lens open on the block the cursor is in | `space n l` |
-| **Source** | the file as written: a note's Markdown | `ctrl+k`, `space n v` |
+| **R** (READ) | Shows the file rendered, closing the lens | `esc` closes the lens; `ctrl+k` leaves SOURCE |
+| **L** (LENS) | Toggles the lens within READ | `space n l` |
+| **S** (SOURCE) | Shows the file as written | `ctrl+k`, `space n v` |
 
-The bright one is the window's mode, the same one the status line's chip names. Click another to switch to it straight
-away. From Source, Lens opens the lens without showing the page first. Clicking the bright one changes nothing.
+READ and SOURCE are a radio pair: one stays selected. With the lens open, both READ and LENS are lit.
+Clicking LENS in SOURCE opens READ with the lens on. Clicking LENS again closes it, leaving READ.
+The view stays visible while you type or select. A click stops typing first; your unsaved changes stay.
+Successful switches are silent. An unavailable READ or lens button is dim and italic; clicking it explains why.
+Plain text, unsupported code and data that does not parse have only SOURCE. A rendering default set to false
+opens SOURCE while keeping supported READ and its lens available.
 
-While you type, the button of the mode you're typing in stays bright, though the chip says `INSERT`. A click stops
-typing first, as every click does. Your unsaved changes stay.
-
-A button in italics, fainter than the others, is a mode the file can't be shown in. A plain text file, code in a
-language without the code view (or with `render.code = "source"`), and a data file that doesn't parse have only Source.
-A click on one of those says why. A data file you've changed since slipbox last checked it keeps Read and Lens lit: the
-click finds out, and says so if it doesn't parse.
-
-In a narrow window, the breadcrumb folds first, keeping room for the heading the cursor is in. Then the buttons shorten
-to `R` `L` `S`, and at last only the bright one is left. Which of these a window shows depends on its width, and in a
-split on its file's name, never on where the cursor is or the mode: the buttons stay put as you move and switch.
-
-The command palette has them too: Read mode, Lens mode and Source mode.
+In a narrow window the breadcrumb folds, then only the selected view's letter remains. Button positions depend
+on the window's width and file name, keeping them steady as you move the cursor.
+The command palette has Read view, Toggle lens and Source view too.
 
 ### The breadcrumb
 
@@ -382,26 +381,12 @@ In a data file, the breadcrumb shows its sections and keys. In a code file, it s
 
 The status line describes the file in the focused window. From the left:
 
-- **The mode**, in a coloured chip:
-
-  | Chip | What has the keys |
-  | --- | --- |
-  | `READ` | the note, drawn as a page |
-  | `SOURCE` | the note's Markdown, in source mode |
-  | `LENS` | the note, with the lens open on the block being edited |
-  | `INSERT` | typing |
-  | `VISUAL`, `V-LINE` | a selection, by character or by whole rows |
-  | `FILES` | the left panel: the explorer or the history |
-  | `GIT` | the left panel: source control, the git panel |
-  | `OUTLINE`, `FOOTNOTES`, `INFO` | the right panel's view |
-  | `PROBLEMS` | the Problems panel |
-  | `RESIZE` | resize mode |
-
-  While you're in the middle of a key sequence, the chip shows what you've pressed so far instead: `␣ l` after
-  `space l`, `C-w` after `ctrl+w`, `2d` after `2 d`.
-- **Where you are**, dimmed, only while the top bar doesn't show it (hidden, or too narrow): the vault and its branch,
-  as [the top bar](#the-top-bar) says them, without the `◈` (`~/notes · main`, `~ › notes`, `Elsewhere`). Click it for
-  the branches. While the top bar shows, it says where you are, and the status line leaves the room to the file's path.
+- **The view and mode**, in two coloured segments: `READ │ NORMAL`, `READ·LENS │ INSERT` or `SOURCE │ VISUAL`.
+  The first segment stays visible while typing or selecting. The second is vim's `NORMAL`, `INSERT`, `VISUAL` or
+  `V-LINE`. In ASCII the divider is `|` and the lens label is `READ-LENS`. Panel focus (`FILES`, `GIT`, `INFO`,
+  `OUTLINE`, `FOOTNOTES`, `PROBLEMS`), `RESIZE` and pending keys appear alongside them.
+  Short of room, the view becomes `R`, `R·L` or `S`, then the mode becomes `N`, `I`, `V` or `V-L`, before the
+  file name shortens. Without a window, the chip says `NORMAL`.
 - **The file's path**, between `‹` and `›`. These two go back and forward in the window's history, as a browser's
   arrows do. Each is bright when there's somewhere to go. Hovering over one says where. Clicking the path lists the
   window's history above it, with **Copy path** first.
@@ -431,7 +416,7 @@ At the right end:
   far down the window is (`all` when the whole note fits).
 
 When the line is short, the word count goes first, then the link, then the tab count. The position always stays.
-Where you are, when the status line shows it, goes before the path does.
+The top bar keeps where you are visible while the status line makes room for the file.
 
 ## Messages and questions
 
@@ -594,7 +579,6 @@ change it.
 | Mouse | `space u m` | off, the terminal has the mouse |
 | Window header | (only in the list) | the row atop each window: a split's name, the breadcrumb, Read, Lens, Source |
 | Breadcrumb | (only in the list) | the heading path on each window's header |
-| Top bar | `space u b` | the bar at the top |
 | Problems bar | `space u d` | a column beside the text with each line's problems |
 | Spelling | `space u s` | misspelt words marked |
 | Problems marked in the text | `space u shift+d` | none, errors, warnings and up, or all |
@@ -608,7 +592,6 @@ scratch are in [Editing](editing.md). Problems and code cells are in [Code](code
 
 **Zen mode** takes away:
 
-- the top bar
 - the tabs
 - the rails
 - the window headers
@@ -657,7 +640,7 @@ back the new branch's tabs. A note with unsaved changes keeps everything as it i
 `ui.restore_session` on.
 
 **Each folder of home's workspace.** In home, each folder you open by name (`slipbox ~/notes`) has a workspace of its
-own, beside home's own. The top bar names it: `◈ ~ › notes`.
+own, beside home's own. The top bar names it: `◈ notes`.
 
 Your workspaces are yours and the vault's alone: another vault has its own, and a worktree, a vault of its own, has
 its own too. slipbox keeps them in its state folder on your machine, never in the vault. Where is in [Where slipbox

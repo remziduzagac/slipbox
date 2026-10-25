@@ -15,7 +15,7 @@ test("the syntax pass leaves the event loop available and installs only the curr
     root,
     open: "large.ts",
     config: (c) => {
-      c.render.code = "source";
+      c.render.code = false;
     },
   });
   const buf = h.app.view!.buf;
@@ -99,7 +99,7 @@ afterEach(() => {
 const codeHarness = async (text = "export function first() { return 1; }\n") => {
   const root = makeVault();
   writeFileSync(join(root, "code.ts"), text);
-  const h = await harness({ root, open: "code.ts", config: (c) => (c.render.code = "source") });
+  const h = await harness({ root, open: "code.ts", config: (c) => (c.render.code = false) });
   apps.push(h);
   return h;
 };

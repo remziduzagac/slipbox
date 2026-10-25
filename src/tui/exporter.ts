@@ -36,6 +36,18 @@ export class Exporter {
     return true;
   }
 
+  private pathFile = "";
+  private paths: Record<string, string> = {};
+
+  lastPath(rel: string): string | null {
+    const file = join(stateDir(this.app.loc), "export.json");
+    if (this.pathFile !== file) {
+      this.pathFile = file;
+      this.paths = readJson<{ paths?: Record<string, string> }>(file, {})?.paths ?? {};
+    }
+    return this.paths[rel] ?? null;
+  }
+
   /**
    * Export a note (10.x): the explorer's selected one, or this one. Its format picked — or named, `:export docx` — then
    * where asked: beside it, its name, unless you say otherwise.
@@ -183,6 +195,7 @@ export class Exporter {
     let files: string[];
     const controller = new AbortController();
     this.jobs.add(controller);
+    const finished = this.app.background.begin(`Export to ${shown}`, () => controller.abort());
     const graph = this.app.graph;
     let output: PreparedExport | undefined;
     try {
@@ -203,12 +216,25 @@ export class Exporter {
           },
           controller.signal,
           // Over once a cancel can't stop it, its document's rename begun: from then on, none is running (#68).
-          () => this.jobs.delete(controller),
+          () => {
+            this.jobs.delete(controller);
+            finished();
+          },
         );
         // Where it went, for "Where you exported last": as soon as it's there, not once its staging is cleared, so the
         // window opened meanwhile opens there.
         try {
-          writeJson(join(stateDir(graph.loc), "export.json"), { dir: dirname(target) });
+          const file = join(stateDir(graph.loc), "export.json");
+          const previous = readJson<{ paths?: Record<string, string> }>(file, {});
+          const paths = { ...previous?.paths, ...(rels.length === 1 ? { [rels[0]!]: target } : {}) };
+          writeJson(file, {
+            dir: dirname(target),
+            paths,
+          });
+          if (this.app.graph === graph) {
+            this.pathFile = file;
+            this.paths = paths;
+          }
         } catch {}
       } catch (err) {
         if (!this.app.quitting)
@@ -220,6 +246,7 @@ export class Exporter {
       } finally {
         // Over, written or not: a cancel from now on finds none running (#68).
         this.jobs.delete(controller);
+        finished();
       }
       const beside = files.length ? `, ${files.length} file${files.length === 1 ? "" : "s"} beside it` : "";
       // A note written where the vault never indexes it (D246): Markdown into a folder `walk.exclude` names.

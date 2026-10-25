@@ -9,7 +9,7 @@ import { bracketFrom, matchBracket } from "../core/brackets.ts";
 import * as E from "./editing.ts";
 import * as V from "./vim.ts";
 import { visualOp } from "./actions-edit.ts";
-import { type ViewMode, viewMode } from "./lens.ts";
+import type { ViewMode } from "./lens.ts";
 
 /** Moving and viewing: the cursor's motions, scrolling, visual mode, the view's mode and the lens. */
 export function viewActions(): Record<string, Run> {
@@ -50,6 +50,9 @@ export function viewActions(): Record<string, Run> {
     "scroll.top": (a) => withView(a, (v) => a.views.scrollCursorTo(v, "top")),
     "scroll.bottom": (a) => withView(a, (v) => a.views.scrollCursorTo(v, "bottom")),
     // The picture on the cursor's ▣ line (PIC-D3): at its own size or fitted to the window; scrolled sideways.
+    "picture.copy_path": (a, arg) => withView(a, (v) => a.pictures.copy(v, Number(arg ?? v.cur.row), "path")),
+    "picture.copy_caption": (a, arg) => withView(a, (v) => a.pictures.copy(v, Number(arg ?? v.cur.row), "caption")),
+    "picture.copy_image": (a, arg) => withView(a, (v) => a.pictures.copy(v, Number(arg ?? v.cur.row), "image")),
     "picture.size": (a) => withView(a, (v) => a.pictures.toggle(v, v.cur.row)),
     "picture.scroll_left": (a) => withView(a, (v) => a.pictures.scrollSideways(v, -1)),
     "picture.scroll_right": (a) => withView(a, (v) => a.pictures.scrollSideways(v, 1)),
@@ -148,7 +151,7 @@ export function viewActions(): Record<string, Run> {
     "view.live": (a) => withView(a, (v) => switchMode(a, v, v.live ? "rendered" : "live")),
     // The header's buttons (HDR-D2): a mode set, not toggled; in the mode the window is in, nothing.
     "view.mode_read": (a) => withView(a, (v) => switchMode(a, v, "rendered")),
-    "view.mode_lens": (a) => withView(a, (v) => switchMode(a, v, "live")),
+    "view.mode_lens": (a) => withView(a, (v) => switchMode(a, v, v.live ? "rendered" : "live")),
     "view.mode_source": (a) => withView(a, (v) => switchMode(a, v, "source")),
     // The lens's size by hand: a block more or less, kept as it moves; `=` lets it size itself.
     "lens.grow": (a) => lensStep(a, 1),
@@ -172,15 +175,7 @@ export function viewActions(): Record<string, Run> {
  * render, a diff), `setViewMode`'s own message says why.
  */
 function switchMode(a: App, v: View, mode: ViewMode): void {
-  const was = viewMode(v);
-  if (was === mode) return;
   a.lens.setViewMode(v, mode);
-  if (viewMode(v) === was) return;
-  const code = a.isCodeDocument(v.buf);
-  if (v.source)
-    a.message("info", `source — ${v.buf.kind.group === "note" ? "the note's markdown" : "the file as written"}`);
-  else if (v.live) a.message("info", `the lens: the ${E.lensWhat(v.buf)} around the cursor — esc closes it`);
-  else a.message("info", code ? "the code as a document" : "rendered");
 }
 
 /** Where a vertical move lands on a row: the layout column drawn at the goal's screen column (Code.layoutCol). */

@@ -1,7 +1,7 @@
 # Vaults, home and Elsewhere
 
 A vault determines a file's search and link context and its settings. Your workspace there, the tabs and windows
-you have open, is yours, kept for each vault apart. The explorer's view is the part of the filesystem you are looking
+you have open, is yours, kept for each vault apart. The explorer's zoom is the part of the filesystem you are looking
 at; changing that view does not combine independent vaults.
 
 This chapter explains the model and its rules. For a practical session moving between two places, follow
@@ -80,7 +80,7 @@ as any other vault's does: `~ › todo.md`, and `o` goes into home.
 
 Home is a vault as the others are. Its notes have backlinks, `/` starts from your home folder, and a wikilink's name
 matches its notes. It has its own workspace, and each folder of it you open by name, such as `slipbox ~/notes`, has a
-workspace of its own, which the top bar names (`◈ ~ › notes`): open `~/work` and `~/notes` in turn, and each brings
+workspace of its own, which the top bar names (`◈ notes`): open `~/work` and `~/notes` in turn, and each brings
 back what you had open in it. `slipbox ~` brings back home's own. Its settings are your own config, since it has no
 `.slipbox/` to hold any. It has git only when your home folder is itself a repository.
 
@@ -276,18 +276,22 @@ A message names the vault you are now in.
 
 - **Back returns.** `ctrl+o` from the first place you visited in a vault takes you back to the vault before. You are
   at the note and place you left. A chain of switches unwinds one at a time.
-- **Unsaved notes stop a switch.** slipbox refuses to leave a vault while a note in it is unsaved, and names the note.
+- **Unsaved notes ask before a switch.** Choose **Save all and go**, **Discard and go**, or **Stay**. A failed save
+  keeps you in the current vault. Properties edits are resolved first.
   Save it (`:wa` saves them all) or revert it first.
 - **The explorer shows where you went.** It's one tree: going into a vault outside its view zooms the view out to the
-  folder holding both, the two unfolded and the vault you are in now highlighted ([Files](files.md#the-view)).
-- **The named folders** are a key away: `space v v` lists them, wherever you started, and `enter` goes into one.
+  folder holding both, the two unfolded and the vault you are in now highlighted ([Files](files.md#the-zoom)).
+- **Every known vault** is a key away: `space v v` lists them, named or not, and `enter` goes into one.
+
+![Unsaved notes before changing vault](../images/vaults-unsaved-switch.png)
 
 ### Worktrees
 
 A git worktree (made with `git worktree add`) is a vault of its own, with its own workspaces, scratch and history.
 That's because a worktree is usually a separate task, often an agent's.
 
-The top bar shows a worktree by its repository's name and its branch: `◈ website@fix-menu`.
+The top bar shows its workspace and branch: `◈ website │ ⎇ fix-menu`. The vault list groups worktrees under
+their repository.
 
 A worktree's notes are copies of the main checkout's, so their links don't count as backlinks.
 
@@ -404,8 +408,13 @@ the same `id` in `.slipbox/`.
 - **Different `.slipbox/` folders** with one name stay ambiguous until one is renamed. Following a pointer by that name
   asks which, and offers the renaming.
 
-`space v v` (`:folders`) lists the named folders this machine knows, the ones seen last first. `enter` goes into one,
-and `ctrl+o` comes back. `slipbox folders` lists them with their copies.
+`space v v` (`:folders`), or a click on the top bar's workspace, opens **Vaults**. Every known vault appears,
+named or not, most recent first. Worktrees appear under their repository. Folders of home opened by name appear
+marked as home's workspaces. `/` filters; `enter` goes into the selected vault or folder of home; `ctrl+o` comes back.
+![The vault list, with worktrees grouped under their repository](../images/vaults-list.png)
+
+The outgoing workspace is saved on disk; its notes, parses and index are released from memory. Returning loads its
+files again. `slipbox vaults` lists known vaults; `slipbox folders` remains the named pointers and their copies.
 
 ### A named folder moved
 
@@ -431,5 +440,5 @@ slipbox learns where folders are by opening them, and from the background index 
 A link into another vault can open a read-only peek. `esc` closes it, `t` keeps it in a tab, and `o` goes into that
 vault. See [Following a link](links-and-vaults.md#following-a-link) for the complete behavior.
 
-The explorer's zoom and breadcrumbs are described in [Files and folders](files.md#the-view). The vault's boundary
+The explorer's zoom and breadcrumbs are described in [Files and folders](files.md#the-zoom). The vault's boundary
 and the explorer's visible folder are separate concepts.

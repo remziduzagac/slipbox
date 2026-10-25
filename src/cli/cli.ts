@@ -98,6 +98,7 @@ Usage:
   slipbox trash empty               what's in the trash, listed; removed for good with --yes (it keeps 30 days)  [--yes]
   slipbox name <new>                this folder's name, as a pointer names it: changed, the old kept; a repository given one
                                     [--dry-run] [--plan]
+  slipbox vaults                    known vaults and saved home workspaces, newest first
   slipbox folders [default <name> <path>]  the named folders: their copies, the one links open; or make one the one
   slipbox symlinks [forget <link>]  the symlinks you've answered, followed or not, and where they lead; or forget one:
                                     asked again in slipbox, and followed no more
@@ -155,6 +156,7 @@ export const CLI_COMMANDS = new Set([
   "backlinks",
   "name",
   "folders",
+  "vaults",
   "symlinks",
   "ls",
   "outline",

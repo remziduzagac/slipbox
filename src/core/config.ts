@@ -25,8 +25,10 @@ export interface Config {
     glyphs: GlyphMode;
     /** Show link URLs after link text. `auto`: only when colour is off. */
     show_urls: "auto" | "always" | "never";
-    /** How code opens (24.x): as a document, where its language is mapped; or in source mode. */
-    code: "document" | "source";
+    /** Opening defaults (VB-D2); legacy code strings are accepted on input. */
+    notes: boolean;
+    code: boolean;
+    data: boolean;
     /** How the code view draws a cell (24.13): in a box, or on a band. */
     code_cells: "box" | "band";
     /** A code block too wide for the window, in a rendered note in the TUI: `scroll`, its lines whole, the block
@@ -101,7 +103,7 @@ export interface Config {
     line_numbers: boolean;
     /** The lens's counters: in a column of its own, each row's distance from the cursor's (the cursor's 0), vim's counts
      *  read off it (`5j`, `d3k`): "lens", or "off". */
-    relative_numbers: "lens" | "off";
+    relative_numbers: "lens" | "source" | "both" | "off";
     /** Wrap long lines to the pane; off, notes keep their natural width and scroll sideways. */
     wrap: boolean;
     /** Cap the text column at `readable_max` columns, centred. */
@@ -110,7 +112,6 @@ export interface Config {
     /** Hide the top bar, frame, explorer, outline, tab strip, window headers and status line; readable width on. */
     zen: boolean;
     /** The top bar: the explorer button, the app chip, vault state. */
-    top_bar: boolean;
     /** The window header (HDR-D3): the row atop each window — a split's name, the breadcrumb, the mode's buttons, ▤. */
     window_header: boolean;
     /** The outline breadcrumb on each window's header: the headings the cursor is under. */
@@ -246,7 +247,7 @@ export interface Config {
      */
     autosave_ms: number;
     /** What the editing keys (i, a, o…) switch a rendered window to: "source" or "live" preview. */
-    edit_in: "source" | "live";
+    edit_in: "source" | "lens" | "live";
     /** The lens (live preview): at least this many rows of markdown, its neighbours pulled in. */
     lens_min_rows: number;
     /** …and it stops taking in neighbours at this share of the window (a bigger block shows whole). */
@@ -307,7 +308,9 @@ export const DEFAULT_CONFIG: Config = {
     max_width: 0,
     glyphs: "auto",
     show_urls: "auto",
-    code: "document",
+    notes: true,
+    code: true,
+    data: true,
     code_cells: "box",
     code_wrap: "scroll",
     images: "auto",
@@ -340,7 +343,6 @@ export const DEFAULT_CONFIG: Config = {
     readable_width: false,
     readable_max: 100,
     zen: false,
-    top_bar: true,
     window_header: true,
     breadcrumb: true,
     lines: "light",
@@ -375,7 +377,7 @@ export const DEFAULT_CONFIG: Config = {
     command: "",
     remote: ["nvim"],
     autosave_ms: 30000,
-    edit_in: "live",
+    edit_in: "lens",
     lens_min_rows: 6,
     lens_max: 0.5,
     auto_pairs: false,
@@ -390,6 +392,7 @@ export const DEFAULT_CONFIG: Config = {
 
 /** Settings that were, and why they aren't: said once, never an unknown key's warning. */
 const RETIRED: Record<string, string> = {
+  "ui.top_bar": "the top bar is always shown",
   rename: "renames no longer write a note's old name into it; links reach notes by their paths",
 };
 
@@ -410,7 +413,6 @@ function renewed(path: string, value: string): string {
 const ENUMS: Record<string, readonly string[]> = {
   "render.glyphs": ["auto", "nerd", "unicode", "ascii"],
   "render.show_urls": ["auto", "always", "never"],
-  "render.code": ["document", "source"],
   "render.code_cells": ["box", "band"],
   "render.code_wrap": ["scroll", "wrap"],
   "render.images": ["auto", "never"],
@@ -428,9 +430,9 @@ const ENUMS: Record<string, readonly string[]> = {
   "diagnostics.marks": ["off", "error", "warning", "info"],
   "diagnostics.severity": ["error", "warning", "info", "hint"],
   "ui.lines": ["light", "heavy"],
-  "ui.relative_numbers": ["lens", "off"],
+  "ui.relative_numbers": ["lens", "source", "both", "off"],
   "files.show": ["auto", "notes", "renderable", "all"],
-  "editor.edit_in": ["source", "live"],
+  "editor.edit_in": ["source", "lens", "live"],
   "links.style": ["auto", "markdown", "wiki"],
   "links.path": ["auto", "relative", "root", "name"],
   "links.extension": ["auto", "keep", "drop"],
@@ -696,8 +698,14 @@ function dropUserOnly(data: Record<string, unknown>, file: string, warnings: str
 /** Merge `over` into `base`, typed by `base`'s shape. Unknown keys and wrong types are warnings. */
 function merge<T>(base: T, over: Record<string, unknown>, file: string, prefix: string, warnings: string[]): T {
   const out = { ...(base as Record<string, unknown>) };
-  for (const [key, value] of Object.entries(over)) {
+  for (const [key, supplied] of Object.entries(over)) {
     const path = prefix ? `${prefix}.${key}` : key;
+    const value =
+      path === "render.code" && typeof supplied === "string" && ["document", "source"].includes(supplied)
+        ? supplied === "document"
+        : path === "editor.edit_in" && supplied === "live"
+          ? "lens"
+          : supplied;
     // Colour overrides: kept as given (tables merge by key) and validated against the theme. A
     // role's fields merge, at the top and in a theme's own table ([colors.<theme>]) alike.
     if (prefix === "colors") {

@@ -1,6 +1,6 @@
 # Code as a notebook (plan `24.x`)
 
-Notes render, and data files render; source mode shows a source file as typed, highlighted. The code view renders it
+Notes render, and data files render; SOURCE view shows a source file as typed, highlighted. The code view renders it
 too (D125) — as a notebook: its code in cells, one per definition, each with a header carrying buttons
 and the definition's documentation in it above its code; the file's other comments as prose in boxes of their own. The
 aim isn't to make code look like markdown, nor to run it (slipbox runs nothing, `23.x`; D172); it's to make it read
@@ -8,7 +8,7 @@ like a document — and alike whatever language wrote it.
 
 It covers every grammar slipbox parses that has definitions (D130): TypeScript, TSX, JavaScript, Python, Go, Rust,
 Swift, PHP, Ruby, C, C++, Lua and Bash. Markup and config (HTML, Vue, Svelte, Astro, CSS, SCSS, Dockerfile) open in
-source mode, and every file keeps it (`space n v`). What's next is at the end.
+SOURCE view, and every file keeps it (`space n v`). What's next is at the end.
 
 ## The rule: code's tokens verbatim, whitespace and decoration ours, comments as prose
 
@@ -186,10 +186,10 @@ the tokens differ.
 
 ## How it behaves
 
-- **The default view** of a file in a language it maps (`[render] code = "document"`; `"source"` opens code in
-  source mode). `space n v` switches it to source mode and back, as for a note.
+- **The default view** of a file in a language it maps (`[render] code = true`; `false` opens code in
+  SOURCE view). `space n v` switches it to SOURCE view and back, as for a note.
 - **Editing** (D131): as in a rendered note, the editing keys open the lens (their second press edits), or switch the
-  window to source mode with `[editor] edit_in = "source"` — the cursor keeping its character, though a cell's columns
+  window to SOURCE view with `[editor] edit_in = "source"` — the cursor keeping its character, though a cell's columns
   aren't the file's. The lens (`space n l`) is the cursor's cell as written, highlighted as code, the notebook around
   it: the cell whole when it fits within `lens_max` of the window — a function with its documentation, a class's head
   (its doc, its line, its fields), a comment's box, a run of statements — alone, not padded with its neighbours; past
@@ -205,11 +205,11 @@ the tokens differ.
 - **Links in comments** (`16.10`): a comment's paths that name a file of the vault are links in its prose — a doc's, a
   comment's box, a comment among code — drawn and followed as a Markdown link in it is (`enter`, `] l`, the links list),
   to their line where they name one (`path:42`); on a row of code (a note beside code, a comment kept as written) they
-  are drawn as source mode draws them, and `enter` reads them from the text.
-- **The outline and the breadcrumb** are the definitions, as in source mode; the sections head them for `]]`, `[[`
+  are drawn as SOURCE view draws them, and `enter` reads them from the text.
+- **The outline and the breadcrumb** are the definitions, as in SOURCE view; the sections head them for `]]`, `[[`
   and the breadcrumb.
 - **Copying** a selection copies the file's text, never the rows as drawn.
-- **Problems** show as in source mode, from every source alike: the bar's signs, the marks, the Problems panel —
+- **Problems** show as in SOURCE view, from every source alike: the bar's signs, the marks, the Problems panel —
   slipbox's own syntax errors among them, out of insert, until a server has answered (`16.9`, DF-D10) — and a cell's
   header counts its own. A mark is on a row's text only, never on a cell's header, borders or padding, which carry a
   line, not its text.

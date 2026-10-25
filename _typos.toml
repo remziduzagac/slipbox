@@ -36,3 +36,6 @@ opf = "opf" # EPUB's package document, content.opf
 ratatui = "ratatui" # a Rust library for terminal interfaces
 sav = "sav" # the save dialog's id, as `dlg` is a dialog's (src/tui/draw.ts)
 viw = "viw" # Vim's keys for the word under the cursor
+
+[default.extend-identifiers]
+PNGf = "PNGf" # AppleScript's native PNG clipboard data class (src/core/clipboard.ts)

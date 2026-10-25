@@ -80,6 +80,7 @@ export class Overlays {
     move?: (item: ListItem) => void;
     cancel?: () => void;
     filterable?: boolean;
+    slashFilter?: boolean;
     selected?: number;
     source?: (input: string) => ListItem[] | null;
     submit?: (input: string) => boolean | Promise<boolean>;
@@ -98,6 +99,7 @@ export class Overlays {
       title: opts.title,
       input: opts.input ?? "",
       filterable: opts.filterable ?? true,
+      slashFilter: opts.slashFilter,
       items: opts.items,
       source: opts.source,
       filtered: [],
@@ -331,6 +333,7 @@ export class Overlays {
       if (key === "k") return moveTo(o.selected - 1);
       return;
     }
+    if (o.slashFilter && key === "/" && !o.input) return;
     if (key === "backspace") o.input = [...o.input].slice(0, -1).join("");
     else if (key === "ctrl+w" || key === "ctrl+backspace") o.input = o.input.replace(/\S*\s*$/, "");
     else if (typed !== null) o.input += typed;

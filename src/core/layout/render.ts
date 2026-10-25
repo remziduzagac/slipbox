@@ -1,3 +1,4 @@
+import { pictureCaption } from "./render-caption.ts";
 // mdast → layout IR (plan 2.1, 2.2). Pure: no terminal, no OpenTUI, no I/O.
 //
 // Containers (quotes, list items, callouts) lay their children out at a reduced width and then
@@ -55,7 +56,7 @@ export interface RenderOptions {
   embed?: (target: string, heading: string | null, block: string | null, kind?: "embed" | "image") => Embedded | null;
   /** The note being drawn (absolute): an embed of it, however deep, is a loop. */
   embedFrom?: string;
-  /** A picture alone in its paragraph (12.x), drawn under its `▣ alt` line: its file and the cells it takes, fitted
+  /** A picture alone in its paragraph (12.x), drawn above its caption box: its file and the cells it takes, fitted
    *  to `width` columns and its window less its `▣` line's `caption` rows (PIC-D1), or at its own size — or null (not
    *  a local image, no images here): its `▣ alt` alone, the floor. */
   picture?: (from: PictureSource, width: number, caption?: number) => Picture | null;
@@ -553,7 +554,7 @@ function embedsAlone(children: PhrasingContent[], src: number, ctx: Ctx, width: 
     const at = (r.node as unknown as { position?: { start: { line: number } } }).position?.start.line ?? src;
     if (e) out.push(...embedFrame(r, e, at, ctx, width));
     else {
-      const from = pictureSource(r.node);
+      const from = pictureSource(r.node, ctx);
       const p =
         from && ctx.opts.picture ? askPicture(from, width, ctx, captionRows(r.node, at, ctx, width, base)) : null;
       out.push(...pictureRows(r.node, p, at, ctx, width, base));
@@ -563,14 +564,13 @@ function embedsAlone(children: PhrasingContent[], src: number, ctx: Ctx, width: 
 }
 
 /**
- * A paragraph of nothing but pictures (and the line breaks between them), 12.x: each its `▣ alt` line, then the rows
- * the image is drawn over — blank frame rows, the first carrying the picture. Null when there's other text, or no
- * picture drawn (no images here, none local): then it's a paragraph like any, `▣ alt` the floor.
+ * A paragraph of nothing but pictures (and the line breaks between them), 12.x: each the rows its image is drawn over, then its caption box — blank frame rows, the first carrying the picture. Null when there's other text, or no
+ * picture source: then it's a paragraph like any. A caption stands alone when no image can be drawn.
  */
 function picturesAlone(children: PhrasingContent[], src: number, ctx: Ctx, width: number, base: Style): Line[] | null {
-  if (!ctx.opts.picture) return null;
+  if (children.some((c) => c.type === "image" && NOTE_URL.test(c.url.split("#")[0]!))) return null;
   const images = children.flatMap((c) => {
-    const from = pictureSource(c);
+    const from = pictureSource(c, ctx);
     return from ? [{ c, from }] : [];
   });
   if (
@@ -584,13 +584,12 @@ function picturesAlone(children: PhrasingContent[], src: number, ctx: Ctx, width
     const at = c.position?.start.line ?? src;
     return { c, at, p: askPicture(from, width, ctx, captionRows(c, at, ctx, width, base)) };
   });
-  if (!drawn.some((d) => d.p)) return null;
   return drawn.flatMap(({ c, at, p }) => pictureRows(c, p, at, ctx, width, base));
 }
 
 /** How many rows a picture's `▣ alt` line wraps to (PIC-D1): what its window has less for the picture. */
 function captionRows(c: PhrasingContent, at: number, ctx: Ctx, width: number, base: Style): number {
-  return Math.max(1, wrapSpans(inline([c], { ...ctx, links: [] }, base, at), width).length);
+  return pictureCaption(c, at, { ...ctx, links: [] }, width, base).length;
 }
 
 /** A picture asked for: an SVG's (12.15) waits for its rasteriser — the layout says so, and is made again when it's in. */
@@ -603,32 +602,38 @@ function askPicture(from: PictureSource, width: number, ctx: Ctx, caption = 1): 
 }
 
 /**
- * A picture's `▣ alt` line (anything else's reference), then — where it's drawn — the rows its image is drawn over:
+ * The rows a picture is drawn over, where available, then its wrapped caption box:
  * blank frame rows, the first carrying the picture; each of them naming it (PIC). At its own size and wider than its
  * room, its frame rows scroll sideways as a code block's do, and one more frame row under them holds its bar.
  */
 function pictureRows(c: PhrasingContent, p: Picture | null, at: number, ctx: Ctx, width: number, base: Style): Line[] {
-  const caption: Line[] = wrapSpans(inline([c], ctx, base, at), width).map((row) => ({ spans: row, src: at }));
+  const caption = pictureCaption(c, at, ctx, width, base);
   if (!p) return caption;
-  const out = caption.map((l, k): Line => ({ ...l, pic: { p, row: k - caption.length } }));
+  const out: Line[] = [];
   const scroll: CodeScroll | undefined = p.scrolls ? { x: 0, w: width, total: p.cols } : undefined;
   for (let k = 0; k < p.rows; k++)
     out.push({
       spans: [],
       src: at,
-      decor: true,
+      decor: k !== 0,
       pic: { p, row: k },
       ...(k === 0 ? { image: p } : {}),
       ...(scroll ? { scroll } : {}),
     });
   if (scroll)
     out.push({ spans: [], src: at, decor: true, pic: { p, row: p.rows }, scroll: { ...scroll, part: "bar" } });
+  const start = out.length;
+  out.push(...caption.map((line, k): Line => ({ ...line, pic: { p, row: start + k } })));
   return out;
 }
 
 /** Where a picture is drawn from: a markdown image's URL, or a picture embedded by name (`![[dal.png|300]]`) and the
  *  size its `|…` gives it. Null for anything else. */
-function pictureSource(c: PhrasingContent): PictureSource | null {
+function pictureSource(c: PhrasingContent, ctx: Ctx): PictureSource | null {
+  if (c.type === "imageReference") {
+    const url = ctx.definitions.get(c.identifier.toLowerCase());
+    return url ? { url } : null;
+  }
   if (c.type === "image") return { url: c.url };
   if ((c.type as string) !== "wikiLink") return null;
   const w = c as unknown as WikiLink;

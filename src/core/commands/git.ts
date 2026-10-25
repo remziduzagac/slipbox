@@ -5,6 +5,8 @@ import type { CommandSpec } from "../command-specs";
 const I = null; // interaction: needs a human at a terminal
 
 export const GIT_SPECS: CommandSpec[] = [
+  { id: "git.focus", title: "Focus source control", cli: I, desc: "Opens and focuses the git panel" },
+  { id: "git.menu", title: "Branches menu", cli: I, desc: "Lists branches and remote actions" },
   {
     id: "git.changes",
     title: "Changed on this branch",

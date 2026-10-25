@@ -8,6 +8,33 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 
 ### Added
 
+- Standalone pictures have wrapped caption boxes below them, with separate buttons for path, alt text and image
+  copying. Image copying uses an optional native clipboard helper. Alt-text line breaks become spaces, and picture
+  clicks clear selection without leaving the caption highlighted.
+
+- Info ends with an Export row for notes. Enter, a click or `x` offers the formats; the row remembers the last output
+  path, and `y` copies it.
+
+- Switching vaults asks to save all, discard or stay, and releases the outgoing notes, parses and index. The vault
+  list includes unnamed vaults, home workspaces and worktrees grouped under their repository; returning restores
+  the workspace from disk.
+
+- The permanent top bar groups explorer zoom, workspace and git state, with separate click targets and changed-file
+  count. Background indexing, exports, fetches and language servers starting have a task list with individual cancel;
+  an available upgrade stays visible. The bar remains in zen; `space u b` is removed and `ui.top_bar` is retired.
+
+- `slipbox vaults` lists known vaults and saved home workspaces as text or JSON.
+
+- The status chip keeps READ or SOURCE beside NORMAL, INSERT, VISUAL or V-LINE, so Escape visibly returns to
+  NORMAL. On narrow screens the view, then the mode, shortens before the file name. The header uses compact R/L/S
+  buttons: READ and SOURCE select a view; L toggles the lens within READ.
+  View switches are silent. Rendering defaults for notes, code and data choose the opening view without removing
+  READ. The explorer's zoom is named separately from a window's view.
+
+- Source mode highlights fenced code in its declared language and uses a bar cursor while typing. Set
+  `ui.relative_numbers` to `"source"` or `"both"` for relative line numbers in its gutter; `"both"` keeps the lens's
+  counters too. The default stays `"lens"`.
+
 - The documentation site says what slipbox is wherever it's met without being opened. Every page's title ends with
   "slipbox: read, review and edit what your coding agent writes, in your terminal", a link to the site or any page
   shows slipbox's picture when it's shared, and the site's address on its own, `/slipbox/`, says the same before it
@@ -89,7 +116,8 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 - A slow disk, such as a network share or a drive that's asleep, no longer freezes the screen while the background
   index walks and indexes your home folder and the vaults in it, or while the explorer lists a folder outside the vault
   you're in. Both read the disk in the background now: a folder being listed says `listing…` until it answers, and
-  says `can't read: no answer in time` if it hasn't within ten minutes; home's walk, given up on after five minutes, says
+  says `can't read: no answer in time` if it hasn't within ten minutes; home's walk, given up on after five minutes,
+  says
   so and tries again ten minutes later.
 - A followed link that leads out of the vault can be renamed or moved itself, from the explorer or with `slipbox mv`.
   The link moves and stays followed, what it leads to stays where it is, and a relative link moved to another folder
@@ -259,7 +287,8 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 
 - Diagram layout runs in the background, with a rendering deadline and a bounded result cache. Diagrams that exceed
   the rendering limits remain readable as source, with a specific reason. Notes with many diagrams are processed in
-  batches; CLI rendering and export allow five seconds per diagram without automatic retries, independently of the screen.
+  batches; CLI rendering and export allow five seconds per diagram without automatic retries, independently of the
+  screen.
 
 ### Removed
 

@@ -704,20 +704,15 @@ export const NAVIGATING: Check[] = [
   },
   {
     area: "navigating",
-    name: "settings: the top bar, the breadcrumb and the window header hidden and shown again; zen has no header",
+    name: "settings: breadcrumb and window header hidden and shown again; zen keeps the permanent bar",
     covers: {
       cases: ["ui", "breadcrumb", "window-header"],
-      commands: ["ui.top_bar", "ui.breadcrumb", "ui.window_header", "ui.zen", "palette.open"],
+      commands: ["ui.breadcrumb", "ui.window_header", "ui.zen", "palette.open"],
     },
     run: async (s) => {
       s.expect(s.topBar().includes("slipbox"), "the top bar showing to begin with");
-      await leader(s, "u", "b");
-      await s.message("Top bar: off");
-      await s.until(() => !s.topBar().includes("slipbox"), 3000, "the top bar gone");
-      await leader(s, "u", "b");
-      await s.until(() => s.topBar().includes("slipbox"), 3000, "the top bar back");
       // The breadcrumb has no key: the palette (or the list) toggles it. Hidden, the header stays, with its buttons.
-      const HEADER = /Read {2}Lens {2}Source/;
+      const HEADER = /R {2}L {2}S/;
       await s.see("§ Halden Ridge Observatory");
       await s.see(HEADER);
       const palette = async (title: string, shown: boolean) => {
@@ -875,7 +870,7 @@ export const NAVIGATING: Check[] = [
       // --root: started with no path in a folder that is no root (the check's own), halden all the same — its
       // workspace back (the weekly note), where that folder alone would open as a plain folder.
       await s.restart({ args: ["--root", s.vault], startAt: null, cwd: "" });
-      await s.where(/^halden(?: ·|$)/, /2026-09-14-weekly\.md/);
+      await s.where(/^halden(?: │|$)/, /2026-09-14-weekly\.md/);
       s.expect(s.rowOf(/Folders \(\d+\)/) < 0, "halden opened, not the named folders' list");
     },
   },
@@ -1452,9 +1447,10 @@ export const NAVIGATING: Check[] = [
       await s.see(TOP);
       // The rail's ≡: the explorer hidden, then shown.
       await s.see("Explorer");
-      await click("≡");
+      const railRow = () => s.screen().findIndex((line, i) => i > 0 && /^ ≡/.test(line));
+      await click("≡", railRow());
       await s.notSee("Explorer");
-      await click("≡");
+      await click("≡", railRow());
       await s.see("Explorer");
     },
   },

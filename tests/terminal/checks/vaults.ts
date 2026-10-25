@@ -221,7 +221,7 @@ const HOME: Check[] = [
     run: async (s) => {
       // Its own note: the one directly in it, before the one a folder down that comes first by path; never home's own
       // README.md, at its top. The top bar names the folder after home: its workspace (WSP-D4).
-      await s.where("~ › household", /household\/bike-insurance\.md/);
+      await s.where("household", /household\/bike-insurance\.md/);
       await s.see("Bike insurance");
       // The view at the folder opened, home above it.
       await explorerOpen(s);
@@ -244,7 +244,7 @@ const HOME: Check[] = [
     covers: { cases: ["vault", "explorer", "switcher"], commands: ["switcher.open"] },
     options: { home: true, startAt: "home/notes/index.md", config: UNWALKED, setup: homeFolders },
     run: async (s) => {
-      await s.where(/^notes(?: ·|$)/, /index\.md/);
+      await s.where(/^notes(?: │|$)/, /index\.md/);
       await explorerOpen(s);
       await s.until(() => /^~ › \S+ notes ›$/.test(crumbs(s)), 3000, "the view at notes");
       // -: the view at ~, home's folders listed a level at a time; household unfolded in place.
@@ -277,7 +277,7 @@ const HOME: Check[] = [
     options: { home: true, startAt: "home/household", config: UNWALKED, setup: homeFolders },
     run: async (s) => {
       // household: its note, and a second tab; the top bar names its workspace (WSP-D4).
-      await s.where("~ › household", /household\/bike-insurance\.md/);
+      await s.where("household", /household\/bike-insurance\.md/);
       await s.keys("ctrl+t", "c");
       await s.see(tab(2, "bike-insurance.md"));
       await open(s, "2025-policy");
@@ -285,7 +285,7 @@ const HOME: Check[] = [
       await quits(s);
       // garden: its own note alone, none of household's tabs.
       await s.restart({ startAt: "home/garden" });
-      await s.where("~ › garden", /garden\/plan\.md/);
+      await s.where("garden", /garden\/plan\.md/);
       s.expect(!/bike-insurance|2025-policy/.test(s.text()), "garden opened on its own note, not household's tabs");
       await s.keys("ctrl+t", "c");
       await s.see(tab(2, "plan.md"));
@@ -417,7 +417,7 @@ const HOME: Check[] = [
       await quits(s);
       // In the notes vault: home's todo.md opened by its path goes into home, its tabs back with it.
       await s.restart({ startAt: "home/notes/index.md" });
-      await s.where(/^notes(?: ·|$)/);
+      await s.where(/^notes(?: │|$)/);
       await s.ex(`e ${s.path("~/todo.md")}`);
       await s.where("~", /todo\.md/, 5000);
       await s.see(tab(1, "bike-insurance.md"));
@@ -647,7 +647,7 @@ const HOME: Check[] = [
     covers: { cases: ["vault", "switcher"], commands: ["switcher.open"] },
     options: { home: true, startAt: "home/household", config: UNWALKED, setup: (s) => homeWalked(s) },
     run: async (s) => {
-      await s.where(/^~(?: |$)/, /household\/bike-insurance\.md/);
+      await s.where("household", /household\/bike-insurance\.md/);
       await quits(s);
       // slipbox closed. cp -a of a backup into ~/garden: a note, and garden's time the backup's, older than the walk.
       const older = new Date(Date.now() - 2 * 3_600_000);
@@ -666,7 +666,7 @@ const HOME: Check[] = [
       s.expect(statSync(s.path("~/garden")).mtimeMs === older.getTime(), "garden's time set back by cp -a");
       // household opened by name again: home's walk kept covers it, and lists again the folders whose time moved back.
       await s.restart();
-      await s.where(/^~(?: |$)/, /household\/bike-insurance\.md/);
+      await s.where("household", /household\/bike-insurance\.md/);
       await switcherShows(s, "compost", "garden/compost.md");
       await switcherShows(s, "2024-policy", "household/archive/2024-policy.md");
       await quits(s);
@@ -1301,7 +1301,7 @@ const UNWALKED_HOME: Check[] = [
     covers: { cases: ["vault", "watching", "switcher"], commands: ["switcher.open"] },
     options: { home: true, startAt: "home/journal", config: UNWALKED_QUICK, setup: journal },
     run: async (s) => {
-      await s.where("~ › journal", /journal\/index\.md/); // its own workspace (WSP-D4)
+      await s.where("journal", /journal\/index\.md/); // its own workspace (WSP-D4)
       // `slipbox ~/journal`: walked whole; a folder made in it, taken in at once.
       s.write("~/journal/fresh/sub/f.md", "# Fresh day\n");
       await untilListed(s, "Fresh day", "journal/fresh/sub/f.md");
@@ -1337,7 +1337,7 @@ const ELSEWHERE: Check[] = [
     options: { home: true, startAt: "home/notes/index.md", setup: downloadsElsewhere },
     run: async (s) => {
       // notes: two tabs. (Not inbox.md: notes' config makes it its scratch, shown as `scratch`.)
-      await s.where(/^notes(?: ·|$)/, /index\.md/);
+      await s.where(/^notes(?: │|$)/, /index\.md/);
       await s.keys("ctrl+t", "c");
       await s.see(tab(2, "index.md"));
       await open(s, "sync-rewrite");
@@ -1351,7 +1351,7 @@ const ELSEWHERE: Check[] = [
       // Back: notes, its two tabs, at the note left.
       await s.keys("ctrl+o");
       await opened(s, "projects/sync-rewrite.md");
-      await s.where(/^notes(?: ·|$)/);
+      await s.where(/^notes(?: │|$)/);
       await s.see(tab(1, "index.md"));
       await s.see(tab(2, "sync-rewrite.md"));
       await s.notSee(tab("\\d", "stray-note.md"));
@@ -1394,7 +1394,11 @@ const ELSEWHERE: Check[] = [
       await s.keys("f");
       await s.message("following", 5000);
       await s.keys("i");
-      await s.until(() => /^\s*(INSERT|LENS)\b/.test(s.statusLine()), 3000, "i to edit: writable now");
+      await s.until(
+        () => /^(?: SOURCE │ INSERT| READ·LENS │ (?:NORMAL|INSERT))\b/.test(s.statusLine()),
+        3000,
+        "i to edit: writable now",
+      );
       await s.keys("escape");
     },
   },
@@ -1435,7 +1439,11 @@ const ELSEWHERE: Check[] = [
       await s.keys("f");
       await s.message("following", 5000);
       await s.keys("i");
-      await s.until(() => /^\s*(INSERT|LENS)\b/.test(s.statusLine()), 3000, "i to edit: writable now");
+      await s.until(
+        () => /^(?: SOURCE │ INSERT| READ·LENS │ (?:NORMAL|INSERT))\b/.test(s.statusLine()),
+        3000,
+        "i to edit: writable now",
+      );
       await s.type("Z");
       await s.keys("escape");
       await sleep(1500);
@@ -1896,7 +1904,11 @@ const LINKED: Check[] = [
       );
       await s.keys("escape");
       await s.keys("i");
-      await s.until(() => /^\s*(INSERT|LENS)\b/.test(s.statusLine()), 3000, "i to edit: writable now");
+      await s.until(
+        () => /^(?: SOURCE │ INSERT| READ·LENS │ (?:NORMAL|INSERT))\b/.test(s.statusLine()),
+        3000,
+        "i to edit: writable now",
+      );
       await s.keys("escape");
     },
   },
@@ -1934,7 +1946,11 @@ const LINKED: Check[] = [
       await opened(s, "shelf/far.md");
       await s.see("Rewritten on the shelf.", 10_000);
       await s.keys("i");
-      await s.until(() => /^\s*(INSERT|LENS)\b/.test(s.statusLine()), 3000, "i to edit: writable again");
+      await s.until(
+        () => /^(?: SOURCE │ INSERT| READ·LENS │ (?:NORMAL|INSERT))\b/.test(s.statusLine()),
+        3000,
+        "i to edit: writable again",
+      );
       await s.keys("escape");
     },
   },
@@ -2462,12 +2478,50 @@ const GIT_PANEL: Check[] = [
       await s.keys("shift+g");
       await s.see("o go in");
       await s.keys("o");
-      await s.where(/alpha · main$/, null, 5000);
+      await s.where(/alpha │ main$/, null, 5000);
     },
   },
 ];
 
 export const VAULTS: Check[] = [
+  {
+    area: "links-and-files",
+    name: "vault switch choices: stay keeps edits, discard goes; vault list includes destinations",
+    covers: {
+      cases: ["vault", "editing"],
+      commands: ["folders.open", "vault.switch_stay", "vault.switch_discard", "vault.switch_save"],
+    },
+    options: { home: true, startAt: "home/notes/index.md" },
+    run: async (s) => {
+      await s.status("index.md");
+      await s.keys("ctrl+k", "i");
+      await s.type("probe ");
+      await s.keys("escape", ":");
+      await s.type(`e ${s.path("~/work/kestrel/README.md")}`);
+      await s.keys("enter");
+      await s.see("Unsaved notes — change vault?");
+      await s.see("Save all and go");
+      await s.see("Discard and go");
+      await s.keys("c");
+      await s.status("unsaved");
+      await s.keys(":");
+      await s.type(`e ${s.path("~/work/kestrel/README.md")}`);
+      await s.keys("enter");
+      await s.see("Unsaved notes — change vault?");
+      await s.keys("d");
+      await s.status("README.md");
+      await leader(s, "v", "v");
+      await s.see("Vaults — enter goes into one; / filters");
+      await s.keys("escape", "ctrl+k", "i");
+      await s.type("saved ");
+      await s.keys("escape");
+      await s.ex(`e ${s.path("~/notes/index.md")}`);
+      await s.see("Unsaved notes — change vault?");
+      await s.keys("s");
+      await s.status("index.md");
+      s.expect(s.read("~/work/kestrel/README.md").includes("saved "), "save all wrote before switching");
+    },
+  },
   ...HOME,
   ...UNWALKED_HOME,
   ...ELSEWHERE,

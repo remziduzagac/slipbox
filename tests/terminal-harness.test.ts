@@ -6,21 +6,10 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
 import { COMMAND_SPECS } from "../src/core/command-specs.ts";
-import {
-  EXPLORER,
-  explorerClosed,
-  explorerOpen,
-  inSwitcher,
-  MODES,
-  mode,
-  modeOf,
-  OUTLINE,
-  opened,
-} from "./terminal/check.ts";
+import { EXPLORER, explorerClosed, explorerOpen, inSwitcher, mode, modeOf, OUTLINE, opened } from "./terminal/check.ts";
 import { encodeKey } from "./terminal/keys.ts";
-import { REPO, Session, type SessionOptions, WAIT, whereOnBar } from "./terminal/session.ts";
+import { REPO, Session, type SessionOptions, WAIT, whereOnBar, locationOnBar } from "./terminal/session.ts";
 import { HeadlessTerminal } from "./terminal/terminal.ts";
-import { MODES as WINDOW_MODES } from "../src/tui/modes.ts";
 
 describe("keys as a terminal sends them", () => {
   test("Kitty's protocol: escape a sequence of its own; ctrl and alt as CSI u; text, shifted or not, as itself", () => {
@@ -531,19 +520,14 @@ describe("what the checks share (check.ts)", () => {
     return { s, presses };
   };
 
-  test("the modes are the chips the status line draws (draw-status.ts)", () => {
-    const src = readFileSync(join(import.meta.dir, "..", "src", "tui", "draw-status.ts"), "utf8");
-    // The chip's expression, from its name to the next statement's: both found, in that order.
-    const [from, to] = [src.indexOf("const chip = "), src.indexOf("const chipSt")];
-    expect(from).toBeGreaterThan(0);
-    expect(to).toBeGreaterThan(from);
-    const chips = src.slice(from, to);
-    // A window's own modes are its header's buttons' labels (src/tui/modes.ts), the chip naming the one selected.
-    expect(chips).toContain("CHIP[");
-    const windows = WINDOW_MODES.map((m) => m.label.toUpperCase());
-    expect([...[...chips.matchAll(/" ([A-Z][A-Z-]+) "/g)].map((c) => c[1]), ...windows].sort()).toEqual(
-      [...MODES].sort(),
-    );
+  test("the paired view/mode chip keeps panel focus and pending keys distinguishable", () => {
+    expect(modeOf(" SOURCE │ INSERT  ‹ note.md ›")).toBe("INSERT");
+    expect(modeOf(" SOURCE │ NORMAL  ‹ note.md ›")).toBe("SOURCE");
+    expect(modeOf(" READ·LENS │ NORMAL  ‹ note.md ›")).toBe("LENS");
+    expect(modeOf(" READ-LENS | INSERT  < note.md >")).toBe("INSERT");
+    expect(modeOf(" READ │ NORMAL  FILES  ‹ note.md ›")).toBe("FILES");
+    expect(modeOf(" READ │ NORMAL  ␣  ‹ note.md ›")).toBeNull();
+    expect(modeOf(" READ │ NORMAL  2d  ‹ note.md ›")).toBeNull();
   });
 
   test("the status line's mode is its chip when it names one, never the keys pending or an operator's", () => {
@@ -686,27 +670,16 @@ describe("starting slipbox (session.ts)", () => {
   }, 60_000);
 });
 
-describe("where you are, read off the top bar (whereOnBar)", () => {
-  test("between the chip and the right end's items, the glyph left out; empty when the middle says nothing", () => {
-    expect(whereOnBar(" slipbox                  ◈ kestrel · main ↑2              indexing 3…")).toBe(
-      "kestrel · main ↑2",
-    );
-    // Clamped against the right end: 3 columns from it, the item's padding and the 2 kept.
-    expect(whereOnBar(" slipbox   ◈ kestrel   indexing 3…")).toBe("kestrel");
-    expect(whereOnBar(" ≡   slipbox   ◈ ~ › notes    ▤")).toBe("~ › notes");
-    expect(whereOnBar(" slipbox      Elsewhere")).toBe("Elsewhere");
-    expect(whereOnBar(" slipbox   \u{f125f} kestrel@agent/sync-retry rebasing 2/5")).toBe(
-      "kestrel@agent/sync-retry rebasing 2/5",
-    );
-    // Nothing in the middle: the outline's button or the vault's state alone isn't where you are.
-    expect(whereOnBar(" slipbox      ▤")).toBe("");
-    expect(whereOnBar(" slipbox      indexing 3…   ▤")).toBe("");
-    expect(whereOnBar(" slipbox")).toBe("");
-    // No bar: the row is the frame's rule, or a note's first line in zen.
+describe("where you are, read off the grouped bar", () => {
+  test("reads displayed workspace and git items, independently of zoom and activity", () => {
+    expect(whereOnBar(" slipbox    ≡ ~/work │ ◈ kestrel │ ⎇ main ↑2 │ ● 3   ◴ 2 ")).toBe("kestrel │ main ↑2");
+    expect(whereOnBar(" slipbox    ≡ ~ │ ◈ notes    ▤ ")).toBe("notes");
+    expect(whereOnBar(" slipbox    ≡ /tmp │ ◈ Elsewhere ")).toBe("Elsewhere");
+    expect(whereOnBar(" slipbox    ≡ ~ │ ◈ ~ ")).toBe("~");
     expect(whereOnBar("─────────────────────┬──────────")).toBe("");
-    expect(whereOnBar("   notes on kestrel   and more")).toBe("");
-    // ASCII: `…` is drawn `~`, the glyph `#`.
-    expect(whereOnBar(" slipbox      indexing 3~   #")).toBe("");
-    expect(whereOnBar(" slipbox   # kestrel - main   indexing 3~")).toBe("kestrel - main"); // `·` drawn `-`
+    expect(whereOnBar(" slipbox ")).toBe("");
+    expect(whereOnBar(" slipbox    = ~/work | # kestrel | git: main   ~ 2 ")).toBe("kestrel │ main");
+    expect(whereOnBar(" slipbox    \ue0b6 ≡ ~/work │ 󱉟 kestrel │ \ue725 main \ue0b4")).toBe("kestrel │ main");
+    expect(locationOnBar(" slipbox    ≡ ~/work │ ◈ kestrel │ ⎇ main ").zoom).toBe("~/work");
   });
 });

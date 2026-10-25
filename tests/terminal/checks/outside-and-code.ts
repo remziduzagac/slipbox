@@ -184,6 +184,39 @@ const CONFLICT = "changed on disk, and you have unsaved changes";
 const append = (s: Session, line: string) => s.write(MEETING, `${s.read(MEETING)}\n${line}\n`);
 
 export const OUTSIDE_AND_CODE: Check[] = [
+  {
+    area: "outside-and-code",
+    name: "background work: a real export cancelled through its list releases its task",
+    covers: { cases: ["ui"], commands: ["background.open", "background.cancel", "note.export"] },
+    options: { ...HOLD, env: { ...HOLD.env, EXPORT_HOLD_AT: "before-publication" } },
+    run: async (s) => {
+      await format(s, "home.md", "html");
+      await s.keys("enter");
+      await s.until(() => hold(s) === "waiting", 15000, "export held before publication");
+      await s.ex("Background work");
+      await s.see("Background work — enter: cancel");
+      await s.keys("enter");
+      writeFileSync(join(s.dir, "hold-go"), "");
+      await s.message("export cancelled", 15000);
+      await s.until(() => !/[◴◷◶◵]/.test(s.topBar()), 5000, "the finished task removed");
+    },
+  },
+  {
+    area: "outside-and-code",
+    name: "Info export: x and the Export row run the existing note export",
+    covers: { cases: ["info"], commands: ["note.info", "note.export"] },
+    run: async (s) => {
+      await leader(s, "n", "i");
+      await s.status("INFO");
+      await s.keys("x");
+      await s.see("Export home.md as");
+      await s.see("Word (.docx)");
+      await s.keys("escape");
+      await leader(s, "n", "i");
+      await s.keys("shift+g", "enter");
+      await s.see("Export home.md as");
+    },
+  },
   // --- the Problems panel -----------------------------------------------------------------------
   {
     area: "outside-and-code",
@@ -1164,11 +1197,14 @@ export const OUTSIDE_AND_CODE: Check[] = [
       const answered = Date.now() - asked;
       await s.keys("escape");
       await s.notSee("Commands");
-      // zen, no top bar, no explorer; line numbers on: the note's first rows numbered 1, 2, 3.
-      s.expect(!s.text().includes("Explorer") && !s.topBar().includes("slipbox"), "no explorer, no top bar (zen)");
+      // Zen keeps the permanent bar, hides the explorer; the note's first rows below it are numbered 1, 2, 3.
+      s.expect(
+        !s.text().includes("Explorer") && s.topBar().includes("slipbox"),
+        "zen hides the explorer and retains the permanent bar",
+      );
       const numbers = s
         .screen()
-        .slice(0, 3)
+        .slice(1, 4)
         .map((r) => /^\s*(\d+)\s/.exec(r)?.[1]);
       s.expect(numbers.join(",") === "1,2,3", `line numbers in the gutter (${numbers.join(",")})`);
       // Its leader is backslash: \\ m, the messages — none a warning or an error (each row ends with its level and
