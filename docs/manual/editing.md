@@ -576,7 +576,7 @@ run's findings show, a warning says why once, and the next save lints it again.
 
 By default, slipbox hides line-length findings (MD013) where the view handles the width: paragraphs, lists and
 quotes when wrapping is on, table rows always, and fenced code when `render.code_wrap = "wrap"`. With wrapping off,
-long prose lines warn again. Fences scroll by default, so their long lines still warn.
+long prose and fence lines warn again. Fences scroll by default, so their long lines still warn.
 
 Set `lint.follow_view = false` to show every finding, or `lint.ignore = ["MD033"]` to hide chosen rules. Both settings
 may live in a vault's `.slipbox/config.toml`, even one you don't trust. They change only what slipbox shows; your

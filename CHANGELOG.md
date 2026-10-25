@@ -10,6 +10,7 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 
 - Lint findings follow the view: line-length warnings hide where prose wraps, tables fit or fenced code wraps.
   `lint.follow_view` and `lint.ignore` control visibility, with hidden counts and `a` to reveal all in Problems.
+  Findings follow session wrapping toggles too; wrapping off keeps long fence lines visible.
   Picture captions have a blank row of separation and can go above the image with `render.caption = "top"`.
 
 - Standalone pictures have wrapped caption boxes below them, with separate buttons for path, alt text and image

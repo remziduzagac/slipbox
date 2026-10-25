@@ -48,7 +48,7 @@ export class Problems {
       issues,
       parsed,
       this.app.config.lint,
-      { wrap: this.app.ui.wrap, codeWrap: this.app.config.render.code_wrap === "wrap" },
+      { wrap: this.app.ui.wrap, codeWrap: this.app.ui.wrap && this.app.ui.code_wrap === "wrap" },
       this.showAllLint,
     );
   }

@@ -2002,7 +2002,8 @@ produces one error message, `⚠ not watching` in the status line, and polling o
 
 [LC-D1](../workstreams/lint-and-captions/decisions.md) (#91) filters the presentation after the run, keeping every raw
 finding. `lint.follow_view = true` hides MD013 on paragraphs, lists and quotes when `ui.wrap` is on, table rows always,
-and fence interiors when `render.code_wrap = "wrap"`. Other block kinds and fence delimiters keep their findings.
+and fence interiors when wrapping is on and the active code-wrap setting is `wrap`. Other block kinds and fence
+delimiters keep their findings.
 `lint.ignore = []` names rule IDs never shown by default. Both are safe in vault settings. Visibility follows setting
 changes without rerunning lint. Both Problems tabs explain hidden counts by reason; `a` runs `problems.show_all`,
 revealing even ignored rules, and toggles back. Counts, marks and lists use the findings shown.

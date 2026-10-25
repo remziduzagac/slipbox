@@ -317,7 +317,7 @@ export const OUTSIDE_AND_CODE: Check[] = [
     { wrap: true, code: "scroll", follow: true, ignore: false, count: 2, hidden: 2 },
     { wrap: false, code: "scroll", follow: true, ignore: false, count: 3, hidden: 1 },
     { wrap: true, code: "wrap", follow: true, ignore: false, count: 1, hidden: 3 },
-    { wrap: false, code: "wrap", follow: true, ignore: false, count: 2, hidden: 2 },
+    { wrap: false, code: "wrap", follow: true, ignore: false, count: 3, hidden: 1 },
     { wrap: true, code: "wrap", follow: false, ignore: false, count: 4, hidden: 0 },
     { wrap: true, code: "scroll", follow: true, ignore: true, count: 1, hidden: 3 },
   ].map(
