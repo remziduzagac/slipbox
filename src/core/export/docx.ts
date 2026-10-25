@@ -64,6 +64,7 @@ const SYNTAX: Record<string, string> = {
 };
 
 interface Style {
+  underline?: boolean;
   bold?: boolean;
   italics?: boolean;
   strike?: boolean;
@@ -248,11 +249,29 @@ function runs(nodes: PhrasingContent[], s: Style, w: Writer): ParagraphChild[] {
       strike: st.strike,
       ...(st.mark ? { highlight: "yellow" } : {}),
       ...(st.code ? { font: MONO, shading: { type: ShadingType.CLEAR, fill: "EFF1F3", color: "auto" } } : {}),
+      ...(st.underline ? { underline: {} } : {}),
       ...(st.link ? { color: "0563C1", underline: {} } : {}),
     });
   };
   for (const n of nodes) {
     switch (n.type) {
+      case "htmlInline": {
+        const p = n.data?.html;
+        out.push(
+          ...runs(
+            n.children,
+            {
+              ...s,
+              ...(p?.bold !== undefined ? { bold: p.bold } : {}),
+              ...(p?.italic !== undefined ? { italics: p.italic } : {}),
+              ...(p?.strike !== undefined ? { strike: p.strike } : {}),
+              ...(p?.underline !== undefined ? { underline: p.underline } : {}),
+            },
+            w,
+          ),
+        );
+        break;
+      }
       case "text":
         out.push(text(n.value));
         break;
@@ -275,7 +294,7 @@ function runs(nodes: PhrasingContent[], s: Style, w: Writer): ParagraphChild[] {
         out.push(new TextRun({ text: "", break: 1 }));
         break;
       case "link": {
-        const children = runs(n.children, { ...s, link: true }, w).filter((c): c is TextRun => c instanceof TextRun);
+        const children = runs(n.children, { ...s, link: true }, w);
         out.push(
           n.url.startsWith("#")
             ? new InternalHyperlink({ anchor: bookmarkName(n.url.slice(1)), children })

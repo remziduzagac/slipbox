@@ -116,7 +116,7 @@ export function pictureData(pic: ExportPicture, r: Rasterizer | null, maxWidth: 
       pic.size.width,
       pic.size.height ? (pic.size.height * own.width) / own.height : Number.POSITIVE_INFINITY,
     );
-  width = Math.min(width, maxWidth);
+  width = Math.min(width, maxWidth, pic.maxWidth ?? Infinity);
   const shown = {
     width: Math.max(1, Math.round(width)),
     height: Math.max(1, Math.round((width * own.height) / own.width)),

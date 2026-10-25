@@ -24,7 +24,7 @@ import { type Hashtag, tagKey, tagName } from "./tags.ts";
 import type { LinkKind, LinkRef, Pos, NoteEntry } from "./graph-types.ts";
 
 /** Bumped when what a note's entry holds changes: 5, content hashes (17.12). */
-export const INDEX_VERSION = 12; // 6: inline #tags (1.6); 7: where links end (11.7); 8: no wikilinks (20.22); 9: wikilinks again (21.3); 10: heading ids, anchors; 11: front matter links; 12: worker-parsed heading ids (15.1)
+export const INDEX_VERSION = 13; // 6: inline #tags (1.6); 7: where links end (11.7); 8: no wikilinks (20.22); 9: wikilinks again (21.3); 10: heading ids, anchors; 11: front matter links; 12: worker-parsed heading ids (15.1); 13: document HTML headings and anchors (#90)
 
 /** Parse one note and extract what the graph needs. */
 export function extractNote(

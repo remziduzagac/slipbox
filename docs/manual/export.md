@@ -349,3 +349,20 @@ What becomes of each part of a note:
   `no font found on this machine for a PDF (looked in its font folders)`. Install a font package (DejaVu, Liberation or
   Noto) and export again.
 - **Pages are A4**, in Word and PDF.
+
+## HTML inside Markdown notes
+
+Word, PDF, HTML and EPUB exports translate supported document HTML through the same adapter as READ.
+Headings, paragraphs, emphasis, code, links and supported local images remain document content.
+Details are always expanded, with the summary before the body. Pictures use their img fallback for these exports,
+which have no explicit terminal theme. Images on the web use only an already cached copy; exporting fetches nothing.
+
+These formats have their own page layout. Container alignment, percentage sizes and arbitrary CSS are not reproduced
+as browser layout. Pixel image bounds, supported inline formatting and readable children are retained.
+
+A Markdown export keeps the note's HTML as written, including attribute spelling, whitespace, comments and picture
+alternatives. It removes only omitted non-document content such as scripts, styles and frames. It does not rewrite
+HTML into Markdown, relocate URLs inside that HTML, or copy images referenced only by HTML. If the export moves,
+keep those relative assets beside it or update their paths yourself.
+
+The exact supported subset is in [HTML in Markdown](reading.md#html-in-markdown).

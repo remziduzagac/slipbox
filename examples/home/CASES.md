@@ -75,7 +75,7 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
   rows or 20 columns; a click or `z p` shows it at its own size, scrolled sideways under a bar of its own (`z h`, `z l`,
   the wheel), and again fits it; in an embedded note too — `work/product/assets/route-planner-2.3.png`,
   `work/product/releases/2.3-notes.md`, `work/product/releases/2.3-plan.md` (rendering.md Images; issue #52)
-- Inline HTML tags dropped, text kept: \<kbd\>, \<sup\>, \<sub\>, \<mark\>, \<span style\>, \<b\>, \<i\>, \<u\> —
+- Inline HTML formatting applied, unsupported tags keep their text: \<kbd\>, \<sup\>, \<sub\>, \<mark\>, \<span style\>, \<b\>, \<i\>, \<u\> —
   `work/kestrel/docs/qa/theme-showcase.md`, `work/product/releases/2.3-notes.md` (rendering.md Inline)
 - Inline HTML comment in a paragraph and across lines — `notes/daily/2026-08-31.md`,
   `work/kestrel/docs/qa/theme-showcase.md` (render.test review cycle 4 (text between comments))
@@ -291,12 +291,15 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
 
 ### html
 
-- HTML block verbatim and dim: \<div\>, \<details\>\<summary\>, \<table\>, \<p align\>, \<img\>, \<pre\> —
+- A README logo selected for the theme, a linked badge, scoped formatting, preformatted text, details and fragment
+  reveal, source text kept — `notes/research/document-html.md`
+
+- HTML document blocks rendered with supported formatting and pictures: \<div\>, \<details\>\<summary\>, \<table\>, \<p align\>, \<img\>, \<pre\> —
   `work/kestrel/docs/qa/theme-showcase.md`, `work/product/README.md` (writing-guide HTML)
 - HTML comments hidden: each \<!-- --\> on its own; multi-line comment; comment between paragraphs; comment between
   list items; comment before frontmatter-like text — `notes/daily/2026-08-31.md`,
   `work/kestrel/docs/qa/theme-showcase.md` (render.test review cycle 4)
-- HTML with escapes and entities: \<script\>, \<style\>, CDATA, processing instruction \<?php ?\>, \<!DOCTYPE\> —
+- HTML entities decoded; scripts and styles omitted; other unsupported content remains readable: \<script\>, \<style\>, CDATA, processing instruction \<?php ?\>, \<!DOCTYPE\> —
   `work/kestrel/docs/qa/render-torture.md`, `work/kestrel/docs/qa/theme-showcase.md` (CommonMark HTML block kinds 1-7)
 
 ### footnotes
@@ -3214,3 +3217,5 @@ Wide tables and code blocks to edit in place.
 - `vault.switch_discard` — Discard and change vault — `work/kestrel/docs/qa/render-torture.md`
 
 - `vault.switch_stay` — Stay in this vault — `work/kestrel/docs/qa/render-torture.md`
+
+- `html.details_toggle` — Toggle HTML details — `notes/research/document-html.md`

@@ -42,6 +42,7 @@ export class History {
   }
 
   jumpTo(view: View, anchor: Anchor): void {
+    if (view.buf.kind.group === "note") this.app.html.reveal(view, anchor.line);
     view.topAnchor = anchor;
     view.topSub = 0;
     view.curAnchor = { anchor, sub: 0, col: 0 };

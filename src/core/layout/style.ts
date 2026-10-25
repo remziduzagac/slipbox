@@ -26,13 +26,14 @@ export function spanStyle(theme: Theme, span: Span, line: Line, overlayRole?: Ro
   // underline — a diff's changed words still marked (GIT-D2).
   const b = span.bg ? theme.roles[span.bg] : undefined;
   const a = span.attrs;
+  const clear = span.clear ?? 0;
   return {
     fg: o?.fg ?? r.fg ?? theme.fg,
     bg: o?.bg ?? b?.bg ?? r.bg ?? lineFillBg(theme, line),
-    bold: !!(o?.bold || r.bold || b?.bold || a & A_BOLD),
-    italic: !!(r.italic || a & A_ITALIC),
-    underline: !!(o?.underline || r.underline || b?.underline || a & A_UNDERLINE),
-    strike: !!(a & A_STRIKE),
+    bold: !!(o?.bold || (!(clear & A_BOLD) && (r.bold || b?.bold || a & A_BOLD))),
+    italic: !(clear & A_ITALIC) && !!(r.italic || a & A_ITALIC),
+    underline: !!(o?.underline || (!(clear & A_UNDERLINE) && (r.underline || b?.underline || a & A_UNDERLINE))),
+    strike: !(clear & A_STRIKE) && !!(a & A_STRIKE),
     dim: !!(r.dim || a & A_DIM),
     // A role drawn in reverse (a highlight without colour, NO_COLOR).
     ...(r.inverse ? { inverse: true } : {}),

@@ -228,21 +228,24 @@ export function paneActions(): Record<string, Run> {
     "outline.pick": (a) =>
       withView(a, (v) => {
         const layout = lay(a, v);
-        if (!layout.headings.length) return a.message("info", "no headings in this note");
-        const current = [...layout.headings].reverse().findIndex((h) => h.line <= v.cur.row);
+        const headings = a.html.headings(v, layout);
+        if (!headings.length) return a.message("info", "no headings in this note");
+        const current = [...headings].reverse().findIndex((h) => !h.hidden && h.line <= v.cur.row);
         a.overlays.openList({
           title: `Headings — ${v.buf.name}`,
-          items: layout.headings.map((h) => ({
+          items: headings.map((h) => ({
             label: h.text.replace(/\s+/g, " "),
             indent: h.level - 1,
             hint: `${h.src}`,
-            data: h.line,
+            data: { row: h.line, source: h.src, hidden: h.hidden },
           })),
           accept: (item) => {
             a.history.push(v);
-            a.moveCursor(v, { row: item.data as number, col: 0 });
+            const target = item.data as { row: number; source: number; hidden?: boolean };
+            if (target.hidden) a.placeAtLine(v, target.source);
+            else a.moveCursor(v, { row: target.row, col: 0 });
           },
-          selected: current < 0 ? 0 : layout.headings.length - 1 - current,
+          selected: current < 0 ? 0 : headings.length - 1 - current,
         });
       }),
     "info.toggle": (a) => a.panels.openRightView("info"),

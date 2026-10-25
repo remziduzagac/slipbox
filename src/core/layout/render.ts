@@ -1,3 +1,5 @@
+import { adaptHtml, htmlLinkedImage } from "../html-adapter.ts";
+import { htmlStyle, alignHtml } from "./render-html.ts";
 import { pictureCaption } from "./render-caption.ts";
 // mdast → layout IR (plan 2.1, 2.2). Pure: no terminal, no OpenTUI, no I/O.
 //
@@ -43,6 +45,10 @@ import { table } from "./render-table.ts";
 export interface RenderOptions {
   /** Layout width in columns — the caller has already subtracted the inset (2.7). */
   width: number;
+  /** Explicit color scheme for HTML picture alternatives; absent uses img. */
+  htmlTheme?: "light" | "dark";
+  /** TUI disclosure overrides by source line; absent means noninteractive, expanded. */
+  htmlDetails?: ReadonlyMap<number, boolean>;
   glyphs: Glyphs;
   /** Append ` <url>` after external link text (for plain output). */
   showUrls: boolean;
@@ -79,9 +85,9 @@ export interface RenderOptions {
  * from where that note is (12.14).
  */
 export type PictureSource =
-  | { url: string }
+  | { url: string; size?: PictureSize | null; maxWidth?: number }
   | { name: string; size: PictureSize | null }
-  | { file: string; size: PictureSize | null }
+  | { file: string; size: PictureSize | null; maxWidth?: number }
   /** An SVG slipbox drew (12.16, 12.17): a diagram's, sized as the terminal's words are, or a display's maths. */
   | { svg: string; kind: "diagram" | "math" };
 
@@ -152,6 +158,7 @@ export function renderTree(
   frontmatter?: Frontmatter | null,
   cache?: RenderCache,
 ): Layout {
+  tree = adaptHtml(tree, opts.htmlTheme);
   const ctx: Ctx = {
     opts,
     links: [],
@@ -166,7 +173,12 @@ export function renderTree(
   collectDefinitions(tree, ctx);
   const width = Math.max(8, opts.width);
   if (!cache) return finish(blocks(tree.children, ctx, width, TEXT, frontmatter), ctx, width);
-  const key = `${width}|${opts.glyphs.mode}|${opts.showUrls ? 1 : 0}|${opts.codeScroll ? 1 : 0}|${opts.caption ?? "bottom"}|${[...ctx.definitions].join("\u0001")}`;
+  const key =
+    (opts.htmlTheme ?? "") +
+    "|" +
+    JSON.stringify([...(opts.htmlDetails ?? [])]) +
+    "|" +
+    `${width}|${opts.glyphs.mode}|${opts.showUrls ? 1 : 0}|${opts.codeScroll ? 1 : 0}|${opts.caption ?? "bottom"}|${[...ctx.definitions].join("\u0001")}`;
   if (cache.key !== key) {
     cache.key = key;
     cache.blocks = new WeakMap();
@@ -226,6 +238,7 @@ function placed(line: Line, delta: number, linkBase: number, headBase: number): 
   });
   const c: Line = { ...line, spans, src: line.src + delta };
   if (line.heading !== undefined) c.heading = line.heading + headBase;
+  if (line.details) c.details = { ...line.details, from: line.details.from + delta, to: line.details.to + delta };
   return c;
 }
 
@@ -363,13 +376,29 @@ function joined(prev: RootContent | undefined, node: RootContent): boolean {
 
 function block(node: RootContent, ctx: Ctx, width: number, base: Style, fm?: Frontmatter | null): Line[] | null {
   const before = paintRevision;
-  const result = blockNow(node, ctx, width, base, fm);
+  const styled = htmlStyle(base, node.data?.html);
+  const result = blockNow(node, ctx, width, styled, fm);
   if (paintRevision !== before) ctx.pending.add("pictures");
-  return result;
+  return result ? alignHtml(result, width, node.data?.html?.align) : result;
 }
 
 function blockNow(node: RootContent, ctx: Ctx, width: number, base: Style, fm?: Frontmatter | null): Line[] | null {
   switch (node.type) {
+    case "htmlContainer":
+      return blocks(node.children, ctx, width, base);
+    case "htmlDetails": {
+      const src = srcOf(node);
+      const open = ctx.opts.htmlDetails ? (ctx.opts.htmlDetails.get(src) ?? node.open) : true;
+      const summary = paragraph(node.summary, src, ctx, width - 2, base);
+      if (!summary.length) summary.push(blank(src));
+      summary[0]!.spans.unshift({
+        text: (open ? ctx.opts.glyphs.foldOpen : ctx.opts.glyphs.foldClosed) + " ",
+        role: "text",
+        attrs: A_BOLD,
+      });
+      for (const row of summary) row.details = { from: src, to: node.position?.end.line ?? src, open };
+      return open ? [...summary, ...blocks(node.children, ctx, width, base)] : summary;
+    }
     case "heading":
       return heading(
         node.depth,
@@ -413,7 +442,7 @@ function blockNow(node: RootContent, ctx: Ctx, width: number, base: Style, fm?: 
     case "code": {
       // A fenced block's code starts a line after its fence; an indented one's on its own line.
       const span = node.position ? node.position.end.line - node.position.start.line + 1 : 0;
-      const fenced = !node.position || span > node.value.split("\n").length;
+      const fenced = !node.data?.html && (!node.position || span > node.value.split("\n").length);
       if (node.lang && /^mermaid$/i.test(node.lang)) {
         // As a picture, where that's chosen (12.16).
         if (ctx.opts.drawings?.mermaid && ctx.opts.picture) {
@@ -464,7 +493,7 @@ function blockNow(node: RootContent, ctx: Ctx, width: number, base: Style, fm?: 
       return prefixed(table(node, ctx, width - w), guide, srcOf(node), true);
     }
     case "html":
-      return htmlBlock(node.value, srcOf(node), width);
+      return null;
     case "yaml":
       return frontmatterBlock(fm ?? null, node.value, srcOf(node), ctx, width);
     case "definition":
@@ -571,7 +600,8 @@ function embedsAlone(children: PhrasingContent[], src: number, ctx: Ctx, width: 
 function picturesAlone(children: PhrasingContent[], src: number, ctx: Ctx, width: number, base: Style): Line[] | null {
   if (children.some((c) => c.type === "image" && NOTE_URL.test(c.url.split("#")[0]!))) return null;
   const images = children.flatMap((c) => {
-    const from = pictureSource(c, ctx);
+    const image = htmlLinkedImage(c);
+    const from = pictureSource(image ?? c, ctx);
     return from ? [{ c, from }] : [];
   });
   if (
@@ -582,10 +612,19 @@ function picturesAlone(children: PhrasingContent[], src: number, ctx: Ctx, width
   )
     return null;
   const drawn = images.map(({ c, from }) => {
-    const at = c.position?.start.line ?? src;
-    return { c, at, p: askPicture(from, width, ctx, captionRows(c, at, ctx, width, base)) };
+    const at = (htmlLinkedImage(c) ?? c).position?.start.line ?? src;
+    const h = (htmlLinkedImage(c) ?? c).data?.html;
+    const percent = Math.min(
+      h?.width?.unit === "%" ? h.width.value : 100,
+      h?.maxWidth?.unit === "%" ? h.maxWidth.value : 100,
+    );
+    if (h?.maxWidth?.unit === "px" && "url" in from) from.maxWidth = h.maxWidth.value;
+    const room = Math.max(1, Math.floor((width * percent) / 100));
+    return { c, at, p: askPicture(from, room, ctx, captionRows(c, at, ctx, width, base)) };
   });
-  return drawn.flatMap(({ c, at, p }) => pictureRows(c, p, at, ctx, width, base));
+  return drawn.flatMap(({ c, at, p }) =>
+    alignHtml(pictureRows(c, p, at, ctx, width, base), width, (htmlLinkedImage(c) ?? c).data?.html?.align),
+  );
 }
 
 /** How many rows a picture's `▣ alt` line wraps to (PIC-D1): what its window has less for the picture. */
@@ -611,10 +650,13 @@ function pictureRows(c: PhrasingContent, p: Picture | null, at: number, ctx: Ctx
   const caption = pictureCaption(c, at, ctx, width, base);
   if (!p) return caption;
   const out: Line[] = [];
+  const linked = caption
+    .flatMap((l) => l.spans)
+    .find((s) => s.link !== undefined && ctx.links[s.link]?.kind === "markdown")?.link;
   const scroll: CodeScroll | undefined = p.scrolls ? { x: 0, w: width, total: p.cols } : undefined;
   for (let k = 0; k < p.rows; k++)
     out.push({
-      spans: [],
+      spans: linked !== undefined ? [{ text: "", role: "image", attrs: 0, link: linked }] : [],
       src: at,
       decor: k !== 0,
       pic: { p, row: k },
@@ -636,7 +678,20 @@ function pictureSource(c: PhrasingContent, ctx: Ctx): PictureSource | null {
     const url = ctx.definitions.get(c.identifier.toLowerCase());
     return url ? { url } : null;
   }
-  if (c.type === "image") return { url: c.url };
+  if (c.type === "image") {
+    const h = c.data?.html;
+    return {
+      url: c.url,
+      ...(h?.width?.unit === "px" || h?.height
+        ? {
+            size: {
+              width: h?.width?.unit === "px" ? h.width.value : Number.MAX_SAFE_INTEGER,
+              height: h?.height?.value ?? null,
+            },
+          }
+        : {}),
+    };
+  }
   if ((c.type as string) !== "wikiLink") return null;
   const w = c as unknown as WikiLink;
   if (!w.embed || !IMAGE_FILE.test(w.target)) return null;
@@ -712,7 +767,12 @@ function embedFrame(w: EmbedRef, e: Embedded, src: number, ctx: Ctx, width: numb
       linkFrom: e.from,
     };
     collectDefinitions({ type: "root", children: e.nodes }, inner);
-    body = blocks(e.nodes, inner, narrow ? width : width - 2, TEXT);
+    body = blocks(
+      adaptHtml({ type: "root", children: e.nodes }, ctx.opts.htmlTheme).children,
+      inner,
+      narrow ? width : width - 2,
+      TEXT,
+    );
     if (!body.length) body = note("empty");
   }
   // At the embed's line, its own lines and headings forgotten: they're another note's.
@@ -1002,25 +1062,5 @@ function list(node: Extract<RootContent, { type: "list" }>, ctx: Ctx, width: num
     if (hang) out.push(...prefixed(lines, [marker], srcOf(item)));
     else out.push({ spans: [{ ...marker, text: text.trimEnd() }], src: srcOf(item) }, ...lines);
   });
-  return out;
-}
-
-function htmlBlock(value: string, src: number, width: number): Line[] | null {
-  // Comments are hidden, one by one (not everything from the first to the last: text between two
-  // is kept); a block that was only comments draws nothing. A comment leaves its line breaks, so
-  // each row keeps its source line, and a line it emptied draws no row.
-  const before = value.split("\n");
-  value = value.replace(/<!--[\s\S]*?-->/g, (m) => "\n".repeat(m.split("\n").length - 1));
-  const v = value.trim();
-  if (!v) return null;
-  if (/^<br\s*\/?>$/i.test(v)) return [blank(src)];
-  const out: Line[] = [];
-  sanitize(value)
-    .split("\n")
-    .forEach((text, i) => {
-      if (!text.trim() && before[i]?.trim()) return;
-      for (const row of breakHard([{ text: expandTabs(text), role: "html", attrs: 0 }], width))
-        out.push({ spans: row, src: src + i });
-    });
   return out;
 }

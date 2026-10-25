@@ -1163,6 +1163,39 @@ describe("export: an e-book (10.6)", () => {
 });
 
 describe("export: PDF (10.5)", () => {
+  test("document HTML survives PDF assembly with explicit headings, linked images and expanded details", async () => {
+    const r = root({
+      "a.md":
+        '# HTML export\n\n<div><h2 id="inside">HTML heading</h2><p><u>Underlined</u> and <b>bold</b>.</p><a href="https://example.com"><img src="square.png" width=20 alt="Local badge"></a></div>\n\n<details>\n<summary>More</summary>\n\nBody from a disclosure.\n\n</details>\n\n<script>omitted()</script>\n',
+      "square.png": png,
+    });
+    const pdf = readPdf((await exportOf(r, ["a.md"], "pdf")).data);
+    expect(pdf.pages.join("\n")).toContain("HTML heading");
+    expect(pdf.pages.join("\n")).toContain("Underlined and bold.");
+    expect(pdf.pages.join("\n")).toContain("Body from a disclosure.");
+    expect(pdf.pages.join("\n")).not.toContain("omitted");
+    expect(pdf.dests).toContain("a--inside");
+    expect(pdf.images[0]).toBe(1);
+    expect(pdf.links).toContainEqual({ uri: "https://example.com" });
+    const word = xml(unzip((await exportOf(r, ["a.md"], "docx")).data), "word/document.xml");
+    expect(word).toMatch(/<w:hyperlink[^>]*>[\s\S]*?<w:drawing/);
+  });
+
+  test("embedded HTML remains document content and lossless Markdown even when the outer note has no HTML", async () => {
+    const raw = "<DIV><b>__original__ &amp; HTML</b></DIV>";
+    const r = root({
+      "a.md": "# Outer\n\n![[inner]]\n",
+      "inner.md": "# Inner\n\n" + raw + "\n\nWords <script>omitted()</script> remain.\n",
+    });
+    const html = (await exportOf(r, ["a.md"], "html")).text;
+    expect(html).toContain("<strong>__original__ &#x26; HTML</strong>");
+    expect(html).not.toContain("omitted");
+    const markdown = (await exportOf(r, ["a.md"], "md")).text;
+    expect(markdown).toContain(raw);
+    expect(markdown).not.toContain("omitted");
+    expect(markdown).toContain("Words  remain.");
+  });
+
   test("a chapter from a new page, its text read back; each heading a destination, the outline the chapters and their sections", async () => {
     const r = root({
       "a.md":

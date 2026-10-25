@@ -26,9 +26,9 @@ import type {
 import { gfmToMarkdown } from "mdast-util-gfm";
 import { mathToMarkdown } from "mdast-util-math";
 import { toMarkdown as serialise } from "mdast-util-to-markdown";
-import { slugify } from "../parse.ts";
+import { slugify, anchorsOf } from "../parse.ts";
 import { looksLikeSvg } from "../svg.ts";
-import type { ExportDoc, ExportPicture } from "./assemble.ts";
+import { headingAnchor, type ExportDoc, type ExportPicture } from "./assemble.ts";
 import { rasterInfo } from "./images.ts";
 import type { ExportOutput } from "./index.ts";
 
@@ -101,7 +101,7 @@ export async function toMarkdown(doc: ExportDoc, target: string, spool?: ExportS
 
   const children: RootContent[] = [];
   for (const ch of doc.chapters) {
-    const nodes = structuredClone(ch.nodes);
+    const nodes = structuredClone(ch.markdownNodes ?? ch.nodes);
     const first = nodes[0];
     const titled = first?.type === "heading" && first.depth === 1;
     // The chapter's id on its title: the note's own first heading, else one made of its title.
@@ -117,6 +117,9 @@ export async function toMarkdown(doc: ExportDoc, target: string, spool?: ExportS
   }
   const root: Root = { type: "root", children };
   const ids = headingIds(root);
+  for (const ch of doc.chapters)
+    for (const anchor of anchorsOf({ type: "root", children: ch.markdownNodes ?? ch.nodes }))
+      ids.set(headingAnchor(ch.anchor, anchor.id), anchor.id);
   renumberFootnotes(root);
   prepare(root.children, { ids, copy });
 

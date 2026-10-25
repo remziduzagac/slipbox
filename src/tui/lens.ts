@@ -207,6 +207,7 @@ export class Lens {
             pictures,
             this.app.code.scrolls(),
             this.app.config.render.caption,
+            this.app.html.options(buf),
           );
       let blocks = code ? buf.codeBlocks(lineCount) : blockRanges(buf.parsed.tree, lineCount);
       let unit: ((at: number) => Block | null) | undefined;

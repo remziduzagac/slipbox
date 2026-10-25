@@ -55,6 +55,7 @@ export const RENDER_COMMANDS: Record<string, Handler> = {
         width,
         glyphs: glyphsFor(glyphMode, s.io.env),
         showUrls,
+        htmlTheme: theme.kind,
       });
     const layout = await withMermaidBatch(async () => {
       let ready = draw();

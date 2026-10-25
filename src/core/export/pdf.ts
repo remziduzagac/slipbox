@@ -34,6 +34,7 @@ const TIGHT = 2;
 const EX = 0.44;
 
 interface Style {
+  underline?: boolean;
   bold?: boolean;
   italic?: boolean;
   mono?: boolean;
@@ -507,7 +508,11 @@ class PdfWriter {
             .font(a.font)
             .fontSize(a.size ?? BODY)
             .fillColor(a.color ?? box.color ?? PRINT.fg);
-          pdf.text(a.text, x, baseline, { lineBreak: false, baseline: "alphabetic" } as PDFKit.Mixins.TextOptions);
+          pdf.text(a.text, x, baseline, {
+            lineBreak: false,
+            underline: a.underline,
+            baseline: "alphabetic",
+          } as PDFKit.Mixins.TextOptions);
           if (a.strike)
             pdf
               .save()
@@ -579,6 +584,17 @@ class PdfWriter {
     const walk = (ns: PhrasingContent[], s: Style) => {
       for (const n of ns) {
         switch (n.type) {
+          case "htmlInline": {
+            const p = n.data?.html;
+            walk(n.children, {
+              ...s,
+              ...(p?.bold !== undefined ? { bold: p.bold } : {}),
+              ...(p?.italic !== undefined ? { italic: p.italic } : {}),
+              ...(p?.strike !== undefined ? { strike: p.strike } : {}),
+              ...(p?.underline !== undefined ? { underline: p.underline } : {}),
+            });
+            break;
+          }
           case "text":
             out.push({ ...s, text: n.value.replace(/\n/g, " ") });
             break;
@@ -737,7 +753,7 @@ class PdfWriter {
     const pictures = content.filter((c): c is InlinePicture => "picture" in c && !c.math);
     const alone = pictures.length > 0 && content.every((c) => ("picture" in c ? !c.math : !c.text.trim()));
     if (alone) {
-      for (const p of pictures) this.picture(p.picture, p.alt, box);
+      for (const p of pictures) this.picture(p.picture, p.alt, box, 2, p);
       return;
     }
     if (!content.some((c) => "picture" in c || c.text.trim())) return;
@@ -847,11 +863,11 @@ class PdfWriter {
   }
 
   /** A picture, centred, at its size up to the box's width and the page's height; its words where it can't be drawn. */
-  private picture(pic: ExportPicture, alt: string, box: Box, scale = 2): void {
+  private picture(pic: ExportPicture, alt: string, box: Box, scale = 2, style: Style = {}): void {
     const pdf = this.pdf;
     const r = rasterOf(pic, this.r, box.width / PX, ["png", "jpg"], scale);
     if (!r) {
-      this.flow([{ text: alt || "picture", italic: true, color: PRINT.muted }], box);
+      this.flow([{ ...style, text: alt || "picture", italic: true, color: PRINT.muted }], box);
       pdf.y += (box.gap ?? GAP) - 2.5;
       return;
     }
@@ -859,7 +875,10 @@ class PdfWriter {
     const most = pdf.page.height - MARGIN.top - MARGIN.bottom;
     if (h > most) [w, h] = [(w * most) / h, most];
     this.ensure(h);
-    pdf.image(Buffer.from(r.data), box.x + (box.width - w) / 2, pdf.y, { width: w, height: h });
+    const x = box.x + (box.width - w) / 2;
+    pdf.image(Buffer.from(r.data), x, pdf.y, { width: w, height: h });
+    if (style.link) pdf.link(x, pdf.y, w, h, style.link);
+    if (style.goTo) pdf.goTo(x, pdf.y, w, h, style.goTo);
     pdf.y += h + GAP + 2;
   }
 

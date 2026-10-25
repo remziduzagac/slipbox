@@ -1,3 +1,4 @@
+import { adaptHtml } from "./html-adapter.ts";
 // Parse pipeline (plan 1.3): remark + gfm + frontmatter + wikilinks + tags (1.6) + Obsidian's highlights and comments
 // (DF-D17). Wikilinks are read
 // again (21.3): within their root, by the graph. The converter (20.1) parses the same way
@@ -646,11 +647,9 @@ export interface AnchorInfo {
 /** Every HTML anchor (`<a id="x">`, `<a name="x">`) in a note's text, with its line. */
 export function anchorsOf(tree: Root): AnchorInfo[] {
   const out: AnchorInfo[] = [];
-  visit(tree, (node) => {
+  visit(adaptHtml(tree), (node) => {
     if (node.type === "code") return false;
-    if (node.type !== "html") return;
-    for (const m of node.value.matchAll(/<a\s[^>]*?\b(?:id|name)\s*=\s*["']([^"']+)["']/gi))
-      out.push({ id: m[1]!, line: node.position?.start.line ?? 1 });
+    if (node.data?.html && node.data.id) out.push({ id: node.data.id, line: node.position?.start.line ?? 1 });
   });
   return out;
 }
@@ -669,6 +668,7 @@ export function slugify(text: string): string {
 }
 
 export function headingsOf(tree: Root): HeadingInfo[] {
+  tree = adaptHtml(tree);
   const out: HeadingInfo[] = [];
   visit(tree, (node) => {
     if (node.type === "heading") {

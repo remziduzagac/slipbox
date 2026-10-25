@@ -16,6 +16,8 @@ export interface Span {
   role: Role;
   /** Attributes added on top of the role's own (A_* bits). */
   attrs: number;
+  /** Attributes explicitly reset by supported HTML normal/none declarations. */
+  clear?: number;
   /** Background role override; otherwise the role's own background, else the line fill. */
   bg?: Role;
   /** Index into Layout.links. */
@@ -29,6 +31,10 @@ export interface Span {
 }
 
 export interface Line {
+  /** A nearer HTML container supplied alignment; outer containers must retain it. */
+  htmlAligned?: boolean;
+  /** Original source range of an HTML disclosure summary. */
+  details?: { from: number; to: number; open: boolean };
   spans: Span[];
   /** 1-based source line of the first text on this row — reload anchoring stores these (3.5). */
   src: number;

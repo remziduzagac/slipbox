@@ -1164,3 +1164,6 @@ main ones.
 
 **Multiplexers.** zellij takes `ctrl+t`, `ctrl+p`, `ctrl+o` and `ctrl+q`. tmux and herdr take `ctrl+b`, which slipbox
 doesn't use. The leader's keys always work.
+
+On an HTML details summary, Enter runs **Toggle HTML details** (html.details_toggle).
+The command is also available in the palette and can be bound in [keys].

@@ -8,6 +8,10 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 
 ### Added
 
+- Markdown document HTML now renders with scoped formatting, aligned images, theme-aware picture alternatives,
+  headings and collapsible details. Image permissions still apply. Noninteractive output expands details; Markdown
+  exports preserve original HTML except omitted non-document content.
+
 - Installation and upgrades install or refresh the bundled skill for detected Claude Code and Codex user
   configurations. `--no-skill` or `SLIPBOX_NO_SKILL=1` skips automatic writes. Uninstall removes recognized skills
   with `--yes`, reporting foreign and linked skills it leaves alone. TUI upgrade and restart messages retain skill

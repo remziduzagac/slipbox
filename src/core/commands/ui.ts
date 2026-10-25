@@ -6,6 +6,12 @@ const I = null; // interaction: needs a human at a terminal
 
 export const UI_SPECS: CommandSpec[] = [
   {
+    id: "html.details_toggle",
+    title: "Toggle HTML details",
+    cli: null,
+    desc: "Opens or closes the HTML disclosure at the cursor",
+  },
+  {
     id: "picture.copy_path",
     title: "Copy picture path",
     cli: null,
