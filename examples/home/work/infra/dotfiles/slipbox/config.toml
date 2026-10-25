@@ -14,6 +14,7 @@ show_urls = "always"
 code = true               # code opens as a document (24.x) where its language is mapped
 code_cells = "box"              # the code view's cells in boxes, or on bands
 code_wrap = "scroll"            # a code block too wide scrolls sideways (our trees and logs keep their columns)
+caption = "bottom"             # picture captions below the image, with one blank row between them
 images = "auto"                 # pictures in notes, where the terminal draws them
 images_remote = "ask"           # pictures online: asked for on enter
 mermaid = "picture"             # diagrams as pictures where the terminal draws them; text elsewhere
@@ -163,6 +164,8 @@ dictionaries = { de = "~/.local/share/hunspell/de_DE.dic" }   # yours, by langua
 
 [lint]
 enabled = "on"
+follow_view = true              # hide findings the view handles; a in Problems reveals them
+ignore = []                     # rule names hidden until Problems shows all
 command = ["markdownlint-cli2", "--config", "~/.markdownlint-cli2.jsonc"]
 
 [watch]
@@ -540,6 +543,7 @@ sidebar_vault = { bold = true, underline = true }
 "leader ; i e" = "vault.init"
 "leader ; M a" = "problems.open"
 "leader ; M b" = "problems.file"
+"leader ; M c" = "problems.show_all"
 "leader ; Q a" = "tag.list"
 "leader ; S a" = "folders.open"
 "leader ; S b" = "folders.default"

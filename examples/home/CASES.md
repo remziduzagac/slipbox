@@ -3141,6 +3141,8 @@ Wide tables and code blocks to edit in place.
 
 ### problems
 
+- `problems.show_all` — Problems: show all lint findings — `notes/research/link-styles.md`, `notes/index.md`
+  (command-specs.ts)
 - `problems.open` — Problems: open, focus, close — `notes/research/link-styles.md`, `notes/index.md` (command-specs.ts)
 - `cell.fold` — Fold or unfold the cell — `work/kestrel/src/routes/RouteMap.tsx`, `notes/index.md` (command-specs.ts)
 - `cell.edit` — Edit the cell — `work/kestrel/src/routes/RouteMap.tsx`, `notes/index.md` (command-specs.ts)
