@@ -140,7 +140,9 @@ repository (`join(ROOT, "examples", "home")`, the entry point a test runs) — a
 terminal checks, which drive slipbox as a process and import none of it: a changed check file's (`bun run
 test:terminal <file>`); for a changed file of the app's, the features `CHECKS_FOR` names it under (`git`, `export`,
 `spelling`…, pieces of the checks' names), or every check for one it doesn't list (the app, drawing, the parser, the
-index, the config — shared by all); every check for the harness and the samples the checks' home is built from. The
+index, the config — shared by all); every check for the harness and the samples the checks' home is built from, but a
+harness file used by only some checks runs theirs (`HARNESS_FOR`):
+  the release builder runs the `updates` checks. The
 two samples changed most, the reference set's cases and its kitchen-sink config, run what reads them (`SAMPLES_FOR`).
 The packages, the lockfile, the toolchain, the workflows, the tests' preload and a file nothing names run everything;
 the lint's own configs, only the lint. A test holds `CHECKS_FOR` to the files and the checks there are. Locally,

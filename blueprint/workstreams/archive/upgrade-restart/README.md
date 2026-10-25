@@ -1,5 +1,5 @@
 ---
-status: complete
+status: consolidated
 created: "2026-10-24"
 branch: feat/issue-23
 ---
@@ -20,3 +20,6 @@ tabs, windows and positions. A slipbox upgraded underneath a running one offers 
 - [notes.md](notes.md): how it was discussed, and the maintainer's answers.
 - [research.md](research.md): what was tried on this machine: a compiled Bun replacing itself by `execve`.
 - [tasks/](tasks/README.md): its tasks, UPG-T1 to UPG-T8, done.
+
+Consolidated 2026-10-26: requirements and design applied to the root and checked against the implementation.
+Decisions and task records remain here under their stable UPG IDs.

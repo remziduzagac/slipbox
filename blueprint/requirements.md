@@ -242,13 +242,12 @@ How: docs/manual/keys.md; docs/manual/configuration.md; design/tui.md § Modes a
   makes one by moving the `test` branch (GR-D13). An install follows a channel, the releases or the previews as well,
   chosen by the installer (`--preview`) or `slipbox channel set` (GR-D15).
 - `slipbox upgrade` installs the newest its channel offers; the TUI checks for it once a day, on by default (D199,
-  GR-D15). Homebrew gets a formula with each release, never a preview, into a tap once there is one, and an install
-  brew made is left to brew (D204, GR-D18).
-
-How: design/distribution.md; the workflows that build and publish: design/repository.md § CI.
-
-## Reporting a problem
-
+  GR-D15), or when `:upgrade` asks, and offers it in a pop-up: upgrade and restart, upgrade now and restart later, or
+  not now, skipping the version there; nothing installed without a yes (UPG-D6). A restart asks before saving what's
+  unsaved, quits as quitting does and starts the new version in the same terminal, where you were (UPG-D2–UPG-D4); a
+  newer version installed underneath a running slipbox is offered as a restart (UPG-D5). Homebrew gets a formula with
+  each release, never a preview, into a tap once there is one, and an install brew made is left to brew (D204,
+  GR-D18).
 - A problem is reported from inside slipbox, in a key (`space r`, `:report`, help's "Report a problem"): a window
   asks what happened, what was expected and how to make it happen, with what slipbox knows already filled in — its
   version, how it was installed and its channel, the system and processor, the terminal, its size, any multiplexer and

@@ -143,7 +143,8 @@ Codex's part skipped again: its pane still stopped at its usage limit's menu. A 
 `/code-review` found fifteen, the fresh reviewer three, one of them the same (`childrenEnded`'s kill): seventeen,
 each checked against the code. Fixed, each with a test that fails without it (twelve mutations, all caught):
 
-1. **A restart killed children quitting leaves running** (both reviewers): an editor handed a note (`runDetached`), a git
+1. **A restart killed children quitting leaves running** (both reviewers): an editor handed a note (`runDetached`), a
+   git
    commit, pull or checkout running in the background. `childrenEnded` waits for them a second, and kills none.
 2. **`execve` skipped the process's exit hooks:** an export's spool copies and temp files stayed. They run first now.
 3. **A leftover that couldn't be removed left the lock held** (and after `execve`, by a pid still alive).

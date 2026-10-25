@@ -1654,6 +1654,25 @@ any other key leaves").
 feedback all go to one place: a floating box briefly, the messages list permanently (the last
 500).
 
+**The dialog** (`tui/dialog.ts`) asks a question with controls of its own: a select, and checkboxes when it has any.
+The update offer is its first (distribution.md § The update offer), and a restart's question about notes unsaved its
+second (distribution.md § Restarting). Framed like the other popups, its title in its top border, it shows
+its text, wrapped; its select's choices, one a row, the one chosen marked `●` and the others `○` (`(*)` and `( )` in
+ASCII's glyphs); its checkboxes, `☑` or `☐` as a task's (`[x]`, `[ ]`), one the chosen choice doesn't take dimmed; and,
+under a rule, what the row under the cursor does (as many rows as the longest help needs, at most three, so it keeps
+its height). Its keys are in its bottom border: `enter: do it · space: tick · esc: not now` (`space` only with
+checkboxes; `esc` says what it does: `not now`, `cancel`). The marks are glyphs of each set (`choiceOn`, `choiceOff`).
+
+- `↑` / `↓`, `j` / `k`, `tab` / `shift+tab` and `ctrl+n` / `ctrl+p` move the cursor over the choices, then the
+  checkboxes, wrapping; on a choice, the cursor marks it.
+- `space` ticks or unticks the checkbox under the cursor; a dimmed one is ticked, and the choice it goes with marked.
+- `enter` does the choice marked, with the checkboxes as they are; `esc` cancels, as the dialog says.
+- A click on a choice marks it and does it; a click on a checkbox ticks or unticks it, as `space` does; a click outside
+  is `esc`.
+- Every dialog drops the keys, pastes and clicks that arrive before it's first drawn and in the half second after, by
+  when they arrived (each its own time, taken as it's queued), not when they're handled: one meant for a note, or for
+  the dialog that opened it, never answers it.
+
 ## UI settings
 
 These are the `space u` toggles and pickers (list in [keys.md](../../docs/manual/keys.md)):

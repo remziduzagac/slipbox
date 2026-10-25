@@ -55,7 +55,7 @@ controller of its own) and `src/tui/draw.ts` (painting, its regions in `draw-*.t
 | File | What it does with OpenTUI |
 | --- | --- |
 | `src/tui/opentui.ts` | `Canvas` over `OptimizedBuffer`; the full-screen `Renderable`; a worker decoding pictures |
-| `src/tui/run.ts` | `createCliRenderer`, key, paste and mouse events, resize, OSC 52, shutdown |
+| `src/tui/run.ts` | `createCliRenderer`, key, paste and mouse events, resize, OSC 52, shutdown, and restart's hand-over once the screen is given back |
 
 What comes before the screen is taken is `run.ts`'s `prepare`, which needs no terminal (a test calls it):
 the vault found, its config, the vault recorded as seen, and the graph. Recording comes before the graph
@@ -288,6 +288,11 @@ The CLI's commands are the user's reference, [cli.md](../../docs/manual/cli.md);
 | `core/release.ts` | 14.2 | what a release build was told when built; how a preview is named; the Pages site |
 | `core/install.ts` | 14.8 | the installer's layout read; how slipbox was installed; its channel; `uninstall`'s plan |
 | `core/update.ts` | 14.4 | the newest the channel offers, from its sums; the daily check; `upgrade` |
+| `core/restart.ts` | UPG | the restart's note; the hand-over: the upgrade, the binary, `execve` into it |
+| `core/libc.ts` | UPG | libc through `bun:ffi`, opened once: `setenv` (D221), `execve`, `close_range`, `tcflush` |
+| `core/processes.ts` | UPG | whether a process still runs: a lock's holder, a TUI's unsaved notes, an export's spool |
+| `tui/dialog.ts` | UPG | the dialog: text, a select and checkboxes; its keys and clicks |
+| `tui/updates.ts` | UPG | the update offer, `app.upgrade`, `app.restart`, an upgrade underneath noticed |
 | `core/skill.ts` | GR-D10 | the skill for agents, built in: printed; installed, never over another's file or a link |
 | `core/report.ts` | RPT | a bug report's facts (slipbox, the system, the terminal); its text read back; the address |
 | `core/browser.ts` | RPT | a browser opened on an address, by platform; none over SSH |
@@ -461,7 +466,9 @@ and data each have a folder of their own, and a vault's cache and state are kept
 | the trash (`18.4`) | `$XDG_STATE_HOME/slipbox/<key>/trash/` (`trash.json`, an item per folder; kept 30 days: DF-D14) |
 | the background index (`20.9`) | `$XDG_STATE_HOME/slipbox/autoindex.json` (its place), `activity` (CLI last used) |
 | saved plans (`20.18`, `--plan`) | `$XDG_STATE_HOME/slipbox/plans/<id>.json` (for `slipbox apply`; gone once applied) |
-| the update check (`14.4`) | `$XDG_STATE_HOME/slipbox/update.json` (when it last asked, what it found) |
+| the update check (`14.4`) | `$XDG_STATE_HOME/slipbox/update.json` (when it last asked, what it found, the version skipped) |
+| A restart’s note (UPG) | `$XDG_STATE_HOME/slipbox/restart/<pid>.json`; place, session and versions; read and removed |
+| Upgrade lock (UPG) | `<data>/upgrade.lock`; the upgrade process’s pid |
 | language servers installed (`19.5`, `14.11`) | `$XDG_DATA_HOME/slipbox/tools/<package>/<lock>/` (each from its lock) |
 | your own words, spelling's (`25.6`) | `$XDG_DATA_HOME/slipbox/spell/words.txt` |
 | the cache's tag (`14.9`) | `$XDG_CACHE_HOME/slipbox/CACHEDIR.TAG`: backup tools skip the cache |

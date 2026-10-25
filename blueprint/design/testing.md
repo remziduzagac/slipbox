@@ -287,6 +287,20 @@ command line's own areas are left out together (tests/cli.test.ts covers them). 
 an owner, the area whose task covers it, and the report groups what's uncovered by owner; a name a check or a list
 gives that doesn't exist, and a left-out entry a check covers, are said too (TT-D4).
 
+The check file `updates` (`tests/terminal/checks/updates.ts`), of the offer, `:upgrade`, and the restart with its
+question about notes unsaved, driving real release builds (`tests/terminal/release-builds.ts`; where they are, which
+every check's session reads, `releases.ts`): two of the checkout, built for this machine (no `--target`, which would
+download Bun's runtime) with `SLIPBOX_RELEASE` defined, once a run before the workers start, when a chosen check says
+`releases` — the runner tells its workers where (`SLIPBOX_TERMINAL_RELEASES`) — the second from a copy of the sources
+whose `version.ts` says the next patch version, so the slipbox that comes back is the new one. A check installs the
+first in its own data folder as the installer lays it out (linked, not copied), as Homebrew does (a keg and `opt`), or
+put by hand, and starts it: the harness's `bin` starts a given binary in place of `bun src/main.ts`. The second is a
+release served from a folder (`SLIPBOX_RELEASES_URL=file://{releases}`, its pack and `SHA256SUMS`), or from a local
+server holding the pack back three seconds, for quitting during a background upgrade (its address in the session's
+`extraEnv`, which a check's `setup` fills): the shell's prompt back at once, the version installed after. On Linux,
+`/proc/<pid>/exe` shows the process runs the new file itself, not waiting on a child. `:restart`'s question about notes
+unsaved is checked from source.
+
 **What needs a real terminal** (`tests/terminal/herdr/`) runs in a herdr pane, as the terminal tests once all did:
 two checks of the emulator's word against a real terminal's (`bun run test:herdr --pane <id>`): the keys a real one
 sends (escape then a key, ctrl, alt, a bracketed paste), and the widths a real one draws (names in their own scripts,
