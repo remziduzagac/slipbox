@@ -6,6 +6,7 @@
 
 import { existsSync, lstatSync, readdirSync, readFileSync, readlinkSync, realpathSync, rmSync } from "node:fs";
 import { join, sep } from "node:path";
+import { removeOwnedSkill, skillRemovalPlan, type SkillEnv } from "./skill-lifecycle.ts";
 import { atomicWrite } from "./fsutil.ts";
 import { type StoreKind, storeDir } from "./paths.ts";
 
@@ -156,7 +157,12 @@ const KEPT: Record<StoreKind, string> = {
 
 /** What `uninstall` takes away — the installer's files; with `purge`, slipbox's four folders too — and what stays.
  *  `by`: how the slipbox running was put here — Homebrew's is Homebrew's to remove, and said so. */
-export function uninstallPlan(purge: boolean, dirs: Stores = stores(), by: InstalledBy = "other"): UninstallPlan {
+export function uninstallPlan(
+  purge: boolean,
+  dirs: Stores = stores(),
+  by: InstalledBy = "other",
+  env: SkillEnv = {},
+): UninstallPlan {
   const inst = installation(dirs.data);
   const remove: Item[] = [];
   const notes: string[] = [];
@@ -176,6 +182,9 @@ export function uninstallPlan(purge: boolean, dirs: Stores = stores(), by: Insta
     if (!existsSync(dirs[kind])) continue;
     (purge ? remove : keep).push({ path: dirs[kind], what: KEPT[kind] });
   }
+  const skills = skillRemovalPlan(env);
+  remove.push(...skills.remove);
+  notes.push(...skills.notes);
   return { remove, keep, notes };
 }
 
@@ -191,7 +200,15 @@ export function removable(path: string, dirs: Stores, link: string | null): bool
 export function uninstall(plan: UninstallPlan, dirs: Stores = stores()): string[] {
   const link = plan.remove.find((i) => i.what === "the link that runs slipbox")?.path ?? null;
   const failed: string[] = [];
-  for (const { path } of plan.remove) {
+  for (const { path, what } of plan.remove) {
+    if (what === "the agent skill") {
+      try {
+        removeOwnedSkill(path);
+      } catch (err) {
+        failed.push(`${path}: ${(err as Error).message}`);
+      }
+      continue;
+    }
     if (!removable(path, dirs, link)) {
       failed.push(`${path}: not slipbox's to remove`);
       continue;

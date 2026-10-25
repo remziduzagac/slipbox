@@ -31,7 +31,11 @@ command line:
 
 An agent that reads skills, such as Claude Code, loads it when you mention your notes or slipbox.
 
-The skill a slipbox carries is the one that matches its commands. So install it from the `slipbox` you run:
+The installer, Homebrew and the source installer install the matching skill automatically for detected Claude Code
+and Codex user configurations. Upgrades refresh it; source users rerun `scripts/install-local.sh` after updating.
+See [Installation](install.md) for detected paths and the `--no-skill` / `SLIPBOX_NO_SKILL=1` skip options.
+
+If you installed an agent later, run `slipbox skill --auto` to detect it. For a specific destination, use:
 
 ```bash
 slipbox skill --install ~/.claude/skills
@@ -39,21 +43,19 @@ slipbox skill --install ~/.claude/skills
 
 It writes the skill to `~/.claude/skills/slipbox/SKILL.md`, where Claude Code finds it, and says where.
 
-After an upgrade, run it again to bring the skill up to date. If the skill there is already this one, it writes nothing
+For a manually chosen destination, run it again after an upgrade. If the skill there is already this one, it writes nothing
 and says so. It won't write over a `SKILL.md` that slipbox didn't write, or write through a link, unless you add
 `--force`.
 
 For another agent, give `--install` the folder that agent reads skills from. Or have the agent run `slipbox skill`,
 which prints the skill.
 
-From a copy of slipbox's source, one script installs the `slipbox` command and links the skill instead:
+From source, `scripts/install-local.sh` installs both the launcher and regular skill files for detected agents.
+It reports the launcher path and missing `PATH` entry. An older linked skill is preserved; replace it manually
+with `slipbox skill --install <folder> --force` if you want automatic refreshes.
 
-```bash
-scripts/install-local.sh --skill
-```
-
-It puts a `slipbox` launcher in `~/.local/bin`, and says so if that folder isn't on your `PATH`. It links the source's
-`skills/slipbox/` folder to `~/.claude/skills/slipbox`. So the skill there follows the source as you update it.
+Uninstall previews recognized skills and removes them with `--yes`. Its ownership check, like `skill --install`,
+is the frontmatter name `slipbox`; links and files that do not match stay and are reported.
 
 The first tour already made `~/slipbox-tour` a vault. Check it before using the short note names below; `root` should
 name this practice folder. If you use your own notes instead, open their existing vault.

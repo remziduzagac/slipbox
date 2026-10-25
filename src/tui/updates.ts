@@ -437,7 +437,10 @@ export class Updates {
       const v = r.status === "installed" ? (r.installed ?? r.latest) : r.latest;
       this.clearInstalled(v);
       this.mine.add(v);
-      this.app.message("info", `slipbox ${v} is installed (this is ${env.version}): :restart starts it`);
+      this.app.message(
+        "info",
+        `slipbox ${v} is installed (this is ${env.version}): :restart starts it${r.skills ? `\n${r.skills}` : ""}`,
+      );
     } else if (r) this.app.message("info", upgradeSaid(r, env.channel));
     else this.app.message("error", `the upgrade to ${version} failed: ${said.error?.message ?? "it said nothing"}`);
     this.app.host.requestRender();
@@ -588,6 +591,9 @@ export function cameBack(note: RestartNote, version: string): CameBack {
     said:
       failed !== null
         ? { level: "error", text: `the upgrade to ${note.upgrade} failed: ${failed} — this is ${version}` }
-        : { level: "info", text: `restarted: slipbox ${version} (was ${note.from})` },
+        : {
+            level: "info",
+            text: `restarted: slipbox ${version} (was ${note.from})${note.outcome?.ok ? `\n${note.outcome.said}` : ""}`,
+          },
   };
 }

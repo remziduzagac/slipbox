@@ -91,8 +91,24 @@ Every file is attested. Run `gh attestation verify <file> --repo remziduzagac/sl
 file was built by slipbox's own workflows, and from which commit. A release is built from its tag, a preview from the
 `test` branch. Adding `--predicate-type https://cyclonedx.org/bom` checks a build against its SBOM.
 
-A release carries the skill for agents. `slipbox skill --install ~/.claude/skills` installs it for Claude Code.
-[Working with agents](agents.md#give-the-agent-the-skill) shows the rest.
+Installing also installs the bundled agent skill when Claude Code or Codex has an existing user configuration.
+Claude Code uses `${CLAUDE_CONFIG_DIR:-~/.claude}/skills`. Codex uses `${CODEX_HOME:-~/.codex}/skills`;
+with the default Codex home, slipbox also installs into `~/.agents/skills`, the current shared user skill location.
+Each destination is reported. No agent configuration is created just to install a skill.
+
+This happens without a prompt, including in scripts. To skip it, pass `--no-skill`:
+
+```bash
+curl -fsSL https://remziduzagac.github.io/slipbox/install.sh | sh -s -- --no-skill
+```
+
+Or set `SLIPBOX_NO_SKILL=1` in the installer's environment. For Homebrew, use
+`HOMEBREW_SLIPBOX_NO_SKILL=1 brew install slipbox`; Homebrew filters ordinary environment variables.
+For custom agent homes with Homebrew, pass `HOMEBREW_SLIPBOX_CLAUDE_CONFIG_DIR` or `HOMEBREW_SLIPBOX_CODEX_HOME`.
+These prefixed variables have the same meanings as their ordinary counterparts. The skip also applies to upgrades.
+If Homebrew's sandbox prevents writing a skill, its report says what stayed; run `slipbox skill --auto` afterward.
+Foreign or linked skills are left alone and reported; skill installation errors do not undo a binary installation.
+[Working with agents](agents.md#give-the-agent-the-skill) covers manual destinations and ownership.
 
 ### Previews
 
@@ -148,9 +164,8 @@ A few things to know about the launcher:
 - It runs the code in this folder, where it is now. If you move the folder, run `scripts/install-local.sh` again.
 - It starts Bun, so Bun must be on the PATH wherever `slipbox` is run: your shell, your editor, an agent.
 - `SLIPBOX_BIN_DIR=$HOME/bin scripts/install-local.sh` puts it in another folder.
-- `scripts/install-local.sh --skill` also links slipbox's skill for agents into `~/.claude/skills/slipbox`, where
-  Claude Code finds it. It leaves a folder already there alone, and says so. [Working with agents](agents.md) says
-  what the skill is for.
+- The script installs the skill for detected agents too. `--no-skill` skips it; `--skill` remains accepted,
+  but now writes a regular skill file instead of creating a link. [Working with agents](agents.md) explains the skill.
 - Use it or a release, not both. With a release installed, remove the release first (`slipbox uninstall --yes`,
   below). If you run the launcher over a release's `slipbox` link, it replaces the link with its own script, and says
   so. The release itself is left untouched, and `slipbox uninstall --yes` still removes it, keeping the launcher.
@@ -205,7 +220,8 @@ and where it keeps its own files for that folder. If something looks wrong, the
 ## Upgrading
 
 **From source:** bring the folder up to date (`git pull`, in a clone), then run `bun install` again. The launcher runs
-whatever the folder holds, so there's nothing more to do. slipbox run from source never checks for releases.
+whatever the folder holds. Run `scripts/install-local.sh` again to refresh the installed agent skill.
+slipbox run from source never checks for releases.
 `slipbox upgrade` tells you to update the folder instead.
 
 **Installed with the installer:** `slipbox upgrade` installs the latest release, checked as the installer checks it.
@@ -213,10 +229,14 @@ whatever the folder holds, so there's nothing more to do. slipbox run from sourc
 latest release and the newest preview ([Previews](#previews)). The version you had stays beside the new one, so you can
 go back to it.
 
-If you installed the skill for agents with `slipbox skill --install`, run that again after an upgrade, so the skill
-matches the new version.
+Upgrades automatically refresh recognized skills in the detected user locations, using the new binary's skill.
+The TUI's upgrade completion and restart messages retain the skill destinations and any refusals too.
+`slipbox upgrade --no-skill` skips this, as does `SLIPBOX_NO_SKILL=1`. A hand-written file whose frontmatter does not
+name it `slipbox`, or a linked destination, stays untouched. For a manually chosen location outside the detected
+folders, run `slipbox skill --install <folder>` again yourself.
 
-**Installed with Homebrew:** `brew upgrade slipbox`.
+**Installed with Homebrew:** `brew upgrade slipbox` attempts to refresh skills through its post-install hook too.
+If its sandbox refuses a destination, run `slipbox skill --auto` afterward.
 
 slipbox's [changelog](../../CHANGELOG.md) says what each new version changed. Read it before an upgrade that may break
 something. Before 1.0, that's an upgrade to a new minor version, such as `0.2.1` to `0.3.0`.
@@ -273,17 +293,19 @@ what each holds.
 
 Your notes are never touched, nor the `.slipbox/` folders in them.
 
-The skill for agents stays too, if you installed it with `slipbox skill --install`. Remove its folder yourself
-(`rm -r ~/.claude/skills/slipbox`).
+Uninstall lists recognized skills in the detected agent locations and removes them with `--yes`, even without
+`--purge`. Recognition matches `skill --install`: the file's frontmatter names it `slipbox`. Hand-written files
+that do not match, and linked destinations, stay and are reported. Only `SKILL.md` and its now-empty folder are
+removed; other files stay. Skills in other, manually chosen folders must be removed manually.
 
 **Installed with Homebrew:**
 
-1. If you want slipbox's folders gone, run `slipbox uninstall --purge --yes` first.
+1. Run `slipbox uninstall --yes` first to remove its skills; add `--purge` for slipbox's folders too.
 2. Run `brew uninstall slipbox`.
 
 **Installed from source:**
 
-1. If you want slipbox's folders gone, run `slipbox uninstall --purge --yes`.
+1. Run `slipbox uninstall --yes` to remove its skills; add `--purge` for slipbox's folders too.
 2. Remove the launcher (`rm ~/.local/bin/slipbox`).
 3. Remove the skill's link, if you made one (`rm ~/.claude/skills/slipbox`).
 4. Remove the source folder.

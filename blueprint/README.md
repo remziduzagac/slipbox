@@ -35,7 +35,8 @@ search's improvements.
 - [workstreams/](workstreams/README.md): contained parts of the work; the roadmap gives their order. Active:
   [TT](workstreams/terminal-tests/README.md), the terminal tests headless and by feature,
   [DOCS](workstreams/documentation/README.md), the documentation learning path and reference, and
-  [VB](workstreams/views-and-bars/README.md), views and modes, the top bar, vaults and workspaces (#82, #85, #86).
+  [VB](workstreams/views-and-bars/README.md), views and modes, the top bar, vaults and workspaces (#82, #85, #86), and
+  [ASI](workstreams/agent-skill-install/README.md), installing and maintaining the agent skill (#50).
   Consolidated in `workstreams/archive/`: DOC, the user documentation; DF, what writing it found;
   [GR](workstreams/archive/greenrepo/README.md), the repository to greenrepo;
   [DS](workstreams/archive/docs-site/README.md), the documentation site;

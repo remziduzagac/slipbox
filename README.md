@@ -166,7 +166,9 @@ slipbox render home --plain
 With `--json`, each call gives one JSON object. The exit codes are stable.
 
 The skill in [skills/slipbox/SKILL.md](skills/slipbox/SKILL.md) teaches the surface to agents, and slipbox carries
-it. `slipbox skill --install ~/.claude/skills` installs the one matching the binary.
+it. Installation and upgrades install the matching skill for detected Claude Code and Codex user configurations.
+`--no-skill` or `SLIPBOX_NO_SKILL=1` skips automatic writes; `slipbox skill --auto` detects agents installed later.
+`slipbox skill --install <folder>` chooses another destination.
 
 For you, the same ground is in [Working with agents](docs/guides/agents.md) and
 [The command line](docs/manual/cli.md).

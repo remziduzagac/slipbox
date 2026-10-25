@@ -8,6 +8,11 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 
 ### Added
 
+- Installation and upgrades install or refresh the bundled skill for detected Claude Code and Codex user
+  configurations. `--no-skill` or `SLIPBOX_NO_SKILL=1` skips automatic writes. Uninstall removes recognized skills
+  with `--yes`, reporting foreign and linked skills it leaves alone. TUI upgrade and restart messages retain skill
+  destinations, skips and refusals.
+
 - Lint findings follow the view: line-length warnings hide where prose wraps, tables fit or fenced code wraps.
   `lint.follow_view` and `lint.ignore` control visibility, with hidden counts and `a` to reveal all in Problems.
   Findings follow session wrapping toggles too; wrapping off keeps long fence lines visible.

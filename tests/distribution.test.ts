@@ -462,9 +462,15 @@ describe("the supply chain's gates (14.10)", () => {
     // The release script: its tests, the runner's (which makes release builds of it), and the checks of upgrading, which
     // drive those builds, alone.
     expect(of("scripts/release.ts")).toMatchObject({
-      tests: ["tests/distribution.test.ts", "tests/release.test.ts", "tests/terminal-runner.test.ts"],
+      tests: [
+        "tests/distribution.test.ts",
+        "tests/release.test.ts",
+        "tests/skill-lifecycle.test.ts",
+        "tests/terminal-runner.test.ts",
+      ],
       checks: ["updates"],
     });
+    expect(of("src/core/skill-lifecycle.ts")).toMatchObject({ checks: ["updates"] });
     // The builds' record, which every check's session reads: every check.
     expect(of("tests/terminal/releases.ts")).toMatchObject({ checks: "all" });
     // The explorer's listings, every folder a level at a time and the facts its rows' marks read: those features' checks.
@@ -1233,9 +1239,9 @@ describe("a release (14.2)", () => {
         expect(readlinkSync(join(data, "current"))).toBe(`versions/${VERSION}`);
         expect(Bun.spawnSync(["ls", "-A", join(data, "versions")]).stdout.toString()).toBe(`${VERSION}\n`);
         // Upgraded: current moved, the link runs the new one, the old one kept.
-        const done = run(next);
+        const done = run(next, "--no-skill");
         expect(done.code).toBe(0);
-        expect(done.json.data).toEqual({ status: "upgraded", from: VERSION, latest: "9.9.9", removed: [] });
+        expect(done.json.data).toMatchObject({ status: "upgraded", from: VERSION, latest: "9.9.9", removed: [] });
         expect(readlinkSync(join(data, "current"))).toBe("versions/9.9.9");
         expect(Bun.spawnSync([link, "--version"]).stdout.toString()).toBe("slipbox 9.9.9\n");
         expect(existsSync(join(data, "versions", VERSION, "slipbox"))).toBe(true);
@@ -1351,7 +1357,7 @@ describe("a release (14.2)", () => {
         );
         // Previews again, and upgraded to the newest.
         expect(run("channel", "set", "preview").code).toBe(0);
-        expect(JSON.parse(run("upgrade", "--json").out).data).toEqual({
+        expect(JSON.parse(run("upgrade", "--json").out).data).toMatchObject({
           status: "upgraded",
           from: VERSION,
           latest: pv,
@@ -1845,7 +1851,7 @@ describe("updates (14.4)", () => {
       env: {},
       fetcher,
     };
-    expect(await upgrade(opts)).toEqual({
+    expect(await upgrade(opts)).toMatchObject({
       status: "upgraded",
       from: "1.0.0",
       latest: "2.0.0",
@@ -2425,7 +2431,7 @@ describe("channels: the installer on Pages, and which releases an install follow
       const opts = { release, data, env: {}, fetcher };
       expect(
         await upgrade({ ...opts, version: "1.2.3", execPath: join(data, "versions", "1.2.3", "slipbox") }),
-      ).toEqual({ status: "upgraded", from: "1.2.3", latest: PREVIEW, removed: [] });
+      ).toMatchObject({ status: "upgraded", from: "1.2.3", latest: PREVIEW, removed: [] });
       expect(asked).toEqual([
         `${R}/latest/download/SHA256SUMS`,
         `${P}/preview`,

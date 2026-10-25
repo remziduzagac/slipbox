@@ -201,7 +201,7 @@ describe("upgrade, against what's installed (UPG-T1)", () => {
     const { fetcher } = releases(fakePack("2.0.0"));
     const execPath = join(data, "versions", "1.0.0", "slipbox");
     const r = await upgrade({ release, version: "1.0.0", data, execPath, env: {}, fetcher });
-    expect(r).toEqual({
+    expect(r).toMatchObject({
       status: "upgraded",
       from: "1.0.0",
       latest: "2.0.0",

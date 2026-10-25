@@ -121,12 +121,12 @@ Usage:
   slipbox diagnostics <file>        a file's problems: its servers', its linters', its syntax; a note's links and lint  [--severity S] [--timeout SECS]
   slipbox themes                    list themes
   slipbox types [type]              document types here (skill, adr, your [types]): how many notes each; a type's notes in order
-  slipbox upgrade                   the latest release installed, checked before it's used  [--check: only say whether there's one]
+  slipbox upgrade                   the latest release installed, checked before it's used  [--check: only say whether there's one] [--no-skill]
   slipbox channel [set stable|preview]  which releases the installer's install follows: stable, or previews too
   slipbox uninstall                 what the installer put here, listed; removed with --yes  [--purge: slipbox's folders too] [--yes]
   slipbox report                    what a bug report asks for (the version, how it was installed, the system, the
                                     terminal) and the bug form's address filled in with it; nothing sent
-  slipbox skill                     the skill for agents, this slipbox's: printed; written into <dir>/slipbox/ with --install
+  slipbox skill                     the skill for agents: printed; --auto detects agents; --install <dir> writes into <dir>/slipbox/
                                     [--install <dir>] [--force: over a file slipbox didn't write, or a link] [--dry-run]
   slipbox commands                  list named commands and their CLI equivalents
 
@@ -523,9 +523,9 @@ export const FLAGS: Record<string, string[]> = {
   changed: ["base"],
   "merge-review": ["into"],
   diff: ["base"],
-  upgrade: ["check"],
+  upgrade: ["check", "no-skill"],
   uninstall: ["purge", "yes"],
-  skill: ["install", "force", "dry-run"],
+  skill: ["install", "force", "dry-run", "auto"],
 };
 
 /**

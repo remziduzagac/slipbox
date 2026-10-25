@@ -339,7 +339,7 @@ export async function runTui(argv: string[]): Promise<number> {
               execPath: process.execPath,
               env: process.env,
               signal,
-            }).then((r) => upgradeSaid(r, env.channel))
+            }).then((r) => `${upgradeSaid(r, env.channel)}${r.skills ? `\n${r.skills}` : ""}`)
         : null,
     launch: (upgradeFailed) =>
       nextLaunch({

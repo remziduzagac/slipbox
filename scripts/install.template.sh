@@ -11,7 +11,7 @@
 # It installs into slipbox's data folder — ${XDG_DATA_HOME:-~/.local/share}/slipbox: versions/<version>/, current, a
 # link to the version in use, and channel, the releases it follows (SLIPBOX_CHANNEL: stable, the default, or preview)
 # — and links ${SLIPBOX_BIN_DIR:-~/.local/bin}/slipbox to it. Nothing runs as root, and nothing outside those two
-# places is touched. `slipbox upgrade` installs a later one the same way; `slipbox uninstall` lists every path before
+# places and detected user skill folders is touched. `slipbox upgrade` installs a later one the same way; `slipbox uninstall` lists every path before
 # it removes anything.
 #
 # SLIPBOX_RELEASES_URL fetches the packs from elsewhere laid out as GitHub's releases are (a mirror, a test's folder):
@@ -102,6 +102,12 @@ absolute_or() {
 
 main() {
   [ -n "${HOME:-}" ] || fail "HOME isn't set"
+  for arg in "$@"; do
+    case "$arg" in
+      --no-skill) SLIPBOX_NO_SKILL=1; export SLIPBOX_NO_SKILL ;;
+      *) fail "unknown argument: $arg" ;;
+    esac
+  done
   channel=${SLIPBOX_CHANNEL:-stable}
   case "$channel" in
     stable | preview) ;;
@@ -155,6 +161,7 @@ main() {
   printf '%s\n' "$channel" >"$data/channel.new"
   mv -f "$data/channel.new" "$data/channel"
 
+  "$data/current/slipbox" skill --auto || say "agent skill installation failed; slipbox is installed"
   say "$VERSION installed: $link -> $data/versions/$VERSION"
   if [ "$channel" = preview ]; then
     say "it follows previews: slipbox upgrade installs the newest (slipbox channel set stable: releases only)"
