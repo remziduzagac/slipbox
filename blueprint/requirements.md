@@ -1,14 +1,10 @@
+# Requirements
+
 slipbox is for a developer working beside coding agents in a terminal, often over SSH on the machine that holds the
 repository, where nothing beyond the terminal can be assumed: they read, review and edit what their agent writes in it
 (D3, D226, SEO-D1). It lets them read markdown and any other text file well in that terminal, review what an agent
 changed, follow and search the links between them, edit them, and hand their notes to agents, while agents read and
 change the same files through a CLI (D33).
-
-slipbox is the terminal companion for coding agents, for a developer working with them in a terminal, often over SSH
-on the machine that holds the repository, where nothing beyond the terminal can be assumed (D3, D226). It lets them
-read markdown and any other text file well in that terminal, review what an agent changed, follow and search the links
-between them, edit them, and hand their notes to agents, while agents read and change the same files through a CLI
-(D33).
 
 ## Goals
 

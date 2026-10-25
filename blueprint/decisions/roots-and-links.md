@@ -835,7 +835,7 @@ the CLI as in the TUI. It supersedes D55's "`--root DIR`: `DIR`, exactly".
 
 ## D81: A link to a folder resolves, and reveals it (21.2, 2026-10-06)
 
-**Decision:** A link to a folder (`[t](docs)`) resolves and is never broken: followed, the folder is revealed in the
+**Decision:** A link to a folder (`[t](docs/)`) resolves and is never broken: followed, the folder is revealed in the
 explorer, unfolded and focused; a move of the folder rewrites it. A path without an extension is the file as
 written, else its note (`plan` → `plan.md`), else a folder. Renames keep each form: `/…` from the root, no extension,
 a folder's trailing `/`.
