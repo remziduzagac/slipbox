@@ -410,7 +410,7 @@ the same `id` in `.slipbox/`.
 
 `space v v` (`:folders`), or a click on the top bar's workspace, opens **Vaults**. Every known vault appears,
 named or not, most recent first. Worktrees appear under their repository. Folders of home opened by name appear
-marked as home's workspaces. `/` filters; `enter` goes into the selected vault or home folder; `ctrl+o` comes back.
+marked as home's workspaces. `/` filters; `enter` goes into the selected vault or folder of home; `ctrl+o` comes back.
 ![The vault list, with worktrees grouped under their repository](../images/vaults-list.png)
 
 The outgoing workspace is saved on disk; its notes, parses and index are released from memory. Returning loads its
