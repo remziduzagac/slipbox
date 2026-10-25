@@ -168,6 +168,9 @@ The CLI's commands are the user's reference, [cli.md](../../docs/manual/cli.md);
 | `core/footnotes.ts` | 3.17 | a note's footnotes: labels, definitions, references, in GFM's order |
 | `core/tags.ts` | 1.6 | micromark tokenizer for `#tag`; tag names and keys (the graph's tag index) |
 | `core/parse.ts` | 1.3 | remark + gfm + frontmatter + wikilinks; headings, slugs |
+| `core/html.ts`, `html-adapter.ts` | HTML | bounded tokenizer, omission ranges and semantic document adapter |
+| `core/html-export.ts`, `html-markdown.ts` | HTML | semantic export and lossless Markdown HTML runs |
+| `tui/html.ts` | HTML | per-buffer disclosure state and revealing navigation targets |
 | `core/obsidian.ts` | DF-D17 | Obsidian's `==highlight==` and `%%comment%%`, read into the tree; a block comment too |
 | `core/parse-pool.ts` | 15.1 | a big note's chunks parsed on up to four workers (`parse-worker.ts`), into its cache |
 | `core/workers.ts` | 15.1, 25.6 | where a worker's script is, from the source or in the compiled binary (D232) |

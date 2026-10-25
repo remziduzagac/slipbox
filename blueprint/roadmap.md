@@ -733,3 +733,5 @@ design's community-plugin tier ([ideas.md](ideas.md)) gets an ID when it is sche
 - [x] **[LC](workstreams/archive/lint-and-captions/README.md)**: consolidated into the root on 2026-10-26.
 
 - [x] **[ASI](workstreams/archive/agent-skill-install/README.md)**: consolidated into the root on 2026-10-26.
+
+- [x] **[HTML](workstreams/archive/document-html/README.md)**: consolidated into the root on 2026-10-26.

@@ -18,7 +18,8 @@ user documentation, changelog and affected screenshots. Root design consolidatio
   picture alternatives, dimensions, source lines, cache variants and embed resolution: tests/html.test.ts.
 - Disclosures by named command and Enter, target and outline reveal, remote ask/show/never, linked graphics by click
   and keyboard, Lens/Source edits: tests/html-tui.test.ts.
-- Lossless block and inline HTML, omission, semantic HTML/EPUB/Word and remote badge fallback: tests/html-export.test.ts.
+- Lossless block and inline HTML, omission, semantic HTML/EPUB/Word and remote badge fallback:
+  tests/html-export.test.ts.
 - Real plain/ANSI CLI and Markdown export worker: tests/html-cli.test.ts.
 - Upgrade from generation 12 in both content and vault caches: tests/html-cache.test.ts.
 - PDF text, heading destination, local linked graphic, Word hyperlink graphic, embedded HTML export:

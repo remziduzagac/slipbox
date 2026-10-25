@@ -75,6 +75,13 @@ between them, edit them, and hand their notes to agents, while agents read and c
 - `render.caption` selects bottom (default) or top for a standalone picture's box. One blank row separates caption
   and drawable image, including its scrollbar; without a drawable image the box stands alone (LC-T1, `12.x`).
 
+- Document HTML supports paragraphs/containers, breaks, headings, inline formatting, links, images and picture
+  alternatives, preformatted text and disclosures. Unknown tags retain readable children. Supported inline styles
+  map to theme semantics and bounded dimensions; source and edits retain original bytes and ranges. No executable
+  content, stylesheet fetching or browser layout is introduced (HTML-D1–HTML-D4).
+- Semantic exports preserve supported HTML content with disclosures expanded. Markdown exports preserve HTML's
+  original spelling and spacing, omitting only non-document content (HTML-D5).
+
 How: design/rendering.md; design/tui.md § Screen layout, § Positions.
 
 ## Files beyond markdown, and code

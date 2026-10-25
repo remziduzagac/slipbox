@@ -17,6 +17,6 @@ dropped and superseded ones in `archive/`. The roadmap gives their order.
 - Consolidated 2026-10-26: [VB](archive/views-and-bars/README.md), views, modes, bars, vaults and workspaces.
 - Consolidated 2026-10-26: [LC](archive/lint-and-captions/README.md), lint visibility and caption placement.
 - Consolidated 2026-10-26: [ASI](archive/agent-skill-install/README.md), agent skill installation and maintenance.
-- Built, awaiting consolidation: [HTML](document-html/README.md), document HTML in Markdown.
+- Consolidated 2026-10-26: [HTML](archive/document-html/README.md), document HTML in Markdown.
 - Built, awaiting consolidation: [SEO](site-discovery/README.md), site discovery and agent-readable docs.
 - Built, awaiting consolidation: [CIW](ci-waits/README.md), CI push ranges.
