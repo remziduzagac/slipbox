@@ -56,6 +56,16 @@ export class Html {
   }
 
   revealIn(buf: NoteBuffer, line: number): void {
+    if (buf.parseAhead()) {
+      const version = buf.version;
+      void buf.parsing?.then(() => {
+        if (buf.version !== version || this.app.quitting) return;
+        this.revealIn(buf, line);
+        for (const view of this.app.allViews()) if (view.buf === buf) view.layoutKey = "";
+        this.app.host.requestRender();
+      });
+      return;
+    }
     const tree = adaptHtml(buf.parsed.tree, this.app.theme.kind);
     if (tree === buf.parsed.tree) return;
     const details = this.options(buf).htmlDetails;

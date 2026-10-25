@@ -150,7 +150,7 @@ const links = (doc: ExportDoc) =>
   doc.chapters.flatMap((ch) => all(ch.nodes)).filter((n): n is Link => n.type === "link");
 const textOf = (nodes: readonly unknown[]): string =>
   all(nodes)
-    .map((n) => (n.type === "text" ? n.value : n.type === "break" ? "\n" : ""))
+    .map((n) => (n.type === "text" || n.type === "inlineCode" ? n.value : n.type === "break" ? "\n" : ""))
     .join("");
 const pictures = (doc: ExportDoc) =>
   doc.chapters
@@ -483,7 +483,7 @@ describe("export: the assembler (10.1)", () => {
     expect(textOf(plain!.children)).toBe("[!note] read as written");
   });
 
-  test("each note's footnotes its own: two notes' [^1] two footnotes; HTML in a line: <br> a break, other tags gone, their words kept", async () => {
+  test("each note's footnotes its own: two notes' [^1] two footnotes; inline HTML retains hard breaks and keyboard code", async () => {
     const { graph } = root({
       "a.md": "# A\n\nA's claim[^1], and <kbd>Ctrl</kbd> then<br>next.\n\n![[b]]\n\n[^1]: A's note.\n",
       "b.md": "B's claim[^1].\n\n[^1]: B's note.\n",
@@ -497,6 +497,9 @@ describe("export: the assembler (10.1)", () => {
     expect(defs.find(([id]) => id === refs[0])![1]).toBe("A's note.");
     expect(defs.find(([id]) => id === refs[1])![1]).toBe("B's note.");
     expect(textOf([nodes[1]])).toBe("A's claim, and Ctrl then\nnext.");
+    expect(all(nodes).filter((n) => n.type === "inlineCode")).toContainEqual(
+      expect.objectContaining({ value: "Ctrl" }),
+    );
     expect(all(nodes).filter((n) => n.type === "html")).toEqual([]);
   });
 

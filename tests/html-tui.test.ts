@@ -13,6 +13,24 @@ const content = (h: Awaited<ReturnType<typeof harness>>) =>
     .join("\n");
 
 describe("HTML in the TUI", () => {
+  test("large HTML notes reveal their saved target after background parsing", async () => {
+    const root = makeVault();
+    const large = "<!--" + "x".repeat(140_000) + "-->\n" + source;
+    writeFileSync(join(root, "large-html.md"), large);
+    const h = await harness({ root, open: null });
+    try {
+      h.app.open("large-html.md", { heading: null, headingIndex: 0, offset: 0, line: 8 });
+      const buf = h.app.view!.buf;
+      expect(buf.parsing).not.toBeNull();
+      expect(buf.parseCurrent).toBe(false);
+      await buf.parsing;
+      expect(content(h)).toContain("Body text");
+      expect(h.app.currentLayout(h.app.view!).lines[h.app.view!.cur.row]!.src).toBe(8);
+    } finally {
+      h.app.quit();
+    }
+  });
+
   test("restoring a workspace initializes the theme before revealing saved HTML positions", async () => {
     const root = makeVault();
     writeFileSync(join(root, "html.md"), source);

@@ -65,3 +65,5 @@ Preformatted containers extract text recursively from intervening Markdown block
 and formatted text instead of discarding parent nodes without a direct value.
 Nested br elements contribute hard line breaks during the same extraction for rendering and semantic exports.
 The selected theme is initialized before session tabs restore their saved positions and reveal enclosing disclosures.
+For large notes, disclosure reveal waits for the background parser before reading the tree; it never forces a parse
+on the screen thread. A changed buffer version discards a deferred reveal.
