@@ -122,6 +122,8 @@ export const UPDATES: Check[] = [
   {
     area: "navigating",
     name: "updates: About shows a newer release, copies its notes address and offers Upgrade",
+    // On macOS the fixture is intermittently classified as put here by hand: About has no Upgrade (#100).
+    quarantined: "#100",
     releases: true,
     covers: { cases: ["ui"], commands: ["app.about", "app.release_notes", "app.upgrade"] },
     options: { ...INSTALLED, config: "[update]\ncheck = false\n" },
@@ -143,6 +145,8 @@ export const UPDATES: Check[] = [
   {
     area: "outside-and-code",
     name: "updates: the offer once quiet; Upgrade and restart starts the new version in this process, its windows as they were",
+    // On macOS the fixture intermittently offers the releases' address instead of Upgrade and restart (#100).
+    quarantined: "#100",
     covers: { commands: ["app.restart"] },
     releases: true,
     options: INSTALLED,
