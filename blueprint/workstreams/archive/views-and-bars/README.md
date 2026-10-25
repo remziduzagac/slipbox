@@ -1,5 +1,5 @@
 ---
-status: active
+status: consolidated
 created: "2026-10-25"
 branch: tui/issue-82
 ---
@@ -17,3 +17,6 @@ Roadmap foundations: `3.1`, `3.3`, `4.13`, `4.14`, `17.10`, `21.10`, `24.2`.
 
 Source: issues #82, #85, #86 and #94. The image and Info export changes (#83, #84) and the source editing bug (#81)
 are separate work in the same batch, outside VB's design scope.
+
+Consolidated 2026-10-26: requirements and design applied to the root and checked against the implementation.
+Decisions and task records remain here under their stable VB IDs.

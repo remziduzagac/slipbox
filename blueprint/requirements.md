@@ -51,9 +51,14 @@ between them, edit them, and hand their notes to agents, while agents read and c
   defaults carried over from the user's nvim; the line under the cursor stays rendered (D7, D89, D96, D97).
 - Themes are built in, Tokyo Night by default; light themes genuinely work; a theme switches live, with a preview, and
   no restart; a mode follows the terminal's own colours; `NO_COLOR` gives something readable (D91–D95).
-- Each window has a header: in a split its file's name, the breadcrumb of the headings the cursor is under, its mode as
-  three buttons (Read, Lens, Source) of which one is selected and a click switches to another, and the outline's button
-  where the rail doesn't have it. The breadcrumb and the header each hide on their own (HDR-D1, HDR-D2, HDR-D3).
+- Each window has READ or SOURCE as its view, with LENS toggled inside READ. Its header shows the radio pair and
+  lens toggle, alongside the file and breadcrumb; its status chip shows view and vim mode together, in their own
+  theme colours. Successful switches are silent; refusals explain why. Breadcrumb and header visibility remain
+  independent (HDR-D1, HDR-D3, VB-D1).
+- The top bar is permanent, including zen: palette, explorer zoom, workspace and git, work count (including zero)
+  and running version. Each item is a separate target; narrowing preserves zoom and workspace longest. Work opens
+  live progress and supported controls; About shows version/channel, recorded predecessor and upgrade information.
+  Recent outcomes and older failures remain available. The retired top-bar setting gives one notice (VB-D3, VB-D7).
 - An embedded note is drawn in place, read-only (D113). Pictures are drawn where the terminal can (asked of the
   terminal, never read from `$TERM`, and never required), sized to their window — its text width, their height
   bounded by its — never larger than their own size, never shrunk past a floor; a click shows one at its own size,
@@ -75,6 +80,10 @@ How: design/rendering.md; design/tui.md § Screen layout, § Positions.
 - Code reads as a document, every token as written; every file keeps its source mode (D125, D130).
 - Notes of a kind (an agent skill's `SKILL.md`, an ADR) are known by where they are: their frontmatter's rules checked,
   their order and status read, with nothing written or kept (D133).
+
+- `render.notes`, `render.code` and `render.data` are boolean opening defaults, true by default. False opens SOURCE
+  without disabling supported READ or the lens. Legacy code values and `editor.edit_in = "live"` stay readable
+  (VB-D2).
 
 How: design/tui.md § Files beyond notes; design/rendering.md § Data files; design/code-view.md;
 design/document-types.md.
@@ -102,18 +111,21 @@ design/document-types.md.
   is found from evidence, and the relink is offered; before a merge, the links it would break are shown (D63, D66,
   D78, D143, D152).
 
+- Switching vaults with unsaved edits asks Save all and go, Discard and go, or Stay; saves must succeed first.
+  The outgoing notes, parses and index are released; workspace state on disk supports return. The switch list
+  includes unnamed vaults, home folders marked as home's, and worktrees grouped by repository (VB-D4, VB-D5).
+
 How: design/roots.md; design/links.md; design/trust.md § Links you follow.
 
 ## Navigating and search
 
 - Links are followed, with history back and forward; backlinks, the outline, the quick switcher and the command
   palette are a key away (D11, D27).
-- The explorer shows the file system as one tree, the view starting at what's opened, a breadcrumb saying what's
+- The explorer shows the file system as one tree, the zoom starting at what's opened, a breadcrumb saying what's
   above, zoomed out when going elsewhere and in when asked; vaults, links, the index's state and git marked on each
   row; files on screen are shown by path, as the file says (D77, VV-D5, VV-D8, VV-D9).
-- Where you are is on screen, once, while there's room: the vault, its branch, and the workspace when it isn't the
-  vault's own, on the top bar, else on the status line; a click goes to another vault or another branch
-  (WSP-D4, WSP-D5).
+- Where you are is on the top bar: explorer zoom, workspace labelled by its vault (or home folder), and git branch,
+  with separate mouse targets. The status line has no location fallback (VB-D3, VB-D6, VB-D7).
 - Another vault's file is read in a peek, going there a choice (VV-D7).
 - Search is slipbox's own, in the core, shared by the TUI and the CLI, and always answers, from the index or a scan:
   words, phrases, prefixes, exclusions, titles, tags and folders, ranked; a hit opens where most of its words are

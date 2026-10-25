@@ -17,7 +17,7 @@ Code, in `src/tui/`:
 | `input.ts`, `mouse.ts` | keys and pastes, dispatched in order, the which-key popup; clicks, drags, the wheel |
 | `overlays.ts`, `properties.ts` | lists, prompts and dialogs; the properties editor in the floating window |
 | `panels.ts`, `history.ts` | the side panels, their widths and filters; the history |
-| `explorer.ts`, `explorer-disk.ts`, `marks.ts` | the explorer, one tree and its view; what the walk leaves out; marks |
+| `explorer.ts`, `explorer-disk.ts`, `marks.ts` | the explorer, one tree and its zoom; what the walk leaves out; marks |
 | `following.ts`, `peek.ts` | links followed only when you say so; the peek at another vault's file |
 | `git.ts`, `info.ts`, `outline.ts`, `footnotes.ts` | git's state, changes and commits; Info; the outline; footnotes |
 | `gitpanel.ts`, `gitview.ts`, `gitmouse.ts`, `draw-git.ts` | the git panel: rows, keys, buttons, footer; mouse |
@@ -49,11 +49,11 @@ Code, in `src/tui/`:
 ## Screen layout (plan `3.1`)
 
 ```text
- slipbox                    ◈ notes · main ↑2           indexing 3…     ← permanent top bar
+ slipbox                    ◈ notes · main ↑2            0  0.5.0     ← permanent top bar
 ━━━━━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━  ← the frame's top rule
  ≡  Explorer   ┃ 1 index × ┃ 2 alpha × ┃                             ┃ +3  ← left rail (tinted) · explorer ┃ tab strip
  ◷             ┣━━━━━━━━━━━┻━━━━━━━━━━━┻━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━┻━━━  ← the strip's rule, the outline under it
-    ▾ notes    ┃ § Heading › Sub  Read Lens Source┃ Outline            ▤   ← window header (tinted) ┃ outline · rail
+    ▾ notes    ┃ § Heading › Sub       R L S┃ Outline            ▤   ← window header (tinted) ┃ outline · rail
     ├─  beta   ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
     └─  alpha  ┃ ▌ Sub                            ┃ ▾ Heading              ← explorer ┃ note ┃ outline
                ┃ Text with the █ursor on it…      ┃ └─  Sub                ← (both panes optional)
@@ -63,7 +63,7 @@ Code, in `src/tui/`:
         │     Opens the link…      Moves to the…│ ┃
         └──────────── backspace up · esc cancel ┘ ┃
 ━━━━━━━━━━━━━━━┻━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┻━━━━━━━━━━━━━━━━━━━━━━  ← the frame's bottom rule
- READ  notes/alpha.md ↻ reloaded  ● watching  → beta.md (resolved)  L12:7 40%  ← status line
+ READ │ NORMAL  alpha.md ↻ reloaded  ● watching  → beta.md (resolved)  L12:7 40%  ← status line
 ```
 
 **The frame.** Right under the top bar, a `━` rule in the `border` role runs across the top of
@@ -83,10 +83,11 @@ folder open in its place: told when it changes, its control characters stripped.
 **The top bar** is permanent, including zen (VB-D3, VB-T2, #86). `draw-topbar.ts` draws the grouped items:
 
 - the `slipbox` palette chip at left;
-- the central location block: explorer zoom (`top:zoom`, `explorer.focus`), workspace without the vault prefix
+- the central location block: explorer zoom (`top:zoom`, `explorer.focus`), workspace labelled by its vault, or home
+  folder
   (`top:vault`, `folders.open`), branch with tracking and operation (`top:branch`, branches menu), changed-file count
-  (`top:changed`, `git.focus`). The vault remains in Info. A workspace is the home folder, branch, home or vault
-  fallback;
+  (`top:changed`, `git.focus`). The vault remains in Info. Workspace ownership remains per branch, home folder, home or
+  vault fallback (VB-D4, VB-D6);
 - at right, the permanent work count (`top:work`, `background.open`, `space b`), dim at zero and bright otherwise,
   and running version (`top:version`, `app.about`, `space a`), shortened to `x.y.z-P` for previews. An available
   upgrade adds an arrow (`top:upgrade`, `app.about`) in the theme's green `upgrade_available` role (VB-D7, VB-T7).
@@ -111,7 +112,7 @@ its release notes link (`app.release_notes`, copies the address) and `app.upgrad
 `ui.top_bar` is retired with a notice, removed from settings and keys. The status line has no location fallback.
 
 **The window header** tops each window, between two rules: in a split the window's file name, then the breadcrumb,
-then at its right the mode's buttons, and at the far right of the window at the top right, without the right rail,
+then at its right the view buttons, and at the far right of the window at the top right, without the right rail,
 the outline's `▤` (HDR-D1). In a split the name is `strong` in the active window and `dim` in the other, cut to half
 the row. `ui.window_header = false` removes it, as do "Window header" in the UI settings list and the palette; zen
 mode, the floating window and windows under 8 rows have none (HDR-D3). Without a header there are no header rules,
@@ -435,10 +436,11 @@ vault, a backlink from one and another vault's search hit open a peek instead, g
 you left; each switch is remembered, so a chain of them unwinds one by one. From a vault gone into from a tab kept from
 a peek, back goes into the vault it was kept in.
 
-**The view follows** (VV-D5): the explorer's unfolded folders are kept by their absolute paths, then given the new
-vault's keys; a view holding the new vault stays, the folders down to the vault unfolded; one not holding it zooms out
+**The zoom follows** (VV-D5, VB-D1): the explorer's unfolded folders are kept by their absolute paths, then given the
+new
+vault's keys; a zoom holding the new vault stays, the folders down to the vault unfolded; one not holding it zooms out
 to the common parent (§ Side panes); where the tree can't show the vault (its path has a hidden folder: a worktree in
-`.claude/worktrees/`), the view moves to the vault. Started in a folder outside every vault (`slipbox /srv/x`),
+`.claude/worktrees/`), the zoom moves to the vault. Started in a folder outside every vault (`slipbox /srv/x`),
 Elsewhere's, or in `~`, home, nothing opens over the explorer: the launcher of D50 is gone.
 
 **The vaults** (`space v v`, `:folders`, `folders.open`; `slipbox vaults`) list every known vault, named or not,

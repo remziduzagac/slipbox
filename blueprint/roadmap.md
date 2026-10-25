@@ -727,3 +727,5 @@ design's community-plugin tier ([ideas.md](ideas.md)) gets an ID when it is sche
 - [x] **[RPT](workstreams/archive/reporting-a-problem/README.md)**: consolidated into the root on 2026-10-26.
 
 - [x] **[UPG](workstreams/archive/upgrade-restart/README.md)**: consolidated into the root on 2026-10-26.
+
+- [x] **[VB](workstreams/archive/views-and-bars/README.md)**: consolidated into the root on 2026-10-26.

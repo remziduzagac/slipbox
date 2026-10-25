@@ -18,6 +18,9 @@ no alias.
 
 ## HDR-D2: Read, Lens and Source, a radio group on the header (2026-10-24)
 
+> **Amended by VB-D1 and VB-D2 (2026-10-26):** READ and SOURCE form a radio pair; LENS is a toggle inside
+> READ, and the status chip shows view and vim mode together. Rendering settings choose the opening view only.
+
 > **Amended by HDR-D6 (2026-10-24):** a disabled button is in italics in every theme, its colour halfway from an
 > enabled one's to `surface2`.
 >
