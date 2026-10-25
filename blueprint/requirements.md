@@ -73,7 +73,7 @@ between them, edit them, and hand their notes to agents, while agents read and c
   in vault config. Problems explains hidden counts; `a` reveals all findings, including ignored rules, and toggles
   back. Marks and status counts use visible findings (LC-D1, `3.21`).
 - `render.caption` selects bottom (default) or top for a standalone picture's box. One blank row separates caption
-  and drawable image, including its scrollbar; without a drawable image the box stands alone (LC-D2, `12.x`).
+  and drawable image, including its scrollbar; without a drawable image the box stands alone (LC-T1, `12.x`).
 
 How: design/rendering.md; design/tui.md § Screen layout, § Positions.
 
