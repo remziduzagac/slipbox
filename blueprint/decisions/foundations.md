@@ -539,6 +539,9 @@ argv, stays a constraint on whatever is built. This amends D23 and D24.
 
 ## D226: slipbox described as the terminal companion for coding agents (2026-10-13)
 
+> **Amended by SEO-D1 (2026-10-26):** the shared line leads with the person: read, review and edit what your
+> coding agent writes, in your terminal. Site metadata, shared links and agent-readable docs use it (SEO-D2–SEO-D6).
+
 **Decision:** Wherever slipbox describes itself, it is the terminal companion for coding agents: "Read, review and edit
 what your agent writes, with Markdown and code rendered cleanly, an editor that's necessary and sufficient, and agent
 integration built in." The README opens with that, then a paragraph for each claim: an idea followed from the plan to

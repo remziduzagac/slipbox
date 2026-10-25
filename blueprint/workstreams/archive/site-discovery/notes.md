@@ -44,7 +44,8 @@
   11. D226's "documentation's index" (`docs/README.md`), "What is slipbox?"'s first sentence and the skill's line were
       left out of SEO-D1's reach, and the docs home's new sentence on `llms.txt` contradicted a non-goal: taken.
   12. SEO-D1's test belongs with the docs' tests, reading files as text: taken.
-- **The reviewer's questions for the maintainer:** SEO-D1's words and reach; the titles' length; the root; the card's look
+- **The reviewer's questions for the maintainer:** SEO-D1's words and reach; the titles' length; the root; the card's
+  look
   once made. They're below, but the card's look, which the maintainer sees in the pull request.
 
 ## Open questions
@@ -86,7 +87,8 @@ Fixed, with tests (each mutation-checked):
 - **`pages.yml`'s check step** (both): the `site` job checks out `main` while a preview's run takes test's workflow,
   so `site/scripts/check-meta.ts`, absent from `main` until a release, failed the job and no preview deployed;
   `main`'s `release.ts` writes the old root besides. Confirmed: `origin/main`'s `site/scripts/` holds `check-links.ts`
-  and `gather.ts` alone. The step and `--pages` are gone; `tests/release.test.ts` holds the job to running `bootstrap.ts`
+  and `gather.ts` alone. The step and `--pages` are gone; `tests/release.test.ts` holds the job to running
+  `bootstrap.ts`
   and `release.ts` alone. This also settles three findings: the step untested, the root checked against
   `about.ts`' address while `writeSite` uses the repository's, and the docs checked twice.
 - **The served agent guide's links** (`/code-review`): copied raw, its `manual/introduction.md` and the like resolve to

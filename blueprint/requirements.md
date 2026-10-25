@@ -1,4 +1,8 @@
-# Requirements
+slipbox is for a developer working beside coding agents in a terminal, often over SSH on the machine that holds the
+repository, where nothing beyond the terminal can be assumed: they read, review and edit what their agent writes in it
+(D3, D226, SEO-D1). It lets them read markdown and any other text file well in that terminal, review what an agent
+changed, follow and search the links between them, edit them, and hand their notes to agents, while agents read and
+change the same files through a CLI (D33).
 
 slipbox is the terminal companion for coding agents, for a developer working with them in a terminal, often over SSH
 on the machine that holds the repository, where nothing beyond the terminal can be assumed (D3, D226). It lets them
@@ -350,6 +354,19 @@ principles in workstreams/archive/docs-site/requirements.md § How they are writ
   files; a setting is never applied by automation (GR-D9).
 
 How: design/repository.md; the maintainer's procedures: `MAINTAINING.md`.
+
+## The site found and shared
+
+- The docs site says what slipbox is wherever it's met without being opened: every page's title names slipbox and
+  says you read, review and edit what your coding agent writes with it, in your terminal, and the docs home's
+  description says what it does, in the words slipbox describes itself with (SEO-D1, SEO-D2).
+- A link to the site's root or any page shows slipbox's picture when it's shared (SEO-D4); the root says what
+  slipbox is to a search engine, and sends a visitor on to the docs (SEO-D3).
+- Agents find the docs as `llms.txt` at the docs' root, a line per page, and their full text in `llms-full.txt`,
+  rebuilt with the site (SEO-D5).
+- The site's build fails when any of these goes missing (SEO-D6).
+
+How: design/distribution.md § What the site tells search engines and agents.
 
 ## Quality goals
 

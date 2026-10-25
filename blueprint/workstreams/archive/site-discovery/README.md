@@ -1,5 +1,5 @@
 ---
-status: complete
+status: consolidated
 created: "2026-10-24"
 branch: feat/issue-66
 ---
@@ -20,3 +20,6 @@ in full as `llms-full.txt`; and the site's build fails if any of it goes missing
 - [ideas.md](ideas.md): the alternatives weighed.
 - [notes.md](notes.md): how it was discussed.
 - [research.md](research.md): what the formats and the search engines ask for, and what Starlight already writes.
+
+Consolidated 2026-10-26: requirements and design applied to the root and checked against the implementation.
+Decisions and task records remain here under their stable SEO IDs.

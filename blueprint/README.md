@@ -4,7 +4,8 @@ synced_with: dev@71313f3
 
 # slipbox blueprint
 
-slipbox is the terminal companion for coding agents: a shared workspace for humans and agents over plain files, where a
+slipbox is where you read, review and edit what your coding agent writes, in your terminal: a shared workspace for
+humans and agents over plain files, where a
 person in the TUI reads, reviews and edits what an agent on the CLI writes, both seeing the same files, the same links
 and the same answers (D33, D226). It is TypeScript on Bun,
 one core with two faces, compiled into one binary (D5, D8). Every phase on the roadmap is built, extensibility aside,
