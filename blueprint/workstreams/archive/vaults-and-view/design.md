@@ -270,7 +270,8 @@ Done in VV-T4, the busy folders and the marks in VV-T5. The explorer bullet beco
   indexed); and, between the name and those, dimmed and ending a space short of git's column, what describes the row
   (`describe`): a vault's branch when it's a repository's top, a worktree's after `⎇`, a link's target and whether
   it's followed (VV-T6). Each glyph is one column wide in every set (`core/glyphs.ts`, `mark…`); none is an emoji. A
-  vault's other name stays after its folder's (17.13); a row with its menu's button shows no marks, as git's mark wasn't.
+  vault's other name stays after its folder's (17.13); a row with its menu's button shows no marks, as git's mark
+  wasn't.
   The index's
   state: a folder of the vault's own tree is indexed, or indexing while home is unwalked, while the walk hasn't reached
   it (`unwalked`; past home's cap, not indexed), or while a note in it waits to be parsed (`app.indexing`,

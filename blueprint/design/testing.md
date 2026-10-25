@@ -3,8 +3,10 @@
 `bun run test` runs the headless tests (`bun test --timeout 30000`), and `bun run check` adds the typecheck, the
 boundary, the supply chain's gates, Biome, the workflows' and the docs' checks ([repository.md](repository.md) § The
 check). CI runs them all on Linux and macOS (`.github/workflows/ci.yml`; [repository.md](repository.md) § CI).
-`bun run test:terminal` drives slipbox headless through a terminal, in parallel and in CI (TT-D2–TT-D6; below). A run's temporary
-files — the tests' vaults, the CLI's — go in one folder of its own, removed when it ends (`tests/setup.ts`, preloaded by `bunfig.toml`);
+`bun run test:terminal` drives slipbox headless through a terminal, in parallel and in CI (TT-D2–TT-D6; below). A run's
+temporary
+files — the tests' vaults, the CLI's — go in one folder of its own, removed when it ends (`tests/setup.ts`, preloaded by
+`bunfig.toml`);
 one that stopped short (`--bail`, a crash) is removed by the next run, its process gone.
 
 ## Strategy (`0.4`)
@@ -112,7 +114,8 @@ assertion is never deleted or loosened to make a test pass.
 **CI runs the suite on Linux and macOS** (GR-D9): for a pull request, the tests and the terminal checks its files
 reach (D239), the docs' tests only for one of the docs alone (D230), and a push to `dev` or `test` the same for its
 commits; every test and check in the full run, `ci` run by hand on `test` (`full`), which a commit needs before `main`
-takes it and a release builds it (D251). The scripts `bun run check` runs, split into jobs ([repository.md](repository.md)
+takes it and a release builds it (D251). The scripts `bun run check` runs, split into jobs
+([repository.md](repository.md)
 § CI). While working: your change's own tests and its feature's terminal check (`bun run test:terminal <its name>`),
 then `bun run test:changed` for what else it reaches — never the whole suite. A failure the full run finds is fixed
 by a pull request of its own, into `dev`.
@@ -246,10 +249,7 @@ key sent is handled and a frame painted after the last (a named key is one key, 
 paste one), then once nothing more is written for 40 ms. A check timed against the clock (an answer within two
 seconds while it indexes) says `alone` and runs by itself after the others, where it times slipbox, not the machine.
 
-
-
-A check that
-must hold slipbox mid-work has Bun preload a script of the tests' into slipbox's own process, not the CLI's
+A check that must hold slipbox mid-work has Bun preload a script of the tests' into slipbox's own process, not the CLI's
 (`preload`): the spelling checks of a dictionary still loading and of one that won't load preload
 `tests/terminal/spell-hold.ts`, which holds the spell checker's thread (`holdBuild`) until the check writes a file,
 and writes the hold's state to another; the export checks that act while an export's staging is cleared (the window

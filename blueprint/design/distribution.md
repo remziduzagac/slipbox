@@ -348,13 +348,36 @@ title and its first paragraph its description; the links between the docs become
 (`../manual/keys.md#leader` → `/slipbox/docs/manual/keys/#leader`), a link to a repository file outside `docs/` goes to
 it on GitHub, code is left as it is; each page's edit link opens its file in `docs/`. The screenshots are copied in, and
 the agent guide is also served as its Markdown (`/slipbox/docs/agent-guide.md`), for an agent to read. What's
-gathered isn't committed. The home (`site/src/content/docs/index.mdx`) is the site's own: the paths, the buttons, the
-agent prompt, the cards (DS-D3).
+gathered isn't committed. Compatibility page paths are declared as `legacy-page` comments in the same docs map.
+They are built and searchable but absent from the primary sidebar; `readLegacyPages` validates their path shape.
+`splitPage` keeps explicit earlier-section anchors in the body while skipping them when extracting a description.
+The home (`site/src/content/docs/index.mdx`) is the site's own: the paths, the buttons, the
+first-use sequence, workflow cards and lookup routes (DS-D3, DOCS-D2).
 
 **Built** by `bun run site` (the site's install, then `gather`, `astro build` under Bun, and
 `site/scripts/check-links.ts`, which fails on a link within the site to a page or heading that isn't there, or to a
 path on the domain outside it but the installer's files). CI's `site` job runs it on every change, inside the
 required `ci` check; `pages.yml` runs it and puts the site at `_site/docs/`.
+
+## Documentation structure
+
+The docs map orders Start here, Guides, Using slipbox, Reference, Help and project information, and For agents.
+Guides begin with Working with slipbox and the dedicated Reading and editing in slipbox walkthrough; the guide
+sequence follows DOCS-D2. Topic pages own explanations; references own exact lookup. Moved material has onward links,
+with earlier addresses and anchors retained by the compatibility fixture in `tests/fixtures/documentation/`.
+
+`tests/docs.test.ts` checks links, earlier anchors, complete command/key coverage, and that every screenshot recipe's
+picture is shown, the site home's included (or described by a placeholder until it is taken). `tests/site.test.ts`
+checks groups, guide order, map coverage including compatibility pages, and page metadata. The screenshots are taken
+from their recipes in `tests/terminal/shots/` once the text they illustrate is settled (DOCS-D3, DOCS-T2).
+
+### Keeping the tour and captures in step
+
+`examples/guide/slipbox-tour/` is the tour's sample vault, including its `.slipbox/` marker. The executable
+documentation
+test compares the guide setup's two notes and marker with this sample before running the agent write. A change to the
+tour's notes or steps updates that folder and its recipes in `tests/terminal/shots/<doc>.ts`. When changed text alters
+what a capture shows, retake it with `bun run shots <name>` and inspect the PNG before committing.
 
 ## Channels
 

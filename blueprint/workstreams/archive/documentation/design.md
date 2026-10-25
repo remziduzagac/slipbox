@@ -298,7 +298,8 @@ from their recipes in `tests/terminal/shots/` once the text they illustrate is s
 
 ## Keeping the tour and captures in step
 
-`examples/guide/slipbox-tour/` is the tour's sample vault, including its `.slipbox/` marker. The executable documentation
+`examples/guide/slipbox-tour/` is the tour's sample vault, including its `.slipbox/` marker. The executable
+documentation
 test compares the guide setup's two notes and marker with this sample before running the agent write. A change to the
 tour's notes or steps updates that folder and its recipes in `tests/terminal/shots/<doc>.ts`. When changed text alters
 what a capture shows, retake it with `bun run shots <name>` and inspect the PNG before committing.

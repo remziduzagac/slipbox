@@ -1,5 +1,5 @@
 ---
-status: review
+status: done
 assignee: Codex
 blocked_by: []
 created: "2026-10-19"
@@ -49,3 +49,5 @@ Implement the tree, guide order, focused topic/reference pages, compatibility na
 - 2026-10-19: final combined validation: 36 docs/site tests pass (243 assertions), typecheck and lint pass, and the
   site builds 38 pages with every internal link landing. Five key screenshot recipes were independently rerun and
   inspected. Sample/setup drift is caught by the test; the grammar correction changes no captured scene.
+
+- 2026-10-26: documentation merged and in use; task closed at consolidation.

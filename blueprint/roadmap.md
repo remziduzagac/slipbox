@@ -627,7 +627,8 @@ was added 2026-10-09 at the user's asking.*
 
 *Not a phase. Accepted 2026-10-13; started once #26, the lens's regression, is fixed.*
 
-- [x] **[Terminal tests, headless and by feature](workstreams/archive/terminal-tests/README.md)** (TT): the terminal tests on
+- [x] **[Terminal tests, headless and by feature](workstreams/archive/terminal-tests/README.md)** (TT): the terminal
+  tests on
   Bun's pseudo-terminal and a headless xterm, in parallel and in CI on Linux and macOS; one check per feature, tied to
   the reference set's cases, coverage checked; content from the sample folders only.
 
@@ -689,10 +690,11 @@ current requirements or product behavior. Start any resulting design change thro
 
 ## Documentation people can follow
 
-*Not a phase. Accepted 2026-10-19 (DOCS-D2); implementation and review in progress.*
+*Not a phase. Accepted 2026-10-19 (DOCS-D2); merged and in use; consolidated 2026-10-26.*
 
-- [ ] **[Documentation people can follow](workstreams/documentation/README.md)** (DOCS): implement and review the
-  agreed learning path, guides, topic pages and reference, then retake the screenshots for it (DOCS-T2).
+- [x] **[Documentation people can follow](workstreams/archive/documentation/README.md)** (DOCS): the agreed learning
+  path,
+  guides, topic pages, reference and screenshots (DOCS-T1, DOCS-T2).
 
 ## Later
 

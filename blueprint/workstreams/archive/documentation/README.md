@@ -1,5 +1,5 @@
 ---
-status: active
+status: consolidated
 created: "2026-10-18"
 ---
 
@@ -18,7 +18,9 @@ redesign; DOC is the archived original user-documentation workstream.
 - [decisions.md](decisions.md): the guide order, implementation and the image pass after it.
 
 The outline and implementation are agreed (DOCS-D2); the revised guide order and screenshot placeholders are recorded
-in decisions.md. The text and site are ready for review, and the screenshots are captured (DOCS-T2); parent
-consolidation remains a separate approval.
+in decisions.md. The text, site and screenshots are merged and in use (DOCS-T1, DOCS-T2).
 
 - [tasks/](tasks/README.md): implementation and its verification record.
+
+Consolidated 2026-10-26: requirements and design applied to the root and checked against the implementation.
+Decisions and task records remain here under their stable DOCS IDs.
