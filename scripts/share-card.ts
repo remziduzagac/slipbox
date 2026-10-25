@@ -18,8 +18,9 @@ export const CARD_FILE = join(ROOT, "assets", "share-card.png");
 export const LOGO_FILE = join(ROOT, "assets", "slipbox-logo-light.svg");
 export const SCREENSHOT_FILE = join(ROOT, "docs", "images", "readme-hero.png");
 
-const BACKGROUND = "#1b2130"; // the card's dark background
-const TEXT = "#c3c8d4";
+const BACKGROUND = "#1e2030"; // the card's dark background, Tokyo Night Moon's, as the logo's colours are
+const TEXT = "#c8d3f5";
+const FRAME = "#828bb8"; // the screenshot's edge: the logo's grey
 
 /** What a card is made from, as its text chunks record it. */
 export interface Made {
@@ -73,7 +74,7 @@ export function cardSvg(logo: string, screenshot: Uint8Array, line = SENTENCE): 
     text +
     `<clipPath id="shot"><rect x="${sx}" y="${sy}" width="${sw}" height="${sh}" rx="14"/></clipPath>` +
     `<image x="${sx}" y="${sy}" width="${sw.toFixed(2)}" height="${sh}" href="${href}" clip-path="url(#shot)"/>` +
-    `<rect x="${sx}" y="${sy}" width="${sw.toFixed(2)}" height="${sh}" rx="14" fill="none" stroke="#3a4256" stroke-width="2"/>` +
+    `<rect x="${sx}" y="${sy}" width="${sw.toFixed(2)}" height="${sh}" rx="14" fill="none" stroke="${FRAME}" stroke-width="2"/>` +
     "</svg>"
   );
 }
