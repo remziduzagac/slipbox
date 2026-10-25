@@ -462,9 +462,15 @@ describe("the supply chain's gates (14.10)", () => {
     // The release script: its tests, the runner's (which makes release builds of it), and the checks of upgrading, which
     // drive those builds, alone.
     expect(of("scripts/release.ts")).toMatchObject({
-      tests: ["tests/distribution.test.ts", "tests/release.test.ts", "tests/terminal-runner.test.ts"],
+      tests: [
+        "tests/distribution.test.ts",
+        "tests/release.test.ts",
+        "tests/skill-lifecycle.test.ts",
+        "tests/terminal-runner.test.ts",
+      ],
       checks: ["updates"],
     });
+    expect(of("src/core/skill-lifecycle.ts")).toMatchObject({ checks: ["updates"] });
     // The builds' record, which every check's session reads: every check.
     expect(of("tests/terminal/releases.ts")).toMatchObject({ checks: "all" });
     // The explorer's listings, every folder a level at a time and the facts its rows' marks read: those features' checks.

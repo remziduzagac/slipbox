@@ -230,6 +230,7 @@ latest release and the newest preview ([Previews](#previews)). The version you h
 go back to it.
 
 Upgrades automatically refresh recognized skills in the detected user locations, using the new binary's skill.
+The TUI's upgrade completion and restart messages retain the skill destinations and any refusals too.
 `slipbox upgrade --no-skill` skips this, as does `SLIPBOX_NO_SKILL=1`. A hand-written file whose frontmatter does not
 name it `slipbox`, or a linked destination, stays untouched. For a manually chosen location outside the detected
 folders, run `slipbox skill --install <folder>` again yourself.

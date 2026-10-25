@@ -177,6 +177,7 @@ describe("automatic agent skill lifecycle", () => {
   test("real CLI automatic mode reports installs and skip, rejects conflicting options, and uninstall honors --yes", () => {
     const home = fresh();
     mkdirSync(join(home, ".claude"));
+    expect(cli(home, ["help"]).stdout.toString()).toContain("[--no-skill]");
     const made = cli(home, ["skill", "--auto", "--json"]);
     expect(made.exitCode).toBe(0);
     expect(JSON.parse(made.stdout.toString()).data.reports.join()).toContain("created");

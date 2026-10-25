@@ -119,7 +119,9 @@ Codex home installs into `~/.agents/skills` as well. It preserves linked destina
 The installer, source installer and Homebrew post-install invoke automatic installation. Installer and source
 installer accept `--no-skill`; `SLIPBOX_NO_SKILL=1` skips automatic writes everywhere. Upgrades invoke the new binary's
 `skill --auto` after committing `current`, so its skill matches its commands; `upgrade --no-skill` skips this.
-Failures are reported without undoing the binary installation. `tests/skill-lifecycle.test.ts` exercises the lifecycle;
+Failures are reported without undoing the binary installation. TUI background completion and foreground restart
+messages retain skill reports, including destinations, refusals and skips. `tests/skill-lifecycle.test.ts` exercises
+the lifecycle;
 `tests/distribution.test.ts` checks the packed binary prints the source's file.
 
 CI does it on a tag `v<version>`. `.github/workflows/release.yml` checks first that the tag is the version's and that

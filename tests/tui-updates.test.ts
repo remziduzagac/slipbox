@@ -1022,3 +1022,35 @@ test("the bar keeps a checked upgrade after closing, clears skipped, installed a
   await h.app.updates.check();
   expect(h.app.updates.available).toBeNull();
 });
+
+test("background upgrades report agent skill destinations, refusals, skips and refresh failures", async () => {
+  for (const report of [
+    "updated agent skill: /agents/skills/slipbox/SKILL.md",
+    "left /agents/skills/slipbox/SKILL.md: linked destination",
+    "agent skills skipped (SLIPBOX_NO_SKILL=1)",
+    "agent skill refresh failed: could not run the new binary",
+  ]) {
+    const h = await harness();
+    withEnv(h, {
+      execPath: fakeSlipbox({
+        ok: true,
+        data: { status: "upgraded", from: "0.5.0", latest: "0.6.0", removed: [], skills: report },
+      }),
+    });
+    h.app.updates.upgradeBeside("0.6.0");
+    await h.app.updates.background!.done;
+    expect(h.app.messages.at(-1)?.text).toContain(":restart starts it");
+    expect(h.app.messages.at(-1)?.text).toContain(report);
+  }
+});
+
+test("a foreground upgrade keeps its skill report in the restart message", async () => {
+  const h = await harness();
+  withEnv(h);
+  await h.app.updates.restart();
+  const note = takeNote({ pid: process.pid, ppid: -1 })!;
+  note.upgrade = "0.6.0";
+  note.outcome = { ok: true, said: "slipbox upgraded\nleft /agents/skills/slipbox/SKILL.md: linked destination" };
+  expect(cameBack(note, "0.6.0").said.text).toContain("restarted: slipbox 0.6.0 (was 0.5.0)");
+  expect(cameBack(note, "0.6.0").said.text).toContain(note.outcome.said);
+});

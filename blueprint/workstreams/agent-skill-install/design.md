@@ -10,6 +10,8 @@ source installer call it after installing the command; Homebrew calls it in a `p
 the new
 binary after committing `current`, so its skill matches its commands, including upgrades started from the TUI.
 The skip flag is forwarded as an environment skip for child invocations. Skill failures are reported separately.
+Background TUI completion includes the skill report. Foreground hand-over retains it in the outcome and shows that
+outcome in the restarted window's message, so destinations and refusals survive the screen being replaced.
 Uninstall adds recognized skill files to its plan and checks them again before deleting only those files.
 
 Research, read 2026-10-25: [Codex skills](https://learn.chatgpt.com/docs/build-skills),
