@@ -6,6 +6,10 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 
 ## [Unreleased]
 
+- The top bar always shows the work count and running version. Open live task controls and recent outcomes with
+  `space b`, or full version and upgrade information with `space a`; a green arrow marks an available upgrade.
+
+
 ### Added
 
 - Markdown document HTML now renders with scoped formatting, aligned images, theme-aware picture alternatives,

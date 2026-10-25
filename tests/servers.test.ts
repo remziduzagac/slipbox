@@ -1075,6 +1075,62 @@ describe("the servers of open files (19.1)", () => {
     return root;
   };
 
+  test("startup work stops, restarts the same server and retains failures", async () => {
+    const root = project("background-controls");
+    const t = table({
+      fake: { name: "fake", command: launcher("fake-background"), args: ["--stdio"] },
+    });
+    const controls: { cancel: () => void; restart: () => void }[] = [];
+    const outcomes: { outcome?: string; error?: string }[] = [];
+    const e = events();
+    const m = new ServerManager({
+      table: () => t,
+      autoInstall: () => false,
+      problems: () => {},
+      message: () => {},
+      starting: (_label, cancel, restart) => {
+        controls.push({ cancel, restart });
+        e.heard();
+        return (outcome, error) => {
+          outcomes.push({ outcome, error });
+          e.heard();
+        };
+      },
+    });
+    try {
+      m.open(join(root, "one.fk"), 1, "ok\n");
+      await e.when(() => controls.length === 1);
+      controls[0]!.cancel();
+      controls[0]!.restart();
+      await e.when(() => outcomes.length === 2);
+      expect(controls).toHaveLength(2);
+      expect(outcomes.map((result) => result.outcome)).toEqual(["stopped", "done"]);
+      expect(m.list()[0]!.state).toBe("running");
+    } finally {
+      await m.stopAll();
+    }
+    const failed: { outcome?: string; error?: string }[] = [];
+    const bad = new ServerManager({
+      table: () =>
+        table({ fake: { name: "fake", command: launcher("fake-background-bad", "process.exit(3);\n"), args: [] } }),
+      autoInstall: () => false,
+      problems: () => {},
+      message: () => {},
+      starting: () => (outcome, error) => {
+        failed.push({ outcome, error });
+        e.heard();
+      },
+    });
+    try {
+      bad.open(join(root, "two.fk"), 1, "ok\n");
+      await e.when(() => failed.length > 0);
+      expect(failed[0]!.outcome).toBe("failed");
+      expect(failed[0]!.error).toBeTruthy();
+    } finally {
+      await bad.stopAll();
+    }
+  });
+
   describe("a server's limits as the manager has them: slipbox goes on, the server too, the user told", () => {
     const pulling = (name: string) =>
       table({ fake: { name: "fake", command: launcher(name, 'process.env.FAKE_PULL = "1";\n'), args: ["--stdio"] } });

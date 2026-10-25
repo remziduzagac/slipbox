@@ -23,7 +23,11 @@ import { mergeSettings, vscodeSettings, vscodeSettingsFile } from "./vscode.ts";
 
 export interface ManagerOptions {
   /** Track initialization; cancellation stops this server before it becomes ready. */
-  starting?: (label: string, cancel: () => void) => () => void;
+  starting?: (
+    label: string,
+    cancel: () => void,
+    restart: () => void,
+  ) => (outcome?: "done" | "stopped" | "failed", error?: string) => void;
   /** The servers and languages in effect (the config's over the built-in). */
   table: () => ServerTable;
   /** Yours alone — the built-in under your own config, no folder's: a server's settings in a root you
@@ -359,18 +363,39 @@ export class ServerManager {
 
   private async start(r: Running, found: Found | null): Promise<LanguageClient | null> {
     let cancelled = false;
-    const finished = this.o.starting?.(`Starting ${r.def.name}`, () => {
-      cancelled = true;
-      void r.client?.stop();
-    });
+    const finished = this.o.starting?.(
+      `Starting ${r.def.name}`,
+      () => {
+        cancelled = true;
+        void r.client?.stop();
+      },
+      () => {
+        void r.ready.then(() => {
+          if (this.closed || this.running.get(r.key) !== r) return;
+          this.running.delete(r.key);
+          const docs = [...this.docs.values()].filter((doc) => doc.servers.includes(r.key));
+          for (const doc of docs) {
+            this.docs.delete(doc.path);
+            this.open(doc.path, doc.version, doc.text);
+          }
+        });
+      },
+    );
+    let failure: string | undefined;
     try {
       let f = found;
       // slipbox's own install under an older lock (14.11): installed again first, when installing is on.
       if (f?.behind && r.def.npm && this.o.autoInstall()) f = null;
       if (!f) {
-        if (!(await this.install(r.def, found?.behind))) return null;
+        if (!(await this.install(r.def, found?.behind))) {
+          failure = "server installation failed";
+          return null;
+        }
         f = findServer(r.def, r.root);
-        if (!f) return null;
+        if (!f) {
+          failure = "server not found after installation";
+          return null;
+        }
       }
       if (cancelled || this.ending.signal.aborted) return null;
       const yours = this.o.userTable?.().servers[r.def.name] ?? r.def;
@@ -416,12 +441,13 @@ export class ServerManager {
           return null;
         }
       } catch (err) {
-        this.o.message("error", `${r.def.name}: ${(err as Error).message}`);
+        failure = (err as Error).message;
+        this.o.message("error", `${r.def.name}: ${failure}`);
         return null;
       }
       return client;
     } finally {
-      finished?.();
+      finished?.(cancelled ? "stopped" : failure ? "failed" : "done", failure);
     }
   }
 

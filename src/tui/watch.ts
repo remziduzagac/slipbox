@@ -28,12 +28,13 @@ import type { Graph } from "../core/graph.ts";
  */
 export function parseInSlices(
   graph: () => Graph,
-  opts: { stopped: () => boolean; slice?: (left: number) => void; done: () => void },
+  opts: { stopped: () => boolean; paused?: () => boolean; slice?: (left: number) => void; done: () => void },
 ): void {
   const elsewhere = new Set<string>();
   const failed = new Set<string>();
   const tick = () => {
     if (opts.stopped()) return;
+    if (opts.paused?.()) return void setTimeout(tick, 50);
     for (const f of graph().unparsedOver(BACKGROUND_PARSE)) {
       if (elsewhere.has(f.rel) || failed.has(f.rel)) continue;
       let text: string;
@@ -138,14 +139,29 @@ export class Watch {
     this.app.indexing = total;
     const t0 = this.app.now();
     let cancelled = false;
-    const finished = this.app.background.begin("Indexing", (quiet) => {
-      cancelled = true;
-      this.app.indexing = 0;
-      if (!quiet)
-        this.app.message("warn", "indexing cancelled: search and backlinks may be incomplete; :reindex tries again");
-    });
+    let paused = false;
+    const finished = this.app.background.begin(
+      "Indexing",
+      (quiet) => {
+        cancelled = true;
+        this.app.indexing = 0;
+        if (!quiet)
+          this.app.message("warn", "indexing cancelled: search and backlinks may be incomplete; :reindex tries again");
+      },
+      {
+        restart: () => {
+          void this.app.run("vault.reindex");
+          this.indexInBackground();
+        },
+        pause: (value) => {
+          paused = value;
+        },
+      },
+    );
+    finished.update(`Indexing 0/${total} files`);
     // This vault's graph as it is at each slice: switched to another, the pass goes on with that one's notes.
     parseInSlices(() => this.app.graph, {
+      paused: () => paused,
       stopped: () => {
         if (this.app.quitting || cancelled) {
           finished();
@@ -155,6 +171,7 @@ export class Watch {
       },
       slice: (left) => {
         this.app.indexing = left;
+        finished.update(`Indexing ${total - left}/${total} files`);
         if (left && total > 200) this.app.host.requestRender();
       },
       done: () => {

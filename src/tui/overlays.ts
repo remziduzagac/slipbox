@@ -77,6 +77,7 @@ export class Overlays {
     title: string;
     items: ListItem[];
     accept: (item: ListItem) => unknown;
+    key?: (key: string, item: ListItem | undefined) => boolean;
     move?: (item: ListItem) => void;
     cancel?: () => void;
     filterable?: boolean;
@@ -107,6 +108,7 @@ export class Overlays {
       scroll: 0,
       accept: opts.accept,
       submit: opts.submit,
+      key: opts.key,
       move: opts.move,
       cancel: opts.cancel,
       footer: opts.footer,
@@ -263,6 +265,7 @@ export class Overlays {
       if (o.replace && o.view) void R.refresh(this.app, o, o.view).finally(() => this.app.host.requestRender()); // the count of what enter would replace, as you type
       return;
     }
+    if (o.key?.(key, o.filtered[o.selected]?.item)) return;
     // A tree (the folder picker): ← folds, → unfolds; the selection stays on its item.
     if (o.fold && (key === "left" || key === "right")) {
       const cur = o.filtered[o.selected]?.item;

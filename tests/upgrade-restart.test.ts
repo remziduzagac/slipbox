@@ -210,6 +210,9 @@ describe("upgrade, against what's installed (UPG-T1)", () => {
     });
     expect(ls(join(data, "versions"))).toEqual(["1.0.0", "1.5.0", "2.0.0"]);
     // What's said keeps the one replaced, not the one running.
+    expect(JSON.parse(readFileSync(join(data, "versions", "2.0.0", "previous.json"), "utf8"))).toEqual({
+      version: "1.5.0",
+    });
     expect(upgradeSaid(r, "stable")).toBe("slipbox 1.0.0 → 2.0.0; 1.5.0 is kept, to go back to (0.8.0, 0.9.0 removed)");
   });
 

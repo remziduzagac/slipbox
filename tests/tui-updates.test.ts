@@ -373,6 +373,7 @@ describe("the update offer (UPG-T4)", () => {
     expect(h.app.updates.available).toBeNull();
     expect(existsSync(join(env.stateDir, `upgrade-${process.pid}.json`))).toBe(false);
     expect(h.app.updates.mine.has("0.6.0")).toBe(true);
+    expect(h.app.background.recent[0]!.outcome).toBe("done");
     // Failed: said, as an error.
     withEnv(h, { execPath: fakeSlipbox({ ok: false, error: { code: 1, message: "couldn't download it" } }) });
     h.app.updates.upgradeBeside("0.6.0");
@@ -381,6 +382,29 @@ describe("the update offer (UPG-T4)", () => {
       level: "error",
       text: "the upgrade to 0.6.0 failed: couldn't download it",
     });
+    expect(h.app.background.recent[0]).toMatchObject({ outcome: "failed", error: "couldn't download it" });
+  });
+
+  test("background upgrade work stops before commit and refuses Stop after current moves", async () => {
+    const { h } = await clocked(QUIET_MS);
+    const script = fakeSlipbox({ ok: true }, 0.2);
+    const env = withEnv(h, { execPath: script });
+    h.app.updates.upgradeBeside("0.6.0");
+    const first = [...h.app.background.tasks.keys()][0]!;
+    expect(h.app.background.rows().some((row) => row.label === "Restart")).toBe(false);
+    const pending = h.app.updates.background!.done;
+    await h.app.run(`background.cancel ${first}`);
+    await pending;
+    expect(h.app.background.recent[0]!.outcome).toBe("stopped");
+    h.app.updates.upgradeBeside("0.6.0");
+    const second = [...h.app.background.tasks.keys()][0]!;
+    const after = h.app.updates.background!.done;
+    symlinkSync("versions/0.6.0", join(env.data, "current"));
+    expect(h.app.background.rows().some((row) => row.label === "Stop")).toBe(false);
+    await h.app.run(`background.cancel ${second}`);
+    expect(h.app.background.tasks.has(second)).toBe(true);
+    await after;
+    expect(h.app.background.tasks.size).toBe(0);
   });
 
   test(":upgrade asks now, whatever the check says, and offers what it finds — a skipped one too; nothing newer, said; from source, nothing asked", async () => {

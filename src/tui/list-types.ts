@@ -17,6 +17,8 @@ export interface ListItem {
   /** A group heading: drawn dim and bold, never selected. With `rule`, the line under a heading;
    * with an empty label, the blank row before one. */
   header?: boolean;
+  /** An unselectable information row: preserve case and details, even without actions below it. */
+  informational?: boolean;
   rule?: boolean;
   /** A key that picks this item at once (a list that isn't filtered by typing): `l`, `k`… */
   hotkey?: string;
@@ -41,6 +43,7 @@ export interface ListOverlay {
   accept: (item: ListItem) => unknown;
   /** Enter with the raw input, before `accept`; return true when handled (exact `:` aliases). */
   submit?: (input: string) => boolean | Promise<boolean>;
+  key?: (key: string, item: ListItem | undefined) => boolean;
   move?: (item: ListItem) => void;
   cancel?: () => void;
   /** Show the selected item's `detail` in a footer line instead of beside its label. */

@@ -119,3 +119,16 @@ The status chip narrows the view to R/R·L/S, then vim mode to N/I/V/V-L, before
 window it says NORMAL. Removing a vault marker keeps the existing unsaved-note refusal: it rewrites links, rather
 than only switching vaults. A cancelled index warns of incomplete search and backlinks and names reindex as the retry.
 The upgrade item clears when skipped, installed or no longer newer; merely closing its offer keeps it.
+
+## MODIFIED design/tui.md § The top bar (#94, VB-D7)
+
+Previously: work was a spinner/count only while running, and upgrades alone showed a version at right (VB-D3).
+
+Always show the work count and running version; previews shorten to `x.y.z-P`. An available upgrade adds a green
+arrow in `upgrade_available`. Preserve narrowing. Work opens a live list by click, `space b` or palette, with task
+progress, elapsed seconds and supported Stop/Restart/Pause/Resume controls. Keep five recent outcomes plus older
+failures until dismissed, retaining no completed closures. Refresh elapsed time only while the list is open.
+
+About opens by version/arrow, `space a` or palette. Show full version/channel and the previous version from the
+current version's `previous.json`, recorded before the atomic upgrade commit. Show a newer release's notes address
+and Upgrade, or `howToUpgrade` for other installations. No rollback. Escape closes both popups.

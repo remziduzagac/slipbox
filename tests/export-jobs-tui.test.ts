@@ -281,3 +281,30 @@ test("Cancel export stops every export running, none written; with none running,
     ExportJob.prototype.prepare = previous;
   }
 });
+
+test("a real export restarted from background work stops the first and publishes its replacement", async () => {
+  const root = makeVault();
+  writeFileSync(join(root, "exported.md"), "# Export\n\nOne\n");
+  const h = await harness({ root, open: "exported.md" });
+  const target = join(root, "restarted.html");
+  const prepare = ExportJob.prototype.prepare;
+  let calls = 0;
+  ExportJob.prototype.prepare = function (request, options) {
+    if (++calls > 1) return prepare.call(this, request, options);
+    return new Promise((_resolve, reject) => {
+      options?.signal?.addEventListener("abort", () => reject(new Error("export cancelled")), { once: true });
+    });
+  };
+  try {
+    const pending = h.app.exporter.write(["exported.md"], formatFor("html")!, target);
+    const id = [...h.app.background.tasks.keys()][0]!;
+    await h.app.run(`background.restart ${id}`);
+    await pending;
+    for (let i = 0; i < 500 && h.app.background.tasks.size; i++) await Bun.sleep(10);
+    expect(calls).toBe(2);
+    expect(readFileSync(target, "utf8")).toContain("One");
+    expect(h.app.background.recent.map((task) => task.outcome)).toEqual(["done", "stopped"]);
+  } finally {
+    ExportJob.prototype.prepare = prepare;
+  }
+});

@@ -43,3 +43,12 @@ vaults, home folders marked as home's, and worktrees grouped under their reposit
   vaults releases buffers, parses and index. Unnamed vaults, home folders, grouping, recency and `/` filtering tested.
 - Each implementation updates user docs and CHANGELOG and retakes and inspects affected screenshots. Named commands
   cover user actions; focused tests and terminal checks exercise the changes. No full-suite run is required here.
+
+## MODIFIED: Permanent work and version (#94, VB-D7)
+
+Previously: right blocks appeared only for running work or an available upgrade.
+
+Show idle zero, active work count and running stable/short preview version. A theme role supplies the green upgrade
+arrow. Work has live progress/time, only supported controls, five recent outcomes and retained failures. About shows
+full version/channel, recorded predecessor and newer release notes/upgrade method. Both support click, leader key
+and palette entry. Unit and terminal checks exercise idle/busy, controls, outcomes, version states and narrowing.

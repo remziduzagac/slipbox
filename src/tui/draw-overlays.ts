@@ -656,6 +656,11 @@ export function drawList(
     const ry = listY + i;
     const { item, positions } = entry;
     if (item.header) {
+      if (item.informational) {
+        const text = sanitize(`${item.label}${item.detail ? ` · ${item.detail}` : ""}`);
+        drawText(c, x + 2, ry, truncate(text, w - 4), roleStyle(theme, item.role ?? "overlay_group", null));
+        continue;
+      }
       // Never a heading with nothing under it on screen.
       if (i > lastEntry) continue;
       if (item.rule) drawText(c, x + 2, ry, b.h.repeat(w - 4), roleStyle(theme, "overlay_dim", null), w - 4);
@@ -720,7 +725,8 @@ export function drawList(
     }
     if (hint) drawText(c, x + w - 2 - stringWidth(hint), ry, hint, { ...dim, bg: st.bg });
   }
-  if (!selectableCount) drawText(c, x + 2, listY, o.input ? "no matches" : "nothing here", dim);
+  if (!selectableCount && !o.filtered.some((entry) => entry.item.informational))
+    drawText(c, x + 2, listY, o.input ? "no matches" : "nothing here", dim);
   return { x, y, w, h, listY, rows };
 }
 

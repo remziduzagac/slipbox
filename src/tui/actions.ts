@@ -170,6 +170,11 @@ export function registerActions(app: App): void {
     "app.restart": (a) => void a.updates.restart(),
     "background.open": (a) => a.background.open(),
     "background.cancel": (a, id) => a.background.cancel(id),
+    "background.restart": (a, id) => a.background.restart(id),
+    "background.pause": (a, id) => a.background.pause(id),
+    "background.dismiss": (a, id) => a.background.dismiss(id),
+    "app.about": (a) => a.updates.about(),
+    "app.release_notes": (a) => a.updates.copyReleaseNotes(),
     "explorer.focus": (a) => {
       a.panels.switchLeftView("explorer");
       a.panels.showSidebar(true);

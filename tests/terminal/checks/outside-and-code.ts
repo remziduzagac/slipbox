@@ -193,12 +193,19 @@ export const OUTSIDE_AND_CODE: Check[] = [
       await format(s, "home.md", "html");
       await s.keys("enter");
       await s.until(() => hold(s) === "waiting", 15000, "export held before publication");
-      await s.ex("Background work");
-      await s.see("Background work — enter: cancel");
+      s.expect(/ 1 /.test(s.topBar()), "busy count shown without a spinner");
+      await leader(s, "b");
+      await s.see("Background work");
+      await s.see("Restart");
+      await s.see("Stop");
       await s.keys("enter");
       writeFileSync(join(s.dir, "hold-go"), "");
       await s.message("export cancelled", 15000);
-      await s.until(() => !/[◴◷◶◵]/.test(s.topBar()), 5000, "the finished task removed");
+      await s.see("Recent");
+      await s.see("stopped");
+      await s.keys("d");
+      await s.keys("escape");
+      await s.until(() => / 0 /.test(s.topBar()), 5000, "the stopped task no longer counted");
     },
   },
   {

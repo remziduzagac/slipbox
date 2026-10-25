@@ -3219,3 +3219,8 @@ Wide tables and code blocks to edit in place.
 - `vault.switch_stay` — Stay in this vault — `work/kestrel/docs/qa/render-torture.md`
 
 - `html.details_toggle` — Toggle HTML details — `notes/research/document-html.md`
+- `background.restart` — Restart background task — `work/kestrel/docs/qa/render-torture.md`
+- `background.pause` — Pause or resume background task — `work/kestrel/docs/qa/render-torture.md`
+- `background.dismiss` — Dismiss finished task — `work/kestrel/docs/qa/render-torture.md`
+- `app.about` — About slipbox — `notes/index.md`
+- `app.release_notes` — Copy release notes address — `notes/index.md`

@@ -28,6 +28,9 @@ export const INSTALL_COMMANDS: Record<string, Handler> = {
   // The installer's install only: one run from source, or put there another way, is said so.
   async upgrade(s) {
     if (!RELEASE) throw new CliError(FROM_SOURCE, EXIT.error);
+    const controller = new AbortController();
+    const stop = () => controller.abort();
+    process.on("SIGTERM", stop);
     try {
       const r = await upgradeTo({
         release: RELEASE,
@@ -36,12 +39,15 @@ export const INSTALL_COMMANDS: Record<string, Handler> = {
         execPath: process.execPath,
         env: has(s.args, "no-skill") ? { ...s.io.env, SLIPBOX_NO_SKILL: "1" } : s.io.env,
         check: has(s.args, "check"),
+        signal: controller.signal,
       });
       const human = `${upgradeSaid(r, readChannel(dataHome()))}\n${r.skills ? `${r.skills}\n` : ""}`;
       return { data: r, human };
     } catch (err) {
       if (err instanceof UpgradeError) throw new CliError(err.message, EXIT.error);
       throw err;
+    } finally {
+      process.off("SIGTERM", stop);
     }
   },
 

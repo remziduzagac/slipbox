@@ -7,8 +7,12 @@
 
 import { closeSync, existsSync, mkdirSync, openSync, readFileSync, realpathSync, rmSync, statSync } from "node:fs";
 import { join } from "node:path";
+import { VERSION } from "../version.ts";
+import { sanitize } from "../core/sanitize.ts";
+import { tagOf } from "../core/release.ts";
+import { readJson } from "../core/fsutil.ts";
 import { removeOlderThan } from "../core/fsutil.ts";
-import { type Channel, currentVersion, homebrewPrefix, type InstalledBy } from "../core/install.ts";
+import { type Channel, currentVersion, homebrewPrefix, type InstalledBy, howToUpgrade } from "../core/install.ts";
 import { type SessionState, sessionFrom } from "../core/position.ts";
 import type { ReleaseBuild } from "../core/release.ts";
 import { type RestartNote, writeNote } from "../core/restart.ts";
@@ -95,6 +99,52 @@ export class Updates {
 
   private get stateFile(): string {
     return join(this.env!.stateDir, "update.json");
+  }
+
+  releaseNotes(): string | null {
+    const env = this.env;
+    return this.available && env?.release
+      ? `${releasesBase(env.release.repo, env.env)}/tag/${tagOf(this.available)}`
+      : null;
+  }
+
+  copyReleaseNotes(): void {
+    const url = this.releaseNotes();
+    if (url) void this.app.copy(url, true, url);
+  }
+
+  about(): void {
+    const env = this.env;
+    const version = env?.version ?? VERSION;
+    const current = env?.by === "installer" ? currentVersion(env.data) : null;
+    const previous =
+      env && current
+        ? readJson<{ version?: unknown }>(join(env.data, "versions", current, "previous.json"), {}).version
+        : null;
+    const rows = [
+      { label: `slipbox ${sanitize(version)}`, header: true, data: "version" },
+      { label: `Channel: ${env?.channel ?? "stable"}`, header: true, data: "channel" },
+      {
+        label: `Previous version: ${typeof previous === "string" ? sanitize(previous) : "not recorded"}`,
+        header: true,
+        data: "previous",
+      },
+    ];
+    if (this.available) rows.push({ label: `Available: ${sanitize(this.available)}`, header: true, data: "available" });
+    const url = this.releaseNotes();
+    if (url) rows.push({ label: `Release notes: ${sanitize(url)}`, header: false, data: "app.release_notes" });
+    if (env?.release && env.by !== "installer")
+      rows.push({ label: sanitize(howToUpgrade(env.by, env.release.repo)), header: true, data: "method" });
+    else if (this.available && env?.by === "installer")
+      rows.push({ label: "Upgrade", header: false, data: "app.upgrade" });
+    this.app.overlays.openList({
+      title: "About slipbox",
+      items: rows.map((row) => (row.header ? { ...row, informational: true } : row)),
+      filterable: false,
+      accept: (item) => {
+        if (String(item.data).startsWith("app.")) return this.app.run(String(item.data));
+      },
+    });
   }
 
   /** A release build's: the daily check started, and every second what waits looked at, every ten what's underneath. */
@@ -415,15 +465,25 @@ export class Updates {
       return this.app.message("error", `the upgrade to ${version} couldn't start: ${(err as Error).message}`);
     }
     child.unref();
+    const before = currentVersion(env.data);
+    const finished = this.app.background.begin(`Downloading slipbox ${version}`, () => child.kill("SIGTERM"), {
+      canStop: () => currentVersion(env.data) === before,
+    });
     this.app.message("info", `upgrading to ${version}…`);
     const done = child.exited.then(
-      () => this.upgraded(version, file),
-      () => this.upgraded(version, file),
+      () => {
+        const error = this.upgraded(version, file);
+        finished(error ? "failed" : "done", error);
+      },
+      () => {
+        const error = this.upgraded(version, file);
+        finished("failed", error ?? "upgrade process failed");
+      },
     );
     this.background = { version, done };
   }
 
-  private upgraded(version: string, file: string): void {
+  private upgraded(version: string, file: string): string | undefined {
     this.background = null;
     let said: { ok?: boolean; data?: UpgradeResult; error?: { message?: string } } = {};
     try {
@@ -444,6 +504,7 @@ export class Updates {
     } else if (r) this.app.message("info", upgradeSaid(r, env.channel));
     else this.app.message("error", `the upgrade to ${version} failed: ${said.error?.message ?? "it said nothing"}`);
     this.app.host.requestRender();
+    return r ? undefined : (said.error?.message ?? "upgrade process failed");
   }
 
   private clearInstalled(version: string): void {
