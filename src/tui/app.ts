@@ -676,12 +676,12 @@ export class App {
     this.history.recentNotes = (loadSession(this.loc)?.recent_notes ?? []).slice(0, RECENT_NOTES_MAX);
     this.session.restoreUiOverrides();
     if (opts.themeName) this.ui.theme = opts.themeName; // an explicit theme beats a remembered one
+    this.settings.applyTheme();
     // A restart comes back with the window's own session, from its note, whatever restore_session says (UPG-D4).
     if (opts.restarted) this.message(opts.restarted.said.level, opts.restarted.said.text);
     const restored = opts.restarted?.session
       ? this.session.restoreFrom(opts.restarted.session)
       : !opts.open && this.config.ui.restore_session && this.session.restore();
-    this.settings.applyTheme();
     this.glyphs = this.settings.glyphSet(this.ui.glyphs);
     if (!restored) {
       const first = opts.open ?? this.defaultNote(this.homeFolder);

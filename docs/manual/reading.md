@@ -708,5 +708,6 @@ elements end at the fragment boundary. The original source stays available.
 
 Preformatted HTML containers also retain paragraphs recognized as Markdown between blank lines.
 Nested br elements remain hard line breaks inside preformatted content.
+Restoring a workspace reveals collapsed HTML content containing its saved reading position.
 
 [Exports](export.md) preserve HTML differently from READ.

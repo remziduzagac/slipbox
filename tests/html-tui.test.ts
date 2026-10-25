@@ -13,6 +13,34 @@ const content = (h: Awaited<ReturnType<typeof harness>>) =>
     .join("\n");
 
 describe("HTML in the TUI", () => {
+  test("restoring a workspace initializes the theme before revealing saved HTML positions", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "html.md"), source);
+    const first = await harness({ root, open: "html.md" });
+    try {
+      const v = first.app.view!;
+      first.app.placeAtLine(v, 7);
+      await first.app.run("theme.set tokyo-night-day");
+      v.topAnchor = { heading: null, headingIndex: 0, offset: 0, line: 7 };
+    } finally {
+      first.app.quit();
+    }
+    const restored = await harness({
+      root,
+      open: null,
+      config: (c) => {
+        c.ui.restore_session = true;
+      },
+    });
+    try {
+      expect(restored.app.view!.buf.source).toBe(source);
+      expect(restored.app.theme.kind).toBe("light");
+      expect(content(restored)).toContain("Body text");
+    } finally {
+      restored.app.quit();
+    }
+  });
+
   test("named disclosure command and Enter toggle, fragment navigation reveals hidden target", async () => {
     const root = makeVault();
     writeFileSync(join(root, "html.md"), source);
