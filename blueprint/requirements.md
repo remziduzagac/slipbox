@@ -67,6 +67,14 @@ between them, edit them, and hand their notes to agents, while agents read and c
 - A reading position survives a resize, and an agent's insert above it (D98). Notes open as buffers, shown in tabs,
   with one split (D141).
 
+- Completed Markdown lint findings are filtered only for presentation. `lint.follow_view = true` hides MD013 on
+  wrapped paragraphs, lists and quotes, table rows, and fenced code interiors when code wrapping is active.
+  Unknown block kinds and fence delimiters remain visible; `lint.ignore = []` names ignored rule IDs. Both are safe
+  in vault config. Problems explains hidden counts; `a` reveals all findings, including ignored rules, and toggles
+  back. Marks and status counts use visible findings (LC-D1, `3.21`).
+- `render.caption` selects bottom (default) or top for a standalone picture's box. One blank row separates caption
+  and drawable image, including its scrollbar; without a drawable image the box stands alone (LC-D2, `12.x`).
+
 How: design/rendering.md; design/tui.md § Screen layout, § Positions.
 
 ## Files beyond markdown, and code

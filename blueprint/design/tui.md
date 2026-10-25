@@ -2313,7 +2313,8 @@ produces one error message, `⚠ not watching` in the status line, and polling o
 
 ## The lint surface (plan `3.21`)
 
-[LC-D1](../workstreams/lint-and-captions/decisions.md) (#91) filters the presentation after the run, keeping every raw
+[LC-D1](../workstreams/archive/lint-and-captions/decisions.md) (#91) filters the presentation after the run, keeping
+every raw
 finding. `lint.follow_view = true` hides MD013 on paragraphs, lists and quotes when `ui.wrap` is on, table rows always,
 and fence interiors when wrapping is on and the active code-wrap setting is `wrap`. Other block kinds and fence
 delimiters keep their findings.

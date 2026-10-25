@@ -15,7 +15,7 @@ dropped and superseded ones in `archive/`. The roadmap gives their order.
 - Consolidated 2026-10-26: [RPT](archive/reporting-a-problem/README.md), reporting a problem.
 - Consolidated 2026-10-26: [UPG](archive/upgrade-restart/README.md), upgrading and restarting.
 - Consolidated 2026-10-26: [VB](archive/views-and-bars/README.md), views, modes, bars, vaults and workspaces.
-- Built, awaiting consolidation: [LC](lint-and-captions/README.md), lint visibility and caption placement.
+- Consolidated 2026-10-26: [LC](archive/lint-and-captions/README.md), lint visibility and caption placement.
 - Built, awaiting consolidation: [ASI](agent-skill-install/README.md), agent skill installation and maintenance.
 - Built, awaiting consolidation: [HTML](document-html/README.md), document HTML in Markdown.
 - Built, awaiting consolidation: [SEO](site-discovery/README.md), site discovery and agent-readable docs.

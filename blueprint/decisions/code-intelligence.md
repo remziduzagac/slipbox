@@ -15,7 +15,8 @@ embarrassing to add after someone else finds it.
 
 ## D160: slipbox runs your linter rather than shipping one (3.21, 2026-10-01)
 
-> **Amended by [LC-D1](../workstreams/lint-and-captions/decisions.md) (2026-10-25):** completed findings are filtered
+> **Amended by [LC-D1](../workstreams/archive/lint-and-captions/decisions.md) (2026-10-25):** completed findings are
+> filtered
 > for the configured view, with explicit ignored rules, hidden counts and a key to reveal all; the linter is unchanged.
 
 > **Amended by D163 (2026-10-01):** a project's linters without a language server join through the lint surface.

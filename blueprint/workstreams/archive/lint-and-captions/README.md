@@ -1,5 +1,5 @@
 ---
-status: active
+status: consolidated
 created: "2026-10-25"
 branch: feat/issue-91
 ---
@@ -15,3 +15,6 @@ The linter keeps its own rules; slipbox filters completed findings and explains 
 - [tasks/implementation.md](tasks/implementation.md): LC-T1, implementation and validation.
 
 Implementation and its matching root design updates are on this branch; review and consolidation remain.
+
+Consolidated 2026-10-26: requirements and design applied to the root and checked against the implementation.
+Decisions and task records remain here under their stable LC IDs.
