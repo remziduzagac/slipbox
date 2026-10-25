@@ -368,7 +368,8 @@ Order: `12.7` checked, then `12.10`, `12.11`, `12.15`, `12.16`, `12.17`.
   its link.
 - **12.5** Constraint: alt text plus path is the floor; a note never becomes unreadable (requirements.md
   § Constraints).
-- [x] **12.6** Sizing from cell pixel geometry: the text width, proportions kept, at most 12 rows.
+- [x] **12.6** Sizing from cell pixel geometry: fitted to the window above a floor, proportions kept; own-size toggle
+  and sideways scrolling (PIC-D1–PIC-D6, consolidated 2026-10-26).
 - [x] **12.7** Sent once, drawn as Kitty's Unicode placeholders: text that scrolls; sixel waits on scroll.
 - [x] **12.8** Scroll behaviour: a picture cut where it scrolls out of sight.
 - [x] **12.9** Decode cache keyed by path and mtime.
@@ -720,3 +721,5 @@ The design's deferred list was sorted 2026-10-07, and most of it now has IDs: Me
 checks with native servers, `19.23`. Diffs and git awareness are built (`5.11`, `5.13`, `5.14`, `20.21`), and the
 working tree's git is `26.x`. Tier 2 plugins are dropped (D36). Anything else under the
 design's community-plugin tier ([ideas.md](ideas.md)) gets an ID when it is scheduled.
+
+- [x] **[PIC](workstreams/archive/picture-sizes/README.md)**: consolidated into the root on 2026-10-26.

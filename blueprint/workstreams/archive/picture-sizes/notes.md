@@ -103,7 +103,8 @@ the code (file and line) before it was taken:
   - a drawing (Mermaid, maths) scrolled past its top was drawn at the text's left edge: its indent is its first row's
     (`draw-pane.ts`), so the first row is read, not the first shown;
   - a click on a drawing was taken for a picture's and said "no picture here": only pictures of a file are a click's;
-  - the lens's composed layout dropped `extent`, so wrapping off with the lens open the window couldn't reach an own-size
+  - the lens's composed layout dropped `extent`, so wrapping off with the lens open the window couldn't reach an
+    own-size
     picture's right edge (`live.ts`);
   - the lens reopened on the cursor's block whenever the pictures' key changed (a height, a toggle): now on its lines;
   - opening find took two rows from the window, so a picture fitted to its height was sized again and held back for a

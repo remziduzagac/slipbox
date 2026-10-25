@@ -285,7 +285,9 @@ horizontal bar: a `▄` track and thumb under the text (ascii `-` and `#`), draw
 wider than the window; the row stays reserved when it isn't, so the text doesn't jump. A side pane
 whose rows are wider than it scrolls sideways too: its rows are clipped instead of cut with `…`,
 and its last row holds the same `▄` bar (only while they overflow). A code block that scrolls sideways has its own
-`▄` bar on its last row, under its code (§ Code blocks that scroll). Every bar can be clicked and
+`▄` bar on its last row, under its code (§ Code blocks that scroll). A picture shown at its own size that is wider than
+its room has its own `▄` bar on the row under it
+(§ Pictures in a window). Every bar can be clicked and
 dragged; in a side pane that focuses the pane and pins its scroll, like the wheel. A horizontal
 wheel or trackpad scrolls a side pane sideways as it does the note.
 
@@ -334,9 +336,13 @@ once: the second click, landing in the note it opened, is swallowed.
 
 Notes open as buffers, shown in tabs, with one split (D141):
 
-- **Buffer:** one open file, with its source, parse, and layouts by width. Buffers are
-  internal: there is no buffer list. They're keyed by path, so a note deleted on disk keeps
-  its buffer.
+- **Buffer:** one open file, with its source, parse, and layouts by width — and, for a note that asks for a picture
+  (its own, or an embedded note's), by its window's room for pictures, its height, and the pictures it shows at their
+  own size (§ Pictures in a window), so two windows on one note each size its pictures for themselves. A block that
+  asks for a picture is kept in the block cache with what its pictures were sized for, and laid out again where that
+  differs; other blocks are kept as before, and a note that asks for none isn't laid out again when only its window's
+  height changes. Buffers are internal: there is no buffer list. They're keyed by path, so a note deleted on disk
+  keeps its buffer.
 - **View** (a window): a buffer plus its own cursor, top row, selection, find and history.
   Two windows may show one buffer.
 - **Tab:** one window, or two in a split, with an orientation (side by side, or stacked) and a ratio (the first window's
@@ -1539,6 +1545,69 @@ at its natural width with every line of code whole, and the whole window scrolls
 it never scrolls on its own then. `code_wrap = "wrap"` wraps each long line at the block's width, its rows after the
 first marked `↪`, as `slipbox render` always does. The code view's cells are the file, broken at their structure
 (code-view.md § What it looks like), not a code block.
+
+## Pictures in a window
+
+A note's picture is sized for the window it's in: fitted to it (rendering.md § Blocks and inlines), or at its own
+size by choice. What the window shows at its own size, and its pictures' rest, are kept by `tui/pictures.ts`; the
+sizes are worked out by `tui/images.ts`; the rows laid out by `core/layout/render.ts`; the drawing done by
+`tui/draw-pane.ts`, `tui/opentui.ts` and `tui/placeholders.ts`; the commands are `src/core/commands/motion.ts`'s,
+done in `tui/actions-view.ts`.
+
+- **What it's fitted to.** The window's room: its text columns less what's before the picture (a list's indent, a
+  quote's bar, an embed's frame) — with wrapping on, the layout's room for the block; with wrapping off, the
+  window's, not the note's natural width — and its rows less the picture's `▣` rows, however many its alt text
+  wraps to. Its rows are the window's as they are with find's row closed, so opening find doesn't size it again.
+- **At its own size.** A click on a picture — pressed on the cells it's drawn in, not the blank beside it, a quote's
+  bar or its scrollbar, and released without moving — puts the cursor on its first image row and shows it at its own
+  size;
+  another click fits it to the window again. The press is the picture's before the cursor is placed, and never
+  counts toward a double-click; like any click, it ends a selection and visual mode. The release finds the picture
+  by its file, should the note have been laid out again since the press. One that moves becomes a selection, as a
+  drag from those rows always did. A drawing slipbox made is no such picture: a click on it places the cursor. `z p`
+  (`picture.size`, PIC-D3) does the same from its `▣` line, which the cursor reaches as any row, and `tab` as a
+  link. A picture whose two sizes are one (it fits whole) stays as it is, and the message says so. With the lens
+  open, a click changes its size and leaves the cursor, and the lens, where they are: on the picture's line, the lens
+  would show its markdown instead. Where no pictures are drawn (a terminal that draws none, `[render] images =
+  "never"`), `z p` says so rather than where to go; on the `▣` line of a picture not drawn (not found, not
+  fetched), why; with the lens open or in source mode, where it acts. The `z` group's which-key line names `p`, `h`
+  and `l`.
+- **Scrolled sideways.** Wider than its room, it scrolls as a code block does (§ Code blocks that scroll), its frame
+  rows a block of their own — its `▣` rows aren't in it, but name it, so the cursor on them never moves its offset:
+  a sideways wheel or trackpad over it, or the wheel with `shift`, 6 columns a notch; its `▄` bar, on the row under
+  it, clicked or dragged; `z h` and `z l` (`picture.scroll_left`, `picture.scroll_right`, PIC-D3) a quarter of
+  its room a press, from its `▣` line. The sideways offset stays where it was left; cursor placement does not reset it.
+  Its rows are frame rows, blank under the picture: no `‹ ›` marks, nothing copied, nothing found.
+- **How long.** It's the window's, by the picture's file as found (an SVG's own file, not its rasterised PNG; a
+  picture on the internet by its address): kept while the window shows the note — scrolled away and back, the lens
+  opened and closed, an edit or an agent's write that moves it, a resize — and dropped when the window shows
+  another file, opened or gone to by its history, a code file or a source view included. It isn't saved in the
+  session; a window split off starts with its pictures fitted. The same file
+  twice in a note is at its own size in both places, each at its own (two Obsidian sizes, two sizes). Its sideways
+  offset is kept as a code block's (by its line and how many blocks start there), clamped as the window narrows.
+- **A window resized** fits its fitted pictures again; one at its own size stays so, its offset clamped, and once
+  it fits whole its bar goes — it's still at its own size should the window narrow again. Once a window has been
+  drawn, a change to its size that changes the size of a picture in sight holds its pictures back, whatever the
+  protocol, until the size has rested 120 ms, then draws them at the size it ended at: a separator dragged sends
+  Kitty each picture once. A resize that leaves every picture in sight its size (a panel opened beside a picture
+  bound by its width) holds nothing back, nor does a picture shown at another size by a click. The rest is the
+  window's own, beside the rest after quick scrolling, and checked before Kitty's placeholders, which never wait for
+  scrolling; for that rest, a step sideways is a picture's own offset or the window's, never a code block's.
+- **Wrapping off.** The window scrolls sideways as a whole (§ Screen layout). A picture is fitted to the window,
+  not to the note's natural width. One at its own size scrolls with the window, with no bar of its own: the
+  window's sideways extent reaches its right edge, the prose laid out as it was, and `z h` and `z l` then scroll the
+  window. Pictures are drawn, cropped, while the window is scrolled sideways, where they used to wait for its left
+  edge.
+- **The layout's key.** The window's own key, which places its cursor and top again, includes its pictures' key, so
+  a toggle that leaves the note's rows as many is still seen. The lens keeps the note's render around it while its
+  block is typed into; it's made again when the pictures' key changes, as when the width does.
+- **The cost.** With Kitty's placeholders, a picture is sent once per size: a resize sends it once, after resting;
+  shown at its own size, once; scrolled sideways, never. With sixel, a view's pictures are drawn again as it
+  scrolls, down, up or sideways, as before; each frame encodes the part that shows, at most the window's pixels —
+  more than a 12-row picture took, no more than a window's. Decoding doesn't change.
+- **Not pictures here:** drawings slipbox makes (Mermaid, maths, `12.16`, `12.17`) keep their sizing, at most 60
+  rows; a click on one does what it did.
+
 
 ## Configuration reload
 

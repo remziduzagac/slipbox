@@ -36,6 +36,10 @@ decoded pixels one to one, nothing is decoded again for a size, and Kitty's plac
 
 ## PIC-D3: A click, `z p`, and `z h` / `z l` for a picture alone (2026-10-24)
 
+> **Amended by #83 (2026-10-26):** a picture click places the cursor on its first image row, leaving the
+> caption link unfocused. With the lens open, the cursor and lens stay where they are. The shipped code and root
+> design retain this behavior; the earlier caption-line placement below is historical.
+
 **Decision:** A click on a picture (on its drawn cells, released without moving) puts the cursor on its `▣` line and
 toggles it between fitted and its own size; `z p` (`picture.size`) does the same from its `▣` line. Wider than its
 room, it scrolls sideways as a code block does — the wheel sideways or with `shift`, its bar — and `z h` / `z l`

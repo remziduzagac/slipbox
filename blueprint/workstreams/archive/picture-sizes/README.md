@@ -1,5 +1,5 @@
 ---
-status: complete
+status: consolidated
 created: "2026-10-24"
 branch: feat/issue-52
 ---
@@ -22,3 +22,6 @@ and the code blocks that scroll sideways (D233).
 
 Complete (2026-10-24): built, tested and reviewed in two rounds (notes.md), in pull request #61; waiting for the
 maintainer to confirm PIC-D1 to PIC-D6 and to consolidate it into the root's requirements and design.
+
+Consolidated 2026-10-26: requirements and design applied to the root and checked against the implementation.
+Decisions and task records remain here under their stable PIC IDs.

@@ -77,23 +77,42 @@ lines. Links render as their text; the URL follows as `<url>` when colour is off
 render as `▣ alt`, and alt text plus path stay the floor (12.x, D101): a picture alone in its paragraph, a local image
 file (PNG, JPEG, WebP, GIF), is drawn above its boxed `▣ alt` caption where the terminal draws images —
 Kitty graphics or sixel,
-as OpenTUI finds it asking, never blocks of colour (D126) — sized to the text width, its proportions kept, at most 12
-rows, from where its `▣ alt` text starts (past a list's bullet, a quote's bar); scrolled half out of sight, the part
-that shows. One embedded by name, `![[dal.png]]` (12.13, D103), is drawn the same, found as its link is (anywhere in the
+as OpenTUI finds it asking, never blocks of colour (D126) — fitted to its window (tui.md § Pictures in a window), from
+where its `▣ alt` text
+starts (past a list's bullet, a quote's bar, an embedded note's frame). Its own size is its pixels, or the size the
+note gives it (Obsidian's `|300`, `|240x180`, which may enlarge a smaller file, as before), proportions kept, then
+brought within the screen's decoding budget (below: one megapixel, 2,048 a side), which no picture on the screen
+exceeds, fitted or not. Fitted, it's drawn at one scale of that own size: at most 1, and at most what its room's
+columns allow; within that, what its window's height less its `▣` rows allows, but never less than the floor, the
+larger of what makes it 12 rows tall and what makes it 20 columns wide (PIC-D1, PIC-D2). So it's never larger than its
+own size or its room; in a window too short, or for a picture too tall and narrow, the floor wins and the picture is
+taller than the window, scrolled by as text is. Shown at its own size (a click, a key), it's at scale 1 whatever its
+room, as tall as it is; wider than its room, its frame rows scroll sideways on their own as a code block's do, and
+one more frame row under it holds its bar. Each of its rows — its `▣` rows, its frame rows, its bar — names the
+picture and which of its rows it is, so it's found whole from any of them; scrolled half out of sight, rows or
+columns, the part that shows. One embedded by name, `![[dal.png]]` (12.13, D103), is drawn the same, found as its link
+is (anywhere in the
 vault, the nearest of two; two tied, neither): Obsidian's `|300` its width in pixels, `|240x180` the box it fits in, its
 proportions kept. An SVG (12.15, D127) — by its name, or a picture fetched told by how it starts — is rasterised by
-resvg (WebAssembly) at the size it's drawn, from its own size, into the cache, and drawn as a PNG is; it fetches nothing
+resvg (WebAssembly) once, at its own size within the budget, into the cache, and drawn as a PNG is, scaled to its
+drawn size: resizing a window rasterises nothing again (PIC); it fetches nothing
 it links to. One in an embedded note (12.14) is found from where that note is — its path from its folder, its name from
 its place in its vault — and drawn inside its frame. Beside text, or where the terminal draws none (`[render] images =
-"never"` too): the caption box alone. Where the terminal speaks Kitty graphics, a picture is sent to it
-once (12.7, D102) —
-compressed, at the pixels it's drawn in, with a virtual placement of its cells — and drawn as Kitty's Unicode
-placeholders: each cell U+10EEEE in the picture's id's colour, its row and column as combining marks. They're text, so
-scrolling moves them and the terminal the picture with them: nothing is sent again, nothing waits. The last 48 are kept
-in the terminal; quitting lets them go. With sixel (OpenTUI's own picture path, which numbers pictures by the order
-they're drawn in and sends them again as that changes), a step of scrolling draws a view's pictures, but quick steps
-after it (a key held: within 120 ms of the last) don't, nor a wheel's from its first tick — their rows stay — and
-they're drawn once it rests. A picture on the internet (12.12) is fetched only as `[render] images_remote` says, in your
+"never"` too): the caption box alone. Where the terminal speaks Kitty graphics, a picture is sent to it once per size
+(12.7, D102) — compressed, at the
+pixels it's drawn in, with a virtual placement of its cells — and drawn as Kitty's Unicode placeholders: each cell
+U+10EEEE in the picture's id's colour, its row and column as combining marks. They're text, so scrolling moves them
+and the terminal the picture with them: nothing is sent again, nothing waits. The placement and the id are the
+picture's whole size; the part that shows is drawn as the cells of those rows and columns, so scrolled sideways a
+row's cells start at the column that shows, and nothing is sent either. Past 297 rows or columns, which the marks
+can't name, it takes OpenTUI's path. A window resized sizes its pictures again, each sent at its new size once the
+size has rested (tui.md § Pictures in a window). The last 48 are kept in the terminal; quitting lets them go. With
+sixel (OpenTUI's own picture path, which numbers pictures by the order they're drawn in and sends them again as that
+changes), a step of scrolling — down, up or sideways — draws a view's pictures, but quick steps after it (a key held:
+within 120 ms of the last) don't, nor a wheel's from its first tick — their rows stay — and they're drawn once it
+rests. OpenTUI's path is given the picture's whole size and the source rectangle of the part that shows, both its
+edges rounded from the cells', so a frame encodes no more of a picture than its window holds. A picture on the internet
+(12.12) is fetched only as `[render] images_remote` says, in your
 own config (DF-D1): `ask` (the default) — its link, until `enter` on it asks to fetch it, this once or from its site
 without asking (until slipbox quits); `show` — fetched as the note's laid out; `never` — neither fetched nor drawn,
 `enter` copying its address. Fetched (into the cache, a file per address: an image's content type, at most 20 MB, within
@@ -119,7 +138,8 @@ clears its queued jobs and retained images. CLI/export retain their explicit awa
 
 Math input is at most 32 KiB, SVG input 8 MiB, generated output 8 MiB, and each completed-job cache 16 MiB or 512
 entries. Native files are at most 20 MiB; inspection accepts dimensions up to 16,384 per side and 16 million pixels, as
-an SVG's size does on the screen. Screen decoding returns at most one million pixels, with sides no larger than 2,048;
+an SVG's size does on the screen. Screen decoding returns at most one million pixels, with sides no larger than 2,048 —
+the most of a picture the screen shows, fitted or at its own size (PIC-D2);
 the adapter retains the 24 such decoded images drawn last (96 MB of pixels), so the pictures on screen are never decoded
 again while they show. SVG rasterization targets at most four million pixels and width 4,096. These are application
 budgets, not an operating-system memory sandbox or native-fault containment.

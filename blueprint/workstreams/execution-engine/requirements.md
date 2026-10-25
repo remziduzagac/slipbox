@@ -289,7 +289,7 @@ Previously (exact parent text at local `9b3854c`; recheck before consolidation):
 | [D39–D40](../../decisions/roots-and-links.md) | Storage separation and one walk |
 | [VV design](../archive/vaults-and-view/design.md) | Home, explorer view, peek and proposed link permissions |
 | [GIT design](../archive/git-review/design.md) | Diff foundation, remote commands and remaining review work |
-| [TT](../terminal-tests/README.md) | Terminal coverage retained alongside engine tests |
+| [TT](../archive/terminal-tests/README.md) | Terminal coverage retained alongside engine tests |
 
 ### Relationship to existing work
 
@@ -386,7 +386,8 @@ response
 28. A task outlives its launch request's retry window; reconnect still inspects/cancels that same task until settlement
     and advertised expiry. Task expiry never deletes a caller-owned export or repeats its effects (ENG-R5, ENG-R16).
 29. Memory-edit-only clients observe disclosed autosave policy without gaining direct-save or policy-change authority.
-    Queued response timeout, running response timeout and execution deadline have distinct tested effects (ENG-R9, ENG-R14).
+    Queued response timeout, running response timeout and execution deadline have distinct tested effects (ENG-R9,
+    ENG-R14).
 30. Mixed-origin key continuations cannot become human-authorized actions. Session results/choices and events enforce
     the same resource access as snapshots/captures, including revocation before delivery (ENG-R9, ENG-R13).
 

@@ -55,8 +55,10 @@ between them, edit them, and hand their notes to agents, while agents read and c
   three buttons (Read, Lens, Source) of which one is selected and a click switches to another, and the outline's button
   where the rail doesn't have it. The breadcrumb and the header each hide on their own (HDR-D1, HDR-D2, HDR-D3).
 - An embedded note is drawn in place, read-only (D113). Pictures are drawn where the terminal can (asked of the
-  terminal, never read from `$TERM`, and never required), and Mermaid and maths in the terminal's own characters
-  first, as pictures by choice, in the theme's colours (D100, D126, D127).
+  terminal, never read from `$TERM`, and never required), sized to their window — its text width, their height
+  bounded by its — never larger than their own size, never shrunk past a floor; a click shows one at its own size,
+  scrolled sideways where it's wider than the window. Mermaid and maths are drawn in the terminal's own characters
+  first, as pictures by choice, in the theme's colours (D100, D126, D127, PIC-D1–PIC-D3).
 - A reading position survives a resize, and an agent's insert above it (D98). Notes open as buffers, shown in tabs,
   with one split (D141).
 
