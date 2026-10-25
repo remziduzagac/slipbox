@@ -37,9 +37,14 @@ export function rootPage(site: string, repository: string): string {
     tag("meta", { property: "og:description", content: DESCRIPTION }),
     tag("meta", { property: "og:url", content: docs }),
     tag("meta", { property: "og:site_name", content: "slipbox" }),
+    tag("link", {
+      rel: "icon",
+      href: "docs/slipbox-logomark-dark.svg",
+      type: "image/svg+xml",
+      media: "(prefers-color-scheme: light)",
+    }),
     ...headTags(docs).map((t) => tag(t.tag, t.attrs)),
     tag("meta", { name: "twitter:card", content: "summary_large_image" }),
-    tag("link", { rel: "icon", href: "docs/logo.svg", type: "image/svg+xml" }),
   ];
   const body =
     `<p>slipbox: ${escapeHtml(LINE)}. Read <a href="docs/">its documentation</a>, ` +

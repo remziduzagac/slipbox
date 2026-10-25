@@ -10,8 +10,8 @@
 //   - The screenshots are copied to public/images; the agent guide is served as Markdown too, for an agent to read,
 //     its links absolute.
 //   - llms.txt and llms-full.txt, the docs for agents (llms.ts), go to public/: the docs' root.
-//   - The logo is the README's (assets/logo.svg), copied to public/logo.svg: the site's logo and its favicon. The share
-//     card (assets/share-card.png, scripts/share-card.ts) is copied beside it: the picture a shared link shows.
+//   - The branding variants in assets/slipbox-*.svg are copied to public/: wordmarks for the themed header,
+//     logomarks for favicons. The share card (assets/share-card.png, scripts/share-card.ts) is copied beside them.
 
 import {
   copyFileSync,
@@ -223,9 +223,14 @@ function gather(): void {
   console.log(`gather: ${pages} pages in ${sidebar.length} groups, from ${relative(REPO, DOCS)}/`);
 }
 
-/** The README's logo (assets/logo.svg) into `publicDir`, as logo.svg: the site's logo and its favicon. */
+/** Copy the supplied logo, logomark and wordmark variants. Dark ink is for light backgrounds, and vice versa. */
 export function copyLogo(publicDir: string): void {
-  copyFileSync(join(REPO, "assets", "logo.svg"), join(publicDir, "logo.svg"));
+  for (const kind of ["logo", "logomark", "logotype"])
+    for (const ink of ["dark", "light"]) {
+      const file = `slipbox-${kind}-${ink}.svg`;
+      copyFileSync(join(REPO, "assets", file), join(publicDir, file));
+    }
+  rmSync(join(publicDir, "logo.svg"), { force: true }); // remove an earlier build's obsolete copy
 }
 
 /** The share card (assets/share-card.png) into `publicDir`, at the docs' root, where every page's `og:image` points. */

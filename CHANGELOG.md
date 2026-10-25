@@ -67,6 +67,9 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 
 ### Changed
 
+- New slipbox branding in the README, documentation header, favicons and shared-link card, with variants for light
+  and dark backgrounds.
+
 - slipbox describes itself by what you do with it: "Read, review and edit what your coding agent writes, in your
   terminal", in its README, its help, its package, its Homebrew formula and its docs, instead of "the terminal
   companion for coding agents".

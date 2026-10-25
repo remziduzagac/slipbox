@@ -1,5 +1,9 @@
-<p align="center"><img src="assets/logo.svg" alt="" width="96"></p>
-<h1 align="center">slipbox</h1>
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/slipbox-logo-light.svg">
+    <img alt="slipbox" src="assets/slipbox-logo-dark.svg" width="176">
+  </picture>
+</p>
 <p align="center">
   <a href="https://github.com/remziduzagac/slipbox/actions/workflows/ci.yml"><img
     src="https://github.com/remziduzagac/slipbox/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI status"></a>

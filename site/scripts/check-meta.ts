@@ -49,7 +49,9 @@ function missingTags(tags: { tag: string; attrs: Attrs }[], docs: string): strin
   for (const want of headTags(docs)) {
     const key = want.attrs.property ? "property" : want.attrs.name ? "name" : "rel";
     const value = want.tag === "link" ? "href" : "content";
-    const found = tags.find((t) => t.tag === want.tag && t.attrs[key] === want.attrs[key]);
+    const found = tags.find(
+      (t) => t.tag === want.tag && t.attrs[key] === want.attrs[key] && t.attrs.media === want.attrs.media,
+    );
     if (!found) missing.push(`no ${want.attrs[key]}`);
     else if (found.attrs[value] !== want.attrs[value])
       missing.push(`${want.attrs[key]} is "${found.attrs[value]}", not "${want.attrs[value]}"`);

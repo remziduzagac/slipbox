@@ -53,5 +53,14 @@ export function headTags(docs: string): HeadTag[] {
     meta("og:image:alt", CARD.alt),
     { tag: "meta", attrs: { name: "twitter:image:alt", content: CARD.alt } },
     { tag: "link", attrs: { rel: "describedby", href: new URL("llms.txt", docs).href } },
+    {
+      tag: "link",
+      attrs: {
+        rel: "icon",
+        type: "image/svg+xml",
+        href: new URL("slipbox-logomark-light.svg", docs).href,
+        media: "(prefers-color-scheme: dark)",
+      },
+    },
   ];
 }

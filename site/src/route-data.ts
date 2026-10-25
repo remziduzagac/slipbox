@@ -7,6 +7,8 @@ export const onRequest = defineRouteMiddleware((context) => {
   const route = context.locals.starlightRoute;
   const home = route.id === "";
   for (const tag of route.head) {
+    // Starlight appends this fallback after custom head tags; restrict it to light browser backgrounds.
+    if (tag.tag === "link" && tag.attrs?.rel === "shortcut icon") tag.attrs.media = "(prefers-color-scheme: light)";
     if (tag.tag === "title") tag.content = fullTitle(route.entry.data.title, home);
     else if (home && tag.tag === "meta" && tag.attrs?.property === "og:type") tag.attrs.content = "website";
   }

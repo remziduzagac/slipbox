@@ -35,7 +35,7 @@ import { AGENT_GUIDE, type LlmsPage, llmsFull, llmsTxt } from "../site/scripts/l
 import { rootPage } from "../site/scripts/root.ts";
 import { valueImportsOf } from "../scripts/check-boundary.ts";
 import { pngSize } from "../scripts/screenshot.ts";
-import { CARD_FILE, cardSvg, madeFrom, madeFromNow, textOf, withText, wrap } from "../scripts/share-card.ts";
+import { CARD_FILE, LOGO_FILE, cardSvg, madeFrom, madeFromNow, textOf, withText, wrap } from "../scripts/share-card.ts";
 
 const DOCS = join(import.meta.dir, "..", "docs");
 const noDirs = () => false;
@@ -189,20 +189,52 @@ describe("the docs' site: its pages gathered from docs/ (DS-D2)", () => {
 });
 
 describe("the docs' site: its logo", () => {
-  test("the README's: the gathering copies the logo the README shows, and the site's header and favicon use it", () => {
+  test("the README selects the full logo by background without a second handwritten name", () => {
+    const readme = readFileSync(join(import.meta.dir, "..", "README.md"), "utf8");
+    expect(readme).toContain('<source media="(prefers-color-scheme: dark)" srcset="assets/slipbox-logo-light.svg">');
+    expect(readme).toContain('<img alt="slipbox" src="assets/slipbox-logo-dark.svg" width="176">');
+    expect(readme).not.toContain('<h1 align="center">slipbox</h1>');
+  });
+
+  test("the site copies both ink variants, uses wordmarks for its header and marks for its favicons", () => {
     const top = join(import.meta.dir, "..");
-    const shown = /<img src="([^"]+\.svg)"/.exec(readFileSync(join(top, "README.md"), "utf8"))?.[1];
-    expect(shown).toBeDefined();
     const dir = mkdtempSync(join(tmpdir(), "slipbox-site-"));
     try {
+      writeFileSync(join(dir, "logo.svg"), "obsolete build output");
       copyLogo(dir);
-      expect(readFileSync(join(dir, "logo.svg"), "utf8")).toBe(readFileSync(join(top, shown!), "utf8"));
+      for (const kind of ["logo", "logomark", "logotype"])
+        for (const ink of ["dark", "light"]) {
+          const file = `slipbox-${kind}-${ink}.svg`;
+          const asset = readFileSync(join(top, "assets", file), "utf8");
+          expect(readFileSync(join(dir, file), "utf8")).toBe(asset);
+          expect(asset).not.toMatch(/<text\b/);
+        }
+      expect(existsSync(join(dir, "logo.svg"))).toBe(false);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
     const config = readFileSync(join(top, "site", "astro.config.mjs"), "utf8");
-    expect(config).toContain('logo: { src: "./public/logo.svg" }');
-    expect(config).toContain('favicon: "/logo.svg"');
+    expect(config).toContain('light: "./public/slipbox-logotype-dark.svg"');
+    expect(config).toContain('dark: "./public/slipbox-logotype-light.svg"');
+    expect(config).toContain("replacesTitle: true");
+    expect(config).toContain('favicon: "/slipbox-logomark-dark.svg"');
+    expect(headTags(DOCS_URL)).toContainEqual({
+      tag: "link",
+      attrs: {
+        rel: "icon",
+        type: "image/svg+xml",
+        href: `${DOCS_URL}slipbox-logomark-light.svg`,
+        media: "(prefers-color-scheme: dark)",
+      },
+    });
+    const root = rootPage("https://example.com/slipbox", "https://example.com/repo");
+    expect(root).toContain('href="docs/slipbox-logomark-dark.svg"');
+    expect(root).toContain('href="https://example.com/slipbox/docs/slipbox-logomark-light.svg"');
+    expect(
+      headOf(root)
+        .tags.filter((tag) => tag.attrs.rel === "icon")
+        .map((tag) => tag.attrs.media),
+    ).toEqual(["(prefers-color-scheme: light)", "(prefers-color-scheme: dark)"]);
   });
 });
 
@@ -308,11 +340,15 @@ describe("the docs' site: the share card (SEO-D4)", () => {
       "what your coding agent",
       "writes, in your terminal.",
     ]);
-    const svg = cardSvg('<svg width="512" height="512" viewBox="0 0 512 512"></svg>', card, "A <line> & more");
+    const logo = readFileSync(LOGO_FILE, "utf8");
+    expect(logo).toStartWith("<?xml");
+    const svg = cardSvg(logo, card, "A <line> & more");
     expect(svg).toContain(`width="${CARD.width}" height="${CARD.height}"`);
-    expect(svg).toContain(">slipbox</text>");
+    expect(svg).not.toContain(">slipbox</text>");
+    expect(svg).not.toContain("<?xml");
+    expect(svg).toContain('aria-label="slipbox"');
     expect(svg).toContain("A &lt;line&gt; &amp; more");
-    expect(svg).toContain('<svg x="64" y="112" width="104" height="104"');
+    expect(svg).toMatch(/<svg x="64" y="64"\s+width="256"\s+height="256"/);
     expect(svg).toContain('href="data:image/png;base64,');
   });
 
@@ -435,7 +471,15 @@ describe("the docs' site: the docs for agents (SEO-D5)", () => {
       });
       expect(run.stderr.toString()).toBe("");
       expect(run.exitCode).toBe(0);
-      for (const file of [AGENT_GUIDE, "llms.txt", "llms-full.txt", CARD.file, "logo.svg"])
+      for (const file of [
+        AGENT_GUIDE,
+        "llms.txt",
+        "llms-full.txt",
+        CARD.file,
+        "slipbox-logo-dark.svg",
+        "slipbox-logotype-light.svg",
+        "slipbox-logomark-dark.svg",
+      ])
         expect(existsSync(join(root, "site", "public", file)), file).toBe(true);
       expect(readFileSync(join(root, "site", "public", AGENT_GUIDE), "utf8")).toStartWith("# ");
     } finally {
@@ -489,6 +533,16 @@ describe("the docs' site: the build's check of what it tells search engines and 
   test("a site with everything: nothing to say", () => {
     expect(site()).toEqual([]);
     expect(rootProblems(ROOT)).toEqual([]);
+  });
+
+  test("the dark-background icon is checked independently of the fallback icon", () => {
+    expect(rootProblems(ROOT)).toEqual([]);
+    const missing = ROOT.replace(/<link [^>]*media="\(prefers-color-scheme: dark\)"[^>]*>/, "");
+    expect(rootProblems(missing)).toEqual(["the root's page: no icon"]);
+    const wrong = ROOT.replace("slipbox-logomark-light.svg", "slipbox-logomark-dark.svg");
+    expect(rootProblems(wrong)[0]).toContain(
+      'not "https://remziduzagac.github.io/slipbox/docs/slipbox-logomark-light.svg"',
+    );
   });
 
   test("each part missing is named: a page's tag or title, the card, either llms file, a page left out", () => {
