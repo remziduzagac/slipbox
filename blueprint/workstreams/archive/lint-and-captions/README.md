@@ -14,7 +14,7 @@ The linter keeps its own rules; slipbox filters completed findings and explains 
 - [decisions.md](decisions.md): LC-D1, amending D160.
 - [tasks/implementation.md](tasks/implementation.md): LC-T1, implementation and validation.
 
-Implementation and its matching root design updates are on this branch; review and consolidation remain.
+Implementation and review are complete; the matching root requirements and design include these changes.
 
 Consolidated 2026-10-26: requirements and design applied to the root and checked against the implementation.
 Decisions and task records remain here under their stable LC IDs.

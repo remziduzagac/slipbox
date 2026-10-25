@@ -75,7 +75,8 @@ the file's text (DF-D17): `a %%note%% b` reads `a b`, `oil %%note%%.` reads `oil
 leaves no row, and a comment over blank lines (§ Obsidian's highlights and comments) no rows. Rows keep their source
 lines. Links render as their text; the URL follows as `<url>` when colour is off or `render.show_urls` asks. Images
 render as `▣ alt`, and alt text plus path stay the floor (12.x, D101): a picture alone in its paragraph, a local image
-file (PNG, JPEG, WebP, GIF), is drawn above its boxed `▣ alt` caption where the terminal draws images —
+file (PNG, JPEG, WebP, GIF), is drawn with its boxed `▣ alt` caption (below by default, § Standalone picture captions)
+where images are drawn —
 Kitty graphics or sixel,
 as OpenTUI finds it asking, never blocks of colour (D126) — fitted to its window (tui.md § Pictures in a window), from
 where its `▣ alt` text

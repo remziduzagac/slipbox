@@ -7,7 +7,7 @@ branch: tui/issue-82
 # VB: Views and bars
 
 Views and vim modes told apart (#82), the top bar (#86, #94), and vaults and their workspaces (#85).
-Builds on consolidated HDR and WSP; changes are proposed here until implementation and consolidation.
+Builds on consolidated HDR and WSP; the deltas below record the implemented changes now applied to the root.
 Roadmap foundations: `3.1`, `3.3`, `4.13`, `4.14`, `17.10`, `21.10`, `24.2`.
 
 - [requirements.md](requirements.md): requirements deltas and acceptance criteria.

@@ -386,8 +386,7 @@ response
 28. A task outlives its launch request's retry window; reconnect still inspects/cancels that same task until settlement
     and advertised expiry. Task expiry never deletes a caller-owned export or repeats its effects (ENG-R5, ENG-R16).
 29. Memory-edit-only clients observe disclosed autosave policy without gaining direct-save or policy-change authority.
-    Queued response timeout, running response timeout and execution deadline have distinct tested effects (ENG-R9,
-    ENG-R14).
+    Queued response timeout, running response timeout and execution deadline have distinct tested effects (ENG-R9, ENG-R14).
 30. Mixed-origin key continuations cannot become human-authorized actions. Session results/choices and events enforce
     the same resource access as snapshots/captures, including revocation before delivery (ENG-R9, ENG-R13).
 

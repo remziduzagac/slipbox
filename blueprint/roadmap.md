@@ -7,7 +7,7 @@ Vaults and the explorer's view (VV) and reviewing, diffing and merging (GIT) are
 (2026-10-17), and in 0.4.0. Next: native Windows
 (`14.14`–`14.17`); and, open in ideas.md, the skill as an npx package for common harnesses and how agents and slipbox
 work together (§ Agent surface), and search's improvements (§ Search).
-Automatic installation and maintenance of the bundled skill (#50) is in
+Automatic installation and maintenance of the bundled skill (#50) is built and consolidated as
 [ASI](workstreams/archive/agent-skill-install/README.md), extending `14.4`, `14.7` and `14.8`.
 
 Each step's ID is the plan's stable item ID: cite it (`3.3`, `10.1`) rather than restating the work. Phases and
@@ -629,8 +629,8 @@ was added 2026-10-09 at the user's asking.*
 *Not a phase. Accepted 2026-10-13; started once #26, the lens's regression, is fixed.*
 
 - [x] **[Terminal tests, headless and by feature](workstreams/archive/terminal-tests/README.md)** (TT): the terminal
-  tests on
-  Bun's pseudo-terminal and a headless xterm, in parallel and in CI on Linux and macOS; one check per feature, tied to
+  tests on Bun's pseudo-terminal and a headless xterm, in parallel and in CI on Linux and macOS; one check per feature,
+  tied to
   the reference set's cases, coverage checked; content from the sample folders only.
 
 ## The documentation site
@@ -694,8 +694,20 @@ current requirements or product behavior. Start any resulting design change thro
 *Not a phase. Accepted 2026-10-19 (DOCS-D2); merged and in use; consolidated 2026-10-26.*
 
 - [x] **[Documentation people can follow](workstreams/archive/documentation/README.md)** (DOCS): the agreed learning
-  path,
+path,
   guides, topic pages, reference and screenshots (DOCS-T1, DOCS-T2).
+
+## Features consolidated 2026-10-26
+
+- [x] **[PIC](workstreams/archive/picture-sizes/README.md)**: consolidated into the root on 2026-10-26.
+- [x] **[RPT](workstreams/archive/reporting-a-problem/README.md)**: consolidated into the root on 2026-10-26.
+- [x] **[UPG](workstreams/archive/upgrade-restart/README.md)**: consolidated into the root on 2026-10-26.
+- [x] **[VB](workstreams/archive/views-and-bars/README.md)**: consolidated into the root on 2026-10-26.
+- [x] **[LC](workstreams/archive/lint-and-captions/README.md)**: consolidated into the root on 2026-10-26.
+- [x] **[ASI](workstreams/archive/agent-skill-install/README.md)**: consolidated into the root on 2026-10-26.
+- [x] **[HTML](workstreams/archive/document-html/README.md)**: consolidated into the root on 2026-10-26.
+- [x] **[SEO](workstreams/archive/site-discovery/README.md)**: consolidated into the root on 2026-10-26.
+- [x] **[CIW](workstreams/archive/ci-waits/README.md)**: consolidated into the root on 2026-10-26.
 
 ## CI waiting times left open (#65)
 
@@ -731,21 +743,3 @@ The design's deferred list was sorted 2026-10-07, and most of it now has IDs: Me
 checks with native servers, `19.23`. Diffs and git awareness are built (`5.11`, `5.13`, `5.14`, `20.21`), and the
 working tree's git is `26.x`. Tier 2 plugins are dropped (D36). Anything else under the
 design's community-plugin tier ([ideas.md](ideas.md)) gets an ID when it is scheduled.
-
-- [x] **[PIC](workstreams/archive/picture-sizes/README.md)**: consolidated into the root on 2026-10-26.
-
-- [x] **[RPT](workstreams/archive/reporting-a-problem/README.md)**: consolidated into the root on 2026-10-26.
-
-- [x] **[UPG](workstreams/archive/upgrade-restart/README.md)**: consolidated into the root on 2026-10-26.
-
-- [x] **[VB](workstreams/archive/views-and-bars/README.md)**: consolidated into the root on 2026-10-26.
-
-- [x] **[LC](workstreams/archive/lint-and-captions/README.md)**: consolidated into the root on 2026-10-26.
-
-- [x] **[ASI](workstreams/archive/agent-skill-install/README.md)**: consolidated into the root on 2026-10-26.
-
-- [x] **[HTML](workstreams/archive/document-html/README.md)**: consolidated into the root on 2026-10-26.
-
-- [x] **[SEO](workstreams/archive/site-discovery/README.md)**: consolidated into the root on 2026-10-26.
-
-- [x] **[CIW](workstreams/archive/ci-waits/README.md)**: consolidated into the root on 2026-10-26.

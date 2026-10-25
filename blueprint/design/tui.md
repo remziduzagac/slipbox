@@ -1789,12 +1789,12 @@ done in `tui/actions-view.ts`.
 
 - **What it's fitted to.** The window's room: its text columns less what's before the picture (a list's indent, a
   quote's bar, an embed's frame) — with wrapping on, the layout's room for the block; with wrapping off, the
-  window's, not the note's natural width — and its rows less the picture's `▣` rows, however many its alt text
-  wraps to. Its rows are the window's as they are with find's row closed, so opening find doesn't size it again.
+  window's, not the note's natural width — and its rows less the caption rows, however many its alt text
+  wraps to, and the one-row gap for a drawable picture (LC-T1). Its rows are the window's as they are with find's row
+  closed, so opening find doesn't size it again.
 - **At its own size.** A click on a picture — pressed on the cells it's drawn in, not the blank beside it, a quote's
   bar or its scrollbar, and released without moving — puts the cursor on its first image row and shows it at its own
-  size;
-  another click fits it to the window again. The press is the picture's before the cursor is placed, and never
+  size; another click fits it to the window again. The press is the picture's before the cursor is placed, and never
   counts toward a double-click; like any click, it ends a selection and visual mode. The release finds the picture
   by its file, should the note have been laid out again since the press. One that moves becomes a selection, as a
   drag from those rows always did. A drawing slipbox made is no such picture: a click on it places the cursor. `z p`

@@ -1,5 +1,5 @@
 ---
-synced_with: dev@71313f3
+synced_with: dev@7c2e3c6
 ---
 
 # slipbox blueprint

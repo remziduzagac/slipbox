@@ -20,8 +20,8 @@ and the code blocks that scroll sideways (D233).
 - [notes.md](notes.md): how it was discussed, the options weighed, Codex's critique.
 - [tasks/](tasks/README.md): the work, a task per file, all done.
 
-Complete (2026-10-24): built, tested and reviewed in two rounds (notes.md), in pull request #61; waiting for the
-maintainer to confirm PIC-D1 to PIC-D6 and to consolidate it into the root's requirements and design.
+Built, tested and reviewed in two rounds (notes.md), in pull request #61 on 2026-10-24. PIC-D3's dated amendment
+records #83's later cursor placement; the root retains that shipped behavior.
 
 Consolidated 2026-10-26: requirements and design applied to the root and checked against the implementation.
 Decisions and task records remain here under their stable PIC IDs.

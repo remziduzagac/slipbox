@@ -39,6 +39,7 @@ decoded pixels one to one, nothing is decoded again for a size, and Kitty's plac
 > **Amended by #83 (2026-10-26):** a picture click places the cursor on its first image row, leaving the
 > caption link unfocused. With the lens open, the cursor and lens stay where they are. The shipped code and root
 > design retain this behavior; the earlier caption-line placement below is historical.
+> The cursor placement may be revisited if it feels wrong in use.
 
 **Decision:** A click on a picture (on its drawn cells, released without moving) puts the cursor on its `▣` line and
 toggles it between fitted and its own size; `z p` (`picture.size`) does the same from its `▣` line. Wider than its

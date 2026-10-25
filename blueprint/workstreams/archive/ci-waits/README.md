@@ -14,8 +14,7 @@ passed. The issue's other items (the Linux jobs sharded, `CHECKS_FOR` mapping mo
 needs it, macOS after Linux, the slowest tests watched) are tasks for later, not done here.
 
 Complete for items 5 and 7, the scope the maintainer set (2026-10-24): CIW-T1 to CIW-T4 are done. CIW-T5 to CIW-T9,
-the issue's other items, stay open; at consolidation they're carried up, as root tasks or a workstream of their own,
-as the maintainer chooses.
+the issue's other items, stay open in [the root task list](../../../tasks/README.md#ci-waiting-times-left-open).
 
 - [requirements.md](requirements.md): its goals, what it builds on, its acceptance criteria, and its changes to the
   root's requirements.
