@@ -290,6 +290,8 @@ export interface UpgradeResult {
   replaced?: string;
   /** Versions removed, beyond the one replaced (kept). */
   removed: string[];
+  /** New binary's automatic skill report, separate from the binary upgrade result. */
+  skills?: string;
 }
 
 /** What's said when slipbox runs from source, where there are no releases: by `slipbox upgrade`, and `:upgrade`. */
@@ -516,7 +518,28 @@ export async function upgrade(opts: {
         result.removed.push(old);
       } catch {}
     }
-    return { status: "upgraded", ...result, ...(named && named !== opts.version ? { replaced: named } : {}) };
+    let skills: string;
+    try {
+      const child = Bun.spawn([here, "skill", "--auto"], {
+        env: opts.env ?? process.env,
+        stdin: "ignore",
+        stdout: "pipe",
+        stderr: "pipe",
+        timeout: 30_000,
+      });
+      const output = new Response(child.stdout).text();
+      const errors = new Response(child.stderr).text();
+      const code = await child.exited;
+      skills = code === 0 ? (await output).trim() : `agent skill refresh failed: ${(await errors).trim()}`;
+    } catch (err) {
+      skills = `agent skill refresh failed: ${(err as Error).message}`;
+    }
+    return {
+      status: "upgraded",
+      ...result,
+      ...(skills ? { skills } : {}),
+      ...(named && named !== opts.version ? { replaced: named } : {}),
+    };
   } finally {
     unlock();
   }

@@ -71,6 +71,8 @@ const BOOLEAN = new Set([
   "purge",
   "yes",
   "force",
+  "auto",
+  "no-skill",
 ]);
 
 export class UsageError extends Error {}

@@ -111,11 +111,16 @@ The skill for agents, `skills/slipbox/SKILL.md`, is built into the binary by Bun
 each release carries the skill that matches its commands (GR-D10). `slipbox skill` prints it; `slipbox skill
 --install <dir>` writes `<dir>/slipbox/SKILL.md` atomically, and run again with the same skill there, writes
 nothing. It writes over an earlier slipbox's skill (its front matter names it `slipbox`), never over another file,
-and never through a link — `~/.claude/skills/slipbox` linked to a checkout's `skills/slipbox` by
-`scripts/install-local.sh --skill`, whose file it would change — unless `--force`, which removes the link, never
-what it leads to, and writes in its place (exit 5 otherwise). The installer and Homebrew don't install it: where an
-agent reads skills is the user's to say. `tests/distribution.test.ts` checks the packed binary prints the source's
-file.
+and never through a link unless `--force`, which removes the link, never what it leads to, and writes in its place
+(exit 5 otherwise). `skill --auto` detects existing Claude Code and Codex user homes and performs the same safe
+installation in each skill folder (ASI-D1, ASI-D2). It honors `CLAUDE_CONFIG_DIR` and `CODEX_HOME`, and with the default
+Codex home installs into `~/.agents/skills` as well. It preserves linked destination ancestors too.
+
+The installer, source installer and Homebrew post-install invoke automatic installation. Installer and source
+installer accept `--no-skill`; `SLIPBOX_NO_SKILL=1` skips automatic writes everywhere. Upgrades invoke the new binary's
+`skill --auto` after committing `current`, so its skill matches its commands; `upgrade --no-skill` skips this.
+Failures are reported without undoing the binary installation. `tests/skill-lifecycle.test.ts` exercises the lifecycle;
+`tests/distribution.test.ts` checks the packed binary prints the source's file.
 
 CI does it on a tag `v<version>`. `.github/workflows/release.yml` checks first that the tag is the version's and that
 the changelog has its section, then calls `.github/workflows/build.yml`, the build it shares with previews (§ Previews),
@@ -163,7 +168,8 @@ SQLite is the runtime's own, through `node:sqlite` (D196). Bun implements it as 
 and Windows (3.53.2 in Bun 1.4.2), macOS's system one on macOS, so nothing native is packaged per platform for it,
 and a Linux build needs only the glibc Bun and OpenTUI need, 2.17. On macOS the SQLite is Apple's, older and of the
 OS's version: slipbox asks only FTS5 with `unicode61` (3.27 and up), `bm25`, WAL and a busy timeout, and loads no
-extension; CI runs the suite on macOS on every change, so Apple's runs them there (`14.13`; [repository.md](repository.md)
+extension; CI runs the suite on macOS on every change, so Apple's runs them there (`14.13`;
+[repository.md](repository.md)
 § CI). Both its databases, the search index and the parse cache, are caches, made again when they don't open.
 `core/sqlite.ts` keeps the calls slipbox makes (`get`, `all`, `run`, `pragma`, `transaction` with savepoints
 inside, `exec`, `close`); integers the schema needs are bound `CAST(? AS INTEGER)`, harmless whatever a binding
@@ -217,7 +223,8 @@ macOS's), the whole of it a function called on its last line, so a download cut 
    the same version is put back in place.
 5. **The PATH**: when the link's folder isn't on it, how to add it is said.
 
-Nothing runs as root and nothing outside those two places is touched. `SLIPBOX_RELEASES_URL` fetches the packs from
+Nothing runs as root. Besides those two places, installation touches only detected user agent skill folders.
+`SLIPBOX_RELEASES_URL` fetches the packs from
 elsewhere laid out as GitHub's releases are (`<base>/download/<tag>/<pack>`, the tag written into the installer with
 the version: `v<version>`, or a preview's) — a mirror, or the tests' folder through `file://` — and their sums are
 still the release's.
@@ -239,7 +246,9 @@ and Intel (Homebrew on Linux needs glibc; musl's packs aren't in it) — each it
 block asks for arm64 (`depends_on arch: :arm64`) and holds its one pack's address straight in it, so on an Intel Mac
 Homebrew loads the formula and refuses it, saying the arm64 architecture is required (D238), where a formula with no
 address there would fail to load. It installs the binary and puts its notices in Homebrew's `doc`; its test runs
-`slipbox --version`. Its licence is Apache-2.0 (GR-D3), named in the formula.
+`slipbox --version`. Its `post_install_steps` run invokes `skill --auto`, prints its report and tolerates failure.
+Homebrew-prefixed aliases preserve the skip and agent-home overrides through its environment filter; caveats give
+`slipbox skill --auto` for a sandbox refusal. Its licence is Apache-2.0 (GR-D3), named in the formula.
 
 It reaches people through a tap: `remziduzagac/homebrew-tap`, shared with herdsman (`brew install
 remziduzagac/tap/slipbox`, D228). `.github/workflows/homebrew.yml` copies the release's formula into the tap's
@@ -427,8 +436,10 @@ link, to file a report yourself.
 
 Each path is checked before it goes: the installer's link, or inside a folder named `slipbox` among slipbox's four.
 A link is removed as itself, never what it points at. Notes, and the `.slipbox/` folders in them, are never touched.
-The running binary can remove its own install: on macOS and Linux a running program's file can be unlinked. A skill
-`slipbox skill --install` wrote is left where it is.
+The running binary can remove its own install: on macOS and Linux a running program's file can be unlinked.
+Uninstall also lists recognized skill files in detected agent folders and removes them with `--yes` (ASI-D3),
+rechecking frontmatter ownership and destination links immediately before deletion. Foreign and linked skills are
+reported as left; only SKILL.md and an empty containing directory go. Manually chosen locations are not searched.
 
 ## Windows
 

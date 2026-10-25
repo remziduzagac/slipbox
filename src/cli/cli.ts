@@ -126,7 +126,7 @@ Usage:
   slipbox uninstall                 what the installer put here, listed; removed with --yes  [--purge: slipbox's folders too] [--yes]
   slipbox report                    what a bug report asks for (the version, how it was installed, the system, the
                                     terminal) and the bug form's address filled in with it; nothing sent
-  slipbox skill                     the skill for agents, this slipbox's: printed; written into <dir>/slipbox/ with --install
+  slipbox skill                     the skill for agents: printed; --auto detects agents; --install <dir> writes into <dir>/slipbox/
                                     [--install <dir>] [--force: over a file slipbox didn't write, or a link] [--dry-run]
   slipbox commands                  list named commands and their CLI equivalents
 
@@ -523,9 +523,9 @@ export const FLAGS: Record<string, string[]> = {
   changed: ["base"],
   "merge-review": ["into"],
   diff: ["base"],
-  upgrade: ["check"],
+  upgrade: ["check", "no-skill"],
   uninstall: ["purge", "yes"],
-  skill: ["install", "force", "dry-run"],
+  skill: ["install", "force", "dry-run", "auto"],
 };
 
 /**

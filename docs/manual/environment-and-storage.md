@@ -36,6 +36,12 @@ Some of them need a few more words:
 | Variable | What slipbox reads it for |
 | --- | --- |
 | `NO_COLOR` | When set, and not empty: no colour |
+| `HOMEBREW_SLIPBOX_NO_SKILL` | Homebrew-safe alias of `SLIPBOX_NO_SKILL` |
+| `HOMEBREW_SLIPBOX_CLAUDE_CONFIG_DIR` | Homebrew-safe alias of `CLAUDE_CONFIG_DIR` |
+| `HOMEBREW_SLIPBOX_CODEX_HOME` | Homebrew-safe alias of `CODEX_HOME` |
+| `SLIPBOX_NO_SKILL` | `1`: skip automatic agent skill installation and refresh |
+| `CLAUDE_CONFIG_DIR` | Existing Claude Code user configuration; absolute path, default `~/.claude` |
+| `CODEX_HOME` | Existing Codex user configuration; absolute path, default `~/.codex` |
 | `DO_NOT_TRACK` | When set, and not `0` or `false`: no update check (`:upgrade` still asks, when you ask) |
 | `XDG_CONFIG_HOME` | slipbox's config folder |
 | `XDG_CACHE_HOME` | slipbox's cache folder |

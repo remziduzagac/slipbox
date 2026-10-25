@@ -1,6 +1,7 @@
 // The CLI's commands for slipbox itself: the latest release installed (14.4), the channel it follows, what the
 // installer put here removed (14.8), and the skill for agents (GR-D10).
 
+import { automaticSkills } from "../core/skill-lifecycle.ts";
 import { resolve } from "node:path";
 import { dataHome } from "../core/paths.ts";
 import { tildePath } from "../core/names.ts";
@@ -33,10 +34,10 @@ export const INSTALL_COMMANDS: Record<string, Handler> = {
         version: VERSION,
         data: dataHome(),
         execPath: process.execPath,
-        env: s.io.env,
+        env: has(s.args, "no-skill") ? { ...s.io.env, SLIPBOX_NO_SKILL: "1" } : s.io.env,
         check: has(s.args, "check"),
       });
-      const human = `${upgradeSaid(r, readChannel(dataHome()))}\n`;
+      const human = `${upgradeSaid(r, readChannel(dataHome()))}\n${r.skills ? `${r.skills}\n` : ""}`;
       return { data: r, human };
     } catch (err) {
       if (err instanceof UpgradeError) throw new CliError(err.message, EXIT.error);
@@ -78,7 +79,7 @@ export const INSTALL_COMMANDS: Record<string, Handler> = {
   uninstall(s) {
     const purge = has(s.args, "purge");
     const yes = has(s.args, "yes");
-    const plan = uninstallPlan(purge, undefined, installedBy(process.execPath, dataHome(), VERSION));
+    const plan = uninstallPlan(purge, undefined, installedBy(process.execPath, dataHome(), VERSION), s.io.env);
     const failed = yes ? uninstall(plan) : [];
     const width = Math.max(0, ...[...plan.remove, ...plan.keep].map((i) => tildePath(i.path).length));
     const row = (i: { path: string; what: string }) => `  ${tildePath(i.path).padEnd(width)}  ${i.what}\n`;
@@ -109,6 +110,12 @@ export const INSTALL_COMMANDS: Record<string, Handler> = {
   // The skill for agents, built in (GR-D10): printed as this slipbox has it; with --install, written to
   // <dir>/slipbox/SKILL.md — never over a file slipbox didn't write, nor through a link, unless --force.
   skill(s) {
+    if (has(s.args, "auto")) {
+      if (["install", "force", "dry-run"].some((f) => has(s.args, f)))
+        throw new UsageError("--auto cannot be combined with --install, --force or --dry-run");
+      const result = automaticSkills(s.io.env);
+      return { data: result, human: `${result.reports.join("\n")}\n` };
+    }
     const dir = flag(s.args, "install");
     if (dir === undefined) {
       for (const f of ["force", "dry-run"])

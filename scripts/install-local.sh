@@ -4,8 +4,16 @@
 # keybindings can call it. Packaging proper is 14.x.
 #
 #   scripts/install-local.sh            # launcher into ~/.local/bin
-#   scripts/install-local.sh --skill    # also link the agent skill into ~/.claude/skills
+#   scripts/install-local.sh --no-skill # skip the automatic skill installation for detected agents
 set -euo pipefail
+
+for arg in "$@"; do
+  case "$arg" in
+    --no-skill) export SLIPBOX_NO_SKILL=1 ;;
+    --skill) ;; # compatibility: automatic now
+    *) echo "unknown argument: $arg" >&2; exit 1 ;;
+  esac
+done
 
 repo="$(cd "$(dirname "$0")/.." && pwd)"
 bin_dir="${SLIPBOX_BIN_DIR:-$HOME/.local/bin}"
@@ -39,13 +47,4 @@ case ":$PATH:" in
   *) echo "note: $bin_dir is not on PATH in this shell" ;;
 esac
 
-if [[ "${1:-}" == "--skill" ]]; then
-  dest="$HOME/.claude/skills/slipbox"
-  if [[ -e "$dest" && ! -L "$dest" ]]; then
-    echo "not touching $dest: it exists and is not a symlink" >&2
-    exit 1
-  fi
-  mkdir -p "$HOME/.claude/skills"
-  ln -sfn "$repo/skills/slipbox" "$dest"
-  echo "linked $dest -> $repo/skills/slipbox"
-fi
+"$launcher" skill --auto || echo "agent skill installation failed; the launcher is installed" >&2

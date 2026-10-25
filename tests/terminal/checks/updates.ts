@@ -127,6 +127,11 @@ export const UPDATES: Check[] = [
     options: INSTALLED,
     async run(s) {
       const r = builds();
+      // Automatic skill refresh runs in the new binary, including the foreground TUI upgrade path.
+      const agentHome = join(s.home, ".claude");
+      const skill = join(agentHome, "skills/slipbox/SKILL.md");
+      mkdirSync(dirname(skill), { recursive: true });
+      writeFileSync(skill, "---\nname: slipbox\ndescription: older\n---\nOld skill\n");
       await s.ex("vs");
       await open(s, "writing-guide");
       await offered(s, r);
@@ -143,6 +148,9 @@ export const UPDATES: Check[] = [
         s.expect(exe === join(DATA(s), "versions", r.new, "slipbox"), `the process runs ${exe}`);
       }
       s.expect(current(s) === r.new, `current names ${r.new}: ${current(s)}`);
+      const expected = Bun.spawnSync([r.newBin, "skill"], { env: s.env(), timeout: 30_000 });
+      s.expect(expected.exitCode === 0, "new binary prints its bundled skill");
+      s.expect(readFileSync(skill, "utf8") === expected.stdout.toString(), "upgrade refreshes the old agent skill");
       s.expect(s.rowOf(/home\.md.*writing-guide\.md/) >= 0, "both windows back, side by side");
       await s.status("writing-guide");
       // Restarted again, nothing to upgrade: the same version, where it was.

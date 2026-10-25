@@ -1770,12 +1770,13 @@ slipbox upgrade
 ```
 
 - `--check`: only say whether there's a newer one.
+- `--no-skill`: skip installing or refreshing agent skills after the upgrade. `SLIPBOX_NO_SKILL=1` does the same.
 
 Installed by Homebrew, it says that `brew upgrade slipbox` does it. Run from source, it says there are no releases to
 follow. Both are exit 1. The command line never checks for updates by itself ([Privacy](privacy.md)).
 
 With `--json`, the data is `{status, from, latest, removed[]}`. `status` is `upgraded`, `current`, `available`, or
-`installed`, with the version installed as `installed`.
+`installed`, with the version installed as `installed`. After an upgrade, `skills` holds the new binary's skill report.
 
 ### `channel`
 
@@ -1805,7 +1806,8 @@ With `--json`, the data is `{channel}`. With `set`, it's `{channel, previous}`.
 ### `uninstall`
 
 Lists what the installer put here (the `slipbox` link, the versions) and slipbox's own folders. It removes the
-installer's files only with `--yes`. Your notes, and the `.slipbox/` folders in them, are never touched.
+installer's files and recognized agent skills only with `--yes`. Your notes, and the `.slipbox/` folders in them, are
+never touched.
 
 ```bash
 slipbox uninstall
@@ -1829,14 +1831,18 @@ matches its commands. It prints the skill. With `--install`, it writes the skill
 
 ```bash
 slipbox skill
+slipbox skill --auto
 slipbox skill --install ~/.claude/skills
 ```
 
 - `--install <folder>`: write it to `<folder>/slipbox/SKILL.md`, making the folders it needs, and say where. Run again,
   it writes nothing, and says so. Over an earlier slipbox's skill, it writes this one.
+- `--auto`: install or refresh in detected Claude Code and Codex user skill locations
+  ([Installation](../guides/install.md)). Honors `SLIPBOX_NO_SKILL=1`, preserves foreign and linked files and reports
+  each destination. Cannot be combined with `--install`, `--force` or `--dry-run`. JSON data is `{reports[], skipped}`.
 - `--force`: write over a file slipbox didn't write, or in place of a link. A file slipbox didn't write is one whose
-  front matter doesn't name it `slipbox`. A link is, for example, the one `scripts/install-local.sh --skill` makes to
-  the source's skill. Without `--force`, both are refused (exit 5), and nothing is written. A link is removed, never
+  front matter doesn't name it `slipbox`. A link may come from an older source installation. Without `--force`, both are
+  refused (exit 5), and nothing is written. A link is removed, never
   written through. What it leads to stays as it is.
 - `--dry-run`: say what it would write, writing nothing. It refuses as the run would.
 
