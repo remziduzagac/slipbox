@@ -66,6 +66,15 @@ export const ACCEPTED: Accepted[] = [
       "is published (3.0.3 is the latest, 2026-10-13).",
     until: "2027-01-12",
   },
+  {
+    package: "markdown-it@15.0.1",
+    advisories: ["GHSA-vfgh-jcmw-g37q", "GHSA-gfr2-rv44-r23c", "GHSA-r7fv-28h4-cvq7"],
+    why:
+      "markdownlint-cli2's (0.23.3 pins it), a dev tool the docs check runs over the repository's own Markdown: " +
+      "the input is ours, the advisories are slow-input denial of service only, and it isn't in the binary. " +
+      "markdownlint-cli2 0.24.0 takes the fixed 15.0.3, published 2026-10-21: it's taken once it's a week old.",
+    until: "2026-10-29",
+  },
 ];
 
 /** The `--ignore` arguments for the advisories accepted on `today`; those past their date are `expired`. */
