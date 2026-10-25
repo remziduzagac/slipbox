@@ -19,9 +19,13 @@ export default defineConfig({
   integrations: [
     starlight({
       title: "slipbox",
-      // The README's logo, which the gathering copies here.
-      logo: { src: "./public/logo.svg" },
-      favicon: "/logo.svg",
+      // The compact wordmark follows the site's selected theme; its accessible title stays in Starlight.
+      logo: {
+        light: "./public/slipbox-logotype-dark.svg",
+        dark: "./public/slipbox-logotype-light.svg",
+        replacesTitle: true,
+      },
+      favicon: "/slipbox-logomark-dark.svg",
       description: DESCRIPTION,
       // The share card and the link to llms.txt on every page; each page's full title is src/route-data.ts' (SEO-D2).
       head: headTags(DOCS_URL),

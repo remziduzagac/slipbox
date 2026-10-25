@@ -15,11 +15,10 @@ import { pngSize, toPng } from "./screenshot.ts";
 
 const ROOT = resolve(import.meta.dir, "..");
 export const CARD_FILE = join(ROOT, "assets", "share-card.png");
-export const LOGO_FILE = join(ROOT, "assets", "logo.svg");
+export const LOGO_FILE = join(ROOT, "assets", "slipbox-logo-light.svg");
 export const SCREENSHOT_FILE = join(ROOT, "docs", "images", "readme-hero.png");
 
-const BACKGROUND = "#1b2130"; // the logo's
-const NAME = "#e8e6e1";
+const BACKGROUND = "#1b2130"; // the card's dark background
 const TEXT = "#c3c8d4";
 
 /** What a card is made from, as its text chunks record it. */
@@ -57,10 +56,12 @@ export function cardSvg(logo: string, screenshot: Uint8Array, line = SENTENCE): 
   const sw = (shot.width * sh) / shot.height;
   const sx = 560;
   const sy = (H - sh) / 2;
+  // Supplied SVGs include an XML declaration and decimal dimensions. Embed the complete outlined logo.
   const icon = logo
-    .replace(/^<svg\b/, '<svg x="64" y="112"')
-    .replace(/\swidth="\d+"/, ' width="104"')
-    .replace(/\sheight="\d+"/, ' height="104"');
+    .slice(logo.indexOf("<svg"))
+    .replace(/^<svg\b/, '<svg x="64" y="64"')
+    .replace(/\swidth="[^"]+"/, ' width="256"')
+    .replace(/\sheight="[^"]+"/, ' height="256"');
   const text = wrap(line, 25)
     .map((l, i) => `<text x="64" y="${384 + i * 46}" font-size="34" fill="${TEXT}">${escapeHtml(l)}</text>`)
     .join("");
@@ -69,7 +70,6 @@ export function cardSvg(logo: string, screenshot: Uint8Array, line = SENTENCE): 
     `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">` +
     `<rect width="100%" height="100%" fill="${BACKGROUND}"/>` +
     icon +
-    `<text x="64" y="304" font-size="84" font-weight="bold" fill="${NAME}">slipbox</text>` +
     text +
     `<clipPath id="shot"><rect x="${sx}" y="${sy}" width="${sw}" height="${sh}" rx="14"/></clipPath>` +
     `<image x="${sx}" y="${sy}" width="${sw.toFixed(2)}" height="${sh}" href="${href}" clip-path="url(#shot)"/>` +
