@@ -32,6 +32,8 @@ Retire `space u b` and `ui.top_bar`, reading the latter with one notice. Remove 
 line. Reason: location and pending work need a stable, discoverable place.
 Source: issue #86; amends WSP-D4 and WSP-D5. Preserve their entries and add dated amendments at consolidation.
 
+Amended 2026-10-25 by VB-D7 (#94): permanent work count and running version replace the conditional spinner blocks.
+
 ## VB-D4: Switching vaults asks and releases content (#85)
 
 A workspace belongs to a vault; switching vault switches workspace. Unsaved notes offer save all and go, discard
@@ -56,3 +58,16 @@ pointer names and default copies.
 Agreed 2026-10-25. Show the vault's name in the workspace item, with its branch in the adjacent git item:
 `◈ kestrel │ ⎇ main`. The branch is said once. Home folders keep their folder name, and home's top keeps `~`.
 This changes only the label: workspaces still belong to their vault, with one per branch in a git checkout.
+
+## VB-D7: Permanent work count and version, with live popups (#94)
+
+Agreed 2026-10-25; amends VB-D3's conditional right blocks and spinner. Show zero dim, active work bright, and the
+running version always, previews shortened to `x.y.z-P`. A newer version adds a green arrow in its own theme role.
+Keep the existing narrowing order. Reason: idle work and the running build need a discoverable place too.
+
+Work opens by count, `space b` or palette. Show progress, elapsed time and supported named controls: indexing can
+stop, restart and pause; exports, fetches and server startup stop and restart; downloading upgrades stop until
+`current` moves. Keep five recent outcomes plus failures until dismissed, without retaining completed closures.
+About opens by version or arrow, `space a` or palette. Show full version/channel, the replaced version when recorded,
+and newer release notes plus Upgrade or the package manager's instruction. Record the replaced version beside the
+new binary before the atomic current move; it never provides rollback. Source: issue #94; extends `3.1` and `14.4`.

@@ -231,6 +231,8 @@ export const DEFAULT_KEYS: Record<string, string> = {
   "ctrl+shift+p": "palette.open",
   "leader f p": "palette.open",
   // ui
+  "leader b": "background.open",
+  "leader a": "app.about",
   "leader u u": "ui.list",
   "leader u t": "theme.pick",
   "leader u g": "glyphs.pick",

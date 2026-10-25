@@ -449,7 +449,8 @@ export function drawWhichKey(app: App, c: Canvas, top: number, bottom: number, g
       .join(" ");
   const GAP = 4;
   const maxW = Math.min(c.width - 8, 140);
-  const layoutFor = (n: number) => {
+  const room = bottom - top - 2; // the margin above and below
+  const layoutFor = (n: number, compact = false) => {
     const perCol = Math.ceil(entries.length / n);
     const widths: { key: number; text: number }[] = [];
     for (let k = 0; k < n; k++) {
@@ -461,8 +462,16 @@ export function drawWhichKey(app: App, c: Canvas, top: number, bottom: number, g
       });
     }
     // Inside the borders: a column of padding each side, the columns, gaps between them.
-    const total = widths.reduce((a, w) => a + w.key + 1 + w.text, 0) + (widths.length - 1) * GAP + 4;
-    return { perCol, widths, total };
+    const size = () => widths.reduce((a, w) => a + w.key + 1 + w.text, 0) + (widths.length - 1) * GAP + 4;
+    // Shorten the widest text columns before losing explanations to an extra row of entries.
+    // Keep twenty text cells where available; narrower screens use fewer columns as before.
+    if (compact)
+      while (size() > maxW) {
+        const widest = widths.reduce((a, b) => (b.text > a.text ? b : a));
+        if (widest.text <= 20) break;
+        widest.text--;
+      }
+    return { perCol, widths, total: size() };
   };
   let plan = layoutFor(1);
   for (const n of [3, 2]) {
@@ -472,8 +481,15 @@ export function drawWhichKey(app: App, c: Canvas, top: number, bottom: number, g
       break;
     }
   }
+  if (entries.some((e) => e.desc) && plan.perCol * 2 + 2 > room)
+    for (const n of [3, 2]) {
+      const compact = layoutFor(n, true);
+      if (compact.total <= maxW && compact.perCol * 2 + 2 <= room) {
+        plan = compact;
+        break;
+      }
+    }
   const rows = plan.perCol;
-  const room = bottom - top - 2; // the margin above and below
   if (room < 3) return; // no room for even a box with one row
   // Inside the borders, a blank row above and below the entries.
   const withDesc = entries.some((e) => e.desc) && rows * 2 + 2 <= room;
@@ -656,6 +672,11 @@ export function drawList(
     const ry = listY + i;
     const { item, positions } = entry;
     if (item.header) {
+      if (item.informational) {
+        const text = sanitize(`${item.label}${item.detail ? ` · ${item.detail}` : ""}`);
+        drawText(c, x + 2, ry, truncate(text, w - 4), roleStyle(theme, item.role ?? "overlay_group", null));
+        continue;
+      }
       // Never a heading with nothing under it on screen.
       if (i > lastEntry) continue;
       if (item.rule) drawText(c, x + 2, ry, b.h.repeat(w - 4), roleStyle(theme, "overlay_dim", null), w - 4);
@@ -720,7 +741,8 @@ export function drawList(
     }
     if (hint) drawText(c, x + w - 2 - stringWidth(hint), ry, hint, { ...dim, bg: st.bg });
   }
-  if (!selectableCount) drawText(c, x + 2, listY, o.input ? "no matches" : "nothing here", dim);
+  if (!selectableCount && !o.filtered.some((entry) => entry.item.informational))
+    drawText(c, x + 2, listY, o.input ? "no matches" : "nothing here", dim);
   return { x, y, w, h, listY, rows };
 }
 

@@ -104,17 +104,21 @@ describe("permanent location bar (VB-T2)", () => {
       cancelled = true;
     });
     const other = h.app.background.begin("Git fetch", () => {});
-    expect(topRow(h.frame())).toMatch(/[◴◷◶◵] 2/);
+    expect(topRow(h.frame())).toContain(" 2 ");
     click(h, "top:work");
-    expect((h.app.overlay as ListOverlay).items.map((i) => i.label)).toEqual(["Export document", "Git fetch"]);
+    expect((h.app.overlay as ListOverlay).items.filter((i) => i.header).map((i) => i.label)).toEqual([
+      "Export document",
+      "Git fetch",
+    ]);
     await h.keys("enter");
     expect(cancelled).toBe(true);
     expect(h.app.background.tasks.size).toBe(1);
     done();
     other();
-    expect(hot(h, "top:work")).toBeUndefined();
+    await h.keys("escape");
+    expect(hot(h, "top:work")).toBeDefined();
     h.app.updates.available = "0.5.2";
-    expect(topRow(h.frame())).toContain("⇡ 0.5.2");
+    expect(topRow(h.frame())).toContain("↑");
     await h.keys("escape");
     expect(hot(h, "top:upgrade")).toBeDefined();
   });
@@ -148,7 +152,7 @@ test("a real index job cancelled from the list warns and can resume", async () =
   expect(pending).toBeGreaterThan(1);
   h.app.watch.indexInBackground();
   await h.app.run("background.open");
-  expect((h.app.overlay as ListOverlay).items.some((item) => item.label === "Indexing")).toBe(true);
+  expect((h.app.overlay as ListOverlay).items.some((item) => item.label.startsWith("Indexing"))).toBe(true);
   await h.keys("enter");
   await h.app.watch.whenIndexed();
   expect(h.app.background.tasks.size).toBe(0);

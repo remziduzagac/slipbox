@@ -120,6 +120,27 @@ const restart = (s: Session) => s.ex("restart");
 
 export const UPDATES: Check[] = [
   {
+    area: "navigating",
+    name: "updates: About shows a newer release, copies its notes address and offers Upgrade",
+    releases: true,
+    covers: { cases: ["ui"], commands: ["app.about", "app.release_notes", "app.upgrade"] },
+    options: { ...INSTALLED, config: "[update]\ncheck = false\n" },
+    run: async (s) => {
+      const r = builds();
+      await s.ex("upgrade");
+      await s.see(`slipbox ${r.new} is out`);
+      await sleep(PAST_THE_DROP);
+      await s.keys("escape");
+      await s.keys("space", "a");
+      await s.see("About slipbox");
+      await s.see(`slipbox ${r.old}`);
+      await s.see(`Available: ${r.new}`);
+      await s.see("Upgrade");
+      await s.keys("enter");
+      await s.until(() => s.clipboard().endsWith(`/tag/v${r.new}`), 5000, "release notes copied");
+    },
+  },
+  {
     area: "outside-and-code",
     name: "updates: the offer once quiet; Upgrade and restart starts the new version in this process, its windows as they were",
     covers: { commands: ["app.restart"] },

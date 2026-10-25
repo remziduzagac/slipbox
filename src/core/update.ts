@@ -504,6 +504,7 @@ export async function upgrade(opts: {
     // The last look for a cancel: after it, `current` moves and the upgrade is done.
     if (signal?.aborted) throw new UpgradeCancelled();
     // `current` moved in one step: a link made beside it, renamed over it.
+    writeJson(join(versions, v, "previous.json"), { version: before });
     const next = join(opts.data, `current.${process.pid}`);
     rmSync(next, { force: true });
     symlinkSync(`versions/${v}`, next);

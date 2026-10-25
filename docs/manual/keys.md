@@ -956,6 +956,8 @@ Your configuration's [`[aliases]`](configuration.md) adds more commands, or rena
 | `:wq`, `:x`, `:wqa`, `:xa` | save every changed note and quit |
 | `:q!` | quit without saving |
 | `:restart` | start slipbox again, as the newest version installed, where you are; asks first about unsaved notes |
+| `space b` | background work, live controls and recent outcomes |
+| `space a` | About slipbox: full version, channel and upgrade information |
 | `:upgrade` | ask now whether a newer slipbox is out, and offer it |
 | `:e <note>`, `:open <note>` | open a note, or any text file here, by its path |
 | `:vs [note]` / `:sp [note]` | split side by side / stacked, the note in the new window |
@@ -1089,6 +1091,8 @@ it back to the terminal.
 | `ℹ` on the right rail | shows Info, focused, or hides it |
 | `▤` on the right rail (without it, on the window header or the top bar) | shows the outline, focused, or hides it |
 | `¹` on the right rail | shows the footnotes, focused, or hides them |
+| the top bar's work count | opens background work; `s` stops, `r` restarts, `p` pauses or resumes |
+| the top bar's version or upgrade arrow | opens About slipbox |
 | the top bar's `slipbox` | opens the command palette |
 | a window header's `Read` / `Lens` / `Source` | shows it rendered, in the lens or as written; one in italics, why not |
 | the top bar's vault | lists the named folders, and `enter` goes into one |

@@ -156,6 +156,7 @@ export const ROLES = [
   "topbar_button_disabled",
   "topbar_chip",
   "topbar_group",
+  "upgrade_available",
   "picture_caption",
   "hover",
   "breadcrumb",
@@ -456,6 +457,7 @@ export function themeFromPalette(
     // missing (HDR-D6).
     topbar_button_disabled: { fg: blend(p.comment, p.surface2, 0.5), italic: true },
     topbar_chip: { fg: p.purple, bold: true },
+    upgrade_available: { fg: p.green, bold: true },
     topbar_group: { bg: blend(p.surface, p.bg, 0.35) },
     picture_caption: { bg: blend(p.surface, p.bg, 0.35) },
     hover: { fg: p.fg_strong, bg: p.surface2, bold: true },

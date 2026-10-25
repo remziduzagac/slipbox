@@ -409,12 +409,13 @@ installer's install's channel; any other install's, stable releases.
 is one). On a platform no longer released for (`RETIRED`: an Intel Mac, D238) it says so first, and the last release
 built for it, asking for nothing (exit 1). From source, or a binary the installer didn't put in `versions/`, it says so
 and does nothing. Otherwise, as the installer would: the pack downloaded, its SHA-256 checked against its `SHA256SUMS`
-line, unpacked beside the others, its binary run — it must say its version — and only then `current` moved, in one step
-(a link made beside it and renamed over it). The version replaced is kept, to go back to (`ln -sfn versions/<old>
-<data>/current`); any older one is removed. Any check failing changes nothing. Nothing found on `preview` says where it
-looked, the releases and the site's `preview`. When the version installed is newer than what's offered — a preview, back
-on `stable` — it's current, and said so: `slipbox <version> is newer than the latest release, <latest>: it stays until a
-newer one`.
+line, unpacked beside the others, its binary run — it must say its version — and only then `current` moved, in one
+step (a link made beside it and renamed over it). Before that commit, the new version's `previous.json` records `{
+version: <the version current replaced> }` for About's informational predecessor (VB-D7). The version replaced is
+kept, to go back to (`ln -sfn versions/<old> <data>/current`); any older one is removed. Any check failing changes
+nothing. Nothing found on `preview` says where it looked, the releases and the site's `preview`. When the version
+installed is newer than what's offered — a preview, back on `stable` — it's current, and said so: `slipbox <version>
+is newer than the latest release, <latest>: it stays until a newer one`.
 
 **Bun's own crash reports** are off (D221): on macOS and Windows a crashing Bun sends a report to `bun.report` unless
 told not to, and a compiled binary is no different. Bun's crash handler reads its switch when it crashes, from the C

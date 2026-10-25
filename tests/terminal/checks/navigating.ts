@@ -1670,11 +1670,17 @@ export const NAVIGATING: Check[] = [
     area: "navigating",
     name: "which-key: the leader's groups at once, a prefix's entries after its delay; backspace goes up, esc closes",
     covers: { cases: ["which-key"] },
-    options: { config: "[input]\nwhich_key_delay_ms = 1500\n" },
+    options: {
+      size: { cols: 120, rows: 30 },
+      config: '[input]\nwhich_key_delay_ms = 1500\n[groups]\n"leader l" = "LINKS: everything about links"\n',
+    },
     run: async (s) => {
       // The leader: its groups at once, delay or not.
       s.term.key("space");
       await s.until(() => s.rowOf("+history") >= 0 && s.rowOf("+session") >= 0, 1000, "the leader's groups at once");
+      await s.see("everything about links");
+      await s.see("About slipbox");
+      await s.see("Background work");
       // Into find's group: its entries; backspace back up to the groups; esc closes.
       await s.keys("f");
       await s.see("Find in every note");

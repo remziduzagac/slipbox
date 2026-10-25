@@ -800,7 +800,7 @@ export class Mouse {
         if (arg === "zoom") void this.app.run("explorer.focus");
         else if (arg === "changed") void this.app.run("git.focus");
         else if (arg === "work") void this.app.run("background.open");
-        else if (arg === "upgrade") void this.app.run("app.upgrade");
+        else if (arg === "version" || arg === "upgrade") void this.app.run("app.about");
         else if (arg === "vault") void this.app.run("folders.open");
         else if (arg === "branch") void this.app.run("git.menu");
         break;
