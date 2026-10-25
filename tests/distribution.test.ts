@@ -1929,6 +1929,22 @@ describe("updates (14.4)", () => {
 });
 
 describe("how slipbox was installed, and what's said for it (14.3)", () => {
+  test("the installer's paths resolve through a linked parent on either side (#100)", () => {
+    const base = mkdtempSync(join(sandbox, "by-linked-"));
+    const data = join(base, "data", "slipbox");
+    const binary = join(data, "versions", "1.0.0", "slipbox");
+    mkdirSync(dirname(binary), { recursive: true });
+    writeFileSync(binary, "");
+    symlinkSync("versions/1.0.0", join(data, "current"));
+    const alias = `${base}-link`;
+    symlinkSync(base, alias);
+    const linkedData = join(alias, "data", "slipbox");
+    for (const execData of [data, linkedData])
+      for (const store of [data, linkedData])
+        for (const entry of ["current", "versions/1.0.0"])
+          expect(installedBy(join(execData, entry, "slipbox"), store, "1.0.0")).toBe("installer");
+  });
+
   test("the installer's, Homebrew's (its Cellar, behind a link too), or another way", () => {
     const base = mkdtempSync(join(sandbox, "by-"));
     const data = join(base, "data", "slipbox");
