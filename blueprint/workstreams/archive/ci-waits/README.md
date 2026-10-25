@@ -1,5 +1,5 @@
 ---
-status: complete
+status: consolidated
 created: "2026-10-24"
 branch: ci/issue-65
 ---
@@ -25,3 +25,6 @@ as the maintainer chooses.
 - [notes.md](notes.md): how it was discussed.
 - [research.md](research.md): what GitHub's API says of a run, a pull request's run and an artifact.
 - [ideas.md](ideas.md): the alternatives weighed.
+
+Consolidated 2026-10-26: requirements and design applied to the root and checked against the implementation.
+Decisions and task records remain here under their stable CIW IDs.

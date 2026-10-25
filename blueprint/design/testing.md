@@ -112,8 +112,11 @@ reports it skipped with its issue (`tests/terminal/run.ts`). `bun test` and the 
 assertion is never deleted or loosened to make a test pass.
 
 **CI runs the suite on Linux and macOS** (GR-D9): for a pull request, the tests and the terminal checks its files
-reach (D239), the docs' tests only for one of the docs alone (D230), and a push to `dev` or `test` the same for its
-commits; every test and check in the full run, `ci` run by hand on `test` (`full`), which a commit needs before `main`
+reach (D239), the docs' tests only for one of the docs alone (D230), and a push to `dev` or `test` the same for what
+changed since the last passing run, less what a pull
+request's run passed on the same tree: nothing for `dev` moved to `test`
+([repository.md](repository.md) § What a push tests); every test and check in the full run, `ci` run by hand on `test`
+(`full`), which a commit needs before `main`
 takes it and a release builds it (D251). The scripts `bun run check` runs, split into jobs
 ([repository.md](repository.md)
 § CI). While working: your change's own tests and its feature's terminal check (`bun run test:terminal <its name>`),

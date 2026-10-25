@@ -343,7 +343,10 @@ principles in workstreams/archive/docs-site/requirements.md § How they are writ
   format and lint, zizmor and actionlint over the workflows, the docs' lint, spelling and links, and the tests (GR-D7,
   GR-D9). Its toolchain is pinned once, in `mise.toml` (GR-D11).
 - CI is hardened and runs on Linux and macOS: no permission by default, each job's grants explained, actions pinned by
-  their commit, no credentials kept, timeouts, a pull request's superseded run cancelled, nothing cached (GR-D9).
+  their commit, no credentials kept, timeouts, a pull request's superseded run cancelled, nothing cached (GR-D9). A
+  push to `dev` or `test` tests what changed since the last commit whose run passed, less what a pull request's run
+  passed on the same tree, so a run on `dev` that passed means every commit up to it did, and `test` tests nothing
+  `dev` passed (CIW-D1, CIW-D2, CIW-D3).
 - Releases are made by CI from a tag only the maintainer may push, as a draft the maintainer checks and publishes:
   every asset attested, each pack with its SBOM, the notes from the changelog (GR-D9, GR-D18). Previews are built by
   the same workflow from `test` (GR-D13); the installer and the channels are served by the repository's Pages site

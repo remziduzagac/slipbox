@@ -95,6 +95,9 @@ accepted deviation until then, with a review date.
 
 ## GR-D9: Hardened CI, on Linux and macOS (2026-10-12)
 
+> **Amended by CIW-D4 (2026-10-26):** superseded pushes to a branch are cancelled alongside superseded
+> pull-request runs. Reruns, manual runs and merge groups keep distinct groups and finish.
+
 > **Amended by D239 (2026-10-17):** a pull request runs the tests and the terminal checks its files reach; every
 > push to `main` runs them all, on Linux and macOS.
 

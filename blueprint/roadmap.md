@@ -697,6 +697,16 @@ current requirements or product behavior. Start any resulting design change thro
   path,
   guides, topic pages, reference and screenshots (DOCS-T1, DOCS-T2).
 
+## CI waiting times left open (#65)
+
+Items 5 and 7 are consolidated as CIW. The remaining work is tracked in the root tasks:
+
+- [ ] **[CIW-T8: macOS starts after Linux passes](tasks/ciw-macos-after-linux.md)**.
+- [ ] **[CIW-T7: macOS kept for what needs it](tasks/ciw-macos-for-what-needs-it.md)**.
+- [ ] **[CIW-T6: More of the app's files mapped in `CHECKS_FOR`](tasks/ciw-map-more-files.md)**.
+- [ ] **[CIW-T5: The Linux jobs split across runners](tasks/ciw-shard-linux.md)**.
+- [ ] **[CIW-T9: The slowest tests found and kept in check](tasks/ciw-slowest-tests.md)**.
+
 ## Later
 
 Agreed, but not scheduled.
@@ -737,3 +747,5 @@ design's community-plugin tier ([ideas.md](ideas.md)) gets an ID when it is sche
 - [x] **[HTML](workstreams/archive/document-html/README.md)**: consolidated into the root on 2026-10-26.
 
 - [x] **[SEO](workstreams/archive/site-discovery/README.md)**: consolidated into the root on 2026-10-26.
+
+- [x] **[CIW](workstreams/archive/ci-waits/README.md)**: consolidated into the root on 2026-10-26.

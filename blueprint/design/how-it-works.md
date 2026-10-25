@@ -55,7 +55,7 @@ controller of its own) and `src/tui/draw.ts` (painting, its regions in `draw-*.t
 | File | What it does with OpenTUI |
 | --- | --- |
 | `src/tui/opentui.ts` | `Canvas` over `OptimizedBuffer`; the full-screen `Renderable`; a worker decoding pictures |
-| `src/tui/run.ts` | `createCliRenderer`, key, paste and mouse events, resize, OSC 52, shutdown, and restart's hand-over once the screen is given back |
+| `src/tui/run.ts` | renderer creation, input, resize, OSC 52, shutdown and restart after screen teardown |
 
 What comes before the screen is taken is `run.ts`'s `prepare`, which needs no terminal (a test calls it):
 the vault found, its config, the vault recorded as seen, and the graph. Recording comes before the graph
@@ -470,7 +470,7 @@ and data each have a folder of their own, and a vault's cache and state are kept
 | the trash (`18.4`) | `$XDG_STATE_HOME/slipbox/<key>/trash/` (`trash.json`, an item per folder; kept 30 days: DF-D14) |
 | the background index (`20.9`) | `$XDG_STATE_HOME/slipbox/autoindex.json` (its place), `activity` (CLI last used) |
 | saved plans (`20.18`, `--plan`) | `$XDG_STATE_HOME/slipbox/plans/<id>.json` (for `slipbox apply`; gone once applied) |
-| the update check (`14.4`) | `$XDG_STATE_HOME/slipbox/update.json` (when it last asked, what it found, the version skipped) |
+| the update check (`14.4`) | `$XDG_STATE_HOME/slipbox/update.json` (last check, findings, skipped version) |
 | A restart’s note (UPG) | `$XDG_STATE_HOME/slipbox/restart/<pid>.json`; place, session and versions; read and removed |
 | Upgrade lock (UPG) | `<data>/upgrade.lock`; the upgrade process’s pid |
 | language servers installed (`19.5`, `14.11`) | `$XDG_DATA_HOME/slipbox/tools/<package>/<lock>/` (each from its lock) |
