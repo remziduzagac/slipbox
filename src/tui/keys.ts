@@ -861,6 +861,7 @@ export const GIT_ACTION_INFO: Record<string, { title: string; desc: string; acti
 
 /** The Problems panel takes the explorer's keymap too (1.7), `tab` switching its tabs: what its actions do there, for help. */
 export const PROBLEMS_ACTION_INFO: Record<string, { title: string; desc: string; actions?: string[] }> = {
+  show_all: { title: "Show all lint findings", desc: "Toggle findings hidden by view settings or lint.ignore" },
   down: { title: "Move down", desc: "Selects the next problem (This file: the note shows it, marked)" },
   up: { title: "Move up", desc: "Selects the previous problem" },
   jump: {

@@ -314,13 +314,16 @@ Inside a paragraph, tags such as `<kbd>`, `<sup>` and `<mark>` are dropped, and 
 
 ## Pictures
 
-A picture on a paragraph of its own has a boxed caption **under** it: `▣` and its alt text, wrapped to the window.
+A picture on a paragraph of its own has a boxed caption **under** it by default: `▣` and its alt text, wrapped to the window.
 A line break inside the alt text becomes a space. When the terminal cannot draw the picture, or
 `render.images = "never"`, the caption stands alone. A picture beside other text stays inline, as `▣ alt`.
 
 The box's top-right buttons copy the **path** (`⧉p`), **alt text** (`⧉a`) and **image** (`⧉i`) separately.
 Image copying needs an optional native clipboard helper: `wl-copy` on Wayland, `xclip` on X11, or `osascript` on macOS
 for PNG, JPEG and TIFF. OSC 52 carries text only. A remote image must be fetched before its image can be copied.
+
+Set `render.caption = "top"` to put the box above the picture. One blank row separates the picture and box on
+either side; a caption alone has no extra gap.
 
 ![A picture and its boxed caption](../images/obsidian-home.png)
 

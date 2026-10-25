@@ -36,11 +36,15 @@ export const SHOTS: Shot[] = [
   },
   {
     name: "screen-problems",
-    options: HOME("notes/index.md"),
+    options: {
+      ...HOME("notes/index.md"),
+      config: `[lint]\nenabled = "on"\ncommand = ["sh", "-c", ${JSON.stringify(`for f; do case "$f" in */notes/index.md) printf '%s:9:1 error MD013/line-length Line length\\n' "$f";; esac; done; exit 1`)}, "lint"]\n`,
+    },
     take: async (s) => {
       await s.status("index.md");
       await leader(s, "v", "p");
       await s.status("PROBLEMS");
+      await s.see("1 hidden: lines the view wraps");
     },
   },
 ];

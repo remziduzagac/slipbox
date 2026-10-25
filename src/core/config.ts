@@ -37,6 +37,8 @@ export interface Config {
     /** A note's pictures (12.x): drawn under their `▣ alt` line where the terminal draws images (Kitty graphics, sixel)
      *  — `auto` — or never; `▣ alt` and its path are the floor either way. */
     images: "auto" | "never";
+    /** The caption box above or below a drawn picture. */
+    caption: "bottom" | "top";
     /** A picture on the internet (12.12): `ask` — its link, `enter` asks (this once, or its site) and fetches it —
      *  `show`, fetched as the note opens, or `never` fetched nor drawn. Fetched, it's cached: drawn without asking. */
     images_remote: "ask" | "show" | "never";
@@ -144,6 +146,8 @@ export interface Config {
   lint: {
     enabled: "auto" | "on" | "off";
     command: string[];
+    follow_view: boolean;
+    ignore: string[];
   };
   capture: {
     /** `root`: in the root itself; `vault`, the old word, is read as `root` (DF-D22). */
@@ -314,6 +318,7 @@ export const DEFAULT_CONFIG: Config = {
     code_cells: "box",
     code_wrap: "scroll",
     images: "auto",
+    caption: "bottom",
     images_remote: "ask",
     mermaid: "text",
     math: "text",
@@ -352,7 +357,7 @@ export const DEFAULT_CONFIG: Config = {
     history_limit: 100,
   },
   input: { leader: "space", which_key: true, which_key_delay_ms: 500 },
-  lint: { enabled: "auto", command: [] },
+  lint: { enabled: "auto", command: [], follow_view: true, ignore: [] },
   capture: { location: "state", file: "scratch.md", open_in: "float" },
   git: {
     base: "",
@@ -415,6 +420,7 @@ const ENUMS: Record<string, readonly string[]> = {
   "render.show_urls": ["auto", "always", "never"],
   "render.code_cells": ["box", "band"],
   "render.code_wrap": ["scroll", "wrap"],
+  "render.caption": ["bottom", "top"],
   "render.images": ["auto", "never"],
   "render.images_remote": ["ask", "show", "never"],
   "render.mermaid": ["text", "picture"],
