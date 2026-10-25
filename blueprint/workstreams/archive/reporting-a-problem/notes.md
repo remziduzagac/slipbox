@@ -76,7 +76,8 @@
 3. **The form's "Installed with" dropdown:** whether GitHub fills a dropdown from the address isn't documented. Keep
    it (proposed: Version says it too, so nothing is lost), or make it a text field so it always fills? One look
    settles it: open
-   [this address](https://github.com/remziduzagac/slipbox/issues/new?template=bug_report.yml&install=Homebrew&version=0.5.1)
+   [this
+   address](https://github.com/remziduzagac/slipbox/issues/new?template=bug_report.yml&install=Homebrew&version=0.5.1)
    signed in: does "Installed with" show Homebrew?
 4. **A report's copy when no clipboard takes it:** written to the state folder's `clipboard.txt`, as every copy is,
    and said (proposed), or refused for a report, since it may hold the screen?

@@ -289,6 +289,10 @@ The CLI's commands are the user's reference, [cli.md](../../docs/manual/cli.md);
 | `core/install.ts` | 14.8 | the installer's layout read; how slipbox was installed; its channel; `uninstall`'s plan |
 | `core/update.ts` | 14.4 | the newest the channel offers, from its sums; the daily check; `upgrade` |
 | `core/skill.ts` | GR-D10 | the skill for agents, built in: printed; installed, never over another's file or a link |
+| `core/report.ts` | RPT | a bug report's facts (slipbox, the system, the terminal); its text read back; the address |
+| `core/browser.ts` | RPT | a browser opened on an address, by platform; none over SSH |
+| `core/gh.ts` | RPT | `gh` found, its account read, `gh issue create` run |
+| `cli/report.ts` | RPT | `report`, run before any vault is looked for |
 | `core/wsl.ts` | 14.12 | WSL known; Windows' drives from its mounts; their fonts; notes on one, said |
 | `core/stale.ts` | 9.9 | advisory list of unsaved paths, pid-stamped: the TUI writes it, the CLI reads it |
 | `cli/cli.ts` | 9.1–9.6 | the CLI face: the dispatcher, the help, each command's arguments and flags; `--json` |

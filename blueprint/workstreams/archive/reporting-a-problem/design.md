@@ -244,7 +244,8 @@ Its first paragraph, in full:
 Every write goes one way (`writeBuffer`; D142): the file is replaced atomically (a temp file in the same
 folder, then a rename) keeping its permissions; a symlinked note is written through to its target,
 and a target outside the vault is refused (`7.5`) — in home, a link you followed is written through wherever it
-leads, and in Elsewhere what the file system allows (VV-D6; [roots.md](../../design/roots.md) § Links followed only when
+leads, and in Elsewhere what the file system allows (VV-D6; [roots.md](../../../design/roots.md) § Links followed only
+when
 you say so); the watcher is told the write is its own; the buffer reloads, its windows keeping their anchors, so the
 cursor stays put. A virtual buffer (`3.20`: a note's properties, a commit's message, a peek, a report) is no file:
 `writeBuffer` refuses it, said, and `:w!` on one is `:w`, its own save (RPT, found by its review).
@@ -252,7 +253,7 @@ cursor stays put. A virtual buffer (`3.20`: a note's properties, a commit's mess
 Previously: Every write goes one way (`writeBuffer`; D142): the file is replaced atomically (a temp file in the same
 folder, then a rename) keeping its permissions; a symlinked note is written through to its target, and a target
 outside the vault is refused (`7.5`) — in home, a link you followed is written through wherever it leads, and in
-Elsewhere what the file system allows (VV-D6; [roots.md](../../design/roots.md) § Links followed only when you say
+Elsewhere what the file system allows (VV-D6; [roots.md](../../../design/roots.md) § Links followed only when you say
 so); the watcher is told the write is its own; the buffer reloads, its windows keeping their anchors, so the cursor
 stays put.
 
@@ -294,12 +295,12 @@ In the second paragraph, the sentence on keys, in full:
 
 Nor may a folder's `[keys]` or `[aliases]` name a command that throws work away or runs a program (`shell.run`,
 `shell.filter`, `help.report_send`), so a clone can't put one on `ctrl+s` or `:wq` (`USER_ONLY`, each with its reason,
-and `VAULT_FORBIDDEN_COMMANDS` in `core/config.ts`; [configuration.md](../../../docs/manual/configuration.md), "What
+and `VAULT_FORBIDDEN_COMMANDS` in `core/config.ts`; [configuration.md](../../../../docs/manual/configuration.md), "What
 only your own file can set").
 
 Previously: Nor may a folder's `[keys]` or `[aliases]` name a command that throws work away or runs a program
 (`shell.run`, `shell.filter`), so a clone can't put one on `ctrl+s` or `:wq` (`USER_ONLY`, each with its reason, and
-`VAULT_FORBIDDEN_COMMANDS` in `core/config.ts`; [configuration.md](../../../docs/manual/configuration.md), "What only
+`VAULT_FORBIDDEN_COMMANDS` in `core/config.ts`; [configuration.md](../../../../docs/manual/configuration.md), "What only
 your own file can set").
 
 ## No design change: the bug form

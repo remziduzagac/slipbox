@@ -220,6 +220,9 @@ folder can still choose what a server runs; what the project's own tools do is t
 
 ## D172: Run nothing of a folder's own unless you trust its root (23.1, 23.2, 2026-10-07)
 
+> **Detailed by RPT-D3, RPT-D4 and RPT-D6 (2026-10-26):** reporting can launch the system browser or post with
+> `gh` after confirmation. A vault cannot bind the sending command through its keys or aliases.
+
 **Decision:** slipbox runs programs you chose: your editor, git, and the servers and linters found in your config, on
 `PATH`, in your install folders (Mason's, `~/.cargo/bin`, `~/go/bin`, `~/.local/bin`) or installed by slipbox itself.
 Unless you trust its root, it runs nothing a folder brings with it: not its `node_modules/.bin`, `.venv/bin`,

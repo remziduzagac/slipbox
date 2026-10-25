@@ -723,3 +723,5 @@ working tree's git is `26.x`. Tier 2 plugins are dropped (D36). Anything else un
 design's community-plugin tier ([ideas.md](ideas.md)) gets an ID when it is scheduled.
 
 - [x] **[PIC](workstreams/archive/picture-sizes/README.md)**: consolidated into the root on 2026-10-26.
+
+- [x] **[RPT](workstreams/archive/reporting-a-problem/README.md)**: consolidated into the root on 2026-10-26.

@@ -247,6 +247,22 @@ How: docs/manual/keys.md; docs/manual/configuration.md; design/tui.md § Modes a
 
 How: design/distribution.md; the workflows that build and publish: design/repository.md § CI.
 
+## Reporting a problem
+
+- A problem is reported from inside slipbox, in a key (`space r`, `:report`, help's "Report a problem"): a window
+  asks what happened, what was expected and how to make it happen, with what slipbox knows already filled in — its
+  version, how it was installed and its channel, the system and processor, the terminal, its size, any multiplexer and
+  SSH (RPT-D1).
+- The window's text is the report as it will leave, every field shown and editable; the screen as text, or the note
+  and the cursor's line, is in it only when you add it, and then in full (RPT-D2).
+- You send it, never slipbox: the bug form opened in your browser with its fields filled in, its address or the
+  report copied where there's no browser to open (SSH), or, with `gh` on the machine, posted by `gh issue create`
+  after a yes to what it will post. slipbox's own network call stays the update check (RPT-D3, RPT-D4, D199).
+- `slipbox report` prints the same facts, and `--json`, for an agent writing an issue; no vault needed, no network
+  (RPT-D5).
+
+How: design/tui.md § Reporting a problem; docs/manual/troubleshooting.md § Reporting a problem.
+
 ## Documentation
 
 - User documentation lives in Markdown in `docs/`, with one navigation map, `docs/README.md`, shared by GitHub and

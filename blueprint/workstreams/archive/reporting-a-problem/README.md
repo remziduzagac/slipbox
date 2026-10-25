@@ -1,5 +1,5 @@
 ---
-status: complete
+status: consolidated
 created: "2026-10-24"
 branch: feat/issue-5
 ---
@@ -20,3 +20,6 @@ after a yes; slipbox itself sends nothing. `slipbox report` prints the same fact
 - [tasks/](tasks/README.md): its work.
 - [ideas.md](ideas.md): the alternatives weighed.
 - [research.md](research.md): what the bug form's address can carry, and what slipbox knows of itself.
+
+Consolidated 2026-10-26: requirements and design applied to the root and checked against the implementation.
+Decisions and task records remain here under their stable RPT IDs.
