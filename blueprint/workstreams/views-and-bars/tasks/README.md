@@ -9,3 +9,5 @@ Implementation order follows the batch: #82, #86, #85.
 - [VB-T5](T5.md): Worktrees grouped by repository (#85).
 
 - [VB-T6](T6.md): label git workspaces by their vault (VB-D6).
+
+- [VB-T7](T7.md): permanent work and version popups (VB-D7, #94).

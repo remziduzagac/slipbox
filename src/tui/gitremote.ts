@@ -115,8 +115,37 @@ export function gitFetch(app: App): void {
     "fetch",
     () => {
       const abort = new AbortController();
-      const finished = app.background.begin("Git fetch", () => abort.abort());
-      return fetchLater(c, abort.signal).finally(finished);
+      let restart = false;
+      const finished = app.background.begin(
+        `Fetching ${app.git.track?.upstream?.split("/")[0] ?? "origin"}`,
+        () => abort.abort(),
+        {
+          restart: () => {
+            restart = true;
+          },
+        },
+      );
+      return fetchLater(c, abort.signal).then(
+        (result) => {
+          finished(
+            abort.signal.aborted ? "stopped" : result.ok ? "done" : "failed",
+            result.ok ? undefined : result.why,
+          );
+          if (restart)
+            setTimeout(() => {
+              if (!app.quitting && app.git.checkout?.root === c.root) gitFetch(app);
+            }, 0);
+          return result;
+        },
+        (error) => {
+          finished(abort.signal.aborted ? "stopped" : "failed", String(error));
+          if (restart)
+            setTimeout(() => {
+              if (!app.quitting && app.git.checkout?.root === c.root) gitFetch(app);
+            }, 0);
+          throw error;
+        },
+      );
     },
     async () => {
       await app.git.refreshNow();

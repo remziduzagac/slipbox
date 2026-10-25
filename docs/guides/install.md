@@ -309,3 +309,8 @@ removed; other files stay. Skills in other, manually chosen folders must be remo
 2. Remove the launcher (`rm ~/.local/bin/slipbox`).
 3. Remove the skill's link, if you made one (`rm ~/.claude/skills/slipbox`).
 4. Remove the source folder.
+
+The top bar always shows the version you are running, shortening a preview to `0.5.2-P`. Click it or press
+`space a` for the full version and channel, the previous version recorded by the last installer upgrade, and any
+available upgrade. The release notes address can be copied from that popup. A package-manager install shows its
+upgrade command. The previous version is informational; upgrading always moves forward.

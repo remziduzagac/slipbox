@@ -195,7 +195,11 @@ export class Exporter {
     let files: string[];
     const controller = new AbortController();
     this.jobs.add(controller);
-    const finished = this.app.background.begin(`Export to ${shown}`, () => controller.abort());
+    const finished = this.app.background.begin(`Export to ${shown}`, () => controller.abort(), {
+      restart: () => {
+        void this.write(rels, format, target, force);
+      },
+    });
     const graph = this.app.graph;
     let output: PreparedExport | undefined;
     try {
@@ -237,6 +241,7 @@ export class Exporter {
           }
         } catch {}
       } catch (err) {
+        finished(controller.signal.aborted ? "stopped" : "failed", (err as Error).message);
         if (!this.app.quitting)
           this.app.message(
             controller.signal.aborted ? "info" : "error",

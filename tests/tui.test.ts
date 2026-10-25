@@ -666,6 +666,17 @@ describe("which-key", () => {
     expect(f).toContain("+LINKS");
     expect(f).toContain("everything about links");
   });
+  test("leader explanations survive the About and Background entries at normal terminal size", async () => {
+    const h = await harness({ width: 120, height: 30 });
+    const f = await h.keys("space");
+    expect(f).toContain("About slipbox");
+    expect(f).toContain("Background work");
+    expect(f).toContain("rename, actions, format");
+    expect(f).not.toContain("more ·");
+    const popup = h.app.geometry!.popup!;
+    expect(popup.x).toBeGreaterThanOrEqual(0);
+    expect(popup.x + popup.w).toBeLessThanOrEqual(120);
+  });
   test("the explanations of g, z, [ and ] name every key under them", () => {
     for (const prefix of ["g", "z", "[", "]"]) {
       const { desc } = parseGroup(DEFAULT_GROUPS[prefix]!);

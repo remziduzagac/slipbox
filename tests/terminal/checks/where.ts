@@ -1,5 +1,8 @@
 // The permanent grouped location bar: independent zoom/workspace/git targets and its compact form (VB-D3).
 
+import { writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { VERSION } from "../../../src/version.ts";
 import { type Check, leader } from "../check.ts";
 import { SIZE, type Session } from "../session.ts";
 import { columnOf, mouse } from "./source-control.ts";
@@ -17,6 +20,69 @@ async function onTopBar(s: Session, needle: string): Promise<void> {
 }
 
 export const WHERE: Check[] = [
+  {
+    area: "navigating",
+    name: "work controls: real indexing pauses, resumes, restarts and stops in the live popup",
+    covers: {
+      cases: ["ui"],
+      commands: [
+        "background.open",
+        "background.pause",
+        "background.restart",
+        "background.cancel",
+        "background.dismiss",
+      ],
+    },
+    options: { preload: "tests/terminal/index-hold.ts", env: { INDEX_HOLD_GO: "{dir}/index-go" } },
+    run: async (s) => {
+      await s.until(() => / 1 /.test(s.topBar()), 15000, "index busy");
+      await leader(s, "b");
+      await s.see("Indexing");
+      await s.keys("p");
+      await s.see("paused");
+      await s.see("Resume");
+      await s.keys("p");
+      await s.see("Pause");
+      await s.keys("r");
+      await s.see("stopped");
+      await s.keys("s");
+      await s.see("No work running");
+      await s.keys("d");
+      writeFileSync(join(s.dir, "index-go"), "");
+      await s.keys("escape");
+      await s.until(() => / 0 /.test(s.topBar()), 5000, "stopped count");
+    },
+  },
+  {
+    area: "navigating",
+    name: "work and version: idle count, work popup and About by click and leader keys",
+    covers: {
+      cases: ["ui", "status"],
+      commands: ["background.open", "app.about"],
+    },
+    run: async (s) => {
+      await s.until(
+        () => s.topBar().includes(VERSION) && / 0 /.test(s.topBar()),
+        15000,
+        "idle work and running version",
+      );
+      await onTopBar(s, " 0 ");
+      await s.see("Background work");
+      await s.see("No work running");
+      await s.keys("escape");
+      await leader(s, "b");
+      await s.see("Background work");
+      await s.keys("escape");
+      await onTopBar(s, VERSION);
+      await s.see("About slipbox");
+      await s.see(`slipbox ${VERSION}`);
+      await s.see("Channel: stable");
+      await s.keys("escape");
+      await leader(s, "a");
+      await s.see("Previous version: not recorded");
+      await s.keys("escape");
+    },
+  },
   {
     area: "navigating",
     name: "permanent top bar: zoom, workspace, git and changes are distinct named targets; zen retains them",

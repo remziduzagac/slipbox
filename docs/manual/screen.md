@@ -59,11 +59,24 @@ The middle block says **where you are**, with a dim separator between each click
 Each group has a faint background. Nerd Font groups have rounded ends; Unicode and ASCII groups have plain ends.
 Only the item under the mouse lights up.
 
-Two blocks appear at the right when needed. **Background work** has a spinner and a count: indexing, exports,
-git fetches and language servers starting. Click it to list the tasks; select one and press `enter` to cancel that
-one. **A newer slipbox** shows `⇡` and its version in the accent colour. Click for the upgrade offer; closing the
-offer leaves the version visible. Skipping that version, installing it, or finding it is already current clears it.
-Cancelling indexing warns that search and backlinks may be incomplete; `:reindex` tries again.
+The right side always shows the **work count**, dim at `0` and bright while work runs, and the **running version**.
+A preview uses the short form `0.5.2-P`. A green `↑` beside the version means a newer one is available (`^` with
+ASCII glyphs). These blocks shrink to icons, then disappear on narrow screens before the location is shortened.
+
+Click the count or press `space b` for **Background work**. The live list shows each task's progress and elapsed
+seconds. Its Stop, Restart and Pause or Resume rows appear only where supported; `s`, `r` and `p` act on the selected
+task. Indexing supports all three, exports, fetches and server startup support Stop and Restart, and an upgrade
+supports Stop until its installed version changes. Recent shows the last five outcomes, plus older failures kept
+with their errors until dismissed. Select Dismiss or press `d` to remove one. `esc` closes the list.
+
+Click the version or arrow, or press `space a`, for **About slipbox**: its full version, stable or preview channel,
+and the previous version retained by the last installer upgrade, when recorded. A newer version adds its release
+notes address (select it to copy) and Upgrade; a package-manager install shows its upgrade command instead.
+Closing this popup keeps the available-version arrow.
+
+![Background work with recent outcomes](../images/screen-background.png)
+
+![About slipbox with its full version and channel](../images/screen-about.png)
 
 Short of room, the right blocks shrink to icons, then disappear. Git loses ahead and behind, then its branch is cut
 and dropped, then the changed count goes. Zoom and workspace stay; long paths lose their front, keeping their end.
@@ -494,7 +507,8 @@ If you open help while a pane has the keys, or during a selection, it starts at 
 ## The which-key popup
 
 After `space`, a popup lists every key you can press next. Each has a name and a short explanation. Groups read
-`+name`, such as `+links` and `+tabs`.
+`+name`, such as `+links` and `+tabs`. If full descriptions would force too many rows, the popup shortens wide
+columns to keep explanations visible. Short screens drop explanations when they still cannot fit.
 
 After any other key that starts a sequence (`g`, `z`, `y`, `[`, `]`, `ctrl+w`, `ctrl+t`), the popup appears if you
 pause for half a second. So a sequence you know never flashes it.

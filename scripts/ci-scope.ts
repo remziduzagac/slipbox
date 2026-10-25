@@ -120,6 +120,7 @@ export const SAMPLES_FOR: Record<string, { tests: string[]; checks: string[] }> 
   // count as the checks' harness; theirs, not every check's.
   "tests/terminal/spell-hold.ts": { tests: [], checks: ["spelling"] },
   // Likewise the script an export check preloads, to hold an export's staging before it's cleared, or its publication.
+  "tests/terminal/index-hold.ts": { tests: [], checks: ["work controls:"] },
   "tests/terminal/export-hold.ts": { tests: [], checks: ["export"] },
 };
 

@@ -1,4 +1,6 @@
 // The permanent location and activity bar (VB-T2).
+import { VERSION } from "../version.ts";
+import { PREVIEW_VERSION } from "../core/release.ts";
 import type { App } from "./app.ts";
 import { type Canvas, drawText } from "./canvas.ts";
 import { type Band, type Geometry, roleStyle, pageBg, button } from "./draw.ts";
@@ -104,17 +106,22 @@ export function drawTopBar(app: App, c: Canvas, band: Band, geo: Geometry): void
     );
   const work = app.background.tasks.size;
   const newer = app.updates.available;
-  const spin = app.glyphs.workSpinner[Math.floor(app.now() / 250) % app.glyphs.workSpinner.length]!;
+  const version = app.updates.env?.version ?? VERSION;
+  const shortVersion = PREVIEW_VERSION.test(version) ? `${version.split("-preview.")[0]}-P` : version;
   const up = app.glyphs.upgrade;
   let right: Item[] = [
-    ...(work ? [{ text: `${spin} ${work}`, id: "top:work", role: "topbar" as Role }] : []),
-    ...(newer ? [{ text: `${up} ${sanitize(newer)}`, id: "top:upgrade", role: "link" as Role }] : []),
+    { text: String(work), id: "top:work", role: work ? "topbar_button_on" : "status_dim" },
+    { text: sanitize(shortVersion), id: "top:version", role: "topbar" },
+    ...(newer ? [{ text: up === "^" ? up : "↑", id: "top:upgrade", role: "upgrade_available" as Role }] : []),
   ];
   const rightSize = () => right.reduce((n, item) => n + stringWidth(item.text) + 5, 0);
   const items = locationItems(app);
   const full = items.reduce((n, item) => n + stringWidth(item.text) + 3, 2);
   if (left + full + rightSize() > end)
-    right = right.map((item) => ({ ...item, text: item.id === "top:work" ? spin : up }));
+    right = right.map((item) => ({
+      ...item,
+      text: item.id === "top:work" ? "#" : item.id === "top:version" ? "v" : up,
+    }));
   if (left + full + rightSize() > end) right = [];
   let rx = end - rightSize();
   for (const item of right) rx = block([item], rx) + 1;

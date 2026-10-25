@@ -5,6 +5,23 @@ import { HOME, leader, type Shot } from "../shot.ts";
 
 export const SHOTS: Shot[] = [
   {
+    name: "screen-background",
+    options: HOME("notes/index.md"),
+    take: async (s) => {
+      await s.until(() => / 0 +\d+\.\d+\.\d+/.test(s.topBar()), 30000, "indexing done");
+      await leader(s, "b");
+      await s.see("No work running");
+    },
+  },
+  {
+    name: "screen-about",
+    options: HOME("notes/index.md"),
+    take: async (s) => {
+      await leader(s, "a");
+      await s.see("Channel: stable");
+    },
+  },
+  {
     name: "screen-info-export",
     options: HOME("notes/index.md"),
     take: async (s) => {

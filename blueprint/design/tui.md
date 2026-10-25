@@ -86,18 +86,26 @@ folder open in its place: told when it changes, its control characters stripped.
   (`top:vault`, `folders.open`), branch with tracking and operation (`top:branch`, branches menu), changed-file count
   (`top:changed`, `git.focus`). The vault remains in Info. A workspace is the home folder, branch, home or vault
   fallback;
-- at right, background work (`top:work`, `background.open`) with spinner and count, and the persistent available
-  upgrade (`top:upgrade`, `app.upgrade`). Each appears only when needed.
+- at right, the permanent work count (`top:work`, `background.open`, `space b`), dim at zero and bright otherwise,
+  and running version (`top:version`, `app.about`, `space a`), shortened to `x.y.z-P` for previews. An available
+  upgrade adds an arrow (`top:upgrade`, `app.about`) in the theme's green `upgrade_available` role (VB-D7, VB-T7).
 
 `topbar_group` supplies the faint background. Groups have spaces between them and Nerd rounded ends, plain ends in
 Unicode and ASCII. Items have a dim thin separator and individual hover regions. Names pass through sanitize and
 widths through core/width.ts. Right blocks shrink to icons then go; tracking, cut branch, branch and changed count
 then give way. Zoom and workspace keep their icons and shortened names, paths cut from the front.
 
-`Background`, owned by App, tracks tasks and their cancel closures. Index slices, each export, fetch and server
-initialization register and remove their tasks on completion. Selecting a task invokes `background.cancel` with its
-id; cancellation is per task. Export stops before publishing begins; a fetch aborts its child process; indexing
-stops subsequent slices; server cancellation stops initialization. The spinner redraws while tasks remain.
+`Background`, owned by App, tracks task progress, start time, cancellation and supported restart/pause closures.
+Its live list updates elapsed seconds once a second while open; the bar needs no spinner timer. Named commands
+`background.cancel`, `.restart`, `.pause` and `.dismiss` back the list's Stop, Restart, Pause/Resume and Dismiss rows
+and keys `s`, `r`, `p`, `d`. Indexing pauses between slices and reindexes the vault; export, fetch and server
+startup can stop and restart; a downloading upgrade can stop until `current` moves. The list keeps five recent
+outcomes (done, stopped, failed), plus older failures with errors until dismissed. Finished entries keep no closures.
+
+About shows the full running version, channel, and the previous version recorded in the current install's
+`versions/<version>/previous.json` before `current` moves. That version is information only. A newer version adds
+its release notes link (`app.release_notes`, copies the address) and `app.upgrade`; other install methods show
+`howToUpgrade` instead. Escape closes either popup. Narrowing preserves the previous order (VB-D7).
 
 `ui.top_bar` is retired with a notice, removed from settings and keys. The status line has no location fallback.
 
@@ -1407,7 +1415,9 @@ too, after a colon: `z › scroll: the cursor's line to the middle (z), top (t),
 title still too long is cut with `…`. On a short screen the blank rows go first, then the explanations (the blank rows
 never show without them); entries that still don't fit are counted in the bottom border (`+3 more`), and with no room at
 all the popup isn't drawn. The entries are in at most three columns, as many as fit. Each column is sized to its own
-entries, so a long explanation in one never spreads the others apart. Each entry is `key → name` with a short, dimmed
+entries, so a long explanation in one never spreads the others apart. If the rows would lose explanations, try
+shortening the widest text columns (to twenty cells at minimum) to fit more columns and retain explanations.
+Each entry is `key → name` with a short, dimmed
 explanation underneath:
 
 - **For a command:** its `desc` in `core/commands/*.ts`.
