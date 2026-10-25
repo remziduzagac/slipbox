@@ -319,6 +319,7 @@ In the panel:
 | `j` and `k` | move |
 | `enter` | go to the problem |
 | `/` | filter |
+| `a` | show all hidden lint findings, or hide them again |
 | `q` | close the panel |
 | `esc` | give the keys back to the note |
 

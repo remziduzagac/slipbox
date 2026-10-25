@@ -46,6 +46,9 @@ search's improvements.
   [WSP](workstreams/archive/workspaces/README.md), workspaces and where you are (#25), consolidated 2026-10-25.
   VV's and GIT's docs tasks are still being written.
 
+[LC](workstreams/lint-and-captions/README.md), lint visibility and caption placement (#91), is in implementation
+and review.
+
 ## How things are recorded
 
 - Requirements and design are the current truth; decisions say why; workstreams propose changes, are consolidated

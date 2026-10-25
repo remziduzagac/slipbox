@@ -106,6 +106,7 @@ export class Views {
                 view.buf.rel ? this.app.graph : null,
                 pictures,
                 this.app.code.scrolls(),
+                this.app.config.render.caption,
               );
     const block = view.live && view.liveBase ? `${view.liveBase.active[0]}-${view.liveBase.active[1]}` : "";
     const key = `${view.source ? "s" : view.live ? "l" : "r"}${block}:${width}:${this.app.glyphs.mode}:${this.app.ui.urls}:${layout.lines.length}:${view.buf.version}:${view.height}:${view.live ? (view.liveBase?.pictures ?? "") : (pictures?.key ?? "")}`;

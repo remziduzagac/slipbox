@@ -41,6 +41,7 @@ export interface NoteRenderOptions {
   codeScroll?: boolean;
   /** What its pictures are sized for besides the width (PIC): see RenderOptions.pictureKey. */
   pictureKey?: string;
+  caption?: "bottom" | "top";
 }
 
 export function linkResolver(graph: Graph | null, rel: string | null) {

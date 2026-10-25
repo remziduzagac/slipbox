@@ -316,6 +316,12 @@ export const FILE_SPECS: CommandSpec[] = [
     desc: "What's wrong here, in the bottom panel's All tab: links that reach nothing or several notes, lint, conflicts, orphans",
   },
   {
+    id: "problems.show_all",
+    title: "Problems: show all lint findings",
+    cli: null,
+    desc: "Toggle findings hidden by the view or lint.ignore, without rerunning the linter",
+  },
+  {
     id: "problems.file",
     title: "This file's problems",
     cli: "slipbox diagnostics <file>",

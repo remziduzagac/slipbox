@@ -96,7 +96,7 @@ export interface LintCmd {
  * configs is: markdownlint's defaults are no one's rules for notes.
  */
 export function lintCommand(
-  lint: Config["lint"],
+  lint: Pick<Config["lint"], "enabled" | "command">,
   vaultRoot: string,
   home = homedir(),
   autoInstall = true,

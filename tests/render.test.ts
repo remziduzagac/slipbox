@@ -350,8 +350,8 @@ describe("blocks and inlines (2.2)", () => {
     // Each picture precedes its boxed caption.
     const rows = l.lines.map((x) => (x.image ? "picture" : x.spans.map((s) => s.text).join("")));
     expect(rows.slice(0, 2)).toEqual(["picture", ""]);
-    expect(l.lines[2]!.caption?.top).toBe(true);
-    expect(rows[3]).toContain(`${unicode.image} dal.png`);
+    expect(l.lines[3]!.caption?.top).toBe(true);
+    expect(rows[4]).toContain(`${unicode.image} dal.png`);
   });
   test("source lines survive wrapping (3.5 anchors on them)", () => {
     const layout = renderMarkdown("# H\n\npara one\nline two\n\nsecond para\n", {

@@ -61,9 +61,9 @@ export interface Line {
   /** A picture's first row (12.x): the file, and the columns and rows it takes — this row and the `rows - 1` after
    *  it, blank frame rows the drawing puts the image over. */
   image?: Picture;
-  /** Any row of a picture: image rows start at 0, its optional scrollbar follows at `rows`, then the caption. */
+  /** Any row of a picture: image rows start at 0; a caption above has negative rows. */
   pic?: { p: Picture; row: number };
-  /** Standalone image caption, below its picture; target and alt text also back its copy buttons. */
+  /** Standalone image caption, above or below its picture; target and alt text also back its copy buttons. */
   caption?: { target: string; text: string; top?: boolean; from?: string; kind?: string };
   /** A row of a code block too wide for its room, laid out whole to scroll sideways rather than wrap
    *  (`[render] code_wrap = "scroll"`): see CodeScroll. */

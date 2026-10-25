@@ -13698,7 +13698,9 @@ describe("the lint surface: your linter's findings in notes (3.21)", () => {
     const h = await harness({
       root,
       open: "l.md",
-      config: (c) => ((c.lint.enabled = "on"), (c.lint.command = command), (c.ui.line_numbers = true)),
+      config: (c) => (
+        (c.lint.enabled = "on"), (c.lint.command = command), (c.lint.follow_view = false), (c.ui.line_numbers = true)
+      ),
     });
     return { root, h };
   };

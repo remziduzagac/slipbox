@@ -249,6 +249,7 @@ export function paneActions(): Record<string, Run> {
     // The Problems panel at the bottom (1.7): the root's problems (All), or the file on screen's — made afresh when
     // it opens; open and focused already, closed.
     "problems.open": (a) => a.problems.open("all"),
+    "problems.show_all": (a) => a.problems.toggleLint(),
     "problems.file": (a) => a.problems.open("file"),
   };
 }
