@@ -309,6 +309,10 @@ How: design/repository.md; the maintainer's procedures: `MAINTAINING.md`.
 
 ## Quality goals
 
+- **Every feature checked in a terminal** (TT-D2–TT-D4): by the keys a keyboard sends and the screen drawn, one
+  check per feature, headless and in parallel, in CI on Linux and macOS; a command or reference-set area no check
+  covers fails a test unless explicitly left out with its reason (design/testing.md § The terminal tests).
+
 - **Rendering at least as good as leaf's** (D4, D25, D88, D89). Checked by slipbox replacing leaf for reading `docs/`,
   phase 1's finish line, and by the render tests: every demo note at six widths, in both glyph sets, with no row past
   its width, and the table allocator over 5,000 generated inputs (design/testing.md § Strategy).

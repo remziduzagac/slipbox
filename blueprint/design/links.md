@@ -24,7 +24,7 @@ and moves), and the links slipbox makes follow the vault's convention (§ Conven
 | `[t](../docs/plan.md)` | relative to the file: what slipbox writes by default (D56) |
 | `[t](/docs/plan.md)` | from the nearest vault's top; if nothing is there, the filesystem's path (D70) |
 | `[t](plan)` | an extensionless path: the file, else `plan.md`, else a folder (D81) |
-| `[t](docs/)` | a folder: revealed in the explorer when followed (D81) |
+| `[t](docs)` | a folder: revealed in the explorer when followed (D81) |
 | `[[plan]]`, `[[docs/plan#Aims\|a]]` | a wikilink, by name or path, within its vault (D71) |
 | `[t](file:///home/me/x.md)` | the filesystem's path (D48) |
 | `[t](~/notes/x.md)` | the home folder's path: read, never written (D48) |

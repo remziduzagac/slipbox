@@ -35,7 +35,7 @@ and show the failure counts before and after.
 
 ## References
 
-- Delivers: TT's design (`workstreams/terminal-tests/design.md` § The terminal tests: the headless terminal), for
+- Delivers: TT's design (`workstreams/archive/terminal-tests/design.md` § The terminal tests: the headless terminal), for
   design/testing.md at TT's consolidation.
 - Rests on: D223 (one issue and one pull request, the design file with the code); D239; TT-D2 (the headless
   terminal); xtermjs/xterm.js#6003 and its fix, #6004.

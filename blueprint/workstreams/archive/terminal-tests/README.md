@@ -1,5 +1,5 @@
 ---
-status: complete
+status: consolidated
 created: "2026-10-13"
 ---
 
@@ -16,3 +16,6 @@ part, asked for the draft, and accepted it the same day ("yes merge 25 and start
 - [decisions.md](decisions.md): what was decided, and why.
 - [notes.md](notes.md): how it was settled, and the research behind the headless terminal.
 - [tasks/](tasks/README.md): the work, a task per file.
+
+Consolidated 2026-10-26: requirements and design applied to the root and checked against the implementation.
+Decisions and task records remain here under their stable TT IDs.

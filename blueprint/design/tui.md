@@ -576,7 +576,7 @@ what it leads to, going there a choice (VV-D7; § The peek):
 | `[t](#frag)` | jumps within the note |
 | `[t](/docs/plan.md)` | from the vault's top (`21.2`); nothing there, the filesystem's path |
 | `[t](plan)`, no extension | the file as written, else the note `plan.md`, else the folder (zk's links, `21.2`) |
-| `[t](docs/)`, a folder | revealed in the explorer, unfolded and focused (out of the vault: going into its own) |
+| `[t](docs)`, a folder | revealed in the explorer, unfolded and focused (out of the vault: going into its own) |
 | `[t](not-yet.md)`, `[t](not-yet)`, a note not written yet | the new-note prompt, its name typed: `enter` makes it |
 | a broken link whose file moved | says where it went (`17.12`): `space l r` relinks it — a move never resolves it |
 | `[t](../other/x.md)` | another vault's note: a peek at it (`17.9`; VV-D7) |
@@ -676,7 +676,7 @@ vault). A folder link out of the vault is revealed in its own vault, as before (
   their own vault. In a file outside every vault, its paths are read from its folder (`b.md` as `./b.md`), its
   wikilinks said to need a vault.
 - **Backlinks:** under a Markdown note, after a rule, `Linked from (n):` — each a link from the note's folder to the
-  line linking here (`[~/notes/index.md:41](<../../../notes/index.md#L41>) — architecture`), followed as any link in
+  line linking here (`[~/notes/index.md:41](../notes/index.md#L41>) — architecture`), followed as any link in
   the peek; a file's name holding `<`, `>`, `%`, `#` or a control character has them percent-encoded in the link, and
   a control character shown as its escape (`\n`) in its text; none: `Linked from: no note links here.`
 - **Worked out on a thread** (D259; `core/backlinks-jobs.ts`, `core/backlinks-worker.ts`): the note shows at once, and

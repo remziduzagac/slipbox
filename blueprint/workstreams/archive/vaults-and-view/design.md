@@ -329,7 +329,7 @@ looking (VV-D4). A folder link out of the vault is revealed in its own vault, as
   has no note of, or a path not written yet, is said, never made: notes are written in their own vault. In a file
   outside every vault, its paths are read from its folder (`b.md` as `./b.md`), its wikilinks said to need a vault.
 - **Backlinks:** under a Markdown note, after a rule, `Linked from (n):` — each a link from the note's folder to the
-  line linking here (`[~/notes/index.md:41](<../../../notes/index.md#L41>) — architecture`), followed as any link in
+  line linking here (`[~/notes/index.md:41](../notes/index.md#L41>) — architecture`), followed as any link in
   the peek — when its vault has an index on disk (the background index has most); none yet: `Linked from: kestrel has
   no index here yet — o goes there, and finds them.` The vault's graph is the one this vault reaches it by (`Reach`,
   opened once, its index caught up then), given a reach of its own for other vaults' links into it.

@@ -398,7 +398,7 @@ dates. Each says what was asked, decided, built and found, and cites the decisio
   slipbox (#23); a small change goes by an issue and one pull request (D223).
 - Then for the terminal tests: renamed, one check per feature, content from the sample folders only, test-then-fix,
   parallel, and a headless terminal researched for CI; a prototype on `Bun.Terminal` and `@xterm/headless` drove
-  slipbox. Drafted as the workstream TT ([its notes](workstreams/terminal-tests/notes.md)), for the user to accept.
+  slipbox. Drafted as the workstream TT ([its notes](workstreams/archive/terminal-tests/notes.md)), for the user to accept.
 - The user asked for slipbox's description to say what it has become, more than a Markdown reader: the terminal
   companion for coding agents, one wording wherever it describes itself, its editing intuitive yet innovative and the
   editor necessary and sufficient (D226). With it, the README's Try it became opening a folder with an installed

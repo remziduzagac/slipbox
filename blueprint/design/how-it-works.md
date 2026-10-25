@@ -3,7 +3,7 @@
 The walkthrough of the whole system, end to end: one core and its two faces, the parts it is made of, how the CLI and
 the TUI share the disk, the modules, a note's way from its bytes to the screen, what slipbox depends on, where it
 keeps its files, and what it costs. Each part has a design file of its own, linked where the part is described
-below; [terms.md](terms.md) defines the words, and [the decisions](../decisions/) give the reasons.
+below; [terms.md](terms.md) defines the words, and [the decisions](../decisions) give the reasons.
 
 ## One core, two faces
 

@@ -4,7 +4,6 @@ Contained parts of the work, each a folder with its key in its README's H1: acti
 dropped and superseded ones in `archive/`. The roadmap gives their order.
 
 - Active: [HTML](document-html/README.md), document HTML in Markdown (#90);
-  [TT](terminal-tests/README.md), the terminal tests headless and by feature;
   [DOCS](documentation/README.md), the documentation learning path, topic ownership and reference;
   [VB](views-and-bars/README.md), views and modes, the top bar, vaults and workspaces (#82, #85, #86);
   [ASI](agent-skill-install/README.md), automatic agent skill installation, refresh and removal (#50);
@@ -21,3 +20,5 @@ dropped and superseded ones in `archive/`. The roadmap gives their order.
   changed, both consolidated 2026-10-17 while their docs tasks (VV-T9, GIT-T8) are written.
 - Consolidated 2026-10-25: [HDR](archive/window-header/README.md), the window header and its mode buttons (#24);
   [WSP](archive/workspaces/README.md), workspaces apart from vaults and where you are on the top bar (#25).
+
+- Consolidated 2026-10-26: [TT](archive/terminal-tests/README.md).
