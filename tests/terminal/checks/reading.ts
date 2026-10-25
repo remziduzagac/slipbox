@@ -1569,15 +1569,23 @@ export const READING: Check[] = [
     covers: { cases: ["notes"], commands: ["type.list", "type.next", "type.prev"] },
     options: { home: true, startAt: "home/work/kestrel/docs/adr/0002-route-engine-in-rust.md" },
     run: async (s) => {
-      // The lists take each note's title from the index: built first (a loaded machine builds it late), else a note
-      // not yet read is listed by its file's name.
-      await s.until(() => !s.topBar().includes("indexing"), 30000, "the index built");
       await leader(s, "f", "d");
       await s.see("Document types");
       await s.see(/adr\s+4 notes/);
       await s.keys("escape");
-      await s.ex("type adr");
-      await s.see("adr — 4 notes");
+      // A list captures the titles indexed when it opens. Reopen until every title is ready; the top bar's
+      // spinner reports work without the old "indexing" label.
+      await s.retry(
+        async () => {
+          if (s.rowOf("adr — 4 notes") >= 0) await s.keys("escape");
+          await s.ex("type adr");
+          await s.see("adr — 4 notes");
+        },
+        () => [1, 2, 3, 4].every((n) => s.rowOf(`ADR ${n}:`) >= 0),
+        "all four indexed ADR titles",
+        1000,
+        30_000,
+      );
       await s.see(/1 +ADR 1: Offline-first sync with an op log +accepted · docs\/adr\/0001-offline-first-sync\.md/);
       await s.see(/4 +ADR 4: A retry budget for the sync queue +proposed · docs\/adr\/0004-retry-budget\.md/);
       await s.keys("escape");
