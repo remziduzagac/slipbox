@@ -132,3 +132,6 @@ failures until dismissed, retaining no completed closures. Refresh elapsed time 
 About opens by version/arrow, `space a` or palette. Show full version/channel and the previous version from the
 current version's `previous.json`, recorded before the atomic upgrade commit. Show a newer release's notes address
 and Upgrade, or `howToUpgrade` for other installations. No rollback. Escape closes both popups.
+
+The extra leader commands retain which-key explanations at normal terminal sizes: when natural column widths
+would force too many rows, shorten the widest text columns before dropping explanations (VB-T7).

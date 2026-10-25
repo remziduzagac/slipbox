@@ -1415,7 +1415,9 @@ too, after a colon: `z › scroll: the cursor's line to the middle (z), top (t),
 title still too long is cut with `…`. On a short screen the blank rows go first, then the explanations (the blank rows
 never show without them); entries that still don't fit are counted in the bottom border (`+3 more`), and with no room at
 all the popup isn't drawn. The entries are in at most three columns, as many as fit. Each column is sized to its own
-entries, so a long explanation in one never spreads the others apart. Each entry is `key → name` with a short, dimmed
+entries, so a long explanation in one never spreads the others apart. If the rows would lose explanations, try
+shortening the widest text columns (to twenty cells at minimum) to fit more columns and retain explanations.
+Each entry is `key → name` with a short, dimmed
 explanation underneath:
 
 - **For a command:** its `desc` in `core/commands/*.ts`.

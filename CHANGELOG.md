@@ -8,6 +8,7 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 
 - The top bar always shows the work count and running version. Open live task controls and recent outcomes with
   `space b`, or full version and upgrade information with `space a`; a green arrow marks an available upgrade.
+  The leader popup keeps group explanations visible by shortening wide columns when needed.
 
 
 ### Added

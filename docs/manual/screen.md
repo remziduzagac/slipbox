@@ -507,7 +507,8 @@ If you open help while a pane has the keys, or during a selection, it starts at 
 ## The which-key popup
 
 After `space`, a popup lists every key you can press next. Each has a name and a short explanation. Groups read
-`+name`, such as `+links` and `+tabs`.
+`+name`, such as `+links` and `+tabs`. If full descriptions would force too many rows, the popup shortens wide
+columns to keep explanations visible. Short screens drop explanations when they still cannot fit.
 
 After any other key that starts a sequence (`g`, `z`, `y`, `[`, `]`, `ctrl+w`, `ctrl+t`), the popup appears if you
 pause for half a second. So a sequence you know never flashes it.
