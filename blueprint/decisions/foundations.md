@@ -337,6 +337,10 @@ clipboard on the Mac.
 
 ## D22: A skill teaches the CLI, kept with every phase (9.8, 2026-09-25)
 
+> **Extended by ASI-D1–ASI-D3 (2026-10-26):** install and upgrade maintain the bundled skill in detected
+> agent user configurations. Skip controls and ownership/link checks preserve user files; the npx package idea stays
+> open.
+
 > **Detailed by GR-D10 (2026-10-12):** the skill is built into the binary: `slipbox skill` prints it and
 > `--install <dir>` writes it, so each release carries the skill that matches its commands.
 
@@ -563,7 +567,8 @@ what was typed saved; `esc` leaves typing and the lens first, as anywhere, and c
 `[capture] open_in = "right"`, or Scratch opens in the UI settings, puts it in the window on the right instead (in a
 split already, its other window), and `space s r` opens it there whatever the setting. A capture in the TUI (`space s
 a`, a code cell's `space k s`) opens the scratch on the new entry, typing: an entry says where it's at and your note on
-it, `**At:**` its reference (and its lines, fenced) and `**Note:**` after it, and the cursor waits after `**Note:**`. `esc`
+it, `**At:**` its reference (and its lines, fenced) and `**Note:**` after it, and the cursor waits after `**Note:**`.
+`esc`
 then `q` takes you back; a `**Note:**` left empty goes as the scratch closes, or as the TUI adds the next. A rule
 (`---`) divides each entry from the one before. `slipbox capture` writes the same shape: `**At:**` on a reference, its
 text after `**Note:**`; text alone is just the text. What an agent adds opens nothing. Decided by an issue (#43) and one

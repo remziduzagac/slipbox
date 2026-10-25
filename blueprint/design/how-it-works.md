@@ -294,6 +294,7 @@ The CLI's commands are the user's reference, [cli.md](../../docs/manual/cli.md);
 | `tui/dialog.ts` | UPG | the dialog: text, a select and checkboxes; its keys and clicks |
 | `tui/updates.ts` | UPG | the update offer, `app.upgrade`, `app.restart`, an upgrade underneath noticed |
 | `core/skill.ts` | GR-D10 | the skill for agents, built in: printed; installed, never over another's file or a link |
+| `core/skill-lifecycle.ts` | ASI | detected user skill folders, safe refresh and uninstall ownership checks |
 | `core/report.ts` | RPT | a bug report's facts (slipbox, the system, the terminal); its text read back; the address |
 | `core/browser.ts` | RPT | a browser opened on an address, by platform; none over SSH |
 | `core/gh.ts` | RPT | `gh` found, its account read, `gh issue create` run |

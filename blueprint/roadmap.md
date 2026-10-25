@@ -8,7 +8,7 @@ Vaults and the explorer's view (VV) and reviewing, diffing and merging (GIT) are
 (`14.14`–`14.17`); and, open in ideas.md, the skill as an npx package for common harnesses and how agents and slipbox
 work together (§ Agent surface), and search's improvements (§ Search).
 Automatic installation and maintenance of the bundled skill (#50) is in
-[ASI](workstreams/agent-skill-install/README.md), extending `14.4`, `14.7` and `14.8`.
+[ASI](workstreams/archive/agent-skill-install/README.md), extending `14.4`, `14.7` and `14.8`.
 
 Each step's ID is the plan's stable item ID: cite it (`3.3`, `10.1`) rather than restating the work. Phases and
 clusters differ: a cluster groups related items in dependency order, and its line in italics says which phase it
@@ -731,3 +731,5 @@ design's community-plugin tier ([ideas.md](ideas.md)) gets an ID when it is sche
 - [x] **[VB](workstreams/archive/views-and-bars/README.md)**: consolidated into the root on 2026-10-26.
 
 - [x] **[LC](workstreams/archive/lint-and-captions/README.md)**: consolidated into the root on 2026-10-26.
+
+- [x] **[ASI](workstreams/archive/agent-skill-install/README.md)**: consolidated into the root on 2026-10-26.

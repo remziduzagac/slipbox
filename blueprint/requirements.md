@@ -280,6 +280,11 @@ How: docs/manual/keys.md; docs/manual/configuration.md; design/tui.md § Modes a
 - `slipbox report` prints the same facts, and `--json`, for an agent writing an issue; no vault needed, no network
   (RPT-D5).
 
+- Install and upgrade install or refresh the matching bundled skill for detected Claude Code and Codex user
+  configurations, unless skipped by flag or environment. Identical skills stay unchanged; foreign or linked skills
+  stay untouched and are reported. Uninstall previews recognized skill files and removes only those after consent,
+  rechecking ownership and links (ASI-D1–ASI-D3).
+
 How: design/tui.md § Reporting a problem; docs/manual/troubleshooting.md § Reporting a problem.
 
 ## Documentation
