@@ -82,7 +82,7 @@ export function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void
   const whyText = why ? `${app.glyphs.markNotIndexed} not indexed: ${sanitize(why)}  ` : "";
   const dim = { ...roleStyle(theme, "status_dim", st.bg), bg: st.bg };
   if (!view) {
-    // No note open (a folder with none, home's left out): where you are all the same, while the top bar doesn't say it.
+    // Without a note, only the selected explorer row's explanation follows the chip; location stays on the top bar.
     x += 1;
     if (whyText) drawText(c, x, y, truncate(whyText.trimEnd(), Math.max(0, c.width - x - 1)), dim);
     return;
@@ -134,8 +134,7 @@ export function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void
 
   const rightW = stringWidth(right) + 1;
   x += drawText(c, x, y, " ", st);
-  // Where the file is (21.9): the vault, by name or path, and its branch (20.14), only while the top bar doesn't say it
-  // (WSP-D5), and while the path keeps a readable width (it goes before the path does) — at most 40 columns.
+  // The status line keeps the file; the permanent top bar carries location (VB-D3).
   const pathId = "status:path";
   // The path shrinks to leave room for its marker (reloaded / deleted) and the right-hand side;
   // the watch marker after it is dropped when it doesn't fit.

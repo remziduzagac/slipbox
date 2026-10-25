@@ -205,7 +205,7 @@ export const lineText = (l: Line) => {
 };
 export const statusRow = (frame: string) => frame.split("\n").at(-1)!;
 export const topRow = (frame: string) => frame.split("\n")[0]!;
-/** Where you are (WSP-D4), uncut and without the glyph, as the status line says it: `research · main`, `Elsewhere`. */
+/** Uncut workspace/git items from the permanent bar; zoom has a separate target (VB-D3). */
 export const whereNow = (h: Harness) =>
   locationItems(h.app)
     .filter((item) => item.id === "top:vault" || item.id === "top:branch")

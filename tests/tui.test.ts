@@ -15718,7 +15718,7 @@ describe("a branch switch as one event (5.9)", () => {
     expect(h.app.messages.some((m) => m.text.startsWith("switched"))).toBe(false); // not a switch
   });
 
-  test("where the file is (21.9, WSP-D4, WSP-D5): an unnamed vault by its path, cut from the front to fit, the branch kept; the status line's only while the top bar is hidden, at most 40 columns; Elsewhere by its name", async () => {
+  test("where the file is (VB-D3): the unnamed vault path shrinks on the permanent bar; the status line keeps the file; Elsewhere by its name", async () => {
     const { elsewhereAt } = await import("../src/core/vault.ts");
     const root = join(mkdtempSync(join(sandbox, "a-folder-with-a-rather-long-name-")), "experiment");
     mkdirSync(root);
@@ -15728,11 +15728,11 @@ describe("a branch switch as one event (5.9)", () => {
     expect(h.app.loc.name).toBeNull(); // no remote, no .slipbox/ name
     expect(whereNow(h)).toBe(`${root} │ main`);
     const top = topRow(h.frame());
-    expect(top).toMatch(/◈ …[^ ]*\/experiment/); // branch gives way before location // its last folders, and the branch
+    expect(top).toMatch(/◈ …[^ ]*\/experiment/); // branch gives way before location
     expect(top).not.toContain(root);
     expect(statusRow(h.frame())).not.toContain("experiment"); // said once
     // Room enough: the whole path.
-    const wide = await harness({ root, open: "a.md", width: 300 });
+    const wide = await harness({ root, open: "a.md", width: 2 * stringWidth(root) + 100 });
     expect(topRow(wide.frame())).toContain(`◈ ${root} │ ⎇ main`);
     expect(statusRow(wide.frame())).not.toContain(root);
     // Outside home and every vault: Elsewhere, no branch (VV-D3).

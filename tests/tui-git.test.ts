@@ -917,7 +917,7 @@ describe("git in the TUI: marks, what changed, a note's diff, worktrees, conflic
     git(root, "commit", "-q", "-m", "feat's");
     const wt = `${root}-other`;
     git(root, "worktree", "add", "-q", "-b", "other", wt, "main");
-    const h = await harness({ root, open: "notes/b.md" });
+    const h = await harness({ root, open: "notes/b.md", width: 2 * stringWidth(wt) + 100 });
     await h.app.run("git.worktrees");
     const list = h.app.overlay as ListOverlay;
     expect(list.items.map((i) => [i.label, i.detail])).toEqual([
@@ -1981,7 +1981,7 @@ describe("git's review, merge screen, pull and rebase (GIT-D3, GIT-D5, GIT-D6)",
     test("a merge settled on the merge screen, then concluded: the top bar says it; shift+r offers continue, abort", async () => {
       await isolated(async () => {
         const root = conflicted();
-        const h = await harness({ root, open: "sync.md", width: 300, height: 50 });
+        const h = await harness({ root, open: "sync.md", width: 2 * stringWidth(root) + 120, height: 50 });
         await h.app.git.refreshNow();
         await h.app.run("git.merge_screen");
         await h.keys("o", "t", "w", "s");
@@ -2057,7 +2057,7 @@ describe("git's review, merge screen, pull and rebase (GIT-D3, GIT-D5, GIT-D6)",
     test("shift+r rebases onto the base: asked, stopped at a conflict, the merge screen, the top bar; continued", async () => {
       await isolated(async () => {
         const root = behind();
-        const h = await harness({ root, open: "b.md", width: 300, height: 50 });
+        const h = await harness({ root, open: "b.md", width: 2 * stringWidth(root) + 120, height: 50 });
         await h.app.run("git.view");
         await h.app.git.refreshNow();
         await h.keys("shift+r");
@@ -2191,7 +2191,7 @@ describe("git's review, merge screen, pull and rebase (GIT-D3, GIT-D5, GIT-D6)",
         // Both of other's commits, in a terminal: it stops at the first.
         git(root, "cherry-pick", "other~1", "other");
         expect(git(root, "status", "--porcelain")).toBe("UU a.md");
-        const h = await harness({ root, open: "a.md", width: 300, height: 50 });
+        const h = await harness({ root, open: "a.md", width: 2 * stringWidth(root) + 120, height: 50 });
         await h.app.run("git.view");
         await h.app.git.refreshNow();
         expect(topRow(h.frame())).toContain("main cherry-picking");
@@ -2251,7 +2251,7 @@ describe("git's review, merge screen, pull and rebase (GIT-D3, GIT-D5, GIT-D6)",
         // Reverting the first, the line changed again since: a conflict.
         git(root, "revert", "--no-edit", "HEAD~1");
         expect(git(root, "status", "--porcelain")).toBe("UU a.md");
-        const h = await harness({ root, open: "a.md", width: 300, height: 50 });
+        const h = await harness({ root, open: "a.md", width: 2 * stringWidth(root) + 120, height: 50 });
         await h.app.git.refreshNow();
         expect(topRow(h.frame())).toContain("main reverting");
         await h.app.run("git.rebase");

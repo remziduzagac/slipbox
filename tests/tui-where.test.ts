@@ -1,6 +1,5 @@
-// Where you are (WSP-D4, WSP-D5), driven headlessly as tests/tui.test.ts drives the rest (the harness:
-// tests/tui-harness.ts): what the top bar's middle says in each place, its cutting to fit, the span it's kept in, its
-// two click targets, and the status line saying it only while the top bar doesn't.
+// The permanent location bar (VB-D3): independent items, narrowing, cancellation and zen geometry.
+// Driven through the shared TUI harness and the real location fitter.
 
 import { describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, realpathSync, writeFileSync } from "node:fs";
