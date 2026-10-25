@@ -69,3 +69,12 @@ describe("HTML exports", () => {
     expect(html).toContain("Status badge");
   });
 });
+
+test("preformatted HTML containers export intervening Markdown paragraphs", async () => {
+  const doc = await document(
+    '<div style="white-space: pre">\n\nFirst **bold** paragraph.\n\nSecond paragraph.\n\n</div>',
+  );
+  const html = new TextDecoder().decode(await toHtml(doc));
+  expect(html).toContain("First bold paragraph.");
+  expect(html).toContain("Second paragraph.");
+});

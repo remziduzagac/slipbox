@@ -120,18 +120,17 @@ function metadata(n: HtmlElement): Data {
     ...((n.attrs.id ?? (n.tag === "a" ? n.attrs.name : undefined)) ? { id: n.attrs.id ?? n.attrs.name } : {}),
   };
 }
+function nodeLiteral(node: Nodes): string {
+  if ("value" in node) return String(node.value);
+  if (node.type === "break") return "\n";
+  if (!("children" in node)) return node.type === "image" ? (node.alt ?? "") : "";
+  const value = node.children.map(nodeLiteral).join("");
+  return /^(paragraph|heading|listItem|blockquote)$/.test(node.type) ? value + "\n" : value;
+}
 function literal(children: HtmlChild[]): string {
   return children
     .map((c) =>
-      "text" in c
-        ? c.text
-        : "node" in c
-          ? "value" in c.node
-            ? String(c.node.value)
-            : ""
-          : OMIT_HTML.has(c.tag)
-            ? ""
-            : literal(c.children),
+      "text" in c ? c.text : "node" in c ? nodeLiteral(c.node) : OMIT_HTML.has(c.tag) ? "" : literal(c.children),
     )
     .join("");
 }

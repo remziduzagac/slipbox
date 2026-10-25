@@ -60,3 +60,6 @@ This is the complete module import, not a claimed startup delta; remark already 
 The layout IR carries explicit attribute resets alongside additive flags, so normal/none can override a theme's
 bold, italic or underline while preserving semantic colors. The existing shared span-style resolver applies these
 resets for both ANSI and TUI output; document writers use equivalent scoped styles.
+
+Preformatted containers extract text recursively from intervening Markdown blocks, retaining paragraph breaks
+and formatted text instead of discarding parent nodes without a direct value.

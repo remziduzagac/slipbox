@@ -706,4 +706,6 @@ Unsupported declarations are ignored. Nesting is limited to 64 levels; excess ne
 tokens in a fragment, READ shows a content-limit marker. Malformed nesting closes at a matching ancestor; unclosed
 elements end at the fragment boundary. The original source stays available.
 
+Preformatted HTML containers also retain paragraphs recognized as Markdown between blank lines.
+
 [Exports](export.md) preserve HTML differently from READ.

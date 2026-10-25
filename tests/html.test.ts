@@ -252,3 +252,10 @@ describe("document HTML", () => {
     expect(style).toMatchObject({ bold: false, italic: false, underline: false, fg: theme.roles.link.fg! });
   });
 });
+
+test("preformatted containers retain Markdown blocks between HTML fragments", () => {
+  const source = '<div style="white-space: pre">\n\nFirst **bold** paragraph.\n\nSecond paragraph.\n\n</div>';
+  const value = text(source);
+  expect(value).toContain("First bold paragraph.");
+  expect(value).toContain("Second paragraph.");
+});
