@@ -1,3 +1,5 @@
+import { adaptHtml } from "../html-adapter.ts";
+import { htmlStyle } from "./render-html.ts";
 // Inlines (2.2): a paragraph's text, emphasis, code, maths, links, wikilinks, tags, footnote marks and pictures as
 // spans, each link numbered in the layout; a soft break as the script written there reads one.
 
@@ -24,13 +26,17 @@ function joinsWithoutSpace(g: string): boolean {
   return !!g && graphemeWidth(g) === 2 && !/[\p{Script=Hangul}\p{Extended_Pictographic}]/u.test(g);
 }
 
-const DROP_TAGS =
-  /^<\/?(?:kbd|sup|sub|b|i|u|em|strong|mark|span|small|abbr|ins|del|s|q|cite|code|samp|var|a)\b[^>]*>$/i;
-
 /** What closes a sentence or a bracket: no space before it, where a comment was. */
 const CLOSING = /^[.,;:!?)\]}…]/;
 
 export function inline(nodes: PhrasingContent[], ctx: Ctx, style: Style, src: number): Span[] {
+  if (nodes.some((n) => n.type === "html")) {
+    const paragraph = adaptHtml(
+      { type: "root", children: [{ type: "paragraph", children: nodes }] },
+      ctx.opts.htmlTheme,
+    ).children[0];
+    nodes = paragraph?.type === "paragraph" ? paragraph.children : [];
+  }
   const out: Span[] = [];
   let line = src;
   /** An Obsidian comment just left out (DF-D17): the white space after it goes where there's some before it. */
@@ -38,9 +44,13 @@ export function inline(nodes: PhrasingContent[], ctx: Ctx, style: Style, src: nu
   const push = (text: string, st: Style, extra: Partial<Span> = {}) => {
     if (!text) return;
     squeeze = false;
-    out.push({ text, role: st.role, attrs: st.attrs, src: line, ...extra });
+    out.push({ text, role: st.role, attrs: st.attrs, ...(st.clear ? { clear: st.clear } : {}), src: line, ...extra });
   };
   const text = (value: string, st: Style, extra: Partial<Span> = {}) => {
+    if (st.pre) {
+      push(expandTabs(sanitize(value)), st, extra);
+      return;
+    }
     // Soft line breaks become spaces; each one advances the source line.
     // A tab in prose or a table cell is whitespace; the width function gives it no columns.
     let v = sanitize(value).replace(/\t/g, " ");
@@ -72,25 +82,53 @@ export function inline(nodes: PhrasingContent[], ctx: Ctx, style: Style, src: nu
     for (const n of ns) {
       if (n.position) line = n.position.start.line;
       switch (n.type) {
+        case "htmlInline": {
+          const next = htmlStyle(st, n.data?.html);
+          walk(n.children, next, n.data?.html?.mark ? { ...extra, bg: "highlight" } : extra);
+          break;
+        }
         case "text":
           text(n.value, st, extra);
           break;
         case "strong":
           walk(
             n.children,
-            { role: st.role === "text" || st.role === "quote" ? "strong" : st.role, attrs: st.attrs | A_BOLD },
+            {
+              ...st,
+              role: st.role === "text" || st.role === "quote" ? "strong" : st.role,
+              attrs: st.attrs | A_BOLD,
+              clear: (st.clear ?? 0) & ~A_BOLD,
+            },
             extra,
           );
           break;
         case "emphasis":
-          walk(n.children, { role: st.role === "text" ? "emphasis" : st.role, attrs: st.attrs | A_ITALIC }, extra);
+          walk(
+            n.children,
+            {
+              ...st,
+              role: st.role === "text" ? "emphasis" : st.role,
+              attrs: st.attrs | A_ITALIC,
+              clear: (st.clear ?? 0) & ~A_ITALIC,
+            },
+            extra,
+          );
           break;
         case "delete":
-          walk(n.children, { role: st.role === "text" ? "strike" : st.role, attrs: st.attrs | A_STRIKE }, extra);
+          walk(
+            n.children,
+            {
+              ...st,
+              role: st.role === "text" ? "strike" : st.role,
+              attrs: st.attrs | A_STRIKE,
+              clear: (st.clear ?? 0) & ~A_STRIKE,
+            },
+            extra,
+          );
           break;
         case "highlight":
           // Obsidian's `==highlight==` (DF-D17): on its own background, what's inside it (a link, code) too.
-          walk(n.children, { role: "highlight", attrs: st.attrs }, { ...extra, bg: "highlight" });
+          walk(n.children, { ...st, role: "highlight", attrs: st.attrs }, { ...extra, bg: "highlight" });
           break;
         case "comment":
           // Obsidian's `%%comment%%`: hidden while reading (source mode and the lens show the text as typed).
@@ -158,13 +196,6 @@ export function inline(nodes: PhrasingContent[], ctx: Ctx, style: Style, src: nu
           push(`[${sanitize(n.label ?? n.identifier)}]`, { role: "footnote", attrs: 0 }, { link: id });
           break;
         }
-        case "html": {
-          const v = n.value.trim();
-          if (/^<br\s*\/?>$/i.test(v)) push("\n", st);
-          else if (/^<!--[\s\S]*-->$/.test(v) || DROP_TAGS.test(v)) break;
-          else push(sanitize(n.value), { role: "html", attrs: 0 }, extra);
-          break;
-        }
         default:
           if ((n.type as string) === "wikiLink") wiki(n as unknown as WikiLink, st, extra);
           else if ((n.type as string) === "hashtag") {
@@ -193,8 +224,8 @@ export function inline(nodes: PhrasingContent[], ctx: Ctx, style: Style, src: nu
     // no form made up for the screen.
     // On a highlight's background, inside one.
     const bg = around.bg ? { bg: around.bg } : {};
-    if (children.length) walk(children, { role, attrs: st.attrs }, { ...bg, link: id });
-    else push(sanitize(url), { role, attrs: st.attrs }, { ...bg, link: id });
+    if (children.length) walk(children, { ...st, role, attrs: st.attrs }, { ...bg, link: id });
+    else push(sanitize(url), { ...st, role, attrs: st.attrs }, { ...bg, link: id });
     const external = /^[a-z][a-z0-9+.-]*:/i.test(url);
     // The URL after the text, unless the text already is it (www. autolinks, empty link text).
     const same = url === visible || ["mailto:", "http://", "https://"].some((scheme) => url === `${scheme}${visible}`);
@@ -241,7 +272,11 @@ export function inline(nodes: PhrasingContent[], ctx: Ctx, style: Style, src: nu
             ? "link_ambiguous"
             : "wikilink";
     const prefix = picture ? `${ctx.opts.glyphs.image} ` : w.embed ? `${ctx.opts.glyphs.embed} ` : "";
-    push(prefix + sanitize(shown), { role, attrs: st.attrs }, { ...(around.bg ? { bg: around.bg } : {}), link: id });
+    push(
+      prefix + sanitize(shown),
+      { ...st, role, attrs: st.attrs },
+      { ...(around.bg ? { bg: around.bg } : {}), link: id },
+    );
   };
   walk(nodes, style);
   return out;

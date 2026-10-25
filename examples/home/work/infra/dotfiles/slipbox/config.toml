@@ -221,6 +221,7 @@ topbar_chip = { fg = "#2e3440", bg = "#88c0d0", bold = true }
 sidebar_vault = { bold = true, underline = true }
 
 [keys]                          # one binding per command, ctrl+j, and some real ones
+"leader ; 0 l" = "html.details_toggle"
 "leader ; 0 a" = "git.focus"
 "leader ; 0 b" = "git.menu"
 "leader ; 0 c" = "picture.copy_path"

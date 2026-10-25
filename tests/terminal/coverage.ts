@@ -46,7 +46,7 @@ const COMMAND_OWNERS: Record<string, Area> = {
     ].map((g) => [g, "navigating" as const]),
   ),
   ...Object.fromEntries(
-    ["theme", "glyphs", "cell", "info", "footnotes", "footnote", "heading", "type", "picture"].map((g) => [
+    ["theme", "glyphs", "cell", "info", "footnotes", "footnote", "heading", "type", "picture", "html"].map((g) => [
       g,
       "reading" as const,
     ]),

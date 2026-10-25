@@ -292,12 +292,11 @@ export class Pictures {
         const size = svg ? (r?.size(svg) ?? null) : images.size(path);
         if (!size || size.width <= 0 || size.height <= 0) return null;
         // Obsidian's size, `|300` its width and `|240x180` the box it fits in, in place of its own; proportions kept.
-        const given =
-          "file" in from && from.size
-            ? Math.min(from.size.width, from.size.height ? (from.size.height * size.width) / size.height : Infinity)
-            : 0;
+        const given = from.size
+          ? Math.min(from.size.width, from.size.height ? (from.size.height * size.width) / size.height : Infinity)
+          : 0;
         // (`|0`, a size of nothing: its own instead.)
-        const px = given > 0 ? given : size.width;
+        const px = Math.min(given > 0 ? given : size.width, from.maxWidth ?? Infinity);
         const room = { cols: Math.max(1, width - excess), rows: rows - caption };
         const sizes = pictureSizes(px, (px * size.height) / size.width, room, cell);
         const toggles = sizes.fit.cols !== sizes.own.cols || sizes.fit.rows !== sizes.own.rows;

@@ -1316,7 +1316,7 @@ export const READING: Check[] = [
   },
   {
     area: "reading",
-    name: "paragraphs, rules and HTML: soft breaks join, each kind of hard break breaks; --- a rule; HTML blocks as written, dim; each comment hidden, inline HTML's text kept",
+    name: "paragraphs, rules and HTML: soft breaks join, each kind of hard break breaks; --- a rule; HTML document content rendered; each comment hidden, inline HTML formatted",
     covers: { cases: ["paragraphs", "rules", "html"] },
     options: { home: true, startAt: "home/notes/daily/2026-08-19.md" },
     run: async (s) => {
@@ -1342,25 +1342,23 @@ export const READING: Check[] = [
       await s.restart({ startAt: "home/notes/daily/2026-09-11.md" });
       await s.see("Friday 11 September");
       s.expect(s.rowOf(/│\s+2\s+─{20,}/) >= 0, "line 2's --- drawn as a rule");
-      // HTML: a block as it's written, dimmed; comments hidden, an unclosed one to the end; inline tags dropped.
+      // HTML document content is rendered; comments, including an unclosed comment, remain hidden.
       await s.restart({ startAt: "home/work/kestrel/docs/qa/theme-showcase.md" });
       await s.see("Inline HTML that renders as its text: press Ctrl+S, x2, H2O");
       await s.see("An inline comment  in a paragraph");
       await s.notSee("this part is hidden");
       await s.ex("300");
       await s.keys("z", "z");
-      await s.see('<div class="note">');
-      await s.see("<summary>A details block</summary>");
-      const html = s.styleOf('<div class="note">');
+      await s.see("A div, shown verbatim and dim.");
+      await s.see("A details block");
+      await s.notSee('<div class="note">');
+      await s.notSee("<summary>");
       await s.keys("G");
       await s.see("Last visible line.");
-      const prose = s.styleOf("Visible between comments.");
-      s.expect(!!html && !!prose && html.fg !== prose.fg, `the HTML dimmed: ${JSON.stringify([html, prose])}`);
+      await s.see("Visible between comments.");
       await s.notSee("A heading inside a comment");
       await s.notSee("one-line comment");
-      // One never closed isn't a comment on its own: an HTML block, as written and dim, to the end.
-      await s.see("<!-- never closed");
-      s.expect(s.styleOf("<!-- never closed")?.fg === html?.fg, "the unclosed comment dim, as HTML is");
+      await s.notSee("<!-- never closed");
     },
   },
   {

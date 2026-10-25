@@ -150,7 +150,7 @@ const links = (doc: ExportDoc) =>
   doc.chapters.flatMap((ch) => all(ch.nodes)).filter((n): n is Link => n.type === "link");
 const textOf = (nodes: readonly unknown[]): string =>
   all(nodes)
-    .map((n) => (n.type === "text" ? n.value : n.type === "break" ? "\n" : ""))
+    .map((n) => (n.type === "text" || n.type === "inlineCode" ? n.value : n.type === "break" ? "\n" : ""))
     .join("");
 const pictures = (doc: ExportDoc) =>
   doc.chapters
@@ -483,7 +483,7 @@ describe("export: the assembler (10.1)", () => {
     expect(textOf(plain!.children)).toBe("[!note] read as written");
   });
 
-  test("each note's footnotes its own: two notes' [^1] two footnotes; HTML in a line: <br> a break, other tags gone, their words kept", async () => {
+  test("each note's footnotes its own: two notes' [^1] two footnotes; inline HTML retains hard breaks and keyboard code", async () => {
     const { graph } = root({
       "a.md": "# A\n\nA's claim[^1], and <kbd>Ctrl</kbd> then<br>next.\n\n![[b]]\n\n[^1]: A's note.\n",
       "b.md": "B's claim[^1].\n\n[^1]: B's note.\n",
@@ -497,6 +497,9 @@ describe("export: the assembler (10.1)", () => {
     expect(defs.find(([id]) => id === refs[0])![1]).toBe("A's note.");
     expect(defs.find(([id]) => id === refs[1])![1]).toBe("B's note.");
     expect(textOf([nodes[1]])).toBe("A's claim, and Ctrl then\nnext.");
+    expect(all(nodes).filter((n) => n.type === "inlineCode")).toContainEqual(
+      expect.objectContaining({ value: "Ctrl" }),
+    );
     expect(all(nodes).filter((n) => n.type === "html")).toEqual([]);
   });
 
@@ -1163,6 +1166,39 @@ describe("export: an e-book (10.6)", () => {
 });
 
 describe("export: PDF (10.5)", () => {
+  test("document HTML survives PDF assembly with explicit headings, linked images and expanded details", async () => {
+    const r = root({
+      "a.md":
+        '# HTML export\n\n<div><h2 id="inside">HTML heading</h2><p><u>Underlined</u> and <b>bold</b>.</p><a href="https://example.com"><img src="square.png" width=20 alt="Local badge"></a></div>\n\n<details>\n<summary>More</summary>\n\nBody from a disclosure.\n\n</details>\n\n<script>omitted()</script>\n',
+      "square.png": png,
+    });
+    const pdf = readPdf((await exportOf(r, ["a.md"], "pdf")).data);
+    expect(pdf.pages.join("\n")).toContain("HTML heading");
+    expect(pdf.pages.join("\n")).toContain("Underlined and bold.");
+    expect(pdf.pages.join("\n")).toContain("Body from a disclosure.");
+    expect(pdf.pages.join("\n")).not.toContain("omitted");
+    expect(pdf.dests).toContain("a--inside");
+    expect(pdf.images[0]).toBe(1);
+    expect(pdf.links).toContainEqual({ uri: "https://example.com" });
+    const word = xml(unzip((await exportOf(r, ["a.md"], "docx")).data), "word/document.xml");
+    expect(word).toMatch(/<w:hyperlink[^>]*>[\s\S]*?<w:drawing/);
+  });
+
+  test("embedded HTML remains document content and lossless Markdown even when the outer note has no HTML", async () => {
+    const raw = "<DIV><b>__original__ &amp; HTML</b></DIV>";
+    const r = root({
+      "a.md": "# Outer\n\n![[inner]]\n",
+      "inner.md": "# Inner\n\n" + raw + "\n\nWords <script>omitted()</script> remain.\n",
+    });
+    const html = (await exportOf(r, ["a.md"], "html")).text;
+    expect(html).toContain("<strong>__original__ &#x26; HTML</strong>");
+    expect(html).not.toContain("omitted");
+    const markdown = (await exportOf(r, ["a.md"], "md")).text;
+    expect(markdown).toContain(raw);
+    expect(markdown).not.toContain("omitted");
+    expect(markdown).toContain("Words  remain.");
+  });
+
   test("a chapter from a new page, its text read back; each heading a destination, the outline the chapters and their sections", async () => {
     const r = root({
       "a.md":

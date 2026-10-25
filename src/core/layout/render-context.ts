@@ -31,6 +31,8 @@ export interface Ctx {
 }
 
 export interface Style {
+  clear?: number;
+  pre?: boolean;
   role: Role;
   attrs: number;
 }
@@ -76,6 +78,7 @@ export function addLink(ctx: Ctx, l: Omit<LayoutLink, "line" | "col">): number {
 }
 
 export function textOf(n: Nodes): string {
+  if (n.type === "image" || n.type === "imageReference") return n.alt ?? "";
   if ((n.type as string) === "hashtag") return `#${(n as unknown as Hashtag).value}`;
   if ("value" in n && typeof n.value === "string") return n.value;
   if ((n.type as string) === "wikiLink") return (n as unknown as WikiLink).alias ?? (n as unknown as WikiLink).value;

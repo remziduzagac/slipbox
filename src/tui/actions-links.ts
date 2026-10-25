@@ -22,7 +22,7 @@ import { slugName } from "../core/registry.ts";
 import { rootAt } from "../core/vault.ts";
 import { classify } from "../core/filetypes.ts";
 import { lineFragment, blockLine, findHeading } from "../core/landing.ts";
-import { anchorsOf } from "../core/parse.ts";
+import { anchorsOf, headingsOf } from "../core/parse.ts";
 
 /** Links: followed, peeked at, cycled through, listed (links and backlinks), inserted and converted. */
 export function linkActions(): Record<string, Run> {
@@ -35,6 +35,7 @@ export function linkActions(): Record<string, Run> {
       withView(a, (v) => {
         // A diff window's row (GIT-D2): a fold opened, a line gone to.
         if (diffEnter(a, v)) return;
+        if (a.currentLayout(v).lines[v.cur.row]?.details) return a.run("html.details_toggle");
         // The code view's run of imports (24.5): folded or unfolded.
         if (a.code.toggleFold(v)) return;
         const i = a.linking.linkForFollow(v);
@@ -494,6 +495,9 @@ function pointerHeading(headings: { level: number; text: string }[], pointer: st
 }
 
 function jumpToHeading(a: App, view: View, heading: string, wiki = false): void {
+  const full = headingsOf(view.buf.parsed.tree);
+  const target = findHeading(full, anchorsOf(view.buf.parsed.tree), heading, wiki);
+  if (target) a.html.reveal(view, target.line);
   const layout = lay(a, view);
   const p = heading.startsWith("/") ? pointerHeading(layout.headings, heading) : -1;
   if (p >= 0) {

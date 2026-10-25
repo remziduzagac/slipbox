@@ -279,6 +279,9 @@ export function registerActions(app: App): void {
     "help.report_send": (a, arg) => a.report.send(arg),
     "app.quit": (a) => a.saving.requestQuit(),
   };
+  impl["html.details_toggle"] = (a) => {
+    if (!a.html.toggle()) a.message("info", "no HTML details summary here");
+  };
   for (const t of UI_TOGGLES) impl[t.id] = (a) => toggle(a, t.key, t.title);
   // The marks, a level now (off → errors → warnings and up → all), not a switch.
   impl["ui.problem_marks"] = (a) => {

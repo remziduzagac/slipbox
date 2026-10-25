@@ -1061,11 +1061,7 @@ describe("an HTML block's comments (review cycle 2, render)", () => {
           .join("")
           .trimEnd(),
       ]);
-    expect(rows).toEqual([
-      [3, "<div>"],
-      [6, "<p>x</p>"],
-      [8, "</div>"],
-    ]);
+    expect(rows).toEqual([[6, "x"]]);
   });
 });
 
@@ -1135,11 +1131,11 @@ describe("what rendering.md promises (review: docs against the tests)", () => {
     expect(out.slice(1, 5).map((r) => r.trimEnd())).toEqual(["a rather  a", "long", "column", "label"]);
     expect(out.find((r) => r.startsWith("two"))).toBe("two       b");
   });
-  test("tabs expand to stops of 4 in code blocks, HTML and raw frontmatter, and of 2 in inline code", () => {
+  test("tabs expand in code and frontmatter; HTML prose collapses whitespace", () => {
     const out = rows("```\na\tb\n```\n\n`a\tb` x\n\n<div>\nc\td\n</div>\n");
     expect(out).toContain(" a   b"); // the code block's own one-column margin, then a stop of 4
     expect(out).toContain("a b x"); // inline code: a stop of 2
-    expect(out).toContain("c   d"); // an HTML block
+    expect(out.join("\n")).toContain("c d"); // HTML prose collapses whitespace
     // Frontmatter that doesn't parse is shown as written, its tabs expanded too.
     expect(rows("---\ntitle: [x\n\tq\n---\n\nbody\n")).toContain("     q");
   });

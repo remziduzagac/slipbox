@@ -642,9 +642,11 @@ export class NoteBuffer {
     },
     codeScroll = false,
     caption: "bottom" | "top" = "bottom",
+    html: Pick<NoteRenderOptions, "htmlTheme" | "htmlDetails"> = {},
   ): Layout {
     const key = `${width}:${glyphs.mode}:${showUrls ? 1 : 0}:${codeScroll ? 1 : 0}:${pictures?.key ?? "-"}:${caption}`;
-    let l = this.layouts.get(key);
+    const variant = key + ":" + html.htmlTheme + ":" + JSON.stringify([...(html.htmlDetails ?? [])]);
+    let l = this.layouts.get(variant);
     if (!l) {
       // Another vault's file: its links and embeds read in its own vault.
       const there = this.elsewhere?.graph && this.elsewhere.rel !== null ? this.elsewhere : null;
@@ -658,6 +660,7 @@ export class NoteBuffer {
           showUrls,
           codeScroll,
           caption,
+          ...html,
           ...(pictures
             ? { picture: pictures.picture, drawings: pictures.drawings, pictureKey: pictures.sized ?? "" }
             : {}),
@@ -669,7 +672,7 @@ export class NoteBuffer {
       for (const p of l.embedded ?? []) this.embedded.add(p);
       // Keep the last few widths (a drag back and forth, a toggle and back): evict the oldest.
       if (this.layouts.size >= 6) this.layouts.delete(this.layouts.keys().next().value!);
-      this.layouts.set(key, l);
+      this.layouts.set(variant, l);
     }
     return l;
   }

@@ -67,7 +67,16 @@ export class OutlineView {
   }
 
   /** Visible outline rows for the current view: headings, folds applied. */
-  rows(): { index: number; level: number; text: string; line: number; folded: boolean; hasChildren: boolean }[] {
+  rows(): {
+    index: number;
+    level: number;
+    text: string;
+    line: number;
+    source?: number;
+    hidden?: boolean;
+    folded: boolean;
+    hasChildren: boolean;
+  }[] {
     const view = this.app.view;
     if (!view) return [];
     if (this.app.outline.forKey !== view.buf.key) {
@@ -77,7 +86,7 @@ export class OutlineView {
       this.app.outline.scroll = 0;
       this.app.outline.left = 0;
     }
-    const hs = this.app.currentLayout(view).headings;
+    const hs = this.app.html.headings(view, this.app.currentLayout(view));
     const out: ReturnType<App["outlineView"]["rows"]> = [];
     // Filtering (`/`): the headings that match and the ones they sit under, folds ignored.
     const q = this.app.outline.filter ?? "";
@@ -101,6 +110,8 @@ export class OutlineView {
             level: h.level,
             text: h.text.replace(/\s+/g, " "),
             line: h.line,
+            source: h.src,
+            hidden: h.hidden,
             folded: false,
             hasChildren: (hs[i + 1]?.level ?? 0) > h.level,
           });
@@ -114,7 +125,16 @@ export class OutlineView {
       const hasChildren = (hs[i + 1]?.level ?? 0) > h.level;
       const folded = this.app.outline.folded.has(i);
       // Its text on one row (the layout keeps the heading's own, white space and all, for links).
-      out.push({ index: i, level: h.level, text: h.text.replace(/\s+/g, " "), line: h.line, folded, hasChildren });
+      out.push({
+        index: i,
+        level: h.level,
+        text: h.text.replace(/\s+/g, " "),
+        line: h.line,
+        source: h.src,
+        hidden: h.hidden,
+        folded,
+        hasChildren,
+      });
       if (folded && hasChildren) hideDeeperThan = h.level;
     });
     return out;
@@ -126,7 +146,7 @@ export class OutlineView {
     if (!view) return -1;
     let best = -1;
     this.rows().forEach((r, i) => {
-      if (r.line <= view.cur.row) best = i;
+      if (!r.hidden && r.line <= view.cur.row) best = i;
     });
     return best;
   }
@@ -156,7 +176,8 @@ export class OutlineView {
       case "jump":
         if (row && view) {
           this.app.history.push(view);
-          this.app.moveCursor(view, { row: row.line, col: 0 });
+          if (row.hidden && row.source) this.app.placeAtLine(view, row.source);
+          else this.app.moveCursor(view, { row: row.line, col: 0 });
           this.app.region = "content";
           if (this.app.panels.narrow || this.app.ui.zen) this.app.outline.overlay = false;
         }

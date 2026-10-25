@@ -308,9 +308,8 @@ The Info view lists the properties too ([The screen](screen.md#the-info-view)). 
 
 ### HTML in a note
 
-A block of HTML is shown as it's written, dimmed. Comments (`<!-- -->`) are hidden.
-
-Inside a paragraph, tags such as `<kbd>`, `<sup>` and `<mark>` are dropped, and their text is kept.
+Document HTML renders as text, formatting, headings, pictures and collapsible sections. Comments are hidden.
+The [supported HTML subset](#html-in-markdown) lists the exact elements, presentation values and fallbacks.
 
 ## Pictures
 
@@ -642,3 +641,74 @@ A text or code file has no page to draw. `slipbox render` says so and exits with
 text.
 
 Every option is in [The command line](cli.md).
+
+## HTML in Markdown
+
+READ renders the document HTML commonly used in READMEs. SOURCE and the lens keep the original markup.
+
+![HTML formatting, picture captions and a collapsed section](../images/reading-html.png)
+
+Supported elements:
+
+| Elements | READ behavior |
+| --- | --- |
+| p, div, span | Containers and paragraph boundaries; readable children retained |
+| br, hr | Hard break and thematic rule |
+| h1–h6 | Headings in the outline and fragment navigation; explicit id takes precedence |
+| strong, b, em, i, u, ins, s, del | Bold, italic, underline and strikethrough |
+| code, kbd, samp, mark | Code, key and highlight styling using the current theme |
+| pre | Spaces and line breaks preserved |
+| a | Links; id and name anchors remain navigation targets |
+| img | The same resolution, SVG decoding, image policy and alt fallback as Markdown images |
+| picture, source | One supported alternative selected for the current light or dark theme |
+| details, summary | Collapsible section, respecting open initially |
+
+On a summary, Enter runs **Toggle HTML details**. That command is also in the palette and can have a custom binding.
+Following a fragment or choosing a heading reveals enclosing collapsed sections. The command line always prints
+the body, since printed output has no disclosure interaction.
+
+These attributes and inline style declarations are supported:
+
+| Attribute or declaration | Accepted values |
+| --- | --- |
+| align; text-align | left, center, right, relative to the container width |
+| width, height; style width, height | Positive integer pixels, bare or followed by px |
+| style width, max-width | Also integer percentages from 1% to 100% |
+| font-weight | normal, bold |
+| font-style | normal, italic |
+| text-decoration | underline, line-through, both separated by a space, none |
+| white-space | pre |
+
+A pixel value has at most nine digits. Height percentages, zero, negative, fractional and other units are ignored.
+Valid inline styles override legacy attributes; invalid declarations leave earlier valid values in effect.
+Width and height describe a box the image fits inside, preserving its intrinsic aspect ratio. Max-width further
+caps it; container width and existing image limits still apply. Alignment also applies to its alt-text fallback.
+
+A picture selects the first source with a matching (prefers-color-scheme: light) or
+(prefers-color-scheme: dark) media query and a single URL in srcset. Other queries, multiple candidates or density
+descriptors are skipped. An optional type must be image/png, image/jpeg, image/gif, image/webp, image/avif,
+image/svg+xml, image/bmp, image/x-icon, image/tiff or image/heic. Without a supported match, use img.
+A renderer without explicit theme information also uses img. A linked image and its fallback follow the enclosing
+link.
+
+Local images resolve beside their note, including in embedded notes. Remote images obey render.images_remote:
+the default remains ask; never causes no requests. HTML does not grant permission to fetch a badge.
+Unavailable, disabled or undecodable images keep their alt text and link. Inline images mixed with prose use the
+same text fallback as equivalent Markdown images.
+
+Unknown document elements retain readable children. HTML text is not reinterpreted as Markdown: literal asterisks
+inside an HTML block remain asterisks. Comments are hidden, including an unclosed comment to the end of its fragment.
+Scripts, styles, frames, objects, embeds, applets, templates, noscript, head metadata, link, meta and base elements
+are omitted with their content. Event handlers and unsupported URL schemes have no action.
+
+There are no stylesheets, class-based styling, external CSS, custom colors, positioning, flexbox, grid or custom fonts.
+Unsupported declarations are ignored. Nesting is limited to 64 levels; excess nesting is flattened. After 50,000 HTML
+tokens in a fragment, READ shows a content-limit marker. Malformed nesting closes at a matching ancestor; unclosed
+elements end at the fragment boundary. The original source stays available.
+
+Preformatted HTML containers also retain paragraphs recognized as Markdown between blank lines.
+Nested br elements remain hard line breaks inside preformatted content.
+Restoring a workspace reveals collapsed HTML content containing its saved reading position.
+For a large note, this reveal waits for its background parse to finish.
+
+[Exports](export.md) preserve HTML differently from READ.

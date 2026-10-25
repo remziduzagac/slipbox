@@ -8,6 +8,10 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 
 ### Added
 
+- Markdown document HTML now renders with scoped formatting, aligned images, theme-aware picture alternatives,
+  headings and collapsible details. Image permissions still apply. Noninteractive output expands details; Markdown
+  exports preserve original HTML except omitted non-document content.
+
 - Installation and upgrades install or refresh the bundled skill for detected Claude Code and Codex user
   configurations. `--no-skill` or `SLIPBOX_NO_SKILL=1` skips automatic writes. Uninstall removes recognized skills
   with `--yes`, reporting foreign and linked skills it leaves alone. TUI upgrade and restart messages retain skill
@@ -109,6 +113,11 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
   downloading it again.
 
 ### Fixed
+
+- Preserve Markdown paragraphs inside preformatted HTML containers.
+- Preserve nested HTML line breaks inside preformatted containers in READ and document exports.
+- Restore saved workspaces with document HTML without a startup error.
+- Keep large notes on the background parsing path when revealing saved HTML positions.
 
 - The agent guide's Markdown on the documentation site, which an agent can fetch on its own, links the other pages by
   their full addresses. Its links were relative to the docs folder and led nowhere on the site.

@@ -1,3 +1,4 @@
+import { Html } from "./html.ts";
 import type { ListOverlay } from "./list-types.ts";
 export type { ListItem, ListOverlay } from "./list-types.ts";
 import { Background } from "./background.ts";
@@ -533,6 +534,7 @@ export class App {
   readonly settings = new Settings(this);
   /** Pictures (12.x): drawn, fetched, and held back while a view scrolls. */
   readonly pictures = new Pictures(this);
+  readonly html = new Html(this);
   /** Syntax, language servers, linters, and the trust they need. */
   readonly languages = new Languages(this);
   /** Source control: git's view of the files, its diffs, branches and commits. */
@@ -674,12 +676,12 @@ export class App {
     this.history.recentNotes = (loadSession(this.loc)?.recent_notes ?? []).slice(0, RECENT_NOTES_MAX);
     this.session.restoreUiOverrides();
     if (opts.themeName) this.ui.theme = opts.themeName; // an explicit theme beats a remembered one
+    this.settings.applyTheme();
     // A restart comes back with the window's own session, from its note, whatever restore_session says (UPG-D4).
     if (opts.restarted) this.message(opts.restarted.said.level, opts.restarted.said.text);
     const restored = opts.restarted?.session
       ? this.session.restoreFrom(opts.restarted.session)
       : !opts.open && this.config.ui.restore_session && this.session.restore();
-    this.settings.applyTheme();
     this.glyphs = this.settings.glyphSet(this.ui.glyphs);
     if (!restored) {
       const first = opts.open ?? this.defaultNote(this.homeFolder);
@@ -1020,6 +1022,7 @@ export class App {
       caughtUpOnce.add(buf);
       keepCaughtUp(this, buf.elsewhere.graph);
     }
+    if (anchor && buf.kind.group === "note") this.html.revealIn(buf, anchor.line);
     const topAnchor = anchor ?? this.positions.get(buf.key) ?? { ...TOP };
     const curAnchor =
       cursor ??
@@ -1250,6 +1253,7 @@ export class App {
    * the column. A rendered row has no source columns: the column counts there only in source mode.
    */
   placeAtLine(v: View, line: number, column = 1): void {
+    if (!v.source && v.buf.kind.group === "note") this.html.reveal(v, line);
     {
       const layout = this.currentLayout(v);
       const row = layout.lines.findIndex((l) => l.src === line && !l.decor);

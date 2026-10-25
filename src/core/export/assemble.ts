@@ -1,3 +1,6 @@
+import { markdownHtml } from "../html-markdown.ts";
+import { exportHtml } from "../html-export.ts";
+import { htmlForMarkdown } from "../html.ts";
 // Export, the assembler (plan 10.1): the notes to export as one document for a writer (10.2–10.6) — each a chapter, in
 // the order given (10.9). Its embeds are drawn in; its links to the notes exported stay links, inside the document, and
 // the rest are their text (an address on the web stays a link); its pictures are files (one on the internet its cached
@@ -29,6 +32,8 @@ export interface ExportChapter {
   /** Its id in the document: what a link to it is to. */
   anchor: string;
   nodes: RootContent[];
+  /** Original HTML for the lossless Markdown writer, alongside assembled Markdown content. */
+  markdownNodes?: RootContent[];
 }
 
 export interface ExportDoc {
@@ -45,6 +50,7 @@ export interface ExportDoc {
  * display's maths); the size Obsidian's `|300` or `|240x180` gives it, in pixels.
  */
 export interface ExportPicture {
+  maxWidth?: number;
   file?: string;
   /** Its bytes in hand, read before its file: a picture made PNG for a format that doesn't hold its kind. */
   data?: Uint8Array;
@@ -66,6 +72,8 @@ export interface ExportPicture {
 const MAX_DEPTH = 3;
 
 interface Ctx {
+  htmlFound?: { value: boolean };
+  preserveHtml?: boolean;
   graph: Graph;
   /** The note being read, in this root (null for another root's: its links are its text) and absolute. */
   rel: string | null;
@@ -100,11 +108,23 @@ async function assembleDocument(graph: Graph, rels: string[]): Promise<ExportDoc
   const doc: ExportDoc = { title: "", author: null, date: null, lang: null, chapters: [] };
   for (const rel of rels) {
     const abs = graph.abs(rel);
-    const parsed = structuredClone(parseExportNote(abs));
+    const original = parseExportNote(abs);
+    const parsed = structuredClone(original);
     const anchor = chapters.get(rel)!;
     const ctx: Ctx = { graph, rel, abs, chapters, chain: [abs], ids: new Map(), anchor };
     const title = noteTitle(parsed, basename(rel).replace(/\.(md|markdown)$/i, ""));
-    doc.chapters.push({ rel, title, anchor, nodes: await blocks(parsed.tree.children, ctx) });
+    const hasHtml = [...walk(parsed.tree.children)].some((n) => n.type === "html");
+    ctx.htmlFound = { value: hasHtml };
+    const semantic = hasHtml ? exportHtml(parsed.tree) : parsed.tree;
+    const nodes = await blocks(semantic.children, ctx);
+    const markdownNodes = ctx.htmlFound.value
+      ? await blocks(markdownHtml(structuredClone(original.tree), original.source).children, {
+          ...ctx,
+          ids: new Map(),
+          preserveHtml: true,
+        })
+      : undefined;
+    doc.chapters.push({ rel, title, anchor, nodes, ...(markdownNodes ? { markdownNodes } : {}) });
     // The first note's frontmatter says the document's title, author and date.
     if (doc.chapters.length === 1) {
       const fm = parsed.frontmatter?.data ?? {};
@@ -153,7 +173,13 @@ function words(v: unknown): string | null {
 async function blocks(nodes: RootContent[], c: Ctx): Promise<RootContent[]> {
   const out: RootContent[] = [];
   for (const n of nodes) {
-    if (n.type === "yaml" || (n.type as string) === "toml" || n.type === "definition" || n.type === "html") continue;
+    if (n.type === "html") {
+      if (c.htmlFound) c.htmlFound.value = true;
+      if (c.preserveHtml) out.push({ ...n, value: htmlForMarkdown(n.value) });
+      else out.push(...(await blocks(exportHtml({ type: "root", children: [n] }).children, c)));
+      continue;
+    }
+    if (n.type === "yaml" || (n.type as string) === "toml" || n.type === "definition") continue;
     // Obsidian's comments (DF-D17): hidden while reading, so not in what's sent either.
     if (n.type === "commentBlock" || (n.type === "paragraph" && onlyComments(n.children))) continue;
     if (n.type === "paragraph") {
@@ -166,7 +192,7 @@ async function blocks(nodes: RootContent[], c: Ctx): Promise<RootContent[]> {
       n.children = await inline(n.children, c);
     } else if (n.type === "heading") {
       // Its id, as a link to it says it — the second of a name numbered, as GitHub does.
-      const slug = headingAnchor(c.anchor, headingText(n));
+      const slug = headingAnchor(c.anchor, (n.data?.html ? n.data.id : undefined) ?? headingText(n));
       const seen = c.ids.get(slug) ?? 0;
       c.ids.set(slug, seen + 1);
       n.data = { ...(n.data ?? {}), anchor: seen ? `${slug}-${seen}` : slug } as typeof n.data;
@@ -239,14 +265,21 @@ async function embeds(children: PhrasingContent[], c: Ctx): Promise<RootContent[
       continue;
     }
     const inner: Ctx = { ...c, rel: e.from ?? null, abs: e.path, chain: [...c.chain, e.path] };
-    out.push(...(await blocks(structuredClone(e.nodes), inner)));
+    const tree = { type: "root" as const, children: structuredClone(e.nodes) };
+    out.push(
+      ...(await blocks(
+        (c.preserveHtml ? markdownHtml(tree, parseExportNote(e.path).source) : exportHtml(tree)).children,
+        inner,
+      )),
+    );
+    if (c.htmlFound && [...walk(e.nodes)].some((n) => n.type === "html")) c.htmlFound.value = true;
   }
   return out;
 }
 
 /** Inline content made ready: links resolved against the export, pictures given their files, tags as their text,
  *  Obsidian's comments left out. */
-async function inline(nodes: PhrasingContent[], c: Ctx): Promise<PhrasingContent[]> {
+async function inline(nodes: PhrasingContent[], c: Ctx, linked = false): Promise<PhrasingContent[]> {
   const out: PhrasingContent[] = [];
   for (const n of withoutComments(nodes)) {
     const t = n.type as string;
@@ -260,7 +293,8 @@ async function inline(nodes: PhrasingContent[], c: Ctx): Promise<PhrasingContent
     }
     // HTML in a line: a `<br>` breaks it; any other tag goes, the words between kept.
     if (n.type === "html") {
-      if (/^<br\s*\/?>$/i.test(n.value.trim())) out.push({ type: "break" });
+      if (c.preserveHtml) out.push({ ...n, value: htmlForMarkdown(n.value) });
+      else if (/^<br\s*\/?>$/i.test(n.value.trim())) out.push({ type: "break" });
       continue;
     }
     if (n.type === "footnoteReference") {
@@ -280,11 +314,27 @@ async function inline(nodes: PhrasingContent[], c: Ctx): Promise<PhrasingContent
       continue;
     }
     if (n.type === "image") {
-      out.push(picture(n, { url: n.url }, c));
+      const p = picture(n, { url: n.url }, c);
+      const h = n.data?.html;
+      if (h?.width?.unit === "px" || h?.height) {
+        const data = p.data as { picture?: ExportPicture } | undefined;
+        if (data?.picture)
+          data.picture.size = {
+            width: h?.width?.unit === "px" ? h.width.value : Number.MAX_SAFE_INTEGER,
+            height: h?.height?.value ?? null,
+          };
+      }
+      if (h?.maxWidth?.unit === "px") {
+        const data = p.data as { picture?: ExportPicture } | undefined;
+        if (data?.picture) data.picture.maxWidth = h.maxWidth.value;
+      }
+      if (linked && p.type === "link" && (p.data as { remoteImage?: boolean } | undefined)?.remoteImage)
+        out.push(...p.children);
+      else out.push(p);
       continue;
     }
     if (n.type === "link") {
-      const children = await inline(n.children, c);
+      const children = await inline(n.children, c, true);
       const to = linkTo(n.url, "markdown", c);
       // A link to what isn't exported: its text.
       if (to === null) out.push(...children);
@@ -295,6 +345,7 @@ async function inline(nodes: PhrasingContent[], c: Ctx): Promise<PhrasingContent
       (n as { children: PhrasingContent[] }).children = await inline(
         (n as { children: PhrasingContent[] }).children,
         c,
+        linked,
       );
     out.push(n);
   }

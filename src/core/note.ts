@@ -30,6 +30,8 @@ export function layoutWidth(paneWidth: number, inset: number, maxWidth = 0): num
 }
 
 export interface NoteRenderOptions {
+  htmlTheme?: RenderOptions["htmlTheme"];
+  htmlDetails?: RenderOptions["htmlDetails"];
   width: number;
   glyphs: Glyphs;
   showUrls: boolean;
@@ -87,7 +89,11 @@ export function pictureLocator(
     if (!url) return null;
     if (/^[a-z][a-z0-9+.-]*:/i.test(url) || url.startsWith("//")) return from;
     try {
-      return { file: resolve(dirname(abs), decodeURI(url.split(/[?#]/)[0]!)), size: null };
+      return {
+        file: resolve(dirname(abs), decodeURI(url.split(/[?#]/)[0]!)),
+        size: from.size ?? null,
+        ...(from.maxWidth ? { maxWidth: from.maxWidth } : {}),
+      };
     } catch {
       return null;
     }

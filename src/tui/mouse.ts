@@ -622,6 +622,15 @@ export class Mouse {
       // As any click: a selection, and visual mode, end — whether the picture's still there or not.
       d.view.visual = null;
       d.view.sel = null;
+      const layout = this.app.currentLayout(d.view);
+      const linked = layout.lines[d.row]?.spans.find(
+        (s) => s.link !== undefined && layout.links[s.link]?.kind === "markdown",
+      );
+      if (linked) {
+        this.app.moveCursor(d.view, { row: d.row, col: 0 });
+        void this.app.run("link.follow");
+        return;
+      }
       return this.app.pictures.toggle(d.view, d.row, d.file);
     }
     if (d.kind !== "select") return;

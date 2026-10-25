@@ -76,6 +76,22 @@ function prepare(nodes: Nodes[], o: HastOptions): void {
     const data = (n.data ??= {}) as Record<string, unknown>;
     const picture = data.picture as ExportPicture | undefined;
     switch (n.type) {
+      case "htmlInline": {
+        const p = n.data?.html;
+        data.hName = "span";
+        const style = [
+          p?.bold !== undefined ? "font-weight:" + (p.bold ? "bold" : "normal") : "",
+          p?.italic !== undefined ? "font-style:" + (p.italic ? "italic" : "normal") : "",
+          p?.underline !== undefined || p?.strike !== undefined
+            ? "text-decoration:" +
+              ([p?.underline ? "underline" : "", p?.strike ? "line-through" : ""].filter(Boolean).join(" ") || "none")
+            : "",
+        ]
+          .filter(Boolean)
+          .join(";");
+        data.hProperties = { ...(style ? { style } : {}), ...(n.data?.id ? { id: n.data.id } : {}) };
+        break;
+      }
       case "heading":
         if (data.anchor) data.hProperties = { id: data.anchor };
         break;

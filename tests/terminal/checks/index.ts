@@ -1,3 +1,4 @@
+import { HTML } from "./html.ts";
 // Every terminal check, by area (TT-D3): each area's file holds its checks and what it leaves out (TT-D4).
 
 import { CLI_CASES, type Check, type LeftOut } from "../check.ts";
@@ -23,6 +24,7 @@ import { WHERE } from "./where.ts";
 
 /** Each file's checks, by its name: `bun run test:terminal <name>` runs them. */
 export const CHECK_FILES: Record<string, Check[]> = {
+  html: HTML,
   reading: READING,
   editing: EDITING,
   navigating: NAVIGATING,

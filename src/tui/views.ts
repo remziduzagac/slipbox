@@ -40,6 +40,10 @@ export class Views {
       this.app.glyphs,
       this.app.ui.urls,
       view.buf.rel ? this.app.graph : null,
+      undefined,
+      false,
+      this.app.config.render.caption,
+      this.app.html.options(view.buf),
     );
     let natural = naturalWidths.get(probe);
     if (natural === undefined) {
@@ -107,6 +111,7 @@ export class Views {
                 pictures,
                 this.app.code.scrolls(),
                 this.app.config.render.caption,
+                this.app.html.options(view.buf),
               );
     const block = view.live && view.liveBase ? `${view.liveBase.active[0]}-${view.liveBase.active[1]}` : "";
     const key = `${view.source ? "s" : view.live ? "l" : "r"}${block}:${width}:${this.app.glyphs.mode}:${this.app.ui.urls}:${layout.lines.length}:${view.buf.version}:${view.height}:${view.live ? (view.liveBase?.pictures ?? "") : (pictures?.key ?? "")}`;
