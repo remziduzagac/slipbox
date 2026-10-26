@@ -99,7 +99,7 @@ Do not compare its percentage with the inventory total. Report paths are `jscpd/
 | `src/tui/footnotes.ts:264`, `src/tui/outline.ts:162` | 16 | Overlaps the pane-navigation candidate above |
 | `src/core/data.ts:203`, `src/core/data.ts:372` | 12 | Data-format parsing similarity; keep format semantics visible |
 | `src/core/diagram-jobs.ts:99`, `src/core/paint-jobs.ts:54` | 11 | Pending/idle cleanup; queue policies still differ |
-| `src/tui/draw-panels.ts:610`, `src/tui/draw-panels.ts:680` | 11 | Pane drawing; confirm geometry before sharing |
+| `src/tui/draw-panels.ts:610`, `src/tui/draw-panels.ts:680` | 11 | Selection/scroll bounds; preserve pinning |
 
 The combined report is dominated by test/setup similarities. Examples: `tests/core.test.ts:6178` and
 `tests/tui-git.test.ts:1277` share 25 reported lines; `tests/terminal/herdr/session.ts:303` and
@@ -171,13 +171,25 @@ The process returned 1 with **58 unused-file candidates, 186 unused exports, 54 
 references, 5 unlisted binaries and 2 unused development dependencies**. There were zero unresolved-import entries.
 These are raw candidate counts across the discovered project, including the site and tooling, not proven removals.
 
+The 58 file candidates split into 25 example files, 18 test files, 8 source files, 4 site files and 3 scripts.
+Default discovery therefore overreaches the implementation inventory. For example, the flagged `scripts/bench.ts`
+and `scripts/sample-metrics.ts` have documented invocations (`blueprint/design/testing.md:328`, `174`), and the
+flagged `site/scripts/check-links.ts` is invoked by `site/package.json:9`. The two development-package candidates
+are `markdownlint-cli2` and `vscode-languageserver`; the former is invoked through a computed executable path in
+`scripts/check-docs.ts:69`, so its flag is not evidence that the project can drop its docs linter.
+The latter is imported by the fake server fixture (`tests/fixtures/fake-lsp.ts:12`), itself flagged as unused; this
+is another entry-discovery issue rather than an established unused dependency.
+
 Examples requiring configuration-aware triage:
 
 - Knip marks `src/core/backlinks-worker.ts` and other workers unused; build entry points are explicit in
   `package.json:36`, and worker URLs are formed through `src/core/workers.ts`. These files cannot be deleted based on
   default entry discovery. The project's scope graph explicitly recognizes `workerUrl` (`scripts/ci-scope.ts:177`).
 - `src/core/parse.ts:371` exports `HEADING_ID`; Knip reports the export unused. Distinguish removing `export` from
-  deleting the implementation, and verify non-TypeScript consumers before either change.
+  deleting the implementation, and verify non-TypeScript consumers before either change. A repository search
+  found only its declaration and internal use (`src/core/parse.ts:379`); similarly, the flagged `htmlEntities`
+  export is used internally at `src/core/html.ts:36` and `116`. These support narrower export surfaces, not deletion
+  of those behaviors.
 - Knip reports `unist` and `hast` type references as unlisted (`src/core/parse.ts:9`, `src/core/export/html.ts:7`).
   Resolve direct type ownership deliberately; an organizational change should not silently add or remove packages.
 - Optional host tools such as `nvim` are flagged as binaries (`src/core/nvim.ts`); their optional runtime integration
@@ -246,6 +258,14 @@ workers in addition to imports (`177`). The design must account for this graph, 
 rename test files. `tests/setup.ts` is a global preload (`bunfig.toml:14`), so shared setup changes intentionally have
 wide scope. Terminal checks already live by feature under `tests/terminal/checks/`; their harness stays shared.
 
+There is another independent source of breadth: `tests/cli.test.ts:31` names `src/main.ts`, and its helper launches
+that file (`79`). Main dynamically imports the TUI (`src/main.ts:50`), which the scope graph follows even when a
+particular CLI invocation never enters it. The dependency scanner's fixture explicitly retains that dynamic edge
+(`tests/distribution.test.ts:391`, `427`). Thus a header change selecting CLI tests does not establish that header
+code runs in those tests. Source dependencies and invocation-specific execution are different facts. Narrower
+CLI-function tests with retained launcher coverage, or a separately reviewed selection-policy refinement, are
+candidates for stage 2; merely putting unchanged imports into smaller test files will retain this breadth.
+
 Feature ownership is visible in existing describe groups, but historical review groups mix it again:
 `tests/tui.test.ts:3686`, `3931`, `4028` and `tests/core.test.ts:612`, `655`. A split should classify individual
 scenarios by the behavior they exercise, rather than moving each historical review group intact. Representative
@@ -254,6 +274,81 @@ seams already named by tests are core width/sanitize/config (`tests/core.test.ts
 (`tests/tui.test.ts:205`, `334`, `1597`). Preserve the assertions and their fixture lifetime when relocating them:
 core owns a sandbox and resets trust after each test (`tests/core.test.ts:127`, `136`); vault sets process-wide XDG
 paths (`tests/vault.test.ts:77`); TUI uses the shared harness sandbox (`tests/tui.test.ts:83`).
+
+### Timeout findings and current limits
+
+The scoped runs repeatedly hit per-test limits as well as the separate whole-command bound. No project timeout setting
+was changed. These are observed expiries at the starting commit, not evidence of a quantified increase over earlier
+runs: this session has no controlled earlier failure-rate sample.
+
+| Test (source anchor) | Measured expiry in the location case | In the export-stream case |
+| --- | ---: | ---: |
+| Word export scenario, `tests/cli.test.ts:400` | 30,047.83 ms | 30,006.92 ms |
+| Excluded-note writing scenario, `tests/cli.test.ts:535` | 30,062.60 ms | No expiry recorded |
+
+Both logs explicitly say the test timed out after **30,000 ms**. The first scenario exercises several exports and
+CLI launches in one test; each launch has its own **20,000 ms** child-process bound (`tests/cli.test.ts:79`–`82`).
+Those limits are distinct: a larger test budget does not repair a child invocation exceeding its own deadline.
+Likewise, splitting a file without splitting or narrowing that compound scenario does not reduce its own work.
+The wide dependency scope does explain why a location-only change runs it at all; it does not prove the cause of
+its individual timeout. Other assertion failures, including interrupted distribution output, are not counted as
+per-test timeout expiries here. Raw evidence: `tmp/issue/unrestricted-scope-where.log` and
+`unrestricted-scope-stream.log`; the table is updated with the remaining case before this stage ends.
+
+Current timeout layers, read from code:
+
+- **Runner default:** `bun test --timeout 30000` (`package.json:16`); docs use the same default (`17`).
+  `scripts/ci-scope.ts:310` selects files and invokes that package script; it does not set a per-feature deadline.
+- **File/harness defaults:** ten `setDefaultTimeout` calls were found under tests. Nine use 30,000 ms, including
+  `tests/tui-harness.ts:44`, `tests/core.test.ts:124` and `tests/cli.test.ts:30`; export reads use 60,000 ms
+  (`tests/export-reads.test.ts:17`). `tests/setup.ts:10` explains why setting a preload default alone reaches only
+  the first file. The inventory is `tmp/issue/default-timeouts.txt`.
+- **Named slow scenarios and hooks:** the skill-command integration case uses 180,000 ms
+  (`tests/cli.test.ts:785`); large parse cases use 60,000 and 120,000 ms (`tests/worker-requests.test.ts:301`, `311`);
+  one syntax responsiveness case uses 20,000 ms (`tests/syntax-worker-tui.test.ts:53`). The release build's
+  `beforeAll` uses 240,000 ms (`tests/distribution.test.ts:1008`), a hook budget rather than an ordinary test limit.
+  Other explicit examples include 60,000 ms in `tests/tui.test.ts:5910`, 90,000 ms in
+  `tests/servers.test.ts:1406` and 120,000 ms in `tests/servers.test.ts:1525`. These values are not one shared default.
+- **Terminal observation waits:** the minimum wait is 10,000 ms, configurable by `SLIPBOX_TERMINAL_WAIT`
+  (`tests/terminal/session.ts:43`); `until` takes the maximum of that floor and its argument (`522`), polling every
+  20 ms (`529`). CI overrides the minimum to 30,000 ms (`.github/workflows/ci.yml:189`,
+  `.github/workflows/build.yml:77`). Some checks ask for more, such as 20,000 and 30,000 ms during updates
+  (`tests/terminal/checks/updates.ts:75`, `81`). A frame wait is a separate setting (`session.ts:83`), defaulting to
+  1,000 ms (`tests/terminal/terminal.ts:63`, `290`).
+- **Terminal check lifetime:** `SLIPBOX_TERMINAL_LIMIT` defaults to 120,000 ms
+  (`tests/terminal/worker.ts:26`), with a Promise race around startup and the check (`43`). Quit and cleanup follow
+  that race (`66`); quitting tries a 5,000 ms wait, subject to the session's minimum, before SIGKILL and another
+  wait (`tests/terminal/session.ts:251`–`256`). Thus this is not a hard process-wall-clock ceiling. No terminal
+  check was run in this analysis, so no terminal timeout rate is measured here.
+- **CI job ceiling:** the test and terminal jobs each allow 45 minutes (`.github/workflows/ci.yml:129`, `170`).
+  This is separate from each test/check deadline; the local 15-minute measurement bound is intentionally lower.
+  Hitting that analysis bound does not establish that CI requires a larger job timeout.
+- **Run termination:** the measurement command wraps the selected run in `gnutimeout -k 10 900`, a 900-second
+  command budget followed by a 10-second forced-stop allowance. This is analysis harness configuration in ignored
+  files, not a project timeout change. `tests/setup.ts:41` installs SIGTERM cleanup/exit handling; an in-process
+  timer or cleanup handler is not a guarantee that every child exits promptly. Retain a forced-stop bound for runs
+  that ignore or delay SIGTERM. The completed location run returned 124 at 900.088 seconds; that result alone does
+  not demonstrate that SIGKILL was necessary.
+
+The existing SIGTERM-resistant tool fixture was also run on its own, without editing it:
+
+```sh
+gnutimeout -k 10 300 bun test --timeout 30000 ./tests/tool-process.test.ts \
+  -t 'a tool that ignores the graceful stop'
+```
+
+The fixture deliberately ignores SIGTERM, sets a 300 ms tool deadline and 50 ms grace, and asserts SIGKILL and no
+remaining process (`tests/tool-process.test.ts:56`–`64`). Its measured result is retained in
+`tmp/issue/sigterm-probe.log`: **one pass, zero failures, 381.90 ms for the test, 548.00 ms for the run**.
+This distinguishes a stubborn child from an unresponsive test runner; it is not
+proof that every Bun test run ignores SIGTERM. The sandbox-only regex log also contains `TimeoutOverflowWarning`
+and an effective 1 ms timer; those warnings are not per-test timeout reports and are not a reason to raise defaults.
+
+Stage 2 must propose a **separate phase for timeout policy**, keeping it out of source/test moves. The proposal
+needs a recommendation on any increase, a shared default with named slow-case constants, and a distinction between
+noise from machine load, over-broad test scope, compound scenarios and a stuck worker/process. These observations
+do not establish that a blanket increase or a file split alone will fix the expiries. Product deadlines and loading
+behavior remain outside that test-policy change.
 
 ### Scoped execution baseline
 
