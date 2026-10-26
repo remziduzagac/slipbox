@@ -4,7 +4,7 @@ import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { grammar } from "../src/core/syntax.ts";
 import { stopSyntaxThread } from "../src/core/syntax-thread.ts";
-import { locateVault } from "../src/core/vault.ts";
+import { locateVault } from "../src/core/workspace/vaults/vault.ts";
 import { harness, makeSandbox, makeVault } from "./tui-harness.ts";
 
 makeSandbox();

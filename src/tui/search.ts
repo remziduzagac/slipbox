@@ -9,8 +9,8 @@ import { IndexJob, indexFile, search, type SearchHit, SearchIndex, type SearchRe
 import { leadsOut, peekAt } from "./peek.ts";
 import { notesOfType, ofType, type TypedNote } from "../core/doctypes.ts";
 import { type Scope, SCOPES, searchOthers } from "../core/scope.ts";
-import { isListed } from "../core/vault.ts";
-import { ELSEWHERE } from "../core/names.ts";
+import { isListed } from "../core/workspace/vaults/vault.ts";
+import { ELSEWHERE } from "../core/workspace/vaults/names.ts";
 import { frontmatterFindings, rootTypes } from "../core/diagnostics.ts";
 import type { App, View, ListItem, ListOverlay, PromptOverlay } from "./app.ts";
 import type { Layout } from "../core/layout/ir.ts";

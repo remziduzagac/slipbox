@@ -43,7 +43,7 @@ import { userFolders } from "../src/core/foundation/platform/paths.ts";
 import { openGraph } from "../src/core/graph.ts";
 import { remoteImageName } from "../src/core/imagecache.ts";
 import { loadRasterizer } from "../src/core/svg.ts";
-import { locateVault } from "../src/core/vault.ts";
+import { locateVault } from "../src/core/workspace/vaults/vault.ts";
 
 // Drawing diagrams and maths, writing a document: slow on a loaded machine, not stuck.
 setDefaultTimeout(UNIT_TIMEOUT_MS);

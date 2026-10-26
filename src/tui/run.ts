@@ -28,8 +28,8 @@ import {
   setRootMarkers,
   VaultError,
   type VaultLocation,
-} from "../core/vault.ts";
-import { setTrustedRoots } from "../core/trust.ts";
+} from "../core/workspace/vaults/vault.ts";
+import { setTrustedRoots } from "../core/workspace/vaults/trust.ts";
 import { baseAtOpen } from "../core/gitbase.ts";
 import { App, type AppOptions } from "./app.ts";
 import { type CameBack, cameBack, type Place } from "./updates.ts";

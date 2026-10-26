@@ -11,7 +11,7 @@ import { repoKey } from "./gitbase.ts";
 import type { Track } from "./gitremote.ts";
 import { type StatusEntry, statusLater } from "./gitstage.ts";
 import { type Config, DEFAULT_CONFIG } from "./application/config/config.ts";
-import { busyFolderAt } from "./walk.ts";
+import { busyFolderAt } from "./workspace/walk/walk.ts";
 
 /** A repository found: its checkouts in the folder looked in, the main one first. */
 export interface RepoFound {

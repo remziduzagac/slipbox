@@ -48,7 +48,8 @@ folder asked for by name, which is whole, and once home's walk is kept, a folder
 - 2026-10-23: Reproduced on `dev` (be3674a) with a script driving `VaultWatcher` over an unwalked home's graph, as
   `src/tui/watch.ts` starts it (`tmp/issue/repro.ts`, not committed). The issue's own case doesn't happen as written: a
   shell's history rewritten in `~` takes nothing in, because `walkTop` lists home's top folders into the graph's
-  folders (`src/core/walk.ts` `walkTop`, `tests/vault.test.ts` "home opened is never walked then": `["", "sub"]`), so
+  folders (`src/core/workspace/walk/walk.ts` `walkTop`, `tests/vault.test.ts` "home opened is never walked then": `["",
+  "sub"]`), so
   the watcher watches each, not looked into. The same happens one level down: a file saved in `~/Documents` lists it
   again (`lookAgain`), and each folder in it, not watched, is taken in whole (`flush` → `adoptTree`), every note in it
   reported created (`Documents/d0/sub/n0.md`…); a top folder made in the two seconds before the start, the same at the

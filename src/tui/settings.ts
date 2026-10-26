@@ -7,10 +7,10 @@ import { glyphsFor, type Glyphs } from "../core/glyphs.ts";
 import { Graph } from "../core/graph.ts";
 import { lintCommand } from "../core/lint.ts";
 import { userConfigFile } from "../core/foundation/platform/paths.ts";
-import type { UiOverride } from "../core/position.ts";
+import type { UiOverride } from "../core/workspace/session/position.ts";
 import { applyColorOverrides, loadTheme, type Theme } from "../core/theme/index.ts";
-import { configFilesFor, setRootMarkers } from "../core/vault.ts";
-import { setTrustedRoots } from "../core/trust.ts";
+import { configFilesFor, setRootMarkers } from "../core/workspace/vaults/vault.ts";
+import { setTrustedRoots } from "../core/workspace/vaults/trust.ts";
 import {
   DEFAULT_ALIASES,
   DEFAULT_EXPLORER_KEYS,

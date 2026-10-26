@@ -13,13 +13,13 @@ import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, realpathSync, statSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join, relative, resolve, sep } from "node:path";
-import { loadConfig, VAULT_CONFIG_TEMPLATE } from "./application/config/config.ts";
-import { checkoutOf, inMain, worktreeFingerprint } from "./git.ts";
-import { gitArgs } from "./gitops.ts";
+import { loadConfig, VAULT_CONFIG_TEMPLATE } from "../../application/config/config.ts";
+import { checkoutOf, inMain, worktreeFingerprint } from "../../git.ts";
+import { gitArgs } from "../../gitops.ts";
 import { folderIdentity, folderNamed, identityAt, movedFrom, recordFolder, suggestFolderName } from "./folders.ts";
-import { carryPaths, climbsOut, readRegular, SMALL_FILE } from "./foundation/platform/fsutil.ts";
-import { stateDir, vaultKey } from "./foundation/platform/paths.ts";
-import { carryPositions, sessionFile } from "./position.ts";
+import { carryPaths, climbsOut, readRegular, SMALL_FILE } from "../../foundation/platform/fsutil.ts";
+import { stateDir, vaultKey } from "../../foundation/platform/paths.ts";
+import { carryPositions, sessionFile } from "../session/position.ts";
 import {
   addIdentity,
   IdentityEditError,

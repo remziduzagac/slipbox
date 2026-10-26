@@ -6,7 +6,7 @@ import type { Config } from "../application/config/config.ts";
 import { climbsOut } from "../foundation/platform/fsutil.ts";
 import { Graph } from "../graph.ts";
 import { Reach } from "../reach.ts";
-import type { VaultLocation } from "../vault.ts";
+import type { VaultLocation } from "../workspace/vaults/vault.ts";
 import { workerUrl } from "../foundation/workers/url.ts";
 import type { ExportOutput } from "./index.ts";
 

@@ -16,13 +16,13 @@ import {
 import { classify } from "../core/filetypes.ts";
 import { readText } from "../core/foundation/platform/fsutil.ts";
 import type { Graph } from "../core/graph.ts";
-import { ELSEWHERE, rootLabel, tildePath } from "../core/names.ts";
-import type { Anchor, CursorAnchor } from "../core/position.ts";
+import { ELSEWHERE, rootLabel, tildePath } from "../core/workspace/vaults/names.ts";
+import type { Anchor, CursorAnchor } from "../core/workspace/session/position.ts";
 import { Reach } from "../core/reach.ts";
-import { noteIndexed } from "../core/registry.ts";
+import { noteIndexed } from "../core/workspace/vaults/registry.ts";
 import { sanitize } from "../core/foundation/text/sanitize.ts";
-import { linkSaid, probeFollowed } from "../core/symlinks.ts";
-import { isInside, locateVault, type VaultLocation, vaultOf } from "../core/vault.ts";
+import { linkSaid, probeFollowed } from "../core/workspace/vaults/symlinks.ts";
+import { isInside, locateVault, type VaultLocation, vaultOf } from "../core/workspace/vaults/vault.ts";
 import { stringWidth, truncate, truncateStart } from "../core/foundation/text/width.ts";
 import type { App, View } from "./app.ts";
 import { NoteBuffer } from "./buffer.ts";

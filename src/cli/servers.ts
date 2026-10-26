@@ -24,7 +24,7 @@ import {
 } from "../core/diagnostics.ts";
 import { languageOf, serverTable } from "../core/servers/languages.ts";
 import { rootFor } from "../core/servers/find.ts";
-import { isTrusted } from "../core/trust.ts";
+import { isTrusted } from "../core/workspace/vaults/trust.ts";
 import { flag, UsageError } from "./args.ts";
 import { EXIT, CliError, type Handler, requireArg } from "./common.ts";
 

@@ -18,7 +18,7 @@ import { discardFile, replaceLines, sections, stageChange, stageFile } from "../
 import { layoutScreen, type ScreenPart, screenText } from "../core/layout/screen.ts";
 import { type Layout, type Span, srcAt } from "../core/layout/ir.ts";
 import { comparable } from "../core/merge.ts";
-import { TOP } from "../core/position.ts";
+import { TOP } from "../core/workspace/session/position.ts";
 import { sanitize } from "../core/foundation/text/sanitize.ts";
 import type { App } from "./app.ts";
 import { NoteBuffer } from "./buffer.ts";

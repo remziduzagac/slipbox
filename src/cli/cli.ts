@@ -13,12 +13,19 @@
 import { existsSync } from "node:fs";
 import { dirname, isAbsolute, join, resolve } from "node:path";
 import { loadConfig } from "../core/application/config/config.ts";
-import { lookupFolder } from "../core/folders.ts";
+import { lookupFolder } from "../core/workspace/vaults/folders.ts";
 import { isPointer, parsePointer, resolvePointer } from "../core/pointer.ts";
 import { pathLink } from "../core/links.ts";
 import { sanitize, UNSAFE } from "../core/foundation/text/sanitize.ts";
-import { elsewhereAt, findVaultRoot, isVaultRoot, locateVault, setRootMarkers, VaultError } from "../core/vault.ts";
-import { setTrustedRoots } from "../core/trust.ts";
+import {
+  elsewhereAt,
+  findVaultRoot,
+  isVaultRoot,
+  locateVault,
+  setRootMarkers,
+  VaultError,
+} from "../core/workspace/vaults/vault.ts";
+import { setTrustedRoots } from "../core/workspace/vaults/trust.ts";
 import { type Args, flag, has, parseArgs, UsageError, VALUED } from "./args.ts";
 import { VERSION } from "../version.ts";
 import { EXIT, CliError, type Io, Session, type Handler, probeLinks } from "./common.ts";

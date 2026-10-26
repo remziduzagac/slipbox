@@ -19,9 +19,9 @@ import {
   pointerWarnings,
   readFolders,
   travelTogether,
-} from "./folders.ts";
+} from "./workspace/vaults/folders.ts";
 import { formatPointer } from "./pointer.ts";
-import { findVaultRoot } from "./vault.ts";
+import { findVaultRoot } from "./workspace/vaults/vault.ts";
 
 const NOTE_EXT = /\.(md|markdown)$/i;
 

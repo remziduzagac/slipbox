@@ -7,7 +7,7 @@ import { cannotEdit, lineOf, offsetOf, placeAt, typedSelection } from "./editing
 import { matchBracket } from "../core/brackets.ts";
 import { extentOf, type Layout } from "../core/layout/ir.ts";
 import { layoutWidth } from "../core/note.ts";
-import { type Anchor, anchorAt, type CursorAnchor, rowFor } from "../core/position.ts";
+import { type Anchor, anchorAt, type CursorAnchor, rowFor } from "../core/workspace/session/position.ts";
 import type { TextEdit } from "../core/footnotes.ts";
 import { truncate, graphemes, graphemeWidth, stringWidth } from "../core/foundation/text/width.ts";
 import type { NoteBuffer } from "./buffer.ts";

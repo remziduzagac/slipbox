@@ -20,7 +20,7 @@ import { stateDir } from "../core/foundation/platform/paths.ts";
 import { readRegular } from "../core/foundation/platform/fsutil.ts";
 import { editorArgv } from "../core/editor.ts";
 import { discoverNvims, NVIM_REMOTE, probeNvim } from "../core/nvim.ts";
-import { loadSession } from "../core/position.ts";
+import { loadSession } from "../core/workspace/session/position.ts";
 import { flag, has, UsageError } from "./args.ts";
 import {
   EXIT,

@@ -8,7 +8,7 @@
 
 import { existsSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
-import { lookupFolder, type NamedFolder } from "./folders.ts";
+import { lookupFolder, type NamedFolder } from "./workspace/vaults/folders.ts";
 import { readRegular, SMALL_FILE } from "./foundation/platform/fsutil.ts";
 import { type Checkout, checkoutOf, headOf } from "./git.ts";
 import { branchesOf } from "./gitops.ts";

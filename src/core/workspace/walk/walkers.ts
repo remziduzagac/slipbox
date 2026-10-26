@@ -2,9 +2,9 @@
 // — or on the walk's own thread (walk-thread.ts), the TUI's, so a folder that answers slowly never holds up the keys
 // or the screen. The same code walks either way (walk.ts, home.ts); only where it runs differs.
 
-import type { Config } from "./application/config/config.ts";
-import { type HomeWalk, vaultsPastCap } from "./home.ts";
-import { type IndexAnswer, IndexJob, type IndexOf, type Opened } from "./index-job.ts";
+import type { Config } from "../../application/config/config.ts";
+import { type HomeWalk, vaultsPastCap } from "../vaults/home.ts";
+import { type IndexAnswer, IndexJob, type IndexOf, type Opened } from "../../index-job.ts";
 import { type FilterSettings, filterFrom, SlicedWalk, type WalkCap, type WalkLimits, type WalkResult } from "./walk.ts";
 
 /** A walk made a slice at a time (`SlicedWalk`), here or on another thread — kept where it was made: what the one who

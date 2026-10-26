@@ -15,7 +15,7 @@ import { join } from "node:path";
 import { canonKey } from "../src/core/application/commands/registry.ts";
 import { type Config, DEFAULT_CONFIG } from "../src/core/application/config/config.ts";
 import { openGraph } from "../src/core/graph.ts";
-import { locateVault } from "../src/core/vault.ts";
+import { locateVault } from "../src/core/workspace/vaults/vault.ts";
 import { App, type Host } from "../src/tui/app.ts";
 import { TextCanvas } from "../src/tui/canvas.ts";
 import { locationItems } from "../src/tui/draw-topbar.ts";
@@ -89,7 +89,7 @@ export interface Opts {
   configFile?: string;
   themeName?: string;
   /** Start here instead of at `root` as a vault (a loose folder: the home vault). */
-  loc?: import("../src/core/vault.ts").VaultLocation;
+  loc?: import("../src/core/workspace/vaults/vault.ts").VaultLocation;
   /** The folder slipbox was opened on, inside the root: the explorer's view starts there. */
   folder?: string;
   /** The terminal's pictures (12.x), as a stand-in: none unless given. */
@@ -182,7 +182,7 @@ export async function stepToEnd(job: { step(budgetMs: number): boolean }, budget
  * so such a test would be as slow as the tests before it are many.
  */
 export async function onlyRootsUnder<T>(base: string, run: () => Promise<T>): Promise<T> {
-  const { readRoots, writeRoots } = await import("../src/core/registry.ts");
+  const { readRoots, writeRoots } = await import("../src/core/workspace/vaults/registry.ts");
   const was = readRoots();
   const ours = (v: { path: string }) => v.path.startsWith(`${base}/`);
   writeRoots(was.filter(ours));

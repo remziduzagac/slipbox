@@ -7,14 +7,14 @@ import { catchUp, SearchIndex } from "../core/search.ts";
 import { loadConfig } from "../core/application/config/config.ts";
 import { Graph } from "../core/graph.ts";
 import { sanitize } from "../core/foundation/text/sanitize.ts";
-import { noteIndexed } from "../core/registry.ts";
+import { noteIndexed } from "../core/workspace/vaults/registry.ts";
 import { AutoIndex, autoIndexFile } from "../core/autoindex.ts";
 import { type Scope, SCOPES, searchScoped } from "../core/scope.ts";
-import { homeFolder, isListed, locationAt, recordLocation, configFilesFor } from "../core/vault.ts";
-import { describeCap, walkHomeNow } from "../core/home.ts";
+import { homeFolder, isListed, locationAt, recordLocation, configFilesFor } from "../core/workspace/vaults/vault.ts";
+import { describeCap, walkHomeNow } from "../core/workspace/vaults/home.ts";
 import { flag, has, UsageError } from "./args.ts";
 import { EXIT, CliError, type Session, type Handler, needsIndex, wholeFlag } from "./common.ts";
-import { ELSEWHERE } from "../core/names.ts";
+import { ELSEWHERE } from "../core/workspace/vaults/names.ts";
 
 /** Search (6.x), and its index brought up to date. */
 export const SEARCH_COMMANDS: Record<string, Handler> = {

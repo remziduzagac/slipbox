@@ -9,10 +9,10 @@
 
 import { join, relative, sep } from "node:path";
 import { climbsOut } from "./foundation/platform/fsutil.ts";
-import { lookupFolder, type NamedFolder, readFolders } from "./folders.ts";
+import { lookupFolder, type NamedFolder, readFolders } from "./workspace/vaults/folders.ts";
 import { checkoutOf, headOf } from "./git.ts";
 import { branchesOf, worktreeList } from "./gitops.ts";
-import { tildePath } from "./names.ts";
+import { tildePath } from "./workspace/vaults/names.ts";
 
 const SCHEME = /^slipbox:\/\//i;
 

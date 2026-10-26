@@ -20,7 +20,7 @@ delete process.env.SLIPBOX_CONFIG;
 const { canonKey } = await import("../src/core/application/commands/registry.ts");
 const { DEFAULT_CONFIG } = await import("../src/core/application/config/config.ts");
 const { openGraph } = await import("../src/core/graph.ts");
-const { locateVault } = await import("../src/core/vault.ts");
+const { locateVault } = await import("../src/core/workspace/vaults/vault.ts");
 const { App } = await import("../src/tui/app.ts");
 const { TextCanvas } = await import("../src/tui/canvas.ts");
 
@@ -272,7 +272,7 @@ if ([FIRST, FROM_CACHE, NO_CACHE].some(want)) {
   const { cpSync, mkdirSync } = await import("node:fs");
   const { ParseCache } = await import("../src/core/parsecache.ts");
   const { Graph } = await import("../src/core/graph.ts");
-  const { rootAt } = await import("../src/core/vault.ts");
+  const { rootAt } = await import("../src/core/workspace/vaults/vault.ts");
   const many = join(dir, "many");
   mkdirSync(join(many, ".slipbox"), { recursive: true });
   // Each note's own text (a shared one would be parsed once, whatever the copy).

@@ -9,7 +9,7 @@ import { existsSync } from "node:fs";
 import { homedir } from "node:os";
 import { delimiter, dirname, join, resolve } from "node:path";
 import type { Problem, Severity } from "../diagnostics.ts";
-import { isTrusted } from "../trust.ts";
+import { isTrusted } from "../workspace/vaults/trust.ts";
 
 /** A linter as the config writes it (`[linter.<name>]`): efm-langserver's keys. */
 export interface LinterConfig {

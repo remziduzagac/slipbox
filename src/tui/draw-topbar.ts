@@ -7,7 +7,7 @@ import { type Band, type Geometry, roleStyle, pageBg, button } from "./draw.ts";
 import type { Role } from "../core/theme/theme.ts";
 import { sanitize } from "../core/foundation/text/sanitize.ts";
 import { stringWidth, truncateStart, truncate } from "../core/foundation/text/width.ts";
-import { tildePath } from "../core/names.ts";
+import { tildePath } from "../core/workspace/vaults/names.ts";
 import { whereOf } from "./where.ts";
 
 type Item = { text: string; id: string; role: Role; compact?: string };

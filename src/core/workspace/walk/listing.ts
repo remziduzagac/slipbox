@@ -8,14 +8,14 @@
 
 import { accessSync, constants, type Dirent, realpathSync, statSync } from "node:fs";
 import { basename, join } from "node:path";
-import type { Config } from "./application/config/config.ts";
-import { unreadableWords } from "./foundation/platform/fsutil.ts";
-import { checkoutOf, headOf } from "./git.ts";
-import { mountsIn, recentMountTable } from "./mounts.ts";
-import { vaultKey } from "./foundation/platform/paths.ts";
-import { readIdentity, vaultConfigFile } from "./registry.ts";
-import { linkKey, linkScope, linkTarget } from "./symlinks.ts";
-import { findVaultRoot, hasMarker, isVaultRoot, locationAt } from "./vault.ts";
+import type { Config } from "../../application/config/config.ts";
+import { unreadableWords } from "../../foundation/platform/fsutil.ts";
+import { checkoutOf, headOf } from "../../git.ts";
+import { mountsIn, recentMountTable } from "../vaults/mounts.ts";
+import { vaultKey } from "../../foundation/platform/paths.ts";
+import { readIdentity, vaultConfigFile } from "../vaults/registry.ts";
+import { linkKey, linkScope, linkTarget } from "../vaults/symlinks.ts";
+import { findVaultRoot, hasMarker, isVaultRoot, locationAt } from "../vaults/vault.ts";
 import { type BusyWhy, busyFolderWhyAt, readFolder } from "./walk.ts";
 
 /** One entry of a folder listed, and what's known of it. */

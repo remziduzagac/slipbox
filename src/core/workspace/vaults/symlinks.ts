@@ -21,8 +21,8 @@ import {
 } from "node:fs";
 import { homedir } from "node:os";
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
-import { climbsOut, ensureDir, readJson, realTarget, writeJson } from "./foundation/platform/fsutil.ts";
-import { stateHome, tildePath } from "./foundation/platform/paths.ts";
+import { climbsOut, ensureDir, readJson, realTarget, writeJson } from "../../foundation/platform/fsutil.ts";
+import { stateHome, tildePath } from "../../foundation/platform/paths.ts";
 
 /** What you answered for a link: follow it, or not. Just looking is for this once, never kept. */
 export type LinkAnswer = "follow" | "no";

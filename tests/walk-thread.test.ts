@@ -16,14 +16,27 @@ import {
 } from "node:fs";
 import { dirname, join } from "node:path";
 import { DEFAULT_CONFIG } from "../src/core/application/config/config.ts";
-import { type HomeWalk, homeFilter, homeWalk, homeWalkFile, keepHomeWalk, walkHomeNow } from "../src/core/home.ts";
-import { probe, setLinkAnswer } from "../src/core/symlinks.ts";
-import { homeAt, setRootMarkers } from "../src/core/vault.ts";
-import { SlicedWalk, setFolderReader } from "../src/core/walk.ts";
-import { ListThreads, listThreads, setWalkWorker, WalkThread } from "../src/core/walk-thread.ts";
-import { listFolder } from "../src/core/listing.ts";
-import { tildePath } from "../src/core/names.ts";
-import { HERE, type IndexAsk, type Pending, type SteppedWalk, type Walker } from "../src/core/walkers.ts";
+import {
+  type HomeWalk,
+  homeFilter,
+  homeWalk,
+  homeWalkFile,
+  keepHomeWalk,
+  walkHomeNow,
+} from "../src/core/workspace/vaults/home.ts";
+import { probe, setLinkAnswer } from "../src/core/workspace/vaults/symlinks.ts";
+import { homeAt, setRootMarkers } from "../src/core/workspace/vaults/vault.ts";
+import { SlicedWalk, setFolderReader } from "../src/core/workspace/walk/walk.ts";
+import { ListThreads, listThreads, setWalkWorker, WalkThread } from "../src/core/workspace/walk/walk-thread.ts";
+import { listFolder } from "../src/core/workspace/walk/listing.ts";
+import { tildePath } from "../src/core/workspace/vaults/names.ts";
+import {
+  HERE,
+  type IndexAsk,
+  type Pending,
+  type SteppedWalk,
+  type Walker,
+} from "../src/core/workspace/walk/walkers.ts";
 import { SLOW_MS, STUCK_MS, slowFolders } from "./fixtures/walk/slow.ts";
 import type { TreeRow } from "../src/tui/explorer.ts";
 import { Listings, PENDING_MS, REREAD_MS } from "../src/tui/listings.ts";
@@ -244,12 +257,12 @@ describe("the TUI's walks on their own thread (T12, #9)", () => {
   });
 
   test("the background index writes the machine's lists on the thread that asks alone; home is never read there", async () => {
-    const vaultMod = await import("../src/core/vault.ts");
-    const homeMod = await import("../src/core/home.ts");
-    const registry = await import("../src/core/registry.ts");
-    const folders = await import("../src/core/folders.ts");
+    const vaultMod = await import("../src/core/workspace/vaults/vault.ts");
+    const homeMod = await import("../src/core/workspace/vaults/home.ts");
+    const registry = await import("../src/core/workspace/vaults/registry.ts");
+    const folders = await import("../src/core/workspace/vaults/folders.ts");
     const { AutoIndex } = await import("../src/core/autoindex.ts");
-    const { walkThread } = await import("../src/core/walk-thread.ts");
+    const { walkThread } = await import("../src/core/workspace/walk/walk-thread.ts");
     const home = tree({
       "a.md": "# A\n",
       "proj/.slipbox/config.toml": '[vault]\nname = "found-here"\n',
@@ -291,9 +304,9 @@ describe("the TUI's walks on their own thread (T12, #9)", () => {
 
   test("a found vault recorded with nothing read of the named folders' copies on the thread that asks: read where it was opened", async () => {
     const fs = await import("node:fs");
-    const folders = await import("../src/core/folders.ts");
+    const folders = await import("../src/core/workspace/vaults/folders.ts");
     const { AutoIndex } = await import("../src/core/autoindex.ts");
-    const { walkThread } = await import("../src/core/walk-thread.ts");
+    const { walkThread } = await import("../src/core/workspace/walk/walk-thread.ts");
     // One folder by its id, in two copies.
     const TWICE = '[vault]\nname = "twice"\nid = "0b6f1c2e-twice"\n';
     const home = tree({ "a.md": "# A\n", "proj/.slipbox/config.toml": TWICE, "proj/p.md": "# P\n" });
@@ -331,7 +344,7 @@ describe("the TUI's walks on their own thread (T12, #9)", () => {
 
   test("a found vault recorded from what was read where it was opened: a copy recorded since read of nothing here", async () => {
     const fs = await import("node:fs");
-    const folders = await import("../src/core/folders.ts");
+    const folders = await import("../src/core/workspace/vaults/folders.ts");
     const TWICE = '[vault]\nname = "since"\nid = "5d0c-recorded-since"\n';
     const home = tree({ "proj/.slipbox/config.toml": TWICE });
     const elsewhere = tree({ "c2/.slipbox/config.toml": TWICE });
@@ -512,7 +525,7 @@ describe("the TUI's walks on their own thread (T12, #9)", () => {
   });
 
   test("a slice has five minutes on the thread: a folder that always takes longer than a minute is read, never given up on", async () => {
-    const { WALK_DEADLINES } = await import("../src/core/walk-thread.ts");
+    const { WALK_DEADLINES } = await import("../src/core/workspace/walk/walk-thread.ts");
     // A share's folder of thousands of files may take minutes every time: given up on at a minute, home was never walked.
     expect(WALK_DEADLINES.step).toBe(5 * 60_000);
     expect(WALK_DEADLINES.whole).toBe(10 * 60_000);
@@ -534,7 +547,7 @@ describe("the TUI's walks on their own thread (T12, #9)", () => {
   });
 
   test("home walked again while a vault is indexed: home recorded as found, the vault after it, each once", async () => {
-    const registry = await import("../src/core/registry.ts");
+    const registry = await import("../src/core/workspace/vaults/registry.ts");
     const { AutoIndex } = await import("../src/core/autoindex.ts");
     const notes: Record<string, string> = { "a.md": "# A\n", "proj/.slipbox/config.toml": "" };
     for (let i = 0; i < 400; i++) notes[`proj/n${i}.md`] = `# N${i}\n\n${"word ".repeat(50)}\n`;
@@ -1083,7 +1096,7 @@ describe("the explorer's listings off the main thread (T12, #9)", () => {
   });
 
   test("another disk mounted in a folder listed is never looked at — a folder, or a file mounted alone; a folder you may not read says why", async () => {
-    const { setMountTable } = await import("../src/core/mounts.ts");
+    const { setMountTable } = await import("../src/core/workspace/vaults/mounts.ts");
     const top = tree({
       "disk/.slipbox/config.toml": "",
       "disk/d.md": "# D\n",

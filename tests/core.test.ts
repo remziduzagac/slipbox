@@ -47,7 +47,7 @@ import { extractFromSource } from "../src/core/graph.ts";
 import { type LintIssue, lintCommand, lintLoadsCode, MARKDOWNLINT, parseLint, runLint } from "../src/core/lint.ts";
 import { installTool, lockKey, toolFolder, toolManifest } from "../src/core/servers/install.ts";
 import { LOCKS } from "../src/core/servers/locks.ts";
-import { isTrusted, setTrust, setTrustedRoots, trustFile, trustOf } from "../src/core/trust.ts";
+import { isTrusted, setTrust, setTrustedRoots, trustFile, trustOf } from "../src/core/workspace/vaults/trust.ts";
 import {
   addFootnote,
   applyEdits,
@@ -336,7 +336,7 @@ describe("capture format (8.3, 8.4)", () => {
 
 describe("folders that travel together (21.7)", () => {
   test("two folders outside git, one in the other's `..archive/`: they travel together (21.7)", async () => {
-    const { travelTogether } = await import("../src/core/folders.ts");
+    const { travelTogether } = await import("../src/core/workspace/vaults/folders.ts");
     const x = mkdtempSync(join(tmpdir(), "slipbox-travel-"));
     mkdirSync(join(x, "..archive"));
     expect([travelTogether(x, join(x, "..archive")), travelTogether(join(x, "..archive"), x)]).toEqual([true, true]);

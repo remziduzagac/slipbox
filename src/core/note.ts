@@ -17,7 +17,7 @@ import {
 } from "./layout/render.ts";
 import { headingLabel, headingText, type ParsedNote, parseMarkdown } from "./parse.ts";
 import { findHeading } from "./landing.ts";
-import { vaultOf } from "./vault.ts";
+import { vaultOf } from "./workspace/vaults/vault.ts";
 
 /** Effective inset: the configured value, but never more than ~5% of a narrow pane, and ≥ 1 (2.7). */
 export function effectiveInset(paneWidth: number, inset: number): number {

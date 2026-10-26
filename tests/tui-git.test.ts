@@ -57,7 +57,7 @@ describe("git worktrees in the TUI (17.19)", () => {
     expect(topRow(feat.frame()).match(/⎇/g)).toHaveLength(1);
     await harness({ root: join(l.wts, "fix"), open: "index.md", width }); // seen too
     // From elsewhere: :folders lists it once, by its name — its worktrees are its branches, not copies (21.6).
-    const { tildePath } = await import("../src/core/names.ts");
+    const { tildePath } = await import("../src/core/workspace/vaults/names.ts");
     const other = await harness({ open: "index.md", width });
     await other.app.run("folders.open");
     const items = (other.app.overlay as ListOverlay).items.filter((i) => i.label === name && i.header);
@@ -71,7 +71,7 @@ describe("git worktrees in the TUI (17.19)", () => {
   });
 
   test("a second copy of a folder opened: which one links to its name open — asked once, remembered; dismissed, the first stays (21.6)", async () => {
-    const { readFolders, recordFolder } = await import("../src/core/folders.ts");
+    const { readFolders, recordFolder } = await import("../src/core/workspace/vaults/folders.ts");
     const copies = (tag: string) => {
       const id = basename(mkdtempSync(join(sandbox, "cp-")))
         .replace(/[^a-z0-9]/gi, "")
@@ -117,8 +117,8 @@ describe("git worktrees in the TUI (17.19)", () => {
   });
 
   test("named folders' words (21.10): :folders goes into one; :folders-default sets the copy links open; :name names a repository; :open takes a pointer", async () => {
-    const { readFolders, recordFolder } = await import("../src/core/folders.ts");
-    const { tildePath } = await import("../src/core/names.ts");
+    const { readFolders, recordFolder } = await import("../src/core/workspace/vaults/folders.ts");
+    const { tildePath } = await import("../src/core/workspace/vaults/names.ts");
     const tag = basename(mkdtempSync(join(sandbox, "wd-")))
       .replace(/[^a-z0-9]/gi, "")
       .toLowerCase();
@@ -176,8 +176,8 @@ describe("git worktrees in the TUI (17.19)", () => {
   });
 
   test(":folders-default offers a repository's every copy, a clone with a .slipbox/ name of its own too (DF-D30)", async () => {
-    const { readFolders, recordFolder } = await import("../src/core/folders.ts");
-    const { tildePath } = await import("../src/core/names.ts");
+    const { readFolders, recordFolder } = await import("../src/core/workspace/vaults/folders.ts");
+    const { tildePath } = await import("../src/core/workspace/vaults/names.ts");
     const tag = basename(mkdtempSync(join(sandbox, "dc-")))
       .replace(/[^a-z0-9]/gi, "")
       .toLowerCase();
@@ -210,7 +210,7 @@ describe("git worktrees in the TUI (17.19)", () => {
   });
 
   test("repairs (21.11): a batch of moves made elsewhere offers the relink once; a folder named the old way says so, its pointer written by a code action", async () => {
-    const { recordFolder } = await import("../src/core/folders.ts");
+    const { recordFolder } = await import("../src/core/workspace/vaults/folders.ts");
     const tag = basename(mkdtempSync(join(sandbox, "rp-")))
       .replace(/[^a-z0-9]/gi, "")
       .toLowerCase();
@@ -354,7 +354,7 @@ describe("git worktrees in the TUI (17.19)", () => {
   });
 
   test("a pointer followed (21.7): into another named folder, at its heading; by an old name, said; two folders of the name, picked — or one renamed", async () => {
-    const { recordFolder } = await import("../src/core/folders.ts");
+    const { recordFolder } = await import("../src/core/workspace/vaults/folders.ts");
     const tag = basename(mkdtempSync(join(sandbox, "pt-")))
       .replace(/[^a-z0-9]/gi, "")
       .toLowerCase();
@@ -446,9 +446,9 @@ describe("git worktrees in the TUI (17.19)", () => {
   });
 
   test("a named folder opened where it was moved by hand: its state along, said once, nothing asked (21.8)", async () => {
-    const { PositionStore } = await import("../src/core/position.ts");
-    const { locateVault, recordLocation } = await import("../src/core/vault.ts");
-    const { tildePath } = await import("../src/core/names.ts");
+    const { PositionStore } = await import("../src/core/workspace/session/position.ts");
+    const { locateVault, recordLocation } = await import("../src/core/workspace/vaults/vault.ts");
+    const { tildePath } = await import("../src/core/workspace/vaults/names.ts");
     const dir = join(mkdtempSync(join(sandbox, "mv-")), "mva");
     const tag = `mva${basename(dirname(dir))
       .slice(-6)
@@ -481,7 +481,7 @@ describe("git worktrees in the TUI (17.19)", () => {
   });
 
   test("trust (23.x): asked once, when it first matters — never over another window, never mid-typing; y trusts, remembered; :untrust and :trust after", async () => {
-    const { setTrust, trustOf } = await import("../src/core/trust.ts");
+    const { setTrust, trustOf } = await import("../src/core/workspace/vaults/trust.ts");
     const h = await harness({ open: "index.md" });
     const root = h.app.loc.root;
     try {
@@ -525,7 +525,7 @@ describe("git worktrees in the TUI (17.19)", () => {
   });
 
   test("started from the command line where a named folder was moved by hand: the start records it once, the App says so (21.8)", async () => {
-    const { locateVault, recordLocation } = await import("../src/core/vault.ts");
+    const { locateVault, recordLocation } = await import("../src/core/workspace/vaults/vault.ts");
     const { prepare } = await import("../src/tui/run.ts");
     const dir = join(mkdtempSync(join(sandbox, "mvs-")), "mvs");
     const tag = `mvs${basename(dirname(dir))
@@ -579,7 +579,7 @@ describe("git worktrees in the TUI (17.19)", () => {
   });
 
   test("a named folder moved by hand: the links its move broke, their fix previewed at once (20.17, 21.8)", async () => {
-    const { locateVault, recordLocation } = await import("../src/core/vault.ts");
+    const { locateVault, recordLocation } = await import("../src/core/workspace/vaults/vault.ts");
     const base = mkdtempSync(join(sandbox, "mvfix-"));
     const a = join(base, "v");
     mkdirSync(join(a, ".slipbox"), { recursive: true });
@@ -607,7 +607,7 @@ describe("git worktrees in the TUI (17.19)", () => {
   test("the folder holding the worktrees: each its own vault, its branch beside it", async () => {
     const l = layout();
     if (!l) return;
-    const { elsewhereAt } = await import("../src/core/vault.ts");
+    const { elsewhereAt } = await import("../src/core/workspace/vaults/vault.ts");
     const h = await harness({ loc: elsewhereAt(l.wts), open: null });
     h.app.panels.showSidebar(true);
     const f = h.frame();

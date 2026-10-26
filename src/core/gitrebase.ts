@@ -13,7 +13,7 @@ import type { Checkout } from "./git.ts";
 import { gitArgs } from "./gitops.ts";
 import { editorless, failureOf, inEnglish, type RemoteDone, refusedName, withAutostash } from "./gitremote.ts";
 import { parseEntries } from "./gitstage.ts";
-import { isTrusted } from "./trust.ts";
+import { isTrusted } from "./workspace/vaults/trust.ts";
 
 /** What can be under way: a merge, a rebase, or a cherry-pick or a revert (started in a terminal). */
 export type OperationKind = "merge" | "rebase" | "cherry-pick" | "revert";

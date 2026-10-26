@@ -10,10 +10,10 @@ import type { Graph } from "./graph.ts";
 import { trashVaultMarker } from "./files.ts";
 import { contentHash } from "./redirects.ts";
 import { changedSpan, forgetRename, type LoggedRename, logRename, readRenames } from "./rename-log.ts";
-import { forgetRoot } from "./registry.ts";
+import { forgetRoot } from "./workspace/vaults/registry.ts";
 import { openVault } from "./reach.ts";
-import { recordFolder } from "./folders.ts";
-import { findVaultRoot, initVault, isInside } from "./vault.ts";
+import { recordFolder } from "./workspace/vaults/folders.ts";
+import { findVaultRoot, initVault, isInside } from "./workspace/vaults/vault.ts";
 import {
   RenameError,
   type FileChange,
@@ -26,7 +26,7 @@ import {
   whereItLeads,
 } from "./rename-plan.ts";
 import { real } from "./rename-links.ts";
-import { blockingLink, isLink, moveLink } from "./symlinks.ts";
+import { blockingLink, isLink, moveLink } from "./workspace/vaults/symlinks.ts";
 
 // -------------------------------------------------------------------------------------------
 // Undoing (7.4)

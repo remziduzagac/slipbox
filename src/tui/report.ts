@@ -6,8 +6,8 @@ import { existsSync } from "node:fs";
 import { homedir } from "node:os";
 import { browserOpener, openerSources } from "../core/foundation/platform/browser.ts";
 import { ghAccount, ghPath, ghPost } from "../core/gh.ts";
-import { tildePath } from "../core/names.ts";
-import { TOP } from "../core/position.ts";
+import { tildePath } from "../core/workspace/vaults/names.ts";
+import { TOP } from "../core/workspace/session/position.ts";
 import {
   type AddressPlan,
   addressPlan,

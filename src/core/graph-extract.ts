@@ -19,7 +19,7 @@ import { parseNoteFile } from "./readers.ts";
 import { ParseCache, sharedParseCache } from "./parsecache.ts";
 import { contentHash } from "./redirects.ts";
 import { noteFormat } from "./filetypes.ts";
-import type { NoteFile } from "./walk.ts";
+import type { NoteFile } from "./workspace/walk/walk.ts";
 import { type Hashtag, tagKey, tagName } from "./tags.ts";
 import type { LinkKind, LinkRef, Pos, NoteEntry } from "./graph-types.ts";
 

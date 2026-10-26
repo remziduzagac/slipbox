@@ -8,7 +8,7 @@ import { accessSync, constants, statSync } from "node:fs";
 import { delimiter, join, posix, relative, sep } from "node:path";
 import { climbsOut } from "./foundation/platform/fsutil.ts";
 import type { Checkout } from "./git.ts";
-import { isTrusted } from "./trust.ts";
+import { isTrusted } from "./workspace/vaults/trust.ts";
 
 /** A file's state, as the explorer marks it: new (untracked or added), modified, renamed, deleted, or in conflict (a merge). */
 export type GitState = "new" | "modified" | "renamed" | "deleted" | "conflict";

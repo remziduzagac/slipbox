@@ -4,7 +4,7 @@
 import { listTasks } from "../core/tasks.ts";
 import { placeAt } from "./editing.ts";
 import { type ConventionPart, conventionOf, describeConvention } from "../core/convention.ts";
-import { ELSEWHERE, rootLabel } from "../core/names.ts";
+import { ELSEWHERE, rootLabel } from "../core/workspace/vaults/names.ts";
 import { match } from "./match.ts";
 import type { App } from "./app.ts";
 

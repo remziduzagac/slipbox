@@ -10,9 +10,9 @@ import { type Config, DEFAULT_CONFIG } from "../src/core/application/config/conf
 import { glyphsFor } from "../src/core/glyphs.ts";
 import { openGraph } from "../src/core/graph.ts";
 import { cacheDir, vaultKey } from "../src/core/foundation/platform/paths.ts";
-import { probe, setLinkAnswer } from "../src/core/symlinks.ts";
-import { homeAt, locateVault, type VaultLocation } from "../src/core/vault.ts";
-import { WalkFilter, walkVault } from "../src/core/walk.ts";
+import { probe, setLinkAnswer } from "../src/core/workspace/vaults/symlinks.ts";
+import { homeAt, locateVault, type VaultLocation } from "../src/core/workspace/vaults/vault.ts";
+import { WalkFilter, walkVault } from "../src/core/workspace/walk/walk.ts";
 import { stringWidth } from "../src/core/foundation/text/width.ts";
 import { App, type Host } from "../src/tui/app.ts";
 import { TextCanvas } from "../src/tui/canvas.ts";
@@ -445,7 +445,7 @@ describe("why a row isn't indexed (VV-D9)", () => {
   });
 
   test("home's: Downloads, another disk, a hidden folder, git's own, past its cap; each said, and in Info", async () => {
-    const { setMountTable } = await import("../src/core/mounts.ts");
+    const { setMountTable } = await import("../src/core/workspace/vaults/mounts.ts");
     const home = realpathSync(mkdtempSync(join(sandbox, "home-")));
     mkdirSync(join(home, "notes", "sub"), { recursive: true });
     writeFileSync(join(home, "notes", "sub", "b.md"), "# B\n");
@@ -659,7 +659,7 @@ describe("home before its walk (VV-D2, VV-D8)", () => {
   });
 
   test("a folder of home where another disk is mounted: listed, not indexed, `another disk` beside it — never looked at; unfolded, what's in it not indexed either", async () => {
-    const { setMountTable } = await import("../src/core/mounts.ts");
+    const { setMountTable } = await import("../src/core/workspace/vaults/mounts.ts");
     const home = realpathSync(mkdtempSync(join(sandbox, "home-")));
     mkdirSync(join(home, "mnt", "docs"), { recursive: true });
     writeFileSync(join(home, "mnt", "m.md"), "# M\n");

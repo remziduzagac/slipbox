@@ -18,7 +18,7 @@ import { join } from "node:path";
 import { COMMAND_SPECS } from "../src/core/application/commands/catalog.ts";
 import { takeNote } from "../src/core/restart.ts";
 import { dailyUpdateCheck, FROM_SOURCE } from "../src/core/update.ts";
-import { saveSession, loadSession } from "../src/core/position.ts";
+import { saveSession, loadSession } from "../src/core/workspace/session/position.ts";
 import { openDialog, type DialogOverlay } from "../src/tui/dialog.ts";
 import { cameBack, QUIET_MS, type UpdateEnv } from "../src/tui/updates.ts";
 import { PASTE } from "../src/tui/vim.ts";

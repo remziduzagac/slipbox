@@ -10,7 +10,7 @@ import { posix, sep } from "node:path";
 import type { Checkout } from "./git.ts";
 import { gitArgs, literalArgs, literalEnv, STATUS_ARGS } from "./gitops.ts";
 import { parseTrack, type Track } from "./gitremote.ts";
-import { isTrusted } from "./trust.ts";
+import { isTrusted } from "./workspace/vaults/trust.ts";
 import type { GitChange } from "./gitsigns.ts";
 
 /** One file of `git status`: its path, its staged letter (`x`) and its working tree's (`y`), where it came from. */

@@ -445,7 +445,8 @@ dates. Each says what was asked, decided, built and found, and cites the decisio
   (`tui/mergescreen.ts`); the description of `peek.go` says a file outside every vault opens beside the vault, where `o`
   goes into Elsewhere (`core/application/commands/catalog.ts`); and code comments still name the removed `space g` keys
   (`tui/git.ts`,
-  `tui/githistory.ts`, `core/gitbranches.ts`) and the sections renamed (`core/registry.ts`, `core/names.ts`). VV-D9's
+  `tui/githistory.ts`, `core/gitbranches.ts`) and the sections renamed (`core/workspace/vaults/registry.ts`,
+  `core/workspace/vaults/names.ts`). VV-D9's
   `⚠` for a disk that doesn't answer is amended to the code's `⊘` (2026-10-17).
 
 ## Intel Macs dropped (2026-10-17)

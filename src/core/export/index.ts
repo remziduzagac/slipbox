@@ -6,7 +6,7 @@ import { lstatSync, statSync } from "node:fs";
 import { basename, dirname, extname, join, relative, resolve, sep } from "node:path";
 import { atomicWrite, climbsOut, landsInside, realTarget } from "../foundation/platform/fsutil.ts";
 import type { Graph } from "../graph.ts";
-import { findVaultRoot } from "../vault.ts";
+import { findVaultRoot } from "../workspace/vaults/vault.ts";
 import type { ExportDoc } from "./assemble.ts";
 import { backgroundExport, type ExportJobOptions } from "./jobs.ts";
 import { isExport, isMarkdownExport } from "./mark.ts";

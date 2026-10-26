@@ -368,7 +368,7 @@ Notes open as buffers, shown in tabs, with one split (D141):
   returns the same top. A table's rules belong to the lines beside them (the header rule to the
   delimiter line, the bottom rule to the last row), so a cursor on one stays on it. On a reload the heading is
   found again by its slug and its occurrence index (else the first heading of that slug); if no heading has the
-  slug, the absolute line is used, clamped (D98; `core/position.ts`).
+  slug, the absolute line is used, clamped (D98; `core/workspace/session/position.ts`).
 - **Cursor:** the same kind of anchor for its row, plus which wrapped row of that source line
   it's on, plus its column.
 - **Selection:** its fixed end is kept the same way, so a resize or a pane toggle keeps it on the
@@ -473,7 +473,8 @@ was elsewhere gone — its workspaces, scratch, trash and reading positions come
 ("`<name>` moved here from `<path>`: …came along"), and if the move broke links in or out of it, their fix is
 previewed at once (`relink`'s, `20.17`). A worktree `git worktree move` took elsewhere is found by git's name for it.
 Anything less sure — an unnamed vault, two copies gone — starts fresh.
-**A second copy of a named folder** (`21.6`, `core/folders.ts`): opened where another copy of it is here too — one
+**A second copy of a named folder** (`21.6`, `core/workspace/vaults/folders.ts`): opened where another copy of it is
+here too — one
 `.slipbox/` id, or one remote — the TUI asks once "`<name>`: 2 copies on this machine — which do links to it open?",
 the first found marked `links open it now`; the answer is remembered, and `esc` keeps the first, not asking again. A
 copy gone (moved here, a drive unplugged) is no choice: not asked.
@@ -817,7 +818,8 @@ keys.
   (`outsideRows`): its folders, then its files as this vault's `files.show` lists them (`auto` worked out from the
   listed folder's own vault), hidden ones left out unless `files.hidden` is on, `.git` always (a busy folder is
   listed, VV-D8; below). Such a folder is read off the main thread (T12; `Listings` in `tui/listings.ts`,
-  `core/listing.ts`), so one on a disk that answers slowly never freezes the keys or the screen: on one of two listing
+  `core/workspace/walk/listing.ts`), so one on a disk that answers slowly never freezes the keys or the screen: on one
+  of two listing
   threads, apart from the walk's, its entries the explorer lists (a hidden name, while they aren't listed, never read)
   and what its rows and marks say of each (a folder or a file, where a link leads, a vault's key, name and branch, one
   you may not read, a busy folder) — a link's answer, and so its mark, still read here from the answers kept. Kept, at

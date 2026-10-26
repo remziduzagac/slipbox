@@ -261,7 +261,8 @@ export's cleanup (`PreparedExport.dispose`) the same way, or, with `EXPORT_HOLD_
 once its document is in place.
 
 **A slow disk, stood in for** (T12): `SLIPBOX_SLOW_DISK=<folder name>:<ms>[:<deadline ms>]` makes a folder of that
-name take so long to list, on whichever thread lists it (`slowDisk` in `core/walk.ts`), and shortens the walk's and
+name take so long to list, on whichever thread lists it (`slowDisk` in `core/workspace/walk/walk.ts`), and shortens the
+walk's and
 the listings' threads' deadlines to the third: the disk a check can't mount. `tests/terminal/checks/slow-disk.ts`
 drives the TUI with it; the unit tests hold a folder up on a thread of their own (`setFolderReader`, a worker of
 their own: `tests/fixtures/walk/`). What such a check says comes at once is timed by the check itself, against a

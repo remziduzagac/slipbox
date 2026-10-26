@@ -6,7 +6,7 @@
 
 import { existsSync, readFileSync, realpathSync } from "node:fs";
 import { join } from "node:path";
-import { parseProcMounts } from "../../mounts.ts";
+import { parseProcMounts } from "../../workspace/vaults/mounts.ts";
 
 function read(file: string): string {
   try {

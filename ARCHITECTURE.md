@@ -93,12 +93,11 @@ What every change keeps. Each is checked by a test or a script where it can be.
 - **Nothing is written outside a note's root,** and nothing at all into a folder by opening it. What slipbox keeps goes
   into its own folders (`core/foundation/platform/paths.ts`).
 - **Nothing measures text but `core/foundation/text/width.ts`,** and every string entering the layout passes through
-  `sanitize`. The
-  command line's human output is sanitised too.
+  `sanitize`. The command line's human output is sanitised too.
 - **Rendering is pure.** A note's layout depends on its text, the width, the glyph set and a link resolver passed in,
   never on the terminal; the render tests hold every demo note to its width.
-- **Nothing a folder brings runs unless its root is trusted** (`core/trust.ts`), and a folder's own config never names a
-  program to run or turns on a network request.
+- **Nothing a folder brings runs unless its root is trusted** (`core/workspace/vaults/trust.ts`), and a folder's own
+  config never names a program to run or turns on a network request.
 - **A program slipbox runs is optional,** found when present and never required, and is given an argument vector, never
   a shell string (`core/editor.ts`).
 - **The command line's contract:** one JSON object per call with `--json`, its `schema` versioned apart from slipbox

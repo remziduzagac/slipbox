@@ -8,10 +8,16 @@ import { dirname, isAbsolute, join, posix, relative } from "node:path";
 import { writeDirty } from "../core/stale.ts";
 import { loadConfig } from "../core/application/config/config.ts";
 import { Graph } from "../core/graph.ts";
-import { leftOutOfHome, walksInto } from "../core/home.ts";
+import { leftOutOfHome, walksInto } from "../core/workspace/vaults/home.ts";
 import { lintCommand } from "../core/lint.ts";
 import { slipboxOwn } from "../core/foundation/platform/paths.ts";
-import { type Anchor, type CursorAnchor, loadSession, PositionStore, type SessionTab } from "../core/position.ts";
+import {
+  type Anchor,
+  type CursorAnchor,
+  loadSession,
+  PositionStore,
+  type SessionTab,
+} from "../core/workspace/session/position.ts";
 import { stopBacklinkJobs } from "../core/backlinks-jobs.ts";
 import { openVault } from "../core/reach.ts";
 import { tuiReach } from "./peek.ts";
@@ -23,7 +29,7 @@ import {
   planUnmakeVault,
   planVaultRename,
 } from "../core/rename.ts";
-import { rootLabel, tildePath } from "../core/names.ts";
+import { rootLabel, tildePath } from "../core/workspace/vaults/names.ts";
 import {
   copyAvailable,
   folderIdentity,
@@ -33,7 +39,7 @@ import {
   repositoryCopies,
   setDefaultCopy,
   suggestFolderName,
-} from "../core/folders.ts";
+} from "../core/workspace/vaults/folders.ts";
 import {
   configFilesFor,
   initVault,
@@ -45,7 +51,7 @@ import {
   recordLocation,
   rootAt,
   type VaultLocation,
-} from "../core/vault.ts";
+} from "../core/workspace/vaults/vault.ts";
 import type { App, ListItem, PromptOverlay } from "./app.ts";
 import { uiDefaults, RECENT_MAX, RECENT_NOTES_MAX } from "./app.ts";
 import { type ExplorerItem, listedDown, type TreeRow } from "./explorer.ts";
