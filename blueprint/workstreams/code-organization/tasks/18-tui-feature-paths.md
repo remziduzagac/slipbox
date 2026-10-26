@@ -1,0 +1,25 @@
+---
+status: todo
+assignee:
+blocked_by: [ORG-T17]
+created: "2026-10-26"
+---
+
+# ORG-T18: TUI git and service paths
+
+## Approval gate
+
+Draft only; blocked on approval of [the design](../design.md). One behavior-preserving PR into `dev` after the listed
+predecessors. Apply the common [review and verification gates](README.md).
+
+## Scope
+
+Move git, diagnostics, media, export, settings and distribution controllers with their area drawing. Complete the TUI
+map; keep App wiring identical.
+
+## Evidence required
+
+Run the affected owner tests and terminal checks before/after; compare assertions, snapshots and observable errors. Run
+boundary/size and verify all changed import/build/selector paths. Record actual commands/results, not assumed passes.
+
+The PR records actual commands, results and affected paths. No passing result is assumed in this draft.
