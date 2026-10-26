@@ -221,8 +221,7 @@ commands or documented paths actually change, with no blueprint IDs in user docs
 4. **Recommend small proven shared helpers and existing worker/export/controller patterns.** Alternative: authorize
    moves alone now and return for approval on each helper extraction; no universal queue or ENG implementation.
 5. **Recommend unchanged 30-second default and named current slow budgets in ORG-T12.** Alternative: approve only
-  timeout
-   centralization now and defer compound-scenario splitting to CIW-T9. No blanket increase is recommended.
+   timeout centralization now and defer compound-scenario splitting to CIW-T9. No blanket increase is recommended.
 6. **Recommend the 39-PR dependency sequence, with tasks split further before work if their manifest is too
    large to review in one sitting.** Alternative: finish all path moves before any responsibility/test-boundary work,
    accepting a longer period with broad tests and oversized modules.
