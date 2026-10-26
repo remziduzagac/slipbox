@@ -7,19 +7,23 @@ created: "2026-10-26"
 
 # ORG-T4: Graph and links paths
 
-## Approval gate
+## Phase gate
 
-Draft only; blocked on approval of [the design](../design.md). One behavior-preserving PR into `dev` after the listed
-predecessors. Apply the common [review and verification gates](README.md).
+Design approved on 2026-10-27 ([ORG-D1–ORG-D3](../decisions.md)); the listed predecessors and PR review still apply.
+Apply the [common phase
+gates](../design.md#phase-sequence-and-review-gates) and [move
+mechanics](../design.md#move-mechanics-history-and-compiled-verification) when applicable.
 
 ## Scope
 
 Move graph and links families only, preserving authoritative graph maps and all resolution contracts. Mutation paths
 move separately in ORG-T13.
 
+### Issue coverage and ownership
+
+Destinations: core/workspace/graph and links. Keep graph state authoritative and existing resolution behavior.
+
 ## Evidence required
 
 Graph/link/rename/plan tests and corresponding file/rename terminal checks. Preserve refusal, undo and watcher
 contracts; compare runtime SCCs.
-
-The PR records actual commands, results and affected paths. No passing result is assumed in this draft.

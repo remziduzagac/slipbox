@@ -7,18 +7,23 @@ created: "2026-10-26"
 
 # ORG-T36: TUI drawing splits
 
-## Approval gate
+## Phase gate
 
-Draft only; blocked on approval of [the design](../design.md). One behavior-preserving PR into `dev` after the listed
-predecessors. Apply the common [review and verification gates](README.md).
+Design approved on 2026-10-27 ([ORG-D1–ORG-D3](../decisions.md)); the listed predecessors and PR review still apply.
+Apply the [common phase
+gates](../design.md#phase-sequence-and-review-gates) and [move
+mechanics](../design.md#move-mechanics-history-and-compiled-verification) when applicable.
 
 ## Scope
 
 Separate overlay widgets and pane painting into owner-local helpers with unchanged geometry.
 
+### Issue coverage and ownership
+
+Separate shell composition, window/tab drawing, document headers and owner-local feature drawing. Assess the shared
+selection/scroll clone with pinning and filtering tests; preserve geometry and existing tab/window containment.
+
 ## Evidence required
 
 Run focused owner tests and affected terminal checks pre/post; retain failure/cancellation and snapshot contracts.
 Verify measured size exceptions and light/heavy import boundaries.
-
-The PR records actual commands, results and affected paths. No passing result is assumed in this draft.

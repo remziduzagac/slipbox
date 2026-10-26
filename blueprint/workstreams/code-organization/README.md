@@ -1,22 +1,24 @@
 ---
-status: draft
+status: active
 created: "2026-10-26"
 ---
 
 # ORG: Code organization
 
-Research for [issue #55](https://github.com/remziduzagac/slipbox/issues/55): organize the source and tests by area or
-feature, reduce modules by responsibility, and remove repetition where its policies agree. No implementation is
-approved by this draft. Roadmap `0.2`, `0.3` and `14.10`, D235 and D239 remain the baseline.
+For [issue #55](https://github.com/remziduzagac/slipbox/issues/55): organize source/tests by feature, split oversized
+responsibilities, improve reuse and dependencies, and apply patterns where justified. The design was approved on
+2026-10-27; implementation tasks remain todo. Roadmap `0.2`, `0.3`, `14.10`, D235 and D239 remain the baseline.
 
-[research.md](research.md) records the measured baseline and the limits of the tools used.
-[requirements.md](requirements.md), [design.md](design.md) and [tasks/](tasks/README.md) propose the area map,
-conventions and PR sequence for approval. The design ends with recommendation-first choices. No decisions are
-recorded here yet; every task remains todo and blocked on approval.
+- [design.md](design.md): design, verified findings, coverage, phase order and a short linked task index.
+- [requirements.md](requirements.md): the authoritative ORG-R1–ORG-R10 requirements.
+- [tasks/](tasks/README.md): one authoritative file for each of the 44 task IDs, including its status and dependencies.
+- [decisions.md](decisions.md): approved choices ORG-D1–ORG-D3.
+- [research.md](research.md): supporting evidence and measurement limitations.
 
-ORG proceeds independently of the draft [execution engine](../execution-engine/README.md); their shared boundaries
-are identified in the research. Source and test files stay in place during research and design.
+Gateway preparation and ENG compatibility review remain in scope by maintainer direction. The plan records the
+ownership difference with the draft [execution engine](../execution-engine/README.md); ORG does not depend on its
+implementation. Gateway execution, client routing, socket transport and functionality migration are the next stack.
 
-The research includes the boundary with [#56](https://github.com/remziduzagac/slipbox/issues/56), which follows the
-moves and keeps memory/loading behavior outside ORG. The design proposes timeout policy as its own
-application-behavior-neutral phase, with no default increase. Existing limits remain unchanged.
+[#56](https://github.com/remziduzagac/slipbox/issues/56) memory/loading work stays outside ORG. Timeout policy is an
+early, separate behavior-neutral phase after T1; defaults and product deadlines stay unchanged. Source and test files
+are unchanged at the approved-design checkpoint.

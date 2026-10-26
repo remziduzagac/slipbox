@@ -7,19 +7,23 @@ created: "2026-10-26"
 
 # ORG-T6: Rendering and export paths
 
-## Approval gate
+## Phase gate
 
-Draft only; blocked on approval of [the design](../design.md). One behavior-preserving PR into `dev` after the listed
-predecessors. Apply the common [review and verification gates](README.md).
+Design approved on 2026-10-27 ([ORG-D1–ORG-D3](../decisions.md)); the listed predecessors and PR review still apply.
+Apply the [common phase
+gates](../design.md#phase-sequence-and-review-gates) and [move
+mechanics](../design.md#move-mechanics-history-and-compiled-verification) when applicable.
 
 ## Scope
 
-Group existing layout and export by subarea and relocate export-worker with its URL/build references. Media and
-distribution move separately. Preserve dynamic writer dispatch.
+Group layout, media, export and theme by subarea; relocate export-worker with its URL/build references. Distribution
+moves separately. Preserve dynamic writer dispatch.
+
+### Issue coverage and ownership
+
+Destinations: core/rendering/layout, media, export and theme. Keep media worker entries beside their feature.
 
 ## Evidence required
 
 Export formats/streams, image/diagram/paint, layout snapshots and distribution worker-asset tests; relevant
 export/render terminal checks. Compare output bytes or existing snapshots.
-
-The PR records actual commands, results and affected paths. No passing result is assumed in this draft.

@@ -7,19 +7,24 @@ created: "2026-10-26"
 
 # ORG-T9: Pure TUI test boundaries
 
-## Approval gate
+## Phase gate
 
-Draft only; blocked on approval of [the design](../design.md). One behavior-preserving PR into `dev` after the listed
-predecessors. Apply the common [review and verification gates](README.md).
+Design approved on 2026-10-27 ([ORG-D1–ORG-D3](../decisions.md)); the listed predecessors and PR review still apply.
+Apply the [common phase
+gates](../design.md#phase-sequence-and-review-gates) and [move
+mechanics](../design.md#move-mechanics-history-and-compiled-verification) when applicable.
 
 ## Scope
 
 Extract editable and drawing primitives below composition; remove topbar imports from generic model support and isolate
 pure location/geometry tests. Keep App integration journeys. CLI and controller seams have separate PRs.
 
+### Issue coverage and ownership
+
+Place pure helpers under their document or shell owner. Add forbidden reverse-edge fixtures and retain full-App
+journeys; no new window/tab behavior. Report actual dependency reductions rather than only file counts.
+
 ## Evidence required
 
 Focused unit tests plus retained App and launcher journeys for each seam. Repeat mapped where/export-stream/regex scope
 measurements; report failures and incomplete runs honestly.
-
-The PR records actual commands, results and affected paths. No passing result is assumed in this draft.
