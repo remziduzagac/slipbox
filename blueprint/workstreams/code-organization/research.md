@@ -6,7 +6,7 @@ Read and measured on 2026-10-26 at `d3e406f27dd9e0d2736a09fd640edcc941eaacef`, t
 `refactor/issue-55`. This is analysis for [#55](https://github.com/remziduzagac/slipbox/issues/55), not an approved
 target structure. All source locations below refer to that commit. Interpretations and possible extraction seams
 are research conclusions, not decisions. D235's 1,500-line ceiling and D239's dependency-based test selection hold.
-Roadmap `0.2` and `0.3` establish the faces and their boundary; `14.10` covers repository checks.
+Roadmap `0.2` and `0.3` establish the faces and their boundary; `14.10` covers supply-chain gates.
 
 Commands ran locally with the existing dependencies. Analysis tools ran through `bunx`, without adding a dependency,
 script or configuration to the project. Raw output is retained in ignored `tmp/issue/`; the findings and reproducible
@@ -68,6 +68,12 @@ extracting page/cell/documentation responsibilities. Preserve source maps and me
 The locks file is generated data, not a multipurpose service. Its generator is named at `src/core/servers/locks.ts:1`.
 Treat generated-data placement separately from hand-written module size; changing it requires checking the generator
 and compiled asset loading, not manually distributing its strings.
+
+The current size check already supports a ratchet: `LIMIT` is 1,500 (`scripts/check-size.ts:16`), `CAPPED` is
+empty (`22`), and `judgeSizes` compares each file with its cap or the default (`34`–`44`). A cap can be reduced when
+it is over 200 lines above the current size (`25`, `42`). Issue #55 asks for about 500 lines as an aim; the design
+stage must specify the smaller default and staged exception policy without treating generated lock data as a
+hand-written controller. Roadmap `27.3` separately records evaluation of test-file size ratchets.
 
 ## Duplication: measured candidates, not a general rewrite
 
@@ -221,8 +227,10 @@ The direct `tests/` directory contains 63 `.test.ts` files and two other TypeScr
 Their combined **41,661 lines** account for more than half the direct test-directory TypeScript lines. Counts are
 from the same inventory method; `tmp/issue/test-sections.txt` retains top-level describe groups with locations.
 
-`tests/tui.test.ts:25`–`92` imports commands, config, graph, paths, layout, syntax, pictures, keys, editing and the
-full harness. It mixes OpenTUI grapheme parity (`99`), input/view interactions and feature scenarios.
+`tests/tui.test.ts:25`–`81` imports commands, config, graph, paths, layout, syntax, pictures, keys, editing and the
+full harness. The harness also imports App and top-bar location items (`tests/tui-harness.ts:18`, `20`), making
+a location-only dependency visible to every user of that harness. It mixes OpenTUI grapheme parity (`85`),
+input/view interactions and feature scenarios.
 `tests/vault.test.ts:27`–`76` imports the CLI, graph, discovery, rename, symlinks, walking and rendering.
 `tests/core.test.ts:20`–`70` imports capture, config, parsing, math, images, lint, installation, editing helpers and
 rendering. These are responsibility collections, not narrowly scoped suites.
@@ -238,12 +246,62 @@ workers in addition to imports (`177`). The design must account for this graph, 
 rename test files. `tests/setup.ts` is a global preload (`bunfig.toml:14`), so shared setup changes intentionally have
 wide scope. Terminal checks already live by feature under `tests/terminal/checks/`; their harness stays shared.
 
+Feature ownership is visible in existing describe groups, but historical review groups mix it again:
+`tests/tui.test.ts:3686`, `3931`, `4028` and `tests/core.test.ts:612`, `655`. A split should classify individual
+scenarios by the behavior they exercise, rather than moving each historical review group intact. Representative
+seams already named by tests are core width/sanitize/config (`tests/core.test.ts:138`, `155`, `345`), discovery/walk
+(`tests/vault.test.ts:111`, `284`), cross-root rename/search (`2586`, `3841`), and TUI cursor/selection/editing
+(`tests/tui.test.ts:205`, `334`, `1597`). Preserve the assertions and their fixture lifetime when relocating them:
+core owns a sandbox and resets trust after each test (`tests/core.test.ts:127`, `136`); vault sets process-wide XDG
+paths (`tests/vault.test.ts:77`); TUI uses the shared harness sandbox (`tests/tui.test.ts:83`).
+
 ### Scoped execution baseline
 
 Measurements are being collected in an ignored archive copy of the baseline, with one appended newline in one
 source file at a time. Each run uses `bun run test:changed`; original bytes are restored between runs. The archive
 has its own baseline commit and `origin/dev` ref and shares only installed node_modules. Logs, timings, selected test
 files and failures will be recorded here before the research stage ends. No whole-suite or terminal run is used.
+
+## Where #55 meets #56
+
+[#56](https://github.com/remziduzagac/slipbox/issues/56), memory and loading on first use, follows #55's moves and
+stays outside ORG's behavior changes. The following import sites are a structural baseline, not memory measurements.
+A static import inside a dynamically loaded writer or a worker is different from a static import on the main path.
+
+| Library | Static value import | Existing boundary to preserve |
+| --- | --- | --- |
+| `pdfkit` | `src/core/export/pdf.ts:14` | Writer loaded dynamically by `export/index.ts:65` and `stream.ts:29` |
+| `docx` | `src/core/export/docx.ts:7`–`30` | Writer loaded dynamically by `export/index.ts:58` and `stream.ts:40` |
+| `fontkit` | `src/core/export/fonts.ts:9` | Font adapter used by PDF; its types-only imports load nothing |
+| `web-tree-sitter` | `src/core/syntax.ts:15` | Parser module static; grammar initialization/loading is separate |
+| `highlight.js` | `src/core/layout/highlight.ts:5`–`32` | Core and language registrations are static in that module |
+| `hunspell-asm` | `src/core/hunspell.ts:9` | Static worker-side adapter; WASM factory created on first dictionary |
+
+`src/core/graph.ts:12` statically imports syntax helpers, so moving syntax into a folder would not by itself defer
+its module. The syntax module imports the WASM asset at `src/core/syntax.ts:16`, while parser initialization and
+individual grammar loading happen at `321`–`325`. Similarly, `src/core/layout/render.ts:26` and
+`src/core/layout/source.ts:12` statically import highlighting. Preserve these facts for #56 to assess; ORG does not
+change them or infer retained bytes from an import declaration.
+
+Worker modules are execution and loading boundaries, not dead files: syntax imports the parser
+(`src/core/syntax-worker.ts:2`), spelling imports the Hunspell adapter (`src/core/spell-worker.ts:5`), paint calls
+lazy rasterizer/typesetter loaders (`src/core/paint-worker.ts:2`–`3`), diagrams load their renderer in their own
+worker (`src/core/diagram-worker.ts:2`, `7`), and export invokes the selected writer in its worker
+(`src/core/export-worker.ts:4`, `25`). Walk, list, parse, backlinks and regex also have separate build entry points
+(`package.json:36`). A worker's lifetime and its module's loading time are separate concerns. Worker relocation must
+update the source/compiled URL contract (`src/core/workers.ts:16`) and the build list without pulling worker-only
+libraries onto the caller's thread.
+
+`src/core/lazy.ts:1` currently sits directly in core, below its consumers: it imports only `node:async_hooks` (`6`)
+and owns the loading/ready/failed cache, synchronous `lazy` (`17`), awaited `load` (`25`), error inspection (`33`),
+and completion observers (`39`). Syntax consumes it at `src/core/syntax.ts:41`. This helper does not make its caller's
+static imports lazy; the loader passed to it determines when the dependency is acquired.
+
+The target folders must leave room for **one deliberate entry point per heavy feature**, with light contracts kept
+separate from heavy implementation and worker entry files. Its exact names and the shared loader's destination
+remain for stage 2, with recommendation-first options. No ORG phase may turn an existing dynamic import into a
+static one, including through a new re-export barrel. Path moves preserve first-use loading, worker isolation and
+lazy-loader behavior. Loading policy changes, retained-memory work and new loading optimizations belong to #56.
 
 ## Where ORG meets ENG
 
