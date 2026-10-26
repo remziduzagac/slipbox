@@ -3,9 +3,27 @@ import { mkdirSync, mkdtempSync, renameSync, rmSync, writeFileSync } from "node:
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { capture, compare, stalePaths, type Manifest } from "../../scripts/organization/migration.ts";
+import { withoutComments } from "../../scripts/organization/source-text.ts";
 
 const sandbox = mkdtempSync(join(tmpdir(), "slipbox-migration-"));
 afterAll(() => rmSync(sandbox, { recursive: true, force: true }));
+
+test("comment scanning preserves literals and distinguishes division from expressions", () => {
+  const source = [
+    'const value = a / b; // import { missing } from "./missing";',
+    "const pattern = /[[][/][/]/; /* ordinary comment */",
+    'const url = "https://example.test/*path*/";',
+    "const template = `text // text`; // trailing comment",
+  ].join("\n");
+  const result = withoutComments(source);
+  expect(result).not.toContain("missing");
+  expect(result).not.toContain("ordinary comment");
+  expect(result).not.toContain("trailing comment");
+  expect(result).toContain("/[[][/][/]/");
+  expect(result).toContain('"https://example.test/*path*/"');
+  expect(result).toContain("`text // text`");
+  expect(result.length).toBe(source.length);
+});
 function fixture() {
   const root = mkdtempSync(join(sandbox, "tree-"));
   const put = (file: string, text: string) => {

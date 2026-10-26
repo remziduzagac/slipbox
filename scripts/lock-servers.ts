@@ -68,8 +68,31 @@ export function generatedLocksMatch(source: string, locks: Record<string, string
   return ts.transformSync(source) === ts.transformSync(locksModule(locks));
 }
 
+/** Stored data must cover exactly the current pins and describe the manifest each pin will install. */
+export function locksMatchPins(locks: Record<string, string>, pins: NpmSpec[]): boolean {
+  const keys = pins.map(lockKey).sort();
+  if (JSON.stringify(Object.keys(locks).sort()) !== JSON.stringify(keys)) return false;
+  for (const pin of pins) {
+    try {
+      const lock = JSON.parse(locks[lockKey(pin)]!.replace(/,(\s*[}\]])/g, "$1"));
+      const actual = Object.entries(lock.workspaces[""].dependencies).sort(([a], [b]) => a.localeCompare(b));
+      const expected = Object.entries(JSON.parse(toolManifest(pin)).dependencies).sort(([a], [b]) =>
+        a.localeCompare(b),
+      );
+      if (JSON.stringify(actual) !== JSON.stringify(expected)) return false;
+    } catch {
+      return false;
+    }
+  }
+  return true;
+}
+
 if (import.meta.main) {
   if (process.argv.includes("--check")) {
+    if (!locksMatchPins(LOCKS, pinned())) {
+      console.error("lock-servers: stored locks do not match the current pin set and manifests");
+      process.exit(1);
+    }
     if (!generatedLocksMatch(readFileSync(OUT, "utf8"))) {
       console.error("lock-servers: generated module differs from its stored lock data");
       process.exit(1);

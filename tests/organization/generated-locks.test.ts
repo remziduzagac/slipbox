@@ -1,6 +1,17 @@
 import { expect, test } from "bun:test";
 import { join } from "node:path";
-import { generatedLocksMatch, locksModule } from "../../scripts/lock-servers.ts";
+import { generatedLocksMatch, locksMatchPins, locksModule } from "../../scripts/lock-servers.ts";
+
+test("stored locks must match all and only the pins, including their manifest versions", () => {
+  const pins = [{ package: "example", version: "1", bin: "example" }];
+  const lock = JSON.stringify({ workspaces: { "": { dependencies: { example: "1" } } } });
+  expect(locksMatchPins({ "example@1": lock }, pins)).toBe(true);
+  expect(locksMatchPins({}, pins)).toBe(false);
+  expect(locksMatchPins({ "example@1": lock, "orphan@1": lock }, pins)).toBe(false);
+  expect(locksMatchPins({ "example@1": "invalid" }, pins)).toBe(false);
+  const changed = JSON.stringify({ workspaces: { "": { dependencies: { example: "2" } } } });
+  expect(locksMatchPins({ "example@1": changed }, pins)).toBe(false);
+});
 
 test("generated locks match the offline generator; dropped data and extra code are rejected", () => {
   const locks = { "example@1": '{"pin":"1"}\n', "example@2": '{"pin":"2"}\n' };

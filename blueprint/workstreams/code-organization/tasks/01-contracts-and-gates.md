@@ -48,7 +48,9 @@ identically before and after.
 measured caps, all below 1,500; a one-line shrink requires lowering the cap, and growth fails. Generated server locks
 have a separate measured cap and offline generator verification: `bun scripts/lock-servers.ts --check` regenerates
 from the stored lock data in memory and compares normalized emitted code. It writes nothing and does not refresh npm
-resolutions. `tests/organization/generated-locks.test.ts` covers dropped data, extra code and the committed module.
+resolutions. It also requires exactly the current pin keys and checks each stored workspace dependency map against
+the pin's install manifest. `tests/organization/generated-locks.test.ts` covers missing/orphan pins, changed versions,
+malformed data, dropped data, extra code and the committed module. This does not re-resolve or authenticate npm data.
 The later 750/600 steps remain T10/T11's work (ORG-D2).
 
 Exact cap edits in `scripts/check-size.ts` are the one allowed shared-file conflict between parallel move/extraction
@@ -141,7 +143,7 @@ same checker version on both sides; T1's intentional contract extraction is not 
   replaced by the stricter one-line-shrink assertion; new check fixtures are added.
 - Focused pre/post checks: registry/keymap (5), drawing primitives (4, **baseline only**; reverse-edge extractions for
   drawing/editable remain T9), boundary/import syntax and worker URLs/build entries (6), all passing.
-  The reviewed contract/migration/size, offline generation and startup tests pass (20 tests). Negative fixtures
+  The reviewed contract/migration/size, offline generation and startup tests pass (22 tests). Negative fixtures
   cover skipped tests, missing build entries and a moved worker whose URL/build entry did not follow.
 - Source terminal checks: both checks matching `which-key: the leader` pass. The package build succeeds. A copied
   compiled binary, run away from the repository with isolated XDG directories, passes the panel/which-key check and
@@ -149,6 +151,10 @@ same checker version on both sides; T1's intentional contract extraction is not 
 - Startup failure paths: `tests/organization/startup.test.ts` constructs the actual App through the TUI harness.
   A spec without an implementation and an implementation without a spec both reject with the registration error
   from `src/tui/actions.ts`; each mutation is restored in `finally`.
+  `registerActions(app)` has no spec-list parameter, so these serial tests retain the shared-array mutations rather
+  than adding a production API for tests. The file passes in two separate plain processes; two additional instrumented
+  runs exited in 0.57/0.60 seconds and observed zero active timers, Worker creations or filesystem watcher creations.
+  The harness disables live watching/indexing; OS watcher startup is after registration in the App constructor.
 - The existing autosave/index-lock finding remains the documented ancestor-checkout/fixture interaction. T1 does not
   change its fixture, checkout caching or timeout. T12 remains next; T44 may proceed alongside the move sequence.
 - `bun run check` passed typechecking, boundary/size, dependency, lint, workflow and documentation gates, then failed
@@ -163,6 +169,10 @@ CONTRIBUTING.md and MAINTAINING.md contain no obsolete numeric ceiling. Prefix a
 and the commented-out-test regression, were run against the original T1 checker and all three failed before the fixes.
 The command metadata/composer remains unchanged. Keep the PR draft until all test and terminal CI jobs are green and
 the maintainer asks to advance it.
+
+Comment handling now uses a single forward scanner that preserves string/template/regex literals and blanks comments
+without changing offsets. Regression coverage distinguishes division followed by a comment from a regex literal.
+This remains a lexical tool: templates are opaque and regex starts use expression/line context, not a full syntax tree.
 
 Tool settings: Bun 1.4.2, TypeScript 7.0.2, repository compiler/Biome configuration; no dependency changes. The source
 inventory is now 329 files, with the added contract below the size ceiling. No user-visible behavior change requires a

@@ -4,6 +4,7 @@ import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join, normalize, resolve } from "node:path";
 import { importsOf } from "../check-boundary.ts";
 import { testIdentities } from "./test-identities.ts";
+import { withoutComments } from "./source-text.ts";
 
 export interface Snapshot {
   edges: string[];
@@ -39,12 +40,8 @@ export function capture(root: string): Snapshot {
   const runtime = new Set<string>();
   const unresolved: string[] = [];
   for (const file of [...codeFiles(root, "src"), ...codeFiles(root, "scripts")]) {
-    // Ignore comments without stripping type imports. Quoted strings are consumed first, so URLs survive.
     const source = readFileSync(join(root, file), "utf8");
-    const text = source.replace(
-      /"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|`(?:\\.|[^`\\])*`|\/(?![/*])(?:\\.|\[(?:\\.|[^\]\\])*\]|[^/\\\r\n])+\/[a-z]*|\/\*[\s\S]*?\*\/|\/\/[^\r\n]*/g,
-      (part) => (part.startsWith("//") || part.startsWith("/*") ? part.replace(/[^\r\n]/g, " ") : part),
-    );
+    const text = withoutComments(source);
     const values = new Bun.Transpiler({ loader: file.endsWith(".tsx") ? "tsx" : "ts" })
       .scanImports(source.replace(/^#!.*/, ""))
       .map((i) => i.path);
