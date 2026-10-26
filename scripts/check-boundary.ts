@@ -39,6 +39,21 @@ export function valueImportsOf(text: string): string[] {
     .map((m) => (m[1] ?? m[2] ?? m[3] ?? m[4])!);
 }
 
+/** Area catalogs may depend on contracts, never on the list that composes them, even for types (ORG-T1). */
+export function commandViolations(from: string, text: string): string[] {
+  if (!from.startsWith("src/core/commands/")) return [];
+  return importsOf(text).flatMap((spec) => {
+    const target = spec.startsWith(".") ? relative(ROOT, resolve(ROOT, dirname(from), spec)) : spec;
+    const composer = /^src\/core\/command-specs(?:\.[cm]?[jt]s)?$/.test(target);
+    const contract = from === "src/core/commands/contracts.ts";
+    return composer || contract
+      ? [
+          `${from}: imports ${spec} (${contract ? "contract must be independent" : "catalog must not import its composer"})`,
+        ]
+      : [];
+  });
+}
+
 function files(dir: string): string[] {
   const out: string[] = [];
   let entries: string[] = [];
@@ -73,6 +88,7 @@ if (import.meta.main) {
 
   for (const file of files(join(ROOT, "src"))) {
     const from = relative(ROOT, file);
+    violations.push(...commandViolations(from, readFileSync(file, "utf8")));
     for (const spec of valueImportsOf(readFileSync(file, "utf8"))) {
       if (!spec.startsWith(".")) continue;
       const target = relative(ROOT, resolve(dirname(file), spec));

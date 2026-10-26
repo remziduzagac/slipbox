@@ -1,6 +1,6 @@
 // Command specs: the cursor, scrolling, a picture's size, selection and copy, links and history.
 
-import type { CommandSpec } from "../command-specs";
+import type { CommandSpec } from "./contracts";
 
 const I = null; // interaction: needs a human at a terminal
 

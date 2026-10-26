@@ -4,7 +4,7 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { CAPPED, judgeSizes, LIMIT, lineCount } from "../scripts/check-size.ts";
+import { CAPPED, GENERATED, judgeSizes, LIMIT, lineCount } from "../scripts/check-size.ts";
 
 const sandbox = mkdtempSync(join(tmpdir(), "slipbox-size-"));
 afterAll(() => rmSync(sandbox, { recursive: true, force: true }));
@@ -32,8 +32,12 @@ describe("the size check (D235, scripts/check-size.ts)", () => {
     ]);
   });
 
-  test("a capped file within a little of its cap is left alone", () => {
-    expect(judgeSizes(new Map([["src/big.ts", 2900]]), { "src/big.ts": 3000 })).toEqual({ over: [], lower: [] });
+  test("even a one-line shrink requires lowering the exact cap", () => {
+    const cap = LIMIT + 100;
+    expect(judgeSizes(new Map([["src/big.ts", cap - 1]]), { "src/big.ts": cap })).toEqual({
+      over: [],
+      lower: [{ path: "src/big.ts", lines: cap - 1, cap }],
+    });
   });
 
   test("a capped file back under the limit is to be dropped from the list, however close to its cap", () => {
@@ -74,10 +78,18 @@ describe("the size check (D235, scripts/check-size.ts)", () => {
     expect(run({ "src/tui/new.ts": "x\n".repeat(LIMIT) }).code).toBe(0);
   });
 
+  test("the script fails until a legacy cap is lowered, including a one-line shrink", () => {
+    const cap = CAPPED["src/tui/app.ts"]!;
+    const shrunk = run({ "src/tui/app.ts": "x\n".repeat(cap - 1) });
+    expect(shrunk.code).toBe(1);
+    expect(shrunk.out).toContain(`lower the cap to ${cap - 1}`);
+    expect(Math.max(...Object.values(CAPPED))).toBeLessThanOrEqual(1500);
+  });
+
   test("the repository itself passes, and every capped file still exists and is past the limit", () => {
     const r = Bun.spawnSync([process.execPath, join(import.meta.dir, "..", "scripts", "check-size.ts")]);
     expect(r.exitCode).toBe(0);
-    for (const path of Object.keys(CAPPED)) {
+    for (const path of Object.keys({ ...CAPPED, ...GENERATED })) {
       const lines = lineCount(readFileSync(join(import.meta.dir, "..", path), "utf8"));
       expect(lines).toBeGreaterThan(LIMIT);
     }

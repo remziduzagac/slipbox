@@ -1,6 +1,6 @@
 // Command specs: windows, tabs, panes, the explorer, the outline and find.
 
-import type { CommandSpec } from "../command-specs";
+import type { CommandSpec } from "./contracts";
 
 const I = null; // interaction: needs a human at a terminal
 

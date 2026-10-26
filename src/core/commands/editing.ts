@@ -1,6 +1,6 @@
 // Command specs: search, tasks, editing, the switcher and the palette.
 
-import type { CommandSpec } from "../command-specs";
+import type { CommandSpec } from "./contracts";
 
 const I = null; // interaction: needs a human at a terminal
 

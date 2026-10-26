@@ -5,24 +5,16 @@
 // interaction — cursor, scroll, selection, focus, panes, overlays — the one stated exception
 // class. A test enforces that nothing is left undeclared, so parity cannot quietly decay.
 //
-// The specs themselves live by area in src/core/commands/; this file keeps the type and the one list,
+// The specs and their independent contract live in src/core/commands/; this file composes the one list,
 // built from them in registration order.
 
+import type { CommandSpec } from "./commands/contracts";
 import { MOTION_SPECS } from "./commands/motion";
 import { WINDOW_SPECS } from "./commands/windows";
 import { GIT_SPECS } from "./commands/git";
 import { EDITING_SPECS } from "./commands/editing";
 import { UI_SPECS } from "./commands/ui";
 import { FILE_SPECS } from "./commands/files";
-
-export interface CommandSpec {
-  id: string;
-  title: string;
-  /** CLI invocation reaching the same state change, or null for a TUI-only interaction. */
-  cli: string | null;
-  /** A short explanation, shown under the entry in the which-key popup and in the palette. */
-  desc: string;
-}
 
 export const COMMAND_SPECS: CommandSpec[] = [
   ...MOTION_SPECS,
