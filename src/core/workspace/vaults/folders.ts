@@ -15,7 +15,7 @@
 
 import { existsSync, realpathSync } from "node:fs";
 import { join, relative, sep } from "node:path";
-import { normalizeRemote, remoteUrls } from "../../remotes.ts";
+import { normalizeRemote, remoteUrls } from "../links/remotes.ts";
 import {
   climbsOut,
   ensureDir,

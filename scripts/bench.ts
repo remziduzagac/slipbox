@@ -19,7 +19,7 @@ delete process.env.SLIPBOX_CONFIG;
 
 const { canonKey } = await import("../src/core/application/commands/registry.ts");
 const { DEFAULT_CONFIG } = await import("../src/core/application/config/config.ts");
-const { openGraph } = await import("../src/core/graph.ts");
+const { openGraph } = await import("../src/core/workspace/graph/graph.ts");
 const { locateVault } = await import("../src/core/workspace/vaults/vault.ts");
 const { App } = await import("../src/tui/app.ts");
 const { TextCanvas } = await import("../src/tui/canvas.ts");
@@ -271,7 +271,7 @@ const NO_CACHE = "2,000 notes, a second copy: parsed again (no cache)";
 if ([FIRST, FROM_CACHE, NO_CACHE].some(want)) {
   const { cpSync, mkdirSync } = await import("node:fs");
   const { ParseCache } = await import("../src/core/parsecache.ts");
-  const { Graph } = await import("../src/core/graph.ts");
+  const { Graph } = await import("../src/core/workspace/graph/graph.ts");
   const { rootAt } = await import("../src/core/workspace/vaults/vault.ts");
   const many = join(dir, "many");
   mkdirSync(join(many, ".slipbox"), { recursive: true });
@@ -286,7 +286,10 @@ if ([FIRST, FROM_CACHE, NO_CACHE].some(want)) {
       const loc = rootAt(root);
       const g = new Graph(loc, DEFAULT_CONFIG).build(false, "lazy");
       for (const rel of g.notes.keys())
-        (await import("../src/core/graph.ts")).extractNote({ rel, abs: join(root, rel), size: 0, mtimeMs: 0 }, cache);
+        (await import("../src/core/workspace/graph/graph.ts")).extractNote(
+          { rel, abs: join(root, rel), size: 0, mtimeMs: 0 },
+          cache,
+        );
     });
   const shared = ParseCache.open(join(dir, "cache", "bench-parsed.db"))!;
   // Filled whichever case is wanted: the copies are timed against a full cache.

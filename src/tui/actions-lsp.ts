@@ -2,7 +2,7 @@
 // formatting, symbols — each asked of the server for the file on screen.
 
 import { type Run, withView } from "./actions.ts";
-import { landingText, findHeading } from "../core/landing.ts";
+import { landingText, findHeading } from "../core/workspace/links/landing.ts";
 import { isAbsolute } from "node:path";
 import { markdownText } from "./actions-links.ts";
 import type {

@@ -5,9 +5,9 @@
 
 import { existsSync, statSync } from "node:fs";
 import { isAbsolute, join, posix, relative, sep } from "node:path";
-import { formatPointer, isPointer, parsePointer, resolvePointer } from "./pointer.ts";
-import { checkoutRemotes, hostedHere } from "./hosting.ts";
-import { lookupFolder, pointerName } from "./workspace/vaults/folders.ts";
+import { formatPointer, isPointer, parsePointer, resolvePointer } from "../links/pointer.ts";
+import { checkoutRemotes, hostedHere } from "../links/hosting.ts";
+import { lookupFolder, pointerName } from "../vaults/folders.ts";
 import {
   extensionless,
   type MdLinkTarget,
@@ -17,10 +17,10 @@ import {
   resolveAttachment,
   resolveMarkdownUrl,
   wikiPathCandidates,
-} from "./links.ts";
-import { checkoutOf } from "./git.ts";
-import { isMarkdownExport } from "./export/mark.ts";
-import { classify } from "./filetypes.ts";
+} from "../links/links.ts";
+import { checkoutOf } from "../../git.ts";
+import { isMarkdownExport } from "../../export/mark.ts";
+import { classify } from "../../filetypes.ts";
 import type { LinkRef, Target } from "./graph-types.ts";
 import type { Graph } from "./graph.ts";
 

@@ -7,7 +7,7 @@
 
 import type { Config } from "../../application/config/config.ts";
 import type { HomeWalk } from "../vaults/home.ts";
-import type { IndexAnswer, Opened } from "../../index-job.ts";
+import type { IndexAnswer, Opened } from "../graph/index-job.ts";
 import type { FolderListing } from "./listing.ts";
 import { type FilterSettings, slowDisk, type WalkCap, type WalkLimits } from "./walk.ts";
 import type { StepAnswer, WalkRequest } from "./walk-jobs.ts";

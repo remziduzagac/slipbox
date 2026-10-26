@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, writeFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { DEFAULT_CONFIG } from "../src/core/application/config/config.ts";
-import { openGraph } from "../src/core/graph.ts";
+import { openGraph } from "../src/core/workspace/graph/graph.ts";
 import { locateVault } from "../src/core/workspace/vaults/vault.ts";
 import { assemble } from "../src/core/export/assemble.ts";
 import { toMarkdown } from "../src/core/export/markdown.ts";

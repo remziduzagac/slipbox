@@ -6,7 +6,7 @@
 
 import { isAbsolute } from "node:path";
 import { checkoutOf } from "./git.ts";
-import type { Graph } from "./graph.ts";
+import type { Graph } from "./workspace/graph/graph.ts";
 import { readRoots } from "./workspace/vaults/registry.ts";
 import { catchUp, search, type SearchHit, type SearchResult } from "./search.ts";
 import { SearchIndex } from "./search-index.ts";

@@ -9,25 +9,25 @@
 // and how a link resolves graph-resolve.ts's (`LinkResolver`). All of it is imported from here.
 
 import { statSync } from "node:fs";
-import { commentLinks, grammar, grammarFor, grammarNow, linkTokens, parseSyntax, type Grammar } from "./syntax.ts";
+import { commentLinks, grammar, grammarFor, grammarNow, linkTokens, parseSyntax, type Grammar } from "../../syntax.ts";
 import { basename, isAbsolute, join, posix, relative, sep } from "node:path";
 import { isMainThread } from "node:worker_threads";
-import type { Config } from "./application/config/config.ts";
-import { climbsOut, ensureDir, readJson, readText, sweepTemps, writeJson } from "./foundation/platform/fsutil.ts";
-import { blockingLink } from "./workspace/vaults/symlinks.ts";
-import { countForms, type FormCounts } from "./convention.ts";
-import { LinkIndex, normKey, onDisk, type Resolution } from "./links.ts";
-import type { ParseCache as ChunkCache } from "./parse.ts";
-import { tildePath } from "./workspace/vaults/names.ts";
-import { sharedParseCache } from "./parsecache.ts";
-import { cacheDir, ensureCacheHome, stateDir } from "./foundation/platform/paths.ts";
-import { headCommit, headOf } from "./git.ts";
-import { changedBetween, inVault } from "./gitops.ts";
-import { contentHash, Redirects } from "./redirects.ts";
-import { dataLinks, parseData } from "./data.ts";
-import { classify, extensionOf } from "./filetypes.ts";
-import { type AskedWhole, type HomeWalk, homeWalk, inFolders, walksInto } from "./workspace/vaults/home.ts";
-import { checkoutAt, findVaultRoot, isListed, isVaultRoot, type VaultLocation } from "./workspace/vaults/vault.ts";
+import type { Config } from "../../application/config/config.ts";
+import { climbsOut, ensureDir, readJson, readText, sweepTemps, writeJson } from "../../foundation/platform/fsutil.ts";
+import { blockingLink } from "../vaults/symlinks.ts";
+import { countForms, type FormCounts } from "../links/convention.ts";
+import { LinkIndex, normKey, onDisk, type Resolution } from "../links/links.ts";
+import type { ParseCache as ChunkCache } from "../../parse.ts";
+import { tildePath } from "../vaults/names.ts";
+import { sharedParseCache } from "../../parsecache.ts";
+import { cacheDir, ensureCacheHome, stateDir } from "../../foundation/platform/paths.ts";
+import { headCommit, headOf } from "../../git.ts";
+import { changedBetween, inVault } from "../../gitops.ts";
+import { contentHash, Redirects } from "../links/redirects.ts";
+import { dataLinks, parseData } from "../../data.ts";
+import { classify, extensionOf } from "../../filetypes.ts";
+import { type AskedWhole, type HomeWalk, homeWalk, inFolders, walksInto } from "../vaults/home.ts";
+import { checkoutAt, findVaultRoot, isListed, isVaultRoot, type VaultLocation } from "../vaults/vault.ts";
 import {
   HOME_LIMITS,
   listDirectory,
@@ -36,8 +36,8 @@ import {
   type WalkCap,
   WalkFilter,
   walkVault,
-} from "./workspace/walk/walk.ts";
-import { tagKey, tagName } from "./tags.ts";
+} from "../walk/walk.ts";
+import { tagKey, tagName } from "../../tags.ts";
 import {
   type LinkRef,
   type NoteEntry,

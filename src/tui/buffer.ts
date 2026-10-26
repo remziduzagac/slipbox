@@ -13,7 +13,7 @@ import type { Glyphs } from "../core/glyphs.ts";
 import { parseData } from "../core/data.ts";
 import type { FileKind } from "../core/filetypes.ts";
 import { newRenderCache } from "../core/layout/render.ts";
-import type { Graph } from "../core/graph.ts";
+import type { Graph } from "../core/workspace/graph/graph.ts";
 import { readText, type Stamp, stamp } from "../core/foundation/platform/fsutil.ts";
 import type { Layout } from "../core/layout/ir.ts";
 import { layoutNote, type NoteRenderOptions } from "../core/note.ts";

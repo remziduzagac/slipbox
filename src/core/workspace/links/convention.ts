@@ -14,9 +14,9 @@ import { existsSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { isAbsolute, join, relative } from "node:path";
 import { parse as parseToml } from "smol-toml";
-import type { Config } from "./application/config/config.ts";
-import { stripJsonComments } from "./data.ts";
-import { readRegular, SMALL_FILE } from "./foundation/platform/fsutil.ts";
+import type { Config } from "../../application/config/config.ts";
+import { stripJsonComments } from "../../data.ts";
+import { readRegular, SMALL_FILE } from "../../foundation/platform/fsutil.ts";
 
 export type LinkStyle = "markdown" | "wiki";
 export type LinkPath = "relative" | "root" | "name";
@@ -238,7 +238,8 @@ export function findConvention(input: ConventionInput): Convention {
   return { style, path, extension, tool: tool?.tool ?? null };
 }
 
-/** The form with two-thirds or more of those counted, if one has; none counted, none. (A markdown link is never counted by name.) */
+/** The form with two-thirds or more of those counted, if one has; none counted, none.
+ * (A markdown link is never counted by name.) */
 function dominant<T extends string>(counts: Record<T, number> | undefined): ConventionPart<T> | null {
   if (!counts) return null;
   const total = (Object.values(counts) as number[]).reduce((a, b) => a + b, 0);

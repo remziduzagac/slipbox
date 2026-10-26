@@ -14,14 +14,14 @@ import { linkTokens } from "../core/syntax.ts";
 import { readerFor } from "../core/readers.ts";
 import { type Anchor, TOP } from "../core/workspace/session/position.ts";
 import { isAbsolute, join, posix } from "node:path";
-import { isNotePath, pathLink, pathForm } from "../core/links.ts";
+import { isNotePath, pathLink, pathForm } from "../core/workspace/links/links.ts";
 import { isFile } from "./actions-files.ts";
-import { isPointer, parsePointer, resolvePointer } from "../core/pointer.ts";
+import { isPointer, parsePointer, resolvePointer } from "../core/workspace/links/pointer.ts";
 import { ELSEWHERE, tildePath } from "../core/workspace/vaults/names.ts";
 import { slugName } from "../core/workspace/vaults/registry.ts";
 import { rootAt } from "../core/workspace/vaults/vault.ts";
 import { classify } from "../core/filetypes.ts";
-import { lineFragment, blockLine, findHeading } from "../core/landing.ts";
+import { lineFragment, blockLine, findHeading } from "../core/workspace/links/landing.ts";
 import { anchorsOf, headingsOf } from "../core/parse.ts";
 
 /** Links: followed, peeked at, cycled through, listed (links and backlinks), inserted and converted. */

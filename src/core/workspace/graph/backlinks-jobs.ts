@@ -7,16 +7,16 @@
 import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
 import { isAbsolute, join } from "node:path";
-import { type Config, loadConfig } from "./application/config/config.ts";
+import { type Config, loadConfig } from "../../application/config/config.ts";
 import { type Graph, openGraph } from "./graph.ts";
-import { sweepTemps } from "./foundation/platform/fsutil.ts";
-import { cacheDir, stateDir } from "./foundation/platform/paths.ts";
-import { Reach } from "./reach.ts";
-import { probeFollowed } from "./workspace/vaults/symlinks.ts";
-import { configFilesFor, vaultAt } from "./workspace/vaults/vault.ts";
-import { walkContext } from "./foundation/workers/worker-context.ts";
-import { WorkerRequestError, WorkerRequests } from "./foundation/workers/worker-requests.ts";
-import { workerUrl } from "./foundation/workers/url.ts";
+import { sweepTemps } from "../../foundation/platform/fsutil.ts";
+import { cacheDir, stateDir } from "../../foundation/platform/paths.ts";
+import { Reach } from "../links/reach.ts";
+import { probeFollowed } from "../vaults/symlinks.ts";
+import { configFilesFor, vaultAt } from "../vaults/vault.ts";
+import { walkContext } from "../../foundation/workers/worker-context.ts";
+import { WorkerRequestError, WorkerRequests } from "../../foundation/workers/worker-requests.ts";
+import { workerUrl } from "../../foundation/workers/url.ts";
 
 /** A note of the vault at `root`, to list its backlinks; null: the vault's index caught up alone (a kept tab's). */
 export interface BacklinksRequest {
@@ -155,7 +155,7 @@ export const backlinkThread = {
   // It sees the environment as this process has it now (where the cache is, a test's sandbox), not as it started: Bun
   // gives a worker the starting one otherwise.
   factory: (): Worker =>
-    new Worker(workerUrl("backlinks-worker.ts"), { env: { ...process.env } as Record<string, string> }),
+    new Worker(workerUrl("workspace/graph/backlinks-worker.ts"), { env: { ...process.env } as Record<string, string> }),
 };
 
 function channel(): WorkerRequests {

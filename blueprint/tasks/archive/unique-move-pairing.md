@@ -31,7 +31,8 @@ Make the watcher's rule the index's: several candidates with that text, no move.
 
 - 2026-10-11: Found: `Graph.pairMove` kept one entry per text on each side (`Map<hash, {rel, at}>`), so a second
   removal of the same text replaced the first, and an arrival paired with whichever was last.
-- 2026-10-11: Fixed (`src/core/graph.ts`): each side keeps every removal and arrival of a text within the minute; a
+- 2026-10-11: Fixed (`src/core/workspace/graph/graph.ts`): each side keeps every removal and arrival of a text within
+  the minute; a
   pair is a move only when the other side has exactly one candidate and this side none pending (two gone and one
   come, or the other way, is no move, as `detectMoves` rules at index time). A note gone and back at the same path
   cancels, rather than standing as a removal a later arrival could pair with.

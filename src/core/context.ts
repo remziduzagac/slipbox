@@ -9,7 +9,7 @@ import { isAbsolute, relative } from "node:path";
 import { fence, fenceLanguage, formatRef } from "./capture.ts";
 import { classify } from "./filetypes.ts";
 import { readText } from "./foundation/platform/fsutil.ts";
-import type { Graph } from "./graph.ts";
+import type { Graph } from "./workspace/graph/graph.ts";
 import { sanitize } from "./foundation/text/sanitize.ts";
 
 export interface ContextOptions {

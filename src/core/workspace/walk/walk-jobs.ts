@@ -6,7 +6,7 @@
 
 import type { Config } from "../../application/config/config.ts";
 import { type HomeWalk, homeWalk, vaultsPastCap } from "../vaults/home.ts";
-import { type IndexAnswer, IndexJob, type IndexOf } from "../../index-job.ts";
+import { type IndexAnswer, IndexJob, type IndexOf } from "../graph/index-job.ts";
 import { type FolderListing, listFolder } from "./listing.ts";
 import { type FilterSettings, filterFrom, SlicedWalk, type WalkLimits, type WalkResult } from "./walk.ts";
 import { type IndexAsk, nestedIn, type PastCap } from "./walkers.ts";

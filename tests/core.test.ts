@@ -29,7 +29,7 @@ import { copyText } from "../src/core/foundation/platform/clipboard.ts";
 import { readDoc } from "../src/core/docformats.ts";
 import { canonKey, Keymap, unknownModifiers } from "../src/core/application/commands/registry.ts";
 import { loadConfig } from "../src/core/application/config/config.ts";
-import { LinkIndex, onDisk } from "../src/core/links.ts";
+import { LinkIndex, onDisk } from "../src/core/workspace/links/links.ts";
 import {
   headingsOf,
   newParseCache,
@@ -43,7 +43,7 @@ import { mathRows, mathText } from "../src/core/math.ts";
 import { flattenVars, loadRasterizer, looksLikeSvg, machineFont, rasterizer } from "../src/core/svg.ts";
 import { loadMermaid, mermaidSvg } from "../src/core/diagrams.ts";
 import { loadTypesetter } from "../src/core/typeset.ts";
-import { extractFromSource } from "../src/core/graph.ts";
+import { extractFromSource } from "../src/core/workspace/graph/graph.ts";
 import { type LintIssue, lintCommand, lintLoadsCode, MARKDOWNLINT, parseLint, runLint } from "../src/core/lint.ts";
 import { installTool, lockKey, toolFolder, toolManifest } from "../src/core/servers/install.ts";
 import { LOCKS } from "../src/core/servers/locks.ts";
@@ -1876,7 +1876,7 @@ describe("advisory staleness (9.9)", () => {
 
 describe("links to a repository's own hosting: the edges", () => {
   test("a path that isn't valid percent-encoding is kept as written; a README any case, a file only", async () => {
-    const { inRepo, parseHosted, readmeAt } = await import("../src/core/hosting.ts");
+    const { inRepo, parseHosted, readmeAt } = await import("../src/core/workspace/links/hosting.ts");
     expect(parseHosted("https://github.com/me/repo/blob/main/100%-done.md")).toMatchObject({
       path: "100%-done.md",
       ref: "main",

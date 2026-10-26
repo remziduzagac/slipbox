@@ -7,7 +7,7 @@ import { existsSync, writeFileSync } from "node:fs";
 import { join, relative, resolve, sep } from "node:path";
 import { type Config, loadConfig } from "../core/application/config/config.ts";
 import { folderIdentity } from "../core/workspace/vaults/folders.ts";
-import { type Graph, openGraph, type Retarget } from "../core/graph.ts";
+import { type Graph, openGraph, type Retarget } from "../core/workspace/graph/graph.ts";
 import type { ParsedNote } from "../core/parse.ts";
 import { parseNoteFile } from "../core/readers.ts";
 import { parseData } from "../core/data.ts";
@@ -27,9 +27,9 @@ import {
 } from "../core/foundation/platform/fsutil.ts";
 import { blockingLink, linkSaid, PROBE_MS, probeFollowed, writesThrough } from "../core/workspace/vaults/symlinks.ts";
 import { compilePattern } from "../core/replace.ts";
-import { openVault, Reach } from "../core/reach.ts";
+import { openVault, Reach } from "../core/workspace/links/reach.ts";
 import { planRelink } from "../core/rename.ts";
-import { activityFile } from "../core/autoindex.ts";
+import { activityFile } from "../core/workspace/graph/autoindex.ts";
 import { ELSEWHERE, rootLabel } from "../core/workspace/vaults/names.ts";
 import {
   isHome,

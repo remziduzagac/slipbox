@@ -3,7 +3,7 @@
 
 import { listTasks } from "../core/tasks.ts";
 import { placeAt } from "./editing.ts";
-import { type ConventionPart, conventionOf, describeConvention } from "../core/convention.ts";
+import { type ConventionPart, conventionOf, describeConvention } from "../core/workspace/links/convention.ts";
 import { ELSEWHERE, rootLabel } from "../core/workspace/vaults/names.ts";
 import { match } from "./match.ts";
 import type { App } from "./app.ts";

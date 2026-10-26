@@ -100,7 +100,8 @@ that order:
   `core/workspace/walk/walk-thread.ts`, `core/workspace/vaults/symlinks.ts`,
   `core/workspace/vaults/registry.ts`, `core/workspace/vaults/folders.ts`.
 - **Links** ([links.md](links.md)): every link, whatever its written form, is read as a file and a fragment; each
-  tool's forms are read and written at the edges (D68). The graph (`core/graph.ts`) holds the notes, their links and
+  tool's forms are read and written at the edges (D68). The graph (`core/workspace/graph/graph.ts`) holds the notes,
+  their links and
   backlinks, parsed lazily; renames, repairs, plans and the merge review work on paths.
 - **Search** ([search.md](search.md)): a vault's files ranked by words, in the core so the CLI and the TUI share it:
   an SQLite FTS5 index in the vault's cache, else a scan (D114); `find` beside it, unranked (D119).
@@ -147,15 +148,15 @@ The CLI's commands are the user's reference, [cli.md](../../docs/manual/cli.md);
 | [mounts.ts][o22] | VV-D2 | the mount table, read without touching a mount: home's walk never goes into another disk |
 | [symlinks.ts][o23] | VV-D6 | links followed only when you say so: the answers, a link's scope, writes, the probe |
 | [registry.ts][o24] | 17.3–17.6, 21.8 | `[vault]` identity; the machine's vaults by path (`roots.json`) |
-| `core/remotes.ts` | 21.6 | a repository's remotes as `host/path`: what names it, what hosting URLs are its |
+| [remotes.ts][o30] | 21.6 | a repository's remotes as `host/path`: what names it, what hosting URLs are its |
 | `core/parsecache.ts` | 20.11 | notes' parsed content by content hash, shared by every copy on the machine |
 | [names.ts][o25] | 21.9 | a vault as it's told: its name, else its path (`~/…`); `name@branch`; `~`, `Elsewhere` |
 | `core/git.ts` | 17.19 | a vault's git checkout, from `.git`: the main one or a worktree, the branch |
 | `core/gitops.ts` | 5.11–5.14, 23.6 | git run for what `.git` can't say cheaply: status, changes, a file at a commit |
 | `core/mergereview.ts` | 20.21 | before a merge: the links `git merge-tree`'s result would break, each cause and fix |
-| `core/reach.ts` | 17.9–17.11 | other vaults: paths out of the vault, their backlinks here, a peek's graph; `[[x:…]]` |
-| `core/backlinks-jobs.ts` | D259 | a peek's backlinks in a worker (`backlinks-worker.ts`), its vault caught up there |
-| `core/redirects.ts` | 17.12 | moves seen, by content hash; where an old path went |
+| [reach.ts][o31] | 17.9–17.11 | other vaults: paths out of the vault, their backlinks here, a peek's graph; `[[x:…]]` |
+| [backlinks-jobs.ts][o32] | D259 | a peek's backlinks in a worker (`backlinks-worker.ts`), its vault caught up there |
+| `core/workspace/links/redirects.ts` | 17.12 | moves seen, by content hash; where an old path went |
 | `core/rename.ts` | 7.1–7.3, 17.15, 20.19 | renames and moves: each link rewritten as byte-range edits, previewed |
 | `core/rename-plan.ts` | 7.2, 7.3 | a plan's shape; its edits collected, each file read once; git trees with changes |
 | `core/rename-links.ts` | 7.6, 17.15 | one link rewritten in the form it was written, at the place the index recorded |
@@ -163,7 +164,7 @@ The CLI's commands are the user's reference, [cli.md](../../docs/manual/cli.md);
 | `core/rename-apply.ts` | 7.1–7.4 | a plan carried out, its files unchanged since, the index following; undone |
 | `core/rename-heading.ts` | 11.9 | a heading renamed, with every link to it |
 | `core/plans.ts` | 20.18 | edits as plans: saved, tied to file contents, refused once stale, applied once |
-| `core/convert.ts` | 20.1 | the converter: `[[…]]` and `/…` links made relative paths, by their own old rules |
+| [convert.ts][o33] | 20.1 | the converter: `[[…]]` and `/…` links made relative paths, by their own old rules |
 | `core/rename-log.ts` | 7.4 | each rename's files and moves, as it found them: what an undo gives back |
 | `core/files.ts` | 18.4, 18.5, 18.11 | delete to the vault's trash and restore; copy; an unmade vault's `.slipbox/` |
 | `core/workspace/walk/walk.ts` | 1.2, 0.11 | the walk and `WalkFilter`, shared with the watcher |
@@ -178,26 +179,26 @@ The CLI's commands are the user's reference, [cli.md](../../docs/manual/cli.md);
 | `core/parse-pool.ts` | 15.1 | a big note's chunks parsed on up to four workers (`parse-worker.ts`), into its cache |
 | [url.ts][o4] | 15.1, 25.6 | where a worker's script is, from the source or in the compiled binary (D232) |
 | [worker-requests.ts][o5] | 15.1, 25.6 | a worker's requests one at a time: a bounded mailbox, a line, deadlines |
-| `core/links.ts` | 1.4 | `LinkIndex`: case policy, collisions, markdown URLs |
+| `core/workspace/links/links.ts` | 1.4 | `LinkIndex`: case policy, collisions, markdown URLs |
 | `core/search.ts` | 6.x | search: the query, a file read for it, the index kept, the index or a scan, hits located |
 | `core/regex-jobs.ts` | 25.4 | a regex matched in a worker (`regex-worker.ts`), stopped at its deadline |
 | `core/search-index.ts` | 6.6 | the search index: SQLite FTS5 in the cache, a row per file, BM25 |
 | `core/scope.ts` | 20.16, 21.10 | search by vault: `here`, then linked vaults, then every vault known (`--scope`) |
-| `core/autoindex.ts` | 20.9 | the background auto-index: home walked in slices and indexed, then the vaults in it |
+| [autoindex.ts][o34] | 20.9 | the background auto-index: home walked in slices and indexed, then the vaults in it |
 | [sqlite.ts][o6] | 6.6 | the runtime's SQLite (`node:sqlite`): the few calls the index and the parse cache make |
 | [trust.ts][o26] | 23.x | the vaults whose own code may run: your answers (`trust.json`), your `[trust] roots` |
-| `core/graph.ts` | 1.5–1.9, 6.7, 11.8 | notes, links, backlinks, lazy parsing, the index; change feed; unsaved text |
-| `core/graph-types.ts` | 1.5–1.7 | a note's entry, a link as written and resolved, a backlink, a problem; how sure |
-| `core/graph-extract.ts` | 1.5, 1.6, 20.11 | a note's entry from its text: title, headings, links, tags, names |
-| `core/graph-resolve.ts` | 20.2, 21.2–21.7 | `LinkResolver`: by path, name, alias, pointer, hosting URL; moves |
+| [graph.ts][o35] | 1.5–1.9, 6.7, 11.8 | notes, links, backlinks, lazy parsing, the index; change feed; unsaved text |
+| [graph-types.ts][o36] | 1.5–1.7 | a note's entry, a link as written and resolved, a backlink, a problem; how sure |
+| [graph-extract.ts][o37] | 1.5, 1.6, 20.11 | a note's entry from its text: title, headings, links, tags, names |
+| [graph-resolve.ts][o38] | 20.2, 21.2–21.7 | `LinkResolver`: by path, name, alias, pointer, hosting URL; moves |
 | `core/readers.ts` | 16.2 | a reader per note format: its parse into mdast, headings and links off raw lines |
 | `core/filetypes.ts` | 16.1 | a file's group (note, data, text, binary) and format, by extension |
 | `core/doctypes.ts` | 22.2, 22.3 | document types: notes of a kind by where they are; their rules, order, status |
-| `core/convention.ts` | 21.4 | a vault's links' convention: your setting, its tool's, its notes', ours |
-| `core/write-link.ts` | 21.5 | a link as slipbox writes one: completion, the link picker, `slipbox link` |
+| [convention.ts][o39] | 21.4 | a vault's links' convention: your setting, its tool's, its notes', ours |
+| [write-link.ts][o40] | 21.5 | a link as slipbox writes one: completion, the link picker, `slipbox link` |
 | [folders.ts][o27] | 21.6 | named folders: by `.slipbox/` name, else remote; copies, the default; the lookup |
-| `core/pointer.ts` | 21.7 | `slipbox://` pointers: parsed, resolved (a branch: its worktree, or from git), written |
-| `core/hosting.ts` | — | a repository's hosting URLs (GitHub, GitLab, Bitbucket) read as its files |
+| [pointer.ts][o41] | 21.7 | `slipbox://` pointers: parsed, resolved (a branch: its worktree, or from git), written |
+| `core/workspace/links/hosting.ts` | — | a repository's hosting URLs (GitHub, GitLab, Bitbucket) read as its files |
 | `core/data.ts` | 16.11–16.15 | data files (TOML, INI, YAML, JSON, CSV) read into a document tree; their links |
 | [lazy.ts][o7] | 16.6 | modules and assets loaded on first use: asked synchronously, heard when ready |
 | `core/diagrams.ts` | 12.10, 12.16 | Mermaid's drawings read once done: box drawing, an SVG, or why it's its code |
@@ -230,7 +231,7 @@ The CLI's commands are the user's reference, [cli.md](../../docs/manual/cli.md);
 | `core/syntax.ts` | 16.7–16.9, 16.18–16.22 | tree-sitter: spans, outline, errors, comments; parts in other languages |
 | `core/syntax-thread.ts` | 16.7–16.9, D252 | a code file's grammar, parse and outline on `syntax-worker.ts` |
 | `core/docformats.ts` | 24.4 | a doc comment read into one shape, whatever wrote it: JSDoc, Google, NumPy, Sphinx |
-| `core/landing.ts` | 11.3 | where a link lands in its note — a heading, a block's `^id`, `L42` — and its text there |
+| [landing.ts][o42] | 11.3 | where a link lands in its note — a heading, a block's `^id`, `L42` — and its text there |
 | `core/note.ts` | 2.x, 1.11 | a note rendered for a pane: parse, resolve links, embeds' notes, lay out (CLI and TUI) |
 | `core/layout/*` | 2.1–2.8 | mdast → layout IR; tables; wrap; highlighting; ANSI |
 | `core/layout/source.ts` | 4.13 | the markdown as a layout, with each cell's source offset |
@@ -272,7 +273,7 @@ The CLI's commands are the user's reference, [cli.md](../../docs/manual/cli.md);
 | [catalog.ts][o11] | 0.8, parity | `COMMAND_SPECS`, composed from area catalogs; contracts live separately |
 | `core/application/commands/areas/*.ts` | 0.8, parity, D235 | every command id with its CLI equivalent, by area |
 | [position.ts][o28] | 3.4, 3.5, 3.15 | anchors, reading positions, the session file (the workspaces) |
-| `core/watch.ts` | 5.1, 5.2 | per-directory watcher, debounce, polling fallbacks |
+| `core/workspace/graph/watch.ts` | 5.1, 5.2 | per-directory watcher, debounce, polling fallbacks |
 | [vault-feed.ts][o29] | 5.1, 5.9, 5.10 | the watcher's news into a graph, held while git writes (TUI) |
 | `core/capture.ts` | 8.2–8.4 | scratch location, reference format, append |
 | `core/context.ts` | 9.7 | the context bundle: a note, its links and backlinks, as one document for an agent |
@@ -593,3 +594,17 @@ ordinary note needs.
 [o27]: ../../src/core/workspace/vaults/folders.ts
 [o28]: ../../src/core/workspace/session/position.ts
 [o29]: ../../src/core/workspace/vaults/vault-feed.ts
+
+[o30]: ../../src/core/workspace/links/remotes.ts
+[o31]: ../../src/core/workspace/links/reach.ts
+[o32]: ../../src/core/workspace/graph/backlinks-jobs.ts
+[o33]: ../../src/core/workspace/links/convert.ts
+[o34]: ../../src/core/workspace/graph/autoindex.ts
+[o35]: ../../src/core/workspace/graph/graph.ts
+[o36]: ../../src/core/workspace/graph/graph-types.ts
+[o37]: ../../src/core/workspace/graph/graph-extract.ts
+[o38]: ../../src/core/workspace/graph/graph-resolve.ts
+[o39]: ../../src/core/workspace/links/convention.ts
+[o40]: ../../src/core/workspace/links/write-link.ts
+[o41]: ../../src/core/workspace/links/pointer.ts
+[o42]: ../../src/core/workspace/links/landing.ts

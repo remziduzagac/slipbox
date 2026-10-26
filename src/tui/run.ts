@@ -4,7 +4,7 @@
 import { createCliRenderer, type KeyEvent } from "@opentui/core";
 import { flag, parseArgs } from "../cli/args.ts";
 import { loadConfig } from "../core/application/config/config.ts";
-import { Graph, openGraph } from "../core/graph.ts";
+import { Graph, openGraph } from "../core/workspace/graph/graph.ts";
 import { sanitize } from "../core/foundation/text/sanitize.ts";
 import { setWidthMethod } from "../core/foundation/text/width.ts";
 import { appendFileSync, statSync } from "node:fs";

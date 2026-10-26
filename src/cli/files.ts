@@ -4,9 +4,9 @@
 
 import { statSync } from "node:fs";
 import { dirname, join, relative, sep } from "node:path";
-import { isPointer } from "../core/pointer.ts";
+import { isPointer } from "../core/workspace/links/pointer.ts";
 import { entryInside, readText } from "../core/foundation/platform/fsutil.ts";
-import { openVault } from "../core/reach.ts";
+import { openVault } from "../core/workspace/links/reach.ts";
 import {
   type Applied,
   applyPlan,
@@ -22,7 +22,7 @@ import {
   RenameError,
   type RenamePlan,
 } from "../core/rename.ts";
-import { planConvert } from "../core/convert.ts";
+import { planConvert } from "../core/workspace/links/convert.ts";
 import {
   copyPath,
   emptyTrash,
@@ -36,7 +36,7 @@ import {
 import { forgetPlan, listPlans, loadPlan, type SavedPlan, savePlan } from "../core/plans.ts";
 import { isInside, isVaultRoot, recordLocation, rootAt } from "../core/workspace/vaults/vault.ts";
 import { has, UsageError } from "./args.ts";
-import { notIndexedSaid } from "../core/graph.ts";
+import { notIndexedSaid } from "../core/workspace/graph/graph.ts";
 import {
   EXIT,
   CliError,

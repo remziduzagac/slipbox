@@ -21,7 +21,7 @@ import { loadRasterizer } from "../src/core/svg.ts";
 import { loadTypesetter } from "../src/core/typeset.ts";
 import { paintJobs } from "../src/core/paint-jobs.ts";
 import { parseNoteFile } from "../src/core/readers.ts";
-import { findHeading, headingFragment } from "../src/core/landing.ts";
+import { findHeading, headingFragment } from "../src/core/workspace/links/landing.ts";
 import { headingsOf, parseMarkdown } from "../src/core/parse.ts";
 import { allocate } from "../src/core/layout/table.ts";
 import { countLines, measure, wrapGraphemes, wrapSpans } from "../src/core/layout/wrap.ts";

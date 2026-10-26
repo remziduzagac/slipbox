@@ -6,7 +6,7 @@ import { basename, dirname, isAbsolute, relative, resolve } from "node:path";
 import type { Heading, ListItem, Paragraph, Root, RootContent } from "mdast";
 import { readText } from "./foundation/platform/fsutil.ts";
 import type { Glyphs } from "./glyphs.ts";
-import type { Graph } from "./graph.ts";
+import type { Graph } from "./workspace/graph/graph.ts";
 import type { Layout, LinkStatus } from "./layout/ir.ts";
 import {
   type FoundPicture,
@@ -16,7 +16,7 @@ import {
   renderTree,
 } from "./layout/render.ts";
 import { headingLabel, headingText, type ParsedNote, parseMarkdown } from "./parse.ts";
-import { findHeading } from "./landing.ts";
+import { findHeading } from "./workspace/links/landing.ts";
 import { vaultOf } from "./workspace/vaults/vault.ts";
 
 /** Effective inset: the configured value, but never more than ~5% of a narrow pane, and ≥ 1 (2.7). */

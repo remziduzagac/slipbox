@@ -64,7 +64,8 @@ changed in that vault since.
 - 2026-10-23: The maintainer agreed: the lazy open stays on the main thread (still under "Not done"); fresh at each
   peek, no watching; and a vault with no index here gets one built by the peek, on the thread (D259). Home is left out
   of that: its index is built in slices while nobody works (VV-D2), so a peek into home without one still says so.
-- 2026-10-23: Built. `core/backlinks-jobs.ts` and `core/backlinks-worker.ts` (an entry point of the build, D232): the
+- 2026-10-23: Built. `core/workspace/graph/backlinks-jobs.ts` and `core/workspace/graph/backlinks-worker.ts` (an entry
+  point of the build, D232): the
   vault opened afresh on the thread, caught up or built, its index written, grammars loaded, a note's backlinks as
   rows, and a signature of its walk (notes with mtimes and sizes, other files, folders, nested vaults). One request
   runs at a time, never cancelled; a peek's newest waits, an older one answered null; a kept tab's refreshes wait

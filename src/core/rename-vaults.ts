@@ -4,8 +4,8 @@
 import { existsSync } from "node:fs";
 import { basename, dirname, isAbsolute, join, posix, relative, sep } from "node:path";
 import { climbsOut, readText } from "./foundation/platform/fsutil.ts";
-import type { Graph, LinkRef } from "./graph.ts";
-import { formatPathLink, normKey, wikiPathCandidates } from "./links.ts";
+import type { Graph, LinkRef } from "./workspace/graph/graph.ts";
+import { formatPathLink, normKey, wikiPathCandidates } from "./workspace/links/links.ts";
 import {
   IdentityEditError,
   identityReadsBack,
@@ -15,7 +15,7 @@ import {
   vaultConfigFile,
   withIdentity,
 } from "./workspace/vaults/registry.ts";
-import { openVault, Reach } from "./reach.ts";
+import { openVault, Reach } from "./workspace/links/reach.ts";
 import {
   folderIdentity,
   folderNamed,
@@ -24,7 +24,7 @@ import {
   readFolders,
   travelTogether,
 } from "./workspace/vaults/folders.ts";
-import { formatPointer, isPointer, parsePointer } from "./pointer.ts";
+import { formatPointer, isPointer, parsePointer } from "./workspace/links/pointer.ts";
 import { findVaultRoot, hasMarker, isInside, markersAt, type VaultLocation } from "./workspace/vaults/vault.ts";
 import { RenameError, type FileChange, type RenamePlan, shownFor, Collector, dirtyTrees } from "./rename-plan.ts";
 import { type Site, NOTE_EXT, real, mdTarget, safeDecode } from "./rename-links.ts";

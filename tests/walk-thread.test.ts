@@ -261,7 +261,7 @@ describe("the TUI's walks on their own thread (T12, #9)", () => {
     const homeMod = await import("../src/core/workspace/vaults/home.ts");
     const registry = await import("../src/core/workspace/vaults/registry.ts");
     const folders = await import("../src/core/workspace/vaults/folders.ts");
-    const { AutoIndex } = await import("../src/core/autoindex.ts");
+    const { AutoIndex } = await import("../src/core/workspace/graph/autoindex.ts");
     const { walkThread } = await import("../src/core/workspace/walk/walk-thread.ts");
     const home = tree({
       "a.md": "# A\n",
@@ -305,7 +305,7 @@ describe("the TUI's walks on their own thread (T12, #9)", () => {
   test("a found vault recorded with nothing read of the named folders' copies on the thread that asks: read where it was opened", async () => {
     const fs = await import("node:fs");
     const folders = await import("../src/core/workspace/vaults/folders.ts");
-    const { AutoIndex } = await import("../src/core/autoindex.ts");
+    const { AutoIndex } = await import("../src/core/workspace/graph/autoindex.ts");
     const { walkThread } = await import("../src/core/workspace/walk/walk-thread.ts");
     // One folder by its id, in two copies.
     const TWICE = '[vault]\nname = "twice"\nid = "0b6f1c2e-twice"\n';
@@ -368,8 +368,8 @@ describe("the TUI's walks on their own thread (T12, #9)", () => {
   });
 
   test("a found vault counted once, the TUI quitting while it's indexed; a small one opened and parsed in one step", async () => {
-    const { AutoIndex } = await import("../src/core/autoindex.ts");
-    const { IndexJob } = await import("../src/core/index-job.ts");
+    const { AutoIndex } = await import("../src/core/workspace/graph/autoindex.ts");
+    const { IndexJob } = await import("../src/core/workspace/graph/index-job.ts");
     const notes: Record<string, string> = { "a.md": "# A\n", "proj/.slipbox/config.toml": "" };
     for (let i = 0; i < 400; i++) notes[`proj/n${i}.md`] = `# N${i}\n\n[a](../a.md) ${"word ".repeat(50)}\n`;
     const home = tree(notes);
@@ -452,7 +452,7 @@ describe("the TUI's walks on their own thread (T12, #9)", () => {
   });
 
   test("home walked again later: nothing of home until it's due, the vaults of the pass indexed meanwhile", async () => {
-    const { AutoIndex, WALK_RETRY_MS } = await import("../src/core/autoindex.ts");
+    const { AutoIndex, WALK_RETRY_MS } = await import("../src/core/workspace/graph/autoindex.ts");
     const home = tree({ "a.md": "# A\n", "proj/.slipbox/config.toml": "", "proj/p.md": "# P\n" });
     let clock = Date.now();
     let homes = 0;
@@ -478,7 +478,7 @@ describe("the TUI's walks on their own thread (T12, #9)", () => {
   });
 
   test("home's walk made while Downloads moved is walked again where it is now, never kept under where it was", async () => {
-    const { AutoIndex } = await import("../src/core/autoindex.ts");
+    const { AutoIndex } = await import("../src/core/workspace/graph/autoindex.ts");
     const before = process.env.XDG_CONFIG_HOME;
     for (const on of ["here", "thread"] as const) {
       const home = tree({
@@ -532,7 +532,7 @@ describe("the TUI's walks on their own thread (T12, #9)", () => {
   });
 
   test("a new pass counts the vaults it finds afresh: none left uncounted for the last pass's", async () => {
-    const { AutoIndex, REPASS_MS } = await import("../src/core/autoindex.ts");
+    const { AutoIndex, REPASS_MS } = await import("../src/core/workspace/graph/autoindex.ts");
     const home = tree({ "a.md": "# A\n", "proj/.slipbox/config.toml": "", "proj/p.md": "# P\n" });
     let clock = Date.now();
     await inHome(home, async () => {
@@ -548,7 +548,7 @@ describe("the TUI's walks on their own thread (T12, #9)", () => {
 
   test("home walked again while a vault is indexed: home recorded as found, the vault after it, each once", async () => {
     const registry = await import("../src/core/workspace/vaults/registry.ts");
-    const { AutoIndex } = await import("../src/core/autoindex.ts");
+    const { AutoIndex } = await import("../src/core/workspace/graph/autoindex.ts");
     const notes: Record<string, string> = { "a.md": "# A\n", "proj/.slipbox/config.toml": "" };
     for (let i = 0; i < 400; i++) notes[`proj/n${i}.md`] = `# N${i}\n\n${"word ".repeat(50)}\n`;
     const home = tree(notes);
@@ -572,7 +572,7 @@ describe("the TUI's walks on their own thread (T12, #9)", () => {
 
   test("a tick waiting on the walk's thread writes nothing: the place kept only when it changed", async () => {
     const fsutil = await import("../src/core/foundation/platform/fsutil.ts");
-    const { AutoIndex } = await import("../src/core/autoindex.ts");
+    const { AutoIndex } = await import("../src/core/workspace/graph/autoindex.ts");
     const home = tree({ "a.md": "# A\n", "slow/s.md": "# S\n" });
     const file = join(tree({}), "autoindex.json");
     const thread = new WalkThread(slowWorker);
@@ -604,7 +604,7 @@ describe("the TUI's walks on their own thread (T12, #9)", () => {
   });
 
   test("home's walk given up on is tried again ten minutes later, the pass waiting for it — never finished with nothing found", async () => {
-    const { AutoIndex, WALK_RETRY_MS } = await import("../src/core/autoindex.ts");
+    const { AutoIndex, WALK_RETRY_MS } = await import("../src/core/workspace/graph/autoindex.ts");
     const home = tree({
       "a.md": "# A\n",
       "stuck/s.md": "# S\n",

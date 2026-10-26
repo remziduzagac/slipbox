@@ -33,7 +33,8 @@ a relative path where the two travel together, else the path a link between sepa
 - 2026-10-11: Fixed (`src/core/rename.ts`, `pointersByItsName`, called from `planUnmakeVault`): the pointers naming
   the folder (by its name, an alias or a name it had; landing in this copy) are found in its own notes, the
   parent's (in memory), and every other root's this machine knows, from their saved indexes (`Reach.notesElsewhere`
-  in `src/core/reach.ts`, sharing `inbound`'s list of roots: not worktrees, only those there). Each becomes, per
+  in `src/core/workspace/links/reach.ts`, sharing `inbound`'s list of roots: not worktrees, only those there). Each
+  becomes, per
   design/links.md § Between folders, a relative path where its root (the parent's, for the folder's own files)
   travels with the parent; else the parent's pointer (`slipbox://<parent>/<folder>/<path>`) when the parent is named;
   else a relative path. Fragment, `<…>`, a folder's `/` and percent-encoding kept. A pointer at a branch becomes the

@@ -63,8 +63,8 @@ A few modules to know first:
 
 - `core/application/commands/catalog.ts` (the list, from `core/application/commands/areas/*.ts`) and
   `core/application/commands/registry.ts`: every user action, by its id, with its command-line equivalent.
-- `core/graph.ts`: the notes of a root, their links and backlinks, parsed lazily and cached; how a link resolves is
-  `graph-resolve.ts`'s, a note's entry from its text `graph-extract.ts`'s, their shapes `graph-types.ts`'s.
+- `core/workspace/graph/graph.ts`: the notes of a root, their links and backlinks, parsed lazily and cached; how a link
+  resolves is `graph-resolve.ts`'s, a note's entry from its text `graph-extract.ts`'s, their shapes `graph-types.ts`'s.
 - `core/rename.ts`: renames and moves as plans of byte-range edits, previewed first; a plan's shape is
   `rename-plan.ts`'s, carrying one out and undoing it `rename-apply.ts`'s.
 - `core/note.ts` and `core/layout/`: a note from its text to rows for a width, the same for `slipbox render` and the

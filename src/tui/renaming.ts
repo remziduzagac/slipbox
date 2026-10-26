@@ -2,9 +2,9 @@
 // first, applied as one change, undone as one.
 
 import { dirname, join, relative, sep } from "node:path";
-import { Graph } from "../core/graph.ts";
+import { Graph } from "../core/workspace/graph/graph.ts";
 import { reachedAgain, tuiReach } from "./peek.ts";
-import { planConvert } from "../core/convert.ts";
+import { planConvert } from "../core/workspace/links/convert.ts";
 import {
   type Ambiguous,
   type Applied,

@@ -3,11 +3,11 @@
 
 import { realpathSync } from "node:fs";
 import { dirname, posix, relative } from "node:path";
-import type { Graph, LinkKind } from "./graph.ts";
-import { extensionless, formatPathLink, normKey, pathLink } from "./links.ts";
+import type { Graph, LinkKind } from "./workspace/graph/graph.ts";
+import { extensionless, formatPathLink, normKey, pathLink } from "./workspace/links/links.ts";
 import { folderIdentity, pointerName } from "./workspace/vaults/folders.ts";
-import { formatPointer, isPointer, parsePointer, resolvePointer } from "./pointer.ts";
-import { parseHosted, withHostedPath } from "./hosting.ts";
+import { formatPointer, isPointer, parsePointer, resolvePointer } from "./workspace/links/pointer.ts";
+import { parseHosted, withHostedPath } from "./workspace/links/hosting.ts";
 import { checkoutOf } from "./git.ts";
 import { findVaultRoot, isInside } from "./workspace/vaults/vault.ts";
 

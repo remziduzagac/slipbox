@@ -6,23 +6,16 @@
 // the next starts a day later.
 
 import { join } from "node:path";
-import { type Config, loadConfig } from "./application/config/config.ts";
-import { readJson, writeJson, ensureDir } from "./foundation/platform/fsutil.ts";
-import { recordFolder } from "./workspace/vaults/folders.ts";
-import { describeCap } from "./workspace/vaults/home.ts";
+import { type Config, loadConfig } from "../../application/config/config.ts";
+import { readJson, writeJson, ensureDir } from "../../foundation/platform/fsutil.ts";
+import { recordFolder } from "../vaults/folders.ts";
+import { describeCap } from "../vaults/home.ts";
 import type { Opened } from "./index-job.ts";
-import { stateHome } from "./foundation/platform/paths.ts";
-import { noteIndexed, readRoots, recordRoot } from "./workspace/vaults/registry.ts";
-import { rootMarkers } from "./workspace/vaults/vault.ts";
-import type { FilterSettings, WalkCap, WalkLimits } from "./workspace/walk/walk.ts";
-import {
-  HERE,
-  type PastCap,
-  type Pending,
-  type SteppedIndex,
-  type SteppedWalk,
-  type Walker,
-} from "./workspace/walk/walkers.ts";
+import { stateHome } from "../../foundation/platform/paths.ts";
+import { noteIndexed, readRoots, recordRoot } from "../vaults/registry.ts";
+import { rootMarkers } from "../vaults/vault.ts";
+import type { FilterSettings, WalkCap, WalkLimits } from "../walk/walk.ts";
+import { HERE, type PastCap, type Pending, type SteppedIndex, type SteppedWalk, type Walker } from "../walk/walkers.ts";
 
 /** A pass finished: the next starts this long after. */
 export const REPASS_MS = 24 * 60 * 60 * 1000;

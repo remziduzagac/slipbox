@@ -8,7 +8,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { type Config, DEFAULT_CONFIG } from "../src/core/application/config/config.ts";
 import { glyphsFor } from "../src/core/glyphs.ts";
-import { openGraph } from "../src/core/graph.ts";
+import { openGraph } from "../src/core/workspace/graph/graph.ts";
 import { cacheDir, vaultKey } from "../src/core/foundation/platform/paths.ts";
 import { probe, setLinkAnswer } from "../src/core/workspace/vaults/symlinks.ts";
 import { homeAt, locateVault, type VaultLocation } from "../src/core/workspace/vaults/vault.ts";

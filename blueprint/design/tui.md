@@ -690,7 +690,8 @@ vault). A folder link out of the vault is revealed in its own vault, as before (
   line linking here (`[~/notes/index.md:41](<../../../notes/index.md#L41>) — architecture`), followed as any link in
   the peek; a file's name holding `<`, `>`, `%`, `#` or a control character has them percent-encoded in the link, and
   a control character shown as its escape (`\n`) in its text; none: `Linked from: no note links here.`
-- **Worked out on a thread** (D259; `core/backlinks-jobs.ts`, `core/backlinks-worker.ts`): the note shows at once, and
+- **Worked out on a thread** (D259; `core/workspace/graph/backlinks-jobs.ts`,
+  `core/workspace/graph/backlinks-worker.ts`): the note shows at once, and
   meanwhile `Linked from: reading kestrel's index…` — or, its vault without an index here, `Linked from: kestrel has no
   index here yet — building it; they're shown when it's done.` The list takes that line's place, the peek laid out
   again, if the same peek still shows the note (a rename that gave this TUI a new reach meanwhile changes nothing);
@@ -2423,7 +2424,8 @@ paste closes it, and the next key typed makes it again. Its notes are as they we
 other vaults' (as last indexed) alike. While what's typed matches nothing it shows nothing, and the keys act as with no
 popup, until a backspace brings a match back. Closed (`ctrl+e`), accepted, or replaced by `ctrl+n`'s words, it's
 dropped, and a key typed after in the same target builds it again. Built per key, it would read every other vault's
-index each time; building it works out each folder's pointer name once (`PointerMemo` in `core/write-link.ts`), not once
+index each time; building it works out each folder's pointer name once (`PointerMemo` in
+`core/workspace/links/write-link.ts`), not once
 per note, and puts it in order once. A word typed on from an earlier one is matched only among that one's matches, the
 longest such word's (a backspace's is a shorter word typed before), none past a non-match: each word matches whole, and
 a capital only makes it match as typed, so nothing else can. With a word typed, the best 500 are shown, and every match

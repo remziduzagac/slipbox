@@ -1,0 +1,85 @@
+{
+  "moves": {
+    "src/core/graph.ts": "src/core/workspace/graph/graph.ts",
+    "src/core/graph-types.ts": "src/core/workspace/graph/graph-types.ts",
+    "src/core/graph-extract.ts": "src/core/workspace/graph/graph-extract.ts",
+    "src/core/graph-resolve.ts": "src/core/workspace/graph/graph-resolve.ts",
+    "src/core/index-job.ts": "src/core/workspace/graph/index-job.ts",
+    "src/core/autoindex.ts": "src/core/workspace/graph/autoindex.ts",
+    "src/core/watch.ts": "src/core/workspace/graph/watch.ts",
+    "src/core/backlinks-jobs.ts": "src/core/workspace/graph/backlinks-jobs.ts",
+    "src/core/backlinks-worker.ts": "src/core/workspace/graph/backlinks-worker.ts",
+    "src/core/links.ts": "src/core/workspace/links/links.ts",
+    "src/core/convention.ts": "src/core/workspace/links/convention.ts",
+    "src/core/write-link.ts": "src/core/workspace/links/write-link.ts",
+    "src/core/pointer.ts": "src/core/workspace/links/pointer.ts",
+    "src/core/hosting.ts": "src/core/workspace/links/hosting.ts",
+    "src/core/remotes.ts": "src/core/workspace/links/remotes.ts",
+    "src/core/reach.ts": "src/core/workspace/links/reach.ts",
+    "src/core/redirects.ts": "src/core/workspace/links/redirects.ts",
+    "src/core/landing.ts": "src/core/workspace/links/landing.ts",
+    "src/core/convert.ts": "src/core/workspace/links/convert.ts"
+  },
+  "retained": [
+    {
+      "file": "blueprint/workstreams/archive/doc-findings/tasks/archive/exports-and-copies.md",
+      "text": "src/core/graph",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/design.md",
+      "text": "src/core/graph",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "src/core/graph",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "src/core/graph-types",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/design.md",
+      "text": "src/core/graph-resolve",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "src/core/graph-resolve",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/design.md",
+      "text": "src/core/watch",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "src/core/watch",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "src/core/backlinks-worker",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/user-docs/tasks/archive/task-guides.md",
+      "text": "src/core/convention",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/design.md",
+      "text": "src/core/reach",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "src/core/reach",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    }
+  ]
+}
