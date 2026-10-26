@@ -1,3 +1,4 @@
+import { UNIT_TIMEOUT_MS, TEST_BUDGETS } from "./support/timeouts.ts";
 // Distribution (plan 14.x): the supply chain's gates and the notices a release ships (14.10); a release built (14.2).
 import { afterAll, beforeAll, describe, expect, setDefaultTimeout, test } from "bun:test";
 import {
@@ -87,7 +88,7 @@ import {
 import { VERSION } from "../src/version.ts";
 
 // Processes started, repositories made: slow on a loaded or small machine (a small CI runner), not stuck.
-setDefaultTimeout(30_000);
+setDefaultTimeout(UNIT_TIMEOUT_MS);
 
 const ROOT = resolve(import.meta.dir, "..");
 const sandbox = mkdtempSync(join(tmpdir(), "slipbox-dist-"));
@@ -1007,7 +1008,7 @@ describe("a release (14.2)", () => {
       releases = mkdtempSync(join(sandbox, "releases-"));
       mkdirSync(join(releases, "download", `v${VERSION}`), { recursive: true });
       symlinkSync(pack, join(releases, "download", `v${VERSION}`, assetName(VERSION, host)));
-    }, 240_000);
+    }, TEST_BUDGETS.releaseBuild);
 
     /** The installer run in a home of its own: an environment made from nothing, so it can't reach the real one. */
     function install(
@@ -1066,7 +1067,7 @@ describe("a release (14.2)", () => {
           expect(lines[lines.indexOf(url) + 1]).toBe(`sha256 "${sha256sums([pack]).split(" ")[0]}"`);
         }
       },
-      60_000,
+      TEST_BUDGETS.releaseIntegration,
     );
 
     test.if(host !== null)(
@@ -1095,7 +1096,7 @@ describe("a release (14.2)", () => {
           `slipbox ${VERSION}: the third-party software in this program`,
         );
       },
-      60_000,
+      TEST_BUDGETS.releaseIntegration,
     );
 
     test.if(host !== null)(
@@ -1123,7 +1124,7 @@ describe("a release (14.2)", () => {
         expect(Bun.spawnSync(["ls", join(data, "versions")]).stdout.toString()).toBe(`${VERSION}\n`);
         expect(Bun.spawnSync(["sh", "-c", `ls -d ${home}/slipbox-install.* 2>/dev/null`]).stdout.toString()).toBe("");
       },
-      60_000,
+      TEST_BUDGETS.releaseIntegration,
     );
 
     test.if(host !== null)(
@@ -1196,7 +1197,7 @@ describe("a release (14.2)", () => {
           expect(existsSync(p)).toBe(false);
         expect(existsSync(join(home, ".config"))).toBe(true);
       },
-      60_000,
+      TEST_BUDGETS.releaseIntegration,
     );
 
     test.if(host !== null)(
@@ -1257,7 +1258,7 @@ describe("a release (14.2)", () => {
           `this slipbox (${join(loose, "slipbox")}) wasn't installed by its installer: upgrade it the way it was installed`,
         );
       },
-      60_000,
+      TEST_BUDGETS.releaseIntegration,
     );
 
     test.if(host !== null)(
@@ -1379,7 +1380,7 @@ describe("a release (14.2)", () => {
         );
         expect(readFileSync(join(data, "channel"), "utf8")).toBe("preview\n");
       },
-      60_000,
+      TEST_BUDGETS.releaseIntegration,
     );
 
     test.if(host !== null)(
@@ -1395,7 +1396,7 @@ describe("a release (14.2)", () => {
           join(other, ".local", "share", "slipbox", "current", "slipbox"),
         );
       },
-      60_000,
+      TEST_BUDGETS.releaseIntegration,
     );
 
     test.if(host !== null)(
@@ -1414,7 +1415,7 @@ describe("a release (14.2)", () => {
         expect(existsSync(join(home, ".local", "share", "slipbox"))).toBe(false);
         expect(existsSync(join(home, ".local", "bin", "slipbox"))).toBe(false);
       },
-      60_000,
+      TEST_BUDGETS.releaseIntegration,
     );
 
     test.if(host !== null)(
@@ -1435,7 +1436,7 @@ describe("a release (14.2)", () => {
         expect(install(linked).code).toBe(1);
         expect(readlinkSync(join(linked, ".local", "bin", "slipbox"))).toBe("/usr/bin/true");
       },
-      60_000,
+      TEST_BUDGETS.releaseIntegration,
     );
 
     test.if(host !== null)(
@@ -1496,7 +1497,7 @@ describe("a release (14.2)", () => {
           installed: false,
         });
       },
-      60_000,
+      TEST_BUDGETS.releaseIntegration,
     );
 
     test("on Alpine, a binary that won't load says what to add: libstdc++ and libgcc", () => {
@@ -1572,7 +1573,7 @@ describe("a release (14.2)", () => {
         );
         expect(existsSync(join(home, ".local"))).toBe(false);
       },
-      60_000,
+      TEST_BUDGETS.releaseIntegration,
     );
   });
 });

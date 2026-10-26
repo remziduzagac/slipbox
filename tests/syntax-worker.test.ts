@@ -1,3 +1,4 @@
+import { TEST_BUDGETS } from "./support/timeouts.ts";
 import { expect, test } from "bun:test";
 import { WorkerRequests } from "../src/core/worker-requests.ts";
 import { workerUrl } from "../src/core/workers.ts";
@@ -77,31 +78,35 @@ test("the syntax thread takes an answer of any size: its source's limit bounds i
   }
 });
 
-test("a pass the thread takes more than five seconds over still lands, as a big minified file's does under load", async () => {
-  const real = globalThis.Worker;
-  // A thread answering after 5.5 s: a 3.7 MB minified bundle's pass takes 4.3 s on a fast machine, more on a busy one.
-  class Slow {
-    onmessage: ((e: MessageEvent) => void) | null = null;
-    onerror: ((e: unknown) => void) | null = null;
-    private timer: ReturnType<typeof setTimeout> | null = null;
-    postMessage(m: { id: number }) {
-      const value = { spans: [], outline: [{ name: "slow", kind: "function", line: 1, depth: 0 }] };
-      this.timer = setTimeout(
-        () => this.onmessage?.(new MessageEvent("message", { data: { id: m.id, value } })),
-        5_500,
-      );
+test(
+  "a pass the thread takes more than five seconds over still lands, as a big minified file's does under load",
+  async () => {
+    const real = globalThis.Worker;
+    // A thread answering after 5.5 s: a 3.7 MB minified bundle's pass takes 4.3 s on a fast machine, more on a busy one.
+    class Slow {
+      onmessage: ((e: MessageEvent) => void) | null = null;
+      onerror: ((e: unknown) => void) | null = null;
+      private timer: ReturnType<typeof setTimeout> | null = null;
+      postMessage(m: { id: number }) {
+        const value = { spans: [], outline: [{ name: "slow", kind: "function", line: 1, depth: 0 }] };
+        this.timer = setTimeout(
+          () => this.onmessage?.(new MessageEvent("message", { data: { id: m.id, value } })),
+          5_500,
+        );
+      }
+      terminate() {
+        if (this.timer) clearTimeout(this.timer);
+      }
     }
-    terminate() {
-      if (this.timer) clearTimeout(this.timer);
-    }
-  }
-  stopSyntaxThread();
-  (globalThis as { Worker: unknown }).Worker = Slow;
-  try {
-    const value = await syntaxOnThread("javascript", "function f() {}\n");
-    expect(value.outline.map((e) => e.name)).toEqual(["slow"]);
-  } finally {
-    (globalThis as { Worker: unknown }).Worker = real;
     stopSyntaxThread();
-  }
-}, 15_000);
+    (globalThis as { Worker: unknown }).Worker = Slow;
+    try {
+      const value = await syntaxOnThread("javascript", "function f() {}\n");
+      expect(value.outline.map((e) => e.name)).toEqual(["slow"]);
+    } finally {
+      (globalThis as { Worker: unknown }).Worker = real;
+      stopSyntaxThread();
+    }
+  },
+  TEST_BUDGETS.syntaxWorkerReply,
+);

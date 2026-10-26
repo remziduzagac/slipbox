@@ -1,3 +1,4 @@
+import { UNIT_TIMEOUT_MS, TEST_BUDGETS } from "./support/timeouts.ts";
 import { afterAll, afterEach, describe, expect, setDefaultTimeout, test } from "bun:test";
 import {
   chmodSync,
@@ -121,7 +122,7 @@ import { ensureCacheHome, type StoreKind, storeDir } from "../src/core/paths.ts"
 import type { WikiLink } from "../src/core/wikilink.ts";
 
 // Parses, walks and processes started: slow on a loaded or small machine (CI's macOS runner), not stuck.
-setDefaultTimeout(30_000);
+setDefaultTimeout(UNIT_TIMEOUT_MS);
 
 // Isolation (testing.md): never read or write the real config, cache or state directories.
 const sandbox = mkdtempSync(join(tmpdir(), "slipbox-core-"));
@@ -4799,78 +4800,82 @@ describe("spelling (25.6)", () => {
     stopSpellThread();
   });
 
-  test("a test's hold on the spell checker's thread: its dictionary waits before it's built until let go, or until its wait runs out; one already built never waits; stopping the thread ends a wait, unbuilt", async () => {
-    const { dictionaryFiles } = await import("../src/core/spell.ts");
-    const { holdBuild, openDictionary, stopSpellThread } = await import("../src/core/spell-thread.ts");
-    const until = async (ok: () => boolean) => {
-      for (const t = Date.now(); !ok() && Date.now() - t < 25_000; ) await Bun.sleep(5);
-      return ok();
-    };
-    /** English under a path of its own: built when asked, whatever was built before. */
-    const own = () => {
-      const en = dictionaryFiles("en", {})!;
-      const d = dir();
-      cpSync(en.aff, join(d, "en.aff"));
-      cpSync(en.dic, join(d, "en.dic"));
-      return { aff: join(d, "en.aff"), dic: join(d, "en.dic"), from: "yours" as const };
-    };
-    stopSpellThread();
-    const [a, b, c] = [own(), own(), own()];
-    try {
-      // Two holds at once, each its own dictionary's: set until that one is asked for.
-      const holdA = await holdBuild(a.dic);
-      const holdB = await holdBuild(b.dic, 100);
-      expect([holdA.state(), holdB.state()]).toEqual(["set", "set"]);
-      // A second on the same words, before the first is spent: refused.
-      expect(await holdBuild(b.dic).then(String, (err: Error) => err.message)).toBe(
-        `a hold is set on ${b.dic} already`,
-      );
-      let built = false;
-      const openA = openDictionary(a).then(
-        () => (built = true),
-        (err: Error) => err.message,
-      );
-      expect(await until(() => holdA.state() === "waiting")).toBe(true);
-      await Bun.sleep(50);
-      expect([built, holdB.state()]).toEqual([false, "set"]);
-      holdA.letGo();
-      expect(await openA).toBe(true);
-      expect(holdA.state()).toBe("let go");
-      // Built already: asked for again, it isn't built again, and the hold is spent without waiting — so the same words
-      // with another affix file, built, don't wait either.
-      const again = await holdBuild(a.dic);
-      await openDictionary(a);
-      expect(again.state()).toBe("spent");
-      cpSync(a.aff, join(dirname(a.aff), "other.aff"));
-      await openDictionary({ ...a, aff: join(dirname(a.aff), "other.aff") });
-      expect(again.state()).toBe("spent");
-      // Its wait run out (100 ms here, 40 s unless said): built all the same, and it says so.
-      await openDictionary(b);
-      expect(holdB.state()).toBe("ran out");
-      // Stopped while it waits: the request ends with the thread, and the wait with it — the hold dropped. Let go after,
-      // it stays so: a thread still waiting would wake and say "let go", and go on to build the dictionary.
-      const holdC = await holdBuild(c.dic);
-      const openC = openDictionary(c).then(
-        () => "built",
-        (err: Error) => err.message,
-      );
-      expect(await until(() => holdC.state() === "waiting")).toBe(true);
+  test(
+    "a test's hold on the spell checker's thread: its dictionary waits before it's built until let go, or until its wait runs out; one already built never waits; stopping the thread ends a wait, unbuilt",
+    async () => {
+      const { dictionaryFiles } = await import("../src/core/spell.ts");
+      const { holdBuild, openDictionary, stopSpellThread } = await import("../src/core/spell-thread.ts");
+      const until = async (ok: () => boolean) => {
+        for (const t = Date.now(); !ok() && Date.now() - t < 25_000; ) await Bun.sleep(5);
+        return ok();
+      };
+      /** English under a path of its own: built when asked, whatever was built before. */
+      const own = () => {
+        const en = dictionaryFiles("en", {})!;
+        const d = dir();
+        cpSync(en.aff, join(d, "en.aff"));
+        cpSync(en.dic, join(d, "en.dic"));
+        return { aff: join(d, "en.aff"), dic: join(d, "en.dic"), from: "yours" as const };
+      };
       stopSpellThread();
-      expect(await openC).toBe("worker stopped");
-      expect(holdC.state()).toBe("dropped");
-      await Bun.sleep(200);
-      holdC.letGo();
-      await Bun.sleep(200);
-      expect(holdC.state()).toBe("dropped");
-      // Set and not yet reached, it's dropped with its thread too; a fresh thread builds the dictionary, unheld.
-      const holdD = await holdBuild(c.dic);
-      stopSpellThread();
-      expect(holdD.state()).toBe("dropped");
-      await openDictionary(c);
-    } finally {
-      stopSpellThread();
-    }
-  }, 60_000);
+      const [a, b, c] = [own(), own(), own()];
+      try {
+        // Two holds at once, each its own dictionary's: set until that one is asked for.
+        const holdA = await holdBuild(a.dic);
+        const holdB = await holdBuild(b.dic, 100);
+        expect([holdA.state(), holdB.state()]).toEqual(["set", "set"]);
+        // A second on the same words, before the first is spent: refused.
+        expect(await holdBuild(b.dic).then(String, (err: Error) => err.message)).toBe(
+          `a hold is set on ${b.dic} already`,
+        );
+        let built = false;
+        const openA = openDictionary(a).then(
+          () => (built = true),
+          (err: Error) => err.message,
+        );
+        expect(await until(() => holdA.state() === "waiting")).toBe(true);
+        await Bun.sleep(50);
+        expect([built, holdB.state()]).toEqual([false, "set"]);
+        holdA.letGo();
+        expect(await openA).toBe(true);
+        expect(holdA.state()).toBe("let go");
+        // Built already: asked for again, it isn't built again, and the hold is spent without waiting — so the same words
+        // with another affix file, built, don't wait either.
+        const again = await holdBuild(a.dic);
+        await openDictionary(a);
+        expect(again.state()).toBe("spent");
+        cpSync(a.aff, join(dirname(a.aff), "other.aff"));
+        await openDictionary({ ...a, aff: join(dirname(a.aff), "other.aff") });
+        expect(again.state()).toBe("spent");
+        // Its wait run out (100 ms here, 40 s unless said): built all the same, and it says so.
+        await openDictionary(b);
+        expect(holdB.state()).toBe("ran out");
+        // Stopped while it waits: the request ends with the thread, and the wait with it — the hold dropped. Let go after,
+        // it stays so: a thread still waiting would wake and say "let go", and go on to build the dictionary.
+        const holdC = await holdBuild(c.dic);
+        const openC = openDictionary(c).then(
+          () => "built",
+          (err: Error) => err.message,
+        );
+        expect(await until(() => holdC.state() === "waiting")).toBe(true);
+        stopSpellThread();
+        expect(await openC).toBe("worker stopped");
+        expect(holdC.state()).toBe("dropped");
+        await Bun.sleep(200);
+        holdC.letGo();
+        await Bun.sleep(200);
+        expect(holdC.state()).toBe("dropped");
+        // Set and not yet reached, it's dropped with its thread too; a fresh thread builds the dictionary, unheld.
+        const holdD = await holdBuild(c.dic);
+        stopSpellThread();
+        expect(holdD.state()).toBe("dropped");
+        await openDictionary(c);
+      } finally {
+        stopSpellThread();
+      }
+    },
+    TEST_BUDGETS.dictionaryThread,
+  );
 
   test("Hunspell is loaded by the spell checker's thread alone: nothing else imports it (#40)", async () => {
     const { importsOf } = await import("../scripts/check-boundary.ts");
@@ -4904,28 +4909,32 @@ describe("spelling (25.6)", () => {
 });
 
 describe("spelling, bundled (25.6)", () => {
-  test("Hunspell from a bundle, as the compiled binary has it: its runtime called, a dictionary opened", () => {
-    const dir = mkdtempSync(join(tmpdir(), "slipbox-bundle-"));
-    const entry = join(dir, "entry.ts");
-    writeFileSync(
-      entry,
-      `import { dictionaryFiles } from ${JSON.stringify(join(import.meta.dir, "..", "src", "core", "spell.ts"))};\n` +
-        `import { openSpeller } from ${JSON.stringify(join(import.meta.dir, "..", "src", "core", "hunspell.ts"))};\n` +
-        `const s = await openSpeller(dictionaryFiles("en", {})!);\nconsole.log(s.correct("receive"), s.correct("recieve"));\n`,
-    );
-    const built = Bun.spawnSync([process.execPath, "build", entry, "--target", "bun", "--outdir", join(dir, "out")], {
-      stderr: "pipe",
-    });
-    expect(built.exitCode).toBe(0);
-    // Run where its files are: a bundle names them from there (a compiled binary has them inside it).
-    const ran = Bun.spawnSync([process.execPath, join(dir, "out", "entry.js")], {
-      cwd: join(dir, "out"),
-      stderr: "pipe",
-      env: { ...process.env },
-    });
-    expect(new TextDecoder().decode(ran.stderr)).toBe("");
-    expect(new TextDecoder().decode(ran.stdout)).toBe("true false\n");
-  }, 60000);
+  test(
+    "Hunspell from a bundle, as the compiled binary has it: its runtime called, a dictionary opened",
+    () => {
+      const dir = mkdtempSync(join(tmpdir(), "slipbox-bundle-"));
+      const entry = join(dir, "entry.ts");
+      writeFileSync(
+        entry,
+        `import { dictionaryFiles } from ${JSON.stringify(join(import.meta.dir, "..", "src", "core", "spell.ts"))};\n` +
+          `import { openSpeller } from ${JSON.stringify(join(import.meta.dir, "..", "src", "core", "hunspell.ts"))};\n` +
+          `const s = await openSpeller(dictionaryFiles("en", {})!);\nconsole.log(s.correct("receive"), s.correct("recieve"));\n`,
+      );
+      const built = Bun.spawnSync([process.execPath, "build", entry, "--target", "bun", "--outdir", join(dir, "out")], {
+        stderr: "pipe",
+      });
+      expect(built.exitCode).toBe(0);
+      // Run where its files are: a bundle names them from there (a compiled binary has them inside it).
+      const ran = Bun.spawnSync([process.execPath, join(dir, "out", "entry.js")], {
+        cwd: join(dir, "out"),
+        stderr: "pipe",
+        env: { ...process.env },
+      });
+      expect(new TextDecoder().decode(ran.stderr)).toBe("");
+      expect(new TextDecoder().decode(ran.stdout)).toBe("true false\n");
+    },
+    TEST_BUDGETS.dictionaryBundle,
+  );
 });
 // typos: on
 

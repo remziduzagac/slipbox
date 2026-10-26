@@ -1,3 +1,4 @@
+import { TEST_BUDGETS } from "./support/timeouts.ts";
 // What an export reads and keeps (src/core/export/reads.ts): every note and picture whole, however big — the size of a
 // note, a picture, all of them together or the document made of them refuses nothing; each note parsed once.
 import { afterAll, expect, setDefaultTimeout, test } from "bun:test";
@@ -14,7 +15,7 @@ import { exportGraph } from "../src/core/export/jobs.ts";
 const sandbox = mkdtempSync(join(tmpdir(), "slipbox-export-reads-"));
 afterAll(() => rmSync(sandbox, { recursive: true, force: true }));
 // Notes past 8 MiB and pages of photos, exported through a worker: slow on a loaded machine, not stuck.
-setDefaultTimeout(60_000);
+setDefaultTimeout(TEST_BUDGETS.exportReads);
 // The cache (the index, the web's pictures) and state in the sandbox: the export's worker sees them there too.
 process.env.XDG_CACHE_HOME = join(sandbox, "cache");
 process.env.XDG_STATE_HOME = join(sandbox, "state");

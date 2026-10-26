@@ -1,3 +1,4 @@
+import { UNIT_TIMEOUT_MS, TEST_BUDGETS } from "./support/timeouts.ts";
 import { vaultChoices } from "../src/tui/vault-list.ts";
 // The TUI model, driven headlessly: keys in (canonical names, as the keymap writes them),
 // TextCanvas out. Plus one run through OpenTUI's test renderer for real key parsing.
@@ -3913,19 +3914,23 @@ describe("review round 1", () => {
     click(h, btn.x + 1, btn.y);
     expect(h.app.panels.outlineShown).toBe(true);
   });
-  test("which-key on a short screen drops its blank rows before its explanations", async () => {
-    // At every height: blank rows inside the box only ever appear together with the explanations.
-    for (let height = 12; height <= 40; height++) {
-      const h = await harness({ width: 160, height });
-      const rows = (await h.keys("space")).split("\n");
-      const head = rows.findIndex((r) => r.includes("┌─ ␣ › leader"));
-      if (head < 0) continue;
-      const left = rows[head]!.indexOf("┌");
-      const padded = rows[head + 1]!.slice(left + 1, rows[head + 1]!.lastIndexOf("│")).trim() === "";
-      const described = rows.join("\n").includes("notes, headings, tags, text, commands");
-      if (padded) expect(described).toBe(true);
-    }
-  }, 30_000); // 29 harnesses
+  test(
+    "which-key on a short screen drops its blank rows before its explanations",
+    async () => {
+      // At every height: blank rows inside the box only ever appear together with the explanations.
+      for (let height = 12; height <= 40; height++) {
+        const h = await harness({ width: 160, height });
+        const rows = (await h.keys("space")).split("\n");
+        const head = rows.findIndex((r) => r.includes("┌─ ␣ › leader"));
+        if (head < 0) continue;
+        const left = rows[head]!.indexOf("┌");
+        const padded = rows[head + 1]!.slice(left + 1, rows[head + 1]!.lastIndexOf("│")).trim() === "";
+        const described = rows.join("\n").includes("notes, headings, tags, text, commands");
+        if (padded) expect(described).toBe(true);
+      }
+    },
+    UNIT_TIMEOUT_MS,
+  ); // 29 harnesses
 });
 
 describe("review round 2", () => {
@@ -5869,45 +5874,49 @@ describe("review cycle 2 (TUI)", () => {
     };
     return { h, v, goto, root };
   };
-  test("the lens: the same typing keys give the same text as source mode (a differential)", async () => {
-    let seed = 11;
-    const rand = (n: number) => {
-      // Math.imul: a plain * exceeds 2^53 and loses the low bits, which then take few values.
-      seed = (Math.imul(seed, 1103515245) + 12345) & 0x7fffffff;
-      return (seed >>> 8) % n; // the high bits: an LCG's low ones repeat quickly
-    };
-    const pool = [
-      "x",
-      "y",
-      "space",
-      "enter",
-      "backspace",
-      "delete",
-      "left",
-      "right",
-      "home",
-      "end",
-      "ctrl+w",
-      "ctrl+u",
-    ];
-    for (let run = 0; run < 25; run++) {
-      const keys = Array.from({ length: 25 }, () => pool[rand(pool.length)]!);
-      // Block starts: a row the rendered view and the source both begin with (a paragraph's later
-      // lines are inside one rendered row, which would start the two modes in different places).
-      const start = ["Para 8", "A paragraph", "Para 12"][run % 3]!;
-      const texts: string[] = [];
-      for (const mode of ["source", "live"] as const) {
-        const { h, v, goto } = await open(mode);
-        goto(start);
-        await h.keys("i", ...keys, "escape");
-        texts.push(v.buf.source);
+  test(
+    "the lens: the same typing keys give the same text as source mode (a differential)",
+    async () => {
+      let seed = 11;
+      const rand = (n: number) => {
+        // Math.imul: a plain * exceeds 2^53 and loses the low bits, which then take few values.
+        seed = (Math.imul(seed, 1103515245) + 12345) & 0x7fffffff;
+        return (seed >>> 8) % n; // the high bits: an LCG's low ones repeat quickly
+      };
+      const pool = [
+        "x",
+        "y",
+        "space",
+        "enter",
+        "backspace",
+        "delete",
+        "left",
+        "right",
+        "home",
+        "end",
+        "ctrl+w",
+        "ctrl+u",
+      ];
+      for (let run = 0; run < 25; run++) {
+        const keys = Array.from({ length: 25 }, () => pool[rand(pool.length)]!);
+        // Block starts: a row the rendered view and the source both begin with (a paragraph's later
+        // lines are inside one rendered row, which would start the two modes in different places).
+        const start = ["Para 8", "A paragraph", "Para 12"][run % 3]!;
+        const texts: string[] = [];
+        for (const mode of ["source", "live"] as const) {
+          const { h, v, goto } = await open(mode);
+          goto(start);
+          await h.keys("i", ...keys, "escape");
+          texts.push(v.buf.source);
+        }
+        if (texts[0] !== texts[1])
+          throw new Error(
+            `from ${start}, keys ${keys.join(" ")}:\nsource ${JSON.stringify(texts[0])}\nlens   ${JSON.stringify(texts[1])}`,
+          );
       }
-      if (texts[0] !== texts[1])
-        throw new Error(
-          `from ${start}, keys ${keys.join(" ")}:\nsource ${JSON.stringify(texts[0])}\nlens   ${JSON.stringify(texts[1])}`,
-        );
-    }
-  }, 60000);
+    },
+    TEST_BUDGETS.editingDifferential,
+  );
   test("the lens: delete across its bottom edge, then typing lands at the cursor", async () => {
     const { h, v, goto } = await open("live");
     goto("Para 8");
@@ -6282,27 +6291,31 @@ describe("review cycle 3 (TUI)", () => {
     expect(h.app.messages.some((m) => m.text.includes("takes no argument"))).toBe(false);
     expect((h.app.overlay as ListOverlay).items.map((i) => i.label)).toEqual(["c1.md:1"]);
   });
-  test("joints: a tab separator over a border is a cross", async () => {
-    // Somewhere across these widths a tab's separator lands on the outline's border column.
-    let checked = 0;
-    for (let width = 100; width <= 160; width++) {
-      const h = await harness({ open: "index.md", width, height: 12, config: (c) => (c.ui.outline = true) });
-      for (const n of ["notes/alpha.md", "notes/beta.md", "crlf.md", "bom.md"]) h.app.openInNewTab(n);
-      const rows = h
-        .frame()
-        .split("\n")
-        .map((r) => [...r]);
-      rows.forEach((r, y) => {
-        r.forEach((ch, x) => {
-          // A tee pointing down with a line above it should have been a cross.
-          if ((ch === "┬" || ch === "┳") && y > 1 && "│┃┼╋├┤┣┫┬┳".includes(rows[y - 1]![x] ?? " "))
-            throw new Error(`${width}: ${ch} under a line at ${x},${y}`);
-          if (ch === "┬" || ch === "┳") checked++;
+  test(
+    "joints: a tab separator over a border is a cross",
+    async () => {
+      // Somewhere across these widths a tab's separator lands on the outline's border column.
+      let checked = 0;
+      for (let width = 100; width <= 160; width++) {
+        const h = await harness({ open: "index.md", width, height: 12, config: (c) => (c.ui.outline = true) });
+        for (const n of ["notes/alpha.md", "notes/beta.md", "crlf.md", "bom.md"]) h.app.openInNewTab(n);
+        const rows = h
+          .frame()
+          .split("\n")
+          .map((r) => [...r]);
+        rows.forEach((r, y) => {
+          r.forEach((ch, x) => {
+            // A tee pointing down with a line above it should have been a cross.
+            if ((ch === "┬" || ch === "┳") && y > 1 && "│┃┼╋├┤┣┫┬┳".includes(rows[y - 1]![x] ?? " "))
+              throw new Error(`${width}: ${ch} under a line at ${x},${y}`);
+            if (ch === "┬" || ch === "┳") checked++;
+          });
         });
-      });
-    }
-    expect(checked).toBeGreaterThan(0);
-  }, 60000);
+      }
+      expect(checked).toBeGreaterThan(0);
+    },
+    TEST_BUDGETS.layoutMatrix,
+  );
 });
 
 describe("review cycle 3 (config in the TUI)", () => {
@@ -6559,19 +6572,23 @@ describe("review cycle 5 (editing against nvim)", () => {
   };
   const key = (t: string) => SPECIAL[t] ?? (t === " " ? "space" : /^[A-Z]$/.test(t) ? `shift+${t.toLowerCase()}` : t);
   for (const mode of ["v", "l"] as const) {
-    test(`${mode === "v" ? "source mode" : "the lens"}: ${CASES.length} cases agree with nvim`, async () => {
-      const wrong: string[] = [];
-      for (const [id, input, keys, want] of CASES) {
-        const root = makeVault();
-        writeFileSync(join(root, "v.md"), input);
-        const h = await harness({ root, open: "v.md", width: 200, height: 40 });
-        await h.keys("space", "n", mode);
-        for (const k of keys) await h.keys(key(k));
-        const got = h.app.view!.buf.source;
-        if (got !== want) wrong.push(`${id}: ${JSON.stringify(got)} (nvim ${JSON.stringify(want)})`);
-      }
-      expect(wrong).toEqual([]);
-    }, 60_000);
+    test(
+      `${mode === "v" ? "source mode" : "the lens"}: ${CASES.length} cases agree with nvim`,
+      async () => {
+        const wrong: string[] = [];
+        for (const [id, input, keys, want] of CASES) {
+          const root = makeVault();
+          writeFileSync(join(root, "v.md"), input);
+          const h = await harness({ root, open: "v.md", width: 200, height: 40 });
+          await h.keys("space", "n", mode);
+          for (const k of keys) await h.keys(key(k));
+          const got = h.app.view!.buf.source;
+          if (got !== want) wrong.push(`${id}: ${JSON.stringify(got)} (nvim ${JSON.stringify(want)})`);
+        }
+        expect(wrong).toEqual([]);
+      },
+      TEST_BUDGETS.nvimDifferential,
+    );
   }
 });
 
@@ -6783,47 +6800,51 @@ describe("review cycle 5 (TUI journeys: the status line when narrow)", () => {
 });
 
 describe("review cycle 5 (TUI journeys: the lens after a reload)", () => {
-  test("loading theirs under a tall lens at the note's end: the top stays in range, never past 100%", async () => {
-    const rel = "samples/scratch/broken-frontmatter.md";
-    const bad: string[] = [];
-    for (const paras of [1, 2, 4]) {
-      for (const at of [0, 1, 2]) {
-        for (const keep of ["l", "m"]) {
-          const root = makeVault();
-          const h = await harness({
-            root,
-            open: rel,
-            width: 40,
-            height: 12,
-            config: (c) => ((c.ui.sidebar = false), (c.ui.outline = false)),
-          });
-          const v = h.app.view!;
-          await h.keys("space", "n", "l", "shift+g", "k", "x");
-          const file = join(root, rel);
-          const text = readFileSync(file, "utf8");
-          // After the at-th blank line: paragraphs long enough to wrap at this width.
-          let i = -2;
-          for (let k = 0; k <= at; k++) i = text.indexOf("\n\n", i + 2);
-          i = i < 0 ? text.length : i + 2;
-          const add = Array.from(
-            { length: paras },
-            (_, k) => `An agent's paragraph ${k}, long enough to wrap twice at forty columns.\n\n`,
-          ).join("");
-          writeFileSync(file, text.slice(0, i) + add + text.slice(i));
-          const t = Date.now() / 1000 + 5;
-          (await import("node:fs")).utimesSync(file, t, t);
-          h.app.watch.reloadBuffer(v.buf);
-          await h.keys(keep); // load theirs, or merge
-          const status = statusRow(h.frame());
-          const pct = Number(/(\d+)%/.exec(status)?.[1] ?? 0);
-          const shown = h.app.lens.screenRows(v, h.app.currentLayout(v)).length;
-          if (pct > 100 || shown < v.height)
-            bad.push(`${paras}/${at}/${keep}: ${status.trim()} (${shown} rows of ${v.height})`);
+  test(
+    "loading theirs under a tall lens at the note's end: the top stays in range, never past 100%",
+    async () => {
+      const rel = "samples/scratch/broken-frontmatter.md";
+      const bad: string[] = [];
+      for (const paras of [1, 2, 4]) {
+        for (const at of [0, 1, 2]) {
+          for (const keep of ["l", "m"]) {
+            const root = makeVault();
+            const h = await harness({
+              root,
+              open: rel,
+              width: 40,
+              height: 12,
+              config: (c) => ((c.ui.sidebar = false), (c.ui.outline = false)),
+            });
+            const v = h.app.view!;
+            await h.keys("space", "n", "l", "shift+g", "k", "x");
+            const file = join(root, rel);
+            const text = readFileSync(file, "utf8");
+            // After the at-th blank line: paragraphs long enough to wrap at this width.
+            let i = -2;
+            for (let k = 0; k <= at; k++) i = text.indexOf("\n\n", i + 2);
+            i = i < 0 ? text.length : i + 2;
+            const add = Array.from(
+              { length: paras },
+              (_, k) => `An agent's paragraph ${k}, long enough to wrap twice at forty columns.\n\n`,
+            ).join("");
+            writeFileSync(file, text.slice(0, i) + add + text.slice(i));
+            const t = Date.now() / 1000 + 5;
+            (await import("node:fs")).utimesSync(file, t, t);
+            h.app.watch.reloadBuffer(v.buf);
+            await h.keys(keep); // load theirs, or merge
+            const status = statusRow(h.frame());
+            const pct = Number(/(\d+)%/.exec(status)?.[1] ?? 0);
+            const shown = h.app.lens.screenRows(v, h.app.currentLayout(v)).length;
+            if (pct > 100 || shown < v.height)
+              bad.push(`${paras}/${at}/${keep}: ${status.trim()} (${shown} rows of ${v.height})`);
+          }
         }
       }
-    }
-    expect(bad).toEqual([]);
-  }, 60_000);
+      expect(bad).toEqual([]);
+    },
+    TEST_BUDGETS.lensReload,
+  );
 });
 
 describe("review cycle 5 (TUI journeys: a resize round trip)", () => {
@@ -18861,80 +18882,88 @@ describe("spelling (25.6)", () => {
   // 605 of 632 on a release's runner), and here for 200 ms just after a thousand harnesses were made. So the thread is
   // held inside the dictionary's opening, before Hunspell builds it, until the main thread has taken its turns: a main
   // thread held while the dictionary loads takes none before it's there.
-  test("while the thread loads a dictionary, the main thread keeps its turns: counted, the thread held before it builds (#40)", async () => {
-    const { holdBuild, stopSpellThread } = await import("../src/core/spell-thread.ts");
-    const { h, dic } = await turkish();
-    // The hold's own bounds are a stuck test's, never a passing one's (let go milliseconds after it's waiting): its
-    // wait runs out after 40 s on the thread's clock, inside the test's 60 s, so a main thread held until the
-    // dictionary is there is let go and fails here rather than hanging the run. The request's 20 s deadline, on the
-    // main thread, ends the hold first if the main thread is merely starved that long.
-    const hold = await holdBuild(dic);
-    try {
-      await h.keys("space", "u", "s");
-      // The thread has the request and waits before building — unless the dictionary is there already, built here.
-      expect(await until(() => hold.state() !== "set" || h.app.speller.misspelt(h.app.view!) !== null)).toBe(true);
-      expect(hold.state()).toBe("waiting");
-      // The main thread's turns meanwhile: a timer's, and keys answered and drawn, the dictionary not there at any.
-      expect(h.app.speller.misspelt(h.app.view!)).toBeNull();
-      await new Promise((turn) => setTimeout(turn, 0));
-      expect([hold.state(), h.app.speller.misspelt(h.app.view!)]).toEqual(["waiting", null]);
-      await h.keys("]", "s");
-      expect(h.app.messages.at(-1)?.text).toBe("spelling: its dictionaries are loading");
-      await h.keys("shift+g", "shift+a");
-      for (const k of ["space", ..."kitpa"]) {
-        await h.keys(k);
+  test(
+    "while the thread loads a dictionary, the main thread keeps its turns: counted, the thread held before it builds (#40)",
+    async () => {
+      const { holdBuild, stopSpellThread } = await import("../src/core/spell-thread.ts");
+      const { h, dic } = await turkish();
+      // The hold's own bounds are a stuck test's, never a passing one's (let go milliseconds after it's waiting): its
+      // wait runs out after 40 s on the thread's clock, inside the test's 60 s, so a main thread held until the
+      // dictionary is there is let go and fails here rather than hanging the run. The request's 20 s deadline, on the
+      // main thread, ends the hold first if the main thread is merely starved that long.
+      const hold = await holdBuild(dic);
+      try {
+        await h.keys("space", "u", "s");
+        // The thread has the request and waits before building — unless the dictionary is there already, built here.
+        expect(await until(() => hold.state() !== "set" || h.app.speller.misspelt(h.app.view!) !== null)).toBe(true);
+        expect(hold.state()).toBe("waiting");
+        // The main thread's turns meanwhile: a timer's, and keys answered and drawn, the dictionary not there at any.
         expect(h.app.speller.misspelt(h.app.view!)).toBeNull();
+        await new Promise((turn) => setTimeout(turn, 0));
+        expect([hold.state(), h.app.speller.misspelt(h.app.view!)]).toEqual(["waiting", null]);
+        await h.keys("]", "s");
+        expect(h.app.messages.at(-1)?.text).toBe("spelling: its dictionaries are loading");
+        await h.keys("shift+g", "shift+a");
+        for (const k of ["space", ..."kitpa"]) {
+          await h.keys(k);
+          expect(h.app.speller.misspelt(h.app.view!)).toBeNull();
+        }
+        expect(h.app.view!.buf.source).toEndWith("okuyorum. kitpa\n");
+        // Held until now: let go by the test, not by its wait running out.
+        hold.letGo();
+        expect(await until(() => hold.state() !== "waiting")).toBe(true);
+        expect(hold.state()).toBe("let go");
+        expect(await checked(h)).toBe(true);
+        expect(h.app.speller.misspelt(h.app.view!)!.map((w) => w.word)).toEqual(["evlerinzde", "kitpa"]);
+      } finally {
+        // A fresh thread for the tests after, nothing of this test's kept; a thread still held ends there, unbuilt.
+        stopSpellThread();
       }
-      expect(h.app.view!.buf.source).toEndWith("okuyorum. kitpa\n");
-      // Held until now: let go by the test, not by its wait running out.
-      hold.letGo();
-      expect(await until(() => hold.state() !== "waiting")).toBe(true);
-      expect(hold.state()).toBe("let go");
-      expect(await checked(h)).toBe(true);
-      expect(h.app.speller.misspelt(h.app.view!)!.map((w) => w.word)).toEqual(["evlerinzde", "kitpa"]);
-    } finally {
-      // A fresh thread for the tests after, nothing of this test's kept; a thread still held ends there, unbuilt.
-      stopSpellThread();
-    }
-  }, 60_000);
+    },
+    TEST_BUDGETS.dictionaryThread,
+  );
 
-  test("a dictionary the thread can't build is said once; the note's other languages still check it", async () => {
-    const { dictionaryFiles } = await import("../src/core/spell.ts");
-    const { holdBuild, stopSpellThread } = await import("../src/core/spell-thread.ts");
-    const dict = mkdtempSync(join(sandbox, "dict-"));
-    writeFileSync(join(dict, "zz.aff"), "SET UTF-8\n");
-    mkdirSync(join(dict, "zz.dic")); // a folder: there, but no words to read
-    // English under a path of the test's own, held before it's built: frames drawn after zz failed, while English
-    // still loads, each ask about zz again, whatever was built before. Its wait's 40 s are inside the test's 60.
-    const en = dictionaryFiles("en", {})!;
-    cpSync(en.aff, join(dict, "en.aff"));
-    cpSync(en.dic, join(dict, "en.dic"));
-    const h = await harness({
-      root: vault({ "s7.md": "---\nlang: [zz, en]\n---\nThis has a recieve.\n" }),
-      open: "s7.md",
-      width: 120,
-      height: 30,
-      config: (c) => {
-        c.spell.dictionaries = { zz: join(dict, "zz.dic"), en: join(dict, "en.dic") };
-      },
-    });
-    const hold = await holdBuild(join(dict, "en.dic"));
-    const said = () => h.app.messages.filter((m) => m.text.startsWith("spelling: zz's dictionary didn't load ("));
-    try {
-      await h.keys("space", "u", "s");
-      // zz is asked first and fails before English is asked for.
-      expect(await until(() => hold.state() === "waiting")).toBe(true);
-      for (let i = 0; i < 3; i++) h.frame();
-      expect(said().map((m) => m.level)).toEqual(["warn"]);
-      hold.letGo();
-      expect(await checked(h)).toBe(true);
-      expect(h.app.speller.misspelt(h.app.view!)!.map((w) => w.word)).toEqual(["recieve"]);
-      h.frame();
-      expect(said()).toHaveLength(1);
-    } finally {
-      stopSpellThread();
-    }
-  }, 60_000);
+  test(
+    "a dictionary the thread can't build is said once; the note's other languages still check it",
+    async () => {
+      const { dictionaryFiles } = await import("../src/core/spell.ts");
+      const { holdBuild, stopSpellThread } = await import("../src/core/spell-thread.ts");
+      const dict = mkdtempSync(join(sandbox, "dict-"));
+      writeFileSync(join(dict, "zz.aff"), "SET UTF-8\n");
+      mkdirSync(join(dict, "zz.dic")); // a folder: there, but no words to read
+      // English under a path of the test's own, held before it's built: frames drawn after zz failed, while English
+      // still loads, each ask about zz again, whatever was built before. Its wait's 40 s are inside the test's 60.
+      const en = dictionaryFiles("en", {})!;
+      cpSync(en.aff, join(dict, "en.aff"));
+      cpSync(en.dic, join(dict, "en.dic"));
+      const h = await harness({
+        root: vault({ "s7.md": "---\nlang: [zz, en]\n---\nThis has a recieve.\n" }),
+        open: "s7.md",
+        width: 120,
+        height: 30,
+        config: (c) => {
+          c.spell.dictionaries = { zz: join(dict, "zz.dic"), en: join(dict, "en.dic") };
+        },
+      });
+      const hold = await holdBuild(join(dict, "en.dic"));
+      const said = () => h.app.messages.filter((m) => m.text.startsWith("spelling: zz's dictionary didn't load ("));
+      try {
+        await h.keys("space", "u", "s");
+        // zz is asked first and fails before English is asked for.
+        expect(await until(() => hold.state() === "waiting")).toBe(true);
+        for (let i = 0; i < 3; i++) h.frame();
+        expect(said().map((m) => m.level)).toEqual(["warn"]);
+        hold.letGo();
+        expect(await checked(h)).toBe(true);
+        expect(h.app.speller.misspelt(h.app.view!)!.map((w) => w.word)).toEqual(["recieve"]);
+        h.frame();
+        expect(said()).toHaveLength(1);
+      } finally {
+        stopSpellThread();
+      }
+    },
+    TEST_BUDGETS.dictionaryThread,
+  );
 });
 // typos: on
 

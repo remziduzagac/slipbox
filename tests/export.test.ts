@@ -1,3 +1,4 @@
+import { UNIT_TIMEOUT_MS } from "./support/timeouts.ts";
 // Export (plan 10.x): the assembler against a vault of its own, each writer's file opened and read back — a .docx or an
 // EPUB unzipped here and its XML read, a PDF's pages read back to their text, the HTML and Markdown as they are — and
 // the formats' names. The CLI's `export` is in cli.test.ts, the TUI's in tui.test.ts.
@@ -45,7 +46,7 @@ import { loadRasterizer } from "../src/core/svg.ts";
 import { locateVault } from "../src/core/vault.ts";
 
 // Drawing diagrams and maths, writing a document: slow on a loaded machine, not stuck.
-setDefaultTimeout(30_000);
+setDefaultTimeout(UNIT_TIMEOUT_MS);
 const sandbox = mkdtempSync(join(tmpdir(), "slipbox-export-"));
 process.env.XDG_STATE_HOME = join(sandbox, "state");
 process.env.XDG_CACHE_HOME = join(sandbox, "cache");

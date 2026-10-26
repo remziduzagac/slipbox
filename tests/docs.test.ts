@@ -1,3 +1,4 @@
+import { UNIT_TIMEOUT_MS, TEST_BUDGETS } from "./support/timeouts.ts";
 // The user documentation, docs/: whole, every link landing, every command and key in the manual, and free of the
 // blueprint's IDs (DOC-D3). The configuration chapter's defaults are checked in core.test.ts.
 import { describe, expect, test } from "bun:test";
@@ -331,57 +332,61 @@ describe("the user documentation (DOC)", () => {
     expect(legacyAnchors["README.md"].filter((anchor) => !anchors.includes(anchor))).toEqual([]);
   });
 
-  test("the tour and agent examples work in their own practice vault without replacing existing notes", () => {
-    const tour = shellExample(join(DOCS, "guides/getting-started.md"), "tour-setup");
-    const context = shellExample(join(DOCS, "guides/agents.md"), "agent-context");
-    const write = shellExample(join(DOCS, "guides/agents.md"), "agent-first-write");
-    const sandbox = mkdtempSync(join(tmpdir(), "slipbox-docs-tour-"));
-    const vault = join(sandbox, "tour");
-    const config = join(sandbox, "config.toml");
-    writeFileSync(config, "[index]\nbackground = false\n");
-    const runExample = (script: string) =>
-      Bun.spawnSync(
-        [
-          "sh",
-          "-ec",
-          'slipbox() { bun "$SLIPBOX_DOCS_MAIN" "$@"; }\n' +
-            script.replaceAll("~/slipbox-tour", '"$SLIPBOX_DOCS_TOUR"'),
-        ],
-        {
-          cwd: sandbox,
-          stdin: "ignore",
-          timeout: 25_000,
-          env: {
-            ...process.env,
-            SLIPBOX_DOCS_MAIN: join(TOP, "src/main.ts"),
-            SLIPBOX_DOCS_TOUR: vault,
-            SLIPBOX_CONFIG: config,
-            XDG_CONFIG_HOME: join(sandbox, "config"),
-            XDG_CACHE_HOME: join(sandbox, "cache"),
-            XDG_STATE_HOME: join(sandbox, "state"),
-            XDG_DATA_HOME: join(sandbox, "data"),
+  test(
+    "the tour and agent examples work in their own practice vault without replacing existing notes",
+    () => {
+      const tour = shellExample(join(DOCS, "guides/getting-started.md"), "tour-setup");
+      const context = shellExample(join(DOCS, "guides/agents.md"), "agent-context");
+      const write = shellExample(join(DOCS, "guides/agents.md"), "agent-first-write");
+      const sandbox = mkdtempSync(join(tmpdir(), "slipbox-docs-tour-"));
+      const vault = join(sandbox, "tour");
+      const config = join(sandbox, "config.toml");
+      writeFileSync(config, "[index]\nbackground = false\n");
+      const runExample = (script: string) =>
+        Bun.spawnSync(
+          [
+            "sh",
+            "-ec",
+            'slipbox() { bun "$SLIPBOX_DOCS_MAIN" "$@"; }\n' +
+              script.replaceAll("~/slipbox-tour", '"$SLIPBOX_DOCS_TOUR"'),
+          ],
+          {
+            cwd: sandbox,
+            stdin: "ignore",
+            timeout: 25_000,
+            env: {
+              ...process.env,
+              SLIPBOX_DOCS_MAIN: join(TOP, "src/main.ts"),
+              SLIPBOX_DOCS_TOUR: vault,
+              SLIPBOX_CONFIG: config,
+              XDG_CONFIG_HOME: join(sandbox, "config"),
+              XDG_CACHE_HOME: join(sandbox, "cache"),
+              XDG_STATE_HOME: join(sandbox, "state"),
+              XDG_DATA_HOME: join(sandbox, "data"),
+            },
           },
-        },
-      );
-    try {
-      const run = runExample([tour, context].join("\n"));
-      expect({ code: run.exitCode, stderr: run.stderr.toString() }).toEqual({ code: 0, stderr: "" });
-      expect(existsSync(join(vault, ".slipbox"))).toBe(true);
-      expect(run.stdout.toString()).toContain(vault);
-      // The screenshots start from this sample vault; keep its notes and marker identical to the guide's setup.
-      for (const file of ["inbox.md", "ideas/coffee.md", ".slipbox/config.toml", ".slipbox/version"])
-        expect(read(join(vault, file))).toBe(read(join(TOP, "examples/guide/slipbox-tour", file)));
-      const edited = runExample('cd "$SLIPBOX_DOCS_TOUR"\n' + write);
-      expect({ code: edited.exitCode, stderr: edited.stderr.toString() }).toEqual({ code: 0, stderr: "" });
-      expect(read(join(vault, "inbox.md"))).toContain("- [ ] Call the plumber");
-      expect(read(join(vault, "ideas/coffee.md"))).toContain("A ratio of 1 to 16");
-      const before = read(join(vault, "inbox.md"));
-      expect(runExample(tour).exitCode).not.toBe(0);
-      expect(read(join(vault, "inbox.md"))).toBe(before);
-    } finally {
-      rmSync(sandbox, { recursive: true, force: true });
-    }
-  }, 30_000);
+        );
+      try {
+        const run = runExample([tour, context].join("\n"));
+        expect({ code: run.exitCode, stderr: run.stderr.toString() }).toEqual({ code: 0, stderr: "" });
+        expect(existsSync(join(vault, ".slipbox"))).toBe(true);
+        expect(run.stdout.toString()).toContain(vault);
+        // The screenshots start from this sample vault; keep its notes and marker identical to the guide's setup.
+        for (const file of ["inbox.md", "ideas/coffee.md", ".slipbox/config.toml", ".slipbox/version"])
+          expect(read(join(vault, file))).toBe(read(join(TOP, "examples/guide/slipbox-tour", file)));
+        const edited = runExample('cd "$SLIPBOX_DOCS_TOUR"\n' + write);
+        expect({ code: edited.exitCode, stderr: edited.stderr.toString() }).toEqual({ code: 0, stderr: "" });
+        expect(read(join(vault, "inbox.md"))).toContain("- [ ] Call the plumber");
+        expect(read(join(vault, "ideas/coffee.md"))).toContain("A ratio of 1 to 16");
+        const before = read(join(vault, "inbox.md"));
+        expect(runExample(tour).exitCode).not.toBe(0);
+        expect(read(join(vault, "inbox.md"))).toBe(before);
+      } finally {
+        rmSync(sandbox, { recursive: true, force: true });
+      }
+    },
+    UNIT_TIMEOUT_MS,
+  );
 
   test("the sibling repository example reaches the repository beside the current checkout", () => {
     const guide = read(join(DOCS, "guides/vaults.md"));
@@ -397,60 +402,72 @@ describe("the user documentation (DOC)", () => {
     expect(userDocs().flatMap((f) => blueprintIds(read(f)).map((id) => `${relative(DOCS, f)}: ${id}`))).toEqual([]);
   });
 
-  test("no roadmap step or decision ID in a message slipbox prints, nor in its installers'", async () => {
-    const all = await messages();
-    const found = all.flatMap((m) => idsInMessage(m.text).map((id) => `${m.where}: ${id}`));
-    expect(found).toEqual([]);
-    expect(all.length).toBeGreaterThan(5000); // every source file read, not none
-    // The check catches what it looks for, and leaves versions and the like alone.
-    expect(
-      idsInMessage(
-        "retired (21.12); a scope (20.16, 21.10), trust (23.x); Windows is to come, plan 14.12; D166, DF-D1, DF-T3",
-      ),
-    ).toEqual(["(21.12)", "(20.16, 21.10)", "(23.x)", "plan 14.12", "D166", "DF-D1", "DF-T3"]);
-    expect(
-      idsInMessage("start nvim (0.9 or later); git 2.42; pyright@1.1.414; version 1.0; MPL-2.0; a 3D chart; ${…}"),
-    ).toEqual([]);
-  }, 60_000); // every source file parsed: seconds, more on a busy machine
+  test(
+    "no roadmap step or decision ID in a message slipbox prints, nor in its installers'",
+    async () => {
+      const all = await messages();
+      const found = all.flatMap((m) => idsInMessage(m.text).map((id) => `${m.where}: ${id}`));
+      expect(found).toEqual([]);
+      expect(all.length).toBeGreaterThan(5000); // every source file read, not none
+      // The check catches what it looks for, and leaves versions and the like alone.
+      expect(
+        idsInMessage(
+          "retired (21.12); a scope (20.16, 21.10), trust (23.x); Windows is to come, plan 14.12; D166, DF-D1, DF-T3",
+        ),
+      ).toEqual(["(21.12)", "(20.16, 21.10)", "(23.x)", "plan 14.12", "D166", "DF-D1", "DF-T3"]);
+      expect(
+        idsInMessage("start nvim (0.9 or later); git 2.42; pyright@1.1.414; version 1.0; MPL-2.0; a 3D chart; ${…}"),
+      ).toEqual([]);
+    },
+    TEST_BUDGETS.sourceInspection,
+  ); // every source file parsed: seconds, more on a busy machine
 
-  test("vault, never root, for the folders slipbox works in: the docs, the README, the skill, the messages (VV-D1)", async () => {
-    const files = [...userDocs(), join(TOP, "README.md"), join(TOP, "skills", "slipbox", "SKILL.md")];
-    expect(files.flatMap((f) => rootsForVaults(read(f)).map((r) => `${relative(TOP, f)}:${r}`))).toEqual([]);
-    expect((await messages()).filter((m) => saysRoot(m.text)).map((m) => `${m.where}: ${m.text}`)).toEqual([]);
-    // The checks catch what they look for, and leave code, links' targets and root's other meanings alone.
-    expect(
-      rootsForVaults(
-        "Open the root.\nIn `--root <dir>`, the `root` field\nand a span `over\ntwo lines, root`.\n" +
-          "[Links](links-and-roots.md#roots), the filesystem's root, nothing runs as root.\n" +
-          "```toml\n# the root\n```\nSquare roots and a root cause.\nRoots nested in roots.\n" +
-          "A plain folder, `--plain`, a loose file.\n",
-      ),
-    ).toEqual(["1: Open the root.", "10: Roots nested in roots.", "11: A plain folder, `--plain`, a loose file."]);
-    expect(saysRoot("x is outside the root")).toBe(true);
-    expect(saysRoot("names need a Root")).toBe(true);
-    expect(saysRoot("made x/ a plain folder of y")).toBe(true);
-    expect(saysRoot("--root x isn't a vault; [trust] roots lists it; walk.root_markers; :root { }")).toBe(false);
-    expect(saysRoot("root")).toBe(false); // a value: the JSON's `mode`, a change's kind
-  }, 60_000); // every source file parsed, when the test above hasn't
+  test(
+    "vault, never root, for the folders slipbox works in: the docs, the README, the skill, the messages (VV-D1)",
+    async () => {
+      const files = [...userDocs(), join(TOP, "README.md"), join(TOP, "skills", "slipbox", "SKILL.md")];
+      expect(files.flatMap((f) => rootsForVaults(read(f)).map((r) => `${relative(TOP, f)}:${r}`))).toEqual([]);
+      expect((await messages()).filter((m) => saysRoot(m.text)).map((m) => `${m.where}: ${m.text}`)).toEqual([]);
+      // The checks catch what they look for, and leave code, links' targets and root's other meanings alone.
+      expect(
+        rootsForVaults(
+          "Open the root.\nIn `--root <dir>`, the `root` field\nand a span `over\ntwo lines, root`.\n" +
+            "[Links](links-and-roots.md#roots), the filesystem's root, nothing runs as root.\n" +
+            "```toml\n# the root\n```\nSquare roots and a root cause.\nRoots nested in roots.\n" +
+            "A plain folder, `--plain`, a loose file.\n",
+        ),
+      ).toEqual(["1: Open the root.", "10: Roots nested in roots.", "11: A plain folder, `--plain`, a loose file."]);
+      expect(saysRoot("x is outside the root")).toBe(true);
+      expect(saysRoot("names need a Root")).toBe(true);
+      expect(saysRoot("made x/ a plain folder of y")).toBe(true);
+      expect(saysRoot("--root x isn't a vault; [trust] roots lists it; walk.root_markers; :root { }")).toBe(false);
+      expect(saysRoot("root")).toBe(false); // a value: the JSON's `mode`, a change's kind
+    },
+    TEST_BUDGETS.sourceInspection,
+  ); // every source file parsed, when the test above hasn't
 
-  test("workspace, never session, for what slipbox keeps of your work in a place: the docs, the README, the skill, the messages (WSP-D1)", async () => {
-    const files = [...userDocs(), join(TOP, "README.md"), join(TOP, "skills", "slipbox", "SKILL.md")];
-    expect(files.flatMap((f) => sessionsForWorkspaces(read(f)).map((r) => `${relative(TOP, f)}:${r}`))).toEqual([]);
-    expect((await messages()).filter((m) => WORKING_SESSION.test(m.text)).map((m) => `${m.where}: ${m.text}`)).toEqual(
-      [],
-    );
-    // The check catches what it looks for, and leaves a sitting and the names that keep the word alone.
-    expect(
-      sessionsForWorkspaces(
-        "Its session, scratch and trash came along.\nA first session; between sessions.\n" +
-          "`ui.restore_session` and `session.json` stay.\nIt is kept in the session.\nThe palette's session choices.\n",
-      ),
-    ).toEqual([
-      "1: Its session, scratch and trash came along.",
-      "4: It is kept in the session.",
-      "5: The palette's session choices.",
-    ]);
-  }, 60_000); // every source file parsed, when the tests above haven't
+  test(
+    "workspace, never session, for what slipbox keeps of your work in a place: the docs, the README, the skill, the messages (WSP-D1)",
+    async () => {
+      const files = [...userDocs(), join(TOP, "README.md"), join(TOP, "skills", "slipbox", "SKILL.md")];
+      expect(files.flatMap((f) => sessionsForWorkspaces(read(f)).map((r) => `${relative(TOP, f)}:${r}`))).toEqual([]);
+      expect(
+        (await messages()).filter((m) => WORKING_SESSION.test(m.text)).map((m) => `${m.where}: ${m.text}`),
+      ).toEqual([]);
+      // The check catches what it looks for, and leaves a sitting and the names that keep the word alone.
+      expect(
+        sessionsForWorkspaces(
+          "Its session, scratch and trash came along.\nA first session; between sessions.\n" +
+            "`ui.restore_session` and `session.json` stay.\nIt is kept in the session.\nThe palette's session choices.\n",
+        ),
+      ).toEqual([
+        "1: Its session, scratch and trash came along.",
+        "4: It is kept in the session.",
+        "5: The palette's session choices.",
+      ]);
+    },
+    TEST_BUDGETS.sourceInspection,
+  ); // every source file parsed, when the tests above haven't
 
   test("no link into the blueprint", () => {
     expect(

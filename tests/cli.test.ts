@@ -1,3 +1,4 @@
+import { UNIT_TIMEOUT_MS, TEST_BUDGETS } from "./support/timeouts.ts";
 // The CLI as an agent meets it: the real `slipbox` process, run against a copy of the demo vault
 // (examples/vault), with its exit codes, its human output and its --json envelope. Every CLI
 // command is run here; the last test fails if one isn't. (tests/vault.test.ts drives runCli in
@@ -27,7 +28,7 @@ import { isSlipboxSkill } from "../src/core/skill.ts";
 import { VERSION } from "../src/version.ts";
 
 // Harnesses copy and index a vault, CLI tests start processes: slow on a loaded machine, not stuck.
-setDefaultTimeout(30_000);
+setDefaultTimeout(UNIT_TIMEOUT_MS);
 const MAIN = join(import.meta.dir, "..", "src", "main.ts");
 const DEMO = join(import.meta.dir, "..", "examples", "vault");
 const sandbox = mkdtempSync(join(tmpdir(), "slipbox-cli-"));
@@ -739,50 +740,54 @@ describe("the vault and the tool", () => {
   });
   // The agents' skill (skills/slipbox/SKILL.md) is what they type: every example in it runs, its
   // placeholders filled, with no usage error (exit 2) — a flag renamed or a command reshaped shows.
-  test("every command in the skill runs as written", () => {
-    const skill = readFileSync(join(import.meta.dir, "..", "skills", "slipbox", "SKILL.md"), "utf8");
-    const lines = skill
-      .split(/^```.*$/m)
-      .filter((_, i) => i % 2 === 1)
-      .flatMap((block) => block.split("\n"))
-      .filter((l) => l.startsWith("slipbox "))
-      .map((l) => l.replace(/\s{2,}#.*$/, ""));
-    expect(lines.length).toBeGreaterThan(30);
-    const fill: Record<string, string> = {
-      "<note>": "operations-handbook",
-      "[<note>]": "operations-handbook",
-      "<text>": "Aster",
-      "'<text>'": "Aster",
-      "<old>": "Brill",
-      "<new>": "BRILL",
-      "<line>": "1",
-      "<n>": "1",
-      "<sha>": "0123456789abcdef",
-      "<path>": "scratch/skill-example.md",
-    };
-    // A copy of its own, known only to its own state: another halden in the sandbox's state would
-    // make the demo's name ambiguous for the tests after.
-    const dir = mkdtempSync(join(sandbox, "skill-"));
-    cpSync(DEMO, join(dir, "vault"), { recursive: true });
-    const own = {
-      XDG_STATE_HOME: join(dir, "state"),
-      XDG_CACHE_HOME: join(dir, "cache"),
-      XDG_DATA_HOME: join(dir, "data"),
-    };
-    for (const line of lines) {
-      // Its words as sh would split them: quotes kept together.
-      const words = [...line.matchAll(/'([^']*)'|"([^"]*)"|(\S+)/g)].map((m) => m[1] ?? m[2] ?? m[3]!).slice(1);
-      const args = words.map((w) => fill[w] ?? w);
-      expect(args.join(" ")).not.toMatch(/<\w+>/); // every placeholder known
-      const r = slipbox(args, {
-        cwd: join(dir, "vault"),
-        env: own,
-        stdin: args.includes("--stdin") ? "x\n" : undefined,
-      });
-      if (r.code === 2) throw new Error(`${line}: a usage error\n${r.err || r.out}`);
-    }
-    // Every command the skill shows, one process each: a slow runner's minutes (a small CI runner), not a hang.
-  }, 180_000);
+  test(
+    "every command in the skill runs as written",
+    () => {
+      const skill = readFileSync(join(import.meta.dir, "..", "skills", "slipbox", "SKILL.md"), "utf8");
+      const lines = skill
+        .split(/^```.*$/m)
+        .filter((_, i) => i % 2 === 1)
+        .flatMap((block) => block.split("\n"))
+        .filter((l) => l.startsWith("slipbox "))
+        .map((l) => l.replace(/\s{2,}#.*$/, ""));
+      expect(lines.length).toBeGreaterThan(30);
+      const fill: Record<string, string> = {
+        "<note>": "operations-handbook",
+        "[<note>]": "operations-handbook",
+        "<text>": "Aster",
+        "'<text>'": "Aster",
+        "<old>": "Brill",
+        "<new>": "BRILL",
+        "<line>": "1",
+        "<n>": "1",
+        "<sha>": "0123456789abcdef",
+        "<path>": "scratch/skill-example.md",
+      };
+      // A copy of its own, known only to its own state: another halden in the sandbox's state would
+      // make the demo's name ambiguous for the tests after.
+      const dir = mkdtempSync(join(sandbox, "skill-"));
+      cpSync(DEMO, join(dir, "vault"), { recursive: true });
+      const own = {
+        XDG_STATE_HOME: join(dir, "state"),
+        XDG_CACHE_HOME: join(dir, "cache"),
+        XDG_DATA_HOME: join(dir, "data"),
+      };
+      for (const line of lines) {
+        // Its words as sh would split them: quotes kept together.
+        const words = [...line.matchAll(/'([^']*)'|"([^"]*)"|(\S+)/g)].map((m) => m[1] ?? m[2] ?? m[3]!).slice(1);
+        const args = words.map((w) => fill[w] ?? w);
+        expect(args.join(" ")).not.toMatch(/<\w+>/); // every placeholder known
+        const r = slipbox(args, {
+          cwd: join(dir, "vault"),
+          env: own,
+          stdin: args.includes("--stdin") ? "x\n" : undefined,
+        });
+        if (r.code === 2) throw new Error(`${line}: a usage error\n${r.err || r.out}`);
+      }
+      // Every command the skill shows, one process each: a slow runner's minutes (a small CI runner), not a hang.
+    },
+    TEST_BUDGETS.skillIntegration,
+  );
   test("info, themes, commands, init, help, version", () => {
     const i = slipbox(["info", "--json"]).json.data;
     expect(i.root).toBe(vault);
@@ -1727,37 +1732,46 @@ describe("the vault and the tool", () => {
     expect(r.exitCode).toBe(5);
     expect(note("people/kenji-mori.md").endsWith("- item\n")).toBe(true);
   });
-  test("review cycle 5: replace answers in linear time; resolve reads markdown links; stat; links --all", () => {
-    writeFileSync(join(vault, "big-replace.md"), "- [ ] line Aster and Aster\n".repeat(25_000));
-    const t0 = Date.now();
-    const big = slipbox(["replace", "big-replace", "Aster", "Vega", "--json"]);
-    expect(big.json.data.count).toBe(50_000);
-    expect(big.json.data.changes[1]).toMatchObject({ line: 1, column: 22, textAfter: "- [ ] line Aster and Vega" });
-    expect(Date.now() - t0).toBeLessThan(10_000);
-    writeFileSync(join(vault, "people", "probe.md"), "[a](home.md) and [b](../home.md)\n");
-    expect(slipbox(["resolve", "[a](home.md)", "--from", "people/probe.md"]).code).toBe(3);
-    expect(slipbox(["resolve", "[b](../home.md)", "--from", "people/probe.md", "--json"]).json.data.path).toBe(
-      "home.md",
-    );
-    const st = slipbox(["stat", "partners-and-names", "--json"]).json.data;
-    expect(st).toMatchObject({ path: "people/partners-and-names.md", title: "Partners and names", invalidUtf8: false });
-    expect(st.unresolved).toBeGreaterThan(0);
-    expect(st.backlinks).toBeGreaterThan(0);
-    const all = slipbox(["links", "--all", "--json"]).json.data;
-    expect(
-      all.some(
-        (l: { from: string; status: string }) => l.from === "people/partners-and-names.md" && l.status === "unresolved",
-      ),
-    ).toBe(true);
-    const bl = slipbox(["backlinks", "people/kenji-mori.md", "--json"]).json.data.backlinks;
-    expect(bl[0]).toHaveProperty("kind");
-    expect(bl[0]).toHaveProperty("target");
-    const created = slipbox(["write", "contacts", "# c", "--create", "--json"]);
-    expect(created.json.data.shadows.sort()).toEqual(["equipment/contacts.md", "people/contacts.md"]);
-    expect(created.json.warnings.join(" ")).toContain("naming it in a command takes a path");
-    rmSync(join(vault, "contacts.md"));
-    rmSync(join(vault, "big-replace.md"));
-  }, 30_000);
+  test(
+    "review cycle 5: replace answers in linear time; resolve reads markdown links; stat; links --all",
+    () => {
+      writeFileSync(join(vault, "big-replace.md"), "- [ ] line Aster and Aster\n".repeat(25_000));
+      const t0 = Date.now();
+      const big = slipbox(["replace", "big-replace", "Aster", "Vega", "--json"]);
+      expect(big.json.data.count).toBe(50_000);
+      expect(big.json.data.changes[1]).toMatchObject({ line: 1, column: 22, textAfter: "- [ ] line Aster and Vega" });
+      expect(Date.now() - t0).toBeLessThan(10_000);
+      writeFileSync(join(vault, "people", "probe.md"), "[a](home.md) and [b](../home.md)\n");
+      expect(slipbox(["resolve", "[a](home.md)", "--from", "people/probe.md"]).code).toBe(3);
+      expect(slipbox(["resolve", "[b](../home.md)", "--from", "people/probe.md", "--json"]).json.data.path).toBe(
+        "home.md",
+      );
+      const st = slipbox(["stat", "partners-and-names", "--json"]).json.data;
+      expect(st).toMatchObject({
+        path: "people/partners-and-names.md",
+        title: "Partners and names",
+        invalidUtf8: false,
+      });
+      expect(st.unresolved).toBeGreaterThan(0);
+      expect(st.backlinks).toBeGreaterThan(0);
+      const all = slipbox(["links", "--all", "--json"]).json.data;
+      expect(
+        all.some(
+          (l: { from: string; status: string }) =>
+            l.from === "people/partners-and-names.md" && l.status === "unresolved",
+        ),
+      ).toBe(true);
+      const bl = slipbox(["backlinks", "people/kenji-mori.md", "--json"]).json.data.backlinks;
+      expect(bl[0]).toHaveProperty("kind");
+      expect(bl[0]).toHaveProperty("target");
+      const created = slipbox(["write", "contacts", "# c", "--create", "--json"]);
+      expect(created.json.data.shadows.sort()).toEqual(["equipment/contacts.md", "people/contacts.md"]);
+      expect(created.json.warnings.join(" ")).toContain("naming it in a command takes a path");
+      rmSync(join(vault, "contacts.md"));
+      rmSync(join(vault, "big-replace.md"));
+    },
+    UNIT_TIMEOUT_MS,
+  );
   test("review cycle 5: capture warns on dead references and refuses empty stdin; find names skipped notes", () => {
     const dead = slipbox(["capture", "--ref", "nonexist.md:15", "--json"]);
     expect(dead.json.warnings.join(" ")).toContain("no such file");
@@ -2778,53 +2792,57 @@ describe("the launcher (scripts/install-local.sh)", () => {
 });
 
 describe("the compiled binary", () => {
-  test("runs nothing of the folder it's started in (no bunfig.toml preload, no .env); its SQLite works; its workers start", () => {
-    const dir = mkdtempSync(join(sandbox, "compiled-"));
-    const bin = join(dir, "slipbox");
-    // Built by package.json's own build script, its output moved here: what a release would ship.
-    const script = JSON.parse(readFileSync(join(import.meta.dir, "..", "package.json"), "utf8")).scripts
-      .build as string;
-    const argv = script.split(" ").map((a) => (a === "dist/slipbox" ? bin : a));
-    expect(argv[0]).toBe("bun");
-    const built = Bun.spawnSync([process.execPath, ...argv.slice(1)], {
-      cwd: join(import.meta.dir, ".."),
-      stderr: "pipe",
-    });
-    expect(built.exitCode).toBe(0);
-    // A folder holding a preload that leaves a mark, and a .env naming a config that picks a theme.
-    const work = join(dir, "work");
-    mkdirSync(work);
-    const mark = join(work, "PRELOAD_RAN");
-    writeFileSync(join(work, "bunfig.toml"), 'preload = ["./pre.ts"]\n');
-    writeFileSync(join(work, "pre.ts"), `require("node:fs").writeFileSync(${JSON.stringify(mark)}, "ran\\n");\n`);
-    writeFileSync(join(work, "picked.toml"), 'theme = "nord"\n');
-    writeFileSync(join(work, ".env"), `SLIPBOX_CONFIG=${join(work, "picked.toml")}\n`);
-    const { SLIPBOX_CONFIG: _, ...rest } = env;
-    const r = Bun.spawnSync([bin, "themes", "--json"], { cwd: work, env: rest, timeout: 30_000 });
-    expect(r.exitCode).toBe(0);
-    expect(existsSync(mark)).toBe(false);
-    const current = (JSON.parse(r.stdout.toString()).data as { name: string; current: boolean }[]).find(
-      (t) => t.current,
-    );
-    expect(current?.name).not.toBe("nord");
-    // Its SQLite the runtime's own, there in the binary: a root indexed and searched.
-    const root = join(dir, "notes");
-    mkdirSync(join(root, ".slipbox"), { recursive: true });
-    writeFileSync(join(root, "a.md"), "# A\n\nThe zorvexian word.\n");
-    const run = (args: string[]) => Bun.spawnSync([bin, ...args, "--json"], { cwd: root, env, timeout: 30_000 });
-    expect(run(["index", "--refresh"]).exitCode).toBe(0);
-    const found = run(["search", "zorvexian"]);
-    expect(found.exitCode).toBe(0);
-    expect(JSON.parse(found.stdout.toString()).data.hits.map((h: { path: string }) => h.path)).toEqual(["a.md"]);
-    // Its spell checker's thread (D232): a worker's script the binary has as an entry point of its own — the dictionary
-    // embedded in it built there, a word checked and its suggestions asked.
-    writeFileSync(join(root, "b.md"), "We recieve it.\n"); // typos: ignore-line
-    const spelt = run(["spell", "b.md", "--suggest"]);
-    expect(new TextDecoder().decode(spelt.stderr)).toBe("");
-    expect(JSON.parse(spelt.stdout.toString())).toMatchObject({
-      data: { words: [{ word: "recieve", suggestions: expect.arrayContaining(["receive"]) }] }, // typos: ignore-line
-    });
-  }, 120_000);
+  test(
+    "runs nothing of the folder it's started in (no bunfig.toml preload, no .env); its SQLite works; its workers start",
+    () => {
+      const dir = mkdtempSync(join(sandbox, "compiled-"));
+      const bin = join(dir, "slipbox");
+      // Built by package.json's own build script, its output moved here: what a release would ship.
+      const script = JSON.parse(readFileSync(join(import.meta.dir, "..", "package.json"), "utf8")).scripts
+        .build as string;
+      const argv = script.split(" ").map((a) => (a === "dist/slipbox" ? bin : a));
+      expect(argv[0]).toBe("bun");
+      const built = Bun.spawnSync([process.execPath, ...argv.slice(1)], {
+        cwd: join(import.meta.dir, ".."),
+        stderr: "pipe",
+      });
+      expect(built.exitCode).toBe(0);
+      // A folder holding a preload that leaves a mark, and a .env naming a config that picks a theme.
+      const work = join(dir, "work");
+      mkdirSync(work);
+      const mark = join(work, "PRELOAD_RAN");
+      writeFileSync(join(work, "bunfig.toml"), 'preload = ["./pre.ts"]\n');
+      writeFileSync(join(work, "pre.ts"), `require("node:fs").writeFileSync(${JSON.stringify(mark)}, "ran\\n");\n`);
+      writeFileSync(join(work, "picked.toml"), 'theme = "nord"\n');
+      writeFileSync(join(work, ".env"), `SLIPBOX_CONFIG=${join(work, "picked.toml")}\n`);
+      const { SLIPBOX_CONFIG: _, ...rest } = env;
+      const r = Bun.spawnSync([bin, "themes", "--json"], { cwd: work, env: rest, timeout: 30_000 });
+      expect(r.exitCode).toBe(0);
+      expect(existsSync(mark)).toBe(false);
+      const current = (JSON.parse(r.stdout.toString()).data as { name: string; current: boolean }[]).find(
+        (t) => t.current,
+      );
+      expect(current?.name).not.toBe("nord");
+      // Its SQLite the runtime's own, there in the binary: a root indexed and searched.
+      const root = join(dir, "notes");
+      mkdirSync(join(root, ".slipbox"), { recursive: true });
+      writeFileSync(join(root, "a.md"), "# A\n\nThe zorvexian word.\n");
+      const run = (args: string[]) => Bun.spawnSync([bin, ...args, "--json"], { cwd: root, env, timeout: 30_000 });
+      expect(run(["index", "--refresh"]).exitCode).toBe(0);
+      const found = run(["search", "zorvexian"]);
+      expect(found.exitCode).toBe(0);
+      expect(JSON.parse(found.stdout.toString()).data.hits.map((h: { path: string }) => h.path)).toEqual(["a.md"]);
+      // Its spell checker's thread (D232): a worker's script the binary has as an entry point of its own — the dictionary
+      // embedded in it built there, a word checked and its suggestions asked.
+      writeFileSync(join(root, "b.md"), "We recieve it.\n"); // typos: ignore-line
+      const spelt = run(["spell", "b.md", "--suggest"]);
+      expect(new TextDecoder().decode(spelt.stderr)).toBe("");
+      expect(JSON.parse(spelt.stdout.toString())).toMatchObject({
+        data: { words: [{ word: "recieve", suggestions: expect.arrayContaining(["receive"]) }] }, // typos: ignore-line
+      });
+    },
+    TEST_BUDGETS.compiledBinary,
+  );
 });
 
 describe("distribution (14.x)", () => {
