@@ -14,9 +14,9 @@ import { existsSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { isAbsolute, join, relative } from "node:path";
 import { parse as parseToml } from "smol-toml";
-import type { Config } from "./config.ts";
+import type { Config } from "./application/config/config.ts";
 import { stripJsonComments } from "./data.ts";
-import { readRegular, SMALL_FILE } from "./fsutil.ts";
+import { readRegular, SMALL_FILE } from "./foundation/platform/fsutil.ts";
 
 export type LinkStyle = "markdown" | "wiki";
 export type LinkPath = "relative" | "root" | "name";

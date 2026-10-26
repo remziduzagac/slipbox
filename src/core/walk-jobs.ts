@@ -4,13 +4,13 @@
 // TUI steps it, so it rests while you work, as it does on the thread that asks. The explorer's listings have threads
 // of their own (list-worker.ts); a listing asked here (`list`) is answered the same, for a test's worker serving both.
 
-import type { Config } from "./config.ts";
+import type { Config } from "./application/config/config.ts";
 import { type HomeWalk, homeWalk, vaultsPastCap } from "./home.ts";
 import { type IndexAnswer, IndexJob, type IndexOf } from "./index-job.ts";
 import { type FolderListing, listFolder } from "./listing.ts";
 import { type FilterSettings, filterFrom, SlicedWalk, type WalkLimits, type WalkResult } from "./walk.ts";
 import { type IndexAsk, nestedIn, type PastCap } from "./walkers.ts";
-import { enterContext, type WalkContext } from "./worker-context.ts";
+import { enterContext, type WalkContext } from "./foundation/workers/worker-context.ts";
 
 export type WalkRequest = { context: WalkContext } & (
   | { op: "step"; walk: number; budget: number; start?: { filter: FilterSettings; limits?: WalkLimits } }

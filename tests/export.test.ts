@@ -12,7 +12,7 @@ import { Document, Packer } from "docx";
 import { strToU8, zipSync } from "fflate";
 import type { Image, Link, PhrasingContent, RootContent } from "mdast";
 import PDFDocument from "pdfkit";
-import { DEFAULT_CONFIG } from "../src/core/config.ts";
+import { DEFAULT_CONFIG } from "../src/core/application/config/config.ts";
 import {
   assemble,
   chapterAnchor,
@@ -39,7 +39,7 @@ import { prepareExport } from "../src/core/export/jobs.ts";
 import { pdfDocument, splitByFont, toPdf, words } from "../src/core/export/pdf.ts";
 import { TINT } from "../src/core/export/style.ts";
 import { slugify } from "../src/core/parse.ts";
-import { userFolders } from "../src/core/paths.ts";
+import { userFolders } from "../src/core/foundation/platform/paths.ts";
 import { openGraph } from "../src/core/graph.ts";
 import { remoteImageName } from "../src/core/imagecache.ts";
 import { loadRasterizer } from "../src/core/svg.ts";

@@ -19,9 +19,9 @@ import { mathRows } from "../math.ts";
 import { paintRevision } from "../paint-jobs.ts";
 import { onlyComments } from "../obsidian.ts";
 import { headingLabel, ORIGIN, parseMarkdown, type Frontmatter } from "../parse.ts";
-import { expandTabs, sanitize } from "../sanitize.ts";
+import { expandTabs, sanitize } from "../foundation/text/sanitize.ts";
 import type { Role } from "../theme/theme.ts";
-import { graphemes, graphemeWidth, padEnd, stringWidth, truncate } from "../width.ts";
+import { graphemes, graphemeWidth, padEnd, stringWidth, truncate } from "../foundation/text/width.ts";
 import type { WikiLink } from "../wikilink.ts";
 import { highlight } from "./highlight.ts";
 import {

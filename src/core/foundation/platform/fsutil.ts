@@ -177,7 +177,7 @@ export function realTarget(path: string): string {
 }
 
 /**
- * Whether a relative path (as `relative` gives it) climbs out of where it's from: a ".." segment
+ * Whether a relative path (as `relative` gives it) climbs out of where it's from: a "../../.." segment
  * first, or another drive's. A name that merely starts with dots ("..notes") stays in.
  */
 export function climbsOut(rel: string): boolean {

@@ -14,7 +14,7 @@ import { privateNameWarning } from "../core/folders.ts";
 import { findVaultRoot, hasMarker, rootAt } from "../core/vault.ts";
 import type { App, View, ListItem } from "./app.ts";
 import type { Layout } from "../core/layout/ir.ts";
-import { stringWidth } from "../core/width.ts";
+import { stringWidth } from "../core/foundation/text/width.ts";
 
 /** Links under the cursor, and links inserted. */
 export class Linking {

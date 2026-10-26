@@ -5,8 +5,8 @@ import type { App } from "./app.ts";
 import { type Canvas, drawText } from "./canvas.ts";
 import { type Band, type Geometry, roleStyle, pageBg, button } from "./draw.ts";
 import type { Role } from "../core/theme/theme.ts";
-import { sanitize } from "../core/sanitize.ts";
-import { stringWidth, truncateStart, truncate } from "../core/width.ts";
+import { sanitize } from "../core/foundation/text/sanitize.ts";
+import { stringWidth, truncateStart, truncate } from "../core/foundation/text/width.ts";
 import { tildePath } from "../core/names.ts";
 import { whereOf } from "./where.ts";
 

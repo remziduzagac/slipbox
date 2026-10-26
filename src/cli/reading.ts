@@ -2,7 +2,7 @@
 // text and sha, the notes and files listed, text found in them, and a note's misspelt words (25.6).
 
 import { grammar, grammarFor, parseSyntax } from "../core/syntax.ts";
-import { loadError } from "../core/lazy.ts";
+import { loadError } from "../core/foundation/platform/lazy.ts";
 import { statSync } from "node:fs";
 import { headingsOf, parseMarkdown } from "../core/parse.ts";
 import {
@@ -17,7 +17,7 @@ import {
 import { addToDictionaries, openDictionary, threadDictionaries } from "../core/spell-thread.ts";
 import { dataOutline } from "../core/data.ts";
 import { classify, extensionOf } from "../core/filetypes.ts";
-import { readText } from "../core/fsutil.ts";
+import { readText } from "../core/foundation/platform/fsutil.ts";
 import { matchText } from "../core/regex-jobs.ts";
 import { flag, has, UsageError } from "./args.ts";
 import {

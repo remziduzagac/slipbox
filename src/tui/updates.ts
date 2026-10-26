@@ -8,10 +8,10 @@
 import { closeSync, existsSync, mkdirSync, openSync, readFileSync, realpathSync, rmSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { VERSION } from "../version.ts";
-import { sanitize } from "../core/sanitize.ts";
+import { sanitize } from "../core/foundation/text/sanitize.ts";
 import { tagOf } from "../core/release.ts";
-import { readJson } from "../core/fsutil.ts";
-import { removeOlderThan } from "../core/fsutil.ts";
+import { readJson } from "../core/foundation/platform/fsutil.ts";
+import { removeOlderThan } from "../core/foundation/platform/fsutil.ts";
 import { type Channel, currentVersion, homebrewPrefix, type InstalledBy, howToUpgrade } from "../core/install.ts";
 import { type SessionState, sessionFrom } from "../core/position.ts";
 import type { ReleaseBuild } from "../core/release.ts";

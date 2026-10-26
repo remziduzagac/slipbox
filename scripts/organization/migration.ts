@@ -16,6 +16,8 @@ export interface Snapshot {
 
 export interface Manifest {
   moves: Record<string, string>;
+  /** Retired filenames whose basename changed, including prose references without a directory. */
+  renamedBasenames?: Record<string, string>;
   /** Exact old-path text retained in a particular file, with a reviewable reason. */
   retained: { file: string; text: string; reason: string }[];
 }
@@ -26,8 +28,8 @@ const codeFiles = (root: string, area: string) =>
     .sort();
 
 /** Bun's relative source resolution, including explicit assets and directory indexes. */
-export function resolveLocal(root: string, file: string, spec: string): string | null {
-  const path = normalize(join(dirname(file), spec));
+export function resolveLocal(root: string, file: string, spec: string, directory = false): string | null {
+  const path = normalize(join(directory ? file : dirname(file), spec));
   if (path.startsWith("../") || path.startsWith("/")) return null;
   for (const candidate of [path, `${path}.ts`, `${path}.tsx`, `${path}/index.ts`, `${path}/index.tsx`]) {
     if (existsSync(join(root, candidate)) && statSync(join(root, candidate)).isFile()) return candidate;
@@ -55,7 +57,7 @@ export function capture(root: string): Snapshot {
     for (const spec of new Set([...importsOf(text), ...values, ...paths, ...workerPaths])) {
       if (!spec.startsWith(".") && !paths.includes(spec) && !workerPaths.includes(spec)) continue;
       const target = workerPaths.includes(spec)
-        ? helper && resolveLocal(root, helper, spec)
+        ? helper && resolveLocal(root, "src/core", spec, true)
         : resolveLocal(root, file, spec);
       if (!target) unresolved.push(`${file}: ${spec}`);
       else {
@@ -115,6 +117,21 @@ export function stalePaths(root: string, files: string[], manifest: Manifest): s
         !manifest.retained.some((r) => r.file === file && r.text === needle && r.reason.trim().length > 0)
       )
         failures.push(`${file}: stale ${needle}`);
+    }
+  }
+  for (const old of Object.keys(manifest.renamedBasenames ?? {})) {
+    const escaped = old.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const pattern = new RegExp(`(?<![A-Za-z0-9_-])${escaped}(?![A-Za-z0-9_-])`);
+    for (const file of files) {
+      if (!existsSync(join(root, file)) || !statSync(join(root, file)).isFile()) continue;
+      const text = readFileSync(join(root, file), "utf8");
+      const retained = manifest.retained.some(
+        (r) =>
+          r.file === file &&
+          r.reason.trim().length > 0 &&
+          (r.text === old || r.text.endsWith(`/${old.replace(/\.tsx?$/, "")}`)),
+      );
+      if (pattern.test(text) && !retained) failures.push(`${file}: retired basename ${old}`);
     }
   }
   return failures;

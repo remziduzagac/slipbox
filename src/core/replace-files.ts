@@ -3,7 +3,7 @@
 // changes previewed before and after, carried out by `applyPlan` (nothing written when a file changed since), and
 // logged, so `slipbox undo` and the TUI's `space v shift+u` take it back (7.4). The matching is find's (`replace.ts`).
 
-import { readText } from "./fsutil.ts";
+import { readText } from "./foundation/platform/fsutil.ts";
 import type { Graph } from "./graph.ts";
 import { matchText } from "./regex-jobs.ts";
 import { dirtyTrees, type Edit, type FileChange, RenameError, type RenamePlan } from "./rename.ts";

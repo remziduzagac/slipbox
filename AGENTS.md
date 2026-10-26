@@ -21,14 +21,14 @@ a change users will see updates it in the same piece of work, without the bluepr
   `App` (`src/tui/app.ts`) keeps the shared state and the wiring, and a feature is a controller in its own file that
   `App` owns (`src/tui/explorer.ts` is `app.explorer`), holding the state that is the feature's alone.
   `bun run check:size` enforces the limit.
-- **Every user action is a named command.** Add it to the `src/core/commands/` file of its area (`git.ts`,
-  `editing.ts`, …; `command-specs.ts` joins them into `COMMAND_SPECS`) with its CLI equivalent (or `null` for a pure
-  interaction), then implement it in the `src/tui/actions-*.ts` of its area (or `actions.ts`), which `registerActions`
-  registers. Registration fails at startup, and a test fails, if the two disagree.
+- **Every user action is a named command.** Add it to the `src/core/application/commands/areas/` file of its area
+  (`git.ts`, `editing.ts`, …; `catalog.ts` joins them into `COMMAND_SPECS`) with its CLI equivalent (or `null` for a
+  pure interaction), then implement it in the `src/tui/actions-*.ts` of its area (or `actions.ts`), which
+  `registerActions` registers. Registration fails at startup, and a test fails, if the two disagree.
 - **The design stays true to the code.** A behaviour change updates the matching file in
   `blueprint/design/` in the same change; since the initial design was settled (D210), a planned change to
   requirements or design goes through a workstream.
-- **Nothing measures text except `src/core/width.ts`**, and every string entering the layout
+- **Nothing measures text except `src/core/foundation/text/width.ts`**, and every string entering the layout
   passes through `sanitize`.
 - Phase 3 (editing) has begun: the TUI writes notes only through `App.writeBuffer` (atomic, inside
   the vault, the watcher told) — never with its own `writeFile`. Besides notes, it writes its own

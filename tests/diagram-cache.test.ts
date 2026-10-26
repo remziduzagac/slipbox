@@ -5,7 +5,7 @@ import { join } from "node:path";
 import packageInfo from "../package.json";
 import { DiagramCache, diagramKey } from "../src/core/diagram-cache.ts";
 import { BATCH_DIAGRAM_POLICY, DiagramJobs, type DiagramRequest } from "../src/core/diagram-jobs.ts";
-import { Database } from "../src/core/sqlite.ts";
+import { Database } from "../src/core/foundation/platform/sqlite.ts";
 
 const dirs: string[] = [];
 const caches: DiagramCache[] = [];

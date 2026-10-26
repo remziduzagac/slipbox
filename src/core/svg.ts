@@ -5,7 +5,7 @@
 
 import { accessSync, constants, readFileSync } from "node:fs";
 import wasm from "@resvg/resvg-wasm/index_bg.wasm" with { type: "file" };
-import { load as loadLazy } from "./lazy.ts";
+import { load as loadLazy } from "./foundation/platform/lazy.ts";
 import { paintJobs } from "./paint-jobs.ts";
 
 type ResvgModule = typeof import("@resvg/resvg-wasm");

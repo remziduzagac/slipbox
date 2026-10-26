@@ -6,7 +6,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { runCli } from "../src/cli/cli.ts";
 import { parseRef } from "../src/core/capture.ts";
-import { DEFAULT_CONFIG, loadConfig, type Config } from "../src/core/config.ts";
+import { DEFAULT_CONFIG, loadConfig, type Config } from "../src/core/application/config/config.ts";
 import { glyphsFor } from "../src/core/glyphs.ts";
 import { openGraph } from "../src/core/graph.ts";
 import { renderMarkdown } from "../src/core/layout/render.ts";
@@ -15,7 +15,7 @@ import { loadSession, rowForSource, saveSession } from "../src/core/position.ts"
 import { listThemes } from "../src/core/theme/index.ts";
 import { elsewhereAt, locateVault } from "../src/core/vault.ts";
 import { WalkFilter, walkVault } from "../src/core/walk.ts";
-import { stringWidth } from "../src/core/width.ts";
+import { stringWidth } from "../src/core/foundation/text/width.ts";
 import { App } from "../src/tui/app.ts";
 import { TextCanvas } from "../src/tui/canvas.ts";
 import { importsOf } from "../scripts/check-boundary.ts";

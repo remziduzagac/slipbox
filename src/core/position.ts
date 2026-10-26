@@ -7,9 +7,9 @@
 
 import { existsSync, rmSync } from "node:fs";
 import { isAbsolute, join, relative, sep } from "node:path";
-import { climbsOut, ensureDir, readJson, writeJson } from "./fsutil.ts";
+import { climbsOut, ensureDir, readJson, writeJson } from "./foundation/platform/fsutil.ts";
 import type { Layout } from "./layout/ir.ts";
-import { type Keyed, stateDir, stateHome } from "./paths.ts";
+import { type Keyed, stateDir, stateHome } from "./foundation/platform/paths.ts";
 
 /** Where a root's session lives: its state directory, by its path (21.8) — a plain folder's too. */
 export interface StatePlace extends Keyed {

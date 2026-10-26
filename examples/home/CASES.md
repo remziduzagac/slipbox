@@ -2456,7 +2456,7 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
 
 ## Commands
 
-Every command (`src/core/command-specs.ts`) and the files it's best tried on: the area's material — a long note
+Every command (`src/core/application/commands/catalog.ts`) and the files it's best tried on: the area's material — a long note
 for moving and paging, related notes for windows and tabs, footnoted reading for footnotes, code for its servers.
 Commands that need nothing in particular are tried on any note; the files named are where they say the most.
 
@@ -2464,397 +2464,397 @@ Commands that need nothing in particular are tried on any note; the files named 
 
 A long note: headings, paragraphs, pages to move through; the daily note has the f/t targets.
 
-- `cursor.left` — Cursor left — `notes/meetings/all-hands-archive.md`, `notes/daily/2026-10-05.md` (command-specs.ts)
-- `cursor.right` — Cursor right — `notes/meetings/all-hands-archive.md`, `notes/daily/2026-10-05.md` (command-specs.ts)
-- `cursor.up` — Cursor up — `notes/meetings/all-hands-archive.md`, `notes/daily/2026-10-05.md` (command-specs.ts)
-- `cursor.down` — Cursor down — `notes/meetings/all-hands-archive.md`, `notes/daily/2026-10-05.md` (command-specs.ts)
+- `cursor.left` — Cursor left — `notes/meetings/all-hands-archive.md`, `notes/daily/2026-10-05.md` (catalog.ts)
+- `cursor.right` — Cursor right — `notes/meetings/all-hands-archive.md`, `notes/daily/2026-10-05.md` (catalog.ts)
+- `cursor.up` — Cursor up — `notes/meetings/all-hands-archive.md`, `notes/daily/2026-10-05.md` (catalog.ts)
+- `cursor.down` — Cursor down — `notes/meetings/all-hands-archive.md`, `notes/daily/2026-10-05.md` (catalog.ts)
 - `cursor.word_prev` — Previous word — `notes/meetings/all-hands-archive.md`, `notes/daily/2026-10-05.md`
-  (command-specs.ts)
-- `cursor.word_next` — Next word — `notes/meetings/all-hands-archive.md`, `notes/daily/2026-10-05.md` (command-specs.ts)
+  (catalog.ts)
+- `cursor.word_next` — Next word — `notes/meetings/all-hands-archive.md`, `notes/daily/2026-10-05.md` (catalog.ts)
 - `cursor.word_end` — End of word — `notes/meetings/all-hands-archive.md`, `notes/daily/2026-10-05.md`
-  (command-specs.ts)
+  (catalog.ts)
 - `cursor.line_start` — Start of row — `notes/meetings/all-hands-archive.md`, `notes/daily/2026-10-05.md`
-  (command-specs.ts)
-- `cursor.line_end` — End of row — `notes/meetings/all-hands-archive.md`, `notes/daily/2026-10-05.md` (command-specs.ts)
+  (catalog.ts)
+- `cursor.line_end` — End of row — `notes/meetings/all-hands-archive.md`, `notes/daily/2026-10-05.md` (catalog.ts)
 - `cursor.first_nonblank` — First non-blank of row — `notes/meetings/all-hands-archive.md`, `notes/daily/2026-10-05.md`
-  (command-specs.ts)
-- `cursor.top` — Top of note — `notes/meetings/all-hands-archive.md`, `notes/daily/2026-10-05.md` (command-specs.ts)
+  (catalog.ts)
+- `cursor.top` — Top of note — `notes/meetings/all-hands-archive.md`, `notes/daily/2026-10-05.md` (catalog.ts)
 - `cursor.bottom` — Bottom of note — `notes/meetings/all-hands-archive.md`, `notes/daily/2026-10-05.md`
-  (command-specs.ts)
+  (catalog.ts)
 - `cursor.heading_prev` — Previous heading — `notes/meetings/all-hands-archive.md`, `notes/daily/2026-10-05.md`
-  (command-specs.ts)
+  (catalog.ts)
 - `cursor.heading_next` — Next heading — `notes/meetings/all-hands-archive.md`, `notes/daily/2026-10-05.md`
-  (command-specs.ts)
+  (catalog.ts)
 - `cursor.paragraph_prev` — Previous paragraph — `notes/meetings/all-hands-archive.md`, `notes/daily/2026-10-05.md`
-  (command-specs.ts)
+  (catalog.ts)
 - `cursor.paragraph_next` — Next paragraph — `notes/meetings/all-hands-archive.md`, `notes/daily/2026-10-05.md`
-  (command-specs.ts)
+  (catalog.ts)
 - `cursor.find_char` — To a character on the line — `notes/meetings/all-hands-archive.md`, `notes/daily/2026-10-05.md`
-  (command-specs.ts)
+  (catalog.ts)
 - `cursor.find_repeat` — Repeat f / t — `notes/meetings/all-hands-archive.md`, `notes/daily/2026-10-05.md`
-  (command-specs.ts)
+  (catalog.ts)
 - `cursor.half_down` — Half page down — `notes/meetings/all-hands-archive.md`, `notes/daily/2026-10-05.md`
-  (command-specs.ts)
+  (catalog.ts)
 - `cursor.half_up` — Half page up — `notes/meetings/all-hands-archive.md`, `notes/daily/2026-10-05.md`
-  (command-specs.ts)
-- `cursor.page_down` — Page down — `notes/meetings/all-hands-archive.md`, `notes/daily/2026-10-05.md` (command-specs.ts)
-- `cursor.page_up` — Page up — `notes/meetings/all-hands-archive.md`, `notes/daily/2026-10-05.md` (command-specs.ts)
+  (catalog.ts)
+- `cursor.page_down` — Page down — `notes/meetings/all-hands-archive.md`, `notes/daily/2026-10-05.md` (catalog.ts)
+- `cursor.page_up` — Page up — `notes/meetings/all-hands-archive.md`, `notes/daily/2026-10-05.md` (catalog.ts)
 - `cursor.screen_top` — Top of the screen — `notes/meetings/all-hands-archive.md`, `notes/daily/2026-10-05.md`
-  (command-specs.ts)
+  (catalog.ts)
 - `cursor.screen_middle` — Middle of the screen — `notes/meetings/all-hands-archive.md`, `notes/daily/2026-10-05.md`
-  (command-specs.ts)
+  (catalog.ts)
 - `cursor.screen_bottom` — Bottom of the screen — `notes/meetings/all-hands-archive.md`, `notes/daily/2026-10-05.md`
-  (command-specs.ts)
+  (catalog.ts)
 - `cursor.match_bracket` — To the matching bracket — `work/kestrel/src/sync/queue.ts`,
-  `work/kestrel/api/kestrel_api/sync.py` (command-specs.ts)
+  `work/kestrel/api/kestrel_api/sync.py` (catalog.ts)
 - `cursor.goto_line` — Go to line — `notes/meetings/all-hands-archive.md`, `notes/daily/2026-10-05.md`
-  (command-specs.ts)
+  (catalog.ts)
 
 ### scroll
 
-- `scroll.center` — Cursor's line to the middle — `notes/meetings/all-hands-archive.md` (command-specs.ts)
-- `scroll.top` — Cursor's line to the top — `notes/meetings/all-hands-archive.md` (command-specs.ts)
-- `scroll.bottom` — Cursor's line to the bottom — `notes/meetings/all-hands-archive.md` (command-specs.ts)
+- `scroll.center` — Cursor's line to the middle — `notes/meetings/all-hands-archive.md` (catalog.ts)
+- `scroll.top` — Cursor's line to the top — `notes/meetings/all-hands-archive.md` (catalog.ts)
+- `scroll.bottom` — Cursor's line to the bottom — `notes/meetings/all-hands-archive.md` (catalog.ts)
 
 ### picture
 
-- `picture.size` — Picture at its own size, or fitted — `work/product/releases/2.3-notes.md` (command-specs.ts)
-- `picture.scroll_left` — Scroll the picture left — `work/product/releases/2.3-notes.md` (command-specs.ts)
-- `picture.scroll_right` — Scroll the picture right — `work/product/releases/2.3-notes.md` (command-specs.ts)
+- `picture.size` — Picture at its own size, or fitted — `work/product/releases/2.3-notes.md` (catalog.ts)
+- `picture.scroll_left` — Scroll the picture left — `work/product/releases/2.3-notes.md` (catalog.ts)
+- `picture.scroll_right` — Scroll the picture right — `work/product/releases/2.3-notes.md` (catalog.ts)
 
 ### visual
 
 - `visual.char` — Visual mode (characters) — `notes/daily/2026-09-22.md`, `notes/projects/kestrel-v2-3.md`
-  (command-specs.ts)
-- `visual.line` — Visual mode (rows) — `notes/daily/2026-09-22.md`, `notes/projects/kestrel-v2-3.md` (command-specs.ts)
-- `visual.swap` — Swap selection ends — `notes/daily/2026-09-22.md`, `notes/projects/kestrel-v2-3.md` (command-specs.ts)
+  (catalog.ts)
+- `visual.line` — Visual mode (rows) — `notes/daily/2026-09-22.md`, `notes/projects/kestrel-v2-3.md` (catalog.ts)
+- `visual.swap` — Swap selection ends — `notes/daily/2026-09-22.md`, `notes/projects/kestrel-v2-3.md` (catalog.ts)
 - `visual.yank` — Copy selection and leave visual mode — `notes/daily/2026-09-22.md`, `notes/projects/kestrel-v2-3.md`
-  (command-specs.ts)
-- `visual.exit` — Leave visual mode — `notes/daily/2026-09-22.md`, `notes/projects/kestrel-v2-3.md` (command-specs.ts)
+  (catalog.ts)
+- `visual.exit` — Leave visual mode — `notes/daily/2026-09-22.md`, `notes/projects/kestrel-v2-3.md` (catalog.ts)
 - `visual.delete` — Delete the selection — `notes/daily/2026-09-22.md`, `notes/projects/kestrel-v2-3.md`
-  (command-specs.ts)
+  (catalog.ts)
 - `visual.change` — Change the selection — `notes/daily/2026-09-22.md`, `notes/projects/kestrel-v2-3.md`
-  (command-specs.ts)
+  (catalog.ts)
 - `visual.indent` — Indent the selection — `notes/daily/2026-09-22.md`, `notes/projects/kestrel-v2-3.md`
-  (command-specs.ts)
+  (catalog.ts)
 - `visual.outdent` — Outdent the selection — `notes/daily/2026-09-22.md`, `notes/projects/kestrel-v2-3.md`
-  (command-specs.ts)
+  (catalog.ts)
 - `visual.comment` — Comment or uncomment the selection — `work/kestrel/src/sync/queue.ts`, `notes/inbox.md`
-  (command-specs.ts)
+  (catalog.ts)
 
 ### app
 
-- `app.escape` — Cancel: selection, find highlights — `notes/index.md` (command-specs.ts)
-- `app.save_quit` — Save and quit — `notes/index.md` (command-specs.ts)
-- `app.quit_force` — Quit without saving — `notes/index.md` (command-specs.ts)
-- `app.quit` — Quit — `notes/index.md` (command-specs.ts)
-- `app.restart` — Restart slipbox — `notes/index.md` (command-specs.ts)
-- `app.upgrade` — Check for a newer slipbox — `notes/index.md` (command-specs.ts)
+- `app.escape` — Cancel: selection, find highlights — `notes/index.md` (catalog.ts)
+- `app.save_quit` — Save and quit — `notes/index.md` (catalog.ts)
+- `app.quit_force` — Quit without saving — `notes/index.md` (catalog.ts)
+- `app.quit` — Quit — `notes/index.md` (catalog.ts)
+- `app.restart` — Restart slipbox — `notes/index.md` (catalog.ts)
+- `app.upgrade` — Check for a newer slipbox — `notes/index.md` (catalog.ts)
 
 ### copy
 
 - `copy.smart` — Copy selection or cursor row — `work/kestrel/api/kestrel_api/sync.py`, `notes/daily/2026-09-22.md`
-  (command-specs.ts)
+  (catalog.ts)
 - `copy.selection` — Copy selection — `work/kestrel/api/kestrel_api/sync.py`, `notes/daily/2026-09-22.md`
-  (command-specs.ts)
-- `copy.path` — Copy note path — `work/kestrel/api/kestrel_api/sync.py`, `notes/daily/2026-09-22.md` (command-specs.ts)
+  (catalog.ts)
+- `copy.path` — Copy note path — `work/kestrel/api/kestrel_api/sync.py`, `notes/daily/2026-09-22.md` (catalog.ts)
 - `copy.ref` — Copy path:line of cursor row — `work/kestrel/api/kestrel_api/sync.py`, `notes/daily/2026-09-22.md`
-  (command-specs.ts)
+  (catalog.ts)
 - `copy.link` — Copy link target — `work/kestrel/api/kestrel_api/sync.py`, `notes/daily/2026-09-22.md`
-  (command-specs.ts)
+  (catalog.ts)
 
 ### link
 
-- `link.next` — Next link — `notes/research/link-styles.md`, `notes/projects/route-sharing.md` (command-specs.ts)
-- `link.prev` — Previous link — `notes/research/link-styles.md`, `notes/projects/route-sharing.md` (command-specs.ts)
-- `link.follow` — Follow link — `notes/research/link-styles.md`, `notes/projects/route-sharing.md` (command-specs.ts)
+- `link.next` — Next link — `notes/research/link-styles.md`, `notes/projects/route-sharing.md` (catalog.ts)
+- `link.prev` — Previous link — `notes/research/link-styles.md`, `notes/projects/route-sharing.md` (catalog.ts)
+- `link.follow` — Follow link — `notes/research/link-styles.md`, `notes/projects/route-sharing.md` (catalog.ts)
 - `link.follow_tab` — Follow link into a new tab — `notes/research/link-styles.md`, `notes/projects/route-sharing.md`
 - `link.follow_split` — Follow link into the split — `notes/research/link-styles.md`, `notes/projects/route-sharing.md`
-  (command-specs.ts)
+  (catalog.ts)
 - `link.insert` — Insert a link to a note… — `hobbies/cooking/Home.md`, `hobbies/cycling/202608151900-index.md`
-  (command-specs.ts; 21.5)
+  (catalog.ts; 21.5)
 - `link.go` — Go where the link leads — `notes/index.md`, `notes/meetings/2026-09-05-feedback-synthesis.md`
-  (command-specs.ts; VV-D7)
+  (catalog.ts; VV-D7)
 
 ### peek
 
 - `peek.go` — Go there — `notes/index.md`, `work/kestrel/docs/architecture.md`
-  (command-specs.ts; VV-D7)
+  (catalog.ts; VV-D7)
 - `peek.tab` — Keep the peek as a tab — `notes/index.md`, `work/kestrel/docs/architecture.md`
-  (command-specs.ts; VV-D7)
+  (catalog.ts; VV-D7)
 - `peek.fill` — Peek: fill the screen — `notes/index.md`, `work/kestrel/docs/architecture.md`
-  (command-specs.ts; VV-D7)
+  (catalog.ts; VV-D7)
 
 ### spell
 
 - `spell.next` — Next misspelt word — `notes/reading/okuma-notlari.md`, `notes/reading/maps-and-territories.md`
-  (command-specs.ts)
+  (catalog.ts)
 - `spell.prev` — Previous misspelt word — `notes/reading/okuma-notlari.md`, `notes/reading/maps-and-territories.md`
-  (command-specs.ts)
+  (catalog.ts)
 - `spell.suggest` — Spelling suggestions — `notes/reading/okuma-notlari.md`, `notes/reading/maps-and-territories.md`
-  (command-specs.ts)
+  (catalog.ts)
 - `spell.add` — Add the word to your words — `notes/reading/okuma-notlari.md`,
-  `notes/reading/maps-and-territories.md` (command-specs.ts)
+  `notes/reading/maps-and-territories.md` (catalog.ts)
 - `folders.open` — Vaults: go into one — `notes/.slipbox/config.toml`, `work/product/README.md`
-  (command-specs.ts; 21.10)
+  (catalog.ts; 21.10)
 - `folders.default` — Which copy a folder's links open — `notes/.slipbox/config.toml`,
-  `Downloads/notes-backup-2026-07/.slipbox/config.toml` (command-specs.ts; 21.10)
+  `Downloads/notes-backup-2026-07/.slipbox/config.toml` (catalog.ts; 21.10)
 - `folder.name` — Name this folder, as pointers name it — `hobbies/photography/.slipbox/config.toml`,
-  `work/product/README.md` (command-specs.ts; 21.10)
+  `work/product/README.md` (catalog.ts; 21.10)
 - `root.trust` — Trust this vault — `work/kestrel/eslint.config.js`, `work/kestrel/.vscode/settings.json`
-  (kestrel's ESLint and its .vscode settings run only once it's trusted; command-specs.ts, 23.x)
+  (kestrel's ESLint and its .vscode settings run only once it's trusted; catalog.ts, 23.x)
 - `root.untrust` — Stop trusting this vault — `work/kestrel/src/sync/retry.ts`,
   `work/infra/dotfiles/slipbox/config.toml` (its [trust] roots, which a config's trust wins over; 23.x)
 - `link.relink` — Relink after moves and renamed folders — `notes/research/link-styles.md`,
-  `notes/projects/route-sharing.md` (command-specs.ts)
+  `notes/projects/route-sharing.md` (catalog.ts)
 - `link.convert` — Convert links to plain paths — `notes/research/link-styles.md`, `notes/projects/route-sharing.md`
-  (command-specs.ts)
+  (catalog.ts)
 
 ### links
 
 - `links.open` — Links from this note — `notes/projects/sync-rewrite.md`, `notes/research/link-styles.md`
-  (command-specs.ts)
+  (catalog.ts)
 
 ### backlinks
 
 - `backlinks.open` — Backlinks: notes linking here — `notes/projects/sync-rewrite.md`, `notes/projects/route-sharing.md`
-  (command-specs.ts)
+  (catalog.ts)
 
 ### lsp
 
 Code with definitions, references and the errors its servers report.
 
 - `lsp.hover` — What's under the cursor — `work/kestrel/src/sync/queue.ts`, `work/kestrel/api/kestrel_api/sync.py`
-  (command-specs.ts)
+  (catalog.ts)
 - `lsp.definition` — Go to the definition — `work/kestrel/src/sync/queue.ts`, `work/kestrel/api/kestrel_api/sync.py`
-  (command-specs.ts)
+  (catalog.ts)
 - `lsp.references` — References — `work/kestrel/src/sync/queue.ts`, `work/kestrel/api/kestrel_api/sync.py`
-  (command-specs.ts)
+  (catalog.ts)
 - `lsp.type_definition` — Go to the type's definition — `work/kestrel/src/sync/queue.ts`,
-  `work/kestrel/tools/geodesic/geodesic.cpp` (command-specs.ts; 19.13)
+  `work/kestrel/tools/geodesic/geodesic.cpp` (catalog.ts; 19.13)
 - `lsp.implementation` — Go to the implementations — `work/kestrel/src/sync/queue.ts`,
-  `work/kestrel/tools/geodesic/geodesic.hpp` (command-specs.ts; 19.13)
+  `work/kestrel/tools/geodesic/geodesic.hpp` (catalog.ts; 19.13)
 - `lsp.rename` — Rename the symbol — `work/kestrel/src/sync/queue.ts`, `work/kestrel/api/kestrel_api/sync.py`
-  (command-specs.ts)
+  (catalog.ts)
 - `lsp.code_action` — Code actions — `work/kestrel/src/sync/queue.ts`, `work/kestrel/api/kestrel_api/sync.py`
-  (command-specs.ts)
+  (catalog.ts)
 - `lsp.format` — Format the file — `work/kestrel/src/sync/queue.ts`, `work/kestrel/api/kestrel_api/sync.py`
-  (command-specs.ts)
+  (catalog.ts)
 
 ### change
 
-- `change.prev` — Older change — `notes/projects/kestrel-v2-3.md`, `notes/daily/2026-10-06.md` (command-specs.ts)
-- `change.next` — Newer change — `notes/projects/kestrel-v2-3.md`, `notes/daily/2026-10-06.md` (command-specs.ts)
+- `change.prev` — Older change — `notes/projects/kestrel-v2-3.md`, `notes/daily/2026-10-06.md` (catalog.ts)
+- `change.next` — Newer change — `notes/projects/kestrel-v2-3.md`, `notes/daily/2026-10-06.md` (catalog.ts)
 
 ### edit
 
 Notes being written today: lists, tasks, tables, quotes, code to change.
 
 - `edit.move_line_up` — Move line up — `notes/daily/2026-10-06.md`, `notes/projects/kestrel-v2-3.md`,
-  `notes/daily/2026-10-05.md` (command-specs.ts)
+  `notes/daily/2026-10-05.md` (catalog.ts)
 - `edit.move_line_down` — Move line down — `notes/daily/2026-10-06.md`, `notes/projects/kestrel-v2-3.md`,
-  `notes/daily/2026-10-05.md` (command-specs.ts)
+  `notes/daily/2026-10-05.md` (catalog.ts)
 - `edit.insert_last` — Insert where you last did — `notes/daily/2026-10-06.md`, `notes/projects/kestrel-v2-3.md`,
-  `notes/daily/2026-10-05.md` (command-specs.ts)
+  `notes/daily/2026-10-05.md` (catalog.ts)
 - `edit.insert` — Insert before the cursor — `notes/daily/2026-10-06.md`, `notes/projects/kestrel-v2-3.md`,
-  `notes/daily/2026-10-05.md` (command-specs.ts)
+  `notes/daily/2026-10-05.md` (catalog.ts)
 - `edit.append` — Append after the cursor — `notes/daily/2026-10-06.md`, `notes/projects/kestrel-v2-3.md`,
-  `notes/daily/2026-10-05.md` (command-specs.ts)
+  `notes/daily/2026-10-05.md` (catalog.ts)
 - `edit.insert_line_start` — Insert at the line's start — `notes/daily/2026-10-06.md`, `notes/projects/kestrel-v2-3.md`,
-  `notes/daily/2026-10-05.md` (command-specs.ts)
+  `notes/daily/2026-10-05.md` (catalog.ts)
 - `edit.append_line_end` — Append at the line's end — `notes/daily/2026-10-06.md`, `notes/projects/kestrel-v2-3.md`,
-  `notes/daily/2026-10-05.md` (command-specs.ts)
+  `notes/daily/2026-10-05.md` (catalog.ts)
 - `edit.open_below` — Open a line below — `notes/daily/2026-10-06.md`, `notes/projects/kestrel-v2-3.md`,
-  `notes/daily/2026-10-05.md` (command-specs.ts)
+  `notes/daily/2026-10-05.md` (catalog.ts)
 - `edit.open_above` — Open a line above — `notes/daily/2026-10-06.md`, `notes/projects/kestrel-v2-3.md`,
-  `notes/daily/2026-10-05.md` (command-specs.ts)
+  `notes/daily/2026-10-05.md` (catalog.ts)
 - `edit.delete_char` — Delete the character — `notes/daily/2026-10-06.md`, `notes/projects/kestrel-v2-3.md`,
-  `notes/daily/2026-10-05.md` (command-specs.ts)
+  `notes/daily/2026-10-05.md` (catalog.ts)
 - `edit.op_delete` — Delete (operator) — `notes/daily/2026-10-06.md`, `notes/projects/kestrel-v2-3.md`,
-  `notes/daily/2026-10-05.md` (command-specs.ts)
+  `notes/daily/2026-10-05.md` (catalog.ts)
 - `edit.op_change` — Change (operator) — `notes/daily/2026-10-06.md`, `notes/projects/kestrel-v2-3.md`,
-  `notes/daily/2026-10-05.md` (command-specs.ts)
+  `notes/daily/2026-10-05.md` (catalog.ts)
 - `edit.op_yank` — Yank (operator) — `notes/daily/2026-10-06.md`, `notes/projects/kestrel-v2-3.md`,
-  `notes/daily/2026-10-05.md` (command-specs.ts)
+  `notes/daily/2026-10-05.md` (catalog.ts)
 - `edit.op_indent` — Indent (operator) — `notes/daily/2026-10-06.md`, `notes/projects/kestrel-v2-3.md`,
-  `notes/daily/2026-10-05.md` (command-specs.ts)
+  `notes/daily/2026-10-05.md` (catalog.ts)
 - `edit.op_outdent` — Outdent (operator) — `notes/daily/2026-10-06.md`, `notes/projects/kestrel-v2-3.md`,
-  `notes/daily/2026-10-05.md` (command-specs.ts)
+  `notes/daily/2026-10-05.md` (catalog.ts)
 - `edit.op_comment` — Comment or uncomment (operator) — `work/kestrel/src/sync/queue.ts`,
-  `work/kestrel/api/kestrel_api/sync.py`, `notes/inbox.md` (command-specs.ts)
+  `work/kestrel/api/kestrel_api/sync.py`, `notes/inbox.md` (catalog.ts)
 - `edit.comment_line` — Comment or uncomment the line — `work/kestrel/tools/greeter/greeter.go`,
-  `work/kestrel/kestrel.toml` (command-specs.ts)
+  `work/kestrel/kestrel.toml` (catalog.ts)
 - `edit.delete_to_end` — Delete to the line's end — `notes/daily/2026-10-06.md`, `notes/projects/kestrel-v2-3.md`,
-  `notes/daily/2026-10-05.md` (command-specs.ts)
+  `notes/daily/2026-10-05.md` (catalog.ts)
 - `edit.change_to_end` — Change to the line's end — `notes/daily/2026-10-06.md`, `notes/projects/kestrel-v2-3.md`,
-  `notes/daily/2026-10-05.md` (command-specs.ts)
+  `notes/daily/2026-10-05.md` (catalog.ts)
 - `edit.substitute` — Substitute the character — `notes/daily/2026-10-06.md`, `notes/projects/kestrel-v2-3.md`,
-  `notes/daily/2026-10-05.md` (command-specs.ts)
+  `notes/daily/2026-10-05.md` (catalog.ts)
 - `edit.substitute_line` — Substitute the line — `notes/daily/2026-10-06.md`, `notes/projects/kestrel-v2-3.md`,
-  `notes/daily/2026-10-05.md` (command-specs.ts)
+  `notes/daily/2026-10-05.md` (catalog.ts)
 - `edit.replace_char` — Replace the character — `notes/daily/2026-10-06.md`, `notes/projects/kestrel-v2-3.md`,
-  `notes/daily/2026-10-05.md` (command-specs.ts)
+  `notes/daily/2026-10-05.md` (catalog.ts)
 - `edit.join` — Join lines — `notes/daily/2026-10-06.md`, `notes/projects/kestrel-v2-3.md`, `notes/daily/2026-10-05.md`
-  (command-specs.ts)
+  (catalog.ts)
 - `edit.paste_after` — Put after — `notes/daily/2026-10-06.md`, `notes/projects/kestrel-v2-3.md`,
-  `notes/daily/2026-10-05.md` (command-specs.ts)
+  `notes/daily/2026-10-05.md` (catalog.ts)
 - `edit.paste_before` — Put before — `notes/daily/2026-10-06.md`, `notes/projects/kestrel-v2-3.md`,
-  `notes/daily/2026-10-05.md` (command-specs.ts)
+  `notes/daily/2026-10-05.md` (catalog.ts)
 - `edit.cut` — Cut — `notes/daily/2026-10-06.md`, `notes/projects/kestrel-v2-3.md`, `notes/daily/2026-10-05.md`
-  (command-specs.ts)
+  (catalog.ts)
 - `edit.paste` — Paste — `notes/daily/2026-10-06.md`, `notes/projects/kestrel-v2-3.md`, `notes/daily/2026-10-05.md`
-  (command-specs.ts)
+  (catalog.ts)
 - `edit.toggle_case` — Toggle case — `notes/daily/2026-10-06.md`, `notes/projects/kestrel-v2-3.md`,
-  `notes/daily/2026-10-05.md` (command-specs.ts)
+  `notes/daily/2026-10-05.md` (catalog.ts)
 - `edit.repeat` — Repeat the last change — `notes/daily/2026-10-06.md`, `notes/projects/kestrel-v2-3.md`,
-  `notes/daily/2026-10-05.md` (command-specs.ts)
+  `notes/daily/2026-10-05.md` (catalog.ts)
 - `edit.undo` — Undo — `notes/daily/2026-10-06.md`, `notes/projects/kestrel-v2-3.md`, `notes/daily/2026-10-05.md`
-  (command-specs.ts)
+  (catalog.ts)
 - `edit.redo` — Redo — `notes/daily/2026-10-06.md`, `notes/projects/kestrel-v2-3.md`, `notes/daily/2026-10-05.md`
-  (command-specs.ts)
+  (catalog.ts)
 
 ### history
 
-- `history.back` — Back — `notes/daily/2026-10-06.md`, `notes/index.md` (command-specs.ts)
-- `history.forward` — Forward — `notes/daily/2026-10-06.md`, `notes/index.md` (command-specs.ts)
-- `history.list` — History — `notes/daily/2026-10-06.md`, `notes/index.md` (command-specs.ts)
+- `history.back` — Back — `notes/daily/2026-10-06.md`, `notes/index.md` (catalog.ts)
+- `history.forward` — Forward — `notes/daily/2026-10-06.md`, `notes/index.md` (catalog.ts)
+- `history.list` — History — `notes/daily/2026-10-06.md`, `notes/index.md` (catalog.ts)
 
 ### window
 
 Three notes that belong side by side: the plan, its PRD, the architecture they rest on.
 
 - `window.split_side` — Split side by side — `notes/projects/route-sharing.md`, `work/product/prd/route-sharing.md`,
-  `work/kestrel/docs/architecture.md` (command-specs.ts)
+  `work/kestrel/docs/architecture.md` (catalog.ts)
 - `window.split_stacked` — Split stacked — `notes/projects/route-sharing.md`, `work/product/prd/route-sharing.md`,
-  `work/kestrel/docs/architecture.md` (command-specs.ts)
+  `work/kestrel/docs/architecture.md` (catalog.ts)
 - `window.focus_left` — Focus left — `notes/projects/route-sharing.md`, `work/product/prd/route-sharing.md`,
-  `work/kestrel/docs/architecture.md` (command-specs.ts)
+  `work/kestrel/docs/architecture.md` (catalog.ts)
 - `window.focus_down` — Focus down — `notes/projects/route-sharing.md`, `work/product/prd/route-sharing.md`,
-  `work/kestrel/docs/architecture.md` (command-specs.ts)
+  `work/kestrel/docs/architecture.md` (catalog.ts)
 - `window.focus_up` — Focus up — `notes/projects/route-sharing.md`, `work/product/prd/route-sharing.md`,
-  `work/kestrel/docs/architecture.md` (command-specs.ts)
+  `work/kestrel/docs/architecture.md` (catalog.ts)
 - `window.focus_right` — Focus right — `notes/projects/route-sharing.md`, `work/product/prd/route-sharing.md`,
-  `work/kestrel/docs/architecture.md` (command-specs.ts)
+  `work/kestrel/docs/architecture.md` (catalog.ts)
 - `window.other` — Other window — `notes/projects/route-sharing.md`, `work/product/prd/route-sharing.md`,
-  `work/kestrel/docs/architecture.md` (command-specs.ts)
+  `work/kestrel/docs/architecture.md` (catalog.ts)
 - `window.move_left` — Move window left — `notes/projects/route-sharing.md`, `work/product/prd/route-sharing.md`,
-  `work/kestrel/docs/architecture.md` (command-specs.ts)
+  `work/kestrel/docs/architecture.md` (catalog.ts)
 - `window.move_down` — Move window down — `notes/projects/route-sharing.md`, `work/product/prd/route-sharing.md`,
-  `work/kestrel/docs/architecture.md` (command-specs.ts)
+  `work/kestrel/docs/architecture.md` (catalog.ts)
 - `window.move_up` — Move window up — `notes/projects/route-sharing.md`, `work/product/prd/route-sharing.md`,
-  `work/kestrel/docs/architecture.md` (command-specs.ts)
+  `work/kestrel/docs/architecture.md` (catalog.ts)
 - `window.move_right` — Move window right — `notes/projects/route-sharing.md`, `work/product/prd/route-sharing.md`,
-  `work/kestrel/docs/architecture.md` (command-specs.ts)
+  `work/kestrel/docs/architecture.md` (catalog.ts)
 - `window.swap` — Swap windows — `notes/projects/route-sharing.md`, `work/product/prd/route-sharing.md`,
-  `work/kestrel/docs/architecture.md` (command-specs.ts)
+  `work/kestrel/docs/architecture.md` (catalog.ts)
 - `window.close` — Close window — `notes/projects/route-sharing.md`, `work/product/prd/route-sharing.md`,
-  `work/kestrel/docs/architecture.md` (command-specs.ts)
+  `work/kestrel/docs/architecture.md` (catalog.ts)
 - `window.close_or_quit` — Close window, quit on the last — `notes/projects/route-sharing.md`,
-  `work/product/prd/route-sharing.md`, `work/kestrel/docs/architecture.md` (command-specs.ts)
+  `work/product/prd/route-sharing.md`, `work/kestrel/docs/architecture.md` (catalog.ts)
 - `window.only` — Keep only this window — `notes/projects/route-sharing.md`, `work/product/prd/route-sharing.md`,
-  `work/kestrel/docs/architecture.md` (command-specs.ts)
+  `work/kestrel/docs/architecture.md` (catalog.ts)
 - `window.resize_mode` — Resize mode — `notes/projects/route-sharing.md`, `work/product/prd/route-sharing.md`,
-  `work/kestrel/docs/architecture.md` (command-specs.ts)
+  `work/kestrel/docs/architecture.md` (catalog.ts)
 - `window.equalize` — Equal window sizes — `notes/projects/route-sharing.md`, `work/product/prd/route-sharing.md`,
-  `work/kestrel/docs/architecture.md` (command-specs.ts)
+  `work/kestrel/docs/architecture.md` (catalog.ts)
 - `window.wider` — Wider — `notes/projects/route-sharing.md`, `work/product/prd/route-sharing.md`,
-  `work/kestrel/docs/architecture.md` (command-specs.ts)
+  `work/kestrel/docs/architecture.md` (catalog.ts)
 - `window.narrower` — Narrower — `notes/projects/route-sharing.md`, `work/product/prd/route-sharing.md`,
-  `work/kestrel/docs/architecture.md` (command-specs.ts)
+  `work/kestrel/docs/architecture.md` (catalog.ts)
 - `window.taller` — Taller — `notes/projects/route-sharing.md`, `work/product/prd/route-sharing.md`,
-  `work/kestrel/docs/architecture.md` (command-specs.ts)
+  `work/kestrel/docs/architecture.md` (catalog.ts)
 - `window.shorter` — Shorter — `notes/projects/route-sharing.md`, `work/product/prd/route-sharing.md`,
-  `work/kestrel/docs/architecture.md` (command-specs.ts)
+  `work/kestrel/docs/architecture.md` (catalog.ts)
 
 ### breadcrumb
 
 - `breadcrumb.path` — Heading path — `notes/meetings/all-hands-archive.md`, `work/kestrel/config/app.toml`
-  (command-specs.ts)
+  (catalog.ts)
 
 ### tab
 
 The same notes, one per tab.
 
 - `tab.new` — New tab with this note — `notes/projects/route-sharing.md`, `work/product/prd/route-sharing.md`,
-  `notes/index.md` (command-specs.ts)
+  `notes/index.md` (catalog.ts)
 - `tab.list` — Tabs — `notes/projects/route-sharing.md`, `work/product/prd/route-sharing.md`, `notes/index.md`
-  (command-specs.ts)
+  (catalog.ts)
 - `tab.next` — Next tab — `notes/projects/route-sharing.md`, `work/product/prd/route-sharing.md`, `notes/index.md`
-  (command-specs.ts)
+  (catalog.ts)
 - `tab.prev` — Previous tab — `notes/projects/route-sharing.md`, `work/product/prd/route-sharing.md`, `notes/index.md`
-  (command-specs.ts)
+  (catalog.ts)
 - `tab.goto` — Go to tab N — `notes/projects/route-sharing.md`, `work/product/prd/route-sharing.md`, `notes/index.md`
-  (command-specs.ts)
+  (catalog.ts)
 - `tab.move_left` — Move tab left — `notes/projects/route-sharing.md`, `work/product/prd/route-sharing.md`,
-  `notes/index.md` (command-specs.ts)
+  `notes/index.md` (catalog.ts)
 - `tab.move_right` — Move tab right — `notes/projects/route-sharing.md`, `work/product/prd/route-sharing.md`,
-  `notes/index.md` (command-specs.ts)
+  `notes/index.md` (catalog.ts)
 - `tab.close` — Close tab — `notes/projects/route-sharing.md`, `work/product/prd/route-sharing.md`, `notes/index.md`
-  (command-specs.ts)
+  (catalog.ts)
 - `tab.pin` — Pin or unpin tab — `notes/projects/route-sharing.md`, `work/product/prd/route-sharing.md`,
-  `notes/index.md` (command-specs.ts)
+  `notes/index.md` (catalog.ts)
 - `tab.close_others` — Close other tabs — `notes/projects/route-sharing.md`, `work/product/prd/route-sharing.md`,
-  `notes/index.md` (command-specs.ts)
+  `notes/index.md` (catalog.ts)
 - `tab.close_all` — Close all tabs — `notes/projects/route-sharing.md`, `work/product/prd/route-sharing.md`,
-  `notes/index.md` (command-specs.ts)
+  `notes/index.md` (catalog.ts)
 
 ### explorer
 
-- `explorer.cycle` — Explorer: open, focus, close — `notes/projects/`, `notes/index.md` (command-specs.ts)
-- `explorer.reveal` — Reveal note in explorer — `notes/projects/`, `notes/index.md` (command-specs.ts)
+- `explorer.cycle` — Explorer: open, focus, close — `notes/projects/`, `notes/index.md` (catalog.ts)
+- `explorer.reveal` — Reveal note in explorer — `notes/projects/`, `notes/index.md` (catalog.ts)
 - `explorer.toggle_hidden` — Show or hide hidden files — `work/kestrel/.github/`, `work/kestrel/.env.example`
-  (command-specs.ts)
+  (catalog.ts)
 
 ### outline
 
 - `outline.cycle` — Outline: open, focus, close — `notes/meetings/all-hands-archive.md`, `work/kestrel/config/app.toml`
-  (command-specs.ts)
+  (catalog.ts)
 - `outline.toggle` — Show or hide the outline — `notes/meetings/all-hands-archive.md`, `work/kestrel/config/app.toml`
-  (command-specs.ts)
+  (catalog.ts)
 - `outline.pick` — Find a heading in this note — `notes/meetings/all-hands-archive.md`, `work/kestrel/config/app.toml`
-  (command-specs.ts)
+  (catalog.ts)
 
 ### footnotes
 
-- `footnotes.cycle` — Footnotes: open, focus, close — `notes/reading/maps-and-territories.md` (command-specs.ts)
-- `footnotes.toggle` — Show or hide the footnotes — `notes/reading/maps-and-territories.md` (command-specs.ts)
+- `footnotes.cycle` — Footnotes: open, focus, close — `notes/reading/maps-and-territories.md` (catalog.ts)
+- `footnotes.toggle` — Show or hide the footnotes — `notes/reading/maps-and-territories.md` (catalog.ts)
 
 ### footnote
 
-- `footnote.add` — Add a footnote — `notes/reading/maps-and-territories.md` (command-specs.ts)
+- `footnote.add` — Add a footnote — `notes/reading/maps-and-territories.md` (catalog.ts)
 
 ### find
 
 - `find.open` — Find in note — `notes/meetings/all-hands-archive.md`, `work/kestrel/api/kestrel_api/sync.py`
-  (command-specs.ts)
+  (catalog.ts)
 - `find.replace` — Find and replace — `notes/meetings/all-hands-archive.md`, `work/kestrel/api/kestrel_api/sync.py`
-  (command-specs.ts)
+  (catalog.ts)
 - `find.vault` — Find in every note — `notes/meetings/all-hands-archive.md`, `work/kestrel/api/kestrel_api/sync.py`
-  (command-specs.ts)
+  (catalog.ts)
 - `find.replace_vault` — Replace in every note — `notes/meetings/all-hands-archive.md`,
-  `work/kestrel/api/kestrel_api/sync.py` (command-specs.ts)
+  `work/kestrel/api/kestrel_api/sync.py` (catalog.ts)
 
 ### git changes
 
-- `git.view` — The git panel: open, focus, close — `notes/index.md`, `work/kestrel/README.md` (command-specs.ts)
+- `git.view` — The git panel: open, focus, close — `notes/index.md`, `work/kestrel/README.md` (catalog.ts)
 - source control: sections, l on a file, s on a change, d asks, an untracked file to the trash, a, U, . —
   `work/kestrel/README.md`, `notes/index.md` (tui.md Source control (26.2); tests 'source control (26.2)')
-- `git.branches` — Branches — `notes/index.md`, `work/kestrel/README.md` (command-specs.ts)
+- `git.branches` — Branches — `notes/index.md`, `work/kestrel/README.md` (catalog.ts)
 - branches (space g o): one checked out, unsaved saved or kept first, a new one; git refusing over a change of yours —
   `work/kestrel/README.md` (tui.md Branches (26.5); tests 'branches (26.5)')
-- `git.blame` — Who changed this line — `notes/index.md`, `work/kestrel/README.md` (command-specs.ts)
-- `git.history` — This file's history — `notes/index.md`, `work/kestrel/README.md` (command-specs.ts)
+- `git.blame` — Who changed this line — `notes/index.md`, `work/kestrel/README.md` (catalog.ts)
+- `git.history` — This file's history — `notes/index.md`, `work/kestrel/README.md` (catalog.ts)
 - blame (space g b) a line, and one changed since; history (space g h) through a rename, a version read, its diff —
   `work/kestrel/README.md` (tui.md Blame and a file's history (26.4, 22.1); tests 'blame and a file's history')
-- `git.commit` — Commit — `notes/index.md`, `work/kestrel/README.md` (command-specs.ts)
-- `git.amend` — Amend the last commit — `notes/index.md`, `work/kestrel/README.md` (command-specs.ts)
+- `git.commit` — Commit — `notes/index.md`, `work/kestrel/README.md` (catalog.ts)
+- `git.amend` — Amend the last commit — `notes/index.md`, `work/kestrel/README.md` (catalog.ts)
 - commit from source control: c, the message's guide lines, ctrl+s; shift+c amends; not trusted: no hooks, not signed —
   `work/kestrel/README.md` (tui.md Commit (26.3); tests 'commit (26.3)')
-- `git.change_next` — Next change against what's staged — `notes/index.md`, `work/kestrel/README.md` (command-specs.ts)
+- `git.change_next` — Next change against what's staged — `notes/index.md`, `work/kestrel/README.md` (catalog.ts)
 - `git.change_prev` — Previous change against what's staged — `notes/index.md`, `work/kestrel/README.md`
-  (command-specs.ts)
-- `git.change_preview` — Preview the change — `notes/index.md`, `work/kestrel/README.md` (command-specs.ts)
-- `git.change_undo` — Undo the change — `notes/index.md`, `work/kestrel/README.md` (command-specs.ts)
+  (catalog.ts)
+- `git.change_preview` — Preview the change — `notes/index.md`, `work/kestrel/README.md` (catalog.ts)
+- `git.change_undo` — Undo the change — `notes/index.md`, `work/kestrel/README.md` (catalog.ts)
 - signs in the gutter for unsaved edits, ] c, space g p, space g r; an untracked file all added; staged, none —
   `work/kestrel/README.md`, `notes/index.md` (tui.md The working tree's changes (26.1); tests 'changes against what's
   staged, in the gutter')
@@ -2862,10 +2862,10 @@ The same notes, one per tab.
   numbers and without, in softer colours of their own (`git_sign_*`) — `work/kestrel/docs/sync.md` (tui.md The working
   tree's changes (26.1, D225); tests 'where [git] signs_at puts them'; terminal check 'the gutter's signs where [git]
   signs_at puts them')
-- `git.fetch` — Fetch — `work/kestrel/README.md`, `notes/index.md` (command-specs.ts)
-- `git.pull` — Pull — `work/kestrel/README.md`, `notes/index.md` (command-specs.ts)
-- `git.push` — Push — `work/kestrel/README.md`, `notes/index.md` (command-specs.ts)
-- `git.stash` — Stashes — `work/kestrel/docs/sync.md`, `notes/index.md` (command-specs.ts)
+- `git.fetch` — Fetch — `work/kestrel/README.md`, `notes/index.md` (catalog.ts)
+- `git.pull` — Pull — `work/kestrel/README.md`, `notes/index.md` (catalog.ts)
+- `git.push` — Push — `work/kestrel/README.md`, `notes/index.md` (catalog.ts)
+- `git.stash` — Stashes — `work/kestrel/docs/sync.md`, `notes/index.md` (catalog.ts)
 - kestrel's origin a bare repository in the check's folder: main pushed after the upstream's question, fetched (`↓1`),
   pulled fast-forward, an agent's commit (`↑1`) pushed, the pre-push hook not run while not trusted; a pull where both
   sides moved asked about, then merged; an edit stashed with a message and popped; a remote answering 401 failing at
@@ -2873,41 +2873,41 @@ The same notes, one per tab.
   and stash (26.6), Pull and rebase (GIT-D6); tests 'the remote's commands and stash (26.6)'; terminal checks 'push,
   fetch and pull against a bare repository', 'a pull where both sides moved', 'stash', 'a remote that asks for a
   password')
-- `git.review` — Review the changes — `work/kestrel/README.md`, `work/kestrel/docs/sync.md` (command-specs.ts)
-- `git.review_keep` — Keep this change (review) — `work/kestrel/README.md` (command-specs.ts)
-- `git.review_revert` — Revert this change (review) — `work/kestrel/docs/architecture.md` (command-specs.ts)
-- `git.review_note` — Note this change for the agent (review) — `work/kestrel/docs/sync.md` (command-specs.ts)
-- `git.review_next` — Next change (review) — `work/kestrel/README.md` (command-specs.ts)
-- `git.review_prev` — Previous change (review) — `work/kestrel/README.md` (command-specs.ts)
-- `git.review_go` — Go to the change (review) — `work/kestrel/docs/sync.md` (command-specs.ts)
+- `git.review` — Review the changes — `work/kestrel/README.md`, `work/kestrel/docs/sync.md` (catalog.ts)
+- `git.review_keep` — Keep this change (review) — `work/kestrel/README.md` (catalog.ts)
+- `git.review_revert` — Revert this change (review) — `work/kestrel/docs/architecture.md` (catalog.ts)
+- `git.review_note` — Note this change for the agent (review) — `work/kestrel/docs/sync.md` (catalog.ts)
+- `git.review_next` — Next change (review) — `work/kestrel/README.md` (catalog.ts)
+- `git.review_prev` — Previous change (review) — `work/kestrel/README.md` (catalog.ts)
+- `git.review_go` — Go to the change (review) — `work/kestrel/docs/sync.md` (catalog.ts)
 - an agent's changes to three of kestrel's files reviewed among the working tree's others (`.editorconfig`, the
   untracked `docs/plan.md`): `n` and `p` through them; one kept (staged), one reverted (as staged, saved), one noted for
   the agent (the scratch, `space s y`); `esc`'s summary; `enter` to a change in its file; a file with unsaved typing
   skipped — `work/kestrel/README.md`, `work/kestrel/docs/architecture.md`, `work/kestrel/docs/sync.md` (GIT's design.md
   Reviewing a change (GIT-D3); tests 'reviewing a change (GIT-D3)')
-- `git.merge_screen` — Settle the conflicts — `work/kestrel/docs/release-notes/2.3.md` (command-specs.ts)
-- `git.merge_ours` — Take yours (merge screen) — `work/kestrel/docs/release-notes/2.3.md` (command-specs.ts)
-- `git.merge_theirs` — Take theirs (merge screen) — `work/kestrel/docs/release-notes/2.3.md` (command-specs.ts)
+- `git.merge_screen` — Settle the conflicts — `work/kestrel/docs/release-notes/2.3.md` (catalog.ts)
+- `git.merge_ours` — Take yours (merge screen) — `work/kestrel/docs/release-notes/2.3.md` (catalog.ts)
+- `git.merge_theirs` — Take theirs (merge screen) — `work/kestrel/docs/release-notes/2.3.md` (catalog.ts)
 - `git.merge_both` — Take both, yours first (merge screen) — `work/kestrel/docs/release-notes/2.3.md`
-  (command-specs.ts)
+  (catalog.ts)
 - `git.merge_both_theirs` — Take both, theirs first (merge screen) — `work/kestrel/docs/release-notes/2.3.md`
-  (command-specs.ts)
-- `git.merge_edit` — Edit in the lens (merge screen) — `work/kestrel/docs/release-notes/2.3.md` (command-specs.ts)
+  (catalog.ts)
+- `git.merge_edit` — Edit in the lens (merge screen) — `work/kestrel/docs/release-notes/2.3.md` (catalog.ts)
 - `git.merge_agent` — Send the conflict to the agent (merge screen) — `work/kestrel/docs/release-notes/2.3.md`
-  (command-specs.ts)
-- `git.merge_next` — Next conflict (merge screen) — `work/kestrel/docs/release-notes/2.3.md` (command-specs.ts)
-- `git.merge_prev` — Previous conflict (merge screen) — `work/kestrel/docs/release-notes/2.3.md` (command-specs.ts)
-- `git.merge_save` — Save the merged file (merge screen) — `work/kestrel/docs/release-notes/2.3.md` (command-specs.ts)
+  (catalog.ts)
+- `git.merge_next` — Next conflict (merge screen) — `work/kestrel/docs/release-notes/2.3.md` (catalog.ts)
+- `git.merge_prev` — Previous conflict (merge screen) — `work/kestrel/docs/release-notes/2.3.md` (catalog.ts)
+- `git.merge_save` — Save the merged file (merge screen) — `work/kestrel/docs/release-notes/2.3.md` (catalog.ts)
 - `git.merge_stage` — Stage the merged file (merge screen) — `work/kestrel/docs/release-notes/2.3.md`
-  (command-specs.ts)
+  (catalog.ts)
 - jo/release-notes-wording merged into main, a commit more on each side: two conflicts in the release notes, each one's
   base from git's index; both either way, yours, `a` to the agent, `e` into the lens and `:resolve` back, theirs;
   saved, staged, the merge concluded from source control — `work/kestrel/docs/release-notes/2.3.md` (GIT's design.md
   The merge screen (GIT-D5); tests 'the merge screen (GIT-D5)')
-- `git.rebase` — Rebase onto the base — `work/kestrel/src/sync/retry.ts` (command-specs.ts)
-- `git.continue` — Continue the merge or rebase — `work/kestrel/src/sync/retry.ts` (command-specs.ts)
-- `git.skip` — Skip this commit (rebase) — `work/kestrel/src/sync/retry.ts` (command-specs.ts)
-- `git.abort` — Abort the merge or rebase — `work/kestrel/src/sync/retry.ts` (command-specs.ts)
+- `git.rebase` — Rebase onto the base — `work/kestrel/src/sync/retry.ts` (catalog.ts)
+- `git.continue` — Continue the merge or rebase — `work/kestrel/src/sync/retry.ts` (catalog.ts)
+- `git.skip` — Skip this commit (rebase) — `work/kestrel/src/sync/retry.ts` (catalog.ts)
+- `git.abort` — Abort the merge or rebase — `work/kestrel/src/sync/retry.ts` (catalog.ts)
 - the agent's worktree (agent/sync-retry) rebased onto main, main having changed a line of `src/sync/retry.ts` its
   first commit changed: stopped there, the merge screen, `rebasing 1/2` on the top bar, theirs taken, continued;
   aborted, the branch as it was; the conflicting commit skipped — `work/kestrel/src/sync/retry.ts` (GIT's design.md Pull
@@ -2915,34 +2915,34 @@ The same notes, one per tab.
 
 ### shell
 
-- `shell.run` — Run a command — `notes/index.md`, `work/kestrel/README.md` (command-specs.ts)
+- `shell.run` — Run a command — `notes/index.md`, `work/kestrel/README.md` (catalog.ts)
 - `shell.filter` — Filter lines through a command — `notes/reading/list.md`, `work/kestrel/config/app.toml`
-  (command-specs.ts)
-- `shell.stop` — Stop the running command — `notes/index.md`, `work/kestrel/README.md` (command-specs.ts)
+  (catalog.ts)
+- `shell.stop` — Stop the running command — `notes/index.md`, `work/kestrel/README.md` (catalog.ts)
 - :!grep -n then enter on a path:line; :'<,'>!sort on a list; :%!column -t on a table; a folder's key bound to
   shell.run dropped — `notes/reading/list.md`, `work/kestrel/README.md` (keymap.md Your shell (25.7); tests 'commands
   run by your shell')
 - `find.substitute` — Substitute: s/old/new/ — `notes/meetings/all-hands-archive.md`,
-  `work/kestrel/api/kestrel_api/sync.py` (command-specs.ts)
+  `work/kestrel/api/kestrel_api/sync.py` (catalog.ts)
 - `find.next` — Next match — `notes/meetings/all-hands-archive.md`, `work/kestrel/api/kestrel_api/sync.py`
-  (command-specs.ts)
+  (catalog.ts)
 - `find.prev` — Previous match — `notes/meetings/all-hands-archive.md`, `work/kestrel/api/kestrel_api/sync.py`
-  (command-specs.ts)
+  (catalog.ts)
 - `find.word_next` — Find the word under the cursor — `notes/meetings/all-hands-archive.md`,
-  `work/kestrel/api/kestrel_api/sync.py` (command-specs.ts)
+  `work/kestrel/api/kestrel_api/sync.py` (catalog.ts)
 - `find.word_prev` — Find the word under the cursor, backward — `notes/meetings/all-hands-archive.md`,
-  `work/kestrel/api/kestrel_api/sync.py` (command-specs.ts)
+  `work/kestrel/api/kestrel_api/sync.py` (catalog.ts)
 - `find.clear` — Clear find highlights — `notes/meetings/all-hands-archive.md`, `work/kestrel/api/kestrel_api/sync.py`
-  (command-specs.ts)
+  (catalog.ts)
 
 ### git
 
 - `git.changes` — Changed on this branch — `work/kestrel/docs/architecture.md`, `work/product/prd/route-sharing.md`
-  (command-specs.ts)
+  (catalog.ts)
 - `git.diff` — Diff this note against the base — `work/kestrel/docs/architecture.md`,
-  `work/product/prd/route-sharing.md` (command-specs.ts)
+  `work/product/prd/route-sharing.md` (catalog.ts)
 - `git.diff_view` — Switch the diff: its blocks before and after, or its lines — `work/kestrel/docs/sync.md`,
-  `notes/index.md` (command-specs.ts)
+  `notes/index.md` (catalog.ts)
 - a note's diff as its blocks before and after: a reworded sentence's paragraph in a `before` and an `after` frame,
   only its changed words marked, its line breaks moved no change; a list item, a table's row, a heading, a code block;
   a block added or removed whole once; `tab` its lines and back; `[git] diff` — `work/kestrel/docs/sync.md` (GIT's
@@ -2952,230 +2952,230 @@ The same notes, one per tab.
   unified narrower; `[git] diff_layout` — `work/kestrel/src/sync/retry.ts` (GIT's design.md Side by side (GIT-D7);
   tests 'a code file's diff side by side', 'the diff window')
 - `git.worktrees` — Open in another worktree — `work/kestrel/docs/architecture.md`, `work/product/prd/route-sharing.md`
-  (command-specs.ts)
+  (catalog.ts)
 - `git.merge_review` — Review a merge's links — `work/kestrel/docs/architecture.md`, `work/product/prd/route-sharing.md`
-  (command-specs.ts)
+  (catalog.ts)
 
 ### search
 
-- `search.open` — Search here — `notes/index.md`, `notes/meetings/all-hands-archive.md` (command-specs.ts)
+- `search.open` — Search here — `notes/index.md`, `notes/meetings/all-hands-archive.md` (catalog.ts)
 
 ### task
 
-- `task.toggle` — Toggle task — `notes/daily/2026-10-05.md`, `notes/projects/brevet-300.md` (command-specs.ts)
+- `task.toggle` — Toggle task — `notes/daily/2026-10-05.md`, `notes/projects/brevet-300.md` (catalog.ts)
 
 ### note
 
-- `note.save` — Save — `notes/inbox.md`, `notes/projects/home-office.md`, `notes/projects/` (command-specs.ts)
-- `note.save_all` — Save all — `notes/inbox.md`, `notes/projects/home-office.md`, `notes/projects/` (command-specs.ts)
+- `note.save` — Save — `notes/inbox.md`, `notes/projects/home-office.md`, `notes/projects/` (catalog.ts)
+- `note.save_all` — Save all — `notes/inbox.md`, `notes/projects/home-office.md`, `notes/projects/` (catalog.ts)
 - `note.save_force` — Save over a changed file — `notes/inbox.md`, `notes/projects/home-office.md`, `notes/projects/`
-  (command-specs.ts)
+  (catalog.ts)
 - `note.revert` — Reload, dropping changes — `notes/inbox.md`, `notes/projects/home-office.md`, `notes/projects/`
-  (command-specs.ts)
+  (catalog.ts)
 - `note.resolve` — Resolve a conflict with the file — `notes/inbox.md`, `notes/projects/home-office.md`,
-  `notes/projects/` (command-specs.ts)
-- `note.open` — Open a note — `notes/inbox.md`, `notes/projects/home-office.md`, `notes/projects/` (command-specs.ts)
-- `note.create` — New note — `notes/inbox.md`, `notes/projects/home-office.md`, `notes/projects/` (command-specs.ts)
+  `notes/projects/` (catalog.ts)
+- `note.open` — Open a note — `notes/inbox.md`, `notes/projects/home-office.md`, `notes/projects/` (catalog.ts)
+- `note.create` — New note — `notes/inbox.md`, `notes/projects/home-office.md`, `notes/projects/` (catalog.ts)
 - `note.reload` — Reload note from disk — `notes/inbox.md`, `notes/projects/home-office.md`, `notes/projects/`
-  (command-specs.ts)
+  (catalog.ts)
 - `note.edit` — Edit in your editor — `notes/inbox.md`, `notes/projects/home-office.md`, `notes/projects/`
-  (command-specs.ts)
+  (catalog.ts)
 - `note.send` — Send to your running editor — `notes/inbox.md`, `notes/projects/home-office.md`, `notes/projects/`
-  (command-specs.ts)
+  (catalog.ts)
 - `note.send_pick` — Choose the editor to send to — `notes/inbox.md`, `notes/projects/home-office.md`, `notes/projects/`
-  (command-specs.ts)
+  (catalog.ts)
 - `note.export` — Export the note: Word, PDF, HTML… — `notes/research/route-cost-models.md`,
-  `notes/projects/sync-rewrite.md` (command-specs.ts)
+  `notes/projects/sync-rewrite.md` (catalog.ts)
 - `note.export_many` — Export notes as one document… — `notes/projects/sync-rewrite.md`,
-  `notes/projects/route-sharing.md` (command-specs.ts)
+  `notes/projects/route-sharing.md` (catalog.ts)
 - `note.export_cancel` — Cancel export — `notes/projects/sync-rewrite.md`, `notes/research/route-cost-models.md`
-  (command-specs.ts)
+  (catalog.ts)
 - `note.info` — Info: open, focus, close — `notes/inbox.md`, `notes/projects/home-office.md`, `notes/projects/`
-  (command-specs.ts)
+  (catalog.ts)
 - `note.properties` — Edit the properties — `notes/inbox.md`, `notes/projects/home-office.md`, `notes/projects/`
-  (command-specs.ts)
+  (catalog.ts)
 - `note.delete` — Delete the note — `notes/inbox.md`, `notes/projects/home-office.md`, `notes/projects/`
-  (command-specs.ts)
+  (catalog.ts)
 - `note.copy` — Duplicate the note — `notes/inbox.md`, `notes/projects/home-office.md`, `notes/projects/`
-  (command-specs.ts)
+  (catalog.ts)
 - `note.move` — Move the note to a folder… — `notes/inbox.md`, `notes/projects/home-office.md`, `notes/projects/`
-  (command-specs.ts)
+  (catalog.ts)
 - `note.yank` — Copy the note, to paste — `notes/inbox.md`, `notes/projects/home-office.md`, `notes/projects/`
-  (command-specs.ts)
+  (catalog.ts)
 - `note.cut` — Cut the note, to paste — `notes/inbox.md`, `notes/projects/home-office.md`, `notes/projects/`
-  (command-specs.ts)
+  (catalog.ts)
 - `note.rename` — Rename or move the note — `notes/inbox.md`, `notes/projects/home-office.md`, `notes/projects/`
-  (command-specs.ts)
+  (catalog.ts)
 
 ### switcher
 
-- `switcher.open` — Quick switcher: find a note — `notes/index.md` (command-specs.ts)
+- `switcher.open` — Quick switcher: find a note — `notes/index.md` (catalog.ts)
 
 ### palette
 
-- `palette.open` — Command palette — `notes/index.md` (command-specs.ts)
+- `palette.open` — Command palette — `notes/index.md` (catalog.ts)
 
 ### ui
 
 - `ui.list` — UI settings — `work/kestrel/docs/qa/render-torture.md`, `notes/meetings/all-hands-archive.md`
-  (command-specs.ts)
+  (catalog.ts)
 - `ui.readable` — Readable width — `work/kestrel/docs/qa/render-torture.md`, `notes/meetings/all-hands-archive.md`
-  (command-specs.ts)
+  (catalog.ts)
 - `ui.zen` — Zen mode — `work/kestrel/docs/qa/render-torture.md`, `notes/meetings/all-hands-archive.md`
-  (command-specs.ts)
+  (catalog.ts)
 - `ui.cursorline` — Cursor-row highlight — `work/kestrel/docs/qa/render-torture.md`,
-  `notes/meetings/all-hands-archive.md` (command-specs.ts)
+  `notes/meetings/all-hands-archive.md` (catalog.ts)
 - `ui.line_numbers` — Line numbers — `work/kestrel/docs/qa/render-torture.md`, `notes/meetings/all-hands-archive.md`
-  (command-specs.ts)
+  (catalog.ts)
 - `ui.wrap` — Wrap long lines — `work/kestrel/docs/qa/render-torture.md`, `notes/meetings/all-hands-archive.md`
-  (command-specs.ts)
+  (catalog.ts)
 - `ui.window_header` — Window header — `work/kestrel/docs/qa/render-torture.md`, `notes/meetings/all-hands-archive.md`
-  (command-specs.ts)
+  (catalog.ts)
 - `ui.breadcrumb` — Breadcrumb — `work/kestrel/docs/qa/render-torture.md`, `notes/meetings/all-hands-archive.md`
-  (command-specs.ts)
-  (command-specs.ts)
+  (catalog.ts)
+  (catalog.ts)
 - `ui.problems_bar` — Problems bar — `work/kestrel/docs/qa/render-torture.md`, `notes/meetings/all-hands-archive.md`
-  (command-specs.ts)
-- `ui.spell` — Spelling — `notes/reading/okuma-notlari.md`, `notes/reading/maps-and-territories.md` (command-specs.ts)
+  (catalog.ts)
+- `ui.spell` — Spelling — `notes/reading/okuma-notlari.md`, `notes/reading/maps-and-territories.md` (catalog.ts)
 - `ui.problem_marks` — Problems marked in the text — `work/kestrel/docs/qa/render-torture.md`,
-  `notes/meetings/all-hands-archive.md` (command-specs.ts)
+  `notes/meetings/all-hands-archive.md` (catalog.ts)
 - `ui.urls` — Show link URLs — `work/kestrel/docs/qa/render-torture.md`, `notes/meetings/all-hands-archive.md`
-  (command-specs.ts)
+  (catalog.ts)
 - `ui.mouse` — Mouse — `work/kestrel/docs/qa/render-torture.md`, `notes/meetings/all-hands-archive.md`
-  (command-specs.ts)
+  (catalog.ts)
 
 ### theme
 
-- `theme.pick` — Theme — `work/kestrel/docs/qa/theme-showcase.md` (command-specs.ts)
-- `theme.set` — Set theme — `work/kestrel/docs/qa/theme-showcase.md` (command-specs.ts)
+- `theme.pick` — Theme — `work/kestrel/docs/qa/theme-showcase.md` (catalog.ts)
+- `theme.set` — Set theme — `work/kestrel/docs/qa/theme-showcase.md` (catalog.ts)
 
 ### glyphs
 
 - `glyphs.pick` — Glyphs — `work/kestrel/docs/qa/theme-showcase.md`, `work/kestrel/docs/qa/render-torture.md`
-  (command-specs.ts)
+  (catalog.ts)
 - `glyphs.set` — Set glyphs — `work/kestrel/docs/qa/theme-showcase.md`, `work/kestrel/docs/qa/render-torture.md`
-  (command-specs.ts)
+  (catalog.ts)
 
 ### scratch
 
 - `scratch.open` — Open the scratch — `notes/daily/2026-09-22.md`, `work/kestrel/api/kestrel_api/sync.py`
-  (command-specs.ts)
+  (catalog.ts)
 - `scratch.add` — Add to the scratch — `notes/daily/2026-09-22.md`, `work/kestrel/api/kestrel_api/sync.py`
-  (command-specs.ts)
+  (catalog.ts)
 - `scratch.copy` — Copy the scratch — `notes/daily/2026-09-22.md`, `work/kestrel/api/kestrel_api/sync.py`
-  (command-specs.ts)
+  (catalog.ts)
 - `scratch.clear` — Clear the scratch — `notes/daily/2026-09-22.md`, `work/kestrel/api/kestrel_api/sync.py`
-  (command-specs.ts)
-- `scratch.open_right` — Open the scratch on the right — `notes/daily/2026-09-22.md` (command-specs.ts)
+  (catalog.ts)
+- `scratch.open_right` — Open the scratch on the right — `notes/daily/2026-09-22.md` (catalog.ts)
 - `ui.scratch_in` — Scratch: floating or on the right — `notes/daily/2026-09-22.md`, `notes/index.md`
-  (command-specs.ts)
+  (catalog.ts)
 
 ### context
 
-- `context.copy` — Copy the note's context for an agent — `notes/projects/sync-rewrite.md` (command-specs.ts)
+- `context.copy` — Copy the note's context for an agent — `notes/projects/sync-rewrite.md` (catalog.ts)
 
 ### folder
 
-- `folder.create` — New folder — `notes/projects/`, `notes/index.md` (command-specs.ts)
-- `folder.rename` — Rename the folder — `notes/projects/`, `notes/index.md` (command-specs.ts)
-- `folder.move` — Move the folder… — `notes/projects/`, `notes/index.md` (command-specs.ts)
-- `folder.delete` — Delete the folder — `notes/projects/`, `notes/index.md` (command-specs.ts)
-- `folder.yank` — Copy the folder, to paste — `notes/projects/`, `notes/index.md` (command-specs.ts)
-- `folder.cut` — Cut the folder, to paste — `notes/projects/`, `notes/index.md` (command-specs.ts)
-- `folder.paste` — Paste into the folder — `notes/projects/`, `notes/index.md` (command-specs.ts)
+- `folder.create` — New folder — `notes/projects/`, `notes/index.md` (catalog.ts)
+- `folder.rename` — Rename the folder — `notes/projects/`, `notes/index.md` (catalog.ts)
+- `folder.move` — Move the folder… — `notes/projects/`, `notes/index.md` (catalog.ts)
+- `folder.delete` — Delete the folder — `notes/projects/`, `notes/index.md` (catalog.ts)
+- `folder.yank` — Copy the folder, to paste — `notes/projects/`, `notes/index.md` (catalog.ts)
+- `folder.cut` — Cut the folder, to paste — `notes/projects/`, `notes/index.md` (catalog.ts)
+- `folder.paste` — Paste into the folder — `notes/projects/`, `notes/index.md` (catalog.ts)
 
 ### view
 
 - `view.source` — Source / rendered — `work/kestrel/docs/qa/render-torture.md`, `work/kestrel/docs/qa/theme-showcase.md`
-  (command-specs.ts)
+  (catalog.ts)
 - `view.live` — Lens / rendered — `work/kestrel/docs/qa/render-torture.md`, `work/kestrel/docs/qa/theme-showcase.md`
-  (command-specs.ts)
+  (catalog.ts)
 - `view.mode_read` — Read view — `work/kestrel/docs/qa/render-torture.md`, `work/kestrel/config/app.toml`
-  (command-specs.ts; the window header's Read)
+  (catalog.ts; the window header's Read)
 - `view.mode_lens` — Toggle lens — `work/kestrel/docs/qa/render-torture.md`, `work/kestrel/config/app.toml`
-  (command-specs.ts; the window header's Lens)
+  (catalog.ts; the window header's Lens)
 - `view.mode_source` — Source view — `work/kestrel/docs/qa/render-torture.md`, `work/kestrel/config/app.toml`
-  (command-specs.ts; the window header's Source)
+  (catalog.ts; the window header's Source)
 
 ### lens
 
 Wide tables and code blocks to edit in place.
 
 - `lens.grow` — Grow the lens — `work/kestrel/docs/qa/render-torture.md`, `notes/projects/kestrel-v2-3.md`
-  (command-specs.ts)
+  (catalog.ts)
 - `lens.shrink` — Shrink the lens — `work/kestrel/docs/qa/render-torture.md`, `notes/projects/kestrel-v2-3.md`
-  (command-specs.ts)
+  (catalog.ts)
 - `lens.reset` — Lens to its own size — `work/kestrel/docs/qa/render-torture.md`, `notes/projects/kestrel-v2-3.md`
-  (command-specs.ts)
+  (catalog.ts)
 
 ### info
 
 - `info.toggle` — Show or hide the Info — `notes/projects/kestrel-v2-3.md`, `work/kestrel/api/kestrel_api/sync.py`
-  (command-specs.ts)
+  (catalog.ts)
 
 ### vault
 
 - `vault.reindex` — Reindex the folder — `notes/index.md`, `hobbies/cooking/Home.md`, `hobbies/photography/index.md`
-  (command-specs.ts)
+  (catalog.ts)
 - `vault.info` — Folder info — `notes/index.md`, `hobbies/cooking/Home.md`, `hobbies/photography/index.md`
-  (command-specs.ts)
+  (catalog.ts)
 - `vault.unmake` — Take .slipbox/ away — `notes/index.md`, `hobbies/cooking/Home.md`, `hobbies/photography/index.md`
-  (command-specs.ts)
+  (catalog.ts)
 - `vault.init` — Give a folder .slipbox/ — `notes/index.md`, `hobbies/cooking/Home.md`, `hobbies/photography/index.md`
-  (command-specs.ts)
+  (catalog.ts)
 - `vault.links` — Symlinks you've answered — `notes/research/outside.md`, `.build/extras.toml` (its link to
-  /etc/hosts, answered when it's opened, then listed and forgotten; command-specs.ts, VV-D6)
+  /etc/hosts, answered when it's opened, then listed and forgotten; catalog.ts, VV-D6)
 
 ### trash
 
-- `trash.restore` — Restore the last deleted — `notes/inbox.md`, `notes/projects/` (command-specs.ts)
-- `trash.open` — The trash — `notes/inbox.md`, `notes/projects/` (command-specs.ts)
-- `trash.empty` — Empty the trash — `notes/inbox.md`, `notes/projects/` (command-specs.ts)
+- `trash.restore` — Restore the last deleted — `notes/inbox.md`, `notes/projects/` (catalog.ts)
+- `trash.open` — The trash — `notes/inbox.md`, `notes/projects/` (catalog.ts)
+- `trash.empty` — Empty the trash — `notes/inbox.md`, `notes/projects/` (catalog.ts)
 
 ### heading
 
 - `heading.rename` — Rename the heading — `notes/meetings/all-hands-archive.md`, `notes/projects/kestrel-v2-3.md`
-  (command-specs.ts)
+  (catalog.ts)
 
 ### rename
 
 - `rename.undo` — Undo the last rename — `notes/projects/route-sharing.md`, `work/kestrel/docs/architecture.md`
-  (command-specs.ts)
+  (catalog.ts)
 
 ### problems
 
 - `problems.show_all` — Problems: show all lint findings — `notes/research/link-styles.md`, `notes/index.md`
-  (command-specs.ts)
-- `problems.open` — Problems: open, focus, close — `notes/research/link-styles.md`, `notes/index.md` (command-specs.ts)
-- `cell.fold` — Fold or unfold the cell — `work/kestrel/src/routes/RouteMap.tsx`, `notes/index.md` (command-specs.ts)
-- `cell.edit` — Edit the cell — `work/kestrel/src/routes/RouteMap.tsx`, `notes/index.md` (command-specs.ts)
-- `cell.copy` — Copy the cell — `work/kestrel/api/kestrel_api/app.py`, `notes/index.md` (command-specs.ts)
+  (catalog.ts)
+- `problems.open` — Problems: open, focus, close — `notes/research/link-styles.md`, `notes/index.md` (catalog.ts)
+- `cell.fold` — Fold or unfold the cell — `work/kestrel/src/routes/RouteMap.tsx`, `notes/index.md` (catalog.ts)
+- `cell.edit` — Edit the cell — `work/kestrel/src/routes/RouteMap.tsx`, `notes/index.md` (catalog.ts)
+- `cell.copy` — Copy the cell — `work/kestrel/api/kestrel_api/app.py`, `notes/index.md` (catalog.ts)
 - `cell.references` — Where the cell's definition is used — `work/kestrel/src/routes/RouteMap.tsx`, `notes/index.md`
-  (command-specs.ts)
+  (catalog.ts)
 - `cell.problems` — The cell's problems — `work/kestrel/api/kestrel_api/half_written.py`, `notes/index.md`
-  (command-specs.ts)
+  (catalog.ts)
 - `cell.scratch` — Add the cell to the scratch — `work/kestrel/api/kestrel_api/app.py`, `notes/index.md`
-  (command-specs.ts)
+  (catalog.ts)
 - `cell.fold_unchanged` — Fold the cells that didn't change — `work/kestrel/src/sync/retry.ts`, `notes/index.md`
-  (command-specs.ts)
+  (catalog.ts)
 - `ui.code_cells` — Code cells: boxes or bands — `work/kestrel/src/routes/RouteMap.tsx`, `notes/index.md`
-  (command-specs.ts)
+  (catalog.ts)
 - `ui.code_wrap` — Code blocks: scroll or wrap — `notes/projects/sync-rewrite.md`,
-  `work/kestrel/docs/qa/render-torture.md` (command-specs.ts)
-- `problems.file` — This file's problems — `work/kestrel/src/routes/RouteMap.tsx`, `notes/index.md` (command-specs.ts)
+  `work/kestrel/docs/qa/render-torture.md` (catalog.ts)
+- `problems.file` — This file's problems — `work/kestrel/src/routes/RouteMap.tsx`, `notes/index.md` (catalog.ts)
 
 ### tag
 
-- `tag.list` — Tags — `notes/projects/kestrel-v2-3.md`, `notes/projects/brevet-300.md` (command-specs.ts)
+- `tag.list` — Tags — `notes/projects/kestrel-v2-3.md`, `notes/projects/brevet-300.md` (catalog.ts)
 
 ### types
 
 - `type.list` — Document types — `work/kestrel/docs/adr/0001-offline-first-sync.md`,
-  `notes/research/agent-skills/route-summary/SKILL.md` (command-specs.ts; 22.3)
+  `notes/research/agent-skills/route-summary/SKILL.md` (catalog.ts; 22.3)
 - `type.next` — Next of this type — `work/kestrel/docs/adr/0001-offline-first-sync.md`,
-  `work/kestrel/docs/adr/0002-route-engine-in-rust.md` (command-specs.ts; 22.3)
+  `work/kestrel/docs/adr/0002-route-engine-in-rust.md` (catalog.ts; 22.3)
 - `type.prev` — Previous of this type — `work/kestrel/docs/adr/0003-sharing-links.md`,
-  `work/kestrel/docs/adr/0004-retry-budget.md` (command-specs.ts; 22.3)
+  `work/kestrel/docs/adr/0004-retry-budget.md` (catalog.ts; 22.3)
 - an ADR's status from a `- Status:` list item, in number order — `work/kestrel/docs/adr/0004-retry-budget.md`
   (document-types.md; 22.3)
 - a skill whose frontmatter breaks its type's rules: `description` missing —
@@ -3184,17 +3184,17 @@ Wide tables and code blocks to edit in place.
 
 ### config
 
-- `config.reload` — Reload configuration — `notes/.slipbox/config.toml` (command-specs.ts)
+- `config.reload` — Reload configuration — `notes/.slipbox/config.toml` (catalog.ts)
 
 ### messages
 
-- `messages.open` — Messages — `notes/index.md` (command-specs.ts)
+- `messages.open` — Messages — `notes/index.md` (catalog.ts)
 
 ### help
 
-- `help.open` — All keys and commands — `notes/index.md` (command-specs.ts)
-- `help.report` — Report a problem — `notes/index.md` (command-specs.ts)
-- `help.report_send` — Send the report — `notes/index.md` (command-specs.ts)
+- `help.open` — All keys and commands — `notes/index.md` (catalog.ts)
+- `help.report` — Report a problem — `notes/index.md` (catalog.ts)
+- `help.report_send` — Send the report — `notes/index.md` (catalog.ts)
 
 - `git.focus` — Focus source control — `work/kestrel/docs/qa/render-torture.md`
 

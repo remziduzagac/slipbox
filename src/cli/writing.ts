@@ -19,7 +19,7 @@ import {
 } from "../core/footnotes.ts";
 import { parseNoteFile } from "../core/readers.ts";
 import { classify, extensionOf, isKnownExtension, noteFormat } from "../core/filetypes.ts";
-import { WriteRefused, writeNote } from "../core/fsutil.ts";
+import { WriteRefused, writeNote } from "../core/foundation/platform/fsutil.ts";
 import { blockingLink, writesThrough } from "../core/symlinks.ts";
 import { expandReplacement, firstPerLine, replaceMatches } from "../core/replace.ts";
 import { planReplaceLater } from "../core/replace-files.ts";

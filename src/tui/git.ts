@@ -4,7 +4,7 @@
 import { beginGitRead } from "./gitquery.ts";
 import { existsSync } from "node:fs";
 import { basename, join, posix, relative, sep } from "node:path";
-import { readText } from "../core/fsutil.ts";
+import { readText } from "../core/foundation/platform/fsutil.ts";
 import { baseFor, baseForLater } from "../core/gitbase.ts";
 import { startInsert } from "./editing.ts";
 import { fence, fenceLanguage } from "../core/capture.ts";
@@ -42,7 +42,7 @@ import { openDiff } from "./diffview.ts";
 import { checkoutAt, isInside, isVaultRoot, rootAt, rootMarkers } from "../core/vault.ts";
 import { isTrusted } from "../core/trust.ts";
 import type { Head } from "../core/vault-feed.ts";
-import { sanitize } from "../core/sanitize.ts";
+import { sanitize } from "../core/foundation/text/sanitize.ts";
 import { NoteBuffer } from "./buffer.ts";
 import type { App, View, Region } from "./app.ts";
 

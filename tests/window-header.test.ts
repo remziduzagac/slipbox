@@ -5,7 +5,7 @@
 import { describe, expect, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { commandGroup, COMMAND_SPECS } from "../src/core/command-specs.ts";
+import { commandGroup, COMMAND_SPECS } from "../src/core/application/commands/catalog.ts";
 import { TextCanvas } from "../src/tui/canvas.ts";
 import { BACKGROUND_PARSE } from "../src/tui/buffer.ts";
 import { crumbLeast, type Geometry } from "../src/tui/draw.ts";

@@ -10,7 +10,7 @@ import { type Checkout, checkoutOf, headOf } from "./git.ts";
 import { repoKey } from "./gitbase.ts";
 import type { Track } from "./gitremote.ts";
 import { type StatusEntry, statusLater } from "./gitstage.ts";
-import { type Config, DEFAULT_CONFIG } from "./config.ts";
+import { type Config, DEFAULT_CONFIG } from "./application/config/config.ts";
 import { busyFolderAt } from "./walk.ts";
 
 /** A repository found: its checkouts in the folder looked in, the main one first. */

@@ -22,7 +22,7 @@ import {
   type Scalar,
 } from "yaml";
 import { type HeadingInfo, slugify } from "./parse.ts";
-import { stringWidth } from "./width.ts";
+import { stringWidth } from "./foundation/text/width.ts";
 
 /** One key and its value, on source lines `position` (its comment lines above included). */
 export interface DataField {

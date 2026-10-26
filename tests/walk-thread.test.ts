@@ -15,7 +15,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { dirname, join } from "node:path";
-import { DEFAULT_CONFIG } from "../src/core/config.ts";
+import { DEFAULT_CONFIG } from "../src/core/application/config/config.ts";
 import { type HomeWalk, homeFilter, homeWalk, homeWalkFile, keepHomeWalk, walkHomeNow } from "../src/core/home.ts";
 import { probe, setLinkAnswer } from "../src/core/symlinks.ts";
 import { homeAt, setRootMarkers } from "../src/core/vault.ts";
@@ -558,7 +558,7 @@ describe("the TUI's walks on their own thread (T12, #9)", () => {
   });
 
   test("a tick waiting on the walk's thread writes nothing: the place kept only when it changed", async () => {
-    const fsutil = await import("../src/core/fsutil.ts");
+    const fsutil = await import("../src/core/foundation/platform/fsutil.ts");
     const { AutoIndex } = await import("../src/core/autoindex.ts");
     const home = tree({ "a.md": "# A\n", "slow/s.md": "# S\n" });
     const file = join(tree({}), "autoindex.json");

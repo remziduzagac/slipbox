@@ -4,9 +4,9 @@
 
 import { readdirSync, unlinkSync } from "node:fs";
 import { join } from "node:path";
-import { ensureDir, readJson, writeJson } from "./fsutil.ts";
-import { type Keyed, stateDir } from "./paths.ts";
-import { alive } from "./processes.ts";
+import { ensureDir, readJson, writeJson } from "./foundation/platform/fsutil.ts";
+import { type Keyed, stateDir } from "./foundation/platform/paths.ts";
+import { alive } from "./foundation/platform/processes.ts";
 
 interface StaleFile {
   pid: number;

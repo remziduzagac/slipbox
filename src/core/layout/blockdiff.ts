@@ -7,12 +7,19 @@
 // What changed that no line shows is a dim row.
 
 import type { Parents, PhrasingContent } from "mdast";
-import { type BlockDiff, type BlockItem, type BlockSide, blockText, headText, type NoteBlock } from "../blockdiff.ts";
+import {
+  type BlockDiff,
+  type BlockItem,
+  type BlockSide,
+  blockText,
+  headText,
+  type NoteBlock,
+} from "../foundation/text/blockdiff.ts";
 import type { Glyphs } from "../glyphs.ts";
 import { inRanges, type WordRange } from "../merge.ts";
-import { sanitize } from "../sanitize.ts";
+import { sanitize } from "../foundation/text/sanitize.ts";
 import type { Role } from "../theme/theme.ts";
-import { graphemes, graphemeWidth, stringWidth } from "../width.ts";
+import { graphemes, graphemeWidth, stringWidth } from "../foundation/text/width.ts";
 import type { WikiLink } from "../wikilink.ts";
 import { A_BOLD, A_ITALIC, A_STRIKE, type Layout, type Line, type Span } from "./ir.ts";
 

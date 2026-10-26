@@ -7,8 +7,8 @@
 import { existsSync, lstatSync, readdirSync, readFileSync, readlinkSync, realpathSync, rmSync } from "node:fs";
 import { join, sep } from "node:path";
 import { removeOwnedSkill, skillRemovalPlan, type SkillEnv } from "./skill-lifecycle.ts";
-import { atomicWrite } from "./fsutil.ts";
-import { type StoreKind, storeDir } from "./paths.ts";
+import { atomicWrite } from "./foundation/platform/fsutil.ts";
+import { type StoreKind, storeDir } from "./foundation/platform/paths.ts";
 
 export type Stores = Record<StoreKind, string>;
 

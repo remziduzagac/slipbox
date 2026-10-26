@@ -4,9 +4,9 @@
 
 import type { Nodes, Table, TableCell } from "mdast";
 import type { CellLink } from "../data.ts";
-import { expandTabs, sanitize } from "../sanitize.ts";
+import { expandTabs, sanitize } from "../foundation/text/sanitize.ts";
 import type { Role } from "../theme/theme.ts";
-import { stringWidth } from "../width.ts";
+import { stringWidth } from "../foundation/text/width.ts";
 import { A_BOLD, type Line, type Span } from "./ir.ts";
 import { allocate, PADDING } from "./table.ts";
 import { fit, longestWord, measure, naturalWidth, wrapSpans } from "./wrap.ts";

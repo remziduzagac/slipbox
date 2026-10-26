@@ -1,0 +1,415 @@
+{
+  "moves": {
+    "src/core/width.ts": "src/core/foundation/text/width.ts",
+    "src/core/sanitize.ts": "src/core/foundation/text/sanitize.ts",
+    "src/core/words.ts": "src/core/foundation/text/words.ts",
+    "src/core/myers.ts": "src/core/foundation/text/myers.ts",
+    "src/core/blockdiff.ts": "src/core/foundation/text/blockdiff.ts",
+    "src/core/fsutil.ts": "src/core/foundation/platform/fsutil.ts",
+    "src/core/paths.ts": "src/core/foundation/platform/paths.ts",
+    "src/core/processes.ts": "src/core/foundation/platform/processes.ts",
+    "src/core/shell.ts": "src/core/foundation/platform/shell.ts",
+    "src/core/tool-process.ts": "src/core/foundation/platform/tool-process.ts",
+    "src/core/libc.ts": "src/core/foundation/platform/libc.ts",
+    "src/core/wsl.ts": "src/core/foundation/platform/wsl.ts",
+    "src/core/sqlite.ts": "src/core/foundation/platform/sqlite.ts",
+    "src/core/browser.ts": "src/core/foundation/platform/browser.ts",
+    "src/core/clipboard.ts": "src/core/foundation/platform/clipboard.ts",
+    "src/core/lazy.ts": "src/core/foundation/platform/lazy.ts",
+    "src/core/worker-requests.ts": "src/core/foundation/workers/worker-requests.ts",
+    "src/core/worker-context.ts": "src/core/foundation/workers/worker-context.ts",
+    "src/core/workers.ts": "src/core/foundation/workers/url.ts",
+    "src/core/config.ts": "src/core/application/config/config.ts",
+    "src/core/command-specs.ts": "src/core/application/commands/catalog.ts",
+    "src/core/commands.ts": "src/core/application/commands/registry.ts",
+    "src/core/commands/editing.ts": "src/core/application/commands/areas/editing.ts",
+    "src/core/commands/files.ts": "src/core/application/commands/areas/files.ts",
+    "src/core/commands/git.ts": "src/core/application/commands/areas/git.ts",
+    "src/core/commands/motion.ts": "src/core/application/commands/areas/motion.ts",
+    "src/core/commands/ui.ts": "src/core/application/commands/areas/ui.ts",
+    "src/core/commands/windows.ts": "src/core/application/commands/areas/windows.ts",
+    "src/core/commands/contracts.ts": "src/core/application/commands/contracts.ts"
+  },
+  "retained": [
+    {
+      "file": "blueprint/decisions/roots-and-links.md",
+      "text": "src/core/fsutil",
+      "reason": "Historical decision or measured pre-move evidence; no runtime reference."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "src/core/fsutil",
+      "reason": "Historical decision or measured pre-move evidence; no runtime reference."
+    },
+    {
+      "file": "blueprint/workstreams/archive/reporting-a-problem/research.md",
+      "text": "src/core/clipboard",
+      "reason": "Historical decision or measured pre-move evidence; no runtime reference."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "src/core/lazy",
+      "reason": "Historical decision or measured pre-move evidence; no runtime reference."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "src/core/worker-requests",
+      "reason": "Historical decision or measured pre-move evidence; no runtime reference."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/design.md",
+      "text": "src/core/workers",
+      "reason": "Historical decision or measured pre-move evidence; no runtime reference."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "src/core/workers",
+      "reason": "Historical decision or measured pre-move evidence; no runtime reference."
+    },
+    {
+      "file": "blueprint/workstreams/archive/doc-findings/tasks/archive/exports-and-copies.md",
+      "text": "src/core/config",
+      "reason": "Historical decision or measured pre-move evidence; no runtime reference."
+    },
+    {
+      "file": "blueprint/workstreams/archive/doc-findings/tasks/archive/privacy-and-messages.md",
+      "text": "src/core/config",
+      "reason": "Historical decision or measured pre-move evidence; no runtime reference."
+    },
+    {
+      "file": "blueprint/workstreams/archive/doc-findings/tasks/archive/words-hover-clones-popups.md",
+      "text": "src/core/config",
+      "reason": "Historical decision or measured pre-move evidence; no runtime reference."
+    },
+    {
+      "file": "blueprint/workstreams/archive/user-docs/tasks/archive/configuration-chapter.md",
+      "text": "src/core/config",
+      "reason": "Historical decision or measured pre-move evidence; no runtime reference."
+    },
+    {
+      "file": "blueprint/workstreams/archive/user-docs/tasks/archive/editing-and-files.md",
+      "text": "src/core/config",
+      "reason": "Historical decision or measured pre-move evidence; no runtime reference."
+    },
+    {
+      "file": "blueprint/workstreams/archive/user-docs/tasks/archive/task-guides.md",
+      "text": "src/core/config",
+      "reason": "Historical decision or measured pre-move evidence; no runtime reference."
+    },
+    {
+      "file": "blueprint/workstreams/archive/window-header/tasks/archive/settings.md",
+      "text": "src/core/config",
+      "reason": "Historical decision or measured pre-move evidence; no runtime reference."
+    },
+    {
+      "file": "blueprint/workstreams/archive/workspaces/notes.md",
+      "text": "src/core/config",
+      "reason": "Historical decision or measured pre-move evidence; no runtime reference."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/design.md",
+      "text": "src/core/config",
+      "reason": "Historical decision or measured pre-move evidence; no runtime reference."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "src/core/config",
+      "reason": "Historical decision or measured pre-move evidence; no runtime reference."
+    },
+    {
+      "file": "blueprint/decisions/foundations.md",
+      "text": "src/core/command-specs",
+      "reason": "Historical decision or measured pre-move evidence; no runtime reference."
+    },
+    {
+      "file": "blueprint/workstreams/archive/doc-findings/tasks/archive/moves-and-trash.md",
+      "text": "src/core/command-specs",
+      "reason": "Historical decision or measured pre-move evidence; no runtime reference."
+    },
+    {
+      "file": "blueprint/workstreams/archive/doc-findings/tasks/archive/tui-fixes.md",
+      "text": "src/core/command-specs",
+      "reason": "Historical decision or measured pre-move evidence; no runtime reference."
+    },
+    {
+      "file": "blueprint/workstreams/archive/user-docs/requirements.md",
+      "text": "src/core/command-specs",
+      "reason": "Historical decision or measured pre-move evidence; no runtime reference."
+    },
+    {
+      "file": "blueprint/workstreams/archive/user-docs/tasks/archive/editing-and-files.md",
+      "text": "src/core/command-specs",
+      "reason": "Historical decision or measured pre-move evidence; no runtime reference."
+    },
+    {
+      "file": "blueprint/workstreams/archive/user-docs/tasks/archive/keys-chapter.md",
+      "text": "src/core/command-specs",
+      "reason": "Historical decision or measured pre-move evidence; no runtime reference."
+    },
+    {
+      "file": "blueprint/workstreams/archive/user-docs/tasks/archive/task-guides.md",
+      "text": "src/core/command-specs",
+      "reason": "Historical decision or measured pre-move evidence; no runtime reference."
+    },
+    {
+      "file": "blueprint/workstreams/archive/vaults-and-view/tasks/archive/words.md",
+      "text": "src/core/command-specs",
+      "reason": "Historical decision or measured pre-move evidence; no runtime reference."
+    },
+    {
+      "file": "blueprint/workstreams/archive/window-header/tasks/archive/commands.md",
+      "text": "src/core/command-specs",
+      "reason": "Historical decision or measured pre-move evidence; no runtime reference."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/tasks/01-contracts-and-gates.md",
+      "text": "src/core/command-specs",
+      "reason": "Historical decision or measured pre-move evidence; no runtime reference."
+    },
+    {
+      "file": "blueprint/decisions/foundations.md",
+      "text": "src/core/commands",
+      "reason": "Historical decision or measured pre-move evidence; no runtime reference."
+    },
+    {
+      "file": "blueprint/workstreams/archive/user-docs/tasks/archive/keys-chapter.md",
+      "text": "src/core/commands",
+      "reason": "Historical decision or measured pre-move evidence; no runtime reference."
+    },
+    {
+      "file": "blueprint/workstreams/archive/window-header/notes.md",
+      "text": "src/core/commands/files",
+      "reason": "Historical decision or measured pre-move evidence; no runtime reference."
+    },
+    {
+      "file": "blueprint/workstreams/archive/window-header/tasks/archive/commands.md",
+      "text": "src/core/commands/files",
+      "reason": "Historical decision or measured pre-move evidence; no runtime reference."
+    },
+    {
+      "file": "blueprint/workstreams/archive/workspaces/notes.md",
+      "text": "src/core/commands/files",
+      "reason": "Historical decision or measured pre-move evidence; no runtime reference."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "src/core/commands/files",
+      "reason": "Historical decision or measured pre-move evidence; no runtime reference."
+    },
+    {
+      "file": "blueprint/workstreams/archive/workspaces/notes.md",
+      "text": "src/core/commands/git",
+      "reason": "Historical decision or measured pre-move evidence; no runtime reference."
+    },
+    {
+      "file": "blueprint/workstreams/archive/picture-sizes/design.md",
+      "text": "src/core/commands/motion",
+      "reason": "Historical decision or measured pre-move evidence; no runtime reference."
+    },
+    {
+      "file": "blueprint/workstreams/archive/picture-sizes/tasks/archive/interaction.md",
+      "text": "src/core/commands/motion",
+      "reason": "Historical decision or measured pre-move evidence; no runtime reference."
+    },
+    {
+      "file": "blueprint/workstreams/archive/window-header/tasks/archive/settings.md",
+      "text": "src/core/commands/ui",
+      "reason": "Historical decision or measured pre-move evidence; no runtime reference."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/tasks/01-contracts-and-gates.md",
+      "text": "src/core/commands/contracts",
+      "reason": "Historical decision or measured pre-move evidence; no runtime reference."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/manifests/t2.json",
+      "text": "src/core/width",
+      "reason": "Reviewed move manifest and its old-path allowlist."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/manifests/t2.json",
+      "text": "src/core/sanitize",
+      "reason": "Reviewed move manifest and its old-path allowlist."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/manifests/t2.json",
+      "text": "src/core/words",
+      "reason": "Reviewed move manifest and its old-path allowlist."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/manifests/t2.json",
+      "text": "src/core/myers",
+      "reason": "Reviewed move manifest and its old-path allowlist."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/manifests/t2.json",
+      "text": "src/core/blockdiff",
+      "reason": "Reviewed move manifest and its old-path allowlist."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/manifests/t2.json",
+      "text": "src/core/fsutil",
+      "reason": "Reviewed move manifest and its old-path allowlist."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/manifests/t2.json",
+      "text": "src/core/paths",
+      "reason": "Reviewed move manifest and its old-path allowlist."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/manifests/t2.json",
+      "text": "src/core/processes",
+      "reason": "Reviewed move manifest and its old-path allowlist."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/manifests/t2.json",
+      "text": "src/core/shell",
+      "reason": "Reviewed move manifest and its old-path allowlist."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/manifests/t2.json",
+      "text": "src/core/tool-process",
+      "reason": "Reviewed move manifest and its old-path allowlist."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/manifests/t2.json",
+      "text": "src/core/libc",
+      "reason": "Reviewed move manifest and its old-path allowlist."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/manifests/t2.json",
+      "text": "src/core/wsl",
+      "reason": "Reviewed move manifest and its old-path allowlist."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/manifests/t2.json",
+      "text": "src/core/sqlite",
+      "reason": "Reviewed move manifest and its old-path allowlist."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/manifests/t2.json",
+      "text": "src/core/browser",
+      "reason": "Reviewed move manifest and its old-path allowlist."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/manifests/t2.json",
+      "text": "src/core/clipboard",
+      "reason": "Reviewed move manifest and its old-path allowlist."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/manifests/t2.json",
+      "text": "src/core/lazy",
+      "reason": "Reviewed move manifest and its old-path allowlist."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/manifests/t2.json",
+      "text": "src/core/worker-requests",
+      "reason": "Reviewed move manifest and its old-path allowlist."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/manifests/t2.json",
+      "text": "src/core/worker-context",
+      "reason": "Reviewed move manifest and its old-path allowlist."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/manifests/t2.json",
+      "text": "src/core/workers",
+      "reason": "Reviewed move manifest and its old-path allowlist."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/manifests/t2.json",
+      "text": "src/core/config",
+      "reason": "Reviewed move manifest and its old-path allowlist."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/manifests/t2.json",
+      "text": "src/core/command-specs",
+      "reason": "Reviewed move manifest and its old-path allowlist."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/manifests/t2.json",
+      "text": "src/core/commands",
+      "reason": "Reviewed move manifest and its old-path allowlist."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/manifests/t2.json",
+      "text": "src/core/commands/editing",
+      "reason": "Reviewed move manifest and its old-path allowlist."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/manifests/t2.json",
+      "text": "src/core/commands/files",
+      "reason": "Reviewed move manifest and its old-path allowlist."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/manifests/t2.json",
+      "text": "src/core/commands/git",
+      "reason": "Reviewed move manifest and its old-path allowlist."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/manifests/t2.json",
+      "text": "src/core/commands/motion",
+      "reason": "Reviewed move manifest and its old-path allowlist."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/manifests/t2.json",
+      "text": "src/core/commands/ui",
+      "reason": "Reviewed move manifest and its old-path allowlist."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/manifests/t2.json",
+      "text": "src/core/commands/windows",
+      "reason": "Reviewed move manifest and its old-path allowlist."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/manifests/t2.json",
+      "text": "src/core/commands/contracts",
+      "reason": "Reviewed move manifest and its old-path allowlist."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/manifests/t2.json",
+      "text": "command-specs.ts",
+      "reason": "Reviewed retired-basename policy in the move manifest."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/manifests/t2.json",
+      "text": "workers.ts",
+      "reason": "Reviewed retired-basename policy in the move manifest."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/manifests/t2.json",
+      "text": "commands.ts",
+      "reason": "Reviewed retired-basename policy in the move manifest."
+    },
+    {
+      "file": "blueprint/workstreams/archive/doc-findings/tasks/archive/privacy-and-messages.md",
+      "text": "command-specs.ts",
+      "reason": "Historical module name in an archived decision or task."
+    },
+    {
+      "file": "blueprint/workstreams/archive/terminal-tests/decisions.md",
+      "text": "command-specs.ts",
+      "reason": "Historical module name in an archived decision or task."
+    },
+    {
+      "file": "blueprint/workstreams/archive/terminal-tests/tasks/archive/coverage.md",
+      "text": "command-specs.ts",
+      "reason": "Historical module name in an archived decision or task."
+    },
+    {
+      "file": "blueprint/workstreams/archive/user-docs/tasks/archive/screen-and-reading.md",
+      "text": "command-specs.ts",
+      "reason": "Historical module name in an archived decision or task."
+    },
+    {
+      "file": "blueprint/decisions/editing.md",
+      "text": "workers.ts",
+      "reason": "Historical module name in an archived decision or task."
+    }
+  ],
+  "renamedBasenames": {
+    "command-specs.ts": "catalog.ts",
+    "workers.ts": "url.ts",
+    "commands.ts": "registry.ts"
+  }
+}

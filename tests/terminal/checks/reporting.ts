@@ -5,7 +5,7 @@
 import { chmodSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { type Check, HANDBOOK, leader } from "../check.ts";
-import { isWsl } from "../../../src/core/wsl.ts";
+import { isWsl } from "../../../src/core/foundation/platform/wsl.ts";
 import type { Session } from "../session.ts";
 
 /** The report's window's frame, on screen while it's open. */

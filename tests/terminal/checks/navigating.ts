@@ -3,7 +3,7 @@
 
 import { appendFileSync } from "node:fs";
 import { join } from "node:path";
-import { UNSAFE } from "../../../src/core/sanitize.ts";
+import { UNSAFE } from "../../../src/core/foundation/text/sanitize.ts";
 import { loadTheme } from "../../../src/core/theme/index.ts";
 import {
   type Check,

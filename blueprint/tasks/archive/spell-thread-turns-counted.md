@@ -78,7 +78,8 @@ that a busy machine can't fail and that still fails if the main thread is held w
   cursor, no marks, `] s` said "spelling: its dictionaries are loading"; the pipe fed from the shell, and only `kitpa`
   was marked (not in the code span). The first try held the pipe over 20 s: the thread's deadline ended the load,
   "spelling: tr's dictionary didn't load (worker request deadline exceeded)" was said, and the note was checked in
-  English alone, its Turkish words marked: as designed (`src/core/worker-requests.ts`, D232). A load that fails is
+  English alone, its Turkish words marked: as designed (`src/core/foundation/workers/worker-requests.ts`, D232). A load
+  that fails is
   now covered by a test (said once, the other languages still checking), by a read the thread fails on; the deadline
   itself and the thread started afresh are `tests/worker-requests.test.ts`'s. The saved spelling setting was put back
   off afterwards.

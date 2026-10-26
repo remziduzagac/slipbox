@@ -61,8 +61,8 @@ Since the big files were split, none is past it; a file that ever must be is cap
 
 A few modules to know first:
 
-- `core/command-specs.ts` (the list, from `core/commands/*.ts`) and `core/commands.ts`: every user action, by its id,
-  with its command-line equivalent.
+- `core/application/commands/catalog.ts` (the list, from `core/application/commands/areas/*.ts`) and
+  `core/application/commands/registry.ts`: every user action, by its id, with its command-line equivalent.
 - `core/graph.ts`: the notes of a root, their links and backlinks, parsed lazily and cached; how a link resolves is
   `graph-resolve.ts`'s, a note's entry from its text `graph-extract.ts`'s, their shapes `graph-types.ts`'s.
 - `core/rename.ts`: renames and moves as plans of byte-range edits, previewed first; a plan's shape is
@@ -71,18 +71,19 @@ A few modules to know first:
   TUI; `layout/render.ts` lays out its blocks, `render-inline.ts`, `render-table.ts` and `render-data.ts` the rest.
 - `cli/cli.ts`: the command line's dispatcher, its help and flags; each command's code is in its group's module, the
   session and the helpers they share in `cli/common.ts`.
-- `core/fsutil.ts`: atomic writes, and `writeNote`, which never writes outside the root.
-- `core/width.ts` and `core/sanitize.ts`: how wide text is, and text made safe for a terminal.
-- `core/paths.ts`: slipbox's own config, cache, state and data folders.
+- `core/foundation/platform/fsutil.ts`: atomic writes, and `writeNote`, which never writes outside the root.
+- `core/foundation/text/width.ts` and `core/foundation/text/sanitize.ts`: how wide text is, and text made safe for a
+  terminal.
+- `core/foundation/platform/paths.ts`: slipbox's own config, cache, state and data folders.
 
 ## Invariants
 
 What every change keeps. Each is checked by a test or a script where it can be.
 
 - **Every user action is a named command.** Its id and its command-line equivalent (or `null`, for a pure interaction)
-  are in `core/commands/*.ts`, by area; the TUI implements it in `tui/actions.ts` or the `tui/actions-*.ts` of its
-  area, all registered by `registerActions`. A command implemented without a spec, or specified without an
-  implementation, fails at start-up and fails a test.
+  are in `core/application/commands/areas/*.ts`, by area; the TUI implements it in `tui/actions.ts` or the
+  `tui/actions-*.ts` of its area, all registered by `registerActions`. A command implemented without a spec, or
+  specified without an implementation, fails at start-up and fails a test.
 - **Disk is the contract.** A command reads saved files only, writes atomically, and is never blocked by an open editor.
   The TUI takes a command's write as any program's: it reloads, or asks when the note has unsaved changes. It lists the
   notes it holds unsaved for commands to warn about (`core/stale.ts`): advice, never a lock.
@@ -90,8 +91,9 @@ What every change keeps. Each is checked by a test or a script where it can be.
   writes only its own state and cache, the scratch, and an export where the user said (`writeExport`, never over a
   note).
 - **Nothing is written outside a note's root,** and nothing at all into a folder by opening it. What slipbox keeps goes
-  into its own folders (`core/paths.ts`).
-- **Nothing measures text but `core/width.ts`,** and every string entering the layout passes through `sanitize`. The
+  into its own folders (`core/foundation/platform/paths.ts`).
+- **Nothing measures text but `core/foundation/text/width.ts`,** and every string entering the layout passes through
+  `sanitize`. The
   command line's human output is sanitised too.
 - **Rendering is pure.** A note's layout depends on its text, the width, the glyph set and a link resolver passed in,
   never on the terminal; the render tests hold every demo note to its width.

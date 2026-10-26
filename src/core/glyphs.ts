@@ -4,7 +4,7 @@
 // ASCII when the locale is not UTF-8 or on the Linux console; Nerd glyphs on terminals that
 // bundle the Nerd Font symbols as a fallback font (Ghostty, kitty, WezTerm); Unicode otherwise.
 
-import type { GlyphMode } from "./config.ts";
+import type { GlyphMode } from "./application/config/config.ts";
 
 export interface Glyphs {
   mode: Exclude<GlyphMode, "auto">;

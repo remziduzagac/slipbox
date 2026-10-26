@@ -3,7 +3,7 @@
 // `process.env` doesn't write to. So the switch is set through libc's own `setenv`, by FFI, first thing at start.
 // slipbox's one network call is the update check (D199); a crash still prints Bun's link, to file a report yourself.
 
-import { libc } from "./libc.ts";
+import { libc } from "./foundation/platform/libc.ts";
 
 /** The two variables Bun's crash handler reads: either one set by you is left as you set it. */
 export const CRASH_SWITCHES = ["BUN_ENABLE_CRASH_REPORTING", "BUN_CRASH_REPORT_URL"] as const;

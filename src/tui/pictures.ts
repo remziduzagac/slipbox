@@ -1,4 +1,4 @@
-import { copyImage } from "../core/clipboard.ts";
+import { copyImage } from "../core/foundation/platform/clipboard.ts";
 // Pictures in the TUI (12.x): what a note's images, diagrams and maths are drawn as for the terminal, the ones on
 // the internet fetched, and when they're drawn — held back while a view scrolls quickly (12.7).
 
@@ -9,7 +9,7 @@ import { extentOf, type Layout, type Picture } from "../core/layout/ir.ts";
 import type { PictureSource, RenderOptions } from "../core/layout/render.ts";
 import { type Rasterizer, rasterizer } from "../core/svg.ts";
 import { pictureLocator } from "../core/note.ts";
-import { cacheHome, ensureCacheHome } from "../core/paths.ts";
+import { cacheHome, ensureCacheHome } from "../core/foundation/platform/paths.ts";
 import { colorHex, type Role } from "../core/theme/index.ts";
 import { fitPicture, pictureSizes, RemoteImages, svgText } from "./images.ts";
 import type { App, View } from "./app.ts";

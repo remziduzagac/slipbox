@@ -2,9 +2,9 @@
 // (`listFolder`), with what the asking thread knows taken first. Apart from the walk's worker, and light — no index, no
 // parser — so one starts at once, and a fast folder's first listing comes before its row would say `listing…`.
 
-import type { Config } from "./config.ts";
+import type { Config } from "./application/config/config.ts";
 import { listFolder } from "./listing.ts";
-import { enterContext, type WalkContext } from "./worker-context.ts";
+import { enterContext, type WalkContext } from "./foundation/workers/worker-context.ts";
 
 declare const self: Worker;
 

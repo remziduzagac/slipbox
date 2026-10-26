@@ -6,7 +6,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { readFileSync, writeFileSync } from "node:fs";
 import { randomBytes } from "node:crypto";
 import { join } from "node:path";
-import { DEFAULT_CONFIG } from "../src/core/config.ts";
+import { DEFAULT_CONFIG } from "../src/core/application/config/config.ts";
 import { Graph } from "../src/core/graph.ts";
 import { noteChunks } from "../src/core/parse.ts";
 import { stopParsePool } from "../src/core/parse-pool.ts";

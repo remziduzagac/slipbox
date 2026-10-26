@@ -4,9 +4,9 @@
 import { existsSync, rmSync, statSync } from "node:fs";
 import { dirname, isAbsolute, join } from "node:path";
 import { catchUp, SearchIndex } from "../core/search.ts";
-import { loadConfig } from "../core/config.ts";
+import { loadConfig } from "../core/application/config/config.ts";
 import { Graph } from "../core/graph.ts";
-import { sanitize } from "../core/sanitize.ts";
+import { sanitize } from "../core/foundation/text/sanitize.ts";
 import { noteIndexed } from "../core/registry.ts";
 import { AutoIndex, autoIndexFile } from "../core/autoindex.ts";
 import { type Scope, SCOPES, searchScoped } from "../core/scope.ts";

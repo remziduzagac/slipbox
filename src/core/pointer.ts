@@ -8,7 +8,7 @@
 // has: the longest one that's there (`%2F` reads as a `/` too).
 
 import { join, relative, sep } from "node:path";
-import { climbsOut } from "./fsutil.ts";
+import { climbsOut } from "./foundation/platform/fsutil.ts";
 import { lookupFolder, type NamedFolder, readFolders } from "./folders.ts";
 import { checkoutOf, headOf } from "./git.ts";
 import { branchesOf, worktreeList } from "./gitops.ts";

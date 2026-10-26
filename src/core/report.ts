@@ -6,11 +6,11 @@
 import { readFileSync } from "node:fs";
 import { release as kernelRelease } from "node:os";
 import { type Channel, installedBy, readChannel } from "./install.ts";
-import { dataHome } from "./paths.ts";
+import { dataHome } from "./foundation/platform/paths.ts";
 import { RELEASE, type ReleaseBuild } from "./release.ts";
-import { sanitize } from "./sanitize.ts";
-import { truncate } from "./width.ts";
-import { isWsl } from "./wsl.ts";
+import { sanitize } from "./foundation/text/sanitize.ts";
+import { truncate } from "./foundation/text/width.ts";
+import { isWsl } from "./foundation/platform/wsl.ts";
 import { VERSION } from "../version.ts";
 
 /** Where reports go when this slipbox isn't a release that says (RPT-D7): slipbox's own repository. */

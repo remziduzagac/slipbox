@@ -1,11 +1,12 @@
 // slipbox in WSL (plan 14.12): Windows' own Linux, where the Linux release and its installer run as they are — the
 // way slipbox runs on Windows for now; native Windows is staged (14.14–14.17). What differs from other Linux: no X or
-// Wayland clipboard tool, but Windows' clip.exe and PowerShell (`core/clipboard.ts`); Windows' drives mounted under
+// Wayland clipboard tool, but Windows' clip.exe and PowerShell (`core/foundation/platform/clipboard.ts`); Windows'
+// drives mounted under
 // /mnt (9p, drvfs), where a change a Windows program makes raises no event; and Windows' fonts on its C: drive.
 
 import { existsSync, readFileSync, realpathSync } from "node:fs";
 import { join } from "node:path";
-import { parseProcMounts } from "./mounts.ts";
+import { parseProcMounts } from "../../mounts.ts";
 
 function read(file: string): string {
   try {

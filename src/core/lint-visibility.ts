@@ -1,6 +1,6 @@
 // Presentation of completed markdownlint findings; the linter's rules and original output stay intact.
 import type { Nodes, Root } from "mdast";
-import type { Config } from "./config.ts";
+import type { Config } from "./application/config/config.ts";
 import type { LintIssue } from "./lint.ts";
 
 export type HiddenReason = "lines the view wraps" | "table rows the view fits" | "rules in lint.ignore";

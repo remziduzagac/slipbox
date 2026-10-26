@@ -14,7 +14,7 @@ import { basename } from "node:path";
 import type { Blockquote, Image, Link, PhrasingContent, RootContent, Text } from "mdast";
 import { cachedImage } from "../imagecache.ts";
 import { loadMermaid, mermaidSvg, withMermaidBatch } from "../diagrams.ts";
-import { landsInside } from "../fsutil.ts";
+import { landsInside } from "../foundation/platform/fsutil.ts";
 import type { Graph } from "../graph.ts";
 import { embedder, pictureLocator } from "../note.ts";
 import { onlyComments, withoutComments } from "../obsidian.ts";

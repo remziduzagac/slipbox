@@ -2,7 +2,7 @@
 import type { HtmlPresentation } from "../html-adapter.ts";
 import { A_BOLD, A_ITALIC, A_STRIKE, A_UNDERLINE, type Line } from "./ir.ts";
 import type { Style } from "./render-context.ts";
-import { stringWidth } from "../width.ts";
+import { stringWidth } from "../foundation/text/width.ts";
 
 export function htmlStyle(base: Style, presentation?: HtmlPresentation): Style {
   if (!presentation) return base;

@@ -4,7 +4,7 @@
 
 import { createHash } from "node:crypto";
 import { basename, dirname, posix } from "node:path";
-import { readJson, sweepTemps, writeJson } from "./fsutil.ts";
+import { readJson, sweepTemps, writeJson } from "./foundation/platform/fsutil.ts";
 import { normKey } from "./links.ts";
 
 /** A note's content hash, over its text. */

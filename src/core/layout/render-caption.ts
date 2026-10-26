@@ -4,7 +4,7 @@ import type { Line } from "./ir.ts";
 import type { Ctx, Style } from "./render-context.ts";
 import { inline } from "./render-inline.ts";
 import { wrapSpans } from "./wrap.ts";
-import { stringWidth } from "../width.ts";
+import { stringWidth } from "../foundation/text/width.ts";
 
 export function pictureCaption(c: PhrasingContent, at: number, ctx: Ctx, width: number, base: Style): Line[] {
   const spans = inline([c], ctx, base, at);

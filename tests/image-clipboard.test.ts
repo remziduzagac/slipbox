@@ -2,7 +2,7 @@ import { afterAll, expect, test } from "bun:test";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { copyImage } from "../src/core/clipboard.ts";
+import { copyImage } from "../src/core/foundation/platform/clipboard.ts";
 
 const dir = mkdtempSync(join(tmpdir(), "slipbox-image-copy-"));
 afterAll(() => rmSync(dir, { recursive: true, force: true }));

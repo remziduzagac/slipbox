@@ -4,7 +4,7 @@ How slipbox ranks a vault's notes and data files by words (plans `6.1`–`6.12`)
 share it (D114). The query and the results as the user meets them are [cli.md](../../docs/manual/cli.md) § `search`; the
 TUI's list is [tui.md](tui.md) § Overlays; which vaults a search covers is [roots.md](roots.md) § Search scope (D64,
 D79). Code: `core/search.ts` (the query, a file read for it, the index kept, the index or a scan, hits located),
-`core/search-index.ts` (the index), `core/sqlite.ts`, `core/scope.ts` (search by vault).
+`core/search-index.ts` (the index), `core/foundation/platform/sqlite.ts`, `core/scope.ts` (search by vault).
 
 ## The index and the scan
 
@@ -25,7 +25,7 @@ it: …`; `needsIndex` in `cli/common.ts`) (VV-D3).
 The index is a cache (D39): one of another version, or one SQLite can't read, is deleted and made again, and one that
 can't be made (a read-only cache) leaves the scan. It asks of SQLite only FTS5 with `unicode61`, `bm25`, WAL and a
 busy timeout. That SQLite is the runtime's own, `node:sqlite` (D196); which it is on each platform, and the few calls
-`core/sqlite.ts` makes of it, are [distribution.md](distribution.md) § SQLite.
+`core/foundation/platform/sqlite.ts` makes of it, are [distribution.md](distribution.md) § SQLite.
 
 ## A row per file
 
@@ -87,7 +87,8 @@ confirming substitutes, search operators, vault find and CLI find/replace use it
 thread that asks. `core/replace-files.ts` builds a complete plan before any write, with asynchronous matching through
 `planReplaceLater`; its synchronous entry is for callers already outside an interactive thread.
 
-Its mailbox (`core/worker-requests.ts`) holds eight requests and 8 MiB of input for the worker; a caller past that waits
+Its mailbox (`core/foundation/workers/worker-requests.ts`) holds eight requests and 8 MiB of input for the worker; a
+caller past that waits
 its turn. A request's deadline is 1.5 seconds and one more for each million characters it matches in, counted from when
 the worker is handed it, not from the wait: a regex that never finishes still stops within 1.5 seconds on a short note,
 and a big note's every match has the time to be found and sent. A deadline terminates the worker and fails that request

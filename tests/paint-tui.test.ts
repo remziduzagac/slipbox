@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import { join } from "node:path";
 import { writeFileSync } from "node:fs";
 import { OptimizedBuffer, type RenderContext } from "@opentui/core";
-import { onLoaded } from "../src/core/lazy.ts";
+import { onLoaded } from "../src/core/foundation/platform/lazy.ts";
 import { loadRasterizer } from "../src/core/svg.ts";
 import { BufferCanvas, Pictures } from "../src/tui/opentui.ts";
 import { harness, makeSandbox, makeVault } from "./tui-harness.ts";

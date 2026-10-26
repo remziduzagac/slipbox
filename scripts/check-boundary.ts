@@ -41,11 +41,12 @@ export function valueImportsOf(text: string): string[] {
 
 /** Area catalogs may depend on contracts, never on the list that composes them, even for types (ORG-T1). */
 export function commandViolations(from: string, text: string): string[] {
-  if (!from.startsWith("src/core/commands/")) return [];
+  const root = "src/core/application/commands/";
+  const contract = from === `${root}contracts.ts`;
+  if (!contract && !from.startsWith(`${root}areas/`)) return [];
   return importsOf(text).flatMap((spec) => {
     const target = spec.startsWith(".") ? relative(ROOT, resolve(ROOT, dirname(from), spec)) : spec;
-    const composer = /^src\/core\/command-specs(?:\.[cm]?[jt]s)?$/.test(target);
-    const contract = from === "src/core/commands/contracts.ts";
+    const composer = target === `${root}catalog` || target === `${root}catalog.ts`;
     return composer || contract
       ? [
           `${from}: imports ${spec} (${contract ? "contract must be independent" : "catalog must not import its composer"})`,

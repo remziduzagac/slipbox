@@ -1,5 +1,5 @@
 // A thread writing one file again and again (T12): a test of two threads of one process writing the same path at once.
-import { atomicWrite } from "../../../src/core/fsutil.ts";
+import { atomicWrite } from "../../../src/core/foundation/platform/fsutil.ts";
 
 declare const self: Worker;
 

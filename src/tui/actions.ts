@@ -1,18 +1,18 @@
-// Command implementations for the TUI. Ids and titles come from core/command-specs.ts, so the CLI
+// Command implementations for the TUI. Ids and titles come from core/application/commands/catalog.ts, so the CLI
 // can list them and the parity test can check them; registerActions registers each one, its work
 // done here (the app's own: escape, copying, the UI settings, the theme, the scratch, quitting) or
 // in the actions-*.ts module of its area (D235). The keys are in keys.ts and docs/manual/keys.md.
 
 import { cancelGitRead } from "./gitquery.ts";
 import { clearScratch, dropEmptyAsks, formatEntry, readScratch } from "../core/capture.ts";
-import { COMMAND_SPECS } from "../core/command-specs.ts";
-import type { Command } from "../core/commands.ts";
+import { COMMAND_SPECS } from "../core/application/commands/catalog.ts";
+import type { Command } from "../core/application/commands/registry.ts";
 import { listThemes, loadTheme } from "../core/theme/index.ts";
 import type { App, ListItem, UiState, View } from "./app.ts";
 import * as C from "./cursor.ts";
 import * as E from "./editing.ts";
 import { shellFilter, shellRun, shellStop } from "./shellrun.ts";
-import { parseBang } from "../core/shell.ts";
+import { parseBang } from "../core/foundation/platform/shell.ts";
 import { prettyKey } from "./keys.ts";
 import { openPalette, openHelp } from "./palette.ts";
 import { viewActions } from "./actions-view.ts";
@@ -329,5 +329,5 @@ export function registerActions(app: App): void {
     });
   }
   for (const id of Object.keys(impl))
-    if (!app.registry.get(id)) throw new Error(`command ${id} has no spec in core/command-specs.ts`);
+    if (!app.registry.get(id)) throw new Error(`command ${id} has no spec in core/application/commands/catalog.ts`);
 }

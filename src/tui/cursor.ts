@@ -3,7 +3,7 @@
 // start of a grapheme. A wide character is one stop; moving up or down keeps a goal column.
 
 import type { Layout, Line } from "../core/layout/ir.ts";
-import { graphemes, graphemeWidth } from "../core/width.ts";
+import { graphemes, graphemeWidth } from "../core/foundation/text/width.ts";
 
 export interface Pos {
   row: number;

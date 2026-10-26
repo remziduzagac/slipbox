@@ -14,7 +14,7 @@ import { folderIdentity, readFolders, recordFolder, copyAvailable } from "../cor
 import { tildePath, rootLabel } from "../core/names.ts";
 import { describeCap } from "../core/home.ts";
 import { describeBackground, backgroundStatus } from "../core/autoindex.ts";
-import { cacheDir, stateDir } from "../core/paths.ts";
+import { cacheDir, stateDir } from "../core/foundation/platform/paths.ts";
 import { statSync } from "node:fs";
 import type { App } from "./app.ts";
 

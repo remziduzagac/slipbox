@@ -46,10 +46,12 @@ export function codeChanged(files: string[]): string | null {
  * not sorted yet. An empty list: no check runs it (the command line's commands, which the TUI never calls).
  */
 export const CHECKS_FOR: [RegExp, string[]][] = [
+  [/^src\/core\/foundation\/text\/blockdiff\.ts$/, ["git"]],
+  [/^src\/core\/foundation\/workers\/worker-context\.ts$/, ["slow disk", "home", "view"]],
   // Source control: the panel and its views, the diff, the merge screen, the review, the rebase (GIT). Not git.ts,
   // gitbase.ts nor gitsigns.ts: every vault's checkout and every note's gutter read them.
   [
-    /^src\/core\/(gitbranches|gitlog|gitops|gitrebase|gitremote|gitrepos|gitreview|gitstage|mergereview|conflicts|blockdiff)\.ts$/,
+    /^src\/core\/(gitbranches|gitlog|gitops|gitrebase|gitremote|gitrepos|gitreview|gitstage|mergereview|conflicts)\.ts$/,
     ["git"],
   ],
   [/^src\/core\/layout\/(diff|splitdiff|blockdiff)\.ts$/, ["git", "conflict"]],
@@ -67,10 +69,7 @@ export const CHECKS_FOR: [RegExp, string[]][] = [
   [/^src\/core\/(spell|spell-thread|spell-worker|hunspell)\.ts$/, ["spelling"]],
   [/^src\/tui\/spelling\.ts$/, ["spelling"]],
   // A slow disk read off the main thread (T12): the walk's and the listings' threads, the explorer's listings.
-  [
-    /^src\/core\/(walk-thread|walk-jobs|walk-worker|worker-context|walkers|index-job)\.ts$/,
-    ["slow disk", "home", "view"],
-  ],
+  [/^src\/core\/(walk-thread|walk-jobs|walk-worker|walkers|index-job)\.ts$/, ["slow disk", "home", "view"]],
   // Every folder listed a level at a time (Elsewhere's among them), and the vault and permission facts every row's
   // marks read.
   [/^src\/core\/(listing|list-worker)\.ts$/, ["slow disk", "home", "view", "Elsewhere", "marks"]],
@@ -94,7 +93,7 @@ export const CHECKS_FOR: [RegExp, string[]][] = [
   [/^src\/tui\/info\.ts$/, ["info"]],
   [/^src\/tui\/properties\.ts$/, ["properties"]],
   [/^src\/tui\/handoff\.ts$/, ["hand-off"]],
-  [/^src\/(core\/shell|tui\/shellrun)\.ts$/, ["shell"]],
+  [/^src\/(core\/foundation\/platform\/shell|tui\/shellrun)\.ts$/, ["shell"]],
   [/^src\/core\/tasks\.ts$/, ["tasks"]],
   [/^src\/core\/comments\.ts$/, ["comments"]],
   [/^src\/core\/data\.ts$/, ["data"]],
@@ -159,8 +158,8 @@ export function importGraph(root = ROOT): Map<string, string[]> {
   const known = new Set(code);
   const exists = (rel: string) => rel !== "" && rel !== "." && !rel.startsWith("..") && existsSync(join(root, rel));
   /** A relative import, as Bun resolves it: the file, or with `.ts`, or a folder's index. */
-  const resolve = (from: string, spec: string): string | null => {
-    const p = normalize(join(dirname(from), spec));
+  const resolve = (from: string, spec: string, directory = false): string | null => {
+    const p = normalize(join(directory ? from : dirname(from), spec));
     for (const c of [p, `${p}.ts`, `${p}.tsx`, `${p}/index.ts`]) if (known.has(c) || (c === p && exists(c))) return c;
     return null;
   };
@@ -175,7 +174,7 @@ export function importGraph(root = ROOT): Map<string, string[]> {
       if (r) uses.add(r);
     }
     for (const m of text.matchAll(/workerUrl\("([^"]+)"/g)) {
-      const r = resolve(file, `./${m[1]}`);
+      const r = resolve("src/core", `./${m[1]}`, true);
       if (r) uses.add(r);
     }
     // A path in the repository: `join` or `resolve` from the file's folder (`import.meta.dir`) or a name for one —

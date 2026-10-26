@@ -3,15 +3,15 @@
 // Must run correctly with no config at all, and never crash on a bad one — problems become
 // warnings in the message sink.
 
-import { deepMerge, type LanguageConfig, type ServerConfig, SERVERS } from "./servers/languages.ts";
-import { type LinterConfig, LINTERS } from "./servers/linters.ts";
+import { deepMerge, type LanguageConfig, type ServerConfig, SERVERS } from "../../servers/languages.ts";
+import { type LinterConfig, LINTERS } from "../../servers/linters.ts";
 import { existsSync } from "node:fs";
-import { readRegular, SMALL_FILE } from "./fsutil.ts";
-import { refName } from "./gitops.ts";
+import { readRegular, SMALL_FILE } from "../../foundation/platform/fsutil.ts";
+import { refName } from "../../gitops.ts";
 import { join } from "node:path";
 import { parse as parseToml } from "smol-toml";
-import { tildePath, userConfigFile } from "./paths.ts";
-import { KEY_KINDS, type TypeConfig } from "./doctypes.ts";
+import { tildePath, userConfigFile } from "../../foundation/platform/paths.ts";
+import { KEY_KINDS, type TypeConfig } from "../../doctypes.ts";
 
 export type GlyphMode = "auto" | "nerd" | "unicode" | "ascii";
 

@@ -22,7 +22,7 @@ import {
 } from "../core/symlinks.ts";
 import { isInside, locationAt, type VaultLocation } from "../core/vault.ts";
 import { LINK_REASON } from "../core/walk.ts";
-import { stringWidth, truncate, truncateStart } from "../core/width.ts";
+import { stringWidth, truncate, truncateStart } from "../core/foundation/text/width.ts";
 import type { App, ListItem } from "./app.ts";
 import type { TreeRow } from "./explorer.ts";
 

@@ -6,7 +6,7 @@
 import { execFileSync, spawn, spawnSync } from "node:child_process";
 import { accessSync, constants, statSync } from "node:fs";
 import { delimiter, join, posix, relative, sep } from "node:path";
-import { climbsOut } from "./fsutil.ts";
+import { climbsOut } from "./foundation/platform/fsutil.ts";
 import type { Checkout } from "./git.ts";
 import { isTrusted } from "./trust.ts";
 

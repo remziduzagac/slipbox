@@ -5,13 +5,13 @@
 // request the thread doesn't answer in time is given up on, the thread started afresh for the next: it never falls
 // back to walking on the main thread, which would freeze the screen again.
 
-import type { Config } from "./config.ts";
+import type { Config } from "./application/config/config.ts";
 import type { HomeWalk } from "./home.ts";
 import type { IndexAnswer, Opened } from "./index-job.ts";
 import type { FolderListing } from "./listing.ts";
 import { type FilterSettings, slowDisk, type WalkCap, type WalkLimits } from "./walk.ts";
 import type { StepAnswer, WalkRequest } from "./walk-jobs.ts";
-import { walkContext } from "./worker-context.ts";
+import { walkContext } from "./foundation/workers/worker-context.ts";
 import {
   type HomeOf,
   type IndexAsk,
@@ -22,8 +22,8 @@ import {
   takeAnswer,
   type Walker,
 } from "./walkers.ts";
-import { WorkerRequestError, WorkerRequests } from "./worker-requests.ts";
-import { workerUrl } from "./workers.ts";
+import { WorkerRequestError, WorkerRequests } from "./foundation/workers/worker-requests.ts";
+import { workerUrl } from "./foundation/workers/url.ts";
 
 /**
  * How long the thread has for a request, the wait for it not counted: a slice of home's walk, or a folder looked in

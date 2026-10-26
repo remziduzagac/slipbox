@@ -6,7 +6,7 @@
 import type { Layout, Line } from "../core/layout/ir.ts";
 import type { SpellWord } from "../core/spell.ts";
 import type { Role } from "../core/theme/theme.ts";
-import { stringWidth } from "../core/width.ts";
+import { stringWidth } from "../core/foundation/text/width.ts";
 import type { App, View } from "./app.ts";
 import { cells } from "./cursor.ts";
 import { cannotEdit } from "./editing.ts";
@@ -20,7 +20,7 @@ import {
   ownWordsFile,
 } from "../core/spell.ts";
 import type { NoteBuffer } from "./buffer.ts";
-import { lazy, loadError } from "../core/lazy.ts";
+import { lazy, loadError } from "../core/foundation/platform/lazy.ts";
 import { openDictionary, threadDictionaries, addToDictionaries } from "../core/spell-thread.ts";
 
 /** A misspelt word on screen: its row, first column and width, and the word. */

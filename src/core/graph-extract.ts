@@ -4,7 +4,7 @@
 
 import { basename } from "node:path";
 import type { Definition, Nodes } from "mdast";
-import { readText } from "./fsutil.ts";
+import { readText } from "./foundation/platform/fsutil.ts";
 import { parseWikiTarget, type WikiLink } from "./wikilink.ts";
 import {
   type AnchorInfo,

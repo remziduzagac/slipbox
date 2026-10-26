@@ -10,7 +10,7 @@
 import { headingLabel, parseMarkdown, slugify } from "../parse.ts";
 import type { Span as SyntaxSpan } from "../syntax.ts";
 import { highlight, type Token } from "./highlight.ts";
-import { graphemes, graphemeWidth } from "../width.ts";
+import { graphemes, graphemeWidth } from "../foundation/text/width.ts";
 import type { Layout, LayoutHeading, Line, Span } from "./ir.ts";
 import type { Role } from "../theme/theme.ts";
 

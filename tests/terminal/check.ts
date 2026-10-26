@@ -16,7 +16,7 @@ export interface Check {
   covers: {
     /** `CASES.md` areas (its `###` headings) this check exercises. */
     cases?: string[];
-    /** Commands (core/command-specs.ts) it runs for their effect; the runner fails a check that declares one it
+    /** Commands (core/application/commands/catalog.ts) it runs for their effect; the runner fails a check that declares one it
      *  never ran. */
     commands?: string[];
   };

@@ -6,7 +6,7 @@ import { mkdirSync, mkdtempSync, realpathSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { ListOverlay } from "../src/tui/app.ts";
 import { fitLocation } from "../src/tui/draw-topbar.ts";
-import { stringWidth } from "../src/core/width.ts";
+import { stringWidth } from "../src/core/foundation/text/width.ts";
 import { harness, makeSandbox, statusRow, topRow, type Harness } from "./tui-harness.ts";
 
 const sandbox = makeSandbox();

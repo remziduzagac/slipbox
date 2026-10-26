@@ -4,7 +4,7 @@
 // Scored by where each word lands: in the label over its description, the file name over its
 // folders, at a word start, earlier; shorter texts first.
 
-import { UNSAFE } from "../core/sanitize.ts";
+import { UNSAFE } from "../core/foundation/text/sanitize.ts";
 
 export interface Match {
   score: number;

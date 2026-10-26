@@ -1,11 +1,11 @@
-// What the terminal checks cover, and what they don't (TT-D4): every command (core/command-specs.ts) and every area
+// What the terminal checks cover, and what they don't (TT-D4): every command (core/application/commands/catalog.ts) and every area
 // of the reference set (`examples/home/CASES.md`'s `###` headings under "By area") has a check that covers it, or is
 // left out with its reason. `bun tests/terminal/coverage.ts [area]` lists what's uncovered, by the area that owns it;
 // tests/terminal-coverage.test.ts fails while anything is.
 
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { COMMAND_SPECS } from "../../src/core/command-specs.ts";
+import { COMMAND_SPECS } from "../../src/core/application/commands/catalog.ts";
 import { type Area, CLI_CASES, type Check } from "./check.ts";
 import { CHECKS, LEFT_OUT } from "./checks/index.ts";
 

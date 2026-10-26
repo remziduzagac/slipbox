@@ -14,10 +14,10 @@ import { readDoc } from "../docformats.ts";
 import type { Severity } from "../diagnostics.ts";
 import type { Glyphs } from "../glyphs.ts";
 import { slugify } from "../parse.ts";
-import { expandTabs } from "../sanitize.ts";
+import { expandTabs } from "../foundation/text/sanitize.ts";
 import type { CodeComment, CodeDef, CodeDoc, CodeImports, CodeModel, OutlineEntry } from "../syntax.ts";
 import type { Role } from "../theme/theme.ts";
-import { graphemes, graphemeWidth, stringWidth, truncate } from "../width.ts";
+import { graphemes, graphemeWidth, stringWidth, truncate } from "../foundation/text/width.ts";
 import {
   A_BOLD,
   A_DIM,

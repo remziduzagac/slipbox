@@ -3,7 +3,7 @@ import { AsyncLocalStorage } from "node:async_hooks";
 import { diagramStore } from "./diagram-cache.ts";
 import { BATCH_DIAGRAM_POLICY, DiagramJobs } from "./diagram-jobs.ts";
 import type { DrawingColors, Drawn } from "./diagram-render.ts";
-import { notifyLoaded } from "./lazy.ts";
+import { notifyLoaded } from "./foundation/platform/lazy.ts";
 // Types alone from the renderer: it runs in its worker, never here (`bun run check:boundary`).
 export type { DrawingColors, Drawn } from "./diagram-render.ts";
 

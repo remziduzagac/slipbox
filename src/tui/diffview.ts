@@ -9,7 +9,7 @@
 // goes there (or back, where the window has nowhere to go); `esc` goes back where it came from.
 
 import { isAbsolute, join } from "node:path";
-import { type BlockDiff, blockDiff } from "../core/blockdiff.ts";
+import { type BlockDiff, blockDiff } from "../core/foundation/text/blockdiff.ts";
 import { classify } from "../core/filetypes.ts";
 import { indentFor } from "../core/indent.ts";
 import { layoutBlockDiff } from "../core/layout/blockdiff.ts";

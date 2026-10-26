@@ -15,9 +15,9 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { stringWidth } from "../src/core/width.ts";
-import { canonKey } from "../src/core/commands.ts";
-import { DEFAULT_CONFIG } from "../src/core/config.ts";
+import { stringWidth } from "../src/core/foundation/text/width.ts";
+import { canonKey } from "../src/core/application/commands/registry.ts";
+import { DEFAULT_CONFIG } from "../src/core/application/config/config.ts";
 import { openGraph } from "../src/core/graph.ts";
 import { keepBase, keptBases } from "../src/core/gitbase.ts";
 import { attention } from "../src/core/gitrepos.ts";

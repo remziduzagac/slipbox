@@ -1,7 +1,7 @@
 // Line diffs and a three-way merge (plan 5.5): what a diff window shows (5.13; changed words inside changed lines,
 // GIT-D2) and the conflict prompt's (M)erge does, over the line diff of `myers.ts`.
 
-import { diffLines, type Hunk } from "./myers.ts";
+import { diffLines, type Hunk } from "./foundation/text/myers.ts";
 
 export { diffLines, type Hunk };
 

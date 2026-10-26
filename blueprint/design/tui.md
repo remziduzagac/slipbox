@@ -94,7 +94,8 @@ folder open in its place: told when it changes, its control characters stripped.
 
 `topbar_group` supplies the faint background. Groups have spaces between them and Nerd rounded ends, plain ends in
 Unicode and ASCII. Items have a dim thin separator and individual hover regions. Names pass through sanitize and
-widths through core/width.ts. Right blocks shrink to icons then go; tracking, cut branch, branch and changed count
+widths through core/foundation/text/width.ts. Right blocks shrink to icons then go; tracking, cut branch, branch and
+changed count
 then give way. Zoom and workspace keep their icons and shortened names, paths cut from the front.
 
 `Background`, owned by App, tracks task progress, start time, cancellation and supported restart/pause closures.
@@ -1421,7 +1422,8 @@ form's fields, by one rule, which also says where an added screen goes:
   source" (no `RELEASE`); a release's binary put somewhere by hand says so in words of its own.
 - **Platform:** the system's name and version (Linux's `/etc/os-release` `PRETTY_NAME`, else its `NAME` and
   `VERSION`; macOS's `SystemVersion.plist`), the kernel (`os.release()`), the processor (`process.arch`), and WSL when
-  it's there (`core/wsl.ts`): `Ubuntu 24.04.1 LTS in WSL (Linux 5.15.167.4-microsoft-standard-WSL2), x64`.
+  it's there (`core/foundation/platform/wsl.ts`): `Ubuntu 24.04.1 LTS in WSL (Linux 5.15.167.4-microsoft-standard-WSL2),
+  x64`.
 - **Terminal:** what the terminal answered when asked who it is (OpenTUI's `capabilities.terminal`, from XTVERSION;
   the TUI only), `TERM_PROGRAM` and its version, `TERM`, the size in cells, the multiplexer and SSH. The multiplexer is
   OpenTUI's when it names one, and the environment's (`TMUX`, `ZELLIJ`, `STY`, `HERDSMAN_ENV`, `HERDR_ENV`, each set
@@ -1491,7 +1493,8 @@ heads it, said, and `o` and `a` aren't there:
   browser opens; when it can't, it copies the address and says what's still left out (`v`, `c`). Each copy is said
   as `App.copy` says it — by OSC 52, which a terminal never confirms; by the system's tool; or written to
   `clipboard.txt` — and a copy refused (the clipboard busy) is said, never claimed.
-- **The browser** (`core/browser.ts`): `open` on macOS; in WSL, `wslview`, else `explorer.exe`; elsewhere `xdg-open`
+- **The browser** (`core/foundation/platform/browser.ts`): `open` on macOS; in WSL, `wslview`, else `explorer.exe`;
+  elsewhere `xdg-open`
   when there's a display (`DISPLAY`, `WAYLAND_DISPLAY`); none over SSH, where a browser would open on that machine,
   not yours — the entry isn't shown, and `a` copies the address to your terminal's clipboard (OSC 52). Run as an
   argument vector (`13.2`) by the host's `runDetached`, nothing read from it; its exit waited for five seconds, one
@@ -1504,7 +1507,8 @@ heads it, said, and `o` and `a` aren't there:
   comes before what gh keeps, so then it's "the account of GH_TOKEN (not checked)"; else the account gh keeps
   (`gh config get -h github.com user`); neither, and it says `gh auth login` first; gh not answering in five
   seconds, or not starting, said as that. gh is run as every helper is
-  (`core/tool-process.ts`: its output capped, its process group stopped at its deadline and when slipbox ends), with
+  (`core/foundation/platform/tool-process.ts`: its output capped, its process group stopped at its deadline and when
+  slipbox ends), with
   `GH_PROMPT_DISABLED=1`, so it never waits on a question of its own. The report closed meanwhile, or something
   opened over it, and nothing is asked over that: said, `ctrl+s`, `g` asks again. A
   yes-or-no names everything: `Post "<title>" on <repo> as <account>? Anyone can read it.`, the title and text read
@@ -1535,7 +1539,8 @@ the terminal who it is. The skill for agents (`core/skill.ts`) names it: an agen
 report --json` first.
 
 Code: `tui/report.ts` (the `Reporter`, `app.report`: the window, the frame and place kept, the menu, sending),
-`core/report.ts` (the facts, the report's text, reading it back, the address's plan), `core/browser.ts`,
+`core/report.ts` (the facts, the report's text, reading it back, the address's plan),
+`core/foundation/platform/browser.ts`,
 `core/gh.ts`, `cli/report.ts` (`slipbox report`, dispatched by `cli/cli.ts` before the session); the host's
 `terminal()` (`tui/run.ts`) hands the TUI a plain copy of OpenTUI's answer, so nothing else touches OpenTUI.
 
@@ -1591,7 +1596,7 @@ past theirs), so the content behind never runs up to the edge.
   footer. The footer is always four rows under a rule, so the list doesn't jump (on a short screen
   it's left out before the list gets under four rows): the selected entry's name
   (bold), its explanation in normal text (wrapping to a second row), and its other bindings
-  ("also", as keycaps). Explanations are the `desc` of each command in `core/commands/*.ts`:
+  ("also", as keycaps). Explanations are the `desc` of each command in `core/application/commands/areas/*.ts`:
   a plain sentence saying what it does ("Moves the cursor to the end of the row").
 - **Keycaps:** key bindings are spelled out (`ctrl+d`, `shift+g`, `space l y`, `esc`) and each
   binding is its own keycap (`keycap` role; `keycap_selected` on the selected row), so the space
@@ -1604,7 +1609,8 @@ past theirs), so the content behind never runs up to the edge.
   Without a keycap background (`NO_COLOR`), the columns are separated by `·`.
 
 Help and the palette list the same commands for different jobs, in the groups of [keys.md](../../docs/manual/keys.md)
-(`COMMAND_GROUPS` in `core/command-specs.ts`), in that document's order. Every command has a group (a test checks it);
+(`COMMAND_GROUPS` in `core/application/commands/catalog.ts`), in that document's order. Every command has a group (a
+test checks it);
 one no group claims would still be listed, under "Other", last:
 
 - **Help (`?`, `space ?`, `:help`)** is for learning the keys: every command with all its bindings (source
@@ -1640,7 +1646,7 @@ shortening the widest text columns (to twenty cells at minimum) to fit more colu
 Each entry is `key → name` with a short, dimmed
 explanation underneath:
 
-- **For a command:** its `desc` in `core/commands/*.ts`.
+- **For a command:** its `desc` in `core/application/commands/areas/*.ts`.
 - **For a group:** from `[groups]`: its explanation under its name, or, for a prefix of one key, in the popup's own
   title.
 
@@ -1784,7 +1790,8 @@ first marked `↪`, as `slipbox render` always does. The code view's cells are t
 A note's picture is sized for the window it's in: fitted to it (rendering.md § Blocks and inlines), or at its own
 size by choice. What the window shows at its own size, and its pictures' rest, are kept by `tui/pictures.ts`; the
 sizes are worked out by `tui/images.ts`; the rows laid out by `core/layout/render.ts`; the drawing done by
-`tui/draw-pane.ts`, `tui/opentui.ts` and `tui/placeholders.ts`; the commands are `src/core/commands/motion.ts`'s,
+`tui/draw-pane.ts`, `tui/opentui.ts` and `tui/placeholders.ts`; the commands are
+`src/core/application/commands/areas/motion.ts`'s,
 done in `tui/actions-view.ts`.
 
 - **What it's fitted to.** The window's room: its text columns less what's before the picture (a list's indent, a
@@ -2066,7 +2073,8 @@ the only one (`16.16`, `16.17`; D112): Org and AsciiDoc files open as text.
   schedules the first pass on open and debounces later passes for 150 ms. It installs only a reply for the same buffer
   revision and request; superseded work is cancelled, and leaving the vault or quitting lets go of every pass. The
   layout uses its last answer.
-  Its bounded mailbox (`core/worker-requests.ts`) holds eight requests and 16 MiB of their input; a caller past that
+  Its bounded mailbox (`core/foundation/workers/worker-requests.ts`) holds eight requests and 16 MiB of their input; a
+  caller past that
   waits its turn. A pass's deadline counts from when the worker is handed it: twenty seconds, as the spelling
   thread's, since a pass is a whole source's and can't be batched as a big note's parse is (a 3.7 MiB minified bundle
   took 4.3 s on a fast machine, idle, and missed a five-second deadline with its cores busy). A source is at most 4 MiB
@@ -2631,7 +2639,8 @@ margins.
   line 1; the final line break (`\ no newline at end of file`, `\ newline at end of file added`) after its last, at
   the last line — whether or not a line changed too; alone, the diff's only rows. The command line's `git diff` says
   it instead of rows: "only the line endings (CRLF → LF) changed from main".
-- **Found:** hunks of lines by the Myers diff (`core/myers.ts`), as git's xdiff finds them, which every diff, the
+- **Found:** hunks of lines by the Myers diff (`core/foundation/text/myers.ts`), as git's xdiff finds them, which every
+  diff, the
   gutter's signs, blame and the three-way merge use: the common head and tail trimmed; the lines only one side has set
   aside as changed, whatever else is (a rewrite costs a read); the rest searched from both ends at once for the
   shortest edit's middle, each half the same way (Myers' middle snake: O((N+M)·D) time, O(N+M) memory). Past a cost of
@@ -2675,7 +2684,8 @@ margins.
   changed words are bold and underlined, as without colour (`NO_COLOR`). A span's background role (`Span.bg`) gives its
   bold and underline as well as its colour (`layout/style.ts`), so the words are marked where there's no tint to give.
 
-**Before and after** (GIT-D2; `core/blockdiff.ts` `blockDiff`, `core/layout/blockdiff.ts` `layoutBlockDiff`): a note's
+**Before and after** (GIT-D2; `core/foundation/text/blockdiff.ts` `blockDiff`, `core/layout/blockdiff.ts`
+`layoutBlockDiff`): a note's
 diff (a file the walk reads as a note) in every window a diff opens in, unless `[git] diff = "source"` (default
 `blocks`).
 
@@ -3006,7 +3016,8 @@ runs the binding.
 
 ## Parity with the CLI
 
-Every command is declared in `core/commands/*.ts` with the CLI invocation that reaches the same state change, or
+Every command is declared in `core/application/commands/areas/*.ts` with the CLI invocation that reaches the same state
+change, or
 marked as an interaction: cursor, scrolling, selection, focus, panes, overlays (D11, D14). Editing keys are interactions
 too: the state they change, a note's text, is reached from the CLI by `write`, `replace` and `task` (D14, D18). Git in
 the editor is marked so too, though it changes state: it is the TUI's alone (§ Git; D156). Tests fail when a command is

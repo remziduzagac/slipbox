@@ -26,9 +26,11 @@ paths (D8, D67).
 when stdin and stdout are terminals (`9.3`). The TUI is loaded with a dynamic `import()`, so a
 CLI call never loads OpenTUI's native renderer.
 
-Every user action is a named command (D11). `core/commands/*.ts` (by area, listed by `core/command-specs.ts`) give
+Every user action is a named command (D11). `core/application/commands/areas/*.ts` (by area, listed by
+`core/application/commands/catalog.ts`) give
 each command id the CLI invocation that reaches the same state change, or mark it an interaction; the TUI implements
-each one (`tui/actions.ts` and the `tui/actions-*.ts` of its area) in the `CommandRegistry` (`core/commands.ts`), and
+each one (`tui/actions.ts` and the `tui/actions-*.ts` of its area) in the `CommandRegistry`
+(`core/application/commands/registry.ts`), and
 keys, the palette and the `:` prompt run them by id. A command implemented without a spec, or specified without an
 implementation, fails at start-up and fails a test ([tui.md](tui.md) § Parity with the CLI).
 
@@ -129,17 +131,17 @@ The CLI's commands are the user's reference, [cli.md](../../docs/manual/cli.md);
 
 | Module | Steps | Role |
 | --- | --- | --- |
-| `core/width.ts` | 0.7 | the one width function: graphemes, East Asian width, emoji |
-| `core/fsutil.ts` | 4.6, 7.5 | atomic writes keeping the mode; `writeNote` (never out of the vault); reads |
-| `core/sanitize.ts` | 2.9 | strips terminal escapes on the way into layout |
-| `core/paths.ts` | 0.10, 21.8 | config, cache and state directories; a vault's key, by its path |
-| `core/config.ts` | 0.9, 20.7 | TOML: defaults ← yours ← each enclosing vault's ← its own; warnings, never crashes |
+| `core/foundation/text/width.ts` | 0.7 | the one width function: graphemes, East Asian width, emoji |
+| [fsutil.ts][o1] | 4.6, 7.5 | atomic writes keeping the mode; `writeNote` (never out of the vault); reads |
+| `core/foundation/text/sanitize.ts` | 2.9 | strips terminal escapes on the way into layout |
+| `core/foundation/platform/paths.ts` | 0.10, 21.8 | config, cache and state directories; a vault's key, by its path |
+| [config.ts][o2] | 0.9, 20.7 | TOML: defaults ← yours ← each enclosing vault's ← its own; warnings, never crashes |
 | `core/vault.ts` | 1.1, 1.10, 0.12, 17.1, 20.3, 21.8 | a file's vault, home or Elsewhere; recorded; state moved |
 | `core/home.ts` | VV-D2 | home's walk, made in slices and kept (`walk.json`); its graph built from it; the cap |
 | `core/walkers.ts` | T12 | where a walk is made: here (the CLI's), or on the walk's thread (the TUI's) |
 | `core/walk-thread.ts` | T12 | the walk's thread and the listings' two (`walk-worker.ts`, `list-worker.ts`): asked |
 | `core/walk-jobs.ts` | T12 | what the walk's thread does: the same walks and indexes as here, slice by slice |
-| `core/worker-context.ts` | T12 | what those threads can't see for themselves: the environment, markers, probe |
+| [worker-context.ts][o3] | T12 | what those threads can't see for themselves: the environment, markers, probe |
 | `core/listing.ts` | T12, VV-D5 | a folder listed for the explorer: its entries, what its rows and marks say of each |
 | `core/mounts.ts` | VV-D2 | the mount table, read without touching a mount: home's walk never goes into another disk |
 | `core/symlinks.ts` | VV-D6 | links followed only when you say so: the answers, a link's scope, writes, the probe |
@@ -173,15 +175,15 @@ The CLI's commands are the user's reference, [cli.md](../../docs/manual/cli.md);
 | `tui/html.ts` | HTML | per-buffer disclosure state and revealing navigation targets |
 | `core/obsidian.ts` | DF-D17 | Obsidian's `==highlight==` and `%%comment%%`, read into the tree; a block comment too |
 | `core/parse-pool.ts` | 15.1 | a big note's chunks parsed on up to four workers (`parse-worker.ts`), into its cache |
-| `core/workers.ts` | 15.1, 25.6 | where a worker's script is, from the source or in the compiled binary (D232) |
-| `core/worker-requests.ts` | 15.1, 25.6 | a worker's requests one at a time: a bounded mailbox, a line, deadlines |
+| [url.ts][o4] | 15.1, 25.6 | where a worker's script is, from the source or in the compiled binary (D232) |
+| [worker-requests.ts][o5] | 15.1, 25.6 | a worker's requests one at a time: a bounded mailbox, a line, deadlines |
 | `core/links.ts` | 1.4 | `LinkIndex`: case policy, collisions, markdown URLs |
 | `core/search.ts` | 6.x | search: the query, a file read for it, the index kept, the index or a scan, hits located |
 | `core/regex-jobs.ts` | 25.4 | a regex matched in a worker (`regex-worker.ts`), stopped at its deadline |
 | `core/search-index.ts` | 6.6 | the search index: SQLite FTS5 in the cache, a row per file, BM25 |
 | `core/scope.ts` | 20.16, 21.10 | search by vault: `here`, then linked vaults, then every vault known (`--scope`) |
 | `core/autoindex.ts` | 20.9 | the background auto-index: home walked in slices and indexed, then the vaults in it |
-| `core/sqlite.ts` | 6.6 | the runtime's SQLite (`node:sqlite`): the few calls the index and the parse cache make |
+| [sqlite.ts][o6] | 6.6 | the runtime's SQLite (`node:sqlite`): the few calls the index and the parse cache make |
 | `core/trust.ts` | 23.x | the vaults whose own code may run: your answers (`trust.json`), your `[trust] roots` |
 | `core/graph.ts` | 1.5–1.9, 6.7, 11.8 | notes, links, backlinks, lazy parsing, the index; change feed; unsaved text |
 | `core/graph-types.ts` | 1.5–1.7 | a note's entry, a link as written and resolved, a backlink, a problem; how sure |
@@ -196,7 +198,7 @@ The CLI's commands are the user's reference, [cli.md](../../docs/manual/cli.md);
 | `core/pointer.ts` | 21.7 | `slipbox://` pointers: parsed, resolved (a branch: its worktree, or from git), written |
 | `core/hosting.ts` | — | a repository's hosting URLs (GitHub, GitLab, Bitbucket) read as its files |
 | `core/data.ts` | 16.11–16.15 | data files (TOML, INI, YAML, JSON, CSV) read into a document tree; their links |
-| `core/lazy.ts` | 16.6 | modules and assets loaded on first use: asked synchronously, heard when ready |
+| [lazy.ts][o7] | 16.6 | modules and assets loaded on first use: asked synchronously, heard when ready |
 | `core/diagrams.ts` | 12.10, 12.16 | Mermaid's drawings read once done: box drawing, an SVG, or why it's its code |
 | `core/diagram-jobs.ts` | 12.10, D253 | the diagrams' queue and results, drawn one at a time in `diagram-worker.ts` |
 | `core/diagram-render.ts` | 12.10, 12.16 | Mermaid laid out as text or an SVG; imported by the worker alone |
@@ -233,7 +235,7 @@ The CLI's commands are the user's reference, [cli.md](../../docs/manual/cli.md);
 | `core/layout/source.ts` | 4.13 | the markdown as a layout, with each cell's source offset |
 | `core/layout/live.ts` | 4.14 | a note's blocks; the lens composed into the render |
 | `core/tasks.ts` | 4.11 | a task's checkbox toggled as a one-byte edit |
-| `core/words.ts` | — | word counts for the status line and note info: Han and kana by character |
+| `core/foundation/text/words.ts` | — | word counts for the status line and note info: Han and kana by character |
 | `core/editor.ts` | 4.1, 4.2, 4.12 | hand-off templates to argv, never through a shell |
 | `core/indent.ts` | 25.1 | a file's indentation: `.editorconfig`, else its lines, else its language; save rules |
 | `core/comments.ts` | 25.2 | each language's comment markers; lines commented or uncommented, as vim-commentary does |
@@ -244,14 +246,14 @@ The CLI's commands are the user's reference, [cli.md](../../docs/manual/cli.md);
 | `core/gitlog.ts` | 26.4, 22.1 | a line's last commit (blame of the last commit); a file's log through renames |
 | `core/gitstage.ts` | 26.2 | status's two letters; a file or one change staged, unstaged, discarded |
 | `core/gitsigns.ts` | 26.1 | a file's changes against what's staged: runs of lines added, changed, deleted; signs |
-| `core/shell.ts` | 25.7 | a `:!` line parsed; a command run by your shell, its output kept; stopped with its children |
+| [shell.ts][o8] | 25.7 | a `:!` line parsed; a command run by your shell, its output kept; stopped with its children |
 | `core/snippet.ts` | 25.8 | a server's snippet expanded: its text, its stops and their mirrors, `$0` last |
 | `core/spell.ts` | 25.6 | a note's prose word by word; Hunspell dictionaries: slipbox's, yours, the system's |
 | `core/spell-thread.ts` | 25.6 | the spell checker's thread (`spell-worker.ts`, D232): its dictionaries, its answers |
 | `core/hunspell.ts` | 25.6 | Hunspell as WebAssembly: a dictionary built; loaded by the spell checker's thread alone |
-| `core/myers.ts` | 5.5, GIT-D2 | the line diff every diff is: Myers' in linear space, as git's, its cost capped |
+| [myers.ts][o9] | 5.5, GIT-D2 | the line diff every diff is: Myers' in linear space, as git's, its cost capped |
 | `core/merge.ts` | 5.5, GIT-D2 | changed words in paired lines, three-way merge, a diff's rows; what a diff compares |
-| `core/blockdiff.ts` | GIT-D2 | a note's diff before and after: the line diff widened to the blocks it touches |
+| [blockdiff.ts][o10] | GIT-D2 | a note's diff before and after: the line diff widened to the blocks it touches |
 | `core/conflicts.ts` | GIT-D5 | a file in conflict for the merge screen: markers, the index's stages, the result |
 | `core/gitreview.ts` | GIT-D3 | the review's hunk shown, found again, a note's scratch entry, the end's tally |
 | `core/gitremote.ts` | 26.6, GIT-D4 | fetch, pull, push, stash, without a terminal; a pull merged or rebased |
@@ -265,9 +267,9 @@ The CLI's commands are the user's reference, [cli.md](../../docs/manual/cli.md);
 | `core/layout/screen.ts` | GIT-D3, GIT-D5 | a screen of text rows and diffs: the review's, the merge screen's |
 | `core/theme/*` | 2.6 | semantic roles, built-in themes, base16 loader |
 | `core/glyphs.ts` | 2.8 | Nerd, Unicode and ASCII glyph sets |
-| `core/commands.ts` | 0.8 | `CommandRegistry` and `Keymap` |
-| `core/command-specs.ts` | 0.8, parity | the `CommandSpec` type and `COMMAND_SPECS`, built from `core/commands/*.ts` |
-| `core/commands/*.ts` | 0.8, parity, D235 | every command id with its CLI equivalent, by area |
+| `core/application/commands/registry.ts` | 0.8 | `CommandRegistry` and `Keymap` |
+| [catalog.ts][o11] | 0.8, parity | `COMMAND_SPECS`, composed from area catalogs; contracts live separately |
+| `core/application/commands/areas/*.ts` | 0.8, parity, D235 | every command id with its CLI equivalent, by area |
 | `core/position.ts` | 3.4, 3.5, 3.15 | anchors, reading positions, the session file (the workspaces) |
 | `core/watch.ts` | 5.1, 5.2 | per-directory watcher, debounce, polling fallbacks |
 | `core/vault-feed.ts` | 5.1, 5.9, 5.10 | the watcher's news into a graph, held while git writes (TUI) |
@@ -284,25 +286,25 @@ The CLI's commands are the user's reference, [cli.md](../../docs/manual/cli.md);
 | `core/servers/limits.ts` | 19.1 | what a server may cost: requests unanswered, their bytes, diagnostics kept |
 | `core/servers/transport.ts` | 19.1 | an answer's framing checked before it's read |
 | `core/servers/linters.ts` | 19.19 | linters with no language server, in efm-langserver's keys, via the lint surface |
-| `core/tool-process.ts` | 3.21, 19.5, 19.19 | a linter's or install's run: its output bounded, its group stopped |
+| [tool-process.ts][o12] | 3.21, 19.5, 19.19 | a linter's or install's run: its output bounded, its group stopped |
 | `core/servers/vscode.ts` | 19.20 | a project's `.vscode/settings.json` answering its servers' settings |
 | `core/diagnostics.ts` | 19.8, 11.5 | a file's problems from every source, one shape: links, conflicts, syntax, lint |
-| `core/clipboard.ts` | 8.5 | OSC 52 (up to 100 KB of base64), then pbcopy / clip.exe / wl-copy / xclip, then a file |
+| [clipboard.ts][o13] | 8.5 | OSC 52 (up to 100 KB of base64), then pbcopy / clip.exe / wl-copy / xclip, then a file |
 | `core/release.ts` | 14.2 | what a release build was told when built; how a preview is named; the Pages site |
 | `core/install.ts` | 14.8 | the installer's layout read; how slipbox was installed; its channel; `uninstall`'s plan |
 | `core/update.ts` | 14.4 | the newest the channel offers, from its sums; the daily check; `upgrade` |
 | `core/restart.ts` | UPG | the restart's note; the hand-over: the upgrade, the binary, `execve` into it |
-| `core/libc.ts` | UPG | libc through `bun:ffi`, opened once: `setenv` (D221), `execve`, `close_range`, `tcflush` |
-| `core/processes.ts` | UPG | whether a process still runs: a lock's holder, a TUI's unsaved notes, an export's spool |
+| [libc.ts][o14] | UPG | libc through `bun:ffi`, opened once: `setenv` (D221), `execve`, `close_range`, `tcflush` |
+| [processes.ts][o15] | UPG | whether a process still runs: a lock's holder, a TUI's unsaved notes, an export's spool |
 | `tui/dialog.ts` | UPG | the dialog: text, a select and checkboxes; its keys and clicks |
 | `tui/updates.ts` | UPG | the update offer, `app.upgrade`, `app.restart`, an upgrade underneath noticed |
 | `core/skill.ts` | GR-D10 | the skill for agents, built in: printed; installed, never over another's file or a link |
 | `core/skill-lifecycle.ts` | ASI | detected user skill folders, safe refresh and uninstall ownership checks |
 | `core/report.ts` | RPT | a bug report's facts (slipbox, the system, the terminal); its text read back; the address |
-| `core/browser.ts` | RPT | a browser opened on an address, by platform; none over SSH |
+| `core/foundation/platform/browser.ts` | RPT | a browser opened on an address, by platform; none over SSH |
 | `core/gh.ts` | RPT | `gh` found, its account read, `gh issue create` run |
 | `cli/report.ts` | RPT | `report`, run before any vault is looked for |
-| `core/wsl.ts` | 14.12 | WSL known; Windows' drives from its mounts; their fonts; notes on one, said |
+| [wsl.ts][o16] | 14.12 | WSL known; Windows' drives from its mounts; their fonts; notes on one, said |
 | `core/stale.ts` | 9.9 | advisory list of unsaved paths, pid-stamped: the TUI writes it, the CLI reads it |
 | `cli/cli.ts` | 9.1–9.6 | the CLI face: the dispatcher, the help, each command's arguments and flags; `--json` |
 | `cli/common.ts` | 9.2, 9.4, 9.10 | the session; errors, exit codes; a note named, resolved; a note read and written |
@@ -479,7 +481,8 @@ and data each have a folder of their own, and a vault's cache and state are kept
 
 The four folders are XDG's, their defaults (`~/.config`, `~/.cache`, `~/.local/state`, `~/.local/share`) when the
 variables are unset, on macOS too; on Windows, `%APPDATA%\slipbox` and `%LOCALAPPDATA%\slipbox\cache`, `\state` and
-`\data`. An `XDG_*` that is set, absolute, is taken on every platform (`core/paths.ts`, `storeDir`; D200;
+`\data`. An `XDG_*` that is set, absolute, is taken on every platform (`core/foundation/platform/paths.ts`, `storeDir`;
+D200;
 [distribution.md](distribution.md) § Folders).
 
 `<key>` is the vault's path, home's too: `<basename>-<sha256(realpath)[:12]>`; Elsewhere's is `elsewhere` (`21.8`;
@@ -534,7 +537,8 @@ the whole-note work — the first open, a change of width — short:
   footnotes views wait too, rather than parse here. Where threads can't start, or one fails, the note reads as its
   source, the app says why once, and opening it again tries again ([rendering.md](rendering.md) § Background parsing and
   spelling limits); the index parses it here. The workers stop after a minute idle.
-- **Wrapping is mostly ASCII work** (`core/layout/wrap.ts`, `core/width.ts`): a paragraph of printable ASCII is
+- **Wrapping is mostly ASCII work** (`core/layout/wrap.ts`, `core/foundation/text/width.ts`): a paragraph of printable
+  ASCII is
   wrapped by ranges of its text, not a grapheme object per character (the same rows, exactly: a randomised test
   holds the two paths together); other text goes through the grapheme segmenter only around what isn't ASCII
   (between two printable ASCII characters is always a boundary); short strings' widths (a bullet, a border) are
@@ -557,3 +561,20 @@ Measured with `bun scripts/bench.ts` (median, this machine, 2026-10-01):
 What still grows with the note: a width change re-wraps every block (70 ms at 20,000 lines), and a first open
 parses all of it (on other threads, 380 ms). Laying out only what's in view first is the lever left; nothing an
 ordinary note needs.
+
+[o1]: ../../src/core/foundation/platform/fsutil.ts
+[o2]: ../../src/core/application/config/config.ts
+[o3]: ../../src/core/foundation/workers/worker-context.ts
+[o4]: ../../src/core/foundation/workers/url.ts
+[o5]: ../../src/core/foundation/workers/worker-requests.ts
+[o6]: ../../src/core/foundation/platform/sqlite.ts
+[o7]: ../../src/core/foundation/platform/lazy.ts
+[o8]: ../../src/core/foundation/platform/shell.ts
+[o9]: ../../src/core/foundation/text/myers.ts
+[o10]: ../../src/core/foundation/text/blockdiff.ts
+[o11]: ../../src/core/application/commands/catalog.ts
+[o12]: ../../src/core/foundation/platform/tool-process.ts
+[o13]: ../../src/core/foundation/platform/clipboard.ts
+[o14]: ../../src/core/foundation/platform/libc.ts
+[o15]: ../../src/core/foundation/platform/processes.ts
+[o16]: ../../src/core/foundation/platform/wsl.ts

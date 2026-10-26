@@ -5,12 +5,12 @@ import { prepareExport } from "../core/export/jobs.ts";
 import { loadMermaid, mermaidPending, withMermaidBatch } from "../core/diagrams.ts";
 import { statSync } from "node:fs";
 import { basename, extname, resolve } from "node:path";
-import type { Config } from "../core/config.ts";
+import type { Config } from "../core/application/config/config.ts";
 import { glyphsFor, isGlyphMode } from "../core/glyphs.ts";
 import { detectColorDepth, layoutToAnsi, type ColorDepth } from "../core/layout/ansi.ts";
 import { layoutNote, layoutWidth } from "../core/note.ts";
 import { applyColorOverrides, loadTheme } from "../core/theme/index.ts";
-import { readText } from "../core/fsutil.ts";
+import { readText } from "../core/foundation/platform/fsutil.ts";
 import { exportTarget, FORMATS, formatFor, namesFolder } from "../core/export/index.ts";
 import { flag, has, UsageError } from "./args.ts";
 import {

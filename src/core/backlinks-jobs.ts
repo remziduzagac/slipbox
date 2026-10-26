@@ -7,16 +7,16 @@
 import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
 import { isAbsolute, join } from "node:path";
-import { type Config, loadConfig } from "./config.ts";
+import { type Config, loadConfig } from "./application/config/config.ts";
 import { type Graph, openGraph } from "./graph.ts";
-import { sweepTemps } from "./fsutil.ts";
-import { cacheDir, stateDir } from "./paths.ts";
+import { sweepTemps } from "./foundation/platform/fsutil.ts";
+import { cacheDir, stateDir } from "./foundation/platform/paths.ts";
 import { Reach } from "./reach.ts";
 import { probeFollowed } from "./symlinks.ts";
 import { configFilesFor, vaultAt } from "./vault.ts";
-import { walkContext } from "./worker-context.ts";
-import { WorkerRequestError, WorkerRequests } from "./worker-requests.ts";
-import { workerUrl } from "./workers.ts";
+import { walkContext } from "./foundation/workers/worker-context.ts";
+import { WorkerRequestError, WorkerRequests } from "./foundation/workers/worker-requests.ts";
+import { workerUrl } from "./foundation/workers/url.ts";
 
 /** A note of the vault at `root`, to list its backlinks; null: the vault's index caught up alone (a kept tab's). */
 export interface BacklinksRequest {

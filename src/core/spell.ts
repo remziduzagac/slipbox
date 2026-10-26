@@ -16,7 +16,7 @@ import enAff from "../../node_modules/dictionary-en/index.aff" with { type: "fil
 import enDic from "../../node_modules/dictionary-en/index.dic" with { type: "file" };
 import trAff from "../../node_modules/dictionary-tr/index.aff" with { type: "file" };
 import trDic from "../../node_modules/dictionary-tr/index.dic" with { type: "file" };
-import { dataHome } from "./paths.ts";
+import { dataHome } from "./foundation/platform/paths.ts";
 
 /** A word of a note's prose: where it is, by line and column (from 1, UTF-16) and by offset in the text. */
 export interface SpellWord {

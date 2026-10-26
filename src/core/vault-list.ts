@@ -8,7 +8,7 @@ import { vaultAt } from "./vault.ts";
 import { homeFolder } from "./vault.ts";
 import { loadSession } from "./position.ts";
 import { rootLabel, tildePath } from "./names.ts";
-import { sanitize } from "./sanitize.ts";
+import { sanitize } from "./foundation/text/sanitize.ts";
 export interface VaultEntry {
   label: string;
   detail: string;

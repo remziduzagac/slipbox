@@ -6,8 +6,8 @@ import { type Canvas, drawText } from "./canvas.ts";
 import { type Rect, type Geometry, pageBg, roleStyle, markStyle } from "./draw.ts";
 import type { Role, Color } from "../core/theme/theme.ts";
 import { smallButton } from "./draw-panels.ts";
-import { truncate, stringWidth, truncateStart } from "../core/width.ts";
-import { sanitize } from "../core/sanitize.ts";
+import { truncate, stringWidth, truncateStart } from "../core/foundation/text/width.ts";
+import { sanitize } from "../core/foundation/text/sanitize.ts";
 import type { Problem } from "../core/diagnostics.ts";
 import { severityGlyph, SEVERITY_ROLE, MARK_ROLE } from "./draw-pane.ts";
 

@@ -1,12 +1,12 @@
 // The configuration in the TUI: the keymaps, the theme and glyphs built from it, the UI settings (`space u`) and
 // the overrides a session keeps, and the live reload of the config files when one is saved.
 
-import { canonKey, canonSeq, Keymap, unknownModifiers } from "../core/commands.ts";
-import { type Config, loadConfig } from "../core/config.ts";
+import { canonKey, canonSeq, Keymap, unknownModifiers } from "../core/application/commands/registry.ts";
+import { type Config, loadConfig } from "../core/application/config/config.ts";
 import { glyphsFor, type Glyphs } from "../core/glyphs.ts";
 import { Graph } from "../core/graph.ts";
 import { lintCommand } from "../core/lint.ts";
-import { userConfigFile } from "../core/paths.ts";
+import { userConfigFile } from "../core/foundation/platform/paths.ts";
 import type { UiOverride } from "../core/position.ts";
 import { applyColorOverrides, loadTheme, type Theme } from "../core/theme/index.ts";
 import { configFilesFor, setRootMarkers } from "../core/vault.ts";

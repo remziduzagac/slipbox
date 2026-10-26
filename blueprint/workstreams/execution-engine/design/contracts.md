@@ -19,7 +19,7 @@ Each built-in operation definition contains:
 
 The catalog has two handler groups, application and session, with one descriptor format. One source defines each
 named UI action's ID, title, argument shape and declared application/host effects. Keybindings, the palette, attached
-CLI discovery and session invocation use that source. Existing `command-specs.ts` is migrated into this structure;
+CLI discovery and session invocation use that source. Existing `catalog.ts` is migrated into this structure;
 do not maintain a second hand-written remote-action list. A generic invoke-action request still validates the
 selected action's argument schema and access; it is not a path around typed contracts.
 
@@ -33,7 +33,8 @@ identity, access grants, configuration context and cancellation signal. Those tr
 inside socket arguments. Receipt/task status, cancellation, plans and artifacts also enforce ownership and current
 access; opaque IDs alone are not authorization. Deadline and retry-window limits are advertised at connection.
 Response-wait and execution deadlines are distinct and have bounded defaults; callers can shorten the execution
-budget within host limits. Status/reconnect never extends that budget. See [runtime](runtime.md#tasks-interruption-and-retries).
+budget within host limits. Status/reconnect never extends that budget. See
+[runtime](runtime.md#tasks-interruption-and-retries).
 
 Preserve this context across child operations, deferred callbacks and tool results. Synthetic input retains its
 client origin through the normal key/mouse dispatcher; it never becomes a human key because it reached that loop.

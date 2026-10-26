@@ -5,8 +5,14 @@
 
 import { statSync } from "node:fs";
 import { isAbsolute, join, relative } from "node:path";
-import { sanitize } from "../core/sanitize.ts";
-import { type BangRange, expandPercent, parseBang, runShell, type ShellResult } from "../core/shell.ts";
+import { sanitize } from "../core/foundation/text/sanitize.ts";
+import {
+  type BangRange,
+  expandPercent,
+  parseBang,
+  runShell,
+  type ShellResult,
+} from "../core/foundation/platform/shell.ts";
 import { type App, editable, type View } from "./app.ts";
 import { cannotEdit, placeAt } from "./editing.ts";
 import { exLines } from "./replacing.ts";

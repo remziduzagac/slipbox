@@ -4,10 +4,10 @@
 import { deleteTypedSelection, insertKey, insertText } from "./editing.ts";
 import { insertRecord, PASTE, put, vimKey, visualKey } from "./vim.ts";
 import * as R from "./replacing.ts";
-import type { Keymap } from "../core/commands.ts";
+import type { Keymap } from "../core/application/commands/registry.ts";
 import { afterSnippetKey, snippetKey } from "./snippets.ts";
 import { afterInsertKey, afterPaste, completeWords, completionKey } from "./completion.ts";
-import { sanitize } from "../core/sanitize.ts";
+import { sanitize } from "../core/foundation/text/sanitize.ts";
 import {
   EXPLORER_ACTION_INFO,
   HISTORY_ACTION_INFO,

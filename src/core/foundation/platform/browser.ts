@@ -3,7 +3,7 @@
 // would open on that machine, not yours. The one place slipbox opens a browser, because it's what you chose: a link
 // in a note is still copied, never opened (design/tui.md § Following links).
 
-import { overSsh } from "./report.ts";
+import { overSsh } from "../../report.ts";
 import { isWsl } from "./wsl.ts";
 
 export interface Opener {

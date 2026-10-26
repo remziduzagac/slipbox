@@ -4,7 +4,7 @@
 import { statSync } from "node:fs";
 import { basename, dirname, isAbsolute, relative, resolve } from "node:path";
 import type { Heading, ListItem, Paragraph, Root, RootContent } from "mdast";
-import { readText } from "./fsutil.ts";
+import { readText } from "./foundation/platform/fsutil.ts";
 import type { Glyphs } from "./glyphs.ts";
 import type { Graph } from "./graph.ts";
 import type { Layout, LinkStatus } from "./layout/ir.ts";

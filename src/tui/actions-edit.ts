@@ -5,7 +5,7 @@ import { type Run, withView } from "./actions.ts";
 import { spellStep, spellSuggest, spellAdd } from "./spelling.ts";
 import * as E from "./editing.ts";
 import * as V from "./vim.ts";
-import { graphemes } from "../core/width.ts";
+import { graphemes } from "../core/foundation/text/width.ts";
 import { type App, type View, editable } from "./app.ts";
 import { endSnippet } from "./snippets.ts";
 import * as C from "./cursor.ts";

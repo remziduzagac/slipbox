@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { runLint } from "../src/core/lint.ts";
 import { type LinterDef, runLinter } from "../src/core/servers/linters.ts";
-import { runTool, toolFailure } from "../src/core/tool-process.ts";
+import { runTool, toolFailure } from "../src/core/foundation/platform/tool-process.ts";
 
 const run = (source: string, options = {}) =>
   runTool([process.execPath, "-e", source], { cwd: "/tmp", timeoutMs: 1000, ...options });

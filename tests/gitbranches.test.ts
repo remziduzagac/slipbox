@@ -6,7 +6,7 @@ import { spawnSync } from "node:child_process";
 import { chmodSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { delimiter, join } from "node:path";
-import { DEFAULT_CONFIG, loadConfig } from "../src/core/config.ts";
+import { DEFAULT_CONFIG, loadConfig } from "../src/core/application/config/config.ts";
 import { type Checkout, checkoutOf } from "../src/core/git.ts";
 import {
   agoSaid,

@@ -12,8 +12,8 @@ import { randomBytes } from "node:crypto";
 import { existsSync, readdirSync, realpathSync, renameSync, rmSync } from "node:fs";
 import { basename, join } from "node:path";
 import { parse as parseToml } from "smol-toml";
-import { atomicWrite, ensureDir, readJson, readRegular, SMALL_FILE, writeJson } from "./fsutil.ts";
-import { cacheHome, stateHome, vaultKey } from "./paths.ts";
+import { atomicWrite, ensureDir, readJson, readRegular, SMALL_FILE, writeJson } from "./foundation/platform/fsutil.ts";
+import { cacheHome, stateHome, vaultKey } from "./foundation/platform/paths.ts";
 
 export const MARKER = ".slipbox";
 

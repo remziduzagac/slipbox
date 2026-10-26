@@ -4,11 +4,11 @@
 import { existsSync, statSync } from "node:fs";
 import { isAbsolute, join } from "node:path";
 import { scratchLocation } from "../core/capture.ts";
-import { COMMAND_SPECS } from "../core/command-specs.ts";
+import { COMMAND_SPECS } from "../core/application/commands/catalog.ts";
 import { conventionOf, describeConvention } from "../core/convention.ts";
 import { copyAvailable, folderIdentity, pointerName, readFolders } from "../core/folders.ts";
 import { parseNoteFile } from "../core/readers.ts";
-import { cacheDir, stateDir, userConfigFile } from "../core/paths.ts";
+import { cacheDir, stateDir, userConfigFile } from "../core/foundation/platform/paths.ts";
 import { listThemes } from "../core/theme/index.ts";
 import { loadSession, PositionStore } from "../core/position.ts";
 import { frontmatterFindings, rootTypes } from "../core/diagnostics.ts";

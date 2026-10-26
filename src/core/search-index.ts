@@ -4,10 +4,10 @@
 // BM25, the title weighing most. What each file was when indexed (size, mtime) says what to index
 // again: whoever changed the file, the next catch-up finds it.
 
-import { Database } from "./sqlite.ts";
+import { Database } from "./foundation/platform/sqlite.ts";
 import { existsSync, mkdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
-import { cacheDir, ensureCacheHome, type Keyed } from "./paths.ts";
+import { cacheDir, ensureCacheHome, type Keyed } from "./foundation/platform/paths.ts";
 
 /** Bumped when the rows or their columns change: an index of another version is made again. */
 const SEARCH_VERSION = 3; // 3: better-sqlite3, and sections by size band
@@ -129,7 +129,7 @@ export class SearchIndex {
   /** A file's row, replaced: its text and fields, its tags, and what it was. */
   put(path: string, doc: IndexedDoc, stat: { size: number; mtime: number }): void {
     this.remove(path);
-    // Integers the schema needs are cast: a JS number binds as a double (see sqlite.ts).
+    // Integers the schema needs are cast: a JS number binds as a double (see foundation/platform/sqlite.ts).
     const id = Number(
       this.db
         .prepare("insert into docs (path, grp, size, mtime) values (?, ?, CAST(? AS INTEGER), ?)")

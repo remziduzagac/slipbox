@@ -6,11 +6,11 @@ import { type Canvas, drawText } from "./canvas.ts";
 import { type SaveAsOverlay, type SaveAsGeometry, placeOf, sizeText, dateText } from "./saveas.ts";
 import { type DialogGeometry, type DialogOverlay, cursorHelp, dimmed } from "./dialog.ts";
 import { type Geometry, type Rect, roleStyle, keyText, coverHot } from "./draw.ts";
-import { truncate, stringWidth, truncateStart, graphemes, graphemeWidth } from "../core/width.ts";
+import { truncate, stringWidth, truncateStart, graphemes, graphemeWidth } from "../core/foundation/text/width.ts";
 import { smallButton } from "./draw-panels.ts";
 import { peekTitle } from "./peek.ts";
 import { drawPane } from "./draw-pane.ts";
-import { sanitize, sanitizeMap } from "../core/sanitize.ts";
+import { sanitize, sanitizeMap } from "../core/foundation/text/sanitize.ts";
 import type { GitState } from "../core/gitops.ts";
 import type { Color } from "../core/theme/theme.ts";
 

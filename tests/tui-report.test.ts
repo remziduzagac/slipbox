@@ -12,9 +12,9 @@ import {
   utimesSync,
   writeFileSync,
 } from "node:fs";
-import { isWsl } from "../src/core/wsl.ts";
+import { isWsl } from "../src/core/foundation/platform/wsl.ts";
 import { join } from "node:path";
-import { canonKey } from "../src/core/commands.ts";
+import { canonKey } from "../src/core/application/commands/registry.ts";
 import { tildePath } from "../src/core/names.ts";
 import { GUIDE, readReport, SCREEN_INTRO, WHERE_INTRO } from "../src/core/report.ts";
 import { NoteBuffer } from "../src/tui/buffer.ts";

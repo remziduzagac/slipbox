@@ -4,7 +4,7 @@
 import { classify, extensionOf, isKnownExtension } from "../core/filetypes.ts";
 import { existsSync, mkdirSync, statSync } from "node:fs";
 import { basename, dirname, join, posix, relative, sep } from "node:path";
-import { climbsOut, writeNote } from "../core/fsutil.ts";
+import { climbsOut, writeNote } from "../core/foundation/platform/fsutil.ts";
 import { notIndexedSaid } from "../core/graph.ts";
 import { blockingLink, linkSaid, writesThrough } from "../core/symlinks.ts";
 import { insertText, startInsert } from "./editing.ts";

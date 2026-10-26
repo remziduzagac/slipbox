@@ -2,12 +2,12 @@
 // graph, assembly and writer. Only the owner — the command line or the TUI — writes the output, once complete.
 import { PreparedExport } from "./spool.ts";
 import { isAbsolute } from "node:path";
-import type { Config } from "../config.ts";
-import { climbsOut } from "../fsutil.ts";
+import type { Config } from "../application/config/config.ts";
+import { climbsOut } from "../foundation/platform/fsutil.ts";
 import { Graph } from "../graph.ts";
 import { Reach } from "../reach.ts";
 import type { VaultLocation } from "../vault.ts";
-import { workerUrl } from "../workers.ts";
+import { workerUrl } from "../foundation/workers/url.ts";
 import type { ExportOutput } from "./index.ts";
 
 export type ExportStage = "reading" | "assembling" | "writing";

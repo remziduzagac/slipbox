@@ -4,7 +4,7 @@
 import { stopInsert } from "./editing.ts";
 import * as R from "./replacing.ts";
 import { gitClick, gitRightClick, signClick } from "./gitmouse.ts";
-import { stringWidth } from "../core/width.ts";
+import { stringWidth } from "../core/foundation/text/width.ts";
 import { saveAsMouse } from "./saveas.ts";
 import { dialogMouse } from "./dialog.ts";
 import { clampPos, type Pos, wordAt } from "./cursor.ts";

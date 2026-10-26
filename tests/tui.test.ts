@@ -23,16 +23,16 @@ import {
   utimesSync,
   writeFileSync,
 } from "node:fs";
-import { UNSAFE } from "../src/core/sanitize.ts";
+import { UNSAFE } from "../src/core/foundation/text/sanitize.ts";
 import { homedir, tmpdir } from "node:os";
 import { randomBytes } from "node:crypto";
 import { basename, dirname, join, relative } from "node:path";
-import { COMMAND_SPECS, commandGroup } from "../src/core/command-specs.ts";
-import { canonKey, canonSeq } from "../src/core/commands.ts";
-import { type Config, DEFAULT_CONFIG } from "../src/core/config.ts";
+import { COMMAND_SPECS, commandGroup } from "../src/core/application/commands/catalog.ts";
+import { canonKey, canonSeq } from "../src/core/application/commands/registry.ts";
+import { type Config, DEFAULT_CONFIG } from "../src/core/application/config/config.ts";
 import { openGraph } from "../src/core/graph.ts";
 import { locateVault } from "../src/core/vault.ts";
-import { tildePath } from "../src/core/paths.ts";
+import { tildePath } from "../src/core/foundation/platform/paths.ts";
 import { linkAnswer, linkKey, probe, setLinkAnswer } from "../src/core/symlinks.ts";
 import { type ListOverlay, App, type Host } from "../src/tui/app.ts";
 import { dateText, listFolder, placeOf, type SaveAsOverlay, sizeText } from "../src/tui/saveas.ts";
@@ -43,12 +43,12 @@ import type { PanelRow } from "../src/tui/gitpanel.ts";
 import type { NvimServer } from "../src/core/nvim.ts";
 import { TextCanvas } from "../src/tui/canvas.ts";
 import { match, RANKED, rank } from "../src/tui/match.ts";
-import { graphemes, setWidthMethod, stringWidth, type WidthMethod } from "../src/core/width.ts";
+import { graphemes, setWidthMethod, stringWidth, type WidthMethod } from "../src/core/foundation/text/width.ts";
 import { glyphsFor } from "../src/core/glyphs.ts";
 import { crumbLayout } from "../src/tui/draw.ts";
 import { A_BOLD, A_DIM, type Layout, srcAt } from "../src/core/layout/ir.ts";
 import { codeKind } from "../src/core/syntax.ts";
-import { load } from "../src/core/lazy.ts";
+import { load } from "../src/core/foundation/platform/lazy.ts";
 import { loadRasterizer, rasterizer } from "../src/core/svg.ts";
 import { loadMermaid, mermaidPending, mermaidSvg } from "../src/core/diagrams.ts";
 import { loadTypesetter } from "../src/core/typeset.ts";
@@ -1457,7 +1457,7 @@ describe("the left panel's views and filter", () => {
     await none.keys("space", "h", "h");
     expect(none.app.history.rows().some((r) => r.heading || r.recent)).toBe(false);
     // Out of range: said, and the default kept.
-    const { loadConfig } = await import("../src/core/config.ts");
+    const { loadConfig } = await import("../src/core/application/config/config.ts");
     const file = join(root, "limit.toml");
     writeFileSync(file, "[ui]\nhistory_limit = 5000\n");
     const loaded = loadConfig({ configFile: file });
@@ -2825,7 +2825,7 @@ describe("the lens (live preview: space n l, i/a/o with edit_in = live)", () => 
     expect(rows().join("\n")).toContain("AAAA text of alpha.");
   });
   test("a in the render, edit_in = live from a config file: the lens, a again types after the cursor, esc esc back to the render; space n l; the status line's column the text's, not counting the counters (#26)", async () => {
-    const { loadConfig } = await import("../src/core/config.ts");
+    const { loadConfig } = await import("../src/core/application/config/config.ts");
     const root = makeVault();
     writeFileSync(join(root, "a.md"), "# Alpha\n\nSee [b](b.md) here.\n\nAAAA text of alpha.\n");
     // The setting as a user's own file says it, read as the app reads it.
@@ -9026,7 +9026,7 @@ describe("pinned tabs", () => {
 
 describe("word count, save all, the change list, moving lines", () => {
   test("words in the status line, the selection's in visual mode; note info; frontmatter not counted", async () => {
-    const { countWords } = await import("../src/core/words.ts");
+    const { countWords } = await import("../src/core/foundation/text/words.ts");
     expect(countWords("# Title\n\n- one two, three's\n| a | b |\n")).toBe(6);
     expect(countWords("---\ntitle: x y\n---\nhello world\n", true)).toBe(2);
     expect(countWords("日本語のノート")).toBe(7);
@@ -9214,7 +9214,7 @@ describe("the key map as agreed (vim first, desktop editors' ctrl keys, space fo
     expect(h.app.view!.buf.rel).toBe("notes/beta.md");
   });
   test("the clipboard: cuts reach it, p puts what it holds (the register when it holds nothing)", async () => {
-    const { copyText } = await import("../src/core/clipboard.ts");
+    const { copyText } = await import("../src/core/foundation/platform/clipboard.ts");
     const root = makeVault();
     writeFileSync(join(root, "c.md"), "alpha beta\n");
     const h = await harness({ root, open: "c.md" });
@@ -9224,7 +9224,7 @@ describe("the key map as agreed (vim first, desktop editors' ctrl keys, space fo
     await h.keys("p");
     expect(v.buf.source).toBe("lapha beta\n"); // nothing readable on the clipboard: the register
     // Something copied elsewhere (the clipboard file stands for the system clipboard here).
-    const { stateDir } = await import("../src/core/paths.ts");
+    const { stateDir } = await import("../src/core/foundation/platform/paths.ts");
     copyText("ZED", { osc52: () => false, fallbackDir: stateDir(h.app.loc) });
     await h.keys("0", "shift+p");
     expect(v.buf.source).toBe("ZEDlapha beta\n");
@@ -9251,8 +9251,8 @@ describe("the key map as agreed (vim first, desktop editors' ctrl keys, space fo
     await h.keys("ctrl+v");
     expect(v.buf.source).toBe("ha beta\ndelta\ngamma\n");
     // Over a selection: the clipboard in its place — the clipboard unchanged (a paste isn't a cut).
-    const { copyText } = await import("../src/core/clipboard.ts");
-    const { stateDir } = await import("../src/core/paths.ts");
+    const { copyText } = await import("../src/core/foundation/platform/clipboard.ts");
+    const { stateDir } = await import("../src/core/foundation/platform/paths.ts");
     copyText("ZED", { osc52: () => false, fallbackDir: stateDir(h.app.loc) });
     await h.keys("g", "g", "v", "l", "ctrl+v");
     expect(v.buf.source).toBe("ZED beta\ndelta\ngamma\n");
@@ -10212,7 +10212,7 @@ describe("vaults in the TUI (17.x)", () => {
   test("a link's target that matches nothing keeps its list while typed: the other vaults' indexes read once per link, not per key", async () => {
     const { base, notes, app } = await twoVaults();
     await onlyRootsUnder(base, async () => {
-      const { cacheDir } = await import("../src/core/paths.ts");
+      const { cacheDir } = await import("../src/core/foundation/platform/paths.ts");
       const { readRoots } = await import("../src/core/registry.ts");
       const { foldersFile } = await import("../src/core/folders.ts");
       const match = await import("../src/tui/match.ts");
@@ -16037,7 +16037,7 @@ describe("problems where they are: the bar, the marks, the status line (19.8–1
     ] as const) {
       const dir = mkdtempSync(join(sandbox, "marks-"));
       writeFileSync(join(dir, "config.toml"), `[diagnostics]\nmarks = ${old}\n`);
-      const { loadConfig } = await import("../src/core/config.ts");
+      const { loadConfig } = await import("../src/core/application/config/config.ts");
       expect(loadConfig({ configFile: join(dir, "config.toml"), vaultFile: null }).config.diagnostics.marks).toBe(
         level,
       );

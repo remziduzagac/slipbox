@@ -21,7 +21,7 @@ import type { NoteBuffer } from "./buffer.ts";
 import { match } from "./match.ts";
 import { keyChar } from "./keys.ts";
 import type { App, View } from "./app.ts";
-import { readText } from "../core/fsutil.ts";
+import { readText } from "../core/foundation/platform/fsutil.ts";
 
 /** The Problems panel and the problems marked in the text. */
 export class Problems {

@@ -14,10 +14,10 @@ import {
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
-import { loadConfig } from "../../../src/core/config.ts";
-import { STALE_TEMP_MS } from "../../../src/core/fsutil.ts";
+import { loadConfig } from "../../../src/core/application/config/config.ts";
+import { STALE_TEMP_MS } from "../../../src/core/foundation/platform/fsutil.ts";
 import { openGraph } from "../../../src/core/graph.ts";
-import { vaultKey } from "../../../src/core/paths.ts";
+import { vaultKey } from "../../../src/core/foundation/platform/paths.ts";
 import { setLinkAnswer } from "../../../src/core/symlinks.ts";
 import { configFilesFor, initVault, recordLocation, rootAt } from "../../../src/core/vault.ts";
 import { type Check, explorerOpen, follow, inSwitcher, leader, opened } from "../check.ts";

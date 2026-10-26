@@ -7,7 +7,7 @@ import { join } from "node:path";
 import { glyphsFor } from "../src/core/glyphs.ts";
 import { layoutToAnsi } from "../src/core/layout/ansi.ts";
 import { A_BOLD, type Layout, type Line, scrolledCol, scrolledInSight, unscrolledCol } from "../src/core/layout/ir.ts";
-import { blockDiff } from "../src/core/blockdiff.ts";
+import { blockDiff } from "../src/core/foundation/text/blockdiff.ts";
 import { layoutBlockDiff } from "../src/core/layout/blockdiff.ts";
 import { layoutDiff } from "../src/core/layout/diff.ts";
 import { layoutSplitDiff, splitColumns, splitRows } from "../src/core/layout/splitdiff.ts";
@@ -28,7 +28,7 @@ import { countLines, measure, wrapGraphemes, wrapSpans } from "../src/core/layou
 import type { Span } from "../src/core/layout/ir.ts";
 import { blend, listThemes, loadTheme } from "../src/core/theme/index.ts";
 import { layoutWidth } from "../src/core/note.ts";
-import { stringWidth } from "../src/core/width.ts";
+import { stringWidth } from "../src/core/foundation/text/width.ts";
 
 // Isolation (testing.md): never read or write the real config, cache or state directories.
 const sandbox = mkdtempSync(join(tmpdir(), "slipbox-render-"));

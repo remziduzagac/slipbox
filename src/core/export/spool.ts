@@ -3,9 +3,9 @@ import { randomUUID } from "node:crypto";
 import { closeSync, constants, mkdirSync, openSync, readdirSync, rmSync, writeSync } from "node:fs";
 import { mkdir, mkdtemp, open, rename, rm, stat } from "node:fs/promises";
 import { dirname, isAbsolute, join } from "node:path";
-import { climbsOut } from "../fsutil.ts";
-import { ensureCacheHome } from "../paths.ts";
-import { alive } from "../processes.ts";
+import { climbsOut } from "../foundation/platform/fsutil.ts";
+import { ensureCacheHome } from "../foundation/platform/paths.ts";
+import { alive } from "../foundation/platform/processes.ts";
 
 // Normal process exit (including the TUI's immediate quit) must not leave document copies behind.
 const privatePaths = new Set<string>();

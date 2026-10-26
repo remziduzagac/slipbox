@@ -5,8 +5,8 @@
 import { availableParallelism } from "node:os";
 import type { Root } from "mdast";
 import { adoptChunks, noteChunks, type ParseCache } from "./parse.ts";
-import { WorkerRequestError, WorkerRequests } from "./worker-requests.ts";
-import { workerUrl } from "./workers.ts";
+import { WorkerRequestError, WorkerRequests } from "./foundation/workers/worker-requests.ts";
+import { workerUrl } from "./foundation/workers/url.ts";
 
 let workers: WorkerRequests[] | null = null;
 /** Workers asked for (tests); null: up to four, a core left for the UI. */

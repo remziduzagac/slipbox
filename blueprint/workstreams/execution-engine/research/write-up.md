@@ -14,8 +14,10 @@ The baseline is the inspected local checkout at `9b3854c`, plus the D235 split a
 The split is an implementation input, not assumed merged. Reconcile the actual main branch and unfinished work
 before applying this design; branch names and task indexes alone do not establish completion.
 
-In the baseline, `src/core/commands.ts` registers callbacks over an arbitrary context. The TUI uses `App` as that
-context. `src/core/command-specs.ts` supplies titles and CLI equivalents as strings, not executable contracts.
+In the baseline, `src/core/application/commands/registry.ts` registers callbacks over an arbitrary context. The TUI uses
+`App` as that
+context. `src/core/application/commands/catalog.ts` supplies titles and CLI equivalents as strings, not executable
+contracts.
 `src/cli/cli.ts` performs argument validation and application orchestration separately. `src/tui/buffer.ts` combines
 editable text, undo and saved-file state with layout caches and display state. `App.writeBuffer` coordinates atomic
 writes, watcher suppression, graph refresh and server notification.

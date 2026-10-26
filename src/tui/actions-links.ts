@@ -3,7 +3,7 @@
 
 import { type Run, withView, lay } from "./actions.ts";
 import { diffEnter } from "./diffview.ts";
-import { canonKey } from "../core/commands.ts";
+import { canonKey } from "../core/application/commands/registry.ts";
 import { prettyKey } from "./keys.ts";
 import { peekGo, peekKeep, peekFill, peekInstead, ownPath } from "./peek.ts";
 import { planRelink, planVaultRename } from "../core/rename.ts";

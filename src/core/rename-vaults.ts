@@ -3,7 +3,7 @@
 
 import { existsSync } from "node:fs";
 import { basename, dirname, isAbsolute, join, posix, relative, sep } from "node:path";
-import { climbsOut, readText } from "./fsutil.ts";
+import { climbsOut, readText } from "./foundation/platform/fsutil.ts";
 import type { Graph, LinkRef } from "./graph.ts";
 import { formatPathLink, normKey, wikiPathCandidates } from "./links.ts";
 import {

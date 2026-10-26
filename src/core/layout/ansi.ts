@@ -3,7 +3,7 @@
 
 import type { Color, Theme } from "../theme/theme.ts";
 import { hexToRgb } from "../theme/theme.ts";
-import { stringWidth } from "../width.ts";
+import { stringWidth } from "../foundation/text/width.ts";
 import type { Layout, Line } from "./ir.ts";
 import { type CellStyle, lineFillBg, spanStyle } from "./style.ts";
 

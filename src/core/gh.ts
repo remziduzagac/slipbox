@@ -2,15 +2,15 @@
 // the account it will post as, read without the network, for the yes-or-no; on yes, `gh issue create`, the text on
 // its input, from the home folder (never a vault's, so no folder's settings reach it), a minute at most.
 
-import { sanitize } from "./sanitize.ts";
-import { runTool } from "./tool-process.ts";
+import { sanitize } from "./foundation/text/sanitize.ts";
+import { runTool } from "./foundation/platform/tool-process.ts";
 
 /** `gh`, as `PATH` finds it now (Bun.which alone reads the start-up one), or null. */
 export function ghPath(env: Record<string, string | undefined> = process.env): string | null {
   return Bun.which("gh", { PATH: env.PATH ?? "" });
 }
 
-/** gh run as every helper is (`core/tool-process.ts`): its output capped, its process group stopped at its deadline
+/** gh run as every helper is (`core/foundation/platform/tool-process.ts`): its output capped, its process group stopped at its deadline
  *  and when slipbox ends; never waiting on a question of its own. */
 function run(
   argv: string[],

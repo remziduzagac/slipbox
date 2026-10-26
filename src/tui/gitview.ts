@@ -24,8 +24,8 @@ import {
   unstageChange,
   unstageFile,
 } from "../core/gitstage.ts";
-import { climbsOut, decodeText, readRegular } from "../core/fsutil.ts";
-import { sanitize } from "../core/sanitize.ts";
+import { climbsOut, decodeText, readRegular } from "../core/foundation/platform/fsutil.ts";
+import { sanitize } from "../core/foundation/text/sanitize.ts";
 import { openDiff } from "./diffview.ts";
 import { match } from "./match.ts";
 import type { HeadingRow } from "./gitpanel.ts";

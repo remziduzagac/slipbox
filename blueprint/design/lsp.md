@@ -175,7 +175,8 @@ own quirks, not slipbox's:
 
 ## Finite tool runs
 
-Linters (the lint surface's and those above) and tool installs run through `core/tool-process.ts`. A linter's output
+Linters (the lint surface's and those above) and tool installs run through `core/foundation/platform/tool-process.ts`. A
+linter's output
 is read up to 16 MiB a stream, as git's is ([tui.md](tui.md)); an install's, 1 MiB. A run past that limit, past its
 deadline (a linter's 30 s, markdownlint-cli2's 60 s, an install's three minutes), cancelled, or ended by a signal —
 whoever sent it — is never read as findings: partial output never passes for a whole run.

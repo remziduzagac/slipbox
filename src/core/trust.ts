@@ -7,8 +7,8 @@
 import { realpathSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
-import { ensureDir, readJson, writeJson } from "./fsutil.ts";
-import { stateHome } from "./paths.ts";
+import { ensureDir, readJson, writeJson } from "./foundation/platform/fsutil.ts";
+import { stateHome } from "./foundation/platform/paths.ts";
 
 let roots: string[] = [];
 

@@ -7,7 +7,7 @@ import { stopInsert } from "./editing.ts";
 import type { Anchor } from "../core/position.ts";
 import { peekStep } from "./peek.ts";
 import { tildePath } from "../core/names.ts";
-import { sanitize } from "../core/sanitize.ts";
+import { sanitize } from "../core/foundation/text/sanitize.ts";
 import type { NoteBuffer } from "./buffer.ts";
 import { match } from "./match.ts";
 import { prettyKey } from "./keys.ts";

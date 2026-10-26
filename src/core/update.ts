@@ -31,8 +31,8 @@ import {
 import { join } from "node:path";
 import { PREVIEW_TAG, pagesBase, type ReleaseBuild, retired, tagOf } from "./release.ts";
 import { type Channel, currentVersion, howToUpgrade, type InstalledBy, installedBy, readChannel } from "./install.ts";
-import { readJson, writeJson } from "./fsutil.ts";
-import { alive } from "./processes.ts";
+import { readJson, writeJson } from "./foundation/platform/fsutil.ts";
+import { alive } from "./foundation/platform/processes.ts";
 
 type Fetcher = (url: string, init?: RequestInit) => Promise<Response>;
 
