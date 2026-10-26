@@ -14,3 +14,7 @@ conventions and phased tasks follow in the design stage, for approval. No decisi
 
 ORG proceeds independently of the draft [execution engine](../execution-engine/README.md); their shared boundaries
 are identified in the research. Source and test files stay in place during research and design.
+
+The research includes the boundary with [#56](https://github.com/remziduzagac/slipbox/issues/56), which follows the
+moves and keeps memory/loading behavior outside ORG. The design will propose test timeout policy as a separate
+phase; this analysis records existing limits and measured failures without changing them.

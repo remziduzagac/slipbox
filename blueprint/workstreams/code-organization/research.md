@@ -132,6 +132,11 @@ with three nontrivial components: file mutations (3), export writer dispatch (3)
 `tmp/issue/madge-runtime.json` and `graph-runtime-summary.json` retain it. This is an import-analysis approximation:
 it includes dynamic imports and does not prove an eager initialization failure or a runtime hang.
 
+Madge's import graph is not a complete worker-lifecycle graph: a string passed to `workerUrl` is not itself a
+JavaScript import. Worker entry points and those URL edges need the build list and the project's scope scanner as
+additional evidence (`package.json:36`, `scripts/ci-scope.ts:177`). Do not infer that an apparently unreferenced
+worker can be removed from this graph alone.
+
 Type-only feedback is substantial. `src/core/commands/files.ts:3` imports `CommandSpec` from the joining catalog;
 `src/core/graph-types.ts:7` refers to `Graph`; `src/core/diagram-cache.ts:5` refers to `DiagramRequest`.
 Those edges should not be described as runtime faults. Separate reusable contracts from a composition module where
@@ -281,19 +286,21 @@ The scoped runs repeatedly hit per-test limits as well as the separate whole-com
 was changed. These are observed expiries at the starting commit, not evidence of a quantified increase over earlier
 runs: this session has no controlled earlier failure-rate sample.
 
-| Test (source anchor) | Measured expiry in the location case | In the export-stream case |
-| --- | ---: | ---: |
-| Word export scenario, `tests/cli.test.ts:400` | 30,047.83 ms | 30,006.92 ms |
-| Excluded-note writing scenario, `tests/cli.test.ts:535` | 30,062.60 ms | No expiry recorded |
+| Test (source anchor) | Location case | Export-stream case | Regex case |
+| --- | --- | --- | --- |
+| Word export, `tests/cli.test.ts:400` | Timeout: 30,047.83 ms | Timeout: 30,006.92 ms | Pass: 7,042.07 ms |
+| Excluded-note write, `tests/cli.test.ts:535` | Timeout: 30,062.60 ms | Pass: 14,935.62 ms | Pass: 3,052.36 ms |
 
-Both logs explicitly say the test timed out after **30,000 ms**. The first scenario exercises several exports and
+The timeout reports explicitly name **30,000 ms** as the test limit. The later passes show substantial variation;
+these sequential runs do not control cache warmth or host load, so they cannot identify its cause.
+The first scenario exercises several exports and
 CLI launches in one test; each launch has its own **20,000 ms** child-process bound (`tests/cli.test.ts:79`–`82`).
 Those limits are distinct: a larger test budget does not repair a child invocation exceeding its own deadline.
 Likewise, splitting a file without splitting or narrowing that compound scenario does not reduce its own work.
 The wide dependency scope does explain why a location-only change runs it at all; it does not prove the cause of
 its individual timeout. Other assertion failures, including interrupted distribution output, are not counted as
 per-test timeout expiries here. Raw evidence: `tmp/issue/unrestricted-scope-where.log` and
-`unrestricted-scope-stream.log`; the table is updated with the remaining case before this stage ends.
+`unrestricted-scope-stream.log`, and `unrestricted-scope-regex-jobs.log`.
 
 Current timeout layers, read from code:
 
@@ -341,8 +348,10 @@ The fixture deliberately ignores SIGTERM, sets a 300 ms tool deadline and 50 ms 
 remaining process (`tests/tool-process.test.ts:56`–`64`). Its measured result is retained in
 `tmp/issue/sigterm-probe.log`: **one pass, zero failures, 381.90 ms for the test, 548.00 ms for the run**.
 This distinguishes a stubborn child from an unresponsive test runner; it is not
-proof that every Bun test run ignores SIGTERM. The sandbox-only regex log also contains `TimeoutOverflowWarning`
-and an effective 1 ms timer; those warnings are not per-test timeout reports and are not a reason to raise defaults.
+proof that every Bun test run ignores SIGTERM. Both the sandbox log and the unrestricted regex-case log contain
+`TimeoutOverflowWarning` and an effective 1 ms
+timer. In the latter, a reported delay was 1,793,023,178,340 ms before clamping. These warnings are not per-test
+timeout reports and are not a reason to raise defaults; clock/deadline arithmetic needs separate investigation.
 
 Stage 2 must propose a **separate phase for timeout policy**, keeping it out of source/test moves. The proposal
 needs a recommendation on any increase, a shared default with named slow-case constants, and a distinction between
@@ -352,10 +361,48 @@ behavior remain outside that test-policy change.
 
 ### Scoped execution baseline
 
-Measurements are being collected in an ignored archive copy of the baseline, with one appended newline in one
-source file at a time. Each run uses `bun run test:changed`; original bytes are restored between runs. The archive
-has its own baseline commit and `origin/dev` ref and shares only installed node_modules. Logs, timings, selected test
-files and failures will be recorded here before the research stage ends. No whole-suite or terminal run is used.
+Ran three sequential measurements on Linux aarch64 with Bun 1.4.2. Each used an archive of the starting commit in
+`/tmp`, its own Git baseline commit and `origin/dev` ref, and a symlink to the existing node_modules. Append exactly
+one newline to the named source file, run the command below, then restore the original bytes in `finally`. Git
+status in the archive was empty after the final case. Source and test files in the actual worktree stayed untouched.
+
+```sh
+gnutimeout -k 10 900 bun run test:changed
+```
+
+Wall time is measured around that command with Python's `time.monotonic()`, including selection and process startup.
+The selector's JSON is retained as `tmp/issue/scopes.json`; timings are in `unrestricted-scope-times.json`, and full
+output in `unrestricted-scope-{where,stream,regex-jobs}.log`. The analysis runner is retained in ignored
+`tmp/issue/measure-unrestricted.py`; it is not a project script or dependency.
+
+| Changed file | Test files selected | Wall seconds | Exit |
+| --- | ---: | ---: | ---: |
+| `src/tui/where.ts` | 32 | 900.088 | 124 |
+| `src/core/export/stream.ts` | 37 | 900.018 | 124 |
+| `src/core/regex-jobs.ts` | 33 | 672.870 | 1 |
+
+The location case ended during distribution tests; the export case ended in the large TUI file. Exit 124 means the
+analysis command's outer bound expired, not that the selected tests completed. The regex case completed:
+**2,452 passed, 2 skipped, 1 failed; 2,455 tests across 33 files**, as Bun's summary reports (670.80 seconds inside
+Bun, separately from the command's wall time). Its one failure is the uninstall-list expectation
+(`tests/cli.test.ts:1907`, assertion `1910`): an empty list was expected, but installed agent skills were listed.
+No uninstall with confirmation was performed by that test. Record this host-state-sensitive assertion failure;
+do not classify it as a timeout or a regression caused by a newline.
+
+The location and export cases recorded two and one per-test timeout messages respectively; the completed regex
+case recorded **zero**, but emitted **46,876 `TimeoutOverflowWarning` messages**. The timeout table above identifies
+the affected scenarios. Logs that stop at the outer bound contain partial results, so their test totals cannot be
+compared with the completed case as if all selected files ran.
+
+Selection also named every terminal check for the location and regex cases, and only export checks for the export
+case. **No terminal check ran**: the command invokes only `test:changed`. No whole-suite run was used. An initial
+sandboxed location run also reached its outer bound (900.021 seconds, exit 124), with permission/socket failures;
+that attempt is retained in `tmp/issue/scope-where.log` and excluded from the table's unrestricted measurements.
+
+These runs establish the selected scopes, repeated individual expiries and one completed failed baseline. They do
+not establish a green end-to-end timing baseline or prove a slowdown against an earlier version. Cache warmth and
+host load were not controlled across cases. Future move phases should repeat the same mapped cases with the same
+runner, investigate or isolate the baseline failures, and compare selected files as well as completed times.
 
 ## Where #55 meets #56
 
