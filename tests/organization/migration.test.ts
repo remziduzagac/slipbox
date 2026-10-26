@@ -80,3 +80,40 @@ test("moving a worker requires both its helper-relative URL and its compiled bui
   put("package.json", JSON.stringify({ scripts: { build: "bun build src/main.ts src/core/jobs/job.ts" } }));
   expect(compare(before, capture(root), manifest)).toEqual([]);
 });
+
+test("old paths do not match prefix-sharing siblings", () => {
+  const { root, put } = fixture();
+  renameSync(join(root, "src/core/item.ts"), join(root, "src/core/jobs/item.ts"));
+  const manifest: Manifest = { moves: { "src/core/item.ts": "src/core/jobs/item.ts" }, retained: [] };
+  put("references.md", "src/core/item-resolve.ts src/core/item_cache.ts src/core/items.ts src/core/item/index.ts");
+  expect(stalePaths(root, ["references.md"], manifest)).toEqual([]);
+  put("references.md", "../src/core/item.ts and src/core/item");
+  expect(stalePaths(root, ["references.md"], manifest)).toHaveLength(1);
+});
+
+test("comments and quoted fixtures cannot stand in for a removed test", () => {
+  const { root, put } = fixture();
+  const before = capture(root);
+  for (const text of [
+    '// test("kept", () => {});\n// test("also kept", () => {});',
+    '/* test("kept", () => {}); test("also kept", () => {}); */',
+    'const sample = \'test("kept", () => {}); test("also kept", () => {});\';',
+  ]) {
+    put("tests/one.test.ts", text);
+    expect(capture(root).tests).toEqual([]);
+    expect(compare(before, capture(root), { moves: {}, retained: [] }).join("\n")).toContain("tests changed");
+  }
+});
+
+test("script imports and literal worker and URL references participate in move verification", () => {
+  const { root, put } = fixture();
+  put("scripts/use.ts", 'import type { Item } from "../src/core/item";');
+  put("scripts/job.ts", 'import { workerUrl } from "../src/core/workers"; workerUrl("job.ts");');
+  put("scripts/url.ts", 'new URL("../src/core/item.ts", import.meta.url);');
+  const before = capture(root);
+  expect(before.edges).toContain("scripts/use.ts -> src/core/item.ts");
+  expect(before.edges).toContain("scripts/job.ts -> src/core/job.ts");
+  expect(before.edges).toContain("scripts/url.ts -> src/core/item.ts");
+  renameSync(join(root, "src/core/item.ts"), join(root, "src/core/contract.ts"));
+  expect(capture(root).unresolved).toContain("scripts/use.ts: ../src/core/item");
+});

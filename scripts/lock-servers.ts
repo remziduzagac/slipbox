@@ -6,6 +6,7 @@
 //
 //   bun scripts/lock-servers.ts             every pin's lock made again
 //   bun scripts/lock-servers.ts --missing   only the pins without one, the rest kept as they are
+//   bun scripts/lock-servers.ts --check     verify generation from stored locks, offline and without writing
 
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -61,7 +62,21 @@ function resolveLock(npm: NpmSpec): string {
   }
 }
 
+/** Regenerate from stored lock data, comparing emitted code so formatter-only quote changes are harmless. */
+export function generatedLocksMatch(source: string, locks: Record<string, string> = LOCKS): boolean {
+  const ts = new Bun.Transpiler({ loader: "ts" });
+  return ts.transformSync(source) === ts.transformSync(locksModule(locks));
+}
+
 if (import.meta.main) {
+  if (process.argv.includes("--check")) {
+    if (!generatedLocksMatch(readFileSync(OUT, "utf8"))) {
+      console.error("lock-servers: generated module differs from its stored lock data");
+      process.exit(1);
+    }
+    console.log("lock-servers: offline generator verification passed (stored resolutions, no npm refresh)");
+    process.exit(0);
+  }
   const onlyMissing = process.argv.includes("--missing");
   const out: Record<string, string> = {};
   for (const npm of pinned()) {

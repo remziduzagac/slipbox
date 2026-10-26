@@ -3,6 +3,7 @@
 import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join, normalize, resolve } from "node:path";
 import { importsOf } from "../check-boundary.ts";
+import { testIdentities } from "./test-identities.ts";
 
 export interface Snapshot {
   edges: string[];
@@ -37,10 +38,15 @@ export function capture(root: string): Snapshot {
   const edges = new Set<string>();
   const runtime = new Set<string>();
   const unresolved: string[] = [];
-  for (const file of codeFiles(root, "src")) {
-    const text = readFileSync(join(root, file), "utf8");
+  for (const file of [...codeFiles(root, "src"), ...codeFiles(root, "scripts")]) {
+    // Ignore comments without stripping type imports. Quoted strings are consumed first, so URLs survive.
+    const source = readFileSync(join(root, file), "utf8");
+    const text = source.replace(
+      /"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|`(?:\\.|[^`\\])*`|\/(?![/*])(?:\\.|\[(?:\\.|[^\]\\])*\]|[^/\\\r\n])+\/[a-z]*|\/\*[\s\S]*?\*\/|\/\/[^\r\n]*/g,
+      (part) => (part.startsWith("//") || part.startsWith("/*") ? part.replace(/[^\r\n]/g, " ") : part),
+    );
     const values = new Bun.Transpiler({ loader: file.endsWith(".tsx") ? "tsx" : "ts" })
-      .scanImports(text.replace(/^#!.*/, ""))
+      .scanImports(source.replace(/^#!.*/, ""))
       .map((i) => i.path);
     // Literal URL and worker references are checked as paths, as well as imports and type imports.
     const workerPaths = [...text.matchAll(/workerUrl\(\s*["']([^"']+)["']/g)].map((m) => m[1]!);
@@ -64,13 +70,7 @@ export function capture(root: string): Snapshot {
   }
   // Preserve the multiset of literal suite/test declarations when splitting tests. Dynamic cases still need review.
   const tests = codeFiles(root, "tests")
-    .flatMap((file) =>
-      [
-        ...readFileSync(join(root, file), "utf8").matchAll(
-          /\b(test|it|describe)((?:\.(?:skip|todo|only))?)\(\s*(["'`])((?:\\.|(?!\3)[^\\])*)\3/g,
-        ),
-      ].map((m) => `${m[1]}${m[2]}: ${m[4]}`),
-    )
+    .flatMap((file) => testIdentities(readFileSync(join(root, file), "utf8"), file.endsWith(".tsx") ? "tsx" : "ts"))
     .sort();
   const build = JSON.parse(readFileSync(join(root, "package.json"), "utf8")).scripts.build as string;
   const entries = [...build.matchAll(/\bsrc\/[^\s]+\.tsx?\b/g)].map((m) => m[0]).sort();
@@ -112,8 +112,9 @@ export function stalePaths(root: string, files: string[], manifest: Manifest): s
       if (!existsSync(join(root, file)) || !statSync(join(root, file)).isFile()) continue;
       const text = readFileSync(join(root, file), "utf8");
       const needle = old.replace(/\.tsx?$/, "");
+      const escaped = needle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
       if (
-        text.includes(needle) &&
+        new RegExp(`${escaped}(?![A-Za-z0-9_/-])`).test(text) &&
         !manifest.retained.some((r) => r.file === file && r.text === needle && r.reason.trim().length > 0)
       )
         failures.push(`${file}: stale ${needle}`);

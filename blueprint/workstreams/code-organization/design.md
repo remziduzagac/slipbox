@@ -385,8 +385,9 @@ refusal, focus and disposal. Do not build a second mock App or a global context 
 
 ## ADDED — blueprint/design/how-it-works.md: Size and shared-code conventions
 
-Recommendation: about 500 lines is the design aim; finish with a 600-line handwritten source ceiling, stepped through
-1,000 and 750. At each step, cap every pre-existing larger file at its measured size, never above 1,500. Moves carry
+The current handwritten source ceiling is 1,000 lines (T1); about 500 lines is the design aim. Finish with a 600-line
+ceiling, with 750 as the next step. At each step, cap every pre-existing larger file at its measured size, never above
+1,500. Moves carry
 caps to the new paths; new modules obey the current ceiling. Lower touched exceptions to their actual size and remove
 them below the ceiling. Final handwritten exceptions require a named responsibility, rationale and follow-up task; no
 blanket exemption for App. Keep generated server locks outside the handwritten ceiling under a separate measured cap and

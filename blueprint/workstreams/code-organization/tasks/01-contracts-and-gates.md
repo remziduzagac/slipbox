@@ -46,7 +46,14 @@ identically before and after.
 
 `scripts/check-size.ts` enforces the first 1,000-line source ceiling. Its eight handwritten exceptions have exact
 measured caps, all below 1,500; a one-line shrink requires lowering the cap, and growth fails. Generated server locks
-have their own measured cap and generator reference. The later 750/600 steps remain T10/T11's work (ORG-D2).
+have a separate measured cap and offline generator verification: `bun scripts/lock-servers.ts --check` regenerates
+from the stored lock data in memory and compares normalized emitted code. It writes nothing and does not refresh npm
+resolutions. `tests/organization/generated-locks.test.ts` covers dropped data, extra code and the committed module.
+The later 750/600 steps remain T10/T11's work (ORG-D2).
+
+Exact cap edits in `scripts/check-size.ts` are the one allowed shared-file conflict between parallel move/extraction
+PRs. Resolve a same-file cap conflict by keeping the smaller value, remeasure the merged source and shrink it to that
+cap if necessary; never raise a cap to make the merge pass. A file below the ceiling loses its exception.
 
 The [finding ledger](../design.md#issue-coverage-and-finding-owners) is authoritative for the seven issue items, six
 clone pairs, pattern/type/error candidates and 55 oversized modules. The [verified hierarchy
@@ -75,12 +82,21 @@ with a reason). For example:
 }
 ```
 
-The capture records resolved source imports, type imports, literal dynamic imports, literal worker/URL references,
+The capture records resolved imports in `src/` and `scripts/`, type imports, literal dynamic imports and worker/URL
+references,
 runtime import edges, build entry points and the multiset of literal test/suite declarations. Worker paths resolve
 from the imported `workerUrl` helper, including callers in nested folders. The comparison maps both ends of each edge
 and build entry through the manifest, fails on unresolved paths or lost/added dependencies and tests, and searches
-tracked files for old full paths, including extensionless forms. Snapshot overwrite is refused so the before evidence
+tracked files for old full paths, including extensionless forms, with filename boundaries so prefix-sharing siblings
+are not flagged. Snapshot overwrite is refused so the before evidence
 is retained. Keep the manifest and both snapshots with the PR's measurement artifacts.
+
+Worker detection supports a literal first argument to `workerUrl`, with a plain, unaliased named import of that helper
+(the first matching import statement). Aliased/namespace helpers, alternate explicit URL bases, computed arguments
+and template-built worker paths require manual review and the affected worker's source/compiled execution checks.
+Test files supply literal declarations, not import edges; their imports still need typechecking. Comments and quoted
+fixture text are excluded from the declaration capture. Conditional/parameterized cases such as `test.each` and
+`test.skipIf` are not expanded or counted as plain declarations.
 
 This gate is deliberately for mechanical relocations: a responsibility extraction such as T1 has intentional graph
 changes to review. It does not parse arbitrary computed paths or establish test nesting/hook equivalence. Split string
@@ -88,27 +104,65 @@ paths, computed test cases, fixtures, selector mappings and dynamically construc
 explicit old-path search and review. Typechecking, focused tests, worker-entry tests and the copied compiled binary
 checks remain required; matching graph counts alone are insufficient.
 
+### Reproducible baseline capture
+
+The review-corrected capture of `fe3693d` has **2,594 literal test/suite declarations**, 1,945 resolved source/script
+edges, 1,606 runtime import edges and 12 build entries, with no unresolved paths. These are lexical declaration
+identities, not Bun's executed test count. The original raw-text capture counted comments and fixture strings too;
+its declaration count must not be used as the baseline.
+
+The full snapshot is retained locally at `tmp/issue/t1-baseline.json` (ignored generated evidence). Its SHA-256 is
+`3dfc6695ec36e0f0e2fd73bfc79464637a6239c0cad3a99fe58bd518cbcfea88`.
+From the T1 checkout, reproduce it with Bun 1.4.2 and the reviewed capture implementation:
+
+```sh
+baseline_dir=$(mktemp -d /tmp/org-t1-baseline-XXXXXX)
+git archive fe3693d | tar -x -C "$baseline_dir"
+ln -s "$PWD/node_modules" "$baseline_dir/node_modules"
+mkdir -p tmp/issue
+bun -e '
+  import { capture } from "./scripts/organization/migration.ts";
+  const snapshot = capture(process.argv[1]!);
+  if (snapshot.unresolved.length) throw new Error(snapshot.unresolved.join("\n"));
+  await Bun.write("tmp/issue/t1-baseline.json", JSON.stringify(snapshot, null, 2) + "\n");
+' "$baseline_dir"
+```
+
+This is the T1 measurement baseline. Each later mechanical move PR captures its own immediate pre-move tree with the
+same checker version on both sides; T1's intentional contract extraction is not an empty graph delta from `fe3693d`.
+
 ### Verification record
 
-- The new scanner reports 1,585 runtime import edges, identical before and after. Its Bun-based import interpretation
+- The initial source-only scanner reported 1,585 runtime import edges, identical before and after. Its interpretation
   differs from research's Madge count; it is not a claim of four new dependencies. Full SCC membership matches research:
   mutation (3), export dispatch (3) and TUI composition (64). Their extractions retain their assigned owners.
 - The only source graph changes are six removed area-to-composer type edges and seven new imports of the contract.
   The build entry list is unchanged. Test declarations retain the baseline except the old size-slack assertion,
   replaced by the stricter one-line-shrink assertion; new check fixtures are added.
-- Focused pre/post checks: registry/keymap (5), drawing primitives (4), boundary/import syntax and worker URLs/build
-  entries (6), all passing. The new contract/migration fixtures and size checks pass (13 tests). Negative fixtures
+- Focused pre/post checks: registry/keymap (5), drawing primitives (4, **baseline only**; reverse-edge extractions for
+  drawing/editable remain T9), boundary/import syntax and worker URLs/build entries (6), all passing.
+  The reviewed contract/migration/size, offline generation and startup tests pass (20 tests). Negative fixtures
   cover skipped tests, missing build entries and a moved worker whose URL/build entry did not follow.
 - Source terminal checks: both checks matching `which-key: the leader` pass. The package build succeeds. A copied
   compiled binary, run away from the repository with isolated XDG directories, passes the panel/which-key check and
   exits cleanly; `info --json` and `commands --json` succeed, and an unknown option exits 2 with its expected error.
+- Startup failure paths: `tests/organization/startup.test.ts` constructs the actual App through the TUI harness.
+  A spec without an implementation and an implementation without a spec both reject with the registration error
+  from `src/tui/actions.ts`; each mutation is restored in `finally`.
 - The existing autosave/index-lock finding remains the documented ancestor-checkout/fixture interaction. T1 does not
   change its fixture, checkout caching or timeout. T12 remains next; T44 may proceed alongside the move sequence.
 - `bun run check` passed typechecking, boundary/size, dependency, lint, workflow and documentation gates, then failed
   in its broad selected test run. Socket permission, shell output and two asynchronous clipboard failures reproduce
-  on the unchanged `fe3693d` baseline. The broad run was stopped after cascading fixture/environment failures and
+  on the unchanged `fe3693d` baseline in `tests/core.test.ts` and `tests/clipboard-async.test.ts`. The broad run was
+  stopped after cascading fixture/environment failures and
   invalid-timer warnings; its remaining failures are not individually diagnosed. This is not a green aggregate run.
   Focused T1 evidence above stands separately; CI and maintainer review are still required before completion.
+
+Review corrections are confined to this PR: contributor instructions now state the 1,000-line ceiling;
+CONTRIBUTING.md and MAINTAINING.md contain no obsolete numeric ceiling. Prefix and script-edge regression fixtures,
+and the commented-out-test regression, were run against the original T1 checker and all three failed before the fixes.
+The command metadata/composer remains unchanged. Keep the PR draft until all test and terminal CI jobs are green and
+the maintainer asks to advance it.
 
 Tool settings: Bun 1.4.2, TypeScript 7.0.2, repository compiler/Biome configuration; no dependency changes. The source
 inventory is now 329 files, with the added contract below the size ceiling. No user-visible behavior change requires a
