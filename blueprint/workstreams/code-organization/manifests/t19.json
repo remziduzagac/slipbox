@@ -1,0 +1,1024 @@
+{
+  "moves": {
+    "tests/vault.test.ts": "tests/core/workspace/vaults/discovery.test.ts"
+  },
+  "splits": {
+    "tests/vault.test.ts": [
+      "tests/cli/contracts/catalog.test.ts",
+      "tests/cli/contracts/envelopes.test.ts",
+      "tests/cli/contracts/parity.test.ts",
+      "tests/cli/diagnostics/spell.test.ts",
+      "tests/cli/reading/paths.test.ts",
+      "tests/cli/vaults/elsewhere.test.ts",
+      "tests/cli/vaults/list.test.ts",
+      "tests/core/application/config/vault-config.test.ts",
+      "tests/core/documents/markdown/content-cache.test.ts",
+      "tests/core/documents/syntax/vault-examples.test.ts",
+      "tests/core/rendering/layout/markdown/embeds.test.ts",
+      "tests/core/workspace/git/branch-switch.test.ts",
+      "tests/core/workspace/git/merge/stale-integration.test.ts",
+      "tests/core/workspace/git/review-integration.test.ts",
+      "tests/core/workspace/git/status.test.ts",
+      "tests/core/workspace/git/trust.test.ts",
+      "tests/core/workspace/git/worktrees.test.ts",
+      "tests/core/workspace/graph/context.test.ts",
+      "tests/core/workspace/graph/freshness.test.ts",
+      "tests/core/workspace/graph/problems.test.ts",
+      "tests/core/workspace/graph/reached-index.test.ts",
+      "tests/core/workspace/graph/tags.test.ts",
+      "tests/core/workspace/graph/watch.test.ts",
+      "tests/core/workspace/links/conventions.test.ts",
+      "tests/core/workspace/links/cross-vault.test.ts",
+      "tests/core/workspace/links/destinations.test.ts",
+      "tests/core/workspace/links/extraction-integration.test.ts",
+      "tests/core/workspace/links/fragile.test.ts",
+      "tests/core/workspace/links/frontmatter.test.ts",
+      "tests/core/workspace/links/hosting-integration.test.ts",
+      "tests/core/workspace/links/landing-integration.test.ts",
+      "tests/core/workspace/links/names.test.ts",
+      "tests/core/workspace/links/path-links.test.ts",
+      "tests/core/workspace/links/pointers.test.ts",
+      "tests/core/workspace/links/redirects.test.ts",
+      "tests/core/workspace/links/resolution-integration.test.ts",
+      "tests/core/workspace/mutations/attachments.test.ts",
+      "tests/core/workspace/mutations/convert-links.test.ts",
+      "tests/core/workspace/mutations/files-integration.test.ts",
+      "tests/core/workspace/mutations/folders.test.ts",
+      "tests/core/workspace/mutations/headings.test.ts",
+      "tests/core/workspace/mutations/link-moves.test.ts",
+      "tests/core/workspace/mutations/path-moves.test.ts",
+      "tests/core/workspace/mutations/plans.test.ts",
+      "tests/core/workspace/mutations/reached-writes.test.ts",
+      "tests/core/workspace/mutations/refusals.test.ts",
+      "tests/core/workspace/mutations/rename-integration.test.ts",
+      "tests/core/workspace/mutations/replace-files.test.ts",
+      "tests/core/workspace/mutations/undo.test.ts",
+      "tests/core/workspace/mutations/write-policy.test.ts",
+      "tests/core/workspace/search/index.test.ts",
+      "tests/core/workspace/search/scope.test.ts",
+      "tests/core/workspace/search/sections.test.ts",
+      "tests/core/workspace/vaults/discovery.test.ts",
+      "tests/core/workspace/vaults/home/autoindex.test.ts",
+      "tests/core/workspace/vaults/home/commands.test.ts",
+      "tests/core/workspace/vaults/home/filter.test.ts",
+      "tests/core/workspace/vaults/home/indexing.test.ts",
+      "tests/core/workspace/vaults/home/limits.test.ts",
+      "tests/core/workspace/vaults/home/links.test.ts",
+      "tests/core/workspace/vaults/home/mounts.test.ts",
+      "tests/core/workspace/vaults/home/moves.test.ts",
+      "tests/core/workspace/vaults/home/persistence.test.ts",
+      "tests/core/workspace/vaults/home/reached.test.ts",
+      "tests/core/workspace/vaults/home/retry.test.ts",
+      "tests/core/workspace/vaults/home/startup.test.ts",
+      "tests/core/workspace/vaults/home/watch.test.ts",
+      "tests/core/workspace/vaults/identity.test.ts",
+      "tests/core/workspace/vaults/init.test.ts",
+      "tests/core/workspace/vaults/named-folders.test.ts",
+      "tests/core/workspace/vaults/nested.test.ts",
+      "tests/core/workspace/vaults/symlinks/answers.test.ts",
+      "tests/core/workspace/vaults/symlinks/following.test.ts",
+      "tests/core/workspace/vaults/symlinks/reading-writing.test.ts",
+      "tests/core/workspace/walk/examples.test.ts",
+      "tests/core/workspace/walk/hostile.test.ts",
+      "tests/core/workspace/walk/walk.test.ts"
+    ]
+  },
+  "support": [
+    "tests/support/vault-sandbox.ts",
+    "tests/support/vault-cli.ts",
+    "tests/support/home-walk.ts"
+  ],
+  "suiteWrapperDeltas": [
+    {
+      "name": "describe: home, a vault without a marker (VV-D2)",
+      "delta": 10
+    },
+    {
+      "name": "describe: plans write only inside the vault (VV-D6)",
+      "delta": 1
+    },
+    {
+      "name": "describe: review cycle 3 (core)",
+      "delta": 14
+    },
+    {
+      "name": "describe: review cycle 5 (vault, a loose folder)",
+      "delta": 2
+    },
+    {
+      "name": "describe: review round 2 (CLI)",
+      "delta": 3
+    },
+    {
+      "name": "describe: review round 3 (CLI)",
+      "delta": 2
+    }
+  ],
+  "retained": [
+    {
+      "file": "blueprint/research/maintenance-gaps.md",
+      "text": "tests/vault.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/tasks/archive/deinit-relinks-pointers.md",
+      "text": "tests/vault.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/tasks/archive/every-link-says-how.md",
+      "text": "tests/vault.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/tasks/archive/folder-time-set-back.md",
+      "text": "tests/vault.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/tasks/archive/hosting-backlinks-across-roots.md",
+      "text": "tests/vault.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/tasks/archive/link-completion-reads-once.md",
+      "text": "tests/vault.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/tasks/archive/merge-review-reads-hosting-links.md",
+      "text": "tests/vault.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/tasks/archive/moved-files-own-paths.md",
+      "text": "tests/vault.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/tasks/archive/pointer-writes-say-so.md",
+      "text": "tests/vault.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/tasks/archive/rename-a-followed-link.md",
+      "text": "tests/vault.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/tasks/archive/restored-tabs-ask-their-folders.md",
+      "text": "tests/vault.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/tasks/archive/unique-move-pairing.md",
+      "text": "tests/vault.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/tasks/archive/watcher-leaves-home-to-its-walk.md",
+      "text": "tests/vault.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/doc-findings/tasks/archive/cli-words.md",
+      "text": "tests/vault.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/greenrepo/tasks/archive/hardened-ci.md",
+      "text": "tests/vault.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/greenrepo/tasks/archive/tests-on-ci.md",
+      "text": "tests/vault.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/terminal-tests/notes.md",
+      "text": "tests/vault.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/design.md",
+      "text": "tests/vault.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "tests/vault.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/tasks/04-graph-links-mutations.md",
+      "text": "tests/vault.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/tasks/13-mutation-paths.md",
+      "text": "tests/vault.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/research/maintenance-gaps.md",
+      "text": "vault.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/tasks/archive/deinit-relinks-pointers.md",
+      "text": "vault.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/tasks/archive/every-link-says-how.md",
+      "text": "vault.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/tasks/archive/folder-time-set-back.md",
+      "text": "vault.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/tasks/archive/hosting-backlinks-across-roots.md",
+      "text": "vault.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/tasks/archive/link-completion-reads-once.md",
+      "text": "vault.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/tasks/archive/merge-review-reads-hosting-links.md",
+      "text": "vault.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/tasks/archive/moved-files-own-paths.md",
+      "text": "vault.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/tasks/archive/pointer-writes-say-so.md",
+      "text": "vault.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/tasks/archive/rename-a-followed-link.md",
+      "text": "vault.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/tasks/archive/restored-tabs-ask-their-folders.md",
+      "text": "vault.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/tasks/archive/unique-move-pairing.md",
+      "text": "vault.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/tasks/archive/watcher-leaves-home-to-its-walk.md",
+      "text": "vault.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/doc-findings/tasks/archive/cli-words.md",
+      "text": "vault.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/doc-findings/tasks/archive/exports.md",
+      "text": "vault.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/doc-findings/tasks/archive/links-and-search.md",
+      "text": "vault.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/doc-findings/tasks/archive/words-hover-clones-popups.md",
+      "text": "vault.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/greenrepo/tasks/archive/hardened-ci.md",
+      "text": "vault.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/greenrepo/tasks/archive/tests-on-ci.md",
+      "text": "vault.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/terminal-tests/notes.md",
+      "text": "vault.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/design.md",
+      "text": "vault.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "vault.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/tasks/04-graph-links-mutations.md",
+      "text": "vault.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/tasks/13-mutation-paths.md",
+      "text": "vault.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/tasks/19-vault-test-split.md",
+      "text": "vault.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/tasks/19-vault-test-split.md",
+      "text": "tests/vault.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    }
+  ],
+  "renamedBasenames": {
+    "vault.test.ts": "feature suites listed by the split manifest"
+  },
+  "ownership": {
+    "fixtures": "Vault XDG/clipboard isolation retains its original preload-owned cleanup and explicit per-scenario trust policy. No core-sandbox cleanup/reset is added.",
+    "scenarios": "Every leaf title, callback, hook and assertion is preserved. Mixed review/home/write-policy suites keep parent names with wrapper deltas listed explicitly.",
+    "helpers": "CLI capture and home-walk persistence helpers retain their behavior; no App/model harness or generic assertion runner."
+  },
+  "prunedUnusedReviewSupport": [
+    {
+      "file": "tests/cli/contracts/catalog.test.ts",
+      "parent": "review round 2 (CLI)",
+      "declaration": "const vault = (files: Record<string, string>) => {\n    const dir = mkdtempSync(join(tmpdir(), \"slipbox-r2-\"));\n    mkdirSync(join(dir, \".slipbox\"));\n    for (const [name, text] of Object.entries(files)) writeFileSync(join(dir, name), text);\n    return dir;\n  };"
+    },
+    {
+      "file": "tests/core/workspace/git/review-integration.test.ts",
+      "parent": "review cycle 3 (core)",
+      "declaration": "const root = (files: Record<string, string>, marker = \".slipbox\") => {\n    const dir = mkdtempSync(join(tmpdir(), \"slipbox-c3-\"));\n    mkdirSync(join(dir, marker));\n    for (const [rel, text] of Object.entries(files)) {\n      mkdirSync(dirname(join(dir, rel)), { recursive: true });\n      writeFileSync(join(dir, rel), text);\n    }\n    return { dir, g: openGraph(locateVault({ root: dir }), DEFAULT_CONFIG, true) };\n  };"
+    },
+    {
+      "file": "tests/core/workspace/git/review-integration.test.ts",
+      "parent": "review cycle 3 (core)",
+      "declaration": "const read = (dir: string, rel: string) => readFileSync(join(dir, rel), \"utf8\");"
+    },
+    {
+      "file": "tests/core/workspace/git/worktrees.test.ts",
+      "parent": "review cycle 3 (core)",
+      "declaration": "const root = (files: Record<string, string>, marker = \".slipbox\") => {\n    const dir = mkdtempSync(join(tmpdir(), \"slipbox-c3-\"));\n    mkdirSync(join(dir, marker));\n    for (const [rel, text] of Object.entries(files)) {\n      mkdirSync(dirname(join(dir, rel)), { recursive: true });\n      writeFileSync(join(dir, rel), text);\n    }\n    return { dir, g: openGraph(locateVault({ root: dir }), DEFAULT_CONFIG, true) };\n  };"
+    },
+    {
+      "file": "tests/core/workspace/graph/watch.test.ts",
+      "parent": "review cycle 3 (core)",
+      "declaration": "const root = (files: Record<string, string>, marker = \".slipbox\") => {\n    const dir = mkdtempSync(join(tmpdir(), \"slipbox-c3-\"));\n    mkdirSync(join(dir, marker));\n    for (const [rel, text] of Object.entries(files)) {\n      mkdirSync(dirname(join(dir, rel)), { recursive: true });\n      writeFileSync(join(dir, rel), text);\n    }\n    return { dir, g: openGraph(locateVault({ root: dir }), DEFAULT_CONFIG, true) };\n  };"
+    },
+    {
+      "file": "tests/core/workspace/graph/watch.test.ts",
+      "parent": "review cycle 3 (core)",
+      "declaration": "const read = (dir: string, rel: string) => readFileSync(join(dir, rel), \"utf8\");"
+    },
+    {
+      "file": "tests/core/workspace/links/conventions.test.ts",
+      "parent": "review cycle 3 (core)",
+      "declaration": "const root = (files: Record<string, string>, marker = \".slipbox\") => {\n    const dir = mkdtempSync(join(tmpdir(), \"slipbox-c3-\"));\n    mkdirSync(join(dir, marker));\n    for (const [rel, text] of Object.entries(files)) {\n      mkdirSync(dirname(join(dir, rel)), { recursive: true });\n      writeFileSync(join(dir, rel), text);\n    }\n    return { dir, g: openGraph(locateVault({ root: dir }), DEFAULT_CONFIG, true) };\n  };"
+    },
+    {
+      "file": "tests/core/workspace/links/conventions.test.ts",
+      "parent": "review cycle 3 (core)",
+      "declaration": "const read = (dir: string, rel: string) => readFileSync(join(dir, rel), \"utf8\");"
+    },
+    {
+      "file": "tests/core/workspace/links/fragile.test.ts",
+      "parent": "review cycle 3 (core)",
+      "declaration": "const read = (dir: string, rel: string) => readFileSync(join(dir, rel), \"utf8\");"
+    },
+    {
+      "file": "tests/core/workspace/links/frontmatter.test.ts",
+      "parent": "review cycle 3 (core)",
+      "declaration": "const read = (dir: string, rel: string) => readFileSync(join(dir, rel), \"utf8\");"
+    },
+    {
+      "file": "tests/core/workspace/links/names.test.ts",
+      "parent": "review cycle 3 (core)",
+      "declaration": "const root = (files: Record<string, string>, marker = \".slipbox\") => {\n    const dir = mkdtempSync(join(tmpdir(), \"slipbox-c3-\"));\n    mkdirSync(join(dir, marker));\n    for (const [rel, text] of Object.entries(files)) {\n      mkdirSync(dirname(join(dir, rel)), { recursive: true });\n      writeFileSync(join(dir, rel), text);\n    }\n    return { dir, g: openGraph(locateVault({ root: dir }), DEFAULT_CONFIG, true) };\n  };"
+    },
+    {
+      "file": "tests/core/workspace/links/names.test.ts",
+      "parent": "review cycle 3 (core)",
+      "declaration": "const read = (dir: string, rel: string) => readFileSync(join(dir, rel), \"utf8\");"
+    },
+    {
+      "file": "tests/core/workspace/vaults/home/commands.test.ts",
+      "parent": "home, a vault without a marker (VV-D2)",
+      "declaration": "const watchHome = async (\n    home: string,\n    g: Graph,\n    opts: { known?: Map<string, number>; sizes?: Map<string, number>; maxDirs?: number; kinds?: boolean } = {},\n  ) => {\n    const { VaultWatcher } = await import(\"../../../../../src/core/workspace/graph/watch.ts\");\n    const reported: string[] = [];\n    const toWalk: string[] = [];\n    let rescan = false;\n    /** The watcher's clock, set ahead to make what was just done look long ago. */\n    const clock = { ahead: 0 };\n    const w = new VaultWatcher({\n      root: home,\n      filter: g.filter,\n      dirs: g.dirs,\n      debounceMs: 20,\n      pollMs: 1_000_000,\n      known: opts.known ?? new Map([...g.notes.values()].map((n) => [n.rel, n.mtimeMs] as [string, number])),\n      ...(opts.sizes ? { sizes: opts.sizes } : {}),\n      ...(opts.maxDirs === undefined ? {} : { maxDirs: opts.maxDirs }),\n      attachments: g.filePaths(),\n      walkedAt: () => g.walkedAt,\n      leftToWalk: (rel) => g.waitsForHomeWalk(rel),\n      walkPending: () => g.home?.walked === null,\n      now: () => Date.now() + clock.ahead,\n      onBatch: (b) => {\n        reported.push(...b.changes.map((c) => (opts.kinds ? `${c.kind} ${c.rel}` : c.rel)));\n        toWalk.push(...(b.toWalk ?? []));\n        rescan ||= b.rescan;\n      },\n      onDegraded: () => {},\n    });\n    const look = async () => {\n      await Bun.sleep(30);\n      w.pollTick();\n      w.flush();\n      await Bun.sleep(30);\n      w.flush();\n      const out = { reported: [...new Set(reported.splice(0))].sort(), toWalk: [...new Set(toWalk.splice(0))], rescan };\n      rescan = false;\n      return out;\n    };\n    return { w, look, reported, clock };\n  };"
+    },
+    {
+      "file": "tests/core/workspace/vaults/home/commands.test.ts",
+      "parent": "home, a vault without a marker (VV-D2)",
+      "declaration": "const none = { reported: [], toWalk: [], rescan: false };"
+    },
+    {
+      "file": "tests/core/workspace/vaults/home/filter.test.ts",
+      "parent": "home, a vault without a marker (VV-D2)",
+      "declaration": "const watchHome = async (\n    home: string,\n    g: Graph,\n    opts: { known?: Map<string, number>; sizes?: Map<string, number>; maxDirs?: number; kinds?: boolean } = {},\n  ) => {\n    const { VaultWatcher } = await import(\"../../../../../src/core/workspace/graph/watch.ts\");\n    const reported: string[] = [];\n    const toWalk: string[] = [];\n    let rescan = false;\n    /** The watcher's clock, set ahead to make what was just done look long ago. */\n    const clock = { ahead: 0 };\n    const w = new VaultWatcher({\n      root: home,\n      filter: g.filter,\n      dirs: g.dirs,\n      debounceMs: 20,\n      pollMs: 1_000_000,\n      known: opts.known ?? new Map([...g.notes.values()].map((n) => [n.rel, n.mtimeMs] as [string, number])),\n      ...(opts.sizes ? { sizes: opts.sizes } : {}),\n      ...(opts.maxDirs === undefined ? {} : { maxDirs: opts.maxDirs }),\n      attachments: g.filePaths(),\n      walkedAt: () => g.walkedAt,\n      leftToWalk: (rel) => g.waitsForHomeWalk(rel),\n      walkPending: () => g.home?.walked === null,\n      now: () => Date.now() + clock.ahead,\n      onBatch: (b) => {\n        reported.push(...b.changes.map((c) => (opts.kinds ? `${c.kind} ${c.rel}` : c.rel)));\n        toWalk.push(...(b.toWalk ?? []));\n        rescan ||= b.rescan;\n      },\n      onDegraded: () => {},\n    });\n    const look = async () => {\n      await Bun.sleep(30);\n      w.pollTick();\n      w.flush();\n      await Bun.sleep(30);\n      w.flush();\n      const out = { reported: [...new Set(reported.splice(0))].sort(), toWalk: [...new Set(toWalk.splice(0))], rescan };\n      rescan = false;\n      return out;\n    };\n    return { w, look, reported, clock };\n  };"
+    },
+    {
+      "file": "tests/core/workspace/vaults/home/filter.test.ts",
+      "parent": "home, a vault without a marker (VV-D2)",
+      "declaration": "const none = { reported: [], toWalk: [], rescan: false };"
+    },
+    {
+      "file": "tests/core/workspace/vaults/home/filter.test.ts",
+      "parent": "home, a vault without a marker (VV-D2)",
+      "declaration": "const cli = async (args: string[], cwd: string) => {\n    const out: string[] = [];\n    const code = await runCli([...args, \"--json\"], {\n      out: (x: string) => out.push(x),\n      err: () => {},\n      stdin: async () => \"\",\n      isTTY: false,\n      columns: 80,\n      cwd,\n      env: process.env,\n    });\n    return { code, json: JSON.parse(out.join(\"\")) };\n  };"
+    },
+    {
+      "file": "tests/core/workspace/vaults/home/indexing.test.ts",
+      "parent": "home, a vault without a marker (VV-D2)",
+      "declaration": "const watchHome = async (\n    home: string,\n    g: Graph,\n    opts: { known?: Map<string, number>; sizes?: Map<string, number>; maxDirs?: number; kinds?: boolean } = {},\n  ) => {\n    const { VaultWatcher } = await import(\"../../../../../src/core/workspace/graph/watch.ts\");\n    const reported: string[] = [];\n    const toWalk: string[] = [];\n    let rescan = false;\n    /** The watcher's clock, set ahead to make what was just done look long ago. */\n    const clock = { ahead: 0 };\n    const w = new VaultWatcher({\n      root: home,\n      filter: g.filter,\n      dirs: g.dirs,\n      debounceMs: 20,\n      pollMs: 1_000_000,\n      known: opts.known ?? new Map([...g.notes.values()].map((n) => [n.rel, n.mtimeMs] as [string, number])),\n      ...(opts.sizes ? { sizes: opts.sizes } : {}),\n      ...(opts.maxDirs === undefined ? {} : { maxDirs: opts.maxDirs }),\n      attachments: g.filePaths(),\n      walkedAt: () => g.walkedAt,\n      leftToWalk: (rel) => g.waitsForHomeWalk(rel),\n      walkPending: () => g.home?.walked === null,\n      now: () => Date.now() + clock.ahead,\n      onBatch: (b) => {\n        reported.push(...b.changes.map((c) => (opts.kinds ? `${c.kind} ${c.rel}` : c.rel)));\n        toWalk.push(...(b.toWalk ?? []));\n        rescan ||= b.rescan;\n      },\n      onDegraded: () => {},\n    });\n    const look = async () => {\n      await Bun.sleep(30);\n      w.pollTick();\n      w.flush();\n      await Bun.sleep(30);\n      w.flush();\n      const out = { reported: [...new Set(reported.splice(0))].sort(), toWalk: [...new Set(toWalk.splice(0))], rescan };\n      rescan = false;\n      return out;\n    };\n    return { w, look, reported, clock };\n  };"
+    },
+    {
+      "file": "tests/core/workspace/vaults/home/indexing.test.ts",
+      "parent": "home, a vault without a marker (VV-D2)",
+      "declaration": "const none = { reported: [], toWalk: [], rescan: false };"
+    },
+    {
+      "file": "tests/core/workspace/vaults/home/indexing.test.ts",
+      "parent": "home, a vault without a marker (VV-D2)",
+      "declaration": "const cli = async (args: string[], cwd: string) => {\n    const out: string[] = [];\n    const code = await runCli([...args, \"--json\"], {\n      out: (x: string) => out.push(x),\n      err: () => {},\n      stdin: async () => \"\",\n      isTTY: false,\n      columns: 80,\n      cwd,\n      env: process.env,\n    });\n    return { code, json: JSON.parse(out.join(\"\")) };\n  };"
+    },
+    {
+      "file": "tests/core/workspace/vaults/home/limits.test.ts",
+      "parent": "home, a vault without a marker (VV-D2)",
+      "declaration": "const watchHome = async (\n    home: string,\n    g: Graph,\n    opts: { known?: Map<string, number>; sizes?: Map<string, number>; maxDirs?: number; kinds?: boolean } = {},\n  ) => {\n    const { VaultWatcher } = await import(\"../../../../../src/core/workspace/graph/watch.ts\");\n    const reported: string[] = [];\n    const toWalk: string[] = [];\n    let rescan = false;\n    /** The watcher's clock, set ahead to make what was just done look long ago. */\n    const clock = { ahead: 0 };\n    const w = new VaultWatcher({\n      root: home,\n      filter: g.filter,\n      dirs: g.dirs,\n      debounceMs: 20,\n      pollMs: 1_000_000,\n      known: opts.known ?? new Map([...g.notes.values()].map((n) => [n.rel, n.mtimeMs] as [string, number])),\n      ...(opts.sizes ? { sizes: opts.sizes } : {}),\n      ...(opts.maxDirs === undefined ? {} : { maxDirs: opts.maxDirs }),\n      attachments: g.filePaths(),\n      walkedAt: () => g.walkedAt,\n      leftToWalk: (rel) => g.waitsForHomeWalk(rel),\n      walkPending: () => g.home?.walked === null,\n      now: () => Date.now() + clock.ahead,\n      onBatch: (b) => {\n        reported.push(...b.changes.map((c) => (opts.kinds ? `${c.kind} ${c.rel}` : c.rel)));\n        toWalk.push(...(b.toWalk ?? []));\n        rescan ||= b.rescan;\n      },\n      onDegraded: () => {},\n    });\n    const look = async () => {\n      await Bun.sleep(30);\n      w.pollTick();\n      w.flush();\n      await Bun.sleep(30);\n      w.flush();\n      const out = { reported: [...new Set(reported.splice(0))].sort(), toWalk: [...new Set(toWalk.splice(0))], rescan };\n      rescan = false;\n      return out;\n    };\n    return { w, look, reported, clock };\n  };"
+    },
+    {
+      "file": "tests/core/workspace/vaults/home/limits.test.ts",
+      "parent": "home, a vault without a marker (VV-D2)",
+      "declaration": "const none = { reported: [], toWalk: [], rescan: false };"
+    },
+    {
+      "file": "tests/core/workspace/vaults/home/links.test.ts",
+      "parent": "home, a vault without a marker (VV-D2)",
+      "declaration": "const watchHome = async (\n    home: string,\n    g: Graph,\n    opts: { known?: Map<string, number>; sizes?: Map<string, number>; maxDirs?: number; kinds?: boolean } = {},\n  ) => {\n    const { VaultWatcher } = await import(\"../../../../../src/core/workspace/graph/watch.ts\");\n    const reported: string[] = [];\n    const toWalk: string[] = [];\n    let rescan = false;\n    /** The watcher's clock, set ahead to make what was just done look long ago. */\n    const clock = { ahead: 0 };\n    const w = new VaultWatcher({\n      root: home,\n      filter: g.filter,\n      dirs: g.dirs,\n      debounceMs: 20,\n      pollMs: 1_000_000,\n      known: opts.known ?? new Map([...g.notes.values()].map((n) => [n.rel, n.mtimeMs] as [string, number])),\n      ...(opts.sizes ? { sizes: opts.sizes } : {}),\n      ...(opts.maxDirs === undefined ? {} : { maxDirs: opts.maxDirs }),\n      attachments: g.filePaths(),\n      walkedAt: () => g.walkedAt,\n      leftToWalk: (rel) => g.waitsForHomeWalk(rel),\n      walkPending: () => g.home?.walked === null,\n      now: () => Date.now() + clock.ahead,\n      onBatch: (b) => {\n        reported.push(...b.changes.map((c) => (opts.kinds ? `${c.kind} ${c.rel}` : c.rel)));\n        toWalk.push(...(b.toWalk ?? []));\n        rescan ||= b.rescan;\n      },\n      onDegraded: () => {},\n    });\n    const look = async () => {\n      await Bun.sleep(30);\n      w.pollTick();\n      w.flush();\n      await Bun.sleep(30);\n      w.flush();\n      const out = { reported: [...new Set(reported.splice(0))].sort(), toWalk: [...new Set(toWalk.splice(0))], rescan };\n      rescan = false;\n      return out;\n    };\n    return { w, look, reported, clock };\n  };"
+    },
+    {
+      "file": "tests/core/workspace/vaults/home/links.test.ts",
+      "parent": "home, a vault without a marker (VV-D2)",
+      "declaration": "const none = { reported: [], toWalk: [], rescan: false };"
+    },
+    {
+      "file": "tests/core/workspace/vaults/home/mounts.test.ts",
+      "parent": "home, a vault without a marker (VV-D2)",
+      "declaration": "const watchHome = async (\n    home: string,\n    g: Graph,\n    opts: { known?: Map<string, number>; sizes?: Map<string, number>; maxDirs?: number; kinds?: boolean } = {},\n  ) => {\n    const { VaultWatcher } = await import(\"../../../../../src/core/workspace/graph/watch.ts\");\n    const reported: string[] = [];\n    const toWalk: string[] = [];\n    let rescan = false;\n    /** The watcher's clock, set ahead to make what was just done look long ago. */\n    const clock = { ahead: 0 };\n    const w = new VaultWatcher({\n      root: home,\n      filter: g.filter,\n      dirs: g.dirs,\n      debounceMs: 20,\n      pollMs: 1_000_000,\n      known: opts.known ?? new Map([...g.notes.values()].map((n) => [n.rel, n.mtimeMs] as [string, number])),\n      ...(opts.sizes ? { sizes: opts.sizes } : {}),\n      ...(opts.maxDirs === undefined ? {} : { maxDirs: opts.maxDirs }),\n      attachments: g.filePaths(),\n      walkedAt: () => g.walkedAt,\n      leftToWalk: (rel) => g.waitsForHomeWalk(rel),\n      walkPending: () => g.home?.walked === null,\n      now: () => Date.now() + clock.ahead,\n      onBatch: (b) => {\n        reported.push(...b.changes.map((c) => (opts.kinds ? `${c.kind} ${c.rel}` : c.rel)));\n        toWalk.push(...(b.toWalk ?? []));\n        rescan ||= b.rescan;\n      },\n      onDegraded: () => {},\n    });\n    const look = async () => {\n      await Bun.sleep(30);\n      w.pollTick();\n      w.flush();\n      await Bun.sleep(30);\n      w.flush();\n      const out = { reported: [...new Set(reported.splice(0))].sort(), toWalk: [...new Set(toWalk.splice(0))], rescan };\n      rescan = false;\n      return out;\n    };\n    return { w, look, reported, clock };\n  };"
+    },
+    {
+      "file": "tests/core/workspace/vaults/home/mounts.test.ts",
+      "parent": "home, a vault without a marker (VV-D2)",
+      "declaration": "const none = { reported: [], toWalk: [], rescan: false };"
+    },
+    {
+      "file": "tests/core/workspace/vaults/home/mounts.test.ts",
+      "parent": "home, a vault without a marker (VV-D2)",
+      "declaration": "const cli = async (args: string[], cwd: string) => {\n    const out: string[] = [];\n    const code = await runCli([...args, \"--json\"], {\n      out: (x: string) => out.push(x),\n      err: () => {},\n      stdin: async () => \"\",\n      isTTY: false,\n      columns: 80,\n      cwd,\n      env: process.env,\n    });\n    return { code, json: JSON.parse(out.join(\"\")) };\n  };"
+    },
+    {
+      "file": "tests/core/workspace/vaults/home/moves.test.ts",
+      "parent": "home, a vault without a marker (VV-D2)",
+      "declaration": "const cli = async (args: string[], cwd: string) => {\n    const out: string[] = [];\n    const code = await runCli([...args, \"--json\"], {\n      out: (x: string) => out.push(x),\n      err: () => {},\n      stdin: async () => \"\",\n      isTTY: false,\n      columns: 80,\n      cwd,\n      env: process.env,\n    });\n    return { code, json: JSON.parse(out.join(\"\")) };\n  };"
+    },
+    {
+      "file": "tests/core/workspace/vaults/home/persistence.test.ts",
+      "parent": "home, a vault without a marker (VV-D2)",
+      "declaration": "const watchHome = async (\n    home: string,\n    g: Graph,\n    opts: { known?: Map<string, number>; sizes?: Map<string, number>; maxDirs?: number; kinds?: boolean } = {},\n  ) => {\n    const { VaultWatcher } = await import(\"../../../../../src/core/workspace/graph/watch.ts\");\n    const reported: string[] = [];\n    const toWalk: string[] = [];\n    let rescan = false;\n    /** The watcher's clock, set ahead to make what was just done look long ago. */\n    const clock = { ahead: 0 };\n    const w = new VaultWatcher({\n      root: home,\n      filter: g.filter,\n      dirs: g.dirs,\n      debounceMs: 20,\n      pollMs: 1_000_000,\n      known: opts.known ?? new Map([...g.notes.values()].map((n) => [n.rel, n.mtimeMs] as [string, number])),\n      ...(opts.sizes ? { sizes: opts.sizes } : {}),\n      ...(opts.maxDirs === undefined ? {} : { maxDirs: opts.maxDirs }),\n      attachments: g.filePaths(),\n      walkedAt: () => g.walkedAt,\n      leftToWalk: (rel) => g.waitsForHomeWalk(rel),\n      walkPending: () => g.home?.walked === null,\n      now: () => Date.now() + clock.ahead,\n      onBatch: (b) => {\n        reported.push(...b.changes.map((c) => (opts.kinds ? `${c.kind} ${c.rel}` : c.rel)));\n        toWalk.push(...(b.toWalk ?? []));\n        rescan ||= b.rescan;\n      },\n      onDegraded: () => {},\n    });\n    const look = async () => {\n      await Bun.sleep(30);\n      w.pollTick();\n      w.flush();\n      await Bun.sleep(30);\n      w.flush();\n      const out = { reported: [...new Set(reported.splice(0))].sort(), toWalk: [...new Set(toWalk.splice(0))], rescan };\n      rescan = false;\n      return out;\n    };\n    return { w, look, reported, clock };\n  };"
+    },
+    {
+      "file": "tests/core/workspace/vaults/home/persistence.test.ts",
+      "parent": "home, a vault without a marker (VV-D2)",
+      "declaration": "const none = { reported: [], toWalk: [], rescan: false };"
+    },
+    {
+      "file": "tests/core/workspace/vaults/home/persistence.test.ts",
+      "parent": "home, a vault without a marker (VV-D2)",
+      "declaration": "const cli = async (args: string[], cwd: string) => {\n    const out: string[] = [];\n    const code = await runCli([...args, \"--json\"], {\n      out: (x: string) => out.push(x),\n      err: () => {},\n      stdin: async () => \"\",\n      isTTY: false,\n      columns: 80,\n      cwd,\n      env: process.env,\n    });\n    return { code, json: JSON.parse(out.join(\"\")) };\n  };"
+    },
+    {
+      "file": "tests/core/workspace/vaults/home/reached.test.ts",
+      "parent": "home, a vault without a marker (VV-D2)",
+      "declaration": "const watchHome = async (\n    home: string,\n    g: Graph,\n    opts: { known?: Map<string, number>; sizes?: Map<string, number>; maxDirs?: number; kinds?: boolean } = {},\n  ) => {\n    const { VaultWatcher } = await import(\"../../../../../src/core/workspace/graph/watch.ts\");\n    const reported: string[] = [];\n    const toWalk: string[] = [];\n    let rescan = false;\n    /** The watcher's clock, set ahead to make what was just done look long ago. */\n    const clock = { ahead: 0 };\n    const w = new VaultWatcher({\n      root: home,\n      filter: g.filter,\n      dirs: g.dirs,\n      debounceMs: 20,\n      pollMs: 1_000_000,\n      known: opts.known ?? new Map([...g.notes.values()].map((n) => [n.rel, n.mtimeMs] as [string, number])),\n      ...(opts.sizes ? { sizes: opts.sizes } : {}),\n      ...(opts.maxDirs === undefined ? {} : { maxDirs: opts.maxDirs }),\n      attachments: g.filePaths(),\n      walkedAt: () => g.walkedAt,\n      leftToWalk: (rel) => g.waitsForHomeWalk(rel),\n      walkPending: () => g.home?.walked === null,\n      now: () => Date.now() + clock.ahead,\n      onBatch: (b) => {\n        reported.push(...b.changes.map((c) => (opts.kinds ? `${c.kind} ${c.rel}` : c.rel)));\n        toWalk.push(...(b.toWalk ?? []));\n        rescan ||= b.rescan;\n      },\n      onDegraded: () => {},\n    });\n    const look = async () => {\n      await Bun.sleep(30);\n      w.pollTick();\n      w.flush();\n      await Bun.sleep(30);\n      w.flush();\n      const out = { reported: [...new Set(reported.splice(0))].sort(), toWalk: [...new Set(toWalk.splice(0))], rescan };\n      rescan = false;\n      return out;\n    };\n    return { w, look, reported, clock };\n  };"
+    },
+    {
+      "file": "tests/core/workspace/vaults/home/reached.test.ts",
+      "parent": "home, a vault without a marker (VV-D2)",
+      "declaration": "const none = { reported: [], toWalk: [], rescan: false };"
+    },
+    {
+      "file": "tests/core/workspace/vaults/home/reached.test.ts",
+      "parent": "home, a vault without a marker (VV-D2)",
+      "declaration": "const cli = async (args: string[], cwd: string) => {\n    const out: string[] = [];\n    const code = await runCli([...args, \"--json\"], {\n      out: (x: string) => out.push(x),\n      err: () => {},\n      stdin: async () => \"\",\n      isTTY: false,\n      columns: 80,\n      cwd,\n      env: process.env,\n    });\n    return { code, json: JSON.parse(out.join(\"\")) };\n  };"
+    },
+    {
+      "file": "tests/core/workspace/vaults/home/retry.test.ts",
+      "parent": "home, a vault without a marker (VV-D2)",
+      "declaration": "const watchHome = async (\n    home: string,\n    g: Graph,\n    opts: { known?: Map<string, number>; sizes?: Map<string, number>; maxDirs?: number; kinds?: boolean } = {},\n  ) => {\n    const { VaultWatcher } = await import(\"../../../../../src/core/workspace/graph/watch.ts\");\n    const reported: string[] = [];\n    const toWalk: string[] = [];\n    let rescan = false;\n    /** The watcher's clock, set ahead to make what was just done look long ago. */\n    const clock = { ahead: 0 };\n    const w = new VaultWatcher({\n      root: home,\n      filter: g.filter,\n      dirs: g.dirs,\n      debounceMs: 20,\n      pollMs: 1_000_000,\n      known: opts.known ?? new Map([...g.notes.values()].map((n) => [n.rel, n.mtimeMs] as [string, number])),\n      ...(opts.sizes ? { sizes: opts.sizes } : {}),\n      ...(opts.maxDirs === undefined ? {} : { maxDirs: opts.maxDirs }),\n      attachments: g.filePaths(),\n      walkedAt: () => g.walkedAt,\n      leftToWalk: (rel) => g.waitsForHomeWalk(rel),\n      walkPending: () => g.home?.walked === null,\n      now: () => Date.now() + clock.ahead,\n      onBatch: (b) => {\n        reported.push(...b.changes.map((c) => (opts.kinds ? `${c.kind} ${c.rel}` : c.rel)));\n        toWalk.push(...(b.toWalk ?? []));\n        rescan ||= b.rescan;\n      },\n      onDegraded: () => {},\n    });\n    const look = async () => {\n      await Bun.sleep(30);\n      w.pollTick();\n      w.flush();\n      await Bun.sleep(30);\n      w.flush();\n      const out = { reported: [...new Set(reported.splice(0))].sort(), toWalk: [...new Set(toWalk.splice(0))], rescan };\n      rescan = false;\n      return out;\n    };\n    return { w, look, reported, clock };\n  };"
+    },
+    {
+      "file": "tests/core/workspace/vaults/home/retry.test.ts",
+      "parent": "home, a vault without a marker (VV-D2)",
+      "declaration": "const none = { reported: [], toWalk: [], rescan: false };"
+    },
+    {
+      "file": "tests/core/workspace/vaults/home/watch.test.ts",
+      "parent": "home, a vault without a marker (VV-D2)",
+      "declaration": "const cli = async (args: string[], cwd: string) => {\n    const out: string[] = [];\n    const code = await runCli([...args, \"--json\"], {\n      out: (x: string) => out.push(x),\n      err: () => {},\n      stdin: async () => \"\",\n      isTTY: false,\n      columns: 80,\n      cwd,\n      env: process.env,\n    });\n    return { code, json: JSON.parse(out.join(\"\")) };\n  };"
+    }
+  ],
+  "inventory": {
+    "baseline": "ORG-T8",
+    "baselineDeclarations": 3582,
+    "expectedDeclarations": 3614,
+    "unchangedLiteralLeafCalls": 421,
+    "baselineRuntimeTests": 421,
+    "runtimeTests": 421,
+    "baselineAssertions": 3445,
+    "assertions": 3445,
+    "snapshotFiles": 0,
+    "files": [
+      {
+        "file": "tests/cli/contracts/catalog.test.ts",
+        "literalLeafCalls": 13,
+        "runtimeTests": 13,
+        "assertions": 99
+      },
+      {
+        "file": "tests/cli/contracts/envelopes.test.ts",
+        "literalLeafCalls": 10,
+        "runtimeTests": 10,
+        "assertions": 41
+      },
+      {
+        "file": "tests/cli/contracts/parity.test.ts",
+        "literalLeafCalls": 1,
+        "runtimeTests": 1,
+        "assertions": 804
+      },
+      {
+        "file": "tests/cli/diagnostics/spell.test.ts",
+        "literalLeafCalls": 2,
+        "runtimeTests": 2,
+        "assertions": 18
+      },
+      {
+        "file": "tests/cli/reading/paths.test.ts",
+        "literalLeafCalls": 6,
+        "runtimeTests": 6,
+        "assertions": 37
+      },
+      {
+        "file": "tests/cli/vaults/elsewhere.test.ts",
+        "literalLeafCalls": 1,
+        "runtimeTests": 1,
+        "assertions": 4
+      },
+      {
+        "file": "tests/cli/vaults/list.test.ts",
+        "literalLeafCalls": 1,
+        "runtimeTests": 1,
+        "assertions": 5
+      },
+      {
+        "file": "tests/core/application/config/vault-config.test.ts",
+        "literalLeafCalls": 1,
+        "runtimeTests": 1,
+        "assertions": 11
+      },
+      {
+        "file": "tests/core/documents/markdown/content-cache.test.ts",
+        "literalLeafCalls": 3,
+        "runtimeTests": 3,
+        "assertions": 22
+      },
+      {
+        "file": "tests/core/documents/syntax/vault-examples.test.ts",
+        "literalLeafCalls": 1,
+        "runtimeTests": 1,
+        "assertions": 38
+      },
+      {
+        "file": "tests/core/rendering/layout/markdown/embeds.test.ts",
+        "literalLeafCalls": 5,
+        "runtimeTests": 5,
+        "assertions": 22
+      },
+      {
+        "file": "tests/core/workspace/git/branch-switch.test.ts",
+        "literalLeafCalls": 2,
+        "runtimeTests": 2,
+        "assertions": 8
+      },
+      {
+        "file": "tests/core/workspace/git/merge/stale-integration.test.ts",
+        "literalLeafCalls": 1,
+        "runtimeTests": 1,
+        "assertions": 8
+      },
+      {
+        "file": "tests/core/workspace/git/review-integration.test.ts",
+        "literalLeafCalls": 14,
+        "runtimeTests": 14,
+        "assertions": 38
+      },
+      {
+        "file": "tests/core/workspace/git/status.test.ts",
+        "literalLeafCalls": 5,
+        "runtimeTests": 5,
+        "assertions": 18
+      },
+      {
+        "file": "tests/core/workspace/git/trust.test.ts",
+        "literalLeafCalls": 3,
+        "runtimeTests": 3,
+        "assertions": 8
+      },
+      {
+        "file": "tests/core/workspace/git/worktrees.test.ts",
+        "literalLeafCalls": 9,
+        "runtimeTests": 9,
+        "assertions": 44
+      },
+      {
+        "file": "tests/core/workspace/graph/context.test.ts",
+        "literalLeafCalls": 3,
+        "runtimeTests": 3,
+        "assertions": 22
+      },
+      {
+        "file": "tests/core/workspace/graph/freshness.test.ts",
+        "literalLeafCalls": 3,
+        "runtimeTests": 3,
+        "assertions": 23
+      },
+      {
+        "file": "tests/core/workspace/graph/problems.test.ts",
+        "literalLeafCalls": 1,
+        "runtimeTests": 1,
+        "assertions": 4
+      },
+      {
+        "file": "tests/core/workspace/graph/reached-index.test.ts",
+        "literalLeafCalls": 7,
+        "runtimeTests": 7,
+        "assertions": 36
+      },
+      {
+        "file": "tests/core/workspace/graph/tags.test.ts",
+        "literalLeafCalls": 1,
+        "runtimeTests": 1,
+        "assertions": 6
+      },
+      {
+        "file": "tests/core/workspace/graph/watch.test.ts",
+        "literalLeafCalls": 10,
+        "runtimeTests": 10,
+        "assertions": 25
+      },
+      {
+        "file": "tests/core/workspace/links/conventions.test.ts",
+        "literalLeafCalls": 10,
+        "runtimeTests": 10,
+        "assertions": 79
+      },
+      {
+        "file": "tests/core/workspace/links/cross-vault.test.ts",
+        "literalLeafCalls": 10,
+        "runtimeTests": 10,
+        "assertions": 30
+      },
+      {
+        "file": "tests/core/workspace/links/destinations.test.ts",
+        "literalLeafCalls": 1,
+        "runtimeTests": 1,
+        "assertions": 3
+      },
+      {
+        "file": "tests/core/workspace/links/extraction-integration.test.ts",
+        "literalLeafCalls": 5,
+        "runtimeTests": 5,
+        "assertions": 16
+      },
+      {
+        "file": "tests/core/workspace/links/fragile.test.ts",
+        "literalLeafCalls": 5,
+        "runtimeTests": 5,
+        "assertions": 32
+      },
+      {
+        "file": "tests/core/workspace/links/frontmatter.test.ts",
+        "literalLeafCalls": 2,
+        "runtimeTests": 2,
+        "assertions": 10
+      },
+      {
+        "file": "tests/core/workspace/links/hosting-integration.test.ts",
+        "literalLeafCalls": 3,
+        "runtimeTests": 3,
+        "assertions": 18
+      },
+      {
+        "file": "tests/core/workspace/links/landing-integration.test.ts",
+        "literalLeafCalls": 6,
+        "runtimeTests": 6,
+        "assertions": 41
+      },
+      {
+        "file": "tests/core/workspace/links/names.test.ts",
+        "literalLeafCalls": 7,
+        "runtimeTests": 7,
+        "assertions": 34
+      },
+      {
+        "file": "tests/core/workspace/links/path-links.test.ts",
+        "literalLeafCalls": 3,
+        "runtimeTests": 3,
+        "assertions": 18
+      },
+      {
+        "file": "tests/core/workspace/links/pointers.test.ts",
+        "literalLeafCalls": 9,
+        "runtimeTests": 9,
+        "assertions": 74
+      },
+      {
+        "file": "tests/core/workspace/links/redirects.test.ts",
+        "literalLeafCalls": 11,
+        "runtimeTests": 11,
+        "assertions": 73
+      },
+      {
+        "file": "tests/core/workspace/links/resolution-integration.test.ts",
+        "literalLeafCalls": 1,
+        "runtimeTests": 1,
+        "assertions": 2
+      },
+      {
+        "file": "tests/core/workspace/mutations/attachments.test.ts",
+        "literalLeafCalls": 1,
+        "runtimeTests": 1,
+        "assertions": 8
+      },
+      {
+        "file": "tests/core/workspace/mutations/convert-links.test.ts",
+        "literalLeafCalls": 9,
+        "runtimeTests": 9,
+        "assertions": 50
+      },
+      {
+        "file": "tests/core/workspace/mutations/files-integration.test.ts",
+        "literalLeafCalls": 2,
+        "runtimeTests": 2,
+        "assertions": 31
+      },
+      {
+        "file": "tests/core/workspace/mutations/folders.test.ts",
+        "literalLeafCalls": 5,
+        "runtimeTests": 5,
+        "assertions": 28
+      },
+      {
+        "file": "tests/core/workspace/mutations/headings.test.ts",
+        "literalLeafCalls": 5,
+        "runtimeTests": 5,
+        "assertions": 17
+      },
+      {
+        "file": "tests/core/workspace/mutations/link-moves.test.ts",
+        "literalLeafCalls": 18,
+        "runtimeTests": 18,
+        "assertions": 146
+      },
+      {
+        "file": "tests/core/workspace/mutations/path-moves.test.ts",
+        "literalLeafCalls": 1,
+        "runtimeTests": 1,
+        "assertions": 8
+      },
+      {
+        "file": "tests/core/workspace/mutations/plans.test.ts",
+        "literalLeafCalls": 2,
+        "runtimeTests": 2,
+        "assertions": 18
+      },
+      {
+        "file": "tests/core/workspace/mutations/reached-writes.test.ts",
+        "literalLeafCalls": 1,
+        "runtimeTests": 1,
+        "assertions": 5
+      },
+      {
+        "file": "tests/core/workspace/mutations/refusals.test.ts",
+        "literalLeafCalls": 7,
+        "runtimeTests": 7,
+        "assertions": 35
+      },
+      {
+        "file": "tests/core/workspace/mutations/rename-integration.test.ts",
+        "literalLeafCalls": 9,
+        "runtimeTests": 9,
+        "assertions": 44
+      },
+      {
+        "file": "tests/core/workspace/mutations/replace-files.test.ts",
+        "literalLeafCalls": 6,
+        "runtimeTests": 6,
+        "assertions": 47
+      },
+      {
+        "file": "tests/core/workspace/mutations/undo.test.ts",
+        "literalLeafCalls": 4,
+        "runtimeTests": 4,
+        "assertions": 32
+      },
+      {
+        "file": "tests/core/workspace/mutations/write-policy.test.ts",
+        "literalLeafCalls": 13,
+        "runtimeTests": 13,
+        "assertions": 90
+      },
+      {
+        "file": "tests/core/workspace/search/index.test.ts",
+        "literalLeafCalls": 11,
+        "runtimeTests": 11,
+        "assertions": 112
+      },
+      {
+        "file": "tests/core/workspace/search/scope.test.ts",
+        "literalLeafCalls": 6,
+        "runtimeTests": 6,
+        "assertions": 27
+      },
+      {
+        "file": "tests/core/workspace/search/sections.test.ts",
+        "literalLeafCalls": 4,
+        "runtimeTests": 4,
+        "assertions": 14
+      },
+      {
+        "file": "tests/core/workspace/vaults/discovery.test.ts",
+        "literalLeafCalls": 12,
+        "runtimeTests": 12,
+        "assertions": 68
+      },
+      {
+        "file": "tests/core/workspace/vaults/home/autoindex.test.ts",
+        "literalLeafCalls": 4,
+        "runtimeTests": 4,
+        "assertions": 34
+      },
+      {
+        "file": "tests/core/workspace/vaults/home/commands.test.ts",
+        "literalLeafCalls": 1,
+        "runtimeTests": 1,
+        "assertions": 7
+      },
+      {
+        "file": "tests/core/workspace/vaults/home/filter.test.ts",
+        "literalLeafCalls": 2,
+        "runtimeTests": 2,
+        "assertions": 41
+      },
+      {
+        "file": "tests/core/workspace/vaults/home/indexing.test.ts",
+        "literalLeafCalls": 1,
+        "runtimeTests": 1,
+        "assertions": 14
+      },
+      {
+        "file": "tests/core/workspace/vaults/home/limits.test.ts",
+        "literalLeafCalls": 4,
+        "runtimeTests": 4,
+        "assertions": 11
+      },
+      {
+        "file": "tests/core/workspace/vaults/home/links.test.ts",
+        "literalLeafCalls": 3,
+        "runtimeTests": 3,
+        "assertions": 18
+      },
+      {
+        "file": "tests/core/workspace/vaults/home/mounts.test.ts",
+        "literalLeafCalls": 2,
+        "runtimeTests": 2,
+        "assertions": 16
+      },
+      {
+        "file": "tests/core/workspace/vaults/home/moves.test.ts",
+        "literalLeafCalls": 3,
+        "runtimeTests": 3,
+        "assertions": 22
+      },
+      {
+        "file": "tests/core/workspace/vaults/home/persistence.test.ts",
+        "literalLeafCalls": 2,
+        "runtimeTests": 2,
+        "assertions": 21
+      },
+      {
+        "file": "tests/core/workspace/vaults/home/reached.test.ts",
+        "literalLeafCalls": 5,
+        "runtimeTests": 5,
+        "assertions": 22
+      },
+      {
+        "file": "tests/core/workspace/vaults/home/retry.test.ts",
+        "literalLeafCalls": 22,
+        "runtimeTests": 22,
+        "assertions": 99
+      },
+      {
+        "file": "tests/core/workspace/vaults/home/startup.test.ts",
+        "literalLeafCalls": 1,
+        "runtimeTests": 1,
+        "assertions": 12
+      },
+      {
+        "file": "tests/core/workspace/vaults/home/watch.test.ts",
+        "literalLeafCalls": 3,
+        "runtimeTests": 3,
+        "assertions": 41
+      },
+      {
+        "file": "tests/core/workspace/vaults/identity.test.ts",
+        "literalLeafCalls": 30,
+        "runtimeTests": 30,
+        "assertions": 174
+      },
+      {
+        "file": "tests/core/workspace/vaults/init.test.ts",
+        "literalLeafCalls": 5,
+        "runtimeTests": 5,
+        "assertions": 58
+      },
+      {
+        "file": "tests/core/workspace/vaults/named-folders.test.ts",
+        "literalLeafCalls": 10,
+        "runtimeTests": 10,
+        "assertions": 87
+      },
+      {
+        "file": "tests/core/workspace/vaults/nested.test.ts",
+        "literalLeafCalls": 3,
+        "runtimeTests": 3,
+        "assertions": 24
+      },
+      {
+        "file": "tests/core/workspace/vaults/symlinks/answers.test.ts",
+        "literalLeafCalls": 2,
+        "runtimeTests": 2,
+        "assertions": 38
+      },
+      {
+        "file": "tests/core/workspace/vaults/symlinks/following.test.ts",
+        "literalLeafCalls": 11,
+        "runtimeTests": 11,
+        "assertions": 69
+      },
+      {
+        "file": "tests/core/workspace/vaults/symlinks/reading-writing.test.ts",
+        "literalLeafCalls": 7,
+        "runtimeTests": 7,
+        "assertions": 57
+      },
+      {
+        "file": "tests/core/workspace/walk/examples.test.ts",
+        "literalLeafCalls": 1,
+        "runtimeTests": 1,
+        "assertions": 1
+      },
+      {
+        "file": "tests/core/workspace/walk/hostile.test.ts",
+        "literalLeafCalls": 1,
+        "runtimeTests": 1,
+        "assertions": 4
+      },
+      {
+        "file": "tests/core/workspace/walk/walk.test.ts",
+        "literalLeafCalls": 6,
+        "runtimeTests": 6,
+        "assertions": 24
+      }
+    ]
+  }
+}
