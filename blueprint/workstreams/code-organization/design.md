@@ -208,27 +208,294 @@ outputs, explicit target identity, read/effect classification, errors, cancellat
 and the client-side reconciliation step. Keep the public operation contract independent of TUI/CLI/socket presentation.
 A method signature alone does not settle execution or delivery guarantees.
 
-Initial contract sketches, to refine against existing behavior:
+#### Contract boundary and common rules (ORG-T44)
 
-| Operation | Explicit request | Outcome and client responsibility |
+**Proposed design, not implemented guarantees.** Source traces below refer to the tree at `4597a8f`, before the
+rendering/TUI moves. Existing-code examples establish current behavior; lifecycle requirements describe the future
+gateway. No method is routed through a new layer in #55. Public CLI commands, exit codes and stored formats stay as
+implemented. These operation names are design vocabulary, not a new runtime catalog or transport schema.
+
+The TUI owns live text, undo, document revision, saved-buffer baseline, selection, view mode, focus and pane state.
+Typing, selection and text cut/paste use that local buffer immediately. Explorer cut/paste captures a file identity
+locally, then invokes a file mutation; it does not place a NoteBuffer in an operation request. Shared pure text
+algorithms remain directly callable. The future gateway owns application-operation validation, execution and outcomes;
+its feature services own their workers, processes, caches and cleanup. A Promise alone provides no thread isolation.
+
+| Common value/rule | Proposed meaning |
+| --- | --- |
+| Request identity | Client invocation ID plus owner lifetime; used for correlation, not an exactly-once promise |
+| Resource target | Explicit vault/root identity and absolute file/repository identity; no ambient active tab or cwd |
+| Authority | The operation validates the target, trust, symlink and write policy; supplied roots are not authority |
+| Content identity | An immutable snapshot tagged with buffer incarnation/revision, distinct from disk observation |
+| Disk baseline | Observed disk identity/stamp and available content fingerprint, with its strength made explicit |
+| Query result | Explicit target/request identity, data or operation-specific refusal/failure/cancellation |
+| Effect result | Known effects, warnings and final/uncertain status; failure or cancellation does not imply rollback |
+| Delivery | Client checks lifetime, target and relevant revision again when applying a completion |
+| Cancellation | Queries may be abandoned; accepted mutations must settle and report effects already started |
+| Work policy | Replace obsolete queries; finish useful refreshes; preserve mutation order for overlapping targets |
+| Progress | Operation stages/counts only; adapters choose messages, panes and presentation |
+| Close/disconnect | Stop owner-owned reads; do not redirect effects or lose an accepted mutation's outcome |
+
+A plan is a self-contained immutable value carrying its explicit target, proposed effects and per-file expected content
+hashes. Its identity means a digest of that value, not a key into a server-held plan record. Apply receives the whole
+value and verifies the digest/prerequisites; the digest proves neither authority nor current applicability. The current
+RenamePlan stores before/after text and computes hashes when applying; precomputed expected hashes are proposed contract
+data. Retained/server-managed plans would require a separate future retention decision and rules.
+
+Delete/restore/copy/move follow the same target, refusal, cancellation and effect rules; files.ts and trash.ts (T13)
+remain their core owners. They are outside these eight representative sketches, not exceptions to the boundary.
+
+A query does not edit user content; it may refresh existing caches or derived state under the current policy.
+Request/outcome values contain no App, NoteBuffer, renderer, UI object or callback into current selection. The client
+keeps its presentation target separately. A closed view cannot be reopened by a late completion; a still-valid file
+mutation may finish after that view closes, with its outcome retained by the operation owner. Before implementation,
+choose bounded outcome retention/reconnect rules and transport authority separately. No new receipt store, scheduler,
+socket protocol or authentication mechanism is installed by this design.
+
+Conflicting mutations need ordering over their actual file/repository footprint, including aliases of one target. A
+rename with an uncertain footprint requires a conservative owner scope until validated. Disk preflight and atomic
+replacement do not create a transaction against arbitrary external writers. Preserve current refusal checks; stronger
+compare-and-write or cross-file rollback guarantees require a separate implementation choice and evidence.
+
+#### Resolve a link
+
+| Contract field | Proposed design |
+| --- | --- |
+| Kind/target | Query; explicit vault/root, source file and link kind/text |
+| Inputs | Parsed target, source content identity and optional immutable source context; no cursor callback |
+| Output | Resolved resource/anchor, candidates or refusal, warnings and captured request/content identity |
+| Errors | Missing/ambiguous target, forbidden traversal or follow permission needed; preserve existing distinctions |
+| Cancel/progress | Abandon obsolete reads; resolving/reading stages; never grant follow permission implicitly |
+| Owner/reconciliation | Core graph/links resolve; client chooses destination view and checks its navigation request |
+
+**Existing example:** `src/tui/linking.ts:27` asks Graph.resolveLink; graph resolution and landing remain in
+`workspace/graph` and `workspace/links`. `tests/vault.test.ts` covers CLI resolve with headings, blocks and ambiguous
+names. Following a target and granting a symlink answer are distinct from resolving it. Resolving an external URL does
+not launch a browser or run a program as a hidden query effect.
+
+**Lifecycle:** capture source A, its revision and this navigation request; resolve/read under A's policy; return the
+explicit target. If focus moves to B or A's view closes, the client rejects delivery to that view instead of resolving
+again against B. If following needs consent, return that requirement and let a separate explicit action obtain it; a
+later request revalidates it. Existing synchronous resolution is preserved during ORG; asynchronous delivery checks are
+future requirements.
+
+#### Save an immutable snapshot
+
+| Contract field | Proposed design |
+| --- | --- |
+| Kind/target | Mutation; explicit file, vault/policy context and captured buffer incarnation/revision |
+| Inputs | Immutable content bytes with encoding/BOM/EOL, observed disk baseline and scoped conflict decision |
+| Output | Written disk fingerprint, saved content identity, known effects or conflict/refusal |
+| Errors | Changed/deleted target, invalid encoding, virtual/read-only target, trust/path refusal or write failure |
+| Cancel/progress | Cancel before effects; after writing starts, settle and report the write; preparing/writing stages |
+| Owner/reconciliation | Core performs checked atomic write; TUI alone advances its saved-buffer baseline |
+
+**Existing example:** `src/tui/saving.ts:37` checks disk changes and applies save rules before calling
+`src/tui/app.ts:1172` (writeBuffer). That gate checks virtual/follow/path policy, calls writeNote, notifies the watcher
+and updates graph/language state. `src/tui/buffer.ts` owns version, saved text and undo. Existing conflict, keep/reload,
+shared-buffer and autosave cases are in `tests/tui.test.ts`; the known autosave fixture condition remains recorded in
+the focused-verification section. Save is currently synchronous, not an asynchronous gateway guarantee.
+
+**Lifecycle:** apply the existing local save rules as an undoable edit, then capture file A’s snapshot S at revision 7
+and disk baseline D. Submit S. Typing different text creates revision 8 immediately without waiting. Revalidate D and
+the target before writing S. On completion, record that S reached disk; revision 8 remains dirty relative to S. Do not
+call today's markSaved on whichever text is current. If A’s view closes or another vault becomes active, the outcome
+still names A; it cannot mark B clean or recreate A's view. A conflict returns without authorizing an overwrite;
+confirmation applies only to the observed conflict. External writers can race checks, so advertise no stronger
+filesystem compare-and-swap guarantee than the eventual implementation actually provides.
+
+#### Plan a rename
+
+| Contract field | Proposed design |
+| --- | --- |
+| Kind/target | Planning/query; explicit vault, source identity and destination input |
+| Inputs | Source/destination and relevant saved-file observations; client handles unsaved-buffer preparation |
+| Output | Preview, warnings/ambiguities, immutable plan value/digest and per-file prerequisites |
+| Errors | Invalid destination, collision, unsupported target, unreadable source or policy refusal |
+| Cancel/progress | Cancel planning; scan/resolve/preview stages; caches may refresh, user files do not move |
+| Owner/reconciliation | Core owns calculations; client displays preview and retains its buffer ownership |
+
+**Existing example:** `workspace/mutations/rename/rename.ts:133` builds a note rename plan. RenamePlan in
+`rename-plan.ts:89` contains affected texts, moves, vault changes and ambiguities. The TUI renaming coordinator and CLI
+files handler use this implementation; `tests/vault.test.ts` covers preview, cross-vault links and refusal.
+
+**Lifecycle:** capture source A and destination D; prepare any relevant live buffers through the current client
+workflow; build a preview against explicit saved observations. If focus/vault changes, keep the preview bound to A's
+request or discard it. Editing an affected file makes its prerequisites stale; approval of an old preview never means
+replanning silently against current files. Resolve ambiguities explicitly before requesting apply. Temporary planner
+resources are disposed on cancellation; no application operation obtains text from the current active tab later.
+
+#### Apply an approved rename plan
+
+| Contract field | Proposed design |
+| --- | --- |
+| Kind/target | Mutation; full immutable plan and digest, original vault and explicit affected resources |
+| Inputs | Approved plan value, per-file expected hashes and explicit ambiguity resolutions |
+| Output | Written/moved identities, warnings, undo reference if created, known/uncertain partial effects |
+| Errors | Stale plan, changed destination, path/trust refusal, I/O or incomplete follow-up/index update |
+| Cancel/progress | Cancel before effects; settle once started; checking/moving/writing/indexing stages |
+| Owner/reconciliation | Mutations own application and recovery facts; client remaps its own views and refreshes facts |
+
+**Existing example:** `rename-apply.ts:170` checks paths and each file's content hash before effects, then moves/writes
+and updates indexes/logs. Its Applied result names written/moved paths and warnings (`:131`). Failure after an effect is
+not a cross-file rollback promise: its current exceptions do not form a complete partial-effect journal.
+`tests/vault.test.ts` covers changed-since-preview refusal and undo; the file-operation client remains separate.
+
+**Lifecycle:** approve the self-contained plan P and digest for A; pass that value to apply and order it against
+overlapping mutations; recheck P's prerequisites. A stale file refuses before effects, with no implicit new plan. After
+a move/write starts, cancellation or client close cannot be reported as “nothing changed”. Future execution must capture
+known effects and uncertainty even if a later write or index step fails. Keep the outcome bound to P and refresh
+affected facts; view remapping uses captured identities, not the currently selected row. Undo is a separate checked
+operation, not automatic rollback after cancellation. The future effect record is supporting work for migration, not
+something the current synchronous API already supplies.
+
+#### Read Git status
+
+| Contract field | Proposed design |
+| --- | --- |
+| Kind/target | Query/refresh; explicit checkout/worktree identity |
+| Inputs | Repository, status options and request identity; no current explorer selection |
+| Output | Status entries, observed repository state and warnings tied to that checkout |
+| Errors | Repository gone, denied/untrusted execution, process failure or cancellation |
+| Cancel/progress | Preserve existing process cancellation; reading stage; useful refreshes may finish before newest |
+| Owner/reconciliation | Git owns process/state; client checks repository lifetime before replacing its panel rows |
+
+**Existing example:** `workspace/git/staging/gitstage.ts:43` provides statusLater; TUI Git/panel controllers consume
+status and branch information. `tests/gitpanel.test.ts` exercises changing rows and repositories, while core status
+parser tests retain literal path handling. This is a saved repository view, not a gateway-owned live-document view.
+
+**Lifecycle:** request status for repository R; focus switches to S while R's process runs. Deliver R's answer only to a
+surviving R owner; do not apply it to S's rows. A newer refresh can remain pending without indefinitely replacing a
+running useful refresh. Closing R stops its reads and invalidates delivery. Current Git process behavior is retained; no
+new global refresh policy is imposed during this workstream.
+
+#### Stage explicit Git paths
+
+| Contract field | Proposed design |
+| --- | --- |
+| Kind/target | Mutation; explicit checkout/worktree and literal path list |
+| Inputs | Selected paths and observed index/worktree prerequisites; operation-specific stage/unstage intent |
+| Output | Actual Git result, affected identities and post-operation facts; failure may require rereading status |
+| Errors | Changed prerequisites, index lock, repository/policy failure or Git refusal, preserving Git's diagnostic |
+| Cancel/progress | Never coalesce explicit mutations; after starting Git, report its actual settlement; staging stage |
+| Owner/reconciliation | Git owns execution; TUI owns selection, confirmation and rendering after status refresh |
+
+**Existing example:** `gitstage.ts:116`–`:134` stages/unstages explicit paths using literal pathspec input. It currently
+returns GitDone (error text or null), not an expected-state or partial-effect protocol. Core staging tests in
+`tests/core.test.ts` include glob/colon filenames and whole-section operations; the panel tests retain integration.
+
+**Lifecycle:** capture R and selected paths before waiting. If a row changes or focus moves, do not stage whatever
+occupies that row now. The future operation checks any promised prerequisites before invoking Git. If cancellation
+arrives after the process starts, settle and reread affected facts rather than assuming the index is unchanged. The
+current implementation's guarantees remain unchanged; stronger stale-state checks and authoritative outcomes are
+migration work, not existing behavior inferred from these proposed fields.
+
+#### Search saved resources
+
+| Contract field | Proposed design |
+| --- | --- |
+| Kind/target | Query; explicit vault/scope, query and request identity |
+| Inputs | Parsed query, filters/limit and saved-data mode; any supplied client snapshot is immutable and explicit |
+| Output | Ranked hits with file/position and observed content/index identity, warnings or failure |
+| Errors | Invalid query, missing/unreadable scope, unavailable index or worker failure under existing fallback policy |
+| Cancel/progress | Abandon obsolete query; retain useful index refresh; searching/indexing stages |
+| Owner/reconciliation | Search owns index/worker resources; client reconciles its own unsaved-text overlay |
+
+**Existing example:** `workspace/search/search.ts:654` accepts an explicit Graph/index/query; SearchIndex owns the
+SQLite query (`search-index.ts:186`), and regex-jobs owns worker matching. `src/tui/search.ts` tracks query and buffer
+versions while combining live text. `tests/vault.test.ts` covers scan/index and scope; `tests/regex-jobs.test.ts`
+retains worker/TUI-find checks. Current SQLite/scan work is not automatically nonblocking because it returns data.
+
+**Lifecycle:** capture Q for scope V and client snapshot revisions; issue saved-data search while the client can keep
+typing. Q2 supersedes Q's presentation. On Q's delivery, check query, scope and relevant live revisions before merging
+or showing hits. Standalone CLI results remain saved-file results; another client's unsaved text is not silently
+included. Any future server-side snapshot overlay is request-local, not an authoritative second buffer store. Expensive
+scan/index work needs bounded slices or a worker/process before promising smooth gateway execution.
+
+#### Export a document or scope
+
+| Contract field | Proposed design |
+| --- | --- |
+| Prepare kind/target | Query over explicit saved sources and format; private staging may be written |
+| Publish kind/target | Mutation of the explicit destination, using the prepared result and write policy |
+| Inputs | Captured saved-file scope/observations and export settings; preserve current unsaved-input preparation |
+| Output | Artifact paths/fingerprints, warnings and actual publication/cleanup outcome |
+| Errors | Invalid format/target, read/worker/format failure, cancellation or write/cleanup failure |
+| Cancel/progress | Keep reading/assembling/writing stages; cancel before commit; publication settlement is explicit |
+| Owner/reconciliation | Export owns workers/staging and output policy; client owns dialogs and navigation |
+
+**Existing example:** `src/tui/exporter.ts:207` prepares an export, publishes through its prepared-output flow and
+always disposes staging (`:266`). `src/core/export/jobs.ts:14` captures the source/policy/format/target request; its
+worker builds the result while the owner publishes it. `export/index.ts:179` writes output assets/document. Existing
+export and terminal cases cover cancellation, nested diagrams, target refusal and cleanup errors. No immutable
+live-buffer export snapshot guarantee is invented for today's saved-file pipeline.
+
+**Lifecycle:** capture source set and destination D after the current client preparation. Run the existing worker
+pipeline, including nested workers. Moving focus does not change D or the source set. Before publication, honor
+cancellation and target refusal; after the irreversible publication boundary, report what was actually published.
+Dispose staging even if the originating view closes, reporting cleanup failure separately from artifact success. A UI
+cancel after commit cannot turn a successful publication into “no output”. Future gateway publication must own this
+whole lifetime rather than moving only its worker-start call out of the client.
+
+#### Extraction and migration map
+
+These are responsibility owners, not claims that each operation is already a gateway API. Current callers remain direct
+throughout #55; a move does not by itself establish reusability or responsiveness.
+
+| Operation | Existing implementation/client | ORG owner; remaining gateway work |
 | --- | --- | --- |
-| Resolve link | Vault, source file, link target and content revision | Resolved target/refusal; TUI navigates |
-| Save snapshot | File, immutable content, client revision, disk baseline | Written fingerprint or conflict |
-| Plan rename | Vault, source/destination and file prerequisites | Preview and applicability prerequisites |
-| Apply rename | Approved plan identity and its expected prerequisites | Actual effects/refusal/partial failure |
-| Git status/stage | Repository, selected paths and expected state | Status or mutation outcome |
-| Search/export | Scope or document input, parameters, request identity | Results/artifact and progress |
+| Link resolution | graph/links; TUI linking/following, CLI resolve | T25/T24/T42; explicit request/delivery adapter |
+| Save snapshot | fsutil writeNote; App/Saving/NoteBuffer | T24/T38/T42; checked save seam, ordered async outcomes |
+| Plan/apply rename | mutations/rename; TUI renaming, CLI files | T13/T35/T42; immutable preview and effect reporting |
+| Git status/stage | workspace/git; Git/panel and CLI Git | T30/T39/T42; prerequisites/process settlement |
+| Search | workspace/search; TUI search and CLI search | T34/T40/T42; live overlay seam and bounded execution |
+| Export | export jobs/formats; exporter and CLI render | T29/T39/T40/T42; full staging/publication ownership |
 
-Each sketch needs an existing-code example and a lifecycle walkthrough. Values crossing the contract must not contain
-App, NoteBuffer, renderer handles or callbacks that read whichever tab is active later. Use operation-specific data and
-preserve current path, trust and write-refusal rules beneath the client. Transport encoding and authentication are
-future adapter work; an in-process contract must not be mistaken for a safe socket protocol by itself.
+T9 removes inappropriate editable/drawing composition dependencies; it does not move live buffers into a backend. T24
+uses the relevant contracts as an extraction checklist and must demonstrate real focused callers/tests while retaining
+integration journeys. T43 reconciles each row with actual extractions and remaining migration work. Future runtime
+routing, transport, authorization, request replay/retention and connected-session editing remain the next stack.
+Existing public error behavior is mapped per operation; no global replacement error framework follows.
 
-The save walkthrough must distinguish the TUI's document revision from the disk baseline: the TUI owns buffer text and
-undo, captures a snapshot, and records which revision was saved. A later completion cannot mark subsequent edits clean
-or change another document after focus/vault switching. File mutations report actual effects; cancellation is not a
-promise of rollback. Read/query cancellation, mutation settlement and UI presentation have distinct rules. Design the
-rules here; preserve current synchronous save and existing worker policies during #55 extractions.
+#### ENG reconciliation and future acceptance
+
+**Recommendation:** keep the maintainer-approved TUI-owned-buffer model authoritative for this contract design. Adopt
+compatible lifecycle principles, not ENG's proposed document owner. ENG's Documents design moves text, undo and
+saved-baseline state into the engine; it cannot simultaneously own the same live record as NoteBuffer. See the [ENG
+principles](../execution-engine/decisions.md) and [engine document
+proposal](../execution-engine/design/how-it-works.md#documents-and-presentation-buffers). This is a real alternative,
+not a naming difference. ENG's accepted decision records and draft architecture are not amended here.
+
+| ENG principle | Compatible application in this proposal |
+| --- | --- |
+| ENG-D1 | Feature execution owners retain timers, workers, staging and disposal; client buffers retain their lifetime |
+| ENG-D2 | Work-specific query/refresh/mutation rules; preserve current queues until a tested migration |
+| ENG-D3 | Check identity/lifetime/revision at delivery, even if cancellation was requested |
+| ENG-D9 | Capture explicit targets before waiting; closed views cannot redirect operations |
+| ENG-D10 | Authoritative operation outcomes are separate from client presentation; no ENG receipt runtime in #55 |
+| ENG-D15 | Small testable owners and real client integration, with one implementation of each policy |
+
+For the next stack, a standalone saved-file operation uses checked disk state and returns external-change facts. A
+connected edit of a TUI document must coordinate with that client owner, using an explicit document incarnation and
+revision; it cannot mutate an engine copy or silently overwrite the live buffer. Define that connected-edit protocol and
+its conflict/owner-disconnect policy before implementing it. Alternatively, adopting engine-owned live documents
+requires an explicit replacement decision and migration of text/undo ownership; it is not part of ORG. No operation
+contract here treats live document handles as interchangeable with saved files.
+
+Future acceptance cases (not new tests or runtime guarantees delivered by this document):
+
+- Save S, type again, then complete S: retain the newer dirty text/undo and record only S as saved.
+- Switch vault/focus or close/reopen a view while any query runs: late delivery affects no replacement owner.
+- Edit a plan target or occupy its destination after preview: refuse the stale plan before effects; do not replan.
+- Cancel before a mutation starts versus after its first effect: distinguish no effects from known/uncertain effects.
+- Lose a client after a rename/Git/write starts: retain and reconcile the operation outcome without reviving its view.
+- Search while typing in an unsaved buffer: update this client's overlay only for matching query/content identities.
+- Export through a nested worker, cancel near publication, then fail cleanup: preserve artifact/outcome distinctions.
+- Run an expensive operation while typing/opening a lens: demonstrate bounded UI latency using actual execution.
+
+These cases gate future gateway migration. #55 keeps the current synchronous save, queue/deadline policies,
+App.writeBuffer entry, buffer/undo owner, session format and direct calls. This design adds no loading/memory work
+under #56 and no sockets, scheduler, execution engine, operation catalog or duplicate document store.
 
 ### Responsibility extraction deliverable
 
@@ -242,22 +509,6 @@ Build only interfaces needed by actual extracted code and tests. Test applicatio
 focused collaborators, with the existing TUI/CLI integration checks retained. Record work that still needs gateway
 migration rather than claiming that a path move made an entire operation reusable. Owner tasks T10/T13/T24/T25–T42
 perform the relevant extractions; T43 audits the contract-to-owner mapping and remaining migration work.
-
-### Reconciliation with ENG
-
-Compare the contract proposal with ENG's relevant principles: complete lifecycle ownership (ENG-D1), work-specific
-policies (ENG-D2), applicability checks at delivery (ENG-D3), explicit deferred targets (ENG-D9), results distinct from
-presentation (ENG-D10), and local/testable feature growth (ENG-D15). See [ENG
-decisions](../execution-engine/decisions.md). This is design compatibility review, not a dependency on ENG or adoption
-of its architecture. #55 installs no ENG runtime, receipts, scheduler or operation catalog.
-
-There is a concrete ownership difference to reconcile: ENG's [document
-model](../execution-engine/design/how-it-works.md#documents-and-presentation-buffers) proposes moving text, undo and
-saved-baseline state into the engine. This plan keeps those live-buffer responsibilities in the TUI. ORG-T44 must record
-the difference and a proposed reconciliation before gateway implementation; do not silently adopt both models or amend
-ENG's accepted records as a side effect. Connected editing of a running TUI and standalone saved-file operations need
-explicit contracts in that follow-up. The #55 contract examples must remain consistent with the TUI-owned-buffer model
-throughout.
 
 ## ADDED — blueprint/design/tui.md: Ownership verification and separate adjustments
 
