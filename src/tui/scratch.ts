@@ -2,7 +2,7 @@
 // in the window on the right.
 
 import { relative } from "node:path";
-import { climbsOut } from "../core/fsutil.ts";
+import { climbsOut } from "../core/foundation/platform/fsutil.ts";
 import { placeAt, startInsert } from "./editing.ts";
 import { appendScratch, dropEmptyAsks, ensureScratch, scratchLocation } from "../core/capture.ts";
 import type { NoteBuffer } from "./buffer.ts";

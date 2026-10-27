@@ -4,7 +4,7 @@
 
 import { existsSync } from "node:fs";
 import { homedir } from "node:os";
-import { browserOpener, openerSources } from "../core/browser.ts";
+import { browserOpener, openerSources } from "../core/foundation/platform/browser.ts";
 import { ghAccount, ghPath, ghPost } from "../core/gh.ts";
 import { tildePath } from "../core/names.ts";
 import { TOP } from "../core/position.ts";
@@ -28,7 +28,7 @@ import {
   TITLE_LINE,
   WHERE_SAID,
 } from "../core/report.ts";
-import { sanitize } from "../core/sanitize.ts";
+import { sanitize } from "../core/foundation/text/sanitize.ts";
 import { NoteBuffer } from "./buffer.ts";
 import { type Canvas, TextCanvas } from "./canvas.ts";
 import { placeAt, startInsert, stopInsert } from "./editing.ts";

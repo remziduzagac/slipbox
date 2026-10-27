@@ -4,7 +4,7 @@
 import type { App, View } from "./app.ts";
 import { type Canvas, drawText } from "./canvas.ts";
 import { type Rect, type Geometry, pageBg, roleStyle, button, drawBreadcrumb, crumbLeast } from "./draw.ts";
-import { truncate, stringWidth } from "../core/width.ts";
+import { truncate, stringWidth } from "../core/foundation/text/width.ts";
 import { MODES, viewMode } from "./modes.ts";
 
 /** The buttons' forms, widest first: every label, every letter, the selected one's letter alone; none. */

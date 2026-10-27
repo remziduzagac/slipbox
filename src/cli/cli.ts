@@ -12,11 +12,11 @@
 
 import { existsSync } from "node:fs";
 import { dirname, isAbsolute, join, resolve } from "node:path";
-import { loadConfig } from "../core/config.ts";
+import { loadConfig } from "../core/application/config/config.ts";
 import { lookupFolder } from "../core/folders.ts";
 import { isPointer, parsePointer, resolvePointer } from "../core/pointer.ts";
 import { pathLink } from "../core/links.ts";
-import { sanitize, UNSAFE } from "../core/sanitize.ts";
+import { sanitize, UNSAFE } from "../core/foundation/text/sanitize.ts";
 import { elsewhereAt, findVaultRoot, isVaultRoot, locateVault, setRootMarkers, VaultError } from "../core/vault.ts";
 import { setTrustedRoots } from "../core/trust.ts";
 import { type Args, flag, has, parseArgs, UsageError, VALUED } from "./args.ts";

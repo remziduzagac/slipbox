@@ -13,7 +13,7 @@ import { type LintIssue, lintCommand, lintFailure, runLint } from "../core/lint.
 import { slugify } from "../core/parse.ts";
 import { headingFragment, landing, lineFragment } from "../core/landing.ts";
 import { classify } from "../core/filetypes.ts";
-import { readText } from "../core/fsutil.ts";
+import { readText } from "../core/foundation/platform/fsutil.ts";
 import { frontmatterFindings } from "../core/diagnostics.ts";
 import { urlPath } from "../core/convert.ts";
 import { findVaultRoot, isInside } from "../core/vault.ts";

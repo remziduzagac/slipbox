@@ -5,8 +5,8 @@
 import { readFileSync, statSync } from "node:fs";
 import { isMainThread } from "node:worker_threads";
 import { PaintJobs, type PaintRequest, type PaintResult } from "../core/paint-jobs.ts";
-import { workerUrl } from "../core/workers.ts";
-import { notifyLoaded } from "../core/lazy.ts";
+import { workerUrl } from "../core/foundation/workers/url.ts";
+import { notifyLoaded } from "../core/foundation/platform/lazy.ts";
 import {
   imageInfo,
   NativeImage,

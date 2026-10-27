@@ -33,8 +33,11 @@ function fixture() {
   put("package.json", JSON.stringify({ scripts: { build: "bun build src/main.ts src/core/job.ts" } }));
   put("src/main.ts", 'import type { Item } from "./core/item"; import("./core/jobs/run");');
   put("src/core/item.ts", "export interface Item { id: string }");
-  put("src/core/jobs/run.ts", 'import { workerUrl } from "../workers"; new Worker(workerUrl("job.ts"));');
-  put("src/core/workers.ts", "export function workerUrl(file: string) { return file; }");
+  put(
+    "src/core/jobs/run.ts",
+    'import { workerUrl } from "../foundation/workers/url"; new Worker(workerUrl("job.ts"));',
+  );
+  put("src/core/foundation/workers/url.ts", "export function workerUrl(file: string) { return file; }");
   put("src/core/job.ts", 'export const result = "ok";');
   put("tests/one.test.ts", 'test("kept", () => {}); test("also kept", () => {});');
   return { root, put };
@@ -85,6 +88,11 @@ test("stale paths need an exact file/text exception with a reason, not a blanket
   expect(stalePaths(root, ["history.md"], manifest)).toEqual([]);
   manifest.retained[0]!.reason = "";
   expect(stalePaths(root, ["history.md"], manifest)).toHaveLength(1);
+  manifest.renamedBasenames = { "item.ts": "contract.ts" };
+  put("names.md", "The former item.ts module; item-resolve.ts is a sibling.");
+  expect(stalePaths(root, ["names.md"], manifest)).toEqual(["names.md: retired basename item.ts"]);
+  manifest.retained.push({ file: "names.md", text: "item.ts", reason: "Historical module name" });
+  expect(stalePaths(root, ["names.md"], manifest)).toEqual([]);
 });
 
 test("moving a worker requires both its helper-relative URL and its compiled build entry to follow", () => {
@@ -93,7 +101,10 @@ test("moving a worker requires both its helper-relative URL and its compiled bui
   const manifest: Manifest = { moves: { "src/core/job.ts": "src/core/jobs/job.ts" }, retained: [] };
   renameSync(join(root, "src/core/job.ts"), join(root, "src/core/jobs/job.ts"));
   expect(capture(root).unresolved).toContain("src/core/jobs/run.ts: job.ts");
-  put("src/core/jobs/run.ts", 'import { workerUrl } from "../workers"; new Worker(workerUrl("jobs/job.ts"));');
+  put(
+    "src/core/jobs/run.ts",
+    'import { workerUrl } from "../foundation/workers/url"; new Worker(workerUrl("jobs/job.ts"));',
+  );
   expect(capture(root).unresolved).toEqual(["build entry: src/core/job.ts"]);
   put("package.json", JSON.stringify({ scripts: { build: "bun build src/main.ts src/core/jobs/job.ts" } }));
   expect(compare(before, capture(root), manifest)).toEqual([]);
@@ -126,7 +137,7 @@ test("comments and quoted fixtures cannot stand in for a removed test", () => {
 test("script imports and literal worker and URL references participate in move verification", () => {
   const { root, put } = fixture();
   put("scripts/use.ts", 'import type { Item } from "../src/core/item";');
-  put("scripts/job.ts", 'import { workerUrl } from "../src/core/workers"; workerUrl("job.ts");');
+  put("scripts/job.ts", 'import { workerUrl } from "../src/core/foundation/workers/url"; workerUrl("job.ts");');
   put("scripts/url.ts", 'new URL("../src/core/item.ts", import.meta.url);');
   const before = capture(root);
   expect(before.edges).toContain("scripts/use.ts -> src/core/item.ts");

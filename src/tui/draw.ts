@@ -9,7 +9,7 @@
 
 import type { CellStyle } from "../core/layout/style.ts";
 import type { Color, Role, Theme } from "../core/theme/theme.ts";
-import { stringWidth, truncate } from "../core/width.ts";
+import { stringWidth, truncate } from "../core/foundation/text/width.ts";
 import type { App, View } from "./app.ts";
 import { type Canvas, drawText } from "./canvas.ts";
 import { prettyKey } from "./keys.ts";

@@ -5,7 +5,7 @@
 import { lstatSync, readlinkSync, unlinkSync } from "node:fs";
 import { join, resolve } from "node:path";
 import text from "../../skills/slipbox/SKILL.md" with { type: "text" };
-import { atomicWrite, readRegular, SMALL_FILE } from "./fsutil.ts";
+import { atomicWrite, readRegular, SMALL_FILE } from "./foundation/platform/fsutil.ts";
 
 /** The skill's text, as `skills/slipbox/SKILL.md` was when this slipbox was built. */
 export const SKILL: string = text;

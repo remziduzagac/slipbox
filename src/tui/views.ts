@@ -1,7 +1,7 @@
 // A window's view of its note: its layout for the window's width (rows derived from source anchors, decision 3.5),
 // its gutter, its cursor and selection, scrolling, and the marks drawn over its text.
 
-import { readRegular } from "../core/fsutil.ts";
+import { readRegular } from "../core/foundation/platform/fsutil.ts";
 import { taskHolding, toggleTask } from "../core/tasks.ts";
 import { cannotEdit, lineOf, offsetOf, placeAt, typedSelection } from "./editing.ts";
 import { matchBracket } from "../core/brackets.ts";
@@ -9,7 +9,7 @@ import { extentOf, type Layout } from "../core/layout/ir.ts";
 import { layoutWidth } from "../core/note.ts";
 import { type Anchor, anchorAt, type CursorAnchor, rowFor } from "../core/position.ts";
 import type { TextEdit } from "../core/footnotes.ts";
-import { truncate, graphemes, graphemeWidth, stringWidth } from "../core/width.ts";
+import { truncate, graphemes, graphemeWidth, stringWidth } from "../core/foundation/text/width.ts";
 import type { NoteBuffer } from "./buffer.ts";
 import { cells, clampPos, type Pos, snap, ordered } from "./cursor.ts";
 import type { App, View } from "./app.ts";

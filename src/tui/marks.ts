@@ -9,7 +9,7 @@ import { constants as fsConstants, existsSync, lstatSync, statSync } from "node:
 import { basename, join, relative, sep } from "node:path";
 import type { Glyphs } from "../core/glyphs.ts";
 import { denied, type ListedEntry, type VaultHead, vaultHead } from "../core/listing.ts";
-import { cacheDir, vaultKey } from "../core/paths.ts";
+import { cacheDir, vaultKey } from "../core/foundation/platform/paths.ts";
 import type { Role } from "../core/theme/theme.ts";
 import { isInside } from "../core/vault.ts";
 import { ANOTHER_DISK, type BusyWhy, busyFolderWhyAt, HOME_LIMITS, LINK_REASON, type WalkCap } from "../core/walk.ts";

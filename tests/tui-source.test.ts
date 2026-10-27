@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { layoutSource, newSourceCache } from "../src/core/layout/source.ts";
-import { loadConfig } from "../src/core/config.ts";
+import { loadConfig } from "../src/core/application/config/config.ts";
 import { harness, makeSandbox } from "./tui-harness.ts";
 
 makeSandbox();

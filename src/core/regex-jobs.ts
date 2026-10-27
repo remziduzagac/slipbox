@@ -1,9 +1,9 @@
 // Plain searches keep their cheap path. Native regex matching runs in a worker, stopped at a deadline its input sets.
 import { createHash } from "node:crypto";
 import { everyMatch, findAll, MatchLimitError, type MatchLimits, SHOWN_MATCHES, type TextMatch } from "./replace.ts";
-import { notifyLoaded } from "./lazy.ts";
-import { WorkerRequests } from "./worker-requests.ts";
-import { workerUrl } from "./workers.ts";
+import { notifyLoaded } from "./foundation/platform/lazy.ts";
+import { WorkerRequests } from "./foundation/workers/worker-requests.ts";
+import { workerUrl } from "./foundation/workers/url.ts";
 export const REGEX = "regex";
 export type RegexRequest = { source: string; flags: string } & (
   | { kind: "text"; text: string; from: number; to: number; empty: boolean; limits: MatchLimits }

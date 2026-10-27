@@ -5,16 +5,16 @@
 // interaction — cursor, scroll, selection, focus, panes, overlays — the one stated exception
 // class. A test enforces that nothing is left undeclared, so parity cannot quietly decay.
 //
-// The specs and their independent contract live in src/core/commands/; this file composes the one list,
+// The specs and their independent contract live in src/core/application/commands/; this file composes the one list,
 // built from them in registration order.
 
-import type { CommandSpec } from "./commands/contracts";
-import { MOTION_SPECS } from "./commands/motion";
-import { WINDOW_SPECS } from "./commands/windows";
-import { GIT_SPECS } from "./commands/git";
-import { EDITING_SPECS } from "./commands/editing";
-import { UI_SPECS } from "./commands/ui";
-import { FILE_SPECS } from "./commands/files";
+import type { CommandSpec } from "./contracts";
+import { MOTION_SPECS } from "./areas/motion";
+import { WINDOW_SPECS } from "./areas/windows";
+import { GIT_SPECS } from "./areas/git";
+import { EDITING_SPECS } from "./areas/editing";
+import { UI_SPECS } from "./areas/ui";
+import { FILE_SPECS } from "./areas/files";
 
 export const COMMAND_SPECS: CommandSpec[] = [
   ...MOTION_SPECS,

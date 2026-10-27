@@ -15,7 +15,7 @@ import { frontmatterFindings, rootTypes } from "../core/diagnostics.ts";
 import type { App, View, ListItem, ListOverlay, PromptOverlay } from "./app.ts";
 import type { Layout } from "../core/layout/ir.ts";
 import type { FindState } from "./app.ts";
-import { stringWidth, prefixWidths } from "../core/width.ts";
+import { stringWidth, prefixWidths } from "../core/foundation/text/width.ts";
 import { refilter } from "./overlays.ts";
 
 /** Search: the index and its list, tags and types, replace across notes. */

@@ -2,7 +2,7 @@
 
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { userThemesDir } from "../paths.ts";
+import { userThemesDir } from "../foundation/platform/paths.ts";
 import { base16ToPalette, parseBase16 } from "./base16.ts";
 import { builtinThemes } from "./builtin.ts";
 import {

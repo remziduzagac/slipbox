@@ -1,7 +1,7 @@
 // Painting reads completed math/SVG results; their expensive conversion belongs to a worker.
 import { createHash } from "node:crypto";
-import { notifyLoaded } from "./lazy.ts";
-import { workerUrl } from "./workers.ts";
+import { notifyLoaded } from "./foundation/platform/lazy.ts";
+import { workerUrl } from "./foundation/workers/url.ts";
 
 export type PaintRequest =
   | { kind: "math"; source: string; color: string; inline: boolean }

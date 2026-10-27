@@ -15,7 +15,7 @@ import type { StatusEntry } from "../core/gitstage.ts";
 import { attention, type CheckoutState, checkoutStateLater, type RepoFound, reposUnder } from "../core/gitrepos.ts";
 import { repoKey } from "../core/gitbase.ts";
 import { tildePath } from "../core/names.ts";
-import { sanitize } from "../core/sanitize.ts";
+import { sanitize } from "../core/foundation/text/sanitize.ts";
 import { homeFolder, isInside, isVaultRoot, rootAt } from "../core/vault.ts";
 import { openDiff } from "./diffview.ts";
 import { readForDiff } from "./gitview.ts";

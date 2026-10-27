@@ -8,11 +8,11 @@
 
 import { accessSync, constants, type Dirent, realpathSync, statSync } from "node:fs";
 import { basename, join } from "node:path";
-import type { Config } from "./config.ts";
-import { unreadableWords } from "./fsutil.ts";
+import type { Config } from "./application/config/config.ts";
+import { unreadableWords } from "./foundation/platform/fsutil.ts";
 import { checkoutOf, headOf } from "./git.ts";
 import { mountsIn, recentMountTable } from "./mounts.ts";
-import { vaultKey } from "./paths.ts";
+import { vaultKey } from "./foundation/platform/paths.ts";
 import { readIdentity, vaultConfigFile } from "./registry.ts";
 import { linkKey, linkScope, linkTarget } from "./symlinks.ts";
 import { findVaultRoot, hasMarker, isVaultRoot, locationAt } from "./vault.ts";

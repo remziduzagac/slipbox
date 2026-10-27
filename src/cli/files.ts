@@ -5,7 +5,7 @@
 import { statSync } from "node:fs";
 import { dirname, join, relative, sep } from "node:path";
 import { isPointer } from "../core/pointer.ts";
-import { entryInside, readText } from "../core/fsutil.ts";
+import { entryInside, readText } from "../core/foundation/platform/fsutil.ts";
 import { openVault } from "../core/reach.ts";
 import {
   type Applied,

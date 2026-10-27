@@ -2,7 +2,7 @@
 // the disk resolved — keep, reload, merge, diff — and leaving with unsaved changes asked about.
 
 import { existsSync } from "node:fs";
-import { readText } from "../core/fsutil.ts";
+import { readText } from "../core/foundation/platform/fsutil.ts";
 import { merge3 } from "../core/merge.ts";
 import { stopInsert } from "./editing.ts";
 import { openDiff } from "./diffview.ts";

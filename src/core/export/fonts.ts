@@ -7,7 +7,7 @@ import { readdirSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename, join } from "node:path";
 import { type Font, type FontCollection, openSync } from "fontkit";
-import { isWsl, windowsFontsDir } from "../wsl.ts";
+import { isWsl, windowsFontsDir } from "../foundation/platform/wsl.ts";
 
 /** A face: its file, and its PostScript name inside a collection (`.ttc`). */
 export interface Face {

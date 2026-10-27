@@ -16,7 +16,7 @@ import {
 import { basename, delimiter, dirname, join, relative } from "node:path";
 import { type ListOverlay, App } from "../src/tui/app.ts";
 import type { Line } from "../src/core/layout/ir.ts";
-import { stringWidth } from "../src/core/width.ts";
+import { stringWidth } from "../src/core/foundation/text/width.ts";
 import { makeSandbox, makeVault, harness, onlyRootsUnder, statusRow, topRow, type Harness } from "./tui-harness.ts";
 
 const sandbox = makeSandbox();

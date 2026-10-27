@@ -22,7 +22,8 @@ who read what, installing fetches from npm, and the update check asks slipbox's 
 file that sets one is ignored, with a warning, whichever way it sets it. Nor may a folder's `[keys]` or `[aliases]`
 name a command that throws work away or runs a program (`shell.run`, `shell.filter`, `help.report_send`), so a clone
 can't put one on
-`ctrl+s` or `:wq` (`USER_ONLY`, each with its reason, and `VAULT_FORBIDDEN_COMMANDS` in `core/config.ts`;
+`ctrl+s` or `:wq` (`USER_ONLY`, each with its reason, and `VAULT_FORBIDDEN_COMMANDS` in
+`core/application/config/config.ts`;
 [configuration.md](../../docs/manual/configuration.md), "What only your own file can set"). A folder may set its
 branches' bases (`[git] base`, `[git] bases`), as a team's repository does; each is a branch's name, checked before git
 uses it ([tui.md](tui.md) § Git, "Each branch's own base").

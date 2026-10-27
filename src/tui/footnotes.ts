@@ -11,7 +11,7 @@ import {
   renameFootnote,
   type TextEdit,
 } from "../core/footnotes.ts";
-import { stringWidth } from "../core/width.ts";
+import { stringWidth } from "../core/foundation/text/width.ts";
 import { match } from "./match.ts";
 import type { App, View } from "./app.ts";
 

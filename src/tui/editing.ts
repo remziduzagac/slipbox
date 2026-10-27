@@ -3,7 +3,7 @@
 // offset it shows). Insert mode types into it; the normal-mode commands (`i`, `o`, `x`, `u`…) are
 // named commands in actions-edit.ts that call in here.
 
-import { graphemes } from "../core/width.ts";
+import { graphemes } from "../core/foundation/text/width.ts";
 import { type App, editable, type View } from "./app.ts";
 import { cells } from "./cursor.ts";
 import { keyChar } from "./keys.ts";

@@ -18,7 +18,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { parse } from "smol-toml";
 import { BuildError, buildHome, SOURCE } from "../scripts/build-home.ts";
-import { COMMAND_SPECS } from "../src/core/command-specs.ts";
+import { COMMAND_SPECS } from "../src/core/application/commands/catalog.ts";
 import { parseData } from "../src/core/data.ts";
 import { classify } from "../src/core/filetypes.ts";
 
@@ -281,12 +281,12 @@ describe("the reference set is complete (examples/home)", () => {
   });
 
   test("the team's kitchen-sink config says every key once, none unknown or retired", async () => {
-    const { loadConfig } = await import("../src/core/config.ts");
+    const { loadConfig } = await import("../src/core/application/config/config.ts");
     expect(loadConfig({ configFile: join(SOURCE, "work/infra/dotfiles/slipbox/config.toml") }).warnings).toEqual([]);
   });
 
   test("the kitchen-sink config has every key of slipbox's defaults, the free-form tables aside", async () => {
-    const { DEFAULT_CONFIG } = await import("../src/core/config.ts");
+    const { DEFAULT_CONFIG } = await import("../src/core/application/config/config.ts");
     const file = parse(readFileSync(join(SOURCE, "work/infra/dotfiles/slipbox/config.toml"), "utf8")) as Record<
       string,
       unknown

@@ -5,16 +5,16 @@
 import { createHash } from "node:crypto";
 import { existsSync, writeFileSync } from "node:fs";
 import { join, relative, resolve, sep } from "node:path";
-import { type Config, loadConfig } from "../core/config.ts";
+import { type Config, loadConfig } from "../core/application/config/config.ts";
 import { folderIdentity } from "../core/folders.ts";
 import { type Graph, openGraph, type Retarget } from "../core/graph.ts";
 import type { ParsedNote } from "../core/parse.ts";
 import { parseNoteFile } from "../core/readers.ts";
 import { parseData } from "../core/data.ts";
 import { classify } from "../core/filetypes.ts";
-import { stateHome } from "../core/paths.ts";
+import { stateHome } from "../core/foundation/platform/paths.ts";
 import { readStale, type StaleEntry } from "../core/stale.ts";
-import { UNSAFE } from "../core/sanitize.ts";
+import { UNSAFE } from "../core/foundation/text/sanitize.ts";
 import {
   climbsOut,
   type DecodedFile,
@@ -24,7 +24,7 @@ import {
   realTarget,
   WriteRefused,
   writeNote,
-} from "../core/fsutil.ts";
+} from "../core/foundation/platform/fsutil.ts";
 import { blockingLink, linkSaid, PROBE_MS, probeFollowed, writesThrough } from "../core/symlinks.ts";
 import { compilePattern } from "../core/replace.ts";
 import { openVault, Reach } from "../core/reach.ts";

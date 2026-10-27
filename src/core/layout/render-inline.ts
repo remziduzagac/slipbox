@@ -5,9 +5,9 @@ import { htmlStyle } from "./render-html.ts";
 
 import type { Parents, PhrasingContent } from "mdast";
 import { mathText } from "../math.ts";
-import { expandTabs, sanitize } from "../sanitize.ts";
+import { expandTabs, sanitize } from "../foundation/text/sanitize.ts";
 import type { Role } from "../theme/theme.ts";
-import { graphemes, graphemeWidth } from "../width.ts";
+import { graphemes, graphemeWidth } from "../foundation/text/width.ts";
 import type { Hashtag } from "../tags.ts";
 import type { WikiLink } from "../wikilink.ts";
 import { A_BOLD, A_ITALIC, A_STRIKE, type Span } from "./ir.ts";

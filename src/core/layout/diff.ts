@@ -7,7 +7,7 @@
 import type { Glyphs } from "../glyphs.ts";
 import { type DiffViewRow, inRanges, type WordRange } from "../merge.ts";
 import type { Role } from "../theme/theme.ts";
-import { graphemes, graphemeWidth } from "../width.ts";
+import { graphemes, graphemeWidth } from "../foundation/text/width.ts";
 import type { CodeScroll, Layout, Line, Span } from "./ir.ts";
 import { layoutSource } from "./source.ts";
 

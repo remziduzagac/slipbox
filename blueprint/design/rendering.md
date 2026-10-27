@@ -1,7 +1,7 @@
 # Rendering
 
 mdast to a laid-out, themed page: remark's tree, laid out by slipbox's own code (D7). Code: `src/core/layout/`,
-`src/core/theme/`, `src/core/glyphs.ts`, `src/core/width.ts`, `src/core/sanitize.ts`.
+`src/core/theme/`, `src/core/glyphs.ts`, `src/core/foundation/text/width.ts`, `src/core/foundation/text/sanitize.ts`.
 
 ## The layout IR (plan `2.1`)
 
@@ -160,7 +160,8 @@ block's line, so the lens opens on its source. The library loads in a worker the
 `diagrams.ts` reads completed results from
 `diagram-jobs.ts`; until a result arrives, the block is its code with `mermaid — drawing…` in its header (#179). Arrival
 invalidates waiting layouts through
-`lazy.ts`. Lazy-load subscribers run in their registration context, so an asset finishing during export cannot
+`foundation/platform/lazy.ts`. Lazy-load subscribers run in their registration context, so an asset finishing during
+export cannot
 move a screen relayout into the export's worker or lifetime. `slipbox render` and export wait for requested results
 before producing their output. Text and SVG layout run in `diagram-worker.ts`, and only there: the renderer
 (`diagram-render.ts`) is imported for more than its types by the worker alone, which `bun run check:boundary` holds;
@@ -459,7 +460,7 @@ some row wraps. The header separator is doubled (`╞═╪═╡`).
 
 ## Wrapping and width (plans `0.7`, `2.4`)
 
-`core/width.ts` is the only thing that measures text (D88). It works per grapheme cluster
+`core/foundation/text/width.ts` is the only thing that measures text (D88). It works per grapheme cluster
 (`Intl.Segmenter`):
 
 - ASCII is 1 column, CJK and East Asian Wide are 2, RGI emoji are 2.
@@ -569,7 +570,7 @@ panes).
 
 ## Escapes (constraint `2.9`)
 
-`core/sanitize.ts` (D90) removes CSI, OSC, DCS/APC and two-byte escape sequences, bare C0 and C1
+`core/foundation/text/sanitize.ts` (D90) removes CSI, OSC, DCS/APC and two-byte escape sequences, bare C0 and C1
 controls, bidi override and isolate characters and the bidi marks (U+200E, U+200F, U+061C), which
 are used for display spoofing, and turns the line and paragraph separators (U+2028, U+2029) into
 spaces. An OSC or DCS string left unterminated (a truncated capture) is removed to the end of its
@@ -618,7 +619,8 @@ becomes the nearest of the 16 on a 16-colour terminal.
 
 ## Background parsing and spelling limits
 
-Each parse worker, and the spelling worker, has a bounded mailbox (`worker-requests.ts`). At most eight requests and
+Each parse worker, and the spelling worker, has a bounded mailbox (`foundation/workers/worker-requests.ts`). At most
+eight requests and
 eight MiB of their input are held for it at once; sizes are counted from string lengths, never by serializing. The
 worker is handed them one at a time. A caller past that room waits in line, and none is refused: one request bigger than
 the budget is held alone. A request's deadline counts from when its worker is handed it, not from the wait. It is twenty
@@ -642,7 +644,8 @@ text goes to the threads. A note whose parse failed is parsed on the main thread
 never made, or cached, from the fallback. The pool's workers stop after a minute with no parse running.
 
 A spelling check that fails leaves its words unknown, never taken as right, and its warning is said once; an answer is
-held to 16 MiB, the default for a worker's requests (`core/worker-requests.ts`). The words are asked again on a draw two
+held to 16 MiB, the default for a worker's requests (`core/foundation/workers/worker-requests.ts`). The words are asked
+again on a draw two
 seconds or more later. These are budgets for requests and held input, not OS-enforced limits on a worker's memory.
 
 ## Standalone picture captions (#83)

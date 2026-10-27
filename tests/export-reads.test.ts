@@ -5,7 +5,7 @@ import { afterAll, expect, setDefaultTimeout, test } from "bun:test";
 import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { DEFAULT_CONFIG } from "../src/core/config.ts";
+import { DEFAULT_CONFIG } from "../src/core/application/config/config.ts";
 import { openGraph } from "../src/core/graph.ts";
 import { locateVault } from "../src/core/vault.ts";
 import { exportNotes, formatFor } from "../src/core/export/index.ts";

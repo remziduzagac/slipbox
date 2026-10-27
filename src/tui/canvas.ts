@@ -5,8 +5,8 @@
 
 import type { CellStyle } from "../core/layout/style.ts";
 import type { Color } from "../core/theme/theme.ts";
-import { sanitize, UNSAFE } from "../core/sanitize.ts";
-import { graphemes, graphemeWidth } from "../core/width.ts";
+import { sanitize, UNSAFE } from "../core/foundation/text/sanitize.ts";
+import { graphemes, graphemeWidth } from "../core/foundation/text/width.ts";
 
 export interface Canvas {
   readonly width: number;

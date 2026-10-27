@@ -5,7 +5,7 @@
 
 import { replace } from "unicodeit";
 import { combiningmarks, replacements, subsuperscripts } from "unicodeit/ts_dist/js/data.js";
-import { stringWidth } from "./width.ts";
+import { stringWidth } from "./foundation/text/width.ts";
 
 // What mustn't be read as TeX between the steps — escaped braces, `&`, `_`, `^`, `\text`'s words — held as private-use
 // characters of one UTF-16 unit each (`unicodeit` reads by unit), and given back at the end.

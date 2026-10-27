@@ -1,7 +1,7 @@
 // A bounded queue and cache shared by diagram layouts. Only one worker renders at a time.
 import { diagramKey, type DiagramStore } from "./diagram-cache.ts";
 import type { DrawingColors, Drawn } from "./diagram-render.ts";
-import { workerUrl } from "./workers.ts";
+import { workerUrl } from "./foundation/workers/url.ts";
 
 export type DiagramRequest =
   | { kind: "text"; source: string; width: number; ascii: boolean; scroll: boolean }

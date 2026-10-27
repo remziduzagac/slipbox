@@ -86,7 +86,8 @@ to lead where it did (D260).
 - 2026-10-23: The maintainer chose: the answer moves with the link (only for a link moved itself); a relative link is
   written again to lead where it did; the home bug is fixed here; copy and delete of a link stay refused. Recorded as
   D260 (decisions/roots-and-links.md), with a note under VV-D6.
-- 2026-10-23: Fixed. `entryInside` (`src/core/fsutil.ts`): a symlink named itself checked by its folder's real path,
+- 2026-10-23: Fixed. `entryInside` (`src/core/foundation/platform/fsutil.ts`): a symlink named itself checked by its
+  folder's real path,
   anything else as before; used by `checkSource` and by `outside` for `move.from`. `moveLink` (`src/core/symlinks.ts`),
   called by `applyPlan` when what moves is a link: renamed, or, relative and changing folder, made anew from
   `movedLinkText` (its text with the way back to its old folder in front, each leading `..` taking back a folder of

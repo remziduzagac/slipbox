@@ -9,7 +9,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import type { Diagnostic } from "vscode-languageserver-protocol";
-import { loadConfig } from "../src/core/config.ts";
+import { loadConfig } from "../src/core/application/config/config.ts";
 import { LanguageClient, type ServerSpec, settingAt } from "../src/core/servers/client.ts";
 import { chooseServers, findServer, ownInstall, rootFor, toolsDir } from "../src/core/servers/find.ts";
 import {

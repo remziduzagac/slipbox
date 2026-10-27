@@ -15,7 +15,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
-import { COMMAND_SPECS } from "../src/core/command-specs.ts";
+import { COMMAND_SPECS } from "../src/core/application/commands/catalog.ts";
 import { takeNote } from "../src/core/restart.ts";
 import { dailyUpdateCheck, FROM_SOURCE } from "../src/core/update.ts";
 import { saveSession, loadSession } from "../src/core/position.ts";

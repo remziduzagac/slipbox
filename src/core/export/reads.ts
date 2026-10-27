@@ -2,7 +2,7 @@
 // refused, never waited on — and each note parsed once in a job, however often it's a chapter or embedded.
 import { AsyncLocalStorage } from "node:async_hooks";
 import { closeSync, constants, fstatSync, openSync, readFileSync } from "node:fs";
-import { decodeText } from "../fsutil.ts";
+import { decodeText } from "../foundation/platform/fsutil.ts";
 import { type ParsedNote, parseMarkdown } from "../parse.ts";
 
 const job = new AsyncLocalStorage<Map<string, ParsedNote>>();

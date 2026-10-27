@@ -272,7 +272,8 @@ different folder of the same name (§ Named folders).
 
 Settings apply deeper over broader: the built-in defaults, the user's config (`--config`, else `$SLIPBOX_CONFIG`,
 else `config.toml` in the config folder), then the `.slipbox/config.toml` of each vault enclosing this one, broadest
-first, then the vault's own (D62; `configFilesFor` in `core/vault.ts`, `core/config.ts`). A vault without `.slipbox/`
+first, then the vault's own (D62; `configFilesFor` in `core/vault.ts`, `core/application/config/config.ts`). A vault
+without `.slipbox/`
 (a repository, an Obsidian vault) has no file of its own; home and Elsewhere take the user's alone. `slipbox info`
 lists the files that applied, and a change to any of them reloads the TUI's settings.
 
@@ -360,7 +361,7 @@ what the walk leaves out, the watcher doesn't subscribe to (D40).
 - **Files a vault controls are read with care:** a cloned or unpacked folder can hold a FIFO or a symlink to
   `/dev/zero` where a note, `.gitignore`, `.slipbox/config.toml` or `.slipbox/version` should be. Each such read opens
   without blocking and refuses anything but a regular file, and the small files are capped at 1 MB (`readRegular` in
-  `core/fsutil.ts`): a hostile folder gets a warning, never a hang.
+  `core/foundation/platform/fsutil.ts`): a hostile folder gets a warning, never a hang.
 - **Size cap:** files over `walk.max_file_size` (default 4 MiB) are listed as skipped, not parsed.
 - **Errors never abort:** unreadable folders and files are collected and reported as warnings.
 - **Encoding:** UTF-8; invalid sequences decode to U+FFFD and the file is flagged; a BOM is noted and stripped for
@@ -430,7 +431,8 @@ unsaved text — is never written through it (`App.writeBuffer`): not saved, aut
   checked as its destination is: a move, copy or delete whose source or destination crosses a link out of the vault, or
   out of home, is refused in the CLI and the TUI, in home too, said the same: `… resolves outside the vault` for what's
   moved, copied or deleted, `… would land outside the vault` for where it goes. A link named itself crosses nothing when
-  it moves: its entry is checked, in its folder by its real path (`entryInside` in `core/fsutil.ts`), and it's renamed
+  it moves: its entry is checked, in its folder by its real path (`entryInside` in
+  `core/foundation/platform/fsutil.ts`), and it's renamed
   or moved as a link (`moveLink` in `core/symlinks.ts`; D260), what it leads to staying where it is; its answer goes
   with it, in place of any kept where it goes — one without an answer leaves one there for where it leads, an answer
   being a place and where it leads, as a link made there by hand would find it; one that can't be kept there (the state
@@ -509,7 +511,8 @@ deleted (D61). Each vault's is in its cache folder (the link index, the search i
   home's walk kept there too (`keepHomeWalk`); the folders past home's cap, looked in for vaults; and home's walk kept,
   brought up to now when home's graph is built again after its walk. Each is the same code as on the main thread
   (`AutoIndex` takes a walker, `core/walkers.ts`: `HERE` for the CLI, whose command waits for its answer either way),
-  given what the thread can't see for itself (`core/worker-context.ts`): the environment naming slipbox's folders, the
+  given what the thread can't see for itself (`core/foundation/workers/worker-context.ts`): the environment naming
+  slipbox's folders, the
   root markers, the probe's answers. `AutoIndex` reads nothing of home itself: home's walk is told by its settings alone
   (`FilterSettings`), its filter made, and its location read, where it walks — and its walk, made under a filter other
   than home's when it's kept (Downloads moved meanwhile, a root marker added: the filter's signature, compared where the
@@ -726,6 +729,7 @@ yours (WSP-D1):
 
 A vault's cache and state folders are named by its key, `<basename>-<hash>`: the hash the first 12 hex characters of
 SHA-256 over the vault's real path; the basename, its characters outside `A-Za-z0-9._-` made `_`, is only there so a
-person can find the folder (D39, D76; `vaultKey` in `core/paths.ts`). Home's is `vaultKey(~)`; Elsewhere's is
+person can find the folder (D39, D76; `vaultKey` in `core/foundation/platform/paths.ts`). Home's is `vaultKey(~)`;
+Elsewhere's is
 `elsewhere`, one for the machine (`ELSEWHERE_KEY`, VV-D3). Where each file lives: [how-it-works.md](how-it-works.md)
 § Storage.

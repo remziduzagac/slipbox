@@ -1,14 +1,14 @@
 import { afterAll, expect, test } from "bun:test";
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { DEFAULT_CONFIG } from "../src/core/config.ts";
+import { DEFAULT_CONFIG } from "../src/core/application/config/config.ts";
 import { openGraph } from "../src/core/graph.ts";
 import { compilePattern, findAll, replaceMatches } from "../src/core/replace.ts";
 import { planReplaceLater } from "../src/core/replace-files.ts";
 import { locateVault } from "../src/core/vault.ts";
 import { confirmRest, layoutMatches, matchText, stopRegexJobs } from "../src/core/regex-jobs.ts";
-import { prefixWidths, stringWidth } from "../src/core/width.ts";
-import { WorkerRequests } from "../src/core/worker-requests.ts";
+import { prefixWidths, stringWidth } from "../src/core/foundation/text/width.ts";
+import { WorkerRequests } from "../src/core/foundation/workers/worker-requests.ts";
 import { computeFind } from "../src/tui/search.ts";
 import { textMatches } from "../src/tui/replacing.ts";
 import type { PromptOverlay } from "../src/tui/app.ts";

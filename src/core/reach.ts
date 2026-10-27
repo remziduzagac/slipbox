@@ -6,8 +6,8 @@
 
 import { existsSync, realpathSync, statSync } from "node:fs";
 import { dirname, isAbsolute, join, posix, relative, resolve } from "node:path";
-import { loadConfig } from "./config.ts";
-import { readJson } from "./fsutil.ts";
+import { loadConfig } from "./application/config/config.ts";
+import { readJson } from "./foundation/platform/fsutil.ts";
 import {
   type Backlink,
   Graph,
@@ -22,7 +22,7 @@ import { folderIdentity, lookupFolder, type NamedFolder, readFolders } from "./f
 import { checkoutOf } from "./git.ts";
 import { checkoutRemotes, hostedHere } from "./hosting.ts";
 import { homeWalkKept, walkHomeNow } from "./home.ts";
-import { cacheDir } from "./paths.ts";
+import { cacheDir } from "./foundation/platform/paths.ts";
 import { tildePath } from "./names.ts";
 import { type KnownRoot, readRoots } from "./registry.ts";
 import {

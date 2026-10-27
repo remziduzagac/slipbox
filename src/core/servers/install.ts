@@ -9,8 +9,8 @@
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { basename, join } from "node:path";
-import { runTool, toolFailure } from "../tool-process.ts";
-import { dataHome } from "../paths.ts";
+import { runTool, toolFailure } from "../foundation/platform/tool-process.ts";
+import { dataHome } from "../foundation/platform/paths.ts";
 import type { ServerDef } from "./languages.ts";
 import { LOCKS } from "./locks.ts";
 

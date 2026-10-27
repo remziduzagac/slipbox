@@ -2,7 +2,7 @@
 // picture, chosen where pictures are (`[render] math = "picture"`); text (12.11) otherwise. Loaded the first time it's
 // asked for (16.6). A command MathJax doesn't know is an error here, not red ink: then it's text, or as written.
 
-import { load as loadLazy } from "./lazy.ts";
+import { load as loadLazy } from "./foundation/platform/lazy.ts";
 import { paintJobs } from "./paint-jobs.ts";
 
 /** The name it loads under: what a layout drawn without it waited for. */

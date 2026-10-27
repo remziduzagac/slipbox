@@ -5,7 +5,7 @@ import { prepareExport } from "../core/export/jobs.ts";
 import type { PreparedExport } from "../core/export/spool.ts";
 import { statSync } from "node:fs";
 import { basename, dirname, isAbsolute, join, relative, sep } from "node:path";
-import { climbsOut, readJson, writeJson } from "../core/fsutil.ts";
+import { climbsOut, readJson, writeJson } from "../core/foundation/platform/fsutil.ts";
 import {
   defaultTarget,
   type ExportFormat,
@@ -14,7 +14,7 @@ import {
   formatFor,
   NotAnExport,
 } from "../core/export/index.ts";
-import { stateDir, userFolders } from "../core/paths.ts";
+import { stateDir, userFolders } from "../core/foundation/platform/paths.ts";
 import { openSaveAs, type SaveAsOverlay, type SavePlace } from "./saveas.ts";
 import { rank } from "./match.ts";
 import type { App, ListItem, ListOverlay } from "./app.ts";

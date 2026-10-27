@@ -4,7 +4,7 @@
 import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { cacheHome } from "./paths.ts";
+import { cacheHome } from "./foundation/platform/paths.ts";
 
 /** A picture's file's name in the cache: its address, hashed. */
 export function remoteImageName(url: string): string {

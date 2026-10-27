@@ -3,18 +3,18 @@
 
 import { createCliRenderer, type KeyEvent } from "@opentui/core";
 import { flag, parseArgs } from "../cli/args.ts";
-import { loadConfig } from "../core/config.ts";
+import { loadConfig } from "../core/application/config/config.ts";
 import { Graph, openGraph } from "../core/graph.ts";
-import { sanitize } from "../core/sanitize.ts";
-import { setWidthMethod } from "../core/width.ts";
+import { sanitize } from "../core/foundation/text/sanitize.ts";
+import { setWidthMethod } from "../core/foundation/text/width.ts";
 import { appendFileSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { dataHome, stateHome } from "../core/paths.ts";
+import { dataHome, stateHome } from "../core/foundation/platform/paths.ts";
 import { installedBy, readChannel } from "../core/install.ts";
 import { RELEASE } from "../core/release.ts";
 import { upgrade, upgradeSaid } from "../core/update.ts";
 import { handOver, nextLaunch, startedPath, takeNote } from "../core/restart.ts";
-import { windowsDriveNote } from "../core/wsl.ts";
+import { windowsDriveNote } from "../core/foundation/platform/wsl.ts";
 import { VERSION } from "../version.ts";
 import {
   elsewhereAt,
@@ -173,7 +173,7 @@ export async function runTui(argv: string[]): Promise<number> {
     listOffThread: true,
     host: {
       requestRender: () => renderer.requestRender(),
-      // SLIPBOX_CLIPBOARD=file keeps copies off the real clipboard (core/clipboard.ts).
+      // SLIPBOX_CLIPBOARD=file keeps copies off the real clipboard (core/foundation/platform/clipboard.ts).
       osc52: (text) => process.env.SLIPBOX_CLIPBOARD !== "file" && renderer.copyToClipboardOSC52(text),
       quit: () => {
         pictures.releaseAll();

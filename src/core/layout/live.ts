@@ -10,7 +10,7 @@
 import type { Root, RootContent } from "mdast";
 import type { Span as SyntaxSpan } from "../syntax.ts";
 import type { Role } from "../theme/theme.ts";
-import { stringWidth } from "../width.ts";
+import { stringWidth } from "../foundation/text/width.ts";
 import type { Layout, LayoutHeading, LayoutLink, Line } from "./ir.ts";
 import { layoutSource } from "./source.ts";
 

@@ -11,7 +11,7 @@
 import { existsSync, readlinkSync, realpathSync, statSync } from "node:fs";
 import { dirname, isAbsolute, join, parse, posix, relative, sep } from "node:path";
 import { classify } from "./filetypes.ts";
-import { entryAt, entryInside, realTarget } from "./fsutil.ts";
+import { entryAt, entryInside, realTarget } from "./foundation/platform/fsutil.ts";
 import type { Backlink, Graph, NoteEntry, ResolvedLink } from "./graph.ts";
 import { extensionless, formatPathLink, normKey, pathForm, pathLink, type PathForm, pathNamed } from "./links.ts";
 import { readRoots } from "./registry.ts";

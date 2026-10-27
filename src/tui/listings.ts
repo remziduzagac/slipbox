@@ -7,7 +7,7 @@
 
 import { listFolder, type FolderListing } from "../core/listing.ts";
 import { listThreads } from "../core/walk-thread.ts";
-import { WorkerRequestError } from "../core/worker-requests.ts";
+import { WorkerRequestError } from "../core/foundation/workers/worker-requests.ts";
 import type { App } from "./app.ts";
 
 /** How long a folder's first listing is read before its rows say it's being listed: a fast disk never shows it. */

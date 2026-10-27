@@ -6,8 +6,8 @@
 // never here. A cache: deletable, rebuilt as notes are read. `SLIPBOX_PARSE_CACHE=off` goes without.
 
 import { join } from "node:path";
-import { cacheHome, ensureCacheHome } from "./paths.ts";
-import { Database, type Statement } from "./sqlite.ts";
+import { cacheHome, ensureCacheHome } from "./foundation/platform/paths.ts";
+import { Database, type Statement } from "./foundation/platform/sqlite.ts";
 
 /** The cache's own shape: bumped with it, the cache starts again. */
 const PARSE_CACHE_VERSION = 4; // 2: a heading's `{#id}` kept (its text without it); 3: front matter links; 4: worker-parsed heading ids

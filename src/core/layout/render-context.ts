@@ -4,7 +4,7 @@
 
 import type { Nodes, Parents } from "mdast";
 import type { Role } from "../theme/theme.ts";
-import { graphemes, graphemeWidth } from "../width.ts";
+import { graphemes, graphemeWidth } from "../foundation/text/width.ts";
 import type { Hashtag } from "../tags.ts";
 import type { WikiLink } from "../wikilink.ts";
 import type { LayoutHeading, LayoutLink, LinkStatus, Span } from "./ir.ts";

@@ -7,8 +7,8 @@
 
 import type { Grammar } from "./syntax.ts";
 import type { SyntaxSnapshot } from "./syntax-worker.ts";
-import { WorkerRequests } from "./worker-requests.ts";
-import { workerUrl } from "./workers.ts";
+import { WorkerRequests } from "./foundation/workers/worker-requests.ts";
+import { workerUrl } from "./foundation/workers/url.ts";
 
 /** The largest source sent to the thread (UTF-8 bytes): a bigger one keeps its text without this structure. */
 export const SYNTAX_SOURCE_LIMIT = 4 * 1024 * 1024;

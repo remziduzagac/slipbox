@@ -5,7 +5,7 @@
 // thread that asks alone, never from two at once.
 
 import { realpathSync } from "node:fs";
-import { type Config, loadConfig } from "./config.ts";
+import { type Config, loadConfig } from "./application/config/config.ts";
 import { type CopyFacts, copyFacts, type FolderIdentity, folderIdentity } from "./folders.ts";
 import { Graph } from "./graph.ts";
 import { type HomeWalk, homeFilter, keepHomeWalk } from "./home.ts";

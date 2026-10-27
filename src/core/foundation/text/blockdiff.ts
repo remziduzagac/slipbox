@@ -5,8 +5,16 @@
 // unchanged stretches between fold to a row saying how many lines they hold. `layout/blockdiff.ts` draws it.
 
 import type { ListItem, Nodes, Root, RootContent, Table } from "mdast";
-import { diffLines, type Hunk, type LinePair, pairLines, textLines, type UnseenRows, type WordRange } from "./merge.ts";
-import { headingText, parseMarkdown } from "./parse.ts";
+import {
+  diffLines,
+  type Hunk,
+  type LinePair,
+  pairLines,
+  textLines,
+  type UnseenRows,
+  type WordRange,
+} from "../../merge.ts";
+import { headingText, parseMarkdown } from "../../parse.ts";
 
 /** A block of a note: its lines (1-based, inclusive), and the node it lays out; none: lines shown as written. */
 export interface NoteBlock {

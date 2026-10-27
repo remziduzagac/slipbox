@@ -69,7 +69,7 @@ import {
   uninstallPlan,
   writeChannel,
 } from "../src/core/install.ts";
-import { libcCandidates } from "../src/core/libc.ts";
+import { libcCandidates } from "../src/core/foundation/platform/libc.ts";
 import {
   CHECK_EVERY_MS,
   channelsBase,
@@ -377,8 +377,9 @@ describe("the supply chain's gates (14.10)", () => {
 
   test("the import graph: what a file imports, a worker it starts, what it imports that isn't code, a path it names", () => {
     const g = importGraph();
-    expect(g.get("src/core/walk.ts")).toContain("src/core/fsutil.ts");
+    expect(g.get("src/core/walk.ts")).toContain("src/core/foundation/platform/fsutil.ts");
     expect(g.get("src/core/parse-pool.ts")).toContain("src/core/parse-worker.ts");
+    expect(g.get("src/core/export/jobs.ts")).toContain("src/core/export-worker.ts");
     expect(g.get("src/core/skill.ts")).toContain("skills/slipbox/SKILL.md");
     // Run by its path, from the file's folder or the top's name; a temporary folder's paths name nothing here.
     expect(g.get("tests/cli.test.ts")).toContain("src/main.ts");
@@ -393,8 +394,9 @@ describe("the supply chain's gates (14.10)", () => {
       "package.json": JSON.stringify({ scripts: { "test:docs": "bun test ./tests/docs.test.ts" } }),
       "src/main.ts": 'export const tui = () => import("./tui/run.ts");\n',
       "src/tui/run.ts": 'import { a } from "../core/a";\nexport const run = a;\n',
-      "src/core/a.ts": 'import { workerUrl } from "./workers.ts";\nexport const a = workerUrl("w.ts");\n',
-      "src/core/workers.ts": "export const workerUrl = (f: string) => f;\n",
+      "src/core/a.ts":
+        'import { workerUrl } from "./foundation/workers/url.ts";\nexport const a = workerUrl("w.ts");\n',
+      "src/core/foundation/workers/url.ts": "export const workerUrl = (f: string) => f;\n",
       "src/core/w.ts": "export {};\n",
       "tests/a.test.ts": 'import { a } from "../src/core/a.ts";\nexport { a };\n',
       "tests/docs.test.ts": 'import { a } from "../src/core/a.ts";\nexport { a };\n',
@@ -429,7 +431,7 @@ describe("the supply chain's gates (14.10)", () => {
     const g = importGraph(top);
     expect(g.get("src/main.ts")).toEqual(["src/tui/run.ts"]); // imported when it's needed
     expect(g.get("src/tui/run.ts")).toEqual(["src/core/a.ts"]); // without its extension
-    expect(g.get("src/core/a.ts")?.sort()).toEqual(["src/core/w.ts", "src/core/workers.ts"]); // a worker it starts
+    expect(g.get("src/core/a.ts")?.sort()).toEqual(["src/core/foundation/workers/url.ts", "src/core/w.ts"]); // a worker it starts
     // By its path from the file's folder, or from a name set from it, at any depth; not from a temporary folder.
     expect(g.get("tests/run.test.ts")?.sort()).toEqual([
       "src/main.ts",
@@ -1756,7 +1758,7 @@ describe("updates (14.4)", () => {
 
   test("Bun's crash reports off at start, in the C environment, read back through libc: unless you set either switch (D221)", () => {
     const mod = join(ROOT, "src", "core", "crash-reports.ts");
-    const libcMod = join(ROOT, "src", "core", "libc.ts");
+    const libcMod = join(ROOT, "src", "core", "foundation", "platform", "libc.ts");
     // A process of its own, its environment as given; what libc's getenv says after, on its last line.
     const after = (env: Record<string, string>, first: string): string | null => {
       const base = Object.fromEntries(

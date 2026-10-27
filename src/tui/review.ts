@@ -10,7 +10,7 @@
 import { beginGitRead } from "./gitquery.ts";
 import { lstatSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
-import { type BlockDiff, blockDiff } from "../core/blockdiff.ts";
+import { type BlockDiff, blockDiff } from "../core/foundation/text/blockdiff.ts";
 import { inVault, showLater } from "../core/gitops.ts";
 import { findChange, hunkEntry, hunkLines, hunkView, movedBy, type Tally, tallyText } from "../core/gitreview.ts";
 import { type GitChange, gitChanges } from "../core/gitsigns.ts";
@@ -19,7 +19,7 @@ import { layoutScreen, type ScreenPart, screenText } from "../core/layout/screen
 import { type Layout, type Span, srcAt } from "../core/layout/ir.ts";
 import { comparable } from "../core/merge.ts";
 import { TOP } from "../core/position.ts";
-import { sanitize } from "../core/sanitize.ts";
+import { sanitize } from "../core/foundation/text/sanitize.ts";
 import type { App } from "./app.ts";
 import { NoteBuffer } from "./buffer.ts";
 import { asBlocks, diffLanguage, isNote, LINES_ONLY, sideBySide, switchedText } from "./diffview.ts";

@@ -93,7 +93,8 @@ on the main thread had them, but for an EPUB: a ZIP written without ZIP64, refus
 (`core/export/zip.ts`). Worker isolation keeps their CPU work away from input; it is not an OS memory sandbox or
 independent native-fault containment. Existing writers are JavaScript/WebAssembly; a helper process is unnecessary for
 the measured CPU scheduling problem, but remains an option for stronger future containment. A worker the export's starts
-(the diagrams') is found from the compiled binary's root, whichever entry point starts it (`core/workers.ts`).
+(the diagrams') is found from the compiled binary's root, whichever entry point starts it
+(`core/foundation/workers/url.ts`).
 
 A local 279,890-byte document measured before/after this boundary (2026-10-18, single runs; #176): PDF 763/778 ms,
 DOCX 277/370 ms, EPUB 251/363 ms total. Maximum sampled event-loop gaps were 478/8 ms, 175/8 ms, 169/8 ms. Sampled peak

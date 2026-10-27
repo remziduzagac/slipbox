@@ -9,7 +9,7 @@
 import { appendFileSync, existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { availableParallelism, tmpdir } from "node:os";
 import { join } from "node:path";
-import { COMMAND_SPECS } from "../../src/core/command-specs.ts";
+import { COMMAND_SPECS } from "../../src/core/application/commands/catalog.ts";
 import { type Check, notRun } from "./check.ts";
 import { CHECK_FILES, CHECKS } from "./checks/index.ts";
 import { buildAndRecord } from "./release-builds.ts";

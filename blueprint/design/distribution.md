@@ -7,7 +7,8 @@ repository that does it, its workflows and its upkeep: [repository.md](repositor
 
 ## Folders
 
-`core/paths.ts`, `storeDir` (`14.9`, D200). Every file slipbox keeps is one of four kinds — config, cache, state,
+`core/foundation/platform/paths.ts`, `storeDir` (`14.9`, D200). Every file slipbox keeps is one of four kinds — config,
+cache, state,
 data — and each kind has one folder (D39; what's in each: [how-it-works.md](how-it-works.md) § Storage):
 
 | Platform | Config | Cache, state, data |
@@ -65,7 +66,8 @@ reads no `bunfig.toml`, `.env`, `tsconfig.json` or `package.json` of the folder 
 (`core/diagram-worker.ts`, `core/export-worker.ts`, `core/paint-worker.ts`, `core/parse-worker.ts`,
 `core/regex-worker.ts`, `core/spell-worker.ts`, `core/syntax-worker.ts`, and `tui/opentui.ts`, the pictures' decoder),
 laid out from `src/` (`--root=src`; left to itself, Bun keeps `src/` in their paths past eight entries): Bun puts a
-worker in the binary only when it is named, and `core/workers.ts` finds it there by its path under `src/`; a test holds
+worker in the binary only when it is named, and `core/foundation/workers/url.ts` finds it there by its path under
+`src/`; a test holds
 the list to the workers started, and the compiled binary's test runs its spelling, on its thread (D232). It defines the
 release in it (`core/release.ts`, `RELEASE`: the repository releases come from and the platform it's for). A Mac's
 binary built on a Mac is signed ad hoc again (§ Signing). A target built for this machine is run once (`--version`)
@@ -172,7 +174,8 @@ OS's version: slipbox asks only FTS5 with `unicode61` (3.27 and up), `bm25`, WAL
 extension; CI runs the suite on macOS on every change, so Apple's runs them there (`14.13`;
 [repository.md](repository.md)
 § CI). Both its databases, the search index and the parse cache, are caches, made again when they don't open.
-`core/sqlite.ts` keeps the calls slipbox makes (`get`, `all`, `run`, `pragma`, `transaction` with savepoints
+`core/foundation/platform/sqlite.ts` keeps the calls slipbox makes (`get`, `all`, `run`, `pragma`, `transaction` with
+savepoints
 inside, `exec`, `close`); integers the schema needs are bound `CAST(? AS INTEGER)`, harmless whatever a binding
 does with a number.
 
@@ -544,7 +547,7 @@ consistent: `current` names a complete version, the old one or the new.
 told not to, and a compiled binary is no different. Bun's crash handler reads its switch when it crashes, from the C
 environment, which `process.env` doesn't write to; so the first thing `src/main.ts` does, for the TUI and the CLI
 alike, is `core/crash-reports.ts`'s `crashReportsOff`: libc's `setenv`, through `bun:ffi`
-(`core/libc.ts`, opened once for this and restart's `execve`), puts
+(`core/foundation/platform/libc.ts`, opened once for this and restart's `execve`), puts
 `BUN_ENABLE_CRASH_REPORTING=0` there — libc found as glibc's `libc.so.6`, musl's loader (`/lib/ld-musl-<arch>.so.1`)
 or macOS's `libSystem.B.dylib`. It's left alone when you set `BUN_ENABLE_CRASH_REPORTING` or `BUN_CRASH_REPORT_URL`
 yourself (an empty one counts as unset), and libc not reached changes nothing, silently. A crash still prints Bun's
@@ -732,7 +735,8 @@ reported as left; only SKILL.md and an empty containing directory go. Manually c
 ## Windows
 
 Through WSL, for now (`14.12`, D205): WSL is Linux, so the Linux release and `install.sh` run there as
-they are, in a terminal such as Windows Terminal. What differs from other Linux is handled (`core/wsl.ts`), WSL known
+they are, in a terminal such as Windows Terminal. What differs from other Linux is handled
+(`core/foundation/platform/wsl.ts`), WSL known
 by `WSL_DISTRO_NAME` or its kernel:
 
 - **The clipboard** is Windows': a copy goes to `clip.exe` first, as UTF-16 with a byte-order mark (else it's read in

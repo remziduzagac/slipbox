@@ -25,10 +25,10 @@ import {
   readScratch,
   scratchLocation,
 } from "../src/core/capture.ts";
-import { copyText } from "../src/core/clipboard.ts";
+import { copyText } from "../src/core/foundation/platform/clipboard.ts";
 import { readDoc } from "../src/core/docformats.ts";
-import { canonKey, Keymap, unknownModifiers } from "../src/core/commands.ts";
-import { loadConfig } from "../src/core/config.ts";
+import { canonKey, Keymap, unknownModifiers } from "../src/core/application/commands/registry.ts";
+import { loadConfig } from "../src/core/application/config/config.ts";
 import { LinkIndex, onDisk } from "../src/core/links.ts";
 import {
   headingsOf,
@@ -60,12 +60,12 @@ import {
 import { layoutToAnsi } from "../src/core/layout/ansi.ts";
 import { renderMarkdown } from "../src/core/layout/render.ts";
 import { layoutSource } from "../src/core/layout/source.ts";
-import { expandTabs, sanitize, sanitizeMap } from "../src/core/sanitize.ts";
+import { expandTabs, sanitize, sanitizeMap } from "../src/core/foundation/text/sanitize.ts";
 import { base16ToPalette, parseBase16 } from "../src/core/theme/base16.ts";
 import { applyColorOverrides, listThemes, loadTheme, ROLES } from "../src/core/theme/index.ts";
 import { blend, colorHex, hexToRgb, luminance } from "../src/core/theme/theme.ts";
 import { glyphsFor } from "../src/core/glyphs.ts";
-import { WriteRefused, writeNote } from "../src/core/fsutil.ts";
+import { WriteRefused, writeNote } from "../src/core/foundation/platform/fsutil.ts";
 import { listTasks, toggleTask } from "../src/core/tasks.ts";
 import {
   comparable,
@@ -106,7 +106,7 @@ import {
   stashKept,
 } from "../src/core/gitrebase.ts";
 import { pullLater, withAutostash } from "../src/core/gitremote.ts";
-import { blockDiff, blockText, noteBlocks } from "../src/core/blockdiff.ts";
+import { blockDiff, blockText, noteBlocks } from "../src/core/foundation/text/blockdiff.ts";
 import {
   compilePattern,
   expandReplacement,
@@ -117,8 +117,8 @@ import {
 } from "../src/core/replace.ts";
 import { editorArgv, splitCommand } from "../src/core/editor.ts";
 import { discoverNvims, nvimSockets } from "../src/core/nvim.ts";
-import { graphemes, stringWidth, truncate } from "../src/core/width.ts";
-import { ensureCacheHome, type StoreKind, storeDir } from "../src/core/paths.ts";
+import { graphemes, stringWidth, truncate } from "../src/core/foundation/text/width.ts";
+import { ensureCacheHome, type StoreKind, storeDir } from "../src/core/foundation/platform/paths.ts";
 import type { WikiLink } from "../src/core/wikilink.ts";
 
 // Parses, walks and processes started: slow on a loaded or small machine (CI's macOS runner), not stuck.
@@ -713,7 +713,7 @@ describe("task toggle (4.11) and note writes (4.6, 7.5)", () => {
     expect(toggleTask(bom, 1)?.checked).toBe(true); // the BOM isn't part of line 1
   });
   test("a write whose rename fails leaves no temp file behind, and what was there as it was (4.6)", async () => {
-    const { atomicWrite } = await import("../src/core/fsutil.ts");
+    const { atomicWrite } = await import("../src/core/foundation/platform/fsutil.ts");
     const { readdirSync } = await import("node:fs");
     const dir = mkdtempSync(join(sandbox, "atomic-"));
     mkdirSync(join(dir, "taken"));
@@ -873,7 +873,7 @@ describe("clipboard (8.5): OSC 52, the system's tools, then the file", () => {
     existsSync(join(dir, "ran")) ? readFileSync(join(dir, "ran"), "utf8").trim().split("\n") : [];
 
   test("a copy goes by OSC 52 and the first tool that takes it, confirmed; a paste reads it back the same way", async () => {
-    const { copyText, readClipboard } = await import("../src/core/clipboard.ts");
+    const { copyText, readClipboard } = await import("../src/core/foundation/platform/clipboard.ts");
     const out = mkdtempSync(join(tmpdir(), "slipbox-clip-"));
     // X11: xclip fails, xsel takes it.
     await withTools({ xclip: "fail", xsel: "both" }, { DISPLAY: ":0" }, (dir) => {
@@ -907,7 +907,7 @@ describe("clipboard (8.5): OSC 52, the system's tools, then the file", () => {
   });
 
   test("in WSL (14.12): a copy reaches Windows by clip.exe, in UTF-16; a paste by PowerShell, when the Linux side's don't answer", async () => {
-    const { copyText, readClipboard, fromPowerShell } = await import("../src/core/clipboard.ts");
+    const { copyText, readClipboard, fromPowerShell } = await import("../src/core/foundation/platform/clipboard.ts");
     const out = mkdtempSync(join(tmpdir(), "slipbox-clip-"));
     // WSLg's X tools there too: clip.exe takes the copy first, Windows' own clipboard whatever the Linux side does.
     await withTools({ "clip.exe": "copy", xsel: "both" }, { WSL_DISTRO_NAME: "Ubuntu", DISPLAY: ":0" }, (dir) => {
@@ -953,7 +953,7 @@ describe("clipboard (8.5): OSC 52, the system's tools, then the file", () => {
   });
 
   test("no tool answers (over SSH): OSC 52 alone, unconfirmed; without it the file; a paste finds nothing", async () => {
-    const { copyText, readClipboard } = await import("../src/core/clipboard.ts");
+    const { copyText, readClipboard } = await import("../src/core/foundation/platform/clipboard.ts");
     const out = mkdtempSync(join(tmpdir(), "slipbox-clip-"));
     // A display, but none of its tools installed; then no display at all, a tool there unasked.
     for (const [tools, env] of [
@@ -982,7 +982,7 @@ describe("clipboard (8.5): OSC 52, the system's tools, then the file", () => {
   });
 
   test("SLIPBOX_CLIPBOARD=file: never the terminal's or the system's clipboard, only the file, read back", async () => {
-    const { copyText, readClipboard } = await import("../src/core/clipboard.ts");
+    const { copyText, readClipboard } = await import("../src/core/foundation/platform/clipboard.ts");
     const out = mkdtempSync(join(tmpdir(), "slipbox-clip-"));
     await withTools(
       { xclip: "both", "wl-copy": "copy", "wl-paste": "paste" },
@@ -1002,7 +1002,9 @@ describe("clipboard (8.5): OSC 52, the system's tools, then the file", () => {
   });
 
   test("the OSC 52 sequence: the text in base64, capped where terminals choke — the cap's own size still sent", async () => {
-    const { copyText, osc52Sequence, osc52ToTty, OSC52_MAX_BASE64 } = await import("../src/core/clipboard.ts");
+    const { copyText, osc52Sequence, osc52ToTty, OSC52_MAX_BASE64 } = await import(
+      "../src/core/foundation/platform/clipboard.ts"
+    );
     expect(osc52Sequence("hé")).toBe(`\x1b]52;c;${Buffer.from("hé").toString("base64")}\x07`);
     const atCap = "x".repeat((OSC52_MAX_BASE64 / 4) * 3); // exactly the cap in base64
     expect(osc52Sequence(atCap)).not.toBeNull();
@@ -1807,7 +1809,7 @@ describe("find and replace: character classes in a regex", () => {
 
 describe("lazy loading (16.6)", () => {
   test("asked before it's ready: null, loaded once; then the value, and whoever listens hears it", async () => {
-    const { lazy, load, loadError, onLoaded } = await import("../src/core/lazy.ts");
+    const { lazy, load, loadError, onLoaded } = await import("../src/core/foundation/platform/lazy.ts");
     const name = "test:lazy-ready";
     const heard: string[] = [];
     const off = onLoaded((n) => n.startsWith("test:") && heard.push(n));
@@ -1829,7 +1831,7 @@ describe("lazy loading (16.6)", () => {
   });
 
   test("a load that fails: null, and why; never tried again; a listener removed hears no more", async () => {
-    const { lazy, load, loadError, onLoaded } = await import("../src/core/lazy.ts");
+    const { lazy, load, loadError, onLoaded } = await import("../src/core/foundation/platform/lazy.ts");
     const heard: string[] = [];
     const off = onLoaded((n) => n.startsWith("test:") && heard.push(n));
     let calls = 0;
@@ -1861,7 +1863,7 @@ describe("advisory staleness (9.9)", () => {
     ]);
     writeDirty(v, []);
     expect(readStale(v)).toEqual([]);
-    const { stateDir } = await import("../src/core/paths.ts");
+    const { stateDir } = await import("../src/core/foundation/platform/paths.ts");
     expect(existsSync(join(stateDir(v), "dirty", `${process.pid}.json`))).toBe(false);
     writeDirty(v, []); // nothing to remove: no error
     if (process.getuid?.() !== 0) {
@@ -2195,7 +2197,7 @@ describe("what manual/configuration.md promises", () => {
   });
 
   test("a value outside its set keeps the default, with a warning — each key the list names; one inside it is taken", async () => {
-    const { DEFAULT_CONFIG } = await import("../src/core/config.ts");
+    const { DEFAULT_CONFIG } = await import("../src/core/application/config/config.ts");
     const keys: [string, string, string][] = [
       ["render", "glyphs", "ascii"],
       ["render", "show_urls", "never"],
@@ -2260,7 +2262,7 @@ describe("what manual/configuration.md promises", () => {
   });
 
   test("numbers: a range's ends are taken, past them the default; a fraction only for split_ratio and lens_max", async () => {
-    const { DEFAULT_CONFIG } = await import("../src/core/config.ts");
+    const { DEFAULT_CONFIG } = await import("../src/core/application/config/config.ts");
     const value = (section: string, key: string, v: number) => {
       const r = loadConfig({ configFile: file(`[${section}]\n${key} = ${v}\n`) });
       return { v: (r.config as unknown as Sections)[section]![key], warned: r.warnings.length > 0 };
@@ -2419,14 +2421,14 @@ describe("review cycle 5 (core, from mutation testing)", () => {
     expect(match("tel", "Telescope.md")).not.toBeNull();
   });
   test("truncateStart keeps as much of the end as fits", async () => {
-    const { truncateStart } = await import("../src/core/width.ts");
+    const { truncateStart } = await import("../src/core/foundation/text/width.ts");
     expect(truncateStart("abcdef", 4)).toBe("…def");
     expect(truncateStart("abcdef", 6)).toBe("abcdef");
     expect(stringWidth(truncateStart("日本語の文", 6))).toBeLessThanOrEqual(6);
     expect(truncateStart("日本語の文", 6)).toBe("…の文");
   });
   test("VS16 makes a text-default symbol wide", async () => {
-    const { graphemeWidth } = await import("../src/core/width.ts");
+    const { graphemeWidth } = await import("../src/core/foundation/text/width.ts");
     expect(graphemeWidth("\u{1F02C}️")).toBe(2);
     expect(graphemeWidth("❤️")).toBe(2);
   });
@@ -4890,7 +4892,7 @@ describe("spelling (25.6)", () => {
   });
 
   test("a worker's script: beside its module from the source; in the compiled binary, under core/ from its root, whichever entry point starts it", async () => {
-    const { workerUrl } = await import("../src/core/workers.ts");
+    const { workerUrl } = await import("../src/core/foundation/workers/url.ts");
     expect(workerUrl("spell-worker.ts")).toBe(
       Bun.pathToFileURL(join(import.meta.dir, "../src/core/spell-worker.ts")).href,
     );
@@ -4940,7 +4942,7 @@ describe("spelling, bundled (25.6)", () => {
 
 describe("commands run by your shell (25.7)", () => {
   test(":!cmd and its ranges parsed: '<,'>, %, ., a line, two; no command, none", async () => {
-    const { parseBang } = await import("../src/core/shell.ts");
+    const { parseBang } = await import("../src/core/foundation/platform/shell.ts");
     expect(parseBang("!ls -la")).toEqual({ range: null, command: "ls -la" });
     expect(parseBang("  '<,'>!sort -u ")).toEqual({ range: "selection", command: "sort -u" });
     expect(parseBang("%!column -t")).toEqual({ range: "all", command: "column -t" });
@@ -4956,7 +4958,7 @@ describe("commands run by your shell (25.7)", () => {
   });
 
   test("% is the file's path, quoted for the shell; \\% a percent; none without a file", async () => {
-    const { expandPercent, shellQuote } = await import("../src/core/shell.ts");
+    const { expandPercent, shellQuote } = await import("../src/core/foundation/platform/shell.ts");
     expect(shellQuote("it's here")).toBe(`'it'\\''s here'`);
     expect(expandPercent("wc -l % && echo 50\\%", "notes/a b.md")).toBe("wc -l 'notes/a b.md' && echo 50%");
     expect(expandPercent("echo 50\\%", null)).toBe("echo 50%");
@@ -4964,7 +4966,7 @@ describe("commands run by your shell (25.7)", () => {
   });
 
   test("run in a folder with your shell: its input, both streams as they came, its exit; stopped, what it started too", async () => {
-    const { runShell } = await import("../src/core/shell.ts");
+    const { runShell } = await import("../src/core/foundation/platform/shell.ts");
     const was = process.env.SHELL;
     process.env.SHELL = "/bin/sh";
     try {
@@ -5023,7 +5025,7 @@ describe("commands run by your shell (25.7)", () => {
   });
 
   test("a character cut across two reads is kept whole, on either stream, merged or not", async () => {
-    const { runShell } = await import("../src/core/shell.ts");
+    const { runShell } = await import("../src/core/foundation/platform/shell.ts");
     const was = process.env.SHELL;
     process.env.SHELL = "/bin/sh";
     try {
@@ -5050,7 +5052,7 @@ describe("commands run by your shell (25.7)", () => {
   });
 
   test("merged (a window's, D264): its errors through its output's pipe, in the order written — your shell given -c and the command, its exit, its signal; stopped, what it started too", async () => {
-    const { runShell } = await import("../src/core/shell.ts");
+    const { runShell } = await import("../src/core/foundation/platform/shell.ts");
     const was = process.env.SHELL;
     try {
       const dir = mkdtempSync(join(tmpdir(), "slipbox-shell-"));
@@ -6621,7 +6623,7 @@ describe("blame and a file's history (26.4, 22.1)", () => {
 
 describe("SQLite, the runtime's own (node:sqlite)", () => {
   test("statements; pragmas set and read; a transaction all or none; one inside another a savepoint", async () => {
-    const { Database } = await import("../src/core/sqlite.ts");
+    const { Database } = await import("../src/core/foundation/platform/sqlite.ts");
     const db = new Database(":memory:");
     db.exec("create table t (id integer primary key, v text)");
     const ins = db.prepare("insert into t (v) values (?)");
@@ -6725,7 +6727,7 @@ describe("WSL (14.12)", () => {
   ].join("\n");
 
   test("WSL known by its environment or its kernel; Windows' drives read from its mounts — drvfs, or 9p naming it", async () => {
-    const { isWsl, windowsDrives } = await import("../src/core/wsl.ts");
+    const { isWsl, windowsDrives } = await import("../src/core/foundation/platform/wsl.ts");
     expect(isWsl({ WSL_DISTRO_NAME: "Ubuntu" }, "6.1.0")).toBe(true);
     expect(isWsl({}, "5.15.153.1-microsoft-standard-WSL2")).toBe(true);
     expect(isWsl({}, "4.4.0-19041-Microsoft")).toBe(true);
@@ -6739,7 +6741,9 @@ describe("WSL (14.12)", () => {
   });
 
   test("a path on a Windows drive, through a link too; Windows' fonts on C:; what's said opening notes there — in WSL only", async () => {
-    const { windowsDriveNote, windowsDriveOf, windowsFontsDir } = await import("../src/core/wsl.ts");
+    const { windowsDriveNote, windowsDriveOf, windowsFontsDir } = await import(
+      "../src/core/foundation/platform/wsl.ts"
+    );
     const { fontDirs } = await import("../src/core/export/fonts.ts");
     const base = mkdtempSync(join(sandbox, "wsl-"));
     const c = join(base, "mnt", "c");

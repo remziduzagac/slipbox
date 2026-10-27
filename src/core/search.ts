@@ -13,10 +13,10 @@ import { basename } from "node:path";
 import { parse as parseToml } from "smol-toml";
 import { parse as parseYaml } from "yaml";
 import { classify } from "./filetypes.ts";
-import { readText } from "./fsutil.ts";
+import { readText } from "./foundation/platform/fsutil.ts";
 import type { Graph } from "./graph.ts";
 import { SearchIndex, WEIGHTS } from "./search-index.ts";
-import { sanitize } from "./sanitize.ts";
+import { sanitize } from "./foundation/text/sanitize.ts";
 import { tagName, tagsInLine } from "./tags.ts";
 
 // -------------------------------------------------------------------------------------------

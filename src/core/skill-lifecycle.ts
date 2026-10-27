@@ -1,7 +1,7 @@
 // Automatic user skill lifecycle (ASI): shared by installation, upgrades and uninstall.
 import { lstatSync, rmdirSync, statSync, unlinkSync } from "node:fs";
 import { dirname, isAbsolute, join, resolve } from "node:path";
-import { readRegular, SMALL_FILE } from "./fsutil.ts";
+import { readRegular, SMALL_FILE } from "./foundation/platform/fsutil.ts";
 import { installSkill, isSlipboxSkill } from "./skill.ts";
 
 export type SkillEnv = Record<string, string | undefined>;

@@ -4,11 +4,11 @@
 // markdownlint-cli2 is found as a server is (the vault's own copy, PATH, your installs), else
 // installed into slipbox's own folder when first needed (19.21), and run on slipbox's Bun.
 
-import { LINT_OUTPUT_BYTES, runTool, toolFailure } from "./tool-process.ts";
+import { LINT_OUTPUT_BYTES, runTool, toolFailure } from "./foundation/platform/tool-process.ts";
 import { existsSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
-import type { Config } from "./config.ts";
+import type { Config } from "./application/config/config.ts";
 import { isTrusted } from "./trust.ts";
 import { findServer } from "./servers/find.ts";
 import { installTool, lockKey, type NpmSpec } from "./servers/install.ts";

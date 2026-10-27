@@ -1,6 +1,6 @@
 // Command specs: source control (git.*).
 
-import type { CommandSpec } from "./contracts";
+import type { CommandSpec } from "../contracts";
 
 const I = null; // interaction: needs a human at a terminal
 

@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { COMMAND_SPECS } from "../../src/core/command-specs.ts";
+import { COMMAND_SPECS } from "../../src/core/application/commands/catalog.ts";
 import { harness, makeSandbox } from "../tui-harness.ts";
 
 makeSandbox();
@@ -18,7 +18,7 @@ test("startup refuses a command spec without an implementation", async () => {
 test("startup refuses an implemented action without a command spec", async () => {
   const first = COMMAND_SPECS.shift()!;
   try {
-    await expect(harness()).rejects.toThrow(`command ${first.id} has no spec in core/command-specs.ts`);
+    await expect(harness()).rejects.toThrow(`command ${first.id} has no spec in core/application/commands/catalog.ts`);
   } finally {
     COMMAND_SPECS.unshift(first);
   }

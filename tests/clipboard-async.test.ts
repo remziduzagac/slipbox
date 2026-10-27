@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { copyTextAsync, readClipboardAsync } from "../src/core/clipboard.ts";
+import { copyTextAsync, readClipboardAsync } from "../src/core/foundation/platform/clipboard.ts";
 import { harness, makeSandbox } from "./tui-harness.ts";
 
 makeSandbox();

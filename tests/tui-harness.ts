@@ -12,8 +12,8 @@ import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:f
 import { tmpdir } from "node:os";
 import { randomBytes } from "node:crypto";
 import { join } from "node:path";
-import { canonKey } from "../src/core/commands.ts";
-import { type Config, DEFAULT_CONFIG } from "../src/core/config.ts";
+import { canonKey } from "../src/core/application/commands/registry.ts";
+import { type Config, DEFAULT_CONFIG } from "../src/core/application/config/config.ts";
 import { openGraph } from "../src/core/graph.ts";
 import { locateVault } from "../src/core/vault.ts";
 import { App, type Host } from "../src/tui/app.ts";

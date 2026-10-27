@@ -25,8 +25,8 @@ import {
 import { tmpdir } from "node:os";
 import { basename, dirname, join, relative, sep } from "node:path";
 import { CLI_COMMANDS, FLAGS, GLOBAL_FLAGS, runCli } from "../src/cli/cli.ts";
-import { COMMAND_SPECS } from "../src/core/command-specs.ts";
-import { DEFAULT_CONFIG, loadConfig } from "../src/core/config.ts";
+import { COMMAND_SPECS } from "../src/core/application/commands/catalog.ts";
+import { DEFAULT_CONFIG, loadConfig } from "../src/core/application/config/config.ts";
 import { type Graph, openGraph } from "../src/core/graph.ts";
 import { applyPlan, outside, planHeadingRename, planRelink, planUndo } from "../src/core/rename.ts";
 import {
@@ -48,7 +48,7 @@ import {
   setRootMarkers,
   vaultOf,
 } from "../src/core/vault.ts";
-import { cacheDir, stateDir, vaultKey } from "../src/core/paths.ts";
+import { cacheDir, stateDir, vaultKey } from "../src/core/foundation/platform/paths.ts";
 import { readRoots } from "../src/core/registry.ts";
 import {
   agentsWarning,
@@ -931,7 +931,7 @@ describe("review cycle 4 (vault, hostile files)", () => {
   test("a symlinked FIFO is skipped; device symlinks for .gitignore, config and version are refused", async () => {
     const { symlinkSync } = await import("node:fs");
     const { WalkFilter, walkVault } = await import("../src/core/walk.ts");
-    const { loadConfig } = await import("../src/core/config.ts");
+    const { loadConfig } = await import("../src/core/application/config/config.ts");
     const { readVaultVersion } = await import("../src/core/vault.ts");
     const dir = mkdtempSync(join(tmpdir(), "slipbox-hostile-"));
     mkdirSync(join(dir, ".slipbox"));
@@ -1692,7 +1692,7 @@ describe("a root's identity, its state by path, the machine's roots (17.3–17.6
     const { PositionStore, loadSession, saveSession } = await import("../src/core/position.ts");
     const { readRoots } = await import("../src/core/registry.ts");
     const { lookupFolder } = await import("../src/core/folders.ts");
-    const { stateDir } = await import("../src/core/paths.ts");
+    const { stateDir } = await import("../src/core/foundation/platform/paths.ts");
     const base = fresh("moves");
     const tag = `mv${basename(base).slice(-6).toLowerCase()}`;
     const a = join(base, "orig");
@@ -1769,7 +1769,7 @@ describe("a root's identity, its state by path, the machine's roots (17.3–17.6
     const { recordFolder } = await import("../src/core/folders.ts");
     const { recordRoot } = await import("../src/core/registry.ts");
     const { rootAt } = await import("../src/core/vault.ts");
-    const { stateDir } = await import("../src/core/paths.ts");
+    const { stateDir } = await import("../src/core/foundation/platform/paths.ts");
     const git = (cwd: string, ...args: string[]) =>
       Bun.spawnSync(["git", "-c", "user.email=t@example.invalid", "-c", "user.name=t", "-C", cwd, ...args]).exitCode;
     const base = fresh("moved-indexed");
@@ -1803,7 +1803,7 @@ describe("a root's identity, its state by path, the machine's roots (17.3–17.6
 
   test("a root's storage taken to its new key: the personal state the old key's, the new key's derived files kept (21.8)", async () => {
     const { adoptStorage } = await import("../src/core/registry.ts");
-    const { cacheHome, stateHome } = await import("../src/core/paths.ts");
+    const { cacheHome, stateHome } = await import("../src/core/foundation/platform/paths.ts");
     const tag = basename(fresh("adopt-storage"));
     const [from, to, alone] = [`${tag}-from`, `${tag}-to`, `${tag}-alone`];
     const put = (home: string, key: string, rel: string, text: string) => {
@@ -1918,8 +1918,8 @@ describe("a root's identity, its state by path, the machine's roots (17.3–17.6
   test("today's state moved once (21.8): the instances' list read into the roots', each one's state from its key to its path's", async () => {
     const { readRoots, rootsFile } = await import("../src/core/registry.ts");
     const { PositionStore, loadSession, positionsFile } = await import("../src/core/position.ts");
-    const { cacheDir, stateDir, stateHome, cacheHome } = await import("../src/core/paths.ts");
-    const { writeJson } = await import("../src/core/fsutil.ts");
+    const { cacheDir, stateDir, stateHome, cacheHome } = await import("../src/core/foundation/platform/paths.ts");
+    const { writeJson } = await import("../src/core/foundation/platform/fsutil.ts");
     // A machine of its own: the state and cache folders, for this test.
     const before = { state: process.env.XDG_STATE_HOME, cache: process.env.XDG_CACHE_HOME };
     const home = fresh("migrate");
@@ -2019,7 +2019,8 @@ describe("a root's identity, its state by path, the machine's roots (17.3–17.6
 
   test("a list that can't be written: the path's key, the same each time", () => {
     const { chmodSync } = require("node:fs") as typeof import("node:fs");
-    const { stateHome } = require("../src/core/paths.ts") as typeof import("../src/core/paths.ts");
+    const { stateHome } =
+      require("../src/core/foundation/platform/paths.ts") as typeof import("../src/core/foundation/platform/paths.ts");
     const dir = fresh("ro");
     mkdirSync(join(dir, ".git"));
     mkdirSync(stateHome(), { recursive: true });
@@ -4082,7 +4083,7 @@ describe("search: the index and the scan (6.x)", () => {
 
   test("an index of another version, or one SQLite can't read, is made again; a new one is built before it's used", async () => {
     const { SearchIndex } = await import("../src/core/search.ts");
-    const { cacheDir } = await import("../src/core/paths.ts");
+    const { cacheDir } = await import("../src/core/foundation/platform/paths.ts");
     const { g } = setup();
     mkdirSync(cacheDir(g.loc), { recursive: true });
     writeFileSync(join(cacheDir(g.loc), "search.db"), "not a database, just bytes ".repeat(100));
@@ -4320,7 +4321,7 @@ describe("git worktrees: separate vaults of one repository (17.19)", () => {
 
   test("a worktree gone: its cache removed at once, its state and entry a month after it was last seen", async () => {
     const { pruneWorktrees, readRoots } = await import("../src/core/registry.ts");
-    const { cacheDir, stateDir } = await import("../src/core/paths.ts");
+    const { cacheDir, stateDir } = await import("../src/core/foundation/platform/paths.ts");
     const l = await layout(++n);
     if (!l) return;
     await cli(["ls"], l.wt);
@@ -4360,7 +4361,7 @@ describe("git worktrees: separate vaults of one repository (17.19)", () => {
   });
 
   test("a worktree's root marked only by .obsidian/ isn't gone while it's there (21.1, 17.19)", async () => {
-    const { cacheDir } = await import("../src/core/paths.ts");
+    const { cacheDir } = await import("../src/core/foundation/platform/paths.ts");
     const { rootAt } = await import("../src/core/vault.ts");
     const base = mkdtempSync(join(tmpdir(), "slipbox-wt-obs-"));
     const main = join(base, "repo");
@@ -5545,7 +5546,7 @@ describe("a root's name and entry: by its remote, its .slipbox/, its path (20.22
     const gone = fresh("plaingone");
     recordRoot({ kind: "folder", path: gone });
     // Its own cache (index, search) and state (session): kept a day, removed with it after the month.
-    const { cacheHome, stateHome } = await import("../src/core/paths.ts");
+    const { cacheHome, stateHome } = await import("../src/core/foundation/platform/paths.ts");
     const own = [join(cacheHome(), vaultKey(gone)), join(stateHome(), vaultKey(gone))];
     for (const d of own) mkdirSync(d, { recursive: true });
     rmSync(gone, { recursive: true });
@@ -5858,7 +5859,7 @@ describe("the background auto-index of the home folder (20.9)", () => {
   test("finds the roots in it, nested ones too, never in hidden folders or node_modules; indexes each; listed as found", async () => {
     const { AutoIndex } = await import("../src/core/autoindex.ts");
     const { readRoots } = await import("../src/core/registry.ts");
-    const { cacheDir } = await import("../src/core/paths.ts");
+    const { cacheDir } = await import("../src/core/foundation/platform/paths.ts");
     const home = makeHome();
     const ai = new AutoIndex(home, join(home, "..", `${basename(home)}-progress.json`));
     let slices = 0;
@@ -12520,7 +12521,7 @@ describe("review cycle 3 (core)", () => {
   });
 
   test("a new worktree under a removed one's name is a new worktree: no state carried, no move; git worktree move still carries", async () => {
-    const { stateDir } = await import("../src/core/paths.ts");
+    const { stateDir } = await import("../src/core/foundation/platform/paths.ts");
     const { readRoots } = await import("../src/core/registry.ts");
     const git = (cwd: string, ...args: string[]) =>
       Bun.spawnSync(["git", "-c", "user.email=t@example.invalid", "-c", "user.name=t", "-C", cwd, ...args]);

@@ -6,7 +6,7 @@ import { classify } from "../core/filetypes.ts";
 import { listThemes } from "../core/theme/index.ts";
 import { FORMATS } from "../core/export/index.ts";
 import { rootTypes } from "../core/diagnostics.ts";
-import { COMMAND_SPECS, commandGroup, COMMAND_GROUPS } from "../core/command-specs.ts";
+import { COMMAND_SPECS, commandGroup, COMMAND_GROUPS } from "../core/application/commands/catalog.ts";
 import {
   spellKey,
   EXPLORER_ACTION_INFO,
@@ -20,7 +20,7 @@ import {
   RESIZE_ACTIONS,
 } from "./keys.ts";
 import { parseSubstitute } from "../core/replace.ts";
-import { parseBang } from "../core/shell.ts";
+import { parseBang } from "../core/foundation/platform/shell.ts";
 import { rank } from "./match.ts";
 import { MOUSE_HELP } from "./mouse-help.ts";
 import { REPORT_ADDS, REPORT_SENDS } from "./report.ts";
@@ -74,7 +74,7 @@ const FREE_ARG = new Set([
   "shell.filter",
 ]);
 
-/** Commands in the order of core/command-specs.ts, which follows docs/manual/keys.md. */
+/** Commands in the order of core/application/commands/catalog.ts, which follows docs/manual/keys.md. */
 const SPEC_ORDER = new Map(COMMAND_SPECS.map((c, i) => [c.id, i]));
 function inSpecOrder<T extends { id: string }>(commands: T[]): T[] {
   return [...commands].sort((x, y) => (SPEC_ORDER.get(x.id) ?? 1e9) - (SPEC_ORDER.get(y.id) ?? 1e9));

@@ -6,12 +6,12 @@
 // the next starts a day later.
 
 import { join } from "node:path";
-import { type Config, loadConfig } from "./config.ts";
-import { readJson, writeJson, ensureDir } from "./fsutil.ts";
+import { type Config, loadConfig } from "./application/config/config.ts";
+import { readJson, writeJson, ensureDir } from "./foundation/platform/fsutil.ts";
 import { recordFolder } from "./folders.ts";
 import { describeCap } from "./home.ts";
 import type { Opened } from "./index-job.ts";
-import { stateHome } from "./paths.ts";
+import { stateHome } from "./foundation/platform/paths.ts";
 import { noteIndexed, readRoots, recordRoot } from "./registry.ts";
 import { rootMarkers } from "./vault.ts";
 import type { FilterSettings, WalkCap, WalkLimits } from "./walk.ts";

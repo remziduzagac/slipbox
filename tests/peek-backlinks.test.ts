@@ -23,11 +23,17 @@ import {
   stopBacklinkJobs,
   vaultSignature,
 } from "../src/core/backlinks-jobs.ts";
-import { DEFAULT_CONFIG } from "../src/core/config.ts";
-import { atomicWrite, STALE_TEMP_MS, sweepTemps, tempPath, tempRandom } from "../src/core/fsutil.ts";
+import { DEFAULT_CONFIG } from "../src/core/application/config/config.ts";
+import {
+  atomicWrite,
+  STALE_TEMP_MS,
+  sweepTemps,
+  tempPath,
+  tempRandom,
+} from "../src/core/foundation/platform/fsutil.ts";
 import { Graph, openGraph } from "../src/core/graph.ts";
 import { walkHomeNow } from "../src/core/home.ts";
-import { cacheDir, stateDir } from "../src/core/paths.ts";
+import { cacheDir, stateDir } from "../src/core/foundation/platform/paths.ts";
 import { Reach } from "../src/core/reach.ts";
 import { noteIndexed, readRoots, writeRoots } from "../src/core/registry.ts";
 import { planMakeVault, planUnmakeVault } from "../src/core/rename-vaults.ts";
@@ -35,7 +41,7 @@ import { Redirects } from "../src/core/redirects.ts";
 import { forgetProbes, setLinkAnswer } from "../src/core/symlinks.ts";
 import { homeAt, initVault, locateVault, recordLocation, setRootMarkers } from "../src/core/vault.ts";
 import * as vaultModule from "../src/core/vault.ts";
-import * as fsutil from "../src/core/fsutil.ts";
+import * as fsutil from "../src/core/foundation/platform/fsutil.ts";
 import { keepCaughtUp, peekOf, peekProbe, vaultGraph } from "../src/tui/peek.ts";
 import { type Harness, harness, makeSandbox, onlyRootsUnder } from "./tui-harness.ts";
 

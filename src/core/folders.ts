@@ -16,9 +16,9 @@
 import { existsSync, realpathSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 import { normalizeRemote, remoteUrls } from "./remotes.ts";
-import { climbsOut, ensureDir, readJson, readRegular, SMALL_FILE, writeJson } from "./fsutil.ts";
+import { climbsOut, ensureDir, readJson, readRegular, SMALL_FILE, writeJson } from "./foundation/platform/fsutil.ts";
 import { checkoutOf, inMain } from "./git.ts";
-import { stateHome } from "./paths.ts";
+import { stateHome } from "./foundation/platform/paths.ts";
 import {
   implicitName,
   MARKER,

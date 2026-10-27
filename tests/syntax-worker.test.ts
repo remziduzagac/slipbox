@@ -1,7 +1,7 @@
 import { TEST_BUDGETS } from "./support/timeouts.ts";
 import { expect, test } from "bun:test";
-import { WorkerRequests } from "../src/core/worker-requests.ts";
-import { workerUrl } from "../src/core/workers.ts";
+import { WorkerRequests } from "../src/core/foundation/workers/worker-requests.ts";
+import { workerUrl } from "../src/core/foundation/workers/url.ts";
 import { grammar, parseSyntax, commentLinks } from "../src/core/syntax.ts";
 import { SYNTAX_SOURCE_LIMIT, stopSyntaxThread, syntaxOnThread } from "../src/core/syntax-thread.ts";
 import type { SyntaxSnapshot } from "../src/core/syntax-worker.ts";
@@ -20,8 +20,9 @@ test("the code worker preserves the complete extracted structure", async () => {
     code: tree.codeModel(),
   };
   tree.delete();
+  // Worker entry paths stay core-relative when the URL helper moves into a nested folder.
   const jobs = new WorkerRequests(
-    () => new Worker(workerUrl("syntax-worker.ts", new URL("../src/core/workers.ts", import.meta.url).href)),
+    () => new Worker(workerUrl("syntax-worker.ts", new URL("../src/core/", import.meta.url).href)),
   );
   try {
     const reply = await jobs.request<{ value: unknown }>({ grammar: "typescript", source });

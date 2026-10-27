@@ -1,8 +1,8 @@
 // Mermaid rendering used only by the diagram worker; the UI reads completed results through diagrams.ts.
 
-import { lazy, load } from "./lazy.ts";
+import { lazy, load } from "./foundation/platform/lazy.ts";
 import { flattenVars } from "./svg.ts";
-import { stringWidth } from "./width.ts";
+import { stringWidth } from "./foundation/text/width.ts";
 
 type Mermaid = typeof import("beautiful-mermaid");
 

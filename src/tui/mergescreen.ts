@@ -9,7 +9,7 @@
 
 import { beginGitRead } from "./gitquery.ts";
 import { join } from "node:path";
-import { blockDiff } from "../core/blockdiff.ts";
+import { blockDiff } from "../core/foundation/text/blockdiff.ts";
 import { fenceLanguage, formatEntry } from "../core/capture.ts";
 import {
   type Choice,
@@ -24,7 +24,7 @@ import {
   resultText,
   resultView,
 } from "../core/conflicts.ts";
-import { readText } from "../core/fsutil.ts";
+import { readText } from "../core/foundation/platform/fsutil.ts";
 import { inCheckout, inVault, showLater } from "../core/gitops.ts";
 import { OPERATIONS, operationOf } from "../core/gitrebase.ts";
 import { sections, stageFile } from "../core/gitstage.ts";
@@ -32,7 +32,7 @@ import { layoutScreen, type ScreenPart, screenText } from "../core/layout/screen
 import type { Layout, Span } from "../core/layout/ir.ts";
 import { comparable, type DiffViewRow, diffView } from "../core/merge.ts";
 import { TOP } from "../core/position.ts";
-import { sanitize } from "../core/sanitize.ts";
+import { sanitize } from "../core/foundation/text/sanitize.ts";
 import type { App } from "./app.ts";
 import { editable } from "./app.ts";
 import { NoteBuffer } from "./buffer.ts";

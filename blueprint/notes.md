@@ -443,7 +443,8 @@ dates. Each says what was asked, decided, built and found, and cites the decisio
   peek, asking git again on the terminal's focus) and § Git (a first-run setup screen, key tables for the floating
   windows). And what the check found in the code: `ctrl+s` and `:w` don't save the merge screen, which says it does
   (`tui/mergescreen.ts`); the description of `peek.go` says a file outside every vault opens beside the vault, where `o`
-  goes into Elsewhere (`core/command-specs.ts`); and code comments still name the removed `space g` keys (`tui/git.ts`,
+  goes into Elsewhere (`core/application/commands/catalog.ts`); and code comments still name the removed `space g` keys
+  (`tui/git.ts`,
   `tui/githistory.ts`, `core/gitbranches.ts`) and the sections renamed (`core/registry.ts`, `core/names.ts`). VV-D9's
   `⚠` for a disk that doesn't answer is amended to the code's `⊘` (2026-10-17).
 

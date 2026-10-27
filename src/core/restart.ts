@@ -8,10 +8,10 @@ import { accessSync, constants, existsSync, readdirSync, readFileSync, rmSync, s
 import { constants as os } from "node:os";
 import { isatty } from "node:tty";
 import { join, resolve } from "node:path";
-import { libc } from "./libc.ts";
-import { atomicWrite, removeOlderThan } from "./fsutil.ts";
+import { libc } from "./foundation/platform/libc.ts";
+import { atomicWrite, removeOlderThan } from "./foundation/platform/fsutil.ts";
 import { homebrewPrefix, type InstalledBy } from "./install.ts";
-import { stateHome } from "./paths.ts";
+import { stateHome } from "./foundation/platform/paths.ts";
 
 /** What a restart leaves for the slipbox it starts. `place` and `session` are the TUI's own, kept as it wrote them. */
 export interface RestartNote {
@@ -133,7 +133,7 @@ export function nextLaunch(opts: {
 const CLOSE_RANGE_CLOEXEC = 1 << 2;
 
 /**
- * This process replaced by `file`, run with `argv` and `env` (libc's `execve`, `libc.ts`): the same
+ * This process replaced by `file`, run with `argv` and `env` (libc's `execve`, `foundation/platform/libc.ts`): the same
  * pid, process group and terminal. Descriptors above 2 are marked close-on-exec first where Linux's libc has
  * `close_range`, so none is carried into the next one; none is closed, so a failure leaves this process whole.
  * Returns only when it couldn't: why.

@@ -111,7 +111,7 @@ still blocks.
   `can't read: …` when a listing fails or doesn't answer in a minute; neither opened nor marked. The marks of a listed
   row come from its listing (`Marks.listedFacts`). A test's App lists at once on the main thread
   (`AppOptions.listOffThread`, set by `tui/run.ts`), so the 91 explorer tests and the 20 marks tests run as they were,
-  and pass. `folderUnreadable` moved to `core/fsutil.ts` for the listing to use.
+  and pass. `folderUnreadable` moved to `core/foundation/platform/fsutil.ts` for the listing to use.
 - 2026-10-23: Tests: a folder beside the vault listed slowly — a tree built in under 100 ms, `listing…` after 150 ms, a
   key handled and drawn at once, then its rows, the `listing…` row never opened; an answer for a folder folded again
   kept, one for a folder let go of dropped, one under changed settings read again; a listing that doesn't answer in
@@ -171,7 +171,8 @@ still blocks.
   worktree check still failed, its screen showing `listing…` for `~/work`: a fresh TUI's first listing waited for a
   listing thread to start, and that thread was the whole walk worker (the index and the parser loaded with it): 250–500
   ms to its first answer under load, against 9–54 once running. The listings have a light worker of their own now
-  (`core/list-worker.ts`, a build entry point; the context in `core/worker-context.ts`): 60–70 ms to the first answer,
+  (`core/list-worker.ts`, a build entry point; the context in `core/foundation/workers/worker-context.ts`): 60–70 ms to
+  the first answer,
   under the 150 ms before `listing…` shows. And the check waits for `~/work`'s rows, listed off the main thread now,
   rather than asserting them as the breadcrumb changes. The touched features' terminal checks: 24 of 24, at a load of
   20.
@@ -256,7 +257,7 @@ still blocks.
   walk is kept; (r13) `AutoIndex.step` wrote its place (an fsync) at every tick, waiting on a thread or a retry —
   only when it changed; (r14) `ci-scope.ts` mapped `core/listing.ts` short of Elsewhere's and the marks' checks — now
   to them; (r15) a listing's error words copied `folderUnreadable`'s, and its row said the bare code where `l` said
-  the words — one table (`unreadableWords` in `core/fsutil.ts`), the row saying the words.
+  the words — one table (`unreadableWords` in `core/foundation/platform/fsutil.ts`), the row saying the words.
 - 2026-10-24: Round 3's tests. Each fix has a unit test (`tests/walk-thread.test.ts`; r14's in
   `tests/distribution.test.ts`), and each was checked by undoing its fix once: all seventeen undoings (r6 three of them)
   fail their test. Four cases are seen on the screen, and have terminal checks (`slow-disk.ts`), each failing with its

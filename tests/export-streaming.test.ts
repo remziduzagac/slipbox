@@ -8,10 +8,10 @@ import type { ExportDoc } from "../src/core/export/assemble.ts";
 import { assemble } from "../src/core/export/assemble.ts";
 import { prepareExport } from "../src/core/export/jobs.ts";
 import { formatFor, exportNotes, exportTarget, isExport } from "../src/core/export/index.ts";
-import { DEFAULT_CONFIG } from "../src/core/config.ts";
+import { DEFAULT_CONFIG } from "../src/core/application/config/config.ts";
 import { Graph } from "../src/core/graph.ts";
 import { locateVault } from "../src/core/vault.ts";
-import { readText } from "../src/core/fsutil.ts";
+import { readText } from "../src/core/foundation/platform/fsutil.ts";
 
 // Exports stage in slipbox's cache folder: this file's, never the developer's.
 process.env.XDG_CACHE_HOME = fs.mkdtempSync(join(tmpdir(), "export-streaming-cache-"));

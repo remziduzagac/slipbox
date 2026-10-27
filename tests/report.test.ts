@@ -39,7 +39,7 @@ import {
   TITLE_LINE,
   WHERE_SAID,
 } from "../src/core/report.ts";
-import { browserOpener, type OpenerSources, openerSources } from "../src/core/browser.ts";
+import { browserOpener, type OpenerSources, openerSources } from "../src/core/foundation/platform/browser.ts";
 import { ghAccount, ghPath, ghPost } from "../src/core/gh.ts";
 
 const OS_RELEASE = 'NAME="Ubuntu"\nVERSION="24.04.1 LTS (Noble Numbat)"\nPRETTY_NAME="Ubuntu 24.04.1 LTS"\nID=ubuntu\n';

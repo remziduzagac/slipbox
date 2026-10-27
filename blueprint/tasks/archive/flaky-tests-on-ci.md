@@ -83,13 +83,15 @@ shown before the fix, and gone after.
       absolute path, and both runs' temp folders had `zz` in their random names (`two-dG0Zz7`, `two-ZaqzzC`). The
       test's, not slipbox's.
     - `clipboard timeout falls back …` (`tests/clipboard-async.test.ts`; macos-15, #10's branch): 2617 ms against a
-      2500 ms bound, for a helper stopped at 1 s (`src/core/clipboard.ts`, the timer starts after the spawn).
+      2500 ms bound, for a helper stopped at 1 s (`src/core/foundation/platform/clipboard.ts`, the timer starts after
+      the spawn).
     - `linters without a server (19.19) > a file's linters …` (`tests/tui.test.ts`; macos-15, #11's branch): waits for
       two linters' findings, then expects the third's "not found" at once. Each linter's result lands on its own
       (`ensureLinters`, `src/tui/languages.ts`), and a missing one is known only when its shell exits 127
       (`runLinter`, `src/core/servers/linters.ts`): it can come last.
     - `commands run by your shell (25.7) > :!cmd …` (`tests/tui.test.ts`; macos-15, #14's branch): `err` listed after
-      `c1.md`. Standard output and error are two pipes (`runShell`, `src/core/shell.ts`), and the command writes `err`
+      `c1.md`. Standard output and error are two pipes (`runShell`, `src/core/foundation/platform/shell.ts`), and the
+      command writes `err`
       then `c1.md` with no pause between: which comes first is which pipe slipbox reads first.
     - `a tool's process group > a helper in a session of its own …` (`tests/tool-process.test.ts`; macos-15,
       0.5.1-next, #6's last comment): 4434 ms against 2500, for a run stopped at 420 ms (deadline, grace, cutoff).

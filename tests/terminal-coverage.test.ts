@@ -8,7 +8,7 @@ import { join } from "node:path";
 import type { Check } from "./terminal/check.ts";
 import { CHECK_FILES, CHECKS, LEFT_OUT } from "./terminal/checks/index.ts";
 import { caseAreas, coverage, ownerOfCase, ownerOfCommand, report } from "./terminal/coverage.ts";
-import { COMMAND_SPECS } from "../src/core/command-specs.ts";
+import { COMMAND_SPECS } from "../src/core/application/commands/catalog.ts";
 import { CHECKS_FOR, importGraph, SAMPLES_FOR } from "../scripts/ci-scope.ts";
 
 describe("the terminal checks' coverage", () => {

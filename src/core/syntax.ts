@@ -1,5 +1,5 @@
 // Source files' structure with tree-sitter (plan 16.7–16.10, 16.18–16.23), each language's grammar
-// loaded the first time a file of it opens (16.6, `lazy.ts`).
+// loaded the first time a file of it opens (16.6, `foundation/platform/lazy.ts`).
 //
 // highlight.js colours a line well on its own; what a line can't know is that it starts inside a
 // string or comment opened lines above. Tree-sitter supplies that (`spans`), and the rest of a
@@ -38,7 +38,7 @@ import dockerfile from "../../grammars/tree-sitter-dockerfile.wasm" with { type:
 import scss from "../../grammars/tree-sitter-scss.wasm" with { type: "file" };
 import swift from "../../grammars/tree-sitter-swift.wasm" with { type: "file" };
 import vue from "../../grammars/tree-sitter-vue.wasm" with { type: "file" };
-import { lazy, load, loadError } from "./lazy.ts";
+import { lazy, load, loadError } from "./foundation/platform/lazy.ts";
 
 export type Grammar =
   | "typescript"

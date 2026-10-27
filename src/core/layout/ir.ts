@@ -3,7 +3,7 @@
 // what insulates slipbox from OpenTUI churn and makes rendering snapshot-testable.
 
 import type { Role } from "../theme/theme.ts";
-import { stringWidth } from "../width.ts";
+import { stringWidth } from "../foundation/text/width.ts";
 
 export const A_BOLD = 1;
 export const A_ITALIC = 2;

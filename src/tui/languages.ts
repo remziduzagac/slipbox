@@ -11,13 +11,13 @@ import type {
 } from "vscode-languageserver-protocol";
 import { TextDocument } from "vscode-languageserver-textdocument";
 import { SYNTAX_SOURCE_LIMIT, syntaxOnThread } from "../core/syntax-thread.ts";
-import { WorkerRequestError } from "../core/worker-requests.ts";
+import { WorkerRequestError } from "../core/foundation/workers/worker-requests.ts";
 import { extensionOf } from "../core/filetypes.ts";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { offsetOf } from "./editing.ts";
 import { homedir } from "node:os";
-import { type Config, loadConfig } from "../core/config.ts";
+import { type Config, loadConfig } from "../core/application/config/config.ts";
 import { type LintCmd, type LintIssue, lintFailure, runLint } from "../core/lint.ts";
 import { checkoutOf } from "../core/git.ts";
 import { diffLines } from "../core/merge.ts";

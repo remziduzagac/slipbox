@@ -6,7 +6,7 @@ import ignore from "ignore";
 import { classify, type FileGroup } from "../core/filetypes.ts";
 import { type Dirent, readdirSync, statSync } from "node:fs";
 import { basename, dirname, isAbsolute, join, posix, relative, sep } from "node:path";
-import { folderUnreadable, unreadableWords } from "../core/fsutil.ts";
+import { folderUnreadable, unreadableWords } from "../core/foundation/platform/fsutil.ts";
 import { MARKER } from "../core/registry.ts";
 import { tildePath } from "../core/names.ts";
 import { hasMarker, homeFolder, isInside, isListed, isVaultRoot, locationAt } from "../core/vault.ts";

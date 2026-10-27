@@ -11,7 +11,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { initWasm, Resvg } from "@resvg/resvg-wasm";
 import wasm from "@resvg/resvg-wasm/index_bg.wasm" with { type: "file" };
 import { openSync } from "fontkit";
-import { graphemes, graphemeWidth } from "../src/core/width.ts";
+import { graphemes, graphemeWidth } from "../src/core/foundation/text/width.ts";
 import { PLACEHOLDER, placeholderCell } from "../src/tui/placeholders.ts";
 
 const FONT_DIR = "/usr/share/fonts/truetype/dejavu";

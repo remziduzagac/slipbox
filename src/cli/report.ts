@@ -13,7 +13,7 @@ import {
   reportFacts,
   reportRepo,
 } from "../core/report.ts";
-import { stringWidth } from "../core/width.ts";
+import { stringWidth } from "../core/foundation/text/width.ts";
 import type { Io, Result } from "./common.ts";
 
 export function report(io: Io): Result {

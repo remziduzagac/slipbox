@@ -3,7 +3,7 @@
 // `[keys.explorer]`, `[keys.outline]`, the leader, which-key `[groups]` and `:` `[aliases]`.
 // Sequences are written in config notation; `leader` stands for the configured leader key.
 
-import { canonKey } from "../core/commands.ts";
+import { canonKey } from "../core/application/commands/registry.ts";
 
 /** Movement commands: bound plain to move, and with `shift+` (or in visual mode) to extend. */
 const MOVES: [id: string, keys: string[], extendKeys: string[]][] = [

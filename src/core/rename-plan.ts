@@ -5,7 +5,7 @@ import { execFileSync } from "node:child_process";
 import { lstatSync } from "node:fs";
 import { basename, dirname, join, posix, relative, sep } from "node:path";
 import { classify } from "./filetypes.ts";
-import { readText, realTarget } from "./fsutil.ts";
+import { readText, realTarget } from "./foundation/platform/fsutil.ts";
 import type { Graph } from "./graph.ts";
 import { gitArgs } from "./gitops.ts";
 import { isLink, movedLinkText, quietFollowed, writesThrough } from "./symlinks.ts";

@@ -4,8 +4,8 @@ import { join } from "node:path";
 import packageInfo from "../../package.json";
 import type { DiagramRequest } from "./diagram-jobs.ts";
 import type { Drawn } from "./diagram-render.ts";
-import { cacheHome, ensureCacheHome } from "./paths.ts";
-import { Database } from "./sqlite.ts";
+import { cacheHome, ensureCacheHome } from "./foundation/platform/paths.ts";
+import { Database } from "./foundation/platform/sqlite.ts";
 
 export type DiagramResult = Drawn | string | null;
 export interface DiagramStore {

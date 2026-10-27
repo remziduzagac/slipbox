@@ -15,8 +15,8 @@ import {
   worktreeList,
 } from "../core/gitops.ts";
 import { comparable, diffRows, unseenChange } from "../core/merge.ts";
-import { sanitize } from "../core/sanitize.ts";
-import { readText } from "../core/fsutil.ts";
+import { sanitize } from "../core/foundation/text/sanitize.ts";
+import { readText } from "../core/foundation/platform/fsutil.ts";
 import { describeBreak, type MergeReview, MergeReviewError, reviewMerge } from "../core/mergereview.ts";
 import { flag } from "./args.ts";
 import { EXIT, CliError, type Session, type Handler, requireArg, resolveNote } from "./common.ts";

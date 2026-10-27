@@ -2,7 +2,7 @@
 // Unicode placeholders: each cell names the picture's row and column it shows, so a check sees how big a picture is
 // drawn, which part of it shows, and where. In the reading area; reading.ts is past the size limit.
 
-import { stringWidth } from "../../../src/core/width.ts";
+import { stringWidth } from "../../../src/core/foundation/text/width.ts";
 import { placeholderCell } from "../../../src/tui/placeholders.ts";
 import { type Check, leader } from "../check.ts";
 import type { Session } from "../session.ts";

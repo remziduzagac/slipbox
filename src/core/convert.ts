@@ -14,7 +14,7 @@ import { dirname, isAbsolute, join, posix, relative, sep } from "node:path";
 import type { Graph, LinkRef, ResolvedLink } from "./graph.ts";
 import { blockLine, findHeading, headingFragment, lineFragment } from "./landing.ts";
 import { parseLegacy, visit } from "./parse.ts";
-import { readText } from "./fsutil.ts";
+import { readText } from "./foundation/platform/fsutil.ts";
 import { type Ambiguous, Collector, dirtyTrees, type RenamePlan } from "./rename.ts";
 import { parseWikiTarget, type WikiLink } from "./wikilink.ts";
 import { isInside } from "./vault.ts";

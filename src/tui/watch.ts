@@ -3,11 +3,11 @@
 
 import { existsSync, statSync } from "node:fs";
 import { basename, join } from "node:path";
-import { readText, stamp } from "../core/fsutil.ts";
+import { readText, stamp } from "../core/foundation/platform/fsutil.ts";
 import { offsetOf } from "./editing.ts";
 import { planRelink } from "../core/rename.ts";
 import { activityFile, AutoIndex, autoIndexFile } from "../core/autoindex.ts";
-import { loadConfig } from "../core/config.ts";
+import { loadConfig } from "../core/application/config/config.ts";
 import { describeCap, type HomeWalk, inFolders, keepHomeWalk, walksInto } from "../core/home.ts";
 import { HOME_LIMITS, type WalkCap } from "../core/walk.ts";
 import { homeFolder, isListed } from "../core/vault.ts";

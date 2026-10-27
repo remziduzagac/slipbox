@@ -17,8 +17,8 @@ process.env.XDG_DATA_HOME = join(dir, "data");
 process.env.SLIPBOX_CLIPBOARD = "file";
 delete process.env.SLIPBOX_CONFIG;
 
-const { canonKey } = await import("../src/core/commands.ts");
-const { DEFAULT_CONFIG } = await import("../src/core/config.ts");
+const { canonKey } = await import("../src/core/application/commands/registry.ts");
+const { DEFAULT_CONFIG } = await import("../src/core/application/config/config.ts");
 const { openGraph } = await import("../src/core/graph.ts");
 const { locateVault } = await import("../src/core/vault.ts");
 const { App } = await import("../src/tui/app.ts");

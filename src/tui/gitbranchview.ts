@@ -40,7 +40,7 @@ import {
 import { candidates, keepBase, keptBases, nearest, remoteBranchesLater, resolveBaseLater } from "../core/gitbase.ts";
 import { checkoutStateLater } from "../core/gitrepos.ts";
 import { tildePath } from "../core/names.ts";
-import { sanitize } from "../core/sanitize.ts";
+import { sanitize } from "../core/foundation/text/sanitize.ts";
 import { isVaultRoot, rootAt, rootMarkers } from "../core/vault.ts";
 import { openDiff } from "./diffview.ts";
 import { match } from "./match.ts";

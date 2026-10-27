@@ -1,7 +1,7 @@
 // Wrapping over the one width function (plan 2.4). Word boundaries first; CJK breaks between
 // characters; a word longer than the line is broken by grapheme, never overflowed.
 
-import { graphemes, graphemeWidth } from "../width.ts";
+import { graphemes, graphemeWidth } from "../foundation/text/width.ts";
 import type { Span } from "./ir.ts";
 
 interface G {

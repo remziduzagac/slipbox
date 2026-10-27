@@ -4,7 +4,7 @@
 // from the nearest folder holding one of its root-markers (else, unless it requires one, the file's
 // project), the project's own copy first; findings read from what it prints.
 
-import { LINT_OUTPUT_BYTES, runTool, toolFailure } from "../tool-process.ts";
+import { LINT_OUTPUT_BYTES, runTool, toolFailure } from "../foundation/platform/tool-process.ts";
 import { existsSync } from "node:fs";
 import { homedir } from "node:os";
 import { delimiter, dirname, join, resolve } from "node:path";

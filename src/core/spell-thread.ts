@@ -7,8 +7,8 @@
 
 import type { SpellAnswer, SpellAsk } from "./spell-worker.ts";
 import { type Dictionaries, type DictionaryFiles, HOLD_STATES, ownWordsFile } from "./spell.ts";
-import { WorkerRequests } from "./worker-requests.ts";
-import { workerUrl } from "./workers.ts";
+import { WorkerRequests } from "./foundation/workers/worker-requests.ts";
+import { workerUrl } from "./foundation/workers/url.ts";
 
 let channel: WorkerRequests | null = null;
 /** Bumped when a thread starts or ends (stopped, a deadline, a crash): a test's hold belongs to the thread it was set

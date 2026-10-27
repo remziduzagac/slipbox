@@ -7,7 +7,7 @@ import { dirname, join, relative, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { fromCells, parseAnsi, toSvg } from "../scripts/screenshot.ts";
 import { CLI_COMMANDS, FLAGS } from "../src/cli/cli.ts";
-import { canonSeq } from "../src/core/commands.ts";
+import { canonSeq } from "../src/core/application/commands/registry.ts";
 import { extractText } from "../src/core/graph.ts";
 import { githubSlugs } from "../src/core/landing.ts";
 import { type Grammar, grammar } from "../src/core/syntax.ts";
@@ -538,7 +538,7 @@ describe("what the manual promises of the code (DOC)", () => {
   type Sections = Record<string, Record<string, unknown>>;
 
   test("every key's default is the one its listing gives", async () => {
-    const { DEFAULT_CONFIG } = await import("../src/core/config.ts");
+    const { DEFAULT_CONFIG } = await import("../src/core/application/config/config.ts");
     const doc = read(join(DOCS, "manual", "configuration.md"));
     const listed = Bun.TOML.parse(doc.split("## Every key")[1]!.split("```toml")[1]!.split("```")[0]!) as Sections;
     // The tables there are examples, not defaults: servers, languages, linters, keys, aliases, groups, colours.

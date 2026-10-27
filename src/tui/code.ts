@@ -6,7 +6,7 @@ import { formatEntry } from "../core/capture.ts";
 import { gitSigns } from "../core/gitsigns.ts";
 import { type Layout, scrolledCol, srcAt, unscrolledCol } from "../core/layout/ir.ts";
 import type { Problem } from "../core/diagnostics.ts";
-import { graphemes } from "../core/width.ts";
+import { graphemes } from "../core/foundation/text/width.ts";
 import { cells, ordered, type Pos } from "./cursor.ts";
 import type { App, View } from "./app.ts";
 

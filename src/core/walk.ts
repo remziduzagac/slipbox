@@ -5,13 +5,13 @@
 // time (`SlicedWalk`), breadth first, as far as its cap (`HOME_LIMITS`).
 
 import { type Dirent, lstatSync, readdirSync, realpathSync, type Stats, statSync } from "node:fs";
-import { readRegular, SMALL_FILE } from "./fsutil.ts";
+import { readRegular, SMALL_FILE } from "./foundation/platform/fsutil.ts";
 import { basename, dirname, join, relative, sep } from "node:path";
 import ignore, { type Ignore } from "ignore";
-import type { Config } from "./config.ts";
+import type { Config } from "./application/config/config.ts";
 import { classify } from "./filetypes.ts";
 import { mountsIn } from "./mounts.ts";
-import { userFolders } from "./paths.ts";
+import { userFolders } from "./foundation/platform/paths.ts";
 import { answered, linkAnswer } from "./symlinks.ts";
 import { findVaultRoot, isInside, isVaultRoot, MARKER, rootMarkers } from "./vault.ts";
 

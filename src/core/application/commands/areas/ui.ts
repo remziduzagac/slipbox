@@ -1,6 +1,6 @@
 // Command specs: UI settings, themes, glyphs, the code view's cells and the scratch.
 
-import type { CommandSpec } from "./contracts";
+import type { CommandSpec } from "../contracts";
 
 const I = null; // interaction: needs a human at a terminal
 

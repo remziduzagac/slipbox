@@ -6,10 +6,10 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, realpathSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { ensureDir, readJson, writeJson } from "./fsutil.ts";
+import { ensureDir, readJson, writeJson } from "./foundation/platform/fsutil.ts";
 import { type Checkout, checkoutOf, headOf } from "./git.ts";
 import { baseBranch, gitArgs, gitReadLater, refName } from "./gitops.ts";
-import { stateHome } from "./paths.ts";
+import { stateHome } from "./foundation/platform/paths.ts";
 
 /** Where the kept bases are: one file for the machine, by repository. */
 export function basesFile(): string {

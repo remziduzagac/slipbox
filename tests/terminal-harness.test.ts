@@ -6,7 +6,7 @@ import { describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
-import { COMMAND_SPECS } from "../src/core/command-specs.ts";
+import { COMMAND_SPECS } from "../src/core/application/commands/catalog.ts";
 import { EXPLORER, explorerClosed, explorerOpen, inSwitcher, mode, modeOf, OUTLINE, opened } from "./terminal/check.ts";
 import { encodeKey } from "./terminal/keys.ts";
 import { REPO, Session, type SessionOptions, WAIT, whereOnBar, locationOnBar } from "./terminal/session.ts";
