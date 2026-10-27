@@ -14,8 +14,8 @@ import { isLink, linkScope, linkStateAt, linkTarget } from "../core/workspace/va
 import { type FolderListing, type ListedEntry, vaultName } from "../core/workspace/walk/listing.ts";
 import { ANOTHER_DISK, busyFolderAt, LINK_REASON } from "../core/workspace/walk/walk.ts";
 import { match } from "./match.ts";
-import { prettyKey } from "./keys.ts";
-import type { App, ListItem } from "./app.ts";
+import { prettyKey } from "./shell/input/keys.ts";
+import type { App, ListItem } from "./app/runtime/app.ts";
 import { type DiskEntry, fromDisk, listsName } from "./explorer-disk.ts";
 import { Listings } from "./listings.ts";
 import { Marks } from "./marks.ts";

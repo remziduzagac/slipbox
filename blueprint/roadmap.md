@@ -647,12 +647,12 @@ was added 2026-10-09 at the user's asking.*
 *Not a phase. The user's, 2026-10-15 (D235): next, after VV-T2, VV-T4, VV-T7 and GIT-T3 land, before the rest of VV
 and GIT.*
 
-- [x] **The split**: `src/tui/app.ts` (11,500 lines, 436 methods) by concern — the explorer, the git panel, the lens,
-  views and scrolling, the mouse, overlays and the peek, vaults and sessions, indexing and the watcher, find, conflicts
-  — `App` keeping the shared state and the wiring; `cli.ts`, `draw.ts` and `actions.ts` likewise; each file under 1,500
-  lines, the caps in `scripts/check-size.ts` lowered as they go. No behaviour changes; the terminal tests are its net.
-  Done 2026-10-15: `App`'s features each a controller of its own, `draw.ts` by region, `actions.ts` by command area,
-  `cli.ts`, `graph.ts`, `rename.ts` and `render.ts` by concern; no file past the limit, `CAPPED` empty.
+- [x] **The split**: `src/tui/app/runtime/app.ts` (11,500 lines, 436 methods) by concern — the explorer, the git panel,
+  the lens, views and scrolling, the mouse, overlays and the peek, vaults and sessions, indexing and the watcher, find,
+  conflicts — `App` keeping the shared state and the wiring; `cli.ts`, `draw.ts` and `actions.ts` likewise; each file
+  under 1,500 lines, the caps in `scripts/check-size.ts` lowered as they go. No behaviour changes; the terminal tests
+  are its net. Done 2026-10-15: `App`'s features each a controller of its own, `draw.ts` by region, `actions.ts` by
+  command area, `cli.ts`, `graph.ts`, `rename.ts` and `render.ts` by concern; no file past the limit, `CAPPED` empty.
 
 ## Vaults and the explorer's view
 

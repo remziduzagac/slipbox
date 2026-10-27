@@ -13,7 +13,7 @@ import {
 } from "../core/documents/model/footnotes.ts";
 import { stringWidth } from "../core/foundation/text/width.ts";
 import { match } from "./match.ts";
-import type { App, View } from "./app.ts";
+import type { App, View } from "./app/runtime/app.ts";
 
 /** The footnotes view. */
 export class Footnotes {

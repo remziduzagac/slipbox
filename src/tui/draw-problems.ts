@@ -1,8 +1,8 @@
 // Drawing the Problems panel (1.7): its tabs, the file's problems with an excerpt of each line, the root's in
 // folding sections.
 
-import type { App } from "./app.ts";
-import { type Canvas, drawText } from "./canvas.ts";
+import type { App } from "./app/runtime/app.ts";
+import { type Canvas, drawText } from "./shell/terminal/canvas.ts";
 import { type Rect, type Geometry, pageBg, roleStyle, markStyle } from "./draw.ts";
 import type { Role, Color } from "../core/rendering/theme/theme.ts";
 import { smallButton } from "./draw-panels.ts";

@@ -15,7 +15,7 @@ import { OPERATIONS } from "../core/workspace/git/branches/gitrebase.ts";
 import { commitLater, sections } from "../core/workspace/git/staging/gitstage.ts";
 import { formatEntry } from "../core/workspace/mutations/capture.ts";
 import { sanitize } from "../core/foundation/text/sanitize.ts";
-import { keyChar, spellKey } from "./keys.ts";
+import { keyChar, spellKey } from "./shell/input/keys.ts";
 import { match } from "./match.ts";
 import { BranchView, type BranchViewRow } from "./gitbranchview.ts";
 import { type Drawing, REPO_ACTIONS, RepoView, type RepoViewRow } from "./gitreposview.ts";
@@ -32,7 +32,7 @@ import {
 } from "./gitview.ts";
 import { pointedAt } from "./gitmouse.ts";
 import { operationNow } from "./rebase.ts";
-import type { App } from "./app.ts";
+import type { App } from "./app/runtime/app.ts";
 
 /** A section of the panel: the working tree's four; the branch's, this file's; the branches, the merged and older among
  *  them; the other repositories, the rest of home's. */

@@ -19,8 +19,8 @@ import { tildePath } from "../src/core/workspace/vaults/names.ts";
 import { GUIDE, readReport, SCREEN_INTRO, WHERE_INTRO } from "../src/core/application/distribution/report.ts";
 import { NoteBuffer } from "../src/tui/buffer.ts";
 import { placeAt } from "../src/tui/editing.ts";
-import type { ListOverlay } from "../src/tui/app.ts";
-import { TextCanvas } from "../src/tui/canvas.ts";
+import type { ListOverlay } from "../src/tui/app/runtime/app.ts";
+import { TextCanvas } from "../src/tui/shell/terminal/canvas.ts";
 import { type Harness, harness, makeSandbox, makeVault } from "./tui-harness.ts";
 
 const sandbox = makeSandbox();

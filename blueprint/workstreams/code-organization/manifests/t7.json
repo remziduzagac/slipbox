@@ -1,0 +1,370 @@
+{
+  "moves": {
+    "src/tui/app.ts": "src/tui/app/runtime/app.ts",
+    "src/tui/background.ts": "src/tui/app/runtime/background.ts",
+    "src/tui/watch.ts": "src/tui/app/runtime/watch.ts",
+    "src/tui/session.ts": "src/tui/workspace/session/session.ts",
+    "src/tui/vaults.ts": "src/tui/workspace/vaults/vaults.ts",
+    "src/tui/vault-list.ts": "src/tui/workspace/vaults/vault-list.ts",
+    "src/tui/run.ts": "src/tui/shell/terminal/run.ts",
+    "src/tui/opentui.ts": "src/tui/shell/terminal/opentui.ts",
+    "src/tui/canvas.ts": "src/tui/shell/terminal/canvas.ts",
+    "src/tui/input.ts": "src/tui/shell/input/input.ts",
+    "src/tui/keys.ts": "src/tui/shell/input/keys.ts",
+    "src/tui/modes.ts": "src/tui/shell/input/modes.ts",
+    "src/tui/vim.ts": "src/tui/shell/input/vim.ts",
+    "src/tui/mouse.ts": "src/tui/shell/input/mouse.ts",
+    "src/tui/mouse-help.ts": "src/tui/shell/input/mouse-help.ts",
+    "src/tui/actions.ts": "src/tui/actions/actions.ts",
+    "src/tui/windows.ts": "src/tui/windows/layout/windows.ts"
+  },
+  "ownership": {
+    "windowArrangement": {
+      "source": "src/tui/windows.ts",
+      "destination": "src/tui/windows/layout/windows.ts",
+      "invariant": "Preserve the existing global tabs containing views and current session data."
+    },
+    "tabStrip": {
+      "source": "src/tui/draw.ts:554",
+      "destination": "src/tui/shell/screen/draw.ts in ORG-T17",
+      "followUp": "ORG-T36 assesses a cohesive windows/tabs extraction; no tab-strip split or new Window model in this move."
+    }
+  },
+  "retained": [
+    {
+      "file": "blueprint/decisions/foundations.md",
+      "text": "src/tui/app",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/doc-findings/tasks/archive/code-and-rendering.md",
+      "text": "src/tui/app",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/doc-findings/tasks/archive/tui-fixes.md",
+      "text": "src/tui/app",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/user-docs/tasks/archive/editing-and-files.md",
+      "text": "src/tui/app",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/user-docs/tasks/archive/export-privacy-troubleshooting.md",
+      "text": "src/tui/app",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/user-docs/tasks/archive/keys-chapter.md",
+      "text": "src/tui/app",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/user-docs/tasks/archive/links-and-finding.md",
+      "text": "src/tui/app",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/user-docs/tasks/archive/task-guides.md",
+      "text": "src/tui/app",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/vaults-and-view/tasks/archive/view.md",
+      "text": "src/tui/app",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/window-header/notes.md",
+      "text": "src/tui/app",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/window-header/tasks/archive/settings.md",
+      "text": "src/tui/app",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/design.md",
+      "text": "src/tui/app",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "src/tui/app",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/design.md",
+      "text": "src/tui/watch",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "src/tui/watch",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/window-header/notes.md",
+      "text": "src/tui/session",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/workspaces/design.md",
+      "text": "src/tui/session",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/workspaces/notes.md",
+      "text": "src/tui/session",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/workspaces/requirements.md",
+      "text": "src/tui/session",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/workspaces/tasks/archive/words.md",
+      "text": "src/tui/session",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/design.md",
+      "text": "src/tui/session",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/workspaces/notes.md",
+      "text": "src/tui/vaults",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/workspaces/tasks/archive/words.md",
+      "text": "src/tui/vaults",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/design.md",
+      "text": "src/tui/vaults",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "src/tui/vaults",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/doc-findings/tasks/archive/design-and-examples.md",
+      "text": "src/tui/run",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/greenrepo/tasks/archive/channels.md",
+      "text": "src/tui/run",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/reporting-a-problem/research.md",
+      "text": "src/tui/run",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/terminal-tests/design.md",
+      "text": "src/tui/run",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/upgrade-restart/design.md",
+      "text": "src/tui/run",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/upgrade-restart/research.md",
+      "text": "src/tui/run",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/user-docs/tasks/archive/cli-chapter.md",
+      "text": "src/tui/run",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/picture-sizes/research.md",
+      "text": "src/tui/opentui",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/reporting-a-problem/research.md",
+      "text": "src/tui/canvas",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/doc-findings/tasks/archive/tui-fixes.md",
+      "text": "src/tui/keys",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/doc-findings/tasks/archive/words-hover-clones-popups.md",
+      "text": "src/tui/keys",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/picture-sizes/notes.md",
+      "text": "src/tui/keys",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/user-docs/tasks/archive/editing-and-files.md",
+      "text": "src/tui/keys",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/user-docs/tasks/archive/keys-chapter.md",
+      "text": "src/tui/keys",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/user-docs/tasks/archive/links-and-finding.md",
+      "text": "src/tui/keys",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/user-docs/tasks/archive/task-guides.md",
+      "text": "src/tui/keys",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/design.md",
+      "text": "src/tui/keys",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "src/tui/keys",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/user-docs/tasks/archive/editing-and-files.md",
+      "text": "src/tui/vim",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/design.md",
+      "text": "src/tui/vim",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "src/tui/vim",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/picture-sizes/research.md",
+      "text": "src/tui/mouse",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/picture-sizes/tasks/archive/interaction.md",
+      "text": "src/tui/mouse",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/window-header/decisions.md",
+      "text": "src/tui/mouse",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/window-header/notes.md",
+      "text": "src/tui/mouse",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/workspaces/notes.md",
+      "text": "src/tui/mouse",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/design.md",
+      "text": "src/tui/mouse",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "src/tui/mouse",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/decisions/process.md",
+      "text": "src/tui/mouse-help",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/window-header/requirements.md",
+      "text": "src/tui/mouse-help",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/window-header/tasks/archive/docs.md",
+      "text": "src/tui/mouse-help",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/workspaces/requirements.md",
+      "text": "src/tui/mouse-help",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/workspaces/tasks/archive/where.md",
+      "text": "src/tui/mouse-help",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/doc-findings/tasks/archive/code-and-rendering.md",
+      "text": "src/tui/actions",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/doc-findings/tasks/archive/tui-fixes.md",
+      "text": "src/tui/actions",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/doc-findings/tasks/archive/words-hover-clones-popups.md",
+      "text": "src/tui/actions",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/user-docs/tasks/archive/links-and-finding.md",
+      "text": "src/tui/actions",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/user-docs/tasks/archive/screen-and-reading.md",
+      "text": "src/tui/actions",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/window-header/notes.md",
+      "text": "src/tui/actions",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/window-header/tasks/archive/settings.md",
+      "text": "src/tui/actions",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/tasks/01-contracts-and-gates.md",
+      "text": "src/tui/actions",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/design.md",
+      "text": "src/tui/windows",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    }
+  ]
+}

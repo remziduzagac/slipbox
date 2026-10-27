@@ -19,9 +19,9 @@ import { type Scope, SCOPES, searchOthers } from "../core/workspace/search/scope
 import { isListed } from "../core/workspace/vaults/vault.ts";
 import { ELSEWHERE } from "../core/workspace/vaults/names.ts";
 import { frontmatterFindings, rootTypes } from "../core/documents/diagnostics/diagnostics.ts";
-import type { App, View, ListItem, ListOverlay, PromptOverlay } from "./app.ts";
+import type { App, View, ListItem, ListOverlay, PromptOverlay } from "./app/runtime/app.ts";
 import type { Layout } from "../core/rendering/layout/ir.ts";
-import type { FindState } from "./app.ts";
+import type { FindState } from "./app/runtime/app.ts";
 import { stringWidth, prefixWidths } from "../core/foundation/text/width.ts";
 import { refilter } from "./overlays.ts";
 

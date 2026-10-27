@@ -392,8 +392,8 @@ describe("the supply chain's gates (14.10)", () => {
     const top = mkdtempSync(join(sandbox, "reach-"));
     const files: Record<string, string> = {
       "package.json": JSON.stringify({ scripts: { "test:docs": "bun test ./tests/docs.test.ts" } }),
-      "src/main.ts": 'export const tui = () => import("./tui/run.ts");\n',
-      "src/tui/run.ts": 'import { a } from "../core/a";\nexport const run = a;\n',
+      "src/main.ts": 'export const tui = () => import("./tui/shell/terminal/run.ts");\n',
+      "src/tui/shell/terminal/run.ts": 'import { a } from "../../../core/a";\nexport const run = a;\n',
       "src/core/a.ts":
         'import { workerUrl } from "./foundation/workers/url.ts";\nexport const a = workerUrl("w.ts");\n',
       "src/core/foundation/workers/url.ts": "export const workerUrl = (f: string) => f;\n",
@@ -429,8 +429,8 @@ describe("the supply chain's gates (14.10)", () => {
       writeFileSync(join(top, f), text);
     }
     const g = importGraph(top);
-    expect(g.get("src/main.ts")).toEqual(["src/tui/run.ts"]); // imported when it's needed
-    expect(g.get("src/tui/run.ts")).toEqual(["src/core/a.ts"]); // without its extension
+    expect(g.get("src/main.ts")).toEqual(["src/tui/shell/terminal/run.ts"]); // imported when it's needed
+    expect(g.get("src/tui/shell/terminal/run.ts")).toEqual(["src/core/a.ts"]); // without its extension
     expect(g.get("src/core/a.ts")?.sort()).toEqual(["src/core/foundation/workers/url.ts", "src/core/w.ts"]); // a worker it starts
     // By its path from the file's folder, or from a name set from it, at any depth; not from a temporary folder.
     expect(g.get("tests/run.test.ts")?.sort()).toEqual([
@@ -486,7 +486,11 @@ describe("the supply chain's gates (14.10)", () => {
     expect(of("src/cli/git.ts")).toMatchObject({ checks: [] });
     // A check file: its checks. A file of the app's with no feature of its own, the harness, a sample: every check.
     expect(of("tests/terminal/checks/vaults.ts")).toMatchObject({ checks: ["vaults"] });
-    for (const f of ["src/tui/app.ts", "tests/terminal/session.ts", "examples/home/hobbies/cooking/Pantry.md"])
+    for (const f of [
+      "src/tui/app/runtime/app.ts",
+      "tests/terminal/session.ts",
+      "examples/home/hobbies/cooking/Pantry.md",
+    ])
       expect([f, of(f)]).toMatchObject([f, { checks: "all" }]);
     expect(of("examples/home/hobbies/cooking/Pantry.md")).toMatchObject({
       tests: expect.arrayContaining(["tests/home.test.ts"]),
@@ -505,7 +509,9 @@ describe("the supply chain's gates (14.10)", () => {
     });
     expect(of("_typos.toml")).toMatchObject({ tests: [], checks: [] });
     // The docs' tests are the lint job's, on every change: never among a change's.
-    expect(of("src/tui/mouse-help.ts")).not.toMatchObject({ tests: expect.arrayContaining(["tests/docs.test.ts"]) });
+    expect(of("src/tui/shell/input/mouse-help.ts")).not.toMatchObject({
+      tests: expect.arrayContaining(["tests/docs.test.ts"]),
+    });
     // Everything: the packages, the toolchain, a workflow, the tests' preload, a file nothing names, a diff unread.
     for (const f of ["package.json", "bun.lock", "mise.toml", ".github/workflows/ci.yml", "tests/setup.ts", "new.txt"])
       expect([f, of(f).all]).toEqual([f, expect.any(String)]);

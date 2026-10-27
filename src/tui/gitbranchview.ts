@@ -51,7 +51,7 @@ import { sanitize } from "../core/foundation/text/sanitize.ts";
 import { isVaultRoot, rootAt, rootMarkers } from "../core/workspace/vaults/vault.ts";
 import { openDiff } from "./diffview.ts";
 import { match } from "./match.ts";
-import type { App } from "./app.ts";
+import type { App } from "./app/runtime/app.ts";
 import type { HeadingRow, PanelRow } from "./gitpanel.ts";
 
 /** "Compare against…"'s entry for a branch, tag or commit typed: no ref's name, so never mistaken for one. */

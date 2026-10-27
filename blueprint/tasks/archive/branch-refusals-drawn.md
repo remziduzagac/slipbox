@@ -57,10 +57,11 @@ So:
 
 ## Log
 
-- 2026-10-23: read the code on `dev` (`be3674a`). `App.message` (`src/tui/app.ts:778`) pushes the message and its
-  toast and schedules the toasts' expiry, which asks for a frame only once a toast was drawn: a message said with no
-  frame asked for waits. A key's frame comes after its command is done (`Input.processKey`, `src/tui/input.ts:165`);
-  a mouse click asks for one at once (`src/tui/run.ts`, `view.onMouse`), not when what it started is answered.
+- 2026-10-23: read the code on `dev` (`be3674a`). `App.message` (`src/tui/app/runtime/app.ts:778`) pushes the message
+  and its toast and schedules the toasts' expiry, which asks for a frame only once a toast was drawn: a message said
+  with no frame asked for waits. A key's frame comes after its command is done (`Input.processKey`,
+  `src/tui/shell/input/input.ts:165`); a mouse click asks for one at once (`src/tui/shell/terminal/run.ts`,
+  `view.onMouse`), not when what it started is answered.
 - 2026-10-23: the paths in `src/tui/gitbranchview.ts` that say something after an await, with no frame asked for:
   - `remove`'s accept, `removeWorktreeLater`'s refusal (line 577) — #17's;
   - `worktreeFor`, `addWorktreeLater`'s refusal (line 609) — #17's;

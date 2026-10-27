@@ -11,18 +11,17 @@ a change users will see updates it in the same piece of work, without the bluepr
 ## Rules
 
 - **`src/core/` never imports `src/tui/` or `@opentui/*`**, and `src/cli/` never imports `src/tui/`.
-  `bun run check:boundary` enforces it. Only `src/tui/opentui.ts` and `src/tui/run.ts` touch OpenTUI. Diagrams are drawn
-  in their worker alone: only `src/core/rendering/media/diagrams/diagram-worker.ts` imports
-  `src/core/rendering/media/diagrams/diagram-render.ts` for more than types (the same check), since drawing on the
-  screen's thread can freeze it.
+  `bun run check:boundary` enforces it. Only `src/tui/shell/terminal/opentui.ts` and `src/tui/shell/terminal/run.ts`
+  touch OpenTUI. Diagrams are drawn in their worker alone: only `src/core/rendering/media/diagrams/diagram-worker.ts`
+  imports `src/core/rendering/media/diagrams/diagram-render.ts` for more than types (the same check), since drawing on
+  the screen's thread can freeze it.
 - **Source files have a 1,000-line ceiling, and no class does everything** (D235, ORG-D2). Existing handwritten
   exceptions have exact non-growing caps, never above 1,500. Moves may reset a cap solely for measured import-formatting
-  growth, recording its delta in the task (ORG-D2); preserve non-import code/comments and normal formatting.
-  Generated server locks have a separate measured cap and
-  offline generator check (`bun scripts/lock-servers.ts --check`). Lower a cap whenever its file shrinks; remove the
-  exception at or below 1,000. A feature goes in a module of its own;
-  `App` (`src/tui/app.ts`) keeps the shared state and the wiring, and a feature is a controller in its own file that
-  `App` owns (`src/tui/explorer.ts` is `app.explorer`), holding the state that is the feature's alone.
+  growth, recording its delta in the task (ORG-D2); preserve non-import code/comments and normal formatting. Generated
+  server locks have a separate measured cap and offline generator check (`bun scripts/lock-servers.ts --check`). Lower a
+  cap whenever its file shrinks; remove the exception at or below 1,000. A feature goes in a module of its own; `App`
+  (`src/tui/app/runtime/app.ts`) keeps the shared state and the wiring, and a feature is a controller in its own file
+  that `App` owns (`src/tui/explorer.ts` is `app.explorer`), holding the state that is the feature's alone.
   `bun run check:size` enforces the limit.
 - **Every user action is a named command.** Add it to the `src/core/application/commands/areas/` file of its area
   (`git.ts`, `editing.ts`, …; `catalog.ts` joins them into `COMMAND_SPECS`) with its CLI equivalent (or `null` for a

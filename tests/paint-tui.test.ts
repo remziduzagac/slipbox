@@ -4,7 +4,7 @@ import { writeFileSync } from "node:fs";
 import { OptimizedBuffer, type RenderContext } from "@opentui/core";
 import { onLoaded } from "../src/core/foundation/platform/lazy.ts";
 import { loadRasterizer } from "../src/core/rendering/media/images/svg.ts";
-import { BufferCanvas, Pictures } from "../src/tui/opentui.ts";
+import { BufferCanvas, Pictures } from "../src/tui/shell/terminal/opentui.ts";
 import { harness, makeSandbox, makeVault } from "./tui-harness.ts";
 
 makeSandbox();

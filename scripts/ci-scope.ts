@@ -79,7 +79,7 @@ export const CHECKS_FOR: [RegExp, string[]][] = [
   [/^src\/tui\/listings\.ts$/, ["slow disk", "view", "Elsewhere", "marks"]],
   // Vaults, home and Elsewhere; a link followed out; the peek (VV).
   [/^src\/core\/workspace\/vaults\/(home|mounts)\.ts$/, ["home", "Elsewhere"]],
-  [/^src\/tui\/vaults\.ts$/, ["vaults", "home", "Elsewhere", "roots", "named folders"]],
+  [/^src\/tui\/workspace\/vaults\/vaults\.ts$/, ["vaults", "home", "Elsewhere", "roots", "named folders"]],
   [/^src\/core\/workspace\/vaults\/symlinks\.ts$/, ["links", "rename"]],
   [/^src\/tui\/peek\.ts$/, ["peek"]],
   // Replace, and renames with the links they rewrite.

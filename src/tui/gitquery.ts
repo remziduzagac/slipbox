@@ -2,7 +2,7 @@
 import { statSync } from "node:fs";
 import { join } from "node:path";
 import { headOf, headCommit } from "../core/workspace/git/git.ts";
-import type { App } from "./app.ts";
+import type { App } from "./app/runtime/app.ts";
 const active = new WeakMap<App, AbortController>();
 export function beginGitRead(app: App, label: string, watchIndex = false) {
   active.get(app)?.abort();

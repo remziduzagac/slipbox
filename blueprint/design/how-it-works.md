@@ -27,12 +27,11 @@ when stdin and stdout are terminals (`9.3`). The TUI is loaded with a dynamic `i
 CLI call never loads OpenTUI's native renderer.
 
 Every user action is a named command (D11). `core/application/commands/areas/*.ts` (by area, listed by
-`core/application/commands/catalog.ts`) give
-each command id the CLI invocation that reaches the same state change, or mark it an interaction; the TUI implements
-each one (`tui/actions.ts` and the `tui/actions-*.ts` of its area) in the `CommandRegistry`
-(`core/application/commands/registry.ts`), and
-keys, the palette and the `:` prompt run them by id. A command implemented without a spec, or specified without an
-implementation, fails at start-up and fails a test ([tui.md](tui.md) § Parity with the CLI).
+`core/application/commands/catalog.ts`) give each command id the CLI invocation that reaches the same state change, or
+mark it an interaction; the TUI implements each one (`tui/actions/actions.ts` and the `tui/actions-*.ts` of its area) in
+the `CommandRegistry` (`core/application/commands/registry.ts`), and keys, the palette and the `:` prompt run them by
+id. A command implemented without a spec, or specified without an implementation, fails at start-up and fails a test
+([tui.md](tui.md) § Parity with the CLI).
 
 ### The boundary is enforced, not hoped for
 
@@ -51,14 +50,14 @@ freeze it ([rendering.md](rendering.md) § Blocks and inlines). It runs in CI (`
 
 ### Only the final draw step touches OpenTUI
 
-Inside the TUI, the same rule applies one level down. `src/tui/app.ts` (the model, its features each a
-controller of its own) and `src/tui/draw.ts` (painting, its regions in `draw-*.ts`) talk to an abstract
-`Canvas` and `Host`. Only two files import OpenTUI:
+Inside the TUI, the same rule applies one level down. `src/tui/app/runtime/app.ts` (the model, its features each a
+controller of its own) and `src/tui/draw.ts` (painting, its regions in `draw-*.ts`) talk to an abstract `Canvas` and
+`Host`. Only two files import OpenTUI:
 
 | File | What it does with OpenTUI |
 | --- | --- |
-| `src/tui/opentui.ts` | `Canvas` over `OptimizedBuffer`; the full-screen `Renderable`; a worker decoding pictures |
-| `src/tui/run.ts` | renderer creation, input, resize, OSC 52, shutdown and restart after screen teardown |
+| [opentui.ts][o130] | `Canvas` over `OptimizedBuffer`; the full-screen `Renderable`; a worker decoding pictures |
+| [run.ts][o131] | renderer creation, input, resize, OSC 52, shutdown and restart after screen teardown |
 
 What comes before the screen is taken is `run.ts`'s `prepare`, which needs no terminal (a test calls it):
 the vault found, its config, the vault recorded as seen, and the graph. Recording comes before the graph
@@ -327,12 +326,12 @@ The CLI's commands are the user's reference, [cli.md](../../docs/manual/cli.md);
 | `cli/args.ts` | 9.1 | flag parsing: flags anywhere, `--x=v` or `--x v`, `--` ends flags |
 | `version.ts` | — | the version, one source |
 | `tui/*` | 3.x, 5.3–5.7 | the app: reading, panes, saving and conflicts |
-| `tui/app.ts` | D235 | the model: the state every part shares and the wiring; a controller per feature (`app.git`) |
-| `tui/actions*.ts` | 0.8 | the commands' implementations, by area, registered by `registerActions` |
+| [app.ts][o132] | D235 | the model: the state every part shares and the wiring; a controller per feature (`app.git`) |
+| `tui/actions/actions.ts`, `tui/actions-*.ts` | 0.8 | command registration and area implementations |
 | `tui/draw*.ts` | 3.1, 3.2 | painting: the frame, then each region (windows, panels, status line, overlays) |
 | `tui/buffer.ts` | 4.5–4.8 | a note's text, its undo steps, unsaved state, BOM and line endings |
 | `tui/editing.ts` | 4.3 | the cursor as a text offset; insert mode |
-| `tui/vim.ts` | 4.4 | counts, operators and text objects, the register, `.` |
+| `tui/shell/input/vim.ts` | 4.4 | counts, operators and text objects, the register, `.` |
 | `tui/replacing.ts` | 4.16 | the replace row, `:s` and its confirm, `gn`'s matches |
 | `tui/githistory.ts` | 26.4, 22.1 | blame and a file's history: a version read, its diff to now |
 | `tui/gitquery.ts` | — | the one foreground git read: a newer one cancels it, a stale view never takes it |
@@ -433,13 +432,13 @@ OpenTUI is pre-1.0 and moves fast, so it is pinned to an exact version in `packa
 1. Read the changelog from the pinned version to the target.
 2. Bump the pin, run `bun run check`. The `OpenTUI end to end` test in `tests/tui.test.ts`
    exercises the adapter through OpenTUI's own test renderer.
-3. Launch the TUI and check what the adapter uses: `drawText` and `fillRect` output, key names
-   (`keyName` in `tui/keys.ts`), paste, mouse and resize events, `widthMethod` (a wcwidth
-   terminal's rows must not drift), `suspend`/`resume` (the `$EDITOR` hand-off),
-   `setTerminalTitle`, `setBackgroundColor`, `useMouse`, `copyToClipboardOSC52`, and `destroy`. And pictures:
-   `NativeImage` (decode, `resize`, `raw`), `drawImage` for sixel, and the **private** `writeOut` that sends Kitty
-   placeholders' pictures in step with the frames (12.7) — still there, still ordered with the frame's output.
-4. Only `tui/opentui.ts` and `tui/run.ts` should need changes. If anything else does, the
+3. Launch the TUI and check what the adapter uses: `drawText` and `fillRect` output, key names (`keyName` in
+   `tui/shell/input/keys.ts`), paste, mouse and resize events, `widthMethod` (a wcwidth terminal's rows must not drift),
+   `suspend`/`resume` (the `$EDITOR` hand-off), `setTerminalTitle`, `setBackgroundColor`, `useMouse`,
+   `copyToClipboardOSC52`, and `destroy`. And pictures: `NativeImage` (decode, `resize`, `raw`), `drawImage` for sixel,
+   and the **private** `writeOut` that sends Kitty placeholders' pictures in step with the frames (12.7) — still there,
+   still ordered with the frame's output.
+4. Only `tui/shell/terminal/opentui.ts` and `tui/shell/terminal/run.ts` should need changes. If anything else does, the
    boundary has leaked; fix that first.
 
 ## Storage
@@ -702,3 +701,7 @@ ordinary note needs.
 [o127]: ../../src/core/rendering/layout/diff/blockdiff.ts
 [o128]: ../../src/core/rendering/layout/diff/splitdiff.ts
 [o129]: ../../src/core/rendering/layout/screen.ts
+
+[o130]: ../../src/tui/shell/terminal/opentui.ts
+[o131]: ../../src/tui/shell/terminal/run.ts
+[o132]: ../../src/tui/app/runtime/app.ts

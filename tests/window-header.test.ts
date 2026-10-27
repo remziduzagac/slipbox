@@ -6,7 +6,7 @@ import { describe, expect, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { commandGroup, COMMAND_SPECS } from "../src/core/application/commands/catalog.ts";
-import { TextCanvas } from "../src/tui/canvas.ts";
+import { TextCanvas } from "../src/tui/shell/terminal/canvas.ts";
 import { BACKGROUND_PARSE } from "../src/tui/buffer.ts";
 import { crumbLeast, type Geometry } from "../src/tui/draw.ts";
 import { modeButtons } from "../src/tui/draw-header.ts";
@@ -698,7 +698,15 @@ describe("room: the buttons give way before the breadcrumb's innermost heading (
 describe("loading the header's modules", () => {
   test("each loads first on its own: no import cycle runs one before what it needs (lens.ts and the header's modes)", () => {
     const top = join(import.meta.dir, "..");
-    for (const m of ["lens", "modes", "draw-header", "draw-pane", "mouse", "draw-status", "actions-view"]) {
+    for (const m of [
+      "lens",
+      "shell/input/modes",
+      "draw-header",
+      "draw-pane",
+      "shell/input/mouse",
+      "draw-status",
+      "actions-view",
+    ]) {
       const r = Bun.spawnSync([process.execPath, "-e", `await import("./src/tui/${m}.ts")`], { cwd: top });
       expect(`${m}: ${r.exitCode} ${r.stderr.toString().trim().split("\n")[0] ?? ""}`).toBe(`${m}: 0 `);
     }

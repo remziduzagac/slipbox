@@ -12,7 +12,7 @@ import { pictureLocator } from "../core/documents/model/note.ts";
 import { cacheHome, ensureCacheHome } from "../core/foundation/platform/paths.ts";
 import { colorHex, type Role } from "../core/rendering/theme/index.ts";
 import { fitPicture, pictureSizes, RemoteImages, svgText } from "./images.ts";
-import type { App, View } from "./app.ts";
+import type { App, View } from "./app/runtime/app.ts";
 import { codeBlocks } from "./code.ts";
 
 /** Pictures (12.x): drawn, fetched, and held back while a view scrolls. */

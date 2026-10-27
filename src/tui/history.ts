@@ -10,9 +10,9 @@ import { tildePath } from "../core/workspace/vaults/names.ts";
 import { sanitize } from "../core/foundation/text/sanitize.ts";
 import type { NoteBuffer } from "./buffer.ts";
 import { match } from "./match.ts";
-import { prettyKey } from "./keys.ts";
-import type { App, Loc, View, ListItem } from "./app.ts";
-import { RECENT_NOTES_MAX } from "./app.ts";
+import { prettyKey } from "./shell/input/keys.ts";
+import type { App, Loc, View, ListItem } from "./app/runtime/app.ts";
+import { RECENT_NOTES_MAX } from "./app/runtime/app.ts";
 
 /** Each window's history, the notes read lately, and the history view. */
 export class History {

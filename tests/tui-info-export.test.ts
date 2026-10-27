@@ -5,7 +5,7 @@ import { stateDir } from "../src/core/foundation/platform/paths.ts";
 import { writeJson } from "../src/core/foundation/platform/fsutil.ts";
 import { rootAt } from "../src/core/workspace/vaults/vault.ts";
 import { formatFor } from "../src/core/rendering/export/index.ts";
-import type { ListOverlay } from "../src/tui/app.ts";
+import type { ListOverlay } from "../src/tui/app/runtime/app.ts";
 import { harness, makeSandbox, makeVault } from "./tui-harness.ts";
 
 makeSandbox();

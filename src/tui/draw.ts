@@ -10,9 +10,9 @@
 import type { CellStyle } from "../core/rendering/layout/style.ts";
 import type { Color, Role, Theme } from "../core/rendering/theme/theme.ts";
 import { stringWidth, truncate } from "../core/foundation/text/width.ts";
-import type { App, View } from "./app.ts";
-import { type Canvas, drawText } from "./canvas.ts";
-import { prettyKey } from "./keys.ts";
+import type { App, View } from "./app/runtime/app.ts";
+import { type Canvas, drawText } from "./shell/terminal/canvas.ts";
+import { prettyKey } from "./shell/input/keys.ts";
 import type { SaveAsGeometry } from "./saveas.ts";
 import type { DialogGeometry } from "./dialog.ts";
 import { LEFT_VIEWS, RIGHT_VIEWS } from "./panels.ts";

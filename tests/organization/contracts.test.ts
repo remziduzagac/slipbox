@@ -19,7 +19,10 @@ test("command areas reject the composer for values, types, re-exports and dynami
     ),
   ).toEqual([]);
   expect(
-    commandViolations("src/core/application/commands/contracts.ts", 'import type { App } from "../../tui/app";'),
+    commandViolations(
+      "src/core/application/commands/contracts.ts",
+      'import type { App } from "../../../tui/app/runtime/app";',
+    ),
   ).toHaveLength(1);
 });
 

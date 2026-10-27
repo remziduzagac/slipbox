@@ -21,7 +21,7 @@ import {
   LINK_REASON,
   type WalkCap,
 } from "../core/workspace/walk/walk.ts";
-import type { App } from "./app.ts";
+import type { App } from "./app/runtime/app.ts";
 import type { TreeRow } from "./explorer.ts";
 
 /**

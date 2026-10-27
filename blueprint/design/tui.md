@@ -388,9 +388,9 @@ short.
   each note by its absolute path and the vault it was read from (D76; [roots.md](roots.md) § State by vault).
 - **Workspaces** (WSP-D1, WSP-D2): a workspace is the tabs and the active one, the pinned ones, splits with their
   orientation and ratio, and each window's note, cursor and history (its last 50 places each way). A vault keeps its
-  workspaces in its `session.json` (the `Session`, `tui/session.ts`), found in this order: in home, one per folder
-  opened by name (below); else the branch's, once left; else, in home, home's own; else the vault's last tabs,
-  whatever branch left them (a vault without git, a detached head, which keeps none of its own, a branch not yet
+  workspaces in its `session.json` (the `Session`, `tui/workspace/session/session.ts`), found in this order: in home,
+  one per folder opened by name (below); else the branch's, once left; else, in home, home's own; else the vault's last
+  tabs, whatever branch left them (a vault without git, a detached head, which keeps none of its own, a branch not yet
   left). Beside them, shared by them: the explorer's and the outline's visibility and widths, the Problems panel's
   height, UI setting overrides, the palette's recent commands, the recent notes and the nvim picked for send. A
   workspace is restored when slipbox starts with no note named, no path or a folder (`slipbox ~/notes`), if
@@ -419,20 +419,19 @@ forward with the mouse; the path, clicked, lists the window's timeline (see the 
 The TUI is always in one vault ([roots.md](roots.md)): a folder holding a vault marker, home (`~`, a vault without one),
 or Elsewhere, the rest of the file system, one place for the machine (VV-D1–VV-D3); each with its workspaces, its own
 (`21.8`; D76, WSP-D1). The current vault is the one whose tabs are shown. **Choosing a file or folder of another vault
-goes into it** (VV-D4; `switchVault` in `tui/vaults.ts`): `enter` or a double-click on another vault's row in the
-explorer, a file of another vault opened from the explorer or with `:e` (a path, a pointer; `intoOther`), `o` in a peek
-(§ The peek), the git panel's `o` on a repository, a checkout or a branch's worktree (Open), a named folder picked from
-`space v v` or from the top bar's vault, clicked (WSP-D4), a folder link that leads out of the vault (revealed in its
-own vault, D81). The TUI becomes that vault's, as if started there — its config, its index (refreshed), its watcher, its
-reading positions and your workspace there, whose tabs come back, with the note open (at its heading). What git said of
-the vault left is forgotten — its files' states, the git panel's files, where its branch stood, those opened up — and
-the git panel's message box is emptied: a message typed in one vault is never committed in another. Leaving saves the
-one before as quitting does. Unsaved notes ask Save all and go, Discard and go, or Stay (VB-D4); all saves must
-succeed before leaving. Release the outgoing buffers, parses, index and pending work; keep return history only as
-paths and positions, restoring from disk. The properties editor closes first, writing its edits into the note — or,
-while it asks,
-nothing switches. **Looking never moves you** (VV-D7): following a link into another
-vault, a backlink from one and another vault's search hit open a peek instead, going there a choice (§ The peek).
+goes into it** (VV-D4; `switchVault` in `tui/workspace/vaults/vaults.ts`): `enter` or a double-click on another vault's
+row in the explorer, a file of another vault opened from the explorer or with `:e` (a path, a pointer; `intoOther`), `o`
+in a peek (§ The peek), the git panel's `o` on a repository, a checkout or a branch's worktree (Open), a named folder
+picked from `space v v` or from the top bar's vault, clicked (WSP-D4), a folder link that leads out of the vault
+(revealed in its own vault, D81). The TUI becomes that vault's, as if started there — its config, its index (refreshed),
+its watcher, its reading positions and your workspace there, whose tabs come back, with the note open (at its heading).
+What git said of the vault left is forgotten — its files' states, the git panel's files, where its branch stood, those
+opened up — and the git panel's message box is emptied: a message typed in one vault is never committed in another.
+Leaving saves the one before as quitting does. Unsaved notes ask Save all and go, Discard and go, or Stay (VB-D4); all
+saves must succeed before leaving. Release the outgoing buffers, parses, index and pending work; keep return history
+only as paths and positions, restoring from disk. The properties editor closes first, writing its edits into the note —
+or, while it asks, nothing switches. **Looking never moves you** (VV-D7): following a link into another vault, a
+backlink from one and another vault's search hit open a peek instead, going there a choice (§ The peek).
 
 **Back returns.** `back` (`ctrl+o`) from the first place in a vault goes to the vault before, at the note and place
 you left; each switch is remembered, so a chain of them unwinds one by one. From a vault gone into from a tab kept from
@@ -654,21 +653,21 @@ peek, never a switch (D50's switch on following a link is gone). So does a backl
 `:e` with a path or a pointer, the explorer and `space v v` still go there: choosing, not looking (VV-D4; § Going into a
 vault). A folder link out of the vault is revealed in its own vault, as before (D81), going into it, from a peek too.
 
-- **The window:** the floating window (`3.20`) of kind `peek`, a virtual buffer of the file's text (`peek:<path>`,
-  never read from or written to the disk again, never a place remembered), read-only (`a peek is read-only — o goes
-  there, to edit it`). A note is rendered, a data or code file shown as its kind opens; a binary file isn't peeked at,
-  said so. A file reached through a link its place hasn't followed isn't read: the peek holds `Not read here: … isn't
-  followed in kestrel`, `t` keeps nothing, and `o` goes there, where opening it asks; a link of the current vault's on
-  the way asks first, as opening it would ([roots.md](roots.md) § Links followed only when you say so). Its
-  `elsewhere` holds its vault's name and the vault's graph and path there: the layout reads its links and
-  embeds in that graph, and `followLink` resolves them there (`tui/actions.ts`). Its size: the screen's width less an
-  eighth (at least four columns) and four more for its margin, and the main area's height less a tenth (at least a row)
-  and two more, centred; `z` (`peek.fill`) the whole content area, no margin; again, back. Titled
+- **The window:** the floating window (`3.20`) of kind `peek`, a virtual buffer of the file's text (`peek:<path>`, never
+  read from or written to the disk again, never a place remembered), read-only
+  (`a peek is read-only — o goes there, to edit it`). A note is rendered, a data or code file shown as its kind opens; a
+  binary file isn't peeked at, said so. A file reached through a link its place hasn't followed isn't read: the peek
+  holds `Not read here: … isn't followed in kestrel`, `t` keeps nothing, and `o` goes there, where opening it asks; a
+  link of the current vault's on the way asks first, as opening it would ([roots.md](roots.md) § Links followed only
+  when you say so). Its `elsewhere` holds its vault's name and the vault's graph and path there: the layout reads its
+  links and embeds in that graph, and `followLink` resolves them there (`tui/actions/actions.ts`). Its size: the
+  screen's width less an eighth (at least four columns) and four more for its margin, and the main area's height less a
+  tenth (at least a row) and two more, centred; `z` (`peek.fill`) the whole content area, no margin; again, back. Titled
   `kestrel › docs/architecture.md`, `~ › todo.md` in home, `Elsewhere › /etc/hosts` outside every vault, the path cut
-  from the front when it doesn't fit (`peekTitle`), so the vault and the file's name stay; its bottom border `o go
-  there · t keep as a tab · z fill · ctrl+o back · esc closes` (`z smaller` while it fills the screen, `ctrl+o back`
-  while it has somewhere to go back to). The top bar keeps the current vault (the status line, while the bar is
-  hidden), the status line's path being the peek's (`kestrel: docs/architecture.md`).
+  from the front when it doesn't fit (`peekTitle`), so the vault and the file's name stay; its bottom border
+  `o go there · t keep as a tab · z fill · ctrl+o back · esc closes` (`z smaller` while it fills the screen,
+  `ctrl+o back` while it has somewhere to go back to). The top bar keeps the current vault (the status line, while the
+  bar is hidden), the status line's path being the peek's (`kestrel: docs/architecture.md`).
 - **Keys:** the peek's keymap (`DEFAULT_PEEK_KEYS`, over the note's, not in visual mode): `o` `peek.go`, `t`
   `peek.tab`, `z` `peek.fill`; `esc` closes it (a find first), `q` too, as every floating window. `/`, the moves, the
   selection and `y` as in any rendered note. The keymap has no table of its own in the config: a key for its commands
@@ -757,23 +756,24 @@ vault). A folder link out of the vault is revealed in its own vault, as before (
   settings are fixed when it's made. A vault's catch-ups run one after another, each against the graph held for it by
   then (this TUI's reach as it is then, or a peeked vault's), so an answer that comes while another's waits on its probe
   never opens anew a graph already let go of. A rebuild that fails leaves the backlinks shown. When that index couldn't
-  be written, or the thread failed, its notes are parsed here as this vault's own are (`parseInSlices`, `tui/watch.ts`):
-  a slice at a time, a big one on the parse threads, stopped once the graph is let go of. A tab of another vault's file
-  — kept from a peek, back with the session — asks the thread to catch its vault up too, with its first view
-  (`makeView`; a buffer read for an edit alone asks nothing, a split nothing more), its index built if it has none
-  (`keepCaughtUp`). A rename that gives this TUI a new reach (a vault made or unmade, this vault's config renamed) gives
-  every buffer of another vault's file that vault's graph as the new reach opens it, and asks its catch-up
-  (`reachedAgain`), or none, its file no vault's other than this one any more (a vault unmade). The TUI's reached graphs
-  write nothing of their vaults' here (`readOnly`): no index, no redirects, no commit caught up with, no `git diff` run
-  here to find moves — but home's walk, kept as every graph on the main thread keeps it, never on the thread
-  (`Graph.keepsWalk`). The thread does it all, off the keys, and each answer has the graph's redirects read again. A
-  vault nested in this one without an index is opened and built on the thread, not parsed whole here (`nested: "open"`).
-  Once the thread has written another vault's index — the peeked one's, or one nested in it it built (`others`), each
-  stamped indexed in the machine's list — this vault's backlinks from other vaults are read again, the machine's list
-  with them, whatever the indexes' mtimes say (a coarse clock gives a rewrite the mtime it had), and what's worked out
-  from them (its `generation`: the Info view's count); every view is laid out again whether or not the graph there
-  changed (`othersChanged`), and the explorer's rows are made again, a vault's saying whether it has an index. A third
-  vault's graph, held by a peeked vault's reach, is caught up only while that vault's graph is held itself.
+  be written, or the thread failed, its notes are parsed here as this vault's own are (`parseInSlices`,
+  `tui/app/runtime/watch.ts`): a slice at a time, a big one on the parse threads, stopped once the graph is let go of. A
+  tab of another vault's file — kept from a peek, back with the session — asks the thread to catch its vault up too,
+  with its first view (`makeView`; a buffer read for an edit alone asks nothing, a split nothing more), its index built
+  if it has none (`keepCaughtUp`). A rename that gives this TUI a new reach (a vault made or unmade, this vault's config
+  renamed) gives every buffer of another vault's file that vault's graph as the new reach opens it, and asks its
+  catch-up (`reachedAgain`), or none, its file no vault's other than this one any more (a vault unmade). The TUI's
+  reached graphs write nothing of their vaults' here (`readOnly`): no index, no redirects, no commit caught up with, no
+  `git diff` run here to find moves — but home's walk, kept as every graph on the main thread keeps it, never on the
+  thread (`Graph.keepsWalk`). The thread does it all, off the keys, and each answer has the graph's redirects read
+  again. A vault nested in this one without an index is opened and built on the thread, not parsed whole here
+  (`nested: "open"`). Once the thread has written another vault's index — the peeked one's, or one nested in it it built
+  (`others`), each stamped indexed in the machine's list — this vault's backlinks from other vaults are read again, the
+  machine's list with them, whatever the indexes' mtimes say (a coarse clock gives a rewrite the mtime it had), and
+  what's worked out from them (its `generation`: the Info view's count); every view is laid out again whether or not the
+  graph there changed (`othersChanged`), and the explorer's rows are made again, a vault's saying whether it has an
+  index. A third vault's graph, held by a peeked vault's reach, is caught up only while that vault's graph is held
+  itself.
 - **Mouse:** a click on a link out of the vault peeks; `ctrl+click` (`link.go`, the terminal's ctrl with a click) goes
   there at once, a peek skipped; within the vault it's a click. A click outside the peek closes it.
 
@@ -1440,14 +1440,13 @@ form's fields, by one rule, which also says where an added screen goes:
 
 **What you saw, if you add it** (RPT-D2). slipbox keeps two things when the report opens, and puts neither in it:
 
-- **The screen as text:** the frame drawn after the command ran — the palette, help or the which-key popup that ran
-  it closed, the messages showing as they were — drawn as every frame is and kept as text too, onto a `TextCanvas` of
-  the screen's size (`tui/canvas.ts`) beside the terminal's canvas, that frame only; the window opens on the next. Its
-  rows, with their trailing blanks cut. A picture isn't text, and isn't in it. Keys after the command wait for that
-  frame (a quarter of a second at most, and then no more), so a paste or keys sent at once go to the report, never
-  the window under it; `:report screen` and `:report where` asked before it both add theirs.
-  A frame whose drawing failed is kept as the screen that says so, and the report opens all the same: it's wanted
-  most then.
+- **The screen as text:** the frame drawn after the command ran — the palette, help or the which-key popup that ran it
+  closed, the messages showing as they were — drawn as every frame is and kept as text too, onto a `TextCanvas` of the
+  screen's size (`tui/shell/terminal/canvas.ts`) beside the terminal's canvas, that frame only; the window opens on the
+  next. Its rows, with their trailing blanks cut. A picture isn't text, and isn't in it. Keys after the command wait for
+  that frame (a quarter of a second at most, and then no more), so a paste or keys sent at once go to the report, never
+  the window under it; `:report screen` and `:report where` asked before it both add theirs. A frame whose drawing
+  failed is kept as the screen that says so, and the report opens all the same: it's wanted most then.
 - **Where you were:** the window's file (its path in the vault, else from home, `~/…`; a peek's, its vault's name and
   its path there), the cursor's line number and
   how it was shown (rendered, source, the lens open; nothing said for a file that isn't a note), then that line's
@@ -1548,10 +1547,9 @@ report --json` first.
 
 Code: `tui/report.ts` (the `Reporter`, `app.report`: the window, the frame and place kept, the menu, sending),
 `core/application/distribution/report.ts` (the facts, the report's text, reading it back, the address's plan),
-`core/foundation/platform/browser.ts`,
-`core/application/distribution/gh.ts`, `cli/report.ts` (`slipbox report`, dispatched by `cli/cli.ts` before the
-session); the host's
-`terminal()` (`tui/run.ts`) hands the TUI a plain copy of OpenTUI's answer, so nothing else touches OpenTUI.
+`core/foundation/platform/browser.ts`, `core/application/distribution/gh.ts`, `cli/report.ts` (`slipbox report`,
+dispatched by `cli/cli.ts` before the session); the host's `terminal()` (`tui/shell/terminal/run.ts`) hands the TUI a
+plain copy of OpenTUI's answer, so nothing else touches OpenTUI.
 
 ## Overlays
 
@@ -1646,14 +1644,13 @@ its title (`␣ l › links`), the hint (`backspace up · esc cancel`) in its bo
 below the entries, and the same margin; it sits centred just above the bottom of the content area. A prefix of one key,
 which no popup above it lists with its explanation (`z`, `[`, `]`, `g`, `y`, `ctrl+w`), has its explanation in the title
 too, after a colon: `z › scroll: the cursor's line to the middle (z), top (t), …` (DF-D31; `groupExplanation` in
-`tui/input.ts`). The box widens to hold that title, as far as the screen allows (past the entries' 140 columns), and a
-title still too long is cut with `…`. On a short screen the blank rows go first, then the explanations (the blank rows
-never show without them); entries that still don't fit are counted in the bottom border (`+3 more`), and with no room at
-all the popup isn't drawn. The entries are in at most three columns, as many as fit. Each column is sized to its own
-entries, so a long explanation in one never spreads the others apart. If the rows would lose explanations, try
-shortening the widest text columns (to twenty cells at minimum) to fit more columns and retain explanations.
-Each entry is `key → name` with a short, dimmed
-explanation underneath:
+`tui/shell/input/input.ts`). The box widens to hold that title, as far as the screen allows (past the entries' 140
+columns), and a title still too long is cut with `…`. On a short screen the blank rows go first, then the explanations
+(the blank rows never show without them); entries that still don't fit are counted in the bottom border (`+3 more`), and
+with no room at all the popup isn't drawn. The entries are in at most three columns, as many as fit. Each column is
+sized to its own entries, so a long explanation in one never spreads the others apart. If the rows would lose
+explanations, try shortening the widest text columns (to twenty cells at minimum) to fit more columns and retain
+explanations. Each entry is `key → name` with a short, dimmed explanation underneath:
 
 - **For a command:** its `desc` in `core/application/commands/areas/*.ts`.
 - **For a group:** from `[groups]`: its explanation under its name, or, for a prefix of one key, in the popup's own
@@ -1801,7 +1798,7 @@ first marked `↪`, as `slipbox render` always does. The code view's cells are t
 A note's picture is sized for the window it's in: fitted to it (rendering.md § Blocks and inlines), or at its own size
 by choice. What the window shows at its own size, and its pictures' rest, are kept by `tui/pictures.ts`; the sizes are
 worked out by `tui/images.ts`; the rows laid out by `core/rendering/layout/markdown/render.ts`; the drawing done by
-`tui/draw-pane.ts`, `tui/opentui.ts` and `tui/placeholders.ts`; the commands are
+`tui/draw-pane.ts`, `tui/shell/terminal/opentui.ts` and `tui/placeholders.ts`; the commands are
 `src/core/application/commands/areas/motion.ts`'s, done in `tui/actions-view.ts`.
 
 - **What it's fitted to.** The window's room: its text columns less what's before the picture (a list's indent, a
@@ -2574,19 +2571,18 @@ or master; `data.baseChosen` says how (`given`, `kept`, `nearest`, `configured`)
 names into `--into`, else HEAD.
 
 **A base asked for** (D255; `core/workspace/git/gitbase.ts`): `resolveBase` (`resolveBaseLater` on the screen) takes
-what was typed —
-never an option, a space or a control character — and keeps a branch, remote branch or tag by its plain name
-(`plainName` of git's `--symbolic-full-name`: `refs/heads/dev`, `heads/dev` and `dev` are `dev`, `HEAD` the branch
+what was typed — never an option, a space or a control character — and keeps a branch, remote branch or tag by its plain
+name (`plainName` of git's `--symbolic-full-name`: `refs/heads/dev`, `heads/dev` and `dev` are `dev`, `HEAD` the branch
 checked out, `origin` its default branch), anything else (`HEAD~3`, `ORIG_HEAD`, a short hash) as the commit it names: a
 kept base never moves with HEAD, and the branch itself is refused however it's spelt (`full`). Opening the screen with
-`--base <ref>` (`tui/run.ts` `prepare`, `baseAtOpen`) keeps it for the branch checked out there before the screen is
-taken: a ref that names nothing is said in a line, exit 3; a detached HEAD, the branch itself or no repository keep
-nothing, said as the screen opens (`AppOptions.notes`, `warnings`). Compare against… lists the local branches, then the
-remote-tracking ones (`remoteBranchesLater`: `refs/remotes/`, their `HEAD`s left out), then **A branch, tag or
-commit…**, a prompt checked the same way. With a remote-tracking base (`isRemoteTracking`: under `refs/remotes/`, loose
-or packed), This branch against ends with when the fetch that last moved it ran (`remoteMovedAt`: its reflog's last
-entry, in the repository's shared folder; `· updated 2 h ago`, or `· as of the last fetch` where git kept no record, as
-for a branch a clone made), whether it's remote asked once each time git has news.
+`--base <ref>` (`tui/shell/terminal/run.ts` `prepare`, `baseAtOpen`) keeps it for the branch checked out there before
+the screen is taken: a ref that names nothing is said in a line, exit 3; a detached HEAD, the branch itself or no
+repository keep nothing, said as the screen opens (`AppOptions.notes`, `warnings`). Compare against… lists the local
+branches, then the remote-tracking ones (`remoteBranchesLater`: `refs/remotes/`, their `HEAD`s left out), then **A
+branch, tag or commit…**, a prompt checked the same way. With a remote-tracking base (`isRemoteTracking`: under
+`refs/remotes/`, loose or packed), This branch against ends with when the fetch that last moved it ran (`remoteMovedAt`:
+its reflog's last entry, in the repository's shared folder; `· updated 2 h ago`, or `· as of the last fetch` where git
+kept no record, as for a branch a clone made), whether it's remote asked once each time git has news.
 
 What's on request (the changes, a diff, the worktrees) asks git there and then; the explorer's marks and the panel's
 rows are asked in the background (D154; § Side panes).

@@ -1,8 +1,8 @@
 // Drawing what floats over the windows: the floating window, dialogs — a question's, and one of choices and
 // checkboxes — menus and dropdowns, lists with their footers and keycaps, the which-key popup, and the save-as browser.
 
-import type { App, PromptOverlay, ListOverlay, ListItem } from "./app.ts";
-import { type Canvas, drawText } from "./canvas.ts";
+import type { App, PromptOverlay, ListOverlay, ListItem } from "./app/runtime/app.ts";
+import { type Canvas, drawText } from "./shell/terminal/canvas.ts";
 import { type SaveAsOverlay, type SaveAsGeometry, placeOf, sizeText, dateText } from "./saveas.ts";
 import { type DialogGeometry, type DialogOverlay, cursorHelp, dimmed } from "./dialog.ts";
 import { type Geometry, type Rect, roleStyle, keyText, coverHot } from "./draw.ts";

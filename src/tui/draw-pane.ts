@@ -2,8 +2,8 @@
 // its code scrolled sideways — the gutter and its signs, the problems bar, pictures, the cursor, the scrollbars, and
 // the completion and signature popups at the cursor.
 
-import type { App, View, Tab } from "./app.ts";
-import { type Canvas, drawText } from "./canvas.ts";
+import type { App, View, Tab } from "./app/runtime/app.ts";
+import { type Canvas, drawText } from "./shell/terminal/canvas.ts";
 import { type Rect, type Geometry, pageBg, roleStyle, button, markStyle } from "./draw.ts";
 import { drawWindowHeader } from "./draw-header.ts";
 import { truncate, stringWidth, truncateStart, graphemes, graphemeWidth } from "../core/foundation/text/width.ts";

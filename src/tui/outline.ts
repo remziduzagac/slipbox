@@ -2,7 +2,7 @@
 // the breadcrumb of headings above it.
 
 import { match } from "./match.ts";
-import type { App, View } from "./app.ts";
+import type { App, View } from "./app/runtime/app.ts";
 
 /** The outline view and the breadcrumb. */
 export class OutlineView {

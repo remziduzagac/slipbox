@@ -2,25 +2,25 @@ import { vaultChoices } from "./vault-list.ts";
 // Vaults in the TUI (17.x, VV): switching into another and back, a folder made a vault or unmade, the named folders
 // and their copies (21.x).
 
-import { cancelGitRead } from "./gitquery.ts";
+import { cancelGitRead } from "../../gitquery.ts";
 import { existsSync } from "node:fs";
 import { dirname, isAbsolute, join, posix, relative } from "node:path";
-import { writeDirty } from "../core/workspace/git/merge/stale.ts";
-import { loadConfig } from "../core/application/config/config.ts";
-import { Graph } from "../core/workspace/graph/graph.ts";
-import { leftOutOfHome, walksInto } from "../core/workspace/vaults/home.ts";
-import { lintCommand } from "../core/documents/diagnostics/lint.ts";
-import { slipboxOwn } from "../core/foundation/platform/paths.ts";
+import { writeDirty } from "../../../core/workspace/git/merge/stale.ts";
+import { loadConfig } from "../../../core/application/config/config.ts";
+import { Graph } from "../../../core/workspace/graph/graph.ts";
+import { leftOutOfHome, walksInto } from "../../../core/workspace/vaults/home.ts";
+import { lintCommand } from "../../../core/documents/diagnostics/lint.ts";
+import { slipboxOwn } from "../../../core/foundation/platform/paths.ts";
 import {
   type Anchor,
   type CursorAnchor,
   loadSession,
   PositionStore,
   type SessionTab,
-} from "../core/workspace/session/position.ts";
-import { stopBacklinkJobs } from "../core/workspace/graph/backlinks-jobs.ts";
-import { openVault } from "../core/workspace/links/reach.ts";
-import { tuiReach } from "./peek.ts";
+} from "../../../core/workspace/session/position.ts";
+import { stopBacklinkJobs } from "../../../core/workspace/graph/backlinks-jobs.ts";
+import { openVault } from "../../../core/workspace/links/reach.ts";
+import { tuiReach } from "../../peek.ts";
 import {
   type Applied,
   applyPlan,
@@ -28,8 +28,8 @@ import {
   planRelink,
   planUnmakeVault,
   planVaultRename,
-} from "../core/workspace/mutations/rename/rename.ts";
-import { rootLabel, tildePath } from "../core/workspace/vaults/names.ts";
+} from "../../../core/workspace/mutations/rename/rename.ts";
+import { rootLabel, tildePath } from "../../../core/workspace/vaults/names.ts";
 import {
   copyAvailable,
   folderIdentity,
@@ -39,7 +39,7 @@ import {
   repositoryCopies,
   setDefaultCopy,
   suggestFolderName,
-} from "../core/workspace/vaults/folders.ts";
+} from "../../../core/workspace/vaults/folders.ts";
 import {
   configFilesFor,
   initVault,
@@ -51,10 +51,10 @@ import {
   recordLocation,
   rootAt,
   type VaultLocation,
-} from "../core/workspace/vaults/vault.ts";
-import type { App, ListItem, PromptOverlay } from "./app.ts";
-import { uiDefaults, RECENT_MAX, RECENT_NOTES_MAX } from "./app.ts";
-import { type ExplorerItem, listedDown, type TreeRow } from "./explorer.ts";
+} from "../../../core/workspace/vaults/vault.ts";
+import type { App, ListItem, PromptOverlay } from "../../app/runtime/app.ts";
+import { uiDefaults, RECENT_MAX, RECENT_NOTES_MAX } from "../../app/runtime/app.ts";
+import { type ExplorerItem, listedDown, type TreeRow } from "../../explorer.ts";
 
 /** Vaults: switching, making and unmaking, named folders. */
 export class Vaults {

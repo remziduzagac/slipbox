@@ -2,8 +2,8 @@ import { branchMenu } from "./gitmouse.ts";
 // The commands of windows, tabs and panels (`window.*`, `tab.*`, `history.*`, the panels' and source control's):
 // splits and tabs, each window's history, the side panels' views, the Problems panel, git's changes.
 
-import { type Run, withView, lay } from "./actions.ts";
-import type { App } from "./app.ts";
+import { type Run, withView, lay } from "./actions/actions.ts";
+import type { App } from "./app/runtime/app.ts";
 import { diffSwitch } from "./diffview.ts";
 import { blameHere, historyHere } from "./githistory.ts";
 import { gitStep, gitPreview, gitReset } from "./gitchanges.ts";

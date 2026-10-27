@@ -47,7 +47,7 @@ async function main(): Promise<number> {
     );
     return EXIT.usage;
   }
-  const { runTui } = await import("./tui/run.ts");
+  const { runTui } = await import("./tui/shell/terminal/run.ts");
   return runTui(tuiArgs);
 }
 

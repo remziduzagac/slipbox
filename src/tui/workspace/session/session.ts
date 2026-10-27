@@ -3,7 +3,7 @@
 // on start; and the state published for the command line — the notes unsaved here (9.9), what's on screen. The code
 // keeps the word session (WSP-D6); users read workspace.
 
-import { writeDirty } from "../core/workspace/git/merge/stale.ts";
+import { writeDirty } from "../../../core/workspace/git/merge/stale.ts";
 import {
   SESSION_BRANCHES,
   SESSION_FOLDERS,
@@ -13,10 +13,10 @@ import {
   saveSession,
   type SessionState,
   type TabSet,
-} from "../core/workspace/session/position.ts";
-import { listThemes } from "../core/rendering/theme/index.ts";
-import type { App, View, UiState } from "./app.ts";
-import { uiDefaults } from "./app.ts";
+} from "../../../core/workspace/session/position.ts";
+import { listThemes } from "../../../core/rendering/theme/index.ts";
+import type { App, View, UiState } from "../../app/runtime/app.ts";
+import { uiDefaults } from "../../app/runtime/app.ts";
 
 /** The workspaces kept and restored, and the state published for the CLI. */
 export class Session {

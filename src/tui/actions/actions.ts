@@ -3,25 +3,25 @@
 // done here (the app's own: escape, copying, the UI settings, the theme, the scratch, quitting) or
 // in the actions-*.ts module of its area (D235). The keys are in keys.ts and docs/manual/keys.md.
 
-import { cancelGitRead } from "./gitquery.ts";
-import { clearScratch, dropEmptyAsks, formatEntry, readScratch } from "../core/workspace/mutations/capture.ts";
-import { COMMAND_SPECS } from "../core/application/commands/catalog.ts";
-import type { Command } from "../core/application/commands/registry.ts";
-import { listThemes, loadTheme } from "../core/rendering/theme/index.ts";
-import type { App, ListItem, UiState, View } from "./app.ts";
-import * as C from "./cursor.ts";
-import * as E from "./editing.ts";
-import { shellFilter, shellRun, shellStop } from "./shellrun.ts";
-import { parseBang } from "../core/foundation/platform/shell.ts";
-import { prettyKey } from "./keys.ts";
-import { openPalette, openHelp } from "./palette.ts";
-import { viewActions } from "./actions-view.ts";
-import { editActions } from "./actions-edit.ts";
-import { linkActions, linkTarget } from "./actions-links.ts";
-import { findActions } from "./actions-find.ts";
-import { paneActions } from "./actions-panes.ts";
-import { fileActions } from "./actions-files.ts";
-import { lspActions } from "./actions-lsp.ts";
+import { cancelGitRead } from "../gitquery.ts";
+import { clearScratch, dropEmptyAsks, formatEntry, readScratch } from "../../core/workspace/mutations/capture.ts";
+import { COMMAND_SPECS } from "../../core/application/commands/catalog.ts";
+import type { Command } from "../../core/application/commands/registry.ts";
+import { listThemes, loadTheme } from "../../core/rendering/theme/index.ts";
+import type { App, ListItem, UiState, View } from "../app/runtime/app.ts";
+import * as C from "../cursor.ts";
+import * as E from "../editing.ts";
+import { shellFilter, shellRun, shellStop } from "../shellrun.ts";
+import { parseBang } from "../../core/foundation/platform/shell.ts";
+import { prettyKey } from "../shell/input/keys.ts";
+import { openPalette, openHelp } from "../palette.ts";
+import { viewActions } from "../actions-view.ts";
+import { editActions } from "../actions-edit.ts";
+import { linkActions, linkTarget } from "../actions-links.ts";
+import { findActions } from "../actions-find.ts";
+import { paneActions } from "../actions-panes.ts";
+import { fileActions } from "../actions-files.ts";
+import { lspActions } from "../actions-lsp.ts";
 
 export type Run = Command<App>["run"];
 

@@ -24,7 +24,7 @@ import {
 } from "../core/workspace/git/branches/gitremote.ts";
 import { sanitize } from "../core/foundation/text/sanitize.ts";
 import { isTrusted } from "../core/workspace/vaults/trust.ts";
-import type { App } from "./app.ts";
+import type { App } from "./app/runtime/app.ts";
 import { askDiverged } from "./rebase.ts";
 
 /** What's running, by app: one of these at a time. */

@@ -2,20 +2,20 @@
 // Imported lazily by main.ts only when stdout and stdin are terminals (9.3).
 
 import { createCliRenderer, type KeyEvent } from "@opentui/core";
-import { flag, parseArgs } from "../cli/args.ts";
-import { loadConfig } from "../core/application/config/config.ts";
-import { Graph, openGraph } from "../core/workspace/graph/graph.ts";
-import { sanitize } from "../core/foundation/text/sanitize.ts";
-import { setWidthMethod } from "../core/foundation/text/width.ts";
+import { flag, parseArgs } from "../../../cli/args.ts";
+import { loadConfig } from "../../../core/application/config/config.ts";
+import { Graph, openGraph } from "../../../core/workspace/graph/graph.ts";
+import { sanitize } from "../../../core/foundation/text/sanitize.ts";
+import { setWidthMethod } from "../../../core/foundation/text/width.ts";
 import { appendFileSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { dataHome, stateHome } from "../core/foundation/platform/paths.ts";
-import { installedBy, readChannel } from "../core/application/distribution/install.ts";
-import { RELEASE } from "../core/application/distribution/release.ts";
-import { upgrade, upgradeSaid } from "../core/application/distribution/update.ts";
-import { handOver, nextLaunch, startedPath, takeNote } from "../core/application/distribution/restart.ts";
-import { windowsDriveNote } from "../core/foundation/platform/wsl.ts";
-import { VERSION } from "../version.ts";
+import { dataHome, stateHome } from "../../../core/foundation/platform/paths.ts";
+import { installedBy, readChannel } from "../../../core/application/distribution/install.ts";
+import { RELEASE } from "../../../core/application/distribution/release.ts";
+import { upgrade, upgradeSaid } from "../../../core/application/distribution/update.ts";
+import { handOver, nextLaunch, startedPath, takeNote } from "../../../core/application/distribution/restart.ts";
+import { windowsDriveNote } from "../../../core/foundation/platform/wsl.ts";
+import { VERSION } from "../../../version.ts";
 import {
   elsewhereAt,
   homeAt,
@@ -28,12 +28,12 @@ import {
   setRootMarkers,
   VaultError,
   type VaultLocation,
-} from "../core/workspace/vaults/vault.ts";
-import { setTrustedRoots } from "../core/workspace/vaults/trust.ts";
-import { baseAtOpen } from "../core/workspace/git/gitbase.ts";
-import { App, type AppOptions } from "./app.ts";
-import { type CameBack, cameBack, type Place } from "./updates.ts";
-import { keyName } from "./keys.ts";
+} from "../../../core/workspace/vaults/vault.ts";
+import { setTrustedRoots } from "../../../core/workspace/vaults/trust.ts";
+import { baseAtOpen } from "../../../core/workspace/git/gitbase.ts";
+import { App, type AppOptions } from "../../app/runtime/app.ts";
+import { type CameBack, cameBack, type Place } from "../../updates.ts";
+import { keyName } from "../input/keys.ts";
 import type { Canvas } from "./canvas.ts";
 import { AppRenderable, Pictures, toRGBA } from "./opentui.ts";
 

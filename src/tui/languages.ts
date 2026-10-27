@@ -28,7 +28,7 @@ import { type LinterDef, linterRoot, linterTable, runLinter } from "../core/docu
 import { rootFor } from "../core/documents/servers/find.ts";
 import { ServerManager } from "../core/documents/servers/manager.ts";
 import type { NoteBuffer } from "./buffer.ts";
-import type { App, View, ListItem } from "./app.ts";
+import type { App, View, ListItem } from "./app/runtime/app.ts";
 import { SymbolKind } from "vscode-languageserver-protocol";
 
 /** Syntax, language servers, linters, and the trust they need. */

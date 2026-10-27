@@ -21,8 +21,8 @@ const { canonKey } = await import("../src/core/application/commands/registry.ts"
 const { DEFAULT_CONFIG } = await import("../src/core/application/config/config.ts");
 const { openGraph } = await import("../src/core/workspace/graph/graph.ts");
 const { locateVault } = await import("../src/core/workspace/vaults/vault.ts");
-const { App } = await import("../src/tui/app.ts");
-const { TextCanvas } = await import("../src/tui/canvas.ts");
+const { App } = await import("../src/tui/app/runtime/app.ts");
+const { TextCanvas } = await import("../src/tui/shell/terminal/canvas.ts");
 
 const vault = join(dir, "vault");
 const MAIN = join(import.meta.dir, "..", "src", "main.ts");

@@ -49,17 +49,17 @@ that a busy machine can't fail and that still fails if the main thread is held w
   20–28 ms of a 500–690 ms load. On one CPU (`taskset -c 0`): 40–137 ms of 450–920 ms. On one CPU shared with three
   busy loops: 220–372 ms of 2.2–3.3 s; the whole spelling block that way, 63–248 ms of 1.2–1.5 s. Always passes.
 - 2026-10-23: Is it the machine, or the process? The timing records nothing on the thread's side. A suspect: the App's
-  lazy listener (`src/tui/app.ts`, `onLoaded`), removed only on quit, which a test's App never does, so hundreds pile
-  up late in a test file. Measured with N harnesses created just before the timed window (the
-  build asked directly or by `space u s`): 0, no gap; 300, 76 ms; 1000, 140–214 ms, at the window's start. Not the
-  listeners: one event in the window (the dictionary), about 8 ms for 1000 Apps. Not a collection of the main thread's
-  heap: JSC's GC log (`BUN_JSC_logGC=true`) shows 18 ms and 4 ms ones in the window (800 MB heap). Mostly not the main
-  thread's own work: its CPU time over the load rose by about 30 ms for a 180 ms gap. Not the build: with the thread
-  held at a named pipe before Hunspell's call, the gap came while it was held (66 ms), none during the build. And not
-  the request: with the other spelling tests run between the 1000 harnesses and the window, on one CPU, no gap (9 ms
-  of a 200 ms load). So it follows the harnesses' creation; what it is wasn't found. Which held CI's main thread can't
-  be told from here (the timing records nothing that would say); what's shown is that the test process alone can hold
-  the main thread through much of a load the thread builds.
+  lazy listener (`src/tui/app/runtime/app.ts`, `onLoaded`), removed only on quit, which a test's App never does, so
+  hundreds pile up late in a test file. Measured with N harnesses created just before the timed window (the build asked
+  directly or by `space u s`): 0, no gap; 300, 76 ms; 1000, 140–214 ms, at the window's start. Not the listeners: one
+  event in the window (the dictionary), about 8 ms for 1000 Apps. Not a collection of the main thread's heap: JSC's GC
+  log (`BUN_JSC_logGC=true`) shows 18 ms and 4 ms ones in the window (800 MB heap). Mostly not the main thread's own
+  work: its CPU time over the load rose by about 30 ms for a 180 ms gap. Not the build: with the thread held at a named
+  pipe before Hunspell's call, the gap came while it was held (66 ms), none during the build. And not the request: with
+  the other spelling tests run between the 1000 harnesses and the window, on one CPU, no gap (9 ms of a 200 ms load). So
+  it follows the harnesses' creation; what it is wasn't found. Which held CI's main thread can't be told from here (the
+  timing records nothing that would say); what's shown is that the test process alone can hold the main thread through
+  much of a load the thread builds.
 - 2026-10-23: A count, bounded by nothing but the test's timeout and the thread's own deadline: the dictionary's `.dic`
   a named pipe, so the thread, loading it, waits for its words; the main thread takes its turns there (timer ticks,
   keys typed and answered, frames drawn, the dictionary still not there) and only then writes them; the marks follow.

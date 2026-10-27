@@ -1,13 +1,13 @@
 // The commands of links (`link.*`, `links.*`, `backlinks.*`, `peek.*`): a link followed — to a note, a heading, a
 // line, another vault's file (a peek) or a pointer — cycled through, listed, its target copied.
 
-import { type Run, withView, lay } from "./actions.ts";
+import { type Run, withView, lay } from "./actions/actions.ts";
 import { diffEnter } from "./diffview.ts";
 import { canonKey } from "../core/application/commands/registry.ts";
-import { prettyKey } from "./keys.ts";
+import { prettyKey } from "./shell/input/keys.ts";
 import { peekGo, peekKeep, peekFill, peekInstead, ownPath } from "./peek.ts";
 import { planRelink, planVaultRename } from "../core/workspace/mutations/rename/rename.ts";
-import type { App, View, ListItem } from "./app.ts";
+import type { App, View, ListItem } from "./app/runtime/app.ts";
 import type { LayoutLink } from "../core/rendering/layout/ir.ts";
 import * as E from "./editing.ts";
 import { linkTokens } from "../core/documents/syntax/syntax.ts";

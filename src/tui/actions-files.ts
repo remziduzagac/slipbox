@@ -1,7 +1,7 @@
 // The commands of files and vaults (`note.*`, `folder.*`, `vault.*`, `trash.*`, `root.*`): notes and folders made,
 // opened, moved, renamed, exported and deleted; vaults made, unmade and described; a root trusted.
 
-import { type Run, withView } from "./actions.ts";
+import { type Run, withView } from "./actions/actions.ts";
 import { isPointer } from "../core/workspace/links/pointer.ts";
 import { fileLink } from "./actions-links.ts";
 import { join, dirname, isAbsolute, relative } from "node:path";
@@ -16,7 +16,7 @@ import { describeCap } from "../core/workspace/vaults/home.ts";
 import { describeBackground, backgroundStatus } from "../core/workspace/graph/autoindex.ts";
 import { cacheDir, stateDir } from "../core/foundation/platform/paths.ts";
 import { statSync } from "node:fs";
-import type { App } from "./app.ts";
+import type { App } from "./app/runtime/app.ts";
 
 /** Files and vaults: notes and folders made, opened, moved, renamed, exported and deleted; vaults made and switched; trust. */
 export function fileActions(): Record<string, Run> {

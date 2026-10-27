@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
-// D235: no source file grows past LIMIT lines. A class that does everything (src/tui/app.ts reached 11,500 lines) is
-// hard to read, to review and to change in parallel; a feature goes in a module of its own, the shared state and the
+// D235: no source file grows past LIMIT lines. A class that does everything (App once reached 11,500 lines) is hard
+// to read, to review and to change in parallel; a feature goes in a module of its own, the shared state and the
 // wiring staying where they are.
 //
 // A file past it has an exact cap. Apart from the import-formatting reset below, it may only shrink; lower its cap
@@ -22,9 +22,9 @@ export const CAPPED: Record<string, number> = {
   "src/core/rendering/layout/code/code.ts": 1424,
   "src/core/rendering/layout/markdown/render.ts": 1076,
   "src/core/documents/syntax/syntax.ts": 1170,
-  "src/tui/app.ts": 1453,
+  "src/tui/app/runtime/app.ts": 1459,
   "src/tui/explorer.ts": 1268,
-  "src/tui/keys.ts": 1166,
+  "src/tui/shell/input/keys.ts": 1166,
 };
 
 /** Generated data: separate measured cap; verify offline with `bun scripts/lock-servers.ts --check` (ORG-D2). */

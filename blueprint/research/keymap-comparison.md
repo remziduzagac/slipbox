@@ -163,4 +163,4 @@ The slipbox column was brought up to date on 2026-10-11 from [docs/manual/keys.m
 
 - vim's default keys; VS Code's default keybindings on Linux and Windows; Obsidian's default hotkeys (2026-09-29).
 - slipbox's own map: [docs/manual/keys.md](../../docs/manual/keys.md), read 2026-10-11 and checked against
-  `src/tui/keys.ts`.
+  `src/tui/shell/input/keys.ts`.

@@ -49,7 +49,7 @@ import { isTrusted } from "../core/workspace/vaults/trust.ts";
 import type { Head } from "../core/workspace/vaults/vault-feed.ts";
 import { sanitize } from "../core/foundation/text/sanitize.ts";
 import { NoteBuffer } from "./buffer.ts";
-import type { App, View, Region } from "./app.ts";
+import type { App, View, Region } from "./app/runtime/app.ts";
 
 /** Source control: git's view of the files, its diffs, branches and commits. */
 export class Git {

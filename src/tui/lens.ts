@@ -14,10 +14,10 @@ import {
 import type { Layout } from "../core/rendering/layout/ir.ts";
 import { stringWidth } from "../core/foundation/text/width.ts";
 import type { NoteBuffer } from "./buffer.ts";
-import type { App, View } from "./app.ts";
-import { type ViewMode, viewMode } from "./modes.ts";
+import type { App, View } from "./app/runtime/app.ts";
+import { type ViewMode, viewMode } from "./shell/input/modes.ts";
 
-export { MODES, type ViewMode, viewMode } from "./modes.ts";
+export { MODES, type ViewMode, viewMode } from "./shell/input/modes.ts";
 
 /** What's said of a data file that doesn't parse, each place it's said: one wording, so one click can tell it said it. */
 export function unparsedText(buf: NoteBuffer): string {

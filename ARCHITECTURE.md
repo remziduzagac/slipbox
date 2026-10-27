@@ -33,9 +33,10 @@ for a person, and a command line for agents and scripts, both over the same plai
   implement the commands; `keys.ts` holds the default keys.
 
 **The boundary.** `src/core/` never imports `src/tui/`, `src/cli/` or `@opentui/*`, and `src/cli/` never imports
-`src/tui/`. Inside the TUI, only `src/tui/opentui.ts` (the `Canvas` over OpenTUI's buffer) and `src/tui/run.ts` (the
-renderer, input, shutdown) touch OpenTUI; everything else is driven in tests through a text canvas, with no terminal.
-`bun run check:boundary` (`scripts/check-boundary.ts`) fails on any import that crosses.
+`src/tui/`. Inside the TUI, only `src/tui/shell/terminal/opentui.ts` (the `Canvas` over OpenTUI's buffer) and
+`src/tui/shell/terminal/run.ts` (the renderer, input, shutdown) touch OpenTUI; everything else is driven in tests
+through a text canvas, with no terminal. `bun run check:boundary` (`scripts/check-boundary.ts`) fails on any import that
+crosses.
 
 **The size of a file.** No source file is over 1,500 lines (D235): a feature lives in a module of its own, and `App`
 keeps the shared state and the wiring. `bun run check:size` (`scripts/check-size.ts`) fails on a file past the limit.
@@ -83,7 +84,7 @@ A few modules to know first:
 What every change keeps. Each is checked by a test or a script where it can be.
 
 - **Every user action is a named command.** Its id and its command-line equivalent (or `null`, for a pure interaction)
-  are in `core/application/commands/areas/*.ts`, by area; the TUI implements it in `tui/actions.ts` or the
+  are in `core/application/commands/areas/*.ts`, by area; the TUI implements it in `tui/actions/actions.ts` or the
   `tui/actions-*.ts` of its area, all registered by `registerActions`. A command implemented without a spec, or
   specified without an implementation, fails at start-up and fails a test.
 - **Disk is the contract.** A command reads saved files only, writes atomically, and is never blocked by an open editor.

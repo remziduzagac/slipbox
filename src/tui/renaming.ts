@@ -17,7 +17,7 @@ import {
 } from "../core/workspace/mutations/rename/rename.ts";
 import { vaultConfigFile } from "../core/workspace/vaults/registry.ts";
 import { recordLocation, rootAt } from "../core/workspace/vaults/vault.ts";
-import type { App, ListItem, PromptOverlay } from "./app.ts";
+import type { App, ListItem, PromptOverlay } from "./app/runtime/app.ts";
 
 /** Renames and their previews. */
 export class Renaming {

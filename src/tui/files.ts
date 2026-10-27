@@ -21,8 +21,8 @@ import { emptyTrash, listTrash, type TrashItem } from "../core/workspace/mutatio
 import { isInside, isListed } from "../core/workspace/vaults/vault.ts";
 import type { NoteBuffer } from "./buffer.ts";
 import { match } from "./match.ts";
-import type { App, ListItem, PromptOverlay } from "./app.ts";
-import { editable } from "./app.ts";
+import type { App, ListItem, PromptOverlay } from "./app/runtime/app.ts";
+import { editable } from "./app/runtime/app.ts";
 import type { ExplorerItem } from "./explorer.ts";
 
 /** File operations: new, rename, move, copy, delete, the trash. */

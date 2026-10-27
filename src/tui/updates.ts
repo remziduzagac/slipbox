@@ -1,10 +1,10 @@
-// The TUI's side of upgrading and restarting (UPG). What the daily check found, or `:upgrade` asked for, is offered in
-// the dialog once the TUI is quiet, by how slipbox was installed: the installer's upgrades and restarts, or upgrades
-// beside the TUI (`slipbox upgrade --json`, a process of its own) for `:restart` to start later; Homebrew's and one put
-// by hand are given the command or the address to copy. `:restart` asks first about notes unsaved, leaves its note
-// (`core/application/distribution/restart.ts`) and quits; `tui/run.ts` hands over once the screen is given back, and
-// the slipbox that starts
-// takes the note and comes back where you were.
+// The TUI's side of upgrading and restarting (UPG). What the daily check found, or `:upgrade` asked for, is offered
+// in the dialog once the TUI is quiet, by how slipbox was installed: the installer's upgrades and restarts, or
+// upgrades beside the TUI (`slipbox upgrade --json`, a process of its own) for `:restart` to start later;
+// Homebrew's and one put by hand are given the command or the address to copy. `:restart` asks first about notes
+// unsaved, leaves its note (`core/application/distribution/restart.ts`) and quits; `tui/shell/terminal/run.ts`
+// hands over once the screen is given back, and the slipbox that starts takes the note and comes back where you
+// were.
 
 import { closeSync, existsSync, mkdirSync, openSync, readFileSync, realpathSync, rmSync, statSync } from "node:fs";
 import { join } from "node:path";
@@ -38,11 +38,11 @@ import {
   versionOf,
 } from "../core/application/distribution/update.ts";
 import type { VaultMode } from "../core/workspace/vaults/vault.ts";
-import type { App, Level } from "./app.ts";
+import type { App, Level } from "./app/runtime/app.ts";
 import { openDialog } from "./dialog.ts";
 import { stopInsert } from "./editing.ts";
 
-/** What slipbox knows of itself and where it keeps things: `tui/run.ts`'s, a test's own. */
+/** What slipbox knows of itself and where it keeps things: `tui/shell/terminal/run.ts`'s, a test's own. */
 export interface UpdateEnv {
   release: ReleaseBuild | null;
   version: string;
@@ -77,7 +77,7 @@ export const QUIET_MS = 2000;
 export class Updates {
   constructor(readonly app: App) {}
 
-  /** `tui/run.ts` sets it; without it (a test's App, unless it sets one) nothing is checked or offered. */
+  /** `tui/shell/terminal/run.ts` sets it; without it (a test's App, unless it sets one) nothing is checked or offered. */
   env: UpdateEnv | null = null;
   /** Latest available release, kept on the bar after its offer closes. */
   available: string | null = null;
@@ -91,7 +91,7 @@ export class Updates {
   background: { version: string; done: Promise<void> } | null = null;
   /** The versions this window's own background upgrade installed: said already, never offered again underneath. */
   readonly mine = new Set<string>();
-  /** The restart asked for, its note written: `tui/run.ts` hands over to it once the TUI has quit. */
+  /** The restart asked for, its note written: `tui/shell/terminal/run.ts` hands over to it once the TUI has quit. */
   restartNote: RestartNote | null = null;
   /** `:upgrade` asking, or a restart waiting for an upgrade beside the TUI: asked again meanwhile, nothing more. */
   private checking = false;

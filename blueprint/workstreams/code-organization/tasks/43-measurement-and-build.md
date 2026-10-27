@@ -31,3 +31,5 @@ size, unused-code and pattern dispositions across the owner PRs. Recommend any a
 change as a coherent follow-up; #56 remains excluded. This is focused verification, not the full suite.
 
 - T6: render's “drawn while its library loads …” needs a separate isolation fix and repeated-same-cache regression.
+
+- T7: explorer/which-key “space n notes, space d folders, space v vaults …”: cause unproven; separate isolation fix.

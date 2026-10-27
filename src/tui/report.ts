@@ -31,10 +31,10 @@ import {
 } from "../core/application/distribution/report.ts";
 import { sanitize } from "../core/foundation/text/sanitize.ts";
 import { NoteBuffer } from "./buffer.ts";
-import { type Canvas, TextCanvas } from "./canvas.ts";
+import { type Canvas, TextCanvas } from "./shell/terminal/canvas.ts";
 import { placeAt, startInsert, stopInsert } from "./editing.ts";
 import { mergeClosed } from "./mergescreen.ts";
-import type { App, ListItem, Region, View } from "./app.ts";
+import type { App, ListItem, Region, View } from "./app/runtime/app.ts";
 
 /** What `:report` adds; what `help.report_send` sends by. */
 export const REPORT_ADDS = ["screen", "where"] as const;

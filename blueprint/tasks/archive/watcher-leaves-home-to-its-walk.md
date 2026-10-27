@@ -46,14 +46,13 @@ folder asked for by name, which is whole, and once home's walk is kept, a folder
 ## Log
 
 - 2026-10-23: Reproduced on `dev` (be3674a) with a script driving `VaultWatcher` over an unwalked home's graph, as
-  `src/tui/watch.ts` starts it (`tmp/issue/repro.ts`, not committed). The issue's own case doesn't happen as written: a
-  shell's history rewritten in `~` takes nothing in, because `walkTop` lists home's top folders into the graph's
-  folders (`src/core/workspace/walk/walk.ts` `walkTop`, `tests/vault.test.ts` "home opened is never walked then": `["",
-  "sub"]`), so
-  the watcher watches each, not looked into. The same happens one level down: a file saved in `~/Documents` lists it
-  again (`lookAgain`), and each folder in it, not watched, is taken in whole (`flush` → `adoptTree`), every note in it
-  reported created (`Documents/d0/sub/n0.md`…); a top folder made in the two seconds before the start, the same at the
-  first tick; a new top folder, `~/cloned/x/y/deep.md`, taken in whole from its event.
+  `src/tui/app/runtime/watch.ts` starts it (`tmp/issue/repro.ts`, not committed). The issue's own case doesn't happen as
+  written: a shell's history rewritten in `~` takes nothing in, because `walkTop` lists home's top folders into the
+  graph's folders (`src/core/workspace/walk/walk.ts` `walkTop`, `tests/vault.test.ts` "home opened is never walked
+  then": `["", "sub"]`), so the watcher watches each, not looked into. The same happens one level down: a file saved in
+  `~/Documents` lists it again (`lookAgain`), and each folder in it, not watched, is taken in whole (`flush` →
+  `adoptTree`), every note in it reported created (`Documents/d0/sub/n0.md`…); a top folder made in the two seconds
+  before the start, the same at the first tick; a new top folder, `~/cloned/x/y/deep.md`, taken in whole from its event.
 - 2026-10-23: The terminal checks work around it: `homeFolders` and the marks check in
   `tests/terminal/checks/vaults.ts` date home's top and their folders an hour back, "a folder that came in it taken in
   with its notes … whatever home's walk has done".
@@ -62,13 +61,13 @@ folder asked for by name, which is whole, and once home's walk is kept, a folder
   take in whole. Taken: before home's first walk the watcher still lists a folder it watches, and reports that folder's
   own files.
 - 2026-10-23: Fixed. `Graph.waitsForHomeWalk(rel)` (`src/core/workspace/graph/graph.ts`): home not walked, any folder
-  but its top and
-  those asked for by name (D248). The watcher's `leftToWalk` option (`src/core/workspace/graph/watch.ts`, given it by
-  `src/tui/watch.ts`'s `startWatcher`): a folder found that it isn't watching (`found`: from an event, a second look,
-  or a polled folder) is taken in only when no walk is to look into it. Left to the walk, a folder come into home's top
-  asks for it (a rescan: the graph, built again, lists it and the watcher watches it, not looked into; `walkHomeAgain`);
-  one in a folder left to the walk asks for nothing, since the walk asked for at the start, or the walk kept brought up
-  to now (a folder changed since it began is listed again), takes it.
+  but its top and those asked for by name (D248). The watcher's `leftToWalk` option
+  (`src/core/workspace/graph/watch.ts`, given it by `src/tui/app/runtime/watch.ts`'s `startWatcher`): a folder found
+  that it isn't watching (`found`: from an event, a second look, or a polled folder) is taken in only when no walk is to
+  look into it. Left to the walk, a folder come into home's top asks for it (a rescan: the graph, built again, lists it
+  and the watcher watches it, not looked into; `walkHomeAgain`); one in a folder left to the walk asks for nothing,
+  since the walk asked for at the start, or the walk kept brought up to now (a folder changed since it began is listed
+  again), takes it.
 - 2026-10-23: That leaves out a `left` set (my first plan): with a rescan only for a folder come into home's top, a
   polled folder of home finds the same folders at every tick without asking again, so there's nothing to remember.
   It also ends a loop the old code had in that state: a polled top folder's new folder was watched alone and a rescan
