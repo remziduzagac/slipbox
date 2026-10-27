@@ -8,8 +8,8 @@ import { join } from "node:path";
 
 const base = tmpdir();
 
-// Every test's bound is `bun run test`'s `--timeout 30000` (package.json): a preload's setDefaultTimeout reaches the
-// first file alone. Parses, walks and processes started are slow on a loaded or small machine (CI's macOS runners),
+// The runner fallback `--timeout 30000` (package.json) matches UNIT_TIMEOUT_MS in tests/support/timeouts.ts.
+// A preload's setDefaultTimeout reaches the first file alone. Parses, walks and processes started are slow on a loaded or small machine (CI's macOS runners),
 // never stuck; tests wait on conditions, and the bound only says when one is stuck.
 
 /** A process still running (or one this user can't signal: someone else's, so not ours to judge). */

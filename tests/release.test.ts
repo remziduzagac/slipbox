@@ -1,3 +1,4 @@
+import { UNIT_TIMEOUT_MS, TEST_BUDGETS } from "./support/timeouts.ts";
 // Previews and the Pages site (GR-T15; GR-D13, GR-D14): a preview's version and tag, stamped into a checkout and
 // refused once its version is released; a preview's installer, notes and SBOM; the channel files made from the
 // releases; the previews kept; and the workflows that build, publish and deploy them.
@@ -179,40 +180,52 @@ describe("a preview's version and tag (GR-D13)", () => {
       return { dir, origin, git: (...a: string[]) => git(dir, ...a) };
     }
 
-    test("its version and tag from package.json's and the commit's committer time, in UTC, and hash", () => {
-      // Committed at 18:30 in UTC+3: 15:30 UTC.
-      const { dir, git } = repo("2026-10-12T18:30:59+03:00");
-      const head = git("rev-parse", "HEAD");
-      expect(previewPlan(dir)).toEqual({
-        version: `1.2.3-preview.202610121530.g${head.slice(0, 7)}`,
-        tag: `preview-202610121530-${head.slice(0, 7)}`,
-      });
-    }, 30_000);
+    test(
+      "its version and tag from package.json's and the commit's committer time, in UTC, and hash",
+      () => {
+        // Committed at 18:30 in UTC+3: 15:30 UTC.
+        const { dir, git } = repo("2026-10-12T18:30:59+03:00");
+        const head = git("rev-parse", "HEAD");
+        expect(previewPlan(dir)).toEqual({
+          version: `1.2.3-preview.202610121530.g${head.slice(0, 7)}`,
+          tag: `preview-202610121530-${head.slice(0, 7)}`,
+        });
+      },
+      UNIT_TIMEOUT_MS,
+    );
 
-    test("refused when v<version> is tagged on the remote, lightweight or annotated: bump the version first", () => {
-      const { dir, git } = repo("2026-10-12T15:30:00Z");
-      git("tag", "v1.2.30");
-      git("push", "-q", "origin", "v1.2.30");
-      expect(previewPlan(dir).tag).toStartWith("preview-202610121530-");
-      git("tag", "v1.2.3");
-      // Tagged here only, not on the remote: the remote's tags are what count.
-      expect(previewPlan(dir).version).toStartWith("1.2.3-preview.");
-      git("push", "-q", "origin", "v1.2.3");
-      expect(() => previewPlan(dir)).toThrow("v1.2.3 is released already: bump the version");
-      const annotated = repo("2026-10-12T15:30:00Z");
-      annotated.git("tag", "-a", "-m", "slipbox 1.2.3", "v1.2.3");
-      annotated.git("push", "-q", "origin", "v1.2.3");
-      expect(() => previewPlan(annotated.dir)).toThrow("v1.2.3 is released already");
-    }, 30_000);
+    test(
+      "refused when v<version> is tagged on the remote, lightweight or annotated: bump the version first",
+      () => {
+        const { dir, git } = repo("2026-10-12T15:30:00Z");
+        git("tag", "v1.2.30");
+        git("push", "-q", "origin", "v1.2.30");
+        expect(previewPlan(dir).tag).toStartWith("preview-202610121530-");
+        git("tag", "v1.2.3");
+        // Tagged here only, not on the remote: the remote's tags are what count.
+        expect(previewPlan(dir).version).toStartWith("1.2.3-preview.");
+        git("push", "-q", "origin", "v1.2.3");
+        expect(() => previewPlan(dir)).toThrow("v1.2.3 is released already: bump the version");
+        const annotated = repo("2026-10-12T15:30:00Z");
+        annotated.git("tag", "-a", "-m", "slipbox 1.2.3", "v1.2.3");
+        annotated.git("push", "-q", "origin", "v1.2.3");
+        expect(() => previewPlan(annotated.dir)).toThrow("v1.2.3 is released already");
+      },
+      UNIT_TIMEOUT_MS,
+    );
 
-    test("refused when the preview is published already; a remote that can't be read fails", () => {
-      const { dir, git } = repo("2026-10-12T15:30:00Z");
-      const { tag } = previewPlan(dir);
-      git("tag", tag);
-      git("push", "-q", "origin", tag);
-      expect(() => previewPlan(dir)).toThrow(`${tag} is published already`);
-      expect(() => previewPlan(dir, join(sandbox, "no-such-remote"))).toThrow("git ls-remote failed");
-    }, 30_000);
+    test(
+      "refused when the preview is published already; a remote that can't be read fails",
+      () => {
+        const { dir, git } = repo("2026-10-12T15:30:00Z");
+        const { tag } = previewPlan(dir);
+        git("tag", tag);
+        git("push", "-q", "origin", tag);
+        expect(() => previewPlan(dir)).toThrow(`${tag} is published already`);
+        expect(() => previewPlan(dir, join(sandbox, "no-such-remote"))).toThrow("git ls-remote failed");
+      },
+      UNIT_TIMEOUT_MS,
+    );
   });
 });
 
@@ -257,7 +270,7 @@ describe("what a preview carries (GR-D13)", () => {
       expect(r.stdout.toString()).toContain(`slipbox: ${PREVIEW} installed:`);
       expect(existsSync(join(home, ".local", "share", "slipbox", "versions", PREVIEW, "slipbox"))).toBe(true);
     },
-    60_000,
+    TEST_BUDGETS.releaseIntegration,
   );
 
   test("finished: its sums and installer, and no Homebrew formula — a release's has one", () => {
@@ -874,129 +887,133 @@ describe("the workflows: one build for releases and previews, previews from test
     expect(runs(site)).toContain("bun run site\n");
   });
 
-  test("a deployment passes once the site serves its marker and channels; a stale marker fails, the channels alike (#7)", () => {
-    const steps = workflow("pages.yml").jobs.deploy?.steps ?? [];
-    const served = steps.find((s) => s.name === "served");
-    const deploys = steps.findIndex((s) => s.uses?.startsWith("actions/deploy-pages@"));
-    expect(deploys).toBeGreaterThanOrEqual(0);
-    expect(steps.indexOf(served!)).toBeGreaterThan(deploys);
-    expect(served?.env).toEqual({
-      SITE: "${{ steps.deploy.outputs.page_url }}",
-      DEPLOYMENT: "${{ needs.site.outputs.deployment }}",
-      STABLE: "${{ needs.site.outputs.stable }}",
-      PREVIEW: "${{ needs.site.outputs.preview }}",
-    });
-    // The site, as files `curl` answers from (a 404, curl's 22, for one missing), each request taking `lag` seconds,
-    // and `later`'s served once the step has waited once. The clock is a file: `date` reads it, `sleep` and `curl`
-    // move it on, and nothing waits.
-    const stable = "v1.2.3 aaa";
-    const preview = "preview-202610231322-71313f3 bbb";
-    const readBack = (
-      site: Record<string, string>,
-      built: Record<string, string>,
-      { later, lag = 0, swapAt }: { later?: Record<string, string>; lag?: number; swapAt?: number } = {},
-    ) => {
-      const dir = mkdtempSync(join(sandbox, "served-"));
-      const start = 1_761_264_000;
-      writeFileSync(join(dir, "clock"), `${start}\n`);
-      for (const [where, files] of [
-        ["site", site],
-        ["later", later],
-      ] as const) {
-        if (!files) continue;
-        mkdirSync(join(dir, where));
-        for (const [name, text] of Object.entries(files)) writeFileSync(join(dir, where, name), `${text}\n`);
-      }
-      const stubs = join(dir, "bin");
-      mkdirSync(stubs);
-      const tick = (by: string) => `t=$(cat "$FAKE/clock"); echo $((t + ${by})) >"$FAKE/clock"\n`;
-      const stub = {
-        date: '#!/bin/sh\ncat "$FAKE/clock"\n',
-        curl: `#!/bin/sh\nif [ -n "$SWAP_AT" ] && [ -d "$FAKE/later" ] && [ "$(cat "$FAKE/clock")" -ge "$SWAP_AT" ]; then cp "$FAKE"/later/* "$FAKE/site/"; rm -r "$FAKE/later"; fi\n${tick("$LAG")}echo "$*" >>"$FAKE/curl-args"\nfor a; do url=$a; done\nf="$FAKE/site/\${url#"$SITE"}"\n[ -f "$f" ] || exit 22\ncat "$f"\n`,
-        sleep: `#!/bin/sh\n${tick("$1")}echo >>"$FAKE/slept"\nif [ -z "$SWAP_AT" ] && [ -d "$FAKE/later" ]; then cp "$FAKE"/later/* "$FAKE/site/"; rm -r "$FAKE/later"; fi\n`,
+  test(
+    "a deployment passes once the site serves its marker and channels; a stale marker fails, the channels alike (#7)",
+    () => {
+      const steps = workflow("pages.yml").jobs.deploy?.steps ?? [];
+      const served = steps.find((s) => s.name === "served");
+      const deploys = steps.findIndex((s) => s.uses?.startsWith("actions/deploy-pages@"));
+      expect(deploys).toBeGreaterThanOrEqual(0);
+      expect(steps.indexOf(served!)).toBeGreaterThan(deploys);
+      expect(served?.env).toEqual({
+        SITE: "${{ steps.deploy.outputs.page_url }}",
+        DEPLOYMENT: "${{ needs.site.outputs.deployment }}",
+        STABLE: "${{ needs.site.outputs.stable }}",
+        PREVIEW: "${{ needs.site.outputs.preview }}",
+      });
+      // The site, as files `curl` answers from (a 404, curl's 22, for one missing), each request taking `lag` seconds,
+      // and `later`'s served once the step has waited once. The clock is a file: `date` reads it, `sleep` and `curl`
+      // move it on, and nothing waits.
+      const stable = "v1.2.3 aaa";
+      const preview = "preview-202610231322-71313f3 bbb";
+      const readBack = (
+        site: Record<string, string>,
+        built: Record<string, string>,
+        { later, lag = 0, swapAt }: { later?: Record<string, string>; lag?: number; swapAt?: number } = {},
+      ) => {
+        const dir = mkdtempSync(join(sandbox, "served-"));
+        const start = 1_761_264_000;
+        writeFileSync(join(dir, "clock"), `${start}\n`);
+        for (const [where, files] of [
+          ["site", site],
+          ["later", later],
+        ] as const) {
+          if (!files) continue;
+          mkdirSync(join(dir, where));
+          for (const [name, text] of Object.entries(files)) writeFileSync(join(dir, where, name), `${text}\n`);
+        }
+        const stubs = join(dir, "bin");
+        mkdirSync(stubs);
+        const tick = (by: string) => `t=$(cat "$FAKE/clock"); echo $((t + ${by})) >"$FAKE/clock"\n`;
+        const stub = {
+          date: '#!/bin/sh\ncat "$FAKE/clock"\n',
+          curl: `#!/bin/sh\nif [ -n "$SWAP_AT" ] && [ -d "$FAKE/later" ] && [ "$(cat "$FAKE/clock")" -ge "$SWAP_AT" ]; then cp "$FAKE"/later/* "$FAKE/site/"; rm -r "$FAKE/later"; fi\n${tick("$LAG")}echo "$*" >>"$FAKE/curl-args"\nfor a; do url=$a; done\nf="$FAKE/site/\${url#"$SITE"}"\n[ -f "$f" ] || exit 22\ncat "$f"\n`,
+          sleep: `#!/bin/sh\n${tick("$1")}echo >>"$FAKE/slept"\nif [ -z "$SWAP_AT" ] && [ -d "$FAKE/later" ]; then cp "$FAKE"/later/* "$FAKE/site/"; rm -r "$FAKE/later"; fi\n`,
+        };
+        for (const [name, text] of Object.entries(stub)) {
+          writeFileSync(join(stubs, name), text);
+          chmodSync(join(stubs, name), 0o755);
+        }
+        const env = {
+          FAKE: dir,
+          SITE: "https://example.test/slipbox/",
+          LAG: String(lag),
+          SWAP_AT: swapAt === undefined ? "" : String(start + swapAt),
+          ...built,
+        };
+        const { code, out } = runStep(served, env, dir, stubs);
+        const slept = existsSync(join(dir, "slept"))
+          ? readFileSync(join(dir, "slept"), "utf8").split("\n").length - 1
+          : 0;
+        const took = Number(readFileSync(join(dir, "clock"), "utf8")) - start;
+        // Every request bounded: a site that hangs can't hold the job past its timeout.
+        const asked = join(dir, "curl-args");
+        const requests = existsSync(asked) ? readFileSync(asked, "utf8").trim().split("\n") : [];
+        for (const args of requests)
+          expect(args).toStartWith("-fsS --connect-timeout 5 --max-time 10 https://example.test/");
+        return { code, slept, took, out };
       };
-      for (const [name, text] of Object.entries(stub)) {
-        writeFileSync(join(stubs, name), text);
-        chmodSync(join(stubs, name), 0o755);
+      const built = { DEPLOYMENT: "40045492245.1", STABLE: stable, PREVIEW: preview, GITHUB_EVENT_NAME: "push" };
+      // Served at once.
+      const now = readBack({ deployment: "40045492245.1", stable, preview }, built);
+      expect([now.code, now.slept]).toEqual([0, 0]);
+      expect(now.out).toContain("the site serves this deployment, 40045492245.1, and the channels built");
+      // #7: the channels are what the site served already (a release's commit pushed to main, its preview's), but the
+      // files are the deployment before: never served, failing after eleven minutes, no longer passing at once.
+      const stale = readBack({ deployment: "39964133295.1", stable, preview }, built);
+      expect([stale.code, stale.slept, stale.took]).toEqual([1, 66, 660]);
+      expect(stale.out).toContain('deployment: built "40045492245.1", served "39964133295.1"');
+      expect(stale.out).toContain(`stable: built "${stable}", served "${stable}"`);
+      expect(stale.out).toContain(`preview: built "${preview}", served "${preview}"`);
+      // A preview's run (a push) is told a re-run won't help; a run by hand, which is the remedy, isn't.
+      expect(stale.out).toContain("Re-running this preview's pages / site deploys its commit again");
+      const byHand = readBack(
+        { deployment: "39964133295.1", stable, preview },
+        { ...built, GITHUB_EVENT_NAME: "workflow_dispatch" },
+        { lag: 10 },
+      );
+      expect(byHand.code).toBe(1);
+      expect(byHand.out).not.toMatch(/re-run/i);
+      // A site slow to answer (ten seconds a request, curl's bound) still gives up after eleven minutes, at most a wait,
+      // a round of three requests and the message's three later: within the job's 25 minutes, with deploy-pages' ten.
+      // With the marker the deployment before's; with no marker at all (a site deployed before markers); with the
+      // marker this one's and a channel off: each fails.
+      for (const site of [
+        { deployment: "39964133295.1", stable, preview },
+        { stable, preview } as Record<string, string>,
+        { deployment: "40045492245.1", stable, preview: "preview-202610222311-95570ea ccc" },
+      ]) {
+        const slow = readBack(site, built, { lag: 10 });
+        expect(slow.code).toBe(1);
+        expect(slow.took).toBeGreaterThanOrEqual(660);
+        expect(slow.took).toBeLessThanOrEqual(660 + 10 + 3 * 10 + 3 * 10);
       }
-      const env = {
-        FAKE: dir,
-        SITE: "https://example.test/slipbox/",
-        LAG: String(lag),
-        SWAP_AT: swapAt === undefined ? "" : String(start + swapAt),
-        ...built,
-      };
-      const { code, out } = runStep(served, env, dir, stubs);
-      const slept = existsSync(join(dir, "slept"))
-        ? readFileSync(join(dir, "slept"), "utf8").split("\n").length - 1
-        : 0;
-      const took = Number(readFileSync(join(dir, "clock"), "utf8")) - start;
-      // Every request bounded: a site that hangs can't hold the job past its timeout.
-      const asked = join(dir, "curl-args");
-      const requests = existsSync(asked) ? readFileSync(asked, "utf8").trim().split("\n") : [];
-      for (const args of requests)
-        expect(args).toStartWith("-fsS --connect-timeout 5 --max-time 10 https://example.test/");
-      return { code, slept, took, out };
-    };
-    const built = { DEPLOYMENT: "40045492245.1", STABLE: stable, PREVIEW: preview, GITHUB_EVENT_NAME: "push" };
-    // Served at once.
-    const now = readBack({ deployment: "40045492245.1", stable, preview }, built);
-    expect([now.code, now.slept]).toEqual([0, 0]);
-    expect(now.out).toContain("the site serves this deployment, 40045492245.1, and the channels built");
-    // #7: the channels are what the site served already (a release's commit pushed to main, its preview's), but the
-    // files are the deployment before: never served, failing after eleven minutes, no longer passing at once.
-    const stale = readBack({ deployment: "39964133295.1", stable, preview }, built);
-    expect([stale.code, stale.slept, stale.took]).toEqual([1, 66, 660]);
-    expect(stale.out).toContain('deployment: built "40045492245.1", served "39964133295.1"');
-    expect(stale.out).toContain(`stable: built "${stable}", served "${stable}"`);
-    expect(stale.out).toContain(`preview: built "${preview}", served "${preview}"`);
-    // A preview's run (a push) is told a re-run won't help; a run by hand, which is the remedy, isn't.
-    expect(stale.out).toContain("Re-running this preview's pages / site deploys its commit again");
-    const byHand = readBack(
-      { deployment: "39964133295.1", stable, preview },
-      { ...built, GITHUB_EVENT_NAME: "workflow_dispatch" },
-      { lag: 10 },
-    );
-    expect(byHand.code).toBe(1);
-    expect(byHand.out).not.toMatch(/re-run/i);
-    // A site slow to answer (ten seconds a request, curl's bound) still gives up after eleven minutes, at most a wait,
-    // a round of three requests and the message's three later: within the job's 25 minutes, with deploy-pages' ten.
-    // With the marker the deployment before's; with no marker at all (a site deployed before markers); with the
-    // marker this one's and a channel off: each fails.
-    for (const site of [
-      { deployment: "39964133295.1", stable, preview },
-      { stable, preview } as Record<string, string>,
-      { deployment: "40045492245.1", stable, preview: "preview-202610222311-95570ea ccc" },
-    ]) {
-      const slow = readBack(site, built, { lag: 10 });
-      expect(slow.code).toBe(1);
-      expect(slow.took).toBeGreaterThanOrEqual(660);
-      expect(slow.took).toBeLessThanOrEqual(660 + 10 + 3 * 10 + 3 * 10);
-    }
-    // And the job's timeout holds deploy-pages' ten minutes and that worst case.
-    const timeout = (workflow("pages.yml").jobs.deploy as { "timeout-minutes"?: number })["timeout-minutes"] ?? 0;
-    expect(timeout * 60).toBeGreaterThanOrEqual(600 + 660 + 10 + 3 * 10 + 3 * 10);
-    // Served just after the last round, at the deadline's one last read: passed, not reported unserved.
-    const last = readBack({ deployment: "39964133295.1", stable, preview }, built, {
-      later: { deployment: "40045492245.1" },
-      lag: 1,
-      swapAt: 661,
-    });
-    expect(last.code).toBe(0);
-    expect(last.took).toBeGreaterThan(660);
-    expect(last.out).toContain("the site serves this deployment, 40045492245.1, and the channels built");
-    // Served a while after the deployment says it's done.
-    const later = readBack({ deployment: "39964133295.1", stable, preview }, built, {
-      later: { deployment: "40045492245.1" },
-    });
-    expect([later.code, later.slept]).toEqual([0, 1]);
-    // A channel with no release has no file, which reads back as the empty line built.
-    expect(readBack({ deployment: "40045492245.1", preview }, { ...built, STABLE: "" }).code).toBe(0);
-    // Nothing to read back without a marker built: fails at once.
-    const unmarked = readBack({ deployment: "", stable, preview }, { ...built, DEPLOYMENT: "" });
-    expect([unmarked.code, unmarked.slept]).toEqual([1, 0]);
-    expect(unmarked.out).toContain("no marker was built");
-  }, 30_000);
+      // And the job's timeout holds deploy-pages' ten minutes and that worst case.
+      const timeout = (workflow("pages.yml").jobs.deploy as { "timeout-minutes"?: number })["timeout-minutes"] ?? 0;
+      expect(timeout * 60).toBeGreaterThanOrEqual(600 + 660 + 10 + 3 * 10 + 3 * 10);
+      // Served just after the last round, at the deadline's one last read: passed, not reported unserved.
+      const last = readBack({ deployment: "39964133295.1", stable, preview }, built, {
+        later: { deployment: "40045492245.1" },
+        lag: 1,
+        swapAt: 661,
+      });
+      expect(last.code).toBe(0);
+      expect(last.took).toBeGreaterThan(660);
+      expect(last.out).toContain("the site serves this deployment, 40045492245.1, and the channels built");
+      // Served a while after the deployment says it's done.
+      const later = readBack({ deployment: "39964133295.1", stable, preview }, built, {
+        later: { deployment: "40045492245.1" },
+      });
+      expect([later.code, later.slept]).toEqual([0, 1]);
+      // A channel with no release has no file, which reads back as the empty line built.
+      expect(readBack({ deployment: "40045492245.1", preview }, { ...built, STABLE: "" }).code).toBe(0);
+      // Nothing to read back without a marker built: fails at once.
+      const unmarked = readBack({ deployment: "", stable, preview }, { ...built, DEPLOYMENT: "" });
+      expect([unmarked.code, unmarked.slept]).toEqual([1, 0]);
+      expect(unmarked.out).toContain("no marker was built");
+    },
+    UNIT_TIMEOUT_MS,
+  );
 
   test("a re-run of `deploy` alone is refused: it might put back an older site (D265)", () => {
     const steps = workflow("pages.yml").jobs.deploy?.steps ?? [];

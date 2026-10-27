@@ -1,3 +1,4 @@
+import { UNIT_TIMEOUT_MS } from "./support/timeouts.ts";
 // The harness the TUI's tests share (tests/tui.test.ts, tests/tui-git.test.ts): a sandbox of each file's own, a vault
 // copied into it, the TUI model driven headlessly (keys in, TextCanvas out), and the helpers that read its rows.
 //
@@ -41,7 +42,7 @@ export function makeSandbox(): string {
   process.env.XDG_CONFIG_HOME = join(sandbox, "config");
   process.env.XDG_DATA_HOME = join(sandbox, "data"); // the home vault (17.2)
   // Harnesses copy and index a vault, CLI tests start processes: slow on a loaded machine, not stuck.
-  setDefaultTimeout(30_000);
+  setDefaultTimeout(UNIT_TIMEOUT_MS);
   delete process.env.SLIPBOX_CONFIG; // it would win over XDG_CONFIG_HOME: never the developer's own config
   process.env.SLIPBOX_CLIPBOARD = "file"; // copies never reach the developer's clipboard
   delete process.env.NO_COLOR;

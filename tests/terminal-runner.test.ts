@@ -1,3 +1,4 @@
+import { TEST_BUDGETS } from "./support/timeouts.ts";
 // The terminal checks' runner (tests/terminal/run.ts), over checks made up for it (made-up-checks.ts, preloaded into it
 // alone): nothing of slipbox started. A file of its own, small: the runner reaches every check file.
 
@@ -18,21 +19,29 @@ describe("the runner (T31)", () => {
   };
   const NAME = "made up for the runner's test";
 
-  test("a check quarantined is never started, in the pool or alone: reported skipped with its issue, no release builds made for it", () => {
-    const r = runner(NAME);
-    expect(r.out).toContain(`- reading: ${NAME}: quarantined (0 ms) (skipped: quarantined by #0)\n`);
-    expect(r.out).toContain(`- reading: ${NAME}: quarantined, alone (0 ms, alone) (skipped: quarantined by #0)\n`);
-    expect(r.out).not.toContain("release builds");
-    expect(r.out).toContain("reading: 0 passed, 0 failed, 2 skipped\n");
-    expect(r.out).toMatch(/^0\/0 checks passed in [\d.]+ s, 1 at a time, 2 skipped$/m);
-    expect(r.code).toBe(0);
-  }, 60_000);
+  test(
+    "a check quarantined is never started, in the pool or alone: reported skipped with its issue, no release builds made for it",
+    () => {
+      const r = runner(NAME);
+      expect(r.out).toContain(`- reading: ${NAME}: quarantined (0 ms) (skipped: quarantined by #0)\n`);
+      expect(r.out).toContain(`- reading: ${NAME}: quarantined, alone (0 ms, alone) (skipped: quarantined by #0)\n`);
+      expect(r.out).not.toContain("release builds");
+      expect(r.out).toContain("reading: 0 passed, 0 failed, 2 skipped\n");
+      expect(r.out).toMatch(/^0\/0 checks passed in [\d.]+ s, 1 at a time, 2 skipped$/m);
+      expect(r.code).toBe(0);
+    },
+    TEST_BUDGETS.terminalRunner,
+  );
 
-  test("its list says which checks are quarantined, by their issue", () => {
-    const r = runner("--list", NAME);
-    expect(r.stdout).toBe(
-      `reading: ${NAME}: quarantined (quarantined by #0)\nreading: ${NAME}: quarantined, alone (quarantined by #0)\n`,
-    );
-    expect(r.code).toBe(0);
-  }, 60_000);
+  test(
+    "its list says which checks are quarantined, by their issue",
+    () => {
+      const r = runner("--list", NAME);
+      expect(r.stdout).toBe(
+        `reading: ${NAME}: quarantined (quarantined by #0)\nreading: ${NAME}: quarantined, alone (quarantined by #0)\n`,
+      );
+      expect(r.code).toBe(0);
+    },
+    TEST_BUDGETS.terminalRunner,
+  );
 });

@@ -1,3 +1,4 @@
+import { UNIT_TIMEOUT_MS } from "./support/timeouts.ts";
 // The fixture vault (0.5) against the walk (0.11), discovery (1.1), the graph and the CLI (9.x).
 
 import { describe, expect, setDefaultTimeout, setSystemTime, spyOn, test } from "bun:test";
@@ -69,7 +70,7 @@ import { renderMarkdown } from "../src/core/layout/render.ts";
 import { glyphsFor } from "../src/core/glyphs.ts";
 
 // Parses, walks and processes started: slow on a loaded or small machine (CI's macOS runner), not stuck.
-setDefaultTimeout(30_000);
+setDefaultTimeout(UNIT_TIMEOUT_MS);
 
 const VAULT = join(import.meta.dir, "fixtures", "vault");
 

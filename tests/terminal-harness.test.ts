@@ -1,3 +1,4 @@
+import { TEST_BUDGETS } from "./support/timeouts.ts";
 // The terminal tests' own harness (tests/terminal/): the keys as a terminal sends them, and the headless terminal
 // reading back what a program draws and answering what it asks (TT-T1).
 
@@ -646,28 +647,32 @@ describe("what the checks share (check.ts)", () => {
 });
 
 describe("starting slipbox (session.ts)", () => {
-  test("a preload: Bun loads it into slipbox's own process, once, before slipbox; never into the CLI's", async () => {
-    const dir = mkdtempSync(join(tmpdir(), "slipbox-preload-"));
-    const script = join(dir, "mark.ts");
-    writeFileSync(script, 'require("node:fs").appendFileSync(process.env.PRELOAD_MARK, `${process.pid}\\n`);\n');
-    // Named from the repository, slipbox started in a folder of the check's deeper than it: found all the same.
-    const deep = join("home", ...Array(8).fill("d"));
-    const s = new Session({
-      preload: relative(REPO, script),
-      cwd: deep,
-      setup: (s) => mkdirSync(join(s.dir, deep), { recursive: true }),
-      env: { PRELOAD_MARK: join(dir, "loaded") },
-    });
-    try {
-      await s.start();
-      expect(readFileSync(join(dir, "loaded"), "utf8")).toBe(`${s.pid()}\n`);
-      expect(s.cli("--version").code).toBe(0);
-      expect(readFileSync(join(dir, "loaded"), "utf8")).toBe(`${s.pid()}\n`);
-    } finally {
-      await s.quit();
-      s.cleanup();
-    }
-  }, 60_000);
+  test(
+    "a preload: Bun loads it into slipbox's own process, once, before slipbox; never into the CLI's",
+    async () => {
+      const dir = mkdtempSync(join(tmpdir(), "slipbox-preload-"));
+      const script = join(dir, "mark.ts");
+      writeFileSync(script, 'require("node:fs").appendFileSync(process.env.PRELOAD_MARK, `${process.pid}\\n`);\n');
+      // Named from the repository, slipbox started in a folder of the check's deeper than it: found all the same.
+      const deep = join("home", ...Array(8).fill("d"));
+      const s = new Session({
+        preload: relative(REPO, script),
+        cwd: deep,
+        setup: (s) => mkdirSync(join(s.dir, deep), { recursive: true }),
+        env: { PRELOAD_MARK: join(dir, "loaded") },
+      });
+      try {
+        await s.start();
+        expect(readFileSync(join(dir, "loaded"), "utf8")).toBe(`${s.pid()}\n`);
+        expect(s.cli("--version").code).toBe(0);
+        expect(readFileSync(join(dir, "loaded"), "utf8")).toBe(`${s.pid()}\n`);
+      } finally {
+        await s.quit();
+        s.cleanup();
+      }
+    },
+    TEST_BUDGETS.terminalPreload,
+  );
 });
 
 describe("where you are, read off the grouped bar", () => {

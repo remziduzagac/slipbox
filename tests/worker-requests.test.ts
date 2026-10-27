@@ -1,3 +1,4 @@
+import { TEST_BUDGETS } from "./support/timeouts.ts";
 import { afterEach, expect, jest, test } from "bun:test";
 import { sizeOf, type WorkerRequestError, WorkerRequests } from "../src/core/worker-requests.ts";
 import { newParseCache, parseChunk, parseMarkdown } from "../src/core/parse.ts";
@@ -289,26 +290,34 @@ test("a newer parse revision owns the shared cache", async () => {
 });
 
 for (const workers of [null, 1]) {
-  test(`a burst of twelve big notes parses — none refused, none failed for another (${workers ?? "the machine's"} worker${workers === 1 ? "" : "s"})`, async () => {
-    setParseWorkers(workers);
-    const notes = Array.from({ length: 12 }, (_, i) => bigNote(`Note ${i}`, 100 * 1024));
-    const caches = notes.map(() => newParseCache());
-    const ok = await Promise.all(notes.map((n, i) => parseInBackground(n, caches[i]!)));
-    expect(caches.map((c) => c.backgroundFailure?.why ?? null)).toEqual(notes.map(() => null));
-    expect(ok.every(Boolean)).toBe(true);
-    for (const [i, n] of notes.entries())
-      expect(parseMarkdown(n, caches[i]!).tree.children[0]).toMatchObject({ type: "heading" });
-  }, 60_000);
+  test(
+    `a burst of twelve big notes parses — none refused, none failed for another (${workers ?? "the machine's"} worker${workers === 1 ? "" : "s"})`,
+    async () => {
+      setParseWorkers(workers);
+      const notes = Array.from({ length: 12 }, (_, i) => bigNote(`Note ${i}`, 100 * 1024));
+      const caches = notes.map(() => newParseCache());
+      const ok = await Promise.all(notes.map((n, i) => parseInBackground(n, caches[i]!)));
+      expect(caches.map((c) => c.backgroundFailure?.why ?? null)).toEqual(notes.map(() => null));
+      expect(ok.every(Boolean)).toBe(true);
+      for (const [i, n] of notes.entries())
+        expect(parseMarkdown(n, caches[i]!).tree.children[0]).toMatchObject({ type: "heading" });
+    },
+    TEST_BUDGETS.parseBurst,
+  );
 }
 
-test("a note as big as walk.max_file_size parses on one worker: never refused for its size or its tree's", async () => {
-  setParseWorkers(1);
-  const text = bigNote("Index", DEFAULT_CONFIG.walk.max_file_size);
-  const cache = newParseCache();
-  expect(await parseInBackground(text, cache)).toBe(true);
-  expect(cache.backgroundFailure).toBeUndefined();
-  expect(parseMarkdown(text, cache).tree.children[0]).toMatchObject({ type: "heading" });
-}, 120_000);
+test(
+  "a note as big as walk.max_file_size parses on one worker: never refused for its size or its tree's",
+  async () => {
+    setParseWorkers(1);
+    const text = bigNote("Index", DEFAULT_CONFIG.walk.max_file_size);
+    const cache = newParseCache();
+    expect(await parseInBackground(text, cache)).toBe(true);
+    expect(cache.backgroundFailure).toBeUndefined();
+    expect(parseMarkdown(text, cache).tree.children[0]).toMatchObject({ type: "heading" });
+  },
+  TEST_BUDGETS.maximumNoteParse,
+);
 
 test("a note whose tree is many times its text — a long list of links — parses on one worker, its answer uncapped", async () => {
   setParseWorkers(1);

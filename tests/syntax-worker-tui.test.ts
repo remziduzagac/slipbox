@@ -1,3 +1,4 @@
+import { TEST_BUDGETS } from "./support/timeouts.ts";
 import { afterEach, describe, expect, test } from "bun:test";
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -7,50 +8,54 @@ import { locateVault } from "../src/core/vault.ts";
 import { harness, makeSandbox, makeVault } from "./tui-harness.ts";
 
 makeSandbox();
-test("the syntax pass leaves the event loop available and installs only the current revision", async () => {
-  await grammar("typescript");
-  const root = makeVault();
-  writeFileSync(join(root, "large.ts"), "export const initial = 1;\n");
-  const h = await harness({
-    root,
-    open: "large.ts",
-    config: (c) => {
-      c.render.code = false;
-    },
-  });
-  const buf = h.app.view!.buf;
-  const source = Array.from(
-    { length: 10000 },
-    (_, i) => `export function item${i}(x: number) { return x + ${i}; }\n`,
-  ).join("");
-  buf.loadText(source);
-  // The screen's turns while the pass is on the thread: a pass on this one would leave none between its start and its
-  // answer. Counted, not timed, so a CI runner that stalls for seconds can't fail it (a 7.6 s gap on macOS once).
-  const pending = (h.app.languages as unknown as { syntaxPending: Map<unknown, unknown> }).syntaxPending;
-  let turnsWhilePending = 0;
-  const heartbeat = setInterval(() => {
-    if (pending.has(buf)) turnsWhilePending++;
-  }, 5);
-  try {
-    h.app.languages.ensureSyntax(buf);
-    const deadline = performance.now() + 15000;
-    while (buf.syntax?.version !== buf.version && performance.now() < deadline) await Bun.sleep(5);
-    expect(buf.syntax?.version).toBe(buf.version);
-    expect(buf.syntax!.outline).toHaveLength(10000);
-    expect(turnsWhilePending).toBeGreaterThan(0);
-    buf.loadText(source + "\nexport const superseded = true;\n");
-    h.app.languages.ensureSyntax(buf);
-    await Bun.sleep(10);
-    buf.loadText("export function latestRevision() { return 1; }\n");
-    h.app.languages.ensureSyntax(buf);
-    const end = performance.now() + 5000;
-    while (buf.syntax?.version !== buf.version && performance.now() < end) await Bun.sleep(5);
-    expect(buf.syntax?.outline.map((entry) => entry.name)).toEqual(["latestRevision"]);
-  } finally {
-    clearInterval(heartbeat);
-    h.app.languages.stopSyntax?.();
-  }
-}, 20000);
+test(
+  "the syntax pass leaves the event loop available and installs only the current revision",
+  async () => {
+    await grammar("typescript");
+    const root = makeVault();
+    writeFileSync(join(root, "large.ts"), "export const initial = 1;\n");
+    const h = await harness({
+      root,
+      open: "large.ts",
+      config: (c) => {
+        c.render.code = false;
+      },
+    });
+    const buf = h.app.view!.buf;
+    const source = Array.from(
+      { length: 10000 },
+      (_, i) => `export function item${i}(x: number) { return x + ${i}; }\n`,
+    ).join("");
+    buf.loadText(source);
+    // The screen's turns while the pass is on the thread: a pass on this one would leave none between its start and its
+    // answer. Counted, not timed, so a CI runner that stalls for seconds can't fail it (a 7.6 s gap on macOS once).
+    const pending = (h.app.languages as unknown as { syntaxPending: Map<unknown, unknown> }).syntaxPending;
+    let turnsWhilePending = 0;
+    const heartbeat = setInterval(() => {
+      if (pending.has(buf)) turnsWhilePending++;
+    }, 5);
+    try {
+      h.app.languages.ensureSyntax(buf);
+      const deadline = performance.now() + 15000;
+      while (buf.syntax?.version !== buf.version && performance.now() < deadline) await Bun.sleep(5);
+      expect(buf.syntax?.version).toBe(buf.version);
+      expect(buf.syntax!.outline).toHaveLength(10000);
+      expect(turnsWhilePending).toBeGreaterThan(0);
+      buf.loadText(source + "\nexport const superseded = true;\n");
+      h.app.languages.ensureSyntax(buf);
+      await Bun.sleep(10);
+      buf.loadText("export function latestRevision() { return 1; }\n");
+      h.app.languages.ensureSyntax(buf);
+      const end = performance.now() + 5000;
+      while (buf.syntax?.version !== buf.version && performance.now() < end) await Bun.sleep(5);
+      expect(buf.syntax?.outline.map((entry) => entry.name)).toEqual(["latestRevision"]);
+    } finally {
+      clearInterval(heartbeat);
+      h.app.languages.stopSyntax?.();
+    }
+  },
+  TEST_BUDGETS.syntaxUiPass,
+);
 
 const real = globalThis.Worker;
 /** Each syntax thread started from now on: a stand-in that crashes, answers with an error or never answers (`kind`),

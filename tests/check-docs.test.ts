@@ -1,3 +1,4 @@
+import { UNIT_TIMEOUT_MS } from "./support/timeouts.ts";
 // The docs' check (scripts/check-docs.ts, greenrepo DOC-05), run on a repository of the test's own with the project's
 // configs: a clean one passes; a misspelling, a broken link, a heading a link names that isn't there and a long line
 // each fail it alone; it reads only what git tracks, and leaves out what's wrong on purpose. typos and lychee are the
@@ -9,7 +10,7 @@ import { dirname, join } from "node:path";
 import { LEFT_OUT, lycheePath } from "../scripts/check-docs.ts";
 
 // Processes started, repositories made: slow on a loaded or small machine (a small CI runner), not stuck.
-setDefaultTimeout(30_000);
+setDefaultTimeout(UNIT_TIMEOUT_MS);
 
 const TOP = join(import.meta.dir, "..");
 const CONFIGS = [".markdownlint-cli2.jsonc", "_typos.toml"];

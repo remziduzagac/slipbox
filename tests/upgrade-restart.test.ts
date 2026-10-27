@@ -1,3 +1,4 @@
+import { UNIT_TIMEOUT_MS } from "./support/timeouts.ts";
 // Upgrading and restarting from the TUI (UPG): `upgrade` one at a time, never back, cancellable before its commit;
 // the restart's note and its hand-over (`core/restart.ts`).
 import { afterAll, describe, expect, setDefaultTimeout, test } from "bun:test";
@@ -43,7 +44,7 @@ import {
   versionOf,
 } from "../src/core/update.ts";
 
-setDefaultTimeout(30_000);
+setDefaultTimeout(UNIT_TIMEOUT_MS);
 
 const sandbox = realpathSync(mkdtempSync(join(tmpdir(), "slipbox-upg-")));
 afterAll(() => rmSync(sandbox, { recursive: true, force: true }));

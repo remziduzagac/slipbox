@@ -1,3 +1,4 @@
+import { UNIT_TIMEOUT_MS, TEST_BUDGETS } from "./support/timeouts.ts";
 // slipbox as a client of language servers (plan 19.x): a server started, told about a file, its
 // diagnostics heard — sent or asked for — its settings answered, stopped, and a crash noticed. A fake
 // server (tests/fixtures/fake-lsp.ts) stands in for a real one.
@@ -49,7 +50,7 @@ import { vscodeSettings } from "../src/core/servers/vscode.ts";
 import type { Problem } from "../src/core/diagnostics.ts";
 import { setTrust, setTrustedRoots } from "../src/core/trust.ts";
 
-setDefaultTimeout(30_000);
+setDefaultTimeout(UNIT_TIMEOUT_MS);
 const FAKE = join(import.meta.dir, "fixtures", "fake-lsp.ts");
 const sandbox = mkdtempSync(join(tmpdir(), "slipbox-servers-"));
 process.env.XDG_DATA_HOME = join(sandbox, "data"); // slipbox's installs, and Mason's, are the sandbox's
@@ -1135,25 +1136,29 @@ describe("the servers of open files (19.1)", () => {
     const pulling = (name: string) =>
       table({ fake: { name: "fake", command: launcher(name, 'process.env.FAKE_PULL = "1";\n'), args: ["--stdio"] } });
 
-    test("crashed with 70 files open: started again, each file told again and answered — no burst stops it", async () => {
-      const { m, problems, messages, when } = managed(pulling("fake-reopen"));
-      const root = project("reopen");
-      const files = Array.from({ length: 70 }, (_, i) => join(root, `f${i}.fk`));
-      for (const file of files) {
-        m.open(file, 1, "ok\n");
-        await when(() => problems.has(file));
-      }
-      m.change(files[0]!, 2, "CRASH\n");
-      await when(() => messages.some((x) => x.startsWith("fake crashed")));
-      m.change(files[0]!, 3, "ok\n"); // as it is when the new one is told
-      problems.clear();
-      await when(() => files.every((file) => problems.has(file)));
-      expect(m.list()[0]?.state).toBe("running");
-      expect(messages.filter((x) => x.startsWith("fake"))).toEqual([
-        expect.stringMatching(/^fake crashed \(it exited \(code 3\)\); starting it again$/),
-      ]);
-      await m.stopAll();
-    }, 60_000);
+    test(
+      "crashed with 70 files open: started again, each file told again and answered — no burst stops it",
+      async () => {
+        const { m, problems, messages, when } = managed(pulling("fake-reopen"));
+        const root = project("reopen");
+        const files = Array.from({ length: 70 }, (_, i) => join(root, `f${i}.fk`));
+        for (const file of files) {
+          m.open(file, 1, "ok\n");
+          await when(() => problems.has(file));
+        }
+        m.change(files[0]!, 2, "CRASH\n");
+        await when(() => messages.some((x) => x.startsWith("fake crashed")));
+        m.change(files[0]!, 3, "ok\n"); // as it is when the new one is told
+        problems.clear();
+        await when(() => files.every((file) => problems.has(file)));
+        expect(m.list()[0]?.state).toBe("running");
+        expect(messages.filter((x) => x.startsWith("fake"))).toEqual([
+          expect.stringMatching(/^fake crashed \(it exited \(code 3\)\); starting it again$/),
+        ]);
+        await m.stopAll();
+      },
+      TEST_BUDGETS.serverRestart,
+    );
 
     test("gone while a change is still being written to it: the write's failure is no error of slipbox's", async () => {
       const { m, messages, when } = managed(
@@ -1347,63 +1352,67 @@ describe("the servers of open files (19.1)", () => {
     ]);
   });
 
-  test("the TUI's way (23.x): a root not answered for is asked about once, not told; kept restricted, neither; trusted, its servers started again as anywhere", async () => {
-    const folder = {
-      name: "fake",
-      command: launcher("fake-ask"),
-      args: ["--stdio"],
-      config: { fake: { level: 2 } },
-      untrusted: { settings: () => ({ fake: { safe: true } }) },
-    };
-    const problems = new Map<string, { version: number | null; list: Problem[] }>();
-    const messages: string[] = [];
-    const asked: string[] = [];
-    const e = events();
-    const m = new ServerManager({
-      table: () => table({ fake: folder }),
-      userTable: () => table({ fake: { ...folder, config: { fake: { level: 1 } } } }),
-      autoInstall: () => false,
-      problems: (path, _s, version, list) => (problems.set(path, { version, list }), e.heard()),
-      message: (_l, text) => messages.push(text),
-      ask: (root, limits) => asked.push(`${root}: ${limits.join("; ")}`),
-    });
-    const top = project("ask-trust");
-    const file = join(top, "a.fk");
-    m.open(file, 1, "BAD\n");
-    m.open(join(top, "b.fk"), 1, "fine\n");
-    expect(asked).toEqual([`${top}: fake without the project's code`]); // once
-    expect(messages.filter((t) => t.includes("trust"))).toEqual([]);
-    // The settings the file's server reports (it says nothing before it has them), once it's running: a change, and
-    // what it says of it.
-    let version = 1;
-    const settings = async () => {
-      expect(await m.started(file, "diagnostics")).toEqual(["fake"]);
-      m.change(file, ++version, "BAD\n");
-      await e.when(() => problems.get(file)?.version === version);
-      return JSON.parse(problems.get(file)!.list[0]!.message.replace(/^bad, with /, ""));
-    };
-    expect(await settings()).toEqual({ level: 1, safe: true });
-    // Trusted: started again with the folder's own settings, nothing more asked.
-    setTrust(top, "trusted");
-    m.restartUnder(top);
-    expect(await settings()).toEqual({ level: 2 });
-    expect(asked.length).toBe(1);
-    await m.stopAll();
-    // Another root, kept restricted: neither asked nor told.
-    const other = project("kept-safe");
-    setTrust(other, "restricted");
-    const m2 = new ServerManager({
-      table: () => table({ fake: folder }),
-      autoInstall: () => false,
-      problems: () => {},
-      message: (_l, text) => messages.push(text),
-      ask: (root) => asked.push(root),
-    });
-    m2.open(join(other, "a.fk"), 1, "fine\n");
-    expect(asked.length).toBe(1);
-    expect(messages.filter((t) => t.includes("trust"))).toEqual([]);
-    await m2.stopAll();
-  }, 90_000); // three servers started one after another: the time a loaded machine takes
+  test(
+    "the TUI's way (23.x): a root not answered for is asked about once, not told; kept restricted, neither; trusted, its servers started again as anywhere",
+    async () => {
+      const folder = {
+        name: "fake",
+        command: launcher("fake-ask"),
+        args: ["--stdio"],
+        config: { fake: { level: 2 } },
+        untrusted: { settings: () => ({ fake: { safe: true } }) },
+      };
+      const problems = new Map<string, { version: number | null; list: Problem[] }>();
+      const messages: string[] = [];
+      const asked: string[] = [];
+      const e = events();
+      const m = new ServerManager({
+        table: () => table({ fake: folder }),
+        userTable: () => table({ fake: { ...folder, config: { fake: { level: 1 } } } }),
+        autoInstall: () => false,
+        problems: (path, _s, version, list) => (problems.set(path, { version, list }), e.heard()),
+        message: (_l, text) => messages.push(text),
+        ask: (root, limits) => asked.push(`${root}: ${limits.join("; ")}`),
+      });
+      const top = project("ask-trust");
+      const file = join(top, "a.fk");
+      m.open(file, 1, "BAD\n");
+      m.open(join(top, "b.fk"), 1, "fine\n");
+      expect(asked).toEqual([`${top}: fake without the project's code`]); // once
+      expect(messages.filter((t) => t.includes("trust"))).toEqual([]);
+      // The settings the file's server reports (it says nothing before it has them), once it's running: a change, and
+      // what it says of it.
+      let version = 1;
+      const settings = async () => {
+        expect(await m.started(file, "diagnostics")).toEqual(["fake"]);
+        m.change(file, ++version, "BAD\n");
+        await e.when(() => problems.get(file)?.version === version);
+        return JSON.parse(problems.get(file)!.list[0]!.message.replace(/^bad, with /, ""));
+      };
+      expect(await settings()).toEqual({ level: 1, safe: true });
+      // Trusted: started again with the folder's own settings, nothing more asked.
+      setTrust(top, "trusted");
+      m.restartUnder(top);
+      expect(await settings()).toEqual({ level: 2 });
+      expect(asked.length).toBe(1);
+      await m.stopAll();
+      // Another root, kept restricted: neither asked nor told.
+      const other = project("kept-safe");
+      setTrust(other, "restricted");
+      const m2 = new ServerManager({
+        table: () => table({ fake: folder }),
+        autoInstall: () => false,
+        problems: () => {},
+        message: (_l, text) => messages.push(text),
+        ask: (root) => asked.push(root),
+      });
+      m2.open(join(other, "a.fk"), 1, "fine\n");
+      expect(asked.length).toBe(1);
+      expect(messages.filter((t) => t.includes("trust"))).toEqual([]);
+      await m2.stopAll();
+    },
+    TEST_BUDGETS.serverTrust,
+  ); // three servers started one after another: the time a loaded machine takes
 
   test("a server's start in a root you don't trust (23.4): its safe environment and initialize options; in one you trust, its own", () => {
     const top = project("untrusted-start");
@@ -1509,20 +1518,24 @@ describe("the servers of open files (19.1)", () => {
 
   // Four servers started one after another: on a loaded machine each start can take seconds, so the test is given the
   // time they take, and waits for what they say rather than for a while.
-  test("a crash: started again, its files told again; one that keeps crashing is left stopped", async () => {
-    const { m, problems, messages, when } = managed(
-      table({ fake: { name: "fake", command: launcher("fake-crash"), args: ["--stdio"] } }),
-    );
-    const root = project("pc");
-    const file = join(root, "a.fk");
-    m.open(file, 1, "BAD\n");
-    await when(() => problems.get(file)?.list.length === 1);
-    problems.clear();
-    m.change(file, 2, "CRASH\n"); // it dies on this text, every time it's told it
-    await when(() => messages.some((x) => x.includes("keeps crashing")));
-    expect(messages.filter((x) => x.startsWith("fake crashed")).length).toBe(3);
-    await m.stopAll();
-  }, 120_000);
+  test(
+    "a crash: started again, its files told again; one that keeps crashing is left stopped",
+    async () => {
+      const { m, problems, messages, when } = managed(
+        table({ fake: { name: "fake", command: launcher("fake-crash"), args: ["--stdio"] } }),
+      );
+      const root = project("pc");
+      const file = join(root, "a.fk");
+      m.open(file, 1, "BAD\n");
+      await when(() => problems.get(file)?.list.length === 1);
+      problems.clear();
+      m.change(file, 2, "CRASH\n"); // it dies on this text, every time it's told it
+      await when(() => messages.some((x) => x.includes("keeps crashing")));
+      expect(messages.filter((x) => x.startsWith("fake crashed")).length).toBe(3);
+      await m.stopAll();
+    },
+    TEST_BUDGETS.serverCrashLoop,
+  );
 
   test("a crash whose program has gone: left stopped and said so — never installed, native or npm with auto_install off", async () => {
     setTrustedRoots([sandbox]); // a root you trust (23.x): the project's own programs and settings count
