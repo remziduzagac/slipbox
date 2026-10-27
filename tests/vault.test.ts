@@ -28,7 +28,13 @@ import { CLI_COMMANDS, FLAGS, GLOBAL_FLAGS, runCli } from "../src/cli/cli.ts";
 import { COMMAND_SPECS } from "../src/core/application/commands/catalog.ts";
 import { DEFAULT_CONFIG, loadConfig } from "../src/core/application/config/config.ts";
 import { type Graph, openGraph } from "../src/core/workspace/graph/graph.ts";
-import { applyPlan, outside, planHeadingRename, planRelink, planUndo } from "../src/core/rename.ts";
+import {
+  applyPlan,
+  outside,
+  planHeadingRename,
+  planRelink,
+  planUndo,
+} from "../src/core/workspace/mutations/rename/rename.ts";
 import {
   checkoutAt,
   configFilesFor,
@@ -1405,7 +1411,7 @@ describe("links in code comments (16.10)", () => {
   });
 
   test("a code or data file moved: its own relative paths follow it, each in its form; one the root still reaches stays (D63)", async () => {
-    const { planNoteRename } = await import("../src/core/rename.ts");
+    const { planNoteRename } = await import("../src/core/workspace/mutations/rename/rename.ts");
     const dir = mkdtempSync(join(tmpdir(), "slipbox-ownpaths-"));
     const files: Record<string, string> = {
       ".slipbox/config.toml": "",
@@ -1839,7 +1845,7 @@ describe("a root's identity, its state by path, the machine's roots (17.3–17.6
   });
 
   test("a named folder moved by hand: its trash restores into where it is now, its undo log follows (0.10, 21.8)", async () => {
-    const { readRenames } = await import("../src/core/rename-log.ts");
+    const { readRenames } = await import("../src/core/workspace/mutations/rename/rename-log.ts");
     const base = fresh("trash-moved");
     const tag = `tm${basename(base).slice(-6).toLowerCase()}`;
     const a = join(base, "a", "notes");
@@ -1866,7 +1872,7 @@ describe("a root's identity, its state by path, the machine's roots (17.3–17.6
 
   test("a named folder moved by hand: the session's scratch, in the state folder by its absolute path, follows it (0.10, 21.8)", async () => {
     const { loadSession, saveSession } = await import("../src/core/workspace/session/position.ts");
-    const { appendScratch, scratchLocation } = await import("../src/core/capture.ts");
+    const { appendScratch, scratchLocation } = await import("../src/core/workspace/mutations/capture.ts");
     const base = fresh("scratch-moved");
     const tag = `sm${basename(base).slice(-6).toLowerCase()}`;
     const a = join(base, "a", "notes");
@@ -2620,7 +2626,7 @@ describe("renames across vaults (17.15, 7.1–7.3)", () => {
 
   test("a nested root's file rewritten by a rename stays that root's: never one of this root's notes (17.17)", async () => {
     const { openVault } = await import("../src/core/workspace/links/reach.ts");
-    const { planNoteRename } = await import("../src/core/rename.ts");
+    const { planNoteRename } = await import("../src/core/workspace/mutations/rename/rename.ts");
     const dir = vault({ "a.md": "# A\n", "sub/.slipbox/config.toml": "", "sub/b.md": "[a](../a.md)\n" });
     openVault(join(dir, "sub")).ensureAll();
     const g = openVault(dir);
@@ -2702,7 +2708,7 @@ describe("renames across vaults (17.15, 7.1–7.3)", () => {
     expect((await cli(["mv", "a", "b"], dir)).code).toBe(5);
     expect((await cli(["mv", "a", "../elsewhere"], dir)).code).toBe(5);
     const { openGraph: open } = await import("../src/core/workspace/graph/graph.ts");
-    const { planNoteRename, applyPlan } = await import("../src/core/rename.ts");
+    const { planNoteRename, applyPlan } = await import("../src/core/workspace/mutations/rename/rename.ts");
     const g = open(locateVault({ root: dir }), DEFAULT_CONFIG, true);
     const plan = planNoteRename(g, "a.md", "c");
     writeFileSync(join(dir, "index.md"), "[a](a.md) edited meanwhile\n");
@@ -3071,7 +3077,7 @@ describe("replace in every note (25.4)", () => {
   });
 
   test("planned with nothing to find: refused, not a match at every place", async () => {
-    const { planReplace } = await import("../src/core/replace-files.ts");
+    const { planReplace } = await import("../src/core/workspace/mutations/replace-files.ts");
     const dir = vault({ "a.md": "x\n" });
     const g = openGraph(locateVault({ root: dir }), DEFAULT_CONFIG, true);
     expect(() => planReplace(g, "", "y", ["a.md"], { regex: true, whole: false })).toThrow(
@@ -3407,7 +3413,7 @@ describe("nested vaults, known to each other without being opened (17.17)", () =
 describe("moving a folder (18.3)", () => {
   test("links between notes that move together stay; links out of it and into it are fixed; everything in it moves", async () => {
     const { openGraph: open } = await import("../src/core/workspace/graph/graph.ts");
-    const { planFolderMove, applyPlan } = await import("../src/core/rename.ts");
+    const { planFolderMove, applyPlan } = await import("../src/core/workspace/mutations/rename/rename.ts");
     const dir = mkdtempSync(join(tmpdir(), "slipbox-foldermove-"));
     const files: Record<string, string> = {
       "a/one.md":
@@ -3473,7 +3479,7 @@ describe("moving a folder (18.3)", () => {
 
 describe("moving a vault's folder (18.7)", () => {
   test("links into it by path are fixed, from its parent and other vaults; its links out too", async () => {
-    const { planVaultFolderMove, applyPlan } = await import("../src/core/rename.ts");
+    const { planVaultFolderMove, applyPlan } = await import("../src/core/workspace/mutations/rename/rename.ts");
     const { openVault } = await import("../src/core/workspace/links/reach.ts");
     const base = mkdtempSync(join(tmpdir(), "slipbox-vaultmove-"));
     const parent = join(base, "parent");
@@ -4043,7 +4049,7 @@ describe("search: the index and the scan (6.x)", () => {
       heard.push(c);
       if (c.kind !== "moved") indexFile(again, idx, c.path);
     });
-    const { applyPlan, planNoteRename } = await import("../src/core/rename.ts");
+    const { applyPlan, planNoteRename } = await import("../src/core/workspace/mutations/rename/rename.ts");
     applyPlan(again, planNoteRename(again, "new.md", "fresh"));
     stop();
     expect(heard).toEqual(
@@ -8079,7 +8085,7 @@ describe("search by vault (20.16)", () => {
   test("a moved folder's relink reads every other root's links, and leaves each as it was: not seen now", async () => {
     const { openVault } = await import("../src/core/workspace/links/reach.ts");
     const { readRoots, writeRoots } = await import("../src/core/workspace/vaults/registry.ts");
-    const { planRelink } = await import("../src/core/rename.ts");
+    const { planRelink } = await import("../src/core/workspace/mutations/rename/rename.ts");
     const { at } = await four();
     const old = "2020-01-01T00:00:00.000Z";
     writeRoots(readRoots().map((v) => (v.path === at("d") ? { ...v, seen: old } : v)));
@@ -8284,7 +8290,7 @@ describe("generated edits as plans, in two steps (20.18)", () => {
     expect((await cli(["apply", id], dir)).code).toBe(3); // applied once: gone
     expect((await cli(["apply", "nope"], dir)).code).toBe(3);
     // A plan file that isn't one (cut short, edited by hand): no plan, not a crash.
-    const { plansDir } = await import("../src/core/plans.ts");
+    const { plansDir } = await import("../src/core/workspace/mutations/plans.ts");
     writeFileSync(join(plansDir(), "deadbeef.json"), '{"version": 1, "root": 7}');
     expect((await cli(["apply", "deadbeef"], dir)).code).toBe(3);
   });
@@ -8419,7 +8425,7 @@ describe("plans write only inside the vault (VV-D6)", () => {
     "a note or folder reached through a followed link out of the vault isn't moved out of it, in a vault or in home",
     homed(async (home) => {
       const { vault, outer } = await linked();
-      const { planFolderMove, planNoteRename } = await import("../src/core/rename.ts");
+      const { planFolderMove, planNoteRename } = await import("../src/core/workspace/mutations/rename/rename.ts");
       const g = openGraph(locateVault({ root: vault }), DEFAULT_CONFIG, false);
       expect(() => planNoteRename(g, "outdir/s.md", "moved.md")).toThrow("outdir/s.md resolves outside the vault");
       expect(() => planFolderMove(g, "outdir/sub", "insub")).toThrow("outdir/sub resolves outside the vault");
@@ -8447,7 +8453,7 @@ describe("plans write only inside the vault (VV-D6)", () => {
     "a followed link out of the vault, named itself, is renamed and moved as a link: its target stays where it is",
     homed(async () => {
       const { top, vault, outer, link } = await linked();
-      const { planFolderMove, planNoteRename } = await import("../src/core/rename.ts");
+      const { planFolderMove, planNoteRename } = await import("../src/core/workspace/mutations/rename/rename.ts");
       // A file link, and a relative one to a folder of its own.
       const file = join(vault, "ext.md");
       symlinkSync(join(outer, "s.md"), file);
@@ -8633,7 +8639,7 @@ describe("plans write only inside the vault (VV-D6)", () => {
   test(
     "a file link moved where a link leading nowhere is: refused, nothing written; one shared with another name keeps its own links",
     homed(async (home) => {
-      const { planNoteRename } = await import("../src/core/rename.ts");
+      const { planNoteRename } = await import("../src/core/workspace/mutations/rename/rename.ts");
       const top = realpathSync(mkdtempSync(join(tmpdir(), "slipbox-inside-")));
       writeFileSync(join(home, "a.md"), "# A\n");
       writeFileSync(join(top, "s.md"), "# S\n\nsee [a](a.md)\n");
@@ -8794,7 +8800,7 @@ describe("plans write only inside the vault (VV-D6)", () => {
       expect(readFileSync(join(vault, "shelf", "t.md"), "utf8")).toBe("# T\n\n[a](../a.md)\n");
       // Written once, through one name: the other's links indexed again too, as an undo's.
       const g = openGraph(locateVault({ root: vault }), loadConfig({ vaultRoot: vault }).config, false);
-      const { planNoteRename } = await import("../src/core/rename.ts");
+      const { planNoteRename } = await import("../src/core/workspace/mutations/rename/rename.ts");
       applyPlan(g, planNoteRename(g, "a.md", "b.md"));
       const from = (rel: string) =>
         g
@@ -8805,7 +8811,7 @@ describe("plans write only inside the vault (VV-D6)", () => {
       applyPlan(g, planUndo(g));
       expect(from("a.md")).toEqual(["box/e3.md", "box/e4.md", "e1.md"]);
       // Two names in one folder edited otherwise each: neither is written, both said.
-      const { Collector } = await import("../src/core/rename-plan.ts");
+      const { Collector } = await import("../src/core/workspace/mutations/rename/rename-plan.ts");
       const c = new Collector(openGraph(locateVault({ root: vault }), loadConfig({ vaultRoot: vault }).config, false));
       for (const [n, to] of [
         ["e3.md", "[a](x.md)"],
@@ -8961,7 +8967,7 @@ describe("plans write only inside the vault (VV-D6)", () => {
       const { vault } = await linked();
       writeFileSync(join(vault, "index.md"), "# Index\n\n[a](a.md)\n");
       const g = openGraph(locateVault({ root: vault }), DEFAULT_CONFIG, false);
-      const { planNoteRename } = await import("../src/core/rename.ts");
+      const { planNoteRename } = await import("../src/core/workspace/mutations/rename/rename.ts");
       const plan = planNoteRename(g, "a.md", "b.md");
       rmSync(join(vault, "a.md"));
       expect(() => applyPlan(g, plan)).toThrow("a.md isn't there any more; nothing changed");
@@ -8996,7 +9002,7 @@ describe("plans write only inside the vault (VV-D6)", () => {
       writeFileSync(join(vault, "b.md"), "# B\n\n[s](a/out/s.md)\n");
       const g = openGraph(locateVault({ root: vault }), DEFAULT_CONFIG, false);
       expect(g.notes.has("a/out/s.md")).toBe(true);
-      const { planFolderMove } = await import("../src/core/rename.ts");
+      const { planFolderMove } = await import("../src/core/workspace/mutations/rename/rename.ts");
       applyPlan(g, planFolderMove(g, "a", "c"));
       expect([...g.notes.keys()].filter((r) => r.startsWith("c/out/"))).toEqual([]);
       expect(g.skipped.some((x) => x.rel === "c/out")).toBe(true);
@@ -9127,7 +9133,7 @@ describe("plans write only inside the vault (VV-D6)", () => {
       mkdirSync(join(home, "src"));
       writeFileSync(join(home, "src", "s.md"), "# S\n");
       writeFileSync(join(home, "ref.md"), "# Ref\n\n[s](src/s.md)\n");
-      const { planNoteRename } = await import("../src/core/rename.ts");
+      const { planNoteRename } = await import("../src/core/workspace/mutations/rename/rename.ts");
       const plan = planNoteRename(openGraph(locateVault({ root: home }), DEFAULT_CONFIG, false), "src/s.md", "s.md");
       chmodSync(join(home, "src"), 0o600);
       try {
@@ -9149,7 +9155,7 @@ describe("plans write only inside the vault (VV-D6)", () => {
       const shared = join(process.env.XDG_STATE_HOME!, "slipbox");
       const g = openGraph(locateVault({ root: vault }), DEFAULT_CONFIG, false);
       mkdirSync(stateDir(g.loc), { recursive: true }); // the vault's own, there from its first use: its log written
-      const { planFolderMove } = await import("../src/core/rename.ts");
+      const { planFolderMove } = await import("../src/core/workspace/mutations/rename/rename.ts");
       const plan = planFolderMove(g, "outdir", "outlink");
       const heard: string[] = [];
       g.onChange((c) => {
@@ -9197,7 +9203,7 @@ describe("plans write only inside the vault (VV-D6)", () => {
       symlinkSync(join(top, "proj"), join(home, "work"));
       setLinkAnswer(join(home, "work"), "follow");
       await probe(join(top, "proj"));
-      const { planVaultRename } = await import("../src/core/rename.ts");
+      const { planVaultRename } = await import("../src/core/workspace/mutations/rename/rename.ts");
       const g = openGraph(locateVault({ root: home }), DEFAULT_CONFIG, false);
       applyPlan(g, planVaultRename(rootAt(join(home, "work")), "proj2"));
       expect(readFileSync(join(top, "proj", ".slipbox", "config.toml"), "utf8")).toContain('name = "proj2"');
@@ -9232,7 +9238,7 @@ describe("plans write only inside the vault (VV-D6)", () => {
       writeFileSync(join(vault, "f", "n.md"), "# N\n");
       mkdirSync(join(vault, "ro"));
       const g = openGraph(locateVault({ root: vault }), DEFAULT_CONFIG, false);
-      const { planFolderMove } = await import("../src/core/rename.ts");
+      const { planFolderMove } = await import("../src/core/workspace/mutations/rename/rename.ts");
       const plan = planFolderMove(g, "f", "ro/deep/f");
       chmodSync(join(vault, "ro"), 0o500);
       try {
@@ -9263,7 +9269,7 @@ describe("plans write only inside the vault (VV-D6)", () => {
       const g = openGraph(locateVault({ root: vault }), DEFAULT_CONFIG, false);
       // The walk lists one of the names (where case is ignored, there's one): the rename goes to the other.
       const [from, to] = g.dirs.includes("Outer") ? ["Outer", "outer"] : ["outer", "Outer"];
-      const { planFolderMove } = await import("../src/core/rename.ts");
+      const { planFolderMove } = await import("../src/core/workspace/mutations/rename/rename.ts");
       const plan = planFolderMove(g, from, to);
       expect(plan.move?.link).toBe(true);
       expect(outside(g, plan)).toBeNull();
@@ -9290,7 +9296,7 @@ describe("plans write only inside the vault (VV-D6)", () => {
       symlinkSync(join(top, "out"), join(vault, "q"));
       setLinkAnswer(join(vault, "q"), "follow");
       await probe(join(top, "out"));
-      const { planNoteRename } = await import("../src/core/rename.ts");
+      const { planNoteRename } = await import("../src/core/workspace/mutations/rename/rename.ts");
       const g = openGraph(locateVault({ root: vault }), loadConfig({ vaultRoot: vault }).config, false);
       expect(planNoteRename(g, "a.md", "z.md").skipped.map((x) => x.reason)).toEqual([
         "reached as q/e2.md too, from another folder: not rewritten",
@@ -9330,7 +9336,7 @@ describe("plans write only inside the vault (VV-D6)", () => {
   test(
     "apply takes a plan by its id, from slipbox's plans only: each file shown where it is, and one out of the vault refused",
     homed(async () => {
-      const { plansDir } = await import("../src/core/plans.ts");
+      const { plansDir } = await import("../src/core/workspace/mutations/plans.ts");
       const { top, vault } = await linked();
       const loose = join(top, "loose.txt");
       writeFileSync(loose, "before\n");
@@ -9439,7 +9445,7 @@ describe("renames refused before anything is written (cli.md, Renames)", () => {
     return dir;
   };
   test("a file where the target's folder would be: refused when planned; appeared since, nothing written", async () => {
-    const { planNoteRename, RenameError } = await import("../src/core/rename.ts");
+    const { planNoteRename, RenameError } = await import("../src/core/workspace/mutations/rename/rename.ts");
     const dir = root({ "a.md": "# A\n", "x.md": "# X\n", "index.md": "[a](a.md)\n" });
     const g = openGraph(locateVault({ root: dir }), DEFAULT_CONFIG, false);
     expect(() => planNoteRename(g, "a.md", "x.md/a")).toThrow("x.md is a file: x.md/a can't go under it");
@@ -9451,7 +9457,7 @@ describe("renames refused before anything is written (cli.md, Renames)", () => {
   });
 
   test("onto a different file whose name differs only in case: refused, both kept; a lone note's case-only rename works", async () => {
-    const { planNoteRename } = await import("../src/core/rename.ts");
+    const { planNoteRename } = await import("../src/core/workspace/mutations/rename/rename.ts");
     const dir = root({
       "note.md": "# lower\n",
       "Note.md": "# UPPER\n",
@@ -9471,7 +9477,7 @@ describe("renames refused before anything is written (cli.md, Renames)", () => {
   });
 
   test("a folder's case-only rename works; onto a different existing folder, refused", async () => {
-    const { planFolderMove } = await import("../src/core/rename.ts");
+    const { planFolderMove } = await import("../src/core/workspace/mutations/rename/rename.ts");
     const dir = root({ "notes/a.md": "# A\n", "other/b.md": "# B\n", "index.md": "[a](notes/a.md)\n" });
     const g = openGraph(locateVault({ root: dir }), DEFAULT_CONFIG, false);
     expect(() => planFolderMove(g, "notes", "other")).toThrow("other exists; not overwriting it");
@@ -9481,7 +9487,9 @@ describe("renames refused before anything is written (cli.md, Renames)", () => {
   });
 
   test("a move typed as a path: a folder that's there, or a path ending in /, is into it, the name kept (DF-D4)", async () => {
-    const { moveTarget, planFolderMove, planNoteRename } = await import("../src/core/rename.ts");
+    const { moveTarget, planFolderMove, planNoteRename } = await import(
+      "../src/core/workspace/mutations/rename/rename.ts"
+    );
     const dir = root({
       "a.md": "# A\n",
       "ideas/b.md": "# B\n",
@@ -9507,7 +9515,7 @@ describe("renames refused before anything is written (cli.md, Renames)", () => {
   });
 
   test("a wikilinked note whose name has a colon: renamed, its links name it, no folder prefix (21.12)", async () => {
-    const { planNoteRename } = await import("../src/core/rename.ts");
+    const { planNoteRename } = await import("../src/core/workspace/mutations/rename/rename.ts");
     const dir = root({ "notes/Meeting: Q3.md": "# Q3\n", "index.md": "See [[Meeting: Q3]].\n" });
     const g = openGraph(locateVault({ root: dir }), DEFAULT_CONFIG, false);
     applyPlan(g, planNoteRename(g, "notes/Meeting: Q3.md", "notes/Meeting: Q4"));
@@ -9515,7 +9523,7 @@ describe("renames refused before anything is written (cli.md, Renames)", () => {
   });
 
   test("a renamed folder's previous_names on several lines, or with a comment: kept one key, its id and the old name", async () => {
-    const { planVaultRename } = await import("../src/core/rename.ts");
+    const { planVaultRename } = await import("../src/core/workspace/mutations/rename/rename.ts");
     const { readIdentity } = await import("../src/core/workspace/vaults/registry.ts");
     const tag = (dir: string) => basename(dir).slice(-6).toLowerCase();
     for (const prev of ['previous_names = [\n  "older",\n]\n', 'previous_names = ["older"] # kept\n']) {
@@ -9542,7 +9550,7 @@ describe("renames refused before anything is written (cli.md, Renames)", () => {
   });
 
   test("a folder's naming, and its undo, leave .slipbox/config.toml out of the root's files", async () => {
-    const { planVaultRename } = await import("../src/core/rename.ts");
+    const { planVaultRename } = await import("../src/core/workspace/mutations/rename/rename.ts");
     const { search } = await import("../src/core/search.ts");
     const dir = root({ "a.md": "# A\n", ".slipbox/config.toml": "" });
     const g = openGraph(locateVault({ root: dir }), DEFAULT_CONFIG, false);
@@ -12268,7 +12276,7 @@ describe("review cycle 3 (core)", () => {
   const read = (dir: string, rel: string) => readFileSync(join(dir, rel), "utf8");
 
   test("an attachment renamed or moved keeps its wikilinks' extension once: ![[dal.png]] → ![[dal2.png]]", async () => {
-    const { planNoteRename, planFolderMove } = await import("../src/core/rename.ts");
+    const { planNoteRename, planFolderMove } = await import("../src/core/workspace/mutations/rename/rename.ts");
     const { dir, g } = root({
       "x.md": "![[dal.png]] ![[pics/a.pdf]] [[pics/a.pdf]]\n",
       "pics/y.md": "![[./a.pdf]]\n",
@@ -12291,7 +12299,7 @@ describe("review cycle 3 (core)", () => {
   });
 
   test("rename-heading on a setext heading rewrites it with its links; a heading not found writes nothing", async () => {
-    const { RenameError } = await import("../src/core/rename.ts");
+    const { RenameError } = await import("../src/core/workspace/mutations/rename/rename.ts");
     const { dir, g } = root({
       "plan.md": "Plan\n====\n\nGoals {#g}\n-----\n",
       "x.md": "[a](plan.md#goals) [[plan#Goals]]\n",
@@ -12569,7 +12577,7 @@ describe("review cycle 3 (core)", () => {
   });
 
   test("moving a nested root's folder rewrites the links into it from a root nested beside it", async () => {
-    const { planVaultFolderMove } = await import("../src/core/rename.ts");
+    const { planVaultFolderMove } = await import("../src/core/workspace/mutations/rename/rename.ts");
     const { openVault } = await import("../src/core/workspace/links/reach.ts");
     const { dir } = root({
       "home.md": "[b](b/index.md)\n",
@@ -12589,7 +12597,7 @@ describe("review cycle 3 (core)", () => {
   });
 
   test("moving a plain folder that holds a nested root rewrites the links into that root, and the machine's list follows it", async () => {
-    const { planFolderMove } = await import("../src/core/rename.ts");
+    const { planFolderMove } = await import("../src/core/workspace/mutations/rename/rename.ts");
     const { openVault } = await import("../src/core/workspace/links/reach.ts");
     const { dir } = root({
       "home.md": "[n](X/N/n.md) [x](X/x.md)\n",
@@ -12741,7 +12749,7 @@ describe("review cycle 3 (core)", () => {
   });
 
   test("a note moved into a nested root: [[name]] links to it become paths into it, its own names and `/` paths relative out", async () => {
-    const { planNoteRename } = await import("../src/core/rename.ts");
+    const { planNoteRename } = await import("../src/core/workspace/mutations/rename/rename.ts");
     const { dir, g } = root({
       "home.md": "[[plan]] [p](plan.md) [[plan|the plan]]\n",
       "plan.md": "[[home]] [h](home.md) [r](/home.md) [[docs/x]] ![[pic.png]]\n",
@@ -12767,7 +12775,7 @@ describe("review cycle 3 (core)", () => {
   });
 
   test("init <folder> keeps wikilinks reaching: names into it become paths, its names out relative, its root paths its own", async () => {
-    const { planMakeVault } = await import("../src/core/rename.ts");
+    const { planMakeVault } = await import("../src/core/workspace/mutations/rename/rename.ts");
     const { dir, g } = root({
       "home.md": "[[plan]] [[F/plan]] [[docs/x]]\n",
       "docs/x.md": "# X\n",
@@ -12795,7 +12803,7 @@ describe("review cycle 3 (core)", () => {
   });
 
   test("deinit keeps wikilinks reaching what they did: its root paths gain its folder, a name shared with the parent's a path", async () => {
-    const { planUnmakeVault } = await import("../src/core/rename.ts");
+    const { planUnmakeVault } = await import("../src/core/workspace/mutations/rename/rename.ts");
     const { dir, g } = root({
       "home.md": "[[y]] [[solo]]\n",
       "sub/y.md": "# Parent's y\n",
@@ -12825,7 +12833,8 @@ describe("review cycle 3 (core)", () => {
 
 describe("deleting and copying: the path checked by the core, whoever asks (18.4, 18.5)", () => {
   test("a file gone since it was listed, a path out of the root, slipbox's and git's own: refused, nothing trashed or copied", async () => {
-    const { copyPath, FileOpError, listTrash, trashPath } = await import("../src/core/files.ts");
+    const { copyPath, FileOpError, trashPath } = await import("../src/core/workspace/mutations/files.ts");
+    const { listTrash } = await import("../src/core/workspace/mutations/trash.ts");
     const dir = mkdtempSync(join(tmpdir(), "slipbox-fileops-"));
     mkdirSync(join(dir, ".slipbox"));
     mkdirSync(join(dir, ".git"));
@@ -12860,9 +12869,8 @@ describe("deleting and copying: the path checked by the core, whoever asks (18.4
   });
 
   test("the trash emptied: all, or what a preview listed; past 30 days, gone when the trash is next read or written (DF-D14)", async () => {
-    const { emptyTrash, FileOpError, listTrash, restorePath, TRASH_DAYS, trashDir, trashPath } = await import(
-      "../src/core/files.ts"
-    );
+    const { FileOpError, restorePath, trashPath } = await import("../src/core/workspace/mutations/files.ts");
+    const { emptyTrash, listTrash, TRASH_DAYS, trashDir } = await import("../src/core/workspace/mutations/trash.ts");
     const dir = mkdtempSync(join(tmpdir(), "slipbox-trash-"));
     mkdirSync(join(dir, ".slipbox"));
     for (const n of ["a", "b", "c", "d"]) writeFileSync(join(dir, `${n}.md`), `# ${n}\n`);

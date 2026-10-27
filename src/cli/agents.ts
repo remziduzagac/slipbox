@@ -13,7 +13,7 @@ import {
   parseRef,
   readScratch,
   scratchLocation,
-} from "../core/capture.ts";
+} from "../core/workspace/mutations/capture.ts";
 import { copyTextAsync } from "../core/foundation/platform/clipboard.ts";
 import { buildContext } from "../core/documents/model/context.ts";
 import { stateDir } from "../core/foundation/platform/paths.ts";

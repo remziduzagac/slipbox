@@ -11877,7 +11877,7 @@ describe("vaults in the TUI (17.x)", () => {
   });
 
   test("a folder's move is refused while a note in it is unsaved, its links rewritten or not", async () => {
-    const { planFolderMove } = await import("../src/core/rename.ts");
+    const { planFolderMove } = await import("../src/core/workspace/mutations/rename/rename.ts");
     const root = makeVault();
     const h = await harness({ root, open: "notes/alpha.md" });
     h.app.view!.buf.edit(0, 0, "UNSAVED ");
@@ -12148,7 +12148,8 @@ describe("the explorer's file operations and buttons (18.x)", () => {
     await h.keys("d", "y");
     h.app.explorer.select("notes/beta.md");
     await h.keys("d", "y");
-    const { listTrash, trashDir, trashPath } = await import("../src/core/files.ts");
+    const { trashPath } = await import("../src/core/workspace/mutations/files.ts");
+    const { listTrash, trashDir } = await import("../src/core/workspace/mutations/trash.ts");
     expect(listTrash(h.app.loc)).toHaveLength(2);
     // The list's last row, reached by up from the first: it asks; n leaves the trash as it was.
     await h.app.run("trash.open");
@@ -13990,7 +13991,7 @@ describe("search in the TUI (6.5, 6.9)", () => {
     h.app.graph.updateFile("b.md", { rel: "b.md", abs: join(h.root, "b.md"), size: st.size, mtimeMs: st.mtimeMs });
     expect(found("quokka")).toEqual(["b.md:3"]);
     // Renamed here: the old path gone, the new one found.
-    const { planNoteRename } = await import("../src/core/rename.ts");
+    const { planNoteRename } = await import("../src/core/workspace/mutations/rename/rename.ts");
     h.app.renaming.preview(() => planNoteRename(h.app.graph, "b.md", "c"));
     await h.keys("enter");
     expect(found("quokka")).toEqual(["c.md:3"]); // as it was: nothing written into it (21.12)

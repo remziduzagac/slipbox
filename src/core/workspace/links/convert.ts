@@ -15,7 +15,7 @@ import type { Graph, LinkRef, ResolvedLink } from "../graph/graph.ts";
 import { blockLine, findHeading, headingFragment, lineFragment } from "./landing.ts";
 import { parseLegacy, visit } from "../../documents/markdown/parse.ts";
 import { readText } from "../../foundation/platform/fsutil.ts";
-import { type Ambiguous, Collector, dirtyTrees, type RenamePlan } from "../../rename.ts";
+import { type Ambiguous, Collector, dirtyTrees, type RenamePlan } from "../mutations/rename/rename.ts";
 import { parseWikiTarget, type WikiLink } from "../../documents/markdown/wikilink.ts";
 import { isInside } from "../vaults/vault.ts";
 

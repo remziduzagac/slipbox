@@ -7,7 +7,7 @@ import { conventionOf } from "../core/workspace/links/convention.ts";
 import { type LinkEnds, linkEnds, writeLink } from "../core/workspace/links/write-link.ts";
 import { describeLanding } from "../core/workspace/graph/graph.ts";
 import type { LayoutLink } from "../core/layout/ir.ts";
-import { planVaultRename } from "../core/rename.ts";
+import { planVaultRename } from "../core/workspace/mutations/rename/rename.ts";
 import { slugName } from "../core/workspace/vaults/registry.ts";
 import { tildePath } from "../core/workspace/vaults/names.ts";
 import { privateNameWarning } from "../core/workspace/vaults/folders.ts";

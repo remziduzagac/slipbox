@@ -83,9 +83,9 @@ export const CHECKS_FOR: [RegExp, string[]][] = [
   [/^src\/core\/workspace\/vaults\/symlinks\.ts$/, ["links", "rename"]],
   [/^src\/tui\/peek\.ts$/, ["peek"]],
   // Replace, and renames with the links they rewrite.
-  [/^src\/core\/(replace|replace-files)\.ts$/, ["replace", "find"]],
+  [/^src\/core\/(replace|workspace\/mutations\/replace-files)\.ts$/, ["replace", "find"]],
   [/^src\/tui\/replacing\.ts$/, ["replace"]],
-  [/^src\/core\/rename[\w-]*\.ts$/, ["rename", "naming", "vaults"]],
+  [/^src\/core\/workspace\/mutations\/rename\/rename[\w-]*\.ts$/, ["rename", "naming", "vaults"]],
   [/^src\/tui\/renaming\.ts$/, ["rename", "naming"]],
   // Features of a window or a command of their own.
   [/^src\/tui\/palette\.ts$/, ["palette", "help", "which-key"]],

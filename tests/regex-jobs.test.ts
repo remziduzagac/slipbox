@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { DEFAULT_CONFIG } from "../src/core/application/config/config.ts";
 import { openGraph } from "../src/core/workspace/graph/graph.ts";
 import { compilePattern, findAll, replaceMatches } from "../src/core/replace.ts";
-import { planReplaceLater } from "../src/core/replace-files.ts";
+import { planReplaceLater } from "../src/core/workspace/mutations/replace-files.ts";
 import { locateVault } from "../src/core/workspace/vaults/vault.ts";
 import { confirmRest, layoutMatches, matchText, stopRegexJobs } from "../src/core/regex-jobs.ts";
 import { prefixWidths, stringWidth } from "../src/core/foundation/text/width.ts";

@@ -3,13 +3,13 @@
 
 import { realpathSync } from "node:fs";
 import { dirname, posix, relative } from "node:path";
-import type { Graph, LinkKind } from "./workspace/graph/graph.ts";
-import { extensionless, formatPathLink, normKey, pathLink } from "./workspace/links/links.ts";
-import { folderIdentity, pointerName } from "./workspace/vaults/folders.ts";
-import { formatPointer, isPointer, parsePointer, resolvePointer } from "./workspace/links/pointer.ts";
-import { parseHosted, withHostedPath } from "./workspace/links/hosting.ts";
-import { checkoutOf } from "./git.ts";
-import { findVaultRoot, isInside } from "./workspace/vaults/vault.ts";
+import type { Graph, LinkKind } from "../../graph/graph.ts";
+import { extensionless, formatPathLink, normKey, pathLink } from "../../links/links.ts";
+import { folderIdentity, pointerName } from "../../vaults/folders.ts";
+import { formatPointer, isPointer, parsePointer, resolvePointer } from "../../links/pointer.ts";
+import { parseHosted, withHostedPath } from "../../links/hosting.ts";
+import { checkoutOf } from "../../../git.ts";
+import { findVaultRoot, isInside } from "../../vaults/vault.ts";
 
 /** A link as found in a file: where, how it's written, and where it should point now. */
 export interface Site {

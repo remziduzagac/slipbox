@@ -1,0 +1,47 @@
+{
+  "moves": {
+    "src/core/files.ts": "src/core/workspace/mutations/files.ts",
+    "src/core/plans.ts": "src/core/workspace/mutations/plans.ts",
+    "src/core/capture.ts": "src/core/workspace/mutations/capture.ts",
+    "src/core/replace-files.ts": "src/core/workspace/mutations/replace-files.ts",
+    "src/core/rename.ts": "src/core/workspace/mutations/rename/rename.ts",
+    "src/core/rename-apply.ts": "src/core/workspace/mutations/rename/rename-apply.ts",
+    "src/core/rename-heading.ts": "src/core/workspace/mutations/rename/rename-heading.ts",
+    "src/core/rename-links.ts": "src/core/workspace/mutations/rename/rename-links.ts",
+    "src/core/rename-log.ts": "src/core/workspace/mutations/rename/rename-log.ts",
+    "src/core/rename-plan.ts": "src/core/workspace/mutations/rename/rename-plan.ts",
+    "src/core/rename-vaults.ts": "src/core/workspace/mutations/rename/rename-vaults.ts"
+  },
+  "retained": [
+    {
+      "file": "blueprint/workstreams/archive/user-docs/tasks/archive/editing-and-files.md",
+      "text": "src/core/files",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/doc-findings/tasks/archive/exports-and-copies.md",
+      "text": "src/core/rename",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/user-docs/tasks/archive/editing-and-files.md",
+      "text": "src/core/rename",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/design.md",
+      "text": "src/core/rename",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "src/core/rename",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "src/core/rename-apply",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    }
+  ]
+}

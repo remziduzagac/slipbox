@@ -5,7 +5,7 @@ import { chmodSync, mkdirSync, mkdtempSync, renameSync, rmSync, writeFileSync } 
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { runCli } from "../src/cli/cli.ts";
-import { parseRef } from "../src/core/capture.ts";
+import { parseRef } from "../src/core/workspace/mutations/capture.ts";
 import { DEFAULT_CONFIG, loadConfig, type Config } from "../src/core/application/config/config.ts";
 import { glyphsFor } from "../src/core/glyphs.ts";
 import { openGraph } from "../src/core/workspace/graph/graph.ts";

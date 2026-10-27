@@ -425,7 +425,8 @@ of every read through a link out of the root; D220's writes stay for vaults.
   Elsewhere, what the file system allows. A window read through a link not followed now — looked at, or forgotten with
 unsaved text — is never written through it (`App.writeBuffer`): not saved, autosaved, nor a task toggled in it, nothing
   read through it to toggle one or to ask about a change out there; it's writable again only once the link is followed
-  and its target answered. Plans keep to it (`mayRewrite` in `core/rename-plan.ts`): a rename's relinking, a replace
+  and its target answered. Plans keep to it (`mayRewrite` in `core/workspace/mutations/rename/rename-plan.ts`): a
+  rename's relinking, a replace
   across files, the converter and a heading's rename leave a file whose write would land out of its vault as it is, or
   through a link where its place doesn't list it (`landsHidden`: a hidden folder, as `checkWritable` measures it), a
   `skipped` row saying so, and `applyPlan` refuses a plan holding one, or moving anything from or to outside the vault

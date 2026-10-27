@@ -566,7 +566,7 @@ export function loadConfig(opts: LoadConfigOptions = {}): LoadedConfig {
   }
   // The scratch's file name: a plain relative path inside the project, never empty, absolute or
   // climbing out (a cloned vault's config must not aim `slipbox capture` at any file; symlinks on
-  // the way are refused where the path is used, in core/capture.ts).
+  // the way are refused where the path is used, in core/workspace/mutations/capture.ts).
   if (!isSafeRelative(config.capture.file) || !/\.(md|markdown)$/i.test(config.capture.file)) {
     warnings.push(
       `config: capture.file must be a relative .md path inside the project, not hidden (got ${JSON.stringify(config.capture.file)}); using "${DEFAULT_CONFIG.capture.file}"`,

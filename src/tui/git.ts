@@ -7,7 +7,7 @@ import { basename, join, posix, relative, sep } from "node:path";
 import { readText } from "../core/foundation/platform/fsutil.ts";
 import { baseFor, baseForLater } from "../core/gitbase.ts";
 import { startInsert } from "./editing.ts";
-import { fence, fenceLanguage } from "../core/capture.ts";
+import { fence, fenceLanguage } from "../core/workspace/mutations/capture.ts";
 import { loadSession, TOP } from "../core/workspace/session/position.ts";
 import type { Role } from "../core/theme/index.ts";
 import { type Checkout, checkoutOf, headOf } from "../core/git.ts";

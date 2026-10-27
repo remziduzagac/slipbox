@@ -4,7 +4,7 @@
 // in the actions-*.ts module of its area (D235). The keys are in keys.ts and docs/manual/keys.md.
 
 import { cancelGitRead } from "./gitquery.ts";
-import { clearScratch, dropEmptyAsks, formatEntry, readScratch } from "../core/capture.ts";
+import { clearScratch, dropEmptyAsks, formatEntry, readScratch } from "../core/workspace/mutations/capture.ts";
 import { COMMAND_SPECS } from "../core/application/commands/catalog.ts";
 import type { Command } from "../core/application/commands/registry.ts";
 import { listThemes, loadTheme } from "../core/theme/index.ts";

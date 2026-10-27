@@ -1,0 +1,40 @@
+{
+  "edges": {
+    "removed": [
+      "src/core/workspace/mutations/rename/rename-apply.ts -> src/core/workspace/mutations/files.ts"
+    ],
+    "added": [
+      "src/cli/files.ts -> src/core/workspace/mutations/trash.ts",
+      "src/core/workspace/mutations/files.ts -> src/core/workspace/mutations/trash.ts",
+      "src/core/workspace/mutations/rename/rename-apply.ts -> src/core/workspace/mutations/trash.ts",
+      "src/core/workspace/mutations/trash.ts -> src/core/foundation/platform/fsutil.ts",
+      "src/core/workspace/mutations/trash.ts -> src/core/foundation/platform/paths.ts",
+      "src/tui/files.ts -> src/core/workspace/mutations/trash.ts"
+    ]
+  },
+  "runtime": {
+    "removed": [
+      "src/core/workspace/mutations/files.ts -> src/core/foundation/platform/paths.ts",
+      "src/core/workspace/mutations/rename/rename-apply.ts -> src/core/workspace/mutations/files.ts"
+    ],
+    "added": [
+      "src/cli/files.ts -> src/core/workspace/mutations/trash.ts",
+      "src/core/workspace/mutations/files.ts -> src/core/workspace/mutations/trash.ts",
+      "src/core/workspace/mutations/rename/rename-apply.ts -> src/core/workspace/mutations/trash.ts",
+      "src/core/workspace/mutations/trash.ts -> src/core/foundation/platform/fsutil.ts",
+      "src/core/workspace/mutations/trash.ts -> src/core/foundation/platform/paths.ts",
+      "src/tui/files.ts -> src/core/workspace/mutations/trash.ts"
+    ]
+  },
+  "tests": {
+    "removed": [],
+    "added": [
+      "test: shared trash and marker operations reject reverse mutation imports in every form",
+      "test: the real shared mutation module stays below orchestration"
+    ]
+  },
+  "entries": {
+    "removed": [],
+    "added": []
+  }
+}

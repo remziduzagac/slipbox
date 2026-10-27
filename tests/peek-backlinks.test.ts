@@ -36,7 +36,7 @@ import { walkHomeNow } from "../src/core/workspace/vaults/home.ts";
 import { cacheDir, stateDir } from "../src/core/foundation/platform/paths.ts";
 import { Reach } from "../src/core/workspace/links/reach.ts";
 import { noteIndexed, readRoots, writeRoots } from "../src/core/workspace/vaults/registry.ts";
-import { planMakeVault, planUnmakeVault } from "../src/core/rename-vaults.ts";
+import { planMakeVault, planUnmakeVault } from "../src/core/workspace/mutations/rename/rename-vaults.ts";
 import { Redirects } from "../src/core/workspace/links/redirects.ts";
 import { forgetProbes, setLinkAnswer } from "../src/core/workspace/vaults/symlinks.ts";
 import { homeAt, initVault, locateVault, recordLocation, setRootMarkers } from "../src/core/workspace/vaults/vault.ts";

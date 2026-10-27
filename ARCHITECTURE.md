@@ -65,8 +65,9 @@ A few modules to know first:
   `core/application/commands/registry.ts`: every user action, by its id, with its command-line equivalent.
 - `core/workspace/graph/graph.ts`: the notes of a root, their links and backlinks, parsed lazily and cached; how a link
   resolves is `graph-resolve.ts`'s, a note's entry from its text `graph-extract.ts`'s, their shapes `graph-types.ts`'s.
-- `core/rename.ts`: renames and moves as plans of byte-range edits, previewed first; a plan's shape is
-  `rename-plan.ts`'s, carrying one out and undoing it `rename-apply.ts`'s.
+- `core/workspace/mutations/rename/rename.ts`: renames and moves as plans of byte-range edits, previewed first;
+  `rename-plan.ts` defines the plan, and `rename-apply.ts` carries it out and undoes it. Shared trash storage and
+  vault-marker operations live below both file operations and rename execution in `core/workspace/mutations/trash.ts`.
 - `core/documents/model/note.ts` and `core/layout/`: a note from its text to rows for a width, shared by
   `slipbox render` and the TUI. `layout/render.ts` lays out its blocks; `render-inline.ts`, `render-table.ts` and
   `render-data.ts` lay out the rest.

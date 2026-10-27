@@ -22,7 +22,7 @@ import { classify, extensionOf, isKnownExtension, noteFormat } from "../core/doc
 import { WriteRefused, writeNote } from "../core/foundation/platform/fsutil.ts";
 import { blockingLink, writesThrough } from "../core/workspace/vaults/symlinks.ts";
 import { expandReplacement, firstPerLine, replaceMatches } from "../core/replace.ts";
-import { planReplaceLater } from "../core/replace-files.ts";
+import { planReplaceLater } from "../core/workspace/mutations/replace-files.ts";
 import { listTasks, toggleTask } from "../core/tasks.ts";
 import { isInside } from "../core/workspace/vaults/vault.ts";
 import { flag, has, UsageError } from "./args.ts";

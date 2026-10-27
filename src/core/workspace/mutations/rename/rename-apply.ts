@@ -4,16 +4,23 @@
 import { randomUUID } from "node:crypto";
 import { accessSync, constants, existsSync, mkdirSync, renameSync, rmdirSync, statSync, unlinkSync } from "node:fs";
 import { dirname, join, relative, sep } from "node:path";
-import { classify } from "./documents/model/filetypes.ts";
-import { atomicWrite, entryAt, entryInside, landsInside, readText, realTarget } from "./foundation/platform/fsutil.ts";
-import type { Graph } from "./workspace/graph/graph.ts";
-import { trashVaultMarker } from "./files.ts";
-import { contentHash } from "./workspace/links/redirects.ts";
+import { classify } from "../../../documents/model/filetypes.ts";
+import {
+  atomicWrite,
+  entryAt,
+  entryInside,
+  landsInside,
+  readText,
+  realTarget,
+} from "../../../foundation/platform/fsutil.ts";
+import type { Graph } from "../../graph/graph.ts";
+import { trashVaultMarker } from "../trash.ts";
+import { contentHash } from "../../links/redirects.ts";
 import { changedSpan, forgetRename, type LoggedRename, logRename, readRenames } from "./rename-log.ts";
-import { forgetRoot } from "./workspace/vaults/registry.ts";
-import { openVault } from "./workspace/links/reach.ts";
-import { recordFolder } from "./workspace/vaults/folders.ts";
-import { findVaultRoot, initVault, isInside } from "./workspace/vaults/vault.ts";
+import { forgetRoot } from "../../vaults/registry.ts";
+import { openVault } from "../../links/reach.ts";
+import { recordFolder } from "../../vaults/folders.ts";
+import { findVaultRoot, initVault, isInside } from "../../vaults/vault.ts";
 import {
   RenameError,
   type FileChange,
@@ -26,7 +33,7 @@ import {
   whereItLeads,
 } from "./rename-plan.ts";
 import { real } from "./rename-links.ts";
-import { blockingLink, isLink, moveLink } from "./workspace/vaults/symlinks.ts";
+import { blockingLink, isLink, moveLink } from "../../vaults/symlinks.ts";
 
 // -------------------------------------------------------------------------------------------
 // Undoing (7.4)

@@ -321,7 +321,7 @@ backlinks, said so rather than shown empty (VV-D3).
 A rename or move in slipbox rewrites exactly the files linking in, found by backlinks (another vault's links and
 pointers, data files' values and code comments' paths included), and a moved file's own relative links when its
 folder changes, a code or data file's as a note's: previewed, undoable, a plan in the CLI (D63, D143;
-`core/rename.ts`). Each link keeps its form (D72, D81, D83):
+`core/workspace/mutations/rename/rename.ts`). Each link keeps its form (D72, D81, D83):
 
 - a wikilink stays a wikilink, a path a path, `./` kept, an extension kept or left off as written, a folder's
   trailing `/` kept, percent-encoding and `<…>` kept, a reference definition rewritten where it is;
@@ -350,7 +350,7 @@ there is refused, never overwritten, and so is a path under a file (`slipbox cp 
 `..` are from the current folder, as `./` and `../` are; a move's plan (`--dry-run`, `--plan`) holds the path it
 lands on. A rename in place (the explorer's `r`) takes a name, never a folder to go into; the explorer's `m` and a
 paste pick the folder themselves, and the TUI's copy of a note (`space n shift+y`) goes beside it, no path typed
-(`core/rename.ts`, `moveTarget`; `copyPath` in `core/files.ts`).
+(`core/workspace/mutations/rename/rename.ts`, `moveTarget`; `copyPath` in `core/workspace/mutations/files.ts`).
 
 No old name is written into a note (D79). A heading renamed rewrites the fragments naming it, each by its slug or
 its text as written. A whole named folder moved rewrites no pointer. Links from places not indexed yet show broken
@@ -379,7 +379,8 @@ once indexed, and the repair applies (§ Repairs). Keys and the preview: [tui.md
   pointer as a markdown link, its heading or block kept. Copies meant for a note give a link, never a label (D78).
 - **Every generated edit is a plan:** a preview tied to each file's content hash, refused when any of them has
   changed since; in the TUI, an undo step per file, files no window shows saved; in the CLI, planned and applied as
-  two explicit steps (`--plan`, `slipbox apply`), so an agent reviews before it writes (D63; `core/plans.ts`). A plan
+  two explicit steps (`--plan`, `slipbox apply`), so an agent reviews before it writes (D63;
+  `core/workspace/mutations/plans.ts`). A plan
   warns when a git tree it writes to already has changes; a file that isn't valid UTF-8 is never rewritten, a file
   reached through a link out of its vault isn't either ([roots.md](roots.md) § Links followed only when you say so),
   and a link no longer where the index had it is skipped and reported. Plans are saved in the state folder until

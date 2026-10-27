@@ -15,7 +15,7 @@ import {
   setDefaultCopy,
 } from "../core/workspace/vaults/folders.ts";
 import { openVault } from "../core/workspace/links/reach.ts";
-import { planMakeVault, planUnmakeVault, planVaultRename } from "../core/rename.ts";
+import { planMakeVault, planUnmakeVault, planVaultRename } from "../core/workspace/mutations/rename/rename.ts";
 import { readIdentity, vaultConfigFile } from "../core/workspace/vaults/registry.ts";
 import { tildePath } from "../core/workspace/vaults/names.ts";
 import { answersKept, forgetLinkAnswer, linkSaid } from "../core/workspace/vaults/symlinks.ts";

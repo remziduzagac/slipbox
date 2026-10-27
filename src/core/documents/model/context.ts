@@ -6,7 +6,7 @@
 
 import { statSync } from "node:fs";
 import { isAbsolute, relative } from "node:path";
-import { fence, fenceLanguage, formatRef } from "../../capture.ts";
+import { fence, fenceLanguage, formatRef } from "../../workspace/mutations/capture.ts";
 import { classify } from "./filetypes.ts";
 import { readText } from "../../foundation/platform/fsutil.ts";
 import type { Graph } from "../../workspace/graph/graph.ts";

@@ -14,7 +14,7 @@ import {
   planNoteRename,
   planUndo,
   type RenamePlan,
-} from "../core/rename.ts";
+} from "../core/workspace/mutations/rename/rename.ts";
 import { vaultConfigFile } from "../core/workspace/vaults/registry.ts";
 import { recordLocation, rootAt } from "../core/workspace/vaults/vault.ts";
 import type { App, ListItem, PromptOverlay } from "./app.ts";

@@ -538,7 +538,8 @@ The explorer makes and changes files by keys and by buttons, on the selected row
   "Empty the trash? Its 3 items go for good: none can be restored." — and `y` removes, for good, the items the list
   showed (one deleted since stays), as `slipbox trash empty --yes` does after its listing (DF-D14). The trash keeps
   nothing past 30 days: an older item is removed, its folder too, whenever the trash is next read or written — listed,
-  restored from, deleted to (`core/files.ts`, `listTrash`, `TRASH_DAYS`). An open note deleted shows its last text,
+  restored from, deleted to (`core/workspace/mutations/files.ts`, `listTrash`, `TRASH_DAYS`). An open note deleted shows
+  its last text,
   marked deleted; restored, it's reloaded. Refused while a note it takes is unsaved.
 - **Copy, cut, paste (`y`, `x`, `p`):** `p` pastes into the selected folder (or beside the selected file): a copy —
   `name-copy`, `-2`… when pasted beside the original, the copy's links as written — or what was cut, moved (the

@@ -2,7 +2,7 @@
 // the code view's cells (24.13), and folding.
 
 import { placeAt } from "./editing.ts";
-import { formatEntry } from "../core/capture.ts";
+import { formatEntry } from "../core/workspace/mutations/capture.ts";
 import { gitSigns } from "../core/gitsigns.ts";
 import { type Layout, scrolledCol, srcAt, unscrolledCol } from "../core/layout/ir.ts";
 import type { Problem } from "../core/diagnostics.ts";

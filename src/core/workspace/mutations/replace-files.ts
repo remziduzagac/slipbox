@@ -3,11 +3,11 @@
 // changes previewed before and after, carried out by `applyPlan` (nothing written when a file changed since), and
 // logged, so `slipbox undo` and the TUI's `space v shift+u` take it back (7.4). The matching is find's (`replace.ts`).
 
-import { readText } from "./foundation/platform/fsutil.ts";
-import type { Graph } from "./workspace/graph/graph.ts";
-import { matchText } from "./regex-jobs.ts";
-import { dirtyTrees, type Edit, type FileChange, RenameError, type RenamePlan } from "./rename.ts";
-import { mayRewrite, notRewritten } from "./rename-plan.ts";
+import { readText } from "../../foundation/platform/fsutil.ts";
+import type { Graph } from "../graph/graph.ts";
+import { matchText } from "../../regex-jobs.ts";
+import { dirtyTrees, type Edit, type FileChange, RenameError, type RenamePlan } from "./rename/rename.ts";
+import { mayRewrite, notRewritten } from "./rename/rename-plan.ts";
 import {
   compilePattern,
   everyMatch,
@@ -16,7 +16,7 @@ import {
   type PatternOptions,
   replaceMatches,
   type TextMatch,
-} from "./replace.ts";
+} from "../../replace.ts";
 
 /** Plan replacing `query` with `replacement` in the files at `rels` (paths from the root): the ones it changes. */
 function* replacementPlan(

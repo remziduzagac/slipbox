@@ -4,8 +4,8 @@
 // the vault's state, as its redirects are: personal, never committed.
 
 import { join } from "node:path";
-import { readJson, writeJson } from "./foundation/platform/fsutil.ts";
-import { type Keyed, stateDir } from "./foundation/platform/paths.ts";
+import { readJson, writeJson } from "../../../foundation/platform/fsutil.ts";
+import { type Keyed, stateDir } from "../../../foundation/platform/paths.ts";
 
 export interface LoggedFile {
   /** Where the file is after the rename (absolute); how it's shown, and its vault's name when another's. */
