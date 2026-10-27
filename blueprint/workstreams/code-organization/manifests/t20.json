@@ -1,0 +1,545 @@
+{
+  "moves": {},
+  "splits": {
+    "tests/tui.test.ts": [
+      "tests/tui.test.ts",
+      "tests/tui/documents/editing/brackets.test.ts",
+      "tests/tui/documents/editing/clipboard.test.ts",
+      "tests/tui/documents/editing/comments.test.ts",
+      "tests/tui/documents/editing/cursor.test.ts",
+      "tests/tui/documents/editing/indent.test.ts",
+      "tests/tui/documents/editing/insert.test.ts",
+      "tests/tui/documents/editing/lens-data.test.ts",
+      "tests/tui/documents/editing/lens-differential.test.ts",
+      "tests/tui/documents/editing/lens-size.test.ts",
+      "tests/tui/documents/editing/lens.test.ts",
+      "tests/tui/documents/editing/lines.test.ts",
+      "tests/tui/documents/editing/selection.test.ts",
+      "tests/tui/documents/editing/server-completion.test.ts",
+      "tests/tui/documents/editing/shell.test.ts",
+      "tests/tui/documents/editing/tasks.test.ts",
+      "tests/tui/documents/editing/undo.test.ts",
+      "tests/tui/documents/editing/word-completion.test.ts",
+      "tests/tui/documents/saving/conflicts.test.ts",
+      "tests/tui/documents/saving/force.test.ts",
+      "tests/tui/documents/saving/handoff.test.ts",
+      "tests/tui/documents/saving/index.test.ts",
+      "tests/tui/documents/saving/lens-reload.test.ts",
+      "tests/tui/documents/saving/nvim.test.ts",
+      "tests/tui/documents/saving/reload.test.ts",
+      "tests/tui/documents/saving/save-all.test.ts",
+      "tests/tui/documents/search/find-navigation.test.ts",
+      "tests/tui/documents/search/replace.test.ts",
+      "tests/tui/documents/views/source.test.ts",
+      "tests/tui/shell/input/key-names.test.ts",
+      "tests/tui/shell/input/keymap.test.ts",
+      "tests/tui/shell/input/motions.test.ts",
+      "tests/tui/shell/input/mouse.test.ts",
+      "tests/tui/shell/input/nvim-differential.test.ts",
+      "tests/tui/shell/input/operators.test.ts",
+      "tests/tui/shell/input/paste.test.ts",
+      "tests/tui/shell/input/repeat.test.ts",
+      "tests/tui/shell/input/vim.test.ts"
+    ]
+  },
+  "support": [],
+  "suiteWrapperDeltas": [
+    {
+      "name": "describe: lists and commands no test had run (the TUI model)",
+      "delta": 6
+    },
+    {
+      "name": "describe: review (tui): the app's floating windows, new paths, roots and repeats",
+      "delta": 2
+    },
+    {
+      "name": "describe: review (tui): vim and editing edges",
+      "delta": 5
+    },
+    {
+      "name": "describe: review cycle 1 (TUI)",
+      "delta": 8
+    },
+    {
+      "name": "describe: review cycle 2 (TUI editing)",
+      "delta": 3
+    },
+    {
+      "name": "describe: review cycle 3 (TUI)",
+      "delta": 3
+    },
+    {
+      "name": "describe: review cycle 4 (TUI)",
+      "delta": 3
+    },
+    {
+      "name": "describe: review cycle 5 (TUI, behaviour no test had pinned)",
+      "delta": 2
+    },
+    {
+      "name": "describe: review round 1",
+      "delta": 1
+    },
+    {
+      "name": "describe: review round 2",
+      "delta": 1
+    },
+    {
+      "name": "describe: review round 3",
+      "delta": 1
+    },
+    {
+      "name": "describe: the key map as agreed (vim first, desktop editors' ctrl keys, space for the rest)",
+      "delta": 3
+    },
+    {
+      "name": "describe: what keymap.md and tui.md promise (review: docs against the tests)",
+      "delta": 1
+    },
+    {
+      "name": "describe: word count, save all, the change list, moving lines",
+      "delta": 3
+    }
+  ],
+  "retained": [],
+  "renamedBasenames": {},
+  "ownership": {
+    "scope": "Editor, input, source/lens, completion and saving cases move first. Unrelated workspace/tools/screen/navigation cases remain in the original collection for T21/T22.",
+    "buffers": "Existing shared buffer, undo, App.writeBuffer and view behavior remains unchanged; no gateway or window model implementation.",
+    "fixtures": "Each owner calls the existing makeSandbox model harness with its existing hooks and timeout policy. Full-App integration scenarios remain full-App."
+  },
+  "prunedUnusedReviewSupport": [
+    {
+      "file": "tests/tui.test.ts",
+      "parent": "review cycle 1 (TUI)",
+      "declaration": "const touch = async (file: string, text: string) => {\n    writeFileSync(file, text);\n    const future = Date.now() / 1000 + 5;\n    (await import(\"node:fs\")).utimesSync(file, future, future);\n  };"
+    },
+    {
+      "file": "tests/tui.test.ts",
+      "parent": "review cycle 1 (TUI)",
+      "declaration": "const source = async (text: string, config?: (c: Config) => void, width = 100, height = 30) => {\n    const root = makeVault();\n    const file = join(root, \"r.md\");\n    writeFileSync(file, text);\n    const h = await harness({ root, open: \"r.md\", width, height, config });\n    await h.keys(\"space\", \"n\", \"v\");\n    const v = h.app.view!;\n    const at = (row: number, col: number) => h.app.moveCursor(v, { row, col });\n    const ex = (cmd: string) => h.keys(\":\", ...[...cmd].map((ch) => (ch === \" \" ? \"space\" : ch)), \"enter\");\n    return { h, v, at, ex, file, root };\n  };"
+    },
+    {
+      "file": "tests/tui.test.ts",
+      "parent": "review cycle 3 (TUI)",
+      "declaration": "const src = async (text: string, config?: (c: Config) => void, width = 100, height = 30) => {\n    const root = makeVault();\n    writeFileSync(join(root, \"e.md\"), text);\n    const h = await harness({ root, open: \"e.md\", width, height, config });\n    await h.keys(\"space\", \"n\", \"v\");\n    const v = h.app.view!;\n    return {\n      h,\n      v,\n      root,\n      at: (row: number, col: number) => h.app.moveCursor(v, { row, col }),\n      ex: (cmd: string) => h.keys(\":\", ...[...cmd].map((c) => (c === \" \" ? \"space\" : c)), \"enter\"),\n    };\n  };"
+    },
+    {
+      "file": "tests/tui.test.ts",
+      "parent": "review cycle 4 (TUI)",
+      "declaration": "const until = async (pred: () => boolean, ms = 25_000) => {\n    const end = Date.now() + ms;\n    while (!pred() && Date.now() < end) await new Promise((r) => setTimeout(r, 20));\n  };"
+    },
+    {
+      "file": "tests/tui.test.ts",
+      "parent": "review cycle 4 (TUI)",
+      "declaration": "const touch = async (file: string, text: string) => {\n    writeFileSync(file, text);\n    const future = Date.now() / 1000 + 5;\n    (await import(\"node:fs\")).utimesSync(file, future, future);\n  };"
+    },
+    {
+      "file": "tests/tui.test.ts",
+      "parent": "the key map as agreed (vim first, desktop editors' ctrl keys, space for the rest)",
+      "declaration": "const long = () => {\n    const root = makeVault();\n    writeFileSync(join(root, \"long.md\"), Array.from({ length: 80 }, (_, i) => `Line ${i + 1}.`).join(\"\\n\\n\") + \"\\n\");\n    return root;\n  };"
+    },
+    {
+      "file": "tests/tui.test.ts",
+      "parent": "review (tui): vim and editing edges",
+      "declaration": "const setup = async (text: string, name = \"v.md\", files: Record<string, string> = {}) => {\n    const root = makeVault();\n    writeFileSync(join(root, name), text);\n    for (const [f, t] of Object.entries(files)) writeFileSync(join(root, f), t);\n    const h = await harness({ root, open: name, width: 100, height: 30 });\n    await h.keys(\"space\", \"n\", \"v\");\n    const v = h.app.view!;\n    const keys = async (...ks: string[]) => {\n      for (const k of ks) {\n        if (k.length > 1 && !k.includes(\"+\") && ![\"escape\", \"enter\", \"backspace\", \"space\", \"tab\"].includes(k)) {\n          for (const ch of k) await h.keys(ch === \" \" ? \"space\" : /[A-Z]/.test(ch) ? `shift+${ch.toLowerCase()}` : ch);\n        } else await h.keys(k);\n      }\n    };\n    return { h, v, keys, text: () => v.buf.source };\n  };"
+    },
+    {
+      "file": "tests/tui/documents/editing/clipboard.test.ts",
+      "parent": "the key map as agreed (vim first, desktop editors' ctrl keys, space for the rest)",
+      "declaration": "const long = () => {\n    const root = makeVault();\n    writeFileSync(join(root, \"long.md\"), Array.from({ length: 80 }, (_, i) => `Line ${i + 1}.`).join(\"\\n\\n\") + \"\\n\");\n    return root;\n  };"
+    },
+    {
+      "file": "tests/tui/documents/editing/clipboard.test.ts",
+      "parent": "lists and commands no test had run (the TUI model)",
+      "declaration": "const last = (h: Harness) => h.app.messages.at(-1)!.text;"
+    },
+    {
+      "file": "tests/tui/documents/editing/selection.test.ts",
+      "parent": "review round 1",
+      "declaration": "const click = (h: Harness, x: number, y: number, button = 0) => {\n    h.app.mouse.handle({ type: \"down\", x, y, button });\n    h.app.mouse.handle({ type: \"up\", x, y, button });\n    h.frame();\n  };"
+    },
+    {
+      "file": "tests/tui/documents/editing/selection.test.ts",
+      "parent": "review round 2",
+      "declaration": "const click = (h: Harness, x: number, y: number) => {\n    h.app.mouse.handle({ type: \"down\", x, y, button: 0 });\n    h.app.mouse.handle({ type: \"up\", x, y, button: 0 });\n    h.frame();\n  };"
+    },
+    {
+      "file": "tests/tui/documents/editing/selection.test.ts",
+      "parent": "review cycle 1 (TUI)",
+      "declaration": "const touch = async (file: string, text: string) => {\n    writeFileSync(file, text);\n    const future = Date.now() / 1000 + 5;\n    (await import(\"node:fs\")).utimesSync(file, future, future);\n  };"
+    },
+    {
+      "file": "tests/tui/documents/saving/conflicts.test.ts",
+      "parent": "review cycle 4 (TUI)",
+      "declaration": "const until = async (pred: () => boolean, ms = 25_000) => {\n    const end = Date.now() + ms;\n    while (!pred() && Date.now() < end) await new Promise((r) => setTimeout(r, 20));\n  };"
+    },
+    {
+      "file": "tests/tui/documents/saving/force.test.ts",
+      "parent": "review cycle 5 (TUI, behaviour no test had pinned)",
+      "declaration": "const LINKS =\n    \"# M\\n\\n[to alpha](notes/alpha.md) [two](notes/alpha.md#section-two) [far](#far) [broken](nope.pdf)\\n\\nfiller\\n\\n## Far\\n\\nend\\n\";"
+    },
+    {
+      "file": "tests/tui/documents/saving/force.test.ts",
+      "parent": "review cycle 5 (TUI, behaviour no test had pinned)",
+      "declaration": "const follow = async (h: Harness, k: number) => {\n    const v = h.app.view!;\n    const l = h.app.currentLayout(v).links[k]!;\n    h.app.moveCursor(v, { row: l.line, col: l.col });\n    await h.keys(\"enter\");\n  };"
+    },
+    {
+      "file": "tests/tui/documents/saving/force.test.ts",
+      "parent": "review cycle 5 (TUI, behaviour no test had pinned)",
+      "declaration": "const at = (h: Harness) => ({ rel: h.app.view!.buf.rel, row: rowText(h).trim() });"
+    },
+    {
+      "file": "tests/tui/documents/saving/handoff.test.ts",
+      "parent": "review (tui): the app's floating windows, new paths, roots and repeats",
+      "declaration": "const type = async (h: Harness, text: string) => {\n    for (const c of text) await h.keys(c === \" \" ? \"space\" : c);\n  };"
+    },
+    {
+      "file": "tests/tui/documents/saving/handoff.test.ts",
+      "parent": "review (tui): the app's floating windows, new paths, roots and repeats",
+      "declaration": "const virtualInTabs = (h: Harness) =>\n    h.app.tabs\n      .flatMap((t) => t.views)\n      .filter((v) => v.buf.virtual)\n      .map((v) => v.buf.key);"
+    },
+    {
+      "file": "tests/tui/documents/saving/handoff.test.ts",
+      "parent": "review (tui): the app's floating windows, new paths, roots and repeats",
+      "declaration": "const fnSetup = async (source: string | Buffer) => {\n    const root = makeVault();\n    writeFileSync(join(root, \"fn.md\"), source);\n    const h = await harness({ root, open: \"fn.md\", width: 140 });\n    return { root, h, read: () => readFileSync(join(root, \"fn.md\"), \"utf8\") };\n  };"
+    },
+    {
+      "file": "tests/tui/documents/saving/handoff.test.ts",
+      "parent": "review (tui): the app's floating windows, new paths, roots and repeats",
+      "declaration": "const onlyCrlf = (text: string) => expect(text.replace(/\\r\\n/g, \"\")).not.toMatch(/[\\r\\n]/);"
+    },
+    {
+      "file": "tests/tui/documents/saving/reload.test.ts",
+      "parent": "review cycle 4 (TUI)",
+      "declaration": "const touch = async (file: string, text: string) => {\n    writeFileSync(file, text);\n    const future = Date.now() / 1000 + 5;\n    (await import(\"node:fs\")).utimesSync(file, future, future);\n  };"
+    },
+    {
+      "file": "tests/tui/documents/search/replace.test.ts",
+      "parent": "review cycle 1 (TUI)",
+      "declaration": "const touch = async (file: string, text: string) => {\n    writeFileSync(file, text);\n    const future = Date.now() / 1000 + 5;\n    (await import(\"node:fs\")).utimesSync(file, future, future);\n  };"
+    },
+    {
+      "file": "tests/tui/documents/search/replace.test.ts",
+      "parent": "review cycle 4 (TUI)",
+      "declaration": "const until = async (pred: () => boolean, ms = 25_000) => {\n    const end = Date.now() + ms;\n    while (!pred() && Date.now() < end) await new Promise((r) => setTimeout(r, 20));\n  };"
+    },
+    {
+      "file": "tests/tui/documents/search/replace.test.ts",
+      "parent": "review cycle 4 (TUI)",
+      "declaration": "const touch = async (file: string, text: string) => {\n    writeFileSync(file, text);\n    const future = Date.now() / 1000 + 5;\n    (await import(\"node:fs\")).utimesSync(file, future, future);\n  };"
+    },
+    {
+      "file": "tests/tui/shell/input/key-names.test.ts",
+      "parent": "review round 3",
+      "declaration": "const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));"
+    },
+    {
+      "file": "tests/tui/shell/input/keymap.test.ts",
+      "parent": "lists and commands no test had run (the TUI model)",
+      "declaration": "const last = (h: Harness) => h.app.messages.at(-1)!.text;"
+    },
+    {
+      "file": "tests/tui/shell/input/motions.test.ts",
+      "parent": "review cycle 1 (TUI)",
+      "declaration": "const touch = async (file: string, text: string) => {\n    writeFileSync(file, text);\n    const future = Date.now() / 1000 + 5;\n    (await import(\"node:fs\")).utimesSync(file, future, future);\n  };"
+    },
+    {
+      "file": "tests/tui/shell/input/motions.test.ts",
+      "parent": "review cycle 5 (TUI, behaviour no test had pinned)",
+      "declaration": "const LINKS =\n    \"# M\\n\\n[to alpha](notes/alpha.md) [two](notes/alpha.md#section-two) [far](#far) [broken](nope.pdf)\\n\\nfiller\\n\\n## Far\\n\\nend\\n\";"
+    },
+    {
+      "file": "tests/tui/shell/input/motions.test.ts",
+      "parent": "review cycle 5 (TUI, behaviour no test had pinned)",
+      "declaration": "const follow = async (h: Harness, k: number) => {\n    const v = h.app.view!;\n    const l = h.app.currentLayout(v).links[k]!;\n    h.app.moveCursor(v, { row: l.line, col: l.col });\n    await h.keys(\"enter\");\n  };"
+    },
+    {
+      "file": "tests/tui/shell/input/motions.test.ts",
+      "parent": "review cycle 5 (TUI, behaviour no test had pinned)",
+      "declaration": "const at = (h: Harness) => ({ rel: h.app.view!.buf.rel, row: rowText(h).trim() });"
+    },
+    {
+      "file": "tests/tui/shell/input/operators.test.ts",
+      "parent": "review cycle 1 (TUI)",
+      "declaration": "const touch = async (file: string, text: string) => {\n    writeFileSync(file, text);\n    const future = Date.now() / 1000 + 5;\n    (await import(\"node:fs\")).utimesSync(file, future, future);\n  };"
+    },
+    {
+      "file": "tests/tui/shell/input/paste.test.ts",
+      "parent": "review cycle 1 (TUI)",
+      "declaration": "const touch = async (file: string, text: string) => {\n    writeFileSync(file, text);\n    const future = Date.now() / 1000 + 5;\n    (await import(\"node:fs\")).utimesSync(file, future, future);\n  };"
+    },
+    {
+      "file": "tests/tui/shell/input/paste.test.ts",
+      "parent": "lists and commands no test had run (the TUI model)",
+      "declaration": "const last = (h: Harness) => h.app.messages.at(-1)!.text;"
+    },
+    {
+      "file": "tests/tui/shell/input/repeat.test.ts",
+      "parent": "review cycle 1 (TUI)",
+      "declaration": "const touch = async (file: string, text: string) => {\n    writeFileSync(file, text);\n    const future = Date.now() / 1000 + 5;\n    (await import(\"node:fs\")).utimesSync(file, future, future);\n  };"
+    },
+    {
+      "file": "tests/tui/shell/input/repeat.test.ts",
+      "parent": "review (tui): the app's floating windows, new paths, roots and repeats",
+      "declaration": "const type = async (h: Harness, text: string) => {\n    for (const c of text) await h.keys(c === \" \" ? \"space\" : c);\n  };"
+    },
+    {
+      "file": "tests/tui/shell/input/repeat.test.ts",
+      "parent": "review (tui): the app's floating windows, new paths, roots and repeats",
+      "declaration": "const last = (h: Harness) => h.app.messages.at(-1)!;"
+    },
+    {
+      "file": "tests/tui/shell/input/repeat.test.ts",
+      "parent": "review (tui): the app's floating windows, new paths, roots and repeats",
+      "declaration": "const virtualInTabs = (h: Harness) =>\n    h.app.tabs\n      .flatMap((t) => t.views)\n      .filter((v) => v.buf.virtual)\n      .map((v) => v.buf.key);"
+    },
+    {
+      "file": "tests/tui/shell/input/repeat.test.ts",
+      "parent": "review (tui): the app's floating windows, new paths, roots and repeats",
+      "declaration": "const fnSetup = async (source: string | Buffer) => {\n    const root = makeVault();\n    writeFileSync(join(root, \"fn.md\"), source);\n    const h = await harness({ root, open: \"fn.md\", width: 140 });\n    return { root, h, read: () => readFileSync(join(root, \"fn.md\"), \"utf8\") };\n  };"
+    },
+    {
+      "file": "tests/tui/shell/input/repeat.test.ts",
+      "parent": "review (tui): the app's floating windows, new paths, roots and repeats",
+      "declaration": "const onlyCrlf = (text: string) => expect(text.replace(/\\r\\n/g, \"\")).not.toMatch(/[\\r\\n]/);"
+    }
+  ],
+  "inventory": {
+    "baseline": "ORG-T19",
+    "baselineDeclarations": 3614,
+    "expectedDeclarations": 3656,
+    "unchangedLiteralLeafCalls": 797,
+    "movedLiteralLeafCalls": 204,
+    "residualLiteralLeafCalls": 593,
+    "baselineSelectedRuntimeTests": 205,
+    "runtimeTests": 205,
+    "baselineSelectedAssertions": 1916,
+    "assertions": 1916,
+    "snapshotFiles": 0,
+    "files": [
+      {
+        "file": "tests/tui/documents/editing/brackets.test.ts",
+        "literalLeafCalls": 3,
+        "runtimeTests": 3,
+        "assertions": 13
+      },
+      {
+        "file": "tests/tui/documents/editing/clipboard.test.ts",
+        "literalLeafCalls": 3,
+        "runtimeTests": 3,
+        "assertions": 20
+      },
+      {
+        "file": "tests/tui/documents/editing/comments.test.ts",
+        "literalLeafCalls": 4,
+        "runtimeTests": 4,
+        "assertions": 17
+      },
+      {
+        "file": "tests/tui/documents/editing/cursor.test.ts",
+        "literalLeafCalls": 10,
+        "runtimeTests": 10,
+        "assertions": 39
+      },
+      {
+        "file": "tests/tui/documents/editing/indent.test.ts",
+        "literalLeafCalls": 6,
+        "runtimeTests": 6,
+        "assertions": 20
+      },
+      {
+        "file": "tests/tui/documents/editing/insert.test.ts",
+        "literalLeafCalls": 13,
+        "runtimeTests": 13,
+        "assertions": 92
+      },
+      {
+        "file": "tests/tui/documents/editing/lens-data.test.ts",
+        "literalLeafCalls": 1,
+        "runtimeTests": 1,
+        "assertions": 3
+      },
+      {
+        "file": "tests/tui/documents/editing/lens-differential.test.ts",
+        "literalLeafCalls": 4,
+        "runtimeTests": 4,
+        "assertions": 3
+      },
+      {
+        "file": "tests/tui/documents/editing/lens-size.test.ts",
+        "literalLeafCalls": 3,
+        "runtimeTests": 3,
+        "assertions": 12
+      },
+      {
+        "file": "tests/tui/documents/editing/lens.test.ts",
+        "literalLeafCalls": 18,
+        "runtimeTests": 18,
+        "assertions": 215
+      },
+      {
+        "file": "tests/tui/documents/editing/lines.test.ts",
+        "literalLeafCalls": 2,
+        "runtimeTests": 2,
+        "assertions": 12
+      },
+      {
+        "file": "tests/tui/documents/editing/selection.test.ts",
+        "literalLeafCalls": 15,
+        "runtimeTests": 15,
+        "assertions": 58
+      },
+      {
+        "file": "tests/tui/documents/editing/server-completion.test.ts",
+        "literalLeafCalls": 14,
+        "runtimeTests": 14,
+        "assertions": 95
+      },
+      {
+        "file": "tests/tui/documents/editing/shell.test.ts",
+        "literalLeafCalls": 5,
+        "runtimeTests": 5,
+        "assertions": 65
+      },
+      {
+        "file": "tests/tui/documents/editing/tasks.test.ts",
+        "literalLeafCalls": 3,
+        "runtimeTests": 3,
+        "assertions": 18
+      },
+      {
+        "file": "tests/tui/documents/editing/undo.test.ts",
+        "literalLeafCalls": 2,
+        "runtimeTests": 2,
+        "assertions": 9
+      },
+      {
+        "file": "tests/tui/documents/editing/word-completion.test.ts",
+        "literalLeafCalls": 4,
+        "runtimeTests": 4,
+        "assertions": 23
+      },
+      {
+        "file": "tests/tui/documents/saving/conflicts.test.ts",
+        "literalLeafCalls": 11,
+        "runtimeTests": 11,
+        "assertions": 61
+      },
+      {
+        "file": "tests/tui/documents/saving/force.test.ts",
+        "literalLeafCalls": 1,
+        "runtimeTests": 1,
+        "assertions": 5
+      },
+      {
+        "file": "tests/tui/documents/saving/handoff.test.ts",
+        "literalLeafCalls": 3,
+        "runtimeTests": 3,
+        "assertions": 19
+      },
+      {
+        "file": "tests/tui/documents/saving/index.test.ts",
+        "literalLeafCalls": 3,
+        "runtimeTests": 3,
+        "assertions": 6
+      },
+      {
+        "file": "tests/tui/documents/saving/lens-reload.test.ts",
+        "literalLeafCalls": 1,
+        "runtimeTests": 1,
+        "assertions": 1
+      },
+      {
+        "file": "tests/tui/documents/saving/nvim.test.ts",
+        "literalLeafCalls": 2,
+        "runtimeTests": 2,
+        "assertions": 13
+      },
+      {
+        "file": "tests/tui/documents/saving/reload.test.ts",
+        "literalLeafCalls": 3,
+        "runtimeTests": 3,
+        "assertions": 6
+      },
+      {
+        "file": "tests/tui/documents/saving/save-all.test.ts",
+        "literalLeafCalls": 1,
+        "runtimeTests": 1,
+        "assertions": 6
+      },
+      {
+        "file": "tests/tui/documents/search/find-navigation.test.ts",
+        "literalLeafCalls": 4,
+        "runtimeTests": 4,
+        "assertions": 19
+      },
+      {
+        "file": "tests/tui/documents/search/replace.test.ts",
+        "literalLeafCalls": 6,
+        "runtimeTests": 6,
+        "assertions": 16
+      },
+      {
+        "file": "tests/tui/documents/views/source.test.ts",
+        "literalLeafCalls": 1,
+        "runtimeTests": 1,
+        "assertions": 9
+      },
+      {
+        "file": "tests/tui/shell/input/key-names.test.ts",
+        "literalLeafCalls": 2,
+        "runtimeTests": 2,
+        "assertions": 7
+      },
+      {
+        "file": "tests/tui/shell/input/keymap.test.ts",
+        "literalLeafCalls": 5,
+        "runtimeTests": 5,
+        "assertions": 741
+      },
+      {
+        "file": "tests/tui/shell/input/motions.test.ts",
+        "literalLeafCalls": 3,
+        "runtimeTests": 3,
+        "assertions": 17
+      },
+      {
+        "file": "tests/tui/shell/input/mouse.test.ts",
+        "literalLeafCalls": 13,
+        "runtimeTests": 13,
+        "assertions": 132
+      },
+      {
+        "file": "tests/tui/shell/input/nvim-differential.test.ts",
+        "literalLeafCalls": 1,
+        "runtimeTests": 2,
+        "assertions": 2
+      },
+      {
+        "file": "tests/tui/shell/input/operators.test.ts",
+        "literalLeafCalls": 10,
+        "runtimeTests": 10,
+        "assertions": 27
+      },
+      {
+        "file": "tests/tui/shell/input/paste.test.ts",
+        "literalLeafCalls": 2,
+        "runtimeTests": 2,
+        "assertions": 4
+      },
+      {
+        "file": "tests/tui/shell/input/repeat.test.ts",
+        "literalLeafCalls": 8,
+        "runtimeTests": 8,
+        "assertions": 23
+      },
+      {
+        "file": "tests/tui/shell/input/vim.test.ts",
+        "literalLeafCalls": 14,
+        "runtimeTests": 14,
+        "assertions": 88
+      }
+    ]
+  }
+}

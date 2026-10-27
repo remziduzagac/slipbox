@@ -24,7 +24,8 @@ through OpenTUI itself, to prove the adapter and real key parsing.
 | `tests/render.test.ts` | snapshots, the no-overflow property, allocator properties, blocks, ANSI output |
 | `tests/core/workspace/`, `tests/cli/` | vaults, walk, links/graph, mutations, search/Git and CLI parity |
 | `tests/cli.test.ts` | the CLI as an agent meets it: the real process on a copy of the demo vault; every command |
-| `tests/tui.test.ts` | the TUI model, the real watcher, state, keymap, OpenTUI end to end |
+| `tests/tui/documents/`, `tests/tui/shell/input/` | editor, source/lens, edit/save and keyboard/mouse behavior |
+| `tests/tui.test.ts` | remaining TUI model, watcher, workspace and screen journeys |
 | `tests/tui-git.test.ts` | source control in the TUI: worktrees, marks, the diff window, review, merge, pull, rebase |
 | `tests/servers.test.ts` | slipbox as a client of language servers, against a fake one (`tests/fixtures/fake-lsp.ts`) |
 | `tests/regressions.test.ts` | one test per bug found in review (later: "review round/cycle N" blocks) |
@@ -52,10 +53,10 @@ that keep the word ([roots.md](roots.md)); root's other meanings pass: the files
 cause, square roots (VV-D1).
 
 A test file stays under 1 MiB, the most Biome checks: past it, `bun run lint` fails on it. `tests/tui.test.ts` reached
-it, and source control's TUI tests went to `tests/tui-git.test.ts`. The two share their harness, `tests/tui-harness.ts`
-(a vault copied, the TUI driven, its rows read). `bun test` evaluates a module once a run, however many files import
-it, and an `afterAll` at its top would be the first file's alone: so each file calls `makeSandbox()` at its own top, for
-a sandbox of its own, removed when that file ends.
+it, and source control's TUI tests went to `tests/tui-git.test.ts`. These and the editor/input owners share
+`tests/tui-harness.ts` (a vault copied, the TUI driven, its rows read). `bun test` evaluates a module once a run,
+however many files import it, and an `afterAll` at its top would be the first file's alone: so each file calls
+`makeSandbox()` at its own top, for a sandbox of its own, removed when that file ends.
 
 Regression tests follow their feature owner. Existing review-round/cycle parent titles are preserved while mixed
 collections split scenario by scenario; core cases now live in tests/core and the focused organization/TUI owners, while
