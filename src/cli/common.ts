@@ -13,7 +13,7 @@ import { parseNoteFile } from "../core/documents/model/readers.ts";
 import { parseData } from "../core/documents/model/data.ts";
 import { classify } from "../core/documents/model/filetypes.ts";
 import { stateHome } from "../core/foundation/platform/paths.ts";
-import { readStale, type StaleEntry } from "../core/stale.ts";
+import { readStale, type StaleEntry } from "../core/workspace/git/merge/stale.ts";
 import { UNSAFE } from "../core/foundation/text/sanitize.ts";
 import {
   climbsOut,

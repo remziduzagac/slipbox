@@ -1905,7 +1905,7 @@ describe("a root's identity, its state by path, the machine's roots (17.3–17.6
 
   test("a name that starts with dots (`..draft.md`) is inside its root: its position carried and listed, git's paths kept", async () => {
     const { PositionStore, carryPositions } = await import("../src/core/workspace/session/position.ts");
-    const { inVault } = await import("../src/core/gitops.ts");
+    const { inVault } = await import("../src/core/workspace/git/branches/gitops.ts");
     const base = fresh("dotdot");
     const a = join(base, "a");
     const b = join(base, "b");
@@ -4234,7 +4234,7 @@ describe("git worktrees: separate vaults of one repository (17.19)", () => {
   });
 
   test("read from .git: the main checkout, a worktree, its name and branch; a vault below the top folder too", async () => {
-    const { checkoutOf, headOf, inMain } = await import("../src/core/git.ts");
+    const { checkoutOf, headOf, inMain } = await import("../src/core/workspace/git/git.ts");
     const l = await layout(++n);
     if (!l) return;
     expect(checkoutOf(l.x)).toEqual({
@@ -4481,7 +4481,7 @@ describe("git in a root you don't trust (23.6)", () => {
   test("status, what changed, a file as a branch has it: nothing the repository names runs", async () => {
     const top = hostile();
     if (!top) return; // no git here
-    const { statusOf, changedSince, showAt } = await import("../src/core/gitops.ts");
+    const { statusOf, changedSince, showAt } = await import("../src/core/workspace/git/branches/gitops.ts");
     const c = { root: top };
     expect(statusOf(c)!.get("a.md")).toBe("modified");
     expect(changedSince(c, "main")).not.toBeNull();
@@ -4495,7 +4495,7 @@ describe("git in a root you don't trust (23.6)", () => {
     const top = hostile();
     if (!top) return; // no git here
     const noGit = mkdtempSync(join(tmpdir(), "slipbox-nogit-"));
-    const gitops = join(import.meta.dir, "..", "src", "core", "gitops.ts");
+    const gitops = join(import.meta.dir, "..", "src", "core", "workspace", "git", "branches", "gitops.ts");
     const script = `
       const { gitArgs, statusOf } = await import(${JSON.stringify(gitops)});
       const real = process.env.PATH;
@@ -4513,7 +4513,7 @@ describe("git in a root you don't trust (23.6)", () => {
   test("in a root you trust, git as the repository has it: its filters and hooks run", async () => {
     const top = hostile();
     if (!top) return;
-    const { statusOf, changedSince } = await import("../src/core/gitops.ts");
+    const { statusOf, changedSince } = await import("../src/core/workspace/git/branches/gitops.ts");
     const { setTrustedRoots } = await import("../src/core/workspace/vaults/trust.ts");
     setTrustedRoots([top]);
     try {
@@ -4560,7 +4560,7 @@ describe("git: status, what changed, diffs, worktrees, conflicts (5.11–5.14)",
   };
 
   test("git's status read: new, modified, renamed (its old path skipped), deleted, a merge's conflicts", async () => {
-    const { parseStatus } = await import("../src/core/gitops.ts");
+    const { parseStatus } = await import("../src/core/workspace/git/branches/gitops.ts");
     const z = [
       "?? new.md",
       " M a.md",
@@ -4584,7 +4584,7 @@ describe("git: status, what changed, diffs, worktrees, conflicts (5.11–5.14)",
   });
 
   test("a diff as rows, each at its line in the new text", async () => {
-    const { diffRows } = await import("../src/core/merge.ts");
+    const { diffRows } = await import("../src/core/workspace/git/merge/merge.ts");
     expect(diffRows("a\nb\nc\nd\n", "a\nB\nc\nd\ne\n", 1)).toEqual([
       { kind: "@@", text: "line 2", line: 2 },
       { kind: " ", text: "a", line: 1 },
@@ -10284,7 +10284,7 @@ describe("the merge review (20.21)", () => {
 
   test("a repository appearing while it's watched: where its branch is, seen at once — its next merge has a before", async () => {
     const { VaultFeed } = await import("../src/core/workspace/vaults/vault-feed.ts");
-    const { checkoutOf } = await import("../src/core/git.ts");
+    const { checkoutOf } = await import("../src/core/workspace/git/git.ts");
     const { openVault } = await import("../src/core/workspace/links/reach.ts");
     const root = mkdtempSync(join(tmpdir(), "slipbox-appear-"));
     put(
@@ -10322,7 +10322,7 @@ describe("the merge review (20.21)", () => {
 
   test("a rebase is one change: HEAD isn't seen moving mid-rebase; at its end the branch moved on, never switched", async () => {
     const { VaultFeed } = await import("../src/core/workspace/vaults/vault-feed.ts");
-    const { checkoutOf } = await import("../src/core/git.ts");
+    const { checkoutOf } = await import("../src/core/workspace/git/git.ts");
     const { openVault } = await import("../src/core/workspace/links/reach.ts");
     const root = mkdtempSync(join(tmpdir(), "slipbox-rebase-"));
     if (git(root, "init", "-q", "-b", "main").exitCode !== 0) return;
@@ -11503,7 +11503,7 @@ describe("slipbox:// pointers (21.7)", () => {
     git(repo, "checkout", "-q", "main");
     writeFileSync(join(repo, "a.md"), `# A\n\n[s](slipbox://ref${tag}@other/x.md#Setup)\n`);
     await cli(["--root", repo, "ls"]);
-    const { noteProblems } = await import("../src/core/diagnostics.ts");
+    const { noteProblems } = await import("../src/core/documents/diagnostics/diagnostics.ts");
     const g = openGraph(locateVault({ root: repo }), DEFAULT_CONFIG, false);
     expect(g.resolveLink({ kind: "markdown", target: `slipbox://ref${tag}@other/x.md#Setup` }, "a.md")).toMatchObject({
       resolvedKind: "note",
@@ -11805,7 +11805,7 @@ describe("where a link lands (trailscout's suggestions, 2026-10-06)", () => {
     expect(landingLine(g, "n.md", "setup", null)).toBe(3);
     expect(landingLine(g, "n.md", "setup-1", null)).toBe(7);
     expect(landingLine(g, "n.md", "Setup", null, true)).toBe(3);
-    const { noteProblems } = await import("../src/core/diagnostics.ts");
+    const { noteProblems } = await import("../src/core/documents/diagnostics/diagnostics.ts");
     const probs = noteProblems(g, "a.md").map((p) => [p.code, p.target, p.message]);
     expect(probs).toEqual([
       ["ambiguous-heading", "n", 'several headings "Setup" in n.md: this link reaches the first'],
@@ -11900,7 +11900,7 @@ describe("links in front matter (Obsidian's properties)", () => {
       ["wiki", "Gone", 5, 11, "unresolved"],
     ]);
     expect(g.backlinks("Dal.md").map((b) => b.from)).toEqual(["x.md"]);
-    const { noteProblems } = await import("../src/core/diagnostics.ts");
+    const { noteProblems } = await import("../src/core/documents/diagnostics/diagnostics.ts");
     expect(noteProblems(g, "x.md").map((p) => [p.code, p.target, p.start.line])).toEqual([["unresolved", "Gone", 5]]);
     // Drawn as links in the properties.
     const parsed = (await import("../src/core/documents/model/readers.ts")).parseNoteFile(
@@ -12013,7 +12013,7 @@ describe("how every link landed, and fragile links (trailscout's review)", () =>
 
   test("a link won by where it's written is fragile: said, with the path that names it for sure, a fix; problems and the CLI list them", async () => {
     const { dir, g } = vault(files);
-    const { noteProblems } = await import("../src/core/diagnostics.ts");
+    const { noteProblems } = await import("../src/core/documents/diagnostics/diagnostics.ts");
     const fragile = noteProblems(g, "Home.md").filter((p) => p.code === "fragile");
     expect(fragile.map((p) => [p.target, p.fix])).toEqual([
       ["Pie", { title: "Name it for sure: [[Recipes/Baking/Pie]]", text: "[[Recipes/Baking/Pie]]" }],
@@ -12152,7 +12152,7 @@ describe("links to the repository's own hosting (trailscout's review)", () => {
     const { landingLine } = await import("../src/core/workspace/links/landing.ts");
     expect(landingLine(g, "docs/plan.md", "goals", null)).toBe(3);
     expect(landingLine(g, "docs/plan.md", "markdown-header-goals", null)).toBe(3);
-    const { noteProblems } = await import("../src/core/diagnostics.ts");
+    const { noteProblems } = await import("../src/core/documents/diagnostics/diagnostics.ts");
     expect(noteProblems(g, "README.md").map((p) => [p.code, p.message])).toEqual([
       ["other-ref", `${base}/blob/dev/docs/plan.md names dev; this copy is on main`],
       ["unresolved", "no gone.md in this copy of github.com/me/repo"],
@@ -12333,7 +12333,7 @@ describe("review cycle 3 (core)", () => {
   });
 
   test("a fragile link to a top-level note is fixed by a relative path: [[plan]] → [[../plan]], never [[plan]] again", async () => {
-    const { noteProblems } = await import("../src/core/diagnostics.ts");
+    const { noteProblems } = await import("../src/core/documents/diagnostics/diagnostics.ts");
     const { g } = root({
       "plan.md": "# P\n",
       "a/b/plan.md": "# P2\n",
@@ -12671,7 +12671,7 @@ describe("review cycle 3 (core)", () => {
   });
 
   test("a wikilink path broken by a move made outside slipbox is relinked, in its own form; its problem says where it went", async () => {
-    const { noteProblems } = await import("../src/core/diagnostics.ts");
+    const { noteProblems } = await import("../src/core/documents/diagnostics/diagnostics.ts");
     const { dir } = root({
       "docs/plan.md": "# The plan\n",
       "docs/my plan.md": "# Mine\n",

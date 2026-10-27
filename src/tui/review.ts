@@ -11,13 +11,21 @@ import { beginGitRead } from "./gitquery.ts";
 import { lstatSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { type BlockDiff, blockDiff } from "../core/foundation/text/blockdiff.ts";
-import { inVault, showLater } from "../core/gitops.ts";
-import { findChange, hunkEntry, hunkLines, hunkView, movedBy, type Tally, tallyText } from "../core/gitreview.ts";
-import { type GitChange, gitChanges } from "../core/gitsigns.ts";
-import { discardFile, replaceLines, sections, stageChange, stageFile } from "../core/gitstage.ts";
+import { inVault, showLater } from "../core/workspace/git/branches/gitops.ts";
+import {
+  findChange,
+  hunkEntry,
+  hunkLines,
+  hunkView,
+  movedBy,
+  type Tally,
+  tallyText,
+} from "../core/workspace/git/review/gitreview.ts";
+import { type GitChange, gitChanges } from "../core/workspace/git/gitsigns.ts";
+import { discardFile, replaceLines, sections, stageChange, stageFile } from "../core/workspace/git/staging/gitstage.ts";
 import { layoutScreen, type ScreenPart, screenText } from "../core/layout/screen.ts";
 import { type Layout, type Span, srcAt } from "../core/layout/ir.ts";
-import { comparable } from "../core/merge.ts";
+import { comparable } from "../core/workspace/git/merge/merge.ts";
 import { TOP } from "../core/workspace/session/position.ts";
 import { sanitize } from "../core/foundation/text/sanitize.ts";
 import type { App } from "./app.ts";

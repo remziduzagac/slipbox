@@ -3,8 +3,14 @@
 // and `space g h`, the file's commits (followed through renames), each opened to read as it was or diffed to now.
 
 import { join, relative } from "node:path";
-import { blameLineLater, type CommitInfo, fileLogLater, lineInHead, messageLater } from "../core/gitlog.ts";
-import { showLater } from "../core/gitops.ts";
+import {
+  blameLineLater,
+  type CommitInfo,
+  fileLogLater,
+  lineInHead,
+  messageLater,
+} from "../core/workspace/git/history/gitlog.ts";
+import { showLater } from "../core/workspace/git/branches/gitops.ts";
 import { beginGitRead } from "./gitquery.ts";
 import { climbsOut } from "../core/foundation/platform/fsutil.ts";
 import { sanitize } from "../core/foundation/text/sanitize.ts";

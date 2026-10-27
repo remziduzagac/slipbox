@@ -11,7 +11,7 @@ import { smallButton } from "./draw-panels.ts";
 import { peekTitle } from "./peek.ts";
 import { drawPane } from "./draw-pane.ts";
 import { sanitize, sanitizeMap } from "../core/foundation/text/sanitize.ts";
-import type { GitState } from "../core/gitops.ts";
+import type { GitState } from "../core/workspace/git/branches/gitops.ts";
 import type { Color } from "../core/theme/theme.ts";
 
 /**

@@ -3,8 +3,8 @@ import { spawn } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { runLint } from "../src/core/lint.ts";
-import { type LinterDef, runLinter } from "../src/core/servers/linters.ts";
+import { runLint } from "../src/core/documents/diagnostics/lint.ts";
+import { type LinterDef, runLinter } from "../src/core/documents/servers/linters.ts";
 import { runTool, toolFailure } from "../src/core/foundation/platform/tool-process.ts";
 
 const run = (source: string, options = {}) =>
@@ -152,7 +152,7 @@ describe.skipIf(process.platform === "win32")("a tool's process group", () => {
     test(`slipbox ended (${how}) while a linter runs: no linter survives it`, async () => {
       const dir = mkdtempSync(join(tmpdir(), "slipbox-tool-"));
       const pidFile = join(dir, "pid");
-      const lint = join(import.meta.dir, "../src/core/lint.ts");
+      const lint = join(import.meta.dir, "../src/core/documents/diagnostics/lint.ts");
       const script = [
         `import { existsSync } from "node:fs";`,
         `import { runLint } from ${JSON.stringify(lint)};`,

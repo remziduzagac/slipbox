@@ -16,7 +16,7 @@ import { isWsl } from "../src/core/foundation/platform/wsl.ts";
 import { join } from "node:path";
 import { canonKey } from "../src/core/application/commands/registry.ts";
 import { tildePath } from "../src/core/workspace/vaults/names.ts";
-import { GUIDE, readReport, SCREEN_INTRO, WHERE_INTRO } from "../src/core/report.ts";
+import { GUIDE, readReport, SCREEN_INTRO, WHERE_INTRO } from "../src/core/application/distribution/report.ts";
 import { NoteBuffer } from "../src/tui/buffer.ts";
 import { placeAt } from "../src/tui/editing.ts";
 import type { ListOverlay } from "../src/tui/app.ts";

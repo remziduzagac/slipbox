@@ -5,7 +5,7 @@
 
 import { existsSync, statSync } from "node:fs";
 import { join } from "node:path";
-import { type Checkout, headCommit, headOf } from "../../git.ts";
+import { type Checkout, headCommit, headOf } from "../git/git.ts";
 import type { Graph } from "../graph/graph.ts";
 import { deepestOutside, inFolders } from "./home.ts";
 import { HOME_LIMITS } from "../walk/walk.ts";

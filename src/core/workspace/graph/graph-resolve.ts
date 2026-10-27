@@ -18,7 +18,7 @@ import {
   resolveMarkdownUrl,
   wikiPathCandidates,
 } from "../links/links.ts";
-import { checkoutOf } from "../../git.ts";
+import { checkoutOf } from "../git/git.ts";
 import { isMarkdownExport } from "../../export/mark.ts";
 import { classify } from "../../documents/model/filetypes.ts";
 import type { LinkRef, Target } from "./graph-types.ts";

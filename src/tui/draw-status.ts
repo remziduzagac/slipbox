@@ -10,7 +10,7 @@ import { srcAt } from "../core/layout/ir.ts";
 import { countWords } from "../core/foundation/text/words.ts";
 import { sanitize } from "../core/foundation/text/sanitize.ts";
 import type { Role, Color } from "../core/theme/theme.ts";
-import { SEVERITIES, worst } from "../core/diagnostics.ts";
+import { SEVERITIES, worst } from "../core/documents/diagnostics/diagnostics.ts";
 import { severityGlyph, SEVERITY_ROLE } from "./draw-pane.ts";
 
 export function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void {

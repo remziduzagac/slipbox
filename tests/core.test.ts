@@ -44,9 +44,16 @@ import { flattenVars, loadRasterizer, looksLikeSvg, machineFont, rasterizer } fr
 import { loadMermaid, mermaidSvg } from "../src/core/diagrams.ts";
 import { loadTypesetter } from "../src/core/typeset.ts";
 import { extractFromSource } from "../src/core/workspace/graph/graph.ts";
-import { type LintIssue, lintCommand, lintLoadsCode, MARKDOWNLINT, parseLint, runLint } from "../src/core/lint.ts";
-import { installTool, lockKey, toolFolder, toolManifest } from "../src/core/servers/install.ts";
-import { LOCKS } from "../src/core/servers/locks.ts";
+import {
+  type LintIssue,
+  lintCommand,
+  lintLoadsCode,
+  MARKDOWNLINT,
+  parseLint,
+  runLint,
+} from "../src/core/documents/diagnostics/lint.ts";
+import { installTool, lockKey, toolFolder, toolManifest } from "../src/core/documents/servers/install.ts";
+import { LOCKS } from "../src/core/documents/servers/locks.ts";
 import { isTrusted, setTrust, setTrustedRoots, trustFile, trustOf } from "../src/core/workspace/vaults/trust.ts";
 import {
   addFootnote,
@@ -77,9 +84,17 @@ import {
   pairLines,
   unseenChange,
   unseenRows,
-} from "../src/core/merge.ts";
-import { findChange, hunkEntry, hunkLines, hunkView, movedBy, sameChange, tallyText } from "../src/core/gitreview.ts";
-import { gitChanges } from "../src/core/gitsigns.ts";
+} from "../src/core/workspace/git/merge/merge.ts";
+import {
+  findChange,
+  hunkEntry,
+  hunkLines,
+  hunkView,
+  movedBy,
+  sameChange,
+  tallyText,
+} from "../src/core/workspace/git/review/gitreview.ts";
+import { gitChanges } from "../src/core/workspace/git/gitsigns.ts";
 import {
   conflictExcerpt,
   conflictsOf,
@@ -91,8 +106,8 @@ import {
   resultView,
   toBase,
   withStages,
-} from "../src/core/conflicts.ts";
-import { checkoutOf } from "../src/core/git.ts";
+} from "../src/core/workspace/git/merge/conflicts.ts";
+import { checkoutOf } from "../src/core/workspace/git/git.ts";
 import {
   abortLater,
   aheadBehind,
@@ -104,8 +119,8 @@ import {
   rebaseLater,
   skipLater,
   stashKept,
-} from "../src/core/gitrebase.ts";
-import { pullLater, withAutostash } from "../src/core/gitremote.ts";
+} from "../src/core/workspace/git/branches/gitrebase.ts";
+import { pullLater, withAutostash } from "../src/core/workspace/git/branches/gitremote.ts";
 import { blockDiff, blockText, noteBlocks } from "../src/core/foundation/text/blockdiff.ts";
 import {
   compilePattern,
@@ -1854,7 +1869,7 @@ describe("lazy loading (16.6)", () => {
 
 describe("advisory staleness (9.9)", () => {
   test("an empty list removes this process's file; another user's process (EPERM) counts as alive", async () => {
-    const { readStale, writeDirty } = await import("../src/core/stale.ts");
+    const { readStale, writeDirty } = await import("../src/core/workspace/git/merge/stale.ts");
     const v = { key: `stale-${process.pid}` };
     writeDirty(v, ["a.md", "b.md"]);
     expect(readStale(v)).toEqual([
@@ -4540,7 +4555,7 @@ describe("spelling (25.6)", () => {
   const dir = () => mkdtempSync(join(tmpdir(), "slipbox-spell-"));
 
   test("a note's prose, word by word: not its front matter, code, addresses, wikilinks, tags, abbreviations or identifiers", async () => {
-    const { proseWords } = await import("../src/core/spell.ts");
+    const { proseWords } = await import("../src/core/documents/diagnostics/spell.ts");
     const src = [
       "---",
       "title: Frontmatter wrods",
@@ -4586,7 +4601,7 @@ describe("spelling (25.6)", () => {
   });
 
   test("a language's dictionary: yours, else the system's for that very language, else slipbox's, else the system's for its base", async () => {
-    const { dictionaryFiles } = await import("../src/core/spell.ts");
+    const { dictionaryFiles } = await import("../src/core/documents/diagnostics/spell.ts");
     const home = dir();
     const sys = dir();
     for (const n of ["tr_TR", "en_GB", "de_DE", "de_AT"]) {
@@ -4621,7 +4636,7 @@ describe("spelling (25.6)", () => {
   });
 
   test("a dictionary in another encoding is read as UTF-8; one in UTF-8 as it is", async () => {
-    const { asUtf8, openSpeller } = await import("../src/core/hunspell.ts");
+    const { asUtf8, openSpeller } = await import("../src/core/documents/diagnostics/hunspell.ts");
     const latin = (s: string) =>
       Uint8Array.from([...s].map((c) => (c === "ı" ? 0xfd : c === "ş" ? 0xfe : c.charCodeAt(0))));
     const aff = latin("SET ISO8859-9\nTRY abcı\n");
@@ -4640,8 +4655,10 @@ describe("spelling (25.6)", () => {
   });
 
   test("slipbox's English and Turkish; your words put in as each opens; the languages a note names", async () => {
-    const { openSpeller } = await import("../src/core/hunspell.ts");
-    const { addOwnWord, dictionaryFiles, noteLanguages, ownWords, ownWordsFile } = await import("../src/core/spell.ts");
+    const { openSpeller } = await import("../src/core/documents/diagnostics/hunspell.ts");
+    const { addOwnWord, dictionaryFiles, noteLanguages, ownWords, ownWordsFile } = await import(
+      "../src/core/documents/diagnostics/spell.ts"
+    );
     addOwnWord("Zorvexian");
     expect(ownWords()).toContain("Zorvexian");
     expect(ownWordsFile()).toBe(join(process.env.XDG_DATA_HOME!, "slipbox", "spell", "words.txt"));
@@ -4669,7 +4686,7 @@ describe("spelling (25.6)", () => {
   });
 
   test("your words: one a line, comments and blank lines left out; added at the end, a line of its own", async () => {
-    const { addOwnWord, ownWords } = await import("../src/core/spell.ts");
+    const { addOwnWord, ownWords } = await import("../src/core/documents/diagnostics/spell.ts");
     const f = join(dir(), "sub", "words.txt");
     expect(ownWords(f)).toEqual([]);
     addOwnWord("one", f);
@@ -4680,7 +4697,7 @@ describe("spelling (25.6)", () => {
   });
 
   test("a checker: its dictionaries answer later, each word asked once; a word added re-asks the misspelt; suggestions in turn, ten at most", async () => {
-    const { Checker } = await import("../src/core/spell.ts");
+    const { Checker } = await import("../src/core/documents/diagnostics/spell.ts");
     let known = ["bir", "don't", "one"];
     const asked: string[][] = [];
     let heard = 0;
@@ -4749,10 +4766,10 @@ describe("spelling (25.6)", () => {
   });
 
   test("the spell checker's thread: dictionaries built there and asked; your word put in; stopped or failed, the next request starts it again", async () => {
-    const { addOwnWord, dictionaryFiles } = await import("../src/core/spell.ts");
-    const { dictionariesBuilt } = await import("../src/core/hunspell.ts");
+    const { addOwnWord, dictionaryFiles } = await import("../src/core/documents/diagnostics/spell.ts");
+    const { dictionariesBuilt } = await import("../src/core/documents/diagnostics/hunspell.ts");
     const { addToDictionaries, openDictionary, stopSpellThread, threadDictionaries } = await import(
-      "../src/core/spell-thread.ts"
+      "../src/core/documents/diagnostics/spell-thread.ts"
     );
     const built = dictionariesBuilt();
     const en = dictionaryFiles("en", {})!;
@@ -4805,8 +4822,10 @@ describe("spelling (25.6)", () => {
   test(
     "a test's hold on the spell checker's thread: its dictionary waits before it's built until let go, or until its wait runs out; one already built never waits; stopping the thread ends a wait, unbuilt",
     async () => {
-      const { dictionaryFiles } = await import("../src/core/spell.ts");
-      const { holdBuild, openDictionary, stopSpellThread } = await import("../src/core/spell-thread.ts");
+      const { dictionaryFiles } = await import("../src/core/documents/diagnostics/spell.ts");
+      const { holdBuild, openDictionary, stopSpellThread } = await import(
+        "../src/core/documents/diagnostics/spell-thread.ts"
+      );
       const until = async (ok: () => boolean) => {
         for (const t = Date.now(); !ok() && Date.now() - t < 25_000; ) await Bun.sleep(5);
         return ok();
@@ -4884,20 +4903,20 @@ describe("spelling (25.6)", () => {
     const root = join(import.meta.dir, "..");
     const importers: string[] = [];
     for (const f of new Bun.Glob("src/**/*.ts").scanSync(root)) {
-      if (f.endsWith(".d.ts") || f === "src/core/hunspell.ts") continue;
+      if (f.endsWith(".d.ts") || f === "src/core/documents/diagnostics/hunspell.ts") continue;
       for (const spec of importsOf(readFileSync(join(root, f), "utf8")))
         if (/(^|\/)hunspell\.ts$|^hunspell-asm/.test(spec)) importers.push(`${f} ${spec}`);
     }
-    expect(importers).toEqual(["src/core/spell-worker.ts ./hunspell.ts"]);
+    expect(importers).toEqual(["src/core/documents/diagnostics/spell-worker.ts ./hunspell.ts"]);
   });
 
   test("a worker's script: beside its module from the source; in the compiled binary, under core/ from its root, whichever entry point starts it", async () => {
     const { workerUrl } = await import("../src/core/foundation/workers/url.ts");
-    expect(workerUrl("spell-worker.ts")).toBe(
-      Bun.pathToFileURL(join(import.meta.dir, "../src/core/spell-worker.ts")).href,
+    expect(workerUrl("documents/diagnostics/spell-worker.ts")).toBe(
+      Bun.pathToFileURL(join(import.meta.dir, "../src/core/documents/diagnostics/spell-worker.ts")).href,
     );
-    expect(workerUrl("spell-worker.ts", "file:///$bunfs/root/slipbox")).toBe(
-      "file:///$bunfs/root/core/spell-worker.ts",
+    expect(workerUrl("documents/diagnostics/spell-worker.ts", "file:///$bunfs/root/slipbox")).toBe(
+      "file:///$bunfs/root/core/documents/diagnostics/spell-worker.ts",
     );
     // From a module bundled into a worker's entry point (the export's, starting the diagrams'): the same place, not
     // core/core/, where Bun finds no module and the worker never starts.
@@ -4918,8 +4937,8 @@ describe("spelling, bundled (25.6)", () => {
       const entry = join(dir, "entry.ts");
       writeFileSync(
         entry,
-        `import { dictionaryFiles } from ${JSON.stringify(join(import.meta.dir, "..", "src", "core", "spell.ts"))};\n` +
-          `import { openSpeller } from ${JSON.stringify(join(import.meta.dir, "..", "src", "core", "hunspell.ts"))};\n` +
+        `import { dictionaryFiles } from ${JSON.stringify(join(import.meta.dir, "..", "src", "core", "documents", "diagnostics", "spell.ts"))};\n` +
+          `import { openSpeller } from ${JSON.stringify(join(import.meta.dir, "..", "src", "core", "documents", "diagnostics", "hunspell.ts"))};\n` +
           `const s = await openSpeller(dictionaryFiles("en", {})!);\nconsole.log(s.correct("receive"), s.correct("recieve"));\n`,
       );
       const built = Bun.spawnSync([process.execPath, "build", entry, "--target", "bun", "--outdir", join(dir, "out")], {
@@ -5205,7 +5224,7 @@ describe("a server's snippets (25.8)", () => {
 
 describe("changes against what's staged (26.1)", () => {
   test("added, changed and deleted runs; signs by line, a deletion's on the line before it or the first", async () => {
-    const { gitChanges, gitSigns, changeAt, changeDiff } = await import("../src/core/gitsigns.ts");
+    const { gitChanges, gitSigns, changeAt, changeDiff } = await import("../src/core/workspace/git/gitsigns.ts");
     const staged = "a\nb\nc\nd\ne\n";
     const changes = gitChanges(staged, "a\nB\nc\nnew\nd\n");
     expect(changes).toEqual([
@@ -5257,7 +5276,7 @@ describe("staging, from the source control view (26.2)", () => {
   };
 
   test("status entries with both letters; renames with where from; sections: conflicted, staged, unstaged, untracked", async () => {
-    const { parseEntries, sections } = await import("../src/core/gitstage.ts");
+    const { parseEntries, sections } = await import("../src/core/workspace/git/staging/gitstage.ts");
     const entries = parseEntries("MM a.md\0A  b.md\0R  new.md\0old.md\0?? u.md\0UU c.md\0 D d.md\0");
     // Every pair a merge's conflict has; sorted by path within each section.
     const s2 = sections(parseEntries("AA x.md\0DU y.md\0UD w.md\0M  z.md\0M  m.md\0"));
@@ -5283,14 +5302,14 @@ describe("staging, from the source control view (26.2)", () => {
   });
 
   test("a commit message as git keeps it: # lines left out, blank lines around trimmed, runs of them one (26.3)", async () => {
-    const { cleanMessage } = await import("../src/core/gitstage.ts");
+    const { cleanMessage } = await import("../src/core/workspace/git/staging/gitstage.ts");
     expect(cleanMessage("\nSubject\n\n\n\nbody\n# a guide\n#another\n\n")).toBe("Subject\n\nbody");
     expect(cleanMessage("# only guides\n\n")).toBe("");
     expect(cleanMessage("Fix #12 here\n")).toBe("Fix #12 here");
   });
 
   test("lines replaced in a text: its line breaks kept, its final one as it was, an empty text's lines ended", async () => {
-    const { replaceLines } = await import("../src/core/gitstage.ts");
+    const { replaceLines } = await import("../src/core/workspace/git/staging/gitstage.ts");
     expect(replaceLines("a\nb\nc\n", 1, 1, ["B", "B2"])).toBe("a\nB\nB2\nc\n");
     expect(replaceLines("a\r\nb\r\n", 2, 0, ["c"])).toBe("a\r\nb\r\nc\r\n");
     expect(replaceLines("a\nb", 0, 1, [])).toBe("b");
@@ -5303,9 +5322,9 @@ describe("staging, from the source control view (26.2)", () => {
 
   test("a file staged, unstaged, discarded; all staged and unstaged; one change staged and unstaged, the others left", async () => {
     const { discardFile, stageAll, stageChange, stageFile, unstageAll, unstageChange, unstageFile } = await import(
-      "../src/core/gitstage.ts"
+      "../src/core/workspace/git/staging/gitstage.ts"
     );
-    const { gitChanges } = await import("../src/core/gitsigns.ts");
+    const { gitChanges } = await import("../src/core/workspace/git/gitsigns.ts");
     const root = repo({ "a.md": "one\ntwo\nthree\nfour\n", "b.md": "b\n" });
     const c = { root };
     const staged = (p: string) => git(root, "show", `:${p}`);
@@ -5361,8 +5380,10 @@ describe("staging, from the source control view (26.2)", () => {
   const NAMES = ["Why?.md", "WhyX.md", "a*.md", "ab.md", "[x] d.md", "x d.md", ":!k.md", "k.md", ":j.md", "j.md"];
 
   test("a file whose name holds a glob's characters, or starts with `:`, is the only one staged, unstaged or discarded", async () => {
-    const { discardFile, stageFile, unstageFile, writeIndex } = await import("../src/core/gitstage.ts");
-    const { blameLine, fileLog } = await import("../src/core/gitlog.ts");
+    const { discardFile, stageFile, unstageFile, writeIndex } = await import(
+      "../src/core/workspace/git/staging/gitstage.ts"
+    );
+    const { blameLine, fileLog } = await import("../src/core/workspace/git/history/gitlog.ts");
     const root = repo(Object.fromEntries(NAMES.map((n) => [n, "1\n"])));
     const c = { root };
     for (const n of NAMES) writeFileSync(join(root, n), `1\n2 ${n}\n`);
@@ -5397,7 +5418,7 @@ describe("staging, from the source control view (26.2)", () => {
   });
 
   test("a section staged, unstaged or discarded in one git call: its files, and only them", async () => {
-    const { discardFiles, stageFiles, unstageFiles } = await import("../src/core/gitstage.ts");
+    const { discardFiles, stageFiles, unstageFiles } = await import("../src/core/workspace/git/staging/gitstage.ts");
     const root = repo(Object.fromEntries(NAMES.map((n) => [n, "1\n"])));
     const c = { root };
     for (const n of NAMES) writeFileSync(join(root, n), `1\n2 ${n}\n`);
@@ -5425,7 +5446,7 @@ describe("staging, from the source control view (26.2)", () => {
   });
 
   test("unstaging everything during a merge keeps the merge: a conflict stays one, the next commit is the merge's", async () => {
-    const { unstageAll } = await import("../src/core/gitstage.ts");
+    const { unstageAll } = await import("../src/core/workspace/git/staging/gitstage.ts");
     const root = repo({ "a.md": "1\n", "b.md": "1\n" });
     git(root, "switch", "-q", "-c", "x");
     writeFileSync(join(root, "a.md"), "x\n");
@@ -5442,7 +5463,7 @@ describe("staging, from the source control view (26.2)", () => {
   });
 
   test("a staged rename unstaged whole: its old path back, its new one untracked, nothing staged", async () => {
-    const { parseEntries, unstageAll, unstageFile } = await import("../src/core/gitstage.ts");
+    const { parseEntries, unstageAll, unstageFile } = await import("../src/core/workspace/git/staging/gitstage.ts");
     const root = repo({ "old.md": "a\nb\nc\nd\n" });
     git(root, "mv", "old.md", "new.md");
     const e = parseEntries(git(root, "status", "--porcelain=v1", "-z")).find((x) => x.x === "R")!;
@@ -5456,7 +5477,7 @@ describe("staging, from the source control view (26.2)", () => {
   });
 
   test("the message box's text committed as typed: a line starting with # is its own; the editor's guide picks a mark", async () => {
-    const { cleanMessage, commentFor } = await import("../src/core/gitstage.ts");
+    const { cleanMessage, commentFor } = await import("../src/core/workspace/git/staging/gitstage.ts");
     expect(cleanMessage("#12 fix the link\n", null)).toBe("#12 fix the link");
     expect(cleanMessage("# Notes cleanup\n\nbody\n", null)).toBe("# Notes cleanup\n\nbody");
     // The editor's: its guide's lines start with a mark no line of the message does, as git's commentChar = auto.
@@ -5524,7 +5545,7 @@ describe("the remote's commands and stash (26.6)", () => {
   };
 
   test("the branch against its upstream, from git status --branch's first line", async () => {
-    const { parseTrack, trackText } = await import("../src/core/gitremote.ts");
+    const { parseTrack, trackText } = await import("../src/core/workspace/git/branches/gitremote.ts");
     expect(parseTrack("## main...origin/main [ahead 2, behind 1]\0M  a.md\0")).toEqual({
       branch: "main",
       upstream: "origin/main",
@@ -5553,12 +5574,12 @@ describe("the remote's commands and stash (26.6)", () => {
     expect(t("## main...origin/main [gone]")).toBe("");
     expect(trackText(parseTrack("## main...origin/main [ahead 2, behind 1]"), "+", "-")).toBe("+2 -1");
     // The source control view's entries never take the branch's line for a file.
-    const { parseEntries } = await import("../src/core/gitstage.ts");
+    const { parseEntries } = await import("../src/core/workspace/git/staging/gitstage.ts");
     expect(parseEntries("## main...origin/main [ahead 1]\0M  a.md\0")).toEqual([{ path: "a.md", x: "M", y: " " }]);
   });
 
   test("the upstream asked for: origin/<branch>, else the one remote; none with no remote, or several", async () => {
-    const { upstreamFor } = await import("../src/core/gitremote.ts");
+    const { upstreamFor } = await import("../src/core/workspace/git/branches/gitremote.ts");
     expect(upstreamFor("main", ["upstream", "origin"])).toEqual({ remote: "origin", branch: "main" });
     expect(upstreamFor("feat/x", ["fork"])).toEqual({ remote: "fork", branch: "feat/x" });
     expect(upstreamFor("main", [])).toBeNull();
@@ -5566,7 +5587,7 @@ describe("the remote's commands and stash (26.6)", () => {
   });
 
   test("git without a terminal: no prompt, ssh in batch mode unless you set your own ssh command", async () => {
-    const { remoteEnv } = await import("../src/core/gitremote.ts");
+    const { remoteEnv } = await import("../src/core/workspace/git/branches/gitremote.ts");
     expect(remoteEnv({ PATH: "/bin" }, false)).toEqual({
       PATH: "/bin",
       GIT_TERMINAL_PROMPT: "0",
@@ -5578,7 +5599,9 @@ describe("the remote's commands and stash (26.6)", () => {
   });
 
   test("a failure in git's words: a remote's refusal, a fatal or error line with its files, a conflict; hints left out", async () => {
-    const { gitReason, needsLogin, parseScoped, ownPrograms } = await import("../src/core/gitremote.ts");
+    const { gitReason, needsLogin, parseScoped, ownPrograms } = await import(
+      "../src/core/workspace/git/branches/gitremote.ts"
+    );
     expect(
       gitReason(
         "hint: Diverging branches can't be fast-forwarded, you need to either:\nhint:\nfatal: Not possible to fast-forward, aborting.\n",
@@ -5617,9 +5640,9 @@ describe("the remote's commands and stash (26.6)", () => {
     await isolated(async () => {
       const { root, bare, top } = withRemote();
       const { fetchLater, pullLater, pushLater, upstreamOf, remotesOf, headShort } = await import(
-        "../src/core/gitremote.ts"
+        "../src/core/workspace/git/branches/gitremote.ts"
       );
-      const { statusLater } = await import("../src/core/gitstage.ts");
+      const { statusLater } = await import("../src/core/workspace/git/staging/gitstage.ts");
       const c = { root };
       expect(remotesOf(c)).toEqual(["origin"]);
       expect(upstreamOf(c, "main")).toEqual({ remote: "origin", ref: "refs/heads/main" });
@@ -5657,7 +5680,7 @@ describe("the remote's commands and stash (26.6)", () => {
   test("a branch with no upstream pushed, tracked there from then on", async () => {
     await isolated(async () => {
       const { root, bare } = withRemote();
-      const { pushLater, upstreamOf } = await import("../src/core/gitremote.ts");
+      const { pushLater, upstreamOf } = await import("../src/core/workspace/git/branches/gitremote.ts");
       git(root, "switch", "-q", "-c", "topic");
       commit(root, "t.md", "topic");
       expect(upstreamOf({ root }, "topic")).toBeNull();
@@ -5671,7 +5694,7 @@ describe("the remote's commands and stash (26.6)", () => {
   test("a remote's name that starts with - isn't passed to git: the push refused, said why (regression)", async () => {
     await isolated(async () => {
       const { root, bare } = withRemote();
-      const { pushLater, upstreamOf } = await import("../src/core/gitremote.ts");
+      const { pushLater, upstreamOf } = await import("../src/core/workspace/git/branches/gitremote.ts");
       // The repository's own config names the branch's remote so.
       git(root, "config", "remote.--dry-run.url", bare);
       git(root, "config", "remote.--dry-run.fetch", "+refs/heads/*:refs/remotes/--dry-run/*");
@@ -5695,7 +5718,7 @@ describe("the remote's commands and stash (26.6)", () => {
     // A hook is the folder's own code (D172, D175): a push in a vault not trusted runs none, as a commit runs none.
     await isolated(async () => {
       const { root } = withRemote();
-      const { pushLater } = await import("../src/core/gitremote.ts");
+      const { pushLater } = await import("../src/core/workspace/git/branches/gitremote.ts");
       const mark = join(root, "..", "pre-push-ran");
       const hook = join(root, ".git", "hooks", "pre-push");
       writeFileSync(hook, `#!/bin/sh\ntouch '${mark}'\n`);
@@ -5713,7 +5736,7 @@ describe("the remote's commands and stash (26.6)", () => {
   test("a program the repository's own config names for the remote: refused where the vault isn't trusted", async () => {
     await isolated(async () => {
       const { root, top } = withRemote();
-      const { fetchLater } = await import("../src/core/gitremote.ts");
+      const { fetchLater } = await import("../src/core/workspace/git/branches/gitremote.ts");
       const mark = join(top, "ssh-ran");
       git(root, "remote", "set-url", "origin", "ssh://git@example.invalid/x.git");
       git(root, "config", "core.sshCommand", `sh -c 'touch "${mark}"; exit 1' --`);
@@ -5731,7 +5754,7 @@ describe("the remote's commands and stash (26.6)", () => {
   test("ssh in batch mode — nothing waits for a passphrase — unless you set your own ssh command", async () => {
     await isolated(async () => {
       const { root, top } = withRemote();
-      const { fetchLater } = await import("../src/core/gitremote.ts");
+      const { fetchLater } = await import("../src/core/workspace/git/branches/gitremote.ts");
       // An ssh of the test's own, first on the PATH: what it was asked, and a login refused.
       const bin = join(top, "bin");
       const said = join(top, "ssh-args");
@@ -5765,7 +5788,7 @@ describe("the remote's commands and stash (26.6)", () => {
   test("a remote that asks for a password fails at once, in git's words, rather than wait for one", async () => {
     await isolated(async () => {
       const { root } = withRemote();
-      const { fetchLater } = await import("../src/core/gitremote.ts");
+      const { fetchLater } = await import("../src/core/workspace/git/branches/gitremote.ts");
       const server = Bun.serve({
         port: 0,
         hostname: "127.0.0.1",
@@ -5788,7 +5811,7 @@ describe("the remote's commands and stash (26.6)", () => {
   test("stash: saved with a message, listed, popped; nothing to save said; a stash that moved refused", async () => {
     await isolated(async () => {
       const { root } = withRemote();
-      const { stashesOf, stashSaveLater, stashLater } = await import("../src/core/gitremote.ts");
+      const { stashesOf, stashSaveLater, stashLater } = await import("../src/core/workspace/git/branches/gitremote.ts");
       const c = { root };
       expect(stashesOf(c)).toEqual([]);
       const none = await stashSaveLater(c, "nothing", false);
@@ -6304,9 +6327,9 @@ describe("a merge or a rebase under way, and a pull where both sides moved (GIT-
     await isolated(async () => {
       const root = behind();
       const c = checkoutOf(root)!;
-      const { stashSaveLater, pushLater } = await import("../src/core/gitremote.ts");
-      const { mergeLater } = await import("../src/core/gitbranches.ts");
-      const { reviewMerge } = await import("../src/core/mergereview.ts");
+      const { stashSaveLater, pushLater } = await import("../src/core/workspace/git/branches/gitremote.ts");
+      const { mergeLater } = await import("../src/core/workspace/git/branches/gitbranches.ts");
+      const { reviewMerge } = await import("../src/core/workspace/git/review/mergereview.ts");
       // A git that says what it was run with — its locale, its arguments — and fails; or prints too much.
       const bin = mkdtempSync(join(sandbox, "saying-"));
       writeFileSync(
@@ -6582,7 +6605,7 @@ describe("blame and a file's history (26.4, 22.1)", () => {
     );
 
   test("a line now, in the last commit: shifted by the changes before it; null where it's changed", async () => {
-    const { lineInHead } = await import("../src/core/gitlog.ts");
+    const { lineInHead } = await import("../src/core/workspace/git/history/gitlog.ts");
     const head = "a\nb\nc\nd\n";
     const now = "new\na\nB\nc\nd\n";
     expect([1, 2, 3, 4, 5].map((n) => lineInHead(head, now, n))).toEqual([null, 1, null, 3, 4]);
@@ -6592,7 +6615,7 @@ describe("blame and a file's history (26.4, 22.1)", () => {
   });
 
   test("blame of the last commit, the log followed through a rename, each commit's path then", async () => {
-    const { blameLine, fileLog, messageOf } = await import("../src/core/gitlog.ts");
+    const { blameLine, fileLog, messageOf } = await import("../src/core/workspace/git/history/gitlog.ts");
     const root = mkdtempSync(join(tmpdir(), "slipbox-log-"));
     git(root, "init", "-q", "-b", "main");
     writeFileSync(join(root, "old.md"), "one\ntwo\n");

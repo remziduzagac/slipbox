@@ -1,6 +1,6 @@
 import { UNIT_TIMEOUT_MS } from "./support/timeouts.ts";
 // Upgrading and restarting from the TUI (UPG): `upgrade` one at a time, never back, cancellable before its commit;
-// the restart's note and its hand-over (`core/restart.ts`).
+// the restart's note and its hand-over (`core/application/distribution/restart.ts`).
 import { afterAll, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { createHash } from "node:crypto";
 import {
@@ -30,7 +30,7 @@ import {
   startedPath,
   takeNote,
   writeNote,
-} from "../src/core/restart.ts";
+} from "../src/core/application/distribution/restart.ts";
 import {
   LOCK_STALE_MS,
   lockUpgrades,
@@ -42,7 +42,7 @@ import {
   upgrade,
   upgradeSaid,
   versionOf,
-} from "../src/core/update.ts";
+} from "../src/core/application/distribution/update.ts";
 
 setDefaultTimeout(UNIT_TIMEOUT_MS);
 
@@ -455,7 +455,7 @@ describe("the restart's note and its hand-over (UPG-T2)", () => {
   test("execve through libc: the same process, its exit code the shell's; on Linux, no descriptor carried over", () => {
     if (process.platform === "win32") return;
     const helper = join(mkdtempSync(join(sandbox, "exec-")), "helper.ts");
-    const restart = resolve(import.meta.dir, "../src/core/restart.ts");
+    const restart = resolve(import.meta.dir, "../src/core/application/distribution/restart.ts");
     writeFileSync(
       helper,
       `import { execInto } from ${JSON.stringify(restart)};
@@ -564,7 +564,7 @@ describe("before the next slipbox starts (UPG, round 1)", () => {
   test("the children quitting stopped are waited for and reaped: none is left a zombie of the next one", () => {
     if (process.platform !== "linux") return;
     const helper = join(mkdtempSync(join(sandbox, "reap-")), "helper.ts");
-    const restart = resolve(import.meta.dir, "../src/core/restart.ts");
+    const restart = resolve(import.meta.dir, "../src/core/application/distribution/restart.ts");
     writeFileSync(
       helper,
       `import { childrenEnded, execInto } from ${JSON.stringify(restart)};
@@ -603,7 +603,7 @@ describe("before the next slipbox starts (UPG, round 2)", () => {
     if (process.platform === "win32") return;
     const dir = mkdtempSync(join(sandbox, "exit-"));
     const helper = join(dir, "helper.ts");
-    const restart = resolve(import.meta.dir, "../src/core/restart.ts");
+    const restart = resolve(import.meta.dir, "../src/core/application/distribution/restart.ts");
     writeFileSync(
       helper,
       `import { writeFileSync } from "node:fs";

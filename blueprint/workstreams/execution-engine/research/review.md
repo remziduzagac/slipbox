@@ -180,7 +180,8 @@ reservations while writes may still occur or claim a successful safe stop on uns
 
 ### Finite tasks versus resident services
 
-`src/core/servers/manager.ts:61` separates readiness from the running client, and line 169 waits for startup rather
+`src/core/documents/servers/manager.ts:61` separates readiness from the running client, and line 169 waits for startup
+rather
 than the process's full lifetime. The design now does the same: finite install/start/readiness tasks settle at
 ready/failure, and resident processes transfer to the language-service owner. Launch receipts expire normally;
 queries retain individual deadlines and service disposal/idle/crash policy controls persistent processes.

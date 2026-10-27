@@ -5,7 +5,7 @@
 // full path.
 
 import { isAbsolute } from "node:path";
-import { checkoutOf } from "../../git.ts";
+import { checkoutOf } from "../git/git.ts";
 import type { Graph } from "../graph/graph.ts";
 import { readRoots } from "../vaults/registry.ts";
 import { catchUp, search, type SearchHit, type SearchResult } from "./search.ts";

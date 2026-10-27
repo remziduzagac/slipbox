@@ -1,6 +1,6 @@
 // The permanent location and activity bar (VB-T2).
 import { VERSION } from "../version.ts";
-import { PREVIEW_VERSION } from "../core/release.ts";
+import { PREVIEW_VERSION } from "../core/application/distribution/release.ts";
 import type { App } from "./app.ts";
 import { type Canvas, drawText } from "./canvas.ts";
 import { type Band, type Geometry, roleStyle, pageBg, button } from "./draw.ts";

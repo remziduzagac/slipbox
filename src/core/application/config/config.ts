@@ -3,11 +3,11 @@
 // Must run correctly with no config at all, and never crash on a bad one — problems become
 // warnings in the message sink.
 
-import { deepMerge, type LanguageConfig, type ServerConfig, SERVERS } from "../../servers/languages.ts";
-import { type LinterConfig, LINTERS } from "../../servers/linters.ts";
+import { deepMerge, type LanguageConfig, type ServerConfig, SERVERS } from "../../documents/servers/languages.ts";
+import { type LinterConfig, LINTERS } from "../../documents/servers/linters.ts";
 import { existsSync } from "node:fs";
 import { readRegular, SMALL_FILE } from "../../foundation/platform/fsutil.ts";
-import { refName } from "../../gitops.ts";
+import { refName } from "../../workspace/git/branches/gitops.ts";
 import { join } from "node:path";
 import { parse as parseToml } from "smol-toml";
 import { tildePath, userConfigFile } from "../../foundation/platform/paths.ts";
@@ -196,13 +196,13 @@ export interface Config {
     severity: "error" | "warning" | "info" | "hint";
   };
   /** Language servers in Helix's shape (19.2): each changed or added by name — its command, args,
-   *  settings (`config`), environment — over the built-in ones (`core/servers/languages.ts`). */
+   *  settings (`config`), environment — over the built-in ones (`core/documents/servers/languages.ts`). */
   "language-server": Record<string, ServerConfig>;
   /** Languages in Helix's shape (`[[language]]`): a language's servers, roots and file types — and its
    *  linters without a server (`linters`, 19.19). */
   language: LanguageConfig[];
   /** Linters without a server (19.19), in efm-langserver's keys (`lint-command`, `lint-formats`,
-   *  `lint-stdin`…): each changed or added by name over the built-in ones (`core/servers/linters.ts`). */
+   *  `lint-stdin`…): each changed or added by name over the built-in ones (`core/documents/servers/linters.ts`). */
   linter: Record<string, LinterConfig>;
   /** Language servers for the code slipbox opens (19.x). */
   lsp: {

@@ -5,14 +5,14 @@ import { grammar, grammarFor, parseSyntax } from "../core/documents/syntax/synta
 import { existsSync } from "node:fs";
 import { homedir } from "node:os";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
-import { gitGuardsAttributes } from "../core/gitops.ts";
+import { gitGuardsAttributes } from "../core/workspace/git/branches/gitops.ts";
 import { loadConfig } from "../core/application/config/config.ts";
-import { lintCommand, runLint } from "../core/lint.ts";
+import { lintCommand, runLint } from "../core/documents/diagnostics/lint.ts";
 import { classify, extensionOf } from "../core/documents/model/filetypes.ts";
 import { climbsOut, readText } from "../core/foundation/platform/fsutil.ts";
-import { doctor, doctorFile, type LinterReport, type ServerReport } from "../core/servers/doctor.ts";
-import { linterRoot, linterTable, runLinter } from "../core/servers/linters.ts";
-import { ServerManager } from "../core/servers/manager.ts";
+import { doctor, doctorFile, type LinterReport, type ServerReport } from "../core/documents/servers/doctor.ts";
+import { linterRoot, linterTable, runLinter } from "../core/documents/servers/linters.ts";
+import { ServerManager } from "../core/documents/servers/manager.ts";
 import {
   atLeast,
   lintProblems,
@@ -21,9 +21,9 @@ import {
   SEVERITIES,
   type Severity,
   syntaxProblems,
-} from "../core/diagnostics.ts";
-import { languageOf, serverTable } from "../core/servers/languages.ts";
-import { rootFor } from "../core/servers/find.ts";
+} from "../core/documents/diagnostics/diagnostics.ts";
+import { languageOf, serverTable } from "../core/documents/servers/languages.ts";
+import { rootFor } from "../core/documents/servers/find.ts";
 import { isTrusted } from "../core/workspace/vaults/trust.ts";
 import { flag, UsageError } from "./args.ts";
 import { EXIT, CliError, type Handler, requireArg } from "./common.ts";

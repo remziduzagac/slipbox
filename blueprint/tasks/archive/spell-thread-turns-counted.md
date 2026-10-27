@@ -142,8 +142,10 @@ that a busy machine can't fail and that still fails if the main thread is held w
     Only a clock sees one, and the clock is what failed.
   - Then: the spelling block, 7 pass, under `nice` at a load of 38; the spelling terminal checks, 2 of 2. No product
     code changed, so the app's live try stands; the writer's changes were tried with the rc files above.
-- 2026-10-23: The gate moved into the spell checker's thread: asked to (`holdBuild` in `core/spell-thread.ts`, the op
-  `hold` in `core/spell-worker.ts`), the thread waits with `Atomics.wait`, once it has the request for the test's
+- 2026-10-23: The gate moved into the spell checker's thread: asked to (`holdBuild` in
+  `core/documents/diagnostics/spell-thread.ts`, the op
+  `hold` in `core/documents/diagnostics/spell-worker.ts`), the thread waits with `Atomics.wait`, once it has the request
+  for the test's
   dictionary and before Hunspell builds it, until the test lets it go; the wait's state is in shared memory (set,
   waiting, let go, ran out). Its wait runs out after 40 s on the thread's own clock, so a main thread held until the
   dictionary is there is let go and fails, inside the test's 60 s. No child process, no named pipe, no blocking read
@@ -184,7 +186,7 @@ that a busy machine can't fail and that still fails if the main thread is held w
   - Verified, fixed: one hold slot, matched by the words alone. A second hold replaced the first. Holds are now kept
     per dictionary, and a unit test holds two at once.
   - Verified, fixed: the states were numbers in the worker and a list's order on the main thread, tied by nothing.
-    Both now read `HOLD_STATES` in `core/spell.ts`.
+    Both now read `HOLD_STATES` in `core/documents/diagnostics/spell.ts`.
   - Verified, fixed: letting go after stopping the thread did nothing. Terminated while waiting, a worker doesn't
     resume (a standalone try: still "waiting" after the wait's limit, and after letting go). `finally` only stops it
     now, and `holdBuild` says that stopping the thread ends a wait, the dictionary unbuilt.

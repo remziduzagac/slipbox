@@ -10,8 +10,8 @@ import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import type { Diagnostic } from "vscode-languageserver-protocol";
 import { loadConfig } from "../src/core/application/config/config.ts";
-import { LanguageClient, type ServerSpec, settingAt } from "../src/core/servers/client.ts";
-import { chooseServers, findServer, ownInstall, rootFor, toolsDir } from "../src/core/servers/find.ts";
+import { LanguageClient, type ServerSpec, settingAt } from "../src/core/documents/servers/client.ts";
+import { chooseServers, findServer, ownInstall, rootFor, toolsDir } from "../src/core/documents/servers/find.ts";
 import {
   INSTALL_ARGS,
   installTool,
@@ -20,9 +20,9 @@ import {
   toolFolder,
   toolManifest,
   toolSlug,
-} from "../src/core/servers/install.ts";
-import { LOCKS } from "../src/core/servers/locks.ts";
-import { lintCommand, MARKDOWNLINT } from "../src/core/lint.ts";
+} from "../src/core/documents/servers/install.ts";
+import { LOCKS } from "../src/core/documents/servers/locks.ts";
+import { lintCommand, MARKDOWNLINT } from "../src/core/documents/diagnostics/lint.ts";
 import { pinned } from "../scripts/lock-servers.ts";
 import {
   languageOf,
@@ -31,7 +31,7 @@ import {
   type ServerDef,
   serverTable,
   type ServerTable,
-} from "../src/core/servers/languages.ts";
+} from "../src/core/documents/servers/languages.ts";
 import {
   commandFor,
   compileFormat,
@@ -43,11 +43,11 @@ import {
   parseFindings,
   projectPath,
   runLinter,
-} from "../src/core/servers/linters.ts";
-import { doctor, doctorFile } from "../src/core/servers/doctor.ts";
-import { ServerManager, startOf } from "../src/core/servers/manager.ts";
-import { vscodeSettings } from "../src/core/servers/vscode.ts";
-import type { Problem } from "../src/core/diagnostics.ts";
+} from "../src/core/documents/servers/linters.ts";
+import { doctor, doctorFile } from "../src/core/documents/servers/doctor.ts";
+import { ServerManager, startOf } from "../src/core/documents/servers/manager.ts";
+import { vscodeSettings } from "../src/core/documents/servers/vscode.ts";
+import type { Problem } from "../src/core/documents/diagnostics/diagnostics.ts";
 import { setTrust, setTrustedRoots } from "../src/core/workspace/vaults/trust.ts";
 
 setDefaultTimeout(UNIT_TIMEOUT_MS);

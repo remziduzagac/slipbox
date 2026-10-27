@@ -1,11 +1,12 @@
 // Reporting a problem (RPT): the report in the floating window (RPT-D1), the screen and where you were kept for it and
 // added on your say (RPT-D2), and its sending — the bug form in your browser, its address or the report copied
-// (RPT-D3), or posted with gh after a yes (RPT-D4). What it knows, and how its text is read back, is core/report.ts's.
+// (RPT-D3), or posted with gh after a yes (RPT-D4). What it knows, and how its text is read back, is
+// core/application/distribution/report.ts's.
 
 import { existsSync } from "node:fs";
 import { homedir } from "node:os";
 import { browserOpener, openerSources } from "../core/foundation/platform/browser.ts";
-import { ghAccount, ghPath, ghPost } from "../core/gh.ts";
+import { ghAccount, ghPath, ghPost } from "../core/application/distribution/gh.ts";
 import { tildePath } from "../core/workspace/vaults/names.ts";
 import { TOP } from "../core/workspace/session/position.ts";
 import {
@@ -27,7 +28,7 @@ import {
   sentText,
   TITLE_LINE,
   WHERE_SAID,
-} from "../core/report.ts";
+} from "../core/application/distribution/report.ts";
 import { sanitize } from "../core/foundation/text/sanitize.ts";
 import { NoteBuffer } from "./buffer.ts";
 import { type Canvas, TextCanvas } from "./canvas.ts";

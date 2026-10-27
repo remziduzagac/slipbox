@@ -80,7 +80,8 @@ writes are last-writer-wins and never torn; `--if-unchanged` refuses one when th
 
 Two things keep the CLI's view honest. Hand-offs save first: a capture into an open scratch, the context bundle and
 handing a note to an editor write unsaved changes before the other side reads ([tui.md](tui.md) § Editing). And the
-TUI lists the notes it holds unsaved in `dirty/<pid>.json` in the vault's state (`core/stale.ts`, `9.9`), which every
+TUI lists the notes it holds unsaved in `dirty/<pid>.json` in the vault's state (`core/workspace/git/merge/stale.ts`,
+`9.9`), which every
 CLI call reads, ignoring the files of dead pids, and reports as a warning or a `stale` array: advisory, never a lock
 ([cli.md](../../docs/manual/cli.md) § Unsaved changes in a running slipbox).
 
@@ -151,9 +152,9 @@ The CLI's commands are the user's reference, [cli.md](../../docs/manual/cli.md);
 | [remotes.ts][o30] | 21.6 | a repository's remotes as `host/path`: what names it, what hosting URLs are its |
 | [parsecache.ts][o43] | 20.11 | notes' parsed content by content hash, shared by every copy on the machine |
 | [names.ts][o25] | 21.9 | a vault as it's told: its name, else its path (`~/…`); `name@branch`; `~`, `Elsewhere` |
-| `core/git.ts` | 17.19 | a vault's git checkout, from `.git`: the main one or a worktree, the branch |
-| `core/gitops.ts` | 5.11–5.14, 23.6 | git run for what `.git` can't say cheaply: status, changes, a file at a commit |
-| `core/mergereview.ts` | 20.21 | before a merge: the links `git merge-tree`'s result would break, each cause and fix |
+| `core/workspace/git/git.ts` | 17.19 | a vault's git checkout, from `.git`: the main one or a worktree, the branch |
+| [gitops.ts][o73] | 5.11–5.14, 23.6 | git run for what `.git` can't say cheaply: status, changes, a file at a commit |
+| [mergereview.ts][o74] | 20.21 | before a merge: the links `git merge-tree`'s result would break, each cause and fix |
 | [reach.ts][o31] | 17.9–17.11 | other vaults: paths out of the vault, their backlinks here, a peek's graph; `[[x:…]]` |
 | [backlinks-jobs.ts][o32] | D259 | a peek's backlinks in a worker (`backlinks-worker.ts`), its vault caught up there |
 | `core/workspace/links/redirects.ts` | 17.12 | moves seen, by content hash; where an old path went |
@@ -245,24 +246,24 @@ The CLI's commands are the user's reference, [cli.md](../../docs/manual/cli.md);
 | `core/documents/external-editors/nvim.ts` | 4.12 | finding and asking the running nvims |
 | [replace.ts][o71] | 4.16 | find's patterns (plain, regex, whole words), replacements, vim's `:s` parsed |
 | [replace-files.ts][o64] | 25.4 | a find replaced across files, as a rename's plan: previewed, undone |
-| `core/gitlog.ts` | 26.4, 22.1 | a line's last commit (blame of the last commit); a file's log through renames |
-| `core/gitstage.ts` | 26.2 | status's two letters; a file or one change staged, unstaged, discarded |
-| `core/gitsigns.ts` | 26.1 | a file's changes against what's staged: runs of lines added, changed, deleted; signs |
+| [gitlog.ts][o75] | 26.4, 22.1 | a line's last commit (blame of the last commit); a file's log through renames |
+| [gitstage.ts][o76] | 26.2 | status's two letters; a file or one change staged, unstaged, discarded |
+| [gitsigns.ts][o77] | 26.1 | a file's changes against what's staged: runs of lines added, changed, deleted; signs |
 | [shell.ts][o8] | 25.7 | a `:!` line parsed; a command run by your shell, its output kept; stopped with its children |
 | [snippet.ts][o72] | 25.8 | a server's snippet expanded: its text, its stops and their mirrors, `$0` last |
-| `core/spell.ts` | 25.6 | a note's prose word by word; Hunspell dictionaries: slipbox's, yours, the system's |
-| `core/spell-thread.ts` | 25.6 | the spell checker's thread (`spell-worker.ts`, D232): its dictionaries, its answers |
-| `core/hunspell.ts` | 25.6 | Hunspell as WebAssembly: a dictionary built; loaded by the spell checker's thread alone |
+| [spell.ts][o78] | 25.6 | a note's prose word by word; Hunspell dictionaries: slipbox's, yours, the system's |
+| [spell-thread.ts][o79] | 25.6 | the spell checker's thread (`spell-worker.ts`, D232): its dictionaries, its answers |
+| [hunspell.ts][o80] | 25.6 | Hunspell as WebAssembly: a dictionary built; loaded by the spell checker's thread alone |
 | [myers.ts][o9] | 5.5, GIT-D2 | the line diff every diff is: Myers' in linear space, as git's, its cost capped |
-| `core/merge.ts` | 5.5, GIT-D2 | changed words in paired lines, three-way merge, a diff's rows; what a diff compares |
+| [merge.ts][o81] | 5.5, GIT-D2 | changed words in paired lines, three-way merge, a diff's rows; what a diff compares |
 | [blockdiff.ts][o10] | GIT-D2 | a note's diff before and after: the line diff widened to the blocks it touches |
-| `core/conflicts.ts` | GIT-D5 | a file in conflict for the merge screen: markers, the index's stages, the result |
-| `core/gitreview.ts` | GIT-D3 | the review's hunk shown, found again, a note's scratch entry, the end's tally |
-| `core/gitremote.ts` | 26.6, GIT-D4 | fetch, pull, push, stash, without a terminal; a pull merged or rebased |
-| `core/gitrebase.ts` | GIT-D6, D247 | a rebase onto the base, over files changed; what's under way, from git's files |
-| `core/gitbranches.ts` | GIT-D9, GIT-D13 | the branches, where each is checked out; worktrees made, removed |
-| `core/gitbase.ts` | GIT-D10 | each branch's own base: kept (`bases.json`), else the nearest of `[git] bases` |
-| `core/gitrepos.ts` | VV-D10 | the repositories under a folder, each checkout grouped with its own, their state |
+| [conflicts.ts][o82] | GIT-D5 | a file in conflict for the merge screen: markers, the index's stages, the result |
+| [gitreview.ts][o83] | GIT-D3 | the review's hunk shown, found again, a note's scratch entry, the end's tally |
+| [gitremote.ts][o84] | 26.6, GIT-D4 | fetch, pull, push, stash, without a terminal; a pull merged or rebased |
+| [gitrebase.ts][o85] | GIT-D6, D247 | a rebase onto the base, over files changed; what's under way, from git's files |
+| [gitbranches.ts][o86] | GIT-D9, GIT-D13 | the branches, where each is checked out; worktrees made, removed |
+| [gitbase.ts][o87] | GIT-D10 | each branch's own base: kept (`bases.json`), else the nearest of `[git] bases` |
+| [gitrepos.ts][o88] | VV-D10 | the repositories under a folder, each checkout grouped with its own, their state |
 | `core/layout/diff.ts` | GIT-D2 | a diff's rows: signs, highlighting, changed words, heads and folds, sideways scroll |
 | `core/layout/blockdiff.ts` | GIT-D2 | before and after laid out: frames, light formatting, the marked words |
 | `core/layout/splitdiff.ts` | GIT-D7 | a code file's diff side by side, the two sides scrolling together |
@@ -277,37 +278,37 @@ The CLI's commands are the user's reference, [cli.md](../../docs/manual/cli.md);
 | [vault-feed.ts][o29] | 5.1, 5.9, 5.10 | the watcher's news into a graph, held while git writes (TUI) |
 | `core/workspace/mutations/capture.ts` | 8.2–8.4 | scratch location, reference format, append |
 | [context.ts][o55] | 9.7 | the context bundle: a note, its links and backlinks, as one document for an agent |
-| `core/lint.ts` | 3.21 | the lint surface: your markdownlint-cli2 run, its findings read |
-| `core/servers/languages.ts` | 19.2 | languages and their servers, built in and in Helix's shape from the config |
-| `core/servers/find.ts` | 19.3, 19.4 | a file's project root; where a server's program is; which servers serve a file |
-| `core/servers/install.ts` | 19.5, 14.11 | npm servers installed from slipbox's locks, a folder each, scripts off |
-| `core/servers/locks.ts` | 14.11 | those locks, made by `scripts/lock-servers.ts` |
-| `core/servers/manager.ts` | 19.1 | the servers of open files: one per server and project, installed, restarted |
-| `core/servers/doctor.ts` | 19.7 | each language's servers and where each is; a file's, in its project |
-| `core/servers/client.ts` | 19.1 | a language server as slipbox's client: started, files synced, diagnostics, stopped |
-| `core/servers/limits.ts` | 19.1 | what a server may cost: requests unanswered, their bytes, diagnostics kept |
-| `core/servers/transport.ts` | 19.1 | an answer's framing checked before it's read |
-| `core/servers/linters.ts` | 19.19 | linters with no language server, in efm-langserver's keys, via the lint surface |
+| `core/documents/diagnostics/lint.ts` | 3.21 | the lint surface: your markdownlint-cli2 run, its findings read |
+| [languages.ts][o89] | 19.2 | languages and their servers, built in and in Helix's shape from the config |
+| [find.ts][o90] | 19.3, 19.4 | a file's project root; where a server's program is; which servers serve a file |
+| [install.ts][o91] | 19.5, 14.11 | npm servers installed from slipbox's locks, a folder each, scripts off |
+| `core/documents/servers/locks.ts` | 14.11 | those locks, made by `scripts/lock-servers.ts` |
+| [manager.ts][o92] | 19.1 | the servers of open files: one per server and project, installed, restarted |
+| `core/documents/servers/doctor.ts` | 19.7 | each language's servers and where each is; a file's, in its project |
+| [client.ts][o93] | 19.1 | a language server as slipbox's client: started, files synced, diagnostics, stopped |
+| [limits.ts][o94] | 19.1 | what a server may cost: requests unanswered, their bytes, diagnostics kept |
+| `core/documents/servers/transport.ts` | 19.1 | an answer's framing checked before it's read |
+| [linters.ts][o95] | 19.19 | linters with no language server, in efm-langserver's keys, via the lint surface |
 | [tool-process.ts][o12] | 3.21, 19.5, 19.19 | a linter's or install's run: its output bounded, its group stopped |
-| `core/servers/vscode.ts` | 19.20 | a project's `.vscode/settings.json` answering its servers' settings |
-| `core/diagnostics.ts` | 19.8, 11.5 | a file's problems from every source, one shape: links, conflicts, syntax, lint |
+| `core/documents/servers/vscode.ts` | 19.20 | a project's `.vscode/settings.json` answering its servers' settings |
+| [diagnostics.ts][o96] | 19.8, 11.5 | a file's problems from every source, one shape: links, conflicts, syntax, lint |
 | [clipboard.ts][o13] | 8.5 | OSC 52 (up to 100 KB of base64), then pbcopy / clip.exe / wl-copy / xclip, then a file |
-| `core/release.ts` | 14.2 | what a release build was told when built; how a preview is named; the Pages site |
-| `core/install.ts` | 14.8 | the installer's layout read; how slipbox was installed; its channel; `uninstall`'s plan |
-| `core/update.ts` | 14.4 | the newest the channel offers, from its sums; the daily check; `upgrade` |
-| `core/restart.ts` | UPG | the restart's note; the hand-over: the upgrade, the binary, `execve` into it |
+| [release.ts][o97] | 14.2 | what a release build was told when built; how a preview is named; the Pages site |
+| [install.ts][o98] | 14.8 | the installer's layout read; how slipbox was installed; its channel; `uninstall`'s plan |
+| [update.ts][o99] | 14.4 | the newest the channel offers, from its sums; the daily check; `upgrade` |
+| [restart.ts][o100] | UPG | the restart's note; the hand-over: the upgrade, the binary, `execve` into it |
 | [libc.ts][o14] | UPG | libc through `bun:ffi`, opened once: `setenv` (D221), `execve`, `close_range`, `tcflush` |
 | [processes.ts][o15] | UPG | whether a process still runs: a lock's holder, a TUI's unsaved notes, an export's spool |
 | `tui/dialog.ts` | UPG | the dialog: text, a select and checkboxes; its keys and clicks |
 | `tui/updates.ts` | UPG | the update offer, `app.upgrade`, `app.restart`, an upgrade underneath noticed |
-| `core/skill.ts` | GR-D10 | the skill for agents, built in: printed; installed, never over another's file or a link |
-| `core/skill-lifecycle.ts` | ASI | detected user skill folders, safe refresh and uninstall ownership checks |
-| `core/report.ts` | RPT | a bug report's facts (slipbox, the system, the terminal); its text read back; the address |
+| [skill.ts][o101] | GR-D10 | the skill for agents, built in: printed; installed, never over another's file or a link |
+| [skill-lifecycle.ts][o102] | ASI | detected user skill folders, safe refresh and uninstall ownership checks |
+| [report.ts][o103] | RPT | a bug report's facts (slipbox, the system, the terminal); its text read back; the address |
 | `core/foundation/platform/browser.ts` | RPT | a browser opened on an address, by platform; none over SSH |
-| `core/gh.ts` | RPT | `gh` found, its account read, `gh issue create` run |
+| `core/application/distribution/gh.ts` | RPT | `gh` found, its account read, `gh issue create` run |
 | `cli/report.ts` | RPT | `report`, run before any vault is looked for |
 | [wsl.ts][o16] | 14.12 | WSL known; Windows' drives from its mounts; their fonts; notes on one, said |
-| `core/stale.ts` | 9.9 | advisory list of unsaved paths, pid-stamped: the TUI writes it, the CLI reads it |
+| [stale.ts][o104] | 9.9 | advisory list of unsaved paths, pid-stamped: the TUI writes it, the CLI reads it |
 | `cli/cli.ts` | 9.1–9.6 | the CLI face: the dispatcher, the help, each command's arguments and flags; `--json` |
 | `cli/common.ts` | 9.2, 9.4, 9.10 | the session; errors, exit codes; a note named, resolved; a note read and written |
 | `cli/render.ts` | 2.x, 10.x | `render`, `export` |
@@ -642,3 +643,36 @@ ordinary note needs.
 [o70]: ../../src/core/documents/editing/brackets.ts
 [o71]: ../../src/core/documents/editing/replace.ts
 [o72]: ../../src/core/documents/editing/snippet.ts
+
+[o73]: ../../src/core/workspace/git/branches/gitops.ts
+[o74]: ../../src/core/workspace/git/review/mergereview.ts
+[o75]: ../../src/core/workspace/git/history/gitlog.ts
+[o76]: ../../src/core/workspace/git/staging/gitstage.ts
+[o77]: ../../src/core/workspace/git/gitsigns.ts
+[o78]: ../../src/core/documents/diagnostics/spell.ts
+[o79]: ../../src/core/documents/diagnostics/spell-thread.ts
+[o80]: ../../src/core/documents/diagnostics/hunspell.ts
+[o81]: ../../src/core/workspace/git/merge/merge.ts
+[o82]: ../../src/core/workspace/git/merge/conflicts.ts
+[o83]: ../../src/core/workspace/git/review/gitreview.ts
+[o84]: ../../src/core/workspace/git/branches/gitremote.ts
+[o85]: ../../src/core/workspace/git/branches/gitrebase.ts
+[o86]: ../../src/core/workspace/git/branches/gitbranches.ts
+[o87]: ../../src/core/workspace/git/gitbase.ts
+[o88]: ../../src/core/workspace/git/gitrepos.ts
+[o89]: ../../src/core/documents/servers/languages.ts
+[o90]: ../../src/core/documents/servers/find.ts
+[o91]: ../../src/core/documents/servers/install.ts
+[o92]: ../../src/core/documents/servers/manager.ts
+[o93]: ../../src/core/documents/servers/client.ts
+[o94]: ../../src/core/documents/servers/limits.ts
+[o95]: ../../src/core/documents/servers/linters.ts
+[o96]: ../../src/core/documents/diagnostics/diagnostics.ts
+[o97]: ../../src/core/application/distribution/release.ts
+[o98]: ../../src/core/application/distribution/install.ts
+[o99]: ../../src/core/application/distribution/update.ts
+[o100]: ../../src/core/application/distribution/restart.ts
+[o101]: ../../src/core/application/distribution/skill.ts
+[o102]: ../../src/core/application/distribution/skill-lifecycle.ts
+[o103]: ../../src/core/application/distribution/report.ts
+[o104]: ../../src/core/workspace/git/merge/stale.ts

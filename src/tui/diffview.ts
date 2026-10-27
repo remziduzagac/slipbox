@@ -16,7 +16,13 @@ import { layoutBlockDiff } from "../core/layout/blockdiff.ts";
 import { diffText, layoutDiff } from "../core/layout/diff.ts";
 import { type Layout, srcAt } from "../core/layout/ir.ts";
 import { layoutSplitDiff, SPLIT_MIN, splitColumns } from "../core/layout/splitdiff.ts";
-import { comparable, type DiffViewRow, diffView, type UnseenRows, unseenRows } from "../core/merge.ts";
+import {
+  comparable,
+  type DiffViewRow,
+  diffView,
+  type UnseenRows,
+  unseenRows,
+} from "../core/workspace/git/merge/merge.ts";
 import { TOP } from "../core/workspace/session/position.ts";
 import { readerFor } from "../core/documents/model/readers.ts";
 import type { App, View } from "./app.ts";

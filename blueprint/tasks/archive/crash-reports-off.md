@@ -35,7 +35,8 @@ silent: reporting stays as Bun has it.
 
 ## Log
 
-- 2026-10-11: `core/crash-reports.ts`, `crashReportsOff()`, called at the top of `src/main.ts`, before `main()`: libc
+- 2026-10-11: `core/application/distribution/crash-reports.ts`, `crashReportsOff()`, called at the top of `src/main.ts`,
+  before `main()`: libc
   opened by `bun:ffi` (`libc.so.6`, then `/lib/ld-musl-<arch>.so.1`, then `libc.so`; macOS `libSystem.B.dylib`), its
   `getenv` asked for either switch (an empty one counts as unset), its `setenv` writing `0`. Any failure is silent.
   It costs about half a millisecond (*ran*).

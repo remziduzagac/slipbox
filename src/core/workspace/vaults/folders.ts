@@ -24,7 +24,7 @@ import {
   SMALL_FILE,
   writeJson,
 } from "../../foundation/platform/fsutil.ts";
-import { checkoutOf, inMain } from "../../git.ts";
+import { checkoutOf, inMain } from "../git/git.ts";
 import { stateHome } from "../../foundation/platform/paths.ts";
 import {
   implicitName,

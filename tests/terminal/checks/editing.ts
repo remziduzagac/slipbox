@@ -3,7 +3,7 @@
 
 import { cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { dictionaryFiles } from "../../../src/core/spell.ts";
+import { dictionaryFiles } from "../../../src/core/documents/diagnostics/spell.ts";
 import {
   type Check,
   follow,

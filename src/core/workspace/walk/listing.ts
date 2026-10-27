@@ -10,7 +10,7 @@ import { accessSync, constants, type Dirent, realpathSync, statSync } from "node
 import { basename, join } from "node:path";
 import type { Config } from "../../application/config/config.ts";
 import { unreadableWords } from "../../foundation/platform/fsutil.ts";
-import { checkoutOf, headOf } from "../../git.ts";
+import { checkoutOf, headOf } from "../git/git.ts";
 import { mountsIn, recentMountTable } from "../vaults/mounts.ts";
 import { vaultKey } from "../../foundation/platform/paths.ts";
 import { readIdentity, vaultConfigFile } from "../vaults/registry.ts";

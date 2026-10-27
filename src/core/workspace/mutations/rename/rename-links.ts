@@ -8,7 +8,7 @@ import { extensionless, formatPathLink, normKey, pathLink } from "../../links/li
 import { folderIdentity, pointerName } from "../../vaults/folders.ts";
 import { formatPointer, isPointer, parsePointer, resolvePointer } from "../../links/pointer.ts";
 import { parseHosted, withHostedPath } from "../../links/hosting.ts";
-import { checkoutOf } from "../../../git.ts";
+import { checkoutOf } from "../../git/git.ts";
 import { findVaultRoot, isInside } from "../../vaults/vault.ts";
 
 /** A link as found in a file: where, how it's written, and where it should point now. */

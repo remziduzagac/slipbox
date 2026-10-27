@@ -64,14 +64,16 @@ this machine's when none is named — with package.json's own `build`, so Bun's 
 reads no `bunfig.toml`, `.env`, `tsconfig.json` or `package.json` of the folder it starts in (`14.1`, D195;
 [trust.md](trust.md) § Bun's own reading). Its entry points are `src/main.ts` and each worker's script
 (`core/diagram-worker.ts`, `core/export-worker.ts`, `core/paint-worker.ts`, `core/documents/markdown/parse-worker.ts`,
-`core/workspace/search/regex-worker.ts`, `core/spell-worker.ts`, `core/documents/syntax/syntax-worker.ts`, and
+`core/workspace/search/regex-worker.ts`, `core/documents/diagnostics/spell-worker.ts`,
+`core/documents/syntax/syntax-worker.ts`, and
 `tui/opentui.ts`, the
 pictures' decoder),
 laid out from `src/` (`--root=src`; left to itself, Bun keeps `src/` in their paths past eight entries): Bun puts a
 worker in the binary only when it is named, and `core/foundation/workers/url.ts` finds it there by its path under
 `src/`; a test holds
 the list to the workers started, and the compiled binary's test runs its spelling, on its thread (D232). It defines the
-release in it (`core/release.ts`, `RELEASE`: the repository releases come from and the platform it's for). A Mac's
+release in it (`core/application/distribution/release.ts`, `RELEASE`: the repository releases come from and the platform
+it's for). A Mac's
 binary built on a Mac is signed ad hoc again (§ Signing). A target built for this machine is run once (`--version`)
 first. Each is packed, with slipbox's `LICENSE` and the third-party notices, as `slipbox-<version>-<target>.tar.gz`, a
 folder of that name inside. Beside each pack, `build` writes its SBOM, `slipbox-<version>-<target>.cdx.json` (CycloneDX
@@ -90,7 +92,8 @@ installer.
 | `linux-arm64-musl` | `bun-linux-arm64-musl` |
 
 A Mac is Apple silicon: 0.3.0 was the last release built for Intel Macs (`darwin-x64`, D238). The platforms released
-once and no longer, and the last release built for each, are `core/release.ts`'s `RETIRED`; `build` refuses one,
+once and no longer, and the last release built for each, are `core/application/distribution/release.ts`'s `RETIRED`;
+`build` refuses one,
 saying so, and the installer and `slipbox upgrade` tell such a machine the same (§ Installing, § Updates). x64 takes
 Bun's baseline build: it runs on any x64 processor, with no AVX2 asked for, and a terminal program loses nothing by
 it. `-musl` is Linux whose C library is musl — Alpine's (`14.5`, D203). SQLite is the runtime's own (below),
@@ -111,7 +114,8 @@ version with no section, or an empty one, fails. A preview's are its own (§ Pre
 Run from source, or built by hand (`bun run build`), slipbox has no `RELEASE`: it has no channel, so `upgrade` and the
 update check leave it alone. A release build says its own in `info` (`release`, and the first line).
 
-The skill for agents, `skills/slipbox/SKILL.md`, is built into the binary by Bun's text import (`core/skill.ts`), so
+The skill for agents, `skills/slipbox/SKILL.md`, is built into the binary by Bun's text import
+(`core/application/distribution/skill.ts`), so
 each release carries the skill that matches its commands (GR-D10). `slipbox skill` prints it; `slipbox skill
 --install <dir>` writes `<dir>/slipbox/SKILL.md` atomically, and run again with the same skill there, writes
 nothing. It writes over an earlier slipbox's skill (its front matter names it `slipbox`), never over another file,
@@ -269,7 +273,8 @@ with its own token (`contents: read`); the tap's checkout keeps its key to push,
 skipped, no tap named then.
 
 A slipbox Homebrew installed — its file in a `Cellar/slipbox/<version>/bin/`, through a link or not
-(`core/install.ts`, `installedBy`) — is Homebrew's to change: `slipbox upgrade` says `brew upgrade slipbox`, the
+(`core/application/distribution/install.ts`, `installedBy`) — is Homebrew's to change: `slipbox upgrade` says `brew
+upgrade slipbox`, the
 daily check says so too, and `slipbox uninstall` says `brew uninstall slipbox` removes it (`--purge` still takes
 slipbox's own folders).
 
@@ -460,7 +465,8 @@ release brings the build's check to `main`, `pages.yml`'s `bun run site` runs it
 ## Channels
 
 An install follows a channel (GR-D15): `stable`, the releases, or `preview`, the previews as well (§ Previews). It's
-kept with the install, in `<data>/channel` beside `current` (`core/install.ts`: `readChannel`, `writeChannel`), one
+kept with the install, in `<data>/channel` beside `current` (`core/application/distribution/install.ts`: `readChannel`,
+`writeChannel`), one
 word; none, or any other word, is `stable`. The installer writes it (§ Installing); `slipbox channel` says it, and
 `slipbox channel set stable|preview` writes it in one step (`atomicWrite`). `--json`: `{channel}`, with `set`
 `{channel, previous}`.
@@ -473,11 +479,13 @@ daily check of a Homebrew install follows stable releases.
 **The Pages site's channel files** (`pages.yml`, § Previews) are what a channel offers: `stable` and `preview`, each
 one line, `<tag> <SHA-256 of that release's install.sh>`, absent when the channel has no release. The bootstrap reads
 the channel's to install; `upgrade` and the daily check read `preview`'s (§ Updates). The site is
-`https://<owner>.github.io/<name>` for the release's repository (`core/release.ts`' `pagesBase`, the owner in lower
+`https://<owner>.github.io/<name>` for the release's repository (`core/application/distribution/release.ts`'
+`pagesBase`, the owner in lower
 case as Pages names it; `release.ts`' `pagesUrl` checks the repository first), or `SLIPBOX_CHANNELS_URL`.
 
 **How a preview is named** — its tag, `preview-<time>-<hash>`, and its version, `<x.y.z>-preview.<time>.g<hash>`
-(`PREVIEW_TAG`, `PREVIEW_VERSION`, `tagOf`) — is `core/release.ts`'s, the binary's own, which `release.ts`
+(`PREVIEW_TAG`, `PREVIEW_VERSION`, `tagOf`) — is `core/application/distribution/release.ts`'s, the binary's own, which
+`release.ts`
 re-exports: what upgrades follow and what releases are made as can't drift apart.
 
 Back on `stable` from a preview, nothing is taken back: `upgrade` never installs an older version, so the preview
@@ -485,7 +493,7 @@ stays until a release newer than it — its own version's release, which sorts a
 
 ## Updates
 
-`core/update.ts` (`14.4`, D199). The latest release is found from its `SHA256SUMS`, at
+`core/application/distribution/update.ts` (`14.4`, D199). The latest release is found from its `SHA256SUMS`, at
 `<releases>/latest/download/SHA256SUMS` — one small file: its packs' names carry the version, and its lines the sum
 each download is checked against. On `preview` (§ Channels), the newest preview is asked for as well, at the same
 time: the site's `preview` file names its tag, and `<releases>/download/<tag>/SHA256SUMS` its packs (`fetchPreview`;
@@ -548,7 +556,7 @@ consistent: `current` names a complete version, the old one or the new.
 **Bun's own crash reports** are off (D221): on macOS and Windows a crashing Bun sends a report to `bun.report` unless
 told not to, and a compiled binary is no different. Bun's crash handler reads its switch when it crashes, from the C
 environment, which `process.env` doesn't write to; so the first thing `src/main.ts` does, for the TUI and the CLI
-alike, is `core/crash-reports.ts`'s `crashReportsOff`: libc's `setenv`, through `bun:ffi`
+alike, is `core/application/distribution/crash-reports.ts`'s `crashReportsOff`: libc's `setenv`, through `bun:ffi`
 (`core/foundation/platform/libc.ts`, opened once for this and restart's `execve`), puts
 `BUN_ENABLE_CRASH_REPORTING=0` there — libc found as glibc's `libc.so.6`, musl's loader (`/lib/ld-musl-<arch>.so.1`)
 or macOS's `libSystem.B.dylib`. It's left alone when you set `BUN_ENABLE_CRASH_REPORTING` or `BUN_CRASH_REPORT_URL`
@@ -648,7 +656,7 @@ answers it.
 teardown (raw mode off, the main screen back, mouse reporting off) comes after its `destroy` event: the hand-over waits
 for that event, then a turn of the event loop, before it writes a line or replaces the process.
 
-**The hand-over** (`core/restart.ts`; UPG-D2) runs in the same process, in order:
+**The hand-over** (`core/application/distribution/restart.ts`; UPG-D2) runs in the same process, in order:
 
 1. **The upgrade**, when asked for: `slipbox: upgrading to 0.6.0… (ctrl+c cancels)`, then `upgrade`'s work (§ Updates)
    done by the version that was running, as `slipbox upgrade` does it, and what `slipbox upgrade` says after it
@@ -718,7 +726,8 @@ runs, whatever version it installs.
 
 ## Uninstalling
 
-`slipbox uninstall` (`14.8`, `core/install.ts`) lists every path first, and removes nothing without `--yes`:
+`slipbox uninstall` (`14.8`, `core/application/distribution/install.ts`) lists every path first, and removes nothing
+without `--yes`:
 
 - **The installer's files**: the link `bin-link` names — only while it's still the installer's link to
   `<data>/current/slipbox`; anything else there is left and said — then `versions/`, `current`, `bin-link` and
@@ -757,8 +766,10 @@ Windows CI runner to check it: nothing here can run a Windows binary.
 ## Language servers' lockfiles
 
 `scripts/lock-servers.ts` (`14.11`, D202) makes a lockfile for each package slipbox pins — the npm servers in
-`core/servers/languages.ts`, markdownlint-cli2 in `core/lint.ts` — resolved by Bun from npm with the week's wait the
-repository's own dependencies have, and writes them into `src/core/servers/locks.ts`, which the binary carries: a
+`core/documents/servers/languages.ts`, markdownlint-cli2 in `core/documents/diagnostics/lint.ts` — resolved by Bun from
+npm with the week's wait the
+repository's own dependencies have, and writes them into `src/core/documents/servers/locks.ts`, which the binary
+carries: a
 line of source per line of each lock, so a change reads as a diff. Run it again when a pin changes. A test holds
 every pin to having its lock, made for its manifest, and every package in it to an integrity hash. How a server is
 installed from it, and kept current, is [lsp.md](lsp.md) § The client for code, "Installing" and "Kept current".

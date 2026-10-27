@@ -3,7 +3,7 @@
 // but only when stdout is a terminal (9.3). The TUI is imported lazily so the CLI never loads
 // OpenTUI's native renderer.
 
-import { crashReportsOff } from "./core/crash-reports.ts";
+import { crashReportsOff } from "./core/application/distribution/crash-reports.ts";
 import { parseArgs } from "./cli/args.ts";
 import { CLI_COMMANDS, defaultIo, EXIT, runCli } from "./cli/cli.ts";
 

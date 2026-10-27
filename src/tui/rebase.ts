@@ -9,7 +9,7 @@
 // changed asks to stash them and put them back after (`--autostash`, D247); where they conflict going back, git keeps
 // them in the stash, and the message names it.
 
-import { type Checkout, headOf } from "../core/git.ts";
+import { type Checkout, headOf } from "../core/workspace/git/git.ts";
 import {
   abortLater,
   aheadBehind,
@@ -23,8 +23,8 @@ import {
   rebaseLater,
   skipLater,
   stashKept,
-} from "../core/gitrebase.ts";
-import { pullLater, type RemoteDone, stashesOf } from "../core/gitremote.ts";
+} from "../core/workspace/git/branches/gitrebase.ts";
+import { pullLater, type RemoteDone, stashesOf } from "../core/workspace/git/branches/gitremote.ts";
 import { sanitize } from "../core/foundation/text/sanitize.ts";
 import { isTrusted } from "../core/workspace/vaults/trust.ts";
 import type { App } from "./app.ts";

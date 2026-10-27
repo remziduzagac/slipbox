@@ -389,7 +389,7 @@ it again on any difference (`stamps` in `src/core/workspace/graph/watch.ts`); ho
      walk without home's top out. Both say it now.
   Rejected: a ctime-only change keeps the walk again, once per change (the ctime trade-off); `keptWalk`'s errors not
   reported, the double stat, the command line alone walking an earlier version's walk (rounds 3 to 6); the errno
-  check's other copies (`src/core/skill.ts`, `src/tui/explorer.ts`: outside this fix).
+  check's other copies (`src/core/application/distribution/skill.ts`, `src/tui/explorer.ts`: outside this fix).
   Ran: tests/vault.test.ts (384), the TUI, core, CLI, regressions and marks tests of home, walk, watch, rename, move
   and deinit (156), terminal checks `home` and "space v m gives" (24/24), the typecheck, the lint, `check:size`,
   `check:boundary`, `check:docs`.

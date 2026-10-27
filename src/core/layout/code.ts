@@ -11,7 +11,7 @@
 // by line, as a rendered note's are.
 
 import { readDoc } from "../documents/model/docformats.ts";
-import type { Severity } from "../diagnostics.ts";
+import type { Severity } from "../documents/diagnostics/diagnostics.ts";
 import type { Glyphs } from "../glyphs.ts";
 import { slugify } from "../documents/markdown/parse.ts";
 import { expandTabs } from "../foundation/text/sanitize.ts";

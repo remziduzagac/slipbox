@@ -19,7 +19,7 @@ import {
 } from "../graph/graph.ts";
 import { pathLink, wikiPathCandidates } from "./links.ts";
 import { folderIdentity, lookupFolder, type NamedFolder, readFolders } from "../vaults/folders.ts";
-import { checkoutOf } from "../../git.ts";
+import { checkoutOf } from "../git/git.ts";
 import { checkoutRemotes, hostedHere } from "./hosting.ts";
 import { homeWalkKept, walkHomeNow } from "../vaults/home.ts";
 import { cacheDir } from "../../foundation/platform/paths.ts";

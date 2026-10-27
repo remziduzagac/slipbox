@@ -2,8 +2,9 @@
 
 What slipbox runs, and what a folder it opens may run through it (`23.x`): nothing of a folder's own, unless you
 trust its vault (D172); and what a link may reach: nothing out of its vault or home, unless you follow it (VV-D6). Code:
-`core/workspace/vaults/trust.ts` (the vaults you trust), `core/gitops.ts` (git's guards),
-`core/servers/find.ts` and `core/servers/manager.ts` (the servers' programs, settings and safe modes), `core/lint.ts`
+`core/workspace/vaults/trust.ts` (the vaults you trust), `core/workspace/git/branches/gitops.ts` (git's guards),
+`core/documents/servers/find.ts` and `core/documents/servers/manager.ts` (the servers' programs, settings and safe
+modes), `core/documents/diagnostics/lint.ts`
 (markdownlint-cli2's configs), `core/workspace/vaults/symlinks.ts` and `tui/following.ts` (the links you follow).
 
 ## What runs
@@ -52,7 +53,8 @@ repository or notes folder slipbox runs in, or a server's project folder, and it
 - **Servers** (D174): each in its safe mode, or not run when it can't work without the project's code;
   markdownlint-cli2 skips a note under a config that is code. Which, and how: [lsp.md](lsp.md) § The client for code
   ("Trust"); [tui.md](tui.md) § The lint surface.
-- **git** (D175, `gitArgs` in `core/gitops.ts`) runs nothing of the repository's own config or files: no fsmonitor
+- **git** (D175, `gitArgs` in `core/workspace/git/branches/gitops.ts`) runs nothing of the repository's own config or
+  files: no fsmonitor
   command (`core.fsmonitor=false`); no hook (`core.hooksPath=/dev/null`: `git status` writes the index, and that runs
   `post-index-change`); no signature checked in a log (`log.showSignature=false`); attributes read from the empty tree
   (`--attr-source`, git 2.42 and later), so no filter, diff or merge driver of the repository's runs; no textconv or

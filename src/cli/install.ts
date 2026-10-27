@@ -1,13 +1,13 @@
 // The CLI's commands for slipbox itself: the latest release installed (14.4), the channel it follows, what the
 // installer put here removed (14.8), and the skill for agents (GR-D10).
 
-import { automaticSkills } from "../core/skill-lifecycle.ts";
+import { automaticSkills } from "../core/application/distribution/skill-lifecycle.ts";
 import { resolve } from "node:path";
 import { dataHome } from "../core/foundation/platform/paths.ts";
 import { tildePath } from "../core/workspace/vaults/names.ts";
 import { flag, has, UsageError } from "./args.ts";
 import { VERSION } from "../version.ts";
-import { RELEASE } from "../core/release.ts";
+import { RELEASE } from "../core/application/distribution/release.ts";
 import {
   type Channel,
   installedBy,
@@ -17,9 +17,14 @@ import {
   uninstall,
   uninstallPlan,
   writeChannel,
-} from "../core/install.ts";
-import { FROM_SOURCE, upgradeSaid, upgrade as upgradeTo, UpgradeError } from "../core/update.ts";
-import { installSkill, SKILL, SKILL_NAME, SkillRefused } from "../core/skill.ts";
+} from "../core/application/distribution/install.ts";
+import {
+  FROM_SOURCE,
+  upgradeSaid,
+  upgrade as upgradeTo,
+  UpgradeError,
+} from "../core/application/distribution/update.ts";
+import { installSkill, SKILL, SKILL_NAME, SkillRefused } from "../core/application/distribution/skill.ts";
 import { EXIT, CliError, type Handler } from "./common.ts";
 
 /** slipbox itself: upgraded, its channel, uninstalled; the skill for agents. */

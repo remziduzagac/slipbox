@@ -48,7 +48,8 @@ scrolled past its end to keep that row on its line (D261), and the scrollbar's t
   deleted, 31 rows, and 23 > 31 − 24. Neither This branch against main nor the branches have answered by the end.
 - 2026-10-24: Cause: the test's setup races git. The repository is on `feature`, so the panel has a section This
   branch against main (GIT-D8), asked in the background (`merge-base`, then `diff`: `changedLater` in
-  `core/gitbranches.ts`), listing c.md and every untracked file, below the files and so below the pointer's row. Its
+  `core/workspace/git/branches/gitbranches.ts`), listing c.md and every untracked file, below the files and so below the
+  pointer's row. Its
   first ask starts with the panel's first frame; the test next waits on git at the status after the deletion. On Linux
   that status always comes back first, and the section never shows during the test. On macOS the section's answer
   always comes back first, and its rows fill the list below the pointer's row: the list isn't past its end, and any

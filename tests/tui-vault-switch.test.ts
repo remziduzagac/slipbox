@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { homeAt, rootAt } from "../src/core/workspace/vaults/vault.ts";
-import { readStale } from "../src/core/stale.ts";
+import { readStale } from "../src/core/workspace/git/merge/stale.ts";
 import { loadSession } from "../src/core/workspace/session/position.ts";
 import { recordRoot } from "../src/core/workspace/vaults/registry.ts";
 import { vaultChoices } from "../src/tui/vault-list.ts";

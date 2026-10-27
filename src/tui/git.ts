@@ -5,12 +5,12 @@ import { beginGitRead } from "./gitquery.ts";
 import { existsSync } from "node:fs";
 import { basename, join, posix, relative, sep } from "node:path";
 import { readText } from "../core/foundation/platform/fsutil.ts";
-import { baseFor, baseForLater } from "../core/gitbase.ts";
+import { baseFor, baseForLater } from "../core/workspace/git/gitbase.ts";
 import { startInsert } from "./editing.ts";
 import { fence, fenceLanguage } from "../core/workspace/mutations/capture.ts";
 import { loadSession, TOP } from "../core/workspace/session/position.ts";
 import type { Role } from "../core/theme/index.ts";
-import { type Checkout, checkoutOf, headOf } from "../core/git.ts";
+import { type Checkout, checkoutOf, headOf } from "../core/workspace/git/git.ts";
 import {
   baseBranch,
   baseBranchLater,
@@ -23,7 +23,7 @@ import {
   showLater,
   stateOf,
   worktreeList,
-} from "../core/gitops.ts";
+} from "../core/workspace/git/branches/gitops.ts";
 import {
   commentFor,
   commitLater,
@@ -33,11 +33,16 @@ import {
   sections,
   type StatusEntry,
   statusLater,
-} from "../core/gitstage.ts";
-import { switchLater } from "../core/gitbranches.ts";
-import type { Track } from "../core/gitremote.ts";
-import { type GitChange, gitChanges } from "../core/gitsigns.ts";
-import { describeBreak, type MergeBreak, type MergeReview, reviewMerge } from "../core/mergereview.ts";
+} from "../core/workspace/git/staging/gitstage.ts";
+import { switchLater } from "../core/workspace/git/branches/gitbranches.ts";
+import type { Track } from "../core/workspace/git/branches/gitremote.ts";
+import { type GitChange, gitChanges } from "../core/workspace/git/gitsigns.ts";
+import {
+  describeBreak,
+  type MergeBreak,
+  type MergeReview,
+  reviewMerge,
+} from "../core/workspace/git/review/mergereview.ts";
 import { openDiff } from "./diffview.ts";
 import { checkoutAt, isInside, isVaultRoot, rootAt, rootMarkers } from "../core/workspace/vaults/vault.ts";
 import { isTrusted } from "../core/workspace/vaults/trust.ts";

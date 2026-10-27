@@ -5,11 +5,11 @@ import { vaultChoices } from "./vault-list.ts";
 import { cancelGitRead } from "./gitquery.ts";
 import { existsSync } from "node:fs";
 import { dirname, isAbsolute, join, posix, relative } from "node:path";
-import { writeDirty } from "../core/stale.ts";
+import { writeDirty } from "../core/workspace/git/merge/stale.ts";
 import { loadConfig } from "../core/application/config/config.ts";
 import { Graph } from "../core/workspace/graph/graph.ts";
 import { leftOutOfHome, walksInto } from "../core/workspace/vaults/home.ts";
-import { lintCommand } from "../core/lint.ts";
+import { lintCommand } from "../core/documents/diagnostics/lint.ts";
 import { slipboxOwn } from "../core/foundation/platform/paths.ts";
 import {
   type Anchor,

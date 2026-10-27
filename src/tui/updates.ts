@@ -2,20 +2,27 @@
 // the dialog once the TUI is quiet, by how slipbox was installed: the installer's upgrades and restarts, or upgrades
 // beside the TUI (`slipbox upgrade --json`, a process of its own) for `:restart` to start later; Homebrew's and one put
 // by hand are given the command or the address to copy. `:restart` asks first about notes unsaved, leaves its note
-// (`core/restart.ts`) and quits; `tui/run.ts` hands over once the screen is given back, and the slipbox that starts
+// (`core/application/distribution/restart.ts`) and quits; `tui/run.ts` hands over once the screen is given back, and
+// the slipbox that starts
 // takes the note and comes back where you were.
 
 import { closeSync, existsSync, mkdirSync, openSync, readFileSync, realpathSync, rmSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { VERSION } from "../version.ts";
 import { sanitize } from "../core/foundation/text/sanitize.ts";
-import { tagOf } from "../core/release.ts";
+import { tagOf } from "../core/application/distribution/release.ts";
 import { readJson } from "../core/foundation/platform/fsutil.ts";
 import { removeOlderThan } from "../core/foundation/platform/fsutil.ts";
-import { type Channel, currentVersion, homebrewPrefix, type InstalledBy, howToUpgrade } from "../core/install.ts";
+import {
+  type Channel,
+  currentVersion,
+  homebrewPrefix,
+  type InstalledBy,
+  howToUpgrade,
+} from "../core/application/distribution/install.ts";
 import { type SessionState, sessionFrom } from "../core/workspace/session/position.ts";
-import type { ReleaseBuild } from "../core/release.ts";
-import { type RestartNote, writeNote } from "../core/restart.ts";
+import type { ReleaseBuild } from "../core/application/distribution/release.ts";
+import { type RestartNote, writeNote } from "../core/application/distribution/restart.ts";
 import {
   askNewest,
   dailyUpdateCheck,
@@ -29,7 +36,7 @@ import {
   type UpgradeResult,
   upgradeSaid,
   versionOf,
-} from "../core/update.ts";
+} from "../core/application/distribution/update.ts";
 import type { VaultMode } from "../core/workspace/vaults/vault.ts";
 import type { App, Level } from "./app.ts";
 import { openDialog } from "./dialog.ts";

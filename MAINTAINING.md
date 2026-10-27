@@ -258,8 +258,9 @@ Reviewed twice a year, with the toolchains:
 
 - `mise.toml`: Bun and the check's tools, each a week old when taken; `package.json`'s `engines` is the floor for
   running from source.
-- The language servers and markdownlint-cli2 slipbox installs: their pins are in `src/core/servers/languages.ts` and
-  `src/core/lint.ts`, and `bun scripts/lock-servers.ts` makes their lockfiles again after a pin moves.
+- The language servers and markdownlint-cli2 slipbox installs: their pins are in
+  `src/core/documents/servers/languages.ts` and `src/core/documents/diagnostics/lint.ts`, and
+  `bun scripts/lock-servers.ts` makes their lockfiles again after a pin moves.
 - The grammars built from pinned commits (`scripts/build-grammars.ts`, `grammars/README.md`).
 - The Alpine image the release runs musl builds in, pinned by digest in `build.yml`.
 

@@ -394,7 +394,8 @@ once indexed, and the repair applies (§ Repairs). Keys and the preview: [tui.md
 ## The merge review
 
 Before a merge, git's own tentative result (`git merge-tree --write-tree`, without touching the working tree) is checked
-for the links it would break (D66; `core/mergereview.ts`): "`refactor` moves `docs/plan.md`; `main` added a link to it
+for the links it would break (D66; `core/workspace/git/review/mergereview.ts`): "`refactor` moves `docs/plan.md`; `main`
+added a link to it
 in `docs/b.md`", each with its cause (`moved`, `deleted`, `note-moved`, `missing`) and the fix in the link's own form,
 shown, not written; in review for people (`:merge-review`, and the git panel's Merge… on a branch: [tui.md](tui.md) §
 Git), from the CLI for agents (`slipbox merge-review`). It reads paths (relative, `/…`, `~/`, absolute), wikilinks by

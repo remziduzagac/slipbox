@@ -6,4 +6,4 @@ status, assignee and blocked_by. Keep scope and evidence in that file, not in du
 Use the [linked task index](../design.md#implementation-tasks) and [phase order and
 gates](../design.md#phase-sequence-and-review-gates). T12 follows T1 early; T44 can run alongside mechanical moves after
 T1 and gates T24's contract-dependent extraction. Design approval was granted on 2026-10-27
-([ORG-D1–ORG-D3](../decisions.md)); task files retain their todo status and remaining dependencies.
+([ORG-D1–ORG-D3](../decisions.md)); task files own their current status and remaining dependencies.

@@ -13,8 +13,8 @@ import {
   noteLanguages,
   ownWordsFile,
   proseWords,
-} from "../core/spell.ts";
-import { addToDictionaries, openDictionary, threadDictionaries } from "../core/spell-thread.ts";
+} from "../core/documents/diagnostics/spell.ts";
+import { addToDictionaries, openDictionary, threadDictionaries } from "../core/documents/diagnostics/spell-thread.ts";
 import { dataOutline } from "../core/documents/model/data.ts";
 import { classify, extensionOf } from "../core/documents/model/filetypes.ts";
 import { readText } from "../core/foundation/platform/fsutil.ts";

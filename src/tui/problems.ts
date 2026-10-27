@@ -4,9 +4,9 @@
 import { join, relative } from "node:path";
 import { placeAt } from "./editing.ts";
 import type { LinkProblem } from "../core/workspace/graph/graph.ts";
-import { visibleLint, type LintVisibility } from "../core/lint-visibility.ts";
+import { visibleLint, type LintVisibility } from "../core/documents/diagnostics/lint-visibility.ts";
 import { parseMarkdown, type ParsedNote } from "../core/documents/markdown/parse.ts";
-import type { LintIssue } from "../core/lint.ts";
+import type { LintIssue } from "../core/documents/diagnostics/lint.ts";
 import { srcAt } from "../core/layout/ir.ts";
 import {
   atLeast,
@@ -16,7 +16,7 @@ import {
   type Problem,
   SEVERITIES,
   syntaxProblems,
-} from "../core/diagnostics.ts";
+} from "../core/documents/diagnostics/diagnostics.ts";
 import type { NoteBuffer } from "./buffer.ts";
 import { match } from "./match.ts";
 import { keyChar } from "./keys.ts";
