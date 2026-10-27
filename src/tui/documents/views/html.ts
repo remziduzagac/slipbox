@@ -1,10 +1,10 @@
-import { headingsOf } from "../core/documents/markdown/parse.ts";
-import { rowForSource } from "../core/workspace/session/position.ts";
-import type { Layout, LayoutHeading } from "../core/rendering/layout/ir.ts";
+import { headingsOf } from "../../../core/documents/markdown/parse.ts";
+import { rowForSource } from "../../../core/workspace/session/position.ts";
+import type { Layout, LayoutHeading } from "../../../core/rendering/layout/ir.ts";
 // Document disclosures own their state per buffer; App supplies commands and layout wiring.
-import type { App, View } from "./app/runtime/app.ts";
-import type { NoteBuffer } from "./buffer.ts";
-import { adaptHtml } from "../core/documents/markdown/html-adapter.ts";
+import type { App, View } from "../../app/runtime/app.ts";
+import type { NoteBuffer } from "../buffers/buffer.ts";
+import { adaptHtml } from "../../../core/documents/markdown/html-adapter.ts";
 import type { Nodes } from "mdast";
 
 export class Html {

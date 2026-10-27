@@ -9,8 +9,8 @@ import type { SpellWord } from "../core/documents/diagnostics/spell.ts";
 import type { Role } from "../core/rendering/theme/theme.ts";
 import { stringWidth } from "../core/foundation/text/width.ts";
 import type { App, View } from "./app/runtime/app.ts";
-import { cells } from "./cursor.ts";
-import { cannotEdit } from "./editing.ts";
+import { cells } from "./documents/editing/cursor.ts";
+import { cannotEdit } from "./documents/editing/editing.ts";
 import {
   type DictionaryFiles,
   Checker,
@@ -20,7 +20,7 @@ import {
   addOwnWord,
   ownWordsFile,
 } from "../core/documents/diagnostics/spell.ts";
-import type { NoteBuffer } from "./buffer.ts";
+import type { NoteBuffer } from "./documents/buffers/buffer.ts";
 import { lazy, loadError } from "../core/foundation/platform/lazy.ts";
 import { openDictionary, threadDictionaries, addToDictionaries } from "../core/documents/diagnostics/spell-thread.ts";
 

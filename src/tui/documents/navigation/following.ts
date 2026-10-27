@@ -5,7 +5,7 @@
 // on, said so.
 
 import { dirname } from "node:path";
-import { rootLabel, tildePath } from "../core/workspace/vaults/names.ts";
+import { rootLabel, tildePath } from "../../../core/workspace/vaults/names.ts";
 import {
   agentsWarning,
   answered,
@@ -19,12 +19,12 @@ import {
   probe,
   probeFollowed,
   setLinkAnswer,
-} from "../core/workspace/vaults/symlinks.ts";
-import { isInside, locationAt, type VaultLocation } from "../core/workspace/vaults/vault.ts";
-import { LINK_REASON } from "../core/workspace/walk/walk.ts";
-import { stringWidth, truncate, truncateStart } from "../core/foundation/text/width.ts";
-import type { App, ListItem } from "./app/runtime/app.ts";
-import type { TreeRow } from "./explorer.ts";
+} from "../../../core/workspace/vaults/symlinks.ts";
+import { isInside, locationAt, type VaultLocation } from "../../../core/workspace/vaults/vault.ts";
+import { LINK_REASON } from "../../../core/workspace/walk/walk.ts";
+import { stringWidth, truncate, truncateStart } from "../../../core/foundation/text/width.ts";
+import type { App, ListItem } from "../../app/runtime/app.ts";
+import type { TreeRow } from "../../explorer.ts";
 
 /** What answering a link was for: a note opened, a folder unfolded — run once it's followed, or looked at. */
 type Then = () => void;

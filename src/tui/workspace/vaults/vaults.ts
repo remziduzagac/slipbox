@@ -20,7 +20,7 @@ import {
 } from "../../../core/workspace/session/position.ts";
 import { stopBacklinkJobs } from "../../../core/workspace/graph/backlinks-jobs.ts";
 import { openVault } from "../../../core/workspace/links/reach.ts";
-import { tuiReach } from "../../peek.ts";
+import { tuiReach } from "../../documents/navigation/peek.ts";
 import {
   type Applied,
   applyPlan,

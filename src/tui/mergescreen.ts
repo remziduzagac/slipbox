@@ -35,7 +35,7 @@ import { TOP } from "../core/workspace/session/position.ts";
 import { sanitize } from "../core/foundation/text/sanitize.ts";
 import type { App } from "./app/runtime/app.ts";
 import { editable } from "./app/runtime/app.ts";
-import { NoteBuffer } from "./buffer.ts";
+import { NoteBuffer } from "./documents/buffers/buffer.ts";
 import { asBlocks, diffLanguage, isNote, LINES_ONLY, sideBySide, switchedText } from "./diffview.ts";
 import { keyRow } from "./review.ts";
 

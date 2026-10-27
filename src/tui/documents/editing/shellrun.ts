@@ -5,17 +5,17 @@
 
 import { statSync } from "node:fs";
 import { isAbsolute, join, relative } from "node:path";
-import { sanitize } from "../core/foundation/text/sanitize.ts";
+import { sanitize } from "../../../core/foundation/text/sanitize.ts";
 import {
   type BangRange,
   expandPercent,
   parseBang,
   runShell,
   type ShellResult,
-} from "../core/foundation/platform/shell.ts";
-import { type App, editable, type View } from "./app/runtime/app.ts";
+} from "../../../core/foundation/platform/shell.ts";
+import { type App, editable, type View } from "../../app/runtime/app.ts";
 import { cannotEdit, placeAt } from "./editing.ts";
-import { exLines } from "./replacing.ts";
+import { exLines } from "../search/replacing.ts";
 
 /** The command as the shell is given it, `%` the file's path from the root; null when it can't be (said). */
 function prepared(app: App, command: string): string | null {

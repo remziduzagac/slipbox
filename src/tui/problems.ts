@@ -2,7 +2,7 @@
 // root's — the marks in the text, and going to a problem.
 
 import { join, relative } from "node:path";
-import { placeAt } from "./editing.ts";
+import { placeAt } from "./documents/editing/editing.ts";
 import type { LinkProblem } from "../core/workspace/graph/graph.ts";
 import { visibleLint, type LintVisibility } from "../core/documents/diagnostics/lint-visibility.ts";
 import { parseMarkdown, type ParsedNote } from "../core/documents/markdown/parse.ts";
@@ -17,7 +17,7 @@ import {
   SEVERITIES,
   syntaxProblems,
 } from "../core/documents/diagnostics/diagnostics.ts";
-import type { NoteBuffer } from "./buffer.ts";
+import type { NoteBuffer } from "./documents/buffers/buffer.ts";
 import { match } from "./match.ts";
 import { keyChar } from "./shell/input/keys.ts";
 import type { App, View } from "./app/runtime/app.ts";

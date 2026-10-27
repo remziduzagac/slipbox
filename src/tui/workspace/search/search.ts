@@ -1,10 +1,10 @@
 // Finding in the TUI: the vault's search index kept as the app runs (6.5, 6.9) and the list ranked as you type;
 // notes by tag and by type; find's replace row, and a replace across every note.
 
-import { layoutMatches, matchText } from "../core/workspace/search/regex-jobs.ts";
-import { compilePattern, findAll } from "../core/documents/editing/replace.ts";
-import { planReplaceLater } from "../core/workspace/mutations/replace-files.ts";
-import * as R from "./replacing.ts";
+import { layoutMatches, matchText } from "../../../core/workspace/search/regex-jobs.ts";
+import { compilePattern, findAll } from "../../../core/documents/editing/replace.ts";
+import { planReplaceLater } from "../../../core/workspace/mutations/replace-files.ts";
+import * as R from "../../documents/search/replacing.ts";
 import {
   IndexJob,
   indexFile,
@@ -12,18 +12,18 @@ import {
   type SearchHit,
   SearchIndex,
   type SearchResult,
-} from "../core/workspace/search/search.ts";
-import { leadsOut, peekAt } from "./peek.ts";
-import { notesOfType, ofType, type TypedNote } from "../core/documents/model/doctypes.ts";
-import { type Scope, SCOPES, searchOthers } from "../core/workspace/search/scope.ts";
-import { isListed } from "../core/workspace/vaults/vault.ts";
-import { ELSEWHERE } from "../core/workspace/vaults/names.ts";
-import { frontmatterFindings, rootTypes } from "../core/documents/diagnostics/diagnostics.ts";
-import type { App, View, ListItem, ListOverlay, PromptOverlay } from "./app/runtime/app.ts";
-import type { Layout } from "../core/rendering/layout/ir.ts";
-import type { FindState } from "./app/runtime/app.ts";
-import { stringWidth, prefixWidths } from "../core/foundation/text/width.ts";
-import { refilter } from "./overlays.ts";
+} from "../../../core/workspace/search/search.ts";
+import { leadsOut, peekAt } from "../../documents/navigation/peek.ts";
+import { notesOfType, ofType, type TypedNote } from "../../../core/documents/model/doctypes.ts";
+import { type Scope, SCOPES, searchOthers } from "../../../core/workspace/search/scope.ts";
+import { isListed } from "../../../core/workspace/vaults/vault.ts";
+import { ELSEWHERE } from "../../../core/workspace/vaults/names.ts";
+import { frontmatterFindings, rootTypes } from "../../../core/documents/diagnostics/diagnostics.ts";
+import type { App, View, ListItem, ListOverlay, PromptOverlay } from "../../app/runtime/app.ts";
+import type { Layout } from "../../../core/rendering/layout/ir.ts";
+import type { FindState } from "../../app/runtime/app.ts";
+import { stringWidth, prefixWidths } from "../../../core/foundation/text/width.ts";
+import { refilter } from "../../overlays.ts";
 
 /** Search: the index and its list, tags and types, replace across notes. */
 export class Search {

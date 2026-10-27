@@ -1,28 +1,28 @@
 // The commands of links (`link.*`, `links.*`, `backlinks.*`, `peek.*`): a link followed — to a note, a heading, a
 // line, another vault's file (a peek) or a pointer — cycled through, listed, its target copied.
 
-import { type Run, withView, lay } from "./actions/actions.ts";
-import { diffEnter } from "./diffview.ts";
-import { canonKey } from "../core/application/commands/registry.ts";
-import { prettyKey } from "./shell/input/keys.ts";
-import { peekGo, peekKeep, peekFill, peekInstead, ownPath } from "./peek.ts";
-import { planRelink, planVaultRename } from "../core/workspace/mutations/rename/rename.ts";
-import type { App, View, ListItem } from "./app/runtime/app.ts";
-import type { LayoutLink } from "../core/rendering/layout/ir.ts";
-import * as E from "./editing.ts";
-import { linkTokens } from "../core/documents/syntax/syntax.ts";
-import { readerFor } from "../core/documents/model/readers.ts";
-import { type Anchor, TOP } from "../core/workspace/session/position.ts";
+import { type Run, withView, lay } from "../actions.ts";
+import { diffEnter } from "../../diffview.ts";
+import { canonKey } from "../../../core/application/commands/registry.ts";
+import { prettyKey } from "../../shell/input/keys.ts";
+import { peekGo, peekKeep, peekFill, peekInstead, ownPath } from "../../documents/navigation/peek.ts";
+import { planRelink, planVaultRename } from "../../../core/workspace/mutations/rename/rename.ts";
+import type { App, View, ListItem } from "../../app/runtime/app.ts";
+import type { LayoutLink } from "../../../core/rendering/layout/ir.ts";
+import * as E from "../../documents/editing/editing.ts";
+import { linkTokens } from "../../../core/documents/syntax/syntax.ts";
+import { readerFor } from "../../../core/documents/model/readers.ts";
+import { type Anchor, TOP } from "../../../core/workspace/session/position.ts";
 import { isAbsolute, join, posix } from "node:path";
-import { isNotePath, pathLink, pathForm } from "../core/workspace/links/links.ts";
-import { isFile } from "./actions-files.ts";
-import { isPointer, parsePointer, resolvePointer } from "../core/workspace/links/pointer.ts";
-import { ELSEWHERE, tildePath } from "../core/workspace/vaults/names.ts";
-import { slugName } from "../core/workspace/vaults/registry.ts";
-import { rootAt } from "../core/workspace/vaults/vault.ts";
-import { classify } from "../core/documents/model/filetypes.ts";
-import { lineFragment, blockLine, findHeading } from "../core/workspace/links/landing.ts";
-import { anchorsOf, headingsOf } from "../core/documents/markdown/parse.ts";
+import { isNotePath, pathLink, pathForm } from "../../../core/workspace/links/links.ts";
+import { isFile } from "../../actions-files.ts";
+import { isPointer, parsePointer, resolvePointer } from "../../../core/workspace/links/pointer.ts";
+import { ELSEWHERE, tildePath } from "../../../core/workspace/vaults/names.ts";
+import { slugName } from "../../../core/workspace/vaults/registry.ts";
+import { rootAt } from "../../../core/workspace/vaults/vault.ts";
+import { classify } from "../../../core/documents/model/filetypes.ts";
+import { lineFragment, blockLine, findHeading } from "../../../core/workspace/links/landing.ts";
+import { anchorsOf, headingsOf } from "../../../core/documents/markdown/parse.ts";
 
 /** Links: followed, peeked at, cycled through, listed (links and backlinks), inserted and converted. */
 export function linkActions(): Record<string, Run> {

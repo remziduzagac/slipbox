@@ -6,9 +6,9 @@
 
 import { mkdirSync, readdirSync, statSync } from "node:fs";
 import { dirname, isAbsolute, join, resolve } from "node:path";
-import { namesFolder } from "../core/rendering/export/index.ts";
-import type { App } from "./app/runtime/app.ts";
-import { keyChar } from "./shell/input/keys.ts";
+import { namesFolder } from "../../../core/rendering/export/index.ts";
+import type { App } from "../../app/runtime/app.ts";
+import { keyChar } from "../../shell/input/keys.ts";
 
 export interface SaveEntry {
   name: string;

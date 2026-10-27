@@ -1,11 +1,11 @@
 # Trust
 
-What slipbox runs, and what a folder it opens may run through it (`23.x`): nothing of a folder's own, unless you
-trust its vault (D172); and what a link may reach: nothing out of its vault or home, unless you follow it (VV-D6). Code:
+What slipbox runs, and what a folder it opens may run through it (`23.x`): nothing of a folder's own, unless you trust
+its vault (D172); and what a link may reach: nothing out of its vault or home, unless you follow it (VV-D6). Code:
 `core/workspace/vaults/trust.ts` (the vaults you trust), `core/workspace/git/branches/gitops.ts` (git's guards),
 `core/documents/servers/find.ts` and `core/documents/servers/manager.ts` (the servers' programs, settings and safe
-modes), `core/documents/diagnostics/lint.ts`
-(markdownlint-cli2's configs), `core/workspace/vaults/symlinks.ts` and `tui/following.ts` (the links you follow).
+modes), `core/documents/diagnostics/lint.ts` (markdownlint-cli2's configs), `core/workspace/vaults/symlinks.ts` and
+`tui/documents/navigation/following.ts` (the links you follow).
 
 ## What runs
 

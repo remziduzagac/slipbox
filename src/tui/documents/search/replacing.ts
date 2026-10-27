@@ -2,7 +2,7 @@
 // the note's text — its markdown — found by core/documents/editing/replace.ts with the window's find toggles. The
 // window edits (source mode or the lens), so every match is a real place in the file.
 
-import { confirmRest, matchText } from "../core/workspace/search/regex-jobs.ts";
+import { confirmRest, matchText } from "../../../core/workspace/search/regex-jobs.ts";
 import {
   compilePattern,
   expandReplacement,
@@ -10,10 +10,10 @@ import {
   nextLine,
   parseSubstitute,
   type TextMatch,
-} from "../core/documents/editing/replace.ts";
-import { type App, editable, type PromptOverlay, type View } from "./app/runtime/app.ts";
-import * as E from "./editing.ts";
-import { computeFind } from "./search.ts";
+} from "../../../core/documents/editing/replace.ts";
+import { type App, editable, type PromptOverlay, type View } from "../../app/runtime/app.ts";
+import * as E from "../editing/editing.ts";
+import { computeFind } from "../../workspace/search/search.ts";
 
 export interface ReplaceState {
   pending?: boolean;

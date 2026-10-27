@@ -2,14 +2,14 @@
 // motions, with vim's counts in source mode; scrolling; a picture's size; visual mode; the view's mode and the lens's
 // size.
 
-import { type Run, lay, withView } from "./actions/actions.ts";
-import * as C from "./cursor.ts";
-import { type App, type View, editable } from "./app/runtime/app.ts";
-import { bracketFrom, matchBracket } from "../core/documents/editing/brackets.ts";
-import * as E from "./editing.ts";
-import * as V from "./shell/input/vim.ts";
+import { type Run, lay, withView } from "../actions.ts";
+import * as C from "../../documents/editing/cursor.ts";
+import { type App, type View, editable } from "../../app/runtime/app.ts";
+import { bracketFrom, matchBracket } from "../../../core/documents/editing/brackets.ts";
+import * as E from "../../documents/editing/editing.ts";
+import * as V from "../../shell/input/vim.ts";
 import { visualOp } from "./actions-edit.ts";
-import type { ViewMode } from "./lens.ts";
+import type { ViewMode } from "../../documents/editing/lens.ts";
 
 /** Moving and viewing: the cursor's motions, scrolling, visual mode, the view's mode and the lens. */
 export function viewActions(): Record<string, Run> {

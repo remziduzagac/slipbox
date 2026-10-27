@@ -29,7 +29,7 @@ import { comparable } from "../core/workspace/git/merge/merge.ts";
 import { TOP } from "../core/workspace/session/position.ts";
 import { sanitize } from "../core/foundation/text/sanitize.ts";
 import type { App } from "./app/runtime/app.ts";
-import { NoteBuffer } from "./buffer.ts";
+import { NoteBuffer } from "./documents/buffers/buffer.ts";
 import { asBlocks, diffLanguage, isNote, LINES_ONLY, sideBySide, switchedText } from "./diffview.ts";
 
 /** A note's change as its blocks before and after: the file with this change undone against the file as it is. */

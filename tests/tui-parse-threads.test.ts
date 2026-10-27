@@ -11,7 +11,7 @@ import { Graph } from "../src/core/workspace/graph/graph.ts";
 import { noteChunks } from "../src/core/documents/markdown/parse.ts";
 import { stopParsePool } from "../src/core/documents/markdown/parse-pool.ts";
 import { locateVault } from "../src/core/workspace/vaults/vault.ts";
-import { BACKGROUND_PARSE } from "../src/tui/buffer.ts";
+import { BACKGROUND_PARSE } from "../src/tui/documents/buffers/buffer.ts";
 import { harness, makeSandbox, makeVault } from "./tui-harness.ts";
 
 makeSandbox();

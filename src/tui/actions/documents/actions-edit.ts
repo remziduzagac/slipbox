@@ -1,14 +1,14 @@
 // The commands that edit (`edit.*`, `task.*`, `spell.*`, saving): insert mode, vim's operators and the register,
 // undo and redo, spelling's fixes; a note saved, reverted, resolved, or handed to an editor.
 
-import { type Run, withView } from "./actions/actions.ts";
-import { spellStep, spellSuggest, spellAdd } from "./spelling.ts";
-import * as E from "./editing.ts";
-import * as V from "./shell/input/vim.ts";
-import { graphemes } from "../core/foundation/text/width.ts";
-import { type App, type View, editable } from "./app/runtime/app.ts";
-import { endSnippet } from "./snippets.ts";
-import * as C from "./cursor.ts";
+import { type Run, withView } from "../actions.ts";
+import { spellStep, spellSuggest, spellAdd } from "../../spelling.ts";
+import * as E from "../../documents/editing/editing.ts";
+import * as V from "../../shell/input/vim.ts";
+import { graphemes } from "../../../core/foundation/text/width.ts";
+import { type App, type View, editable } from "../../app/runtime/app.ts";
+import { endSnippet } from "../../documents/editing/snippets.ts";
+import * as C from "../../documents/editing/cursor.ts";
 
 /** Editing: insert mode, vim's operators, the register, undo, spelling; saving, and hand-offs to an editor. */
 export function editActions(): Record<string, Run> {

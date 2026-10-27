@@ -15,7 +15,7 @@ import { WorkerRequestError } from "../core/foundation/workers/worker-requests.t
 import { extensionOf } from "../core/documents/model/filetypes.ts";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { offsetOf } from "./editing.ts";
+import { offsetOf } from "./documents/editing/editing.ts";
 import { homedir } from "node:os";
 import { type Config, loadConfig } from "../core/application/config/config.ts";
 import { type LintCmd, type LintIssue, lintFailure, runLint } from "../core/documents/diagnostics/lint.ts";
@@ -27,7 +27,7 @@ import { languageOf, serverTable, type ServerTable } from "../core/documents/ser
 import { type LinterDef, linterRoot, linterTable, runLinter } from "../core/documents/servers/linters.ts";
 import { rootFor } from "../core/documents/servers/find.ts";
 import { ServerManager } from "../core/documents/servers/manager.ts";
-import type { NoteBuffer } from "./buffer.ts";
+import type { NoteBuffer } from "./documents/buffers/buffer.ts";
 import type { App, View, ListItem } from "./app/runtime/app.ts";
 import { SymbolKind } from "vscode-languageserver-protocol";
 

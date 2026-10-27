@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { PreparedExport, ExportSpool } from "../src/core/rendering/export/spool.ts";
 import { ExportJob } from "../src/core/rendering/export/jobs.ts";
 import { formatFor } from "../src/core/rendering/export/index.ts";
-import type { SaveAsOverlay } from "../src/tui/saveas.ts";
+import type { SaveAsOverlay } from "../src/tui/documents/saving/saveas.ts";
 import { harness, makeSandbox, makeVault } from "./tui-harness.ts";
 
 makeSandbox();

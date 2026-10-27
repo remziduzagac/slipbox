@@ -6,7 +6,7 @@ import { existsSync } from "node:fs";
 import { basename, join, posix, relative, sep } from "node:path";
 import { readText } from "../core/foundation/platform/fsutil.ts";
 import { baseFor, baseForLater } from "../core/workspace/git/gitbase.ts";
-import { startInsert } from "./editing.ts";
+import { startInsert } from "./documents/editing/editing.ts";
 import { fence, fenceLanguage } from "../core/workspace/mutations/capture.ts";
 import { loadSession, TOP } from "../core/workspace/session/position.ts";
 import type { Role } from "../core/rendering/theme/index.ts";
@@ -48,7 +48,7 @@ import { checkoutAt, isInside, isVaultRoot, rootAt, rootMarkers } from "../core/
 import { isTrusted } from "../core/workspace/vaults/trust.ts";
 import type { Head } from "../core/workspace/vaults/vault-feed.ts";
 import { sanitize } from "../core/foundation/text/sanitize.ts";
-import { NoteBuffer } from "./buffer.ts";
+import { NoteBuffer } from "./documents/buffers/buffer.ts";
 import type { App, View, Region } from "./app/runtime/app.ts";
 
 /** Source control: git's view of the files, its diffs, branches and commits. */

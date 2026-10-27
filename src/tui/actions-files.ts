@@ -3,11 +3,11 @@
 
 import { type Run, withView } from "./actions/actions.ts";
 import { isPointer } from "../core/workspace/links/pointer.ts";
-import { fileLink } from "./actions-links.ts";
+import { fileLink } from "./actions/documents/actions-links.ts";
 import { join, dirname, isAbsolute, relative } from "node:path";
 import { isInside, isNeverRoot, hasMarker, initVault, rootAt } from "../core/workspace/vaults/vault.ts";
 import { classify } from "../core/documents/model/filetypes.ts";
-import { revert } from "./actions-edit.ts";
+import { revert } from "./actions/documents/actions-edit.ts";
 import { copyPath } from "../core/workspace/mutations/files.ts";
 import { planHeadingRename, planVaultRename } from "../core/workspace/mutations/rename/rename.ts";
 import { folderIdentity, readFolders, recordFolder, copyAvailable } from "../core/workspace/vaults/folders.ts";

@@ -646,12 +646,13 @@ text, and keeps whichever count still finds that text.
 
 ## The peek
 
-**Looking never moves you** (VV-D7; `tui/peek.ts`): a link that leads out of the current vault — into another vault, a
-vault nested in this one among them, home, or a file outside every vault, by a path, a pointer or a wikilink — opens a
-peek, never a switch (D50's switch on following a link is gone). So does a backlink from another vault (`space l b`,
-`g r`), another vault's hit in the search widened with `ctrl+a`, and `ctrl+enter` or the split's follow on such a link.
-`:e` with a path or a pointer, the explorer and `space v v` still go there: choosing, not looking (VV-D4; § Going into a
-vault). A folder link out of the vault is revealed in its own vault, as before (D81), going into it, from a peek too.
+**Looking never moves you** (VV-D7; `tui/documents/navigation/peek.ts`): a link that leads out of the current vault —
+into another vault, a vault nested in this one among them, home, or a file outside every vault, by a path, a pointer or
+a wikilink — opens a peek, never a switch (D50's switch on following a link is gone). So does a backlink from another
+vault (`space l b`, `g r`), another vault's hit in the search widened with `ctrl+a`, and `ctrl+enter` or the split's
+follow on such a link. `:e` with a path or a pointer, the explorer and `space v v` still go there: choosing, not looking
+(VV-D4; § Going into a vault). A folder link out of the vault is revealed in its own vault, as before (D81), going into
+it, from a peek too.
 
 - **The window:** the floating window (`3.20`) of kind `peek`, a virtual buffer of the file's text (`peek:<path>`, never
   read from or written to the disk again, never a place remembered), read-only
@@ -1799,7 +1800,7 @@ A note's picture is sized for the window it's in: fitted to it (rendering.md § 
 by choice. What the window shows at its own size, and its pictures' rest, are kept by `tui/pictures.ts`; the sizes are
 worked out by `tui/images.ts`; the rows laid out by `core/rendering/layout/markdown/render.ts`; the drawing done by
 `tui/draw-pane.ts`, `tui/shell/terminal/opentui.ts` and `tui/placeholders.ts`; the commands are
-`src/core/application/commands/areas/motion.ts`'s, done in `tui/actions-view.ts`.
+`src/core/application/commands/areas/motion.ts`'s, done in `tui/actions/documents/actions-view.ts`.
 
 - **What it's fitted to.** The window's room: its text columns less what's before the picture (a list's indent, a
   quote's bar, an embed's frame) — with wrapping on, the layout's room for the block; with wrapping off, the
