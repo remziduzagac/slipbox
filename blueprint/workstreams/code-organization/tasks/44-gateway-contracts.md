@@ -1,5 +1,5 @@
 ---
-status: todo
+status: review
 assignee:
 blocked_by: [ORG-T1]
 created: "2026-10-26"
@@ -36,3 +36,22 @@ implementation. This task designs contracts; it creates no runtime gateway, sock
 Run alongside mechanical moves after T1. Review the relevant contracts before T24's contract-dependent extractions;
 ordinary moves and independently useful helpers do not wait for this design. Preserve existing-call-path parity. Gateway
 execution, routing, socket transport and functionality migration belong to the next stack.
+
+## Deliverable and evidence
+
+The [contract boundary and sketches](../design.md#contract-boundary-and-common-rules-org-t44) refine eight operations:
+link resolution, save, rename planning/application, Git status/staging, saved-resource search and export. Each gives
+explicit target/input/output, read/effect classification, errors, cancellation/progress, resource owner, client
+reconciliation, an existing-code example and a lifecycle walkthrough. Common rules separate operation outcomes from
+presentation and preserve TUI text/undo/revision/saved-baseline ownership. The extraction/migration map names the ORG
+owners; ENG reconciliation records its conflicting engine-owned document proposal without changing ENG's records.
+
+Examples are read against `4597a8f` before later source moves; they establish current behavior, not implemented future
+gateway guarantees. Lifecycle cases cover typing after save capture, focus/vault changes, closed/reopened targets,
+stale plans, cancellation after effects and partial/uncertain outcomes. Stronger disk transactions, connected edits,
+transport authority and outcome retention remain explicit next-stack implementation work.
+
+Local supporting checks pass: 2 link/plan cases, 1 save-conflict case and 2 export-publication/cancellation cases.
+Documentation lint/spelling/links and diff whitespace pass. Both changed files are also linted directly with
+markdownlint-cli2. This document task changes no src/tests, runtime call paths, deadlines or persisted data and needs no
+migration manifest.
