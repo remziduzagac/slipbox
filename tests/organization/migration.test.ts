@@ -83,12 +83,20 @@ test("stale paths need an exact file/text exception with a reason, not a blanket
   renameSync(join(root, "src/core/item.ts"), join(root, "src/core/contract.ts"));
   put("history.md", "The former src/core/item.ts contract.");
   const manifest: Manifest = { moves: { "src/core/item.ts": "src/core/contract.ts" }, retained: [] };
+  put("current.json", JSON.stringify(manifest));
+  put("previous.json", JSON.stringify(manifest));
+  expect(stalePaths(root, ["current.json"], manifest, "current.json")).toEqual([]);
+  expect(stalePaths(root, ["current.json", "previous.json"], manifest, "current.json")).toEqual([
+    "previous.json: stale src/core/item",
+  ]);
   expect(stalePaths(root, ["history.md"], manifest)).toHaveLength(1);
   manifest.retained.push({ file: "history.md", text: "src/core/item", reason: "Historical evidence" });
   expect(stalePaths(root, ["history.md"], manifest)).toEqual([]);
   manifest.retained[0]!.reason = "";
   expect(stalePaths(root, ["history.md"], manifest)).toHaveLength(1);
   manifest.renamedBasenames = { "item.ts": "contract.ts" };
+  put("current.json", JSON.stringify(manifest));
+  expect(stalePaths(root, ["current.json"], manifest, "current.json")).toEqual([]);
   put("names.md", "The former item.ts module; item-resolve.ts is a sibling.");
   expect(stalePaths(root, ["names.md"], manifest)).toEqual(["names.md: retired basename item.ts"]);
   manifest.retained.push({ file: "names.md", text: "item.ts", reason: "Historical module name" });

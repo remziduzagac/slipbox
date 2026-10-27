@@ -101,13 +101,14 @@ export function compare(before: Snapshot, after: Snapshot, manifest: Manifest): 
   return failures;
 }
 
-/** Search reviewed text files for old full paths and their extensionless forms; no broad folder exemptions. */
-export function stalePaths(root: string, files: string[], manifest: Manifest): string[] {
+/** Search old references; only the exact input manifest is metadata, never a folder-wide exemption. */
+export function stalePaths(root: string, files: string[], manifest: Manifest, manifestFile?: string): string[] {
+  const references = files.filter((file) => !manifestFile || resolve(root, file) !== resolve(root, manifestFile));
   const failures: string[] = [];
   for (const [old, next] of Object.entries(manifest.moves)) {
     if (existsSync(join(root, old))) failures.push(`old path still exists: ${old}`);
     if (!existsSync(join(root, next))) failures.push(`new path missing: ${next}`);
-    for (const file of files) {
+    for (const file of references) {
       if (!existsSync(join(root, file)) || !statSync(join(root, file)).isFile()) continue;
       const text = readFileSync(join(root, file), "utf8");
       const needle = old.replace(/\.tsx?$/, "");
@@ -122,7 +123,7 @@ export function stalePaths(root: string, files: string[], manifest: Manifest): s
   for (const old of Object.keys(manifest.renamedBasenames ?? {})) {
     const escaped = old.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     const pattern = new RegExp(`(?<![A-Za-z0-9_-])${escaped}(?![A-Za-z0-9_-])`);
-    for (const file of files) {
+    for (const file of references) {
       if (!existsSync(join(root, file)) || !statSync(join(root, file)).isFile()) continue;
       const text = readFileSync(join(root, file), "utf8");
       const retained = manifest.retained.some(
@@ -158,7 +159,7 @@ if (import.meta.main) {
     if (tracked.exitCode !== 0) throw new Error(tracked.stderr.toString());
     const failures = [
       ...compare(JSON.parse(readFileSync(snapshotFile, "utf8")) as Snapshot, current, manifest),
-      ...stalePaths(root, tracked.stdout.toString().split("\0").filter(Boolean), manifest),
+      ...stalePaths(root, tracked.stdout.toString().split("\0").filter(Boolean), manifest, manifestFile),
     ];
     if (failures.length) {
       console.error(failures.join("\n"));
