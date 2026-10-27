@@ -35,6 +35,12 @@ reviewed exceptions and follow-up work rather than arbitrary splits.
 **Verify:** Run size checks after each phase; record cohesion, caps and follow-ups for every inventory row. No blanket
 App exemption or manual splitting of generated lockfile strings.
 
+**2026-10-27 note:** The maintainer permits resetting an exact source cap to measured growth caused solely by
+formatting longer import paths during moves. Record the old/new cap and import-only delta in the task; preserve
+non-import code and comments, and verify mapped dependencies and executable bodies. Keep normal import formatting;
+do not trim comments or blank separators to offset path growth. The 1,500 ceiling and ordinary non-growing ratchet
+still apply. This exception does not permit implementation growth.
+
 ## ORG-D3: Early timeout policy and independent gateway preparation (2026-10-27)
 
 **Decision:** T12 follows T1 and centralizes unchanged defaults and named existing budgets. T23 handles compound CLI

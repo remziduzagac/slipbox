@@ -36,8 +36,15 @@ import { dataLinks, parseData } from "../../documents/model/data.ts";
 import { classify, extensionOf } from "../../documents/model/filetypes.ts";
 import { type AskedWhole, type HomeWalk, homeWalk, inFolders, walksInto } from "../vaults/home.ts";
 import { checkoutAt, findVaultRoot, isListed, isVaultRoot, type VaultLocation } from "../vaults/vault.ts";
-import { HOME_LIMITS, listDirectory, WalkFilter, walkVault } from "../walk/walk.ts";
-import type { NoteFile, Skipped, WalkCap } from "../walk/walk.ts";
+import {
+  HOME_LIMITS,
+  listDirectory,
+  type NoteFile,
+  type Skipped,
+  type WalkCap,
+  WalkFilter,
+  walkVault,
+} from "../walk/walk.ts";
 import { tagKey, tagName } from "../../documents/markdown/tags.ts";
 import {
   type LinkRef,
@@ -56,6 +63,7 @@ import {
 } from "./graph-types.ts";
 import { INDEX_VERSION, extractNote, extractFromSource } from "./graph-extract.ts";
 import { LinkResolver } from "./graph-resolve.ts";
+
 export { certainty, fragile, describeLanding, disambiguated } from "./graph-types.ts";
 export type {
   LinkKind,

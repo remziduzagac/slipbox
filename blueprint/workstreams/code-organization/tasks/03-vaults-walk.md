@@ -37,8 +37,8 @@ fixtures and selector paths move atomically; build entries retain their existing
 
 The mapped dependency, runtime, declaration and build-entry snapshots are unchanged. All 106 affected source modules
 have identical executable bodies after import/worker-path normalization; all 18 moved module bodies match. Selector
-filters are unchanged for every moved file. Existing caps remain exact; App's value/type imports are separated and
-import-section whitespace is compacted. Its complete boundary comment is preserved.
+filters are unchanged for every moved file. App's complete boundary comment is preserved; its import-formatting cap
+adjustment is recorded below.
 
 The actual worker-client matrix passes from source and a host-compiled probe outside the repository: all eleven clients
 complete, including the moved walk/list workers and nested export-to-diagram SVG generation. Focused vault/session,
@@ -46,16 +46,16 @@ symlink/trust and walk-thread checks, type/boundary/size/lint/docs and source/co
 `tmp/issue/reviews/t3-*`. Source-only historical references are explicit manifest exceptions; no source compatibility
 barrel or loading/memory change is added.
 
-## Local review and trade-off
+## Local review and import-formatting adjustment
 
 The shipped skill is byte-identical to the predecessor: its capture-path example refers to a user's project,
 so the manifest retains it explicitly. No skill hash changes. The skill installation check passes (1 test).
 
-App retains its exact 1,446-line cap and full boundary comment by splitting a value/type import and removing the blank
-line between the final import and `Host`. This import-only style trade-off avoids raising the cap for longer paths;
-the maintainer can request a measured cap adjustment during review.
+Under the approved ORG-D2 dated note, normal import grouping and the blank separator before `Host` are restored.
+App's exact cap becomes 1,453 from 1,446 (+7 import-formatting lines). Its non-import code and complete boundary
+comment are unchanged; normalized executable bodies and mapped edges agree. No implementation growth is allowed.
 
 Local checks: 15 vault/session/trust/symlink tests, 4 walk-thread tests and 3 selector/import-graph/build-entry tests
 pass. Source TUI navigation passes; the compiled binary outside the repository opens explorer/outline and exits cleanly,
-serves info/commands JSON, and rejects an unknown option with exit 2. Typecheck, lint, boundary, size, docs and migration
-checks pass. The second review has no remaining correctness findings.
+serves info/commands JSON, and rejects an unknown option with exit 2. Typecheck, lint, boundary, size, docs and
+migration checks pass. The second review has no remaining correctness findings.

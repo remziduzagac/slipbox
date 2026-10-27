@@ -45,17 +45,19 @@ the independent contract. Command metadata, order and startup registration remai
 identically before and after.
 
 `scripts/check-size.ts` enforces the first 1,000-line source ceiling. Its eight handwritten exceptions have exact
-measured caps, all below 1,500; a one-line shrink requires lowering the cap, and growth fails. Generated server locks
-have a separate measured cap and offline generator verification: `bun scripts/lock-servers.ts --check` regenerates
-from the stored lock data in memory and compares normalized emitted code. It writes nothing and does not refresh npm
-resolutions. It also requires exactly the current pin keys and checks each stored workspace dependency map against
-the pin's install manifest. `tests/organization/generated-locks.test.ts` covers missing/orphan pins, changed versions,
-malformed data, dropped data, extra code and the committed module. This does not re-resolve or authenticate npm data.
-The later 750/600 steps remain T10/T11's work (ORG-D2).
+measured caps, all below 1,500; a one-line shrink requires lowering the cap. Ordinary growth fails; the ORG-D2 dated
+note permits only a documented measured reset for import formatting during moves. Generated server locks have a separate
+measured cap and offline generator verification: `bun scripts/lock-servers.ts --check` regenerates from the stored lock
+data in memory and compares normalized emitted code. It writes nothing and does not refresh npm resolutions. It also
+requires exactly the current pin keys and checks each stored workspace dependency map against the pin's install
+manifest. `tests/organization/generated-locks.test.ts` covers missing/orphan pins, changed versions, malformed data,
+dropped data, extra code and the committed module. This does not re-resolve or authenticate npm data. The later 750/600
+steps remain T10/T11's work (ORG-D2).
 
 Exact cap edits in `scripts/check-size.ts` are the one allowed shared-file conflict between parallel move/extraction
-PRs. Resolve a same-file cap conflict by keeping the smaller value, remeasure the merged source and shrink it to that
-cap if necessary; never raise a cap to make the merge pass. A file below the ceiling loses its exception.
+PRs. For ordinary shrink-only conflicts, keep the smaller cap and remeasure the merged source. If a move also changes
+import formatting, preserve normal formatting and record the measured import-only delta under the ORG-D2 dated note;
+never raise a cap for implementation growth. A file below the ceiling loses its exception.
 
 The [finding ledger](../design.md#issue-coverage-and-finding-owners) is authoritative for the seven issue items, six
 clone pairs, pattern/type/error candidates and 55 oversized modules. The [verified hierarchy

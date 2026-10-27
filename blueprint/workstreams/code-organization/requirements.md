@@ -7,6 +7,7 @@ must express ownership; splitting a module must not create another large flat di
 
 ORG-R2: Aim for about 500 lines per handwritten source module, with responsibility determining the seam. Lower the size
 ceiling incrementally, with explicit non-growing exceptions, preserving D235's prohibition on an all-purpose class.
+ORG-D2 permits a measured, documented cap reset solely for formatting longer import paths during moves.
 
 ORG-R3: Split broad tests by the behavior exercised and narrow avoidable imports, preserving integration coverage and
 D239's conservative selection. Measure selected scopes and completed runs; claim no speedup from incomplete runs.
