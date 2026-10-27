@@ -64,7 +64,8 @@ this machine's when none is named — with package.json's own `build`, so Bun's 
 reads no `bunfig.toml`, `.env`, `tsconfig.json` or `package.json` of the folder it starts in (`14.1`, D195;
 [trust.md](trust.md) § Bun's own reading). Its entry points are `src/main.ts` and each worker's script
 (`core/diagram-worker.ts`, `core/export-worker.ts`, `core/paint-worker.ts`, `core/documents/markdown/parse-worker.ts`,
-`core/regex-worker.ts`, `core/spell-worker.ts`, `core/documents/syntax/syntax-worker.ts`, and `tui/opentui.ts`, the
+`core/workspace/search/regex-worker.ts`, `core/spell-worker.ts`, `core/documents/syntax/syntax-worker.ts`, and
+`tui/opentui.ts`, the
 pictures' decoder),
 laid out from `src/` (`--root=src`; left to itself, Bun keeps `src/` in their paths past eight entries): Bun puts a
 worker in the binary only when it is named, and `core/foundation/workers/url.ts` finds it there by its path under

@@ -1,8 +1,8 @@
 // Replace (the find row's replace field; `:s` in vim.ts builds on the same pieces). Matches are in
-// the note's text — its markdown — found by core/replace.ts with the window's find toggles. The
+// the note's text — its markdown — found by core/documents/editing/replace.ts with the window's find toggles. The
 // window edits (source mode or the lens), so every match is a real place in the file.
 
-import { confirmRest, matchText } from "../core/regex-jobs.ts";
+import { confirmRest, matchText } from "../core/workspace/search/regex-jobs.ts";
 import {
   compilePattern,
   expandReplacement,
@@ -10,7 +10,7 @@ import {
   nextLine,
   parseSubstitute,
   type TextMatch,
-} from "../core/replace.ts";
+} from "../core/documents/editing/replace.ts";
 import { type App, editable, type PromptOverlay, type View } from "./app.ts";
 import * as E from "./editing.ts";
 import { computeFind } from "./search.ts";

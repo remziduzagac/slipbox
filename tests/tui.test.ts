@@ -40,7 +40,7 @@ import { placeIn } from "../src/tui/shellrun.ts";
 import { peekOf } from "../src/tui/peek.ts";
 import { setTrust } from "../src/core/workspace/vaults/trust.ts";
 import type { PanelRow } from "../src/tui/gitpanel.ts";
-import type { NvimServer } from "../src/core/nvim.ts";
+import type { NvimServer } from "../src/core/documents/external-editors/nvim.ts";
 import { TextCanvas } from "../src/tui/canvas.ts";
 import { match, RANKED, rank } from "../src/tui/match.ts";
 import { graphemes, setWidthMethod, stringWidth, type WidthMethod } from "../src/core/foundation/text/width.ts";

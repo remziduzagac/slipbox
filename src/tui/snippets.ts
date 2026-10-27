@@ -1,10 +1,11 @@
-// A snippet's tab stops while typing (plan 25.8): a completion that's a server's snippet (`core/snippet.ts`) is put in
+// A snippet's tab stops while typing (plan 25.8): a completion that's a server's snippet
+// (`core/documents/editing/snippet.ts`) is put in
 // and the cursor goes to its first stop — its placeholder marked: the first key typed replaces it — then `tab` to the
 // next and `shift+tab` back, `$0` (else the snippet's end) last. What's typed at a stop is copied to its mirrors. The
 // stops follow the text as it changes (the buffer tells), so an import added above, or a mirror, moves them along.
 // It ends at `$0`, with `esc`, when the cursor leaves the stop, or when an edit cuts across one.
 
-import type { Snippet } from "../core/snippet.ts";
+import type { Snippet } from "../core/documents/editing/snippet.ts";
 import type { App, View } from "./app.ts";
 import { keyChar } from "./keys.ts";
 import { offsetOf, placeAt } from "./editing.ts";

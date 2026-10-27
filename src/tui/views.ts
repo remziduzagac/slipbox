@@ -2,9 +2,9 @@
 // its gutter, its cursor and selection, scrolling, and the marks drawn over its text.
 
 import { readRegular } from "../core/foundation/platform/fsutil.ts";
-import { taskHolding, toggleTask } from "../core/tasks.ts";
+import { taskHolding, toggleTask } from "../core/documents/editing/tasks.ts";
 import { cannotEdit, lineOf, offsetOf, placeAt, typedSelection } from "./editing.ts";
-import { matchBracket } from "../core/brackets.ts";
+import { matchBracket } from "../core/documents/editing/brackets.ts";
 import { extentOf, type Layout } from "../core/layout/ir.ts";
 import { layoutWidth } from "../core/documents/model/note.ts";
 import { type Anchor, anchorAt, type CursorAnchor, rowFor } from "../core/workspace/session/position.ts";

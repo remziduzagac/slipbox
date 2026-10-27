@@ -1,7 +1,7 @@
 // The Info view (3.19): the file on screen — its vault, its path, its properties, its links and backlinks, its git
 // state — in folding sections, each row copied, followed or run.
 
-import { listTasks } from "../core/tasks.ts";
+import { listTasks } from "../core/documents/editing/tasks.ts";
 import { placeAt } from "./editing.ts";
 import { type ConventionPart, conventionOf, describeConvention } from "../core/workspace/links/convention.ts";
 import { ELSEWHERE, rootLabel } from "../core/workspace/vaults/names.ts";

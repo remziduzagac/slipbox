@@ -4,10 +4,10 @@
 // BM25, the title weighing most. What each file was when indexed (size, mtime) says what to index
 // again: whoever changed the file, the next catch-up finds it.
 
-import { Database } from "./foundation/platform/sqlite.ts";
+import { Database } from "../../foundation/platform/sqlite.ts";
 import { existsSync, mkdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
-import { cacheDir, ensureCacheHome, type Keyed } from "./foundation/platform/paths.ts";
+import { cacheDir, ensureCacheHome, type Keyed } from "../../foundation/platform/paths.ts";
 
 /** Bumped when the rows or their columns change: an index of another version is made again. */
 const SEARCH_VERSION = 3; // 3: better-sqlite3, and sections by size band

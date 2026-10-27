@@ -17,7 +17,7 @@ import { Background } from "./background.ts";
 import { cancelGitRead } from "./gitquery.ts";
 import { DOCUMENT_GRAMMARS, grammarFor } from "../core/documents/syntax/syntax.ts";
 import { MERMAID } from "../core/diagrams.ts";
-import { REGEX, stopRegexJobs } from "../core/regex-jobs.ts";
+import { REGEX, stopRegexJobs } from "../core/workspace/search/regex-jobs.ts";
 import { stopParsePool } from "../core/documents/markdown/parse-pool.ts";
 import { stopWalkThreads } from "../core/workspace/walk/walk-thread.ts";
 import { Listings } from "./listings.ts";

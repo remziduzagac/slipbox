@@ -23,8 +23,8 @@ import { keyChar } from "./keys.ts";
 import { RANKED, rank } from "./match.ts";
 import { PASTE } from "./vim.ts";
 import { startSnippet } from "./snippets.ts";
-import { expandSnippet, type SnippetContext } from "../core/snippet.ts";
-import { indentUnit } from "../core/indent.ts";
+import { expandSnippet, type SnippetContext } from "../core/documents/editing/snippet.ts";
+import { indentUnit } from "../core/documents/editing/indent.ts";
 
 export interface CompletionState {
   view: View;

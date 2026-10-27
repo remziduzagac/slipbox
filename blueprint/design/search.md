@@ -3,8 +3,10 @@
 How slipbox ranks a vault's notes and data files by words (plans `6.1`–`6.12`): in the core, so the CLI and the TUI
 share it (D114). The query and the results as the user meets them are [cli.md](../../docs/manual/cli.md) § `search`; the
 TUI's list is [tui.md](tui.md) § Overlays; which vaults a search covers is [roots.md](roots.md) § Search scope (D64,
-D79). Code: `core/search.ts` (the query, a file read for it, the index kept, the index or a scan, hits located),
-`core/search-index.ts` (the index), `core/foundation/platform/sqlite.ts`, `core/scope.ts` (search by vault).
+D79). Code: `core/workspace/search/search.ts` (the query, a file read for it, the index kept, the index or a scan, hits
+located),
+`core/workspace/search/search-index.ts` (the index), `core/foundation/platform/sqlite.ts`,
+`core/workspace/search/scope.ts` (search by vault).
 
 ## The index and the scan
 
@@ -82,7 +84,8 @@ trailscout's SDK, once that exists; until then slipbox's search is the only engi
 ## Native regex matching
 
 Find and replace (`25.4`) keep JavaScript's regex syntax, captures, smart case, whole-word matching and CRLF positions.
-`core/regex-jobs.ts` owns the native matcher worker (`core/regex-worker.ts`); rendered find, source replacement,
+`core/workspace/search/regex-jobs.ts` owns the native matcher worker (`core/workspace/search/regex-worker.ts`); rendered
+find, source replacement,
 confirming substitutes, search operators, vault find and CLI find/replace use it. Plain text is matched at once, on the
 thread that asks. `core/workspace/mutations/replace-files.ts` builds a complete plan before any write, with asynchronous
 matching through

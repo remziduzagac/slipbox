@@ -7,9 +7,9 @@ import { graphemes } from "../core/foundation/text/width.ts";
 import { type App, editable, type View } from "./app.ts";
 import { cells } from "./cursor.ts";
 import { keyChar } from "./keys.ts";
-import { indentUnit } from "../core/indent.ts";
-import { type CommentStyle, commentStyle, toggleComments } from "../core/comments.ts";
-import { autoPair, emptyPair } from "../core/brackets.ts";
+import { indentUnit } from "../core/documents/editing/indent.ts";
+import { type CommentStyle, commentStyle, toggleComments } from "../core/documents/editing/comments.ts";
+import { autoPair, emptyPair } from "../core/documents/editing/brackets.ts";
 import { endSnippet } from "./snippets.ts";
 
 /** The cursor's place in the text (a UTF-16 offset into `source`). Source mode only. */

@@ -83,7 +83,7 @@ export const CHECKS_FOR: [RegExp, string[]][] = [
   [/^src\/core\/workspace\/vaults\/symlinks\.ts$/, ["links", "rename"]],
   [/^src\/tui\/peek\.ts$/, ["peek"]],
   // Replace, and renames with the links they rewrite.
-  [/^src\/core\/(replace|workspace\/mutations\/replace-files)\.ts$/, ["replace", "find"]],
+  [/^src\/core\/(documents\/editing\/replace|workspace\/mutations\/replace-files)\.ts$/, ["replace", "find"]],
   [/^src\/tui\/replacing\.ts$/, ["replace"]],
   [/^src\/core\/workspace\/mutations\/rename\/rename[\w-]*\.ts$/, ["rename", "naming", "vaults"]],
   [/^src\/tui\/renaming\.ts$/, ["rename", "naming"]],
@@ -97,8 +97,8 @@ export const CHECKS_FOR: [RegExp, string[]][] = [
   [/^src\/tui\/properties\.ts$/, ["properties"]],
   [/^src\/tui\/handoff\.ts$/, ["hand-off"]],
   [/^src\/(core\/foundation\/platform\/shell|tui\/shellrun)\.ts$/, ["shell"]],
-  [/^src\/core\/tasks\.ts$/, ["tasks"]],
-  [/^src\/core\/comments\.ts$/, ["comments"]],
+  [/^src\/core\/documents\/editing\/tasks\.ts$/, ["tasks"]],
+  [/^src\/core\/documents\/editing\/comments\.ts$/, ["comments"]],
   [/^src\/core\/documents\/model\/data\.ts$/, ["data"]],
   // The command line's commands, and the agents' skill it installs: main.ts loads them with the TUI, which never calls
   // them — but `upgrade` (install.ts), which Upgrade, restart later runs beside it (UPG).

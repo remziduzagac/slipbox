@@ -5,12 +5,12 @@
 // full path.
 
 import { isAbsolute } from "node:path";
-import { checkoutOf } from "./git.ts";
-import type { Graph } from "./workspace/graph/graph.ts";
-import { readRoots } from "./workspace/vaults/registry.ts";
+import { checkoutOf } from "../../git.ts";
+import type { Graph } from "../graph/graph.ts";
+import { readRoots } from "../vaults/registry.ts";
 import { catchUp, search, type SearchHit, type SearchResult } from "./search.ts";
 import { SearchIndex } from "./search-index.ts";
-import { isHome, isListed, isVaultRoot, vaultOf } from "./workspace/vaults/vault.ts";
+import { isHome, isListed, isVaultRoot, vaultOf } from "../vaults/vault.ts";
 
 export const SCOPES = ["here", "linked", "all"] as const;
 export type Scope = (typeof SCOPES)[number];

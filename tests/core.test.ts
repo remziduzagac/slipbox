@@ -66,7 +66,7 @@ import { applyColorOverrides, listThemes, loadTheme, ROLES } from "../src/core/t
 import { blend, colorHex, hexToRgb, luminance } from "../src/core/theme/theme.ts";
 import { glyphsFor } from "../src/core/glyphs.ts";
 import { WriteRefused, writeNote } from "../src/core/foundation/platform/fsutil.ts";
-import { listTasks, toggleTask } from "../src/core/tasks.ts";
+import { listTasks, toggleTask } from "../src/core/documents/editing/tasks.ts";
 import {
   comparable,
   diffLines,
@@ -114,9 +114,9 @@ import {
   firstPerLine,
   parseSubstitute,
   replaceMatches,
-} from "../src/core/replace.ts";
-import { editorArgv, splitCommand } from "../src/core/editor.ts";
-import { discoverNvims, nvimSockets } from "../src/core/nvim.ts";
+} from "../src/core/documents/editing/replace.ts";
+import { editorArgv, splitCommand } from "../src/core/documents/external-editors/editor.ts";
+import { discoverNvims, nvimSockets } from "../src/core/documents/external-editors/nvim.ts";
 import { graphemes, stringWidth, truncate } from "../src/core/foundation/text/width.ts";
 import { ensureCacheHome, type StoreKind, storeDir } from "../src/core/foundation/platform/paths.ts";
 import type { WikiLink } from "../src/core/documents/markdown/wikilink.ts";
@@ -1020,7 +1020,7 @@ describe("clipboard (8.5): OSC 52, the system's tools, then the file", () => {
 
 describe("finding running nvims (4.12): where, and what each says", () => {
   test("the sockets' folders: $XDG_RUNTIME_DIR, then each of nvim's own under $TMPDIR/nvim.$USER", async () => {
-    const { nvimSocketDirs } = await import("../src/core/nvim.ts");
+    const { nvimSocketDirs } = await import("../src/core/documents/external-editors/nvim.ts");
     const { userInfo } = await import("node:os");
     const tmp = mkdtempSync(join(tmpdir(), "slipbox-nvdirs-"));
     const base = join(tmp, `nvim.${userInfo().username}`);
@@ -1034,7 +1034,7 @@ describe("finding running nvims (4.12): where, and what each says", () => {
   });
 
   test("each socket asked its cwd and file; one that fails, says nothing, or hangs is left out", async () => {
-    const { probeNvim } = await import("../src/core/nvim.ts");
+    const { probeNvim } = await import("../src/core/documents/external-editors/nvim.ts");
     // A fake nvim on a PATH of its own: the user's nvims are never asked.
     const bin = mkdtempSync(join(tmpdir(), "slipbox-fakenvim-"));
     writeFileSync(
@@ -2380,7 +2380,7 @@ describe("review cycle 4 (core)", () => {
 
 describe("review cycle 4 (core, CRLF empty matches)", () => {
   test("an empty match never falls between \\r and \\n", () => {
-    const { findAll } = require("../src/core/replace.ts");
+    const { findAll } = require("../src/core/documents/editing/replace.ts");
     expect(findAll("aaa\r\nb\r\n", /a*/g, 0, 5, true)).toEqual([{ from: 0, to: 3, groups: ["aaa"] }]);
     expect(findAll("xy\r\n", /a*/g, 0, 4, true).map((m: { from: number }) => m.from)).toEqual([0, 1, 2]);
   });
@@ -4262,7 +4262,7 @@ describe("documentation formats into one shape (24.4)", () => {
 
 describe("indentation (25.1)", () => {
   test("found in a file's lines: tabs where more lines start with one, else the step spaces go in by; too few, nothing", async () => {
-    const { detectIndent } = await import("../src/core/indent.ts");
+    const { detectIndent } = await import("../src/core/documents/editing/indent.ts");
     expect(detectIndent("func f() {\n\tx := 1\n\tif x {\n\t\ty()\n\t}\n}\n")).toEqual({ tabs: true, size: 4 });
     expect(detectIndent("def f():\n    x = 1\n    if x:\n        y()\n")).toEqual({ tabs: false, size: 4 });
     expect(detectIndent("a:\n  b:\n    c: 1\n  d: 2\n")).toEqual({ tabs: false, size: 2 });
@@ -4281,7 +4281,7 @@ describe("indentation (25.1)", () => {
   });
 
   test("a language's own, by extension or name: Go and Makefiles tabs, Python and Rust four, the rest two", async () => {
-    const { languageIndent } = await import("../src/core/indent.ts");
+    const { languageIndent } = await import("../src/core/documents/editing/indent.ts");
     expect(
       ["/a/main.go", "/a/Makefile", "/a/rules.mk", "/a/app.py", "/a/lib.rs", "/a/index.ts", "/a/note.md"].map((p) =>
         languageIndent(p),
@@ -4298,7 +4298,7 @@ describe("indentation (25.1)", () => {
   });
 
   test(".editorconfig's globs as the spec has them: a name alone anywhere, a path from its folder, *, **, ?, [], {a,b}, {1..3}", async () => {
-    const { globRegex } = await import("../src/core/indent.ts");
+    const { globRegex } = await import("../src/core/documents/editing/indent.ts");
     const m = (glob: string, path: string) => globRegex(glob).test(path);
     expect([m("*.md", "a.md"), m("*.md", "x/y/a.md"), m("*.md", "a.mdx"), m("*", "x/y")]).toEqual([
       true,
@@ -4333,7 +4333,7 @@ describe("indentation (25.1)", () => {
   });
 
   test(".editorconfig read from the file's folder up, until root = true: nearer over farther, later sections over earlier", async () => {
-    const { editorConfigFor, parseEditorConfig } = await import("../src/core/indent.ts");
+    const { editorConfigFor, parseEditorConfig } = await import("../src/core/documents/editing/indent.ts");
     expect(
       parseEditorConfig("root = true\n# a comment\n[*]\nIndent_Style = Space ; why\n\n[*.go]\nindent_style=tab\n"),
     ).toEqual({
@@ -4365,7 +4365,7 @@ describe("indentation (25.1)", () => {
   });
 
   test("a file's indent: .editorconfig's, else its own lines', else its language's; a tab's width; what a save does", async () => {
-    const { indentFor, indentUnit, saveRules } = await import("../src/core/indent.ts");
+    const { indentFor, indentUnit, saveRules } = await import("../src/core/documents/editing/indent.ts");
     const none = () => null;
     expect(indentFor("/p/a.go", "x\n", none)).toMatchObject({ tabs: true, size: 4, tabWidth: 4, from: "language" });
     expect(indentFor("/p/a.ts", "if (x) {\n    y();\n}\nif (z) {\n    w();\n}\n", none)).toMatchObject({
@@ -4409,7 +4409,7 @@ describe("indentation (25.1)", () => {
 
 describe("comments toggled (25.2)", () => {
   test("a language's markers: a line's in front, a block's around; none for JSON, CSV, a diff", async () => {
-    const { commentStyle } = await import("../src/core/comments.ts");
+    const { commentStyle } = await import("../src/core/documents/editing/comments.ts");
     expect(["typescript", "python", "lua", "vim", "toml", "makefile"].map((l) => commentStyle(l))).toEqual([
       { line: "//" },
       { line: "#" },
@@ -4427,7 +4427,7 @@ describe("comments toggled (25.2)", () => {
   });
 
   test("commented at the least indentation, blank lines left; all commented, uncommented — the space after the marker too", async () => {
-    const { toggleComments } = await import("../src/core/comments.ts");
+    const { toggleComments } = await import("../src/core/documents/editing/comments.ts");
     const s = { line: "//" };
     expect(toggleComments(["if (x) {", "  y();", "", "}"], s)).toEqual(["// if (x) {", "//   y();", "", "// }"]);
     expect(toggleComments(["  a();", "    b();"], s)).toEqual(["  // a();", "  //   b();"]);
@@ -4440,7 +4440,7 @@ describe("comments toggled (25.2)", () => {
   });
 
   test("a block's pair around each line, and taken off again", async () => {
-    const { toggleComments } = await import("../src/core/comments.ts");
+    const { toggleComments } = await import("../src/core/documents/editing/comments.ts");
     const s = { open: "<!--", close: "-->" };
     expect(toggleComments(["# Title", "", "  text"], s)).toEqual(["<!-- # Title -->", "", "<!--   text -->"]);
     expect(toggleComments(["<!-- # Title -->", "", "<!--   text -->"], s)).toEqual(["# Title", "", "  text"]);
@@ -4450,7 +4450,7 @@ describe("comments toggled (25.2)", () => {
 
 describe("brackets (25.3)", () => {
   test("the matching one: forward from an opening bracket, back from a closing one, past the nested pairs of its kind", async () => {
-    const { matchBracket, bracketFrom } = await import("../src/core/brackets.ts");
+    const { matchBracket, bracketFrom } = await import("../src/core/documents/editing/brackets.ts");
     const t = "f(a, [b(c)], {d})";
     expect([
       matchBracket(t, 1),
@@ -4467,7 +4467,7 @@ describe("brackets (25.3)", () => {
   });
 
   test("pairs closed as typed: an opening bracket before a space, the end or a closing one; quotes not in a word; skips, backspace", async () => {
-    const { autoPair, emptyPair } = await import("../src/core/brackets.ts");
+    const { autoPair, emptyPair } = await import("../src/core/documents/editing/brackets.ts");
     expect([autoPair("", 0, "("), autoPair("x y", 1, "["), autoPair("f)", 1, "{")]).toEqual(["()", "[]", "{}"]);
     // Before a word: as typed.
     expect(autoPair("word", 0, "(")).toBeNull();
@@ -4487,7 +4487,7 @@ describe("brackets (25.3)", () => {
 describe("replace across files: the lines it changes (25.4)", () => {
   test("a line's matches one edit; a match across a break, its lines one; numbered on from the last; a CRLF's \\r left out", async () => {
     const { lineEdits } = await import("../src/core/workspace/mutations/replace-files.ts");
-    const { compilePattern, findAll } = await import("../src/core/replace.ts");
+    const { compilePattern, findAll } = await import("../src/core/documents/editing/replace.ts");
     const edits = (text: string, query: string, replacement: string, regex = false) =>
       lineEdits(
         text,
@@ -5110,7 +5110,7 @@ describe("commands run by your shell (25.7)", () => {
 describe("a server's snippets (25.8)", () => {
   const ctx = { indent: "", unit: "  ", vars: { TM_FILENAME_BASE: "main", TM_SELECTED_TEXT: "" } };
   test("tab stops, placeholders (nested too), mirrors, $0 last; the end where there's none", async () => {
-    const { expandSnippet } = await import("../src/core/snippet.ts");
+    const { expandSnippet } = await import("../src/core/documents/editing/snippet.ts");
     const s = expandSnippet("for (${1:i} = 0; $1 < ${2:n}; $1++) {$0}", ctx);
     // The mirrors given the placeholder's text.
     expect(s.text).toBe("for (i = 0; i < n; i++) {}");
@@ -5169,7 +5169,7 @@ describe("a server's snippets (25.8)", () => {
   });
 
   test("choices (the first put in), variables (a value, a default, else the name), escapes, transforms left out", async () => {
-    const { expandSnippet } = await import("../src/core/snippet.ts");
+    const { expandSnippet } = await import("../src/core/documents/editing/snippet.ts");
     // typos: off — a choice with an escaped comma, `thr\,ee`.
     expect(expandSnippet("pick(${1|one,two,thr\\,ee|})", ctx)).toEqual({
       text: "pick(one)",
@@ -5193,7 +5193,7 @@ describe("a server's snippets (25.8)", () => {
   });
 
   test("each new line indented as the first's, a tab as the file indents", async () => {
-    const { expandSnippet } = await import("../src/core/snippet.ts");
+    const { expandSnippet } = await import("../src/core/documents/editing/snippet.ts");
     const s = expandSnippet("if (${1:x}) {\n\t$0\n}", { ...ctx, indent: "    ", unit: "\t" });
     expect(s.text).toBe("if (x) {\n    \t\n    }");
     expect(s.stops).toEqual([

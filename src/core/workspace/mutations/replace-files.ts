@@ -5,7 +5,7 @@
 
 import { readText } from "../../foundation/platform/fsutil.ts";
 import type { Graph } from "../graph/graph.ts";
-import { matchText } from "../../regex-jobs.ts";
+import { matchText } from "../search/regex-jobs.ts";
 import { dirtyTrees, type Edit, type FileChange, RenameError, type RenamePlan } from "./rename/rename.ts";
 import { mayRewrite, notRewritten } from "./rename/rename-plan.ts";
 import {
@@ -16,7 +16,7 @@ import {
   type PatternOptions,
   replaceMatches,
   type TextMatch,
-} from "../../replace.ts";
+} from "../../documents/editing/replace.ts";
 
 /** Plan replacing `query` with `replacement` in the files at `rels` (paths from the root): the ones it changes. */
 function* replacementPlan(

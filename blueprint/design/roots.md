@@ -677,7 +677,8 @@ keep the code's words, `vault`, `make-vault` and `unmake-vault`, and the CLI pri
 ## Search scope
 
 Search ranks this vault first, then, under a divider, the vaults linked to or from it; widened to every vault this
-machine knows, those join the linked ones, ranked together by score (D64, D79; `core/scope.ts`). Linked means this
+machine knows, those join the linked ones, ranked together by score (D64, D79; `core/workspace/search/scope.ts`). Linked
+means this
 vault's notes link into it by path, or its notes link here, as of its index; home is a vault to it (`scopeRoots`);
 every scope leaves out worktrees, whose notes are their main checkout's, even one a note links into (by `@branch`, or
 by path). Each vault is searched with its own index, caught up first (a scan where it has none), and a hit of another

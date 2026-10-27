@@ -3,13 +3,13 @@
 
 import { existsSync, rmSync, statSync } from "node:fs";
 import { dirname, isAbsolute, join } from "node:path";
-import { catchUp, SearchIndex } from "../core/search.ts";
+import { catchUp, SearchIndex } from "../core/workspace/search/search.ts";
 import { loadConfig } from "../core/application/config/config.ts";
 import { Graph } from "../core/workspace/graph/graph.ts";
 import { sanitize } from "../core/foundation/text/sanitize.ts";
 import { noteIndexed } from "../core/workspace/vaults/registry.ts";
 import { AutoIndex, autoIndexFile } from "../core/workspace/graph/autoindex.ts";
-import { type Scope, SCOPES, searchScoped } from "../core/scope.ts";
+import { type Scope, SCOPES, searchScoped } from "../core/workspace/search/scope.ts";
 import { homeFolder, isListed, locationAt, recordLocation, configFilesFor } from "../core/workspace/vaults/vault.ts";
 import { describeCap, walkHomeNow } from "../core/workspace/vaults/home.ts";
 import { flag, has, UsageError } from "./args.ts";
