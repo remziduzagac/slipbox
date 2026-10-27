@@ -50,9 +50,10 @@ and show the failure counts before and after.
 - 2026-10-23: The runs the issue names (39032663393, 39045129115) are from the repository before it was restarted:
   `gh run view` answers 404, so their screens are gone; the issue's text is what's left of them.
 - 2026-10-23: Read: the wait that times out (`tests/terminal/checks/links-and-files.ts`, `: Commit`, then
-  `s.message("nothing staged — …")`) comes before the check opens the git panel (`leader(s, "g")` is the next step),
-  so the explorer on the screen at the timeout is expected: the panel hadn't been asked for yet. The question is why
-  `openCommitEditor` (`src/tui/git.ts`) didn't say "nothing staged", or why its message wasn't on the screen.
+  `s.message("nothing staged — …")`) comes before the check opens the git panel (`leader(s, "g")` is the next step), so
+  the explorer on the screen at the timeout is expected: the panel hadn't been asked for yet. The question is why
+  `openCommitEditor` (`src/tui/workspace/git/git.ts`) didn't say "nothing staged", or why its message wasn't on the
+  screen.
 - 2026-10-23: Read, the app's side: `: Commit` is deterministic. Keys are handled one at a time (`Input.handleKey`),
   the palette filters synchronously (`refilter`), `git.commit` runs `openCommitEditor` synchronously, and with nothing
   staged it says the message before the key's turn ends; the next frame draws it. It says nothing only with a floating

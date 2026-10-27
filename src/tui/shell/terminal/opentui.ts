@@ -19,7 +19,7 @@ import {
 import type { CellStyle } from "../../../core/rendering/layout/style.ts";
 import type { Color } from "../../../core/rendering/theme/theme.ts";
 import { type Canvas, type Crop, glyphCell } from "./canvas.ts";
-import { idColor, MAX_PLACEHOLDER_CELLS, pictureId, placeholderRow, release, transmit } from "../../placeholders.ts";
+import { idColor, MAX_PLACEHOLDER_CELLS, pictureId, placeholderRow, release, transmit } from "./placeholders.ts";
 
 const colors = new Map<string, RGBA>();
 

@@ -55,19 +55,28 @@ export const CHECKS_FOR: [RegExp, string[]][] = [
     ["git"],
   ],
   [/^src\/core\/rendering\/layout\/diff\/(diff|splitdiff|blockdiff)\.ts$/, ["git", "conflict"]],
-  [/^src\/tui\/(gitview|gitpanel|gitchanges|githistory|gitmouse|gitremote|gitreposview|gitbranchview)\.ts$/, ["git"]],
-  [/^src\/tui\/(draw-git|gitsteady|mergescreen|rebase|review)\.ts$/, ["git"]],
-  [/^src\/tui\/diffview\.ts$/, ["git", "conflict"]],
+  [
+    /^src\/tui\/workspace\/git\/(?:views\/(?:panel\/(?:gitview|gitpanel|gitmouse)|changes\/gitchanges|history\/githistory|branches\/(?:gitreposview|gitbranchview))|gitremote)\.ts$/,
+    ["git"],
+  ],
+  [
+    /^src\/tui\/workspace\/git\/(?:views\/(?:panel\/draw-git|review\/(?:mergescreen|rebase|review))|gitsteady)\.ts$/,
+    ["git"],
+  ],
+  [/^src\/tui\/workspace\/git\/views\/changes\/diffview\.ts$/, ["git", "conflict"]],
   // Export.
   [/^src\/core\/rendering\/export\/(?!export-worker\.ts$)/, ["export"]],
-  [/^src\/tui\/exporter\.ts$/, ["export"]],
+  [/^src\/tui\/documents\/export\/exporter\.ts$/, ["export"]],
   // Language servers, the linter, the Problems panel.
   [/^src\/core\/documents\/servers\//, ["language servers", "lint", "problems"]],
   [/^src\/core\/documents\/diagnostics\/lint\.ts$/, ["lint", "problems"]],
-  [/^src\/tui\/(actions-lsp|problems|draw-problems)\.ts$/, ["language servers", "lint", "problems"]],
+  [
+    /^src\/tui\/(?:actions\/documents\/actions-lsp|documents\/diagnostics\/(?:problems|draw-problems))\.ts$/,
+    ["language servers", "lint", "problems"],
+  ],
   // Spelling, off unless asked for.
   [/^src\/core\/documents\/diagnostics\/(spell|spell-thread|spell-worker|hunspell)\.ts$/, ["spelling"]],
-  [/^src\/tui\/spelling\.ts$/, ["spelling"]],
+  [/^src\/tui\/documents\/diagnostics\/spelling\.ts$/, ["spelling"]],
   // A slow disk read off the main thread (T12): the walk's and the listings' threads, the explorer's listings.
   [
     /^src\/core\/(?:workspace\/walk\/(?:walk-thread|walk-jobs|walk-worker|walkers)|workspace\/graph\/index-job)\.ts$/,
@@ -91,7 +100,7 @@ export const CHECKS_FOR: [RegExp, string[]][] = [
   [/^src\/tui\/shell\/overlays\/palette\.ts$/, ["palette", "help", "which-key"]],
   // Upgrading and restarting (UPG): the update offer, its dialog, the restart's note and hand-over.
   [
-    /^src\/(core\/application\/distribution\/(update|restart|skill-lifecycle)|tui\/(updates|shell\/overlays\/dialog))\.ts$/,
+    /^src\/(core\/application\/distribution\/(update|restart|skill-lifecycle)|tui\/(app\/distribution\/updates|shell\/overlays\/dialog))\.ts$/,
     ["updates"],
   ],
   [/^src\/tui\/documents\/tools\/outline\/outline\.ts$/, ["outline"]],

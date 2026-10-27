@@ -23,7 +23,7 @@ import { parseSubstitute } from "../../../core/documents/editing/replace.ts";
 import { parseBang } from "../../../core/foundation/platform/shell.ts";
 import { rank } from "./match.ts";
 import { MOUSE_HELP } from "../input/mouse-help.ts";
-import { REPORT_ADDS, REPORT_SENDS } from "../../report.ts";
+import { REPORT_ADDS, REPORT_SENDS } from "../../app/distribution/report.ts";
 
 // ---------------------------------------------------------------------------------------------
 // The `:` prompt: matching commands, plus exact aliases that win, plus argument completion.

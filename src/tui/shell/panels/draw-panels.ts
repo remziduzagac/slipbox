@@ -9,7 +9,7 @@ import { stringWidth, truncate, splitAtWidth, graphemes, graphemeWidth } from ".
 import { drawHScrollbar, paneScrollbar } from "../../documents/views/draw-pane.ts";
 import { LEFT_VIEWS, RIGHT_VIEWS } from "./panels.ts";
 import { sanitize } from "../../../core/foundation/text/sanitize.ts";
-import { drawGitPanel } from "../../draw-git.ts";
+import { drawGitPanel } from "../../workspace/git/views/panel/draw-git.ts";
 import type { TreeRow } from "../../workspace/explorer/explorer.ts";
 import { INDEX_ROLE, indexGlyph } from "../../workspace/explorer/marks.ts";
 import { GIT_MARK, marked } from "../overlays/draw-overlays.ts";

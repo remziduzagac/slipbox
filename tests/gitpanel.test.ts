@@ -25,11 +25,11 @@ import { setTrust } from "../src/core/workspace/vaults/trust.ts";
 import { locateVault } from "../src/core/workspace/vaults/vault.ts";
 import { App, type ListOverlay } from "../src/tui/app/runtime/app.ts";
 import { TextCanvas } from "../src/tui/shell/terminal/canvas.ts";
-import { type BranchList, type BranchViewRow, shownOn } from "../src/tui/gitbranchview.ts";
+import { type BranchList, type BranchViewRow, shownOn } from "../src/tui/workspace/git/views/branches/gitbranchview.ts";
 import type { Branch } from "../src/core/workspace/git/branches/gitbranches.ts";
-import { pointedAt } from "../src/tui/gitmouse.ts";
-import { DIFF_MAX, readForDiff } from "../src/tui/gitview.ts";
-import { reviewOf } from "../src/tui/review.ts";
+import { pointedAt } from "../src/tui/workspace/git/views/panel/gitmouse.ts";
+import { DIFF_MAX, readForDiff } from "../src/tui/workspace/git/views/panel/gitview.ts";
+import { reviewOf } from "../src/tui/workspace/git/views/review/review.ts";
 
 const sandbox = mkdtempSync(join(tmpdir(), "slipbox-gitpanel-"));
 const saved = { ...process.env };

@@ -3,7 +3,7 @@
 // done here (the app's own: escape, copying, the UI settings, the theme, the scratch, quitting) or
 // in the actions-*.ts module of its area (D235). The keys are in keys.ts and docs/manual/keys.md.
 
-import { cancelGitRead } from "../gitquery.ts";
+import { cancelGitRead } from "../workspace/git/gitquery.ts";
 import { clearScratch, dropEmptyAsks, formatEntry, readScratch } from "../../core/workspace/mutations/capture.ts";
 import { COMMAND_SPECS } from "../../core/application/commands/catalog.ts";
 import type { Command } from "../../core/application/commands/registry.ts";
@@ -21,7 +21,7 @@ import { linkActions, linkTarget } from "./documents/actions-links.ts";
 import { findActions } from "./documents/actions-find.ts";
 import { paneActions } from "./shell/actions-panes.ts";
 import { fileActions } from "./workspace/actions-files.ts";
-import { lspActions } from "../actions-lsp.ts";
+import { lspActions } from "./documents/actions-lsp.ts";
 
 export type Run = Command<App>["run"];
 

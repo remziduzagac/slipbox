@@ -457,7 +457,7 @@ describe("the supply chain's gates (14.10)", () => {
     const g = importGraph();
     const of = (...files: string[]) => reaches(files, g);
     // A feature's own file: the tests that use it, at any depth, and its checks.
-    const git = of("src/tui/gitbranchview.ts");
+    const git = of("src/tui/workspace/git/views/branches/gitbranchview.ts");
     expect(git.all).toBeNull();
     if (git.all === null) {
       expect(git.tests).toContain("tests/tui.test.ts");

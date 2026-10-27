@@ -2,7 +2,7 @@ import { afterEach, expect, test } from "bun:test";
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { RemoteImages } from "../src/tui/images.ts";
+import { RemoteImages } from "../src/tui/documents/media/images.ts";
 
 const dirs: string[] = [];
 const owners: RemoteImages[] = [];

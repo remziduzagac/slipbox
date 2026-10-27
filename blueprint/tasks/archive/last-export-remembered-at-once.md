@@ -16,9 +16,9 @@ it once the file was there, and so failed now and then on CI, waits for the expo
 `tests/tui.test.ts` › "the window's places: beside the note, the last export, …; it opens at the last (10.14)" failed
 once on CI (ubuntu) and passed when rerun with the code unchanged: the window opened again beside the note, not at the
 last export. The test waits only for the exported file, then opens the window again. `Exporter.write`
-(`src/tui/exporter.ts`) publishes the file, awaits `output.dispose()` (the staging folder removed) in its `finally`, and
-only then writes `export.json`, where the folder is remembered; the window reads it when it opens (`lastDir`). When
-the cleanup is slow, the window opened in between falls back to beside the note.
+(`src/tui/documents/export/exporter.ts`) publishes the file, awaits `output.dispose()` (the staging folder removed) in
+its `finally`, and only then writes `export.json`, where the folder is remembered; the window reads it when it opens
+(`lastDir`). When the cleanup is slow, the window opened in between falls back to beside the note.
 
 ## Acceptance criteria
 
@@ -43,9 +43,9 @@ the cleanup is slow, the window opened in between falls back to beside the note.
 
 ## Log
 
-- 2026-10-24: Read the cause as the issue gives it: `Exporter.write` (`src/tui/exporter.ts`) remembers the folder in
-  `export.json` after `await output.dispose()` in its `finally`, the staging folder's `rm -r`; `browser` reads it
-  through `lastDir` when the window opens. A second, smaller gap: `PreparedExport.publish`
+- 2026-10-24: Read the cause as the issue gives it: `Exporter.write` (`src/tui/documents/export/exporter.ts`) remembers
+  the folder in `export.json` after `await output.dispose()` in its `finally`, the staging folder's `rm -r`; `browser`
+  reads it through `lastDir` when the window opens. A second, smaller gap: `PreparedExport.publish`
   (`src/core/rendering/export/spool.ts`) renames the document last, then its own `finally` awaits an `rm` of every
   temporary (already renamed), so the file is there a moment before `publish` returns. A test that waits for the file
   alone can race even once the folder is remembered right after `publish`.

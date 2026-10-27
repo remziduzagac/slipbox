@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { mkdirSync, symlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { ListOverlay } from "../src/tui/app/runtime/app.ts";
-import type { UpdateEnv } from "../src/tui/updates.ts";
+import type { UpdateEnv } from "../src/tui/app/distribution/updates.ts";
 import { harness, makeSandbox, makeVault, topRow } from "./tui-harness.ts";
 
 const sandbox = makeSandbox();

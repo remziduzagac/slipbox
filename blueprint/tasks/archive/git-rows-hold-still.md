@@ -48,21 +48,23 @@ repository's own panel, and for the keys: the selection is an index, so a sort p
 - 2026-10-23: Reproduced on `dev` (be3674a) with a test: three repositories, by name before git answers (alpha, beta,
   gamma); the pointer on alpha's row; once every checkout has answered, the next frame draws gamma, beta, alpha, so
   the row under the pointer is gamma's. Fails as `Expected "alpha,beta,gamma", Received "gamma,beta,alpha"`.
-- 2026-10-23: Cause: `RepoView.ordered` (src/tui/gitreposview.ts) sorted by `attention` of the states known so far on
-  every `rows()` call — every frame, every click, every key. Each checkout's state comes in on its own (`stateOf`, a
-  render each), again on git's news and when the panel's shown again, and when scrolling draws rows not asked before,
-  so "until all answers are in" never quite comes for a long list. The mouse's rows are by index (`git:row:<i>`), and
-  a click takes `rows()[i]` at the click. `rows()` runs between frames too (keys, clicks, the footer), so the order to
-  hold is the one a frame drew, not the last computed. The keyboard has the same bug: the selection is an index.
+- 2026-10-23: Cause: `RepoView.ordered` (src/tui/workspace/git/views/branches/gitreposview.ts) sorted by `attention` of
+  the states known so far on every `rows()` call — every frame, every click, every key. Each checkout's state comes in
+  on its own (`stateOf`, a render each), again on git's news and when the panel's shown again, and when scrolling draws
+  rows not asked before, so "until all answers are in" never quite comes for a long list. The mouse's rows are by index
+  (`git:row:<i>`), and a click takes `rows()[i]` at the click. `rows()` runs between frames too (keys, clicks, the
+  footer), so the order to hold is the one a frame drew, not the last computed. The keyboard has the same bug: the
+  selection is an index.
 - 2026-10-23: Decided with the user (D261): the hold ends when the pointer leaves the rows, not on a key; the keyboard's
   selection is fixed here too, following its repository.
-- 2026-10-23: Fixed (src/tui/gitreposview.ts, gitpanel.ts, draw-git.ts, mouse.ts, panels.ts): the repositories are
-  sorted only for a frame drawn (`GitPanel.drawnRows`, `rows(true)`), and not while the pointer is on the panel's rows
-  as the last frame drew them (`gitRows`, against `Mouse.at`, where the mouse last said it was), the mouse on. Every
-  other `rows()` gets the order last drawn for the folder the repositories were found in. Every repository found is
-  ranked, those the filter or a fold hides too. When a frame sorts them differently, the selection goes to the row it
-  was on in the order drawn, if it's a repository's, a checkout's or a file's of one, and scrolls into view; where the
-  panel put it (`place`: the first row when it's shown, the filter's first match, off a note), it stays in the place.
+- 2026-10-23: Fixed (src/tui/workspace/git/views/branches/gitreposview.ts, gitpanel.ts, draw-git.ts, mouse.ts,
+  panels.ts): the repositories are sorted only for a frame drawn (`GitPanel.drawnRows`, `rows(true)`), and not while the
+  pointer is on the panel's rows as the last frame drew them (`gitRows`, against `Mouse.at`, where the mouse last said
+  it was), the mouse on. Every other `rows()` gets the order last drawn for the folder the repositories were found in.
+  Every repository found is ranked, those the filter or a fold hides too. When a frame sorts them differently, the
+  selection goes to the row it was on in the order drawn, if it's a repository's, a checkout's or a file's of one, and
+  scrolls into view; where the panel put it (`place`: the first row when it's shown, the filter's first match, off a
+  note), it stays in the place.
 - 2026-10-23: Dead ends: remembering the selected row of the last frame by its index, to also follow rows shifted by
   an opened repository's files, overrode a selection made on purpose at the same index (the filter's first match);
   dropped. Holding by what's under the pointer (the hot id, `git:row:3`) missed a pointer resting below the last row
@@ -133,17 +135,17 @@ repository's own panel, and for the keys: the selection is an index, so a sort p
   a change by its lines, several rows of one key none of them; a row gone since it was drawn does nothing; the view
   restored and the filter, the wheel, the scrollbar and a key's move not held off by the pointer; the footer resolved
   as the clicks are; the anchor's limits said.
-- 2026-10-23: Built (`src/tui/gitsteady.ts`, `Steady`, as `GitPanel.steady`): every row's key (`rowKey`); the
-  selection kept as a row — every writer of the panel's selection through `select` or `place` (the keys, clicks,
-  right clicks, the filter's up and down, a file staged and followed, `collapse` of a file, a branch, a repository,
-  a branch made), one that doesn't say taken as it is; the row under a resting pointer back on its line (`settle`),
-  past the list's end if it must, the last row kept where it is when the pointer is below it, not across a scroll,
-  a filter, a key's move or another repository; a click, a right click and the footer by the row the last frame drew
-  at the index (`rowAt`, `hotNow`), a key by the row drawn selected, a row gone since doing nothing. What's under the
-  pointer is worked out again after each frame (`Mouse.rehover`), the hover drawn from the frame's own rows.
-  `RepoView`'s own row ids and its "moved" check went: the selection by key covers them. The follow's own check of
-  "another repository" went too: its mutation changed nothing (a new repository's branches aren't there on the first
-  frame), and a selection landing on a row of the same name is harmless; the anchor's stays, tested.
+- 2026-10-23: Built (`src/tui/workspace/git/gitsteady.ts`, `Steady`, as `GitPanel.steady`): every row's key (`rowKey`);
+  the selection kept as a row — every writer of the panel's selection through `select` or `place` (the keys, clicks,
+  right clicks, the filter's up and down, a file staged and followed, `collapse` of a file, a branch, a repository, a
+  branch made), one that doesn't say taken as it is; the row under a resting pointer back on its line (`settle`), past
+  the list's end if it must, the last row kept where it is when the pointer is below it, not across a scroll, a filter,
+  a key's move or another repository; a click, a right click and the footer by the row the last frame drew at the index
+  (`rowAt`, `hotNow`), a key by the row drawn selected, a row gone since doing nothing. What's under the pointer is
+  worked out again after each frame (`Mouse.rehover`), the hover drawn from the frame's own rows. `RepoView`'s own row
+  ids and its "moved" check went: the selection by key covers them. The follow's own check of "another repository" went
+  too: its mutation changed nothing (a new repository's branches aren't there on the first frame), and a selection
+  landing on a row of the same name is harmless; the anchor's stays, tested.
 - 2026-10-23: Tests (tests/gitpanel.test.ts, "the panel's rows by what they are…"): the selection on a branch as new
   files arrive above; the pointer's row on its line, the wheel's scroll and the filter not held; the last row kept when
   the pointer rests below it; rows gone above a scrolled list's pointer row; a key's move shown though the pointer

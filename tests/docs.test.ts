@@ -27,7 +27,7 @@ import {
   DEFAULT_VISUAL_KEYS,
 } from "../src/tui/shell/input/keys.ts";
 import { MOUSE_HELP } from "../src/tui/shell/input/mouse-help.ts";
-import { placeholderRow } from "../src/tui/placeholders.ts";
+import { placeholderRow } from "../src/tui/shell/terminal/placeholders.ts";
 import { allShots } from "./terminal/shot.ts";
 import legacyAnchors from "./fixtures/documentation/legacy-anchors.json";
 import { LINE } from "../site/scripts/about.ts";

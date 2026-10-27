@@ -40,7 +40,7 @@ describe("the terminal checks' coverage", () => {
     expect(samples.filter((f) => !existsSync(join(top, f)))).toEqual([]);
   });
   test("the git panel's rows kept by what they are (gitsteady.ts) run the git checks, not every check", () => {
-    expect(CHECKS_FOR.find(([re]) => re.test("src/tui/gitsteady.ts"))?.[1]).toEqual(["git"]);
+    expect(CHECKS_FOR.find(([re]) => re.test("src/tui/workspace/git/gitsteady.ts"))?.[1]).toEqual(["git"]);
   });
 
   test("each reason says something", () => {

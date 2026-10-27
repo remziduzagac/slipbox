@@ -2,7 +2,7 @@
 // keys; the floating window closed or left.
 
 import * as R from "../../documents/search/replacing.ts";
-import { cancelGitRead } from "../../gitquery.ts";
+import { cancelGitRead } from "../../workspace/git/gitquery.ts";
 import { TOP } from "../../../core/workspace/session/position.ts";
 import { saveAsKey } from "../../documents/saving/saveas.ts";
 import { dialogKey } from "./dialog.ts";
@@ -10,8 +10,8 @@ import { NoteBuffer } from "../../documents/buffers/buffer.ts";
 import { keyChar } from "../input/keys.ts";
 import type { App, View, ListItem, ListOverlay, Overlay, PromptOverlay } from "../../app/runtime/app.ts";
 import { rank } from "./match.ts";
-import { mergeClosed } from "../../mergescreen.ts";
-import { reviewEnded } from "../../review.ts";
+import { mergeClosed } from "../../workspace/git/views/review/mergescreen.ts";
+import { reviewEnded } from "../../workspace/git/views/review/review.ts";
 
 /** Lists, prompts, dialogs, and the floating window's closing. */
 export class Overlays {

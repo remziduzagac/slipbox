@@ -11,7 +11,7 @@ import { BACKGROUND_PARSE } from "../src/tui/documents/buffers/buffer.ts";
 import { crumbLeast, type Geometry } from "../src/tui/shell/screen/draw.ts";
 import { modeButtons } from "../src/tui/documents/views/draw-header.ts";
 import { drawPane } from "../src/tui/documents/views/draw-pane.ts";
-import { openDiff } from "../src/tui/diffview.ts";
+import { openDiff } from "../src/tui/workspace/git/views/changes/diffview.ts";
 import { unparsedText, type ViewMode, viewMode } from "../src/tui/documents/editing/lens.ts";
 import { type Harness, harness, makeSandbox, statusRow } from "./tui-harness.ts";
 

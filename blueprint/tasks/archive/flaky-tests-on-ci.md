@@ -89,8 +89,8 @@ shown before the fix, and gone after.
       the spawn).
     - `linters without a server (19.19) > a file's linters …` (`tests/tui.test.ts`; macos-15, #11's branch): waits for
       two linters' findings, then expects the third's "not found" at once. Each linter's result lands on its own
-      (`ensureLinters`, `src/tui/languages.ts`), and a missing one is known only when its shell exits 127
-      (`runLinter`, `src/core/documents/servers/linters.ts`): it can come last.
+      (`ensureLinters`, `src/tui/documents/diagnostics/languages.ts`), and a missing one is known only when its shell
+      exits 127 (`runLinter`, `src/core/documents/servers/linters.ts`): it can come last.
     - `commands run by your shell (25.7) > :!cmd …` (`tests/tui.test.ts`; macos-15, #14's branch): `err` listed after
       `c1.md`. Standard output and error are two pipes (`runShell`, `src/core/foundation/platform/shell.ts`), and the
       command writes `err`
@@ -108,9 +108,9 @@ shown before the fix, and gone after.
   pipes; the bounds need a reason, not just a bigger number; the picture test could be two pictures sharing an id.
 - 2026-10-24: Ran, the link list's test with `TMPDIR` under a folder named `jazz`: fails every time, `[[zz` showing
   `todo.md` by its path. Reproduced.
-- 2026-10-24: Ran, the picture test 150 times, each its own process, on one CPU (`taskset -c 0`): 150 passed. And
-  two of 49 pictures sharing an id, simulated with the test's names (`pictureId`, `src/tui/placeholders.ts`, 24 bits):
-  19 runs in 200,000, about 1 in 10,000. Possible, unlikely; left unexplained, the test unchanged.
+- 2026-10-24: Ran, the picture test 150 times, each its own process, on one CPU (`taskset -c 0`): 150 passed. And two of
+  49 pictures sharing an id, simulated with the test's names (`pictureId`, `src/tui/shell/terminal/placeholders.ts`, 24
+  bits): 19 runs in 200,000, about 1 in 10,000. Possible, unlikely; left unexplained, the test unchanged.
 - 2026-10-24: Ran, the change list's check 20 times, 2 at a time: 20 passed.
 - 2026-10-24: The maintainer decided, asked: the link list's test fixed in the test, slipbox's matching unchanged (it
   narrows by the full path, design/tui.md § What's under the cursor); `:!cmd` through one pipe in slipbox (D264); the

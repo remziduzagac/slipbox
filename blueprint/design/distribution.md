@@ -564,8 +564,8 @@ link, to file a report yourself.
 
 When the daily check (§ Updates) finds a version newer than this one, and newer than one you skipped, the TUI asks in a
 pop-up, the dialog (tui.md § Overlays), rather than saying so in the message line. The line it said before goes to the
-messages list. The offer is `tui/updates.ts`'s (`app.updates`); the check is started by `tui/shell/terminal/run.ts`, as
-now, and its answer handed to it.
+messages list. The offer is `tui/app/distribution/updates.ts`'s (`app.updates`); the check is started by
+`tui/shell/terminal/run.ts`, as now, and its answer handed to it.
 
 **It waits for a quiet moment**, as it opens on its own. Quiet is one test (`app.updates`' `quiet`, over the input's own
 state): no key in flight or waiting its turn (one waiting on a note's parse counts), none for two seconds

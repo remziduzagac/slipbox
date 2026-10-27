@@ -15,12 +15,12 @@ that followed it.
 
 ## Description
 
-`Exporter.write` (`src/tui/exporter.ts`) keeps the export among its running jobs until `output.dispose()` has removed
-its staging folder, after `publish` has put the file in place, and says `exported … to …` only after that. A cancel
-during the cleanup (`note.export_cancel`) finds the job, aborts its controller and says nothing, and nothing reads the
-signal after `publish`: the export goes on to say `exported … to …`, the cancel taken and ignored. A cleanup that fails
-says `export cleanup: …`, then `exported … to …` at once over it: the newest message is the one the bottom line shows
-on a narrow screen, and the first of the boxes on a wide one.
+`Exporter.write` (`src/tui/documents/export/exporter.ts`) keeps the export among its running jobs until
+`output.dispose()` has removed its staging folder, after `publish` has put the file in place, and says `exported … to …`
+only after that. A cancel during the cleanup (`note.export_cancel`) finds the job, aborts its controller and says
+nothing, and nothing reads the signal after `publish`: the export goes on to say `exported … to …`, the cancel taken and
+ignored. A cleanup that fails says `export cleanup: …`, then `exported … to …` at once over it: the newest message is
+the one the bottom line shows on a narrow screen, and the first of the boxes on a wide one.
 
 ## Acceptance criteria
 
@@ -51,15 +51,15 @@ on a narrow screen, and the first of the boxes on a wide one.
 
 ## Log
 
-- 2026-10-24: Read the cause as the issue gives it, and it holds: `Exporter.write` (`src/tui/exporter.ts`) deletes the
-  job from `jobs` in its `finally`, after `await output.dispose()`, and says `exported … to …` after the `finally`.
-  `cancel()` says `no export is running` only when `jobs` is empty; otherwise it aborts a signal that nothing reads once
-  `publish` has returned. Two things the issue doesn't say. Messages are boxes, newest first, four at most, each for 4 s
-  (`App.message`): on a screen 30 columns wide or more (and a content area 5 rows high), the cleanup's warning still
-  shows, under `exported …`; only smaller, where the newest alone goes over the bottom line, is it replaced. And the
-  same window is there for an export that fails in `publish`, or is cancelled during it: its `not written` or `export
-  cancelled` is said in the `catch`, then the `finally` awaits the cleanup with the job still in `jobs`, so a cancel
-  then says nothing too.
+- 2026-10-24: Read the cause as the issue gives it, and it holds: `Exporter.write`
+  (`src/tui/documents/export/exporter.ts`) deletes the job from `jobs` in its `finally`, after `await output.dispose()`,
+  and says `exported … to …` after the `finally`. `cancel()` says `no export is running` only when `jobs` is empty;
+  otherwise it aborts a signal that nothing reads once `publish` has returned. Two things the issue doesn't say.
+  Messages are boxes, newest first, four at most, each for 4 s (`App.message`): on a screen 30 columns wide or more (and
+  a content area 5 rows high), the cleanup's warning still shows, under `exported …`; only smaller, where the newest
+  alone goes over the bottom line, is it replaced. And the same window is there for an export that fails in `publish`,
+  or is cancelled during it: its `not written` or `export cancelled` is said in the `catch`, then the `finally` awaits
+  the cleanup with the job still in `jobs`, so a cancel then says nothing too.
 - 2026-10-24: Not a gap: the early `return` after `prepareExport` says nothing on an abort, but `PreparedExport.take`
   ends with `signal?.throwIfAborted()` and only microtasks follow, so no key can cancel there; it's the quit's way out.
 - 2026-10-24: Reproduced on `dev`'s code with unit tests in `tests/export-jobs-tui.test.ts`, the cleanup held

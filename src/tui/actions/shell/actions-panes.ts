@@ -1,13 +1,13 @@
-import { branchMenu } from "../../gitmouse.ts";
+import { branchMenu } from "../../workspace/git/views/panel/gitmouse.ts";
 // The commands of windows, tabs and panels (`window.*`, `tab.*`, `history.*`, the panels' and source control's):
 // splits and tabs, each window's history, the side panels' views, the Problems panel, git's changes.
 
 import { type Run, withView, lay } from "../actions.ts";
 import type { App } from "../../app/runtime/app.ts";
-import { diffSwitch } from "../../diffview.ts";
-import { blameHere, historyHere } from "../../githistory.ts";
-import { gitStep, gitPreview, gitReset } from "../../gitchanges.ts";
-import { gitFetch, gitPull, gitPush, gitStash } from "../../gitremote.ts";
+import { diffSwitch } from "../../workspace/git/views/changes/diffview.ts";
+import { blameHere, historyHere } from "../../workspace/git/views/history/githistory.ts";
+import { gitStep, gitPreview, gitReset } from "../../workspace/git/views/changes/gitchanges.ts";
+import { gitFetch, gitPull, gitPush, gitStash } from "../../workspace/git/gitremote.ts";
 import {
   mergeAgent,
   mergeEdit,
@@ -17,9 +17,17 @@ import {
   mergeSwitch,
   mergeTake,
   openMergeScreen,
-} from "../../mergescreen.ts";
-import { gitAbort, gitContinue, gitRebase, gitSkip } from "../../rebase.ts";
-import { openReview, reviewGo, reviewKeep, reviewNote, reviewRevert, reviewStep, reviewSwitch } from "../../review.ts";
+} from "../../workspace/git/views/review/mergescreen.ts";
+import { gitAbort, gitContinue, gitRebase, gitSkip } from "../../workspace/git/views/review/rebase.ts";
+import {
+  openReview,
+  reviewGo,
+  reviewKeep,
+  reviewNote,
+  reviewRevert,
+  reviewStep,
+  reviewSwitch,
+} from "../../workspace/git/views/review/review.ts";
 import * as E from "../../documents/editing/editing.ts";
 
 /** Windows, tabs and panels: splits and tabs, each window's history, the side panels, the Problems panel and source control. */

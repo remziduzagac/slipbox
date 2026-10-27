@@ -32,7 +32,7 @@ import {
 import { setTrustedRoots } from "../../../core/workspace/vaults/trust.ts";
 import { baseAtOpen } from "../../../core/workspace/git/gitbase.ts";
 import { App, type AppOptions } from "../../app/runtime/app.ts";
-import { type CameBack, cameBack, type Place } from "../../updates.ts";
+import { type CameBack, cameBack, type Place } from "../../app/distribution/updates.ts";
 import { keyName } from "../input/keys.ts";
 import type { Canvas } from "./canvas.ts";
 import { AppRenderable, Pictures, toRGBA } from "./opentui.ts";

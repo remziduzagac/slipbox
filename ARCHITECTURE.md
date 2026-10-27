@@ -30,8 +30,8 @@ for a person, and a command line for agents and scripts, both over the same plai
   module of its own (`links.ts`, `files.ts`, `git.ts`, …) and what they share in `common.ts`; `args.ts` parses flags.
 - **`src/tui/`** is the TUI: `app.ts` is the model (the shared state and the wiring), each feature a controller of its
   own. `shell/screen/draw.ts` composes feature drawing on an abstract `Canvas`; document views, panels and overlays keep
-  their area drawing. `actions/` holds registration and command-area folders (`documents/` so far); remaining root
-  action modules move by area. `keys.ts` holds the default keys.
+  their area drawing. `actions/` holds registration and the `documents/`, `workspace/` and `shell/` command areas.
+  `keys.ts` holds the default keys.
 
 **The boundary.** `src/core/` never imports `src/tui/`, `src/cli/` or `@opentui/*`, and `src/cli/` never imports
 `src/tui/`. Inside the TUI, only `src/tui/shell/terminal/opentui.ts` (the `Canvas` over OpenTUI's buffer) and
@@ -86,8 +86,8 @@ What every change keeps. Each is checked by a test or a script where it can be.
 
 - **Every user action is a named command.** Its id and its command-line equivalent (or `null`, for a pure interaction)
   are in `core/application/commands/areas/*.ts`, by area; `tui/actions/` holds registration and command-area folders
-  (`documents/` so far), with remaining root action modules moving by area. `registerActions` registers them all. A
-  command implemented without a spec, or specified without an implementation, fails at start-up and fails a test.
+  (`documents/`, `workspace/` and `shell/`). `registerActions` registers them all. A command implemented without a spec,
+  or specified without an implementation, fails at start-up and fails a test.
 - **Disk is the contract.** A command reads saved files only, writes atomically, and is never blocked by an open editor.
   The TUI takes a command's write as any program's: it reloads, or asks when the note has unsaved changes. It lists the
   notes it holds unsaved for commands to warn about (`core/workspace/git/merge/stale.ts`): advice, never a lock.

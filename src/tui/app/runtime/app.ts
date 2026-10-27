@@ -14,7 +14,7 @@ import { Background } from "./background.ts";
 // This module does not import OpenTUI. It draws through `Canvas` and talks to the terminal
 // through `Host`; tui/shell/terminal/run.ts binds both to OpenTUI. That keeps the whole model testable.
 
-import { cancelGitRead } from "../../gitquery.ts";
+import { cancelGitRead } from "../../workspace/git/gitquery.ts";
 import { DOCUMENT_GRAMMARS, grammarFor } from "../../../core/documents/syntax/syntax.ts";
 import { MERMAID } from "../../../core/rendering/media/diagrams/diagrams.ts";
 import { REGEX, stopRegexJobs } from "../../../core/workspace/search/regex-jobs.ts";
@@ -53,9 +53,9 @@ import {
 import type { Theme } from "../../../core/rendering/theme/index.ts";
 import type { Reach } from "../../../core/workspace/links/reach.ts";
 import { keepCaughtUp, type Peek, tuiReach, vaultGraph } from "../../documents/navigation/peek.ts";
-import type { DiffWindow } from "../../diffview.ts";
-import type { MergeState } from "../../mergescreen.ts";
-import type { Review } from "../../review.ts";
+import type { DiffWindow } from "../../workspace/git/views/changes/diffview.ts";
+import type { MergeState } from "../../workspace/git/views/review/mergescreen.ts";
+import type { Review } from "../../workspace/git/views/review/review.ts";
 import { ELSEWHERE, rootLabel, tildePath } from "../../../core/workspace/vaults/names.ts";
 import {
   configFilesFor,
@@ -78,11 +78,11 @@ import { NoteBuffer } from "../../documents/buffers/buffer.ts";
 import { type Canvas, drawText } from "../../shell/terminal/canvas.ts";
 import { clampPos, type Pos } from "../../documents/editing/cursor.ts";
 import { drawApp, type Geometry } from "../../shell/screen/draw.ts";
-import { Settings } from "../../settings.ts";
-import { Pictures } from "../../pictures.ts";
-import { Languages } from "../../languages.ts";
-import { Git } from "../../git.ts";
-import { GitPanel } from "../../gitpanel.ts";
+import { Settings } from "../settings/settings.ts";
+import { Pictures } from "../../documents/media/pictures.ts";
+import { Languages } from "../../documents/diagnostics/languages.ts";
+import { Git } from "../../workspace/git/git.ts";
+import { GitPanel } from "../../workspace/git/views/panel/gitpanel.ts";
 import { Search } from "../../workspace/search/search.ts";
 import { Views } from "../../documents/views/views.ts";
 import { Lens, type LiveBase } from "../../documents/editing/lens.ts";
@@ -94,7 +94,7 @@ import { Panels, type LeftView, type RightView } from "../../shell/panels/panels
 import { Footnotes } from "../../documents/tools/footnotes/footnotes.ts";
 import { Properties } from "../../documents/tools/info/properties.ts";
 import { Overlays } from "../../shell/overlays/overlays.ts";
-import { Problems } from "../../problems.ts";
+import { Problems } from "../../documents/diagnostics/problems.ts";
 import { Info } from "../../documents/tools/info/info.ts";
 import { Linking } from "../../documents/navigation/linking.ts";
 import { Explorer } from "../../workspace/explorer/explorer.ts";
@@ -102,18 +102,18 @@ import { History } from "../../workspace/history/history.ts";
 import { OutlineView } from "../../documents/tools/outline/outline.ts";
 import { Input } from "../../shell/input/input.ts";
 import { Mouse } from "../../shell/input/mouse.ts";
-import { Exporter } from "../../exporter.ts";
+import { Exporter } from "../../documents/export/exporter.ts";
 import { Scratch } from "../scratch/scratch.ts";
-import { Reporter } from "../../report.ts";
+import { Reporter } from "../distribution/report.ts";
 import type { TerminalAnswer } from "../../../core/application/distribution/report.ts";
 import { Watch } from "./watch.ts";
 import { Session } from "../../workspace/session/session.ts";
 import { Saving } from "../../documents/saving/saving.ts";
 import { Vaults, carried } from "../../workspace/vaults/vaults.ts";
 import { Renaming } from "../../workspace/explorer/renaming.ts";
-import { Speller } from "../../spelling.ts";
+import { Speller } from "../../documents/diagnostics/spelling.ts";
 import { Following } from "../../documents/navigation/following.ts";
-import { Updates } from "../../updates.ts";
+import { Updates } from "../distribution/updates.ts";
 import type { SessionState } from "../../../core/workspace/session/position.ts";
 
 export interface Host {

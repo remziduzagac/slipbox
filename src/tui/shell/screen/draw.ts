@@ -19,7 +19,7 @@ import { LEFT_VIEWS, RIGHT_VIEWS } from "../panels/panels.ts";
 import { drawTopBar } from "./topbar/draw-topbar.ts";
 import { drawPane, drawCompletion, drawSignature } from "../../documents/views/draw-pane.ts";
 import { drawSidebar, drawInfo, drawFootnotes, drawOutline } from "../panels/draw-panels.ts";
-import { drawProblemsPanel } from "../../draw-problems.ts";
+import { drawProblemsPanel } from "../../documents/diagnostics/draw-problems.ts";
 import { drawStatus, drawBottomLine, TOAST_MIN_W, drawToasts } from "./statusbar/draw-status.ts";
 import {
   drawSaveAs,
