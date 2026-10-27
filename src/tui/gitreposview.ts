@@ -25,7 +25,7 @@ import { sanitize } from "../core/foundation/text/sanitize.ts";
 import { homeFolder, isInside, isVaultRoot, rootAt } from "../core/workspace/vaults/vault.ts";
 import { openDiff } from "./diffview.ts";
 import { readForDiff } from "./gitview.ts";
-import { match } from "./match.ts";
+import { match } from "./shell/overlays/match.ts";
 import type { App } from "./app/runtime/app.ts";
 import type { PanelRow } from "./gitpanel.ts";
 

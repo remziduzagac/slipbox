@@ -19,7 +19,7 @@ import { COMMAND_SPECS } from "../src/core/application/commands/catalog.ts";
 import { takeNote } from "../src/core/application/distribution/restart.ts";
 import { dailyUpdateCheck, FROM_SOURCE } from "../src/core/application/distribution/update.ts";
 import { saveSession, loadSession } from "../src/core/workspace/session/position.ts";
-import { openDialog, type DialogOverlay } from "../src/tui/dialog.ts";
+import { openDialog, type DialogOverlay } from "../src/tui/shell/overlays/dialog.ts";
 import { cameBack, QUIET_MS, type UpdateEnv } from "../src/tui/updates.ts";
 import { PASTE } from "../src/tui/shell/input/vim.ts";
 import { harness, makeSandbox, makeVault } from "./tui-harness.ts";

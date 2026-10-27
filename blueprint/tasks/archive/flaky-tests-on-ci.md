@@ -221,11 +221,11 @@ shown before the fix, and gone after.
   - Not taken: the decision numbered now (code-review) — at the merge; one helper for the "lay out this buffer's views
     again and ask for a frame" loop that about fifteen places repeat (code-review) — a refactor beyond this change, left
     as a follow-up.
-- 2026-10-24: Added, from the main session: `links-and-files: view: a worktree kept outside the view chosen …` failed
-  on `macos-15` (run 40083598491, b0a508d), as after #34, passing on reruns: `docs/ under each of the two` asked the
-  moment kestrel's row was listed, but kestrel's own folders come a read later on the listing threads
-  (`src/tui/listings.ts`), and macOS's screen had kestrel with none. Fixed in the check: it waits for them, as it
-  waits for kestrel. Ran: 20 of 20 passed here before (not reproduced), 10 of 10 after.
+- 2026-10-24: Added, from the main session: `links-and-files: view: a worktree kept outside the view chosen …` failed on
+  `macos-15` (run 40083598491, b0a508d), as after #34, passing on reruns: `docs/ under each of the two` asked the moment
+  kestrel's row was listed, but kestrel's own folders come a read later on the listing threads
+  (`src/tui/workspace/explorer/listings.ts`), and macOS's screen had kestrel with none. Fixed in the check: it waits for
+  them, as it waits for kestrel. Ran: 20 of 20 passed here before (not reproduced), 10 of 10 after.
 - 2026-10-24: Review, round 3, the last (the maintainer's cap), of the branch after round 2: `/code-review` and a fresh
   Claude reviewer (Codex still at its limit). The Claude reviewer found nothing real. Consolidated, each verified:
   - Taken, robustness: a linter run that threw would have left the file's run "running" for good, so it was never

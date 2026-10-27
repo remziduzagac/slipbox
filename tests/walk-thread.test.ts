@@ -38,8 +38,8 @@ import {
   type Walker,
 } from "../src/core/workspace/walk/walkers.ts";
 import { SLOW_MS, STUCK_MS, slowFolders } from "./fixtures/walk/slow.ts";
-import type { TreeRow } from "../src/tui/explorer.ts";
-import { Listings, PENDING_MS, REREAD_MS } from "../src/tui/listings.ts";
+import type { TreeRow } from "../src/tui/workspace/explorer/explorer.ts";
+import { Listings, PENDING_MS, REREAD_MS } from "../src/tui/workspace/explorer/listings.ts";
 import { type Harness, harness, makeSandbox, stepToEnd } from "./tui-harness.ts";
 
 const sandbox = makeSandbox();

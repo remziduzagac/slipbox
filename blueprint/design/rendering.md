@@ -31,8 +31,8 @@ Span   { text; role; attrs; bg?; link?; src?; task? }
   of it show (`w`), the block's widest line (`total`), and the block's label row and last row (`part`), which don't
   move. Such a row holds its line whole, wider than the layout.
 
-Both faces draw the same IR: `tui/draw.ts` paints it through a `Canvas`, and `rendering/layout/ansi.ts` turns it into a
-string for `slipbox render`.
+Both faces draw the same IR: `tui/shell/screen/draw.ts` paints it through a `Canvas`, and `rendering/layout/ansi.ts`
+turns it into a string for `slipbox render`.
 
 ## Blocks and inlines (plan `2.2`)
 

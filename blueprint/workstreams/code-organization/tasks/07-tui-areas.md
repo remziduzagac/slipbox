@@ -43,10 +43,10 @@ lazy TUI entry, the picture-decoder worker URL and package entry follow the adap
 core-relative. Generated boundary fixtures follow their new relative paths; command parity and startup refusal remain
 covered. Installer-template and shipped skill bytes are unchanged; basename names are unchanged.
 
-Baseline `e156dba`: `bun scripts/organization/migration.ts capture tmp/issue/t7-before.json` captured 1,954 edges and
-2,614 literal test declarations. The mapped dependency/runtime graph, exact declaration multiset and build entries
-agree. All 91 affected source bodies match after import/worker-path normalization; selectors are preserved for all 17
-moves, including vaults' feature selection. No snapshots change.
+Baseline ORG-T6: `bun scripts/organization/migration.ts capture tmp/issue/t7-before.json` captured 1,954 edges and 2,614
+literal test declarations. The mapped dependency/runtime graph, exact declaration multiset and build entries agree. All
+91 affected source bodies match after import/worker-path normalization; selectors are preserved for all 17 moves,
+including vaults' feature selection. No snapshots change.
 
 Under the ORG-D2 dated note, App's cap moves to its new path and becomes 1,459 from 1,453 (+6 lines solely from normal
 import formatting). Non-import code and the complete boundary comment are preserved, apart from updating its run path.

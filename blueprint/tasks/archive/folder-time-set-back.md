@@ -385,14 +385,13 @@ it again on any difference (`stamps` in `src/core/workspace/graph/watch.ts`); ho
      didn't (`lstatSync`), so one whose target can't be looked at was dropped unseen. One `statSync` decides both
      (test and terminal check: `~/lnk` to `shed/proj`, `shed` not searched any more, home's top to list again; both
      mutation-checked).
-  3. The design still said a plan across home always goes by the walk kept; the command line's comment left the
-     walk without home's top out. Both say it now.
-  Rejected: a ctime-only change keeps the walk again, once per change (the ctime trade-off); `keptWalk`'s errors not
-  reported, the double stat, the command line alone walking an earlier version's walk (rounds 3 to 6); the errno
-  check's other copies (`src/core/application/distribution/skill.ts`, `src/tui/explorer.ts`: outside this fix).
-  Ran: tests/vault.test.ts (384), the TUI, core, CLI, regressions and marks tests of home, walk, watch, rename, move
-  and deinit (156), terminal checks `home` and "space v m gives" (24/24), the typecheck, the lint, `check:size`,
-  `check:boundary`, `check:docs`.
+  3. The design still said a plan across home always goes by the walk kept; the command line's comment left the walk
+     without home's top out. Both say it now. Rejected: a ctime-only change keeps the walk again, once per change (the
+     ctime trade-off); `keptWalk`'s errors not reported, the double stat, the command line alone walking an earlier
+     version's walk (rounds 3 to 6); the errno check's other copies (`src/core/application/distribution/skill.ts`,
+     `src/tui/workspace/explorer/explorer.ts`: outside this fix). Ran: tests/vault.test.ts (384), the TUI, core, CLI,
+     regressions and marks tests of home, walk, watch, rename, move and deinit (156), terminal checks `home` and "space
+     v m gives" (24/24), the typecheck, the lint, `check:size`, `check:boundary`, `check:docs`.
 - 2026-10-24: Review loop, round 8, on `efb615a`: 10 findings, one reproduced. Verified and taken:
   1. Reproduced by the review: a build that couldn't stat home's top (a folder above it not searched, a disk's error)
      dropped everything and kept the walk as `dirs: [""]` without a stamp, which the rule of round 7 took as a walk of

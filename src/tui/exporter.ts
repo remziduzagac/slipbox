@@ -16,7 +16,7 @@ import {
 } from "../core/rendering/export/index.ts";
 import { stateDir, userFolders } from "../core/foundation/platform/paths.ts";
 import { openSaveAs, type SaveAsOverlay, type SavePlace } from "./documents/saving/saveas.ts";
-import { rank } from "./match.ts";
+import { rank } from "./shell/overlays/match.ts";
 import type { App, ListItem, ListOverlay } from "./app/runtime/app.ts";
 
 /** Export: notes, a format, a place. */

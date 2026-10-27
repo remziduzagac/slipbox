@@ -22,7 +22,7 @@ import {
 } from "./keys.ts";
 import type { App } from "../../app/runtime/app.ts";
 import { editable } from "../../app/runtime/app.ts";
-import { refilter } from "../../overlays.ts";
+import { refilter } from "../overlays/overlays.ts";
 
 /** Keys and pastes: dispatch, sequences, the which-key popup. */
 export class Input {

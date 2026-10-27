@@ -16,7 +16,7 @@ import { commitLater, sections } from "../core/workspace/git/staging/gitstage.ts
 import { formatEntry } from "../core/workspace/mutations/capture.ts";
 import { sanitize } from "../core/foundation/text/sanitize.ts";
 import { keyChar, spellKey } from "./shell/input/keys.ts";
-import { match } from "./match.ts";
+import { match } from "./shell/overlays/match.ts";
 import { BranchView, type BranchViewRow } from "./gitbranchview.ts";
 import { type Drawing, REPO_ACTIONS, RepoView, type RepoViewRow } from "./gitreposview.ts";
 import { Steady } from "./gitsteady.ts";

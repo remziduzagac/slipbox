@@ -37,12 +37,12 @@ extracted here. The embedded skill still resolves to the same shipped text. Spel
 entries, selector patterns, generated-cap path and generator output path move atomically. Generated lock data and its
 1,239-line cap are unchanged; offline generation/pin verification passes without network access.
 
-Baseline `1639025`: `bun scripts/organization/migration.ts capture tmp/issue/t15-before.json` captured 1,954 edges
-and 2,614 literal test declarations. Mapped dependency/runtime edges, test identities and build entries agree after
-the move, preserving mapped SCCs. All 111 affected source bodies match after import/worker-path normalization;
-all 42 moved-file selectors are preserved. The 37 historical blueprint references and one shipped installer comment are
-retained explicitly. No source
-compatibility barrel, transport, gateway execution or optional-tool policy change is introduced.
+Baseline ORG-T14: `bun scripts/organization/migration.ts capture tmp/issue/t15-before.json` captured 1,954 edges and
+2,614 literal test declarations. Mapped dependency/runtime edges, test identities and build entries agree after the
+move, preserving mapped SCCs. All 111 affected source bodies match after import/worker-path normalization; all 42
+moved-file selectors are preserved. The 37 historical blueprint references and one shipped installer comment are
+retained explicitly. No source compatibility barrel, transport, gateway execution or optional-tool policy change is
+introduced.
 
 ## Local validation and limitations
 
@@ -82,8 +82,8 @@ recorded above.
 
 ## Shipped installer bytes
 
-The installer-template hunk is reverted: `scripts/install.template.sh` is byte-identical to baseline `1639025`.
-Its historical `core/release.ts` comment is explicitly retained. Inspection found no raw-template hash assertion;
+The installer-template hunk is reverted: `scripts/install.template.sh` is byte-identical to baseline ORG-T14. Its
+historical `core/release.ts` comment is explicitly retained. Inspection found no raw-template hash assertion;
 `scripts/release.ts` renders that template into the published installer and `channelFiles` hashes downloaded
 `install.sh` bytes for the site channel files. Those rendered-artifact hashes matter, so this phase preserves the
 template bytes. The existing distribution tests exercise rendering and installer/channel digest checks.

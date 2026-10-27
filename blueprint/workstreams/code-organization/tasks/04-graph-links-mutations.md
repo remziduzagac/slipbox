@@ -50,7 +50,7 @@ the cause of the first-run failures remains unknown.
 - B: `tests/vault.test.ts`, “in home, a file reached through a followed link is written through it, never over it:
   by a rename's relinking, and moving the link itself”.
 
-| Test | Baseline 97e4b75 | Current tree |
+| Test | Baseline ORG-T3 | Current tree |
 | --- | --- | --- |
 | A: degraded watcher | 5 pass, 0 fail | 5 pass, 0 fail |
 | B: home-link relinking | 5 pass, 0 fail | 5 pass, 0 fail |
@@ -58,6 +58,6 @@ the cause of the first-run failures remains unknown.
 These repetitions found no increased failure rate; they do not establish why the first run failed. Logs remain local,
 but the test identities, observed failures and repeat counts above are the reviewable record.
 
-Baseline: `97e4b75`; `bun scripts/organization/migration.ts capture tmp/issue/t4-before.json` captured 1,949 edges
-and 2,612 literal test declarations. Compare with `bun scripts/organization/migration.ts check` using that snapshot
-and the linked manifest.
+Baseline: ORG-T3; `bun scripts/organization/migration.ts capture tmp/issue/t4-before.json` captured 1,949 edges and
+2,612 literal test declarations. Compare with `bun scripts/organization/migration.ts check` using that snapshot and the
+linked manifest.

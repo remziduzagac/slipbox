@@ -13,7 +13,7 @@ import { checkoutOf, headOf } from "../core/workspace/git/git.ts";
 import { branchesOf, type Changed, inVault, refName, showLater } from "../core/workspace/git/branches/gitops.ts";
 import type { StatusEntry } from "../core/workspace/git/staging/gitstage.ts";
 import { backToPanel, readForDiff } from "./gitview.ts";
-import { GIT_MARK } from "./draw-overlays.ts";
+import { GIT_MARK } from "./shell/overlays/draw-overlays.ts";
 import {
   addWorktreeLater,
   aheadBehindLater,
@@ -50,7 +50,7 @@ import { tildePath } from "../core/workspace/vaults/names.ts";
 import { sanitize } from "../core/foundation/text/sanitize.ts";
 import { isVaultRoot, rootAt, rootMarkers } from "../core/workspace/vaults/vault.ts";
 import { openDiff } from "./diffview.ts";
-import { match } from "./match.ts";
+import { match } from "./shell/overlays/match.ts";
 import type { App } from "./app/runtime/app.ts";
 import type { HeadingRow, PanelRow } from "./gitpanel.ts";
 

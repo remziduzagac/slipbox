@@ -24,7 +24,7 @@ import { isInside, locationAt, type VaultLocation } from "../../../core/workspac
 import { LINK_REASON } from "../../../core/workspace/walk/walk.ts";
 import { stringWidth, truncate, truncateStart } from "../../../core/foundation/text/width.ts";
 import type { App, ListItem } from "../../app/runtime/app.ts";
-import type { TreeRow } from "../../explorer.ts";
+import type { TreeRow } from "../../workspace/explorer/explorer.ts";
 
 /** What answering a link was for: a note opened, a folder unfolded — run once it's followed, or looked at. */
 type Then = () => void;

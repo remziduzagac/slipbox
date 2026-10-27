@@ -1,7 +1,7 @@
 // Session work, its live controls and recent outcomes. Completed entries retain no task closures.
 import type { App, ListItem, ListOverlay } from "./app.ts";
 import { sanitize } from "../../../core/foundation/text/sanitize.ts";
-import { refilter } from "../../overlays.ts";
+import { refilter } from "../../shell/overlays/overlays.ts";
 
 export type Outcome = "done" | "stopped" | "failed";
 export interface WorkOptions {

@@ -3,13 +3,13 @@
 
 import type { App } from "./app/runtime/app.ts";
 import { type Canvas, drawText } from "./shell/terminal/canvas.ts";
-import { type Rect, type Geometry, pageBg, roleStyle, markStyle } from "./draw.ts";
+import { type Rect, type Geometry, pageBg, roleStyle, markStyle } from "./shell/screen/draw.ts";
 import type { Role, Color } from "../core/rendering/theme/theme.ts";
-import { smallButton } from "./draw-panels.ts";
+import { smallButton } from "./shell/panels/draw-panels.ts";
 import { truncate, stringWidth, truncateStart } from "../core/foundation/text/width.ts";
 import { sanitize } from "../core/foundation/text/sanitize.ts";
 import type { Problem } from "../core/documents/diagnostics/diagnostics.ts";
-import { severityGlyph, SEVERITY_ROLE, MARK_ROLE } from "./draw-pane.ts";
+import { severityGlyph, SEVERITY_ROLE, MARK_ROLE } from "./documents/views/draw-pane.ts";
 
 /**
  * The Problems panel (1.7), across the bottom: a row of its two tabs — This file (n), All (n) — with

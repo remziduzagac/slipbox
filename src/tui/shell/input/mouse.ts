@@ -6,16 +6,16 @@ import * as R from "../../documents/search/replacing.ts";
 import { gitClick, gitRightClick, signClick } from "../../gitmouse.ts";
 import { stringWidth } from "../../../core/foundation/text/width.ts";
 import { saveAsMouse } from "../../documents/saving/saveas.ts";
-import { dialogMouse } from "../../dialog.ts";
+import { dialogMouse } from "../overlays/dialog.ts";
 import { clampPos, type Pos, wordAt } from "../../documents/editing/cursor.ts";
-import type { Geometry } from "../../draw.ts";
+import type { Geometry } from "../screen/draw.ts";
 import { prettyKey } from "./keys.ts";
 import type { App, View } from "../../app/runtime/app.ts";
 import { editable } from "../../app/runtime/app.ts";
-import { type LeftView, LEFT_VIEWS } from "../../panels.ts";
+import { type LeftView, LEFT_VIEWS } from "../panels/panels.ts";
 import { codeBlocks } from "../../documents/views/code.ts";
 import { extentOf } from "../../../core/rendering/layout/ir.ts";
-import { selectable } from "../../overlays.ts";
+import { selectable } from "../overlays/overlays.ts";
 import { taskMarkAt } from "../../documents/views/views.ts";
 import { linkAt } from "../../documents/navigation/linking.ts";
 import { MODES } from "./modes.ts";
@@ -53,8 +53,8 @@ export class Mouse {
   private drag:
     | { kind: "select"; view: View; start: Pos; moved: boolean; onText: boolean; ctrl?: boolean }
     | { kind: "tab"; index: number }
-    | { kind: "separator"; sep: import("../../draw.ts").Separator }
-    | { kind: "scrollbar"; bar: import("../../draw.ts").ScrollbarGeom }
+    | { kind: "separator"; sep: import("../screen/draw.ts").Separator }
+    | { kind: "scrollbar"; bar: import("../screen/draw.ts").ScrollbarGeom }
     | { kind: "picture"; view: View; row: number; file: string; x: number; y: number; ctrl: boolean }
     | null = null;
 
@@ -493,7 +493,7 @@ export class Mouse {
   /** A press on a window's text: the cursor there, a word or a row selected, or a drag's start. */
   private press(
     ev: { x: number; y: number; ctrl?: boolean },
-    pane: import("../../draw.ts").PaneGeom,
+    pane: import("../screen/draw.ts").PaneGeom,
     clicks: number,
   ): void {
     const view = pane.view;
@@ -663,7 +663,7 @@ export class Mouse {
     if (task) this.app.views.toggleTaskAt(d.view, task);
   }
 
-  private scrollbarTo(bar: import("../../draw.ts").ScrollbarGeom, y: number, x = bar.x): void {
+  private scrollbarTo(bar: import("../screen/draw.ts").ScrollbarGeom, y: number, x = bar.x): void {
     const frac = Math.max(0, Math.min(1, (y - bar.y) / Math.max(1, bar.h - 1)));
     if (bar.pane) {
       // A side pane's view moves, pinned like the wheel's; its selection stays.

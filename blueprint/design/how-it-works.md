@@ -52,8 +52,8 @@ freeze it ([rendering.md](rendering.md) § Blocks and inlines). It runs in CI (`
 ### Only the final draw step touches OpenTUI
 
 Inside the TUI, the same rule applies one level down. `src/tui/app/runtime/app.ts` (the model, its features each a
-controller of its own) and `src/tui/draw.ts` (painting, its regions in `draw-*.ts`) talk to an abstract `Canvas` and
-`Host`. Only two files import OpenTUI:
+controller of its own) and `src/tui/shell/screen/draw.ts` (painting, its regions in `draw-*.ts`) talk to an abstract
+`Canvas` and `Host`. Only two files import OpenTUI:
 
 | File | What it does with OpenTUI |
 | --- | --- |
@@ -300,7 +300,7 @@ The CLI's commands are the user's reference, [cli.md](../../docs/manual/cli.md);
 | [restart.ts][o100] | UPG | the restart's note; the hand-over: the upgrade, the binary, `execve` into it |
 | [libc.ts][o14] | UPG | libc through `bun:ffi`, opened once: `setenv` (D221), `execve`, `close_range`, `tcflush` |
 | [processes.ts][o15] | UPG | whether a process still runs: a lock's holder, a TUI's unsaved notes, an export's spool |
-| `tui/dialog.ts` | UPG | the dialog: text, a select and checkboxes; its keys and clicks |
+| `tui/shell/overlays/dialog.ts` | UPG | the dialog: text, a select and checkboxes; its keys and clicks |
 | `tui/updates.ts` | UPG | the update offer, `app.upgrade`, `app.restart`, an upgrade underneath noticed |
 | [skill.ts][o101] | GR-D10 | the skill for agents, built in: printed; installed, never over another's file or a link |
 | [skill-lifecycle.ts][o102] | ASI | detected user skill folders, safe refresh and uninstall ownership checks |
@@ -329,7 +329,7 @@ The CLI's commands are the user's reference, [cli.md](../../docs/manual/cli.md);
 | `tui/*` | 3.x, 5.3–5.7 | the app: reading, panes, saving and conflicts |
 | [app.ts][o132] | D235 | the model: the state every part shares and the wiring; a controller per feature (`app.git`) |
 | `tui/actions/`, remaining root action modules | 0.8 | command registration and area folders (`documents/` so far) |
-| `tui/draw*.ts` | 3.1, 3.2 | painting: the frame, then each region (windows, panels, status line, overlays) |
+| [draw.ts][o139], feature drawing | 3.1, 3.2 | frame composition, document views, panels, bars and overlays |
 | `tui/documents/buffers/buffer.ts` | 4.5–4.8 | a note's text, its undo steps, unsaved state, BOM and line endings |
 | `tui/documents/editing/editing.ts` | 4.3 | the cursor as a text offset; insert mode |
 | `tui/shell/input/vim.ts` | 4.4 | counts, operators and text objects, the register, `.` |
@@ -346,10 +346,10 @@ The CLI's commands are the user's reference, [cli.md](../../docs/manual/cli.md);
 | `tui/mergescreen.ts` | GIT-D5 | the merge screen: a card a conflict, the result, saved and staged; its keys |
 | `tui/gitremote.ts` | 26.6, GIT-D4 | fetch, pull, push and stash from the TUI, in the background, one at a time |
 | `tui/rebase.ts` | GIT-D6, D247 | a diverged pull asked about, a rebase onto the base and its stash; what's under way |
-| `tui/explorer.ts` | 3.7, VV-D5 | the explorer: one tree and its view, the breadcrumb, zooming; rows, keys, menu |
-| `tui/explorer-disk.ts` | VV-D8 | the explorer's rows the walk doesn't give: what it leaves out or hasn't reached |
-| `tui/listings.ts` | T12 | the folders the explorer lists a level at a time: read off the main thread, kept, again |
-| `tui/marks.ts` | VV-D9, D244 | a row's marks: the index's state, what describes the row; why it isn't indexed |
+| [explorer.ts][o140] | 3.7, VV-D5 | the explorer: one tree and its view, the breadcrumb, zooming; rows, keys, menu |
+| [explorer-disk.ts][o141] | VV-D8 | the explorer's rows the walk doesn't give: what it leaves out or hasn't reached |
+| [listings.ts][o142] | T12 | the folders the explorer lists a level at a time: read off the main thread, kept, again |
+| [marks.ts][o143] | VV-D9, D244 | a row's marks: the index's state, what describes the row; why it isn't indexed |
 | [peek.ts][o133] | VV-D7, D259 | the peek: another vault's file read in place; `o`, `t`, `z`; its backlinks, asked |
 | [following.ts][o134] | VV-D6 | the question a link not followed asks; follow, just look, no; the probe |
 | `tui/gitchanges.ts` | 26.1 | `] c`, `[ c` to a change against what's staged; its preview; one undone |
@@ -358,7 +358,7 @@ The CLI's commands are the user's reference, [cli.md](../../docs/manual/cli.md);
 | `tui/spelling.ts` | 25.6 | misspelt words where a window shows them: the marks, `] s`, `z =`, `z g` |
 | [completion.ts][o137] | 19.16, 20.13, 25.5 | completion as typed: a server's items, links' targets, open files' words |
 | [saveas.ts][o138] | 10.14 | the Save As window an export opens: places, the folder's entries, the name; its keys |
-| `tui/where.ts` | WSP-D4, WSP-D5 | where you are, on the top bar or the status line: vault, workspace, branch, cut |
+| [where.ts][o144] | WSP-D4, WSP-D5 | where you are, on the top bar or the status line: vault, workspace, branch, cut |
 
 ## Data flow for one note
 
@@ -366,7 +366,7 @@ The CLI's commands are the user's reference, [cli.md](../../docs/manual/cli.md);
 file bytes ──readText──▶ text (BOM noted, invalid UTF-8 → U+FFFD)
           ──parseMarkdown──▶ mdast with positions + frontmatter
           ──renderTree(width, glyphs, resolveLink)──▶ Layout { lines, links, headings }
-          ──▶ tui/draw.ts through Canvas          (TUI)
+          ──▶ tui/shell/screen/draw.ts through Canvas          (TUI)
           ──▶ rendering/layout/ansi.ts to a string          (slipbox render)
 ```
 
@@ -713,3 +713,10 @@ ordinary note needs.
 [o136]: ../../src/tui/documents/editing/snippets.ts
 [o137]: ../../src/tui/documents/editing/completion.ts
 [o138]: ../../src/tui/documents/saving/saveas.ts
+
+[o139]: ../../src/tui/shell/screen/draw.ts
+[o140]: ../../src/tui/workspace/explorer/explorer.ts
+[o141]: ../../src/tui/workspace/explorer/explorer-disk.ts
+[o142]: ../../src/tui/workspace/explorer/listings.ts
+[o143]: ../../src/tui/workspace/explorer/marks.ts
+[o144]: ../../src/tui/shell/screen/topbar/where.ts

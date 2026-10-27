@@ -15,7 +15,7 @@ import { readerFor } from "../../../core/documents/model/readers.ts";
 import { type Anchor, TOP } from "../../../core/workspace/session/position.ts";
 import { isAbsolute, join, posix } from "node:path";
 import { isNotePath, pathLink, pathForm } from "../../../core/workspace/links/links.ts";
-import { isFile } from "../../actions-files.ts";
+import { isFile } from "../workspace/actions-files.ts";
 import { isPointer, parsePointer, resolvePointer } from "../../../core/workspace/links/pointer.ts";
 import { ELSEWHERE, tildePath } from "../../../core/workspace/vaults/names.ts";
 import { slugName } from "../../../core/workspace/vaults/registry.ts";

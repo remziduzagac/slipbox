@@ -20,7 +20,7 @@ import { homeFolder } from "../../../core/workspace/vaults/vault.ts";
 import type { App, View } from "../../app/runtime/app.ts";
 import { offsetOf, placeAt, prevBoundary } from "./editing.ts";
 import { keyChar } from "../../shell/input/keys.ts";
-import { RANKED, rank } from "../../match.ts";
+import { RANKED, rank } from "../../shell/overlays/match.ts";
 import { PASTE } from "../../shell/input/vim.ts";
 import { startSnippet } from "./snippets.ts";
 import { expandSnippet, type SnippetContext } from "../../../core/documents/editing/snippet.ts";

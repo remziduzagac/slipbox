@@ -36,7 +36,7 @@ from orchestration. Existing modules move intact and no newly organized director
 implementation files. No filename basename changes, compatibility barrels, runtime extraction or loading-policy changes
 are introduced.
 
-Baseline `71f0191`: `bun scripts/organization/migration.ts capture tmp/issue/t6-before.json` captured 1,954 edges and
+Baseline ORG-T44: `bun scripts/organization/migration.ts capture tmp/issue/t6-before.json` captured 1,954 edges and
 2,614 literal test declarations. Mapped dependency/runtime edges, build entries and the exact test multiset agree. All
 103 affected source bodies match after import/worker/asset-path normalization; mapped SCCs and all 56 selector filters
 are preserved. The relocated export worker retains its broad fallback selection rather than inheriting a narrow

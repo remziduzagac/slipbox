@@ -27,7 +27,7 @@ import {
 import { climbsOut, decodeText, readRegular } from "../core/foundation/platform/fsutil.ts";
 import { sanitize } from "../core/foundation/text/sanitize.ts";
 import { openDiff } from "./diffview.ts";
-import { match } from "./match.ts";
+import { match } from "./shell/overlays/match.ts";
 import type { HeadingRow } from "./gitpanel.ts";
 import type { App } from "./app/runtime/app.ts";
 

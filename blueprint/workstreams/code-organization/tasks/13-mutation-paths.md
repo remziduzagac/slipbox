@@ -31,7 +31,7 @@ boundary/size and verify all changed import/build/selector paths. Record actual 
 ## Implementation and dependency evidence
 
 The [T13 move manifest](../manifests/t13.json) relocates 11 files into mutations and its rename subfolder. Before
-extraction, the mapped graph/runtime edges, test identities and build entries agree with baseline `2a8f2fd`:
+extraction, the mapped graph/runtime edges, test identities and build entries agree with baseline ORG-T5:
 `bun scripts/organization/migration.ts capture tmp/issue/t13-before.json`, then the migration check with that snapshot
 and manifest. The mechanical stage captured 1,949 edges and 2,612 literal test declarations; all 35 affected source
 modules matched after import normalization. The moved-file selector comparison has no mismatches.
@@ -63,13 +63,13 @@ The first post-extraction owner run passed 14/16 and failed two `tests/vault.tes
 - “deinit rewrites the pointers by its name, which goes with its .slipbox/: from apart, the parent's pointer, else a
   path (D74, D75)”: preview edits used relative paths instead of the expected named-parent pointers.
 
-Both pass five isolated fresh-process runs on baseline `2a8f2fd` and five on the current tree: each is 5 pass/0 fail
-on each revision (20/20 repetitions total). The identical 16-test selection also passes on both revisions. The cause
-of the first-run failures remains unknown; these repetitions do not establish a product defect or its absence.
+Both pass five isolated fresh-process runs on baseline ORG-T5 and five on the current tree: each is 5 pass/0 fail on
+each revision (20/20 repetitions total). The identical 16-test selection also passes on both revisions. The cause of the
+first-run failures remains unknown; these repetitions do not establish a product defect or its absence.
 
 The complete 16-test selection was also repeated five times per revision, each in a fresh process:
 
-| Selection | Baseline 2a8f2fd | Current tree |
+| Selection | Baseline ORG-T5 | Current tree |
 | --- | --- | --- |
 | Five batches of all 16 owner tests | 5/5 runs, 80/80 tests pass | 5/5 runs, 80/80 tests pass |
 
