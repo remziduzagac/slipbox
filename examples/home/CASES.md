@@ -597,7 +597,7 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
   `work/kestrel/.gitignore` (tui.md Opening 20.8; test ':e of a git-ignored or hidden file opens it')
 - a row's marks: indexed `●` dimmed, not indexed `⊘` (node\_modules, build, vendor, tmp listed and browsed), git's
   mark before them, a vault's branch and a worktree's after `⎇` dimmed — `.build/extras.toml`, `.build/kestrel.toml`
-  (its worktree), `work/kestrel/.gitignore` (VV-D8, VV-D9; tests/marks.test.ts)
+  (its worktree), `work/kestrel/.gitignore` (VV-D8, VV-D9; tests/tui/workspace/explorer/marks.test.ts)
 - git marks M + R ! and folder bullet — `.build/extras.toml` (M: local edits), `.build/kestrel.toml` (R and ! from
   test steps: `git mv`, merging `jo/release-notes-wording`), `work/kestrel/README.md` (tui.md Git's marks 5.11)
 - explorer filter: words in any order, letters together, smart case, highlight — `notes/index.md`,

@@ -95,6 +95,10 @@ not flagged. The input manifest is excluded by its exact resolved path; sibling 
 overwrite is refused so the before evidence is retained. Keep the manifest and both snapshots with the PR's measurement
 artifacts.
 
+Path-looking text rendered, measured, compared or written into test fixture files (labels, tree samples, expected
+output and fixture bodies) is data: keep it byte-identical, list exact retained entries and exclude it from import/path
+rewrites, which can change widths or expected strings; the stale-path scan cannot distinguish data from references.
+
 Worker detection supports a literal first argument to `workerUrl`, with a plain, unaliased named import of that helper
 (the first matching import statement). Aliased/namespace helpers, alternate explicit URL bases, computed arguments
 and template-built worker paths require manual review and the affected worker's source/compiled execution checks.
