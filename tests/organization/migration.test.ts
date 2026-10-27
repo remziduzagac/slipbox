@@ -142,6 +142,19 @@ test("comments and quoted fixtures cannot stand in for a removed test", () => {
     expect(capture(root).tests).toEqual([]);
     expect(compare(before, capture(root), { moves: {}, retained: [] }).join("\n")).toContain("tests changed");
   }
+  for (const source of [
+    'let i = 0; i++ / 2; test("kept", () => {}); i-- / 2; test("also kept", () => {});',
+    'const pattern = /["\'`]/; test("kept", () => {}); test("also kept", () => {});',
+    'const sample = `outer ${`inner ${/[}`]/.test("}") ? `yes` : "no"}`} end`; test("kept", () => {}); test("also kept", () => {});',
+    'const sample = `x ${(() => { /* comment ` } */ return `y ${"{"}`; })()}`; test("kept", () => {}); test("also kept", () => {});',
+    "test(`kept`, () => {}); test(`also kept`, () => {});",
+  ]) {
+    put("tests/one.test.ts", source);
+    expect(capture(root).tests).toEqual(before.tests);
+  }
+  renameSync(join(root, "tests/one.test.ts"), join(root, "tests/one.test.tsx"));
+  put("tests/one.test.tsx", 'const view = <p>hello</p>; test("kept", () => {}); test("also kept", () => {});');
+  expect(capture(root).tests).toEqual(before.tests);
 });
 
 test("script imports and literal worker and URL references participate in move verification", () => {
