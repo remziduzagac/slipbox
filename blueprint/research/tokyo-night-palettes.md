@@ -14,7 +14,7 @@ that exact revision, including Day's generated palette, rather than reconstructi
 - **Four variants:** Night, Storm, Moon and Day are upstream styles (*read*, upstream README).
 - **The old default was customized:** its darker backgrounds and softer foreground followed D96; the old Day palette
   also had a custom strong foreground. These were deliberate local values, not upstream palette values (*read*,
-  `core/theme/builtin.ts` before D254, and D96).
+  `core/rendering/theme/builtin.ts` before D254, and D96).
 - **One role mapping suffices:** map upstream colours into slipbox's palette, then use its existing semantic roles and
   typography. D254 replaces the colour deviations while retaining the readability mechanisms (*ours*).
 

@@ -930,51 +930,49 @@ keys.
   every vault's — are unchanged: only what the explorer lists changes. The switcher, the explorer's filter, search and
   find list what's indexed, as for the busy folders: a hidden file only once reached. Hidden again, a view in a hidden
   folder (not the vault's own way to it) goes out to the folder holding it.
-- **A row's marks** (VV-D9; `tui/marks.ts`, drawn by `drawTree`). At a row's right, in columns that line up: the
-  index's state in the last (`indexGlyph`, `INDEX_ROLE`) — indexed `●` (`sidebar_mark`: dimmer than a name), indexing
-  `◐` (`info`), not indexed `⊘` (`sidebar`), can't read `⚿` (a lock in Nerd; `warn`), a problem `⚠` (`warn`), ascii
-  `*`, `~`, `-`, `#`, `!`; git's mark two columns before it (`5.11`; D154): a file's state — `M` modified, `+` new
-  (untracked or added), `R` renamed, `!` in a merge's conflict (`git_modified`, `git_new`, `git_conflict`) — or a
-  folder's with one in it (`markGitFolder`, `•`; `o` in ascii, where `*` says indexed); and, between the name and
-  those, dimmed and ending a space short of git's column, what describes the row (`describe`): a vault's branch when
-  it's a repository's top, a worktree's after `⎇`, a link's target and whether it's followed (`→ /mnt/disk/data`, then
-  `not followed`, `just looking` or `not answering` while the walk doesn't go through it — in a folder out of the
-  vault open, by the rule of the place it's in, unfolded only once asked; `Marks.describe`, from
-  `Following.describe`), its place cut from the front to fit, the state kept (`RowMarks.fit`); a folder of home where
-  another disk is mounted, `another disk` (VV-D2, [roots.md](roots.md) § Home). Each glyph is one
-  column wide in every set (`core/glyphs.ts`, `mark…`); none is an emoji. A vault's other name stays after its
-  folder's (`17.13`); a row with its menu's button shows no marks. The index's state: a folder of the vault's own tree
-  is indexed, or indexing while home is unwalked, while the walk hasn't reached it (`unwalked`; past home's cap, not
-  indexed), or while a note in it waits to be parsed (`app.indexing`, `graph.pendingPaths`); what the walk leaves out
-  (`leftOut`) and every folder in it, unfolded there or zoomed into (`outsideRows` carries `leftOut` down, to a vault
-  of its own), a busy folder anywhere (`busyFolderAt` for one outside the vault open: the rule of D237, asked once
-  per row drawn), a link not followed or not answering, and a note too big
-  (`walk.max_file_size`) are not indexed; the vault open's row is indexing while its index is built, else indexed;
-  another vault's is indexed when its index is on the disk, indexing while the background index builds it
+- **A row's marks** (VV-D9; `tui/marks.ts`, drawn by `drawTree`). At a row's right, in columns that line up: the index's
+  state in the last (`indexGlyph`, `INDEX_ROLE`) — indexed `●` (`sidebar_mark`: dimmer than a name), indexing `◐`
+  (`info`), not indexed `⊘` (`sidebar`), can't read `⚿` (a lock in Nerd; `warn`), a problem `⚠` (`warn`), ascii `*`,
+  `~`, `-`, `#`, `!`; git's mark two columns before it (`5.11`; D154): a file's state — `M` modified, `+` new (untracked
+  or added), `R` renamed, `!` in a merge's conflict (`git_modified`, `git_new`, `git_conflict`) — or a folder's with one
+  in it (`markGitFolder`, `•`; `o` in ascii, where `*` says indexed); and, between the name and those, dimmed and ending
+  a space short of git's column, what describes the row (`describe`): a vault's branch when it's a repository's top, a
+  worktree's after `⎇`, a link's target and whether it's followed (`→ /mnt/disk/data`, then `not followed`,
+  `just looking` or `not answering` while the walk doesn't go through it — in a folder out of the vault open, by the
+  rule of the place it's in, unfolded only once asked; `Marks.describe`, from `Following.describe`), its place cut from
+  the front to fit, the state kept (`RowMarks.fit`); a folder of home where another disk is mounted, `another disk`
+  (VV-D2, [roots.md](roots.md) § Home). Each glyph is one column wide in every set (`core/rendering/theme/glyphs.ts`,
+  `mark…`); none is an emoji. A vault's other name stays after its folder's (`17.13`); a row with its menu's button
+  shows no marks. The index's state: a folder of the vault's own tree is indexed, or indexing while home is unwalked,
+  while the walk hasn't reached it (`unwalked`; past home's cap, not indexed), or while a note in it waits to be parsed
+  (`app.indexing`, `graph.pendingPaths`); what the walk leaves out (`leftOut`) and every folder in it, unfolded there or
+  zoomed into (`outsideRows` carries `leftOut` down, to a vault of its own), a busy folder anywhere (`busyFolderAt` for
+  one outside the vault open: the rule of D237, asked once per row drawn), a link not followed or not answering, and a
+  note too big (`walk.max_file_size`) are not indexed; the vault open's row is indexing while its index is built, else
+  indexed; another vault's is indexed when its index is on the disk, indexing while the background index builds it
   (`AutoIndex.status.current`), else unmarked; a note or file in what the walk leaves out that was reached (a link to
-  it, a hidden one opened) is indexed. A
-  folder you may not list and a file you may not read: can't read; a link whose target isn't there: a problem. A file's
-  row carries one only when it isn't its folder's. **Why a row is `⊘`** (D244) is said in words, never on the row —
-  there's no width for it — but on the status line while the explorer's cursor is on it, and in Info for the file on
-  screen (its row's reason, or its folder's): the rule that marked it says which it is (`Marks.index` gives the rule
-  and what it read; `Marks.why` the words), never a second guess. A busy folder: `generated (node_modules)` when it
-  holds no note at its top, `git-ignored` when its repository ignores it, both when both hold (`busyWhy`, D237's two
-  things); a folder in it says the busy folder's name, carried down with the reason (`TreeRow.leftOutAt`). What
-  `.gitignore` leaves out, `git-ignored`; `walk.exclude`; a hidden name listed (D250), `hidden`; home's skip list:
-  `hidden`, `home's Downloads`, `a system
-  folder (Library)`, `git's own folder`; `on another disk`; a link: `a link not followed` (looked at or not), `a link
-  followed, its disk not answering`, `a link to a folder holding the vault`, `a second link to a folder followed
-  already`; a note `over walk.max_file_size`; a folder of home past its walk's cap, `past home's limit of 5,000
-  folders` (or its notes'). What the disk says of a row (`Facts`: access, a broken link, the
-  size, a vault's index and branch) is read once per row drawn, again when the tree is built again: never for the rows
-  out of sight, so the pane's width for its sideways scroll keeps the index's column for every folder and vault, and a
-  file's mark only the disk gives may take a name's last columns. Never either for the row of a folder where another
-  disk is mounted (VV-D2), nor by `rowPath` or a left-out row's check for a marker: one that stops answering would hang
-  the tree. Unfolded, what's in it carries `another disk` down as any left-out folder's rows carry its reason, read as
-  you asked; only a mount point's row says `another disk`. git is asked for its marks in the background, a moment after
-  anything changed (a save, the watcher, a file operation, a branch switch, going into another vault — which drops the
-  old vault's marks at once); asked while a question is still out, it's asked again once that one's answered, so a
-  stage or a commit is never answered by a question from before it.
+  it, a hidden one opened) is indexed. A folder you may not list and a file you may not read: can't read; a link whose
+  target isn't there: a problem. A file's row carries one only when it isn't its folder's. **Why a row is `⊘`** (D244)
+  is said in words, never on the row — there's no width for it — but on the status line while the explorer's cursor is
+  on it, and in Info for the file on screen (its row's reason, or its folder's): the rule that marked it says which it
+  is (`Marks.index` gives the rule and what it read; `Marks.why` the words), never a second guess. A busy folder:
+  `generated (node_modules)` when it holds no note at its top, `git-ignored` when its repository ignores it, both when
+  both hold (`busyWhy`, D237's two things); a folder in it says the busy folder's name, carried down with the reason
+  (`TreeRow.leftOutAt`). What `.gitignore` leaves out, `git-ignored`; `walk.exclude`; a hidden name listed (D250),
+  `hidden`; home's skip list: `hidden`, `home's Downloads`, `a system folder (Library)`, `git's own folder`;
+  `on another disk`; a link: `a link not followed` (looked at or not), `a link followed, its disk not answering`,
+  `a link to a folder holding the vault`, `a second link to a folder followed already`; a note
+  `over walk.max_file_size`; a folder of home past its walk's cap, `past home's limit of 5,000 folders` (or its notes').
+  What the disk says of a row (`Facts`: access, a broken link, the size, a vault's index and branch) is read once per
+  row drawn, again when the tree is built again: never for the rows out of sight, so the pane's width for its sideways
+  scroll keeps the index's column for every folder and vault, and a file's mark only the disk gives may take a name's
+  last columns. Never either for the row of a folder where another disk is mounted (VV-D2), nor by `rowPath` or a
+  left-out row's check for a marker: one that stops answering would hang the tree. Unfolded, what's in it carries
+  `another disk` down as any left-out folder's rows carry its reason, read as you asked; only a mount point's row says
+  `another disk`. git is asked for its marks in the background, a moment after anything changed (a save, the watcher, a
+  file operation, a branch switch, going into another vault — which drops the old vault's marks at once); asked while a
+  question is still out, it's asked again once that one's answered, so a stage or a commit is never answered by a
+  question from before it.
 - **History (left, `◷`, `space h h`):** the active window's timeline, newest first: each place's
   note name and line, the current one marked `here` and selected when the view opens. A click
   selects an entry; `enter` or a double-click jumps there, the places before it becoming back and
@@ -1800,12 +1798,11 @@ first marked `↪`, as `slipbox render` always does. The code view's cells are t
 
 ## Pictures in a window
 
-A note's picture is sized for the window it's in: fitted to it (rendering.md § Blocks and inlines), or at its own
-size by choice. What the window shows at its own size, and its pictures' rest, are kept by `tui/pictures.ts`; the
-sizes are worked out by `tui/images.ts`; the rows laid out by `core/layout/render.ts`; the drawing done by
+A note's picture is sized for the window it's in: fitted to it (rendering.md § Blocks and inlines), or at its own size
+by choice. What the window shows at its own size, and its pictures' rest, are kept by `tui/pictures.ts`; the sizes are
+worked out by `tui/images.ts`; the rows laid out by `core/rendering/layout/markdown/render.ts`; the drawing done by
 `tui/draw-pane.ts`, `tui/opentui.ts` and `tui/placeholders.ts`; the commands are
-`src/core/application/commands/areas/motion.ts`'s,
-done in `tui/actions-view.ts`.
+`src/core/application/commands/areas/motion.ts`'s, done in `tui/actions-view.ts`.
 
 - **What it's fitted to.** The window's room: its text columns less what's before the picture (a list's indent, a
   quote's bar, an embed's frame) — with wrapping on, the layout's room for the block; with wrapping off, the
@@ -1925,15 +1922,14 @@ inside them, never through a shell, so a file name can't become a command; a tem
 
 ## SOURCE view (plan `4.13`)
 
-`space n v` and `ctrl+k` (`:source`) switch a window's note between its raw markdown and the
-rendered view, and the header's Source button (`view.mode_source`) sets it (HDR-D2); the status chip reads `SOURCE`. It
-is another layout of the same note (`core/layout/source.ts`; D146), so everything
-built on the layout works the same in both: the cursor keys, find and `*`, visual selection and
-copy, the mouse, wrapping, line numbers, the scrollbars. The cursor stays on its source line across
-the switch, and the outline and breadcrumb keep working. Their headings are the parse's while the
-text is saved; while it's being edited they're scanned from the text, each ATX heading line read
-the way the render reads it (a line with markup parsed alone), so their text and slugs — and a
-`#fragment` followed from SOURCE view — are the render's.
+`space n v` and `ctrl+k` (`:source`) switch a window's note between its raw markdown and the rendered view, and the
+header's Source button (`view.mode_source`) sets it (HDR-D2); the status chip reads `SOURCE`. It is another layout of
+the same note (`core/rendering/layout/code/source.ts`; D146), so everything built on the layout works the same in both:
+the cursor keys, find and `*`, visual selection and copy, the mouse, wrapping, line numbers, the scrollbars. The cursor
+stays on its source line across the switch, and the outline and breadcrumb keep working. Their headings are the parse's
+while the text is saved; while it's being edited they're scanned from the text, each ATX heading line read the way the
+render reads it (a line with markup parsed alone), so their text and slugs — and a `#fragment` followed from SOURCE view
+— are the render's.
 
 A source line is a row, wrapped at the last space that fits (wrapping on) or kept whole (off); the
 text column is the window's full width, readable width aside. Highlighting is light and per line:
@@ -2019,14 +2015,13 @@ a heading next to a long code block stays a small lens until the cursor moves in
 hidden rows are still in the layout — motions, find and editing see all of the block — and only
 the drawing, clicks, drags and scrolling map screen rows around them (`Lens.screenRows`).
 
-**How it's drawn.** It is composed, not re-rendered (`core/layout/live.ts`): the render with the
-lens's rows swapped for source rows (which carry `srcMap`, so everything in
-[Editing](#editing-plans-43-44-45) works in it) and its rules as frame rows
-(`decor`: the cursor steps over them, find ignores them, they map to no text). While it's being
-typed into, the render around it is reused — the rows after it renumbered by the lines added or
-taken away — so a keystroke never re-parses the note (plan `15.1`'s per-block re-layout, for the
-lens; D120). Leaving insert mode, or an edit reaching outside it, lays the note out afresh — re-parsing
-only the chunks the edits touched and re-rendering only their blocks.
+**How it's drawn.** It is composed, not re-rendered (`core/rendering/layout/markdown/live.ts`): the render with the
+lens's rows swapped for source rows (which carry `srcMap`, so everything in [Editing](#editing-plans-43-44-45) works in
+it) and its rules as frame rows (`decor`: the cursor steps over them, find ignores them, they map to no text). While
+it's being typed into, the render around it is reused — the rows after it renumbered by the lines added or taken away —
+so a keystroke never re-parses the note (plan `15.1`'s per-block re-layout, for the lens; D120). Leaving insert mode, or
+an edit reaching outside it, lays the note out afresh — re-parsing only the chunks the edits touched and re-rendering
+only their blocks.
 
 **Another note in the window.** Following a link from the lens, or `ctrl+o` / `ctrl+i` to another note, keeps the
 lens open on the new note's cursor block: the old note's render, size, place and inner scroll go with it
@@ -2647,12 +2642,11 @@ one keeps the index's.
 (`git.change_undo`) undoes it — its lines as staged put back, one undo step, left unsaved. A click on a change's sign
 does both from a menu (§ Side panes).
 
-**The diff** (GIT-D2; `core/workspace/git/merge/merge.ts` `diffView`, `core/layout/diff.ts`, `tui/diffview.ts`): `:diff`
-(the panel's
-This file diff too), a file's diff from `:changes`' list, the git panel's `enter` on a file or a change, a branch's or
-another repository's file in the panel, a history entry's diff to now, the conflict prompt's (D)iff and the overwrite
-question's "(d) Show the differences first" draw one way, in the floating window, as wide as the screen less its
-margins.
+**The diff** (GIT-D2; `core/workspace/git/merge/merge.ts` `diffView`, `core/rendering/layout/diff/diff.ts`,
+`tui/diffview.ts`): `:diff` (the panel's This file diff too), a file's diff from `:changes`' list, the git panel's
+`enter` on a file or a change, a branch's or another repository's file in the panel, a history entry's diff to now, the
+conflict prompt's (D)iff and the overwrite question's "(d) Show the differences first" draw one way, in the floating
+window, as wide as the screen less its margins.
 
 - **Compared:** the two texts without their line endings or a byte order mark (`comparable`): CRLF is LF, as git has
   it for a checkout that turns LF into CRLF and as the gutter's signs have it, so a CRLF file's diff against git's LF
@@ -2701,16 +2695,16 @@ margins.
   list, the prompt. Two texts the same are said ("no differences from main"), and go back; two whose only change no
   line shows open on its rows (above), `enter` on one going to its line. The wheel over the floating
   window scrolls it, never the window or the side pane under it.
-- **Roles:** `diff_add` and `diff_del` have a `bg`, the line's tint: their colour 12% of the way from the page in a
-  dark theme, 14% in a light one; `diff_add_word` and `diff_del_word` are the same colours 32% and 34% of the way. The
+- **Roles:** `diff_add` and `diff_del` have a `bg`, the line's tint: their colour 12% of the way from the page in a dark
+  theme, 14% in a light one; `diff_add_word` and `diff_del_word` are the same colours 32% and 34% of the way. The
   terminal's theme can't mix its sixteen colours with the page: a diff's lines have their sign's colour alone, and the
   changed words are bold and underlined, as without colour (`NO_COLOR`). A span's background role (`Span.bg`) gives its
-  bold and underline as well as its colour (`layout/style.ts`), so the words are marked where there's no tint to give.
+  bold and underline as well as its colour (`rendering/layout/style.ts`), so the words are marked where there's no tint
+  to give.
 
-**Before and after** (GIT-D2; `core/foundation/text/blockdiff.ts` `blockDiff`, `core/layout/blockdiff.ts`
-`layoutBlockDiff`): a note's
-diff (a file the walk reads as a note) in every window a diff opens in, unless `[git] diff = "source"` (default
-`blocks`).
+**Before and after** (GIT-D2; `core/foundation/text/blockdiff.ts` `blockDiff`, `core/rendering/layout/diff/blockdiff.ts`
+`layoutBlockDiff`): a note's diff (a file the walk reads as a note) in every window a diff opens in, unless
+`[git] diff = "source"` (default `blocks`).
 
 - **Its blocks** (`noteBlocks`): the note's top-level nodes as the parse has them, a list a block per item (a nested
   list's items blocks of their own after their item's own lines), a table a block per row (the header's with its
@@ -2756,44 +2750,44 @@ diff (a file the walk reads as a note) in every window a diff opens in, unless `
   review's and the merge screen's keymaps have it too: there, `tab` switches each hunk, or each side against the
   base, for the rest of the review or of the file's screen (`reviewSwitch`, `mergeSwitch`).
 
-**Side by side** (GIT-D7; `core/layout/splitdiff.ts` `layoutSplitDiff`): a code file's diff (anything not a note) where
-each side gets at least `SPLIT_MIN` (80) text columns — the window less a sign and a space before each text, ` │ `
-between (the left's `›` in its first column) and a column after the right's text (`splitColumns`) — unless `[git]
-diff_layout = "unified"` (default `auto`); `"split"` puts it side by side however narrow. `from` on the left, `to` on
-the right (`splitRows`): an unchanged line on both; in a run of changes, each removed line beside the added line it's
-paired with (the k-th paired of each), those paired with none beside each other in order, a side with no line blank.
-A changed side is on its sign's tint up to the rule, its changed words on the stronger. The heads, the folds and the
-`\ …` rows span both. Each row's `src` is the unified row it stands for (the right's, else the left's), so the
+**Side by side** (GIT-D7; `core/rendering/layout/diff/splitdiff.ts` `layoutSplitDiff`): a code file's diff (anything not
+a note) where each side gets at least `SPLIT_MIN` (80) text columns — the window less a sign and a space before each
+text, ` │ ` between (the left's `›` in its first column) and a column after the right's text (`splitColumns`) — unless
+`[git] diff_layout = "unified"` (default `auto`); `"split"` puts it side by side however narrow. `from` on the left,
+`to` on the right (`splitRows`): an unchanged line on both; in a run of changes, each removed line beside the added line
+it's paired with (the k-th paired of each), those paired with none beside each other in order, a side with no line
+blank. A changed side is on its sign's tint up to the rule, its changed words on the stronger. The heads, the folds and
+the `\ …` rows span both. Each row's `src` is the unified row it stands for (the right's, else the left's), so the
 window's text, `enter` and the folds are the unified diff's, and a resize between the two layouts keeps them.
 
 - **Scrolling:** both sides scroll by the one offset, as a code block's rows do (D233). A row's `scroll` (`CodeScroll`)
-  gains `right`: where its second text starts, after the first's `total` columns, padded, and what's fixed between;
-  that text is drawn `total - w` columns to the left as well as by the offset (`scrolledCol`, `scrolledInSight`,
-  `unscrolledCol` in `layout/ir.ts`), each text showing its own `‹` and `›`. The cursor stops on the texts up to the
-  right's end, and moving it reveals its side. With `[render] code_wrap = "wrap"` each side wraps in its column, `↪` on
-  its rows after the first; wrapping off, the rows are whole and the window scrolls.
+  gains `right`: where its second text starts, after the first's `total` columns, padded, and what's fixed between; that
+  text is drawn `total - w` columns to the left as well as by the offset (`scrolledCol`, `scrolledInSight`,
+  `unscrolledCol` in `rendering/layout/ir.ts`), each text showing its own `‹` and `›`. The cursor stops on the texts up
+  to the right's end, and moving it reveals its side. With `[render] code_wrap = "wrap"` each side wraps in its column,
+  `↪` on its rows after the first; wrapping off, the rows are whole and the window scrolls.
 - **The code view's cells folded** (`cell.fold_unchanged`, `space k d`): every cell with no line changed against what's
   staged (the gutter's signs, `26.1`) folds to its header and every one with one opens, the cursor on the first that
   changed; with every unchanged cell folded already, every cell opens. A file with no change says so and folds nothing.
   Only on that key: a diff doesn't fold the cells by itself.
 
 **Reviewing a change** (GIT-D3; `core/workspace/git/review/gitreview.ts`, `tui/review.ts`): `v` in the git panel
-(`[keys.git]`'s `review`),
-its Review button, `:review` or `git.review` walks the working tree's changes against what's staged — the gutter's hunks
-(`gitChanges`), the files as they are on disk — across every file `git status` has changed and not staged, and every
-untracked one, as wholly added, in one path order across both (`localeCompare`). A folder (a submodule's), a file gone
-or binary (a NUL in its first 8,192 characters), an empty untracked file and a tracked one with no version staged are
-left out; a deleted file is one hunk, all removed. Each hunk is shown in the floating window, as wide as a diff's: a
-row with its file, its lines (a deletion's, the line before it) and its place (`change 2 of 3 here, 5 of 9 in all`, a
-new or deleted file said, what was done with it), a row of its keys, then its diff as every diff is drawn
-(`layoutDiff`): its lines as staged and as they are, with up to three of the file's lines on each side (`hunkView`),
-each row at its line in the file. The window is a screen of parts (`layoutScreen`, `layout/screen.ts`): text rows and
-diffs, a line of its text each, the review's own keys over the note's (`reviewKeys`, `DEFAULT_REVIEW_KEYS`, as a peek
-has its own). A note's hunk is its blocks before and after (`asBlocks`, `[git] diff`) — the file with this change undone
-against the file as it is (`hunkBlocks`), so its paragraphs are whole, no head and no folds (`blockDiff`'s `heads` and
-`folds` off) — and its lines where only blank lines changed; a code file's lines go side by side where there's room
-(`sideBySide`, `layoutScreen`'s `split`, a part that changes something). `enter` goes to the line of what's under the
-cursor (`srcAt`: a block's span carries its line's unit), as in the diff window; the window is as tall as its rows.
+(`[keys.git]`'s `review`), its Review button, `:review` or `git.review` walks the working tree's changes against what's
+staged — the gutter's hunks (`gitChanges`), the files as they are on disk — across every file `git status` has changed
+and not staged, and every untracked one, as wholly added, in one path order across both (`localeCompare`). A folder (a
+submodule's), a file gone or binary (a NUL in its first 8,192 characters), an empty untracked file and a tracked one
+with no version staged are left out; a deleted file is one hunk, all removed. Each hunk is shown in the floating window,
+as wide as a diff's: a row with its file, its lines (a deletion's, the line before it) and its place
+(`change 2 of 3 here, 5 of 9 in all`, a new or deleted file said, what was done with it), a row of its keys, then its
+diff as every diff is drawn (`layoutDiff`): its lines as staged and as they are, with up to three of the file's lines on
+each side (`hunkView`), each row at its line in the file. The window is a screen of parts (`layoutScreen`,
+`rendering/layout/screen.ts`): text rows and diffs, a line of its text each, the review's own keys over the note's
+(`reviewKeys`, `DEFAULT_REVIEW_KEYS`, as a peek has its own). A note's hunk is its blocks before and after (`asBlocks`,
+`[git] diff`) — the file with this change undone against the file as it is (`hunkBlocks`), so its paragraphs are whole,
+no head and no folds (`blockDiff`'s `heads` and `folds` off) — and its lines where only blank lines changed; a code
+file's lines go side by side where there's room (`sideBySide`, `layoutScreen`'s `split`, a part that changes something).
+`enter` goes to the line of what's under the cursor (`srcAt`: a block's span carries its line's unit), as in the diff
+window; the window is as tall as its rows.
 
 - `y` (`git.review_keep`) stages the hunk as the git panel's `s` stages a change (`stageChange`): found again among
   the file's changes now (`findChange`: the same lines as staged and now, where it was — at its line in the file, or

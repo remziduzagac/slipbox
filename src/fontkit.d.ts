@@ -1,4 +1,5 @@
-// fontkit (MIT; pdfkit's own font reader) ships no types: what export's font finder (`core/export/fonts.ts`) uses.
+// fontkit (MIT; pdfkit's own font reader) ships no types: what export's font finder
+// (`core/rendering/export/assets/fonts.ts`) uses.
 declare module "fontkit" {
   export interface Font {
     postscriptName: string;

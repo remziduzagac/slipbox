@@ -14,7 +14,7 @@ import type { App, View } from "./app.ts";
 import { editable } from "./app.ts";
 import { type LeftView, LEFT_VIEWS } from "./panels.ts";
 import { codeBlocks } from "./code.ts";
-import { extentOf } from "../core/layout/ir.ts";
+import { extentOf } from "../core/rendering/layout/ir.ts";
 import { selectable } from "./overlays.ts";
 import { taskMarkAt } from "./views.ts";
 import { linkAt } from "./linking.ts";

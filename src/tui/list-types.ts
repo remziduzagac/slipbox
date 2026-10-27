@@ -1,5 +1,5 @@
 // Shared picker and menu state.
-import type { Role } from "../core/theme/theme.ts";
+import type { Role } from "../core/rendering/theme/theme.ts";
 
 export interface ListItem {
   label: string;

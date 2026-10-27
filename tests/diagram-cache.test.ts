@@ -3,8 +3,12 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import packageInfo from "../package.json";
-import { DiagramCache, diagramKey } from "../src/core/diagram-cache.ts";
-import { BATCH_DIAGRAM_POLICY, DiagramJobs, type DiagramRequest } from "../src/core/diagram-jobs.ts";
+import { DiagramCache, diagramKey } from "../src/core/rendering/media/diagrams/diagram-cache.ts";
+import {
+  BATCH_DIAGRAM_POLICY,
+  DiagramJobs,
+  type DiagramRequest,
+} from "../src/core/rendering/media/diagrams/diagram-jobs.ts";
 import { Database } from "../src/core/foundation/platform/sqlite.ts";
 
 const dirs: string[] = [];
@@ -178,7 +182,7 @@ test("transient worker startup failures are retried in a new session", async () 
 test("fresh processes reuse production text and SVG caches without pending work", () => {
   const cacheRoot = file().replace(/\/diagrams\.db$/, "");
   const script = `
-    import { drawMermaid, mermaidSvg, loadMermaid, mermaidPending } from "./src/core/diagrams.ts";
+    import { drawMermaid, mermaidSvg, loadMermaid, mermaidPending } from "./src/core/rendering/media/diagrams/diagrams.ts";
     const source = "graph TD\\n A[AcrossProcesses] --> B[Ready]";
     const colors = {bg:"#000000",fg:"#ffffff",line:"#777777",accent:"#333333",muted:"#888888"};
     const text = drawMermaid(source, 70, false);

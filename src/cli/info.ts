@@ -9,7 +9,7 @@ import { conventionOf, describeConvention } from "../core/workspace/links/conven
 import { copyAvailable, folderIdentity, pointerName, readFolders } from "../core/workspace/vaults/folders.ts";
 import { parseNoteFile } from "../core/documents/model/readers.ts";
 import { cacheDir, stateDir, userConfigFile } from "../core/foundation/platform/paths.ts";
-import { listThemes } from "../core/theme/index.ts";
+import { listThemes } from "../core/rendering/theme/index.ts";
 import { loadSession, PositionStore } from "../core/workspace/session/position.ts";
 import { frontmatterFindings, rootTypes } from "../core/documents/diagnostics/diagnostics.ts";
 import { backgroundStatus, describeBackground } from "../core/workspace/graph/autoindex.ts";

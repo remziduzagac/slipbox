@@ -7,7 +7,7 @@ import { cancelGitRead } from "./gitquery.ts";
 import { clearScratch, dropEmptyAsks, formatEntry, readScratch } from "../core/workspace/mutations/capture.ts";
 import { COMMAND_SPECS } from "../core/application/commands/catalog.ts";
 import type { Command } from "../core/application/commands/registry.ts";
-import { listThemes, loadTheme } from "../core/theme/index.ts";
+import { listThemes, loadTheme } from "../core/rendering/theme/index.ts";
 import type { App, ListItem, UiState, View } from "./app.ts";
 import * as C from "./cursor.ts";
 import * as E from "./editing.ts";

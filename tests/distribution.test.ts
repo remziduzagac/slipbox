@@ -379,7 +379,7 @@ describe("the supply chain's gates (14.10)", () => {
     const g = importGraph();
     expect(g.get("src/core/workspace/walk/walk.ts")).toContain("src/core/foundation/platform/fsutil.ts");
     expect(g.get("src/core/documents/markdown/parse-pool.ts")).toContain("src/core/documents/markdown/parse-worker.ts");
-    expect(g.get("src/core/export/jobs.ts")).toContain("src/core/export-worker.ts");
+    expect(g.get("src/core/rendering/export/jobs.ts")).toContain("src/core/rendering/export/export-worker.ts");
     expect(g.get("src/core/application/distribution/skill.ts")).toContain("skills/slipbox/SKILL.md");
     // Run by its path, from the file's folder or the top's name; a temporary folder's paths name nothing here.
     expect(g.get("tests/cli.test.ts")).toContain("src/main.ts");

@@ -5,11 +5,11 @@ import { tmpdir } from "node:os";
 import { DEFAULT_CONFIG } from "../src/core/application/config/config.ts";
 import { openGraph } from "../src/core/workspace/graph/graph.ts";
 import { locateVault } from "../src/core/workspace/vaults/vault.ts";
-import { assemble } from "../src/core/export/assemble.ts";
-import { toMarkdown } from "../src/core/export/markdown.ts";
-import { toHtml } from "../src/core/export/html.ts";
-import { toDocx } from "../src/core/export/docx.ts";
-import { toEpub } from "../src/core/export/epub.ts";
+import { assemble } from "../src/core/rendering/export/assemble.ts";
+import { toMarkdown } from "../src/core/rendering/export/formats/markdown.ts";
+import { toHtml } from "../src/core/rendering/export/formats/html.ts";
+import { toDocx } from "../src/core/rendering/export/formats/docx.ts";
+import { toEpub } from "../src/core/rendering/export/formats/epub.ts";
 import { unzipSync, strFromU8 } from "fflate";
 
 const sandbox = mkdtempSync(join(tmpdir(), "slipbox-html-export-"));

@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
-import { PaintJobs, type PaintRequest } from "../src/core/paint-jobs.ts";
-import { loadTypesetter, typesetter } from "../src/core/typeset.ts";
+import { PaintJobs, type PaintRequest } from "../src/core/rendering/media/paint/paint-jobs.ts";
+import { loadTypesetter, typesetter } from "../src/core/rendering/media/typeset.ts";
 
 const request: PaintRequest = { kind: "math", source: "x^2", color: "#123456", inline: false };
 async function eventually<T>(read: () => T | undefined | null): Promise<T> {

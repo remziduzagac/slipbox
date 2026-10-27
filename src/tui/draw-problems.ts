@@ -4,7 +4,7 @@
 import type { App } from "./app.ts";
 import { type Canvas, drawText } from "./canvas.ts";
 import { type Rect, type Geometry, pageBg, roleStyle, markStyle } from "./draw.ts";
-import type { Role, Color } from "../core/theme/theme.ts";
+import type { Role, Color } from "../core/rendering/theme/theme.ts";
 import { smallButton } from "./draw-panels.ts";
 import { truncate, stringWidth, truncateStart } from "../core/foundation/text/width.ts";
 import { sanitize } from "../core/foundation/text/sanitize.ts";

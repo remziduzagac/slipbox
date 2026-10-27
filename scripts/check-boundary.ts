@@ -20,7 +20,7 @@ const RULES: Record<string, string[]> = {
 /** Modules only some files may import, but for types: the diagram library draws in its worker alone (#164), since a
  *  diagram it never finished, drawn on the screen's thread, froze slipbox. */
 export const OWNERS: Record<string, string[]> = {
-  "src/core/diagram-render.ts": ["src/core/diagram-worker.ts"],
+  "src/core/rendering/media/diagrams/diagram-render.ts": ["src/core/rendering/media/diagrams/diagram-worker.ts"],
 };
 
 // `… from "x"`, `import("x")`, `require("x")`, and a side-effect `import "x"`.

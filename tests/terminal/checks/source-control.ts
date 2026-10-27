@@ -7,7 +7,7 @@
 
 import { spawnSync } from "node:child_process";
 import { join } from "node:path";
-import { loadTheme, type Role } from "../../../src/core/theme/index.ts";
+import { loadTheme, type Role } from "../../../src/core/rendering/theme/index.ts";
 import { type Check, leader, panelFocused } from "../check.ts";
 import type { Session, SessionOptions } from "../session.ts";
 

@@ -72,8 +72,8 @@ import {
 } from "../src/core/workspace/vaults/symlinks.ts";
 import { LINK_REASON, WalkFilter, walkVault } from "../src/core/workspace/walk/walk.ts";
 import { homeWalkFile, walkHomeNow } from "../src/core/workspace/vaults/home.ts";
-import { renderMarkdown } from "../src/core/layout/render.ts";
-import { glyphsFor } from "../src/core/glyphs.ts";
+import { renderMarkdown } from "../src/core/rendering/layout/markdown/render.ts";
+import { glyphsFor } from "../src/core/rendering/theme/glyphs.ts";
 
 // Parses, walks and processes started: slow on a loaded or small machine (CI's macOS runner), not stuck.
 setDefaultTimeout(UNIT_TIMEOUT_MS);
@@ -4711,12 +4711,12 @@ describe("embeds drawn in place (1.11)", () => {
     rel: string,
     caches?: {
       parse: import("../src/core/documents/markdown/parse.ts").ParseCache;
-      render: import("../src/core/layout/render.ts").RenderCache;
+      render: import("../src/core/rendering/layout/markdown/render.ts").RenderCache;
     },
   ) => {
     const { layoutNote } = await import("../src/core/documents/model/note.ts");
     const { parseMarkdown } = await import("../src/core/documents/markdown/parse.ts");
-    const { glyphsFor } = await import("../src/core/glyphs.ts");
+    const { glyphsFor } = await import("../src/core/rendering/theme/glyphs.ts");
     return layoutNote(
       parseMarkdown(readFileSync(g.abs(rel), "utf8"), caches?.parse),
       g,
@@ -4865,7 +4865,7 @@ describe("embeds drawn in place (1.11)", () => {
   });
 
   test("the embedded note changed: drawn as it is now, through the render cache too", async () => {
-    const { newRenderCache } = await import("../src/core/layout/render.ts");
+    const { newRenderCache } = await import("../src/core/rendering/layout/markdown/render.ts");
     const { newParseCache } = await import("../src/core/documents/markdown/parse.ts");
     const { g } = vaultOf({ "host.md": "# H\n\n![inner](inner.md)\n\nkept\n", "inner.md": "old text\n" });
     const cache = { parse: newParseCache(), render: newRenderCache() };
@@ -5417,7 +5417,7 @@ describe("the converter: links made plain paths (20.1)", () => {
     });
     const { layoutNote } = await import("../src/core/documents/model/note.ts");
     const { parseMarkdown } = await import("../src/core/documents/markdown/parse.ts");
-    const { glyphsFor } = await import("../src/core/glyphs.ts");
+    const { glyphsFor } = await import("../src/core/rendering/theme/glyphs.ts");
     const l = layoutNote(parseMarkdown(readFileSync(g.abs("host.md"), "utf8")), g, "host.md", {
       width: 60,
       glyphs: glyphsFor("unicode"),
@@ -11907,7 +11907,7 @@ describe("links in front matter (Obsidian's properties)", () => {
       "x.md",
       readFileSync(join(dir, "x.md"), "utf8"),
     );
-    const { renderTree } = await import("../src/core/layout/render.ts");
+    const { renderTree } = await import("../src/core/rendering/layout/markdown/render.ts");
     const r = renderTree(
       parsed.tree,
       {

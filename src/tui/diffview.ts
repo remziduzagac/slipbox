@@ -12,10 +12,10 @@ import { isAbsolute, join } from "node:path";
 import { type BlockDiff, blockDiff } from "../core/foundation/text/blockdiff.ts";
 import { classify } from "../core/documents/model/filetypes.ts";
 import { indentFor } from "../core/documents/editing/indent.ts";
-import { layoutBlockDiff } from "../core/layout/blockdiff.ts";
-import { diffText, layoutDiff } from "../core/layout/diff.ts";
-import { type Layout, srcAt } from "../core/layout/ir.ts";
-import { layoutSplitDiff, SPLIT_MIN, splitColumns } from "../core/layout/splitdiff.ts";
+import { layoutBlockDiff } from "../core/rendering/layout/diff/blockdiff.ts";
+import { diffText, layoutDiff } from "../core/rendering/layout/diff/diff.ts";
+import { type Layout, srcAt } from "../core/rendering/layout/ir.ts";
+import { layoutSplitDiff, SPLIT_MIN, splitColumns } from "../core/rendering/layout/diff/splitdiff.ts";
 import {
   comparable,
   type DiffViewRow,

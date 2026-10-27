@@ -6,14 +6,14 @@ import { cannotEdit, insertText } from "./editing.ts";
 import { conventionOf } from "../core/workspace/links/convention.ts";
 import { type LinkEnds, linkEnds, writeLink } from "../core/workspace/links/write-link.ts";
 import { describeLanding } from "../core/workspace/graph/graph.ts";
-import type { LayoutLink } from "../core/layout/ir.ts";
+import type { LayoutLink } from "../core/rendering/layout/ir.ts";
 import { planVaultRename } from "../core/workspace/mutations/rename/rename.ts";
 import { slugName } from "../core/workspace/vaults/registry.ts";
 import { tildePath } from "../core/workspace/vaults/names.ts";
 import { privateNameWarning } from "../core/workspace/vaults/folders.ts";
 import { findVaultRoot, hasMarker, rootAt } from "../core/workspace/vaults/vault.ts";
 import type { App, View, ListItem } from "./app.ts";
-import type { Layout } from "../core/layout/ir.ts";
+import type { Layout } from "../core/rendering/layout/ir.ts";
 import { stringWidth } from "../core/foundation/text/width.ts";
 
 /** Links under the cursor, and links inserted. */

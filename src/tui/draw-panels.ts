@@ -4,7 +4,7 @@
 import type { App, SidePaneState } from "./app.ts";
 import { type Canvas, drawText } from "./canvas.ts";
 import { type Rect, type Geometry, roleStyle, pageBg } from "./draw.ts";
-import type { Color, Role } from "../core/theme/theme.ts";
+import type { Color, Role } from "../core/rendering/theme/theme.ts";
 import { stringWidth, truncate, splitAtWidth, graphemes, graphemeWidth } from "../core/foundation/text/width.ts";
 import { drawHScrollbar, paneScrollbar } from "./draw-pane.ts";
 import { LEFT_VIEWS, RIGHT_VIEWS } from "./panels.ts";

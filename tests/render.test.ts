@@ -4,29 +4,36 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { mkdtempSync, readdirSync, readFileSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { glyphsFor } from "../src/core/glyphs.ts";
-import { layoutToAnsi } from "../src/core/layout/ansi.ts";
-import { A_BOLD, type Layout, type Line, scrolledCol, scrolledInSight, unscrolledCol } from "../src/core/layout/ir.ts";
+import { glyphsFor } from "../src/core/rendering/theme/glyphs.ts";
+import { layoutToAnsi } from "../src/core/rendering/layout/ansi.ts";
+import {
+  A_BOLD,
+  type Layout,
+  type Line,
+  scrolledCol,
+  scrolledInSight,
+  unscrolledCol,
+} from "../src/core/rendering/layout/ir.ts";
 import { blockDiff } from "../src/core/foundation/text/blockdiff.ts";
-import { layoutBlockDiff } from "../src/core/layout/blockdiff.ts";
-import { layoutDiff } from "../src/core/layout/diff.ts";
-import { layoutSplitDiff, splitColumns, splitRows } from "../src/core/layout/splitdiff.ts";
-import { layoutScreen, type ScreenPart, screenText } from "../src/core/layout/screen.ts";
+import { layoutBlockDiff } from "../src/core/rendering/layout/diff/blockdiff.ts";
+import { layoutDiff } from "../src/core/rendering/layout/diff/diff.ts";
+import { layoutSplitDiff, splitColumns, splitRows } from "../src/core/rendering/layout/diff/splitdiff.ts";
+import { layoutScreen, type ScreenPart, screenText } from "../src/core/rendering/layout/screen.ts";
 import { comparable, diffView, unseenRows } from "../src/core/workspace/git/merge/merge.ts";
-import { type PictureSource, renderMarkdown, renderTree } from "../src/core/layout/render.ts";
+import { type PictureSource, renderMarkdown, renderTree } from "../src/core/rendering/layout/markdown/render.ts";
 import { dataLinks, parseData } from "../src/core/documents/model/data.ts";
 import { classify } from "../src/core/documents/model/filetypes.ts";
-import { loadMermaid } from "../src/core/diagrams.ts";
-import { loadRasterizer } from "../src/core/svg.ts";
-import { loadTypesetter } from "../src/core/typeset.ts";
-import { paintJobs } from "../src/core/paint-jobs.ts";
+import { loadMermaid } from "../src/core/rendering/media/diagrams/diagrams.ts";
+import { loadRasterizer } from "../src/core/rendering/media/images/svg.ts";
+import { loadTypesetter } from "../src/core/rendering/media/typeset.ts";
+import { paintJobs } from "../src/core/rendering/media/paint/paint-jobs.ts";
 import { parseNoteFile } from "../src/core/documents/model/readers.ts";
 import { findHeading, headingFragment } from "../src/core/workspace/links/landing.ts";
 import { headingsOf, parseMarkdown } from "../src/core/documents/markdown/parse.ts";
-import { allocate } from "../src/core/layout/table.ts";
-import { countLines, measure, wrapGraphemes, wrapSpans } from "../src/core/layout/wrap.ts";
-import type { Span } from "../src/core/layout/ir.ts";
-import { blend, listThemes, loadTheme } from "../src/core/theme/index.ts";
+import { allocate } from "../src/core/rendering/layout/markdown/table.ts";
+import { countLines, measure, wrapGraphemes, wrapSpans } from "../src/core/rendering/layout/wrap.ts";
+import type { Span } from "../src/core/rendering/layout/ir.ts";
+import { blend, listThemes, loadTheme } from "../src/core/rendering/theme/index.ts";
 import { layoutWidth } from "../src/core/documents/model/note.ts";
 import { stringWidth } from "../src/core/foundation/text/width.ts";
 
@@ -446,8 +453,8 @@ describe("table allocator — height minimisation over generated tables", () => 
     return (seed >>> 8) % n; // the high bits: an LCG's low ones repeat quickly
   };
   test("same invariants, and never worse than water-filling (height + split words)", async () => {
-    const { measure, fit } = await import("../src/core/layout/wrap.ts");
-    const { longestWord, naturalWidth } = await import("../src/core/layout/wrap.ts");
+    const { measure, fit } = await import("../src/core/rendering/layout/wrap.ts");
+    const { longestWord, naturalWidth } = await import("../src/core/rendering/layout/wrap.ts");
     const words = [
       "a",
       "to",
@@ -523,8 +530,8 @@ describe("ANSI writer", () => {
 describe("ANSI writer: colours the terminal can't show as given", () => {
   /** The SGR codes the writer gives a span of the text role, coloured `color`, at `depth`. */
   const codes = async (color: unknown, depth: "16" | "256" | "truecolor") => {
-    const { lineToAnsi } = await import("../src/core/layout/ansi.ts");
-    const { applyColorOverrides } = await import("../src/core/theme/index.ts");
+    const { lineToAnsi } = await import("../src/core/rendering/layout/ansi.ts");
+    const { applyColorOverrides } = await import("../src/core/rendering/theme/index.ts");
     const { theme, warnings } = applyColorOverrides(loadTheme("tokyo-night").theme, { text: color });
     expect(warnings).toEqual([]);
     const out = lineToAnsi({ spans: [{ text: "x", role: "text", attrs: 0 }], src: 1 }, 1, theme, { depth });
@@ -558,7 +565,7 @@ describe("ANSI writer: colours the terminal can't show as given", () => {
 
 describe("rows back to their source (the layout IR)", () => {
   test("what's at a column comes from its span's own line, else the row's; where a line's text starts", async () => {
-    const { posOfSrc, srcAt } = await import("../src/core/layout/ir.ts");
+    const { posOfSrc, srcAt } = await import("../src/core/rendering/layout/ir.ts");
     const l = renderMarkdown("# T\n\none\ntwo\nthree\n\n- a\n", { width: 40, glyphs: unicode, showUrls: false });
     const para = l.lines.find((x) => x.spans.some((s) => s.text === "two"))!;
     expect([0, 3, 4, 7, 8, 12].map((c) => srcAt(para, c))).toEqual([3, 4, 4, 5, 5, 5]); // one two three, one row of three lines
@@ -574,7 +581,7 @@ describe("rows back to their source (the layout IR)", () => {
 
 describe("highlighting: languages and the cache's bounds (15.1)", () => {
   test("a language known or not; a block highlighted again once thousands of others have pushed it out", async () => {
-    const { hasLanguage, highlight } = await import("../src/core/layout/highlight.ts");
+    const { hasLanguage, highlight } = await import("../src/core/rendering/layout/markdown/highlight.ts");
     expect(hasLanguage("ts")).toBe(true);
     expect(hasLanguage("python")).toBe(true);
     expect(hasLanguage("no-such-language")).toBe(false);
@@ -903,7 +910,7 @@ describe("review cycle 5 (render: what the snapshots can't see)", () => {
 describe("the render cache (15.1)", () => {
   test("rendering with the last render's blocks gives exactly a fresh render, edit after edit", async () => {
     const { newParseCache, parseMarkdown } = await import("../src/core/documents/markdown/parse.ts");
-    const { newRenderCache, renderTree } = await import("../src/core/layout/render.ts");
+    const { newRenderCache, renderTree } = await import("../src/core/rendering/layout/markdown/render.ts");
     let seed = 3;
     const rand = (n: number) => {
       seed = (Math.imul(seed, 1103515245) + 12345) & 0x7fffffff;
@@ -949,7 +956,7 @@ describe("the render cache (15.1)", () => {
   });
   test("a code block too wide, cached wrapped, is laid out again to scroll sideways, and back", async () => {
     const { newParseCache, parseMarkdown } = await import("../src/core/documents/markdown/parse.ts");
-    const { newRenderCache, renderTree } = await import("../src/core/layout/render.ts");
+    const { newRenderCache, renderTree } = await import("../src/core/rendering/layout/markdown/render.ts");
     const text = `# Code\n\n\`\`\`sh\necho ${"a long argument ".repeat(6)}\n\`\`\`\n`;
     const pcache = newParseCache();
     const rcache = newRenderCache();
@@ -1218,9 +1225,9 @@ describe("Mermaid (12.10)", async () => {
     // A process of its own: here the library is in already.
     const script = `
       import { parseMarkdown } from "./src/core/documents/markdown/parse.ts";
-      import { newRenderCache, renderTree } from "./src/core/layout/render.ts";
-      import { glyphsFor } from "./src/core/glyphs.ts";
-      import { loadMermaid } from "./src/core/diagrams.ts";
+      import { newRenderCache, renderTree } from "./src/core/rendering/layout/markdown/render.ts";
+      import { glyphsFor } from "./src/core/rendering/theme/glyphs.ts";
+      import { loadMermaid } from "./src/core/rendering/media/diagrams/diagrams.ts";
       const parsed = parseMarkdown("# D\\n\\n\`\`\`mermaid\\ngraph TD\\n  A[Write] --> B[Disk]\\n\`\`\`\\n");
       const cache = newRenderCache();
       const opts = { width: 60, glyphs: glyphsFor("unicode"), showUrls: false };
@@ -1422,8 +1429,8 @@ describe("drawn as pictures, by choice (12.16, 12.17)", () => {
   test("drawn while what draws it loads: in text, the layout saying what it waited for", () => {
     // A process of its own: here they're in already. A diagram, a display, an SVG picture, each on its own.
     const script = `
-      import { renderMarkdown } from "./src/core/layout/render.ts";
-      import { glyphsFor } from "./src/core/glyphs.ts";
+      import { renderMarkdown } from "./src/core/rendering/layout/markdown/render.ts";
+      import { glyphsFor } from "./src/core/rendering/theme/glyphs.ts";
       const colors = { bg: "#000000", fg: "#ffffff", line: "#777777", accent: "#0000ff", muted: "#999999", math: "#ffffff" };
       const picture = (from) => ("svg" in from ? { src: "/p.png", cols: 4, rows: 2 } : null);
       const opts = { width: 40, glyphs: glyphsFor("unicode"), showUrls: false, picture, drawings: { mermaid: true, math: true, colors } };

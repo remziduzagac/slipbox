@@ -1,6 +1,6 @@
 import { headingsOf } from "../core/documents/markdown/parse.ts";
 import { rowForSource } from "../core/workspace/session/position.ts";
-import type { Layout, LayoutHeading } from "../core/layout/ir.ts";
+import type { Layout, LayoutHeading } from "../core/rendering/layout/ir.ts";
 // Document disclosures own their state per buffer; App supplies commands and layout wiring.
 import type { App, View } from "./app.ts";
 import type { NoteBuffer } from "./buffer.ts";

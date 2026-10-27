@@ -17,10 +17,10 @@ export const LIMIT = 1000;
 
 /** Legacy handwritten files: exact caps; only reviewed import-formatting growth may reset one (ORG-D2). */
 export const CAPPED: Record<string, number> = {
-  "src/core/export/pdf.ts": 1038,
+  "src/core/rendering/export/formats/pdf.ts": 1038,
   "src/core/workspace/graph/graph.ts": 1441,
-  "src/core/layout/code.ts": 1424,
-  "src/core/layout/render.ts": 1076,
+  "src/core/rendering/layout/code/code.ts": 1424,
+  "src/core/rendering/layout/markdown/render.ts": 1076,
   "src/core/documents/syntax/syntax.ts": 1170,
   "src/tui/app.ts": 1453,
   "src/tui/explorer.ts": 1268,

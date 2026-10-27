@@ -45,10 +45,10 @@ the cleanup is slow, the window opened in between falls back to beside the note.
 
 - 2026-10-24: Read the cause as the issue gives it: `Exporter.write` (`src/tui/exporter.ts`) remembers the folder in
   `export.json` after `await output.dispose()` in its `finally`, the staging folder's `rm -r`; `browser` reads it
-  through `lastDir` when the window opens. A second, smaller gap: `PreparedExport.publish` (`src/core/export/spool.ts`)
-  renames the document last, then its own `finally` awaits an `rm` of every temporary (already renamed), so the file
-  is there a moment before `publish` returns. A test that waits for the file alone can race even once the folder is
-  remembered right after `publish`.
+  through `lastDir` when the window opens. A second, smaller gap: `PreparedExport.publish`
+  (`src/core/rendering/export/spool.ts`) renames the document last, then its own `finally` awaits an `rm` of every
+  temporary (already renamed), so the file is there a moment before `publish` returns. A test that waits for the file
+  alone can race even once the folder is remembered right after `publish`.
 - 2026-10-24: Reproduced on `dev`: the places test as it is, `PreparedExport.prototype.dispose` spied to sleep 300 ms
   first (a temporary edit, undone), fails as on CI: `Expected: "…/home-…/Downloads"`, `Received: "…/vault-…"`.
 - 2026-10-24: Codex, the sidekick, is at its usage limit: a fresh Claude reviewer challenges the reading and the plan

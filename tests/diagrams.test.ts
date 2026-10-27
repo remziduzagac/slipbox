@@ -1,8 +1,18 @@
 import { describe, expect, test } from "bun:test";
-import { glyphsFor } from "../src/core/glyphs.ts";
-import { renderMarkdown } from "../src/core/layout/render.ts";
-import { BATCH_DIAGRAM_POLICY, DiagramJobs, type DiagramRequest } from "../src/core/diagram-jobs.ts";
-import { drawMermaid, loadMermaid, mermaidSvg, mermaidPending, withMermaidBatch } from "../src/core/diagrams.ts";
+import { glyphsFor } from "../src/core/rendering/theme/glyphs.ts";
+import { renderMarkdown } from "../src/core/rendering/layout/markdown/render.ts";
+import {
+  BATCH_DIAGRAM_POLICY,
+  DiagramJobs,
+  type DiagramRequest,
+} from "../src/core/rendering/media/diagrams/diagram-jobs.ts";
+import {
+  drawMermaid,
+  loadMermaid,
+  mermaidSvg,
+  mermaidPending,
+  withMermaidBatch,
+} from "../src/core/rendering/media/diagrams/diagrams.ts";
 import { load, onLoaded } from "../src/core/foundation/platform/lazy.ts";
 
 // Worker timing tests always start cold; persistent-cache behavior is covered separately.

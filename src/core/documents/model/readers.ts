@@ -8,8 +8,8 @@
 // re-parses a note): its headings, and the link around the cursor.
 
 import { noteFormat } from "./filetypes.ts";
-import type { LayoutHeading, LinkKind } from "../../layout/ir.ts";
-import { scanHeadings } from "../../layout/source.ts";
+import type { LayoutHeading, LinkKind } from "../../rendering/layout/ir.ts";
+import { scanHeadings } from "../../rendering/layout/code/source.ts";
 import { type ParseCache, type ParsedNote, parseMarkdown } from "../markdown/parse.ts";
 import { tagsInLine } from "../markdown/tags.ts";
 import { parseWikiTarget } from "../markdown/wikilink.ts";

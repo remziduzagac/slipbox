@@ -44,16 +44,16 @@ import type { NvimServer } from "../src/core/documents/external-editors/nvim.ts"
 import { TextCanvas } from "../src/tui/canvas.ts";
 import { match, RANKED, rank } from "../src/tui/match.ts";
 import { graphemes, setWidthMethod, stringWidth, type WidthMethod } from "../src/core/foundation/text/width.ts";
-import { glyphsFor } from "../src/core/glyphs.ts";
+import { glyphsFor } from "../src/core/rendering/theme/glyphs.ts";
 import { crumbLayout } from "../src/tui/draw.ts";
-import { A_BOLD, A_DIM, type Layout, srcAt } from "../src/core/layout/ir.ts";
+import { A_BOLD, A_DIM, type Layout, srcAt } from "../src/core/rendering/layout/ir.ts";
 import { codeKind } from "../src/core/documents/syntax/syntax.ts";
 import { load } from "../src/core/foundation/platform/lazy.ts";
-import { loadRasterizer, rasterizer } from "../src/core/svg.ts";
-import { loadMermaid, mermaidPending, mermaidSvg } from "../src/core/diagrams.ts";
-import { loadTypesetter } from "../src/core/typeset.ts";
-import { paintJobs } from "../src/core/paint-jobs.ts";
-import { colorHex } from "../src/core/theme/theme.ts";
+import { loadRasterizer, rasterizer } from "../src/core/rendering/media/images/svg.ts";
+import { loadMermaid, mermaidPending, mermaidSvg } from "../src/core/rendering/media/diagrams/diagrams.ts";
+import { loadTypesetter } from "../src/core/rendering/media/typeset.ts";
+import { paintJobs } from "../src/core/rendering/media/paint/paint-jobs.ts";
+import { colorHex } from "../src/core/rendering/theme/theme.ts";
 import { svgText } from "../src/tui/images.ts";
 import { idColor, pictureId, placeholderCell, placeholderRow, release, transmit } from "../src/tui/placeholders.ts";
 import { Pictures } from "../src/tui/opentui.ts";
@@ -17397,7 +17397,7 @@ describe("review (tui): the app's floating windows, new paths, roots and repeats
       expect(last(h).text).toBe("a folder this vault doesn't index: select one it does");
     }
     // Exported there as Markdown, a note; as Word, nothing a vault indexes, so nothing said.
-    const { formatFor } = await import("../src/core/export/index.ts");
+    const { formatFor } = await import("../src/core/rendering/export/index.ts");
     await h.app.exporter.write(["index.md"], formatFor("md")!, join(root, "drafts", "index.export.md"));
     expect(last(h).text).toBe(
       "exported index.md to drafts/index.export.md (Markdown (.md), not indexed: walk.exclude)",

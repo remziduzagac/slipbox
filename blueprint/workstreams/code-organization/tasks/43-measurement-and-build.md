@@ -29,3 +29,5 @@ Report passing comparable runs and known baseline failures separately; partial t
 Explain remaining shared integration scope under D239; preserve dynamic-import and worker selection. Reconcile clone,
 size, unused-code and pattern dispositions across the owner PRs. Recommend any additional measured performance/build
 change as a coherent follow-up; #56 remains excluded. This is focused verification, not the full suite.
+
+- T6: render's “drawn while its library loads …” needs a separate isolation fix and repeated-same-cache regression.

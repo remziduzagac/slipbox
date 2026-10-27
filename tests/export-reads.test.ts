@@ -1,6 +1,7 @@
 import { TEST_BUDGETS } from "./support/timeouts.ts";
-// What an export reads and keeps (src/core/export/reads.ts): every note and picture whole, however big — the size of a
-// note, a picture, all of them together or the document made of them refuses nothing; each note parsed once.
+// What an export reads and keeps (src/core/rendering/export/reads.ts): every note and picture whole, however big —
+// the size of a note, a picture, all of them together or the document made of them refuses nothing; each note
+// parsed once.
 import { afterAll, expect, setDefaultTimeout, test } from "bun:test";
 import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -8,9 +9,9 @@ import { join } from "node:path";
 import { DEFAULT_CONFIG } from "../src/core/application/config/config.ts";
 import { openGraph } from "../src/core/workspace/graph/graph.ts";
 import { locateVault } from "../src/core/workspace/vaults/vault.ts";
-import { exportNotes, formatFor } from "../src/core/export/index.ts";
-import { rasterInfo, rasterOf } from "../src/core/export/images.ts";
-import { exportGraph } from "../src/core/export/jobs.ts";
+import { exportNotes, formatFor } from "../src/core/rendering/export/index.ts";
+import { rasterInfo, rasterOf } from "../src/core/rendering/export/assets/images.ts";
+import { exportGraph } from "../src/core/rendering/export/jobs.ts";
 
 const sandbox = mkdtempSync(join(tmpdir(), "slipbox-export-reads-"));
 afterAll(() => rmSync(sandbox, { recursive: true, force: true }));
@@ -121,7 +122,7 @@ test("pictures of any size are pictures; an SVG is rasterised however many pixel
 });
 
 test("a chapter's transformed links never mutate the parsed source later used by an embed", async () => {
-  const { assemble } = await import("../src/core/export/assemble.ts");
+  const { assemble } = await import("../src/core/rendering/export/assemble.ts");
   const r = vault({ "a.md": "# A\n\n[go to B](b.md)\n", "b.md": "# B\n\n![[a]]\n" });
   const doc = await assemble(r.graph, ["a.md", "b.md"]);
   const links: string[] = [];
@@ -136,7 +137,7 @@ test("a chapter's transformed links never mutate the parsed source later used by
 });
 
 test("an embedded note that can't be read stays its name, and the export goes on", async () => {
-  const { assemble } = await import("../src/core/export/assemble.ts");
+  const { assemble } = await import("../src/core/rendering/export/assemble.ts");
   const r = vault({ "main.md": "# Main\n\nBefore.\n\n![[locked]]\n\nAfter.\n", "locked.md": "# Locked\n\nPrivate.\n" });
   chmodSync(join(r.root, "locked.md"), 0o000);
   try {

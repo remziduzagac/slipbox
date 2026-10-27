@@ -1,9 +1,9 @@
 import { expect, test } from "bun:test";
 import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { PreparedExport, ExportSpool } from "../src/core/export/spool.ts";
-import { ExportJob } from "../src/core/export/jobs.ts";
-import { formatFor } from "../src/core/export/index.ts";
+import { PreparedExport, ExportSpool } from "../src/core/rendering/export/spool.ts";
+import { ExportJob } from "../src/core/rendering/export/jobs.ts";
+import { formatFor } from "../src/core/rendering/export/index.ts";
 import type { SaveAsOverlay } from "../src/tui/saveas.ts";
 import { harness, makeSandbox, makeVault } from "./tui-harness.ts";
 

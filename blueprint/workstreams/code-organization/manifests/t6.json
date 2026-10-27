@@ -1,0 +1,272 @@
+{
+  "moves": {
+    "src/core/diagram-cache.ts": "src/core/rendering/media/diagrams/diagram-cache.ts",
+    "src/core/diagram-jobs.ts": "src/core/rendering/media/diagrams/diagram-jobs.ts",
+    "src/core/diagram-render.ts": "src/core/rendering/media/diagrams/diagram-render.ts",
+    "src/core/diagram-worker.ts": "src/core/rendering/media/diagrams/diagram-worker.ts",
+    "src/core/diagrams.ts": "src/core/rendering/media/diagrams/diagrams.ts",
+    "src/core/export-worker.ts": "src/core/rendering/export/export-worker.ts",
+    "src/core/export/assemble.ts": "src/core/rendering/export/assemble.ts",
+    "src/core/export/convert.ts": "src/core/rendering/export/assets/convert.ts",
+    "src/core/export/docx.ts": "src/core/rendering/export/formats/docx.ts",
+    "src/core/export/epub.ts": "src/core/rendering/export/formats/epub.ts",
+    "src/core/export/fonts.ts": "src/core/rendering/export/assets/fonts.ts",
+    "src/core/export/hast.ts": "src/core/rendering/export/formats/hast.ts",
+    "src/core/export/html.ts": "src/core/rendering/export/formats/html.ts",
+    "src/core/export/images.ts": "src/core/rendering/export/assets/images.ts",
+    "src/core/export/index.ts": "src/core/rendering/export/index.ts",
+    "src/core/export/jobs.ts": "src/core/rendering/export/jobs.ts",
+    "src/core/export/mark.ts": "src/core/rendering/export/mark.ts",
+    "src/core/export/markdown.ts": "src/core/rendering/export/formats/markdown.ts",
+    "src/core/export/pdf.ts": "src/core/rendering/export/formats/pdf.ts",
+    "src/core/export/reads.ts": "src/core/rendering/export/reads.ts",
+    "src/core/export/spool.ts": "src/core/rendering/export/spool.ts",
+    "src/core/export/stream.ts": "src/core/rendering/export/stream.ts",
+    "src/core/export/style.ts": "src/core/rendering/export/assets/style.ts",
+    "src/core/export/zip.ts": "src/core/rendering/export/formats/zip.ts",
+    "src/core/glyphs.ts": "src/core/rendering/theme/glyphs.ts",
+    "src/core/imagecache.ts": "src/core/rendering/media/images/imagecache.ts",
+    "src/core/layout/ansi.ts": "src/core/rendering/layout/ansi.ts",
+    "src/core/layout/blockdiff.ts": "src/core/rendering/layout/diff/blockdiff.ts",
+    "src/core/layout/code.ts": "src/core/rendering/layout/code/code.ts",
+    "src/core/layout/diff.ts": "src/core/rendering/layout/diff/diff.ts",
+    "src/core/layout/highlight.ts": "src/core/rendering/layout/markdown/highlight.ts",
+    "src/core/layout/ir.ts": "src/core/rendering/layout/ir.ts",
+    "src/core/layout/live.ts": "src/core/rendering/layout/markdown/live.ts",
+    "src/core/layout/render-caption.ts": "src/core/rendering/layout/markdown/render-caption.ts",
+    "src/core/layout/render-context.ts": "src/core/rendering/layout/markdown/render-context.ts",
+    "src/core/layout/render-data.ts": "src/core/rendering/layout/markdown/render-data.ts",
+    "src/core/layout/render-html.ts": "src/core/rendering/layout/markdown/render-html.ts",
+    "src/core/layout/render-inline.ts": "src/core/rendering/layout/markdown/render-inline.ts",
+    "src/core/layout/render-table.ts": "src/core/rendering/layout/markdown/render-table.ts",
+    "src/core/layout/render.ts": "src/core/rendering/layout/markdown/render.ts",
+    "src/core/layout/screen.ts": "src/core/rendering/layout/screen.ts",
+    "src/core/layout/source.ts": "src/core/rendering/layout/code/source.ts",
+    "src/core/layout/splitdiff.ts": "src/core/rendering/layout/diff/splitdiff.ts",
+    "src/core/layout/style.ts": "src/core/rendering/layout/style.ts",
+    "src/core/layout/table.ts": "src/core/rendering/layout/markdown/table.ts",
+    "src/core/layout/wrap.ts": "src/core/rendering/layout/wrap.ts",
+    "src/core/math.ts": "src/core/rendering/media/math.ts",
+    "src/core/paint-jobs.ts": "src/core/rendering/media/paint/paint-jobs.ts",
+    "src/core/paint-worker.ts": "src/core/rendering/media/paint/paint-worker.ts",
+    "src/core/svg.ts": "src/core/rendering/media/images/svg.ts",
+    "src/core/theme/base16.ts": "src/core/rendering/theme/base16.ts",
+    "src/core/theme/builtin.ts": "src/core/rendering/theme/builtin.ts",
+    "src/core/theme/index.ts": "src/core/rendering/theme/index.ts",
+    "src/core/theme/theme.ts": "src/core/rendering/theme/theme.ts",
+    "src/core/theme/tokyo-night.ts": "src/core/rendering/theme/tokyo-night.ts",
+    "src/core/typeset.ts": "src/core/rendering/media/typeset.ts"
+  },
+  "retained": [
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "src/core/diagram-cache",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "src/core/diagram-jobs",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "src/core/diagram-worker",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "src/core/export-worker",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "src/core/export/docx",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "src/core/export/fonts",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "src/core/export/html",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "src/core/export/index",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/design.md",
+      "text": "src/core/export/jobs",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "src/core/export/jobs",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/doc-findings/tasks/archive/exports-and-copies.md",
+      "text": "src/core/export/markdown",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/doc-findings/tasks/archive/merge-and-check.md",
+      "text": "src/core/export/markdown",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "src/core/export/markdown",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/design.md",
+      "text": "src/core/export/pdf",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "src/core/export/pdf",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "src/core/export/stream",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/doc-findings/tasks/archive/design-and-examples.md",
+      "text": "src/core/glyphs",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/workspaces/notes.md",
+      "text": "src/core/glyphs",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/design.md",
+      "text": "src/core/glyphs",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "src/core/glyphs",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/design.md",
+      "text": "src/core/layout/blockdiff",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "src/core/layout/blockdiff",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/doc-findings/tasks/archive/code-and-rendering.md",
+      "text": "src/core/layout/code",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/window-header/decisions.md",
+      "text": "src/core/layout/code",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/window-header/notes.md",
+      "text": "src/core/layout/code",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/design.md",
+      "text": "src/core/layout/code",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "src/core/layout/code",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "src/core/layout/highlight",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/picture-sizes/research.md",
+      "text": "src/core/layout/ir",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "src/core/layout/render-inline",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/picture-sizes/research.md",
+      "text": "src/core/layout/render",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/design.md",
+      "text": "src/core/layout/render",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "src/core/layout/render",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "src/core/layout/source",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "src/core/paint-jobs",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "src/core/paint-worker",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/greenrepo/tasks/archive/repository-documents.md",
+      "text": "src/core/theme/theme",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/window-header/notes.md",
+      "text": "src/core/theme/theme",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/design.md",
+      "text": "src/core/theme/theme",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "src/core/theme/theme",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/greenrepo/tasks/archive/dependencies.md",
+      "text": "src/core/typeset",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "tests/tui.test.ts",
+      "text": "src/core/layout/render",
+      "reason": "Rendered tree fixture label, not an import or live source reference; its original width preserves the code_wrap geometry assertions."
+    }
+  ]
+}

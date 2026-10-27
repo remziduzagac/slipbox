@@ -3,8 +3,8 @@
 // the "only the final draw step touches OpenTUI" rule (blueprint/design/how-it-works.md). TextCanvas is an
 // in-memory implementation for tests.
 
-import type { CellStyle } from "../core/layout/style.ts";
-import type { Color } from "../core/theme/theme.ts";
+import type { CellStyle } from "../core/rendering/layout/style.ts";
+import type { Color } from "../core/rendering/theme/theme.ts";
 import { sanitize, UNSAFE } from "../core/foundation/text/sanitize.ts";
 import { graphemes, graphemeWidth } from "../core/foundation/text/width.ts";
 

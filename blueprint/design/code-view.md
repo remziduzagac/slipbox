@@ -49,18 +49,16 @@ a language hasn't mapped is drawn as it is.
 | indentation | guides, one per level |
 
 The mapping is generic (`24.9`, D130): `SyntaxTree.codeModel` (`src/core/documents/syntax/syntax.ts`) reads each
-grammar's own queries —
-the definitions its outline uses and the comments its links are found in — so no language is mapped by hand. A
-definition's kind is its node's type: a function or method; a class (what holds definitions: a class, an impl, a trait,
-a module, a namespace, a protocol); a type (an interface, a struct, an enum, an alias). What's written above it for it
-(Rust's `#[derive(…)]`, a decorator) is its cell's. Its documentation is the comment lines right above it, the markers
-gone (`///`, `//!`, `//`, `#`, `--`, `/** */`). Imports are a run of top-level nodes named so (`import`, `use`,
-`#include`, `using`), what each imports read from its strings, else its words. What a language does its own way is an
-exception, not a mapping: Python's docstrings, below their `def`; TypeScript's, JavaScript's and Python's top-level
-values, cells by their names. A comment that takes its line's end with it (Rust's) ends where its line does. The
-documentation formats are `readDoc` (`src/core/documents/model/docformats.ts`), and the layout (`layoutCode`,
-`src/core/layout/code.ts`)
-knows only the categories.
+grammar's own queries — the definitions its outline uses and the comments its links are found in — so no language is
+mapped by hand. A definition's kind is its node's type: a function or method; a class (what holds definitions: a class,
+an impl, a trait, a module, a namespace, a protocol); a type (an interface, a struct, an enum, an alias). What's written
+above it for it (Rust's `#[derive(…)]`, a decorator) is its cell's. Its documentation is the comment lines right above
+it, the markers gone (`///`, `//!`, `//`, `#`, `--`, `/** */`). Imports are a run of top-level nodes named so (`import`,
+`use`, `#include`, `using`), what each imports read from its strings, else its words. What a language does its own way
+is an exception, not a mapping: Python's docstrings, below their `def`; TypeScript's, JavaScript's and Python's
+top-level values, cells by their names. A comment that takes its line's end with it (Rust's) ends where its line does.
+The documentation formats are `readDoc` (`src/core/documents/model/docformats.ts`), and the layout (`layoutCode`,
+`src/core/rendering/layout/code/code.ts`) knows only the categories.
 
 ## Documentation: one shape from every format
 

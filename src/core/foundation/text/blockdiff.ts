@@ -1,8 +1,9 @@
 // A note's diff before and after (GIT-D2): the diff found by lines, as every diff is, then widened to the blocks it
-// touches — a paragraph, a heading, a list item, a table's row — so each changed block is shown whole, twice, as it was
-// and as it is, the words removed marked in the first and those added in the second; a block too big to diff by words,
-// its changed lines marked instead, and their changed words. A block added or removed whole is shown once. The
-// unchanged stretches between fold to a row saying how many lines they hold. `layout/blockdiff.ts` draws it.
+// touches — a paragraph, a heading, a list item, a table's row — so each changed block is shown whole, twice, as it
+// was and as it is, the words removed marked in the first and those added in the second; a block too big to diff by
+// words, its changed lines marked instead, and their changed words. A block added or removed whole is shown once.
+// The unchanged stretches between fold to a row saying how many lines they hold.
+// `rendering/layout/diff/blockdiff.ts` draws it.
 
 import type { ListItem, Nodes, Root, RootContent, Table } from "mdast";
 import {

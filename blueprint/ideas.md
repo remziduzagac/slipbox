@@ -320,9 +320,9 @@ idea without an outcome is still open. Nothing here is agreed: the decisions are
 - `mermaid-ascii` for diagrams in text: its labelled nodes are broken. (2026-09-25) Not chosen (D127).
 - For `mermaid-ascii`'s broken labels: fix it upstream, or port `AlexanderGrooff/mermaid-ascii` (Go) or `mmdflux`
   (Rust, a crate leaf depends on). (2026-09-25) Not chosen (D127): `beautiful-mermaid` draws Mermaid.
-- Mermaid's CSS variables flattened (`flattenVars`, `core/svg.ts`) loop on a variable whose value names itself after
-  other text (`--a: (var(--a)`); only the library's own variables reach it today, so no note can (found triaging
-  CodeQL, workstream GR). A guard on the depth. (2026-10-12) Open.
+- Mermaid's CSS variables flattened (`flattenVars`, `core/rendering/media/images/svg.ts`) loop on a variable whose value
+  names itself after other text (`--a: (var(--a)`); only the library's own variables reach it today, so no note can
+  (found triaging CodeQL, workstream GR). A guard on the depth. (2026-10-12) Open.
 
 ## Performance
 

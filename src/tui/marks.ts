@@ -1,16 +1,17 @@
-// A row's marks in the explorer (VV-D9), at its right in columns: the index's state in the last — indexed, indexing,
-// not indexed, can't read, a problem — and, between the name and the marks, dimmed, what describes the row: a vault's
-// branch (a worktree's after ⎇), where a link points. git's mark, in the column before the index's, is drawn as it
-// was (draw-panels.ts). Each mark is one column wide in every terminal, in the nerd, unicode and ascii glyphs
-// (`core/glyphs.ts`); none is an emoji. Why a row isn't indexed is said in words, from the rule that made it so: on
-// the status line while the cursor is on it, and in Info for the file on screen (`why`, `whyAt`).
+// A row's marks in the explorer (VV-D9), at its right in columns: the index's state in the last — indexed,
+// indexing, not indexed, can't read, a problem — and, between the name and the marks, dimmed, what describes the
+// row: a vault's branch (a worktree's after ⎇), where a link points. git's mark, in the column before the index's,
+// is drawn as it was (draw-panels.ts). Each mark is one column wide in every terminal, in the nerd, unicode and
+// ascii glyphs (`core/rendering/theme/glyphs.ts`); none is an emoji. Why a row isn't indexed is said in words, from
+// the rule that made it so: on the status line while the cursor is on it, and in Info for the file on screen
+// (`why`, `whyAt`).
 
 import { constants as fsConstants, existsSync, lstatSync, statSync } from "node:fs";
 import { basename, join, relative, sep } from "node:path";
-import type { Glyphs } from "../core/glyphs.ts";
+import type { Glyphs } from "../core/rendering/theme/glyphs.ts";
 import { denied, type ListedEntry, type VaultHead, vaultHead } from "../core/workspace/walk/listing.ts";
 import { cacheDir, vaultKey } from "../core/foundation/platform/paths.ts";
-import type { Role } from "../core/theme/theme.ts";
+import type { Role } from "../core/rendering/theme/theme.ts";
 import { isInside } from "../core/workspace/vaults/vault.ts";
 import {
   ANOTHER_DISK,

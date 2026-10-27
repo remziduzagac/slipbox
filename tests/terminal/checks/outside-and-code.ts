@@ -18,7 +18,7 @@ import {
 import { join } from "node:path";
 import { newParseCache } from "../../../src/core/documents/markdown/parse.ts";
 import { parseNoteFile } from "../../../src/core/documents/model/readers.ts";
-import { loadTheme } from "../../../src/core/theme/index.ts";
+import { loadTheme } from "../../../src/core/rendering/theme/index.ts";
 import {
   explorerOpen,
   type Check,

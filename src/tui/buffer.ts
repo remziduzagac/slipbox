@@ -9,15 +9,15 @@
 import type { Diagnostic } from "vscode-languageserver-protocol";
 import type { Problem } from "../core/documents/diagnostics/diagnostics.ts";
 import type { LintIssue } from "../core/documents/diagnostics/lint.ts";
-import type { Glyphs } from "../core/glyphs.ts";
+import type { Glyphs } from "../core/rendering/theme/glyphs.ts";
 import { parseData } from "../core/documents/model/data.ts";
 import type { FileKind } from "../core/documents/model/filetypes.ts";
-import { newRenderCache } from "../core/layout/render.ts";
+import { newRenderCache } from "../core/rendering/layout/markdown/render.ts";
 import type { Graph } from "../core/workspace/graph/graph.ts";
 import { readText, type Stamp, stamp } from "../core/foundation/platform/fsutil.ts";
-import type { Layout } from "../core/layout/ir.ts";
+import type { Layout } from "../core/rendering/layout/ir.ts";
 import { layoutNote, type NoteRenderOptions } from "../core/documents/model/note.ts";
-import { layoutSource, newSourceCache } from "../core/layout/source.ts";
+import { layoutSource, newSourceCache } from "../core/rendering/layout/code/source.ts";
 import {
   headingsOf,
   newParseCache,
@@ -36,7 +36,7 @@ import type {
   Span as SyntaxSpan,
   SyntaxError,
 } from "../core/documents/syntax/syntax.ts";
-import { codeBlocks, layoutCode } from "../core/layout/code.ts";
+import { codeBlocks, layoutCode } from "../core/rendering/layout/code/code.ts";
 import { type Indent, indentFor, saveRules } from "../core/documents/editing/indent.ts";
 
 /** One change to the text: at `at`, `removed` was replaced by `inserted`. */

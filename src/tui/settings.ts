@@ -3,12 +3,12 @@
 
 import { canonKey, canonSeq, Keymap, unknownModifiers } from "../core/application/commands/registry.ts";
 import { type Config, loadConfig } from "../core/application/config/config.ts";
-import { glyphsFor, type Glyphs } from "../core/glyphs.ts";
+import { glyphsFor, type Glyphs } from "../core/rendering/theme/glyphs.ts";
 import { Graph } from "../core/workspace/graph/graph.ts";
 import { lintCommand } from "../core/documents/diagnostics/lint.ts";
 import { userConfigFile } from "../core/foundation/platform/paths.ts";
 import type { UiOverride } from "../core/workspace/session/position.ts";
-import { applyColorOverrides, loadTheme, type Theme } from "../core/theme/index.ts";
+import { applyColorOverrides, loadTheme, type Theme } from "../core/rendering/theme/index.ts";
 import { configFilesFor, setRootMarkers } from "../core/workspace/vaults/vault.ts";
 import { setTrustedRoots } from "../core/workspace/vaults/trust.ts";
 import {

@@ -4,9 +4,9 @@
 // agree in every view: source, rendered and the lens. Its checkers (`app.speller`): a note's languages, a dictionary
 // for each loaded in the background, the misspelt words of the text on screen, suggestions, your own words added.
 
-import type { Layout, Line } from "../core/layout/ir.ts";
+import type { Layout, Line } from "../core/rendering/layout/ir.ts";
 import type { SpellWord } from "../core/documents/diagnostics/spell.ts";
-import type { Role } from "../core/theme/theme.ts";
+import type { Role } from "../core/rendering/theme/theme.ts";
 import { stringWidth } from "../core/foundation/text/width.ts";
 import type { App, View } from "./app.ts";
 import { cells } from "./cursor.ts";

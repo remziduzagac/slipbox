@@ -1,5 +1,5 @@
 import { expect, jest, test } from "bun:test";
-import { ExportJob, type ExportRequest } from "../src/core/export/jobs.ts";
+import { ExportJob, type ExportRequest } from "../src/core/rendering/export/jobs.ts";
 
 const request = {} as ExportRequest;
 function fake() {

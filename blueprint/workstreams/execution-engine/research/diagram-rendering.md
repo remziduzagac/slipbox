@@ -13,9 +13,10 @@ diagrams fail or that the renderer never terminates. SVG validation alone did no
 
 ## Evidence
 
-*Read:* `src/core/layout/render.ts:390` calls `drawMermaid` during layout. `src/core/diagrams.ts:82` calls the library's
-synchronous text renderer and can try three spacings. Rendering therefore occupies the caller until it returns;
-a same-loop timer cannot interrupt it. The installed `beautiful-mermaid` version is 1.1.3.
+*Read:* `src/core/rendering/layout/markdown/render.ts:390` calls `drawMermaid` during layout.
+`src/core/rendering/media/diagrams/diagrams.ts:82` calls the library's synchronous text renderer and can try three
+spacings. Rendering therefore occupies the caller until it returns; a same-loop timer cannot interrupt it. The installed
+`beautiful-mermaid` version is 1.1.3.
 
 *Ran:* Separate local probe processes rendered each of the nine proposal diagrams, with an external four-second
 watchdog and 256 MiB RSS cutoff. The original third diagram hit the memory cutoff; the other eight completed.
