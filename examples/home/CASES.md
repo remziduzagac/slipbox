@@ -548,7 +548,7 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
 - Each data extension is classified as data with the right format — `hobbies/cooking/.obsidian/app.json`,
   `work/kestrel/.hadolint.yaml`, `work/kestrel/api/settings.json5`, `work/kestrel/config/settings.conf`,
   `work/kestrel/docker-compose.yml`, `work/kestrel/package.json`, `work/kestrel/tsconfig.web.jsonc`
-  (src/core/filetypes.ts DATA\_FORMATS)
+  (src/core/documents/model/filetypes.ts DATA\_FORMATS)
 - Dotfile .env and a file named exactly .env render as INI data — `.build/extras.toml`, `work/infra/config/prod.env`;
   `work/kestrel/.env.example` is text, its extension `example` (filetypes.ts NAMED, tests 'INI and .env')
 - Whole-name languages open as text with their language: Makefile, Dockerfile, .zshrc, .bashrc, .profile —

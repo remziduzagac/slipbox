@@ -7,7 +7,7 @@ import { scratchLocation } from "../core/capture.ts";
 import { COMMAND_SPECS } from "../core/application/commands/catalog.ts";
 import { conventionOf, describeConvention } from "../core/workspace/links/convention.ts";
 import { copyAvailable, folderIdentity, pointerName, readFolders } from "../core/workspace/vaults/folders.ts";
-import { parseNoteFile } from "../core/readers.ts";
+import { parseNoteFile } from "../core/documents/model/readers.ts";
 import { cacheDir, stateDir, userConfigFile } from "../core/foundation/platform/paths.ts";
 import { listThemes } from "../core/theme/index.ts";
 import { loadSession, PositionStore } from "../core/workspace/session/position.ts";
@@ -19,7 +19,7 @@ import { describeCap } from "../core/workspace/vaults/home.ts";
 import { flag } from "./args.ts";
 import { VERSION } from "../version.ts";
 import { RELEASE } from "../core/release.ts";
-import { notesOfType, ofType } from "../core/doctypes.ts";
+import { notesOfType, ofType } from "../core/documents/model/doctypes.ts";
 import { EXIT, CliError, type Handler, requireArg, resolveNote, readNoteFile } from "./common.ts";
 import { searchInfo } from "./search.ts";
 

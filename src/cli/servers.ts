@@ -1,14 +1,14 @@
 // The CLI's language servers (19.x): each language's servers and linters and where each is (`doctor`); a file's
 // problems from every source — its servers', its linters', its syntax, a note's links and lint (`diagnostics`).
 
-import { grammar, grammarFor, parseSyntax } from "../core/syntax.ts";
+import { grammar, grammarFor, parseSyntax } from "../core/documents/syntax/syntax.ts";
 import { existsSync } from "node:fs";
 import { homedir } from "node:os";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import { gitGuardsAttributes } from "../core/gitops.ts";
 import { loadConfig } from "../core/application/config/config.ts";
 import { lintCommand, runLint } from "../core/lint.ts";
-import { classify, extensionOf } from "../core/filetypes.ts";
+import { classify, extensionOf } from "../core/documents/model/filetypes.ts";
 import { climbsOut, readText } from "../core/foundation/platform/fsutil.ts";
 import { doctor, doctorFile, type LinterReport, type ServerReport } from "../core/servers/doctor.ts";
 import { linterRoot, linterTable, runLinter } from "../core/servers/linters.ts";

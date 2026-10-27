@@ -6,11 +6,11 @@
 
 import { statSync } from "node:fs";
 import { isAbsolute, relative } from "node:path";
-import { fence, fenceLanguage, formatRef } from "./capture.ts";
+import { fence, fenceLanguage, formatRef } from "../../capture.ts";
 import { classify } from "./filetypes.ts";
-import { readText } from "./foundation/platform/fsutil.ts";
-import type { Graph } from "./workspace/graph/graph.ts";
-import { sanitize } from "./foundation/text/sanitize.ts";
+import { readText } from "../../foundation/platform/fsutil.ts";
+import type { Graph } from "../../workspace/graph/graph.ts";
+import { sanitize } from "../../foundation/text/sanitize.ts";
 
 export interface ContextOptions {
   /** How many links out to follow from the notes asked for: 1, what they link to; 0, none. */

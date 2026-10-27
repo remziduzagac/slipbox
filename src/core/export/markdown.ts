@@ -26,7 +26,7 @@ import type {
 import { gfmToMarkdown } from "mdast-util-gfm";
 import { mathToMarkdown } from "mdast-util-math";
 import { toMarkdown as serialise } from "mdast-util-to-markdown";
-import { slugify, anchorsOf } from "../parse.ts";
+import { slugify, anchorsOf } from "../documents/markdown/parse.ts";
 import { looksLikeSvg } from "../svg.ts";
 import { headingAnchor, type ExportDoc, type ExportPicture } from "./assemble.ts";
 import { rasterInfo } from "./images.ts";

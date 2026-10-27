@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { extractNote, openGraph } from "../src/core/workspace/graph/graph.ts";
 import { contentHash } from "../src/core/workspace/links/redirects.ts";
-import { ParseCache } from "../src/core/parsecache.ts";
+import { ParseCache } from "../src/core/documents/markdown/parsecache.ts";
 import { cacheDir } from "../src/core/foundation/platform/paths.ts";
 import { DEFAULT_CONFIG } from "../src/core/application/config/config.ts";
 import { locateVault } from "../src/core/workspace/vaults/vault.ts";

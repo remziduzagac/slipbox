@@ -4,7 +4,7 @@
 import { randomUUID } from "node:crypto";
 import { accessSync, constants, existsSync, mkdirSync, renameSync, rmdirSync, statSync, unlinkSync } from "node:fs";
 import { dirname, join, relative, sep } from "node:path";
-import { classify } from "./filetypes.ts";
+import { classify } from "./documents/model/filetypes.ts";
 import { atomicWrite, entryAt, entryInside, landsInside, readText, realTarget } from "./foundation/platform/fsutil.ts";
 import type { Graph } from "./workspace/graph/graph.ts";
 import { trashVaultMarker } from "./files.ts";

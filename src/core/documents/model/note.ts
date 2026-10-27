@@ -4,20 +4,20 @@
 import { statSync } from "node:fs";
 import { basename, dirname, isAbsolute, relative, resolve } from "node:path";
 import type { Heading, ListItem, Paragraph, Root, RootContent } from "mdast";
-import { readText } from "./foundation/platform/fsutil.ts";
-import type { Glyphs } from "./glyphs.ts";
-import type { Graph } from "./workspace/graph/graph.ts";
-import type { Layout, LinkStatus } from "./layout/ir.ts";
+import { readText } from "../../foundation/platform/fsutil.ts";
+import type { Glyphs } from "../../glyphs.ts";
+import type { Graph } from "../../workspace/graph/graph.ts";
+import type { Layout, LinkStatus } from "../../layout/ir.ts";
 import {
   type FoundPicture,
   type PictureSource,
   type RenderCache,
   type RenderOptions,
   renderTree,
-} from "./layout/render.ts";
-import { headingLabel, headingText, type ParsedNote, parseMarkdown } from "./parse.ts";
-import { findHeading } from "./workspace/links/landing.ts";
-import { vaultOf } from "./workspace/vaults/vault.ts";
+} from "../../layout/render.ts";
+import { headingLabel, headingText, type ParsedNote, parseMarkdown } from "../markdown/parse.ts";
+import { findHeading } from "../../workspace/links/landing.ts";
+import { vaultOf } from "../../workspace/vaults/vault.ts";
 
 /** Effective inset: the configured value, but never more than ~5% of a narrow pane, and ≥ 1 (2.7). */
 export function effectiveInset(paneWidth: number, inset: number): number {

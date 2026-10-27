@@ -1,10 +1,10 @@
 // The CLI's reading commands: a note's outline (its headings, a data file's sections, code's definitions), its
 // text and sha, the notes and files listed, text found in them, and a note's misspelt words (25.6).
 
-import { grammar, grammarFor, parseSyntax } from "../core/syntax.ts";
+import { grammar, grammarFor, parseSyntax } from "../core/documents/syntax/syntax.ts";
 import { loadError } from "../core/foundation/platform/lazy.ts";
 import { statSync } from "node:fs";
-import { headingsOf, parseMarkdown } from "../core/parse.ts";
+import { headingsOf, parseMarkdown } from "../core/documents/markdown/parse.ts";
 import {
   addOwnWord,
   Checker,
@@ -15,8 +15,8 @@ import {
   proseWords,
 } from "../core/spell.ts";
 import { addToDictionaries, openDictionary, threadDictionaries } from "../core/spell-thread.ts";
-import { dataOutline } from "../core/data.ts";
-import { classify, extensionOf } from "../core/filetypes.ts";
+import { dataOutline } from "../core/documents/model/data.ts";
+import { classify, extensionOf } from "../core/documents/model/filetypes.ts";
 import { readText } from "../core/foundation/platform/fsutil.ts";
 import { matchText } from "../core/regex-jobs.ts";
 import { flag, has, UsageError } from "./args.ts";

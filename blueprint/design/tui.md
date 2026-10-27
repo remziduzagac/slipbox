@@ -2024,14 +2024,15 @@ lens open on the new note's cursor block: the old note's render, size, place and
 
 ## Files beyond notes (plan `16.x`)
 
-slipbox opens any text file in the vault, not only notes (D107). `core/filetypes.ts` puts each file in a group by its
+slipbox opens any text file in the vault, not only notes (D107). `core/documents/model/filetypes.ts` puts each file in a
+group by its
 name: **notes** (the vault's `walk.extensions`), **data** (JSON, YAML, TOML, INI, CSV/TSV), **text** (everything else:
 code, logs, `.txt`), or **binary** (images, archives…, by extension — and a text-named file holding a NUL in its first 8
 KB), which never opens. A path in the vault that a symlink leads out of is read only once you've said to follow the
 link, or to just look this once: asked the first time it's opened, the CLI refusing it until then (VV-D6;
 [roots.md](roots.md) § Links followed only when you say so).
 
-A note is read by its format's reader (`core/readers.ts`, `16.2`; D110): each parses into the same mdast
+A note is read by its format's reader (`core/documents/model/readers.ts`, `16.2`; D110): each parses into the same mdast
 tree — so the index, the render, the lens and the outline work alike for every format — and says
 what SOURCE view reads off the raw lines: its headings and the link around the cursor. Markdown's is
 the only one (`16.16`, `16.17`; D112): Org and AsciiDoc files open as text.
@@ -2071,8 +2072,10 @@ the only one (`16.16`, `16.17`; D112): Org and AsciiDoc files open as text.
   `bunfig.toml` keeps their native install scripts off — or, where npm has none, built from its source into
   `grammars/`, D121) loads the first time a file of it opens, never at start-up; until it lands, the file shows as
   any text file, and it draws again when it does. Grammar loading, parsing and extraction of spans, outline, errors,
-  comment links, embedded languages and the code model run together in `core/syntax-worker.ts`, on one thread for the
-  process (`core/syntax-thread.ts`, as the spelling thread is), stopped when slipbox quits. `tui/languages.ts`
+  comment links, embedded languages and the code model run together in `core/documents/syntax/syntax-worker.ts`, on one
+  thread for the
+  process (`core/documents/syntax/syntax-thread.ts`, as the spelling thread is), stopped when slipbox quits.
+  `tui/languages.ts`
   schedules the first pass on open and debounces later passes for 150 ms. It installs only a reply for the same buffer
   revision and request; superseded work is cancelled, and leaving the vault or quitting lets go of every pass. The
   layout uses its last answer.

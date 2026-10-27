@@ -3,7 +3,7 @@
 // field's value is.
 
 import type { Nodes, Table, TableCell } from "mdast";
-import type { CellLink } from "../data.ts";
+import type { CellLink } from "../documents/model/data.ts";
 import { expandTabs, sanitize } from "../foundation/text/sanitize.ts";
 import type { Role } from "../theme/theme.ts";
 import { stringWidth } from "../foundation/text/width.ts";

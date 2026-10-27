@@ -15,7 +15,7 @@ import {
   scratchLocation,
 } from "../core/capture.ts";
 import { copyTextAsync } from "../core/foundation/platform/clipboard.ts";
-import { buildContext } from "../core/context.ts";
+import { buildContext } from "../core/documents/model/context.ts";
 import { stateDir } from "../core/foundation/platform/paths.ts";
 import { readRegular } from "../core/foundation/platform/fsutil.ts";
 import { editorArgv } from "../core/editor.ts";

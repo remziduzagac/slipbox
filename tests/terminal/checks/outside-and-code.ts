@@ -16,8 +16,8 @@ import {
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
-import { newParseCache } from "../../../src/core/parse.ts";
-import { parseNoteFile } from "../../../src/core/readers.ts";
+import { newParseCache } from "../../../src/core/documents/markdown/parse.ts";
+import { parseNoteFile } from "../../../src/core/documents/model/readers.ts";
 import { loadTheme } from "../../../src/core/theme/index.ts";
 import {
   explorerOpen,

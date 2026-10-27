@@ -18,7 +18,7 @@ It declares PDF, DOCX, MathJax, Hunspell and tree-sitter packages. These counts 
 204 or establish its scope. The build script uses Bun compilation with main, parse-worker and spell-worker entries.
 
 *Read:* `src/core/export/pdf.ts:13` imports PDFKit; `src/core/export/docx.ts:30` imports DOCX;
-`src/core/typeset.ts:13` loads MathJax dynamically. `src/core/parse-pool.ts:31` and
+`src/core/typeset.ts:13` loads MathJax dynamically. `src/core/documents/markdown/parse-pool.ts:31` and
 `src/core/spell-thread.ts:18` create workers. These observations identify review targets, not demonstrated security
 boundaries or a complete map of their inputs and runtime permissions.
 
@@ -41,7 +41,8 @@ Inventory shipped runtime modules/assets, native and WASM components, auxiliary-
 entry paths per feature. Measure existing limits and owner-loop blocking. Use those findings to assess isolation
 or optional packaging; neither a smaller binary nor another process automatically establishes security.
 
-The accepted choice is [ENG-D12](../decisions.md#eng-d12-bound-dependency-backed-services-and-assess-isolation-2026-10-16).
+The accepted choice is
+[ENG-D12](../decisions.md#eng-d12-bound-dependency-backed-services-and-assess-isolation-2026-10-16).
 
 ## Gate review
 

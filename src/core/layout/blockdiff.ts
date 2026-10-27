@@ -20,7 +20,7 @@ import { inRanges, type WordRange } from "../merge.ts";
 import { sanitize } from "../foundation/text/sanitize.ts";
 import type { Role } from "../theme/theme.ts";
 import { graphemes, graphemeWidth, stringWidth } from "../foundation/text/width.ts";
-import type { WikiLink } from "../wikilink.ts";
+import type { WikiLink } from "../documents/markdown/wikilink.ts";
 import { A_BOLD, A_ITALIC, A_STRIKE, type Layout, type Line, type Span } from "./ir.ts";
 
 export interface BlockDiffLayoutOptions {

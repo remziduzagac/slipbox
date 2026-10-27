@@ -18,7 +18,7 @@ import { LENS_COUNTERS } from "../core/layout/live.ts";
 import { sanitize } from "../core/foundation/text/sanitize.ts";
 import type { Glyphs } from "../core/glyphs.ts";
 import { type CodeScroll, extentOf, type Line, type Layout, scrolledCol, scrolledInSight } from "../core/layout/ir.ts";
-import type { CommentLink } from "../core/syntax.ts";
+import type { CommentLink } from "../core/documents/syntax/syntax.ts";
 import { spanStyle } from "../core/layout/style.ts";
 
 function paneIsActive(app: App, view: View): boolean {

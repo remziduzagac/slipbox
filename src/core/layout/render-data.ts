@@ -2,12 +2,12 @@
 // their kind and linked where they're links, a tree's guides before them.
 
 import type { Nodes, RootContent } from "mdast";
-import { type CellLink, type DataComment, type DataField, fieldLink, type TreePlace } from "../data.ts";
-import { type Frontmatter, slugify } from "../parse.ts";
+import { type CellLink, type DataComment, type DataField, fieldLink, type TreePlace } from "../documents/model/data.ts";
+import { type Frontmatter, slugify } from "../documents/markdown/parse.ts";
 import { expandTabs, sanitize } from "../foundation/text/sanitize.ts";
 import type { Role } from "../theme/theme.ts";
 import { padEnd, stringWidth, truncate } from "../foundation/text/width.ts";
-import { parseWikiTarget } from "../wikilink.ts";
+import { parseWikiTarget } from "../documents/markdown/wikilink.ts";
 import { A_BOLD, type Line, type Span } from "./ir.ts";
 import { wrapSpans } from "./wrap.ts";
 import { type Ctx, srcOf, breakHard, status, addLink } from "./render-context.ts";

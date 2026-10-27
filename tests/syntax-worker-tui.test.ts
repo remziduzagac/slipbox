@@ -2,8 +2,8 @@ import { TEST_BUDGETS } from "./support/timeouts.ts";
 import { afterEach, describe, expect, test } from "bun:test";
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { grammar } from "../src/core/syntax.ts";
-import { stopSyntaxThread } from "../src/core/syntax-thread.ts";
+import { grammar } from "../src/core/documents/syntax/syntax.ts";
+import { stopSyntaxThread } from "../src/core/documents/syntax/syntax-thread.ts";
 import { locateVault } from "../src/core/workspace/vaults/vault.ts";
 import { harness, makeSandbox, makeVault } from "./tui-harness.ts";
 

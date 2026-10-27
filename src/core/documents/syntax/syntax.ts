@@ -33,12 +33,12 @@ import rust from "tree-sitter-rust/tree-sitter-rust.wasm" with { type: "file" };
 import tsx from "tree-sitter-typescript/tree-sitter-tsx.wasm" with { type: "file" };
 import typescript from "tree-sitter-typescript/tree-sitter-typescript.wasm" with { type: "file" };
 // Those npm ships no wasm for: built from their sources (grammars/README.md, scripts/build-grammars.ts).
-import astro from "../../grammars/tree-sitter-astro.wasm" with { type: "file" };
-import dockerfile from "../../grammars/tree-sitter-dockerfile.wasm" with { type: "file" };
-import scss from "../../grammars/tree-sitter-scss.wasm" with { type: "file" };
-import swift from "../../grammars/tree-sitter-swift.wasm" with { type: "file" };
-import vue from "../../grammars/tree-sitter-vue.wasm" with { type: "file" };
-import { lazy, load, loadError } from "./foundation/platform/lazy.ts";
+import astro from "../../../../grammars/tree-sitter-astro.wasm" with { type: "file" };
+import dockerfile from "../../../../grammars/tree-sitter-dockerfile.wasm" with { type: "file" };
+import scss from "../../../../grammars/tree-sitter-scss.wasm" with { type: "file" };
+import swift from "../../../../grammars/tree-sitter-swift.wasm" with { type: "file" };
+import vue from "../../../../grammars/tree-sitter-vue.wasm" with { type: "file" };
+import { lazy, load, loadError } from "../../foundation/platform/lazy.ts";
 
 export type Grammar =
   | "typescript"

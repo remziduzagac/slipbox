@@ -8,7 +8,7 @@
 // the rows after it renumbered by the lines added or taken away: no re-parse on a keystroke.
 
 import type { Root, RootContent } from "mdast";
-import type { Span as SyntaxSpan } from "../syntax.ts";
+import type { Span as SyntaxSpan } from "../documents/syntax/syntax.ts";
 import type { Role } from "../theme/theme.ts";
 import { stringWidth } from "../foundation/text/width.ts";
 import type { Layout, LayoutHeading, LayoutLink, Line } from "./ir.ts";

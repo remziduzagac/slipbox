@@ -7,7 +7,7 @@
 
 import { type Dirent, readdirSync } from "node:fs";
 import { join } from "node:path";
-import { classify, type FileGroup } from "../core/filetypes.ts";
+import { classify, type FileGroup } from "../core/documents/model/filetypes.ts";
 import { listsName } from "../core/workspace/walk/listing.ts";
 import type { App } from "./app.ts";
 

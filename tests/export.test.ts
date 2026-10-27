@@ -38,7 +38,7 @@ import {
 import { prepareExport } from "../src/core/export/jobs.ts";
 import { pdfDocument, splitByFont, toPdf, words } from "../src/core/export/pdf.ts";
 import { TINT } from "../src/core/export/style.ts";
-import { slugify } from "../src/core/parse.ts";
+import { slugify } from "../src/core/documents/markdown/parse.ts";
 import { userFolders } from "../src/core/foundation/platform/paths.ts";
 import { openGraph } from "../src/core/workspace/graph/graph.ts";
 import { remoteImageName } from "../src/core/imagecache.ts";

@@ -10,9 +10,9 @@ import { linkEnds, linkWarnings, writeLink } from "../core/workspace/links/write
 import { isPointer } from "../core/workspace/links/pointer.ts";
 import { certainty, describeLanding, type LinkProblem, type Target } from "../core/workspace/graph/graph.ts";
 import { type LintIssue, lintCommand, lintFailure, runLint } from "../core/lint.ts";
-import { slugify } from "../core/parse.ts";
+import { slugify } from "../core/documents/markdown/parse.ts";
 import { headingFragment, landing, lineFragment } from "../core/workspace/links/landing.ts";
-import { classify } from "../core/filetypes.ts";
+import { classify } from "../core/documents/model/filetypes.ts";
 import { readText } from "../core/foundation/platform/fsutil.ts";
 import { frontmatterFindings } from "../core/diagnostics.ts";
 import { urlPath } from "../core/workspace/links/convert.ts";

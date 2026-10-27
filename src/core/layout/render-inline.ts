@@ -1,4 +1,4 @@
-import { adaptHtml } from "../html-adapter.ts";
+import { adaptHtml } from "../documents/markdown/html-adapter.ts";
 import { htmlStyle } from "./render-html.ts";
 // Inlines (2.2): a paragraph's text, emphasis, code, maths, links, wikilinks, tags, footnote marks and pictures as
 // spans, each link numbered in the layout; a soft break as the script written there reads one.
@@ -8,8 +8,8 @@ import { mathText } from "../math.ts";
 import { expandTabs, sanitize } from "../foundation/text/sanitize.ts";
 import type { Role } from "../theme/theme.ts";
 import { graphemes, graphemeWidth } from "../foundation/text/width.ts";
-import type { Hashtag } from "../tags.ts";
-import type { WikiLink } from "../wikilink.ts";
+import type { Hashtag } from "../documents/markdown/tags.ts";
+import type { WikiLink } from "../documents/markdown/wikilink.ts";
 import { A_BOLD, A_ITALIC, A_STRIKE, type Span } from "./ir.ts";
 import { type Ctx, type Style, status, addLink, textOf } from "./render-context.ts";
 

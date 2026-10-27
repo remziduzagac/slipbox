@@ -26,7 +26,7 @@ import {
   scratchLocation,
 } from "../src/core/capture.ts";
 import { copyText } from "../src/core/foundation/platform/clipboard.ts";
-import { readDoc } from "../src/core/docformats.ts";
+import { readDoc } from "../src/core/documents/model/docformats.ts";
 import { canonKey, Keymap, unknownModifiers } from "../src/core/application/commands/registry.ts";
 import { loadConfig } from "../src/core/application/config/config.ts";
 import { LinkIndex, onDisk } from "../src/core/workspace/links/links.ts";
@@ -38,7 +38,7 @@ import {
   parseMarkdown,
   slugify,
   visit,
-} from "../src/core/parse.ts";
+} from "../src/core/documents/markdown/parse.ts";
 import { mathRows, mathText } from "../src/core/math.ts";
 import { flattenVars, loadRasterizer, looksLikeSvg, machineFont, rasterizer } from "../src/core/svg.ts";
 import { loadMermaid, mermaidSvg } from "../src/core/diagrams.ts";
@@ -56,7 +56,7 @@ import {
   footnotesOf,
   renameFootnote,
   type TextEdit,
-} from "../src/core/footnotes.ts";
+} from "../src/core/documents/model/footnotes.ts";
 import { layoutToAnsi } from "../src/core/layout/ansi.ts";
 import { renderMarkdown } from "../src/core/layout/render.ts";
 import { layoutSource } from "../src/core/layout/source.ts";
@@ -119,7 +119,7 @@ import { editorArgv, splitCommand } from "../src/core/editor.ts";
 import { discoverNvims, nvimSockets } from "../src/core/nvim.ts";
 import { graphemes, stringWidth, truncate } from "../src/core/foundation/text/width.ts";
 import { ensureCacheHome, type StoreKind, storeDir } from "../src/core/foundation/platform/paths.ts";
-import type { WikiLink } from "../src/core/wikilink.ts";
+import type { WikiLink } from "../src/core/documents/markdown/wikilink.ts";
 
 // Parses, walks and processes started: slow on a loaded or small machine (CI's macOS runner), not stuck.
 setDefaultTimeout(UNIT_TIMEOUT_MS);
@@ -210,7 +210,7 @@ describe("wikilink syntax, as the converter reads it", () => {
     expect(d).toMatchObject({ target: "n", block: "blk" });
   });
   test("a block is `#^id`, or a bare `^id` with no heading before it; a caret in a heading is the heading's", async () => {
-    const { parseWikiTarget } = await import("../src/core/wikilink.ts");
+    const { parseWikiTarget } = await import("../src/core/documents/markdown/wikilink.ts");
     expect(parseWikiTarget("Complexity#O(n^2)")).toMatchObject({
       target: "Complexity",
       heading: "O(n^2)",
@@ -2887,7 +2887,7 @@ describe("big notes: parsed on other threads, rendered faster (15.1)", () => {
   };
 
   test("chunks parsed apart (through JSON, as from a thread) and taken in: the tree a parse here gives", async () => {
-    const { adoptChunks, noteChunks, parseChunk } = await import("../src/core/parse.ts");
+    const { adoptChunks, noteChunks, parseChunk } = await import("../src/core/documents/markdown/parse.ts");
     const text = await demo();
     const chunks = noteChunks(text);
     expect(chunks.length).toBeGreaterThan(50);
@@ -2902,7 +2902,7 @@ describe("big notes: parsed on other threads, rendered faster (15.1)", () => {
     expect(strip(adopted.frontmatter)).toBe(strip(parseMarkdown(text).frontmatter));
     // Each block carries its token for the render's cache, as a block parsed here does (a list
     // joined across a seam is a new node: none, either way).
-    const { ORIGIN } = await import("../src/core/parse.ts");
+    const { ORIGIN } = await import("../src/core/documents/markdown/parse.ts");
     const tokens = (t: typeof adopted) =>
       t.tree.children.map((n) => (n as unknown as Record<symbol, unknown>)[ORIGIN] !== undefined);
     expect(tokens(adopted)).toEqual(tokens(parseMarkdown(text, newParseCache())));
@@ -2917,7 +2917,7 @@ describe("big notes: parsed on other threads, rendered faster (15.1)", () => {
   });
 
   test("chunks parsed apart keep heading ids and literal quotes (15.1): a {#id} anchor, an escaped [!note]", async () => {
-    const { adoptChunks, headingsOf, noteChunks, parseChunk } = await import("../src/core/parse.ts");
+    const { adoptChunks, headingsOf, noteChunks, parseChunk } = await import("../src/core/documents/markdown/parse.ts");
     const text = "## Setup {#setup}\n\n> \\[!note] literal\n";
     const quote = (t: ReturnType<typeof parseMarkdown>) => t.tree.children.find((n) => n.type === "blockquote")?.data;
     const cache = newParseCache();
@@ -2937,8 +2937,8 @@ describe("big notes: parsed on other threads, rendered faster (15.1)", () => {
   });
 
   test("on the workers: every chunk in the cache, the same tree; nothing left the second time", async () => {
-    const { noteChunks } = await import("../src/core/parse.ts");
-    const { parseInBackground, stopParsePool } = await import("../src/core/parse-pool.ts");
+    const { noteChunks } = await import("../src/core/documents/markdown/parse.ts");
+    const { parseInBackground, stopParsePool } = await import("../src/core/documents/markdown/parse-pool.ts");
     const text = await demo();
     const cache = newParseCache();
     expect(await parseInBackground(text, cache)).toBe(true);
@@ -2951,7 +2951,7 @@ describe("big notes: parsed on other threads, rendered faster (15.1)", () => {
   });
 
   test("threads that can't start, or a worker that fails: false with source fallback, and a failed worker starts afresh", async () => {
-    const { parseInBackground, stopParsePool } = await import("../src/core/parse-pool.ts");
+    const { parseInBackground, stopParsePool } = await import("../src/core/documents/markdown/parse-pool.ts");
     const text = await demo();
     const real = globalThis.Worker;
     let made = 0;
@@ -3045,7 +3045,7 @@ describe("big notes: parsed on other threads, rendered faster (15.1)", () => {
 
 describe("parseAround (15.1)", () => {
   test("the tasks of one line's chunk are the whole parse's there", async () => {
-    const { parseAround } = await import("../src/core/parse.ts");
+    const { parseAround } = await import("../src/core/documents/markdown/parse.ts");
     const text = [
       "# Tasks",
       "",
@@ -3071,7 +3071,7 @@ describe("parseAround (15.1)", () => {
 
 describe("file groups (16.1)", () => {
   test("notes by the vault's extensions, data by format, binary by extension, text otherwise", async () => {
-    const { classify, isKnownExtension } = await import("../src/core/filetypes.ts");
+    const { classify, isKnownExtension } = await import("../src/core/documents/model/filetypes.ts");
     const notes = ["md", "markdown"];
     expect(classify("a/b.md", notes)).toEqual({ group: "note", format: "markdown" });
     expect(classify("x.org", notes).group).toBe("text"); // not a note unless the vault lists it
@@ -3102,7 +3102,7 @@ describe("data files read as documents (16.11–16.13)", () => {
       .filter((n) => (n as { type: string }).type === "heading")
       .map((n) => (n as { children: { value: string }[] }).children[0]!.value);
   test("TOML: sections, keys with their lines and comments, multi-line values, record arrays", async () => {
-    const { parseData } = await import("../src/core/data.ts");
+    const { parseData } = await import("../src/core/documents/model/data.ts");
     const d = parseData(
       "toml",
       '# top\ntitle = "x"\n\n[a.b]\n# above\nlist = [\n  1,\n  2,\n]\ns = """\nlong\n"""\nn = 3 # three\n\n[[s]]\nname = "p"\n[[s]]\nname = "q"\n',
@@ -3127,7 +3127,7 @@ describe("data files read as documents (16.11–16.13)", () => {
     expect(parseData("toml", "[bad\n").error).toBeTruthy();
   });
   test("YAML and JSON as a tree: a row per key with its place, branches, records as tables, positions", async () => {
-    const { parseData, dataOutline } = await import("../src/core/data.ts");
+    const { parseData, dataOutline } = await import("../src/core/documents/model/data.ts");
     const y = parseData(
       "yaml",
       "a: 1\nb:\n  c: true\n  d: [x, y]\n  e:\n    f: 1\n    g: {h: 1, $ref: x.json}\nrows:\n  - k: 1\n  - k: 2\nv:\n  - {n: 1, deep: {z: 1}}\n  - {n: 2}\n",
@@ -3206,7 +3206,7 @@ describe("data files read as documents (16.11–16.13)", () => {
     expect(parseData("yaml", "a: [1, 2\n").error).toBeTruthy();
   });
   test("INI and .env; CSV with quotes, doubled quotes and a newline in a field", async () => {
-    const { parseData } = await import("../src/core/data.ts");
+    const { parseData } = await import("../src/core/documents/model/data.ts");
     const ini = parseData(
       "ini",
       '; c\n[core]\nk = v ; tail\nexport X=1\nURL="https://x.invalid/#top"   # where sync goes\nB=\'one ; two\' ; c\nQ="plain"\n',
@@ -3252,7 +3252,7 @@ describe("data files read as documents (16.11–16.13)", () => {
 
 describe("links out of data files (16.15)", () => {
   test("URLs and reference keys always; path-like values only when they resolve (the graph's call)", async () => {
-    const { fieldLink } = await import("../src/core/data.ts");
+    const { fieldLink } = await import("../src/core/documents/model/data.ts");
     expect(fieldLink({ key: "home", value: "https://example.invalid/x" })).toEqual({
       target: "https://example.invalid/x",
       explicit: true,
@@ -3276,7 +3276,7 @@ describe("links out of data files (16.15)", () => {
     expect(fieldLink({ key: "title", value: "a sentence with spaces.md" })).toBeNull();
   });
   test("a reference key's list, number, boolean or null is no link (never a broken `[base.json]`)", async () => {
-    const { dataLinks, parseData } = await import("../src/core/data.ts");
+    const { dataLinks, parseData } = await import("../src/core/documents/model/data.ts");
     const { renderTree } = await import("../src/core/layout/render.ts");
     const targets = (format: string, src: string) => dataLinks(parseData(format, src).tree).map((l) => l.target);
     expect(
@@ -3301,7 +3301,7 @@ describe("links out of data files (16.15)", () => {
 
 describe("link-like tokens in code (16.10)", () => {
   test("URLs without the sentence's punctuation; paths with an extension, `:line` apart", async () => {
-    const { linkTokens } = await import("../src/core/syntax.ts");
+    const { linkTokens } = await import("../src/core/documents/syntax/syntax.ts");
     const t = (s: string) => linkTokens(s).map((k) => [k.target, k.at, s.slice(k.index, k.index + k.length)]);
     expect(t("see docs/a.md and src/x.ts:42.")).toEqual([
       ["docs/a.md", null, "docs/a.md"],
@@ -3322,8 +3322,8 @@ describe("link-like tokens in code (16.10)", () => {
 
 describe("a reader per note format (16.2)", () => {
   test("markdown's reader parses, scans headings and finds links in a line; it's every note's", async () => {
-    const { readerFor, parseNoteFile } = await import("../src/core/readers.ts");
-    const { noteFormat } = await import("../src/core/filetypes.ts");
+    const { readerFor, parseNoteFile } = await import("../src/core/documents/model/readers.ts");
+    const { noteFormat } = await import("../src/core/documents/model/filetypes.ts");
     // Org and AsciiDoc were readers once (16.16, 16.17, dropped): every note is markdown.
     expect([noteFormat("a.md"), noteFormat("b.markdown"), noteFormat("c.org"), noteFormat("d.txt")]).toEqual([
       "markdown",
@@ -3436,7 +3436,7 @@ describe("every grammar runs with this runtime (16.7)", () => {
   } as const;
   for (const [g, [src, first]] of Object.entries(SAMPLES)) {
     test(g, async () => {
-      const { grammar, parseSyntax } = await import("../src/core/syntax.ts");
+      const { grammar, parseSyntax } = await import("../src/core/documents/syntax/syntax.ts");
       const loaded = await grammar(g as Parameters<typeof grammar>[0]);
       expect(loaded).not.toBeNull();
       const tree = parseSyntax(loaded!, src)!;
@@ -3448,8 +3448,8 @@ describe("every grammar runs with this runtime (16.7)", () => {
 
 describe("more languages: Swift, the web's, PHP, Dockerfile, Ruby, C and C++ (16.18–16.23)", () => {
   const parsed = async (name: string, src: string) => {
-    const { grammar, grammarFor, parseSyntax } = await import("../src/core/syntax.ts");
-    const { classify, extensionOf } = await import("../src/core/filetypes.ts");
+    const { grammar, grammarFor, parseSyntax } = await import("../src/core/documents/syntax/syntax.ts");
+    const { classify, extensionOf } = await import("../src/core/documents/model/filetypes.ts");
     const g = grammarFor(classify(name, ["md"]).format, extensionOf(name))!;
     return parseSyntax((await grammar(g))!, src)!;
   };
@@ -3457,8 +3457,8 @@ describe("more languages: Swift, the web's, PHP, Dockerfile, Ruby, C and C++ (16
     t.outline().map((o) => `${"  ".repeat(o.depth)}${o.kind} ${o.name} @${o.line}`);
 
   test("each language by its extension or its file's name; HTML parsed as HTML, XML and SVG not", async () => {
-    const { grammarFor } = await import("../src/core/syntax.ts");
-    const { classify, extensionOf } = await import("../src/core/filetypes.ts");
+    const { grammarFor } = await import("../src/core/documents/syntax/syntax.ts");
+    const { classify, extensionOf } = await import("../src/core/documents/model/filetypes.ts");
     const of = (name: string) => grammarFor(classify(name, ["md"]).format, extensionOf(name));
     expect(
       [
@@ -3586,7 +3586,7 @@ describe("more languages: Swift, the web's, PHP, Dockerfile, Ruby, C and C++ (16
       const wts = await import("web-tree-sitter");
       const load = wts.Language.load.bind(wts.Language);
       wts.Language.load = async (p) => (String(p).includes("typescript") ? await new Promise((r) => setTimeout(r, 300)) : null, load(p));
-      const { grammarNow } = await import(${JSON.stringify(join(import.meta.dir, "..", "src", "core", "syntax.ts"))});
+      const { grammarNow } = await import(${JSON.stringify(join(import.meta.dir, "..", "src", "core", "documents", "syntax", "syntax.ts"))});
       for (let i = 0; i < 2000 && !grammarNow("vue"); i++) await new Promise((r) => setTimeout(r, 1));
       console.log(JSON.stringify([!!grammarNow("vue"), !!grammarNow("typescript"), !!grammarNow("scss")]));`;
     const r = Bun.spawnSync([process.execPath, "-e", script], { cwd: join(import.meta.dir, "..") });
@@ -6770,7 +6770,7 @@ describe("WSL (14.12)", () => {
 
 describe("document types (22.2, 22.3)", () => {
   test("built in: skill and adr; the config's change a built-in's keys, add their own, and turn one off with no paths", async () => {
-    const { docTypes, ofType } = await import("../src/core/doctypes.ts");
+    const { docTypes, ofType } = await import("../src/core/documents/model/doctypes.ts");
     expect(docTypes().map((t) => t.name)).toEqual(["adr", "skill"]);
     const t = docTypes({
       skill: { required: ["name", "description", "license"] },
@@ -6801,7 +6801,7 @@ describe("document types (22.2, 22.3)", () => {
   });
 
   test("frontmatter checked by a type's rules: missing, of another kind, not an allowed value — each at its key's line", async () => {
-    const { docTypes, frontmatterProblems } = await import("../src/core/doctypes.ts");
+    const { docTypes, frontmatterProblems } = await import("../src/core/documents/model/doctypes.ts");
     const [memory] = docTypes({
       memory: {
         paths: ["*.md"],
@@ -6852,7 +6852,7 @@ describe("document types (22.2, 22.3)", () => {
   });
 
   test("a status: the type's key, a Status line (bold or not), or a Status section's first line", async () => {
-    const { statusOf } = await import("../src/core/doctypes.ts");
+    const { statusOf } = await import("../src/core/documents/model/doctypes.ts");
     expect(statusOf("---\nstatus: Accepted\n---\n# A\n\nStatus: Draft\n", "status")).toBe("Accepted");
     expect(statusOf("# A\n\nStatus: Superseded by [0007](0007-x.md)\n", "status")).toBe(
       "Superseded by [0007](0007-x.md)",
@@ -6867,7 +6867,7 @@ describe("document types (22.2, 22.3)", () => {
   });
 
   test("what supersedes a note: a link from where it is, a wikilink, or a number in the type's own naming", async () => {
-    const { supersededBy } = await import("../src/core/doctypes.ts");
+    const { supersededBy } = await import("../src/core/documents/model/doctypes.ts");
     const adrs = [
       { path: "docs/adr/0001-a.md", number: 1 },
       { path: "docs/adr/0007-b.md", number: 7 },
@@ -6893,7 +6893,7 @@ describe("document types (22.2, 22.3)", () => {
   });
 
   test("a type's notes in order: by number, then path; a status each, and what supersedes it", async () => {
-    const { docTypes, notesOfType } = await import("../src/core/doctypes.ts");
+    const { docTypes, notesOfType } = await import("../src/core/documents/model/doctypes.ts");
     const adr = docTypes().find((t) => t.name === "adr")!;
     const files: Record<string, string> = {
       "docs/adr/0010-c.md": "# C\n\nStatus: Accepted\n",

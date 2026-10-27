@@ -8,7 +8,7 @@ import { basename, extname, resolve } from "node:path";
 import type { Config } from "../core/application/config/config.ts";
 import { glyphsFor, isGlyphMode } from "../core/glyphs.ts";
 import { detectColorDepth, layoutToAnsi, type ColorDepth } from "../core/layout/ansi.ts";
-import { layoutNote, layoutWidth } from "../core/note.ts";
+import { layoutNote, layoutWidth } from "../core/documents/model/note.ts";
 import { applyColorOverrides, loadTheme } from "../core/theme/index.ts";
 import { readText } from "../core/foundation/platform/fsutil.ts";
 import { exportTarget, FORMATS, formatFor, namesFolder } from "../core/export/index.ts";

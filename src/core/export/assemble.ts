@@ -1,6 +1,6 @@
-import { markdownHtml } from "../html-markdown.ts";
-import { exportHtml } from "../html-export.ts";
-import { htmlForMarkdown } from "../html.ts";
+import { markdownHtml } from "../documents/markdown/html-markdown.ts";
+import { exportHtml } from "../documents/markdown/html-export.ts";
+import { htmlForMarkdown } from "../documents/markdown/html.ts";
 // Export, the assembler (plan 10.1): the notes to export as one document for a writer (10.2–10.6) — each a chapter, in
 // the order given (10.9). Its embeds are drawn in; its links to the notes exported stay links, inside the document, and
 // the rest are their text (an address on the web stays a link); its pictures are files (one on the internet its cached
@@ -16,12 +16,12 @@ import { cachedImage } from "../imagecache.ts";
 import { loadMermaid, mermaidSvg, withMermaidBatch } from "../diagrams.ts";
 import { landsInside } from "../foundation/platform/fsutil.ts";
 import type { Graph } from "../workspace/graph/graph.ts";
-import { embedder, pictureLocator } from "../note.ts";
-import { onlyComments, withoutComments } from "../obsidian.ts";
-import { headingText, noteTitle, slugify } from "../parse.ts";
+import { embedder, pictureLocator } from "../documents/model/note.ts";
+import { onlyComments, withoutComments } from "../documents/markdown/obsidian.ts";
+import { headingText, noteTitle, slugify } from "../documents/markdown/parse.ts";
 import { loadRasterizer } from "../svg.ts";
 import { loadTypesetter } from "../typeset.ts";
-import type { WikiLink } from "../wikilink.ts";
+import type { WikiLink } from "../documents/markdown/wikilink.ts";
 import { embeddedNote, parseExportNote, withExportReads } from "./reads.ts";
 import { PRINT } from "./style.ts";
 

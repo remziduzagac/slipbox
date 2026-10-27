@@ -2,9 +2,9 @@ import { TEST_BUDGETS } from "./support/timeouts.ts";
 import { expect, test } from "bun:test";
 import { WorkerRequests } from "../src/core/foundation/workers/worker-requests.ts";
 import { workerUrl } from "../src/core/foundation/workers/url.ts";
-import { grammar, parseSyntax, commentLinks } from "../src/core/syntax.ts";
-import { SYNTAX_SOURCE_LIMIT, stopSyntaxThread, syntaxOnThread } from "../src/core/syntax-thread.ts";
-import type { SyntaxSnapshot } from "../src/core/syntax-worker.ts";
+import { grammar, parseSyntax, commentLinks } from "../src/core/documents/syntax/syntax.ts";
+import { SYNTAX_SOURCE_LIMIT, stopSyntaxThread, syntaxOnThread } from "../src/core/documents/syntax/syntax-thread.ts";
+import type { SyntaxSnapshot } from "../src/core/documents/syntax/syntax-worker.ts";
 
 const source =
   "/** See https://example.org/docs */\nexport function greet(name: string) {\n  return `Hello ${name}`;\n}\n";
@@ -22,7 +22,7 @@ test("the code worker preserves the complete extracted structure", async () => {
   tree.delete();
   // Worker entry paths stay core-relative when the URL helper moves into a nested folder.
   const jobs = new WorkerRequests(
-    () => new Worker(workerUrl("syntax-worker.ts", new URL("../src/core/", import.meta.url).href)),
+    () => new Worker(workerUrl("documents/syntax/syntax-worker.ts", new URL("../src/core/", import.meta.url).href)),
   );
   try {
     const reply = await jobs.request<{ value: unknown }>({ grammar: "typescript", source });
@@ -43,7 +43,9 @@ const fixture = `"""Fixtures."""\n\nDATA = """\n${Array.from({ length: 180_000 }
 
 test("a source under its limit whose structure is bigger than its text: all of it answered", async () => {
   expect(Buffer.byteLength(fixture)).toBeLessThan(SYNTAX_SOURCE_LIMIT);
-  const jobs = new WorkerRequests(() => new Worker(workerUrl("syntax-worker.ts")), { result: Infinity });
+  const jobs = new WorkerRequests(() => new Worker(workerUrl("documents/syntax/syntax-worker.ts")), {
+    result: Infinity,
+  });
   try {
     const reply = await jobs.request<{ value: SyntaxSnapshot }>({ grammar: "python", source: fixture });
     expect(reply.value.spans.length).toBeGreaterThan(180_000);

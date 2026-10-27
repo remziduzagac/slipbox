@@ -9,7 +9,7 @@ import { readRegular, SMALL_FILE } from "../../foundation/platform/fsutil.ts";
 import { basename, dirname, join, relative, sep } from "node:path";
 import ignore, { type Ignore } from "ignore";
 import type { Config } from "../../application/config/config.ts";
-import { classify } from "../../filetypes.ts";
+import { classify } from "../../documents/model/filetypes.ts";
 import { mountsIn } from "../vaults/mounts.ts";
 import { userFolders } from "../../foundation/platform/paths.ts";
 import { answered, linkAnswer } from "../vaults/symlinks.ts";

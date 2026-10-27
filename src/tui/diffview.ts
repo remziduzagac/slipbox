@@ -10,7 +10,7 @@
 
 import { isAbsolute, join } from "node:path";
 import { type BlockDiff, blockDiff } from "../core/foundation/text/blockdiff.ts";
-import { classify } from "../core/filetypes.ts";
+import { classify } from "../core/documents/model/filetypes.ts";
 import { indentFor } from "../core/indent.ts";
 import { layoutBlockDiff } from "../core/layout/blockdiff.ts";
 import { diffText, layoutDiff } from "../core/layout/diff.ts";
@@ -18,7 +18,7 @@ import { type Layout, srcAt } from "../core/layout/ir.ts";
 import { layoutSplitDiff, SPLIT_MIN, splitColumns } from "../core/layout/splitdiff.ts";
 import { comparable, type DiffViewRow, diffView, type UnseenRows, unseenRows } from "../core/merge.ts";
 import { TOP } from "../core/workspace/session/position.ts";
-import { readerFor } from "../core/readers.ts";
+import { readerFor } from "../core/documents/model/readers.ts";
 import type { App, View } from "./app.ts";
 import { NoteBuffer } from "./buffer.ts";
 

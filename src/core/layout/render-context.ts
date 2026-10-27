@@ -5,8 +5,8 @@
 import type { Nodes, Parents } from "mdast";
 import type { Role } from "../theme/theme.ts";
 import { graphemes, graphemeWidth } from "../foundation/text/width.ts";
-import type { Hashtag } from "../tags.ts";
-import type { WikiLink } from "../wikilink.ts";
+import type { Hashtag } from "../documents/markdown/tags.ts";
+import type { WikiLink } from "../documents/markdown/wikilink.ts";
 import type { LayoutHeading, LayoutLink, LinkStatus, Span } from "./ir.ts";
 import type { RenderOptions } from "./render.ts";
 

@@ -3,7 +3,7 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import { closeSync, constants, fstatSync, openSync, readFileSync } from "node:fs";
 import { decodeText } from "../foundation/platform/fsutil.ts";
-import { type ParsedNote, parseMarkdown } from "../parse.ts";
+import { type ParsedNote, parseMarkdown } from "../documents/markdown/parse.ts";
 
 const job = new AsyncLocalStorage<Map<string, ParsedNote>>();
 

@@ -19,8 +19,8 @@ import { dirname, join } from "node:path";
 import { parse } from "smol-toml";
 import { BuildError, buildHome, SOURCE } from "../scripts/build-home.ts";
 import { COMMAND_SPECS } from "../src/core/application/commands/catalog.ts";
-import { parseData } from "../src/core/data.ts";
-import { classify } from "../src/core/filetypes.ts";
+import { parseData } from "../src/core/documents/model/data.ts";
+import { classify } from "../src/core/documents/model/filetypes.ts";
 
 const hasGit = spawnSync("git", ["--version"]).status === 0;
 
@@ -315,8 +315,10 @@ describe("the reference set is complete (examples/home)", () => {
   });
 
   test("every grammar, data format and highlighted language has files: more than one where it can", async () => {
-    const { GRAMMARS, grammarFor } = await import("../src/core/syntax.ts");
-    const { DATA_FORMATS, LANGUAGES, NAMED, classify, extensionOf } = await import("../src/core/filetypes.ts");
+    const { GRAMMARS, grammarFor } = await import("../src/core/documents/syntax/syntax.ts");
+    const { DATA_FORMATS, LANGUAGES, NAMED, classify, extensionOf } = await import(
+      "../src/core/documents/model/filetypes.ts"
+    );
     const kinds = files
       .filter((f) => !f.endsWith("/"))
       .map((f) => ({ f, ext: extensionOf(f), kind: classify(f, ["md", "markdown"]) }));

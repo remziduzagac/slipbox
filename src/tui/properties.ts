@@ -3,7 +3,7 @@
 
 import { cannotEdit } from "./editing.ts";
 import { TOP } from "../core/workspace/session/position.ts";
-import { parseMarkdown } from "../core/parse.ts";
+import { parseMarkdown } from "../core/documents/markdown/parse.ts";
 import { NoteBuffer } from "./buffer.ts";
 import type { App } from "./app.ts";
 

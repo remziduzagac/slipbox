@@ -10,7 +10,7 @@
 
 import { existsSync, readlinkSync, realpathSync, statSync } from "node:fs";
 import { dirname, isAbsolute, join, parse, posix, relative, sep } from "node:path";
-import { classify } from "./filetypes.ts";
+import { classify } from "./documents/model/filetypes.ts";
 import { entryAt, entryInside, realTarget } from "./foundation/platform/fsutil.ts";
 import type { Backlink, Graph, NoteEntry, ResolvedLink } from "./workspace/graph/graph.ts";
 import {

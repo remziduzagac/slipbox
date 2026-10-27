@@ -99,7 +99,7 @@ export const CHECKS_FOR: [RegExp, string[]][] = [
   [/^src\/(core\/foundation\/platform\/shell|tui\/shellrun)\.ts$/, ["shell"]],
   [/^src\/core\/tasks\.ts$/, ["tasks"]],
   [/^src\/core\/comments\.ts$/, ["comments"]],
-  [/^src\/core\/data\.ts$/, ["data"]],
+  [/^src\/core\/documents\/model\/data\.ts$/, ["data"]],
   // The command line's commands, and the agents' skill it installs: main.ts loads them with the TUI, which never calls
   // them — but `upgrade` (install.ts), which Upgrade, restart later runs beside it (UPG).
   [/^src\/cli\/(agents|files|git|info|links|reading|render|search|servers|vaults|writing)\.ts$/, []],

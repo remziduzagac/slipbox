@@ -6,7 +6,7 @@ import { isPointer } from "../core/workspace/links/pointer.ts";
 import { fileLink } from "./actions-links.ts";
 import { join, dirname, isAbsolute, relative } from "node:path";
 import { isInside, isNeverRoot, hasMarker, initVault, rootAt } from "../core/workspace/vaults/vault.ts";
-import { classify } from "../core/filetypes.ts";
+import { classify } from "../core/documents/model/filetypes.ts";
 import { revert } from "./actions-edit.ts";
 import { copyPath } from "../core/files.ts";
 import { planHeadingRename, planVaultRename } from "../core/rename.ts";

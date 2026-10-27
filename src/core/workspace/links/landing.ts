@@ -9,7 +9,7 @@
 
 import type { Graph } from "../graph/graph.ts";
 import { normKey } from "./links.ts";
-import { type AnchorInfo, type HeadingInfo, slugify } from "../../parse.ts";
+import { type AnchorInfo, type HeadingInfo, slugify } from "../../documents/markdown/parse.ts";
 
 /** A fragment naming lines (GitHub's): `L42`, `L42-L50`, `L42C5-L45C10`. Null when it isn't one. */
 export function lineFragment(fragment: string): { line: number; col: number | null; endLine: number | null } | null {

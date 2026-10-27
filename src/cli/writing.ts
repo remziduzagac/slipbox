@@ -5,7 +5,7 @@
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
-import { parseAround } from "../core/parse.ts";
+import { parseAround } from "../core/documents/markdown/parse.ts";
 import { matchText } from "../core/regex-jobs.ts";
 import {
   addFootnote,
@@ -16,9 +16,9 @@ import {
   footnotesOf,
   renameFootnote,
   type TextEdit,
-} from "../core/footnotes.ts";
-import { parseNoteFile } from "../core/readers.ts";
-import { classify, extensionOf, isKnownExtension, noteFormat } from "../core/filetypes.ts";
+} from "../core/documents/model/footnotes.ts";
+import { parseNoteFile } from "../core/documents/model/readers.ts";
+import { classify, extensionOf, isKnownExtension, noteFormat } from "../core/documents/model/filetypes.ts";
 import { WriteRefused, writeNote } from "../core/foundation/platform/fsutil.ts";
 import { blockingLink, writesThrough } from "../core/workspace/vaults/symlinks.ts";
 import { expandReplacement, firstPerLine, replaceMatches } from "../core/replace.ts";

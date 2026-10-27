@@ -10,19 +10,32 @@ import type { Diagnostic } from "vscode-languageserver-protocol";
 import type { Problem } from "../core/diagnostics.ts";
 import type { LintIssue } from "../core/lint.ts";
 import type { Glyphs } from "../core/glyphs.ts";
-import { parseData } from "../core/data.ts";
-import type { FileKind } from "../core/filetypes.ts";
+import { parseData } from "../core/documents/model/data.ts";
+import type { FileKind } from "../core/documents/model/filetypes.ts";
 import { newRenderCache } from "../core/layout/render.ts";
 import type { Graph } from "../core/workspace/graph/graph.ts";
 import { readText, type Stamp, stamp } from "../core/foundation/platform/fsutil.ts";
 import type { Layout } from "../core/layout/ir.ts";
-import { layoutNote, type NoteRenderOptions } from "../core/note.ts";
+import { layoutNote, type NoteRenderOptions } from "../core/documents/model/note.ts";
 import { layoutSource, newSourceCache } from "../core/layout/source.ts";
-import { headingsOf, newParseCache, noteChunks, type ParsedNote, parseMarkdown, slugify } from "../core/parse.ts";
-import { parseInBackground } from "../core/parse-pool.ts";
+import {
+  headingsOf,
+  newParseCache,
+  noteChunks,
+  type ParsedNote,
+  parseMarkdown,
+  slugify,
+} from "../core/documents/markdown/parse.ts";
+import { parseInBackground } from "../core/documents/markdown/parse-pool.ts";
 import { countWords } from "../core/foundation/text/words.ts";
-import { readerFor } from "../core/readers.ts";
-import type { CodeModel, CommentLink, OutlineEntry, Span as SyntaxSpan, SyntaxError } from "../core/syntax.ts";
+import { readerFor } from "../core/documents/model/readers.ts";
+import type {
+  CodeModel,
+  CommentLink,
+  OutlineEntry,
+  Span as SyntaxSpan,
+  SyntaxError,
+} from "../core/documents/syntax/syntax.ts";
 import { codeBlocks, layoutCode } from "../core/layout/code.ts";
 import { type Indent, indentFor, saveRules } from "../core/indent.ts";
 

@@ -8,7 +8,7 @@
 import { basename, posix } from "node:path";
 import { parse as parseToml } from "smol-toml";
 import { parse as parseYaml } from "yaml";
-import type { Problem } from "./diagnostics.ts";
+import type { Problem } from "../../diagnostics.ts";
 
 /** A frontmatter key's kind, as a type's `keys` names it. */
 export type KeyKind = "string" | "number" | "boolean" | "date" | "list" | "table";
