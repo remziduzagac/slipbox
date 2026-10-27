@@ -135,6 +135,8 @@ test("comments and quoted fixtures cannot stand in for a removed test", () => {
     '// test("kept", () => {});\n// test("also kept", () => {});',
     '/* test("kept", () => {}); test("also kept", () => {}); */',
     'const sample = \'test("kept", () => {}); test("also kept", () => {});\';',
+    'const re = /text/; re.test("kept"); re . test("also kept");',
+    'const matcher = { test() {}, it() {}, describe() {} }; matcher?.test("kept"); matcher.it("also kept"); matcher.describe("suite");',
   ]) {
     put("tests/one.test.ts", text);
     expect(capture(root).tests).toEqual([]);
