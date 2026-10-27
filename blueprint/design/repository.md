@@ -87,7 +87,8 @@ exception in place is a `biome-ignore` with its reason. The code was reformatted
 
 **`check:docs`** runs three tools over the text files git tracks, less what is wrong on purpose (`LEFT_OUT`: the
 reference set, the demo vault, the tests' fixtures, each with its reason): markdownlint-cli2, an exact dev dependency
-at the version slipbox installs for notes (`MARKDOWNLINT` in `src/core/lint.ts`), run by Bun, by the repository's
+at the version slipbox installs for notes (`MARKDOWNLINT` in `src/core/documents/diagnostics/lint.ts`), run by Bun, by
+the repository's
 `.markdownlint-cli2.jsonc` (the maintainer's own rules, copied, so nothing depends on a home file); typos, by
 `_typos.toml`; and lychee, offline, for the links between files and into their headings. typos and lychee come from
 `mise.toml`, so the check runs where mise is active. How each is run, and what a test's misspelling on purpose does:

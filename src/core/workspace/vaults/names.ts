@@ -3,7 +3,7 @@
 // (`~/…`); no-vault, Elsewhere (VV-D3). A worktree's name carries its branch: `research@refactor`.
 // Never written into a file.
 
-import { checkoutOf, headOf } from "../../git.ts";
+import { checkoutOf, headOf } from "../git/git.ts";
 import { tildePath } from "../../foundation/platform/paths.ts";
 import type { VaultLocation } from "./vault.ts";
 

@@ -690,7 +690,8 @@ in the TUI, `ctrl+a` in search widens it a step at a time ([tui.md](tui.md) § O
 
 A linked worktree (`git worktree add`) is a vault of its own: its own state and cache, its own workspaces, scratch,
 positions and indexes, since worktrees are an agent's task, each its own context (D54). Which checkout a folder is comes
-from the files under `.git` (`core/git.ts`): a worktree's `.git` is a file naming `.git/worktrees/<name>`, whose
+from the files under `.git` (`core/workspace/git/git.ts`): a worktree's `.git` is a file naming `.git/worktrees/<name>`,
+whose
 `commondir` is the repository's; a submodule's has no `commondir`, and is a repository of its own. Never a git process,
 and never where the folder is: `project/worktrees/x/feat` is a worktree of `project/x` as surely as `x/.worktrees/feat`
 would be.

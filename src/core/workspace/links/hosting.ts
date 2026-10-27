@@ -10,8 +10,8 @@ import { existsSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { lookupFolder, type NamedFolder } from "../vaults/folders.ts";
 import { readRegular, SMALL_FILE } from "../../foundation/platform/fsutil.ts";
-import { type Checkout, checkoutOf, headOf } from "../../git.ts";
-import { branchesOf } from "../../gitops.ts";
+import { type Checkout, checkoutOf, headOf } from "../git/git.ts";
+import { branchesOf } from "../git/branches/gitops.ts";
 import { remotesIn } from "./remotes.ts";
 
 export interface HostedPath {

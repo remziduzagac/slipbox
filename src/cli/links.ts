@@ -3,18 +3,18 @@
 
 import { existsSync, statSync } from "node:fs";
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
-import { checkoutOf } from "../core/git.ts";
-import { inVault, statusOf } from "../core/gitops.ts";
+import { checkoutOf } from "../core/workspace/git/git.ts";
+import { inVault, statusOf } from "../core/workspace/git/branches/gitops.ts";
 import { conventionOf, type LinkStyle } from "../core/workspace/links/convention.ts";
 import { linkEnds, linkWarnings, writeLink } from "../core/workspace/links/write-link.ts";
 import { isPointer } from "../core/workspace/links/pointer.ts";
 import { certainty, describeLanding, type LinkProblem, type Target } from "../core/workspace/graph/graph.ts";
-import { type LintIssue, lintCommand, lintFailure, runLint } from "../core/lint.ts";
+import { type LintIssue, lintCommand, lintFailure, runLint } from "../core/documents/diagnostics/lint.ts";
 import { slugify } from "../core/documents/markdown/parse.ts";
 import { headingFragment, landing, lineFragment } from "../core/workspace/links/landing.ts";
 import { classify } from "../core/documents/model/filetypes.ts";
 import { readText } from "../core/foundation/platform/fsutil.ts";
-import { frontmatterFindings } from "../core/diagnostics.ts";
+import { frontmatterFindings } from "../core/documents/diagnostics/diagnostics.ts";
 import { urlPath } from "../core/workspace/links/convert.ts";
 import { findVaultRoot, isInside } from "../core/workspace/vaults/vault.ts";
 import { flag, has, UsageError } from "./args.ts";

@@ -3,7 +3,7 @@
 import type { App } from "./app.ts";
 import { operationStatus } from "./rebase.ts";
 import { ELSEWHERE, tildePath } from "../core/workspace/vaults/names.ts";
-import { trackText } from "../core/gitremote.ts";
+import { trackText } from "../core/workspace/git/branches/gitremote.ts";
 import { sanitize } from "../core/foundation/text/sanitize.ts";
 
 /** Sanitized vault and git state; explorer zoom and workspace are composed by draw-topbar. */

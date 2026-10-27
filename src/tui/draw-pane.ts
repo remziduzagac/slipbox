@@ -8,10 +8,10 @@ import { type Rect, type Geometry, pageBg, roleStyle, button, markStyle } from "
 import { drawWindowHeader } from "./draw-header.ts";
 import { truncate, stringWidth, truncateStart, graphemes, graphemeWidth } from "../core/foundation/text/width.ts";
 import { ordered, cells } from "./cursor.ts";
-import { type Problem, type Severity, SEVERITIES, atLeast, worst } from "../core/diagnostics.ts";
+import { type Problem, type Severity, SEVERITIES, atLeast, worst } from "../core/documents/diagnostics/diagnostics.ts";
 import { snippetMark } from "./snippets.ts";
 import { type Spot, spellSpots } from "./spelling.ts";
-import { type GitSign, gitSigns } from "../core/gitsigns.ts";
+import { type GitSign, gitSigns } from "../core/workspace/git/gitsigns.ts";
 import { codeBlocks } from "./code.ts";
 import type { Role, Color, Theme } from "../core/theme/theme.ts";
 import { LENS_COUNTERS } from "../core/layout/live.ts";

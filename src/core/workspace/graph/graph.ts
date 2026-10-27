@@ -29,8 +29,8 @@ import type { ParseCache as ChunkCache } from "../../documents/markdown/parse.ts
 import { tildePath } from "../vaults/names.ts";
 import { sharedParseCache } from "../../documents/markdown/parsecache.ts";
 import { cacheDir, ensureCacheHome, stateDir } from "../../foundation/platform/paths.ts";
-import { headCommit, headOf } from "../../git.ts";
-import { changedBetween, inVault } from "../../gitops.ts";
+import { headCommit, headOf } from "../git/git.ts";
+import { changedBetween, inVault } from "../git/branches/gitops.ts";
 import { contentHash, Redirects } from "../links/redirects.ts";
 import { dataLinks, parseData } from "../../documents/model/data.ts";
 import { classify, extensionOf } from "../../documents/model/filetypes.ts";

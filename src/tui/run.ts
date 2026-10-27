@@ -10,10 +10,10 @@ import { setWidthMethod } from "../core/foundation/text/width.ts";
 import { appendFileSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { dataHome, stateHome } from "../core/foundation/platform/paths.ts";
-import { installedBy, readChannel } from "../core/install.ts";
-import { RELEASE } from "../core/release.ts";
-import { upgrade, upgradeSaid } from "../core/update.ts";
-import { handOver, nextLaunch, startedPath, takeNote } from "../core/restart.ts";
+import { installedBy, readChannel } from "../core/application/distribution/install.ts";
+import { RELEASE } from "../core/application/distribution/release.ts";
+import { upgrade, upgradeSaid } from "../core/application/distribution/update.ts";
+import { handOver, nextLaunch, startedPath, takeNote } from "../core/application/distribution/restart.ts";
 import { windowsDriveNote } from "../core/foundation/platform/wsl.ts";
 import { VERSION } from "../version.ts";
 import {
@@ -30,7 +30,7 @@ import {
   type VaultLocation,
 } from "../core/workspace/vaults/vault.ts";
 import { setTrustedRoots } from "../core/workspace/vaults/trust.ts";
-import { baseAtOpen } from "../core/gitbase.ts";
+import { baseAtOpen } from "../core/workspace/git/gitbase.ts";
 import { App, type AppOptions } from "./app.ts";
 import { type CameBack, cameBack, type Place } from "./updates.ts";
 import { keyName } from "./keys.ts";

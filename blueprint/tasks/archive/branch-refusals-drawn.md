@@ -218,7 +218,8 @@ So:
   selected, HEAD still main; Remove… on `agent/here2` with the new-branch prompt opened in the same burst of keys,
   before git answered: the prompt stayed, no question over it, the worktree kept.
 - 2026-10-23: round 2 of the review, on the widened diff, the two reviews again apart; consolidated, each checked.
-  - Rejected: the root decision numbered then — it's numbered when it's merged (it's D263); T20's was given with the task.
+  - Rejected: the root decision numbered then — it's numbered when it's merged (it's D263); T20's was given with the
+    task.
     Telling a late question from a newer one asked and dismissed meanwhile (out of scope above).
   - Real, fixed, each with its test:
     - a new branch by the name of one there already, In a new worktree: git refused, and the branch's own base was
@@ -423,4 +424,5 @@ So:
     reached unit tests, the terminal checks and `check:docs` pass.
 - Follow-up, found by the terminal checks, older than this change: a hook's refusal is said as git's first line, not
   the hook's — `git: Preparing worktree (new branch 'agent/x')`, `… made, but git: Switched to branch 'agent/x'` —
-  since `gitReason` (`src/core/gitremote.ts`) falls back to the first line when there's no `fatal:` or `error:` one.
+  since `gitReason` (`src/core/workspace/git/branches/gitremote.ts`) falls back to the first line when there's no
+  `fatal:` or `error:` one.

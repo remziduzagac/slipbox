@@ -12,7 +12,7 @@ import { layoutBlockDiff } from "../src/core/layout/blockdiff.ts";
 import { layoutDiff } from "../src/core/layout/diff.ts";
 import { layoutSplitDiff, splitColumns, splitRows } from "../src/core/layout/splitdiff.ts";
 import { layoutScreen, type ScreenPart, screenText } from "../src/core/layout/screen.ts";
-import { comparable, diffView, unseenRows } from "../src/core/merge.ts";
+import { comparable, diffView, unseenRows } from "../src/core/workspace/git/merge/merge.ts";
 import { type PictureSource, renderMarkdown, renderTree } from "../src/core/layout/render.ts";
 import { dataLinks, parseData } from "../src/core/documents/model/data.ts";
 import { classify } from "../src/core/documents/model/filetypes.ts";

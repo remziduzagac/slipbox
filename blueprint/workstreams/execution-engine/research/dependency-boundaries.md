@@ -19,7 +19,8 @@ It declares PDF, DOCX, MathJax, Hunspell and tree-sitter packages. These counts 
 
 *Read:* `src/core/export/pdf.ts:13` imports PDFKit; `src/core/export/docx.ts:30` imports DOCX;
 `src/core/typeset.ts:13` loads MathJax dynamically. `src/core/documents/markdown/parse-pool.ts:31` and
-`src/core/spell-thread.ts:18` create workers. These observations identify review targets, not demonstrated security
+`src/core/documents/diagnostics/spell-thread.ts:18` create workers. These observations identify review targets, not
+demonstrated security
 boundaries or a complete map of their inputs and runtime permissions.
 
 *Read:* [Bun's executable documentation](https://bun.sh/docs/bundler/executables) describes compilation and bundled
@@ -52,9 +53,11 @@ accepted advisory. The inspected dependency gate has no reviewed package-members
 
 *Read:* `src/core/export/index.ts:44` and line 51 dynamically load DOCX and PDF implementations; those modules
 statically import their dependencies. Therefore a blanket ban on static heavy-package imports would reject an
-existing deferred feature path. `src/core/spell-worker.ts:5` imports its spelling implementation in the worker.
+existing deferred feature path. `src/core/documents/diagnostics/spell-worker.ts:5` imports its spelling implementation
+in the worker.
 
-*Read:* `src/core/servers/install.ts:62` uses frozen installation with scripts disabled, loading the embedded tool
+*Read:* `src/core/documents/servers/install.ts:62` uses frozen installation with scripts disabled, loading the embedded
+tool
 lock at line 85. `scripts/audit.ts:111` selects the root application directory. `.github/workflows/audit.yml` triggers
 on the root lock and invokes that audit; it does not select the site or embedded installed-tool locks.
 `check-deps.ts:288` checks site specs/install policy; its production licence walk at line 300 targets the root.

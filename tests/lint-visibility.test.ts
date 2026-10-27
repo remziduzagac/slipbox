@@ -1,10 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import { join } from "node:path";
 import { writeFileSync } from "node:fs";
-import { visibleLint } from "../src/core/lint-visibility.ts";
+import { visibleLint } from "../src/core/documents/diagnostics/lint-visibility.ts";
 import { parseMarkdown } from "../src/core/documents/markdown/parse.ts";
 import { DEFAULT_CONFIG, loadConfig } from "../src/core/application/config/config.ts";
-import type { LintIssue } from "../src/core/lint.ts";
+import type { LintIssue } from "../src/core/documents/diagnostics/lint.ts";
 import { harness, makeSandbox, makeVault } from "./tui-harness.ts";
 
 const sandbox = makeSandbox();

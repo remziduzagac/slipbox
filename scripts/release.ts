@@ -6,12 +6,12 @@
 //   bun scripts/release.ts notes [--tag v<version>]
 //
 // build: each target — this machine's when none is named — compiled by package.json's own `build` (its autoload
-// flags off: 14.1), with its release defined in it (`core/release.ts`), and packed with slipbox's licence and the
-// third-party notices as `slipbox-<version>-<target>.tar.gz`, its SBOM beside it as
+// flags off: 14.1), with its release defined in it (`core/application/distribution/release.ts`), and packed with
+// slipbox's licence and the third-party notices as `slipbox-<version>-<target>.tar.gz`, its SBOM beside it as
 // `slipbox-<version>-<target>.cdx.json`, from the same walk as the notices. One built for this machine is run
-// (`--version`) before it's packed. Another platform's needs that platform's OpenTUI package installed (`bun install
-// --os <os> --cpu <cpu>`); CI builds each on its own platform instead (`.github/workflows/build.yml`), where it's
-// there.
+// (`--version`) before it's packed. Another platform's needs that platform's OpenTUI package installed
+// (`bun install --os <os> --cpu <cpu>`); CI builds each on its own platform instead
+// (`.github/workflows/build.yml`), where it's there.
 // finish: `SHA256SUMS` over the packs in `--out`; `install.sh` (14.7): `install.template.sh` with the version, its
 // tag, the repository and each pack's sum written in; and, but for a preview, `slipbox.rb` (14.3), the Homebrew
 // formula, from `homebrew.template.rb` — Apple silicon's and glibc Linux's packs, which are Homebrew's.
@@ -46,7 +46,13 @@ import { createHash } from "node:crypto";
 import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { basename, join, resolve } from "node:path";
 import { rootPage } from "../site/scripts/root.ts";
-import { PREVIEW_TAG, PREVIEW_VERSION, pagesBase, retired, tagOf } from "../src/core/release.ts";
+import {
+  PREVIEW_TAG,
+  PREVIEW_VERSION,
+  pagesBase,
+  retired,
+  tagOf,
+} from "../src/core/application/distribution/release.ts";
 import { checkDeps, notices, sbom } from "./check-deps.ts";
 
 const ROOT = resolve(import.meta.dir, "..");
@@ -100,7 +106,7 @@ export function repoOf(s: string): string | null {
 }
 
 // A preview's tag and version, and the tag a version is published under (GR-D13): the binary's own, which its
-// upgrades follow (`core/release.ts`).
+// upgrades follow (`core/application/distribution/release.ts`).
 export { PREVIEW_TAG, PREVIEW_VERSION, tagOf };
 
 /** A time, in seconds since the epoch, as a preview names it: UTC, `YYYYMMDDHHMM`. */

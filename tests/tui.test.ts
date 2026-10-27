@@ -1974,7 +1974,7 @@ describe("saving and conflicts (step 4)", () => {
     expect(h.app.overlay).toBeNull();
   });
   test("unsaved notes are listed for the CLI (the staleness file, 9.9) until saved or quit", async () => {
-    const { readStale } = await import("../src/core/stale.ts");
+    const { readStale } = await import("../src/core/workspace/git/merge/stale.ts");
     const { h } = await setup("x\n");
     expect(readStale(h.app.loc)).toEqual([]);
     await h.keys("shift+a", "y", "escape");
@@ -6457,7 +6457,7 @@ describe("review cycle 4 (TUI)", () => {
     h.app.mouse.handle({ type: "down", x: load.x + 3, y: load.listY, button: 0 });
     h.app.mouse.handle({ type: "up", x: load.x + 3, y: load.listY, button: 0 });
     expect(v.buf.dirty).toBe(false);
-    const { readStale } = await import("../src/core/stale.ts");
+    const { readStale } = await import("../src/core/workspace/git/merge/stale.ts");
     expect(readStale(h.app.loc).map((x) => x.path)).not.toContain("c.md");
   });
   test(":s with \\r in a CRLF note keeps it CRLF; /gc and /g agree on a*", async () => {
@@ -16796,7 +16796,7 @@ describe("linters without a server (19.19)", () => {
   test("a file's linters: findings beside their lines as it opens; one reading its input again once typing pauses, one reading the file once saved", async () => {
     // Each linter's answer lands on its own, in whatever order they end: the two found are held here until a frame is
     // drawn, the one not installed until their findings are; the order a busy machine gave on CI (#6).
-    const servers = await import("../src/core/servers/linters.ts");
+    const servers = await import("../src/core/documents/servers/linters.ts");
     const run = servers.runLinter;
     let found = () => {};
     let release = () => {};
@@ -16860,7 +16860,7 @@ describe("linters without a server (19.19)", () => {
   test("a linter whose run throws ends that run all the same: the file is linted again once typing pauses", async () => {
     // Its run ended in an exception, not an answer: the others' answers are kept, and the next run isn't held back as
     // if this one were still going.
-    const servers = await import("../src/core/servers/linters.ts");
+    const servers = await import("../src/core/documents/servers/linters.ts");
     const run = servers.runLinter;
     let threw = false;
     const spy = spyOn(servers, "runLinter").mockImplementation((async (def, ...rest) => {
@@ -18835,7 +18835,7 @@ describe("spelling (25.6)", () => {
   /** A Turkish dictionary (9 MB) under a path of the test's own, so it's built now whatever was built before, and a
    *  note in its language open: the harness, and the dictionary's words (`dic`). */
   const turkish = async () => {
-    const { dictionaryFiles } = await import("../src/core/spell.ts");
+    const { dictionaryFiles } = await import("../src/core/documents/diagnostics/spell.ts");
     const tr = dictionaryFiles("tr", {})!;
     const dict = mkdtempSync(join(sandbox, "dict-"));
     const dic = join(dict, "zz.dic");
@@ -18855,8 +18855,8 @@ describe("spelling (25.6)", () => {
   };
 
   test("a dictionary is built on the spell checker's thread, never here: counted; typing keeps the marks (#40)", async () => {
-    const { dictionariesBuilt } = await import("../src/core/hunspell.ts");
-    const { stopSpellThread } = await import("../src/core/spell-thread.ts");
+    const { dictionariesBuilt } = await import("../src/core/documents/diagnostics/hunspell.ts");
+    const { stopSpellThread } = await import("../src/core/documents/diagnostics/spell-thread.ts");
     const { h } = await turkish();
     try {
       const built = dictionariesBuilt();
@@ -18886,7 +18886,7 @@ describe("spelling (25.6)", () => {
   test(
     "while the thread loads a dictionary, the main thread keeps its turns: counted, the thread held before it builds (#40)",
     async () => {
-      const { holdBuild, stopSpellThread } = await import("../src/core/spell-thread.ts");
+      const { holdBuild, stopSpellThread } = await import("../src/core/documents/diagnostics/spell-thread.ts");
       const { h, dic } = await turkish();
       // The hold's own bounds are a stuck test's, never a passing one's (let go milliseconds after it's waiting): its
       // wait runs out after 40 s on the thread's clock, inside the test's 60 s, so a main thread held until the
@@ -18927,8 +18927,8 @@ describe("spelling (25.6)", () => {
   test(
     "a dictionary the thread can't build is said once; the note's other languages still check it",
     async () => {
-      const { dictionaryFiles } = await import("../src/core/spell.ts");
-      const { holdBuild, stopSpellThread } = await import("../src/core/spell-thread.ts");
+      const { dictionaryFiles } = await import("../src/core/documents/diagnostics/spell.ts");
+      const { holdBuild, stopSpellThread } = await import("../src/core/documents/diagnostics/spell-thread.ts");
       const dict = mkdtempSync(join(sandbox, "dict-"));
       writeFileSync(join(dict, "zz.aff"), "SET UTF-8\n");
       mkdirSync(join(dict, "zz.dic")); // a folder: there, but no words to read

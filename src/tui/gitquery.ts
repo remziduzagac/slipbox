@@ -1,7 +1,7 @@
 // One foreground git read per app. Requests never reopen a result for an obsolete view or revision.
 import { statSync } from "node:fs";
 import { join } from "node:path";
-import { headOf, headCommit } from "../core/git.ts";
+import { headOf, headCommit } from "../core/workspace/git/git.ts";
 import type { App } from "./app.ts";
 const active = new WeakMap<App, AbortController>();
 export function beginGitRead(app: App, label: string, watchIndex = false) {

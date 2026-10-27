@@ -3,7 +3,7 @@
 // state written to SPELL_HOLD_STATE as it changes. A check's tool: slipbox itself never reads these.
 
 import { existsSync, renameSync, rmSync, writeFileSync } from "node:fs";
-import { holdBuild } from "../../src/core/spell-thread.ts";
+import { holdBuild } from "../../src/core/documents/diagnostics/spell-thread.ts";
 
 const { SPELL_HOLD_DIC: dic, SPELL_HOLD_GO: go, SPELL_HOLD_STATE: stateFile } = process.env;
 if (dic && go && stateFile) {

@@ -9,9 +9,9 @@
 import { beginGitRead } from "./gitquery.ts";
 import { existsSync } from "node:fs";
 import { join, relative, sep } from "node:path";
-import { checkoutOf, headOf } from "../core/git.ts";
-import { branchesOf, type Changed, inVault, refName, showLater } from "../core/gitops.ts";
-import type { StatusEntry } from "../core/gitstage.ts";
+import { checkoutOf, headOf } from "../core/workspace/git/git.ts";
+import { branchesOf, type Changed, inVault, refName, showLater } from "../core/workspace/git/branches/gitops.ts";
+import type { StatusEntry } from "../core/workspace/git/staging/gitstage.ts";
 import { backToPanel, readForDiff } from "./gitview.ts";
 import { GIT_MARK } from "./draw-overlays.ts";
 import {
@@ -36,9 +36,16 @@ import {
   removeWorktreeLater,
   switchLater,
   worktreeFolder,
-} from "../core/gitbranches.ts";
-import { candidates, keepBase, keptBases, nearest, remoteBranchesLater, resolveBaseLater } from "../core/gitbase.ts";
-import { checkoutStateLater } from "../core/gitrepos.ts";
+} from "../core/workspace/git/branches/gitbranches.ts";
+import {
+  candidates,
+  keepBase,
+  keptBases,
+  nearest,
+  remoteBranchesLater,
+  resolveBaseLater,
+} from "../core/workspace/git/gitbase.ts";
+import { checkoutStateLater } from "../core/workspace/git/gitrepos.ts";
 import { tildePath } from "../core/workspace/vaults/names.ts";
 import { sanitize } from "../core/foundation/text/sanitize.ts";
 import { isVaultRoot, rootAt, rootMarkers } from "../core/workspace/vaults/vault.ts";

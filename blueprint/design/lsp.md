@@ -7,7 +7,8 @@ use the CLI (D67). What a vault you don't trust leaves out is [trust.md](trust.m
 
 ## The client for code (`19.x`)
 
-**One server** (`19.1`, `core/servers/client.ts`; D170) is started on stdio in the project's top folder, its stderr kept
+**One server** (`19.1`, `core/documents/servers/client.ts`; D170) is started on stdio in the project's top folder, its
+stderr kept
 (the last of it says why when it fails), and initialized as slipbox: positions in UTF-16, the capabilities slipbox
 uses. Its settings answer its `workspace/configuration` questions, by section (`python.analysis`), and go with
 `didChangeConfiguration` once it's ready — a server asked and answered nothing checks nothing. A file is sent whole at
@@ -24,14 +25,14 @@ error line. One that exits before it answers `initialize`, or doesn't answer in 
 its last error line, and not started again. The failed start kills the child immediately, closes its three pipes,
 and disposes the connection, including when it ignores graceful termination.
 
-**Which servers** (`19.2`, `core/servers/languages.ts`; D162, D165, D166): a file's language is its whole name
+**Which servers** (`19.2`, `core/documents/servers/languages.ts`; D162, D165, D166): a file's language is its whole name
 (`Dockerfile`), else its extension, and each language has root markers and servers — the first that applies and is found
 is its main server, and add-ons, a linter's server each, run beside it where the project has that linter's config
 (`eslint.config.js`, `biome.json`, `.stylelintrc`, `ruff.toml` or `[tool.ruff]` in `pyproject.toml`). A linter's server
 runs the project's linter: eslint's server loads the project's ESLint (8.57 or 9, flat config or `.eslintrc`, as that
 ESLint decides), stylelint's reads the project's config and its plugins, and biome is the project's own
 `node_modules/.bin/biome` when it has one. Their findings, fixes and rule suppressions come as any server's
-(`space c a`). Built in (`LANGUAGES` in `core/servers/languages.ts`; DF-D13):
+(`space c a`). Built in (`LANGUAGES` in `core/documents/servers/languages.ts`; DF-D13):
 
 | Languages | Servers, the main first (npm: installed when missing) |
 | --- | --- |
@@ -105,7 +106,8 @@ with it (D172); linters keep their own `PATH` (below).
 
 In a vault you trust, each runs as it would anywhere else: its own defaults, the folder's settings, its own copy.
 
-**Installing** (`19.5`, `14.11`, `core/servers/install.ts`; D162, D202): a server published on npm and found nowhere is
+**Installing** (`19.5`, `14.11`, `core/documents/servers/install.ts`; D162, D202): a server published on npm and found
+nowhere is
 installed when a file first needs it — `[lsp] auto_install = false`, in your own config only (DF-D1), stops that — into
 a folder of its own in slipbox's (`$XDG_DATA_HOME/slipbox/tools/<package>/<lock>/`), from the lockfile slipbox ships for
 its pin (`locks.ts`, made by `scripts/lock-servers.ts`): installed frozen, so every package under it is the version and
@@ -121,7 +123,8 @@ it is, and `slipbox doctor` says it's not from the lockfile slipbox ships. A ser
 the project's, on `PATH`, Mason's — is yours to update, never slipbox's. A native server is never installed: found, or
 named in the config — the system is the user's.
 
-**The servers of open files** (`19.1`, `core/servers/manager.ts`; D161): one client per server and project, started when
+**The servers of open files** (`19.1`, `core/documents/servers/manager.ts`; D161): one client per server and project,
+started when
 a file of its language in that project is first shown — installed first when it must be — and told about each such file
 as it opens, again 150 ms after typing pauses (never per key), and when it's saved; a file gone when the TUI goes into
 another vault, or with a rename, is closed in it. Its diagnostics become the file's problems, in the bar, the marks and
@@ -142,7 +145,8 @@ it and answers; references and code actions are every server's together, the sam
 servers in turn and shows the first one that answers (a main server before its add-ons, which by default don't
 complete); its trigger characters, and signature help's, are every server's together.
 
-**Linters without a server** (`19.19`, `core/servers/linters.ts`; D163, D165) are described in efm-langserver's keys, so
+**Linters without a server** (`19.19`, `core/documents/servers/linters.ts`; D163, D165) are described in
+efm-langserver's keys, so
 a linter set up for efm pastes in — `[linter.<name>]` with `lint-command`, `lint-formats` (vim's errorformat),
 `lint-stdin`, `lint-source`, `lint-severity`, `lint-ignore-exit-code`, `root-markers`, `require-marker` — and a
 language's `linters` names its own. Each runs as efm runs it: through the shell, from the nearest folder holding one of
@@ -201,7 +205,8 @@ interrupted. Installs still use frozen lockfiles and run no package scripts.
 
 ## Language server request budgets
 
-The client's limits (`19.1`, `core/servers/limits.ts`) keep a broken server from costing slipbox; they never stop a
+The client's limits (`19.1`, `core/documents/servers/limits.ts`) keep a broken server from costing slipbox; they never
+stop a
 server that is only slow or busy, and never end slipbox. A request waits ten seconds for its answer, a diagnostics pull
 sixty (a server may hold one through its first analysis), and `slipbox diagnostics --timeout` sets both. Past that, the
 request is cancelled (`$/cancelRequest`), its caller gets no answer, and the server runs on; the first time for each

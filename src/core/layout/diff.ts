@@ -5,7 +5,7 @@
 // end of file`. A line too long for the window scrolls sideways, as a code block too wide does (D233) — never cut.
 
 import type { Glyphs } from "../glyphs.ts";
-import { type DiffViewRow, inRanges, type WordRange } from "../merge.ts";
+import { type DiffViewRow, inRanges, type WordRange } from "../workspace/git/merge/merge.ts";
 import type { Role } from "../theme/theme.ts";
 import { graphemes, graphemeWidth } from "../foundation/text/width.ts";
 import type { CodeScroll, Layout, Line, Span } from "./ir.ts";

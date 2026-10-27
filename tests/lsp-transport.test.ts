@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { ServerTransport } from "../src/core/servers/transport.ts";
+import { ServerTransport } from "../src/core/documents/servers/transport.ts";
 const frame = (text: string) => Buffer.from(`Content-Length: ${Buffer.byteLength(text)}\r\n\r\n${text}`);
 function through(chunks: Buffer[], cap = 1024): Promise<string> {
   return new Promise((resolve, reject) => {

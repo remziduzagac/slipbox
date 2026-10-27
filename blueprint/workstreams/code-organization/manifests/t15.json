@@ -1,0 +1,238 @@
+{
+  "moves": {
+    "src/core/diagnostics.ts": "src/core/documents/diagnostics/diagnostics.ts",
+    "src/core/lint.ts": "src/core/documents/diagnostics/lint.ts",
+    "src/core/lint-visibility.ts": "src/core/documents/diagnostics/lint-visibility.ts",
+    "src/core/spell.ts": "src/core/documents/diagnostics/spell.ts",
+    "src/core/spell-thread.ts": "src/core/documents/diagnostics/spell-thread.ts",
+    "src/core/spell-worker.ts": "src/core/documents/diagnostics/spell-worker.ts",
+    "src/core/hunspell.ts": "src/core/documents/diagnostics/hunspell.ts",
+    "src/core/install.ts": "src/core/application/distribution/install.ts",
+    "src/core/release.ts": "src/core/application/distribution/release.ts",
+    "src/core/update.ts": "src/core/application/distribution/update.ts",
+    "src/core/restart.ts": "src/core/application/distribution/restart.ts",
+    "src/core/skill.ts": "src/core/application/distribution/skill.ts",
+    "src/core/skill-lifecycle.ts": "src/core/application/distribution/skill-lifecycle.ts",
+    "src/core/report.ts": "src/core/application/distribution/report.ts",
+    "src/core/crash-reports.ts": "src/core/application/distribution/crash-reports.ts",
+    "src/core/gh.ts": "src/core/application/distribution/gh.ts",
+    "src/core/servers/client.ts": "src/core/documents/servers/client.ts",
+    "src/core/servers/doctor.ts": "src/core/documents/servers/doctor.ts",
+    "src/core/servers/find.ts": "src/core/documents/servers/find.ts",
+    "src/core/servers/install.ts": "src/core/documents/servers/install.ts",
+    "src/core/servers/languages.ts": "src/core/documents/servers/languages.ts",
+    "src/core/servers/limits.ts": "src/core/documents/servers/limits.ts",
+    "src/core/servers/linters.ts": "src/core/documents/servers/linters.ts",
+    "src/core/servers/locks.ts": "src/core/documents/servers/locks.ts",
+    "src/core/servers/manager.ts": "src/core/documents/servers/manager.ts",
+    "src/core/servers/transport.ts": "src/core/documents/servers/transport.ts",
+    "src/core/servers/vscode.ts": "src/core/documents/servers/vscode.ts",
+    "src/core/git.ts": "src/core/workspace/git/git.ts",
+    "src/core/gitbase.ts": "src/core/workspace/git/gitbase.ts",
+    "src/core/gitrepos.ts": "src/core/workspace/git/gitrepos.ts",
+    "src/core/gitsigns.ts": "src/core/workspace/git/gitsigns.ts",
+    "src/core/gitbranches.ts": "src/core/workspace/git/branches/gitbranches.ts",
+    "src/core/gitremote.ts": "src/core/workspace/git/branches/gitremote.ts",
+    "src/core/gitrebase.ts": "src/core/workspace/git/branches/gitrebase.ts",
+    "src/core/gitops.ts": "src/core/workspace/git/branches/gitops.ts",
+    "src/core/gitlog.ts": "src/core/workspace/git/history/gitlog.ts",
+    "src/core/gitreview.ts": "src/core/workspace/git/review/gitreview.ts",
+    "src/core/mergereview.ts": "src/core/workspace/git/review/mergereview.ts",
+    "src/core/merge.ts": "src/core/workspace/git/merge/merge.ts",
+    "src/core/conflicts.ts": "src/core/workspace/git/merge/conflicts.ts",
+    "src/core/stale.ts": "src/core/workspace/git/merge/stale.ts",
+    "src/core/gitstage.ts": "src/core/workspace/git/staging/gitstage.ts"
+  },
+  "retained": [
+    {
+      "file": "blueprint/workstreams/archive/greenrepo/tasks/archive/docs-checks.md",
+      "text": "src/core/lint",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "src/core/spell-worker",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "src/core/hunspell",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/greenrepo/tasks/archive/channels.md",
+      "text": "src/core/install",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/reporting-a-problem/research.md",
+      "text": "src/core/install",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/upgrade-restart/research.md",
+      "text": "src/core/install",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/workspaces/notes.md",
+      "text": "src/core/install",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/workspaces/tasks/archive/words.md",
+      "text": "src/core/install",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/greenrepo/tasks/archive/channels.md",
+      "text": "src/core/release",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/reporting-a-problem/research.md",
+      "text": "src/core/release",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/greenrepo/tasks/archive/channels.md",
+      "text": "src/core/update",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/upgrade-restart/research.md",
+      "text": "src/core/update",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/user-docs/tasks/archive/export-privacy-troubleshooting.md",
+      "text": "src/core/update",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/design.md",
+      "text": "src/core/update",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "src/core/update",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/upgrade-restart/tasks/archive/restart-handover.md",
+      "text": "src/core/restart",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/greenrepo/tasks/archive/skill-in-binary.md",
+      "text": "src/core/skill",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/design.md",
+      "text": "src/core/report",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "src/core/report",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/upgrade-restart/research.md",
+      "text": "src/core/crash-reports",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/design.md",
+      "text": "src/core/servers/client",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "src/core/servers/client",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/user-docs/tasks/archive/export-privacy-troubleshooting.md",
+      "text": "src/core/servers/install",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/doc-findings/design.md",
+      "text": "src/core/servers/languages",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/doc-findings/tasks/archive/design-and-examples.md",
+      "text": "src/core/servers/languages",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/design.md",
+      "text": "src/core/servers/languages",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "src/core/servers/languages",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/design.md",
+      "text": "src/core/servers/locks",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "src/core/servers/locks",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/design.md",
+      "text": "src/core/servers/manager",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "src/core/servers/manager",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/user-docs/tasks/archive/git-and-code.md",
+      "text": "src/core/git",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/design.md",
+      "text": "src/core/git",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/git-review/notes.md",
+      "text": "src/core/merge",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/git-review/requirements.md",
+      "text": "src/core/merge",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/design.md",
+      "text": "src/core/merge",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "src/core/merge",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "scripts/install.template.sh",
+      "text": "core/release.ts",
+      "reason": "Historical implementation pointer in a shipped installer comment; preserve published template bytes during source-only moves."
+    }
+  ]
+}

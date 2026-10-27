@@ -3,7 +3,7 @@
 // another, each row a line of the screen's text, so the cursor's line says what it's on.
 
 import type { BlockDiff } from "../foundation/text/blockdiff.ts";
-import type { DiffViewRow } from "../merge.ts";
+import type { DiffViewRow } from "../workspace/git/merge/merge.ts";
 import type { Role } from "../theme/theme.ts";
 import { layoutBlockDiff } from "./blockdiff.ts";
 import { type DiffLayoutOptions, diffText, layoutDiff } from "./diff.ts";

@@ -1,6 +1,6 @@
 // The switch list includes known vaults independently of pointer names (VB-T3–T5).
 import { readFolders } from "./folders.ts";
-import { checkoutOf, headOf } from "../../git.ts";
+import { checkoutOf, headOf } from "../git/git.ts";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { readRoots } from "./registry.ts";

@@ -19,8 +19,8 @@ import type {
 } from "vscode-languageserver-protocol";
 import { pathToFileURL, fileURLToPath } from "node:url";
 import type { PromptOverlay, App, View } from "./app.ts";
-import { type Problem, noteProblems } from "../core/diagnostics.ts";
-import type { Feature } from "../core/servers/languages.ts";
+import { type Problem, noteProblems } from "../core/documents/diagnostics/diagnostics.ts";
+import type { Feature } from "../core/documents/servers/languages.ts";
 import { readFileSync } from "node:fs";
 
 /** Language servers (3.x): hover, definitions, references, renames, code actions, symbols. */

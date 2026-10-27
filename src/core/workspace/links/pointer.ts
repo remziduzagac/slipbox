@@ -10,8 +10,8 @@
 import { join, relative, sep } from "node:path";
 import { climbsOut } from "../../foundation/platform/fsutil.ts";
 import { lookupFolder, type NamedFolder, readFolders } from "../vaults/folders.ts";
-import { checkoutOf, headOf } from "../../git.ts";
-import { branchesOf, worktreeList } from "../../gitops.ts";
+import { checkoutOf, headOf } from "../git/git.ts";
+import { branchesOf, worktreeList } from "../git/branches/gitops.ts";
 import { tildePath } from "../vaults/names.ts";
 
 const SCHEME = /^slipbox:\/\//i;

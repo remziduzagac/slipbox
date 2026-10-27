@@ -275,7 +275,8 @@ dates. Each says what was asked, decided, built and found, and cites the decisio
 - 3, backfill: none. The initial design is settled now, past phases stay ticked on the roadmap, and workstreams start
   with the next change (D210; ideas.md § Process).
 - **Open:** the code and the old decisions disagree on Mason's `bin`. The decisions for `11.1` put it on the language
-  servers' `PATH` when slipbox finds Mason; `core/servers/client.ts` spawns a server with slipbox's environment and the
+  servers' `PATH` when slipbox finds Mason; `core/documents/servers/client.ts` spawns a server with slipbox's
+  environment and the
   server's own `environment` only, Mason's `bin` searched for programs alone. Left out of D170 and the design; which is
   right is the user's to decide.
 - **Open:** Bun's own crash reports, sent on macOS and Windows unless `DO_NOT_TRACK` is set, to be checked in the
@@ -445,7 +446,8 @@ dates. Each says what was asked, decided, built and found, and cites the decisio
   (`tui/mergescreen.ts`); the description of `peek.go` says a file outside every vault opens beside the vault, where `o`
   goes into Elsewhere (`core/application/commands/catalog.ts`); and code comments still name the removed `space g` keys
   (`tui/git.ts`,
-  `tui/githistory.ts`, `core/gitbranches.ts`) and the sections renamed (`core/workspace/vaults/registry.ts`,
+  `tui/githistory.ts`, `core/workspace/git/branches/gitbranches.ts`) and the sections renamed
+  (`core/workspace/vaults/registry.ts`,
   `core/workspace/vaults/names.ts`). VV-D9's
   `⚠` for a disk that doesn't answer is amended to the code's `⊘` (2026-10-17).
 
@@ -458,7 +460,7 @@ dates. Each says what was asked, decided, built and found, and cites the decisio
   release's build; the installer and `slipbox upgrade` tell an Intel Mac so, naming 0.3.0, before downloading anything;
   the formula asks for arm64 on macOS. The required check was already the aggregate `ci` on `main`'s and `test`'s
   rulesets, so no setting names the Intel runner. The lockfiles keep their `darwin-x64` entries: they are tools'
-  optional packages, as are the language servers' lockfiles slipbox ships (`core/servers/locks.ts`).
+  optional packages, as are the language servers' lockfiles slipbox ships (`core/documents/servers/locks.ts`).
 
 ## Deferred maintenance and accessibility review (2026-10-16)
 

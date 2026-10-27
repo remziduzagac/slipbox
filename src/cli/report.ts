@@ -12,7 +12,7 @@ import {
   LABEL,
   reportFacts,
   reportRepo,
-} from "../core/report.ts";
+} from "../core/application/distribution/report.ts";
 import { stringWidth } from "../core/foundation/text/width.ts";
 import type { Io, Result } from "./common.ts";
 

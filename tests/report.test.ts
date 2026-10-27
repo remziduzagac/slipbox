@@ -38,9 +38,9 @@ import {
   sentText,
   TITLE_LINE,
   WHERE_SAID,
-} from "../src/core/report.ts";
+} from "../src/core/application/distribution/report.ts";
 import { browserOpener, type OpenerSources, openerSources } from "../src/core/foundation/platform/browser.ts";
-import { ghAccount, ghPath, ghPost } from "../src/core/gh.ts";
+import { ghAccount, ghPath, ghPost } from "../src/core/application/distribution/gh.ts";
 
 const OS_RELEASE = 'NAME="Ubuntu"\nVERSION="24.04.1 LTS (Noble Numbat)"\nPRETTY_NAME="Ubuntu 24.04.1 LTS"\nID=ubuntu\n';
 const PLIST = `<?xml version="1.0" encoding="UTF-8"?>

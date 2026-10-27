@@ -9,11 +9,17 @@
 import { beginGitRead } from "./gitquery.ts";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import type { Checkout } from "../core/git.ts";
-import { showLater } from "../core/gitops.ts";
-import type { StatusEntry } from "../core/gitstage.ts";
-import { attention, type CheckoutState, checkoutStateLater, type RepoFound, reposUnder } from "../core/gitrepos.ts";
-import { repoKey } from "../core/gitbase.ts";
+import type { Checkout } from "../core/workspace/git/git.ts";
+import { showLater } from "../core/workspace/git/branches/gitops.ts";
+import type { StatusEntry } from "../core/workspace/git/staging/gitstage.ts";
+import {
+  attention,
+  type CheckoutState,
+  checkoutStateLater,
+  type RepoFound,
+  reposUnder,
+} from "../core/workspace/git/gitrepos.ts";
+import { repoKey } from "../core/workspace/git/gitbase.ts";
 import { tildePath } from "../core/workspace/vaults/names.ts";
 import { sanitize } from "../core/foundation/text/sanitize.ts";
 import { homeFolder, isInside, isVaultRoot, rootAt } from "../core/workspace/vaults/vault.ts";

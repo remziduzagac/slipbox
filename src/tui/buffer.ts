@@ -7,8 +7,8 @@
 // layout), not on every keystroke.
 
 import type { Diagnostic } from "vscode-languageserver-protocol";
-import type { Problem } from "../core/diagnostics.ts";
-import type { LintIssue } from "../core/lint.ts";
+import type { Problem } from "../core/documents/diagnostics/diagnostics.ts";
+import type { LintIssue } from "../core/documents/diagnostics/lint.ts";
 import type { Glyphs } from "../core/glyphs.ts";
 import { parseData } from "../core/documents/model/data.ts";
 import type { FileKind } from "../core/documents/model/filetypes.ts";

@@ -11,7 +11,8 @@ break is reported, as a path's or a wikilink's is.
 
 ## Description
 
-`core/mergereview.ts` reads markdown links' paths and wikilinks. A link to the repository's own hosting is the file in
+`core/workspace/git/review/mergereview.ts` reads markdown links' paths and wikilinks. A link to the repository's own
+hosting is the file in
 this copy (D87), so a merge that moves or deletes the file breaks it the same way. Read it through
 `core/workspace/links/hosting.ts`,
 report it with its cause, and the fix in its own form (the URL with the new path). Pointers naming this repository

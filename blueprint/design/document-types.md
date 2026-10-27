@@ -27,7 +27,8 @@ A note of a type with rules has its frontmatter (YAML's `---` or TOML's `+++`) c
 empty, a key of another kind (a date is `2026-10-10`, a time after it allowed, or a TOML date), a value not among the
 allowed. Each is a warning at the key's line — at the first line for one missing — from `slipbox`, code
 `frontmatter`. A note with none at all needs it; frontmatter that doesn't parse is said once, its rules unchecked.
-They're a note's own problems (`core/diagnostics.ts`, `noteProblems`; D167), so they're in the bar and the marks, the
+They're a note's own problems (`core/documents/diagnostics/diagnostics.ts`, `noteProblems`; D167), so they're in the bar
+and the marks, the
 panel's This file tab and `slipbox diagnostics`; and the vault's are a Frontmatter section of the panel's All tab and
 `slipbox problems`' `frontmatter[]`, kept until a note changes.
 

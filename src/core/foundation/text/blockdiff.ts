@@ -13,7 +13,7 @@ import {
   textLines,
   type UnseenRows,
   type WordRange,
-} from "../../merge.ts";
+} from "../../workspace/git/merge/merge.ts";
 import { headingText, parseMarkdown } from "../../documents/markdown/parse.ts";
 
 /** A block of a note: its lines (1-based, inclusive), and the node it lays out; none: lines shown as written. */

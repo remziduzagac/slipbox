@@ -7,7 +7,7 @@
 // pull or a stash changes the files, unsaved notes are saved or kept (`beforeCheckout`, as a branch switch, 26.5); HEAD
 // moving on is the watcher's (5.9).
 
-import { type Checkout, headOf } from "../core/git.ts";
+import { type Checkout, headOf } from "../core/workspace/git/git.ts";
 import {
   fetchLater,
   headShort,
@@ -21,7 +21,7 @@ import {
   stashSaveLater,
   upstreamFor,
   upstreamOf,
-} from "../core/gitremote.ts";
+} from "../core/workspace/git/branches/gitremote.ts";
 import { sanitize } from "../core/foundation/text/sanitize.ts";
 import { isTrusted } from "../core/workspace/vaults/trust.ts";
 import type { App } from "./app.ts";

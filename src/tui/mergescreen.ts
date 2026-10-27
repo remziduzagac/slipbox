@@ -23,14 +23,14 @@ import {
   readConflicts,
   resultText,
   resultView,
-} from "../core/conflicts.ts";
+} from "../core/workspace/git/merge/conflicts.ts";
 import { readText } from "../core/foundation/platform/fsutil.ts";
-import { inCheckout, inVault, showLater } from "../core/gitops.ts";
-import { OPERATIONS, operationOf } from "../core/gitrebase.ts";
-import { sections, stageFile } from "../core/gitstage.ts";
+import { inCheckout, inVault, showLater } from "../core/workspace/git/branches/gitops.ts";
+import { OPERATIONS, operationOf } from "../core/workspace/git/branches/gitrebase.ts";
+import { sections, stageFile } from "../core/workspace/git/staging/gitstage.ts";
 import { layoutScreen, type ScreenPart, screenText } from "../core/layout/screen.ts";
 import type { Layout, Span } from "../core/layout/ir.ts";
-import { comparable, type DiffViewRow, diffView } from "../core/merge.ts";
+import { comparable, type DiffViewRow, diffView } from "../core/workspace/git/merge/merge.ts";
 import { TOP } from "../core/workspace/session/position.ts";
 import { sanitize } from "../core/foundation/text/sanitize.ts";
 import type { App } from "./app.ts";

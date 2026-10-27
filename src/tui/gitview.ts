@@ -7,8 +7,8 @@
 
 import { existsSync, lstatSync, readlinkSync } from "node:fs";
 import { basename, dirname, join, relative } from "node:path";
-import { type GitChange, gitChanges } from "../core/gitsigns.ts";
-import { showLater } from "../core/gitops.ts";
+import { type GitChange, gitChanges } from "../core/workspace/git/gitsigns.ts";
+import { showLater } from "../core/workspace/git/branches/gitops.ts";
 import {
   discardFile,
   discardFiles,
@@ -23,7 +23,7 @@ import {
   unstageAll,
   unstageChange,
   unstageFile,
-} from "../core/gitstage.ts";
+} from "../core/workspace/git/staging/gitstage.ts";
 import { climbsOut, decodeText, readRegular } from "../core/foundation/platform/fsutil.ts";
 import { sanitize } from "../core/foundation/text/sanitize.ts";
 import { openDiff } from "./diffview.ts";

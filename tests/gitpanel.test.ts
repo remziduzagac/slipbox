@@ -19,14 +19,14 @@ import { stringWidth } from "../src/core/foundation/text/width.ts";
 import { canonKey } from "../src/core/application/commands/registry.ts";
 import { DEFAULT_CONFIG } from "../src/core/application/config/config.ts";
 import { openGraph } from "../src/core/workspace/graph/graph.ts";
-import { keepBase, keptBases } from "../src/core/gitbase.ts";
-import { attention } from "../src/core/gitrepos.ts";
+import { keepBase, keptBases } from "../src/core/workspace/git/gitbase.ts";
+import { attention } from "../src/core/workspace/git/gitrepos.ts";
 import { setTrust } from "../src/core/workspace/vaults/trust.ts";
 import { locateVault } from "../src/core/workspace/vaults/vault.ts";
 import { App, type ListOverlay } from "../src/tui/app.ts";
 import { TextCanvas } from "../src/tui/canvas.ts";
 import { type BranchList, type BranchViewRow, shownOn } from "../src/tui/gitbranchview.ts";
-import type { Branch } from "../src/core/gitbranches.ts";
+import type { Branch } from "../src/core/workspace/git/branches/gitbranches.ts";
 import { pointedAt } from "../src/tui/gitmouse.ts";
 import { DIFF_MAX, readForDiff } from "../src/tui/gitview.ts";
 import { reviewOf } from "../src/tui/review.ts";
@@ -1618,7 +1618,7 @@ describe("the repositories in the view (VV-D10)", () => {
       git(join(top, d), "init", "-q", "-b", "main");
     }
     writeFileSync(join(top, "vendor", "notes.md"), "# Notes\n");
-    const { reposUnder } = await import("../src/core/gitrepos.ts");
+    const { reposUnder } = await import("../src/core/workspace/git/gitrepos.ts");
     expect((await reposUnder(top)).map((r) => r.name)).toEqual(["lib"]);
   });
 

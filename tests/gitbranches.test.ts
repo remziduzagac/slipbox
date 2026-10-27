@@ -7,7 +7,7 @@ import { chmodSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, symlinkSy
 import { tmpdir } from "node:os";
 import { delimiter, join } from "node:path";
 import { DEFAULT_CONFIG, loadConfig } from "../src/core/application/config/config.ts";
-import { type Checkout, checkoutOf } from "../src/core/git.ts";
+import { type Checkout, checkoutOf } from "../src/core/workspace/git/git.ts";
 import {
   agoSaid,
   askedBase,
@@ -23,7 +23,7 @@ import {
   remoteMovedAt,
   resolveBase,
   resolveBaseLater,
-} from "../src/core/gitbase.ts";
+} from "../src/core/workspace/git/gitbase.ts";
 import {
   aheadBehindLater,
   branchChangedLater,
@@ -41,9 +41,9 @@ import {
   orderBranches,
   parseWorktrees,
   worktreeFolder,
-} from "../src/core/gitbranches.ts";
-import { baseBranch, refName, worktreeList } from "../src/core/gitops.ts";
-import { refusedName } from "../src/core/gitremote.ts";
+} from "../src/core/workspace/git/branches/gitbranches.ts";
+import { baseBranch, refName, worktreeList } from "../src/core/workspace/git/branches/gitops.ts";
+import { refusedName } from "../src/core/workspace/git/branches/gitremote.ts";
 import { setTrust } from "../src/core/workspace/vaults/trust.ts";
 
 /** git in `repo`, as a test runs it: its own name and no system config. */
@@ -602,7 +602,7 @@ test.skipIf(process.platform === "win32")(
       script,
       `
     import {existsSync,readFileSync} from "node:fs";
-    import {gitReadLater} from ${JSON.stringify(new URL("../src/core/gitops.ts", import.meta.url).pathname)};
+    import {gitReadLater} from ${JSON.stringify(new URL("../src/core/workspace/git/branches/gitops.ts", import.meta.url).pathname)};
     const abort = new AbortController();
     const pending = gitReadLater({root: ${JSON.stringify(dir)}}, ["status"], false, abort.signal);
     while (!existsSync(process.env.GIT_PROBE_PID!)) await Bun.sleep(5);

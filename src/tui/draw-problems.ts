@@ -8,7 +8,7 @@ import type { Role, Color } from "../core/theme/theme.ts";
 import { smallButton } from "./draw-panels.ts";
 import { truncate, stringWidth, truncateStart } from "../core/foundation/text/width.ts";
 import { sanitize } from "../core/foundation/text/sanitize.ts";
-import type { Problem } from "../core/diagnostics.ts";
+import type { Problem } from "../core/documents/diagnostics/diagnostics.ts";
 import { severityGlyph, SEVERITY_ROLE, MARK_ROLE } from "./draw-pane.ts";
 
 /**

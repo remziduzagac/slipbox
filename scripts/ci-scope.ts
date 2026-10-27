@@ -51,7 +51,7 @@ export const CHECKS_FOR: [RegExp, string[]][] = [
   // Source control: the panel and its views, the diff, the merge screen, the review, the rebase (GIT). Not git.ts,
   // gitbase.ts nor gitsigns.ts: every vault's checkout and every note's gutter read them.
   [
-    /^src\/core\/(gitbranches|gitlog|gitops|gitrebase|gitremote|gitrepos|gitreview|gitstage|mergereview|conflicts)\.ts$/,
+    /^src\/core\/workspace\/git\/(?:branches\/(?:gitbranches|gitops|gitrebase|gitremote)|history\/gitlog|gitrepos|review\/(?:gitreview|mergereview)|staging\/gitstage|merge\/conflicts)\.ts$/,
     ["git"],
   ],
   [/^src\/core\/layout\/(diff|splitdiff|blockdiff)\.ts$/, ["git", "conflict"]],
@@ -62,11 +62,11 @@ export const CHECKS_FOR: [RegExp, string[]][] = [
   [/^src\/core\/export\//, ["export"]],
   [/^src\/tui\/exporter\.ts$/, ["export"]],
   // Language servers, the linter, the Problems panel.
-  [/^src\/core\/servers\//, ["language servers", "lint", "problems"]],
-  [/^src\/core\/lint\.ts$/, ["lint", "problems"]],
+  [/^src\/core\/documents\/servers\//, ["language servers", "lint", "problems"]],
+  [/^src\/core\/documents\/diagnostics\/lint\.ts$/, ["lint", "problems"]],
   [/^src\/tui\/(actions-lsp|problems|draw-problems)\.ts$/, ["language servers", "lint", "problems"]],
   // Spelling, off unless asked for.
-  [/^src\/core\/(spell|spell-thread|spell-worker|hunspell)\.ts$/, ["spelling"]],
+  [/^src\/core\/documents\/diagnostics\/(spell|spell-thread|spell-worker|hunspell)\.ts$/, ["spelling"]],
   [/^src\/tui\/spelling\.ts$/, ["spelling"]],
   // A slow disk read off the main thread (T12): the walk's and the listings' threads, the explorer's listings.
   [
@@ -90,7 +90,7 @@ export const CHECKS_FOR: [RegExp, string[]][] = [
   // Features of a window or a command of their own.
   [/^src\/tui\/palette\.ts$/, ["palette", "help", "which-key"]],
   // Upgrading and restarting (UPG): the update offer, its dialog, the restart's note and hand-over.
-  [/^src\/(core\/(update|restart|skill-lifecycle)|tui\/(updates|dialog))\.ts$/, ["updates"]],
+  [/^src\/(core\/application\/distribution\/(update|restart|skill-lifecycle)|tui\/(updates|dialog))\.ts$/, ["updates"]],
   [/^src\/tui\/outline\.ts$/, ["outline"]],
   [/^src\/tui\/scratch\.ts$/, ["scratch"]],
   [/^src\/tui\/info\.ts$/, ["info"]],
@@ -104,7 +104,7 @@ export const CHECKS_FOR: [RegExp, string[]][] = [
   // them — but `upgrade` (install.ts), which Upgrade, restart later runs beside it (UPG).
   [/^src\/cli\/(agents|files|git|info|links|reading|render|search|servers|vaults|writing)\.ts$/, []],
   [/^src\/cli\/install\.ts$/, ["updates"]],
-  [/^(src\/core\/skill\.ts|skills\/slipbox\/SKILL\.md)$/, []],
+  [/^(src\/core\/application\/distribution\/skill\.ts|skills\/slipbox\/SKILL\.md)$/, []],
 ];
 
 /**

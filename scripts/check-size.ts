@@ -28,7 +28,7 @@ export const CAPPED: Record<string, number> = {
 };
 
 /** Generated data: separate measured cap; verify offline with `bun scripts/lock-servers.ts --check` (ORG-D2). */
-export const GENERATED: Record<string, number> = { "src/core/servers/locks.ts": 1239 };
+export const GENERATED: Record<string, number> = { "src/core/documents/servers/locks.ts": 1239 };
 
 export interface SizeVerdict {
   /** Files past their limit: LIMIT, or their cap. */

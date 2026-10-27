@@ -55,7 +55,7 @@ import {
 } from "../scripts/release.ts";
 import { bootstrapScript } from "../scripts/bootstrap.ts";
 import { codeChanged, importGraph, isDocs, scope as reaches } from "../scripts/ci-scope.ts";
-import { pagesBase, RELEASE, RETIRED, retired, tagOf } from "../src/core/release.ts";
+import { pagesBase, RELEASE, RETIRED, retired, tagOf } from "../src/core/application/distribution/release.ts";
 import {
   howToUpgrade,
   installation,
@@ -68,7 +68,7 @@ import {
   uninstall,
   uninstallPlan,
   writeChannel,
-} from "../src/core/install.ts";
+} from "../src/core/application/distribution/install.ts";
 import { libcCandidates } from "../src/core/foundation/platform/libc.ts";
 import {
   CHECK_EVERY_MS,
@@ -84,7 +84,7 @@ import {
   releasesBase,
   upgrade,
   UpgradeError,
-} from "../src/core/update.ts";
+} from "../src/core/application/distribution/update.ts";
 import { VERSION } from "../src/version.ts";
 
 // Processes started, repositories made: slow on a loaded or small machine (a small CI runner), not stuck.
@@ -380,7 +380,7 @@ describe("the supply chain's gates (14.10)", () => {
     expect(g.get("src/core/workspace/walk/walk.ts")).toContain("src/core/foundation/platform/fsutil.ts");
     expect(g.get("src/core/documents/markdown/parse-pool.ts")).toContain("src/core/documents/markdown/parse-worker.ts");
     expect(g.get("src/core/export/jobs.ts")).toContain("src/core/export-worker.ts");
-    expect(g.get("src/core/skill.ts")).toContain("skills/slipbox/SKILL.md");
+    expect(g.get("src/core/application/distribution/skill.ts")).toContain("skills/slipbox/SKILL.md");
     // Run by its path, from the file's folder or the top's name; a temporary folder's paths name nothing here.
     expect(g.get("tests/cli.test.ts")).toContain("src/main.ts");
     expect(g.get("tests/check-size.test.ts")).toContain("scripts/check-size.ts");
@@ -475,7 +475,7 @@ describe("the supply chain's gates (14.10)", () => {
       ],
       checks: ["updates"],
     });
-    expect(of("src/core/skill-lifecycle.ts")).toMatchObject({ checks: ["updates"] });
+    expect(of("src/core/application/distribution/skill-lifecycle.ts")).toMatchObject({ checks: ["updates"] });
     // The builds' record, which every check's session reads: every check.
     expect(of("tests/terminal/releases.ts")).toMatchObject({ checks: "all" });
     // The explorer's listings, every folder a level at a time and the facts its rows' marks read: those features' checks.
@@ -1757,7 +1757,7 @@ describe("updates (14.4)", () => {
   });
 
   test("Bun's crash reports off at start, in the C environment, read back through libc: unless you set either switch (D221)", () => {
-    const mod = join(ROOT, "src", "core", "crash-reports.ts");
+    const mod = join(ROOT, "src", "core", "application", "distribution", "crash-reports.ts");
     const libcMod = join(ROOT, "src", "core", "foundation", "platform", "libc.ts");
     // A process of its own, its environment as given; what libc's getenv says after, on its last line.
     const after = (env: Record<string, string>, first: string): string | null => {

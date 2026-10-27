@@ -1,10 +1,11 @@
-// Spelling in the TUI (plan 25.6): a note's misspelt words (`core/spell.ts`) where the window shows them — in source
+// Spelling in the TUI (plan 25.6): a note's misspelt words (`core/documents/diagnostics/spell.ts`) where the window
+// shows them — in source
 // rows by their offsets, in rendered rows found in the prose's spans — so the marks, `] s` / `[ s`, `z =` and `z g`
 // agree in every view: source, rendered and the lens. Its checkers (`app.speller`): a note's languages, a dictionary
 // for each loaded in the background, the misspelt words of the text on screen, suggestions, your own words added.
 
 import type { Layout, Line } from "../core/layout/ir.ts";
-import type { SpellWord } from "../core/spell.ts";
+import type { SpellWord } from "../core/documents/diagnostics/spell.ts";
 import type { Role } from "../core/theme/theme.ts";
 import { stringWidth } from "../core/foundation/text/width.ts";
 import type { App, View } from "./app.ts";
@@ -18,10 +19,10 @@ import {
   proseWords,
   addOwnWord,
   ownWordsFile,
-} from "../core/spell.ts";
+} from "../core/documents/diagnostics/spell.ts";
 import type { NoteBuffer } from "./buffer.ts";
 import { lazy, loadError } from "../core/foundation/platform/lazy.ts";
-import { openDictionary, threadDictionaries, addToDictionaries } from "../core/spell-thread.ts";
+import { openDictionary, threadDictionaries, addToDictionaries } from "../core/documents/diagnostics/spell-thread.ts";
 
 /** A misspelt word on screen: its row, first column and width, and the word. */
 export interface Spot {

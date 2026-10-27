@@ -88,7 +88,7 @@ What every change keeps. Each is checked by a test or a script where it can be.
   specified without an implementation, fails at start-up and fails a test.
 - **Disk is the contract.** A command reads saved files only, writes atomically, and is never blocked by an open editor.
   The TUI takes a command's write as any program's: it reloads, or asks when the note has unsaved changes. It lists the
-  notes it holds unsaved for commands to warn about (`core/stale.ts`): advice, never a lock.
+  notes it holds unsaved for commands to warn about (`core/workspace/git/merge/stale.ts`): advice, never a lock.
 - **The TUI writes notes only through `App.writeBuffer`:** atomic, inside the root, the watcher told. Besides notes it
   writes only its own state and cache, the scratch, and an export where the user said (`writeExport`, never over a
   note).

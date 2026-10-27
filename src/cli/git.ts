@@ -2,8 +2,8 @@
 // the base, the links a merge would break (20.21), the repository's worktrees.
 
 import { join, relative } from "node:path";
-import { type Checkout, checkoutOf, headOf } from "../core/git.ts";
-import { type BaseHow, baseFor as branchBase, resolveBase } from "../core/gitbase.ts";
+import { type Checkout, checkoutOf, headOf } from "../core/workspace/git/git.ts";
+import { type BaseHow, baseFor as branchBase, resolveBase } from "../core/workspace/git/gitbase.ts";
 import {
   baseBranch,
   changedSince,
@@ -13,11 +13,16 @@ import {
   mergeBaseOf,
   showAt,
   worktreeList,
-} from "../core/gitops.ts";
-import { comparable, diffRows, unseenChange } from "../core/merge.ts";
+} from "../core/workspace/git/branches/gitops.ts";
+import { comparable, diffRows, unseenChange } from "../core/workspace/git/merge/merge.ts";
 import { sanitize } from "../core/foundation/text/sanitize.ts";
 import { readText } from "../core/foundation/platform/fsutil.ts";
-import { describeBreak, type MergeReview, MergeReviewError, reviewMerge } from "../core/mergereview.ts";
+import {
+  describeBreak,
+  type MergeReview,
+  MergeReviewError,
+  reviewMerge,
+} from "../core/workspace/git/review/mergereview.ts";
 import { flag } from "./args.ts";
 import { EXIT, CliError, type Session, type Handler, requireArg, resolveNote } from "./common.ts";
 

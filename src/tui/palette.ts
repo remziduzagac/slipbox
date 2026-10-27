@@ -5,7 +5,7 @@ import type { App, ListItem } from "./app.ts";
 import { classify } from "../core/documents/model/filetypes.ts";
 import { listThemes } from "../core/theme/index.ts";
 import { FORMATS } from "../core/export/index.ts";
-import { rootTypes } from "../core/diagnostics.ts";
+import { rootTypes } from "../core/documents/diagnostics/diagnostics.ts";
 import { COMMAND_SPECS, commandGroup, COMMAND_GROUPS } from "../core/application/commands/catalog.ts";
 import {
   spellKey,

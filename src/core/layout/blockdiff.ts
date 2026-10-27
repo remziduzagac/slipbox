@@ -16,7 +16,7 @@ import {
   type NoteBlock,
 } from "../foundation/text/blockdiff.ts";
 import type { Glyphs } from "../glyphs.ts";
-import { inRanges, type WordRange } from "../merge.ts";
+import { inRanges, type WordRange } from "../workspace/git/merge/merge.ts";
 import { sanitize } from "../foundation/text/sanitize.ts";
 import type { Role } from "../theme/theme.ts";
 import { graphemes, graphemeWidth, stringWidth } from "../foundation/text/width.ts";

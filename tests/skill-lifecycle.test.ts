@@ -14,10 +14,14 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
-import { automaticSkills, skillDirectories, skillRemovalPlan } from "../src/core/skill-lifecycle.ts";
-import { SKILL } from "../src/core/skill.ts";
-import { uninstall, uninstallPlan, type Stores } from "../src/core/install.ts";
-import { upgrade } from "../src/core/update.ts";
+import {
+  automaticSkills,
+  skillDirectories,
+  skillRemovalPlan,
+} from "../src/core/application/distribution/skill-lifecycle.ts";
+import { SKILL } from "../src/core/application/distribution/skill.ts";
+import { uninstall, uninstallPlan, type Stores } from "../src/core/application/distribution/install.ts";
+import { upgrade } from "../src/core/application/distribution/update.ts";
 import { hostTarget, installScript } from "../scripts/release.ts";
 
 const root = resolve(import.meta.dir, "..");

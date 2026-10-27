@@ -1091,7 +1091,8 @@ keys.
   are. After each frame what's under the pointer is worked out again from where it last was (`Mouse.rehover`, § Hover),
   and drawn again when it isn't the row the frame drew by (`gitHover`), so its hover is the frame's. Scrolled past the
   list's end, the scrollbar counts the blank, and the wheel down, with nothing more to show, leaves it as it is.
-- **The Branches section** (GIT-D9; `gitbranchview.ts`, `core/gitbranches.ts`): the local branches
+- **The Branches section** (GIT-D9; `gitbranchview.ts`, `core/workspace/git/branches/gitbranches.ts`): the local
+  branches
   (`branchesLater`: `for-each-ref` with each tip and its date, `worktree list --porcelain -z` for where each is checked
   out — a folder's name may hold a line break; a git before 2.36 refuses `-z`, and the list is read as lines then,
   which form a git takes asked once and kept by its path (`worktreeRecordsLater`) — a folder gone marked `prunable`),
@@ -1160,7 +1161,8 @@ keys.
   it — run where the base is checked out, here (unsaved notes first) or in its worktree (`git merge --no-edit`, in the
   background; in a vault not trusted no hook, `commit.gpgSign=false`); a conflict said, `git merge --abort` named — or,
   checked out nowhere, said so; Into another branch… among those checked out here or in a worktree.
-- **The repositories in the view** (VV-D10, GIT-D11; `tui/gitreposview.ts`, `core/gitrepos.ts`) are found under the
+- **The repositories in the view** (VV-D10, GIT-D11; `tui/gitreposview.ts`, `core/workspace/git/gitrepos.ts`) are found
+  under the
   explorer's zoom (`explorer.top`, else the vault) three folders down (`reposUnder`, `REPO_DEPTH`), 2,000 folders at
   most, in the background: not into a hidden folder, a busy one (`busyFolderAt`, VV-D8, D237) or a repository, whose
   folders are its own; a checkout's `.git` makes it one, and a worktree found beside its main checkout is grouped under
@@ -1417,7 +1419,7 @@ form's fields, by one rule, which also says where an added screen goes:
   or the place, or yours) is indented four spaces there, which no fence's end may be (CommonMark), so nothing in it
   ends the form's own block early, whatever fence GitHub picks. The copy and `gh` keep it as written.
 
-**The facts** (`core/report.ts`, RPT-D1), the same as `slipbox report` prints:
+**The facts** (`core/application/distribution/report.ts`, RPT-D1), the same as `slipbox report` prints:
 
 - **Version:** `VERSION`; how it was installed, in a word ("the installer's", "Homebrew's", "a release put in place by
   hand", "from source or built by hand"), since the form's dropdown may not fill from the address (RPT-D3); the channel
@@ -1485,7 +1487,8 @@ heads it, said, and `o` and `a` aren't there:
   encoded as `URLSearchParams` does. No `labels`: a reporter can't label, and the form labels it `bug` itself.
   `install` is passed though a dropdown may not take it from the address (RPT research, Gaps): Version says how it was
   installed too. `<repo>` is the release's (`RELEASE.repo`), else slipbox's own, `remziduzagac/slipbox` (RPT-D7).
-- **Its plan** (`core/report.ts`: the address, what it leaves out, and why), made when the menu opens, the length
+- **Its plan** (`core/application/distribution/report.ts`: the address, what it leaves out, and why), made when the menu
+  opens, the length
   measured on the encoded address: at most 5,000 characters (RPT research: about 5,500 survives GitHub's sign-in
   redirect). In order: every field; else every field but `output`, which `v` copies; else the title and the facts;
   else the facts alone; else none but the template. `o` and `a` say what they leave out ("filled in but What slipbox
@@ -1506,7 +1509,8 @@ heads it, said, and `o` and `a` aren't there:
   that hasn't answered by then taken to have opened it: a failure copies the address instead and says why
   (`explorer.exe` answers 1 when it worked: not taken for one). A link to the web is still copied, never opened
   (§ Following links, unchanged): this is the one place slipbox opens a browser, because it's what you chose.
-- **gh** (`core/gh.ts`): nothing is run until you choose it. Then the account, as gh will use it, without the
+- **gh** (`core/application/distribution/gh.ts`): nothing is run until you choose it. Then the account, as gh will use
+  it, without the
   network (no question opens for keys typed meanwhile, counted from the key that asked, so one sent with it counts
   too: a `y` among them would answer it — said, `ctrl+s`, `g` asks again): a token in `GH_TOKEN` or `GITHUB_TOKEN`
   comes before what gh keeps, so then it's "the account of GH_TOKEN (not checked)"; else the account gh keeps
@@ -1540,13 +1544,15 @@ no config of a vault read, no state written, nothing reaching the network. `--js
 `facts` structured (`version`, `channel`, `installedBy`, `release`, `bun`, `system`, `terminal`), `fields` by the
 form's ids (`version`, `install`, `platform`, `terminal`), `body` the facts' sections as Markdown, ready for `gh issue
 create --body-file`, and `url`. The terminal's size is stdout's when it's a terminal, else left out; the CLI never asks
-the terminal who it is. The skill for agents (`core/skill.ts`) names it: an agent writing an issue runs `slipbox
+the terminal who it is. The skill for agents (`core/application/distribution/skill.ts`) names it: an agent writing an
+issue runs `slipbox
 report --json` first.
 
 Code: `tui/report.ts` (the `Reporter`, `app.report`: the window, the frame and place kept, the menu, sending),
-`core/report.ts` (the facts, the report's text, reading it back, the address's plan),
+`core/application/distribution/report.ts` (the facts, the report's text, reading it back, the address's plan),
 `core/foundation/platform/browser.ts`,
-`core/gh.ts`, `cli/report.ts` (`slipbox report`, dispatched by `cli/cli.ts` before the session); the host's
+`core/application/distribution/gh.ts`, `cli/report.ts` (`slipbox report`, dispatched by `cli/cli.ts` before the
+session); the host's
 `terminal()` (`tui/run.ts`) hands the TUI a plain copy of OpenTUI's answer, so nothing else touches OpenTUI.
 
 ## Overlays
@@ -1719,13 +1725,15 @@ prints is kept to 2 MB (the window says so when cut short), a filter's output to
 sanitized, filtered as typed — whose `enter` on a `path:line` of the vault opens it.
 
 **Spelling (`25.6`, D157; `space u s`, `[spell] enabled`).** A note's misspelt words are marked (`spell`: underlined) in
-every view — source, rendered and the lens — as `core/spell.ts` finds them: its prose, word by word — not its front
+every view — source, rendered and the lens — as `core/documents/diagnostics/spell.ts` finds them: its prose, word by
+word — not its front
 matter, code, HTML or maths, a link's address, a wikilink, a tag, a URL or an email, nor an abbreviation (`API`), an
 identifier (`camelCase`, `snake_case`, `x86`), a path or a dotted name (`file.ts`) — checked against its languages'
 dictionaries, a word any of them knows being right. Its languages are its front matter's `lang` (`lang: tr`,
 `lang: [tr, en]`), else `[spell] languages`; English and Turkish come with slipbox, any other is yours or the system's
 ([configuration.md](../../docs/manual/configuration.md) § Spelling dictionaries); a language with none is said once.
-Hunspell, as WebAssembly, runs on a thread of its own (`core/spell-thread.ts`, D232): it builds each dictionary there
+Hunspell, as WebAssembly, runs on a thread of its own (`core/documents/diagnostics/spell-thread.ts`, D232): it builds
+each dictionary there
 the first time, and checks there the words a note's checker has no answer for yet; the window is drawn again when the
 dictionaries are there, and again as answers come. A word not answered yet isn't marked: one just typed is marked a
 moment later, and the marks already shown stay meanwhile. Source rows mark a word by its offsets; a rendered row finds
@@ -2211,7 +2219,7 @@ letters meant for the text never pick a choice.
   prompt doesn't nag: after (k) Keep yours, later changes on disk don't open it again, since saving is where it asks;
   `space n c` reopens it (D139).
 - **(d) Diff** — yours → theirs, `-` and `+` lines with context; closing it returns to the prompt.
-- **(m) Merge** — a three-way merge by lines against the version you started from (`core/merge.ts`):
+- **(m) Merge** — a three-way merge by lines against the version you started from (`core/workspace/git/merge/merge.ts`):
   what only one side changed is taken, the same change once, and different changes to the same
   lines are marked `<<<<<<< yours` / `=======` / `>>>>>>> theirs` (with the note's own line endings).
   The result is unsaved (one undo step); the file is theirs now, so `:w` writes it without asking.
@@ -2550,7 +2558,8 @@ worktree changed, ready to review (D154, GIT-D10):
   there isn't. `enter` goes to the link (a note only the other branch has, said so); `esc` comes back to the branches.
   Nothing broken, a message says so. A branch's Merge… in the panel offers the same, into the branch's own base.
 
-**Each branch's own base** (GIT-D10; `core/gitbase.ts`): a branch's base (`chooseBase`, `baseFor`) is the one kept for
+**Each branch's own base** (GIT-D10; `core/workspace/git/gitbase.ts`): a branch's base (`chooseBase`, `baseFor`) is the
+one kept for
 it in `bases.json` (slipbox's state, by repository: its shared git folder's real path, `repoKey`) — by a new branch's
 From, or Compare against… — when it's still there; else the nearest of its candidates (`candidates`): `[git] bases`
 (default `["main"]`), with `[git] base` when set, a base listed there measured only against those before it
@@ -2569,7 +2578,8 @@ D154's amendment of 2026-10-17 settles it) and the rebase onto the base use it; 
 or master; `data.baseChosen` says how (`given`, `kept`, `nearest`, `configured`). `merge-review` merges the branch it
 names into `--into`, else HEAD.
 
-**A base asked for** (D255; `core/gitbase.ts`): `resolveBase` (`resolveBaseLater` on the screen) takes what was typed —
+**A base asked for** (D255; `core/workspace/git/gitbase.ts`): `resolveBase` (`resolveBaseLater` on the screen) takes
+what was typed —
 never an option, a space or a control character — and keeps a branch, remote branch or tag by its plain name
 (`plainName` of git's `--symbolic-full-name`: `refs/heads/dev`, `heads/dev` and `dev` are `dev`, `HEAD` the branch
 checked out, `origin` its default branch), anything else (`HEAD~3`, `ORIG_HEAD`, a short hash) as the commit it names: a
@@ -2618,7 +2628,8 @@ renames (one from before shows the path it had); `enter` on one reads it as it w
 shows its diff to the text as it is now, `enter` on a line going there.
 
 **The working tree's changes** (`26.1`; `[git] signs`): a file's lines changed against what's staged — its text as it is
-now, unsaved typing included (`core/gitsigns.ts`) — are signed in the gutter: `▎` added (`git_sign_add`), `▎` changed
+now, unsaved typing included (`core/workspace/git/gitsigns.ts`) — are signed in the gutter: `▎` added (`git_sign_add`),
+`▎` changed
 (`git_sign_change`), `▁` lines deleted below the line (`▔` above the first; `git_sign_delete`), each role the explorer's
 or a diff's colour halfway to the page, so the signs don't pull the eye from the text (D225). A rendered row joining
 several lines takes their strongest; the blank row between two blocks, no line of the file, has none (#41).
@@ -2636,7 +2647,8 @@ one keeps the index's.
 (`git.change_undo`) undoes it — its lines as staged put back, one undo step, left unsaved. A click on a change's sign
 does both from a menu (§ Side panes).
 
-**The diff** (GIT-D2; `core/merge.ts` `diffView`, `core/layout/diff.ts`, `tui/diffview.ts`): `:diff` (the panel's
+**The diff** (GIT-D2; `core/workspace/git/merge/merge.ts` `diffView`, `core/layout/diff.ts`, `tui/diffview.ts`): `:diff`
+(the panel's
 This file diff too), a file's diff from `:changes`' list, the git panel's `enter` on a file or a change, a branch's or
 another repository's file in the panel, a history entry's diff to now, the conflict prompt's (D)iff and the overwrite
 question's "(d) Show the differences first" draw one way, in the floating window, as wide as the screen less its
@@ -2765,7 +2777,8 @@ window's text, `enter` and the folds are the unified diff's, and a resize betwee
   changed; with every unchanged cell folded already, every cell opens. A file with no change says so and folds nothing.
   Only on that key: a diff doesn't fold the cells by itself.
 
-**Reviewing a change** (GIT-D3; `core/gitreview.ts`, `tui/review.ts`): `v` in the git panel (`[keys.git]`'s `review`),
+**Reviewing a change** (GIT-D3; `core/workspace/git/review/gitreview.ts`, `tui/review.ts`): `v` in the git panel
+(`[keys.git]`'s `review`),
 its Review button, `:review` or `git.review` walks the working tree's changes against what's staged — the gutter's hunks
 (`gitChanges`), the files as they are on disk — across every file `git status` has changed and not staged, and every
 untracked one, as wholly added, in one path order across both (`localeCompare`). A folder (a submodule's), a file gone
@@ -2808,7 +2821,8 @@ none left, it ends. Its end, however it comes, says what it did (`tallyText`): `
 1 note for the agent in the scratch — space s y copies it; 2 left as they were` — `space s y` named when a note was
 written, whatever the key is now. Nothing is committed.
 
-**The remote and stash** (`26.6`; GIT-D4; `core/gitremote.ts`, `tui/gitremote.ts`): the git panel's keys and buttons and
+**The remote and stash** (`26.6`; GIT-D4; `core/workspace/git/branches/gitremote.ts`, `tui/gitremote.ts`): the git
+panel's keys and buttons and
 the palette's commands, none of `space g`'s. `f` (`:fetch`, `git.fetch`) fetches — the branch's remote, else origin,
 git's own choice; `p` (`:pull`, `git.pull`) pulls, fast-forward only (`git pull --ff-only --no-rebase`), and where both
 sides moved asks merge or rebase (below); `shift+p` (`:push`, `git.push`) pushes the branch to its upstream (`git push
@@ -2848,7 +2862,8 @@ fetch:
 read from `git status --branch`'s first line, asked with the status in the background whenever git has news
 (`statusLater`), so after a fetch, a pull, a push, or HEAD moving.
 
-**Pulling where both sides moved** (GIT-D6; `core/gitremote.ts` `pullLater`, `tui/rebase.ts`): a pull that can't
+**Pulling where both sides moved** (GIT-D6; `core/workspace/git/branches/gitremote.ts` `pullLater`, `tui/rebase.ts`): a
+pull that can't
 fast-forward (git's "Not possible to fast-forward") asks: `(m)` merge the upstream into the branch (`git pull
 --no-rebase --ff --no-edit`: git's own message, never an editor; `--ff` over a `pull.ff = only`), `(r)` rebase the
 branch onto it (`git pull --rebase`; over files changed, asked to stash them first, below), `(n)` nothing. Selected is
@@ -2860,7 +2875,8 @@ the base's tip — the branch's own (GIT-D10, `baseOf`), else `[git] base`, main
 with how many commits each side has (`aheadBehind`); unsaved notes saved or kept first, as before a pull. On the base,
 detached, or with nothing new on the base: said, nothing run.
 
-**A rebase over files changed** (D247; `core/gitrebase.ts` `changedTracked`, `stashFirst` in `tui/rebase.ts`): git
+**A rebase over files changed** (D247; `core/workspace/git/branches/gitrebase.ts` `changedTracked`, `stashFirst` in
+`tui/rebase.ts`): git
 won't start a rebase over tracked files changed, staged or not, so slipbox asks first instead of saying git's refusal.
 `shift+r`'s question becomes "Stash your changes, rebase agent onto main, put them back? 2 files changed; its 3 commits
 replayed after main's 1 new."; the pull's `(r)` asks "Stash your changes, rebase main onto origin/main, put them back?
@@ -2879,7 +2895,8 @@ files (`rebased agent onto main — your changes conflicted going back, so git k
 them in the stash, stash@{0} ("autostash"): 1 file in conflict (b.md) — x in source control settles it (:resolve), then
 drop the stash (z)`).
 
-**A merge or a rebase under way** (`core/gitrebase.ts` `operationOf`), or a cherry-pick or a revert begun in a
+**A merge or a rebase under way** (`core/workspace/git/branches/gitrebase.ts` `operationOf`), or a cherry-pick or a
+revert begun in a
 terminal: read from git's own files, no git run — `rebase-merge/` (`msgnum`, `end`, `head-name`), `rebase-apply/`
 (`next`, `last`; `applying`, a `git am`, is none of slipbox's), `MERGE_HEAD` and its `MERGE_MSG`, `CHERRY_PICK_HEAD` or
 `REVERT_HEAD` with the commit `MERGE_MSG` names (a revert's subject, unquoted), and `sequencer/` alone, a series
@@ -2906,7 +2923,8 @@ with the key that opens it (`x in source control opens the merge screen (:resolv
 how to bring them together`). In a vault not trusted, `gitArgs`'s guards hold — no hook runs (a rebase's `pre-rebase`, a
 merge's `pre-merge-commit`), no merge driver — and nothing is signed (`commit.gpgSign=false`); said.
 
-**The merge screen** (GIT-D5; `core/conflicts.ts`, `tui/mergescreen.ts`): `x` on a file in conflict in the git panel
+**The merge screen** (GIT-D5; `core/workspace/git/merge/conflicts.ts`, `tui/mergescreen.ts`): `x` on a file in conflict
+in the git panel
 (its `resolve`, or its Resolve button), `x` on a conflict in the Problems panel's All tab, `:resolve [file]` or
 `git.merge_screen` — the file named, else the conflicted file selected in the panel, else this note when it's in
 conflict, else the first that is — opens the file's buffer (read again first when git changed it on disk and it has no
@@ -3036,8 +3054,10 @@ implemented without a spec or specified without an implementation. See [cli.md](
 
 ## Asynchronous git reads
 
-History, blame, commit messages and old-version reads use `core/gitlog.ts`'s asynchronous forms and
-`core/gitops.ts`'s bounded `gitReadLater`. Capability discovery is asynchronous too. Each command allows fifteen
+History, blame, commit messages and old-version reads use `core/workspace/git/history/gitlog.ts`'s asynchronous forms
+and
+`core/workspace/git/branches/gitops.ts`'s bounded `gitReadLater`. Capability discovery is asynchronous too. Each command
+allows fifteen
 seconds and 64 MiB of output; cancellation or a limit returns no result and closes owned pipes/processes. Unix
 cleanup includes the owned process group. Existing trust guards, literal path arguments and noninteractive sync
 APIs remain. Merge stages are read in parallel; explicit branch diffs select their base asynchronously.

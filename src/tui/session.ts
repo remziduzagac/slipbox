@@ -3,7 +3,7 @@
 // on start; and the state published for the command line — the notes unsaved here (9.9), what's on screen. The code
 // keeps the word session (WSP-D6); users read workspace.
 
-import { writeDirty } from "../core/stale.ts";
+import { writeDirty } from "../core/workspace/git/merge/stale.ts";
 import {
   SESSION_BRANCHES,
   SESSION_FOLDERS,

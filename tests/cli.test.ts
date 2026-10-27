@@ -22,9 +22,9 @@ import {
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import { CLI_COMMANDS, FLAGS } from "../src/cli/cli.ts";
-import { checkoutOf } from "../src/core/git.ts";
-import { keepBase } from "../src/core/gitbase.ts";
-import { isSlipboxSkill } from "../src/core/skill.ts";
+import { checkoutOf } from "../src/core/workspace/git/git.ts";
+import { keepBase } from "../src/core/workspace/git/gitbase.ts";
+import { isSlipboxSkill } from "../src/core/application/distribution/skill.ts";
 import { VERSION } from "../src/version.ts";
 
 // Harnesses copy and index a vault, CLI tests start processes: slow on a loaded machine, not stuck.

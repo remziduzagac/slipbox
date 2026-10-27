@@ -3,9 +3,9 @@
 
 import { placeAt } from "./editing.ts";
 import { formatEntry } from "../core/workspace/mutations/capture.ts";
-import { gitSigns } from "../core/gitsigns.ts";
+import { gitSigns } from "../core/workspace/git/gitsigns.ts";
 import { type Layout, scrolledCol, srcAt, unscrolledCol } from "../core/layout/ir.ts";
-import type { Problem } from "../core/diagnostics.ts";
+import type { Problem } from "../core/documents/diagnostics/diagnostics.ts";
 import { graphemes } from "../core/foundation/text/width.ts";
 import { cells, ordered, type Pos } from "./cursor.ts";
 import type { App, View } from "./app.ts";

@@ -1352,8 +1352,8 @@ describe("git's review, merge screen, pull and rebase (GIT-D3, GIT-D5, GIT-D6)",
   test("opened with --base: the branch here kept against it, said on opening; a ref that names nothing, exit 3 before the screen (D255)", async () => {
     await isolated(async () => {
       const { prepare } = await import("../src/tui/run.ts");
-      const { keptBases } = await import("../src/core/gitbase.ts");
-      const { checkoutOf } = await import("../src/core/git.ts");
+      const { keptBases } = await import("../src/core/workspace/git/gitbase.ts");
+      const { checkoutOf } = await import("../src/core/workspace/git/git.ts");
       const { root } = repo({ "a.md": "# A\n" }, true);
       git(root, "fetch", "-q", "origin");
       git(root, "switch", "-q", "-c", "fix-retry");

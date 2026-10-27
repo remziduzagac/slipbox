@@ -7,12 +7,12 @@
 // selected, and its footer says them; `space g` opens it and focuses it (`git.view`).
 
 import { basename } from "node:path";
-import { headOf } from "../core/git.ts";
-import { type Changed, inVault } from "../core/gitops.ts";
-import { changedLater } from "../core/gitbranches.ts";
-import { agoSaid, isRemoteTracking, remoteMovedAt } from "../core/gitbase.ts";
-import { OPERATIONS } from "../core/gitrebase.ts";
-import { commitLater, sections } from "../core/gitstage.ts";
+import { headOf } from "../core/workspace/git/git.ts";
+import { type Changed, inVault } from "../core/workspace/git/branches/gitops.ts";
+import { changedLater } from "../core/workspace/git/branches/gitbranches.ts";
+import { agoSaid, isRemoteTracking, remoteMovedAt } from "../core/workspace/git/gitbase.ts";
+import { OPERATIONS } from "../core/workspace/git/branches/gitrebase.ts";
+import { commitLater, sections } from "../core/workspace/git/staging/gitstage.ts";
 import { formatEntry } from "../core/workspace/mutations/capture.ts";
 import { sanitize } from "../core/foundation/text/sanitize.ts";
 import { keyChar, spellKey } from "./keys.ts";

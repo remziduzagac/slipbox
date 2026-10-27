@@ -18,7 +18,7 @@ import { notesOfType, ofType, type TypedNote } from "../core/documents/model/doc
 import { type Scope, SCOPES, searchOthers } from "../core/workspace/search/scope.ts";
 import { isListed } from "../core/workspace/vaults/vault.ts";
 import { ELSEWHERE } from "../core/workspace/vaults/names.ts";
-import { frontmatterFindings, rootTypes } from "../core/diagnostics.ts";
+import { frontmatterFindings, rootTypes } from "../core/documents/diagnostics/diagnostics.ts";
 import type { App, View, ListItem, ListOverlay, PromptOverlay } from "./app.ts";
 import type { Layout } from "../core/layout/ir.ts";
 import type { FindState } from "./app.ts";

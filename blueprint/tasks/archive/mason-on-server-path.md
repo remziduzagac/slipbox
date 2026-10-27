@@ -10,8 +10,10 @@ A language server slipbox starts gets Mason's `bin` on its `PATH`, after the use
 
 ## Description
 
-`core/servers/find.ts` already knows Mason's `bin` (`$XDG_DATA_HOME/nvim/mason/bin`) as a place to look for programs;
-`core/servers/client.ts` spawns a server with `process.env` and the server's own `environment`. Add Mason's `bin` to
+`core/documents/servers/find.ts` already knows Mason's `bin` (`$XDG_DATA_HOME/nvim/mason/bin`) as a place to look for
+programs;
+`core/documents/servers/client.ts` spawns a server with `process.env` and the server's own `environment`. Add Mason's
+`bin` to
 the end of the spawned server's `PATH` when the folder exists (and isn't already on it). Only for servers; linters
 keep their own `PATH` handling (`linters.ts`, `projectPath`).
 
@@ -32,9 +34,11 @@ keep their own `PATH` handling (`linters.ts`, `projectPath`).
 
 ## Log
 
-- 2026-10-11: `core/servers/find.ts`: `masonBin()` (what `userInstalls` already looked in) and `serverPath(path)`:
+- 2026-10-11: `core/documents/servers/find.ts`: `masonBin()` (what `userInstalls` already looked in) and
+  `serverPath(path)`:
   Mason's `bin` appended when it's a folder and not on `PATH` already (a trailing `/` ignored); no `PATH` is left as
-  it is. `core/servers/client.ts` sets the spawned server's `PATH` to it, after the server's own `environment`, so
+  it is. `core/documents/servers/client.ts` sets the spawned server's `PATH` to it, after the server's own
+  `environment`, so
   every server slipbox starts has it; linters are untouched.
 - 2026-10-11: test in tests/servers.test.ts, "the servers of open files (19.1)": the fake server started by the
   manager through a launcher that writes its `PATH` down: absent, yours as it is; present, yours then Mason's;

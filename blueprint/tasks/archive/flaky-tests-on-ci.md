@@ -89,7 +89,7 @@ shown before the fix, and gone after.
     - `linters without a server (19.19) > a file's linters …` (`tests/tui.test.ts`; macos-15, #11's branch): waits for
       two linters' findings, then expects the third's "not found" at once. Each linter's result lands on its own
       (`ensureLinters`, `src/tui/languages.ts`), and a missing one is known only when its shell exits 127
-      (`runLinter`, `src/core/servers/linters.ts`): it can come last.
+      (`runLinter`, `src/core/documents/servers/linters.ts`): it can come last.
     - `commands run by your shell (25.7) > :!cmd …` (`tests/tui.test.ts`; macos-15, #14's branch): `err` listed after
       `c1.md`. Standard output and error are two pipes (`runShell`, `src/core/foundation/platform/shell.ts`), and the
       command writes `err`

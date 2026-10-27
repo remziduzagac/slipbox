@@ -5,7 +5,7 @@
 // scrolls sideways, both columns by the one offset, as a code block's lines do (D233); with `[render] code_wrap =
 // "wrap"` each side wraps in its column; with wrapping off the rows are whole and the window scrolls.
 
-import type { DiffViewRow } from "../merge.ts";
+import type { DiffViewRow } from "../workspace/git/merge/merge.ts";
 import {
   acrossRow,
   type Cell,

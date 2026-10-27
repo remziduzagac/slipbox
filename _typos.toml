@@ -28,7 +28,7 @@ extend-ignore-re = [
 [default.extend-words]
 alikes = "alikes" # look-alikes, a character drawn as another
 bre = "bre" # `cof bre`, a search typed in parts (docs/manual/finding.md)
-devlop = "devlop" # an npm package, in a language server's lockfile (src/core/servers/locks.ts)
+devlop = "devlop" # an npm package, in a language server's lockfile (src/core/documents/servers/locks.ts)
 flate = "flate" # PDF's FlateDecode
 hom = "hom" # LaTeX's \hom
 multline = "multline" # LaTeX's multline environment
