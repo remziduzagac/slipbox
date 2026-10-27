@@ -1,0 +1,660 @@
+{
+  "moves": {
+    "tests/core.test.ts": "tests/core/foundation/text/width.test.ts"
+  },
+  "splits": {
+    "tests/core.test.ts": [
+      "tests/core/application/commands/keymap.test.ts",
+      "tests/core/application/config/config.test.ts",
+      "tests/core/documents/diagnostics/lint.test.ts",
+      "tests/core/documents/diagnostics/spelling.test.ts",
+      "tests/core/documents/editing/brackets.test.ts",
+      "tests/core/documents/editing/comments.test.ts",
+      "tests/core/documents/editing/indent.test.ts",
+      "tests/core/documents/editing/replace.test.ts",
+      "tests/core/documents/editing/snippets.test.ts",
+      "tests/core/documents/editing/tasks.test.ts",
+      "tests/core/documents/external-editors/editor.test.ts",
+      "tests/core/documents/external-editors/nvim.test.ts",
+      "tests/core/documents/markdown/parse-threads.test.ts",
+      "tests/core/documents/markdown/parse.test.ts",
+      "tests/core/documents/markdown/tags.test.ts",
+      "tests/core/documents/markdown/wikilink.test.ts",
+      "tests/core/documents/model/data.test.ts",
+      "tests/core/documents/model/docformats.test.ts",
+      "tests/core/documents/model/doctypes.test.ts",
+      "tests/core/documents/model/filetypes.test.ts",
+      "tests/core/documents/model/footnotes.test.ts",
+      "tests/core/documents/syntax/documentation.test.ts",
+      "tests/core/documents/syntax/grammar.test.ts",
+      "tests/core/documents/syntax/links.test.ts",
+      "tests/core/foundation/platform/clipboard.test.ts",
+      "tests/core/foundation/platform/lazy.test.ts",
+      "tests/core/foundation/platform/paths.test.ts",
+      "tests/core/foundation/platform/shell.test.ts",
+      "tests/core/foundation/platform/sqlite.test.ts",
+      "tests/core/foundation/platform/writes.test.ts",
+      "tests/core/foundation/platform/wsl.test.ts",
+      "tests/core/foundation/text/width.test.ts",
+      "tests/core/rendering/layout/ansi.test.ts",
+      "tests/core/rendering/layout/code/source.test.ts",
+      "tests/core/rendering/layout/markdown/render.test.ts",
+      "tests/core/rendering/media/images/svg.test.ts",
+      "tests/core/rendering/media/math.test.ts",
+      "tests/core/rendering/theme/glyphs.test.ts",
+      "tests/core/rendering/theme/theme.test.ts",
+      "tests/core/workspace/git/branches/remote.test.ts",
+      "tests/core/workspace/git/history/blame.test.ts",
+      "tests/core/workspace/git/merge/conflicts.test.ts",
+      "tests/core/workspace/git/merge/merge.test.ts",
+      "tests/core/workspace/git/merge/operations.test.ts",
+      "tests/core/workspace/git/merge/stale.test.ts",
+      "tests/core/workspace/git/review/gitreview.test.ts",
+      "tests/core/workspace/git/staging/signs.test.ts",
+      "tests/core/workspace/git/staging/staging.test.ts",
+      "tests/core/workspace/links/hosting.test.ts",
+      "tests/core/workspace/links/resolution.test.ts",
+      "tests/core/workspace/mutations/capture.test.ts",
+      "tests/core/workspace/vaults/trust.test.ts",
+      "tests/organization/boundary.test.ts",
+      "tests/tui/shell/overlays/match.test.ts"
+    ]
+  },
+  "support": [
+    "tests/support/core-sandbox.ts"
+  ],
+  "suiteWrapperDeltas": [
+    {
+      "name": "describe: review cycle 1 (core)",
+      "delta": 6
+    },
+    {
+      "name": "describe: review cycle 2 (core)",
+      "delta": 1
+    },
+    {
+      "name": "describe: review cycle 4 (core)",
+      "delta": 1
+    },
+    {
+      "name": "describe: review cycle 5 (core, from mutation testing)",
+      "delta": 3
+    },
+    {
+      "name": "describe: review round 2 (core)",
+      "delta": 3
+    },
+    {
+      "name": "describe: review round 3 (core)",
+      "delta": 2
+    }
+  ],
+  "retained": [
+    {
+      "file": "blueprint/tasks/archive/flaky-tests-on-ci.md",
+      "text": "tests/core.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/tasks/archive/folder-time-set-back.md",
+      "text": "tests/core.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/tasks/archive/moved-files-own-paths.md",
+      "text": "tests/core.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/tasks/archive/spell-thread-turns-counted.md",
+      "text": "tests/core.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/docs-site/tasks/archive/reference-chapters.md",
+      "text": "tests/core.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/greenrepo/tasks/archive/hardened-ci.md",
+      "text": "tests/core.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/greenrepo/tasks/archive/tests-on-ci.md",
+      "text": "tests/core.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/upgrade-restart/tasks/archive/dialog.md",
+      "text": "tests/core.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/user-docs/tasks/archive/configuration-chapter.md",
+      "text": "tests/core.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/design.md",
+      "text": "tests/core.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/manifests/t14.json",
+      "text": "tests/core.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "tests/core.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/tasks/01-contracts-and-gates.md",
+      "text": "tests/core.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/tasks/14-search-editing-paths.md",
+      "text": "tests/core.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/tasks/archive/flaky-tests-on-ci.md",
+      "text": "core.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/tasks/archive/folder-time-set-back.md",
+      "text": "core.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/tasks/archive/moved-files-own-paths.md",
+      "text": "core.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/tasks/archive/spell-thread-turns-counted.md",
+      "text": "core.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/doc-findings/tasks/archive/code-and-rendering.md",
+      "text": "core.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/doc-findings/tasks/archive/privacy-and-messages.md",
+      "text": "core.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/doc-findings/tasks/archive/words-hover-clones-popups.md",
+      "text": "core.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/docs-site/tasks/archive/reference-chapters.md",
+      "text": "core.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/greenrepo/tasks/archive/docs-checks.md",
+      "text": "core.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/greenrepo/tasks/archive/hardened-ci.md",
+      "text": "core.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/greenrepo/tasks/archive/tests-on-ci.md",
+      "text": "core.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/upgrade-restart/tasks/archive/dialog.md",
+      "text": "core.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/user-docs/tasks/archive/configuration-chapter.md",
+      "text": "core.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/design.md",
+      "text": "core.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/manifests/t14.json",
+      "text": "core.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "core.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/tasks/01-contracts-and-gates.md",
+      "text": "core.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/tasks/08-test-areas.md",
+      "text": "core.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/tasks/14-search-editing-paths.md",
+      "text": "core.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/tasks/08-test-areas.md",
+      "text": "tests/core.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    }
+  ],
+  "ownership": {
+    "setup": "Each file calls the original-equivalent core XDG/clipboard sandbox setup and registers the same per-file afterAll cleanup and per-test trust reset. Pure support has no App dependency.",
+    "historicalReviews": "Mixed review suites are split by principal scenario responsibility. Parent titles and test bodies are retained; duplicated describe wrappers account for declaration-count changes without adding tests."
+  },
+  "renamedBasenames": {
+    "core.test.ts": "tests/core/ feature suites and the two focused organization/TUI cases"
+  },
+  "prunedUnusedReviewSupport": [
+    {
+      "file": "tests/core/application/config/config.test.ts",
+      "parent": "review round 2 (core)",
+      "declaration": "const g = glyphsFor(\"unicode\");"
+    },
+    {
+      "file": "tests/core/application/config/config.test.ts",
+      "parent": "review round 2 (core)",
+      "declaration": "const text = (l: { lines: { spans: { text: string }[] }[] }) =>\n    l.lines.map((x) => x.spans.map((s) => s.text).join(\"\")).join(\"\\n\");"
+    },
+    {
+      "file": "tests/core/documents/editing/replace.test.ts",
+      "parent": "review cycle 1 (core)",
+      "declaration": "const tmp = (name: string) => mkdtempSync(join(tmpdir(), `slipbox-${name}-`));"
+    },
+    {
+      "file": "tests/core/documents/editing/tasks.test.ts",
+      "parent": "review cycle 1 (core)",
+      "declaration": "const tmp = (name: string) => mkdtempSync(join(tmpdir(), `slipbox-${name}-`));"
+    },
+    {
+      "file": "tests/core/foundation/text/width.test.ts",
+      "parent": "review round 2 (core)",
+      "declaration": "const g = glyphsFor(\"unicode\");"
+    },
+    {
+      "file": "tests/core/foundation/text/width.test.ts",
+      "parent": "review round 2 (core)",
+      "declaration": "const text = (l: { lines: { spans: { text: string }[] }[] }) =>\n    l.lines.map((x) => x.spans.map((s) => s.text).join(\"\")).join(\"\\n\");"
+    },
+    {
+      "file": "tests/core/rendering/layout/ansi.test.ts",
+      "parent": "review round 2 (core)",
+      "declaration": "const text = (l: { lines: { spans: { text: string }[] }[] }) =>\n    l.lines.map((x) => x.spans.map((s) => s.text).join(\"\")).join(\"\\n\");"
+    },
+    {
+      "file": "tests/core/rendering/layout/markdown/render.test.ts",
+      "parent": "review cycle 1 (core)",
+      "declaration": "const tmp = (name: string) => mkdtempSync(join(tmpdir(), `slipbox-${name}-`));"
+    },
+    {
+      "file": "tests/core/rendering/layout/markdown/render.test.ts",
+      "parent": "review cycle 4 (core)",
+      "declaration": "const re = (q: string) => compilePattern(q, { regex: true, whole: false }) as RegExp;"
+    },
+    {
+      "file": "tests/core/workspace/git/merge/merge.test.ts",
+      "parent": "review cycle 1 (core)",
+      "declaration": "const tmp = (name: string) => mkdtempSync(join(tmpdir(), `slipbox-${name}-`));"
+    }
+  ],
+  "inventory": {
+    "baseline": "ORG-T18 plus the literal-content inventory fix",
+    "baselineDeclarations": 3566,
+    "expectedDeclarations": 3582,
+    "unchangedLiteralLeafCalls": 292,
+    "baselineRuntimeTests": 313,
+    "runtimeTests": 313,
+    "baselineAssertions": 61112,
+    "assertions": 61112,
+    "snapshotFiles": 0,
+    "files": [
+      {
+        "file": "tests/core/application/commands/keymap.test.ts",
+        "literalLeafCalls": 2,
+        "runtimeTests": 2,
+        "assertions": 8
+      },
+      {
+        "file": "tests/core/application/config/config.test.ts",
+        "literalLeafCalls": 24,
+        "runtimeTests": 24,
+        "assertions": 164
+      },
+      {
+        "file": "tests/core/documents/diagnostics/lint.test.ts",
+        "literalLeafCalls": 5,
+        "runtimeTests": 5,
+        "assertions": 29
+      },
+      {
+        "file": "tests/core/documents/diagnostics/spelling.test.ts",
+        "literalLeafCalls": 11,
+        "runtimeTests": 11,
+        "assertions": 68
+      },
+      {
+        "file": "tests/core/documents/editing/brackets.test.ts",
+        "literalLeafCalls": 2,
+        "runtimeTests": 2,
+        "assertions": 9
+      },
+      {
+        "file": "tests/core/documents/editing/comments.test.ts",
+        "literalLeafCalls": 3,
+        "runtimeTests": 3,
+        "assertions": 13
+      },
+      {
+        "file": "tests/core/documents/editing/indent.test.ts",
+        "literalLeafCalls": 5,
+        "runtimeTests": 5,
+        "assertions": 30
+      },
+      {
+        "file": "tests/core/documents/editing/replace.test.ts",
+        "literalLeafCalls": 11,
+        "runtimeTests": 11,
+        "assertions": 60
+      },
+      {
+        "file": "tests/core/documents/editing/snippets.test.ts",
+        "literalLeafCalls": 3,
+        "runtimeTests": 3,
+        "assertions": 12
+      },
+      {
+        "file": "tests/core/documents/editing/tasks.test.ts",
+        "literalLeafCalls": 5,
+        "runtimeTests": 5,
+        "assertions": 28
+      },
+      {
+        "file": "tests/core/documents/external-editors/editor.test.ts",
+        "literalLeafCalls": 4,
+        "runtimeTests": 4,
+        "assertions": 13
+      },
+      {
+        "file": "tests/core/documents/external-editors/nvim.test.ts",
+        "literalLeafCalls": 3,
+        "runtimeTests": 3,
+        "assertions": 12
+      },
+      {
+        "file": "tests/core/documents/markdown/parse-threads.test.ts",
+        "literalLeafCalls": 6,
+        "runtimeTests": 6,
+        "assertions": 5263
+      },
+      {
+        "file": "tests/core/documents/markdown/parse.test.ts",
+        "literalLeafCalls": 5,
+        "runtimeTests": 5,
+        "assertions": 781
+      },
+      {
+        "file": "tests/core/documents/markdown/tags.test.ts",
+        "literalLeafCalls": 2,
+        "runtimeTests": 2,
+        "assertions": 8
+      },
+      {
+        "file": "tests/core/documents/markdown/wikilink.test.ts",
+        "literalLeafCalls": 6,
+        "runtimeTests": 6,
+        "assertions": 13
+      },
+      {
+        "file": "tests/core/documents/model/data.test.ts",
+        "literalLeafCalls": 5,
+        "runtimeTests": 5,
+        "assertions": 43
+      },
+      {
+        "file": "tests/core/documents/model/docformats.test.ts",
+        "literalLeafCalls": 1,
+        "runtimeTests": 1,
+        "assertions": 17
+      },
+      {
+        "file": "tests/core/documents/model/doctypes.test.ts",
+        "literalLeafCalls": 6,
+        "runtimeTests": 6,
+        "assertions": 38
+      },
+      {
+        "file": "tests/core/documents/model/filetypes.test.ts",
+        "literalLeafCalls": 1,
+        "runtimeTests": 1,
+        "assertions": 11
+      },
+      {
+        "file": "tests/core/documents/model/footnotes.test.ts",
+        "literalLeafCalls": 3,
+        "runtimeTests": 3,
+        "assertions": 15
+      },
+      {
+        "file": "tests/core/documents/syntax/documentation.test.ts",
+        "literalLeafCalls": 4,
+        "runtimeTests": 4,
+        "assertions": 10
+      },
+      {
+        "file": "tests/core/documents/syntax/grammar.test.ts",
+        "literalLeafCalls": 8,
+        "runtimeTests": 27,
+        "assertions": 90
+      },
+      {
+        "file": "tests/core/documents/syntax/links.test.ts",
+        "literalLeafCalls": 1,
+        "runtimeTests": 1,
+        "assertions": 4
+      },
+      {
+        "file": "tests/core/foundation/platform/clipboard.test.ts",
+        "literalLeafCalls": 6,
+        "runtimeTests": 6,
+        "assertions": 43
+      },
+      {
+        "file": "tests/core/foundation/platform/lazy.test.ts",
+        "literalLeafCalls": 2,
+        "runtimeTests": 2,
+        "assertions": 16
+      },
+      {
+        "file": "tests/core/foundation/platform/paths.test.ts",
+        "literalLeafCalls": 3,
+        "runtimeTests": 3,
+        "assertions": 14
+      },
+      {
+        "file": "tests/core/foundation/platform/shell.test.ts",
+        "literalLeafCalls": 5,
+        "runtimeTests": 5,
+        "assertions": 43
+      },
+      {
+        "file": "tests/core/foundation/platform/sqlite.test.ts",
+        "literalLeafCalls": 1,
+        "runtimeTests": 1,
+        "assertions": 10
+      },
+      {
+        "file": "tests/core/foundation/platform/writes.test.ts",
+        "literalLeafCalls": 1,
+        "runtimeTests": 1,
+        "assertions": 4
+      },
+      {
+        "file": "tests/core/foundation/platform/wsl.test.ts",
+        "literalLeafCalls": 2,
+        "runtimeTests": 2,
+        "assertions": 17
+      },
+      {
+        "file": "tests/core/foundation/text/width.test.ts",
+        "literalLeafCalls": 9,
+        "runtimeTests": 9,
+        "assertions": 79
+      },
+      {
+        "file": "tests/core/rendering/layout/ansi.test.ts",
+        "literalLeafCalls": 2,
+        "runtimeTests": 2,
+        "assertions": 10
+      },
+      {
+        "file": "tests/core/rendering/layout/code/source.test.ts",
+        "literalLeafCalls": 5,
+        "runtimeTests": 5,
+        "assertions": 1226
+      },
+      {
+        "file": "tests/core/rendering/layout/markdown/render.test.ts",
+        "literalLeafCalls": 7,
+        "runtimeTests": 7,
+        "assertions": 150
+      },
+      {
+        "file": "tests/core/rendering/media/images/svg.test.ts",
+        "literalLeafCalls": 8,
+        "runtimeTests": 8,
+        "assertions": 45
+      },
+      {
+        "file": "tests/core/rendering/media/math.test.ts",
+        "literalLeafCalls": 7,
+        "runtimeTests": 7,
+        "assertions": 48
+      },
+      {
+        "file": "tests/core/rendering/theme/glyphs.test.ts",
+        "literalLeafCalls": 2,
+        "runtimeTests": 4,
+        "assertions": 439
+      },
+      {
+        "file": "tests/core/rendering/theme/theme.test.ts",
+        "literalLeafCalls": 9,
+        "runtimeTests": 9,
+        "assertions": 3178
+      },
+      {
+        "file": "tests/core/workspace/git/branches/remote.test.ts",
+        "literalLeafCalls": 12,
+        "runtimeTests": 12,
+        "assertions": 94
+      },
+      {
+        "file": "tests/core/workspace/git/history/blame.test.ts",
+        "literalLeafCalls": 2,
+        "runtimeTests": 2,
+        "assertions": 10
+      },
+      {
+        "file": "tests/core/workspace/git/merge/conflicts.test.ts",
+        "literalLeafCalls": 11,
+        "runtimeTests": 11,
+        "assertions": 63
+      },
+      {
+        "file": "tests/core/workspace/git/merge/merge.test.ts",
+        "literalLeafCalls": 5,
+        "runtimeTests": 5,
+        "assertions": 47867
+      },
+      {
+        "file": "tests/core/workspace/git/merge/operations.test.ts",
+        "literalLeafCalls": 13,
+        "runtimeTests": 13,
+        "assertions": 84
+      },
+      {
+        "file": "tests/core/workspace/git/merge/stale.test.ts",
+        "literalLeafCalls": 1,
+        "runtimeTests": 1,
+        "assertions": 4
+      },
+      {
+        "file": "tests/core/workspace/git/review/gitreview.test.ts",
+        "literalLeafCalls": 23,
+        "runtimeTests": 23,
+        "assertions": 744
+      },
+      {
+        "file": "tests/core/workspace/git/staging/signs.test.ts",
+        "literalLeafCalls": 1,
+        "runtimeTests": 1,
+        "assertions": 11
+      },
+      {
+        "file": "tests/core/workspace/git/staging/staging.test.ts",
+        "literalLeafCalls": 9,
+        "runtimeTests": 9,
+        "assertions": 91
+      },
+      {
+        "file": "tests/core/workspace/links/hosting.test.ts",
+        "literalLeafCalls": 1,
+        "runtimeTests": 1,
+        "assertions": 8
+      },
+      {
+        "file": "tests/core/workspace/links/resolution.test.ts",
+        "literalLeafCalls": 5,
+        "runtimeTests": 5,
+        "assertions": 16
+      },
+      {
+        "file": "tests/core/workspace/mutations/capture.test.ts",
+        "literalLeafCalls": 6,
+        "runtimeTests": 6,
+        "assertions": 23
+      },
+      {
+        "file": "tests/core/workspace/vaults/trust.test.ts",
+        "literalLeafCalls": 4,
+        "runtimeTests": 4,
+        "assertions": 26
+      },
+      {
+        "file": "tests/organization/boundary.test.ts",
+        "literalLeafCalls": 3,
+        "runtimeTests": 3,
+        "assertions": 8
+      },
+      {
+        "file": "tests/tui/shell/overlays/match.test.ts",
+        "literalLeafCalls": 1,
+        "runtimeTests": 1,
+        "assertions": 2
+      }
+    ]
+  }
+}

@@ -95,6 +95,5 @@ first archive migration invocation lacked a Git index and stopped at `git ls-fil
 passes. T17's migration and size checks also pass after restoring its work. Earlier task tips are unchanged.
 
 
-Two read-only reviews are complete. The inherited fixture fixes now precede T16/T17 in local history; temporary local
-commit identities are kept only in the private progress record, with durable task identifiers used here. No remaining
-code, scope or evidence findings were identified.
+The inherited fixture fixes precede T16/T17 in local history. Durable task identifiers name the baseline stages here;
+temporary local commit identities remain in the local verification log.

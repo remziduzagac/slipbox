@@ -1,6 +1,6 @@
 import { UNIT_TIMEOUT_MS, TEST_BUDGETS } from "./support/timeouts.ts";
 // The user documentation, docs/: whole, every link landing, every command and key in the manual, and free of the
-// blueprint's IDs (DOC-D3). The configuration chapter's defaults are checked in core.test.ts.
+// blueprint's IDs (DOC-D3). The configuration chapter's defaults are checked in core/application/config/config.test.ts.
 import { describe, expect, test } from "bun:test";
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";

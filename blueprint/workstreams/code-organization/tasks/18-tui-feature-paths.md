@@ -72,13 +72,11 @@ The final owner selection uses `-t '^(the Problems panel|spelling \(25.6|UI sett
   info/commands JSON and unknown-option exit 2.
 - Typecheck, boundary, size and docs checks pass. Initial docs lint caught expanded-path wrapping; the affected prose
   and comments were reflowed without changing content, then docs passed. Direct changed-file Markdown/Biome lint passes;
-  the first review found no code, asset or scope problems and identified only the cap-policy clarification. No
-  whole-suite or all-terminal run was made; no intermittent test failure appeared in these controls. Titles, assertions,
-  hooks, snapshots and timeout budgets remain unchanged.
+  the approved cap-policy clarification is recorded above. No whole-suite or all-terminal run was made; no intermittent
+  test failure appeared in these controls. Titles, assertions, hooks, snapshots and timeout budgets remain unchanged.
 
 
 The approved crossing rule is consistent in all four policy documents and the size-check header, with T30 named for cap
 removal. The complete manifest accompanies the move.
-
 The code-block tree sample retains its original drawing-path label as rendered fixture data, with an exact retained
 entry. It is not a module reference; changing its width would change the scenario rather than relocate its owner.

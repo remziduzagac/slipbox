@@ -56,11 +56,11 @@ The probe build retains the package's root/autoload flags and worker entries; it
 isolated temporary directory. The package's actual CLI build also passes its compiled SQLite/index/spell test.
 Probe artifacts are `tmp/issue/worker-probe.ts`, `run-worker-probe.py` and `reviews/t2-workers-*.log`.
 
-Review corrections: the generated selector fixture imports the moved URL helper and expects its new sort order.
-The selector matrix preserves the original terminal filters for all 29 moved files, including blockdiff, shell and
-worker-context. Retired basenames are explicit in the manifest, and prose-only historical uses have exact exceptions.
-Current prose/module-map references, the worker URL JSDoc attachment and wraps are corrected; sample-case formatting
-is preserved except the actual path/name substitutions. The expanded distribution/scope test run is recorded below.
+The generated selector fixture imports the moved URL helper and expects its new sort order. The selector matrix
+preserves the original terminal filters for all 29 moved files, including blockdiff, shell and worker-context. Retired
+basenames are explicit in the manifest, and prose-only historical uses have exact exceptions. Current prose/module-map
+references, the worker URL JSDoc attachment and wraps are corrected; sample-case formatting is preserved except the
+actual path/name substitutions. The expanded distribution/scope test run is recorded below.
 
 The expanded local distribution and scope/range run passes: 97 tests across distribution.test.ts and ci-range.test.ts.
 The generated fixture failure is fixed, and all 331 command records retain their original content and order.
@@ -70,9 +70,9 @@ corrected a rewritten literal shell range selector; asset-base rewriting is now 
 bases. All 28 ordinary moved modules retain equivalent bodies; the URL helper is the sole intentional implementation
 adaptation, verified by the source/compiled worker matrix.
 
-Both shell range and process cases pass with normal local process permissions; the existing range test was verified
-to fail with the incorrect rewritten selector. Source and compiled TUI panel checks pass. All validated external
-findings are fixed; final own review is clean.
+Both shell range and process cases pass with normal local process permissions; the existing range test was verified to
+fail with the incorrect rewritten selector. Source and compiled TUI panel checks pass. All listed source, selector and
+compiled checks pass.
 
 The syntax-worker structure fixture keeps its explicit source base at core/, independently of the URL helper's
 folder. Using the nested helper URL as that base looks for the entry in the helper's folder instead and fails with

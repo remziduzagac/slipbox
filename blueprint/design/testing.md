@@ -20,7 +20,7 @@ through OpenTUI itself, to prove the adapter and real key parsing.
 
 | File | Covers |
 | --- | --- |
-| `tests/core.test.ts` | width, sanitize, wikilinks, link resolution, capture, config, themes, keymap, glyph sets |
+| `tests/core/` | width, sanitize, wikilinks, link resolution, capture, config, themes, keymap, glyph sets |
 | `tests/render.test.ts` | snapshots, the no-overflow property, allocator properties, blocks, ANSI output |
 | `tests/vault.test.ts` | discovery, the walk against the fixture vault, the graph, the CLI and parity |
 | `tests/cli.test.ts` | the CLI as an agent meets it: the real process on a copy of the demo vault; every command |
@@ -36,6 +36,10 @@ through OpenTUI itself, to prove the adapter and real key parsing.
 | `tests/check-docs.test.ts` | the docs' check on a repository of its own: a misspelling, a broken link, a long line |
 | `tests/docs.test.ts` | the user docs and agent guide: links, anchors, commands, flags, keys; no ID; vault, not root |
 | `tests/site.test.ts` | the docs' site: pages gathered from the docs map, links rewritten, the home's cards (DS) |
+
+The core split also places boundary fixtures under `tests/organization/` and pure switcher matching under
+`tests/tui/shell/overlays/`. Every owner file retains its timeout and equivalent file-owned core sandbox; the support
+module does not import App.
 
 `tests/distribution.test.ts` builds a release for this machine and drives it as a user would: the packed binary
 printing the skill, the release's notes, installed by the release's installer and through the Pages bootstrap,
@@ -53,9 +57,9 @@ it, and source control's TUI tests went to `tests/tui-git.test.ts`. The two shar
 it, and an `afterAll` at its top would be the first file's alone: so each file calls `makeSandbox()` at its own top, for
 a sandbox of its own, removed when that file ends.
 
-Later reviews keep their regression tests in `describe("review round N …")` or `describe("review cycle
-N …")` blocks in the file for the area: `tui.test.ts`, `core.test.ts`, `vault.test.ts`,
-`render.test.ts` and `cli.test.ts`.
+Regression tests follow their feature owner. Existing review-round/cycle parent titles are preserved while mixed
+collections split scenario by scenario; core cases now live in tests/core and the focused organization/TUI owners, while
+remaining collections migrate in their assigned phases.
 
 **Properties, not just examples:**
 

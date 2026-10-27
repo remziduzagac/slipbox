@@ -45,7 +45,7 @@ terminal wait or process-kill policy changed.
 The autosave ancestor-checkout interaction and broad-run environment/timer findings remain separate; no timeout increase
 or timer-arithmetic fix is included. Source application code and build entries are unchanged.
 
-The review also named the unchanged tighter syntax budgets (15,000 and 20,000 ms), clarified that export reads still
+The policy names the unchanged tighter syntax budgets (15,000 and 20,000 ms), clarified that export reads still
 initialize their file default locally, and added a guard for all ten existing file-local initialization sites. The
 numeric runner fallback is intentionally duplicated in package JSON and checked against the shared constant.
 
@@ -63,7 +63,7 @@ The release-build hook remains 240,000 ms; equivalence checking covers its argum
 for this test-only change. Product/child-process/terminal clocks and intentionally injected tiny timeout cases retain
 their original owners and numbers.
 
-Final review found no correctness or scope issue. The initialization guard names its explicit path-map maintenance
-requirement; later test moves update that map. Source-inspection and setup comments retain the budget rationale and
-point at the policy. Formatting expands several existing callback bodies: inspect `git diff -w` alongside the
-18-file executable-equivalence result to separate that formatting from the budget substitutions.
+The initialization guard names its explicit path-map maintenance requirement; later test moves update that map.
+Source-inspection and setup comments retain the budget rationale and point at the policy. Formatting expands several
+existing callback bodies: inspect `git diff -w` alongside the 18-file executable-equivalence result to separate that
+formatting from the budget substitutions.
