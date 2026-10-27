@@ -46,7 +46,7 @@ symlink/trust and walk-thread checks, type/boundary/size/lint/docs and source/co
 `tmp/issue/reviews/t3-*`. Source-only historical references are explicit manifest exceptions; no source compatibility
 barrel or loading/memory change is added.
 
-## Local review and import-formatting adjustment
+## Import-formatting adjustment and validation
 
 The shipped skill is byte-identical to the predecessor: its capture-path example refers to a user's project,
 so the manifest retains it explicitly. No skill hash changes. The skill installation check passes (1 test).
@@ -58,4 +58,4 @@ comment are unchanged; normalized executable bodies and mapped edges agree. No i
 Local checks: 15 vault/session/trust/symlink tests, 4 walk-thread tests and 3 selector/import-graph/build-entry tests
 pass. Source TUI navigation passes; the compiled binary outside the repository opens explorer/outline and exits cleanly,
 serves info/commands JSON, and rejects an unknown option with exit 2. Typecheck, lint, boundary, size, docs and
-migration checks pass. The second review has no remaining correctness findings.
+migration checks pass.

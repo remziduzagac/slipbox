@@ -1306,7 +1306,8 @@ describe("git's review, merge screen, pull and rebase (GIT-D3, GIT-D5, GIT-D6)",
     writeFileSync(join(root, ".gitignore"), ".slipbox/\n");
     for (const [f, t] of Object.entries(files)) writeFileSync(join(root, f), t);
     git(root, "init", "-q", "-b", "main");
-    // git's own markers, whatever the machine's config says (diff3's base section is read too: core.test.ts).
+    // git's own markers, whatever the machine's config says (diff3's base section is read too:
+    // core/workspace/git/merge/conflicts.test.ts).
     git(root, "config", "merge.conflictStyle", "merge");
     git(root, "add", "-A");
     git(root, "commit", "-q", "-m", "start");

@@ -71,6 +71,6 @@ current tabs-containing-views model. The mixed tab strip stays in draw.ts until 
 ownership review; the manifest records this explicitly.
 
 The final path-input negative control temporarily substituted a nonexistent lens module: the unchanged test failed with
-exit 1 and `Cannot find module`, then passed after restoration. A repeat read-only review found no actionable issues.
-The template/join scan also checked core worker discovery and literal source joins in scripts and tests; their mapped
-paths resolve. No other stale variable-built source import was found.
+exit 1 and `Cannot find module`, then passed after restoration. The template/join scan also checked core worker
+discovery and literal source joins in scripts and tests; their mapped paths resolve. No other stale variable-built
+source import was found.

@@ -110,10 +110,10 @@ checks remain required; matching graph counts alone are insufficient.
 
 ### Reproducible baseline capture
 
-The review-corrected capture of `fe3693d` has **2,594 literal test/suite declarations**, 1,945 resolved source/script
-edges, 1,606 runtime import edges and 12 build entries, with no unresolved paths. These are lexical declaration
-identities, not Bun's executed test count. The original raw-text capture counted comments and fixture strings too;
-its declaration count must not be used as the baseline.
+The corrected capture of `fe3693d` has **2,594 literal test/suite declarations**, 1,945 resolved source/script edges,
+1,606 runtime import edges and 12 build entries, with no unresolved paths. These are lexical declaration identities, not
+Bun's executed test count. The original raw-text capture counted comments and fixture strings too; its declaration count
+must not be used as the baseline.
 
 The full snapshot is retained locally at `tmp/issue/t1-baseline.json` (ignored generated evidence). Its SHA-256 is
 `3dfc6695ec36e0f0e2fd73bfc79464637a6239c0cad3a99fe58bd518cbcfea88`.
@@ -166,11 +166,11 @@ same checker version on both sides; T1's intentional contract extraction is not 
   invalid-timer warnings; its remaining failures are not individually diagnosed. This is not a green aggregate run.
   Focused T1 evidence above stands separately; CI and maintainer review are still required before completion.
 
-Review corrections are confined to this PR: contributor instructions now state the 1,000-line ceiling;
-CONTRIBUTING.md and MAINTAINING.md contain no obsolete numeric ceiling. Prefix and script-edge regression fixtures,
-and the commented-out-test regression, were run against the original T1 checker and all three failed before the fixes.
-The command metadata/composer remains unchanged. Keep the PR draft until all test and terminal CI jobs are green and
-the maintainer asks to advance it.
+The gate corrections are confined to T1: contributor instructions now state the 1,000-line ceiling; CONTRIBUTING.md and
+MAINTAINING.md contain no obsolete numeric ceiling. Prefix and script-edge regression fixtures, and the
+commented-out-test regression, were run against the original T1 checker and all three failed before the fixes. The
+command metadata/composer remains unchanged. Keep the PR draft until all test and terminal CI jobs are green and the
+maintainer asks to advance it.
 
 Comment handling now uses a single forward scanner that preserves string/template/regex literals and blanks comments
 without changing offsets. Regression coverage distinguishes division followed by a comment from a regex literal.

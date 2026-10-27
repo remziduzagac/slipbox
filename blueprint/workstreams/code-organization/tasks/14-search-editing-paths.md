@@ -51,4 +51,5 @@ outside the repository, including regex and nested export-to-diagram SVG. The ac
 explorer/outline and exits cleanly, serves info/commands JSON and rejects an unknown option with exit 2. Typecheck,
 lint, boundary, size, docs and migration checks pass. Assertions and snapshots are unchanged.
 
-Known follow-up: ORG-T19–ORG-T22 must rename the retained suite source label together with its identity baseline.
+Known item for ORG-T8/T19–T22: preserve the historical source label with its test identity during this batch; any label
+rename and identity-baseline update need a separate approved change.

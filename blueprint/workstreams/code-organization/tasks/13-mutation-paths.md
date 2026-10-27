@@ -48,7 +48,7 @@ are added, none removed; build entries are unchanged. Runtime SCC sizes change f
 → rename-apply → files cycle is removed. The other SCCs are unchanged under the path mapping. Final imports resolve and
 old-path scanning passes. The original mechanical snapshot is not claimed identical after this intentional extraction.
 
-## Local validation and review record
+## Local verification record
 
 The focused mutation/refusal/marker/trash selection passes 16/16 before extraction and on baseline/current repeat runs;
 rename-across-vault and undo tests pass 12/12. Both boundary tests pass, and the reverse-import fixture fails when the
