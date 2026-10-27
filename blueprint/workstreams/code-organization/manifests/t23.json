@@ -1,0 +1,669 @@
+{
+  "moves": {
+    "tests/cli.test.ts": "tests/cli/links/process.test.ts"
+  },
+  "splits": {
+    "tests/cli.test.ts": [
+      "tests/cli/agents/capture.test.ts",
+      "tests/cli/agents/context.test.ts",
+      "tests/cli/agents/skill.test.ts",
+      "tests/cli/diagnostics/servers.test.ts",
+      "tests/cli/diagnostics/spelling-process.test.ts",
+      "tests/cli/distribution/cache.test.ts",
+      "tests/cli/distribution/install.test.ts",
+      "tests/cli/distribution/report.test.ts",
+      "tests/cli/editing/find.test.ts",
+      "tests/cli/editing/replace.test.ts",
+      "tests/cli/editing/writing.test.ts",
+      "tests/cli/export/destinations.test.ts",
+      "tests/cli/export/formats.test.ts",
+      "tests/cli/export/word.test.ts",
+      "tests/cli/files/code-links.test.ts",
+      "tests/cli/files/excluded.test.ts",
+      "tests/cli/files/operations.test.ts",
+      "tests/cli/files/plans.test.ts",
+      "tests/cli/files/refusals.test.ts",
+      "tests/cli/files/symlinks.test.ts",
+      "tests/cli/git/process.test.ts",
+      "tests/cli/launcher/compiled.test.ts",
+      "tests/cli/launcher/dispatch.test.ts",
+      "tests/cli/launcher/install-local.test.ts",
+      "tests/cli/launcher/terminal-errors.test.ts",
+      "tests/cli/links/process.test.ts",
+      "tests/cli/reading/metadata.test.ts",
+      "tests/cli/reading/process.test.ts",
+      "tests/cli/reading/render.test.ts",
+      "tests/cli/reading/text-files.test.ts",
+      "tests/cli/reading/themes.test.ts",
+      "tests/cli/search/process.test.ts",
+      "tests/cli/state/editors.test.ts",
+      "tests/cli/state/history.test.ts",
+      "tests/cli/vaults/process.test.ts"
+    ]
+  },
+  "support": [
+    "tests/support/cli-process.ts"
+  ],
+  "suiteWrapperDeltas": [
+    {
+      "name": "describe: find and replace",
+      "delta": 2
+    },
+    {
+      "name": "describe: reading",
+      "delta": 2
+    },
+    {
+      "name": "describe: review cycle 6 (cli)",
+      "delta": 6
+    },
+    {
+      "name": "describe: the CLI's edges: help flags, error paths, empty states",
+      "delta": 8
+    },
+    {
+      "name": "describe: the vault and the tool",
+      "delta": 17
+    },
+    {
+      "name": "describe: writing",
+      "delta": 7
+    }
+  ],
+  "retained": [
+    {
+      "file": "blueprint/tasks/archive/folder-time-set-back.md",
+      "text": "tests/cli.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/tasks/archive/link-completion-reads-once.md",
+      "text": "tests/cli.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/doc-findings/tasks/archive/cli-words.md",
+      "text": "tests/cli.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/doc-findings/tasks/archive/merge-and-check.md",
+      "text": "tests/cli.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/greenrepo/tasks/archive/channels.md",
+      "text": "tests/cli.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/greenrepo/tasks/archive/hardened-ci.md",
+      "text": "tests/cli.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/greenrepo/tasks/archive/skill-in-binary.md",
+      "text": "tests/cli.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/greenrepo/tasks/archive/tests-on-ci.md",
+      "text": "tests/cli.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/terminal-tests/design.md",
+      "text": "tests/cli.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/upgrade-restart/tasks/archive/upgrade-safely.md",
+      "text": "tests/cli.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/user-docs/tasks/archive/cli-chapter.md",
+      "text": "tests/cli.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "tests/cli.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/tasks/09-focused-hosts.md",
+      "text": "tests/cli.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/tasks/archive/folder-time-set-back.md",
+      "text": "cli.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/tasks/archive/link-completion-reads-once.md",
+      "text": "cli.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/doc-findings/tasks/archive/cli-words.md",
+      "text": "cli.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/doc-findings/tasks/archive/exports.md",
+      "text": "cli.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/doc-findings/tasks/archive/links-and-search.md",
+      "text": "cli.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/doc-findings/tasks/archive/merge-and-check.md",
+      "text": "cli.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/doc-findings/tasks/archive/privacy-and-messages.md",
+      "text": "cli.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/greenrepo/tasks/archive/channels.md",
+      "text": "cli.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/greenrepo/tasks/archive/hardened-ci.md",
+      "text": "cli.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/greenrepo/tasks/archive/skill-in-binary.md",
+      "text": "cli.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/greenrepo/tasks/archive/tests-on-ci.md",
+      "text": "cli.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/terminal-tests/design.md",
+      "text": "cli.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/upgrade-restart/tasks/archive/upgrade-safely.md",
+      "text": "cli.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/user-docs/tasks/archive/cli-chapter.md",
+      "text": "cli.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "cli.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/tasks/09-focused-hosts.md",
+      "text": "cli.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    }
+  ],
+  "renamedBasenames": {
+    "cli.test.ts": "feature suites listed by the split manifest"
+  },
+  "ownership": {
+    "process": "Each owner retains real-process assertions and a file-scoped isolated demo sandbox.",
+    "launcher": "Dispatch, argument/error, terminal refusal, installer and compiled entry coverage.",
+    "handlers": "Focused handler characterization uses real sessions without the main launcher."
+  },
+  "prunedUnusedReviewSupport": [
+    {
+      "file": "tests/cli/agents/capture.test.ts",
+      "parent": "writing",
+      "declaration": "const linkedOut = () => {\n    const dir = realpathSync(mkdtempSync(join(sandbox, \"linked-\")));\n    const own = {\n      XDG_STATE_HOME: join(dir, \"state\"),\n      XDG_CACHE_HOME: join(dir, \"cache\"),\n      XDG_DATA_HOME: join(dir, \"d\"),\n    };\n    const root = join(dir, \"root\");\n    const out = join(dir, \"out\");\n    mkdirSync(join(root, \".slipbox\"), { recursive: true });\n    mkdirSync(join(out, \"sub\"), { recursive: true });\n    writeFileSync(join(root, \"a.md\"), \"# A\\n\\n[far](data/far.md)\\n\");\n    writeFileSync(join(out, \"far.md\"), \"# Far\\n\\nKept out of the vault.\\n\");\n    writeFileSync(join(out, \"sub\", \"s.md\"), \"# S\\n\");\n    symlinkSync(out, join(root, \"data\"));\n    return { dir, own, root, out, link: join(root, \"data\") };\n  };"
+    },
+    {
+      "file": "tests/cli/agents/capture.test.ts",
+      "parent": "the vault and the tool",
+      "declaration": "const SKILL_FILE = join(import.meta.dir, \"../../..\", \"skills\", \"slipbox\", \"SKILL.md\");"
+    },
+    {
+      "file": "tests/cli/agents/context.test.ts",
+      "parent": "the vault and the tool",
+      "declaration": "const SKILL_FILE = join(import.meta.dir, \"../../..\", \"skills\", \"slipbox\", \"SKILL.md\");"
+    },
+    {
+      "file": "tests/cli/diagnostics/servers.test.ts",
+      "parent": "the vault and the tool",
+      "declaration": "const SKILL_FILE = join(import.meta.dir, \"../../..\", \"skills\", \"slipbox\", \"SKILL.md\");"
+    },
+    {
+      "file": "tests/cli/distribution/install.test.ts",
+      "parent": "the vault and the tool",
+      "declaration": "const SKILL_FILE = join(import.meta.dir, \"../../..\", \"skills\", \"slipbox\", \"SKILL.md\");"
+    },
+    {
+      "file": "tests/cli/distribution/report.test.ts",
+      "parent": "the vault and the tool",
+      "declaration": "const SKILL_FILE = join(import.meta.dir, \"../../..\", \"skills\", \"slipbox\", \"SKILL.md\");"
+    },
+    {
+      "file": "tests/cli/editing/replace.test.ts",
+      "parent": "the vault and the tool",
+      "declaration": "const SKILL_FILE = join(import.meta.dir, \"../../..\", \"skills\", \"slipbox\", \"SKILL.md\");"
+    },
+    {
+      "file": "tests/cli/editing/writing.test.ts",
+      "parent": "writing",
+      "declaration": "const linkedOut = () => {\n    const dir = realpathSync(mkdtempSync(join(sandbox, \"linked-\")));\n    const own = {\n      XDG_STATE_HOME: join(dir, \"state\"),\n      XDG_CACHE_HOME: join(dir, \"cache\"),\n      XDG_DATA_HOME: join(dir, \"d\"),\n    };\n    const root = join(dir, \"root\");\n    const out = join(dir, \"out\");\n    mkdirSync(join(root, \".slipbox\"), { recursive: true });\n    mkdirSync(join(out, \"sub\"), { recursive: true });\n    writeFileSync(join(root, \"a.md\"), \"# A\\n\\n[far](data/far.md)\\n\");\n    writeFileSync(join(out, \"far.md\"), \"# Far\\n\\nKept out of the vault.\\n\");\n    writeFileSync(join(out, \"sub\", \"s.md\"), \"# S\\n\");\n    symlinkSync(out, join(root, \"data\"));\n    return { dir, own, root, out, link: join(root, \"data\") };\n  };"
+    },
+    {
+      "file": "tests/cli/editing/writing.test.ts",
+      "parent": "the vault and the tool",
+      "declaration": "const SKILL_FILE = join(import.meta.dir, \"../../..\", \"skills\", \"slipbox\", \"SKILL.md\");"
+    },
+    {
+      "file": "tests/cli/export/destinations.test.ts",
+      "parent": "writing",
+      "declaration": "const linkedOut = () => {\n    const dir = realpathSync(mkdtempSync(join(sandbox, \"linked-\")));\n    const own = {\n      XDG_STATE_HOME: join(dir, \"state\"),\n      XDG_CACHE_HOME: join(dir, \"cache\"),\n      XDG_DATA_HOME: join(dir, \"d\"),\n    };\n    const root = join(dir, \"root\");\n    const out = join(dir, \"out\");\n    mkdirSync(join(root, \".slipbox\"), { recursive: true });\n    mkdirSync(join(out, \"sub\"), { recursive: true });\n    writeFileSync(join(root, \"a.md\"), \"# A\\n\\n[far](data/far.md)\\n\");\n    writeFileSync(join(out, \"far.md\"), \"# Far\\n\\nKept out of the vault.\\n\");\n    writeFileSync(join(out, \"sub\", \"s.md\"), \"# S\\n\");\n    symlinkSync(out, join(root, \"data\"));\n    return { dir, own, root, out, link: join(root, \"data\") };\n  };"
+    },
+    {
+      "file": "tests/cli/export/formats.test.ts",
+      "parent": "writing",
+      "declaration": "const linkedOut = () => {\n    const dir = realpathSync(mkdtempSync(join(sandbox, \"linked-\")));\n    const own = {\n      XDG_STATE_HOME: join(dir, \"state\"),\n      XDG_CACHE_HOME: join(dir, \"cache\"),\n      XDG_DATA_HOME: join(dir, \"d\"),\n    };\n    const root = join(dir, \"root\");\n    const out = join(dir, \"out\");\n    mkdirSync(join(root, \".slipbox\"), { recursive: true });\n    mkdirSync(join(out, \"sub\"), { recursive: true });\n    writeFileSync(join(root, \"a.md\"), \"# A\\n\\n[far](data/far.md)\\n\");\n    writeFileSync(join(out, \"far.md\"), \"# Far\\n\\nKept out of the vault.\\n\");\n    writeFileSync(join(out, \"sub\", \"s.md\"), \"# S\\n\");\n    symlinkSync(out, join(root, \"data\"));\n    return { dir, own, root, out, link: join(root, \"data\") };\n  };"
+    },
+    {
+      "file": "tests/cli/export/word.test.ts",
+      "parent": "writing",
+      "declaration": "const linkedOut = () => {\n    const dir = realpathSync(mkdtempSync(join(sandbox, \"linked-\")));\n    const own = {\n      XDG_STATE_HOME: join(dir, \"state\"),\n      XDG_CACHE_HOME: join(dir, \"cache\"),\n      XDG_DATA_HOME: join(dir, \"d\"),\n    };\n    const root = join(dir, \"root\");\n    const out = join(dir, \"out\");\n    mkdirSync(join(root, \".slipbox\"), { recursive: true });\n    mkdirSync(join(out, \"sub\"), { recursive: true });\n    writeFileSync(join(root, \"a.md\"), \"# A\\n\\n[far](data/far.md)\\n\");\n    writeFileSync(join(out, \"far.md\"), \"# Far\\n\\nKept out of the vault.\\n\");\n    writeFileSync(join(out, \"sub\", \"s.md\"), \"# S\\n\");\n    symlinkSync(out, join(root, \"data\"));\n    return { dir, own, root, out, link: join(root, \"data\") };\n  };"
+    },
+    {
+      "file": "tests/cli/files/excluded.test.ts",
+      "parent": "writing",
+      "declaration": "const linkedOut = () => {\n    const dir = realpathSync(mkdtempSync(join(sandbox, \"linked-\")));\n    const own = {\n      XDG_STATE_HOME: join(dir, \"state\"),\n      XDG_CACHE_HOME: join(dir, \"cache\"),\n      XDG_DATA_HOME: join(dir, \"d\"),\n    };\n    const root = join(dir, \"root\");\n    const out = join(dir, \"out\");\n    mkdirSync(join(root, \".slipbox\"), { recursive: true });\n    mkdirSync(join(out, \"sub\"), { recursive: true });\n    writeFileSync(join(root, \"a.md\"), \"# A\\n\\n[far](data/far.md)\\n\");\n    writeFileSync(join(out, \"far.md\"), \"# Far\\n\\nKept out of the vault.\\n\");\n    writeFileSync(join(out, \"sub\", \"s.md\"), \"# S\\n\");\n    symlinkSync(out, join(root, \"data\"));\n    return { dir, own, root, out, link: join(root, \"data\") };\n  };"
+    },
+    {
+      "file": "tests/cli/files/operations.test.ts",
+      "parent": "the vault and the tool",
+      "declaration": "const SKILL_FILE = join(import.meta.dir, \"../../..\", \"skills\", \"slipbox\", \"SKILL.md\");"
+    },
+    {
+      "file": "tests/cli/files/plans.test.ts",
+      "parent": "the vault and the tool",
+      "declaration": "const SKILL_FILE = join(import.meta.dir, \"../../..\", \"skills\", \"slipbox\", \"SKILL.md\");"
+    },
+    {
+      "file": "tests/cli/files/refusals.test.ts",
+      "parent": "writing",
+      "declaration": "const linkedOut = () => {\n    const dir = realpathSync(mkdtempSync(join(sandbox, \"linked-\")));\n    const own = {\n      XDG_STATE_HOME: join(dir, \"state\"),\n      XDG_CACHE_HOME: join(dir, \"cache\"),\n      XDG_DATA_HOME: join(dir, \"d\"),\n    };\n    const root = join(dir, \"root\");\n    const out = join(dir, \"out\");\n    mkdirSync(join(root, \".slipbox\"), { recursive: true });\n    mkdirSync(join(out, \"sub\"), { recursive: true });\n    writeFileSync(join(root, \"a.md\"), \"# A\\n\\n[far](data/far.md)\\n\");\n    writeFileSync(join(out, \"far.md\"), \"# Far\\n\\nKept out of the vault.\\n\");\n    writeFileSync(join(out, \"sub\", \"s.md\"), \"# S\\n\");\n    symlinkSync(out, join(root, \"data\"));\n    return { dir, own, root, out, link: join(root, \"data\") };\n  };"
+    },
+    {
+      "file": "tests/cli/files/symlinks.test.ts",
+      "parent": "the vault and the tool",
+      "declaration": "const SKILL_FILE = join(import.meta.dir, \"../../..\", \"skills\", \"slipbox\", \"SKILL.md\");"
+    },
+    {
+      "file": "tests/cli/git/process.test.ts",
+      "parent": "the vault and the tool",
+      "declaration": "const SKILL_FILE = join(import.meta.dir, \"../../..\", \"skills\", \"slipbox\", \"SKILL.md\");"
+    },
+    {
+      "file": "tests/cli/launcher/dispatch.test.ts",
+      "parent": "the vault and the tool",
+      "declaration": "const SKILL_FILE = join(import.meta.dir, \"../../..\", \"skills\", \"slipbox\", \"SKILL.md\");"
+    },
+    {
+      "file": "tests/cli/launcher/dispatch.test.ts",
+      "parent": "review cycle 6 (cli)",
+      "declaration": "function own(prefix: string): { dir: string; env: Record<string, string> } {\n    const dir = mkdtempSync(join(sandbox, prefix));\n    return {\n      dir,\n      env: { XDG_STATE_HOME: join(dir, \"state\"), XDG_CACHE_HOME: join(dir, \"cache\"), XDG_DATA_HOME: join(dir, \"data\") },\n    };\n  }"
+    },
+    {
+      "file": "tests/cli/launcher/dispatch.test.ts",
+      "parent": "the CLI's edges: help flags, error paths, empty states",
+      "declaration": "function fresh(prefix: string): { root: string; dir: string; env: Record<string, string> } {\n    const dir = mkdtempSync(join(sandbox, prefix));\n    const root = join(dir, \"root\");\n    mkdirSync(join(root, \".slipbox\"), { recursive: true });\n    const env = {\n      XDG_STATE_HOME: join(dir, \"state\"),\n      XDG_CACHE_HOME: join(dir, \"cache\"),\n      XDG_DATA_HOME: join(dir, \"data\"),\n      XDG_CONFIG_HOME: join(dir, \"config\"),\n      SLIPBOX_CONFIG: join(dir, \"config\", \"slipbox\", \"config.toml\"),\n    };\n    return { root, dir, env };\n  }"
+    },
+    {
+      "file": "tests/cli/reading/metadata.test.ts",
+      "parent": "the vault and the tool",
+      "declaration": "const SKILL_FILE = join(import.meta.dir, \"../../..\", \"skills\", \"slipbox\", \"SKILL.md\");"
+    },
+    {
+      "file": "tests/cli/reading/text-files.test.ts",
+      "parent": "the vault and the tool",
+      "declaration": "const SKILL_FILE = join(import.meta.dir, \"../../..\", \"skills\", \"slipbox\", \"SKILL.md\");"
+    },
+    {
+      "file": "tests/cli/search/process.test.ts",
+      "parent": "the vault and the tool",
+      "declaration": "const SKILL_FILE = join(import.meta.dir, \"../../..\", \"skills\", \"slipbox\", \"SKILL.md\");"
+    },
+    {
+      "file": "tests/cli/state/history.test.ts",
+      "parent": "the vault and the tool",
+      "declaration": "const SKILL_FILE = join(import.meta.dir, \"../../..\", \"skills\", \"slipbox\", \"SKILL.md\");"
+    },
+    {
+      "file": "tests/cli/vaults/process.test.ts",
+      "parent": "the vault and the tool",
+      "declaration": "const SKILL_FILE = join(import.meta.dir, \"../../..\", \"skills\", \"slipbox\", \"SKILL.md\");"
+    }
+  ],
+  "declarationDeltas": [
+    {
+      "name": "describe: find and replace",
+      "delta": 2
+    },
+    {
+      "name": "describe: reading",
+      "delta": 2
+    },
+    {
+      "name": "describe: review cycle 6 (cli)",
+      "delta": 6
+    },
+    {
+      "name": "describe: the CLI's edges: help flags, error paths, empty states",
+      "delta": 8
+    },
+    {
+      "name": "describe: the vault and the tool",
+      "delta": 17
+    },
+    {
+      "name": "describe: writing",
+      "delta": 7
+    },
+    {
+      "name": "test: every CLI command is run by this file",
+      "delta": -1
+    },
+    {
+      "name": "test: export to PDF, a web page, an e-book; Markdown beside it apart from the note, its pictures in a folder, an earlier one replaced",
+      "delta": -1
+    },
+    {
+      "name": "test: export: a Word document beside the note, its name; several notes one; --to, -o (a folder: its name in it), never over a note",
+      "delta": -1
+    },
+    {
+      "name": "describe: export to PDF, a web page, an e-book; Markdown beside it apart from the note, its pictures in a folder, an earlier one replaced",
+      "delta": 1
+    },
+    {
+      "name": "describe: export: a Word document beside the note, its name; several notes one; --to, -o (a folder: its name in it), never over a note",
+      "delta": 1
+    },
+    {
+      "name": "describe: reading handlers without the launcher",
+      "delta": 1
+    },
+    {
+      "name": "test: EPUB export and replacement",
+      "delta": 1
+    },
+    {
+      "name": "test: HTML export and replacement",
+      "delta": 1
+    },
+    {
+      "name": "test: Markdown and its picture folder, including replacement after indexing",
+      "delta": 1
+    },
+    {
+      "name": "test: PDF export and replacement",
+      "delta": 1
+    },
+    {
+      "name": "test: Word beside the note, then the earlier export replaced",
+      "delta": 1
+    },
+    {
+      "name": "test: a foreign file is untouched until forced, then becomes a replaceable export",
+      "delta": 1
+    },
+    {
+      "name": "test: a missing note retains the typed not-found refusal for the dispatch adapter",
+      "delta": 1
+    },
+    {
+      "name": "test: every CLI command is covered by a process scenario",
+      "delta": 1
+    },
+    {
+      "name": "test: notes are protected even with force and unsupported formats are usage errors",
+      "delta": 1
+    },
+    {
+      "name": "test: outline returns the real heading lines and the same human heading text",
+      "delta": 1
+    },
+    {
+      "name": "test: output extension and existing folder choose the destination",
+      "delta": 1
+    },
+    {
+      "name": "test: read returns saved text and its content hash without a JSON envelope",
+      "delta": 1
+    },
+    {
+      "name": "test: several notes in one Word document with a JSON byte count",
+      "delta": 1
+    }
+  ],
+  "inventory": {
+    "beforeDeclarations": 3744,
+    "afterDeclarations": 3799,
+    "unchangedBodyCallbacks": 115,
+    "baselineRuntimeTests": 118,
+    "ownerRuntimeTests": 128,
+    "baselineAssertions": 1272,
+    "ownerAssertions": 1325,
+    "files": [
+      {
+        "file": "tests/cli/agents/capture.test.ts",
+        "pass": 2,
+        "assertions": 16
+      },
+      {
+        "file": "tests/cli/agents/context.test.ts",
+        "pass": 1,
+        "assertions": 11
+      },
+      {
+        "file": "tests/cli/agents/skill.test.ts",
+        "pass": 4,
+        "assertions": 109
+      },
+      {
+        "file": "tests/cli/diagnostics/servers.test.ts",
+        "pass": 8,
+        "assertions": 76
+      },
+      {
+        "file": "tests/cli/diagnostics/spelling-process.test.ts",
+        "pass": 2,
+        "assertions": 22
+      },
+      {
+        "file": "tests/cli/distribution/cache.test.ts",
+        "pass": 1,
+        "assertions": 2
+      },
+      {
+        "file": "tests/cli/distribution/install.test.ts",
+        "pass": 3,
+        "assertions": 19
+      },
+      {
+        "file": "tests/cli/distribution/report.test.ts",
+        "pass": 1,
+        "assertions": 18
+      },
+      {
+        "file": "tests/cli/editing/find.test.ts",
+        "pass": 2,
+        "assertions": 15
+      },
+      {
+        "file": "tests/cli/editing/replace.test.ts",
+        "pass": 3,
+        "assertions": 35
+      },
+      {
+        "file": "tests/cli/editing/writing.test.ts",
+        "pass": 13,
+        "assertions": 102
+      },
+      {
+        "file": "tests/cli/export/destinations.test.ts",
+        "pass": 1,
+        "assertions": 4
+      },
+      {
+        "file": "tests/cli/export/formats.test.ts",
+        "pass": 4,
+        "assertions": 13
+      },
+      {
+        "file": "tests/cli/export/word.test.ts",
+        "pass": 5,
+        "assertions": 20
+      },
+      {
+        "file": "tests/cli/files/code-links.test.ts",
+        "pass": 1,
+        "assertions": 2
+      },
+      {
+        "file": "tests/cli/files/excluded.test.ts",
+        "pass": 1,
+        "assertions": 18
+      },
+      {
+        "file": "tests/cli/files/operations.test.ts",
+        "pass": 8,
+        "assertions": 93
+      },
+      {
+        "file": "tests/cli/files/plans.test.ts",
+        "pass": 6,
+        "assertions": 50
+      },
+      {
+        "file": "tests/cli/files/refusals.test.ts",
+        "pass": 1,
+        "assertions": 27
+      },
+      {
+        "file": "tests/cli/files/symlinks.test.ts",
+        "pass": 4,
+        "assertions": 32
+      },
+      {
+        "file": "tests/cli/git/process.test.ts",
+        "pass": 3,
+        "assertions": 18
+      },
+      {
+        "file": "tests/cli/launcher/compiled.test.ts",
+        "pass": 1,
+        "assertions": 10
+      },
+      {
+        "file": "tests/cli/launcher/dispatch.test.ts",
+        "pass": 10,
+        "assertions": 191
+      },
+      {
+        "file": "tests/cli/launcher/install-local.test.ts",
+        "pass": 2,
+        "assertions": 14
+      },
+      {
+        "file": "tests/cli/launcher/terminal-errors.test.ts",
+        "pass": 1,
+        "assertions": 6
+      },
+      {
+        "file": "tests/cli/links/process.test.ts",
+        "pass": 9,
+        "assertions": 47
+      },
+      {
+        "file": "tests/cli/reading/metadata.test.ts",
+        "pass": 7,
+        "assertions": 42
+      },
+      {
+        "file": "tests/cli/reading/process.test.ts",
+        "pass": 3,
+        "assertions": 10
+      },
+      {
+        "file": "tests/cli/reading/render.test.ts",
+        "pass": 4,
+        "assertions": 193
+      },
+      {
+        "file": "tests/cli/reading/text-files.test.ts",
+        "pass": 2,
+        "assertions": 30
+      },
+      {
+        "file": "tests/cli/reading/themes.test.ts",
+        "pass": 1,
+        "assertions": 5
+      },
+      {
+        "file": "tests/cli/search/process.test.ts",
+        "pass": 3,
+        "assertions": 11
+      },
+      {
+        "file": "tests/cli/state/editors.test.ts",
+        "pass": 1,
+        "assertions": 6
+      },
+      {
+        "file": "tests/cli/state/history.test.ts",
+        "pass": 5,
+        "assertions": 18
+      },
+      {
+        "file": "tests/cli/vaults/process.test.ts",
+        "pass": 2,
+        "assertions": 31
+      },
+      {
+        "file": "tests/cli/reading/handler.test.ts",
+        "pass": 3,
+        "assertions": 9
+      }
+    ],
+    "assertionCountPolicy": "Host measurements; original assertion expressions and normalized callback identities establish preservation separately."
+  },
+  "characterization": [
+    "tests/cli/reading/handler.test.ts"
+  ],
+  "invariants": {
+    "sourceAndScripts": "Byte-identical product and tooling; 2010 static edges, 1637 runtime edges and the same build entries.",
+    "processDeadlineMs": 20000,
+    "unitDefaultMs": 30000,
+    "unchangedLeafCallbacks": 115,
+    "assertions": "All original assertion expressions retained, normalized only for actual module-relative paths.",
+    "intentionalScenarioChanges": [
+      "Word aggregate becomes five independent cases, keeping default replacement and foreign-file force/replacement sequences together.",
+      "The format aggregate becomes PDF, HTML, EPUB and Markdown cases; each first export/replacement sequence stays together.",
+      "The historical per-file runtime command set becomes an AST cross-owner scenario-coverage check, excluding comments and fixture bodies."
+    ]
+  }
+}

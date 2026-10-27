@@ -107,8 +107,7 @@ What every change keeps. Each is checked by a test or a script where it can be.
 - **A program slipbox runs is optional,** found when present and never required, and is given an argument vector, never
   a shell string (`core/documents/external-editors/editor.ts`).
 - **The command line's contract:** one JSON object per call with `--json`, its `schema` versioned apart from slipbox
-  (`JSON_SCHEMA` in `cli/cli.ts`); stable exit codes (`EXIT`); `tests/cli.test.ts` runs every command as an agent meets
-  it.
+  (`JSON_SCHEMA` in `cli/cli.ts`); stable exit codes (`EXIT`); `tests/cli/` covers every command as an agent meets it.
 - **The docs follow the code.** A change users will see updates `docs/` in the same change; `tests/docs.test.ts` holds
   every command, flag and default key to the manual.
 

@@ -382,7 +382,7 @@ describe("the supply chain's gates (14.10)", () => {
     expect(g.get("src/core/rendering/export/jobs.ts")).toContain("src/core/rendering/export/export-worker.ts");
     expect(g.get("src/core/application/distribution/skill.ts")).toContain("skills/slipbox/SKILL.md");
     // Run by its path, from the file's folder or the top's name; a temporary folder's paths name nothing here.
-    expect(g.get("tests/cli.test.ts")).toContain("src/main.ts");
+    expect(g.get("tests/support/cli-process.ts")).toContain("src/main.ts");
     expect(g.get("tests/check-size.test.ts")).toContain("scripts/check-size.ts");
     expect(g.get("tests/check-size.test.ts")).not.toContain("scripts");
     expect(g.get("scripts/build-home.ts")).toContain("examples/home");

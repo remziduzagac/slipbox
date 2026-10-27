@@ -72,7 +72,7 @@ const AREAS: LeftOut[] = [
   LEFT_OUT_LINKS_AND_FILES,
   LEFT_OUT_OUTSIDE_AND_CODE,
   // The command line's own areas: what an agent or a script runs, with no screen to read.
-  { cases: Object.fromEntries(CLI_CASES.map((a) => [a, "the command line's: tests/cli.test.ts covers it"])) },
+  { cases: Object.fromEntries(CLI_CASES.map((a) => [a, "the command line's: tests/cli/ covers it"])) },
 ];
 
 /** Everything left out, with its reason, from every area. */

@@ -380,7 +380,7 @@ How: design/distribution.md § What the site tells search engines and agents.
   without its CLI equivalent declared, or declared and not implemented, fails at start-up and fails a test
   (design/tui.md § Parity with the CLI).
 - **A contract agents can rely on** (D15, D18). The stable commands' `--json` shapes change only with `schema`; checked
-  by `tests/cli.test.ts`, which runs every command as an agent meets it (docs/manual/cli.md § What stays stable).
+  by `tests/cli/`, which run every command as an agent meets it (docs/manual/cli.md § What stays stable).
 - **The CLI never needs a terminal** (D8). The core imports nothing from the TUI or OpenTUI, nor the CLI from the TUI.
   Checked by `bun run check:boundary`, in `bun run check` and in CI (design/how-it-works.md § The boundary is
   enforced, not hoped for).

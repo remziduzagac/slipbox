@@ -59,7 +59,7 @@ const COMMAND_OWNERS: Record<string, Area> = {
   ...Object.fromEntries(["lsp", "problems", "shell", "context"].map((g) => [g, "outside-and-code" as const])),
 };
 
-/** Which area's task owns a CASES.md area; `cli` for the command line's own, which tests/cli.test.ts covers. */
+/** Which area's task owns a CASES.md area; `cli` for the command line's own, which tests/cli/ covers. */
 const CASE_OWNERS: Record<string, Area | "cli"> = {
   ...Object.fromEntries(
     [
@@ -196,7 +196,7 @@ const CASE_OWNERS: Record<string, Area | "cli"> = {
   ...Object.fromEntries(
     ["watching", "context", "problems", "lint", "lsp", "reload", "agent"].map((a) => [a, "outside-and-code" as const]),
   ),
-  // The command line's own: tests/cli.test.ts covers them, left out of the terminal's (index.ts says so).
+  // The command line's own: tests/cli/ covers them, left out of the terminal's (index.ts says so).
   ...Object.fromEntries(CLI_CASES.map((a) => [a, "cli" as const])),
 };
 

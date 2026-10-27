@@ -23,7 +23,8 @@ through OpenTUI itself, to prove the adapter and real key parsing.
 | `tests/core/` | width, sanitize, wikilinks, link resolution, capture, config, themes, keymap, glyph sets |
 | `tests/render.test.ts` | snapshots, the no-overflow property, allocator properties, blocks, ANSI output |
 | `tests/core/workspace/`, `tests/cli/` | vaults, walk, links/graph, mutations, search/Git and CLI parity |
-| `tests/cli.test.ts` | the CLI as an agent meets it: the real process on a copy of the demo vault; every command |
+| `tests/cli/` | command-area process scenarios, focused handlers and launcher/argument/error coverage |
+
 | `tests/tui/documents/`, `tests/tui/shell/input/` | editor, source/lens, edit/save and keyboard/mouse behavior |
 | `tests/tui/app/`, `tests/tui/shell/` | retained App state/watch/windows, settings, screen, overlays and terminal |
 | `tests/tui/workspace/git/` | source control: worktrees, panel, marks, diff, review, merge, pull, rebase |
@@ -37,6 +38,13 @@ through OpenTUI itself, to prove the adapter and real key parsing.
 | `tests/check-docs.test.ts` | the docs' check on a repository of its own: a misspelling, a broken link, a long line |
 | `tests/docs.test.ts` | the user docs and agent guide: links, anchors, commands, flags, keys; no ID; vault, not root |
 | `tests/site.test.ts` | the docs' site: pages gathered from the docs map, links rewritten, the home's cards (DS) |
+
+CLI process scenarios use `tests/support/cli-process.ts`: each owner gets a fresh demo copy, child environment and
+cleanup hooks. `tests/cli/launcher/` retains dispatch, argument/error, terminal refusal, installer and compiled-entry
+coverage. The catalog guard parses the area suites and checks that every command has an executable process call,
+ignoring comments and fixture strings. Reading-handler tests call the real handler with a Session, without loading
+main, the dispatcher or the TUI. Export outcomes have individual tests; overwrite/force and Markdown replacement
+sequences stay together. The unit default and each process deadline are unchanged.
 
 The core split also places boundary fixtures under `tests/organization/` and pure switcher matching under
 `tests/tui/shell/overlays/`. Every owner file retains its timeout and equivalent file-owned core sandbox; the support
@@ -297,7 +305,7 @@ a worktree, a bare repository as the remote, a conflict from a real merge or reb
 
 **Coverage** (`tests/terminal/coverage.ts`, tests/terminal-coverage.test.ts in `bun run test`): every command and every
 area of `CASES.md` (its "By area" part) is covered by a check, or left out, with its reason, in its area's file; the
-command line's own areas are left out together (tests/cli.test.ts covers them). Each command group and each area has
+command line's own areas are left out together (tests/cli/ covers them). Each command group and each area has
 an owner, the area whose task covers it, and the report groups what's uncovered by owner; a name a check or a list
 gives that doesn't exist, and a left-out entry a check covers, are said too (TT-D4).
 
