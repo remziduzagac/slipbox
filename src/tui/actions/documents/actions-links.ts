@@ -2,7 +2,7 @@
 // line, another vault's file (a peek) or a pointer — cycled through, listed, its target copied.
 
 import { type Run, withView, lay } from "../actions.ts";
-import { diffEnter } from "../../diffview.ts";
+import { diffEnter } from "../../workspace/git/views/changes/diffview.ts";
 import { canonKey } from "../../../core/application/commands/registry.ts";
 import { prettyKey } from "../../shell/input/keys.ts";
 import { peekGo, peekKeep, peekFill, peekInstead, ownPath } from "../../documents/navigation/peek.ts";

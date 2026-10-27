@@ -2,7 +2,7 @@ import { vaultChoices } from "./vault-list.ts";
 // Vaults in the TUI (17.x, VV): switching into another and back, a folder made a vault or unmade, the named folders
 // and their copies (21.x).
 
-import { cancelGitRead } from "../../gitquery.ts";
+import { cancelGitRead } from "../git/gitquery.ts";
 import { existsSync } from "node:fs";
 import { dirname, isAbsolute, join, posix, relative } from "node:path";
 import { writeDirty } from "../../../core/workspace/git/merge/stale.ts";

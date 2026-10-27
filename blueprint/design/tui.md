@@ -977,29 +977,31 @@ keys.
   0 lists none): each with when (the time today, else the day), or `tab N` when it's open in
   another tab; `enter` opens one in this window. The heading is stepped over. The history never
   scrolls sideways: a name too long for the pane beside its hint is cut (`…`), the hint kept.
-- **Source control (left, `±`): the git panel**, by mouse as by keys, its keys shown (GIT-D8; `tui/gitpanel.ts`, the
-  panel's state, rows, keys and footer, `app.gitPanel`; `tui/gitview.ts`, the working tree's sections;
-  `tui/gitbranchview.ts`, the branches; `tui/gitreposview.ts`, the repositories; `tui/draw-git.ts`; `tui/gitmouse.ts`).
-  `space g` (`git.view`) opens it and focuses it, again closes it, as `space e` the explorer (GIT-D12); the status
-  line's mode chip says `GIT` while it has the keys. Shown again (opened, or its view picked on the rail), git is asked
-  again about all it shows (`GitPanel.shown`). **Its top**, as the pane's rows allow: from 10 rows, the repository
-  (`Git.repoName`: the vault's name, else the main checkout's folder's) and its branch, a click (`git:head`) the status
-  line's branches; from 13, under it, where the branch stands — `↑5 ↓2 on main`, its own base's figures (GIT-D10;
-  `↑0` shown too), then its upstream's: `↑1 origin/main`, `in step with origin/main`, `not pushed` (no upstream),
-  `origin/x is gone`; `HEAD detached` when it is; from 18 (17 without that line), **the message box**: a frame titled
-  Message, its text wrapped, its last three rows shown, `ctrl+enter commits` in it while empty; a click (`git:box`) or
-  `i` (`message`) types in it (`GitPanel.typing`, keys to `messageKey`: typed, `backspace`, `ctrl+w` and
-  `ctrl+backspace`, `ctrl+u`; a paste, every line), `ctrl+enter` commits what's staged with it in the background,
-  as typed: a line starting with `#` is its own (`commitLater`, the box emptied when it's in), `enter` takes it to the
-  floating editor, `esc`, `ctrl+c` and `ctrl+g` leave it, as a click anywhere else does. **The buttons**, flowing over
-  as many rows as they take while eight rows are left under them (`buttons()`): Commit (and the count staged), Amend,
-  Review (while a change isn't staged or a file is untracked), `Resolve N` (while files are in conflict), Pull (the
-  count behind, once there's an upstream, not when it's gone), Push (the count ahead; Publish with no upstream), Fetch,
-  Stash, and while a merge or a rebase is under way Continue, Skip (a rebase's) and Abort — each running its key's
-  action; Commit with the box empty opens the editor, Amend starts from the box's text when it has one. Then the
-  filter's row (`/`), the rows, and at the foot, under a rule, the keys of the row selected (`footer(row)`; with none,
-  commit's and fetch's, and `shift+r continue…` while something is under way), or, under the pointer, a button's or a
-  row's button's key and what it does (`pointedAt`), or, typing in the box, its keys.
+- **Source control (left, `±`): the git panel**, by mouse as by keys, its keys shown (GIT-D8;
+  `tui/workspace/git/views/panel/gitpanel.ts`, the panel's state, rows, keys and footer, `app.gitPanel`;
+  `tui/workspace/git/views/panel/gitview.ts`, the working tree's sections;
+  `tui/workspace/git/views/branches/gitbranchview.ts`, the branches; `tui/workspace/git/views/branches/gitreposview.ts`,
+  the repositories; `tui/workspace/git/views/panel/draw-git.ts`; `tui/workspace/git/views/panel/gitmouse.ts`). `space g`
+  (`git.view`) opens it and focuses it, again closes it, as `space e` the explorer (GIT-D12); the status line's mode
+  chip says `GIT` while it has the keys. Shown again (opened, or its view picked on the rail), git is asked again about
+  all it shows (`GitPanel.shown`). **Its top**, as the pane's rows allow: from 10 rows, the repository (`Git.repoName`:
+  the vault's name, else the main checkout's folder's) and its branch, a click (`git:head`) the status line's branches;
+  from 13, under it, where the branch stands — `↑5 ↓2 on main`, its own base's figures (GIT-D10; `↑0` shown too), then
+  its upstream's: `↑1 origin/main`, `in step with origin/main`, `not pushed` (no upstream), `origin/x is gone`; `HEAD
+  detached` when it is; from 18 (17 without that line), **the message box**: a frame titled Message, its text wrapped,
+  its last three rows shown, `ctrl+enter commits` in it while empty; a click (`git:box`) or `i` (`message`) types in it
+  (`GitPanel.typing`, keys to `messageKey`: typed, `backspace`, `ctrl+w` and `ctrl+backspace`, `ctrl+u`; a paste, every
+  line), `ctrl+enter` commits what's staged with it in the background, as typed: a line starting with `#` is its own
+  (`commitLater`, the box emptied when it's in), `enter` takes it to the floating editor, `esc`, `ctrl+c` and `ctrl+g`
+  leave it, as a click anywhere else does. **The buttons**, flowing over as many rows as they take while eight rows are
+  left under them (`buttons()`): Commit (and the count staged), Amend, Review (while a change isn't staged or a file is
+  untracked), `Resolve N` (while files are in conflict), Pull (the count behind, once there's an upstream, not when it's
+  gone), Push (the count ahead; Publish with no upstream), Fetch, Stash, and while a merge or a rebase is under way
+  Continue, Skip (a rebase's) and Abort — each running its key's action; Commit with the box empty opens the editor,
+  Amend starts from the box's text when it has one. Then the filter's row (`/`), the rows, and at the foot, under a
+  rule, the keys of the row selected (`footer(row)`; with none, commit's and fetch's, and `shift+r continue…` while
+  something is under way), or, under the pointer, a button's or a row's button's key and what it does (`pointedAt`), or,
+  typing in the box, its keys.
 - **Its rows** (`rows()`), each section under a heading that `enter`, a click, `l` and `h` fold (`GitPanel.folded`;
   the merged and older branches, the other repositories and home's folded to begin with): **Conflicts**, **Staged**,
   **Changes**, **Untracked** (`26.2`), a line saying `nothing uncommitted` when they're empty; **This branch against
@@ -1047,43 +1049,44 @@ keys.
   of the file at the change, `formatEntry`, typing after its note), Copy its path; a branch's, a repository's, their
   own; a heading has none. The glyphs are `Glyphs.git`'s (`● ⎇ ✎ ◆ ✓` marks, `+ − ↺ ⧉` a row's buttons, `✓ ⟳`
   commit's and fetch's; ascii `* & ~ ! =`, `+ - x d`, `* @`).
-- **Its rows by what they are, not where they were** (D261; `tui/gitsteady.ts`, `Steady`, as `GitPanel.steady`): each
-  row has a key whatever its place (`rowKey`: its kind and what it's of — a file by section and path, a branch by name,
-  a change by its lines, hashed, so one edited is another; rows alike, such as two changes alike in a file, are told
-  apart by their order, `keysOf`, as `watch.ts` tells headings apart). As git answers, rows come, go and are sorted
-  under the pointer and the selection, and the panel keeps to them: **the selection** stays on its row, moved to its new
-  place — scrolled to, unless the wheel scrolled the panel away from it (kept as it is) or the pointer rests on the rows
-  (its row's line wins); every writer goes through `GitPanel.select` (a key that moves it, which shows it though the
-  wheel had scrolled the panel; a key that acts on its row, a click, a right click, the panel following a file staged to
-  where it went) or `place` (the panel's own pick, kept at its place: its own keys, `esc` and the filter leave it
-  there); one that doesn't say (a view's selection restored) is taken as it is, and the explorer, revealing a note while
-  it isn't the view shown, leaves the panel's selection alone, as the panel, answering while the explorer is shown (a
-  file staged followed), puts its own where it comes back to (`leftPositions`), finding its row among its own rows
-  (`GitPanel.filter`, the panel's filter, not the explorer's). A row gone a moment (a file's changes while git's answer
-  is read again) is still the one, the selection back on it when it's back, for a second (`A_MOMENT`); longer, the row
-  in its place is the selection's, and one back after longer with no frame drawn meanwhile is let go of all the same;
-  the moment is the row's (`lost`: its key, and since when), so another row picked meanwhile — by a key, the panel, or a
-  writer that didn't say — starts afresh. Of another repository (outside one, another folder's list: the view's once its
-  repositories are found, the last one's drawn until then, `RepoView.listedDir`), nothing selected or pointed at before
-  is looked for, between frames too (a key or a click before its rows are drawn does nothing, but on a pick made there
-  since, which its first frame follows too); in a checkout, the explorer's zoom changing changes nothing, its rows the
-  checkout's; another note open changes nothing (This file's rows are known by what they do). **The row under a resting
-  pointer** stays on its line (`settle`): the pointer holding the rows (on them, not their scrollbar's column, reported
-  since they showed, the mouse on), the scroll is set so that row is where the last frame drew it, past the list's end
-  if it must, blank under it until the pointer leaves — not when the view was scrolled, filtered or navigated by a key
-  since, nor in another repository, nor when its line is no longer the list's (the panel's top grew over it). Gone from
-  the rows (a file staged by its `+`), it isn't kept for: the rows move as they come — kept in place, the rows arriving
-  above it, the Staged a file goes to, would go out of sight. Below the last row, the last is kept where it is, so no
-  row above it comes under the pointer; one gone a moment is kept to while the pointer doesn't move, the moment its own
-  (an earlier row's goes with its anchor). Rows gone above it at the top, it moves up. **Between frames**, a click, a
-  right click and the footer take a row's hot id (`hotRow`) to the row the last frame drew there (`rowAt`, `hotNow`),
-  and a key to the row drawn selected, the panel's own pick too (or the row set since), the filter's `enter` too; a row
-  gone since does nothing, and says nothing (a new branch from a branch gone; any other row gone, `n` starts one from
-  HEAD, and `resolve`, as its button, opens the merge screen on this note when it's in conflict, else on the first file
-  in conflict). A key that moves the selection moves it from there; the panel's own keys leave it, and its pick, as they
-  are. After each frame what's under the pointer is worked out again from where it last was (`Mouse.rehover`, § Hover),
-  and drawn again when it isn't the row the frame drew by (`gitHover`), so its hover is the frame's. Scrolled past the
-  list's end, the scrollbar counts the blank, and the wheel down, with nothing more to show, leaves it as it is.
+- **Its rows by what they are, not where they were** (D261; `tui/workspace/git/gitsteady.ts`, `Steady`, as
+  `GitPanel.steady`): each row has a key whatever its place (`rowKey`: its kind and what it's of — a file by section and
+  path, a branch by name, a change by its lines, hashed, so one edited is another; rows alike, such as two changes alike
+  in a file, are told apart by their order, `keysOf`, as `watch.ts` tells headings apart). As git answers, rows come, go
+  and are sorted under the pointer and the selection, and the panel keeps to them: **the selection** stays on its row,
+  moved to its new place — scrolled to, unless the wheel scrolled the panel away from it (kept as it is) or the pointer
+  rests on the rows (its row's line wins); every writer goes through `GitPanel.select` (a key that moves it, which shows
+  it though the wheel had scrolled the panel; a key that acts on its row, a click, a right click, the panel following a
+  file staged to where it went) or `place` (the panel's own pick, kept at its place: its own keys, `esc` and the filter
+  leave it there); one that doesn't say (a view's selection restored) is taken as it is, and the explorer, revealing a
+  note while it isn't the view shown, leaves the panel's selection alone, as the panel, answering while the explorer is
+  shown (a file staged followed), puts its own where it comes back to (`leftPositions`), finding its row among its own
+  rows (`GitPanel.filter`, the panel's filter, not the explorer's). A row gone a moment (a file's changes while git's
+  answer is read again) is still the one, the selection back on it when it's back, for a second (`A_MOMENT`); longer,
+  the row in its place is the selection's, and one back after longer with no frame drawn meanwhile is let go of all the
+  same; the moment is the row's (`lost`: its key, and since when), so another row picked meanwhile — by a key, the
+  panel, or a writer that didn't say — starts afresh. Of another repository (outside one, another folder's list: the
+  view's once its repositories are found, the last one's drawn until then, `RepoView.listedDir`), nothing selected or
+  pointed at before is looked for, between frames too (a key or a click before its rows are drawn does nothing, but on a
+  pick made there since, which its first frame follows too); in a checkout, the explorer's zoom changing changes
+  nothing, its rows the checkout's; another note open changes nothing (This file's rows are known by what they do).
+  **The row under a resting pointer** stays on its line (`settle`): the pointer holding the rows (on them, not their
+  scrollbar's column, reported since they showed, the mouse on), the scroll is set so that row is where the last frame
+  drew it, past the list's end if it must, blank under it until the pointer leaves — not when the view was scrolled,
+  filtered or navigated by a key since, nor in another repository, nor when its line is no longer the list's (the
+  panel's top grew over it). Gone from the rows (a file staged by its `+`), it isn't kept for: the rows move as they
+  come — kept in place, the rows arriving above it, the Staged a file goes to, would go out of sight. Below the last
+  row, the last is kept where it is, so no row above it comes under the pointer; one gone a moment is kept to while the
+  pointer doesn't move, the moment its own (an earlier row's goes with its anchor). Rows gone above it at the top, it
+  moves up. **Between frames**, a click, a right click and the footer take a row's hot id (`hotRow`) to the row the last
+  frame drew there (`rowAt`, `hotNow`), and a key to the row drawn selected, the panel's own pick too (or the row set
+  since), the filter's `enter` too; a row gone since does nothing, and says nothing (a new branch from a branch gone;
+  any other row gone, `n` starts one from HEAD, and `resolve`, as its button, opens the merge screen on this note when
+  it's in conflict, else on the first file in conflict). A key that moves the selection moves it from there; the panel's
+  own keys leave it, and its pick, as they are. After each frame what's under the pointer is worked out again from where
+  it last was (`Mouse.rehover`, § Hover), and drawn again when it isn't the row the frame drew by (`gitHover`), so its
+  hover is the frame's. Scrolled past the list's end, the scrollbar counts the blank, and the wheel down, with nothing
+  more to show, leaves it as it is.
 - **The Branches section** (GIT-D9; `gitbranchview.ts`, `core/workspace/git/branches/gitbranches.ts`): the local
   branches
   (`branchesLater`: `for-each-ref` with each tip and its date, `worktree list --porcelain -z` for where each is checked
@@ -1154,39 +1157,39 @@ keys.
   it — run where the base is checked out, here (unsaved notes first) or in its worktree (`git merge --no-edit`, in the
   background; in a vault not trusted no hook, `commit.gpgSign=false`); a conflict said, `git merge --abort` named — or,
   checked out nowhere, said so; Into another branch… among those checked out here or in a worktree.
-- **The repositories in the view** (VV-D10, GIT-D11; `tui/gitreposview.ts`, `core/workspace/git/gitrepos.ts`) are found
-  under the
-  explorer's zoom (`explorer.top`, else the vault) three folders down (`reposUnder`, `REPO_DEPTH`), 2,000 folders at
-  most, in the background: not into a hidden folder, a busy one (`busyFolderAt`, VV-D8, D237) or a repository, whose
-  folders are its own; a checkout's `.git` makes it one, and a worktree found beside its main checkout is grouped under
-  it, by its repository's shared git folder (`groupRepos`, `repoKey`). Found again each time the panel is shown
-  (`RepoView.again`). **In a repository**, its own panel, and after it, folded, **Other repositories (n)**: the view's
-  others; on their rows, their own keys (`enter`, `l`, `h`, `o`, the menu) are theirs, the panel's (the message, commit,
-  fetch, …) the panel's. **In a vault that isn't one** — home, a vault without git, Elsewhere — they're the panel: a
-  line saying `~/work holds 3 repositories` (or that it holds none), then each repository's row; in a folder of home,
-  the view not home itself, the rest of home's repositories (looked for from `~`) folded under **More in home (n)**.
-  Each row says, at its end, its checkouts' uncommitted files (`✎n`), its main checkout's ahead and behind its upstream,
-  or `clean`, `◆` when a worktree has uncommitted files, `asking git…` meanwhile: `git status --branch` asked per
-  checkout (`checkoutStateLater`) for the repositories drawn and the checkouts of those opened up, again when git has
-  news or the panel's shown again. **Ordered** by what needs attention, as far as git has said (`attention`): a worktree
-  with uncommitted files, uncommitted files, ahead of or behind the upstream, clean, then not asked yet; then by name.
-  **Sorted so only as the panel's drawn** (`GitPanel.drawnRows`), and not while the pointer is on the panel's rows
-  (D261): on a row or between them, where the last frame drew them (`gitRows`, against where the mouse last said it was,
-  `Mouse.at`), the mouse on, and reported there since the rows showed and since the mouse came on — a pointer that
-  hasn't moved since holds nothing. Until then a repository stays where it was drawn, under the pointer, and for a key,
-  a click or the footer between frames (`RepoView.ordered`: the order last drawn for the folder they were found in, so a
-  view still showing the last one's list keeps it, and its own is sorted). The repositories the filter hides are ordered
-  too, in their place when it's cleared; a folded section's aren't sorted; one found since comes after. The hold ends
-  when the pointer leaves the rows or the mouse is turned off, never on a key. Sorted differently, the selection stays
-  on its row — a repository's, or a checkout's or a file's of one opened up, as the last frame drew it — and scrolls
-  into view; where the panel put it (`place`: the first row when it's shown, the filter's first match), it stays in that
-  place until a key moves it, a key acts on its row, or a click picks one (`select`); `esc`, the filter and the panel's
-  own keys (commit, push, …) leave it there. Rows that come or go are kept to by what they are, as all the panel's rows
-  are (above: its rows by what they are). **Opened up in place** (`enter`, a click): each checkout's row, the main one
-  `●`, a worktree `⎇`, by branch and folder, and its uncommitted files, each a diff against its last commit in the diff
-  window. **`o`** goes into a repository (its first checkout), the checkout selected, or a checkout at the file selected
-  (`switchVault`, VV-D4); `enter` on a checkout too. The filter keeps repositories by name. Not done: the panel asks
-  again when it's shown, not when the terminal gets the focus back (VV-D10).
+- **The repositories in the view** (VV-D10, GIT-D11; `tui/workspace/git/views/branches/gitreposview.ts`,
+  `core/workspace/git/gitrepos.ts`) are found under the explorer's zoom (`explorer.top`, else the vault) three folders
+  down (`reposUnder`, `REPO_DEPTH`), 2,000 folders at most, in the background: not into a hidden folder, a busy one
+  (`busyFolderAt`, VV-D8, D237) or a repository, whose folders are its own; a checkout's `.git` makes it one, and a
+  worktree found beside its main checkout is grouped under it, by its repository's shared git folder (`groupRepos`,
+  `repoKey`). Found again each time the panel is shown (`RepoView.again`). **In a repository**, its own panel, and after
+  it, folded, **Other repositories (n)**: the view's others; on their rows, their own keys (`enter`, `l`, `h`, `o`, the
+  menu) are theirs, the panel's (the message, commit, fetch, …) the panel's. **In a vault that isn't one** — home, a
+  vault without git, Elsewhere — they're the panel: a line saying `~/work holds 3 repositories` (or that it holds none),
+  then each repository's row; in a folder of home, the view not home itself, the rest of home's repositories (looked for
+  from `~`) folded under **More in home (n)**. Each row says, at its end, its checkouts' uncommitted files (`✎n`), its
+  main checkout's ahead and behind its upstream, or `clean`, `◆` when a worktree has uncommitted files, `asking git…`
+  meanwhile: `git status --branch` asked per checkout (`checkoutStateLater`) for the repositories drawn and the
+  checkouts of those opened up, again when git has news or the panel's shown again. **Ordered** by what needs attention,
+  as far as git has said (`attention`): a worktree with uncommitted files, uncommitted files, ahead of or behind the
+  upstream, clean, then not asked yet; then by name. **Sorted so only as the panel's drawn** (`GitPanel.drawnRows`), and
+  not while the pointer is on the panel's rows (D261): on a row or between them, where the last frame drew them
+  (`gitRows`, against where the mouse last said it was, `Mouse.at`), the mouse on, and reported there since the rows
+  showed and since the mouse came on — a pointer that hasn't moved since holds nothing. Until then a repository stays
+  where it was drawn, under the pointer, and for a key, a click or the footer between frames (`RepoView.ordered`: the
+  order last drawn for the folder they were found in, so a view still showing the last one's list keeps it, and its own
+  is sorted). The repositories the filter hides are ordered too, in their place when it's cleared; a folded section's
+  aren't sorted; one found since comes after. The hold ends when the pointer leaves the rows or the mouse is turned off,
+  never on a key. Sorted differently, the selection stays on its row — a repository's, or a checkout's or a file's of
+  one opened up, as the last frame drew it — and scrolls into view; where the panel put it (`place`: the first row when
+  it's shown, the filter's first match), it stays in that place until a key moves it, a key acts on its row, or a click
+  picks one (`select`); `esc`, the filter and the panel's own keys (commit, push, …) leave it there. Rows that come or
+  go are kept to by what they are, as all the panel's rows are (above: its rows by what they are). **Opened up in
+  place** (`enter`, a click): each checkout's row, the main one `●`, a worktree `⎇`, by branch and folder, and its
+  uncommitted files, each a diff against its last commit in the diff window. **`o`** goes into a repository (its first
+  checkout), the checkout selected, or a checkout at the file selected (`switchVault`, VV-D4); `enter` on a checkout
+  too. The filter keeps repositories by name. Not done: the panel asks again when it's shown, not when the terminal gets
+  the focus back (VV-D10).
 - **The branches' menu**, from the top bar's branch (`top:branch`) or the status line's (`status:branch`), in a
   repository: the branches list (`openBranches`) with Pull (while
   there's an upstream not gone; its count when behind), Push (or Push, and track it on origin), Fetch and The git panel
@@ -1540,8 +1543,8 @@ the terminal who it is. The skill for agents (`core/application/distribution/ski
 issue runs `slipbox
 report --json` first.
 
-Code: `tui/report.ts` (the `Reporter`, `app.report`: the window, the frame and place kept, the menu, sending),
-`core/application/distribution/report.ts` (the facts, the report's text, reading it back, the address's plan),
+Code: `tui/app/distribution/report.ts` (the `Reporter`, `app.report`: the window, the frame and place kept, the menu,
+sending), `core/application/distribution/report.ts` (the facts, the report's text, reading it back, the address's plan),
 `core/foundation/platform/browser.ts`, `core/application/distribution/gh.ts`, `cli/report.ts` (`slipbox report`,
 dispatched by `cli/cli.ts` before the session); the host's `terminal()` (`tui/shell/terminal/run.ts`) hands the TUI a
 plain copy of OpenTUI's answer, so nothing else touches OpenTUI.
@@ -1791,9 +1794,10 @@ first marked `↪`, as `slipbox render` always does. The code view's cells are t
 ## Pictures in a window
 
 A note's picture is sized for the window it's in: fitted to it (rendering.md § Blocks and inlines), or at its own size
-by choice. What the window shows at its own size, and its pictures' rest, are kept by `tui/pictures.ts`; the sizes are
-worked out by `tui/images.ts`; the rows laid out by `core/rendering/layout/markdown/render.ts`; the drawing done by
-`tui/documents/views/draw-pane.ts`, `tui/shell/terminal/opentui.ts` and `tui/placeholders.ts`; the commands are
+by choice. What the window shows at its own size, and its pictures' rest, are kept by `tui/documents/media/pictures.ts`;
+the sizes are worked out by `tui/documents/media/images.ts`; the rows laid out by
+`core/rendering/layout/markdown/render.ts`; the drawing done by `tui/documents/views/draw-pane.ts`,
+`tui/shell/terminal/opentui.ts` and `tui/shell/terminal/placeholders.ts`; the commands are
 `src/core/application/commands/areas/motion.ts`'s, done in `tui/actions/documents/actions-view.ts`.
 
 - **What it's fitted to.** The window's room: its text columns less what's before the picture (a list's indent, a
@@ -2063,34 +2067,29 @@ the only one (`16.16`, `16.17`; D112): Org and AsciiDoc files open as text.
   (`[editor] edit_in`), as for a note. `[render] code = false` opens it in SOURCE view.
   The same disabled buttons apply to data that doesn't parse and code configured as source.
   [code-view.md](code-view.md) has the view.
-- **Source code through tree-sitter** (`16.6`–`16.9`, `16.18`–`16.23`; D109, D123: TypeScript, TSX, JavaScript,
-  Python, shell, Lua, Go, Rust, Swift, HTML, CSS, SCSS, PHP, Dockerfile, Vue, Svelte, Astro, Ruby, C, C++). A `.h` is
-  C's (D123). Each language's grammar (the wasm from the language's own npm package, built for this runtime —
-  `bunfig.toml` keeps their native install scripts off — or, where npm has none, built from its source into
-  `grammars/`, D121) loads the first time a file of it opens, never at start-up; until it lands, the file shows as
-  any text file, and it draws again when it does. Grammar loading, parsing and extraction of spans, outline, errors,
-  comment links, embedded languages and the code model run together in `core/documents/syntax/syntax-worker.ts`, on one
-  thread for the
-  process (`core/documents/syntax/syntax-thread.ts`, as the spelling thread is), stopped when slipbox quits.
-  `tui/languages.ts`
-  schedules the first pass on open and debounces later passes for 150 ms. It installs only a reply for the same buffer
-  revision and request; superseded work is cancelled, and leaving the vault or quitting lets go of every pass. The
-  layout uses its last answer.
-  Its bounded mailbox (`core/foundation/workers/worker-requests.ts`) holds eight requests and 16 MiB of their input; a
-  caller past that
-  waits its turn. A pass's deadline counts from when the worker is handed it: twenty seconds, as the spelling
-  thread's, since a pass is a whole source's and can't be batched as a big note's parse is (a 3.7 MiB minified bundle
-  took 4.3 s on a fast machine, idle, and missed a five-second deadline with its cores busy). A source is at most 4 MiB
+- **Source code through tree-sitter** (`16.6`–`16.9`, `16.18`–`16.23`; D109, D123: TypeScript, TSX, JavaScript, Python,
+  shell, Lua, Go, Rust, Swift, HTML, CSS, SCSS, PHP, Dockerfile, Vue, Svelte, Astro, Ruby, C, C++). A `.h` is C's
+  (D123). Each language's grammar (the wasm from the language's own npm package, built for this runtime — `bunfig.toml`
+  keeps their native install scripts off — or, where npm has none, built from its source into `grammars/`, D121) loads
+  the first time a file of it opens, never at start-up; until it lands, the file shows as any text file, and it draws
+  again when it does. Grammar loading, parsing and extraction of spans, outline, errors, comment links, embedded
+  languages and the code model run together in `core/documents/syntax/syntax-worker.ts`, on one thread for the process
+  (`core/documents/syntax/syntax-thread.ts`, as the spelling thread is), stopped when slipbox quits.
+  `tui/documents/diagnostics/languages.ts` schedules the first pass on open and debounces later passes for 150 ms. It
+  installs only a reply for the same buffer revision and request; superseded work is cancelled, and leaving the vault or
+  quitting lets go of every pass. The layout uses its last answer. Its bounded mailbox
+  (`core/foundation/workers/worker-requests.ts`) holds eight requests and 16 MiB of their input; a caller past that
+  waits its turn. A pass's deadline counts from when the worker is handed it: twenty seconds, as the spelling thread's,
+  since a pass is a whole source's and can't be batched as a big note's parse is (a 3.7 MiB minified bundle took 4.3 s
+  on a fast machine, idle, and missed a five-second deadline with its cores busy). A source is at most 4 MiB
   (`SYNTAX_SOURCE_LIMIT`, D252); its answer has no cap of its own, its size following the source's (a span a line of a
-  long
-  string or comment can make it several times the text). Failures keep readable source and are reported once per
-  revision. One that was the thread's (the deadline, a crash, a thread that can't start) is tried again when the file
-  is opened again, as a big note's parse is (15.1); the code's own (the worker's error answer) waits for an edit or a
-  reload. Graph comment-link lookup keeps its separate existing 256 KiB file guard.
-  A local 596,670-byte TypeScript fixture (10,001 lines) took 107 ms to parse plus 195 ms for outline, spans, comment
-  links and code-model extraction; a 296,670-byte Python fixture took 41 ms plus 92 ms (2026-10-18, one run; #177).
-  These measurements motivate moving extraction as well as parsing off the UI thread.
-  The retained structure serves:
+  long string or comment can make it several times the text). Failures keep readable source and are reported once per
+  revision. One that was the thread's (the deadline, a crash, a thread that can't start) is tried again when the file is
+  opened again, as a big note's parse is (15.1); the code's own (the worker's error answer) waits for an edit or a
+  reload. Graph comment-link lookup keeps its separate existing 256 KiB file guard. A local 596,670-byte TypeScript
+  fixture (10,001 lines) took 107 ms to parse plus 195 ms for outline, spans, comment links and code-model extraction; a
+  296,670-byte Python fixture took 41 ms plus 92 ms (2026-10-18, one run; #177). These measurements motivate moving
+  extraction as well as parsing off the UI thread. The retained structure serves:
   - **Highlighting.** highlight.js still colours each line; tree-sitter adds what a line can't
     know alone, that it starts inside a string or comment opened above (a template string's middle
     lines, a docstring, a block comment).
@@ -2634,10 +2633,10 @@ one keeps the index's.
 does both from a menu (§ Side panes).
 
 **The diff** (GIT-D2; `core/workspace/git/merge/merge.ts` `diffView`, `core/rendering/layout/diff/diff.ts`,
-`tui/diffview.ts`): `:diff` (the panel's This file diff too), a file's diff from `:changes`' list, the git panel's
-`enter` on a file or a change, a branch's or another repository's file in the panel, a history entry's diff to now, the
-conflict prompt's (D)iff and the overwrite question's "(d) Show the differences first" draw one way, in the floating
-window, as wide as the screen less its margins.
+`tui/workspace/git/views/changes/diffview.ts`): `:diff` (the panel's This file diff too), a file's diff from `:changes`'
+list, the git panel's `enter` on a file or a change, a branch's or another repository's file in the panel, a history
+entry's diff to now, the conflict prompt's (D)iff and the overwrite question's "(d) Show the differences first" draw one
+way, in the floating window, as wide as the screen less its margins.
 
 - **Compared:** the two texts without their line endings or a byte order mark (`comparable`): CRLF is LF, as git has
   it for a checkout that turns LF into CRLF and as the gutter's signs have it, so a CRLF file's diff against git's LF
@@ -2762,23 +2761,23 @@ window's text, `enter` and the folds are the unified diff's, and a resize betwee
   changed; with every unchanged cell folded already, every cell opens. A file with no change says so and folds nothing.
   Only on that key: a diff doesn't fold the cells by itself.
 
-**Reviewing a change** (GIT-D3; `core/workspace/git/review/gitreview.ts`, `tui/review.ts`): `v` in the git panel
-(`[keys.git]`'s `review`), its Review button, `:review` or `git.review` walks the working tree's changes against what's
-staged — the gutter's hunks (`gitChanges`), the files as they are on disk — across every file `git status` has changed
-and not staged, and every untracked one, as wholly added, in one path order across both (`localeCompare`). A folder (a
-submodule's), a file gone or binary (a NUL in its first 8,192 characters), an empty untracked file and a tracked one
-with no version staged are left out; a deleted file is one hunk, all removed. Each hunk is shown in the floating window,
-as wide as a diff's: a row with its file, its lines (a deletion's, the line before it) and its place
-(`change 2 of 3 here, 5 of 9 in all`, a new or deleted file said, what was done with it), a row of its keys, then its
-diff as every diff is drawn (`layoutDiff`): its lines as staged and as they are, with up to three of the file's lines on
-each side (`hunkView`), each row at its line in the file. The window is a screen of parts (`layoutScreen`,
-`rendering/layout/screen.ts`): text rows and diffs, a line of its text each, the review's own keys over the note's
-(`reviewKeys`, `DEFAULT_REVIEW_KEYS`, as a peek has its own). A note's hunk is its blocks before and after (`asBlocks`,
-`[git] diff`) — the file with this change undone against the file as it is (`hunkBlocks`), so its paragraphs are whole,
-no head and no folds (`blockDiff`'s `heads` and `folds` off) — and its lines where only blank lines changed; a code
-file's lines go side by side where there's room (`sideBySide`, `layoutScreen`'s `split`, a part that changes something).
-`enter` goes to the line of what's under the cursor (`srcAt`: a block's span carries its line's unit), as in the diff
-window; the window is as tall as its rows.
+**Reviewing a change** (GIT-D3; `core/workspace/git/review/gitreview.ts`, `tui/workspace/git/views/review/review.ts`):
+`v` in the git panel (`[keys.git]`'s `review`), its Review button, `:review` or `git.review` walks the working tree's
+changes against what's staged — the gutter's hunks (`gitChanges`), the files as they are on disk — across every file
+`git status` has changed and not staged, and every untracked one, as wholly added, in one path order across both
+(`localeCompare`). A folder (a submodule's), a file gone or binary (a NUL in its first 8,192 characters), an empty
+untracked file and a tracked one with no version staged are left out; a deleted file is one hunk, all removed. Each hunk
+is shown in the floating window, as wide as a diff's: a row with its file, its lines (a deletion's, the line before it)
+and its place (`change 2 of 3 here, 5 of 9 in all`, a new or deleted file said, what was done with it), a row of its
+keys, then its diff as every diff is drawn (`layoutDiff`): its lines as staged and as they are, with up to three of the
+file's lines on each side (`hunkView`), each row at its line in the file. The window is a screen of parts
+(`layoutScreen`, `rendering/layout/screen.ts`): text rows and diffs, a line of its text each, the review's own keys over
+the note's (`reviewKeys`, `DEFAULT_REVIEW_KEYS`, as a peek has its own). A note's hunk is its blocks before and after
+(`asBlocks`, `[git] diff`) — the file with this change undone against the file as it is (`hunkBlocks`), so its
+paragraphs are whole, no head and no folds (`blockDiff`'s `heads` and `folds` off) — and its lines where only blank
+lines changed; a code file's lines go side by side where there's room (`sideBySide`, `layoutScreen`'s `split`, a part
+that changes something). `enter` goes to the line of what's under the cursor (`srcAt`: a block's span carries its line's
+unit), as in the diff window; the window is as tall as its rows.
 
 - `y` (`git.review_keep`) stages the hunk as the git panel's `s` stages a change (`stageChange`): found again among
   the file's changes now (`findChange`: the same lines as staged and now, where it was — at its line in the file, or
@@ -2806,22 +2805,22 @@ none left, it ends. Its end, however it comes, says what it did (`tallyText`): `
 1 note for the agent in the scratch — space s y copies it; 2 left as they were` — `space s y` named when a note was
 written, whatever the key is now. Nothing is committed.
 
-**The remote and stash** (`26.6`; GIT-D4; `core/workspace/git/branches/gitremote.ts`, `tui/gitremote.ts`): the git
-panel's keys and buttons and
-the palette's commands, none of `space g`'s. `f` (`:fetch`, `git.fetch`) fetches — the branch's remote, else origin,
-git's own choice; `p` (`:pull`, `git.pull`) pulls, fast-forward only (`git pull --ff-only --no-rebase`), and where both
-sides moved asks merge or rebase (below); `shift+p` (`:push`, `git.push`) pushes the branch to its upstream (`git push
---end-of-options <remote> refs/heads/<branch>:<its ref>`, the remote and ref as `%(upstream:remotename)` and
-`%(upstream:remoteref)` name them; a remote, branch or ref whose name isn't one git takes — one that starts with `-`
-among them — is refused before git is run, said, as a base rebased onto is, `refusedName`, by `refName`'s rule). A
-branch with no upstream is asked "Push it to origin/<branch>, and track it there?" (`-u`): origin, else the only remote;
-with none, or several and no origin, said how to set one. Each is asked for, none on a timer, nothing in the background
-reaching the network; each runs in the background, one at a time ("git is still fetching" to another), a message saying
-it's under way and how it went: "fetched: main is 3 commits behind origin/main — p pulls (:pull)", "pulled: main
-fast-forwarded to 1a2b3c4", "pushed main to origin/main". Before a pull, unsaved notes are saved or kept, as before a
-branch switch (`beforeCheckout`); HEAD moving on is then the feed's (`5.9`, `checkHead`): no switch, the tabs stay. A
-failure is git's own words (`gitReason`): a remote's refusal (`[rejected] main -> main (fetch first)`, with "fetch them
-(f) and pull (p) first"), else its `fatal:` or `error:` line and the files it names, else a conflict.
+**The remote and stash** (`26.6`; GIT-D4; `core/workspace/git/branches/gitremote.ts`, `tui/workspace/git/gitremote.ts`):
+the git panel's keys and buttons and the palette's commands, none of `space g`'s. `f` (`:fetch`, `git.fetch`) fetches —
+the branch's remote, else origin, git's own choice; `p` (`:pull`, `git.pull`) pulls, fast-forward only (`git pull
+--ff-only --no-rebase`), and where both sides moved asks merge or rebase (below); `shift+p` (`:push`, `git.push`) pushes
+the branch to its upstream (`git push --end-of-options <remote> refs/heads/<branch>:<its ref>`, the remote and ref as
+`%(upstream:remotename)` and `%(upstream:remoteref)` name them; a remote, branch or ref whose name isn't one git takes —
+one that starts with `-` among them — is refused before git is run, said, as a base rebased onto is, `refusedName`, by
+`refName`'s rule). A branch with no upstream is asked "Push it to origin/<branch>, and track it there?" (`-u`): origin,
+else the only remote; with none, or several and no origin, said how to set one. Each is asked for, none on a timer,
+nothing in the background reaching the network; each runs in the background, one at a time ("git is still fetching" to
+another), a message saying it's under way and how it went: "fetched: main is 3 commits behind origin/main — p pulls
+(:pull)", "pulled: main fast-forwarded to 1a2b3c4", "pushed main to origin/main". Before a pull, unsaved notes are saved
+or kept, as before a branch switch (`beforeCheckout`); HEAD moving on is then the feed's (`5.9`, `checkHead`): no
+switch, the tabs stay. A failure is git's own words (`gitReason`): a remote's refusal (`[rejected] main -> main (fetch
+first)`, with "fetch them (f) and pull (p) first"), else its `fatal:` or `error:` line and the files it names, else a
+conflict.
 
 git runs without a terminal: `GIT_TERMINAL_PROMPT=0`, so a login git can't make with what it has fails at once ("could
 not read Username for '…': terminal prompts disabled") rather than wait at a prompt; and ssh in batch mode
@@ -2847,13 +2846,12 @@ fetch:
 read from `git status --branch`'s first line, asked with the status in the background whenever git has news
 (`statusLater`), so after a fetch, a pull, a push, or HEAD moving.
 
-**Pulling where both sides moved** (GIT-D6; `core/workspace/git/branches/gitremote.ts` `pullLater`, `tui/rebase.ts`): a
-pull that can't
-fast-forward (git's "Not possible to fast-forward") asks: `(m)` merge the upstream into the branch (`git pull
---no-rebase --ff --no-edit`: git's own message, never an editor; `--ff` over a `pull.ff = only`), `(r)` rebase the
-branch onto it (`git pull --rebase`; over files changed, asked to stash them first, below), `(n)` nothing. Selected is
-what git's config says (`pullDefault`): a rebase where `branch.<name>.rebase`, else `pull.rebase`, is true or a kind of
-rebase, else a merge.
+**Pulling where both sides moved** (GIT-D6; `core/workspace/git/branches/gitremote.ts` `pullLater`,
+`tui/workspace/git/views/review/rebase.ts`): a pull that can't fast-forward (git's "Not possible to fast-forward") asks:
+`(m)` merge the upstream into the branch (`git pull --no-rebase --ff --no-edit`: git's own message, never an editor;
+`--ff` over a `pull.ff = only`), `(r)` rebase the branch onto it (`git pull --rebase`; over files changed, asked to
+stash them first, below), `(n)` nothing. Selected is what git's config says (`pullDefault`): a rebase where
+`branch.<name>.rebase`, else `pull.rebase`, is true or a kind of rebase, else a merge.
 
 **Rebasing onto the base** (`git.rebase`, `:rebase`, `shift+r` in the git panel — its `rebase`): the branch rebased onto
 the base's tip — the branch's own (GIT-D10, `baseOf`), else `[git] base`, main or master (`baseBranch`) — after asking,
@@ -2861,40 +2859,39 @@ with how many commits each side has (`aheadBehind`); unsaved notes saved or kept
 detached, or with nothing new on the base: said, nothing run.
 
 **A rebase over files changed** (D247; `core/workspace/git/branches/gitrebase.ts` `changedTracked`, `stashFirst` in
-`tui/rebase.ts`): git
-won't start a rebase over tracked files changed, staged or not, so slipbox asks first instead of saying git's refusal.
-`shift+r`'s question becomes "Stash your changes, rebase agent onto main, put them back? 2 files changed; its 3 commits
-replayed after main's 1 new."; the pull's `(r)` asks "Stash your changes, rebase main onto origin/main, put them back?
-1 file changed." Yes runs the rebase with `--autostash` (`git rebase --autostash`, `git pull --rebase --autostash`):
-git stashes them, rebases, and puts them back, as changes not staged (a new file stays staged). No: nothing runs. The
-files are read with `git status --untracked-files=no --ignore-submodules=all`, as git's own check sees them; a clean
-tree asks and runs as before. Unsaved notes saved after `shift+r`'s question may change a file: then the stash is asked
-about there. Untracked files stay git's to judge, as without slipbox: its autostash doesn't take them, and it rebases
-past them, refusing in its words only where one would be overwritten (`The following untracked working tree files
-would be overwritten by checkout: n.md`), the changes stashed put back first. A rebase that stops at a conflict keeps
-them stashed until it ends, continued or aborted. Where putting them back conflicts, git keeps them in the stash, as
-`autostash`, and marks the files in conflict. slipbox knows it by the stash the rebase left behind — the newest
-stash's commit before and after (`withAutostash`, `stashKept`), never git's words, which change between its versions
-— and also when a continue, a skip or an abort ends the rebase: the end's message says so, naming the entry and the
-files (`rebased agent onto main — your changes conflicted going back, so git kept
-them in the stash, stash@{0} ("autostash"): 1 file in conflict (b.md) — x in source control settles it (:resolve), then
-drop the stash (z)`).
+`tui/workspace/git/views/review/rebase.ts`): git won't start a rebase over tracked files changed, staged or not, so
+slipbox asks first instead of saying git's refusal. `shift+r`'s question becomes "Stash your changes, rebase agent onto
+main, put them back? 2 files changed; its 3 commits replayed after main's 1 new."; the pull's `(r)` asks "Stash your
+changes, rebase main onto origin/main, put them back? 1 file changed." Yes runs the rebase with `--autostash` (`git
+rebase --autostash`, `git pull --rebase --autostash`): git stashes them, rebases, and puts them back, as changes not
+staged (a new file stays staged). No: nothing runs. The files are read with `git status --untracked-files=no
+--ignore-submodules=all`, as git's own check sees them; a clean tree asks and runs as before. Unsaved notes saved after
+`shift+r`'s question may change a file: then the stash is asked about there. Untracked files stay git's to judge, as
+without slipbox: its autostash doesn't take them, and it rebases past them, refusing in its words only where one would
+be overwritten (`The following untracked working tree files would be overwritten by checkout: n.md`), the changes
+stashed put back first. A rebase that stops at a conflict keeps them stashed until it ends, continued or aborted. Where
+putting them back conflicts, git keeps them in the stash, as `autostash`, and marks the files in conflict. slipbox knows
+it by the stash the rebase left behind — the newest stash's commit before and after (`withAutostash`, `stashKept`),
+never git's words, which change between its versions — and also when a continue, a skip or an abort ends the rebase: the
+end's message says so, naming the entry and the files (`rebased agent onto main — your changes conflicted going back, so
+git kept them in the stash, stash@{0} ("autostash"): 1 file in conflict (b.md) — x in source control settles it
+(:resolve), then drop the stash (z)`).
 
 **A merge or a rebase under way** (`core/workspace/git/branches/gitrebase.ts` `operationOf`), or a cherry-pick or a
-revert begun in a
-terminal: read from git's own files, no git run — `rebase-merge/` (`msgnum`, `end`, `head-name`), `rebase-apply/`
-(`next`, `last`; `applying`, a `git am`, is none of slipbox's), `MERGE_HEAD` and its `MERGE_MSG`, `CHERRY_PICK_HEAD` or
-`REVERT_HEAD` with the commit `MERGE_MSG` names (a revert's subject, unquoted), and `sequencer/` alone, a series
-between its commits, a cherry-pick or a revert as its `todo`'s next line says — again when git has news or half a
-second on (`operationNow` in `tui/rebase.ts`). Where you are says it after the branch (§ Screen layout): `rebasing
-2/5`, `merging`, `cherry-picking`, `reverting` (`operationText`). `shift+r` then offers, as a question with keys
-titled by what's under way (`operationTitle`: `Cherry-picking "Retry with a budget"`): `(x)` the merge screen on a file
-still in conflict, `(c)` continue (`git.continue`, `:continue`: `git rebase --continue`, `git cherry-pick --continue`,
-`git revert --continue`, or `git commit --no-edit` for a merge; refused, said which, while a file is in conflict),
-`(s)` skip (`git.skip`, `:skip`: `git rebase --skip`, `git cherry-pick --skip`, `git revert --skip`; a merge has none),
-`(a)` abort (`git.abort`, `:abort`: `git <kind> --abort`; asked first, as a rebase is: "Abort the cherry-pick? main
-goes back as it was before it, and what's settled so far is lost."). The git panel has the three as buttons meanwhile:
-Continue, Skip (not a merge's) and Abort, each saying what it does (`OPERATIONS`).
+revert begun in a terminal: read from git's own files, no git run — `rebase-merge/` (`msgnum`, `end`, `head-name`),
+`rebase-apply/` (`next`, `last`; `applying`, a `git am`, is none of slipbox's), `MERGE_HEAD` and its `MERGE_MSG`,
+`CHERRY_PICK_HEAD` or `REVERT_HEAD` with the commit `MERGE_MSG` names (a revert's subject, unquoted), and `sequencer/`
+alone, a series between its commits, a cherry-pick or a revert as its `todo`'s next line says — again when git has news
+or half a second on (`operationNow` in `tui/workspace/git/views/review/rebase.ts`). Where you are says it after the
+branch (§ Screen layout): `rebasing 2/5`, `merging`, `cherry-picking`, `reverting` (`operationText`). `shift+r` then
+offers, as a question with keys titled by what's under way (`operationTitle`: `Cherry-picking "Retry with a budget"`):
+`(x)` the merge screen on a file still in conflict, `(c)` continue (`git.continue`, `:continue`: `git rebase
+--continue`, `git cherry-pick --continue`, `git revert --continue`, or `git commit --no-edit` for a merge; refused, said
+which, while a file is in conflict), `(s)` skip (`git.skip`, `:skip`: `git rebase --skip`, `git cherry-pick --skip`,
+`git revert --skip`; a merge has none), `(a)` abort (`git.abort`, `:abort`: `git <kind> --abort`; asked first, as a
+rebase is: "Abort the cherry-pick? main goes back as it was before it, and what's settled so far is lost."). The git
+panel has the three as buttons meanwhile: Continue, Skip (not a merge's) and Abort, each saying what it does
+(`OPERATIONS`).
 
 Each runs in the background, one git command at a time with the remote's (`runInBackground`), without a terminal or an
 editor (`GIT_TERMINAL_PROMPT=0`, `GIT_EDITOR=true`, `GIT_SEQUENCE_EDITOR=true`: a commit settled on the way keeps its
@@ -2908,29 +2905,28 @@ with the key that opens it (`x in source control opens the merge screen (:resolv
 how to bring them together`). In a vault not trusted, `gitArgs`'s guards hold — no hook runs (a rebase's `pre-rebase`, a
 merge's `pre-merge-commit`), no merge driver — and nothing is signed (`commit.gpgSign=false`); said.
 
-**The merge screen** (GIT-D5; `core/workspace/git/merge/conflicts.ts`, `tui/mergescreen.ts`): `x` on a file in conflict
-in the git panel
-(its `resolve`, or its Resolve button), `x` on a conflict in the Problems panel's All tab, `:resolve [file]` or
-`git.merge_screen` — the file named, else the conflicted file selected in the panel, else this note when it's in
-conflict, else the first that is — opens the file's buffer (read again first when git changed it on disk and it has no
-unsaved changes) and reads git's markers (`parseConflicts`): `<<<<<<< label`, yours, `||||||| label` and the base where
-git wrote it (diff3, zdiff3), `=======`, theirs, `>>>>>>> label`; a marker that doesn't close, or a `=======` outside a
-conflict (a setext heading's), is text. The markers give the conflicts, so what was settled by hand stays settled. git
-doesn't widen its markers for a side with a seven-character `=======` line in it (a setext heading's underline), so a
-conflict with more than one `=======` that could part the sides — after diff3's base marker, where there's one; one
-before it is yours — can be read more than one way (`Conflict.ambiguous`): the index's stages choose the one way whose
-yours is in stage 2 and theirs in stage 3 (and a marked base in stage 1). With no stage that does, or more than one
-way that fits, the conflict is ambiguous: its card shows it as marked, and `o`, `t`, `b` and `shift+b` are refused,
-said, `e` settling it by hand. A complete set of markers inside a fenced code block — the fence open from before the
-`<<<<<<<` to after the `>>>>>>>` — is an example of git's markers, text, unless neither side's stage holds those lines,
-which makes them git's own conflict in a code block (`readConflicts`). Each conflict's base where the markers don't hold
-it comes from the index's stage 1 (`withStages`): yours is found in stage 2, and theirs in stage 3, where the stretches
-before put it (else wherever it is), each mapped back onto stage 1 through that side's changes (`toBase`, a boundary
-inside a change widened to the whole of it), the two ranges joined. Line endings and a byte order mark aren't compared,
-finding a side or diffing it against the base: the index holds LF where a checkout (`eol=crlf`) has CRLF. Where neither
-has it (the stages gone), there's no base. A file in conflict with no marker (one side deleted it) is said, with `s` in
-the git panel to mark it resolved — its buffer unsaved, `:w` first, as `s` stages the file on disk. `enter` on a
-conflicted file in the panel shows its diff, not the screen.
+**The merge screen** (GIT-D5; `core/workspace/git/merge/conflicts.ts`, `tui/workspace/git/views/review/mergescreen.ts`):
+`x` on a file in conflict in the git panel (its `resolve`, or its Resolve button), `x` on a conflict in the Problems
+panel's All tab, `:resolve [file]` or `git.merge_screen` — the file named, else the conflicted file selected in the
+panel, else this note when it's in conflict, else the first that is — opens the file's buffer (read again first when git
+changed it on disk and it has no unsaved changes) and reads git's markers (`parseConflicts`): `<<<<<<< label`, yours,
+`||||||| label` and the base where git wrote it (diff3, zdiff3), `=======`, theirs, `>>>>>>> label`; a marker that
+doesn't close, or a `=======` outside a conflict (a setext heading's), is text. The markers give the conflicts, so what
+was settled by hand stays settled. git doesn't widen its markers for a side with a seven-character `=======` line in it
+(a setext heading's underline), so a conflict with more than one `=======` that could part the sides — after diff3's
+base marker, where there's one; one before it is yours — can be read more than one way (`Conflict.ambiguous`): the
+index's stages choose the one way whose yours is in stage 2 and theirs in stage 3 (and a marked base in stage 1). With
+no stage that does, or more than one way that fits, the conflict is ambiguous: its card shows it as marked, and `o`,
+`t`, `b` and `shift+b` are refused, said, `e` settling it by hand. A complete set of markers inside a fenced code block
+— the fence open from before the `<<<<<<<` to after the `>>>>>>>` — is an example of git's markers, text, unless neither
+side's stage holds those lines, which makes them git's own conflict in a code block (`readConflicts`). Each conflict's
+base where the markers don't hold it comes from the index's stage 1 (`withStages`): yours is found in stage 2, and
+theirs in stage 3, where the stretches before put it (else wherever it is), each mapped back onto stage 1 through that
+side's changes (`toBase`, a boundary inside a change widened to the whole of it), the two ranges joined. Line endings
+and a byte order mark aren't compared, finding a side or diffing it against the base: the index holds LF where a
+checkout (`eol=crlf`) has CRLF. Where neither has it (the stages gone), there's no base. A file in conflict with no
+marker (one side deleted it) is said, with `s` in the git panel to mark it resolved — its buffer unsaved, `:w` first, as
+`s` stages the file on disk. `enter` on a conflicted file in the panel shows its diff, not the screen.
 
 The screen, in the floating window as tall as a peek's, a conflict at a time: its number, its line in the result and
 how it's settled; the keys; while a rebase is under way, that yours is what's rebased onto and theirs the commit
@@ -3047,14 +3043,14 @@ seconds and 64 MiB of output; cancellation or a limit returns no result and clos
 cleanup includes the owned process group. Existing trust guards, literal path arguments and noninteractive sync
 APIs remain. Merge stages are read in parallel; explicit branch diffs select their base asynchronously.
 
-`tui/gitquery.ts` owns the current foreground request. A newer request, Escape, leaving the vault, opening another
-tab or quitting cancels it. Completion checks the repository, document version and disk identity, view and HEAD commit;
-staged/index reads also check the index's identity and timestamps. Results are fetched afresh, so no stale history/blob
-cache is introduced. Existing content remains while a loading message is shown. The key that starts a read waits for
-it, as any key waits for what it does: a list's selection, source control's and the branches' rows, `space g d`, a link
-to another branch's file, and `esc` back to the list a diff came from all return their reads to the key, so the keys
-typed after it act on what it opened. Completion requests a repaint. The base a diff is taken against is the branch's
-own; on a detached HEAD, `[git] base` or main/master, and one not there is named. These reads do not change the
+`tui/workspace/git/gitquery.ts` owns the current foreground request. A newer request, Escape, leaving the vault, opening
+another tab or quitting cancels it. Completion checks the repository, document version and disk identity, view and HEAD
+commit; staged/index reads also check the index's identity and timestamps. Results are fetched afresh, so no stale
+history/blob cache is introduced. Existing content remains while a loading message is shown. The key that starts a read
+waits for it, as any key waits for what it does: a list's selection, source control's and the branches' rows, `space g
+d`, a link to another branch's file, and `esc` back to the list a diff came from all return their reads to the key, so
+the keys typed after it act on what it opened. Completion requests a repaint. The base a diff is taken against is the
+branch's own; on a detached HEAD, `[git] base` or main/master, and one not there is named. These reads do not change the
 separate policies for git mutations.
 
 Opening defaults (VB-D2): `render.notes`, `render.code` and `render.data` are true by default. False opens SOURCE;

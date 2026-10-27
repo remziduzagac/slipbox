@@ -1,7 +1,7 @@
 // The side panels: their widths and rails, which view each shows (the left: explorer, history, source control; the
 // right: info, outline, footnotes), resize mode, the filters typed into them, and where focus may be.
 
-import type { PanelRow } from "../../gitpanel.ts";
+import type { PanelRow } from "../../workspace/git/views/panel/gitpanel.ts";
 import { match } from "../overlays/match.ts";
 import { RESIZE_ACTIONS, keyChar } from "../input/keys.ts";
 import type { App, SidePaneState } from "../../app/runtime/app.ts";
@@ -10,7 +10,7 @@ import type { InfoRow } from "../../documents/tools/info/info.ts";
 import type { FootnoteRow } from "../../documents/tools/footnotes/footnotes.ts";
 import type { HistoryRow } from "../../workspace/history/history.ts";
 import type { TreeRow } from "../../workspace/explorer/explorer.ts";
-import { PANEL_ROWS } from "../../problems.ts";
+import { PANEL_ROWS } from "../../documents/diagnostics/problems.ts";
 
 /** The side panels: widths, rails, views, filters, resize mode. */
 export class Panels {

@@ -5,8 +5,8 @@ import { existsSync } from "node:fs";
 import { readText } from "../../../core/foundation/platform/fsutil.ts";
 import { merge3 } from "../../../core/workspace/git/merge/merge.ts";
 import { stopInsert } from "../editing/editing.ts";
-import { openDiff } from "../../diffview.ts";
-import { openPromptMerge } from "../../mergescreen.ts";
+import { openDiff } from "../../workspace/git/views/changes/diffview.ts";
+import { openPromptMerge } from "../../workspace/git/views/review/mergescreen.ts";
 import type { NoteBuffer } from "../buffers/buffer.ts";
 import type { App } from "../../app/runtime/app.ts";
 

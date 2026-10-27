@@ -27,9 +27,8 @@ a change users will see updates it in the same piece of work, without the bluepr
   alone. `bun run check:size` enforces the limit.
 - **Every user action is a named command.** Add it to the `src/core/application/commands/areas/` file of its area
   (`git.ts`, `editing.ts`, …; `catalog.ts` joins them into `COMMAND_SPECS`) with its CLI equivalent (or `null` for a
-  pure interaction), then implement it in its TUI action-area module (`src/tui/actions/`, with remaining
-  `src/tui/actions-*.ts` moving by area). `src/tui/actions/actions.ts` registers them. Registration fails at startup,
-  and a test fails, if the two disagree.
+  pure interaction), then implement it in its area under `src/tui/actions/documents/`, `workspace/` or `shell/`.
+  `src/tui/actions/actions.ts` registers them. Registration fails at startup, and a test fails, if the two disagree.
 - **The design stays true to the code.** A behaviour change updates the matching file in
   `blueprint/design/` in the same change; since the initial design was settled (D210), a planned change to
   requirements or design goes through a workstream.

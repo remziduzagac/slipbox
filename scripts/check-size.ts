@@ -5,7 +5,8 @@
 //
 // A file past it has an exact cap. Apart from the import-formatting reset below, it may only shrink; lower its cap
 // to its measured size (the check fails until then); at or below LIMIT, drop it from the list (ORG-D2).
-// A move may reset a cap to measured import-formatting growth only, with its delta recorded (ORG-D2 dated note).
+// A move may reset a cap to measured import-formatting growth, or give a file crossing LIMIT an exact cap;
+// record the delta and extraction owner (ORG-D2 dated note).
 
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
@@ -25,6 +26,7 @@ export const CAPPED: Record<string, number> = {
   "src/tui/app/runtime/app.ts": 1459,
   "src/tui/workspace/explorer/explorer.ts": 1275,
   "src/tui/shell/input/keys.ts": 1166,
+  "src/tui/workspace/git/views/branches/gitbranchview.ts": 1005,
 };
 
 /** Generated data: separate measured cap; verify offline with `bun scripts/lock-servers.ts --check` (ORG-D2). */

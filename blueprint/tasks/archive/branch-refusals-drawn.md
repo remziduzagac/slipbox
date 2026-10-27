@@ -62,7 +62,8 @@ So:
   with no frame asked for waits. A key's frame comes after its command is done (`Input.processKey`,
   `src/tui/shell/input/input.ts:165`); a mouse click asks for one at once (`src/tui/shell/terminal/run.ts`,
   `view.onMouse`), not when what it started is answered.
-- 2026-10-23: the paths in `src/tui/gitbranchview.ts` that say something after an await, with no frame asked for:
+- 2026-10-23: the paths in `src/tui/workspace/git/views/branches/gitbranchview.ts` that say something after an await,
+  with no frame asked for:
   - `remove`'s accept, `removeWorktreeLater`'s refusal (line 577) — #17's;
   - `worktreeFor`, `addWorktreeLater`'s refusal (line 609) — #17's;
   - `newWhere`'s `inWorktree`, `newWorktreeLater`'s refusal (line 714) — #17's;
@@ -148,9 +149,9 @@ So:
     Remove…'s question and Merge…'s menu open over a list or prompt opened meanwhile (`compare` checks
     `app.overlay`, they don't);
   - a message with no frame asked for, outside what #17 named: the status line's and the palette's switch refused
-    (`src/tui/git.ts`, `checkedOut`), and `fileDiff`'s message for an uncommitted file it won't read (past 8 MB, not a
-    regular file), when the diff was asked for by a click; that one is also said before the read is checked for being
-    overtaken (`query.current()`).
+    (`src/tui/workspace/git/git.ts`, `checkedOut`), and `fileDiff`'s message for an uncommitted file it won't read (past
+    8 MB, not a regular file), when the diff was asked for by a click; that one is also said before the read is checked
+    for being overtaken (`query.current()`).
 - 2026-10-23: round 1 of the pull request's own review: the code-review skill and a second reviewer, each on
   `git diff origin/dev...` without the other's findings; consolidated, each checked against the code.
   - Rejected: the removal question's title compared with the fixture's path could miss git's spelling of it through a

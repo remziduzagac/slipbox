@@ -443,13 +443,12 @@ dates. Each says what was asked, decided, built and found, and cites the decisio
   the main thread, a folder link going in from a peek, a peek's cost and stale backlinks, the git panel's files in a
   peek, asking git again on the terminal's focus) and § Git (a first-run setup screen, key tables for the floating
   windows). And what the check found in the code: `ctrl+s` and `:w` don't save the merge screen, which says it does
-  (`tui/mergescreen.ts`); the description of `peek.go` says a file outside every vault opens beside the vault, where `o`
-  goes into Elsewhere (`core/application/commands/catalog.ts`); and code comments still name the removed `space g` keys
-  (`tui/git.ts`,
-  `tui/githistory.ts`, `core/workspace/git/branches/gitbranches.ts`) and the sections renamed
-  (`core/workspace/vaults/registry.ts`,
-  `core/workspace/vaults/names.ts`). VV-D9's
-  `⚠` for a disk that doesn't answer is amended to the code's `⊘` (2026-10-17).
+  (`tui/workspace/git/views/review/mergescreen.ts`); the description of `peek.go` says a file outside every vault opens
+  beside the vault, where `o` goes into Elsewhere (`core/application/commands/catalog.ts`); and code comments still name
+  the removed `space g` keys (`tui/workspace/git/git.ts`, `tui/workspace/git/views/history/githistory.ts`,
+  `core/workspace/git/branches/gitbranches.ts`) and the sections renamed (`core/workspace/vaults/registry.ts`,
+  `core/workspace/vaults/names.ts`). VV-D9's `⚠` for a disk that doesn't answer is amended to the code's `⊘`
+  (2026-10-17).
 
 ## Intel Macs dropped (2026-10-17)
 

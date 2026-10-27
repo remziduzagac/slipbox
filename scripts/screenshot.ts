@@ -2,7 +2,8 @@
 // as the docs' screenshots read them: tests/terminal/shots.ts), or a screen's text with its escapes (`parseAnsi`) —
 // drawn into an SVG cell by cell and rasterised by resvg with DejaVu Sans Mono. Box-drawing and block characters are
 // drawn as shapes, so borders join across cells. A picture shows in the screen's text only as Kitty's placeholder
-// cells (src/tui/placeholders.ts): named, it's drawn over them as the terminal draws it; not, they're left blank.
+// cells (src/tui/shell/terminal/placeholders.ts): named, it's drawn over them as the terminal draws it; not,
+// they're left blank.
 //
 //   bun scripts/screenshot.ts screen.ansi screen.png [--cols 120] [--rows 36] [--scale 2] [--picture a.png…]
 //   (a screen read with its escapes, as a terminal multiplexer's `--format ansi` gives it; `-` reads it from stdin)
@@ -12,7 +13,7 @@ import { initWasm, Resvg } from "@resvg/resvg-wasm";
 import wasm from "@resvg/resvg-wasm/index_bg.wasm" with { type: "file" };
 import { openSync } from "fontkit";
 import { graphemes, graphemeWidth } from "../src/core/foundation/text/width.ts";
-import { PLACEHOLDER, placeholderCell } from "../src/tui/placeholders.ts";
+import { PLACEHOLDER, placeholderCell } from "../src/tui/shell/terminal/placeholders.ts";
 
 const FONT_DIR = "/usr/share/fonts/truetype/dejavu";
 // DejaVu Sans after the mono faces: resvg falls back to it for a symbol the mono font lacks (ℹ).

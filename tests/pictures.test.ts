@@ -10,10 +10,10 @@ import { loadRasterizer } from "../src/core/rendering/media/images/svg.ts";
 import type { Layout, Line } from "../src/core/rendering/layout/ir.ts";
 import type { Host, View } from "../src/tui/app/runtime/app.ts";
 import { TextCanvas } from "../src/tui/shell/terminal/canvas.ts";
-import { FLOOR_COLS, FLOOR_ROWS, pictureSizes } from "../src/tui/images.ts";
+import { FLOOR_COLS, FLOOR_ROWS, pictureSizes } from "../src/tui/documents/media/images.ts";
 import { Pictures as OpenTuiPictures } from "../src/tui/shell/terminal/opentui.ts";
-import { PICTURES_REST_MS } from "../src/tui/pictures.ts";
-import { pictureId, placeholderCell, placeholderRow } from "../src/tui/placeholders.ts";
+import { PICTURES_REST_MS } from "../src/tui/documents/media/pictures.ts";
+import { pictureId, placeholderCell, placeholderRow } from "../src/tui/shell/terminal/placeholders.ts";
 import { harness, type Harness, lineText, makeSandbox, makeVault } from "./tui-harness.ts";
 
 const sandbox = makeSandbox();

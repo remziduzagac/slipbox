@@ -3,7 +3,7 @@
 
 import { stopInsert } from "../../documents/editing/editing.ts";
 import * as R from "../../documents/search/replacing.ts";
-import { gitClick, gitRightClick, signClick } from "../../gitmouse.ts";
+import { gitClick, gitRightClick, signClick } from "../../workspace/git/views/panel/gitmouse.ts";
 import { stringWidth } from "../../../core/foundation/text/width.ts";
 import { saveAsMouse } from "../../documents/saving/saveas.ts";
 import { dialogMouse } from "../overlays/dialog.ts";

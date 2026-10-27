@@ -16,7 +16,7 @@ import { refilter } from "../../shell/overlays/overlays.ts";
 import type { SymbolInformation, WorkspaceSymbol } from "vscode-languageserver-protocol";
 import { fileURLToPath } from "node:url";
 import { relative } from "node:path";
-import { KIND_NAMES } from "../../languages.ts";
+import { KIND_NAMES } from "../../documents/diagnostics/languages.ts";
 import { rank } from "../../shell/overlays/match.ts";
 
 /** Finding: find in a note and replace, search, the switcher, notes by type and by tag. */

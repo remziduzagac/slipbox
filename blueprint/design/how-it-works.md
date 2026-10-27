@@ -28,11 +28,10 @@ CLI call never loads OpenTUI's native renderer.
 
 Every user action is a named command (D11). `core/application/commands/areas/*.ts` (by area, listed by
 `core/application/commands/catalog.ts`) give each command id the CLI invocation that reaches the same state change, or
-mark it an interaction. `tui/actions/` holds registration and command-area folders (`documents/` so far), with remaining
-root action modules moving by area; each implementation is registered in the `CommandRegistry`
-(`core/application/commands/registry.ts`), and keys, the palette and the `:` prompt run them by id. A command
-implemented without a spec, or specified without an implementation, fails at start-up and fails a test ([tui.md](tui.md)
-§ Parity with the CLI).
+mark it an interaction. `tui/actions/` holds registration and the documents, workspace and shell command-area folders;
+each implementation is registered in the `CommandRegistry` (`core/application/commands/registry.ts`), and keys, the
+palette and the `:` prompt run them by id. A command implemented without a spec, or specified without an implementation,
+fails at start-up and fails a test ([tui.md](tui.md) § Parity with the CLI).
 
 ### The boundary is enforced, not hoped for
 
@@ -229,7 +228,7 @@ The CLI's commands are the user's reference, [cli.md](../../docs/manual/cli.md);
 | `core/rendering/export/reads.ts` | 10.x | what a job reads: regular files only, each note parsed once |
 | `core/rendering/export/spool.ts` | 10.x | the output staged privately (`stream.ts`), published by the owner |
 | [zip.ts][o125] | 10.x | EPUB's ZIP, an entry at a time; no ZIP64, so 4 GiB or 65,535 files at most |
-| `tui/placeholders.ts` | 12.7 | Kitty's Unicode placeholders: a picture's id, its cells as text, sent once, let go |
+| [placeholders.ts][o145] | 12.7 | Kitty's Unicode placeholders: a picture's id, its cells as text, sent once, let go |
 | [syntax.ts][o51] | 16.7–16.9, 16.18–16.22 | tree-sitter: spans, outline, errors, comments; parts in other languages |
 | [syntax-thread.ts][o52] | 16.7–16.9, D252 | a code file's grammar, parse and outline on `syntax-worker.ts` |
 | [docformats.ts][o53] | 24.4 | a doc comment read into one shape, whatever wrote it: JSDoc, Google, NumPy, Sphinx |
@@ -301,7 +300,7 @@ The CLI's commands are the user's reference, [cli.md](../../docs/manual/cli.md);
 | [libc.ts][o14] | UPG | libc through `bun:ffi`, opened once: `setenv` (D221), `execve`, `close_range`, `tcflush` |
 | [processes.ts][o15] | UPG | whether a process still runs: a lock's holder, a TUI's unsaved notes, an export's spool |
 | `tui/shell/overlays/dialog.ts` | UPG | the dialog: text, a select and checkboxes; its keys and clicks |
-| `tui/updates.ts` | UPG | the update offer, `app.upgrade`, `app.restart`, an upgrade underneath noticed |
+| [updates.ts][o146] | UPG | the update offer, `app.upgrade`, `app.restart`, an upgrade underneath noticed |
 | [skill.ts][o101] | GR-D10 | the skill for agents, built in: printed; installed, never over another's file or a link |
 | [skill-lifecycle.ts][o102] | ASI | detected user skill folders, safe refresh and uninstall ownership checks |
 | [report.ts][o103] | RPT | a bug report's facts (slipbox, the system, the terminal); its text read back; the address |
@@ -328,34 +327,34 @@ The CLI's commands are the user's reference, [cli.md](../../docs/manual/cli.md);
 | `version.ts` | — | the version, one source |
 | `tui/*` | 3.x, 5.3–5.7 | the app: reading, panes, saving and conflicts |
 | [app.ts][o132] | D235 | the model: the state every part shares and the wiring; a controller per feature (`app.git`) |
-| `tui/actions/`, remaining root action modules | 0.8 | command registration and area folders (`documents/` so far) |
+| `tui/actions/` | 0.8 | command registration and document, workspace and shell area implementations |
 | [draw.ts][o139], feature drawing | 3.1, 3.2 | frame composition, document views, panels, bars and overlays |
 | `tui/documents/buffers/buffer.ts` | 4.5–4.8 | a note's text, its undo steps, unsaved state, BOM and line endings |
 | `tui/documents/editing/editing.ts` | 4.3 | the cursor as a text offset; insert mode |
 | `tui/shell/input/vim.ts` | 4.4 | counts, operators and text objects, the register, `.` |
 | `tui/documents/search/replacing.ts` | 4.16 | the replace row, `:s` and its confirm, `gn`'s matches |
-| `tui/githistory.ts` | 26.4, 22.1 | blame and a file's history: a version read, its diff to now |
-| `tui/gitquery.ts` | — | the one foreground git read: a newer one cancels it, a stale view never takes it |
-| `tui/gitview.ts` | 26.2, GIT-D8 | the git panel's working tree: its sections, a file's changes, what its keys run |
-| `tui/gitpanel.ts` | GIT-D8, GIT-D12 | the git panel: its top, buttons, rows, keys and footer; `space g` |
-| `tui/gitbranchview.ts` | GIT-D9, GIT-D10 | the git panel's branches: worktrees, bases; made, removed, merged |
-| `tui/gitreposview.ts` | VV-D10, GIT-D11 | the git panel's repositories in the view, ordered by what needs attention |
-| `tui/gitmouse.ts` | GIT-D8 | the git panel by mouse; the branch where you are; a change's sign in the gutter |
-| `tui/diffview.ts` | GIT-D2, GIT-D7 | the diff window: blocks or lines, side by side; `tab`, `enter`, `esc` |
-| `tui/review.ts` | GIT-D3 | the review: a hunk at a time, kept, reverted, noted; its keys |
-| `tui/mergescreen.ts` | GIT-D5 | the merge screen: a card a conflict, the result, saved and staged; its keys |
-| `tui/gitremote.ts` | 26.6, GIT-D4 | fetch, pull, push and stash from the TUI, in the background, one at a time |
-| `tui/rebase.ts` | GIT-D6, D247 | a diverged pull asked about, a rebase onto the base and its stash; what's under way |
+| [githistory.ts][o147] | 26.4, 22.1 | blame and a file's history: a version read, its diff to now |
+| [gitquery.ts][o148] | — | the one foreground git read: a newer one cancels it, a stale view never takes it |
+| [gitview.ts][o149] | 26.2, GIT-D8 | the git panel's working tree: its sections, a file's changes, what its keys run |
+| [gitpanel.ts][o150] | GIT-D8, GIT-D12 | the git panel: its top, buttons, rows, keys and footer; `space g` |
+| [gitbranchview.ts][o151] | GIT-D9, GIT-D10 | the git panel's branches: worktrees, bases; made, removed, merged |
+| [gitreposview.ts][o152] | VV-D10, GIT-D11 | the git panel's repositories in the view, ordered by what needs attention |
+| [gitmouse.ts][o153] | GIT-D8 | the git panel by mouse; the branch where you are; a change's sign in the gutter |
+| [diffview.ts][o154] | GIT-D2, GIT-D7 | the diff window: blocks or lines, side by side; `tab`, `enter`, `esc` |
+| `tui/workspace/git/views/review/review.ts` | GIT-D3 | the review: a hunk at a time, kept, reverted, noted; its keys |
+| [mergescreen.ts][o155] | GIT-D5 | the merge screen: a card a conflict, the result, saved and staged; its keys |
+| [gitremote.ts][o156] | 26.6, GIT-D4 | fetch, pull, push and stash from the TUI, in the background, one at a time |
+| [rebase.ts][o157] | GIT-D6, D247 | a diverged pull asked about, a rebase onto the base and its stash; what's under way |
 | [explorer.ts][o140] | 3.7, VV-D5 | the explorer: one tree and its view, the breadcrumb, zooming; rows, keys, menu |
 | [explorer-disk.ts][o141] | VV-D8 | the explorer's rows the walk doesn't give: what it leaves out or hasn't reached |
 | [listings.ts][o142] | T12 | the folders the explorer lists a level at a time: read off the main thread, kept, again |
 | [marks.ts][o143] | VV-D9, D244 | a row's marks: the index's state, what describes the row; why it isn't indexed |
 | [peek.ts][o133] | VV-D7, D259 | the peek: another vault's file read in place; `o`, `t`, `z`; its backlinks, asked |
 | [following.ts][o134] | VV-D6 | the question a link not followed asks; follow, just look, no; the probe |
-| `tui/gitchanges.ts` | 26.1 | `] c`, `[ c` to a change against what's staged; its preview; one undone |
+| [gitchanges.ts][o158] | 26.1 | `] c`, `[ c` to a change against what's staged; its preview; one undone |
 | [shellrun.ts][o135] | 25.7 | `:!cmd`'s output window, `:{range}!cmd`'s lines replaced, one command at a time |
 | [snippets.ts][o136] | 25.8 | a snippet's stops while typing: `tab` through them, placeholders replaced, mirrors |
-| `tui/spelling.ts` | 25.6 | misspelt words where a window shows them: the marks, `] s`, `z =`, `z g` |
+| [spelling.ts][o159] | 25.6 | misspelt words where a window shows them: the marks, `] s`, `z =`, `z g` |
 | [completion.ts][o137] | 19.16, 20.13, 25.5 | completion as typed: a server's items, links' targets, open files' words |
 | [saveas.ts][o138] | 10.14 | the Save As window an export opens: places, the folder's entries, the name; its keys |
 | [where.ts][o144] | WSP-D4, WSP-D5 | where you are, on the top bar or the status line: vault, workspace, branch, cut |
@@ -720,3 +719,19 @@ ordinary note needs.
 [o142]: ../../src/tui/workspace/explorer/listings.ts
 [o143]: ../../src/tui/workspace/explorer/marks.ts
 [o144]: ../../src/tui/shell/screen/topbar/where.ts
+
+[o145]: ../../src/tui/shell/terminal/placeholders.ts
+[o146]: ../../src/tui/app/distribution/updates.ts
+[o147]: ../../src/tui/workspace/git/views/history/githistory.ts
+[o148]: ../../src/tui/workspace/git/gitquery.ts
+[o149]: ../../src/tui/workspace/git/views/panel/gitview.ts
+[o150]: ../../src/tui/workspace/git/views/panel/gitpanel.ts
+[o151]: ../../src/tui/workspace/git/views/branches/gitbranchview.ts
+[o152]: ../../src/tui/workspace/git/views/branches/gitreposview.ts
+[o153]: ../../src/tui/workspace/git/views/panel/gitmouse.ts
+[o154]: ../../src/tui/workspace/git/views/changes/diffview.ts
+[o155]: ../../src/tui/workspace/git/views/review/mergescreen.ts
+[o156]: ../../src/tui/workspace/git/gitremote.ts
+[o157]: ../../src/tui/workspace/git/views/review/rebase.ts
+[o158]: ../../src/tui/workspace/git/views/changes/gitchanges.ts
+[o159]: ../../src/tui/documents/diagnostics/spelling.ts

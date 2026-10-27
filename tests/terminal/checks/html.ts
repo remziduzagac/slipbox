@@ -1,5 +1,5 @@
 import { type Check, pos } from "../check.ts";
-import { placeholderCell } from "../../../src/tui/placeholders.ts";
+import { placeholderCell } from "../../../src/tui/shell/terminal/placeholders.ts";
 
 const NOTE = "home/notes/research/document-html.md";
 export const HTML: Check[] = [

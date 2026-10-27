@@ -1,0 +1,179 @@
+{
+  "moves": {
+    "src/tui/git.ts": "src/tui/workspace/git/git.ts",
+    "src/tui/gitquery.ts": "src/tui/workspace/git/gitquery.ts",
+    "src/tui/gitsteady.ts": "src/tui/workspace/git/gitsteady.ts",
+    "src/tui/gitremote.ts": "src/tui/workspace/git/gitremote.ts",
+    "src/tui/gitview.ts": "src/tui/workspace/git/views/panel/gitview.ts",
+    "src/tui/gitpanel.ts": "src/tui/workspace/git/views/panel/gitpanel.ts",
+    "src/tui/gitmouse.ts": "src/tui/workspace/git/views/panel/gitmouse.ts",
+    "src/tui/draw-git.ts": "src/tui/workspace/git/views/panel/draw-git.ts",
+    "src/tui/gitbranchview.ts": "src/tui/workspace/git/views/branches/gitbranchview.ts",
+    "src/tui/gitreposview.ts": "src/tui/workspace/git/views/branches/gitreposview.ts",
+    "src/tui/githistory.ts": "src/tui/workspace/git/views/history/githistory.ts",
+    "src/tui/gitchanges.ts": "src/tui/workspace/git/views/changes/gitchanges.ts",
+    "src/tui/diffview.ts": "src/tui/workspace/git/views/changes/diffview.ts",
+    "src/tui/mergescreen.ts": "src/tui/workspace/git/views/review/mergescreen.ts",
+    "src/tui/rebase.ts": "src/tui/workspace/git/views/review/rebase.ts",
+    "src/tui/review.ts": "src/tui/workspace/git/views/review/review.ts",
+    "src/tui/languages.ts": "src/tui/documents/diagnostics/languages.ts",
+    "src/tui/problems.ts": "src/tui/documents/diagnostics/problems.ts",
+    "src/tui/spelling.ts": "src/tui/documents/diagnostics/spelling.ts",
+    "src/tui/draw-problems.ts": "src/tui/documents/diagnostics/draw-problems.ts",
+    "src/tui/images.ts": "src/tui/documents/media/images.ts",
+    "src/tui/pictures.ts": "src/tui/documents/media/pictures.ts",
+    "src/tui/placeholders.ts": "src/tui/shell/terminal/placeholders.ts",
+    "src/tui/exporter.ts": "src/tui/documents/export/exporter.ts",
+    "src/tui/settings.ts": "src/tui/app/settings/settings.ts",
+    "src/tui/updates.ts": "src/tui/app/distribution/updates.ts",
+    "src/tui/report.ts": "src/tui/app/distribution/report.ts",
+    "src/tui/actions-lsp.ts": "src/tui/actions/documents/actions-lsp.ts"
+  },
+  "ownership": {
+    "git": "Git panel, branch/repository views, history, changes/diffs and review/merge semantics stay in one workspace Git feature with cohesive view subareas.",
+    "diagnostics": "Document/vault Problems remains one scoped feature. App composition and note writes remain unchanged.",
+    "terminalMedia": "The Kitty placeholder wire format stays a pure terminal helper; document image sizing/render state stays with documents/media."
+  },
+  "retained": [
+    {
+      "file": "blueprint/workstreams/archive/user-docs/tasks/archive/git-and-code.md",
+      "text": "src/tui/git",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/workspaces/notes.md",
+      "text": "src/tui/git",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/workspaces/tasks/archive/where.md",
+      "text": "src/tui/git",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/design.md",
+      "text": "src/tui/git",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "src/tui/git",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/design.md",
+      "text": "src/tui/gitpanel",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "src/tui/gitpanel",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/workspaces/notes.md",
+      "text": "src/tui/gitmouse",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/design.md",
+      "text": "src/tui/gitbranchview",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "src/tui/gitbranchview",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/window-header/notes.md",
+      "text": "src/tui/diffview",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/window-header/notes.md",
+      "text": "src/tui/mergescreen",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/design.md",
+      "text": "src/tui/languages",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "src/tui/languages",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/design.md",
+      "text": "src/tui/problems",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "src/tui/problems",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/user-docs/tasks/archive/editing-and-files.md",
+      "text": "src/tui/spelling",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/picture-sizes/research.md",
+      "text": "src/tui/images",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/picture-sizes/tasks/archive/sizes.md",
+      "text": "src/tui/images",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/user-docs/tasks/archive/export-privacy-troubleshooting.md",
+      "text": "src/tui/images",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/picture-sizes/research.md",
+      "text": "src/tui/pictures",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/picture-sizes/tasks/archive/sizes.md",
+      "text": "src/tui/pictures",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/picture-sizes/research.md",
+      "text": "src/tui/placeholders",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/design.md",
+      "text": "src/tui/exporter",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/upgrade-restart/tasks/archive/update-offer.md",
+      "text": "src/tui/updates",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/design.md",
+      "text": "src/tui/updates",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "src/tui/updates",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "tests/tui.test.ts",
+      "text": "src/tui/draw",
+      "reason": "Rendered tree fixture label, not an import or live source reference; preserve its original text and width across this move."
+    }
+  ]
+}

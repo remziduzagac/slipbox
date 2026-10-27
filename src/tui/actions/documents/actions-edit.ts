@@ -2,7 +2,7 @@
 // undo and redo, spelling's fixes; a note saved, reverted, resolved, or handed to an editor.
 
 import { type Run, withView } from "../actions.ts";
-import { spellStep, spellSuggest, spellAdd } from "../../spelling.ts";
+import { spellStep, spellSuggest, spellAdd } from "../../documents/diagnostics/spelling.ts";
 import * as E from "../../documents/editing/editing.ts";
 import * as V from "../../shell/input/vim.ts";
 import { graphemes } from "../../../core/foundation/text/width.ts";

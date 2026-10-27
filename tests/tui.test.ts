@@ -39,7 +39,7 @@ import { dateText, listFolder, placeOf, type SaveAsOverlay, sizeText } from "../
 import { placeIn } from "../src/tui/documents/editing/shellrun.ts";
 import { peekOf } from "../src/tui/documents/navigation/peek.ts";
 import { setTrust } from "../src/core/workspace/vaults/trust.ts";
-import type { PanelRow } from "../src/tui/gitpanel.ts";
+import type { PanelRow } from "../src/tui/workspace/git/views/panel/gitpanel.ts";
 import type { NvimServer } from "../src/core/documents/external-editors/nvim.ts";
 import { TextCanvas } from "../src/tui/shell/terminal/canvas.ts";
 import { match, RANKED, rank } from "../src/tui/shell/overlays/match.ts";
@@ -54,8 +54,15 @@ import { loadMermaid, mermaidPending, mermaidSvg } from "../src/core/rendering/m
 import { loadTypesetter } from "../src/core/rendering/media/typeset.ts";
 import { paintJobs } from "../src/core/rendering/media/paint/paint-jobs.ts";
 import { colorHex } from "../src/core/rendering/theme/theme.ts";
-import { svgText } from "../src/tui/images.ts";
-import { idColor, pictureId, placeholderCell, placeholderRow, release, transmit } from "../src/tui/placeholders.ts";
+import { svgText } from "../src/tui/documents/media/images.ts";
+import {
+  idColor,
+  pictureId,
+  placeholderCell,
+  placeholderRow,
+  release,
+  transmit,
+} from "../src/tui/shell/terminal/placeholders.ts";
 import { Pictures } from "../src/tui/shell/terminal/opentui.ts";
 import { OptimizedBuffer } from "@opentui/core";
 import { inflateSync } from "node:zlib";
@@ -71,7 +78,7 @@ import {
 } from "../src/tui/shell/input/keys.ts";
 import { MOUSE_HELP } from "../src/tui/shell/input/mouse-help.ts";
 import { codeBlocks } from "../src/tui/documents/views/code.ts";
-import { PICTURES_REST_MS } from "../src/tui/pictures.ts";
+import { PICTURES_REST_MS } from "../src/tui/documents/media/pictures.ts";
 import {
   makeSandbox,
   makeVault,
@@ -4240,7 +4247,7 @@ describe("code blocks that scroll sideways ([render] code_wrap)", () => {
   const LONG_ONE =
     "├── src/core/layout/render.ts     the layout: mdast to rows, every block and inline, the code anchovy";
   const LONG_TWO =
-    "├── src/tui/shell/screen/draw.ts               the drawing: rows to cells, and each code block from its offset bergamot";
+    "├── src/tui/draw.ts               the drawing: rows to cells, and each code block from its offset bergamot";
   const COMMAND =
     'echo "a long command line inside a list item that goes well past the right edge of the window" cardamom';
   const TREE = [

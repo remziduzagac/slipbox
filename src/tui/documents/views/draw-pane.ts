@@ -16,7 +16,7 @@ import {
   worst,
 } from "../../../core/documents/diagnostics/diagnostics.ts";
 import { snippetMark } from "../editing/snippets.ts";
-import { type Spot, spellSpots } from "../../spelling.ts";
+import { type Spot, spellSpots } from "../diagnostics/spelling.ts";
 import { type GitSign, gitSigns } from "../../../core/workspace/git/gitsigns.ts";
 import { codeBlocks } from "./code.ts";
 import type { Role, Color, Theme } from "../../../core/rendering/theme/theme.ts";

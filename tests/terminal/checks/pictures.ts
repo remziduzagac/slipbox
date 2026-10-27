@@ -3,7 +3,7 @@
 // drawn, which part of it shows, and where. In the reading area; reading.ts is past the size limit.
 
 import { stringWidth } from "../../../src/core/foundation/text/width.ts";
-import { placeholderCell } from "../../../src/tui/placeholders.ts";
+import { placeholderCell } from "../../../src/tui/shell/terminal/placeholders.ts";
 import { type Check, leader } from "../check.ts";
 import type { Session } from "../session.ts";
 

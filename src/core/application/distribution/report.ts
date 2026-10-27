@@ -1,7 +1,7 @@
 // A bug report (RPT): what slipbox knows of itself, the system and the terminal, as the bug form asks it (RPT-D1);
 // the report's text and how it's read back; the bug form's address filled in from it (RPT-D3). `slipbox report`
-// prints the facts (RPT-D5); the report's window (`tui/report.ts`) writes them into its text. Nothing here reaches
-// the network: the address is opened, or copied, on your say.
+// prints the facts (RPT-D5); the report's window (`tui/app/distribution/report.ts`) writes them into its text.
+// Nothing here reaches the network: the address is opened, or copied, on your say.
 
 import { readFileSync } from "node:fs";
 import { release as kernelRelease } from "node:os";
