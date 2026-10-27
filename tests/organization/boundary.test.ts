@@ -54,6 +54,11 @@ describe("the boundary check (0.3, scripts/check-boundary.ts)", () => {
         'import type { View } from "../../app/runtime/app.ts";\nexport type Reverse = View;\n',
       "src/tui/documents/editing/editing.ts":
         'import { App } from "../../app/runtime/app.ts";\nexport const reverse = App;\n',
+      "src/tui/shell/panels/focus.ts":
+        'export type { App } from "../../app/runtime/app.ts";\nimport { Panels } from "./panels";\nexport const owner = Panels;\n',
+      "src/tui/shell/screen/topbar/where.ts": 'export * from "../../../workspace/git/views/review/rebase.ts";\n',
+      "src/tui/shell/screen/topbar/contracts.ts":
+        'import type { App } from "../../../app/runtime/app.ts";\nexport type Reverse = App;\n',
       "tests/support/tui/sandbox.ts":
         'import { App } from "../../../src/tui/app/runtime/app.ts";\nexport const reverse = App;\n',
       "src/tui/shell/screen/draw.ts": "export interface Geometry {}\nexport const draw = () => {};\n",
@@ -65,6 +70,13 @@ describe("the boundary check (0.3, scripts/check-boundary.ts)", () => {
     expect(r.err).toContain("editing client must stay below App composition");
     expect(r.err).toContain("filesystem fixture must stay independent of the TUI model");
     expect(r.err).toContain("drawing client must stay below screen composition");
+    for (const file of [
+      "src/tui/shell/panels/focus.ts",
+      "src/tui/shell/screen/topbar/where.ts",
+      "src/tui/shell/screen/topbar/contracts.ts",
+    ])
+      expect(r.err).toContain(`${file}:`);
+    expect(r.err).toContain("src/tui/shell/panels/focus.ts: imports ./panels");
     const typed = check({
       "src/tui/shell/screen/draw.ts": "export interface Geometry {}\n",
       "src/tui/documents/views/draw-pane.ts":

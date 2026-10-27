@@ -261,6 +261,7 @@ The CLI's commands are the user's reference, [cli.md](../../docs/manual/cli.md);
 | [gitreview.ts][o83] | GIT-D3 | the review's hunk shown, found again, a note's scratch entry, the end's tally |
 | [gitremote.ts][o84] | 26.6, GIT-D4 | fetch, pull, push, stash, without a terminal; a pull merged or rebased |
 | [gitrebase.ts][o85] | GIT-D6, D247 | a rebase onto the base, over files changed; what's under way, from git's files |
+| [operation-status.ts][operation-status] | GIT-D6 | caller-keyed Git operation observations; generation/clock refresh |
 | [gitbranches.ts][o86] | GIT-D9, GIT-D13 | the branches, where each is checked out; worktrees made, removed |
 | [gitbase.ts][o87] | GIT-D10 | each branch's own base: kept (`bases.json`), else the nearest of `[git] bases` |
 | [gitrepos.ts][o88] | VV-D10 | the repositories under a folder, each checkout grouped with its own, their state |
@@ -735,3 +736,5 @@ ordinary note needs.
 [o157]: ../../src/tui/workspace/git/views/review/rebase.ts
 [o158]: ../../src/tui/workspace/git/views/changes/gitchanges.ts
 [o159]: ../../src/tui/documents/diagnostics/spelling.ts
+
+[operation-status]: ../../src/core/workspace/git/branches/operation-status.ts

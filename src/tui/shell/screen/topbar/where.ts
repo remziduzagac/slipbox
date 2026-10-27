@@ -1,7 +1,7 @@
 // Location data for the permanent grouped bar (VB-D3, VB-D6).
 
-import type { App } from "../../../app/runtime/app.ts";
-import { operationStatus } from "../../../workspace/git/views/review/rebase.ts";
+import type { WhereContext } from "./contracts.ts";
+import { operationStatus } from "../../../../core/workspace/git/branches/operation-status.ts";
 import { ELSEWHERE, tildePath } from "../../../../core/workspace/vaults/names.ts";
 import { trackText } from "../../../../core/workspace/git/branches/gitremote.ts";
 import { sanitize } from "../../../../core/foundation/text/sanitize.ts";
@@ -15,7 +15,7 @@ export interface Where {
 }
 
 /** Where the app is now. */
-export function whereOf(app: App): Where {
+export function whereOf(app: WhereContext): Where {
   const loc = app.loc;
   const elsewhere = loc.mode === "folder";
   // A merge or a rebase under way, said after the branch (GIT-D6): a rebase's HEAD is detached, its branch named.

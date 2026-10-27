@@ -12,6 +12,15 @@ describe("review round 1", () => {
     h.app.settings.setUi("zen", true);
     h.frame();
     expect(h.app.region).toBe("content");
+    // Session/vault wiring may replace pane state; the controller must read its current owner.
+    const previous = h.app.sidebar;
+    h.app.sidebar = { ...previous, visible: false, overlay: false };
+    h.app.region = "sidebar";
+    h.app.panels.fixRegion();
+    expect(h.app.region as string).toBe("content");
+    h.app.panels.showSidebar(true);
+    expect(h.app.sidebar.overlay).toBe(true);
+    expect(h.app.sidebar).not.toBe(previous);
   }); // 29 harnesses
 });
 

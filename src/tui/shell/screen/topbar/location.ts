@@ -1,11 +1,11 @@
-import type { App } from "../../../app/runtime/app.ts";
+import type { LocationContext } from "./contracts.ts";
 import type { Role } from "../../../../core/rendering/theme/theme.ts";
 import { sanitize } from "../../../../core/foundation/text/sanitize.ts";
 import { tildePath } from "../../../../core/workspace/vaults/names.ts";
 import { whereOf } from "./where.ts";
 import type { LocationItem } from "./fit-location.ts";
 
-export function locationItems(app: App): LocationItem[] {
+export function locationItems(app: LocationContext): LocationItem[] {
   const w = whereOf(app);
   const g = app.glyphs;
   const workspace = app.homeFolder ?? (app.loc.mode === "home" ? "~" : w.vault);

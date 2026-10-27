@@ -31,7 +31,7 @@ import {
   workRows,
 } from "./gitview.ts";
 import { pointedAt } from "./gitmouse.ts";
-import { operationNow } from "../review/rebase.ts";
+import { operationNow } from "../../../../../core/workspace/git/branches/operation-status.ts";
 import type { App } from "../../../../app/runtime/app.ts";
 
 /** A section of the panel: the working tree's four; the branch's, this file's; the branches, the merged and older among
