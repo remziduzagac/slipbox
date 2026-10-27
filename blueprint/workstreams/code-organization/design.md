@@ -830,6 +830,10 @@ ORG preserves existing execution and checks affected interaction paths before/af
 
 ### Move mechanics, history and compiled verification
 
+Path-looking text rendered, measured, compared or written into test fixture files (labels, tree samples, expected
+output and fixture bodies) is data: keep it byte-identical, list exact retained entries and exclude it from import/path
+rewrites, which can change widths or expected strings; the stale-path scan cannot distinguish data from references.
+
 1. **Manifest and review size:** publish exact old/new paths and affected entry points before editing. Use git mv for
    tracked relocations, then one manifest-driven scripted import/path rewrite per move PR. Review its diff before
    accepting it. Git infers renames from similarity; git mv alone does not preserve a special rename record. Keep

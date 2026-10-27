@@ -1,0 +1,1911 @@
+{
+  "moves": {
+    "tests/tui-git.test.ts": "tests/tui/workspace/git/worktrees.test.ts",
+    "tests/gitpanel.test.ts": "tests/tui/workspace/git/panel/input.test.ts",
+    "tests/peek-backlinks.test.ts": "tests/tui/documents/navigation/peek/backlinks.test.ts",
+    "tests/clipboard-async.test.ts": "tests/tui/documents/editing/clipboard-async.test.ts",
+    "tests/export-jobs-tui.test.ts": "tests/tui/documents/export/jobs.test.ts",
+    "tests/html-tui.test.ts": "tests/tui/documents/views/html.test.ts",
+    "tests/lint-visibility.test.ts": "tests/tui/documents/diagnostics/lint-visibility.test.ts",
+    "tests/paint-tui.test.ts": "tests/tui/documents/media/paint.test.ts",
+    "tests/pictures.test.ts": "tests/tui/documents/media/pictures.test.ts",
+    "tests/regex-jobs.test.ts": "tests/tui/documents/search/regex-jobs.test.ts",
+    "tests/syntax-worker-tui.test.ts": "tests/tui/documents/views/syntax-worker.test.ts",
+    "tests/tui-background.test.ts": "tests/tui/shell/background/jobs.test.ts",
+    "tests/tui-info-export.test.ts": "tests/tui/documents/tools/info-export.test.ts",
+    "tests/tui-parse-threads.test.ts": "tests/tui/documents/views/parse-threads.test.ts",
+    "tests/tui-report.test.ts": "tests/tui/shell/report/report.test.ts",
+    "tests/tui-source.test.ts": "tests/tui/documents/views/source-cursor.test.ts",
+    "tests/tui-updates.test.ts": "tests/tui/shell/updates/updates.test.ts",
+    "tests/tui-vault-switch.test.ts": "tests/tui/workspace/vaults/switching-lifetime.test.ts",
+    "tests/walk-thread.test.ts": "tests/tui/workspace/explorer/walk-thread.test.ts",
+    "tests/marks.test.ts": "tests/tui/workspace/explorer/marks.test.ts",
+    "tests/remote-images.test.ts": "tests/tui/documents/media/remote-images.test.ts"
+  },
+  "splits": {
+    "tests/tui.test.ts": [
+      "tests/tui.test.ts",
+      "tests/tui/documents/diagnostics/code-actions.test.ts",
+      "tests/tui/documents/diagnostics/lint.test.ts",
+      "tests/tui/documents/diagnostics/linters.test.ts",
+      "tests/tui/documents/diagnostics/locations.test.ts",
+      "tests/tui/documents/diagnostics/problems.test.ts",
+      "tests/tui/documents/diagnostics/servers.test.ts",
+      "tests/tui/documents/diagnostics/spelling.test.ts",
+      "tests/tui/documents/export/save-dialog.test.ts",
+      "tests/tui/documents/media/diagrams.test.ts",
+      "tests/tui/documents/media/picture-commands.test.ts",
+      "tests/tui/documents/navigation/code-links.test.ts",
+      "tests/tui/documents/navigation/conversion.test.ts",
+      "tests/tui/documents/navigation/explicit-links.test.ts",
+      "tests/tui/documents/navigation/folders.test.ts",
+      "tests/tui/documents/navigation/headings.test.ts",
+      "tests/tui/documents/navigation/history.test.ts",
+      "tests/tui/documents/navigation/link-completion.test.ts",
+      "tests/tui/documents/navigation/link-picker.test.ts",
+      "tests/tui/documents/navigation/lists.test.ts",
+      "tests/tui/documents/navigation/messages.test.ts",
+      "tests/tui/documents/navigation/outside.test.ts",
+      "tests/tui/documents/navigation/peek.test.ts",
+      "tests/tui/documents/navigation/pointer.test.ts",
+      "tests/tui/documents/navigation/pointers.test.ts",
+      "tests/tui/documents/navigation/source.test.ts",
+      "tests/tui/documents/navigation/wikilinks.test.ts",
+      "tests/tui/documents/saving/conflict-notifications.test.ts",
+      "tests/tui/documents/search/commands.test.ts",
+      "tests/tui/documents/search/replace-vault.test.ts",
+      "tests/tui/documents/tools/context.test.ts",
+      "tests/tui/documents/tools/empty.test.ts",
+      "tests/tui/documents/tools/footnotes.test.ts",
+      "tests/tui/documents/tools/info.test.ts",
+      "tests/tui/documents/tools/outline.test.ts",
+      "tests/tui/documents/tools/properties.test.ts",
+      "tests/tui/documents/tools/refusals.test.ts",
+      "tests/tui/documents/tools/tags.test.ts",
+      "tests/tui/documents/tools/types.test.ts",
+      "tests/tui/shell/overlays/commands.test.ts",
+      "tests/tui/shell/overlays/help.test.ts",
+      "tests/tui/shell/overlays/lists.test.ts",
+      "tests/tui/shell/overlays/matching.test.ts",
+      "tests/tui/shell/overlays/switcher.test.ts",
+      "tests/tui/shell/panels/focus.test.ts",
+      "tests/tui/shell/panels/layout.test.ts",
+      "tests/tui/shell/panels/live-selection.test.ts",
+      "tests/tui/shell/panels/pointer.test.ts",
+      "tests/tui/shell/panels/selection.test.ts",
+      "tests/tui/workspace/explorer/creating.test.ts",
+      "tests/tui/workspace/explorer/exclusions.test.ts",
+      "tests/tui/workspace/explorer/extensions.test.ts",
+      "tests/tui/workspace/explorer/file-operations.test.ts",
+      "tests/tui/workspace/explorer/filter.test.ts",
+      "tests/tui/workspace/explorer/hidden.test.ts",
+      "tests/tui/workspace/explorer/opening.test.ts",
+      "tests/tui/workspace/explorer/renaming.test.ts",
+      "tests/tui/workspace/explorer/views.test.ts",
+      "tests/tui/workspace/explorer/zoom.test.ts",
+      "tests/tui/workspace/git/branches.test.ts",
+      "tests/tui/workspace/git/commit.test.ts",
+      "tests/tui/workspace/git/history.test.ts",
+      "tests/tui/workspace/git/panel-commands.test.ts",
+      "tests/tui/workspace/git/remote.test.ts",
+      "tests/tui/workspace/git/signs.test.ts",
+      "tests/tui/workspace/git/watching.test.ts",
+      "tests/tui/workspace/history/live.test.ts",
+      "tests/tui/workspace/search/local.test.ts",
+      "tests/tui/workspace/search/marks.test.ts",
+      "tests/tui/workspace/search/roots.test.ts",
+      "tests/tui/workspace/search/symbols.test.ts",
+      "tests/tui/workspace/vaults/autoindex.test.ts",
+      "tests/tui/workspace/vaults/config.test.ts",
+      "tests/tui/workspace/vaults/elsewhere.test.ts",
+      "tests/tui/workspace/vaults/explorer.test.ts",
+      "tests/tui/workspace/vaults/indexing.test.ts",
+      "tests/tui/workspace/vaults/limits.test.ts",
+      "tests/tui/workspace/vaults/renaming.test.ts",
+      "tests/tui/workspace/vaults/startup.test.ts",
+      "tests/tui/workspace/vaults/switching.test.ts"
+    ],
+    "tests/tui-git.test.ts": [
+      "tests/tui/workspace/git/changes.test.ts",
+      "tests/tui/workspace/git/diff-window.test.ts",
+      "tests/tui/workspace/git/review-journeys.test.ts",
+      "tests/tui/workspace/git/worktrees.test.ts"
+    ],
+    "tests/gitpanel.test.ts": [
+      "tests/tui/workspace/git/panel/attention.test.ts",
+      "tests/tui/workspace/git/panel/bases.test.ts",
+      "tests/tui/workspace/git/panel/branches.test.ts",
+      "tests/tui/workspace/git/panel/disk-diff.test.ts",
+      "tests/tui/workspace/git/panel/input.test.ts",
+      "tests/tui/workspace/git/panel/opening.test.ts",
+      "tests/tui/workspace/git/panel/renames.test.ts",
+      "tests/tui/workspace/git/panel/repositories.test.ts",
+      "tests/tui/workspace/git/panel/review.test.ts",
+      "tests/tui/workspace/git/panel/stable-repositories.test.ts",
+      "tests/tui/workspace/git/panel/stable-rows.test.ts",
+      "tests/tui/workspace/git/panel/state.test.ts"
+    ],
+    "tests/peek-backlinks.test.ts": [
+      "tests/core/foundation/platform/atomic-files.test.ts",
+      "tests/core/workspace/graph/write-stamps.test.ts",
+      "tests/core/workspace/links/reach-policy.test.ts",
+      "tests/tui/documents/navigation/peek/backlinks.test.ts",
+      "tests/tui/documents/navigation/peek/catch-up.test.ts",
+      "tests/tui/documents/navigation/peek/home.test.ts",
+      "tests/tui/documents/navigation/peek/records.test.ts",
+      "tests/tui/documents/navigation/peek/scheduling.test.ts"
+    ]
+  },
+  "support": [
+    "tests/support/tui/git-panel-fixture.ts",
+    "tests/support/tui/peek-fixture.ts"
+  ],
+  "suiteWrapperDeltas": [
+    {
+      "name": "describe: lists and commands no test had run (the TUI model)",
+      "delta": 5
+    },
+    {
+      "name": "describe: review (tui): the app's floating windows, new paths, roots and repeats",
+      "delta": 7
+    },
+    {
+      "name": "describe: review (tui): what a filter or a search marks, drawn where it is",
+      "delta": 3
+    },
+    {
+      "name": "describe: review cycle 1 (TUI)",
+      "delta": 2
+    },
+    {
+      "name": "describe: review cycle 2 (TUI navigation)",
+      "delta": 7
+    },
+    {
+      "name": "describe: review cycle 3 (TUI)",
+      "delta": 1
+    },
+    {
+      "name": "describe: review cycle 5 (TUI, behaviour no test had pinned)",
+      "delta": 3
+    },
+    {
+      "name": "describe: review round 1",
+      "delta": 4
+    },
+    {
+      "name": "describe: review round 2",
+      "delta": 4
+    },
+    {
+      "name": "describe: review round 3",
+      "delta": 3
+    },
+    {
+      "name": "describe: the key map as agreed (vim first, desktop editors' ctrl keys, space for the rest)",
+      "delta": 2
+    },
+    {
+      "name": "describe: vaults in the TUI (17.x)",
+      "delta": 9
+    },
+    {
+      "name": "describe: what keymap.md and tui.md promise (review: docs against the tests)",
+      "delta": 1
+    }
+  ],
+  "retained": [
+    {
+      "file": "blueprint/tasks/archive/git-rows-hold-still.md",
+      "text": "tests/tui-git.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/tasks/archive/restored-tabs-ask-their-folders.md",
+      "text": "tests/tui-git.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "tests/tui-git.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/tasks/18-tui-feature-paths.md",
+      "text": "tests/tui-git.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/tasks/archive/branch-refusals-drawn.md",
+      "text": "tests/gitpanel.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/tasks/archive/git-rows-hold-still.md",
+      "text": "tests/gitpanel.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/tasks/archive/restored-tabs-ask-their-folders.md",
+      "text": "tests/gitpanel.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/tasks/archive/scrollbar-thumb-test-races.md",
+      "text": "tests/gitpanel.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/design.md",
+      "text": "tests/gitpanel.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/tasks/archive/peek-index-off-the-main-thread.md",
+      "text": "tests/peek-backlinks.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/tasks/archive/flaky-tests-on-ci.md",
+      "text": "tests/clipboard-async.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/tasks/01-contracts-and-gates.md",
+      "text": "tests/clipboard-async.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/tasks/archive/export-ends-at-publication.md",
+      "text": "tests/export-jobs-tui.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/tasks/archive/last-export-remembered-at-once.md",
+      "text": "tests/export-jobs-tui.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/tasks/18-tui-feature-paths.md",
+      "text": "tests/export-jobs-tui.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/document-html/tasks/adapter.md",
+      "text": "tests/html-tui.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "tests/html-tui.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/picture-sizes/tasks/archive/sizes.md",
+      "text": "tests/pictures.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/tasks/18-tui-feature-paths.md",
+      "text": "tests/pictures.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/tasks/archive/git-rows-hold-still.md",
+      "text": "tests/regex-jobs.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/tasks/archive/spell-thread-turns-counted.md",
+      "text": "tests/regex-jobs.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/design.md",
+      "text": "tests/regex-jobs.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "tests/regex-jobs.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/tasks/16-tui-editor-paths.md",
+      "text": "tests/regex-jobs.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/tasks/archive/spell-thread-turns-counted.md",
+      "text": "tests/syntax-worker-tui.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "tests/syntax-worker-tui.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/tasks/18-tui-feature-paths.md",
+      "text": "tests/tui-report.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/upgrade-restart/notes.md",
+      "text": "tests/tui-updates.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/upgrade-restart/tasks/archive/dialog.md",
+      "text": "tests/tui-updates.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/upgrade-restart/tasks/archive/restart-command.md",
+      "text": "tests/tui-updates.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/upgrade-restart/tasks/archive/update-offer.md",
+      "text": "tests/tui-updates.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/upgrade-restart/tasks/archive/upgrade-underneath.md",
+      "text": "tests/tui-updates.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "tests/tui-updates.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/tasks/18-tui-feature-paths.md",
+      "text": "tests/tui-updates.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/tasks/archive/folder-time-set-back.md",
+      "text": "tests/walk-thread.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/tasks/archive/quarantine-flaky-tests.md",
+      "text": "tests/walk-thread.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/tasks/archive/walk-off-the-main-thread.md",
+      "text": "tests/walk-thread.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/tasks/archive/folder-time-set-back.md",
+      "text": "tests/marks.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/tasks/archive/restored-tabs-ask-their-folders.md",
+      "text": "tests/marks.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/vaults-and-view/tasks/archive/marks.md",
+      "text": "tests/marks.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/tasks/archive/git-rows-hold-still.md",
+      "text": "tui-git.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/tasks/archive/restored-tabs-ask-their-folders.md",
+      "text": "tui-git.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "tui-git.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/tasks/18-tui-feature-paths.md",
+      "text": "tui-git.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/tasks/archive/branch-refusals-drawn.md",
+      "text": "gitpanel.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/tasks/archive/git-rows-hold-still.md",
+      "text": "gitpanel.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/tasks/archive/restored-tabs-ask-their-folders.md",
+      "text": "gitpanel.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/tasks/archive/scrollbar-thumb-test-races.md",
+      "text": "gitpanel.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/workspaces/notes.md",
+      "text": "gitpanel.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/design.md",
+      "text": "gitpanel.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/tasks/archive/peek-index-off-the-main-thread.md",
+      "text": "peek-backlinks.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/tasks/archive/export-ends-at-publication.md",
+      "text": "export-jobs-tui.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/tasks/archive/last-export-remembered-at-once.md",
+      "text": "export-jobs-tui.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/tasks/18-tui-feature-paths.md",
+      "text": "export-jobs-tui.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/document-html/tasks/adapter.md",
+      "text": "html-tui.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "html-tui.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/tasks/archive/spell-thread-turns-counted.md",
+      "text": "syntax-worker-tui.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "syntax-worker-tui.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/tasks/18-tui-feature-paths.md",
+      "text": "tui-report.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/upgrade-restart/notes.md",
+      "text": "tui-updates.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/upgrade-restart/tasks/archive/dialog.md",
+      "text": "tui-updates.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/upgrade-restart/tasks/archive/restart-command.md",
+      "text": "tui-updates.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/upgrade-restart/tasks/archive/update-offer.md",
+      "text": "tui-updates.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/upgrade-restart/tasks/archive/upgrade-underneath.md",
+      "text": "tui-updates.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "tui-updates.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/tasks/18-tui-feature-paths.md",
+      "text": "tui-updates.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    }
+  ],
+  "renamedBasenames": {
+    "tui-git.test.ts": "tests/tui/workspace/git/worktrees.test.ts",
+    "gitpanel.test.ts": "tests/tui/workspace/git/panel/input.test.ts",
+    "peek-backlinks.test.ts": "tests/tui/documents/navigation/peek/backlinks.test.ts",
+    "export-jobs-tui.test.ts": "tests/tui/documents/export/jobs.test.ts",
+    "html-tui.test.ts": "tests/tui/documents/views/html.test.ts",
+    "paint-tui.test.ts": "tests/tui/documents/media/paint.test.ts",
+    "syntax-worker-tui.test.ts": "tests/tui/documents/views/syntax-worker.test.ts",
+    "tui-background.test.ts": "tests/tui/shell/background/jobs.test.ts",
+    "tui-info-export.test.ts": "tests/tui/documents/tools/info-export.test.ts",
+    "tui-parse-threads.test.ts": "tests/tui/documents/views/parse-threads.test.ts",
+    "tui-report.test.ts": "tests/tui/shell/report/report.test.ts",
+    "tui-source.test.ts": "tests/tui/documents/views/source-cursor.test.ts",
+    "tui-updates.test.ts": "tests/tui/shell/updates/updates.test.ts",
+    "tui-vault-switch.test.ts": "tests/tui/workspace/vaults/switching-lifetime.test.ts"
+  },
+  "ownership": {
+    "scenarios": "Workspace, navigation, document tools, diagnostics and media retain their original integration collaborators and buffer ownership.",
+    "residual": "Full-App state, screen and document presentation journeys remain for ORG-T22.",
+    "fixturePolicy": "Existing per-file model sandbox and timeout policy; cloned suite support is pruned only when unused.",
+    "focusedSuites": "Existing focused model and controller suites retain their original file-owned fixtures. Git journeys/panel and peek collections split by principal behavior; screen/where suites stay for T22.",
+    "statefulPeekFixture": "Each owner retains the original local made counter and twoVaults closure where used, so direct ++made operations and helper calls share a cell. Pure read/parse/fake-thread helpers and mock restoration share one factory. ORG-T40 may assess this deliberate closure clone; no test body or fixture counter API changes.",
+    "testSizes": "The largest new file is under 1500 lines. Cohesive auto-index, merge/rebase journeys and Git-panel branch/row-stability groups exceed the 1000-line aim while retaining their shared nested preambles and integration coverage."
+  },
+  "prunedUnusedReviewSupport": [
+    {
+      "file": "tests/tui.test.ts",
+      "parent": "review round 2",
+      "declaration": "const click = (h: Harness, x: number, y: number) => {\n    h.app.mouse.handle({ type: \"down\", x, y, button: 0 });\n    h.app.mouse.handle({ type: \"up\", x, y, button: 0 });\n    h.frame();\n  };"
+    },
+    {
+      "file": "tests/tui.test.ts",
+      "parent": "review cycle 5 (TUI, behaviour no test had pinned)",
+      "declaration": "const LINKS =\n    \"# M\\n\\n[to alpha](notes/alpha.md) [two](notes/alpha.md#section-two) [far](#far) [broken](nope.pdf)\\n\\nfiller\\n\\n## Far\\n\\nend\\n\";"
+    },
+    {
+      "file": "tests/tui.test.ts",
+      "parent": "review cycle 5 (TUI, behaviour no test had pinned)",
+      "declaration": "const follow = async (h: Harness, k: number) => {\n    const v = h.app.view!;\n    const l = h.app.currentLayout(v).links[k]!;\n    h.app.moveCursor(v, { row: l.line, col: l.col });\n    await h.keys(\"enter\");\n  };"
+    },
+    {
+      "file": "tests/tui.test.ts",
+      "parent": "review cycle 5 (TUI, behaviour no test had pinned)",
+      "declaration": "const at = (h: Harness) => ({ rel: h.app.view!.buf.rel, row: rowText(h).trim() });"
+    },
+    {
+      "file": "tests/tui.test.ts",
+      "parent": "review (tui): what a filter or a search marks, drawn where it is",
+      "declaration": "const lit = (h: Harness, y: number) => {\n    const c = h.canvas();\n    const fg = h.app.theme.roles.overlay_match.fg;\n    return c.rows[y]!.map((g, x) => (c.styles[y]![x]?.fg === fg && g !== \"\" ? g : \"\")).join(\"\");\n  };"
+    },
+    {
+      "file": "tests/tui.test.ts",
+      "parent": "review (tui): the app's floating windows, new paths, roots and repeats",
+      "declaration": "const type = async (h: Harness, text: string) => {\n    for (const c of text) await h.keys(c === \" \" ? \"space\" : c);\n  };"
+    },
+    {
+      "file": "tests/tui.test.ts",
+      "parent": "review (tui): the app's floating windows, new paths, roots and repeats",
+      "declaration": "const last = (h: Harness) => h.app.messages.at(-1)!;"
+    },
+    {
+      "file": "tests/tui.test.ts",
+      "parent": "review (tui): the app's floating windows, new paths, roots and repeats",
+      "declaration": "const fnSetup = async (source: string | Buffer) => {\n    const root = makeVault();\n    writeFileSync(join(root, \"fn.md\"), source);\n    const h = await harness({ root, open: \"fn.md\", width: 140 });\n    return { root, h, read: () => readFileSync(join(root, \"fn.md\"), \"utf8\") };\n  };"
+    },
+    {
+      "file": "tests/tui.test.ts",
+      "parent": "review (tui): the app's floating windows, new paths, roots and repeats",
+      "declaration": "const onlyCrlf = (text: string) => expect(text.replace(/\\r\\n/g, \"\")).not.toMatch(/[\\r\\n]/);"
+    },
+    {
+      "file": "tests/tui/documents/navigation/folders.test.ts",
+      "parent": "review cycle 2 (TUI navigation)",
+      "declaration": "const click = (h: Harness, x: number, y: number) => {\n    h.app.mouse.handle({ type: \"down\", x, y, button: 0 });\n    h.app.mouse.handle({ type: \"up\", x, y, button: 0 });\n  };"
+    },
+    {
+      "file": "tests/tui/documents/navigation/headings.test.ts",
+      "parent": "review cycle 2 (TUI navigation)",
+      "declaration": "const click = (h: Harness, x: number, y: number) => {\n    h.app.mouse.handle({ type: \"down\", x, y, button: 0 });\n    h.app.mouse.handle({ type: \"up\", x, y, button: 0 });\n  };"
+    },
+    {
+      "file": "tests/tui/documents/navigation/link-completion.test.ts",
+      "parent": "vaults in the TUI (17.x)",
+      "declaration": "const until = async (ok: () => boolean, ms = 25_000) => {\n    for (const t = Date.now(); !ok() && Date.now() - t < ms; ) await Bun.sleep(20);\n    return ok();\n  };"
+    },
+    {
+      "file": "tests/tui/documents/navigation/link-completion.test.ts",
+      "parent": "vaults in the TUI (17.x)",
+      "declaration": "const isDocx = (file: string) => readFileSync(file).subarray(0, 4).toString(\"latin1\") === \"PK\\x03\\x04\";"
+    },
+    {
+      "file": "tests/tui/documents/navigation/link-completion.test.ts",
+      "parent": "vaults in the TUI (17.x)",
+      "declaration": "const saveAs = (h: Harness) => {\n    expect(h.app.overlay?.kind).toBe(\"saveas\");\n    return h.app.overlay as SaveAsOverlay;\n  };"
+    },
+    {
+      "file": "tests/tui/documents/navigation/link-completion.test.ts",
+      "parent": "vaults in the TUI (17.x)",
+      "declaration": "const listed = (o: SaveAsOverlay) => o.entries.map((e) => (e.up ? \"\u2025\" : e.dir ? `${e.name}/` : e.name));"
+    },
+    {
+      "file": "tests/tui/documents/navigation/link-picker.test.ts",
+      "parent": "vaults in the TUI (17.x)",
+      "declaration": "const until = async (ok: () => boolean, ms = 25_000) => {\n    for (const t = Date.now(); !ok() && Date.now() - t < ms; ) await Bun.sleep(20);\n    return ok();\n  };"
+    },
+    {
+      "file": "tests/tui/documents/navigation/link-picker.test.ts",
+      "parent": "vaults in the TUI (17.x)",
+      "declaration": "const isDocx = (file: string) => readFileSync(file).subarray(0, 4).toString(\"latin1\") === \"PK\\x03\\x04\";"
+    },
+    {
+      "file": "tests/tui/documents/navigation/link-picker.test.ts",
+      "parent": "vaults in the TUI (17.x)",
+      "declaration": "const saveAs = (h: Harness) => {\n    expect(h.app.overlay?.kind).toBe(\"saveas\");\n    return h.app.overlay as SaveAsOverlay;\n  };"
+    },
+    {
+      "file": "tests/tui/documents/navigation/link-picker.test.ts",
+      "parent": "vaults in the TUI (17.x)",
+      "declaration": "const listed = (o: SaveAsOverlay) => o.entries.map((e) => (e.up ? \"\u2025\" : e.dir ? `${e.name}/` : e.name));"
+    },
+    {
+      "file": "tests/tui/documents/navigation/lists.test.ts",
+      "parent": "lists and commands no test had run (the TUI model)",
+      "declaration": "const last = (h: Harness) => h.app.messages.at(-1)!.text;"
+    },
+    {
+      "file": "tests/tui/documents/navigation/peek.test.ts",
+      "parent": "vaults in the TUI (17.x)",
+      "declaration": "const until = async (ok: () => boolean, ms = 25_000) => {\n    for (const t = Date.now(); !ok() && Date.now() - t < ms; ) await Bun.sleep(20);\n    return ok();\n  };"
+    },
+    {
+      "file": "tests/tui/documents/navigation/peek.test.ts",
+      "parent": "vaults in the TUI (17.x)",
+      "declaration": "const isDocx = (file: string) => readFileSync(file).subarray(0, 4).toString(\"latin1\") === \"PK\\x03\\x04\";"
+    },
+    {
+      "file": "tests/tui/documents/navigation/peek.test.ts",
+      "parent": "vaults in the TUI (17.x)",
+      "declaration": "const saveAs = (h: Harness) => {\n    expect(h.app.overlay?.kind).toBe(\"saveas\");\n    return h.app.overlay as SaveAsOverlay;\n  };"
+    },
+    {
+      "file": "tests/tui/documents/navigation/peek.test.ts",
+      "parent": "vaults in the TUI (17.x)",
+      "declaration": "const listed = (o: SaveAsOverlay) => o.entries.map((e) => (e.up ? \"\u2025\" : e.dir ? `${e.name}/` : e.name));"
+    },
+    {
+      "file": "tests/tui/documents/navigation/source.test.ts",
+      "parent": "review cycle 2 (TUI navigation)",
+      "declaration": "const click = (h: Harness, x: number, y: number) => {\n    h.app.mouse.handle({ type: \"down\", x, y, button: 0 });\n    h.app.mouse.handle({ type: \"up\", x, y, button: 0 });\n  };"
+    },
+    {
+      "file": "tests/tui/documents/navigation/source.test.ts",
+      "parent": "review cycle 5 (TUI, behaviour no test had pinned)",
+      "declaration": "const follow = async (h: Harness, k: number) => {\n    const v = h.app.view!;\n    const l = h.app.currentLayout(v).links[k]!;\n    h.app.moveCursor(v, { row: l.line, col: l.col });\n    await h.keys(\"enter\");\n  };"
+    },
+    {
+      "file": "tests/tui/documents/navigation/source.test.ts",
+      "parent": "review cycle 5 (TUI, behaviour no test had pinned)",
+      "declaration": "const at = (h: Harness) => ({ rel: h.app.view!.buf.rel, row: rowText(h).trim() });"
+    },
+    {
+      "file": "tests/tui/documents/navigation/wikilinks.test.ts",
+      "parent": "review cycle 2 (TUI navigation)",
+      "declaration": "const click = (h: Harness, x: number, y: number) => {\n    h.app.mouse.handle({ type: \"down\", x, y, button: 0 });\n    h.app.mouse.handle({ type: \"up\", x, y, button: 0 });\n  };"
+    },
+    {
+      "file": "tests/tui/documents/saving/conflict-notifications.test.ts",
+      "parent": "vaults in the TUI (17.x)",
+      "declaration": "const until = async (ok: () => boolean, ms = 25_000) => {\n    for (const t = Date.now(); !ok() && Date.now() - t < ms; ) await Bun.sleep(20);\n    return ok();\n  };"
+    },
+    {
+      "file": "tests/tui/documents/saving/conflict-notifications.test.ts",
+      "parent": "vaults in the TUI (17.x)",
+      "declaration": "const isDocx = (file: string) => readFileSync(file).subarray(0, 4).toString(\"latin1\") === \"PK\\x03\\x04\";"
+    },
+    {
+      "file": "tests/tui/documents/saving/conflict-notifications.test.ts",
+      "parent": "vaults in the TUI (17.x)",
+      "declaration": "const saveAs = (h: Harness) => {\n    expect(h.app.overlay?.kind).toBe(\"saveas\");\n    return h.app.overlay as SaveAsOverlay;\n  };"
+    },
+    {
+      "file": "tests/tui/documents/saving/conflict-notifications.test.ts",
+      "parent": "vaults in the TUI (17.x)",
+      "declaration": "const listed = (o: SaveAsOverlay) => o.entries.map((e) => (e.up ? \"\u2025\" : e.dir ? `${e.name}/` : e.name));"
+    },
+    {
+      "file": "tests/tui/documents/search/commands.test.ts",
+      "parent": "review round 2",
+      "declaration": "const click = (h: Harness, x: number, y: number) => {\n    h.app.mouse.handle({ type: \"down\", x, y, button: 0 });\n    h.app.mouse.handle({ type: \"up\", x, y, button: 0 });\n    h.frame();\n  };"
+    },
+    {
+      "file": "tests/tui/documents/tools/context.test.ts",
+      "parent": "vaults in the TUI (17.x)",
+      "declaration": "const until = async (ok: () => boolean, ms = 25_000) => {\n    for (const t = Date.now(); !ok() && Date.now() - t < ms; ) await Bun.sleep(20);\n    return ok();\n  };"
+    },
+    {
+      "file": "tests/tui/documents/tools/context.test.ts",
+      "parent": "vaults in the TUI (17.x)",
+      "declaration": "const isDocx = (file: string) => readFileSync(file).subarray(0, 4).toString(\"latin1\") === \"PK\\x03\\x04\";"
+    },
+    {
+      "file": "tests/tui/documents/tools/context.test.ts",
+      "parent": "vaults in the TUI (17.x)",
+      "declaration": "const saveAs = (h: Harness) => {\n    expect(h.app.overlay?.kind).toBe(\"saveas\");\n    return h.app.overlay as SaveAsOverlay;\n  };"
+    },
+    {
+      "file": "tests/tui/documents/tools/context.test.ts",
+      "parent": "vaults in the TUI (17.x)",
+      "declaration": "const listed = (o: SaveAsOverlay) => o.entries.map((e) => (e.up ? \"\u2025\" : e.dir ? `${e.name}/` : e.name));"
+    },
+    {
+      "file": "tests/tui/documents/tools/empty.test.ts",
+      "parent": "lists and commands no test had run (the TUI model)",
+      "declaration": "const last = (h: Harness) => h.app.messages.at(-1)!.text;"
+    },
+    {
+      "file": "tests/tui/documents/tools/footnotes.test.ts",
+      "parent": "review (tui): the app's floating windows, new paths, roots and repeats",
+      "declaration": "const last = (h: Harness) => h.app.messages.at(-1)!;"
+    },
+    {
+      "file": "tests/tui/documents/tools/footnotes.test.ts",
+      "parent": "review (tui): the app's floating windows, new paths, roots and repeats",
+      "declaration": "const virtualInTabs = (h: Harness) =>\n    h.app.tabs\n      .flatMap((t) => t.views)\n      .filter((v) => v.buf.virtual)\n      .map((v) => v.buf.key);"
+    },
+    {
+      "file": "tests/tui/documents/tools/outline.test.ts",
+      "parent": "review cycle 2 (TUI navigation)",
+      "declaration": "const click = (h: Harness, x: number, y: number) => {\n    h.app.mouse.handle({ type: \"down\", x, y, button: 0 });\n    h.app.mouse.handle({ type: \"up\", x, y, button: 0 });\n  };"
+    },
+    {
+      "file": "tests/tui/documents/tools/properties.test.ts",
+      "parent": "review (tui): the app's floating windows, new paths, roots and repeats",
+      "declaration": "const last = (h: Harness) => h.app.messages.at(-1)!;"
+    },
+    {
+      "file": "tests/tui/documents/tools/properties.test.ts",
+      "parent": "review (tui): the app's floating windows, new paths, roots and repeats",
+      "declaration": "const virtualInTabs = (h: Harness) =>\n    h.app.tabs\n      .flatMap((t) => t.views)\n      .filter((v) => v.buf.virtual)\n      .map((v) => v.buf.key);"
+    },
+    {
+      "file": "tests/tui/documents/tools/properties.test.ts",
+      "parent": "review (tui): the app's floating windows, new paths, roots and repeats",
+      "declaration": "const onlyCrlf = (text: string) => expect(text.replace(/\\r\\n/g, \"\")).not.toMatch(/[\\r\\n]/);"
+    },
+    {
+      "file": "tests/tui/documents/tools/refusals.test.ts",
+      "parent": "review (tui): the app's floating windows, new paths, roots and repeats",
+      "declaration": "const virtualInTabs = (h: Harness) =>\n    h.app.tabs\n      .flatMap((t) => t.views)\n      .filter((v) => v.buf.virtual)\n      .map((v) => v.buf.key);"
+    },
+    {
+      "file": "tests/tui/documents/tools/refusals.test.ts",
+      "parent": "review (tui): the app's floating windows, new paths, roots and repeats",
+      "declaration": "const onlyCrlf = (text: string) => expect(text.replace(/\\r\\n/g, \"\")).not.toMatch(/[\\r\\n]/);"
+    },
+    {
+      "file": "tests/tui/shell/overlays/commands.test.ts",
+      "parent": "review round 1",
+      "declaration": "const click = (h: Harness, x: number, y: number, button = 0) => {\n    h.app.mouse.handle({ type: \"down\", x, y, button });\n    h.app.mouse.handle({ type: \"up\", x, y, button });\n    h.frame();\n  };"
+    },
+    {
+      "file": "tests/tui/shell/overlays/help.test.ts",
+      "parent": "lists and commands no test had run (the TUI model)",
+      "declaration": "const last = (h: Harness) => h.app.messages.at(-1)!.text;"
+    },
+    {
+      "file": "tests/tui/shell/overlays/lists.test.ts",
+      "parent": "review round 3",
+      "declaration": "const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));"
+    },
+    {
+      "file": "tests/tui/shell/overlays/matching.test.ts",
+      "parent": "review round 3",
+      "declaration": "const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));"
+    },
+    {
+      "file": "tests/tui/shell/panels/focus.test.ts",
+      "parent": "review round 1",
+      "declaration": "const click = (h: Harness, x: number, y: number, button = 0) => {\n    h.app.mouse.handle({ type: \"down\", x, y, button });\n    h.app.mouse.handle({ type: \"up\", x, y, button });\n    h.frame();\n  };"
+    },
+    {
+      "file": "tests/tui/shell/panels/focus.test.ts",
+      "parent": "review round 2",
+      "declaration": "const click = (h: Harness, x: number, y: number) => {\n    h.app.mouse.handle({ type: \"down\", x, y, button: 0 });\n    h.app.mouse.handle({ type: \"up\", x, y, button: 0 });\n    h.frame();\n  };"
+    },
+    {
+      "file": "tests/tui/shell/panels/layout.test.ts",
+      "parent": "review round 2",
+      "declaration": "const click = (h: Harness, x: number, y: number) => {\n    h.app.mouse.handle({ type: \"down\", x, y, button: 0 });\n    h.app.mouse.handle({ type: \"up\", x, y, button: 0 });\n    h.frame();\n  };"
+    },
+    {
+      "file": "tests/tui/shell/panels/live-selection.test.ts",
+      "parent": "review cycle 2 (TUI navigation)",
+      "declaration": "const click = (h: Harness, x: number, y: number) => {\n    h.app.mouse.handle({ type: \"down\", x, y, button: 0 });\n    h.app.mouse.handle({ type: \"up\", x, y, button: 0 });\n  };"
+    },
+    {
+      "file": "tests/tui/workspace/explorer/creating.test.ts",
+      "parent": "review (tui): the app's floating windows, new paths, roots and repeats",
+      "declaration": "const virtualInTabs = (h: Harness) =>\n    h.app.tabs\n      .flatMap((t) => t.views)\n      .filter((v) => v.buf.virtual)\n      .map((v) => v.buf.key);"
+    },
+    {
+      "file": "tests/tui/workspace/explorer/creating.test.ts",
+      "parent": "review (tui): the app's floating windows, new paths, roots and repeats",
+      "declaration": "const fnSetup = async (source: string | Buffer) => {\n    const root = makeVault();\n    writeFileSync(join(root, \"fn.md\"), source);\n    const h = await harness({ root, open: \"fn.md\", width: 140 });\n    return { root, h, read: () => readFileSync(join(root, \"fn.md\"), \"utf8\") };\n  };"
+    },
+    {
+      "file": "tests/tui/workspace/explorer/creating.test.ts",
+      "parent": "review (tui): the app's floating windows, new paths, roots and repeats",
+      "declaration": "const onlyCrlf = (text: string) => expect(text.replace(/\\r\\n/g, \"\")).not.toMatch(/[\\r\\n]/);"
+    },
+    {
+      "file": "tests/tui/workspace/explorer/exclusions.test.ts",
+      "parent": "review (tui): the app's floating windows, new paths, roots and repeats",
+      "declaration": "const virtualInTabs = (h: Harness) =>\n    h.app.tabs\n      .flatMap((t) => t.views)\n      .filter((v) => v.buf.virtual)\n      .map((v) => v.buf.key);"
+    },
+    {
+      "file": "tests/tui/workspace/explorer/exclusions.test.ts",
+      "parent": "review (tui): the app's floating windows, new paths, roots and repeats",
+      "declaration": "const fnSetup = async (source: string | Buffer) => {\n    const root = makeVault();\n    writeFileSync(join(root, \"fn.md\"), source);\n    const h = await harness({ root, open: \"fn.md\", width: 140 });\n    return { root, h, read: () => readFileSync(join(root, \"fn.md\"), \"utf8\") };\n  };"
+    },
+    {
+      "file": "tests/tui/workspace/explorer/exclusions.test.ts",
+      "parent": "review (tui): the app's floating windows, new paths, roots and repeats",
+      "declaration": "const onlyCrlf = (text: string) => expect(text.replace(/\\r\\n/g, \"\")).not.toMatch(/[\\r\\n]/);"
+    },
+    {
+      "file": "tests/tui/workspace/explorer/filter.test.ts",
+      "parent": "review (tui): what a filter or a search marks, drawn where it is",
+      "declaration": "const lit = (h: Harness, y: number) => {\n    const c = h.canvas();\n    const fg = h.app.theme.roles.overlay_match.fg;\n    return c.rows[y]!.map((g, x) => (c.styles[y]![x]?.fg === fg && g !== \"\" ? g : \"\")).join(\"\");\n  };"
+    },
+    {
+      "file": "tests/tui/workspace/explorer/renaming.test.ts",
+      "parent": "vaults in the TUI (17.x)",
+      "declaration": "const until = async (ok: () => boolean, ms = 25_000) => {\n    for (const t = Date.now(); !ok() && Date.now() - t < ms; ) await Bun.sleep(20);\n    return ok();\n  };"
+    },
+    {
+      "file": "tests/tui/workspace/explorer/renaming.test.ts",
+      "parent": "vaults in the TUI (17.x)",
+      "declaration": "const isDocx = (file: string) => readFileSync(file).subarray(0, 4).toString(\"latin1\") === \"PK\\x03\\x04\";"
+    },
+    {
+      "file": "tests/tui/workspace/explorer/renaming.test.ts",
+      "parent": "vaults in the TUI (17.x)",
+      "declaration": "const saveAs = (h: Harness) => {\n    expect(h.app.overlay?.kind).toBe(\"saveas\");\n    return h.app.overlay as SaveAsOverlay;\n  };"
+    },
+    {
+      "file": "tests/tui/workspace/explorer/renaming.test.ts",
+      "parent": "vaults in the TUI (17.x)",
+      "declaration": "const listed = (o: SaveAsOverlay) => o.entries.map((e) => (e.up ? \"\u2025\" : e.dir ? `${e.name}/` : e.name));"
+    },
+    {
+      "file": "tests/tui/workspace/search/roots.test.ts",
+      "parent": "vaults in the TUI (17.x)",
+      "declaration": "const until = async (ok: () => boolean, ms = 25_000) => {\n    for (const t = Date.now(); !ok() && Date.now() - t < ms; ) await Bun.sleep(20);\n    return ok();\n  };"
+    },
+    {
+      "file": "tests/tui/workspace/search/roots.test.ts",
+      "parent": "vaults in the TUI (17.x)",
+      "declaration": "const isDocx = (file: string) => readFileSync(file).subarray(0, 4).toString(\"latin1\") === \"PK\\x03\\x04\";"
+    },
+    {
+      "file": "tests/tui/workspace/search/roots.test.ts",
+      "parent": "vaults in the TUI (17.x)",
+      "declaration": "const saveAs = (h: Harness) => {\n    expect(h.app.overlay?.kind).toBe(\"saveas\");\n    return h.app.overlay as SaveAsOverlay;\n  };"
+    },
+    {
+      "file": "tests/tui/workspace/search/roots.test.ts",
+      "parent": "vaults in the TUI (17.x)",
+      "declaration": "const listed = (o: SaveAsOverlay) => o.entries.map((e) => (e.up ? \"\u2025\" : e.dir ? `${e.name}/` : e.name));"
+    },
+    {
+      "file": "tests/tui/workspace/vaults/explorer.test.ts",
+      "parent": "vaults in the TUI (17.x)",
+      "declaration": "const until = async (ok: () => boolean, ms = 25_000) => {\n    for (const t = Date.now(); !ok() && Date.now() - t < ms; ) await Bun.sleep(20);\n    return ok();\n  };"
+    },
+    {
+      "file": "tests/tui/workspace/vaults/explorer.test.ts",
+      "parent": "vaults in the TUI (17.x)",
+      "declaration": "const isDocx = (file: string) => readFileSync(file).subarray(0, 4).toString(\"latin1\") === \"PK\\x03\\x04\";"
+    },
+    {
+      "file": "tests/tui/workspace/vaults/explorer.test.ts",
+      "parent": "vaults in the TUI (17.x)",
+      "declaration": "const saveAs = (h: Harness) => {\n    expect(h.app.overlay?.kind).toBe(\"saveas\");\n    return h.app.overlay as SaveAsOverlay;\n  };"
+    },
+    {
+      "file": "tests/tui/workspace/vaults/explorer.test.ts",
+      "parent": "vaults in the TUI (17.x)",
+      "declaration": "const listed = (o: SaveAsOverlay) => o.entries.map((e) => (e.up ? \"\u2025\" : e.dir ? `${e.name}/` : e.name));"
+    },
+    {
+      "file": "tests/tui/workspace/vaults/limits.test.ts",
+      "parent": "review round 3",
+      "declaration": "const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));"
+    },
+    {
+      "file": "tests/tui/workspace/vaults/renaming.test.ts",
+      "parent": "review (tui): the app's floating windows, new paths, roots and repeats",
+      "declaration": "const type = async (h: Harness, text: string) => {\n    for (const c of text) await h.keys(c === \" \" ? \"space\" : c);\n  };"
+    },
+    {
+      "file": "tests/tui/workspace/vaults/renaming.test.ts",
+      "parent": "review (tui): the app's floating windows, new paths, roots and repeats",
+      "declaration": "const virtualInTabs = (h: Harness) =>\n    h.app.tabs\n      .flatMap((t) => t.views)\n      .filter((v) => v.buf.virtual)\n      .map((v) => v.buf.key);"
+    },
+    {
+      "file": "tests/tui/workspace/vaults/renaming.test.ts",
+      "parent": "review (tui): the app's floating windows, new paths, roots and repeats",
+      "declaration": "const fnSetup = async (source: string | Buffer) => {\n    const root = makeVault();\n    writeFileSync(join(root, \"fn.md\"), source);\n    const h = await harness({ root, open: \"fn.md\", width: 140 });\n    return { root, h, read: () => readFileSync(join(root, \"fn.md\"), \"utf8\") };\n  };"
+    },
+    {
+      "file": "tests/tui/workspace/vaults/renaming.test.ts",
+      "parent": "review (tui): the app's floating windows, new paths, roots and repeats",
+      "declaration": "const onlyCrlf = (text: string) => expect(text.replace(/\\r\\n/g, \"\")).not.toMatch(/[\\r\\n]/);"
+    },
+    {
+      "file": "tests/tui/workspace/vaults/startup.test.ts",
+      "parent": "review cycle 5 (TUI, behaviour no test had pinned)",
+      "declaration": "const LINKS =\n    \"# M\\n\\n[to alpha](notes/alpha.md) [two](notes/alpha.md#section-two) [far](#far) [broken](nope.pdf)\\n\\nfiller\\n\\n## Far\\n\\nend\\n\";"
+    },
+    {
+      "file": "tests/tui/workspace/vaults/startup.test.ts",
+      "parent": "review cycle 5 (TUI, behaviour no test had pinned)",
+      "declaration": "const follow = async (h: Harness, k: number) => {\n    const v = h.app.view!;\n    const l = h.app.currentLayout(v).links[k]!;\n    h.app.moveCursor(v, { row: l.line, col: l.col });\n    await h.keys(\"enter\");\n  };"
+    },
+    {
+      "file": "tests/tui/workspace/vaults/startup.test.ts",
+      "parent": "review cycle 5 (TUI, behaviour no test had pinned)",
+      "declaration": "const at = (h: Harness) => ({ rel: h.app.view!.buf.rel, row: rowText(h).trim() });"
+    },
+    {
+      "file": "tests/tui/workspace/vaults/switching.test.ts",
+      "parent": "vaults in the TUI (17.x)",
+      "declaration": "const until = async (ok: () => boolean, ms = 25_000) => {\n    for (const t = Date.now(); !ok() && Date.now() - t < ms; ) await Bun.sleep(20);\n    return ok();\n  };"
+    },
+    {
+      "file": "tests/tui/workspace/vaults/switching.test.ts",
+      "parent": "vaults in the TUI (17.x)",
+      "declaration": "const isDocx = (file: string) => readFileSync(file).subarray(0, 4).toString(\"latin1\") === \"PK\\x03\\x04\";"
+    },
+    {
+      "file": "tests/tui/workspace/vaults/switching.test.ts",
+      "parent": "vaults in the TUI (17.x)",
+      "declaration": "const saveAs = (h: Harness) => {\n    expect(h.app.overlay?.kind).toBe(\"saveas\");\n    return h.app.overlay as SaveAsOverlay;\n  };"
+    },
+    {
+      "file": "tests/tui/workspace/vaults/switching.test.ts",
+      "parent": "vaults in the TUI (17.x)",
+      "declaration": "const listed = (o: SaveAsOverlay) => o.entries.map((e) => (e.up ? \"\u2025\" : e.dir ? `${e.name}/` : e.name));"
+    },
+    {
+      "file": "tests/tui/workspace/vaults/switching.test.ts",
+      "parent": "review (tui): the app's floating windows, new paths, roots and repeats",
+      "declaration": "const type = async (h: Harness, text: string) => {\n    for (const c of text) await h.keys(c === \" \" ? \"space\" : c);\n  };"
+    },
+    {
+      "file": "tests/tui/workspace/vaults/switching.test.ts",
+      "parent": "review (tui): the app's floating windows, new paths, roots and repeats",
+      "declaration": "const last = (h: Harness) => h.app.messages.at(-1)!;"
+    },
+    {
+      "file": "tests/tui/workspace/vaults/switching.test.ts",
+      "parent": "review (tui): the app's floating windows, new paths, roots and repeats",
+      "declaration": "const virtualInTabs = (h: Harness) =>\n    h.app.tabs\n      .flatMap((t) => t.views)\n      .filter((v) => v.buf.virtual)\n      .map((v) => v.buf.key);"
+    },
+    {
+      "file": "tests/tui/workspace/vaults/switching.test.ts",
+      "parent": "review (tui): the app's floating windows, new paths, roots and repeats",
+      "declaration": "const fnSetup = async (source: string | Buffer) => {\n    const root = makeVault();\n    writeFileSync(join(root, \"fn.md\"), source);\n    const h = await harness({ root, open: \"fn.md\", width: 140 });\n    return { root, h, read: () => readFileSync(join(root, \"fn.md\"), \"utf8\") };\n  };"
+    },
+    {
+      "file": "tests/tui/workspace/vaults/switching.test.ts",
+      "parent": "review (tui): the app's floating windows, new paths, roots and repeats",
+      "declaration": "const onlyCrlf = (text: string) => expect(text.replace(/\\r\\n/g, \"\")).not.toMatch(/[\\r\\n]/);"
+    },
+    {
+      "file": "tests/tui/documents/export/save-dialog.test.ts",
+      "parent": "vaults in the TUI (17.x)",
+      "declaration": "let made = 0;"
+    },
+    {
+      "file": "tests/tui/documents/export/save-dialog.test.ts",
+      "parent": "vaults in the TUI (17.x)",
+      "declaration": "async function twoVaults() {\n    const n = ++made;\n    const { initVault, locateVault: locate } = await import(\"../../../../src/core/workspace/vaults/vault.ts\");\n    const base = mkdtempSync(join(sandbox, \"two-\"));\n    const notes = join(base, \"notes\");\n    const app = join(base, \"app\");\n    const files: Record<string, string> = {\n      \"notes/index.md\": \"# Index\\n\\n[goals](../app/design.md#goals)\\n\\n[out](../app/design.md)\\n\",\n      \"notes/todo.md\": \"# Todo\\n\",\n      \"app/design.md\": \"# Design\\n\\nIntro.\\n\\n## Goals\\n\\nShip.\\n\",\n      \"app/links.md\": \"See [todo](../notes/todo.md).\\n\",\n    };\n    for (const [rel, text] of Object.entries(files)) {\n      mkdirSync(dirname(join(base, rel)), { recursive: true });\n      writeFileSync(join(base, rel), text);\n    }\n    initVault(notes, `tnotes${n}`);\n    initVault(app, `tapp${n}`);\n    openGraph(locate({ root: app }), DEFAULT_CONFIG, true); // tapp's index, as of now\n    return { base, notes, app, n };\n  }"
+    },
+    {
+      "file": "tests/tui/documents/navigation/link-picker.test.ts",
+      "parent": "vaults in the TUI (17.x)",
+      "declaration": "let made = 0;"
+    },
+    {
+      "file": "tests/tui/documents/navigation/link-picker.test.ts",
+      "parent": "vaults in the TUI (17.x)",
+      "declaration": "async function twoVaults() {\n    const n = ++made;\n    const { initVault, locateVault: locate } = await import(\"../../../../src/core/workspace/vaults/vault.ts\");\n    const base = mkdtempSync(join(sandbox, \"two-\"));\n    const notes = join(base, \"notes\");\n    const app = join(base, \"app\");\n    const files: Record<string, string> = {\n      \"notes/index.md\": \"# Index\\n\\n[goals](../app/design.md#goals)\\n\\n[out](../app/design.md)\\n\",\n      \"notes/todo.md\": \"# Todo\\n\",\n      \"app/design.md\": \"# Design\\n\\nIntro.\\n\\n## Goals\\n\\nShip.\\n\",\n      \"app/links.md\": \"See [todo](../notes/todo.md).\\n\",\n    };\n    for (const [rel, text] of Object.entries(files)) {\n      mkdirSync(dirname(join(base, rel)), { recursive: true });\n      writeFileSync(join(base, rel), text);\n    }\n    initVault(notes, `tnotes${n}`);\n    initVault(app, `tapp${n}`);\n    openGraph(locate({ root: app }), DEFAULT_CONFIG, true); // tapp's index, as of now\n    return { base, notes, app, n };\n  }"
+    },
+    {
+      "file": "tests/tui/documents/saving/conflict-notifications.test.ts",
+      "parent": "vaults in the TUI (17.x)",
+      "declaration": "let made = 0;"
+    },
+    {
+      "file": "tests/tui/documents/saving/conflict-notifications.test.ts",
+      "parent": "vaults in the TUI (17.x)",
+      "declaration": "async function twoVaults() {\n    const n = ++made;\n    const { initVault, locateVault: locate } = await import(\"../../../../src/core/workspace/vaults/vault.ts\");\n    const base = mkdtempSync(join(sandbox, \"two-\"));\n    const notes = join(base, \"notes\");\n    const app = join(base, \"app\");\n    const files: Record<string, string> = {\n      \"notes/index.md\": \"# Index\\n\\n[goals](../app/design.md#goals)\\n\\n[out](../app/design.md)\\n\",\n      \"notes/todo.md\": \"# Todo\\n\",\n      \"app/design.md\": \"# Design\\n\\nIntro.\\n\\n## Goals\\n\\nShip.\\n\",\n      \"app/links.md\": \"See [todo](../notes/todo.md).\\n\",\n    };\n    for (const [rel, text] of Object.entries(files)) {\n      mkdirSync(dirname(join(base, rel)), { recursive: true });\n      writeFileSync(join(base, rel), text);\n    }\n    initVault(notes, `tnotes${n}`);\n    initVault(app, `tapp${n}`);\n    openGraph(locate({ root: app }), DEFAULT_CONFIG, true); // tapp's index, as of now\n    return { base, notes, app, n };\n  }"
+    },
+    {
+      "file": "tests/tui/documents/tools/context.test.ts",
+      "parent": "vaults in the TUI (17.x)",
+      "declaration": "let made = 0;"
+    },
+    {
+      "file": "tests/tui/documents/tools/context.test.ts",
+      "parent": "vaults in the TUI (17.x)",
+      "declaration": "async function twoVaults() {\n    const n = ++made;\n    const { initVault, locateVault: locate } = await import(\"../../../../src/core/workspace/vaults/vault.ts\");\n    const base = mkdtempSync(join(sandbox, \"two-\"));\n    const notes = join(base, \"notes\");\n    const app = join(base, \"app\");\n    const files: Record<string, string> = {\n      \"notes/index.md\": \"# Index\\n\\n[goals](../app/design.md#goals)\\n\\n[out](../app/design.md)\\n\",\n      \"notes/todo.md\": \"# Todo\\n\",\n      \"app/design.md\": \"# Design\\n\\nIntro.\\n\\n## Goals\\n\\nShip.\\n\",\n      \"app/links.md\": \"See [todo](../notes/todo.md).\\n\",\n    };\n    for (const [rel, text] of Object.entries(files)) {\n      mkdirSync(dirname(join(base, rel)), { recursive: true });\n      writeFileSync(join(base, rel), text);\n    }\n    initVault(notes, `tnotes${n}`);\n    initVault(app, `tapp${n}`);\n    openGraph(locate({ root: app }), DEFAULT_CONFIG, true); // tapp's index, as of now\n    return { base, notes, app, n };\n  }"
+    }
+  ],
+  "inventory": {
+    "baseline": "ORG-T20",
+    "baselineDeclarations": 3656,
+    "expectedDeclarations": 3707,
+    "baselineSelectedRuntimeTests": 981,
+    "runtimeTests": 981,
+    "baselineExistingSkips": 2,
+    "existingSkips": 2,
+    "baselineSelectedAssertions": 7824,
+    "assertions": 7824,
+    "rootUnchangedLiteralLeafCalls": 593,
+    "rootMovedLiteralLeafCalls": 387,
+    "rootResidualLiteralLeafCalls": 206,
+    "splitFocusedUnchangedLiteralLeafCalls": 300,
+    "snapshotFiles": 0,
+    "files": [
+      {
+        "file": "tests/core/foundation/platform/atomic-files.test.ts",
+        "literalLeafCalls": 7,
+        "runtimeTests": 7,
+        "existingSkips": 0,
+        "assertions": 19
+      },
+      {
+        "file": "tests/core/workspace/graph/write-stamps.test.ts",
+        "literalLeafCalls": 1,
+        "runtimeTests": 1,
+        "existingSkips": 0,
+        "assertions": 3
+      },
+      {
+        "file": "tests/core/workspace/links/reach-policy.test.ts",
+        "literalLeafCalls": 2,
+        "runtimeTests": 2,
+        "existingSkips": 0,
+        "assertions": 11
+      },
+      {
+        "file": "tests/tui/documents/diagnostics/code-actions.test.ts",
+        "literalLeafCalls": 6,
+        "runtimeTests": 6,
+        "existingSkips": 0,
+        "assertions": 39
+      },
+      {
+        "file": "tests/tui/documents/diagnostics/lint-visibility.test.ts",
+        "literalLeafCalls": 5,
+        "runtimeTests": 5,
+        "existingSkips": 0,
+        "assertions": 31
+      },
+      {
+        "file": "tests/tui/documents/diagnostics/lint.test.ts",
+        "literalLeafCalls": 4,
+        "runtimeTests": 4,
+        "existingSkips": 0,
+        "assertions": 43
+      },
+      {
+        "file": "tests/tui/documents/diagnostics/linters.test.ts",
+        "literalLeafCalls": 4,
+        "runtimeTests": 4,
+        "existingSkips": 0,
+        "assertions": 19
+      },
+      {
+        "file": "tests/tui/documents/diagnostics/locations.test.ts",
+        "literalLeafCalls": 6,
+        "runtimeTests": 6,
+        "existingSkips": 0,
+        "assertions": 34
+      },
+      {
+        "file": "tests/tui/documents/diagnostics/problems.test.ts",
+        "literalLeafCalls": 8,
+        "runtimeTests": 8,
+        "existingSkips": 0,
+        "assertions": 107
+      },
+      {
+        "file": "tests/tui/documents/diagnostics/servers.test.ts",
+        "literalLeafCalls": 8,
+        "runtimeTests": 8,
+        "existingSkips": 0,
+        "assertions": 51
+      },
+      {
+        "file": "tests/tui/documents/diagnostics/spelling.test.ts",
+        "literalLeafCalls": 7,
+        "runtimeTests": 7,
+        "existingSkips": 0,
+        "assertions": 89
+      },
+      {
+        "file": "tests/tui/documents/editing/clipboard-async.test.ts",
+        "literalLeafCalls": 4,
+        "runtimeTests": 4,
+        "existingSkips": 0,
+        "assertions": 18
+      },
+      {
+        "file": "tests/tui/documents/export/jobs.test.ts",
+        "literalLeafCalls": 10,
+        "runtimeTests": 10,
+        "existingSkips": 0,
+        "assertions": 41
+      },
+      {
+        "file": "tests/tui/documents/export/save-dialog.test.ts",
+        "literalLeafCalls": 11,
+        "runtimeTests": 11,
+        "existingSkips": 0,
+        "assertions": 137
+      },
+      {
+        "file": "tests/tui/documents/media/diagrams.test.ts",
+        "literalLeafCalls": 1,
+        "runtimeTests": 1,
+        "existingSkips": 0,
+        "assertions": 7
+      },
+      {
+        "file": "tests/tui/documents/media/paint.test.ts",
+        "literalLeafCalls": 4,
+        "runtimeTests": 4,
+        "existingSkips": 0,
+        "assertions": 7
+      },
+      {
+        "file": "tests/tui/documents/media/picture-commands.test.ts",
+        "literalLeafCalls": 27,
+        "runtimeTests": 27,
+        "existingSkips": 0,
+        "assertions": 130
+      },
+      {
+        "file": "tests/tui/documents/media/pictures.test.ts",
+        "literalLeafCalls": 50,
+        "runtimeTests": 51,
+        "existingSkips": 0,
+        "assertions": 440
+      },
+      {
+        "file": "tests/tui/documents/media/remote-images.test.ts",
+        "literalLeafCalls": 7,
+        "runtimeTests": 7,
+        "existingSkips": 0,
+        "assertions": 95
+      },
+      {
+        "file": "tests/tui/documents/navigation/code-links.test.ts",
+        "literalLeafCalls": 1,
+        "runtimeTests": 1,
+        "existingSkips": 0,
+        "assertions": 1
+      },
+      {
+        "file": "tests/tui/documents/navigation/conversion.test.ts",
+        "literalLeafCalls": 1,
+        "runtimeTests": 1,
+        "existingSkips": 0,
+        "assertions": 2
+      },
+      {
+        "file": "tests/tui/documents/navigation/explicit-links.test.ts",
+        "literalLeafCalls": 24,
+        "runtimeTests": 24,
+        "existingSkips": 0,
+        "assertions": 128
+      },
+      {
+        "file": "tests/tui/documents/navigation/folders.test.ts",
+        "literalLeafCalls": 1,
+        "runtimeTests": 1,
+        "existingSkips": 0,
+        "assertions": 6
+      },
+      {
+        "file": "tests/tui/documents/navigation/headings.test.ts",
+        "literalLeafCalls": 3,
+        "runtimeTests": 3,
+        "existingSkips": 0,
+        "assertions": 13
+      },
+      {
+        "file": "tests/tui/documents/navigation/history.test.ts",
+        "literalLeafCalls": 9,
+        "runtimeTests": 9,
+        "existingSkips": 0,
+        "assertions": 47
+      },
+      {
+        "file": "tests/tui/documents/navigation/link-completion.test.ts",
+        "literalLeafCalls": 7,
+        "runtimeTests": 7,
+        "existingSkips": 0,
+        "assertions": 98
+      },
+      {
+        "file": "tests/tui/documents/navigation/link-picker.test.ts",
+        "literalLeafCalls": 1,
+        "runtimeTests": 1,
+        "existingSkips": 0,
+        "assertions": 7
+      },
+      {
+        "file": "tests/tui/documents/navigation/lists.test.ts",
+        "literalLeafCalls": 2,
+        "runtimeTests": 2,
+        "existingSkips": 0,
+        "assertions": 6
+      },
+      {
+        "file": "tests/tui/documents/navigation/messages.test.ts",
+        "literalLeafCalls": 1,
+        "runtimeTests": 1,
+        "existingSkips": 0,
+        "assertions": 1
+      },
+      {
+        "file": "tests/tui/documents/navigation/outside.test.ts",
+        "literalLeafCalls": 6,
+        "runtimeTests": 6,
+        "existingSkips": 0,
+        "assertions": 44
+      },
+      {
+        "file": "tests/tui/documents/navigation/peek.test.ts",
+        "literalLeafCalls": 13,
+        "runtimeTests": 13,
+        "existingSkips": 0,
+        "assertions": 111
+      },
+      {
+        "file": "tests/tui/documents/navigation/peek/backlinks.test.ts",
+        "literalLeafCalls": 4,
+        "runtimeTests": 4,
+        "existingSkips": 0,
+        "assertions": 25
+      },
+      {
+        "file": "tests/tui/documents/navigation/peek/catch-up.test.ts",
+        "literalLeafCalls": 30,
+        "runtimeTests": 30,
+        "existingSkips": 0,
+        "assertions": 98
+      },
+      {
+        "file": "tests/tui/documents/navigation/peek/home.test.ts",
+        "literalLeafCalls": 5,
+        "runtimeTests": 5,
+        "existingSkips": 0,
+        "assertions": 16
+      },
+      {
+        "file": "tests/tui/documents/navigation/peek/records.test.ts",
+        "literalLeafCalls": 7,
+        "runtimeTests": 7,
+        "existingSkips": 0,
+        "assertions": 14
+      },
+      {
+        "file": "tests/tui/documents/navigation/peek/scheduling.test.ts",
+        "literalLeafCalls": 40,
+        "runtimeTests": 40,
+        "existingSkips": 0,
+        "assertions": 132
+      },
+      {
+        "file": "tests/tui/documents/navigation/pointer.test.ts",
+        "literalLeafCalls": 1,
+        "runtimeTests": 1,
+        "existingSkips": 0,
+        "assertions": 2
+      },
+      {
+        "file": "tests/tui/documents/navigation/pointers.test.ts",
+        "literalLeafCalls": 1,
+        "runtimeTests": 1,
+        "existingSkips": 0,
+        "assertions": 3
+      },
+      {
+        "file": "tests/tui/documents/navigation/source.test.ts",
+        "literalLeafCalls": 2,
+        "runtimeTests": 2,
+        "existingSkips": 0,
+        "assertions": 3
+      },
+      {
+        "file": "tests/tui/documents/navigation/wikilinks.test.ts",
+        "literalLeafCalls": 1,
+        "runtimeTests": 1,
+        "existingSkips": 0,
+        "assertions": 11
+      },
+      {
+        "file": "tests/tui/documents/saving/conflict-notifications.test.ts",
+        "literalLeafCalls": 1,
+        "runtimeTests": 1,
+        "existingSkips": 0,
+        "assertions": 2
+      },
+      {
+        "file": "tests/tui/documents/search/commands.test.ts",
+        "literalLeafCalls": 1,
+        "runtimeTests": 1,
+        "existingSkips": 0,
+        "assertions": 4
+      },
+      {
+        "file": "tests/tui/documents/search/regex-jobs.test.ts",
+        "literalLeafCalls": 17,
+        "runtimeTests": 17,
+        "existingSkips": 0,
+        "assertions": 77
+      },
+      {
+        "file": "tests/tui/documents/search/replace-vault.test.ts",
+        "literalLeafCalls": 4,
+        "runtimeTests": 4,
+        "existingSkips": 0,
+        "assertions": 32
+      },
+      {
+        "file": "tests/tui/documents/tools/context.test.ts",
+        "literalLeafCalls": 3,
+        "runtimeTests": 3,
+        "existingSkips": 0,
+        "assertions": 17
+      },
+      {
+        "file": "tests/tui/documents/tools/empty.test.ts",
+        "literalLeafCalls": 1,
+        "runtimeTests": 1,
+        "existingSkips": 0,
+        "assertions": 5
+      },
+      {
+        "file": "tests/tui/documents/tools/footnotes.test.ts",
+        "literalLeafCalls": 7,
+        "runtimeTests": 7,
+        "existingSkips": 0,
+        "assertions": 43
+      },
+      {
+        "file": "tests/tui/documents/tools/info-export.test.ts",
+        "literalLeafCalls": 3,
+        "runtimeTests": 3,
+        "existingSkips": 0,
+        "assertions": 16
+      },
+      {
+        "file": "tests/tui/documents/tools/info.test.ts",
+        "literalLeafCalls": 4,
+        "runtimeTests": 4,
+        "existingSkips": 0,
+        "assertions": 34
+      },
+      {
+        "file": "tests/tui/documents/tools/outline.test.ts",
+        "literalLeafCalls": 1,
+        "runtimeTests": 1,
+        "existingSkips": 0,
+        "assertions": 1
+      },
+      {
+        "file": "tests/tui/documents/tools/properties.test.ts",
+        "literalLeafCalls": 8,
+        "runtimeTests": 8,
+        "existingSkips": 0,
+        "assertions": 52
+      },
+      {
+        "file": "tests/tui/documents/tools/refusals.test.ts",
+        "literalLeafCalls": 1,
+        "runtimeTests": 1,
+        "existingSkips": 0,
+        "assertions": 11
+      },
+      {
+        "file": "tests/tui/documents/tools/tags.test.ts",
+        "literalLeafCalls": 2,
+        "runtimeTests": 2,
+        "existingSkips": 0,
+        "assertions": 12
+      },
+      {
+        "file": "tests/tui/documents/tools/types.test.ts",
+        "literalLeafCalls": 3,
+        "runtimeTests": 3,
+        "existingSkips": 0,
+        "assertions": 21
+      },
+      {
+        "file": "tests/tui/documents/views/html.test.ts",
+        "literalLeafCalls": 8,
+        "runtimeTests": 8,
+        "existingSkips": 0,
+        "assertions": 38
+      },
+      {
+        "file": "tests/tui/documents/views/parse-threads.test.ts",
+        "literalLeafCalls": 8,
+        "runtimeTests": 8,
+        "existingSkips": 0,
+        "assertions": 29
+      },
+      {
+        "file": "tests/tui/documents/views/source-cursor.test.ts",
+        "literalLeafCalls": 5,
+        "runtimeTests": 5,
+        "existingSkips": 0,
+        "assertions": 90
+      },
+      {
+        "file": "tests/tui/documents/views/syntax-worker.test.ts",
+        "literalLeafCalls": 6,
+        "runtimeTests": 6,
+        "existingSkips": 0,
+        "assertions": 23
+      },
+      {
+        "file": "tests/tui/shell/background/jobs.test.ts",
+        "literalLeafCalls": 6,
+        "runtimeTests": 6,
+        "existingSkips": 0,
+        "assertions": 50
+      },
+      {
+        "file": "tests/tui/shell/overlays/commands.test.ts",
+        "literalLeafCalls": 1,
+        "runtimeTests": 1,
+        "existingSkips": 0,
+        "assertions": 3
+      },
+      {
+        "file": "tests/tui/shell/overlays/help.test.ts",
+        "literalLeafCalls": 2,
+        "runtimeTests": 2,
+        "existingSkips": 0,
+        "assertions": 5
+      },
+      {
+        "file": "tests/tui/shell/overlays/lists.test.ts",
+        "literalLeafCalls": 4,
+        "runtimeTests": 4,
+        "existingSkips": 0,
+        "assertions": 28
+      },
+      {
+        "file": "tests/tui/shell/overlays/matching.test.ts",
+        "literalLeafCalls": 3,
+        "runtimeTests": 3,
+        "existingSkips": 0,
+        "assertions": 987
+      },
+      {
+        "file": "tests/tui/shell/overlays/switcher.test.ts",
+        "literalLeafCalls": 1,
+        "runtimeTests": 1,
+        "existingSkips": 0,
+        "assertions": 2
+      },
+      {
+        "file": "tests/tui/shell/panels/focus.test.ts",
+        "literalLeafCalls": 2,
+        "runtimeTests": 2,
+        "existingSkips": 0,
+        "assertions": 6
+      },
+      {
+        "file": "tests/tui/shell/panels/layout.test.ts",
+        "literalLeafCalls": 1,
+        "runtimeTests": 1,
+        "existingSkips": 0,
+        "assertions": 1
+      },
+      {
+        "file": "tests/tui/shell/panels/live-selection.test.ts",
+        "literalLeafCalls": 1,
+        "runtimeTests": 1,
+        "existingSkips": 0,
+        "assertions": 1
+      },
+      {
+        "file": "tests/tui/shell/panels/pointer.test.ts",
+        "literalLeafCalls": 3,
+        "runtimeTests": 3,
+        "existingSkips": 0,
+        "assertions": 7
+      },
+      {
+        "file": "tests/tui/shell/panels/selection.test.ts",
+        "literalLeafCalls": 4,
+        "runtimeTests": 4,
+        "existingSkips": 0,
+        "assertions": 34
+      },
+      {
+        "file": "tests/tui/shell/report/report.test.ts",
+        "literalLeafCalls": 40,
+        "runtimeTests": 41,
+        "existingSkips": 0,
+        "assertions": 170
+      },
+      {
+        "file": "tests/tui/shell/updates/updates.test.ts",
+        "literalLeafCalls": 49,
+        "runtimeTests": 49,
+        "existingSkips": 0,
+        "assertions": 217
+      },
+      {
+        "file": "tests/tui/workspace/explorer/creating.test.ts",
+        "literalLeafCalls": 8,
+        "runtimeTests": 8,
+        "existingSkips": 0,
+        "assertions": 62
+      },
+      {
+        "file": "tests/tui/workspace/explorer/exclusions.test.ts",
+        "literalLeafCalls": 1,
+        "runtimeTests": 1,
+        "existingSkips": 0,
+        "assertions": 37
+      },
+      {
+        "file": "tests/tui/workspace/explorer/extensions.test.ts",
+        "literalLeafCalls": 1,
+        "runtimeTests": 1,
+        "existingSkips": 0,
+        "assertions": 3
+      },
+      {
+        "file": "tests/tui/workspace/explorer/file-operations.test.ts",
+        "literalLeafCalls": 18,
+        "runtimeTests": 18,
+        "existingSkips": 0,
+        "assertions": 203
+      },
+      {
+        "file": "tests/tui/workspace/explorer/filter.test.ts",
+        "literalLeafCalls": 2,
+        "runtimeTests": 2,
+        "existingSkips": 0,
+        "assertions": 5
+      },
+      {
+        "file": "tests/tui/workspace/explorer/hidden.test.ts",
+        "literalLeafCalls": 6,
+        "runtimeTests": 6,
+        "existingSkips": 0,
+        "assertions": 60
+      },
+      {
+        "file": "tests/tui/workspace/explorer/marks.test.ts",
+        "literalLeafCalls": 18,
+        "runtimeTests": 20,
+        "existingSkips": 0,
+        "assertions": 231
+      },
+      {
+        "file": "tests/tui/workspace/explorer/opening.test.ts",
+        "literalLeafCalls": 1,
+        "runtimeTests": 1,
+        "existingSkips": 0,
+        "assertions": 2
+      },
+      {
+        "file": "tests/tui/workspace/explorer/renaming.test.ts",
+        "literalLeafCalls": 8,
+        "runtimeTests": 8,
+        "existingSkips": 0,
+        "assertions": 62
+      },
+      {
+        "file": "tests/tui/workspace/explorer/views.test.ts",
+        "literalLeafCalls": 11,
+        "runtimeTests": 11,
+        "existingSkips": 0,
+        "assertions": 80
+      },
+      {
+        "file": "tests/tui/workspace/explorer/walk-thread.test.ts",
+        "literalLeafCalls": 44,
+        "runtimeTests": 42,
+        "existingSkips": 2,
+        "assertions": 586
+      },
+      {
+        "file": "tests/tui/workspace/explorer/zoom.test.ts",
+        "literalLeafCalls": 7,
+        "runtimeTests": 7,
+        "existingSkips": 0,
+        "assertions": 73
+      },
+      {
+        "file": "tests/tui/workspace/git/branches.test.ts",
+        "literalLeafCalls": 2,
+        "runtimeTests": 2,
+        "existingSkips": 0,
+        "assertions": 18
+      },
+      {
+        "file": "tests/tui/workspace/git/changes.test.ts",
+        "literalLeafCalls": 11,
+        "runtimeTests": 11,
+        "existingSkips": 0,
+        "assertions": 52
+      },
+      {
+        "file": "tests/tui/workspace/git/commit.test.ts",
+        "literalLeafCalls": 4,
+        "runtimeTests": 4,
+        "existingSkips": 0,
+        "assertions": 34
+      },
+      {
+        "file": "tests/tui/workspace/git/diff-window.test.ts",
+        "literalLeafCalls": 11,
+        "runtimeTests": 11,
+        "existingSkips": 0,
+        "assertions": 77
+      },
+      {
+        "file": "tests/tui/workspace/git/history.test.ts",
+        "literalLeafCalls": 4,
+        "runtimeTests": 4,
+        "existingSkips": 0,
+        "assertions": 46
+      },
+      {
+        "file": "tests/tui/workspace/git/panel-commands.test.ts",
+        "literalLeafCalls": 4,
+        "runtimeTests": 4,
+        "existingSkips": 0,
+        "assertions": 72
+      },
+      {
+        "file": "tests/tui/workspace/git/panel/attention.test.ts",
+        "literalLeafCalls": 1,
+        "runtimeTests": 1,
+        "existingSkips": 0,
+        "assertions": 5
+      },
+      {
+        "file": "tests/tui/workspace/git/panel/bases.test.ts",
+        "literalLeafCalls": 1,
+        "runtimeTests": 1,
+        "existingSkips": 0,
+        "assertions": 14
+      },
+      {
+        "file": "tests/tui/workspace/git/panel/branches.test.ts",
+        "literalLeafCalls": 37,
+        "runtimeTests": 37,
+        "existingSkips": 0,
+        "assertions": 246
+      },
+      {
+        "file": "tests/tui/workspace/git/panel/disk-diff.test.ts",
+        "literalLeafCalls": 1,
+        "runtimeTests": 1,
+        "existingSkips": 0,
+        "assertions": 4
+      },
+      {
+        "file": "tests/tui/workspace/git/panel/input.test.ts",
+        "literalLeafCalls": 8,
+        "runtimeTests": 8,
+        "existingSkips": 0,
+        "assertions": 50
+      },
+      {
+        "file": "tests/tui/workspace/git/panel/opening.test.ts",
+        "literalLeafCalls": 3,
+        "runtimeTests": 3,
+        "existingSkips": 0,
+        "assertions": 13
+      },
+      {
+        "file": "tests/tui/workspace/git/panel/renames.test.ts",
+        "literalLeafCalls": 2,
+        "runtimeTests": 2,
+        "existingSkips": 0,
+        "assertions": 19
+      },
+      {
+        "file": "tests/tui/workspace/git/panel/repositories.test.ts",
+        "literalLeafCalls": 2,
+        "runtimeTests": 2,
+        "existingSkips": 0,
+        "assertions": 7
+      },
+      {
+        "file": "tests/tui/workspace/git/panel/review.test.ts",
+        "literalLeafCalls": 8,
+        "runtimeTests": 8,
+        "existingSkips": 0,
+        "assertions": 54
+      },
+      {
+        "file": "tests/tui/workspace/git/panel/stable-repositories.test.ts",
+        "literalLeafCalls": 9,
+        "runtimeTests": 9,
+        "existingSkips": 0,
+        "assertions": 78
+      },
+      {
+        "file": "tests/tui/workspace/git/panel/stable-rows.test.ts",
+        "literalLeafCalls": 56,
+        "runtimeTests": 56,
+        "existingSkips": 0,
+        "assertions": 201
+      },
+      {
+        "file": "tests/tui/workspace/git/panel/state.test.ts",
+        "literalLeafCalls": 3,
+        "runtimeTests": 3,
+        "existingSkips": 0,
+        "assertions": 11
+      },
+      {
+        "file": "tests/tui/workspace/git/remote.test.ts",
+        "literalLeafCalls": 5,
+        "runtimeTests": 5,
+        "existingSkips": 0,
+        "assertions": 43
+      },
+      {
+        "file": "tests/tui/workspace/git/review-journeys.test.ts",
+        "literalLeafCalls": 35,
+        "runtimeTests": 35,
+        "existingSkips": 0,
+        "assertions": 311
+      },
+      {
+        "file": "tests/tui/workspace/git/signs.test.ts",
+        "literalLeafCalls": 6,
+        "runtimeTests": 6,
+        "existingSkips": 0,
+        "assertions": 193
+      },
+      {
+        "file": "tests/tui/workspace/git/watching.test.ts",
+        "literalLeafCalls": 7,
+        "runtimeTests": 7,
+        "existingSkips": 0,
+        "assertions": 44
+      },
+      {
+        "file": "tests/tui/workspace/git/worktrees.test.ts",
+        "literalLeafCalls": 16,
+        "runtimeTests": 16,
+        "existingSkips": 0,
+        "assertions": 119
+      },
+      {
+        "file": "tests/tui/workspace/history/live.test.ts",
+        "literalLeafCalls": 1,
+        "runtimeTests": 1,
+        "existingSkips": 0,
+        "assertions": 1
+      },
+      {
+        "file": "tests/tui/workspace/search/local.test.ts",
+        "literalLeafCalls": 4,
+        "runtimeTests": 4,
+        "existingSkips": 0,
+        "assertions": 30
+      },
+      {
+        "file": "tests/tui/workspace/search/marks.test.ts",
+        "literalLeafCalls": 1,
+        "runtimeTests": 1,
+        "existingSkips": 0,
+        "assertions": 2
+      },
+      {
+        "file": "tests/tui/workspace/search/roots.test.ts",
+        "literalLeafCalls": 1,
+        "runtimeTests": 1,
+        "existingSkips": 0,
+        "assertions": 12
+      },
+      {
+        "file": "tests/tui/workspace/search/symbols.test.ts",
+        "literalLeafCalls": 2,
+        "runtimeTests": 2,
+        "existingSkips": 0,
+        "assertions": 13
+      },
+      {
+        "file": "tests/tui/workspace/vaults/autoindex.test.ts",
+        "literalLeafCalls": 44,
+        "runtimeTests": 44,
+        "existingSkips": 0,
+        "assertions": 224
+      },
+      {
+        "file": "tests/tui/workspace/vaults/config.test.ts",
+        "literalLeafCalls": 1,
+        "runtimeTests": 1,
+        "existingSkips": 0,
+        "assertions": 3
+      },
+      {
+        "file": "tests/tui/workspace/vaults/elsewhere.test.ts",
+        "literalLeafCalls": 4,
+        "runtimeTests": 4,
+        "existingSkips": 0,
+        "assertions": 43
+      },
+      {
+        "file": "tests/tui/workspace/vaults/explorer.test.ts",
+        "literalLeafCalls": 10,
+        "runtimeTests": 10,
+        "existingSkips": 0,
+        "assertions": 88
+      },
+      {
+        "file": "tests/tui/workspace/vaults/indexing.test.ts",
+        "literalLeafCalls": 4,
+        "runtimeTests": 4,
+        "existingSkips": 0,
+        "assertions": 80
+      },
+      {
+        "file": "tests/tui/workspace/vaults/limits.test.ts",
+        "literalLeafCalls": 1,
+        "runtimeTests": 1,
+        "existingSkips": 0,
+        "assertions": 4
+      },
+      {
+        "file": "tests/tui/workspace/vaults/renaming.test.ts",
+        "literalLeafCalls": 1,
+        "runtimeTests": 1,
+        "existingSkips": 0,
+        "assertions": 6
+      },
+      {
+        "file": "tests/tui/workspace/vaults/startup.test.ts",
+        "literalLeafCalls": 1,
+        "runtimeTests": 1,
+        "existingSkips": 0,
+        "assertions": 1
+      },
+      {
+        "file": "tests/tui/workspace/vaults/switching-lifetime.test.ts",
+        "literalLeafCalls": 8,
+        "runtimeTests": 8,
+        "existingSkips": 0,
+        "assertions": 74
+      },
+      {
+        "file": "tests/tui/workspace/vaults/switching.test.ts",
+        "literalLeafCalls": 3,
+        "runtimeTests": 3,
+        "existingSkips": 0,
+        "assertions": 21
+      }
+    ],
+    "assertionCountPolicy": "Recorded totals are measured on this host. Expectations in walk-thread time-sliced loops can vary across hosts/runs; preservation uses declarations, runtime tests, complete leaf identities and normalized callbacks."
+  }
+}

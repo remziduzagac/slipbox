@@ -33,3 +33,7 @@ change as a coherent follow-up; #56 remains excluded. This is focused verificati
 - T6: render's “drawn while its library loads …” needs a separate isolation fix and repeated-same-cache regression.
 
 - T7: explorer/which-key “space n notes, space d folders, space v vaults …”: cause unproven; separate isolation fix.
+
+- T12/T21: known clock-arithmetic TimeoutOverflowWarning output in shared processes: 18,198 lines for 121 split owners
+  versus 4,069 for the old 22 files in an independent observation; groups alone are quiet, with no test failure. These
+  are output observations, not a performance comparison. Investigate separately with a clock-arithmetic regression.
