@@ -387,16 +387,19 @@ refusal, focus and disposal. Do not build a second mock App or a global context 
 
 The current handwritten source ceiling is 1,000 lines (T1); about 500 lines is the design aim. Finish with a 600-line
 ceiling, with 750 as the next step. At each step, cap every pre-existing larger file at its measured size, never above
-1,500. Moves carry
-caps to the new paths; new modules obey the current ceiling. Lower touched exceptions to their actual size and remove
-them below the ceiling. Final handwritten exceptions require a named responsibility, rationale and follow-up task; no
-blanket exemption for App. Keep generated server locks outside the handwritten ceiling under a separate measured cap and
-verify their generator. Do not split embedded strings by hand. The research inventory of all 55 modules over 500 is the
-backlog, not only the nine over 1,000. Every row receives an extraction or a documented cohesive-module assessment;
-reaching 600 does not erase the 500-line aim.
+1,500. Moves carry caps to the new paths; new modules obey the current ceiling. A cap may reset to measured growth
+caused solely by formatting longer import paths, with its old/new value and delta recorded in the task (ORG-D2 dated
+note). Preserve normal formatting, non-import code and comments; verify mapped dependencies and executable bodies. This
+exception permits no implementation growth. Lower touched exceptions to their actual size and remove them below the
+ceiling. Final handwritten exceptions require a named responsibility, rationale and follow-up task; no blanket exemption
+for App. Keep generated server locks outside the handwritten ceiling under a separate measured cap and verify their
+generator. Do not split embedded strings by hand. The research inventory of all 55 modules over 500 is the backlog, not
+only the nine over 1,000. Every row receives an extraction or a documented cohesive-module assessment; reaching 600 does
+not erase the 500-line aim.
 
 For tests, recommend a 1,000-line aim and a 1,500-line ceiling on new/split feature files, with exact non-growing caps
-for remaining legacy files. Keep process fixtures and generated snapshots separately identified. This implements the
+for remaining legacy files; the import-formatting exception above applies to source caps only. Keep process fixtures and
+generated snapshots separately identified. This implements the
 review of roadmap `27.3`, approved in ORG-D2; source and test rules have distinct defaults.
 
 Extract pane navigation shared by footnotes/info/outline first. Share panel close or scroll helpers only after checking

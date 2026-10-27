@@ -51,8 +51,14 @@ import type { DiffWindow } from "./diffview.ts";
 import type { MergeState } from "./mergescreen.ts";
 import type { Review } from "./review.ts";
 import { ELSEWHERE, rootLabel, tildePath } from "../core/workspace/vaults/names.ts";
-import { configFilesFor, isInside, vaultAt, vaultOf, recordLocation } from "../core/workspace/vaults/vault.ts";
-import type { VaultLocation } from "../core/workspace/vaults/vault.ts";
+import {
+  configFilesFor,
+  isInside,
+  vaultAt,
+  vaultOf,
+  recordLocation,
+  type VaultLocation,
+} from "../core/workspace/vaults/vault.ts";
 import { VaultFeed } from "../core/workspace/vaults/vault-feed.ts";
 import type { VaultWatcher } from "../core/workspace/graph/watch.ts";
 import type { SnippetSession } from "./snippets.ts";
@@ -103,6 +109,7 @@ import { Speller } from "./spelling.ts";
 import { Following } from "./following.ts";
 import { Updates } from "./updates.ts";
 import type { SessionState } from "../core/workspace/session/position.ts";
+
 export interface Host {
   requestRender(): void;
   /** OSC 52 through the renderer, which owns the terminal. */

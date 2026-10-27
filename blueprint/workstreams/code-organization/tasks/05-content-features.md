@@ -39,14 +39,19 @@ mapped dependencies/runtime edges, test identities and build entries agree with 
 Baseline `595f029`: `bun scripts/organization/migration.ts capture tmp/issue/t5-before.json` captured 1,949 edges and
 2,612 literal test declarations. The migration check against that snapshot and the linked manifest passes.
 
-Local checks: 46 parser/syntax tests, 14 TUI parse/syntax worker tests and 2 selector/import-graph fixtures pass.
-All eleven actual worker clients complete from source and a host-compiled probe outside the repository, including
-parse, syntax and nested export-to-diagram SVG generation. The actual package binary opens explorer/outline and exits
-cleanly, serves info/commands JSON and rejects an unknown option with exit 2. Two code terminal checks pass: syntax
-errors while typing and the responsive 4,000-line TypeScript view.
-Typecheck, lint, boundary and docs pass. The existing size caps pass unchanged. To keep them exact, type imports are
-grouped and the final import separator
-is removed in layout/code and graph; all executable bodies and mapped edges still match. This is an explicit
-import-formatting trade-off pending the maintainer's preferred cap policy.
+Local checks: 46 parser/syntax tests, 14 TUI parse/syntax worker tests and 2 selector/import-graph fixtures pass. All
+eleven actual worker clients complete from source and a host-compiled probe outside the repository, including parse,
+syntax and nested export-to-diagram SVG generation. The actual package binary opens explorer/outline and exits cleanly,
+serves info/commands JSON and rejects an unknown option with exit 2. Two code terminal checks pass: syntax errors while
+typing and the responsive 4,000-line TypeScript view. Typecheck, lint, boundary, docs and size pass. Under the approved
+ORG-D2 dated note, normal type/value import grouping and final import separators are restored. Exact caps increase
+solely for longer formatted import paths:
+
+| File | Before | After | Import-only growth |
+| --- | --- | --- | --- |
+| layout/code.ts | 1,417 | 1,424 | +7 |
+| workspace/graph/graph.ts | 1,433 | 1,441 | +8 |
+
+Non-import code/comments and normalized executable bodies are unchanged; mapped edges still agree.
 
 The final comment wrap from T4 is included in config's JSDoc; no runtime change accompanies it.
