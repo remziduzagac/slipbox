@@ -1,11 +1,12 @@
 # Rendering
 
-mdast to a laid-out, themed page: remark's tree, laid out by slipbox's own code (D7). Code: `src/core/layout/`,
-`src/core/theme/`, `src/core/glyphs.ts`, `src/core/foundation/text/width.ts`, `src/core/foundation/text/sanitize.ts`.
+mdast to a laid-out, themed page: remark's tree, laid out by slipbox's own code (D7). Code:
+`src/core/rendering/layout/`, `src/core/rendering/theme/`, `src/core/rendering/theme/glyphs.ts`,
+`src/core/foundation/text/width.ts`, `src/core/foundation/text/sanitize.ts`.
 
 ## The layout IR (plan `2.1`)
 
-Pure data, framework-agnostic, defined in `layout/ir.ts` (D6, D8):
+Pure data, framework-agnostic, defined in `rendering/layout/ir.ts` (D6, D8):
 
 ```ts
 Layout { lines: Line[]; links: LayoutLink[]; headings: LayoutHeading[]; width; clipped?; embedded? }
@@ -30,14 +31,15 @@ Span   { text; role; attrs; bg?; link?; src?; task? }
   of it show (`w`), the block's widest line (`total`), and the block's label row and last row (`part`), which don't
   move. Such a row holds its line whole, wider than the layout.
 
-Both faces draw the same IR: `tui/draw.ts` paints it through a `Canvas`, and `layout/ansi.ts`
-turns it into a string for `slipbox render`.
+Both faces draw the same IR: `tui/draw.ts` paints it through a `Canvas`, and `rendering/layout/ansi.ts` turns it into a
+string for `slipbox render`.
 
 ## Blocks and inlines (plan `2.2`)
 
-`layout/render.ts` handles every mdast node remark-gfm produces, plus `#tags` and Obsidian's highlights and comments:
-the blocks itself, inlines in `render-inline.ts`, tables in `render-table.ts`, front matter and data files' rows in
-`render-data.ts`. Containers lay their children out at reduced width and prefix every row, so nesting composes.
+`rendering/layout/markdown/render.ts` handles every mdast node remark-gfm produces, plus `#tags` and Obsidian's
+highlights and comments: the blocks itself, inlines in `render-inline.ts`, tables in `render-table.ts`, front matter and
+data files' rows in `render-data.ts`. Containers lay their children out at reduced width and prefix every row, so
+nesting composes.
 
 | Node | Rendering |
 | --- | --- |
@@ -128,15 +130,16 @@ The session owns transfers across tab navigation, so a shared URL is not cancell
 Quitting or changing the remote policy to `never` aborts pending work; partial files are removed and only completed
 files are atomically published. Existing request consent and redirect behavior are unchanged (issue #171).
 
-On screen, math conversion and SVG size/rasterization are bounded background jobs (`core/paint-jobs.ts`,
-`core/paint-worker.ts`); native image inspection, decoding and downscaling use the same job protocol in the OpenTUI
-adapter, which is also a compiled worker entry. Drawing callbacks read completed results or keep the textual
-fallback. Completion invalidates layouts that waited, without announcing a grammar change. Source and options
-identify results; native files also include their modification time, so late replies cannot replace current input.
-Each owner admits eight jobs, deduplicates them, has a three-second deadline including startup, and discards replies
-from replaced workers. Saturation is temporary, never a remembered failure. Completed failures stay cached rather
-than retrying each frame. Idle workers are unreferenced and stop after 30 seconds; closing the native picture owner
-clears its queued jobs and retained images. CLI/export retain their explicit awaited loaders.
+On screen, math conversion and SVG size/rasterization are bounded background jobs
+(`core/rendering/media/paint/paint-jobs.ts`, `core/rendering/media/paint/paint-worker.ts`); native image inspection,
+decoding and downscaling use the same job protocol in the OpenTUI adapter, which is also a compiled worker entry.
+Drawing callbacks read completed results or keep the textual fallback. Completion invalidates layouts that waited,
+without announcing a grammar change. Source and options identify results; native files also include their modification
+time, so late replies cannot replace current input. Each owner admits eight jobs, deduplicates them, has a three-second
+deadline including startup, and discards replies from replaced workers. Saturation is temporary, never a remembered
+failure. Completed failures stay cached rather than retrying each frame. Idle workers are unreferenced and stop after 30
+seconds; closing the native picture owner clears its queued jobs and retained images. CLI/export retain their explicit
+awaited loaders.
 
 Math input is at most 32 KiB, SVG input 8 MiB, generated output 8 MiB, and each completed-job cache 16 MiB or 512
 entries. Native files are at most 20 MiB; inspection accepts dimensions up to 16,384 per side and 16 million pixels, as
@@ -153,39 +156,34 @@ conversion still takes background time; these measurements describe time removed
 **Mermaid** (12.10, D127): a ` ```mermaid ` block is drawn in the terminal's own characters — box drawing, arrows, its
 words in the text's colour and its lines in the table's border colour; in ASCII where the glyphs are — by
 `beautiful-mermaid`, no browser (flowcharts, state, sequence, class and ER diagrams, XY charts). Too wide at its own
-spacing, it's drawn closer together; still too wide, with `codeScroll`, drawn at its closest and scrolling sideways
-as code too wide does (D233), a column of margin either side for its marks and a row under it for its scrollbar; too
-wide without it, a kind it doesn't draw (`pie`, `gantt`), or one it can't read: its code, the label saying why
-(`mermaid — too wide to draw`, `mermaid — not drawn: pie`). Every row is at the
-block's line, so the lens opens on its source. The library loads in a worker the first time a note holds a diagram.
-`diagrams.ts` reads completed results from
+spacing, it's drawn closer together; still too wide, with `codeScroll`, drawn at its closest and scrolling sideways as
+code too wide does (D233), a column of margin either side for its marks and a row under it for its scrollbar; too wide
+without it, a kind it doesn't draw (`pie`, `gantt`), or one it can't read: its code, the label saying why
+(`mermaid — too wide to draw`, `mermaid — not drawn: pie`). Every row is at the block's line, so the lens opens on its
+source. The library loads in a worker the first time a note holds a diagram. `diagrams.ts` reads completed results from
 `diagram-jobs.ts`; until a result arrives, the block is its code with `mermaid — drawing…` in its header (#179). Arrival
-invalidates waiting layouts through
-`foundation/platform/lazy.ts`. Lazy-load subscribers run in their registration context, so an asset finishing during
-export cannot
-move a screen relayout into the export's worker or lifetime. `slipbox render` and export wait for requested results
-before producing their output. Text and SVG layout run in `diagram-worker.ts`, and only there: the renderer
-(`diagram-render.ts`) is imported for more than its types by the worker alone, which `bun run check:boundary` holds;
-one active request and at most eight outstanding. Temporary queue saturation
-leaves the block pending: subsequent layouts admit it as capacity becomes available. The CLI repeats layout and drains
-until there is no pending work. Worker startup has a two-second deadline; each screen render has 500 ms. A timeout
-terminates the screen worker and retries the request once, then remembers a specific fallback reason without
+invalidates waiting layouts through `foundation/platform/lazy.ts`. Lazy-load subscribers run in their registration
+context, so an asset finishing during export cannot move a screen relayout into the export's worker or lifetime.
+`slipbox render` and export wait for requested results before producing their output. Text and SVG layout run in
+`diagram-worker.ts`, and only there: the renderer (`diagram-render.ts`) is imported for more than its types by the
+worker alone, which `bun run check:boundary` holds; one active request and at most eight outstanding. Temporary queue
+saturation leaves the block pending: subsequent layouts admit it as capacity becomes available. The CLI repeats layout
+and drains until there is no pending work. Worker startup has a two-second deadline; each screen render has 500 ms. A
+timeout terminates the screen worker and retries the request once, then remembers a specific fallback reason without
 retrying on every redraw. Source is limited to 32,768 UTF-16 code units, each result to one MiB, and the screen result
-cache to two MiB
-and 2,048 entries. Cache keys include source and rendering options; failures are cached too. An idle worker is stopped
-after 30 seconds; its idle timer and worker are unreferenced so they do not delay exit. CLI rendering and export
-assembly each own a separate worker and cache through `withMermaidBatch`, with five seconds per diagram, no automatic
-retry, and a 32 MiB,
-2,048-entry result budget. At that document budget, new diagrams stay as source with a specific reason, preserving
-completed results instead of eviction and repeated rendering. The batch disposes its worker and cache when finished.
-Completed results also use `core/diagram-cache.ts`, a machine-shared SQLite cache at `cacheHome()/diagrams.db`, never in
-the vault (#180; D39, D253). Text and SVG keys include the rendering implementation epoch, slipbox's and the Mermaid
-library's versions and all rendering inputs: source, width, glyph/scroll mode or colours and font. Warm cache hits are
-synchronous and shared by the screen, CLI and export. The store keeps at most 2,048 rows and 32 MiB of serialized
-results; SQLite pages/WAL add storage overhead. Old least-recently-used entries are evicted. Reads and writes are
-best-effort with a short lock wait; a missing, corrupt or unavailable store falls back to rendering.
-`SLIPBOX_DIAGRAM_CACHE=off` bypasses disk reuse. Supported rendering failures and timeouts are retained, but
-deadline/retry policy partitions failure keys so a screen timeout cannot suppress the longer batch attempt.
+cache to two MiB and 2,048 entries. Cache keys include source and rendering options; failures are cached too. An idle
+worker is stopped after 30 seconds; its idle timer and worker are unreferenced so they do not delay exit. CLI rendering
+and export assembly each own a separate worker and cache through `withMermaidBatch`, with five seconds per diagram, no
+automatic retry, and a 32 MiB, 2,048-entry result budget. At that document budget, new diagrams stay as source with a
+specific reason, preserving completed results instead of eviction and repeated rendering. The batch disposes its worker
+and cache when finished. Completed results also use `core/rendering/media/diagrams/diagram-cache.ts`, a machine-shared
+SQLite cache at `cacheHome()/diagrams.db`, never in the vault (#180; D39, D253). Text and SVG keys include the rendering
+implementation epoch, slipbox's and the Mermaid library's versions and all rendering inputs: source, width, glyph/scroll
+mode or colours and font. Warm cache hits are synchronous and shared by the screen, CLI and export. The store keeps at
+most 2,048 rows and 32 MiB of serialized results; SQLite pages/WAL add storage overhead. Old least-recently-used entries
+are evicted. Reads and writes are best-effort with a short lock wait; a missing, corrupt or unavailable store falls back
+to rendering. `SLIPBOX_DIAGRAM_CACHE=off` bypasses disk reuse. Supported rendering failures and timeouts are retained,
+but deadline/retry policy partitions failure keys so a screen timeout cannot suppress the longer batch attempt.
 Startup/worker availability failures stay session-only.
 
 Deadlines apply per diagram, not to the whole note: screen jobs allow two attempts, batch jobs one, plus worker startup
@@ -396,9 +394,8 @@ or a quote whose last line does: a `%%` right after a list is its last item's la
 
 ## The table allocator (plan `2.3`)
 
-`layout/table.ts` (D89). Tables are re-allocated at every width, so this decides how a table survives
-a resize. It starts from render-markdown's algorithm, fixes its known flaw, and changes where
-spare width goes.
+`rendering/layout/markdown/table.ts` (D89). Tables are re-allocated at every width, so this decides how a table survives
+a resize. It starts from render-markdown's algorithm, fixes its known flaw, and changes where spare width goes.
 
 ```text
 desired[i] = max over rows of (content width + 2 * padding)
@@ -432,12 +429,11 @@ columns and shrinks only when both widen. So three candidates are scored and the
 greedy then water-fill, water-fill alone, and surplus shared in proportion to each column's
 unmet width.
 
-**Measured once, counted many times.** Each cell is measured once into word, space and segment
-widths. `countLines` and `fit` in `layout/wrap.ts` answer "how many rows at width w" without
-building spans, using the same packing rule `wrapSpans` draws with — grapheme by grapheme when a
-segment is longer than a row, since a wide character is never split and can leave a row a column
-short, and with no row counted after a final hard break. So the allocator's prediction is exactly
-what is drawn; `tests/render.test.ts` checks it on 39,000 random mixes of ASCII, CJK, kinsoku
+**Measured once, counted many times.** Each cell is measured once into word, space and segment widths. `countLines` and
+`fit` in `rendering/layout/wrap.ts` answer "how many rows at width w" without building spans, using the same packing
+rule `wrapSpans` draws with — grapheme by grapheme when a segment is longer than a row, since a wide character is never
+split and can leave a row a column short, and with no row counted after a final hard break. So the allocator's
+prediction is exactly what is drawn; `tests/render.test.ts` checks it on 39,000 random mixes of ASCII, CJK, kinsoku
 punctuation, emoji, ZWJ sequences and breaks.
 
 **Cost.** A re-layout on resize, tables included, measured on 2026-09-29 (widths 40 to 200):
@@ -479,23 +475,20 @@ some row wraps. The header separator is doubled (`╞═╪═╡`).
   reph 1, which it doesn't. A terminal may still count differently from OpenTUI: libghostty gives an Indic spacing
   mark a column of its own.
 
-`layout/wrap.ts` breaks at spaces, and between CJK characters — except that closing punctuation
-(`、` `。` `）` `」` `…`, and an ASCII `,` or `.` right after a CJK character) never starts a row, and
-opening punctuation (`（` `「`) never ends one (kinsoku). A token longer than the row starts
-a fresh row and packs its soft segments (split after `/ - _ . ? & = , : ; |`), so paths, URLs and
-identifiers break at a readable point. Only a segment wider than the whole row breaks at the
-grapheme that overflows.
-**Hostile notes** (`15.2`, D111). Containers deeper than 60 (quotes, lists) render as their plain text, so a note
-5,000 levels deep neither overflows the stack nor hides everything. Below 8 columns for its child, a
-container stops indenting (a quote, a callout or an embed drops its bar, a list item's marker takes a
-row of its own), and a data file's tree drops its outer guides, so nothing is cut in a narrow split.
-Inputs the markdown parser takes quadratic time over are tamed before parsing without moving an
-offset (`tame` in `core/documents/markdown/parse.ts`), and only where an ordinary note never has them: frontmatter,
-fenced code and lines made only of rule characters (`***`, a setext `===`) are left alone. A run of
-64 or more `*` `_` `[` `]` in a line with other text becomes look-alikes; 20 or more container
-markers, or 96 columns of indentation before a list marker, get one no-break space at the cap, which
-ends the nesting there.
-Frontmatter over 64 KB shows as text; YAML is parsed without the (quadratic) duplicate-key check.
+`rendering/layout/wrap.ts` breaks at spaces, and between CJK characters — except that closing punctuation (`、` `。` `）`
+`」` `…`, and an ASCII `,` or `.` right after a CJK character) never starts a row, and opening punctuation (`（` `「`)
+never ends one (kinsoku). A token longer than the row starts a fresh row and packs its soft segments (split after
+`/ - _ . ? & = , : ; |`), so paths, URLs and identifiers break at a readable point. Only a segment wider than the whole
+row breaks at the grapheme that overflows. **Hostile notes** (`15.2`, D111). Containers deeper than 60 (quotes, lists)
+render as their plain text, so a note 5,000 levels deep neither overflows the stack nor hides everything. Below 8
+columns for its child, a container stops indenting (a quote, a callout or an embed drops its bar, a list item's marker
+takes a row of its own), and a data file's tree drops its outer guides, so nothing is cut in a narrow split. Inputs the
+markdown parser takes quadratic time over are tamed before parsing without moving an offset (`tame` in
+`core/documents/markdown/parse.ts`), and only where an ordinary note never has them: frontmatter, fenced code and lines
+made only of rule characters (`***`, a setext `===`) are left alone. A run of 64 or more `*` `_` `[` `]` in a line with
+other text becomes look-alikes; 20 or more container markers, or 96 columns of indentation before a list marker, get one
+no-break space at the cap, which ends the nesting there. Frontmatter over 64 KB shows as text; YAML is parsed without
+the (quadratic) duplicate-key check.
 
 Nothing ever overflows the layout width but a code block's rows that scroll sideways (`scroll`), whose code is
 whole by design: what's before their code, and their window on it, fit. As a last defence the renderer cuts any other
@@ -520,14 +513,14 @@ Carried over from the nvim configuration, where they were arrived at by trial (D
 
 ## Themes (plan `2.6`)
 
-`core/theme/theme.ts` defines about 100 semantic roles covering the document, syntax and chrome (D93).
-Every theme reduces to an 18-colour `Palette`, and `themeFromPalette` maps it to roles, so there is
-one mapping to get right. Heading bands are the heading colour blended into the background, 14%
-in dark themes and 16% in light ones. A highlight's band (the `highlight` role, Obsidian's `==text==`; DF-D17) is the
-palette's yellow blended into the background, 30% in dark themes and 40% in light ones, under the strong foreground;
-`terminal` puts the terminal's yellow behind black, and `mono` reverses it, `inverse` carried to a span's style and the
-ANSI writer. Single roles can be overridden from config, for every theme or one (`[colors]`,
-[configuration.md](../../docs/manual/configuration.md) § Colours).
+`core/rendering/theme/theme.ts` defines about 100 semantic roles covering the document, syntax and chrome (D93). Every
+theme reduces to an 18-colour `Palette`, and `themeFromPalette` maps it to roles, so there is one mapping to get right.
+Heading bands are the heading colour blended into the background, 14% in dark themes and 16% in light ones. A
+highlight's band (the `highlight` role, Obsidian's `==text==`; DF-D17) is the palette's yellow blended into the
+background, 30% in dark themes and 40% in light ones, under the strong foreground; `terminal` puts the terminal's yellow
+behind black, and `mono` reverses it, `inverse` carried to a span's style and the ANSI writer. Single roles can be
+overridden from config, for every theme or one (`[colors]`, [configuration.md](../../docs/manual/configuration.md) §
+Colours).
 
 | Kind | Themes |
 | --- | --- |
@@ -539,9 +532,9 @@ ANSI writer. Single roles can be overridden from config, for every theme or one 
 | special | `terminal` (ANSI indexed colours: the terminal's own theme flows through) |
 | special | `mono` (attributes only: links underlined, unresolved dim too, code bold; used under `NO_COLOR`) |
 
-Tokyo Night's four palettes live in `core/theme/tokyo-night.ts`, mapped from the pinned upstream exports recorded in
-[the palette research](../research/tokyo-night-palettes.md). Night remains the default (D94). All four use the same
-semantic mapping and typography: strong text uses `fg`, inline code uses `fg` on `bg_highlight`, dim text uses
+Tokyo Night's four palettes live in `core/rendering/theme/tokyo-night.ts`, mapped from the pinned upstream exports
+recorded in [the palette research](../research/tokyo-night-palettes.md). Night remains the default (D94). All four use
+the same semantic mapping and typography: strong text uses `fg`, inline code uses `fg` on `bg_highlight`, dim text uses
 `fg_dark`, and borders use `fg_gutter`; syntax accents come from each variant's own palette (D254, amending D96).
 
 Themes are built in (D91), hand-tuned or from base16 data (D92). In the TUI, `NO_COLOR` wins over any theme setting,
@@ -602,23 +595,22 @@ language each line is in (`languageAt`; D122). See [tui.md](tui.md) § Files bey
 ## Diffs
 
 A diff has layouts of its own beside the note's, which they leave unchanged (GIT-D2, GIT-D7): its lines
-(`core/layout/diff.ts`), a row a line, highlighted as SOURCE view highlights the file, its changed words tinted more
-strongly than their line; a note's **before and after** (`core/layout/blockdiff.ts`), each changed block laid out
-twice, lightly formatted (headings, emphasis, links as they read, a list's marker, a table's cells, a quote's bar), in
-a `before` and an `after` frame, the removed words marked in the first and the added in the second (a block too big to
-diff by words, its changed lines and their words), a block added or removed whole laid out once, marked, the
-unchanged stretches folded; and a code file's **side by side** (`core/layout/splitdiff.ts`), its two texts scrolling
-sideways by one offset, as a code block does (D233). Each says in a dim row what changed that no line shows, the line
-endings or the final newline (D245). The layout's other users never see the marks. How each is found and drawn, its
-roles and its window: [tui.md](tui.md) § Git.
+(`core/rendering/layout/diff/diff.ts`), a row a line, highlighted as SOURCE view highlights the file, its changed words
+tinted more strongly than their line; a note's **before and after** (`core/rendering/layout/diff/blockdiff.ts`), each
+changed block laid out twice, lightly formatted (headings, emphasis, links as they read, a list's marker, a table's
+cells, a quote's bar), in a `before` and an `after` frame, the removed words marked in the first and the added in the
+second (a block too big to diff by words, its changed lines and their words), a block added or removed whole laid out
+once, marked, the unchanged stretches folded; and a code file's **side by side**
+(`core/rendering/layout/diff/splitdiff.ts`), its two texts scrolling sideways by one offset, as a code block does
+(D233). Each says in a dim row what changed that no line shows, the line endings or the final newline (D245). The
+layout's other users never see the marks. How each is found and drawn, its roles and its window: [tui.md](tui.md) § Git.
 
 ## The ANSI writer
 
-`layout/ansi.ts` writes the IR as text for `slipbox render`. Colour depth comes from `NO_COLOR`,
-whether stdout is a TTY, `COLORTERM` and `TERM`: truecolor, 256, 16, or none. The 256- and 16-colour
-paths approximate the theme's colours. With `--plain`, `--color never`, or when stdout is piped, the
-output contains no escape sequences at all. A 256-colour palette entry (from `[colors]`, say)
-becomes the nearest of the 16 on a 16-colour terminal.
+`rendering/layout/ansi.ts` writes the IR as text for `slipbox render`. Colour depth comes from `NO_COLOR`, whether
+stdout is a TTY, `COLORTERM` and `TERM`: truecolor, 256, 16, or none. The 256- and 16-colour paths approximate the
+theme's colours. With `--plain`, `--color never`, or when stdout is piped, the output contains no escape sequences at
+all. A 256-colour palette entry (from `[colors]`, say) becomes the nearest of the 16 on a 16-colour terminal.
 
 ## Background parsing and spelling limits
 

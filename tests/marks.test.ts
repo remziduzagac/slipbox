@@ -7,7 +7,7 @@ import { chmodSync, mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, w
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { type Config, DEFAULT_CONFIG } from "../src/core/application/config/config.ts";
-import { glyphsFor } from "../src/core/glyphs.ts";
+import { glyphsFor } from "../src/core/rendering/theme/glyphs.ts";
 import { openGraph } from "../src/core/workspace/graph/graph.ts";
 import { cacheDir, vaultKey } from "../src/core/foundation/platform/paths.ts";
 import { probe, setLinkAnswer } from "../src/core/workspace/vaults/symlinks.ts";

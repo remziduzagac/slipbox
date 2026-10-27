@@ -4,7 +4,7 @@
 
 import { readFileSync, statSync } from "node:fs";
 import { isMainThread } from "node:worker_threads";
-import { PaintJobs, type PaintRequest, type PaintResult } from "../core/paint-jobs.ts";
+import { PaintJobs, type PaintRequest, type PaintResult } from "../core/rendering/media/paint/paint-jobs.ts";
 import { workerUrl } from "../core/foundation/workers/url.ts";
 import { notifyLoaded } from "../core/foundation/platform/lazy.ts";
 import {
@@ -16,8 +16,8 @@ import {
   RGBA,
   TextAttributes,
 } from "@opentui/core";
-import type { CellStyle } from "../core/layout/style.ts";
-import type { Color } from "../core/theme/theme.ts";
+import type { CellStyle } from "../core/rendering/layout/style.ts";
+import type { Color } from "../core/rendering/theme/theme.ts";
 import { type Canvas, type Crop, glyphCell } from "./canvas.ts";
 import { idColor, MAX_PLACEHOLDER_CELLS, pictureId, placeholderRow, release, transmit } from "./placeholders.ts";
 

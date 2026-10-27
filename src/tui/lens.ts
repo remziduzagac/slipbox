@@ -2,9 +2,16 @@
 // render with the cursor's block as its markdown, in a lens that sizes and pins itself as it moves.
 
 import { offsetOf, placeAt, stopInsert } from "./editing.ts";
-import { cellBlocks } from "../core/layout/code.ts";
-import { type Block, blockAt, blockRanges, composeLive, LENS_COUNTERS, sectionRanges } from "../core/layout/live.ts";
-import type { Layout } from "../core/layout/ir.ts";
+import { cellBlocks } from "../core/rendering/layout/code/code.ts";
+import {
+  type Block,
+  blockAt,
+  blockRanges,
+  composeLive,
+  LENS_COUNTERS,
+  sectionRanges,
+} from "../core/rendering/layout/markdown/live.ts";
+import type { Layout } from "../core/rendering/layout/ir.ts";
 import { stringWidth } from "../core/foundation/text/width.ts";
 import type { NoteBuffer } from "./buffer.ts";
 import type { App, View } from "./app.ts";

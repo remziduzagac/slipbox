@@ -7,7 +7,7 @@ import type { LinkProblem } from "../core/workspace/graph/graph.ts";
 import { visibleLint, type LintVisibility } from "../core/documents/diagnostics/lint-visibility.ts";
 import { parseMarkdown, type ParsedNote } from "../core/documents/markdown/parse.ts";
 import type { LintIssue } from "../core/documents/diagnostics/lint.ts";
-import { srcAt } from "../core/layout/ir.ts";
+import { srcAt } from "../core/rendering/layout/ir.ts";
 import {
   atLeast,
   frontmatterFindings,

@@ -2,12 +2,12 @@ import { afterEach, expect, spyOn, test } from "bun:test";
 import * as fs from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { EXPORT_CHUNK, ExportSpool, PreparedExport, fileSink } from "../src/core/export/spool.ts";
-import { utf8 } from "../src/core/export/stream.ts";
-import type { ExportDoc } from "../src/core/export/assemble.ts";
-import { assemble } from "../src/core/export/assemble.ts";
-import { prepareExport } from "../src/core/export/jobs.ts";
-import { formatFor, exportNotes, exportTarget, isExport } from "../src/core/export/index.ts";
+import { EXPORT_CHUNK, ExportSpool, PreparedExport, fileSink } from "../src/core/rendering/export/spool.ts";
+import { utf8 } from "../src/core/rendering/export/stream.ts";
+import type { ExportDoc } from "../src/core/rendering/export/assemble.ts";
+import { assemble } from "../src/core/rendering/export/assemble.ts";
+import { prepareExport } from "../src/core/rendering/export/jobs.ts";
+import { formatFor, exportNotes, exportTarget, isExport } from "../src/core/rendering/export/index.ts";
 import { DEFAULT_CONFIG } from "../src/core/application/config/config.ts";
 import { Graph } from "../src/core/workspace/graph/graph.ts";
 import { locateVault } from "../src/core/workspace/vaults/vault.ts";
@@ -227,8 +227,8 @@ test("invalid or incomplete manifests never become prepared output", async () =>
 
 test("a streamed PDF releases completed pages rather than retaining the whole book", async () => {
   const PDFDocument = (await import("pdfkit")).default;
-  const { toPdf } = await import("../src/core/export/pdf.ts");
-  const { findFonts } = await import("../src/core/export/fonts.ts");
+  const { toPdf } = await import("../src/core/rendering/export/formats/pdf.ts");
+  const { findFonts } = await import("../src/core/rendering/export/assets/fonts.ts");
   const doc: ExportDoc = {
     title: "Pages",
     author: null,
@@ -286,7 +286,7 @@ test("a staged note past 8 MiB keeps its complete contents", async () => {
 });
 
 test("cancelling worker preparation removes its private partial output", async () => {
-  const { ExportJob } = await import("../src/core/export/jobs.ts");
+  const { ExportJob } = await import("../src/core/rendering/export/jobs.ts");
   let asked: { spool: string } | undefined;
   const worker = {
     onmessage: null as ((event: unknown) => void) | null,
@@ -358,7 +358,7 @@ test.skipIf(process.platform === "win32")(
 );
 
 test("normal process exit removes private staging without waiting for an async disposer", async () => {
-  const module = new URL("../src/core/export/spool.ts", import.meta.url).href;
+  const module = new URL("../src/core/rendering/export/spool.ts", import.meta.url).href;
   const child = Bun.spawn(
     [
       process.execPath,
@@ -381,7 +381,7 @@ test("staging left by a process that's gone is removed when the next export stag
   fs.mkdirSync(join(exports, `${gone.pid}-left`), { recursive: true });
   fs.writeFileSync(join(exports, `${gone.pid}-left`, "document"), "a killed export's output");
   fs.mkdirSync(join(exports, `${process.pid}-running`));
-  const module = new URL("../src/core/export/spool.ts", import.meta.url).href;
+  const module = new URL("../src/core/rendering/export/spool.ts", import.meta.url).href;
   const child = Bun.spawn(
     [process.execPath, "-e", `await (await import(${JSON.stringify(module)})).PreparedExport.directory();`],
     { env: { ...process.env, XDG_CACHE_HOME: cache }, stdout: "pipe", stderr: "pipe" },
@@ -391,8 +391,8 @@ test("staging left by a process that's gone is removed when the next export stag
 });
 
 test("streamed PDF quotes and nested callouts continue across released pages", async () => {
-  const { toPdf } = await import("../src/core/export/pdf.ts");
-  const { findFonts } = await import("../src/core/export/fonts.ts");
+  const { toPdf } = await import("../src/core/rendering/export/formats/pdf.ts");
+  const { findFonts } = await import("../src/core/rendering/export/assets/fonts.ts");
   const paragraphs = Array.from({ length: 150 }, (_, i) => ({
     type: "paragraph" as const,
     children: [{ type: "text" as const, value: `Quoted ${i}. ${"Many quoted words. ".repeat(20)}` }],

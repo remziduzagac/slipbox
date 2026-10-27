@@ -12,7 +12,7 @@ import { peekTitle } from "./peek.ts";
 import { drawPane } from "./draw-pane.ts";
 import { sanitize, sanitizeMap } from "../core/foundation/text/sanitize.ts";
 import type { GitState } from "../core/workspace/git/branches/gitops.ts";
-import type { Color } from "../core/theme/theme.ts";
+import type { Color } from "../core/rendering/theme/theme.ts";
 
 /**
  * The Save As window (10.14), framed like the lists, near the top of the content: its title, the folder it's in; places

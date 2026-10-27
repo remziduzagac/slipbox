@@ -43,10 +43,11 @@ implementation, fails at start-up and fails a test ([tui.md](tui.md) § Parity w
 | `src/core/` | `src/tui/`, `src/cli/`, `@opentui/*` |
 | `src/cli/` | `src/tui/`, `@opentui/*` |
 
-It fails it too when a module other than `core/diagram-worker.ts` imports `core/diagram-render.ts` for more than its
-types: a diagram drawn on the screen's thread could freeze it ([rendering.md](rendering.md) § Blocks and inlines).
-It runs in CI (`.github/workflows/ci.yml`) and in `bun run check`, as does `scripts/check-deps.ts`, the supply chain's
-gates (`14.10`, [distribution.md](distribution.md) § The supply chain).
+It fails it too when a module other than `core/rendering/media/diagrams/diagram-worker.ts` imports
+`core/rendering/media/diagrams/diagram-render.ts` for more than its types: a diagram drawn on the screen's thread could
+freeze it ([rendering.md](rendering.md) § Blocks and inlines). It runs in CI (`.github/workflows/ci.yml`) and in
+`bun run check`, as does `scripts/check-deps.ts`, the supply chain's gates (`14.10`, [distribution.md](distribution.md)
+§ The supply chain).
 
 ### Only the final draw step touches OpenTUI
 
@@ -202,41 +203,41 @@ The CLI's commands are the user's reference, [cli.md](../../docs/manual/cli.md);
 | `core/workspace/links/hosting.ts` | — | a repository's hosting URLs (GitHub, GitLab, Bitbucket) read as its files |
 | [data.ts][o50] | 16.11–16.15 | data files (TOML, INI, YAML, JSON, CSV) read into a document tree; their links |
 | [lazy.ts][o7] | 16.6 | modules and assets loaded on first use: asked synchronously, heard when ready |
-| `core/diagrams.ts` | 12.10, 12.16 | Mermaid's drawings read once done: box drawing, an SVG, or why it's its code |
-| `core/diagram-jobs.ts` | 12.10, D253 | the diagrams' queue and results, drawn one at a time in `diagram-worker.ts` |
-| `core/diagram-render.ts` | 12.10, 12.16 | Mermaid laid out as text or an SVG; imported by the worker alone |
-| `core/diagram-cache.ts` | D253 | diagrams drawn, kept on disk across sessions: private, optional, bounded |
-| `core/math.ts` | 12.11 | maths as Unicode text: a formula, a display's rows (aligned, cases, matrices) |
-| `core/svg.ts` | 12.15 | SVG rasterised (resvg), a machine's font for words; CSS variables resolved |
-| `core/typeset.ts` | 12.17 | a display's maths typeset as an SVG (MathJax) |
-| `core/paint-jobs.ts` | 12.15, 12.17 | the screen's maths and SVGs, done in `paint-worker.ts` and read once done |
-| `core/imagecache.ts` | 12.12 | where a picture on the web is kept once fetched: a file per address |
-| `core/export/assemble.ts` | 10.1 | notes as one document: chapters, embeds drawn in, links inside it, pictures found |
-| `core/export/mark.ts` | 10.3, DF-D25 | the mark a Markdown export carries, read without loading the writers |
-| `core/export/docx.ts` | 10.4 | the document as Word's `.docx` (`docx`, loaded when exporting) |
-| `core/export/pdf.ts` | 10.5, 10.11 | the document as a PDF: lines laid out here, set by pdfkit; a font a character |
-| `core/export/fonts.ts` | 10.5 | a PDF's fonts, found in the machine's font folders: sans, mono, fallbacks |
-| `core/export/hast.ts` | 10.2, 10.6 | a chapter as HTML's tree: ids, pictures where kept, maths, code, footnotes |
-| `core/export/html.ts` | 10.2 | the document as one HTML file, its pictures inside it |
-| `core/export/epub.ts` | 10.6 | the document as an EPUB 3 (fflate): XHTML chapters, contents, pictures |
-| `core/export/markdown.ts` | 10.3 | the document as portable Markdown, its pictures copied beside it |
-| `core/export/images.ts` | 10.x | a picture's kind and size from its header; an SVG rasterised; its size as shown |
-| `core/export/convert.ts` | 10.10 | a picture a format doesn't hold made PNG first: BMP, GIF, WebP decoded |
-| `core/export/style.ts` | 10.x | the look on paper: print's colours, callouts', code's; the stylesheet |
-| `core/export/index.ts` | 10.x | the formats by name, where an export goes, writing it ([export.md](export.md)) |
-| `core/export/jobs.ts` | 10.x | an export in a worker of its own (`export-worker.ts`); only the owner writes it |
-| `core/export/reads.ts` | 10.x | what a job reads: regular files only, each note parsed once |
-| `core/export/spool.ts` | 10.x | the output staged privately (`stream.ts`), published by the owner |
-| `core/export/zip.ts` | 10.x | EPUB's ZIP, an entry at a time; no ZIP64, so 4 GiB or 65,535 files at most |
+| [diagrams.ts][o105] | 12.10, 12.16 | Mermaid's drawings read once done: box drawing, an SVG, or why it's its code |
+| [diagram-jobs.ts][o106] | 12.10, D253 | the diagrams' queue and results, drawn one at a time in `diagram-worker.ts` |
+| [diagram-render.ts][o107] | 12.10, 12.16 | Mermaid laid out as text or an SVG; imported by the worker alone |
+| [diagram-cache.ts][o108] | D253 | diagrams drawn, kept on disk across sessions: private, optional, bounded |
+| [math.ts][o109] | 12.11 | maths as Unicode text: a formula, a display's rows (aligned, cases, matrices) |
+| [svg.ts][o110] | 12.15 | SVG rasterised (resvg), a machine's font for words; CSS variables resolved |
+| `core/rendering/media/typeset.ts` | 12.17 | a display's maths typeset as an SVG (MathJax) |
+| [paint-jobs.ts][o111] | 12.15, 12.17 | the screen's maths and SVGs, done in `paint-worker.ts` and read once done |
+| [imagecache.ts][o112] | 12.12 | where a picture on the web is kept once fetched: a file per address |
+| [assemble.ts][o113] | 10.1 | notes as one document: chapters, embeds drawn in, links inside it, pictures found |
+| [mark.ts][o114] | 10.3, DF-D25 | the mark a Markdown export carries, read without loading the writers |
+| `core/rendering/export/formats/docx.ts` | 10.4 | the document as Word's `.docx` (`docx`, loaded when exporting) |
+| [pdf.ts][o115] | 10.5, 10.11 | the document as a PDF: lines laid out here, set by pdfkit; a font a character |
+| [fonts.ts][o116] | 10.5 | a PDF's fonts, found in the machine's font folders: sans, mono, fallbacks |
+| [hast.ts][o117] | 10.2, 10.6 | a chapter as HTML's tree: ids, pictures where kept, maths, code, footnotes |
+| `core/rendering/export/formats/html.ts` | 10.2 | the document as one HTML file, its pictures inside it |
+| [epub.ts][o118] | 10.6 | the document as an EPUB 3 (fflate): XHTML chapters, contents, pictures |
+| [markdown.ts][o119] | 10.3 | the document as portable Markdown, its pictures copied beside it |
+| [images.ts][o120] | 10.x | a picture's kind and size from its header; an SVG rasterised; its size as shown |
+| [convert.ts][o121] | 10.10 | a picture a format doesn't hold made PNG first: BMP, GIF, WebP decoded |
+| [style.ts][o122] | 10.x | the look on paper: print's colours, callouts', code's; the stylesheet |
+| [index.ts][o123] | 10.x | the formats by name, where an export goes, writing it ([export.md](export.md)) |
+| [jobs.ts][o124] | 10.x | an export in a worker of its own (`export-worker.ts`); only the owner writes it |
+| `core/rendering/export/reads.ts` | 10.x | what a job reads: regular files only, each note parsed once |
+| `core/rendering/export/spool.ts` | 10.x | the output staged privately (`stream.ts`), published by the owner |
+| [zip.ts][o125] | 10.x | EPUB's ZIP, an entry at a time; no ZIP64, so 4 GiB or 65,535 files at most |
 | `tui/placeholders.ts` | 12.7 | Kitty's Unicode placeholders: a picture's id, its cells as text, sent once, let go |
 | [syntax.ts][o51] | 16.7–16.9, 16.18–16.22 | tree-sitter: spans, outline, errors, comments; parts in other languages |
 | [syntax-thread.ts][o52] | 16.7–16.9, D252 | a code file's grammar, parse and outline on `syntax-worker.ts` |
 | [docformats.ts][o53] | 24.4 | a doc comment read into one shape, whatever wrote it: JSDoc, Google, NumPy, Sphinx |
 | [landing.ts][o42] | 11.3 | where a link lands in its note — a heading, a block's `^id`, `L42` — and its text there |
 | [note.ts][o54] | 2.x, 1.11 | a note rendered for a pane: parse, resolve links, embeds' notes, lay out (CLI and TUI) |
-| `core/layout/*` | 2.1–2.8 | mdast → layout IR; tables; wrap; highlighting; ANSI |
-| `core/layout/source.ts` | 4.13 | the markdown as a layout, with each cell's source offset |
-| `core/layout/live.ts` | 4.14 | a note's blocks; the lens composed into the render |
+| `core/rendering/layout/*` | 2.1–2.8 | mdast → layout IR; tables; wrap; highlighting; ANSI |
+| `core/rendering/layout/code/source.ts` | 4.13 | the markdown as a layout, with each cell's source offset |
+| `core/rendering/layout/markdown/live.ts` | 4.14 | a note's blocks; the lens composed into the render |
 | `core/documents/editing/tasks.ts` | 4.11 | a task's checkbox toggled as a one-byte edit |
 | `core/foundation/text/words.ts` | — | word counts for the status line and note info: Han and kana by character |
 | `core/documents/external-editors/editor.ts` | 4.1, 4.2, 4.12 | hand-off templates to argv, never through a shell |
@@ -264,12 +265,12 @@ The CLI's commands are the user's reference, [cli.md](../../docs/manual/cli.md);
 | [gitbranches.ts][o86] | GIT-D9, GIT-D13 | the branches, where each is checked out; worktrees made, removed |
 | [gitbase.ts][o87] | GIT-D10 | each branch's own base: kept (`bases.json`), else the nearest of `[git] bases` |
 | [gitrepos.ts][o88] | VV-D10 | the repositories under a folder, each checkout grouped with its own, their state |
-| `core/layout/diff.ts` | GIT-D2 | a diff's rows: signs, highlighting, changed words, heads and folds, sideways scroll |
-| `core/layout/blockdiff.ts` | GIT-D2 | before and after laid out: frames, light formatting, the marked words |
-| `core/layout/splitdiff.ts` | GIT-D7 | a code file's diff side by side, the two sides scrolling together |
-| `core/layout/screen.ts` | GIT-D3, GIT-D5 | a screen of text rows and diffs: the review's, the merge screen's |
-| `core/theme/*` | 2.6 | semantic roles, built-in themes, base16 loader |
-| `core/glyphs.ts` | 2.8 | Nerd, Unicode and ASCII glyph sets |
+| [diff.ts][o126] | GIT-D2 | a diff's rows: signs, highlighting, changed words, heads and folds, sideways scroll |
+| [blockdiff.ts][o127] | GIT-D2 | before and after laid out: frames, light formatting, the marked words |
+| [splitdiff.ts][o128] | GIT-D7 | a code file's diff side by side, the two sides scrolling together |
+| [screen.ts][o129] | GIT-D3, GIT-D5 | a screen of text rows and diffs: the review's, the merge screen's |
+| `core/rendering/theme/*` | 2.6 | semantic roles, built-in themes, base16 loader |
+| `core/rendering/theme/glyphs.ts` | 2.8 | Nerd, Unicode and ASCII glyph sets |
 | `core/application/commands/registry.ts` | 0.8 | `CommandRegistry` and `Keymap` |
 | [catalog.ts][o11] | 0.8, parity | `COMMAND_SPECS`, composed from area catalogs; contracts live separately |
 | `core/application/commands/areas/*.ts` | 0.8, parity, D235 | every command id with its CLI equivalent, by area |
@@ -366,7 +367,7 @@ file bytes ──readText──▶ text (BOM noted, invalid UTF-8 → U+FFFD)
           ──parseMarkdown──▶ mdast with positions + frontmatter
           ──renderTree(width, glyphs, resolveLink)──▶ Layout { lines, links, headings }
           ──▶ tui/draw.ts through Canvas          (TUI)
-          ──▶ layout/ansi.ts to a string          (slipbox render)
+          ──▶ rendering/layout/ansi.ts to a string          (slipbox render)
 ```
 
 Link statuses (resolved, unresolved, ambiguous) are decided during layout by a resolver function
@@ -541,11 +542,10 @@ the whole-note work — the first open, a change of width — short:
   footnotes views wait too, rather than parse here. Where threads can't start, or one fails, the note reads as its
   source, the app says why once, and opening it again tries again ([rendering.md](rendering.md) § Background parsing and
   spelling limits); the index parses it here. The workers stop after a minute idle.
-- **Wrapping is mostly ASCII work** (`core/layout/wrap.ts`, `core/foundation/text/width.ts`): a paragraph of printable
-  ASCII is
-  wrapped by ranges of its text, not a grapheme object per character (the same rows, exactly: a randomised test
-  holds the two paths together); other text goes through the grapheme segmenter only around what isn't ASCII
-  (between two printable ASCII characters is always a boundary); short strings' widths (a bullet, a border) are
+- **Wrapping is mostly ASCII work** (`core/rendering/layout/wrap.ts`, `core/foundation/text/width.ts`): a paragraph of
+  printable ASCII is wrapped by ranges of its text, not a grapheme object per character (the same rows, exactly: a
+  randomised test holds the two paths together); other text goes through the grapheme segmenter only around what isn't
+  ASCII (between two printable ASCII characters is always a boundary); short strings' widths (a bullet, a border) are
   remembered; and a code block is highlighted once, not again at each width.
 
 Measured with `bun scripts/bench.ts` (median, this machine, 2026-10-01):
@@ -676,3 +676,29 @@ ordinary note needs.
 [o102]: ../../src/core/application/distribution/skill-lifecycle.ts
 [o103]: ../../src/core/application/distribution/report.ts
 [o104]: ../../src/core/workspace/git/merge/stale.ts
+
+[o105]: ../../src/core/rendering/media/diagrams/diagrams.ts
+[o106]: ../../src/core/rendering/media/diagrams/diagram-jobs.ts
+[o107]: ../../src/core/rendering/media/diagrams/diagram-render.ts
+[o108]: ../../src/core/rendering/media/diagrams/diagram-cache.ts
+[o109]: ../../src/core/rendering/media/math.ts
+[o110]: ../../src/core/rendering/media/images/svg.ts
+[o111]: ../../src/core/rendering/media/paint/paint-jobs.ts
+[o112]: ../../src/core/rendering/media/images/imagecache.ts
+[o113]: ../../src/core/rendering/export/assemble.ts
+[o114]: ../../src/core/rendering/export/mark.ts
+[o115]: ../../src/core/rendering/export/formats/pdf.ts
+[o116]: ../../src/core/rendering/export/assets/fonts.ts
+[o117]: ../../src/core/rendering/export/formats/hast.ts
+[o118]: ../../src/core/rendering/export/formats/epub.ts
+[o119]: ../../src/core/rendering/export/formats/markdown.ts
+[o120]: ../../src/core/rendering/export/assets/images.ts
+[o121]: ../../src/core/rendering/export/assets/convert.ts
+[o122]: ../../src/core/rendering/export/assets/style.ts
+[o123]: ../../src/core/rendering/export/index.ts
+[o124]: ../../src/core/rendering/export/jobs.ts
+[o125]: ../../src/core/rendering/export/formats/zip.ts
+[o126]: ../../src/core/rendering/layout/diff/diff.ts
+[o127]: ../../src/core/rendering/layout/diff/blockdiff.ts
+[o128]: ../../src/core/rendering/layout/diff/splitdiff.ts
+[o129]: ../../src/core/rendering/layout/screen.ts

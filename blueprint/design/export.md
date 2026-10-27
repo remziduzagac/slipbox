@@ -6,7 +6,7 @@ Notes as a document for people who don't use slipbox, in five formats: Word (`10
 is installed (D180, D184). A format that would need one (a headless browser, `10.7`; pandoc, `10.8`) isn't offered.
 Word comes first, and an export goes beside its note by default (D185).
 
-The code is in `src/core/export/`:
+The code is in `src/core/rendering/export/`:
 
 | Module | What it does |
 | --- | --- |
@@ -23,28 +23,28 @@ The code is in `src/core/export/`:
 | `style.ts` | the look on paper: print's colours, a callout's, code's; the stylesheet |
 | `index.ts` | the formats, by name; where an export goes; writing it |
 | `mark.ts` | each format's mark, that slipbox wrote it: read by `index.ts`; Markdown's also by the graph's lookups |
-| `jobs.ts` | an export as a job in a worker of its own (`src/core/export-worker.ts`), its turn, its cancel |
+| `jobs.ts` | an export as a job in a worker of its own ([export-worker.ts][o1]), its turn, its cancel |
 | `spool.ts` | private staged files, bounded copying and atomic publication by the owner |
 | `stream.ts` | format dispatch into a disk sink and bounded UTF-8 encoding |
 | `zip.ts` | EPUB's ZIP, an entry at a time, each with its sizes in its own header |
 | `reads.ts` | what a job reads: regular files only, each note parsed once in a job |
 
-`src/core/imagecache.ts` is where a picture on the web is kept once the TUI has fetched it (`12.12`). An export reads
-it, and fetches nothing. Every writer is loaded when it's first used, not at start.
+`src/core/rendering/media/images/imagecache.ts` is where a picture on the web is kept once the TUI has fetched it
+(`12.12`). An export reads it, and fetches nothing. Every writer is loaded when it's first used, not at start.
 
 ## Background jobs
 
-`core/export/jobs.ts` runs a whole export in a worker of its own (`core/export-worker.ts`): its graph, the assembly
-and the writer. The request carries the location, configuration, asked home folders, thorough-link behavior, known
-aliases and whether the owner's graph reads the persisted index; the worker's reads it too, so notes parsed already
-aren't parsed again. Cross-root reach is recreated only where the parent had it. The worker is given the environment
-as the owner has it when the job starts (Bun would give it the one the process started with), so it finds the cache
-and state the owner does. It reads saved files and fetches nothing; `reads.ts` reads notes and pictures only when they
-are regular files, and parses each note once in a job. An embedded note that can't be read stays its name, as on the
-screen. The worker reports stages (reading, assembling, writing), streams output into a private staging directory
-created by its owner, and returns only a manifest of lengths and attachment names. It never writes the destination.
-CLI callers await the same job. The buffered `exportNotes` helper remains available for callers that need bytes; the
-CLI and TUI use `prepareExport` and `PreparedExport.publish`.
+`core/rendering/export/jobs.ts` runs a whole export in a worker of its own (`core/rendering/export/export-worker.ts`):
+its graph, the assembly and the writer. The request carries the location, configuration, asked home folders,
+thorough-link behavior, known aliases and whether the owner's graph reads the persisted index; the worker's reads it
+too, so notes parsed already aren't parsed again. Cross-root reach is recreated only where the parent had it. The worker
+is given the environment as the owner has it when the job starts (Bun would give it the one the process started with),
+so it finds the cache and state the owner does. It reads saved files and fetches nothing; `reads.ts` reads notes and
+pictures only when they are regular files, and parses each note once in a job. An embedded note that can't be read stays
+its name, as on the screen. The worker reports stages (reading, assembling, writing), streams output into a private
+staging directory created by its owner, and returns only a manifest of lengths and attachment names. It never writes the
+destination. CLI callers await the same job. The buffered `exportNotes` helper remains available for callers that need
+bytes; the CLI and TUI use `prepareExport` and `PreparedExport.publish`.
 
 Two jobs run at once; another waits its turn, in order, and is never refused. A job has no deadline: a long book, or
 many pictures to convert, takes as long as it needs. Cancellation or a worker failure settles it, terminates its worker
@@ -90,10 +90,10 @@ These are bounds on output transport and publication, not on the assembled tree,
 third-party encoder allocations. No total-process memory ceiling is claimed. Nothing an export reads or makes is capped
 by its size: a note, a picture, all of them together, the document and its output are as big as they are, as an export
 on the main thread had them, but for an EPUB: a ZIP written without ZIP64, refused past 4 GiB or 65,535 files
-(`core/export/zip.ts`). Worker isolation keeps their CPU work away from input; it is not an OS memory sandbox or
-independent native-fault containment. Existing writers are JavaScript/WebAssembly; a helper process is unnecessary for
-the measured CPU scheduling problem, but remains an option for stronger future containment. A worker the export's starts
-(the diagrams') is found from the compiled binary's root, whichever entry point starts it
+(`core/rendering/export/formats/zip.ts`). Worker isolation keeps their CPU work away from input; it is not an OS memory
+sandbox or independent native-fault containment. Existing writers are JavaScript/WebAssembly; a helper process is
+unnecessary for the measured CPU scheduling problem, but remains an option for stronger future containment. A worker the
+export's starts (the diagrams') is found from the compiled binary's root, whichever entry point starts it
 (`core/foundation/workers/url.ts`).
 
 A local 279,890-byte document measured before/after this boundary (2026-10-18, single runs; #176): PDF 763/778 ms,
@@ -363,3 +363,5 @@ distributed binary owes them: [distribution.md](distribution.md) § Notices.
 - PDF: emoji are black and white, and only where a font that draws them is on the machine (none, a box); colour is
   deferred (`10.13`, D189). On a machine with no fonts at all, a compiled slipbox can't make one: PDF's own fonts, which
   it would fall back on, aren't in the build (it says so).
+
+[o1]: ../../src/core/rendering/export/export-worker.ts

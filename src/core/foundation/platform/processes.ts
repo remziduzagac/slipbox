@@ -1,5 +1,5 @@
 // Other processes, as slipbox asks after them: a running TUI's unsaved notes (stale.ts), an export's spool
-// (export/spool.ts), an upgrade's lock (update.ts).
+// (rendering/export/spool.ts), an upgrade's lock (update.ts).
 
 /** A process still running (or one this user can't signal: someone else's, so not ours to judge). */
 export function alive(pid: number): boolean {

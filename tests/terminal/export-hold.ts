@@ -5,7 +5,7 @@
 // instead: its document in place, the export not yet told. A check's tool: slipbox itself never reads these.
 
 import { existsSync, renameSync, rmSync, writeFileSync } from "node:fs";
-import { PreparedExport } from "../../src/core/export/spool.ts";
+import { PreparedExport } from "../../src/core/rendering/export/spool.ts";
 
 const { EXPORT_HOLD_GO: go, EXPORT_HOLD_STATE: stateFile, EXPORT_HOLD_AT: at } = process.env;
 if (go && stateFile) {

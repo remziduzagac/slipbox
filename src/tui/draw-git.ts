@@ -6,7 +6,7 @@
 import type { App } from "./app.ts";
 import { type Canvas, drawText } from "./canvas.ts";
 import { type Geometry, type Rect, roleStyle } from "./draw.ts";
-import type { Color, Role } from "../core/theme/theme.ts";
+import type { Color, Role } from "../core/rendering/theme/theme.ts";
 import { splitAtWidth, stringWidth, truncate, truncateStart } from "../core/foundation/text/width.ts";
 import { sanitize } from "../core/foundation/text/sanitize.ts";
 import { headOf } from "../core/workspace/git/git.ts";

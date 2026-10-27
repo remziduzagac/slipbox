@@ -13,13 +13,20 @@ import { snippetMark } from "./snippets.ts";
 import { type Spot, spellSpots } from "./spelling.ts";
 import { type GitSign, gitSigns } from "../core/workspace/git/gitsigns.ts";
 import { codeBlocks } from "./code.ts";
-import type { Role, Color, Theme } from "../core/theme/theme.ts";
-import { LENS_COUNTERS } from "../core/layout/live.ts";
+import type { Role, Color, Theme } from "../core/rendering/theme/theme.ts";
+import { LENS_COUNTERS } from "../core/rendering/layout/markdown/live.ts";
 import { sanitize } from "../core/foundation/text/sanitize.ts";
-import type { Glyphs } from "../core/glyphs.ts";
-import { type CodeScroll, extentOf, type Line, type Layout, scrolledCol, scrolledInSight } from "../core/layout/ir.ts";
+import type { Glyphs } from "../core/rendering/theme/glyphs.ts";
+import {
+  type CodeScroll,
+  extentOf,
+  type Line,
+  type Layout,
+  scrolledCol,
+  scrolledInSight,
+} from "../core/rendering/layout/ir.ts";
 import type { CommentLink } from "../core/documents/syntax/syntax.ts";
-import { spanStyle } from "../core/layout/style.ts";
+import { spanStyle } from "../core/rendering/layout/style.ts";
 
 function paneIsActive(app: App, view: View): boolean {
   // The floating editor, while it's open, is the only active window (3.20).

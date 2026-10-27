@@ -39,10 +39,16 @@ import {
   slugify,
   visit,
 } from "../src/core/documents/markdown/parse.ts";
-import { mathRows, mathText } from "../src/core/math.ts";
-import { flattenVars, loadRasterizer, looksLikeSvg, machineFont, rasterizer } from "../src/core/svg.ts";
-import { loadMermaid, mermaidSvg } from "../src/core/diagrams.ts";
-import { loadTypesetter } from "../src/core/typeset.ts";
+import { mathRows, mathText } from "../src/core/rendering/media/math.ts";
+import {
+  flattenVars,
+  loadRasterizer,
+  looksLikeSvg,
+  machineFont,
+  rasterizer,
+} from "../src/core/rendering/media/images/svg.ts";
+import { loadMermaid, mermaidSvg } from "../src/core/rendering/media/diagrams/diagrams.ts";
+import { loadTypesetter } from "../src/core/rendering/media/typeset.ts";
 import { extractFromSource } from "../src/core/workspace/graph/graph.ts";
 import {
   type LintIssue,
@@ -64,14 +70,14 @@ import {
   renameFootnote,
   type TextEdit,
 } from "../src/core/documents/model/footnotes.ts";
-import { layoutToAnsi } from "../src/core/layout/ansi.ts";
-import { renderMarkdown } from "../src/core/layout/render.ts";
-import { layoutSource } from "../src/core/layout/source.ts";
+import { layoutToAnsi } from "../src/core/rendering/layout/ansi.ts";
+import { renderMarkdown } from "../src/core/rendering/layout/markdown/render.ts";
+import { layoutSource } from "../src/core/rendering/layout/code/source.ts";
 import { expandTabs, sanitize, sanitizeMap } from "../src/core/foundation/text/sanitize.ts";
-import { base16ToPalette, parseBase16 } from "../src/core/theme/base16.ts";
-import { applyColorOverrides, listThemes, loadTheme, ROLES } from "../src/core/theme/index.ts";
-import { blend, colorHex, hexToRgb, luminance } from "../src/core/theme/theme.ts";
-import { glyphsFor } from "../src/core/glyphs.ts";
+import { base16ToPalette, parseBase16 } from "../src/core/rendering/theme/base16.ts";
+import { applyColorOverrides, listThemes, loadTheme, ROLES } from "../src/core/rendering/theme/index.ts";
+import { blend, colorHex, hexToRgb, luminance } from "../src/core/rendering/theme/theme.ts";
+import { glyphsFor } from "../src/core/rendering/theme/glyphs.ts";
 import { WriteRefused, writeNote } from "../src/core/foundation/platform/fsutil.ts";
 import { listTasks, toggleTask } from "../src/core/documents/editing/tasks.ts";
 import {
@@ -1091,7 +1097,7 @@ describe("source layout (4.13)", () => {
     expect(L.lines[2]!.srcMap!.end).toBe(8);
   });
   test("source fences use their language, keep their text, and recolour cached lines after a language edit", async () => {
-    const { newSourceCache } = await import("../src/core/layout/source.ts");
+    const { newSourceCache } = await import("../src/core/rendering/layout/code/source.ts");
     const cache = newSourceCache();
     const opts = { width: 80, wrap: true, headings: "scan" as const };
     const source = "~~~ts\nconst answer = 42;\n~~~\n# After\n";
@@ -2451,7 +2457,7 @@ describe("review cycle 5 (core, from mutation testing)", () => {
 
 describe("review cycle 5 (core, colour depth)", () => {
   test("NO_COLOR and a pipe mean none; COLORTERM and known terminals truecolor; TERM for the rest", async () => {
-    const { detectColorDepth } = await import("../src/core/layout/ansi.ts");
+    const { detectColorDepth } = await import("../src/core/rendering/layout/ansi.ts");
     expect(detectColorDepth({ NO_COLOR: "1", COLORTERM: "truecolor" }, true)).toBe("none");
     expect(detectColorDepth({ NO_COLOR: "", COLORTERM: "truecolor" }, true)).toBe("truecolor"); // empty NO_COLOR is unset
     expect(detectColorDepth({ COLORTERM: "truecolor" }, false)).toBe("none");
@@ -2466,7 +2472,7 @@ describe("review cycle 5 (core, colour depth)", () => {
 
 describe("the incremental source layout (15.1)", () => {
   test("after any edit, reusing the last layout's lines gives exactly a fresh layout", async () => {
-    const { layoutSource, newSourceCache, scanHeadings } = await import("../src/core/layout/source.ts");
+    const { layoutSource, newSourceCache, scanHeadings } = await import("../src/core/rendering/layout/code/source.ts");
     let seed = 5;
     const rand = (n: number) => {
       seed = (Math.imul(seed, 1103515245) + 12345) & 0x7fffffff;
@@ -2602,7 +2608,7 @@ describe("SVG drawn (12.15), and what slipbox draws as pictures (12.16, 12.17)",
     // In a process of its own: the layout library sets itself up once, on its first diagram.
     const script = `
       globalThis.window = {}; // as OpenTUI's renderer leaves it
-      const d = await import(${JSON.stringify(join(import.meta.dir, "../src/core/diagrams.ts"))});
+      const d = await import(${JSON.stringify(join(import.meta.dir, "../src/core/rendering/media/diagrams/diagrams.ts"))});
       await d.loadMermaid();
       const colors = { bg: "#ffffff", fg: "#000000", line: "#888888", accent: "#0000ff", muted: "#999999" };
       d.mermaidSvg("graph TD\\n  A-->B", colors, "DejaVu Sans");
@@ -3049,7 +3055,7 @@ describe("big notes: parsed on other threads, rendered faster (15.1)", () => {
   });
 
   test("a code block is highlighted once: a re-wrap reuses its colours", async () => {
-    const { highlight } = await import("../src/core/layout/highlight.ts");
+    const { highlight } = await import("../src/core/rendering/layout/markdown/highlight.ts");
     const a = highlight("const x = 1;\nfunction f() { return x; }", "ts");
     expect(a).not.toBeNull();
     expect(highlight("const x = 1;\nfunction f() { return x; }", "TS")).toBe(a); // the same lists
@@ -3292,7 +3298,7 @@ describe("links out of data files (16.15)", () => {
   });
   test("a reference key's list, number, boolean or null is no link (never a broken `[base.json]`)", async () => {
     const { dataLinks, parseData } = await import("../src/core/documents/model/data.ts");
-    const { renderTree } = await import("../src/core/layout/render.ts");
+    const { renderTree } = await import("../src/core/rendering/layout/markdown/render.ts");
     const targets = (format: string, src: string) => dataLinks(parseData(format, src).tree).map((l) => l.target);
     expect(
       targets(
@@ -3682,7 +3688,7 @@ describe("more languages: Swift, the web's, PHP, Dockerfile, Ruby, C and C++ (16
   });
 
   test("the source view colours a part's lines in its language: a component's script as TypeScript, its template as markup", async () => {
-    const { layoutSource } = await import("../src/core/layout/source.ts");
+    const { layoutSource } = await import("../src/core/rendering/layout/code/source.ts");
     const src = '<template>\n  <p>const</p>\n</template>\n<script setup lang="ts">\nconst a = 1;\n</script>\n';
     const roles = (languageAt?: (line: number) => string | undefined) => {
       const l = layoutSource(src, {
@@ -3698,7 +3704,7 @@ describe("more languages: Swift, the web's, PHP, Dockerfile, Ruby, C and C++ (16
     expect(roles((line) => (line === 5 ? "typescript" : undefined))).toEqual(["text", "syn_keyword"]); // a word in the template is text
     expect(roles()[1]).toBe("text"); // without the parts known: markup throughout
     // The same text laid out again once the parts are known (a buffer keeps its layout): the line is coloured anew.
-    const { newSourceCache } = await import("../src/core/layout/source.ts");
+    const { newSourceCache } = await import("../src/core/rendering/layout/code/source.ts");
     const cache = newSourceCache();
     const opts = { width: 80, wrap: false, headings: [], language: "vue" };
     layoutSource(src, opts, cache);
@@ -4165,12 +4171,14 @@ describe("the boundary check (0.3, scripts/check-boundary.ts)", () => {
   test("the diagram renderer imported for what runs, outside its worker: reported; its types anywhere (#164)", () => {
     const render = "export type Drawn = { rows: string[] };\nexport const renderText = () => null;\n";
     const r = check({
-      "src/core/diagram-render.ts": render,
-      "src/core/diagram-worker.ts": 'import { renderText } from "./diagram-render.ts";\nexport const w = renderText;\n',
-      "src/core/diagrams.ts":
+      "src/core/rendering/media/diagrams/diagram-render.ts": render,
+      "src/core/rendering/media/diagrams/diagram-worker.ts":
+        'import { renderText } from "./diagram-render.ts";\nexport const w = renderText;\n',
+      "src/core/rendering/media/diagrams/diagrams.ts":
         'import type { Drawn } from "./diagram-render.ts";\nexport type { Drawn } from "./diagram-render.ts";\n',
-      "src/core/layout/render.ts": 'import { renderText } from "../diagram-render.ts";\nexport const l = renderText;\n',
-      "src/tui/app.ts": 'export { renderText } from "../core/diagram-render.ts";\n',
+      "src/core/rendering/layout/markdown/render.ts":
+        'import { renderText } from "../../media/diagrams/diagram-render.ts";\nexport const l = renderText;\n',
+      "src/tui/app.ts": 'export { renderText } from "../core/rendering/media/diagrams/diagram-render.ts";\n',
     });
     expect(r.code).toBe(1);
     expect(
@@ -4180,8 +4188,8 @@ describe("the boundary check (0.3, scripts/check-boundary.ts)", () => {
         .map((l) => l.trim())
         .sort(),
     ).toEqual([
-      "src/core/layout/render.ts: imports ../diagram-render.ts (only src/core/diagram-worker.ts may: it runs there alone)",
-      "src/tui/app.ts: imports ../core/diagram-render.ts (only src/core/diagram-worker.ts may: it runs there alone)",
+      "src/core/rendering/layout/markdown/render.ts: imports ../../media/diagrams/diagram-render.ts (only src/core/rendering/media/diagrams/diagram-worker.ts may: it runs there alone)",
+      "src/tui/app.ts: imports ../core/rendering/media/diagrams/diagram-render.ts (only src/core/rendering/media/diagrams/diagram-worker.ts may: it runs there alone)",
     ]);
   });
 });
@@ -4920,10 +4928,13 @@ describe("spelling (25.6)", () => {
     );
     // From a module bundled into a worker's entry point (the export's, starting the diagrams'): the same place, not
     // core/core/, where Bun finds no module and the worker never starts.
-    expect(workerUrl("diagram-worker.ts", "file:///$bunfs/root/core/export-worker.js")).toBe(
-      "file:///$bunfs/root/core/diagram-worker.ts",
-    );
-    expect(workerUrl("../tui/opentui.ts", "file:///$bunfs/root/core/export-worker.js")).toBe(
+    expect(
+      workerUrl(
+        "rendering/media/diagrams/diagram-worker.ts",
+        "file:///$bunfs/root/core/rendering/export/export-worker.js",
+      ),
+    ).toBe("file:///$bunfs/root/core/rendering/media/diagrams/diagram-worker.ts");
+    expect(workerUrl("../tui/opentui.ts", "file:///$bunfs/root/core/rendering/export/export-worker.js")).toBe(
       "file:///$bunfs/root/tui/opentui.ts",
     );
   });
@@ -6767,7 +6778,7 @@ describe("WSL (14.12)", () => {
     const { windowsDriveNote, windowsDriveOf, windowsFontsDir } = await import(
       "../src/core/foundation/platform/wsl.ts"
     );
-    const { fontDirs } = await import("../src/core/export/fonts.ts");
+    const { fontDirs } = await import("../src/core/rendering/export/assets/fonts.ts");
     const base = mkdtempSync(join(sandbox, "wsl-"));
     const c = join(base, "mnt", "c");
     mkdirSync(join(c, "Users", "u", "notes"), { recursive: true });

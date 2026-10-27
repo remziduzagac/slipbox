@@ -30,7 +30,7 @@ import {
   pos,
   problemListed,
 } from "../check.ts";
-import { loadTheme, type Role } from "../../../src/core/theme/index.ts";
+import { loadTheme, type Role } from "../../../src/core/rendering/theme/index.ts";
 import { type Session, sleep } from "../session.ts";
 
 /** A role's foreground in a built-in theme, as the terminal reports it. */

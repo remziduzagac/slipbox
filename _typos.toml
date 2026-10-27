@@ -20,7 +20,7 @@ extend-ignore-re = [
   "(?s)//\\s*typos: off.*?//\\s*typos: on",
   # Keys after the leader, `␣fo` or `␣tQ`: keys, not words.
   "␣[A-Za-z]+",
-  # A theme's palette, sixteen colours in hex (src/core/theme/builtin.ts): `dcd7ba` is no word.
+  # A theme's palette, sixteen colours in hex (src/core/rendering/theme/builtin.ts): `dcd7ba` is no word.
   "\\b[0-9a-f]{6}(?: [0-9a-f]{6}){15}\\b",
 ]
 

@@ -19,11 +19,17 @@ import {
   type ExportDoc,
   type ExportPicture,
   headingAnchor,
-} from "../src/core/export/assemble.ts";
-import { convertPictures, decodeBmp, decodeWebp, encodePng, toPng } from "../src/core/export/convert.ts";
-import { bookmarkName, toDocx } from "../src/core/export/docx.ts";
-import { findFonts } from "../src/core/export/fonts.ts";
-import { rasterInfo, rasterOf } from "../src/core/export/images.ts";
+} from "../src/core/rendering/export/assemble.ts";
+import {
+  convertPictures,
+  decodeBmp,
+  decodeWebp,
+  encodePng,
+  toPng,
+} from "../src/core/rendering/export/assets/convert.ts";
+import { bookmarkName, toDocx } from "../src/core/rendering/export/formats/docx.ts";
+import { findFonts } from "../src/core/rendering/export/assets/fonts.ts";
+import { rasterInfo, rasterOf } from "../src/core/rendering/export/assets/images.ts";
 import {
   defaultTarget,
   EXPORT_MARK,
@@ -34,15 +40,15 @@ import {
   isExport,
   NotAnExport,
   writeExport,
-} from "../src/core/export/index.ts";
-import { prepareExport } from "../src/core/export/jobs.ts";
-import { pdfDocument, splitByFont, toPdf, words } from "../src/core/export/pdf.ts";
-import { TINT } from "../src/core/export/style.ts";
+} from "../src/core/rendering/export/index.ts";
+import { prepareExport } from "../src/core/rendering/export/jobs.ts";
+import { pdfDocument, splitByFont, toPdf, words } from "../src/core/rendering/export/formats/pdf.ts";
+import { TINT } from "../src/core/rendering/export/assets/style.ts";
 import { slugify } from "../src/core/documents/markdown/parse.ts";
 import { userFolders } from "../src/core/foundation/platform/paths.ts";
 import { openGraph } from "../src/core/workspace/graph/graph.ts";
-import { remoteImageName } from "../src/core/imagecache.ts";
-import { loadRasterizer } from "../src/core/svg.ts";
+import { remoteImageName } from "../src/core/rendering/media/images/imagecache.ts";
+import { loadRasterizer } from "../src/core/rendering/media/images/svg.ts";
 import { locateVault } from "../src/core/workspace/vaults/vault.ts";
 
 // Drawing diagrams and maths, writing a document: slow on a loaded machine, not stuck.

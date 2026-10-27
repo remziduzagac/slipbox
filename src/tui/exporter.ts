@@ -1,8 +1,8 @@
 // Export in the TUI (10.x): notes picked, a format chosen, a place to write it asked — beside the note, or where you
 // say — and written there, never over a note; over a file that isn't an earlier export only once you say so (D243).
 
-import { prepareExport } from "../core/export/jobs.ts";
-import type { PreparedExport } from "../core/export/spool.ts";
+import { prepareExport } from "../core/rendering/export/jobs.ts";
+import type { PreparedExport } from "../core/rendering/export/spool.ts";
 import { statSync } from "node:fs";
 import { basename, dirname, isAbsolute, join, relative, sep } from "node:path";
 import { climbsOut, readJson, writeJson } from "../core/foundation/platform/fsutil.ts";
@@ -13,7 +13,7 @@ import {
   FORMATS,
   formatFor,
   NotAnExport,
-} from "../core/export/index.ts";
+} from "../core/rendering/export/index.ts";
 import { stateDir, userFolders } from "../core/foundation/platform/paths.ts";
 import { openSaveAs, type SaveAsOverlay, type SavePlace } from "./saveas.ts";
 import { rank } from "./match.ts";

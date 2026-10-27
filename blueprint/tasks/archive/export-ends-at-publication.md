@@ -40,9 +40,9 @@ on a narrow screen, and the first of the boxes on a wide one.
 ## Out of scope
 
 - The CLI's export (`src/cli/`), which awaits its cleanup before it exits and has no cancel but a signal.
-- An export that fails or is cancelled while it's prepared: `ExportJob.prepare` (`src/core/export/jobs.ts`) removes
-  its staging before it settles, so the TUI says why only after that, and a removal that fails replaces the export's
-  error. Core code the CLI shares, as on `dev`.
+- An export that fails or is cancelled while it's prepared: `ExportJob.prepare` (`src/core/rendering/export/jobs.ts`)
+  removes its staging before it settles, so the TUI says why only after that, and a removal that fails replaces the
+  export's error. Core code the CLI shares, as on `dev`.
 
 ## References
 
@@ -102,13 +102,13 @@ on a narrow screen, and the first of the boxes on a wide one.
   to clear; a throw while the message is made still clears it; nothing else reads `jobs`; the queue's turn is given
   back when the worker ends, before publication; no test or check took `exported …` to mean the staging was gone).
   Verified, and taken:
-  - `publish` itself (`src/core/export/spool.ts`) awaits `rm` of every temporary, already renamed, after the
-    document's rename and its last check of the signal: a cancel there was taken and ignored, `exported …` after it,
-    the window longer the more files beside the document. Reproduced: a unit test whose `publish` cancels as it
-    returns, failing on the fix as it was. Fixed by telling the TUI as soon as the document is in place: `publish`
-    takes a `published` callback, called after the last rename, before the temporaries are cleared, and the TUI's ends
-    the job there. The CLI passes none. A terminal check too: `export-hold.ts` takes `EXPORT_HOLD_AT=publication`, the
-    first publication held once it has returned, before the TUI goes on.
+  - `publish` itself (`src/core/rendering/export/spool.ts`) awaits `rm` of every temporary, already renamed, after the
+    document's rename and its last check of the signal: a cancel there was taken and ignored, `exported …` after it, the
+    window longer the more files beside the document. Reproduced: a unit test whose `publish` cancels as it returns,
+    failing on the fix as it was. Fixed by telling the TUI as soon as the document is in place: `publish` takes a
+    `published` callback, called after the last rename, before the temporaries are cleared, and the TUI's ends the job
+    there. The CLI passes none. A terminal check too: `export-hold.ts` takes `EXPORT_HOLD_AT=publication`, the first
+    publication held once it has returned, before the TUI goes on.
   - The design's sentence and this task's criterion said a failed or stopped export ends before its staging is
     cleared: true while it's published, not while it's prepared, where `ExportJob.prepare` removes the staging before
     it settles. Narrowed, and that path put out of scope above.
@@ -163,5 +163,5 @@ on a narrow screen, and the first of the boxes on a wide one.
   - `tests/terminal/checks/outside-and-code.ts` past 1,500 lines: 1,700 on `dev`; the rule and `check:size` are for
     `src/` (`tests/tui.test.ts` is past 21,000).
 - 2026-10-24: Ran: tests/export-jobs-tui.test.ts and tests/export-streaming.test.ts (24 pass); the terminal checks
-  `export:`, `notes: exported`, `notes: an export cancelled` (15/15, `SLIPBOX_TERMINAL_JOBS=2`); the typecheck, the lint,
-  `check:docs`. The maintainer's call: one round, then handed over.
+  `export:`, `notes: exported`, `notes: an export cancelled` (15/15, `SLIPBOX_TERMINAL_JOBS=2`); the typecheck, the
+  lint, `check:docs`. The maintainer's call: one round, then handed over.

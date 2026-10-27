@@ -17,11 +17,11 @@ isolation. This review did not build or inspect a release binary, run vulnerabil
 It declares PDF, DOCX, MathJax, Hunspell and tree-sitter packages. These counts do not verify the quoted total of
 204 or establish its scope. The build script uses Bun compilation with main, parse-worker and spell-worker entries.
 
-*Read:* `src/core/export/pdf.ts:13` imports PDFKit; `src/core/export/docx.ts:30` imports DOCX;
-`src/core/typeset.ts:13` loads MathJax dynamically. `src/core/documents/markdown/parse-pool.ts:31` and
-`src/core/documents/diagnostics/spell-thread.ts:18` create workers. These observations identify review targets, not
-demonstrated security
-boundaries or a complete map of their inputs and runtime permissions.
+*Read:* `src/core/rendering/export/formats/pdf.ts:13` imports PDFKit; `src/core/rendering/export/formats/docx.ts:30`
+imports DOCX; `src/core/rendering/media/typeset.ts:13` loads MathJax dynamically.
+`src/core/documents/markdown/parse-pool.ts:31` and `src/core/documents/diagnostics/spell-thread.ts:18` create workers.
+These observations identify review targets, not demonstrated security boundaries or a complete map of their inputs and
+runtime permissions.
 
 *Read:* [Bun's executable documentation](https://bun.sh/docs/bundler/executables) describes compilation and bundled
 resources. The actual module/asset contents of Slipbox's released artifacts remain to be inspected.
@@ -51,10 +51,10 @@ The accepted choice is
 That walk is not an exact bundle manifest. `scripts/audit.ts:37` uses a reasoned package-absence assertion for an
 accepted advisory. The inspected dependency gate has no reviewed package-membership baseline.
 
-*Read:* `src/core/export/index.ts:44` and line 51 dynamically load DOCX and PDF implementations; those modules
-statically import their dependencies. Therefore a blanket ban on static heavy-package imports would reject an
-existing deferred feature path. `src/core/documents/diagnostics/spell-worker.ts:5` imports its spelling implementation
-in the worker.
+*Read:* `src/core/rendering/export/index.ts:44` and line 51 dynamically load DOCX and PDF implementations; those modules
+statically import their dependencies. Therefore a blanket ban on static heavy-package imports would reject an existing
+deferred feature path. `src/core/documents/diagnostics/spell-worker.ts:5` imports its spelling implementation in the
+worker.
 
 *Read:* `src/core/documents/servers/install.ts:62` uses frozen installation with scripts disabled, loading the embedded
 tool

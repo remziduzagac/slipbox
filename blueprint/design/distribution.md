@@ -63,25 +63,22 @@ Dependabot and the scanner keep the dependencies current and watched: [repositor
 this machine's when none is named — with package.json's own `build`, so Bun's autoloading is always off: the binary
 reads no `bunfig.toml`, `.env`, `tsconfig.json` or `package.json` of the folder it starts in (`14.1`, D195;
 [trust.md](trust.md) § Bun's own reading). Its entry points are `src/main.ts` and each worker's script
-(`core/diagram-worker.ts`, `core/export-worker.ts`, `core/paint-worker.ts`, `core/documents/markdown/parse-worker.ts`,
+(`core/rendering/media/diagrams/diagram-worker.ts`, `core/rendering/export/export-worker.ts`,
+`core/rendering/media/paint/paint-worker.ts`, `core/documents/markdown/parse-worker.ts`,
 `core/workspace/search/regex-worker.ts`, `core/documents/diagnostics/spell-worker.ts`,
-`core/documents/syntax/syntax-worker.ts`, and
-`tui/opentui.ts`, the
-pictures' decoder),
-laid out from `src/` (`--root=src`; left to itself, Bun keeps `src/` in their paths past eight entries): Bun puts a
-worker in the binary only when it is named, and `core/foundation/workers/url.ts` finds it there by its path under
-`src/`; a test holds
-the list to the workers started, and the compiled binary's test runs its spelling, on its thread (D232). It defines the
-release in it (`core/application/distribution/release.ts`, `RELEASE`: the repository releases come from and the platform
-it's for). A Mac's
-binary built on a Mac is signed ad hoc again (§ Signing). A target built for this machine is run once (`--version`)
-first. Each is packed, with slipbox's `LICENSE` and the third-party notices, as `slipbox-<version>-<target>.tar.gz`, a
-folder of that name inside. Beside each pack, `build` writes its SBOM, `slipbox-<version>-<target>.cdx.json` (CycloneDX
-1.6, JSON), from the same walk as its notices (`check-deps.ts`' `sbom`): slipbox; each package bundled, with its
-licence, its source and the packages it depends on; the code compiled into packages (Hunspell, libwebp); and Bun, the
-runtime. There's one per pack because the walk differs by platform: a platform's OpenTUI package is installed only
-there. `finish` writes `SHA256SUMS` over the packs, refusing another version's packs or SBOMs beside them, and the
-installer.
+`core/documents/syntax/syntax-worker.ts`, and `tui/opentui.ts`, the pictures' decoder), laid out from `src/`
+(`--root=src`; left to itself, Bun keeps `src/` in their paths past eight entries): Bun puts a worker in the binary only
+when it is named, and `core/foundation/workers/url.ts` finds it there by its path under `src/`; a test holds the list to
+the workers started, and the compiled binary's test runs its spelling, on its thread (D232). It defines the release in
+it (`core/application/distribution/release.ts`, `RELEASE`: the repository releases come from and the platform it's for).
+A Mac's binary built on a Mac is signed ad hoc again (§ Signing). A target built for this machine is run once
+(`--version`) first. Each is packed, with slipbox's `LICENSE` and the third-party notices, as
+`slipbox-<version>-<target>.tar.gz`, a folder of that name inside. Beside each pack, `build` writes its SBOM,
+`slipbox-<version>-<target>.cdx.json` (CycloneDX 1.6, JSON), from the same walk as its notices (`check-deps.ts`'
+`sbom`): slipbox; each package bundled, with its licence, its source and the packages it depends on; the code compiled
+into packages (Hunspell, libwebp); and Bun, the runtime. There's one per pack because the walk differs by platform: a
+platform's OpenTUI package is installed only there. `finish` writes `SHA256SUMS` over the packs, refusing another
+version's packs or SBOMs beside them, and the installer.
 
 | Asset | Bun's target |
 | --- | --- |

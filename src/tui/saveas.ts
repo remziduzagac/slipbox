@@ -6,7 +6,7 @@
 
 import { mkdirSync, readdirSync, statSync } from "node:fs";
 import { dirname, isAbsolute, join, resolve } from "node:path";
-import { namesFolder } from "../core/export/index.ts";
+import { namesFolder } from "../core/rendering/export/index.ts";
 import type { App } from "./app.ts";
 import { keyChar } from "./keys.ts";
 

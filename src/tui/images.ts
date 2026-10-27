@@ -16,9 +16,9 @@ import {
   writeSync,
 } from "node:fs";
 import { extname, join } from "node:path";
-import { remoteImageName } from "../core/imagecache.ts";
+import { remoteImageName } from "../core/rendering/media/images/imagecache.ts";
 import { cacheHome, ensureCacheHome } from "../core/foundation/platform/paths.ts";
-import { looksLikeSvg } from "../core/svg.ts";
+import { looksLikeSvg } from "../core/rendering/media/images/svg.ts";
 
 /** An SVG read for drawing is at most this big (12.15). */
 const MAX_SVG_BYTES = 8 * 1024 * 1024;

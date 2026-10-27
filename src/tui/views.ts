@@ -5,7 +5,7 @@ import { readRegular } from "../core/foundation/platform/fsutil.ts";
 import { taskHolding, toggleTask } from "../core/documents/editing/tasks.ts";
 import { cannotEdit, lineOf, offsetOf, placeAt, typedSelection } from "./editing.ts";
 import { matchBracket } from "../core/documents/editing/brackets.ts";
-import { extentOf, type Layout } from "../core/layout/ir.ts";
+import { extentOf, type Layout } from "../core/rendering/layout/ir.ts";
 import { layoutWidth } from "../core/documents/model/note.ts";
 import { type Anchor, anchorAt, type CursorAnchor, rowFor } from "../core/workspace/session/position.ts";
 import type { TextEdit } from "../core/documents/model/footnotes.ts";

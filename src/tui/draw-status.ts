@@ -6,10 +6,10 @@ import { type Canvas, drawText } from "./canvas.ts";
 import { type Band, type Geometry, pageBg, roleStyle, mid, keyText, CHANGE_MARKER_MS } from "./draw.ts";
 import { keyChar } from "./keys.ts";
 import { stringWidth, truncate, truncateStart, splitAtWidth } from "../core/foundation/text/width.ts";
-import { srcAt } from "../core/layout/ir.ts";
+import { srcAt } from "../core/rendering/layout/ir.ts";
 import { countWords } from "../core/foundation/text/words.ts";
 import { sanitize } from "../core/foundation/text/sanitize.ts";
-import type { Role, Color } from "../core/theme/theme.ts";
+import type { Role, Color } from "../core/rendering/theme/theme.ts";
 import { SEVERITIES, worst } from "../core/documents/diagnostics/diagnostics.ts";
 import { severityGlyph, SEVERITY_ROLE } from "./draw-pane.ts";
 

@@ -177,9 +177,9 @@ Older decisions use these; the design doesn't.
   `SLIPBOX_ROOT`, the `root` field of the CLI's JSON and its values, the settings `[trust] roots`, `walk.root_markers`,
   `capture.location = "root"` and `links.path = "root"`, the explorer's actions `rename_root`, `make_root` and
   `unmake_root`, the colour role `sidebar_root`, the command ids `root.trust` and `root.untrust`, and the state file
-  `roots.json`. The settings' older words, `vault`, `rename_vault`,
-  `make_vault`, `unmake_vault` and `sidebar_vault`, are still read as them, unwarned (DF-D22; `OLD_VALUES` in
-  `core/application/config/config.ts`, `OLD_ROLES` in `core/theme/theme.ts`).
+  `roots.json`. The settings' older words, `vault`, `rename_vault`, `make_vault`, `unmake_vault` and `sidebar_vault`,
+  are still read as them, unwarned (DF-D22; `OLD_VALUES` in `core/application/config/config.ts`, `OLD_ROLES` in
+  `core/rendering/theme/theme.ts`).
 - **scope** (D55, never built): the vault (D56, D80).
 - **session**, for what slipbox restores: a workspace (WSP-D1); the word stays in `ui.restore_session` and
   `session.json`.

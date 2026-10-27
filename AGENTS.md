@@ -11,9 +11,10 @@ a change users will see updates it in the same piece of work, without the bluepr
 ## Rules
 
 - **`src/core/` never imports `src/tui/` or `@opentui/*`**, and `src/cli/` never imports `src/tui/`.
-  `bun run check:boundary` enforces it. Only `src/tui/opentui.ts` and `src/tui/run.ts` touch OpenTUI. Diagrams are
-  drawn in their worker alone: only `src/core/diagram-worker.ts` imports `src/core/diagram-render.ts` for more than
-  types (the same check), since drawing on the screen's thread can freeze it.
+  `bun run check:boundary` enforces it. Only `src/tui/opentui.ts` and `src/tui/run.ts` touch OpenTUI. Diagrams are drawn
+  in their worker alone: only `src/core/rendering/media/diagrams/diagram-worker.ts` imports
+  `src/core/rendering/media/diagrams/diagram-render.ts` for more than types (the same check), since drawing on the
+  screen's thread can freeze it.
 - **Source files have a 1,000-line ceiling, and no class does everything** (D235, ORG-D2). Existing handwritten
   exceptions have exact non-growing caps, never above 1,500. Moves may reset a cap solely for measured import-formatting
   growth, recording its delta in the task (ORG-D2); preserve non-import code/comments and normal formatting.

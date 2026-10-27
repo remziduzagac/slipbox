@@ -19,7 +19,7 @@ import {
   wikiPathCandidates,
 } from "../links/links.ts";
 import { checkoutOf } from "../git/git.ts";
-import { isMarkdownExport } from "../../export/mark.ts";
+import { isMarkdownExport } from "../../rendering/export/mark.ts";
 import { classify } from "../../documents/model/filetypes.ts";
 import type { LinkRef, Target } from "./graph-types.ts";
 import type { Graph } from "./graph.ts";

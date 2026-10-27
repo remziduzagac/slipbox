@@ -54,12 +54,12 @@ export const CHECKS_FOR: [RegExp, string[]][] = [
     /^src\/core\/workspace\/git\/(?:branches\/(?:gitbranches|gitops|gitrebase|gitremote)|history\/gitlog|gitrepos|review\/(?:gitreview|mergereview)|staging\/gitstage|merge\/conflicts)\.ts$/,
     ["git"],
   ],
-  [/^src\/core\/layout\/(diff|splitdiff|blockdiff)\.ts$/, ["git", "conflict"]],
+  [/^src\/core\/rendering\/layout\/diff\/(diff|splitdiff|blockdiff)\.ts$/, ["git", "conflict"]],
   [/^src\/tui\/(gitview|gitpanel|gitchanges|githistory|gitmouse|gitremote|gitreposview|gitbranchview)\.ts$/, ["git"]],
   [/^src\/tui\/(draw-git|gitsteady|mergescreen|rebase|review)\.ts$/, ["git"]],
   [/^src\/tui\/diffview\.ts$/, ["git", "conflict"]],
   // Export.
-  [/^src\/core\/export\//, ["export"]],
+  [/^src\/core\/rendering\/export\/(?!export-worker\.ts$)/, ["export"]],
   [/^src\/tui\/exporter\.ts$/, ["export"]],
   // Language servers, the linter, the Problems panel.
   [/^src\/core\/documents\/servers\//, ["language servers", "lint", "problems"]],

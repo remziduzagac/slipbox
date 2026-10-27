@@ -1,17 +1,17 @@
 // The CLI's render and export: a note drawn as the TUI draws it, for a width, in colour or plain (2.x); notes made
 // one document — Word, PDF, HTML, EPUB or Markdown — beside the first, or where `--out` says (10.x).
 
-import { prepareExport } from "../core/export/jobs.ts";
-import { loadMermaid, mermaidPending, withMermaidBatch } from "../core/diagrams.ts";
+import { prepareExport } from "../core/rendering/export/jobs.ts";
+import { loadMermaid, mermaidPending, withMermaidBatch } from "../core/rendering/media/diagrams/diagrams.ts";
 import { statSync } from "node:fs";
 import { basename, extname, resolve } from "node:path";
 import type { Config } from "../core/application/config/config.ts";
-import { glyphsFor, isGlyphMode } from "../core/glyphs.ts";
-import { detectColorDepth, layoutToAnsi, type ColorDepth } from "../core/layout/ansi.ts";
+import { glyphsFor, isGlyphMode } from "../core/rendering/theme/glyphs.ts";
+import { detectColorDepth, layoutToAnsi, type ColorDepth } from "../core/rendering/layout/ansi.ts";
 import { layoutNote, layoutWidth } from "../core/documents/model/note.ts";
-import { applyColorOverrides, loadTheme } from "../core/theme/index.ts";
+import { applyColorOverrides, loadTheme } from "../core/rendering/theme/index.ts";
 import { readText } from "../core/foundation/platform/fsutil.ts";
-import { exportTarget, FORMATS, formatFor, namesFolder } from "../core/export/index.ts";
+import { exportTarget, FORMATS, formatFor, namesFolder } from "../core/rendering/export/index.ts";
 import { flag, has, UsageError } from "./args.ts";
 import {
   EXIT,

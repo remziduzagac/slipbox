@@ -9,7 +9,7 @@ import { baseFor, baseForLater } from "../core/workspace/git/gitbase.ts";
 import { startInsert } from "./editing.ts";
 import { fence, fenceLanguage } from "../core/workspace/mutations/capture.ts";
 import { loadSession, TOP } from "../core/workspace/session/position.ts";
-import type { Role } from "../core/theme/index.ts";
+import type { Role } from "../core/rendering/theme/index.ts";
 import { type Checkout, checkoutOf, headOf } from "../core/workspace/git/git.ts";
 import {
   baseBranch,

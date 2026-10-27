@@ -7,8 +7,8 @@
 //
 // Returns the geometry of what was drawn, which the mouse handler hit-tests against.
 
-import type { CellStyle } from "../core/layout/style.ts";
-import type { Color, Role, Theme } from "../core/theme/theme.ts";
+import type { CellStyle } from "../core/rendering/layout/style.ts";
+import type { Color, Role, Theme } from "../core/rendering/theme/theme.ts";
 import { stringWidth, truncate } from "../core/foundation/text/width.ts";
 import type { App, View } from "./app.ts";
 import { type Canvas, drawText } from "./canvas.ts";

@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
-import { listThemes, loadTheme } from "../src/core/theme/index.ts";
-import { blend } from "../src/core/theme/theme.ts";
+import { listThemes, loadTheme } from "../src/core/rendering/theme/index.ts";
+import { blend } from "../src/core/rendering/theme/theme.ts";
 import upstream from "./fixtures/themes/tokyo-night.json";
 
 for (const [variant, palette] of Object.entries(upstream.palettes)) {

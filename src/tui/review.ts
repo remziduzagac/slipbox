@@ -23,8 +23,8 @@ import {
 } from "../core/workspace/git/review/gitreview.ts";
 import { type GitChange, gitChanges } from "../core/workspace/git/gitsigns.ts";
 import { discardFile, replaceLines, sections, stageChange, stageFile } from "../core/workspace/git/staging/gitstage.ts";
-import { layoutScreen, type ScreenPart, screenText } from "../core/layout/screen.ts";
-import { type Layout, type Span, srcAt } from "../core/layout/ir.ts";
+import { layoutScreen, type ScreenPart, screenText } from "../core/rendering/layout/screen.ts";
+import { type Layout, type Span, srcAt } from "../core/rendering/layout/ir.ts";
 import { comparable } from "../core/workspace/git/merge/merge.ts";
 import { TOP } from "../core/workspace/session/position.ts";
 import { sanitize } from "../core/foundation/text/sanitize.ts";

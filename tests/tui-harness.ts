@@ -19,7 +19,7 @@ import { locateVault } from "../src/core/workspace/vaults/vault.ts";
 import { App, type Host } from "../src/tui/app.ts";
 import { TextCanvas } from "../src/tui/canvas.ts";
 import { locationItems } from "../src/tui/draw-topbar.ts";
-import type { Line } from "../src/core/layout/ir.ts";
+import type { Line } from "../src/core/rendering/layout/ir.ts";
 
 /** The sandbox of the file running, which `makeSandbox` sets. */
 let sandbox = "";

@@ -35,7 +35,7 @@ export const ACCEPTED: Accepted[] = [
     ],
     why:
       "speech-rule-engine's, through mathjax-full, which pins 0.9.10 (0.9.12 fixes them). Only MathJax's " +
-      "accessibility code and menu load speech-rule-engine; slipbox's TeX-to-SVG (core/typeset.ts) loads neither, " +
+      "accessibility code and menu load speech-rule-engine; slipbox's TeX-to-SVG (core/rendering/media/typeset.ts) loads neither, " +
       "so neither is in the binary (checked by bundling it, 2026-10-12).",
     until: "2027-01-12",
   },

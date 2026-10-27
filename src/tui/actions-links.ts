@@ -8,7 +8,7 @@ import { prettyKey } from "./keys.ts";
 import { peekGo, peekKeep, peekFill, peekInstead, ownPath } from "./peek.ts";
 import { planRelink, planVaultRename } from "../core/workspace/mutations/rename/rename.ts";
 import type { App, View, ListItem } from "./app.ts";
-import type { LayoutLink } from "../core/layout/ir.ts";
+import type { LayoutLink } from "../core/rendering/layout/ir.ts";
 import * as E from "./editing.ts";
 import { linkTokens } from "../core/documents/syntax/syntax.ts";
 import { readerFor } from "../core/documents/model/readers.ts";
