@@ -84,7 +84,8 @@ trailscout's SDK, once that exists; until then slipbox's search is the only engi
 Find and replace (`25.4`) keep JavaScript's regex syntax, captures, smart case, whole-word matching and CRLF positions.
 `core/regex-jobs.ts` owns the native matcher worker (`core/regex-worker.ts`); rendered find, source replacement,
 confirming substitutes, search operators, vault find and CLI find/replace use it. Plain text is matched at once, on the
-thread that asks. `core/replace-files.ts` builds a complete plan before any write, with asynchronous matching through
+thread that asks. `core/workspace/mutations/replace-files.ts` builds a complete plan before any write, with asynchronous
+matching through
 `planReplaceLater`; its synchronous entry is for callers already outside an interactive thread.
 
 Its mailbox (`core/foundation/workers/worker-requests.ts`) holds eight requests and 8 MiB of input for the worker; a

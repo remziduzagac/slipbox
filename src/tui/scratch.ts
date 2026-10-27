@@ -4,7 +4,7 @@
 import { relative } from "node:path";
 import { climbsOut } from "../core/foundation/platform/fsutil.ts";
 import { placeAt, startInsert } from "./editing.ts";
-import { appendScratch, dropEmptyAsks, ensureScratch, scratchLocation } from "../core/capture.ts";
+import { appendScratch, dropEmptyAsks, ensureScratch, scratchLocation } from "../core/workspace/mutations/capture.ts";
 import type { NoteBuffer } from "./buffer.ts";
 import type { App, UiState } from "./app.ts";
 import { editable } from "./app.ts";

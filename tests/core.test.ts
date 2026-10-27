@@ -24,7 +24,7 @@ import {
   parseRef,
   readScratch,
   scratchLocation,
-} from "../src/core/capture.ts";
+} from "../src/core/workspace/mutations/capture.ts";
 import { copyText } from "../src/core/foundation/platform/clipboard.ts";
 import { readDoc } from "../src/core/documents/model/docformats.ts";
 import { canonKey, Keymap, unknownModifiers } from "../src/core/application/commands/registry.ts";
@@ -4486,7 +4486,7 @@ describe("brackets (25.3)", () => {
 
 describe("replace across files: the lines it changes (25.4)", () => {
   test("a line's matches one edit; a match across a break, its lines one; numbered on from the last; a CRLF's \\r left out", async () => {
-    const { lineEdits } = await import("../src/core/replace-files.ts");
+    const { lineEdits } = await import("../src/core/workspace/mutations/replace-files.ts");
     const { compilePattern, findAll } = await import("../src/core/replace.ts");
     const edits = (text: string, query: string, replacement: string, regex = false) =>
       lineEdits(

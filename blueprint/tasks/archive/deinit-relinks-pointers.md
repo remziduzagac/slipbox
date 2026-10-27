@@ -30,7 +30,8 @@ a relative path where the two travel together, else the path a link between sepa
 
 ## Log
 
-- 2026-10-11: Fixed (`src/core/rename.ts`, `pointersByItsName`, called from `planUnmakeVault`): the pointers naming
+- 2026-10-11: Fixed (`src/core/workspace/mutations/rename/rename.ts`, `pointersByItsName`, called from
+  `planUnmakeVault`): the pointers naming
   the folder (by its name, an alias or a name it had; landing in this copy) are found in its own notes, the
   parent's (in memory), and every other root's this machine knows, from their saved indexes (`Reach.notesElsewhere`
   in `src/core/workspace/links/reach.ts`, sharing `inbound`'s list of roots: not worktrees, only those there). Each

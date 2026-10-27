@@ -129,7 +129,8 @@ LSP create/rename/delete support is not added. T5, acceptance criteria and scena
 
 ### Persisted plans and canonical text contracts
 
-`src/core/plans.ts:13` stores saved plans in user state; `src/cli/cli.ts:2172` loads them in a later invocation.
+`src/core/workspace/mutations/plans.ts:13` stores saved plans in user state; `src/cli/cli.ts:2172` loads them in a later
+invocation.
 Generic client ownership wording did not explain this cross-process contract. Saved CLI plans now retain user/state
 ownership; connected plans retain scoped ownership, and live plans cannot survive restart as silently converted
 saved-only plans. Range-read continuations bind expected versions, and canonical edit batches define half-open
@@ -153,7 +154,8 @@ unchanged.
 
 ### Existing workflow compatibility
 
-`src/core/plans.ts:4` describes managed plans as apply-once, and `src/cli/cli.ts:2191` removes one after successful
+`src/core/workspace/mutations/plans.ts:4` describes managed plans as apply-once, and `src/cli/cli.ts:2191` removes one
+after successful
 application. The draft now explicitly consumes a managed plan independently of invocation retry identity, excludes
 concurrent claims across embedded CLI processes, and leaves dry-run non-consuming. Partial/interrupted plans need
 inspection. A confirmed pre-effect refusal returns the claim to ready only after a successful recorded release;

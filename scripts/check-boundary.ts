@@ -55,6 +55,18 @@ export function commandViolations(from: string, text: string): string[] {
   });
 }
 
+/** Shared trash/marker storage must not depend on the mutation orchestration that calls it (ORG-T13). */
+export function mutationViolations(from: string, text: string): string[] {
+  const root = "src/core/workspace/mutations";
+  if (from !== `${root}/trash.ts`) return [];
+  return importsOf(text).flatMap((spec) => {
+    const target = spec.startsWith(".") ? relative(ROOT, resolve(ROOT, dirname(from), spec)) : spec;
+    return target === root || target.startsWith(`${root}/`)
+      ? [`${from}: imports ${spec} (shared trash/marker storage must not import mutation orchestration)`]
+      : [];
+  });
+}
+
 function files(dir: string): string[] {
   const out: string[] = [];
   let entries: string[] = [];
@@ -90,6 +102,7 @@ if (import.meta.main) {
   for (const file of files(join(ROOT, "src"))) {
     const from = relative(ROOT, file);
     violations.push(...commandViolations(from, readFileSync(file, "utf8")));
+    violations.push(...mutationViolations(from, readFileSync(file, "utf8")));
     for (const spec of valueImportsOf(readFileSync(file, "utf8"))) {
       if (!spec.startsWith(".")) continue;
       const target = relative(ROOT, resolve(dirname(file), spec));

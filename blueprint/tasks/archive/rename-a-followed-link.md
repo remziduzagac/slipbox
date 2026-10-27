@@ -16,8 +16,10 @@ file link is written through the link, never over it.
 
 ## Description
 
-A move's source is checked by its real path (`checkSource` in `src/core/rename.ts`, called by `planNoteRename`,
-`planFolderMove` and `planVaultFolderMove`; `outside` in `src/core/rename-apply.ts`, when a plan is carried out):
+A move's source is checked by its real path (`checkSource` in `src/core/workspace/mutations/rename/rename.ts`, called by
+`planNoteRename`,
+`planFolderMove` and `planVaultFolderMove`; `outside` in `src/core/workspace/mutations/rename/rename-apply.ts`, when a
+plan is carried out):
 `landsInside` resolves the path named to its target. For a followed link out of the vault (`outdir → /mnt/disk/data`,
 or a file `ext.md → /elsewhere/ext.md`), named itself, that target is outside the vault, so renaming the link is
 refused, though the rename only changes the link's entry in its folder. The check should look at the link entry
@@ -59,9 +61,11 @@ to lead where it did (D260).
   outside the vault`. Live, the installed release (0.4.1-preview.202610221359), in a scratch home with a followed
   folder link `outdir` and a followed file link `ext.md`: `slipbox mv outdir outlink` and `slipbox mv ext.md box/`
   both exit 5, `… resolves outside the vault`.
-- 2026-10-23: The cause: `checkSource` (`src/core/rename.ts`) asks `landsInside`, whose `realTarget` is the path's
+- 2026-10-23: The cause: `checkSource` (`src/core/workspace/mutations/rename/rename.ts`) asks `landsInside`, whose
+  `realTarget` is the path's
   `realpathSync`: for a link named itself, the link's own last step is resolved too, to its target. A rename moves
-  only the link's entry in its folder. `outside` (`src/core/rename-apply.ts`) does the same for `plan.move.from` when
+  only the link's entry in its folder. `outside` (`src/core/workspace/mutations/rename/rename-apply.ts`) does the same
+  for `plan.move.from` when
   a plan is carried out, and an undo's `move.from` is the link at its new name, so both need the fix.
 - 2026-10-23: Prototyped (an `lstat`: a link named itself checked by its folder's real path), tried live with this
   worktree's CLI: both moves go ahead and `b.md`'s links follow. Two neighbours found:

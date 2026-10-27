@@ -157,16 +157,16 @@ The CLI's commands are the user's reference, [cli.md](../../docs/manual/cli.md);
 | [reach.ts][o31] | 17.9–17.11 | other vaults: paths out of the vault, their backlinks here, a peek's graph; `[[x:…]]` |
 | [backlinks-jobs.ts][o32] | D259 | a peek's backlinks in a worker (`backlinks-worker.ts`), its vault caught up there |
 | `core/workspace/links/redirects.ts` | 17.12 | moves seen, by content hash; where an old path went |
-| `core/rename.ts` | 7.1–7.3, 17.15, 20.19 | renames and moves: each link rewritten as byte-range edits, previewed |
-| `core/rename-plan.ts` | 7.2, 7.3 | a plan's shape; its edits collected, each file read once; git trees with changes |
-| `core/rename-links.ts` | 7.6, 17.15 | one link rewritten in the form it was written, at the place the index recorded |
-| `core/rename-vaults.ts` | 18.11, 21.10 | a folder named, made a vault of its own, or part of its vault again: plans |
-| `core/rename-apply.ts` | 7.1–7.4 | a plan carried out, its files unchanged since, the index following; undone |
-| `core/rename-heading.ts` | 11.9 | a heading renamed, with every link to it |
-| `core/plans.ts` | 20.18 | edits as plans: saved, tied to file contents, refused once stale, applied once |
+| [rename.ts][o56] | 7.1–7.3, 17.15, 20.19 | renames and moves: each link rewritten as byte-range edits, previewed |
+| [rename-plan.ts][o57] | 7.2, 7.3 | a plan's shape; its edits collected, each file read once; git trees with changes |
+| [rename-links.ts][o58] | 7.6, 17.15 | one link rewritten in the form it was written, at the place the index recorded |
+| [rename-vaults.ts][o59] | 18.11, 21.10 | a folder named, made a vault of its own, or part of its vault again: plans |
+| [rename-apply.ts][o60] | 7.1–7.4 | a plan carried out, its files unchanged since, the index following; undone |
+| `core/workspace/mutations/rename/rename-heading.ts` | 11.9 | a heading renamed, with every link to it |
+| [plans.ts][o61] | 20.18 | edits as plans: saved, tied to file contents, refused once stale, applied once |
 | [convert.ts][o33] | 20.1 | the converter: `[[…]]` and `/…` links made relative paths, by their own old rules |
-| `core/rename-log.ts` | 7.4 | each rename's files and moves, as it found them: what an undo gives back |
-| `core/files.ts` | 18.4, 18.5, 18.11 | delete to the vault's trash and restore; copy; an unmade vault's `.slipbox/` |
+| [rename-log.ts][o62] | 7.4 | each rename's files and moves, as it found them: what an undo gives back |
+| [files.ts][o63] | 18.4, 18.5, 18.11 | delete to the vault's trash and restore; copy; an unmade vault's `.slipbox/` |
 | `core/workspace/walk/walk.ts` | 1.2, 0.11 | the walk and `WalkFilter`, shared with the watcher |
 | `core/documents/markdown/wikilink.ts` | 1.3 | micromark tokenizer for `[[link]]` and `![[embed]]` |
 | `core/documents/model/footnotes.ts` | 3.17 | a note's footnotes: labels, definitions, references, in GFM's order |
@@ -244,7 +244,7 @@ The CLI's commands are the user's reference, [cli.md](../../docs/manual/cli.md);
 | `core/brackets.ts` | 25.3 | the bracket matching one (`%`, the marks); pairs closed as typed, stepped over, deleted |
 | `core/nvim.ts` | 4.12 | finding and asking the running nvims |
 | `core/replace.ts` | 4.16 | find's patterns (plain, regex, whole words), replacements, vim's `:s` parsed |
-| `core/replace-files.ts` | 25.4 | a find replaced across files, as a rename's plan: previewed, undone |
+| [replace-files.ts][o64] | 25.4 | a find replaced across files, as a rename's plan: previewed, undone |
 | `core/gitlog.ts` | 26.4, 22.1 | a line's last commit (blame of the last commit); a file's log through renames |
 | `core/gitstage.ts` | 26.2 | status's two letters; a file or one change staged, unstaged, discarded |
 | `core/gitsigns.ts` | 26.1 | a file's changes against what's staged: runs of lines added, changed, deleted; signs |
@@ -275,7 +275,7 @@ The CLI's commands are the user's reference, [cli.md](../../docs/manual/cli.md);
 | [position.ts][o28] | 3.4, 3.5, 3.15 | anchors, reading positions, the session file (the workspaces) |
 | `core/workspace/graph/watch.ts` | 5.1, 5.2 | per-directory watcher, debounce, polling fallbacks |
 | [vault-feed.ts][o29] | 5.1, 5.9, 5.10 | the watcher's news into a graph, held while git writes (TUI) |
-| `core/capture.ts` | 8.2–8.4 | scratch location, reference format, append |
+| `core/workspace/mutations/capture.ts` | 8.2–8.4 | scratch location, reference format, append |
 | [context.ts][o55] | 9.7 | the context bundle: a note, its links and backlinks, as one document for an agent |
 | `core/lint.ts` | 3.21 | the lint surface: your markdownlint-cli2 run, its findings read |
 | `core/servers/languages.ts` | 19.2 | languages and their servers, built in and in Helix's shape from the config |
@@ -623,3 +623,13 @@ ordinary note needs.
 [o53]: ../../src/core/documents/model/docformats.ts
 [o54]: ../../src/core/documents/model/note.ts
 [o55]: ../../src/core/documents/model/context.ts
+
+[o56]: ../../src/core/workspace/mutations/rename/rename.ts
+[o57]: ../../src/core/workspace/mutations/rename/rename-plan.ts
+[o58]: ../../src/core/workspace/mutations/rename/rename-links.ts
+[o59]: ../../src/core/workspace/mutations/rename/rename-vaults.ts
+[o60]: ../../src/core/workspace/mutations/rename/rename-apply.ts
+[o61]: ../../src/core/workspace/mutations/plans.ts
+[o62]: ../../src/core/workspace/mutations/rename/rename-log.ts
+[o63]: ../../src/core/workspace/mutations/files.ts
+[o64]: ../../src/core/workspace/mutations/replace-files.ts

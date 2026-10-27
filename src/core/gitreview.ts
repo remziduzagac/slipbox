@@ -2,7 +2,7 @@
 // with a few of the file's around them, diffed as every diff is (GIT-D2) — how it finds a hunk again once the file or
 // the index has moved under it, the scratch's entry a note for the agent makes, and what the review says at its end.
 
-import { formatEntry } from "./capture.ts";
+import { formatEntry } from "./workspace/mutations/capture.ts";
 import { changeDiff, type GitChange } from "./gitsigns.ts";
 import { type DiffViewRow, diffView } from "./merge.ts";
 

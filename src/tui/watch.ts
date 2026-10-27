@@ -5,7 +5,7 @@ import { existsSync, statSync } from "node:fs";
 import { basename, join } from "node:path";
 import { readText, stamp } from "../core/foundation/platform/fsutil.ts";
 import { offsetOf } from "./editing.ts";
-import { planRelink } from "../core/rename.ts";
+import { planRelink } from "../core/workspace/mutations/rename/rename.ts";
 import { activityFile, AutoIndex, autoIndexFile } from "../core/workspace/graph/autoindex.ts";
 import { loadConfig } from "../core/application/config/config.ts";
 import { describeCap, type HomeWalk, inFolders, keepHomeWalk, walksInto } from "../core/workspace/vaults/home.ts";

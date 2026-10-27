@@ -14,10 +14,10 @@
 
 import { existsSync, lstatSync } from "node:fs";
 import { extname, isAbsolute, join, relative, resolve } from "node:path";
-import { type Config, isSafeRelative } from "./application/config/config.ts";
-import { atomicWrite, climbsOut, ensureDir, landsInside, readRegular } from "./foundation/platform/fsutil.ts";
-import { type Keyed, stateDir } from "./foundation/platform/paths.ts";
-import { sanitize } from "./foundation/text/sanitize.ts";
+import { type Config, isSafeRelative } from "../../application/config/config.ts";
+import { atomicWrite, climbsOut, ensureDir, landsInside, readRegular } from "../../foundation/platform/fsutil.ts";
+import { type Keyed, stateDir } from "../../foundation/platform/paths.ts";
+import { sanitize } from "../../foundation/text/sanitize.ts";
 
 export interface ScratchLocation {
   path: string;

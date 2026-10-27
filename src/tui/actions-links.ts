@@ -6,7 +6,7 @@ import { diffEnter } from "./diffview.ts";
 import { canonKey } from "../core/application/commands/registry.ts";
 import { prettyKey } from "./keys.ts";
 import { peekGo, peekKeep, peekFill, peekInstead, ownPath } from "./peek.ts";
-import { planRelink, planVaultRename } from "../core/rename.ts";
+import { planRelink, planVaultRename } from "../core/workspace/mutations/rename/rename.ts";
 import type { App, View, ListItem } from "./app.ts";
 import type { LayoutLink } from "../core/layout/ir.ts";
 import * as E from "./editing.ts";

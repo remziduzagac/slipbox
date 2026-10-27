@@ -3,7 +3,7 @@
 
 import { existsSync, statSync } from "node:fs";
 import { isAbsolute, join } from "node:path";
-import { scratchLocation } from "../core/capture.ts";
+import { scratchLocation } from "../core/workspace/mutations/capture.ts";
 import { COMMAND_SPECS } from "../core/application/commands/catalog.ts";
 import { conventionOf, describeConvention } from "../core/workspace/links/convention.ts";
 import { copyAvailable, folderIdentity, pointerName, readFolders } from "../core/workspace/vaults/folders.ts";

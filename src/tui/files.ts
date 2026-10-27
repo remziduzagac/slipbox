@@ -10,8 +10,14 @@ import { blockingLink, linkSaid, writesThrough } from "../core/workspace/vaults/
 import { insertText, startInsert } from "./editing.ts";
 import { normKey } from "../core/workspace/links/links.ts";
 import { openVault } from "../core/workspace/links/reach.ts";
-import { planFolderMove, planNoteRename, planVaultFolderMove, type RenamePlan } from "../core/rename.ts";
-import { copyPath, emptyTrash, linksInto, listTrash, restorePath, type TrashItem, trashPath } from "../core/files.ts";
+import {
+  planFolderMove,
+  planNoteRename,
+  planVaultFolderMove,
+  type RenamePlan,
+} from "../core/workspace/mutations/rename/rename.ts";
+import { copyPath, linksInto, restorePath, trashPath } from "../core/workspace/mutations/files.ts";
+import { emptyTrash, listTrash, type TrashItem } from "../core/workspace/mutations/trash.ts";
 import { isInside, isListed } from "../core/workspace/vaults/vault.ts";
 import type { NoteBuffer } from "./buffer.ts";
 import { match } from "./match.ts";

@@ -13,7 +13,7 @@ import { changedLater } from "../core/gitbranches.ts";
 import { agoSaid, isRemoteTracking, remoteMovedAt } from "../core/gitbase.ts";
 import { OPERATIONS } from "../core/gitrebase.ts";
 import { commitLater, sections } from "../core/gitstage.ts";
-import { formatEntry } from "../core/capture.ts";
+import { formatEntry } from "../core/workspace/mutations/capture.ts";
 import { sanitize } from "../core/foundation/text/sanitize.ts";
 import { keyChar, spellKey } from "./keys.ts";
 import { match } from "./match.ts";

@@ -28,7 +28,8 @@ rewrite them in their own form, previewed with the rest of the move's plan.
 
 ## Log
 
-- 2026-10-11: Fixed (`src/core/rename.ts`, `ownFileLinks` and `relativeAs`, called from `planMove` for a file that
+- 2026-10-11: Fixed (`src/core/workspace/mutations/rename/rename.ts`, `ownFileLinks` and `relativeAs`, called from
+  `planMove` for a file that
   isn't a note when its folder changes): the file's own links from the index (`fileLinksOf`), each rewritten from
   where it will be, as it was written. A comment's path is its text up to its first `:` (`util.ts:12:3` keeps its
   `:12:3`); it is rewritten only when it no longer lands on its file from the new place (beside the file first, then

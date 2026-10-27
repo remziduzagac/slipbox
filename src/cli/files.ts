@@ -21,19 +21,11 @@ import {
   planVaultFolderMove,
   RenameError,
   type RenamePlan,
-} from "../core/rename.ts";
+} from "../core/workspace/mutations/rename/rename.ts";
 import { planConvert } from "../core/workspace/links/convert.ts";
-import {
-  copyPath,
-  emptyTrash,
-  FileOpError,
-  linksInto,
-  listTrash,
-  restorePath,
-  type TrashItem,
-  trashPath,
-} from "../core/files.ts";
-import { forgetPlan, listPlans, loadPlan, type SavedPlan, savePlan } from "../core/plans.ts";
+import { copyPath, FileOpError, linksInto, restorePath, trashPath } from "../core/workspace/mutations/files.ts";
+import { emptyTrash, listTrash, type TrashItem } from "../core/workspace/mutations/trash.ts";
+import { forgetPlan, listPlans, loadPlan, type SavedPlan, savePlan } from "../core/workspace/mutations/plans.ts";
 import { isInside, isVaultRoot, recordLocation, rootAt } from "../core/workspace/vaults/vault.ts";
 import { has, UsageError } from "./args.ts";
 import { notIndexedSaid } from "../core/workspace/graph/graph.ts";

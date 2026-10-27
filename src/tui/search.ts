@@ -3,7 +3,7 @@
 
 import { layoutMatches, matchText } from "../core/regex-jobs.ts";
 import { compilePattern, findAll } from "../core/replace.ts";
-import { planReplaceLater } from "../core/replace-files.ts";
+import { planReplaceLater } from "../core/workspace/mutations/replace-files.ts";
 import * as R from "./replacing.ts";
 import { IndexJob, indexFile, search, type SearchHit, SearchIndex, type SearchResult } from "../core/search.ts";
 import { leadsOut, peekAt } from "./peek.ts";

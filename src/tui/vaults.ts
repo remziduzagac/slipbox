@@ -28,7 +28,7 @@ import {
   planRelink,
   planUnmakeVault,
   planVaultRename,
-} from "../core/rename.ts";
+} from "../core/workspace/mutations/rename/rename.ts";
 import { rootLabel, tildePath } from "../core/workspace/vaults/names.ts";
 import {
   copyAvailable,

@@ -10,7 +10,7 @@
 import { beginGitRead } from "./gitquery.ts";
 import { join } from "node:path";
 import { blockDiff } from "../core/foundation/text/blockdiff.ts";
-import { fenceLanguage, formatEntry } from "../core/capture.ts";
+import { fenceLanguage, formatEntry } from "../core/workspace/mutations/capture.ts";
 import {
   type Choice,
   type Conflicted,

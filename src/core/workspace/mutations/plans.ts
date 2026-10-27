@@ -6,9 +6,9 @@
 import { randomBytes } from "node:crypto";
 import { readdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
-import { ensureDir, readJson, writeJson } from "./foundation/platform/fsutil.ts";
-import { stateHome } from "./foundation/platform/paths.ts";
-import type { RenamePlan } from "./rename.ts";
+import { ensureDir, readJson, writeJson } from "../../foundation/platform/fsutil.ts";
+import { stateHome } from "../../foundation/platform/paths.ts";
+import type { RenamePlan } from "./rename/rename.ts";
 
 export interface SavedPlan {
   version: 1;
