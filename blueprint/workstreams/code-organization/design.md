@@ -906,9 +906,9 @@ shares, retains or defers each candidate and why. Use identical scan settings an
 
 | Reported source pair | Owner | Proposed treatment and check |
 | --- | --- | --- |
-| footnotes:253 / info:251 | T10 | Share matching navigation; preserve focus, selection and pinning |
-| explorer:1163 / history:288 | T10 | Compare close/leave semantics; share only equivalent behavior |
-| footnotes:264 / outline:162 | T10 | Include in the same navigation assessment; avoid duplicate helpers |
+| footnotes:253 / info:251 | T10 | Shared row navigation; feature jumps/folding retained; see task 10 evidence |
+| explorer:1163 / history:288 | T10 | Shared leave in PanelFocus; close already shares visibility transitions |
+| footnotes:264 / outline:162 | T10 | Same shared row navigation; filtering/pinning order retained |
 | data:203 / data:372 | T32 | Keep format-specific parsing explicit unless equivalence is demonstrated |
 | diagram-jobs:99 / paint-jobs:54 | T40 | Compare lifecycle cleanup; preserve retry/cache/queue policies |
 | draw-panels:610 / draw-panels:680 | T36 | Compare selection/scroll mechanics with pinning and filtering coverage |
@@ -1004,6 +1004,15 @@ into coherent child PRs before execution instead of treating an owner assignment
 | `src/core/folders.ts` | 508 | ORG-T39 |
 | `src/tui/lens.ts` | 505 | ORG-T38 |
 | `src/tui/search.ts` | 503 | ORG-T34 |
+
+### T10 composition assessment
+
+[Task 10](tasks/10-responsibility-splits.md#responsibility-assessment) records the App/watch/update/vault and panel
+responsibilities, their current sizes, retained ordering and separately bounded extraction candidates. Clipboard and
+notification scheduling are independent collaborators; App keeps shared state and the sole note-write gate. The
+remaining composition files have not been asserted to meet the final 600-line ceiling. T11 audits their dispositions
+and any final exception against ORG-D2; further controller splits require coherent child PRs with their own lifecycle
+characterization rather than extending this extraction's manifest.
 
 ### Measured completion and known failures
 

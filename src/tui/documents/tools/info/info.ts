@@ -1,6 +1,7 @@
 // The Info view (3.19): the file on screen — its vault, its path, its properties, its links and backlinks, its git
 // state — in folding sections, each row copied, followed or run.
 
+import { navigateRows } from "../navigation.ts";
 import { listTasks } from "../../../../core/documents/editing/tasks.ts";
 import { placeAt } from "../../editing/editing.ts";
 import { type ConventionPart, conventionOf, describeConvention } from "../../../../core/workspace/links/convention.ts";
@@ -260,19 +261,8 @@ export class Info {
     }
     const rows = this.rows();
     const row = rows[this.app.outline.selected];
+    if (navigateRows(this.app.outline, action, rows.length)) return;
     switch (action) {
-      case "down":
-        this.app.outline.selected = Math.min(rows.length - 1, this.app.outline.selected + 1);
-        break;
-      case "up":
-        this.app.outline.selected = Math.max(0, this.app.outline.selected - 1);
-        break;
-      case "top":
-        this.app.outline.selected = 0;
-        break;
-      case "bottom":
-        this.app.outline.selected = rows.length - 1;
-        break;
       case "jump":
         if (row) this.openRow(row);
         break;
@@ -303,8 +293,7 @@ export class Info {
         this.app.panels.showOutline(false);
         break;
       case "leave":
-        this.app.region = "content";
-        if (this.app.panels.narrow || this.app.ui.zen) this.app.outline.overlay = false;
+        this.app.panels.leave("outline");
         break;
       default:
         this.app.message("error", `unknown Info action: ${action}`);

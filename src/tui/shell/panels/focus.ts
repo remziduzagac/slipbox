@@ -42,6 +42,12 @@ export class PanelFocus {
     if (!on && this.host.region === "outline") this.host.region = "content";
   }
 
+  /** Leaving keeps a wide pane visible; a narrow or zen overlay closes without changing its preference. */
+  leave(side: "sidebar" | "outline"): void {
+    this.host.region = "content";
+    if (this.isNarrow() || this.host.ui.zen) this.host[side].overlay = false;
+  }
+
   /** Focus never stays on a hidden pane (after zen, a config reload, a resize): back to the note. */
   fixRegion(): void {
     if (

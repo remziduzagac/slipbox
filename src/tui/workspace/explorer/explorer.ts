@@ -1172,8 +1172,7 @@ export class Explorer {
         this.app.panels.showSidebar(false);
         break;
       case "leave":
-        this.app.region = "content";
-        if (this.app.panels.narrow || this.app.ui.zen) this.app.sidebar.overlay = false;
+        this.app.panels.leave("sidebar");
         break;
       default:
         this.app.message("error", `unknown explorer action: ${action}`);

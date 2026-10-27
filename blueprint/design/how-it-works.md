@@ -423,6 +423,9 @@ Clipboard copies and reads use asynchronous helpers with a one-second deadline p
 32 MiB input/output limits, cancellation on quit and Unix process-group cleanup. The TUI writes OSC 52 at once and
 runs at most eight copies' helpers, one after another (a ninth is refused, said); paste waits for preceding copies and
 rejects a result if its view or buffer revision changed while waiting.
+`tui/app/clipboard/clipboard.ts` owns the TUI's existing serial promise, admission count and abort controller. App keeps
+its public copy/paste methods, register, current vault and quit flag; helpers read that live context, including the
+vault when each queued copy starts. This collaborator has no document-writing path.
 The synchronous clipboard functions remain available for file-only callers and compatibility tests (#172).
 
 ### OpenTUI upgrade policy (`0.6`)
