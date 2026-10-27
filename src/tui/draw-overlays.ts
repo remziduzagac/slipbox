@@ -3,12 +3,12 @@
 
 import type { App, PromptOverlay, ListOverlay, ListItem } from "./app/runtime/app.ts";
 import { type Canvas, drawText } from "./shell/terminal/canvas.ts";
-import { type SaveAsOverlay, type SaveAsGeometry, placeOf, sizeText, dateText } from "./saveas.ts";
+import { type SaveAsOverlay, type SaveAsGeometry, placeOf, sizeText, dateText } from "./documents/saving/saveas.ts";
 import { type DialogGeometry, type DialogOverlay, cursorHelp, dimmed } from "./dialog.ts";
 import { type Geometry, type Rect, roleStyle, keyText, coverHot } from "./draw.ts";
 import { truncate, stringWidth, truncateStart, graphemes, graphemeWidth } from "../core/foundation/text/width.ts";
 import { smallButton } from "./draw-panels.ts";
-import { peekTitle } from "./peek.ts";
+import { peekTitle } from "./documents/navigation/peek.ts";
 import { drawPane } from "./draw-pane.ts";
 import { sanitize, sanitizeMap } from "../core/foundation/text/sanitize.ts";
 import type { GitState } from "../core/workspace/git/branches/gitops.ts";

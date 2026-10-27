@@ -15,12 +15,10 @@ The split is an implementation input, not assumed merged. Reconcile the actual m
 before applying this design; branch names and task indexes alone do not establish completion.
 
 In the baseline, `src/core/application/commands/registry.ts` registers callbacks over an arbitrary context. The TUI uses
-`App` as that
-context. `src/core/application/commands/catalog.ts` supplies titles and CLI equivalents as strings, not executable
-contracts.
-`src/cli/cli.ts` performs argument validation and application orchestration separately. `src/tui/buffer.ts` combines
-editable text, undo and saved-file state with layout caches and display state. `App.writeBuffer` coordinates atomic
-writes, watcher suppression, graph refresh and server notification.
+`App` as that context. `src/core/application/commands/catalog.ts` supplies titles and CLI equivalents as strings, not
+executable contracts. `src/cli/cli.ts` performs argument validation and application orchestration separately.
+`src/tui/documents/buffers/buffer.ts` combines editable text, undo and saved-file state with layout caches and display
+state. `App.writeBuffer` coordinates atomic writes, watcher suppression, graph refresh and server notification.
 
 The split branch reduces file sizes and introduces feature controllers. Those controllers still receive the whole
 `App`; its shared buffers and write path remain TUI-owned. ENG addresses that dependency and ownership boundary.

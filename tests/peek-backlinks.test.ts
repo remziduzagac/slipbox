@@ -42,7 +42,7 @@ import { forgetProbes, setLinkAnswer } from "../src/core/workspace/vaults/symlin
 import { homeAt, initVault, locateVault, recordLocation, setRootMarkers } from "../src/core/workspace/vaults/vault.ts";
 import * as vaultModule from "../src/core/workspace/vaults/vault.ts";
 import * as fsutil from "../src/core/foundation/platform/fsutil.ts";
-import { keepCaughtUp, peekOf, peekProbe, vaultGraph } from "../src/tui/peek.ts";
+import { keepCaughtUp, peekOf, peekProbe, vaultGraph } from "../src/tui/documents/navigation/peek.ts";
 import { type Harness, harness, makeSandbox, onlyRootsUnder } from "./tui-harness.ts";
 
 const sandbox = makeSandbox();

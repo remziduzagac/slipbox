@@ -3,7 +3,7 @@
 
 import { dirname, join, relative, sep } from "node:path";
 import { Graph } from "../core/workspace/graph/graph.ts";
-import { reachedAgain, tuiReach } from "./peek.ts";
+import { reachedAgain, tuiReach } from "./documents/navigation/peek.ts";
 import { planConvert } from "../core/workspace/links/convert.ts";
 import {
   type Ambiguous,

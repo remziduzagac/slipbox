@@ -15,7 +15,7 @@ import { beginGitRead } from "./gitquery.ts";
 import { climbsOut } from "../core/foundation/platform/fsutil.ts";
 import { sanitize } from "../core/foundation/text/sanitize.ts";
 import type { App, View } from "./app/runtime/app.ts";
-import { lineOf, offsetOf } from "./editing.ts";
+import { lineOf, offsetOf } from "./documents/editing/editing.ts";
 
 /** A commit's date, as a day. */
 const day = (time: number) => new Date(time * 1000).toISOString().slice(0, 10);

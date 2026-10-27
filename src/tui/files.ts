@@ -7,7 +7,7 @@ import { basename, dirname, join, posix, relative, sep } from "node:path";
 import { climbsOut, writeNote } from "../core/foundation/platform/fsutil.ts";
 import { notIndexedSaid } from "../core/workspace/graph/graph.ts";
 import { blockingLink, linkSaid, writesThrough } from "../core/workspace/vaults/symlinks.ts";
-import { insertText, startInsert } from "./editing.ts";
+import { insertText, startInsert } from "./documents/editing/editing.ts";
 import { normKey } from "../core/workspace/links/links.ts";
 import { openVault } from "../core/workspace/links/reach.ts";
 import {
@@ -19,7 +19,7 @@ import {
 import { copyPath, linksInto, restorePath, trashPath } from "../core/workspace/mutations/files.ts";
 import { emptyTrash, listTrash, type TrashItem } from "../core/workspace/mutations/trash.ts";
 import { isInside, isListed } from "../core/workspace/vaults/vault.ts";
-import type { NoteBuffer } from "./buffer.ts";
+import type { NoteBuffer } from "./documents/buffers/buffer.ts";
 import { match } from "./match.ts";
 import type { App, ListItem, PromptOverlay } from "./app/runtime/app.ts";
 import { editable } from "./app/runtime/app.ts";

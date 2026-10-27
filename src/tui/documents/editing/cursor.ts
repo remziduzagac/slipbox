@@ -2,8 +2,8 @@
 // position is (row, col) where row indexes Layout.lines and col is a display column, always the
 // start of a grapheme. A wide character is one stop; moving up or down keeps a goal column.
 
-import type { Layout, Line } from "../core/rendering/layout/ir.ts";
-import { graphemes, graphemeWidth } from "../core/foundation/text/width.ts";
+import type { Layout, Line } from "../../../core/rendering/layout/ir.ts";
+import { graphemes, graphemeWidth } from "../../../core/foundation/text/width.ts";
 
 export interface Pos {
   row: number;

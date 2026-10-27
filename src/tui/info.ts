@@ -2,7 +2,7 @@
 // state — in folding sections, each row copied, followed or run.
 
 import { listTasks } from "../core/documents/editing/tasks.ts";
-import { placeAt } from "./editing.ts";
+import { placeAt } from "./documents/editing/editing.ts";
 import { type ConventionPart, conventionOf, describeConvention } from "../core/workspace/links/convention.ts";
 import { ELSEWHERE, rootLabel } from "../core/workspace/vaults/names.ts";
 import { match } from "./match.ts";

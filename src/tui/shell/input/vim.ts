@@ -4,10 +4,10 @@
 // operator is read here, the way which-key reads what follows a prefix.
 
 import type { App, View } from "../../app/runtime/app.ts";
-import * as C from "../../cursor.ts";
-import * as E from "../../editing.ts";
+import * as C from "../../documents/editing/cursor.ts";
+import * as E from "../../documents/editing/editing.ts";
 import { keyChar } from "./keys.ts";
-import { textMatches } from "../../replacing.ts";
+import { textMatches } from "../../documents/search/replacing.ts";
 import { indentUnit } from "../../../core/documents/editing/indent.ts";
 import { toggleComments } from "../../../core/documents/editing/comments.ts";
 

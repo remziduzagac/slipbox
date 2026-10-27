@@ -913,7 +913,7 @@ describe("picture caption regressions (#83)", () => {
   });
 
   test("a picture click does not leave its caption link highlighted, including a stationary drag event", async () => {
-    const { linkAt } = await import("../src/tui/linking.ts");
+    const { linkAt } = await import("../src/tui/documents/navigation/linking.ts");
     const { h, v } = await open({ md: "![A screenshot](shot.png)\n" });
     for (let i = 0; i < 2; i++) {
       const r = drawnRect(h);

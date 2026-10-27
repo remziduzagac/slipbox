@@ -35,9 +35,9 @@ import { locateVault } from "../src/core/workspace/vaults/vault.ts";
 import { tildePath } from "../src/core/foundation/platform/paths.ts";
 import { linkAnswer, linkKey, probe, setLinkAnswer } from "../src/core/workspace/vaults/symlinks.ts";
 import { type ListOverlay, App, type Host } from "../src/tui/app/runtime/app.ts";
-import { dateText, listFolder, placeOf, type SaveAsOverlay, sizeText } from "../src/tui/saveas.ts";
-import { placeIn } from "../src/tui/shellrun.ts";
-import { peekOf } from "../src/tui/peek.ts";
+import { dateText, listFolder, placeOf, type SaveAsOverlay, sizeText } from "../src/tui/documents/saving/saveas.ts";
+import { placeIn } from "../src/tui/documents/editing/shellrun.ts";
+import { peekOf } from "../src/tui/documents/navigation/peek.ts";
 import { setTrust } from "../src/core/workspace/vaults/trust.ts";
 import type { PanelRow } from "../src/tui/gitpanel.ts";
 import type { NvimServer } from "../src/core/documents/external-editors/nvim.ts";
@@ -59,8 +59,8 @@ import { idColor, pictureId, placeholderCell, placeholderRow, release, transmit 
 import { Pictures } from "../src/tui/shell/terminal/opentui.ts";
 import { OptimizedBuffer } from "@opentui/core";
 import { inflateSync } from "node:zlib";
-import { cells } from "../src/tui/cursor.ts";
-import { lineOf, offsetOf } from "../src/tui/editing.ts";
+import { cells } from "../src/tui/documents/editing/cursor.ts";
+import { lineOf, offsetOf } from "../src/tui/documents/editing/editing.ts";
 import {
   DEFAULT_ALIASES,
   DEFAULT_GROUPS,
@@ -70,7 +70,7 @@ import {
   parseGroup,
 } from "../src/tui/shell/input/keys.ts";
 import { MOUSE_HELP } from "../src/tui/shell/input/mouse-help.ts";
-import { codeBlocks } from "../src/tui/code.ts";
+import { codeBlocks } from "../src/tui/documents/views/code.ts";
 import { PICTURES_REST_MS } from "../src/tui/pictures.ts";
 import {
   makeSandbox,
@@ -6933,7 +6933,7 @@ describe("files beyond notes (16.3–16.5)", () => {
     expect(v.source).toBe(false); // the note renders again
   });
   test("the background index parses a big note on other threads: here, its parsed chunks are only put together (15.1)", async () => {
-    const { BACKGROUND_PARSE } = await import("../src/tui/buffer.ts");
+    const { BACKGROUND_PARSE } = await import("../src/tui/documents/buffers/buffer.ts");
     const { noteChunks } = await import("../src/core/documents/markdown/parse.ts");
     const root = makeVault();
     const h = await harness({ root });

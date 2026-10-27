@@ -13,12 +13,12 @@ own, and a later peek shows them as that vault is now.
 
 ## Description
 
-The first peek into another vault holds the keys while that vault is read: `vaultGraph` (`tui/peek.ts`) opens its
-graph through `Reach.graphAt` on the main thread, and `withBacklinks` asks it for the note's backlinks there, which
-parses every note changed since its index, resolves every link in it, and reads the other vaults' indexes. The graph is
-`thorough`, so a layout of the peeked note with a link by a name it doesn't find parses the whole vault too. Then the
-graph is kept (`Reach.graphs`) and its backlinks worked out once, so a later peek shows them as they were, whatever
-changed in that vault since.
+The first peek into another vault holds the keys while that vault is read: `vaultGraph`
+(`tui/documents/navigation/peek.ts`) opens its graph through `Reach.graphAt` on the main thread, and `withBacklinks`
+asks it for the note's backlinks there, which parses every note changed since its index, resolves every link in it, and
+reads the other vaults' indexes. The graph is `thorough`, so a layout of the peeked note with a link by a name it
+doesn't find parses the whole vault too. Then the graph is kept (`Reach.graphs`) and its backlinks worked out once, so a
+later peek shows them as they were, whatever changed in that vault since.
 
 ## Acceptance criteria
 

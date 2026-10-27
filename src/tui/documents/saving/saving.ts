@@ -2,13 +2,13 @@
 // the disk resolved — keep, reload, merge, diff — and leaving with unsaved changes asked about.
 
 import { existsSync } from "node:fs";
-import { readText } from "../core/foundation/platform/fsutil.ts";
-import { merge3 } from "../core/workspace/git/merge/merge.ts";
-import { stopInsert } from "./editing.ts";
-import { openDiff } from "./diffview.ts";
-import { openPromptMerge } from "./mergescreen.ts";
-import type { NoteBuffer } from "./buffer.ts";
-import type { App } from "./app/runtime/app.ts";
+import { readText } from "../../../core/foundation/platform/fsutil.ts";
+import { merge3 } from "../../../core/workspace/git/merge/merge.ts";
+import { stopInsert } from "../editing/editing.ts";
+import { openDiff } from "../../diffview.ts";
+import { openPromptMerge } from "../../mergescreen.ts";
+import type { NoteBuffer } from "../buffers/buffer.ts";
+import type { App } from "../../app/runtime/app.ts";
 
 /** Saving, autosave, conflicts with the disk, and leaving. */
 export class Saving {

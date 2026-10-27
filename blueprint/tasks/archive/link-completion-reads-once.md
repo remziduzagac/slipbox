@@ -13,11 +13,11 @@ than building the list again, and reading every known vault's index, on each key
 
 ## Description
 
-A link's completion (20.13) lists this vault's files and, for a markdown link, the other vaults' notes, read from
-each vault's saved index (`linkItems` in `src/tui/completion.ts`). When what's typed matches nothing, the completion
-closes, and the next key builds it again: `readRoots()`, every other vault's `index.json`, and each of their notes'
-pointer, once per key. With hundreds of vaults known, each key takes hundreds of milliseconds. Keep the list for the
-link being typed, matched or not, so the keys that match nothing cost the same however many vaults are known.
+A link's completion (20.13) lists this vault's files and, for a markdown link, the other vaults' notes, read from each
+vault's saved index (`linkItems` in `src/tui/documents/editing/completion.ts`). When what's typed matches nothing, the
+completion closes, and the next key builds it again: `readRoots()`, every other vault's `index.json`, and each of their
+notes' pointer, once per key. With hundreds of vaults known, each key takes hundreds of milliseconds. Keep the list for
+the link being typed, matched or not, so the keys that match nothing cost the same however many vaults are known.
 
 ## Acceptance criteria
 
@@ -38,11 +38,11 @@ link being typed, matched or not, so the keys that match nothing cost the same h
 
 ## Log
 
-- 2026-10-23: The cause, in `src/tui/completion.ts`: `narrow` drops the state (`app.completion = null`) when nothing
-  is shown, so the next key in the same link target finds no state and builds the list again with `linkItems`, which
-  reads the registry (`readRoots()`) and, for a markdown link, every other vault's `index.json`, and works out each
-  entry's link (`linkEnds`). Once per key while nothing matches. Wikilinks (`[[`, `![[`) rebuild the same way, from
-  this vault's files alone; no other path rebuilds per key within one target.
+- 2026-10-23: The cause, in `src/tui/documents/editing/completion.ts`: `narrow` drops the state
+  (`app.completion = null`) when nothing is shown, so the next key in the same link target finds no state and builds the
+  list again with `linkItems`, which reads the registry (`readRoots()`) and, for a markdown link, every other vault's
+  `index.json`, and works out each entry's link (`linkEnds`). Once per key while nothing matches. Wikilinks (`[[`,
+  `![[`) rebuild the same way, from this vault's files alone; no other path rebuilds per key within one target.
 - 2026-10-23: Reproduced in a test (`tests/tui.test.ts`, "a link's target that matches nothing keeps its list while
   typed"): with `fs.readFileSync` spied, `[x](tod` then `qqqq` read the other vault's index 4 times, once expected.
 - 2026-10-23: Measured in the test harness, 454 other vaults of 4 notes each, all named and indexed (a benchmark not

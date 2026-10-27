@@ -1,12 +1,12 @@
 // Keys and pastes (docs/manual/keys.md): handled one at a time, in order, through the focused pane's keys → visual
 // mode's → source mode's → the normal keymap; a sequence pending shows the which-key popup.
 
-import { deleteTypedSelection, insertKey, insertText } from "../../editing.ts";
+import { deleteTypedSelection, insertKey, insertText } from "../../documents/editing/editing.ts";
 import { insertRecord, PASTE, put, vimKey, visualKey } from "./vim.ts";
-import * as R from "../../replacing.ts";
+import * as R from "../../documents/search/replacing.ts";
 import type { Keymap } from "../../../core/application/commands/registry.ts";
-import { afterSnippetKey, snippetKey } from "../../snippets.ts";
-import { afterInsertKey, afterPaste, completeWords, completionKey } from "../../completion.ts";
+import { afterSnippetKey, snippetKey } from "../../documents/editing/snippets.ts";
+import { afterInsertKey, afterPaste, completeWords, completionKey } from "../../documents/editing/completion.ts";
 import { sanitize } from "../../../core/foundation/text/sanitize.ts";
 import {
   EXPLORER_ACTION_INFO,

@@ -12,21 +12,21 @@ import {
   type BacklinksAnswer,
   configSignature,
   vaultSignature,
-} from "../core/workspace/graph/backlinks-jobs.ts";
-import { classify } from "../core/documents/model/filetypes.ts";
-import { readText } from "../core/foundation/platform/fsutil.ts";
-import type { Graph } from "../core/workspace/graph/graph.ts";
-import { ELSEWHERE, rootLabel, tildePath } from "../core/workspace/vaults/names.ts";
-import type { Anchor, CursorAnchor } from "../core/workspace/session/position.ts";
-import { Reach } from "../core/workspace/links/reach.ts";
-import { noteIndexed } from "../core/workspace/vaults/registry.ts";
-import { sanitize } from "../core/foundation/text/sanitize.ts";
-import { linkSaid, probeFollowed } from "../core/workspace/vaults/symlinks.ts";
-import { isInside, locateVault, type VaultLocation, vaultOf } from "../core/workspace/vaults/vault.ts";
-import { stringWidth, truncate, truncateStart } from "../core/foundation/text/width.ts";
-import type { App, View } from "./app/runtime/app.ts";
-import { NoteBuffer } from "./buffer.ts";
-import { parseInSlices } from "./app/runtime/watch.ts";
+} from "../../../core/workspace/graph/backlinks-jobs.ts";
+import { classify } from "../../../core/documents/model/filetypes.ts";
+import { readText } from "../../../core/foundation/platform/fsutil.ts";
+import type { Graph } from "../../../core/workspace/graph/graph.ts";
+import { ELSEWHERE, rootLabel, tildePath } from "../../../core/workspace/vaults/names.ts";
+import type { Anchor, CursorAnchor } from "../../../core/workspace/session/position.ts";
+import { Reach } from "../../../core/workspace/links/reach.ts";
+import { noteIndexed } from "../../../core/workspace/vaults/registry.ts";
+import { sanitize } from "../../../core/foundation/text/sanitize.ts";
+import { linkSaid, probeFollowed } from "../../../core/workspace/vaults/symlinks.ts";
+import { isInside, locateVault, type VaultLocation, vaultOf } from "../../../core/workspace/vaults/vault.ts";
+import { stringWidth, truncate, truncateStart } from "../../../core/foundation/text/width.ts";
+import type { App, View } from "../../app/runtime/app.ts";
+import { NoteBuffer } from "../buffers/buffer.ts";
+import { parseInSlices } from "../../app/runtime/watch.ts";
 
 /** A place a peek showed, for `ctrl+o` inside it: with the backlinks it listed, shown again at once when it's back. */
 interface Place {

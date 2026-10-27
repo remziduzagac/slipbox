@@ -382,9 +382,9 @@ what the walk leaves out, the watcher doesn't subscribe to (D40).
 
 A symlinked folder or file leading out of its vault, or out of home, is shown as a link and not read until you answer,
 the first time it's opened: follow it, just look, or no (VV-D6; `core/workspace/vaults/symlinks.ts`,
-`tui/following.ts`). The rules
-replace D40's "a symlinked folder is never followed" and "a symlinked file only inside the root", and the CLI's refusal
-of every read through a link out of the root; D220's writes stay for vaults.
+`tui/documents/navigation/following.ts`). The rules replace D40's "a symlinked folder is never followed" and "a
+symlinked file only inside the root", and the CLI's refusal of every read through a link out of the root; D220's writes
+stay for vaults.
 
 - **Which links ask.** A link's scope (`linkScope`) is its vault's real path, home's for home, none in Elsewhere. A link
   whose real target is inside it is `within`: a second name for what's there, never asked about — a file kept as the

@@ -28,10 +28,11 @@ CLI call never loads OpenTUI's native renderer.
 
 Every user action is a named command (D11). `core/application/commands/areas/*.ts` (by area, listed by
 `core/application/commands/catalog.ts`) give each command id the CLI invocation that reaches the same state change, or
-mark it an interaction; the TUI implements each one (`tui/actions/actions.ts` and the `tui/actions-*.ts` of its area) in
-the `CommandRegistry` (`core/application/commands/registry.ts`), and keys, the palette and the `:` prompt run them by
-id. A command implemented without a spec, or specified without an implementation, fails at start-up and fails a test
-([tui.md](tui.md) § Parity with the CLI).
+mark it an interaction. `tui/actions/` holds registration and command-area folders (`documents/` so far), with remaining
+root action modules moving by area; each implementation is registered in the `CommandRegistry`
+(`core/application/commands/registry.ts`), and keys, the palette and the `:` prompt run them by id. A command
+implemented without a spec, or specified without an implementation, fails at start-up and fails a test ([tui.md](tui.md)
+§ Parity with the CLI).
 
 ### The boundary is enforced, not hoped for
 
@@ -175,7 +176,7 @@ The CLI's commands are the user's reference, [cli.md](../../docs/manual/cli.md);
 | `core/documents/markdown/parse.ts` | 1.3 | remark + gfm + frontmatter + wikilinks; headings, slugs |
 | [html.ts][o44], `html-adapter.ts` | HTML | bounded tokenizer, omission ranges and semantic document adapter |
 | [html-export.ts][o45], `html-markdown.ts` | HTML | semantic export and lossless Markdown HTML runs |
-| `tui/html.ts` | HTML | per-buffer disclosure state and revealing navigation targets |
+| `tui/documents/views/html.ts` | HTML | per-buffer disclosure state and revealing navigation targets |
 | [obsidian.ts][o46] | DF-D17 | Obsidian's `==highlight==` and `%%comment%%`, read into the tree; a block comment too |
 | [parse-pool.ts][o47] | 15.1 | a big note's chunks parsed on up to four workers (`parse-worker.ts`), into its cache |
 | [url.ts][o4] | 15.1, 25.6 | where a worker's script is, from the source or in the compiled binary (D232) |
@@ -327,12 +328,12 @@ The CLI's commands are the user's reference, [cli.md](../../docs/manual/cli.md);
 | `version.ts` | — | the version, one source |
 | `tui/*` | 3.x, 5.3–5.7 | the app: reading, panes, saving and conflicts |
 | [app.ts][o132] | D235 | the model: the state every part shares and the wiring; a controller per feature (`app.git`) |
-| `tui/actions/actions.ts`, `tui/actions-*.ts` | 0.8 | command registration and area implementations |
+| `tui/actions/`, remaining root action modules | 0.8 | command registration and area folders (`documents/` so far) |
 | `tui/draw*.ts` | 3.1, 3.2 | painting: the frame, then each region (windows, panels, status line, overlays) |
-| `tui/buffer.ts` | 4.5–4.8 | a note's text, its undo steps, unsaved state, BOM and line endings |
-| `tui/editing.ts` | 4.3 | the cursor as a text offset; insert mode |
+| `tui/documents/buffers/buffer.ts` | 4.5–4.8 | a note's text, its undo steps, unsaved state, BOM and line endings |
+| `tui/documents/editing/editing.ts` | 4.3 | the cursor as a text offset; insert mode |
 | `tui/shell/input/vim.ts` | 4.4 | counts, operators and text objects, the register, `.` |
-| `tui/replacing.ts` | 4.16 | the replace row, `:s` and its confirm, `gn`'s matches |
+| `tui/documents/search/replacing.ts` | 4.16 | the replace row, `:s` and its confirm, `gn`'s matches |
 | `tui/githistory.ts` | 26.4, 22.1 | blame and a file's history: a version read, its diff to now |
 | `tui/gitquery.ts` | — | the one foreground git read: a newer one cancels it, a stale view never takes it |
 | `tui/gitview.ts` | 26.2, GIT-D8 | the git panel's working tree: its sections, a file's changes, what its keys run |
@@ -349,14 +350,14 @@ The CLI's commands are the user's reference, [cli.md](../../docs/manual/cli.md);
 | `tui/explorer-disk.ts` | VV-D8 | the explorer's rows the walk doesn't give: what it leaves out or hasn't reached |
 | `tui/listings.ts` | T12 | the folders the explorer lists a level at a time: read off the main thread, kept, again |
 | `tui/marks.ts` | VV-D9, D244 | a row's marks: the index's state, what describes the row; why it isn't indexed |
-| `tui/peek.ts` | VV-D7, D259 | the peek: another vault's file read in place; `o`, `t`, `z`; its backlinks, asked |
-| `tui/following.ts` | VV-D6 | the question a link not followed asks; follow, just look, no; the probe |
+| [peek.ts][o133] | VV-D7, D259 | the peek: another vault's file read in place; `o`, `t`, `z`; its backlinks, asked |
+| [following.ts][o134] | VV-D6 | the question a link not followed asks; follow, just look, no; the probe |
 | `tui/gitchanges.ts` | 26.1 | `] c`, `[ c` to a change against what's staged; its preview; one undone |
-| `tui/shellrun.ts` | 25.7 | `:!cmd`'s output window, `:{range}!cmd`'s lines replaced, one command at a time |
-| `tui/snippets.ts` | 25.8 | a snippet's stops while typing: `tab` through them, placeholders replaced, mirrors |
+| [shellrun.ts][o135] | 25.7 | `:!cmd`'s output window, `:{range}!cmd`'s lines replaced, one command at a time |
+| [snippets.ts][o136] | 25.8 | a snippet's stops while typing: `tab` through them, placeholders replaced, mirrors |
 | `tui/spelling.ts` | 25.6 | misspelt words where a window shows them: the marks, `] s`, `z =`, `z g` |
-| `tui/completion.ts` | 19.16, 20.13, 25.5 | completion as typed: a server's items, links' targets, open files' words |
-| `tui/saveas.ts` | 10.14 | the Save As window an export opens: places, the folder's entries, the name; its keys |
+| [completion.ts][o137] | 19.16, 20.13, 25.5 | completion as typed: a server's items, links' targets, open files' words |
+| [saveas.ts][o138] | 10.14 | the Save As window an export opens: places, the folder's entries, the name; its keys |
 | `tui/where.ts` | WSP-D4, WSP-D5 | where you are, on the top bar or the status line: vault, workspace, branch, cut |
 
 ## Data flow for one note
@@ -705,3 +706,10 @@ ordinary note needs.
 [o130]: ../../src/tui/shell/terminal/opentui.ts
 [o131]: ../../src/tui/shell/terminal/run.ts
 [o132]: ../../src/tui/app/runtime/app.ts
+
+[o133]: ../../src/tui/documents/navigation/peek.ts
+[o134]: ../../src/tui/documents/navigation/following.ts
+[o135]: ../../src/tui/documents/editing/shellrun.ts
+[o136]: ../../src/tui/documents/editing/snippets.ts
+[o137]: ../../src/tui/documents/editing/completion.ts
+[o138]: ../../src/tui/documents/saving/saveas.ts

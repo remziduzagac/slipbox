@@ -1,14 +1,14 @@
 // Code in a note's view: a code block too wide for the window scrolled sideways on its own (`[render] code_wrap`),
 // the code view's cells (24.13), and folding.
 
-import { placeAt } from "./editing.ts";
-import { formatEntry } from "../core/workspace/mutations/capture.ts";
-import { gitSigns } from "../core/workspace/git/gitsigns.ts";
-import { type Layout, scrolledCol, srcAt, unscrolledCol } from "../core/rendering/layout/ir.ts";
-import type { Problem } from "../core/documents/diagnostics/diagnostics.ts";
-import { graphemes } from "../core/foundation/text/width.ts";
-import { cells, ordered, type Pos } from "./cursor.ts";
-import type { App, View } from "./app/runtime/app.ts";
+import { placeAt } from "../editing/editing.ts";
+import { formatEntry } from "../../../core/workspace/mutations/capture.ts";
+import { gitSigns } from "../../../core/workspace/git/gitsigns.ts";
+import { type Layout, scrolledCol, srcAt, unscrolledCol } from "../../../core/rendering/layout/ir.ts";
+import type { Problem } from "../../../core/documents/diagnostics/diagnostics.ts";
+import { graphemes } from "../../../core/foundation/text/width.ts";
+import { cells, ordered, type Pos } from "../editing/cursor.ts";
+import type { App, View } from "../../app/runtime/app.ts";
 
 /** Code blocks scrolled sideways, and the code view's cells. */
 export class Code {

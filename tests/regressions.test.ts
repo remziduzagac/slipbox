@@ -19,8 +19,8 @@ import { stringWidth } from "../src/core/foundation/text/width.ts";
 import { App } from "../src/tui/app/runtime/app.ts";
 import { TextCanvas } from "../src/tui/shell/terminal/canvas.ts";
 import { importsOf } from "../scripts/check-boundary.ts";
-import { computeFind } from "../src/tui/search.ts";
-import { selectedText } from "../src/tui/views.ts";
+import { computeFind } from "../src/tui/workspace/search/search.ts";
+import { selectedText } from "../src/tui/documents/views/views.ts";
 
 const sandbox = mkdtempSync(join(tmpdir(), "slipbox-reg-"));
 process.env.XDG_STATE_HOME = join(sandbox, "state");

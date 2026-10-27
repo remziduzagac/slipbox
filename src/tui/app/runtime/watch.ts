@@ -4,7 +4,7 @@
 import { existsSync, statSync } from "node:fs";
 import { basename, join } from "node:path";
 import { readText, stamp } from "../../../core/foundation/platform/fsutil.ts";
-import { offsetOf } from "../../editing.ts";
+import { offsetOf } from "../../documents/editing/editing.ts";
 import { planRelink } from "../../../core/workspace/mutations/rename/rename.ts";
 import { activityFile, AutoIndex, autoIndexFile } from "../../../core/workspace/graph/autoindex.ts";
 import { loadConfig } from "../../../core/application/config/config.ts";
@@ -16,7 +16,7 @@ import { VaultWatcher, type WatchBatch, type WatchChange, watchTakes } from "../
 import { walkFailure, walkThread } from "../../../core/workspace/walk/walk-thread.ts";
 import { newParseCache } from "../../../core/documents/markdown/parse.ts";
 import { parseInBackground } from "../../../core/documents/markdown/parse-pool.ts";
-import { BACKGROUND_PARSE, type NoteBuffer } from "../../buffer.ts";
+import { BACKGROUND_PARSE, type NoteBuffer } from "../../documents/buffers/buffer.ts";
 import type { App } from "./app.ts";
 import type { Graph } from "../../../core/workspace/graph/graph.ts";
 

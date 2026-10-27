@@ -4,7 +4,7 @@
 import { type Run, withView } from "./actions/actions.ts";
 import { landingText, findHeading } from "../core/workspace/links/landing.ts";
 import { isAbsolute } from "node:path";
-import { markdownText } from "./actions-links.ts";
+import { markdownText } from "./actions/documents/actions-links.ts";
 import type {
   Hover,
   Location,

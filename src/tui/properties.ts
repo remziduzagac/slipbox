@@ -1,10 +1,10 @@
 // The properties editor (3.20): a note's frontmatter in the floating window, with every editing key there is; closed
 // or saved, its text goes back into the note as one undo step.
 
-import { cannotEdit } from "./editing.ts";
+import { cannotEdit } from "./documents/editing/editing.ts";
 import { TOP } from "../core/workspace/session/position.ts";
 import { parseMarkdown } from "../core/documents/markdown/parse.ts";
-import { NoteBuffer } from "./buffer.ts";
+import { NoteBuffer } from "./documents/buffers/buffer.ts";
 import type { App } from "./app/runtime/app.ts";
 
 /** The properties editor. */

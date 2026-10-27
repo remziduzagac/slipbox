@@ -13,7 +13,7 @@ import { stringWidth, truncate } from "../core/foundation/text/width.ts";
 import type { App, View } from "./app/runtime/app.ts";
 import { type Canvas, drawText } from "./shell/terminal/canvas.ts";
 import { prettyKey } from "./shell/input/keys.ts";
-import type { SaveAsGeometry } from "./saveas.ts";
+import type { SaveAsGeometry } from "./documents/saving/saveas.ts";
 import type { DialogGeometry } from "./dialog.ts";
 import { LEFT_VIEWS, RIGHT_VIEWS } from "./panels.ts";
 import { drawTopBar } from "./draw-topbar.ts";

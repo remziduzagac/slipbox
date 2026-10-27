@@ -1,12 +1,12 @@
 // Overlays: the lists (pickers, menus, the palette's), prompts and yes-or-no dialogs over the windows, and their
 // keys; the floating window closed or left.
 
-import * as R from "./replacing.ts";
+import * as R from "./documents/search/replacing.ts";
 import { cancelGitRead } from "./gitquery.ts";
 import { TOP } from "../core/workspace/session/position.ts";
-import { saveAsKey } from "./saveas.ts";
+import { saveAsKey } from "./documents/saving/saveas.ts";
 import { dialogKey } from "./dialog.ts";
-import { NoteBuffer } from "./buffer.ts";
+import { NoteBuffer } from "./documents/buffers/buffer.ts";
 import { keyChar } from "./shell/input/keys.ts";
 import type { App, View, ListItem, ListOverlay, Overlay, PromptOverlay } from "./app/runtime/app.ts";
 import { rank } from "./match.ts";

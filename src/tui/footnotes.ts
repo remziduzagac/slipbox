@@ -1,7 +1,7 @@
 // The footnotes view (3.17): the note's footnotes, each with its references unfolded under it, jumped to, added,
 // edited, renamed and deleted.
 
-import { cannotEdit, offsetOf, placeAt } from "./editing.ts";
+import { cannotEdit, offsetOf, placeAt } from "./documents/editing/editing.ts";
 import {
   addFootnote,
   deleteFootnote,

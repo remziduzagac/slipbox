@@ -81,10 +81,10 @@ export const CHECKS_FOR: [RegExp, string[]][] = [
   [/^src\/core\/workspace\/vaults\/(home|mounts)\.ts$/, ["home", "Elsewhere"]],
   [/^src\/tui\/workspace\/vaults\/vaults\.ts$/, ["vaults", "home", "Elsewhere", "roots", "named folders"]],
   [/^src\/core\/workspace\/vaults\/symlinks\.ts$/, ["links", "rename"]],
-  [/^src\/tui\/peek\.ts$/, ["peek"]],
+  [/^src\/tui\/documents\/navigation\/peek\.ts$/, ["peek"]],
   // Replace, and renames with the links they rewrite.
   [/^src\/core\/(documents\/editing\/replace|workspace\/mutations\/replace-files)\.ts$/, ["replace", "find"]],
-  [/^src\/tui\/replacing\.ts$/, ["replace"]],
+  [/^src\/tui\/documents\/search\/replacing\.ts$/, ["replace"]],
   [/^src\/core\/workspace\/mutations\/rename\/rename[\w-]*\.ts$/, ["rename", "naming", "vaults"]],
   [/^src\/tui\/renaming\.ts$/, ["rename", "naming"]],
   // Features of a window or a command of their own.
@@ -92,11 +92,11 @@ export const CHECKS_FOR: [RegExp, string[]][] = [
   // Upgrading and restarting (UPG): the update offer, its dialog, the restart's note and hand-over.
   [/^src\/(core\/application\/distribution\/(update|restart|skill-lifecycle)|tui\/(updates|dialog))\.ts$/, ["updates"]],
   [/^src\/tui\/outline\.ts$/, ["outline"]],
-  [/^src\/tui\/scratch\.ts$/, ["scratch"]],
+  [/^src\/tui\/app\/scratch\/scratch\.ts$/, ["scratch"]],
   [/^src\/tui\/info\.ts$/, ["info"]],
   [/^src\/tui\/properties\.ts$/, ["properties"]],
-  [/^src\/tui\/handoff\.ts$/, ["hand-off"]],
-  [/^src\/(core\/foundation\/platform\/shell|tui\/shellrun)\.ts$/, ["shell"]],
+  [/^src\/tui\/documents\/saving\/handoff\.ts$/, ["hand-off"]],
+  [/^src\/(core\/foundation\/platform\/shell|tui\/documents\/editing\/shellrun)\.ts$/, ["shell"]],
   [/^src\/core\/documents\/editing\/tasks\.ts$/, ["tasks"]],
   [/^src\/core\/documents\/editing\/comments\.ts$/, ["comments"]],
   [/^src\/core\/documents\/model\/data\.ts$/, ["data"]],

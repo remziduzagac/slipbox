@@ -30,9 +30,9 @@ import {
   WHERE_SAID,
 } from "../core/application/distribution/report.ts";
 import { sanitize } from "../core/foundation/text/sanitize.ts";
-import { NoteBuffer } from "./buffer.ts";
+import { NoteBuffer } from "./documents/buffers/buffer.ts";
 import { type Canvas, TextCanvas } from "./shell/terminal/canvas.ts";
-import { placeAt, startInsert, stopInsert } from "./editing.ts";
+import { placeAt, startInsert, stopInsert } from "./documents/editing/editing.ts";
 import { mergeClosed } from "./mergescreen.ts";
 import type { App, ListItem, Region, View } from "./app/runtime/app.ts";
 

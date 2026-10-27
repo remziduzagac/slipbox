@@ -1,21 +1,21 @@
 // A window's view of its note: its layout for the window's width (rows derived from source anchors, decision 3.5),
 // its gutter, its cursor and selection, scrolling, and the marks drawn over its text.
 
-import { readRegular } from "../core/foundation/platform/fsutil.ts";
-import { taskHolding, toggleTask } from "../core/documents/editing/tasks.ts";
-import { cannotEdit, lineOf, offsetOf, placeAt, typedSelection } from "./editing.ts";
-import { matchBracket } from "../core/documents/editing/brackets.ts";
-import { extentOf, type Layout } from "../core/rendering/layout/ir.ts";
-import { layoutWidth } from "../core/documents/model/note.ts";
-import { type Anchor, anchorAt, type CursorAnchor, rowFor } from "../core/workspace/session/position.ts";
-import type { TextEdit } from "../core/documents/model/footnotes.ts";
-import { truncate, graphemes, graphemeWidth, stringWidth } from "../core/foundation/text/width.ts";
-import type { NoteBuffer } from "./buffer.ts";
-import { cells, clampPos, type Pos, snap, ordered } from "./cursor.ts";
-import type { App, View } from "./app/runtime/app.ts";
-import { editable, type Selection } from "./app/runtime/app.ts";
-import { isHidden, unparsedText } from "./lens.ts";
-import { computeFind } from "./search.ts";
+import { readRegular } from "../../../core/foundation/platform/fsutil.ts";
+import { taskHolding, toggleTask } from "../../../core/documents/editing/tasks.ts";
+import { cannotEdit, lineOf, offsetOf, placeAt, typedSelection } from "../editing/editing.ts";
+import { matchBracket } from "../../../core/documents/editing/brackets.ts";
+import { extentOf, type Layout } from "../../../core/rendering/layout/ir.ts";
+import { layoutWidth } from "../../../core/documents/model/note.ts";
+import { type Anchor, anchorAt, type CursorAnchor, rowFor } from "../../../core/workspace/session/position.ts";
+import type { TextEdit } from "../../../core/documents/model/footnotes.ts";
+import { truncate, graphemes, graphemeWidth, stringWidth } from "../../../core/foundation/text/width.ts";
+import type { NoteBuffer } from "../buffers/buffer.ts";
+import { cells, clampPos, type Pos, snap, ordered } from "../editing/cursor.ts";
+import type { App, View } from "../../app/runtime/app.ts";
+import { editable, type Selection } from "../../app/runtime/app.ts";
+import { isHidden, unparsedText } from "../editing/lens.ts";
+import { computeFind } from "../../workspace/search/search.ts";
 
 /** Views: layout, anchors, cursor and selection, scrolling. */
 export class Views {

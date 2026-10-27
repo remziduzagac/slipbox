@@ -20,7 +20,7 @@ import {
 } from "./mergescreen.ts";
 import { gitAbort, gitContinue, gitRebase, gitSkip } from "./rebase.ts";
 import { openReview, reviewGo, reviewKeep, reviewNote, reviewRevert, reviewStep, reviewSwitch } from "./review.ts";
-import * as E from "./editing.ts";
+import * as E from "./documents/editing/editing.ts";
 
 /** Windows, tabs and panels: splits and tabs, each window's history, the side panels, the Problems panel and source control. */
 export function paneActions(): Record<string, Run> {

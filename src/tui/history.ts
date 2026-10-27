@@ -3,12 +3,12 @@
 
 import { existsSync } from "node:fs";
 import { isAbsolute, join } from "node:path";
-import { stopInsert } from "./editing.ts";
+import { stopInsert } from "./documents/editing/editing.ts";
 import type { Anchor } from "../core/workspace/session/position.ts";
-import { peekStep } from "./peek.ts";
+import { peekStep } from "./documents/navigation/peek.ts";
 import { tildePath } from "../core/workspace/vaults/names.ts";
 import { sanitize } from "../core/foundation/text/sanitize.ts";
-import type { NoteBuffer } from "./buffer.ts";
+import type { NoteBuffer } from "./documents/buffers/buffer.ts";
 import { match } from "./match.ts";
 import { prettyKey } from "./shell/input/keys.ts";
 import type { App, Loc, View, ListItem } from "./app/runtime/app.ts";

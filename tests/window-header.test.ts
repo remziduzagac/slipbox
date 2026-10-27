@@ -7,12 +7,12 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { commandGroup, COMMAND_SPECS } from "../src/core/application/commands/catalog.ts";
 import { TextCanvas } from "../src/tui/shell/terminal/canvas.ts";
-import { BACKGROUND_PARSE } from "../src/tui/buffer.ts";
+import { BACKGROUND_PARSE } from "../src/tui/documents/buffers/buffer.ts";
 import { crumbLeast, type Geometry } from "../src/tui/draw.ts";
 import { modeButtons } from "../src/tui/draw-header.ts";
 import { drawPane } from "../src/tui/draw-pane.ts";
 import { openDiff } from "../src/tui/diffview.ts";
-import { unparsedText, type ViewMode, viewMode } from "../src/tui/lens.ts";
+import { unparsedText, type ViewMode, viewMode } from "../src/tui/documents/editing/lens.ts";
 import { type Harness, harness, makeSandbox, statusRow } from "./tui-harness.ts";
 
 makeSandbox();
@@ -698,16 +698,16 @@ describe("room: the buttons give way before the breadcrumb's innermost heading (
 describe("loading the header's modules", () => {
   test("each loads first on its own: no import cycle runs one before what it needs (lens.ts and the header's modes)", () => {
     const top = join(import.meta.dir, "..");
-    for (const m of [
-      "lens",
-      "shell/input/modes",
-      "draw-header",
-      "draw-pane",
-      "shell/input/mouse",
-      "draw-status",
-      "actions-view",
-    ]) {
-      const r = Bun.spawnSync([process.execPath, "-e", `await import("./src/tui/${m}.ts")`], { cwd: top });
+    for (const [m, path] of Object.entries({
+      lens: "documents/editing/lens",
+      modes: "shell/input/modes",
+      "draw-header": "draw-header",
+      "draw-pane": "draw-pane",
+      mouse: "shell/input/mouse",
+      "draw-status": "draw-status",
+      "actions-view": "actions/documents/actions-view",
+    })) {
+      const r = Bun.spawnSync([process.execPath, "-e", `await import("./src/tui/${path}.ts")`], { cwd: top });
       expect(`${m}: ${r.exitCode} ${r.stderr.toString().trim().split("\n")[0] ?? ""}`).toBe(`${m}: 0 `);
     }
   });
