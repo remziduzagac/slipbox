@@ -1,5 +1,5 @@
 import { UNIT_TIMEOUT_MS } from "./support/timeouts.ts";
-// The harness shared by tests/tui.test.ts and tests/tui/ feature owners: a sandbox of each file's own, a vault
+// The harness shared by tests/tui/ feature owners: a sandbox of each file's own, a vault
 // copied into it, the TUI model driven headlessly (keys in, TextCanvas out), and the helpers that read its rows.
 //
 // `bun test` evaluates this module once in a run, however many files import it: its top-level code runs for the first

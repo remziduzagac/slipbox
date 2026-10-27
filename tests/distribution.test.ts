@@ -460,7 +460,7 @@ describe("the supply chain's gates (14.10)", () => {
     const git = of("src/tui/workspace/git/views/branches/gitbranchview.ts");
     expect(git.all).toBeNull();
     if (git.all === null) {
-      expect(git.tests).toContain("tests/tui.test.ts");
+      expect(git.tests).toContain("tests/tui/workspace/git/panel/branches.test.ts");
       expect(git.tests).not.toContain("tests/release.test.ts");
       expect(git.checks).toEqual(["git"]);
     }

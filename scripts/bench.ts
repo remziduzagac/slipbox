@@ -1,7 +1,7 @@
 // Timings for the paths that grow with a note's size (plan 15.1): bun scripts/bench.ts [filter…]
 //
-// Generates big notes in a temporary vault, drives the TUI model headlessly (as tests/tui.test.ts
-// does) and the CLI as a process, and prints the median of a few runs of each. Nothing outside the
+// Generates big notes in a temporary vault, drives the TUI model headlessly (as tests/tui/ feature owners
+// do) and the CLI as a process, and prints the median of a few runs of each. Nothing outside the
 // temporary directory is touched; the config, state, cache and data go there too, and no linter or
 // server runs (or is installed) while it's timed.
 

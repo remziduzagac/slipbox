@@ -430,7 +430,7 @@ OpenTUI is pre-1.0 and moves fast, so it is pinned to an exact version in `packa
 (`"0.5.12"`, no caret; D6). To upgrade:
 
 1. Read the changelog from the pinned version to the target.
-2. Bump the pin, run `bun run check`. The `OpenTUI end to end` test in `tests/tui.test.ts`
+2. Bump the pin, run `bun run check`. The `OpenTUI end to end` test in `tests/tui/shell/terminal/integration.test.ts`
    exercises the adapter through OpenTUI's own test renderer.
 3. Launch the TUI and check what the adapter uses: `drawText` and `fillRect` output, key names (`keyName` in
    `tui/shell/input/keys.ts`), paste, mouse and resize events, `widthMethod` (a wcwidth terminal's rows must not drift),
