@@ -189,3 +189,30 @@ baseline after ORG-T17 is 2,604 literal suite/test declarations; the earlier 2,6
 sides of subsequent comparisons use the corrected scanner. Earlier task counts remain their recorded measurements,
 made consistently with the preceding scanner on both sides. Regression inputs are added inside the existing quoted
 fixture test; the old scanner fails them and the corrected scanner passes all eight migration tests.
+
+
+### Literal-content correction before ORG-T8
+
+A split exposed another inventory limitation: quotes in regex literals and nested templates could hide later real
+calls. Declaration scans now use the shared linear lexer to mask those contents, preserving positions and recovering
+the original title text. Default comment/path scanning is unchanged. The corrected post-T18 baseline has 3,566 literal
+suite/test declarations across 126 files. An independent TypeScript-grammar tree walk agrees on every declaration,
+including multiplicity; the earlier regex-based counts remain historical measurements made consistently on both sides.
+Regression inputs inside the existing fixture test cover quote-bearing regexes, nested templates/comments and template
+titles. The quote-bearing-regex case fails before the repair; the eight migration tests pass afterward. No dependency
+or product-code change is required. Subsequent split checks use this version on both sides and separately account for
+duplicated parent-suite wrappers while preserving all leaf identities and callbacks.
+
+The corrected inventory also closes the earlier evidence gap: clean archives of the T1 squash and ORG-T18 have 3,562
+and 3,566 declarations respectively, with none removed and exactly four added. Earlier whole-inventory claims covered
+the narrower scanner's subset; the complete comparison now confirms the expected additions only:
+
+- ORG-T12: `package test and documentation runners retain the shared unit fallback`.
+- ORG-T12: `Bun file-local timeout sites stay named; update this map when a file moves`.
+- ORG-T13: `shared trash and marker operations reject reverse mutation imports in every form`.
+- ORG-T13: `the real shared mutation module stays below orchestration`.
+
+The additional same-line postfix-increment/decrement division fixture fails before its two-character guard and passes
+afterward. TSX closing tags are lowered by Bun before inventory scanning and are covered explicitly. Computed names and
+runtime expansion still require review; an unterminated template is masked to the end rather than inventing later
+calls. Default comment/path mode retains its prior behavior.
