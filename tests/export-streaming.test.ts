@@ -10,7 +10,7 @@ import { prepareExport } from "../src/core/export/jobs.ts";
 import { formatFor, exportNotes, exportTarget, isExport } from "../src/core/export/index.ts";
 import { DEFAULT_CONFIG } from "../src/core/application/config/config.ts";
 import { Graph } from "../src/core/graph.ts";
-import { locateVault } from "../src/core/vault.ts";
+import { locateVault } from "../src/core/workspace/vaults/vault.ts";
 import { readText } from "../src/core/foundation/platform/fsutil.ts";
 
 // Exports stage in slipbox's cache folder: this file's, never the developer's.

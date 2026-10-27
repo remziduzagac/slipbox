@@ -69,15 +69,18 @@ export const CHECKS_FOR: [RegExp, string[]][] = [
   [/^src\/core\/(spell|spell-thread|spell-worker|hunspell)\.ts$/, ["spelling"]],
   [/^src\/tui\/spelling\.ts$/, ["spelling"]],
   // A slow disk read off the main thread (T12): the walk's and the listings' threads, the explorer's listings.
-  [/^src\/core\/(walk-thread|walk-jobs|walk-worker|walkers|index-job)\.ts$/, ["slow disk", "home", "view"]],
+  [
+    /^src\/core\/(?:workspace\/walk\/(?:walk-thread|walk-jobs|walk-worker|walkers)|index-job)\.ts$/,
+    ["slow disk", "home", "view"],
+  ],
   // Every folder listed a level at a time (Elsewhere's among them), and the vault and permission facts every row's
   // marks read.
-  [/^src\/core\/(listing|list-worker)\.ts$/, ["slow disk", "home", "view", "Elsewhere", "marks"]],
+  [/^src\/core\/workspace\/walk\/(listing|list-worker)\.ts$/, ["slow disk", "home", "view", "Elsewhere", "marks"]],
   [/^src\/tui\/listings\.ts$/, ["slow disk", "view", "Elsewhere", "marks"]],
   // Vaults, home and Elsewhere; a link followed out; the peek (VV).
-  [/^src\/core\/(home|mounts)\.ts$/, ["home", "Elsewhere"]],
+  [/^src\/core\/workspace\/vaults\/(home|mounts)\.ts$/, ["home", "Elsewhere"]],
   [/^src\/tui\/vaults\.ts$/, ["vaults", "home", "Elsewhere", "roots", "named folders"]],
-  [/^src\/core\/symlinks\.ts$/, ["links", "rename"]],
+  [/^src\/core\/workspace\/vaults\/symlinks\.ts$/, ["links", "rename"]],
   [/^src\/tui\/peek\.ts$/, ["peek"]],
   // Replace, and renames with the links they rewrite.
   [/^src\/core\/(replace|replace-files)\.ts$/, ["replace", "find"]],

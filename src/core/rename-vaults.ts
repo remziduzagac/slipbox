@@ -14,11 +14,18 @@ import {
   VAULT_NAME,
   vaultConfigFile,
   withIdentity,
-} from "./registry.ts";
+} from "./workspace/vaults/registry.ts";
 import { openVault, Reach } from "./reach.ts";
-import { folderIdentity, folderNamed, lookupFolder, pointerName, readFolders, travelTogether } from "./folders.ts";
+import {
+  folderIdentity,
+  folderNamed,
+  lookupFolder,
+  pointerName,
+  readFolders,
+  travelTogether,
+} from "./workspace/vaults/folders.ts";
 import { formatPointer, isPointer, parsePointer } from "./pointer.ts";
-import { findVaultRoot, hasMarker, isInside, markersAt, type VaultLocation } from "./vault.ts";
+import { findVaultRoot, hasMarker, isInside, markersAt, type VaultLocation } from "./workspace/vaults/vault.ts";
 import { RenameError, type FileChange, type RenamePlan, shownFor, Collector, dirtyTrees } from "./rename-plan.ts";
 import { type Site, NOTE_EXT, real, mdTarget, safeDecode } from "./rename-links.ts";
 

@@ -10,14 +10,14 @@
 import { spawnSync } from "node:child_process";
 import { join, posix, relative, sep } from "node:path";
 import { urlPath } from "./convert.ts";
-import { folderIdentity, lookupFolder, type NamedFolder, readFolders } from "./folders.ts";
+import { folderIdentity, lookupFolder, type NamedFolder, readFolders } from "./workspace/vaults/folders.ts";
 import { type Checkout, headOf } from "./git.ts";
 import { branchesOf, changedBetween, gitArgs, inCheckout, inVault } from "./gitops.ts";
 import { inEnglish } from "./gitremote.ts";
 import { extractText } from "./graph.ts";
 import { checkoutRemotes, parseHosted, splitRef, withHostedPath } from "./hosting.ts";
 import { extensionless, homeDir, wikiPathCandidates } from "./links.ts";
-import { isBusyFolder } from "./walk.ts";
+import { isBusyFolder } from "./workspace/walk/walk.ts";
 import { formatPointer, isPointer, type Pointer, parsePointer } from "./pointer.ts";
 
 export interface MergeBreak {

@@ -13,7 +13,7 @@ import {
   saveSession,
   type SessionState,
   type TabSet,
-} from "../core/position.ts";
+} from "../core/workspace/session/position.ts";
 import { listThemes } from "../core/theme/index.ts";
 import type { App, View, UiState } from "./app.ts";
 import { uiDefaults } from "./app.ts";

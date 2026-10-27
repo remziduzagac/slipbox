@@ -44,7 +44,7 @@ import {
 } from "../src/core/gitbranches.ts";
 import { baseBranch, refName, worktreeList } from "../src/core/gitops.ts";
 import { refusedName } from "../src/core/gitremote.ts";
-import { setTrust } from "../src/core/trust.ts";
+import { setTrust } from "../src/core/workspace/vaults/trust.ts";
 
 /** git in `repo`, as a test runs it: its own name and no system config. */
 function git(repo: string, ...args: string[]): string {

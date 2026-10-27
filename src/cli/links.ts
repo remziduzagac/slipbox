@@ -16,7 +16,7 @@ import { classify } from "../core/filetypes.ts";
 import { readText } from "../core/foundation/platform/fsutil.ts";
 import { frontmatterFindings } from "../core/diagnostics.ts";
 import { urlPath } from "../core/convert.ts";
-import { findVaultRoot, isInside } from "../core/vault.ts";
+import { findVaultRoot, isInside } from "../core/workspace/vaults/vault.ts";
 import { flag, has, UsageError } from "./args.ts";
 import { EXIT, CliError, type Handler, needsIndex, requireArg, resolveNote } from "./common.ts";
 

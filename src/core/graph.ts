@@ -14,11 +14,11 @@ import { basename, isAbsolute, join, posix, relative, sep } from "node:path";
 import { isMainThread } from "node:worker_threads";
 import type { Config } from "./application/config/config.ts";
 import { climbsOut, ensureDir, readJson, readText, sweepTemps, writeJson } from "./foundation/platform/fsutil.ts";
-import { blockingLink } from "./symlinks.ts";
+import { blockingLink } from "./workspace/vaults/symlinks.ts";
 import { countForms, type FormCounts } from "./convention.ts";
 import { LinkIndex, normKey, onDisk, type Resolution } from "./links.ts";
 import type { ParseCache as ChunkCache } from "./parse.ts";
-import { tildePath } from "./names.ts";
+import { tildePath } from "./workspace/vaults/names.ts";
 import { sharedParseCache } from "./parsecache.ts";
 import { cacheDir, ensureCacheHome, stateDir } from "./foundation/platform/paths.ts";
 import { headCommit, headOf } from "./git.ts";
@@ -26,8 +26,8 @@ import { changedBetween, inVault } from "./gitops.ts";
 import { contentHash, Redirects } from "./redirects.ts";
 import { dataLinks, parseData } from "./data.ts";
 import { classify, extensionOf } from "./filetypes.ts";
-import { type AskedWhole, type HomeWalk, homeWalk, inFolders, walksInto } from "./home.ts";
-import { checkoutAt, findVaultRoot, isListed, isVaultRoot, type VaultLocation } from "./vault.ts";
+import { type AskedWhole, type HomeWalk, homeWalk, inFolders, walksInto } from "./workspace/vaults/home.ts";
+import { checkoutAt, findVaultRoot, isListed, isVaultRoot, type VaultLocation } from "./workspace/vaults/vault.ts";
 import {
   HOME_LIMITS,
   listDirectory,
@@ -36,7 +36,7 @@ import {
   type WalkCap,
   WalkFilter,
   walkVault,
-} from "./walk.ts";
+} from "./workspace/walk/walk.ts";
 import { tagKey, tagName } from "./tags.ts";
 import {
   type LinkRef,

@@ -35,7 +35,8 @@ write the qualified name; the CLI writes the qualified name and warns.
 - 2026-10-11: found that `pointerName` wrote a repository's qualified name on a clash already, silently, and a
   `.slipbox/` folder's short name; and it counted only other folders' names, while following (`lookupFolder`) also
   reads their aliases, so a name another folder had as an alias was written as if it were unique.
-- 2026-10-11: `core/folders.ts`: `pointerNaming` (the name written, short, qualified, private, the folders that share
+- 2026-10-11: `core/workspace/vaults/folders.ts`: `pointerNaming` (the name written, short, qualified, private, the
+  folders that share
   it by name or alias, as following reads one), `pointerWarnings`, `privateNameWarning`; `pointerName` is its `name`.
   `core/write-link.ts`: `pointerAt`, `LinkEnds.naming`, `linkWarnings`. `slipbox link` puts them in its `warnings`;
   the relink's plan says them for the pointers it offers (`planRelink`; an ambiguous one it never offered). The TUI:

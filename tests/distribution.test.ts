@@ -377,7 +377,7 @@ describe("the supply chain's gates (14.10)", () => {
 
   test("the import graph: what a file imports, a worker it starts, what it imports that isn't code, a path it names", () => {
     const g = importGraph();
-    expect(g.get("src/core/walk.ts")).toContain("src/core/foundation/platform/fsutil.ts");
+    expect(g.get("src/core/workspace/walk/walk.ts")).toContain("src/core/foundation/platform/fsutil.ts");
     expect(g.get("src/core/parse-pool.ts")).toContain("src/core/parse-worker.ts");
     expect(g.get("src/core/export/jobs.ts")).toContain("src/core/export-worker.ts");
     expect(g.get("src/core/skill.ts")).toContain("skills/slipbox/SKILL.md");
@@ -479,7 +479,7 @@ describe("the supply chain's gates (14.10)", () => {
     // The builds' record, which every check's session reads: every check.
     expect(of("tests/terminal/releases.ts")).toMatchObject({ checks: "all" });
     // The explorer's listings, every folder a level at a time and the facts its rows' marks read: those features' checks.
-    expect(of("src/core/listing.ts")).toMatchObject({
+    expect(of("src/core/workspace/walk/listing.ts")).toMatchObject({
       checks: expect.arrayContaining(["Elsewhere", "marks", "slow disk", "view"]),
     });
     // A command of the command line's: its tests, no check.

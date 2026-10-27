@@ -74,8 +74,10 @@ still blocks.
   vault open's rebuilds (reindex, rescan, a vault switched to, settings, renaming), a note's text read to parse or
   open it, and the walk at start (before the screen) to a follow-up issue. A folder being listed shows a dim
   `listing…` row under it, only after about 150 ms.
-- 2026-10-23: The walk thread: `core/walk-worker.ts` (a build entry point, D232) serving `core/walk-jobs.ts`, asked by
-  `core/walk-thread.ts` through one `WorkerRequests`. Home's walk is a `SlicedWalk` kept on the thread and stepped
+- 2026-10-23: The walk thread: `core/workspace/walk/walk-worker.ts` (a build entry point, D232) serving
+  `core/workspace/walk/walk-jobs.ts`, asked by
+  `core/workspace/walk/walk-thread.ts` through one `WorkerRequests`. Home's walk is a `SlicedWalk` kept on the thread
+  and stepped
   there by each `step(15)` (a request per slice, so it rests while you work); a vault's walk, home's walk kept
   brought up to now (`homeWalk` with `keep` false: what changed comes back `unkept`, kept by the main thread once it
   takes the answer) and a folder past the cap (`vaultsPastCap`, from `AutoIndex.seekIn`) are a request each. Each
@@ -83,7 +85,8 @@ still blocks.
   environment the process started with — checked), the root markers, the probe's answers (`probeAnswers`,
   `takeProbeAnswers`). Deadlines: a slice or a seek 60 s, a whole walk 10 minutes; past one the thread is started
   afresh, the walk given up on and said (`home's walk gave up: a folder didn't answer in time; …`), never walked on
-  the main thread instead. `AutoIndex` takes a walker (`core/walkers.ts`: `HERE`, the CLI's, by default); the TUI's
+  the main thread instead. `AutoIndex` takes a walker (`core/workspace/walk/walkers.ts`: `HERE`, the CLI's, by default);
+  the TUI's
   idle jobs take the thread's. `Graph.build` takes a vault's walk given. Home's graph built again after its walk
   (`Watch.homeIndexed`) asks the thread, and drops the answer when the graph was built since (`Graph.builds`), the
   folders asked for changed, or the vault open did.
@@ -102,7 +105,8 @@ still blocks.
   from 10,000 notes, CPU and no disk. Memory: RSS grows 16 MB more on the slow mount (the thread's own heap), 45 MB
   against 39 on the wide folder; the main heap the same within a few MB.
 - 2026-10-23: The explorer's listings: a folder listed a level at a time (`outsideRows`) is built from its listing
-  (`core/listing.ts`: its entries with what its rows and their marks read of each — a folder or a file, a link's target
+  (`core/workspace/walk/listing.ts`: its entries with what its rows and their marks read of each — a folder or a file, a
+  link's target
   and key, a vault's name and branch, one you may not read, a busy folder), read on two listing threads of their own
   (`ListThreads`, the walk worker's `list`) and kept by `Listings` (`tui/listings.ts`): at most 256 folders, read again
   in the background once a second old as the tree is built again, an answer drawn only when it changed, dropped for
@@ -151,7 +155,8 @@ still blocks.
   one the tree shows and read it again in a loop: the folders the tree last asked for are never let go of
   (`newTree`); (5) rows coming above the selection moved it onto another row: kept by its path; (6) hidden names
   were read (stat, markers, busy check) before the explorer filtered them, so a hidden link that hangs could hold up
-  its folder's listing: `listFolder` filters first (`listsName`, moved to `core/listing.ts`; `files.hidden` in the
+  its folder's listing: `listFolder` filters first (`listsName`, moved to `core/workspace/walk/listing.ts`;
+  `files.hidden` in the
   request and the listing's settings).
 - 2026-10-23: The maintainer's review loop (`/code-review` and Codex, independently, until a round finds nothing real)
   runs on the draft pull request once its CI is green; this round's `/code-review` waits for it.
@@ -171,7 +176,8 @@ still blocks.
   worktree check still failed, its screen showing `listing…` for `~/work`: a fresh TUI's first listing waited for a
   listing thread to start, and that thread was the whole walk worker (the index and the parser loaded with it): 250–500
   ms to its first answer under load, against 9–54 once running. The listings have a light worker of their own now
-  (`core/list-worker.ts`, a build entry point; the context in `core/foundation/workers/worker-context.ts`): 60–70 ms to
+  (`core/workspace/walk/list-worker.ts`, a build entry point; the context in
+  `core/foundation/workers/worker-context.ts`): 60–70 ms to
   the first answer,
   under the 150 ms before `listing…` shows. And the check waits for `~/work`'s rows, listed off the main thread now,
   rather than asserting them as the breadcrumb changes. The touched features' terminal checks: 24 of 24, at a load of
@@ -219,7 +225,8 @@ still blocks.
 - 2026-10-24: Round 2's fixes made, each with a unit test (`tests/walk-thread.test.ts`) that fails without it — all
   thirteen mutation-checked, each fix undone once (`tmp`'s runner) — and the cases you'd see with a terminal check of
   their own (`tests/terminal/checks/slow-disk.ts`, ten). The terminal checks drive the TUI as shipped on a slow disk
-  stood in for by `SLIPBOX_SLOW_DISK=<folder name>:<ms>[:<deadline ms>]` (`slowDisk` in `core/walk.ts`: a folder of that
+  stood in for by `SLIPBOX_SLOW_DISK=<folder name>:<ms>[:<deadline ms>]` (`slowDisk` in `core/workspace/walk/walk.ts`: a
+  folder of that
   name takes so long to list on whichever thread lists it, the threads' deadlines the third): a check can't mount a
   disk, and a test hook of this kind is the terminal tests' own (`SLIPBOX_TRACE`, `SLIPBOX_CLIPBOARD`). Two of them
   mutation-checked too: with the background index walking on the main thread again, or the explorer listing there,
@@ -255,7 +262,8 @@ still blocks.
   turned a file reached by a link (20.8) into one of home's own notes — reached again as reached; (r12) the check that
   home's settings changed mid-walk lost where Downloads is — the walk's own filter's signature is compared where the
   walk is kept; (r13) `AutoIndex.step` wrote its place (an fsync) at every tick, waiting on a thread or a retry —
-  only when it changed; (r14) `ci-scope.ts` mapped `core/listing.ts` short of Elsewhere's and the marks' checks — now
+  only when it changed; (r14) `ci-scope.ts` mapped `core/workspace/walk/listing.ts` short of Elsewhere's and the marks'
+  checks — now
   to them; (r15) a listing's error words copied `folderUnreadable`'s, and its row said the bare code where `l` said
   the words — one table (`unreadableWords` in `core/foundation/platform/fsutil.ts`), the row saying the words.
 - 2026-10-24: Round 3's tests. Each fix has a unit test (`tests/walk-thread.test.ts`; r14's in

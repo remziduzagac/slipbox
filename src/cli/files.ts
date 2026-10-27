@@ -34,7 +34,7 @@ import {
   trashPath,
 } from "../core/files.ts";
 import { forgetPlan, listPlans, loadPlan, type SavedPlan, savePlan } from "../core/plans.ts";
-import { isInside, isVaultRoot, recordLocation, rootAt } from "../core/vault.ts";
+import { isInside, isVaultRoot, recordLocation, rootAt } from "../core/workspace/vaults/vault.ts";
 import { has, UsageError } from "./args.ts";
 import { notIndexedSaid } from "../core/graph.ts";
 import {

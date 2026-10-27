@@ -7,7 +7,7 @@ import { existsSync, statSync } from "node:fs";
 import { isAbsolute, join, posix, relative, sep } from "node:path";
 import { formatPointer, isPointer, parsePointer, resolvePointer } from "./pointer.ts";
 import { checkoutRemotes, hostedHere } from "./hosting.ts";
-import { lookupFolder, pointerName } from "./folders.ts";
+import { lookupFolder, pointerName } from "./workspace/vaults/folders.ts";
 import {
   extensionless,
   type MdLinkTarget,

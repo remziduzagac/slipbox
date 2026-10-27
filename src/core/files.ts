@@ -12,8 +12,8 @@ import type { Backlink, Graph } from "./graph.ts";
 import { type Keyed, stateDir } from "./foundation/platform/paths.ts";
 import { openVault } from "./reach.ts";
 import { fileInTheWay, linksIntoFolder } from "./rename.ts";
-import { isInside, isVaultRoot } from "./vault.ts";
-import { holdsNotes } from "./walk.ts";
+import { isInside, isVaultRoot } from "./workspace/vaults/vault.ts";
+import { holdsNotes } from "./workspace/walk/walk.ts";
 
 export class FileOpError extends Error {}
 

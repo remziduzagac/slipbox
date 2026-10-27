@@ -3,7 +3,7 @@
 
 import * as R from "./replacing.ts";
 import { cancelGitRead } from "./gitquery.ts";
-import { TOP } from "../core/position.ts";
+import { TOP } from "../core/workspace/session/position.ts";
 import { saveAsKey } from "./saveas.ts";
 import { dialogKey } from "./dialog.ts";
 import { NoteBuffer } from "./buffer.ts";

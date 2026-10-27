@@ -5,11 +5,11 @@
 
 import { existsSync, statSync } from "node:fs";
 import { join } from "node:path";
-import { type Checkout, headCommit, headOf } from "./git.ts";
-import type { Graph } from "./graph.ts";
+import { type Checkout, headCommit, headOf } from "../../git.ts";
+import type { Graph } from "../../graph.ts";
 import { deepestOutside, inFolders } from "./home.ts";
-import { HOME_LIMITS } from "./walk.ts";
-import type { WatchBatch } from "./watch.ts";
+import { HOME_LIMITS } from "../walk/walk.ts";
+import type { WatchBatch } from "../../watch.ts";
 
 /** HEAD as seen: its branch and its commit — a merge, a pull, a commit move it on the branch (20.21). */
 export interface Head {

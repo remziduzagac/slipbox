@@ -10,7 +10,7 @@
 import { execFile, execFileSync } from "node:child_process";
 import type { Checkout } from "./git.ts";
 import { gitArgs, refName } from "./gitops.ts";
-import { isTrusted } from "./trust.ts";
+import { isTrusted } from "./workspace/vaults/trust.ts";
 
 /** Where the branch stands against its upstream, as `git status --branch` says it. */
 export interface Track {

@@ -7,9 +7,9 @@
 
 import { type Dirent, readdirSync, realpathSync, statSync } from "node:fs";
 import { join, relative, sep } from "node:path";
-import type { Config } from "./application/config/config.ts";
-import { ensureDir, readJson, writeJson } from "./foundation/platform/fsutil.ts";
-import { cacheDir, ensureCacheHome, type Keyed } from "./foundation/platform/paths.ts";
+import type { Config } from "../../application/config/config.ts";
+import { ensureDir, readJson, writeJson } from "../../foundation/platform/fsutil.ts";
+import { cacheDir, ensureCacheHome, type Keyed } from "../../foundation/platform/paths.ts";
 import { answered, followedTarget, isLink, linkTarget } from "./symlinks.ts";
 import { isVaultRoot, type VaultLocation } from "./vault.ts";
 import {
@@ -30,7 +30,7 @@ import {
   symlinkVerdict,
   type WalkResult,
   walkTop,
-} from "./walk.ts";
+} from "../walk/walk.ts";
 
 /** Home's walk as its cache folder keeps it. */
 interface KeptWalk {

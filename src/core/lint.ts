@@ -9,7 +9,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import type { Config } from "./application/config/config.ts";
-import { isTrusted } from "./trust.ts";
+import { isTrusted } from "./workspace/vaults/trust.ts";
 import { findServer } from "./servers/find.ts";
 import { installTool, lockKey, type NpmSpec } from "./servers/install.ts";
 import type { ServerDef } from "./servers/languages.ts";

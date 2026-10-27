@@ -47,9 +47,9 @@ import {
   rootAt,
   setRootMarkers,
   vaultOf,
-} from "../src/core/vault.ts";
+} from "../src/core/workspace/vaults/vault.ts";
 import { cacheDir, stateDir, vaultKey } from "../src/core/foundation/platform/paths.ts";
-import { readRoots } from "../src/core/registry.ts";
+import { readRoots } from "../src/core/workspace/vaults/registry.ts";
 import {
   agentsWarning,
   answered,
@@ -63,9 +63,9 @@ import {
   probe,
   setLinkAnswer,
   writesThrough,
-} from "../src/core/symlinks.ts";
-import { LINK_REASON, WalkFilter, walkVault } from "../src/core/walk.ts";
-import { homeWalkFile, walkHomeNow } from "../src/core/home.ts";
+} from "../src/core/workspace/vaults/symlinks.ts";
+import { LINK_REASON, WalkFilter, walkVault } from "../src/core/workspace/walk/walk.ts";
+import { homeWalkFile, walkHomeNow } from "../src/core/workspace/vaults/home.ts";
 import { renderMarkdown } from "../src/core/layout/render.ts";
 import { glyphsFor } from "../src/core/glyphs.ts";
 
@@ -314,7 +314,7 @@ describe("the walk (0.11)", () => {
     expect([...g.notes.keys()]).toEqual(["public.md"]);
   });
   test("a symlinked picture or data file: inside the root, listed and found by name; outside it, skipped and said (0.11)", async () => {
-    const { WalkFilter, walkVault } = await import("../src/core/walk.ts");
+    const { WalkFilter, walkVault } = await import("../src/core/workspace/walk/walk.ts");
     const dir = mkdtempSync(join(tmpdir(), "slipbox-link-asset-"));
     const outside = mkdtempSync(join(tmpdir(), "slipbox-link-asset-out-"));
     for (const d of [".slipbox", "shared", "img"]) mkdirSync(join(dir, d));
@@ -930,9 +930,9 @@ describe("review round 3 (CLI)", () => {
 describe("review cycle 4 (vault, hostile files)", () => {
   test("a symlinked FIFO is skipped; device symlinks for .gitignore, config and version are refused", async () => {
     const { symlinkSync } = await import("node:fs");
-    const { WalkFilter, walkVault } = await import("../src/core/walk.ts");
+    const { WalkFilter, walkVault } = await import("../src/core/workspace/walk/walk.ts");
     const { loadConfig } = await import("../src/core/application/config/config.ts");
-    const { readVaultVersion } = await import("../src/core/vault.ts");
+    const { readVaultVersion } = await import("../src/core/workspace/vaults/vault.ts");
     const dir = mkdtempSync(join(tmpdir(), "slipbox-hostile-"));
     mkdirSync(join(dir, ".slipbox"));
     mkdirSync(join(dir, "sub"));
@@ -1049,7 +1049,7 @@ describe("review cycle 5 (the watcher's polling fallbacks)", () => {
   };
   test("degraded (the watch limit hit): open notes are polled, their changes still reported", async () => {
     const { VaultWatcher } = await import("../src/core/watch.ts");
-    const { WalkFilter } = await import("../src/core/walk.ts");
+    const { WalkFilter } = await import("../src/core/workspace/walk/walk.ts");
     const dir = mkdtempSync(join(tmpdir(), "slipbox-poll-"));
     writeFileSync(join(dir, "a.md"), "one\n");
     const changed: string[] = [];
@@ -1079,7 +1079,7 @@ describe("review cycle 5 (the watcher's polling fallbacks)", () => {
   });
   test("what the watcher sees on its own, and a change heard elsewhere said no second time by its sweep (#13)", async () => {
     const { VaultWatcher } = await import("../src/core/watch.ts");
-    const { WalkFilter } = await import("../src/core/walk.ts");
+    const { WalkFilter } = await import("../src/core/workspace/walk/walk.ts");
     const dir = mkdtempSync(join(tmpdir(), "slipbox-heard-"));
     mkdirSync(join(dir, ".stash"));
     writeFileSync(join(dir, "a.md"), "one\n");
@@ -1123,7 +1123,7 @@ describe("review cycle 5 (the watcher's polling fallbacks)", () => {
 
   test("a folder that can't be watched is polled: its new and changed notes still come", async () => {
     const { VaultWatcher } = await import("../src/core/watch.ts");
-    const { WalkFilter } = await import("../src/core/walk.ts");
+    const { WalkFilter } = await import("../src/core/workspace/walk/walk.ts");
     const dir = mkdtempSync(join(tmpdir(), "slipbox-polldir-"));
     mkdirSync(join(dir, "sub"));
     const changed: string[] = [];
@@ -1152,7 +1152,7 @@ describe("review cycle 5 (the watcher's polling fallbacks)", () => {
   });
   test("a folder moved in brings its attachments with its notes: `![[dal.png]]` finds the picture in it (21.3)", async () => {
     const { VaultWatcher } = await import("../src/core/watch.ts");
-    const { WalkFilter } = await import("../src/core/walk.ts");
+    const { WalkFilter } = await import("../src/core/workspace/walk/walk.ts");
     const dir = mkdtempSync(join(tmpdir(), "slipbox-adopt-"));
     const outside = mkdtempSync(join(tmpdir(), "slipbox-adopt-out-"));
     mkdirSync(join(outside, "photos", "old"), { recursive: true });
@@ -1187,7 +1187,7 @@ describe("review cycle 5 (the watcher's polling fallbacks)", () => {
   });
   test("a note written and removed between two looks is said gone: what read it from the disk meanwhile looks again", async () => {
     const { VaultWatcher } = await import("../src/core/watch.ts");
-    const { WalkFilter } = await import("../src/core/walk.ts");
+    const { WalkFilter } = await import("../src/core/workspace/walk/walk.ts");
     const dir = mkdtempSync(join(tmpdir(), "slipbox-cameandwent-"));
     const changes: string[] = [];
     const w = new VaultWatcher({
@@ -1224,7 +1224,7 @@ describe("the watcher's second look: what its events didn't say (5.1, #56)", () 
     listed?: boolean;
   }) => {
     const { VaultWatcher } = await import("../src/core/watch.ts");
-    const { WalkFilter } = await import("../src/core/walk.ts");
+    const { WalkFilter } = await import("../src/core/workspace/walk/walk.ts");
     const changes: string[] = [];
     const w = new VaultWatcher({
       ...o,
@@ -1638,7 +1638,7 @@ describe("a root's identity, its state by path, the machine's roots (17.3–17.6
   });
 
   test("names: one a different folder has is refused, by a dry run too, with one that isn't — x-<folder> inside x, -2 when taken (17.5, 21.6)", async () => {
-    const { suggestFolderName } = await import("../src/core/folders.ts");
+    const { suggestFolderName } = await import("../src/core/workspace/vaults/folders.ts");
     const base = fresh("names");
     const tag = `xn${basename(base).slice(-6).toLowerCase()}`;
     const top = join(base, "x");
@@ -1689,9 +1689,9 @@ describe("a root's identity, its state by path, the machine's roots (17.3–17.6
   });
 
   test("state by path (21.8): each copy its own; a named folder moved by hand takes its state along — sure, never a guess", async () => {
-    const { PositionStore, loadSession, saveSession } = await import("../src/core/position.ts");
-    const { readRoots } = await import("../src/core/registry.ts");
-    const { lookupFolder } = await import("../src/core/folders.ts");
+    const { PositionStore, loadSession, saveSession } = await import("../src/core/workspace/session/position.ts");
+    const { readRoots } = await import("../src/core/workspace/vaults/registry.ts");
+    const { lookupFolder } = await import("../src/core/workspace/vaults/folders.ts");
     const { stateDir } = await import("../src/core/foundation/platform/paths.ts");
     const base = fresh("moves");
     const tag = `mv${basename(base).slice(-6).toLowerCase()}`;
@@ -1736,8 +1736,8 @@ describe("a root's identity, its state by path, the machine's roots (17.3–17.6
     expect((await cli(["ls", "--json"], c)).json.warnings.join()).not.toContain("moved here"); // once
     // Found where it went by the background index before it's opened there: still its move, when opened.
     const c3 = join(base, "found-first");
-    const { recordFolder } = await import("../src/core/folders.ts");
-    const { recordRoot } = await import("../src/core/registry.ts");
+    const { recordFolder } = await import("../src/core/workspace/vaults/folders.ts");
+    const { recordRoot } = await import("../src/core/workspace/vaults/registry.ts");
     renameSync(c, c3);
     recordRoot({ kind: "vault", path: c3, found: true });
     recordFolder(c3, { found: true });
@@ -1765,10 +1765,10 @@ describe("a root's identity, its state by path, the machine's roots (17.3–17.6
   });
 
   test("a named repository moved by hand, its graph built at the new path first (the background index): its state still comes along (0.10, 21.8)", async () => {
-    const { loadSession, saveSession } = await import("../src/core/position.ts");
-    const { recordFolder } = await import("../src/core/folders.ts");
-    const { recordRoot } = await import("../src/core/registry.ts");
-    const { rootAt } = await import("../src/core/vault.ts");
+    const { loadSession, saveSession } = await import("../src/core/workspace/session/position.ts");
+    const { recordFolder } = await import("../src/core/workspace/vaults/folders.ts");
+    const { recordRoot } = await import("../src/core/workspace/vaults/registry.ts");
+    const { rootAt } = await import("../src/core/workspace/vaults/vault.ts");
     const { stateDir } = await import("../src/core/foundation/platform/paths.ts");
     const git = (cwd: string, ...args: string[]) =>
       Bun.spawnSync(["git", "-c", "user.email=t@example.invalid", "-c", "user.name=t", "-C", cwd, ...args]).exitCode;
@@ -1802,7 +1802,7 @@ describe("a root's identity, its state by path, the machine's roots (17.3–17.6
   });
 
   test("a root's storage taken to its new key: the personal state the old key's, the new key's derived files kept (21.8)", async () => {
-    const { adoptStorage } = await import("../src/core/registry.ts");
+    const { adoptStorage } = await import("../src/core/workspace/vaults/registry.ts");
     const { cacheHome, stateHome } = await import("../src/core/foundation/platform/paths.ts");
     const tag = basename(fresh("adopt-storage"));
     const [from, to, alone] = [`${tag}-from`, `${tag}-to`, `${tag}-alone`];
@@ -1865,7 +1865,7 @@ describe("a root's identity, its state by path, the machine's roots (17.3–17.6
   });
 
   test("a named folder moved by hand: the session's scratch, in the state folder by its absolute path, follows it (0.10, 21.8)", async () => {
-    const { loadSession, saveSession } = await import("../src/core/position.ts");
+    const { loadSession, saveSession } = await import("../src/core/workspace/session/position.ts");
     const { appendScratch, scratchLocation } = await import("../src/core/capture.ts");
     const base = fresh("scratch-moved");
     const tag = `sm${basename(base).slice(-6).toLowerCase()}`;
@@ -1898,7 +1898,7 @@ describe("a root's identity, its state by path, the machine's roots (17.3–17.6
   });
 
   test("a name that starts with dots (`..draft.md`) is inside its root: its position carried and listed, git's paths kept", async () => {
-    const { PositionStore, carryPositions } = await import("../src/core/position.ts");
+    const { PositionStore, carryPositions } = await import("../src/core/workspace/session/position.ts");
     const { inVault } = await import("../src/core/gitops.ts");
     const base = fresh("dotdot");
     const a = join(base, "a");
@@ -1916,8 +1916,8 @@ describe("a root's identity, its state by path, the machine's roots (17.3–17.6
   });
 
   test("today's state moved once (21.8): the instances' list read into the roots', each one's state from its key to its path's", async () => {
-    const { readRoots, rootsFile } = await import("../src/core/registry.ts");
-    const { PositionStore, loadSession, positionsFile } = await import("../src/core/position.ts");
+    const { readRoots, rootsFile } = await import("../src/core/workspace/vaults/registry.ts");
+    const { PositionStore, loadSession, positionsFile } = await import("../src/core/workspace/session/position.ts");
     const { cacheDir, stateDir, stateHome, cacheHome } = await import("../src/core/foundation/platform/paths.ts");
     const { writeJson } = await import("../src/core/foundation/platform/fsutil.ts");
     // A machine of its own: the state and cache folders, for this test.
@@ -1977,7 +1977,7 @@ describe("a root's identity, its state by path, the machine's roots (17.3–17.6
   });
 
   test("positions by file (21.8): a note opened from the root, or from a folder inside it, is where it was left", async () => {
-    const { PositionStore } = await import("../src/core/position.ts");
+    const { PositionStore } = await import("../src/core/workspace/session/position.ts");
     const dir = fresh("byfile");
     mkdirSync(join(dir, "docs"), { recursive: true });
     mkdirSync(join(dir, ".git"));
@@ -2000,7 +2000,7 @@ describe("a root's identity, its state by path, the machine's roots (17.3–17.6
   });
 
   test("a root reached by a link is recorded: known on this machine from then on, its index found by its path (17.11, 21.8)", async () => {
-    const { readRoots } = await import("../src/core/registry.ts");
+    const { readRoots } = await import("../src/core/workspace/vaults/registry.ts");
     const base = fresh("reached");
     const [a, b] = [join(base, "a"), join(base, "b")];
     mkdirSync(join(a, ".slipbox"), { recursive: true });
@@ -2036,7 +2036,7 @@ describe("a root's identity, its state by path, the machine's roots (17.3–17.6
   });
 
   test("the machine's roots: each open recorded once, by its path and kind (17.6, 21.8)", async () => {
-    const { readRoots, rootsFile } = await import("../src/core/registry.ts");
+    const { readRoots, rootsFile } = await import("../src/core/workspace/vaults/registry.ts");
     const dir = fresh("reg");
     await cli(["init", dir, "--name", `reg${basename(dir).slice(-6).toLowerCase()}`, "--json"], dir);
     await cli(["ls"], dir);
@@ -2065,7 +2065,7 @@ describe("a root's identity, its state by path, the machine's roots (17.3–17.6
   });
 
   test("Elsewhere keeps one session for the machine, wherever it's opened; positions by file (VV-D3, 21.8)", async () => {
-    const { PositionStore, loadSession, saveSession } = await import("../src/core/position.ts");
+    const { PositionStore, loadSession, saveSession } = await import("../src/core/workspace/session/position.ts");
     const one = fresh("l1");
     const two = fresh("l2");
     const a = locateVault({ path: one });
@@ -3589,7 +3589,7 @@ describe("a folder made a vault, and a vault made a plain folder again (18.11)",
     for (const rel of Object.keys(files)) expect([rel, read(rel)]).toEqual([rel, texts[rel]!]);
     expect(await reached([parent])).toEqual(before);
     // The machine forgot it — a root no more, its name gone with its .slipbox/ — which is in the parent's trash, restorable.
-    const { readRoots } = await import("../src/core/registry.ts");
+    const { readRoots } = await import("../src/core/workspace/vaults/registry.ts");
     expect(readRoots().some((v) => v.path === join(parent, "proj"))).toBe(false);
     expect((await cli(["folders"], parent)).json.data.some((f: { name: string }) => f.name === "mkproj")).toBe(false);
     expect((await cli(["trash"], parent)).json.data[0]).toMatchObject({ shown: "proj/.slipbox", dir: true });
@@ -4249,8 +4249,8 @@ describe("git worktrees: separate vaults of one repository (17.19)", () => {
   });
 
   test("its own state, by its path; moved by git (git worktree move), found again by git's name for it, its state along (17.19, 21.8)", async () => {
-    const { readRoots } = await import("../src/core/registry.ts");
-    const { PositionStore } = await import("../src/core/position.ts");
+    const { readRoots } = await import("../src/core/workspace/vaults/registry.ts");
+    const { PositionStore } = await import("../src/core/workspace/session/position.ts");
     const l = await layout(++n);
     if (!l) return;
     const wt = locateVault({ root: l.wt });
@@ -4320,7 +4320,7 @@ describe("git worktrees: separate vaults of one repository (17.19)", () => {
   });
 
   test("a worktree gone: its cache removed at once, its state and entry a month after it was last seen", async () => {
-    const { pruneWorktrees, readRoots } = await import("../src/core/registry.ts");
+    const { pruneWorktrees, readRoots } = await import("../src/core/workspace/vaults/registry.ts");
     const { cacheDir, stateDir } = await import("../src/core/foundation/platform/paths.ts");
     const l = await layout(++n);
     if (!l) return;
@@ -4340,8 +4340,8 @@ describe("git worktrees: separate vaults of one repository (17.19)", () => {
   });
 
   test("a named .slipbox/ folder inside a worktree: its copy is the main checkout's folder, not a second one (21.6)", async () => {
-    const { readFolders } = await import("../src/core/folders.ts");
-    const { rootAt } = await import("../src/core/vault.ts");
+    const { readFolders } = await import("../src/core/workspace/vaults/folders.ts");
+    const { rootAt } = await import("../src/core/workspace/vaults/vault.ts");
     const base = mkdtempSync(join(tmpdir(), "slipbox-wt-named-"));
     const main = join(base, "repo");
     const name = `hb${basename(base).slice(-6).toLowerCase()}`;
@@ -4362,7 +4362,7 @@ describe("git worktrees: separate vaults of one repository (17.19)", () => {
 
   test("a worktree's root marked only by .obsidian/ isn't gone while it's there (21.1, 17.19)", async () => {
     const { cacheDir } = await import("../src/core/foundation/platform/paths.ts");
-    const { rootAt } = await import("../src/core/vault.ts");
+    const { rootAt } = await import("../src/core/workspace/vaults/vault.ts");
     const base = mkdtempSync(join(tmpdir(), "slipbox-wt-obs-"));
     const main = join(base, "repo");
     mkdirSync(join(main, "notes", ".obsidian"), { recursive: true });
@@ -4508,7 +4508,7 @@ describe("git in a root you don't trust (23.6)", () => {
     const top = hostile();
     if (!top) return;
     const { statusOf, changedSince } = await import("../src/core/gitops.ts");
-    const { setTrustedRoots } = await import("../src/core/trust.ts");
+    const { setTrustedRoots } = await import("../src/core/workspace/vaults/trust.ts");
     setTrustedRoots([top]);
     try {
       statusOf({ root: top });
@@ -5519,8 +5519,8 @@ describe("a root's name and entry: by its remote, its .slipbox/, its path (20.22
   });
 
   test("a root as the user is told of it (21.9): its name, else its path from home, else its whole path", async () => {
-    const { rootLabel } = await import("../src/core/names.ts");
-    const { homeFolder } = await import("../src/core/vault.ts");
+    const { rootLabel } = await import("../src/core/workspace/vaults/names.ts");
+    const { homeFolder } = await import("../src/core/workspace/vaults/vault.ts");
     expect(rootLabel({ mode: "vault", name: "research", root: "/x/research", worktree: null })).toBe("research");
     expect(
       rootLabel({ mode: "vault", name: null, root: join(homeFolder(), "src", "experiment"), worktree: null }),
@@ -5531,7 +5531,9 @@ describe("a root's name and entry: by its remote, its .slipbox/, its path (20.22
   });
 
   test("Elsewhere isn't in the machine's list; given .slipbox/, the vault's entry; an old folder's, gone a month, forgotten", async () => {
-    const { pruneWorktrees, readRoots, recordRoot, rootsFile } = await import("../src/core/registry.ts");
+    const { pruneWorktrees, readRoots, recordRoot, rootsFile } = await import(
+      "../src/core/workspace/vaults/registry.ts"
+    );
     const dir = fresh("plainf");
     writeFileSync(join(dir, "n.md"), "# N\n");
     await cli(["ls"], dir);
@@ -5562,7 +5564,7 @@ describe("a root's name and entry: by its remote, its .slipbox/, its path (20.22
 
 describe("settings, deeper over broader (20.7)", () => {
   test("a vault inside another: its own settings, then the outer one's, then yours; a program named in a vault's never runs", async () => {
-    const { configFilesFor } = await import("../src/core/vault.ts");
+    const { configFilesFor } = await import("../src/core/workspace/vaults/vault.ts");
     const base = mkdtempSync(join(tmpdir(), "slipbox-deeper-"));
     const outer = join(base, "outer");
     const inner = join(outer, "inner");
@@ -5858,7 +5860,7 @@ describe("the background auto-index of the home folder (20.9)", () => {
 
   test("finds the roots in it, nested ones too, never in hidden folders or node_modules; indexes each; listed as found", async () => {
     const { AutoIndex } = await import("../src/core/autoindex.ts");
-    const { readRoots } = await import("../src/core/registry.ts");
+    const { readRoots } = await import("../src/core/workspace/vaults/registry.ts");
     const { cacheDir } = await import("../src/core/foundation/platform/paths.ts");
     const home = makeHome();
     const ai = new AutoIndex(home, join(home, "..", `${basename(home)}-progress.json`));
@@ -5874,7 +5876,7 @@ describe("the background auto-index of the home folder (20.9)", () => {
       expect(existsSync(join(cacheDir(v), "index.json"))).toBe(true);
     }
     // In the lookup pointers use (21.6): the named one, as found; the unnamed ones not.
-    const { readFolders } = await import("../src/core/folders.ts");
+    const { readFolders } = await import("../src/core/workspace/vaults/folders.ts");
     const named = readFolders().filter((f) => f.copies.some((c) => c.path.startsWith(`${home}/`)));
     // (notes/inner's .slipbox/ has no name, and none is written into it: unnamed, 21.8.)
     expect(named.map((f) => [f.name, f.copies.map((c) => [c.path.slice(home.length + 1), c.found])]).sort()).toEqual([
@@ -5909,7 +5911,7 @@ describe("the background auto-index of the home folder (20.9)", () => {
 
   test("its place is kept: a new run resumes the pass; a day after one is done, the next starts; opened, a vault is no longer only found", async () => {
     const { AutoIndex, REPASS_MS } = await import("../src/core/autoindex.ts");
-    const { readRoots } = await import("../src/core/registry.ts");
+    const { readRoots } = await import("../src/core/workspace/vaults/registry.ts");
     const home = makeHome();
     const file = join(home, "..", `${basename(home)}-progress.json`);
     const first = new AutoIndex(home, file);
@@ -6047,7 +6049,7 @@ describe("home, a vault without a marker (VV-D2)", () => {
   };
 
   test("its skip list: hidden folders, the system's, Downloads, the busy folders, and what isn't a note or a text file; large notes listed, not read; no .gitignore", async () => {
-    const { homeSkip, isBusyName, SlicedWalk, WalkFilter } = await import("../src/core/walk.ts");
+    const { homeSkip, isBusyName, SlicedWalk, WalkFilter } = await import("../src/core/workspace/walk/walk.ts");
     const busy = ["node_modules", ".venv", "venv", "__pycache__", "target", "build", "dist", ".next", "vendor"];
     const busier = ["Pods", "DerivedData", ".gradle", ".tox", "cache", "Caches", ".cache", "pip-cache"];
     const files: Record<string, string> = {
@@ -6123,7 +6125,7 @@ describe("home, a vault without a marker (VV-D2)", () => {
   });
 
   test("its Downloads is where the desktop keeps it (user-dirs.dirs)", async () => {
-    const { SlicedWalk, WalkFilter } = await import("../src/core/walk.ts");
+    const { SlicedWalk, WalkFilter } = await import("../src/core/workspace/walk/walk.ts");
     const files = { "Téléchargements/t.md": "# T\n", "Downloads/d.md": "# D\n" };
     await withHome(files, (home) => {
       const config = join(home, "..", `${basename(home)}-config`);
@@ -6143,7 +6145,7 @@ describe("home, a vault without a marker (VV-D2)", () => {
 
   test("a vault inside home stays its own: a boundary of home's walk, its notes never home's — nor its backlinks", async () => {
     const { Reach } = await import("../src/core/reach.ts");
-    const { walkHomeNow } = await import("../src/core/home.ts");
+    const { walkHomeNow } = await import("../src/core/workspace/vaults/home.ts");
     const elsewhere = realpathSync(mkdtempSync(join(tmpdir(), "slipbox-vhome-other-")));
     await withHome(
       {
@@ -6183,8 +6185,8 @@ describe("home, a vault without a marker (VV-D2)", () => {
 
   test("built in slices while nobody is working: its walk, then its index; the cap said when it's reached", async () => {
     const { AutoIndex } = await import("../src/core/autoindex.ts");
-    const { homeWalkKept } = await import("../src/core/home.ts");
-    const { SlicedWalk, WalkFilter } = await import("../src/core/walk.ts");
+    const { homeWalkKept } = await import("../src/core/workspace/vaults/home.ts");
+    const { SlicedWalk, WalkFilter } = await import("../src/core/workspace/walk/walk.ts");
     const files: Record<string, string> = { "a.md": "# A\n" };
     for (let i = 0; i < 6; i++) files[`f${i}/n${i}.md`] = `[a](../a.md)\n`;
     files["repo/.git/HEAD"] = "ref: refs/heads/main\n";
@@ -6246,7 +6248,7 @@ describe("home, a vault without a marker (VV-D2)", () => {
       const ai = new AutoIndex(home, file, () => Date.now(), { limits: { notes: 100, folders: 2 } });
       while (ai.step(50)) {}
       expect(ai.status).toMatchObject({ home: true, capped: "folders", homeNotes: 1, found: 1, indexed: 1 });
-      const { readRoots } = await import("../src/core/registry.ts");
+      const { readRoots } = await import("../src/core/workspace/vaults/registry.ts");
       expect(readRoots().some((v) => v.path === join(home, "b", "c", "repo") && v.found)).toBe(true);
     });
   });
@@ -6274,7 +6276,7 @@ describe("home, a vault without a marker (VV-D2)", () => {
   });
 
   test("its walk kept is brought up to now: a note come since, a folder become a vault, a vault become home's again", async () => {
-    const { walkHomeNow, homeWalkFile } = await import("../src/core/home.ts");
+    const { walkHomeNow, homeWalkFile } = await import("../src/core/workspace/vaults/home.ts");
     const files = {
       "a.md": "# A\n",
       "keep/k.md": "# K\n",
@@ -6311,7 +6313,7 @@ describe("home, a vault without a marker (VV-D2)", () => {
   });
 
   test("its walk kept lists again a folder whose time differs from the walk's, set back too: cp -a, rsync -a, a clock behind (#12)", async () => {
-    const { walkHomeNow, homeWalkFile } = await import("../src/core/home.ts");
+    const { walkHomeNow, homeWalkFile } = await import("../src/core/workspace/vaults/home.ts");
     await withHome({ "a.md": "# A\n", "keep/k.md": "# K\n", "proj/p.md": "# P\n", "w/w.md": "# W\n" }, (home) => {
       const loc = homeAt(home);
       const hour = new Date(Date.now() - 3_600_000);
@@ -6365,7 +6367,7 @@ describe("home, a vault without a marker (VV-D2)", () => {
   });
 
   test("a folder of home walked within two seconds of its change is listed again: a change its time can't tell apart is found (#12)", async () => {
-    const { walkHomeNow, homeWalkFile } = await import("../src/core/home.ts");
+    const { walkHomeNow, homeWalkFile } = await import("../src/core/workspace/vaults/home.ts");
     await withHome({ "notes/a.md": "# A\n" }, (home) => {
       const loc = homeAt(home);
       const notes = join(home, "notes");
@@ -6391,7 +6393,7 @@ describe("home, a vault without a marker (VV-D2)", () => {
   });
 
   test("a folder of home whose time is still its stamp isn't listed again, wherever walk.json has it (#12)", async () => {
-    const { walkHomeNow, homeWalkFile } = await import("../src/core/home.ts");
+    const { walkHomeNow, homeWalkFile } = await import("../src/core/workspace/vaults/home.ts");
     await withHome({ "a.md": "# A\n", "keep/k.md": "# K\n", "proj/p.md": "# P\n" }, (home) => {
       const loc = homeAt(home);
       // Each folder a time of its own, so a stamp given to the wrong folder would tell.
@@ -6412,7 +6414,7 @@ describe("home, a vault without a marker (VV-D2)", () => {
   });
 
   test("a walk kept without its folders' times (an earlier version's) is brought up to now as before, none taken as seen until it's listed (#12)", async () => {
-    const { walkHomeNow, homeWalkFile } = await import("../src/core/home.ts");
+    const { walkHomeNow, homeWalkFile } = await import("../src/core/workspace/vaults/home.ts");
     await withHome({ "a.md": "# A\n", "keep/k.md": "# K\n", "proj/p.md": "# P\n" }, (home) => {
       const loc = homeAt(home);
       const hour = new Date(Date.now() - 3_600_000);
@@ -6454,7 +6456,7 @@ describe("home, a vault without a marker (VV-D2)", () => {
   });
 
   test("a folder's stamp: its mtime and ctime; to list again when either is too recent to tell a later change apart — its ctime only in whole seconds, a coarse clock's (#12)", async () => {
-    const { RELIST, stampOf } = await import("../src/core/walk.ts");
+    const { RELIST, stampOf } = await import("../src/core/workspace/walk/walk.ts");
     const now = 1_800_000_000_000;
     const old = now - 3_600_000;
     expect(stampOf(old, old + 0.25, now)).toEqual([old, old + 0.25]);
@@ -6465,7 +6467,7 @@ describe("home, a vault without a marker (VV-D2)", () => {
   });
 
   test("a folder listed again for its stamp alone is kept with its new stamp; one whose time moved on past the walk isn't (#12)", async () => {
-    const { walkHomeNow, homeWalkFile } = await import("../src/core/home.ts");
+    const { walkHomeNow, homeWalkFile } = await import("../src/core/workspace/vaults/home.ts");
     await withHome({ "a.md": "# A\n", "v/v.md": "# V\n", "w/w.md": "# W\n" }, (home) => {
       const loc = homeAt(home);
       const twoHours = new Date(Date.now() - 7_200_000);
@@ -6493,7 +6495,7 @@ describe("home, a vault without a marker (VV-D2)", () => {
 
   test("a folder of home that can't be read is listed again at each build, the walk not kept again for it; readable, its notes come back (#12)", async () => {
     if (process.getuid?.() === 0) return; // root reads everything
-    const { walkHomeNow, homeWalkFile } = await import("../src/core/home.ts");
+    const { walkHomeNow, homeWalkFile } = await import("../src/core/workspace/vaults/home.ts");
     await withHome({ "a.md": "# A\n", "p/n.md": "# N\n" }, (home) => {
       const loc = homeAt(home);
       const p = join(home, "p");
@@ -6521,7 +6523,7 @@ describe("home, a vault without a marker (VV-D2)", () => {
 
   test("a folder of home that can't be read when home is walked is tried again at each build; readable, its notes are found (#12)", async () => {
     if (process.getuid?.() === 0) return; // root reads everything
-    const { walkHomeNow, homeWalkFile } = await import("../src/core/home.ts");
+    const { walkHomeNow, homeWalkFile } = await import("../src/core/workspace/vaults/home.ts");
     await withHome({ "a.md": "# A\n", "p/n.md": "# N\n" }, (home) => {
       const loc = homeAt(home);
       const p = join(home, "p");
@@ -6548,7 +6550,7 @@ describe("home, a vault without a marker (VV-D2)", () => {
 
   test("a vault of home that's home's again, unreadable then, is tried again at each build; readable, its notes are found (#12)", async () => {
     if (process.getuid?.() === 0) return; // root reads everything
-    const { walkHomeNow, homeWalkFile } = await import("../src/core/home.ts");
+    const { walkHomeNow, homeWalkFile } = await import("../src/core/workspace/vaults/home.ts");
     await withHome({ "a.md": "# A\n", "proj/.git/HEAD": "ref: refs/heads/main\n", "proj/p.md": "# P\n" }, (home) => {
       const loc = homeAt(home);
       const proj = join(home, "proj");
@@ -6574,7 +6576,7 @@ describe("home, a vault without a marker (VV-D2)", () => {
 
   test("a folder listed again whose folder can't be read keeps its own stamp: only the one in it is to list again (#12)", async () => {
     if (process.getuid?.() === 0) return; // root reads everything
-    const { walkHomeNow, homeWalkFile } = await import("../src/core/home.ts");
+    const { walkHomeNow, homeWalkFile } = await import("../src/core/workspace/vaults/home.ts");
     await withHome({ "a/n.md": "# N\n", "a/b/m.md": "# M\n" }, (home) => {
       const loc = homeAt(home);
       const hour = new Date(Date.now() - 3_600_000);
@@ -6600,7 +6602,7 @@ describe("home, a vault without a marker (VV-D2)", () => {
 
   test("a walk of home that couldn't read its top is no walk of home's to the command line: walked again at its next command (#12)", async () => {
     if (process.getuid?.() === 0) return; // root reads everything
-    const { walkHomeNow, homeWalkFile, homeWalkKept } = await import("../src/core/home.ts");
+    const { walkHomeNow, homeWalkFile, homeWalkKept } = await import("../src/core/workspace/vaults/home.ts");
     await withHome({ "a.md": "# A\n", "keep/k.md": "# K\n" }, async (home) => {
       const loc = homeAt(home);
       try {
@@ -6620,7 +6622,7 @@ describe("home, a vault without a marker (VV-D2)", () => {
 
   test("a folder of home that can't be looked at any more is tried again from the folder holding it, not dropped for good (#12)", async () => {
     if (process.getuid?.() === 0) return; // root reads everything
-    const { walkHomeNow, homeWalkFile } = await import("../src/core/home.ts");
+    const { walkHomeNow, homeWalkFile } = await import("../src/core/workspace/vaults/home.ts");
     await withHome({ "a/n.md": "# N\n", "a/b/m.md": "# M\n" }, (home) => {
       const loc = homeAt(home);
       const a = join(home, "a");
@@ -6646,7 +6648,7 @@ describe("home, a vault without a marker (VV-D2)", () => {
 
   test("a walk of home that couldn't read its top is no walk of home's for a plan across it either: walked again (#12)", async () => {
     if (process.getuid?.() === 0) return; // root reads everything
-    const { walkHomeNow } = await import("../src/core/home.ts");
+    const { walkHomeNow } = await import("../src/core/workspace/vaults/home.ts");
     const { openVault } = await import("../src/core/reach.ts");
     await withHome({ "a.md": "# A\n", "keep/k.md": "# K\n" }, (home) => {
       const loc = homeAt(home);
@@ -6662,7 +6664,7 @@ describe("home, a vault without a marker (VV-D2)", () => {
 
   test("a walk of home that couldn't read its top is no walk of home's to the TUI either: home's top shown, its walk made again (#12)", async () => {
     if (process.getuid?.() === 0) return; // root reads everything
-    const { walkHomeNow, homeFilter, homeWalk } = await import("../src/core/home.ts");
+    const { walkHomeNow, homeFilter, homeWalk } = await import("../src/core/workspace/vaults/home.ts");
     await withHome({ "a.md": "# A\n", "keep/k.md": "# K\n" }, (home) => {
       const loc = homeAt(home);
       try {
@@ -6679,7 +6681,7 @@ describe("home, a vault without a marker (VV-D2)", () => {
   });
 
   test("a vault of home through a link the walk follows, its target away for a while (a disk taken away), is found again when it's back (#12)", async () => {
-    const { walkHomeNow, homeWalkFile } = await import("../src/core/home.ts");
+    const { walkHomeNow, homeWalkFile } = await import("../src/core/workspace/vaults/home.ts");
     await withHome({ "a.md": "# A\n" }, async (home) => {
       const loc = homeAt(home);
       const disk = realpathSync(mkdtempSync(join(tmpdir(), "slipbox-disk-")));
@@ -6715,7 +6717,7 @@ describe("home, a vault without a marker (VV-D2)", () => {
 
   test("a folder of home through a link the walk follows, its target not to be looked at when home's top is listed again, is found again once it can be (#12)", async () => {
     if (process.getuid?.() === 0) return; // root reads everything
-    const { walkHomeNow, homeWalkFile } = await import("../src/core/home.ts");
+    const { walkHomeNow, homeWalkFile } = await import("../src/core/workspace/vaults/home.ts");
     await withHome({ "a.md": "# A\n" }, async (home) => {
       const loc = homeAt(home);
       const disk = realpathSync(mkdtempSync(join(tmpdir(), "slipbox-disk-")));
@@ -6752,7 +6754,7 @@ describe("home, a vault without a marker (VV-D2)", () => {
   });
 
   test("a note of home through a link the walk follows, its target away for a while, has its folder listed again till it's back (#12)", async () => {
-    const { walkHomeNow, homeWalkFile } = await import("../src/core/home.ts");
+    const { walkHomeNow, homeWalkFile } = await import("../src/core/workspace/vaults/home.ts");
     await withHome({ "a.md": "# A\n" }, async (home) => {
       const loc = homeAt(home);
       const disk = realpathSync(mkdtempSync(join(tmpdir(), "slipbox-disk-")));
@@ -6780,7 +6782,7 @@ describe("home, a vault without a marker (VV-D2)", () => {
   });
 
   test("a vault home's again that home's cap left unreached isn't taken as unreadable: its folder not to list again for it (#12)", async () => {
-    const { walkHomeNow, homeWalkFile, homeFilter, homeWalk } = await import("../src/core/home.ts");
+    const { walkHomeNow, homeWalkFile, homeFilter, homeWalk } = await import("../src/core/workspace/vaults/home.ts");
     await withHome(
       { "a.md": "# A\n", "big/b0.md": "# B\n", "proj/.git/HEAD": "ref: refs/heads/main\n", "proj/p.md": "# P\n" },
       (home) => {
@@ -6800,7 +6802,7 @@ describe("home, a vault without a marker (VV-D2)", () => {
 
   test("a note of home that can't be looked at any more has its folder tried again, not dropped for good (#12)", async () => {
     if (process.getuid?.() === 0) return; // root reads everything
-    const { walkHomeNow, homeWalkFile } = await import("../src/core/home.ts");
+    const { walkHomeNow, homeWalkFile } = await import("../src/core/workspace/vaults/home.ts");
     await withHome({ "a.md": "# A\n", "n/one.md": "# One\n", "n/two.md": "# Two\n" }, (home) => {
       const loc = homeAt(home);
       const n = join(home, "n");
@@ -6828,7 +6830,7 @@ describe("home, a vault without a marker (VV-D2)", () => {
   });
 
   test("the command line walks home again, once, when its walk kept is an earlier version's, without folders' stamps (#12)", async () => {
-    const { walkHomeNow, homeWalkFile, homeWalkKept } = await import("../src/core/home.ts");
+    const { walkHomeNow, homeWalkFile, homeWalkKept } = await import("../src/core/workspace/vaults/home.ts");
     await withHome({ "a.md": "# A\n", "keep/k.md": "# K\n", "proj/p.md": "# P\n" }, async (home) => {
       const loc = homeAt(home);
       const hour = new Date(Date.now() - 3_600_000);
@@ -6857,7 +6859,7 @@ describe("home, a vault without a marker (VV-D2)", () => {
   });
 
   test("a plan across home (openVault, the TUI's too) goes by its walk kept, an earlier version's as well: never walks home for want of its stamps (#12)", async () => {
-    const { walkHomeNow, homeWalkFile, homeWalkKept } = await import("../src/core/home.ts");
+    const { walkHomeNow, homeWalkFile, homeWalkKept } = await import("../src/core/workspace/vaults/home.ts");
     const { openVault } = await import("../src/core/reach.ts");
     await withHome({ "a.md": "# A\n", "keep/k.md": "# K\n" }, (home) => {
       const loc = homeAt(home);
@@ -6910,7 +6912,7 @@ describe("home, a vault without a marker (VV-D2)", () => {
   });
 
   test("an agent in home: walked the first time, then the walk kept read; info says home", async () => {
-    const { homeWalkKept } = await import("../src/core/home.ts");
+    const { homeWalkKept } = await import("../src/core/workspace/vaults/home.ts");
     await withHome({ "a.md": "# A\n", "deep/er/b.md": "[a](../../a.md)\n" }, async (home) => {
       expect(homeWalkKept(homeAt(home))).toBe(false);
       const r = await cli(["backlinks", "a.md"], home);
@@ -6925,7 +6927,7 @@ describe("home, a vault without a marker (VV-D2)", () => {
   });
 
   test("the mount table read without going near the mounts: /proc/mounts' escapes, macOS's `mount`, a folder of home by either of its paths", async () => {
-    const { mountsIn, parseMountOutput, parseProcMounts } = await import("../src/core/mounts.ts");
+    const { mountsIn, parseMountOutput, parseProcMounts } = await import("../src/core/workspace/vaults/mounts.ts");
     const linux = parseProcMounts("server:/x /home/me/my\\040share nfs4 rw,relatime 0 0\n/dev/sda1 / ext4 rw 0 0\n");
     expect(linux.map((m) => [m.at, m.type])).toEqual([
       ["/home/me/my share", "nfs4"],
@@ -6954,9 +6956,9 @@ describe("home, a vault without a marker (VV-D2)", () => {
   });
 
   test("a folder where another disk is mounted is never walked: known from the mount table alone, left out as another disk — dropped from a walk kept, walked again once the disk is gone", async () => {
-    const { setMountTable } = await import("../src/core/mounts.ts");
-    const { homeFilter, homeWalk, leftOutOfHome } = await import("../src/core/home.ts");
-    const { ANOTHER_DISK, SlicedWalk, walkTop } = await import("../src/core/walk.ts");
+    const { setMountTable } = await import("../src/core/workspace/vaults/mounts.ts");
+    const { homeFilter, homeWalk, leftOutOfHome } = await import("../src/core/workspace/vaults/home.ts");
+    const { ANOTHER_DISK, SlicedWalk, walkTop } = await import("../src/core/workspace/walk/walk.ts");
     await withHome({ "a.md": "# A\n", "mnt/m.md": "# M\n", "notes/n.md": "# N\n" }, (home) => {
       const loc = homeAt(home);
       const mounts: { device: string; at: string; type: string; options: string }[] = [];
@@ -7002,8 +7004,8 @@ describe("home, a vault without a marker (VV-D2)", () => {
 
   test("a folder of home listed again for a disk taken away, and unreadable then, is stamped to list again, not as seen (#12)", async () => {
     if (process.getuid?.() === 0) return; // root reads everything
-    const { setMountTable } = await import("../src/core/mounts.ts");
-    const { homeFilter, homeWalk, homeWalkFile } = await import("../src/core/home.ts");
+    const { setMountTable } = await import("../src/core/workspace/vaults/mounts.ts");
+    const { homeFilter, homeWalk, homeWalkFile } = await import("../src/core/workspace/vaults/home.ts");
     await withHome({ "p/n.md": "# N\n", "p/mnt/m.md": "# M\n" }, (home) => {
       const loc = homeAt(home);
       const p = join(home, "p");
@@ -7033,7 +7035,7 @@ describe("home, a vault without a marker (VV-D2)", () => {
   });
 
   test("its walk kept follows [walk]: one kept under other settings is no walk of home's — a folder excluded leaves, an extension added comes, a marker added makes a vault; a walk under way made again", async () => {
-    const { homeFilter, homeWalk, homeWalkKept } = await import("../src/core/home.ts");
+    const { homeFilter, homeWalk, homeWalkKept } = await import("../src/core/workspace/vaults/home.ts");
     const { AutoIndex } = await import("../src/core/autoindex.ts");
     const files = { "a/n.md": "# N\n", "b/m.md": "# M\n", "b/t.txt": "text\n", "c/Cargo.toml": "", "c/c.md": "# C\n" };
     await withHome(files, (home) => {
@@ -7083,7 +7085,7 @@ describe("home, a vault without a marker (VV-D2)", () => {
   });
 
   test("its cap: a walk of exactly so many notes left nothing out; its other files capped too, those nearest the top", async () => {
-    const { SlicedWalk, WalkFilter } = await import("../src/core/walk.ts");
+    const { SlicedWalk, WalkFilter } = await import("../src/core/workspace/walk/walk.ts");
     const files = { "a.md": "", "b.md": "", "c.md": "", "d/x.txt": "", "d/y.txt": "", "e.txt": "", "f.json": "" };
     await withHome(files, (home) => {
       const walk = (limits: { notes: number; folders: number; assets?: number }) => {
@@ -7105,7 +7107,7 @@ describe("home, a vault without a marker (VV-D2)", () => {
   });
 
   test("its cap holds what comes into a folder of a walk kept: a tree unpacked past the folder cap listed as far as the room left, and said", async () => {
-    const { homeFilter, homeWalk } = await import("../src/core/home.ts");
+    const { homeFilter, homeWalk } = await import("../src/core/workspace/vaults/home.ts");
     await withHome({ "a/n.md": "# N\n" }, (home) => {
       const loc = homeAt(home);
       const limits = { notes: 100, folders: 5 };
@@ -7126,7 +7128,7 @@ describe("home, a vault without a marker (VV-D2)", () => {
 
   test("a folder asked for that a capped walk listed is walked whole: what's deeper wasn't listed", async () => {
     const { AutoIndex } = await import("../src/core/autoindex.ts");
-    const { homeFilter, homeWalk } = await import("../src/core/home.ts");
+    const { homeFilter, homeWalk } = await import("../src/core/workspace/vaults/home.ts");
     await withHome({ "notes/inbox.md": "[d](sub/deep.md)\n", "notes/sub/deep.md": "# D\n" }, (home) => {
       const loc = homeAt(home);
       const hour = new Date(Date.now() - 3_600_000);
@@ -7141,7 +7143,7 @@ describe("home, a vault without a marker (VV-D2)", () => {
   });
 
   test("a folder asked for, home's index full: the folder whole, home's own deepest notes left out to hold the cap", async () => {
-    const { describeCap, homeFilter, homeWalk } = await import("../src/core/home.ts");
+    const { describeCap, homeFilter, homeWalk } = await import("../src/core/workspace/vaults/home.ts");
     const notes = ["a.md", "b.md", "x/c.md", "x/d.md", "x/y/e.md", "x/y/f.md", "w/notes/n1.md", "w/notes/n2.md"];
     const files = Object.fromEntries([...notes, "w/notes/sub/n3.md", "w/notes/sub/n4.md"].map((f) => [f, "# N\n"]));
     await withHome(files, (home) => {
@@ -7177,7 +7179,7 @@ describe("home, a vault without a marker (VV-D2)", () => {
   });
 
   test("a folder asked for that home's walk covers stays whole when another asked for needs room", async () => {
-    const { homeFilter, homeWalk, homeWalkFile } = await import("../src/core/home.ts");
+    const { homeFilter, homeWalk, homeWalkFile } = await import("../src/core/workspace/vaults/home.ts");
     const notes = ["top.md", "a/x/y/deep1.md", "a/x/y/deep2.md", "o/p.md", "o/q/r.md"];
     await withHome(Object.fromEntries(notes.map((f) => [f, "# N\n"])), (home) => {
       const loc = homeAt(home);
@@ -7210,7 +7212,7 @@ describe("home, a vault without a marker (VV-D2)", () => {
   });
 
   test("a folder asked for that alone holds more than home's cap: walked whole all the same, home's own all left out", async () => {
-    const { describeCap, homeFilter, homeWalk } = await import("../src/core/home.ts");
+    const { describeCap, homeFilter, homeWalk } = await import("../src/core/workspace/vaults/home.ts");
     const notes = ["a.md", "big/1.md", "big/2.md", "big/s/3.md", "big/s/t/4.md", "big/u/5.md"];
     await withHome(Object.fromEntries(notes.map((f) => [f, "# N\n"])), (home) => {
       const loc = homeAt(home);
@@ -7231,7 +7233,7 @@ describe("home, a vault without a marker (VV-D2)", () => {
   });
 
   test("a note made in a folder asked for, home's index full: taken in, home's deepest own note left out for it", async () => {
-    const { applyToGraph } = await import("../src/core/vault-feed.ts");
+    const { applyToGraph } = await import("../src/core/workspace/vaults/vault-feed.ts");
     await withHome({ "a.md": "# A\n", "x/y/deep.md": "# D\n", "w/notes/n.md": "# N\n" }, (home) => {
       walkHomeNow(homeAt(home), DEFAULT_CONFIG);
       const g = openGraph(homeAt(home), DEFAULT_CONFIG, true, "lazy");
@@ -7266,8 +7268,8 @@ describe("home, a vault without a marker (VV-D2)", () => {
 
   test("what comes while home is open holds its cap: past it, a folder isn't taken in, nor a note — left to home's walk", async () => {
     const { VaultWatcher } = await import("../src/core/watch.ts");
-    const { WalkFilter } = await import("../src/core/walk.ts");
-    const { applyToGraph } = await import("../src/core/vault-feed.ts");
+    const { WalkFilter } = await import("../src/core/workspace/walk/walk.ts");
+    const { applyToGraph } = await import("../src/core/workspace/vaults/vault-feed.ts");
     await withHome({ "a.md": "# A\n" }, (home) => {
       for (let i = 0; i < 6; i++) mkdirSync(join(home, "big", `d${i}`), { recursive: true });
       const w = new VaultWatcher({
@@ -7296,8 +7298,8 @@ describe("home, a vault without a marker (VV-D2)", () => {
   });
 
   test("before home's first walk, the watcher looks into no folder its graph hasn't: a folder in one is the walk's, one come into home's top is listed for it; in a folder asked for, or home walked, a folder is taken in (#16)", async () => {
-    const { HOME_LIMITS } = await import("../src/core/walk.ts");
-    const { applyToGraph } = await import("../src/core/vault-feed.ts");
+    const { HOME_LIMITS } = await import("../src/core/workspace/walk/walk.ts");
+    const { applyToGraph } = await import("../src/core/workspace/vaults/vault-feed.ts");
     const files: Record<string, string> = { "a.md": "# A\n", "Documents/top.md": "# Top\n", "touched/t.md": "# T\n" };
     for (const top of ["Documents", "touched", "notes"])
       for (const d of ["d0", "d1"]) files[`${top}/${d}/sub/n.md`] = "# N\n";
@@ -7746,7 +7748,7 @@ describe("freshness and coverage (20.10)", () => {
     const first = await cli(["index", "--refresh", there], here);
     expect(first.json.data).toMatchObject({ root: there, notes: 2, changed: 2, gone: 0 });
     expect(first.json.data.indexed).not.toBeNull();
-    const { readRoots } = await import("../src/core/registry.ts");
+    const { readRoots } = await import("../src/core/workspace/vaults/registry.ts");
     expect(readRoots().find((v) => v.path === there)?.indexed).toBeDefined();
     writeFileSync(join(there, "a.md"), "# A, longer now\n");
     rmSync(join(there, "b.md"));
@@ -7820,7 +7822,9 @@ describe("freshness and coverage (20.10)", () => {
   });
 
   test("a drive unplugged: its roots unavailable, not gone — kept, never pruned, and a link into one says why it's broken", async () => {
-    const { pruneWorktrees, readRoots, recordRoot, unavailable } = await import("../src/core/registry.ts");
+    const { pruneWorktrees, readRoots, recordRoot, unavailable } = await import(
+      "../src/core/workspace/vaults/registry.ts"
+    );
     const drive = `/media/slipbox-test-nodrive-${basename(mkdtempSync(join(tmpdir(), "slipbox-nodrive-")))}`;
     expect(unavailable(`${drive}/notes`)).toBe(true);
     expect(unavailable("/tmp/certainly/not/here")).toBe(false);
@@ -8061,7 +8065,7 @@ describe("search by vault (20.16)", () => {
   test("a search of every root leaves each as it was: not seen now, one only found still only found (the :folders order kept)", async () => {
     const { searchOthers } = await import("../src/core/scope.ts");
     const { openVault } = await import("../src/core/reach.ts");
-    const { readRoots, writeRoots } = await import("../src/core/registry.ts");
+    const { readRoots, writeRoots } = await import("../src/core/workspace/vaults/registry.ts");
     const { at } = await four();
     // d: last seen long ago, and only found by the background index, never opened.
     const old = "2020-01-01T00:00:00.000Z";
@@ -8074,7 +8078,7 @@ describe("search by vault (20.16)", () => {
 
   test("a moved folder's relink reads every other root's links, and leaves each as it was: not seen now", async () => {
     const { openVault } = await import("../src/core/reach.ts");
-    const { readRoots, writeRoots } = await import("../src/core/registry.ts");
+    const { readRoots, writeRoots } = await import("../src/core/workspace/vaults/registry.ts");
     const { planRelink } = await import("../src/core/rename.ts");
     const { at } = await four();
     const old = "2020-01-01T00:00:00.000Z";
@@ -8552,7 +8556,7 @@ describe("plans write only inside the vault (VV-D6)", () => {
   test(
     "a followed link to a vault, or to a folder holding one, isn't moved by its name: a vault's place is its real path",
     homed(async () => {
-      const { recordLocation, rootAt } = await import("../src/core/vault.ts");
+      const { recordLocation, rootAt } = await import("../src/core/workspace/vaults/vault.ts");
       const top = realpathSync(mkdtempSync(join(tmpdir(), "slipbox-inside-")));
       const vault = join(top, "vault");
       const other = join(top, "other");
@@ -9512,7 +9516,7 @@ describe("renames refused before anything is written (cli.md, Renames)", () => {
 
   test("a renamed folder's previous_names on several lines, or with a comment: kept one key, its id and the old name", async () => {
     const { planVaultRename } = await import("../src/core/rename.ts");
-    const { readIdentity } = await import("../src/core/registry.ts");
+    const { readIdentity } = await import("../src/core/workspace/vaults/registry.ts");
     const tag = (dir: string) => basename(dir).slice(-6).toLowerCase();
     for (const prev of ['previous_names = [\n  "older",\n]\n', 'previous_names = ["older"] # kept\n']) {
       const dir = root({ "a.md": "# A\n" });
@@ -10271,7 +10275,7 @@ describe("the merge review (20.21)", () => {
   });
 
   test("a repository appearing while it's watched: where its branch is, seen at once — its next merge has a before", async () => {
-    const { VaultFeed } = await import("../src/core/vault-feed.ts");
+    const { VaultFeed } = await import("../src/core/workspace/vaults/vault-feed.ts");
     const { checkoutOf } = await import("../src/core/git.ts");
     const { openVault } = await import("../src/core/reach.ts");
     const root = mkdtempSync(join(tmpdir(), "slipbox-appear-"));
@@ -10309,7 +10313,7 @@ describe("the merge review (20.21)", () => {
   });
 
   test("a rebase is one change: HEAD isn't seen moving mid-rebase; at its end the branch moved on, never switched", async () => {
-    const { VaultFeed } = await import("../src/core/vault-feed.ts");
+    const { VaultFeed } = await import("../src/core/workspace/vaults/vault-feed.ts");
     const { checkoutOf } = await import("../src/core/git.ts");
     const { openVault } = await import("../src/core/reach.ts");
     const root = mkdtempSync(join(tmpdir(), "slipbox-rebase-"));
@@ -10346,7 +10350,7 @@ describe("the merge review (20.21)", () => {
   });
 
   test("the feed closed (another vault opened) while git still writes: what it held is never applied after", async () => {
-    const { VaultFeed } = await import("../src/core/vault-feed.ts");
+    const { VaultFeed } = await import("../src/core/workspace/vaults/vault-feed.ts");
     let locked = true;
     const applied: string[][] = [];
     const make = () =>
@@ -10998,7 +11002,7 @@ describe("named folders (21.6)", () => {
   };
 
   test("a name travels with what it names: .slipbox/'s, else the remote's; never a folder's own", async () => {
-    const { folderIdentity } = await import("../src/core/folders.ts");
+    const { folderIdentity } = await import("../src/core/workspace/vaults/folders.ts");
     const id = uniq();
     expect(folderIdentity(folder({ name: "notes", id, old: ["kb"] }))).toMatchObject({
       key: `slipbox:${id}`,
@@ -11042,7 +11046,9 @@ describe("named folders (21.6)", () => {
   });
 
   test("the lookup: the first copy found is the default; a second asks once; gone copies stay listed", async () => {
-    const { lookupFolder, readFolders, recordFolder, setDefaultCopy } = await import("../src/core/folders.ts");
+    const { lookupFolder, readFolders, recordFolder, setDefaultCopy } = await import(
+      "../src/core/workspace/vaults/folders.ts"
+    );
     const name = `n${uniq()}`;
     const id = uniq();
     const a = folder({ name, id });
@@ -11086,7 +11092,9 @@ describe("named folders (21.6)", () => {
   });
 
   test("different folders of one name: repositories by their qualified names, .slipbox/ folders until one is renamed; old names still find", async () => {
-    const { lookupFolder, pointerName, readFolders, recordFolder } = await import("../src/core/folders.ts");
+    const { lookupFolder, pointerName, readFolders, recordFolder } = await import(
+      "../src/core/workspace/vaults/folders.ts"
+    );
     const short = `r${uniq()}`;
     const mine = folder({ remote: `git@github.com:me/${short}.git` });
     const theirs = folder({ remote: `https://gitlab.com/lab/${short}` });
@@ -11132,7 +11140,9 @@ describe("named folders (21.6)", () => {
   });
 
   test("a repository and a clone of it with a .slipbox/ name of its own are copies of one: by the remote, a pointer and a hosting URL open the default copy", async () => {
-    const { lookupFolder, pointerNaming, readFolders, recordFolder } = await import("../src/core/folders.ts");
+    const { lookupFolder, pointerNaming, readFolders, recordFolder } = await import(
+      "../src/core/workspace/vaults/folders.ts"
+    );
     const { parsePointer, resolvePointer } = await import("../src/core/pointer.ts");
     // As the reference set has them: the repository named in its .slipbox/ as its remote names it, the clone
     // (found first) given a name of its own.
@@ -11198,8 +11208,8 @@ describe("named folders (21.6)", () => {
   });
 
   test("a clone with a .slipbox/ name of its own is still a copy: made its repository's default copy, and named as its repository is (DF-D30)", async () => {
-    const { lookupFolder, readFolders, recordFolder } = await import("../src/core/folders.ts");
-    const { tildePath } = await import("../src/core/names.ts");
+    const { lookupFolder, readFolders, recordFolder } = await import("../src/core/workspace/vaults/folders.ts");
+    const { tildePath } = await import("../src/core/workspace/vaults/names.ts");
     const short = `c${uniq()}`;
     const remote = `git@github.com:labs/${short}.git`;
     const qualified = `github.com/labs/${short}`;
@@ -11527,7 +11537,7 @@ describe("slipbox:// pointers (21.7)", () => {
 
   test("written across folders that don't travel together: a pointer; together (one repository, nested outside git), a relative path", async () => {
     const { linkEnds, writeLink } = await import("../src/core/write-link.ts");
-    const { travelTogether } = await import("../src/core/folders.ts");
+    const { travelTogether } = await import("../src/core/workspace/vaults/folders.ts");
     const tag = uniq();
     const parent = mkdtempSync(join(tmpdir(), "slipbox-ptr-w-"));
     const b = await named(`wb${tag}`, { "far note.md": "---\ntitle: Far\n---\n# Far\n" }, parent);
@@ -11567,7 +11577,7 @@ describe("slipbox:// pointers (21.7)", () => {
 
   test("pointers to many files from one root, with a memo: the same as one by one, each folder's name worked out once, the named folders read once", async () => {
     const { linkEnds, linkWarnings, pointerAt } = await import("../src/core/write-link.ts");
-    const { foldersFile, recordFolder } = await import("../src/core/folders.ts");
+    const { foldersFile, recordFolder } = await import("../src/core/workspace/vaults/folders.ts");
     const tag = uniq();
     const parent = mkdtempSync(join(tmpdir(), "slipbox-ptr-memo-"));
     const b = await named(`mb${tag}`, { "x.md": "# X\n", "sub/y.md": "# Y\n", "z.md": "# Z\n" }, parent);
@@ -11648,7 +11658,7 @@ describe("slipbox:// pointers (21.7)", () => {
 
   test("a pointer written says when its name is private; on a name different folders share, the qualified one, said — else ambiguous, said (D74, D83)", async () => {
     const { linkEnds, linkWarnings, writeLink } = await import("../src/core/write-link.ts");
-    const { recordFolder } = await import("../src/core/folders.ts");
+    const { recordFolder } = await import("../src/core/workspace/vaults/folders.ts");
     const tag = uniq();
     const parent = mkdtempSync(join(tmpdir(), "slipbox-ptr-say-"));
     const a = await named(`sa${tag}`, { "a.md": "# A\n" }, parent);
@@ -12150,7 +12160,7 @@ describe("links to the repository's own hosting (trailscout's review)", () => {
   });
 
   test("another repository this machine knows by its remote (21.6): its file there", async () => {
-    const { recordFolder } = await import("../src/core/folders.ts");
+    const { recordFolder } = await import("../src/core/workspace/vaults/folders.ts");
     const tag = basename(mkdtempSync(join(tmpdir(), "h")))
       .replace(/[^a-z0-9]/gi, "")
       .toLowerCase();
@@ -12479,7 +12489,7 @@ describe("review cycle 3 (core)", () => {
   });
 
   test("a folder's alias finds it as its name does — exact, never relinked away; a previous name is said and relinked", async () => {
-    const { lookupFolder, recordFolder } = await import("../src/core/folders.ts");
+    const { lookupFolder, recordFolder } = await import("../src/core/workspace/vaults/folders.ts");
     const { certainty } = await import("../src/core/graph.ts");
     const tag = basename(mkdtempSync(join(tmpdir(), "a")))
       .replace(/[^a-z0-9]/gi, "")
@@ -12502,7 +12512,7 @@ describe("review cycle 3 (core)", () => {
   });
 
   test("one named folder reached by its real path and by a symlink is one copy: nothing asked", async () => {
-    const { readFolders } = await import("../src/core/folders.ts");
+    const { readFolders } = await import("../src/core/workspace/vaults/folders.ts");
     const top = mkdtempSync(join(tmpdir(), "slipbox-c3-link-"));
     const tag = basename(top)
       .replace(/[^a-z0-9]/gi, "")
@@ -12522,7 +12532,7 @@ describe("review cycle 3 (core)", () => {
 
   test("a new worktree under a removed one's name is a new worktree: no state carried, no move; git worktree move still carries", async () => {
     const { stateDir } = await import("../src/core/foundation/platform/paths.ts");
-    const { readRoots } = await import("../src/core/registry.ts");
+    const { readRoots } = await import("../src/core/workspace/vaults/registry.ts");
     const git = (cwd: string, ...args: string[]) =>
       Bun.spawnSync(["git", "-c", "user.email=t@example.invalid", "-c", "user.name=t", "-C", cwd, ...args]);
     const base = mkdtempSync(join(tmpdir(), "slipbox-c3-wt-"));
@@ -12603,7 +12613,7 @@ describe("review cycle 3 (core)", () => {
 
   test("the watcher takes symlinks as the walk does: a symlinked folder never followed, a file outside never adopted", async () => {
     const { VaultWatcher } = await import("../src/core/watch.ts");
-    const { WalkFilter, walkVault } = await import("../src/core/walk.ts");
+    const { WalkFilter, walkVault } = await import("../src/core/workspace/walk/walk.ts");
     const top = mkdtempSync(join(tmpdir(), "slipbox-c3-watchln-"));
     const dir = join(top, "root");
     const outside = join(top, "outside");

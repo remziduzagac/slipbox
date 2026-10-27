@@ -48,7 +48,7 @@ import { doctor, doctorFile } from "../src/core/servers/doctor.ts";
 import { ServerManager, startOf } from "../src/core/servers/manager.ts";
 import { vscodeSettings } from "../src/core/servers/vscode.ts";
 import type { Problem } from "../src/core/diagnostics.ts";
-import { setTrust, setTrustedRoots } from "../src/core/trust.ts";
+import { setTrust, setTrustedRoots } from "../src/core/workspace/vaults/trust.ts";
 
 setDefaultTimeout(UNIT_TIMEOUT_MS);
 const FAKE = join(import.meta.dir, "fixtures", "fake-lsp.ts");

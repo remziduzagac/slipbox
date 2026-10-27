@@ -8,11 +8,18 @@
 import { constants as fsConstants, existsSync, lstatSync, statSync } from "node:fs";
 import { basename, join, relative, sep } from "node:path";
 import type { Glyphs } from "../core/glyphs.ts";
-import { denied, type ListedEntry, type VaultHead, vaultHead } from "../core/listing.ts";
+import { denied, type ListedEntry, type VaultHead, vaultHead } from "../core/workspace/walk/listing.ts";
 import { cacheDir, vaultKey } from "../core/foundation/platform/paths.ts";
 import type { Role } from "../core/theme/theme.ts";
-import { isInside } from "../core/vault.ts";
-import { ANOTHER_DISK, type BusyWhy, busyFolderWhyAt, HOME_LIMITS, LINK_REASON, type WalkCap } from "../core/walk.ts";
+import { isInside } from "../core/workspace/vaults/vault.ts";
+import {
+  ANOTHER_DISK,
+  type BusyWhy,
+  busyFolderWhyAt,
+  HOME_LIMITS,
+  LINK_REASON,
+  type WalkCap,
+} from "../core/workspace/walk/walk.ts";
 import type { App } from "./app.ts";
 import type { TreeRow } from "./explorer.ts";
 

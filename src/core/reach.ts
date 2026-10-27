@@ -18,13 +18,13 @@ import {
   type VaultReach,
 } from "./graph.ts";
 import { pathLink, wikiPathCandidates } from "./links.ts";
-import { folderIdentity, lookupFolder, type NamedFolder, readFolders } from "./folders.ts";
+import { folderIdentity, lookupFolder, type NamedFolder, readFolders } from "./workspace/vaults/folders.ts";
 import { checkoutOf } from "./git.ts";
 import { checkoutRemotes, hostedHere } from "./hosting.ts";
-import { homeWalkKept, walkHomeNow } from "./home.ts";
+import { homeWalkKept, walkHomeNow } from "./workspace/vaults/home.ts";
 import { cacheDir } from "./foundation/platform/paths.ts";
-import { tildePath } from "./names.ts";
-import { type KnownRoot, readRoots } from "./registry.ts";
+import { tildePath } from "./workspace/vaults/names.ts";
+import { type KnownRoot, readRoots } from "./workspace/vaults/registry.ts";
 import {
   findVaultRoot,
   isHome,
@@ -35,7 +35,7 @@ import {
   configFilesFor,
   vaultAt,
   vaultOf,
-} from "./vault.ts";
+} from "./workspace/vaults/vault.ts";
 import { isPointer, parsePointer, resolvePointer } from "./pointer.ts";
 
 function real(p: string): string {

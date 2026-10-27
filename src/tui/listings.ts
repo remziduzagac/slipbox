@@ -5,8 +5,8 @@
 // (`PENDING_MS`); an answer that changed nothing draws nothing, one for a folder let go of meanwhile is dropped, and
 // rows that come keep the selection on the row it was on.
 
-import { listFolder, type FolderListing } from "../core/listing.ts";
-import { listThreads } from "../core/walk-thread.ts";
+import { listFolder, type FolderListing } from "../core/workspace/walk/listing.ts";
+import { listThreads } from "../core/workspace/walk/walk-thread.ts";
 import { WorkerRequestError } from "../core/foundation/workers/worker-requests.ts";
 import type { App } from "./app.ts";
 

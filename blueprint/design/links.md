@@ -230,7 +230,7 @@ the CLI: [docs/manual/cli.md](../../docs/manual/cli.md) § `resolve` (`slipbox l
 
 ## Between folders
 
-A link from one file to another is written (D73; `travelTogether` in `core/folders.ts`, `pointerTo` in
+A link from one file to another is written (D73; `travelTogether` in `core/workspace/vaults/folders.ts`, `pointerTo` in
 `core/write-link.ts`):
 
 1. in the file's convention, when the two travel together: one clone, or one folder moved as a whole, carries both
@@ -255,7 +255,8 @@ when its target is in a named folder (§ Repairs).
   too.
 - **The path** after the name is read as a markdown link's path is (no extension, a folder), and stays in its folder:
   one climbing out of it is unresolved.
-- **Written** (completion, the link picker, `slipbox link`, the relink; `pointerNaming` in `core/folders.ts`): by the
+- **Written** (completion, the link picker, `slipbox link`, the relink; `pointerNaming` in
+  `core/workspace/vaults/folders.ts`): by the
   folder's short name, unless a different folder this machine knows answers to it too, by its name or an alias, as
   following reads one (D74, D83). Then a repository's qualified name is written; a folder with none keeps the short
   one, ambiguous: followed, it asks which. In the TUI such a name asks before anything is written (`writeLinkAsked`):

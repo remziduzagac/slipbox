@@ -8,7 +8,7 @@ import { describeLanding, disambiguated, fragile, type Graph, type LinkRef, type
 import { landing, lineFragment } from "./landing.ts";
 import { slugify } from "./parse.ts";
 import type { LintIssue } from "./lint.ts";
-import { unavailable } from "./registry.ts";
+import { unavailable } from "./workspace/vaults/registry.ts";
 import type { SyntaxError } from "./syntax.ts";
 import { type DocType, docTypes, frontmatterProblems, ofType } from "./doctypes.ts";
 

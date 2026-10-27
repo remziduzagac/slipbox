@@ -22,8 +22,8 @@ import {
   worktreeRecordsLater,
 } from "./gitops.ts";
 import { failureOf, inEnglish, stopOf } from "./gitremote.ts";
-import { isTrusted } from "./trust.ts";
-import { isBusyName } from "./walk.ts";
+import { isTrusted } from "./workspace/vaults/trust.ts";
+import { isBusyName } from "./workspace/walk/walk.ts";
 
 const OPTS = { encoding: "utf8" as const, timeout: 15_000, maxBuffer: 64 * 1024 * 1024 };
 

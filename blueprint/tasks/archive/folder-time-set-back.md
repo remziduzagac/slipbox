@@ -12,7 +12,8 @@ it's newer than the walk, so notes that come into a folder whose time is then se
 
 ## Description
 
-Home's graph is built from its walk kept (`keptWalk` in `src/core/home.ts`), each folder statted and listed again when
+Home's graph is built from its walk kept (`keptWalk` in `src/core/workspace/vaults/home.ts`), each folder statted and
+listed again when
 it changed since the walk. "Changed" was `mtime >= walked - SETTLE_MS`: newer than the walk. Tools that restore a
 folder's time (`cp -a`, `rsync -a`, `tar x`), or a disk whose clock is behind this machine's by more than the settle
 time, leave a folder that changed looking unchanged, and the notes that came into it wait for home's next full walk
@@ -55,7 +56,8 @@ it again on any difference (`stamps` in `src/core/watch.ts`); home's walk kept s
 
 ## Log
 
-- 2026-10-23: Read the cause in `keptWalk` (`src/core/home.ts`): `changed = mtime >= walked - SETTLE_MS`, `walked`
+- 2026-10-23: Read the cause in `keptWalk` (`src/core/workspace/vaults/home.ts`): `changed = mtime >= walked -
+  SETTLE_MS`, `walked`
   the time the walk kept began. `walk.json` keeps no folder's time, so a time set back to before the walk can't be
   told from no change. The watcher (`src/core/watch.ts`) keeps a stamp per folder (`settled`: its mtime, or -1 when
   read within `SETTLE_MS` of a change) and lists one again when its mtime differs. design/roots.md § Home and
@@ -80,13 +82,14 @@ it again on any difference (`stamps` in `src/core/watch.ts`); home's walk kept s
   scope: the watcher stamps its folders from their time when it starts (`watchDir`, `src/core/watch.ts`), not the
   walk's, so a note brought in and its folder's time set back between the build's listing and the watcher's start is
   missed for that session; the next build lists it (the stamp kept differs). A follow-up, if wanted.
-- 2026-10-23: Fixed. `SlicedWalk` (`src/core/walk.ts`, home's walks) stamps each folder before it reads it
+- 2026-10-23: Fixed. `SlicedWalk` (`src/core/workspace/walk/walk.ts`, home's walks) stamps each folder before it reads
+  it
   (`settled`: its time, or -1 when within `SETTLE_MS` of its change), as `WalkResult.times`; `keepHomeWalk` keeps them
   as `times`, beside `dirs` (`version` stays 1: an earlier version ignores the field and writes the walk without it).
   `keptWalk` lists a folder again when its time isn't its stamp; without one (an earlier version's walk), when newer
   than the walk, as before. Kept again, a folder listed again takes its new stamp, one unchanged keeps its own, one
   unknown stays unknown. Still kept again only when the listing says something else. `SETTLE_MS` and `settled` moved
-  from `src/core/watch.ts` to `src/core/walk.ts`, shared.
+  from `src/core/watch.ts` to `src/core/workspace/walk/walk.ts`, shared.
 - 2026-10-23: Tests (tests/vault.test.ts): set back two hours (`cp -a`, `rsync -a`), a clock 30 s behind, a time set
   back with nothing changed (listed again, not kept again), a folder made a vault and its time set back; a folder
   walked within two seconds of its change, a note brought in and its time put back exactly (found: stamped -1); an
@@ -151,7 +154,8 @@ it again on any difference (`stamps` in `src/core/watch.ts`); home's walk kept s
      folder's time): the clock is held still for the walk (`setSystemTime`).
   4. The TUI test's folder was walked within two seconds of being made, so stamped -1, and found by that path: its
      time is set two hours back before the walk, so it's found by its stamp (mutation-checked: the old rule fails it).
-  5. `listDir`'s stat repeated the watcher's `dirMtime`: moved beside `settled` in `src/core/walk.ts`, shared.
+  5. `listDir`'s stat repeated the watcher's `dirMtime`: moved beside `settled` in `src/core/workspace/walk/walk.ts`,
+     shared.
   6. The extra stat per folder in a walk never kept (folders opened by name, walked whole at each build):
      `SlicedWalk` takes `stamped: false`, which `homeWalk` passes. Measured on `/usr/share`: a stat per folder costs
      about 15% of a bare listing of the same folders. Relisted folders statted twice in `keptWalk` (a few): left.
@@ -199,7 +203,8 @@ it again on any difference (`stamps` in `src/core/watch.ts`); home's walk kept s
   since, a tree of fixed times) is still missed, which ctime would catch.
 - 2026-10-23: The maintainer's answers: the command line walks home again, once, for a walk kept without stamps; and
   ctime goes in this pull request. Done:
-  1. A stamp is a folder's mtime (`settled`) and its ctime (`Stamp`, `dirStamp` in `src/core/walk.ts`), kept as pairs
+  1. A stamp is a folder's mtime (`settled`) and its ctime (`Stamp`, `dirStamp` in `src/core/workspace/walk/walk.ts`),
+     kept as pairs
      in `times`; a folder is changed when either differs. The ctime isn't settled: for a change to leave it as it was,
      a time set, the listing, a note and the same time set again would all fall in one tick of its clock, and settling
      it would stamp to list again every folder listed within two seconds of a `cp -a`. Where a file system keeps no
@@ -325,7 +330,7 @@ it again on any difference (`stamps` in `src/core/watch.ts`); home's walk kept s
      mutation-checked).
   4. The terminal check made `garden` unreadable in its setup, outside the run's `finally`: it walks home in the run
      now, inside it.
-  5. Three copies of `parentOf`: one, in `src/core/walk.ts`.
+  5. Three copies of `parentOf`: one, in `src/core/workspace/walk/walk.ts`.
   Rejected: the errors of a folder that can't be listed aren't reported (`keptWalk`'s `errors: []`, as before; said at
   every command, a folder that stays unreadable would warn at each one); a folder stamped to list again by the walk
   (listed within two seconds of its change) is listed again at every build till something else is kept, as before the

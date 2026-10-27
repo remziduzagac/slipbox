@@ -134,7 +134,7 @@ what replaced them.
 - **Vault**: the nearest folder above a file holding a vault marker, else home; what `/`, a wikilink's names, the
   convention and settings are measured from. Every file is in exactly one vault, home, or Elsewhere (VV-D1, VV-D4). The
   content boundary and the unit you trust, whether you trust it being yours (WSP-D1). The word users read and the
-  code's, `core/vault.ts` and `vault.init`. [roots.md](roots.md) § Vaults and markers.
+  code's, `core/workspace/vaults/vault.ts` and `vault.init`. [roots.md](roots.md) § Vaults and markers.
 - **Vault marker**: `.git`, `.slipbox/`, `.obsidian/` or `.zk/` (`walk.root_markers`).
   [roots.md](roots.md) § Vaults and markers.
 - **View**: a window's READ or SOURCE presentation; the lens is a toggle within READ (VB-D1). The code's `View`

@@ -4,7 +4,7 @@
 import { automaticSkills } from "../core/skill-lifecycle.ts";
 import { resolve } from "node:path";
 import { dataHome } from "../core/foundation/platform/paths.ts";
-import { tildePath } from "../core/names.ts";
+import { tildePath } from "../core/workspace/vaults/names.ts";
 import { flag, has, UsageError } from "./args.ts";
 import { VERSION } from "../version.ts";
 import { RELEASE } from "../core/release.ts";

@@ -9,7 +9,7 @@ import { existsSync, openSync, readdirSync, readFileSync, readSync, closeSync, r
 import { homedir } from "node:os";
 import { delimiter, dirname, isAbsolute, join } from "node:path";
 import { checkoutOf } from "../git.ts";
-import { isTrusted } from "../trust.ts";
+import { isTrusted } from "../workspace/vaults/trust.ts";
 import type { LanguageDef, ServerDef } from "./languages.ts";
 
 /**

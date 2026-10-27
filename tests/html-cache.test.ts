@@ -7,7 +7,7 @@ import { contentHash } from "../src/core/redirects.ts";
 import { ParseCache } from "../src/core/parsecache.ts";
 import { cacheDir } from "../src/core/foundation/platform/paths.ts";
 import { DEFAULT_CONFIG } from "../src/core/application/config/config.ts";
-import { locateVault } from "../src/core/vault.ts";
+import { locateVault } from "../src/core/workspace/vaults/vault.ts";
 
 const sandbox = mkdtempSync(join(tmpdir(), "slipbox-html-cache-"));
 for (const kind of ["STATE", "CACHE", "CONFIG", "DATA"]) process.env["XDG_" + kind + "_HOME"] = join(sandbox, kind);

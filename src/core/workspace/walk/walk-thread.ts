@@ -5,13 +5,13 @@
 // request the thread doesn't answer in time is given up on, the thread started afresh for the next: it never falls
 // back to walking on the main thread, which would freeze the screen again.
 
-import type { Config } from "./application/config/config.ts";
-import type { HomeWalk } from "./home.ts";
-import type { IndexAnswer, Opened } from "./index-job.ts";
+import type { Config } from "../../application/config/config.ts";
+import type { HomeWalk } from "../vaults/home.ts";
+import type { IndexAnswer, Opened } from "../../index-job.ts";
 import type { FolderListing } from "./listing.ts";
 import { type FilterSettings, slowDisk, type WalkCap, type WalkLimits } from "./walk.ts";
 import type { StepAnswer, WalkRequest } from "./walk-jobs.ts";
-import { walkContext } from "./foundation/workers/worker-context.ts";
+import { walkContext } from "../../foundation/workers/worker-context.ts";
 import {
   type HomeOf,
   type IndexAsk,
@@ -22,8 +22,8 @@ import {
   takeAnswer,
   type Walker,
 } from "./walkers.ts";
-import { WorkerRequestError, WorkerRequests } from "./foundation/workers/worker-requests.ts";
-import { workerUrl } from "./foundation/workers/url.ts";
+import { WorkerRequestError, WorkerRequests } from "../../foundation/workers/worker-requests.ts";
+import { workerUrl } from "../../foundation/workers/url.ts";
 
 /**
  * How long the thread has for a request, the wait for it not counted: a slice of home's walk, or a folder looked in
@@ -69,7 +69,7 @@ export class WalkThread implements Walker {
   private serial = 0;
 
   constructor(
-    factory: () => Worker = () => new Worker(workerUrl("walk-worker.ts")),
+    factory: () => Worker = () => new Worker(workerUrl("workspace/walk/walk-worker.ts")),
     readonly deadlines = WALK_DEADLINES,
   ) {
     // No cap on an answer: a walk's grows with what it found, which home's cap bounds and a vault's own size does.
@@ -197,7 +197,7 @@ export class ListThreads {
 
   /** `deadline`: a whole walk's, a folder of many entries on a slow disk asked of each. */
   constructor(
-    factory: () => Worker = () => new Worker(workerUrl("list-worker.ts")),
+    factory: () => Worker = () => new Worker(workerUrl("workspace/walk/list-worker.ts")),
     readonly deadline = WALK_DEADLINES.whole,
     size = 2,
   ) {

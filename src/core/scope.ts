@@ -7,10 +7,10 @@
 import { isAbsolute } from "node:path";
 import { checkoutOf } from "./git.ts";
 import type { Graph } from "./graph.ts";
-import { readRoots } from "./registry.ts";
+import { readRoots } from "./workspace/vaults/registry.ts";
 import { catchUp, search, type SearchHit, type SearchResult } from "./search.ts";
 import { SearchIndex } from "./search-index.ts";
-import { isHome, isListed, isVaultRoot, vaultOf } from "./vault.ts";
+import { isHome, isListed, isVaultRoot, vaultOf } from "./workspace/vaults/vault.ts";
 
 export const SCOPES = ["here", "linked", "all"] as const;
 export type Scope = (typeof SCOPES)[number];

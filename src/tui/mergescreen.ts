@@ -31,7 +31,7 @@ import { sections, stageFile } from "../core/gitstage.ts";
 import { layoutScreen, type ScreenPart, screenText } from "../core/layout/screen.ts";
 import type { Layout, Span } from "../core/layout/ir.ts";
 import { comparable, type DiffViewRow, diffView } from "../core/merge.ts";
-import { TOP } from "../core/position.ts";
+import { TOP } from "../core/workspace/session/position.ts";
 import { sanitize } from "../core/foundation/text/sanitize.ts";
 import type { App } from "./app.ts";
 import { editable } from "./app.ts";

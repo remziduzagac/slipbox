@@ -26,7 +26,7 @@ import {
 } from "../core/gitrebase.ts";
 import { pullLater, type RemoteDone, stashesOf } from "../core/gitremote.ts";
 import { sanitize } from "../core/foundation/text/sanitize.ts";
-import { isTrusted } from "../core/trust.ts";
+import { isTrusted } from "../core/workspace/vaults/trust.ts";
 import type { App } from "./app.ts";
 import { runInBackground } from "./gitremote.ts";
 import { conflictedFiles, mergeOf, openMergeScreen } from "./mergescreen.ts";

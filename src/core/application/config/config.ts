@@ -524,7 +524,7 @@ export function loadConfig(opts: LoadConfigOptions = {}): LoadedConfig {
       if (!kept) continue;
       data = structuredClone(kept);
     }
-    // The vault's identity (17.4) isn't a setting: read by core/registry.ts, never merged.
+    // The vault's identity (17.4) isn't a setting: read by core/workspace/vaults/registry.ts, never merged.
     if ("vault" in data) {
       if (file === userFile)
         warnings.push(`config: ${shown}: [vault] belongs in a folder's .slipbox/config.toml (its identity); ignored`);

@@ -31,14 +31,14 @@ import { COMMAND_SPECS, commandGroup } from "../src/core/application/commands/ca
 import { canonKey, canonSeq } from "../src/core/application/commands/registry.ts";
 import { type Config, DEFAULT_CONFIG } from "../src/core/application/config/config.ts";
 import { openGraph } from "../src/core/graph.ts";
-import { locateVault } from "../src/core/vault.ts";
+import { locateVault } from "../src/core/workspace/vaults/vault.ts";
 import { tildePath } from "../src/core/foundation/platform/paths.ts";
-import { linkAnswer, linkKey, probe, setLinkAnswer } from "../src/core/symlinks.ts";
+import { linkAnswer, linkKey, probe, setLinkAnswer } from "../src/core/workspace/vaults/symlinks.ts";
 import { type ListOverlay, App, type Host } from "../src/tui/app.ts";
 import { dateText, listFolder, placeOf, type SaveAsOverlay, sizeText } from "../src/tui/saveas.ts";
 import { placeIn } from "../src/tui/shellrun.ts";
 import { peekOf } from "../src/tui/peek.ts";
-import { setTrust } from "../src/core/trust.ts";
+import { setTrust } from "../src/core/workspace/vaults/trust.ts";
 import type { PanelRow } from "../src/tui/gitpanel.ts";
 import type { NvimServer } from "../src/core/nvim.ts";
 import { TextCanvas } from "../src/tui/canvas.ts";
@@ -1426,7 +1426,7 @@ describe("the left panel's views and filter", () => {
     const root = makeVault();
     const h = await harness({ root });
     // Read in earlier sessions: their reading positions, with their times.
-    const { PositionStore } = await import("../src/core/position.ts");
+    const { PositionStore } = await import("../src/core/workspace/session/position.ts");
     const ps = new PositionStore(h.app.loc);
     const top = { heading: null, headingIndex: 0, offset: 0, line: 1 };
     const files = ["notes/alpha.md", "notes/beta.md", "crlf.md", "bom.md", "escapes.md", "latin1.md", "no-newline.md"];
@@ -4558,7 +4558,7 @@ describe("code blocks that scroll sideways ([render] code_wrap)", () => {
     const again = await tree({ root, config });
     expect(again.app.ui.code_wrap).toBe("scroll");
     // A value saved that isn't one: dropped, the config's taken.
-    const { loadSession, saveSession } = await import("../src/core/position.ts");
+    const { loadSession, saveSession } = await import("../src/core/workspace/session/position.ts");
     again.app.quit();
     const saved = loadSession(again.app.loc)!;
     saveSession(again.app.loc, { ...saved, ui: { ...saved.ui, code_wrap: { value: "fold", base: "wrap" } } });
@@ -5163,7 +5163,7 @@ describe("configuration: everything from config, and live reload", () => {
     expect(h.app.messages.some((m) => m.text.includes("config reloaded"))).toBe(true);
   });
   test("a reload's root_markers decide where roots are from then on (21.1)", async () => {
-    const { rootMarkers, setRootMarkers } = await import("../src/core/vault.ts");
+    const { rootMarkers, setRootMarkers } = await import("../src/core/workspace/vaults/vault.ts");
     const dir = mkdtempSync(join(sandbox, "cfg-"));
     const file = join(dir, "config.toml");
     writeFileSync(file, 'theme = "nord"\n');
@@ -5391,7 +5391,7 @@ describe("scratch (space s)", () => {
     const again = await harness({ root, open: "notes/alpha.md", config });
     expect(again.app.ui.scratch_in).toBe("float");
     // A value saved that isn't one: dropped, the config's taken.
-    const { loadSession, saveSession } = await import("../src/core/position.ts");
+    const { loadSession, saveSession } = await import("../src/core/workspace/session/position.ts");
     again.app.quit();
     const s = loadSession(again.app.loc)!;
     saveSession(again.app.loc, { ...s, ui: { ...s.ui, scratch_in: { value: "bottom", base: "right" } } });
@@ -6500,7 +6500,7 @@ describe("review cycle 4 (TUI, a hostile vault's names)", () => {
 
 describe("review cycle 5 (TUI, the session while running)", () => {
   test("history sees the note on screen while slipbox runs, not only after quit", async () => {
-    const { loadSession } = await import("../src/core/position.ts");
+    const { loadSession } = await import("../src/core/workspace/session/position.ts");
     const root = makeVault();
     const h = await harness({ root, open: "notes/alpha.md" });
     await h.app.run("note.open notes/beta.md");
@@ -8636,7 +8636,7 @@ describe("the explorer's view (VV-D5)", () => {
     const before = process.env.HOME;
     process.env.HOME = P;
     try {
-      const { elsewhereAt } = await import("../src/core/vault.ts");
+      const { elsewhereAt } = await import("../src/core/workspace/vaults/vault.ts");
       const h = await harness({ loc: elsewhereAt(P), open: null });
       expect(h.app.explorer.crumbs().map((c) => c.label)).toEqual(["~"]);
       await select(h, "loose");
@@ -8701,7 +8701,7 @@ describe("the explorer's view (VV-D5)", () => {
       );
       expect(h.app.explorer.top).toBe(P);
       // Opened on it: said at once.
-      const { elsewhereAt } = await import("../src/core/vault.ts");
+      const { elsewhereAt } = await import("../src/core/workspace/vaults/vault.ts");
       const at = await harness({ loc: elsewhereAt(join(P, "locked")), open: null });
       expect(at.app.messages.some((m) => m.text.startsWith(`can't read ${tildePath(join(P, "locked"))}:`))).toBe(true);
     } finally {
@@ -10110,7 +10110,7 @@ describe("vaults in the TUI (17.x)", () => {
    *  Names are unique on a machine, so each call numbers its own. */
   async function twoVaults() {
     const n = ++made;
-    const { initVault, locateVault: locate } = await import("../src/core/vault.ts");
+    const { initVault, locateVault: locate } = await import("../src/core/workspace/vaults/vault.ts");
     const base = mkdtempSync(join(sandbox, "two-"));
     const notes = join(base, "notes");
     const app = join(base, "app");
@@ -10213,8 +10213,8 @@ describe("vaults in the TUI (17.x)", () => {
     const { base, notes, app } = await twoVaults();
     await onlyRootsUnder(base, async () => {
       const { cacheDir } = await import("../src/core/foundation/platform/paths.ts");
-      const { readRoots } = await import("../src/core/registry.ts");
-      const { foldersFile } = await import("../src/core/folders.ts");
+      const { readRoots } = await import("../src/core/workspace/vaults/registry.ts");
+      const { foldersFile } = await import("../src/core/workspace/vaults/folders.ts");
       const match = await import("../src/tui/match.ts");
       const index = join(cacheDir(readRoots().find((v) => v.path === app)!), "index.json");
       const h = await harness({ root: notes, open: "index.md" });
@@ -10438,8 +10438,8 @@ describe("vaults in the TUI (17.x)", () => {
   });
 
   test("a pointer completed to a name two folders share asks first (D74, D83): written as it is, or one folder renamed first, previewed, then written; a private name, said", async () => {
-    const { initVault, locateVault: locate } = await import("../src/core/vault.ts");
-    const { recordFolder } = await import("../src/core/folders.ts");
+    const { initVault, locateVault: locate } = await import("../src/core/workspace/vaults/vault.ts");
+    const { recordFolder } = await import("../src/core/workspace/vaults/folders.ts");
     const n = ++made;
     const base = mkdtempSync(join(sandbox, "clash-"));
     const notes = join(base, "notes");
@@ -10682,7 +10682,7 @@ describe("vaults in the TUI (17.x)", () => {
   });
 
   test("a vault nested in the one open: going into it keeps the view, it unfolded and highlighted; back, its own tree again", async () => {
-    const { locateVault } = await import("../src/core/vault.ts");
+    const { locateVault } = await import("../src/core/workspace/vaults/vault.ts");
     const outer = makeVault(); // its nested-vault/ is a vault of its own
     const inner = join(outer, "nested-vault");
     const h = await harness({ loc: locateVault({ path: outer }), open: null });
@@ -10888,7 +10888,7 @@ describe("vaults in the TUI (17.x)", () => {
   });
 
   test("links inside a peek (VV-D7): its own vault's moves it, ctrl+o back inside it; a third vault's moves it; this vault's closes it, opened here", async () => {
-    const { initVault } = await import("../src/core/vault.ts");
+    const { initVault } = await import("../src/core/workspace/vaults/vault.ts");
     const { base, notes, app, n } = await twoVaults();
     const third = join(base, "third");
     mkdirSync(third);
@@ -10955,7 +10955,7 @@ describe("vaults in the TUI (17.x)", () => {
       const bare = join(base, "bare");
       mkdirSync(bare);
       writeFileSync(join(bare, "b.md"), "# B\n");
-      (await import("../src/core/vault.ts")).initVault(bare, `tbare${n}`);
+      (await import("../src/core/workspace/vaults/vault.ts")).initVault(bare, `tbare${n}`);
       writeFileSync(join(notes, "to-bare.md"), "[b](../bare/b.md)\n");
       h.app.overlays.closeFloating();
       await h.app.run("note.open to-bare.md");
@@ -11125,7 +11125,7 @@ describe("vaults in the TUI (17.x)", () => {
   });
 
   test("Elsewhere's folder is listed: its folders and the vaults in it, by their whole paths (VV-D3, VV-D5)", async () => {
-    const { elsewhereAt } = await import("../src/core/vault.ts");
+    const { elsewhereAt } = await import("../src/core/workspace/vaults/vault.ts");
     const dir = mkdtempSync(join(sandbox, "loose-"));
     writeFileSync(join(dir, "note.md"), "# loose\n");
     mkdirSync(join(dir, "plain"));
@@ -11149,7 +11149,7 @@ describe("vaults in the TUI (17.x)", () => {
   });
 
   test("a note in a git repository opens the repository as its root: nothing offered, nothing written (20.3)", async () => {
-    const { elsewhereAt, locateVault } = await import("../src/core/vault.ts");
+    const { elsewhereAt, locateVault } = await import("../src/core/workspace/vaults/vault.ts");
     const repo = join(mkdtempSync(join(sandbox, "repo-")), "alpha");
     mkdirSync(join(repo, "docs"), { recursive: true });
     mkdirSync(join(repo, ".git"));
@@ -11188,7 +11188,7 @@ describe("vaults in the TUI (17.x)", () => {
       expect(started.overlay).toBeNull();
       started.quit();
       // space v v: the named folders, from anywhere; enter goes into one.
-      const { elsewhereAt } = await import("../src/core/vault.ts");
+      const { elsewhereAt } = await import("../src/core/workspace/vaults/vault.ts");
       const h = await harness({ loc: elsewhereAt(dir), open: null });
       expect(h.app.overlay).toBeNull();
       await h.keys("space", "v", "v");
@@ -12218,7 +12218,7 @@ describe("the explorer's file operations and buttons (18.x)", () => {
     h.app.explorer.select("notes/alpha.md");
     await h.keys("d", "y");
     expect(existsSync(join(a, "notes", "alpha.md"))).toBe(false);
-    h.app.vaults.switchVault((await import("../src/core/vault.ts")).rootAt(b), null);
+    h.app.vaults.switchVault((await import("../src/core/workspace/vaults/vault.ts")).rootAt(b), null);
     expect(h.app.loc.root).toBe(b);
     h.app.files.pasteItem();
     expect(h.app.messages.at(-1)!.text).toBe("nothing copied or cut: y copies, x cuts");
@@ -14213,7 +14213,7 @@ describe("hidden files in the explorer (files.hidden, shift+h)", () => {
   });
 
   test("home as before: its walk leaves hidden folders out; listed, ⊘ hidden, nothing in them indexed, opened or not", async () => {
-    const { homeAt } = await import("../src/core/vault.ts");
+    const { homeAt } = await import("../src/core/workspace/vaults/vault.ts");
     const home = realpathSync(mkdtempSync(join(sandbox, "home-")));
     mkdirSync(join(home, ".config", "tool"), { recursive: true });
     writeFileSync(join(home, "a.md"), "# A\n");
@@ -14317,7 +14317,7 @@ describe("the index on demand in the TUI (20.8)", () => {
     }
   });
   test(":e in home of what its skip list leaves out opens it, and nothing more (D249)", async () => {
-    const { homeAt } = await import("../src/core/vault.ts");
+    const { homeAt } = await import("../src/core/workspace/vaults/vault.ts");
     const home = realpathSync(mkdtempSync(join(sandbox, "home-")));
     mkdirSync(join(home, "Downloads"));
     mkdirSync(join(home, ".config", "tool"), { recursive: true });
@@ -14387,7 +14387,7 @@ describe("the background auto-index in the TUI (20.9)", () => {
   });
 
   test("home the vault open (VV-D2): its walk and index made while nobody works, the background index off — then its notes have their backlinks", async () => {
-    const { homeAt } = await import("../src/core/vault.ts");
+    const { homeAt } = await import("../src/core/workspace/vaults/vault.ts");
     const home = realpathSync(mkdtempSync(join(sandbox, "home-")));
     mkdirSync(join(home, "deep", "er"), { recursive: true });
     writeFileSync(join(home, "a.md"), "# A\n");
@@ -14420,7 +14420,7 @@ describe("the background auto-index in the TUI (20.9)", () => {
   };
 
   test("home never walked, its watcher leaves what the walk is to look into (VV-D2): a note saved in a folder of home comes, nothing a folder down; a folder come into home's top is listed and watched, its folders the walk's, nothing dropped (#16)", async () => {
-    const { homeAt } = await import("../src/core/vault.ts");
+    const { homeAt } = await import("../src/core/workspace/vaults/vault.ts");
     const home = realpathSync(mkdtempSync(join(sandbox, "home-")));
     mkdirSync(join(home, "Documents", "d0", "sub"), { recursive: true });
     writeFileSync(join(home, "a.md"), "# A\n");
@@ -14497,7 +14497,7 @@ describe("the background auto-index in the TUI (20.9)", () => {
   });
 
   test("home never walked, a folder come into its top leaves the rest watched as it was: a folder made in one asked for by name, taken in, still sees its notes (#16)", async () => {
-    const { homeAt } = await import("../src/core/vault.ts");
+    const { homeAt } = await import("../src/core/workspace/vaults/vault.ts");
     const home = realpathSync(mkdtempSync(join(sandbox, "home-")));
     mkdirSync(join(home, "notes"), { recursive: true });
     writeFileSync(join(home, "notes", "inbox.md"), "# Inbox\n");
@@ -14585,7 +14585,7 @@ describe("the background auto-index in the TUI (20.9)", () => {
   });
 
   test("home's Downloads opened (VV-D2): left out of home's index, and said so; listed in the explorer a level at a time", async () => {
-    const { homeAt } = await import("../src/core/vault.ts");
+    const { homeAt } = await import("../src/core/workspace/vaults/vault.ts");
     const home = realpathSync(mkdtempSync(join(sandbox, "home-")));
     mkdirSync(join(home, "Downloads", "sub"), { recursive: true });
     mkdirSync(join(home, "empty"));
@@ -14612,8 +14612,8 @@ describe("the background auto-index in the TUI (20.9)", () => {
   });
 
   test("a folder of home opened by name (VV-D2): its notes there at once, home never walked — its own note open, before one of a folder in it, the switcher listing them; a file's folder too", async () => {
-    const { homeAt } = await import("../src/core/vault.ts");
-    const { homeWalkKept } = await import("../src/core/home.ts");
+    const { homeAt } = await import("../src/core/workspace/vaults/vault.ts");
+    const { homeWalkKept } = await import("../src/core/workspace/vaults/home.ts");
     const home = realpathSync(mkdtempSync(join(sandbox, "home-")));
     mkdirSync(join(home, "notes", "ideas"), { recursive: true });
     mkdirSync(join(home, "other"), { recursive: true });
@@ -14691,8 +14691,8 @@ describe("the background auto-index in the TUI (20.9)", () => {
   };
 
   test("a folder of home gone into from a vault — a note of it opened, the folder revealed — has its notes at once, home never walked (VV-D2)", async () => {
-    const { homeAt } = await import("../src/core/vault.ts");
-    const { homeWalkKept } = await import("../src/core/home.ts");
+    const { homeAt } = await import("../src/core/workspace/vaults/vault.ts");
+    const { homeWalkKept } = await import("../src/core/workspace/vaults/home.ts");
     const home = homeWithFolders();
     const vault = makeVault();
     const before = process.env.HOME;
@@ -14721,7 +14721,7 @@ describe("the background auto-index in the TUI (20.9)", () => {
   });
 
   test("a [walk] setting changed in a folder of home opened by name: its notes stay (VV-D2)", async () => {
-    const { homeAt } = await import("../src/core/vault.ts");
+    const { homeAt } = await import("../src/core/workspace/vaults/vault.ts");
     const home = homeWithFolders();
     const cfg = join(mkdtempSync(join(sandbox, "cfg-")), "config.toml");
     writeFileSync(cfg, "");
@@ -14740,8 +14740,8 @@ describe("the background auto-index in the TUI (20.9)", () => {
   });
 
   test("home's walk done at its cap, a folder of it opened by name: the cap said as ever, the folder said to be whole (VV-D2)", async () => {
-    const { homeAt } = await import("../src/core/vault.ts");
-    const { walkHomeNow } = await import("../src/core/home.ts");
+    const { homeAt } = await import("../src/core/workspace/vaults/vault.ts");
+    const { walkHomeNow } = await import("../src/core/workspace/vaults/home.ts");
     const home = homeWithFolders();
     const loc = homeAt(home);
     const before = process.env.HOME;
@@ -14762,8 +14762,8 @@ describe("the background auto-index in the TUI (20.9)", () => {
   });
 
   test("each folder of home opened by name has its own tabs, as before home was a vault; home's top keeps its own (VV-D2)", async () => {
-    const { homeAt } = await import("../src/core/vault.ts");
-    const { sessionFile } = await import("../src/core/position.ts");
+    const { homeAt } = await import("../src/core/workspace/vaults/vault.ts");
+    const { sessionFile } = await import("../src/core/workspace/session/position.ts");
     const home = homeWithFolders();
     const loc = homeAt(home);
     const on = (c: Config) => (c.ui.restore_session = true);
@@ -14801,7 +14801,7 @@ describe("the background auto-index in the TUI (20.9)", () => {
   });
 
   test("home's tabs brought back, in folders its walk hasn't reached: their folders walked at once, their notes known (VV-D2, #13)", async () => {
-    const { homeAt } = await import("../src/core/vault.ts");
+    const { homeAt } = await import("../src/core/workspace/vaults/vault.ts");
     const home = homeWithFolders();
     const loc = homeAt(home);
     const on = (c: Config) => (c.ui.restore_session = true);
@@ -14827,9 +14827,9 @@ describe("the background auto-index in the TUI (20.9)", () => {
   });
 
   test("home's tabs brought back: one build for all their folders, a split's other window's too; a file gone, or one home leaves out, walks nothing (VV-D2, #13)", async () => {
-    const { homeAt } = await import("../src/core/vault.ts");
+    const { homeAt } = await import("../src/core/workspace/vaults/vault.ts");
     const { Graph } = await import("../src/core/graph.ts");
-    const { sessionFile } = await import("../src/core/position.ts");
+    const { sessionFile } = await import("../src/core/workspace/session/position.ts");
     const home = homeWithFolders();
     mkdirSync(join(home, "Downloads"));
     writeFileSync(join(home, "Downloads", "list.md"), "# List\n");
@@ -14881,8 +14881,8 @@ describe("the background auto-index in the TUI (20.9)", () => {
   });
 
   test("home's tab behind a link out of home not followed: nothing asked for it, nothing read through it (VV-D2, VV-D6, #13)", async () => {
-    const { homeAt } = await import("../src/core/vault.ts");
-    const { sessionFile } = await import("../src/core/position.ts");
+    const { homeAt } = await import("../src/core/workspace/vaults/vault.ts");
+    const { sessionFile } = await import("../src/core/workspace/session/position.ts");
     const home = homeWithFolders();
     const shelf = realpathSync(mkdtempSync(join(sandbox, "shelf-")));
     writeFileSync(join(shelf, "far.md"), "# Far\n");
@@ -14911,7 +14911,7 @@ describe("the background auto-index in the TUI (20.9)", () => {
   });
 
   test("a folder of home opened by name, its tabs in a folder of it: no second build (VV-D2, #13)", async () => {
-    const { homeAt } = await import("../src/core/vault.ts");
+    const { homeAt } = await import("../src/core/workspace/vaults/vault.ts");
     const { Graph } = await import("../src/core/graph.ts");
     const home = homeWithFolders();
     const loc = homeAt(home);
@@ -14943,7 +14943,7 @@ describe("the background auto-index in the TUI (20.9)", () => {
   });
 
   test("a tab brought back in a folder made since a folder holding it was walked: walked then (VV-D2, #13)", async () => {
-    const { homeAt } = await import("../src/core/vault.ts");
+    const { homeAt } = await import("../src/core/workspace/vaults/vault.ts");
     const home = homeWithFolders();
     const before = process.env.HOME;
     process.env.HOME = home;
@@ -14963,8 +14963,8 @@ describe("the background auto-index in the TUI (20.9)", () => {
   });
 
   test("home's walk kept, stopped at its cap: a tab brought back has its folder walked all the same (VV-D2, #13)", async () => {
-    const { homeAt } = await import("../src/core/vault.ts");
-    const { walkHomeNow } = await import("../src/core/home.ts");
+    const { homeAt } = await import("../src/core/workspace/vaults/vault.ts");
+    const { walkHomeNow } = await import("../src/core/workspace/vaults/home.ts");
     const home = homeWithFolders();
     const loc = homeAt(home);
     const on = (c: Config) => (c.ui.restore_session = true);
@@ -14994,7 +14994,7 @@ describe("the background auto-index in the TUI (20.9)", () => {
   });
 
   test("into home from a vault, its tabs brought back: their folders walked at once (VV-D2, #13)", async () => {
-    const { homeAt } = await import("../src/core/vault.ts");
+    const { homeAt } = await import("../src/core/workspace/vaults/vault.ts");
     const { Graph } = await import("../src/core/graph.ts");
     const home = homeWithFolders();
     const vault = makeVault();
@@ -15026,7 +15026,7 @@ describe("the background auto-index in the TUI (20.9)", () => {
   });
 
   test("home a repository, a branch's tabs brought back as it's checked out: their folders walked at once (VV-D2, 5.9, #13)", async () => {
-    const { homeAt } = await import("../src/core/vault.ts");
+    const { homeAt } = await import("../src/core/workspace/vaults/vault.ts");
     const home = homeWithFolders();
     const loc = homeAt(home);
     const git = (...args: string[]) =>
@@ -15070,7 +15070,7 @@ describe("the background auto-index in the TUI (20.9)", () => {
   });
 
   test("home a repository, a branch checked out as its batch lands: an open note it changed read again once, after its tabs' build (VV-D2, D153, #13)", async () => {
-    const { homeAt } = await import("../src/core/vault.ts");
+    const { homeAt } = await import("../src/core/workspace/vaults/vault.ts");
     const home = homeWithFolders();
     const loc = homeAt(home);
     const git = (...args: string[]) =>
@@ -15117,7 +15117,7 @@ describe("the background auto-index in the TUI (20.9)", () => {
   });
 
   test("home's tabs brought back as a branch is checked out, their folders walked: search finds their notes (VV-D2, #13)", async () => {
-    const { homeAt } = await import("../src/core/vault.ts");
+    const { homeAt } = await import("../src/core/workspace/vaults/vault.ts");
     const home = homeWithFolders();
     const loc = homeAt(home);
     const on = (c: Config) => {
@@ -15142,7 +15142,7 @@ describe("the background auto-index in the TUI (20.9)", () => {
   });
 
   test("slipbox started in home: its graph built once, with the folder opened and its tabs' folders (VV-D2, #13)", async () => {
-    const { homeAt } = await import("../src/core/vault.ts");
+    const { homeAt } = await import("../src/core/workspace/vaults/vault.ts");
     const { Graph } = await import("../src/core/graph.ts");
     const { prepare } = await import("../src/tui/run.ts");
     const home = homeWithFolders();
@@ -15209,7 +15209,7 @@ describe("the background auto-index in the TUI (20.9)", () => {
   });
 
   test("home: a buffer open before its folder was walked is home's note once it is — a tab brought back, home's walk (VV-D2, #13)", async () => {
-    const { homeAt } = await import("../src/core/vault.ts");
+    const { homeAt } = await import("../src/core/workspace/vaults/vault.ts");
     const home = homeWithFolders();
     const before = process.env.HOME;
     process.env.HOME = home;
@@ -15239,7 +15239,7 @@ describe("the background auto-index in the TUI (20.9)", () => {
   });
 
   test("home: a buffer open before its folder was walked, changed on disk since it was read: read again as the build follows, then home's note (VV-D2, #13)", async () => {
-    const { homeAt } = await import("../src/core/vault.ts");
+    const { homeAt } = await import("../src/core/workspace/vaults/vault.ts");
     const home = homeWithFolders();
     const before = process.env.HOME;
     process.env.HOME = home;
@@ -15308,7 +15308,7 @@ describe("the background auto-index in the TUI (20.9)", () => {
   });
 
   test("a buffer the conflict left with the disk's text, the graph knowing it since: home's note at the next poll (#13)", async () => {
-    const { homeAt } = await import("../src/core/vault.ts");
+    const { homeAt } = await import("../src/core/workspace/vaults/vault.ts");
     const home = homeWithFolders();
     const before = process.env.HOME;
     process.env.HOME = home;
@@ -15581,7 +15581,7 @@ describe("the background auto-index in the TUI (20.9)", () => {
   });
 
   test("a folder of home opened by name lists the vaults in it at once, home never walked: a repository's row, one deeper's (VV-D2)", async () => {
-    const { homeAt } = await import("../src/core/vault.ts");
+    const { homeAt } = await import("../src/core/workspace/vaults/vault.ts");
     const home = realpathSync(mkdtempSync(join(sandbox, "home-")));
     mkdirSync(join(home, "work", "kestrel", ".git"), { recursive: true });
     mkdirSync(join(home, "work", "clients", "heron", ".slipbox"), { recursive: true });
@@ -15753,7 +15753,7 @@ describe("a branch switch as one event (5.9)", () => {
   });
 
   test("where the file is (VB-D3): the unnamed vault path shrinks on the permanent bar; the status line keeps the file; Elsewhere by its name", async () => {
-    const { elsewhereAt } = await import("../src/core/vault.ts");
+    const { elsewhereAt } = await import("../src/core/workspace/vaults/vault.ts");
     const root = join(mkdtempSync(join(sandbox, "a-folder-with-a-rather-long-name-")), "experiment");
     mkdirSync(root);
     writeFileSync(join(root, "a.md"), "# A\n");
@@ -20269,7 +20269,7 @@ describe("Elsewhere: no-vault (VV-D3)", () => {
   };
 
   test("opened there: Elsewhere on the top bar, its files by their whole paths, and what needs an index said missing", async () => {
-    const { elsewhereAt } = await import("../src/core/vault.ts");
+    const { elsewhereAt } = await import("../src/core/workspace/vaults/vault.ts");
     const dir = nowhere();
     writeFileSync(join(dir, "broken.md"), "[gone](gone.md)\n"); // a link that reaches nothing: never counted here
     const h = await harness({ loc: elsewhereAt(dir, join(dir, "b.md")), open: join(dir, "b.md") });
@@ -20524,7 +20524,7 @@ describe("out of the vault open, the links of the place a file is in: the peek, 
     try {
       setLinkAnswer(join(home, "data"), "follow");
       await probe(ext);
-      const { homeAt } = await import("../src/core/vault.ts");
+      const { homeAt } = await import("../src/core/workspace/vaults/vault.ts");
       const h = await harness({ loc: homeAt(home), open: "n.md" });
       expect(h.app.files.createNote("data/new", "")).toMatchObject({ created: true });
       expect(readFileSync(join(ext, "new.md"), "utf8")).toBe("# new\n\n");
@@ -20735,7 +20735,7 @@ describe("links followed only when you say so (VV-D6)", () => {
   });
 
   test("home: a link out of it followed, its note edited, then forgotten: its unsaved text never written through it (VV-D6, #13)", async () => {
-    const { homeAt } = await import("../src/core/vault.ts");
+    const { homeAt } = await import("../src/core/workspace/vaults/vault.ts");
     const top = realpathSync(mkdtempSync(join(sandbox, "homelinks-")));
     const home = join(top, "home");
     const out = join(top, "out");
@@ -20782,7 +20782,7 @@ describe("links followed only when you say so (VV-D6)", () => {
   test("home: a note looked at through a link, followed, its target not answering: still read-only, the poll lifts nothing (VV-D6, #13)", async () => {
     // Root reads any folder: a target that won't list is only so for others.
     if (process.getuid?.() === 0) return;
-    const { homeAt } = await import("../src/core/vault.ts");
+    const { homeAt } = await import("../src/core/workspace/vaults/vault.ts");
     const top = realpathSync(mkdtempSync(join(sandbox, "homelinks-")));
     const home = join(top, "home");
     const out = join(top, "out");
@@ -20885,7 +20885,7 @@ describe("links followed only when you say so (VV-D6)", () => {
   });
 
   test("Elsewhere: a note just looked at through a link, the link forgotten, then followed: writable again (VV-D3, #13)", async () => {
-    const { elsewhereAt } = await import("../src/core/vault.ts");
+    const { elsewhereAt } = await import("../src/core/workspace/vaults/vault.ts");
     const top = realpathSync(mkdtempSync(join(sandbox, "plain-")));
     const plain = join(top, "plain");
     const out = join(top, "out");
@@ -20911,7 +20911,7 @@ describe("links followed only when you say so (VV-D6)", () => {
   });
 
   test("Elsewhere: a note looked at through a link, changed by an agent, then followed: read again at once, writable (VV-D3, #13)", async () => {
-    const { elsewhereAt } = await import("../src/core/vault.ts");
+    const { elsewhereAt } = await import("../src/core/workspace/vaults/vault.ts");
     const top = realpathSync(mkdtempSync(join(sandbox, "plain-")));
     const plain = join(top, "plain");
     const out = join(top, "out");
@@ -20935,7 +20935,7 @@ describe("links followed only when you say so (VV-D6)", () => {
   });
 
   test("Elsewhere: a link followed, the others not: a note forgotten, or one looked at, changed by an agent, still not read through theirs (VV-D6, #13)", async () => {
-    const { elsewhereAt } = await import("../src/core/vault.ts");
+    const { elsewhereAt } = await import("../src/core/workspace/vaults/vault.ts");
     const top = realpathSync(mkdtempSync(join(sandbox, "plain-")));
     const plain = join(top, "plain");
     mkdirSync(plain);
@@ -20969,7 +20969,7 @@ describe("links followed only when you say so (VV-D6)", () => {
   });
 
   test("Elsewhere: a link followed, typed into, forgotten, changed by an agent, followed again: the conflict prompt asks at once (VV-D3, 5.5, #13)", async () => {
-    const { elsewhereAt } = await import("../src/core/vault.ts");
+    const { elsewhereAt } = await import("../src/core/workspace/vaults/vault.ts");
     const top = realpathSync(mkdtempSync(join(sandbox, "plain-")));
     const plain = join(top, "plain");
     const out = join(top, "out");
@@ -21061,7 +21061,7 @@ describe("links followed only when you say so (VV-D6)", () => {
     try {
       setLinkAnswer(link, "follow");
       await probe(out);
-      const { homeAt } = await import("../src/core/vault.ts");
+      const { homeAt } = await import("../src/core/workspace/vaults/vault.ts");
       const h = await harness({ loc: homeAt(root), open: null });
       const buf = h.app.buffer(join(link, "far.md"))!;
       expect(buf.readOnly).toBeNull();
@@ -21110,7 +21110,7 @@ describe("links followed only when you say so (VV-D6)", () => {
     const state = process.env.XDG_STATE_HOME;
     process.env.HOME = mkdtempSync(join(sandbox, "home-")); // a home of the test's own
     process.env.XDG_STATE_HOME = mkdtempSync(join(sandbox, "state-")); // and answers of its own
-    const { linkKey } = await import("../src/core/symlinks.ts");
+    const { linkKey } = await import("../src/core/workspace/vaults/symlinks.ts");
     mkdirSync(join(top, "other"));
     writeFileSync(join(top, "other", "o.md"), "# O\n");
     symlinkSync(join(top, "other"), join(root, "no"));

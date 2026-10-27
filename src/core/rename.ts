@@ -14,7 +14,7 @@ import { classify } from "./filetypes.ts";
 import { entryAt, entryInside, realTarget } from "./foundation/platform/fsutil.ts";
 import type { Backlink, Graph, NoteEntry, ResolvedLink } from "./graph.ts";
 import { extensionless, formatPathLink, normKey, pathForm, pathLink, type PathForm, pathNamed } from "./links.ts";
-import { readRoots } from "./registry.ts";
+import { readRoots } from "./workspace/vaults/registry.ts";
 import { openVault } from "./reach.ts";
 import {
   copyAvailable,
@@ -24,11 +24,11 @@ import {
   pointerWarnings,
   readFolders,
   travelTogether,
-} from "./folders.ts";
+} from "./workspace/vaults/folders.ts";
 import { formatPointer, isPointer, parsePointer, resolvePointer } from "./pointer.ts";
-import { isLink, linkAnswer } from "./symlinks.ts";
-import { findVaultRoot, isHome, isInside } from "./vault.ts";
-import { holdsNotes } from "./walk.ts";
+import { isLink, linkAnswer } from "./workspace/vaults/symlinks.ts";
+import { findVaultRoot, isHome, isInside } from "./workspace/vaults/vault.ts";
+import { holdsNotes } from "./workspace/walk/walk.ts";
 import {
   RenameError,
   type RenamePlan,

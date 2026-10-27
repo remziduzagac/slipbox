@@ -7,7 +7,7 @@ import { pathToFileURL, fileURLToPath } from "node:url";
 import type { Diagnostic, WorkspaceEdit } from "vscode-languageserver-protocol";
 import type { Problem, Severity } from "../diagnostics.ts";
 import { LanguageClient } from "./client.ts";
-import { isTrusted, trustOf } from "../trust.ts";
+import { isTrusted, trustOf } from "../workspace/vaults/trust.ts";
 import { type Choice, chooseServers, type Found, findServer, rootFor } from "./find.ts";
 import { installTool, lockKey } from "./install.ts";
 import {

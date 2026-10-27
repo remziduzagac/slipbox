@@ -2,7 +2,7 @@
 
 import type { App } from "./app.ts";
 import { operationStatus } from "./rebase.ts";
-import { ELSEWHERE, tildePath } from "../core/names.ts";
+import { ELSEWHERE, tildePath } from "../core/workspace/vaults/names.ts";
 import { trackText } from "../core/gitremote.ts";
 import { sanitize } from "../core/foundation/text/sanitize.ts";
 

@@ -13,7 +13,7 @@ import { tagOf } from "../core/release.ts";
 import { readJson } from "../core/foundation/platform/fsutil.ts";
 import { removeOlderThan } from "../core/foundation/platform/fsutil.ts";
 import { type Channel, currentVersion, homebrewPrefix, type InstalledBy, howToUpgrade } from "../core/install.ts";
-import { type SessionState, sessionFrom } from "../core/position.ts";
+import { type SessionState, sessionFrom } from "../core/workspace/session/position.ts";
 import type { ReleaseBuild } from "../core/release.ts";
 import { type RestartNote, writeNote } from "../core/restart.ts";
 import {
@@ -30,7 +30,7 @@ import {
   upgradeSaid,
   versionOf,
 } from "../core/update.ts";
-import type { VaultMode } from "../core/vault.ts";
+import type { VaultMode } from "../core/workspace/vaults/vault.ts";
 import type { App, Level } from "./app.ts";
 import { openDialog } from "./dialog.ts";
 import { stopInsert } from "./editing.ts";

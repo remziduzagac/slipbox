@@ -4,9 +4,9 @@
 import { existsSync } from "node:fs";
 import { isAbsolute, join } from "node:path";
 import { stopInsert } from "./editing.ts";
-import type { Anchor } from "../core/position.ts";
+import type { Anchor } from "../core/workspace/session/position.ts";
 import { peekStep } from "./peek.ts";
-import { tildePath } from "../core/names.ts";
+import { tildePath } from "../core/workspace/vaults/names.ts";
 import { sanitize } from "../core/foundation/text/sanitize.ts";
 import type { NoteBuffer } from "./buffer.ts";
 import { match } from "./match.ts";

@@ -1,0 +1,199 @@
+{
+  "moves": {
+    "src/core/vault.ts": "src/core/workspace/vaults/vault.ts",
+    "src/core/home.ts": "src/core/workspace/vaults/home.ts",
+    "src/core/registry.ts": "src/core/workspace/vaults/registry.ts",
+    "src/core/folders.ts": "src/core/workspace/vaults/folders.ts",
+    "src/core/names.ts": "src/core/workspace/vaults/names.ts",
+    "src/core/mounts.ts": "src/core/workspace/vaults/mounts.ts",
+    "src/core/symlinks.ts": "src/core/workspace/vaults/symlinks.ts",
+    "src/core/trust.ts": "src/core/workspace/vaults/trust.ts",
+    "src/core/vault-feed.ts": "src/core/workspace/vaults/vault-feed.ts",
+    "src/core/vault-list.ts": "src/core/workspace/vaults/vault-list.ts",
+    "src/core/position.ts": "src/core/workspace/session/position.ts",
+    "src/core/walk.ts": "src/core/workspace/walk/walk.ts",
+    "src/core/walkers.ts": "src/core/workspace/walk/walkers.ts",
+    "src/core/walk-thread.ts": "src/core/workspace/walk/walk-thread.ts",
+    "src/core/walk-jobs.ts": "src/core/workspace/walk/walk-jobs.ts",
+    "src/core/walk-worker.ts": "src/core/workspace/walk/walk-worker.ts",
+    "src/core/listing.ts": "src/core/workspace/walk/listing.ts",
+    "src/core/list-worker.ts": "src/core/workspace/walk/list-worker.ts"
+  },
+  "retained": [
+    {
+      "file": "blueprint/workstreams/code-organization/design.md",
+      "text": "src/core/vault",
+      "reason": "Historical decision or measured pre-move evidence; no runtime reference."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "src/core/vault",
+      "reason": "Historical decision or measured pre-move evidence; no runtime reference."
+    },
+    {
+      "file": "blueprint/decisions/roots-and-links.md",
+      "text": "src/core/home",
+      "reason": "Historical decision or measured pre-move evidence; no runtime reference."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/design.md",
+      "text": "src/core/home",
+      "reason": "Historical decision or measured pre-move evidence; no runtime reference."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "src/core/home",
+      "reason": "Historical decision or measured pre-move evidence; no runtime reference."
+    },
+    {
+      "file": "blueprint/workstreams/archive/doc-findings/tasks/archive/words-hover-clones-popups.md",
+      "text": "src/core/folders",
+      "reason": "Historical decision or measured pre-move evidence; no runtime reference."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/design.md",
+      "text": "src/core/folders",
+      "reason": "Historical decision or measured pre-move evidence; no runtime reference."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "src/core/folders",
+      "reason": "Historical decision or measured pre-move evidence; no runtime reference."
+    },
+    {
+      "file": "blueprint/decisions/roots-and-links.md",
+      "text": "src/core/symlinks",
+      "reason": "Historical decision or measured pre-move evidence; no runtime reference."
+    },
+    {
+      "file": "blueprint/workstreams/archive/workspaces/notes.md",
+      "text": "src/core/position",
+      "reason": "Historical decision or measured pre-move evidence; no runtime reference."
+    },
+    {
+      "file": "blueprint/workstreams/archive/workspaces/tasks/archive/words.md",
+      "text": "src/core/position",
+      "reason": "Historical decision or measured pre-move evidence; no runtime reference."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/design.md",
+      "text": "src/core/position",
+      "reason": "Historical decision or measured pre-move evidence; no runtime reference."
+    },
+    {
+      "file": "blueprint/decisions/roots-and-links.md",
+      "text": "src/core/walk",
+      "reason": "Historical decision or measured pre-move evidence; no runtime reference."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/design.md",
+      "text": "src/core/walk",
+      "reason": "Historical decision or measured pre-move evidence; no runtime reference."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "src/core/walk",
+      "reason": "Historical decision or measured pre-move evidence; no runtime reference."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "src/core/walk-thread",
+      "reason": "Historical decision or measured pre-move evidence; no runtime reference."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/manifests/t3.json",
+      "text": "src/core/vault",
+      "reason": "Reviewed move manifest and its old-path allowlist."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/manifests/t3.json",
+      "text": "src/core/home",
+      "reason": "Reviewed move manifest and its old-path allowlist."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/manifests/t3.json",
+      "text": "src/core/registry",
+      "reason": "Reviewed move manifest and its old-path allowlist."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/manifests/t3.json",
+      "text": "src/core/folders",
+      "reason": "Reviewed move manifest and its old-path allowlist."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/manifests/t3.json",
+      "text": "src/core/names",
+      "reason": "Reviewed move manifest and its old-path allowlist."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/manifests/t3.json",
+      "text": "src/core/mounts",
+      "reason": "Reviewed move manifest and its old-path allowlist."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/manifests/t3.json",
+      "text": "src/core/symlinks",
+      "reason": "Reviewed move manifest and its old-path allowlist."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/manifests/t3.json",
+      "text": "src/core/trust",
+      "reason": "Reviewed move manifest and its old-path allowlist."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/manifests/t3.json",
+      "text": "src/core/vault-feed",
+      "reason": "Reviewed move manifest and its old-path allowlist."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/manifests/t3.json",
+      "text": "src/core/vault-list",
+      "reason": "Reviewed move manifest and its old-path allowlist."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/manifests/t3.json",
+      "text": "src/core/position",
+      "reason": "Reviewed move manifest and its old-path allowlist."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/manifests/t3.json",
+      "text": "src/core/walk",
+      "reason": "Reviewed move manifest and its old-path allowlist."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/manifests/t3.json",
+      "text": "src/core/walkers",
+      "reason": "Reviewed move manifest and its old-path allowlist."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/manifests/t3.json",
+      "text": "src/core/walk-thread",
+      "reason": "Reviewed move manifest and its old-path allowlist."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/manifests/t3.json",
+      "text": "src/core/walk-jobs",
+      "reason": "Reviewed move manifest and its old-path allowlist."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/manifests/t3.json",
+      "text": "src/core/walk-worker",
+      "reason": "Reviewed move manifest and its old-path allowlist."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/manifests/t3.json",
+      "text": "src/core/listing",
+      "reason": "Reviewed move manifest and its old-path allowlist."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/manifests/t3.json",
+      "text": "src/core/list-worker",
+      "reason": "Reviewed move manifest and its old-path allowlist."
+    },
+    {
+      "file": "skills/slipbox/SKILL.md",
+      "text": "src/core/walk",
+      "reason": "Example path in a user project, not a slipbox source reference."
+    }
+  ]
+}

@@ -96,8 +96,9 @@ that order:
   followed, its settings, and where its state is kept. Nothing is written into a folder by opening it (D58). One walk
   lists its files for the index and the watcher alike (D40); the TUI makes its own walks, and lists the explorer's
   folders, on threads of their own (T12). A link out of the vault or home is followed only when you say so (VV-D6).
-  Code: `core/vault.ts`, `core/home.ts`, `core/walk.ts`, `core/walk-thread.ts`, `core/symlinks.ts`,
-  `core/registry.ts`, `core/folders.ts`.
+  Code: `core/workspace/vaults/vault.ts`, `core/workspace/vaults/home.ts`, `core/workspace/walk/walk.ts`,
+  `core/workspace/walk/walk-thread.ts`, `core/workspace/vaults/symlinks.ts`,
+  `core/workspace/vaults/registry.ts`, `core/workspace/vaults/folders.ts`.
 - **Links** ([links.md](links.md)): every link, whatever its written form, is read as a file and a fragment; each
   tool's forms are read and written at the edges (D68). The graph (`core/graph.ts`) holds the notes, their links and
   backlinks, parsed lazily; renames, repairs, plans and the merge review work on paths.
@@ -136,19 +137,19 @@ The CLI's commands are the user's reference, [cli.md](../../docs/manual/cli.md);
 | `core/foundation/text/sanitize.ts` | 2.9 | strips terminal escapes on the way into layout |
 | `core/foundation/platform/paths.ts` | 0.10, 21.8 | config, cache and state directories; a vault's key, by its path |
 | [config.ts][o2] | 0.9, 20.7 | TOML: defaults ← yours ← each enclosing vault's ← its own; warnings, never crashes |
-| `core/vault.ts` | 1.1, 1.10, 0.12, 17.1, 20.3, 21.8 | a file's vault, home or Elsewhere; recorded; state moved |
-| `core/home.ts` | VV-D2 | home's walk, made in slices and kept (`walk.json`); its graph built from it; the cap |
-| `core/walkers.ts` | T12 | where a walk is made: here (the CLI's), or on the walk's thread (the TUI's) |
-| `core/walk-thread.ts` | T12 | the walk's thread and the listings' two (`walk-worker.ts`, `list-worker.ts`): asked |
-| `core/walk-jobs.ts` | T12 | what the walk's thread does: the same walks and indexes as here, slice by slice |
+| [vault.ts][o17] | 1.1, 1.10, 0.12, 17.1, 20.3, 21.8 | a file's vault, home or Elsewhere; recorded; state moved |
+| [home.ts][o18] | VV-D2 | home's walk, made in slices and kept (`walk.json`); its graph built from it; the cap |
+| `core/workspace/walk/walkers.ts` | T12 | where a walk is made: here (the CLI's), or on the walk's thread (the TUI's) |
+| [walk-thread.ts][o19] | T12 | the walk's thread and the listings' two (`walk-worker.ts`, `list-worker.ts`): asked |
+| [walk-jobs.ts][o20] | T12 | what the walk's thread does: the same walks and indexes as here, slice by slice |
 | [worker-context.ts][o3] | T12 | what those threads can't see for themselves: the environment, markers, probe |
-| `core/listing.ts` | T12, VV-D5 | a folder listed for the explorer: its entries, what its rows and marks say of each |
-| `core/mounts.ts` | VV-D2 | the mount table, read without touching a mount: home's walk never goes into another disk |
-| `core/symlinks.ts` | VV-D6 | links followed only when you say so: the answers, a link's scope, writes, the probe |
-| `core/registry.ts` | 17.3–17.6, 21.8 | `[vault]` identity; the machine's vaults by path (`roots.json`) |
+| [listing.ts][o21] | T12, VV-D5 | a folder listed for the explorer: its entries, what its rows and marks say of each |
+| [mounts.ts][o22] | VV-D2 | the mount table, read without touching a mount: home's walk never goes into another disk |
+| [symlinks.ts][o23] | VV-D6 | links followed only when you say so: the answers, a link's scope, writes, the probe |
+| [registry.ts][o24] | 17.3–17.6, 21.8 | `[vault]` identity; the machine's vaults by path (`roots.json`) |
 | `core/remotes.ts` | 21.6 | a repository's remotes as `host/path`: what names it, what hosting URLs are its |
 | `core/parsecache.ts` | 20.11 | notes' parsed content by content hash, shared by every copy on the machine |
-| `core/names.ts` | 21.9 | a vault as it's told: its name, else its path (`~/…`); `name@branch`; `~`, `Elsewhere` |
+| [names.ts][o25] | 21.9 | a vault as it's told: its name, else its path (`~/…`); `name@branch`; `~`, `Elsewhere` |
 | `core/git.ts` | 17.19 | a vault's git checkout, from `.git`: the main one or a worktree, the branch |
 | `core/gitops.ts` | 5.11–5.14, 23.6 | git run for what `.git` can't say cheaply: status, changes, a file at a commit |
 | `core/mergereview.ts` | 20.21 | before a merge: the links `git merge-tree`'s result would break, each cause and fix |
@@ -165,7 +166,7 @@ The CLI's commands are the user's reference, [cli.md](../../docs/manual/cli.md);
 | `core/convert.ts` | 20.1 | the converter: `[[…]]` and `/…` links made relative paths, by their own old rules |
 | `core/rename-log.ts` | 7.4 | each rename's files and moves, as it found them: what an undo gives back |
 | `core/files.ts` | 18.4, 18.5, 18.11 | delete to the vault's trash and restore; copy; an unmade vault's `.slipbox/` |
-| `core/walk.ts` | 1.2, 0.11 | the walk and `WalkFilter`, shared with the watcher |
+| `core/workspace/walk/walk.ts` | 1.2, 0.11 | the walk and `WalkFilter`, shared with the watcher |
 | `core/wikilink.ts` | 1.3 | micromark tokenizer for `[[link]]` and `![[embed]]` |
 | `core/footnotes.ts` | 3.17 | a note's footnotes: labels, definitions, references, in GFM's order |
 | `core/tags.ts` | 1.6 | micromark tokenizer for `#tag`; tag names and keys (the graph's tag index) |
@@ -184,7 +185,7 @@ The CLI's commands are the user's reference, [cli.md](../../docs/manual/cli.md);
 | `core/scope.ts` | 20.16, 21.10 | search by vault: `here`, then linked vaults, then every vault known (`--scope`) |
 | `core/autoindex.ts` | 20.9 | the background auto-index: home walked in slices and indexed, then the vaults in it |
 | [sqlite.ts][o6] | 6.6 | the runtime's SQLite (`node:sqlite`): the few calls the index and the parse cache make |
-| `core/trust.ts` | 23.x | the vaults whose own code may run: your answers (`trust.json`), your `[trust] roots` |
+| [trust.ts][o26] | 23.x | the vaults whose own code may run: your answers (`trust.json`), your `[trust] roots` |
 | `core/graph.ts` | 1.5–1.9, 6.7, 11.8 | notes, links, backlinks, lazy parsing, the index; change feed; unsaved text |
 | `core/graph-types.ts` | 1.5–1.7 | a note's entry, a link as written and resolved, a backlink, a problem; how sure |
 | `core/graph-extract.ts` | 1.5, 1.6, 20.11 | a note's entry from its text: title, headings, links, tags, names |
@@ -194,7 +195,7 @@ The CLI's commands are the user's reference, [cli.md](../../docs/manual/cli.md);
 | `core/doctypes.ts` | 22.2, 22.3 | document types: notes of a kind by where they are; their rules, order, status |
 | `core/convention.ts` | 21.4 | a vault's links' convention: your setting, its tool's, its notes', ours |
 | `core/write-link.ts` | 21.5 | a link as slipbox writes one: completion, the link picker, `slipbox link` |
-| `core/folders.ts` | 21.6 | named folders: by `.slipbox/` name, else remote; copies, the default; the lookup |
+| [folders.ts][o27] | 21.6 | named folders: by `.slipbox/` name, else remote; copies, the default; the lookup |
 | `core/pointer.ts` | 21.7 | `slipbox://` pointers: parsed, resolved (a branch: its worktree, or from git), written |
 | `core/hosting.ts` | — | a repository's hosting URLs (GitHub, GitLab, Bitbucket) read as its files |
 | `core/data.ts` | 16.11–16.15 | data files (TOML, INI, YAML, JSON, CSV) read into a document tree; their links |
@@ -270,9 +271,9 @@ The CLI's commands are the user's reference, [cli.md](../../docs/manual/cli.md);
 | `core/application/commands/registry.ts` | 0.8 | `CommandRegistry` and `Keymap` |
 | [catalog.ts][o11] | 0.8, parity | `COMMAND_SPECS`, composed from area catalogs; contracts live separately |
 | `core/application/commands/areas/*.ts` | 0.8, parity, D235 | every command id with its CLI equivalent, by area |
-| `core/position.ts` | 3.4, 3.5, 3.15 | anchors, reading positions, the session file (the workspaces) |
+| [position.ts][o28] | 3.4, 3.5, 3.15 | anchors, reading positions, the session file (the workspaces) |
 | `core/watch.ts` | 5.1, 5.2 | per-directory watcher, debounce, polling fallbacks |
-| `core/vault-feed.ts` | 5.1, 5.9, 5.10 | the watcher's news into a graph, held while git writes (TUI) |
+| [vault-feed.ts][o29] | 5.1, 5.9, 5.10 | the watcher's news into a graph, held while git writes (TUI) |
 | `core/capture.ts` | 8.2–8.4 | scratch location, reference format, append |
 | `core/context.ts` | 9.7 | the context bundle: a note, its links and backlinks, as one document for an agent |
 | `core/lint.ts` | 3.21 | the lint surface: your markdownlint-cli2 run, its findings read |
@@ -578,3 +579,17 @@ ordinary note needs.
 [o14]: ../../src/core/foundation/platform/libc.ts
 [o15]: ../../src/core/foundation/platform/processes.ts
 [o16]: ../../src/core/foundation/platform/wsl.ts
+
+[o17]: ../../src/core/workspace/vaults/vault.ts
+[o18]: ../../src/core/workspace/vaults/home.ts
+[o19]: ../../src/core/workspace/walk/walk-thread.ts
+[o20]: ../../src/core/workspace/walk/walk-jobs.ts
+[o21]: ../../src/core/workspace/walk/listing.ts
+[o22]: ../../src/core/workspace/vaults/mounts.ts
+[o23]: ../../src/core/workspace/vaults/symlinks.ts
+[o24]: ../../src/core/workspace/vaults/registry.ts
+[o25]: ../../src/core/workspace/vaults/names.ts
+[o26]: ../../src/core/workspace/vaults/trust.ts
+[o27]: ../../src/core/workspace/vaults/folders.ts
+[o28]: ../../src/core/workspace/session/position.ts
+[o29]: ../../src/core/workspace/vaults/vault-feed.ts

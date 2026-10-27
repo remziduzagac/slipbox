@@ -6,11 +6,11 @@
 
 import { realpathSync } from "node:fs";
 import { type Config, loadConfig } from "./application/config/config.ts";
-import { type CopyFacts, copyFacts, type FolderIdentity, folderIdentity } from "./folders.ts";
+import { type CopyFacts, copyFacts, type FolderIdentity, folderIdentity } from "./workspace/vaults/folders.ts";
 import { Graph } from "./graph.ts";
-import { type HomeWalk, homeFilter, keepHomeWalk } from "./home.ts";
-import type { KnownRoot } from "./registry.ts";
-import { configFilesFor, homeAt, isVaultRoot, knownWorktree, rootAt } from "./vault.ts";
+import { type HomeWalk, homeFilter, keepHomeWalk } from "./workspace/vaults/home.ts";
+import type { KnownRoot } from "./workspace/vaults/registry.ts";
+import { configFilesFor, homeAt, isVaultRoot, knownWorktree, rootAt } from "./workspace/vaults/vault.ts";
 
 /** What an index is of: a vault found, by its folder — or home, from its walk (with its filter's signature: what it was
  *  walked under), under its settings (yours alone). */

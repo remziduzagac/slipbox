@@ -2,7 +2,7 @@
 // vault named (21.10), the named folders this machine knows, with the copy links open (21.6), and the symlinks answered
 // (VV-D6).
 
-import { knownVaults } from "../core/vault-list.ts";
+import { knownVaults } from "../core/workspace/vaults/vault-list.ts";
 import { existsSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import {
@@ -13,12 +13,12 @@ import {
   readFolders,
   repositoryCopies,
   setDefaultCopy,
-} from "../core/folders.ts";
+} from "../core/workspace/vaults/folders.ts";
 import { openVault } from "../core/reach.ts";
 import { planMakeVault, planUnmakeVault, planVaultRename } from "../core/rename.ts";
-import { readIdentity, vaultConfigFile } from "../core/registry.ts";
-import { tildePath } from "../core/names.ts";
-import { answersKept, forgetLinkAnswer, linkSaid } from "../core/symlinks.ts";
+import { readIdentity, vaultConfigFile } from "../core/workspace/vaults/registry.ts";
+import { tildePath } from "../core/workspace/vaults/names.ts";
+import { answersKept, forgetLinkAnswer, linkSaid } from "../core/workspace/vaults/symlinks.ts";
 import {
   checkInit,
   hasMarker,
@@ -29,7 +29,7 @@ import {
   recordLocation,
   rootAt,
   VaultError,
-} from "../core/vault.ts";
+} from "../core/workspace/vaults/vault.ts";
 import { flag, has, UsageError } from "./args.ts";
 import { EXIT, CliError, type Handler, requireArg } from "./common.ts";
 import { renameResult } from "./files.ts";

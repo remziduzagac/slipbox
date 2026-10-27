@@ -3,8 +3,8 @@
 // the process started with, not the one now: a test's `HOME`), the root markers your config names, and what the
 // followed links' targets answered (VV-D6: never asked there).
 
-import { probeAnswers, takeProbeAnswers } from "../../symlinks.ts";
-import { rootMarkers, setRootMarkers } from "../../vault.ts";
+import { probeAnswers, takeProbeAnswers } from "../../workspace/vaults/symlinks.ts";
+import { rootMarkers, setRootMarkers } from "../../workspace/vaults/vault.ts";
 
 export interface WalkContext {
   env: Record<string, string>;

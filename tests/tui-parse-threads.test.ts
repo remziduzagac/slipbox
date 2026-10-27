@@ -10,7 +10,7 @@ import { DEFAULT_CONFIG } from "../src/core/application/config/config.ts";
 import { Graph } from "../src/core/graph.ts";
 import { noteChunks } from "../src/core/parse.ts";
 import { stopParsePool } from "../src/core/parse-pool.ts";
-import { locateVault } from "../src/core/vault.ts";
+import { locateVault } from "../src/core/workspace/vaults/vault.ts";
 import { BACKGROUND_PARSE } from "../src/tui/buffer.ts";
 import { harness, makeSandbox, makeVault } from "./tui-harness.ts";
 

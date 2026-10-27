@@ -23,7 +23,7 @@ import {
   upstreamOf,
 } from "../core/gitremote.ts";
 import { sanitize } from "../core/foundation/text/sanitize.ts";
-import { isTrusted } from "../core/trust.ts";
+import { isTrusted } from "../core/workspace/vaults/trust.ts";
 import type { App } from "./app.ts";
 import { askDiverged } from "./rebase.ts";
 

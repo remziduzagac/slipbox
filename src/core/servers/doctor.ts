@@ -6,7 +6,7 @@ import { type Choice, chooseServers, findServer, rootFor, type Where } from "./f
 import { type LanguageDef, languageOf, projectAsks, type ServerDef, type ServerTable } from "./languages.ts";
 import { type LinterDef, linterRoot, projectPath } from "./linters.ts";
 import { limitsOf } from "./manager.ts";
-import { isTrusted } from "../trust.ts";
+import { isTrusted } from "../workspace/vaults/trust.ts";
 
 export interface ServerReport {
   name: string;

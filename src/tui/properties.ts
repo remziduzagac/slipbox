@@ -2,7 +2,7 @@
 // or saved, its text goes back into the note as one undo step.
 
 import { cannotEdit } from "./editing.ts";
-import { TOP } from "../core/position.ts";
+import { TOP } from "../core/workspace/session/position.ts";
 import { parseMarkdown } from "../core/parse.ts";
 import { NoteBuffer } from "./buffer.ts";
 import type { App } from "./app.ts";
