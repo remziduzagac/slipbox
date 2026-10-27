@@ -17,7 +17,9 @@ a change users will see updates it in the same piece of work, without the bluepr
   the screen's thread can freeze it.
 - **Source files have a 1,000-line ceiling, and no class does everything** (D235, ORG-D2). Existing handwritten
   exceptions have exact non-growing caps, never above 1,500. Moves may reset a cap solely for measured import-formatting
-  growth, recording its delta in the task (ORG-D2); preserve non-import code/comments and normal formatting. Generated
+  growth, recording its delta in the task (ORG-D2); preserve non-import code/comments and normal formatting.
+  The same applies when import formatting alone moves a file from at or below the ceiling to above it; the file gets an
+  exact cap equal to its measured size, recorded in the task and removed by its extraction task. Generated
   server locks have a separate measured cap and offline generator check (`bun scripts/lock-servers.ts --check`). Lower a
   cap whenever its file shrinks; remove the exception at or below 1,000. A feature goes in a module of its own; `App`
   (`src/tui/app/runtime/app.ts`) keeps the shared state and the wiring, and a feature is a controller in its own file

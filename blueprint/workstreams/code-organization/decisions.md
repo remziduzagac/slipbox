@@ -40,6 +40,8 @@ formatting longer import paths during moves. Record the old/new cap and import-o
 non-import code and comments, and verify mapped dependencies and executable bodies. Keep normal import formatting;
 do not trim comments or blank separators to offset path growth. The 1,500 ceiling and ordinary non-growing ratchet
 still apply. This exception does not permit implementation growth.
+The same applies when import formatting alone moves a file from at or below the ceiling to above it; the file gets an
+exact cap equal to its measured size, recorded in the task and removed by its extraction task.
 
 ## ORG-D3: Early timeout policy and independent gateway preparation (2026-10-27)
 
