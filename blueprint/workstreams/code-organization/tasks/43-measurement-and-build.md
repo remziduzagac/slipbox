@@ -42,3 +42,8 @@ change as a coherent follow-up; #56 remains excluded. This is focused verificati
 T9 records two CLI fixture assumptions for T23 isolation: listing-only uninstall discovers installed host skills, and
 stat expects an unqualified vault name even inside a linked worktree. Baseline/current controls reproduce each; the
 focused launcher selection passes separately. Keep these failures separate from the passing mapped scope timings.
+
+- ORG-T9 CI follow-up: the switcher row-ownership fixture now publishes on reopening, with a controlled 400 ms first
+  repaint that reproduces the old 300 ms timer race. Existing assertions and the separate 6.5-second wait case are
+  unchanged; the fixed regression passes five repeats, the harness file passes 35 tests, and the watcher terminal
+  check passes. No product code or deadline changed.

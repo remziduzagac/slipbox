@@ -406,20 +406,25 @@ describe("what the checks share (check.ts)", () => {
     "draw",
     'while c=$(dd bs=1 count=1 2>/dev/null) && [ -n "$c" ]; do',
     '  if [ "$c" = "$(printf \'\\020\')" ]; then shown=1; printf p >> "$OPENS"',
+    '    if [ "$(wc -c < "$OPENS")" -eq 1 ]; then sleep 0.4; fi',
+    '    if [ "$REOPEN" = 1 ] && [ "$(wc -c < "$OPENS")" -ge 2 ]; then : > "$LISTED"; fi',
     '  elif [ "$c" = "$(printf \'\\033\')" ]; then shown=0; fi',
     "  draw; printf 'key\\nframe\\n' >> \"$T\"",
     "done",
   ].join("\n");
 
-  /** The fake switcher, the note listed `after` ms on; whether it was listed when inSwitcher returned, and the opens. */
-  const switched = async (after: number) => {
+  /** List on reopening, or after a timed delay for the long-wait case; report readiness, opens and the row. */
+  const switched = async (after: number | "reopen") => {
     const s = new Session();
     const listed = join(s.dir, "listed");
     const opens = join(s.dir, "opens");
     try {
-      s.term.spawn(["sh", "-c", switcher], { cwd: "/", env: { ...env, T: s.trace, LISTED: listed, OPENS: opens } });
+      s.term.spawn(["sh", "-c", switcher], {
+        cwd: "/",
+        env: { ...env, T: s.trace, LISTED: listed, OPENS: opens, REOPEN: after === "reopen" ? "1" : "0" },
+      });
       await until(() => s.rowOf("by-name.md by an agent") >= 0, "the explorer's row and the message's");
-      const later = setTimeout(() => writeFileSync(listed, ""), after);
+      const later = typeof after === "number" ? setTimeout(() => writeFileSync(listed, ""), after) : undefined;
       try {
         await inSwitcher(s, "by-name", "by-name.md");
       } finally {
@@ -436,7 +441,8 @@ describe("what the checks share (check.ts)", () => {
   };
 
   test("inSwitcher waits for the switcher's own row of a note, never the explorer's or a message's (#69)", async () => {
-    const r = await switched(300);
+    // The first repaint takes longer than the old 300 ms publication timer; only a reopen publishes the row.
+    const r = await switched("reopen");
     expect(r.listed).toBe(true);
     expect(r.opens).toBeGreaterThan(1);
     expect(r.row).toBe(3);
