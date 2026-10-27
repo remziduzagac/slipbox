@@ -1,7 +1,7 @@
 import { UNIT_TIMEOUT_MS } from "./support/timeouts.ts";
 // Export (plan 10.x): the assembler against a vault of its own, each writer's file opened and read back — a .docx or an
 // EPUB unzipped here and its XML read, a PDF's pages read back to their text, the HTML and Markdown as they are — and
-// the formats' names. The CLI's `export` is in cli.test.ts, the TUI's under tests/tui/documents/export/.
+// the formats' names. The CLI's `export` is under tests/cli/export/, the TUI's under tests/tui/documents/export/.
 
 import { beforeAll, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, symlinkSync, writeFileSync } from "node:fs";

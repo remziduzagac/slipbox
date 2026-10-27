@@ -120,7 +120,7 @@ and reports `full` instead of `ci`. Jobs call package.json scripts.
 - **`test`**, on `ubuntu-24.04` and `macos-15` (arm64) for every event, neither stopping the other: the typecheck,
   boundary, supply chain's gates and reached unit tests (`bun run test:changed`; everything in the full run). On macOS
   SQLite is Apple's; its FTS5 and ranking run when a change reaches them and in the full run (`tests/core/`,
-  `tests/cli/`, `tests/cli.test.ts`; `14.13`).
+  `tests/cli/`; `14.13`).
 - **`terminal`**, skipped entirely for pull requests. Pushes, merge groups and full runs keep `ubuntu-24.04`,
   `ubuntu-24.04-arm` and `macos-15`: the terminal checks a change's files reach (`bun run test:terminal:changed`; every
   one in the full run, TT-D6). No job runs on an Intel Mac, for which nothing is built after 0.3.0 (D238); a test holds
