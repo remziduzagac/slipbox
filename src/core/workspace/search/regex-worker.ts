@@ -8,7 +8,7 @@ import {
   nextLine,
   SHOWN_MATCHES,
   type TextMatch,
-} from "./replace.ts";
+} from "../../documents/editing/replace.ts";
 import type { RegexRequest } from "./regex-jobs.ts";
 declare const self: Worker;
 

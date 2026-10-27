@@ -1,14 +1,21 @@
 // Finding in the TUI: the vault's search index kept as the app runs (6.5, 6.9) and the list ranked as you type;
 // notes by tag and by type; find's replace row, and a replace across every note.
 
-import { layoutMatches, matchText } from "../core/regex-jobs.ts";
-import { compilePattern, findAll } from "../core/replace.ts";
+import { layoutMatches, matchText } from "../core/workspace/search/regex-jobs.ts";
+import { compilePattern, findAll } from "../core/documents/editing/replace.ts";
 import { planReplaceLater } from "../core/workspace/mutations/replace-files.ts";
 import * as R from "./replacing.ts";
-import { IndexJob, indexFile, search, type SearchHit, SearchIndex, type SearchResult } from "../core/search.ts";
+import {
+  IndexJob,
+  indexFile,
+  search,
+  type SearchHit,
+  SearchIndex,
+  type SearchResult,
+} from "../core/workspace/search/search.ts";
 import { leadsOut, peekAt } from "./peek.ts";
 import { notesOfType, ofType, type TypedNote } from "../core/documents/model/doctypes.ts";
-import { type Scope, SCOPES, searchOthers } from "../core/scope.ts";
+import { type Scope, SCOPES, searchOthers } from "../core/workspace/search/scope.ts";
 import { isListed } from "../core/workspace/vaults/vault.ts";
 import { ELSEWHERE } from "../core/workspace/vaults/names.ts";
 import { frontmatterFindings, rootTypes } from "../core/diagnostics.ts";

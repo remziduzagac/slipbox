@@ -8,8 +8,8 @@ import * as C from "./cursor.ts";
 import * as E from "./editing.ts";
 import { keyChar } from "./keys.ts";
 import { textMatches } from "./replacing.ts";
-import { indentUnit } from "../core/indent.ts";
-import { toggleComments } from "../core/comments.ts";
+import { indentUnit } from "../core/documents/editing/indent.ts";
+import { toggleComments } from "../core/documents/editing/comments.ts";
 
 type Op = "d" | "c" | "y" | ">" | "<" | "gc";
 export type FindKind = "f" | "F" | "t" | "T";

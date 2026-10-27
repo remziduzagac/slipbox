@@ -1,8 +1,8 @@
 // Hand-offs (4.10): a note sent to an editor — `$EDITOR` in this terminal, or a Neovim already running — and its
 // context bundle copied for an agent (9.7), unsaved notes saved first.
 
-import { editorArgv } from "../core/editor.ts";
-import { discoverNvims, NVIM_REMOTE, type NvimServer, probeNvim } from "../core/nvim.ts";
+import { editorArgv } from "../core/documents/external-editors/editor.ts";
+import { discoverNvims, NVIM_REMOTE, type NvimServer, probeNvim } from "../core/documents/external-editors/nvim.ts";
 import { homedir } from "node:os";
 import { buildContext } from "../core/documents/model/context.ts";
 import type { NoteBuffer } from "./buffer.ts";

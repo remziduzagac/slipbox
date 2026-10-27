@@ -101,7 +101,7 @@ What every change keeps. Each is checked by a test or a script where it can be.
 - **Nothing a folder brings runs unless its root is trusted** (`core/workspace/vaults/trust.ts`), and a folder's own
   config never names a program to run or turns on a network request.
 - **A program slipbox runs is optional,** found when present and never required, and is given an argument vector, never
-  a shell string (`core/editor.ts`).
+  a shell string (`core/documents/external-editors/editor.ts`).
 - **The command line's contract:** one JSON object per call with `--json`, its `schema` versioned apart from slipbox
   (`JSON_SCHEMA` in `cli/cli.ts`); stable exit codes (`EXIT`); `tests/cli.test.ts` runs every command as an agent meets
   it.

@@ -3868,7 +3868,7 @@ describe("search: the index and the scan (6.x)", () => {
   };
 
   test("what a note gives the index: sections at headings (not in code), its frontmatter's title, aliases and tags, inline tags", async () => {
-    const { indexDoc } = await import("../src/core/search.ts");
+    const { indexDoc } = await import("../src/core/workspace/search/search.ts");
     const d = indexDoc("dome.md", readFileSync(join(setup().dir, "dome.md"), "utf8"), "note");
     expect(d).toMatchObject({ title: "Dome refit", aliases: ["Shutter work"], tags: ["dome/shutter", "budget"] });
     expect(d.headings).toEqual([
@@ -3901,7 +3901,7 @@ describe("search: the index and the scan (6.x)", () => {
   });
 
   test("the query: words, phrases, prefix*, -not, title:, #tag, tag:, path: — nothing passed on as FTS5 syntax", async () => {
-    const { ftsMatch, parseQuery } = await import("../src/core/search.ts");
+    const { ftsMatch, parseQuery } = await import("../src/core/workspace/search/search.ts");
     const q = parseQuery('dome "shutter belt" roll* -summer title:refit #budget tag:dome path:notes/ " AND ( NEAR');
     expect(q.tags).toEqual(["budget", "dome"]);
     expect(q.paths).toEqual(["notes/"]);
@@ -3922,7 +3922,7 @@ describe("search: the index and the scan (6.x)", () => {
   });
 
   test("ranked by the index: the title first; every word, else some of them; -not, #tag, path:, prefix, accents folded", async () => {
-    const { catchUp, search, SearchIndex } = await import("../src/core/search.ts");
+    const { catchUp, search, SearchIndex } = await import("../src/core/workspace/search/search.ts");
     const { g } = setup();
     const idx = SearchIndex.open(g.loc)!;
     expect(idx.complete).toBe(false);
@@ -3953,7 +3953,7 @@ describe("search: the index and the scan (6.x)", () => {
   });
 
   test("index and scan agree: -word with filters only, a phrase across a line break, path: in any case; marks merged", async () => {
-    const { catchUp, search, SearchIndex } = await import("../src/core/search.ts");
+    const { catchUp, search, SearchIndex } = await import("../src/core/workspace/search/search.ts");
     const dir = mkdtempSync(join(tmpdir(), "slipbox-search-agree-"));
     mkdirSync(join(dir, ".slipbox"));
     mkdirSync(join(dir, "A"));
@@ -3992,7 +3992,7 @@ describe("search: the index and the scan (6.x)", () => {
   });
 
   test("the scan answers the same query the same way, before there's an index", async () => {
-    const { catchUp, search, SearchIndex } = await import("../src/core/search.ts");
+    const { catchUp, search, SearchIndex } = await import("../src/core/workspace/search/search.ts");
     const { g } = setup();
     const idx = SearchIndex.open(g.loc)!;
     catchUp(g, idx);
@@ -4026,7 +4026,7 @@ describe("search: the index and the scan (6.x)", () => {
   });
 
   test("kept up to date: a change, a new file, one gone, a move — at the next catch-up, or as the vault's feed says", async () => {
-    const { catchUp, indexFile, search, SearchIndex } = await import("../src/core/search.ts");
+    const { catchUp, indexFile, search, SearchIndex } = await import("../src/core/workspace/search/search.ts");
     const { dir, g } = setup();
     const idx = SearchIndex.open(g.loc)!;
     catchUp(g, idx);
@@ -4065,7 +4065,7 @@ describe("search: the index and the scan (6.x)", () => {
   });
 
   test("words are whole words (a prefix* aside), both engines; a hit opens at the section with most of them", async () => {
-    const { catchUp, search, SearchIndex } = await import("../src/core/search.ts");
+    const { catchUp, search, SearchIndex } = await import("../src/core/workspace/search/search.ts");
     const { dir, g: first } = setup();
     writeFileSync(join(dir, "words.md"), "# Words\n\nThe catalogue, and blogging.\n");
     writeFileSync(join(dir, "two.md"), "# Two\n\nalpha only\n\n## Both\n\nalpha and beta here\n");
@@ -4088,7 +4088,7 @@ describe("search: the index and the scan (6.x)", () => {
   });
 
   test("an index of another version, or one SQLite can't read, is made again; a new one is built before it's used", async () => {
-    const { SearchIndex } = await import("../src/core/search.ts");
+    const { SearchIndex } = await import("../src/core/workspace/search/search.ts");
     const { cacheDir } = await import("../src/core/foundation/platform/paths.ts");
     const { g } = setup();
     mkdirSync(cacheDir(g.loc), { recursive: true });
@@ -4108,7 +4108,7 @@ describe("search: the index and the scan (6.x)", () => {
   });
 
   test("filters alone with `only` (the TUI's unsaved notes): just those files read", async () => {
-    const { search } = await import("../src/core/search.ts");
+    const { search } = await import("../src/core/workspace/search/search.ts");
     const dir = mkdtempSync(join(tmpdir(), "slipbox-search-only-"));
     mkdirSync(join(dir, ".slipbox"));
     for (const f of ["a.md", "b.md"]) writeFileSync(join(dir, f), `# ${f}\n`);
@@ -4118,7 +4118,7 @@ describe("search: the index and the scan (6.x)", () => {
   });
 
   test("a phrase wrapped across a line break, or starting inside a word turned down: found and placed, by the scan and the index", async () => {
-    const { catchUp, search, SearchIndex } = await import("../src/core/search.ts");
+    const { catchUp, search, SearchIndex } = await import("../src/core/workspace/search/search.ts");
     const dir = mkdtempSync(join(tmpdir(), "slipbox-search-phrase-"));
     mkdirSync(join(dir, ".slipbox"));
     writeFileSync(join(dir, "a.md"), "uno no no\n");
@@ -5039,7 +5039,7 @@ describe("search's sections, cut to scout's size band (scout's Stage 4)", () => 
   /** A paragraph of `bytes` bytes (ASCII), a word given to find it by. */
   const para = (bytes: number, word = "filler") => `${word} ${"lorem ".repeat(Math.ceil(bytes / 6))}`.slice(0, bytes);
   test("each node on its own tokens: kept in the band, merged up when under — the root always kept — split when over", async () => {
-    const { indexDoc, BAND_MAX } = await import("../src/core/search.ts");
+    const { indexDoc, BAND_MAX } = await import("../src/core/workspace/search/search.ts");
     const text = [
       "---",
       "title: T",
@@ -5123,7 +5123,7 @@ describe("search's sections, cut to scout's size band (scout's Stage 4)", () => 
   });
 
   test("a split's last piece under the band's bottom goes onto the one before", async () => {
-    const { indexDoc } = await import("../src/core/search.ts");
+    const { indexDoc } = await import("../src/core/workspace/search/search.ts");
     const text = [
       "# Tail",
       "",
@@ -5136,14 +5136,14 @@ describe("search's sections, cut to scout's size band (scout's Stage 4)", () => 
   });
 
   test("a data file with no headings: one section, or band-sized chunks at blank lines", async () => {
-    const { indexDoc } = await import("../src/core/search.ts");
+    const { indexDoc } = await import("../src/core/workspace/search/search.ts");
     expect(indexDoc("a.yaml", "a: 1\nb: 2\n", "data").sections.map((x) => x.name)).toEqual(["§:file"]);
     const big = Array.from({ length: 8 }, (_, i) => para(1000, `k${i}:`)).join("\n\n");
     expect(indexDoc("big.yaml", big, "data").sections.map((x) => x.name)).toEqual(["§:chunk", "§:chunk~2"]);
   });
 
   test("a hit names its section and range, as scout would, for a search that adds scout's results to dedupe on", async () => {
-    const { search } = await import("../src/core/search.ts");
+    const { search } = await import("../src/core/workspace/search/search.ts");
     const dir = mkdtempSync(join(tmpdir(), "slipbox-band-"));
     mkdirSync(join(dir, ".slipbox"));
     writeFileSync(join(dir, "n.md"), `# N\n\nintro\n\n## Deep\n\n${para(2000, "needle")}\n`);
@@ -7998,7 +7998,7 @@ describe("search by vault (20.16)", () => {
   };
 
   test("a scope's vaults: linked, those linked to or from this one; all, every other vault this machine knows", async () => {
-    const { scopeRoots } = await import("../src/core/scope.ts");
+    const { scopeRoots } = await import("../src/core/workspace/search/scope.ts");
     const { at } = await four();
     const { openVault } = await import("../src/core/workspace/links/reach.ts");
     const g = openVault(at("a"));
@@ -8012,7 +8012,7 @@ describe("search by vault (20.16)", () => {
   });
 
   test("a scope leaves worktrees out, even one a note links into by @branch or by path: their notes are their main checkout's", async () => {
-    const { scopeRoots } = await import("../src/core/scope.ts");
+    const { scopeRoots } = await import("../src/core/workspace/search/scope.ts");
     const { openVault } = await import("../src/core/workspace/links/reach.ts");
     const { at, tag } = await four();
     const git = (cwd: string, ...args: string[]) =>
@@ -8042,9 +8042,9 @@ describe("search by vault (20.16)", () => {
   });
 
   test("another root's index still being built is not used: its files scanned; a built one is caught up first", async () => {
-    const { searchOthers } = await import("../src/core/scope.ts");
-    const { SearchIndex } = await import("../src/core/search-index.ts");
-    const { catchUp } = await import("../src/core/search.ts");
+    const { searchOthers } = await import("../src/core/workspace/search/scope.ts");
+    const { SearchIndex } = await import("../src/core/workspace/search/search-index.ts");
+    const { catchUp } = await import("../src/core/workspace/search/search.ts");
     const { openVault } = await import("../src/core/workspace/links/reach.ts");
     const { at } = await four();
     const bLoc = locateVault({ root: at("b") });
@@ -8069,7 +8069,7 @@ describe("search by vault (20.16)", () => {
   });
 
   test("a search of every root leaves each as it was: not seen now, one only found still only found (the :folders order kept)", async () => {
-    const { searchOthers } = await import("../src/core/scope.ts");
+    const { searchOthers } = await import("../src/core/workspace/search/scope.ts");
     const { openVault } = await import("../src/core/workspace/links/reach.ts");
     const { readRoots, writeRoots } = await import("../src/core/workspace/vaults/registry.ts");
     const { at } = await four();
@@ -9551,7 +9551,7 @@ describe("renames refused before anything is written (cli.md, Renames)", () => {
 
   test("a folder's naming, and its undo, leave .slipbox/config.toml out of the root's files", async () => {
     const { planVaultRename } = await import("../src/core/workspace/mutations/rename/rename.ts");
-    const { search } = await import("../src/core/search.ts");
+    const { search } = await import("../src/core/workspace/search/search.ts");
     const dir = root({ "a.md": "# A\n", ".slipbox/config.toml": "" });
     const g = openGraph(locateVault({ root: dir }), DEFAULT_CONFIG, false);
     applyPlan(g, planVaultRename(g.loc, `nm${basename(dir).slice(-6).toLowerCase()}`));

@@ -18,7 +18,7 @@ import { addToDictionaries, openDictionary, threadDictionaries } from "../core/s
 import { dataOutline } from "../core/documents/model/data.ts";
 import { classify, extensionOf } from "../core/documents/model/filetypes.ts";
 import { readText } from "../core/foundation/platform/fsutil.ts";
-import { matchText } from "../core/regex-jobs.ts";
+import { matchText } from "../core/workspace/search/regex-jobs.ts";
 import { flag, has, UsageError } from "./args.ts";
 import {
   EXIT,

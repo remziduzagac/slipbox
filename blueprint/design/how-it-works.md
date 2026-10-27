@@ -180,10 +180,10 @@ The CLI's commands are the user's reference, [cli.md](../../docs/manual/cli.md);
 | [url.ts][o4] | 15.1, 25.6 | where a worker's script is, from the source or in the compiled binary (D232) |
 | [worker-requests.ts][o5] | 15.1, 25.6 | a worker's requests one at a time: a bounded mailbox, a line, deadlines |
 | `core/workspace/links/links.ts` | 1.4 | `LinkIndex`: case policy, collisions, markdown URLs |
-| `core/search.ts` | 6.x | search: the query, a file read for it, the index kept, the index or a scan, hits located |
-| `core/regex-jobs.ts` | 25.4 | a regex matched in a worker (`regex-worker.ts`), stopped at its deadline |
-| `core/search-index.ts` | 6.6 | the search index: SQLite FTS5 in the cache, a row per file, BM25 |
-| `core/scope.ts` | 20.16, 21.10 | search by vault: `here`, then linked vaults, then every vault known (`--scope`) |
+| [search.ts][o65] | 6.x | search: the query, a file read for it, the index kept, the index or a scan, hits located |
+| [regex-jobs.ts][o66] | 25.4 | a regex matched in a worker (`regex-worker.ts`), stopped at its deadline |
+| `core/workspace/search/search-index.ts` | 6.6 | the search index: SQLite FTS5 in the cache, a row per file, BM25 |
+| [scope.ts][o67] | 20.16, 21.10 | search by vault: `here`, then linked vaults, then every vault known (`--scope`) |
 | [autoindex.ts][o34] | 20.9 | the background auto-index: home walked in slices and indexed, then the vaults in it |
 | [sqlite.ts][o6] | 6.6 | the runtime's SQLite (`node:sqlite`): the few calls the index and the parse cache make |
 | [trust.ts][o26] | 23.x | the vaults whose own code may run: your answers (`trust.json`), your `[trust] roots` |
@@ -236,20 +236,20 @@ The CLI's commands are the user's reference, [cli.md](../../docs/manual/cli.md);
 | `core/layout/*` | 2.1–2.8 | mdast → layout IR; tables; wrap; highlighting; ANSI |
 | `core/layout/source.ts` | 4.13 | the markdown as a layout, with each cell's source offset |
 | `core/layout/live.ts` | 4.14 | a note's blocks; the lens composed into the render |
-| `core/tasks.ts` | 4.11 | a task's checkbox toggled as a one-byte edit |
+| `core/documents/editing/tasks.ts` | 4.11 | a task's checkbox toggled as a one-byte edit |
 | `core/foundation/text/words.ts` | — | word counts for the status line and note info: Han and kana by character |
-| `core/editor.ts` | 4.1, 4.2, 4.12 | hand-off templates to argv, never through a shell |
-| `core/indent.ts` | 25.1 | a file's indentation: `.editorconfig`, else its lines, else its language; save rules |
-| `core/comments.ts` | 25.2 | each language's comment markers; lines commented or uncommented, as vim-commentary does |
-| `core/brackets.ts` | 25.3 | the bracket matching one (`%`, the marks); pairs closed as typed, stepped over, deleted |
-| `core/nvim.ts` | 4.12 | finding and asking the running nvims |
-| `core/replace.ts` | 4.16 | find's patterns (plain, regex, whole words), replacements, vim's `:s` parsed |
+| `core/documents/external-editors/editor.ts` | 4.1, 4.2, 4.12 | hand-off templates to argv, never through a shell |
+| [indent.ts][o68] | 25.1 | a file's indentation: `.editorconfig`, else its lines, else its language; save rules |
+| [comments.ts][o69] | 25.2 | each language's comment markers; lines commented or uncommented, as vim-commentary does |
+| [brackets.ts][o70] | 25.3 | the bracket matching one (`%`, the marks); pairs closed as typed, stepped over, deleted |
+| `core/documents/external-editors/nvim.ts` | 4.12 | finding and asking the running nvims |
+| [replace.ts][o71] | 4.16 | find's patterns (plain, regex, whole words), replacements, vim's `:s` parsed |
 | [replace-files.ts][o64] | 25.4 | a find replaced across files, as a rename's plan: previewed, undone |
 | `core/gitlog.ts` | 26.4, 22.1 | a line's last commit (blame of the last commit); a file's log through renames |
 | `core/gitstage.ts` | 26.2 | status's two letters; a file or one change staged, unstaged, discarded |
 | `core/gitsigns.ts` | 26.1 | a file's changes against what's staged: runs of lines added, changed, deleted; signs |
 | [shell.ts][o8] | 25.7 | a `:!` line parsed; a command run by your shell, its output kept; stopped with its children |
-| `core/snippet.ts` | 25.8 | a server's snippet expanded: its text, its stops and their mirrors, `$0` last |
+| [snippet.ts][o72] | 25.8 | a server's snippet expanded: its text, its stops and their mirrors, `$0` last |
 | `core/spell.ts` | 25.6 | a note's prose word by word; Hunspell dictionaries: slipbox's, yours, the system's |
 | `core/spell-thread.ts` | 25.6 | the spell checker's thread (`spell-worker.ts`, D232): its dictionaries, its answers |
 | `core/hunspell.ts` | 25.6 | Hunspell as WebAssembly: a dictionary built; loaded by the spell checker's thread alone |
@@ -633,3 +633,12 @@ ordinary note needs.
 [o62]: ../../src/core/workspace/mutations/rename/rename-log.ts
 [o63]: ../../src/core/workspace/mutations/files.ts
 [o64]: ../../src/core/workspace/mutations/replace-files.ts
+
+[o65]: ../../src/core/workspace/search/search.ts
+[o66]: ../../src/core/workspace/search/regex-jobs.ts
+[o67]: ../../src/core/workspace/search/scope.ts
+[o68]: ../../src/core/documents/editing/indent.ts
+[o69]: ../../src/core/documents/editing/comments.ts
+[o70]: ../../src/core/documents/editing/brackets.ts
+[o71]: ../../src/core/documents/editing/replace.ts
+[o72]: ../../src/core/documents/editing/snippet.ts

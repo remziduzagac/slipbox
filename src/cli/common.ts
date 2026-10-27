@@ -26,7 +26,7 @@ import {
   writeNote,
 } from "../core/foundation/platform/fsutil.ts";
 import { blockingLink, linkSaid, PROBE_MS, probeFollowed, writesThrough } from "../core/workspace/vaults/symlinks.ts";
-import { compilePattern } from "../core/replace.ts";
+import { compilePattern } from "../core/documents/editing/replace.ts";
 import { openVault, Reach } from "../core/workspace/links/reach.ts";
 import { planRelink } from "../core/workspace/mutations/rename/rename.ts";
 import { activityFile } from "../core/workspace/graph/autoindex.ts";

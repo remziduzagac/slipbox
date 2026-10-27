@@ -1,11 +1,11 @@
 // The commands that find (`find.*`, `search.*`, `switcher.*`, `type.*`, `tag.*`): find in a note and its matches
 // stepped through, search across the vault, the switcher with its symbols, notes by type and by tag.
 
-import { cancelRegex, matchText, retryRegex } from "../core/regex-jobs.ts";
+import { cancelRegex, matchText, retryRegex } from "../core/workspace/search/regex-jobs.ts";
 import { type Run, withView, lay } from "./actions.ts";
 import * as V from "./vim.ts";
 import { computeFind, computeFindReady } from "./search.ts";
-import { compilePattern } from "../core/replace.ts";
+import { compilePattern } from "../core/documents/editing/replace.ts";
 import type { FindState, ListItem, PromptOverlay, App, View } from "./app.ts";
 import { readText, climbsOut } from "../core/foundation/platform/fsutil.ts";
 import { sanitize } from "../core/foundation/text/sanitize.ts";

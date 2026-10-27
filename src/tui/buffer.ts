@@ -37,7 +37,7 @@ import type {
   SyntaxError,
 } from "../core/documents/syntax/syntax.ts";
 import { codeBlocks, layoutCode } from "../core/layout/code.ts";
-import { type Indent, indentFor, saveRules } from "../core/indent.ts";
+import { type Indent, indentFor, saveRules } from "../core/documents/editing/indent.ts";
 
 /** One change to the text: at `at`, `removed` was replaced by `inserted`. */
 export interface TextEdit {

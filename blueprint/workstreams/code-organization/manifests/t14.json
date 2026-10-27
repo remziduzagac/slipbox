@@ -1,0 +1,54 @@
+{
+  "moves": {
+    "src/core/search.ts": "src/core/workspace/search/search.ts",
+    "src/core/search-index.ts": "src/core/workspace/search/search-index.ts",
+    "src/core/scope.ts": "src/core/workspace/search/scope.ts",
+    "src/core/regex-jobs.ts": "src/core/workspace/search/regex-jobs.ts",
+    "src/core/regex-worker.ts": "src/core/workspace/search/regex-worker.ts",
+    "src/core/brackets.ts": "src/core/documents/editing/brackets.ts",
+    "src/core/comments.ts": "src/core/documents/editing/comments.ts",
+    "src/core/indent.ts": "src/core/documents/editing/indent.ts",
+    "src/core/replace.ts": "src/core/documents/editing/replace.ts",
+    "src/core/snippet.ts": "src/core/documents/editing/snippet.ts",
+    "src/core/tasks.ts": "src/core/documents/editing/tasks.ts",
+    "src/core/editor.ts": "src/core/documents/external-editors/editor.ts",
+    "src/core/nvim.ts": "src/core/documents/external-editors/nvim.ts"
+  },
+  "retained": [
+    {
+      "file": "tests/core.test.ts",
+      "text": "core/replace.ts",
+      "reason": "Historical source label in a stable suite declaration; preserve the baseline test identity during the move."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/design.md",
+      "text": "src/core/search",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "src/core/search",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/doc-findings/tasks/archive/links-and-search.md",
+      "text": "src/core/scope",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/user-docs/tasks/archive/links-and-finding.md",
+      "text": "src/core/scope",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "src/core/regex-jobs",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "src/core/nvim",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    }
+  ]
+}

@@ -6,7 +6,7 @@ import { createHash } from "node:crypto";
 import { existsSync, mkdirSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { parseAround } from "../core/documents/markdown/parse.ts";
-import { matchText } from "../core/regex-jobs.ts";
+import { matchText } from "../core/workspace/search/regex-jobs.ts";
 import {
   addFootnote,
   applyEdits,
@@ -21,9 +21,9 @@ import { parseNoteFile } from "../core/documents/model/readers.ts";
 import { classify, extensionOf, isKnownExtension, noteFormat } from "../core/documents/model/filetypes.ts";
 import { WriteRefused, writeNote } from "../core/foundation/platform/fsutil.ts";
 import { blockingLink, writesThrough } from "../core/workspace/vaults/symlinks.ts";
-import { expandReplacement, firstPerLine, replaceMatches } from "../core/replace.ts";
+import { expandReplacement, firstPerLine, replaceMatches } from "../core/documents/editing/replace.ts";
 import { planReplaceLater } from "../core/workspace/mutations/replace-files.ts";
-import { listTasks, toggleTask } from "../core/tasks.ts";
+import { listTasks, toggleTask } from "../core/documents/editing/tasks.ts";
 import { isInside } from "../core/workspace/vaults/vault.ts";
 import { flag, has, UsageError } from "./args.ts";
 import {

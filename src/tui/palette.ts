@@ -19,7 +19,7 @@ import {
   FOOTNOTE_ACTION_INFO,
   RESIZE_ACTIONS,
 } from "./keys.ts";
-import { parseSubstitute } from "../core/replace.ts";
+import { parseSubstitute } from "../core/documents/editing/replace.ts";
 import { parseBang } from "../core/foundation/platform/shell.ts";
 import { rank } from "./match.ts";
 import { MOUSE_HELP } from "./mouse-help.ts";

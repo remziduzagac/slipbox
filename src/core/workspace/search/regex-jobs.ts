@@ -1,9 +1,16 @@
 // Plain searches keep their cheap path. Native regex matching runs in a worker, stopped at a deadline its input sets.
 import { createHash } from "node:crypto";
-import { everyMatch, findAll, MatchLimitError, type MatchLimits, SHOWN_MATCHES, type TextMatch } from "./replace.ts";
-import { notifyLoaded } from "./foundation/platform/lazy.ts";
-import { WorkerRequests } from "./foundation/workers/worker-requests.ts";
-import { workerUrl } from "./foundation/workers/url.ts";
+import {
+  everyMatch,
+  findAll,
+  MatchLimitError,
+  type MatchLimits,
+  SHOWN_MATCHES,
+  type TextMatch,
+} from "../../documents/editing/replace.ts";
+import { notifyLoaded } from "../../foundation/platform/lazy.ts";
+import { WorkerRequests } from "../../foundation/workers/worker-requests.ts";
+import { workerUrl } from "../../foundation/workers/url.ts";
 export const REGEX = "regex";
 export type RegexRequest = { source: string; flags: string } & (
   | { kind: "text"; text: string; from: number; to: number; empty: boolean; limits: MatchLimits }
@@ -22,7 +29,7 @@ export type RegexRequest = { source: string; flags: string } & (
 export type MatchResult = { matches: TextMatch[]; limited: boolean };
 export type LayoutMatches = { matches: { row: number; from: number; to: number }[]; limited: boolean };
 // Answers have no size cap of the mailbox's: the worker bounds its own by its input (`everyMatch`, `SHOWN_MATCHES`).
-const jobs = new WorkerRequests(() => new Worker(workerUrl("regex-worker.ts")), { result: Infinity });
+const jobs = new WorkerRequests(() => new Worker(workerUrl("workspace/search/regex-worker.ts")), { result: Infinity });
 
 /** A request's deadline: 1.5 seconds, and a second more for each million characters it matches in. A regex that
  *  never finishes still stops within 1.5 seconds on a short note; a big note's every match has the time to be found

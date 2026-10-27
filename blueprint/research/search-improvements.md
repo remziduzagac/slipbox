@@ -13,7 +13,7 @@ code (*read*); its claims about other tools, models and numbers come from the an
 
 ## Where it stands
 
-From `src/core/search.ts` and `src/core/search-index.ts` (*read*, 2026-10-11):
+From `src/core/workspace/search/search.ts` and `src/core/workspace/search/search-index.ts` (*read*, 2026-10-11):
 
 - One row per file in SQLite FTS5, ranked by BM25 over weighted fields: title 10, aliases 8, tags 5, path 3,
   headings 4, text 1 (`WEIGHTS`).

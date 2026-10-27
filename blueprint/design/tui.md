@@ -251,7 +251,8 @@ takes `$&`, `$1`–`$9` and `$$`. Opened on a selection within a line, the selec
 across lines, the replacing stays within the selection's lines. Messages (`replaced 3 matches`) show
 while the rows are open. The text moves down three rows.
 
-Vim's `:s` ([keys.md](../../docs/manual/keys.md)) uses the same engine, `core/replace.ts`; with its `c` flag the
+Vim's `:s` ([keys.md](../../docs/manual/keys.md)) uses the same engine, `core/documents/editing/replace.ts`; with its
+`c` flag the
 same two rows ask at each match, `replace? y n a q` where the buttons were.
 
 **Messages and questions never take a row of their own,** so the note never changes height for them.
@@ -2152,7 +2153,8 @@ the only one (`16.16`, `16.17`; D112): Org and AsciiDoc files open as text.
 Editing is in SOURCE view (D146): `i`, `a`, `o` and their capitals (in [keys.md](../../docs/manual/keys.md)) start
 typing, switching a rendered window to source first (D105). A level of indentation is the file's (`25.1`; D155): its
 `.editorconfig`, else its own lines, else its language ([configuration.md](../../docs/manual/configuration.md) §
-Indentation: `.editorconfig`). `%` goes to the matching bracket (`core/brackets.ts`, `25.3`): of its kind, the pairs
+Indentation: `.editorconfig`). `%` goes to the matching bracket (`core/documents/editing/brackets.ts`, `25.3`): of its
+kind, the pairs
 nested between counted, across lines, by the text alone — a bracket in a string or a comment counts too, as in vim. In
 SOURCE view the bracket at the cursor and its match are marked (`bracket_match`); while typing, the one just before the
 cursor. The buffer's `source` is the truth; every change is `NoteBuffer.edit`, one undo step each, except that an insert
@@ -2402,7 +2404,8 @@ each with its detail dimmed, the best first — by how well the word typed so fa
 on narrows the list without asking again, unless the server said its list was partial; a word ended (a space, an
 operator) closes it. `tab` or `enter` puts the chosen item in — its edit if it has one, else its text over the word —
 then its other edits (an import at the top), the cursor staying on its text. **A snippet** (`25.8`, D155; slipbox says
-it takes them) is expanded first (`core/snippet.ts`, LSP's grammar): a choice its first, a variable its value
+it takes them) is expanded first (`core/documents/editing/snippet.ts`, LSP's grammar): a choice its first, a variable
+its value
 (`TM_FILENAME`…), each new line indented as the line, a tab as the file indents, a stop written again given its
 placeholder's text. The cursor goes to its first stop, the placeholder marked as selected: the first key typed replaces
 it (a backspace takes it), and its mirrors follow what's typed. `tab` goes to the next stop, `shift+tab` back; `$0`
