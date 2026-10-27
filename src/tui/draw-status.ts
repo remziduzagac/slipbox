@@ -1,10 +1,10 @@
 // Drawing the status line and the messages: the mode, the path, what's happening in the background, the cursor's
 // place; the bottom line's prompt; the floating message boxes.
 
-import type { App, View, PromptOverlay } from "./app.ts";
-import { type Canvas, drawText } from "./canvas.ts";
+import type { App, View, PromptOverlay } from "./app/runtime/app.ts";
+import { type Canvas, drawText } from "./shell/terminal/canvas.ts";
 import { type Band, type Geometry, pageBg, roleStyle, mid, keyText, CHANGE_MARKER_MS } from "./draw.ts";
-import { keyChar } from "./keys.ts";
+import { keyChar } from "./shell/input/keys.ts";
 import { stringWidth, truncate, truncateStart, splitAtWidth } from "../core/foundation/text/width.ts";
 import { srcAt } from "../core/rendering/layout/ir.ts";
 import { countWords } from "../core/foundation/text/words.ts";

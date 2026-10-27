@@ -3,8 +3,8 @@
 // own under the pointer and on the row selected, a branch's figures at its end, a repository's state — and at its foot
 // the keys of what's selected, or of what the pointer is on.
 
-import type { App } from "./app.ts";
-import { type Canvas, drawText } from "./canvas.ts";
+import type { App } from "./app/runtime/app.ts";
+import { type Canvas, drawText } from "./shell/terminal/canvas.ts";
 import { type Geometry, type Rect, roleStyle } from "./draw.ts";
 import type { Color, Role } from "../core/rendering/theme/theme.ts";
 import { splitAtWidth, stringWidth, truncate, truncateStart } from "../core/foundation/text/width.ts";

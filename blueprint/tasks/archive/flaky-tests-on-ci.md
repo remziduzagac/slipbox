@@ -65,8 +65,9 @@ shown before the fix, and gone after.
     still in the code (`IndexJob.step`, `src/core/workspace/search/search.ts`: its budget checked between batches of 100
     files).
   - not seen since the restart, unexplained: `the change list: … g i` (macos-15 twice, before). `g g` is no prefix
-    (`src/tui/keys.ts`), so no timer can run it late (`dispatchMapped`, `src/tui/input.ts`: one only for a sequence
-    both bound and a prefix), and the check still sends `g g g i` (`tests/terminal/checks/editing.ts`).
+    (`src/tui/shell/input/keys.ts`), so no timer can run it late (`dispatchMapped`, `src/tui/shell/input/input.ts`: one
+    only for a sequence both bound and a prefix), and the check still sends `g g g i`
+    (`tests/terminal/checks/editing.ts`).
 - 2026-10-24: Ran, the failures since the restart (`tmp/issue/ci/failures.txt`), each against the change it ran on:
   - the change's own check or test, failing while it was written: `peek backlinks` (#10), `home: before its first
     walk` (#16), `git panel: a file gone for good` (#14), the rename checks and test (#11), the coverage test (#13);

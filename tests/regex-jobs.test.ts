@@ -11,7 +11,7 @@ import { prefixWidths, stringWidth } from "../src/core/foundation/text/width.ts"
 import { WorkerRequests } from "../src/core/foundation/workers/worker-requests.ts";
 import { computeFind } from "../src/tui/search.ts";
 import { textMatches } from "../src/tui/replacing.ts";
-import type { PromptOverlay } from "../src/tui/app.ts";
+import type { PromptOverlay } from "../src/tui/app/runtime/app.ts";
 import { harness, makeSandbox, makeVault } from "./tui-harness.ts";
 makeSandbox();
 afterAll(stopRegexJobs);

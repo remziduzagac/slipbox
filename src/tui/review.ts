@@ -28,7 +28,7 @@ import { type Layout, type Span, srcAt } from "../core/rendering/layout/ir.ts";
 import { comparable } from "../core/workspace/git/merge/merge.ts";
 import { TOP } from "../core/workspace/session/position.ts";
 import { sanitize } from "../core/foundation/text/sanitize.ts";
-import type { App } from "./app.ts";
+import type { App } from "./app/runtime/app.ts";
 import { NoteBuffer } from "./buffer.ts";
 import { asBlocks, diffLanguage, isNote, LINES_ONLY, sideBySide, switchedText } from "./diffview.ts";
 

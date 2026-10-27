@@ -12,7 +12,7 @@ import { slugName } from "../core/workspace/vaults/registry.ts";
 import { tildePath } from "../core/workspace/vaults/names.ts";
 import { privateNameWarning } from "../core/workspace/vaults/folders.ts";
 import { findVaultRoot, hasMarker, rootAt } from "../core/workspace/vaults/vault.ts";
-import type { App, View, ListItem } from "./app.ts";
+import type { App, View, ListItem } from "./app/runtime/app.ts";
 import type { Layout } from "../core/rendering/layout/ir.ts";
 import { stringWidth } from "../core/foundation/text/width.ts";
 

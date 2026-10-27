@@ -13,13 +13,13 @@ the keys and the screen for as long as it takes. They move off it.
 
 ## Description
 
-Home's walk runs in slices while nobody is working (`SlicedWalk.step`, asked by `AutoIndex` from `tui/watch.ts`), but a
-slice can't be cut short inside one folder's read, so one folder that answers slowly (a network share, a sleeping USB
-disk, a folder of many thousands of files) freezes the screen for the whole read. The background index walks each
-vault it finds in one go (`AutoIndex.open` → `Graph.build` → `walkVault`), and the explorer lists folders outside the
-vault's own tree with `readdirSync` as it builds its rows (`Explorer.outsideRows`). Mount points of other disks under
-home are skipped already (VV-D2, `ANOTHER_DISK`); a slow disk that is home's own filesystem, or a slow folder in it,
-still blocks.
+Home's walk runs in slices while nobody is working (`SlicedWalk.step`, asked by `AutoIndex` from
+`tui/app/runtime/watch.ts`), but a slice can't be cut short inside one folder's read, so one folder that answers slowly
+(a network share, a sleeping USB disk, a folder of many thousands of files) freezes the screen for the whole read. The
+background index walks each vault it finds in one go (`AutoIndex.open` → `Graph.build` → `walkVault`), and the explorer
+lists folders outside the vault's own tree with `readdirSync` as it builds its rows (`Explorer.outsideRows`). Mount
+points of other disks under home are skipped already (VV-D2, `ANOTHER_DISK`); a slow disk that is home's own filesystem,
+or a slow folder in it, still blocks.
 
 ## Acceptance criteria
 
@@ -55,7 +55,7 @@ still blocks.
   `SlicedWalk` run to its end for the folders changed); every rebuild of a vault's graph (`walkVault`: a rescan, a
   reload, a vault switched to, a setting changed); the explorer's rows outside the vault's own tree (`outsideRows`:
   `readdirSync`, then a `statSync` per link, `isVaultRoot` per folder). The start's walk (`openGraph` in
-  `tui/run.ts`'s `prepare`) runs before the screen is up.
+  `tui/shell/terminal/run.ts`'s `prepare`) runs before the screen is up.
 - 2026-10-23: What a worker would need from the main thread: the probe's answers (`answered` reads a module-level map
   only the main thread fills), the root markers (`setRootMarkers`), and the same state and config folders (the
   worker's environment); `links.json` is read again by its mtime, so a worker reads the answers the TUI wrote.
@@ -106,16 +106,15 @@ still blocks.
   against 39 on the wide folder; the main heap the same within a few MB.
 - 2026-10-23: The explorer's listings: a folder listed a level at a time (`outsideRows`) is built from its listing
   (`core/workspace/walk/listing.ts`: its entries with what its rows and their marks read of each — a folder or a file, a
-  link's target
-  and key, a vault's name and branch, one you may not read, a busy folder), read on two listing threads of their own
-  (`ListThreads`, the walk worker's `list`) and kept by `Listings` (`tui/listings.ts`): at most 256 folders, read again
-  in the background once a second old as the tree is built again, an answer drawn only when it changed, dropped for
-  a folder let go of or read under settings changed since. A link's state is read here from the answers kept
+  link's target and key, a vault's name and branch, one you may not read, a busy folder), read on two listing threads of
+  their own (`ListThreads`, the walk worker's `list`) and kept by `Listings` (`tui/listings.ts`): at most 256 folders,
+  read again in the background once a second old as the tree is built again, an answer drawn only when it changed,
+  dropped for a folder let go of or read under settings changed since. A link's state is read here from the answers kept
   (`linkStateAt`, by the key the listing read), so a link followed shows at once. `listing…` after 150 ms;
   `can't read: …` when a listing fails or doesn't answer in a minute; neither opened nor marked. The marks of a listed
   row come from its listing (`Marks.listedFacts`). A test's App lists at once on the main thread
-  (`AppOptions.listOffThread`, set by `tui/run.ts`), so the 91 explorer tests and the 20 marks tests run as they were,
-  and pass. `folderUnreadable` moved to `core/foundation/platform/fsutil.ts` for the listing to use.
+  (`AppOptions.listOffThread`, set by `tui/shell/terminal/run.ts`), so the 91 explorer tests and the 20 marks tests run
+  as they were, and pass. `folderUnreadable` moved to `core/foundation/platform/fsutil.ts` for the listing to use.
 - 2026-10-23: Tests: a folder beside the vault listed slowly — a tree built in under 100 ms, `listing…` after 150 ms, a
   key handled and drawn at once, then its rows, the `listing…` row never opened; an answer for a folder folded again
   kept, one for a folder let go of dropped, one under changed settings read again; a listing that doesn't answer in

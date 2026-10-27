@@ -21,7 +21,7 @@ import { dailyUpdateCheck, FROM_SOURCE } from "../src/core/application/distribut
 import { saveSession, loadSession } from "../src/core/workspace/session/position.ts";
 import { openDialog, type DialogOverlay } from "../src/tui/dialog.ts";
 import { cameBack, QUIET_MS, type UpdateEnv } from "../src/tui/updates.ts";
-import { PASTE } from "../src/tui/vim.ts";
+import { PASTE } from "../src/tui/shell/input/vim.ts";
 import { harness, makeSandbox, makeVault } from "./tui-harness.ts";
 
 const sandbox = makeSandbox();
@@ -240,7 +240,7 @@ function fakeSlipbox(json: object, sleep = 0): string {
   return file;
 }
 
-/** The App given what slipbox knows of itself, as `tui/run.ts` gives it; the check on, a release, version 0.5.0. */
+/** The App given what slipbox knows of itself, as `tui/shell/terminal/run.ts` gives it; the check on, a release, version 0.5.0. */
 function withEnv(h: H, over: Partial<UpdateEnv> = {}, check = { on: true }): UpdateEnv {
   const env: UpdateEnv = {
     release: { repo: "o/r", target: "linux-x64" },
@@ -727,7 +727,7 @@ describe("restarting (UPG-T5)", () => {
       branches: {},
     });
     const back = cameBack(note, "0.6.0");
-    const { prepare } = await import("../src/tui/run.ts");
+    const { prepare } = await import("../src/tui/shell/terminal/run.ts");
     // Started with another vault's path, and a --base that names nothing: the note's vault, and no refusal.
     const start = prepare([makeVault(), "--base", "no-such-ref-anywhere"], back);
     if (typeof start === "number") throw new Error(`exit ${start}`);
@@ -755,7 +755,7 @@ describe("restarting (UPG-T5)", () => {
       level: "error",
       text: "the upgrade to 0.6.0 failed: couldn't download it — this is 0.5.0",
     });
-    const { prepare } = await import("../src/tui/run.ts");
+    const { prepare } = await import("../src/tui/shell/terminal/run.ts");
     const root = makeVault();
     const start = prepare([root], back);
     if (typeof start === "number") throw new Error(`exit ${start}`);

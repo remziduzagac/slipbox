@@ -34,9 +34,9 @@ import {
   OUTLINE_ACTIONS,
   RESIZE_ACTIONS,
   parseGroup,
-} from "./keys.ts";
-import type { App, UiState } from "./app.ts";
-import { uiDefaults } from "./app.ts";
+} from "./shell/input/keys.ts";
+import type { App, UiState } from "./app/runtime/app.ts";
+import { uiDefaults } from "./app/runtime/app.ts";
 import { existsSync, statSync } from "node:fs";
 
 /** The configuration: keys, theme, glyphs, the UI settings, and live reload. */

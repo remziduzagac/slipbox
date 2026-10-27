@@ -24,9 +24,9 @@ import { sanitize } from "../core/foundation/text/sanitize.ts";
 import { linkSaid, probeFollowed } from "../core/workspace/vaults/symlinks.ts";
 import { isInside, locateVault, type VaultLocation, vaultOf } from "../core/workspace/vaults/vault.ts";
 import { stringWidth, truncate, truncateStart } from "../core/foundation/text/width.ts";
-import type { App, View } from "./app.ts";
+import type { App, View } from "./app/runtime/app.ts";
 import { NoteBuffer } from "./buffer.ts";
-import { parseInSlices } from "./watch.ts";
+import { parseInSlices } from "./app/runtime/watch.ts";
 
 /** A place a peek showed, for `ctrl+o` inside it: with the backlinks it listed, shown again at once when it's back. */
 interface Place {

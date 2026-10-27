@@ -29,7 +29,7 @@ import { sanitize } from "../core/foundation/text/sanitize.ts";
 import { openDiff } from "./diffview.ts";
 import { match } from "./match.ts";
 import type { HeadingRow } from "./gitpanel.ts";
-import type { App } from "./app.ts";
+import type { App } from "./app/runtime/app.ts";
 
 export type GitSection = "conflicted" | "staged" | "unstaged" | "untracked";
 

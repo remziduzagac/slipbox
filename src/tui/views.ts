@@ -12,8 +12,8 @@ import type { TextEdit } from "../core/documents/model/footnotes.ts";
 import { truncate, graphemes, graphemeWidth, stringWidth } from "../core/foundation/text/width.ts";
 import type { NoteBuffer } from "./buffer.ts";
 import { cells, clampPos, type Pos, snap, ordered } from "./cursor.ts";
-import type { App, View } from "./app.ts";
-import { editable, type Selection } from "./app.ts";
+import type { App, View } from "./app/runtime/app.ts";
+import { editable, type Selection } from "./app/runtime/app.ts";
 import { isHidden, unparsedText } from "./lens.ts";
 import { computeFind } from "./search.ts";
 

@@ -1,7 +1,7 @@
 // The command palette (`:`) and the help list: every command by its title, its keys and the arguments it takes,
 // the recent ones first; the help list by group, with the keys of the pane you're in.
 
-import type { App, ListItem } from "./app.ts";
+import type { App, ListItem } from "./app/runtime/app.ts";
 import { classify } from "../core/documents/model/filetypes.ts";
 import { listThemes } from "../core/rendering/theme/index.ts";
 import { FORMATS } from "../core/rendering/export/index.ts";
@@ -18,11 +18,11 @@ import {
   INFO_ACTION_INFO,
   FOOTNOTE_ACTION_INFO,
   RESIZE_ACTIONS,
-} from "./keys.ts";
+} from "./shell/input/keys.ts";
 import { parseSubstitute } from "../core/documents/editing/replace.ts";
 import { parseBang } from "../core/foundation/platform/shell.ts";
 import { rank } from "./match.ts";
-import { MOUSE_HELP } from "./mouse-help.ts";
+import { MOUSE_HELP } from "./shell/input/mouse-help.ts";
 import { REPORT_ADDS, REPORT_SENDS } from "./report.ts";
 
 // ---------------------------------------------------------------------------------------------

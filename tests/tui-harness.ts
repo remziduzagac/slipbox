@@ -16,8 +16,8 @@ import { canonKey } from "../src/core/application/commands/registry.ts";
 import { type Config, DEFAULT_CONFIG } from "../src/core/application/config/config.ts";
 import { openGraph } from "../src/core/workspace/graph/graph.ts";
 import { locateVault } from "../src/core/workspace/vaults/vault.ts";
-import { App, type Host } from "../src/tui/app.ts";
-import { TextCanvas } from "../src/tui/canvas.ts";
+import { App, type Host } from "../src/tui/app/runtime/app.ts";
+import { TextCanvas } from "../src/tui/shell/terminal/canvas.ts";
 import { locationItems } from "../src/tui/draw-topbar.ts";
 import type { Line } from "../src/core/rendering/layout/ir.ts";
 
@@ -99,7 +99,7 @@ export interface Opts {
   /** The app's clock: `Date.now` unless given. */
   now?: () => number;
   /** Started by a restart (UPG): the session its note kept, and what's said. */
-  restarted?: import("../src/tui/app.ts").AppOptions["restarted"];
+  restarted?: import("../src/tui/app/runtime/app.ts").AppOptions["restarted"];
 }
 
 export async function harness(opts: Opts = {}): Promise<Harness> {

@@ -3,13 +3,13 @@
 // actions-edit.ts, bound in `[keys.source]`); this file is the grammar around them — what follows an
 // operator is read here, the way which-key reads what follows a prefix.
 
-import type { App, View } from "./app.ts";
-import * as C from "./cursor.ts";
-import * as E from "./editing.ts";
+import type { App, View } from "../../app/runtime/app.ts";
+import * as C from "../../cursor.ts";
+import * as E from "../../editing.ts";
 import { keyChar } from "./keys.ts";
-import { textMatches } from "./replacing.ts";
-import { indentUnit } from "../core/documents/editing/indent.ts";
-import { toggleComments } from "../core/documents/editing/comments.ts";
+import { textMatches } from "../../replacing.ts";
+import { indentUnit } from "../../../core/documents/editing/indent.ts";
+import { toggleComments } from "../../../core/documents/editing/comments.ts";
 
 type Op = "d" | "c" | "y" | ">" | "<" | "gc";
 export type FindKind = "f" | "F" | "t" | "T";

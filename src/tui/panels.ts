@@ -3,8 +3,8 @@
 
 import type { PanelRow } from "./gitpanel.ts";
 import { match } from "./match.ts";
-import { RESIZE_ACTIONS, keyChar } from "./keys.ts";
-import type { App, SidePaneState } from "./app.ts";
+import { RESIZE_ACTIONS, keyChar } from "./shell/input/keys.ts";
+import type { App, SidePaneState } from "./app/runtime/app.ts";
 import type { Glyphs } from "../core/rendering/theme/glyphs.ts";
 import type { InfoRow } from "./info.ts";
 import type { FootnoteRow } from "./footnotes.ts";

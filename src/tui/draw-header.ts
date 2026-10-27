@@ -1,11 +1,11 @@
 // Drawing a window's header (HDR-D1): the row atop each window between two rules — a split's file name, the
 // breadcrumb, the mode's buttons (HDR-D2) and the outline's ▤ — and how the buttons give way in a narrow one (HDR-D4).
 
-import type { App, View } from "./app.ts";
-import { type Canvas, drawText } from "./canvas.ts";
+import type { App, View } from "./app/runtime/app.ts";
+import { type Canvas, drawText } from "./shell/terminal/canvas.ts";
 import { type Rect, type Geometry, pageBg, roleStyle, button, drawBreadcrumb, crumbLeast } from "./draw.ts";
 import { truncate, stringWidth } from "../core/foundation/text/width.ts";
-import { MODES, viewMode } from "./modes.ts";
+import { MODES, viewMode } from "./shell/input/modes.ts";
 
 /** The buttons' forms, widest first: every label, every letter, the selected one's letter alone; none. */
 export type ModeForm = "letters" | "selected" | "none";

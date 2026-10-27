@@ -1,7 +1,7 @@
 // The commands of language servers (`lsp.*`, 3.x): hover, definitions, references, renames, code actions,
 // formatting, symbols — each asked of the server for the file on screen.
 
-import { type Run, withView } from "./actions.ts";
+import { type Run, withView } from "./actions/actions.ts";
 import { landingText, findHeading } from "../core/workspace/links/landing.ts";
 import { isAbsolute } from "node:path";
 import { markdownText } from "./actions-links.ts";
@@ -18,7 +18,7 @@ import type {
   LocationLink,
 } from "vscode-languageserver-protocol";
 import { pathToFileURL, fileURLToPath } from "node:url";
-import type { PromptOverlay, App, View } from "./app.ts";
+import type { PromptOverlay, App, View } from "./app/runtime/app.ts";
 import { type Problem, noteProblems } from "../core/documents/diagnostics/diagnostics.ts";
 import type { Feature } from "../core/documents/servers/languages.ts";
 import { readFileSync } from "node:fs";

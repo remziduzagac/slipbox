@@ -9,7 +9,7 @@
 import { relative, sep } from "node:path";
 import { changeAt, type GitChange } from "../core/workspace/git/gitsigns.ts";
 import { stageChange, stageFile } from "../core/workspace/git/staging/gitstage.ts";
-import type { App, View } from "./app.ts";
+import type { App, View } from "./app/runtime/app.ts";
 import type { PanelRow } from "./gitpanel.ts";
 import { revertChange } from "./gitchanges.ts";
 import { hotRow } from "./gitsteady.ts";

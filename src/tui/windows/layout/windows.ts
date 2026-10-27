@@ -1,6 +1,6 @@
 // Windows and tabs: a tab's one or two windows split, closed and moved between; tabs closed, pinned and moved.
 
-import type { App, Tab } from "./app.ts";
+import type { App, Tab } from "../../app/runtime/app.ts";
 
 /** Windows and tabs. */
 export class Windows {

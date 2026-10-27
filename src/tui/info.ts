@@ -6,7 +6,7 @@ import { placeAt } from "./editing.ts";
 import { type ConventionPart, conventionOf, describeConvention } from "../core/workspace/links/convention.ts";
 import { ELSEWHERE, rootLabel } from "../core/workspace/vaults/names.ts";
 import { match } from "./match.ts";
-import type { App } from "./app.ts";
+import type { App } from "./app/runtime/app.ts";
 
 /** The Info view. */
 export class Info {

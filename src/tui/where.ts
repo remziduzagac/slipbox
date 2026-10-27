@@ -1,6 +1,6 @@
 // Location data for the permanent grouped bar (VB-D3, VB-D6).
 
-import type { App } from "./app.ts";
+import type { App } from "./app/runtime/app.ts";
 import { operationStatus } from "./rebase.ts";
 import { ELSEWHERE, tildePath } from "../core/workspace/vaults/names.ts";
 import { trackText } from "../core/workspace/git/branches/gitremote.ts";

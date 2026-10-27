@@ -1,6 +1,6 @@
-import { Html } from "./html.ts";
-import type { ListOverlay } from "./list-types.ts";
-export type { ListItem, ListOverlay } from "./list-types.ts";
+import { Html } from "../../html.ts";
+import type { ListOverlay } from "../../list-types.ts";
+export type { ListItem, ListOverlay } from "../../list-types.ts";
 import { Background } from "./background.ts";
 // The TUI app model (plan 3.x; keymap in docs/manual/keys.md): the state every part shares — the vault open, its
 // graph and config, tabs of one or two windows over shared buffers, the panels' state, the overlay and the floating
@@ -12,45 +12,51 @@ import { Background } from "./background.ts";
 // them, its own state (reading positions, session) and the scratch, through core.
 //
 // This module does not import OpenTUI. It draws through `Canvas` and talks to the terminal
-// through `Host`; tui/run.ts binds both to OpenTUI. That keeps the whole model testable.
+// through `Host`; tui/shell/terminal/run.ts binds both to OpenTUI. That keeps the whole model testable.
 
-import { cancelGitRead } from "./gitquery.ts";
-import { DOCUMENT_GRAMMARS, grammarFor } from "../core/documents/syntax/syntax.ts";
-import { MERMAID } from "../core/rendering/media/diagrams/diagrams.ts";
-import { REGEX, stopRegexJobs } from "../core/workspace/search/regex-jobs.ts";
-import { stopParsePool } from "../core/documents/markdown/parse-pool.ts";
-import { stopWalkThreads } from "../core/workspace/walk/walk-thread.ts";
-import { Listings } from "./listings.ts";
-import { stopBacklinkJobs } from "../core/workspace/graph/backlinks-jobs.ts";
-import { stopSpellThread } from "../core/documents/diagnostics/spell-thread.ts";
-import { stopSyntaxThread } from "../core/documents/syntax/syntax-thread.ts";
-import { onLoaded } from "../core/foundation/platform/lazy.ts";
-import { classify, extensionOf } from "../core/documents/model/filetypes.ts";
+import { cancelGitRead } from "../../gitquery.ts";
+import { DOCUMENT_GRAMMARS, grammarFor } from "../../../core/documents/syntax/syntax.ts";
+import { MERMAID } from "../../../core/rendering/media/diagrams/diagrams.ts";
+import { REGEX, stopRegexJobs } from "../../../core/workspace/search/regex-jobs.ts";
+import { stopParsePool } from "../../../core/documents/markdown/parse-pool.ts";
+import { stopWalkThreads } from "../../../core/workspace/walk/walk-thread.ts";
+import { Listings } from "../../listings.ts";
+import { stopBacklinkJobs } from "../../../core/workspace/graph/backlinks-jobs.ts";
+import { stopSpellThread } from "../../../core/documents/diagnostics/spell-thread.ts";
+import { stopSyntaxThread } from "../../../core/documents/syntax/syntax-thread.ts";
+import { onLoaded } from "../../../core/foundation/platform/lazy.ts";
+import { classify, extensionOf } from "../../../core/documents/model/filetypes.ts";
 import { accessSync, appendFileSync, constants as fsConstants } from "node:fs";
 import { dirname, isAbsolute, join, relative } from "node:path";
-import { climbsOut, folderUnreadable, WriteRefused, writeNote } from "../core/foundation/platform/fsutil.ts";
-import { linkSaid, writesThrough } from "../core/workspace/vaults/symlinks.ts";
-import { writeDirty } from "../core/workspace/git/merge/stale.ts";
-import { placeAt, stopInsert } from "./editing.ts";
-import { newVimState } from "./vim.ts";
-import type { ReplaceState } from "./replacing.ts";
+import { climbsOut, folderUnreadable, WriteRefused, writeNote } from "../../../core/foundation/platform/fsutil.ts";
+import { linkSaid, writesThrough } from "../../../core/workspace/vaults/symlinks.ts";
+import { writeDirty } from "../../../core/workspace/git/merge/stale.ts";
+import { placeAt, stopInsert } from "../../editing.ts";
+import { newVimState } from "../../shell/input/vim.ts";
+import type { ReplaceState } from "../../replacing.ts";
 import { homedir } from "node:os";
-import { copyTextAsync, osc52Sequence, readClipboardAsync } from "../core/foundation/platform/clipboard.ts";
-import { CommandRegistry, type Keymap } from "../core/application/commands/registry.ts";
-import { type Config, loadConfig } from "../core/application/config/config.ts";
-import type { Glyphs } from "../core/rendering/theme/glyphs.ts";
-import type { Graph } from "../core/workspace/graph/graph.ts";
-import { lintCommand } from "../core/documents/diagnostics/lint.ts";
-import { type Layout, posOfSrc, srcAt } from "../core/rendering/layout/ir.ts";
-import { slipboxOwn, stateDir } from "../core/foundation/platform/paths.ts";
-import { type Anchor, type CursorAnchor, loadSession, PositionStore, TOP } from "../core/workspace/session/position.ts";
-import type { Theme } from "../core/rendering/theme/index.ts";
-import type { Reach } from "../core/workspace/links/reach.ts";
-import { keepCaughtUp, type Peek, tuiReach, vaultGraph } from "./peek.ts";
-import type { DiffWindow } from "./diffview.ts";
-import type { MergeState } from "./mergescreen.ts";
-import type { Review } from "./review.ts";
-import { ELSEWHERE, rootLabel, tildePath } from "../core/workspace/vaults/names.ts";
+import { copyTextAsync, osc52Sequence, readClipboardAsync } from "../../../core/foundation/platform/clipboard.ts";
+import { CommandRegistry, type Keymap } from "../../../core/application/commands/registry.ts";
+import { type Config, loadConfig } from "../../../core/application/config/config.ts";
+import type { Glyphs } from "../../../core/rendering/theme/glyphs.ts";
+import type { Graph } from "../../../core/workspace/graph/graph.ts";
+import { lintCommand } from "../../../core/documents/diagnostics/lint.ts";
+import { type Layout, posOfSrc, srcAt } from "../../../core/rendering/layout/ir.ts";
+import { slipboxOwn, stateDir } from "../../../core/foundation/platform/paths.ts";
+import {
+  type Anchor,
+  type CursorAnchor,
+  loadSession,
+  PositionStore,
+  TOP,
+} from "../../../core/workspace/session/position.ts";
+import type { Theme } from "../../../core/rendering/theme/index.ts";
+import type { Reach } from "../../../core/workspace/links/reach.ts";
+import { keepCaughtUp, type Peek, tuiReach, vaultGraph } from "../../peek.ts";
+import type { DiffWindow } from "../../diffview.ts";
+import type { MergeState } from "../../mergescreen.ts";
+import type { Review } from "../../review.ts";
+import { ELSEWHERE, rootLabel, tildePath } from "../../../core/workspace/vaults/names.ts";
 import {
   configFilesFor,
   isInside,
@@ -58,57 +64,57 @@ import {
   vaultOf,
   recordLocation,
   type VaultLocation,
-} from "../core/workspace/vaults/vault.ts";
-import { VaultFeed } from "../core/workspace/vaults/vault-feed.ts";
-import type { VaultWatcher } from "../core/workspace/graph/watch.ts";
-import type { SnippetSession } from "./snippets.ts";
-import type { CompletionState, SignatureState } from "./completion.ts";
-import { sanitize } from "../core/foundation/text/sanitize.ts";
-import { truncate } from "../core/foundation/text/width.ts";
-import { registerActions } from "./actions.ts";
-import type { SaveAsOverlay } from "./saveas.ts";
-import type { DialogOverlay } from "./dialog.ts";
-import { NoteBuffer } from "./buffer.ts";
-import { type Canvas, drawText } from "./canvas.ts";
-import { clampPos, type Pos } from "./cursor.ts";
-import { drawApp, type Geometry } from "./draw.ts";
-import { Settings } from "./settings.ts";
-import { Pictures } from "./pictures.ts";
-import { Languages } from "./languages.ts";
-import { Git } from "./git.ts";
-import { GitPanel } from "./gitpanel.ts";
-import { Search } from "./search.ts";
-import { Views } from "./views.ts";
-import { Lens, type LiveBase } from "./lens.ts";
-import { Code } from "./code.ts";
-import { Handoff } from "./handoff.ts";
-import { Windows } from "./windows.ts";
-import { Files } from "./files.ts";
-import { Panels, type LeftView, type RightView } from "./panels.ts";
-import { Footnotes } from "./footnotes.ts";
-import { Properties } from "./properties.ts";
-import { Overlays } from "./overlays.ts";
-import { Problems } from "./problems.ts";
-import { Info } from "./info.ts";
-import { Linking } from "./linking.ts";
-import { Explorer } from "./explorer.ts";
-import { History } from "./history.ts";
-import { OutlineView } from "./outline.ts";
-import { Input } from "./input.ts";
-import { Mouse } from "./mouse.ts";
-import { Exporter } from "./exporter.ts";
-import { Scratch } from "./scratch.ts";
-import { Reporter } from "./report.ts";
-import type { TerminalAnswer } from "../core/application/distribution/report.ts";
+} from "../../../core/workspace/vaults/vault.ts";
+import { VaultFeed } from "../../../core/workspace/vaults/vault-feed.ts";
+import type { VaultWatcher } from "../../../core/workspace/graph/watch.ts";
+import type { SnippetSession } from "../../snippets.ts";
+import type { CompletionState, SignatureState } from "../../completion.ts";
+import { sanitize } from "../../../core/foundation/text/sanitize.ts";
+import { truncate } from "../../../core/foundation/text/width.ts";
+import { registerActions } from "../../actions/actions.ts";
+import type { SaveAsOverlay } from "../../saveas.ts";
+import type { DialogOverlay } from "../../dialog.ts";
+import { NoteBuffer } from "../../buffer.ts";
+import { type Canvas, drawText } from "../../shell/terminal/canvas.ts";
+import { clampPos, type Pos } from "../../cursor.ts";
+import { drawApp, type Geometry } from "../../draw.ts";
+import { Settings } from "../../settings.ts";
+import { Pictures } from "../../pictures.ts";
+import { Languages } from "../../languages.ts";
+import { Git } from "../../git.ts";
+import { GitPanel } from "../../gitpanel.ts";
+import { Search } from "../../search.ts";
+import { Views } from "../../views.ts";
+import { Lens, type LiveBase } from "../../lens.ts";
+import { Code } from "../../code.ts";
+import { Handoff } from "../../handoff.ts";
+import { Windows } from "../../windows/layout/windows.ts";
+import { Files } from "../../files.ts";
+import { Panels, type LeftView, type RightView } from "../../panels.ts";
+import { Footnotes } from "../../footnotes.ts";
+import { Properties } from "../../properties.ts";
+import { Overlays } from "../../overlays.ts";
+import { Problems } from "../../problems.ts";
+import { Info } from "../../info.ts";
+import { Linking } from "../../linking.ts";
+import { Explorer } from "../../explorer.ts";
+import { History } from "../../history.ts";
+import { OutlineView } from "../../outline.ts";
+import { Input } from "../../shell/input/input.ts";
+import { Mouse } from "../../shell/input/mouse.ts";
+import { Exporter } from "../../exporter.ts";
+import { Scratch } from "../../scratch.ts";
+import { Reporter } from "../../report.ts";
+import type { TerminalAnswer } from "../../../core/application/distribution/report.ts";
 import { Watch } from "./watch.ts";
-import { Session } from "./session.ts";
-import { Saving } from "./saving.ts";
-import { Vaults, carried } from "./vaults.ts";
-import { Renaming } from "./renaming.ts";
-import { Speller } from "./spelling.ts";
-import { Following } from "./following.ts";
-import { Updates } from "./updates.ts";
-import type { SessionState } from "../core/workspace/session/position.ts";
+import { Session } from "../../workspace/session/session.ts";
+import { Saving } from "../../saving.ts";
+import { Vaults, carried } from "../../workspace/vaults/vaults.ts";
+import { Renaming } from "../../renaming.ts";
+import { Speller } from "../../spelling.ts";
+import { Following } from "../../following.ts";
+import { Updates } from "../../updates.ts";
+import type { SessionState } from "../../../core/workspace/session/position.ts";
 
 export interface Host {
   requestRender(): void;

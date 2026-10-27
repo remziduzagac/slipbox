@@ -1,5 +1,5 @@
 import { UNIT_TIMEOUT_MS, TEST_BUDGETS } from "./support/timeouts.ts";
-import { vaultChoices } from "../src/tui/vault-list.ts";
+import { vaultChoices } from "../src/tui/workspace/vaults/vault-list.ts";
 // The TUI model, driven headlessly: keys in (canonical names, as the keymap writes them),
 // TextCanvas out. Plus one run through OpenTUI's test renderer for real key parsing.
 // The harness is tests/tui-harness.ts; source control's worktrees, marks, diffs, review, merge, pull and rebase
@@ -34,14 +34,14 @@ import { openGraph } from "../src/core/workspace/graph/graph.ts";
 import { locateVault } from "../src/core/workspace/vaults/vault.ts";
 import { tildePath } from "../src/core/foundation/platform/paths.ts";
 import { linkAnswer, linkKey, probe, setLinkAnswer } from "../src/core/workspace/vaults/symlinks.ts";
-import { type ListOverlay, App, type Host } from "../src/tui/app.ts";
+import { type ListOverlay, App, type Host } from "../src/tui/app/runtime/app.ts";
 import { dateText, listFolder, placeOf, type SaveAsOverlay, sizeText } from "../src/tui/saveas.ts";
 import { placeIn } from "../src/tui/shellrun.ts";
 import { peekOf } from "../src/tui/peek.ts";
 import { setTrust } from "../src/core/workspace/vaults/trust.ts";
 import type { PanelRow } from "../src/tui/gitpanel.ts";
 import type { NvimServer } from "../src/core/documents/external-editors/nvim.ts";
-import { TextCanvas } from "../src/tui/canvas.ts";
+import { TextCanvas } from "../src/tui/shell/terminal/canvas.ts";
 import { match, RANKED, rank } from "../src/tui/match.ts";
 import { graphemes, setWidthMethod, stringWidth, type WidthMethod } from "../src/core/foundation/text/width.ts";
 import { glyphsFor } from "../src/core/rendering/theme/glyphs.ts";
@@ -56,13 +56,20 @@ import { paintJobs } from "../src/core/rendering/media/paint/paint-jobs.ts";
 import { colorHex } from "../src/core/rendering/theme/theme.ts";
 import { svgText } from "../src/tui/images.ts";
 import { idColor, pictureId, placeholderCell, placeholderRow, release, transmit } from "../src/tui/placeholders.ts";
-import { Pictures } from "../src/tui/opentui.ts";
+import { Pictures } from "../src/tui/shell/terminal/opentui.ts";
 import { OptimizedBuffer } from "@opentui/core";
 import { inflateSync } from "node:zlib";
 import { cells } from "../src/tui/cursor.ts";
 import { lineOf, offsetOf } from "../src/tui/editing.ts";
-import { DEFAULT_ALIASES, DEFAULT_GROUPS, DEFAULT_KEYS, keyChar, keyName, parseGroup } from "../src/tui/keys.ts";
-import { MOUSE_HELP } from "../src/tui/mouse-help.ts";
+import {
+  DEFAULT_ALIASES,
+  DEFAULT_GROUPS,
+  DEFAULT_KEYS,
+  keyChar,
+  keyName,
+  parseGroup,
+} from "../src/tui/shell/input/keys.ts";
+import { MOUSE_HELP } from "../src/tui/shell/input/mouse-help.ts";
 import { codeBlocks } from "../src/tui/code.ts";
 import { PICTURES_REST_MS } from "../src/tui/pictures.ts";
 import {
@@ -2381,7 +2388,7 @@ describe("the lens (live preview: space n l, i/a/o with edit_in = live)", () => 
     const root = makeVault();
     writeFileSync(join(root, "b.md"), "cat dog cat\n");
     const h = await harness({ root, open: "b.md", width: 100, height: 30 });
-    const o = () => h.app.overlay as import("../src/tui/app.ts").PromptOverlay;
+    const o = () => h.app.overlay as import("../src/tui/app/runtime/app.ts").PromptOverlay;
     await h.app.run("find.replace");
     await h.keys(..."cat", "tab");
     expect(o().replace?.focus).toBe(true);
@@ -3795,7 +3802,7 @@ describe("review round 1", () => {
     h.frame();
     expect(v.left).toBeGreaterThan(0);
     const wide = h.app.draw.bind(h.app);
-    const { TextCanvas } = await import("../src/tui/canvas.ts");
+    const { TextCanvas } = await import("../src/tui/shell/terminal/canvas.ts");
     wide(new TextCanvas(200, 30));
     expect(v.left).toBeLessThanOrEqual(Math.max(0, h.app.currentLayout(v).width - h.app.views.textColumns(v)));
   });
@@ -5568,7 +5575,7 @@ describe("keymap and registry (0.8, 3.12)", () => {
 describe("OpenTUI end to end", () => {
   test("real key parsing and the frame-buffer adapter", async () => {
     const { createTestRenderer } = await import("@opentui/core/testing");
-    const { AppRenderable } = await import("../src/tui/opentui.ts");
+    const { AppRenderable } = await import("../src/tui/shell/terminal/opentui.ts");
     const { renderer, mockInput, renderOnce, captureCharFrame } = await createTestRenderer({ width: 100, height: 24 });
     const root = makeVault();
     const config: Config = structuredClone(DEFAULT_CONFIG);
@@ -8497,7 +8504,7 @@ describe("the explorer's view (VV-D5)", () => {
 
   test("x/y opened shows y, vault x named in the breadcrumb; - zooms out, y unfolded and selected; the breadcrumb and z zoom back in", async () => {
     const P = place();
-    const { prepare } = await import("../src/tui/run.ts");
+    const { prepare } = await import("../src/tui/shell/terminal/run.ts");
     const start = prepare([join(P, "notes", "sub")]);
     if (typeof start === "number") throw new Error(`exit ${start}`);
     expect(start.folder).toBe(join(P, "notes", "sub"));
@@ -10490,7 +10497,7 @@ describe("vaults in the TUI (17.x)", () => {
     list().selected = 2;
     await h.keys("enter");
     expect(h.app.overlay?.kind).toBe("prompt");
-    expect((h.app.overlay as import("../src/tui/app.ts").PromptOverlay).text).toBe(`two-tw${n}`);
+    expect((h.app.overlay as import("../src/tui/app/runtime/app.ts").PromptOverlay).text).toBe(`two-tw${n}`);
     await h.keys("enter");
     expect(list().title).toStartWith(`name tw${n} → two-tw${n}: 1 change in 1 file`);
     await h.keys("enter");
@@ -11178,7 +11185,7 @@ describe("vaults in the TUI (17.x)", () => {
     await onlyRootsUnder(base, async () => {
       const dir = mkdtempSync(join(sandbox, "launch-"));
       // Started as the TUI starts: prepare's options, as they are, make the App.
-      const { prepare } = await import("../src/tui/run.ts");
+      const { prepare } = await import("../src/tui/shell/terminal/run.ts");
       const start = prepare([dir]);
       if (typeof start === "number") throw new Error(`exit ${start}`);
       expect(start.loc.mode).toBe("folder");
@@ -11209,7 +11216,7 @@ describe("vaults in the TUI (17.x)", () => {
     const root = makeVault();
     const h = await harness({ root, open: "notes/alpha.md" });
     await h.keys("space", "n", "m");
-    const p = h.app.overlay as import("../src/tui/app.ts").PromptOverlay;
+    const p = h.app.overlay as import("../src/tui/app/runtime/app.ts").PromptOverlay;
     expect(p.kind).toBe("prompt");
     expect(p.text).toBe("notes/alpha");
     p.text = "notes/first";
@@ -11242,7 +11249,7 @@ describe("vaults in the TUI (17.x)", () => {
     const root = makeVault();
     const h = await harness({ root, open: "notes/alpha.md" });
     await h.keys("space", "n", "m");
-    (h.app.overlay as import("../src/tui/app.ts").PromptOverlay).text = "projects";
+    (h.app.overlay as import("../src/tui/app/runtime/app.ts").PromptOverlay).text = "projects";
     await h.keys("enter");
     expect((h.app.overlay as ListOverlay).title).toStartWith("notes/alpha.md → projects/alpha.md: ");
     await h.keys("enter");
@@ -11262,7 +11269,7 @@ describe("vaults in the TUI (17.x)", () => {
     const h = await harness({ root, open: "notes/alpha.md" });
     await h.app.run("cursor.goto_line 9"); // in Section One
     await h.keys("space", "n", "h");
-    const p = h.app.overlay as import("../src/tui/app.ts").PromptOverlay;
+    const p = h.app.overlay as import("../src/tui/app/runtime/app.ts").PromptOverlay;
     expect(p.text).toBe("Section One");
     p.text = "Part One";
     await h.keys("enter");
@@ -11276,7 +11283,7 @@ describe("vaults in the TUI (17.x)", () => {
     const rows = h.app.outlineView.rows();
     h.app.outline.selected = rows.findIndex((r) => r.text === "Section Two");
     await h.keys("r");
-    expect((h.app.overlay as import("../src/tui/app.ts").PromptOverlay).text).toBe("Section Two");
+    expect((h.app.overlay as import("../src/tui/app/runtime/app.ts").PromptOverlay).text).toBe("Section Two");
     await h.keys("escape");
     // Above the first heading: nothing to rename.
     await h.app.run("cursor.goto_line 1");
@@ -11922,7 +11929,7 @@ describe("vaults in the TUI (17.x)", () => {
     for (const c of "alpha") await h.keys(c);
     await h.keys("enter");
     expect(h.app.messages.at(-1)!.text).toContain("a note named alpha is at notes/alpha.md");
-    const p = h.app.overlay as import("../src/tui/app.ts").PromptOverlay;
+    const p = h.app.overlay as import("../src/tui/app/runtime/app.ts").PromptOverlay;
     expect(p.text).toBe("projects-alpha");
     await h.keys("enter");
     expect(existsSync(join(root, "projects", "projects-alpha.md"))).toBe(true);
@@ -11968,7 +11975,7 @@ describe("vaults in the TUI (17.x)", () => {
 });
 
 describe("questions float in a window of their own", () => {
-  const ask = (h: Harness) => h.app.overlay as import("../src/tui/app.ts").PromptOverlay;
+  const ask = (h: Harness) => h.app.overlay as import("../src/tui/app/runtime/app.ts").PromptOverlay;
   const click = (h: Harness, x: number, y: number) => {
     h.app.mouse.handle({ type: "down", x, y, button: 0 });
     h.app.mouse.handle({ type: "up", x, y, button: 0 });
@@ -12085,7 +12092,7 @@ describe("the explorer's file operations and buttons (18.x)", () => {
     expect(h.app.explorer.rows()[h.app.sidebar.selected]!.path).toBe(rel);
     return h;
   }
-  const prompt = (h: Harness) => h.app.overlay as import("../src/tui/app.ts").PromptOverlay;
+  const prompt = (h: Harness) => h.app.overlay as import("../src/tui/app/runtime/app.ts").PromptOverlay;
   const type = async (h: Harness, text: string) => {
     for (const c of text) await h.keys(c === " " ? "space" : c);
   };
@@ -12965,7 +12972,7 @@ describe("adding and changing footnotes (3.18)", () => {
     const h = await harness({ root, open: "fn.md", width: 140 });
     return { root, h, read: () => readFileSync(join(root, "fn.md"), "utf8") };
   };
-  const prompt = (h: Harness) => h.app.overlay as import("../src/tui/app.ts").PromptOverlay;
+  const prompt = (h: Harness) => h.app.overlay as import("../src/tui/app/runtime/app.ts").PromptOverlay;
   const type = async (h: Harness, text: string) => {
     for (const c of text) await h.keys(c === " " ? "space" : c);
   };
@@ -13218,7 +13225,7 @@ describe("the properties editor: a note's frontmatter in a floating window (3.20
   const type = async (h: Harness, text: string) => {
     for (const c of text) await h.keys(c === " " ? "space" : c);
   };
-  const ask = (h: Harness) => h.app.overlay as import("../src/tui/app.ts").PromptOverlay;
+  const ask = (h: Harness) => h.app.overlay as import("../src/tui/app/runtime/app.ts").PromptOverlay;
 
   test("space n shift+p: the YAML in a floating editor with every editing key; esc closes it, writing back — one undo step in the note", async () => {
     const { h, read } = await setup("---\ntitle: T\ntags: [a]\n---\n# T\n\nBody.\n");
@@ -15145,7 +15152,7 @@ describe("the background auto-index in the TUI (20.9)", () => {
   test("slipbox started in home: its graph built once, with the folder opened and its tabs' folders (VV-D2, #13)", async () => {
     const { homeAt } = await import("../src/core/workspace/vaults/vault.ts");
     const { Graph } = await import("../src/core/workspace/graph/graph.ts");
-    const { prepare } = await import("../src/tui/run.ts");
+    const { prepare } = await import("../src/tui/shell/terminal/run.ts");
     const home = homeWithFolders();
     const loc = homeAt(home);
     const on = (c: Config) => (c.ui.restore_session = true);
@@ -15172,7 +15179,7 @@ describe("the background auto-index in the TUI (20.9)", () => {
 
   test("slipbox ~ started, nothing asked for: home's graph built all the same, once, by the screen (VV-D2, #13)", async () => {
     const { Graph } = await import("../src/core/workspace/graph/graph.ts");
-    const { prepare } = await import("../src/tui/run.ts");
+    const { prepare } = await import("../src/tui/shell/terminal/run.ts");
     const home = homeWithFolders();
     const before = process.env.HOME;
     process.env.HOME = home;
@@ -15192,7 +15199,7 @@ describe("the background auto-index in the TUI (20.9)", () => {
 
   test("slipbox started in a vault: its graph built once, before the screen, never again by it (#13)", async () => {
     const { Graph } = await import("../src/core/workspace/graph/graph.ts");
-    const { prepare } = await import("../src/tui/run.ts");
+    const { prepare } = await import("../src/tui/shell/terminal/run.ts");
     const root = makeVault();
     const build = spyOn(Graph.prototype, "build");
     try {
@@ -16357,7 +16364,7 @@ describe("what a code file's server changes (19.15)", () => {
     await ready(h);
     await h.keys("space", "c", "r");
     expect(await until(() => h.app.overlay?.kind === "prompt")).toBe(true);
-    const p = h.app.overlay as import("../src/tui/app.ts").PromptOverlay;
+    const p = h.app.overlay as import("../src/tui/app/runtime/app.ts").PromptOverlay;
     expect(p.text).toBe("REF");
     p.text = "NAME";
     await h.keys("enter");
@@ -17366,7 +17373,7 @@ describe("review (tui): the app's floating windows, new paths, roots and repeats
     pick("drafts");
     expect(h.app.explorer.rows()[h.app.sidebar.selected]!.leftOut).toBe("walk.exclude");
     h.app.explorer.action("new_note");
-    expect((h.app.overlay as import("../src/tui/app.ts").PromptOverlay).label).toBe("new note in drafts/");
+    expect((h.app.overlay as import("../src/tui/app/runtime/app.ts").PromptOverlay).label).toBe("new note in drafts/");
     await type(h, "fresh");
     await h.keys("enter");
     expect(readFileSync(join(root, "drafts", "fresh.md"), "utf8")).toStartWith("# fresh\n");
@@ -17387,7 +17394,7 @@ describe("review (tui): the app's floating windows, new paths, roots and repeats
     h.app.explorer.action("expand");
     pick("wip.md");
     h.app.explorer.action("new_note");
-    expect((h.app.overlay as import("../src/tui/app.ts").PromptOverlay).label).toBe("new note in drafts/");
+    expect((h.app.overlay as import("../src/tui/app/runtime/app.ts").PromptOverlay).label).toBe("new note in drafts/");
     await h.keys("escape");
     // A busy folder that looks generated, and a vault of its own there, are refused as before.
     for (const name of ["node_modules", "nested-vault"]) {
@@ -17613,7 +17620,9 @@ describe("review (tui): the app's floating windows, new paths, roots and repeats
     await h.keys("shift+g", "o");
     await type(h, "broken = ");
     await h.keys("escape", "ctrl+s");
-    expect((h.app.overlay as import("../src/tui/app.ts").PromptOverlay).label).toMatch(/^The properties don't parse/);
+    expect((h.app.overlay as import("../src/tui/app/runtime/app.ts").PromptOverlay).label).toMatch(
+      /^The properties don't parse/,
+    );
     await h.keys("y");
     expect(read()).toBe('+++\ntitle = "T"\nbroken =\n+++\n# T\n');
     expect(h.app.floating).not.toBeNull();
@@ -17622,7 +17631,7 @@ describe("review (tui): the app's floating windows, new paths, roots and repeats
     await h.keys("o");
     await type(h, "more = 1");
     await h.keys("escape", "ctrl+s");
-    expect((h.app.overlay as import("../src/tui/app.ts").PromptOverlay).label).toMatch(
+    expect((h.app.overlay as import("../src/tui/app/runtime/app.ts").PromptOverlay).label).toMatch(
       /properties changed while you edited them/,
     );
     await h.keys("y");

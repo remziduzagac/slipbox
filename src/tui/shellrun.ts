@@ -13,7 +13,7 @@ import {
   runShell,
   type ShellResult,
 } from "../core/foundation/platform/shell.ts";
-import { type App, editable, type View } from "./app.ts";
+import { type App, editable, type View } from "./app/runtime/app.ts";
 import { cannotEdit, placeAt } from "./editing.ts";
 import { exLines } from "./replacing.ts";
 

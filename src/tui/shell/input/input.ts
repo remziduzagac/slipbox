@@ -1,13 +1,13 @@
 // Keys and pastes (docs/manual/keys.md): handled one at a time, in order, through the focused pane's keys → visual
 // mode's → source mode's → the normal keymap; a sequence pending shows the which-key popup.
 
-import { deleteTypedSelection, insertKey, insertText } from "./editing.ts";
+import { deleteTypedSelection, insertKey, insertText } from "../../editing.ts";
 import { insertRecord, PASTE, put, vimKey, visualKey } from "./vim.ts";
-import * as R from "./replacing.ts";
-import type { Keymap } from "../core/application/commands/registry.ts";
-import { afterSnippetKey, snippetKey } from "./snippets.ts";
-import { afterInsertKey, afterPaste, completeWords, completionKey } from "./completion.ts";
-import { sanitize } from "../core/foundation/text/sanitize.ts";
+import * as R from "../../replacing.ts";
+import type { Keymap } from "../../../core/application/commands/registry.ts";
+import { afterSnippetKey, snippetKey } from "../../snippets.ts";
+import { afterInsertKey, afterPaste, completeWords, completionKey } from "../../completion.ts";
+import { sanitize } from "../../../core/foundation/text/sanitize.ts";
 import {
   EXPLORER_ACTION_INFO,
   HISTORY_ACTION_INFO,
@@ -20,9 +20,9 @@ import {
   keyChar,
   prettyKey,
 } from "./keys.ts";
-import type { App } from "./app.ts";
-import { editable } from "./app.ts";
-import { refilter } from "./overlays.ts";
+import type { App } from "../../app/runtime/app.ts";
+import { editable } from "../../app/runtime/app.ts";
+import { refilter } from "../../overlays.ts";
 
 /** Keys and pastes: dispatch, sequences, the which-key popup. */
 export class Input {

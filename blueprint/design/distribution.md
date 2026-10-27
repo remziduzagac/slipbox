@@ -66,12 +66,12 @@ reads no `bunfig.toml`, `.env`, `tsconfig.json` or `package.json` of the folder 
 (`core/rendering/media/diagrams/diagram-worker.ts`, `core/rendering/export/export-worker.ts`,
 `core/rendering/media/paint/paint-worker.ts`, `core/documents/markdown/parse-worker.ts`,
 `core/workspace/search/regex-worker.ts`, `core/documents/diagnostics/spell-worker.ts`,
-`core/documents/syntax/syntax-worker.ts`, and `tui/opentui.ts`, the pictures' decoder), laid out from `src/`
-(`--root=src`; left to itself, Bun keeps `src/` in their paths past eight entries): Bun puts a worker in the binary only
-when it is named, and `core/foundation/workers/url.ts` finds it there by its path under `src/`; a test holds the list to
-the workers started, and the compiled binary's test runs its spelling, on its thread (D232). It defines the release in
-it (`core/application/distribution/release.ts`, `RELEASE`: the repository releases come from and the platform it's for).
-A Mac's binary built on a Mac is signed ad hoc again (§ Signing). A target built for this machine is run once
+`core/documents/syntax/syntax-worker.ts`, and `tui/shell/terminal/opentui.ts`, the pictures' decoder), laid out from
+`src/` (`--root=src`; left to itself, Bun keeps `src/` in their paths past eight entries): Bun puts a worker in the
+binary only when it is named, and `core/foundation/workers/url.ts` finds it there by its path under `src/`; a test holds
+the list to the workers started, and the compiled binary's test runs its spelling, on its thread (D232). It defines the
+release in it (`core/application/distribution/release.ts`, `RELEASE`: the repository releases come from and the platform
+it's for). A Mac's binary built on a Mac is signed ad hoc again (§ Signing). A target built for this machine is run once
 (`--version`) first. Each is packed, with slipbox's `LICENSE` and the third-party notices, as
 `slipbox-<version>-<target>.tar.gz`, a folder of that name inside. Beside each pack, `build` writes its SBOM,
 `slipbox-<version>-<target>.cdx.json` (CycloneDX 1.6, JSON), from the same walk as its notices (`check-deps.ts`'
@@ -564,8 +564,8 @@ link, to file a report yourself.
 
 When the daily check (§ Updates) finds a version newer than this one, and newer than one you skipped, the TUI asks in a
 pop-up, the dialog (tui.md § Overlays), rather than saying so in the message line. The line it said before goes to the
-messages list. The offer is `tui/updates.ts`'s (`app.updates`); the check is started by `tui/run.ts`, as now, and its
-answer handed to it.
+messages list. The offer is `tui/updates.ts`'s (`app.updates`); the check is started by `tui/shell/terminal/run.ts`, as
+now, and its answer handed to it.
 
 **It waits for a quiet moment**, as it opens on its own. Quiet is one test (`app.updates`' `quiet`, over the input's own
 state): no key in flight or waiting its turn (one waiting on a note's parse counts), none for two seconds

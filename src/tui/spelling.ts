@@ -8,7 +8,7 @@ import type { Layout, Line } from "../core/rendering/layout/ir.ts";
 import type { SpellWord } from "../core/documents/diagnostics/spell.ts";
 import type { Role } from "../core/rendering/theme/theme.ts";
 import { stringWidth } from "../core/foundation/text/width.ts";
-import type { App, View } from "./app.ts";
+import type { App, View } from "./app/runtime/app.ts";
 import { cells } from "./cursor.ts";
 import { cannotEdit } from "./editing.ts";
 import {

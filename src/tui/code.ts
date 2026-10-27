@@ -8,7 +8,7 @@ import { type Layout, scrolledCol, srcAt, unscrolledCol } from "../core/renderin
 import type { Problem } from "../core/documents/diagnostics/diagnostics.ts";
 import { graphemes } from "../core/foundation/text/width.ts";
 import { cells, ordered, type Pos } from "./cursor.ts";
-import type { App, View } from "./app.ts";
+import type { App, View } from "./app/runtime/app.ts";
 
 /** Code blocks scrolled sideways, and the code view's cells. */
 export class Code {

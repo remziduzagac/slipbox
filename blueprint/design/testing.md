@@ -246,12 +246,12 @@ ready (spelling's dictionaries, loading in the background) is tried again until 
 does nothing.
 
 **In step with slipbox.** On a loaded machine slipbox reads a key late and draws late: a check that reads the screen
-right after sending keys can read the frame before them, and act on it (the link under the cursor, the line it's
-on). So with `SLIPBOX_TRACE` set, slipbox writes, beside each command run, a `key` line once it has handled a key or
-a paste and a `frame` line for each frame it paints (src/tui/run.ts); `keys`, `type` and `paste` return once every
-key sent is handled and a frame painted after the last (a named key is one key, typed text one per code point, a
-paste one), then once nothing more is written for 40 ms. A check timed against the clock (an answer within two
-seconds while it indexes) says `alone` and runs by itself after the others, where it times slipbox, not the machine.
+right after sending keys can read the frame before them, and act on it (the link under the cursor, the line it's on). So
+with `SLIPBOX_TRACE` set, slipbox writes, beside each command run, a `key` line once it has handled a key or a paste and
+a `frame` line for each frame it paints (src/tui/shell/terminal/run.ts); `keys`, `type` and `paste` return once every
+key sent is handled and a frame painted after the last (a named key is one key, typed text one per code point, a paste
+one), then once nothing more is written for 40 ms. A check timed against the clock (an answer within two seconds while
+it indexes) says `alone` and runs by itself after the others, where it times slipbox, not the machine.
 
 A check that must hold slipbox mid-work has Bun preload a script of the tests' into slipbox's own process, not the CLI's
 (`preload`): the spelling checks of a dictionary still loading and of one that won't load preload

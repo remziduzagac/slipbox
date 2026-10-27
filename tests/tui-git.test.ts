@@ -14,7 +14,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { basename, delimiter, dirname, join, relative } from "node:path";
-import { type ListOverlay, App } from "../src/tui/app.ts";
+import { type ListOverlay, App } from "../src/tui/app/runtime/app.ts";
 import type { Line } from "../src/core/rendering/layout/ir.ts";
 import { stringWidth } from "../src/core/foundation/text/width.ts";
 import { makeSandbox, makeVault, harness, onlyRootsUnder, statusRow, topRow, type Harness } from "./tui-harness.ts";
@@ -412,7 +412,7 @@ describe("git worktrees in the TUI (17.19)", () => {
       `slipbox://none${tag}/x.md: none${tag} isn't on this machine yet: open it, or let the index find it`,
     );
     expect(h5.app.overlay).toBeNull();
-    expect((h4.app.overlay as import("../src/tui/app.ts").PromptOverlay).text).toBe(
+    expect((h4.app.overlay as import("../src/tui/app/runtime/app.ts").PromptOverlay).text).toBe(
       `${basename(dirname(twin1)).replace(/[^\p{L}\p{N}._-]/gu, "")}-twin${tag}`,
     );
   });
@@ -526,7 +526,7 @@ describe("git worktrees in the TUI (17.19)", () => {
 
   test("started from the command line where a named folder was moved by hand: the start records it once, the App says so (21.8)", async () => {
     const { locateVault, recordLocation } = await import("../src/core/workspace/vaults/vault.ts");
-    const { prepare } = await import("../src/tui/run.ts");
+    const { prepare } = await import("../src/tui/shell/terminal/run.ts");
     const dir = join(mkdtempSync(join(sandbox, "mvs-")), "mvs");
     const tag = `mvs${basename(dirname(dir))
       .slice(-6)
@@ -549,7 +549,7 @@ describe("git worktrees in the TUI (17.19)", () => {
   });
 
   test("the start (prepare): a path that isn't there said in a line, exit 3; a note opens in its vault, the flags passed on; a folder, the view at it (VV-D5)", async () => {
-    const { prepare } = await import("../src/tui/run.ts");
+    const { prepare } = await import("../src/tui/shell/terminal/run.ts");
     const said: string[] = [];
     const write = process.stderr.write;
     process.stderr.write = ((s: string) => (said.push(s), true)) as typeof process.stderr.write;
@@ -1351,7 +1351,7 @@ describe("git's review, merge screen, pull and rebase (GIT-D3, GIT-D5, GIT-D6)",
 
   test("opened with --base: the branch here kept against it, said on opening; a ref that names nothing, exit 3 before the screen (D255)", async () => {
     await isolated(async () => {
-      const { prepare } = await import("../src/tui/run.ts");
+      const { prepare } = await import("../src/tui/shell/terminal/run.ts");
       const { keptBases } = await import("../src/core/workspace/git/gitbase.ts");
       const { checkoutOf } = await import("../src/core/workspace/git/git.ts");
       const { root } = repo({ "a.md": "# A\n" }, true);

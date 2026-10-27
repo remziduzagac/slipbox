@@ -2,7 +2,7 @@
 // The selection stays on its row as rows come, go and are sorted; the row under a resting pointer stays on its line;
 // a click, a key or the footer between frames finds the row the last frame drew there, or nothing when it's gone.
 
-import type { App } from "./app.ts";
+import type { App } from "./app/runtime/app.ts";
 import type { Rect } from "./draw.ts";
 import type { PanelRow } from "./gitpanel.ts";
 

@@ -7,7 +7,7 @@
 // it was drawn or in the half second after, by when each arrived: one meant for a note, or for the dialog it followed
 // (a second `enter`, a double click), never answers it.
 
-import type { App } from "./app.ts";
+import type { App } from "./app/runtime/app.ts";
 
 export interface DialogChoice {
   id: string;

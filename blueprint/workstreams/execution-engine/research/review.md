@@ -56,12 +56,12 @@ See [session control](../design/interfaces.md#tui-session-control).
 
 ### Migration feasibility and preserved behavior
 
-ENG-T2 previously moved all task toggles before ENG-T3 transferred documents. `src/tui/app.ts:4061` distinguishes
-dirty memory toggles from clean disk toggles, so that migration claim was premature. T2 now migrates only the saved/
-clean path and preserves its bounded synchronous clean-check-to-commit interval. T3 completes live ownership and
-deletes the temporary route. The live-edit example now distinguishes memory-only edits from later configured
-autosave. Scratch/draft ownership is explicit without requiring a graph for every temporary document.
-See [ENG-T2](../roadmap.md#eng-t2-prove-one-shared-read-and-mutation).
+ENG-T2 previously moved all task toggles before ENG-T3 transferred documents. `src/tui/app/runtime/app.ts:4061`
+distinguishes dirty memory toggles from clean disk toggles, so that migration claim was premature. T2 now migrates only
+the saved/ clean path and preserves its bounded synchronous clean-check-to-commit interval. T3 completes live ownership
+and deletes the temporary route. The live-edit example now distinguishes memory-only edits from later configured
+autosave. Scratch/draft ownership is explicit without requiring a graph for every temporary document. See
+[ENG-T2](../roadmap.md#eng-t2-prove-one-shared-read-and-mutation).
 
 ### Parent changes and acceptance completeness
 
@@ -120,12 +120,12 @@ the gap left by snapshot/capture-only wording. Queued delivery also rechecks acc
 
 ### Mixed live/disk language edits
 
-`src/tui/app.ts:1888` applies text edits with one undo group per file; shown or already-dirty targets stay in memory,
-while unshown clean targets save. The draft specified disk-plan refusal for dirty documents but omitted this mixed
-coordinator. It now captures per-target revisions and persistence disposition, validates all targets before effects,
-uses complete reservations and reports partial disk failures without rolling back subsequent text. The session
-adapter invalidates stale shown-state context through the existing signal, avoiding callbacks into App. Unsupported
-LSP create/rename/delete support is not added. T5, acceptance criteria and scenarios cover preserved behavior.
+`src/tui/app/runtime/app.ts:1888` applies text edits with one undo group per file; shown or already-dirty targets stay
+in memory, while unshown clean targets save. The draft specified disk-plan refusal for dirty documents but omitted this
+mixed coordinator. It now captures per-target revisions and persistence disposition, validates all targets before
+effects, uses complete reservations and reports partial disk failures without rolling back subsequent text. The session
+adapter invalidates stale shown-state context through the existing signal, avoiding callbacks into App. Unsupported LSP
+create/rename/delete support is not added. T5, acceptance criteria and scenarios cover preserved behavior.
 
 ### Persisted plans and canonical text contracts
 
@@ -161,10 +161,10 @@ concurrent claims across embedded CLI processes, and leaves dry-run non-consumin
 inspection. A confirmed pre-effect refusal returns the claim to ready only after a successful recorded release;
 inconclusive claims cannot be reclaimed merely by age or PID.
 
-`src/tui/app.ts:9638` saves dirty nonvirtual buffers for disk handoffs; export invokes it at line 9942. External-editor
-handoff at line 4147 saves only its selected target. Generic preparation wording did not preserve these scopes under
-asynchronous saves. The shared prerequisite coordinator now returns revision/fingerprint evidence, checks the
-required dirty set immediately before handoff, and aborts on a refused/stale prerequisite while reporting saves
+`src/tui/app/runtime/app.ts:9638` saves dirty nonvirtual buffers for disk handoffs; export invokes it at line 9942.
+External-editor handoff at line 4147 saves only its selected target. Generic preparation wording did not preserve these
+scopes under asynchronous saves. The shared prerequisite coordinator now returns revision/fingerprint evidence, checks
+the required dirty set immediately before handoff, and aborts on a refused/stale prerequisite while reporting saves
 already completed. Standalone saved CLI behavior remains D17's; direct live operations retain their declared source.
 
 ### Failure and storage liveness

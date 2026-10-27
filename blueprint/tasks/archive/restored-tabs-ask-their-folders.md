@@ -41,12 +41,13 @@ folder before its tabs open, as a file opened by name has its folder asked for, 
 
 ## Log
 
-- 2026-10-23: Read: at the start, `App`'s constructor asks for `opts.folder` or `opts.open`'s folder
-  (`Vaults.ask`, `src/tui/app.ts`), then `Session.restore` opens the tabs kept (`openTabs`, `src/tui/session.ts`)
-  with nothing asked for them; `switchVault` (`src/tui/vaults.ts`) does the same on a switch into home. `App.buffer`
-  gives a file the graph doesn't know no vault path (`rel` null), so the tab is no note of home's: no backlinks, its
-  links unresolved. The comment in the test of folders' own tabs already said so ("one of a folder home's walk hasn't
-  reached is no note of its graph yet").
+- 2026-10-23: Read: at the start, `App`'s constructor asks for `opts.folder` or `opts.open`'s folder (`Vaults.ask`,
+  `src/tui/app/runtime/app.ts`), then `Session.restore` opens the tabs kept (`openTabs`,
+  `src/tui/workspace/session/session.ts`) with nothing asked for them; `switchVault`
+  (`src/tui/workspace/vaults/vaults.ts`) does the same on a switch into home. `App.buffer` gives a file the graph
+  doesn't know no vault path (`rel` null), so the tab is no note of home's: no backlinks, its links unresolved. The
+  comment in the test of folders' own tabs already said so ("one of a folder home's walk hasn't reached is no note of
+  its graph yet").
 - 2026-10-23: Reproduced on `dev` (`be3674a`): the test `home's tabs brought back, in folders its walk hasn't
   reached: …` in tests/tui.test.ts fails, the two restored tabs `notes/inbox.md` and `other/p.md` with `rel` null
   (`tmp/issue/test-red.log`, not kept).

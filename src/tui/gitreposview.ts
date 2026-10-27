@@ -26,7 +26,7 @@ import { homeFolder, isInside, isVaultRoot, rootAt } from "../core/workspace/vau
 import { openDiff } from "./diffview.ts";
 import { readForDiff } from "./gitview.ts";
 import { match } from "./match.ts";
-import type { App } from "./app.ts";
+import type { App } from "./app/runtime/app.ts";
 import type { PanelRow } from "./gitpanel.ts";
 
 /** A repository's row; `open` while it's opened up. */

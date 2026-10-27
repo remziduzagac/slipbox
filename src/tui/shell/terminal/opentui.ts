@@ -4,9 +4,9 @@
 
 import { readFileSync, statSync } from "node:fs";
 import { isMainThread } from "node:worker_threads";
-import { PaintJobs, type PaintRequest, type PaintResult } from "../core/rendering/media/paint/paint-jobs.ts";
-import { workerUrl } from "../core/foundation/workers/url.ts";
-import { notifyLoaded } from "../core/foundation/platform/lazy.ts";
+import { PaintJobs, type PaintRequest, type PaintResult } from "../../../core/rendering/media/paint/paint-jobs.ts";
+import { workerUrl } from "../../../core/foundation/workers/url.ts";
+import { notifyLoaded } from "../../../core/foundation/platform/lazy.ts";
 import {
   imageInfo,
   NativeImage,
@@ -16,10 +16,10 @@ import {
   RGBA,
   TextAttributes,
 } from "@opentui/core";
-import type { CellStyle } from "../core/rendering/layout/style.ts";
-import type { Color } from "../core/rendering/theme/theme.ts";
+import type { CellStyle } from "../../../core/rendering/layout/style.ts";
+import type { Color } from "../../../core/rendering/theme/theme.ts";
 import { type Canvas, type Crop, glyphCell } from "./canvas.ts";
-import { idColor, MAX_PLACEHOLDER_CELLS, pictureId, placeholderRow, release, transmit } from "./placeholders.ts";
+import { idColor, MAX_PLACEHOLDER_CELLS, pictureId, placeholderRow, release, transmit } from "../../placeholders.ts";
 
 const colors = new Map<string, RGBA>();
 
@@ -54,7 +54,7 @@ function attrs(s: CellStyle): number {
 export class Pictures {
   private readonly jobs = new PaintJobs(
     () => notifyLoaded("pictures"),
-    () => new Worker(workerUrl("../tui/opentui.ts")),
+    () => new Worker(workerUrl("../tui/shell/terminal/opentui.ts")),
   );
   private readonly sizes = new Map<string, { at: number; size: { width: number; height: number } | null }>();
   private readonly images = new Map<string, { at: number; image: NativeImage | null }>();

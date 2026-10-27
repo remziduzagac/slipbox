@@ -25,7 +25,7 @@ import {
 } from "../core/workspace/git/merge/merge.ts";
 import { TOP } from "../core/workspace/session/position.ts";
 import { readerFor } from "../core/documents/model/readers.ts";
-import type { App, View } from "./app.ts";
+import type { App, View } from "./app/runtime/app.ts";
 import { NoteBuffer } from "./buffer.ts";
 
 /** A diff window's own: the two texts, its rows, the folds opened, and where `enter` and `esc` go. */

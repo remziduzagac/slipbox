@@ -9,7 +9,7 @@ import { type Dirent, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { classify, type FileGroup } from "../core/documents/model/filetypes.ts";
 import { listsName } from "../core/workspace/walk/listing.ts";
-import type { App } from "./app.ts";
+import type { App } from "./app/runtime/app.ts";
 
 /** An entry of a folder of the vault's own tree that the walk didn't give. */
 export interface DiskEntry {

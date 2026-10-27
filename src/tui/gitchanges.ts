@@ -3,7 +3,7 @@
 // The gutter's signs are draw-pane.ts's; the changes, `core/workspace/git/gitsigns.ts`.
 
 import { changeAt, changeDiff, type GitChange } from "../core/workspace/git/gitsigns.ts";
-import type { App, View } from "./app.ts";
+import type { App, View } from "./app/runtime/app.ts";
 import { cannotEdit, lineOf, offsetOf } from "./editing.ts";
 
 /** The source lines the cursor is on: its line in source mode; a rendered row's, the ones its text came from. */

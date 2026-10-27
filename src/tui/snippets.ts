@@ -6,8 +6,8 @@
 // It ends at `$0`, with `esc`, when the cursor leaves the stop, or when an edit cuts across one.
 
 import type { Snippet } from "../core/documents/editing/snippet.ts";
-import type { App, View } from "./app.ts";
-import { keyChar } from "./keys.ts";
+import type { App, View } from "./app/runtime/app.ts";
+import { keyChar } from "./shell/input/keys.ts";
 import { offsetOf, placeAt } from "./editing.ts";
 
 export interface SnippetSession {

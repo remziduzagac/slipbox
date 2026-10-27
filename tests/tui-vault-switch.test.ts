@@ -5,8 +5,8 @@ import { homeAt, rootAt } from "../src/core/workspace/vaults/vault.ts";
 import { readStale } from "../src/core/workspace/git/merge/stale.ts";
 import { loadSession } from "../src/core/workspace/session/position.ts";
 import { recordRoot } from "../src/core/workspace/vaults/registry.ts";
-import { vaultChoices } from "../src/tui/vault-list.ts";
-import type { ListOverlay } from "../src/tui/app.ts";
+import { vaultChoices } from "../src/tui/workspace/vaults/vault-list.ts";
+import type { ListOverlay } from "../src/tui/app/runtime/app.ts";
 import { harness, makeSandbox, makeVault } from "./tui-harness.ts";
 
 makeSandbox();

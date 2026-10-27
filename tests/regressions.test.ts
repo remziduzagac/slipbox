@@ -16,8 +16,8 @@ import { listThemes } from "../src/core/rendering/theme/index.ts";
 import { elsewhereAt, locateVault } from "../src/core/workspace/vaults/vault.ts";
 import { WalkFilter, walkVault } from "../src/core/workspace/walk/walk.ts";
 import { stringWidth } from "../src/core/foundation/text/width.ts";
-import { App } from "../src/tui/app.ts";
-import { TextCanvas } from "../src/tui/canvas.ts";
+import { App } from "../src/tui/app/runtime/app.ts";
+import { TextCanvas } from "../src/tui/shell/terminal/canvas.ts";
 import { importsOf } from "../scripts/check-boundary.ts";
 import { computeFind } from "../src/tui/search.ts";
 import { selectedText } from "../src/tui/views.ts";
@@ -427,16 +427,16 @@ describe("low", () => {
   });
   test("the boundary check sees a side-effect import, not only from / import() / require", () => {
     const text = [
-      'import "../tui/app.ts";',
-      "import { App } from '../tui/app.ts';",
+      'import "../tui/app/runtime/app.ts";',
+      "import { App } from '../tui/app/runtime/app.ts';",
       'export * from "@opentui/core";',
-      'await import("../tui/run.ts");',
+      'await import("../tui/shell/terminal/run.ts");',
       'require("../tui/x.ts");',
     ].join("\n");
     expect(importsOf(text).sort()).toEqual([
-      "../tui/app.ts",
-      "../tui/app.ts",
-      "../tui/run.ts",
+      "../tui/app/runtime/app.ts",
+      "../tui/app/runtime/app.ts",
+      "../tui/shell/terminal/run.ts",
       "../tui/x.ts",
       "@opentui/core",
     ]);
@@ -486,7 +486,7 @@ describe("found in hands-on review", () => {
 });
 
 test("prettyKey names keys whole: backspace is not back␣", async () => {
-  const { prettyKey } = await import("../src/tui/keys.ts");
+  const { prettyKey } = await import("../src/tui/shell/input/keys.ts");
   expect(prettyKey("backspace")).toBe("backspace");
   expect(prettyKey("space f")).toBe("␣ f");
   expect(prettyKey("shift+space")).toBe("S-␣");

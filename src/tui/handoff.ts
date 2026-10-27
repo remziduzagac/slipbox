@@ -6,8 +6,8 @@ import { discoverNvims, NVIM_REMOTE, type NvimServer, probeNvim } from "../core/
 import { homedir } from "node:os";
 import { buildContext } from "../core/documents/model/context.ts";
 import type { NoteBuffer } from "./buffer.ts";
-import { prettyKey } from "./keys.ts";
-import type { App, View } from "./app.ts";
+import { prettyKey } from "./shell/input/keys.ts";
+import type { App, View } from "./app/runtime/app.ts";
 
 /** Hand-offs to an editor or an agent. */
 export class Handoff {

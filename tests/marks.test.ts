@@ -14,8 +14,8 @@ import { probe, setLinkAnswer } from "../src/core/workspace/vaults/symlinks.ts";
 import { homeAt, locateVault, type VaultLocation } from "../src/core/workspace/vaults/vault.ts";
 import { WalkFilter, walkVault } from "../src/core/workspace/walk/walk.ts";
 import { stringWidth } from "../src/core/foundation/text/width.ts";
-import { App, type Host } from "../src/tui/app.ts";
-import { TextCanvas } from "../src/tui/canvas.ts";
+import { App, type Host } from "../src/tui/app/runtime/app.ts";
+import { TextCanvas } from "../src/tui/shell/terminal/canvas.ts";
 import { roleStyle } from "../src/tui/draw.ts";
 
 const sandbox = realpathSync(mkdtempSync(join(tmpdir(), "slipbox-marks-")));

@@ -4135,10 +4135,10 @@ describe("the boundary check (0.3, scripts/check-boundary.ts)", () => {
 
   test("a core file importing the TUI, a CLI file importing OpenTUI: each reported, the check fails", () => {
     const r = check({
-      "src/core/deep/a.ts": 'import { App } from "../../tui/app.ts";\nexport const a = App;\n',
+      "src/core/deep/a.ts": 'import { App } from "../../tui/app/runtime/app.ts";\nexport const a = App;\n',
       "src/core/b.ts": 'export const b = () => import("../cli/cli.ts");\n',
       "src/cli/c.ts": 'import "@opentui/core";\nimport { a } from "../core/deep/a.ts";\n',
-      "src/tui/app.ts": 'import "@opentui/core";\nexport const App = 1;\n',
+      "src/tui/app/runtime/app.ts": 'import "@opentui/core";\nexport const App = 1;\n',
     });
     expect(r.code).toBe(1);
     expect(
@@ -4150,7 +4150,7 @@ describe("the boundary check (0.3, scripts/check-boundary.ts)", () => {
     ).toEqual([
       "src/cli/c.ts: imports @opentui/core (src/cli must not import @opentui)",
       "src/core/b.ts: imports ../cli/cli.ts (src/core must not import src/cli)",
-      "src/core/deep/a.ts: imports ../../tui/app.ts (src/core must not import src/tui)",
+      "src/core/deep/a.ts: imports ../../tui/app/runtime/app.ts (src/core must not import src/tui)",
     ]);
     expect(r.out).not.toContain("boundary check ok");
   });
@@ -4159,7 +4159,7 @@ describe("the boundary check (0.3, scripts/check-boundary.ts)", () => {
     const r = check({
       "src/core/a.ts": 'import { join } from "node:path";\nexport const a = join;\n',
       "src/cli/c.ts": 'import { a } from "../core/a.ts";\nexport const c = a;\n',
-      "src/tui/app.ts": 'import "@opentui/core";\nimport { a } from "../core/a.ts";\n',
+      "src/tui/shell/terminal/opentui.ts": 'import "@opentui/core";\nimport { a } from "../../../core/a.ts";\n',
       "src/tuition/t.ts": "export const t = 1;\n", // a folder whose name starts as the TUI's does: not the TUI
       "src/core/d.ts": 'import { t } from "../tuition/t.ts";\n',
     });
@@ -4178,7 +4178,8 @@ describe("the boundary check (0.3, scripts/check-boundary.ts)", () => {
         'import type { Drawn } from "./diagram-render.ts";\nexport type { Drawn } from "./diagram-render.ts";\n',
       "src/core/rendering/layout/markdown/render.ts":
         'import { renderText } from "../../media/diagrams/diagram-render.ts";\nexport const l = renderText;\n',
-      "src/tui/app.ts": 'export { renderText } from "../core/rendering/media/diagrams/diagram-render.ts";\n',
+      "src/tui/app/runtime/app.ts":
+        'export { renderText } from "../../../core/rendering/media/diagrams/diagram-render.ts";\n',
     });
     expect(r.code).toBe(1);
     expect(
@@ -4189,7 +4190,7 @@ describe("the boundary check (0.3, scripts/check-boundary.ts)", () => {
         .sort(),
     ).toEqual([
       "src/core/rendering/layout/markdown/render.ts: imports ../../media/diagrams/diagram-render.ts (only src/core/rendering/media/diagrams/diagram-worker.ts may: it runs there alone)",
-      "src/tui/app.ts: imports ../core/rendering/media/diagrams/diagram-render.ts (only src/core/rendering/media/diagrams/diagram-worker.ts may: it runs there alone)",
+      "src/tui/app/runtime/app.ts: imports ../../../core/rendering/media/diagrams/diagram-render.ts (only src/core/rendering/media/diagrams/diagram-worker.ts may: it runs there alone)",
     ]);
   });
 });
@@ -4934,9 +4935,9 @@ describe("spelling (25.6)", () => {
         "file:///$bunfs/root/core/rendering/export/export-worker.js",
       ),
     ).toBe("file:///$bunfs/root/core/rendering/media/diagrams/diagram-worker.ts");
-    expect(workerUrl("../tui/opentui.ts", "file:///$bunfs/root/core/rendering/export/export-worker.js")).toBe(
-      "file:///$bunfs/root/tui/opentui.ts",
-    );
+    expect(
+      workerUrl("../tui/shell/terminal/opentui.ts", "file:///$bunfs/root/core/rendering/export/export-worker.js"),
+    ).toBe("file:///$bunfs/root/tui/shell/terminal/opentui.ts");
   });
 });
 

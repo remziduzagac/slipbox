@@ -1,8 +1,8 @@
 // Drawing the side panels: on the left the explorer's tree and its breadcrumb, source control's list, the history;
 // on the right the Info view, the footnotes, the outline — each with its title, its filter row, its scrolling.
 
-import type { App, SidePaneState } from "./app.ts";
-import { type Canvas, drawText } from "./canvas.ts";
+import type { App, SidePaneState } from "./app/runtime/app.ts";
+import { type Canvas, drawText } from "./shell/terminal/canvas.ts";
 import { type Rect, type Geometry, roleStyle, pageBg } from "./draw.ts";
 import type { Color, Role } from "../core/rendering/theme/theme.ts";
 import { stringWidth, truncate, splitAtWidth, graphemes, graphemeWidth } from "../core/foundation/text/width.ts";
