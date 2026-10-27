@@ -14,7 +14,7 @@ import { parse as parseToml } from "smol-toml";
 import { parse as parseYaml } from "yaml";
 import { classify } from "./filetypes.ts";
 import { readText } from "./foundation/platform/fsutil.ts";
-import type { Graph } from "./graph.ts";
+import type { Graph } from "./workspace/graph/graph.ts";
 import { SearchIndex, WEIGHTS } from "./search-index.ts";
 import { sanitize } from "./foundation/text/sanitize.ts";
 import { tagName, tagsInLine } from "./tags.ts";

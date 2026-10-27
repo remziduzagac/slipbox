@@ -12,13 +12,13 @@ import {
   type BacklinksAnswer,
   configSignature,
   vaultSignature,
-} from "../core/backlinks-jobs.ts";
+} from "../core/workspace/graph/backlinks-jobs.ts";
 import { classify } from "../core/filetypes.ts";
 import { readText } from "../core/foundation/platform/fsutil.ts";
-import type { Graph } from "../core/graph.ts";
+import type { Graph } from "../core/workspace/graph/graph.ts";
 import { ELSEWHERE, rootLabel, tildePath } from "../core/workspace/vaults/names.ts";
 import type { Anchor, CursorAnchor } from "../core/workspace/session/position.ts";
-import { Reach } from "../core/reach.ts";
+import { Reach } from "../core/workspace/links/reach.ts";
 import { noteIndexed } from "../core/workspace/vaults/registry.ts";
 import { sanitize } from "../core/foundation/text/sanitize.ts";
 import { linkSaid, probeFollowed } from "../core/workspace/vaults/symlinks.ts";

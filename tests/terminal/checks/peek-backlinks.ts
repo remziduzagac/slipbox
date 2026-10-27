@@ -16,7 +16,7 @@ import {
 import { join } from "node:path";
 import { loadConfig } from "../../../src/core/application/config/config.ts";
 import { STALE_TEMP_MS } from "../../../src/core/foundation/platform/fsutil.ts";
-import { openGraph } from "../../../src/core/graph.ts";
+import { openGraph } from "../../../src/core/workspace/graph/graph.ts";
 import { vaultKey } from "../../../src/core/foundation/platform/paths.ts";
 import { setLinkAnswer } from "../../../src/core/workspace/vaults/symlinks.ts";
 import { configFilesFor, initVault, recordLocation, rootAt } from "../../../src/core/workspace/vaults/vault.ts";

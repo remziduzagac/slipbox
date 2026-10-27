@@ -27,8 +27,8 @@ import {
   watch,
 } from "node:fs";
 import { join, relative, sep } from "node:path";
-import { under, walksInto } from "./workspace/vaults/home.ts";
-import { parentOf, SETTLE_MS, settled, symlinkVerdict, type WalkFilter } from "./workspace/walk/walk.ts";
+import { under, walksInto } from "../vaults/home.ts";
+import { parentOf, SETTLE_MS, settled, symlinkVerdict, type WalkFilter } from "../walk/walk.ts";
 
 export interface WatchChange {
   rel: string;

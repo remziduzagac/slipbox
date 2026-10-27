@@ -30,7 +30,7 @@ import { basename, dirname, join, relative } from "node:path";
 import { COMMAND_SPECS, commandGroup } from "../src/core/application/commands/catalog.ts";
 import { canonKey, canonSeq } from "../src/core/application/commands/registry.ts";
 import { type Config, DEFAULT_CONFIG } from "../src/core/application/config/config.ts";
-import { openGraph } from "../src/core/graph.ts";
+import { openGraph } from "../src/core/workspace/graph/graph.ts";
 import { locateVault } from "../src/core/workspace/vaults/vault.ts";
 import { tildePath } from "../src/core/foundation/platform/paths.ts";
 import { linkAnswer, linkKey, probe, setLinkAnswer } from "../src/core/workspace/vaults/symlinks.ts";
@@ -12513,7 +12513,7 @@ describe("the explorer's file operations and buttons (18.x)", () => {
   });
 
   test("V on a named folder previews the pointers by its name rewritten, another root's too: deinit's plan (18.11, D75)", async () => {
-    const { openVault } = await import("../src/core/reach.ts");
+    const { openVault } = await import("../src/core/workspace/links/reach.ts");
     const root = makeVault();
     // Names of their own: every test's copy of the fixture has the same ones.
     const tag = randomBytes(4).toString("hex");
@@ -14365,7 +14365,7 @@ describe("the index on demand in the TUI (20.8)", () => {
 
 describe("the background auto-index in the TUI (20.9)", () => {
   test("it works only while nobody is: no key or click here, no agent's command, this vault indexed; and it can be off", async () => {
-    const { activityFile } = await import("../src/core/autoindex.ts");
+    const { activityFile } = await import("../src/core/workspace/graph/autoindex.ts");
     const h = await harness({ config: (c) => (c.index.background = true) }); // off in tests unless asked
     const quiet = h.app.config.index.idle_seconds * 1000;
     const now = Date.now();
@@ -14828,7 +14828,7 @@ describe("the background auto-index in the TUI (20.9)", () => {
 
   test("home's tabs brought back: one build for all their folders, a split's other window's too; a file gone, or one home leaves out, walks nothing (VV-D2, #13)", async () => {
     const { homeAt } = await import("../src/core/workspace/vaults/vault.ts");
-    const { Graph } = await import("../src/core/graph.ts");
+    const { Graph } = await import("../src/core/workspace/graph/graph.ts");
     const { sessionFile } = await import("../src/core/workspace/session/position.ts");
     const home = homeWithFolders();
     mkdirSync(join(home, "Downloads"));
@@ -14912,7 +14912,7 @@ describe("the background auto-index in the TUI (20.9)", () => {
 
   test("a folder of home opened by name, its tabs in a folder of it: no second build (VV-D2, #13)", async () => {
     const { homeAt } = await import("../src/core/workspace/vaults/vault.ts");
-    const { Graph } = await import("../src/core/graph.ts");
+    const { Graph } = await import("../src/core/workspace/graph/graph.ts");
     const home = homeWithFolders();
     const loc = homeAt(home);
     const on = (c: Config) => (c.ui.restore_session = true);
@@ -14995,7 +14995,7 @@ describe("the background auto-index in the TUI (20.9)", () => {
 
   test("into home from a vault, its tabs brought back: their folders walked at once (VV-D2, #13)", async () => {
     const { homeAt } = await import("../src/core/workspace/vaults/vault.ts");
-    const { Graph } = await import("../src/core/graph.ts");
+    const { Graph } = await import("../src/core/workspace/graph/graph.ts");
     const home = homeWithFolders();
     const vault = makeVault();
     const on = (c: Config) => (c.ui.restore_session = true);
@@ -15143,7 +15143,7 @@ describe("the background auto-index in the TUI (20.9)", () => {
 
   test("slipbox started in home: its graph built once, with the folder opened and its tabs' folders (VV-D2, #13)", async () => {
     const { homeAt } = await import("../src/core/workspace/vaults/vault.ts");
-    const { Graph } = await import("../src/core/graph.ts");
+    const { Graph } = await import("../src/core/workspace/graph/graph.ts");
     const { prepare } = await import("../src/tui/run.ts");
     const home = homeWithFolders();
     const loc = homeAt(home);
@@ -15170,7 +15170,7 @@ describe("the background auto-index in the TUI (20.9)", () => {
   });
 
   test("slipbox ~ started, nothing asked for: home's graph built all the same, once, by the screen (VV-D2, #13)", async () => {
-    const { Graph } = await import("../src/core/graph.ts");
+    const { Graph } = await import("../src/core/workspace/graph/graph.ts");
     const { prepare } = await import("../src/tui/run.ts");
     const home = homeWithFolders();
     const before = process.env.HOME;
@@ -15190,7 +15190,7 @@ describe("the background auto-index in the TUI (20.9)", () => {
   });
 
   test("slipbox started in a vault: its graph built once, before the screen, never again by it (#13)", async () => {
-    const { Graph } = await import("../src/core/graph.ts");
+    const { Graph } = await import("../src/core/workspace/graph/graph.ts");
     const { prepare } = await import("../src/tui/run.ts");
     const root = makeVault();
     const build = spyOn(Graph.prototype, "build");

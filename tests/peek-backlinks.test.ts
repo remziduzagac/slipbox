@@ -22,7 +22,7 @@ import {
   configSignature,
   stopBacklinkJobs,
   vaultSignature,
-} from "../src/core/backlinks-jobs.ts";
+} from "../src/core/workspace/graph/backlinks-jobs.ts";
 import { DEFAULT_CONFIG } from "../src/core/application/config/config.ts";
 import {
   atomicWrite,
@@ -31,13 +31,13 @@ import {
   tempPath,
   tempRandom,
 } from "../src/core/foundation/platform/fsutil.ts";
-import { Graph, openGraph } from "../src/core/graph.ts";
+import { Graph, openGraph } from "../src/core/workspace/graph/graph.ts";
 import { walkHomeNow } from "../src/core/workspace/vaults/home.ts";
 import { cacheDir, stateDir } from "../src/core/foundation/platform/paths.ts";
-import { Reach } from "../src/core/reach.ts";
+import { Reach } from "../src/core/workspace/links/reach.ts";
 import { noteIndexed, readRoots, writeRoots } from "../src/core/workspace/vaults/registry.ts";
 import { planMakeVault, planUnmakeVault } from "../src/core/rename-vaults.ts";
-import { Redirects } from "../src/core/redirects.ts";
+import { Redirects } from "../src/core/workspace/links/redirects.ts";
 import { forgetProbes, setLinkAnswer } from "../src/core/workspace/vaults/symlinks.ts";
 import { homeAt, initVault, locateVault, recordLocation, setRootMarkers } from "../src/core/workspace/vaults/vault.ts";
 import * as vaultModule from "../src/core/workspace/vaults/vault.ts";
@@ -930,7 +930,10 @@ test("the other vault's index unwritable, a second peek while its notes are pars
       // The next peek's answer, the walk as the graph's now: no rebuild, the parse going on.
       await h.keys("esc", "enter");
       await Bun.sleep(0);
-      reply(sent.length - 1, { signature: (await import("../src/core/backlinks-jobs.ts")).vaultSignature(g), config });
+      reply(sent.length - 1, {
+        signature: (await import("../src/core/workspace/graph/backlinks-jobs.ts")).vaultSignature(g),
+        config,
+      });
       await peekOf(h.app)!.reading;
       expect(g.pendingCount).toBeLessThanOrEqual(left);
       h.app.quitting = true;

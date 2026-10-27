@@ -209,7 +209,8 @@ walk's stamp after its notes changed isn't listed again, its notes waiting for h
 a disk whose clock is behind and whose times are coarse, a second change within the same tick of its clock is missed
 too. A ctime is settled only when in whole seconds, so where a kernel moves file times once a tick (Linux before 6.13),
 a time put back, the listing, and the same time put back with a note, all within that tick (a few milliseconds), is
-missed as well. The watcher goes by a folder's time alone (`src/core/watch.ts`), so one it polls, not watches, put back
+missed as well. The watcher goes by a folder's time alone (`src/core/workspace/graph/watch.ts`), so one it polls, not
+watches, put back
 so while the TUI is open, waits for the next build.
 
 ## Elsewhere
@@ -505,7 +506,8 @@ deleted (D61). Each vault's is in its cache folder (the link index, the search i
   into; paths an agent's CLI command names. Once indexed, a folder is remembered and refreshed when touched again.
   Files beyond the walk are indexed when reached (§ The walk). A vault nested in this one, or holding it, is indexed
   when a link or a backlink needs it, without having been opened on this machine.
-- **In the background** (`core/autoindex.ts`, `AutoIndex`): while the TUI is open and nobody is working (no key or
+- **In the background** (`core/workspace/graph/autoindex.ts`, `AutoIndex`): while the TUI is open and nobody is working
+  (no key or
   click, and no CLI command from an agent, for `index.idle_seconds`; this vault's own index done), home is walked a
   slice at a time and its index built, then each vault found in it is indexed with its own config, so backlinks from
   vaults never opened appear by themselves (§ Home). It doesn't walk into a vault it found: the vaults nested in one are
@@ -520,7 +522,8 @@ deleted (D61). Each vault's is in its cache folder (the link index, the search i
   share, a disk
   asleep, a folder of many thousands of files) never holds up the keys or the screen: home's walk, kept there between
   its slices and stepped a slice at a time as on the main thread, so it rests while you work; the index of each vault
-  the background index finds, and home's own from its walk (`IndexJob`, `core/index-job.ts`: opened, walked, its notes
+  the background index finds, and home's own from its walk (`IndexJob`, `core/workspace/graph/index-job.ts`: opened,
+  walked, its notes
   parsed — a small one in a single step's budget — kept there between slices as well), written to its cache there,
   home's walk kept there too (`keepHomeWalk`); the folders past home's cap, looked in for vaults; and home's walk kept,
   brought up to now when home's graph is built again after its walk. Each is the same code as on the main thread
@@ -584,7 +587,7 @@ holding a pointer goes to other machines:
 - the name in its `.slipbox/` config, given by `slipbox init --name` or `slipbox name`;
 - else, for a repository, its remote's last part (`research`: `origin`'s, else the first remote's), qualified
   (`github.com/me/research`) when a different repository this machine knows shares the short one
-  (`core/remotes.ts`);
+  (`core/workspace/links/remotes.ts`);
 - never its folder's own name, nor a copy's path: neither travels. A vault with neither (`.obsidian/` or `.zk/` alone,
   a repository with no remote) is unnamed: shown by its path, and linked by relative path. Home is never named.
 

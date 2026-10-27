@@ -70,7 +70,7 @@ export const CHECKS_FOR: [RegExp, string[]][] = [
   [/^src\/tui\/spelling\.ts$/, ["spelling"]],
   // A slow disk read off the main thread (T12): the walk's and the listings' threads, the explorer's listings.
   [
-    /^src\/core\/(?:workspace\/walk\/(?:walk-thread|walk-jobs|walk-worker|walkers)|index-job)\.ts$/,
+    /^src\/core\/(?:workspace\/walk\/(?:walk-thread|walk-jobs|walk-worker|walkers)|workspace\/graph\/index-job)\.ts$/,
     ["slow disk", "home", "view"],
   ],
   // Every folder listed a level at a time (Elsewhere's among them), and the vault and permission facts every row's

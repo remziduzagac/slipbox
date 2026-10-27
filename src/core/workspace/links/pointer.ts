@@ -8,11 +8,11 @@
 // has: the longest one that's there (`%2F` reads as a `/` too).
 
 import { join, relative, sep } from "node:path";
-import { climbsOut } from "./foundation/platform/fsutil.ts";
-import { lookupFolder, type NamedFolder, readFolders } from "./workspace/vaults/folders.ts";
-import { checkoutOf, headOf } from "./git.ts";
-import { branchesOf, worktreeList } from "./gitops.ts";
-import { tildePath } from "./workspace/vaults/names.ts";
+import { climbsOut } from "../../foundation/platform/fsutil.ts";
+import { lookupFolder, type NamedFolder, readFolders } from "../vaults/folders.ts";
+import { checkoutOf, headOf } from "../../git.ts";
+import { branchesOf, worktreeList } from "../../gitops.ts";
+import { tildePath } from "../vaults/names.ts";
 
 const SCHEME = /^slipbox:\/\//i;
 

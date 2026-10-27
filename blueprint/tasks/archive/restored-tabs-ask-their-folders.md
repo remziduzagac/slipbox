@@ -206,7 +206,8 @@ folder before its tabs open, as a file opened by name has its folder asked for, 
   - Verified, fixed: an adoption in the middle of a render drew nothing new until something else did; it asks for a
     redraw. A build listener that throws no longer escapes `Graph.build` (isolated, as change listeners are).
   - Taken: the folders listed held as a set until a build lists them anew (not made each second); `parentOf` from
-    core/watch.ts; the read-only reason made in one place (`lockedSaid`); design/tui.md and the CHANGELOG say what the
+    core/workspace/graph/watch.ts; the read-only reason made in one place (`lockedSaid`); design/tui.md and the
+    CHANGELOG say what the
     poll does now. The poll's own adoption dropped: `reloadBuffer` adopts.
   - Rejected: home's graph built by the screen, after it's taken: `slipbox ~/notes` already built there, and the tabs
     to ask for are the screen's to read (the branch, home's folder); a vault's is built before it.
@@ -239,7 +240,7 @@ folder before its tabs open, as a file opened by name has its folder asked for, 
     never made the vault's. The poll claims an unchanged buffer the graph knows.
   - Taken: a change to one file claims that file's buffer, not every buffer; `App.adopt` renamed `App.claim` (core's
     `Graph.adopt` reads a file into nothing); `lockedSaid` beside `fileUnwritable`, each with its own doc; one
-    `parentOf`, home.ts importing core/watch.ts's; a claim asks for the redraw itself.
+    `parentOf`, home.ts importing core/workspace/graph/watch.ts's; a claim asks for the redraw itself.
   - Rejected again: folders asked for stay asked (D248); home's graph built by the screen; the panes' selections
     across a branch's build (the explorer lists from the disk: rows the same before and after, round 1).
   - Rejected: the session read twice and the tabs' folders worked out twice at the start (as in round 3).
@@ -277,7 +278,8 @@ folder before its tabs open, as a file opened by name has its folder asked for, 
     lint, the docs' checks and tests.
 - 2026-10-24: Rebased on `dev` twice. First on T12 (#47: home's walk on the walk's thread): its build counter
   (`Graph.builds`) replaces this branch's own, so "never built" is `builds === 0`; its `refreshHome` sends the folders
-  asked for (the tabs' among them) to the walk's thread and drops an answer once the graph is built or asked again since,
+  asked for (the tabs' among them) to the walk's thread and drops an answer once the graph is built or asked again
+  since,
   so a tab's folder asked for meanwhile is never lost; `homeBuilt` ends with `Watch.rebuilt` (the watcher, the open
   notes changed, search). The start's build and a branch's tabs' stay on the screen's thread, as T12 leaves the walk at
   the start and the open vault's builds. A test stepped home's job in a loop that never let the thread answer, and hung:

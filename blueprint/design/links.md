@@ -9,7 +9,8 @@ links; how a link is drawn, [rendering.md](rendering.md) § Blocks and inlines; 
 
 Every link, whatever its written form, is read as a file and a fragment (`#heading`, `#^block`, `#L42`). Everything
 behind the reading works on that: the index, backlinks, renames, repairs, the merge review and plans see only paths
-(D68; the resolver is `core/graph-resolve.ts`, behind `resolveLink`, over `core/links.ts`). A path resolves without
+(D68; the resolver is `core/workspace/graph/graph-resolve.ts`, behind `resolveLink`, over
+`core/workspace/links/links.ts`). A path resolves without
 the index: its target exists or it doesn't (D56). A wikilink's name needs the index of its vault (D71). A broken link
 stays broken until it is repaired, never resolved quietly by a name or a remembered move (D56, D78). The index makes
 lookups fast and gives backlinks; it never decides where a link points (D61).
@@ -37,7 +38,8 @@ inlines).
 
 ## Paths
 
-A markdown link's path (`resolvePath` in `core/graph-resolve.ts`, `resolveMarkdownUrl` in `core/links.ts`):
+A markdown link's path (`resolvePath` in `core/workspace/graph/graph-resolve.ts`, `resolveMarkdownUrl` in
+`core/workspace/links/links.ts`):
 
 - **Relative to the file** is the form slipbox writes by default. A relative link within a repository works anywhere
   the repository is cloned; `~/…`, absolute paths and links between repositories depend on how the machine is laid
@@ -72,8 +74,9 @@ files). Neither has wikilinks.
 ## Wikilinks
 
 A wikilink is read by a micromark extension, never inside code (`core/wikilink.ts`; [rendering.md](rendering.md) §
-The wikilink tokenizer), and resolved within its vault (D71; `resolveWiki` in `core/graph-resolve.ts`, `LinkIndex` in
-`core/links.ts`):
+The wikilink tokenizer), and resolved within its vault (D71; `resolveWiki` in `core/workspace/graph/graph-resolve.ts`,
+`LinkIndex` in
+`core/workspace/links/links.ts`):
 
 - **Forms.** `[[name]]` matches file names without their extension; `[[dir/name]]` a path from the vault's top
   (`[[Recipes/Weeknight/Dal]]`), else a path's end aligned on segments; `[[name.md]]` is accepted, an extension
@@ -86,7 +89,8 @@ The wikilink tokenizer), and resolved within its vault (D71; `resolveWiki` in `c
   the vault, as Obsidian finds one (`![[dal.png]]`), but in a Markdown export's pictures, whose copies would answer for
   the pictures they were copied from: a folder named `*.export.assets/`, or any `<name>.assets/` beside a note
   `<name>.md` (or `.markdown`) that carries the export's mark, `generator: slipbox`, in its front matter (DF-D18,
-  DF-D25; `exportPicturesFolder` in `core/graph-resolve.ts`, the mark read again when the note changes) — unless the
+  DF-D25; `exportPicturesFolder` in `core/workspace/graph/graph-resolve.ts`, the mark read again when the note changes)
+  — unless the
   name goes through such a folder (`[[report.export.assets/dal.png]]`, `[[book.assets/dal.png]]`); a note by an alias
   its front matter gives (`aliases` or `alias`), after every file name (D71, D46). The converter's reading of the old
   wikilinks leaves them out alike.
@@ -107,7 +111,8 @@ An existing Obsidian vault opens unchanged for Obsidian's default "shortest path
 
 ## Where a link lands
 
-One matcher, `core/landing.ts`, decides where a fragment lands, for the follow, the hover, the link check, `resolve`
+One matcher, `core/workspace/links/landing.ts`, decides where a fragment lands, for the follow, the hover, the link
+check, `resolve`
 and the converter (D84):
 
 - **Explicit ids first:** `## Setup {#id}` (kept off the heading's text and the screen), `<a id>`, `<a name>`; as
@@ -133,7 +138,7 @@ the hover and `shift+k`: the heading's section, the block, the lines ([tui.md](t
 ## How a link landed
 
 Every link that reaches a file or folder says how it landed, and every resolution how sure it is (D86; `Landed` in
-`core/links.ts`, `certainty` in `core/graph-types.ts`):
+`core/workspace/links/links.ts`, `certainty` in `core/workspace/graph/graph-types.ts`):
 
 - **How** it landed: a markdown link by its path (`path`), in any of its forms (relative, `/…`, extensionless, a
   folder, `~/`, absolute, `file://`); a pointer by its folder's name (`pointer`); a link to the repository's own
@@ -170,11 +175,13 @@ not a link. The converter leaves front-matter links as they are (§ The converte
 
 ## Links to the repository's own hosting
 
-A link to the repository's own hosting is the file in this copy (D87; `core/hosting.ts`, `core/remotes.ts`):
+A link to the repository's own hosting is the file in this copy (D87; `core/workspace/links/hosting.ts`,
+`core/workspace/links/remotes.ts`):
 GitHub's `/blob/<ref>/`, `/tree/<ref>/`, `/raw/<ref>/`; GitLab's `/-/blob/<ref>/`, `/-/tree/<ref>/` and
 `/-/raw/<ref>/` (groups nested); Bitbucket's `/src/<ref>/`, with its `#markdown-header-` headings; a repository's own
 page (`host/owner/repo`), and `#readme` (its README). The shapes are read on any host. It counts when the URL is one of
-this checkout's remotes, or a named folder's by its remote (`hostedHere` in `core/hosting.ts`). Such a link resolves
+this checkout's remotes, or a named folder's by its remote (`hostedHere` in `core/workspace/links/hosting.ts`). Such a
+link resolves
 (`how` and `via` both `hosting`), is a backlink within its vault and from other vaults (§ Backlinks), is followed, is
 checked by the merge review (§ The merge review), and a rename rewrites the URL's path after the ref in place, the
 URL keeping its form. A ref other than the branch checked out (`HEAD` is it) is inferred, and the link check says so
@@ -183,7 +190,8 @@ longest that is.
 
 ## Conventions
 
-A vault's convention says how the links slipbox makes are written (`core/convention.ts`; D72, D82). It has three parts:
+A vault's convention says how the links slipbox makes are written (`core/workspace/links/convention.ts`; D72, D82). It
+has three parts:
 style (markdown or wiki), path (relative, from the vault's top, or by name) and extension (kept or dropped). Each part
 is the first that says:
 
@@ -213,7 +221,8 @@ convention decides only the links slipbox makes; a rename keeps each link's own 
 
 ## Links slipbox writes
 
-Completion (`](` and `[[`), the link picker (`space l i`) and `slipbox link` all write through `core/write-link.ts`, in
+Completion (`](` and `[[`), the link picker (`space l i`) and `slipbox link` all write through
+`core/workspace/links/write-link.ts`, in
 the vault's convention (D83). A markdown link's text is the note's title, a wikilink has none unless one is given
 (`[[dest|text]]`, when the text isn't what the link shows by itself). A wikilink is a name only where the name reaches
 the note from the linking file; else its path from the vault's top, a top-level note's path being its name, or a
@@ -231,7 +240,7 @@ the CLI: [docs/manual/cli.md](../../docs/manual/cli.md) § `resolve` (`slipbox l
 ## Between folders
 
 A link from one file to another is written (D73; `travelTogether` in `core/workspace/vaults/folders.ts`, `pointerTo` in
-`core/write-link.ts`):
+`core/workspace/links/write-link.ts`):
 
 1. in the file's convention, when the two travel together: one clone, or one folder moved as a whole, carries both
    (the same repository; a repository and a submodule it records; outside git, one folder inside the other);
@@ -244,7 +253,7 @@ when its target is in a named folder (§ Repairs).
 
 ## Pointers
 
-`slipbox://<name>[@branch]/<path>#fragment` is a link into a named folder (D75; `core/pointer.ts`):
+`slipbox://<name>[@branch]/<path>#fragment` is a link into a named folder (D75; `core/workspace/links/pointer.ts`):
 
 - **The name** is a folder's short one, an alias or a name it had, or a repository's qualified one
   (`github.com/me/research`: the longest leading part this machine knows as a remote). The pointer opens this machine's
@@ -294,7 +303,8 @@ backlinks, said so rather than shown empty (VV-D3).
   are backlinks of what they name, as links to attachments and folders are.
 - **From other vaults,** home among them (VV-D2), a note's links into this one by path (relative, `~/`, absolute,
   `file://`, a wikilink's `../`), by pointer, or by this repository's hosting URL count, as of that vault's last
-  indexing, read from its saved index (D48, D87; `core/reach.ts`). Each is read as that vault reads it: a pointer by the
+  indexing, read from its saved index (D48, D87; `core/workspace/links/reach.ts`). Each is read as that vault reads it:
+  a pointer by the
   folder this machine has of that name; a hosting URL by that vault's own checkout's remote, else the named folder of
   that remote, so it counts in the copy its link opens. Only vaults this machine knows count, and only while their
   folder is there: an unplugged drive's drop out until it is back. Another vault's data and code files don't count: its
@@ -402,7 +412,8 @@ install, never slipbox's default (D66). The CLI's words: [docs/manual/cli.md](..
 
 ## The converter
 
-`slipbox convert-links` (`:convert-links`; `core/convert.ts`) makes a vault's links plain paths, opt-in: nothing asks
+`slipbox convert-links` (`:convert-links`; `core/workspace/links/convert.ts`) makes a vault's links plain paths, opt-in:
+nothing asks
 to run it (D57). Each `[[…]]` becomes a relative path link, an embed `![…](…)`, its alias kept as the link text (else
 the target, with its heading) and its heading as a `#fragment` checked to exist, written as the heading's id or
 numbered slug (`[[plan#Aims|the aims]]` → `[the aims](docs/plan.md#aims)`); a block's `^id` is checked too. Each

@@ -46,7 +46,7 @@ import {
   writeNoteText,
   notIndexed,
 } from "./common.ts";
-import { notIndexedSaid } from "../core/graph.ts";
+import { notIndexedSaid } from "../core/workspace/graph/graph.ts";
 import { renameResult } from "./files.ts";
 
 /** A note written: its text, a task ticked, a find replaced, its footnotes; a folder made. */

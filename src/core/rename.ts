@@ -12,10 +12,18 @@ import { existsSync, readlinkSync, realpathSync, statSync } from "node:fs";
 import { dirname, isAbsolute, join, parse, posix, relative, sep } from "node:path";
 import { classify } from "./filetypes.ts";
 import { entryAt, entryInside, realTarget } from "./foundation/platform/fsutil.ts";
-import type { Backlink, Graph, NoteEntry, ResolvedLink } from "./graph.ts";
-import { extensionless, formatPathLink, normKey, pathForm, pathLink, type PathForm, pathNamed } from "./links.ts";
+import type { Backlink, Graph, NoteEntry, ResolvedLink } from "./workspace/graph/graph.ts";
+import {
+  extensionless,
+  formatPathLink,
+  normKey,
+  pathForm,
+  pathLink,
+  type PathForm,
+  pathNamed,
+} from "./workspace/links/links.ts";
 import { readRoots } from "./workspace/vaults/registry.ts";
-import { openVault } from "./reach.ts";
+import { openVault } from "./workspace/links/reach.ts";
 import {
   copyAvailable,
   folderIdentity,
@@ -25,7 +33,7 @@ import {
   readFolders,
   travelTogether,
 } from "./workspace/vaults/folders.ts";
-import { formatPointer, isPointer, parsePointer, resolvePointer } from "./pointer.ts";
+import { formatPointer, isPointer, parsePointer, resolvePointer } from "./workspace/links/pointer.ts";
 import { isLink, linkAnswer } from "./workspace/vaults/symlinks.ts";
 import { findVaultRoot, isHome, isInside } from "./workspace/vaults/vault.ts";
 import { holdsNotes } from "./workspace/walk/walk.ts";

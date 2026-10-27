@@ -6,7 +6,7 @@ import { lstatSync } from "node:fs";
 import { basename, dirname, join, posix, relative, sep } from "node:path";
 import { classify } from "./filetypes.ts";
 import { readText, realTarget } from "./foundation/platform/fsutil.ts";
-import type { Graph } from "./graph.ts";
+import type { Graph } from "./workspace/graph/graph.ts";
 import { gitArgs } from "./gitops.ts";
 import { isLink, movedLinkText, quietFollowed, writesThrough } from "./workspace/vaults/symlinks.ts";
 import { findVaultRoot, homeOf, isInside, vaultOf } from "./workspace/vaults/vault.ts";

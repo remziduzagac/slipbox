@@ -6,19 +6,19 @@ import { basename, join } from "node:path";
 import { readText, stamp } from "../core/foundation/platform/fsutil.ts";
 import { offsetOf } from "./editing.ts";
 import { planRelink } from "../core/rename.ts";
-import { activityFile, AutoIndex, autoIndexFile } from "../core/autoindex.ts";
+import { activityFile, AutoIndex, autoIndexFile } from "../core/workspace/graph/autoindex.ts";
 import { loadConfig } from "../core/application/config/config.ts";
 import { describeCap, type HomeWalk, inFolders, keepHomeWalk, walksInto } from "../core/workspace/vaults/home.ts";
 import { HOME_LIMITS, type WalkCap } from "../core/workspace/walk/walk.ts";
 import { homeFolder, isListed } from "../core/workspace/vaults/vault.ts";
 import { applyToGraph } from "../core/workspace/vaults/vault-feed.ts";
-import { VaultWatcher, type WatchBatch, type WatchChange, watchTakes } from "../core/watch.ts";
+import { VaultWatcher, type WatchBatch, type WatchChange, watchTakes } from "../core/workspace/graph/watch.ts";
 import { walkFailure, walkThread } from "../core/workspace/walk/walk-thread.ts";
 import { newParseCache } from "../core/parse.ts";
 import { parseInBackground } from "../core/parse-pool.ts";
 import { BACKGROUND_PARSE, type NoteBuffer } from "./buffer.ts";
 import type { App } from "./app.ts";
-import type { Graph } from "../core/graph.ts";
+import type { Graph } from "../core/workspace/graph/graph.ts";
 
 /**
  * A graph's notes not parsed yet, parsed between frames, a slice at a time (5.1): a big note on other threads first

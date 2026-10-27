@@ -4,7 +4,7 @@
 // logged, so `slipbox undo` and the TUI's `space v shift+u` take it back (7.4). The matching is find's (`replace.ts`).
 
 import { readText } from "./foundation/platform/fsutil.ts";
-import type { Graph } from "./graph.ts";
+import type { Graph } from "./workspace/graph/graph.ts";
 import { matchText } from "./regex-jobs.ts";
 import { dirtyTrees, type Edit, type FileChange, RenameError, type RenamePlan } from "./rename.ts";
 import { mayRewrite, notRewritten } from "./rename-plan.ts";

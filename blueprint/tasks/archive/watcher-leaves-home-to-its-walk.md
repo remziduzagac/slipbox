@@ -61,8 +61,9 @@ folder asked for by name, which is whole, and once home's walk is kept, a folder
   own files after a missed event; a polled folder's only way to see new notes), and guard only the folders it would
   take in whole. Taken: before home's first walk the watcher still lists a folder it watches, and reports that folder's
   own files.
-- 2026-10-23: Fixed. `Graph.waitsForHomeWalk(rel)` (`src/core/graph.ts`): home not walked, any folder but its top and
-  those asked for by name (D248). The watcher's `leftToWalk` option (`src/core/watch.ts`, given it by
+- 2026-10-23: Fixed. `Graph.waitsForHomeWalk(rel)` (`src/core/workspace/graph/graph.ts`): home not walked, any folder
+  but its top and
+  those asked for by name (D248). The watcher's `leftToWalk` option (`src/core/workspace/graph/watch.ts`, given it by
   `src/tui/watch.ts`'s `startWatcher`): a folder found that it isn't watching (`found`: from an event, a second look,
   or a polled folder) is taken in only when no walk is to look into it. Left to the walk, a folder come into home's top
   asks for it (a rescan: the graph, built again, lists it and the watcher watches it, not looked into; `walkHomeAgain`);

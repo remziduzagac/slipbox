@@ -60,7 +60,7 @@ export interface Config {
   };
   /**
    * How the links slipbox writes look (21.4): each part "auto" — found from the root's tool and its
-   * notes (core/convention.ts) — or set here, for every root, or in a root's own `.slipbox/config.toml`.
+   * notes (core/workspace/links/convention.ts) — or set here, for every root, or in a root's own `.slipbox/config.toml`.
    */
   links: {
     style: "auto" | "markdown" | "wiki";

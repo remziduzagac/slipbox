@@ -2,7 +2,7 @@
 // opened, moved, renamed, exported and deleted; vaults made, unmade and described; a root trusted.
 
 import { type Run, withView } from "./actions.ts";
-import { isPointer } from "../core/pointer.ts";
+import { isPointer } from "../core/workspace/links/pointer.ts";
 import { fileLink } from "./actions-links.ts";
 import { join, dirname, isAbsolute, relative } from "node:path";
 import { isInside, isNeverRoot, hasMarker, initVault, rootAt } from "../core/workspace/vaults/vault.ts";
@@ -13,7 +13,7 @@ import { planHeadingRename, planVaultRename } from "../core/rename.ts";
 import { folderIdentity, readFolders, recordFolder, copyAvailable } from "../core/workspace/vaults/folders.ts";
 import { tildePath, rootLabel } from "../core/workspace/vaults/names.ts";
 import { describeCap } from "../core/workspace/vaults/home.ts";
-import { describeBackground, backgroundStatus } from "../core/autoindex.ts";
+import { describeBackground, backgroundStatus } from "../core/workspace/graph/autoindex.ts";
 import { cacheDir, stateDir } from "../core/foundation/platform/paths.ts";
 import { statSync } from "node:fs";
 import type { App } from "./app.ts";

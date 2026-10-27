@@ -6,12 +6,12 @@ import { accessSync, constants, existsSync, mkdirSync, renameSync, rmdirSync, st
 import { dirname, join, relative, sep } from "node:path";
 import { classify } from "./filetypes.ts";
 import { atomicWrite, entryAt, entryInside, landsInside, readText, realTarget } from "./foundation/platform/fsutil.ts";
-import type { Graph } from "./graph.ts";
+import type { Graph } from "./workspace/graph/graph.ts";
 import { trashVaultMarker } from "./files.ts";
-import { contentHash } from "./redirects.ts";
+import { contentHash } from "./workspace/links/redirects.ts";
 import { changedSpan, forgetRename, type LoggedRename, logRename, readRenames } from "./rename-log.ts";
 import { forgetRoot } from "./workspace/vaults/registry.ts";
-import { openVault } from "./reach.ts";
+import { openVault } from "./workspace/links/reach.ts";
 import { recordFolder } from "./workspace/vaults/folders.ts";
 import { findVaultRoot, initVault, isInside } from "./workspace/vaults/vault.ts";
 import {

@@ -4,7 +4,7 @@
 import { canonKey, canonSeq, Keymap, unknownModifiers } from "../core/application/commands/registry.ts";
 import { type Config, loadConfig } from "../core/application/config/config.ts";
 import { glyphsFor, type Glyphs } from "../core/glyphs.ts";
-import { Graph } from "../core/graph.ts";
+import { Graph } from "../core/workspace/graph/graph.ts";
 import { lintCommand } from "../core/lint.ts";
 import { userConfigFile } from "../core/foundation/platform/paths.ts";
 import type { UiOverride } from "../core/workspace/session/position.ts";

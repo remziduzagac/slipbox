@@ -8,9 +8,9 @@ import { cpSync, existsSync, mkdirSync, renameSync, rmSync, statSync } from "nod
 import { basename, dirname, isAbsolute, join, posix, relative } from "node:path";
 import { classify } from "./filetypes.ts";
 import { landsInside, readJson, writeJson } from "./foundation/platform/fsutil.ts";
-import type { Backlink, Graph } from "./graph.ts";
+import type { Backlink, Graph } from "./workspace/graph/graph.ts";
 import { type Keyed, stateDir } from "./foundation/platform/paths.ts";
-import { openVault } from "./reach.ts";
+import { openVault } from "./workspace/links/reach.ts";
 import { fileInTheWay, linksIntoFolder } from "./rename.ts";
 import { isInside, isVaultRoot } from "./workspace/vaults/vault.ts";
 import { holdsNotes } from "./workspace/walk/walk.ts";

@@ -129,7 +129,8 @@ still blocks.
   branch with the walks on the thread 31, 30, 339, 3,814, 38, 134, 31, 33 ms. What was left was the background index
   indexing the vaults it found on the main thread (measured: opening one up to 4.1 s — its config, git — and a slice
   of parsing up to 7.1 s): asked, the maintainer took it into this task.
-- 2026-10-23: The background index's indexing on the walk's thread: `IndexJob` (`core/index-job.ts`) opens a vault
+- 2026-10-23: The background index's indexing on the walk's thread: `IndexJob` (`core/workspace/graph/index-job.ts`)
+  opens a vault
   found (`isVaultRoot`, `rootAt`, its config), walks and builds it, then parses its notes a slice at a time — home's
   own from its walk the same — kept on the thread between slices (`index` op), written to its cache there.
   `AutoIndex` steps it through the walker (`SteppedIndex`; `HERE` for the CLI); the machine's lists stay the main

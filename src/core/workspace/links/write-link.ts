@@ -1,4 +1,5 @@
-// A link as slipbox writes one (plan 21.5): in the root's convention (core/convention.ts) — its style,
+// A link as slipbox writes one (plan 21.5): in the root's convention
+// (core/workspace/links/convention.ts) — its style,
 // its path (relative, from the root, by name) and whether a note keeps its extension. Completion, the
 // link picker and `slipbox link` write through here; a rename keeps each link's own form instead.
 //
@@ -10,7 +11,7 @@
 import { dirname, isAbsolute, posix, relative, sep } from "node:path";
 import type { Convention, LinkStyle } from "./convention.ts";
 import { linkText, urlPath } from "./convert.ts";
-import type { Graph } from "./graph.ts";
+import type { Graph } from "../graph/graph.ts";
 import {
   folderIdentity,
   type NamedFolder,
@@ -19,9 +20,9 @@ import {
   pointerWarnings,
   readFolders,
   travelTogether,
-} from "./workspace/vaults/folders.ts";
+} from "../vaults/folders.ts";
 import { formatPointer } from "./pointer.ts";
-import { findVaultRoot } from "./workspace/vaults/vault.ts";
+import { findVaultRoot } from "../vaults/vault.ts";
 
 const NOTE_EXT = /\.(md|markdown)$/i;
 

@@ -20,7 +20,8 @@ write the qualified name; the CLI writes the qualified name and warns.
 
 ## Acceptance criteria
 
-- Tests for `core/write-link.ts` (or where the pointer is chosen): a private name returns its warning; a clash yields
+- Tests for `core/workspace/links/write-link.ts` (or where the pointer is chosen): a private name returns its warning; a
+  clash yields
   the qualified name and a warning. Each fails without the change.
 - A TUI test: completing a pointer to a clashing name asks before writing.
 - design/links.md § Pointers and § Links slipbox writes say it.
@@ -38,7 +39,8 @@ write the qualified name; the CLI writes the qualified name and warns.
 - 2026-10-11: `core/workspace/vaults/folders.ts`: `pointerNaming` (the name written, short, qualified, private, the
   folders that share
   it by name or alias, as following reads one), `pointerWarnings`, `privateNameWarning`; `pointerName` is its `name`.
-  `core/write-link.ts`: `pointerAt`, `LinkEnds.naming`, `linkWarnings`. `slipbox link` puts them in its `warnings`;
+  `core/workspace/links/write-link.ts`: `pointerAt`, `LinkEnds.naming`, `linkWarnings`. `slipbox link` puts them in its
+  `warnings`;
   the relink's plan says them for the pointers it offers (`planRelink`; an ambiguous one it never offered). The TUI:
   `App.writeLinkAsked`, used by completion's pointers and the link picker: on a clash a list asks — write it (by the
   qualified name, or the short one as it is), or rename one of the folders first (a `.slipbox/` one whose name it

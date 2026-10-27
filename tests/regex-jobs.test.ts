@@ -2,7 +2,7 @@ import { afterAll, expect, test } from "bun:test";
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { DEFAULT_CONFIG } from "../src/core/application/config/config.ts";
-import { openGraph } from "../src/core/graph.ts";
+import { openGraph } from "../src/core/workspace/graph/graph.ts";
 import { compilePattern, findAll, replaceMatches } from "../src/core/replace.ts";
 import { planReplaceLater } from "../src/core/replace-files.ts";
 import { locateVault } from "../src/core/workspace/vaults/vault.ts";

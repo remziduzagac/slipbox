@@ -2,7 +2,7 @@
 // answer out.
 
 import { type BacklinksRequest, backlinksThere } from "./backlinks-jobs.ts";
-import { enterContext, type WalkContext } from "./foundation/workers/worker-context.ts";
+import { enterContext, type WalkContext } from "../../foundation/workers/worker-context.ts";
 
 declare const self: Worker;
 

@@ -18,7 +18,7 @@ it changed since the walk. "Changed" was `mtime >= walked - SETTLE_MS`: newer th
 folder's time (`cp -a`, `rsync -a`, `tar x`), or a disk whose clock is behind this machine's by more than the settle
 time, leave a folder that changed looking unchanged, and the notes that came into it wait for home's next full walk
 (by the background index) or `slipbox index --refresh ~`. The watcher already keeps each folder's time and lists
-it again on any difference (`stamps` in `src/core/watch.ts`); home's walk kept should do the same.
+it again on any difference (`stamps` in `src/core/workspace/graph/watch.ts`); home's walk kept should do the same.
 
 ## Acceptance criteria
 
@@ -46,7 +46,8 @@ it again on any difference (`stamps` in `src/core/watch.ts`); home's walk kept s
 
 ## Out of scope
 
-- The watcher's own freshness (`src/core/watch.ts`), which already compares each folder's time (not its ctime).
+- The watcher's own freshness (`src/core/workspace/graph/watch.ts`), which already compares each folder's time (not its
+  ctime).
 - A vault's build, which walks the vault whole.
 
 ## References
@@ -59,13 +60,15 @@ it again on any difference (`stamps` in `src/core/watch.ts`); home's walk kept s
 - 2026-10-23: Read the cause in `keptWalk` (`src/core/workspace/vaults/home.ts`): `changed = mtime >= walked -
   SETTLE_MS`, `walked`
   the time the walk kept began. `walk.json` keeps no folder's time, so a time set back to before the walk can't be
-  told from no change. The watcher (`src/core/watch.ts`) keeps a stamp per folder (`settled`: its mtime, or -1 when
+  told from no change. The watcher (`src/core/workspace/graph/watch.ts`) keeps a stamp per folder (`settled`: its mtime,
+  or -1 when
   read within `SETTLE_MS` of a change) and lists one again when its mtime differs. design/roots.md § Home and
   docs/manual/vaults.md state today's limit ("a folder whose time is set back after its notes changed … isn't listed
   again"); no decision pins it. VV-D2 says nothing of freshness; `keptWalk`'s comment and design/roots.md § Home
   promise it "checked, not assumed".
 - 2026-10-23: The background index makes home's walk again each pass, the next starting a day after one finishes
-  (`REPASS_MS` in `src/core/autoindex.ts`) and done in slices while nobody works: such notes wait until home's next
+  (`REPASS_MS` in `src/core/workspace/graph/autoindex.ts`) and done in slices while nobody works: such notes wait until
+  home's next
   full walk, not a fixed day.
 - 2026-10-23: Reproduced. A test (tests/vault.test.ts, "its walk kept lists again a folder whose time differs from
   the walk's …") fails on dev: `keep/new.md` missing after `keep`'s time is set two hours back. Live, on a scratch
@@ -79,7 +82,8 @@ it again on any difference (`stamps` in `src/core/watch.ts`); home's walk kept s
   caused by another folder would take their listing as seen — so they stay unknown (null) until listed. Not taken:
   `ctime` (stamp `max(mtime, ctime)`), which would catch a time put back to exactly the stamp, but a future mtime masks
   it, and on some file systems (FAT on Windows) ctime may not move; the watcher compares mtime alone. Found, out of
-  scope: the watcher stamps its folders from their time when it starts (`watchDir`, `src/core/watch.ts`), not the
+  scope: the watcher stamps its folders from their time when it starts (`watchDir`,
+  `src/core/workspace/graph/watch.ts`), not the
   walk's, so a note brought in and its folder's time set back between the build's listing and the watcher's start is
   missed for that session; the next build lists it (the stamp kept differs). A follow-up, if wanted.
 - 2026-10-23: Fixed. `SlicedWalk` (`src/core/workspace/walk/walk.ts`, home's walks) stamps each folder before it reads
@@ -89,7 +93,7 @@ it again on any difference (`stamps` in `src/core/watch.ts`); home's walk kept s
   `keptWalk` lists a folder again when its time isn't its stamp; without one (an earlier version's walk), when newer
   than the walk, as before. Kept again, a folder listed again takes its new stamp, one unchanged keeps its own, one
   unknown stays unknown. Still kept again only when the listing says something else. `SETTLE_MS` and `settled` moved
-  from `src/core/watch.ts` to `src/core/workspace/walk/walk.ts`, shared.
+  from `src/core/workspace/graph/watch.ts` to `src/core/workspace/walk/walk.ts`, shared.
 - 2026-10-23: Tests (tests/vault.test.ts): set back two hours (`cp -a`, `rsync -a`), a clock 30 s behind, a time set
   back with nothing changed (listed again, not kept again), a folder made a vault and its time set back; a folder
   walked within two seconds of its change, a note brought in and its time put back exactly (found: stamped -1); an
@@ -212,9 +216,11 @@ it again on any difference (`stamps` in `src/core/watch.ts`); home's walk kept s
   2. The walk is kept again for a folder listed again for its stamp alone, its time before the walk (set back, put
      back, or a chmod), which takes in round 2's 1; one whose time moved on still isn't.
   3. `homeWalkKept` under a config is false for a walk without stamps: the command line (`src/cli/common.ts`,
-     `src/core/reach.ts`) walks home again, once, as the first time. The TUI goes on with that walk until its
+     `src/core/workspace/links/reach.ts`) walks home again, once, as the first time. The TUI goes on with that walk
+     until its
      background index's next pass.
-  4. `dirMtime` is back in `src/core/watch.ts`, the walk using `dirStamp`. The watcher still compares a folder's mtime
+  4. `dirMtime` is back in `src/core/workspace/graph/watch.ts`, the walk using `dirStamp`. The watcher still compares a
+     folder's mtime
      alone (out of scope): a folder it polls, put back so while the TUI is open, waits for the next build, which the
      design says.
   Tests: in the `w` folder, a note come and its time put back to exactly its stamp is found (mutation-checked:
@@ -280,7 +286,8 @@ it again on any difference (`stamps` in `src/core/watch.ts`); home's walk kept s
   commands, its notes back once readable.
 - 2026-10-24: Review loop, round 4, on `4acdb54`: the first reviewer (10 findings, none in the main fix). The second
   review ended partway; the maintainer was asked. Verified and taken:
-  1. `homeWalkKept` asking for every folder's stamp reached `openVault` (`src/core/reach.ts`), which the TUI uses too
+  1. `homeWalkKept` asking for every folder's stamp reached `openVault` (`src/core/workspace/links/reach.ts`), which the
+     TUI uses too
      (making a vault part of home, a rename or move across it): after an upgrade, such an action walked all of home in
      one blocking pass, where the design says the TUI goes by its walk until the background index's next pass. The
      stamps are asked for by the command line's graph alone (`homeWalkKept(…, stamped)`, `src/cli/common.ts`); a plan

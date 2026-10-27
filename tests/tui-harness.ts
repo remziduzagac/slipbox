@@ -14,7 +14,7 @@ import { randomBytes } from "node:crypto";
 import { join } from "node:path";
 import { canonKey } from "../src/core/application/commands/registry.ts";
 import { type Config, DEFAULT_CONFIG } from "../src/core/application/config/config.ts";
-import { openGraph } from "../src/core/graph.ts";
+import { openGraph } from "../src/core/workspace/graph/graph.ts";
 import { locateVault } from "../src/core/workspace/vaults/vault.ts";
 import { App, type Host } from "../src/tui/app.ts";
 import { TextCanvas } from "../src/tui/canvas.ts";

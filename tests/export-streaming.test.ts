@@ -9,7 +9,7 @@ import { assemble } from "../src/core/export/assemble.ts";
 import { prepareExport } from "../src/core/export/jobs.ts";
 import { formatFor, exportNotes, exportTarget, isExport } from "../src/core/export/index.ts";
 import { DEFAULT_CONFIG } from "../src/core/application/config/config.ts";
-import { Graph } from "../src/core/graph.ts";
+import { Graph } from "../src/core/workspace/graph/graph.ts";
 import { locateVault } from "../src/core/workspace/vaults/vault.ts";
 import { readText } from "../src/core/foundation/platform/fsutil.ts";
 

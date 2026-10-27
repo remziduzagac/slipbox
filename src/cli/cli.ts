@@ -14,8 +14,8 @@ import { existsSync } from "node:fs";
 import { dirname, isAbsolute, join, resolve } from "node:path";
 import { loadConfig } from "../core/application/config/config.ts";
 import { lookupFolder } from "../core/workspace/vaults/folders.ts";
-import { isPointer, parsePointer, resolvePointer } from "../core/pointer.ts";
-import { pathLink } from "../core/links.ts";
+import { isPointer, parsePointer, resolvePointer } from "../core/workspace/links/pointer.ts";
+import { pathLink } from "../core/workspace/links/links.ts";
 import { sanitize, UNSAFE } from "../core/foundation/text/sanitize.ts";
 import {
   elsewhereAt,

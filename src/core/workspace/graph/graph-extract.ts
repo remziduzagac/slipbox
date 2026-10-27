@@ -4,8 +4,8 @@
 
 import { basename } from "node:path";
 import type { Definition, Nodes } from "mdast";
-import { readText } from "./foundation/platform/fsutil.ts";
-import { parseWikiTarget, type WikiLink } from "./wikilink.ts";
+import { readText } from "../../foundation/platform/fsutil.ts";
+import { parseWikiTarget, type WikiLink } from "../../wikilink.ts";
 import {
   type AnchorInfo,
   anchorsOf,
@@ -14,13 +14,13 @@ import {
   noteTitle,
   type ParseCache as ChunkCache,
   visit,
-} from "./parse.ts";
-import { parseNoteFile } from "./readers.ts";
-import { ParseCache, sharedParseCache } from "./parsecache.ts";
-import { contentHash } from "./redirects.ts";
-import { noteFormat } from "./filetypes.ts";
-import type { NoteFile } from "./workspace/walk/walk.ts";
-import { type Hashtag, tagKey, tagName } from "./tags.ts";
+} from "../../parse.ts";
+import { parseNoteFile } from "../../readers.ts";
+import { ParseCache, sharedParseCache } from "../../parsecache.ts";
+import { contentHash } from "../links/redirects.ts";
+import { noteFormat } from "../../filetypes.ts";
+import type { NoteFile } from "../walk/walk.ts";
+import { type Hashtag, tagKey, tagName } from "../../tags.ts";
 import type { LinkKind, LinkRef, Pos, NoteEntry } from "./graph-types.ts";
 
 /** Bumped when what a note's entry holds changes: 5, content hashes (17.12). */

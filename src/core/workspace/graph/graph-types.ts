@@ -2,8 +2,8 @@
 // backlink, a problem; and how a link landed, and how sure that is, for people and for agents.
 
 import { posix } from "node:path";
-import type { Landed } from "./links.ts";
-import type { AnchorInfo, HeadingInfo } from "./parse.ts";
+import type { Landed } from "../links/links.ts";
+import type { AnchorInfo, HeadingInfo } from "../../parse.ts";
 import type { Graph } from "./graph.ts";
 
 export type LinkKind = "wiki" | "embed" | "markdown" | "image";
@@ -142,7 +142,7 @@ export function describeLanding(t: Pick<Target, "how" | "via" | "candidates" | "
 export type Target = Omit<ResolvedLink, keyof LinkRef>;
 
 /**
- * Other vaults, as this one reaches them (17.8–17.11; core/reach.ts): `[[vault:note]]`, the root
+ * Other vaults, as this one reaches them (17.8–17.11; core/workspace/links/reach.ts): `[[vault:note]]`, the root
  * holding a path outside this one, and the links other vaults make into this one.
  */
 export interface VaultReach {

@@ -64,7 +64,8 @@ graph and SOURCE view's scan, which the outline and breadcrumb draw on one row, 
 GitHub's way — letters, marks, numbers, `_` and `-` kept, so a Devanagari heading keeps its vowel signs — with repeats
 numbered as GitHub numbers them (`#setup-1` is the second "Setup"). A trailing `{#id …}` (Pandoc, MkDocs, Docusaurus) is
 the heading's explicit id, not drawn; `<a id="x">` and `<a name="x">` are anchors too. Where a fragment lands is
-`core/landing.ts`'s one matcher (D84; [links.md](links.md) § Where a link lands; [tui.md](tui.md) § Following links). A
+`core/workspace/links/landing.ts`'s one matcher (D84; [links.md](links.md) § Where a link lands; [tui.md](tui.md) §
+Following links). A
 no-break space (U+00A0, U+2007, U+202F) is never a place to wrap.
 
 **Inline:** `**strong**` gets the `strong` role, which has an explicitly lighter foreground, because bold alone does not

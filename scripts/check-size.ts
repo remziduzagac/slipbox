@@ -17,7 +17,7 @@ export const LIMIT = 1000;
 /** Legacy handwritten files: exact, non-growing caps until their ORG extraction tasks land. */
 export const CAPPED: Record<string, number> = {
   "src/core/export/pdf.ts": 1038,
-  "src/core/graph.ts": 1433,
+  "src/core/workspace/graph/graph.ts": 1433,
   "src/core/layout/code.ts": 1417,
   "src/core/layout/render.ts": 1076,
   "src/core/syntax.ts": 1170,

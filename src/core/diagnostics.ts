@@ -4,8 +4,15 @@
 
 import { homedir } from "node:os";
 import { dirname, isAbsolute, join, posix } from "node:path";
-import { describeLanding, disambiguated, fragile, type Graph, type LinkRef, type Pos } from "./graph.ts";
-import { landing, lineFragment } from "./landing.ts";
+import {
+  describeLanding,
+  disambiguated,
+  fragile,
+  type Graph,
+  type LinkRef,
+  type Pos,
+} from "./workspace/graph/graph.ts";
+import { landing, lineFragment } from "./workspace/links/landing.ts";
 import { slugify } from "./parse.ts";
 import type { LintIssue } from "./lint.ts";
 import { unavailable } from "./workspace/vaults/registry.ts";

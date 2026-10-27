@@ -6,8 +6,8 @@
 
 import { existsSync, realpathSync, statSync } from "node:fs";
 import { dirname, isAbsolute, join, posix, relative, resolve } from "node:path";
-import { loadConfig } from "./application/config/config.ts";
-import { readJson } from "./foundation/platform/fsutil.ts";
+import { loadConfig } from "../../application/config/config.ts";
+import { readJson } from "../../foundation/platform/fsutil.ts";
 import {
   type Backlink,
   Graph,
@@ -16,15 +16,15 @@ import {
   openGraph,
   type Target,
   type VaultReach,
-} from "./graph.ts";
+} from "../graph/graph.ts";
 import { pathLink, wikiPathCandidates } from "./links.ts";
-import { folderIdentity, lookupFolder, type NamedFolder, readFolders } from "./workspace/vaults/folders.ts";
-import { checkoutOf } from "./git.ts";
+import { folderIdentity, lookupFolder, type NamedFolder, readFolders } from "../vaults/folders.ts";
+import { checkoutOf } from "../../git.ts";
 import { checkoutRemotes, hostedHere } from "./hosting.ts";
-import { homeWalkKept, walkHomeNow } from "./workspace/vaults/home.ts";
-import { cacheDir } from "./foundation/platform/paths.ts";
-import { tildePath } from "./workspace/vaults/names.ts";
-import { type KnownRoot, readRoots } from "./workspace/vaults/registry.ts";
+import { homeWalkKept, walkHomeNow } from "../vaults/home.ts";
+import { cacheDir } from "../../foundation/platform/paths.ts";
+import { tildePath } from "../vaults/names.ts";
+import { type KnownRoot, readRoots } from "../vaults/registry.ts";
 import {
   findVaultRoot,
   isHome,
@@ -35,7 +35,7 @@ import {
   configFilesFor,
   vaultAt,
   vaultOf,
-} from "./workspace/vaults/vault.ts";
+} from "../vaults/vault.ts";
 import { isPointer, parsePointer, resolvePointer } from "./pointer.ts";
 
 function real(p: string): string {

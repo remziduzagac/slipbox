@@ -47,7 +47,8 @@ link being typed, matched or not, so the keys that match nothing cost the same h
   typed"): with `fs.readFileSync` spied, `[x](tod` then `qqqq` read the other vault's index 4 times, once expected.
 - 2026-10-23: Measured in the test harness, 454 other vaults of 4 notes each, all named and indexed (a benchmark not
   committed): opening the link (`](`) 839 ms; each key that matches nothing 807 ms (median); each key that matches
-  8 ms. Of the build, reading the registry and the 454 indexes is 5 ms; `pointerAt` (`core/write-link.ts`, through
+  8 ms. Of the build, reading the registry and the 454 indexes is 5 ms; `pointerAt`
+  (`core/workspace/links/write-link.ts`, through
   `linkEnds`) for the 1,816 other vaults' notes is 757 ms: per note it walks up to the vault's root, reads its
   identity, and `pointerNaming` reads the whole folders registry (`readFolders()`) again. So the cost per key is the
   build's, of which the indexes are a small part.

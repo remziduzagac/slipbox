@@ -11,7 +11,8 @@ A file in another root linking to this repository's hosting counts as a backlink
 ## Description
 
 `reach.ts` (`landsHere`) counts another root's paths, pointers and `file://` links into this root, not its links to
-this repository's hosting, which D87 makes the file in this copy. Count them too, through `core/hosting.ts`, with this
+this repository's hosting, which D87 makes the file in this copy. Count them too, through
+`core/workspace/links/hosting.ts`, with this
 checkout's remote. Also check that another root's data and code files' links count, as notes' do; if they don't,
 count them (their links are in the index).
 
@@ -29,7 +30,8 @@ count them (their links are in the index).
 ## Log
 
 - 2026-10-11: `landsHere` read every `https:` link as a URL elsewhere. It now reads a hosting URL as the linking root
-  reads it, through `hostedHere` in `core/hosting.ts` (the graph's `byHosting` reasoning, moved there and shared): the
+  reads it, through `hostedHere` in `core/workspace/links/hosting.ts` (the graph's `byHosting` reasoning, moved there
+  and shared): the
   linking root's own checkout's remote, else the named folder of that remote; the file in that copy is a backlink
   here when it is this root's. Read as the linking root reads it, not by this checkout's remote alone, so a second
   clone or a worktree doesn't claim backlinks that open the default copy, as pointers already do. The linking roots'

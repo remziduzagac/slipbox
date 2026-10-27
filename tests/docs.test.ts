@@ -8,8 +8,8 @@ import { tmpdir } from "node:os";
 import { fromCells, parseAnsi, toSvg } from "../scripts/screenshot.ts";
 import { CLI_COMMANDS, FLAGS } from "../src/cli/cli.ts";
 import { canonSeq } from "../src/core/application/commands/registry.ts";
-import { extractText } from "../src/core/graph.ts";
-import { githubSlugs } from "../src/core/landing.ts";
+import { extractText } from "../src/core/workspace/graph/graph.ts";
+import { githubSlugs } from "../src/core/workspace/links/landing.ts";
 import { type Grammar, grammar } from "../src/core/syntax.ts";
 import {
   DEFAULT_EXPLORER_KEYS,

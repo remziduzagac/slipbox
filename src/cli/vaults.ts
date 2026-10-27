@@ -14,7 +14,7 @@ import {
   repositoryCopies,
   setDefaultCopy,
 } from "../core/workspace/vaults/folders.ts";
-import { openVault } from "../core/reach.ts";
+import { openVault } from "../core/workspace/links/reach.ts";
 import { planMakeVault, planUnmakeVault, planVaultRename } from "../core/rename.ts";
 import { readIdentity, vaultConfigFile } from "../core/workspace/vaults/registry.ts";
 import { tildePath } from "../core/workspace/vaults/names.ts";
