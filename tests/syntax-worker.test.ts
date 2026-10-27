@@ -20,9 +20,9 @@ test("the code worker preserves the complete extracted structure", async () => {
     code: tree.codeModel(),
   };
   tree.delete();
+  // Worker entry paths stay core-relative when the URL helper moves into a nested folder.
   const jobs = new WorkerRequests(
-    () =>
-      new Worker(workerUrl("syntax-worker.ts", new URL("../src/core/foundation/workers/url.ts", import.meta.url).href)),
+    () => new Worker(workerUrl("syntax-worker.ts", new URL("../src/core/", import.meta.url).href)),
   );
   try {
     const reply = await jobs.request<{ value: unknown }>({ grammar: "typescript", source });

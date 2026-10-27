@@ -73,3 +73,9 @@ adaptation, verified by the source/compiled worker matrix.
 Both shell range and process cases pass with normal local process permissions; the existing range test was verified
 to fail with the incorrect rewritten selector. Source and compiled TUI panel checks pass. All validated external
 findings are fixed; final own review is clean.
+
+The syntax-worker structure fixture keeps its explicit source base at core/, independently of the URL helper's
+folder. Using the nested helper URL as that base looks for the entry in the helper's folder instead and fails with
+ModuleNotFound. The existing structure test reproduces that failure before correction and passes afterward; all four
+syntax-worker tests and the existing source/compiled URL characterization pass (five tests, eleven assertions).
+No test identity, assertion, product worker resolver or build entry changes in this correction.
