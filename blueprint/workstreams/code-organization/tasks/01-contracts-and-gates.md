@@ -87,13 +87,13 @@ with a reason). For example:
 ```
 
 The capture records resolved imports in `src/` and `scripts/`, type imports, literal dynamic imports and worker/URL
-references,
-runtime import edges, build entry points and the multiset of literal test/suite declarations. Worker paths resolve
-from the imported `workerUrl` helper, including callers in nested folders. The comparison maps both ends of each edge
-and build entry through the manifest, fails on unresolved paths or lost/added dependencies and tests, and searches
-tracked files for old full paths, including extensionless forms, with filename boundaries so prefix-sharing siblings
-are not flagged. Snapshot overwrite is refused so the before evidence
-is retained. Keep the manifest and both snapshots with the PR's measurement artifacts.
+references, runtime import edges, build entry points and the multiset of literal test/suite declarations. Worker paths
+resolve from the imported `workerUrl` helper, including callers in nested folders. The comparison maps both ends of each
+edge and build entry through the manifest, fails on unresolved paths or lost/added dependencies and tests, and searches
+tracked files for old full paths, including extensionless forms, with filename boundaries so prefix-sharing siblings are
+not flagged. The input manifest is excluded by its exact resolved path; sibling manifests are still scanned. Snapshot
+overwrite is refused so the before evidence is retained. Keep the manifest and both snapshots with the PR's measurement
+artifacts.
 
 Worker detection supports a literal first argument to `workerUrl`, with a plain, unaliased named import of that helper
 (the first matching import statement). Aliased/namespace helpers, alternate explicit URL bases, computed arguments
