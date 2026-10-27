@@ -1,6 +1,6 @@
 // Command specs: notes, folders, vaults, problems, config, help and the app.
 
-import type { CommandSpec } from "../command-specs";
+import type { CommandSpec } from "./contracts";
 
 const I = null; // interaction: needs a human at a terminal
 

@@ -14,7 +14,10 @@ a change users will see updates it in the same piece of work, without the bluepr
   `bun run check:boundary` enforces it. Only `src/tui/opentui.ts` and `src/tui/run.ts` touch OpenTUI. Diagrams are
   drawn in their worker alone: only `src/core/diagram-worker.ts` imports `src/core/diagram-render.ts` for more than
   types (the same check), since drawing on the screen's thread can freeze it.
-- **No source file over 1,500 lines, and no class that does everything** (D235). A feature goes in a module of its own;
+- **Source files have a 1,000-line ceiling, and no class does everything** (D235, ORG-D2). Existing handwritten
+  exceptions have exact non-growing caps, never above 1,500; generated server locks have a separate measured cap and
+  offline generator check (`bun scripts/lock-servers.ts --check`). Lower a cap whenever its file shrinks; remove the
+  exception at or below 1,000. A feature goes in a module of its own;
   `App` (`src/tui/app.ts`) keeps the shared state and the wiring, and a feature is a controller in its own file that
   `App` owns (`src/tui/explorer.ts` is `app.explorer`), holding the state that is the feature's alone.
   `bun run check:size` enforces the limit.
