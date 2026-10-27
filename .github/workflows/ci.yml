@@ -178,6 +178,7 @@ jobs:
   # The docs' site (site/), built from docs/ as the pages workflow builds it: every page gathered, every link within it
   # landing. Its own packages, under its own install gates (site/bunfig.toml).
   site:
+    if: ${{ github.event_name != 'pull_request' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:

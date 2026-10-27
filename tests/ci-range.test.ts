@@ -431,6 +431,8 @@ describe("the workflow hands the range on (CIW-D1–CIW-D4)", () => {
       const systems = new Function("github", "fromJSON", `return ${expression(String(matrix))}`)(github, JSON.parse);
       expect(systems).toEqual(event_name === "pull_request" ? ["ubuntu-24.04"] : ["ubuntu-24.04", "macos-15"]);
       expect(ci.jobs.terminal?.strategy?.matrix.os).toEqual(["ubuntu-24.04", "ubuntu-24.04-arm", "macos-15"]);
+      const site = new Function("github", `return ${expression(ci.jobs.site!.if!)}`)(github);
+      expect(site).toBe(event_name !== "pull_request");
       for (const checks of ["true", "false"]) {
         const run = new Function("github", "needs", `return ${expression(ci.jobs.terminal!.if!)}`)(github, {
           changes: { outputs: { checks } },

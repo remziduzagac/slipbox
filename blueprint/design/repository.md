@@ -102,9 +102,10 @@ workflow: actionlint 1.7.12 doesn't know the token's `vulnerability-alerts` scop
 
 `.github/workflows/ci.yml` runs on every pull request, every push to `dev` or `test`, a merge queue's group (listed for
 later: a merge queue needs an organisation's repository) and by hand (GR-D9, D251). A pull request runs reached Linux
-unit tests, with no terminal job; pushes add macOS and terminal checks for their scope (D266). Both run lint, site and
-CodeQL; a run by hand runs everything, and its aggregator reports `full` instead of `ci`. Its jobs are `bun run check`'s
-parts, each step a package.json script, never a command of its own, and one more for a run by hand:
+unit tests, with no terminal job; pushes add macOS and terminal checks for their scope (D266). Both run lint and CodeQL;
+the docs-site build runs after merge and in the pages workflow; a run by hand runs everything, and its aggregator
+reports `full` instead of `ci`. Its jobs are `bun run check`'s parts, each step a package.json script, never a command
+of its own, and one more for a run by hand:
 
 - **`lint`**, on `ubuntu-24.04`: Biome (`bun run lint`), the workflows (`bun run check:actions`, zizmor online with
   the job's token), the docs (`bun run check:docs`) and the tests that read the docs (`bun run test:docs`: the docs'
@@ -126,7 +127,8 @@ parts, each step a package.json script, never a command of its own, and one more
   `ubuntu-24.04-arm` and `macos-15`: the terminal checks a change's files reach (`bun run test:terminal:changed`; every
   one in the full run, TT-D6). No job runs on an Intel Mac, for which nothing is built after 0.3.0 (D238); a test holds
   every workflow to it.
-- **`site`**, on `ubuntu-24.04`: the docs' site built (`bun run site`), every link within it landing (DS).
+- **`site`**, skipped on pull requests; on `ubuntu-24.04` for pushes, merge groups and runs by hand: the docs' site
+  built (`bun run site`), every link within it landing (DS).
 - **`ci`**, the aggregator and the one required check: it always runs, waits for every other job, and fails unless
   each passed or was skipped. A job skipped by its `if:` counts as passed; one that failed, was cancelled or never
   started doesn't. A test holds it to waiting for every job but `status`, so a job added can't be left out of the
@@ -237,14 +239,14 @@ available.
 A squash push retains its own commit in the range since the last full-platform push pass. Linux units repeat along with
 the newly required macOS and terminal coverage. This deliberately forgoes per-platform reuse to keep one conservative
 range for every job. Cancelled or failed pushes leave their changes to the next push, and a matching already-passed push
-can still cover promotion to `test` (CIW-D1, CIW-D3). PRs keep lint, site, CodeQL and the aggregate `ci` check; its
-success/skipped rule is unchanged. A terminal-check or macOS-only break can sit on `dev` until the push run or a preview
-finds it, before the full run permits a release (D251, D266).
+can still cover promotion to `test` (CIW-D1, CIW-D3). PRs keep lint (Markdown, spelling, file links and docs tests),
+CodeQL and the aggregate `ci` check; its success/skipped rule is unchanged. A terminal-check, site-build or macOS-only
+break can sit on `dev` until the push run or a preview finds it, before the full run permits a release (D251, D266).
 
 **Nothing to test.** A range from a commit to itself, or between two commits with the same tree, tests nothing:
-`changes` outputs `code` and `checks` false, `test` and `terminal` are skipped, and `ci` passes; `lint` and `site`,
-which take under a minute on Linux, run as before. A pull request that changes nothing still runs everything (D230).
-So:
+`changes` outputs `code` and `checks` false, `test` and `terminal` are skipped, and `ci` passes; `lint` runs on every PR
+and push, and `site` runs on pushes, merge groups and full runs. A pull request that changes nothing still runs
+everything (D230). So:
 
 - a squash merge tests its changed scope on all configured platforms, even when its Linux-only PR passed;
 - after merges close together whose runs were cancelled or failed, the next push tests every one of them since the
