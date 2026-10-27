@@ -641,12 +641,14 @@ ceiling, with 750 as the next step. At each step, cap every pre-existing larger 
 1,500. Moves carry caps to the new paths; new modules obey the current ceiling. A cap may reset to measured growth
 caused solely by formatting longer import paths, with its old/new value and delta recorded in the task (ORG-D2 dated
 note). Preserve normal formatting, non-import code and comments; verify mapped dependencies and executable bodies. This
-exception permits no implementation growth. Lower touched exceptions to their actual size and remove them below the
-ceiling. Final handwritten exceptions require a named responsibility, rationale and follow-up task; no blanket exemption
-for App. Keep generated server locks outside the handwritten ceiling under a separate measured cap and verify their
-generator. Do not split embedded strings by hand. The research inventory of all 55 modules over 500 is the backlog, not
-only the nine over 1,000. Every row receives an extraction or a documented cohesive-module assessment; reaching 600 does
-not erase the 500-line aim.
+exception permits no implementation growth. The same applies when import formatting alone moves a file from at or below
+the ceiling to above it; the file gets an exact cap equal to its measured size, recorded in the task and removed by its
+extraction task. Lower touched exceptions to their actual size and remove them below the ceiling. Final handwritten
+exceptions require a named responsibility, rationale and follow-up task; no blanket exemption for App. Keep generated
+server locks outside the handwritten ceiling under a separate measured cap and verify their generator. Do not split
+embedded strings by hand. The research inventory of all 55 modules over 500 is the backlog, not only the nine over
+1,000. Every row receives an extraction or a documented cohesive-module assessment; reaching 600 does not erase the
+500-line aim.
 
 For tests, recommend a 1,000-line aim and a 1,500-line ceiling on new/split feature files, with exact non-growing caps
 for remaining legacy files; the import-formatting exception above applies to source caps only. Keep process fixtures and
