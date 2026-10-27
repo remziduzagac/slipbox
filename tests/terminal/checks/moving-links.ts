@@ -1,7 +1,7 @@
 // A symlink renamed or moved itself (D260), and what a rename writes through links on its way (VV-D6): a check each,
 // driven through the explorer, the command line at `:` and the undo, on a small vault (or home) each check builds in
-// its own folder. tests/vault.test.ts holds the same cases as unit tests; a case only the command line has (a move
-// into a folder that isn't there yet, a plan saved and applied) is run with the CLI beside the TUI.
+// its own folder. tests/core/workspace/mutations holds the same cases as unit tests; a case only the command line
+// has (a move into a folder that isn't there yet, a plan saved and applied) is run with the CLI beside the TUI.
 
 import {
   chmodSync,

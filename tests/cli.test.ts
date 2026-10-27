@@ -1,8 +1,8 @@
 import { UNIT_TIMEOUT_MS, TEST_BUDGETS } from "./support/timeouts.ts";
 // The CLI as an agent meets it: the real `slipbox` process, run against a copy of the demo vault
 // (examples/vault), with its exit codes, its human output and its --json envelope. Every CLI
-// command is run here; the last test fails if one isn't. (tests/vault.test.ts drives runCli in
-// process for the finer cases.)
+// command is run here; the last test fails if one isn't. Feature files under tests/core/workspace and tests/cli
+// drive runCli in process for the finer cases.
 
 import { afterAll, beforeAll, describe, expect, setDefaultTimeout, test } from "bun:test";
 import {
