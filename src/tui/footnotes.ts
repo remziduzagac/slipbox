@@ -10,7 +10,7 @@ import {
   footnotesOf,
   renameFootnote,
   type TextEdit,
-} from "../core/footnotes.ts";
+} from "../core/documents/model/footnotes.ts";
 import { stringWidth } from "../core/foundation/text/width.ts";
 import { match } from "./match.ts";
 import type { App, View } from "./app.ts";
@@ -98,7 +98,7 @@ export class Footnotes {
     if (this.app.panels.narrow || this.app.ui.zen) this.app.outline.overlay = false;
   }
 
-  // Adding and changing footnotes (3.18): the edits core/footnotes.ts makes, to the buffer as one
+  // Adding and changing footnotes (3.18): the edits core/documents/model/footnotes.ts makes, to the buffer as one
   // undo step, then saved — as a task's tick is.
 
   /**

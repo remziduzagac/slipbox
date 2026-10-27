@@ -9,7 +9,15 @@
 // and how a link resolves graph-resolve.ts's (`LinkResolver`). All of it is imported from here.
 
 import { statSync } from "node:fs";
-import { commentLinks, grammar, grammarFor, grammarNow, linkTokens, parseSyntax, type Grammar } from "../../syntax.ts";
+import {
+  commentLinks,
+  grammar,
+  grammarFor,
+  grammarNow,
+  linkTokens,
+  parseSyntax,
+  type Grammar,
+} from "../../documents/syntax/syntax.ts";
 import { basename, isAbsolute, join, posix, relative, sep } from "node:path";
 import { isMainThread } from "node:worker_threads";
 import type { Config } from "../../application/config/config.ts";
@@ -17,27 +25,20 @@ import { climbsOut, ensureDir, readJson, readText, sweepTemps, writeJson } from 
 import { blockingLink } from "../vaults/symlinks.ts";
 import { countForms, type FormCounts } from "../links/convention.ts";
 import { LinkIndex, normKey, onDisk, type Resolution } from "../links/links.ts";
-import type { ParseCache as ChunkCache } from "../../parse.ts";
+import type { ParseCache as ChunkCache } from "../../documents/markdown/parse.ts";
 import { tildePath } from "../vaults/names.ts";
-import { sharedParseCache } from "../../parsecache.ts";
+import { sharedParseCache } from "../../documents/markdown/parsecache.ts";
 import { cacheDir, ensureCacheHome, stateDir } from "../../foundation/platform/paths.ts";
 import { headCommit, headOf } from "../../git.ts";
 import { changedBetween, inVault } from "../../gitops.ts";
 import { contentHash, Redirects } from "../links/redirects.ts";
-import { dataLinks, parseData } from "../../data.ts";
-import { classify, extensionOf } from "../../filetypes.ts";
+import { dataLinks, parseData } from "../../documents/model/data.ts";
+import { classify, extensionOf } from "../../documents/model/filetypes.ts";
 import { type AskedWhole, type HomeWalk, homeWalk, inFolders, walksInto } from "../vaults/home.ts";
 import { checkoutAt, findVaultRoot, isListed, isVaultRoot, type VaultLocation } from "../vaults/vault.ts";
-import {
-  HOME_LIMITS,
-  listDirectory,
-  type NoteFile,
-  type Skipped,
-  type WalkCap,
-  WalkFilter,
-  walkVault,
-} from "../walk/walk.ts";
-import { tagKey, tagName } from "../../tags.ts";
+import { HOME_LIMITS, listDirectory, WalkFilter, walkVault } from "../walk/walk.ts";
+import type { NoteFile, Skipped, WalkCap } from "../walk/walk.ts";
+import { tagKey, tagName } from "../../documents/markdown/tags.ts";
 import {
   type LinkRef,
   type NoteEntry,
@@ -55,7 +56,6 @@ import {
 } from "./graph-types.ts";
 import { INDEX_VERSION, extractNote, extractFromSource } from "./graph-extract.ts";
 import { LinkResolver } from "./graph-resolve.ts";
-
 export { certainty, fragile, describeLanding, disambiguated } from "./graph-types.ts";
 export type {
   LinkKind,

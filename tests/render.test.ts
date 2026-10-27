@@ -14,20 +14,20 @@ import { layoutSplitDiff, splitColumns, splitRows } from "../src/core/layout/spl
 import { layoutScreen, type ScreenPart, screenText } from "../src/core/layout/screen.ts";
 import { comparable, diffView, unseenRows } from "../src/core/merge.ts";
 import { type PictureSource, renderMarkdown, renderTree } from "../src/core/layout/render.ts";
-import { dataLinks, parseData } from "../src/core/data.ts";
-import { classify } from "../src/core/filetypes.ts";
+import { dataLinks, parseData } from "../src/core/documents/model/data.ts";
+import { classify } from "../src/core/documents/model/filetypes.ts";
 import { loadMermaid } from "../src/core/diagrams.ts";
 import { loadRasterizer } from "../src/core/svg.ts";
 import { loadTypesetter } from "../src/core/typeset.ts";
 import { paintJobs } from "../src/core/paint-jobs.ts";
-import { parseNoteFile } from "../src/core/readers.ts";
+import { parseNoteFile } from "../src/core/documents/model/readers.ts";
 import { findHeading, headingFragment } from "../src/core/workspace/links/landing.ts";
-import { headingsOf, parseMarkdown } from "../src/core/parse.ts";
+import { headingsOf, parseMarkdown } from "../src/core/documents/markdown/parse.ts";
 import { allocate } from "../src/core/layout/table.ts";
 import { countLines, measure, wrapGraphemes, wrapSpans } from "../src/core/layout/wrap.ts";
 import type { Span } from "../src/core/layout/ir.ts";
 import { blend, listThemes, loadTheme } from "../src/core/theme/index.ts";
-import { layoutWidth } from "../src/core/note.ts";
+import { layoutWidth } from "../src/core/documents/model/note.ts";
 import { stringWidth } from "../src/core/foundation/text/width.ts";
 
 // Isolation (testing.md): never read or write the real config, cache or state directories.
@@ -902,7 +902,7 @@ describe("review cycle 5 (render: what the snapshots can't see)", () => {
 
 describe("the render cache (15.1)", () => {
   test("rendering with the last render's blocks gives exactly a fresh render, edit after edit", async () => {
-    const { newParseCache, parseMarkdown } = await import("../src/core/parse.ts");
+    const { newParseCache, parseMarkdown } = await import("../src/core/documents/markdown/parse.ts");
     const { newRenderCache, renderTree } = await import("../src/core/layout/render.ts");
     let seed = 3;
     const rand = (n: number) => {
@@ -948,7 +948,7 @@ describe("the render cache (15.1)", () => {
     }
   });
   test("a code block too wide, cached wrapped, is laid out again to scroll sideways, and back", async () => {
-    const { newParseCache, parseMarkdown } = await import("../src/core/parse.ts");
+    const { newParseCache, parseMarkdown } = await import("../src/core/documents/markdown/parse.ts");
     const { newRenderCache, renderTree } = await import("../src/core/layout/render.ts");
     const text = `# Code\n\n\`\`\`sh\necho ${"a long argument ".repeat(6)}\n\`\`\`\n`;
     const pcache = newParseCache();
@@ -1217,7 +1217,7 @@ describe("Mermaid (12.10)", async () => {
   test("drawn while its library loads: its code, the layout saying it waited, the block not kept — drawn once it's in", async () => {
     // A process of its own: here the library is in already.
     const script = `
-      import { parseMarkdown } from "./src/core/parse.ts";
+      import { parseMarkdown } from "./src/core/documents/markdown/parse.ts";
       import { newRenderCache, renderTree } from "./src/core/layout/render.ts";
       import { glyphsFor } from "./src/core/glyphs.ts";
       import { loadMermaid } from "./src/core/diagrams.ts";

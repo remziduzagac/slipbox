@@ -15,7 +15,7 @@ import { homedir } from "node:os";
 import { isAbsolute, join, relative } from "node:path";
 import { parse as parseToml } from "smol-toml";
 import type { Config } from "../../application/config/config.ts";
-import { stripJsonComments } from "../../data.ts";
+import { stripJsonComments } from "../../documents/model/data.ts";
 import { readRegular, SMALL_FILE } from "../../foundation/platform/fsutil.ts";
 
 export type LinkStyle = "markdown" | "wiki";

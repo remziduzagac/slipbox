@@ -4,7 +4,7 @@
 import { isAbsolute, join } from "node:path";
 import type { Graph, LinkKind, ResolvedLink } from "./workspace/graph/graph.ts";
 import { normKey } from "./workspace/links/links.ts";
-import { slugify } from "./parse.ts";
+import { slugify } from "./documents/markdown/parse.ts";
 import { RenameError, type RenamePlan, Collector, dirtyTrees } from "./rename-plan.ts";
 import { type Site, safeDecode } from "./rename-links.ts";
 

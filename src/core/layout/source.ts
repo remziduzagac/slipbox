@@ -7,8 +7,8 @@
 // spaces, all mapping to the tab; a wide character is one cell of width two). Control characters
 // show as `�` — the terminal never receives one.
 
-import { headingLabel, parseMarkdown, slugify } from "../parse.ts";
-import type { Span as SyntaxSpan } from "../syntax.ts";
+import { headingLabel, parseMarkdown, slugify } from "../documents/markdown/parse.ts";
+import type { Span as SyntaxSpan } from "../documents/syntax/syntax.ts";
 import { highlight, type Token } from "./highlight.ts";
 import { graphemes, graphemeWidth } from "../foundation/text/width.ts";
 import type { Layout, LayoutHeading, Line, Span } from "./ir.ts";

@@ -149,7 +149,7 @@ The CLI's commands are the user's reference, [cli.md](../../docs/manual/cli.md);
 | [symlinks.ts][o23] | VV-D6 | links followed only when you say so: the answers, a link's scope, writes, the probe |
 | [registry.ts][o24] | 17.3–17.6, 21.8 | `[vault]` identity; the machine's vaults by path (`roots.json`) |
 | [remotes.ts][o30] | 21.6 | a repository's remotes as `host/path`: what names it, what hosting URLs are its |
-| `core/parsecache.ts` | 20.11 | notes' parsed content by content hash, shared by every copy on the machine |
+| [parsecache.ts][o43] | 20.11 | notes' parsed content by content hash, shared by every copy on the machine |
 | [names.ts][o25] | 21.9 | a vault as it's told: its name, else its path (`~/…`); `name@branch`; `~`, `Elsewhere` |
 | `core/git.ts` | 17.19 | a vault's git checkout, from `.git`: the main one or a worktree, the branch |
 | `core/gitops.ts` | 5.11–5.14, 23.6 | git run for what `.git` can't say cheaply: status, changes, a file at a commit |
@@ -168,15 +168,15 @@ The CLI's commands are the user's reference, [cli.md](../../docs/manual/cli.md);
 | `core/rename-log.ts` | 7.4 | each rename's files and moves, as it found them: what an undo gives back |
 | `core/files.ts` | 18.4, 18.5, 18.11 | delete to the vault's trash and restore; copy; an unmade vault's `.slipbox/` |
 | `core/workspace/walk/walk.ts` | 1.2, 0.11 | the walk and `WalkFilter`, shared with the watcher |
-| `core/wikilink.ts` | 1.3 | micromark tokenizer for `[[link]]` and `![[embed]]` |
-| `core/footnotes.ts` | 3.17 | a note's footnotes: labels, definitions, references, in GFM's order |
-| `core/tags.ts` | 1.6 | micromark tokenizer for `#tag`; tag names and keys (the graph's tag index) |
-| `core/parse.ts` | 1.3 | remark + gfm + frontmatter + wikilinks; headings, slugs |
-| `core/html.ts`, `html-adapter.ts` | HTML | bounded tokenizer, omission ranges and semantic document adapter |
-| `core/html-export.ts`, `html-markdown.ts` | HTML | semantic export and lossless Markdown HTML runs |
+| `core/documents/markdown/wikilink.ts` | 1.3 | micromark tokenizer for `[[link]]` and `![[embed]]` |
+| `core/documents/model/footnotes.ts` | 3.17 | a note's footnotes: labels, definitions, references, in GFM's order |
+| `core/documents/markdown/tags.ts` | 1.6 | micromark tokenizer for `#tag`; tag names and keys (the graph's tag index) |
+| `core/documents/markdown/parse.ts` | 1.3 | remark + gfm + frontmatter + wikilinks; headings, slugs |
+| [html.ts][o44], `html-adapter.ts` | HTML | bounded tokenizer, omission ranges and semantic document adapter |
+| [html-export.ts][o45], `html-markdown.ts` | HTML | semantic export and lossless Markdown HTML runs |
 | `tui/html.ts` | HTML | per-buffer disclosure state and revealing navigation targets |
-| `core/obsidian.ts` | DF-D17 | Obsidian's `==highlight==` and `%%comment%%`, read into the tree; a block comment too |
-| `core/parse-pool.ts` | 15.1 | a big note's chunks parsed on up to four workers (`parse-worker.ts`), into its cache |
+| [obsidian.ts][o46] | DF-D17 | Obsidian's `==highlight==` and `%%comment%%`, read into the tree; a block comment too |
+| [parse-pool.ts][o47] | 15.1 | a big note's chunks parsed on up to four workers (`parse-worker.ts`), into its cache |
 | [url.ts][o4] | 15.1, 25.6 | where a worker's script is, from the source or in the compiled binary (D232) |
 | [worker-requests.ts][o5] | 15.1, 25.6 | a worker's requests one at a time: a bounded mailbox, a line, deadlines |
 | `core/workspace/links/links.ts` | 1.4 | `LinkIndex`: case policy, collisions, markdown URLs |
@@ -191,15 +191,15 @@ The CLI's commands are the user's reference, [cli.md](../../docs/manual/cli.md);
 | [graph-types.ts][o36] | 1.5–1.7 | a note's entry, a link as written and resolved, a backlink, a problem; how sure |
 | [graph-extract.ts][o37] | 1.5, 1.6, 20.11 | a note's entry from its text: title, headings, links, tags, names |
 | [graph-resolve.ts][o38] | 20.2, 21.2–21.7 | `LinkResolver`: by path, name, alias, pointer, hosting URL; moves |
-| `core/readers.ts` | 16.2 | a reader per note format: its parse into mdast, headings and links off raw lines |
-| `core/filetypes.ts` | 16.1 | a file's group (note, data, text, binary) and format, by extension |
-| `core/doctypes.ts` | 22.2, 22.3 | document types: notes of a kind by where they are; their rules, order, status |
+| [readers.ts][o48] | 16.2 | a reader per note format: its parse into mdast, headings and links off raw lines |
+| `core/documents/model/filetypes.ts` | 16.1 | a file's group (note, data, text, binary) and format, by extension |
+| [doctypes.ts][o49] | 22.2, 22.3 | document types: notes of a kind by where they are; their rules, order, status |
 | [convention.ts][o39] | 21.4 | a vault's links' convention: your setting, its tool's, its notes', ours |
 | [write-link.ts][o40] | 21.5 | a link as slipbox writes one: completion, the link picker, `slipbox link` |
 | [folders.ts][o27] | 21.6 | named folders: by `.slipbox/` name, else remote; copies, the default; the lookup |
 | [pointer.ts][o41] | 21.7 | `slipbox://` pointers: parsed, resolved (a branch: its worktree, or from git), written |
 | `core/workspace/links/hosting.ts` | — | a repository's hosting URLs (GitHub, GitLab, Bitbucket) read as its files |
-| `core/data.ts` | 16.11–16.15 | data files (TOML, INI, YAML, JSON, CSV) read into a document tree; their links |
+| [data.ts][o50] | 16.11–16.15 | data files (TOML, INI, YAML, JSON, CSV) read into a document tree; their links |
 | [lazy.ts][o7] | 16.6 | modules and assets loaded on first use: asked synchronously, heard when ready |
 | `core/diagrams.ts` | 12.10, 12.16 | Mermaid's drawings read once done: box drawing, an SVG, or why it's its code |
 | `core/diagram-jobs.ts` | 12.10, D253 | the diagrams' queue and results, drawn one at a time in `diagram-worker.ts` |
@@ -228,11 +228,11 @@ The CLI's commands are the user's reference, [cli.md](../../docs/manual/cli.md);
 | `core/export/spool.ts` | 10.x | the output staged privately (`stream.ts`), published by the owner |
 | `core/export/zip.ts` | 10.x | EPUB's ZIP, an entry at a time; no ZIP64, so 4 GiB or 65,535 files at most |
 | `tui/placeholders.ts` | 12.7 | Kitty's Unicode placeholders: a picture's id, its cells as text, sent once, let go |
-| `core/syntax.ts` | 16.7–16.9, 16.18–16.22 | tree-sitter: spans, outline, errors, comments; parts in other languages |
-| `core/syntax-thread.ts` | 16.7–16.9, D252 | a code file's grammar, parse and outline on `syntax-worker.ts` |
-| `core/docformats.ts` | 24.4 | a doc comment read into one shape, whatever wrote it: JSDoc, Google, NumPy, Sphinx |
+| [syntax.ts][o51] | 16.7–16.9, 16.18–16.22 | tree-sitter: spans, outline, errors, comments; parts in other languages |
+| [syntax-thread.ts][o52] | 16.7–16.9, D252 | a code file's grammar, parse and outline on `syntax-worker.ts` |
+| [docformats.ts][o53] | 24.4 | a doc comment read into one shape, whatever wrote it: JSDoc, Google, NumPy, Sphinx |
 | [landing.ts][o42] | 11.3 | where a link lands in its note — a heading, a block's `^id`, `L42` — and its text there |
-| `core/note.ts` | 2.x, 1.11 | a note rendered for a pane: parse, resolve links, embeds' notes, lay out (CLI and TUI) |
+| [note.ts][o54] | 2.x, 1.11 | a note rendered for a pane: parse, resolve links, embeds' notes, lay out (CLI and TUI) |
 | `core/layout/*` | 2.1–2.8 | mdast → layout IR; tables; wrap; highlighting; ANSI |
 | `core/layout/source.ts` | 4.13 | the markdown as a layout, with each cell's source offset |
 | `core/layout/live.ts` | 4.14 | a note's blocks; the lens composed into the render |
@@ -276,7 +276,7 @@ The CLI's commands are the user's reference, [cli.md](../../docs/manual/cli.md);
 | `core/workspace/graph/watch.ts` | 5.1, 5.2 | per-directory watcher, debounce, polling fallbacks |
 | [vault-feed.ts][o29] | 5.1, 5.9, 5.10 | the watcher's news into a graph, held while git writes (TUI) |
 | `core/capture.ts` | 8.2–8.4 | scratch location, reference format, append |
-| `core/context.ts` | 9.7 | the context bundle: a note, its links and backlinks, as one document for an agent |
+| [context.ts][o55] | 9.7 | the context bundle: a note, its links and backlinks, as one document for an agent |
 | `core/lint.ts` | 3.21 | the lint surface: your markdownlint-cli2 run, its findings read |
 | `core/servers/languages.ts` | 19.2 | languages and their servers, built in and in Helix's shape from the config |
 | `core/servers/find.ts` | 19.3, 19.4 | a file's project root; where a server's program is; which servers serve a file |
@@ -519,7 +519,7 @@ slices passing it by; the main thread only puts its chunks together. Where threa
 **Big notes (`15.1`, D120).** Three things keep a big note's cost in proportion to what changed, and two more keep
 the whole-note work — the first open, a change of width — short:
 
-- **The parse is in chunks** (`parseMarkdown` in `core/parse.ts`): the note is cut where the result
+- **The parse is in chunks** (`parseMarkdown` in `core/documents/markdown/parse.ts`): the note is cut where the result
   is certain to be the same as a whole parse — after a blank line, a heading, a closed fence or
   HTML block, and inside a list only where the block certainly began as one — each chunk parsed on
   its own, lists the cut split joined again, and reference and footnote definitions from other
@@ -531,7 +531,8 @@ the whole-note work — the first open, a change of width — short:
 - **SOURCE view lays out changed lines** (`layoutSource`): the lines before and after an edit are
   reused, shifted when lines were added or taken away; the highlighter's per-line state says where
   reuse may resume. Headings are found line by line as it goes.
-- **A big note parses on other threads** (`core/parse-pool.ts`): when what's left to parse of a note is 128 KB or
+- **A big note parses on other threads** (`core/documents/markdown/parse-pool.ts`): when what's left to parse of a note
+  is 128 KB or
   more (a first open, a reload that changed most of it), its chunks are split among up to four workers, which send
   their nodes back as JSON into the buffer's parse cache — so the parse that follows here finds every chunk done.
   Meanwhile the view draws one line, `reading big.md — 20,000 lines…`, without moving (its reading position waits
@@ -608,3 +609,17 @@ ordinary note needs.
 [o40]: ../../src/core/workspace/links/write-link.ts
 [o41]: ../../src/core/workspace/links/pointer.ts
 [o42]: ../../src/core/workspace/links/landing.ts
+
+[o43]: ../../src/core/documents/markdown/parsecache.ts
+[o44]: ../../src/core/documents/markdown/html.ts
+[o45]: ../../src/core/documents/markdown/html-export.ts
+[o46]: ../../src/core/documents/markdown/obsidian.ts
+[o47]: ../../src/core/documents/markdown/parse-pool.ts
+[o48]: ../../src/core/documents/model/readers.ts
+[o49]: ../../src/core/documents/model/doctypes.ts
+[o50]: ../../src/core/documents/model/data.ts
+[o51]: ../../src/core/documents/syntax/syntax.ts
+[o52]: ../../src/core/documents/syntax/syntax-thread.ts
+[o53]: ../../src/core/documents/model/docformats.ts
+[o54]: ../../src/core/documents/model/note.ts
+[o55]: ../../src/core/documents/model/context.ts

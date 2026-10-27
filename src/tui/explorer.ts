@@ -3,7 +3,7 @@
 // from the disk (`explorer-disk.ts`, VV-D8); a row's marks are `marks.ts`' (VV-D9).
 
 import ignore from "ignore";
-import { classify, type FileGroup } from "../core/filetypes.ts";
+import { classify, type FileGroup } from "../core/documents/model/filetypes.ts";
 import { type Dirent, readdirSync, statSync } from "node:fs";
 import { basename, dirname, isAbsolute, join, posix, relative, sep } from "node:path";
 import { folderUnreadable, unreadableWords } from "../core/foundation/platform/fsutil.ts";

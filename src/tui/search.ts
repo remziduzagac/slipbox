@@ -7,7 +7,7 @@ import { planReplaceLater } from "../core/replace-files.ts";
 import * as R from "./replacing.ts";
 import { IndexJob, indexFile, search, type SearchHit, SearchIndex, type SearchResult } from "../core/search.ts";
 import { leadsOut, peekAt } from "./peek.ts";
-import { notesOfType, ofType, type TypedNote } from "../core/doctypes.ts";
+import { notesOfType, ofType, type TypedNote } from "../core/documents/model/doctypes.ts";
 import { type Scope, SCOPES, searchOthers } from "../core/scope.ts";
 import { isListed } from "../core/workspace/vaults/vault.ts";
 import { ELSEWHERE } from "../core/workspace/vaults/names.ts";

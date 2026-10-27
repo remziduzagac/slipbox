@@ -5,7 +5,7 @@ import { join, relative } from "node:path";
 import { placeAt } from "./editing.ts";
 import type { LinkProblem } from "../core/workspace/graph/graph.ts";
 import { visibleLint, type LintVisibility } from "../core/lint-visibility.ts";
-import { parseMarkdown, type ParsedNote } from "../core/parse.ts";
+import { parseMarkdown, type ParsedNote } from "../core/documents/markdown/parse.ts";
 import type { LintIssue } from "../core/lint.ts";
 import { srcAt } from "../core/layout/ir.ts";
 import {

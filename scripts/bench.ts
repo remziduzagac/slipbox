@@ -270,7 +270,7 @@ const FROM_CACHE = "2,000 notes, a second copy: from the parse cache";
 const NO_CACHE = "2,000 notes, a second copy: parsed again (no cache)";
 if ([FIRST, FROM_CACHE, NO_CACHE].some(want)) {
   const { cpSync, mkdirSync } = await import("node:fs");
-  const { ParseCache } = await import("../src/core/parsecache.ts");
+  const { ParseCache } = await import("../src/core/documents/markdown/parsecache.ts");
   const { Graph } = await import("../src/core/workspace/graph/graph.ts");
   const { rootAt } = await import("../src/core/workspace/vaults/vault.ts");
   const many = join(dir, "many");
@@ -281,7 +281,7 @@ if ([FIRST, FROM_CACHE, NO_CACHE].some(want)) {
       join(many, `n${i}.md`),
       `# Note ${i}\n\n${mixed(120).replace(/link-(\d+)/g, `n${i % 97}`)}\nThe end of note ${i}.\n`,
     );
-  const build = (root: string, cache: import("../src/core/parsecache.ts").ParseCache | null) =>
+  const build = (root: string, cache: import("../src/core/documents/markdown/parsecache.ts").ParseCache | null) =>
     time(async () => {
       const loc = rootAt(root);
       const g = new Graph(loc, DEFAULT_CONFIG).build(false, "lazy");

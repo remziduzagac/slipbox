@@ -6,7 +6,7 @@
 import { randomBytes } from "node:crypto";
 import { cpSync, existsSync, mkdirSync, renameSync, rmSync, statSync } from "node:fs";
 import { basename, dirname, isAbsolute, join, posix, relative } from "node:path";
-import { classify } from "./filetypes.ts";
+import { classify } from "./documents/model/filetypes.ts";
 import { landsInside, readJson, writeJson } from "./foundation/platform/fsutil.ts";
 import type { Backlink, Graph } from "./workspace/graph/graph.ts";
 import { type Keyed, stateDir } from "./foundation/platform/paths.ts";

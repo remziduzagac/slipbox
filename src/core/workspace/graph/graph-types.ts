@@ -3,7 +3,7 @@
 
 import { posix } from "node:path";
 import type { Landed } from "../links/links.ts";
-import type { AnchorInfo, HeadingInfo } from "../../parse.ts";
+import type { AnchorInfo, HeadingInfo } from "../../documents/markdown/parse.ts";
 import type { Graph } from "./graph.ts";
 
 export type LinkKind = "wiki" | "embed" | "markdown" | "image";

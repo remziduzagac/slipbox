@@ -570,7 +570,8 @@ deleted (D61). Each vault's is in its cache folder (the link index, the search i
   `/media`, `/run/media` or `/mnt` that isn't there) stays listed, and links into it are broken, said so, until it
   is back; its links into other vaults drop out of their backlinks meanwhile (`unavailable` in
   `core/workspace/vaults/registry.ts`).
-- **Shared by content** (`core/parsecache.ts`): what a note says once parsed (links as written, headings, anchors,
+- **Shared by content** (`core/documents/markdown/parsecache.ts`): what a note says once parsed (links as written,
+  headings, anchors,
   tags, aliases, previous names, a title of its own) is kept in one SQLite file, `parsed.db`, by its text's hash (its
   BOM aside), its format and the parser's version (`INDEX_VERSION`, bumped whenever what is extracted changes), for
   every copy on this machine: a worktree, a branch switched to, a clone parses only what no copy has (D61). No

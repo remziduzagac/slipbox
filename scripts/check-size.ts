@@ -20,7 +20,7 @@ export const CAPPED: Record<string, number> = {
   "src/core/workspace/graph/graph.ts": 1433,
   "src/core/layout/code.ts": 1417,
   "src/core/layout/render.ts": 1076,
-  "src/core/syntax.ts": 1170,
+  "src/core/documents/syntax/syntax.ts": 1170,
   "src/tui/app.ts": 1446,
   "src/tui/explorer.ts": 1268,
   "src/tui/keys.ts": 1166,

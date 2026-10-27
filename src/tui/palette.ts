@@ -2,7 +2,7 @@
 // the recent ones first; the help list by group, with the keys of the pane you're in.
 
 import type { App, ListItem } from "./app.ts";
-import { classify } from "../core/filetypes.ts";
+import { classify } from "../core/documents/model/filetypes.ts";
 import { listThemes } from "../core/theme/index.ts";
 import { FORMATS } from "../core/export/index.ts";
 import { rootTypes } from "../core/diagnostics.ts";

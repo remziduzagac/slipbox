@@ -1,5 +1,5 @@
 // Presentation shared by translated HTML blocks and inlines.
-import type { HtmlPresentation } from "../html-adapter.ts";
+import type { HtmlPresentation } from "../documents/markdown/html-adapter.ts";
 import { A_BOLD, A_ITALIC, A_STRIKE, A_UNDERLINE, type Line } from "./ir.ts";
 import type { Style } from "./render-context.ts";
 import { stringWidth } from "../foundation/text/width.ts";

@@ -1,7 +1,7 @@
 // File operations (18.x): a note or folder made, renamed, moved, copied, cut and pasted, deleted to the trash and
 // restored from it — each one a preview of the links it changes first.
 
-import { classify, extensionOf, isKnownExtension } from "../core/filetypes.ts";
+import { classify, extensionOf, isKnownExtension } from "../core/documents/model/filetypes.ts";
 import { existsSync, mkdirSync, statSync } from "node:fs";
 import { basename, dirname, join, posix, relative, sep } from "node:path";
 import { climbsOut, writeNote } from "../core/foundation/platform/fsutil.ts";

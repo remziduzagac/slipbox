@@ -1,0 +1,78 @@
+{
+  "moves": {
+    "src/core/note.ts": "src/core/documents/model/note.ts",
+    "src/core/readers.ts": "src/core/documents/model/readers.ts",
+    "src/core/filetypes.ts": "src/core/documents/model/filetypes.ts",
+    "src/core/docformats.ts": "src/core/documents/model/docformats.ts",
+    "src/core/doctypes.ts": "src/core/documents/model/doctypes.ts",
+    "src/core/footnotes.ts": "src/core/documents/model/footnotes.ts",
+    "src/core/context.ts": "src/core/documents/model/context.ts",
+    "src/core/data.ts": "src/core/documents/model/data.ts",
+    "src/core/parse.ts": "src/core/documents/markdown/parse.ts",
+    "src/core/parsecache.ts": "src/core/documents/markdown/parsecache.ts",
+    "src/core/parse-pool.ts": "src/core/documents/markdown/parse-pool.ts",
+    "src/core/parse-worker.ts": "src/core/documents/markdown/parse-worker.ts",
+    "src/core/wikilink.ts": "src/core/documents/markdown/wikilink.ts",
+    "src/core/tags.ts": "src/core/documents/markdown/tags.ts",
+    "src/core/obsidian.ts": "src/core/documents/markdown/obsidian.ts",
+    "src/core/html.ts": "src/core/documents/markdown/html.ts",
+    "src/core/html-adapter.ts": "src/core/documents/markdown/html-adapter.ts",
+    "src/core/html-markdown.ts": "src/core/documents/markdown/html-markdown.ts",
+    "src/core/html-export.ts": "src/core/documents/markdown/html-export.ts",
+    "src/core/syntax.ts": "src/core/documents/syntax/syntax.ts",
+    "src/core/syntax-thread.ts": "src/core/documents/syntax/syntax-thread.ts",
+    "src/core/syntax-worker.ts": "src/core/documents/syntax/syntax-worker.ts"
+  },
+  "retained": [
+    {
+      "file": "blueprint/workstreams/code-organization/design.md",
+      "text": "src/core/data",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "src/core/data",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/design.md",
+      "text": "src/core/parse",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "src/core/parse",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/archive/doc-findings/tasks/archive/code-and-rendering.md",
+      "text": "src/core/obsidian",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "src/core/html",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/design.md",
+      "text": "src/core/syntax",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "src/core/syntax",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "src/core/syntax-thread",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "src/core/syntax-worker",
+      "reason": "Historical source path at the recorded stage; the manifest maps its current location."
+    }
+  ]
+}

@@ -15,17 +15,17 @@ import { Background } from "./background.ts";
 // through `Host`; tui/run.ts binds both to OpenTUI. That keeps the whole model testable.
 
 import { cancelGitRead } from "./gitquery.ts";
-import { DOCUMENT_GRAMMARS, grammarFor } from "../core/syntax.ts";
+import { DOCUMENT_GRAMMARS, grammarFor } from "../core/documents/syntax/syntax.ts";
 import { MERMAID } from "../core/diagrams.ts";
 import { REGEX, stopRegexJobs } from "../core/regex-jobs.ts";
-import { stopParsePool } from "../core/parse-pool.ts";
+import { stopParsePool } from "../core/documents/markdown/parse-pool.ts";
 import { stopWalkThreads } from "../core/workspace/walk/walk-thread.ts";
 import { Listings } from "./listings.ts";
 import { stopBacklinkJobs } from "../core/workspace/graph/backlinks-jobs.ts";
 import { stopSpellThread } from "../core/spell-thread.ts";
-import { stopSyntaxThread } from "../core/syntax-thread.ts";
+import { stopSyntaxThread } from "../core/documents/syntax/syntax-thread.ts";
 import { onLoaded } from "../core/foundation/platform/lazy.ts";
-import { classify, extensionOf } from "../core/filetypes.ts";
+import { classify, extensionOf } from "../core/documents/model/filetypes.ts";
 import { accessSync, appendFileSync, constants as fsConstants } from "node:fs";
 import { dirname, isAbsolute, join, relative } from "node:path";
 import { climbsOut, folderUnreadable, WriteRefused, writeNote } from "../core/foundation/platform/fsutil.ts";

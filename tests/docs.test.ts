@@ -10,7 +10,7 @@ import { CLI_COMMANDS, FLAGS } from "../src/cli/cli.ts";
 import { canonSeq } from "../src/core/application/commands/registry.ts";
 import { extractText } from "../src/core/workspace/graph/graph.ts";
 import { githubSlugs } from "../src/core/workspace/links/landing.ts";
-import { type Grammar, grammar } from "../src/core/syntax.ts";
+import { type Grammar, grammar } from "../src/core/documents/syntax/syntax.ts";
 import {
   DEFAULT_EXPLORER_KEYS,
   DEFAULT_FOOTNOTE_KEYS,

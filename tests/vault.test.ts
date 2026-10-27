@@ -1468,8 +1468,8 @@ describe("links in a component's comments (16.10, 16.22)", () => {
 
 describe("the demo vault's code samples", () => {
   test("each language's sample parses cleanly, has an outline, and every path in its comments resolves", async () => {
-    const { grammar, grammarFor, parseSyntax } = await import("../src/core/syntax.ts");
-    const { classify, extensionOf } = await import("../src/core/filetypes.ts");
+    const { grammar, grammarFor, parseSyntax } = await import("../src/core/documents/syntax/syntax.ts");
+    const { classify, extensionOf } = await import("../src/core/documents/model/filetypes.ts");
     const demo = join(import.meta.dir, "..", "examples", "vault");
     const g = openGraph(locateVault({ root: demo }), DEFAULT_CONFIG, false);
     await g.loadGrammars();
@@ -3743,7 +3743,7 @@ describe("the context bundle (9.7)", () => {
   const paths = (b: { items: { path: string; why: string }[] }) => b.items.map((i) => `${i.why}:${i.path}`);
 
   test("breadth first: the note, what it links to in the order written, then what links to it; a file's text, never a picture's or a dump's", async () => {
-    const { buildContext } = await import("../src/core/context.ts");
+    const { buildContext } = await import("../src/core/documents/model/context.ts");
     const g = setup();
     const b = buildContext(g, ["a.md"], { depth: 1, backlinks: true, limit: 25 });
     expect(paths(b)).toEqual([
@@ -3776,7 +3776,7 @@ describe("the context bundle (9.7)", () => {
   });
 
   test("a linked file gone since the index, or one that can't be read: named as such, never included", async () => {
-    const { buildContext } = await import("../src/core/context.ts");
+    const { buildContext } = await import("../src/core/documents/model/context.ts");
     const { chmodSync } = await import("node:fs");
     const g = setup();
     rmSync(join(g.root, "c.md"));
@@ -3797,7 +3797,7 @@ describe("the context bundle (9.7)", () => {
   });
 
   test("deeper, none, no backlinks, a limit: what's past it named, not included", async () => {
-    const { buildContext } = await import("../src/core/context.ts");
+    const { buildContext } = await import("../src/core/documents/model/context.ts");
     const g = setup();
     expect(paths(buildContext(g, ["a.md"], { depth: 2, backlinks: true, limit: 25 }))).toEqual([
       "start:a.md",
@@ -4704,12 +4704,12 @@ describe("embeds drawn in place (1.11)", () => {
     g: ReturnType<typeof openGraph>,
     rel: string,
     caches?: {
-      parse: import("../src/core/parse.ts").ParseCache;
+      parse: import("../src/core/documents/markdown/parse.ts").ParseCache;
       render: import("../src/core/layout/render.ts").RenderCache;
     },
   ) => {
-    const { layoutNote } = await import("../src/core/note.ts");
-    const { parseMarkdown } = await import("../src/core/parse.ts");
+    const { layoutNote } = await import("../src/core/documents/model/note.ts");
+    const { parseMarkdown } = await import("../src/core/documents/markdown/parse.ts");
     const { glyphsFor } = await import("../src/core/glyphs.ts");
     return layoutNote(
       parseMarkdown(readFileSync(g.abs(rel), "utf8"), caches?.parse),
@@ -4860,7 +4860,7 @@ describe("embeds drawn in place (1.11)", () => {
 
   test("the embedded note changed: drawn as it is now, through the render cache too", async () => {
     const { newRenderCache } = await import("../src/core/layout/render.ts");
-    const { newParseCache } = await import("../src/core/parse.ts");
+    const { newParseCache } = await import("../src/core/documents/markdown/parse.ts");
     const { g } = vaultOf({ "host.md": "# H\n\n![inner](inner.md)\n\nkept\n", "inner.md": "old text\n" });
     const cache = { parse: newParseCache(), render: newRenderCache() };
     expect(text(await draw(g, "host.md", cache))).toContain("▎ old text");
@@ -5309,7 +5309,7 @@ describe("the converter: links made plain paths (20.1)", () => {
 
   test("a link's text stays literal: what markdown would act on in a label is escaped; a table's | too; a heading with no slug is left", async () => {
     const { planConvert } = await import("../src/core/workspace/links/convert.ts");
-    const { parseMarkdown } = await import("../src/core/parse.ts");
+    const { parseMarkdown } = await import("../src/core/documents/markdown/parse.ts");
     const { g } = vault({
       "a.md":
         "[[b|a\\]] [[b|2*3*4]] [[b|x<y>]] [[b|`c`]] [[b|snake_case and _x_]] [[b|a & b ~ c]]\n\n| p |\n| --- |\n| ![[pic.png\\|300]] |\n\n[[e#🎉]]\n",
@@ -5409,8 +5409,8 @@ describe("the converter: links made plain paths (20.1)", () => {
       "sub/inner.md": "# Inner\n\nFirst.\n\n## Second Part\n\nSecond.\n",
       "pic.png": "png",
     });
-    const { layoutNote } = await import("../src/core/note.ts");
-    const { parseMarkdown } = await import("../src/core/parse.ts");
+    const { layoutNote } = await import("../src/core/documents/model/note.ts");
+    const { parseMarkdown } = await import("../src/core/documents/markdown/parse.ts");
     const { glyphsFor } = await import("../src/core/glyphs.ts");
     const l = layoutNote(parseMarkdown(readFileSync(g.abs("host.md"), "utf8")), g, "host.md", {
       width: 60,
@@ -7853,7 +7853,7 @@ describe("freshness and coverage (20.10)", () => {
 
 describe("the parse cache by content (20.11)", () => {
   test("a second copy is read from what the first parsed; titles, flags and links are each copy's own", async () => {
-    const { sharedParseCache } = await import("../src/core/parsecache.ts");
+    const { sharedParseCache } = await import("../src/core/documents/markdown/parsecache.ts");
     const cache = sharedParseCache()!;
     const base = mkdtempSync(join(tmpdir(), "slipbox-pc-"));
     const a = join(base, "a");
@@ -7893,7 +7893,7 @@ describe("the parse cache by content (20.11)", () => {
   });
 
   test("the key is the text's hash, its format and the parser's version; without a cache, notes are parsed as ever", async () => {
-    const { ParseCache } = await import("../src/core/parsecache.ts");
+    const { ParseCache } = await import("../src/core/documents/markdown/parsecache.ts");
     const { extractNote } = await import("../src/core/workspace/graph/graph.ts");
     expect(ParseCache.key("abc", "markdown", 7)).toBe("7:markdown:abc");
     expect(ParseCache.key("abc", "markdown", 8)).not.toBe(ParseCache.key("abc", "markdown", 7));
@@ -7929,7 +7929,7 @@ describe("the parse cache by content (20.11)", () => {
     });
     own.close();
     // SLIPBOX_PARSE_CACHE=off: none (what the bench compares with).
-    const { sharedParseCache } = await import("../src/core/parsecache.ts");
+    const { sharedParseCache } = await import("../src/core/documents/markdown/parsecache.ts");
     process.env.SLIPBOX_PARSE_CACHE = "off";
     try {
       expect(sharedParseCache()).toBeNull();
@@ -7940,7 +7940,7 @@ describe("the parse cache by content (20.11)", () => {
   });
 
   test("the shared cache is the cache folder's as it is now: moved, the old one let go (it may be gone)", async () => {
-    const { ParseCache, sharedParseCache } = await import("../src/core/parsecache.ts");
+    const { ParseCache, sharedParseCache } = await import("../src/core/documents/markdown/parsecache.ts");
     const was = process.env.XDG_CACHE_HOME;
     const base = mkdtempSync(join(tmpdir(), "slipbox-pcmove-"));
     const key = ParseCache.key(`moved-${basename(base)}`, "md", 1);
@@ -11819,7 +11819,7 @@ describe("where a link lands (trailscout's suggestions, 2026-10-06)", () => {
 
   test("explicit ids: `## Setup {#install-guide}` (shown without it), <a id>, <a name>; GitHub's slugs keep marks", async () => {
     const { landingLine } = await import("../src/core/workspace/links/landing.ts");
-    const { slugify } = await import("../src/core/parse.ts");
+    const { slugify } = await import("../src/core/documents/markdown/parse.ts");
     expect(slugify("हिन्दी नोट्स")).toBe("हिन्दी-नोट्स"); // the vowel signs kept, as GitHub keeps them
     expect(slugify("snake_case & Co.")).toBe("snake_case--co");
     const { g } = vault({
@@ -11895,7 +11895,7 @@ describe("links in front matter (Obsidian's properties)", () => {
     const { noteProblems } = await import("../src/core/diagnostics.ts");
     expect(noteProblems(g, "x.md").map((p) => [p.code, p.target, p.start.line])).toEqual([["unresolved", "Gone", 5]]);
     // Drawn as links in the properties.
-    const parsed = (await import("../src/core/readers.ts")).parseNoteFile(
+    const parsed = (await import("../src/core/documents/model/readers.ts")).parseNoteFile(
       "x.md",
       readFileSync(join(dir, "x.md"), "utf8"),
     );

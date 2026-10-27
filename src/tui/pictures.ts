@@ -8,7 +8,7 @@ import { basename, join, relative } from "node:path";
 import { extentOf, type Layout, type Picture } from "../core/layout/ir.ts";
 import type { PictureSource, RenderOptions } from "../core/layout/render.ts";
 import { type Rasterizer, rasterizer } from "../core/svg.ts";
-import { pictureLocator } from "../core/note.ts";
+import { pictureLocator } from "../core/documents/model/note.ts";
 import { cacheHome, ensureCacheHome } from "../core/foundation/platform/paths.ts";
 import { colorHex, type Role } from "../core/theme/index.ts";
 import { fitPicture, pictureSizes, RemoteImages, svgText } from "./images.ts";

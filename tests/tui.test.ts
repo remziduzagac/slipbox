@@ -47,7 +47,7 @@ import { graphemes, setWidthMethod, stringWidth, type WidthMethod } from "../src
 import { glyphsFor } from "../src/core/glyphs.ts";
 import { crumbLayout } from "../src/tui/draw.ts";
 import { A_BOLD, A_DIM, type Layout, srcAt } from "../src/core/layout/ir.ts";
-import { codeKind } from "../src/core/syntax.ts";
+import { codeKind } from "../src/core/documents/syntax/syntax.ts";
 import { load } from "../src/core/foundation/platform/lazy.ts";
 import { loadRasterizer, rasterizer } from "../src/core/svg.ts";
 import { loadMermaid, mermaidPending, mermaidSvg } from "../src/core/diagrams.ts";
@@ -6927,7 +6927,7 @@ describe("files beyond notes (16.3–16.5)", () => {
   });
   test("the background index parses a big note on other threads: here, its parsed chunks are only put together (15.1)", async () => {
     const { BACKGROUND_PARSE } = await import("../src/tui/buffer.ts");
-    const { noteChunks } = await import("../src/core/parse.ts");
+    const { noteChunks } = await import("../src/core/documents/markdown/parse.ts");
     const root = makeVault();
     const h = await harness({ root });
     // Written after the harness's first build, with words of its own: no parse of it is cached anywhere. Twice the

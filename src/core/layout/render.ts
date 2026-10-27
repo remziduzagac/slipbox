@@ -1,4 +1,4 @@
-import { adaptHtml, htmlLinkedImage } from "../html-adapter.ts";
+import { adaptHtml, htmlLinkedImage } from "../documents/markdown/html-adapter.ts";
 import { htmlStyle, alignHtml } from "./render-html.ts";
 import { pictureCaption } from "./render-caption.ts";
 // mdast → layout IR (plan 2.1, 2.2). Pure: no terminal, no OpenTUI, no I/O.
@@ -11,18 +11,18 @@ import { pictureCaption } from "./render-caption.ts";
 
 import type { Heading, Nodes, Parents, PhrasingContent, Root, RootContent } from "mdast";
 import type { Glyphs } from "../glyphs.ts";
-import type { DataComment, DataField } from "../data.ts";
+import type { DataComment, DataField } from "../documents/model/data.ts";
 import { type DrawingColors, drawMermaid, mermaidPending, MERMAID, mermaidSvg } from "../diagrams.ts";
 import { RESVG, rasterizer } from "../svg.ts";
 import { MATHJAX, typesetter } from "../typeset.ts";
 import { mathRows } from "../math.ts";
 import { paintRevision } from "../paint-jobs.ts";
-import { onlyComments } from "../obsidian.ts";
-import { headingLabel, ORIGIN, parseMarkdown, type Frontmatter } from "../parse.ts";
+import { onlyComments } from "../documents/markdown/obsidian.ts";
+import { headingLabel, ORIGIN, parseMarkdown, type Frontmatter } from "../documents/markdown/parse.ts";
 import { expandTabs, sanitize } from "../foundation/text/sanitize.ts";
 import type { Role } from "../theme/theme.ts";
 import { graphemes, graphemeWidth, padEnd, stringWidth, truncate } from "../foundation/text/width.ts";
-import type { WikiLink } from "../wikilink.ts";
+import type { WikiLink } from "../documents/markdown/wikilink.ts";
 import { highlight } from "./highlight.ts";
 import {
   A_BOLD,

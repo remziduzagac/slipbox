@@ -10,8 +10,8 @@ import { planRelink, planVaultRename } from "../core/rename.ts";
 import type { App, View, ListItem } from "./app.ts";
 import type { LayoutLink } from "../core/layout/ir.ts";
 import * as E from "./editing.ts";
-import { linkTokens } from "../core/syntax.ts";
-import { readerFor } from "../core/readers.ts";
+import { linkTokens } from "../core/documents/syntax/syntax.ts";
+import { readerFor } from "../core/documents/model/readers.ts";
 import { type Anchor, TOP } from "../core/workspace/session/position.ts";
 import { isAbsolute, join, posix } from "node:path";
 import { isNotePath, pathLink, pathForm } from "../core/workspace/links/links.ts";
@@ -20,9 +20,9 @@ import { isPointer, parsePointer, resolvePointer } from "../core/workspace/links
 import { ELSEWHERE, tildePath } from "../core/workspace/vaults/names.ts";
 import { slugName } from "../core/workspace/vaults/registry.ts";
 import { rootAt } from "../core/workspace/vaults/vault.ts";
-import { classify } from "../core/filetypes.ts";
+import { classify } from "../core/documents/model/filetypes.ts";
 import { lineFragment, blockLine, findHeading } from "../core/workspace/links/landing.ts";
-import { anchorsOf, headingsOf } from "../core/parse.ts";
+import { anchorsOf, headingsOf } from "../core/documents/markdown/parse.ts";
 
 /** Links: followed, peeked at, cycled through, listed (links and backlinks), inserted and converted. */
 export function linkActions(): Record<string, Run> {

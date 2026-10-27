@@ -7,8 +7,8 @@
 
 import type { Grammar } from "./syntax.ts";
 import type { SyntaxSnapshot } from "./syntax-worker.ts";
-import { WorkerRequests } from "./foundation/workers/worker-requests.ts";
-import { workerUrl } from "./foundation/workers/url.ts";
+import { WorkerRequests } from "../../foundation/workers/worker-requests.ts";
+import { workerUrl } from "../../foundation/workers/url.ts";
 
 /** The largest source sent to the thread (UTF-8 bytes): a bigger one keeps its text without this structure. */
 export const SYNTAX_SOURCE_LIMIT = 4 * 1024 * 1024;
@@ -20,7 +20,7 @@ export function syntaxOnThread(grammar: Grammar, source: string, signal?: AbortS
   // A pass is one source's, whole: a 4 MB minified bundle's takes over four seconds on a fast machine, more on a busy
   // one, so the deadline is for a thread that's stuck, not a big file (the spelling thread's). No cap on an answer:
   // its size follows its source's, which SYNTAX_SOURCE_LIMIT bounds.
-  channel ??= new WorkerRequests(() => new Worker(workerUrl("syntax-worker.ts")), {
+  channel ??= new WorkerRequests(() => new Worker(workerUrl("documents/syntax/syntax-worker.ts")), {
     deadline: 20_000,
     bytes: 16 * 1024 * 1024,
     result: Infinity,

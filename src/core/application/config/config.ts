@@ -11,7 +11,7 @@ import { refName } from "../../gitops.ts";
 import { join } from "node:path";
 import { parse as parseToml } from "smol-toml";
 import { tildePath, userConfigFile } from "../../foundation/platform/paths.ts";
-import { KEY_KINDS, type TypeConfig } from "../../doctypes.ts";
+import { KEY_KINDS, type TypeConfig } from "../../documents/model/doctypes.ts";
 
 export type GlyphMode = "auto" | "nerd" | "unicode" | "ascii";
 
@@ -60,7 +60,8 @@ export interface Config {
   };
   /**
    * How the links slipbox writes look (21.4): each part "auto" — found from the root's tool and its
-   * notes (core/workspace/links/convention.ts) — or set here, for every root, or in a root's own `.slipbox/config.toml`.
+   * notes (core/workspace/links/convention.ts) — or set here, for every root, or in a root's own
+   * `.slipbox/config.toml`.
    */
   links: {
     style: "auto" | "markdown" | "wiki";
@@ -212,7 +213,7 @@ export interface Config {
     auto_install: boolean;
   };
   /** Document types (22.2, 22.3): notes of a kind by where they are, what their frontmatter must have, their
-   *  conventions — each by name, over the built-in `skill` and `adr` (`core/doctypes.ts`). */
+   *  conventions — each by name, over the built-in `skill` and `adr` (`core/documents/model/doctypes.ts`). */
   types: Record<string, TypeConfig>;
   /** Updates (14.4): a release build asks, once a day in the TUI, whether there's a newer one. Read from your own
    *  config only — a folder's can't turn it on — and off with DO_NOT_TRACK set. */

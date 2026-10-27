@@ -1,8 +1,8 @@
 import { spanStyle } from "../src/core/layout/style.ts";
 import { loadTheme } from "../src/core/theme/index.ts";
 import { describe, expect, test } from "bun:test";
-import { htmlFragment, htmlForMarkdown, htmlTokens } from "../src/core/html.ts";
-import { adaptHtml, htmlLength } from "../src/core/html-adapter.ts";
+import { htmlFragment, htmlForMarkdown, htmlTokens } from "../src/core/documents/markdown/html.ts";
+import { adaptHtml, htmlLength } from "../src/core/documents/markdown/html-adapter.ts";
 import {
   renderMarkdown,
   renderTree,
@@ -12,7 +12,7 @@ import {
 } from "../src/core/layout/render.ts";
 import { A_BOLD, A_ITALIC, A_UNDERLINE, A_STRIKE } from "../src/core/layout/ir.ts";
 import { glyphsFor } from "../src/core/glyphs.ts";
-import { parseMarkdown, headingsOf, anchorsOf } from "../src/core/parse.ts";
+import { parseMarkdown, headingsOf, anchorsOf } from "../src/core/documents/markdown/parse.ts";
 
 const options: RenderOptions = { width: 50, glyphs: glyphsFor("unicode"), showUrls: false };
 const text = (source: string, opts: Partial<RenderOptions> = {}) =>

@@ -3,7 +3,7 @@
 // them: in the order they're first referred to, the ones nothing refers to after.
 
 import type { FootnoteDefinition, FootnoteReference, Nodes } from "mdast";
-import { type ParsedNote, visit } from "./parse.ts";
+import { type ParsedNote, visit } from "../markdown/parse.ts";
 
 export interface Footnote {
   /** As written (`[^Label]`); `id` is its identifier, lower-cased: how references find it. */

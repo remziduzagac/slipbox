@@ -13,11 +13,11 @@ import {
   type Pos,
 } from "./workspace/graph/graph.ts";
 import { landing, lineFragment } from "./workspace/links/landing.ts";
-import { slugify } from "./parse.ts";
+import { slugify } from "./documents/markdown/parse.ts";
 import type { LintIssue } from "./lint.ts";
 import { unavailable } from "./workspace/vaults/registry.ts";
-import type { SyntaxError } from "./syntax.ts";
-import { type DocType, docTypes, frontmatterProblems, ofType } from "./doctypes.ts";
+import type { SyntaxError } from "./documents/syntax/syntax.ts";
+import { type DocType, docTypes, frontmatterProblems, ofType } from "./documents/model/doctypes.ts";
 
 /** How bad, worst first. */
 export type Severity = "error" | "warning" | "info" | "hint";

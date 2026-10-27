@@ -73,7 +73,8 @@ files). Neither has wikilinks.
 
 ## Wikilinks
 
-A wikilink is read by a micromark extension, never inside code (`core/wikilink.ts`; [rendering.md](rendering.md) §
+A wikilink is read by a micromark extension, never inside code (`core/documents/markdown/wikilink.ts`;
+[rendering.md](rendering.md) §
 The wikilink tokenizer), and resolved within its vault (D71; `resolveWiki` in `core/workspace/graph/graph-resolve.ts`,
 `LinkIndex` in
 `core/workspace/links/links.ts`):
@@ -428,7 +429,8 @@ several notes answer to is listed to pick; missing ones are left and reported. U
 A note's tags are its front matter's `tags:` or `tag:` (a list, or a string split at commas and spaces; `#`
 optional) and the `#tags` in its text (D53): letters (their marks included), digits, `_`, `-` and `/`, not digits
 only, after a space, a tab or at a line's start, so never `a#b`, `page#part` in a URL, `[[a#b]]`, a heading's `#`
-marker, or anything in code (`core/tags.ts`, a micromark extension, as wikilinks are). A trailing `/` goes. `/`
+marker, or anything in code (`core/documents/markdown/tags.ts`, a micromark extension, as wikilinks are). A trailing `/`
+goes. `/`
 nests: `#dome/shutter` is under `#dome`, and a parent's notes include its children's. `#Dome` and `#dome` are one tag
 (compared after NFC, case aside), shown as first written (the first note by path, its front matter before its text).
 Listing and following them: [tui.md](tui.md) § Following links ("Tags").

@@ -67,8 +67,9 @@ A few modules to know first:
   resolves is `graph-resolve.ts`'s, a note's entry from its text `graph-extract.ts`'s, their shapes `graph-types.ts`'s.
 - `core/rename.ts`: renames and moves as plans of byte-range edits, previewed first; a plan's shape is
   `rename-plan.ts`'s, carrying one out and undoing it `rename-apply.ts`'s.
-- `core/note.ts` and `core/layout/`: a note from its text to rows for a width, the same for `slipbox render` and the
-  TUI; `layout/render.ts` lays out its blocks, `render-inline.ts`, `render-table.ts` and `render-data.ts` the rest.
+- `core/documents/model/note.ts` and `core/layout/`: a note from its text to rows for a width, shared by
+  `slipbox render` and the TUI. `layout/render.ts` lays out its blocks; `render-inline.ts`, `render-table.ts` and
+  `render-data.ts` lay out the rest.
 - `cli/cli.ts`: the command line's dispatcher, its help and flags; each command's code is in its group's module, the
   session and the helpers they share in `cli/common.ts`.
 - `core/foundation/platform/fsutil.ts`: atomic writes, and `writeNote`, which never writes outside the root.

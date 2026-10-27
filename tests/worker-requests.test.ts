@@ -1,8 +1,13 @@
 import { TEST_BUDGETS } from "./support/timeouts.ts";
 import { afterEach, expect, jest, test } from "bun:test";
 import { sizeOf, type WorkerRequestError, WorkerRequests } from "../src/core/foundation/workers/worker-requests.ts";
-import { newParseCache, parseChunk, parseMarkdown } from "../src/core/parse.ts";
-import { batchDeadline, parseInBackground, setParseWorkers, stopParsePool } from "../src/core/parse-pool.ts";
+import { newParseCache, parseChunk, parseMarkdown } from "../src/core/documents/markdown/parse.ts";
+import {
+  batchDeadline,
+  parseInBackground,
+  setParseWorkers,
+  stopParsePool,
+} from "../src/core/documents/markdown/parse-pool.ts";
 import { DEFAULT_CONFIG } from "../src/core/application/config/config.ts";
 
 const factory = () => new Worker(new URL("./fixtures/diagram/worker.ts", import.meta.url).href);

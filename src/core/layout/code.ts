@@ -10,12 +10,13 @@
 // line — and the cursor, find, a selection and problem marks land where they are in the file. Prose rows are placed
 // by line, as a rendered note's are.
 
-import { readDoc } from "../docformats.ts";
+import { readDoc } from "../documents/model/docformats.ts";
 import type { Severity } from "../diagnostics.ts";
 import type { Glyphs } from "../glyphs.ts";
-import { slugify } from "../parse.ts";
+import { slugify } from "../documents/markdown/parse.ts";
 import { expandTabs } from "../foundation/text/sanitize.ts";
-import type { CodeComment, CodeDef, CodeDoc, CodeImports, CodeModel, OutlineEntry } from "../syntax.ts";
+import type { CodeComment, CodeDef, CodeDoc } from "../documents/syntax/syntax.ts";
+import type { CodeImports, CodeModel, OutlineEntry } from "../documents/syntax/syntax.ts";
 import type { Role } from "../theme/theme.ts";
 import { graphemes, graphemeWidth, stringWidth, truncate } from "../foundation/text/width.ts";
 import {
@@ -29,7 +30,6 @@ import {
   type Span,
 } from "./ir.ts";
 import { renderMarkdown } from "./render.ts";
-
 export interface CodeLayoutOptions {
   /** Columns to lay out in; with `wrap` off, a line runs on and the layout is as wide as its longest. */
   width: number;

@@ -4,7 +4,7 @@
 import { editorArgv } from "../core/editor.ts";
 import { discoverNvims, NVIM_REMOTE, type NvimServer, probeNvim } from "../core/nvim.ts";
 import { homedir } from "node:os";
-import { buildContext } from "../core/context.ts";
+import { buildContext } from "../core/documents/model/context.ts";
 import type { NoteBuffer } from "./buffer.ts";
 import { prettyKey } from "./keys.ts";
 import type { App, View } from "./app.ts";

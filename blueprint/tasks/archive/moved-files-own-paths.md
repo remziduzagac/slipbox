@@ -36,7 +36,8 @@ rewrite them in their own form, previewed with the rest of the move's plan.
   file's value keeps `./`, its fragment (`#/definitions/User`) and an extension left off; neither is
   percent-encoded. A target moving too (a folder's move) is left to its own backlink, as for a note.
 - 2026-10-11: Found: a comment's `../../docs/x.md` wasn't read as a link at all (16.10's `PATH_RE` took one `../`
-  only), so the rewritten path would have stopped being a link. `PATH_RE` in `src/core/syntax.ts` now takes `../` as
+  only), so the rewritten path would have stopped being a link. `PATH_RE` in `src/core/documents/syntax/syntax.ts` now
+  takes `../` as
   many times as it climbs; the reference set's kestrel already has such comments (`src/sync/queue.ts`,
   `api/kestrel_api/sync.py`), which now read as links. Test added to `link-like tokens in code (16.10)` in
   tests/core.test.ts.

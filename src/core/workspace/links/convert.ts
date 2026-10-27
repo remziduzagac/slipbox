@@ -13,10 +13,10 @@ import { existsSync } from "node:fs";
 import { dirname, isAbsolute, join, posix, relative, sep } from "node:path";
 import type { Graph, LinkRef, ResolvedLink } from "../graph/graph.ts";
 import { blockLine, findHeading, headingFragment, lineFragment } from "./landing.ts";
-import { parseLegacy, visit } from "../../parse.ts";
+import { parseLegacy, visit } from "../../documents/markdown/parse.ts";
 import { readText } from "../../foundation/platform/fsutil.ts";
 import { type Ambiguous, Collector, dirtyTrees, type RenamePlan } from "../../rename.ts";
-import { parseWikiTarget, type WikiLink } from "../../wikilink.ts";
+import { parseWikiTarget, type WikiLink } from "../../documents/markdown/wikilink.ts";
 import { isInside } from "../vaults/vault.ts";
 
 /** A wikilink as written: `!`, then `[[target#heading|alias]]`. */

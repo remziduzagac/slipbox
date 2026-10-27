@@ -13,7 +13,7 @@ import {
   configSignature,
   vaultSignature,
 } from "../core/workspace/graph/backlinks-jobs.ts";
-import { classify } from "../core/filetypes.ts";
+import { classify } from "../core/documents/model/filetypes.ts";
 import { readText } from "../core/foundation/platform/fsutil.ts";
 import type { Graph } from "../core/workspace/graph/graph.ts";
 import { ELSEWHERE, rootLabel, tildePath } from "../core/workspace/vaults/names.ts";

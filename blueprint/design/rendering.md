@@ -325,7 +325,7 @@ on the screen thread. A changed buffer version discards a deferred reveal.
 
 ## Data files (plans `16.11`–`16.14`)
 
-A data file is read into the same tree a note is (`core/data.ts`; D108), so the renderer, the outline,
+A data file is read into the same tree a note is (`core/documents/model/data.ts`; D108), so the renderer, the outline,
 the breadcrumb, `[x](file.toml#section)`, find and the lens work unchanged:
 
 - **TOML and INI sections become headings**: a `[table]` or `[section]`, deeper by its dots — the
@@ -375,7 +375,8 @@ render (`16.14`): its error is shown and SOURCE view opens.
 
 ## The wikilink tokenizer
 
-`core/wikilink.ts` is a micromark extension, not a regex: the reader's (`21.3`, D71), and the converter's (`20.1`,
+`core/documents/markdown/wikilink.ts` is a micromark extension, not a regex: the reader's (`21.3`, D71), and the
+converter's (`20.1`,
 D57), which reads through `parseLegacy`. That is why `[[links]]` inside code spans and fenced
 blocks are never read or converted, and why `\[[escaped]]` stays literal. Every node also carries its source
 position. It parses `![[embeds]]`, which `remark-wiki-link` does not, and treats `\|` as an alias divider, since that
@@ -383,7 +384,8 @@ is how an alias is written inside a table cell.
 
 ## Obsidian's highlights and comments
 
-`core/obsidian.ts` is a micromark extension too (DF-D17), so neither is read inside code, `\==` and `\%%` stay text, and
+`core/documents/markdown/obsidian.ts` is a micromark extension too (DF-D17), so neither is read inside code, `\==` and
+`\%%` stay text, and
 each node has its position. A highlight pairs as GFM's `~~strike~~` does: exactly two `=`, flanking as emphasis does,
 so `a == b` and `===` are text, and what's inside is read as any text (`==**bold**==`, a link). A comment pairs any two
 `%%` of a paragraph, spaces or not, across its lines; what's inside is read too, so a link, a tag or a task in a
@@ -488,7 +490,7 @@ grapheme that overflows.
 container stops indenting (a quote, a callout or an embed drops its bar, a list item's marker takes a
 row of its own), and a data file's tree drops its outer guides, so nothing is cut in a narrow split.
 Inputs the markdown parser takes quadratic time over are tamed before parsing without moving an
-offset (`tame` in `core/parse.ts`), and only where an ordinary note never has them: frontmatter,
+offset (`tame` in `core/documents/markdown/parse.ts`), and only where an ordinary note never has them: frontmatter,
 fenced code and lines made only of rule characters (`***`, a setext `===`) are left alone. A run of
 64 or more `*` `_` `[` `]` in a line with other text becomes look-alikes; 20 or more container
 markers, or 96 columns of indentation before a list marker, get one no-break space at the cap, which
@@ -592,7 +594,7 @@ highlight.js with about 25 common languages (`bash`, `typescript`, `lua`, `pytho
 auto-detection is slow and often wrong. Scopes map to the `syn_*` roles. It lives in the core, so
 `slipbox render` and the TUI highlight identically.
 
-Source files in SOURCE view use it too, a line at a time, with tree-sitter (`core/syntax.ts`,
+Source files in SOURCE view use it too, a line at a time, with tree-sitter (`core/documents/syntax/syntax.ts`,
 `16.7`, D109) painting over it the parts of lines inside a string or comment that spans lines — which a
 line alone can't know — and, in a file of several languages (`16.22`: a component's script and style), saying which
 language each line is in (`languageAt`; D122). See [tui.md](tui.md) § Files beyond notes.

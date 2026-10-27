@@ -2,7 +2,7 @@
 // a root needs before anything it brings runs.
 
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { grammarFor, type OutlineEntry, type Span as SyntaxSpan } from "../core/syntax.ts";
+import { grammarFor, type OutlineEntry, type Span as SyntaxSpan } from "../core/documents/syntax/syntax.ts";
 import type {
   DocumentSymbol,
   SymbolInformation,
@@ -10,9 +10,9 @@ import type {
   WorkspaceEdit,
 } from "vscode-languageserver-protocol";
 import { TextDocument } from "vscode-languageserver-textdocument";
-import { SYNTAX_SOURCE_LIMIT, syntaxOnThread } from "../core/syntax-thread.ts";
+import { SYNTAX_SOURCE_LIMIT, syntaxOnThread } from "../core/documents/syntax/syntax-thread.ts";
 import { WorkerRequestError } from "../core/foundation/workers/worker-requests.ts";
-import { extensionOf } from "../core/filetypes.ts";
+import { extensionOf } from "../core/documents/model/filetypes.ts";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { offsetOf } from "./editing.ts";
