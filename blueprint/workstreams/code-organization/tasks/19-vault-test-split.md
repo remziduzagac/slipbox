@@ -70,3 +70,7 @@ and link-move cases are separate. No product, worker, build-entry, asset or ship
 - Typecheck, boundary, size, docs, changed-file Biome and direct Markdown checks pass. No whole-suite or all-terminal
   run was made. Local raw captures, wrapper expectations, per-file/combined logs and body audits retain the commands'
   output; the manifest and counts above are the durable verification record.
+
+The rebased PR comparison measures 3,584 baseline declarations and 3,616 after this split: the same 32 parent-suite
+wrappers and no other identity change. The original totals above and in the manifest predate D266; the
+[inventory provenance](01-contracts-and-gates.md#inventory-provenance-after-d266) accounts for its two net declarations.

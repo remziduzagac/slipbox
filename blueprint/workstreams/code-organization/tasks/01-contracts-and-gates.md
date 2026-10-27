@@ -216,3 +216,11 @@ The additional same-line postfix-increment/decrement division fixture fails befo
 afterward. TSX closing tags are lowered by Bun before inventory scanning and are covered explicitly. Computed names and
 runtime expansion still require review; an unterminated template is masked to the end rather than inventing later
 calls. Default comment/path mode retains its prior behavior.
+
+### Inventory provenance after D266
+
+The numeric inventory totals in the original task verification records and manifests were measured before D266 was
+inserted into the PR series. D266 adds two net declarations and renames three existing declarations; the corrected
+scanner measures 3,562 at the T1 squash and 3,564 after D266. Keep those original measurements historical. Rebased
+phase checks capture both sides with the same scanner and preserve the exact multiset except each phase's recorded
+guards or parent-suite wrappers; per-owner test and assertion inventories retain their original measurement context.
