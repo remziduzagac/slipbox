@@ -3,7 +3,9 @@
 
 import type { App } from "../../app/runtime/app.ts";
 import { type Canvas, drawText } from "../../shell/terminal/canvas.ts";
-import { type Rect, type Geometry, pageBg, roleStyle, markStyle } from "../../shell/screen/draw.ts";
+import type { Rect } from "../../shell/screen/geometry.ts";
+import type { Geometry } from "../../shell/screen/draw.ts";
+import { pageBg, roleStyle, markStyle } from "../../shell/screen/style.ts";
 import type { Role, Color } from "../../../core/rendering/theme/theme.ts";
 import { smallButton } from "../../shell/panels/draw-panels.ts";
 import { truncate, stringWidth, truncateStart } from "../../../core/foundation/text/width.ts";

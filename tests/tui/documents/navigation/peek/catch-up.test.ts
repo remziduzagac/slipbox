@@ -1,3 +1,4 @@
+import { read } from "../../../../support/tui/peek-reading.ts";
 import { expect, test } from "bun:test";
 import * as fs from "node:fs";
 import {
@@ -41,7 +42,7 @@ import { harness, onlyRootsUnder } from "../../../../tui-harness.ts";
 import { makePeekFixture } from "../../../../support/tui/peek-fixture.ts";
 
 // File-owned peek setup retains its model sandbox and afterEach mock reset.
-const { sandbox, read, parsedHere } = makePeekFixture();
+const { sandbox, parsedHere } = makePeekFixture();
 
 let made = 0;
 

@@ -16,7 +16,7 @@ import { WalkFilter, walkVault } from "../../../../src/core/workspace/walk/walk.
 import { stringWidth } from "../../../../src/core/foundation/text/width.ts";
 import { App, type Host } from "../../../../src/tui/app/runtime/app.ts";
 import { TextCanvas } from "../../../../src/tui/shell/terminal/canvas.ts";
-import { roleStyle } from "../../../../src/tui/shell/screen/draw.ts";
+import { roleStyle } from "../../../../src/tui/shell/screen/style.ts";
 
 const sandbox = realpathSync(mkdtempSync(join(tmpdir(), "slipbox-marks-")));
 process.env.XDG_STATE_HOME = join(sandbox, "state");

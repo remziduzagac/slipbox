@@ -1,0 +1,172 @@
+{
+  "moves": {},
+  "retained": [],
+  "baselineTask": "ORG-T22",
+  "extractions": {
+    "src/tui/app/runtime/app.ts": [
+      "editable"
+    ],
+    "src/tui/shell/screen/draw.ts": [
+      "Rect",
+      "Hot",
+      "Band",
+      "mid",
+      "clipRules",
+      "coverHot",
+      "CHANGE_MARKER_MS",
+      "roleStyle",
+      "pageBg",
+      "markStyle",
+      "keyText",
+      "button",
+      "CRUMB_MIN",
+      "CRUMB_FLOOR",
+      "crumbLeast",
+      "crumbLayout"
+    ],
+    "src/tui/shell/screen/topbar/draw-topbar.ts": [
+      "Item",
+      "locationItems",
+      "fitLocation"
+    ],
+    "src/tui/documents/views/draw-header.ts": [
+      "ModeForm",
+      "labelOf",
+      "FORM_WIDTH",
+      "modeButtons"
+    ]
+  },
+  "ownership": {
+    "buffers": "TUI NoteBuffer and App.writeBuffer are unchanged; no gateway execution.",
+    "location": "App-backed locationItems is a selector; fitLocation and header geometry are pure.",
+    "fixtures": "File-owned filesystem setup is below model support; UI peek reading stays with UI fixtures.",
+    "remainingCycles": "App defaults/session constants, action registration, region composition and controller helpers remain for later extraction owners."
+  },
+  "testRelocations": {
+    "source": "tests/core/foundation/platform/atomic-files.test.ts",
+    "target": "tests/tui/documents/navigation/peek/index-cleanup.test.ts",
+    "title": "a temporary file of the index left by a thread let go of mid-write is swept once it's old (#10)"
+  },
+  "runtimeScc": {
+    "before": [
+      [
+        "src/core/rendering/export/formats/html.ts",
+        "src/core/rendering/export/formats/markdown.ts",
+        "src/core/rendering/export/stream.ts"
+      ],
+      [
+        "src/tui/actions/actions.ts",
+        "src/tui/actions/documents/actions-edit.ts",
+        "src/tui/actions/documents/actions-find.ts",
+        "src/tui/actions/documents/actions-links.ts",
+        "src/tui/actions/documents/actions-lsp.ts",
+        "src/tui/actions/documents/actions-view.ts",
+        "src/tui/actions/shell/actions-panes.ts",
+        "src/tui/actions/workspace/actions-files.ts",
+        "src/tui/app/distribution/report.ts",
+        "src/tui/app/distribution/updates.ts",
+        "src/tui/app/runtime/app.ts",
+        "src/tui/app/runtime/background.ts",
+        "src/tui/app/runtime/watch.ts",
+        "src/tui/app/scratch/scratch.ts",
+        "src/tui/app/settings/settings.ts",
+        "src/tui/documents/diagnostics/draw-problems.ts",
+        "src/tui/documents/diagnostics/languages.ts",
+        "src/tui/documents/diagnostics/problems.ts",
+        "src/tui/documents/diagnostics/spelling.ts",
+        "src/tui/documents/editing/completion.ts",
+        "src/tui/documents/editing/editing.ts",
+        "src/tui/documents/editing/lens.ts",
+        "src/tui/documents/editing/shellrun.ts",
+        "src/tui/documents/editing/snippets.ts",
+        "src/tui/documents/media/pictures.ts",
+        "src/tui/documents/navigation/linking.ts",
+        "src/tui/documents/navigation/peek.ts",
+        "src/tui/documents/saving/saving.ts",
+        "src/tui/documents/search/replacing.ts",
+        "src/tui/documents/tools/footnotes/footnotes.ts",
+        "src/tui/documents/tools/info/info.ts",
+        "src/tui/documents/tools/info/properties.ts",
+        "src/tui/documents/views/code.ts",
+        "src/tui/documents/views/draw-header.ts",
+        "src/tui/documents/views/draw-pane.ts",
+        "src/tui/documents/views/views.ts",
+        "src/tui/shell/input/input.ts",
+        "src/tui/shell/input/mouse.ts",
+        "src/tui/shell/input/vim.ts",
+        "src/tui/shell/overlays/draw-overlays.ts",
+        "src/tui/shell/overlays/overlays.ts",
+        "src/tui/shell/overlays/palette.ts",
+        "src/tui/shell/panels/draw-panels.ts",
+        "src/tui/shell/panels/panels.ts",
+        "src/tui/shell/screen/draw.ts",
+        "src/tui/shell/screen/statusbar/draw-status.ts",
+        "src/tui/shell/screen/topbar/draw-topbar.ts",
+        "src/tui/shell/screen/topbar/where.ts",
+        "src/tui/workspace/explorer/files.ts",
+        "src/tui/workspace/explorer/renaming.ts",
+        "src/tui/workspace/git/git.ts",
+        "src/tui/workspace/git/gitremote.ts",
+        "src/tui/workspace/git/views/branches/gitbranchview.ts",
+        "src/tui/workspace/git/views/changes/gitchanges.ts",
+        "src/tui/workspace/git/views/history/githistory.ts",
+        "src/tui/workspace/git/views/panel/draw-git.ts",
+        "src/tui/workspace/git/views/panel/gitmouse.ts",
+        "src/tui/workspace/git/views/panel/gitpanel.ts",
+        "src/tui/workspace/git/views/review/mergescreen.ts",
+        "src/tui/workspace/git/views/review/rebase.ts",
+        "src/tui/workspace/history/history.ts",
+        "src/tui/workspace/search/search.ts",
+        "src/tui/workspace/session/session.ts",
+        "src/tui/workspace/vaults/vaults.ts"
+      ]
+    ],
+    "after": [
+      [
+        "src/tui/documents/editing/editing.ts",
+        "src/tui/documents/editing/snippets.ts"
+      ],
+      [
+        "src/tui/workspace/git/gitremote.ts",
+        "src/tui/workspace/git/views/review/rebase.ts"
+      ],
+      [
+        "src/core/rendering/export/formats/html.ts",
+        "src/core/rendering/export/formats/markdown.ts",
+        "src/core/rendering/export/stream.ts"
+      ],
+      [
+        "src/tui/documents/search/replacing.ts",
+        "src/tui/shell/overlays/overlays.ts",
+        "src/tui/workspace/search/search.ts"
+      ],
+      [
+        "src/tui/app/runtime/app.ts",
+        "src/tui/app/settings/settings.ts",
+        "src/tui/workspace/history/history.ts",
+        "src/tui/workspace/session/session.ts",
+        "src/tui/workspace/vaults/vaults.ts"
+      ],
+      [
+        "src/tui/actions/actions.ts",
+        "src/tui/actions/documents/actions-edit.ts",
+        "src/tui/actions/documents/actions-find.ts",
+        "src/tui/actions/documents/actions-links.ts",
+        "src/tui/actions/documents/actions-lsp.ts",
+        "src/tui/actions/documents/actions-view.ts",
+        "src/tui/actions/shell/actions-panes.ts",
+        "src/tui/actions/workspace/actions-files.ts"
+      ],
+      [
+        "src/tui/documents/diagnostics/draw-problems.ts",
+        "src/tui/documents/views/draw-header.ts",
+        "src/tui/documents/views/draw-pane.ts",
+        "src/tui/shell/overlays/draw-overlays.ts",
+        "src/tui/shell/panels/draw-panels.ts",
+        "src/tui/shell/screen/draw.ts",
+        "src/tui/shell/screen/statusbar/draw-status.ts",
+        "src/tui/workspace/git/views/panel/draw-git.ts"
+      ]
+    ]
+  }
+}

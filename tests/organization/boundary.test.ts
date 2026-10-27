@@ -47,6 +47,33 @@ describe("the boundary check (0.3, scripts/check-boundary.ts)", () => {
     expect(r.out).not.toContain("boundary check ok");
   });
 
+  test("presentation primitives and editing clients cannot load App composition through the checker", () => {
+    const r = check({
+      "src/tui/app/runtime/app.ts": "export class App {}\nexport interface View {}\n",
+      "src/tui/documents/editing/editable.ts":
+        'import type { View } from "../../app/runtime/app.ts";\nexport type Reverse = View;\n',
+      "src/tui/documents/editing/editing.ts":
+        'import { App } from "../../app/runtime/app.ts";\nexport const reverse = App;\n',
+      "tests/support/tui/sandbox.ts":
+        'import { App } from "../../../src/tui/app/runtime/app.ts";\nexport const reverse = App;\n',
+      "src/tui/shell/screen/draw.ts": "export interface Geometry {}\nexport const draw = () => {};\n",
+      "src/tui/documents/views/draw-pane.ts":
+        'import { draw } from "../../shell/screen/draw.ts";\nexport const paint = draw;\n',
+    });
+    expect(r.code).toBe(1);
+    expect(r.err).toContain("presentation primitive must not import composition");
+    expect(r.err).toContain("editing client must stay below App composition");
+    expect(r.err).toContain("filesystem fixture must stay independent of the TUI model");
+    expect(r.err).toContain("drawing client must stay below screen composition");
+    const typed = check({
+      "src/tui/shell/screen/draw.ts": "export interface Geometry {}\n",
+      "src/tui/documents/views/draw-pane.ts":
+        'import type { Geometry } from "../../shell/screen/draw.ts";\nexport type Frame = Geometry;\n',
+    });
+    expect(typed.code).toBe(0);
+    expect(typed.err).toBe("");
+  });
+
   test("a tree that keeps the rules passes: the core imported by the CLI, the TUI importing OpenTUI", () => {
     const r = check({
       "src/core/a.ts": 'import { join } from "node:path";\nexport const a = join;\n',

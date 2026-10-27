@@ -5,7 +5,9 @@
 
 import type { App } from "../../../../app/runtime/app.ts";
 import { type Canvas, drawText } from "../../../../shell/terminal/canvas.ts";
-import { type Geometry, type Rect, roleStyle } from "../../../../shell/screen/draw.ts";
+import type { Geometry } from "../../../../shell/screen/draw.ts";
+import type { Rect } from "../../../../shell/screen/geometry.ts";
+import { roleStyle } from "../../../../shell/screen/style.ts";
 import type { Color, Role } from "../../../../../core/rendering/theme/theme.ts";
 import { splitAtWidth, stringWidth, truncate, truncateStart } from "../../../../../core/foundation/text/width.ts";
 import { sanitize } from "../../../../../core/foundation/text/sanitize.ts";

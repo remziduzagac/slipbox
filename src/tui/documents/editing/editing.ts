@@ -4,7 +4,8 @@
 // named commands in actions-edit.ts that call in here.
 
 import { graphemes } from "../../../core/foundation/text/width.ts";
-import { type App, editable, type View } from "../../app/runtime/app.ts";
+import type { App, View } from "../../app/runtime/app.ts";
+import { editable } from "./editable.ts";
 import { cells } from "./cursor.ts";
 import { keyChar } from "../../shell/input/keys.ts";
 import { indentUnit } from "../../../core/documents/editing/indent.ts";

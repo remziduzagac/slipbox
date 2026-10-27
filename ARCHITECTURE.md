@@ -32,6 +32,8 @@ for a person, and a command line for agents and scripts, both over the same plai
   own. `shell/screen/draw.ts` composes feature drawing on an abstract `Canvas`; document views, panels and overlays keep
   their area drawing. `actions/` holds registration and the `documents/`, `workspace/` and `shell/` command areas.
   `keys.ts` holds the default keys.
+  Editable flags, header layout, shared geometry/style/controls and location fitting sit below App and region
+  composition. Their clients import these helpers directly; the boundary checker rejects reverse composition imports.
 
 **The boundary.** `src/core/` never imports `src/tui/`, `src/cli/` or `@opentui/*`, and `src/cli/` never imports
 `src/tui/`. Inside the TUI, only `src/tui/shell/terminal/opentui.ts` (the `Canvas` over OpenTUI's buffer) and

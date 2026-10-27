@@ -28,11 +28,10 @@ import { Redirects } from "../../../../src/core/workspace/links/redirects.ts";
 
 import { initVault, locateVault } from "../../../../src/core/workspace/vaults/vault.ts";
 
-import { harness, onlyRootsUnder } from "../../../tui-harness.ts";
 import { makePeekFixture } from "../../../support/tui/peek-fixture.ts";
 
 // File-owned peek setup retains its model sandbox and afterEach mock reset.
-const { sandbox, read } = makePeekFixture();
+const { sandbox } = makePeekFixture();
 
 let made = 0;
 
@@ -93,28 +92,6 @@ test("a write never goes through what's already at its temporary file's name: an
   }
   expect(readFileSync(target, "utf8")).toBe("the note\n");
   expect(readFileSync(victim, "utf8")).toBe("as it was\n");
-});
-
-test("a temporary file of the index left by a thread let go of mid-write is swept once it's old (#10)", async () => {
-  const { base, notes, app } = twoVaults();
-  const dir = cacheDir(locateVault({ root: app }));
-  const old = join(dir, `.index.json.slipbox-1-7-deadbeef.tmp`);
-  const fresh = join(dir, `.index.json.slipbox-1-8-cafebabe.tmp`);
-  const other = join(dir, `.heads.json.slipbox-1-7-deadbeef.tmp`);
-  for (const f of [old, fresh, other]) writeFileSync(f, "{");
-  const hour = new Date(Date.now() - 2 * STALE_TEMP_MS);
-  utimesSync(old, hour, hour);
-  utimesSync(other, hour, hour);
-  await onlyRootsUnder(base, async () => {
-    const h = await harness({ root: notes, open: "index.md" });
-    await h.keys("tab", "enter");
-    await read(h);
-  });
-  expect(existsSync(old)).toBe(false);
-  expect(existsSync(fresh)).toBe(true); // a write may be under way to it
-  expect(existsSync(other)).toBe(true); // not the index's
-  sweepTemps(dir, "heads.json");
-  expect(existsSync(other)).toBe(false);
 });
 
 test("a write that fails leaves no temporary file behind (a full disk)", () => {

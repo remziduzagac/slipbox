@@ -1,4 +1,3 @@
-import { UNIT_TIMEOUT_MS } from "./support/timeouts.ts";
 // The harness shared by tests/tui/ feature owners: a sandbox of each file's own, a vault
 // copied into it, the TUI model driven headlessly (keys in, TextCanvas out), and the helpers that read its rows.
 //
@@ -7,9 +6,8 @@ import { UNIT_TIMEOUT_MS } from "./support/timeouts.ts";
 // each file calls `makeSandbox()` at its top: a folder of its own, the environment pointed into it, removed when that
 // file ends. The files run one after another, so a vault goes in the sandbox of the file running.
 
-import { afterAll, setDefaultTimeout } from "bun:test";
-import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { box, makeSandbox } from "./support/tui/sandbox.ts";
+import { cpSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { randomBytes } from "node:crypto";
 import { join } from "node:path";
 import { canonKey } from "../src/core/application/commands/registry.ts";
@@ -18,37 +16,11 @@ import { openGraph } from "../src/core/workspace/graph/graph.ts";
 import { locateVault } from "../src/core/workspace/vaults/vault.ts";
 import { App, type Host } from "../src/tui/app/runtime/app.ts";
 import { TextCanvas } from "../src/tui/shell/terminal/canvas.ts";
-import { locationItems } from "../src/tui/shell/screen/topbar/draw-topbar.ts";
+import { locationItems } from "../src/tui/shell/screen/topbar/location.ts";
 import type { Line } from "../src/core/rendering/layout/ir.ts";
 
-/** The sandbox of the file running, which `makeSandbox` sets. */
-let sandbox = "";
-
-/** The sandbox of the file running; a file that never made one is told so, rather than writing where it runs. */
-function box(): string {
-  if (!sandbox) throw new Error("tui-harness: call makeSandbox() at the test file's top");
-  return sandbox;
-}
-
-/**
- * A sandbox for the test file that calls it, at its top (its `afterAll` is that file's): the state, cache, config and
- * data folders (the home vault, 17.2) in it, removed when the file ends; never the developer's own config or clipboard.
- */
-export function makeSandbox(): string {
-  const dir = mkdtempSync(join(tmpdir(), "slipbox-tui-"));
-  sandbox = dir;
-  process.env.XDG_STATE_HOME = join(sandbox, "state");
-  process.env.XDG_CACHE_HOME = join(sandbox, "cache");
-  process.env.XDG_CONFIG_HOME = join(sandbox, "config");
-  process.env.XDG_DATA_HOME = join(sandbox, "data"); // the home vault (17.2)
-  // Harnesses copy and index a vault, CLI tests start processes: slow on a loaded machine, not stuck.
-  setDefaultTimeout(UNIT_TIMEOUT_MS);
-  delete process.env.SLIPBOX_CONFIG; // it would win over XDG_CONFIG_HOME: never the developer's own config
-  process.env.SLIPBOX_CLIPBOARD = "file"; // copies never reach the developer's clipboard
-  delete process.env.NO_COLOR;
-  afterAll(() => rmSync(dir, { recursive: true, force: true }));
-  return dir;
-}
+export { onlyRootsUnder } from "./support/vault-roots.ts";
+export { makeSandbox };
 
 const DEMO = join(import.meta.dir, "..", "examples", "vault");
 
@@ -174,24 +146,6 @@ export async function harness(opts: Opts = {}): Promise<Harness> {
 /** An idle job stepped to its end as the TUI steps it, the answers of its walks awaited (made on their own thread). */
 export async function stepToEnd(job: { step(budgetMs: number): boolean }, budgetMs = 50): Promise<void> {
   while (job.step(budgetMs)) await Bun.sleep(1);
-}
-
-/**
- * The machine's list of roots narrowed to those under `base` while `run` runs, then the others put back:
- * a search of every root and a moved folder's relink read them all, and a test file leaves hundreds,
- * so such a test would be as slow as the tests before it are many.
- */
-export async function onlyRootsUnder<T>(base: string, run: () => Promise<T>): Promise<T> {
-  const { readRoots, writeRoots } = await import("../src/core/workspace/vaults/registry.ts");
-  const was = readRoots();
-  const ours = (v: { path: string }) => v.path.startsWith(`${base}/`);
-  writeRoots(was.filter(ours));
-  try {
-    return await run();
-  } finally {
-    const now = readRoots();
-    writeRoots([...was.filter((v) => !ours(v) && !now.some((x) => x.key === v.key)), ...now]);
-  }
 }
 
 export const rowText = (h: Harness, row = h.app.view!.cur.row) =>

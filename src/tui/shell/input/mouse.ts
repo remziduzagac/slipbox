@@ -11,7 +11,7 @@ import { clampPos, type Pos, wordAt } from "../../documents/editing/cursor.ts";
 import type { Geometry } from "../screen/draw.ts";
 import { prettyKey } from "./keys.ts";
 import type { App, View } from "../../app/runtime/app.ts";
-import { editable } from "../../app/runtime/app.ts";
+import { editable } from "../../documents/editing/editable.ts";
 import { type LeftView, LEFT_VIEWS } from "../panels/panels.ts";
 import { codeBlocks } from "../../documents/views/code.ts";
 import { extentOf } from "../../../core/rendering/layout/ir.ts";

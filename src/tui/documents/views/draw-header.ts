@@ -1,42 +1,15 @@
 // Drawing a window's header (HDR-D1): the row atop each window between two rules — a split's file name, the
 // breadcrumb, the mode's buttons (HDR-D2) and the outline's ▤ — and how the buttons give way in a narrow one (HDR-D4).
 
+import { type ModeForm, FORM_WIDTH, labelOf, modeButtons, crumbLeast } from "./header-layout.ts";
 import type { App, View } from "../../app/runtime/app.ts";
 import { type Canvas, drawText } from "../../shell/terminal/canvas.ts";
-import {
-  type Rect,
-  type Geometry,
-  pageBg,
-  roleStyle,
-  button,
-  drawBreadcrumb,
-  crumbLeast,
-} from "../../shell/screen/draw.ts";
+import type { Rect } from "../../shell/screen/geometry.ts";
+import { type Geometry, drawBreadcrumb } from "../../shell/screen/draw.ts";
+import { pageBg, roleStyle } from "../../shell/screen/style.ts";
+import { button } from "../../shell/screen/controls.ts";
 import { truncate, stringWidth } from "../../../core/foundation/text/width.ts";
 import { MODES, viewMode } from "../../shell/input/modes.ts";
-
-/** The buttons' forms, widest first: every label, every letter, the selected one's letter alone; none. */
-export type ModeForm = "letters" | "selected" | "none";
-
-/** A label, or its letter, as drawn: a space either side. */
-const labelOf = (m: (typeof MODES)[number]) => ` ${m.label[0]} `;
-
-/** Each form's width: every label, every letter, one letter (the widest, whichever is selected). */
-const FORM_WIDTH: Record<Exclude<ModeForm, "none">, number> = {
-  letters: MODES.reduce((a, m) => a + stringWidth(labelOf(m)), 0),
-  selected: Math.max(...MODES.map((m) => stringWidth(labelOf(m)))),
-};
-
-/**
- * The buttons' form in `room` columns, the breadcrumb wanting `least` of them, its margins aside (HDR-D4): the widest
- * that leaves it those, else the selected letter as long as it fits at all.
- */
-export function modeButtons(room: number, least: number): ModeForm {
-  // The breadcrumb's columns are those between the name and the buttons less one at each end.
-  const keep = least > 0 ? least + 2 : 0;
-  if (FORM_WIDTH.letters + keep <= room) return "letters";
-  return room >= FORM_WIDTH.selected ? "selected" : "none";
-}
 
 /**
  * A window's header on the row under `rect`'s top (on its top row when the frame's rule is above it): a rule above

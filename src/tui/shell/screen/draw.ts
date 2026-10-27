@@ -7,12 +7,16 @@
 //
 // Returns the geometry of what was drawn, which the mouse handler hit-tests against.
 
+import { type Rect, type Hot, type Band, clipRules, coverHot } from "./geometry.ts";
+import { CHANGE_MARKER_MS, roleStyle, pageBg } from "./style.ts";
+import { button } from "./controls.ts";
+import { CRUMB_FLOOR, crumbLayout } from "../../documents/views/header-layout.ts";
 import type { CellStyle } from "../../../core/rendering/layout/style.ts";
-import type { Color, Role, Theme } from "../../../core/rendering/theme/theme.ts";
+import type { Color, Role } from "../../../core/rendering/theme/theme.ts";
 import { stringWidth, truncate } from "../../../core/foundation/text/width.ts";
 import type { App, View } from "../../app/runtime/app.ts";
 import { type Canvas, drawText } from "../terminal/canvas.ts";
-import { prettyKey } from "../input/keys.ts";
+
 import type { SaveAsGeometry } from "../../documents/saving/saveas.ts";
 import type { DialogGeometry } from "../overlays/dialog.ts";
 import { LEFT_VIEWS, RIGHT_VIEWS } from "../panels/panels.ts";
@@ -35,22 +39,10 @@ import {
   drawDropdown,
 } from "../overlays/draw-overlays.ts";
 
-export interface Rect {
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-}
-
 export interface PaneGeom extends Rect {
   view: View;
   /** Screen column of layout column 0. */
   textX: number;
-}
-
-/** A clickable region: its id says what a click does (see Mouse.clickHot). */
-export interface Hot extends Rect {
-  id: string;
 }
 
 /** A border the mouse can drag to resize something. */
@@ -118,32 +110,6 @@ export interface Geometry {
   /** The top bar said where you are (WSP-D4): the status line, drawn after it, leaves it out (WSP-D5). */
   /** A dialog of choices (UPG): its box and its rows, for clicks. */
   choices?: DialogGeometry | null;
-}
-
-export const CHANGE_MARKER_MS = 3000;
-
-export function roleStyle(theme: Theme, role: Role, page: Color | null): CellStyle {
-  const r = theme.roles[role];
-  return {
-    fg: r.fg ?? theme.fg,
-    bg: r.bg ?? page,
-    bold: !!r.bold,
-    italic: !!r.italic,
-    underline: !!r.underline,
-    strike: false,
-    dim: !!r.dim,
-    inverse: !!r.inverse,
-  };
-}
-
-export function pageBg(theme: Theme): Color | null {
-  return theme.bg === "default" ? null : theme.bg;
-}
-
-/** A key as which-key and the status line show it (`␣ l y`; with ASCII glyphs `SPC l y`). */
-export function keyText(app: App, key: string): string {
-  const k = prettyKey(key, app.leader);
-  return app.glyphs.mode === "ascii" ? k.replaceAll("␣", "SPC") : k;
 }
 
 export function drawApp(app: App, c: Canvas): Geometry {
@@ -401,42 +367,6 @@ function drawRail(
   });
 }
 
-/** A bar's rows: `h` rows from `y`, its text on the middle one. */
-export interface Band {
-  y: number;
-  h: number;
-}
-
-export const mid = (b: Band) => b.y + Math.floor(b.h / 2);
-
-/**
- * A clickable label filling the bar's full height, drawn with the hover role while the mouse is
- * over it, unless `hovers` is false (a click that changes nothing, or can't). `role` null draws the text on the bar's
- * own background.
- */
-export function button(
-  app: App,
-  c: Canvas,
-  x: number,
-  band: Band,
-  text: string,
-  role: Role,
-  id: string,
-  geo: Geometry,
-  barBg: Color | null,
-  maxW = Number.POSITIVE_INFINITY,
-  hovers = true,
-): number {
-  const theme = app.theme;
-  const st = roleStyle(theme, hovers && app.mouse.hover === id ? "hover" : role, barBg);
-  const w = Math.min(stringWidth(text), maxW);
-  if (w <= 0) return 0;
-  c.fill(x, band.y, w, band.h, st.bg ?? null);
-  drawText(c, x, mid(band), text, st, maxW);
-  geo.hot.push({ id, x, y: band.y, w, h: band.h });
-  return w;
-}
-
 /**
  * A window's outline breadcrumb, on its header: `crumbs`, the headings its cursor is under, each clickable. When they
  * don't all fit, the middle collapses into `…` (click: the whole path as a dropdown); then the texts are cut; then the
@@ -490,62 +420,6 @@ export function drawBreadcrumb(
     geo.hot.push({ id, x: cx, y, w, h: 1 });
     cx += w;
   });
-}
-
-/** Below this, a heading is cut no further: the breadcrumb drops it instead. */
-const CRUMB_MIN = 8;
-/** Fewer columns than this, and no breadcrumb is drawn at all. */
-const CRUMB_FLOOR = 4;
-
-/**
- * The columns a breadcrumb keeps before the mode's buttons beside it shorten (HDR-D4, HDR-D7): room for its icon and a
- * space, `… ›` and an innermost heading cut to `CRUMB_MIN` — crumbLayout's narrowest form but `…` alone — whatever the
- * headings the cursor is under or the mode, so the buttons don't change form as either does (well over the 4 columns
- * drawBreadcrumb draws in).
- */
-export function crumbLeast(glyphs: { crumb: string; crumbIcon: string }): number {
-  return stringWidth(glyphs.crumbIcon) + 1 + 1 + stringWidth(` ${glyphs.crumb} `) + CRUMB_MIN;
-}
-
-/**
- * Which headings a breadcrumb shows in `room` columns, each with its width, and where `…` stands
- * for the hidden ones. All of them if they fit; else the first, `…` and as many of the innermost as
- * fit; else the first and the last, cut (down to 8 columns each); else `…` and the last; else `…`.
- */
-export function crumbLayout(widths: number[], room: number, sepW: number): ({ i: number; w: number } | "more")[] {
-  const n = widths.length;
-  if (!n || room < 1) return [];
-  type Part = { i: number; w: number } | "more";
-  const width = (parts: Part[]) => parts.reduce((a, p) => a + (p === "more" ? 1 : p.w), 0) + (parts.length - 1) * sepW;
-  const all = widths.map((w, i) => ({ i, w }));
-  if (width(all) <= room) return all;
-  const last = all[n - 1]!;
-  if (n >= 3) {
-    for (let k = 2; k < n; k++) {
-      const parts: Part[] = [all[0]!, "more", ...all.slice(k)];
-      if (width(parts) <= room) return parts;
-    }
-  }
-  const minW = (w: number) => Math.min(w, CRUMB_MIN);
-  if (n >= 2) {
-    // The first and the last, cut to fit; `…` between them when something is hidden.
-    const fixed = sepW + (n >= 3 ? 1 + sepW : 0);
-    const first = all[0]!;
-    if (minW(first.w) + minW(last.w) + fixed <= room) {
-      const lastW = Math.min(last.w, room - fixed - minW(first.w));
-      const firstW = Math.min(first.w, room - fixed - lastW);
-      return n >= 3
-        ? [{ i: 0, w: firstW }, "more", { i: n - 1, w: lastW }]
-        : [
-            { i: 0, w: firstW },
-            { i: n - 1, w: lastW },
-          ];
-    }
-    if (1 + sepW + minW(last.w) <= room) return ["more", { i: n - 1, w: Math.min(last.w, room - 1 - sepW) }];
-    return ["more"];
-  }
-  if (minW(last.w) <= room) return [{ i: 0, w: Math.min(last.w, room) }];
-  return ["more"];
 }
 
 const CRUMB_MAX = 40;
@@ -614,30 +488,6 @@ function drawTabs(app: App, c: Canvas, x0: number, band: Band, geo: Geometry): v
     if (lastSep < bx - 2) separator(bx - 1);
     button(app, c, bx, band, label, "tab", "tabmore:", geo, stripBg);
   }
-}
-
-/**
- * A pane drawn over the note: the rules under it are cut out (they're hidden, and must not make
- * joints at its border), and so are the borders it covers (the explorer's, under the outline).
- */
-function clipRules(geo: Geometry, r: Rect): void {
-  const out: Geometry["rules"] = [];
-  for (const rule of geo.rules) {
-    if (rule.y < r.y || rule.y >= r.y + r.h || rule.x1 <= r.x || rule.x0 >= r.x + r.w) {
-      out.push(rule);
-      continue;
-    }
-    if (rule.x0 < r.x) out.push({ ...rule, x1: r.x });
-    if (rule.x1 > r.x + r.w) out.push({ ...rule, x0: r.x + r.w });
-  }
-  geo.rules = out;
-  // Only borders the pane actually covers (a tab separator above it stays).
-  geo.verticals = geo.verticals.filter((v) => v.x < r.x || v.x >= r.x + r.w || v.y1 < r.y || v.y0 >= r.y + r.h);
-}
-
-/** A pane drawn over the content hides the click targets under it. */
-export function coverHot(geo: Geometry, r: Rect): void {
-  geo.hot = geo.hot.filter((h) => h.x + h.w <= r.x || h.x >= r.x + r.w || h.y + h.h <= r.y || h.y >= r.y + r.h);
 }
 
 /** Where rules meet vertical borders, the box glyph for the lines that meet there. */
@@ -747,15 +597,4 @@ function drawContent(app: App, c: Canvas, area: Rect, ruleAbove: boolean, geo: G
       geo,
     );
   }
-}
-
-export function markStyle(theme: Theme, role: Role): Partial<CellStyle> {
-  const r = theme.roles[role];
-  const out: Partial<CellStyle> = {};
-  if (r.bg) out.bg = r.bg;
-  if (r.fg) out.fg = r.fg;
-  if (r.bold) out.bold = true;
-  if (r.underline) out.underline = true;
-  if (r.inverse) out.inverse = true;
-  return out;
 }

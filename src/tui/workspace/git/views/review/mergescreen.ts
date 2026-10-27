@@ -34,7 +34,7 @@ import { comparable, type DiffViewRow, diffView } from "../../../../../core/work
 import { TOP } from "../../../../../core/workspace/session/position.ts";
 import { sanitize } from "../../../../../core/foundation/text/sanitize.ts";
 import type { App } from "../../../../app/runtime/app.ts";
-import { editable } from "../../../../app/runtime/app.ts";
+import { editable } from "../../../../documents/editing/editable.ts";
 import { NoteBuffer } from "../../../../documents/buffers/buffer.ts";
 import { asBlocks, diffLanguage, isNote, LINES_ONLY, sideBySide, switchedText } from "../changes/diffview.ts";
 import { keyRow } from "./review.ts";

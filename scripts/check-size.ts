@@ -23,7 +23,7 @@ export const CAPPED: Record<string, number> = {
   "src/core/rendering/layout/code/code.ts": 1424,
   "src/core/rendering/layout/markdown/render.ts": 1076,
   "src/core/documents/syntax/syntax.ts": 1170,
-  "src/tui/app/runtime/app.ts": 1459,
+  "src/tui/app/runtime/app.ts": 1454,
   "src/tui/workspace/explorer/explorer.ts": 1275,
   "src/tui/shell/input/keys.ts": 1166,
   "src/tui/workspace/git/views/branches/gitbranchview.ts": 1005,

@@ -1,64 +1,18 @@
 // The permanent location and activity bar (VB-T2).
+
+import { locationItems } from "./location.ts";
+import { fitLocation, type LocationItem as Item } from "./fit-location.ts";
 import { VERSION } from "../../../../version.ts";
 import { PREVIEW_VERSION } from "../../../../core/application/distribution/release.ts";
 import type { App } from "../../../app/runtime/app.ts";
 import { type Canvas, drawText } from "../../terminal/canvas.ts";
-import { type Band, type Geometry, roleStyle, pageBg, button } from "../draw.ts";
+import type { Band } from "../geometry.ts";
+import type { Geometry } from "../draw.ts";
+import { roleStyle, pageBg } from "../style.ts";
+import { button } from "../controls.ts";
 import type { Role } from "../../../../core/rendering/theme/theme.ts";
 import { sanitize } from "../../../../core/foundation/text/sanitize.ts";
-import { stringWidth, truncateStart, truncate } from "../../../../core/foundation/text/width.ts";
-import { tildePath } from "../../../../core/workspace/vaults/names.ts";
-import { whereOf } from "./where.ts";
-
-type Item = { text: string; id: string; role: Role; compact?: string };
-
-export function locationItems(app: App): Item[] {
-  const w = whereOf(app);
-  const g = app.glyphs;
-  const workspace = app.homeFolder ?? (app.loc.mode === "home" ? "~" : w.vault);
-  const count = new Set(app.git.entries?.map((entry) => entry.path)).size;
-  return [
-    { text: `${g.explorerButton} ${sanitize(tildePath(app.explorer.top))}`, id: "top:zoom", role: "topbar" },
-    { text: `${g.vault} ${sanitize(workspace)}`, id: "top:vault", role: "topbar" },
-    ...(w.branch
-      ? [
-          {
-            text: `${g.branch} ${w.branch}${w.track ? ` ${w.track}` : ""}${w.op ? ` ${w.op}` : ""}`,
-            compact: `${g.branch} ${w.branch}${w.op ? ` ${w.op}` : ""}`,
-            id: "top:branch",
-            role: "status_dim" as Role,
-          },
-        ]
-      : []),
-    ...(count ? [{ text: `${g.changed} ${count}`, id: "top:changed", role: "git_modified" as Role }] : []),
-  ];
-}
-
-/** Location survives narrowing; tracking gives way before branch, then the changed count. */
-export function fitLocation(items: Item[], width: number, separator: string, tight = false): Item[] {
-  const out = items.map((item) => ({ ...item }));
-  const size = () =>
-    out.reduce((n, item) => n + stringWidth(item.text) + (tight ? 0 : 2), tight ? 0 : 2) +
-    Math.max(0, out.length - 1) * stringWidth(separator);
-  const branch = out.find((item) => item.id === "top:branch");
-  if (size() > width && branch) branch.text = branch.compact ?? branch.text;
-  if (size() > width && branch)
-    branch.text = truncate(branch.text, Math.max(4, stringWidth(branch.text) - (size() - width)));
-  if (size() > width && branch) out.splice(out.indexOf(branch), 1);
-  if (size() > width) {
-    const changed = out.findIndex((item) => item.id === "top:changed");
-    if (changed >= 0) out.splice(changed, 1);
-  }
-  for (const item of out) {
-    if (size() <= width) break;
-    const at = item.text.indexOf(" ");
-    const glyph = item.text.slice(0, at + 1);
-    const name = item.text.slice(at + 1);
-    const target = Math.max(1, stringWidth(name) - (size() - width));
-    item.text = glyph + truncateStart(name, target);
-  }
-  return out;
-}
+import { stringWidth } from "../../../../core/foundation/text/width.ts";
 
 export function drawTopBar(app: App, c: Canvas, band: Band, geo: Geometry): void {
   const bar = roleStyle(app.theme, "topbar", pageBg(app.theme));

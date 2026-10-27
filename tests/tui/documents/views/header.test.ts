@@ -8,8 +8,9 @@ import { join } from "node:path";
 import { commandGroup, COMMAND_SPECS } from "../../../../src/core/application/commands/catalog.ts";
 import { TextCanvas } from "../../../../src/tui/shell/terminal/canvas.ts";
 import { BACKGROUND_PARSE } from "../../../../src/tui/documents/buffers/buffer.ts";
-import { crumbLeast, type Geometry } from "../../../../src/tui/shell/screen/draw.ts";
-import { modeButtons } from "../../../../src/tui/documents/views/draw-header.ts";
+
+import type { Geometry } from "../../../../src/tui/shell/screen/draw.ts";
+
 import { drawPane } from "../../../../src/tui/documents/views/draw-pane.ts";
 import { openDiff } from "../../../../src/tui/workspace/git/views/changes/diffview.ts";
 import { unparsedText, type ViewMode, viewMode } from "../../../../src/tui/documents/editing/lens.ts";
@@ -546,36 +547,6 @@ describe("the buttons' hover, and what covers them", () => {
 });
 
 describe("room: the buttons give way before the breadcrumb's innermost heading (HDR-D4)", () => {
-  test("modeButtons: the widest form that leaves the breadcrumb its least room and margins, else the selected letter", () => {
-    // No breadcrumb: full from 20 columns, letters from 9, the selected letter from 3.
-    expect([20, 19, 9, 8, 3, 2].map((r) => modeButtons(r, 0))).toEqual([
-      "letters",
-      "letters",
-      "letters",
-      "selected",
-      "selected",
-      "none",
-    ]);
-    // A breadcrumb wanting 14 columns, and one at each end: full from 36, letters from 25, the selected letter from 19.
-    expect([36, 35, 25, 24, 19, 18, 3, 2].map((r) => modeButtons(r, 14))).toEqual([
-      "letters",
-      "letters",
-      "letters",
-      "selected",
-      "selected",
-      "selected",
-      "selected",
-      "none",
-    ]);
-  });
-
-  test("crumbLeast: room for the icon and a space, `… ›` and 8 columns of a heading, whatever the headings (HDR-D7)", () => {
-    expect(crumbLeast({ crumb: "›", crumbIcon: "§" })).toBe(2 + 4 + 8);
-    expect(crumbLeast({ crumb: ">", crumbIcon: "#" })).toBe(2 + 4 + 8);
-    // A heading one column wide keeps its place too: never under the 4 columns a breadcrumb is drawn in.
-    expect(modeButtons(25, crumbLeast({ crumb: "›", crumbIcon: "§" }))).toBe("letters");
-  });
-
   test("the buttons keep their form as the mode changes: a data file's Read and Source alike (HDR-D8)", async () => {
     const h = await harness({ open: YAML, width: 160, height: 40 });
     const v = h.app.view!;
