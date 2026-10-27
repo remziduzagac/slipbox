@@ -4,7 +4,8 @@
 
 import { type Run, lay, withView } from "../actions.ts";
 import * as C from "../../documents/editing/cursor.ts";
-import { type App, type View, editable } from "../../app/runtime/app.ts";
+import type { App, View } from "../../app/runtime/app.ts";
+import { editable } from "../../documents/editing/editable.ts";
 import { bracketFrom, matchBracket } from "../../../core/documents/editing/brackets.ts";
 import * as E from "../../documents/editing/editing.ts";
 import * as V from "../../shell/input/vim.ts";

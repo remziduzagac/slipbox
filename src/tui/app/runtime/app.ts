@@ -255,11 +255,6 @@ export interface View {
  *  each key handled). */
 const TRACE = process.env.SLIPBOX_TRACE;
 
-/** A window whose text can be edited: source mode or live preview. */
-export function editable(view: View | null | undefined): boolean {
-  return !!view && (!!view.source || !!view.live);
-}
-
 export interface Tab {
   views: View[];
   active: number;

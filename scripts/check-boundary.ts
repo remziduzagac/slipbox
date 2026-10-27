@@ -67,6 +67,101 @@ export function mutationViolations(from: string, text: string): string[] {
   });
 }
 
+/** Presentation primitives stay below the App and region composers that call them (ORG-T9). */
+export const TUI_PRIMITIVES = [
+  "src/tui/documents/editing/editable.ts",
+  "src/tui/documents/views/header-layout.ts",
+  "src/tui/shell/input/modes.ts",
+  "src/tui/shell/screen/geometry.ts",
+  "src/tui/shell/screen/style.ts",
+  "src/tui/shell/screen/controls.ts",
+  "src/tui/shell/screen/topbar/fit-location.ts",
+] as const;
+
+const COMPOSERS = [
+  "src/tui/app/runtime/app",
+  "src/tui/shell/screen/draw",
+  "src/tui/shell/screen/topbar/draw-topbar",
+  "src/tui/documents/views/draw-header",
+];
+
+const targetOf = (from: string, spec: string) =>
+  (spec.startsWith(".") ? relative(ROOT, resolve(ROOT, dirname(from), spec)) : spec).replace(/\.tsx?$/, "");
+
+export function primitiveViolations(from: string, text: string): string[] {
+  if (!(TUI_PRIMITIVES as readonly string[]).includes(from)) return [];
+  return importsOf(text).flatMap((spec) =>
+    COMPOSERS.includes(targetOf(from, spec))
+      ? [`${from}: imports ${spec} (presentation primitive must not import composition, even for types)`]
+      : [],
+  );
+}
+
+/** These editing clients no longer load App for the shared editable predicate (ORG-T9). */
+export const EDITABLE_CLIENTS = [
+  "src/tui/documents/views/views.ts",
+  "src/tui/documents/search/replacing.ts",
+  "src/tui/documents/editing/editing.ts",
+  "src/tui/documents/editing/shellrun.ts",
+  "src/tui/workspace/git/views/review/mergescreen.ts",
+  "src/tui/workspace/explorer/files.ts",
+  "src/tui/shell/input/input.ts",
+  "src/tui/shell/input/mouse.ts",
+  "src/tui/app/scratch/scratch.ts",
+  "src/tui/actions/documents/actions-view.ts",
+  "src/tui/actions/documents/actions-edit.ts",
+] as const;
+
+export function appCompositionViolations(from: string, text: string): string[] {
+  if (!(EDITABLE_CLIENTS as readonly string[]).includes(from)) return [];
+  const values = new Bun.Transpiler({ loader: from.endsWith(".tsx") ? "tsx" : "ts" }).scanImports(text);
+  return values.flatMap(({ path }) =>
+    targetOf(from, path) === "src/tui/app/runtime/app"
+      ? [`${from}: imports ${path} for runtime values (editing client must stay below App composition)`]
+      : [],
+  );
+}
+
+/** Drawing clients keep geometry types but never load the screen composer (ORG-T9). */
+export const DRAWING_CLIENTS = [
+  "src/tui/documents/diagnostics/draw-problems.ts",
+  "src/tui/documents/views/draw-pane.ts",
+  "src/tui/shell/overlays/draw-overlays.ts",
+  "src/tui/shell/panels/draw-panels.ts",
+  "src/tui/shell/screen/statusbar/draw-status.ts",
+  "src/tui/shell/screen/topbar/draw-topbar.ts",
+  "src/tui/workspace/git/views/panel/draw-git.ts",
+  "src/tui/shell/input/mouse.ts",
+  "src/tui/workspace/git/gitsteady.ts",
+] as const;
+
+export function drawingCompositionViolations(from: string, text: string): string[] {
+  if (!(DRAWING_CLIENTS as readonly string[]).includes(from)) return [];
+  const values = new Bun.Transpiler({ loader: from.endsWith(".tsx") ? "tsx" : "ts" }).scanImports(text);
+  return values.flatMap(({ path }) =>
+    targetOf(from, path) === "src/tui/shell/screen/draw"
+      ? [`${from}: imports ${path} for runtime values (drawing client must stay below screen composition)`]
+      : [],
+  );
+}
+
+/** Filesystem setup shared by pure cases must not load the model harness or TUI controllers. */
+export const PURE_TUI_FIXTURES = [
+  "tests/support/tui/sandbox.ts",
+  "tests/support/tui/peek-fixture.ts",
+  "tests/support/vault-roots.ts",
+] as const;
+
+export function fixtureViolations(from: string, text: string): string[] {
+  if (!(PURE_TUI_FIXTURES as readonly string[]).includes(from)) return [];
+  return importsOf(text).flatMap((spec) => {
+    const target = targetOf(from, spec);
+    return target.startsWith("src/tui/") || target === "tests/tui-harness"
+      ? [`${from}: imports ${spec} (filesystem fixture must stay independent of the TUI model)`]
+      : [];
+  });
+}
+
 function files(dir: string): string[] {
   const out: string[] = [];
   let entries: string[] = [];
@@ -103,12 +198,25 @@ if (import.meta.main) {
     const from = relative(ROOT, file);
     violations.push(...commandViolations(from, readFileSync(file, "utf8")));
     violations.push(...mutationViolations(from, readFileSync(file, "utf8")));
+    violations.push(...primitiveViolations(from, readFileSync(file, "utf8")));
+    violations.push(...appCompositionViolations(from, readFileSync(file, "utf8")));
+    violations.push(...drawingCompositionViolations(from, readFileSync(file, "utf8")));
     for (const spec of valueImportsOf(readFileSync(file, "utf8"))) {
       if (!spec.startsWith(".")) continue;
       const target = relative(ROOT, resolve(dirname(file), spec));
       const owners = OWNERS[target];
       if (owners && !owners.includes(from))
         violations.push(`${from}: imports ${spec} (only ${owners.join(", ")} may: it runs there alone)`);
+    }
+  }
+
+  for (const from of PURE_TUI_FIXTURES) {
+    const file = join(ROOT, from);
+    // Small fixture repositories used by the boundary tests need not contain the real support modules.
+    try {
+      violations.push(...fixtureViolations(from, readFileSync(file, "utf8")));
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
     }
   }
 

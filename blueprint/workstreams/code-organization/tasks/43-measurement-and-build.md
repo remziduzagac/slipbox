@@ -37,3 +37,8 @@ change as a coherent follow-up; #56 remains excluded. This is focused verificati
 - T12/T21: known clock-arithmetic TimeoutOverflowWarning output in shared processes: 18,198 lines for 121 split owners
   versus 4,069 for the old 22 files in an independent observation; groups alone are quiet, with no test failure. These
   are output observations, not a performance comparison. Investigate separately with a clock-arithmetic regression.
+
+
+T9 records two CLI fixture assumptions for T23 isolation: listing-only uninstall discovers installed host skills, and
+stat expects an unqualified vault name even inside a linked worktree. Baseline/current controls reproduce each; the
+focused launcher selection passes separately. Keep these failures separate from the passing mapped scope timings.

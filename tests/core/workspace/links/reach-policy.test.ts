@@ -13,7 +13,7 @@ import { readRoots } from "../../../../src/core/workspace/vaults/registry.ts";
 
 import { locateVault } from "../../../../src/core/workspace/vaults/vault.ts";
 
-import { onlyRootsUnder } from "../../../tui-harness.ts";
+import { onlyRootsUnder } from "../../../support/vault-roots.ts";
 import { makePeekFixture } from "../../../support/tui/peek-fixture.ts";
 
 // File-owned peek setup retains its model sandbox and afterEach mock reset.

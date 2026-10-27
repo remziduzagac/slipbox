@@ -3,7 +3,10 @@
 
 import type { App, View, PromptOverlay } from "../../../app/runtime/app.ts";
 import { type Canvas, drawText } from "../../terminal/canvas.ts";
-import { type Band, type Geometry, pageBg, roleStyle, mid, keyText, CHANGE_MARKER_MS } from "../draw.ts";
+import { type Band, mid } from "../geometry.ts";
+import type { Geometry } from "../draw.ts";
+import { pageBg, roleStyle, CHANGE_MARKER_MS } from "../style.ts";
+import { keyText } from "../controls.ts";
 import { keyChar } from "../../input/keys.ts";
 import { stringWidth, truncate, truncateStart, splitAtWidth } from "../../../../core/foundation/text/width.ts";
 import { srcAt } from "../../../../core/rendering/layout/ir.ts";

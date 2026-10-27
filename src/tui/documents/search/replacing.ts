@@ -11,7 +11,8 @@ import {
   parseSubstitute,
   type TextMatch,
 } from "../../../core/documents/editing/replace.ts";
-import { type App, editable, type PromptOverlay, type View } from "../../app/runtime/app.ts";
+import type { App, PromptOverlay, View } from "../../app/runtime/app.ts";
+import { editable } from "../editing/editable.ts";
 import * as E from "../editing/editing.ts";
 import { computeFind } from "../../workspace/search/search.ts";
 

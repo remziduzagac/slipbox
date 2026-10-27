@@ -12,7 +12,7 @@ import {
 } from "../../../core/workspace/mutations/capture.ts";
 import type { NoteBuffer } from "../../documents/buffers/buffer.ts";
 import type { App, UiState } from "../runtime/app.ts";
-import { editable } from "../runtime/app.ts";
+import { editable } from "../../documents/editing/editable.ts";
 
 /** The scratch and capture. */
 export class Scratch {

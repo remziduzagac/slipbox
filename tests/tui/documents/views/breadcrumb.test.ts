@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { ListOverlay } from "../../../../src/tui/app/runtime/app.ts";
-import { crumbLayout } from "../../../../src/tui/shell/screen/draw.ts";
+import { crumbLayout } from "../../../../src/tui/documents/views/header-layout.ts";
 import { makeSandbox, harness } from "../../../tui-harness.ts";
 
 // The model harness applies the file-local timeout and sandbox policy.

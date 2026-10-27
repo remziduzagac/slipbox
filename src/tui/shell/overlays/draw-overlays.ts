@@ -5,7 +5,10 @@ import type { App, PromptOverlay, ListOverlay, ListItem } from "../../app/runtim
 import { type Canvas, drawText } from "../terminal/canvas.ts";
 import { type SaveAsOverlay, type SaveAsGeometry, placeOf, sizeText, dateText } from "../../documents/saving/saveas.ts";
 import { type DialogGeometry, type DialogOverlay, cursorHelp, dimmed } from "./dialog.ts";
-import { type Geometry, type Rect, roleStyle, keyText, coverHot } from "../screen/draw.ts";
+import type { Geometry } from "../screen/draw.ts";
+import { type Rect, coverHot } from "../screen/geometry.ts";
+import { roleStyle } from "../screen/style.ts";
+import { keyText } from "../screen/controls.ts";
 import { truncate, stringWidth, truncateStart, graphemes, graphemeWidth } from "../../../core/foundation/text/width.ts";
 import { smallButton } from "../panels/draw-panels.ts";
 import { peekTitle } from "../../documents/navigation/peek.ts";

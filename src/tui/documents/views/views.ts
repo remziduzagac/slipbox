@@ -13,7 +13,8 @@ import { truncate, graphemes, graphemeWidth, stringWidth } from "../../../core/f
 import type { NoteBuffer } from "../buffers/buffer.ts";
 import { cells, clampPos, type Pos, snap, ordered } from "../editing/cursor.ts";
 import type { App, View } from "../../app/runtime/app.ts";
-import { editable, type Selection } from "../../app/runtime/app.ts";
+import { editable } from "../editing/editable.ts";
+import type { Selection } from "../../app/runtime/app.ts";
 import { isHidden, unparsedText } from "../editing/lens.ts";
 import { computeFind } from "../../workspace/search/search.ts";
 

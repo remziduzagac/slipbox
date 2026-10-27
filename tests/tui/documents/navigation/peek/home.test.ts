@@ -1,3 +1,4 @@
+import { read } from "../../../../support/tui/peek-reading.ts";
 import { expect, test } from "bun:test";
 
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, utimesSync, writeFileSync } from "node:fs";
@@ -21,7 +22,7 @@ import { harness } from "../../../../tui-harness.ts";
 import { makePeekFixture } from "../../../../support/tui/peek-fixture.ts";
 
 // File-owned peek setup retains its model sandbox and afterEach mock reset.
-const { sandbox, read } = makePeekFixture();
+const { sandbox } = makePeekFixture();
 
 test("a peek into home with no index says so and builds none: home's is built in slices while nobody works (VV-D2, D259)", async () => {
   const home = realpathSync(mkdtempSync(join(sandbox, "home-")));

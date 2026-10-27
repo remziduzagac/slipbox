@@ -3,7 +3,9 @@
 
 import type { App, SidePaneState } from "../../app/runtime/app.ts";
 import { type Canvas, drawText } from "../terminal/canvas.ts";
-import { type Rect, type Geometry, roleStyle, pageBg } from "../screen/draw.ts";
+import type { Rect } from "../screen/geometry.ts";
+import type { Geometry } from "../screen/draw.ts";
+import { roleStyle, pageBg } from "../screen/style.ts";
 import type { Color, Role } from "../../../core/rendering/theme/theme.ts";
 import { stringWidth, truncate, splitAtWidth, graphemes, graphemeWidth } from "../../../core/foundation/text/width.ts";
 import { drawHScrollbar, paneScrollbar } from "../../documents/views/draw-pane.ts";

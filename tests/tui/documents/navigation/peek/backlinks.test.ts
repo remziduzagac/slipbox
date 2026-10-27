@@ -1,3 +1,4 @@
+import { read } from "../../../../support/tui/peek-reading.ts";
 import { expect, test } from "bun:test";
 
 import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
@@ -14,7 +15,7 @@ import { harness, onlyRootsUnder } from "../../../../tui-harness.ts";
 import { makePeekFixture } from "../../../../support/tui/peek-fixture.ts";
 
 // File-owned peek setup retains its model sandbox and afterEach mock reset.
-const { sandbox, read } = makePeekFixture();
+const { sandbox } = makePeekFixture();
 
 let made = 0;
 

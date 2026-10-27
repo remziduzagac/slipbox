@@ -4,18 +4,11 @@ import { backlinkThread } from "../../../src/core/workspace/graph/backlinks-jobs
 
 import { Graph } from "../../../src/core/workspace/graph/graph.ts";
 
-import { peekOf } from "../../../src/tui/documents/navigation/peek.ts";
-import { type Harness, makeSandbox } from "../../tui-harness.ts";
+import { makeSandbox } from "./sandbox.ts";
 
 /** The original peek-backlink fixture, registered for the calling test file alone. */
 export function makePeekFixture() {
   const sandbox = makeSandbox();
-
-  /** The peek's backlinks, once their thread has answered. */
-  async function read(h: Harness): Promise<string> {
-    await peekOf(h.app)?.reading;
-    return h.app.view!.buf.source;
-  }
 
   /** The graphs whose notes were all parsed on this thread while `run` ran: by their roots. */
   async function parsedHere<T>(run: () => Promise<T>): Promise<{ result: T; roots: string[] }> {
@@ -71,5 +64,5 @@ export function makePeekFixture() {
     return { sent, thread, reply };
   }
 
-  return { sandbox, read, parsedHere, fakeThread };
+  return { sandbox, parsedHere, fakeThread };
 }

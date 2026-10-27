@@ -1,7 +1,7 @@
 // A window's presentation values (VB-D1, retaining HDR-D2's internal names): their names and their order, in a module that imports nothing at load, so the lens, the
 // header and the mouse find them whichever of them loads first (lens.ts → … → draw-header.ts → lens.ts is a cycle).
 
-import type { View } from "../../app/runtime/app.ts";
+import type { EditableView } from "../../documents/editing/editable.ts";
 
 /** Internal compatibility values: READ, READ with its lens, or SOURCE. Vim mode is independent. */
 export type ViewMode = "rendered" | "source" | "live";
@@ -14,6 +14,6 @@ export const MODES: readonly { mode: ViewMode; id: "read" | "lens" | "source"; l
 ];
 
 /** The mode a window is in. */
-export function viewMode(view: View): ViewMode {
+export function viewMode(view: EditableView): ViewMode {
   return view.source ? "source" : view.live ? "live" : "rendered";
 }

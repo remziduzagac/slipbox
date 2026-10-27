@@ -4,7 +4,10 @@
 
 import type { App, View, Tab } from "../../app/runtime/app.ts";
 import { type Canvas, drawText } from "../../shell/terminal/canvas.ts";
-import { type Rect, type Geometry, pageBg, roleStyle, button, markStyle } from "../../shell/screen/draw.ts";
+import type { Rect } from "../../shell/screen/geometry.ts";
+import type { Geometry } from "../../shell/screen/draw.ts";
+import { pageBg, roleStyle, markStyle } from "../../shell/screen/style.ts";
+import { button } from "../../shell/screen/controls.ts";
 import { drawWindowHeader } from "./draw-header.ts";
 import { truncate, stringWidth, truncateStart, graphemes, graphemeWidth } from "../../../core/foundation/text/width.ts";
 import { ordered, cells } from "../editing/cursor.ts";

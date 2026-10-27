@@ -76,7 +76,7 @@ test("Bun file-local timeout sites stay named; update this map when a file moves
     ["tests/export-reads.test.ts", "TEST_BUDGETS.exportReads"],
     ["tests/export.test.ts", "UNIT_TIMEOUT_MS"],
     ["tests/servers.test.ts", "UNIT_TIMEOUT_MS"],
-    ["tests/tui-harness.ts", "UNIT_TIMEOUT_MS"],
+    ["tests/support/tui/sandbox.ts", "UNIT_TIMEOUT_MS"],
     ["tests/upgrade-restart.test.ts", "UNIT_TIMEOUT_MS"],
     ["tests/cli/contracts/catalog.test.ts", "UNIT_TIMEOUT_MS"],
     ["tests/cli/contracts/envelopes.test.ts", "UNIT_TIMEOUT_MS"],
