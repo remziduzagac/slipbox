@@ -324,7 +324,9 @@ describe("the supply chain's gates (14.10)", () => {
       expect([job, ci.jobs[job]?.needs, ci.jobs[job]?.if]).toEqual([
         job,
         "changes",
-        `\${{ needs.changes.outputs.${output} == 'true' }}`,
+        job === "terminal"
+          ? "${{ github.event_name != 'pull_request' && needs.changes.outputs.checks == 'true' }}"
+          : `\${{ needs.changes.outputs.${output} == 'true' }}`,
       ]);
     expect(ci.jobs.changes?.steps?.find((s) => s.id === "scope")?.run).toBe("bun run ci:scope");
     expect(ci.jobs.lint?.steps?.map((s) => s.run)).toContain("bun run test:docs");

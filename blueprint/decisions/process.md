@@ -230,6 +230,9 @@ typecheck together (2026-10-17), fixed within the hour.
 
 ## D251: dev, test, then main: tested as it moves, everything before a release (2026-10-17)
 
+> **Amended by D266 (2026-10-27):** PRs keep lint, reached Linux/macOS unit tests and site; only terminal checks
+> move to pushes, previews and the full run. Scope 3 disables PR-tree reuse so squash pushes retain terminal coverage.
+
 > **Amended by CIW-D1–CIW-D4 (2026-10-26):** pushes test since the nearest passing run of the same scope,
 > less a verified passing pull-request tree on its base; moving a passing dev commit to test repeats no tests.
 > Superseded push runs are cancelled; their commits remain in the next range.
@@ -329,3 +332,28 @@ thread blocked in a read nothing can end); a stand-in `Worker` on the main threa
 the main thread's: a main thread held until the dictionary is there would hang the run); turns counted while the
 dictionary loads, unheld, as the syntax pass's test counts them (ticks before a build on the main thread pass it, and a
 pause covering the whole load fails it).
+
+
+## D266: Terminal checks after merge; unit tests and site stay on pull requests (2026-10-27)
+
+**Decision:** The maintainer's choice, 2026-10-27: pull requests run lint (Biome, sizes, workflows, docs and docs
+tests), changes, the typecheck, boundary and dependency gates, reached unit tests on Ubuntu and macOS, CodeQL, site and
+the aggregate `ci` check. Only the terminal job is skipped on pull requests. Pushes to `dev` and `test`, merge groups
+and runs by hand keep the existing matrices; the manual run remains full. The aggregator and repository rulesets are
+unchanged.
+
+Scope version 3 stops emitting or trusting complete-check PR records (CIW-D2): a PR pass certifies no terminal checks.
+Squash pushes retain the scope since the last complete push pass, repeating units on both platforms too; site keeps
+running on every event. CIW-D1's conservative fallback, CIW-D3's promotion of an already-passed push tree and CIW-D4's
+superseded-push handling remain. Amends D251 and CIW-D2. Detail: design/repository.md § CI and § What a push tests;
+MAINTAINING.md.
+
+**Why:** Organization PRs touch widely imported modules, so their reached set is nearly everything. Broad terminal runs
+add a long PR wait and unrelated timing failures. Unit tests on both platforms remain before merge; site costs about 15
+seconds and stays there too.
+
+**Cost:** A terminal-only break can sit on `dev` until its push run finds it. Unit tests repeat after merge because
+PR-tree reuse is disabled. A release still requires the full passing run.
+
+**Not chosen:** treating a PR record without terminal coverage as complete; per-job range reuse in this small change,
+which would require separate coverage and range contracts.

@@ -2,8 +2,8 @@
 // the one pushed, whose push run passed under the same scope (`SCOPE_VERSION` in that commit's `scripts/ci-scope.ts`):
 // a run cancelled or failed leaves its commits to the next. With none, from `test`'s head before the push when it's of
 // that version (`test` takes only a commit whose `ci` passed), else everything. And it ends at the commit's parent when
-// a pull request's run passed the commit's own tree on that parent (CIW-D2): what the pull request changed was tested
-// there, on the same tree, by the same workflow. Whatever can't be read tests more, never less.
+// a scope before version 3 certified every check in a PR record (CIW-D2). Scope 3 PRs cover units on both platforms,
+// so their pushes retain the whole range for terminal checks (D266). Unreadable state tests more.
 
 /** A GET of GitHub's REST API under the repository (`actions/runs/1`): its JSON, or null when it can't be read. */
 export type Api = (path: string) => Promise<unknown>;
@@ -117,7 +117,7 @@ export const recordName = (version: number, base: string, tree: string) => `ci-t
 
 /**
  * What a push of `HEAD` in `root` tests: the passes read through `api`, then `test`'s head before the push
- * (`testHead`), then everything; less what a pull request's run passed.
+ * (`testHead`), then everything. Only legacy scopes can reuse a full-platform PR record.
  */
 export async function pushRange(root: string, api: Api | null, testHead: string | null): Promise<Range> {
   const head = commit(root, "HEAD");
@@ -148,7 +148,7 @@ export async function pushRange(root: string, api: Api | null, testHead: string 
   let to = head;
   const parent = commit(root, "HEAD^1");
   const tree = gitOut(root, "rev-parse", "HEAD^{tree}");
-  if (api && from !== head && parent && tree) {
+  if (version < 3 && api && from !== head && parent && tree) {
     const run = await recordRun(api, root, recordName(version, parent, tree), parent, tree);
     if (run) {
       to = parent;
