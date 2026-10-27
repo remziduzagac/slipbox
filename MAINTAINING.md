@@ -49,20 +49,17 @@ GitHub's releases are, with `SLIPBOX_RELEASES_URL`. A person able to take over w
 ## Merging a change
 
 Every change reaches `dev`, the default branch, through a pull request: the rules require the aggregate `ci` check. A
-pull request runs lint (including docs tests), CodeQL and the typecheck, boundary, dependency gates and scoped unit
-tests on Ubuntu alone. Terminal checks and the site build are skipped; they and macOS run after merge (D266). Docs-only
-pull requests still skip the unit job (D230). No ruleset changes are needed: `ci` accepts successful or skipped jobs.
+pull request runs lint (Biome, sizes, workflows, docs and docs tests), CodeQL, the site and the typecheck, boundary,
+dependency gates and reached unit tests on Ubuntu and macOS. Only the terminal job is skipped on pull requests (D266).
+Docs-only pull requests still skip the unit job (D230). No ruleset changes are needed: `ci` accepts successful or
+skipped jobs. Lint checks Markdown, spelling and links between files on every PR.
 
-The lint still checks Markdown, spelling and links between files on every PR. The docs-site build is checked by the push
-run after merge and by the pages workflow.
-
-Pushes to `dev` and `test` run scoped unit tests on Ubuntu/macOS and terminal checks on all three runners. Scope version
-3 disables CIW-D2's PR-tree shortcut: a Linux-unit-only pass covers neither macOS nor terminal checks. A squash push
-retains the range since the last passing push, repeating Linux units too; old-version passes cannot shorten it. A
-promotion already covered by a passing push can still skip tests (CIW-D3). A superseded push gives way to its successor,
-which retains untested commits (CIW-D4). A terminal-check, site-build or macOS-only break can therefore sit on `dev`
-until its push run finds it; the preview and full run remain additional checks. No approval is required, since there is
-no second person to give one.
+Pushes to `dev` and `test`, merge groups and runs by hand keep the original unit and terminal matrices; a run by hand
+stays full. Scope version 3 disables CIW-D2's PR-tree shortcut: a PR pass covers no terminal checks. A squash push
+retains the range since the last passing push, repeating units on both platforms too; old-version passes cannot shorten
+it. Site remains on every PR and push. A promotion already covered by a passing push can still skip tests (CIW-D3). A
+superseded push gives way to its successor, which retains untested commits (CIW-D4). A terminal-only break can therefore
+sit on `dev` until its push run finds it. No approval is required, since there is no second person to give one.
 
 - **Who:** agents and collaborators work on a branch and open the pull request; the maintainer merges it, or asks an
   agent to review and merge it. Agents merge, run the full suite, move `test` or `main` and release only when the

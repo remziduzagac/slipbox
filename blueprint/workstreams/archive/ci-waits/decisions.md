@@ -25,8 +25,8 @@ range starts).
 
 ## CIW-D2: A merge doesn't test again the tree its pull request's run passed (2026-10-24)
 
-> **Amended by D266 (2026-10-27):** scope 3 PRs cover Linux units alone and emit no full-platform record. Squash
-> pushes keep the changed scope for terminal checks and macOS, repeating Linux units as well.
+> **Amended by D266 (2026-10-27):** scope 3 PRs cover units on both platforms, lint and site, but no terminal
+> checks. They emit no complete-check record; squash pushes retain terminal coverage, repeating unit tests too.
 
 **Decision:** A pull request's run records the tree it tests and its base, in an artifact named
 `ci-tested-v<version>-<base>-<tree>`, written by `changes` before the tests, kept seven days, never failing the run. A

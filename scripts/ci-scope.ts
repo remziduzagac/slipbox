@@ -6,8 +6,8 @@
 // a file of the harness `HARNESS_FOR` names, which only some checks use: theirs). The packages, the toolchain, the
 // workflows, and a file nothing names run everything; so do a merge group, a run by hand (the `full` run `main`
 // requires, D251) and a diff that can't be read; the lint's own configs, only the lint. A push to `dev` or `test` is
-// scoped over its range since the nearest full-platform push pass (CIW-D1, D266, `scripts/ci-range.ts`); a Linux-only
-// pull request cannot cover macOS or terminal checks after merge. A range with nothing in it runs nothing.
+// scoped over its range since the nearest complete push pass (CIW-D1, D266, `scripts/ci-range.ts`); a PR without terminal coverage
+// cannot cover those checks after merge. A range with nothing in it runs nothing.
 //
 // `bun run ci:scope` writes what CI's jobs need to $GITHUB_OUTPUT (`code`, `checks`; a push's `range`, which the jobs
 // after it read as `SCOPE_RANGE`), and says it
@@ -24,7 +24,7 @@ const ROOT = join(import.meta.dir, "..");
 /**
  * What a run's pass means, for the runs after it: a push's range starts at a commit whose run passed only when that
  * commit's scope is this version (CIW-D1), and a pull request's record names it (CIW-D2). Raised when a change alters
- * what a pass or a record covers — a pull request's run without macOS, say — so those made before stop counting.
+ * what a pass or a record covers — a pull request's run without terminal checks, say — so those made before stop counting.
  * `scripts/ci-range.ts` reads it from each commit as written here, on one line.
  */
 export const SCOPE_VERSION = 3;
@@ -373,7 +373,7 @@ if (import.meta.main) {
     process.env.SCOPE_RANGE = "all" in r ? "all" : `${r.from}..${r.to}`;
     if (out) appendFileSync(out, `range=${process.env.SCOPE_RANGE}\n`);
   }
-  // D266: PRs cover Linux units only; no full-platform record may shorten their squash push's range.
+  // D266: PRs omit terminal checks; no complete-check record may shorten their squash push's range.
   const files = changedFiles(here, base);
   // A push's range with nothing in it — the commit itself, or a tree a run passed already — runs nothing.
   const nothing = event === "push" && files?.length === 0;

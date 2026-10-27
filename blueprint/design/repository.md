@@ -101,34 +101,30 @@ workflow: actionlint 1.7.12 doesn't know the token's `vulnerability-alerts` scop
 ## CI
 
 `.github/workflows/ci.yml` runs on every pull request, every push to `dev` or `test`, a merge queue's group (listed for
-later: a merge queue needs an organisation's repository) and by hand (GR-D9, D251). A pull request runs reached Linux
-unit tests, with no terminal job; pushes add macOS and terminal checks for their scope (D266). Both run lint and CodeQL;
-the docs-site build runs after merge and in the pages workflow; a run by hand runs everything, and its aggregator
-reports `full` instead of `ci`. Its jobs are `bun run check`'s parts, each step a package.json script, never a command
-of its own, and one more for a run by hand:
+later: a merge queue needs an organisation's repository) and by hand (GR-D9, D251). A pull request runs lint, the
+typecheck, boundary and dependency gates, reached unit tests on Linux and macOS, CodeQL, site and the aggregate `ci`
+check. Only terminal checks move after merge (D266). A push runs the full changed scope; a run by hand runs everything
+and reports `full` instead of `ci`. Jobs call package.json scripts.
 
 - **`lint`**, on `ubuntu-24.04`: Biome (`bun run lint`), the workflows (`bun run check:actions`, zizmor online with
   the job's token), the docs (`bun run check:docs`) and the tests that read the docs (`bun run test:docs`: the docs'
   and the site's tests, D230).
 - **`changes`**, on `ubuntu-24.04`: what a pull request changed (`bun run ci:scope`, its merge commit against its base),
-  or a push to `dev` or `test` (since the nearest full-platform push pass; § What a push tests). Linux-only PRs emit no
-  full-platform record (D266). When every file is the docs' (`docs/`, `blueprint/`, `site/src/`, a Markdown file at the
-  top), `test` and `terminal` are skipped: no test reads those files but the docs' own, which `lint` runs (D230).
-  Otherwise it says whether any terminal check reaches the change (`checks`); `terminal` is skipped when none does
-  (D239). A merge group, a run by hand, a branch just made and a diff that can't be read run everything. A test holds
-  every test that reads the docs to `test:docs`'s list, so a new one can't be skipped with them.
-- **`test`**, on `ubuntu-24.04` alone for pull requests; pushes, merge groups and full runs add `macos-15` (arm64),
-  neither stopping the other: the typecheck, the boundary, the supply chain's gates (this platform's OpenTUI package's
-  licence among them) and the tests a change's files reach (`bun run test:changed`; every one in the full run). On macOS
-  the SQLite is Apple's, so the index's FTS5 (`unicode61`, `remove_diacritics 2`) and its `bm25` ranking are tested
-  there after merge whenever a change reaches them, and in every full run (`tests/core.test.ts`, `tests/vault.test.ts`,
-  `tests/cli.test.ts`; `14.13`).
+  or a push to `dev` or `test` (since the nearest full-platform push pass; § What a push tests). PRs without terminal
+  coverage emit no complete-check record (D266). When every file is the docs' (`docs/`, `blueprint/`, `site/src/`, a
+  Markdown file at the top), `test` and `terminal` are skipped: no test reads those files but the docs' own, which
+  `lint` runs (D230). Otherwise it says whether any terminal check reaches the change (`checks`); `terminal` is skipped
+  when none does (D239). A merge group, a run by hand, a branch just made and a diff that can't be read run everything.
+  A test holds every test that reads the docs to `test:docs`'s list, so a new one can't be skipped with them.
+- **`test`**, on `ubuntu-24.04` and `macos-15` (arm64) for every event, neither stopping the other: the typecheck,
+  boundary, supply chain's gates and reached unit tests (`bun run test:changed`; everything in the full run). On macOS
+  SQLite is Apple's; its FTS5 and ranking run when a change reaches them and in the full run (`14.13`).
 - **`terminal`**, skipped entirely for pull requests. Pushes, merge groups and full runs keep `ubuntu-24.04`,
   `ubuntu-24.04-arm` and `macos-15`: the terminal checks a change's files reach (`bun run test:terminal:changed`; every
   one in the full run, TT-D6). No job runs on an Intel Mac, for which nothing is built after 0.3.0 (D238); a test holds
   every workflow to it.
-- **`site`**, skipped on pull requests; on `ubuntu-24.04` for pushes, merge groups and runs by hand: the docs' site
-  built (`bun run site`), every link within it landing (DS).
+- **`site`**, on `ubuntu-24.04` for every event: the docs' site built (`bun run site`), every link within it landing
+  (DS). Lint separately checks Markdown, spelling and links between files on every PR.
 - **`ci`**, the aggregator and the one required check: it always runs, waits for every other job, and fails unless
   each passed or was skipped. A job skipped by its `if:` counts as passed; one that failed, was cancelled or never
   started doesn't. A test holds it to waiting for every job but `status`, so a job added can't be left out of the
@@ -209,11 +205,10 @@ and a run by hand's and a merge group's everything, as before; so is `bun run te
 branch left `origin/dev`.
 
 **Which runs count.** `scripts/ci-scope.ts` declares `SCOPE_VERSION`, now 3 (D266), and a later change raises it when it
-alters what a pass or a record means (a pull request's run without macOS, say). A run counts only when its commit's
-`scripts/ci-scope.ts` declares the same version as the commit pushed: a pass under another scope tested something else —
-under the scope before this one, a push's commits since the branch's head before it, which says nothing of the commits
-before those (2026-10-24's runs, cancelled for newer ones, left their merges untested). Every hash read from the API is
-checked as one (40 hex digits) before it reaches git.
+alters what a pass or a record means (a pull request no longer running terminal checks). A run counts only when its
+commit's `scripts/ci-scope.ts` declares the same version as the commit pushed. An older policy may have credited a PR
+record for checks the current PR no longer runs, so it cannot establish coverage under this version. Every hash read
+from the API is checked as one (40 hex digits) before it reaches git.
 
 **The last run that passed.** `changes` lists the newest hundred runs of `ci.yml` for a push that concluded `success`
 (`GET /repos/{repo}/actions/workflows/ci.yml/runs` with `event=push`, `status=success`) — every job passed or was
@@ -226,29 +221,25 @@ to `test` — when that commit declares this version: `test`'s ruleset, which no
 `ci` passed, and that run was its own commit's, of this version. Otherwise, everything: the first push under a new
 version, a `test` behind it, `before` all zeros for a branch just made, a start off the pushed commit's line, the API
 unreadable with `test` behind. So a version's first run tests everything, and nothing a run before it skipped is taken
-as tested; for this change's own merge that's what "from `test`'s head" gives too, since every commit since `test`'s
-head (`71313f3`) together changes the workflows and `package.json`, which run everything. Whatever fails — the API, a
-fetch, a hash that isn't one — tests more, never less.
+as tested. In particular, a `test` head from scope 2 provides no fallback for the first scope-3 push. Whatever fails —
+the API, a fetch, a hash that isn't one — tests more, never less.
 
-**What a pull request's run passed** (CIW-D2, amended by D266). Under scope 3, a PR pass covers Linux units but neither
-terminal checks nor macOS. PRs emit no full-platform artifact; push range calculation does not consult PR records, even
-if a matching artifact exists. The old record lookup is retained only for legacy scopes below 3. Raising the version
-invalidates old push passes as well, so the first push under scope 3 runs everything when no same-version fallback is
-available.
+**What a pull request's run passed** (CIW-D2, amended by D266). Under scope 3, PRs cover unit tests on both platforms,
+lint and site, but no terminal checks. They emit no complete-check artifact, and push range calculation does not consult
+PR records even if one matches. The old lookup remains only for legacy scopes below 3. Raising the version invalidates
+old push passes too, so the first scope-3 push runs everything without a same-version fallback.
 
-A squash push retains its own commit in the range since the last full-platform push pass. Linux units repeat along with
-the newly required macOS and terminal coverage. This deliberately forgoes per-platform reuse to keep one conservative
-range for every job. Cancelled or failed pushes leave their changes to the next push, and a matching already-passed push
-can still cover promotion to `test` (CIW-D1, CIW-D3). PRs keep lint (Markdown, spelling, file links and docs tests),
-CodeQL and the aggregate `ci` check; its success/skipped rule is unchanged. A terminal-check, site-build or macOS-only
-break can sit on `dev` until the push run or a preview finds it, before the full run permits a release (D251, D266).
+A squash push retains its own commit in the range since the last complete push pass. Unit tests repeat on both platforms
+along with the required terminal coverage; site remains on every event. This deliberately forgoes per-job reuse to keep
+one conservative range. Cancelled or failed pushes leave their changes to the next push, and an already-passed push tree
+can still cover promotion to `test` (CIW-D1, CIW-D3). The aggregate `ci` check keeps its success/skipped rule. A
+terminal-only break can sit on `dev` until its push run finds it (D251, D266).
 
 **Nothing to test.** A range from a commit to itself, or between two commits with the same tree, tests nothing:
 `changes` outputs `code` and `checks` false, `test` and `terminal` are skipped, and `ci` passes; `lint` runs on every PR
-and push, and `site` runs on pushes, merge groups and full runs. A pull request that changes nothing still runs
-everything (D230). So:
+and push, as does `site`. A pull request that changes nothing still runs everything (D230). So:
 
-- a squash merge tests its changed scope on all configured platforms, even when its Linux-only PR passed;
+- a squash merge tests its changed scope on all configured platforms, even when its PR unit tests passed;
 - after merges close together whose runs were cancelled or failed, the next push tests every one of them since the
   last pass, on Linux and macOS;
 - moving `dev` to `test` (CIW-D3): the commit pushed passed on `dev`, so the push runs no test and no terminal check;

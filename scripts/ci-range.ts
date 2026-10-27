@@ -2,8 +2,8 @@
 // the one pushed, whose push run passed under the same scope (`SCOPE_VERSION` in that commit's `scripts/ci-scope.ts`):
 // a run cancelled or failed leaves its commits to the next. With none, from `test`'s head before the push when it's of
 // that version (`test` takes only a commit whose `ci` passed), else everything. And it ends at the commit's parent when
-// a scope before version 3 certified the full platform set in a PR record (CIW-D2). Scope 3 PRs cover Linux units
-// alone, so their pushes retain the whole range for macOS and terminal checks (D266). Unreadable state tests more.
+// a scope before version 3 certified every check in a PR record (CIW-D2). Scope 3 PRs cover units on both platforms,
+// so their pushes retain the whole range for terminal checks (D266). Unreadable state tests more.
 
 /** A GET of GitHub's REST API under the repository (`actions/runs/1`): its JSON, or null when it can't be read. */
 export type Api = (path: string) => Promise<unknown>;

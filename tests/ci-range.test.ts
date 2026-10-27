@@ -190,7 +190,7 @@ describe("a merge doesn't test again what its pull request's run passed (CIW-D2)
     return { r, o, p, h, x, s, name: recordName(version, p, r.tree(s)) };
   }
 
-  test("Linux-only PR coverage never shortens the push scope for macOS and terminal checks (D266)", async () => {
+  test("PR coverage without terminal checks never shortens their push scope (D266)", async () => {
     const { r, o, p, h, s, name } = merged(SCOPE_VERSION);
     expect(SCOPE_VERSION).toBeGreaterThanOrEqual(3);
     for (const last of [p, o]) {
@@ -322,7 +322,7 @@ describe("a merge doesn't test again what its pull request's run passed (CIW-D2)
   });
 });
 
-describe("a Linux-only pull request does not certify full-platform coverage (D266)", () => {
+describe("a PR without terminal coverage does not certify complete checks (D266)", () => {
   test("ci:scope reports the PR scope without creating a full-platform record", () => {
     const r = repo();
     r.commit({ "src/a.ts": "1" });
@@ -422,17 +422,14 @@ describe("the workflow hands the range on (CIW-D1–CIW-D4)", () => {
     jobs: Record<string, Job>;
   };
 
-  test("PRs run Linux units only; pushes, merge groups and full runs retain macOS and terminal checks (D266)", () => {
+  test("PRs retain both unit platforms and the site; only non-PR events run terminal checks (D266)", () => {
     const expression = (text: string) => text.replace(/^\$\{\{(.*)\}\}$/s, "$1");
     for (const event_name of ["pull_request", "push", "merge_group", "workflow_dispatch"]) {
       const github = { event_name };
       const matrix = ci.jobs.test?.strategy?.matrix.os;
-      expect(typeof matrix).toBe("string");
-      const systems = new Function("github", "fromJSON", `return ${expression(String(matrix))}`)(github, JSON.parse);
-      expect(systems).toEqual(event_name === "pull_request" ? ["ubuntu-24.04"] : ["ubuntu-24.04", "macos-15"]);
+      expect(matrix).toEqual(["ubuntu-24.04", "macos-15"]);
       expect(ci.jobs.terminal?.strategy?.matrix.os).toEqual(["ubuntu-24.04", "ubuntu-24.04-arm", "macos-15"]);
-      const site = new Function("github", `return ${expression(ci.jobs.site!.if!)}`)(github);
-      expect(site).toBe(event_name !== "pull_request");
+      expect(ci.jobs.site?.if).toBeUndefined();
       for (const checks of ["true", "false"]) {
         const run = new Function("github", "needs", `return ${expression(ci.jobs.terminal!.if!)}`)(github, {
           changes: { outputs: { checks } },
@@ -442,7 +439,7 @@ describe("the workflow hands the range on (CIW-D1–CIW-D4)", () => {
     }
   });
 
-  test("only `changes` reads the runs, its token given only for a push; no Linux-only PR record is uploaded", () => {
+  test("only `changes` reads the runs, its token given only for a push; no incomplete PR record is uploaded", () => {
     const changes = ci.jobs.changes as Job;
     expect(Object.keys(changes.permissions ?? {}).sort()).toEqual(["actions", "contents"]);
     expect(changes.permissions).toEqual({ contents: "read", actions: "read" });
