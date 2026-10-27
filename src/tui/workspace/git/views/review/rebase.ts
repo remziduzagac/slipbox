@@ -9,6 +9,7 @@
 // changed asks to stash them and put them back after (`--autostash`, D247); where they conflict going back, git keeps
 // them in the stash, and the message names it.
 
+import { forgetOperation } from "../../../../../core/workspace/git/branches/operation-status.ts";
 import { type Checkout, headOf } from "../../../../../core/workspace/git/git.ts";
 import {
   abortLater,
@@ -18,7 +19,6 @@ import {
   OPERATIONS,
   type Operation,
   operationOf,
-  operationText,
   pullDefault,
   rebaseLater,
   skipLater,
@@ -30,27 +30,6 @@ import { isTrusted } from "../../../../../core/workspace/vaults/trust.ts";
 import type { App } from "../../../../app/runtime/app.ts";
 import { runInBackground } from "../../gitremote.ts";
 import { conflictedFiles, mergeOf, openMergeScreen } from "./mergescreen.ts";
-
-/** What's under way in the vault's checkout, as last read: read again when git has news, or half a second on. */
-const seen = new WeakMap<App, { at: number; generation: number; op: Operation | null }>();
-
-/** What's under way now: where you are asks each frame, so git's files are read again only now and then. */
-export function operationNow(app: App): Operation | null {
-  const c = app.git.checkout;
-  if (!c) return null;
-  const s = seen.get(app);
-  const now = app.now();
-  if (s && s.generation === app.git.generation && now - s.at < 500) return s.op;
-  const op = operationOf(c);
-  seen.set(app, { at: now, generation: app.git.generation, op });
-  return op;
-}
-
-/** Where you are's words for what's under way — `rebasing 2/5`, `merging` — and the branch a rebase is of. */
-export function operationStatus(app: App): { text: string; branch: string | null } | null {
-  const op = operationNow(app);
-  return op ? { text: operationText(op), branch: op.branch } : null;
-}
 
 const plural = (n: number, one: string) => `${n} ${one}${n === 1 ? "" : "s"}`;
 
@@ -73,7 +52,7 @@ async function after(app: App, r: RemoteDone, done: string): Promise<void> {
   if (!c) return;
   app.git.checkHead();
   await app.git.refreshNow();
-  seen.delete(app);
+  forgetOperation(app);
   const op = operationOf(c);
   const trust = isTrusted(c.root) ? "" : " — this vault isn't trusted, so no hook ran";
   if (!op) {

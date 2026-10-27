@@ -1,0 +1,203 @@
+{
+  "edges": {
+    "removed": [
+      "src/tui/shell/screen/topbar/location.ts -> src/tui/app/runtime/app.ts",
+      "src/tui/shell/screen/topbar/where.ts -> src/tui/app/runtime/app.ts",
+      "src/tui/shell/screen/topbar/where.ts -> src/tui/workspace/git/views/review/rebase.ts",
+      "src/tui/workspace/git/views/panel/gitpanel.ts -> src/tui/workspace/git/views/review/rebase.ts"
+    ],
+    "added": [
+      "src/core/workspace/git/branches/operation-status.ts -> src/core/workspace/git/branches/gitrebase.ts",
+      "src/core/workspace/git/branches/operation-status.ts -> src/core/workspace/git/git.ts",
+      "src/tui/shell/panels/panels.ts -> src/tui/shell/panels/focus.ts",
+      "src/tui/shell/screen/topbar/contracts.ts -> src/core/rendering/theme/glyphs.ts",
+      "src/tui/shell/screen/topbar/contracts.ts -> src/core/workspace/git/branches/gitremote.ts",
+      "src/tui/shell/screen/topbar/contracts.ts -> src/core/workspace/git/branches/operation-status.ts",
+      "src/tui/shell/screen/topbar/contracts.ts -> src/core/workspace/vaults/vault.ts",
+      "src/tui/shell/screen/topbar/location.ts -> src/tui/shell/screen/topbar/contracts.ts",
+      "src/tui/shell/screen/topbar/where.ts -> src/core/workspace/git/branches/operation-status.ts",
+      "src/tui/shell/screen/topbar/where.ts -> src/tui/shell/screen/topbar/contracts.ts",
+      "src/tui/workspace/git/views/panel/gitpanel.ts -> src/core/workspace/git/branches/operation-status.ts",
+      "src/tui/workspace/git/views/review/rebase.ts -> src/core/workspace/git/branches/operation-status.ts"
+    ]
+  },
+  "runtime": {
+    "removed": [
+      "src/tui/shell/screen/topbar/where.ts -> src/tui/workspace/git/views/review/rebase.ts",
+      "src/tui/workspace/git/views/panel/gitpanel.ts -> src/tui/workspace/git/views/review/rebase.ts"
+    ],
+    "added": [
+      "src/core/workspace/git/branches/operation-status.ts -> src/core/workspace/git/branches/gitrebase.ts",
+      "src/tui/shell/panels/panels.ts -> src/tui/shell/panels/focus.ts",
+      "src/tui/shell/screen/topbar/where.ts -> src/core/workspace/git/branches/operation-status.ts",
+      "src/tui/workspace/git/views/panel/gitpanel.ts -> src/core/workspace/git/branches/operation-status.ts",
+      "src/tui/workspace/git/views/review/rebase.ts -> src/core/workspace/git/branches/operation-status.ts"
+    ]
+  },
+  "tests": {
+    "removed": [],
+    "added": [
+      "describe: location selectors from explicit data capabilities",
+      "describe: operation observations without a client",
+      "describe: panel focus controller without App",
+      "test: Elsewhere suppresses branch and operation reads even when Git data is present",
+      "test: a generation change and explicit invalidation each refresh immediately",
+      "test: a rebase branch wins over detached HEAD and upstream counts match that branch only",
+      "test: an absent operation is cached too, and explicit invalidation reveals a newly started merge",
+      "test: clock movement backwards retains the existing elapsed-time comparison",
+      "test: different caller identities do not share a cached observation",
+      "test: focus fallback reads current state after resize, zen and problem visibility changes",
+      "test: hiding a focused side returns focus to content without changing the other side",
+      "test: no checkout returns null without consulting the clock or retaining stale status",
+      "test: read the rebase status and branch from Git files with the existing words",
+      "test: reuse the observation below 500 ms and refresh at the exact boundary",
+      "test: vault, branch and distinct changed paths keep independent item identities",
+      "test: wide visibility follows preferences; narrow and zen follow temporary overlays",
+      "test: workspace label stays independent of zoom and branch text is sanitized"
+    ]
+  },
+  "entries": {
+    "removed": [],
+    "added": []
+  },
+  "moves": {},
+  "retained": [],
+  "extractions": [
+    {
+      "from": "src/tui/workspace/git/views/review/rebase.ts",
+      "to": "src/core/workspace/git/branches/operation-status.ts",
+      "symbols": [
+        "operationNow",
+        "operationStatus",
+        "seen"
+      ],
+      "callers": [
+        "where.ts",
+        "gitpanel.ts",
+        "rebase.ts"
+      ],
+      "owner": "A single weak caller-identity cache; existing generation/500ms refresh and explicit invalidation, no document or buffer ownership."
+    },
+    {
+      "from": "src/tui/shell/panels/panels.ts",
+      "to": "src/tui/shell/panels/focus.ts",
+      "symbols": [
+        "sidebarShown",
+        "outlineShown",
+        "showSidebar",
+        "showOutline",
+        "fixRegion",
+        "Region"
+      ],
+      "owner": "Panels wires the narrow shared-state host and current-width predicate; App keeps visibility preferences, overlays and focus. No state is copied."
+    },
+    {
+      "from": [
+        "src/tui/shell/screen/topbar/where.ts",
+        "src/tui/shell/screen/topbar/location.ts"
+      ],
+      "to": "src/tui/shell/screen/topbar/contracts.ts",
+      "symbols": [
+        "WhereContext",
+        "LocationContext"
+      ],
+      "owner": "Read-only current-call capabilities; selectors retain their calculations. No gateway routing or execution."
+    }
+  ],
+  "runtimeScc": {
+    "before": [
+      [
+        "src/tui/documents/editing/editing.ts",
+        "src/tui/documents/editing/snippets.ts"
+      ],
+      [
+        "src/tui/workspace/git/gitremote.ts",
+        "src/tui/workspace/git/views/review/rebase.ts"
+      ],
+      [
+        "src/core/rendering/export/formats/html.ts",
+        "src/core/rendering/export/formats/markdown.ts",
+        "src/core/rendering/export/stream.ts"
+      ],
+      [
+        "src/tui/documents/search/replacing.ts",
+        "src/tui/shell/overlays/overlays.ts",
+        "src/tui/workspace/search/search.ts"
+      ],
+      [
+        "src/tui/app/runtime/app.ts",
+        "src/tui/app/settings/settings.ts",
+        "src/tui/workspace/history/history.ts",
+        "src/tui/workspace/session/session.ts",
+        "src/tui/workspace/vaults/vaults.ts"
+      ],
+      [
+        "src/tui/actions/actions.ts",
+        "src/tui/actions/documents/actions-edit.ts",
+        "src/tui/actions/documents/actions-find.ts",
+        "src/tui/actions/documents/actions-links.ts",
+        "src/tui/actions/documents/actions-lsp.ts",
+        "src/tui/actions/documents/actions-view.ts",
+        "src/tui/actions/shell/actions-panes.ts",
+        "src/tui/actions/workspace/actions-files.ts"
+      ],
+      [
+        "src/tui/documents/diagnostics/draw-problems.ts",
+        "src/tui/documents/views/draw-header.ts",
+        "src/tui/documents/views/draw-pane.ts",
+        "src/tui/shell/overlays/draw-overlays.ts",
+        "src/tui/shell/panels/draw-panels.ts",
+        "src/tui/shell/screen/draw.ts",
+        "src/tui/shell/screen/statusbar/draw-status.ts",
+        "src/tui/workspace/git/views/panel/draw-git.ts"
+      ]
+    ],
+    "after": [
+      [
+        "src/tui/documents/editing/editing.ts",
+        "src/tui/documents/editing/snippets.ts"
+      ],
+      [
+        "src/tui/workspace/git/gitremote.ts",
+        "src/tui/workspace/git/views/review/rebase.ts"
+      ],
+      [
+        "src/core/rendering/export/formats/html.ts",
+        "src/core/rendering/export/formats/markdown.ts",
+        "src/core/rendering/export/stream.ts"
+      ],
+      [
+        "src/tui/documents/search/replacing.ts",
+        "src/tui/shell/overlays/overlays.ts",
+        "src/tui/workspace/search/search.ts"
+      ],
+      [
+        "src/tui/app/runtime/app.ts",
+        "src/tui/app/settings/settings.ts",
+        "src/tui/workspace/history/history.ts",
+        "src/tui/workspace/session/session.ts",
+        "src/tui/workspace/vaults/vaults.ts"
+      ],
+      [
+        "src/tui/actions/actions.ts",
+        "src/tui/actions/documents/actions-edit.ts",
+        "src/tui/actions/documents/actions-find.ts",
+        "src/tui/actions/documents/actions-links.ts",
+        "src/tui/actions/documents/actions-lsp.ts",
+        "src/tui/actions/documents/actions-view.ts",
+        "src/tui/actions/shell/actions-panes.ts",
+        "src/tui/actions/workspace/actions-files.ts"
+      ],
+      [
+        "src/tui/documents/diagnostics/draw-problems.ts",
+        "src/tui/documents/views/draw-header.ts",
+        "src/tui/documents/views/draw-pane.ts",
+        "src/tui/shell/overlays/draw-overlays.ts",
+        "src/tui/shell/panels/draw-panels.ts",
+        "src/tui/shell/screen/draw.ts",
+        "src/tui/shell/screen/statusbar/draw-status.ts",
+        "src/tui/workspace/git/views/panel/draw-git.ts"
+      ]
+    ]
+  }
+}

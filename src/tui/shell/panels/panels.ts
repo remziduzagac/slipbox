@@ -1,6 +1,7 @@
 // The side panels: their widths and rails, which view each shows (the left: explorer, history, source control; the
 // right: info, outline, footnotes), resize mode, the filters typed into them, and where focus may be.
 
+import { PanelFocus } from "./focus.ts";
 import type { PanelRow } from "../../workspace/git/views/panel/gitpanel.ts";
 import { match } from "../overlays/match.ts";
 import { RESIZE_ACTIONS, keyChar } from "../input/keys.ts";
@@ -12,9 +13,15 @@ import type { HistoryRow } from "../../workspace/history/history.ts";
 import type { TreeRow } from "../../workspace/explorer/explorer.ts";
 import { PANEL_ROWS } from "../../documents/diagnostics/problems.ts";
 
+export type { Region } from "./focus.ts";
+
 /** The side panels: widths, rails, views, filters, resize mode. */
 export class Panels {
-  constructor(readonly app: App) {}
+  private readonly focus: PanelFocus;
+
+  constructor(readonly app: App) {
+    this.focus = new PanelFocus(app, () => this.narrow);
+  }
 
   /** Resize mode: h j k l / arrows resize until esc (ctrl+alt+w, space w r). */
   resizeMode = false;
@@ -65,7 +72,7 @@ export class Panels {
   }
 
   get sidebarShown(): boolean {
-    return this.narrow || this.app.ui.zen ? this.app.sidebar.overlay : this.app.sidebar.visible;
+    return this.focus.sidebarShown;
   }
 
   get sidebarBeside(): boolean {
@@ -73,7 +80,7 @@ export class Panels {
   }
 
   get outlineShown(): boolean {
-    return this.narrow || this.app.ui.zen ? this.app.outline.overlay : this.app.outline.visible;
+    return this.focus.outlineShown;
   }
 
   get outlineBeside(): boolean {
@@ -147,9 +154,7 @@ export class Panels {
   }
 
   showSidebar(on: boolean): void {
-    if (this.narrow || this.app.ui.zen) this.app.sidebar.overlay = on;
-    else this.app.sidebar.visible = on;
-    if (!on && this.app.region === "sidebar") this.app.region = "content";
+    this.focus.showSidebar(on);
   }
 
   /**
@@ -201,9 +206,7 @@ export class Panels {
   }
 
   showOutline(on: boolean): void {
-    if (this.narrow || this.app.ui.zen) this.app.outline.overlay = on;
-    else this.app.outline.visible = on;
-    if (!on && this.app.region === "outline") this.app.region = "content";
+    this.focus.showOutline(on);
   }
 
   /**
@@ -473,12 +476,7 @@ export class Panels {
 
   /** Focus never stays on a hidden pane (after zen, a config reload, a resize): back to the note. */
   fixRegion(): void {
-    if (
-      (this.app.region === "sidebar" && !this.sidebarShown) ||
-      (this.app.region === "outline" && !this.outlineShown) ||
-      (this.app.region === "problems" && !this.app.problems.panel.shown)
-    )
-      this.app.region = "content";
+    this.focus.fixRegion();
   }
 }
 

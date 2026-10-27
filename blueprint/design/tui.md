@@ -16,7 +16,7 @@ Code, in `src/tui/`:
 | `views.ts`, `lens.ts`, `code.ts` | a window's layout, cursor and scrolling; the lens and SOURCE view; code blocks |
 | `input.ts`, `mouse.ts` | keys and pastes, dispatched in order, the which-key popup; clicks, drags, the wheel |
 | `overlays.ts`, `properties.ts` | lists, prompts and dialogs; the properties editor in the floating window |
-| `panels.ts`, `history.ts` | the side panels, their widths and filters; the history |
+| `panels.ts`, `focus.ts`, `history.ts` | panel wiring/widths/filters; visibility/focus transitions; the history |
 | `explorer.ts`, `explorer-disk.ts`, `marks.ts` | the explorer, one tree and its zoom; what the walk leaves out; marks |
 | `following.ts`, `peek.ts` | links followed only when you say so; the peek at another vault's file |
 | `git.ts`, `info.ts`, `outline.ts`, `footnotes.ts` | git's state, changes and commits; Info; the outline; footnotes |
@@ -45,6 +45,13 @@ Code, in `src/tui/`:
 | `match.ts` | the matching and ranking every list and filter uses |
 | `keys.ts` | the default keymaps, groups, aliases, and the in-pane actions' titles |
 | `run.ts`, `opentui.ts` | the OpenTUI binding |
+
+Panel visibility/focus transitions live in `shell/panels/focus.ts`, behind only their six current host capabilities.
+`Panels` passes App through the narrow state contract and supplies the current-width predicate, so replaced pane/UI
+state is read from its owner. Positions, filters,
+resize behavior and active-view selection stay in their existing owners. The location selectors under
+`shell/screen/topbar/` read explicit data contracts and use core's Git-operation observation; they do not load the
+Git interaction coordinator. App still owns the buffers, focus and shared state and remains the note-write gate.
 
 ## Screen layout (plan `3.1`)
 
@@ -2882,16 +2889,17 @@ revert begun in a terminal: read from git's own files, no git run — `rebase-me
 `rebase-apply/` (`next`, `last`; `applying`, a `git am`, is none of slipbox's), `MERGE_HEAD` and its `MERGE_MSG`,
 `CHERRY_PICK_HEAD` or `REVERT_HEAD` with the commit `MERGE_MSG` names (a revert's subject, unquoted), and `sequencer/`
 alone, a series between its commits, a cherry-pick or a revert as its `todo`'s next line says — again when git has news
-or half a second on (`operationNow` in `tui/workspace/git/views/review/rebase.ts`). Where you are says it after the
-branch (§ Screen layout): `rebasing 2/5`, `merging`, `cherry-picking`, `reverting` (`operationText`). `shift+r` then
-offers, as a question with keys titled by what's under way (`operationTitle`: `Cherry-picking "Retry with a budget"`):
-`(x)` the merge screen on a file still in conflict, `(c)` continue (`git.continue`, `:continue`: `git rebase
---continue`, `git cherry-pick --continue`, `git revert --continue`, or `git commit --no-edit` for a merge; refused, said
-which, while a file is in conflict), `(s)` skip (`git.skip`, `:skip`: `git rebase --skip`, `git cherry-pick --skip`,
-`git revert --skip`; a merge has none), `(a)` abort (`git.abort`, `:abort`: `git <kind> --abort`; asked first, as a
-rebase is: "Abort the cherry-pick? main goes back as it was before it, and what's settled so far is lost."). The git
-panel has the three as buttons meanwhile: Continue, Skip (not a merge's) and Abort, each saying what it does
-(`OPERATIONS`).
+or half a second on (`operationNow` in `core/workspace/git/branches/operation-status.ts`). The cache is weakly keyed by
+its caller, uses the same Git generation and clock, and is explicitly invalidated after an operation settles. Where you
+are says it after the branch (§ Screen layout): `rebasing 2/5`, `merging`, `cherry-picking`, `reverting`
+(`operationText`). `shift+r` then offers, as a question with keys titled by what's under way (`operationTitle`:
+`Cherry-picking "Retry with a budget"`): `(x)` the merge screen on a file still in conflict, `(c)` continue
+(`git.continue`, `:continue`: `git rebase --continue`, `git cherry-pick --continue`, `git revert --continue`, or `git
+commit --no-edit` for a merge; refused, said which, while a file is in conflict), `(s)` skip (`git.skip`, `:skip`: `git
+rebase --skip`, `git cherry-pick --skip`, `git revert --skip`; a merge has none), `(a)` abort (`git.abort`, `:abort`:
+`git <kind> --abort`; asked first, as a rebase is: "Abort the cherry-pick? main goes back as it was before it, and
+what's settled so far is lost."). The git panel has the three as buttons meanwhile: Continue, Skip (not a merge's) and
+Abort, each saying what it does (`OPERATIONS`).
 
 Each runs in the background, one git command at a time with the remote's (`runInBackground`), without a terminal or an
 editor (`GIT_TERMINAL_PROMPT=0`, `GIT_EDITOR=true`, `GIT_SEQUENCE_EDITOR=true`: a commit settled on the way keeps its

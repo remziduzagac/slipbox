@@ -90,7 +90,7 @@ import { Code } from "../../documents/views/code.ts";
 import { Handoff } from "../../documents/saving/handoff.ts";
 import { Windows } from "../../windows/layout/windows.ts";
 import { Files } from "../../workspace/explorer/files.ts";
-import { Panels, type LeftView, type RightView } from "../../shell/panels/panels.ts";
+import { Panels, type LeftView, type RightView, type Region } from "../../shell/panels/panels.ts";
 import { Footnotes } from "../../documents/tools/footnotes/footnotes.ts";
 import { Properties } from "../../documents/tools/info/properties.ts";
 import { Overlays } from "../../shell/overlays/overlays.ts";
@@ -303,7 +303,7 @@ export interface SidePaneState {
   allFiles?: boolean;
 }
 
-export type Region = "content" | "sidebar" | "outline" | "problems";
+export type { Region };
 
 /** Live UI settings (docs/manual/keys.md, `space u`). */
 export interface UiState {

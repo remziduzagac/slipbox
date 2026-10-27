@@ -76,6 +76,10 @@ export const TUI_PRIMITIVES = [
   "src/tui/shell/screen/style.ts",
   "src/tui/shell/screen/controls.ts",
   "src/tui/shell/screen/topbar/fit-location.ts",
+  "src/tui/shell/screen/topbar/contracts.ts",
+  "src/tui/shell/screen/topbar/where.ts",
+  "src/tui/shell/screen/topbar/location.ts",
+  "src/tui/shell/panels/focus.ts",
 ] as const;
 
 const COMPOSERS = [
@@ -83,6 +87,8 @@ const COMPOSERS = [
   "src/tui/shell/screen/draw",
   "src/tui/shell/screen/topbar/draw-topbar",
   "src/tui/documents/views/draw-header",
+  "src/tui/workspace/git/views/review/rebase",
+  "src/tui/shell/panels/panels",
 ];
 
 const targetOf = (from: string, spec: string) =>
