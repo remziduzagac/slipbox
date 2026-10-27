@@ -48,14 +48,18 @@ GitHub's releases are, with `SLIPBOX_RELEASES_URL`. A person able to take over w
 
 ## Merging a change
 
-Every change reaches `dev`, the default branch, through a pull request: the rules on `dev` require one, and require the
-`ci` check to pass. For a pull request, `ci` runs the lint, the typecheck, and the tests and the terminal checks its
-change reaches, on Linux and macOS (D239). A push to `dev` runs the same for what changed since the last commit whose
-run passed, so a run cancelled or failed leaves nothing out of the next (CIW-D1), less what the pull request's run
-passed on the same tree: when that run passed on the `dev` it merged into, and that `dev`'s own run passed, the push
-tests nothing (CIW-D2). A push's run still going when `dev` moves again gives way to the newer one, which tests both
-(CIW-D4); a run re-run gives way to nothing, nor makes another give way. No approval is required, since there is no
-second person to give one. From `dev`, work goes on to `test` and `main` (§ From dev to a release).
+Every change reaches `dev`, the default branch, through a pull request: the rules require the aggregate `ci` check. A
+pull request runs lint (including docs tests), the site, CodeQL and the typecheck, boundary, dependency gates and scoped
+unit tests on Ubuntu alone. Terminal checks are skipped; macOS runs after merge (D266). Docs-only pull requests still
+skip the unit job (D230). No ruleset changes are needed: `ci` accepts successful or skipped jobs.
+
+Pushes to `dev` and `test` run scoped unit tests on Ubuntu/macOS and terminal checks on all three runners. Scope version
+3 disables CIW-D2's PR-tree shortcut: a Linux-unit-only pass covers neither macOS nor terminal checks. A squash push
+retains the range since the last passing push, repeating Linux units too; old-version passes cannot shorten it. A
+promotion already covered by a passing push can still skip tests (CIW-D3). A superseded push gives way to its successor,
+which retains untested commits (CIW-D4). A terminal-check or macOS-only break can therefore sit on `dev` until its push
+run finds it; the preview and full run remain additional checks. No approval is required, since there is no second
+person to give one.
 
 - **Who:** agents and collaborators work on a branch and open the pull request; the maintainer merges it, or asks an
   agent to review and merge it. Agents merge, run the full suite, move `test` or `main` and release only when the

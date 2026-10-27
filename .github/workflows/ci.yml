@@ -1,11 +1,11 @@
 name: ci
 
 # GR-D9: the check on every change — what `bun run check` runs, split into jobs CI can run side by side: the lint
-# (Biome, the workflows), and the code's checks and tests on Linux and on macOS (slipbox ships for both; on macOS
-# its SQLite is Apple's, 14.13); and the terminal tests on each system it ships for (TT-D6). A pull request that
+# (Biome, the workflows), and the code's checks and tests on Linux; pushes and full runs also cover macOS (its SQLite
+# is Apple's, 14.13) and terminal checks on each system slipbox ships for (TT-D6). A pull request that
 # changes only the docs skips the tests and the terminal tests; the lint job runs the docs' own (D230). Any other runs
 # the tests and the terminal checks its files reach (D239, scripts/ci-scope.ts), and so does a push to `dev` or `test`,
-# by what changed since the nearest commit whose run passed, less what a pull request's run passed on the same tree:
+# by what changed since the nearest full-platform push run passed, without reusing a Linux-only PR pass:
 # nothing, for `dev` moved to `test` (CIW-D1–CIW-D3, scripts/ci-range.ts). A run by hand runs everything, and calls
 # itself `full`: the check `main` takes nothing without (D251), which it reports again as a commit status, the one
 # `main`'s ruleset sees (D257).
@@ -73,7 +73,7 @@ jobs:
         run: bun run test:docs
 
   # D230: what a pull request changed, or a push to `dev` or `test` over its range: since the nearest commit whose run
-  # passed, less what a pull request's run passed on the same tree (CIW-D1, CIW-D2), worked out here once and handed to
+  # passed under this scope (CIW-D1, D266), worked out here once and handed to
   # `test` and `terminal` (`range`). One that touches only the docs (docs/, the blueprint, the site's pages, the
   # Markdown at the top) skips the tests and the terminal tests, which nothing it changes can break; a push's range with
   # nothing in it skips them too. A merge group and a run by hand test everything, as does a diff that can't be read.
@@ -103,27 +103,13 @@ jobs:
           SCOPE_BEFORE: ${{ github.event.before }}
           GH_TOKEN: ${{ github.event_name == 'push' && github.token || '' }}
         run: bun run ci:scope
-      # CIW-D2: a pull request's run records the tree it tests and its base, which its squash's push reads once this run
-      # passed. Written to the runner's temporary folder, never the workspace; a failed upload costs that push its
-      # shortcut, and nothing else. The runner's own token uploads it: no grant.
-      - if: ${{ steps.scope.outputs.record != '' }}
-        continue-on-error: true
-        timeout-minutes: 1
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: ${{ steps.scope.outputs.record }}
-          path: ${{ runner.temp }}/ci-tested.txt
-          retention-days: 7
-          overwrite: true
-          if-no-files-found: error
-
   test:
     needs: changes
     if: ${{ needs.changes.outputs.code == 'true' }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-24.04, macos-15]
+        os: ${{ fromJSON(github.event_name == 'pull_request' && '["ubuntu-24.04"]' || '["ubuntu-24.04","macos-15"]') }}
     runs-on: ${{ matrix.os }}
     # The suite takes about ten minutes on a 10-core machine; a runner has 3 or 4.
     timeout-minutes: 45
@@ -160,7 +146,7 @@ jobs:
   # slipbox ships for, each runner running a check per core. A failing check's screen is in the job's log.
   terminal:
     needs: changes
-    if: ${{ needs.changes.outputs.checks == 'true' }}
+    if: ${{ github.event_name != 'pull_request' && needs.changes.outputs.checks == 'true' }}
     strategy:
       fail-fast: false
       matrix:

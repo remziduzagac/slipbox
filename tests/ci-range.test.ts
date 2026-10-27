@@ -1,7 +1,7 @@
 // Where a push's range starts (CIW-D1, CIW-D2, CIW-D3, scripts/ci-range.ts), and the workflow that hands it on: in
 // repositories made for each case, GitHub's API faked.
 import { afterAll, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { type Api, githubApi, pushRange, recordName, recordRun, versionAt } from "../scripts/ci-range.ts";
@@ -175,20 +175,32 @@ describe("a push's range: since the last run that passed (CIW-D1)", () => {
 
 describe("a merge doesn't test again what its pull request's run passed (CIW-D2)", () => {
   /** dev at `p`, a pull request's branch `h` off it, squashed onto it as `s`; a stranger's branch `x` off `p`. */
-  function merged() {
+  function merged(version = 2) {
     const r = repo();
-    const o = r.commit({ "a.ts": "0" });
-    const p = r.commit({ "a.ts": "1" });
+    const o = r.commit({ "a.ts": "0" }, version);
+    const p = r.commit({ "a.ts": "1" }, version);
     r.git("checkout", "-q", "-b", "feature");
-    const h = r.commit({ "b.ts": "1" });
+    const h = r.commit({ "b.ts": "1" }, version);
     r.git("checkout", "-q", "-b", "stranger", p);
-    const x = r.commit({ "c.ts": "1" });
+    const x = r.commit({ "c.ts": "1" }, version);
     r.git("checkout", "-q", "dev");
     r.git("merge", "--squash", "-q", "feature");
     r.git("commit", "-qm", "feat: b (#1)");
     const s = r.git("rev-parse", "HEAD");
-    return { r, o, p, h, x, s, name: recordName(2, p, r.tree(s)) };
+    return { r, o, p, h, x, s, name: recordName(version, p, r.tree(s)) };
   }
+
+  test("Linux-only PR coverage never shortens the push scope for macOS and terminal checks (D266)", async () => {
+    const { r, o, p, h, s, name } = merged(SCOPE_VERSION);
+    expect(SCOPE_VERSION).toBeGreaterThanOrEqual(3);
+    for (const last of [p, o]) {
+      const f = fakeApi({ passes: [last], records: { [name]: [{ id: 7, head: h }] }, runs: { 7: {} } });
+      expect(range(await pushRange(r.dir, f.api, null))).toEqual({ from: last, to: s });
+      expect(f.asked.some((a) => a.startsWith("actions/artifacts"))).toBe(false);
+    }
+    // A full-platform push pass still covers promotion to the same tested tree (CIW-D3).
+    expect(range(await pushRange(r.dir, fakeApi({ passes: [s] }).api, null))).toEqual({ from: s, to: s });
+  });
 
   test("a record of its parent and tree, from a pull request's run that passed and whose head makes it", async () => {
     const { r, o, p, h, s, name } = merged();
@@ -310,10 +322,10 @@ describe("a merge doesn't test again what its pull request's run passed (CIW-D2)
   });
 });
 
-describe("a pull request's run names its record (CIW-D2)", () => {
-  test("ci:scope for a pull request: its merge commit's parent and tree, and what the scope said, for the upload", () => {
+describe("a Linux-only pull request does not certify full-platform coverage (D266)", () => {
+  test("ci:scope reports the PR scope without creating a full-platform record", () => {
     const r = repo();
-    const base = r.commit({ "src/a.ts": "1" });
+    r.commit({ "src/a.ts": "1" });
     r.commit({ "docs/x.md": "# x\n" });
     const temp = mkdtempSync(join(sandbox, "temp-"));
     const out = join(temp, "out");
@@ -322,10 +334,8 @@ describe("a pull request's run names its record (CIW-D2)", () => {
       cwd: r.dir,
       env: { ...gitEnv, GITHUB_EVENT_NAME: "pull_request", GITHUB_OUTPUT: out, RUNNER_TEMP: temp, GH_TOKEN: "" },
     });
-    expect(readFileSync(out, "utf8")).toBe(
-      `record=${recordName(SCOPE_VERSION, base, r.tree())}\ncode=false\nchecks=false\n`,
-    );
-    expect(readFileSync(join(temp, "ci-tested.txt"), "utf8")).toContain("the docs only");
+    expect(readFileSync(out, "utf8")).toBe("code=false\nchecks=false\n");
+    expect(existsSync(join(temp, "ci-tested.txt"))).toBe(false);
   });
 });
 
@@ -400,13 +410,37 @@ describe("the workflow hands the range on (CIW-D1–CIW-D4)", () => {
     string,
     unknown
   >;
-  type Job = { permissions?: Record<string, string>; outputs?: Record<string, string>; steps?: Step[] };
+  type Job = {
+    permissions?: Record<string, string>;
+    outputs?: Record<string, string>;
+    steps?: Step[];
+    if?: string;
+    strategy?: { matrix: { os: string | string[] } };
+  };
   const ci = Bun.YAML.parse(readFileSync(join(ROOT, ".github", "workflows", "ci.yml"), "utf8")) as {
     concurrency: { group: string; "cancel-in-progress": string };
     jobs: Record<string, Job>;
   };
 
-  test("only `changes` reads the runs, its token given only for a push; the record uploaded for a pull request", () => {
+  test("PRs run Linux units only; pushes, merge groups and full runs retain macOS and terminal checks (D266)", () => {
+    const expression = (text: string) => text.replace(/^\$\{\{(.*)\}\}$/s, "$1");
+    for (const event_name of ["pull_request", "push", "merge_group", "workflow_dispatch"]) {
+      const github = { event_name };
+      const matrix = ci.jobs.test?.strategy?.matrix.os;
+      expect(typeof matrix).toBe("string");
+      const systems = new Function("github", "fromJSON", `return ${expression(String(matrix))}`)(github, JSON.parse);
+      expect(systems).toEqual(event_name === "pull_request" ? ["ubuntu-24.04"] : ["ubuntu-24.04", "macos-15"]);
+      expect(ci.jobs.terminal?.strategy?.matrix.os).toEqual(["ubuntu-24.04", "ubuntu-24.04-arm", "macos-15"]);
+      for (const checks of ["true", "false"]) {
+        const run = new Function("github", "needs", `return ${expression(ci.jobs.terminal!.if!)}`)(github, {
+          changes: { outputs: { checks } },
+        });
+        expect(run).toBe(event_name !== "pull_request" && checks === "true");
+      }
+    }
+  });
+
+  test("only `changes` reads the runs, its token given only for a push; no Linux-only PR record is uploaded", () => {
     const changes = ci.jobs.changes as Job;
     expect(Object.keys(changes.permissions ?? {}).sort()).toEqual(["actions", "contents"]);
     expect(changes.permissions).toEqual({ contents: "read", actions: "read" });
@@ -416,20 +450,7 @@ describe("the workflow hands the range on (CIW-D1–CIW-D4)", () => {
     expect(scope?.run).toBe("bun run ci:scope");
     expect(scope?.env?.GH_TOKEN).toBe("${{ github.event_name == 'push' && github.token || '' }}");
     expect(changes.outputs?.range).toBe("${{ steps.scope.outputs.range }}");
-    // The upload: only when there's a record (a pull request's run), from the runner's temporary folder, pinned as
-    // build.yml pins it, never failing the run.
-    const upload = changes.steps?.find((s) => s.uses?.startsWith("actions/upload-artifact@"));
-    const build = readFileSync(join(ROOT, ".github", "workflows", "build.yml"), "utf8");
-    expect(build).toContain(`uses: ${upload?.uses}`);
-    expect(upload?.if).toBe("${{ steps.scope.outputs.record != '' }}");
-    expect(upload?.["continue-on-error"]).toBe(true);
-    // Its own timeout: a slow upload gives up, and `changes`, which the tests wait on, goes on.
-    expect(upload?.["timeout-minutes"]).toBe(1);
-    expect(upload?.with).toMatchObject({
-      name: "${{ steps.scope.outputs.record }}",
-      path: "${{ runner.temp }}/ci-tested.txt",
-      "retention-days": 7,
-    });
+    expect(changes.steps?.some((s) => s.uses?.startsWith("actions/upload-artifact@"))).toBe(false);
   });
 
   test("`test` and `terminal` read the range `changes` worked out, never the event's `before`", () => {

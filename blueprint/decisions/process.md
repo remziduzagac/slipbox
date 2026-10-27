@@ -230,6 +230,9 @@ typecheck together (2026-10-17), fixed within the hour.
 
 ## D251: dev, test, then main: tested as it moves, everything before a release (2026-10-17)
 
+> **Amended by D266 (2026-10-27):** PRs run lint and reached Linux unit tests; terminal checks and macOS move to
+> pushes, previews and the full run. Scope 3 disables PR-tree reuse so a squash push still covers those checks.
+
 > **Amended by CIW-D1–CIW-D4 (2026-10-26):** pushes test since the nearest passing run of the same scope,
 > less a verified passing pull-request tree on its base; moving a passing dev commit to test repeats no tests.
 > Superseded push runs are cancelled; their commits remain in the next range.
@@ -329,3 +332,27 @@ thread blocked in a read nothing can end); a stand-in `Worker` on the main threa
 the main thread's: a main thread held until the dictionary is there would hang the run); turns counted while the
 dictionary loads, unheld, as the syntax pass's test counts them (ticks before a build on the main thread pass it, and a
 pause covering the whole load fails it).
+
+
+## D266: Linux units on pull requests; macOS and terminal checks after merge (2026-10-27)
+
+**Decision:** The maintainer's choice, 2026-10-27: pull requests run lint (Biome, sizes, workflows, docs and docs
+tests), changes, the typecheck, boundary and dependency gates, scoped unit tests on Ubuntu alone, CodeQL, site and the
+aggregate `ci` check. The terminal job is skipped entirely. Pushes to `dev` and `test`, merge groups and runs by hand
+keep both unit platforms and all three terminal platforms, scoped as before; a run by hand remains full. The aggregator
+and repository rulesets are unchanged.
+
+Scope version 3 stops emitting or trusting full-platform PR records (CIW-D2): a Linux-unit-only pass cannot certify
+macOS or terminal checks. Squash pushes retain the scope since the last full-platform push pass, repeating Linux units
+too. CIW-D1's conservative fallback, CIW-D3's promotion of an already-passed push tree and CIW-D4's superseded-push
+handling remain. Amends D251 and CIW-D2. Detail: design/repository.md § CI and § What a push tests; MAINTAINING.md.
+
+**Why:** Every organization PR touches widely imported modules, so its scoped set is nearly everything. macOS costs
+about 15–20 minutes per PR, and broad terminal checks add another long wait. Linux unit checks still gate each change;
+heavy checks run on the merged scope instead.
+
+**Cost:** A terminal-check or macOS-only break can sit on `dev` until its push run or a preview finds it. Linux units
+repeat after merge because PR-tree reuse is disabled. A release still requires the full passing run.
+
+**Not chosen:** treating a Linux-only PR record as complete coverage, which silently skips post-merge checks;
+per-platform range/record reuse in this small change, which would require separate coverage and range contracts.

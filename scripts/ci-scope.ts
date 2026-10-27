@@ -6,18 +6,18 @@
 // a file of the harness `HARNESS_FOR` names, which only some checks use: theirs). The packages, the toolchain, the
 // workflows, and a file nothing names run everything; so do a merge group, a run by hand (the `full` run `main`
 // requires, D251) and a diff that can't be read; the lint's own configs, only the lint. A push to `dev` or `test` is
-// scoped the same over its range: since the nearest commit whose run passed, less what a pull request's run passed on
-// the same tree (CIW-D1, CIW-D2, `scripts/ci-range.ts`); a range with nothing in it runs nothing.
+// scoped over its range since the nearest full-platform push pass (CIW-D1, D266, `scripts/ci-range.ts`); a Linux-only
+// pull request cannot cover macOS or terminal checks after merge. A range with nothing in it runs nothing.
 //
 // `bun run ci:scope` writes what CI's jobs need to $GITHUB_OUTPUT (`code`, `checks`; a push's `range`, which the jobs
-// after it read as `SCOPE_RANGE`; a pull request's `record`, the name its run's record is uploaded under), and says it
+// after it read as `SCOPE_RANGE`), and says it
 // either way. `bun run test:changed` and `bun run test:terminal:changed [runner's flags…]` run what a change reaches: a
 // pull request's merge commit against its base in CI, a push's range; here, your branch, committed or not, against
 // where it left `origin/dev` (or `--base <ref>`).
 
-import { appendFileSync, existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { appendFileSync, existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join, normalize } from "node:path";
-import { commit, gitOut, githubApi, pushRange, recordName } from "./ci-range.ts";
+import { commit, githubApi, pushRange } from "./ci-range.ts";
 
 const ROOT = join(import.meta.dir, "..");
 
@@ -27,7 +27,7 @@ const ROOT = join(import.meta.dir, "..");
  * what a pass or a record covers — a pull request's run without macOS, say — so those made before stop counting.
  * `scripts/ci-range.ts` reads it from each commit as written here, on one line.
  */
-export const SCOPE_VERSION = 2;
+export const SCOPE_VERSION = 3;
 
 /** A file only the docs' checks read: the docs, the blueprint, the site's pages (not its packages), a top-level `.md`. */
 export const isDocs = (path: string): boolean =>
@@ -373,11 +373,7 @@ if (import.meta.main) {
     process.env.SCOPE_RANGE = "all" in r ? "all" : `${r.from}..${r.to}`;
     if (out) appendFileSync(out, `range=${process.env.SCOPE_RANGE}\n`);
   }
-  // A pull request's run: the name of its record, the tree it tests on its base (CIW-D2), and what the scope says in it.
-  if (event === "pull_request" && what === undefined) {
-    const [baseCommit, tree] = [gitOut(here, "rev-parse", "HEAD^1"), gitOut(here, "rev-parse", "HEAD^{tree}")];
-    if (baseCommit && tree && out) appendFileSync(out, `record=${recordName(SCOPE_VERSION, baseCommit, tree)}\n`);
-  }
+  // D266: PRs cover Linux units only; no full-platform record may shorten their squash push's range.
   const files = changedFiles(here, base);
   // A push's range with nothing in it — the commit itself, or a tree a run passed already — runs nothing.
   const nothing = event === "push" && files?.length === 0;
@@ -390,8 +386,6 @@ if (import.meta.main) {
       ? `the docs only (${files?.length} files): the tests are skipped`
       : say(s, files);
   console.log(said);
-  if (event === "pull_request" && what === undefined && process.env.RUNNER_TEMP)
-    writeFileSync(join(process.env.RUNNER_TEMP, "ci-tested.txt"), `${said}\n`);
   if (what === "test" || what === "terminal") {
     const cmd = scriptFor(what, s);
     if (!cmd) console.log(`no ${what === "test" ? "test" : "terminal check"} reaches this change`);
