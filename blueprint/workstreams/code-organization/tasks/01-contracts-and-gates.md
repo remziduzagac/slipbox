@@ -179,3 +179,13 @@ This remains a lexical tool: templates are opaque and regex starts use expressio
 Tool settings: Bun 1.4.2, TypeScript 7.0.2, repository compiler/Biome configuration; no dependency changes. The source
 inventory is now 329 files, with the added contract below the size ceiling. No user-visible behavior change requires a
 manual or changelog entry.
+
+
+### Inventory correction before ORG-T18
+
+The declaration scanner now excludes member calls named test, it or describe after Bun transpilation. The measured
+baseline after ORG-T17 is 2,604 literal suite/test declarations; the earlier 2,614 inventory included ten false positives
+(one selector-fixture path and nine terminal screen-matching strings). No real declaration was removed or added. Both
+sides of subsequent comparisons use the corrected scanner. Earlier task counts remain their recorded measurements,
+made consistently with the preceding scanner on both sides. Regression inputs are added inside the existing quoted
+fixture test; the old scanner fails them and the corrected scanner passes all eight migration tests.
