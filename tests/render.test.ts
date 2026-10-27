@@ -1444,7 +1444,7 @@ describe("drawn as pictures, by choice (12.16, 12.17)", () => {
     const r = Bun.spawnSync(["bun", "-e", script], { cwd: join(import.meta.dir, ".."), env: { ...process.env, MD } });
     expect(r.stderr.toString()).toBe("");
     // The display waits for its painting job; an SVG file's picture is its callback's to wait for (the TUI's asks the
-    // rasteriser's job: tui.test.ts), and this one asks nothing.
+    // rasteriser's job: tests/tui/documents/media/), and this one asks nothing.
     expect(JSON.parse(r.stdout.toString())).toEqual([
       { pending: ["mermaid"], images: 0 },
       { pending: ["pictures"], images: 0 },

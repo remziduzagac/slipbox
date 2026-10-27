@@ -25,7 +25,7 @@ through OpenTUI itself, to prove the adapter and real key parsing.
 | `tests/core/workspace/`, `tests/cli/` | vaults, walk, links/graph, mutations, search/Git and CLI parity |
 | `tests/cli.test.ts` | the CLI as an agent meets it: the real process on a copy of the demo vault; every command |
 | `tests/tui/documents/`, `tests/tui/shell/input/` | editor, source/lens, edit/save and keyboard/mouse behavior |
-| `tests/tui.test.ts` | remaining TUI model, watcher, workspace and screen journeys |
+| `tests/tui/app/`, `tests/tui/shell/` | retained App state/watch/windows, settings, screen, overlays and terminal |
 | `tests/tui/workspace/git/` | source control: worktrees, panel, marks, diff, review, merge, pull, rebase |
 | `tests/servers.test.ts` | slipbox as a client of language servers, against a fake one (`tests/fixtures/fake-lsp.ts`) |
 | `tests/regressions.test.ts` | one test per bug found in review (later: "review round/cycle N" blocks) |
@@ -54,12 +54,13 @@ cause, square roots (VV-D1).
 
 A test file stays under 1 MiB, the most Biome checks: past it, `bun run lint` fails on it. Model collections are split
 by feature under `tests/tui/`: workspace explorer/vault/search/Git, document navigation/tools/diagnostics/media, and
-shell tools. Screen and remaining App journeys stay in `tests/tui.test.ts` until their split phase. The model owners
-share `tests/tui-harness.ts` (a vault copied, the TUI driven, its rows read). `bun test` evaluates a module once a run,
-however many files import it, and an `afterAll` at its top would be the first file's alone: so each file calls
-`makeSandbox()` at its own top, for a sandbox of its own, removed when that file ends. Git-panel fixtures retain their
-separate saved-environment restoration; peek fixtures retain file-local counters and mock restoration. These policies
-are shared only within their original collection, preserving each file's cleanup lifetime.
+shell tools. Screen, settings and retained App journeys follow their feature owners, with no broad root model collection
+remaining. The model owners share `tests/tui-harness.ts` (a vault copied, the TUI driven, its rows read). `bun test`
+evaluates a module once a run, however many files import it, and an `afterAll` at its top would be the first file's
+alone: so each file calls `makeSandbox()` at its own top, for a sandbox of its own, removed when that file ends.
+Git-panel fixtures retain their separate saved-environment restoration; peek fixtures retain file-local counters and
+mock restoration. These policies are shared only within their original collection, preserving each file's cleanup
+lifetime.
 
 Regression tests follow their feature owner. Existing review-round/cycle parent titles are preserved while mixed
 collections split scenario by scenario; core cases now live in tests/core and the focused organization/TUI owners, while

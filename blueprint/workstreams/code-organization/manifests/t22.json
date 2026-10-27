@@ -1,0 +1,1044 @@
+{
+  "moves": {
+    "tests/tui.test.ts": "tests/tui/shell/terminal/widths.test.ts",
+    "tests/window-header.test.ts": "tests/tui/documents/views/header.test.ts",
+    "tests/tui-where.test.ts": "tests/tui/shell/screen/topbar/location.test.ts"
+  },
+  "splits": {
+    "tests/tui.test.ts": [
+      "tests/tui/app/config/glyphs.test.ts",
+      "tests/tui/app/config/key-errors.test.ts",
+      "tests/tui/app/config/reload.test.ts",
+      "tests/tui/app/config/settings.test.ts",
+      "tests/tui/app/journeys/commands.test.ts",
+      "tests/tui/app/journeys/navigation.test.ts",
+      "tests/tui/app/journeys/settings.test.ts",
+      "tests/tui/app/runtime/lazy-loading.test.ts",
+      "tests/tui/app/session/state.test.ts",
+      "tests/tui/app/watch/anchoring.test.ts",
+      "tests/tui/app/watch/large-files.test.ts",
+      "tests/tui/app/watch/relayout.test.ts",
+      "tests/tui/app/watch/reopening.test.ts",
+      "tests/tui/app/windows/commands.test.ts",
+      "tests/tui/app/windows/floating.test.ts",
+      "tests/tui/app/windows/focus.test.ts",
+      "tests/tui/app/windows/layout.test.ts",
+      "tests/tui/app/windows/questions.test.ts",
+      "tests/tui/app/windows/resize.test.ts",
+      "tests/tui/app/windows/tabs.test.ts",
+      "tests/tui/app/windows/windows.test.ts",
+      "tests/tui/documents/navigation/conversion/converter-journeys.test.ts",
+      "tests/tui/documents/navigation/links/comment-links.test.ts",
+      "tests/tui/documents/navigation/links/data-links.test.ts",
+      "tests/tui/documents/navigation/links/fragments.test.ts",
+      "tests/tui/documents/scratch/model.test.ts",
+      "tests/tui/documents/views/backgrounds.test.ts",
+      "tests/tui/documents/views/breadcrumb.test.ts",
+      "tests/tui/documents/views/code-blocks.test.ts",
+      "tests/tui/documents/views/code-comments.test.ts",
+      "tests/tui/documents/views/code-notebook.test.ts",
+      "tests/tui/documents/views/components.test.ts",
+      "tests/tui/documents/views/data.test.ts",
+      "tests/tui/documents/views/embeds.test.ts",
+      "tests/tui/documents/views/files.test.ts",
+      "tests/tui/documents/views/header-controls.test.ts",
+      "tests/tui/documents/views/structure.test.ts",
+      "tests/tui/documents/views/wrapping.test.ts",
+      "tests/tui/shell/overlays/command-journeys.test.ts",
+      "tests/tui/shell/overlays/geometry.test.ts",
+      "tests/tui/shell/overlays/which-key.test.ts",
+      "tests/tui/shell/screen/ascii.test.ts",
+      "tests/tui/shell/screen/colors.test.ts",
+      "tests/tui/shell/screen/frame.test.ts",
+      "tests/tui/shell/screen/hostile-names.test.ts",
+      "tests/tui/shell/screen/layout.test.ts",
+      "tests/tui/shell/screen/messages.test.ts",
+      "tests/tui/shell/screen/rails.test.ts",
+      "tests/tui/shell/screen/rules.test.ts",
+      "tests/tui/shell/screen/statusbar.test.ts",
+      "tests/tui/shell/screen/tab-strip.test.ts",
+      "tests/tui/shell/terminal/integration.test.ts",
+      "tests/tui/shell/terminal/widths.test.ts"
+    ]
+  },
+  "support": [],
+  "suiteWrapperDeltas": [
+    {
+      "name": "describe: lists and commands no test had run (the TUI model)",
+      "delta": 3
+    },
+    {
+      "name": "describe: review cycle 1 (TUI)",
+      "delta": 3
+    },
+    {
+      "name": "describe: review cycle 3 (TUI)",
+      "delta": 1
+    },
+    {
+      "name": "describe: review round 1",
+      "delta": 7
+    },
+    {
+      "name": "describe: review round 3",
+      "delta": 4
+    },
+    {
+      "name": "describe: what keymap.md and tui.md promise (review: docs against the tests)",
+      "delta": 5
+    }
+  ],
+  "retained": [
+    {
+      "file": "blueprint/research/maintenance-gaps.md",
+      "text": "tests/tui.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/tasks/archive/branch-refusals-drawn.md",
+      "text": "tests/tui.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/tasks/archive/deinit-relinks-pointers.md",
+      "text": "tests/tui.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/tasks/archive/export-ends-at-publication.md",
+      "text": "tests/tui.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/tasks/archive/flaky-tests-on-ci.md",
+      "text": "tests/tui.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/tasks/archive/folder-time-set-back.md",
+      "text": "tests/tui.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/tasks/archive/last-export-remembered-at-once.md",
+      "text": "tests/tui.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/tasks/archive/link-completion-reads-once.md",
+      "text": "tests/tui.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/tasks/archive/peek-index-off-the-main-thread.md",
+      "text": "tests/tui.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/tasks/archive/pointer-writes-say-so.md",
+      "text": "tests/tui.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/tasks/archive/restored-tabs-ask-their-folders.md",
+      "text": "tests/tui.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/tasks/archive/spell-thread-turns-counted.md",
+      "text": "tests/tui.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/tasks/archive/watcher-leaves-home-to-its-walk.md",
+      "text": "tests/tui.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/ci-waits/requirements.md",
+      "text": "tests/tui.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/doc-findings/tasks/archive/cli-words.md",
+      "text": "tests/tui.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/doc-findings/tasks/archive/code-and-rendering.md",
+      "text": "tests/tui.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/doc-findings/tasks/archive/design-and-examples.md",
+      "text": "tests/tui.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/doc-findings/tasks/archive/exports-and-copies.md",
+      "text": "tests/tui.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/doc-findings/tasks/archive/exports.md",
+      "text": "tests/tui.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/doc-findings/tasks/archive/links-and-search.md",
+      "text": "tests/tui.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/doc-findings/tasks/archive/merge-and-check.md",
+      "text": "tests/tui.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/doc-findings/tasks/archive/moves-and-trash.md",
+      "text": "tests/tui.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/doc-findings/tasks/archive/privacy-and-messages.md",
+      "text": "tests/tui.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/doc-findings/tasks/archive/screenshots.md",
+      "text": "tests/tui.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/doc-findings/tasks/archive/tui-fixes.md",
+      "text": "tests/tui.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/doc-findings/tasks/archive/words-hover-clones-popups.md",
+      "text": "tests/tui.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/greenrepo/tasks/archive/history-scan.md",
+      "text": "tests/tui.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/greenrepo/tasks/archive/tests-on-ci.md",
+      "text": "tests/tui.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/terminal-tests/notes.md",
+      "text": "tests/tui.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/upgrade-restart/tasks/archive/dialog.md",
+      "text": "tests/tui.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/upgrade-restart/tasks/archive/restart-command.md",
+      "text": "tests/tui.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/user-docs/tasks/archive/editing-and-files.md",
+      "text": "tests/tui.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/user-docs/tasks/archive/first-guides.md",
+      "text": "tests/tui.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/user-docs/tasks/archive/keys-chapter.md",
+      "text": "tests/tui.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/window-header/notes.md",
+      "text": "tests/tui.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/window-header/tasks/archive/tests.md",
+      "text": "tests/tui.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/design.md",
+      "text": "tests/tui.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/manifests/t18.json",
+      "text": "tests/tui.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/manifests/t20.json",
+      "text": "tests/tui.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/manifests/t21.json",
+      "text": "tests/tui.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/manifests/t6.json",
+      "text": "tests/tui.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "tests/tui.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/tasks/07-tui-areas.md",
+      "text": "tests/tui.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/tasks/16-tui-editor-paths.md",
+      "text": "tests/tui.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/tasks/18-tui-feature-paths.md",
+      "text": "tests/tui.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/tasks/20-tui-editor-test-split.md",
+      "text": "tests/tui.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/tasks/21-tui-feature-test-split.md",
+      "text": "tests/tui.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/window-header/notes.md",
+      "text": "tests/window-header.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/tasks/17-tui-panel-paths.md",
+      "text": "tests/window-header.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/workspaces/notes.md",
+      "text": "tests/tui-where.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/workspaces/tasks/archive/where.md",
+      "text": "tests/tui-where.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/research/maintenance-gaps.md",
+      "text": "tui.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/tasks/archive/branch-refusals-drawn.md",
+      "text": "tui.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/tasks/archive/deinit-relinks-pointers.md",
+      "text": "tui.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/tasks/archive/export-ends-at-publication.md",
+      "text": "tui.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/tasks/archive/flaky-tests-on-ci.md",
+      "text": "tui.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/tasks/archive/folder-time-set-back.md",
+      "text": "tui.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/tasks/archive/git-rows-hold-still.md",
+      "text": "tui.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/tasks/archive/last-export-remembered-at-once.md",
+      "text": "tui.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/tasks/archive/link-completion-reads-once.md",
+      "text": "tui.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/tasks/archive/pages-commit-deployed-before.md",
+      "text": "tui.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/tasks/archive/peek-index-off-the-main-thread.md",
+      "text": "tui.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/tasks/archive/pointer-writes-say-so.md",
+      "text": "tui.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/tasks/archive/restored-tabs-ask-their-folders.md",
+      "text": "tui.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/tasks/archive/spell-thread-turns-counted.md",
+      "text": "tui.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/tasks/archive/watcher-leaves-home-to-its-walk.md",
+      "text": "tui.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/ci-waits/requirements.md",
+      "text": "tui.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/doc-findings/tasks/archive/cli-words.md",
+      "text": "tui.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/doc-findings/tasks/archive/code-and-rendering.md",
+      "text": "tui.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/doc-findings/tasks/archive/design-and-examples.md",
+      "text": "tui.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/doc-findings/tasks/archive/exports-and-copies.md",
+      "text": "tui.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/doc-findings/tasks/archive/exports.md",
+      "text": "tui.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/doc-findings/tasks/archive/links-and-search.md",
+      "text": "tui.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/doc-findings/tasks/archive/merge-and-check.md",
+      "text": "tui.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/doc-findings/tasks/archive/moves-and-trash.md",
+      "text": "tui.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/doc-findings/tasks/archive/privacy-and-messages.md",
+      "text": "tui.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/doc-findings/tasks/archive/screenshots.md",
+      "text": "tui.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/doc-findings/tasks/archive/tui-fixes.md",
+      "text": "tui.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/doc-findings/tasks/archive/words-hover-clones-popups.md",
+      "text": "tui.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/greenrepo/tasks/archive/history-scan.md",
+      "text": "tui.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/greenrepo/tasks/archive/tests-on-ci.md",
+      "text": "tui.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/terminal-tests/notes.md",
+      "text": "tui.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/upgrade-restart/tasks/archive/dialog.md",
+      "text": "tui.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/upgrade-restart/tasks/archive/restart-command.md",
+      "text": "tui.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/user-docs/tasks/archive/editing-and-files.md",
+      "text": "tui.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/user-docs/tasks/archive/first-guides.md",
+      "text": "tui.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/user-docs/tasks/archive/keys-chapter.md",
+      "text": "tui.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/window-header/notes.md",
+      "text": "tui.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/window-header/tasks/archive/tests.md",
+      "text": "tui.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/design.md",
+      "text": "tui.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/manifests/t18.json",
+      "text": "tui.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/manifests/t20.json",
+      "text": "tui.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/manifests/t21.json",
+      "text": "tui.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/manifests/t6.json",
+      "text": "tui.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "tui.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/tasks/07-tui-areas.md",
+      "text": "tui.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/tasks/16-tui-editor-paths.md",
+      "text": "tui.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/tasks/18-tui-feature-paths.md",
+      "text": "tui.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/tasks/20-tui-editor-test-split.md",
+      "text": "tui.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/tasks/21-tui-feature-test-split.md",
+      "text": "tui.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/tasks/22-tui-screen-test-split.md",
+      "text": "tui.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/window-header/notes.md",
+      "text": "window-header.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/tasks/17-tui-panel-paths.md",
+      "text": "window-header.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/workspaces/notes.md",
+      "text": "tui-where.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/archive/workspaces/tasks/archive/where.md",
+      "text": "tui-where.test.ts",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/tasks/22-tui-screen-test-split.md",
+      "text": "tests/tui.test",
+      "reason": "Historical collection path in the recorded baseline; the split manifest lists the scenario owners."
+    }
+  ],
+  "renamedBasenames": {
+    "tui.test.ts": "tests/tui/shell/terminal/widths.test.ts",
+    "window-header.test.ts": "tests/tui/documents/views/header.test.ts",
+    "tui-where.test.ts": "tests/tui/shell/screen/topbar/location.test.ts"
+  },
+  "ownership": {
+    "state": "Current tabs-containing-views and session/focus/buffer behavior are preserved; no new window/tab model.",
+    "journeys": "Full-App screen, watcher, configuration, shell and navigation journeys stay integrated under their principal behavior. Mixed historical parent titles remain as identities, with no historical owner bucket.",
+    "modelHarness": "Every owner retains its file-owned makeSandbox registration, timeout, XDG and cleanup policy."
+  },
+  "prunedUnusedReviewSupport": [
+    {
+      "file": "tests/tui/app/config/key-errors.test.ts",
+      "parent": "review round 3",
+      "declaration": "const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));"
+    },
+    {
+      "file": "tests/tui/app/config/settings.test.ts",
+      "parent": "review round 1",
+      "declaration": "const click = (h: Harness, x: number, y: number, button = 0) => {\n    h.app.mouse.handle({ type: \"down\", x, y, button });\n    h.app.mouse.handle({ type: \"up\", x, y, button });\n    h.frame();\n  };"
+    },
+    {
+      "file": "tests/tui/app/watch/relayout.test.ts",
+      "parent": "review round 3",
+      "declaration": "const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));"
+    },
+    {
+      "file": "tests/tui/app/windows/focus.test.ts",
+      "parent": "lists and commands no test had run (the TUI model)",
+      "declaration": "const last = (h: Harness) => h.app.messages.at(-1)!.text;"
+    },
+    {
+      "file": "tests/tui/app/windows/layout.test.ts",
+      "parent": "review round 1",
+      "declaration": "const click = (h: Harness, x: number, y: number, button = 0) => {\n    h.app.mouse.handle({ type: \"down\", x, y, button });\n    h.app.mouse.handle({ type: \"up\", x, y, button });\n    h.frame();\n  };"
+    },
+    {
+      "file": "tests/tui/app/windows/tabs.test.ts",
+      "parent": "review round 1",
+      "declaration": "const click = (h: Harness, x: number, y: number, button = 0) => {\n    h.app.mouse.handle({ type: \"down\", x, y, button });\n    h.app.mouse.handle({ type: \"up\", x, y, button });\n    h.frame();\n  };"
+    },
+    {
+      "file": "tests/tui/app/windows/tabs.test.ts",
+      "parent": "lists and commands no test had run (the TUI model)",
+      "declaration": "const last = (h: Harness) => h.app.messages.at(-1)!.text;"
+    },
+    {
+      "file": "tests/tui/documents/views/header-controls.test.ts",
+      "parent": "review round 3",
+      "declaration": "const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));"
+    },
+    {
+      "file": "tests/tui/documents/views/header-controls.test.ts",
+      "parent": "lists and commands no test had run (the TUI model)",
+      "declaration": "const last = (h: Harness) => h.app.messages.at(-1)!.text;"
+    },
+    {
+      "file": "tests/tui/documents/views/wrapping.test.ts",
+      "parent": "review round 1",
+      "declaration": "const click = (h: Harness, x: number, y: number, button = 0) => {\n    h.app.mouse.handle({ type: \"down\", x, y, button });\n    h.app.mouse.handle({ type: \"up\", x, y, button });\n    h.frame();\n  };"
+    },
+    {
+      "file": "tests/tui/shell/overlays/which-key.test.ts",
+      "parent": "review round 1",
+      "declaration": "const click = (h: Harness, x: number, y: number, button = 0) => {\n    h.app.mouse.handle({ type: \"down\", x, y, button });\n    h.app.mouse.handle({ type: \"up\", x, y, button });\n    h.frame();\n  };"
+    },
+    {
+      "file": "tests/tui/shell/screen/colors.test.ts",
+      "parent": "review round 1",
+      "declaration": "const click = (h: Harness, x: number, y: number, button = 0) => {\n    h.app.mouse.handle({ type: \"down\", x, y, button });\n    h.app.mouse.handle({ type: \"up\", x, y, button });\n    h.frame();\n  };"
+    },
+    {
+      "file": "tests/tui/shell/screen/layout.test.ts",
+      "parent": "review round 3",
+      "declaration": "const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));"
+    }
+  ],
+  "inventory": {
+    "baseline": "ORG-T21",
+    "baselineDeclarations": 3707,
+    "expectedDeclarations": 3730,
+    "unchangedSplitLiteralLeafCalls": 206,
+    "baselineRuntimeTests": 257,
+    "runtimeTests": 257,
+    "baselineAssertions": 2876,
+    "assertions": 2876,
+    "snapshotFiles": 0,
+    "assertionCountPolicy": "Counts are observed for the recorded runs; preservation is judged by complete identities, runtime tests and normalized bodies.",
+    "files": [
+      {
+        "file": "tests/tui/app/config/glyphs.test.ts",
+        "literalLeafCalls": 1,
+        "runtimeTests": 1,
+        "assertions": 5
+      },
+      {
+        "file": "tests/tui/app/config/key-errors.test.ts",
+        "literalLeafCalls": 1,
+        "runtimeTests": 1,
+        "assertions": 2
+      },
+      {
+        "file": "tests/tui/app/config/reload.test.ts",
+        "literalLeafCalls": 9,
+        "runtimeTests": 9,
+        "assertions": 21
+      },
+      {
+        "file": "tests/tui/app/config/settings.test.ts",
+        "literalLeafCalls": 5,
+        "runtimeTests": 5,
+        "assertions": 33
+      },
+      {
+        "file": "tests/tui/app/journeys/commands.test.ts",
+        "literalLeafCalls": 1,
+        "runtimeTests": 1,
+        "assertions": 10
+      },
+      {
+        "file": "tests/tui/app/journeys/navigation.test.ts",
+        "literalLeafCalls": 1,
+        "runtimeTests": 1,
+        "assertions": 4
+      },
+      {
+        "file": "tests/tui/app/journeys/settings.test.ts",
+        "literalLeafCalls": 1,
+        "runtimeTests": 1,
+        "assertions": 4
+      },
+      {
+        "file": "tests/tui/app/runtime/lazy-loading.test.ts",
+        "literalLeafCalls": 1,
+        "runtimeTests": 1,
+        "assertions": 3
+      },
+      {
+        "file": "tests/tui/app/session/state.test.ts",
+        "literalLeafCalls": 5,
+        "runtimeTests": 5,
+        "assertions": 10
+      },
+      {
+        "file": "tests/tui/app/watch/anchoring.test.ts",
+        "literalLeafCalls": 3,
+        "runtimeTests": 3,
+        "assertions": 9
+      },
+      {
+        "file": "tests/tui/app/watch/large-files.test.ts",
+        "literalLeafCalls": 1,
+        "runtimeTests": 1,
+        "assertions": 13
+      },
+      {
+        "file": "tests/tui/app/watch/relayout.test.ts",
+        "literalLeafCalls": 1,
+        "runtimeTests": 1,
+        "assertions": 2
+      },
+      {
+        "file": "tests/tui/app/watch/reopening.test.ts",
+        "literalLeafCalls": 1,
+        "runtimeTests": 1,
+        "assertions": 8
+      },
+      {
+        "file": "tests/tui/app/windows/commands.test.ts",
+        "literalLeafCalls": 1,
+        "runtimeTests": 1,
+        "assertions": 3
+      },
+      {
+        "file": "tests/tui/app/windows/floating.test.ts",
+        "literalLeafCalls": 2,
+        "runtimeTests": 2,
+        "assertions": 7
+      },
+      {
+        "file": "tests/tui/app/windows/focus.test.ts",
+        "literalLeafCalls": 2,
+        "runtimeTests": 2,
+        "assertions": 7
+      },
+      {
+        "file": "tests/tui/app/windows/layout.test.ts",
+        "literalLeafCalls": 1,
+        "runtimeTests": 1,
+        "assertions": 2
+      },
+      {
+        "file": "tests/tui/app/windows/questions.test.ts",
+        "literalLeafCalls": 3,
+        "runtimeTests": 3,
+        "assertions": 23
+      },
+      {
+        "file": "tests/tui/app/windows/resize.test.ts",
+        "literalLeafCalls": 9,
+        "runtimeTests": 9,
+        "assertions": 44
+      },
+      {
+        "file": "tests/tui/app/windows/tabs.test.ts",
+        "literalLeafCalls": 9,
+        "runtimeTests": 9,
+        "assertions": 54
+      },
+      {
+        "file": "tests/tui/app/windows/windows.test.ts",
+        "literalLeafCalls": 3,
+        "runtimeTests": 3,
+        "assertions": 18
+      },
+      {
+        "file": "tests/tui/documents/navigation/conversion/converter-journeys.test.ts",
+        "literalLeafCalls": 2,
+        "runtimeTests": 2,
+        "assertions": 17
+      },
+      {
+        "file": "tests/tui/documents/navigation/links/comment-links.test.ts",
+        "literalLeafCalls": 1,
+        "runtimeTests": 1,
+        "assertions": 5
+      },
+      {
+        "file": "tests/tui/documents/navigation/links/data-links.test.ts",
+        "literalLeafCalls": 1,
+        "runtimeTests": 1,
+        "assertions": 2
+      },
+      {
+        "file": "tests/tui/documents/navigation/links/fragments.test.ts",
+        "literalLeafCalls": 1,
+        "runtimeTests": 1,
+        "assertions": 4
+      },
+      {
+        "file": "tests/tui/documents/scratch/model.test.ts",
+        "literalLeafCalls": 7,
+        "runtimeTests": 7,
+        "assertions": 49
+      },
+      {
+        "file": "tests/tui/documents/views/backgrounds.test.ts",
+        "literalLeafCalls": 1,
+        "runtimeTests": 1,
+        "assertions": 2
+      },
+      {
+        "file": "tests/tui/documents/views/breadcrumb.test.ts",
+        "literalLeafCalls": 3,
+        "runtimeTests": 3,
+        "assertions": 34
+      },
+      {
+        "file": "tests/tui/documents/views/code-blocks.test.ts",
+        "literalLeafCalls": 11,
+        "runtimeTests": 11,
+        "assertions": 102
+      },
+      {
+        "file": "tests/tui/documents/views/code-comments.test.ts",
+        "literalLeafCalls": 4,
+        "runtimeTests": 4,
+        "assertions": 50
+      },
+      {
+        "file": "tests/tui/documents/views/code-notebook.test.ts",
+        "literalLeafCalls": 27,
+        "runtimeTests": 27,
+        "assertions": 435
+      },
+      {
+        "file": "tests/tui/documents/views/components.test.ts",
+        "literalLeafCalls": 1,
+        "runtimeTests": 1,
+        "assertions": 4
+      },
+      {
+        "file": "tests/tui/documents/views/data.test.ts",
+        "literalLeafCalls": 5,
+        "runtimeTests": 5,
+        "assertions": 32
+      },
+      {
+        "file": "tests/tui/documents/views/embeds.test.ts",
+        "literalLeafCalls": 3,
+        "runtimeTests": 3,
+        "assertions": 9
+      },
+      {
+        "file": "tests/tui/documents/views/files.test.ts",
+        "literalLeafCalls": 5,
+        "runtimeTests": 5,
+        "assertions": 31
+      },
+      {
+        "file": "tests/tui/documents/views/header-controls.test.ts",
+        "literalLeafCalls": 3,
+        "runtimeTests": 3,
+        "assertions": 4
+      },
+      {
+        "file": "tests/tui/documents/views/header.test.ts",
+        "literalLeafCalls": 44,
+        "runtimeTests": 44,
+        "assertions": 252
+      },
+      {
+        "file": "tests/tui/documents/views/structure.test.ts",
+        "literalLeafCalls": 2,
+        "runtimeTests": 2,
+        "assertions": 11
+      },
+      {
+        "file": "tests/tui/documents/views/wrapping.test.ts",
+        "literalLeafCalls": 4,
+        "runtimeTests": 4,
+        "assertions": 20
+      },
+      {
+        "file": "tests/tui/shell/overlays/command-journeys.test.ts",
+        "literalLeafCalls": 12,
+        "runtimeTests": 12,
+        "assertions": 1066
+      },
+      {
+        "file": "tests/tui/shell/overlays/geometry.test.ts",
+        "literalLeafCalls": 1,
+        "runtimeTests": 1,
+        "assertions": 1
+      },
+      {
+        "file": "tests/tui/shell/overlays/which-key.test.ts",
+        "literalLeafCalls": 12,
+        "runtimeTests": 12,
+        "assertions": 120
+      },
+      {
+        "file": "tests/tui/shell/screen/ascii.test.ts",
+        "literalLeafCalls": 1,
+        "runtimeTests": 1,
+        "assertions": 3
+      },
+      {
+        "file": "tests/tui/shell/screen/colors.test.ts",
+        "literalLeafCalls": 1,
+        "runtimeTests": 1,
+        "assertions": 2
+      },
+      {
+        "file": "tests/tui/shell/screen/frame.test.ts",
+        "literalLeafCalls": 16,
+        "runtimeTests": 16,
+        "assertions": 154
+      },
+      {
+        "file": "tests/tui/shell/screen/hostile-names.test.ts",
+        "literalLeafCalls": 1,
+        "runtimeTests": 1,
+        "assertions": 9
+      },
+      {
+        "file": "tests/tui/shell/screen/layout.test.ts",
+        "literalLeafCalls": 5,
+        "runtimeTests": 5,
+        "assertions": 17
+      },
+      {
+        "file": "tests/tui/shell/screen/messages.test.ts",
+        "literalLeafCalls": 2,
+        "runtimeTests": 2,
+        "assertions": 20
+      },
+      {
+        "file": "tests/tui/shell/screen/rails.test.ts",
+        "literalLeafCalls": 2,
+        "runtimeTests": 2,
+        "assertions": 25
+      },
+      {
+        "file": "tests/tui/shell/screen/rules.test.ts",
+        "literalLeafCalls": 2,
+        "runtimeTests": 2,
+        "assertions": 7
+      },
+      {
+        "file": "tests/tui/shell/screen/statusbar.test.ts",
+        "literalLeafCalls": 4,
+        "runtimeTests": 4,
+        "assertions": 20
+      },
+      {
+        "file": "tests/tui/shell/screen/tab-strip.test.ts",
+        "literalLeafCalls": 2,
+        "runtimeTests": 2,
+        "assertions": 9
+      },
+      {
+        "file": "tests/tui/shell/screen/topbar/location.test.ts",
+        "literalLeafCalls": 7,
+        "runtimeTests": 7,
+        "assertions": 70
+      },
+      {
+        "file": "tests/tui/shell/terminal/integration.test.ts",
+        "literalLeafCalls": 1,
+        "runtimeTests": 1,
+        "assertions": 3
+      },
+      {
+        "file": "tests/tui/shell/terminal/widths.test.ts",
+        "literalLeafCalls": 2,
+        "runtimeTests": 2,
+        "assertions": 5
+      }
+    ]
+  }
+}
