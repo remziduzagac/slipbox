@@ -52,14 +52,14 @@ cause.
   switcher.open`, the screen `index.md` still open, `by-name.md` in the explorer, the switcher closed. The switcher had
   been opened, `by-name` typed, enter pressed, and nothing opened.
 - 2026-10-24: Read, the cause: the explorer and the switcher answer from different places. The explorer's tree lists
-  what the disk has that the walk didn't give (`fromDisk`, `src/tui/explorer-disk.ts`; VV-D8: "a folder or file come
-  since"), read again whenever the tree is remade for any reason. The switcher lists the graph's notes (`switcher.open`,
-  `src/tui/actions/documents/actions-find.ts`: `a.graph.notes`), which a new file joins only when the watcher's
-  debounced batch is applied (`VaultFeed.receive` → `applyToGraph` → `Graph.updateFile`). So `s.see("by-name.md")` says
-  the disk has it, not that the graph does; on a loaded runner the batch lands after the switcher opened, the query
-  matches nothing, and enter opens nothing. Whatever remakes the tree after the write (the search's answers, `git.ts`'s
-  status, `listings.ts`, `peek.ts`) races the watcher's 120 ms debounce. `inSwitcher` (`check.ts`) was meant for this:
-  it reopens the switcher until the list has the path.
+  what the disk has that the walk didn't give (`fromDisk`, `src/tui/workspace/explorer/explorer-disk.ts`; VV-D8: "a
+  folder or file come since"), read again whenever the tree is remade for any reason. The switcher lists the graph's
+  notes (`switcher.open`, `src/tui/actions/documents/actions-find.ts`: `a.graph.notes`), which a new file joins only
+  when the watcher's debounced batch is applied (`VaultFeed.receive` → `applyToGraph` → `Graph.updateFile`). So
+  `s.see("by-name.md")` says the disk has it, not that the graph does; on a loaded runner the batch lands after the
+  switcher opened, the query matches nothing, and enter opens nothing. Whatever remakes the tree after the write (the
+  search's answers, `git.ts`'s status, `listings.ts`, `peek.ts`) races the watcher's 120 ms debounce. `inSwitcher`
+  (`check.ts`) was meant for this: it reopens the switcher until the list has the path.
 - 2026-10-24: Read, the other checks: a scan of every run body for a note written and then opened by the switcher
   (`open(s, …)` or `ctrl+p` and the name typed; scripts in `tmp/issue/scan/`) finds this check alone. The rest that open
   a note they just wrote use `inSwitcher` (`vaults.ts`, `outside-and-code.ts`) or `:e` by its path.

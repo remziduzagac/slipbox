@@ -18,7 +18,7 @@ import { openGraph } from "../src/core/workspace/graph/graph.ts";
 import { locateVault } from "../src/core/workspace/vaults/vault.ts";
 import { App, type Host } from "../src/tui/app/runtime/app.ts";
 import { TextCanvas } from "../src/tui/shell/terminal/canvas.ts";
-import { locationItems } from "../src/tui/draw-topbar.ts";
+import { locationItems } from "../src/tui/shell/screen/topbar/draw-topbar.ts";
 import type { Line } from "../src/core/rendering/layout/ir.ts";
 
 /** The sandbox of the file running, which `makeSandbox` sets. */

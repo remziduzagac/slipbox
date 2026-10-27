@@ -21,8 +21,8 @@ a change users will see updates it in the same piece of work, without the bluepr
   server locks have a separate measured cap and offline generator check (`bun scripts/lock-servers.ts --check`). Lower a
   cap whenever its file shrinks; remove the exception at or below 1,000. A feature goes in a module of its own; `App`
   (`src/tui/app/runtime/app.ts`) keeps the shared state and the wiring, and a feature is a controller in its own file
-  that `App` owns (`src/tui/explorer.ts` is `app.explorer`), holding the state that is the feature's alone.
-  `bun run check:size` enforces the limit.
+  that `App` owns (`src/tui/workspace/explorer/explorer.ts` is `app.explorer`), holding the state that is the feature's
+  alone. `bun run check:size` enforces the limit.
 - **Every user action is a named command.** Add it to the `src/core/application/commands/areas/` file of its area
   (`git.ts`, `editing.ts`, …; `catalog.ts` joins them into `COMMAND_SPECS`) with its CLI equivalent (or `null` for a
   pure interaction), then implement it in its TUI action-area module (`src/tui/actions/`, with remaining

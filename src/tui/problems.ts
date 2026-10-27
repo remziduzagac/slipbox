@@ -18,7 +18,7 @@ import {
   syntaxProblems,
 } from "../core/documents/diagnostics/diagnostics.ts";
 import type { NoteBuffer } from "./documents/buffers/buffer.ts";
-import { match } from "./match.ts";
+import { match } from "./shell/overlays/match.ts";
 import { keyChar } from "./shell/input/keys.ts";
 import type { App, View } from "./app/runtime/app.ts";
 import { readText } from "../core/foundation/platform/fsutil.ts";

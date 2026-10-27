@@ -112,13 +112,13 @@ its release notes link (`app.release_notes`, copies the address) and `app.upgrad
 
 `ui.top_bar` is retired with a notice, removed from settings and keys. The status line has no location fallback.
 
-**The window header** tops each window, between two rules: in a split the window's file name, then the breadcrumb,
-then at its right the view buttons, and at the far right of the window at the top right, without the right rail,
-the outline's `▤` (HDR-D1). In a split the name is `strong` in the active window and `dim` in the other, cut to half
-the row. `ui.window_header = false` removes it, as do "Window header" in the UI settings list and the palette; zen
-mode, the floating window and windows under 8 rows have none (HDR-D3). Without a header there are no header rules,
-the outline starts at the top of the content, and a split window gets a plain title row (`tab` / `tab_active`). It is
-drawn by `drawWindowHeader` (`src/tui/draw-header.ts`), which `drawPane` calls.
+**The window header** tops each window, between two rules: in a split the window's file name, then the breadcrumb, then
+at its right the view buttons, and at the far right of the window at the top right, without the right rail, the
+outline's `▤` (HDR-D1). In a split the name is `strong` in the active window and `dim` in the other, cut to half the
+row. `ui.window_header = false` removes it, as do "Window header" in the UI settings list and the palette; zen mode, the
+floating window and windows under 8 rows have none (HDR-D3). Without a header there are no header rules, the outline
+starts at the top of the content, and a split window gets a plain title row (`tab` / `tab_active`). It is drawn by
+`drawWindowHeader` (`src/tui/documents/views/draw-header.ts`), which `drawPane` calls.
 
 **The view buttons** (VB-D1) are ` R `, ` L ` and ` S ` in every glyph set. READ and SOURCE form a radio pair;
 LENS is a toggle beside READ, selected alongside it. LENS clicked in SOURCE opens READ with its lens on; clicked
@@ -811,107 +811,101 @@ registry (`LEFT_VIEWS`,
 `RIGHT_VIEWS` in `panels.ts`) and more will come on both sides, each with its own rows, drawing and
 keys.
 
-- **Explorer (left, `≡`): one tree, the view a part of it** (VV-D5; `tui/explorer.ts`). The view (`explorer.top`,
-  absolute) is a folder: its rows are what's in it. In the vault open, the vault's own tree from there
+- **Explorer (left, `≡`): one tree, the view a part of it** (VV-D5; `tui/workspace/explorer/explorer.ts`). The view
+  (`explorer.top`, absolute) is a folder: its rows are what's in it. In the vault open, the vault's own tree from there
   (`rootTree(sub)`): the walked notes, directories first, with the files `files.show` lists beside them — by default
   (`auto`) every text file in a repository, where code lives, and the data files (JSON, YAML, TOML, INI, CSV) in a notes
   vault (one with `.slipbox/`), shown with their extension and their own icon; `a` toggles to every text file and back
-  (`16.5`, "Files beyond notes" below), `shift+h` to the hidden names too and back (below) — the walk's folders,
-  nested vaults by their rows. Anywhere else — above the
-  vault, beside it, in another vault, a nested one's folder — the folder is listed a level at a time, never walked
-  (`outsideRows`): its folders, then its files as this vault's `files.show` lists them (`auto` worked out from the
-  listed folder's own vault), hidden ones left out unless `files.hidden` is on, `.git` always (a busy folder is
-  listed, VV-D8; below). Such a folder is read off the main thread (T12; `Listings` in `tui/listings.ts`,
-  `core/workspace/walk/listing.ts`), so one on a disk that answers slowly never freezes the keys or the screen: on one
-  of two listing
-  threads, apart from the walk's, its entries the explorer lists (a hidden name, while they aren't listed, never read)
-  and what its rows and marks say of each (a folder or a file, where a link leads, a vault's key, name and branch, one
-  you may not read, a busy folder) — a link's answer, and so its mark, still read here from the answers kept. Kept, at
-  most 256 folders besides those the tree last showed (let go of once a tree is built, never while it's being built),
-  a listing is read again in the background as the tree is built again once it's a second old, or under other
-  settings (`[walk]`, `files.hidden`), its rows replaced only when it says something new (compared by a digest the
-  thread makes of all they're built from: its entries, whether its vault is a notes vault, its links' scope), the
-  selection kept on the row it was on — and a row the explorer meant to select in a folder not
-  listed yet (`-`'s folder it came from, a note revealed: `Explorer.wanted`) selected when it comes, unless you moved
-  the selection since. A folder moved is let go of, the folders it left and came into read again, and a file
+  (`16.5`, "Files beyond notes" below), `shift+h` to the hidden names too and back (below) — the walk's folders, nested
+  vaults by their rows. Anywhere else — above the vault, beside it, in another vault, a nested one's folder — the folder
+  is listed a level at a time, never walked (`outsideRows`): its folders, then its files as this vault's `files.show`
+  lists them (`auto` worked out from the listed folder's own vault), hidden ones left out unless `files.hidden` is on,
+  `.git` always (a busy folder is listed, VV-D8; below). Such a folder is read off the main thread (T12; `Listings` in
+  `tui/workspace/explorer/listings.ts`, `core/workspace/walk/listing.ts`), so one on a disk that answers slowly never
+  freezes the keys or the screen: on one of two listing threads, apart from the walk's, its entries the explorer lists
+  (a hidden name, while they aren't listed, never read) and what its rows and marks say of each (a folder or a file,
+  where a link leads, a vault's key, name and branch, one you may not read, a busy folder) — a link's answer, and so its
+  mark, still read here from the answers kept. Kept, at most 256 folders besides those the tree last showed (let go of
+  once a tree is built, never while it's being built), a listing is read again in the background as the tree is built
+  again once it's a second old, or under other settings (`[walk]`, `files.hidden`), its rows replaced only when it says
+  something new (compared by a digest the thread makes of all they're built from: its entries, whether its vault is a
+  notes vault, its links' scope), the selection kept on the row it was on — and a row the explorer meant to select in a
+  folder not listed yet (`-`'s folder it came from, a note revealed: `Explorer.wanted`) selected when it comes, unless
+  you moved the selection since. A folder moved is let go of, the folders it left and came into read again, and a file
   operation in the vault reads its folders listed this way again: an answer read before is dropped; one read under
-  settings changed since (another vault gone into) is read again at once. Each entry is asked one access check, a
-  folder its markers and, a busy name, whether it holds a note; another disk mounted there (the mount table, read at
-  most every five seconds) is listed by its name alone, never looked at — a folder or a file as its folder's entry
-  says (a file bind-mounted, a container's `/etc/hosts`). A listing has a whole walk's ten minutes, counted from when
-  a thread takes it: one at a time on each thread, the others wait in one line, each going to a thread once it's
-  free — never behind a folder that doesn't answer while the other thread is free. Stopped (the TUI quitting), a
-  listing asked or waiting is refused, never a thread started again for it. Until a folder's first listing
-  answers, nothing is under it; after 150 ms a dim `listing…` row says it's being read, and one that can't be listed
-  says why, in `l`'s words (`can't read: it isn't there`; `can't read: no answer in time`): rows that only say
-  something, never opened or marked. On one, nothing acts on its own path (opening, zooming, copying its path,
-  renaming, moving, deleting, copying or cutting it, a vault made of it: `ON_THE_ROW`); the rest does as on any row of
-  its folder (moving, folding it, a new note or folder there, a paste, a restore, the menu). One that failed is read
-  again a minute later (`RETRY_MS`), not at every rebuild; a folder listed before whose thread gives no answer when
-  it's read again stays as it was listed. A folder `l` refuses as its folder's listing said it (you may not read it)
-  has that listing, and its own, read again (`Listings.again`), nothing else in its folder: one you may read now
-  unfolds at the next `l`. A test's App, not the TUI's, lists at once here
-  (`AppOptions.listOffThread`). There the vault open is a row,
-  highlighted (`sidebar_active`), its tree under it while unfolded; another vault is a row with the vault's icon (`◈`,
-  Nerd: a bookshelf; `17.13`, D51) in a folder's blue (`sidebar_root`, for `[colors]` to set; `sidebar_vault`, its old
-  name, read as it: DF-D22), its name dimmed after the folder's when they differ, its branch among its marks (below). A
-  row's path is its path in the vault for what the vault's own tree holds, else absolute (`outside`), and so is a
-  folder's key in `expanded`; none of this vault's file operations act on an `outside` row (a paste, new note or new
-  folder there says `another vault's folder: select a folder of this vault`), but one `walk.exclude` leaves out (D246,
-  below). **It starts** at the folder opened
-  (`slipbox x/y`: y, in vault x; `prepare`'s `folder`), set once the notes are open, so the note shown outside it leaves
-  it be; opened on a note, at its vault. In Elsewhere it has no tree of its own: every folder is listed a level at a
-  time, by its whole path, the view starting at the folder opened. **The breadcrumb**, on the row under the pane's
-  title, says where the view is: `~` for home when the view is in it (else `/`, home by its name), then each folder
-  down to the view and a `›`, the view always among them; a vault with its
-  icon, the vault open highlighted, the view bold. Past the view, dimmed, the trail (`explorer.trail`): the folders it
-  can zoom back into — the view zoomed out from, or where you went when it zoomed out by itself — kept while the view is
-  on their way. Too long for the pane, the trail gives way first (from its end, its first folder cut short, kept while
-  four columns are left), then the folders above the view, from the start, to `…`. A click on a folder of it zooms the
-  view there (`xcrumb:<path>`). **Zooming** on purpose (`zoomTo`): `z` (`zoom_in`) on a folder or vault, a file's folder
-  on a file; `-` (`zoom_out`, nvim-tree's and oil's key for the parent) a folder up, the folder left unfolded and
-  selected; nothing above `/`, said. **By itself** (`zoomToHold`), only outward: going somewhere outside the view — a
-  note opened, followed to, gone back or forward to, revealed (`space shift+e`), a folder link followed, a vault gone
-  into — zooms the view out to the common parent of the view and the place, only their two paths unfolded (what was
-  unfolded in the old view kept, every other folder folded), the trail at the place. Not for what the tree doesn't list
-  (a hidden folder's file while hidden names aren't listed, `.git`'s always: `listedDown`), nor the scratch; the
-  explorer's first showing, a workspace's tabs restored, and the filter's
-  `esc` reveal the note only inside the view. **A folder gone:** the view and the trail go with a folder slipbox renames
-  or moves (`followMove`, from `Renaming.apply`, as the folds do); one deleted, or gone outside slipbox, gives way to
-  its nearest folder still there when the tree or the breadcrumb is built again (`keepToWhatsThere`), the view's said
-  (`~/x isn't there any more: the view is on ~`). **Keys on a row:** `enter` (or a double-click) folds or unfolds a
-  folder and the vault open's row, opens a note as a tab (or switches to the tab already showing it), goes into another
-  vault (VV-D4; § Going into a vault); `l` unfolds any folder or vault in place, another vault's listed a level at a
-  time, its rows not this vault's to change; `h` folds an unfolded folder or vault, else the folder holding the row
-  (when it's a row of the view); `o` replaces the current window's note (on a folder, unfolds it), and `s` opens it in
-  the split's other window. Moving the selection, or a click on a note, only selects; a click on a folder folds or
-  unfolds it. New notes and folders, renames, moves, deletes, copies: "Files in the explorer", above. **Any folder you
-  may read:** a folder you may not read says why when it's opened on, unfolded or zoomed into
-  (`can't read ~/x: you may not read it (no permission)`), nothing unfolded; a file you may not write — it, or its
-  folder, for the save's rename — opens read-only (`buf.readOnly`), said at once and when typing is refused
-  (`notes/a.md is read-only: you may not write it (no permission)`). Gone with VV-D5: `..` and climbing above the vault,
-  the other roots beside the tree (the one opened, those pinned, a loose file's folder: the view holds them now),
-  `:pin-root` (`vault.pin_root`, its `roots.json` in the vault's state no longer read). Not done: Windows' drives and
-  shares above everything (VV-D5), with native Windows; the breadcrumb's top is `~` or `/`.
-- **What the walk leaves out, listed** (VV-D8; `tui/explorer-disk.ts`). In each folder of the vault's own tree the
-  explorer shows — the view's, and each unfolded under it — what's on the disk that the walk didn't give is read
-  (`fromDisk`), a link aside (§ Links followed only when you say so, [roots.md](roots.md)), and a hidden name unless
-  they're listed (below). What the
-  walk leaves out — `node_modules` and the other busy folders (D237: ignored, or no note at their top; a notes `build/`
-  is the vault's own), what `.gitignore` or `walk.exclude` leaves out, home's
-  skip list — is a row by its absolute path (`outside`, its `leftOut` the reason `exclusion` gives), listed a level at
-  a time as a folder outside the vault, never this vault's to rename, move or delete, nor to make a note in (`a folder
-  this vault doesn't index: select one it does`) — but what `walk.exclude` leaves out, your own setting, takes a new
-  note, a new folder or a paste as a typed path into it does, said `not indexed` (D246: `Files.newItemBase` gives the
-  row's folder when `Graph.notIndexed` says so of the row's path; a busy folder, a `.gitignore`'s, home's skip list or
-  a vault there is refused as before); a file of it opens from the explorer, and by `:e` the same way (D249), never
-  indexed; a note of it a link reached (`20.8`) is listed there, not under a folder of the vault's own. What it hasn't
-  reached — a folder it couldn't read, home's folders before its walk, a folder or file come since the walk — is the
-  vault's, by its path in it (`unwalked`), listed from the disk until the walk has it: so a top-level folder of home
+  settings changed since (another vault gone into) is read again at once. Each entry is asked one access check, a folder
+  its markers and, a busy name, whether it holds a note; another disk mounted there (the mount table, read at most every
+  five seconds) is listed by its name alone, never looked at — a folder or a file as its folder's entry says (a file
+  bind-mounted, a container's `/etc/hosts`). A listing has a whole walk's ten minutes, counted from when a thread takes
+  it: one at a time on each thread, the others wait in one line, each going to a thread once it's free — never behind a
+  folder that doesn't answer while the other thread is free. Stopped (the TUI quitting), a listing asked or waiting is
+  refused, never a thread started again for it. Until a folder's first listing answers, nothing is under it; after 150
+  ms a dim `listing…` row says it's being read, and one that can't be listed says why, in `l`'s words
+  (`can't read: it isn't there`; `can't read: no answer in time`): rows that only say something, never opened or marked.
+  On one, nothing acts on its own path (opening, zooming, copying its path, renaming, moving, deleting, copying or
+  cutting it, a vault made of it: `ON_THE_ROW`); the rest does as on any row of its folder (moving, folding it, a new
+  note or folder there, a paste, a restore, the menu). One that failed is read again a minute later (`RETRY_MS`), not at
+  every rebuild; a folder listed before whose thread gives no answer when it's read again stays as it was listed. A
+  folder `l` refuses as its folder's listing said it (you may not read it) has that listing, and its own, read again
+  (`Listings.again`), nothing else in its folder: one you may read now unfolds at the next `l`. A test's App, not the
+  TUI's, lists at once here (`AppOptions.listOffThread`). There the vault open is a row, highlighted (`sidebar_active`),
+  its tree under it while unfolded; another vault is a row with the vault's icon (`◈`, Nerd: a bookshelf; `17.13`, D51)
+  in a folder's blue (`sidebar_root`, for `[colors]` to set; `sidebar_vault`, its old name, read as it: DF-D22), its
+  name dimmed after the folder's when they differ, its branch among its marks (below). A row's path is its path in the
+  vault for what the vault's own tree holds, else absolute (`outside`), and so is a folder's key in `expanded`; none of
+  this vault's file operations act on an `outside` row (a paste, new note or new folder there says
+  `another vault's folder: select a folder of this vault`), but one `walk.exclude` leaves out (D246, below). **It
+  starts** at the folder opened (`slipbox x/y`: y, in vault x; `prepare`'s `folder`), set once the notes are open, so
+  the note shown outside it leaves it be; opened on a note, at its vault. In Elsewhere it has no tree of its own: every
+  folder is listed a level at a time, by its whole path, the view starting at the folder opened. **The breadcrumb**, on
+  the row under the pane's title, says where the view is: `~` for home when the view is in it (else `/`, home by its
+  name), then each folder down to the view and a `›`, the view always among them; a vault with its icon, the vault open
+  highlighted, the view bold. Past the view, dimmed, the trail (`explorer.trail`): the folders it can zoom back into —
+  the view zoomed out from, or where you went when it zoomed out by itself — kept while the view is on their way. Too
+  long for the pane, the trail gives way first (from its end, its first folder cut short, kept while four columns are
+  left), then the folders above the view, from the start, to `…`. A click on a folder of it zooms the view there
+  (`xcrumb:<path>`). **Zooming** on purpose (`zoomTo`): `z` (`zoom_in`) on a folder or vault, a file's folder on a file;
+  `-` (`zoom_out`, nvim-tree's and oil's key for the parent) a folder up, the folder left unfolded and selected; nothing
+  above `/`, said. **By itself** (`zoomToHold`), only outward: going somewhere outside the view — a note opened,
+  followed to, gone back or forward to, revealed (`space shift+e`), a folder link followed, a vault gone into — zooms
+  the view out to the common parent of the view and the place, only their two paths unfolded (what was unfolded in the
+  old view kept, every other folder folded), the trail at the place. Not for what the tree doesn't list (a hidden
+  folder's file while hidden names aren't listed, `.git`'s always: `listedDown`), nor the scratch; the explorer's first
+  showing, a workspace's tabs restored, and the filter's `esc` reveal the note only inside the view. **A folder gone:**
+  the view and the trail go with a folder slipbox renames or moves (`followMove`, from `Renaming.apply`, as the folds
+  do); one deleted, or gone outside slipbox, gives way to its nearest folder still there when the tree or the breadcrumb
+  is built again (`keepToWhatsThere`), the view's said (`~/x isn't there any more: the view is on ~`). **Keys on a
+  row:** `enter` (or a double-click) folds or unfolds a folder and the vault open's row, opens a note as a tab (or
+  switches to the tab already showing it), goes into another vault (VV-D4; § Going into a vault); `l` unfolds any folder
+  or vault in place, another vault's listed a level at a time, its rows not this vault's to change; `h` folds an
+  unfolded folder or vault, else the folder holding the row (when it's a row of the view); `o` replaces the current
+  window's note (on a folder, unfolds it), and `s` opens it in the split's other window. Moving the selection, or a
+  click on a note, only selects; a click on a folder folds or unfolds it. New notes and folders, renames, moves,
+  deletes, copies: "Files in the explorer", above. **Any folder you may read:** a folder you may not read says why when
+  it's opened on, unfolded or zoomed into (`can't read ~/x: you may not read it (no permission)`), nothing unfolded; a
+  file you may not write — it, or its folder, for the save's rename — opens read-only (`buf.readOnly`), said at once and
+  when typing is refused (`notes/a.md is read-only: you may not write it (no permission)`). Gone with VV-D5: `..` and
+  climbing above the vault, the other roots beside the tree (the one opened, those pinned, a loose file's folder: the
+  view holds them now), `:pin-root` (`vault.pin_root`, its `roots.json` in the vault's state no longer read). Not done:
+  Windows' drives and shares above everything (VV-D5), with native Windows; the breadcrumb's top is `~` or `/`.
+- **What the walk leaves out, listed** (VV-D8; `tui/workspace/explorer/explorer-disk.ts`). In each folder of the vault's
+  own tree the explorer shows — the view's, and each unfolded under it — what's on the disk that the walk didn't give is
+  read (`fromDisk`), a link aside (§ Links followed only when you say so, [roots.md](roots.md)), and a hidden name
+  unless they're listed (below). What the walk leaves out — `node_modules` and the other busy folders (D237: ignored, or
+  no note at their top; a notes `build/` is the vault's own), what `.gitignore` or `walk.exclude` leaves out, home's
+  skip list — is a row by its absolute path (`outside`, its `leftOut` the reason `exclusion` gives), listed a level at a
+  time as a folder outside the vault, never this vault's to rename, move or delete, nor to make a note in
+  (`a folder this vault doesn't index: select one it does`) — but what `walk.exclude` leaves out, your own setting,
+  takes a new note, a new folder or a paste as a typed path into it does, said `not indexed` (D246: `Files.newItemBase`
+  gives the row's folder when `Graph.notIndexed` says so of the row's path; a busy folder, a `.gitignore`'s, home's skip
+  list or a vault there is refused as before); a file of it opens from the explorer, and by `:e` the same way (D249),
+  never indexed; a note of it a link reached (`20.8`) is listed there, not under a folder of the vault's own. What it
+  hasn't reached — a folder it couldn't read, home's folders before its walk, a folder or file come since the walk — is
+  the vault's, by its path in it (`unwalked`), listed from the disk until the walk has it: so a top-level folder of home
   unfolded before home was ever walked lists what's in it at once. `rowPath` gives a path at or under what the walk
   leaves out its absolute path (a hidden one only in home); the view zooms out by itself to hold such a file
-  (`zoomToHold`: only a hidden folder's isn't, `listedDown`), and the view's own folder can be one (`ownView` null).
-  The busy folders whose names start with a dot (`.venv`, `.cache`) are hidden, listed only with the hidden names.
+  (`zoomToHold`: only a hidden folder's isn't, `listedDown`), and the view's own folder can be one (`ownView` null). The
+  busy folders whose names start with a dot (`.venv`, `.cache`) are hidden, listed only with the hidden names.
 - **Hidden names, listed when asked** (D250; `files.hidden`, the explorer's `shift+h`). Off by default: nothing whose
   name starts with a dot is listed (`listsName`), as before. On — `files.hidden` in your config or a vault's, or a UI
   setting (`hidden_files`, `uiDefaults`) changed by `shift+h` (`toggle_hidden`, the command `explorer.toggle_hidden`,
@@ -931,49 +925,49 @@ keys.
   every vault's — are unchanged: only what the explorer lists changes. The switcher, the explorer's filter, search and
   find list what's indexed, as for the busy folders: a hidden file only once reached. Hidden again, a view in a hidden
   folder (not the vault's own way to it) goes out to the folder holding it.
-- **A row's marks** (VV-D9; `tui/marks.ts`, drawn by `drawTree`). At a row's right, in columns that line up: the index's
-  state in the last (`indexGlyph`, `INDEX_ROLE`) — indexed `●` (`sidebar_mark`: dimmer than a name), indexing `◐`
-  (`info`), not indexed `⊘` (`sidebar`), can't read `⚿` (a lock in Nerd; `warn`), a problem `⚠` (`warn`), ascii `*`,
-  `~`, `-`, `#`, `!`; git's mark two columns before it (`5.11`; D154): a file's state — `M` modified, `+` new (untracked
-  or added), `R` renamed, `!` in a merge's conflict (`git_modified`, `git_new`, `git_conflict`) — or a folder's with one
-  in it (`markGitFolder`, `•`; `o` in ascii, where `*` says indexed); and, between the name and those, dimmed and ending
-  a space short of git's column, what describes the row (`describe`): a vault's branch when it's a repository's top, a
-  worktree's after `⎇`, a link's target and whether it's followed (`→ /mnt/disk/data`, then `not followed`,
-  `just looking` or `not answering` while the walk doesn't go through it — in a folder out of the vault open, by the
-  rule of the place it's in, unfolded only once asked; `Marks.describe`, from `Following.describe`), its place cut from
-  the front to fit, the state kept (`RowMarks.fit`); a folder of home where another disk is mounted, `another disk`
-  (VV-D2, [roots.md](roots.md) § Home). Each glyph is one column wide in every set (`core/rendering/theme/glyphs.ts`,
-  `mark…`); none is an emoji. A vault's other name stays after its folder's (`17.13`); a row with its menu's button
-  shows no marks. The index's state: a folder of the vault's own tree is indexed, or indexing while home is unwalked,
-  while the walk hasn't reached it (`unwalked`; past home's cap, not indexed), or while a note in it waits to be parsed
-  (`app.indexing`, `graph.pendingPaths`); what the walk leaves out (`leftOut`) and every folder in it, unfolded there or
-  zoomed into (`outsideRows` carries `leftOut` down, to a vault of its own), a busy folder anywhere (`busyFolderAt` for
-  one outside the vault open: the rule of D237, asked once per row drawn), a link not followed or not answering, and a
-  note too big (`walk.max_file_size`) are not indexed; the vault open's row is indexing while its index is built, else
-  indexed; another vault's is indexed when its index is on the disk, indexing while the background index builds it
-  (`AutoIndex.status.current`), else unmarked; a note or file in what the walk leaves out that was reached (a link to
-  it, a hidden one opened) is indexed. A folder you may not list and a file you may not read: can't read; a link whose
-  target isn't there: a problem. A file's row carries one only when it isn't its folder's. **Why a row is `⊘`** (D244)
-  is said in words, never on the row — there's no width for it — but on the status line while the explorer's cursor is
-  on it, and in Info for the file on screen (its row's reason, or its folder's): the rule that marked it says which it
-  is (`Marks.index` gives the rule and what it read; `Marks.why` the words), never a second guess. A busy folder:
-  `generated (node_modules)` when it holds no note at its top, `git-ignored` when its repository ignores it, both when
-  both hold (`busyWhy`, D237's two things); a folder in it says the busy folder's name, carried down with the reason
-  (`TreeRow.leftOutAt`). What `.gitignore` leaves out, `git-ignored`; `walk.exclude`; a hidden name listed (D250),
-  `hidden`; home's skip list: `hidden`, `home's Downloads`, `a system folder (Library)`, `git's own folder`;
-  `on another disk`; a link: `a link not followed` (looked at or not), `a link followed, its disk not answering`,
-  `a link to a folder holding the vault`, `a second link to a folder followed already`; a note
-  `over walk.max_file_size`; a folder of home past its walk's cap, `past home's limit of 5,000 folders` (or its notes').
-  What the disk says of a row (`Facts`: access, a broken link, the size, a vault's index and branch) is read once per
-  row drawn, again when the tree is built again: never for the rows out of sight, so the pane's width for its sideways
-  scroll keeps the index's column for every folder and vault, and a file's mark only the disk gives may take a name's
-  last columns. Never either for the row of a folder where another disk is mounted (VV-D2), nor by `rowPath` or a
-  left-out row's check for a marker: one that stops answering would hang the tree. Unfolded, what's in it carries
-  `another disk` down as any left-out folder's rows carry its reason, read as you asked; only a mount point's row says
-  `another disk`. git is asked for its marks in the background, a moment after anything changed (a save, the watcher, a
-  file operation, a branch switch, going into another vault — which drops the old vault's marks at once); asked while a
-  question is still out, it's asked again once that one's answered, so a stage or a commit is never answered by a
-  question from before it.
+- **A row's marks** (VV-D9; `tui/workspace/explorer/marks.ts`, drawn by `drawTree`). At a row's right, in columns that
+  line up: the index's state in the last (`indexGlyph`, `INDEX_ROLE`) — indexed `●` (`sidebar_mark`: dimmer than a
+  name), indexing `◐` (`info`), not indexed `⊘` (`sidebar`), can't read `⚿` (a lock in Nerd; `warn`), a problem `⚠`
+  (`warn`), ascii `*`, `~`, `-`, `#`, `!`; git's mark two columns before it (`5.11`; D154): a file's state — `M`
+  modified, `+` new (untracked or added), `R` renamed, `!` in a merge's conflict (`git_modified`, `git_new`,
+  `git_conflict`) — or a folder's with one in it (`markGitFolder`, `•`; `o` in ascii, where `*` says indexed); and,
+  between the name and those, dimmed and ending a space short of git's column, what describes the row (`describe`): a
+  vault's branch when it's a repository's top, a worktree's after `⎇`, a link's target and whether it's followed
+  (`→ /mnt/disk/data`, then `not followed`, `just looking` or `not answering` while the walk doesn't go through it — in
+  a folder out of the vault open, by the rule of the place it's in, unfolded only once asked; `Marks.describe`, from
+  `Following.describe`), its place cut from the front to fit, the state kept (`RowMarks.fit`); a folder of home where
+  another disk is mounted, `another disk` (VV-D2, [roots.md](roots.md) § Home). Each glyph is one column wide in every
+  set (`core/rendering/theme/glyphs.ts`, `mark…`); none is an emoji. A vault's other name stays after its folder's
+  (`17.13`); a row with its menu's button shows no marks. The index's state: a folder of the vault's own tree is
+  indexed, or indexing while home is unwalked, while the walk hasn't reached it (`unwalked`; past home's cap, not
+  indexed), or while a note in it waits to be parsed (`app.indexing`, `graph.pendingPaths`); what the walk leaves out
+  (`leftOut`) and every folder in it, unfolded there or zoomed into (`outsideRows` carries `leftOut` down, to a vault of
+  its own), a busy folder anywhere (`busyFolderAt` for one outside the vault open: the rule of D237, asked once per row
+  drawn), a link not followed or not answering, and a note too big (`walk.max_file_size`) are not indexed; the vault
+  open's row is indexing while its index is built, else indexed; another vault's is indexed when its index is on the
+  disk, indexing while the background index builds it (`AutoIndex.status.current`), else unmarked; a note or file in
+  what the walk leaves out that was reached (a link to it, a hidden one opened) is indexed. A folder you may not list
+  and a file you may not read: can't read; a link whose target isn't there: a problem. A file's row carries one only
+  when it isn't its folder's. **Why a row is `⊘`** (D244) is said in words, never on the row — there's no width for it —
+  but on the status line while the explorer's cursor is on it, and in Info for the file on screen (its row's reason, or
+  its folder's): the rule that marked it says which it is (`Marks.index` gives the rule and what it read; `Marks.why`
+  the words), never a second guess. A busy folder: `generated (node_modules)` when it holds no note at its top,
+  `git-ignored` when its repository ignores it, both when both hold (`busyWhy`, D237's two things); a folder in it says
+  the busy folder's name, carried down with the reason (`TreeRow.leftOutAt`). What `.gitignore` leaves out,
+  `git-ignored`; `walk.exclude`; a hidden name listed (D250), `hidden`; home's skip list: `hidden`, `home's Downloads`,
+  `a system folder (Library)`, `git's own folder`; `on another disk`; a link: `a link not followed` (looked at or not),
+  `a link followed, its disk not answering`, `a link to a folder holding the vault`,
+  `a second link to a folder followed already`; a note `over walk.max_file_size`; a folder of home past its walk's cap,
+  `past home's limit of 5,000 folders` (or its notes'). What the disk says of a row (`Facts`: access, a broken link, the
+  size, a vault's index and branch) is read once per row drawn, again when the tree is built again: never for the rows
+  out of sight, so the pane's width for its sideways scroll keeps the index's column for every folder and vault, and a
+  file's mark only the disk gives may take a name's last columns. Never either for the row of a folder where another
+  disk is mounted (VV-D2), nor by `rowPath` or a left-out row's check for a marker: one that stops answering would hang
+  the tree. Unfolded, what's in it carries `another disk` down as any left-out folder's rows carry its reason, read as
+  you asked; only a mount point's row says `another disk`. git is asked for its marks in the background, a moment after
+  anything changed (a save, the watcher, a file operation, a branch switch, going into another vault — which drops the
+  old vault's marks at once); asked while a question is still out, it's asked again once that one's answered, so a stage
+  or a commit is never answered by a question from before it.
 - **History (left, `◷`, `space h h`):** the active window's timeline, newest first: each place's
   note name and line, the current one marked `here` and selected when the view opens. A click
   selects an entry; `enter` or a double-click jumps there, the places before it becoming back and
@@ -1669,14 +1663,14 @@ any other key leaves").
 feedback all go to one place: a floating box briefly, the messages list permanently (the last
 500).
 
-**The dialog** (`tui/dialog.ts`) asks a question with controls of its own: a select, and checkboxes when it has any.
-The update offer is its first (distribution.md § The update offer), and a restart's question about notes unsaved its
-second (distribution.md § Restarting). Framed like the other popups, its title in its top border, it shows
+**The dialog** (`tui/shell/overlays/dialog.ts`) asks a question with controls of its own: a select, and checkboxes when
+it has any. The update offer is its first (distribution.md § The update offer), and a restart's question about notes
+unsaved its second (distribution.md § Restarting). Framed like the other popups, its title in its top border, it shows
 its text, wrapped; its select's choices, one a row, the one chosen marked `●` and the others `○` (`(*)` and `( )` in
 ASCII's glyphs); its checkboxes, `☑` or `☐` as a task's (`[x]`, `[ ]`), one the chosen choice doesn't take dimmed; and,
-under a rule, what the row under the cursor does (as many rows as the longest help needs, at most three, so it keeps
-its height). Its keys are in its bottom border: `enter: do it · space: tick · esc: not now` (`space` only with
-checkboxes; `esc` says what it does: `not now`, `cancel`). The marks are glyphs of each set (`choiceOn`, `choiceOff`).
+under a rule, what the row under the cursor does (as many rows as the longest help needs, at most three, so it keeps its
+height). Its keys are in its bottom border: `enter: do it · space: tick · esc: not now` (`space` only with checkboxes;
+`esc` says what it does: `not now`, `cancel`). The marks are glyphs of each set (`choiceOn`, `choiceOff`).
 
 - `↑` / `↓`, `j` / `k`, `tab` / `shift+tab` and `ctrl+n` / `ctrl+p` move the cursor over the choices, then the
   checkboxes, wrapping; on a choice, the cursor marks it.
@@ -1799,7 +1793,7 @@ first marked `↪`, as `slipbox render` always does. The code view's cells are t
 A note's picture is sized for the window it's in: fitted to it (rendering.md § Blocks and inlines), or at its own size
 by choice. What the window shows at its own size, and its pictures' rest, are kept by `tui/pictures.ts`; the sizes are
 worked out by `tui/images.ts`; the rows laid out by `core/rendering/layout/markdown/render.ts`; the drawing done by
-`tui/draw-pane.ts`, `tui/shell/terminal/opentui.ts` and `tui/placeholders.ts`; the commands are
+`tui/documents/views/draw-pane.ts`, `tui/shell/terminal/opentui.ts` and `tui/placeholders.ts`; the commands are
 `src/core/application/commands/areas/motion.ts`'s, done in `tui/actions/documents/actions-view.ts`.
 
 - **What it's fitted to.** The window's room: its text columns less what's before the picture (a list's indent, a

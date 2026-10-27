@@ -39,7 +39,7 @@ import {
 } from "../core/application/distribution/update.ts";
 import type { VaultMode } from "../core/workspace/vaults/vault.ts";
 import type { App, Level } from "./app/runtime/app.ts";
-import { openDialog } from "./dialog.ts";
+import { openDialog } from "./shell/overlays/dialog.ts";
 import { stopInsert } from "./documents/editing/editing.ts";
 
 /** What slipbox knows of itself and where it keeps things: `tui/shell/terminal/run.ts`'s, a test's own. */

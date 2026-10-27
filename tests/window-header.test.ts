@@ -8,9 +8,9 @@ import { join } from "node:path";
 import { commandGroup, COMMAND_SPECS } from "../src/core/application/commands/catalog.ts";
 import { TextCanvas } from "../src/tui/shell/terminal/canvas.ts";
 import { BACKGROUND_PARSE } from "../src/tui/documents/buffers/buffer.ts";
-import { crumbLeast, type Geometry } from "../src/tui/draw.ts";
-import { modeButtons } from "../src/tui/draw-header.ts";
-import { drawPane } from "../src/tui/draw-pane.ts";
+import { crumbLeast, type Geometry } from "../src/tui/shell/screen/draw.ts";
+import { modeButtons } from "../src/tui/documents/views/draw-header.ts";
+import { drawPane } from "../src/tui/documents/views/draw-pane.ts";
 import { openDiff } from "../src/tui/diffview.ts";
 import { unparsedText, type ViewMode, viewMode } from "../src/tui/documents/editing/lens.ts";
 import { type Harness, harness, makeSandbox, statusRow } from "./tui-harness.ts";
@@ -701,10 +701,10 @@ describe("loading the header's modules", () => {
     for (const [m, path] of Object.entries({
       lens: "documents/editing/lens",
       modes: "shell/input/modes",
-      "draw-header": "draw-header",
-      "draw-pane": "draw-pane",
+      "draw-header": "documents/views/draw-header",
+      "draw-pane": "documents/views/draw-pane",
       mouse: "shell/input/mouse",
-      "draw-status": "draw-status",
+      "draw-status": "shell/screen/statusbar/draw-status",
       "actions-view": "actions/documents/actions-view",
     })) {
       const r = Bun.spawnSync([process.execPath, "-e", `await import("./src/tui/${path}.ts")`], { cwd: top });

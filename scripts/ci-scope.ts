@@ -76,7 +76,7 @@ export const CHECKS_FOR: [RegExp, string[]][] = [
   // Every folder listed a level at a time (Elsewhere's among them), and the vault and permission facts every row's
   // marks read.
   [/^src\/core\/workspace\/walk\/(listing|list-worker)\.ts$/, ["slow disk", "home", "view", "Elsewhere", "marks"]],
-  [/^src\/tui\/listings\.ts$/, ["slow disk", "view", "Elsewhere", "marks"]],
+  [/^src\/tui\/workspace\/explorer\/listings\.ts$/, ["slow disk", "view", "Elsewhere", "marks"]],
   // Vaults, home and Elsewhere; a link followed out; the peek (VV).
   [/^src\/core\/workspace\/vaults\/(home|mounts)\.ts$/, ["home", "Elsewhere"]],
   [/^src\/tui\/workspace\/vaults\/vaults\.ts$/, ["vaults", "home", "Elsewhere", "roots", "named folders"]],
@@ -86,15 +86,18 @@ export const CHECKS_FOR: [RegExp, string[]][] = [
   [/^src\/core\/(documents\/editing\/replace|workspace\/mutations\/replace-files)\.ts$/, ["replace", "find"]],
   [/^src\/tui\/documents\/search\/replacing\.ts$/, ["replace"]],
   [/^src\/core\/workspace\/mutations\/rename\/rename[\w-]*\.ts$/, ["rename", "naming", "vaults"]],
-  [/^src\/tui\/renaming\.ts$/, ["rename", "naming"]],
+  [/^src\/tui\/workspace\/explorer\/renaming\.ts$/, ["rename", "naming"]],
   // Features of a window or a command of their own.
-  [/^src\/tui\/palette\.ts$/, ["palette", "help", "which-key"]],
+  [/^src\/tui\/shell\/overlays\/palette\.ts$/, ["palette", "help", "which-key"]],
   // Upgrading and restarting (UPG): the update offer, its dialog, the restart's note and hand-over.
-  [/^src\/(core\/application\/distribution\/(update|restart|skill-lifecycle)|tui\/(updates|dialog))\.ts$/, ["updates"]],
-  [/^src\/tui\/outline\.ts$/, ["outline"]],
+  [
+    /^src\/(core\/application\/distribution\/(update|restart|skill-lifecycle)|tui\/(updates|shell\/overlays\/dialog))\.ts$/,
+    ["updates"],
+  ],
+  [/^src\/tui\/documents\/tools\/outline\/outline\.ts$/, ["outline"]],
   [/^src\/tui\/app\/scratch\/scratch\.ts$/, ["scratch"]],
-  [/^src\/tui\/info\.ts$/, ["info"]],
-  [/^src\/tui\/properties\.ts$/, ["properties"]],
+  [/^src\/tui\/documents\/tools\/info\/info\.ts$/, ["info"]],
+  [/^src\/tui\/documents\/tools\/info\/properties\.ts$/, ["properties"]],
   [/^src\/tui\/documents\/saving\/handoff\.ts$/, ["hand-off"]],
   [/^src\/(core\/foundation\/platform\/shell|tui\/documents\/editing\/shellrun)\.ts$/, ["shell"]],
   [/^src\/core\/documents\/editing\/tasks\.ts$/, ["tasks"]],

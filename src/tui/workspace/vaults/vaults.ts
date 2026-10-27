@@ -54,7 +54,7 @@ import {
 } from "../../../core/workspace/vaults/vault.ts";
 import type { App, ListItem, PromptOverlay } from "../../app/runtime/app.ts";
 import { uiDefaults, RECENT_MAX, RECENT_NOTES_MAX } from "../../app/runtime/app.ts";
-import { type ExplorerItem, listedDown, type TreeRow } from "../../explorer.ts";
+import { type ExplorerItem, listedDown, type TreeRow } from "../explorer/explorer.ts";
 
 /** Vaults: switching, making and unmaking, named folders. */
 export class Vaults {

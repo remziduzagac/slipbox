@@ -29,8 +29,9 @@ for a person, and a command line for agents and scripts, both over the same plai
 - **`src/cli/`** is the command line: `cli.ts` parses a command line and runs the command, each group of commands in a
   module of its own (`links.ts`, `files.ts`, `git.ts`, …) and what they share in `common.ts`; `args.ts` parses flags.
 - **`src/tui/`** is the TUI: `app.ts` is the model (the shared state and the wiring), each feature a controller of its
-  own; `draw.ts` and its `draw-*.ts` paint it on an abstract `Canvas`. `actions/` holds registration and command-area
-  folders (`documents/` so far); remaining root action modules move by area. `keys.ts` holds the default keys.
+  own. `shell/screen/draw.ts` composes feature drawing on an abstract `Canvas`; document views, panels and overlays keep
+  their area drawing. `actions/` holds registration and command-area folders (`documents/` so far); remaining root
+  action modules move by area. `keys.ts` holds the default keys.
 
 **The boundary.** `src/core/` never imports `src/tui/`, `src/cli/` or `@opentui/*`, and `src/cli/` never imports
 `src/tui/`. Inside the TUI, only `src/tui/shell/terminal/opentui.ts` (the `Canvas` over OpenTUI's buffer) and

@@ -46,10 +46,11 @@ reconciliation, an existing-code example and a lifecycle walkthrough. Common rul
 presentation and preserve TUI text/undo/revision/saved-baseline ownership. The extraction/migration map names the ORG
 owners; ENG reconciliation records its conflicting engine-owned document proposal without changing ENG's records.
 
-Examples are read against `4597a8f` before later source moves; they establish current behavior, not implemented future
-gateway guarantees. Lifecycle cases cover typing after save capture, focus/vault changes, closed/reopened targets,
-stale plans, cancellation after effects and partial/uncertain outcomes. Stronger disk transactions, connected edits,
-transport authority and outcome retention remain explicit next-stack implementation work.
+Examples are read against the tooling metadata repair preceding ORG-T44 before later source moves; they establish
+current behavior, not implemented future gateway guarantees. Lifecycle cases cover typing after save capture,
+focus/vault changes, closed/reopened targets, stale plans, cancellation after effects and partial/uncertain outcomes.
+Stronger disk transactions, connected edits, transport authority and outcome retention remain explicit next-stack
+implementation work.
 
 Local supporting checks pass: 2 link/plan cases, 1 save-conflict case and 2 export-publication/cancellation cases.
 Documentation lint/spelling/links and diff whitespace pass. Both changed files are also linted directly with

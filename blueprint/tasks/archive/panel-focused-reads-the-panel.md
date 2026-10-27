@@ -56,9 +56,9 @@ and the status line's mode waited for together. Never pressed again on a screen 
   config): after `space`, the which-key popup lists `e → Explorer: open, focus, close` and `o → Outline: open, focus,
   close` (and `Source control in the left panel: …`), so `/Explorer/` and `/Outline/` match it; and while the leader
   is pending the status line's chip is ` ␣ `: with the explorer focused, `space` turns ` FILES ` into ` ␣ `.
-- 2026-10-23: The cycle (`openLeftView`/`openRightView`, `src/tui/panels.ts`): closed → shown and focused in one
-  press; open, unfocused → focused; open and focused → closed. One press always gets "open and focused" but from the
-  last, so the helper's second press had no case of its own: it fired only when the title was read without the mode,
+- 2026-10-23: The cycle (`openLeftView`/`openRightView`, `src/tui/shell/panels/panels.ts`): closed → shown and focused
+  in one press; open, unfocused → focused; open and focused → closed. One press always gets "open and focused" but from
+  the last, so the helper's second press had no case of its own: it fired only when the title was read without the mode,
   which is the popup.
 - 2026-10-23: How the screen lags: `Session.keys` returns once the trace has the keys and a `frame` after them, then
   40 ms of quiet; but `frame` is written as slipbox paints, before its bytes reach the headless terminal, and `taken`

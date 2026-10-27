@@ -36,8 +36,8 @@ package entries move together. The data-file terminal selector follows its model
 loading policy, assertions or snapshots change. All 82 affected source bodies match after import/worker normalization;
 mapped dependencies/runtime edges, test identities and build entries agree with the baseline, preserving mapped SCCs.
 
-Baseline `595f029`: `bun scripts/organization/migration.ts capture tmp/issue/t5-before.json` captured 1,949 edges and
-2,612 literal test declarations. The migration check against that snapshot and the linked manifest passes.
+Baseline ORG-T4: `bun scripts/organization/migration.ts capture tmp/issue/t5-before.json` captured 1,949 edges and 2,612
+literal test declarations. The migration check against that snapshot and the linked manifest passes.
 
 Local checks: 46 parser/syntax tests, 14 TUI parse/syntax worker tests and 2 selector/import-graph fixtures pass. All
 eleven actual worker clients complete from source and a host-compiled probe outside the repository, including parse,

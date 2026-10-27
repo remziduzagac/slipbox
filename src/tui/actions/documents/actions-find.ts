@@ -12,12 +12,12 @@ import { sanitize } from "../../../core/foundation/text/sanitize.ts";
 import * as E from "../../documents/editing/editing.ts";
 import * as R from "../../documents/search/replacing.ts";
 import * as C from "../../documents/editing/cursor.ts";
-import { refilter } from "../../overlays.ts";
+import { refilter } from "../../shell/overlays/overlays.ts";
 import type { SymbolInformation, WorkspaceSymbol } from "vscode-languageserver-protocol";
 import { fileURLToPath } from "node:url";
 import { relative } from "node:path";
 import { KIND_NAMES } from "../../languages.ts";
-import { rank } from "../../match.ts";
+import { rank } from "../../shell/overlays/match.ts";
 
 /** Finding: find in a note and replace, search, the switcher, notes by type and by tag. */
 const vaultFindOwners = new WeakMap<App, AbortController>();

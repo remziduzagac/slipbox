@@ -34,7 +34,7 @@ hom = "hom" # LaTeX's \hom
 multline = "multline" # LaTeX's multline environment
 opf = "opf" # EPUB's package document, content.opf
 ratatui = "ratatui" # a Rust library for terminal interfaces
-sav = "sav" # the save dialog's id, as `dlg` is a dialog's (src/tui/draw.ts)
+sav = "sav" # the save dialog's id, as `dlg` is a dialog's (src/tui/shell/screen/draw.ts)
 viw = "viw" # Vim's keys for the word under the cursor
 
 [default.extend-identifiers]

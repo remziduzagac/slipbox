@@ -42,10 +42,10 @@ import { setTrust } from "../src/core/workspace/vaults/trust.ts";
 import type { PanelRow } from "../src/tui/gitpanel.ts";
 import type { NvimServer } from "../src/core/documents/external-editors/nvim.ts";
 import { TextCanvas } from "../src/tui/shell/terminal/canvas.ts";
-import { match, RANKED, rank } from "../src/tui/match.ts";
+import { match, RANKED, rank } from "../src/tui/shell/overlays/match.ts";
 import { graphemes, setWidthMethod, stringWidth, type WidthMethod } from "../src/core/foundation/text/width.ts";
 import { glyphsFor } from "../src/core/rendering/theme/glyphs.ts";
-import { crumbLayout } from "../src/tui/draw.ts";
+import { crumbLayout } from "../src/tui/shell/screen/draw.ts";
 import { A_BOLD, A_DIM, type Layout, srcAt } from "../src/core/rendering/layout/ir.ts";
 import { codeKind } from "../src/core/documents/syntax/syntax.ts";
 import { load } from "../src/core/foundation/platform/lazy.ts";
@@ -4240,7 +4240,7 @@ describe("code blocks that scroll sideways ([render] code_wrap)", () => {
   const LONG_ONE =
     "├── src/core/layout/render.ts     the layout: mdast to rows, every block and inline, the code anchovy";
   const LONG_TWO =
-    "├── src/tui/draw.ts               the drawing: rows to cells, and each code block from its offset bergamot";
+    "├── src/tui/shell/screen/draw.ts               the drawing: rows to cells, and each code block from its offset bergamot";
   const COMMAND =
     'echo "a long command line inside a list item that goes well past the right edge of the window" cardamom';
   const TREE = [
@@ -10222,7 +10222,7 @@ describe("vaults in the TUI (17.x)", () => {
       const { cacheDir } = await import("../src/core/foundation/platform/paths.ts");
       const { readRoots } = await import("../src/core/workspace/vaults/registry.ts");
       const { foldersFile } = await import("../src/core/workspace/vaults/folders.ts");
-      const match = await import("../src/tui/match.ts");
+      const match = await import("../src/tui/shell/overlays/match.ts");
       const index = join(cacheDir(readRoots().find((v) => v.path === app)!), "index.json");
       const h = await harness({ root: notes, open: "index.md" });
       await h.app.run("view.source");

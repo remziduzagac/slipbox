@@ -36,10 +36,11 @@ documents/external-editors. Pure text operations remain callable without TUI sta
 separate. Regex worker URLs and sorted package entries move together; editing selector rules follow the new paths.
 Existing queue, cancellation and deadline policies are unchanged. No compatibility facade is added.
 
-Baseline `246bec7`: `bun scripts/organization/migration.ts capture tmp/issue/t14-before.json` captured 1,954 edges
-and 2,614 literal test declarations. The mapped migration check preserves dependency/runtime edges, declarations and
-build entries, and therefore mapped SCC membership. All 34 affected source bodies match after import/worker-path
-normalization. Every moved-file selector is preserved; no size cap changes are needed.
+Baseline ORG-T13 plus the ORG-D2 import-formatting note:
+`bun scripts/organization/migration.ts capture tmp/issue/t14-before.json` captured 1,954 edges and 2,614 literal test
+declarations. The mapped migration check preserves dependency/runtime edges, declarations and build entries, and
+therefore mapped SCC membership. All 34 affected source bodies match after import/worker-path normalization. Every
+moved-file selector is preserved; no size cap changes are needed.
 
 Six retained paths are historical blueprint references. One retained suite label in `tests/core.test.ts` names the
 original source location so its baseline test identity stays unchanged; it is not an import or runtime reference.

@@ -107,10 +107,10 @@ or a slow folder in it, still blocks.
 - 2026-10-23: The explorer's listings: a folder listed a level at a time (`outsideRows`) is built from its listing
   (`core/workspace/walk/listing.ts`: its entries with what its rows and their marks read of each — a folder or a file, a
   link's target and key, a vault's name and branch, one you may not read, a busy folder), read on two listing threads of
-  their own (`ListThreads`, the walk worker's `list`) and kept by `Listings` (`tui/listings.ts`): at most 256 folders,
-  read again in the background once a second old as the tree is built again, an answer drawn only when it changed,
-  dropped for a folder let go of or read under settings changed since. A link's state is read here from the answers kept
-  (`linkStateAt`, by the key the listing read), so a link followed shows at once. `listing…` after 150 ms;
+  their own (`ListThreads`, the walk worker's `list`) and kept by `Listings` (`tui/workspace/explorer/listings.ts`): at
+  most 256 folders, read again in the background once a second old as the tree is built again, an answer drawn only when
+  it changed, dropped for a folder let go of or read under settings changed since. A link's state is read here from the
+  answers kept (`linkStateAt`, by the key the listing read), so a link followed shows at once. `listing…` after 150 ms;
   `can't read: …` when a listing fails or doesn't answer in a minute; neither opened nor marked. The marks of a listed
   row come from its listing (`Marks.listedFacts`). A test's App lists at once on the main thread
   (`AppOptions.listOffThread`, set by `tui/shell/terminal/run.ts`), so the 91 explorer tests and the 20 marks tests run

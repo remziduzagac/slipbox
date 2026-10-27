@@ -23,7 +23,7 @@ import type { App, View, ListItem, ListOverlay, PromptOverlay } from "../../app/
 import type { Layout } from "../../../core/rendering/layout/ir.ts";
 import type { FindState } from "../../app/runtime/app.ts";
 import { stringWidth, prefixWidths } from "../../../core/foundation/text/width.ts";
-import { refilter } from "../../overlays.ts";
+import { refilter } from "../../shell/overlays/overlays.ts";
 
 /** Search: the index and its list, tags and types, replace across notes. */
 export class Search {

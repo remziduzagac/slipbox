@@ -14,13 +14,13 @@ import * as E from "../documents/editing/editing.ts";
 import { shellFilter, shellRun, shellStop } from "../documents/editing/shellrun.ts";
 import { parseBang } from "../../core/foundation/platform/shell.ts";
 import { prettyKey } from "../shell/input/keys.ts";
-import { openPalette, openHelp } from "../palette.ts";
+import { openPalette, openHelp } from "../shell/overlays/palette.ts";
 import { viewActions } from "./documents/actions-view.ts";
 import { editActions } from "./documents/actions-edit.ts";
 import { linkActions, linkTarget } from "./documents/actions-links.ts";
 import { findActions } from "./documents/actions-find.ts";
-import { paneActions } from "../actions-panes.ts";
-import { fileActions } from "../actions-files.ts";
+import { paneActions } from "./shell/actions-panes.ts";
+import { fileActions } from "./workspace/actions-files.ts";
 import { lspActions } from "../actions-lsp.ts";
 
 export type Run = Command<App>["run"];

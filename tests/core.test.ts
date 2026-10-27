@@ -2437,7 +2437,7 @@ describe("review cycle 5 (core, from mutation testing)", () => {
     expect((compilePattern("a\\S", { regex: false, whole: false }) as RegExp).flags).not.toContain("i");
   });
   test("the switcher's match is smart-case too", async () => {
-    const { match } = await import("../src/tui/match.ts");
+    const { match } = await import("../src/tui/shell/overlays/match.ts");
     expect(match("Tel", "telescope.md")).toBeNull();
     expect(match("tel", "Telescope.md")).not.toBeNull();
   });

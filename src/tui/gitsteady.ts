@@ -3,7 +3,7 @@
 // a click, a key or the footer between frames finds the row the last frame drew there, or nothing when it's gone.
 
 import type { App } from "./app/runtime/app.ts";
-import type { Rect } from "./draw.ts";
+import type { Rect } from "./shell/screen/draw.ts";
 import type { PanelRow } from "./gitpanel.ts";
 
 /** The panel's hot id of a row or a row's button (`git:row:3`, `git:act:3:stage`, `git:bb:3:merge`): its parts. */
