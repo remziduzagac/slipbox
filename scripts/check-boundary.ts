@@ -112,6 +112,30 @@ export function codeLayoutViolations(from: string, text: string): string[] {
   });
 }
 
+/** Syntax mechanisms never depend on the public facade or tree ownership (ORG-T27). */
+export const SYNTAX_PRIMITIVES = [
+  "src/core/documents/syntax/contracts.ts",
+  "src/core/documents/syntax/grammar/assets.ts",
+  "src/core/documents/syntax/grammar/descriptors.ts",
+  "src/core/documents/syntax/grammar/queries.ts",
+  "src/core/documents/syntax/grammar/loader.ts",
+  "src/core/documents/syntax/tree/markup.ts",
+  "src/core/documents/syntax/tree/outline.ts",
+  "src/core/documents/syntax/tree/positions.ts",
+  "src/core/documents/syntax/model/code-model.ts",
+  "src/core/documents/syntax/links/tokens.ts",
+] as const;
+
+export function syntaxViolations(from: string, text: string): string[] {
+  if (!(SYNTAX_PRIMITIVES as readonly string[]).includes(from)) return [];
+  return importsOf(text).flatMap((spec) => {
+    const target = targetOf(from, spec);
+    return target === "src/core/documents/syntax/syntax" || target === "src/core/documents/syntax/tree/tree"
+      ? [`${from}: imports ${spec} (syntax mechanism must not import tree composition, even for types)`]
+      : [];
+  });
+}
+
 /** Presentation primitives stay below the App and region composers that call them (ORG-T9). */
 export const TUI_PRIMITIVES = [
   "src/tui/app/clipboard/clipboard.ts",
@@ -255,6 +279,7 @@ if (import.meta.main) {
     violations.push(...mutationViolations(from, readFileSync(file, "utf8")));
     violations.push(...graphCompositionViolations(from, readFileSync(file, "utf8")));
     violations.push(...codeLayoutViolations(from, readFileSync(file, "utf8")));
+    violations.push(...syntaxViolations(from, readFileSync(file, "utf8")));
     violations.push(...primitiveViolations(from, readFileSync(file, "utf8")));
     violations.push(...appCompositionViolations(from, readFileSync(file, "utf8")));
     violations.push(...drawingCompositionViolations(from, readFileSync(file, "utf8")));

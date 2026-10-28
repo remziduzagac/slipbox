@@ -20,7 +20,6 @@ export const LIMIT = 1000;
 export const CAPPED: Record<string, number> = {
   "src/core/rendering/export/formats/pdf.ts": 1038,
   "src/core/rendering/layout/markdown/render.ts": 1076,
-  "src/core/documents/syntax/syntax.ts": 1170,
   "src/tui/app/runtime/app.ts": 1366,
   "src/tui/workspace/explorer/explorer.ts": 1274,
   "src/tui/shell/input/keys.ts": 1166,
