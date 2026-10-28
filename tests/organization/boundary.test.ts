@@ -47,6 +47,24 @@ describe("the boundary check (0.3, scripts/check-boundary.ts)", () => {
     expect(r.out).not.toContain("boundary check ok");
   });
 
+  test("input mechanisms reject their own facade and runtime App while allowing interaction types", () => {
+    const refused = check({
+      "src/tui/shell/input/keys/bindings.ts": 'export { DEFAULT_KEYS } from "../keys.ts";',
+      "src/tui/shell/input/keys/help.ts": 'import type { App } from "../../../app/runtime/app.ts";',
+      "src/tui/shell/input/vim/operators.ts": 'export const load = () => import("../../../app/runtime/app.ts");',
+      "src/tui/shell/input/mouse/gestures.ts": 'export type { Mouse } from "../mouse.ts";',
+    });
+    expect(refused.code).toBe(1);
+    expect(refused.err.match(/input mechanism/g)?.length).toBe(4);
+    const allowed = check({
+      "src/tui/shell/input/vim/grammar.ts":
+        'import type { App } from "../../../app/runtime/app.ts"; import { keyChar } from "../keys.ts";',
+      "src/tui/shell/input/mouse/gestures.ts":
+        'import type { App } from "../../../app/runtime/app.ts"; import { inRect } from "./geometry.ts";',
+    });
+    expect(allowed.code).toBe(0);
+  });
+
   test("presentation primitives and editing clients cannot load App composition through the checker", () => {
     const r = check({
       "src/core/rendering/layout/code/code.ts": "export interface CodeLayoutOptions {}\n",
