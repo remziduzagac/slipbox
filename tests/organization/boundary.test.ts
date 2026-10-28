@@ -47,6 +47,27 @@ describe("the boundary check (0.3, scripts/check-boundary.ts)", () => {
     expect(r.out).not.toContain("boundary check ok");
   });
 
+  test("diagnostics helpers reject controllers and process owners but retain App types", () => {
+    const refused = check({
+      "src/tui/documents/diagnostics/problems/rows.ts": 'export type { Problems } from "../problems.ts";',
+      "src/tui/documents/diagnostics/languages/workspace-edits.ts":
+        'export const load = () => import("../languages.ts");',
+      "src/tui/documents/diagnostics/languages/symbols.ts":
+        'import { App } from "../../../app/runtime/app.ts"; export const f = App;',
+      "src/tui/documents/diagnostics/languages/locations.ts":
+        'export { ServerManager } from "../../../../core/documents/servers/manager.ts";',
+    });
+    expect(refused.code).toBe(1);
+    expect(refused.err.match(/diagnostics helper/g)?.length).toBe(4);
+    expect(
+      check({
+        "src/tui/documents/diagnostics/languages/locations.ts":
+          'import type { View } from "../../../app/runtime/app.ts";',
+        "src/tui/documents/diagnostics/problems/rows.ts": 'import type { ProblemRow } from "./contracts.ts";',
+      }).code,
+    ).toBe(0);
+  });
+
   test("drawing owners reject composition and runtime App while geometry retains view types", () => {
     const refused = check({
       "src/tui/documents/views/drawing/lines.ts": 'export type { Geometry } from "../../../shell/screen/draw.ts";',

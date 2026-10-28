@@ -398,6 +398,8 @@ describe("the supply chain's gates (14.10)", () => {
         'import { workerUrl } from "./foundation/workers/url.ts";\nexport const a = workerUrl("w.ts");\n',
       "src/core/foundation/workers/url.ts": "export const workerUrl = (f: string) => f;\n",
       "src/core/w.ts": "export {};\n",
+      "src/tui/documents/diagnostics/problems/rows.ts": "export const rows = [];\n",
+      "tests/problems.test.ts": 'import "../src/tui/documents/diagnostics/problems/rows.ts";\n',
       "tests/a.test.ts": 'import { a } from "../src/core/a.ts";\nexport { a };\n',
       "tests/docs.test.ts": 'import { a } from "../src/core/a.ts";\nexport { a };\n',
       // Runs the app by its path; a temporary folder's paths name nothing in the repository.
@@ -442,6 +444,16 @@ describe("the supply chain's gates (14.10)", () => {
     expect(g.get("tests/terminal/session.ts")?.sort()).toEqual(["examples/home/n.md", "src/main.ts"]);
     const of = (...changed: string[]) => reaches(changed, g, top);
     // A file the app loads, under no feature: the tests that use it, the docs' aside, and every check.
+    expect(
+      reaches(
+        ["src/tui/documents/diagnostics/problems/rows.ts"],
+        new Map([...g, ["src/main.ts", ["src/tui/documents/diagnostics/problems/rows.ts"]]]),
+        top,
+      ),
+    ).toMatchObject({
+      tests: ["tests/problems.test.ts", "tests/run.test.ts"],
+      checks: ["language servers", "lint", "problems"],
+    });
     expect(of("src/core/w.ts")).toMatchObject({ tests: ["tests/a.test.ts", "tests/run.test.ts"], checks: "all" });
     expect(of("tests/terminal/checks/one.ts")).toMatchObject({ tests: [], checks: ["one"] });
     expect(of("examples/home/n.md")).toMatchObject({ checks: "all" }); // a sample the checks' harness names

@@ -20,7 +20,6 @@ export const LIMIT = 750;
 export const CAPPED: Record<string, number> = {
   "src/core/workspace/graph/graph.ts": 998,
   "src/tui/app/runtime/app.ts": 1366,
-  "src/tui/documents/diagnostics/problems.ts": 759,
 };
 
 /** Generated data: separate measured cap; verify offline with `bun scripts/lock-servers.ts --check` (ORG-D2). */

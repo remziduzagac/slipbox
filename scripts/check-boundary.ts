@@ -92,6 +92,39 @@ export function graphCompositionViolations(from: string, text: string): string[]
   });
 }
 
+/** Diagnostics helpers retain explicit inputs, below controller and process ownership (ORG-T37). */
+export const DIAGNOSTICS_HELPERS = [
+  "src/tui/documents/diagnostics/problems/contracts.ts",
+  "src/tui/documents/diagnostics/problems/rows.ts",
+  "src/tui/documents/diagnostics/languages/workspace-edits.ts",
+  "src/tui/documents/diagnostics/languages/locations.ts",
+  "src/tui/documents/diagnostics/languages/symbols.ts",
+] as const;
+
+export function diagnosticsHelperViolations(from: string, text: string): string[] {
+  if (!(DIAGNOSTICS_HELPERS as readonly string[]).includes(from)) return [];
+  const owners = [
+    "src/tui/documents/diagnostics/problems",
+    "src/tui/documents/diagnostics/languages",
+    "src/core/documents/servers/manager",
+    "src/core/documents/syntax/syntax-thread",
+  ];
+  return [
+    ...importsOf(text).flatMap((spec) =>
+      owners.includes(targetOf(from, spec))
+        ? [`${from}: imports ${spec} (diagnostics helper must stay below controller and process ownership)`]
+        : [],
+    ),
+    ...new Bun.Transpiler({ loader: "ts" })
+      .scanImports(text)
+      .flatMap(({ path }) =>
+        targetOf(from, path) === "src/tui/app/runtime/app"
+          ? [`${from}: imports ${path} (diagnostics helper must not load App composition)`]
+          : [],
+      ),
+  ];
+}
+
 /** Code-layout mechanisms depend on explicit inputs, never their page or public-entry composition (ORG-T26). */
 export const CODE_LAYOUT_PRIMITIVES = [
   "src/core/rendering/layout/code/contracts.ts",
@@ -573,6 +606,7 @@ if (import.meta.main) {
     violations.push(...pdfViolations(from, readFileSync(file, "utf8")));
     violations.push(...explorerViolations(from, readFileSync(file, "utf8")));
     violations.push(...drawingOwnerViolations(from, readFileSync(file, "utf8")));
+    violations.push(...diagnosticsHelperViolations(from, readFileSync(file, "utf8")));
     violations.push(...renameMechanismViolations(from, readFileSync(file, "utf8")));
     violations.push(...searchMechanismViolations(from, readFileSync(file, "utf8")));
     violations.push(...walkingMechanismViolations(from, readFileSync(file, "utf8")));

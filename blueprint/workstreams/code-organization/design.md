@@ -147,6 +147,11 @@ preserved. App continues to own shared state and wire controllers explicitly dur
 | `shell/` | `screen/`, `panels/`, `overlays/` | screen composition, shared geometry/drawing, panel mechanics, dialogs |
 | `actions/` | by command area | named action registration and client coordination; no blanket gateway forwarding |
 
+ORG-T37 retains diagnostics controller state and lifecycle while extracting `diagnostics/problems/` presentation
+and records, and `diagnostics/languages/` protocol helpers. The row builder reads the original live controller;
+server-edit previews accept through the original receiver. Trust, syntax/server/linter timers, abort ownership,
+cache keys and buffer ownership stay unchanged. Reverse-edge fixtures keep these helpers below process owners.
+
 Within `shell/screen/`, separate top-bar and status-bar composition from drawing primitives. Top-bar composition draws
 branding/version/update controls, workspace/zoom/branch context and worker controls from their actual owners. Document
 view headers own breadcrumbs and read/lens/source controls; their drawing owns line-number gutters and scrollbars. The
