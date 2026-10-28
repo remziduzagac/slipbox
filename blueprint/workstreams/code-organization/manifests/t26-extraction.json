@@ -1,0 +1,315 @@
+{
+  "edges": {
+    "removed": [
+      "src/core/rendering/layout/code/code.ts -> src/core/documents/diagnostics/diagnostics.ts",
+      "src/core/rendering/layout/code/code.ts -> src/core/documents/markdown/parse.ts",
+      "src/core/rendering/layout/code/code.ts -> src/core/documents/model/docformats.ts",
+      "src/core/rendering/layout/code/code.ts -> src/core/documents/syntax/syntax.ts",
+      "src/core/rendering/layout/code/code.ts -> src/core/foundation/text/sanitize.ts",
+      "src/core/rendering/layout/code/code.ts -> src/core/foundation/text/width.ts",
+      "src/core/rendering/layout/code/code.ts -> src/core/rendering/layout/ir.ts",
+      "src/core/rendering/layout/code/code.ts -> src/core/rendering/layout/markdown/render.ts",
+      "src/core/rendering/layout/code/code.ts -> src/core/rendering/theme/glyphs.ts",
+      "src/core/rendering/layout/code/code.ts -> src/core/rendering/theme/theme.ts"
+    ],
+    "added": [
+      "src/core/rendering/layout/code/cells/blocks.ts -> src/core/documents/syntax/syntax.ts",
+      "src/core/rendering/layout/code/cells/framing.ts -> src/core/documents/diagnostics/diagnostics.ts",
+      "src/core/rendering/layout/code/cells/framing.ts -> src/core/documents/syntax/syntax.ts",
+      "src/core/rendering/layout/code/cells/framing.ts -> src/core/foundation/text/width.ts",
+      "src/core/rendering/layout/code/cells/framing.ts -> src/core/rendering/layout/code/contracts.ts",
+      "src/core/rendering/layout/code/cells/framing.ts -> src/core/rendering/layout/code/wrapping/rows.ts",
+      "src/core/rendering/layout/code/cells/framing.ts -> src/core/rendering/layout/ir.ts",
+      "src/core/rendering/layout/code/cells/framing.ts -> src/core/rendering/theme/glyphs.ts",
+      "src/core/rendering/layout/code/cells/framing.ts -> src/core/rendering/theme/theme.ts",
+      "src/core/rendering/layout/code/code.ts -> src/core/rendering/layout/code/cells/blocks.ts",
+      "src/core/rendering/layout/code/code.ts -> src/core/rendering/layout/code/contracts.ts",
+      "src/core/rendering/layout/code/code.ts -> src/core/rendering/layout/code/page/compose.ts",
+      "src/core/rendering/layout/code/contracts.ts -> src/core/documents/diagnostics/diagnostics.ts",
+      "src/core/rendering/layout/code/contracts.ts -> src/core/documents/syntax/syntax.ts",
+      "src/core/rendering/layout/code/contracts.ts -> src/core/rendering/theme/glyphs.ts",
+      "src/core/rendering/layout/code/contracts.ts -> src/core/rendering/theme/theme.ts",
+      "src/core/rendering/layout/code/documentation/comments.ts -> src/core/documents/syntax/syntax.ts",
+      "src/core/rendering/layout/code/documentation/comments.ts -> src/core/rendering/layout/code/contracts.ts",
+      "src/core/rendering/layout/code/documentation/comments.ts -> src/core/rendering/layout/code/wrapping/rows.ts",
+      "src/core/rendering/layout/code/documentation/comments.ts -> src/core/rendering/layout/ir.ts",
+      "src/core/rendering/layout/code/documentation/comments.ts -> src/core/rendering/theme/theme.ts",
+      "src/core/rendering/layout/code/documentation/layout.ts -> src/core/documents/model/docformats.ts",
+      "src/core/rendering/layout/code/documentation/layout.ts -> src/core/documents/syntax/syntax.ts",
+      "src/core/rendering/layout/code/documentation/layout.ts -> src/core/foundation/text/width.ts",
+      "src/core/rendering/layout/code/documentation/layout.ts -> src/core/rendering/layout/code/cells/framing.ts",
+      "src/core/rendering/layout/code/documentation/layout.ts -> src/core/rendering/layout/code/contracts.ts",
+      "src/core/rendering/layout/code/documentation/layout.ts -> src/core/rendering/layout/code/documentation/comments.ts",
+      "src/core/rendering/layout/code/documentation/layout.ts -> src/core/rendering/layout/ir.ts",
+      "src/core/rendering/layout/code/documentation/layout.ts -> src/core/rendering/layout/markdown/render.ts",
+      "src/core/rendering/layout/code/documentation/layout.ts -> src/core/rendering/theme/glyphs.ts",
+      "src/core/rendering/layout/code/page/compose.ts -> src/core/documents/markdown/parse.ts",
+      "src/core/rendering/layout/code/page/compose.ts -> src/core/documents/syntax/syntax.ts",
+      "src/core/rendering/layout/code/page/compose.ts -> src/core/foundation/text/width.ts",
+      "src/core/rendering/layout/code/page/compose.ts -> src/core/rendering/layout/code/cells/blocks.ts",
+      "src/core/rendering/layout/code/page/compose.ts -> src/core/rendering/layout/code/cells/framing.ts",
+      "src/core/rendering/layout/code/page/compose.ts -> src/core/rendering/layout/code/contracts.ts",
+      "src/core/rendering/layout/code/page/compose.ts -> src/core/rendering/layout/code/documentation/comments.ts",
+      "src/core/rendering/layout/code/page/compose.ts -> src/core/rendering/layout/code/documentation/layout.ts",
+      "src/core/rendering/layout/code/page/compose.ts -> src/core/rendering/layout/code/wrapping/rows.ts",
+      "src/core/rendering/layout/code/page/compose.ts -> src/core/rendering/layout/ir.ts",
+      "src/core/rendering/layout/code/page/compose.ts -> src/core/rendering/theme/theme.ts",
+      "src/core/rendering/layout/code/wrapping/rows.ts -> src/core/documents/syntax/syntax.ts",
+      "src/core/rendering/layout/code/wrapping/rows.ts -> src/core/foundation/text/sanitize.ts",
+      "src/core/rendering/layout/code/wrapping/rows.ts -> src/core/foundation/text/width.ts",
+      "src/core/rendering/layout/code/wrapping/rows.ts -> src/core/rendering/layout/code/contracts.ts",
+      "src/core/rendering/layout/code/wrapping/rows.ts -> src/core/rendering/layout/ir.ts",
+      "src/core/rendering/layout/code/wrapping/rows.ts -> src/core/rendering/theme/glyphs.ts"
+    ]
+  },
+  "runtime": {
+    "removed": [
+      "src/core/rendering/layout/code/code.ts -> src/core/documents/markdown/parse.ts",
+      "src/core/rendering/layout/code/code.ts -> src/core/documents/model/docformats.ts",
+      "src/core/rendering/layout/code/code.ts -> src/core/foundation/text/sanitize.ts",
+      "src/core/rendering/layout/code/code.ts -> src/core/foundation/text/width.ts",
+      "src/core/rendering/layout/code/code.ts -> src/core/rendering/layout/ir.ts",
+      "src/core/rendering/layout/code/code.ts -> src/core/rendering/layout/markdown/render.ts"
+    ],
+    "added": [
+      "src/core/rendering/layout/code/cells/framing.ts -> src/core/foundation/text/width.ts",
+      "src/core/rendering/layout/code/cells/framing.ts -> src/core/rendering/layout/code/wrapping/rows.ts",
+      "src/core/rendering/layout/code/cells/framing.ts -> src/core/rendering/layout/ir.ts",
+      "src/core/rendering/layout/code/code.ts -> src/core/rendering/layout/code/cells/blocks.ts",
+      "src/core/rendering/layout/code/code.ts -> src/core/rendering/layout/code/page/compose.ts",
+      "src/core/rendering/layout/code/documentation/comments.ts -> src/core/rendering/layout/code/wrapping/rows.ts",
+      "src/core/rendering/layout/code/documentation/comments.ts -> src/core/rendering/layout/ir.ts",
+      "src/core/rendering/layout/code/documentation/layout.ts -> src/core/documents/model/docformats.ts",
+      "src/core/rendering/layout/code/documentation/layout.ts -> src/core/foundation/text/width.ts",
+      "src/core/rendering/layout/code/documentation/layout.ts -> src/core/rendering/layout/code/cells/framing.ts",
+      "src/core/rendering/layout/code/documentation/layout.ts -> src/core/rendering/layout/code/documentation/comments.ts",
+      "src/core/rendering/layout/code/documentation/layout.ts -> src/core/rendering/layout/markdown/render.ts",
+      "src/core/rendering/layout/code/page/compose.ts -> src/core/documents/markdown/parse.ts",
+      "src/core/rendering/layout/code/page/compose.ts -> src/core/foundation/text/width.ts",
+      "src/core/rendering/layout/code/page/compose.ts -> src/core/rendering/layout/code/cells/blocks.ts",
+      "src/core/rendering/layout/code/page/compose.ts -> src/core/rendering/layout/code/cells/framing.ts",
+      "src/core/rendering/layout/code/page/compose.ts -> src/core/rendering/layout/code/documentation/comments.ts",
+      "src/core/rendering/layout/code/page/compose.ts -> src/core/rendering/layout/code/documentation/layout.ts",
+      "src/core/rendering/layout/code/page/compose.ts -> src/core/rendering/layout/code/wrapping/rows.ts",
+      "src/core/rendering/layout/code/page/compose.ts -> src/core/rendering/layout/ir.ts",
+      "src/core/rendering/layout/code/wrapping/rows.ts -> src/core/foundation/text/sanitize.ts",
+      "src/core/rendering/layout/code/wrapping/rows.ts -> src/core/foundation/text/width.ts",
+      "src/core/rendering/layout/code/wrapping/rows.ts -> src/core/rendering/layout/ir.ts"
+    ]
+  },
+  "tests": {
+    "removed": [],
+    "added": [
+      "test: cell borders pad source maps with source endpoints while bands retain their fill",
+      "test: comment paths leave source rows and longer words alone and reorder every resulting link reference",
+      "test: documentation terms and prose retain source lines and explicit link-array positioning",
+      "test: headers keep action identity and source range when folded or switched between boxes and bands",
+      "test: lens blocks preserve import/doc groups, continuation lines and leading blanks",
+      "test: signature rows split only complete parameter lists and keep the closing row anchored to its original offset",
+      "test: structural wrapping preserves wide-grapheme offsets and maps continuation padding to its first source cell",
+      "test: whole-cell grouping uses the supplied fit decision and retains original line blocks when too tall"
+    ]
+  },
+  "entries": {
+    "removed": [],
+    "added": []
+  },
+  "moves": {},
+  "retained": [],
+  "extractions": [
+    {
+      "from": "src/core/rendering/layout/code/code.ts",
+      "to": "src/core/rendering/layout/code/contracts.ts",
+      "symbols": [
+        "CodeLayoutOptions",
+        "CommentPath",
+        "Cell",
+        "Break",
+        "DocPart",
+        "CellSpec"
+      ],
+      "invariant": "Original type shapes and public type re-exports. Inputs remain explicit; no App, shared buffer, theme lookup or global layout context."
+    },
+    {
+      "from": "src/core/rendering/layout/code/code.ts",
+      "to": "src/core/rendering/layout/code/page/compose.ts",
+      "symbols": [
+        "layoutCode",
+        "lead",
+        "CLOSING"
+      ],
+      "invariant": "All recursive page state remains per layout call. Same documentation/definition/comment ordering, headings, links, folded-cell metadata, natural width and source-map composition."
+    },
+    {
+      "from": "src/core/rendering/layout/code/code.ts",
+      "to": "src/core/rendering/layout/code/cells/framing.ts",
+      "symbols": [
+        "SEVERITY_ORDER",
+        "joint",
+        "putAt",
+        "plainRow",
+        "framedRow",
+        "cellHeader",
+        "sectionRow",
+        "indentSpans",
+        "foldRow",
+        "markOf"
+      ],
+      "invariant": "Same frame/header/button metadata, glyphs, severity order, padding endpoint maps, decoration and band fill."
+    },
+    {
+      "from": "src/core/rendering/layout/code/code.ts",
+      "to": "src/core/rendering/layout/code/cells/blocks.ts",
+      "symbols": [
+        "range",
+        "codeBlocks",
+        "cellBlocks"
+      ],
+      "invariant": "Public lens block APIs remain re-exported from code.ts. Same continuation, import/doc grouping and supplied fit decisions."
+    },
+    {
+      "from": "src/core/rendering/layout/code/code.ts",
+      "to": "src/core/rendering/layout/code/wrapping/rows.ts",
+      "symbols": [
+        "QUIET",
+        "CONTINUE",
+        "indentUnit",
+        "cellsOf",
+        "inText",
+        "decorate",
+        "dimReceivers",
+        "breaksOf",
+        "signatureRows",
+        "breakLine",
+        "toSpans"
+      ],
+      "invariant": "Same source grapheme/UTF-16 offsets, widths, structural break preference, continuation indentation/guides and receiver decoration. Width/sanitize calls unchanged."
+    },
+    {
+      "from": "src/core/rendering/layout/code/code.ts",
+      "to": [
+        "src/core/rendering/layout/code/documentation/comments.ts",
+        "src/core/rendering/layout/code/documentation/layout.ts"
+      ],
+      "symbols": [
+        "DIRECTIVE",
+        "CODELIKE",
+        "sectionOf",
+        "unmark",
+        "MARKER",
+        "noteColumns",
+        "noted",
+        "proseRows",
+        "docRows",
+        "PATH_CHAR",
+        "linkPaths",
+        "wrapWords"
+      ],
+      "invariant": "Same directives/code-like classification, trailing notes, docformat interpretation, Markdown layout calls, explicit line/link arrays, term formatting, path boundaries and link reordering."
+    }
+  ],
+  "primitives": [
+    "src/core/rendering/layout/code/contracts.ts",
+    "src/core/rendering/layout/code/cells/framing.ts",
+    "src/core/rendering/layout/code/cells/blocks.ts",
+    "src/core/rendering/layout/code/wrapping/rows.ts",
+    "src/core/rendering/layout/code/documentation/comments.ts",
+    "src/core/rendering/layout/code/documentation/layout.ts"
+  ],
+  "runtimeScc": {
+    "before": [
+      [
+        "src/tui/documents/editing/editing.ts",
+        "src/tui/documents/editing/snippets.ts"
+      ],
+      [
+        "src/tui/workspace/git/gitremote.ts",
+        "src/tui/workspace/git/views/review/rebase.ts"
+      ],
+      [
+        "src/core/rendering/export/formats/html.ts",
+        "src/core/rendering/export/formats/markdown.ts",
+        "src/core/rendering/export/stream.ts"
+      ],
+      [
+        "src/tui/documents/search/replacing.ts",
+        "src/tui/shell/overlays/overlays.ts",
+        "src/tui/workspace/search/search.ts"
+      ],
+      [
+        "src/tui/app/runtime/app.ts",
+        "src/tui/app/settings/settings.ts",
+        "src/tui/workspace/history/history.ts",
+        "src/tui/workspace/session/session.ts",
+        "src/tui/workspace/vaults/vaults.ts"
+      ],
+      [
+        "src/tui/actions/actions.ts",
+        "src/tui/actions/documents/actions-edit.ts",
+        "src/tui/actions/documents/actions-find.ts",
+        "src/tui/actions/documents/actions-links.ts",
+        "src/tui/actions/documents/actions-lsp.ts",
+        "src/tui/actions/documents/actions-view.ts",
+        "src/tui/actions/shell/actions-panes.ts",
+        "src/tui/actions/workspace/actions-files.ts"
+      ],
+      [
+        "src/tui/documents/diagnostics/draw-problems.ts",
+        "src/tui/documents/views/draw-header.ts",
+        "src/tui/documents/views/draw-pane.ts",
+        "src/tui/shell/overlays/draw-overlays.ts",
+        "src/tui/shell/panels/draw-panels.ts",
+        "src/tui/shell/screen/draw.ts",
+        "src/tui/shell/screen/statusbar/draw-status.ts",
+        "src/tui/workspace/git/views/panel/draw-git.ts"
+      ]
+    ],
+    "after": [
+      [
+        "src/tui/documents/editing/editing.ts",
+        "src/tui/documents/editing/snippets.ts"
+      ],
+      [
+        "src/tui/workspace/git/gitremote.ts",
+        "src/tui/workspace/git/views/review/rebase.ts"
+      ],
+      [
+        "src/core/rendering/export/formats/html.ts",
+        "src/core/rendering/export/formats/markdown.ts",
+        "src/core/rendering/export/stream.ts"
+      ],
+      [
+        "src/tui/documents/search/replacing.ts",
+        "src/tui/shell/overlays/overlays.ts",
+        "src/tui/workspace/search/search.ts"
+      ],
+      [
+        "src/tui/app/runtime/app.ts",
+        "src/tui/app/settings/settings.ts",
+        "src/tui/workspace/history/history.ts",
+        "src/tui/workspace/session/session.ts",
+        "src/tui/workspace/vaults/vaults.ts"
+      ],
+      [
+        "src/tui/actions/actions.ts",
+        "src/tui/actions/documents/actions-edit.ts",
+        "src/tui/actions/documents/actions-find.ts",
+        "src/tui/actions/documents/actions-links.ts",
+        "src/tui/actions/documents/actions-lsp.ts",
+        "src/tui/actions/documents/actions-view.ts",
+        "src/tui/actions/shell/actions-panes.ts",
+        "src/tui/actions/workspace/actions-files.ts"
+      ],
+      [
+        "src/tui/documents/diagnostics/draw-problems.ts",
+        "src/tui/documents/views/draw-header.ts",
+        "src/tui/documents/views/draw-pane.ts",
+        "src/tui/shell/overlays/draw-overlays.ts",
+        "src/tui/shell/panels/draw-panels.ts",
+        "src/tui/shell/screen/draw.ts",
+        "src/tui/shell/screen/statusbar/draw-status.ts",
+        "src/tui/workspace/git/views/panel/draw-git.ts"
+      ]
+    ]
+  }
+}

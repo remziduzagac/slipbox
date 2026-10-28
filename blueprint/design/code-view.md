@@ -225,3 +225,13 @@ the tokens differ.
 
 Not done: folding inside a cell — an `if`'s body, a loop's. A cell folds whole (`24.18`, D129). Nor typing in a row in
 place, without the lens: the lens is where notes and code are edited (`24.17`, D131).
+
+## Layout implementation ownership
+
+`core/rendering/layout/code/code.ts` keeps the public `layoutCode`, `codeBlocks`, `cellBlocks` and option-type exports.
+The per-call page composer is `code/page/compose.ts`: it owns rows, links, headings, folded-cell metadata and recursive
+page state. `code/contracts.ts` contains the original explicit inputs/cell records; `cells/` owns framing and lens block
+membership, `wrapping/` owns source-cell decoration and structural breaks, and `documentation/` owns comment
+classification, trailing notes, prose/term layout and comment links. These mechanisms never import the page composer
+or public entry, including for types. Width and sanitization still use their existing foundation functions; no second
+text-measurement or mutable document owner is introduced.

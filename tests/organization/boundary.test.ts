@@ -49,6 +49,20 @@ describe("the boundary check (0.3, scripts/check-boundary.ts)", () => {
 
   test("presentation primitives and editing clients cannot load App composition through the checker", () => {
     const r = check({
+      "src/core/rendering/layout/code/code.ts": "export interface CodeLayoutOptions {}\n",
+      ...Object.fromEntries(
+        [
+          "contracts",
+          "cells/framing",
+          "cells/blocks",
+          "wrapping/rows",
+          "documentation/comments",
+          "documentation/layout",
+        ].map((name) => [
+          `src/core/rendering/layout/code/${name}.ts`,
+          `export type { CodeLayoutOptions } from "${name === "contracts" ? "./code.ts" : "../code.ts"}"; ${name === "cells/framing" ? 'export const load = () => import("../page/compose.ts");' : ""}\n`,
+        ]),
+      ),
       "src/core/workspace/graph/graph.ts": "export class Graph {}\n",
       ...Object.fromEntries(
         [
@@ -87,6 +101,17 @@ describe("the boundary check (0.3, scripts/check-boundary.ts)", () => {
         'import { draw } from "../../shell/screen/draw.ts";\nexport const paint = draw;\n',
     });
     expect(r.code).toBe(1);
+    expect(r.err).toContain("code-layout helper must not import composition, even for types");
+    expect(r.err).toContain("cells/framing.ts: imports ../page/compose.ts");
+    for (const name of [
+      "contracts",
+      "cells/framing",
+      "cells/blocks",
+      "wrapping/rows",
+      "documentation/comments",
+      "documentation/layout",
+    ])
+      expect(r.err).toContain(`src/core/rendering/layout/code/${name}.ts:`);
     expect(r.err).toContain("graph helper must not import composition, even for types");
     expect(r.err).toContain("index/schema.ts: imports ../graph-extract.ts");
     for (const name of [

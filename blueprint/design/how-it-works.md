@@ -269,6 +269,7 @@ The CLI's commands are the user's reference, [cli.md](../../docs/manual/cli.md);
 | [gitbase.ts][o87] | GIT-D10 | each branch's own base: kept (`bases.json`), else the nearest of `[git] bases` |
 | [gitrepos.ts][o88] | VV-D10 | the repositories under a folder, each checkout grouped with its own, their state |
 | [diff.ts][o126] | GIT-D2 | a diff's rows: signs, highlighting, changed words, heads and folds, sideways scroll |
+| `layout/code/` | 24.x | code-page composition, cell framing, structural wrapping and documentation layout |
 | [blockdiff.ts][o127] | GIT-D2 | before and after laid out: frames, light formatting, the marked words |
 | [splitdiff.ts][o128] | GIT-D7 | a code file's diff side by side, the two sides scrolling together |
 | [screen.ts][o129] | GIT-D3, GIT-D5 | a screen of text rows and diffs: the review's, the merge screen's |
