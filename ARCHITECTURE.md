@@ -83,6 +83,10 @@ A few modules to know first:
   `slipbox render` and the TUI. The Markdown `render.ts` entry delegates context/cache ownership to `page/render.ts`,
   recursive blocks to `blocks/dispatch.ts`, row finishing to `rows/` and pictures to `pictures/layout.ts`; inline,
   table and data owners retain their distinct layout policies.
+- `core/workspace/search/`: document/section models, query grammar, indexing, hit matching and indexed/scan execution
+  beneath public exports. SQLite and scanning share one lower weight table; document find matching and replace-field
+  interaction live in `tui/documents/search/`, while workspace Search owns its index/feed/list lifecycle and cross-file
+  effects. Buffers and view state remain TUI-owned.
 - `cli/cli.ts`: the command line's dispatcher, its help and flags; each command's code is in its group's module, the
   session and the helpers they share in `cli/common.ts`.
 - `tui/workspace/explorer/explorer.ts`: live Explorer state, listing lifetime and row cache; `rows/` builds visible

@@ -14,7 +14,7 @@ import {
 import type { App, PromptOverlay, View } from "../../app/runtime/app.ts";
 import { editable } from "../editing/editable.ts";
 import * as E from "../editing/editing.ts";
-import { computeFind } from "../../workspace/search/search.ts";
+import { computeFind } from "./find.ts";
 
 export interface ReplaceState {
   pending?: boolean;

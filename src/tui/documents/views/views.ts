@@ -16,7 +16,7 @@ import type { App, View } from "../../app/runtime/app.ts";
 import { editable } from "../editing/editable.ts";
 import type { Selection } from "../../app/runtime/app.ts";
 import { isHidden, unparsedText } from "../editing/lens.ts";
-import { computeFind } from "../../workspace/search/search.ts";
+import { computeFind } from "../search/find.ts";
 
 /** Views: layout, anchors, cursor and selection, scrolling. */
 export class Views {

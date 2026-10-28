@@ -167,6 +167,30 @@ export function markdownViolations(from: string, text: string): string[] {
   });
 }
 
+/** Search mechanisms use lower owners; pure query/scan/location never load the SQLite adapter (ORG-T34). */
+export function searchMechanismViolations(from: string, text: string): string[] {
+  const core = /^src\/core\/workspace\/search\/(?:model|query|matching|execution|indexing)\//.test(from);
+  const document = /^src\/tui\/documents\/search\/(?:find|controls)\.ts$/.test(from);
+  const facade = core ? "src/core/workspace/search/search" : "src/tui/workspace/search/search";
+  const failures =
+    core || document
+      ? importsOf(text).flatMap((spec) =>
+          targetOf(from, spec) === facade
+            ? [`${from}: imports ${spec} (search mechanism must not import composition, even for types)`]
+            : [],
+        )
+      : [];
+  if (core && from !== "src/core/workspace/search/indexing/files.ts") {
+    const values = new Bun.Transpiler({ loader: "ts" }).scanImports(text);
+    for (const { path } of values)
+      if (
+        ["src/core/workspace/search/search-index", "src/core/foundation/platform/sqlite"].includes(targetOf(from, path))
+      )
+        failures.push(`${from}: imports ${path} (search mechanism must not load SQLite)`);
+  }
+  return failures;
+}
+
 /** Walk/watch/home mechanisms stay below their public composition entries (ORG-T33). */
 export function walkingMechanismViolations(from: string, text: string): string[] {
   const walk = "src/core/workspace/walk/walk";
@@ -363,6 +387,8 @@ export function primitiveViolations(from: string, text: string): string[] {
 export const EDITABLE_CLIENTS = [
   "src/tui/documents/views/views.ts",
   "src/tui/documents/search/replacing.ts",
+  "src/tui/documents/search/find.ts",
+  "src/tui/documents/search/controls.ts",
   "src/tui/documents/editing/editing.ts",
   "src/tui/documents/editing/shellrun.ts",
   "src/tui/workspace/git/views/review/mergescreen.ts",
@@ -466,6 +492,7 @@ if (import.meta.main) {
     violations.push(...markdownViolations(from, readFileSync(file, "utf8")));
     violations.push(...pdfViolations(from, readFileSync(file, "utf8")));
     violations.push(...explorerViolations(from, readFileSync(file, "utf8")));
+    violations.push(...searchMechanismViolations(from, readFileSync(file, "utf8")));
     violations.push(...walkingMechanismViolations(from, readFileSync(file, "utf8")));
     violations.push(...parsingMechanismViolations(from, readFileSync(file, "utf8")));
     violations.push(...inputMechanismViolations(from, readFileSync(file, "utf8")));

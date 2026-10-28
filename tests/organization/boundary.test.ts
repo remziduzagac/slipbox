@@ -47,6 +47,26 @@ describe("the boundary check (0.3, scripts/check-boundary.ts)", () => {
     expect(r.out).not.toContain("boundary check ok");
   });
 
+  test("search mechanisms reject workspace composition and runtime SQLite or App", () => {
+    const refused = check({
+      "src/core/workspace/search/query/parsing.ts": 'export type { SearchQuery } from "../search.ts";',
+      "src/core/workspace/search/execution/scan.ts": 'export const load = () => import("../search-index.ts");',
+      "src/tui/documents/search/find.ts": 'export { computeFind } from "../../workspace/search/search.ts";',
+      "src/tui/documents/search/controls.ts": 'import { App } from "../../app/runtime/app.ts"; export const f = App;',
+    });
+    expect(refused.code).toBe(1);
+    expect(refused.err.match(/search mechanism/g)?.length).toBe(3);
+    expect(refused.err).toContain("editing client must stay below App composition");
+    expect(
+      check({
+        "src/core/workspace/search/execution/search.ts": 'import type { SearchIndex } from "../search-index.ts";',
+        "src/tui/documents/search/find.ts": 'import type { FindState } from "../../app/runtime/app.ts";',
+        "src/tui/documents/search/controls.ts":
+          'import { computeFind } from "./find.ts"; export const f = computeFind;',
+      }).code,
+    ).toBe(0);
+  });
+
   test("walk and watcher helpers reject composition and accept lower domain records", () => {
     const refused = check({
       "src/core/workspace/walk/filtering/filter.ts": 'export type { FilterSettings } from "../walk.ts";',
