@@ -1,0 +1,360 @@
+{
+  "edges": {
+    "removed": [
+      "src/core/documents/syntax/syntax.ts -> grammars/tree-sitter-astro.wasm",
+      "src/core/documents/syntax/syntax.ts -> grammars/tree-sitter-dockerfile.wasm",
+      "src/core/documents/syntax/syntax.ts -> grammars/tree-sitter-scss.wasm",
+      "src/core/documents/syntax/syntax.ts -> grammars/tree-sitter-swift.wasm",
+      "src/core/documents/syntax/syntax.ts -> grammars/tree-sitter-vue.wasm",
+      "src/core/documents/syntax/syntax.ts -> src/core/foundation/platform/lazy.ts"
+    ],
+    "added": [
+      "src/core/documents/syntax/grammar/assets.ts -> grammars/tree-sitter-astro.wasm",
+      "src/core/documents/syntax/grammar/assets.ts -> grammars/tree-sitter-dockerfile.wasm",
+      "src/core/documents/syntax/grammar/assets.ts -> grammars/tree-sitter-scss.wasm",
+      "src/core/documents/syntax/grammar/assets.ts -> grammars/tree-sitter-swift.wasm",
+      "src/core/documents/syntax/grammar/assets.ts -> grammars/tree-sitter-vue.wasm",
+      "src/core/documents/syntax/grammar/assets.ts -> src/core/documents/syntax/contracts.ts",
+      "src/core/documents/syntax/grammar/descriptors.ts -> src/core/documents/syntax/contracts.ts",
+      "src/core/documents/syntax/grammar/loader.ts -> src/core/documents/syntax/contracts.ts",
+      "src/core/documents/syntax/grammar/loader.ts -> src/core/documents/syntax/grammar/assets.ts",
+      "src/core/documents/syntax/grammar/loader.ts -> src/core/documents/syntax/grammar/descriptors.ts",
+      "src/core/documents/syntax/grammar/loader.ts -> src/core/documents/syntax/grammar/queries.ts",
+      "src/core/documents/syntax/grammar/loader.ts -> src/core/foundation/platform/lazy.ts",
+      "src/core/documents/syntax/grammar/queries.ts -> src/core/documents/syntax/contracts.ts",
+      "src/core/documents/syntax/links/tokens.ts -> src/core/documents/syntax/contracts.ts",
+      "src/core/documents/syntax/model/code-model.ts -> src/core/documents/syntax/contracts.ts",
+      "src/core/documents/syntax/model/code-model.ts -> src/core/documents/syntax/tree/positions.ts",
+      "src/core/documents/syntax/syntax.ts -> src/core/documents/syntax/contracts.ts",
+      "src/core/documents/syntax/syntax.ts -> src/core/documents/syntax/grammar/assets.ts",
+      "src/core/documents/syntax/syntax.ts -> src/core/documents/syntax/grammar/descriptors.ts",
+      "src/core/documents/syntax/syntax.ts -> src/core/documents/syntax/grammar/loader.ts",
+      "src/core/documents/syntax/syntax.ts -> src/core/documents/syntax/links/tokens.ts",
+      "src/core/documents/syntax/syntax.ts -> src/core/documents/syntax/model/code-model.ts",
+      "src/core/documents/syntax/syntax.ts -> src/core/documents/syntax/tree/tree.ts",
+      "src/core/documents/syntax/tree/markup.ts -> src/core/documents/syntax/contracts.ts",
+      "src/core/documents/syntax/tree/markup.ts -> src/core/documents/syntax/grammar/descriptors.ts",
+      "src/core/documents/syntax/tree/positions.ts -> src/core/documents/syntax/contracts.ts",
+      "src/core/documents/syntax/tree/tree.ts -> src/core/documents/syntax/contracts.ts",
+      "src/core/documents/syntax/tree/tree.ts -> src/core/documents/syntax/grammar/descriptors.ts",
+      "src/core/documents/syntax/tree/tree.ts -> src/core/documents/syntax/grammar/loader.ts",
+      "src/core/documents/syntax/tree/tree.ts -> src/core/documents/syntax/model/code-model.ts",
+      "src/core/documents/syntax/tree/tree.ts -> src/core/documents/syntax/tree/markup.ts",
+      "src/core/documents/syntax/tree/tree.ts -> src/core/documents/syntax/tree/outline.ts",
+      "src/core/documents/syntax/tree/tree.ts -> src/core/documents/syntax/tree/positions.ts"
+    ]
+  },
+  "runtime": {
+    "removed": [
+      "src/core/documents/syntax/syntax.ts -> grammars/tree-sitter-astro.wasm",
+      "src/core/documents/syntax/syntax.ts -> grammars/tree-sitter-dockerfile.wasm",
+      "src/core/documents/syntax/syntax.ts -> grammars/tree-sitter-scss.wasm",
+      "src/core/documents/syntax/syntax.ts -> grammars/tree-sitter-swift.wasm",
+      "src/core/documents/syntax/syntax.ts -> grammars/tree-sitter-vue.wasm",
+      "src/core/documents/syntax/syntax.ts -> src/core/foundation/platform/lazy.ts"
+    ],
+    "added": [
+      "src/core/documents/syntax/grammar/assets.ts -> grammars/tree-sitter-astro.wasm",
+      "src/core/documents/syntax/grammar/assets.ts -> grammars/tree-sitter-dockerfile.wasm",
+      "src/core/documents/syntax/grammar/assets.ts -> grammars/tree-sitter-scss.wasm",
+      "src/core/documents/syntax/grammar/assets.ts -> grammars/tree-sitter-swift.wasm",
+      "src/core/documents/syntax/grammar/assets.ts -> grammars/tree-sitter-vue.wasm",
+      "src/core/documents/syntax/grammar/loader.ts -> src/core/documents/syntax/grammar/assets.ts",
+      "src/core/documents/syntax/grammar/loader.ts -> src/core/documents/syntax/grammar/descriptors.ts",
+      "src/core/documents/syntax/grammar/loader.ts -> src/core/documents/syntax/grammar/queries.ts",
+      "src/core/documents/syntax/grammar/loader.ts -> src/core/foundation/platform/lazy.ts",
+      "src/core/documents/syntax/model/code-model.ts -> src/core/documents/syntax/tree/positions.ts",
+      "src/core/documents/syntax/syntax.ts -> src/core/documents/syntax/grammar/assets.ts",
+      "src/core/documents/syntax/syntax.ts -> src/core/documents/syntax/grammar/descriptors.ts",
+      "src/core/documents/syntax/syntax.ts -> src/core/documents/syntax/grammar/loader.ts",
+      "src/core/documents/syntax/syntax.ts -> src/core/documents/syntax/links/tokens.ts",
+      "src/core/documents/syntax/syntax.ts -> src/core/documents/syntax/model/code-model.ts",
+      "src/core/documents/syntax/syntax.ts -> src/core/documents/syntax/tree/tree.ts",
+      "src/core/documents/syntax/tree/markup.ts -> src/core/documents/syntax/grammar/descriptors.ts",
+      "src/core/documents/syntax/tree/tree.ts -> src/core/documents/syntax/grammar/descriptors.ts",
+      "src/core/documents/syntax/tree/tree.ts -> src/core/documents/syntax/grammar/loader.ts",
+      "src/core/documents/syntax/tree/tree.ts -> src/core/documents/syntax/model/code-model.ts",
+      "src/core/documents/syntax/tree/tree.ts -> src/core/documents/syntax/tree/markup.ts",
+      "src/core/documents/syntax/tree/tree.ts -> src/core/documents/syntax/tree/outline.ts",
+      "src/core/documents/syntax/tree/tree.ts -> src/core/documents/syntax/tree/positions.ts"
+    ]
+  },
+  "tests": {
+    "removed": [],
+    "added": [
+      "test: a parse frees embedded trees in source order before its own tree",
+      "test: comment links keep UTF-16 offsets and repeat without retaining regex cursor state",
+      "test: grammar requests share the cached parser and wait for embedded languages"
+    ]
+  },
+  "entries": {
+    "removed": [],
+    "added": []
+  },
+  "moves": {},
+  "retained": [],
+  "extractions": [
+    {
+      "from": "src/core/documents/syntax/syntax.ts",
+      "to": "src/core/documents/syntax/contracts.ts",
+      "symbols": [
+        "Grammar",
+        "Loaded",
+        "OutlineEntry",
+        "SyntaxError",
+        "Span",
+        "Comment",
+        "Pos",
+        "Entry",
+        "Part",
+        "CodeDef",
+        "CodeDoc",
+        "CodeComment",
+        "CodeImports",
+        "CodeModel",
+        "CommentLink"
+      ],
+      "invariant": "Original type token trees, no initialization or tree ownership."
+    },
+    {
+      "from": "src/core/documents/syntax/syntax.ts",
+      "to": "src/core/documents/syntax/grammar/assets.ts",
+      "symbols": [
+        "WASM",
+        "GRAMMARS"
+      ],
+      "invariant": "Same eagerly imported twenty assets and GRAMMARS insertion order; only five local WASM relative paths gain one parent."
+    },
+    {
+      "from": "src/core/documents/syntax/syntax.ts",
+      "to": "src/core/documents/syntax/grammar/descriptors.ts",
+      "symbols": [
+        "EMBEDS",
+        "MARKUP",
+        "BY_FORMAT",
+        "grammarFor",
+        "HIGHLIGHT"
+      ],
+      "invariant": "Same extension selection, embedded-language lists and highlighting names."
+    },
+    {
+      "from": "src/core/documents/syntax/syntax.ts",
+      "to": "src/core/documents/syntax/grammar/queries.ts",
+      "symbols": [
+        "TS_DEFS",
+        "JS_DEFS",
+        "CSS_DEFS",
+        "C_DEFS",
+        "MARKUP_QUERIES",
+        "QUERIES"
+      ],
+      "invariant": "All query strings byte-identical."
+    },
+    {
+      "from": "src/core/documents/syntax/syntax.ts",
+      "to": "src/core/documents/syntax/grammar/loader.ts",
+      "symbols": [
+        "runtimeReady",
+        "loadGrammar",
+        "key",
+        "grammarNow",
+        "grammar"
+      ],
+      "invariant": "Same runtimeReady promise, lazy/load/error keys and readiness ordering; no tree or facade dependency."
+    },
+    {
+      "from": "src/core/documents/syntax/syntax.ts",
+      "to": "src/core/documents/syntax/tree/markup.ts",
+      "symbols": [
+        "attribute",
+        "scriptPart",
+        "stylePart",
+        "tagName",
+        "partsOf",
+        "EXPRESSIONS",
+        "shownText",
+        "markupOutline"
+      ],
+      "invariant": "Same language sections, coordinates and heading/id extraction."
+    },
+    {
+      "from": "src/core/documents/syntax/syntax.ts",
+      "to": "src/core/documents/syntax/tree/outline.ts",
+      "symbols": [
+        "KIND",
+        "label",
+        "kindOf"
+      ],
+      "invariant": "Same outline labels and kinds."
+    },
+    {
+      "from": "src/core/documents/syntax/syntax.ts",
+      "to": "src/core/documents/syntax/tree/positions.ts",
+      "symbols": [
+        "before",
+        "endOf"
+      ],
+      "invariant": "Same source ordering and last occupied line."
+    },
+    {
+      "from": "src/core/documents/syntax/syntax.ts",
+      "to": "src/core/documents/syntax/model/code-model.ts",
+      "symbols": [
+        "DOCUMENT_GRAMMARS",
+        "ATTRIBUTE",
+        "IMPORT",
+        "importedBy",
+        "headerOf",
+        "TERMS",
+        "termOf",
+        "codeKind",
+        "CODE_KIND"
+      ],
+      "invariant": "Original model body with this.g/this.tree/this.source replaced by explicit inputs; tree owner keeps original admission gate before root access."
+    },
+    {
+      "from": "src/core/documents/syntax/syntax.ts",
+      "to": "src/core/documents/syntax/links/tokens.ts",
+      "symbols": [
+        "URL_RE",
+        "PATH_RE",
+        "linkTokens",
+        "commentLinks"
+      ],
+      "invariant": "Same global regexes, punctuation, masks and UTF-16 offsets."
+    },
+    {
+      "from": "src/core/documents/syntax/syntax.ts",
+      "to": "src/core/documents/syntax/tree/tree.ts",
+      "symbols": [
+        "SyntaxTree",
+        "parseSyntax"
+      ],
+      "invariant": "All other members unchanged; same embedded-child-first disposal, synchronous parsing and grammar admission."
+    }
+  ],
+  "primitives": [
+    "src/core/documents/syntax/contracts.ts",
+    "src/core/documents/syntax/grammar/assets.ts",
+    "src/core/documents/syntax/grammar/descriptors.ts",
+    "src/core/documents/syntax/grammar/queries.ts",
+    "src/core/documents/syntax/grammar/loader.ts",
+    "src/core/documents/syntax/tree/markup.ts",
+    "src/core/documents/syntax/tree/outline.ts",
+    "src/core/documents/syntax/tree/positions.ts",
+    "src/core/documents/syntax/model/code-model.ts",
+    "src/core/documents/syntax/links/tokens.ts"
+  ],
+  "runtimeScc": {
+    "before": [
+      [
+        "src/tui/documents/editing/editing.ts",
+        "src/tui/documents/editing/snippets.ts"
+      ],
+      [
+        "src/tui/workspace/git/gitremote.ts",
+        "src/tui/workspace/git/views/review/rebase.ts"
+      ],
+      [
+        "src/core/rendering/export/formats/html.ts",
+        "src/core/rendering/export/formats/markdown.ts",
+        "src/core/rendering/export/stream.ts"
+      ],
+      [
+        "src/tui/documents/search/replacing.ts",
+        "src/tui/shell/overlays/overlays.ts",
+        "src/tui/workspace/search/search.ts"
+      ],
+      [
+        "src/tui/app/runtime/app.ts",
+        "src/tui/app/settings/settings.ts",
+        "src/tui/workspace/history/history.ts",
+        "src/tui/workspace/session/session.ts",
+        "src/tui/workspace/vaults/vaults.ts"
+      ],
+      [
+        "src/tui/actions/actions.ts",
+        "src/tui/actions/documents/actions-edit.ts",
+        "src/tui/actions/documents/actions-find.ts",
+        "src/tui/actions/documents/actions-links.ts",
+        "src/tui/actions/documents/actions-lsp.ts",
+        "src/tui/actions/documents/actions-view.ts",
+        "src/tui/actions/shell/actions-panes.ts",
+        "src/tui/actions/workspace/actions-files.ts"
+      ],
+      [
+        "src/tui/documents/diagnostics/draw-problems.ts",
+        "src/tui/documents/views/draw-header.ts",
+        "src/tui/documents/views/draw-pane.ts",
+        "src/tui/shell/overlays/draw-overlays.ts",
+        "src/tui/shell/panels/draw-panels.ts",
+        "src/tui/shell/screen/draw.ts",
+        "src/tui/shell/screen/statusbar/draw-status.ts",
+        "src/tui/workspace/git/views/panel/draw-git.ts"
+      ]
+    ],
+    "after": [
+      [
+        "src/tui/documents/editing/editing.ts",
+        "src/tui/documents/editing/snippets.ts"
+      ],
+      [
+        "src/tui/workspace/git/gitremote.ts",
+        "src/tui/workspace/git/views/review/rebase.ts"
+      ],
+      [
+        "src/core/rendering/export/formats/html.ts",
+        "src/core/rendering/export/formats/markdown.ts",
+        "src/core/rendering/export/stream.ts"
+      ],
+      [
+        "src/tui/documents/search/replacing.ts",
+        "src/tui/shell/overlays/overlays.ts",
+        "src/tui/workspace/search/search.ts"
+      ],
+      [
+        "src/tui/app/runtime/app.ts",
+        "src/tui/app/settings/settings.ts",
+        "src/tui/workspace/history/history.ts",
+        "src/tui/workspace/session/session.ts",
+        "src/tui/workspace/vaults/vaults.ts"
+      ],
+      [
+        "src/tui/actions/actions.ts",
+        "src/tui/actions/documents/actions-edit.ts",
+        "src/tui/actions/documents/actions-find.ts",
+        "src/tui/actions/documents/actions-links.ts",
+        "src/tui/actions/documents/actions-lsp.ts",
+        "src/tui/actions/documents/actions-view.ts",
+        "src/tui/actions/shell/actions-panes.ts",
+        "src/tui/actions/workspace/actions-files.ts"
+      ],
+      [
+        "src/tui/documents/diagnostics/draw-problems.ts",
+        "src/tui/documents/views/draw-header.ts",
+        "src/tui/documents/views/draw-pane.ts",
+        "src/tui/shell/overlays/draw-overlays.ts",
+        "src/tui/shell/panels/draw-panels.ts",
+        "src/tui/shell/screen/draw.ts",
+        "src/tui/shell/screen/statusbar/draw-status.ts",
+        "src/tui/workspace/git/views/panel/draw-git.ts"
+      ]
+    ]
+  },
+  "unchanged": [
+    "src/core/documents/syntax/syntax-thread.ts",
+    "src/core/documents/syntax/syntax-worker.ts",
+    "package.json"
+  ],
+  "publicEntry": "src/core/documents/syntax/syntax.ts",
+  "assetPaths": {
+    "from": "../../../../grammars/",
+    "to": "../../../../../grammars/",
+    "owner": "src/core/documents/syntax/grammar/assets.ts",
+    "count": 5
+  },
+  "newTests": [
+    "tests/core/documents/syntax/ownership.test.ts",
+    "tests/core/documents/syntax/tokens.test.ts"
+  ]
+}

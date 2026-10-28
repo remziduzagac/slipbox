@@ -232,7 +232,7 @@ The CLI's commands are the user's reference, [cli.md](../../docs/manual/cli.md);
 | `core/rendering/export/spool.ts` | 10.x | the output staged privately (`stream.ts`), published by the owner |
 | [zip.ts][o125] | 10.x | EPUB's ZIP, an entry at a time; no ZIP64, so 4 GiB or 65,535 files at most |
 | [placeholders.ts][o145] | 12.7 | Kitty's Unicode placeholders: a picture's id, its cells as text, sent once, let go |
-| [syntax.ts][o51] | 16.7–16.9, 16.18–16.22 | tree-sitter: spans, outline, errors, comments; parts in other languages |
+| [syntax.ts][o51] | 16.7–16.9, 16.18–16.22 | syntax entry: grammar loading, tree ownership, code models and links |
 | [syntax-thread.ts][o52] | 16.7–16.9, D252 | a code file's grammar, parse and outline on `syntax-worker.ts` |
 | [docformats.ts][o53] | 24.4 | a doc comment read into one shape, whatever wrote it: JSDoc, Google, NumPy, Sphinx |
 | [landing.ts][o42] | 11.3 | where a link lands in its note — a heading, a block's `^id`, `L42` — and its text there |

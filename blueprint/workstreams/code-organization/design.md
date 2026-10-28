@@ -1044,6 +1044,14 @@ ORG-T11 checks the ledger against merged task evidence, and ORG-T12 verifies its
 retained or deferred finding needs explicit rationale; unfinished accepted improvements remain visible outstanding work
 when reviewing whether #55 is complete.
 
+### T27 syntax assessment
+
+[Task 27](tasks/27-syntax-splits.md) keeps the syntax entry and separates grammar assets/loading, tree ownership,
+code-model extraction and link tokens. All mechanisms are below the entry/tree owner with reverse-edge fixtures.
+The largest extracted owner is 324 lines; the 1,170-line syntax exception is removed. Eager asset imports, one runtime
+initialization, grammar cache identity, embedded parsing and child-first disposal remain unchanged. This is a
+responsibility extraction; all seven runtime SCC memberships stay the same.
+
 ## Implementation tasks
 
 The 44 files below are authoritative for task scope, evidence, status and dependencies. This section is a navigation

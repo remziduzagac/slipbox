@@ -63,6 +63,24 @@ describe("the boundary check (0.3, scripts/check-boundary.ts)", () => {
           `export type { CodeLayoutOptions } from "${name === "contracts" ? "./code.ts" : "../code.ts"}"; ${name === "cells/framing" ? 'export const load = () => import("../page/compose.ts");' : ""}\n`,
         ]),
       ),
+      "src/core/documents/syntax/syntax.ts": "export interface Grammar {}\n",
+      ...Object.fromEntries(
+        [
+          "contracts",
+          "grammar/assets",
+          "grammar/descriptors",
+          "grammar/queries",
+          "grammar/loader",
+          "tree/markup",
+          "tree/outline",
+          "tree/positions",
+          "model/code-model",
+          "links/tokens",
+        ].map((name) => [
+          `src/core/documents/syntax/${name}.ts`,
+          `export type { Grammar } from "${name === "contracts" ? "./syntax.ts" : "../syntax.ts"}"; ${name === "grammar/loader" ? 'export const load = () => import("../tree/tree.ts");' : ""}\n`,
+        ]),
+      ),
       "src/core/workspace/graph/graph.ts": "export class Graph {}\n",
       ...Object.fromEntries(
         [
@@ -101,6 +119,21 @@ describe("the boundary check (0.3, scripts/check-boundary.ts)", () => {
         'import { draw } from "../../shell/screen/draw.ts";\nexport const paint = draw;\n',
     });
     expect(r.code).toBe(1);
+    expect(r.err).toContain("syntax mechanism must not import tree composition, even for types");
+    for (const name of [
+      "contracts",
+      "grammar/assets",
+      "grammar/descriptors",
+      "grammar/queries",
+      "grammar/loader",
+      "tree/markup",
+      "tree/outline",
+      "tree/positions",
+      "model/code-model",
+      "links/tokens",
+    ]) {
+      expect(r.err).toContain(`src/core/documents/syntax/${name}.ts: imports`);
+    }
     expect(r.err).toContain("code-layout helper must not import composition, even for types");
     expect(r.err).toContain("cells/framing.ts: imports ../page/compose.ts");
     for (const name of [
