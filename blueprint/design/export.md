@@ -12,7 +12,7 @@ The code is in `src/core/rendering/export/`:
 | --- | --- |
 | `assemble.ts` | the notes as one document for a writer (`10.1`): its chapters, made ready |
 | `docx.ts` | the document as a `.docx` (`10.4`) |
-| `pdf.ts` | the document as a PDF (`10.5`), laid out page by page |
+| `pdf.ts` | lazy PDF entry (`10.5`); font, line, chapter and page owners under `pdf/` |
 | `fonts.ts` | the fonts a PDF is set in, found on the machine |
 | `hast.ts` | a chapter as HTML's tree, for the web page and the e-book |
 | `html.ts` | the document as one HTML file (`10.2`) |
@@ -260,6 +260,14 @@ Word comes first (D185). Written by `docx` (MIT), whose zip, JSZip, is dual-lice
 ## PDF (`10.5`)
 
 Laid out by pdfkit (MIT, D186) on A4, 64-point margins, the text 10.5 points.
+
+The lazy `formats/pdf.ts` entry retains the existing default font discovery and picture conversion order. Beneath it,
+`pdf/writing/writer.ts` owns the document and output lifecycle; `writing/blocks.ts` owns chapter, footnote and outline
+state. `fonts/adapter.ts` registers faces and adapts fallback/metrics; `layout/lines.ts` owns line layout and its picture
+cache, while `layout/paint.ts` paints those lines. `pages/pagination.ts` owns fitting, bars and footers before page
+release. Collaborators share the same PDFKit document; buffers, maps and stream handlers retain their lifetimes.
+The existing dynamic imports in `export/index.ts` and `export/stream.ts` stay in place: PDFKit, fontkit and linebreak
+remain below the chosen writer, so another format or format discovery does not initialize the PDF writer.
 
 - **Fonts** are found on the machine (`fonts.ts`), never asked of a tool: its font folders are read (Linux's,
   macOS's, Windows', the user's own; in WSL, Windows' on its C: drive first), and the first sans family with all four

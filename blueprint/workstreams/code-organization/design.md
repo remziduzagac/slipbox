@@ -1060,6 +1060,14 @@ The legacy render cap is removed; the largest owner is 469 lines. Complete IR/ca
 exact dependency/test deltas are recorded there. Distinct inline and data guards remain separate. The tracked Mermaid
 warm-cache test fails equally on both revisions; fresh-cache controls pass, with its isolation follow-up retained in T43.
 
+### T29 PDF assessment
+
+[Task 29](tasks/29-pdf-splits.md) preserves the lazy PDF entry and output lifecycle while separating font adaptation,
+line layout/painting, chapter/block writing and pagination. Each export still owns one document and its collaborators;
+font fallback, picture and chapter caches keep their original scopes. The PDF cap is removed; the largest owner is
+440 lines. Font registration, stream release, footer/bar cleanup and complete PDF-object comparisons are recorded in
+the task, including PDFKit's alpha-mask ID serialization variation. All seven runtime SCC memberships remain unchanged.
+
 ## Implementation tasks
 
 The 44 files below are authoritative for task scope, evidence, status and dependencies. This section is a navigation

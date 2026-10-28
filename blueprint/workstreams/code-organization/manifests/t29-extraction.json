@@ -1,0 +1,399 @@
+{
+  "edges": {
+    "removed": [
+      "src/core/rendering/export/formats/pdf.ts -> src/core/rendering/export/assets/images.ts",
+      "src/core/rendering/export/formats/pdf.ts -> src/core/rendering/export/assets/style.ts",
+      "src/core/rendering/export/formats/pdf.ts -> src/core/rendering/layout/markdown/highlight.ts",
+      "src/core/rendering/export/formats/pdf.ts -> src/core/rendering/media/math.ts"
+    ],
+    "added": [
+      "src/core/rendering/export/formats/pdf.ts -> src/core/rendering/export/formats/pdf/fonts/adapter.ts",
+      "src/core/rendering/export/formats/pdf.ts -> src/core/rendering/export/formats/pdf/layout/breaks.ts",
+      "src/core/rendering/export/formats/pdf.ts -> src/core/rendering/export/formats/pdf/writing/document.ts",
+      "src/core/rendering/export/formats/pdf.ts -> src/core/rendering/export/formats/pdf/writing/writer.ts",
+      "src/core/rendering/export/formats/pdf/contracts.ts -> src/core/rendering/export/assemble.ts",
+      "src/core/rendering/export/formats/pdf/fonts/adapter.ts -> src/core/rendering/export/assets/fonts.ts",
+      "src/core/rendering/export/formats/pdf/fonts/adapter.ts -> src/core/rendering/export/formats/pdf/contracts.ts",
+      "src/core/rendering/export/formats/pdf/layout/lines.ts -> src/core/rendering/export/assets/images.ts",
+      "src/core/rendering/export/formats/pdf/layout/lines.ts -> src/core/rendering/export/formats/pdf/contracts.ts",
+      "src/core/rendering/export/formats/pdf/layout/lines.ts -> src/core/rendering/export/formats/pdf/fonts/adapter.ts",
+      "src/core/rendering/export/formats/pdf/layout/lines.ts -> src/core/rendering/export/formats/pdf/layout/breaks.ts",
+      "src/core/rendering/export/formats/pdf/layout/lines.ts -> src/core/rendering/export/formats/pdf/settings.ts",
+      "src/core/rendering/export/formats/pdf/layout/lines.ts -> src/core/rendering/media/images/svg.ts",
+      "src/core/rendering/export/formats/pdf/layout/paint.ts -> src/core/rendering/export/assets/style.ts",
+      "src/core/rendering/export/formats/pdf/layout/paint.ts -> src/core/rendering/export/formats/pdf/contracts.ts",
+      "src/core/rendering/export/formats/pdf/layout/paint.ts -> src/core/rendering/export/formats/pdf/layout/lines.ts",
+      "src/core/rendering/export/formats/pdf/layout/paint.ts -> src/core/rendering/export/formats/pdf/settings.ts",
+      "src/core/rendering/export/formats/pdf/pages/pagination.ts -> src/core/rendering/export/assets/style.ts",
+      "src/core/rendering/export/formats/pdf/pages/pagination.ts -> src/core/rendering/export/formats/pdf/contracts.ts",
+      "src/core/rendering/export/formats/pdf/pages/pagination.ts -> src/core/rendering/export/formats/pdf/settings.ts",
+      "src/core/rendering/export/formats/pdf/writing/blocks.ts -> src/core/rendering/export/assemble.ts",
+      "src/core/rendering/export/formats/pdf/writing/blocks.ts -> src/core/rendering/export/assets/images.ts",
+      "src/core/rendering/export/formats/pdf/writing/blocks.ts -> src/core/rendering/export/assets/style.ts",
+      "src/core/rendering/export/formats/pdf/writing/blocks.ts -> src/core/rendering/export/formats/pdf/contracts.ts",
+      "src/core/rendering/export/formats/pdf/writing/blocks.ts -> src/core/rendering/export/formats/pdf/fonts/adapter.ts",
+      "src/core/rendering/export/formats/pdf/writing/blocks.ts -> src/core/rendering/export/formats/pdf/layout/lines.ts",
+      "src/core/rendering/export/formats/pdf/writing/blocks.ts -> src/core/rendering/export/formats/pdf/layout/paint.ts",
+      "src/core/rendering/export/formats/pdf/writing/blocks.ts -> src/core/rendering/export/formats/pdf/pages/pagination.ts",
+      "src/core/rendering/export/formats/pdf/writing/blocks.ts -> src/core/rendering/export/formats/pdf/settings.ts",
+      "src/core/rendering/export/formats/pdf/writing/blocks.ts -> src/core/rendering/layout/markdown/highlight.ts",
+      "src/core/rendering/export/formats/pdf/writing/blocks.ts -> src/core/rendering/media/images/svg.ts",
+      "src/core/rendering/export/formats/pdf/writing/blocks.ts -> src/core/rendering/media/math.ts",
+      "src/core/rendering/export/formats/pdf/writing/document.ts -> src/core/rendering/export/assemble.ts",
+      "src/core/rendering/export/formats/pdf/writing/document.ts -> src/core/rendering/export/formats/pdf/settings.ts",
+      "src/core/rendering/export/formats/pdf/writing/writer.ts -> src/core/rendering/export/assemble.ts",
+      "src/core/rendering/export/formats/pdf/writing/writer.ts -> src/core/rendering/export/assets/fonts.ts",
+      "src/core/rendering/export/formats/pdf/writing/writer.ts -> src/core/rendering/export/formats/pdf/fonts/adapter.ts",
+      "src/core/rendering/export/formats/pdf/writing/writer.ts -> src/core/rendering/export/formats/pdf/layout/lines.ts",
+      "src/core/rendering/export/formats/pdf/writing/writer.ts -> src/core/rendering/export/formats/pdf/layout/paint.ts",
+      "src/core/rendering/export/formats/pdf/writing/writer.ts -> src/core/rendering/export/formats/pdf/pages/pagination.ts",
+      "src/core/rendering/export/formats/pdf/writing/writer.ts -> src/core/rendering/export/formats/pdf/writing/blocks.ts",
+      "src/core/rendering/export/formats/pdf/writing/writer.ts -> src/core/rendering/export/formats/pdf/writing/document.ts",
+      "src/core/rendering/export/formats/pdf/writing/writer.ts -> src/core/rendering/export/spool.ts",
+      "src/core/rendering/export/formats/pdf/writing/writer.ts -> src/core/rendering/media/images/svg.ts"
+    ]
+  },
+  "runtime": {
+    "removed": [
+      "src/core/rendering/export/formats/pdf.ts -> src/core/rendering/export/assets/images.ts",
+      "src/core/rendering/export/formats/pdf.ts -> src/core/rendering/export/assets/style.ts",
+      "src/core/rendering/export/formats/pdf.ts -> src/core/rendering/layout/markdown/highlight.ts",
+      "src/core/rendering/export/formats/pdf.ts -> src/core/rendering/media/math.ts"
+    ],
+    "added": [
+      "src/core/rendering/export/formats/pdf.ts -> src/core/rendering/export/formats/pdf/fonts/adapter.ts",
+      "src/core/rendering/export/formats/pdf.ts -> src/core/rendering/export/formats/pdf/layout/breaks.ts",
+      "src/core/rendering/export/formats/pdf.ts -> src/core/rendering/export/formats/pdf/writing/document.ts",
+      "src/core/rendering/export/formats/pdf.ts -> src/core/rendering/export/formats/pdf/writing/writer.ts",
+      "src/core/rendering/export/formats/pdf/fonts/adapter.ts -> src/core/rendering/export/assets/fonts.ts",
+      "src/core/rendering/export/formats/pdf/layout/lines.ts -> src/core/rendering/export/assets/images.ts",
+      "src/core/rendering/export/formats/pdf/layout/lines.ts -> src/core/rendering/export/formats/pdf/layout/breaks.ts",
+      "src/core/rendering/export/formats/pdf/layout/lines.ts -> src/core/rendering/export/formats/pdf/settings.ts",
+      "src/core/rendering/export/formats/pdf/layout/paint.ts -> src/core/rendering/export/assets/style.ts",
+      "src/core/rendering/export/formats/pdf/layout/paint.ts -> src/core/rendering/export/formats/pdf/settings.ts",
+      "src/core/rendering/export/formats/pdf/pages/pagination.ts -> src/core/rendering/export/assets/style.ts",
+      "src/core/rendering/export/formats/pdf/pages/pagination.ts -> src/core/rendering/export/formats/pdf/settings.ts",
+      "src/core/rendering/export/formats/pdf/writing/blocks.ts -> src/core/rendering/export/assets/images.ts",
+      "src/core/rendering/export/formats/pdf/writing/blocks.ts -> src/core/rendering/export/assets/style.ts",
+      "src/core/rendering/export/formats/pdf/writing/blocks.ts -> src/core/rendering/export/formats/pdf/settings.ts",
+      "src/core/rendering/export/formats/pdf/writing/blocks.ts -> src/core/rendering/layout/markdown/highlight.ts",
+      "src/core/rendering/export/formats/pdf/writing/blocks.ts -> src/core/rendering/media/math.ts",
+      "src/core/rendering/export/formats/pdf/writing/document.ts -> src/core/rendering/export/formats/pdf/settings.ts",
+      "src/core/rendering/export/formats/pdf/writing/writer.ts -> src/core/rendering/export/formats/pdf/fonts/adapter.ts",
+      "src/core/rendering/export/formats/pdf/writing/writer.ts -> src/core/rendering/export/formats/pdf/layout/lines.ts",
+      "src/core/rendering/export/formats/pdf/writing/writer.ts -> src/core/rendering/export/formats/pdf/layout/paint.ts",
+      "src/core/rendering/export/formats/pdf/writing/writer.ts -> src/core/rendering/export/formats/pdf/pages/pagination.ts",
+      "src/core/rendering/export/formats/pdf/writing/writer.ts -> src/core/rendering/export/formats/pdf/writing/blocks.ts",
+      "src/core/rendering/export/formats/pdf/writing/writer.ts -> src/core/rendering/export/formats/pdf/writing/document.ts"
+    ]
+  },
+  "tests": {
+    "removed": [],
+    "added": [
+      "test: PDF builtin font refusal keeps its typed error when the document cannot select a font",
+      "test: PDF font adaptation registers the six faces in order and keeps live metrics and builtin fallback",
+      "test: PDF inline picture fallback retains its alt text and italic style when no raster is available",
+      "test: PDF line layout trims trailing width, honors newlines and cuts long words without splitting graphemes",
+      "test: streaming PDF footers run before page release and restore the body cursor and margins on failure",
+      "test: streaming PDF quote bars are removed when their body throws"
+    ]
+  },
+  "entries": {
+    "removed": [],
+    "added": []
+  },
+  "moves": {},
+  "retained": [],
+  "extractions": [
+    {
+      "from": "src/core/rendering/export/formats/pdf.ts",
+      "to": "src/core/rendering/export/formats/pdf/contracts.ts",
+      "symbols": [
+        "Style",
+        "Run",
+        "InlinePicture",
+        "Inline",
+        "Box",
+        "Atom",
+        "Line"
+      ],
+      "invariant": "Original seven type token trees; flow and fit capabilities describe only actual callback methods."
+    },
+    {
+      "from": "src/core/rendering/export/formats/pdf.ts",
+      "to": "src/core/rendering/export/formats/pdf/settings.ts",
+      "symbols": [
+        "MARGIN",
+        "BODY",
+        "CODE",
+        "HEADING",
+        "PX",
+        "GAP",
+        "TIGHT",
+        "EX"
+      ],
+      "invariant": "Same shared dimensions and spacing constants."
+    },
+    {
+      "from": "src/core/rendering/export/formats/pdf.ts",
+      "to": "src/core/rendering/export/formats/pdf/writing/document.ts",
+      "symbols": [
+        "pdfDocument"
+      ],
+      "invariant": "Same A4 factory, metadata, default font null and bufferPages behavior."
+    },
+    {
+      "from": "src/core/rendering/export/formats/pdf.ts",
+      "to": "src/core/rendering/export/formats/pdf/fonts/adapter.ts",
+      "symbols": [
+        "splitByFont",
+        "JOINS",
+        "faces",
+        "fallbacks",
+        "fallbackOf",
+        "covered",
+        "faceKey",
+        "segments",
+        "metrics"
+      ],
+      "invariant": "Same ordered registration, builtin refusal, fallback maps, face selection and live metrics."
+    },
+    {
+      "from": "src/core/rendering/export/formats/pdf.ts",
+      "to": "src/core/rendering/export/formats/pdf/layout/breaks.ts",
+      "symbols": [
+        "OBJECT",
+        "words"
+      ],
+      "invariant": "Same Unicode words and object-character marker."
+    },
+    {
+      "from": "src/core/rendering/export/formats/pdf.ts",
+      "to": "src/core/rendering/export/formats/pdf/layout/lines.ts",
+      "symbols": [
+        "drawn",
+        "linePicture",
+        "lines",
+        "layout",
+        "textAtoms",
+        "cut",
+        "height"
+      ],
+      "invariant": "Same per-writer picture cache, fallback text atoms, metrics, line breaks and grapheme cuts; explicit font-method capability."
+    },
+    {
+      "from": "src/core/rendering/export/formats/pdf.ts",
+      "to": "src/core/rendering/export/formats/pdf/layout/paint.ts",
+      "symbols": [
+        "draw",
+        "flow"
+      ],
+      "invariant": "Same shared PDF target, baseline drawing, contiguous link areas and fit calls."
+    },
+    {
+      "from": "src/core/rendering/export/formats/pdf.ts",
+      "to": "src/core/rendering/export/formats/pdf/pages/pagination.ts",
+      "symbols": [
+        "bars",
+        "addPage",
+        "drawBar",
+        "ensure",
+        "page",
+        "barred",
+        "pageNumbers",
+        "pageNumber"
+      ],
+      "invariant": "Same per-writer bars, page fit, footer-before-release, cursor/margin restoration and streaming bar finally cleanup."
+    },
+    {
+      "from": "src/core/rendering/export/formats/pdf.ts",
+      "to": "src/core/rendering/export/formats/pdf/writing/blocks.ts",
+      "symbols": [
+        "notes",
+        "defs",
+        "chapter",
+        "outline",
+        "superscripts",
+        "boxes",
+        "inlines",
+        "text",
+        "noteId",
+        "writeChapter",
+        "blocks",
+        "heading",
+        "paragraph",
+        "quote",
+        "list",
+        "code",
+        "picture",
+        "displayMath",
+        "rule",
+        "table",
+        "endnotes"
+      ],
+      "invariant": "Same per-chapter notes/definitions/outline, glyph coverage order, block dispatch, styles, table continuation and notes."
+    },
+    {
+      "from": "src/core/rendering/export/formats/pdf.ts",
+      "to": "src/core/rendering/export/formats/pdf/writing/writer.ts",
+      "symbols": [
+        "pdf",
+        "write"
+      ],
+      "invariant": "Same document object, stream handlers, setImmediate yield, chapter order, footer/end/await and sink behavior."
+    }
+  ],
+  "primitives": [
+    "src/core/rendering/export/formats/pdf/contracts.ts",
+    "src/core/rendering/export/formats/pdf/settings.ts",
+    "src/core/rendering/export/formats/pdf/writing/document.ts",
+    "src/core/rendering/export/formats/pdf/fonts/adapter.ts",
+    "src/core/rendering/export/formats/pdf/layout/breaks.ts",
+    "src/core/rendering/export/formats/pdf/layout/lines.ts",
+    "src/core/rendering/export/formats/pdf/layout/paint.ts",
+    "src/core/rendering/export/formats/pdf/pages/pagination.ts",
+    "src/core/rendering/export/formats/pdf/writing/blocks.ts"
+  ],
+  "runtimeScc": {
+    "before": [
+      [
+        "src/tui/documents/editing/editing.ts",
+        "src/tui/documents/editing/snippets.ts"
+      ],
+      [
+        "src/tui/workspace/git/gitremote.ts",
+        "src/tui/workspace/git/views/review/rebase.ts"
+      ],
+      [
+        "src/core/rendering/export/formats/html.ts",
+        "src/core/rendering/export/formats/markdown.ts",
+        "src/core/rendering/export/stream.ts"
+      ],
+      [
+        "src/tui/documents/search/replacing.ts",
+        "src/tui/shell/overlays/overlays.ts",
+        "src/tui/workspace/search/search.ts"
+      ],
+      [
+        "src/tui/app/runtime/app.ts",
+        "src/tui/app/settings/settings.ts",
+        "src/tui/workspace/history/history.ts",
+        "src/tui/workspace/session/session.ts",
+        "src/tui/workspace/vaults/vaults.ts"
+      ],
+      [
+        "src/tui/actions/actions.ts",
+        "src/tui/actions/documents/actions-edit.ts",
+        "src/tui/actions/documents/actions-find.ts",
+        "src/tui/actions/documents/actions-links.ts",
+        "src/tui/actions/documents/actions-lsp.ts",
+        "src/tui/actions/documents/actions-view.ts",
+        "src/tui/actions/shell/actions-panes.ts",
+        "src/tui/actions/workspace/actions-files.ts"
+      ],
+      [
+        "src/tui/documents/diagnostics/draw-problems.ts",
+        "src/tui/documents/views/draw-header.ts",
+        "src/tui/documents/views/draw-pane.ts",
+        "src/tui/shell/overlays/draw-overlays.ts",
+        "src/tui/shell/panels/draw-panels.ts",
+        "src/tui/shell/screen/draw.ts",
+        "src/tui/shell/screen/statusbar/draw-status.ts",
+        "src/tui/workspace/git/views/panel/draw-git.ts"
+      ]
+    ],
+    "after": [
+      [
+        "src/tui/documents/editing/editing.ts",
+        "src/tui/documents/editing/snippets.ts"
+      ],
+      [
+        "src/tui/workspace/git/gitremote.ts",
+        "src/tui/workspace/git/views/review/rebase.ts"
+      ],
+      [
+        "src/core/rendering/export/formats/html.ts",
+        "src/core/rendering/export/formats/markdown.ts",
+        "src/core/rendering/export/stream.ts"
+      ],
+      [
+        "src/tui/documents/search/replacing.ts",
+        "src/tui/shell/overlays/overlays.ts",
+        "src/tui/workspace/search/search.ts"
+      ],
+      [
+        "src/tui/app/runtime/app.ts",
+        "src/tui/app/settings/settings.ts",
+        "src/tui/workspace/history/history.ts",
+        "src/tui/workspace/session/session.ts",
+        "src/tui/workspace/vaults/vaults.ts"
+      ],
+      [
+        "src/tui/actions/actions.ts",
+        "src/tui/actions/documents/actions-edit.ts",
+        "src/tui/actions/documents/actions-find.ts",
+        "src/tui/actions/documents/actions-links.ts",
+        "src/tui/actions/documents/actions-lsp.ts",
+        "src/tui/actions/documents/actions-view.ts",
+        "src/tui/actions/shell/actions-panes.ts",
+        "src/tui/actions/workspace/actions-files.ts"
+      ],
+      [
+        "src/tui/documents/diagnostics/draw-problems.ts",
+        "src/tui/documents/views/draw-header.ts",
+        "src/tui/documents/views/draw-pane.ts",
+        "src/tui/shell/overlays/draw-overlays.ts",
+        "src/tui/shell/panels/draw-panels.ts",
+        "src/tui/shell/screen/draw.ts",
+        "src/tui/shell/screen/statusbar/draw-status.ts",
+        "src/tui/workspace/git/views/panel/draw-git.ts"
+      ]
+    ]
+  },
+  "publicEntry": "src/core/rendering/export/formats/pdf.ts",
+  "newTests": [
+    "tests/core/rendering/export/pdf/fonts.test.ts",
+    "tests/core/rendering/export/pdf/lines.test.ts",
+    "tests/core/rendering/export/pdf/pagination.test.ts"
+  ],
+  "lazyBoundary": {
+    "unchanged": [
+      "src/core/rendering/export/index.ts",
+      "src/core/rendering/export/stream.ts"
+    ],
+    "entry": "./formats/pdf.ts",
+    "invariant": "PDFKit and the new collaborators remain below the existing dynamic imports; default font discovery and conversion still occur in toPdf."
+  },
+  "constructorOrder": [
+    "pdfDocument(doc,!streaming)",
+    "original font registration statements",
+    "side-effect-free layout/page/painter construction",
+    "original superscript then checkbox coverage checks",
+    "original output handlers and write lifecycle"
+  ],
+  "stateOwners": {
+    "PdfFonts": [
+      "faces",
+      "fallbacks",
+      "fallbackOf"
+    ],
+    "PdfLines": [
+      "drawn"
+    ],
+    "PdfPagination": [
+      "bars"
+    ],
+    "PdfBlocks": [
+      "notes",
+      "defs",
+      "chapter",
+      "outline",
+      "superscripts",
+      "boxes"
+    ],
+    "PdfWriter": [
+      "pdf",
+      "doc"
+    ]
+  }
+}
