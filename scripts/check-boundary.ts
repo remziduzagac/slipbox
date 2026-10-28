@@ -92,6 +92,26 @@ export function graphCompositionViolations(from: string, text: string): string[]
   });
 }
 
+/** Code-layout mechanisms depend on explicit inputs, never their page or public-entry composition (ORG-T26). */
+export const CODE_LAYOUT_PRIMITIVES = [
+  "src/core/rendering/layout/code/contracts.ts",
+  "src/core/rendering/layout/code/cells/framing.ts",
+  "src/core/rendering/layout/code/cells/blocks.ts",
+  "src/core/rendering/layout/code/wrapping/rows.ts",
+  "src/core/rendering/layout/code/documentation/comments.ts",
+  "src/core/rendering/layout/code/documentation/layout.ts",
+] as const;
+
+export function codeLayoutViolations(from: string, text: string): string[] {
+  if (!(CODE_LAYOUT_PRIMITIVES as readonly string[]).includes(from)) return [];
+  return importsOf(text).flatMap((spec) => {
+    const target = targetOf(from, spec);
+    return target === "src/core/rendering/layout/code/code" || target === "src/core/rendering/layout/code/page/compose"
+      ? [`${from}: imports ${spec} (code-layout helper must not import composition, even for types)`]
+      : [];
+  });
+}
+
 /** Presentation primitives stay below the App and region composers that call them (ORG-T9). */
 export const TUI_PRIMITIVES = [
   "src/tui/app/clipboard/clipboard.ts",
@@ -234,6 +254,7 @@ if (import.meta.main) {
     violations.push(...commandViolations(from, readFileSync(file, "utf8")));
     violations.push(...mutationViolations(from, readFileSync(file, "utf8")));
     violations.push(...graphCompositionViolations(from, readFileSync(file, "utf8")));
+    violations.push(...codeLayoutViolations(from, readFileSync(file, "utf8")));
     violations.push(...primitiveViolations(from, readFileSync(file, "utf8")));
     violations.push(...appCompositionViolations(from, readFileSync(file, "utf8")));
     violations.push(...drawingCompositionViolations(from, readFileSync(file, "utf8")));

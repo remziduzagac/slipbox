@@ -1021,6 +1021,13 @@ Graph as the sole mutable-index owner. Graph drops below 1,000 lines and its leg
 Reach receive explicit cohesive-owner assessments; T11 still owns the final staged-ceiling reconciliation. Exact edges,
 state/body preservation, isolated owner runs, compiled checks and the ancestor-Git fixture control are in its record.
 
+### T26 code-layout assessment
+
+[Task 26](tasks/26-code-layout-splits.md) preserves the code-layout entry while extracting explicit contracts, page
+composition, cell framing/block membership, structural wrapping and documentation owners. The legacy code cap is
+removed; the largest new owner is 533 lines. Block-diff formatting is retained with its distinct unit/tint semantics.
+The task records exact declaration/edge deltas and complete IR/source-map comparisons; no behavior change is intended.
+
 ### Measured completion and known failures
 
 T43 must publish completed, comparable scope runs for the mapped location/header, export-stream and regex cases. Report
