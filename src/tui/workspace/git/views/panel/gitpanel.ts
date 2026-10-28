@@ -11,101 +11,56 @@ import { headOf } from "../../../../../core/workspace/git/git.ts";
 import { type Changed, inVault } from "../../../../../core/workspace/git/branches/gitops.ts";
 import { changedLater } from "../../../../../core/workspace/git/branches/gitbranches.ts";
 import { agoSaid, isRemoteTracking, remoteMovedAt } from "../../../../../core/workspace/git/gitbase.ts";
-import { OPERATIONS } from "../../../../../core/workspace/git/branches/gitrebase.ts";
 import { commitLater, sections } from "../../../../../core/workspace/git/staging/gitstage.ts";
 import { formatEntry } from "../../../../../core/workspace/mutations/capture.ts";
 import { sanitize } from "../../../../../core/foundation/text/sanitize.ts";
 import { keyChar, spellKey } from "../../../../shell/input/keys.ts";
 import { match } from "../../../../shell/overlays/match.ts";
-import { BranchView, type BranchViewRow } from "../branches/gitbranchview.ts";
-import { type Drawing, REPO_ACTIONS, RepoView, type RepoViewRow } from "../branches/gitreposview.ts";
+import { BranchView } from "../branches/gitbranchview.ts";
+import { type Drawing, REPO_ACTIONS, RepoView } from "../branches/gitreposview.ts";
 import { Steady } from "../../gitsteady.ts";
-import {
-  backToPanel,
-  type ChangeRow,
-  type FileRow,
-  type GitSection,
-  relOf,
-  sectionAction,
-  workAction,
-  workRows,
-} from "./gitview.ts";
+import { backToPanel, relOf, sectionAction, workAction, workRows } from "./gitview.ts";
 import { pointedAt } from "./gitmouse.ts";
-import { operationNow } from "../../../../../core/workspace/git/branches/operation-status.ts";
 import type { App } from "../../../../app/runtime/app.ts";
-
-/** A section of the panel: the working tree's four; the branch's, this file's; the branches, the merged and older among
- *  them; the other repositories, the rest of home's. */
-export type SectionId = GitSection | "ahead" | "file" | "branches" | "older" | "repos" | "home";
-
-export interface HeadingRow {
-  kind: "heading";
-  section: SectionId;
-  label: string;
-}
-
-/** A line that says something, not a row to act on: "nothing uncommitted", "asking git…". */
-export interface NoteRow {
-  kind: "note";
-  text: string;
-}
-
-/** A file this branch changed against its base (GIT-D8): its vault path (null outside the vault). */
-export interface AheadRow {
-  kind: "ahead";
-  file: Changed;
-  rel: string | null;
-  base: string;
-}
-
-/** One of this file's own: its diff against the base, its history, who changed the cursor's line. */
-export interface ThisFileRow {
-  kind: "thisfile";
-  command: "git.diff" | "git.history" | "git.blame";
-  label: string;
-}
-
-export type PanelRow =
-  | HeadingRow
-  | NoteRow
-  | FileRow
-  | ChangeRow
-  | AheadRow
-  | ThisFileRow
-  | BranchViewRow
-  | RepoViewRow;
-
-/** A button at the panel's top (GIT-D8): what it says, the action its key runs, what it does. */
-export interface PanelButton {
-  id: string;
-  label: string;
-  action: string;
-  desc: string;
-}
+import type { AheadRow, HeadingRow, PanelButton, PanelRow, SectionId } from "../contracts.ts";
+import { PanelPresentation } from "./presentation.ts";
+export type { SectionId, HeadingRow, NoteRow, AheadRow, ThisFileRow, PanelRow, PanelButton } from "../contracts.ts";
 
 /** The panel's own state: the message typed, the sections folded, what's asked of git for it. */
 export class GitPanel {
+  private readonly presentation: PanelPresentation;
+
   constructor(readonly app: App) {
     this.branches = new BranchView(app);
     this.repos = new RepoView(app);
     this.steady = new Steady(app);
+
+    this.presentation = new PanelPresentation(this);
   }
 
   /** The branches (GIT-D9) and the repositories in the view (VV-D10): their state, what they ask of git. */
   readonly branches: BranchView;
+
   readonly repos: RepoView;
+
   /** Counted each time you act in the panel, by a key or a click: a branch made, selected once git lists it, isn't
    *  selected over a panel you've been using since (`BranchView.newWhere`). */
   touched = 0;
+
   /** The rows by what they are, as git answers (D261): the selection's, the pointer's, a click's. */
   readonly steady: Steady;
+
   /** The message box's text (GIT-D8), and whether keys go to it. */
   message = "";
+
   typing = false;
+
   /** A commit of the box's message under way: another waits for git's answer. */
   committing = false;
+
   /** The sections folded, by id: the merged and older branches, the other repositories, home's, to begin with. */
   readonly folded = new Set<SectionId>(["older", "repos", "home"]);
+
   /** What this branch changed against its base (GIT-D8), asked of git in the background, by the question asked. */
   private ahead: { key: string; base: string; files: Changed[] | null } | null = null;
 
@@ -252,80 +207,14 @@ export class GitPanel {
 
   /** Where the branch stands against its base, as the panel's top says it: `↑5 on main`; null for the base itself. */
   standing(): { ahead: number; behind: number; base: string } | null {
-    const here = this.branches.here();
-    const st = here ? this.branches.statsOf(here) : null;
-    return st?.base ? { ahead: st.ahead, behind: st.behind, base: st.base } : null;
+    return this.presentation.standing();
   }
 
   /** The buttons at the panel's top (GIT-D8), as the repository stands: commit with what's staged, the remote's; the
-   *  review while a change isn't staged, the merge screen while a file's in conflict; while a merge or a rebase is under
-   *  way, continue, skip (a rebase's) and abort. */
+   *  review while a change isn't staged, the merge screen while a file's in conflict; while a merge or a rebase is
+   * under  way, continue, skip (a rebase's) and abort. */
   buttons(): PanelButton[] {
-    const app = this.app;
-    const g = app.glyphs.git;
-    const work = sections(app.git.entries ?? []);
-    const staged = work.staged.length;
-    const t = app.git.track;
-    const up = !!t?.upstream && !t.gone;
-    const label = (glyph: string, text: string) => (glyph ? `${glyph} ${text}` : text);
-    const op = operationNow(app);
-    return [
-      {
-        id: "commit",
-        label: label(g.commit, `Commit${staged ? ` ${staged}` : ""}`),
-        action: "commit",
-        desc: "commits what's staged with the box's message; with none, in the editor",
-      },
-      { id: "amend", label: "Amend", action: "amend", desc: "amends the last commit with what's staged" },
-      ...(up
-        ? [
-            {
-              id: "pull",
-              label: label(app.glyphs.gitBehind, `Pull${t!.behind ? ` ${t!.behind}` : ""}`),
-              action: "pull",
-              desc: `brings in ${sanitize(t!.upstream!)}'s new commits; where both sides moved, asks how`,
-            },
-          ]
-        : []),
-      {
-        id: "push",
-        label: label(app.glyphs.gitAhead, up ? `Push${t!.ahead ? ` ${t!.ahead}` : ""}` : "Publish"),
-        action: "push",
-        desc: up ? `pushes to ${sanitize(t!.upstream!)}` : "pushes the branch to origin, and tracks it there",
-      },
-      { id: "fetch", label: label(g.fetch, "Fetch"), action: "fetch", desc: "fetches the remote's new commits" },
-      { id: "stash", label: "Stash", action: "stash", desc: "the stashes: the changes stashed, or one brought back" },
-      // The review (GIT-D3), while there's a change not staged; the merge screen (GIT-D5), while a file's in conflict.
-      ...(work.unstaged.length || work.untracked.length
-        ? [{ id: "review", label: "Review", action: "review", desc: "the changes not staged, a hunk at a time" }]
-        : []),
-      ...(work.conflicted.length
-        ? [
-            {
-              id: "resolve",
-              label: `Resolve ${work.conflicted.length}`,
-              action: "resolve",
-              desc: "the files in conflict, on the merge screen: a conflict at a time",
-            },
-          ]
-        : []),
-      // A merge, a rebase, a cherry-pick or a revert under way (GIT-D6): carried on, a commit left out (not a merge's),
-      // or given up.
-      ...(op
-        ? [
-            { id: "continue", label: "Continue", action: "continue", desc: OPERATIONS[op.kind].carryOn },
-            ...(OPERATIONS[op.kind].skip
-              ? [{ id: "skip", label: "Skip", action: "skip", desc: OPERATIONS[op.kind].skip! }]
-              : []),
-            {
-              id: "abort",
-              label: "Abort",
-              action: "abort",
-              desc: `the branch back where it was before the ${OPERATIONS[op.kind].noun}`,
-            },
-          ]
-        : []),
-    ];
+    return this.presentation.buttons();
   }
 
   /** A key's shortest name for one of the panel's actions, as its footer and its buttons say it; null when none is bound. */
@@ -351,69 +240,7 @@ export class GitPanel {
 
   /** The footer's keys for a row (GIT-D12): what its keys do to it, the commonest first. */
   footer(row: PanelRow | undefined): [string, string][] {
-    const k = (action: string, what: string): [string, string][] => {
-      const key = this.keyFor(action);
-      return key ? [[key, what]] : [];
-    };
-    if (!row || row.kind === "note")
-      return this.app.git.checkout
-        ? [
-            ...k("commit", "commit"),
-            ...k("fetch", "fetch"),
-            // A merge, a rebase, a cherry-pick or a revert under way (GIT-D6): `shift+r` offers continue, skip and abort.
-            ...(operationNow(this.app) ? k("rebase", "continue…") : []),
-          ]
-        : k("go", "go in");
-    switch (row.kind) {
-      case "heading": {
-        const s = row.section;
-        return [
-          ...k("open", this.folded.has(s) ? "unfold" : "fold"),
-          ...(s === "unstaged" || s === "untracked" ? k("stage", "stage all") : []),
-          ...(s === "staged" ? k("unstage", "unstage all") : []),
-          ...(s === "unstaged" ? k("discard", "discard all") : []),
-          ...(s === "unstaged" || s === "untracked" ? k("review", "review") : []),
-          ...(s === "conflicted" ? k("resolve", "merge screen") : []),
-          ...(s === "branches" ? k("new_branch", "new branch") : []),
-        ];
-      }
-      case "file":
-      case "change":
-        return [
-          ...(row.section === "conflicted" ? k("resolve", "merge screen") : []),
-          ...(row.section === "staged" ? k("unstage", "unstage") : k("stage", "stage")),
-          ...(row.section === "unstaged" || row.section === "untracked" ? k("discard", "discard") : []),
-          ...k("open", "diff"),
-          ...(row.section === "unstaged" || row.section === "untracked" ? k("review", "review") : []),
-          ...(row.kind === "file" ? k("expand", "changes") : []),
-          ...k("go", "open"),
-          ...k("menu", "more"),
-        ];
-      case "ahead":
-      case "bfile":
-      case "rfile":
-        return [...k("open", "diff"), ...(row.kind !== "bfile" ? k("go", "open") : []), ...k("menu", "more")];
-      case "thisfile":
-        return k("open", row.label.toLowerCase());
-      case "branch":
-        return [
-          ...k("open", row.open ? "fold" : "open up"),
-          ...(row.branch.worktree && !row.branch.here ? k("go", "go in") : []),
-          ...k("merge", "merge…"),
-          // The branch checked out here, rebased onto the base (GIT-D6).
-          ...(row.branch.here ? k("rebase", "rebase…") : []),
-          ...(row.branch.worktree && !row.branch.here && !row.branch.worktree.main ? k("discard", "remove") : []),
-          ...k("menu", "more"),
-        ];
-      case "bline":
-      case "bsub":
-      case "bbuttons":
-        return [...k("collapse", "fold"), ...k("menu", "more")];
-      case "repo":
-        return [...k("open", row.open ? "fold" : "open up"), ...k("go", "go in"), ...k("menu", "more")];
-      case "rcheckout":
-        return [...k("open", "go in"), ...k("menu", "more")];
-    }
+    return this.presentation.footer(row);
   }
 
   /** The rows' actions, run by the panel's keys (`[keys.git]`): moving, folding, the row's own, the panel's. */

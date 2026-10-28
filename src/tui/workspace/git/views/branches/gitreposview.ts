@@ -1,17 +1,17 @@
 // The git panel following the vault (VV-D10, GIT-D11): the repositories in the explorer's view — under the current
 // vault's own panel, folded, when it's a repository; the panel itself when it isn't (home, a vault without git,
 // Elsewhere) — each with what it has to say, ordered by what needs attention, opened up in place (its checkouts, a
-// worktree's branch among them; its changes, a file's diff a click away), gone into with `o`. In home, the rest of home's
-// repositories folded and counted under them. git is asked only about the rows on screen, in the background, again
-// when it has news and when the panel is opened. Sorted again only for a frame drawn, and not while the pointer is on
-// the panel's rows: a repository stays where it was drawn, under the pointer and under the keys, the selection on it.
+// worktree's branch among them; its changes, a file's diff a click away), gone into with `o`. In home, the rest of
+// home's repositories folded and counted under them. git is asked only about the rows on screen, in the background,
+// again when it has news and when the panel is opened. Sorted again only for a frame drawn, and not while the pointer
+// is on the panel's rows: a repository stays where it was drawn, under the pointer and under the keys, the selection on
+// it.
 
 import { beginGitRead } from "../../gitquery.ts";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import type { Checkout } from "../../../../../core/workspace/git/git.ts";
 import { showLater } from "../../../../../core/workspace/git/branches/gitops.ts";
-import type { StatusEntry } from "../../../../../core/workspace/git/staging/gitstage.ts";
 import {
   attention,
   type CheckoutState,
@@ -27,31 +27,8 @@ import { openDiff } from "../changes/diffview.ts";
 import { readForDiff } from "../panel/gitview.ts";
 import { match } from "../../../../shell/overlays/match.ts";
 import type { App } from "../../../../app/runtime/app.ts";
-import type { PanelRow } from "../panel/gitpanel.ts";
-
-/** A repository's row; `open` while it's opened up. */
-export interface RepoRow {
-  kind: "repo";
-  repo: RepoFound;
-  open: boolean;
-}
-
-/** One of a repository's checkouts, opened up: the main one, a worktree with its branch. */
-export interface RepoCheckoutRow {
-  kind: "rcheckout";
-  repo: RepoFound;
-  checkout: Checkout;
-}
-
-/** A file a checkout changed, not committed. */
-export interface RepoFileRow {
-  kind: "rfile";
-  repo: RepoFound;
-  checkout: Checkout;
-  entry: StatusEntry;
-}
-
-export type RepoViewRow = RepoRow | RepoCheckoutRow | RepoFileRow;
+import type { PanelRow, RepoFileRow, RepoViewRow } from "../contracts.ts";
+export type { RepoRow, RepoCheckoutRow, RepoFileRow, RepoViewRow } from "../contracts.ts";
 
 /** The actions a repository's, a checkout's or a file's row takes (`RepoView.action`): the rest are the panel's. */
 export const REPO_ACTIONS = new Set(["open", "expand", "collapse", "go", "menu"]);

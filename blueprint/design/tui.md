@@ -989,7 +989,11 @@ keys.
   another tab; `enter` opens one in this window. The heading is stepped over. The history never
   scrolls sideways: a name too long for the pane beside its hint is cut (`…`), the hint kept.
 - **Source control (left, `±`): the git panel**, by mouse as by keys, its keys shown (GIT-D8;
-  `tui/workspace/git/views/panel/gitpanel.ts`, the panel's state, rows, keys and footer, `app.gitPanel`;
+  `tui/workspace/git/views/panel/gitpanel.ts`, the panel's state, rows and keys, `app.gitPanel`;
+  `views/panel/presentation.ts`, its standing, buttons and footer;
+  `state/`, Git read scheduling and base/staged caches through live controller capabilities;
+  `views/branches/reads.ts` and `rows.ts`, branch data and row construction;
+  `views/branches/worktrees.ts`, App-backed interactive worktree prompts;
   `tui/workspace/git/views/panel/gitview.ts`, the working tree's sections;
   `tui/workspace/git/views/branches/gitbranchview.ts`, the branches; `tui/workspace/git/views/branches/gitreposview.ts`,
   the repositories; `tui/workspace/git/views/panel/draw-git.ts`; `tui/workspace/git/views/panel/gitmouse.ts`). `space g`

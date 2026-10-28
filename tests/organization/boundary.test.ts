@@ -137,6 +137,25 @@ describe("the boundary check (0.3, scripts/check-boundary.ts)", () => {
             : 'export type { Graph } from "../graph.ts";\n',
         ]),
       ),
+      "src/tui/workspace/git/git.ts": "export class Git {}\n",
+      ...Object.fromEntries(
+        [
+          "marks",
+          "state/contracts",
+          "state/reads",
+          "state/bases",
+          "state/staged",
+          "views/contracts",
+          "views/branches/reads",
+          "views/branches/rows",
+          "views/panel/presentation",
+        ].map((name) => [
+          `src/tui/workspace/git/${name}.ts`,
+          `export type { Git } from "${name.includes("/") ? "../".repeat(name.split("/").length - 1) : "./"}git"; ${name === "marks" ? 'export type { App } from "../../app/runtime/app";' : ""}\n`,
+        ]),
+      ),
+      "src/tui/workspace/git/views/branches/worktrees.ts":
+        'export type { BranchView } from "./gitbranchview"; export const load = () => import("../../../../app/runtime/app");\n',
       "src/tui/workspace/explorer/explorer.ts": "export interface TreeRow {}\n",
       ...Object.fromEntries(
         ["contracts", "rows/files", "rows/paths", "rows/tree", "navigation", "actions/items", "explorer-disk"].map(
@@ -185,6 +204,22 @@ describe("the boundary check (0.3, scripts/check-boundary.ts)", () => {
     ]) {
       expect(r.err).toContain(`src/core/rendering/export/formats/pdf/${name}.ts: imports`);
     }
+    expect(r.err).toContain("Git data mechanism must not import composition, even for types");
+    expect(r.err).toContain("marks.ts: imports ../../app/runtime/app");
+    for (const name of [
+      "marks",
+      "state/contracts",
+      "state/reads",
+      "state/bases",
+      "state/staged",
+      "views/contracts",
+      "views/branches/reads",
+      "views/branches/rows",
+      "views/panel/presentation",
+    ])
+      expect(r.err).toContain(`src/tui/workspace/git/${name}.ts: imports`);
+    expect(r.err).toContain("worktree client must not import parent composition");
+    expect(r.err).toContain("worktree client must not load App composition");
     expect(r.err).toContain("Explorer mechanism must not import composition, even for types");
     expect(r.err).toContain("rows/tree.ts: imports ../../../app/runtime/app");
     for (const name of [
@@ -270,6 +305,9 @@ describe("the boundary check (0.3, scripts/check-boundary.ts)", () => {
       expect(r.err).toContain(`${file}:`);
     expect(r.err).toContain("src/tui/shell/panels/focus.ts: imports ./panels");
     const typed = check({
+      "src/tui/app/runtime/app.ts": "export interface App {}\n",
+      "src/tui/workspace/git/views/branches/worktrees.ts":
+        'import type { App } from "../../../../app/runtime/app.ts"; export type Client = App;\n',
       "src/tui/shell/screen/draw.ts": "export interface Geometry {}\n",
       "src/tui/documents/views/draw-pane.ts":
         'import type { Geometry } from "../../shell/screen/draw.ts";\nexport type Frame = Geometry;\n',

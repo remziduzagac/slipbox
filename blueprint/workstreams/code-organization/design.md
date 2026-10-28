@@ -1074,8 +1074,12 @@ the task, including PDFKit's alpha-mask ID serialization variation. All seven ru
 independent lifecycles reviewable. The Explorer child separates file visibility, path policy, row construction,
 zoom/reveal and item dispatch through live capabilities. Explorer retains view/selection state, listing lifetime and
 its row/filter caches; IO remains delegated to the same file/vault owners. Its 1,274-line cap is removed. The unchanged
-574-line Files controller is assessed as cohesive write/preview policy; the Git child still owns the 1,005-line branch
-view and the Git/panel controller assessments before T30 is complete. T11 audits final size dispositions.
+574-line Files controller is assessed as cohesive write/preview policy. The Git child separates status scheduling,
+base/staged caches, branch reads/rows and panel presentation through live capabilities; interactive worktree prompts
+remain App-backed. The branch view falls from 1,005 to 473 lines and loses its cap. Git retains shared state and
+orchestration at 591 lines; the panel retains selection/input and action orchestration at 540. Both are below the final
+600-line ceiling; the task records why their shared lifecycles remain cohesive above the 500-line aim. T11 audits final
+size dispositions.
 
 ## Implementation tasks
 

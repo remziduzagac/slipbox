@@ -14,7 +14,6 @@ import { smallButton } from "../panels/draw-panels.ts";
 import { peekTitle } from "../../documents/navigation/peek.ts";
 import { drawPane } from "../../documents/views/draw-pane.ts";
 import { sanitize, sanitizeMap } from "../../../core/foundation/text/sanitize.ts";
-import type { GitState } from "../../../core/workspace/git/branches/gitops.ts";
 import type { Color } from "../../../core/rendering/theme/theme.ts";
 
 /**
@@ -765,14 +764,7 @@ export function marked(raw: string, positions: Iterable<number>): { text: string
   return { text: m.text, pos };
 }
 
-/** A file's git state as the explorer marks it (5.11). */
-export const GIT_MARK: Record<GitState, string> = {
-  new: "+",
-  modified: "M",
-  renamed: "R",
-  deleted: "D",
-  conflict: "!",
-};
+export { GIT_MARK } from "../../workspace/git/marks.ts";
 
 /**
  * A list as a dropdown hanging under `anchor` (the breadcrumb's `…`): framed like the other

@@ -167,6 +167,50 @@ export function markdownViolations(from: string, text: string): string[] {
   });
 }
 
+/** Git data/cache/presentation mechanisms stay below their controllers (ORG-T30). */
+export const GIT_DATA_MECHANISMS = [
+  "src/tui/workspace/git/marks.ts",
+  "src/tui/workspace/git/state/contracts.ts",
+  "src/tui/workspace/git/state/reads.ts",
+  "src/tui/workspace/git/state/bases.ts",
+  "src/tui/workspace/git/state/staged.ts",
+  "src/tui/workspace/git/views/contracts.ts",
+  "src/tui/workspace/git/views/branches/reads.ts",
+  "src/tui/workspace/git/views/branches/rows.ts",
+  "src/tui/workspace/git/views/panel/presentation.ts",
+] as const;
+
+export function gitMechanismViolations(from: string, text: string): string[] {
+  const app = "src/tui/app/runtime/app";
+  const parents = [
+    "src/tui/workspace/git/git",
+    "src/tui/workspace/git/views/panel/gitpanel",
+    "src/tui/workspace/git/views/branches/gitbranchview",
+  ];
+  if ((GIT_DATA_MECHANISMS as readonly string[]).includes(from))
+    return importsOf(text).flatMap((spec) =>
+      [app, ...parents].includes(targetOf(from, spec))
+        ? [`${from}: imports ${spec} (Git data mechanism must not import composition, even for types)`]
+        : [],
+    );
+  if (from !== "src/tui/workspace/git/views/branches/worktrees.ts") return [];
+  // This is an App-backed interactive client; App types are legitimate, runtime composition is not.
+  return [
+    ...importsOf(text).flatMap((spec) =>
+      parents.includes(targetOf(from, spec))
+        ? [`${from}: imports ${spec} (worktree client must not import parent composition)`]
+        : [],
+    ),
+    ...new Bun.Transpiler({ loader: "ts" })
+      .scanImports(text)
+      .flatMap(({ path }) =>
+        targetOf(from, path) === app
+          ? [`${from}: imports ${path} (worktree client must not load App composition)`]
+          : [],
+      ),
+  ];
+}
+
 /** Explorer mechanisms consume live capabilities below controller and App composition (ORG-T30). */
 export const EXPLORER_MECHANISMS = [
   "src/tui/workspace/explorer/contracts.ts",
@@ -361,6 +405,7 @@ if (import.meta.main) {
     violations.push(...markdownViolations(from, readFileSync(file, "utf8")));
     violations.push(...pdfViolations(from, readFileSync(file, "utf8")));
     violations.push(...explorerViolations(from, readFileSync(file, "utf8")));
+    violations.push(...gitMechanismViolations(from, readFileSync(file, "utf8")));
     violations.push(...primitiveViolations(from, readFileSync(file, "utf8")));
     violations.push(...appCompositionViolations(from, readFileSync(file, "utf8")));
     violations.push(...drawingCompositionViolations(from, readFileSync(file, "utf8")));

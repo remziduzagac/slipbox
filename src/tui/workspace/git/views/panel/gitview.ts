@@ -1,9 +1,9 @@
 // The git panel's working tree (plan 26.2, GIT-D8): the checkout's changed files by section — in conflict, staged,
 // changed and not staged, untracked — each opened up into its changes (`l`): a staged file's against the last commit, a
 // changed one's against what's staged, as on disk. `s` stages a file or a change, `u` unstages one, `d` discards one
-// (asking first: an untracked file goes to the trash); on a section's heading, its files all at once, in one call;
-// `a` stages everything and `U` unstages it. `enter` shows a file's or a change's diff, `o` opens the file there. The panel's keys,
-// buttons and mouse are gitpanel.ts's and gitmouse.ts's; these are what they run.
+// (asking first: an untracked file goes to the trash); on a section's heading, its files all at once, in one call; `a`
+// stages everything and `U` unstages it. `enter` shows a file's or a change's diff, `o` opens the file there. The
+// panel's keys, buttons and mouse are gitpanel.ts's and gitmouse.ts's; these are what they run.
 
 import { existsSync, lstatSync, readlinkSync } from "node:fs";
 import { basename, dirname, join, relative } from "node:path";
@@ -28,29 +28,9 @@ import { climbsOut, decodeText, readRegular } from "../../../../../core/foundati
 import { sanitize } from "../../../../../core/foundation/text/sanitize.ts";
 import { openDiff } from "../changes/diffview.ts";
 import { match } from "../../../../shell/overlays/match.ts";
-import type { HeadingRow } from "./gitpanel.ts";
 import type { App } from "../../../../app/runtime/app.ts";
-
-export type GitSection = "conflicted" | "staged" | "unstaged" | "untracked";
-
-/** A changed file in a section of the working tree: its state letter and name, its folder dimmed after it. */
-export interface FileRow {
-  kind: "file";
-  section: GitSection;
-  entry: StatusEntry;
-  label: string;
-  hint: string;
-}
-
-/** One change of a file opened up: where it is, its first line dimmed after it. */
-export interface ChangeRow {
-  kind: "change";
-  section: GitSection;
-  entry: StatusEntry;
-  change: GitChange;
-  label: string;
-  hint: string;
-}
+import type { ChangeRow, FileRow, GitSection, HeadingRow } from "../contracts.ts";
+export type { GitSection, FileRow, ChangeRow } from "../contracts.ts";
 
 export type WorkRow = FileRow | ChangeRow;
 
@@ -79,8 +59,8 @@ interface Texts {
 const texts = new WeakMap<App, Map<string, Texts>>();
 
 /**
- * A file's texts: the last commit's — a staged rename's (or copy's) under the name it had there (`from`), so its diff is
- * what changed, not the whole file added — and the index's, under the name it has now.
+ * A file's texts: the last commit's — a staged rename's (or copy's) under the name it had there (`from`), so its diff
+ * is what changed, not the whole file added — and the index's, under the name it has now.
  */
 function textsOf(app: App, e: Pick<StatusEntry, "path" | "from">): Texts | null {
   const c = app.git.checkout;

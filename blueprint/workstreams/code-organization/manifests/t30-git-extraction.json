@@ -1,0 +1,444 @@
+{
+  "moves": {},
+  "retained": [],
+  "renamedBasenames": {},
+  "edges": {
+    "removed": [
+      "src/tui/shell/overlays/draw-overlays.ts -> src/core/workspace/git/branches/gitops.ts",
+      "src/tui/workspace/git/git.ts -> src/core/workspace/git/gitbase.ts",
+      "src/tui/workspace/git/views/branches/gitbranchview.ts -> src/core/workspace/git/git.ts",
+      "src/tui/workspace/git/views/branches/gitbranchview.ts -> src/core/workspace/git/gitrepos.ts",
+      "src/tui/workspace/git/views/branches/gitbranchview.ts -> src/core/workspace/git/staging/gitstage.ts",
+      "src/tui/workspace/git/views/branches/gitbranchview.ts -> src/tui/shell/overlays/draw-overlays.ts",
+      "src/tui/workspace/git/views/branches/gitbranchview.ts -> src/tui/shell/overlays/match.ts",
+      "src/tui/workspace/git/views/branches/gitbranchview.ts -> src/tui/workspace/git/views/panel/gitpanel.ts",
+      "src/tui/workspace/git/views/branches/gitreposview.ts -> src/core/workspace/git/staging/gitstage.ts",
+      "src/tui/workspace/git/views/branches/gitreposview.ts -> src/tui/workspace/git/views/panel/gitpanel.ts",
+      "src/tui/workspace/git/views/panel/gitpanel.ts -> src/core/workspace/git/branches/gitrebase.ts",
+      "src/tui/workspace/git/views/panel/gitpanel.ts -> src/core/workspace/git/branches/operation-status.ts",
+      "src/tui/workspace/git/views/panel/gitview.ts -> src/tui/workspace/git/views/panel/gitpanel.ts"
+    ],
+    "added": [
+      "src/tui/shell/overlays/draw-overlays.ts -> src/tui/workspace/git/marks.ts",
+      "src/tui/workspace/git/git.ts -> src/tui/workspace/git/state/bases.ts",
+      "src/tui/workspace/git/git.ts -> src/tui/workspace/git/state/reads.ts",
+      "src/tui/workspace/git/git.ts -> src/tui/workspace/git/state/staged.ts",
+      "src/tui/workspace/git/marks.ts -> src/core/workspace/git/branches/gitops.ts",
+      "src/tui/workspace/git/state/bases.ts -> src/core/workspace/git/branches/gitops.ts",
+      "src/tui/workspace/git/state/bases.ts -> src/core/workspace/git/git.ts",
+      "src/tui/workspace/git/state/bases.ts -> src/core/workspace/git/gitbase.ts",
+      "src/tui/workspace/git/state/bases.ts -> src/tui/workspace/git/state/contracts.ts",
+      "src/tui/workspace/git/state/contracts.ts -> src/core/application/config/config.ts",
+      "src/tui/workspace/git/state/contracts.ts -> src/core/workspace/git/branches/gitops.ts",
+      "src/tui/workspace/git/state/contracts.ts -> src/core/workspace/git/branches/gitremote.ts",
+      "src/tui/workspace/git/state/contracts.ts -> src/core/workspace/git/git.ts",
+      "src/tui/workspace/git/state/contracts.ts -> src/core/workspace/git/staging/gitstage.ts",
+      "src/tui/workspace/git/state/contracts.ts -> src/core/workspace/vaults/vault.ts",
+      "src/tui/workspace/git/state/reads.ts -> src/core/workspace/git/branches/gitops.ts",
+      "src/tui/workspace/git/state/reads.ts -> src/core/workspace/git/git.ts",
+      "src/tui/workspace/git/state/reads.ts -> src/core/workspace/git/staging/gitstage.ts",
+      "src/tui/workspace/git/state/reads.ts -> src/core/workspace/vaults/vault.ts",
+      "src/tui/workspace/git/state/reads.ts -> src/tui/workspace/git/state/contracts.ts",
+      "src/tui/workspace/git/state/staged.ts -> src/core/workspace/git/branches/gitops.ts",
+      "src/tui/workspace/git/state/staged.ts -> src/core/workspace/git/gitsigns.ts",
+      "src/tui/workspace/git/state/staged.ts -> src/core/workspace/vaults/vault.ts",
+      "src/tui/workspace/git/state/staged.ts -> src/tui/documents/buffers/buffer.ts",
+      "src/tui/workspace/git/state/staged.ts -> src/tui/workspace/git/state/contracts.ts",
+      "src/tui/workspace/git/views/branches/gitbranchview.ts -> src/tui/workspace/git/views/branches/reads.ts",
+      "src/tui/workspace/git/views/branches/gitbranchview.ts -> src/tui/workspace/git/views/branches/rows.ts",
+      "src/tui/workspace/git/views/branches/gitbranchview.ts -> src/tui/workspace/git/views/branches/worktrees.ts",
+      "src/tui/workspace/git/views/branches/gitbranchview.ts -> src/tui/workspace/git/views/contracts.ts",
+      "src/tui/workspace/git/views/branches/gitreposview.ts -> src/tui/workspace/git/views/contracts.ts",
+      "src/tui/workspace/git/views/branches/reads.ts -> src/core/workspace/git/branches/gitbranches.ts",
+      "src/tui/workspace/git/views/branches/reads.ts -> src/core/workspace/git/branches/gitops.ts",
+      "src/tui/workspace/git/views/branches/reads.ts -> src/core/workspace/git/git.ts",
+      "src/tui/workspace/git/views/branches/reads.ts -> src/core/workspace/git/gitbase.ts",
+      "src/tui/workspace/git/views/branches/reads.ts -> src/core/workspace/git/gitrepos.ts",
+      "src/tui/workspace/git/views/branches/reads.ts -> src/tui/workspace/git/views/contracts.ts",
+      "src/tui/workspace/git/views/branches/rows.ts -> src/core/foundation/text/sanitize.ts",
+      "src/tui/workspace/git/views/branches/rows.ts -> src/core/workspace/git/branches/gitbranches.ts",
+      "src/tui/workspace/git/views/branches/rows.ts -> src/core/workspace/vaults/names.ts",
+      "src/tui/workspace/git/views/branches/rows.ts -> src/tui/shell/overlays/match.ts",
+      "src/tui/workspace/git/views/branches/rows.ts -> src/tui/workspace/git/marks.ts",
+      "src/tui/workspace/git/views/branches/rows.ts -> src/tui/workspace/git/views/contracts.ts",
+      "src/tui/workspace/git/views/branches/worktrees.ts -> src/core/foundation/text/sanitize.ts",
+      "src/tui/workspace/git/views/branches/worktrees.ts -> src/core/workspace/git/branches/gitbranches.ts",
+      "src/tui/workspace/git/views/branches/worktrees.ts -> src/core/workspace/git/branches/gitops.ts",
+      "src/tui/workspace/git/views/branches/worktrees.ts -> src/core/workspace/git/git.ts",
+      "src/tui/workspace/git/views/branches/worktrees.ts -> src/core/workspace/git/gitbase.ts",
+      "src/tui/workspace/git/views/branches/worktrees.ts -> src/core/workspace/vaults/names.ts",
+      "src/tui/workspace/git/views/branches/worktrees.ts -> src/tui/app/runtime/app.ts",
+      "src/tui/workspace/git/views/branches/worktrees.ts -> src/tui/shell/overlays/match.ts",
+      "src/tui/workspace/git/views/branches/worktrees.ts -> src/tui/workspace/git/views/contracts.ts",
+      "src/tui/workspace/git/views/contracts.ts -> src/core/application/config/config.ts",
+      "src/tui/workspace/git/views/contracts.ts -> src/core/rendering/theme/glyphs.ts",
+      "src/tui/workspace/git/views/contracts.ts -> src/core/workspace/git/branches/gitbranches.ts",
+      "src/tui/workspace/git/views/contracts.ts -> src/core/workspace/git/branches/gitops.ts",
+      "src/tui/workspace/git/views/contracts.ts -> src/core/workspace/git/branches/gitremote.ts",
+      "src/tui/workspace/git/views/contracts.ts -> src/core/workspace/git/branches/operation-status.ts",
+      "src/tui/workspace/git/views/contracts.ts -> src/core/workspace/git/git.ts",
+      "src/tui/workspace/git/views/contracts.ts -> src/core/workspace/git/gitrepos.ts",
+      "src/tui/workspace/git/views/contracts.ts -> src/core/workspace/git/gitsigns.ts",
+      "src/tui/workspace/git/views/contracts.ts -> src/core/workspace/git/staging/gitstage.ts",
+      "src/tui/workspace/git/views/panel/gitpanel.ts -> src/tui/workspace/git/views/contracts.ts",
+      "src/tui/workspace/git/views/panel/gitpanel.ts -> src/tui/workspace/git/views/panel/presentation.ts",
+      "src/tui/workspace/git/views/panel/gitview.ts -> src/tui/workspace/git/views/contracts.ts",
+      "src/tui/workspace/git/views/panel/presentation.ts -> src/core/foundation/text/sanitize.ts",
+      "src/tui/workspace/git/views/panel/presentation.ts -> src/core/workspace/git/branches/gitrebase.ts",
+      "src/tui/workspace/git/views/panel/presentation.ts -> src/core/workspace/git/branches/operation-status.ts",
+      "src/tui/workspace/git/views/panel/presentation.ts -> src/core/workspace/git/staging/gitstage.ts",
+      "src/tui/workspace/git/views/panel/presentation.ts -> src/tui/workspace/git/views/contracts.ts"
+    ]
+  },
+  "runtime": {
+    "removed": [
+      "src/tui/workspace/git/git.ts -> src/core/workspace/git/gitbase.ts",
+      "src/tui/workspace/git/git.ts -> src/core/workspace/git/gitsigns.ts",
+      "src/tui/workspace/git/views/branches/gitbranchview.ts -> src/core/workspace/git/git.ts",
+      "src/tui/workspace/git/views/branches/gitbranchview.ts -> src/core/workspace/git/gitrepos.ts",
+      "src/tui/workspace/git/views/branches/gitbranchview.ts -> src/tui/shell/overlays/draw-overlays.ts",
+      "src/tui/workspace/git/views/branches/gitbranchview.ts -> src/tui/shell/overlays/match.ts",
+      "src/tui/workspace/git/views/panel/gitpanel.ts -> src/core/workspace/git/branches/gitrebase.ts",
+      "src/tui/workspace/git/views/panel/gitpanel.ts -> src/core/workspace/git/branches/operation-status.ts"
+    ],
+    "added": [
+      "src/tui/shell/overlays/draw-overlays.ts -> src/tui/workspace/git/marks.ts",
+      "src/tui/workspace/git/git.ts -> src/tui/workspace/git/state/bases.ts",
+      "src/tui/workspace/git/git.ts -> src/tui/workspace/git/state/reads.ts",
+      "src/tui/workspace/git/git.ts -> src/tui/workspace/git/state/staged.ts",
+      "src/tui/workspace/git/state/bases.ts -> src/core/workspace/git/branches/gitops.ts",
+      "src/tui/workspace/git/state/bases.ts -> src/core/workspace/git/git.ts",
+      "src/tui/workspace/git/state/bases.ts -> src/core/workspace/git/gitbase.ts",
+      "src/tui/workspace/git/state/reads.ts -> src/core/workspace/git/branches/gitops.ts",
+      "src/tui/workspace/git/state/reads.ts -> src/core/workspace/git/staging/gitstage.ts",
+      "src/tui/workspace/git/state/reads.ts -> src/core/workspace/vaults/vault.ts",
+      "src/tui/workspace/git/state/staged.ts -> src/core/workspace/git/branches/gitops.ts",
+      "src/tui/workspace/git/state/staged.ts -> src/core/workspace/git/gitsigns.ts",
+      "src/tui/workspace/git/state/staged.ts -> src/core/workspace/vaults/vault.ts",
+      "src/tui/workspace/git/views/branches/gitbranchview.ts -> src/tui/workspace/git/views/branches/reads.ts",
+      "src/tui/workspace/git/views/branches/gitbranchview.ts -> src/tui/workspace/git/views/branches/rows.ts",
+      "src/tui/workspace/git/views/branches/gitbranchview.ts -> src/tui/workspace/git/views/branches/worktrees.ts",
+      "src/tui/workspace/git/views/branches/reads.ts -> src/core/workspace/git/branches/gitbranches.ts",
+      "src/tui/workspace/git/views/branches/reads.ts -> src/core/workspace/git/branches/gitops.ts",
+      "src/tui/workspace/git/views/branches/reads.ts -> src/core/workspace/git/git.ts",
+      "src/tui/workspace/git/views/branches/reads.ts -> src/core/workspace/git/gitbase.ts",
+      "src/tui/workspace/git/views/branches/reads.ts -> src/core/workspace/git/gitrepos.ts",
+      "src/tui/workspace/git/views/branches/rows.ts -> src/core/foundation/text/sanitize.ts",
+      "src/tui/workspace/git/views/branches/rows.ts -> src/core/workspace/git/branches/gitbranches.ts",
+      "src/tui/workspace/git/views/branches/rows.ts -> src/core/workspace/vaults/names.ts",
+      "src/tui/workspace/git/views/branches/rows.ts -> src/tui/shell/overlays/match.ts",
+      "src/tui/workspace/git/views/branches/rows.ts -> src/tui/workspace/git/marks.ts",
+      "src/tui/workspace/git/views/branches/worktrees.ts -> src/core/foundation/text/sanitize.ts",
+      "src/tui/workspace/git/views/branches/worktrees.ts -> src/core/workspace/git/branches/gitbranches.ts",
+      "src/tui/workspace/git/views/branches/worktrees.ts -> src/core/workspace/git/branches/gitops.ts",
+      "src/tui/workspace/git/views/branches/worktrees.ts -> src/core/workspace/git/git.ts",
+      "src/tui/workspace/git/views/branches/worktrees.ts -> src/core/workspace/git/gitbase.ts",
+      "src/tui/workspace/git/views/branches/worktrees.ts -> src/core/workspace/vaults/names.ts",
+      "src/tui/workspace/git/views/branches/worktrees.ts -> src/tui/shell/overlays/match.ts",
+      "src/tui/workspace/git/views/panel/gitpanel.ts -> src/tui/workspace/git/views/panel/presentation.ts",
+      "src/tui/workspace/git/views/panel/presentation.ts -> src/core/foundation/text/sanitize.ts",
+      "src/tui/workspace/git/views/panel/presentation.ts -> src/core/workspace/git/branches/gitrebase.ts",
+      "src/tui/workspace/git/views/panel/presentation.ts -> src/core/workspace/git/branches/operation-status.ts",
+      "src/tui/workspace/git/views/panel/presentation.ts -> src/core/workspace/git/staging/gitstage.ts"
+    ]
+  },
+  "tests": {
+    "removed": [],
+    "added": [
+      "test: a missing checkout is memoized until the existing one-second retry or a root change",
+      "test: a new branch with an invalid name stops before placement and leaves the branch list unchanged",
+      "test: base memoization keeps its original generation key and explicit invalidation boundary",
+      "test: branch answer admission rejects failures and foreign roots while allowing the newest pending list to advance",
+      "test: branch reads keep the previous answer while a new generation is listed and honor the waiting caller's visit",
+      "test: branch row buttons stay in place before stats arrive, and live filtering can hide the section",
+      "test: comparison invalidation drops only the named branch's cached stat and file answers",
+      "test: no checkout clears the same folder map and advances generation without replacing unrelated entries",
+      "test: panel footer keys and folded hints follow their current owner without copying its state",
+      "test: panel presentation reads live entries and keeps the operation cache keyed by the same caller",
+      "test: removing the current worktree is refused before opening a confirmation or changing the checkout",
+      "test: staged answers share each buffer identity, retain old signs while refreshing and cache the new version",
+      "test: status requests coalesce one follow-up and ignore its answer after the root changes"
+    ]
+  },
+  "entries": {
+    "removed": [],
+    "added": []
+  },
+  "extraction": [
+    {
+      "from": "src/tui/workspace/git/git.ts",
+      "to": "src/tui/workspace/git/state/reads.ts",
+      "symbols": [
+        "checkoutMemo",
+        "checkout",
+        "timer",
+        "asking",
+        "again",
+        "refresh",
+        "refreshNow"
+      ]
+    },
+    {
+      "from": "src/tui/workspace/git/git.ts",
+      "to": "src/tui/workspace/git/state/bases.ts",
+      "symbols": [
+        "baseMemo",
+        "fallbackMemo",
+        "baseOf",
+        "fallbackBase",
+        "forgetBase",
+        "baseLater"
+      ]
+    },
+    {
+      "from": "src/tui/workspace/git/git.ts",
+      "to": "src/tui/workspace/git/state/staged.ts",
+      "symbols": [
+        "staged",
+        "stagedAsking",
+        "changeMemo",
+        "changesOf",
+        "stagedText"
+      ]
+    },
+    {
+      "from": "src/tui/workspace/git/views/panel/gitpanel.ts",
+      "to": "src/tui/workspace/git/views/panel/presentation.ts",
+      "symbols": [
+        "standing",
+        "buttons",
+        "footer"
+      ]
+    },
+    {
+      "from": "src/tui/workspace/git/views/branches/gitbranchview.ts",
+      "to": "src/tui/workspace/git/views/branches/reads.ts",
+      "symbols": [
+        "list",
+        "stats",
+        "files",
+        "key",
+        "branches",
+        "listed",
+        "here",
+        "statsOf",
+        "ask",
+        "filesOf"
+      ]
+    },
+    {
+      "from": "src/tui/workspace/git/views/branches/gitbranchview.ts",
+      "to": "src/tui/workspace/git/views/branches/rows.ts",
+      "symbols": [
+        "rows",
+        "branchRows"
+      ]
+    },
+    {
+      "from": "src/tui/workspace/git/views/branches/gitbranchview.ts",
+      "to": "src/tui/workspace/git/views/branches/worktrees.ts",
+      "symbols": [
+        "remove",
+        "worktreeFor",
+        "askFolder",
+        "newBranch",
+        "newWhere"
+      ]
+    },
+    {
+      "from": "src/tui/workspace/git/views/panel/gitpanel.ts",
+      "to": "src/tui/workspace/git/views/contracts.ts",
+      "symbols": [
+        "SectionId",
+        "HeadingRow",
+        "NoteRow",
+        "AheadRow",
+        "ThisFileRow",
+        "PanelRow",
+        "PanelButton"
+      ]
+    },
+    {
+      "from": "src/tui/workspace/git/views/branches/gitbranchview.ts",
+      "to": "src/tui/workspace/git/views/contracts.ts",
+      "symbols": [
+        "BranchRow",
+        "BranchLineRow",
+        "BranchButtonsRow",
+        "BranchFileRow",
+        "BranchSubRow",
+        "BranchViewRow",
+        "BranchFiles",
+        "BranchList",
+        "Asked"
+      ]
+    },
+    {
+      "from": "src/tui/workspace/git/views/branches/gitreposview.ts",
+      "to": "src/tui/workspace/git/views/contracts.ts",
+      "symbols": [
+        "RepoRow",
+        "RepoCheckoutRow",
+        "RepoFileRow",
+        "RepoViewRow"
+      ]
+    },
+    {
+      "from": "src/tui/workspace/git/views/panel/gitview.ts",
+      "to": "src/tui/workspace/git/views/contracts.ts",
+      "symbols": [
+        "GitSection",
+        "FileRow",
+        "ChangeRow"
+      ]
+    },
+    {
+      "from": "src/tui/workspace/git/git.ts",
+      "to": "src/tui/workspace/git/state/reads.ts",
+      "symbols": [
+        "GIT_RANK"
+      ]
+    },
+    {
+      "from": "src/tui/workspace/git/views/branches/gitbranchview.ts",
+      "to": "src/tui/workspace/git/views/branches/reads.ts",
+      "symbols": [
+        "shownOn"
+      ]
+    },
+    {
+      "from": "src/tui/shell/overlays/draw-overlays.ts",
+      "to": "src/tui/workspace/git/marks.ts",
+      "symbols": [
+        "GIT_MARK"
+      ]
+    }
+  ],
+  "primitives": [
+    "src/tui/workspace/git/marks.ts",
+    "src/tui/workspace/git/state/contracts.ts",
+    "src/tui/workspace/git/state/reads.ts",
+    "src/tui/workspace/git/state/bases.ts",
+    "src/tui/workspace/git/state/staged.ts",
+    "src/tui/workspace/git/views/contracts.ts",
+    "src/tui/workspace/git/views/branches/reads.ts",
+    "src/tui/workspace/git/views/branches/rows.ts",
+    "src/tui/workspace/git/views/panel/presentation.ts"
+  ],
+  "AppBackedClients": [
+    "src/tui/workspace/git/views/branches/worktrees.ts"
+  ],
+  "stateOwnership": {
+    "Git": "controller-owned status/folders/generation/entries/track; original serialized-read, base and staged caches each have one collaborator",
+    "BranchView": "one BranchReads for list/stat/file caches; original opened Set remains controller-owned; worktree client reads the same list reference and delegates visit/selection checks",
+    "GitPanel": "original branch/repository/steady objects, message/typing/commit/fold state and async row caches remain controller-owned; presentation reads the same App context",
+    "worktreeClient": "interactive App client; original dialogs, IO, visit/keys/touched guards, settlement and refusals unchanged",
+    "rowContracts": "23 identical original type token trees; old type facades retained",
+    "marks": "same mutable GIT_MARK object through the existing drawing re-export"
+  },
+  "invalidationSeam": {
+    "caller": "BranchView.compareWith",
+    "owner": "BranchReads.forgetBranch",
+    "effects": [
+      "stats.delete(name)",
+      "files.delete(name)"
+    ],
+    "ordering": "same adjacent deletions between keepBase and git.forgetBase; no other cache is cleared"
+  },
+  "runtimeScc": {
+    "before": [
+      [
+        "src/tui/documents/editing/editing.ts",
+        "src/tui/documents/editing/snippets.ts"
+      ],
+      [
+        "src/tui/workspace/git/gitremote.ts",
+        "src/tui/workspace/git/views/review/rebase.ts"
+      ],
+      [
+        "src/core/rendering/export/formats/html.ts",
+        "src/core/rendering/export/formats/markdown.ts",
+        "src/core/rendering/export/stream.ts"
+      ],
+      [
+        "src/tui/documents/search/replacing.ts",
+        "src/tui/shell/overlays/overlays.ts",
+        "src/tui/workspace/search/search.ts"
+      ],
+      [
+        "src/tui/app/runtime/app.ts",
+        "src/tui/app/settings/settings.ts",
+        "src/tui/workspace/history/history.ts",
+        "src/tui/workspace/session/session.ts",
+        "src/tui/workspace/vaults/vaults.ts"
+      ],
+      [
+        "src/tui/actions/actions.ts",
+        "src/tui/actions/documents/actions-edit.ts",
+        "src/tui/actions/documents/actions-find.ts",
+        "src/tui/actions/documents/actions-links.ts",
+        "src/tui/actions/documents/actions-lsp.ts",
+        "src/tui/actions/documents/actions-view.ts",
+        "src/tui/actions/shell/actions-panes.ts",
+        "src/tui/actions/workspace/actions-files.ts"
+      ],
+      [
+        "src/tui/documents/diagnostics/draw-problems.ts",
+        "src/tui/documents/views/draw-header.ts",
+        "src/tui/documents/views/draw-pane.ts",
+        "src/tui/shell/overlays/draw-overlays.ts",
+        "src/tui/shell/panels/draw-panels.ts",
+        "src/tui/shell/screen/draw.ts",
+        "src/tui/shell/screen/statusbar/draw-status.ts",
+        "src/tui/workspace/git/views/panel/draw-git.ts"
+      ]
+    ],
+    "after": [
+      [
+        "src/tui/documents/editing/editing.ts",
+        "src/tui/documents/editing/snippets.ts"
+      ],
+      [
+        "src/tui/workspace/git/gitremote.ts",
+        "src/tui/workspace/git/views/review/rebase.ts"
+      ],
+      [
+        "src/core/rendering/export/formats/html.ts",
+        "src/core/rendering/export/formats/markdown.ts",
+        "src/core/rendering/export/stream.ts"
+      ],
+      [
+        "src/tui/documents/search/replacing.ts",
+        "src/tui/shell/overlays/overlays.ts",
+        "src/tui/workspace/search/search.ts"
+      ],
+      [
+        "src/tui/app/runtime/app.ts",
+        "src/tui/app/settings/settings.ts",
+        "src/tui/workspace/history/history.ts",
+        "src/tui/workspace/session/session.ts",
+        "src/tui/workspace/vaults/vaults.ts"
+      ],
+      [
+        "src/tui/actions/actions.ts",
+        "src/tui/actions/documents/actions-edit.ts",
+        "src/tui/actions/documents/actions-find.ts",
+        "src/tui/actions/documents/actions-links.ts",
+        "src/tui/actions/documents/actions-lsp.ts",
+        "src/tui/actions/documents/actions-view.ts",
+        "src/tui/actions/shell/actions-panes.ts",
+        "src/tui/actions/workspace/actions-files.ts"
+      ],
+      [
+        "src/tui/documents/diagnostics/draw-problems.ts",
+        "src/tui/documents/views/draw-header.ts",
+        "src/tui/documents/views/draw-pane.ts",
+        "src/tui/shell/overlays/draw-overlays.ts",
+        "src/tui/shell/panels/draw-panels.ts",
+        "src/tui/shell/screen/draw.ts",
+        "src/tui/shell/screen/statusbar/draw-status.ts",
+        "src/tui/workspace/git/views/panel/draw-git.ts"
+      ]
+    ]
+  }
+}
