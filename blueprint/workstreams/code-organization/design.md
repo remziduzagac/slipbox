@@ -1117,6 +1117,15 @@ workspace Search, which retains its index/feed/list lifecycle, unsaved overlay a
 TUI buffers and live context are used. One three-module runtime cycle is removed; the other six memberships remain
 unchanged. Public exports, ranking/fallback, existing tests and fixtures stay compatible. No gateway executes here.
 
+### T35 rename assessment
+
+[Task 35](tasks/35-rename-splits.md) separates target/source admission, move/nested-root planning, link rewriting,
+relink/pointer offers and collection policy/contracts below compatible public entries. The complete Collector retains
+its original state, read-once text and skip/edit behavior; apply/undo and stale checks remain byte-identical execution
+owners. The 812-line cap is removed, leaving five exact handwritten exceptions at the 750-line stage. All ten new
+owners are below 500 lines. Existing byte edits, plan schema, fixtures and runtime SCC membership are preserved.
+No gateway executes or retains plans here.
+
 ## Implementation tasks
 
 The 44 files below are authoritative for task scope, evidence, status and dependencies. This section is a navigation

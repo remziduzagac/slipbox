@@ -79,6 +79,9 @@ A few modules to know first:
 - `core/workspace/mutations/rename/rename.ts`: renames and moves as plans of byte-range edits, previewed first;
   `rename-plan.ts` defines the plan, and `rename-apply.ts` carries it out and undoes it. Shared trash storage and
   vault-marker operations live below both file operations and rename execution in `core/workspace/mutations/trash.ts`.
+  `rename/planning/` separates target/source admission, moves, nested roots and relink; `rewriting/` keeps link forms.
+  `collecting/` owns the original plan contracts, read-once Collector, admission policy and dirty-tree warnings.
+  Public exports remain compatible; collection and planning never import apply execution.
 - `core/documents/model/note.ts` and `core/rendering/layout/`: a note from its text to rows for a width, shared by
   `slipbox render` and the TUI. The Markdown `render.ts` entry delegates context/cache ownership to `page/render.ts`,
   recursive blocks to `blocks/dispatch.ts`, row finishing to `rows/` and pictures to `pictures/layout.ts`; inline,
