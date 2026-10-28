@@ -75,6 +75,10 @@ export class Panels {
     return this.focus.sidebarShown;
   }
 
+  leave(side: "sidebar" | "outline"): void {
+    this.focus.leave(side);
+  }
+
   get sidebarBeside(): boolean {
     return this.sidebarShown && !this.narrow && !this.app.ui.zen;
   }

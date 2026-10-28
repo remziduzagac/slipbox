@@ -69,6 +69,10 @@ export function mutationViolations(from: string, text: string): string[] {
 
 /** Presentation primitives stay below the App and region composers that call them (ORG-T9). */
 export const TUI_PRIMITIVES = [
+  "src/tui/app/clipboard/clipboard.ts",
+  "src/tui/app/notifications/contracts.ts",
+  "src/tui/app/notifications/toasts.ts",
+  "src/tui/documents/tools/navigation.ts",
   "src/tui/documents/editing/editable.ts",
   "src/tui/documents/views/header-layout.ts",
   "src/tui/shell/input/modes.ts",

@@ -68,4 +68,24 @@ describe("panel focus controller without App", () => {
     focus.fixRegion();
     expect<PanelFocusHost["region"]>(host.region).toBe("content");
   });
+
+  test("leaving either side preserves wide preferences and hides only its narrow or zen overlay", () => {
+    for (const side of ["sidebar", "outline"] as const) {
+      const { host, focus } = fixture();
+      host[side] = { visible: true, overlay: true };
+      host.region = side;
+      focus.leave(side);
+      expect<PanelFocusHost["region"]>(host.region).toBe("content");
+      expect(host[side]).toEqual({ visible: true, overlay: true });
+      host.narrow = true;
+      host.region = side;
+      focus.leave(side);
+      expect(host[side]).toEqual({ visible: true, overlay: false });
+      host.narrow = false;
+      host.ui.zen = true;
+      host[side] = { visible: false, overlay: true };
+      focus.leave(side);
+      expect(host[side]).toEqual({ visible: false, overlay: false });
+    }
+  });
 });

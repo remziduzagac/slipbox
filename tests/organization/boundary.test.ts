@@ -59,6 +59,10 @@ describe("the boundary check (0.3, scripts/check-boundary.ts)", () => {
       "src/tui/shell/screen/topbar/where.ts": 'export * from "../../../workspace/git/views/review/rebase.ts";\n',
       "src/tui/shell/screen/topbar/contracts.ts":
         'import type { App } from "../../../app/runtime/app.ts";\nexport type Reverse = App;\n',
+      "src/tui/app/clipboard/clipboard.ts": 'import type { App } from "../runtime/app.ts";\n',
+      "src/tui/app/notifications/contracts.ts": 'export type { Message } from "../runtime/app.ts";\n',
+      "src/tui/app/notifications/toasts.ts": 'export * from "../runtime/app";\n',
+      "src/tui/documents/tools/navigation.ts": 'import("../../app/runtime/app.ts");\n',
       "tests/support/tui/sandbox.ts":
         'import { App } from "../../../src/tui/app/runtime/app.ts";\nexport const reverse = App;\n',
       "src/tui/shell/screen/draw.ts": "export interface Geometry {}\nexport const draw = () => {};\n",
@@ -71,6 +75,10 @@ describe("the boundary check (0.3, scripts/check-boundary.ts)", () => {
     expect(r.err).toContain("filesystem fixture must stay independent of the TUI model");
     expect(r.err).toContain("drawing client must stay below screen composition");
     for (const file of [
+      "src/tui/app/clipboard/clipboard.ts",
+      "src/tui/app/notifications/contracts.ts",
+      "src/tui/app/notifications/toasts.ts",
+      "src/tui/documents/tools/navigation.ts",
       "src/tui/shell/panels/focus.ts",
       "src/tui/shell/screen/topbar/where.ts",
       "src/tui/shell/screen/topbar/contracts.ts",

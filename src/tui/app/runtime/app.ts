@@ -35,14 +35,15 @@ import { placeAt, stopInsert } from "../../documents/editing/editing.ts";
 import { newVimState } from "../../shell/input/vim.ts";
 import type { ReplaceState } from "../../documents/search/replacing.ts";
 import { homedir } from "node:os";
-import { copyTextAsync, osc52Sequence, readClipboardAsync } from "../../../core/foundation/platform/clipboard.ts";
+import { Clipboard } from "../clipboard/clipboard.ts";
+import { ToastScheduler } from "../notifications/toasts.ts";
 import { CommandRegistry, type Keymap } from "../../../core/application/commands/registry.ts";
 import { type Config, loadConfig } from "../../../core/application/config/config.ts";
 import type { Glyphs } from "../../../core/rendering/theme/glyphs.ts";
 import type { Graph } from "../../../core/workspace/graph/graph.ts";
 import { lintCommand } from "../../../core/documents/diagnostics/lint.ts";
 import { type Layout, posOfSrc, srcAt } from "../../../core/rendering/layout/ir.ts";
-import { slipboxOwn, stateDir } from "../../../core/foundation/platform/paths.ts";
+import { slipboxOwn } from "../../../core/foundation/platform/paths.ts";
 import {
   type Anchor,
   type CursorAnchor,
@@ -146,15 +147,8 @@ export interface Host {
   terminal?(): TerminalAnswer | null;
 }
 
-export type Level = "info" | "warn" | "error";
-
-export interface Message {
-  level: Level;
-  text: string;
-  at: number;
-  /** When its box was first drawn: its time to show counts from then (#40). */
-  shown?: number;
-}
+import type { Level, Message } from "../notifications/contracts.ts";
+export type { Level, Message } from "../notifications/contracts.ts";
 
 export interface Loc {
   key: string;
@@ -466,7 +460,7 @@ export class App {
   private saidInClick: Set<string> | null = null;
   /** The messages showing as floating boxes, newest first (each for 4 s, 8 s an error, from when it's first drawn). */
   toasts: Message[] = [];
-  private toastTimer: ReturnType<typeof setTimeout> | null = null;
+  private readonly toastScheduler = new ToastScheduler(this);
 
   /** The newest message still showing. */
   get transient(): Message | null {
@@ -786,7 +780,7 @@ export class App {
     const m = this.listMessage(level, text);
     // The same message again (a key held down) refreshes its box rather than stacking another.
     this.toasts = [m, ...this.toasts.filter((t) => t.text !== text || t.level !== level)].slice(0, TOAST_LIMIT);
-    this.scheduleToasts();
+    this.toastScheduler.scheduleToasts();
     // Drawn as it's said, wherever from: a key's command, or git answering in the background, with nothing else to
     // draw it (D263). Said while a frame is painted, it waits for the next, as before: OpenTUI draws again at once for a
     // request made while it draws, so something said on every frame would keep drawing. Said before the host is there
@@ -812,45 +806,14 @@ export class App {
     return m;
   }
 
-  /** How long a message shows. */
-  private toastMs(m: Message): number {
-    return m.level === "error" ? 8000 : 4000;
-  }
-
-  /** Drop the messages whose time is up, and wake again when the next one's is. One not drawn yet keeps its time:
-   *  said while slipbox was busy (a start indexing, a slow machine), it isn't gone before it's seen (#40). */
-  private scheduleToasts(): void {
-    if (this.toastTimer) clearTimeout(this.toastTimer);
-    this.toastTimer = null;
-    const now = this.now();
-    const ends = (t: Message) => (t.shown ?? now) + this.toastMs(t);
-    this.toasts = this.toasts.filter((t) => ends(t) > now);
-    const drawn = this.toasts.filter((t) => t.shown !== undefined);
-    if (!drawn.length) return;
-    const next = Math.min(...drawn.map(ends)) - now;
-    this.toastTimer = setTimeout(
-      () => {
-        this.scheduleToasts();
-        this.host.requestRender();
-      },
-      Math.max(10, next),
-    );
-    (this.toastTimer as { unref?: () => void }).unref?.();
-  }
-
   /** The messages a frame has just drawn: their time begins, those not drawn before. */
   toastsDrawn(drawn: Message[]): void {
-    const now = this.now();
-    let fresh = false;
-    for (const t of drawn) if (t.shown === undefined) (t.shown = now), (fresh = true);
-    if (fresh) this.scheduleToasts();
+    this.toastScheduler.toastsDrawn(drawn);
   }
 
   /** Clear the floating messages (a click on one opens the messages list; they're all there). */
   dismissToasts(): void {
-    this.toasts = [];
-    if (this.toastTimer) clearTimeout(this.toastTimer);
-    this.toastTimer = null;
+    this.toastScheduler.dismissToasts();
   }
 
   // -------------------------------------------------------------------------------------------
@@ -1342,67 +1305,16 @@ export class App {
   // -------------------------------------------------------------------------------------------
   // The clipboard, every view and buffer, quitting.
 
-  private clipboardTask: Promise<unknown> = Promise.resolve();
-  private clipboardAbort = new AbortController();
-  private clipboardPending = 0;
+  private readonly clipboard = new Clipboard(this);
 
-  /**
-   * What `p` puts: the system clipboard when it can be read and holds something else than the
-   * register (text copied in another app); else the register — whose line-wise-ness a clipboard
-   * that holds the same text keeps.
-   */
-  async pasteText(): Promise<{ text: string; linewise: boolean } | null> {
-    await this.clipboardTask;
-    const reg = this.vim.register;
-    const clip = await readClipboardAsync(stateDir(this.loc), this.clipboardAbort.signal);
-    if (clip === null || clip === "" || (reg && clip === reg.text)) return reg;
-    return { text: clip, linewise: false };
+  /** System clipboard first, otherwise the current vim register, preserving linewise copies. */
+  pasteText(): Promise<{ text: string; linewise: boolean } | null> {
+    return this.clipboard.pasteText();
   }
 
-  /** Text on the clipboard; said so (`what` names it: "copied <what>"), unless `announce` is false. */
+  /** Text on the clipboard; said so unless `announce` is false. */
   copy(text: string, announce = true, what = `${text.length} characters`): Promise<boolean> {
-    // Said whether or not the caller announces: its own "copied" or "yanked" would claim a copy that never happens.
-    if (this.clipboardPending >= 8) {
-      this.message("warn", "clipboard busy — copy again after it finishes");
-      return Promise.resolve(false);
-    }
-    // OSC 52 now, in the order copies are made, as it was when copying waited for the helpers: the terminal's
-    // clipboard never waits for them, only the system's.
-    const osc52 = osc52Sequence(text) !== null && this.host.osc52(text);
-    const run = async () => {
-      if (this.quitting) return false;
-      const r = await copyTextAsync(text, {
-        osc52: () => osc52,
-        fallbackDir: stateDir(this.loc),
-        signal: this.clipboardAbort.signal,
-      });
-      if (this.quitting) return false;
-      // SLIPBOX_CLIPBOARD=file sends copies to the file on purpose; otherwise the file means no clipboard answered.
-      const onPurpose = process.env.SLIPBOX_CLIPBOARD === "file";
-      if (announce) {
-        this.message(
-          "info",
-          r.file
-            ? onPurpose
-              ? `copied ${what} to ${r.file}`
-              : `clipboard unavailable — wrote ${r.file} (${what})`
-            : `copied ${what}`,
-        );
-        // The helper answered after the key's frame was drawn: drawn now, not at the next key.
-        this.host.requestRender();
-      }
-      return !r.file;
-    };
-    this.clipboardPending++;
-    const task = this.clipboardTask.then(run).catch((err) => {
-      if (this.quitting) return false;
-      this.message("warn", `clipboard: ${(err as Error).message}`);
-      this.host.requestRender();
-      return false;
-    });
-    task.finally(() => this.clipboardPending--);
-    this.clipboardTask = task;
-    return task;
+    return this.clipboard.copy(text, announce, what);
   }
 
   allViews(): View[] {
@@ -1424,7 +1336,7 @@ export class App {
   quit(): void {
     if (this.quitting) return;
     this.quitting = true;
-    this.clipboardAbort.abort();
+    this.clipboard.abort();
     this.pictures.dispose();
     this.languages.stopSyntax();
     this.languages.stopTools();

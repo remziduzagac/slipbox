@@ -11,7 +11,10 @@ Code, in `src/tui/`:
 
 | File | Role |
 | --- | --- |
-| `app.ts` | the model: the shared state (tabs, windows, buffers, panels, the overlay, messages) and the wiring |
+| `app/runtime/app.ts` | shared state (tabs, windows, buffers, panes, overlays, messages) and feature wiring |
+| `app/clipboard/clipboard.ts` | serial clipboard helpers, immediate OSC 52 and quit cancellation |
+| `app/notifications/toasts.ts` | notification deadlines; App owns messages and visible toasts |
+| `documents/tools/navigation.ts` | the four shared row-selection commands of outline, Info and footnotes |
 | `settings.ts`, `session.ts` | the keymaps, theme, glyphs, UI settings, live reload; the workspaces kept and restored |
 | `views.ts`, `lens.ts`, `code.ts` | a window's layout, cursor and scrolling; the lens and SOURCE view; code blocks |
 | `input.ts`, `mouse.ts` | keys and pastes, dispatched in order, the which-key popup; clicks, drags, the wheel |
@@ -275,9 +278,10 @@ answering in the background (D263) — so it doesn't wait for the next key. One 
 (`App.whileDrawing`, around the host's whole paint) asks for no frame: OpenTUI would draw again at once for it, and
 something said on every frame would keep drawing; it shows on the next frame drawn, which may be the next key's (a
 spell checker's missing dictionary, said as a note is drawn). Clicking one opens the
-messages list and clears the boxes. Popups
-and questions draw over them. On a screen too small for a box (under 30 columns), a message takes
-over the status line while it shows.
+messages list and clears the boxes. Timing is delegated to `app/notifications/toasts.ts`; App retains the messages,
+visible boxes, per-click deduplication and drawing guard. The existing timer is cleared on dismissal; its quit
+behavior is unchanged. Popups and questions draw over them. On a screen too small for a box (under 30 columns), a
+message takes over the status line while it shows.
 
 **Questions** — anything slipbox asks: a name for a new note, a rename, "delete it?" — float in a
 window of their own near the top of the content, framed like the lists: the question (wrapped, six

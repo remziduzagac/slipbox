@@ -1,0 +1,224 @@
+{
+  "edges": {
+    "removed": [
+      "src/tui/app/runtime/app.ts -> src/core/foundation/platform/clipboard.ts"
+    ],
+    "added": [
+      "src/tui/app/clipboard/clipboard.ts -> src/core/foundation/platform/clipboard.ts",
+      "src/tui/app/clipboard/clipboard.ts -> src/core/foundation/platform/paths.ts",
+      "src/tui/app/notifications/toasts.ts -> src/tui/app/notifications/contracts.ts",
+      "src/tui/app/runtime/app.ts -> src/tui/app/clipboard/clipboard.ts",
+      "src/tui/app/runtime/app.ts -> src/tui/app/notifications/contracts.ts",
+      "src/tui/app/runtime/app.ts -> src/tui/app/notifications/toasts.ts",
+      "src/tui/documents/tools/footnotes/footnotes.ts -> src/tui/documents/tools/navigation.ts",
+      "src/tui/documents/tools/info/info.ts -> src/tui/documents/tools/navigation.ts",
+      "src/tui/documents/tools/outline/outline.ts -> src/tui/documents/tools/navigation.ts"
+    ]
+  },
+  "runtime": {
+    "removed": [
+      "src/tui/app/runtime/app.ts -> src/core/foundation/platform/clipboard.ts"
+    ],
+    "added": [
+      "src/tui/app/clipboard/clipboard.ts -> src/core/foundation/platform/clipboard.ts",
+      "src/tui/app/clipboard/clipboard.ts -> src/core/foundation/platform/paths.ts",
+      "src/tui/app/runtime/app.ts -> src/tui/app/clipboard/clipboard.ts",
+      "src/tui/app/runtime/app.ts -> src/tui/app/notifications/toasts.ts",
+      "src/tui/documents/tools/footnotes/footnotes.ts -> src/tui/documents/tools/navigation.ts",
+      "src/tui/documents/tools/info/info.ts -> src/tui/documents/tools/navigation.ts",
+      "src/tui/documents/tools/outline/outline.ts -> src/tui/documents/tools/navigation.ts"
+    ]
+  },
+  "tests": {
+    "removed": [],
+    "added": [
+      "describe: clipboard serialization without App",
+      "describe: document tool row navigation without App",
+      "describe: notification timing without App",
+      "test: document tool movement unpins before selection and resumes the existing filter",
+      "test: down and up clamp to their existing bounds",
+      "test: eight pending copies admit no ninth; completion frees the same queue",
+      "test: failure reports once and does not poison later copies",
+      "test: fallback announcements distinguish an intentional file, unavailable clipboard and silent copies",
+      "test: feature actions leave selection and every other pane property untouched",
+      "test: five pane owners keep close and leave distinct on wide, narrow and zen screens",
+      "test: leaving either side preserves wide preferences and hides only its narrow or zen overlay",
+      "test: paste keeps the register's identity and linewise flag for absent, empty or equal clipboard text",
+      "test: paste snapshots the register before its read, sharing the cancellation signal",
+      "test: quit aborts the running helper, skips queued helpers and ignores its late reply",
+      "test: rescheduling and dismissal clear the previous timer and retain the ten-millisecond floor",
+      "test: terminal delivery is immediate; helpers and paste wait in copy order and read the live vault",
+      "test: the next drawn deadline expires info at four seconds and errors at eight, redrawing each",
+      "test: top and bottom jump directly, preserving the empty-list minus-one result",
+      "test: undrawn messages have no running lifetime, even after a long busy interval"
+    ]
+  },
+  "entries": {
+    "removed": [],
+    "added": []
+  },
+  "moves": {},
+  "retained": [],
+  "extractions": [
+    {
+      "from": "src/tui/app/runtime/app.ts",
+      "to": "src/tui/app/clipboard/clipboard.ts",
+      "symbols": [
+        "clipboardTask",
+        "clipboardAbort",
+        "clipboardPending",
+        "pasteText",
+        "copy"
+      ],
+      "owner": "App owns the current vim register, location, quitting state and Host. The collaborator owns the same private serial promise, AbortController and admission count, aborted at the existing quit point. Same eight-copy limit, immediate OSC 52, helper flags, live-vault lookup and paste register snapshot."
+    },
+    {
+      "from": "src/tui/app/runtime/app.ts",
+      "to": [
+        "src/tui/app/notifications/contracts.ts",
+        "src/tui/app/notifications/toasts.ts"
+      ],
+      "symbols": [
+        "Level",
+        "Message",
+        "toastTimer",
+        "toastMs",
+        "scheduleToasts",
+        "toastsDrawn",
+        "dismissToasts"
+      ],
+      "owner": "App keeps messages/toasts arrays, click deduplication, message admission and drawing suppression. Scheduler owns only the same unref timer and reads live App state; no new quit policy or cancellation deadline."
+    },
+    {
+      "from": [
+        "src/tui/documents/tools/footnotes/footnotes.ts",
+        "src/tui/documents/tools/info/info.ts",
+        "src/tui/documents/tools/outline/outline.ts"
+      ],
+      "to": "src/tui/documents/tools/navigation.ts",
+      "symbols": [
+        "down",
+        "up",
+        "top",
+        "bottom"
+      ],
+      "owner": "Only four identical selected-row assignments. Unpinning, filtering, row production, fold/jump/edit behavior and viewport ownership stay in each tool."
+    },
+    {
+      "from": [
+        "src/tui/workspace/explorer/explorer.ts",
+        "src/tui/workspace/history/history.ts",
+        "src/tui/documents/tools/footnotes/footnotes.ts",
+        "src/tui/documents/tools/info/info.ts",
+        "src/tui/documents/tools/outline/outline.ts"
+      ],
+      "to": "src/tui/shell/panels/focus.ts",
+      "symbols": [
+        "leave"
+      ],
+      "owner": "Panels delegates identical content-focus plus narrow/zen overlay hiding to its existing live-state focus controller. Close still calls showSidebar/showOutline; wide visibility preferences and pinned state are not changed by leave."
+    }
+  ],
+  "primitives": [
+    "src/tui/app/clipboard/clipboard.ts",
+    "src/tui/app/notifications/contracts.ts",
+    "src/tui/app/notifications/toasts.ts",
+    "src/tui/documents/tools/navigation.ts"
+  ],
+  "runtimeScc": {
+    "before": [
+      [
+        "src/tui/documents/editing/editing.ts",
+        "src/tui/documents/editing/snippets.ts"
+      ],
+      [
+        "src/tui/workspace/git/gitremote.ts",
+        "src/tui/workspace/git/views/review/rebase.ts"
+      ],
+      [
+        "src/core/rendering/export/formats/html.ts",
+        "src/core/rendering/export/formats/markdown.ts",
+        "src/core/rendering/export/stream.ts"
+      ],
+      [
+        "src/tui/documents/search/replacing.ts",
+        "src/tui/shell/overlays/overlays.ts",
+        "src/tui/workspace/search/search.ts"
+      ],
+      [
+        "src/tui/app/runtime/app.ts",
+        "src/tui/app/settings/settings.ts",
+        "src/tui/workspace/history/history.ts",
+        "src/tui/workspace/session/session.ts",
+        "src/tui/workspace/vaults/vaults.ts"
+      ],
+      [
+        "src/tui/actions/actions.ts",
+        "src/tui/actions/documents/actions-edit.ts",
+        "src/tui/actions/documents/actions-find.ts",
+        "src/tui/actions/documents/actions-links.ts",
+        "src/tui/actions/documents/actions-lsp.ts",
+        "src/tui/actions/documents/actions-view.ts",
+        "src/tui/actions/shell/actions-panes.ts",
+        "src/tui/actions/workspace/actions-files.ts"
+      ],
+      [
+        "src/tui/documents/diagnostics/draw-problems.ts",
+        "src/tui/documents/views/draw-header.ts",
+        "src/tui/documents/views/draw-pane.ts",
+        "src/tui/shell/overlays/draw-overlays.ts",
+        "src/tui/shell/panels/draw-panels.ts",
+        "src/tui/shell/screen/draw.ts",
+        "src/tui/shell/screen/statusbar/draw-status.ts",
+        "src/tui/workspace/git/views/panel/draw-git.ts"
+      ]
+    ],
+    "after": [
+      [
+        "src/tui/documents/editing/editing.ts",
+        "src/tui/documents/editing/snippets.ts"
+      ],
+      [
+        "src/tui/workspace/git/gitremote.ts",
+        "src/tui/workspace/git/views/review/rebase.ts"
+      ],
+      [
+        "src/core/rendering/export/formats/html.ts",
+        "src/core/rendering/export/formats/markdown.ts",
+        "src/core/rendering/export/stream.ts"
+      ],
+      [
+        "src/tui/documents/search/replacing.ts",
+        "src/tui/shell/overlays/overlays.ts",
+        "src/tui/workspace/search/search.ts"
+      ],
+      [
+        "src/tui/app/runtime/app.ts",
+        "src/tui/app/settings/settings.ts",
+        "src/tui/workspace/history/history.ts",
+        "src/tui/workspace/session/session.ts",
+        "src/tui/workspace/vaults/vaults.ts"
+      ],
+      [
+        "src/tui/actions/actions.ts",
+        "src/tui/actions/documents/actions-edit.ts",
+        "src/tui/actions/documents/actions-find.ts",
+        "src/tui/actions/documents/actions-links.ts",
+        "src/tui/actions/documents/actions-lsp.ts",
+        "src/tui/actions/documents/actions-view.ts",
+        "src/tui/actions/shell/actions-panes.ts",
+        "src/tui/actions/workspace/actions-files.ts"
+      ],
+      [
+        "src/tui/documents/diagnostics/draw-problems.ts",
+        "src/tui/documents/views/draw-header.ts",
+        "src/tui/documents/views/draw-pane.ts",
+        "src/tui/shell/overlays/draw-overlays.ts",
+        "src/tui/shell/panels/draw-panels.ts",
+        "src/tui/shell/screen/draw.ts",
+        "src/tui/shell/screen/statusbar/draw-status.ts",
+        "src/tui/workspace/git/views/panel/draw-git.ts"
+      ]
+    ]
+  }
+}

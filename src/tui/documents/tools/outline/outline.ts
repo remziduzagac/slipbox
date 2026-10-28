@@ -1,6 +1,7 @@
 // The outline view: the note's headings (a code file's symbols) as a tree that folds, the section the cursor is in,
 // the breadcrumb of headings above it.
 
+import { navigateRows } from "../navigation.ts";
 import { match } from "../../../shell/overlays/match.ts";
 import type { App, View } from "../../../app/runtime/app.ts";
 
@@ -160,19 +161,8 @@ export class OutlineView {
     const rows = this.rows();
     const row = rows[this.app.outline.selected];
     const view = this.app.view;
+    if (navigateRows(this.app.outline, action, rows.length)) return;
     switch (action) {
-      case "down":
-        this.app.outline.selected = Math.min(rows.length - 1, this.app.outline.selected + 1);
-        break;
-      case "up":
-        this.app.outline.selected = Math.max(0, this.app.outline.selected - 1);
-        break;
-      case "top":
-        this.app.outline.selected = 0;
-        break;
-      case "bottom":
-        this.app.outline.selected = rows.length - 1;
-        break;
       case "jump":
         if (row && view) {
           this.app.history.push(view);
@@ -203,8 +193,7 @@ export class OutlineView {
         this.app.panels.showOutline(false);
         break;
       case "leave":
-        this.app.region = "content";
-        if (this.app.panels.narrow || this.app.ui.zen) this.app.outline.overlay = false;
+        this.app.panels.leave("outline");
         break;
       case "rename":
         if (!row || !view) break;
