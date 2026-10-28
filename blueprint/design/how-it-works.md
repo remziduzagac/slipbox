@@ -366,6 +366,11 @@ The CLI's commands are the user's reference, [cli.md](../../docs/manual/cli.md);
 | [saveas.ts][o138] | 10.14 | the Save As window an export opens: places, the folder's entries, the name; its keys |
 | [where.ts][o144] | WSP-D4, WSP-D5 | where you are, on the top bar or the status line: vault, workspace, branch, cut |
 
+Search query grammar, document/section models, indexing, hit matching and indexed/scan execution have lower owners
+under `core/workspace/search/`. Scanning and SQLite share the same weight table without a runtime SQLite dependency
+for pure matching. Document find matches and replace-field interaction live under `tui/documents/search/`; workspace
+Search retains index/feed/list lifecycle, unsaved-query overlay merging and replace-across orchestration.
+
 ## Data flow for one note
 
 ```text

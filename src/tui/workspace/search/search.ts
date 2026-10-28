@@ -1,10 +1,9 @@
 // Finding in the TUI: the vault's search index kept as the app runs (6.5, 6.9) and the list ranked as you type;
 // notes by tag and by type; find's replace row, and a replace across every note.
 
-import { layoutMatches, matchText } from "../../../core/workspace/search/regex-jobs.ts";
-import { compilePattern, findAll } from "../../../core/documents/editing/replace.ts";
+import { matchText } from "../../../core/workspace/search/regex-jobs.ts";
+import { compilePattern } from "../../../core/documents/editing/replace.ts";
 import { planReplaceLater } from "../../../core/workspace/mutations/replace-files.ts";
-import * as R from "../../documents/search/replacing.ts";
 import {
   IndexJob,
   indexFile,
@@ -20,20 +19,26 @@ import { isListed } from "../../../core/workspace/vaults/vault.ts";
 import { ELSEWHERE } from "../../../core/workspace/vaults/names.ts";
 import { frontmatterFindings, rootTypes } from "../../../core/documents/diagnostics/diagnostics.ts";
 import type { App, View, ListItem, ListOverlay, PromptOverlay } from "../../app/runtime/app.ts";
-import type { Layout } from "../../../core/rendering/layout/ir.ts";
-import type { FindState } from "../../app/runtime/app.ts";
-import { stringWidth, prefixWidths } from "../../../core/foundation/text/width.ts";
 import { refilter } from "../../shell/overlays/overlays.ts";
+
+import { FindControls } from "../../documents/search/controls.ts";
 
 /** Search: the index and its list, tags and types, replace across notes. */
 export class Search {
-  constructor(readonly app: App) {}
+  constructor(readonly app: App) {
+    this.findControls = new FindControls(app);
+  }
+
+  private readonly findControls: FindControls;
 
   /** The root's search index; null: none here (`~` or `/` opened as a plain folder, `[search] engine = "scan"`, SQLite couldn't). */
   index: SearchIndex | null = null;
+
   /** Bringing the index up to the files, a slice at a time; null when it's done. */
   job: IndexJob | null = null;
+
   private stopFeed: (() => void) | null = null;
+
   /** The search list on screen, refreshed when the index is ready. */
   private list: ListOverlay | null = null;
 
@@ -292,65 +297,18 @@ export class Search {
   }
 
   /** ⇄ / alt+h: the replace row under a window's find row, opened (with find, if need be) or closed. */
-  async toggleReplaceRow(view: View): Promise<void> {
-    const o = this.app.overlay;
-    const typing = o?.kind === "prompt" && o.view === view ? o : null;
-    if (typing?.replace?.confirm) return;
-    if (typing?.replace) {
-      typing.replace = undefined;
-      typing.change?.(typing.text);
-    } else if (typing) R.openReplace(this.app, typing, view);
-    else await this.app.run("find.replace");
+  toggleReplaceRow(view: View): Promise<void> {
+    return this.findControls.toggleReplaceRow(view);
   }
 
   /** Flip a window's find toggle (regex, whole words); the search it has redoes itself with it. */
   toggleFindOpt(view: View, key: "regex" | "whole"): void {
-    const o = { ...(view.findOpts ?? { regex: false, whole: false }) };
-    o[key] = !o[key];
-    view.findOpts = o;
-    const typing = this.app.overlay?.kind === "prompt" && this.app.overlay.view === view;
-    if (view.find && !typing) {
-      const f = computeFind(
-        this.app.currentLayout(view),
-        view.find.query,
-        view.find.current,
-        o.whole,
-        o.regex,
-        false,
-        view,
-      );
-      view.find = f;
-    }
-    this.app.message("info", `${key === "regex" ? "regex" : "whole words"}: ${o[key] ? "on" : "off"}`);
+    return this.findControls.toggleFindOpt(view, key);
   }
 
   /** Keys in the replace field: its text, enter replaces one, alt+enter (alt+a) all, ctrl+n/p move. */
-  async replaceFieldKey(o: PromptOverlay, view: View, key: string, typed: string | null): Promise<void> {
-    const r = o.replace!;
-    switch (key) {
-      case "enter":
-        return R.replaceOne(this.app, o, view);
-      case "alt+enter":
-      case "alt+a":
-        return R.replaceAll(this.app, o, view);
-      case "ctrl+n":
-      case "down":
-        return R.stepMatch(this.app, o, view, 1);
-      case "ctrl+p":
-      case "up":
-        return R.stepMatch(this.app, o, view, -1);
-      case "backspace":
-        r.text = [...r.text].slice(0, -1).join("");
-        return;
-      case "ctrl+w":
-      case "ctrl+backspace":
-        r.text = r.text.replace(/\S*\s*$/, "");
-        return;
-      case "ctrl+u":
-        r.text = "";
-        return;
-    }
-    if (typed !== null) r.text += typed;
+  replaceFieldKey(o: PromptOverlay, view: View, key: string, typed: string | null): Promise<void> {
+    return this.findControls.replaceFieldKey(o, view, key, typed);
   }
 
   /** A find across files' label: what it asks, and which of the window's find toggles are on. */
@@ -421,90 +379,4 @@ export class Search {
   }
 }
 
-const findReady = new WeakMap<FindState, Promise<FindState>>();
-export function computeFind(
-  layout: Layout,
-  query: string,
-  current = 0,
-  whole = false,
-  regex = false,
-  ignoreCase = false,
-  owner: object = layout,
-): FindState {
-  const matches: FindState["matches"] = [];
-  let error: string | undefined;
-  if (query) {
-    const re = compilePattern(query, { regex, whole, ignoreCase });
-    if (typeof re === "string") error = re;
-    else if (regex) {
-      const lines = layout.lines.map((line) => (line.decor ? "" : line.spans.map((span) => span.text).join("")));
-      const entry = layoutMatches(lines, re, owner);
-      const finish = (): FindState => {
-        if (!entry.value)
-          return {
-            query,
-            matches: [],
-            current: 0,
-            whole,
-            regex,
-            error: entry.error ?? "search cancelled",
-            failed: true,
-          };
-        const columns = new Map<number, number[]>();
-        const offsets = new Map<number, number[]>();
-        for (const match of entry.value.matches) {
-          const row = offsets.get(match.row) ?? [];
-          row.push(match.from);
-          offsets.set(match.row, row);
-        }
-        for (const [row, starts] of offsets) columns.set(row, prefixWidths(lines[row]!, starts));
-        const indices = new Map<number, number>();
-        const matches = entry.value.matches.map((match) => {
-          const index = indices.get(match.row) ?? 0;
-          indices.set(match.row, index + 1);
-          return {
-            row: match.row,
-            col: columns.get(match.row)![index]!,
-            len: stringWidth(lines[match.row]!.slice(match.from, match.to)),
-          };
-        });
-        return {
-          query,
-          matches,
-          current: Math.min(current, Math.max(0, matches.length - 1)),
-          whole,
-          regex,
-          limited: entry.value.limited,
-        };
-      };
-      if (entry.value || entry.error || entry.abort.signal.aborted) return finish();
-      const pending: FindState = { query, matches: [], current: 0, whole, regex, pending: true };
-      findReady.set(pending, entry.pending.then(finish));
-      return pending;
-    } else {
-      // Plain text, worked out at once: every match, as many as there are (n reaches the last).
-      layout.lines.forEach((line, row) => {
-        if (line.decor) return; // the lens's rules aren't the note's text
-        const text = line.spans.map((span) => span.text).join("");
-        for (const match of findAll(text, re))
-          matches.push({
-            row,
-            col: stringWidth(text.slice(0, match.from)),
-            len: stringWidth(text.slice(match.from, match.to)),
-          });
-      });
-    }
-  }
-  return {
-    query,
-    matches,
-    current: Math.min(current, Math.max(0, matches.length - 1)),
-    whole,
-    regex,
-    error,
-  };
-}
-export async function computeFindReady(...args: Parameters<typeof computeFind>): Promise<FindState> {
-  const state = computeFind(...args);
-  return (await findReady.get(state)) ?? state;
-}
+export { computeFind, computeFindReady } from "../../documents/search/find.ts";

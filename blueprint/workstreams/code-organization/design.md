@@ -1108,6 +1108,15 @@ fixture data remain unchanged. Walk and watcher caps are removed; seven exact ha
 active 750-line ceiling. All new owners are below 500 lines. Runtime SCC membership is unchanged; the benefit is focused
 responsibility and testable lower mechanisms, without gateway execution or new lifecycle policy.
 
+### T34 search assessment
+
+[Task 34](tasks/34-search-splits.md) separates core query grammar, document/section models, indexing, folded hit matching
+and indexed/scan execution, with one lower weight table shared by both engines. The 805-line cap is removed; six exact
+handwritten exceptions remain at the 750-line stage. Document find matching and replace-field controls sit below
+workspace Search, which retains its index/feed/list lifecycle, unsaved overlay and replace-across effects. The same
+TUI buffers and live context are used. One three-module runtime cycle is removed; the other six memberships remain
+unchanged. Public exports, ranking/fallback, existing tests and fixtures stay compatible. No gateway executes here.
+
 ## Implementation tasks
 
 The 44 files below are authoritative for task scope, evidence, status and dependencies. This section is a navigation

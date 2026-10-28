@@ -1,0 +1,401 @@
+{
+  "moves": {},
+  "retained": [],
+  "renamedBasenames": {},
+  "edges": {
+    "removed": [
+      "src/core/workspace/search/search.ts -> src/core/documents/markdown/tags.ts",
+      "src/core/workspace/search/search.ts -> src/core/documents/model/filetypes.ts",
+      "src/core/workspace/search/search.ts -> src/core/foundation/platform/fsutil.ts",
+      "src/core/workspace/search/search.ts -> src/core/foundation/text/sanitize.ts",
+      "src/core/workspace/search/search.ts -> src/core/workspace/graph/graph.ts",
+      "src/tui/actions/documents/actions-find.ts -> src/tui/workspace/search/search.ts",
+      "src/tui/documents/search/replacing.ts -> src/tui/workspace/search/search.ts",
+      "src/tui/documents/views/views.ts -> src/tui/workspace/search/search.ts",
+      "src/tui/workspace/search/search.ts -> src/core/foundation/text/width.ts",
+      "src/tui/workspace/search/search.ts -> src/core/rendering/layout/ir.ts",
+      "src/tui/workspace/search/search.ts -> src/tui/documents/search/replacing.ts"
+    ],
+    "added": [
+      "src/core/workspace/search/execution/scan.ts -> src/core/foundation/platform/fsutil.ts",
+      "src/core/workspace/search/execution/scan.ts -> src/core/workspace/graph/graph.ts",
+      "src/core/workspace/search/execution/scan.ts -> src/core/workspace/search/indexing/files.ts",
+      "src/core/workspace/search/execution/scan.ts -> src/core/workspace/search/indexing/weights.ts",
+      "src/core/workspace/search/execution/scan.ts -> src/core/workspace/search/matching/location.ts",
+      "src/core/workspace/search/execution/scan.ts -> src/core/workspace/search/matching/text.ts",
+      "src/core/workspace/search/execution/scan.ts -> src/core/workspace/search/model/contracts.ts",
+      "src/core/workspace/search/execution/scan.ts -> src/core/workspace/search/model/document.ts",
+      "src/core/workspace/search/execution/search.ts -> src/core/workspace/graph/graph.ts",
+      "src/core/workspace/search/execution/search.ts -> src/core/workspace/search/execution/scan.ts",
+      "src/core/workspace/search/execution/search.ts -> src/core/workspace/search/matching/location.ts",
+      "src/core/workspace/search/execution/search.ts -> src/core/workspace/search/model/contracts.ts",
+      "src/core/workspace/search/execution/search.ts -> src/core/workspace/search/query/parsing.ts",
+      "src/core/workspace/search/execution/search.ts -> src/core/workspace/search/search-index.ts",
+      "src/core/workspace/search/indexing/files.ts -> src/core/documents/model/filetypes.ts",
+      "src/core/workspace/search/indexing/files.ts -> src/core/foundation/platform/fsutil.ts",
+      "src/core/workspace/search/indexing/files.ts -> src/core/workspace/graph/graph.ts",
+      "src/core/workspace/search/indexing/files.ts -> src/core/workspace/search/model/document.ts",
+      "src/core/workspace/search/indexing/files.ts -> src/core/workspace/search/search-index.ts",
+      "src/core/workspace/search/matching/location.ts -> src/core/foundation/text/sanitize.ts",
+      "src/core/workspace/search/matching/location.ts -> src/core/workspace/search/matching/text.ts",
+      "src/core/workspace/search/matching/location.ts -> src/core/workspace/search/model/contracts.ts",
+      "src/core/workspace/search/matching/location.ts -> src/core/workspace/search/model/document.ts",
+      "src/core/workspace/search/matching/text.ts -> src/core/workspace/search/model/contracts.ts",
+      "src/core/workspace/search/model/document.ts -> src/core/documents/markdown/tags.ts",
+      "src/core/workspace/search/model/document.ts -> src/core/workspace/search/model/contracts.ts",
+      "src/core/workspace/search/model/document.ts -> src/core/workspace/search/model/sections.ts",
+      "src/core/workspace/search/model/document.ts -> src/core/workspace/search/model/syntax.ts",
+      "src/core/workspace/search/model/sections.ts -> src/core/workspace/search/model/contracts.ts",
+      "src/core/workspace/search/model/sections.ts -> src/core/workspace/search/model/syntax.ts",
+      "src/core/workspace/search/query/parsing.ts -> src/core/documents/markdown/tags.ts",
+      "src/core/workspace/search/query/parsing.ts -> src/core/workspace/search/model/contracts.ts",
+      "src/core/workspace/search/search-index.ts -> src/core/workspace/search/indexing/weights.ts",
+      "src/core/workspace/search/search.ts -> src/core/workspace/search/execution/search.ts",
+      "src/core/workspace/search/search.ts -> src/core/workspace/search/indexing/files.ts",
+      "src/core/workspace/search/search.ts -> src/core/workspace/search/model/contracts.ts",
+      "src/core/workspace/search/search.ts -> src/core/workspace/search/model/document.ts",
+      "src/core/workspace/search/search.ts -> src/core/workspace/search/model/sections.ts",
+      "src/core/workspace/search/search.ts -> src/core/workspace/search/query/parsing.ts",
+      "src/tui/actions/documents/actions-find.ts -> src/tui/documents/search/find.ts",
+      "src/tui/documents/search/controls.ts -> src/tui/app/runtime/app.ts",
+      "src/tui/documents/search/controls.ts -> src/tui/documents/search/find.ts",
+      "src/tui/documents/search/controls.ts -> src/tui/documents/search/replacing.ts",
+      "src/tui/documents/search/find.ts -> src/core/documents/editing/replace.ts",
+      "src/tui/documents/search/find.ts -> src/core/foundation/text/width.ts",
+      "src/tui/documents/search/find.ts -> src/core/rendering/layout/ir.ts",
+      "src/tui/documents/search/find.ts -> src/core/workspace/search/regex-jobs.ts",
+      "src/tui/documents/search/find.ts -> src/tui/app/runtime/app.ts",
+      "src/tui/documents/search/replacing.ts -> src/tui/documents/search/find.ts",
+      "src/tui/documents/views/views.ts -> src/tui/documents/search/find.ts",
+      "src/tui/workspace/search/search.ts -> src/tui/documents/search/controls.ts",
+      "src/tui/workspace/search/search.ts -> src/tui/documents/search/find.ts"
+    ]
+  },
+  "runtime": {
+    "removed": [
+      "src/core/workspace/search/search.ts -> src/core/documents/markdown/tags.ts",
+      "src/core/workspace/search/search.ts -> src/core/documents/model/filetypes.ts",
+      "src/core/workspace/search/search.ts -> src/core/foundation/platform/fsutil.ts",
+      "src/core/workspace/search/search.ts -> src/core/foundation/text/sanitize.ts",
+      "src/tui/actions/documents/actions-find.ts -> src/tui/workspace/search/search.ts",
+      "src/tui/documents/search/replacing.ts -> src/tui/workspace/search/search.ts",
+      "src/tui/documents/views/views.ts -> src/tui/workspace/search/search.ts",
+      "src/tui/workspace/search/search.ts -> src/core/foundation/text/width.ts",
+      "src/tui/workspace/search/search.ts -> src/tui/documents/search/replacing.ts"
+    ],
+    "added": [
+      "src/core/workspace/search/execution/scan.ts -> src/core/foundation/platform/fsutil.ts",
+      "src/core/workspace/search/execution/scan.ts -> src/core/workspace/search/indexing/files.ts",
+      "src/core/workspace/search/execution/scan.ts -> src/core/workspace/search/indexing/weights.ts",
+      "src/core/workspace/search/execution/scan.ts -> src/core/workspace/search/matching/location.ts",
+      "src/core/workspace/search/execution/scan.ts -> src/core/workspace/search/matching/text.ts",
+      "src/core/workspace/search/execution/scan.ts -> src/core/workspace/search/model/document.ts",
+      "src/core/workspace/search/execution/search.ts -> src/core/workspace/search/execution/scan.ts",
+      "src/core/workspace/search/execution/search.ts -> src/core/workspace/search/matching/location.ts",
+      "src/core/workspace/search/execution/search.ts -> src/core/workspace/search/query/parsing.ts",
+      "src/core/workspace/search/indexing/files.ts -> src/core/documents/model/filetypes.ts",
+      "src/core/workspace/search/indexing/files.ts -> src/core/foundation/platform/fsutil.ts",
+      "src/core/workspace/search/indexing/files.ts -> src/core/workspace/search/model/document.ts",
+      "src/core/workspace/search/matching/location.ts -> src/core/foundation/text/sanitize.ts",
+      "src/core/workspace/search/matching/location.ts -> src/core/workspace/search/matching/text.ts",
+      "src/core/workspace/search/matching/location.ts -> src/core/workspace/search/model/document.ts",
+      "src/core/workspace/search/model/document.ts -> src/core/documents/markdown/tags.ts",
+      "src/core/workspace/search/model/document.ts -> src/core/workspace/search/model/sections.ts",
+      "src/core/workspace/search/model/document.ts -> src/core/workspace/search/model/syntax.ts",
+      "src/core/workspace/search/model/sections.ts -> src/core/workspace/search/model/syntax.ts",
+      "src/core/workspace/search/query/parsing.ts -> src/core/documents/markdown/tags.ts",
+      "src/core/workspace/search/search-index.ts -> src/core/workspace/search/indexing/weights.ts",
+      "src/core/workspace/search/search.ts -> src/core/workspace/search/execution/search.ts",
+      "src/core/workspace/search/search.ts -> src/core/workspace/search/indexing/files.ts",
+      "src/core/workspace/search/search.ts -> src/core/workspace/search/model/document.ts",
+      "src/core/workspace/search/search.ts -> src/core/workspace/search/model/sections.ts",
+      "src/core/workspace/search/search.ts -> src/core/workspace/search/query/parsing.ts",
+      "src/tui/actions/documents/actions-find.ts -> src/tui/documents/search/find.ts",
+      "src/tui/documents/search/controls.ts -> src/tui/documents/search/find.ts",
+      "src/tui/documents/search/controls.ts -> src/tui/documents/search/replacing.ts",
+      "src/tui/documents/search/find.ts -> src/core/documents/editing/replace.ts",
+      "src/tui/documents/search/find.ts -> src/core/foundation/text/width.ts",
+      "src/tui/documents/search/find.ts -> src/core/workspace/search/regex-jobs.ts",
+      "src/tui/documents/search/replacing.ts -> src/tui/documents/search/find.ts",
+      "src/tui/documents/views/views.ts -> src/tui/documents/search/find.ts",
+      "src/tui/workspace/search/search.ts -> src/tui/documents/search/controls.ts",
+      "src/tui/workspace/search/search.ts -> src/tui/documents/search/find.ts"
+    ]
+  },
+  "tests": {
+    "removed": [],
+    "added": [
+      "test: document find keeps cell widths, skips decoration and clamps the selected match",
+      "test: document reading preserves frontmatter and ignores fenced heading syntax",
+      "test: find toggles read the current view and keep its literal search result in place",
+      "test: folded occurrences preserve original offsets across accents and astral characters",
+      "test: hit location chooses the unit with most positive words and retains snippet marks",
+      "test: indexed dispatch tries strict then relaxed and keeps the original score sign",
+      "test: query grammar keeps phrases, exclusions, title prefixes and normalized filters",
+      "test: replace-field editing preserves Unicode deletion and keeps the existing replace object",
+      "test: replace-row toggling reads a replacement overlay live and leaves confirmation alone",
+      "test: scan ranking and relaxed fallback honor unsaved text and a file restriction",
+      "test: search mechanisms reject workspace composition and runtime SQLite or App"
+    ]
+  },
+  "entries": {
+    "removed": [],
+    "added": []
+  },
+  "extraction": [
+    {
+      "from": "src/core/workspace/search/search.ts",
+      "to": "src/core/workspace/search/model/contracts.ts",
+      "symbols": [
+        "DocLine",
+        "DocSection",
+        "Doc",
+        "Node",
+        "QueryTerm",
+        "SearchQuery",
+        "SearchHit",
+        "SearchResult",
+        "Scanned"
+      ]
+    },
+    {
+      "from": "src/core/workspace/search/search.ts",
+      "to": "src/core/workspace/search/model/syntax.ts",
+      "symbols": [
+        "FENCE",
+        "ATX",
+        "SETEXT",
+        "NOT_PARAGRAPH"
+      ]
+    },
+    {
+      "from": "src/core/workspace/search/search.ts",
+      "to": "src/core/workspace/search/model/sections.ts",
+      "symbols": [
+        "BAND_MIN",
+        "BAND_MAX",
+        "tokensOf",
+        "segment",
+        "distinct",
+        "units",
+        "pack",
+        "section",
+        "pieces",
+        "cut"
+      ]
+    },
+    {
+      "from": "src/core/workspace/search/search.ts",
+      "to": "src/core/workspace/search/model/document.ts",
+      "symbols": [
+        "MAX_FRONTMATTER",
+        "strings",
+        "indexDoc"
+      ]
+    },
+    {
+      "from": "src/core/workspace/search/search.ts",
+      "to": "src/core/workspace/search/indexing/files.ts",
+      "symbols": [
+        "searchable",
+        "indexFile",
+        "IndexJob",
+        "catchUp"
+      ]
+    },
+    {
+      "from": "src/core/workspace/search/search.ts",
+      "to": "src/core/workspace/search/query/parsing.ts",
+      "symbols": [
+        "WORDY",
+        "parseQuery",
+        "ftsTerm",
+        "ftsMatch"
+      ]
+    },
+    {
+      "from": "src/core/workspace/search/search.ts",
+      "to": "src/core/workspace/search/matching/text.ts",
+      "symbols": [
+        "fold",
+        "occurrences"
+      ]
+    },
+    {
+      "from": "src/core/workspace/search/search.ts",
+      "to": "src/core/workspace/search/matching/location.ts",
+      "symbols": [
+        "SNIPPET",
+        "locate",
+        "snippetOf"
+      ]
+    },
+    {
+      "from": "src/core/workspace/search/search.ts",
+      "to": "src/core/workspace/search/execution/scan.ts",
+      "symbols": [
+        "scanned",
+        "asciiLower",
+        "keeps",
+        "foldedFields",
+        "countsIn",
+        "scanFiles",
+        "scanSearch"
+      ]
+    },
+    {
+      "from": "src/core/workspace/search/search.ts",
+      "to": "src/core/workspace/search/execution/search.ts",
+      "symbols": [
+        "search"
+      ]
+    },
+    {
+      "from": "src/tui/workspace/search/search.ts",
+      "to": "src/tui/documents/search/find.ts",
+      "symbols": [
+        "findReady",
+        "computeFind",
+        "computeFindReady"
+      ]
+    },
+    {
+      "from": "src/tui/workspace/search/search.ts",
+      "to": "src/tui/documents/search/controls.ts",
+      "members": [
+        "toggleReplaceRow",
+        "toggleFindOpt",
+        "replaceFieldKey"
+      ],
+      "constructor": "stores original App reference only"
+    },
+    {
+      "from": "src/core/workspace/search/search-index.ts",
+      "to": "src/core/workspace/search/indexing/weights.ts",
+      "symbols": [
+        "WEIGHTS"
+      ]
+    }
+  ],
+  "ownership": {
+    "core": "original query grammar, sections, scanning/ranking, indexing and hit location below public entry; one lower WEIGHTS table shared with SQLite",
+    "document": "original findReady WeakMap and find routines; three controls receive the original live App reference",
+    "workspace": "Search keeps index/feed/list lifecycle, unsaved overlay, tags/types and replace-across orchestration; three direct forwarding methods preserve the original promise",
+    "buffers": "same TUI-owned buffers, view find state and overlays; no gateway execution, new timer or worker policy"
+  },
+  "guards": {
+    "core": [
+      "src/core/workspace/search/execution/scan.ts",
+      "src/core/workspace/search/execution/search.ts",
+      "src/core/workspace/search/indexing/files.ts",
+      "src/core/workspace/search/indexing/weights.ts",
+      "src/core/workspace/search/matching/location.ts",
+      "src/core/workspace/search/matching/text.ts",
+      "src/core/workspace/search/model/contracts.ts",
+      "src/core/workspace/search/model/document.ts",
+      "src/core/workspace/search/model/sections.ts",
+      "src/core/workspace/search/model/syntax.ts",
+      "src/core/workspace/search/query/parsing.ts"
+    ],
+    "document": [
+      "src/tui/documents/search/find.ts",
+      "src/tui/documents/search/controls.ts"
+    ],
+    "rules": [
+      "no reverse facade imports, even for types",
+      "no runtime SQLite dependency in pure mechanisms",
+      "document clients never load App at runtime"
+    ]
+  },
+  "runtimeScc": {
+    "before": [
+      [
+        "src/tui/documents/editing/editing.ts",
+        "src/tui/documents/editing/snippets.ts"
+      ],
+      [
+        "src/tui/workspace/git/gitremote.ts",
+        "src/tui/workspace/git/views/review/rebase.ts"
+      ],
+      [
+        "src/core/rendering/export/formats/html.ts",
+        "src/core/rendering/export/formats/markdown.ts",
+        "src/core/rendering/export/stream.ts"
+      ],
+      [
+        "src/tui/documents/search/replacing.ts",
+        "src/tui/shell/overlays/overlays.ts",
+        "src/tui/workspace/search/search.ts"
+      ],
+      [
+        "src/tui/app/runtime/app.ts",
+        "src/tui/app/settings/settings.ts",
+        "src/tui/workspace/history/history.ts",
+        "src/tui/workspace/session/session.ts",
+        "src/tui/workspace/vaults/vaults.ts"
+      ],
+      [
+        "src/tui/actions/actions.ts",
+        "src/tui/actions/documents/actions-edit.ts",
+        "src/tui/actions/documents/actions-find.ts",
+        "src/tui/actions/documents/actions-links.ts",
+        "src/tui/actions/documents/actions-lsp.ts",
+        "src/tui/actions/documents/actions-view.ts",
+        "src/tui/actions/shell/actions-panes.ts",
+        "src/tui/actions/workspace/actions-files.ts"
+      ],
+      [
+        "src/tui/documents/diagnostics/draw-problems.ts",
+        "src/tui/documents/views/draw-header.ts",
+        "src/tui/documents/views/draw-pane.ts",
+        "src/tui/shell/overlays/draw-overlays.ts",
+        "src/tui/shell/panels/draw-panels.ts",
+        "src/tui/shell/screen/draw.ts",
+        "src/tui/shell/screen/statusbar/draw-status.ts",
+        "src/tui/workspace/git/views/panel/draw-git.ts"
+      ]
+    ],
+    "after": [
+      [
+        "src/tui/documents/editing/editing.ts",
+        "src/tui/documents/editing/snippets.ts"
+      ],
+      [
+        "src/tui/workspace/git/gitremote.ts",
+        "src/tui/workspace/git/views/review/rebase.ts"
+      ],
+      [
+        "src/core/rendering/export/formats/html.ts",
+        "src/core/rendering/export/formats/markdown.ts",
+        "src/core/rendering/export/stream.ts"
+      ],
+      [
+        "src/tui/app/runtime/app.ts",
+        "src/tui/app/settings/settings.ts",
+        "src/tui/workspace/history/history.ts",
+        "src/tui/workspace/session/session.ts",
+        "src/tui/workspace/vaults/vaults.ts"
+      ],
+      [
+        "src/tui/actions/actions.ts",
+        "src/tui/actions/documents/actions-edit.ts",
+        "src/tui/actions/documents/actions-find.ts",
+        "src/tui/actions/documents/actions-links.ts",
+        "src/tui/actions/documents/actions-lsp.ts",
+        "src/tui/actions/documents/actions-view.ts",
+        "src/tui/actions/shell/actions-panes.ts",
+        "src/tui/actions/workspace/actions-files.ts"
+      ],
+      [
+        "src/tui/documents/diagnostics/draw-problems.ts",
+        "src/tui/documents/views/draw-header.ts",
+        "src/tui/documents/views/draw-pane.ts",
+        "src/tui/shell/overlays/draw-overlays.ts",
+        "src/tui/shell/panels/draw-panels.ts",
+        "src/tui/shell/screen/draw.ts",
+        "src/tui/shell/screen/statusbar/draw-status.ts",
+        "src/tui/workspace/git/views/panel/draw-git.ts"
+      ]
+    ]
+  }
+}

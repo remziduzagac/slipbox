@@ -4,7 +4,7 @@
 import { cancelRegex, matchText, retryRegex } from "../../../core/workspace/search/regex-jobs.ts";
 import { type Run, withView, lay } from "../actions.ts";
 import * as V from "../../shell/input/vim.ts";
-import { computeFind, computeFindReady } from "../../workspace/search/search.ts";
+import { computeFind, computeFindReady } from "../../documents/search/find.ts";
 import { compilePattern } from "../../../core/documents/editing/replace.ts";
 import type { FindState, ListItem, PromptOverlay, App, View } from "../../app/runtime/app.ts";
 import { readText, climbsOut } from "../../../core/foundation/platform/fsutil.ts";

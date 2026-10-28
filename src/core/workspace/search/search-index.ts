@@ -8,12 +8,10 @@ import { Database } from "../../foundation/platform/sqlite.ts";
 import { existsSync, mkdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { cacheDir, ensureCacheHome, type Keyed } from "../../foundation/platform/paths.ts";
+import { WEIGHTS } from "./indexing/weights.ts";
 
 /** Bumped when the rows or their columns change: an index of another version is made again. */
 const SEARCH_VERSION = 3; // 3: better-sqlite3, and sections by size band
-
-/** BM25 weights, by column: title, aliases, tags, path, headings, body. */
-export const WEIGHTS = [10, 8, 5, 3, 4, 1] as const;
 
 /** What a file gives the index. */
 export interface IndexedDoc {
@@ -219,3 +217,5 @@ export class SearchIndex {
     return { files: (this.db.prepare("select count(*) as n from docs").get() as { n: number }).n };
   }
 }
+
+export { WEIGHTS } from "./indexing/weights.ts";
