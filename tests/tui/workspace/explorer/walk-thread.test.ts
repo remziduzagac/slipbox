@@ -14,7 +14,7 @@ import {
   utimesSync,
   writeFileSync,
 } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, join, sep } from "node:path";
 import { DEFAULT_CONFIG } from "../../../../src/core/application/config/config.ts";
 import {
   type HomeWalk,
@@ -282,6 +282,10 @@ describe("the TUI's walks on their own thread (T12, #9)", () => {
         recordFolder: spyOn(folders, "recordFolder"),
       };
       try {
+        // Other live indexers share these exports; their roots must not count as this job's writes.
+        const unrelated = tree({ ".slipbox/config.toml": '[vault]\nname = "unrelated"\n' });
+        registry.recordRoot({ kind: "vault", path: unrelated, found: true });
+        folders.recordFolder(unrelated);
         const job = new AutoIndex(home, null, () => Date.now(), {
           walker: walkThread(),
           config: () => structuredClone(DEFAULT_CONFIG),
@@ -293,11 +297,15 @@ describe("the TUI's walks on their own thread (T12, #9)", () => {
         expect(spies.keepHomeWalk).not.toHaveBeenCalled();
         expect(spies.homeFilter).not.toHaveBeenCalled();
         // The lists written here, from what the thread read: home and the vault found, the vault's name.
-        expect(spies.recordRoot.mock.calls.map((c) => [c[0].kind, c[0].path, c[0].found])).toEqual([
+        expect(
+          spies.recordRoot.mock.calls
+            .filter(([root]) => root.path === home || root.path.startsWith(home + sep))
+            .map((c) => [c[0].kind, c[0].path, c[0].found]),
+        ).toEqual([
           ["home", home, true],
           ["vault", join(home, "proj"), true],
         ]);
-        expect(spies.recordFolder).toHaveBeenCalledTimes(1);
+        expect(spies.recordFolder.mock.calls.filter(([path]) => path.startsWith(home + sep))).toHaveLength(1);
         expect(registry.readRoots().find((v) => v.path === join(home, "proj"))).toMatchObject({ found: true });
         expect(folders.readFolders().find((f) => f.name === "found-here")?.copies[0]?.path).toBe(join(home, "proj"));
         expect(homeMod.homeWalkKept(homeAt(home), { walk: DEFAULT_CONFIG.walk })).toBe(true);
@@ -568,9 +576,15 @@ describe("the TUI's walks on their own thread (T12, #9)", () => {
       registry.writeRoots(registry.readRoots().filter((v) => v.kind !== "home"));
       const spy = spyOn(registry, "recordRoot");
       try {
+        // A different live indexer can record a vault while this job is stepped.
+        registry.recordRoot({ kind: "vault", path: tree({}), found: true });
         job.homeAgain();
         await stepToEnd(job, 1);
-        expect(spy.mock.calls.map((c) => [c[0].kind, c[0].path])).toEqual([["home", home]]);
+        expect(
+          spy.mock.calls
+            .filter(([root]) => root.path === home || root.path.startsWith(home + sep))
+            .map((c) => [c[0].kind, c[0].path]),
+        ).toEqual([["home", home]]);
         expect(job.status).toMatchObject({ found: 1, indexed: 1 });
       } finally {
         spy.mockRestore();

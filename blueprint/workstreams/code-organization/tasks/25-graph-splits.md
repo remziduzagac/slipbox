@@ -129,3 +129,11 @@ unchanged terminal discovery; each new helper selects its focused owner. The sch
 path rather than cohort ordering. Its committed parser-cycle fixture fails when that specific rule is removed and
 passes when restored (boundary set: 4 tests, including the additional schema assertion). All runtime Graph bodies,
 initializer mappings, exact deltas and SCC memberships remain unchanged after this guard-only strengthening.
+
+### Registry-spy isolation
+
+The walk-thread owner scopes registry-write assertions to its fixture home and descendants: other live indexers can
+call the same module exports for unrelated roots during an awaited step. Both affected scenarios inject unrelated
+writes, retain exact ordering and counts within their fixture, and fail when the scoping filters are removed. The
+complete walk-thread file passes 42 tests with two existing skips and 586 assertions. Test declarations and extraction
+edge deltas are unchanged; product code is unchanged by this isolation fix.
