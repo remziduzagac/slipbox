@@ -1,3 +1,4 @@
+import { watcherState, watcherDirectories } from "../../../../support/watcher-access.ts";
 import { UNIT_TIMEOUT_MS } from "../../../../support/timeouts.ts";
 import { describe, expect, setDefaultTimeout, test } from "bun:test";
 import { mkdtempSync, mkdirSync, realpathSync, renameSync, rmSync, statSync, utimesSync, writeFileSync } from "node:fs";
@@ -100,7 +101,7 @@ describe("home, a vault without a marker (VV-D2)", () => {
         maxDirs: 3,
       });
       try {
-        (w as unknown as { adoptTree(d: string): string[] }).adoptTree("big");
+        watcherDirectories(w).adoptTree("big");
         expect(w.watchedCount + w.polledDirs.length).toBe(3);
       } finally {
         w.close();
@@ -226,16 +227,11 @@ describe("home, a vault without a marker (VV-D2)", () => {
       // home's cap, as if three folders were all it may watch
       const { w, look } = await watchHome(home, g, { known, maxDirs: 3 });
       // Home's top and Documents polled alone: their watches closed, as when they fail.
-      const inside = w as unknown as {
-        watchers: Map<string, { close(): void }>;
-        pollDir(d: string, r: string): void;
-        degrade(r: string): void;
-        pending: Set<string>;
-      };
+      const inside = watcherState(w);
       for (const d of ["", "Documents"]) {
         inside.watchers.get(d)?.close();
         inside.watchers.delete(d);
-        inside.pollDir(d, "EACCES: test");
+        watcherDirectories(w).pollDir(d, "EACCES: test");
       }
       try {
         expect(w.polledDirs.sort()).toEqual(["", "Documents"]);
@@ -271,7 +267,7 @@ describe("home, a vault without a marker (VV-D2)", () => {
         w.watchNamed(["more"], () => true);
         expect(w.watchedCount).toBe(1);
         // Watching degraded (the system's limit): nothing watched, the folders still found at every tick — none named.
-        inside.degrade("ENOSPC: test");
+        (w as unknown as { degrade(reason: string): void }).degrade("ENOSPC: test");
         expect(await look()).toEqual(none);
         expect(await look()).toEqual(none);
       } finally {

@@ -1,3 +1,4 @@
+import { watcherState } from "../../../support/watcher-access.ts";
 import { describe, expect, spyOn, test } from "bun:test";
 import {
   chmodSync,
@@ -121,7 +122,7 @@ describe("the background auto-index in the TUI (20.9)", () => {
         expect([...h.app.graph.notes.keys()].sort()).toEqual(["Documents/letter.md", "a.md", "cloned/top.md"]);
         // A batch both rescanning and naming (two merged while git wrote; its graph built again): the name forgotten
         // all the same.
-        const left = (h.app.watcher as unknown as { left: Map<string, boolean> }).left;
+        const left = watcherState(h.app.watcher!).left;
         left.set("vaulted", true);
         h.app.watch.applyChanges({ changes: [], rescan: true, toWalk: ["vaulted"] });
         expect(left.has("vaulted")).toBe(false);

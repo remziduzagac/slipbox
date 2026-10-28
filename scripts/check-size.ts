@@ -19,10 +19,8 @@ export const LIMIT = 750;
 /** Legacy handwritten files: exact caps; only reviewed import-formatting growth may reset one (ORG-D2). */
 export const CAPPED: Record<string, number> = {
   "src/core/workspace/graph/graph.ts": 998,
-  "src/core/workspace/graph/watch.ts": 866,
   "src/core/workspace/mutations/rename/rename.ts": 812,
   "src/core/workspace/search/search.ts": 805,
-  "src/core/workspace/walk/walk.ts": 825,
   "src/tui/app/runtime/app.ts": 1366,
   "src/tui/documents/diagnostics/problems.ts": 759,
   "src/tui/documents/views/draw-pane.ts": 959,

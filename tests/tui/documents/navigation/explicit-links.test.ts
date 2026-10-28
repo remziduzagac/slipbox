@@ -1,3 +1,4 @@
+import { watcherState } from "../../../support/watcher-access.ts";
 import { describe, expect, spyOn, test } from "bun:test";
 import {
   chmodSync,
@@ -599,7 +600,7 @@ describe("links followed only when you say so (VV-D6)", () => {
       h.app.open("data/far.md");
       const far = h.app.view!.buf;
       expect(far.readOnly).toBeNull();
-      const watched = () => (h.app.watcher as unknown as { watchers: Map<string, unknown> }).watchers.has("data");
+      const watched = () => watcherState(h.app.watcher!).watchers.has("data");
       expect(watched()).toBe(true);
       await h.app.run("vault.links");
       const list = h.app.overlay as ListOverlay;

@@ -1096,8 +1096,17 @@ interaction clients introduce no gateway execution or new scheduling policy.
 validation; data-format readers and queries; and Markdown engine/chunk/transformation/query owners. Public entry points,
 warning order, format-specific branches and parse/cache identity remain unchanged. The reported TOML/INI clone is
 retained: their line structure is similar but validation, sections and value handling differ. The 750-line stage is
-active, with nine exact pre-existing handwritten exceptions and their named follow-ups recorded in the task; generated
+active; its initial nine exact handwritten exceptions and named follow-ups are recorded in the task. Generated
 locks remain separate. All new owners are below the 500-line aim. Final dispositions remain T11's responsibility.
+
+### T33 walk and watch assessment
+
+[Task 33](tasks/33-walk-splits.md) separates traversal/filtering/IO below the walk entry, home cache and containment below
+home composition, and directory subscription/admission plus event reconciliation below the watcher. One original state
+and live options object preserve scheduling, polling, callbacks, move history and cleanup. Public entry exports and
+fixture data remain unchanged. Walk and watcher caps are removed; seven exact handwritten exceptions remain under the
+active 750-line ceiling. All new owners are below 500 lines. Runtime SCC membership is unchanged; the benefit is focused
+responsibility and testable lower mechanisms, without gateway execution or new lifecycle policy.
 
 ## Implementation tasks
 

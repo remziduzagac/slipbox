@@ -43,9 +43,10 @@ for a person, and a command line for agents and scripts, both over the same plai
 through a text canvas, with no terminal. `bun run check:boundary` (`scripts/check-boundary.ts`) fails on any import that
 crosses.
 
-**The size of a file.** No source file is over 1,500 lines (D235): a feature lives in a module of its own, and `App`
-keeps the shared state and the wiring. `bun run check:size` (`scripts/check-size.ts`) fails on a file past the limit.
-Since the big files were split, none is past it; a file that ever must be is capped in `CAPPED` and may only shrink.
+**The size of a file.** The active source ceiling is 750 lines (D235, ORG-D2), with a 500-line aim and a final
+600-line ceiling. Exact legacy caps may only shrink apart from approved import-formatting growth; generated data has
+a separate cap. A feature lives in a module of its own, and `App` keeps shared state and wiring.
+`bun run check:size` (`scripts/check-size.ts`) checks the ceiling and exact caps.
 
 ## Where things live
 
@@ -71,6 +72,10 @@ A few modules to know first:
   `core/application/commands/registry.ts`: every user action, by its id, with its command-line equivalent.
 - `core/workspace/graph/graph.ts`: the notes of a root, their links and backlinks, parsed lazily and cached; how a link
   resolves is `graph-resolve.ts`'s, a note's entry from its text `graph-extract.ts`'s, their shapes `graph-types.ts`'s.
+- `core/workspace/walk/`: shared contracts, filtering, IO and traversal below the public walk entry; whole and sliced
+  walks use one filter and folder-reader hook. `core/workspace/graph/watch.ts` owns lifecycle and scheduling over
+  shared watcher state, directory subscriptions and event reconciliation in `watch/`. Home composition delegates
+  containment, persisted walk admission and filtering to `core/workspace/vaults/home/`.
 - `core/workspace/mutations/rename/rename.ts`: renames and moves as plans of byte-range edits, previewed first;
   `rename-plan.ts` defines the plan, and `rename-apply.ts` carries it out and undoes it. Shared trash storage and
   vault-marker operations live below both file operations and rename execution in `core/workspace/mutations/trash.ts`.

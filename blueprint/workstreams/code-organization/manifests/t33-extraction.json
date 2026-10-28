@@ -1,0 +1,616 @@
+{
+  "moves": {},
+  "retained": [],
+  "renamedBasenames": {},
+  "edges": {
+    "removed": [
+      "src/core/workspace/graph/watch.ts -> src/core/workspace/vaults/home.ts",
+      "src/core/workspace/graph/watch.ts -> src/core/workspace/walk/walk.ts",
+      "src/core/workspace/vaults/home.ts -> src/core/foundation/platform/fsutil.ts",
+      "src/core/workspace/vaults/home.ts -> src/core/foundation/platform/paths.ts",
+      "src/core/workspace/vaults/home.ts -> src/core/workspace/vaults/symlinks.ts",
+      "src/core/workspace/vaults/home.ts -> src/core/workspace/walk/walk.ts",
+      "src/core/workspace/walk/walk.ts -> src/core/application/config/config.ts",
+      "src/core/workspace/walk/walk.ts -> src/core/documents/model/filetypes.ts",
+      "src/core/workspace/walk/walk.ts -> src/core/foundation/platform/fsutil.ts",
+      "src/core/workspace/walk/walk.ts -> src/core/foundation/platform/paths.ts",
+      "src/core/workspace/walk/walk.ts -> src/core/workspace/vaults/mounts.ts",
+      "src/core/workspace/walk/walk.ts -> src/core/workspace/vaults/symlinks.ts",
+      "src/core/workspace/walk/walk.ts -> src/core/workspace/vaults/vault.ts"
+    ],
+    "added": [
+      "src/core/workspace/graph/watch.ts -> src/core/workspace/graph/watch/contracts.ts",
+      "src/core/workspace/graph/watch.ts -> src/core/workspace/graph/watch/directories.ts",
+      "src/core/workspace/graph/watch.ts -> src/core/workspace/graph/watch/io.ts",
+      "src/core/workspace/graph/watch.ts -> src/core/workspace/graph/watch/reconciliation.ts",
+      "src/core/workspace/graph/watch.ts -> src/core/workspace/graph/watch/state.ts",
+      "src/core/workspace/graph/watch.ts -> src/core/workspace/walk/io/stamps.ts",
+      "src/core/workspace/graph/watch/contracts.ts -> src/core/workspace/graph/watch/state.ts",
+      "src/core/workspace/graph/watch/contracts.ts -> src/core/workspace/walk/filtering/filter.ts",
+      "src/core/workspace/graph/watch/directories.ts -> src/core/workspace/graph/watch/contracts.ts",
+      "src/core/workspace/graph/watch/directories.ts -> src/core/workspace/graph/watch/io.ts",
+      "src/core/workspace/graph/watch/directories.ts -> src/core/workspace/vaults/home/paths.ts",
+      "src/core/workspace/graph/watch/directories.ts -> src/core/workspace/walk/io/stamps.ts",
+      "src/core/workspace/graph/watch/directories.ts -> src/core/workspace/walk/traversal/symlinks.ts",
+      "src/core/workspace/graph/watch/io.ts -> src/core/workspace/walk/filtering/filter.ts",
+      "src/core/workspace/graph/watch/io.ts -> src/core/workspace/walk/io/stamps.ts",
+      "src/core/workspace/graph/watch/reconciliation.ts -> src/core/workspace/graph/watch/contracts.ts",
+      "src/core/workspace/graph/watch/reconciliation.ts -> src/core/workspace/graph/watch/io.ts",
+      "src/core/workspace/graph/watch/reconciliation.ts -> src/core/workspace/graph/watch/state.ts",
+      "src/core/workspace/graph/watch/reconciliation.ts -> src/core/workspace/vaults/home/paths.ts",
+      "src/core/workspace/graph/watch/reconciliation.ts -> src/core/workspace/walk/io/stamps.ts",
+      "src/core/workspace/vaults/home.ts -> src/core/workspace/vaults/home/cache.ts",
+      "src/core/workspace/vaults/home.ts -> src/core/workspace/vaults/home/contracts.ts",
+      "src/core/workspace/vaults/home.ts -> src/core/workspace/vaults/home/filter.ts",
+      "src/core/workspace/vaults/home.ts -> src/core/workspace/vaults/home/paths.ts",
+      "src/core/workspace/vaults/home.ts -> src/core/workspace/walk/contracts.ts",
+      "src/core/workspace/vaults/home.ts -> src/core/workspace/walk/filtering/filter.ts",
+      "src/core/workspace/vaults/home.ts -> src/core/workspace/walk/traversal/walk.ts",
+      "src/core/workspace/vaults/home/cache.ts -> src/core/application/config/config.ts",
+      "src/core/workspace/vaults/home/cache.ts -> src/core/foundation/platform/fsutil.ts",
+      "src/core/workspace/vaults/home/cache.ts -> src/core/foundation/platform/paths.ts",
+      "src/core/workspace/vaults/home/cache.ts -> src/core/workspace/vaults/home/contracts.ts",
+      "src/core/workspace/vaults/home/cache.ts -> src/core/workspace/vaults/home/filter.ts",
+      "src/core/workspace/vaults/home/cache.ts -> src/core/workspace/vaults/home/paths.ts",
+      "src/core/workspace/vaults/home/cache.ts -> src/core/workspace/vaults/symlinks.ts",
+      "src/core/workspace/vaults/home/cache.ts -> src/core/workspace/vaults/vault.ts",
+      "src/core/workspace/vaults/home/cache.ts -> src/core/workspace/walk/contracts.ts",
+      "src/core/workspace/vaults/home/cache.ts -> src/core/workspace/walk/filtering/filter.ts",
+      "src/core/workspace/vaults/home/cache.ts -> src/core/workspace/walk/filtering/policy.ts",
+      "src/core/workspace/vaults/home/cache.ts -> src/core/workspace/walk/io/stamps.ts",
+      "src/core/workspace/vaults/home/cache.ts -> src/core/workspace/walk/traversal/symlinks.ts",
+      "src/core/workspace/vaults/home/cache.ts -> src/core/workspace/walk/traversal/walk.ts",
+      "src/core/workspace/vaults/home/contracts.ts -> src/core/workspace/walk/contracts.ts",
+      "src/core/workspace/vaults/home/filter.ts -> src/core/application/config/config.ts",
+      "src/core/workspace/vaults/home/filter.ts -> src/core/workspace/vaults/vault.ts",
+      "src/core/workspace/vaults/home/filter.ts -> src/core/workspace/walk/filtering/filter.ts",
+      "src/core/workspace/vaults/home/paths.ts -> src/core/workspace/vaults/symlinks.ts",
+      "src/core/workspace/vaults/home/paths.ts -> src/core/workspace/walk/filtering/filter.ts",
+      "src/core/workspace/vaults/home/paths.ts -> src/core/workspace/walk/traversal/symlinks.ts",
+      "src/core/workspace/walk/contracts.ts -> src/core/application/config/config.ts",
+      "src/core/workspace/walk/filtering/filter.ts -> src/core/application/config/config.ts",
+      "src/core/workspace/walk/filtering/filter.ts -> src/core/documents/model/filetypes.ts",
+      "src/core/workspace/walk/filtering/filter.ts -> src/core/foundation/platform/fsutil.ts",
+      "src/core/workspace/walk/filtering/filter.ts -> src/core/foundation/platform/paths.ts",
+      "src/core/workspace/walk/filtering/filter.ts -> src/core/workspace/vaults/mounts.ts",
+      "src/core/workspace/walk/filtering/filter.ts -> src/core/workspace/vaults/vault.ts",
+      "src/core/workspace/walk/filtering/filter.ts -> src/core/workspace/walk/contracts.ts",
+      "src/core/workspace/walk/filtering/filter.ts -> src/core/workspace/walk/filtering/policy.ts",
+      "src/core/workspace/walk/filtering/filter.ts -> src/core/workspace/walk/io/folders.ts",
+      "src/core/workspace/walk/filtering/inspection.ts -> src/core/application/config/config.ts",
+      "src/core/workspace/walk/filtering/inspection.ts -> src/core/workspace/vaults/vault.ts",
+      "src/core/workspace/walk/filtering/inspection.ts -> src/core/workspace/walk/contracts.ts",
+      "src/core/workspace/walk/filtering/inspection.ts -> src/core/workspace/walk/filtering/filter.ts",
+      "src/core/workspace/walk/filtering/inspection.ts -> src/core/workspace/walk/filtering/policy.ts",
+      "src/core/workspace/walk/filtering/policy.ts -> src/core/workspace/vaults/vault.ts",
+      "src/core/workspace/walk/filtering/policy.ts -> src/core/workspace/walk/contracts.ts",
+      "src/core/workspace/walk/io/stamps.ts -> src/core/workspace/walk/contracts.ts",
+      "src/core/workspace/walk/traversal/listing.ts -> src/core/workspace/vaults/vault.ts",
+      "src/core/workspace/walk/traversal/listing.ts -> src/core/workspace/walk/contracts.ts",
+      "src/core/workspace/walk/traversal/listing.ts -> src/core/workspace/walk/filtering/filter.ts",
+      "src/core/workspace/walk/traversal/listing.ts -> src/core/workspace/walk/filtering/policy.ts",
+      "src/core/workspace/walk/traversal/listing.ts -> src/core/workspace/walk/io/folders.ts",
+      "src/core/workspace/walk/traversal/listing.ts -> src/core/workspace/walk/io/stamps.ts",
+      "src/core/workspace/walk/traversal/listing.ts -> src/core/workspace/walk/traversal/state.ts",
+      "src/core/workspace/walk/traversal/listing.ts -> src/core/workspace/walk/traversal/symlinks.ts",
+      "src/core/workspace/walk/traversal/state.ts -> src/core/workspace/walk/contracts.ts",
+      "src/core/workspace/walk/traversal/state.ts -> src/core/workspace/walk/filtering/filter.ts",
+      "src/core/workspace/walk/traversal/symlinks.ts -> src/core/workspace/vaults/symlinks.ts",
+      "src/core/workspace/walk/traversal/symlinks.ts -> src/core/workspace/vaults/vault.ts",
+      "src/core/workspace/walk/traversal/symlinks.ts -> src/core/workspace/walk/contracts.ts",
+      "src/core/workspace/walk/traversal/walk.ts -> src/core/workspace/walk/contracts.ts",
+      "src/core/workspace/walk/traversal/walk.ts -> src/core/workspace/walk/filtering/filter.ts",
+      "src/core/workspace/walk/traversal/walk.ts -> src/core/workspace/walk/io/stamps.ts",
+      "src/core/workspace/walk/traversal/walk.ts -> src/core/workspace/walk/traversal/listing.ts",
+      "src/core/workspace/walk/traversal/walk.ts -> src/core/workspace/walk/traversal/state.ts",
+      "src/core/workspace/walk/walk.ts -> src/core/workspace/walk/contracts.ts",
+      "src/core/workspace/walk/walk.ts -> src/core/workspace/walk/filtering/filter.ts",
+      "src/core/workspace/walk/walk.ts -> src/core/workspace/walk/filtering/inspection.ts",
+      "src/core/workspace/walk/walk.ts -> src/core/workspace/walk/filtering/policy.ts",
+      "src/core/workspace/walk/walk.ts -> src/core/workspace/walk/io/folders.ts",
+      "src/core/workspace/walk/walk.ts -> src/core/workspace/walk/io/stamps.ts",
+      "src/core/workspace/walk/walk.ts -> src/core/workspace/walk/traversal/symlinks.ts",
+      "src/core/workspace/walk/walk.ts -> src/core/workspace/walk/traversal/walk.ts"
+    ]
+  },
+  "runtime": {
+    "removed": [
+      "src/core/workspace/graph/watch.ts -> src/core/workspace/vaults/home.ts",
+      "src/core/workspace/graph/watch.ts -> src/core/workspace/walk/walk.ts",
+      "src/core/workspace/vaults/home.ts -> src/core/foundation/platform/fsutil.ts",
+      "src/core/workspace/vaults/home.ts -> src/core/foundation/platform/paths.ts",
+      "src/core/workspace/vaults/home.ts -> src/core/workspace/vaults/symlinks.ts",
+      "src/core/workspace/vaults/home.ts -> src/core/workspace/vaults/vault.ts",
+      "src/core/workspace/vaults/home.ts -> src/core/workspace/walk/walk.ts",
+      "src/core/workspace/walk/walk.ts -> src/core/documents/model/filetypes.ts",
+      "src/core/workspace/walk/walk.ts -> src/core/foundation/platform/fsutil.ts",
+      "src/core/workspace/walk/walk.ts -> src/core/foundation/platform/paths.ts",
+      "src/core/workspace/walk/walk.ts -> src/core/workspace/vaults/mounts.ts",
+      "src/core/workspace/walk/walk.ts -> src/core/workspace/vaults/symlinks.ts",
+      "src/core/workspace/walk/walk.ts -> src/core/workspace/vaults/vault.ts"
+    ],
+    "added": [
+      "src/core/workspace/graph/watch.ts -> src/core/workspace/graph/watch/directories.ts",
+      "src/core/workspace/graph/watch.ts -> src/core/workspace/graph/watch/io.ts",
+      "src/core/workspace/graph/watch.ts -> src/core/workspace/graph/watch/reconciliation.ts",
+      "src/core/workspace/graph/watch.ts -> src/core/workspace/graph/watch/state.ts",
+      "src/core/workspace/graph/watch.ts -> src/core/workspace/walk/io/stamps.ts",
+      "src/core/workspace/graph/watch/directories.ts -> src/core/workspace/graph/watch/io.ts",
+      "src/core/workspace/graph/watch/directories.ts -> src/core/workspace/vaults/home/paths.ts",
+      "src/core/workspace/graph/watch/directories.ts -> src/core/workspace/walk/io/stamps.ts",
+      "src/core/workspace/graph/watch/directories.ts -> src/core/workspace/walk/traversal/symlinks.ts",
+      "src/core/workspace/graph/watch/io.ts -> src/core/workspace/walk/io/stamps.ts",
+      "src/core/workspace/graph/watch/reconciliation.ts -> src/core/workspace/graph/watch/io.ts",
+      "src/core/workspace/graph/watch/reconciliation.ts -> src/core/workspace/vaults/home/paths.ts",
+      "src/core/workspace/graph/watch/reconciliation.ts -> src/core/workspace/walk/io/stamps.ts",
+      "src/core/workspace/vaults/home.ts -> src/core/workspace/vaults/home/cache.ts",
+      "src/core/workspace/vaults/home.ts -> src/core/workspace/vaults/home/filter.ts",
+      "src/core/workspace/vaults/home.ts -> src/core/workspace/vaults/home/paths.ts",
+      "src/core/workspace/vaults/home.ts -> src/core/workspace/walk/traversal/walk.ts",
+      "src/core/workspace/vaults/home/cache.ts -> src/core/foundation/platform/fsutil.ts",
+      "src/core/workspace/vaults/home/cache.ts -> src/core/foundation/platform/paths.ts",
+      "src/core/workspace/vaults/home/cache.ts -> src/core/workspace/vaults/home/filter.ts",
+      "src/core/workspace/vaults/home/cache.ts -> src/core/workspace/vaults/home/paths.ts",
+      "src/core/workspace/vaults/home/cache.ts -> src/core/workspace/vaults/symlinks.ts",
+      "src/core/workspace/vaults/home/cache.ts -> src/core/workspace/vaults/vault.ts",
+      "src/core/workspace/vaults/home/cache.ts -> src/core/workspace/walk/filtering/policy.ts",
+      "src/core/workspace/vaults/home/cache.ts -> src/core/workspace/walk/io/stamps.ts",
+      "src/core/workspace/vaults/home/cache.ts -> src/core/workspace/walk/traversal/symlinks.ts",
+      "src/core/workspace/vaults/home/cache.ts -> src/core/workspace/walk/traversal/walk.ts",
+      "src/core/workspace/vaults/home/filter.ts -> src/core/workspace/walk/filtering/filter.ts",
+      "src/core/workspace/vaults/home/paths.ts -> src/core/workspace/vaults/symlinks.ts",
+      "src/core/workspace/vaults/home/paths.ts -> src/core/workspace/walk/traversal/symlinks.ts",
+      "src/core/workspace/walk/filtering/filter.ts -> src/core/documents/model/filetypes.ts",
+      "src/core/workspace/walk/filtering/filter.ts -> src/core/foundation/platform/fsutil.ts",
+      "src/core/workspace/walk/filtering/filter.ts -> src/core/foundation/platform/paths.ts",
+      "src/core/workspace/walk/filtering/filter.ts -> src/core/workspace/vaults/mounts.ts",
+      "src/core/workspace/walk/filtering/filter.ts -> src/core/workspace/vaults/vault.ts",
+      "src/core/workspace/walk/filtering/filter.ts -> src/core/workspace/walk/filtering/policy.ts",
+      "src/core/workspace/walk/filtering/filter.ts -> src/core/workspace/walk/io/folders.ts",
+      "src/core/workspace/walk/filtering/inspection.ts -> src/core/workspace/vaults/vault.ts",
+      "src/core/workspace/walk/filtering/inspection.ts -> src/core/workspace/walk/filtering/filter.ts",
+      "src/core/workspace/walk/filtering/inspection.ts -> src/core/workspace/walk/filtering/policy.ts",
+      "src/core/workspace/walk/filtering/policy.ts -> src/core/workspace/vaults/vault.ts",
+      "src/core/workspace/walk/traversal/listing.ts -> src/core/workspace/vaults/vault.ts",
+      "src/core/workspace/walk/traversal/listing.ts -> src/core/workspace/walk/filtering/policy.ts",
+      "src/core/workspace/walk/traversal/listing.ts -> src/core/workspace/walk/io/folders.ts",
+      "src/core/workspace/walk/traversal/listing.ts -> src/core/workspace/walk/io/stamps.ts",
+      "src/core/workspace/walk/traversal/listing.ts -> src/core/workspace/walk/traversal/symlinks.ts",
+      "src/core/workspace/walk/traversal/symlinks.ts -> src/core/workspace/vaults/symlinks.ts",
+      "src/core/workspace/walk/traversal/symlinks.ts -> src/core/workspace/vaults/vault.ts",
+      "src/core/workspace/walk/traversal/walk.ts -> src/core/workspace/walk/io/stamps.ts",
+      "src/core/workspace/walk/traversal/walk.ts -> src/core/workspace/walk/traversal/listing.ts",
+      "src/core/workspace/walk/traversal/walk.ts -> src/core/workspace/walk/traversal/state.ts",
+      "src/core/workspace/walk/walk.ts -> src/core/workspace/walk/filtering/filter.ts",
+      "src/core/workspace/walk/walk.ts -> src/core/workspace/walk/filtering/inspection.ts",
+      "src/core/workspace/walk/walk.ts -> src/core/workspace/walk/filtering/policy.ts",
+      "src/core/workspace/walk/walk.ts -> src/core/workspace/walk/io/folders.ts",
+      "src/core/workspace/walk/walk.ts -> src/core/workspace/walk/io/stamps.ts",
+      "src/core/workspace/walk/walk.ts -> src/core/workspace/walk/traversal/symlinks.ts",
+      "src/core/workspace/walk/walk.ts -> src/core/workspace/walk/traversal/walk.ts"
+    ]
+  },
+  "tests": {
+    "removed": [],
+    "added": [
+      "test: a polling fallback warns and schedules once, then refuses new work after closure",
+      "test: busy-folder reasons distinguish ignored output from a folder that holds notes",
+      "test: directory admission reads live reservations, options and degraded state",
+      "test: home cache reuse requires its original version and filter contract",
+      "test: home containment respects segment boundaries while its top contains every relative path",
+      "test: move history keeps shared sizes and tick values and reads the current clock callback",
+      "test: reconciliation sees a replacement known map and reports the missing note into the original batch",
+      "test: settling uses the original relist sentinel and symlink refusal remains explicit",
+      "test: sliced traversal retains the same files as a whole walk across small budgets",
+      "test: the one folder-reader hook is read live by both direct and traversal callers",
+      "test: the shared home filter factory keeps current extensions and exclusions",
+      "test: walk and watcher helpers reject composition and accept lower domain records"
+    ]
+  },
+  "entries": {
+    "removed": [],
+    "added": []
+  },
+  "extraction": [
+    {
+      "from": "src/core/workspace/walk/walk.ts",
+      "to": "src/core/workspace/walk/contracts.ts",
+      "symbols": [
+        "NoteFile",
+        "Skipped",
+        "WalkResult",
+        "Stamp",
+        "BusyWhy",
+        "HomeSkip",
+        "FilterSettings",
+        "WalkLimits",
+        "WalkCap",
+        "LinkVerdict"
+      ]
+    },
+    {
+      "from": "src/core/workspace/walk/walk.ts",
+      "to": "src/core/workspace/walk/io/stamps.ts",
+      "symbols": [
+        "SETTLE_MS",
+        "settled",
+        "lost",
+        "parentOf",
+        "RELIST",
+        "stampOf",
+        "dirStamp"
+      ]
+    },
+    {
+      "from": "src/core/workspace/walk/walk.ts",
+      "to": "src/core/workspace/walk/io/folders.ts",
+      "symbols": [
+        "slowDisk",
+        "readdirTyped",
+        "folderReader",
+        "readFolder",
+        "setFolderReader"
+      ]
+    },
+    {
+      "from": "src/core/workspace/walk/walk.ts",
+      "to": "src/core/workspace/walk/filtering/policy.ts",
+      "symbols": [
+        "ALWAYS_SKIPPED",
+        "GIT_IGNORECASE",
+        "BUSY_FOLDERS",
+        "isBusyName",
+        "isBusyFolder",
+        "busyWhy",
+        "SYSTEM_FOLDERS",
+        "homeSkip",
+        "ANOTHER_DISK"
+      ]
+    },
+    {
+      "from": "src/core/workspace/walk/walk.ts",
+      "to": "src/core/workspace/walk/filtering/filter.ts",
+      "symbols": [
+        "holdsNotes",
+        "downloadsIn",
+        "filterFrom",
+        "WalkFilter"
+      ]
+    },
+    {
+      "from": "src/core/workspace/walk/walk.ts",
+      "to": "src/core/workspace/walk/filtering/inspection.ts",
+      "symbols": [
+        "busyFolderAt",
+        "busyFolderWhyAt",
+        "filterHolding"
+      ]
+    },
+    {
+      "from": "src/core/workspace/walk/walk.ts",
+      "to": "src/core/workspace/walk/traversal/state.ts",
+      "symbols": [
+        "WalkState",
+        "startWalk",
+        "finishWalk"
+      ]
+    },
+    {
+      "from": "src/core/workspace/walk/walk.ts",
+      "to": "src/core/workspace/walk/traversal/listing.ts",
+      "symbols": [
+        "listDir",
+        "handleSymlink",
+        "addFile"
+      ]
+    },
+    {
+      "from": "src/core/workspace/walk/walk.ts",
+      "to": "src/core/workspace/walk/traversal/symlinks.ts",
+      "symbols": [
+        "LINK_REASON",
+        "symlinkVerdict"
+      ]
+    },
+    {
+      "from": "src/core/workspace/walk/walk.ts",
+      "to": "src/core/workspace/walk/traversal/walk.ts",
+      "symbols": [
+        "walkVault",
+        "HOME_LIMITS",
+        "SlicedWalk",
+        "walkTop",
+        "listDirectory"
+      ]
+    },
+    {
+      "from": "src/core/workspace/vaults/home.ts",
+      "to": "src/core/workspace/vaults/home/contracts.ts",
+      "symbols": [
+        "KeptWalk",
+        "HomeWalk",
+        "AskedWhole"
+      ]
+    },
+    {
+      "from": "src/core/workspace/vaults/home.ts",
+      "to": "src/core/workspace/vaults/home/paths.ts",
+      "symbols": [
+        "under",
+        "isDir",
+        "inFolders",
+        "depth",
+        "nearer",
+        "nearestTop",
+        "deepestOutside",
+        "leftOutOfHome",
+        "walksInto"
+      ]
+    },
+    {
+      "from": "src/core/workspace/vaults/home.ts",
+      "to": "src/core/workspace/vaults/home/cache.ts",
+      "symbols": [
+        "homeWalkFile",
+        "TOO_LARGE",
+        "keepHomeWalk",
+        "strings",
+        "keptTimes",
+        "keptWalk",
+        "same",
+        "fits",
+        "homeWalkKept"
+      ]
+    },
+    {
+      "from": "src/core/workspace/vaults/home.ts",
+      "to": "src/core/workspace/vaults/home/filter.ts",
+      "symbols": [
+        "homeFilter"
+      ]
+    },
+    {
+      "from": "src/core/workspace/graph/watch.ts",
+      "to": "src/core/workspace/graph/watch/contracts.ts",
+      "symbols": [
+        "WatchChange",
+        "WatchBatch",
+        "WatcherOptions",
+        "Settling"
+      ]
+    },
+    {
+      "from": "src/core/workspace/graph/watch.ts",
+      "to": "src/core/workspace/graph/watch/state.ts",
+      "symbols": [
+        "Went"
+      ],
+      "members": [
+        "watchers",
+        "pending",
+        "rescan",
+        "toWalk",
+        "left",
+        "leftSeen",
+        "recentlyWent",
+        "followed",
+        "recentlyGone",
+        "timer",
+        "pollTimer",
+        "ownWrites",
+        "sizes",
+        "polled",
+        "closed",
+        "gitignores",
+        "stamps",
+        "attachments",
+        "ticks"
+      ]
+    },
+    {
+      "from": "src/core/workspace/graph/watch.ts",
+      "to": "src/core/workspace/graph/watch/io.ts",
+      "symbols": [
+        "isSymlink",
+        "every",
+        "changedAt",
+        "dirMtime",
+        "watchTakes",
+        "statOrNull"
+      ]
+    },
+    {
+      "from": "src/core/workspace/graph/watch.ts",
+      "to": "src/core/workspace/graph/watch/directories.ts",
+      "members": [
+        "gitignoreStamp",
+        "unwatchTree",
+        "adoptTree",
+        "symlinkKept",
+        "found",
+        "room",
+        "leave",
+        "forget",
+        "watchNamed",
+        "watchDir",
+        "pollDir",
+        "attachment"
+      ],
+      "owner": "WatchDirectories"
+    },
+    {
+      "from": "src/core/workspace/graph/watch.ts",
+      "to": "src/core/workspace/graph/watch/reconciliation.ts",
+      "members": [
+        "movedTo",
+        "settle",
+        "went",
+        "vanished"
+      ],
+      "owner": "WatchReconciliation"
+    }
+  ],
+  "stateOwnership": {
+    "folderReader": "one live backend hook; setFolderReader affects every traversal caller as before",
+    "filter": "original WalkFilter class/caches and settings identity, no cloned filter",
+    "watcher": "one WatchState owns 19 original mutable fields; public degraded and immutable realRoot remain on VaultWatcher; helpers share state/options references",
+    "callbacks": "directory host reads live degraded and calls the original schedule/degrade/timer owners; constructor IO order retained",
+    "home": "persisted cache DTO/stamps and admission unchanged; shared homeFilter factory below composition"
+  },
+  "fixtureReceivers": {
+    "projections": [
+      {
+        "file": "tests/core/workspace/graph/watch.test.ts",
+        "receiverEdits": 5
+      },
+      {
+        "file": "tests/core/workspace/vaults/home/watch.test.ts",
+        "receiverEdits": 4
+      },
+      {
+        "file": "tests/core/workspace/vaults/home/moves.test.ts",
+        "receiverEdits": 4
+      },
+      {
+        "file": "tests/core/workspace/vaults/symlinks/following.test.ts",
+        "receiverEdits": 3
+      },
+      {
+        "file": "tests/tui/workspace/vaults/autoindex.test.ts",
+        "receiverEdits": 1
+      },
+      {
+        "file": "tests/tui/documents/navigation/explicit-links.test.ts",
+        "receiverEdits": 1
+      }
+    ],
+    "retainedMainCalls": [
+      {
+        "file": "tests/core/workspace/vaults/home/moves.test.ts",
+        "method": "lookAgain",
+        "reason": "method remains on VaultWatcher, not on shared state"
+      }
+    ]
+  },
+  "guard": {
+    "rule": "walkingMechanismViolations",
+    "owners": [
+      "src/core/workspace/graph/watch/contracts.ts",
+      "src/core/workspace/graph/watch/directories.ts",
+      "src/core/workspace/graph/watch/io.ts",
+      "src/core/workspace/graph/watch/reconciliation.ts",
+      "src/core/workspace/graph/watch/state.ts",
+      "src/core/workspace/vaults/home/cache.ts",
+      "src/core/workspace/vaults/home/contracts.ts",
+      "src/core/workspace/vaults/home/filter.ts",
+      "src/core/workspace/vaults/home/paths.ts",
+      "src/core/workspace/walk/contracts.ts",
+      "src/core/workspace/walk/filtering/filter.ts",
+      "src/core/workspace/walk/filtering/inspection.ts",
+      "src/core/workspace/walk/filtering/policy.ts",
+      "src/core/workspace/walk/io/folders.ts",
+      "src/core/workspace/walk/io/stamps.ts",
+      "src/core/workspace/walk/traversal/listing.ts",
+      "src/core/workspace/walk/traversal/state.ts",
+      "src/core/workspace/walk/traversal/symlinks.ts",
+      "src/core/workspace/walk/traversal/walk.ts"
+    ],
+    "rejectedVariants": 330
+  },
+  "runtimeScc": {
+    "before": [
+      [
+        "src/tui/documents/editing/editing.ts",
+        "src/tui/documents/editing/snippets.ts"
+      ],
+      [
+        "src/tui/workspace/git/gitremote.ts",
+        "src/tui/workspace/git/views/review/rebase.ts"
+      ],
+      [
+        "src/core/rendering/export/formats/html.ts",
+        "src/core/rendering/export/formats/markdown.ts",
+        "src/core/rendering/export/stream.ts"
+      ],
+      [
+        "src/tui/documents/search/replacing.ts",
+        "src/tui/shell/overlays/overlays.ts",
+        "src/tui/workspace/search/search.ts"
+      ],
+      [
+        "src/tui/app/runtime/app.ts",
+        "src/tui/app/settings/settings.ts",
+        "src/tui/workspace/history/history.ts",
+        "src/tui/workspace/session/session.ts",
+        "src/tui/workspace/vaults/vaults.ts"
+      ],
+      [
+        "src/tui/actions/actions.ts",
+        "src/tui/actions/documents/actions-edit.ts",
+        "src/tui/actions/documents/actions-find.ts",
+        "src/tui/actions/documents/actions-links.ts",
+        "src/tui/actions/documents/actions-lsp.ts",
+        "src/tui/actions/documents/actions-view.ts",
+        "src/tui/actions/shell/actions-panes.ts",
+        "src/tui/actions/workspace/actions-files.ts"
+      ],
+      [
+        "src/tui/documents/diagnostics/draw-problems.ts",
+        "src/tui/documents/views/draw-header.ts",
+        "src/tui/documents/views/draw-pane.ts",
+        "src/tui/shell/overlays/draw-overlays.ts",
+        "src/tui/shell/panels/draw-panels.ts",
+        "src/tui/shell/screen/draw.ts",
+        "src/tui/shell/screen/statusbar/draw-status.ts",
+        "src/tui/workspace/git/views/panel/draw-git.ts"
+      ]
+    ],
+    "after": [
+      [
+        "src/tui/documents/editing/editing.ts",
+        "src/tui/documents/editing/snippets.ts"
+      ],
+      [
+        "src/tui/workspace/git/gitremote.ts",
+        "src/tui/workspace/git/views/review/rebase.ts"
+      ],
+      [
+        "src/core/rendering/export/formats/html.ts",
+        "src/core/rendering/export/formats/markdown.ts",
+        "src/core/rendering/export/stream.ts"
+      ],
+      [
+        "src/tui/documents/search/replacing.ts",
+        "src/tui/shell/overlays/overlays.ts",
+        "src/tui/workspace/search/search.ts"
+      ],
+      [
+        "src/tui/app/runtime/app.ts",
+        "src/tui/app/settings/settings.ts",
+        "src/tui/workspace/history/history.ts",
+        "src/tui/workspace/session/session.ts",
+        "src/tui/workspace/vaults/vaults.ts"
+      ],
+      [
+        "src/tui/actions/actions.ts",
+        "src/tui/actions/documents/actions-edit.ts",
+        "src/tui/actions/documents/actions-find.ts",
+        "src/tui/actions/documents/actions-links.ts",
+        "src/tui/actions/documents/actions-lsp.ts",
+        "src/tui/actions/documents/actions-view.ts",
+        "src/tui/actions/shell/actions-panes.ts",
+        "src/tui/actions/workspace/actions-files.ts"
+      ],
+      [
+        "src/tui/documents/diagnostics/draw-problems.ts",
+        "src/tui/documents/views/draw-header.ts",
+        "src/tui/documents/views/draw-pane.ts",
+        "src/tui/shell/overlays/draw-overlays.ts",
+        "src/tui/shell/panels/draw-panels.ts",
+        "src/tui/shell/screen/draw.ts",
+        "src/tui/shell/screen/statusbar/draw-status.ts",
+        "src/tui/workspace/git/views/panel/draw-git.ts"
+      ]
+    ]
+  }
+}

@@ -1,3 +1,4 @@
+import { watcherState, watcherDirectories } from "../../../support/watcher-access.ts";
 import { UNIT_TIMEOUT_MS } from "../../../support/timeouts.ts";
 import { describe, expect, setDefaultTimeout, test } from "bun:test";
 import { mkdtempSync, mkdirSync, renameSync, rmSync, statSync, symlinkSync, utimesSync, writeFileSync } from "node:fs";
@@ -71,7 +72,7 @@ describe("review cycle 5 (the watcher's polling fallbacks)", () => {
       // Its folder watched and its name taken: seen. A hidden name in it, or a folder not watched: not. A folder polled
       // (its watch failed) has its notes looked at, nothing else.
       expect([w.sees("a.md"), w.sees(".draft.md"), w.sees(".stash/h.md")]).toEqual([true, false, false]);
-      (w as unknown as { polled: Set<string> }).polled.add("sub");
+      watcherState(w).polled.add("sub");
       expect([w.sees("sub/n.md"), w.sees("sub/d.json")]).toEqual([true, false]);
       // Heard of a file that's no note: not kept by its stamp, so never swept.
       w.heard(".stash/d.json", { mtimeMs: 1, size: 1 });
@@ -109,7 +110,7 @@ describe("review cycle 5 (the watcher's polling fallbacks)", () => {
       onWarn: (m) => warned.push(m),
     });
     try {
-      (w as unknown as { pollDir(d: string, r: string): void }).pollDir("sub", "EACCES: test");
+      watcherDirectories(w).pollDir("sub", "EACCES: test");
       expect(warned.join()).toContain("polling it");
       expect(w.polledDirs).toContain("sub");
       writeFileSync(join(dir, "sub", "new.md"), "# New\n");
@@ -172,7 +173,7 @@ describe("review cycle 5 (the watcher's polling fallbacks)", () => {
       // Its events (made, then removed) in one debounce: settled once, the file not there and never known.
       writeFileSync(join(dir, "rota.md"), "# Rota\n");
       rmSync(join(dir, "rota.md"));
-      (w as unknown as { pending: Set<string> }).pending.add("rota.md");
+      watcherState(w).pending.add("rota.md");
       w.flush();
       expect(changes).toEqual(["deleted rota.md"]);
     } finally {
@@ -204,7 +205,7 @@ describe("the watcher's second look: what its events didn't say (5.1, #56)", () 
       onBatch: (b) => changes.push(...b.changes.map((c) => `${c.kind} ${c.rel}${c.isNote ? "" : " (file)"}`)),
       onDegraded: () => {},
     });
-    for (const fsw of (w as unknown as { watchers: Map<string, { close(): void }> }).watchers.values()) fsw.close();
+    for (const fsw of watcherState(w).watchers.values()) fsw.close();
     const tick = () => {
       w.pollTick();
       w.flush();
@@ -329,7 +330,7 @@ describe("review cycle 3 (core)", () => {
       symlinkSync(join(outside, "secret.md"), join(top, "moving", "x.md"));
       renameSync(join(top, "moving"), join(dir, "moved"));
       // Whatever the platform's events say, each name settled.
-      const pending = (w as unknown as { pending: Set<string> }).pending;
+      const pending = watcherState(w).pending;
       for (const rel of ["linked", "s.md", "twin.md", "pic.png", "moved"]) pending.add(rel);
       w.flush();
       await Bun.sleep(150);

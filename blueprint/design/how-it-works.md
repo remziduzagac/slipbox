@@ -97,6 +97,8 @@ that order:
   followed, its settings, and where its state is kept. Nothing is written into a folder by opening it (D58). One walk
   lists its files for the index and the watcher alike (D40); the TUI makes its own walks, and lists the explorer's
   folders, on threads of their own (T12). A link out of the vault or home is followed only when you say so (VV-D6).
+  Walk contracts, filtering, IO and traversal live below the public entry. Home cache admission and containment live
+  in `vaults/home/`; `graph/watch.ts` keeps lifecycle over directory and reconciliation owners sharing one state.
   Code: `core/workspace/vaults/vault.ts`, `core/workspace/vaults/home.ts`, `core/workspace/walk/walk.ts`,
   `core/workspace/walk/walk-thread.ts`, `core/workspace/vaults/symlinks.ts`,
   `core/workspace/vaults/registry.ts`, `core/workspace/vaults/folders.ts`.

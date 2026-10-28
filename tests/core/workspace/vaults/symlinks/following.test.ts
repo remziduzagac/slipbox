@@ -1,3 +1,4 @@
+import { watcherState } from "../../../../support/watcher-access.ts";
 import { UNIT_TIMEOUT_MS } from "../../../../support/timeouts.ts";
 import { describe, expect, setDefaultTimeout, test } from "bun:test";
 import {
@@ -204,7 +205,7 @@ describe("links followed only when you say so (VV-D6)", () => {
     });
     try {
       // Seen now as it would be when it came: the link followed, what it holds the vault's.
-      (w as unknown as { pending: Set<string> }).pending.add("data");
+      watcherState(w).pending.add("data");
       w.flush();
       expect(changes).toContain("created data/far.md");
       expect(w.watchedCount).toBe(2);
@@ -212,7 +213,7 @@ describe("links followed only when you say so (VV-D6)", () => {
       mkdirSync(join(vault, "moved"));
       symlinkSync(out, join(vault, "moved", "in"));
       setLinkAnswer(join(vault, "moved", "in"), "follow");
-      (w as unknown as { pending: Set<string> }).pending.add("moved");
+      watcherState(w).pending.add("moved");
       w.flush();
       expect(changes).toContain("created moved/in/far.md");
       // Not followed: nothing through it.
@@ -226,7 +227,7 @@ describe("links followed only when you say so (VV-D6)", () => {
         onBatch: (b) => changes.push(...b.changes.map((c) => `again ${c.kind} ${c.rel}`)),
         onDegraded: () => {},
       });
-      (w2 as unknown as { pending: Set<string> }).pending.add("data");
+      watcherState(w2).pending.add("data");
       w2.flush();
       expect(changes.filter((c) => c.startsWith("again"))).toEqual([]);
       w2.close();
