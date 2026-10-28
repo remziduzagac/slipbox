@@ -482,6 +482,10 @@
       {
         "file": "tests/tui/documents/navigation/explicit-links.test.ts",
         "receiverEdits": 1
+      },
+      {
+        "file": "tests/regressions.test.ts",
+        "receiverEdits": 1
       }
     ],
     "retainedMainCalls": [

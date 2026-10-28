@@ -63,10 +63,10 @@ imports from mechanisms to composition, including type and dynamic imports. It f
 passes with it restored. An independent import-shape probe rejects 330 variants across all nineteen new owners and
 allows their lower contracts.
 
-Six existing fixtures deliberately inspect private watcher internals. A pure support module returns the actual new
-state or directory owner; it allocates no watcher, hook, timer or sandbox. Eighteen receiver projections and one call
+Seven existing fixtures deliberately inspect private watcher internals. A pure support module returns the actual new
+state or directory owner; it allocates no watcher, hook, timer or sandbox. Nineteen receiver projections and one call
 retargeted to the still-owned `lookAgain` method preserve the original operations. A transpiled body comparison after
-normalizing those receiver paths finds identical fixture logic, assertions and literal data across all six files.
+normalizing those receiver paths finds identical fixture logic, assertions and literal data across all seven files.
 Titles, hooks and snapshots are unchanged. No production compatibility shim is added for private test access.
 
 The original declarations are accounted for: walk 51, home 26 and watcher 11, plus all 50 non-constructor watcher
@@ -99,3 +99,12 @@ preserve 28 walk exports, 13 home exports and two watcher exports, including ten
   from each characterization entry and include test/support modules, not only source runtime modules.
 
 Local logs, commands, immutable baseline archives, binary hash and audit output are under ignored `tmp/issue/`.
+
+The first PR run exposed two missed fixture references: the distribution graph assertion still expected the walk
+entry's former direct `fsutil` import, and the no-events regression scenario accessed the former private `watchers`
+field. Both fail locally before correction. The graph assertion now checks the actual filtering owner; the regression
+uses the same state projection as the other fixtures. Its emitted operations/data remain identical after receiver
+normalization. Both full test files pass before/after: 110 tests and 1,801 assertions on each tree. No product code or test identity
+changes in this
+correction. A scan of remaining private watcher accesses finds only the already-projected fixtures and retained main
+methods; unrelated layout/worker `pending` properties are unchanged.

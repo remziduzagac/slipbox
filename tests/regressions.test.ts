@@ -20,6 +20,7 @@ import { App } from "../src/tui/app/runtime/app.ts";
 import { TextCanvas } from "../src/tui/shell/terminal/canvas.ts";
 import { importsOf } from "../scripts/check-boundary.ts";
 import { computeFind } from "../src/tui/workspace/search/search.ts";
+import { watcherState } from "./support/watcher-access.ts";
 import { selectedText } from "../src/tui/documents/views/views.ts";
 
 const sandbox = mkdtempSync(join(tmpdir(), "slipbox-reg-"));
@@ -228,8 +229,7 @@ describe("medium", () => {
       open: "b/keep.md",
     });
     try {
-      for (const w of (app.watcher as unknown as { watchers: Map<string, { close(): void }> }).watchers.values())
-        w.close();
+      for (const w of watcherState(app.watcher!).watchers.values()) w.close();
       renameSync(join(dir, "g.md"), join(dir, "h.md"));
       renameSync(join(dir, "a", "x.md"), join(dir, "b", "x.md"));
       mkdirSync(join(dir, "c"));
