@@ -36,10 +36,15 @@ turns it into a string for `slipbox render`.
 
 ## Blocks and inlines (plan `2.2`)
 
-`rendering/layout/markdown/render.ts` handles every mdast node remark-gfm produces, plus `#tags` and Obsidian's
-highlights and comments: the blocks itself, inlines in `render-inline.ts`, tables in `render-table.ts`, front matter and
-data files' rows in `render-data.ts`. Containers lay their children out at reduced width and prefix every row, so
-nesting composes.
+`rendering/layout/markdown/render.ts` is the entry for every mdast node remark-gfm produces, plus `#tags` and Obsidian's
+highlights and comments. `page/render.ts` owns each render's context and cache; `blocks/dispatch.ts` keeps recursive
+block/container/embed dispatch together. `rows/` finishes, places and spaces rows; `pictures/layout.ts` handles fitting,
+captions and drawing rows. Inlines remain in `render-inline.ts`, tables in `render-table.ts`, front matter and data rows
+in `render-data.ts`. Containers lay their children out at reduced width and prefix every row, so nesting composes.
+
+`nodes/structure.ts` shares definition traversal and one identical spacing guard: breaks, comments and whitespace-only
+text may separate standalone embeds or pictures. Inline fallback text conversion and data shape guards have distinct
+contracts and stay separate. Context identity, callbacks, cache keys, source maps and HTML adaptation are unchanged.
 
 | Node | Rendering |
 | --- | --- |

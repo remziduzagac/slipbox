@@ -73,8 +73,9 @@ A few modules to know first:
   `rename-plan.ts` defines the plan, and `rename-apply.ts` carries it out and undoes it. Shared trash storage and
   vault-marker operations live below both file operations and rename execution in `core/workspace/mutations/trash.ts`.
 - `core/documents/model/note.ts` and `core/rendering/layout/`: a note from its text to rows for a width, shared by
-  `slipbox render` and the TUI. `rendering/layout/markdown/render.ts` lays out its blocks; `render-inline.ts`,
-  `render-table.ts` and `render-data.ts` lay out the rest.
+  `slipbox render` and the TUI. The Markdown `render.ts` entry delegates context/cache ownership to `page/render.ts`,
+  recursive blocks to `blocks/dispatch.ts`, row finishing to `rows/` and pictures to `pictures/layout.ts`; inline,
+  table and data owners retain their distinct layout policies.
 - `cli/cli.ts`: the command line's dispatcher, its help and flags; each command's code is in its group's module, the
   session and the helpers they share in `cli/common.ts`.
 - `core/foundation/platform/fsutil.ts`: atomic writes, and `writeNote`, which never writes outside the root.

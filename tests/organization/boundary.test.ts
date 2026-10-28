@@ -81,6 +81,28 @@ describe("the boundary check (0.3, scripts/check-boundary.ts)", () => {
           `export type { Grammar } from "${name === "contracts" ? "./syntax.ts" : "../syntax.ts"}"; ${name === "grammar/loader" ? 'export const load = () => import("../tree/tree.ts");' : ""}\n`,
         ]),
       ),
+      "src/core/rendering/layout/markdown/render.ts": "export interface RenderOptions {}\n",
+      ...Object.fromEntries(
+        [
+          "contracts",
+          "render-context",
+          "render-html",
+          "render-caption",
+          "render-inline",
+          "render-data",
+          "render-table",
+          "rows/finish",
+          "rows/spacing",
+          "nodes/structure",
+          "blocks/headings",
+          "blocks/code",
+          "pictures/layout",
+          "blocks/dispatch",
+        ].map((name) => [
+          `src/core/rendering/layout/markdown/${name}.ts`,
+          `export type { RenderOptions } from "${name.includes("/") ? "../render.ts" : "./render.ts"}"; ${name === "rows/finish" ? 'export const load = () => import("../blocks/dispatch.ts");' : name === "nodes/structure" ? 'export const load = () => import("../page/render.ts");' : ""}\n`,
+        ]),
+      ),
       "src/core/workspace/graph/graph.ts": "export class Graph {}\n",
       ...Object.fromEntries(
         [
@@ -119,6 +141,27 @@ describe("the boundary check (0.3, scripts/check-boundary.ts)", () => {
         'import { draw } from "../../shell/screen/draw.ts";\nexport const paint = draw;\n',
     });
     expect(r.code).toBe(1);
+    expect(r.err).toContain("src/core/rendering/layout/markdown/rows/finish.ts: imports ../blocks/dispatch.ts");
+    expect(r.err).toContain("src/core/rendering/layout/markdown/nodes/structure.ts: imports ../page/render.ts");
+    expect(r.err).toContain("Markdown mechanism must not import higher composition, even for types");
+    for (const name of [
+      "contracts",
+      "render-context",
+      "render-html",
+      "render-caption",
+      "render-inline",
+      "render-data",
+      "render-table",
+      "rows/finish",
+      "rows/spacing",
+      "nodes/structure",
+      "blocks/headings",
+      "blocks/code",
+      "pictures/layout",
+      "blocks/dispatch",
+    ]) {
+      expect(r.err).toContain(`src/core/rendering/layout/markdown/${name}.ts: imports`);
+    }
     expect(r.err).toContain("syntax mechanism must not import tree composition, even for types");
     for (const name of [
       "contracts",
