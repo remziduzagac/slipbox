@@ -164,8 +164,10 @@
       "test: JSON-comment blanking retains strings and block-comment offsets",
       "test: TOML duplicate-key validation stays distinct from INI line admission",
       "test: YAML document admission does not bypass the separate JSON validator",
+      "test: chunking keeps a comment block intact through a near closer until its actual ending",
       "test: delimited tables retain doubled quotes in a quoted cell",
       "test: field validation drops a bad known field, preserves an unknown extension and keeps its warning",
+      "test: literal block closers retain exact Markdown boundary semantics",
       "test: loading clones defaults and retains the last good file after a syntax refusal",
       "test: merge warning order and fallback remain distinct from safe-path and object admission",
       "test: normalization preserves frontmatter and fences while bounding pathological prose",
@@ -433,6 +435,12 @@
     "data": "format-specific readers remain explicit; TOML validation is not shared with INI admission; shared node/link/outline helpers retain their bodies",
     "markdown": "same unified processors/plugin order, cache and single origin symbol; chunks/transforms/headings stay below dispatch",
     "ceiling": "approved ORG-T32 step 750; exact measured pre-existing exceptions, generated locks separate"
+  },
+  "literalMatcher": {
+    "owner": "src/core/documents/markdown/parse/chunks.ts#htmlEnd",
+    "change": "direct string checks for literal block terminators; same test capability and accepted Markdown grammar",
+    "equivalenceComparisons": 112068,
+    "publicAPI": "unchanged"
   },
   "guards": {
     "mechanisms": "configuration, data and Markdown helpers reject their dispatch facade, including types; data queries also avoid the Markdown dispatch facade"

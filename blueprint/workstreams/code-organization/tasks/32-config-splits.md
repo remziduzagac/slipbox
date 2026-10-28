@@ -44,10 +44,10 @@ symbols. No file is moved or retired; moves, retained paths and renamed basename
 
 The configuration entry falls from 999 to 10 lines; data dispatch and Markdown assembly remain small entry points.
 Every new owner is below 500 lines (largest: configuration contracts, 325). All 114 original declarations are accounted
-for: configuration 32, data 40, Markdown 42. Types/literals and executable bodies are unchanged apart from export/import
-placement. Public APIs preserve exports, names, arities and default/template values (configuration six, data five,
-Markdown seventeen). There is one original origin symbol, not a copied cache token. No worker entry, asset, timeout,
-command or persisted format changes.
+for: configuration 32, data 40, Markdown 42. Public types and default/template values are preserved. Executable bodies
+remain unchanged apart from export/import placement, with one equivalent block-end helper refactor described below.
+Public APIs preserve exports, names and arities (configuration six, data five, Markdown seventeen). There is one
+original origin symbol, not a copied cache token. No worker entry, asset, timeout, command or persisted format changes.
 
 The reported `data:203`/`data:372` clone is assessed as retained TOML/INI format-specific line processing. TOML validates
 with smol-toml, supports TOML headers/record tables and interprets quoted/multiline values; INI admits repeated line
@@ -90,12 +90,12 @@ bun run test:terminal --jobs 2 'config: yours rewritten' "config: a folder's con
   'data: TOML' 'data: YAML' 'data: CSV' 'code blocks and properties'
 ```
 
-- Existing configuration/data/Markdown owners pass 35 tests with 999 assertions before/after. Thirteen new
+- Existing configuration/data/Markdown owners pass 35 tests with 999 assertions before/after. Fifteen new
   characterizations cover loading/default identity, last-good fallback, trust filtering, ordered warnings, field
   validation, format-specific admission, JSON comments, table cells, references/outlines, transforms, normalization,
-  position copying, cache records and visitor pruning. The same thirteen pass against original implementations via
-  private export-only adapters (44 assertions); the immutable manifest baseline is separate.
-- Combined affected owners, organization guards and size-policy checks pass 84 tests, 0 fail, 1,839 assertions across
+  position copying, cache records and visitor pruning. The same fifteen pass against original implementations via
+  private export-only adapters (55 assertions); the immutable manifest baseline is separate.
+- Combined affected owners, organization guards and size-policy checks pass 86 tests, 0 fail, 1,850 assertions across
   sixteen files. Existing test identities remain unchanged; the boundary fixture adds one declaration and the size
   assertion stays within its existing declaration. No assertions, hooks, snapshot names or fixture DATA are rewritten.
 - Complete output records match: six configuration/warning/origin records, twelve data trees/outlines/links and sixteen
@@ -106,15 +106,15 @@ bun run test:terminal --jobs 2 'config: yours rewritten' "config: a folder's con
   Real-worker owners pass six tests with 5,263 assertions before/after (including cache reuse, startup refusal and
   failed-worker restart). The 2 MB note journey passes in baseline/current source (2.7/2.6 s) and in the compiled
   binary, exercising the unchanged parse-worker entry through its new imports.
-  Artifact SHA-256: `2b9a315fdc086ef73cee48b40e32a619b0ca5da35cfaacb43d6dc2f5f4694a42`.
+  Artifact SHA-256: `31c23d7e6cb0edf7373110fdb64a2672dc8cd749faa8d721083da63facd09fee`.
 - Static edges: 2,348 to 2,408 (eleven removed, 71 added); runtime: 1,834 to 1,874 (eleven removed, 51 added).
-  Declarations: 3,908 to 3,922 (fourteen added, none removed). Entries stay identical and imports resolve. All seven
+  Declarations: 3,908 to 3,924 (sixteen added, none removed). Entries stay identical and imports resolve. All seven
   runtime SCC memberships stay identical (2, 2, 3, 3, 5, 8, 8); no cycle reduction or speed improvement is claimed.
 - Characterization closures count every importGraph/reach node including support/non-src files: configuration 16
-  files/14 source modules, data 14/13, Markdown 13/12. None imports App. Data outlines import heading queries and their
+  files/14 source modules, data 14/13, Markdown 14/13. None imports App. Data outlines import heading queries and their
   contract directly, so data readers do not load the Markdown dispatch entry just for an outline slug.
 - Mapped selector coverage retains every old owner: configuration 369 to 370, data 361 to 362, Markdown 374 to 376.
-  Direct entry selections are 369, 361 and 372. The two narrowed Markdown-entry owners are
+  Direct entry selections are 369, 361 and 373. The two narrowed Markdown-entry owners are
   `tests/core/workspace/graph/queries/file-links.test.ts` and `tests/home.test.ts`: their data-outline dependency now
   points to the actual heading helper, whose changes still select them. No feature selector is added to mask this
   dependency transfer. Terminal selectors remain unchanged. Every new runtime owner selects its characterization;
@@ -127,3 +127,12 @@ bun run test:terminal --jobs 2 'config: yours rewritten' "config: a folder's con
 
 Assertion totals and durations are observations on this host. Fidelity is judged by identities, original bodies and
 complete output records; no whole-suite or all-terminal run is used.
+
+### Literal block-end matcher
+
+`parse/chunks.ts` keeps the same block-boundary grammar while matching literal endings with `includes`; the raw-tag
+case keeps its case-insensitive expression. The internal capability now exposes only `test`, the member its callers
+use. This changes one helper's executable body, not any public parser API. An exhaustive comparison with the original
+helper covers 112,068 tag/line pairs with identical results. Two additional characterizations preserve exact endings
+and whole/sliced equivalence across a comment block. They also pass against the original implementation. The final
+compiled artifact above passes configuration reload, TOML navigation and the real 2 MB parse-worker journey.

@@ -1,9 +1,10 @@
 import { expect, test } from "bun:test";
 import type { Root } from "mdast";
+import { parseMarkdown } from "../../../../src/core/documents/markdown/parse.ts";
 import { parseLegacy } from "../../../../src/core/documents/markdown/parse/engine.ts";
 import { finish } from "../../../../src/core/documents/markdown/parse/transforms.ts";
 import { tame } from "../../../../src/core/documents/markdown/parse/normalization.ts";
-import { shifted } from "../../../../src/core/documents/markdown/parse/chunks.ts";
+import { htmlEnd, shifted } from "../../../../src/core/documents/markdown/parse/chunks.ts";
 import { ORIGIN, newParseCache } from "../../../../src/core/documents/markdown/parse/contracts.ts";
 import { headingText, headingsOf } from "../../../../src/core/documents/markdown/parse/headings.ts";
 import { visit } from "../../../../src/core/documents/markdown/parse/visit.ts";
@@ -53,4 +54,38 @@ test("visitor pruning skips children while retaining later siblings and their pa
     if (node.type === "paragraph") return false;
   });
   expect(seen).toEqual(["none/root", "root/paragraph", "root/heading", "heading/text"]);
+});
+
+test("literal block closers retain exact Markdown boundary semantics", () => {
+  for (const [tag, close, other] of [
+    ["<!--", "-->", "--!>"],
+    ["<?", "?>", "? >"],
+    ["<![CDATA[", "]]>", "] ]>"],
+    ["<!DOCTYPE", ">", "x"],
+  ] as const) {
+    expect(htmlEnd(tag).test(`before ${close} after`)).toBe(true);
+    expect(htmlEnd(tag).test(other)).toBe(false);
+  }
+  expect(htmlEnd("<script").test("</SCRIPT>")).toBe(true);
+});
+
+test("chunking keeps a comment block intact through a near closer until its actual ending", () => {
+  const text = [
+    "# Start",
+    "",
+    "<!--",
+    ...Array.from({ length: 45 }, (_, i) => `line ${i}`),
+    "--!>",
+    "",
+    "# Hidden",
+    "",
+    "-->",
+    "",
+    "# After",
+    "",
+  ].join("\n");
+  const whole = parseMarkdown(text, undefined, { whole: true });
+  const sliced = parseMarkdown(text, undefined, { chunkLines: 3 });
+  expect(JSON.parse(JSON.stringify(sliced.tree))).toEqual(JSON.parse(JSON.stringify(whole.tree)));
+  expect(whole.tree.children.filter((node) => node.type === "heading")).toHaveLength(2);
 });

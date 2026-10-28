@@ -44,7 +44,7 @@ export function chunkStarts(lines: string[], min = CHUNK_LINES): number[] {
   let front = lines[0]?.replace(/\r$/, "") === "---" || lines[0]?.replace(/\r$/, "") === "+++";
   const frontEnd = lines[0]?.replace(/\r$/, "") === "+++" ? /^\+\+\+\s*$/ : /^(---|\.\.\.)\s*$/;
   /** An open HTML block of kinds 1–5 (comments, <script>…): what ends it. */
-  let html: RegExp | null = null;
+  let html: Pick<RegExp, "test"> | null = null;
   /** An open HTML block of kinds 6–7: a blank line ends it. */
   let htmlToBlank = false;
   /** A lone tag where a paragraph might go on: HTML or text, either way ended by a blank line. */
@@ -149,17 +149,11 @@ export function chunkStarts(lines: string[], min = CHUNK_LINES): number[] {
 
 /** What ends an HTML block of kinds 1–5, from its opening. Kind 1 (<script>, <pre>, <style>,
  *  <textarea>) ends at the end tag of any of the four. */
-export function htmlEnd(tag: string): RegExp {
+export function htmlEnd(tag: string): Pick<RegExp, "test"> {
   const t = tag.toLowerCase();
-  return t === "<!--"
-    ? /-->/
-    : t === "<?"
-      ? /\?>/
-      : t.startsWith("<![cdata[")
-        ? /\]\]>/
-        : t.startsWith("<!")
-          ? />/
-          : /<\/(?:script|pre|style|textarea)>/i;
+  const literal =
+    t === "<!--" ? "-->" : t === "<?" ? "?>" : t.startsWith("<![cdata[") ? "]]>" : t.startsWith("<!") ? ">" : null;
+  return literal === null ? /<\/(?:script|pre|style|textarea)>/i : { test: (line: string) => line.includes(literal) };
 }
 
 /**
