@@ -1126,6 +1126,15 @@ owners. The 812-line cap is removed, leaving five exact handwritten exceptions a
 owners are below 500 lines. Existing byte edits, plan schema, fixtures and runtime SCC membership are preserved.
 No gateway executes or retains plans here.
 
+### T36 drawing assessment
+
+[Task 36](tasks/36-tui-render-splits.md) separates document painting/chrome, shell widgets, feature-owned panels,
+window/tab drawing and geometry records below composition. It preserves the existing global tabs containing views,
+active-document tools, shared caches and TUI buffers. The footnote/outline scroll clone reuses the existing pin-aware
+selection helper; no geometry or selection policy changes. Complete Canvas/hit-geometry comparisons agree. The two
+drawing caps are removed, leaving three exact handwritten exceptions at the 750-line stage; every new owner is below
+500 lines. The eight-module drawing cycle is removed and the other five runtime memberships remain unchanged.
+
 ## Implementation tasks
 
 The 44 files below are authoritative for task scope, evidence, status and dependencies. This section is a navigation

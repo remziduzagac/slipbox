@@ -85,6 +85,11 @@ TUI lists the notes it holds unsaved in `dirty/<pid>.json` in the vault's state 
 CLI call reads, ignoring the files of dead pids, and reports as a warning or a `stale` array: advisory, never a lock
 ([cli.md](../../docs/manual/cli.md) § Unsaved changes in a running slipbox).
 
+Drawing preserves the current tab/view model: the global tab strip and per-tab window arrangement live under
+`tui/windows/drawing/`. Document headers and painting stay with document views; widgets live under shell overlays,
+while Explorer/history and active-document tools own their panels' painting. Shared row metrics, pin-aware selection
+and geometry records sit below screen/panel composition. Drawing does not own or copy buffers.
+
 ## The parts
 
 A file opened belongs to a vault, which the walk lists; its notes are parsed into the graph, their links resolved;
