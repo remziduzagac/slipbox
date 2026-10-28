@@ -377,7 +377,7 @@ describe("the supply chain's gates (14.10)", () => {
 
   test("the import graph: what a file imports, a worker it starts, what it imports that isn't code, a path it names", () => {
     const g = importGraph();
-    expect(g.get("src/core/workspace/walk/walk.ts")).toContain("src/core/foundation/platform/fsutil.ts");
+    expect(g.get("src/core/workspace/walk/filtering/filter.ts")).toContain("src/core/foundation/platform/fsutil.ts");
     expect(g.get("src/core/documents/markdown/parse-pool.ts")).toContain("src/core/documents/markdown/parse-worker.ts");
     expect(g.get("src/core/rendering/export/jobs.ts")).toContain("src/core/rendering/export/export-worker.ts");
     expect(g.get("src/core/application/distribution/skill.ts")).toContain("skills/slipbox/SKILL.md");

@@ -167,6 +167,27 @@ export function markdownViolations(from: string, text: string): string[] {
   });
 }
 
+/** Walk/watch/home mechanisms stay below their public composition entries (ORG-T33). */
+export function walkingMechanismViolations(from: string, text: string): string[] {
+  const walk = "src/core/workspace/walk/walk";
+  const home = "src/core/workspace/vaults/home";
+  const watch = "src/core/workspace/graph/watch";
+  const parents =
+    /^src\/core\/workspace\/walk\/(?:filtering|traversal|io)\//.test(from) ||
+    from === "src/core/workspace/walk/contracts.ts"
+      ? [walk]
+      : from.startsWith(`${watch}/`)
+        ? [watch, walk, home]
+        : from.startsWith(`${home}/`)
+          ? [home, walk]
+          : [];
+  return importsOf(text).flatMap((spec) =>
+    parents.includes(targetOf(from, spec))
+      ? [`${from}: imports ${spec} (walk/watch mechanism must use lower owners, even for types)`]
+      : [],
+  );
+}
+
 /** Parsing mechanisms use contracts/helpers below their own dispatch facade (ORG-T32). */
 export function parsingMechanismViolations(from: string, text: string): string[] {
   const facades =
@@ -445,6 +466,7 @@ if (import.meta.main) {
     violations.push(...markdownViolations(from, readFileSync(file, "utf8")));
     violations.push(...pdfViolations(from, readFileSync(file, "utf8")));
     violations.push(...explorerViolations(from, readFileSync(file, "utf8")));
+    violations.push(...walkingMechanismViolations(from, readFileSync(file, "utf8")));
     violations.push(...parsingMechanismViolations(from, readFileSync(file, "utf8")));
     violations.push(...inputMechanismViolations(from, readFileSync(file, "utf8")));
     violations.push(...gitMechanismViolations(from, readFileSync(file, "utf8")));

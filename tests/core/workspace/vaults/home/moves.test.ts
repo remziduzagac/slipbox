@@ -1,3 +1,4 @@
+import { watcherState, watcherDirectories } from "../../../../support/watcher-access.ts";
 import { UNIT_TIMEOUT_MS } from "../../../../support/timeouts.ts";
 import { describe, expect, setDefaultTimeout, test } from "bun:test";
 import {
@@ -132,11 +133,7 @@ describe("home, a vault without a marker (VV-D2)", () => {
         known.set(rel, statSync(join(home, rel)).mtimeMs);
       const sizes = new Map([...known.keys()].map((rel) => [rel, statSync(join(home, rel)).size] as [string, number]));
       const { w, look, reported, clock } = await watchHome(home, g, { known, sizes, kinds: true });
-      const inside = w as unknown as {
-        lookAgain(moved: [string, number][], at: number): void;
-        pending: Set<string>;
-        leftSeen: Map<string, number>;
-      };
+      const inside = watcherState(w);
       try {
         await look();
         // A note moved under another name into a folder made in Documents: found at its top, by its time and size.
@@ -204,7 +201,10 @@ describe("home, a vault without a marker (VV-D2)", () => {
         // leads: never read through.
         mkdirSync(join(home, "Documents", "later"));
         await look();
-        inside.lookAgain([["Documents", 1]], Date.now());
+        (w as unknown as { lookAgain(moved: [string, number][], at: number): void }).lookAgain(
+          [["Documents", 1]],
+          Date.now(),
+        );
         inside.pending.clear();
         expect([...inside.leftSeen.keys()]).toContain("Documents/later");
         rmSync(join(home, "Documents", "later"), { recursive: true });
@@ -246,7 +246,7 @@ describe("home, a vault without a marker (VV-D2)", () => {
       const known = new Map([...g.notes.values()].map((n) => [n.rel, n.mtimeMs] as [string, number]));
       const sizes = new Map([...known.keys()].map((rel) => [rel, statSync(join(home, rel)).size] as [string, number]));
       const { w, look, reported } = await watchHome(home, g, { known, sizes, kinds: true });
-      const inside = w as unknown as { pending: Set<string> };
+      const inside = watcherState(w);
       /** A batch of these paths alone, before any event of theirs comes: what it reported. */
       const batch = (...paths: string[]) => {
         for (const p of paths) inside.pending.add(p);
@@ -325,10 +325,10 @@ describe("home, a vault without a marker (VV-D2)", () => {
       const sizes = new Map([...known.keys()].map((rel) => [rel, statSync(join(home, rel)).size] as [string, number]));
       const { w, look } = await watchHome(home, g, { known, sizes, kinds: true });
       // Home's top polled alone, its watch closed as when it fails: its listing finds the new name.
-      const inside = w as unknown as { watchers: Map<string, { close(): void }>; pollDir(d: string, r: string): void };
+      const inside = watcherState(w);
       inside.watchers.get("")?.close();
       inside.watchers.delete("");
-      inside.pollDir("", "EACCES: test");
+      watcherDirectories(w).pollDir("", "EACCES: test");
       try {
         expect(await look()).toEqual(none);
         renameSync(join(home, "kept"), join(home, "zettel"));

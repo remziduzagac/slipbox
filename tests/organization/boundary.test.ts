@@ -47,6 +47,25 @@ describe("the boundary check (0.3, scripts/check-boundary.ts)", () => {
     expect(r.out).not.toContain("boundary check ok");
   });
 
+  test("walk and watcher helpers reject composition and accept lower domain records", () => {
+    const refused = check({
+      "src/core/workspace/walk/filtering/filter.ts": 'export type { FilterSettings } from "../walk.ts";',
+      "src/core/workspace/graph/watch/directories.ts": 'export const load = () => import("../watch.ts");',
+      "src/core/workspace/graph/watch/io.ts": 'import { under } from "../../vaults/home.ts"; export const f = under;',
+      "src/core/workspace/vaults/home/cache.ts":
+        'import { homeFilter } from "../home.ts"; export const f = homeFilter;',
+    });
+    expect(refused.code).toBe(1);
+    expect(refused.err.match(/walk\/watch mechanism/g)?.length).toBe(4);
+    expect(
+      check({
+        "src/core/workspace/walk/filtering/filter.ts": 'import type { FilterSettings } from "../contracts.ts";',
+        "src/core/workspace/graph/watch/directories.ts": 'import type { DirectoryOptions } from "./contracts.ts";',
+        "src/core/workspace/vaults/home/cache.ts": 'import { homeFilter } from "./filter.ts";',
+      }).code,
+    ).toBe(0);
+  });
+
   test("parsing mechanisms reject reverse facade edges and accept lower contracts", () => {
     const refused = check({
       "src/core/application/config/defaults.ts": 'export type { Config } from "./config.ts";',
