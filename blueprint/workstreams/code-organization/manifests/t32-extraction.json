@@ -1,0 +1,544 @@
+{
+  "moves": {},
+  "retained": [],
+  "renamedBasenames": {},
+  "edges": {
+    "removed": [
+      "src/core/application/config/config.ts -> src/core/documents/model/doctypes.ts",
+      "src/core/application/config/config.ts -> src/core/documents/servers/languages.ts",
+      "src/core/application/config/config.ts -> src/core/documents/servers/linters.ts",
+      "src/core/application/config/config.ts -> src/core/foundation/platform/fsutil.ts",
+      "src/core/application/config/config.ts -> src/core/foundation/platform/paths.ts",
+      "src/core/application/config/config.ts -> src/core/workspace/git/branches/gitops.ts",
+      "src/core/documents/markdown/parse.ts -> src/core/documents/markdown/html-adapter.ts",
+      "src/core/documents/markdown/parse.ts -> src/core/documents/markdown/tags.ts",
+      "src/core/documents/markdown/parse.ts -> src/core/documents/markdown/wikilink.ts",
+      "src/core/documents/model/data.ts -> src/core/documents/markdown/parse.ts",
+      "src/core/documents/model/data.ts -> src/core/foundation/text/width.ts"
+    ],
+    "added": [
+      "src/core/application/config/config.ts -> src/core/application/config/contracts.ts",
+      "src/core/application/config/config.ts -> src/core/application/config/defaults.ts",
+      "src/core/application/config/config.ts -> src/core/application/config/loading.ts",
+      "src/core/application/config/config.ts -> src/core/application/config/trust.ts",
+      "src/core/application/config/config.ts -> src/core/application/config/validation/predicates.ts",
+      "src/core/application/config/contracts.ts -> src/core/documents/model/doctypes.ts",
+      "src/core/application/config/contracts.ts -> src/core/documents/servers/languages.ts",
+      "src/core/application/config/contracts.ts -> src/core/documents/servers/linters.ts",
+      "src/core/application/config/defaults.ts -> src/core/application/config/contracts.ts",
+      "src/core/application/config/loading.ts -> src/core/application/config/contracts.ts",
+      "src/core/application/config/loading.ts -> src/core/application/config/defaults.ts",
+      "src/core/application/config/loading.ts -> src/core/application/config/trust.ts",
+      "src/core/application/config/loading.ts -> src/core/application/config/validation/merge.ts",
+      "src/core/application/config/loading.ts -> src/core/application/config/validation/predicates.ts",
+      "src/core/application/config/loading.ts -> src/core/foundation/platform/fsutil.ts",
+      "src/core/application/config/loading.ts -> src/core/foundation/platform/paths.ts",
+      "src/core/application/config/loading.ts -> src/core/workspace/git/branches/gitops.ts",
+      "src/core/application/config/trust.ts -> src/core/application/config/validation/predicates.ts",
+      "src/core/application/config/trust.ts -> src/core/documents/servers/languages.ts",
+      "src/core/application/config/trust.ts -> src/core/documents/servers/linters.ts",
+      "src/core/application/config/validation/fields.ts -> src/core/application/config/validation/predicates.ts",
+      "src/core/application/config/validation/fields.ts -> src/core/documents/model/doctypes.ts",
+      "src/core/application/config/validation/merge.ts -> src/core/application/config/validation/fields.ts",
+      "src/core/application/config/validation/merge.ts -> src/core/application/config/validation/predicates.ts",
+      "src/core/application/config/validation/merge.ts -> src/core/documents/model/doctypes.ts",
+      "src/core/application/config/validation/merge.ts -> src/core/documents/servers/languages.ts",
+      "src/core/application/config/validation/merge.ts -> src/core/documents/servers/linters.ts",
+      "src/core/documents/markdown/parse.ts -> src/core/documents/markdown/parse/chunks.ts",
+      "src/core/documents/markdown/parse.ts -> src/core/documents/markdown/parse/contracts.ts",
+      "src/core/documents/markdown/parse.ts -> src/core/documents/markdown/parse/engine.ts",
+      "src/core/documents/markdown/parse.ts -> src/core/documents/markdown/parse/headings.ts",
+      "src/core/documents/markdown/parse.ts -> src/core/documents/markdown/parse/normalization.ts",
+      "src/core/documents/markdown/parse.ts -> src/core/documents/markdown/parse/transforms.ts",
+      "src/core/documents/markdown/parse.ts -> src/core/documents/markdown/parse/visit.ts",
+      "src/core/documents/markdown/parse/chunks.ts -> src/core/documents/markdown/parse/contracts.ts",
+      "src/core/documents/markdown/parse/engine.ts -> src/core/documents/markdown/obsidian.ts",
+      "src/core/documents/markdown/parse/engine.ts -> src/core/documents/markdown/tags.ts",
+      "src/core/documents/markdown/parse/engine.ts -> src/core/documents/markdown/wikilink.ts",
+      "src/core/documents/markdown/parse/headings.ts -> src/core/documents/markdown/html-adapter.ts",
+      "src/core/documents/markdown/parse/headings.ts -> src/core/documents/markdown/parse/contracts.ts",
+      "src/core/documents/markdown/parse/headings.ts -> src/core/documents/markdown/parse/visit.ts",
+      "src/core/documents/markdown/parse/headings.ts -> src/core/documents/markdown/wikilink.ts",
+      "src/core/documents/markdown/parse/transforms.ts -> src/core/documents/markdown/obsidian.ts",
+      "src/core/documents/model/data.ts -> src/core/documents/model/data/contracts.ts",
+      "src/core/documents/model/data.ts -> src/core/documents/model/data/links.ts",
+      "src/core/documents/model/data.ts -> src/core/documents/model/data/nodes.ts",
+      "src/core/documents/model/data.ts -> src/core/documents/model/data/outline.ts",
+      "src/core/documents/model/data.ts -> src/core/documents/model/data/readers/delimited.ts",
+      "src/core/documents/model/data.ts -> src/core/documents/model/data/readers/ini.ts",
+      "src/core/documents/model/data.ts -> src/core/documents/model/data/readers/json.ts",
+      "src/core/documents/model/data.ts -> src/core/documents/model/data/readers/toml.ts",
+      "src/core/documents/model/data.ts -> src/core/documents/model/data/readers/yaml.ts",
+      "src/core/documents/model/data/contracts.ts -> src/core/documents/model/data/links.ts",
+      "src/core/documents/model/data/links.ts -> src/core/documents/model/data/contracts.ts",
+      "src/core/documents/model/data/nodes.ts -> src/core/documents/model/data/contracts.ts",
+      "src/core/documents/model/data/nodes.ts -> src/core/foundation/text/width.ts",
+      "src/core/documents/model/data/outline.ts -> src/core/documents/markdown/parse/contracts.ts",
+      "src/core/documents/model/data/outline.ts -> src/core/documents/markdown/parse/headings.ts",
+      "src/core/documents/model/data/outline.ts -> src/core/documents/model/data/contracts.ts",
+      "src/core/documents/model/data/readers/delimited.ts -> src/core/documents/model/data/contracts.ts",
+      "src/core/documents/model/data/readers/delimited.ts -> src/core/documents/model/data/nodes.ts",
+      "src/core/documents/model/data/readers/ini.ts -> src/core/documents/model/data/contracts.ts",
+      "src/core/documents/model/data/readers/ini.ts -> src/core/documents/model/data/nodes.ts",
+      "src/core/documents/model/data/readers/toml.ts -> src/core/documents/model/data/contracts.ts",
+      "src/core/documents/model/data/readers/toml.ts -> src/core/documents/model/data/links.ts",
+      "src/core/documents/model/data/readers/toml.ts -> src/core/documents/model/data/nodes.ts",
+      "src/core/documents/model/data/readers/yaml.ts -> src/core/documents/model/data/contracts.ts",
+      "src/core/documents/model/data/readers/yaml.ts -> src/core/documents/model/data/links.ts",
+      "src/core/documents/model/data/readers/yaml.ts -> src/core/documents/model/data/nodes.ts",
+      "src/core/documents/model/data/readers/yaml.ts -> src/core/documents/model/data/readers/json.ts",
+      "src/core/documents/model/data/readers/yaml.ts -> src/core/foundation/text/width.ts"
+    ]
+  },
+  "runtime": {
+    "removed": [
+      "src/core/application/config/config.ts -> src/core/documents/model/doctypes.ts",
+      "src/core/application/config/config.ts -> src/core/documents/servers/languages.ts",
+      "src/core/application/config/config.ts -> src/core/documents/servers/linters.ts",
+      "src/core/application/config/config.ts -> src/core/foundation/platform/fsutil.ts",
+      "src/core/application/config/config.ts -> src/core/foundation/platform/paths.ts",
+      "src/core/application/config/config.ts -> src/core/workspace/git/branches/gitops.ts",
+      "src/core/documents/markdown/parse.ts -> src/core/documents/markdown/html-adapter.ts",
+      "src/core/documents/markdown/parse.ts -> src/core/documents/markdown/tags.ts",
+      "src/core/documents/markdown/parse.ts -> src/core/documents/markdown/wikilink.ts",
+      "src/core/documents/model/data.ts -> src/core/documents/markdown/parse.ts",
+      "src/core/documents/model/data.ts -> src/core/foundation/text/width.ts"
+    ],
+    "added": [
+      "src/core/application/config/config.ts -> src/core/application/config/defaults.ts",
+      "src/core/application/config/config.ts -> src/core/application/config/loading.ts",
+      "src/core/application/config/config.ts -> src/core/application/config/trust.ts",
+      "src/core/application/config/config.ts -> src/core/application/config/validation/predicates.ts",
+      "src/core/application/config/loading.ts -> src/core/application/config/defaults.ts",
+      "src/core/application/config/loading.ts -> src/core/application/config/trust.ts",
+      "src/core/application/config/loading.ts -> src/core/application/config/validation/merge.ts",
+      "src/core/application/config/loading.ts -> src/core/application/config/validation/predicates.ts",
+      "src/core/application/config/loading.ts -> src/core/foundation/platform/fsutil.ts",
+      "src/core/application/config/loading.ts -> src/core/foundation/platform/paths.ts",
+      "src/core/application/config/loading.ts -> src/core/workspace/git/branches/gitops.ts",
+      "src/core/application/config/trust.ts -> src/core/application/config/validation/predicates.ts",
+      "src/core/application/config/trust.ts -> src/core/documents/servers/languages.ts",
+      "src/core/application/config/trust.ts -> src/core/documents/servers/linters.ts",
+      "src/core/application/config/validation/fields.ts -> src/core/application/config/validation/predicates.ts",
+      "src/core/application/config/validation/fields.ts -> src/core/documents/model/doctypes.ts",
+      "src/core/application/config/validation/merge.ts -> src/core/application/config/validation/fields.ts",
+      "src/core/application/config/validation/merge.ts -> src/core/application/config/validation/predicates.ts",
+      "src/core/application/config/validation/merge.ts -> src/core/documents/servers/languages.ts",
+      "src/core/documents/markdown/parse.ts -> src/core/documents/markdown/parse/chunks.ts",
+      "src/core/documents/markdown/parse.ts -> src/core/documents/markdown/parse/contracts.ts",
+      "src/core/documents/markdown/parse.ts -> src/core/documents/markdown/parse/engine.ts",
+      "src/core/documents/markdown/parse.ts -> src/core/documents/markdown/parse/headings.ts",
+      "src/core/documents/markdown/parse.ts -> src/core/documents/markdown/parse/normalization.ts",
+      "src/core/documents/markdown/parse.ts -> src/core/documents/markdown/parse/transforms.ts",
+      "src/core/documents/markdown/parse.ts -> src/core/documents/markdown/parse/visit.ts",
+      "src/core/documents/markdown/parse/chunks.ts -> src/core/documents/markdown/parse/contracts.ts",
+      "src/core/documents/markdown/parse/engine.ts -> src/core/documents/markdown/obsidian.ts",
+      "src/core/documents/markdown/parse/engine.ts -> src/core/documents/markdown/tags.ts",
+      "src/core/documents/markdown/parse/engine.ts -> src/core/documents/markdown/wikilink.ts",
+      "src/core/documents/markdown/parse/headings.ts -> src/core/documents/markdown/html-adapter.ts",
+      "src/core/documents/markdown/parse/headings.ts -> src/core/documents/markdown/parse/visit.ts",
+      "src/core/documents/markdown/parse/transforms.ts -> src/core/documents/markdown/obsidian.ts",
+      "src/core/documents/model/data.ts -> src/core/documents/model/data/links.ts",
+      "src/core/documents/model/data.ts -> src/core/documents/model/data/nodes.ts",
+      "src/core/documents/model/data.ts -> src/core/documents/model/data/outline.ts",
+      "src/core/documents/model/data.ts -> src/core/documents/model/data/readers/delimited.ts",
+      "src/core/documents/model/data.ts -> src/core/documents/model/data/readers/ini.ts",
+      "src/core/documents/model/data.ts -> src/core/documents/model/data/readers/json.ts",
+      "src/core/documents/model/data.ts -> src/core/documents/model/data/readers/toml.ts",
+      "src/core/documents/model/data.ts -> src/core/documents/model/data/readers/yaml.ts",
+      "src/core/documents/model/data/nodes.ts -> src/core/foundation/text/width.ts",
+      "src/core/documents/model/data/outline.ts -> src/core/documents/markdown/parse/headings.ts",
+      "src/core/documents/model/data/readers/delimited.ts -> src/core/documents/model/data/nodes.ts",
+      "src/core/documents/model/data/readers/ini.ts -> src/core/documents/model/data/nodes.ts",
+      "src/core/documents/model/data/readers/toml.ts -> src/core/documents/model/data/links.ts",
+      "src/core/documents/model/data/readers/toml.ts -> src/core/documents/model/data/nodes.ts",
+      "src/core/documents/model/data/readers/yaml.ts -> src/core/documents/model/data/links.ts",
+      "src/core/documents/model/data/readers/yaml.ts -> src/core/documents/model/data/nodes.ts",
+      "src/core/documents/model/data/readers/yaml.ts -> src/core/documents/model/data/readers/json.ts",
+      "src/core/documents/model/data/readers/yaml.ts -> src/core/foundation/text/width.ts"
+    ]
+  },
+  "tests": {
+    "removed": [],
+    "added": [
+      "test: JSON-comment blanking retains strings and block-comment offsets",
+      "test: TOML duplicate-key validation stays distinct from INI line admission",
+      "test: YAML document admission does not bypass the separate JSON validator",
+      "test: chunking keeps a comment block intact through a near closer until its actual ending",
+      "test: delimited tables retain doubled quotes in a quoted cell",
+      "test: field validation drops a bad known field, preserves an unknown extension and keeps its warning",
+      "test: literal block closers retain exact Markdown boundary semantics",
+      "test: loading clones defaults and retains the last good file after a syntax refusal",
+      "test: merge warning order and fallback remain distinct from safe-path and object admission",
+      "test: normalization preserves frontmatter and fences while bounding pathological prose",
+      "test: outline and reference queries retain source lines and explicit reference keys",
+      "test: parsing mechanisms reject reverse facade edges and accept lower contracts",
+      "test: position shifting leaves original nodes untouched and caches keep independent maps",
+      "test: post-parse transforms retain heading IDs and discard offsets after parsing",
+      "test: vault capability removal retains ordinary display settings and warns for executable configuration",
+      "test: visitor pruning skips children while retaining later siblings and their parents"
+    ]
+  },
+  "entries": {
+    "removed": [],
+    "added": []
+  },
+  "extraction": [
+    {
+      "from": "src/core/application/config/config.ts",
+      "to": "src/core/application/config/contracts.ts",
+      "symbols": [
+        "GlyphMode",
+        "Config",
+        "LoadedConfig",
+        "LoadConfigOptions"
+      ]
+    },
+    {
+      "from": "src/core/application/config/config.ts",
+      "to": "src/core/application/config/defaults.ts",
+      "symbols": [
+        "DEFAULT_CONFIG",
+        "VAULT_CONFIG_TEMPLATE"
+      ]
+    },
+    {
+      "from": "src/core/application/config/config.ts",
+      "to": "src/core/application/config/loading.ts",
+      "symbols": [
+        "loadConfig"
+      ]
+    },
+    {
+      "from": "src/core/application/config/config.ts",
+      "to": "src/core/application/config/trust.ts",
+      "symbols": [
+        "USER_ONLY",
+        "VAULT_FORBIDDEN_COMMANDS",
+        "RUNS_A_PROGRAM",
+        "dropUserOnly"
+      ]
+    },
+    {
+      "from": "src/core/application/config/config.ts",
+      "to": "src/core/application/config/validation/predicates.ts",
+      "symbols": [
+        "isString",
+        "isStrings",
+        "isBoolean",
+        "isPlainObject",
+        "validRegex",
+        "isSafeRelative"
+      ]
+    },
+    {
+      "from": "src/core/application/config/config.ts",
+      "to": "src/core/application/config/validation/fields.ts",
+      "symbols": [
+        "FieldCheck",
+        "STRINGS",
+        "isServerRef",
+        "SERVER_FIELDS",
+        "LANGUAGE_FIELDS",
+        "LINTER_FIELDS",
+        "TYPE_FIELDS",
+        "checkFields"
+      ]
+    },
+    {
+      "from": "src/core/application/config/config.ts",
+      "to": "src/core/application/config/validation/merge.ts",
+      "symbols": [
+        "RETIRED",
+        "OLD_VALUES",
+        "renewed",
+        "ENUMS",
+        "RANGES",
+        "FRACTIONAL",
+        "merge"
+      ]
+    },
+    {
+      "from": "src/core/documents/model/data.ts",
+      "to": "src/core/documents/model/data/contracts.ts",
+      "symbols": [
+        "DataField",
+        "TreePlace",
+        "DataComment",
+        "ParsedData",
+        "CellLink"
+      ]
+    },
+    {
+      "from": "src/core/documents/model/data.ts",
+      "to": "src/core/documents/model/data/nodes.ts",
+      "symbols": [
+        "KEY_MAX",
+        "pos",
+        "firstLine",
+        "heading",
+        "alignKeys",
+        "kindOf",
+        "table",
+        "standsAlone"
+      ]
+    },
+    {
+      "from": "src/core/documents/model/data.ts",
+      "to": "src/core/documents/model/data/readers/toml.ts",
+      "symbols": [
+        "scanValue",
+        "tomlDisplay",
+        "readToml",
+        "keyEnd",
+        "tomlRecords"
+      ]
+    },
+    {
+      "from": "src/core/documents/model/data.ts",
+      "to": "src/core/documents/model/data/readers/ini.ts",
+      "symbols": [
+        "readIni"
+      ]
+    },
+    {
+      "from": "src/core/documents/model/data.ts",
+      "to": "src/core/documents/model/data/readers/json.ts",
+      "symbols": [
+        "nextSignificant",
+        "stripJsonComments"
+      ]
+    },
+    {
+      "from": "src/core/documents/model/data.ts",
+      "to": "src/core/documents/model/data/readers/yaml.ts",
+      "symbols": [
+        "readYaml",
+        "inline",
+        "scalarKind",
+        "INLINE_MAP",
+        "leaf",
+        "walkYaml",
+        "treeTable",
+        "records",
+        "recordTable"
+      ]
+    },
+    {
+      "from": "src/core/documents/model/data.ts",
+      "to": "src/core/documents/model/data/readers/delimited.ts",
+      "symbols": [
+        "CSV_ROWS",
+        "readDelimited"
+      ]
+    },
+    {
+      "from": "src/core/documents/model/data.ts",
+      "to": "src/core/documents/model/data/outline.ts",
+      "symbols": [
+        "dataOutline"
+      ]
+    },
+    {
+      "from": "src/core/documents/model/data.ts",
+      "to": "src/core/documents/model/data/links.ts",
+      "symbols": [
+        "REFERENCE_KEYS",
+        "URL",
+        "PATHLIKE",
+        "DataLink",
+        "fieldLink",
+        "dataLinks"
+      ]
+    },
+    {
+      "from": "src/core/documents/markdown/parse.ts",
+      "to": "src/core/documents/markdown/parse/contracts.ts",
+      "symbols": [
+        "Frontmatter",
+        "ParsedNote",
+        "ParseCache",
+        "newParseCache",
+        "ORIGIN",
+        "HeadingInfo",
+        "AnchorInfo"
+      ]
+    },
+    {
+      "from": "src/core/documents/markdown/parse.ts",
+      "to": "src/core/documents/markdown/parse/engine.ts",
+      "symbols": [
+        "processor",
+        "bodyProcessor",
+        "parseLegacy"
+      ]
+    },
+    {
+      "from": "src/core/documents/markdown/parse.ts",
+      "to": "src/core/documents/markdown/parse/normalization.ts",
+      "symbols": [
+        "tame"
+      ]
+    },
+    {
+      "from": "src/core/documents/markdown/parse.ts",
+      "to": "src/core/documents/markdown/parse/chunks.ts",
+      "symbols": [
+        "CHUNK_LINES",
+        "LIST_ITEM",
+        "BLOCK_TAGS",
+        "HTML_BLOCK",
+        "HTML_TAG_LINE",
+        "HTML_OPEN",
+        "FULL_ITEM",
+        "chunkStarts",
+        "htmlEnd",
+        "mergeLists",
+        "shifted"
+      ]
+    },
+    {
+      "from": "src/core/documents/markdown/parse.ts",
+      "to": "src/core/documents/markdown/parse/transforms.ts",
+      "symbols": [
+        "finish",
+        "dollarsAsText",
+        "HEADING_ID",
+        "markHeadingIds",
+        "markLiteralQuotes",
+        "dropOffsets"
+      ]
+    },
+    {
+      "from": "src/core/documents/markdown/parse.ts",
+      "to": "src/core/documents/markdown/parse/visit.ts",
+      "symbols": [
+        "visit"
+      ]
+    },
+    {
+      "from": "src/core/documents/markdown/parse.ts",
+      "to": "src/core/documents/markdown/parse/headings.ts",
+      "symbols": [
+        "anchorsOf",
+        "slugify",
+        "headingsOf",
+        "headingLabel",
+        "headingText",
+        "plainText",
+        "noteTitle"
+      ]
+    }
+  ],
+  "stateOwnership": {
+    "configuration": "same defaults, precedence, lastGood records, ordered validation and warning strings; trust filtering remains before merge",
+    "data": "format-specific readers remain explicit; TOML validation is not shared with INI admission; shared node/link/outline helpers retain their bodies",
+    "markdown": "same unified processors/plugin order, cache and single origin symbol; chunks/transforms/headings stay below dispatch",
+    "ceiling": "approved ORG-T32 step 750; exact measured pre-existing exceptions, generated locks separate"
+  },
+  "literalMatcher": {
+    "owner": "src/core/documents/markdown/parse/chunks.ts#htmlEnd",
+    "change": "direct string checks for literal block terminators; same test capability and accepted Markdown grammar",
+    "equivalenceComparisons": 112068,
+    "publicAPI": "unchanged"
+  },
+  "guards": {
+    "mechanisms": "configuration, data and Markdown helpers reject their dispatch facade, including types; data queries also avoid the Markdown dispatch facade"
+  },
+  "runtimeScc": {
+    "before": [
+      [
+        "src/tui/documents/editing/editing.ts",
+        "src/tui/documents/editing/snippets.ts"
+      ],
+      [
+        "src/tui/workspace/git/gitremote.ts",
+        "src/tui/workspace/git/views/review/rebase.ts"
+      ],
+      [
+        "src/core/rendering/export/formats/html.ts",
+        "src/core/rendering/export/formats/markdown.ts",
+        "src/core/rendering/export/stream.ts"
+      ],
+      [
+        "src/tui/documents/search/replacing.ts",
+        "src/tui/shell/overlays/overlays.ts",
+        "src/tui/workspace/search/search.ts"
+      ],
+      [
+        "src/tui/app/runtime/app.ts",
+        "src/tui/app/settings/settings.ts",
+        "src/tui/workspace/history/history.ts",
+        "src/tui/workspace/session/session.ts",
+        "src/tui/workspace/vaults/vaults.ts"
+      ],
+      [
+        "src/tui/actions/actions.ts",
+        "src/tui/actions/documents/actions-edit.ts",
+        "src/tui/actions/documents/actions-find.ts",
+        "src/tui/actions/documents/actions-links.ts",
+        "src/tui/actions/documents/actions-lsp.ts",
+        "src/tui/actions/documents/actions-view.ts",
+        "src/tui/actions/shell/actions-panes.ts",
+        "src/tui/actions/workspace/actions-files.ts"
+      ],
+      [
+        "src/tui/documents/diagnostics/draw-problems.ts",
+        "src/tui/documents/views/draw-header.ts",
+        "src/tui/documents/views/draw-pane.ts",
+        "src/tui/shell/overlays/draw-overlays.ts",
+        "src/tui/shell/panels/draw-panels.ts",
+        "src/tui/shell/screen/draw.ts",
+        "src/tui/shell/screen/statusbar/draw-status.ts",
+        "src/tui/workspace/git/views/panel/draw-git.ts"
+      ]
+    ],
+    "after": [
+      [
+        "src/tui/documents/editing/editing.ts",
+        "src/tui/documents/editing/snippets.ts"
+      ],
+      [
+        "src/tui/workspace/git/gitremote.ts",
+        "src/tui/workspace/git/views/review/rebase.ts"
+      ],
+      [
+        "src/core/rendering/export/formats/html.ts",
+        "src/core/rendering/export/formats/markdown.ts",
+        "src/core/rendering/export/stream.ts"
+      ],
+      [
+        "src/tui/documents/search/replacing.ts",
+        "src/tui/shell/overlays/overlays.ts",
+        "src/tui/workspace/search/search.ts"
+      ],
+      [
+        "src/tui/app/runtime/app.ts",
+        "src/tui/app/settings/settings.ts",
+        "src/tui/workspace/history/history.ts",
+        "src/tui/workspace/session/session.ts",
+        "src/tui/workspace/vaults/vaults.ts"
+      ],
+      [
+        "src/tui/actions/actions.ts",
+        "src/tui/actions/documents/actions-edit.ts",
+        "src/tui/actions/documents/actions-find.ts",
+        "src/tui/actions/documents/actions-links.ts",
+        "src/tui/actions/documents/actions-lsp.ts",
+        "src/tui/actions/documents/actions-view.ts",
+        "src/tui/actions/shell/actions-panes.ts",
+        "src/tui/actions/workspace/actions-files.ts"
+      ],
+      [
+        "src/tui/documents/diagnostics/draw-problems.ts",
+        "src/tui/documents/views/draw-header.ts",
+        "src/tui/documents/views/draw-pane.ts",
+        "src/tui/shell/overlays/draw-overlays.ts",
+        "src/tui/shell/panels/draw-panels.ts",
+        "src/tui/shell/screen/draw.ts",
+        "src/tui/shell/screen/statusbar/draw-status.ts",
+        "src/tui/workspace/git/views/panel/draw-git.ts"
+      ]
+    ]
+  }
+}

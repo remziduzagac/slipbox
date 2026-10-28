@@ -636,17 +636,17 @@ refusal, focus and disposal. Do not build a second mock App or a global context 
 
 ## ADDED — blueprint/design/how-it-works.md: Size and shared-code conventions
 
-The current handwritten source ceiling is 1,000 lines (T1); about 500 lines is the design aim. Finish with a 600-line
-ceiling, with 750 as the next step. At each step, cap every pre-existing larger file at its measured size, never above
-1,500. Moves carry caps to the new paths; new modules obey the current ceiling. A cap may reset to measured growth
-caused solely by formatting longer import paths, with its old/new value and delta recorded in the task (ORG-D2 dated
-note). Preserve normal formatting, non-import code and comments; verify mapped dependencies and executable bodies. This
-exception permits no implementation growth. The same applies when import formatting alone moves a file from at or below
-the ceiling to above it; the file gets an exact cap equal to its measured size, recorded in the task and removed by its
-extraction task. Lower touched exceptions to their actual size and remove them below the ceiling. Final handwritten
-exceptions require a named responsibility, rationale and follow-up task; no blanket exemption for App. Keep generated
-server locks outside the handwritten ceiling under a separate measured cap and verify their generator. Do not split
-embedded strings by hand. The research inventory of all 55 modules over 500 is the backlog, not only the nine over
+The current handwritten source ceiling is 750 lines (ORG-T32); about 500 lines is the design aim. Finish with a 600-line
+ceiling; the first step was 1,000 lines (ORG-T1). At each step, cap every pre-existing larger file at its measured size,
+never above 1,500. Moves carry caps to the new paths; new modules obey the current ceiling. A cap may reset to measured
+growth caused solely by formatting longer import paths, with its old/new value and delta recorded in the task (ORG-D2
+dated note). Preserve normal formatting, non-import code and comments; verify mapped dependencies and executable bodies.
+This exception permits no implementation growth. The same applies when import formatting alone moves a file from at or
+below the ceiling to above it; the file gets an exact cap equal to its measured size, recorded in the task and removed
+by its extraction task. Lower touched exceptions to their actual size and remove them below the ceiling. Final
+handwritten exceptions require a named responsibility, rationale and follow-up task; no blanket exemption for App. Keep
+generated server locks outside the handwritten ceiling under a separate measured cap and verify their generator. Do not
+split embedded strings by hand. The research inventory of all 55 modules over 500 is the backlog, not only the nine over
 1,000. Every row receives an extraction or a documented cohesive-module assessment; reaching 600 does not erase the
 500-line aim.
 
@@ -1089,6 +1089,15 @@ one gesture collaborator owns the original click/drag state and another routes a
 operator completion, edit effects and replay use the same App-owned state and buffers. All extracted owners are below
 500 lines. Entry-point exports, ordered binding mutations and existing input bodies are preserved; these App-backed
 interaction clients introduce no gateway execution or new scheduling policy.
+
+### T32 configuration and parsing assessment
+
+[Task 32](tasks/32-config-splits.md) separates configuration contracts/defaults, ordered loading, trust filtering and
+validation; data-format readers and queries; and Markdown engine/chunk/transformation/query owners. Public entry points,
+warning order, format-specific branches and parse/cache identity remain unchanged. The reported TOML/INI clone is
+retained: their line structure is similar but validation, sections and value handling differ. The 750-line stage is
+active, with nine exact pre-existing handwritten exceptions and their named follow-ups recorded in the task; generated
+locks remain separate. All new owners are below the 500-line aim. Final dispositions remain T11's responsibility.
 
 ## Implementation tasks
 

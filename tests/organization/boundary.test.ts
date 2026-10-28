@@ -47,6 +47,25 @@ describe("the boundary check (0.3, scripts/check-boundary.ts)", () => {
     expect(r.out).not.toContain("boundary check ok");
   });
 
+  test("parsing mechanisms reject reverse facade edges and accept lower contracts", () => {
+    const refused = check({
+      "src/core/application/config/defaults.ts": 'export type { Config } from "./config.ts";',
+      "src/core/documents/model/data/readers/toml.ts": 'export const load = () => import("../../data.ts");',
+      "src/core/documents/model/data/outline.ts":
+        'import { slugify } from "../../markdown/parse.ts"; export const f = slugify;',
+      "src/core/documents/markdown/parse/transforms.ts": 'import { visit } from "../parse.ts"; export const f = visit;',
+    });
+    expect(refused.code).toBe(1);
+    expect(refused.err.match(/parsing mechanism/g)?.length).toBe(4);
+    expect(
+      check({
+        "src/core/application/config/defaults.ts": 'import type { Config } from "./contracts.ts";',
+        "src/core/documents/model/data/readers/toml.ts": 'import { heading } from "../nodes.ts";',
+        "src/core/documents/markdown/parse/transforms.ts": 'import { visit } from "./visit.ts";',
+      }).code,
+    ).toBe(0);
+  });
+
   test("input mechanisms reject their own facade and runtime App while allowing interaction types", () => {
     const refused = check({
       "src/tui/shell/input/keys/bindings.ts": 'export { DEFAULT_KEYS } from "../keys.ts";',

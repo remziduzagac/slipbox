@@ -86,6 +86,9 @@ A few modules to know first:
 - `tui/workspace/git/`: shared Git state stays in `git.ts`; `state/` owns read scheduling and base/staged caches.
   Branch read/row mechanisms and panel presentation use live capabilities below their controllers; interactive
   worktree prompts remain an App-backed client. Shared view records and marks sit below drawing composition.
+- `core/application/config/`: defaults and contracts, ordered loading, trust filtering and validation behind `config.ts`.
+  `core/documents/model/data/` retains format-specific readers and shared tree/query helpers. Markdown's `parse.ts`
+  coordinates cache/chunk assembly over `parse/` processors, boundaries, transforms and tree queries.
 - `core/foundation/platform/fsutil.ts`: atomic writes, and `writeNote`, which never writes outside the root.
 - `core/foundation/text/width.ts` and `core/foundation/text/sanitize.ts`: how wide text is, and text made safe for a
   terminal.
