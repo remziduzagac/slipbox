@@ -3,17 +3,14 @@
 
 import { beginGitRead } from "./gitquery.ts";
 import { existsSync } from "node:fs";
-import { basename, join, posix, relative, sep } from "node:path";
+import { basename, join, relative } from "node:path";
 import { readText } from "../../../core/foundation/platform/fsutil.ts";
-import { baseFor, baseForLater } from "../../../core/workspace/git/gitbase.ts";
 import { startInsert } from "../../documents/editing/editing.ts";
 import { fence, fenceLanguage } from "../../../core/workspace/mutations/capture.ts";
 import { loadSession, TOP } from "../../../core/workspace/session/position.ts";
 import type { Role } from "../../../core/rendering/theme/index.ts";
 import { type Checkout, checkoutOf, headOf } from "../../../core/workspace/git/git.ts";
 import {
-  baseBranch,
-  baseBranchLater,
   gitReadLater,
   branchesOf,
   changedSinceLater,
@@ -21,7 +18,6 @@ import {
   inCheckout,
   inVault,
   showLater,
-  stateOf,
   worktreeList,
 } from "../../../core/workspace/git/branches/gitops.ts";
 import {
@@ -32,11 +28,10 @@ import {
   lastMessage,
   sections,
   type StatusEntry,
-  statusLater,
 } from "../../../core/workspace/git/staging/gitstage.ts";
 import { switchLater } from "../../../core/workspace/git/branches/gitbranches.ts";
 import type { Track } from "../../../core/workspace/git/branches/gitremote.ts";
-import { type GitChange, gitChanges } from "../../../core/workspace/git/gitsigns.ts";
+import type { GitChange } from "../../../core/workspace/git/gitsigns.ts";
 import {
   describeBreak,
   type MergeBreak,
@@ -44,30 +39,32 @@ import {
   reviewMerge,
 } from "../../../core/workspace/git/review/mergereview.ts";
 import { openDiff } from "./views/changes/diffview.ts";
-import { checkoutAt, isInside, isVaultRoot, rootAt, rootMarkers } from "../../../core/workspace/vaults/vault.ts";
+import { isVaultRoot, rootAt, rootMarkers } from "../../../core/workspace/vaults/vault.ts";
 import { isTrusted } from "../../../core/workspace/vaults/trust.ts";
 import type { Head } from "../../../core/workspace/vaults/vault-feed.ts";
 import { sanitize } from "../../../core/foundation/text/sanitize.ts";
 import { NoteBuffer } from "../../documents/buffers/buffer.ts";
 import type { App, View, Region } from "../../app/runtime/app.ts";
+import { GitReads } from "./state/reads.ts";
+import { GitBases } from "./state/bases.ts";
+import { GitStaged } from "./state/staged.ts";
 
 /** Source control: git's view of the files, its diffs, branches and commits. */
 export class Git {
-  constructor(readonly app: App) {}
+  private readonly reads: GitReads;
+  private readonly bases: GitBases;
+  private readonly stagedCache: GitStaged;
 
-  private checkoutMemo: { root: string; c: Checkout | null; at: number } | null = null;
+  constructor(readonly app: App) {
+    this.reads = new GitReads(this);
+    this.bases = new GitBases(this);
+    this.stagedCache = new GitStaged(this);
+  }
 
   /** The git checkout the vault is in (17.19): the main one or a worktree. Read once per vault —
    *  none, again after a second (`git init` may make one). */
   get checkout(): Checkout | null {
-    const m = this.checkoutMemo;
-    if (m?.root !== this.app.loc.root || (!m.c && this.app.now() - m.at > 1000))
-      this.checkoutMemo = {
-        root: this.app.loc.root,
-        c: checkoutAt(this.app.loc),
-        at: this.app.now(),
-      };
-    return this.checkoutMemo!.c;
+    return this.reads.checkout;
   }
 
   /** HEAD as last seen: its branch, or (detached) its commit. */
@@ -92,187 +89,70 @@ export class Git {
   // What git knows of the files (5.11–5.14): each one's state for the explorer's marks and the
   // Problems' conflicts — asked of git in the background, a moment after anything changed — and,
   // on request, what this branch changed against the base, a note's diff, the worktrees.
-
   /** Each changed file's state, by vault path; null until git has answered (or with no git). */
   states: Map<string, GitState> | null = null;
+
   /** A folder's: the strongest of what's in it. */
   folders = new Map<string, GitState>();
-  private timer: ReturnType<typeof setTimeout> | null = null;
-  private asking: Promise<void> | null = null;
-  /** The question asked again once the one out is answered: what changed since it was asked is in its answer. */
-  private again: Promise<void> | null = null;
 
   /** Ask git again, a moment from now (many changes, one question). */
   refresh(): void {
-    if (this.timer || !this.app.live) return;
-    this.timer = setTimeout(() => {
-      this.timer = null;
-      void this.refreshNow().then(() => this.app.host.requestRender());
-    }, 250);
-    (this.timer as { unref?: () => void }).unref?.();
+    return this.reads.refresh();
   }
 
   /** Ask git now: each file's state, by vault path, and each folder's. */
   refreshNow(): Promise<void> {
-    // A question already out was asked before whatever changed now (a stage, a commit): its answer may not have it,
-    // so git is asked again once it's in — once, for every call meanwhile.
-    if (this.asking) {
-      this.again ??= this.asking
-        .catch(() => undefined)
-        .then(() => {
-          this.again = null;
-          return this.refreshNow();
-        });
-      return this.again;
-    }
-    const c = this.checkout;
-    const root = this.app.loc.root;
-    if (!c) {
-      this.states = null;
-      this.track = null;
-      this.folders.clear();
-      // News all the same: the git panel's repositories in the view are asked again (VV-D10).
-      this.generation++;
-      return Promise.resolve();
-    }
-    this.asking = statusLater(c)
-      .then((answer) => {
-        if (this.app.loc.root !== root) return;
-        const entries = answer?.entries ?? null;
-        // Each file's two letters for the source control view (26.2); one state each for the explorer's marks.
-        this.entries = entries;
-        // The branch against its upstream, as of the last fetch (26.6): the ↑ and ↓ after it where you are (where.ts).
-        this.track = answer?.track ?? null;
-        const status = entries && new Map(entries.map((e) => [e.path, stateOf(e.x + e.y)] as const));
-        const states = new Map<string, GitState>();
-        const folders = new Map<string, GitState>();
-        for (const [path, st] of status ?? []) {
-          const rel = inVault(c, root, path);
-          if (rel === null || st === "deleted") continue;
-          states.set(rel, st);
-          for (let d = posix.dirname(rel); d !== "."; d = posix.dirname(d)) {
-            const had = folders.get(d);
-            if (!had || GIT_RANK[st] > GIT_RANK[had]) folders.set(d, st);
-          }
-        }
-        this.states = status ? states : null;
-        this.folders = folders;
-        this.app.explorer.invalidateTree();
-        // What's staged may have changed with it: the gutter's asked again (26.1), and the view's texts (26.2).
-        this.generation++;
-      })
-      .finally(() => {
-        this.asking = null;
-      });
-    return this.asking;
+    return this.reads.refreshNow();
   }
 
-  /** Each open file's text as staged (26.1), by buffer: asked of git in the background, again when git has news. Null:
-   *  a file git hasn't (untracked: every line added); "none": nothing to compare (ignored, outside the checkout). */
-  private readonly staged = new WeakMap<NoteBuffer, { text: string | null | "none"; generation: number }>();
-  private readonly stagedAsking = new WeakSet<NoteBuffer>();
   /** Bumped each time git has answered: what's staged read again. */
   generation = 0;
+
   /** The checkout's changed files, each with its two letters (26.2); null until git has answered, or with no git. */
   entries: StatusEntry[] | null = null;
+
   /** Where the branch stands against its upstream (26.6), as git last said; null until it has, or with no git. */
   track: Track | null = null;
+
   /** The source control view's files opened up into their changes, `section:path`. */
   readonly opened = new Set<string>();
-  private readonly changeMemo = new WeakMap<
-    NoteBuffer,
-    { version: number; generation: number; changes: GitChange[] }
-  >();
 
   /**
-   * A file's changes against what's staged (26.1) — its text as it is now, unsaved typing included — or null where there's
-   * nothing to compare: signs off, no checkout, a file outside the root, git not answered yet (it's asked now).
+   * A file's changes against what's staged (26.1) — its text as it is now, unsaved typing included — or null where
+   * there's nothing to compare: signs off, no checkout, a file outside the root, git not answered yet (it's asked now).
    */
   changesOf(view: View): GitChange[] | null {
-    const buf = view.buf;
-    const c = this.checkout;
-    // By its path, not the graph's name for it: a file just made is git's before the walk's.
-    if (
-      !this.app.config.git.signs ||
-      !c ||
-      buf.virtual ||
-      !buf.abs ||
-      !isInside(c.root, buf.abs) ||
-      !isInside(this.app.loc.root, buf.abs)
-    )
-      return null;
-    const known = this.staged.get(buf);
-    if (known?.generation !== this.generation && !this.stagedAsking.has(buf)) {
-      this.stagedAsking.add(buf);
-      const generation = this.generation;
-      const rel = relative(this.app.loc.root, buf.abs).split(sep).join("/");
-      void showLater(c, "", relative(c.root, buf.abs)).then((text) => {
-        this.stagedAsking.delete(buf);
-        // Not staged: a file git doesn't have is all new; one it ignores, or can't show, has no signs.
-        const untracked = text === null && this.states?.get(rel) === "new";
-        this.staged.set(buf, { text: text ?? (untracked ? null : "none"), generation });
-        this.app.host.requestRender();
-      });
-    }
-    if (!known || known.text === "none") return null;
-    const memo = this.changeMemo.get(buf);
-    if (memo && memo.version === buf.version && memo.generation === known.generation) return memo.changes;
-    const changes = gitChanges(known.text, buf.source);
-    this.changeMemo.set(buf, { version: buf.version, generation: known.generation, changes });
-    return changes;
+    return this.stagedCache.changesOf(view);
   }
-
-  private baseMemo: { key: string; base: string | null } | null = null;
 
   /**
-   * A branch's own base (GIT-D10): kept when slipbox made it, else the nearest of `[git] bases`, else `[git] base`, main
-   * or master; null for the base itself, or with none. Asked of git once each time it has news.
+   * A branch's own base (GIT-D10): kept when slipbox made it, else the nearest of `[git] bases`, else `[git] base`,
+   * main or master; null for the base itself, or with none. Asked of git once each time it has news.
    */
   baseOf(c: Checkout, branch: string | null): string | null {
-    if (!branch) return this.fallbackBase(c);
-    const key = `${this.generation}\0${c.root}\0${branch}`;
-    if (this.baseMemo?.key !== key)
-      this.baseMemo = { key, base: baseFor(c, branch, this.app.config.git)?.base ?? null };
-    return this.baseMemo.base;
+    return this.bases.baseOf(c, branch);
   }
-
-  private fallbackMemo: { key: string; base: string | null } | null = null;
 
   /**
    * `[git] base`, else main or master, as there are (`baseBranch`): asked of git once each time it has news, not on
    * every frame that draws it.
    */
   fallbackBase(c: Checkout): string | null {
-    const key = `${this.generation}\0${c.root}\0${this.app.config.git.base}`;
-    if (this.fallbackMemo?.key !== key) this.fallbackMemo = { key, base: baseBranch(c, this.app.config.git.base) };
-    return this.fallbackMemo.base;
+    return this.bases.fallbackBase(c);
   }
 
   /** The base asked again (one kept or dropped: "Compare against…"). */
   forgetBase(): void {
-    this.baseMemo = null;
-    this.fallbackMemo = null;
+    return this.bases.forgetBase();
   }
 
   /**
-   * The base branch here, not waiting on git: this branch's own (GIT-D10); on a detached HEAD, or where it has none, the
-   * fallback (`[git] base`, else main or master). Null when the read is no longer wanted, or there's none: then said.
+   * The base branch here, not waiting on git: this branch's own (GIT-D10); on a detached HEAD, or where it has none,
+   * the fallback (`[git] base`, else main or master). Null when the read is no longer wanted, or there's none: then
+   * said.
    */
   private async baseLater(c: Checkout, query: { signal: AbortSignal; current: () => boolean }): Promise<string | null> {
-    const branch = headOf(c).branch;
-    const config = this.app.config.git;
-    const base =
-      (branch ? (await baseForLater(c, branch, config, query.signal))?.base : null) ??
-      (await baseBranchLater(c, config.base, query.signal));
-    if (!query.current()) return null;
-    if (!base)
-      this.app.message(
-        "warn",
-        config.base
-          ? `no branch or commit "${config.base}" ([git] base)`
-          : "no base branch: neither main nor master is there — [git] base sets one",
-      );
-    return base;
+    return this.bases.baseLater(c, query);
   }
 
   /** `space g c` (5.13): what this branch changed against the base, committed or not; enter: its diff. */
@@ -598,8 +478,7 @@ export class Git {
 
   /** A file's text as staged, as git last said it (26.1): null for a file git hasn't; undefined while it hasn't said. */
   stagedText(buf: NoteBuffer): string | null | undefined {
-    const known = this.staged.get(buf);
-    return !known || known.text === "none" ? undefined : known.text;
+    return this.stagedCache.stagedText(buf);
   }
 
   /** The repository's name, as the git panel heads it: the vault's name, else the checkout's folder's (a worktree's main's). */
@@ -710,6 +589,3 @@ export class Git {
     this.app.host.requestRender();
   }
 }
-
-/** A folder's git state is its strongest file's (5.11). */
-const GIT_RANK: Record<GitState, number> = { deleted: 0, renamed: 1, modified: 2, new: 3, conflict: 4 };

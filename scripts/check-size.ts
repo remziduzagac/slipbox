@@ -20,7 +20,6 @@ export const LIMIT = 1000;
 export const CAPPED: Record<string, number> = {
   "src/tui/app/runtime/app.ts": 1366,
   "src/tui/shell/input/keys.ts": 1166,
-  "src/tui/workspace/git/views/branches/gitbranchview.ts": 1005,
 };
 
 /** Generated data: separate measured cap; verify offline with `bun scripts/lock-servers.ts --check` (ORG-D2). */
