@@ -167,6 +167,24 @@ export function markdownViolations(from: string, text: string): string[] {
   });
 }
 
+/** Rename planning and collection stay below public/effect composition (ORG-T35). */
+export function renameMechanismViolations(from: string, text: string): string[] {
+  const base = "src/core/workspace/mutations/rename/";
+  if (!/^src\/core\/workspace\/mutations\/rename\/(?:planning|rewriting|collecting)\//.test(from)) return [];
+  const higher = ["rename", "rename-plan", "rename-apply", "rename-vaults", "rename-heading"].map(
+    (name) => base + name,
+  );
+  return importsOf(text).flatMap((spec) => {
+    const target = targetOf(from, spec);
+    const reverse =
+      from.startsWith(`${base}collecting/`) &&
+      (target.startsWith(`${base}planning/`) || target.startsWith(`${base}rewriting/`));
+    return higher.includes(target) || reverse
+      ? [`${from}: imports ${spec} (rename mechanism must not import planning/effect composition, even for types)`]
+      : [];
+  });
+}
+
 /** Search mechanisms use lower owners; pure query/scan/location never load the SQLite adapter (ORG-T34). */
 export function searchMechanismViolations(from: string, text: string): string[] {
   const core = /^src\/core\/workspace\/search\/(?:model|query|matching|execution|indexing)\//.test(from);
@@ -492,6 +510,7 @@ if (import.meta.main) {
     violations.push(...markdownViolations(from, readFileSync(file, "utf8")));
     violations.push(...pdfViolations(from, readFileSync(file, "utf8")));
     violations.push(...explorerViolations(from, readFileSync(file, "utf8")));
+    violations.push(...renameMechanismViolations(from, readFileSync(file, "utf8")));
     violations.push(...searchMechanismViolations(from, readFileSync(file, "utf8")));
     violations.push(...walkingMechanismViolations(from, readFileSync(file, "utf8")));
     violations.push(...parsingMechanismViolations(from, readFileSync(file, "utf8")));

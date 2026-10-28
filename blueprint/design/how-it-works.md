@@ -371,6 +371,11 @@ under `core/workspace/search/`. Scanning and SQLite share the same weight table 
 for pure matching. Document find matches and replace-field interaction live under `tui/documents/search/`; workspace
 Search retains index/feed/list lifecycle, unsaved-query overlay merging and replace-across orchestration.
 
+Rename planning separates target/source admission, moves, nested roots and relink under `mutations/rename/planning/`;
+`rewriting/` preserves link forms and `collecting/` owns the original read-once Collector, plan records, admission
+policy and dirty-tree warnings. The public entries remain compatible; apply, undo and content-hash checks retain
+their existing execution owner.
+
 ## Data flow for one note
 
 ```text

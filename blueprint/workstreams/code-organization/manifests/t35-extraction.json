@@ -1,0 +1,424 @@
+{
+  "moves": {},
+  "retained": [],
+  "renamedBasenames": {},
+  "edges": {
+    "removed": [
+      "src/core/workspace/mutations/rename/rename-plan.ts -> src/core/documents/model/filetypes.ts",
+      "src/core/workspace/mutations/rename/rename-plan.ts -> src/core/foundation/platform/fsutil.ts",
+      "src/core/workspace/mutations/rename/rename-plan.ts -> src/core/workspace/git/branches/gitops.ts",
+      "src/core/workspace/mutations/rename/rename-plan.ts -> src/core/workspace/graph/graph.ts",
+      "src/core/workspace/mutations/rename/rename-plan.ts -> src/core/workspace/mutations/rename/rename-links.ts",
+      "src/core/workspace/mutations/rename/rename-plan.ts -> src/core/workspace/vaults/symlinks.ts",
+      "src/core/workspace/mutations/rename/rename-plan.ts -> src/core/workspace/vaults/vault.ts",
+      "src/core/workspace/mutations/rename/rename.ts -> src/core/documents/model/filetypes.ts",
+      "src/core/workspace/mutations/rename/rename.ts -> src/core/foundation/platform/fsutil.ts",
+      "src/core/workspace/mutations/rename/rename.ts -> src/core/workspace/graph/graph.ts",
+      "src/core/workspace/mutations/rename/rename.ts -> src/core/workspace/links/links.ts",
+      "src/core/workspace/mutations/rename/rename.ts -> src/core/workspace/links/pointer.ts",
+      "src/core/workspace/mutations/rename/rename.ts -> src/core/workspace/links/reach.ts",
+      "src/core/workspace/mutations/rename/rename.ts -> src/core/workspace/mutations/rename/rename-links.ts",
+      "src/core/workspace/mutations/rename/rename.ts -> src/core/workspace/vaults/folders.ts",
+      "src/core/workspace/mutations/rename/rename.ts -> src/core/workspace/vaults/registry.ts",
+      "src/core/workspace/mutations/rename/rename.ts -> src/core/workspace/vaults/symlinks.ts",
+      "src/core/workspace/mutations/rename/rename.ts -> src/core/workspace/vaults/vault.ts",
+      "src/core/workspace/mutations/rename/rename.ts -> src/core/workspace/walk/walk.ts"
+    ],
+    "added": [
+      "src/core/workspace/mutations/rename/collecting/collector.ts -> src/core/documents/model/filetypes.ts",
+      "src/core/workspace/mutations/rename/collecting/collector.ts -> src/core/foundation/platform/fsutil.ts",
+      "src/core/workspace/mutations/rename/collecting/collector.ts -> src/core/workspace/graph/graph.ts",
+      "src/core/workspace/mutations/rename/collecting/collector.ts -> src/core/workspace/mutations/rename/collecting/contracts.ts",
+      "src/core/workspace/mutations/rename/collecting/collector.ts -> src/core/workspace/mutations/rename/collecting/policy.ts",
+      "src/core/workspace/mutations/rename/collecting/collector.ts -> src/core/workspace/mutations/rename/rename-links.ts",
+      "src/core/workspace/mutations/rename/collecting/collector.ts -> src/core/workspace/vaults/symlinks.ts",
+      "src/core/workspace/mutations/rename/collecting/collector.ts -> src/core/workspace/vaults/vault.ts",
+      "src/core/workspace/mutations/rename/collecting/dirty-trees.ts -> src/core/workspace/git/branches/gitops.ts",
+      "src/core/workspace/mutations/rename/collecting/dirty-trees.ts -> src/core/workspace/vaults/vault.ts",
+      "src/core/workspace/mutations/rename/collecting/policy.ts -> src/core/foundation/platform/fsutil.ts",
+      "src/core/workspace/mutations/rename/collecting/policy.ts -> src/core/workspace/graph/graph.ts",
+      "src/core/workspace/mutations/rename/collecting/policy.ts -> src/core/workspace/mutations/rename/collecting/contracts.ts",
+      "src/core/workspace/mutations/rename/collecting/policy.ts -> src/core/workspace/vaults/symlinks.ts",
+      "src/core/workspace/mutations/rename/collecting/policy.ts -> src/core/workspace/vaults/vault.ts",
+      "src/core/workspace/mutations/rename/planning/files.ts -> src/core/foundation/platform/fsutil.ts",
+      "src/core/workspace/mutations/rename/planning/files.ts -> src/core/workspace/graph/graph.ts",
+      "src/core/workspace/mutations/rename/planning/files.ts -> src/core/workspace/mutations/rename/collecting/collector.ts",
+      "src/core/workspace/mutations/rename/planning/files.ts -> src/core/workspace/mutations/rename/collecting/contracts.ts",
+      "src/core/workspace/mutations/rename/planning/files.ts -> src/core/workspace/mutations/rename/collecting/policy.ts",
+      "src/core/workspace/mutations/rename/planning/files.ts -> src/core/workspace/mutations/rename/planning/move.ts",
+      "src/core/workspace/mutations/rename/planning/files.ts -> src/core/workspace/mutations/rename/planning/nested.ts",
+      "src/core/workspace/mutations/rename/planning/files.ts -> src/core/workspace/mutations/rename/planning/targets.ts",
+      "src/core/workspace/mutations/rename/planning/files.ts -> src/core/workspace/mutations/rename/rename-links.ts",
+      "src/core/workspace/mutations/rename/planning/files.ts -> src/core/workspace/walk/walk.ts",
+      "src/core/workspace/mutations/rename/planning/move.ts -> src/core/documents/model/filetypes.ts",
+      "src/core/workspace/mutations/rename/planning/move.ts -> src/core/foundation/platform/fsutil.ts",
+      "src/core/workspace/mutations/rename/planning/move.ts -> src/core/workspace/graph/graph.ts",
+      "src/core/workspace/mutations/rename/planning/move.ts -> src/core/workspace/links/links.ts",
+      "src/core/workspace/mutations/rename/planning/move.ts -> src/core/workspace/mutations/rename/collecting/collector.ts",
+      "src/core/workspace/mutations/rename/planning/move.ts -> src/core/workspace/mutations/rename/collecting/contracts.ts",
+      "src/core/workspace/mutations/rename/planning/move.ts -> src/core/workspace/mutations/rename/collecting/dirty-trees.ts",
+      "src/core/workspace/mutations/rename/planning/move.ts -> src/core/workspace/mutations/rename/collecting/policy.ts",
+      "src/core/workspace/mutations/rename/planning/move.ts -> src/core/workspace/mutations/rename/rename-links.ts",
+      "src/core/workspace/mutations/rename/planning/move.ts -> src/core/workspace/mutations/rename/rewriting/links.ts",
+      "src/core/workspace/mutations/rename/planning/move.ts -> src/core/workspace/vaults/symlinks.ts",
+      "src/core/workspace/mutations/rename/planning/move.ts -> src/core/workspace/vaults/vault.ts",
+      "src/core/workspace/mutations/rename/planning/nested.ts -> src/core/foundation/platform/fsutil.ts",
+      "src/core/workspace/mutations/rename/planning/nested.ts -> src/core/workspace/graph/graph.ts",
+      "src/core/workspace/mutations/rename/planning/nested.ts -> src/core/workspace/links/links.ts",
+      "src/core/workspace/mutations/rename/planning/nested.ts -> src/core/workspace/links/reach.ts",
+      "src/core/workspace/mutations/rename/planning/nested.ts -> src/core/workspace/mutations/rename/collecting/collector.ts",
+      "src/core/workspace/mutations/rename/planning/nested.ts -> src/core/workspace/mutations/rename/collecting/contracts.ts",
+      "src/core/workspace/mutations/rename/planning/nested.ts -> src/core/workspace/mutations/rename/collecting/dirty-trees.ts",
+      "src/core/workspace/mutations/rename/planning/nested.ts -> src/core/workspace/mutations/rename/collecting/policy.ts",
+      "src/core/workspace/mutations/rename/planning/nested.ts -> src/core/workspace/mutations/rename/planning/targets.ts",
+      "src/core/workspace/mutations/rename/planning/nested.ts -> src/core/workspace/mutations/rename/rename-links.ts",
+      "src/core/workspace/mutations/rename/planning/nested.ts -> src/core/workspace/mutations/rename/rewriting/links.ts",
+      "src/core/workspace/mutations/rename/planning/nested.ts -> src/core/workspace/vaults/vault.ts",
+      "src/core/workspace/mutations/rename/planning/relink.ts -> src/core/workspace/graph/graph.ts",
+      "src/core/workspace/mutations/rename/planning/relink.ts -> src/core/workspace/links/links.ts",
+      "src/core/workspace/mutations/rename/planning/relink.ts -> src/core/workspace/links/pointer.ts",
+      "src/core/workspace/mutations/rename/planning/relink.ts -> src/core/workspace/mutations/rename/collecting/collector.ts",
+      "src/core/workspace/mutations/rename/planning/relink.ts -> src/core/workspace/mutations/rename/collecting/contracts.ts",
+      "src/core/workspace/mutations/rename/planning/relink.ts -> src/core/workspace/mutations/rename/collecting/dirty-trees.ts",
+      "src/core/workspace/mutations/rename/planning/relink.ts -> src/core/workspace/mutations/rename/rename-links.ts",
+      "src/core/workspace/mutations/rename/planning/relink.ts -> src/core/workspace/vaults/folders.ts",
+      "src/core/workspace/mutations/rename/planning/relink.ts -> src/core/workspace/vaults/registry.ts",
+      "src/core/workspace/mutations/rename/planning/relink.ts -> src/core/workspace/vaults/vault.ts",
+      "src/core/workspace/mutations/rename/planning/targets.ts -> src/core/foundation/platform/fsutil.ts",
+      "src/core/workspace/mutations/rename/planning/targets.ts -> src/core/workspace/graph/graph.ts",
+      "src/core/workspace/mutations/rename/planning/targets.ts -> src/core/workspace/mutations/rename/collecting/contracts.ts",
+      "src/core/workspace/mutations/rename/planning/targets.ts -> src/core/workspace/mutations/rename/collecting/policy.ts",
+      "src/core/workspace/mutations/rename/planning/targets.ts -> src/core/workspace/vaults/symlinks.ts",
+      "src/core/workspace/mutations/rename/rename-plan.ts -> src/core/workspace/mutations/rename/collecting/collector.ts",
+      "src/core/workspace/mutations/rename/rename-plan.ts -> src/core/workspace/mutations/rename/collecting/contracts.ts",
+      "src/core/workspace/mutations/rename/rename-plan.ts -> src/core/workspace/mutations/rename/collecting/dirty-trees.ts",
+      "src/core/workspace/mutations/rename/rename-plan.ts -> src/core/workspace/mutations/rename/collecting/policy.ts",
+      "src/core/workspace/mutations/rename/rename.ts -> src/core/workspace/mutations/rename/planning/files.ts",
+      "src/core/workspace/mutations/rename/rename.ts -> src/core/workspace/mutations/rename/planning/nested.ts",
+      "src/core/workspace/mutations/rename/rename.ts -> src/core/workspace/mutations/rename/planning/relink.ts",
+      "src/core/workspace/mutations/rename/rename.ts -> src/core/workspace/mutations/rename/planning/targets.ts",
+      "src/core/workspace/mutations/rename/rewriting/links.ts -> src/core/documents/model/filetypes.ts",
+      "src/core/workspace/mutations/rename/rewriting/links.ts -> src/core/workspace/graph/graph.ts",
+      "src/core/workspace/mutations/rename/rewriting/links.ts -> src/core/workspace/links/links.ts",
+      "src/core/workspace/mutations/rename/rewriting/links.ts -> src/core/workspace/links/pointer.ts",
+      "src/core/workspace/mutations/rename/rewriting/links.ts -> src/core/workspace/mutations/rename/collecting/collector.ts",
+      "src/core/workspace/mutations/rename/rewriting/links.ts -> src/core/workspace/mutations/rename/rename-links.ts",
+      "src/core/workspace/mutations/rename/rewriting/links.ts -> src/core/workspace/vaults/vault.ts"
+    ]
+  },
+  "runtime": {
+    "removed": [
+      "src/core/workspace/mutations/rename/rename-plan.ts -> src/core/documents/model/filetypes.ts",
+      "src/core/workspace/mutations/rename/rename-plan.ts -> src/core/foundation/platform/fsutil.ts",
+      "src/core/workspace/mutations/rename/rename-plan.ts -> src/core/workspace/git/branches/gitops.ts",
+      "src/core/workspace/mutations/rename/rename-plan.ts -> src/core/workspace/mutations/rename/rename-links.ts",
+      "src/core/workspace/mutations/rename/rename-plan.ts -> src/core/workspace/vaults/symlinks.ts",
+      "src/core/workspace/mutations/rename/rename-plan.ts -> src/core/workspace/vaults/vault.ts",
+      "src/core/workspace/mutations/rename/rename.ts -> src/core/documents/model/filetypes.ts",
+      "src/core/workspace/mutations/rename/rename.ts -> src/core/foundation/platform/fsutil.ts",
+      "src/core/workspace/mutations/rename/rename.ts -> src/core/workspace/links/links.ts",
+      "src/core/workspace/mutations/rename/rename.ts -> src/core/workspace/links/pointer.ts",
+      "src/core/workspace/mutations/rename/rename.ts -> src/core/workspace/links/reach.ts",
+      "src/core/workspace/mutations/rename/rename.ts -> src/core/workspace/mutations/rename/rename-links.ts",
+      "src/core/workspace/mutations/rename/rename.ts -> src/core/workspace/vaults/folders.ts",
+      "src/core/workspace/mutations/rename/rename.ts -> src/core/workspace/vaults/registry.ts",
+      "src/core/workspace/mutations/rename/rename.ts -> src/core/workspace/vaults/symlinks.ts",
+      "src/core/workspace/mutations/rename/rename.ts -> src/core/workspace/vaults/vault.ts",
+      "src/core/workspace/mutations/rename/rename.ts -> src/core/workspace/walk/walk.ts"
+    ],
+    "added": [
+      "src/core/workspace/mutations/rename/collecting/collector.ts -> src/core/documents/model/filetypes.ts",
+      "src/core/workspace/mutations/rename/collecting/collector.ts -> src/core/foundation/platform/fsutil.ts",
+      "src/core/workspace/mutations/rename/collecting/collector.ts -> src/core/workspace/mutations/rename/collecting/policy.ts",
+      "src/core/workspace/mutations/rename/collecting/collector.ts -> src/core/workspace/mutations/rename/rename-links.ts",
+      "src/core/workspace/mutations/rename/collecting/collector.ts -> src/core/workspace/vaults/symlinks.ts",
+      "src/core/workspace/mutations/rename/collecting/collector.ts -> src/core/workspace/vaults/vault.ts",
+      "src/core/workspace/mutations/rename/collecting/dirty-trees.ts -> src/core/workspace/git/branches/gitops.ts",
+      "src/core/workspace/mutations/rename/collecting/dirty-trees.ts -> src/core/workspace/vaults/vault.ts",
+      "src/core/workspace/mutations/rename/collecting/policy.ts -> src/core/foundation/platform/fsutil.ts",
+      "src/core/workspace/mutations/rename/collecting/policy.ts -> src/core/workspace/vaults/symlinks.ts",
+      "src/core/workspace/mutations/rename/collecting/policy.ts -> src/core/workspace/vaults/vault.ts",
+      "src/core/workspace/mutations/rename/planning/files.ts -> src/core/foundation/platform/fsutil.ts",
+      "src/core/workspace/mutations/rename/planning/files.ts -> src/core/workspace/mutations/rename/collecting/contracts.ts",
+      "src/core/workspace/mutations/rename/planning/files.ts -> src/core/workspace/mutations/rename/collecting/policy.ts",
+      "src/core/workspace/mutations/rename/planning/files.ts -> src/core/workspace/mutations/rename/planning/move.ts",
+      "src/core/workspace/mutations/rename/planning/files.ts -> src/core/workspace/mutations/rename/planning/nested.ts",
+      "src/core/workspace/mutations/rename/planning/files.ts -> src/core/workspace/mutations/rename/planning/targets.ts",
+      "src/core/workspace/mutations/rename/planning/files.ts -> src/core/workspace/mutations/rename/rename-links.ts",
+      "src/core/workspace/mutations/rename/planning/files.ts -> src/core/workspace/walk/walk.ts",
+      "src/core/workspace/mutations/rename/planning/move.ts -> src/core/documents/model/filetypes.ts",
+      "src/core/workspace/mutations/rename/planning/move.ts -> src/core/foundation/platform/fsutil.ts",
+      "src/core/workspace/mutations/rename/planning/move.ts -> src/core/workspace/links/links.ts",
+      "src/core/workspace/mutations/rename/planning/move.ts -> src/core/workspace/mutations/rename/collecting/collector.ts",
+      "src/core/workspace/mutations/rename/planning/move.ts -> src/core/workspace/mutations/rename/collecting/dirty-trees.ts",
+      "src/core/workspace/mutations/rename/planning/move.ts -> src/core/workspace/mutations/rename/collecting/policy.ts",
+      "src/core/workspace/mutations/rename/planning/move.ts -> src/core/workspace/mutations/rename/rename-links.ts",
+      "src/core/workspace/mutations/rename/planning/move.ts -> src/core/workspace/mutations/rename/rewriting/links.ts",
+      "src/core/workspace/mutations/rename/planning/move.ts -> src/core/workspace/vaults/symlinks.ts",
+      "src/core/workspace/mutations/rename/planning/move.ts -> src/core/workspace/vaults/vault.ts",
+      "src/core/workspace/mutations/rename/planning/nested.ts -> src/core/foundation/platform/fsutil.ts",
+      "src/core/workspace/mutations/rename/planning/nested.ts -> src/core/workspace/links/links.ts",
+      "src/core/workspace/mutations/rename/planning/nested.ts -> src/core/workspace/links/reach.ts",
+      "src/core/workspace/mutations/rename/planning/nested.ts -> src/core/workspace/mutations/rename/collecting/collector.ts",
+      "src/core/workspace/mutations/rename/planning/nested.ts -> src/core/workspace/mutations/rename/collecting/contracts.ts",
+      "src/core/workspace/mutations/rename/planning/nested.ts -> src/core/workspace/mutations/rename/collecting/dirty-trees.ts",
+      "src/core/workspace/mutations/rename/planning/nested.ts -> src/core/workspace/mutations/rename/collecting/policy.ts",
+      "src/core/workspace/mutations/rename/planning/nested.ts -> src/core/workspace/mutations/rename/planning/targets.ts",
+      "src/core/workspace/mutations/rename/planning/nested.ts -> src/core/workspace/mutations/rename/rename-links.ts",
+      "src/core/workspace/mutations/rename/planning/nested.ts -> src/core/workspace/mutations/rename/rewriting/links.ts",
+      "src/core/workspace/mutations/rename/planning/nested.ts -> src/core/workspace/vaults/vault.ts",
+      "src/core/workspace/mutations/rename/planning/relink.ts -> src/core/workspace/links/links.ts",
+      "src/core/workspace/mutations/rename/planning/relink.ts -> src/core/workspace/links/pointer.ts",
+      "src/core/workspace/mutations/rename/planning/relink.ts -> src/core/workspace/mutations/rename/collecting/collector.ts",
+      "src/core/workspace/mutations/rename/planning/relink.ts -> src/core/workspace/mutations/rename/collecting/dirty-trees.ts",
+      "src/core/workspace/mutations/rename/planning/relink.ts -> src/core/workspace/mutations/rename/rename-links.ts",
+      "src/core/workspace/mutations/rename/planning/relink.ts -> src/core/workspace/vaults/folders.ts",
+      "src/core/workspace/mutations/rename/planning/relink.ts -> src/core/workspace/vaults/registry.ts",
+      "src/core/workspace/mutations/rename/planning/relink.ts -> src/core/workspace/vaults/vault.ts",
+      "src/core/workspace/mutations/rename/planning/targets.ts -> src/core/foundation/platform/fsutil.ts",
+      "src/core/workspace/mutations/rename/planning/targets.ts -> src/core/workspace/mutations/rename/collecting/contracts.ts",
+      "src/core/workspace/mutations/rename/planning/targets.ts -> src/core/workspace/mutations/rename/collecting/policy.ts",
+      "src/core/workspace/mutations/rename/planning/targets.ts -> src/core/workspace/vaults/symlinks.ts",
+      "src/core/workspace/mutations/rename/rename-plan.ts -> src/core/workspace/mutations/rename/collecting/collector.ts",
+      "src/core/workspace/mutations/rename/rename-plan.ts -> src/core/workspace/mutations/rename/collecting/contracts.ts",
+      "src/core/workspace/mutations/rename/rename-plan.ts -> src/core/workspace/mutations/rename/collecting/dirty-trees.ts",
+      "src/core/workspace/mutations/rename/rename-plan.ts -> src/core/workspace/mutations/rename/collecting/policy.ts",
+      "src/core/workspace/mutations/rename/rename.ts -> src/core/workspace/mutations/rename/planning/files.ts",
+      "src/core/workspace/mutations/rename/rename.ts -> src/core/workspace/mutations/rename/planning/nested.ts",
+      "src/core/workspace/mutations/rename/rename.ts -> src/core/workspace/mutations/rename/planning/relink.ts",
+      "src/core/workspace/mutations/rename/rename.ts -> src/core/workspace/mutations/rename/planning/targets.ts",
+      "src/core/workspace/mutations/rename/rewriting/links.ts -> src/core/documents/model/filetypes.ts",
+      "src/core/workspace/mutations/rename/rewriting/links.ts -> src/core/workspace/links/links.ts",
+      "src/core/workspace/mutations/rename/rewriting/links.ts -> src/core/workspace/links/pointer.ts",
+      "src/core/workspace/mutations/rename/rewriting/links.ts -> src/core/workspace/mutations/rename/rename-links.ts",
+      "src/core/workspace/mutations/rename/rewriting/links.ts -> src/core/workspace/vaults/vault.ts"
+    ]
+  },
+  "tests": {
+    "removed": [],
+    "added": [
+      "test: a changed source refuses the complete plan before either a link edit or a move",
+      "test: a collection refusal is cached and remains the skipped-row reason",
+      "test: a self-contained rename plan preserves BOM, Unicode, CRLF and unrelated text when applied",
+      "test: invalid UTF-8 is retained byte-for-byte and refused by collection",
+      "test: rename mechanisms reject facade, effect and reverse collection imports",
+      "test: target admission keeps folder intent, blockers and outside/hidden refusals",
+      "test: the collector retains one original text and edits CRLF lines without rereading"
+    ]
+  },
+  "entries": {
+    "removed": [],
+    "added": []
+  },
+  "extraction": [
+    {
+      "from": "src/core/workspace/mutations/rename/rename.ts",
+      "to": "src/core/workspace/mutations/rename/planning/targets.ts",
+      "symbols": [
+        "cleanTarget",
+        "checkSource",
+        "moveTarget",
+        "fileInTheWay"
+      ]
+    },
+    {
+      "from": "src/core/workspace/mutations/rename/rename.ts",
+      "to": "src/core/workspace/mutations/rename/planning/files.ts",
+      "symbols": [
+        "planNoteRename",
+        "planFolderMove",
+        "foldersMoving"
+      ]
+    },
+    {
+      "from": "src/core/workspace/mutations/rename/rename.ts",
+      "to": "src/core/workspace/mutations/rename/planning/move.ts",
+      "symbols": [
+        "leftByFolderMove",
+        "planMove"
+      ]
+    },
+    {
+      "from": "src/core/workspace/mutations/rename/rename.ts",
+      "to": "src/core/workspace/mutations/rename/planning/nested.ts",
+      "symbols": [
+        "planVaultFolderMove",
+        "nestedRootEdits",
+        "linksIntoFolder"
+      ]
+    },
+    {
+      "from": "src/core/workspace/mutations/rename/rename.ts",
+      "to": "src/core/workspace/mutations/rename/rewriting/links.ts",
+      "symbols": [
+        "ownFileLinks",
+        "relativeAs",
+        "retargetInto",
+        "retargetBacklink"
+      ]
+    },
+    {
+      "from": "src/core/workspace/mutations/rename/rename.ts",
+      "to": "src/core/workspace/mutations/rename/planning/relink.ts",
+      "symbols": [
+        "planRelink",
+        "pointerOffer",
+        "lastMove",
+        "vaultMoveFixes"
+      ]
+    },
+    {
+      "from": "src/core/workspace/mutations/rename/rename-plan.ts",
+      "to": "src/core/workspace/mutations/rename/collecting/contracts.ts",
+      "symbols": [
+        "RenameError",
+        "Edit",
+        "FileChange",
+        "RenamePlan",
+        "Ambiguous"
+      ]
+    },
+    {
+      "from": "src/core/workspace/mutations/rename/rename-plan.ts",
+      "to": "src/core/workspace/mutations/rename/collecting/policy.ts",
+      "symbols": [
+        "whereItLeads",
+        "notRewritten",
+        "landsHidden",
+        "asNamed",
+        "mayRewrite",
+        "shownFor",
+        "walkSkips",
+        "sameEntry",
+        "relinkSaid"
+      ]
+    },
+    {
+      "from": "src/core/workspace/mutations/rename/rename-plan.ts",
+      "to": "src/core/workspace/mutations/rename/collecting/collector.ts",
+      "symbols": [
+        "Collector"
+      ]
+    },
+    {
+      "from": "src/core/workspace/mutations/rename/rename-plan.ts",
+      "to": "src/core/workspace/mutations/rename/collecting/dirty-trees.ts",
+      "symbols": [
+        "dirtyTrees"
+      ]
+    }
+  ],
+  "ownership": {
+    "public": "same rename and rename-plan facades; error/Collector class identities and plan schema preserved",
+    "collection": "complete original Collector with same maps, cached read-once texts, graph reference, skip/refusal reasons and live leave callback",
+    "planning": "same target/source checks, note/folder/nested moves, rewrite helpers, relink/pointer offers and dirty-tree discovery",
+    "execution": "rename-apply and persisted-plan execution untouched; original content-hash preflight and rollback remain",
+    "data": "no existing fixture, title, assertion, hook, snapshot, product deadline, worker entry or asset changed"
+  },
+  "guards": {
+    "owners": [
+      "src/core/workspace/mutations/rename/collecting/collector.ts",
+      "src/core/workspace/mutations/rename/collecting/contracts.ts",
+      "src/core/workspace/mutations/rename/collecting/dirty-trees.ts",
+      "src/core/workspace/mutations/rename/collecting/policy.ts",
+      "src/core/workspace/mutations/rename/planning/files.ts",
+      "src/core/workspace/mutations/rename/planning/move.ts",
+      "src/core/workspace/mutations/rename/planning/nested.ts",
+      "src/core/workspace/mutations/rename/planning/relink.ts",
+      "src/core/workspace/mutations/rename/planning/targets.ts",
+      "src/core/workspace/mutations/rename/rewriting/links.ts"
+    ],
+    "rule": "renameMechanismViolations",
+    "forbidden": [
+      "public rename and rename-plan facades",
+      "rename-apply, rename-vaults and rename-heading composition",
+      "collection importing higher planning/rewriting"
+    ]
+  },
+  "runtimeScc": {
+    "before": [
+      [
+        "src/tui/documents/editing/editing.ts",
+        "src/tui/documents/editing/snippets.ts"
+      ],
+      [
+        "src/tui/workspace/git/gitremote.ts",
+        "src/tui/workspace/git/views/review/rebase.ts"
+      ],
+      [
+        "src/core/rendering/export/formats/html.ts",
+        "src/core/rendering/export/formats/markdown.ts",
+        "src/core/rendering/export/stream.ts"
+      ],
+      [
+        "src/tui/app/runtime/app.ts",
+        "src/tui/app/settings/settings.ts",
+        "src/tui/workspace/history/history.ts",
+        "src/tui/workspace/session/session.ts",
+        "src/tui/workspace/vaults/vaults.ts"
+      ],
+      [
+        "src/tui/actions/actions.ts",
+        "src/tui/actions/documents/actions-edit.ts",
+        "src/tui/actions/documents/actions-find.ts",
+        "src/tui/actions/documents/actions-links.ts",
+        "src/tui/actions/documents/actions-lsp.ts",
+        "src/tui/actions/documents/actions-view.ts",
+        "src/tui/actions/shell/actions-panes.ts",
+        "src/tui/actions/workspace/actions-files.ts"
+      ],
+      [
+        "src/tui/documents/diagnostics/draw-problems.ts",
+        "src/tui/documents/views/draw-header.ts",
+        "src/tui/documents/views/draw-pane.ts",
+        "src/tui/shell/overlays/draw-overlays.ts",
+        "src/tui/shell/panels/draw-panels.ts",
+        "src/tui/shell/screen/draw.ts",
+        "src/tui/shell/screen/statusbar/draw-status.ts",
+        "src/tui/workspace/git/views/panel/draw-git.ts"
+      ]
+    ],
+    "after": [
+      [
+        "src/tui/documents/editing/editing.ts",
+        "src/tui/documents/editing/snippets.ts"
+      ],
+      [
+        "src/tui/workspace/git/gitremote.ts",
+        "src/tui/workspace/git/views/review/rebase.ts"
+      ],
+      [
+        "src/core/rendering/export/formats/html.ts",
+        "src/core/rendering/export/formats/markdown.ts",
+        "src/core/rendering/export/stream.ts"
+      ],
+      [
+        "src/tui/app/runtime/app.ts",
+        "src/tui/app/settings/settings.ts",
+        "src/tui/workspace/history/history.ts",
+        "src/tui/workspace/session/session.ts",
+        "src/tui/workspace/vaults/vaults.ts"
+      ],
+      [
+        "src/tui/actions/actions.ts",
+        "src/tui/actions/documents/actions-edit.ts",
+        "src/tui/actions/documents/actions-find.ts",
+        "src/tui/actions/documents/actions-links.ts",
+        "src/tui/actions/documents/actions-lsp.ts",
+        "src/tui/actions/documents/actions-view.ts",
+        "src/tui/actions/shell/actions-panes.ts",
+        "src/tui/actions/workspace/actions-files.ts"
+      ],
+      [
+        "src/tui/documents/diagnostics/draw-problems.ts",
+        "src/tui/documents/views/draw-header.ts",
+        "src/tui/documents/views/draw-pane.ts",
+        "src/tui/shell/overlays/draw-overlays.ts",
+        "src/tui/shell/panels/draw-panels.ts",
+        "src/tui/shell/screen/draw.ts",
+        "src/tui/shell/screen/statusbar/draw-status.ts",
+        "src/tui/workspace/git/views/panel/draw-git.ts"
+      ]
+    ]
+  }
+}

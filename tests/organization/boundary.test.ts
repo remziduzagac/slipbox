@@ -47,6 +47,25 @@ describe("the boundary check (0.3, scripts/check-boundary.ts)", () => {
     expect(r.out).not.toContain("boundary check ok");
   });
 
+  test("rename mechanisms reject facade, effect and reverse collection imports", () => {
+    const refused = check({
+      "src/core/workspace/mutations/rename/planning/files.ts": 'export type { RenamePlan } from "../rename-plan.ts";',
+      "src/core/workspace/mutations/rename/planning/move.ts": 'export const load = () => import("../rename-apply.ts");',
+      "src/core/workspace/mutations/rename/collecting/collector.ts": 'export { planMove } from "../planning/move.ts";',
+      "src/core/workspace/mutations/rename/rewriting/links.ts": 'export { planRelink } from "../rename.ts";',
+    });
+    expect(refused.code).toBe(1);
+    expect(refused.err.match(/rename mechanism/g)?.length).toBe(4);
+    expect(
+      check({
+        "src/core/workspace/mutations/rename/planning/files.ts":
+          'import type { RenamePlan } from "../collecting/contracts.ts";',
+        "src/core/workspace/mutations/rename/collecting/collector.ts":
+          'import { replaceAt } from "../rename-links.ts"; export const f = replaceAt;',
+      }).code,
+    ).toBe(0);
+  });
+
   test("search mechanisms reject workspace composition and runtime SQLite or App", () => {
     const refused = check({
       "src/core/workspace/search/query/parsing.ts": 'export type { SearchQuery } from "../search.ts";',
