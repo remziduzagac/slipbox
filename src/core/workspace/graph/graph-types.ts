@@ -6,6 +6,15 @@ import type { Landed } from "../links/links.ts";
 import type { AnchorInfo, HeadingInfo } from "../../documents/markdown/parse.ts";
 import type { Graph } from "./graph.ts";
 
+export interface GraphStats {
+  notes: number;
+  parsed: number;
+  cached: number;
+  /** Notes the index had that the walk found gone (20.10). */
+  gone: number;
+  ms: number;
+}
+
 export type LinkKind = "wiki" | "embed" | "markdown" | "image";
 
 export interface LinkRef {

@@ -1014,6 +1014,13 @@ remaining composition files have not been asserted to meet the final 600-line ce
 and any final exception against ORG-D2; further controller splits require coherent child PRs with their own lifecycle
 characterization rather than extending this extraction's manifest.
 
+### T25 graph assessment
+
+[Task 25](tasks/25-graph-splits.md) records the cache/build, move, editor-overlay, query and admission extractions with
+Graph as the sole mutable-index owner. Graph drops below 1,000 lines and its legacy cap is removed. LinkResolver and
+Reach receive explicit cohesive-owner assessments; T11 still owns the final staged-ceiling reconciliation. Exact edges,
+state/body preservation, isolated owner runs, compiled checks and the ancestor-Git fixture control are in its record.
+
 ### Measured completion and known failures
 
 T43 must publish completed, comparable scope runs for the mapped location/header, export-stream and regex cases. Report

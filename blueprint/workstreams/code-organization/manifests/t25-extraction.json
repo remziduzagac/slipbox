@@ -1,0 +1,302 @@
+{
+  "edges": {
+    "removed": [
+      "src/core/workspace/graph/graph.ts -> src/core/documents/model/data.ts",
+      "src/core/workspace/graph/graph.ts -> src/core/workspace/git/branches/gitops.ts",
+      "src/core/workspace/graph/graph.ts -> src/core/workspace/git/git.ts",
+      "src/core/workspace/graph/graph.ts -> src/core/workspace/vaults/symlinks.ts"
+    ],
+    "added": [
+      "src/core/workspace/graph/graph-extract.ts -> src/core/workspace/graph/index/schema.ts",
+      "src/core/workspace/graph/graph.ts -> src/core/workspace/graph/index/schema.ts",
+      "src/core/workspace/graph/graph.ts -> src/core/workspace/graph/index/storage.ts",
+      "src/core/workspace/graph/graph.ts -> src/core/workspace/graph/moves/reconcile.ts",
+      "src/core/workspace/graph/graph.ts -> src/core/workspace/graph/overlays/editor.ts",
+      "src/core/workspace/graph/graph.ts -> src/core/workspace/graph/queries/file-links.ts",
+      "src/core/workspace/graph/graph.ts -> src/core/workspace/graph/queries/indexes.ts",
+      "src/core/workspace/graph/graph.ts -> src/core/workspace/graph/reach/files.ts",
+      "src/core/workspace/graph/index/schema.ts -> src/core/workspace/graph/graph-types.ts",
+      "src/core/workspace/graph/index/storage.ts -> src/core/foundation/platform/fsutil.ts",
+      "src/core/workspace/graph/index/storage.ts -> src/core/foundation/platform/paths.ts",
+      "src/core/workspace/graph/index/storage.ts -> src/core/workspace/graph/graph-types.ts",
+      "src/core/workspace/graph/index/storage.ts -> src/core/workspace/graph/index/schema.ts",
+      "src/core/workspace/graph/index/storage.ts -> src/core/workspace/graph/overlays/editor.ts",
+      "src/core/workspace/graph/index/storage.ts -> src/core/workspace/walk/walk.ts",
+      "src/core/workspace/graph/moves/reconcile.ts -> src/core/foundation/platform/fsutil.ts",
+      "src/core/workspace/graph/moves/reconcile.ts -> src/core/foundation/platform/paths.ts",
+      "src/core/workspace/graph/moves/reconcile.ts -> src/core/workspace/git/branches/gitops.ts",
+      "src/core/workspace/graph/moves/reconcile.ts -> src/core/workspace/git/git.ts",
+      "src/core/workspace/graph/moves/reconcile.ts -> src/core/workspace/graph/graph-types.ts",
+      "src/core/workspace/graph/moves/reconcile.ts -> src/core/workspace/links/redirects.ts",
+      "src/core/workspace/graph/moves/reconcile.ts -> src/core/workspace/vaults/vault.ts",
+      "src/core/workspace/graph/moves/reconcile.ts -> src/core/workspace/walk/walk.ts",
+      "src/core/workspace/graph/overlays/editor.ts -> src/core/foundation/platform/fsutil.ts",
+      "src/core/workspace/graph/overlays/editor.ts -> src/core/workspace/graph/graph-extract.ts",
+      "src/core/workspace/graph/overlays/editor.ts -> src/core/workspace/graph/graph-types.ts",
+      "src/core/workspace/graph/queries/file-links.ts -> src/core/application/config/config.ts",
+      "src/core/workspace/graph/queries/file-links.ts -> src/core/documents/model/data.ts",
+      "src/core/workspace/graph/queries/file-links.ts -> src/core/documents/model/filetypes.ts",
+      "src/core/workspace/graph/queries/file-links.ts -> src/core/documents/syntax/syntax.ts",
+      "src/core/workspace/graph/queries/file-links.ts -> src/core/foundation/platform/fsutil.ts",
+      "src/core/workspace/graph/queries/file-links.ts -> src/core/workspace/graph/graph-types.ts",
+      "src/core/workspace/graph/queries/indexes.ts -> src/core/documents/markdown/tags.ts",
+      "src/core/workspace/graph/queries/indexes.ts -> src/core/workspace/graph/graph-types.ts",
+      "src/core/workspace/graph/queries/indexes.ts -> src/core/workspace/links/links.ts",
+      "src/core/workspace/graph/reach/files.ts -> src/core/foundation/platform/fsutil.ts",
+      "src/core/workspace/graph/reach/files.ts -> src/core/workspace/graph/graph-types.ts",
+      "src/core/workspace/graph/reach/files.ts -> src/core/workspace/links/links.ts",
+      "src/core/workspace/graph/reach/files.ts -> src/core/workspace/vaults/symlinks.ts",
+      "src/core/workspace/graph/reach/files.ts -> src/core/workspace/vaults/vault.ts",
+      "src/core/workspace/graph/reach/files.ts -> src/core/workspace/walk/walk.ts"
+    ]
+  },
+  "runtime": {
+    "removed": [
+      "src/core/workspace/graph/graph.ts -> src/core/documents/model/data.ts",
+      "src/core/workspace/graph/graph.ts -> src/core/workspace/git/branches/gitops.ts",
+      "src/core/workspace/graph/graph.ts -> src/core/workspace/git/git.ts",
+      "src/core/workspace/graph/graph.ts -> src/core/workspace/vaults/symlinks.ts"
+    ],
+    "added": [
+      "src/core/workspace/graph/graph-extract.ts -> src/core/workspace/graph/index/schema.ts",
+      "src/core/workspace/graph/graph.ts -> src/core/workspace/graph/index/storage.ts",
+      "src/core/workspace/graph/graph.ts -> src/core/workspace/graph/moves/reconcile.ts",
+      "src/core/workspace/graph/graph.ts -> src/core/workspace/graph/overlays/editor.ts",
+      "src/core/workspace/graph/graph.ts -> src/core/workspace/graph/queries/file-links.ts",
+      "src/core/workspace/graph/graph.ts -> src/core/workspace/graph/queries/indexes.ts",
+      "src/core/workspace/graph/graph.ts -> src/core/workspace/graph/reach/files.ts",
+      "src/core/workspace/graph/index/storage.ts -> src/core/foundation/platform/fsutil.ts",
+      "src/core/workspace/graph/index/storage.ts -> src/core/foundation/platform/paths.ts",
+      "src/core/workspace/graph/index/storage.ts -> src/core/workspace/graph/index/schema.ts",
+      "src/core/workspace/graph/moves/reconcile.ts -> src/core/foundation/platform/fsutil.ts",
+      "src/core/workspace/graph/moves/reconcile.ts -> src/core/foundation/platform/paths.ts",
+      "src/core/workspace/graph/moves/reconcile.ts -> src/core/workspace/git/branches/gitops.ts",
+      "src/core/workspace/graph/moves/reconcile.ts -> src/core/workspace/git/git.ts",
+      "src/core/workspace/graph/moves/reconcile.ts -> src/core/workspace/links/redirects.ts",
+      "src/core/workspace/graph/moves/reconcile.ts -> src/core/workspace/vaults/vault.ts",
+      "src/core/workspace/graph/overlays/editor.ts -> src/core/foundation/platform/fsutil.ts",
+      "src/core/workspace/graph/overlays/editor.ts -> src/core/workspace/graph/graph-extract.ts",
+      "src/core/workspace/graph/queries/file-links.ts -> src/core/documents/model/data.ts",
+      "src/core/workspace/graph/queries/file-links.ts -> src/core/documents/model/filetypes.ts",
+      "src/core/workspace/graph/queries/file-links.ts -> src/core/documents/syntax/syntax.ts",
+      "src/core/workspace/graph/queries/file-links.ts -> src/core/foundation/platform/fsutil.ts",
+      "src/core/workspace/graph/queries/indexes.ts -> src/core/documents/markdown/tags.ts",
+      "src/core/workspace/graph/queries/indexes.ts -> src/core/workspace/graph/graph-types.ts",
+      "src/core/workspace/graph/queries/indexes.ts -> src/core/workspace/links/links.ts",
+      "src/core/workspace/graph/reach/files.ts -> src/core/foundation/platform/fsutil.ts",
+      "src/core/workspace/graph/reach/files.ts -> src/core/workspace/links/links.ts",
+      "src/core/workspace/graph/reach/files.ts -> src/core/workspace/vaults/symlinks.ts",
+      "src/core/workspace/graph/reach/files.ts -> src/core/workspace/vaults/vault.ts"
+    ]
+  },
+  "tests": {
+    "removed": [],
+    "added": [
+      "test: backlink materialization preserves source order and reads inbound links after local resolution",
+      "test: build move evidence requires one nonempty vanished note and one fresh file with that hash",
+      "test: comment paths prefer the source directory, exclude self and escaping paths, then try the root",
+      "test: editor overlays retain original disk identity, expose unsaved facts and release the latest underlay",
+      "test: file admission retains filesystem facts, the size limit and excluded-folder refusals",
+      "test: file-link stamps retain cached identity, explicit broken references and the 256 KiB read ceiling",
+      "test: index reuse mutates the authoritative maps, reuses good entries and reparses unreadable or changed ones",
+      "test: linked discovery decodes local paths but never admits names, URLs or paths outside the root",
+      "test: pairing, cancellation by return, nested pause cleanup and the one-minute boundary retain their order",
+      "test: persistence keeps disk underlays, omits pending/unreadable entries and preserves the cache format",
+      "test: problem and namesake queries preserve fragile fixes, moved evidence and lazy-parse ordering",
+      "test: tag and note lookups retain hierarchy, first spelling, ordering and path-before-name precedence"
+    ]
+  },
+  "entries": {
+    "removed": [],
+    "added": []
+  },
+  "moves": {},
+  "retained": [],
+  "extractions": [
+    {
+      "from": [
+        "src/core/workspace/graph/graph.ts",
+        "src/core/workspace/graph/graph-extract.ts"
+      ],
+      "to": [
+        "src/core/workspace/graph/index/schema.ts",
+        "src/core/workspace/graph/index/storage.ts",
+        "src/core/workspace/graph/graph-types.ts"
+      ],
+      "symbols": [
+        "IndexFile",
+        "INDEX_VERSION",
+        "GraphStats",
+        "reuseEntries",
+        "cacheEntries",
+        "persistIndex",
+        "isUnreadable",
+        "stub"
+      ],
+      "invariant": "Graph owns note/reached/unparsed maps, cache flags and observable errors; helpers use those same map references. Entry collection stays outside the IO catch; timestamp assignment stays after write. Version 13 and existing version/type re-exports are retained."
+    },
+    {
+      "from": "src/core/workspace/graph/graph.ts",
+      "to": "src/core/workspace/graph/moves/reconcile.ts",
+      "symbols": [
+        "detectMoves",
+        "catchUpWithGit",
+        "pauseMoves",
+        "branchNow",
+        "pairMove",
+        "went",
+        "came",
+        "movesPaused"
+      ],
+      "invariant": "One GraphMoves per Graph owns only existing private move-pair bookkeeping. Graph owns redirects and event listeners; context reads stay live. Same branch gate, 60-second pairing window, pause finally, 199-head retention and error policy."
+    },
+    {
+      "from": "src/core/workspace/graph/graph.ts",
+      "to": "src/core/workspace/graph/overlays/editor.ts",
+      "symbols": [
+        "applyOverlay",
+        "overlayText",
+        "EditorOverlay"
+      ],
+      "invariant": "Graph owns the same overlay and notes maps, cache invalidation and generation. Disk underlays retain identity; unsaved text never enters persisted entries or file events."
+    },
+    {
+      "from": "src/core/workspace/graph/graph.ts",
+      "to": "src/core/workspace/graph/queries/indexes.ts",
+      "symbols": [
+        "collectTags",
+        "collectProblems",
+        "collectBacklinks",
+        "namesakeLinks",
+        "findNote"
+      ],
+      "invariant": "Graph retains parse-before-query policy, derivative caches, generation evaluation after materialization, listener dispatch and lazy alias invalidation. Same sort order, link identities, local-before-inbound callbacks, name/path precedence and orphan rules."
+    },
+    {
+      "from": "src/core/workspace/graph/graph.ts",
+      "to": "src/core/workspace/graph/queries/file-links.ts",
+      "symbols": [
+        "fileLinksOf",
+        "codeLinks",
+        "commentPath",
+        "DATA_LINK_MAX"
+      ],
+      "invariant": "Graph owns and invalidates the original stamp-cache Map. Same 256 KiB limit, grammar-loading behavior, read failures, syntax-tree cleanup and explicit/implicit data-link rules."
+    },
+    {
+      "from": "src/core/workspace/graph/graph.ts",
+      "to": "src/core/workspace/graph/reach/files.ts",
+      "symbols": [
+        "neverIndexed",
+        "reachable",
+        "reachLinked"
+      ],
+      "invariant": "Only admission/read/discovery policy moves. Graph.reachFile remains the mutation gate; symlink checks, path decoding, exclusion and size policy and callback order stay the same."
+    }
+  ],
+  "primitives": [
+    "src/core/workspace/graph/index/schema.ts",
+    "src/core/workspace/graph/index/storage.ts",
+    "src/core/workspace/graph/moves/reconcile.ts",
+    "src/core/workspace/graph/overlays/editor.ts",
+    "src/core/workspace/graph/queries/indexes.ts",
+    "src/core/workspace/graph/queries/file-links.ts",
+    "src/core/workspace/graph/reach/files.ts"
+  ],
+  "runtimeScc": {
+    "before": [
+      [
+        "src/tui/documents/editing/editing.ts",
+        "src/tui/documents/editing/snippets.ts"
+      ],
+      [
+        "src/tui/workspace/git/gitremote.ts",
+        "src/tui/workspace/git/views/review/rebase.ts"
+      ],
+      [
+        "src/core/rendering/export/formats/html.ts",
+        "src/core/rendering/export/formats/markdown.ts",
+        "src/core/rendering/export/stream.ts"
+      ],
+      [
+        "src/tui/documents/search/replacing.ts",
+        "src/tui/shell/overlays/overlays.ts",
+        "src/tui/workspace/search/search.ts"
+      ],
+      [
+        "src/tui/app/runtime/app.ts",
+        "src/tui/app/settings/settings.ts",
+        "src/tui/workspace/history/history.ts",
+        "src/tui/workspace/session/session.ts",
+        "src/tui/workspace/vaults/vaults.ts"
+      ],
+      [
+        "src/tui/actions/actions.ts",
+        "src/tui/actions/documents/actions-edit.ts",
+        "src/tui/actions/documents/actions-find.ts",
+        "src/tui/actions/documents/actions-links.ts",
+        "src/tui/actions/documents/actions-lsp.ts",
+        "src/tui/actions/documents/actions-view.ts",
+        "src/tui/actions/shell/actions-panes.ts",
+        "src/tui/actions/workspace/actions-files.ts"
+      ],
+      [
+        "src/tui/documents/diagnostics/draw-problems.ts",
+        "src/tui/documents/views/draw-header.ts",
+        "src/tui/documents/views/draw-pane.ts",
+        "src/tui/shell/overlays/draw-overlays.ts",
+        "src/tui/shell/panels/draw-panels.ts",
+        "src/tui/shell/screen/draw.ts",
+        "src/tui/shell/screen/statusbar/draw-status.ts",
+        "src/tui/workspace/git/views/panel/draw-git.ts"
+      ]
+    ],
+    "after": [
+      [
+        "src/tui/documents/editing/editing.ts",
+        "src/tui/documents/editing/snippets.ts"
+      ],
+      [
+        "src/tui/workspace/git/gitremote.ts",
+        "src/tui/workspace/git/views/review/rebase.ts"
+      ],
+      [
+        "src/core/rendering/export/formats/html.ts",
+        "src/core/rendering/export/formats/markdown.ts",
+        "src/core/rendering/export/stream.ts"
+      ],
+      [
+        "src/tui/documents/search/replacing.ts",
+        "src/tui/shell/overlays/overlays.ts",
+        "src/tui/workspace/search/search.ts"
+      ],
+      [
+        "src/tui/app/runtime/app.ts",
+        "src/tui/app/settings/settings.ts",
+        "src/tui/workspace/history/history.ts",
+        "src/tui/workspace/session/session.ts",
+        "src/tui/workspace/vaults/vaults.ts"
+      ],
+      [
+        "src/tui/actions/actions.ts",
+        "src/tui/actions/documents/actions-edit.ts",
+        "src/tui/actions/documents/actions-find.ts",
+        "src/tui/actions/documents/actions-links.ts",
+        "src/tui/actions/documents/actions-lsp.ts",
+        "src/tui/actions/documents/actions-view.ts",
+        "src/tui/actions/shell/actions-panes.ts",
+        "src/tui/actions/workspace/actions-files.ts"
+      ],
+      [
+        "src/tui/documents/diagnostics/draw-problems.ts",
+        "src/tui/documents/views/draw-header.ts",
+        "src/tui/documents/views/draw-pane.ts",
+        "src/tui/shell/overlays/draw-overlays.ts",
+        "src/tui/shell/panels/draw-panels.ts",
+        "src/tui/shell/screen/draw.ts",
+        "src/tui/shell/screen/statusbar/draw-status.ts",
+        "src/tui/workspace/git/views/panel/draw-git.ts"
+      ]
+    ]
+  }
+}

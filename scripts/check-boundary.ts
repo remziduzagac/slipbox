@@ -67,6 +67,31 @@ export function mutationViolations(from: string, text: string): string[] {
   });
 }
 
+/** Extracted graph mechanisms stay below the stateful Graph/LinkResolver composition (ORG-T25). */
+export const GRAPH_PRIMITIVES = [
+  "src/core/workspace/graph/index/schema.ts",
+  "src/core/workspace/graph/index/storage.ts",
+  "src/core/workspace/graph/moves/reconcile.ts",
+  "src/core/workspace/graph/overlays/editor.ts",
+  "src/core/workspace/graph/queries/indexes.ts",
+  "src/core/workspace/graph/queries/file-links.ts",
+  "src/core/workspace/graph/reach/files.ts",
+] as const;
+
+export function graphCompositionViolations(from: string, text: string): string[] {
+  if (!(GRAPH_PRIMITIVES as readonly string[]).includes(from)) return [];
+  return importsOf(text).flatMap((spec) => {
+    const target = targetOf(from, spec);
+    const composition =
+      target === "src/core/workspace/graph/graph" || target === "src/core/workspace/graph/graph-resolve";
+    const schemaCycle =
+      from === "src/core/workspace/graph/index/schema.ts" && target === "src/core/workspace/graph/graph-extract";
+    return composition || schemaCycle
+      ? [`${from}: imports ${spec} (graph helper must not import composition, even for types)`]
+      : [];
+  });
+}
+
 /** Presentation primitives stay below the App and region composers that call them (ORG-T9). */
 export const TUI_PRIMITIVES = [
   "src/tui/app/clipboard/clipboard.ts",
@@ -208,6 +233,7 @@ if (import.meta.main) {
     const from = relative(ROOT, file);
     violations.push(...commandViolations(from, readFileSync(file, "utf8")));
     violations.push(...mutationViolations(from, readFileSync(file, "utf8")));
+    violations.push(...graphCompositionViolations(from, readFileSync(file, "utf8")));
     violations.push(...primitiveViolations(from, readFileSync(file, "utf8")));
     violations.push(...appCompositionViolations(from, readFileSync(file, "utf8")));
     violations.push(...drawingCompositionViolations(from, readFileSync(file, "utf8")));
