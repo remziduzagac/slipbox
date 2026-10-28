@@ -436,3 +436,13 @@ goes. `/`
 nests: `#dome/shutter` is under `#dome`, and a parent's notes include its children's. `#Dome` and `#dome` are one tag
 (compared after NFC, case aside), shown as first written (the first note by path, its front matter before its text).
 Listing and following them: [tui.md](tui.md) § Following links ("Tags").
+
+## Graph implementation ownership
+
+`core/workspace/graph/graph.ts` owns the mutable note/index/reached/overlay maps, lazy parsing, generations, derivative
+cache invalidation and the change feed. Its `index/` helpers reuse those same maps and persist disk entries under the
+existing error boundary; `moves/` tracks content/git evidence per Graph, reading its redirects and emitting through its
+listeners. `overlays/` applies editor text over disk underlays; `queries/` materializes tags, problems, backlinks and
+file/comment links; `reach/` checks file admission and discovers linked files. These helpers import small capabilities,
+not the Graph composer. Their extracted algorithms retain existing sort order, branch/pause rules, path policy and
+query-time resolution; no second authoritative graph or copied mutable index was introduced.

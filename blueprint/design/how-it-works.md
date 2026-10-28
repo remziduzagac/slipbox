@@ -189,6 +189,9 @@ The CLI's commands are the user's reference, [cli.md](../../docs/manual/cli.md);
 | [sqlite.ts][o6] | 6.6 | the runtime's SQLite (`node:sqlite`): the few calls the index and the parse cache make |
 | [trust.ts][o26] | 23.x | the vaults whose own code may run: your answers (`trust.json`), your `[trust] roots` |
 | [graph.ts][o35] | 1.5–1.9, 6.7, 11.8 | notes, links, backlinks, lazy parsing, the index; change feed; unsaved text |
+| `core/workspace/graph/index/` | 1.9 | index schema, live-map reuse and persistence below Graph's cache/error policy |
+| `core/workspace/graph/moves/` | 17.12, 20.21 | content/git move evidence; Graph retains redirects and file events |
+| `graph/overlays/`, `queries/`, `reach/` | 11.8, 1.5–1.7, 20.8 | editor text, derived answers, file admission |
 | [graph-types.ts][o36] | 1.5–1.7 | a note's entry, a link as written and resolved, a backlink, a problem; how sure |
 | [graph-extract.ts][o37] | 1.5, 1.6, 20.11 | a note's entry from its text: title, headings, links, tags, names |
 | [graph-resolve.ts][o38] | 20.2, 21.2–21.7 | `LinkResolver`: by path, name, alias, pointer, hosting URL; moves |

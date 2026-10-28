@@ -34,6 +34,10 @@ change as a coherent follow-up; #56 remains excluded. This is focused verificati
 
 - T7: explorer/which-key “space n notes, space d folders, space v vaults …”: cause unproven; separate isolation fix.
 
+- T25: pointers' “written across folders that don't travel together …” depends on ancestor Git markers. Private
+  no-marker/marker/no-marker controls pass/fail/pass; isolated TMPDIR gives 5/5 at both revisions. Keep its host
+  assumption separate from Graph extraction results; any fixture fix needs an ancestor-marker regression.
+
 - T12/T21: known clock-arithmetic TimeoutOverflowWarning output in shared processes: 18,198 lines for 121 split owners
   versus 4,069 for the old 22 files in an independent observation; groups alone are quiet, with no test failure. These
   are output observations, not a performance comparison. Investigate separately with a clock-arithmetic regression.

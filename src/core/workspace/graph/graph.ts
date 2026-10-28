@@ -9,33 +9,21 @@
 // and how a link resolves graph-resolve.ts's (`LinkResolver`). All of it is imported from here.
 
 import { statSync } from "node:fs";
-import {
-  commentLinks,
-  grammar,
-  grammarFor,
-  grammarNow,
-  linkTokens,
-  parseSyntax,
-  type Grammar,
-} from "../../documents/syntax/syntax.ts";
-import { basename, isAbsolute, join, posix, relative, sep } from "node:path";
+import { grammar, grammarFor, type Grammar } from "../../documents/syntax/syntax.ts";
+import { basename, isAbsolute, join, relative, sep } from "node:path";
 import { isMainThread } from "node:worker_threads";
 import type { Config } from "../../application/config/config.ts";
-import { climbsOut, ensureDir, readJson, readText, sweepTemps, writeJson } from "../../foundation/platform/fsutil.ts";
-import { blockingLink } from "../vaults/symlinks.ts";
+import { climbsOut, readJson } from "../../foundation/platform/fsutil.ts";
 import { countForms, type FormCounts } from "../links/convention.ts";
-import { LinkIndex, normKey, onDisk, type Resolution } from "../links/links.ts";
+import { LinkIndex, onDisk, type Resolution } from "../links/links.ts";
 import type { ParseCache as ChunkCache } from "../../documents/markdown/parse.ts";
 import { tildePath } from "../vaults/names.ts";
 import { sharedParseCache } from "../../documents/markdown/parsecache.ts";
-import { cacheDir, ensureCacheHome, stateDir } from "../../foundation/platform/paths.ts";
-import { headCommit, headOf } from "../git/git.ts";
-import { changedBetween, inVault } from "../git/branches/gitops.ts";
-import { contentHash, Redirects } from "../links/redirects.ts";
-import { dataLinks, parseData } from "../../documents/model/data.ts";
+import { cacheDir, stateDir } from "../../foundation/platform/paths.ts";
+import { Redirects } from "../links/redirects.ts";
 import { classify, extensionOf } from "../../documents/model/filetypes.ts";
 import { type AskedWhole, type HomeWalk, homeWalk, inFolders, walksInto } from "../vaults/home.ts";
-import { checkoutAt, findVaultRoot, isListed, isVaultRoot, type VaultLocation } from "../vaults/vault.ts";
+import { findVaultRoot, isListed, type VaultLocation } from "../vaults/vault.ts";
 import {
   HOME_LIMITS,
   listDirectory,
@@ -46,26 +34,31 @@ import {
   walkVault,
 } from "../walk/walk.ts";
 import { tagKey, tagName } from "../../documents/markdown/tags.ts";
-import {
-  type LinkRef,
-  type NoteEntry,
-  type VaultChange,
-  type ResolvedLink,
-  type Retarget,
-  fragile,
-  describeLanding,
-  type Target,
-  type VaultReach,
-  type LinkProblem,
-  disambiguated,
-  type Backlink,
-  NOTE_EXT_RE,
+import type {
+  LinkRef,
+  NoteEntry,
+  VaultChange,
+  ResolvedLink,
+  Retarget,
+  Target,
+  VaultReach,
+  LinkProblem,
+  Backlink,
 } from "./graph-types.ts";
-import { INDEX_VERSION, extractNote, extractFromSource } from "./graph-extract.ts";
+import { INDEX_VERSION, extractNote } from "./graph-extract.ts";
+import type { GraphStats } from "./graph-types.ts";
 import { LinkResolver } from "./graph-resolve.ts";
+import type { IndexFile } from "./index/schema.ts";
+import { cacheEntries, isUnreadable, persistIndex, reuseEntries, stub } from "./index/storage.ts";
+import { GraphMoves } from "./moves/reconcile.ts";
+import { applyOverlay, overlayText, type EditorOverlay } from "./overlays/editor.ts";
+import { collectBacklinks, collectProblems, collectTags, namesakeLinks, findNote } from "./queries/indexes.ts";
+import { fileLinksOf, commentPath } from "./queries/file-links.ts";
+import { neverIndexed, reachable, reachLinked } from "./reach/files.ts";
 
 export { certainty, fragile, describeLanding, disambiguated } from "./graph-types.ts";
 export type {
+  GraphStats,
   LinkKind,
   LinkRef,
   Pos,
@@ -81,27 +74,6 @@ export type {
 } from "./graph-types.ts";
 export { INDEX_VERSION, extractNote, extractText, frontmatterLinks, extractFromSource } from "./graph-extract.ts";
 export { VAULT_LINK } from "./graph-resolve.ts";
-
-interface IndexFile {
-  version: number;
-  entries: Record<string, NoteEntry>;
-  /** The branch checked out when it was written (5.9): from another, its vanished notes weren't moved. */
-  branch?: string | null;
-  /** Files the walk leaves out that were reached (20.8): indexed all the same, and kept so. */
-  reached?: string[];
-}
-
-export interface GraphStats {
-  notes: number;
-  parsed: number;
-  cached: number;
-  /** Notes the index had that the walk found gone (20.10). */
-  gone: number;
-  ms: number;
-}
-
-/** Data files larger than this aren't read for links (a lock file, a dump). */
-const DATA_LINK_MAX = 256 * 1024;
 
 export class Graph {
   readonly filter: WalkFilter;
@@ -259,29 +231,14 @@ export class Graph {
     const cached = this.useCache ? readJson<IndexFile | null>(this.cachePath, null) : null;
     this.indexRead = cached?.version === INDEX_VERSION;
     const old = this.indexRead ? cached!.entries : {};
-    let reused = 0;
-    this.notes.clear();
-    this.unparsed.clear();
-    // Files reached before (20.8), still there and still left out by the walk: indexed again.
-    this.reached.clear();
-    const reachedFiles: NoteFile[] = [];
-    for (const rel of this.useCache ? (cached?.reached ?? []) : []) {
-      const f = this.reachable(rel);
-      if (!f || walk.files.some((w) => w.rel === rel)) continue;
-      this.reached.add(rel);
-      if (this.filter.isNoteName(basename(rel))) reachedFiles.push(f);
-      else this.addAsset(rel);
-    }
-    for (const f of [...walk.files, ...reachedFiles]) {
-      const prev = old[f.rel];
-      if (prev && prev.mtimeMs === f.mtimeMs && prev.size === f.size && !isUnreadable(prev)) {
-        this.notes.set(f.rel, prev);
-        reused++;
-      } else {
-        this.notes.set(f.rel, stub(f));
-        this.unparsed.set(f.rel, f);
-      }
-    }
+    const reused = reuseEntries(
+      this,
+      this.unparsed,
+      walk.files,
+      this.useCache ? (cached?.reached ?? []) : [],
+      old,
+      (rel) => this.reachable(rel),
+    );
     this.index = new LinkIndex(this.notes.keys());
     // Notes the index had that the walk no longer finds: moved, if one new file has the same text —
     // unless the index was written on another branch (5.9): a note only one branch has is no move.
@@ -411,25 +368,7 @@ export class Graph {
    * found by nothing.
    */
   neverIndexed(rel: string, isDir = false, notes?: boolean): string | null {
-    if (isListed(this.loc)) return null;
-    // By the names on disk, where the filesystem folds case: `Build/` typed is the `build/` the walk lists.
-    const parts = onDisk(this.root, rel).split("/");
-    const last = isDir ? parts.length : parts.length - 1;
-    const holds = notes ?? (!isDir && this.filter.isNoteName(parts.at(-1)!));
-    for (let i = 1; i <= last; i++) {
-      const dir = parts.slice(0, i).join("/");
-      const why = this.filter.exclusion(dir, true);
-      // A root of its own, named as a busy folder too (`build/` holding a `.slipbox/`): its walk starts there.
-      if (why === "nested vault" || (why === "busy folder" && isVaultRoot(join(this.root, dir)))) return null;
-      if (why === "busy folder") {
-        // Busy with a note in it too: ignored. Without, only for want of one, which this write gives it.
-        const ignored = this.filter.busy(dir, true);
-        if (i === last && holds && !ignored) continue;
-        return `${dir}/ is a busy folder (${ignored ? "git ignores it" : "no note at its top"}), which the vault doesn't index`;
-      }
-      if (why === "always skipped") return `${dir}/ is a folder the vault never indexes`;
-    }
-    return null;
+    return neverIndexed(this, rel, isDir, notes);
   }
 
   /**
@@ -443,18 +382,7 @@ export class Graph {
 
   /** `rel` as a file to index when reached: there, a file inside the vault, and only left out softly. */
   private reachable(rel: string): NoteFile | null {
-    if (isListed(this.loc) || !this.filter.reachable(rel)) return null;
-    const abs = join(this.root, rel);
-    // Through a link only when you follow it and its target answered (VV-D6): what a link not followed leads to is
-    // never the vault's, and a disk that hasn't answered isn't read here.
-    if (blockingLink(this.loc, abs, { answering: true })) return null;
-    try {
-      const st = statSync(abs);
-      if (!st.isFile() || st.size > this.filter.maxFileSize) return null;
-      return { rel, abs, size: st.size, mtimeMs: st.mtimeMs };
-    } catch {
-      return null;
-    }
+    return reachable(this, rel);
   }
 
   /**
@@ -494,31 +422,7 @@ export class Graph {
 
   /** The files a note links to that the walk leaves out: reached by the link (20.8). */
   private reachLinked(e: NoteEntry): void {
-    if (isListed(this.loc)) return;
-    for (const l of e.links) {
-      if (l.kind !== "markdown" && l.kind !== "image") continue;
-      const path = l.target.split("#")[0]!;
-      if (!path || /^[a-z][a-z0-9+.-]*:/i.test(path) || path.startsWith("~/")) continue;
-      let decoded = path;
-      try {
-        decoded = decodeURIComponent(path);
-      } catch {}
-      // `/…` is the root's, then the filesystem's (21.2); in a plain folder, which has none, the
-      // filesystem's alone.
-      let rel = !decoded.startsWith("/")
-        ? posix.normalize(posix.join(posix.dirname(e.rel), decoded))
-        : this.loc.mode === "folder"
-          ? relative(this.root, decoded)
-          : posix.normalize(decoded.slice(1));
-      if (
-        decoded.startsWith("/") &&
-        this.loc.mode !== "folder" &&
-        !(rel && !climbsOut(rel) && (this.known(rel) || this.reachable(rel)))
-      )
-        rel = relative(this.root, decoded);
-      if (rel === "" || rel === "." || climbsOut(rel) || isAbsolute(rel) || this.known(rel)) continue;
-      this.reachFile(rel);
-    }
+    return reachLinked(this, e, (rel) => this.reachable(rel));
   }
 
   /** Files read on explicit request that the walk excludes, and can't reach (20.8). Not part of the vault's index. */
@@ -622,22 +526,9 @@ export class Graph {
   private writeCache(): void {
     if (!this.useCache || !this.writesIndex) return;
     this.cacheDirty = false;
-    const entries: Record<string, NoteEntry> = {};
-    // A read failure is not a fact about the note: never cache it (chmod does not touch mtime).
-    for (const [rel, e] of this.notes)
-      if (!this.unparsed.has(rel) && !isUnreadable(e)) entries[rel] = this.overlays.get(rel)?.disk ?? e;
+    const entries = cacheEntries(this.notes, this.unparsed, this.overlays);
     try {
-      ensureCacheHome();
-      ensureDir(cacheDir(this.loc));
-      // A temporary file of it a write let go of left behind (a thread stopped mid-write): gone once it's old.
-      sweepTemps(cacheDir(this.loc), "index.json");
-      writeJson(this.cachePath, {
-        version: INDEX_VERSION,
-        entries,
-        branch: this.branchNow(),
-        reached: [...this.reached],
-      } satisfies IndexFile);
-      this.writtenAt = Date.now();
+      this.writtenAt = persistIndex(this, entries);
     } catch (err) {
       this.errors.push(`cache: ${(err as Error).message}`);
     }
@@ -647,6 +538,7 @@ export class Graph {
   // Moves (17.12)
 
   private redirectStore: Redirects | null | undefined;
+  private readonly moves = new GraphMoves(this);
 
   /**
    * Another root's index changed since this one's backlinks were worked out (its backlinks' thread wrote it, #10):
@@ -676,26 +568,7 @@ export class Graph {
    * no other vanished note had the same text (an empty template made twice is no move).
    */
   private detectMoves(vanished: NoteEntry[], fresh: NoteFile[]): void {
-    const hashed = vanished.filter((e) => e.hash && e.size > 0);
-    if (!hashed.length || !fresh.length) return;
-    const sizes = new Set(hashed.map((e) => e.size));
-    const freshHash = new Map<string, string[]>();
-    for (const f of fresh) {
-      if (!sizes.has(f.size)) continue;
-      let h: string;
-      try {
-        h = contentHash(readText(f.abs).text);
-      } catch {
-        continue;
-      }
-      freshHash.set(h, [...(freshHash.get(h) ?? []), f.rel]);
-    }
-    const moves: [string, string][] = [];
-    for (const e of hashed) {
-      const to = freshHash.get(e.hash);
-      if (to?.length === 1 && hashed.filter((x) => x.hash === e.hash).length === 1) moves.push([e.rel, to[0]!]);
-    }
-    if (moves.length) this.redirects?.add(moves);
+    return this.moves.detectMoves(vanished, fresh);
   }
 
   /**
@@ -707,95 +580,17 @@ export class Graph {
    * Returns the moves recorded, vault paths old → new.
    */
   catchUpWithGit(): [string, string][] {
-    // A vault's git; home's only when `~` is itself a repository (VV-D2).
-    if (this.loc.mode === "folder") return [];
-    const c = checkoutAt(this.loc);
-    const branch = c ? headOf(c).branch : null;
-    const commit = c ? headCommit(c) : null;
-    if (!c || !branch || !commit) return [];
-    const file = join(stateDir(this.loc), "heads.json");
-    const seen = readJson<{ version?: number; branches?: Record<string, string> } | null>(file, null)?.branches ?? {};
-    const was = seen[branch];
-    if (was === commit) return [];
-    const moves: [string, string][] = [];
-    if (was) {
-      for (const f of changedBetween(c, was, commit) ?? []) {
-        const from = f.from ? inVault(c, this.root, f.from) : null;
-        const to = inVault(c, this.root, f.path);
-        if (f.state === "renamed" && from && to) moves.push([from, to]);
-      }
-      if (moves.length) {
-        this.redirects?.add(moves, new Date(), `${was.slice(0, 7)}..${commit.slice(0, 7)}`);
-        this.problemCache = null;
-      }
-    }
-    // The newest last: a long-lived copy's branches, as many as it has had lately.
-    delete seen[branch];
-    const kept = Object.entries(seen).slice(-199);
-    try {
-      ensureDir(stateDir(this.loc));
-      sweepTemps(stateDir(this.loc), "heads.json");
-      writeJson(file, { version: 1, branches: Object.fromEntries([...kept, [branch, commit]]) });
-    } catch {}
-    return moves;
+    return this.moves.catchUpWithGit();
   }
-
-  /** Notes that went (removed) and came (added) lately, by hash: a watcher sees a move as both. */
-  private readonly went = new Map<string, { rel: string; at: number }[]>();
-  private readonly came = new Map<string, { rel: string; at: number }[]>();
-
-  /** While a branch switch lands (5.9): files only one branch has come and go, but nothing moved. */
-  private movesPaused = 0;
 
   /** Run `fn` with move detection off: a branch switch's mass of files coming and going. */
   pauseMoves<T>(fn: () => T): T {
-    this.movesPaused++;
-    try {
-      return fn();
-    } finally {
-      this.movesPaused--;
-    }
+    return this.moves.pauseMoves(fn);
   }
 
   /** The branch the vault's checkout has (null: detached, or no git). */
   branchNow(): string | null {
-    const c = checkoutAt(this.loc);
-    return c ? headOf(c).branch : null;
-  }
-
-  /**
-   * A removal and an arrival of the same text within a minute, in either order, are a move — as
-   * when the index is built (`detectMoves`), only when it is the one such pair: two notes with that
-   * text gone (or come) and one come (or gone) are no move, whichever went where. A note back where
-   * it was is no move either: its going and coming cancel.
-   */
-  private pairMove(hash: string, rel: string, side: "went" | "came"): void {
-    if (!hash || isListed(this.loc) || this.movesPaused) return;
-    const now = Date.now();
-    for (const m of [this.went, this.came])
-      for (const [h, vs] of m) {
-        const kept = vs.filter((v) => now - v.at <= 60_000);
-        if (kept.length) m.set(h, kept);
-        else m.delete(h);
-      }
-    const mine = side === "went" ? this.went : this.came;
-    const other = side === "went" ? this.came : this.went;
-    const theirs = other.get(hash) ?? [];
-    const ours = mine.get(hash) ?? [];
-    const others = theirs.filter((v) => v.rel !== rel);
-    if (others.length < theirs.length) {
-      if (others.length) other.set(hash, others);
-      else other.delete(hash);
-      return;
-    }
-    if (others.length === 1 && !ours.length) {
-      other.delete(hash);
-      const move: [string, string] = side === "went" ? [rel, others[0]!.rel] : [others[0]!.rel, rel];
-      this.redirects?.add([move]);
-      this.moved([move]);
-      return;
-    }
-    mine.set(hash, [...ours.filter((v) => v.rel !== rel), { rel, at: now }]);
+    return this.moves.branchNow();
   }
 
   private readonly listeners = new Set<(c: VaultChange) => void>();
@@ -830,7 +625,7 @@ export class Graph {
     const over = this.overlays.get(rel);
     if (over) over.disk = entry;
     else this.notes.set(rel, entry);
-    if (isNew && entry.size > 0) this.pairMove(entry.hash, rel, "came");
+    if (isNew && entry.size > 0) this.moves.pairMove(entry.hash, rel, "came");
     if (isNew) this.index.add(rel);
     this.backlinkCache = null;
     this.tagCache = null;
@@ -854,27 +649,8 @@ export class Graph {
    * an alias has its name, so a unique name costs nothing — each where it reaches now. Null when none can.
    */
   private namesakeLinks(rel: string): { from: string; link: LinkRef; was: string }[] | null {
-    if (!this.retargetListeners.size || !NOTE_EXT_RE.test(rel)) return null;
-    const name = posix.basename(rel).replace(NOTE_EXT_RE, "");
-    const key = normKey(name);
-    const named = this.index.resolveWiki(name, null).candidates.filter((c) => c !== rel).length;
-    if (!named && !this.resolver.otherNames().aliases.has(key)) return null;
-    // One process, one answer (the CLI's): a link in a note not parsed yet is watched too.
-    if (this.thorough && this.unparsed.size) this.ensureAll();
-    const out: { from: string; link: LinkRef; was: string }[] = [];
-    for (const [from, e] of this.notes) {
-      for (const l of e.links) {
-        if (
-          (l.kind !== "wiki" && l.kind !== "embed") ||
-          normKey(posix.basename(l.target).replace(NOTE_EXT_RE, "")) !== key
-        )
-          continue;
-        const r = this.resolveLink(l, from);
-        if ((r.resolvedKind === "note" || r.resolvedKind === "file") && r.path)
-          out.push({ from, link: l, was: r.path });
-      }
-    }
-    return out.length ? out : null;
+    if (!this.retargetListeners.size) return null;
+    return namesakeLinks(this, rel, () => this.resolver.otherNames().aliases);
   }
 
   /** After: the watched links that reach somewhere else now, told to whoever listens. */
@@ -948,7 +724,7 @@ export class Graph {
     const gone = this.overlays.get(rel)?.disk ?? this.notes.get(rel);
     this.overlays.delete(rel);
     if (!this.notes.delete(rel)) return;
-    if (gone && gone.size > 0) this.pairMove(gone.hash, rel, "went");
+    if (gone && gone.size > 0) this.moves.pairMove(gone.hash, rel, "went");
     this.cacheDirty = true;
     this.index.remove(rel);
     this.backlinkCache = null;
@@ -960,7 +736,7 @@ export class Graph {
   }
 
   /** Notes an editor has open (11.8): the text it has, and the file's own entry behind it. */
-  private readonly overlays = new Map<string, { disk: NoteEntry; text: string }>();
+  private readonly overlays = new Map<string, EditorOverlay>();
 
   /**
    * A note's text as an editor has it, saved or not (11.8): its links, headings, tags and names count
@@ -968,20 +744,7 @@ export class Graph {
    * and no listener hears of it — the file didn't change. A note the graph doesn't know is left alone.
    */
   overlay(rel: string, text: string | null): void {
-    const had = this.overlays.get(rel);
-    if (text === null) {
-      if (!had) return;
-      this.overlays.delete(rel);
-      this.notes.set(rel, had.disk);
-    } else {
-      const disk = had?.disk ?? (this.notes.has(rel) ? this.entry(rel) : undefined);
-      if (!disk) return;
-      this.overlays.set(rel, { disk, text });
-      this.notes.set(
-        rel,
-        extractFromSource({ rel, abs: join(this.root, rel), size: disk.size, mtimeMs: disk.mtimeMs }, text, disk.flags),
-      );
-    }
+    if (!applyOverlay(this, this.overlays, rel, text)) return;
     this.backlinkCache = null;
     this.tagCache = null;
     this.generation++;
@@ -995,14 +758,7 @@ export class Graph {
 
   /** A note's text: an editor's when it has the note open (11.8), else the file's; null when it can't be read. */
   textOf(path: string): string | null {
-    const rel = path.startsWith(`${this.root}/`) ? path.slice(this.root.length + 1) : path;
-    const over = this.overlays.get(rel);
-    if (over) return over.text;
-    try {
-      return readText(isAbsolute(rel) ? rel : join(this.root, rel)).text;
-    } catch {
-      return null;
-    }
+    return overlayText(this.root, this.overlays, path);
   }
 
   abs(rel: string): string {
@@ -1019,17 +775,7 @@ export class Graph {
 
   /** Find a note by user input: a vault-relative path, a path relative to cwd, or its name. */
   findNote(input: string, cwd = process.cwd()): Resolution {
-    const cleaned = input.replace(/^\[\[|\]\]$/g, "");
-    const full = join(cwd, cleaned);
-    const asAbs = full.startsWith(`${this.root}/`) ? full.slice(this.root.length + 1) : null;
-    for (const cand of [cleaned, asAbs]) {
-      if (cand && this.notes.has(cand)) return { status: "resolved", path: cand, candidates: [cand] };
-    }
-    if (input.startsWith("/") && input.startsWith(this.root + "/")) {
-      const rel = input.slice(this.root.length + 1);
-      if (this.notes.has(rel)) return { status: "resolved", path: rel, candidates: [rel] };
-    }
-    return this.index.resolveWiki(cleaned, null);
+    return findNote(this, input, cwd);
   }
 
   /**
@@ -1091,23 +837,7 @@ export class Graph {
   tagIndex(): Map<string, { tag: string; notes: string[] }> {
     if (this.unparsed.size) this.ensureAll();
     if (this.tagCache) return this.tagCache;
-    const index = new Map<string, { tag: string; notes: string[] }>();
-    for (const [rel, e] of [...this.notes].sort(([a], [b]) => a.localeCompare(b))) {
-      const mine = new Set<string>();
-      for (const tag of e.tags) {
-        const parts = tag.split("/");
-        for (let i = 1; i <= parts.length; i++) {
-          const name = parts.slice(0, i).join("/");
-          const key = tagKey(name);
-          if (mine.has(key)) continue;
-          mine.add(key);
-          const t = index.get(key) ?? { tag: name, notes: [] };
-          t.notes.push(rel);
-          index.set(key, t);
-        }
-      }
-    }
-    this.tagCache = new Map([...index].sort(([a], [b]) => a.localeCompare(b)));
+    this.tagCache = collectTags(this.notes);
     return this.tagCache;
   }
 
@@ -1121,47 +851,8 @@ export class Graph {
   problems(): { broken: LinkProblem[]; ambiguous: LinkProblem[]; fragile: LinkProblem[]; orphans: string[] } {
     this.ensureAll();
     if (this.problemCache?.generation === this.generation) return this.problemCache;
-    const broken: LinkProblem[] = [];
-    const ambiguous: LinkProblem[] = [];
-    const fragileLinks: LinkProblem[] = [];
-    for (const rel of [...this.notes.keys()].sort()) {
-      for (const l of this.linksOf(rel)) {
-        // Won by where it's written (the nearest, the shortest): a note of the name nearer would take it.
-        if ((l.resolvedKind === "note" || l.resolvedKind === "file") && fragile(l) && l.path && !isAbsolute(l.path)) {
-          fragileLinks.push({
-            from: rel,
-            line: l.line,
-            column: l.column,
-            end: l.end,
-            kind: l.kind,
-            target: l.target,
-            text: l.text,
-            reason: describeLanding(l),
-            candidates: l.candidates,
-            fix: disambiguated(l, rel),
-          });
-          continue;
-        }
-        if (l.resolvedKind !== "unresolved" && l.resolvedKind !== "ambiguous") continue;
-        // A broken path whose file was seen to move (17.12, git's renames 20.21): where it went, for the fix.
-        const moved = l.resolvedKind === "unresolved" ? this.movedTarget(l, rel) : null;
-        const p: LinkProblem = {
-          from: rel,
-          line: l.line,
-          column: l.column,
-          end: l.end,
-          kind: l.kind,
-          target: l.target,
-          text: l.text,
-          reason: l.reason ?? (moved ? `moved to ${moved} — relink fixes it` : null),
-          candidates: l.candidates,
-          moved,
-        };
-        (l.resolvedKind === "unresolved" ? broken : ambiguous).push(p);
-      }
-    }
-    const orphans = [...this.notes.keys()].sort().filter((rel) => !this.backlinks(rel).some((b) => b.from !== rel));
-    this.problemCache = { generation: this.generation, broken, ambiguous, fragile: fragileLinks, orphans };
+    const problems = collectProblems(this);
+    this.problemCache = { generation: this.generation, ...problems };
     return this.problemCache;
   }
 
@@ -1191,47 +882,7 @@ export class Graph {
 
   backlinks(rel: string): Backlink[] {
     this.ensureAll();
-    if (!this.backlinkCache) {
-      const map = new Map<string, Backlink[]>();
-      // Notes' links, data files' (16.15) and code comments' (16.10); to a note or to a file (a
-      // config, a script, 16.3).
-      const sources: [string, LinkRef[]][] = [
-        ...[...this.notes].map(([from, note]) => [from, note.links] as [string, LinkRef[]]),
-        ...this.linkingFiles().map((f) => [f, this.fileLinksOf(f)] as [string, LinkRef[]]),
-      ];
-      for (const [from, links] of sources) {
-        for (const l of links) {
-          // An image's link counts too: the notes that show a picture are its backlinks (and a
-          // rename or move of it fixes them, 18.3).
-          // A folder's links too, by its path (21.2): a move of the folder rewrites them.
-          const r = this.resolveLink(l, from);
-          if (
-            (r.resolvedKind !== "note" && r.resolvedKind !== "file" && r.resolvedKind !== "folder") ||
-            !r.path ||
-            r.path === from ||
-            isAbsolute(r.path)
-          )
-            continue;
-          const list = map.get(r.path) ?? [];
-          list.push({
-            from,
-            line: l.line,
-            column: l.column,
-            end: l.end,
-            text: l.text,
-            kind: l.kind,
-            target: l.target,
-            heading: l.heading,
-            block: l.block,
-            alias: l.alias,
-          });
-          map.set(r.path, list);
-        }
-      }
-      // And other vaults' links into this one, as of their last indexing (17.11).
-      for (const [rel, list] of this.reach?.inbound(this) ?? []) map.set(rel, [...(map.get(rel) ?? []), ...list]);
-      this.backlinkCache = map;
-    }
+    if (!this.backlinkCache) this.backlinkCache = collectBacklinks(this, () => this.reach?.inbound(this) ?? []);
     return this.backlinkCache.get(rel) ?? [];
   }
 
@@ -1299,10 +950,7 @@ export class Graph {
    * vault's root (where a repo's paths start); null if it names no file of the vault.
    */
   commentPath(target: string, fromRel: string): string | null {
-    const cands = target.startsWith("/")
-      ? [posix.normalize(target.slice(1))]
-      : [posix.normalize(posix.join(posix.dirname(fromRel), target)), posix.normalize(target)];
-    return cands.find((c) => !c.startsWith("..") && c !== fromRel && this.known(c)) ?? null;
+    return commentPath(this, target, fromRel);
   }
 
   /**
@@ -1313,78 +961,7 @@ export class Graph {
    * grammar is still loading has none yet (and isn't cached).
    */
   fileLinksOf(rel: string): LinkRef[] {
-    const kind = classify(rel, this.config.walk.extensions);
-    const g = kind.group === "text" ? grammarFor(kind.format, extensionOf(rel)) : null;
-    if (kind.group !== "data" && !g) return [];
-    let st: { size: number; mtimeMs: number };
-    try {
-      st = statSync(join(this.root, rel));
-    } catch {
-      return [];
-    }
-    if (st.size > DATA_LINK_MAX) return [];
-    const stamp = `${st.mtimeMs}:${st.size}`;
-    const hit = this.dataLinkCache.get(rel);
-    if (hit?.stamp === stamp) return hit.links;
-    let links: LinkRef[] = [];
-    if (g) {
-      const code = this.codeLinks(rel, g, readText(join(this.root, rel)).text);
-      if (!code) return [];
-      this.dataLinkCache.set(rel, { stamp, links: code });
-      return code;
-    }
-    try {
-      const d = parseData(kind.format, readText(join(this.root, rel)).text);
-      links = dataLinks(d.tree)
-        .filter(
-          (l) =>
-            l.explicit ||
-            ["note", "file"].includes(this.resolveLink({ kind: "markdown", target: l.target }, rel).resolvedKind),
-        )
-        .map((l) => ({
-          kind: "markdown",
-          target: l.target,
-          heading: null,
-          block: null,
-          alias: null,
-          text: l.key,
-          line: l.line,
-          column: 1,
-          end: { line: l.line, column: 1 },
-        }));
-    } catch {}
-    this.dataLinkCache.set(rel, { stamp, links });
-    return links;
-  }
-
-  /** A code file's comment links; null while its grammar loads. Parsed only when the text has a
-   *  URL or a path of the vault somewhere (most files have neither, and cost a scan). */
-  private codeLinks(rel: string, g: Grammar, text: string): LinkRef[] | null {
-    if (!linkTokens(text).some((t) => t.url || this.commentPath(t.target, rel))) return [];
-    const loaded = grammarNow(g);
-    if (!loaded) return null;
-    const tree = parseSyntax(loaded, text);
-    if (!tree) return [];
-    const out: LinkRef[] = [];
-    const lines = text.split("\n");
-    for (const l of commentLinks(tree.comments())) {
-      const path = l.url ? null : this.commentPath(l.target, rel);
-      if (!l.url && !path) continue;
-      const target = l.url ? l.target : `/${path}${l.at ? `#L${l.at}` : ""}`;
-      out.push({
-        kind: "markdown",
-        target,
-        heading: null,
-        block: null,
-        alias: null,
-        text: lines[l.line - 1]!.slice(l.from, l.to),
-        line: l.line,
-        column: l.from + 1,
-        end: { line: l.line, column: l.to + 1 },
-      });
-    }
-    tree.delete();
-    return out;
+    return fileLinksOf(this, this.dataLinkCache, rel);
   }
 
   /** A data file changed or went: its links are read again, and backlinks recomputed. */
@@ -1418,24 +995,4 @@ function stampOf(path: string): string {
   } catch {
     return "";
   }
-}
-
-function isUnreadable(e: NoteEntry): boolean {
-  return e.flags.some((f) => f.startsWith("unreadable"));
-}
-
-function stub(f: NoteFile): NoteEntry {
-  return {
-    rel: f.rel,
-    title: basename(f.rel).replace(/\.(md|markdown)$/i, ""),
-    headings: [],
-    links: [],
-    tags: [],
-    aliases: [],
-    previous: [],
-    hash: "",
-    mtimeMs: f.mtimeMs,
-    size: f.size,
-    flags: ["unparsed"],
-  };
 }

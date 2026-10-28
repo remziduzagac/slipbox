@@ -49,6 +49,23 @@ describe("the boundary check (0.3, scripts/check-boundary.ts)", () => {
 
   test("presentation primitives and editing clients cannot load App composition through the checker", () => {
     const r = check({
+      "src/core/workspace/graph/graph.ts": "export class Graph {}\n",
+      ...Object.fromEntries(
+        [
+          "index/schema",
+          "index/storage",
+          "moves/reconcile",
+          "overlays/editor",
+          "queries/indexes",
+          "queries/file-links",
+          "reach/files",
+        ].map((name) => [
+          `src/core/workspace/graph/${name}.ts`,
+          name === "index/schema"
+            ? 'export type { Graph } from "../graph.ts"; export { INDEX_VERSION } from "../graph-extract.ts";\n'
+            : 'export type { Graph } from "../graph.ts";\n',
+        ]),
+      ),
       "src/tui/app/runtime/app.ts": "export class App {}\nexport interface View {}\n",
       "src/tui/documents/editing/editable.ts":
         'import type { View } from "../../app/runtime/app.ts";\nexport type Reverse = View;\n',
@@ -70,6 +87,18 @@ describe("the boundary check (0.3, scripts/check-boundary.ts)", () => {
         'import { draw } from "../../shell/screen/draw.ts";\nexport const paint = draw;\n',
     });
     expect(r.code).toBe(1);
+    expect(r.err).toContain("graph helper must not import composition, even for types");
+    expect(r.err).toContain("index/schema.ts: imports ../graph-extract.ts");
+    for (const name of [
+      "index/schema",
+      "index/storage",
+      "moves/reconcile",
+      "overlays/editor",
+      "queries/indexes",
+      "queries/file-links",
+      "reach/files",
+    ])
+      expect(r.err).toContain(`src/core/workspace/graph/${name}.ts:`);
     expect(r.err).toContain("presentation primitive must not import composition");
     expect(r.err).toContain("editing client must stay below App composition");
     expect(r.err).toContain("filesystem fixture must stay independent of the TUI model");
