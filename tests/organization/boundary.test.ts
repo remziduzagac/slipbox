@@ -103,6 +103,23 @@ describe("the boundary check (0.3, scripts/check-boundary.ts)", () => {
           `export type { RenderOptions } from "${name.includes("/") ? "../render.ts" : "./render.ts"}"; ${name === "rows/finish" ? 'export const load = () => import("../blocks/dispatch.ts");' : name === "nodes/structure" ? 'export const load = () => import("../page/render.ts");' : ""}\n`,
         ]),
       ),
+      "src/core/rendering/export/formats/pdf.ts": "export interface Fonts {}\n",
+      ...Object.fromEntries(
+        [
+          "contracts",
+          "settings",
+          "writing/document",
+          "fonts/adapter",
+          "layout/breaks",
+          "layout/lines",
+          "layout/paint",
+          "pages/pagination",
+          "writing/blocks",
+        ].map((name) => [
+          `src/core/rendering/export/formats/pdf/${name}.ts`,
+          `export type { Fonts } from "${name.includes("/") ? "../../pdf.ts" : "../pdf.ts"}"; ${name === "layout/lines" ? 'export const load = () => import("../writing/blocks.ts");' : name === "fonts/adapter" ? 'export const load = () => import("../writing/writer.ts");' : ""}\n`,
+        ]),
+      ),
       "src/core/workspace/graph/graph.ts": "export class Graph {}\n",
       ...Object.fromEntries(
         [
@@ -143,6 +160,22 @@ describe("the boundary check (0.3, scripts/check-boundary.ts)", () => {
     expect(r.code).toBe(1);
     expect(r.err).toContain("src/core/rendering/layout/markdown/rows/finish.ts: imports ../blocks/dispatch.ts");
     expect(r.err).toContain("src/core/rendering/layout/markdown/nodes/structure.ts: imports ../page/render.ts");
+    expect(r.err).toContain("PDF mechanism must not import higher composition, even for types");
+    expect(r.err).toContain("src/core/rendering/export/formats/pdf/layout/lines.ts: imports ../writing/blocks.ts");
+    expect(r.err).toContain("src/core/rendering/export/formats/pdf/fonts/adapter.ts: imports ../writing/writer.ts");
+    for (const name of [
+      "contracts",
+      "settings",
+      "writing/document",
+      "fonts/adapter",
+      "layout/breaks",
+      "layout/lines",
+      "layout/paint",
+      "pages/pagination",
+      "writing/blocks",
+    ]) {
+      expect(r.err).toContain(`src/core/rendering/export/formats/pdf/${name}.ts: imports`);
+    }
     expect(r.err).toContain("Markdown mechanism must not import higher composition, even for types");
     for (const name of [
       "contracts",

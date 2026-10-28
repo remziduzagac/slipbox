@@ -18,7 +18,6 @@ export const LIMIT = 1000;
 
 /** Legacy handwritten files: exact caps; only reviewed import-formatting growth may reset one (ORG-D2). */
 export const CAPPED: Record<string, number> = {
-  "src/core/rendering/export/formats/pdf.ts": 1038,
   "src/tui/app/runtime/app.ts": 1366,
   "src/tui/workspace/explorer/explorer.ts": 1274,
   "src/tui/shell/input/keys.ts": 1166,

@@ -167,6 +167,32 @@ export function markdownViolations(from: string, text: string): string[] {
   });
 }
 
+/** PDF mechanisms stay below lifecycle composition; lower adapters also stay below chapter writing (ORG-T29). */
+export const PDF_MECHANISMS = [
+  "src/core/rendering/export/formats/pdf/contracts.ts",
+  "src/core/rendering/export/formats/pdf/settings.ts",
+  "src/core/rendering/export/formats/pdf/writing/document.ts",
+  "src/core/rendering/export/formats/pdf/fonts/adapter.ts",
+  "src/core/rendering/export/formats/pdf/layout/breaks.ts",
+  "src/core/rendering/export/formats/pdf/layout/lines.ts",
+  "src/core/rendering/export/formats/pdf/layout/paint.ts",
+  "src/core/rendering/export/formats/pdf/pages/pagination.ts",
+  "src/core/rendering/export/formats/pdf/writing/blocks.ts",
+] as const;
+
+export function pdfViolations(from: string, text: string): string[] {
+  if (!(PDF_MECHANISMS as readonly string[]).includes(from)) return [];
+  return importsOf(text).flatMap((spec) => {
+    const target = targetOf(from, spec);
+    const blocks = "src/core/rendering/export/formats/pdf/writing/blocks";
+    return target === "src/core/rendering/export/formats/pdf" ||
+      target === "src/core/rendering/export/formats/pdf/writing/writer" ||
+      (from !== `${blocks}.ts` && target === blocks)
+      ? [`${from}: imports ${spec} (PDF mechanism must not import higher composition, even for types)`]
+      : [];
+  });
+}
+
 /** Presentation primitives stay below the App and region composers that call them (ORG-T9). */
 export const TUI_PRIMITIVES = [
   "src/tui/app/clipboard/clipboard.ts",
@@ -312,6 +338,7 @@ if (import.meta.main) {
     violations.push(...codeLayoutViolations(from, readFileSync(file, "utf8")));
     violations.push(...syntaxViolations(from, readFileSync(file, "utf8")));
     violations.push(...markdownViolations(from, readFileSync(file, "utf8")));
+    violations.push(...pdfViolations(from, readFileSync(file, "utf8")));
     violations.push(...primitiveViolations(from, readFileSync(file, "utf8")));
     violations.push(...appCompositionViolations(from, readFileSync(file, "utf8")));
     violations.push(...drawingCompositionViolations(from, readFileSync(file, "utf8")));
