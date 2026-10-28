@@ -1,0 +1,466 @@
+{
+  "moves": {},
+  "retained": [],
+  "renamedBasenames": {},
+  "edges": {
+    "removed": [
+      "src/tui/shell/input/keys.ts -> src/core/application/commands/registry.ts",
+      "src/tui/shell/input/mouse.ts -> src/core/foundation/text/width.ts",
+      "src/tui/shell/input/mouse.ts -> src/core/rendering/layout/ir.ts",
+      "src/tui/shell/input/mouse.ts -> src/tui/documents/editing/cursor.ts",
+      "src/tui/shell/input/mouse.ts -> src/tui/documents/editing/editable.ts",
+      "src/tui/shell/input/mouse.ts -> src/tui/documents/navigation/linking.ts",
+      "src/tui/shell/input/mouse.ts -> src/tui/documents/saving/saveas.ts",
+      "src/tui/shell/input/mouse.ts -> src/tui/documents/search/replacing.ts",
+      "src/tui/shell/input/mouse.ts -> src/tui/documents/views/code.ts",
+      "src/tui/shell/input/mouse.ts -> src/tui/documents/views/views.ts",
+      "src/tui/shell/input/mouse.ts -> src/tui/shell/input/keys.ts",
+      "src/tui/shell/input/mouse.ts -> src/tui/shell/input/modes.ts",
+      "src/tui/shell/input/mouse.ts -> src/tui/shell/overlays/dialog.ts",
+      "src/tui/shell/input/mouse.ts -> src/tui/shell/overlays/overlays.ts",
+      "src/tui/shell/input/mouse.ts -> src/tui/shell/panels/panels.ts",
+      "src/tui/shell/input/vim.ts -> src/core/documents/editing/comments.ts",
+      "src/tui/shell/input/vim.ts -> src/core/documents/editing/indent.ts",
+      "src/tui/shell/input/vim.ts -> src/tui/app/runtime/app.ts",
+      "src/tui/shell/input/vim.ts -> src/tui/documents/editing/cursor.ts",
+      "src/tui/shell/input/vim.ts -> src/tui/documents/editing/editing.ts",
+      "src/tui/shell/input/vim.ts -> src/tui/documents/search/replacing.ts",
+      "src/tui/shell/input/vim.ts -> src/tui/shell/input/keys.ts"
+    ],
+    "added": [
+      "src/tui/shell/input/keys.ts -> src/tui/shell/input/keys/aliases.ts",
+      "src/tui/shell/input/keys.ts -> src/tui/shell/input/keys/bindings.ts",
+      "src/tui/shell/input/keys.ts -> src/tui/shell/input/keys/contexts.ts",
+      "src/tui/shell/input/keys.ts -> src/tui/shell/input/keys/decoding.ts",
+      "src/tui/shell/input/keys.ts -> src/tui/shell/input/keys/help.ts",
+      "src/tui/shell/input/keys/decoding.ts -> src/core/application/commands/registry.ts",
+      "src/tui/shell/input/mouse.ts -> src/tui/shell/input/mouse/geometry.ts",
+      "src/tui/shell/input/mouse.ts -> src/tui/shell/input/mouse/gestures.ts",
+      "src/tui/shell/input/mouse.ts -> src/tui/shell/input/mouse/routing.ts",
+      "src/tui/shell/input/mouse/gestures.ts -> src/core/foundation/text/width.ts",
+      "src/tui/shell/input/mouse/gestures.ts -> src/tui/app/runtime/app.ts",
+      "src/tui/shell/input/mouse/gestures.ts -> src/tui/documents/editing/cursor.ts",
+      "src/tui/shell/input/mouse/gestures.ts -> src/tui/documents/editing/editable.ts",
+      "src/tui/shell/input/mouse/gestures.ts -> src/tui/documents/navigation/linking.ts",
+      "src/tui/shell/input/mouse/gestures.ts -> src/tui/documents/views/views.ts",
+      "src/tui/shell/input/mouse/gestures.ts -> src/tui/shell/input/keys.ts",
+      "src/tui/shell/input/mouse/gestures.ts -> src/tui/shell/screen/draw.ts",
+      "src/tui/shell/input/mouse/routing.ts -> src/core/rendering/layout/ir.ts",
+      "src/tui/shell/input/mouse/routing.ts -> src/tui/app/runtime/app.ts",
+      "src/tui/shell/input/mouse/routing.ts -> src/tui/documents/saving/saveas.ts",
+      "src/tui/shell/input/mouse/routing.ts -> src/tui/documents/search/replacing.ts",
+      "src/tui/shell/input/mouse/routing.ts -> src/tui/documents/views/code.ts",
+      "src/tui/shell/input/mouse/routing.ts -> src/tui/shell/input/modes.ts",
+      "src/tui/shell/input/mouse/routing.ts -> src/tui/shell/input/mouse/geometry.ts",
+      "src/tui/shell/input/mouse/routing.ts -> src/tui/shell/overlays/dialog.ts",
+      "src/tui/shell/input/mouse/routing.ts -> src/tui/shell/overlays/overlays.ts",
+      "src/tui/shell/input/mouse/routing.ts -> src/tui/shell/panels/panels.ts",
+      "src/tui/shell/input/mouse/routing.ts -> src/tui/shell/screen/draw.ts",
+      "src/tui/shell/input/vim.ts -> src/tui/shell/input/vim/edits.ts",
+      "src/tui/shell/input/vim.ts -> src/tui/shell/input/vim/grammar.ts",
+      "src/tui/shell/input/vim.ts -> src/tui/shell/input/vim/motions.ts",
+      "src/tui/shell/input/vim.ts -> src/tui/shell/input/vim/operators.ts",
+      "src/tui/shell/input/vim.ts -> src/tui/shell/input/vim/replay.ts",
+      "src/tui/shell/input/vim.ts -> src/tui/shell/input/vim/state.ts",
+      "src/tui/shell/input/vim/edits.ts -> src/core/documents/editing/comments.ts",
+      "src/tui/shell/input/vim/edits.ts -> src/core/documents/editing/indent.ts",
+      "src/tui/shell/input/vim/edits.ts -> src/tui/app/runtime/app.ts",
+      "src/tui/shell/input/vim/edits.ts -> src/tui/documents/editing/editing.ts",
+      "src/tui/shell/input/vim/edits.ts -> src/tui/shell/input/vim/motions.ts",
+      "src/tui/shell/input/vim/edits.ts -> src/tui/shell/input/vim/state.ts",
+      "src/tui/shell/input/vim/grammar.ts -> src/tui/app/runtime/app.ts",
+      "src/tui/shell/input/vim/grammar.ts -> src/tui/documents/editing/editing.ts",
+      "src/tui/shell/input/vim/grammar.ts -> src/tui/shell/input/keys.ts",
+      "src/tui/shell/input/vim/grammar.ts -> src/tui/shell/input/vim/motions.ts",
+      "src/tui/shell/input/vim/grammar.ts -> src/tui/shell/input/vim/operators.ts",
+      "src/tui/shell/input/vim/grammar.ts -> src/tui/shell/input/vim/state.ts",
+      "src/tui/shell/input/vim/motions.ts -> src/tui/app/runtime/app.ts",
+      "src/tui/shell/input/vim/motions.ts -> src/tui/documents/editing/editing.ts",
+      "src/tui/shell/input/vim/motions.ts -> src/tui/shell/input/vim/state.ts",
+      "src/tui/shell/input/vim/operators.ts -> src/tui/app/runtime/app.ts",
+      "src/tui/shell/input/vim/operators.ts -> src/tui/documents/editing/cursor.ts",
+      "src/tui/shell/input/vim/operators.ts -> src/tui/documents/editing/editing.ts",
+      "src/tui/shell/input/vim/operators.ts -> src/tui/documents/search/replacing.ts",
+      "src/tui/shell/input/vim/operators.ts -> src/tui/shell/input/keys.ts",
+      "src/tui/shell/input/vim/operators.ts -> src/tui/shell/input/vim/edits.ts",
+      "src/tui/shell/input/vim/operators.ts -> src/tui/shell/input/vim/motions.ts",
+      "src/tui/shell/input/vim/operators.ts -> src/tui/shell/input/vim/state.ts",
+      "src/tui/shell/input/vim/replay.ts -> src/tui/app/runtime/app.ts",
+      "src/tui/shell/input/vim/state.ts -> src/tui/app/runtime/app.ts"
+    ]
+  },
+  "runtime": {
+    "removed": [
+      "src/tui/shell/input/keys.ts -> src/core/application/commands/registry.ts",
+      "src/tui/shell/input/mouse.ts -> src/core/foundation/text/width.ts",
+      "src/tui/shell/input/mouse.ts -> src/core/rendering/layout/ir.ts",
+      "src/tui/shell/input/mouse.ts -> src/tui/documents/editing/cursor.ts",
+      "src/tui/shell/input/mouse.ts -> src/tui/documents/editing/editable.ts",
+      "src/tui/shell/input/mouse.ts -> src/tui/documents/navigation/linking.ts",
+      "src/tui/shell/input/mouse.ts -> src/tui/documents/saving/saveas.ts",
+      "src/tui/shell/input/mouse.ts -> src/tui/documents/search/replacing.ts",
+      "src/tui/shell/input/mouse.ts -> src/tui/documents/views/code.ts",
+      "src/tui/shell/input/mouse.ts -> src/tui/documents/views/views.ts",
+      "src/tui/shell/input/mouse.ts -> src/tui/shell/input/keys.ts",
+      "src/tui/shell/input/mouse.ts -> src/tui/shell/input/modes.ts",
+      "src/tui/shell/input/mouse.ts -> src/tui/shell/overlays/dialog.ts",
+      "src/tui/shell/input/mouse.ts -> src/tui/shell/overlays/overlays.ts",
+      "src/tui/shell/input/mouse.ts -> src/tui/shell/panels/panels.ts",
+      "src/tui/shell/input/vim.ts -> src/core/documents/editing/comments.ts",
+      "src/tui/shell/input/vim.ts -> src/core/documents/editing/indent.ts",
+      "src/tui/shell/input/vim.ts -> src/tui/documents/editing/cursor.ts",
+      "src/tui/shell/input/vim.ts -> src/tui/documents/editing/editing.ts",
+      "src/tui/shell/input/vim.ts -> src/tui/documents/search/replacing.ts",
+      "src/tui/shell/input/vim.ts -> src/tui/shell/input/keys.ts"
+    ],
+    "added": [
+      "src/tui/shell/input/keys.ts -> src/tui/shell/input/keys/aliases.ts",
+      "src/tui/shell/input/keys.ts -> src/tui/shell/input/keys/bindings.ts",
+      "src/tui/shell/input/keys.ts -> src/tui/shell/input/keys/contexts.ts",
+      "src/tui/shell/input/keys.ts -> src/tui/shell/input/keys/decoding.ts",
+      "src/tui/shell/input/keys.ts -> src/tui/shell/input/keys/help.ts",
+      "src/tui/shell/input/keys/decoding.ts -> src/core/application/commands/registry.ts",
+      "src/tui/shell/input/mouse.ts -> src/tui/shell/input/mouse/geometry.ts",
+      "src/tui/shell/input/mouse.ts -> src/tui/shell/input/mouse/gestures.ts",
+      "src/tui/shell/input/mouse.ts -> src/tui/shell/input/mouse/routing.ts",
+      "src/tui/shell/input/mouse/gestures.ts -> src/core/foundation/text/width.ts",
+      "src/tui/shell/input/mouse/gestures.ts -> src/tui/documents/editing/cursor.ts",
+      "src/tui/shell/input/mouse/gestures.ts -> src/tui/documents/editing/editable.ts",
+      "src/tui/shell/input/mouse/gestures.ts -> src/tui/documents/navigation/linking.ts",
+      "src/tui/shell/input/mouse/gestures.ts -> src/tui/documents/views/views.ts",
+      "src/tui/shell/input/mouse/gestures.ts -> src/tui/shell/input/keys.ts",
+      "src/tui/shell/input/mouse/routing.ts -> src/core/rendering/layout/ir.ts",
+      "src/tui/shell/input/mouse/routing.ts -> src/tui/documents/saving/saveas.ts",
+      "src/tui/shell/input/mouse/routing.ts -> src/tui/documents/search/replacing.ts",
+      "src/tui/shell/input/mouse/routing.ts -> src/tui/documents/views/code.ts",
+      "src/tui/shell/input/mouse/routing.ts -> src/tui/shell/input/modes.ts",
+      "src/tui/shell/input/mouse/routing.ts -> src/tui/shell/input/mouse/geometry.ts",
+      "src/tui/shell/input/mouse/routing.ts -> src/tui/shell/overlays/dialog.ts",
+      "src/tui/shell/input/mouse/routing.ts -> src/tui/shell/overlays/overlays.ts",
+      "src/tui/shell/input/mouse/routing.ts -> src/tui/shell/panels/panels.ts",
+      "src/tui/shell/input/vim.ts -> src/tui/shell/input/vim/edits.ts",
+      "src/tui/shell/input/vim.ts -> src/tui/shell/input/vim/grammar.ts",
+      "src/tui/shell/input/vim.ts -> src/tui/shell/input/vim/motions.ts",
+      "src/tui/shell/input/vim.ts -> src/tui/shell/input/vim/operators.ts",
+      "src/tui/shell/input/vim.ts -> src/tui/shell/input/vim/replay.ts",
+      "src/tui/shell/input/vim.ts -> src/tui/shell/input/vim/state.ts",
+      "src/tui/shell/input/vim/edits.ts -> src/core/documents/editing/comments.ts",
+      "src/tui/shell/input/vim/edits.ts -> src/core/documents/editing/indent.ts",
+      "src/tui/shell/input/vim/edits.ts -> src/tui/documents/editing/editing.ts",
+      "src/tui/shell/input/vim/edits.ts -> src/tui/shell/input/vim/motions.ts",
+      "src/tui/shell/input/vim/edits.ts -> src/tui/shell/input/vim/state.ts",
+      "src/tui/shell/input/vim/grammar.ts -> src/tui/documents/editing/editing.ts",
+      "src/tui/shell/input/vim/grammar.ts -> src/tui/shell/input/keys.ts",
+      "src/tui/shell/input/vim/grammar.ts -> src/tui/shell/input/vim/motions.ts",
+      "src/tui/shell/input/vim/grammar.ts -> src/tui/shell/input/vim/operators.ts",
+      "src/tui/shell/input/vim/grammar.ts -> src/tui/shell/input/vim/state.ts",
+      "src/tui/shell/input/vim/motions.ts -> src/tui/documents/editing/editing.ts",
+      "src/tui/shell/input/vim/operators.ts -> src/tui/documents/editing/cursor.ts",
+      "src/tui/shell/input/vim/operators.ts -> src/tui/documents/editing/editing.ts",
+      "src/tui/shell/input/vim/operators.ts -> src/tui/documents/search/replacing.ts",
+      "src/tui/shell/input/vim/operators.ts -> src/tui/shell/input/keys.ts",
+      "src/tui/shell/input/vim/operators.ts -> src/tui/shell/input/vim/edits.ts",
+      "src/tui/shell/input/vim/operators.ts -> src/tui/shell/input/vim/motions.ts",
+      "src/tui/shell/input/vim/operators.ts -> src/tui/shell/input/vim/state.ts"
+    ]
+  },
+  "tests": {
+    "removed": [],
+    "added": [
+      "test: Vim state instances keep separate registers and consuming a count clears it",
+      "test: a consumed click resets its original history without becoming a double click",
+      "test: a counted operator is cancelled through grammar without dispatching a command",
+      "test: a save-as overlay without drawn choices closes through the existing outside-click policy",
+      "test: an unrecordable visual change clears an older replay instead of repeating it",
+      "test: binding owners retain generated window and numbered tab chords beside extended movement",
+      "test: context bindings retain source operators and independent pane overrides",
+      "test: decoding separates printable text from modified terminal names and help spelling",
+      "test: failed replay restores replay state in finally and replaces a recorded count",
+      "test: group help splits its first colon and aliases retain save and quit commands",
+      "test: input mechanisms reject their own facade and runtime App while allowing interaction types",
+      "test: line ranges retain final-newline admission and clamp to the final real line",
+      "test: operator effects retain invalid-encoding refusal before changing a buffer or register",
+      "test: pointer click history uses the live clock and position with a strict interval",
+      "test: rectangle routing includes top-left and excludes bottom-right edges",
+      "test: text objects preserve nested bracket contents and counted words"
+    ]
+  },
+  "entries": {
+    "removed": [],
+    "added": []
+  },
+  "extraction": [
+    {
+      "from": "src/tui/shell/input/keys.ts",
+      "to": "src/tui/shell/input/keys/bindings.ts",
+      "symbols": [
+        "MOVES",
+        "MOVE_COMMANDS",
+        "movementBindings",
+        "DEFAULT_KEYS"
+      ]
+    },
+    {
+      "from": "src/tui/shell/input/keys.ts",
+      "to": "src/tui/shell/input/keys/contexts.ts",
+      "symbols": [
+        "DEFAULT_SOURCE_KEYS",
+        "DEFAULT_VISUAL_KEYS",
+        "DEFAULT_EXPLORER_KEYS",
+        "EXPLORER_ACTIONS",
+        "DEFAULT_GIT_KEYS",
+        "GIT_ACTIONS",
+        "PANE_KEYS",
+        "PANE_ACTIONS",
+        "DEFAULT_OUTLINE_KEYS",
+        "OUTLINE_ACTIONS",
+        "DEFAULT_FOOTNOTE_KEYS",
+        "FOOTNOTE_ACTIONS",
+        "DEFAULT_INFO_KEYS",
+        "INFO_ACTIONS",
+        "DEFAULT_RESIZE_KEYS",
+        "DEFAULT_PEEK_KEYS",
+        "DEFAULT_REVIEW_KEYS",
+        "DEFAULT_MERGE_KEYS",
+        "DEFAULT_DIFF_KEYS"
+      ]
+    },
+    {
+      "from": "src/tui/shell/input/keys.ts",
+      "to": "src/tui/shell/input/keys/help.ts",
+      "symbols": [
+        "INFO_ACTION_INFO",
+        "EXPLORER_ACTION_INFO",
+        "HISTORY_ACTION_INFO",
+        "GIT_ACTION_INFO",
+        "PROBLEMS_ACTION_INFO",
+        "FILTER_KEYS_HELP",
+        "OUTLINE_ACTION_INFO",
+        "FOOTNOTE_ACTION_INFO",
+        "RESIZE_ACTIONS",
+        "DEFAULT_GROUPS",
+        "parseGroup"
+      ]
+    },
+    {
+      "from": "src/tui/shell/input/keys.ts",
+      "to": "src/tui/shell/input/keys/aliases.ts",
+      "symbols": [
+        "DEFAULT_ALIASES"
+      ]
+    },
+    {
+      "from": "src/tui/shell/input/keys.ts",
+      "to": "src/tui/shell/input/keys/decoding.ts",
+      "symbols": [
+        "KeyLike",
+        "RENAME",
+        "keyName",
+        "keyChar",
+        "spellKey",
+        "prettyKey"
+      ]
+    },
+    {
+      "from": "src/tui/shell/input/vim.ts",
+      "to": "src/tui/shell/input/vim/state.ts",
+      "symbols": [
+        "Op",
+        "FindKind",
+        "Range",
+        "reverseFind",
+        "VimState",
+        "newVimState",
+        "takeCount"
+      ]
+    },
+    {
+      "from": "src/tui/shell/input/vim.ts",
+      "to": "src/tui/shell/input/vim/motions.ts",
+      "symbols": [
+        "LINEWISE",
+        "INCLUSIVE",
+        "motionRange",
+        "linesRange",
+        "firstNonBlank",
+        "textObject"
+      ]
+    },
+    {
+      "from": "src/tui/shell/input/vim.ts",
+      "to": "src/tui/shell/input/vim/edits.ts",
+      "symbols": [
+        "apply",
+        "indentLines",
+        "commentLines",
+        "put"
+      ]
+    },
+    {
+      "from": "src/tui/shell/input/vim.ts",
+      "to": "src/tui/shell/input/vim/operators.ts",
+      "symbols": [
+        "startOperator",
+        "operatorKey",
+        "findRange",
+        "finishSearchOp"
+      ]
+    },
+    {
+      "from": "src/tui/shell/input/vim.ts",
+      "to": "src/tui/shell/input/vim/replay.ts",
+      "symbols": [
+        "recordVisual",
+        "PASTE",
+        "insertRecord",
+        "repeat"
+      ]
+    },
+    {
+      "from": "src/tui/shell/input/vim.ts",
+      "to": "src/tui/shell/input/vim/grammar.ts",
+      "symbols": [
+        "idle",
+        "vimKey",
+        "handle",
+        "visualKey"
+      ]
+    },
+    {
+      "from": "src/tui/shell/input/mouse.ts",
+      "to": "src/tui/shell/input/mouse/gestures.ts",
+      "symbols": [
+        "lastClick",
+        "drag",
+        "clicks",
+        "press",
+        "copySelectionQuietly",
+        "dragTo",
+        "up",
+        "scrollbarTo"
+      ]
+    },
+    {
+      "from": "src/tui/shell/input/mouse.ts",
+      "to": "src/tui/shell/input/mouse/routing.ts",
+      "symbols": [
+        "overlay",
+        "wheel",
+        "clickHot",
+        "focusWindow"
+      ]
+    },
+    {
+      "from": "src/tui/shell/input/mouse.ts",
+      "to": "src/tui/shell/input/mouse/geometry.ts",
+      "symbols": [
+        "inRect"
+      ]
+    }
+  ],
+  "stateOwnership": {
+    "Mouse": "one gesture owner holds the original lastClick and drag references; Mouse keeps pointer/hover, input bookkeeping and down routing; overlay/wheel/hot routing remains App-backed",
+    "Vim": "App retains its single VimState and buffers; grammar/operators/motions/edits/replay use that same live owner; no state copies or new timers",
+    "Keys": "same binding objects and ordered window/tab generation loops; facade exports retain identity"
+  },
+  "guards": {
+    "inputOwners": "keys/, vim/, mouse/ reject their own facade, including types; all reject runtime App, and key data also rejects App types",
+    "interaction": "Mouse and Vim clients intentionally retain App types; no gateway execution is introduced"
+  },
+  "runtimeScc": {
+    "before": [
+      [
+        "src/tui/documents/editing/editing.ts",
+        "src/tui/documents/editing/snippets.ts"
+      ],
+      [
+        "src/tui/workspace/git/gitremote.ts",
+        "src/tui/workspace/git/views/review/rebase.ts"
+      ],
+      [
+        "src/core/rendering/export/formats/html.ts",
+        "src/core/rendering/export/formats/markdown.ts",
+        "src/core/rendering/export/stream.ts"
+      ],
+      [
+        "src/tui/documents/search/replacing.ts",
+        "src/tui/shell/overlays/overlays.ts",
+        "src/tui/workspace/search/search.ts"
+      ],
+      [
+        "src/tui/app/runtime/app.ts",
+        "src/tui/app/settings/settings.ts",
+        "src/tui/workspace/history/history.ts",
+        "src/tui/workspace/session/session.ts",
+        "src/tui/workspace/vaults/vaults.ts"
+      ],
+      [
+        "src/tui/actions/actions.ts",
+        "src/tui/actions/documents/actions-edit.ts",
+        "src/tui/actions/documents/actions-find.ts",
+        "src/tui/actions/documents/actions-links.ts",
+        "src/tui/actions/documents/actions-lsp.ts",
+        "src/tui/actions/documents/actions-view.ts",
+        "src/tui/actions/shell/actions-panes.ts",
+        "src/tui/actions/workspace/actions-files.ts"
+      ],
+      [
+        "src/tui/documents/diagnostics/draw-problems.ts",
+        "src/tui/documents/views/draw-header.ts",
+        "src/tui/documents/views/draw-pane.ts",
+        "src/tui/shell/overlays/draw-overlays.ts",
+        "src/tui/shell/panels/draw-panels.ts",
+        "src/tui/shell/screen/draw.ts",
+        "src/tui/shell/screen/statusbar/draw-status.ts",
+        "src/tui/workspace/git/views/panel/draw-git.ts"
+      ]
+    ],
+    "after": [
+      [
+        "src/tui/documents/editing/editing.ts",
+        "src/tui/documents/editing/snippets.ts"
+      ],
+      [
+        "src/tui/workspace/git/gitremote.ts",
+        "src/tui/workspace/git/views/review/rebase.ts"
+      ],
+      [
+        "src/core/rendering/export/formats/html.ts",
+        "src/core/rendering/export/formats/markdown.ts",
+        "src/core/rendering/export/stream.ts"
+      ],
+      [
+        "src/tui/documents/search/replacing.ts",
+        "src/tui/shell/overlays/overlays.ts",
+        "src/tui/workspace/search/search.ts"
+      ],
+      [
+        "src/tui/app/runtime/app.ts",
+        "src/tui/app/settings/settings.ts",
+        "src/tui/workspace/history/history.ts",
+        "src/tui/workspace/session/session.ts",
+        "src/tui/workspace/vaults/vaults.ts"
+      ],
+      [
+        "src/tui/actions/actions.ts",
+        "src/tui/actions/documents/actions-edit.ts",
+        "src/tui/actions/documents/actions-find.ts",
+        "src/tui/actions/documents/actions-links.ts",
+        "src/tui/actions/documents/actions-lsp.ts",
+        "src/tui/actions/documents/actions-view.ts",
+        "src/tui/actions/shell/actions-panes.ts",
+        "src/tui/actions/workspace/actions-files.ts"
+      ],
+      [
+        "src/tui/documents/diagnostics/draw-problems.ts",
+        "src/tui/documents/views/draw-header.ts",
+        "src/tui/documents/views/draw-pane.ts",
+        "src/tui/shell/overlays/draw-overlays.ts",
+        "src/tui/shell/panels/draw-panels.ts",
+        "src/tui/shell/screen/draw.ts",
+        "src/tui/shell/screen/statusbar/draw-status.ts",
+        "src/tui/workspace/git/views/panel/draw-git.ts"
+      ]
+    ]
+  }
+}

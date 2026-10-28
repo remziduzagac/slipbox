@@ -167,6 +167,29 @@ export function markdownViolations(from: string, text: string): string[] {
   });
 }
 
+/** Extracted input mechanisms never reach their own facade or load App composition (ORG-T31). */
+export function inputMechanismViolations(from: string, text: string): string[] {
+  const area = /^src\/tui\/shell\/input\/(keys|vim|mouse)\//.exec(from)?.[1];
+  if (!area) return [];
+  const facade = `src/tui/shell/input/${area}`;
+  const app = "src/tui/app/runtime/app";
+  return [
+    ...importsOf(text).flatMap((spec) => {
+      const target = targetOf(from, spec);
+      return target === facade || (area === "keys" && target === app)
+        ? [`${from}: imports ${spec} (input mechanism must stay below composition)`]
+        : [];
+    }),
+    ...new Bun.Transpiler({ loader: "ts" })
+      .scanImports(text)
+      .flatMap(({ path }) =>
+        area !== "keys" && targetOf(from, path) === app
+          ? [`${from}: imports ${path} (input mechanism must not load App composition)`]
+          : [],
+      ),
+  ];
+}
+
 /** Git data/cache/presentation mechanisms stay below their controllers (ORG-T30). */
 export const GIT_DATA_MECHANISMS = [
   "src/tui/workspace/git/marks.ts",
@@ -405,6 +428,7 @@ if (import.meta.main) {
     violations.push(...markdownViolations(from, readFileSync(file, "utf8")));
     violations.push(...pdfViolations(from, readFileSync(file, "utf8")));
     violations.push(...explorerViolations(from, readFileSync(file, "utf8")));
+    violations.push(...inputMechanismViolations(from, readFileSync(file, "utf8")));
     violations.push(...gitMechanismViolations(from, readFileSync(file, "utf8")));
     violations.push(...primitiveViolations(from, readFileSync(file, "utf8")));
     violations.push(...appCompositionViolations(from, readFileSync(file, "utf8")));

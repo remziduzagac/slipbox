@@ -49,6 +49,13 @@ Code, in `src/tui/`:
 | `keys.ts` | the default keymaps, groups, aliases, and the in-pane actions' titles |
 | `run.ts`, `opentui.ts` | the OpenTUI binding |
 
+The `shell/input/keys.ts` and `vim.ts` entry points preserve their exports. `keys/` separates binding tables (including
+ordered window/tab additions), context bindings, help/groups, aliases and terminal decoding. `vim/` separates state
+records, grammar, motion ranges, operators, edit effects and replay; App keeps its one Vim state and buffers.
+`mouse.ts` keeps input bookkeeping, pointer/hover state and button-down dispatch. `mouse/gestures.ts` owns the original
+click history and active drag, while `mouse/routing.ts` handles overlays, the wheel and hot regions through App.
+These interaction clients retain live App types; they do not load App at runtime or import their own entry point.
+
 Panel visibility/focus transitions live in `shell/panels/focus.ts`, behind only their six current host capabilities.
 `Panels` passes App through the narrow state contract and supplies the current-width predicate, so replaced pane/UI
 state is read from its owner. Positions, filters,

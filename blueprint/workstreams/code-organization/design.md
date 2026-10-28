@@ -1081,6 +1081,15 @@ orchestration at 591 lines; the panel retains selection/input and action orchest
 600-line ceiling; the task records why their shared lifecycles remain cohesive above the 500-line aim. T11 audits final
 size dispositions.
 
+### T31 input assessment
+
+[Task 31](tasks/31-input-splits.md) separates key binding data, context bindings, help, aliases and decoding below a
+compatibility entry point; its 1,166-line cap is removed. Mouse bookkeeping/down dispatch stays with its owner while
+one gesture collaborator owns the original click/drag state and another routes areas. Vim grammar, range calculation,
+operator completion, edit effects and replay use the same App-owned state and buffers. All extracted owners are below
+500 lines. Entry-point exports, ordered binding mutations and existing input bodies are preserved; these App-backed
+interaction clients introduce no gateway execution or new scheduling policy.
+
 ## Implementation tasks
 
 The 44 files below are authoritative for task scope, evidence, status and dependencies. This section is a navigation

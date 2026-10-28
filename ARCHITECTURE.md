@@ -31,7 +31,9 @@ for a person, and a command line for agents and scripts, both over the same plai
 - **`src/tui/`** is the TUI: `app.ts` is the model (the shared state and the wiring), each feature a controller of its
   own. `shell/screen/draw.ts` composes feature drawing on an abstract `Canvas`; document views, panels and overlays keep
   their area drawing. `actions/` holds registration and the `documents/`, `workspace/` and `shell/` command areas.
-  `keys.ts` holds the default keys.
+  `shell/input/keys.ts` preserves keymap exports over binding, help, alias and decoding owners in `keys/`.
+  Mouse keeps input bookkeeping and delegates gestures and area routing to `mouse/`; `vim/` separates shared grammar
+  records, motion ranges, operator completion, edit effects and replay. App still owns the same Vim state and buffers.
   Editable flags, header layout, shared geometry/style/controls and location fitting sit below App and region
   composition. Their clients import these helpers directly; the boundary checker rejects reverse composition imports.
 

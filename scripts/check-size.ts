@@ -19,7 +19,6 @@ export const LIMIT = 1000;
 /** Legacy handwritten files: exact caps; only reviewed import-formatting growth may reset one (ORG-D2). */
 export const CAPPED: Record<string, number> = {
   "src/tui/app/runtime/app.ts": 1366,
-  "src/tui/shell/input/keys.ts": 1166,
 };
 
 /** Generated data: separate measured cap; verify offline with `bun scripts/lock-servers.ts --check` (ORG-D2). */
