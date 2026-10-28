@@ -1,0 +1,345 @@
+{
+  "moves": {},
+  "retained": [],
+  "renamedBasenames": {},
+  "edges": {
+    "removed": [
+      "src/tui/workspace/explorer/explorer-disk.ts -> src/tui/app/runtime/app.ts",
+      "src/tui/workspace/explorer/explorer.ts -> src/core/foundation/platform/fsutil.ts",
+      "src/tui/workspace/explorer/explorer.ts -> src/core/workspace/vaults/names.ts",
+      "src/tui/workspace/explorer/explorer.ts -> src/core/workspace/vaults/registry.ts",
+      "src/tui/workspace/explorer/explorer.ts -> src/core/workspace/vaults/symlinks.ts",
+      "src/tui/workspace/explorer/explorer.ts -> src/core/workspace/vaults/vault.ts",
+      "src/tui/workspace/explorer/explorer.ts -> src/core/workspace/walk/listing.ts",
+      "src/tui/workspace/explorer/explorer.ts -> src/core/workspace/walk/walk.ts",
+      "src/tui/workspace/explorer/explorer.ts -> src/tui/shell/input/keys.ts",
+      "src/tui/workspace/explorer/explorer.ts -> src/tui/workspace/explorer/explorer-disk.ts"
+    ],
+    "added": [
+      "src/tui/workspace/explorer/actions/items.ts -> src/core/foundation/platform/fsutil.ts",
+      "src/tui/workspace/explorer/actions/items.ts -> src/core/workspace/vaults/names.ts",
+      "src/tui/workspace/explorer/actions/items.ts -> src/core/workspace/vaults/symlinks.ts",
+      "src/tui/workspace/explorer/actions/items.ts -> src/core/workspace/vaults/vault.ts",
+      "src/tui/workspace/explorer/actions/items.ts -> src/core/workspace/walk/walk.ts",
+      "src/tui/workspace/explorer/actions/items.ts -> src/tui/shell/input/keys.ts",
+      "src/tui/workspace/explorer/actions/items.ts -> src/tui/shell/overlays/list-types.ts",
+      "src/tui/workspace/explorer/actions/items.ts -> src/tui/workspace/explorer/contracts.ts",
+      "src/tui/workspace/explorer/contracts.ts -> src/core/application/config/config.ts",
+      "src/tui/workspace/explorer/contracts.ts -> src/core/documents/model/filetypes.ts",
+      "src/tui/workspace/explorer/contracts.ts -> src/core/workspace/graph/graph.ts",
+      "src/tui/workspace/explorer/contracts.ts -> src/core/workspace/vaults/vault.ts",
+      "src/tui/workspace/explorer/contracts.ts -> src/core/workspace/walk/listing.ts",
+      "src/tui/workspace/explorer/contracts.ts -> src/tui/documents/buffers/buffer.ts",
+      "src/tui/workspace/explorer/contracts.ts -> src/tui/shell/overlays/list-types.ts",
+      "src/tui/workspace/explorer/contracts.ts -> src/tui/shell/panels/focus.ts",
+      "src/tui/workspace/explorer/explorer-disk.ts -> src/tui/workspace/explorer/contracts.ts",
+      "src/tui/workspace/explorer/explorer.ts -> src/tui/workspace/explorer/actions/items.ts",
+      "src/tui/workspace/explorer/explorer.ts -> src/tui/workspace/explorer/contracts.ts",
+      "src/tui/workspace/explorer/explorer.ts -> src/tui/workspace/explorer/navigation.ts",
+      "src/tui/workspace/explorer/explorer.ts -> src/tui/workspace/explorer/rows/files.ts",
+      "src/tui/workspace/explorer/explorer.ts -> src/tui/workspace/explorer/rows/paths.ts",
+      "src/tui/workspace/explorer/explorer.ts -> src/tui/workspace/explorer/rows/tree.ts",
+      "src/tui/workspace/explorer/navigation.ts -> src/core/foundation/platform/fsutil.ts",
+      "src/tui/workspace/explorer/navigation.ts -> src/core/workspace/vaults/names.ts",
+      "src/tui/workspace/explorer/navigation.ts -> src/core/workspace/vaults/vault.ts",
+      "src/tui/workspace/explorer/navigation.ts -> src/tui/workspace/explorer/contracts.ts",
+      "src/tui/workspace/explorer/navigation.ts -> src/tui/workspace/explorer/rows/paths.ts",
+      "src/tui/workspace/explorer/rows/files.ts -> src/core/documents/model/filetypes.ts",
+      "src/tui/workspace/explorer/rows/files.ts -> src/core/workspace/vaults/vault.ts",
+      "src/tui/workspace/explorer/rows/files.ts -> src/tui/workspace/explorer/contracts.ts",
+      "src/tui/workspace/explorer/rows/paths.ts -> src/core/workspace/vaults/registry.ts",
+      "src/tui/workspace/explorer/rows/paths.ts -> src/core/workspace/vaults/vault.ts",
+      "src/tui/workspace/explorer/rows/paths.ts -> src/core/workspace/walk/listing.ts",
+      "src/tui/workspace/explorer/rows/paths.ts -> src/core/workspace/walk/walk.ts",
+      "src/tui/workspace/explorer/rows/paths.ts -> src/tui/workspace/explorer/contracts.ts",
+      "src/tui/workspace/explorer/rows/paths.ts -> src/tui/workspace/explorer/explorer-disk.ts",
+      "src/tui/workspace/explorer/rows/tree.ts -> src/core/documents/model/filetypes.ts",
+      "src/tui/workspace/explorer/rows/tree.ts -> src/core/foundation/platform/fsutil.ts",
+      "src/tui/workspace/explorer/rows/tree.ts -> src/core/workspace/vaults/symlinks.ts",
+      "src/tui/workspace/explorer/rows/tree.ts -> src/core/workspace/vaults/vault.ts",
+      "src/tui/workspace/explorer/rows/tree.ts -> src/core/workspace/walk/listing.ts",
+      "src/tui/workspace/explorer/rows/tree.ts -> src/core/workspace/walk/walk.ts",
+      "src/tui/workspace/explorer/rows/tree.ts -> src/tui/workspace/explorer/contracts.ts",
+      "src/tui/workspace/explorer/rows/tree.ts -> src/tui/workspace/explorer/explorer-disk.ts",
+      "src/tui/workspace/explorer/rows/tree.ts -> src/tui/workspace/explorer/rows/files.ts",
+      "src/tui/workspace/explorer/rows/tree.ts -> src/tui/workspace/explorer/rows/paths.ts"
+    ]
+  },
+  "runtime": {
+    "removed": [
+      "src/tui/workspace/explorer/explorer.ts -> src/core/foundation/platform/fsutil.ts",
+      "src/tui/workspace/explorer/explorer.ts -> src/core/workspace/vaults/names.ts",
+      "src/tui/workspace/explorer/explorer.ts -> src/core/workspace/vaults/registry.ts",
+      "src/tui/workspace/explorer/explorer.ts -> src/core/workspace/vaults/symlinks.ts",
+      "src/tui/workspace/explorer/explorer.ts -> src/core/workspace/vaults/vault.ts",
+      "src/tui/workspace/explorer/explorer.ts -> src/core/workspace/walk/listing.ts",
+      "src/tui/workspace/explorer/explorer.ts -> src/core/workspace/walk/walk.ts",
+      "src/tui/workspace/explorer/explorer.ts -> src/tui/shell/input/keys.ts",
+      "src/tui/workspace/explorer/explorer.ts -> src/tui/workspace/explorer/explorer-disk.ts"
+    ],
+    "added": [
+      "src/tui/workspace/explorer/actions/items.ts -> src/core/foundation/platform/fsutil.ts",
+      "src/tui/workspace/explorer/actions/items.ts -> src/core/workspace/vaults/names.ts",
+      "src/tui/workspace/explorer/actions/items.ts -> src/core/workspace/vaults/symlinks.ts",
+      "src/tui/workspace/explorer/actions/items.ts -> src/core/workspace/vaults/vault.ts",
+      "src/tui/workspace/explorer/actions/items.ts -> src/core/workspace/walk/walk.ts",
+      "src/tui/workspace/explorer/actions/items.ts -> src/tui/shell/input/keys.ts",
+      "src/tui/workspace/explorer/explorer.ts -> src/tui/workspace/explorer/actions/items.ts",
+      "src/tui/workspace/explorer/explorer.ts -> src/tui/workspace/explorer/navigation.ts",
+      "src/tui/workspace/explorer/explorer.ts -> src/tui/workspace/explorer/rows/files.ts",
+      "src/tui/workspace/explorer/explorer.ts -> src/tui/workspace/explorer/rows/paths.ts",
+      "src/tui/workspace/explorer/explorer.ts -> src/tui/workspace/explorer/rows/tree.ts",
+      "src/tui/workspace/explorer/navigation.ts -> src/core/foundation/platform/fsutil.ts",
+      "src/tui/workspace/explorer/navigation.ts -> src/core/workspace/vaults/names.ts",
+      "src/tui/workspace/explorer/navigation.ts -> src/core/workspace/vaults/vault.ts",
+      "src/tui/workspace/explorer/navigation.ts -> src/tui/workspace/explorer/rows/paths.ts",
+      "src/tui/workspace/explorer/rows/files.ts -> src/core/documents/model/filetypes.ts",
+      "src/tui/workspace/explorer/rows/files.ts -> src/core/workspace/vaults/vault.ts",
+      "src/tui/workspace/explorer/rows/paths.ts -> src/core/workspace/vaults/registry.ts",
+      "src/tui/workspace/explorer/rows/paths.ts -> src/core/workspace/vaults/vault.ts",
+      "src/tui/workspace/explorer/rows/paths.ts -> src/core/workspace/walk/listing.ts",
+      "src/tui/workspace/explorer/rows/paths.ts -> src/core/workspace/walk/walk.ts",
+      "src/tui/workspace/explorer/rows/paths.ts -> src/tui/workspace/explorer/explorer-disk.ts",
+      "src/tui/workspace/explorer/rows/tree.ts -> src/core/documents/model/filetypes.ts",
+      "src/tui/workspace/explorer/rows/tree.ts -> src/core/foundation/platform/fsutil.ts",
+      "src/tui/workspace/explorer/rows/tree.ts -> src/core/workspace/vaults/symlinks.ts",
+      "src/tui/workspace/explorer/rows/tree.ts -> src/core/workspace/vaults/vault.ts",
+      "src/tui/workspace/explorer/rows/tree.ts -> src/core/workspace/walk/walk.ts",
+      "src/tui/workspace/explorer/rows/tree.ts -> src/tui/workspace/explorer/explorer-disk.ts",
+      "src/tui/workspace/explorer/rows/tree.ts -> src/tui/workspace/explorer/rows/paths.ts"
+    ]
+  },
+  "tests": {
+    "removed": [],
+    "added": [
+      "test: a refused vault switch stops reveal before changing the panel, filter or focus",
+      "test: breadcrumbs repair a missing trail before a tree exists and reuse their unchanged memo",
+      "test: file-row visibility reads live mode, include and exclude rules; notes precede those rules",
+      "test: following a moved view invalidates listings in order and shifts only descendants",
+      "test: item menus keep labels and hotkeys while file writes stay in their existing owner",
+      "test: outside rows preserve pending and unreadable placeholders before their listing arrives",
+      "test: row actions ignore placeholders after clearing pending selection and route other left views directly",
+      "test: row paths distinguish the vault, nested vault contents, outside folders and hidden names",
+      "test: selection waits for a missing row and restores a hidden explorer by path rather than index",
+      "test: tree rows keep directory-first order and reuse the live expanded set",
+      "test: zoom reads current state and leaves the other left pane's selection alone"
+    ]
+  },
+  "entries": {
+    "removed": [],
+    "added": []
+  },
+  "extraction": [
+    {
+      "from": "src/tui/workspace/explorer/explorer.ts",
+      "to": "src/tui/workspace/explorer/rows/files.ts",
+      "symbols": [
+        "shownFiles",
+        "listsFiles",
+        "filesShown",
+        "allNotesInTreeOrder"
+      ]
+    },
+    {
+      "from": "src/tui/workspace/explorer/explorer.ts",
+      "to": "src/tui/workspace/explorer/rows/paths.ts",
+      "symbols": [
+        "rootName",
+        "nestedRels",
+        "rowPath",
+        "unwalkedRels",
+        "leftOut",
+        "leftOutAt",
+        "rowAbs",
+        "ownView",
+        "hiddenOut",
+        "listedDown"
+      ]
+    },
+    {
+      "from": "src/tui/workspace/explorer/explorer.ts",
+      "to": "src/tui/workspace/explorer/rows/tree.ts",
+      "symbols": [
+        "rootRows",
+        "outsideRows",
+        "linkOf",
+        "rootTree",
+        "leftOutRow"
+      ]
+    },
+    {
+      "from": "src/tui/workspace/explorer/explorer.ts",
+      "to": "src/tui/workspace/explorer/navigation.ts",
+      "symbols": [
+        "selectRow",
+        "select",
+        "shown",
+        "hold",
+        "shownAgain",
+        "zoomTo",
+        "zoomOut",
+        "zoomIn",
+        "zoomToHold",
+        "crumbs",
+        "toggleHidden",
+        "followMove",
+        "keepToWhatsThere",
+        "reveal",
+        "revealFolder",
+        "later",
+        "crumbsMemo"
+      ]
+    },
+    {
+      "from": "src/tui/workspace/explorer/explorer.ts",
+      "to": "src/tui/workspace/explorer/actions/items.ts",
+      "symbols": [
+        "item",
+        "openItemMenu",
+        "itemAction",
+        "focused",
+        "noteTarget",
+        "folderTarget",
+        "reachHidden",
+        "linkFirst",
+        "action",
+        "ON_THE_ROW"
+      ]
+    },
+    {
+      "from": "src/tui/workspace/explorer/explorer.ts",
+      "to": "src/tui/workspace/explorer/contracts.ts",
+      "symbols": [
+        "LinkRow",
+        "ExplorerItem",
+        "TreeRow",
+        "LeftOut"
+      ]
+    }
+  ],
+  "primitives": [
+    "src/tui/workspace/explorer/contracts.ts",
+    "src/tui/workspace/explorer/rows/files.ts",
+    "src/tui/workspace/explorer/rows/paths.ts",
+    "src/tui/workspace/explorer/rows/tree.ts",
+    "src/tui/workspace/explorer/navigation.ts",
+    "src/tui/workspace/explorer/actions/items.ts",
+    "src/tui/workspace/explorer/explorer-disk.ts"
+  ],
+  "stateOwnership": {
+    "controller": [
+      "App reference",
+      "Listings lifetime",
+      "marks cache",
+      "expanded",
+      "top",
+      "trail",
+      "tree cache",
+      "wanted",
+      "filtered cache"
+    ],
+    "navigation": [
+      "later",
+      "crumbsMemo"
+    ],
+    "rowMechanisms": "read live graph/configuration/listing capabilities; no map copies or retained row cache",
+    "actions": "delegate IO and shared state to the same Files/Vaults/Following and panel owners",
+    "diskAdapter": "same executable body; parameter narrowed to actual read capabilities"
+  },
+  "runtimeScc": {
+    "before": [
+      [
+        "src/tui/documents/editing/editing.ts",
+        "src/tui/documents/editing/snippets.ts"
+      ],
+      [
+        "src/tui/workspace/git/gitremote.ts",
+        "src/tui/workspace/git/views/review/rebase.ts"
+      ],
+      [
+        "src/core/rendering/export/formats/html.ts",
+        "src/core/rendering/export/formats/markdown.ts",
+        "src/core/rendering/export/stream.ts"
+      ],
+      [
+        "src/tui/documents/search/replacing.ts",
+        "src/tui/shell/overlays/overlays.ts",
+        "src/tui/workspace/search/search.ts"
+      ],
+      [
+        "src/tui/app/runtime/app.ts",
+        "src/tui/app/settings/settings.ts",
+        "src/tui/workspace/history/history.ts",
+        "src/tui/workspace/session/session.ts",
+        "src/tui/workspace/vaults/vaults.ts"
+      ],
+      [
+        "src/tui/actions/actions.ts",
+        "src/tui/actions/documents/actions-edit.ts",
+        "src/tui/actions/documents/actions-find.ts",
+        "src/tui/actions/documents/actions-links.ts",
+        "src/tui/actions/documents/actions-lsp.ts",
+        "src/tui/actions/documents/actions-view.ts",
+        "src/tui/actions/shell/actions-panes.ts",
+        "src/tui/actions/workspace/actions-files.ts"
+      ],
+      [
+        "src/tui/documents/diagnostics/draw-problems.ts",
+        "src/tui/documents/views/draw-header.ts",
+        "src/tui/documents/views/draw-pane.ts",
+        "src/tui/shell/overlays/draw-overlays.ts",
+        "src/tui/shell/panels/draw-panels.ts",
+        "src/tui/shell/screen/draw.ts",
+        "src/tui/shell/screen/statusbar/draw-status.ts",
+        "src/tui/workspace/git/views/panel/draw-git.ts"
+      ]
+    ],
+    "after": [
+      [
+        "src/tui/documents/editing/editing.ts",
+        "src/tui/documents/editing/snippets.ts"
+      ],
+      [
+        "src/tui/workspace/git/gitremote.ts",
+        "src/tui/workspace/git/views/review/rebase.ts"
+      ],
+      [
+        "src/core/rendering/export/formats/html.ts",
+        "src/core/rendering/export/formats/markdown.ts",
+        "src/core/rendering/export/stream.ts"
+      ],
+      [
+        "src/tui/documents/search/replacing.ts",
+        "src/tui/shell/overlays/overlays.ts",
+        "src/tui/workspace/search/search.ts"
+      ],
+      [
+        "src/tui/app/runtime/app.ts",
+        "src/tui/app/settings/settings.ts",
+        "src/tui/workspace/history/history.ts",
+        "src/tui/workspace/session/session.ts",
+        "src/tui/workspace/vaults/vaults.ts"
+      ],
+      [
+        "src/tui/actions/actions.ts",
+        "src/tui/actions/documents/actions-edit.ts",
+        "src/tui/actions/documents/actions-find.ts",
+        "src/tui/actions/documents/actions-links.ts",
+        "src/tui/actions/documents/actions-lsp.ts",
+        "src/tui/actions/documents/actions-view.ts",
+        "src/tui/actions/shell/actions-panes.ts",
+        "src/tui/actions/workspace/actions-files.ts"
+      ],
+      [
+        "src/tui/documents/diagnostics/draw-problems.ts",
+        "src/tui/documents/views/draw-header.ts",
+        "src/tui/documents/views/draw-pane.ts",
+        "src/tui/shell/overlays/draw-overlays.ts",
+        "src/tui/shell/panels/draw-panels.ts",
+        "src/tui/shell/screen/draw.ts",
+        "src/tui/shell/screen/statusbar/draw-status.ts",
+        "src/tui/workspace/git/views/panel/draw-git.ts"
+      ]
+    ]
+  }
+}

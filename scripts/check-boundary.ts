@@ -167,6 +167,27 @@ export function markdownViolations(from: string, text: string): string[] {
   });
 }
 
+/** Explorer mechanisms consume live capabilities below controller and App composition (ORG-T30). */
+export const EXPLORER_MECHANISMS = [
+  "src/tui/workspace/explorer/contracts.ts",
+  "src/tui/workspace/explorer/rows/files.ts",
+  "src/tui/workspace/explorer/rows/paths.ts",
+  "src/tui/workspace/explorer/rows/tree.ts",
+  "src/tui/workspace/explorer/navigation.ts",
+  "src/tui/workspace/explorer/actions/items.ts",
+  "src/tui/workspace/explorer/explorer-disk.ts",
+] as const;
+
+export function explorerViolations(from: string, text: string): string[] {
+  if (!(EXPLORER_MECHANISMS as readonly string[]).includes(from)) return [];
+  return importsOf(text).flatMap((spec) => {
+    const target = targetOf(from, spec);
+    return target === "src/tui/workspace/explorer/explorer" || target === "src/tui/app/runtime/app"
+      ? [`${from}: imports ${spec} (Explorer mechanism must not import composition, even for types)`]
+      : [];
+  });
+}
+
 /** PDF mechanisms stay below lifecycle composition; lower adapters also stay below chapter writing (ORG-T29). */
 export const PDF_MECHANISMS = [
   "src/core/rendering/export/formats/pdf/contracts.ts",
@@ -339,6 +360,7 @@ if (import.meta.main) {
     violations.push(...syntaxViolations(from, readFileSync(file, "utf8")));
     violations.push(...markdownViolations(from, readFileSync(file, "utf8")));
     violations.push(...pdfViolations(from, readFileSync(file, "utf8")));
+    violations.push(...explorerViolations(from, readFileSync(file, "utf8")));
     violations.push(...primitiveViolations(from, readFileSync(file, "utf8")));
     violations.push(...appCompositionViolations(from, readFileSync(file, "utf8")));
     violations.push(...drawingCompositionViolations(from, readFileSync(file, "utf8")));

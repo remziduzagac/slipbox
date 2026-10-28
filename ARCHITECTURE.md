@@ -78,6 +78,9 @@ A few modules to know first:
   table and data owners retain their distinct layout policies.
 - `cli/cli.ts`: the command line's dispatcher, its help and flags; each command's code is in its group's module, the
   session and the helpers they share in `cli/common.ts`.
+- `tui/workspace/explorer/explorer.ts`: live Explorer state, listing lifetime and row cache; `rows/` builds visible
+  files, paths and trees, `navigation.ts` handles zoom/reveal and `actions/items.ts` delegates item operations to their
+  existing file/vault owners. Small capability contracts keep those mechanisms below App and Explorer composition.
 - `core/foundation/platform/fsutil.ts`: atomic writes, and `writeNote`, which never writes outside the root.
 - `core/foundation/text/width.ts` and `core/foundation/text/sanitize.ts`: how wide text is, and text made safe for a
   terminal.
