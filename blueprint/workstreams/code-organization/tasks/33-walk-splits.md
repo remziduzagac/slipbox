@@ -104,7 +104,6 @@ The first PR run exposed two missed fixture references: the distribution graph a
 entry's former direct `fsutil` import, and the no-events regression scenario accessed the former private `watchers`
 field. Both fail locally before correction. The graph assertion now checks the actual filtering owner; the regression
 uses the same state projection as the other fixtures. Its emitted operations/data remain identical after receiver
-normalization. Both full test files pass before/after: 110 tests and 1,801 assertions on each tree. No product code or test identity
-changes in this
-correction. A scan of remaining private watcher accesses finds only the already-projected fixtures and retained main
-methods; unrelated layout/worker `pending` properties are unchanged.
+normalization. Both full test files pass before/after: 110 tests and 1,801 assertions on each tree. No product code or
+test identity changes in this correction. A scan of remaining private watcher accesses finds only the already-projected
+fixtures and retained main methods; unrelated layout/worker `pending` properties are unchanged.
