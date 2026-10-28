@@ -36,6 +36,9 @@ for a person, and a command line for agents and scripts, both over the same plai
   records, motion ranges, operator completion, edit effects and replay. App still owns the same Vim state and buffers.
   Editable flags, header layout, shared geometry/style/controls and location fitting sit below App and region
   composition. Their clients import these helpers directly; the boundary checker rejects reverse composition imports.
+  Screen composition delegates tab/view arrangement to `windows/drawing/`, document painting to
+  `documents/views/drawing/`, widgets to `shell/overlays/drawing/` and panel painting to each feature. Shared panel
+  row/tree/selection mechanisms and geometry records stay below composition; tabs still contain views as before.
 
 **The boundary.** `src/core/` never imports `src/tui/`, `src/cli/` or `@opentui/*`, and `src/cli/` never imports
 `src/tui/`. Inside the TUI, only `src/tui/shell/terminal/opentui.ts` (the `Canvas` over OpenTUI's buffer) and

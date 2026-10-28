@@ -167,6 +167,68 @@ export function markdownViolations(from: string, text: string): string[] {
   });
 }
 
+/** Region-owned drawing stays below screen/pane/overlay/panel composition (ORG-T36). */
+export const DRAWING_OWNERS = [
+  "src/tui/documents/diagnostics/draw-problems.ts",
+  "src/tui/documents/tools/footnotes/draw.ts",
+  "src/tui/documents/tools/info/draw.ts",
+  "src/tui/documents/tools/outline/draw.ts",
+  "src/tui/documents/views/draw-header.ts",
+  "src/tui/documents/views/drawing/breadcrumb.ts",
+  "src/tui/documents/views/drawing/chrome/cursor.ts",
+  "src/tui/documents/views/drawing/chrome/popups.ts",
+  "src/tui/documents/views/drawing/chrome/scrollbars.ts",
+  "src/tui/documents/views/drawing/lines.ts",
+  "src/tui/documents/views/drawing/marks/git.ts",
+  "src/tui/documents/views/drawing/marks/links.ts",
+  "src/tui/documents/views/drawing/marks/problems.ts",
+  "src/tui/documents/views/drawing/pane.ts",
+  "src/tui/documents/views/drawing/pictures.ts",
+  "src/tui/shell/overlays/drawing/common/labels.ts",
+  "src/tui/shell/overlays/drawing/dialogs/choices.ts",
+  "src/tui/shell/overlays/drawing/dialogs/prompt.ts",
+  "src/tui/shell/overlays/drawing/dialogs/save-as.ts",
+  "src/tui/shell/overlays/drawing/floating.ts",
+  "src/tui/shell/overlays/drawing/lists/footer.ts",
+  "src/tui/shell/overlays/drawing/lists/list.ts",
+  "src/tui/shell/overlays/drawing/menus.ts",
+  "src/tui/shell/overlays/drawing/which-key.ts",
+  "src/tui/shell/panels/drawing/chrome.ts",
+  "src/tui/shell/panels/drawing/rows.ts",
+  "src/tui/shell/panels/drawing/selection.ts",
+  "src/tui/shell/panels/drawing/tree.ts",
+  "src/tui/shell/screen/frame/drawing.ts",
+  "src/tui/shell/screen/geometry/contracts.ts",
+  "src/tui/shell/screen/statusbar/draw-status.ts",
+  "src/tui/windows/drawing/content.ts",
+  "src/tui/windows/drawing/tabs.ts",
+  "src/tui/workspace/explorer/drawing/panel.ts",
+  "src/tui/workspace/git/views/panel/draw-git.ts",
+  "src/tui/workspace/history/drawing/panel.ts",
+] as const;
+
+export function drawingOwnerViolations(from: string, text: string): string[] {
+  if (!(DRAWING_OWNERS as readonly string[]).includes(from)) return [];
+  const composers = [
+    "src/tui/shell/screen/draw",
+    "src/tui/documents/views/draw-pane",
+    "src/tui/shell/overlays/draw-overlays",
+    "src/tui/shell/panels/draw-panels",
+  ];
+  const app = "src/tui/app/runtime/app";
+  const pureSelection = from === "src/tui/shell/panels/drawing/selection.ts";
+  const failures = importsOf(text).flatMap((spec) =>
+    composers.includes(targetOf(from, spec)) || (pureSelection && targetOf(from, spec) === app)
+      ? [`${from}: imports ${spec} (drawing owner must use lower contracts, even for types)`]
+      : [],
+  );
+  if (!pureSelection)
+    for (const { path } of new Bun.Transpiler({ loader: "ts" }).scanImports(text))
+      if (targetOf(from, path) === app)
+        failures.push(`${from}: imports ${path} (drawing owner must not load App at runtime)`);
+  return failures;
+}
+
 /** Rename planning and collection stay below public/effect composition (ORG-T35). */
 export function renameMechanismViolations(from: string, text: string): string[] {
   const base = "src/core/workspace/mutations/rename/";
@@ -510,6 +572,7 @@ if (import.meta.main) {
     violations.push(...markdownViolations(from, readFileSync(file, "utf8")));
     violations.push(...pdfViolations(from, readFileSync(file, "utf8")));
     violations.push(...explorerViolations(from, readFileSync(file, "utf8")));
+    violations.push(...drawingOwnerViolations(from, readFileSync(file, "utf8")));
     violations.push(...renameMechanismViolations(from, readFileSync(file, "utf8")));
     violations.push(...searchMechanismViolations(from, readFileSync(file, "utf8")));
     violations.push(...walkingMechanismViolations(from, readFileSync(file, "utf8")));

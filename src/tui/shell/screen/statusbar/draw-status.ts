@@ -4,7 +4,7 @@
 import type { App, View, PromptOverlay } from "../../../app/runtime/app.ts";
 import { type Canvas, drawText } from "../../terminal/canvas.ts";
 import { type Band, mid } from "../geometry.ts";
-import type { Geometry } from "../draw.ts";
+import type { Geometry } from "../geometry/contracts.ts";
 import { pageBg, roleStyle, CHANGE_MARKER_MS } from "../style.ts";
 import { keyText } from "../controls.ts";
 import { keyChar } from "../../input/keys.ts";
@@ -14,7 +14,7 @@ import { countWords } from "../../../../core/foundation/text/words.ts";
 import { sanitize } from "../../../../core/foundation/text/sanitize.ts";
 import type { Role, Color } from "../../../../core/rendering/theme/theme.ts";
 import { SEVERITIES, worst } from "../../../../core/documents/diagnostics/diagnostics.ts";
-import { severityGlyph, SEVERITY_ROLE } from "../../../documents/views/draw-pane.ts";
+import { severityGlyph, SEVERITY_ROLE } from "../../../documents/views/drawing/marks/problems.ts";
 
 export function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void {
   const theme = app.theme;

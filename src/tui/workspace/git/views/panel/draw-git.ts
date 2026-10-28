@@ -5,7 +5,7 @@
 
 import type { App } from "../../../../app/runtime/app.ts";
 import { type Canvas, drawText } from "../../../../shell/terminal/canvas.ts";
-import type { Geometry } from "../../../../shell/screen/draw.ts";
+import type { Geometry } from "../../../../shell/screen/geometry/contracts.ts";
 import type { Rect } from "../../../../shell/screen/geometry.ts";
 import { roleStyle } from "../../../../shell/screen/style.ts";
 import type { Color, Role } from "../../../../../core/rendering/theme/theme.ts";
@@ -13,10 +13,11 @@ import { splitAtWidth, stringWidth, truncate, truncateStart } from "../../../../
 import { sanitize } from "../../../../../core/foundation/text/sanitize.ts";
 import { headOf } from "../../../../../core/workspace/git/git.ts";
 import { trackText } from "../../../../../core/workspace/git/branches/gitremote.ts";
-import { filterRow, followSelection } from "../../../../shell/panels/draw-panels.ts";
-import { paneScrollbar } from "../../../../documents/views/draw-pane.ts";
+import { filterRow } from "../../../../shell/panels/drawing/chrome.ts";
+import { followSelection } from "../../../../shell/panels/drawing/selection.ts";
+import { paneScrollbar } from "../../../../documents/views/drawing/chrome/scrollbars.ts";
 import type { PanelRow } from "./gitpanel.ts";
-import { GIT_MARK } from "../../../../shell/overlays/draw-overlays.ts";
+import { GIT_MARK } from "../../marks.ts";
 import { rowActions } from "./gitmouse.ts";
 import { hotRow } from "../../gitsteady.ts";
 

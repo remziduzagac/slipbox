@@ -5,7 +5,8 @@ import { type ModeForm, FORM_WIDTH, labelOf, modeButtons, crumbLeast } from "./h
 import type { App, View } from "../../app/runtime/app.ts";
 import { type Canvas, drawText } from "../../shell/terminal/canvas.ts";
 import type { Rect } from "../../shell/screen/geometry.ts";
-import { type Geometry, drawBreadcrumb } from "../../shell/screen/draw.ts";
+import type { Geometry } from "../../shell/screen/geometry/contracts.ts";
+import { drawBreadcrumb } from "./drawing/breadcrumb.ts";
 import { pageBg, roleStyle } from "../../shell/screen/style.ts";
 import { button } from "../../shell/screen/controls.ts";
 import { truncate, stringWidth } from "../../../core/foundation/text/width.ts";

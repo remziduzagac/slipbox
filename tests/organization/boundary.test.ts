@@ -47,6 +47,24 @@ describe("the boundary check (0.3, scripts/check-boundary.ts)", () => {
     expect(r.out).not.toContain("boundary check ok");
   });
 
+  test("drawing owners reject composition and runtime App while geometry retains view types", () => {
+    const refused = check({
+      "src/tui/documents/views/drawing/lines.ts": 'export type { Geometry } from "../../../shell/screen/draw.ts";',
+      "src/tui/shell/overlays/drawing/which-key.ts": 'export const load = () => import("../draw-overlays.ts");',
+      "src/tui/shell/panels/drawing/selection.ts": 'import type { SidePaneState } from "../../../app/runtime/app.ts";',
+      "src/tui/windows/drawing/tabs.ts": 'import { App } from "../../app/runtime/app.ts"; export const f = App;',
+    });
+    expect(refused.code).toBe(1);
+    expect(refused.err.match(/drawing owner/g)?.length).toBe(4);
+    expect(
+      check({
+        "src/tui/shell/screen/geometry/contracts.ts": 'import type { View } from "../../../app/runtime/app.ts";',
+        "src/tui/documents/tools/outline/draw.ts":
+          'import { followSelection } from "../../../shell/panels/drawing/selection.ts"; export const f = followSelection;',
+      }).code,
+    ).toBe(0);
+  });
+
   test("rename mechanisms reject facade, effect and reverse collection imports", () => {
     const refused = check({
       "src/core/workspace/mutations/rename/planning/files.ts": 'export type { RenamePlan } from "../rename-plan.ts";',
