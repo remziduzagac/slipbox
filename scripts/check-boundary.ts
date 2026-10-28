@@ -136,6 +136,37 @@ export function syntaxViolations(from: string, text: string): string[] {
   });
 }
 
+/** Markdown mechanisms remain below public/page composition; leaves also stay below block dispatch (ORG-T28). */
+export const MARKDOWN_MECHANISMS = [
+  "src/core/rendering/layout/markdown/contracts.ts",
+  "src/core/rendering/layout/markdown/render-context.ts",
+  "src/core/rendering/layout/markdown/render-html.ts",
+  "src/core/rendering/layout/markdown/render-caption.ts",
+  "src/core/rendering/layout/markdown/render-inline.ts",
+  "src/core/rendering/layout/markdown/render-data.ts",
+  "src/core/rendering/layout/markdown/render-table.ts",
+  "src/core/rendering/layout/markdown/rows/finish.ts",
+  "src/core/rendering/layout/markdown/rows/spacing.ts",
+  "src/core/rendering/layout/markdown/nodes/structure.ts",
+  "src/core/rendering/layout/markdown/blocks/headings.ts",
+  "src/core/rendering/layout/markdown/blocks/code.ts",
+  "src/core/rendering/layout/markdown/pictures/layout.ts",
+  "src/core/rendering/layout/markdown/blocks/dispatch.ts",
+] as const;
+
+export function markdownViolations(from: string, text: string): string[] {
+  if (!(MARKDOWN_MECHANISMS as readonly string[]).includes(from)) return [];
+  return importsOf(text).flatMap((spec) => {
+    const target = targetOf(from, spec);
+    const block = "src/core/rendering/layout/markdown/blocks/dispatch";
+    return target === "src/core/rendering/layout/markdown/render" ||
+      target === "src/core/rendering/layout/markdown/page/render" ||
+      (from !== `${block}.ts` && target === block)
+      ? [`${from}: imports ${spec} (Markdown mechanism must not import higher composition, even for types)`]
+      : [];
+  });
+}
+
 /** Presentation primitives stay below the App and region composers that call them (ORG-T9). */
 export const TUI_PRIMITIVES = [
   "src/tui/app/clipboard/clipboard.ts",
@@ -280,6 +311,7 @@ if (import.meta.main) {
     violations.push(...graphCompositionViolations(from, readFileSync(file, "utf8")));
     violations.push(...codeLayoutViolations(from, readFileSync(file, "utf8")));
     violations.push(...syntaxViolations(from, readFileSync(file, "utf8")));
+    violations.push(...markdownViolations(from, readFileSync(file, "utf8")));
     violations.push(...primitiveViolations(from, readFileSync(file, "utf8")));
     violations.push(...appCompositionViolations(from, readFileSync(file, "utf8")));
     violations.push(...drawingCompositionViolations(from, readFileSync(file, "utf8")));

@@ -1052,6 +1052,14 @@ The largest extracted owner is 324 lines; the 1,170-line syntax exception is rem
 initialization, grammar cache identity, embedded parsing and child-first disposal remain unchanged. This is a
 responsibility extraction; all seven runtime SCC memberships stay the same.
 
+### T28 Markdown-layout assessment
+
+[Task 28](tasks/28-markdown-layout-splits.md) preserves the Markdown entry and extracts context/cache composition,
+recursive block dispatch, row finishing/spacing, picture handling and the identical standalone-node spacing guard.
+The legacy render cap is removed; the largest owner is 469 lines. Complete IR/cache/HTML/source-map comparisons and
+exact dependency/test deltas are recorded there. Distinct inline and data guards remain separate. The tracked Mermaid
+warm-cache test fails equally on both revisions; fresh-cache controls pass, with its isolation follow-up retained in T43.
+
 ## Implementation tasks
 
 The 44 files below are authoritative for task scope, evidence, status and dependencies. This section is a navigation

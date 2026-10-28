@@ -8,7 +8,7 @@ import { graphemes, graphemeWidth } from "../../../foundation/text/width.ts";
 import type { Hashtag } from "../../../documents/markdown/tags.ts";
 import type { WikiLink } from "../../../documents/markdown/wikilink.ts";
 import type { LayoutHeading, LayoutLink, LinkStatus, Span } from "../ir.ts";
-import type { RenderOptions } from "./render.ts";
+import type { RenderOptions } from "./contracts.ts";
 
 export interface Ctx {
   opts: RenderOptions;

@@ -1,0 +1,451 @@
+{
+  "edges": {
+    "removed": [
+      "src/core/rendering/layout/markdown/render-context.ts -> src/core/rendering/layout/markdown/render.ts",
+      "src/core/rendering/layout/markdown/render.ts -> src/core/documents/markdown/html-adapter.ts",
+      "src/core/rendering/layout/markdown/render.ts -> src/core/documents/markdown/obsidian.ts",
+      "src/core/rendering/layout/markdown/render.ts -> src/core/documents/markdown/parse.ts",
+      "src/core/rendering/layout/markdown/render.ts -> src/core/documents/markdown/wikilink.ts",
+      "src/core/rendering/layout/markdown/render.ts -> src/core/documents/model/data.ts",
+      "src/core/rendering/layout/markdown/render.ts -> src/core/foundation/text/sanitize.ts",
+      "src/core/rendering/layout/markdown/render.ts -> src/core/foundation/text/width.ts",
+      "src/core/rendering/layout/markdown/render.ts -> src/core/rendering/layout/ir.ts",
+      "src/core/rendering/layout/markdown/render.ts -> src/core/rendering/layout/markdown/highlight.ts",
+      "src/core/rendering/layout/markdown/render.ts -> src/core/rendering/layout/markdown/render-caption.ts",
+      "src/core/rendering/layout/markdown/render.ts -> src/core/rendering/layout/markdown/render-context.ts",
+      "src/core/rendering/layout/markdown/render.ts -> src/core/rendering/layout/markdown/render-data.ts",
+      "src/core/rendering/layout/markdown/render.ts -> src/core/rendering/layout/markdown/render-html.ts",
+      "src/core/rendering/layout/markdown/render.ts -> src/core/rendering/layout/markdown/render-inline.ts",
+      "src/core/rendering/layout/markdown/render.ts -> src/core/rendering/layout/markdown/render-table.ts",
+      "src/core/rendering/layout/markdown/render.ts -> src/core/rendering/layout/wrap.ts",
+      "src/core/rendering/layout/markdown/render.ts -> src/core/rendering/media/diagrams/diagrams.ts",
+      "src/core/rendering/layout/markdown/render.ts -> src/core/rendering/media/images/svg.ts",
+      "src/core/rendering/layout/markdown/render.ts -> src/core/rendering/media/math.ts",
+      "src/core/rendering/layout/markdown/render.ts -> src/core/rendering/media/paint/paint-jobs.ts",
+      "src/core/rendering/layout/markdown/render.ts -> src/core/rendering/media/typeset.ts",
+      "src/core/rendering/layout/markdown/render.ts -> src/core/rendering/theme/glyphs.ts",
+      "src/core/rendering/layout/markdown/render.ts -> src/core/rendering/theme/theme.ts"
+    ],
+    "added": [
+      "src/core/rendering/layout/markdown/blocks/code.ts -> src/core/foundation/text/sanitize.ts",
+      "src/core/rendering/layout/markdown/blocks/code.ts -> src/core/foundation/text/width.ts",
+      "src/core/rendering/layout/markdown/blocks/code.ts -> src/core/rendering/layout/ir.ts",
+      "src/core/rendering/layout/markdown/blocks/code.ts -> src/core/rendering/layout/markdown/highlight.ts",
+      "src/core/rendering/layout/markdown/blocks/code.ts -> src/core/rendering/layout/markdown/render-context.ts",
+      "src/core/rendering/layout/markdown/blocks/dispatch.ts -> src/core/documents/markdown/html-adapter.ts",
+      "src/core/rendering/layout/markdown/blocks/dispatch.ts -> src/core/documents/markdown/obsidian.ts",
+      "src/core/rendering/layout/markdown/blocks/dispatch.ts -> src/core/documents/markdown/parse.ts",
+      "src/core/rendering/layout/markdown/blocks/dispatch.ts -> src/core/documents/markdown/wikilink.ts",
+      "src/core/rendering/layout/markdown/blocks/dispatch.ts -> src/core/documents/model/data.ts",
+      "src/core/rendering/layout/markdown/blocks/dispatch.ts -> src/core/foundation/text/sanitize.ts",
+      "src/core/rendering/layout/markdown/blocks/dispatch.ts -> src/core/foundation/text/width.ts",
+      "src/core/rendering/layout/markdown/blocks/dispatch.ts -> src/core/rendering/layout/ir.ts",
+      "src/core/rendering/layout/markdown/blocks/dispatch.ts -> src/core/rendering/layout/markdown/blocks/code.ts",
+      "src/core/rendering/layout/markdown/blocks/dispatch.ts -> src/core/rendering/layout/markdown/blocks/headings.ts",
+      "src/core/rendering/layout/markdown/blocks/dispatch.ts -> src/core/rendering/layout/markdown/contracts.ts",
+      "src/core/rendering/layout/markdown/blocks/dispatch.ts -> src/core/rendering/layout/markdown/nodes/structure.ts",
+      "src/core/rendering/layout/markdown/blocks/dispatch.ts -> src/core/rendering/layout/markdown/pictures/layout.ts",
+      "src/core/rendering/layout/markdown/blocks/dispatch.ts -> src/core/rendering/layout/markdown/render-context.ts",
+      "src/core/rendering/layout/markdown/blocks/dispatch.ts -> src/core/rendering/layout/markdown/render-data.ts",
+      "src/core/rendering/layout/markdown/blocks/dispatch.ts -> src/core/rendering/layout/markdown/render-html.ts",
+      "src/core/rendering/layout/markdown/blocks/dispatch.ts -> src/core/rendering/layout/markdown/render-inline.ts",
+      "src/core/rendering/layout/markdown/blocks/dispatch.ts -> src/core/rendering/layout/markdown/render-table.ts",
+      "src/core/rendering/layout/markdown/blocks/dispatch.ts -> src/core/rendering/layout/markdown/rows/spacing.ts",
+      "src/core/rendering/layout/markdown/blocks/dispatch.ts -> src/core/rendering/layout/wrap.ts",
+      "src/core/rendering/layout/markdown/blocks/dispatch.ts -> src/core/rendering/media/diagrams/diagrams.ts",
+      "src/core/rendering/layout/markdown/blocks/dispatch.ts -> src/core/rendering/media/images/svg.ts",
+      "src/core/rendering/layout/markdown/blocks/dispatch.ts -> src/core/rendering/media/math.ts",
+      "src/core/rendering/layout/markdown/blocks/dispatch.ts -> src/core/rendering/media/paint/paint-jobs.ts",
+      "src/core/rendering/layout/markdown/blocks/dispatch.ts -> src/core/rendering/media/typeset.ts",
+      "src/core/rendering/layout/markdown/blocks/dispatch.ts -> src/core/rendering/theme/theme.ts",
+      "src/core/rendering/layout/markdown/blocks/headings.ts -> src/core/documents/markdown/parse.ts",
+      "src/core/rendering/layout/markdown/blocks/headings.ts -> src/core/foundation/text/width.ts",
+      "src/core/rendering/layout/markdown/blocks/headings.ts -> src/core/rendering/layout/ir.ts",
+      "src/core/rendering/layout/markdown/blocks/headings.ts -> src/core/rendering/layout/markdown/render-context.ts",
+      "src/core/rendering/layout/markdown/blocks/headings.ts -> src/core/rendering/layout/markdown/render-inline.ts",
+      "src/core/rendering/layout/markdown/blocks/headings.ts -> src/core/rendering/layout/wrap.ts",
+      "src/core/rendering/layout/markdown/blocks/headings.ts -> src/core/rendering/theme/theme.ts",
+      "src/core/rendering/layout/markdown/contracts.ts -> src/core/rendering/layout/ir.ts",
+      "src/core/rendering/layout/markdown/contracts.ts -> src/core/rendering/media/diagrams/diagrams.ts",
+      "src/core/rendering/layout/markdown/contracts.ts -> src/core/rendering/theme/glyphs.ts",
+      "src/core/rendering/layout/markdown/nodes/structure.ts -> src/core/rendering/layout/markdown/render-context.ts",
+      "src/core/rendering/layout/markdown/page/render.ts -> src/core/documents/markdown/html-adapter.ts",
+      "src/core/rendering/layout/markdown/page/render.ts -> src/core/documents/markdown/parse.ts",
+      "src/core/rendering/layout/markdown/page/render.ts -> src/core/rendering/layout/ir.ts",
+      "src/core/rendering/layout/markdown/page/render.ts -> src/core/rendering/layout/markdown/blocks/dispatch.ts",
+      "src/core/rendering/layout/markdown/page/render.ts -> src/core/rendering/layout/markdown/contracts.ts",
+      "src/core/rendering/layout/markdown/page/render.ts -> src/core/rendering/layout/markdown/nodes/structure.ts",
+      "src/core/rendering/layout/markdown/page/render.ts -> src/core/rendering/layout/markdown/render-context.ts",
+      "src/core/rendering/layout/markdown/page/render.ts -> src/core/rendering/layout/markdown/rows/finish.ts",
+      "src/core/rendering/layout/markdown/page/render.ts -> src/core/rendering/layout/markdown/rows/spacing.ts",
+      "src/core/rendering/layout/markdown/pictures/layout.ts -> src/core/documents/markdown/html-adapter.ts",
+      "src/core/rendering/layout/markdown/pictures/layout.ts -> src/core/documents/markdown/wikilink.ts",
+      "src/core/rendering/layout/markdown/pictures/layout.ts -> src/core/foundation/text/sanitize.ts",
+      "src/core/rendering/layout/markdown/pictures/layout.ts -> src/core/foundation/text/width.ts",
+      "src/core/rendering/layout/markdown/pictures/layout.ts -> src/core/rendering/layout/ir.ts",
+      "src/core/rendering/layout/markdown/pictures/layout.ts -> src/core/rendering/layout/markdown/contracts.ts",
+      "src/core/rendering/layout/markdown/pictures/layout.ts -> src/core/rendering/layout/markdown/nodes/structure.ts",
+      "src/core/rendering/layout/markdown/pictures/layout.ts -> src/core/rendering/layout/markdown/render-caption.ts",
+      "src/core/rendering/layout/markdown/pictures/layout.ts -> src/core/rendering/layout/markdown/render-context.ts",
+      "src/core/rendering/layout/markdown/pictures/layout.ts -> src/core/rendering/layout/markdown/render-html.ts",
+      "src/core/rendering/layout/markdown/pictures/layout.ts -> src/core/rendering/layout/markdown/render-inline.ts",
+      "src/core/rendering/layout/markdown/pictures/layout.ts -> src/core/rendering/media/images/svg.ts",
+      "src/core/rendering/layout/markdown/pictures/layout.ts -> src/core/rendering/theme/theme.ts",
+      "src/core/rendering/layout/markdown/render-context.ts -> src/core/rendering/layout/markdown/contracts.ts",
+      "src/core/rendering/layout/markdown/render.ts -> src/core/rendering/layout/markdown/blocks/headings.ts",
+      "src/core/rendering/layout/markdown/render.ts -> src/core/rendering/layout/markdown/contracts.ts",
+      "src/core/rendering/layout/markdown/render.ts -> src/core/rendering/layout/markdown/page/render.ts",
+      "src/core/rendering/layout/markdown/rows/finish.ts -> src/core/foundation/text/sanitize.ts",
+      "src/core/rendering/layout/markdown/rows/finish.ts -> src/core/foundation/text/width.ts",
+      "src/core/rendering/layout/markdown/rows/finish.ts -> src/core/rendering/layout/ir.ts",
+      "src/core/rendering/layout/markdown/rows/finish.ts -> src/core/rendering/layout/markdown/render-context.ts",
+      "src/core/rendering/layout/markdown/rows/spacing.ts -> src/core/foundation/text/width.ts",
+      "src/core/rendering/layout/markdown/rows/spacing.ts -> src/core/rendering/layout/ir.ts",
+      "src/core/rendering/layout/markdown/rows/spacing.ts -> src/core/rendering/layout/markdown/render-data.ts"
+    ]
+  },
+  "runtime": {
+    "removed": [
+      "src/core/rendering/layout/markdown/render.ts -> src/core/documents/markdown/html-adapter.ts",
+      "src/core/rendering/layout/markdown/render.ts -> src/core/documents/markdown/obsidian.ts",
+      "src/core/rendering/layout/markdown/render.ts -> src/core/documents/markdown/parse.ts",
+      "src/core/rendering/layout/markdown/render.ts -> src/core/foundation/text/sanitize.ts",
+      "src/core/rendering/layout/markdown/render.ts -> src/core/foundation/text/width.ts",
+      "src/core/rendering/layout/markdown/render.ts -> src/core/rendering/layout/ir.ts",
+      "src/core/rendering/layout/markdown/render.ts -> src/core/rendering/layout/markdown/highlight.ts",
+      "src/core/rendering/layout/markdown/render.ts -> src/core/rendering/layout/markdown/render-caption.ts",
+      "src/core/rendering/layout/markdown/render.ts -> src/core/rendering/layout/markdown/render-context.ts",
+      "src/core/rendering/layout/markdown/render.ts -> src/core/rendering/layout/markdown/render-data.ts",
+      "src/core/rendering/layout/markdown/render.ts -> src/core/rendering/layout/markdown/render-html.ts",
+      "src/core/rendering/layout/markdown/render.ts -> src/core/rendering/layout/markdown/render-inline.ts",
+      "src/core/rendering/layout/markdown/render.ts -> src/core/rendering/layout/markdown/render-table.ts",
+      "src/core/rendering/layout/markdown/render.ts -> src/core/rendering/layout/wrap.ts",
+      "src/core/rendering/layout/markdown/render.ts -> src/core/rendering/media/diagrams/diagrams.ts",
+      "src/core/rendering/layout/markdown/render.ts -> src/core/rendering/media/images/svg.ts",
+      "src/core/rendering/layout/markdown/render.ts -> src/core/rendering/media/math.ts",
+      "src/core/rendering/layout/markdown/render.ts -> src/core/rendering/media/paint/paint-jobs.ts",
+      "src/core/rendering/layout/markdown/render.ts -> src/core/rendering/media/typeset.ts"
+    ],
+    "added": [
+      "src/core/rendering/layout/markdown/blocks/code.ts -> src/core/foundation/text/sanitize.ts",
+      "src/core/rendering/layout/markdown/blocks/code.ts -> src/core/foundation/text/width.ts",
+      "src/core/rendering/layout/markdown/blocks/code.ts -> src/core/rendering/layout/markdown/highlight.ts",
+      "src/core/rendering/layout/markdown/blocks/code.ts -> src/core/rendering/layout/markdown/render-context.ts",
+      "src/core/rendering/layout/markdown/blocks/dispatch.ts -> src/core/documents/markdown/html-adapter.ts",
+      "src/core/rendering/layout/markdown/blocks/dispatch.ts -> src/core/documents/markdown/obsidian.ts",
+      "src/core/rendering/layout/markdown/blocks/dispatch.ts -> src/core/foundation/text/sanitize.ts",
+      "src/core/rendering/layout/markdown/blocks/dispatch.ts -> src/core/foundation/text/width.ts",
+      "src/core/rendering/layout/markdown/blocks/dispatch.ts -> src/core/rendering/layout/ir.ts",
+      "src/core/rendering/layout/markdown/blocks/dispatch.ts -> src/core/rendering/layout/markdown/blocks/code.ts",
+      "src/core/rendering/layout/markdown/blocks/dispatch.ts -> src/core/rendering/layout/markdown/blocks/headings.ts",
+      "src/core/rendering/layout/markdown/blocks/dispatch.ts -> src/core/rendering/layout/markdown/nodes/structure.ts",
+      "src/core/rendering/layout/markdown/blocks/dispatch.ts -> src/core/rendering/layout/markdown/pictures/layout.ts",
+      "src/core/rendering/layout/markdown/blocks/dispatch.ts -> src/core/rendering/layout/markdown/render-context.ts",
+      "src/core/rendering/layout/markdown/blocks/dispatch.ts -> src/core/rendering/layout/markdown/render-data.ts",
+      "src/core/rendering/layout/markdown/blocks/dispatch.ts -> src/core/rendering/layout/markdown/render-html.ts",
+      "src/core/rendering/layout/markdown/blocks/dispatch.ts -> src/core/rendering/layout/markdown/render-inline.ts",
+      "src/core/rendering/layout/markdown/blocks/dispatch.ts -> src/core/rendering/layout/markdown/render-table.ts",
+      "src/core/rendering/layout/markdown/blocks/dispatch.ts -> src/core/rendering/layout/markdown/rows/spacing.ts",
+      "src/core/rendering/layout/markdown/blocks/dispatch.ts -> src/core/rendering/layout/wrap.ts",
+      "src/core/rendering/layout/markdown/blocks/dispatch.ts -> src/core/rendering/media/diagrams/diagrams.ts",
+      "src/core/rendering/layout/markdown/blocks/dispatch.ts -> src/core/rendering/media/images/svg.ts",
+      "src/core/rendering/layout/markdown/blocks/dispatch.ts -> src/core/rendering/media/math.ts",
+      "src/core/rendering/layout/markdown/blocks/dispatch.ts -> src/core/rendering/media/paint/paint-jobs.ts",
+      "src/core/rendering/layout/markdown/blocks/dispatch.ts -> src/core/rendering/media/typeset.ts",
+      "src/core/rendering/layout/markdown/blocks/headings.ts -> src/core/documents/markdown/parse.ts",
+      "src/core/rendering/layout/markdown/blocks/headings.ts -> src/core/foundation/text/width.ts",
+      "src/core/rendering/layout/markdown/blocks/headings.ts -> src/core/rendering/layout/ir.ts",
+      "src/core/rendering/layout/markdown/blocks/headings.ts -> src/core/rendering/layout/markdown/render-inline.ts",
+      "src/core/rendering/layout/markdown/blocks/headings.ts -> src/core/rendering/layout/wrap.ts",
+      "src/core/rendering/layout/markdown/page/render.ts -> src/core/documents/markdown/html-adapter.ts",
+      "src/core/rendering/layout/markdown/page/render.ts -> src/core/documents/markdown/parse.ts",
+      "src/core/rendering/layout/markdown/page/render.ts -> src/core/rendering/layout/markdown/blocks/dispatch.ts",
+      "src/core/rendering/layout/markdown/page/render.ts -> src/core/rendering/layout/markdown/nodes/structure.ts",
+      "src/core/rendering/layout/markdown/page/render.ts -> src/core/rendering/layout/markdown/render-context.ts",
+      "src/core/rendering/layout/markdown/page/render.ts -> src/core/rendering/layout/markdown/rows/finish.ts",
+      "src/core/rendering/layout/markdown/page/render.ts -> src/core/rendering/layout/markdown/rows/spacing.ts",
+      "src/core/rendering/layout/markdown/pictures/layout.ts -> src/core/documents/markdown/html-adapter.ts",
+      "src/core/rendering/layout/markdown/pictures/layout.ts -> src/core/foundation/text/sanitize.ts",
+      "src/core/rendering/layout/markdown/pictures/layout.ts -> src/core/foundation/text/width.ts",
+      "src/core/rendering/layout/markdown/pictures/layout.ts -> src/core/rendering/layout/markdown/nodes/structure.ts",
+      "src/core/rendering/layout/markdown/pictures/layout.ts -> src/core/rendering/layout/markdown/render-caption.ts",
+      "src/core/rendering/layout/markdown/pictures/layout.ts -> src/core/rendering/layout/markdown/render-html.ts",
+      "src/core/rendering/layout/markdown/pictures/layout.ts -> src/core/rendering/layout/markdown/render-inline.ts",
+      "src/core/rendering/layout/markdown/pictures/layout.ts -> src/core/rendering/media/images/svg.ts",
+      "src/core/rendering/layout/markdown/render.ts -> src/core/rendering/layout/markdown/blocks/headings.ts",
+      "src/core/rendering/layout/markdown/render.ts -> src/core/rendering/layout/markdown/page/render.ts",
+      "src/core/rendering/layout/markdown/rows/finish.ts -> src/core/foundation/text/sanitize.ts",
+      "src/core/rendering/layout/markdown/rows/finish.ts -> src/core/foundation/text/width.ts",
+      "src/core/rendering/layout/markdown/rows/spacing.ts -> src/core/foundation/text/width.ts",
+      "src/core/rendering/layout/markdown/rows/spacing.ts -> src/core/rendering/layout/markdown/render-data.ts"
+    ]
+  },
+  "tests": {
+    "removed": [],
+    "added": [
+      "test: cached row placement copies source, link, heading, task and disclosure coordinates",
+      "test: row finishing clips by grapheme, keeps scrolling code whole and anchors links and picture extent",
+      "test: standalone pictures keep fitting requests, caption placement and scrolling row metadata",
+      "test: standalone-node spacing accepts only breaks, comments and blank text; definitions keep the first label"
+    ]
+  },
+  "entries": {
+    "removed": [],
+    "added": []
+  },
+  "moves": {},
+  "retained": [],
+  "extractions": [
+    {
+      "from": "src/core/rendering/layout/markdown/render.ts",
+      "to": "src/core/rendering/layout/markdown/contracts.ts",
+      "symbols": [
+        "RenderOptions",
+        "PictureSource",
+        "PictureSize",
+        "FoundPicture",
+        "Embedded",
+        "RenderCache",
+        "CachedBlock",
+        "EmbedRef"
+      ],
+      "invariant": "Original type token trees and public type exports. No page/dispatch dependency."
+    },
+    {
+      "from": "src/core/rendering/layout/markdown/render.ts",
+      "to": "src/core/rendering/layout/markdown/page/render.ts",
+      "symbols": [
+        "renderMarkdown",
+        "newRenderCache",
+        "renderTree"
+      ],
+      "invariant": "Original context, cache key and WeakMap identity, invalidation, ordering and copied row placement."
+    },
+    {
+      "from": "src/core/rendering/layout/markdown/render.ts",
+      "to": "src/core/rendering/layout/markdown/rows/finish.ts",
+      "symbols": [
+        "placed",
+        "finish",
+        "finishRows",
+        "enforceRow"
+      ],
+      "invariant": "Same sanitize, grapheme clipping, scrolling exemptions, picture extent and link/heading/source anchoring."
+    },
+    {
+      "from": "src/core/rendering/layout/markdown/render.ts",
+      "to": "src/core/rendering/layout/markdown/rows/spacing.ts",
+      "symbols": [
+        "gapAfter",
+        "blank",
+        "joined",
+        "prefixed"
+      ],
+      "invariant": "Same gaps, data adjacency and container prefix/scroll offsets."
+    },
+    {
+      "from": "src/core/rendering/layout/markdown/render.ts",
+      "to": "src/core/rendering/layout/markdown/nodes/structure.ts",
+      "symbols": [
+        "collectDefinitions"
+      ],
+      "invariant": "Same first-definition traversal and exactly the repeated break/comment/blank-text predicate; no AST normalization."
+    },
+    {
+      "from": "src/core/rendering/layout/markdown/render.ts",
+      "to": "src/core/rendering/layout/markdown/blocks/headings.ts",
+      "symbols": [
+        "heading"
+      ],
+      "invariant": "Same label/slug computation, source and outline/link metadata."
+    },
+    {
+      "from": "src/core/rendering/layout/markdown/render.ts",
+      "to": "src/core/rendering/layout/markdown/blocks/code.ts",
+      "symbols": [
+        "codeBlock"
+      ],
+      "invariant": "Same sanitization, highlights, tabs, source lines, wrapping and scroll metadata."
+    },
+    {
+      "from": "src/core/rendering/layout/markdown/render.ts",
+      "to": "src/core/rendering/layout/markdown/pictures/layout.ts",
+      "symbols": [
+        "picturesAlone",
+        "captionRows",
+        "askPicture",
+        "pictureRows",
+        "pictureSource",
+        "urlParts",
+        "embeddedPictures",
+        "drawing",
+        "scrollingDiagram",
+        "diagram",
+        "DRAWING",
+        "ASCII_DRAWING"
+      ],
+      "invariant": "Same fitting/caption callbacks and order, HTML linked-image dimensions/alignment, SVG readiness and picture metadata."
+    },
+    {
+      "from": "src/core/rendering/layout/markdown/render.ts",
+      "to": "src/core/rendering/layout/markdown/blocks/dispatch.ts",
+      "symbols": [
+        "MAX_EMBED_DEPTH",
+        "MAX_NESTING",
+        "blocks",
+        "block",
+        "blockNow",
+        "paragraph",
+        "embedsAlone",
+        "embedFrame",
+        "CALLOUT",
+        "blockquote",
+        "MIN_NESTED",
+        "calloutRole",
+        "nestedList",
+        "list"
+      ],
+      "invariant": "Recursive calls keep the same per-render Ctx, nesting counters, embed chain, callback order and HTML adaptation."
+    }
+  ],
+  "primitives": [
+    "src/core/rendering/layout/markdown/contracts.ts",
+    "src/core/rendering/layout/markdown/render-context.ts",
+    "src/core/rendering/layout/markdown/render-html.ts",
+    "src/core/rendering/layout/markdown/render-caption.ts",
+    "src/core/rendering/layout/markdown/render-inline.ts",
+    "src/core/rendering/layout/markdown/render-data.ts",
+    "src/core/rendering/layout/markdown/render-table.ts",
+    "src/core/rendering/layout/markdown/rows/finish.ts",
+    "src/core/rendering/layout/markdown/rows/spacing.ts",
+    "src/core/rendering/layout/markdown/nodes/structure.ts",
+    "src/core/rendering/layout/markdown/blocks/headings.ts",
+    "src/core/rendering/layout/markdown/blocks/code.ts",
+    "src/core/rendering/layout/markdown/pictures/layout.ts",
+    "src/core/rendering/layout/markdown/blocks/dispatch.ts"
+  ],
+  "runtimeScc": {
+    "before": [
+      [
+        "src/tui/documents/editing/editing.ts",
+        "src/tui/documents/editing/snippets.ts"
+      ],
+      [
+        "src/tui/workspace/git/gitremote.ts",
+        "src/tui/workspace/git/views/review/rebase.ts"
+      ],
+      [
+        "src/core/rendering/export/formats/html.ts",
+        "src/core/rendering/export/formats/markdown.ts",
+        "src/core/rendering/export/stream.ts"
+      ],
+      [
+        "src/tui/documents/search/replacing.ts",
+        "src/tui/shell/overlays/overlays.ts",
+        "src/tui/workspace/search/search.ts"
+      ],
+      [
+        "src/tui/app/runtime/app.ts",
+        "src/tui/app/settings/settings.ts",
+        "src/tui/workspace/history/history.ts",
+        "src/tui/workspace/session/session.ts",
+        "src/tui/workspace/vaults/vaults.ts"
+      ],
+      [
+        "src/tui/actions/actions.ts",
+        "src/tui/actions/documents/actions-edit.ts",
+        "src/tui/actions/documents/actions-find.ts",
+        "src/tui/actions/documents/actions-links.ts",
+        "src/tui/actions/documents/actions-lsp.ts",
+        "src/tui/actions/documents/actions-view.ts",
+        "src/tui/actions/shell/actions-panes.ts",
+        "src/tui/actions/workspace/actions-files.ts"
+      ],
+      [
+        "src/tui/documents/diagnostics/draw-problems.ts",
+        "src/tui/documents/views/draw-header.ts",
+        "src/tui/documents/views/draw-pane.ts",
+        "src/tui/shell/overlays/draw-overlays.ts",
+        "src/tui/shell/panels/draw-panels.ts",
+        "src/tui/shell/screen/draw.ts",
+        "src/tui/shell/screen/statusbar/draw-status.ts",
+        "src/tui/workspace/git/views/panel/draw-git.ts"
+      ]
+    ],
+    "after": [
+      [
+        "src/tui/documents/editing/editing.ts",
+        "src/tui/documents/editing/snippets.ts"
+      ],
+      [
+        "src/tui/workspace/git/gitremote.ts",
+        "src/tui/workspace/git/views/review/rebase.ts"
+      ],
+      [
+        "src/core/rendering/export/formats/html.ts",
+        "src/core/rendering/export/formats/markdown.ts",
+        "src/core/rendering/export/stream.ts"
+      ],
+      [
+        "src/tui/documents/search/replacing.ts",
+        "src/tui/shell/overlays/overlays.ts",
+        "src/tui/workspace/search/search.ts"
+      ],
+      [
+        "src/tui/app/runtime/app.ts",
+        "src/tui/app/settings/settings.ts",
+        "src/tui/workspace/history/history.ts",
+        "src/tui/workspace/session/session.ts",
+        "src/tui/workspace/vaults/vaults.ts"
+      ],
+      [
+        "src/tui/actions/actions.ts",
+        "src/tui/actions/documents/actions-edit.ts",
+        "src/tui/actions/documents/actions-find.ts",
+        "src/tui/actions/documents/actions-links.ts",
+        "src/tui/actions/documents/actions-lsp.ts",
+        "src/tui/actions/documents/actions-view.ts",
+        "src/tui/actions/shell/actions-panes.ts",
+        "src/tui/actions/workspace/actions-files.ts"
+      ],
+      [
+        "src/tui/documents/diagnostics/draw-problems.ts",
+        "src/tui/documents/views/draw-header.ts",
+        "src/tui/documents/views/draw-pane.ts",
+        "src/tui/shell/overlays/draw-overlays.ts",
+        "src/tui/shell/panels/draw-panels.ts",
+        "src/tui/shell/screen/draw.ts",
+        "src/tui/shell/screen/statusbar/draw-status.ts",
+        "src/tui/workspace/git/views/panel/draw-git.ts"
+      ]
+    ]
+  },
+  "sharedGuards": [
+    {
+      "name": "isParagraphSpacing",
+      "to": "src/core/rendering/layout/markdown/nodes/structure.ts",
+      "from": [
+        "embedsAlone",
+        "picturesAlone"
+      ],
+      "expression": "c.type === \"break\" || c.type === \"comment\" || (c.type === \"text\" && !c.value.trim())",
+      "count": 2,
+      "excluded": "Inline fallback value/string conversion and data shape guards have different contracts and remain unchanged."
+    }
+  ],
+  "unchanged": [
+    "render-inline.ts",
+    "render-html.ts",
+    "render-data.ts",
+    "render-caption.ts",
+    "render-table.ts",
+    "table.ts",
+    "live.ts",
+    "highlight.ts"
+  ],
+  "contextChange": "render-context.ts changes only its type import from render.ts to contracts.ts",
+  "publicEntry": "src/core/rendering/layout/markdown/render.ts",
+  "newTests": [
+    "tests/core/rendering/layout/markdown/mechanisms.test.ts"
+  ]
+}
