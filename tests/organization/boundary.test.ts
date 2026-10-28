@@ -137,6 +137,15 @@ describe("the boundary check (0.3, scripts/check-boundary.ts)", () => {
             : 'export type { Graph } from "../graph.ts";\n',
         ]),
       ),
+      "src/tui/workspace/explorer/explorer.ts": "export interface TreeRow {}\n",
+      ...Object.fromEntries(
+        ["contracts", "rows/files", "rows/paths", "rows/tree", "navigation", "actions/items", "explorer-disk"].map(
+          (name) => [
+            `src/tui/workspace/explorer/${name}.ts`,
+            `export type { TreeRow } from "${name.includes("/") ? "../explorer" : "./explorer"}"; ${name === "rows/tree" ? 'export const load = () => import("../../../app/runtime/app");' : ""}\n`,
+          ],
+        ),
+      ),
       "src/tui/app/runtime/app.ts": "export class App {}\nexport interface View {}\n",
       "src/tui/documents/editing/editable.ts":
         'import type { View } from "../../app/runtime/app.ts";\nexport type Reverse = View;\n',
@@ -176,6 +185,18 @@ describe("the boundary check (0.3, scripts/check-boundary.ts)", () => {
     ]) {
       expect(r.err).toContain(`src/core/rendering/export/formats/pdf/${name}.ts: imports`);
     }
+    expect(r.err).toContain("Explorer mechanism must not import composition, even for types");
+    expect(r.err).toContain("rows/tree.ts: imports ../../../app/runtime/app");
+    for (const name of [
+      "contracts",
+      "rows/files",
+      "rows/paths",
+      "rows/tree",
+      "navigation",
+      "actions/items",
+      "explorer-disk",
+    ])
+      expect(r.err).toContain(`src/tui/workspace/explorer/${name}.ts: imports`);
     expect(r.err).toContain("Markdown mechanism must not import higher composition, even for types");
     for (const name of [
       "contracts",

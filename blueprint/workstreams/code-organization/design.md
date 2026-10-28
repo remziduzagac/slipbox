@@ -1068,6 +1068,15 @@ font fallback, picture and chapter caches keep their original scopes. The PDF ca
 440 lines. Font registration, stream release, footer/bar cleanup and complete PDF-object comparisons are recorded in
 the task, including PDFKit's alpha-mask ID serialization variation. All seven runtime SCC memberships remain unchanged.
 
+### T30 Explorer and Git assessment
+
+[Task 30](tasks/30-explorer-splits.md) uses separate child PRs for Explorer and Git controllers, keeping their
+independent lifecycles reviewable. The Explorer child separates file visibility, path policy, row construction,
+zoom/reveal and item dispatch through live capabilities. Explorer retains view/selection state, listing lifetime and
+its row/filter caches; IO remains delegated to the same file/vault owners. Its 1,274-line cap is removed. The unchanged
+574-line Files controller is assessed as cohesive write/preview policy; the Git child still owns the 1,005-line branch
+view and the Git/panel controller assessments before T30 is complete. T11 audits final size dispositions.
+
 ## Implementation tasks
 
 The 44 files below are authoritative for task scope, evidence, status and dependencies. This section is a navigation

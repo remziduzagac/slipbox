@@ -2,14 +2,14 @@
 // tree it shows: what the walk leaves out — a busy folder (`node_modules`, `build`…), what `.gitignore` or
 // `walk.exclude` leaves out, home's skip list (`Downloads`) — listed and browsed, never indexed; and what it hasn't
 // reached: a folder it couldn't read, home's folders before its walk, a folder or file come since. Hidden names are
-// listed only while `files.hidden` is on (its `shift+h`), left out as the walk leaves them, `.git` never; a link is left
-// to the walk's rules (VV-D6).
+// listed only while `files.hidden` is on (its `shift+h`), left out as the walk leaves them, `.git` never; a link is
+// left to the walk's rules (VV-D6).
 
 import { type Dirent, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { classify, type FileGroup } from "../../../core/documents/model/filetypes.ts";
 import { listsName } from "../../../core/workspace/walk/listing.ts";
-import type { App } from "../../app/runtime/app.ts";
+import type { ExplorerReadContext } from "./contracts.ts";
 
 /** An entry of a folder of the vault's own tree that the walk didn't give. */
 export interface DiskEntry {
@@ -40,7 +40,7 @@ export interface Walked {
  * whether the explorer lists a file of the vault (`files.show`, `files.include`, `files.exclude`).
  */
 export function fromDisk(
-  app: App,
+  app: Pick<ExplorerReadContext, "graph" | "loc" | "ui" | "config">,
   sub: string,
   expanded: ReadonlySet<string>,
   walked: Walked,
@@ -58,8 +58,8 @@ export function fromDisk(
       continue; // gone, or not yours to read: its row says so
     }
     for (const e of entries) {
-      // A link: the walk's rules (VV-D6), not a folder or file here. git's own folder: never listed. A hidden name: only
-      // while `files.hidden` is on.
+      // A link: the walk's rules (VV-D6), not a folder or file here. git's own folder: never listed. A hidden name:
+      // only while `files.hidden` is on.
       if (e.isSymbolicLink() || !listsName(e.name, showHidden)) continue;
       const hidden = e.name.startsWith(".");
       const rel = dir ? `${dir}/${e.name}` : e.name;

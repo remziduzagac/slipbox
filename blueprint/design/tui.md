@@ -20,7 +20,7 @@ Code, in `src/tui/`:
 | `input.ts`, `mouse.ts` | keys and pastes, dispatched in order, the which-key popup; clicks, drags, the wheel |
 | `overlays.ts`, `properties.ts` | lists, prompts and dialogs; the properties editor in the floating window |
 | `panels.ts`, `focus.ts`, `history.ts` | panel wiring/widths/filters; visibility/focus transitions; the history |
-| `explorer.ts`, `explorer-disk.ts`, `marks.ts` | the explorer, one tree and its zoom; what the walk leaves out; marks |
+| `workspace/explorer/` | Explorer state and cache; row, navigation and action mechanisms; disk reads and marks |
 | `following.ts`, `peek.ts` | links followed only when you say so; the peek at another vault's file |
 | `git.ts`, `info.ts`, `outline.ts`, `footnotes.ts` | git's state, changes and commits; Info; the outline; footnotes |
 | `gitpanel.ts`, `gitview.ts`, `gitmouse.ts`, `draw-git.ts` | the git panel: rows, keys, buttons, footer; mouse |
