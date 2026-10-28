@@ -167,6 +167,23 @@ export function markdownViolations(from: string, text: string): string[] {
   });
 }
 
+/** Parsing mechanisms use contracts/helpers below their own dispatch facade (ORG-T32). */
+export function parsingMechanismViolations(from: string, text: string): string[] {
+  const facades =
+    from.startsWith("src/core/application/config/") && from !== "src/core/application/config/config.ts"
+      ? ["src/core/application/config/config"]
+      : from.startsWith("src/core/documents/model/data/")
+        ? ["src/core/documents/model/data", "src/core/documents/markdown/parse"]
+        : from.startsWith("src/core/documents/markdown/parse/")
+          ? ["src/core/documents/markdown/parse"]
+          : [];
+  return importsOf(text).flatMap((spec) =>
+    facades.includes(targetOf(from, spec))
+      ? [`${from}: imports ${spec} (parsing mechanism must not import its dispatch facade, even for types)`]
+      : [],
+  );
+}
+
 /** Extracted input mechanisms never reach their own facade or load App composition (ORG-T31). */
 export function inputMechanismViolations(from: string, text: string): string[] {
   const area = /^src\/tui\/shell\/input\/(keys|vim|mouse)\//.exec(from)?.[1];
@@ -428,6 +445,7 @@ if (import.meta.main) {
     violations.push(...markdownViolations(from, readFileSync(file, "utf8")));
     violations.push(...pdfViolations(from, readFileSync(file, "utf8")));
     violations.push(...explorerViolations(from, readFileSync(file, "utf8")));
+    violations.push(...parsingMechanismViolations(from, readFileSync(file, "utf8")));
     violations.push(...inputMechanismViolations(from, readFileSync(file, "utf8")));
     violations.push(...gitMechanismViolations(from, readFileSync(file, "utf8")));
     violations.push(...primitiveViolations(from, readFileSync(file, "utf8")));

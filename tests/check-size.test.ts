@@ -11,6 +11,9 @@ afterAll(() => rmSync(sandbox, { recursive: true, force: true }));
 
 describe("the size check (D235, scripts/check-size.ts)", () => {
   test("a file over the limit, or over its cap, is over; one a cap can come down for is said", () => {
+    expect(judgeSizes(new Map([["src/new.ts", 751]]), {}).over).toEqual([
+      { path: "src/new.ts", lines: 751, limit: 750 },
+    ]);
     const capped = { "src/big.ts": 3000, "src/shrunk.ts": 3000, "src/small.ts": 3000 };
     const v = judgeSizes(
       new Map([

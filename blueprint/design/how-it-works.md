@@ -525,6 +525,13 @@ parses the rest in slices of about 12 ms between frames, showing `indexing N…`
 slice parses at least one whole note, so a big one (128 KB and up) is parsed on the workers first (below), the
 slices passing it by; the main thread only puts its chunks together. Where threads can't start, a slice parses it.
 
+Configuration keeps its public entry in `core/application/config/config.ts`; defaults/contracts, ordered loading,
+trust filtering and validation have separate owners. `core/documents/model/data.ts` dispatches explicitly to TOML,
+INI, YAML/JSON and delimited readers under `data/`, preserving each format's validation and source-line rules.
+Markdown's `parse.ts` coordinates assembly; `parse/` owns the original unified processors, normalization, chunk
+boundaries, post-parse transformations and tree queries. Data outlines call heading queries below parser dispatch.
+The shared origin symbol and per-buffer parse caches retain their existing identity and lifetimes.
+
 **Big notes (`15.1`, D120).** Three things keep a big note's cost in proportion to what changed, and two more keep
 the whole-note work — the first open, a change of width — short:
 
