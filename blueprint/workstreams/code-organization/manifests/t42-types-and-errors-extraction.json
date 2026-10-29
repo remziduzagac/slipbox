@@ -1,0 +1,902 @@
+{
+  "moves": {},
+  "retained": [],
+  "edges": {
+    "removed": [],
+    "added": [
+      "src/core/documents/markdown/obsidian.ts -> src/core/documents/markdown/tokenization/contracts.ts",
+      "src/core/documents/markdown/tags.ts -> src/core/documents/markdown/tokenization/contracts.ts",
+      "src/core/documents/markdown/wikilink.ts -> src/core/documents/markdown/tokenization/contracts.ts"
+    ]
+  },
+  "runtime": {
+    "removed": [],
+    "added": []
+  },
+  "tests": {
+    "removed": [],
+    "added": [
+      "test: Markdown adapters propagate the original compiler refusal without calling exit",
+      "test: Markdown compiler adapters preserve their source slice, token identity and callback order",
+      "test: malformed Markdown markers remain text and code fences bypass extension tokenizers"
+    ]
+  },
+  "entries": {
+    "removed": [],
+    "added": []
+  },
+  "counts": {
+    "edges": {
+      "before": 2981,
+      "after": 2984
+    },
+    "runtime": {
+      "before": 2231,
+      "after": 2231
+    },
+    "tests": {
+      "before": 4013,
+      "after": 4016
+    },
+    "entries": {
+      "before": 12,
+      "after": 12
+    }
+  },
+  "runtimeScc": {
+    "before": [
+      [
+        "src/tui/actions/actions.ts",
+        "src/tui/actions/documents/actions-edit.ts",
+        "src/tui/actions/documents/actions-find.ts",
+        "src/tui/actions/documents/actions-links.ts",
+        "src/tui/actions/documents/actions-lsp.ts",
+        "src/tui/actions/documents/actions-view.ts",
+        "src/tui/actions/shell/actions-panes.ts",
+        "src/tui/actions/workspace/actions-files.ts"
+      ],
+      [
+        "src/tui/app/runtime/app.ts",
+        "src/tui/app/settings/settings.ts",
+        "src/tui/workspace/history/history.ts",
+        "src/tui/workspace/session/session.ts",
+        "src/tui/workspace/vaults/vaults.ts"
+      ],
+      [
+        "src/tui/workspace/git/gitremote.ts",
+        "src/tui/workspace/git/views/review/rebase.ts"
+      ]
+    ],
+    "after": [
+      [
+        "src/tui/actions/actions.ts",
+        "src/tui/actions/documents/actions-edit.ts",
+        "src/tui/actions/documents/actions-find.ts",
+        "src/tui/actions/documents/actions-links.ts",
+        "src/tui/actions/documents/actions-lsp.ts",
+        "src/tui/actions/documents/actions-view.ts",
+        "src/tui/actions/shell/actions-panes.ts",
+        "src/tui/actions/workspace/actions-files.ts"
+      ],
+      [
+        "src/tui/app/runtime/app.ts",
+        "src/tui/app/settings/settings.ts",
+        "src/tui/workspace/history/history.ts",
+        "src/tui/workspace/session/session.ts",
+        "src/tui/workspace/vaults/vaults.ts"
+      ],
+      [
+        "src/tui/workspace/git/gitremote.ts",
+        "src/tui/workspace/git/views/review/rebase.ts"
+      ]
+    ]
+  },
+  "unresolved": {
+    "before": [],
+    "after": []
+  },
+  "task": "ORG-T42",
+  "scope": "Shared structural tokenizer types only; emitted runtime and external-input validation unchanged.",
+  "retainedCasts": [
+    {
+      "file": "src/core/documents/markdown/html-adapter.ts",
+      "source": "out.push(c.node as PhrasingContent);",
+      "disposition": "retain",
+      "reason": "HAST/MDAST child unions and HTML presentation transforms have different output node sets; a broad node guard would hide this distinction.",
+      "lineAtBaseline": 175,
+      "line": 175
+    },
+    {
+      "file": "src/core/documents/markdown/html-adapter.ts",
+      "source": "out.push(c.node as RootContent);",
+      "disposition": "retain",
+      "reason": "HAST/MDAST child unions and HTML presentation transforms have different output node sets; a broad node guard would hide this distinction.",
+      "lineAtBaseline": 266,
+      "line": 266
+    },
+    {
+      "file": "src/core/documents/markdown/html-adapter.ts",
+      "source": "return [{ ...node, children } as Nodes];",
+      "disposition": "retain",
+      "reason": "HAST/MDAST child unions and HTML presentation transforms have different output node sets; a broad node guard would hide this distinction.",
+      "lineAtBaseline": 403,
+      "line": 403
+    },
+    {
+      "file": "src/core/documents/markdown/html-adapter.ts",
+      "source": "const result = visit(tree, 0)[0] as Root;",
+      "disposition": "retain",
+      "reason": "HAST/MDAST child unions and HTML presentation transforms have different output node sets; a broad node guard would hide this distinction.",
+      "lineAtBaseline": 405,
+      "line": 405
+    },
+    {
+      "file": "src/core/documents/markdown/html-export.ts",
+      "source": "return \"children\" in node ? ({ ...node, children: node.children.map((n) => inherit(n, p)) } as Nodes) : node;",
+      "disposition": "retain",
+      "reason": "HAST/MDAST child unions and HTML presentation transforms have different output node sets; a broad node guard would hide this distinction.",
+      "lineAtBaseline": 10,
+      "line": 10
+    },
+    {
+      "file": "src/core/documents/markdown/html-export.ts",
+      "source": "children: node.summary.flatMap((n) => walk(n)) as PhrasingContent[],",
+      "disposition": "retain",
+      "reason": "HAST/MDAST child unions and HTML presentation transforms have different output node sets; a broad node guard would hide this distinction.",
+      "lineAtBaseline": 19,
+      "line": 19
+    },
+    {
+      "file": "src/core/documents/markdown/html-export.ts",
+      "source": "let children = node.children.flatMap((n) => walk(n)) as PhrasingContent[];",
+      "disposition": "retain",
+      "reason": "HAST/MDAST child unions and HTML presentation transforms have different output node sets; a broad node guard would hide this distinction.",
+      "lineAtBaseline": 27,
+      "line": 27
+    },
+    {
+      "file": "src/core/documents/markdown/html-export.ts",
+      "source": "if (enabled) children = [{ type, children, position: node.position } as PhrasingContent];",
+      "disposition": "retain",
+      "reason": "HAST/MDAST child unions and HTML presentation transforms have different output node sets; a broad node guard would hide this distinction.",
+      "lineAtBaseline": 35,
+      "line": 35
+    },
+    {
+      "file": "src/core/documents/markdown/html-export.ts",
+      "source": ".map((n) => (\"value\" in n ? String(n.value) : \"children\" in n ? text(n.children as PhrasingContent[]) : \"\"))",
+      "disposition": "retain",
+      "reason": "HAST/MDAST child unions and HTML presentation transforms have different output node sets; a broad node guard would hide this distinction.",
+      "lineAtBaseline": 39,
+      "line": 39
+    },
+    {
+      "file": "src/core/documents/markdown/html-export.ts",
+      "source": "return \"children\" in node ? [{ ...node, children: node.children.flatMap((n) => walk(n)) } as Nodes] : [node];",
+      "disposition": "retain",
+      "reason": "HAST/MDAST child unions and HTML presentation transforms have different output node sets; a broad node guard would hide this distinction.",
+      "lineAtBaseline": 53,
+      "line": 53
+    },
+    {
+      "file": "src/core/documents/markdown/html-export.ts",
+      "source": "return walk(adaptHtml(tree))[0] as Root;",
+      "disposition": "retain",
+      "reason": "HAST/MDAST child unions and HTML presentation transforms have different output node sets; a broad node guard would hide this distinction.",
+      "lineAtBaseline": 55,
+      "line": 55
+    },
+    {
+      "file": "src/core/documents/markdown/html-markdown.ts",
+      "source": "return [{ ...node, children: cleanChildren(node.children) } as Nodes];",
+      "disposition": "retain",
+      "reason": "HAST/MDAST child unions and HTML presentation transforms have different output node sets; a broad node guard would hide this distinction.",
+      "lineAtBaseline": 51,
+      "line": 51
+    },
+    {
+      "file": "src/core/documents/markdown/html-markdown.ts",
+      "source": "return clean(tree)[0] as Root;",
+      "disposition": "retain",
+      "reason": "HAST/MDAST child unions and HTML presentation transforms have different output node sets; a broad node guard would hide this distinction.",
+      "lineAtBaseline": 53,
+      "line": 53
+    },
+    {
+      "file": "src/core/documents/markdown/obsidian.ts",
+      "source": "const list = nodes as unknown as Node[];",
+      "disposition": "retain",
+      "reason": "Extension/library-specific AST or return projection; retain its local contract rather than replace external-input validation with a cast.",
+      "lineAtBaseline": 282,
+      "line": 270
+    },
+    {
+      "file": "src/core/documents/markdown/obsidian.ts",
+      "source": "return (out ?? list) as unknown as T[];",
+      "disposition": "retain",
+      "reason": "Extension/library-specific AST or return projection; retain its local contract rather than replace external-input validation with a cast.",
+      "lineAtBaseline": 310,
+      "line": 298
+    },
+    {
+      "file": "src/core/documents/markdown/parse/chunks.ts",
+      "source": "const node = n as {",
+      "disposition": "retain",
+      "reason": "Trusted parser output, custom metadata or position/origin projection; variants differ in required children, offsets or symbols. Keep producer assumptions and external parse validation separate.",
+      "lineAtBaseline": 193,
+      "line": 193
+    },
+    {
+      "file": "src/core/documents/markdown/parse/engine.ts",
+      "source": "return processor.parse(source) as Root;",
+      "disposition": "retain",
+      "reason": "Trusted parser output, custom metadata or position/origin projection; variants differ in required children, offsets or symbols. Keep producer assumptions and external parse validation separate.",
+      "lineAtBaseline": 34,
+      "line": 34
+    },
+    {
+      "file": "src/core/documents/markdown/parse/headings.ts",
+      "source": "const id = (node.data as { id?: string } | undefined)?.id;",
+      "disposition": "retain",
+      "reason": "Trusted parser output, custom metadata or position/origin projection; variants differ in required children, offsets or symbols. Keep producer assumptions and external parse validation separate.",
+      "lineAtBaseline": 38,
+      "line": 38
+    },
+    {
+      "file": "src/core/documents/markdown/parse/headings.ts",
+      "source": "parts.push(`#${(n as { value: string }).value}`);",
+      "disposition": "retain",
+      "reason": "Trusted parser output, custom metadata or position/origin projection; variants differ in required children, offsets or symbols. Keep producer assumptions and external parse validation separate.",
+      "lineAtBaseline": 74,
+      "line": 74
+    },
+    {
+      "file": "src/core/documents/markdown/parse/headings.ts",
+      "source": "if (\"children\" in node) return node.children.map((c) => plainText(c as Nodes)).join(\"\");",
+      "disposition": "retain",
+      "reason": "Trusted parser output, custom metadata or position/origin projection; variants differ in required children, offsets or symbols. Keep producer assumptions and external parse validation separate.",
+      "lineAtBaseline": 87,
+      "line": 87
+    },
+    {
+      "file": "src/core/documents/markdown/parse/transforms.ts",
+      "source": "const node = n as { children?: { type: string; position?: Position }[] };",
+      "disposition": "retain",
+      "reason": "Trusted parser output, custom metadata or position/origin projection; variants differ in required children, offsets or symbols. Keep producer assumptions and external parse validation separate.",
+      "lineAtBaseline": 22,
+      "line": 22
+    },
+    {
+      "file": "src/core/documents/markdown/parse/transforms.ts",
+      "source": "const node = n as Nodes;",
+      "disposition": "retain",
+      "reason": "Trusted parser output, custom metadata or position/origin projection; variants differ in required children, offsets or symbols. Keep producer assumptions and external parse validation separate.",
+      "lineAtBaseline": 42,
+      "line": 42
+    },
+    {
+      "file": "src/core/documents/markdown/parse/transforms.ts",
+      "source": "((node.data ??= {}) as { id?: string }).id = m[1]!;",
+      "disposition": "retain",
+      "reason": "Trusted parser output, custom metadata or position/origin projection; variants differ in required children, offsets or symbols. Keep producer assumptions and external parse validation separate.",
+      "lineAtBaseline": 48,
+      "line": 48
+    },
+    {
+      "file": "src/core/documents/markdown/parse/transforms.ts",
+      "source": "const node = n as Nodes;",
+      "disposition": "retain",
+      "reason": "Trusted parser output, custom metadata or position/origin projection; variants differ in required children, offsets or symbols. Keep producer assumptions and external parse validation separate.",
+      "lineAtBaseline": 63,
+      "line": 63
+    },
+    {
+      "file": "src/core/documents/markdown/parse/transforms.ts",
+      "source": "((node.data ??= {}) as { literal?: boolean }).literal = true;",
+      "disposition": "retain",
+      "reason": "Trusted parser output, custom metadata or position/origin projection; variants differ in required children, offsets or symbols. Keep producer assumptions and external parse validation separate.",
+      "lineAtBaseline": 69,
+      "line": 69
+    },
+    {
+      "file": "src/core/documents/markdown/parse/transforms.ts",
+      "source": "const node = n as { position?: { start: { offset?: number }; end: { offset?: number } }; children?: unknown[] };",
+      "disposition": "retain",
+      "reason": "Trusted parser output, custom metadata or position/origin projection; variants differ in required children, offsets or symbols. Keep producer assumptions and external parse validation separate.",
+      "lineAtBaseline": 78,
+      "line": 78
+    },
+    {
+      "file": "src/core/documents/markdown/parse/visit.ts",
+      "source": "const children = (node as { children?: Nodes[] }).children;",
+      "disposition": "retain",
+      "reason": "Trusted parser output, custom metadata or position/origin projection; variants differ in required children, offsets or symbols. Keep producer assumptions and external parse validation separate.",
+      "lineAtBaseline": 13,
+      "line": 13
+    },
+    {
+      "file": "src/core/documents/markdown/parse-pool.ts",
+      "source": "const children = JSON.parse(r.value.json) as Root[\"children\"][];",
+      "disposition": "retain",
+      "reason": "Trusted parser output, custom metadata or position/origin projection; variants differ in required children, offsets or symbols. Keep producer assumptions and external parse validation separate.",
+      "lineAtBaseline": 104,
+      "line": 104
+    },
+    {
+      "file": "src/core/documents/markdown/parse-pool.ts",
+      "source": "(idle as { unref?: () => void }).unref?.();",
+      "disposition": "retain",
+      "reason": "Trusted parser output, custom metadata or position/origin projection; variants differ in required children, offsets or symbols. Keep producer assumptions and external parse validation separate.",
+      "lineAtBaseline": 130,
+      "line": 130
+    },
+    {
+      "file": "src/core/documents/markdown/parse.ts",
+      "source": "const root = (from === 0 ? processor : bodyProcessor).parse(lines.slice(from, to).join(\"\\n\")) as Root;",
+      "disposition": "retain",
+      "reason": "Trusted parser output, custom metadata or position/origin projection; variants differ in required children, offsets or symbols. Keep producer assumptions and external parse validation separate.",
+      "lineAtBaseline": 33,
+      "line": 33
+    },
+    {
+      "file": "src/core/documents/markdown/parse.ts",
+      "source": "const root = (first ? processor : bodyProcessor).parse(text) as Root;",
+      "disposition": "retain",
+      "reason": "Trusted parser output, custom metadata or position/origin projection; variants differ in required children, offsets or symbols. Keep producer assumptions and external parse validation separate.",
+      "lineAtBaseline": 51,
+      "line": 51
+    },
+    {
+      "file": "src/core/documents/markdown/parse.ts",
+      "source": "for (const k of p.children) (k as unknown as Record<symbol, object>)[ORIGIN] = {};",
+      "disposition": "retain",
+      "reason": "Trusted parser output, custom metadata or position/origin projection; variants differ in required children, offsets or symbols. Keep producer assumptions and external parse validation separate.",
+      "lineAtBaseline": 61,
+      "line": 61
+    },
+    {
+      "file": "src/core/documents/markdown/parse.ts",
+      "source": "const root = (from === 0 ? processor : bodyProcessor).parse(text) as Root;",
+      "disposition": "retain",
+      "reason": "Trusted parser output, custom metadata or position/origin projection; variants differ in required children, offsets or symbols. Keep producer assumptions and external parse validation separate.",
+      "lineAtBaseline": 102,
+      "line": 102
+    },
+    {
+      "file": "src/core/documents/markdown/parse.ts",
+      "source": "for (const k of kids) (k as unknown as Record<symbol, object>)[ORIGIN] = {};",
+      "disposition": "retain",
+      "reason": "Trusted parser output, custom metadata or position/origin projection; variants differ in required children, offsets or symbols. Keep producer assumptions and external parse validation separate.",
+      "lineAtBaseline": 114,
+      "line": 114
+    },
+    {
+      "file": "src/core/documents/markdown/parse.ts",
+      "source": "data = parseToml(raw) as Record<string, unknown>;",
+      "disposition": "retain",
+      "reason": "Trusted parser output, custom metadata or position/origin projection; variants differ in required children, offsets or symbols. Keep producer assumptions and external parse validation separate.",
+      "lineAtBaseline": 199,
+      "line": 199
+    },
+    {
+      "file": "src/core/documents/markdown/parse.ts",
+      "source": "data = v && typeof v === \"object\" && !Array.isArray(v) ? (v as Record<string, unknown>) : {};",
+      "disposition": "retain",
+      "reason": "Trusted parser output, custom metadata or position/origin projection; variants differ in required children, offsets or symbols. Keep producer assumptions and external parse validation separate.",
+      "lineAtBaseline": 208,
+      "line": 208
+    },
+    {
+      "file": "src/core/documents/markdown/parsecache.ts",
+      "source": "const row = this.get_.get(key) as { data: string } | undefined;",
+      "disposition": "retain",
+      "reason": "Trusted parser output, custom metadata or position/origin projection; variants differ in required children, offsets or symbols. Keep producer assumptions and external parse validation separate.",
+      "lineAtBaseline": 70,
+      "line": 70
+    },
+    {
+      "file": "src/core/rendering/export/assemble.ts",
+      "source": "if (n.type === \"heading\" && (n.data as { anchor?: string } | undefined)?.anchor)",
+      "disposition": "retain",
+      "reason": "Assembler-owned metadata or format-specific AST projection; anchor, picture, code and child contracts differ. Retain rather than assert a universal shape.",
+      "lineAtBaseline": 157,
+      "line": 157
+    },
+    {
+      "file": "src/core/rendering/export/assemble.ts",
+      "source": "ids.add((n.data as { anchor: string }).anchor);",
+      "disposition": "retain",
+      "reason": "Assembler-owned metadata or format-specific AST projection; anchor, picture, code and child contracts differ. Retain rather than assert a universal shape.",
+      "lineAtBaseline": 158,
+      "line": 158
+    },
+    {
+      "file": "src/core/rendering/export/assemble.ts",
+      "source": "if (svg) ((n.data ??= {}) as Record<string, unknown>).picture = { svg, kind: \"math\" } satisfies ExportPicture;",
+      "disposition": "retain",
+      "reason": "Assembler-owned metadata or format-specific AST projection; anchor, picture, code and child contracts differ. Retain rather than assert a universal shape.",
+      "lineAtBaseline": 214,
+      "line": 214
+    },
+    {
+      "file": "src/core/rendering/export/assemble.ts",
+      "source": "if ((k.type as string) === \"wikiLink\" && (k as unknown as WikiLink).embed) {",
+      "disposition": "retain",
+      "reason": "Assembler-owned metadata or format-specific AST projection; anchor, picture, code and child contracts differ. Retain rather than assert a universal shape.",
+      "lineAtBaseline": 243,
+      "line": 243
+    },
+    {
+      "file": "src/core/rendering/export/assemble.ts",
+      "source": "const w = k as unknown as WikiLink;",
+      "disposition": "retain",
+      "reason": "Assembler-owned metadata or format-specific AST projection; anchor, picture, code and child contracts differ. Retain rather than assert a universal shape.",
+      "lineAtBaseline": 244,
+      "line": 244
+    },
+    {
+      "file": "src/core/rendering/export/assemble.ts",
+      "source": "out.push(...wiki(n as unknown as WikiLink, c));",
+      "disposition": "retain",
+      "reason": "Assembler-owned metadata or format-specific AST projection; anchor, picture, code and child contracts differ. Retain rather than assert a universal shape.",
+      "lineAtBaseline": 287,
+      "line": 287
+    },
+    {
+      "file": "src/core/rendering/export/assemble.ts",
+      "source": "out.push({ type: \"text\", value: `#${(n as unknown as { value: string }).value}` });",
+      "disposition": "retain",
+      "reason": "Assembler-owned metadata or format-specific AST projection; anchor, picture, code and child contracts differ. Retain rather than assert a universal shape.",
+      "lineAtBaseline": 291,
+      "line": 291
+    },
+    {
+      "file": "src/core/rendering/export/assemble.ts",
+      "source": "((n.data ??= {}) as Record<string, unknown>).picture = {",
+      "disposition": "retain",
+      "reason": "Assembler-owned metadata or format-specific AST projection; anchor, picture, code and child contracts differ. Retain rather than assert a universal shape.",
+      "lineAtBaseline": 308,
+      "line": 308
+    },
+    {
+      "file": "src/core/rendering/export/assemble.ts",
+      "source": "const data = p.data as { picture?: ExportPicture } | undefined;",
+      "disposition": "retain",
+      "reason": "Assembler-owned metadata or format-specific AST projection; anchor, picture, code and child contracts differ. Retain rather than assert a universal shape.",
+      "lineAtBaseline": 320,
+      "line": 320
+    },
+    {
+      "file": "src/core/rendering/export/assemble.ts",
+      "source": "const data = p.data as { picture?: ExportPicture } | undefined;",
+      "disposition": "retain",
+      "reason": "Assembler-owned metadata or format-specific AST projection; anchor, picture, code and child contracts differ. Retain rather than assert a universal shape.",
+      "lineAtBaseline": 328,
+      "line": 328
+    },
+    {
+      "file": "src/core/rendering/export/assemble.ts",
+      "source": "if (linked && p.type === \"link\" && (p.data as { remoteImage?: boolean } | undefined)?.remoteImage)",
+      "disposition": "retain",
+      "reason": "Assembler-owned metadata or format-specific AST projection; anchor, picture, code and child contracts differ. Retain rather than assert a universal shape.",
+      "lineAtBaseline": 331,
+      "line": 331
+    },
+    {
+      "file": "src/core/rendering/export/assemble.ts",
+      "source": "(n as { children: PhrasingContent[] }).children = await inline(",
+      "disposition": "retain",
+      "reason": "Assembler-owned metadata or format-specific AST projection; anchor, picture, code and child contracts differ. Retain rather than assert a universal shape.",
+      "lineAtBaseline": 345,
+      "line": 345
+    },
+    {
+      "file": "src/core/rendering/export/assemble.ts",
+      "source": "(n as { children: PhrasingContent[] }).children,",
+      "disposition": "retain",
+      "reason": "Assembler-owned metadata or format-specific AST projection; anchor, picture, code and child contracts differ. Retain rather than assert a universal shape.",
+      "lineAtBaseline": 346,
+      "line": 346
+    },
+    {
+      "file": "src/core/rendering/export/assemble.ts",
+      "source": "lead?.type === \"text\" && !(n.data as { literal?: boolean } | undefined)?.literal ? CALLOUT.exec(lead.value) : null;",
+      "disposition": "retain",
+      "reason": "Assembler-owned metadata or format-specific AST projection; anchor, picture, code and child contracts differ. Retain rather than assert a universal shape.",
+      "lineAtBaseline": 374,
+      "line": 374
+    },
+    {
+      "file": "src/core/rendering/export/assets/convert.ts",
+      "source": "await (mod.init as unknown as (module: WebAssembly.Module) => Promise<void>)(",
+      "disposition": "retain",
+      "reason": "Assembler-owned metadata or format-specific AST projection; anchor, picture, code and child contracts differ. Retain rather than assert a universal shape.",
+      "lineAtBaseline": 128,
+      "line": 128
+    },
+    {
+      "file": "src/core/rendering/export/assets/convert.ts",
+      "source": "for (const n of nodes as { type: string; data?: { picture?: ExportPicture }; children?: unknown[] }[]) {",
+      "disposition": "retain",
+      "reason": "Assembler-owned metadata or format-specific AST projection; anchor, picture, code and child contracts differ. Retain rather than assert a universal shape.",
+      "lineAtBaseline": 175,
+      "line": 175
+    },
+    {
+      "file": "src/core/rendering/export/formats/docx.ts",
+      "source": "const anchor = (n.data as { anchor?: string } | undefined)?.anchor;",
+      "disposition": "retain",
+      "reason": "Assembler-owned metadata or format-specific AST projection; anchor, picture, code and child contracts differ. Retain rather than assert a universal shape.",
+      "lineAtBaseline": 153,
+      "line": 153
+    },
+    {
+      "file": "src/core/rendering/export/formats/docx.ts",
+      "source": "const kind = (n.data as { callout?: string } | undefined)?.callout;",
+      "disposition": "retain",
+      "reason": "Assembler-owned metadata or format-specific AST projection; anchor, picture, code and child contracts differ. Retain rather than assert a universal shape.",
+      "lineAtBaseline": 168,
+      "line": 168
+    },
+    {
+      "file": "src/core/rendering/export/formats/docx.ts",
+      "source": "out.push(...displayMath(n.value, (n.data as { picture?: ExportPicture } | undefined)?.picture, w, quoted));",
+      "disposition": "retain",
+      "reason": "Assembler-owned metadata or format-specific AST projection; anchor, picture, code and child contracts differ. Retain rather than assert a universal shape.",
+      "lineAtBaseline": 199,
+      "line": 199
+    },
+    {
+      "file": "src/core/rendering/export/formats/docx.ts",
+      "source": "const pic = (n.data as { picture?: ExportPicture } | undefined)?.picture;",
+      "disposition": "retain",
+      "reason": "Assembler-owned metadata or format-specific AST projection; anchor, picture, code and child contracts differ. Retain rather than assert a universal shape.",
+      "lineAtBaseline": 306,
+      "line": 306
+    },
+    {
+      "file": "src/core/rendering/export/formats/docx.ts",
+      "source": "if (\"children\" in n) out.push(...runs((n as { children: PhrasingContent[] }).children, s, w));",
+      "disposition": "retain",
+      "reason": "Assembler-owned metadata or format-specific AST projection; anchor, picture, code and child contracts differ. Retain rather than assert a universal shape.",
+      "lineAtBaseline": 320,
+      "line": 320
+    },
+    {
+      "file": "src/core/rendering/export/formats/docx.ts",
+      "source": "else if (\"value\" in n) out.push(text(String((n as { value: unknown }).value)));",
+      "disposition": "retain",
+      "reason": "Assembler-owned metadata or format-specific AST projection; anchor, picture, code and child contracts differ. Retain rather than assert a universal shape.",
+      "lineAtBaseline": 321,
+      "line": 321
+    },
+    {
+      "file": "src/core/rendering/export/formats/epub.ts",
+      "source": "for (const n of nodes as { type: string; data?: { anchor?: string }; children?: unknown[] }[]) {",
+      "disposition": "retain",
+      "reason": "Assembler-owned metadata or format-specific AST projection; anchor, picture, code and child contracts differ. Retain rather than assert a universal shape.",
+      "lineAtBaseline": 36,
+      "line": 36
+    },
+    {
+      "file": "src/core/rendering/export/formats/hast.ts",
+      "source": "(tree.children as ElementContent[]).forEach(relabel);",
+      "disposition": "retain",
+      "reason": "HAST/MDAST child unions and HTML presentation transforms have different output node sets; a broad node guard would hide this distinction.",
+      "lineAtBaseline": 55,
+      "line": 55
+    },
+    {
+      "file": "src/core/rendering/export/formats/hast.ts",
+      "source": "children: tree.children as ElementContent[],",
+      "disposition": "retain",
+      "reason": "HAST/MDAST child unions and HTML presentation transforms have different output node sets; a broad node guard would hide this distinction.",
+      "lineAtBaseline": 60,
+      "line": 60
+    },
+    {
+      "file": "src/core/rendering/export/formats/hast.ts",
+      "source": "const data = (n.data ??= {}) as Record<string, unknown>;",
+      "disposition": "retain",
+      "reason": "HAST/MDAST child unions and HTML presentation transforms have different output node sets; a broad node guard would hide this distinction.",
+      "lineAtBaseline": 76,
+      "line": 76
+    },
+    {
+      "file": "src/core/rendering/export/formats/hast.ts",
+      "source": "if (\"children\" in n) prepare(n.children as Nodes[], o);",
+      "disposition": "retain",
+      "reason": "HAST/MDAST child unions and HTML presentation transforms have different output node sets; a broad node guard would hide this distinction.",
+      "lineAtBaseline": 186,
+      "line": 186
+    },
+    {
+      "file": "src/core/rendering/export/formats/hast.ts",
+      "source": "? plain(n.children as PhrasingContent[])",
+      "disposition": "retain",
+      "reason": "HAST/MDAST child unions and HTML presentation transforms have different output node sets; a broad node guard would hide this distinction.",
+      "lineAtBaseline": 197,
+      "line": 197
+    },
+    {
+      "file": "src/core/rendering/export/formats/markdown.ts",
+      "source": "const data = n.data as { anchor?: string; chapter?: string } | undefined;",
+      "disposition": "retain",
+      "reason": "Assembler-owned metadata or format-specific AST projection; anchor, picture, code and child contracts differ. Retain rather than assert a universal shape.",
+      "lineAtBaseline": 190,
+      "line": 190
+    },
+    {
+      "file": "src/core/rendering/export/formats/markdown.ts",
+      "source": "nodes.map((n) => (\"value\" in n ? n.value : \"children\" in n ? text(n.children as PhrasingContent[]) : \"\")).join(\"\");",
+      "disposition": "retain",
+      "reason": "Assembler-owned metadata or format-specific AST projection; anchor, picture, code and child contracts differ. Retain rather than assert a universal shape.",
+      "lineAtBaseline": 198,
+      "line": 198
+    },
+    {
+      "file": "src/core/rendering/export/formats/markdown.ts",
+      "source": "if (\"children\" in n) visit(n.children as Nodes[]);",
+      "disposition": "retain",
+      "reason": "Assembler-owned metadata or format-specific AST projection; anchor, picture, code and child contracts differ. Retain rather than assert a universal shape.",
+      "lineAtBaseline": 209,
+      "line": 209
+    },
+    {
+      "file": "src/core/rendering/export/formats/markdown.ts",
+      "source": "const data = n.data as Record<string, unknown> | undefined;",
+      "disposition": "retain",
+      "reason": "Assembler-owned metadata or format-specific AST projection; anchor, picture, code and child contracts differ. Retain rather than assert a universal shape.",
+      "lineAtBaseline": 229,
+      "line": 229
+    },
+    {
+      "file": "src/core/rendering/export/formats/markdown.ts",
+      "source": "(n.children[0]!.data as { code?: Code } | undefined)?.code",
+      "disposition": "retain",
+      "reason": "Assembler-owned metadata or format-specific AST projection; anchor, picture, code and child contracts differ. Retain rather than assert a universal shape.",
+      "lineAtBaseline": 234,
+      "line": 234
+    },
+    {
+      "file": "src/core/rendering/export/formats/markdown.ts",
+      "source": "nodes[i] = (n.children[0]!.data as { code: Code }).code;",
+      "disposition": "retain",
+      "reason": "Assembler-owned metadata or format-specific AST projection; anchor, picture, code and child contracts differ. Retain rather than assert a universal shape.",
+      "lineAtBaseline": 237,
+      "line": 237
+    },
+    {
+      "file": "src/core/rendering/export/formats/markdown.ts",
+      "source": "if (\"children\" in n) prepare(n.children as Nodes[], c);",
+      "disposition": "retain",
+      "reason": "Assembler-owned metadata or format-specific AST projection; anchor, picture, code and child contracts differ. Retain rather than assert a universal shape.",
+      "lineAtBaseline": 270,
+      "line": 270
+    },
+    {
+      "file": "src/core/rendering/export/formats/markdown.ts",
+      "source": "const marker = { type: \"calloutMarker\", value: `[!${kind}]` } as unknown as PhrasingContent;",
+      "disposition": "retain",
+      "reason": "Assembler-owned metadata or format-specific AST projection; anchor, picture, code and child contracts differ. Retain rather than assert a universal shape.",
+      "lineAtBaseline": 278,
+      "line": 278
+    },
+    {
+      "file": "src/core/rendering/export/formats/markdown.ts",
+      "source": "children: [marker, ...(title.length ? [{ type: \"text\", value: \" \" } as PhrasingContent, ...title] : [])],",
+      "disposition": "retain",
+      "reason": "Assembler-owned metadata or format-specific AST projection; anchor, picture, code and child contracts differ. Retain rather than assert a universal shape.",
+      "lineAtBaseline": 281,
+      "line": 281
+    },
+    {
+      "file": "src/core/rendering/export/formats/pdf/fonts/adapter.ts",
+      "source": "const f = (this.pdf.font(font).fontSize(size) as unknown as { _font: { ascender: number; descender: number } })",
+      "disposition": "retain",
+      "reason": "PDFKit or font/line-layout adapter; preserves its library-specific metric, cursor and pagination contract. T29 already isolates these boundaries.",
+      "lineAtBaseline": 119,
+      "line": 119
+    },
+    {
+      "file": "src/core/rendering/export/formats/pdf/layout/paint.ts",
+      "source": "while (last > 0 && l.atoms[last - 1]!.kind === \"text\" && (l.atoms[last - 1] as { space: boolean }).space) last--;",
+      "disposition": "retain",
+      "reason": "PDFKit or font/line-layout adapter; preserves its library-specific metric, cursor and pagination contract. T29 already isolates these boundaries.",
+      "lineAtBaseline": 26,
+      "line": 26
+    },
+    {
+      "file": "src/core/rendering/export/formats/pdf/writing/blocks.ts",
+      "source": "const picture = (n.data as { picture?: ExportPicture } | undefined)?.picture;",
+      "disposition": "retain",
+      "reason": "PDFKit or font/line-layout adapter; preserves its library-specific metric, cursor and pagination contract. T29 already isolates these boundaries.",
+      "lineAtBaseline": 89,
+      "line": 89
+    },
+    {
+      "file": "src/core/rendering/export/formats/pdf/writing/blocks.ts",
+      "source": "const picture = (n.data as { picture?: ExportPicture } | undefined)?.picture;",
+      "disposition": "retain",
+      "reason": "PDFKit or font/line-layout adapter; preserves its library-specific metric, cursor and pagination contract. T29 already isolates these boundaries.",
+      "lineAtBaseline": 96,
+      "line": 96
+    },
+    {
+      "file": "src/core/rendering/export/formats/pdf/writing/blocks.ts",
+      "source": "if (\"children\" in n) walk(n.children as PhrasingContent[], s);",
+      "disposition": "retain",
+      "reason": "PDFKit or font/line-layout adapter; preserves its library-specific metric, cursor and pagination contract. T29 already isolates these boundaries.",
+      "lineAtBaseline": 116,
+      "line": 116
+    },
+    {
+      "file": "src/core/rendering/export/formats/pdf/writing/blocks.ts",
+      "source": "const anchor = (n.data as { anchor?: string } | undefined)?.anchor;",
+      "disposition": "retain",
+      "reason": "PDFKit or font/line-layout adapter; preserves its library-specific metric, cursor and pagination contract. T29 already isolates these boundaries.",
+      "lineAtBaseline": 192,
+      "line": 192
+    },
+    {
+      "file": "src/core/rendering/export/formats/pdf/writing/blocks.ts",
+      "source": "const kind = (n.data as { callout?: string } | undefined)?.callout;",
+      "disposition": "retain",
+      "reason": "PDFKit or font/line-layout adapter; preserves its library-specific metric, cursor and pagination contract. T29 already isolates these boundaries.",
+      "lineAtBaseline": 226,
+      "line": 226
+    },
+    {
+      "file": "src/core/rendering/export/formats/pdf/writing/blocks.ts",
+      "source": "const pic = (n.data as { picture?: ExportPicture } | undefined)?.picture;",
+      "disposition": "retain",
+      "reason": "PDFKit or font/line-layout adapter; preserves its library-specific metric, cursor and pagination contract. T29 already isolates these boundaries.",
+      "lineAtBaseline": 321,
+      "line": 321
+    },
+    {
+      "file": "src/core/rendering/export/formats/pdf/writing/document.ts",
+      "source": "font: null as unknown as string,",
+      "disposition": "retain",
+      "reason": "PDFKit or font/line-layout adapter; preserves its library-specific metric, cursor and pagination contract. T29 already isolates these boundaries.",
+      "lineAtBaseline": 12,
+      "line": 12
+    },
+    {
+      "file": "src/core/rendering/export/jobs.ts",
+      "source": "new Worker(workerUrl(\"rendering/export/export-worker.ts\"), { env: { ...process.env } as Record<string, string> }),",
+      "disposition": "retain",
+      "reason": "Assembler-owned metadata or format-specific AST projection; anchor, picture, code and child contracts differ. Retain rather than assert a universal shape.",
+      "lineAtBaseline": 75,
+      "line": 75
+    }
+  ],
+  "shared": [
+    {
+      "symbol": "Code",
+      "owners": [
+        "wikilink",
+        "tags",
+        "obsidian"
+      ],
+      "reason": "Identical number-or-null character contract."
+    },
+    {
+      "symbol": "State",
+      "owners": [
+        "wikilink",
+        "tags",
+        "obsidian"
+      ],
+      "reason": "Identical recursive continuation signature."
+    },
+    {
+      "symbol": "Effects<Token>",
+      "owners": [
+        "wikilink",
+        "tags",
+        "obsidian"
+      ],
+      "reason": "Identical enter/exit/consume operations; token result stays unknown for wikilinks/tags and concrete for Obsidian."
+    },
+    {
+      "symbol": "CompileContext",
+      "owners": [
+        "wikilink",
+        "tags",
+        "obsidian"
+      ],
+      "reason": "Identical enter/exit callbacks. LiteralCompileContext adds source serialization for wikilinks/tags; wikilinks retain local stack capability."
+    }
+  ],
+  "retainedAdapters": [
+    {
+      "reference": "src/core/documents/markdown/obsidian.ts:1",
+      "reason": "Token position/event/resolver model remains local; other tokenizers do not own it."
+    },
+    {
+      "reference": "src/core/documents/markdown/wikilink.ts:1",
+      "reason": "Tokenizer acceptance limits and compiler stack stay specific; no broad context object."
+    },
+    {
+      "reference": "src/core/rendering/export/formats/pdf/fonts/adapter.ts:119",
+      "reason": "PDFKit _font metrics remain behind the T29 PdfFonts adapter, not a Markdown AST guard."
+    },
+    {
+      "reference": "src/core/rendering/export/assets/convert.ts:128",
+      "reason": "WASM init signature adapter stays package-specific; runtime failures retain existing fallback handling."
+    }
+  ],
+  "typeDependencies": {
+    "hast": "Type-only tree contracts; package already arrives transitively. No package change bundled; explicit direct type dependency belongs in a separate dependency-ownership change.",
+    "unist": "Position/Point interfaces; same separate direct type-dependency assessment, not replaced with local casts."
+  },
+  "errors": [
+    {
+      "contract": "WriteRefused",
+      "owner": "src/core/foundation/platform/fsutil.ts:133",
+      "presentation": [
+        "src/cli/common.ts:466",
+        "src/cli/writing.ts:195",
+        "src/tui/app/runtime/app.ts:1160"
+      ],
+      "tests": [
+        "tests/core/foundation/platform/writes.test.ts",
+        "tests/core/documents/editing/tasks.test.ts"
+      ],
+      "policy": "Filesystem owner refuses vault escape before write. Atomic cleanup remains local; CLI translates to refused exit 5; TUI preserves typed refusal text."
+    },
+    {
+      "contract": "CliError",
+      "owner": "src/cli/common.ts:49",
+      "presentation": [
+        "src/cli/cli.ts:373"
+      ],
+      "tests": [
+        "tests/cli/reading/handler.test.ts"
+      ],
+      "policy": "Handlers retain typed code/data; launcher owns text/JSON presentation and exit selection. Missing note remains exit 3; usage remains exit 2."
+    },
+    {
+      "contract": "WorkerRequestError",
+      "owner": "src/core/foundation/workers/worker-requests.ts:12",
+      "tests": [
+        "tests/worker-requests.test.ts",
+        "tests/export-jobs.test.ts"
+      ],
+      "policy": "Mailbox owns typed failed/deadline/cancelled/crashed/unavailable/stopped/result reasons, cleanup and restart. Feature owners keep retry/cache/presentation. ExportJobManager owns fresh-worker cancellation/termination; no unified global error type."
+    }
+  ],
+  "extraction": [
+    {
+      "from": "src/core/documents/markdown/wikilink.ts",
+      "to": "src/core/documents/markdown/tokenization/contracts.ts",
+      "symbols": [
+        "Code",
+        "State",
+        "Effects",
+        "CompileContext"
+      ]
+    },
+    {
+      "from": "src/core/documents/markdown/tags.ts",
+      "to": "src/core/documents/markdown/tokenization/contracts.ts",
+      "symbols": [
+        "Code",
+        "State",
+        "Effects",
+        "CompileContext"
+      ]
+    },
+    {
+      "from": "src/core/documents/markdown/obsidian.ts",
+      "to": "src/core/documents/markdown/tokenization/contracts.ts",
+      "symbols": [
+        "Code",
+        "State",
+        "Effects",
+        "CompileContext"
+      ]
+    }
+  ]
+}
