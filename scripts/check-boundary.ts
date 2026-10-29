@@ -92,6 +92,26 @@ export function graphCompositionViolations(from: string, text: string): string[]
   });
 }
 
+/** Buffer layouts keep cache capabilities below the buffer and App runtime owners (ORG-T38). */
+export const BUFFER_LAYOUT_HELPERS = [
+  "src/tui/documents/buffers/layout/contracts.ts",
+  "src/tui/documents/buffers/layout/source.ts",
+  "src/tui/documents/buffers/layout/code.ts",
+  "src/tui/documents/buffers/layout/note.ts",
+] as const;
+
+export function bufferLayoutViolations(from: string, text: string): string[] {
+  if (!(BUFFER_LAYOUT_HELPERS as readonly string[]).includes(from)) return [];
+  const owners = ["src/tui/documents/buffers/buffer", "src/tui/app/runtime/app"];
+  return new Bun.Transpiler({ loader: "ts" })
+    .scanImports(text)
+    .flatMap(({ path }) =>
+      owners.includes(targetOf(from, path))
+        ? [`${from}: imports ${path} (buffer-layout helper must not load buffer or App composition)`]
+        : [],
+    );
+}
+
 /** Diagnostics helpers retain explicit inputs, below controller and process ownership (ORG-T37). */
 export const DIAGNOSTICS_HELPERS = [
   "src/tui/documents/diagnostics/problems/contracts.ts",
@@ -607,6 +627,7 @@ if (import.meta.main) {
     violations.push(...explorerViolations(from, readFileSync(file, "utf8")));
     violations.push(...drawingOwnerViolations(from, readFileSync(file, "utf8")));
     violations.push(...diagnosticsHelperViolations(from, readFileSync(file, "utf8")));
+    violations.push(...bufferLayoutViolations(from, readFileSync(file, "utf8")));
     violations.push(...renameMechanismViolations(from, readFileSync(file, "utf8")));
     violations.push(...searchMechanismViolations(from, readFileSync(file, "utf8")));
     violations.push(...walkingMechanismViolations(from, readFileSync(file, "utf8")));

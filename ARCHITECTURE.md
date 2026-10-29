@@ -41,6 +41,8 @@ for a person, and a command line for agents and scripts, both over the same plai
   row/tree/selection mechanisms and geometry records stay below composition; tabs still contain views as before.
   Diagnostics keep the panel, cached findings, trust and cancellation in their controllers; lower problem-row and
   language-protocol helpers receive the current controller or explicit inputs, without loading App or process owners.
+  A buffer owns its text, history, marks and caches. Its source/code/note layout helpers read the same buffer and live
+  cache getters under `documents/buffers/layout/`; replacing a cache never leaves them with an earlier snapshot.
 
 **The boundary.** `src/core/` never imports `src/tui/`, `src/cli/` or `@opentui/*`, and `src/cli/` never imports
 `src/tui/`. Inside the TUI, only `src/tui/shell/terminal/opentui.ts` (the `Canvas` over OpenTUI's buffer) and

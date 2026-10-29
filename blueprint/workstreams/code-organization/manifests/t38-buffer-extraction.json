@@ -1,0 +1,172 @@
+{
+  "moves": {},
+  "retained": [],
+  "renamedBasenames": {},
+  "edges": {
+    "removed": [],
+    "added": [
+      "src/tui/documents/buffers/buffer.ts -> src/tui/documents/buffers/layout/code.ts",
+      "src/tui/documents/buffers/buffer.ts -> src/tui/documents/buffers/layout/contracts.ts",
+      "src/tui/documents/buffers/buffer.ts -> src/tui/documents/buffers/layout/note.ts",
+      "src/tui/documents/buffers/buffer.ts -> src/tui/documents/buffers/layout/source.ts",
+      "src/tui/documents/buffers/layout/code.ts -> src/core/documents/diagnostics/diagnostics.ts",
+      "src/tui/documents/buffers/layout/code.ts -> src/core/rendering/layout/code/code.ts",
+      "src/tui/documents/buffers/layout/code.ts -> src/core/rendering/layout/ir.ts",
+      "src/tui/documents/buffers/layout/code.ts -> src/core/rendering/theme/glyphs.ts",
+      "src/tui/documents/buffers/layout/code.ts -> src/tui/documents/buffers/layout/contracts.ts",
+      "src/tui/documents/buffers/layout/contracts.ts -> src/core/rendering/layout/code/source.ts",
+      "src/tui/documents/buffers/layout/contracts.ts -> src/core/rendering/layout/ir.ts",
+      "src/tui/documents/buffers/layout/contracts.ts -> src/core/rendering/layout/markdown/render.ts",
+      "src/tui/documents/buffers/layout/contracts.ts -> src/tui/documents/buffers/buffer.ts",
+      "src/tui/documents/buffers/layout/note.ts -> src/core/documents/model/note.ts",
+      "src/tui/documents/buffers/layout/note.ts -> src/core/rendering/layout/ir.ts",
+      "src/tui/documents/buffers/layout/note.ts -> src/core/rendering/theme/glyphs.ts",
+      "src/tui/documents/buffers/layout/note.ts -> src/core/workspace/graph/graph.ts",
+      "src/tui/documents/buffers/layout/note.ts -> src/tui/documents/buffers/layout/contracts.ts",
+      "src/tui/documents/buffers/layout/source.ts -> src/core/documents/markdown/parse.ts",
+      "src/tui/documents/buffers/layout/source.ts -> src/core/documents/model/readers.ts",
+      "src/tui/documents/buffers/layout/source.ts -> src/core/rendering/layout/code/source.ts",
+      "src/tui/documents/buffers/layout/source.ts -> src/core/rendering/layout/ir.ts",
+      "src/tui/documents/buffers/layout/source.ts -> src/core/rendering/theme/glyphs.ts",
+      "src/tui/documents/buffers/layout/source.ts -> src/tui/documents/buffers/layout/contracts.ts"
+    ]
+  },
+  "runtime": {
+    "removed": [
+      "src/tui/documents/buffers/buffer.ts -> src/core/documents/model/note.ts"
+    ],
+    "added": [
+      "src/tui/documents/buffers/buffer.ts -> src/tui/documents/buffers/layout/code.ts",
+      "src/tui/documents/buffers/buffer.ts -> src/tui/documents/buffers/layout/note.ts",
+      "src/tui/documents/buffers/buffer.ts -> src/tui/documents/buffers/layout/source.ts",
+      "src/tui/documents/buffers/layout/code.ts -> src/core/rendering/layout/code/code.ts",
+      "src/tui/documents/buffers/layout/note.ts -> src/core/documents/model/note.ts",
+      "src/tui/documents/buffers/layout/source.ts -> src/core/documents/markdown/parse.ts",
+      "src/tui/documents/buffers/layout/source.ts -> src/core/documents/model/readers.ts",
+      "src/tui/documents/buffers/layout/source.ts -> src/core/rendering/layout/code/source.ts"
+    ]
+  },
+  "tests": {
+    "removed": [],
+    "added": [
+      "test: buffer-layout helpers reject runtime owners while retaining buffer and App types",
+      "test: code layouts keep their own variants for open cells, problem marks and widths",
+      "test: full invalidation replaces the render cache but preserves the map and source-cache identities",
+      "test: late-library arrival drops only pending variants from the shared layout map",
+      "test: layout and parse reads preserve the original shared buffer undo and redo step",
+      "test: source layout reuses its variant and invalidates layouts without replacing the source-row cache",
+      "test: the six-variant cache evicts the oldest insertion while keeping repeated variants"
+    ]
+  },
+  "entries": {
+    "removed": [],
+    "added": []
+  },
+  "extraction": [
+    {
+      "from": "src/tui/documents/buffers/buffer.ts",
+      "to": "src/tui/documents/buffers/layout/source.ts",
+      "symbols": [
+        "sourceLayout"
+      ],
+      "export": "sourceLayout"
+    },
+    {
+      "from": "src/tui/documents/buffers/buffer.ts",
+      "to": "src/tui/documents/buffers/layout/code.ts",
+      "symbols": [
+        "codeLayout"
+      ],
+      "export": "codeLayout"
+    },
+    {
+      "from": "src/tui/documents/buffers/buffer.ts",
+      "to": "src/tui/documents/buffers/layout/note.ts",
+      "symbols": [
+        "layout"
+      ],
+      "export": "noteLayout"
+    }
+  ],
+  "ownership": {
+    "buffer": "original NoteBuffer retains history/marks/text/parse ownership and the same layouts/sourceCache/renderCache fields and reset sites",
+    "bridge": "one new private layoutContext with buffer receiver and getters of parsedVersion/layouts/sourceCache/renderCache; no state copied",
+    "layout": "three methods delegate to original bodies with explicit live buffer/cache capabilities; same defaults and public signatures"
+  },
+  "guards": {
+    "owners": [
+      "src/tui/documents/buffers/layout/contracts.ts",
+      "src/tui/documents/buffers/layout/source.ts",
+      "src/tui/documents/buffers/layout/code.ts",
+      "src/tui/documents/buffers/layout/note.ts"
+    ],
+    "rule": "bufferLayoutViolations",
+    "forbidden": "runtime NoteBuffer and App; type imports allowed"
+  },
+  "runtimeScc": {
+    "before": [
+      [
+        "src/tui/documents/editing/editing.ts",
+        "src/tui/documents/editing/snippets.ts"
+      ],
+      [
+        "src/tui/workspace/git/gitremote.ts",
+        "src/tui/workspace/git/views/review/rebase.ts"
+      ],
+      [
+        "src/core/rendering/export/formats/html.ts",
+        "src/core/rendering/export/formats/markdown.ts",
+        "src/core/rendering/export/stream.ts"
+      ],
+      [
+        "src/tui/app/runtime/app.ts",
+        "src/tui/app/settings/settings.ts",
+        "src/tui/workspace/history/history.ts",
+        "src/tui/workspace/session/session.ts",
+        "src/tui/workspace/vaults/vaults.ts"
+      ],
+      [
+        "src/tui/actions/actions.ts",
+        "src/tui/actions/documents/actions-edit.ts",
+        "src/tui/actions/documents/actions-find.ts",
+        "src/tui/actions/documents/actions-links.ts",
+        "src/tui/actions/documents/actions-lsp.ts",
+        "src/tui/actions/documents/actions-view.ts",
+        "src/tui/actions/shell/actions-panes.ts",
+        "src/tui/actions/workspace/actions-files.ts"
+      ]
+    ],
+    "after": [
+      [
+        "src/tui/documents/editing/editing.ts",
+        "src/tui/documents/editing/snippets.ts"
+      ],
+      [
+        "src/tui/workspace/git/gitremote.ts",
+        "src/tui/workspace/git/views/review/rebase.ts"
+      ],
+      [
+        "src/core/rendering/export/formats/html.ts",
+        "src/core/rendering/export/formats/markdown.ts",
+        "src/core/rendering/export/stream.ts"
+      ],
+      [
+        "src/tui/app/runtime/app.ts",
+        "src/tui/app/settings/settings.ts",
+        "src/tui/workspace/history/history.ts",
+        "src/tui/workspace/session/session.ts",
+        "src/tui/workspace/vaults/vaults.ts"
+      ],
+      [
+        "src/tui/actions/actions.ts",
+        "src/tui/actions/documents/actions-edit.ts",
+        "src/tui/actions/documents/actions-find.ts",
+        "src/tui/actions/documents/actions-links.ts",
+        "src/tui/actions/documents/actions-lsp.ts",
+        "src/tui/actions/documents/actions-view.ts",
+        "src/tui/actions/shell/actions-panes.ts",
+        "src/tui/actions/workspace/actions-files.ts"
+      ]
+    ]
+  }
+}

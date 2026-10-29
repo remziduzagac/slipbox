@@ -378,6 +378,11 @@ controller and buffer state. Syntax timers, trust prompts, server/linter lifecyc
 `Languages`; problem caches and selected/filter/fold state remain in `Problems`. The boundary checker keeps these
 helpers below controllers, App runtime composition, the server manager and the syntax worker facade.
 
+`documents/buffers/layout/` separates source, code and note layout mechanisms from `NoteBuffer`. The buffer still owns
+its text, undo/redo, marks, parse and cache state. A private capability object provides its original buffer and live
+cache getters, so invalidation, cache replacement, embed tracking and picture bookkeeping keep the same ownership.
+The layout helpers import buffer capabilities only as types, never the runtime buffer or App composition.
+
 Search query grammar, document/section models, indexing, hit matching and indexed/scan execution have lower owners
 under `core/workspace/search/`. Scanning and SQLite share the same weight table without a runtime SQLite dependency
 for pure matching. Document find matches and replace-field interaction live under `tui/documents/search/`; workspace
