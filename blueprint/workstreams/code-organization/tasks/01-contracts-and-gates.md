@@ -1,5 +1,5 @@
 ---
-status: review
+status: done
 assignee:
 blocked_by: []
 created: "2026-10-26"

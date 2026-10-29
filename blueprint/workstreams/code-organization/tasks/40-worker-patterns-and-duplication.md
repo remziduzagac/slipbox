@@ -1,5 +1,5 @@
 ---
-status: doing
+status: done
 assignee:
 blocked_by: [ORG-T39]
 created: "2026-10-26"

@@ -653,19 +653,19 @@ refusal, focus and disposal. Do not build a second mock App or a global context 
 
 ## ADDED — blueprint/design/how-it-works.md: Size and shared-code conventions
 
-The current handwritten source ceiling is 750 lines (ORG-T32); about 500 lines is the design aim. Finish with a 600-line
-ceiling; the first step was 1,000 lines (ORG-T1). At each step, cap every pre-existing larger file at its measured size,
-never above 1,500. Moves carry caps to the new paths; new modules obey the current ceiling. A cap may reset to measured
-growth caused solely by formatting longer import paths, with its old/new value and delta recorded in the task (ORG-D2
-dated note). Preserve normal formatting, non-import code and comments; verify mapped dependencies and executable bodies.
-This exception permits no implementation growth. The same applies when import formatting alone moves a file from at or
-below the ceiling to above it; the file gets an exact cap equal to its measured size, recorded in the task and removed
-by its extraction task. Lower touched exceptions to their actual size and remove them below the ceiling. Final
-handwritten exceptions require a named responsibility, rationale and follow-up task; no blanket exemption for App. Keep
-generated server locks outside the handwritten ceiling under a separate measured cap and verify their generator. Do not
-split embedded strings by hand. The research inventory of all 55 modules over 500 is the backlog, not only the nine over
-1,000. Every row receives an extraction or a documented cohesive-module assessment; reaching 600 does not erase the
-500-line aim.
+The current handwritten source ceiling is 600 lines (ORG-T11); about 500 lines remains the design aim. The preceding
+steps were 1,000 lines (ORG-T1) and 750 lines (ORG-T32). At each step, cap every pre-existing larger file at its
+measured size, never above 1,500. Moves carry caps to the new paths; new modules obey the current ceiling. A cap may
+reset to measured growth caused solely by formatting longer import paths, with its old/new value and delta recorded in
+the task (ORG-D2 dated note). Preserve normal formatting, non-import code and comments; verify mapped dependencies and
+executable bodies. This exception permits no implementation growth. The same applies when import formatting alone
+moves a file from at or below the ceiling to above it; the file gets an exact cap equal to its measured size, recorded
+in the task and removed by its extraction task. Lower touched exceptions to their actual size and remove them below
+the ceiling. Final handwritten exceptions require a named responsibility, rationale and follow-up task; no blanket
+exemption for App. Keep generated server locks outside the handwritten ceiling under a separate measured cap and
+verify their generator. Do not split embedded strings by hand. The research inventory of all 55 modules over 500 is
+the backlog, not only the nine over 1,000. Every row receives an extraction or a documented cohesive-module
+assessment; reaching 600 does not erase the 500-line aim.
 
 For tests, recommend a 1,000-line aim and a 1,500-line ceiling on new/split feature files, with exact non-growing caps
 for remaining legacy files; the import-formatting exception above applies to source caps only. Keep process fixtures and
@@ -1145,8 +1145,8 @@ interaction clients introduce no gateway execution or new scheduling policy.
 [Task 32](tasks/32-config-splits.md) separates configuration contracts/defaults, ordered loading, trust filtering and
 validation; data-format readers and queries; and Markdown engine/chunk/transformation/query owners. Public entry points,
 warning order, format-specific branches and parse/cache identity remain unchanged. The reported TOML/INI clone is
-retained: their line structure is similar but validation, sections and value handling differ. The 750-line stage is
-active; its initial nine exact handwritten exceptions and named follow-ups are recorded in the task. Generated
+retained: their line structure is similar but validation, sections and value handling differ. The 750-line stage introduced
+its initial nine exact handwritten exceptions and named follow-ups are recorded in the task. Generated
 locks remain separate. All new owners are below the 500-line aim. Final dispositions remain T11's responsibility.
 
 ### T33 walk and watch assessment
@@ -1155,7 +1155,7 @@ locks remain separate. All new owners are below the 500-line aim. Final disposit
 home composition, and directory subscription/admission plus event reconciliation below the watcher. One original state
 and live options object preserve scheduling, polling, callbacks, move history and cleanup. Public entry exports and
 fixture data remain unchanged. Walk and watcher caps are removed; seven exact handwritten exceptions remain under the
-active 750-line ceiling. All new owners are below 500 lines. Runtime SCC membership is unchanged; the benefit is focused
+then-active 750-line ceiling. All new owners are below 500 lines. Runtime SCC membership is unchanged; the benefit is focused
 responsibility and testable lower mechanisms, without gateway execution or new lifecycle policy.
 
 ### T34 search assessment
@@ -1184,6 +1184,15 @@ active-document tools, shared caches and TUI buffers. The footnote/outline scrol
 selection helper; no geometry or selection policy changes. Complete Canvas/hit-geometry comparisons agree. The two
 drawing caps are removed, leaving three exact handwritten exceptions at the 750-line stage; every new owner is below
 500 lines. The eight-module drawing cycle is removed and the other five runtime memberships remain unchanged.
+
+### Final ratchet and explicit exceptions
+
+[Task 11](tasks/11-final-ratchet.md) applies the final 600-line source and separate 1,500-line test defaults. Its ledger
+reconciles all 55 baseline owners, eighteen cohesive source owners above the 500 aim, seven exact handwritten caps,
+nine legacy test caps and the separate generated-lock cap. Every exception has a responsibility, rationale and named
+follow-up task proposal; no blanket App exemption or arbitrary split is introduced. The 44 task files remain the
+status source of truth. Existing gateway implementation, broad integration scope and known fixture/clock follow-ups
+remain explicit; completion of the approved phases does not erase them.
 
 ## Implementation tasks
 
