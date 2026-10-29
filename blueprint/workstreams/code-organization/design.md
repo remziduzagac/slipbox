@@ -156,8 +156,10 @@ ORG-T38 starts with the cohesive buffer-layout child: `documents/buffers/layout/
 behind a live buffer/cache capability object. Text, history, marks, cache fields and reset sites stay in `NoteBuffer`.
 Source editing has its own child under `documents/editing/source/`: position/text/selection and mutation mechanisms
 stay below keyboard coordination, with the original API re-exported by the facade. Snippets import positions directly;
-view and buffer state, save ownership and stale clipboard-result guards stay unchanged. The remaining view,
-navigation, lens and completion owners follow in their own children.
+view and buffer state, save ownership and stale clipboard-result guards stay unchanged. Peek separates contracts,
+presentation, synchronization and interaction under `navigation/peek/`; its queues, probe and graph caches keep one
+owner. Pure view-layout and link-anchor mechanisms stay below controllers and action composition. View/buffer/save
+ownership and cancellation guards are unchanged. Lens and completion remain the final T38 child.
 
 Within `shell/screen/`, separate top-bar and status-bar composition from drawing primitives. Top-bar composition draws
 branding/version/update controls, workspace/zoom/branch context and worker controls from their actual owners. Document

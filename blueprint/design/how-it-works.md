@@ -389,6 +389,13 @@ read source positions directly from the lower owner. App/View/NoteBuffer keep th
 marks, registers and guards rejecting stale clipboard replies. The boundary checker rejects reverse facade and
 higher-tier imports and runtime App dependencies from these helpers.
 
+Peek interaction has distinct owners under `documents/navigation/peek/`: live place access, path policy, presentation,
+probe, graph synchronization, opening and history. Their contracts remain below coordination; the original probe,
+catch-up queues and graph parsing/retirement caches retain one owner. `documents/views/layout/` holds pure width,
+selection, task-hit and anchor mechanisms while Views keeps controller state. Link fragment/heading/pointer helpers
+live in `actions/documents/links/anchors.ts` below command composition. Public entries retain their original APIs;
+view/buffer/save ownership and cancellation behavior stay unchanged.
+
 Search query grammar, document/section models, indexing, hit matching and indexed/scan execution have lower owners
 under `core/workspace/search/`. Scanning and SQLite share the same weight table without a runtime SQLite dependency
 for pure matching. Document find matches and replace-field interaction live under `tui/documents/search/`; workspace

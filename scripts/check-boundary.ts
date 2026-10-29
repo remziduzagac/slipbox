@@ -92,6 +92,62 @@ export function graphCompositionViolations(from: string, text: string): string[]
   });
 }
 
+/** Navigation/layout helpers stay below their public facades and App runtime composition (ORG-T38). */
+export const NAVIGATION_HELPERS = [
+  "src/tui/documents/navigation/peek/contracts.ts",
+  "src/tui/documents/navigation/peek/state.ts",
+  "src/tui/documents/navigation/peek/paths.ts",
+  "src/tui/documents/navigation/peek/presentation.ts",
+  "src/tui/documents/navigation/peek/probe.ts",
+  "src/tui/documents/navigation/peek/synchronization.ts",
+  "src/tui/documents/navigation/peek/opening.ts",
+  "src/tui/documents/navigation/peek/history.ts",
+  "src/tui/documents/views/layout/widths.ts",
+  "src/tui/documents/views/layout/tasks.ts",
+  "src/tui/documents/views/layout/selection.ts",
+  "src/tui/documents/views/layout/anchors.ts",
+  "src/tui/actions/documents/links/anchors.ts",
+] as const;
+
+export const PEEK_TIERS: Record<string, number> = {
+  contracts: 0,
+  probe: 0,
+  state: 1,
+  paths: 1,
+  presentation: 1,
+  synchronization: 2,
+  opening: 3,
+  history: 4,
+};
+
+export function navigationHelperViolations(from: string, text: string): string[] {
+  if (!(NAVIGATION_HELPERS as readonly string[]).includes(from)) return [];
+  const owners = [
+    "src/tui/documents/navigation/peek",
+    "src/tui/documents/views/views",
+    "src/tui/actions/documents/actions-links",
+    "src/tui/actions/actions",
+  ];
+  const root = "src/tui/documents/navigation/peek/";
+  const tier = from.startsWith(root) ? PEEK_TIERS[from.slice(root.length).replace(/\.ts$/, "")] : undefined;
+  return [
+    ...importsOf(text).flatMap((spec) => {
+      const target = targetOf(from, spec);
+      const other = target.startsWith(root) ? PEEK_TIERS[target.slice(root.length)] : undefined;
+      return owners.includes(target) || (tier !== undefined && other !== undefined && other > tier)
+        ? [`${from}: imports ${spec} (navigation helper must stay below facade and higher coordination)`]
+        : [];
+    }),
+    ...new Bun.Transpiler({ loader: "ts" })
+      .scanImports(text)
+      .flatMap(({ path }) =>
+        targetOf(from, path) === "src/tui/app/runtime/app"
+          ? [`${from}: imports ${path} (navigation helper must not load App composition)`]
+          : [],
+      ),
+  ];
+}
+
 /** Source-editing mechanisms stay below the public facade and higher coordination tiers (ORG-T38). */
 export const SOURCE_EDITING_TIERS: Record<string, number> = {
   position: 0,
@@ -665,6 +721,7 @@ if (import.meta.main) {
     violations.push(...diagnosticsHelperViolations(from, readFileSync(file, "utf8")));
     violations.push(...bufferLayoutViolations(from, readFileSync(file, "utf8")));
     violations.push(...sourceEditingViolations(from, readFileSync(file, "utf8")));
+    violations.push(...navigationHelperViolations(from, readFileSync(file, "utf8")));
     violations.push(...renameMechanismViolations(from, readFileSync(file, "utf8")));
     violations.push(...searchMechanismViolations(from, readFileSync(file, "utf8")));
     violations.push(...walkingMechanismViolations(from, readFileSync(file, "utf8")));

@@ -47,6 +47,26 @@ describe("the boundary check (0.3, scripts/check-boundary.ts)", () => {
     expect(r.out).not.toContain("boundary check ok");
   });
 
+  test("navigation helpers reject facades, upper peek tiers and runtime App while retaining capabilities", () => {
+    const refused = check({
+      "src/tui/documents/navigation/peek/contracts.ts": 'export type { Peek } from "../peek.ts";',
+      "src/tui/documents/navigation/peek/presentation.ts": 'export const load = () => import("./opening.ts");',
+      "src/tui/documents/views/layout/anchors.ts": 'export { Views } from "../views.ts";',
+      "src/tui/actions/documents/links/anchors.ts": 'export { linkActions } from "../actions-links.ts";',
+      "src/tui/documents/navigation/peek/state.ts":
+        'import { App } from "../../../app/runtime/app.ts"; export const f = App;',
+    });
+    expect(refused.code).toBe(1);
+    expect(refused.err.match(/navigation helper/g)?.length).toBe(5);
+    expect(
+      check({
+        "src/tui/documents/navigation/peek/opening.ts":
+          'import { peekTitle } from "./presentation.ts"; export const f = peekTitle;',
+        "src/tui/documents/views/layout/anchors.ts": 'import type { View } from "../../../app/runtime/app.ts";',
+      }).code,
+    ).toBe(0);
+  });
+
   test("source-editing helpers reject facade, upper tiers and runtime App while retaining capabilities", () => {
     const refused = check({
       "src/tui/documents/editing/source/position.ts": 'export { insertKey } from "../editing.ts";',

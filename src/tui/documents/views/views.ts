@@ -7,16 +7,22 @@ import { cannotEdit, lineOf, offsetOf, placeAt, typedSelection } from "../editin
 import { matchBracket } from "../../../core/documents/editing/brackets.ts";
 import { extentOf, type Layout } from "../../../core/rendering/layout/ir.ts";
 import { layoutWidth } from "../../../core/documents/model/note.ts";
-import { type Anchor, anchorAt, type CursorAnchor, rowFor } from "../../../core/workspace/session/position.ts";
+import type { Anchor, CursorAnchor } from "../../../core/workspace/session/position.ts";
 import type { TextEdit } from "../../../core/documents/model/footnotes.ts";
-import { truncate, graphemes, graphemeWidth, stringWidth } from "../../../core/foundation/text/width.ts";
+import { truncate } from "../../../core/foundation/text/width.ts";
 import type { NoteBuffer } from "../buffers/buffer.ts";
-import { cells, clampPos, type Pos, snap, ordered } from "../editing/cursor.ts";
+import { clampPos, type Pos, snap } from "../editing/cursor.ts";
 import type { App, View } from "../../app/runtime/app.ts";
 import { editable } from "../editing/editable.ts";
-import type { Selection } from "../../app/runtime/app.ts";
 import { isHidden, unparsedText } from "../editing/lens.ts";
 import { computeFind } from "../search/find.ts";
+
+import { NOWRAP_PROBE, naturalWidths, naturalWidth } from "./layout/widths.ts";
+import { selectedText } from "./layout/selection.ts";
+export { taskMarkAt } from "./layout/tasks.ts";
+export { selectedText } from "./layout/selection.ts";
+
+import { rowFromAnchor, cursorFromAnchor, cursorAnchorFor } from "./layout/anchors.ts";
 
 /** Views: layout, anchors, cursor and selection, scrolling. */
 export class Views {
@@ -232,25 +238,11 @@ export class Views {
 
   /** The row `sub` rows into the line an anchor names (as far as that line has rows). */
   private rowFromAnchor(layout: Layout, anchor: Anchor, sub: number): number {
-    const first = rowFor(layout, anchor);
-    const src = layout.lines[first]?.src;
-    let row = first;
-    for (let k = 0; k < sub && layout.lines[row + 1]?.src === src; k++) row++;
-    return row;
+    return rowFromAnchor(layout, anchor, sub);
   }
 
   private cursorFromAnchor(layout: Layout, c: CursorAnchor, insert = false): Pos {
-    const first = rowFor(layout, c.anchor);
-    const src = layout.lines[first]?.src;
-    let row = first;
-    for (let k = 0; k < c.sub && layout.lines[row + 1]?.src === src; k++) row++;
-    const pos = clampPos(layout, { row, col: c.col });
-    // Typing at a line's end, the cursor is past its last character: a relayout then (the
-    // problems bar appearing, a resize) keeps it there, or the next key goes in before that one.
-    const cs = insert ? cells(layout.lines[pos.row]) : [];
-    const last = cs[cs.length - 1];
-    if (last && c.col >= last.x + last.w) pos.col = last.x + last.w;
-    return pos;
+    return cursorFromAnchor(layout, c, insert);
   }
 
   /** After placing `view.cur` directly (editing): its anchor, and the view following it. */
@@ -260,10 +252,7 @@ export class Views {
   }
 
   cursorAnchorFor(layout: Layout, p: Pos): CursorAnchor {
-    const src = layout.lines[p.row]?.src;
-    let sub = 0;
-    while (p.row - sub - 1 >= 0 && layout.lines[p.row - sub - 1]?.src === src) sub++;
-    return { anchor: anchorAt(layout, p.row - sub), sub, col: p.col };
+    return cursorAnchorFor(layout, p);
   }
 
   clampTop(view: View, layout: Layout, top: number): number {
@@ -505,80 +494,4 @@ export class Views {
     this.bracketMemo = { buf: view.buf, version: view.buf.version, at, insert: !!view.insert, marks };
     return marks;
   }
-}
-
-/** Wrapping off: how wide a note is laid out first, to find its natural width. */
-const NOWRAP_PROBE = 2000;
-const naturalWidths = new WeakMap<Layout, number>();
-
-/**
- * The widest real row of a very wide layout: trailing spaces don't count, nor does a trailing run
- * of one repeated glyph (a rule, or the tail of a titled rule like `── ≡ properties ────`), nor
- * right-aligned decorations far out (a code block's language label).
- */
-function naturalWidth(layout: Layout): number {
-  let max = 0;
-  for (const line of layout.lines) {
-    let col = 0;
-    let end = 0;
-    // The current run of one glyph: its glyph, where it started, and the end before it.
-    let run = "";
-    let runStart = 0;
-    let before = 0;
-    for (const span of line.spans) {
-      for (const g of graphemes(span.text)) {
-        const w = graphemeWidth(g);
-        if (g.trim() && col < layout.width * 0.75) {
-          if (g !== run) {
-            run = g;
-            runStart = col;
-            before = end;
-          }
-          end = col + w;
-        }
-        col += w;
-      }
-    }
-    if (run && end - runStart > 20) end = before;
-    max = Math.max(max, end);
-  }
-  return max;
-}
-
-/** The task whose checkbox glyph is at this cell, if any (its trailing space doesn't count). */
-export function taskMarkAt(
-  layout: Layout,
-  row: number,
-  col: number,
-): { line: number; end: number; checked: boolean } | null {
-  let x = 0;
-  for (const s of layout.lines[row]?.spans ?? []) {
-    const w = stringWidth(s.text);
-    if (s.task && col >= x && col < x + stringWidth(s.text.trimEnd())) return s.task;
-    x += w;
-  }
-  return null;
-}
-
-/**
- * Text of a selection from `sel.anchor` to the cursor, inclusive, in reading order; rows joined
- * with newlines and trailing blanks trimmed. Line selections take whole rows.
- */
-export function selectedText(layout: Layout, sel: Selection, cur: Pos): string {
-  const [a, b] = ordered(sel.anchor, cur);
-  const out: string[] = [];
-  for (let r = a.row; r <= b.row; r++) {
-    const cs = cells(layout.lines[r]);
-    const from = sel.line || r !== a.row ? 0 : a.col;
-    const to = sel.line || r !== b.row ? Number.POSITIVE_INFINITY : b.col;
-    // A grapheme is selected when any of its cells is — so a wide character counts once.
-    out.push(
-      cs
-        .filter((c) => c.x + c.w > from && c.x <= to)
-        .map((c) => c.g)
-        .join("")
-        .replace(/\s+$/, ""),
-    );
-  }
-  return out.join("\n");
 }

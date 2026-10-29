@@ -31,8 +31,8 @@ Verify measured size exceptions and light/heavy import boundaries.
 
 ## Buffer layout child PR
 
-The buffer child extracts layout mechanisms from the ORG-T37 baseline. Source editing is recorded below;
-views/peek, lens/completion and link actions remain for their own cohesive children.
+The buffer child extracts layout mechanisms from the ORG-T37 baseline. Source editing and navigation are recorded
+below; lens/completion remain for their own cohesive child.
 The exact edge, runtime, test and build deltas are in [t38-buffer-extraction.json](../manifests/t38-buffer-extraction.json).
 
 - `documents/buffers/buffer.ts` shrinks from 692 to 596 lines. `layout/source.ts`, `layout/code.ts` and `layout/note.ts`
@@ -107,3 +107,47 @@ The baseline is the preceding buffer-layout child. Exact deltas are in
 
 Typecheck, Biome, boundary, size, every touched Markdown file and `check:docs` are required before the PR. Private
 original snapshots, token/API checks, selector records, terminal output and binary hash live under ignored `tmp/issue/`.
+
+
+## Navigation and views child PR
+
+The baseline is the preceding source-editing child. Exact deltas and state owners are recorded in
+[t38-navigation-extraction.json](../manifests/t38-navigation-extraction.json).
+
+- `navigation/peek.ts` shrinks from 691 to thirteen lines. Eight `peek/` owners separate contracts, live peek/place
+  access, path admission/switching, presentation, the shared probe, synchronization, opening and history interaction.
+  The largest is 290 lines. Original holder/generation checks, catch-up serialization, parsing/retirement sets,
+  signature cache and mutable probe stay single allocations in their respective owners; no async wrapper is added.
+- `views/views.ts` shrinks from 584 to 497 lines. Width/cache, selected-text, task-hit and anchor conversions live in
+  `views/layout/`. Three state-free methods retain their signatures as forwarders; the other 27 members, constructor,
+  parse set and field initializers are unchanged. The same natural-width WeakMap remains shared by its callers.
+- `actions/documents/actions-links.ts` shrinks from 541 to 467 lines. Six fragment/heading/pointer/punctuation helpers
+  live in `actions/documents/links/anchors.ts`; its other ten declarations and registration table are unchanged.
+  Helpers import App only as types and stay below action composition.
+- Token comparisons preserve all 58 extracted declarations/bodies and 37 retained declarations/members after export
+  and formatting normalization. Public namespaces and prototype signatures are unchanged (sixteen peek values, three
+  view values and four link-action values); re-exports retain the lower owners' exact bindings, including `peekProbe`.
+- Seven characterizations pass original bodies through export-only adapters and the new owners (seven tests,
+  24 assertions each): wrapped source anchors/end columns, natural widths/decorations, wide-character selection,
+  checkbox hit boundaries, line/pointer anchors, title width budgets and backlink Markdown encoding/pending text.
+- The focused navigation, views and organization baseline passes 343 tests with 2,774 assertions across 53 files.
+  The final combined run passes 351 tests with 2,801 assertions across 54 files. There are eight new declarations
+  (seven characterizations and one boundary fixture), none removed; assertion totals are host measurements.
+- Eight source-terminal journeys pass before/after: peek/open/keep/fill, links within a peek and history, asynchronous
+  backlink lists, return to a backlink row, task toggling, all target forms, missing-heading/block fallback and narrowed
+  window headers. A fresh production binary passes peek interaction, asynchronous backlinks and task toggling.
+- Static edges change from 2,899 to 2,958 (fifteen removed, 74 added), runtime edges from 2,187 to 2,221 (fourteen
+  removed, 48 added), and test declarations from 3,982 to 3,990. All four SCC memberships remain identical (2, 3, 5, 8),
+  build entries are unchanged and relative imports resolve. No path-looking fixture data is rewritten.
+- The 261/262/261 original test-file selections for peek/views/link actions remain intact; their mapped lower owners
+  add only the new helper test. Peek helpers keep the original peek-only terminal selector through its extended rule;
+  views and link actions keep their all-check fallback. The existing distribution scope fixture verifies the new path.
+- `importGraph`/`reach` counts graph nodes, including non-source files: pure view helpers reach two to six nodes,
+  peek presentation eight, link anchors nineteen and the new helper test 33, without App or a public facade.
+  Synchronization retains its existing graph/lifecycle dependencies; public closures grow only with the new modules.
+- Boundary fixtures and independent import-shape probes reject facades, higher peek tiers and runtime App (864 refused,
+  71 type/lower imports allowed). Removing the checker invocation makes the fixture fail. Types, sizes, boundary,
+  Biome and all changed Markdown/docs gates are required before publishing.
+
+View/buffer/history/save ownership and all worker/probe/cancellation contracts remain unchanged. Lens and completion
+are the remaining T38 child; the active 750 ceiling and two legacy/one generated caps are unchanged.
