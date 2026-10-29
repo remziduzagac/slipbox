@@ -1,0 +1,103 @@
+{
+  "moves": {},
+  "retained": [],
+  "renamedBasenames": {},
+  "edges": {
+    "removed": [],
+    "added": [
+      "src/core/rendering/theme/theme.ts -> src/core/rendering/theme/roles.ts"
+    ]
+  },
+  "runtime": {
+    "removed": [],
+    "added": [
+      "src/core/rendering/theme/theme.ts -> src/core/rendering/theme/roles.ts"
+    ]
+  },
+  "tests": {
+    "removed": [],
+    "added": [
+      "test: theme role vocabulary keeps shared public bindings and resolvable compatibility aliases",
+      "test: theme vocabulary rejects construction and loading imports including types"
+    ]
+  },
+  "entries": {
+    "removed": [],
+    "added": []
+  },
+  "extraction": [
+    {
+      "from": "src/core/rendering/theme/theme.ts",
+      "to": "src/core/rendering/theme/roles.ts",
+      "symbols": [
+        "Color",
+        "RoleStyle",
+        "ROLES",
+        "Role",
+        "OLD_ROLES",
+        "Theme",
+        "Palette",
+        "RoleOverrides"
+      ]
+    }
+  ],
+  "ownership": {
+    "roles": "original semantic role array, compatibility alias object and six type records below construction; public values retain original binding identity",
+    "construction": "all9 remaining declarations and original palette/terminal/mono/color bodies unchanged; no token/alias/config behavior changes"
+  },
+  "guards": {
+    "owners": [
+      "src/core/rendering/theme/roles.ts"
+    ],
+    "rule": "themeVocabularyViolations",
+    "forbidden": "theme/index/base16/builtin/tokyo-night/glyph composition including types"
+  },
+  "runtimeScc": {
+    "before": [
+      [
+        "src/tui/workspace/git/gitremote.ts",
+        "src/tui/workspace/git/views/review/rebase.ts"
+      ],
+      [
+        "src/tui/app/runtime/app.ts",
+        "src/tui/app/settings/settings.ts",
+        "src/tui/workspace/history/history.ts",
+        "src/tui/workspace/session/session.ts",
+        "src/tui/workspace/vaults/vaults.ts"
+      ],
+      [
+        "src/tui/actions/actions.ts",
+        "src/tui/actions/documents/actions-edit.ts",
+        "src/tui/actions/documents/actions-find.ts",
+        "src/tui/actions/documents/actions-links.ts",
+        "src/tui/actions/documents/actions-lsp.ts",
+        "src/tui/actions/documents/actions-view.ts",
+        "src/tui/actions/shell/actions-panes.ts",
+        "src/tui/actions/workspace/actions-files.ts"
+      ]
+    ],
+    "after": [
+      [
+        "src/tui/workspace/git/gitremote.ts",
+        "src/tui/workspace/git/views/review/rebase.ts"
+      ],
+      [
+        "src/tui/app/runtime/app.ts",
+        "src/tui/app/settings/settings.ts",
+        "src/tui/workspace/history/history.ts",
+        "src/tui/workspace/session/session.ts",
+        "src/tui/workspace/vaults/vaults.ts"
+      ],
+      [
+        "src/tui/actions/actions.ts",
+        "src/tui/actions/documents/actions-edit.ts",
+        "src/tui/actions/documents/actions-find.ts",
+        "src/tui/actions/documents/actions-links.ts",
+        "src/tui/actions/documents/actions-lsp.ts",
+        "src/tui/actions/documents/actions-view.ts",
+        "src/tui/actions/shell/actions-panes.ts",
+        "src/tui/actions/workspace/actions-files.ts"
+      ]
+    ]
+  }
+}
