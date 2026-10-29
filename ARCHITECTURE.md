@@ -43,6 +43,8 @@ for a person, and a command line for agents and scripts, both over the same plai
   language-protocol helpers receive the current controller or explicit inputs, without loading App or process owners.
   A buffer owns its text, history, marks and caches. Its source/code/note layout helpers read the same buffer and live
   cache getters under `documents/buffers/layout/`; replacing a cache never leaves them with an earlier snapshot.
+  Source editing has lower position/text/selection and mutation owners under `documents/editing/source/`, with keyboard
+  coordination above them. Its public entry re-exports the original functions; view/buffer and clipboard guards stay local.
 
 **The boundary.** `src/core/` never imports `src/tui/`, `src/cli/` or `@opentui/*`, and `src/cli/` never imports
 `src/tui/`. Inside the TUI, only `src/tui/shell/terminal/opentui.ts` (the `Canvas` over OpenTUI's buffer) and

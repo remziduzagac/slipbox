@@ -1,0 +1,331 @@
+{
+  "moves": {},
+  "retained": [],
+  "renamedBasenames": {},
+  "edges": {
+    "removed": [
+      "src/tui/documents/editing/editing.ts -> src/core/documents/editing/brackets.ts",
+      "src/tui/documents/editing/editing.ts -> src/core/documents/editing/comments.ts",
+      "src/tui/documents/editing/editing.ts -> src/core/documents/editing/indent.ts",
+      "src/tui/documents/editing/editing.ts -> src/core/foundation/text/width.ts",
+      "src/tui/documents/editing/editing.ts -> src/tui/app/runtime/app.ts",
+      "src/tui/documents/editing/editing.ts -> src/tui/documents/editing/cursor.ts",
+      "src/tui/documents/editing/editing.ts -> src/tui/documents/editing/editable.ts",
+      "src/tui/documents/editing/editing.ts -> src/tui/documents/editing/snippets.ts",
+      "src/tui/documents/editing/editing.ts -> src/tui/shell/input/keys.ts",
+      "src/tui/documents/editing/snippets.ts -> src/tui/documents/editing/editing.ts"
+    ],
+    "added": [
+      "src/tui/documents/editing/editing.ts -> src/tui/documents/editing/source/deleting.ts",
+      "src/tui/documents/editing/editing.ts -> src/tui/documents/editing/source/keyboard.ts",
+      "src/tui/documents/editing/editing.ts -> src/tui/documents/editing/source/lifecycle.ts",
+      "src/tui/documents/editing/editing.ts -> src/tui/documents/editing/source/lines.ts",
+      "src/tui/documents/editing/editing.ts -> src/tui/documents/editing/source/newline.ts",
+      "src/tui/documents/editing/editing.ts -> src/tui/documents/editing/source/policy.ts",
+      "src/tui/documents/editing/editing.ts -> src/tui/documents/editing/source/position.ts",
+      "src/tui/documents/editing/editing.ts -> src/tui/documents/editing/source/selection.ts",
+      "src/tui/documents/editing/editing.ts -> src/tui/documents/editing/source/text.ts",
+      "src/tui/documents/editing/snippets.ts -> src/tui/documents/editing/source/position.ts",
+      "src/tui/documents/editing/source/deleting.ts -> src/core/documents/editing/brackets.ts",
+      "src/tui/documents/editing/source/deleting.ts -> src/tui/app/runtime/app.ts",
+      "src/tui/documents/editing/source/deleting.ts -> src/tui/documents/editing/source/position.ts",
+      "src/tui/documents/editing/source/deleting.ts -> src/tui/documents/editing/source/text.ts",
+      "src/tui/documents/editing/source/keyboard.ts -> src/core/documents/editing/brackets.ts",
+      "src/tui/documents/editing/source/keyboard.ts -> src/tui/app/runtime/app.ts",
+      "src/tui/documents/editing/source/keyboard.ts -> src/tui/documents/editing/cursor.ts",
+      "src/tui/documents/editing/source/keyboard.ts -> src/tui/documents/editing/source/deleting.ts",
+      "src/tui/documents/editing/source/keyboard.ts -> src/tui/documents/editing/source/lifecycle.ts",
+      "src/tui/documents/editing/source/keyboard.ts -> src/tui/documents/editing/source/lines.ts",
+      "src/tui/documents/editing/source/keyboard.ts -> src/tui/documents/editing/source/newline.ts",
+      "src/tui/documents/editing/source/keyboard.ts -> src/tui/documents/editing/source/position.ts",
+      "src/tui/documents/editing/source/keyboard.ts -> src/tui/documents/editing/source/selection.ts",
+      "src/tui/documents/editing/source/keyboard.ts -> src/tui/documents/editing/source/text.ts",
+      "src/tui/documents/editing/source/keyboard.ts -> src/tui/shell/input/keys/decoding.ts",
+      "src/tui/documents/editing/source/lifecycle.ts -> src/tui/app/runtime/app.ts",
+      "src/tui/documents/editing/source/lifecycle.ts -> src/tui/documents/editing/snippets.ts",
+      "src/tui/documents/editing/source/lifecycle.ts -> src/tui/documents/editing/source/policy.ts",
+      "src/tui/documents/editing/source/lifecycle.ts -> src/tui/documents/editing/source/position.ts",
+      "src/tui/documents/editing/source/lifecycle.ts -> src/tui/documents/editing/source/text.ts",
+      "src/tui/documents/editing/source/lines.ts -> src/core/documents/editing/comments.ts",
+      "src/tui/documents/editing/source/lines.ts -> src/core/documents/editing/indent.ts",
+      "src/tui/documents/editing/source/lines.ts -> src/tui/app/runtime/app.ts",
+      "src/tui/documents/editing/source/lines.ts -> src/tui/documents/editing/source/policy.ts",
+      "src/tui/documents/editing/source/lines.ts -> src/tui/documents/editing/source/position.ts",
+      "src/tui/documents/editing/source/newline.ts -> src/core/documents/editing/indent.ts",
+      "src/tui/documents/editing/source/newline.ts -> src/tui/app/runtime/app.ts",
+      "src/tui/documents/editing/source/newline.ts -> src/tui/documents/editing/source/position.ts",
+      "src/tui/documents/editing/source/newline.ts -> src/tui/documents/editing/source/text.ts",
+      "src/tui/documents/editing/source/policy.ts -> src/tui/app/runtime/app.ts",
+      "src/tui/documents/editing/source/policy.ts -> src/tui/documents/editing/editable.ts",
+      "src/tui/documents/editing/source/position.ts -> src/tui/app/runtime/app.ts",
+      "src/tui/documents/editing/source/position.ts -> src/tui/documents/editing/cursor.ts",
+      "src/tui/documents/editing/source/selection.ts -> src/tui/app/runtime/app.ts",
+      "src/tui/documents/editing/source/selection.ts -> src/tui/documents/editing/source/position.ts",
+      "src/tui/documents/editing/source/text.ts -> src/core/foundation/text/width.ts",
+      "src/tui/documents/editing/source/text.ts -> src/tui/app/runtime/app.ts",
+      "src/tui/documents/editing/source/text.ts -> src/tui/documents/editing/source/position.ts"
+    ]
+  },
+  "runtime": {
+    "removed": [
+      "src/tui/documents/editing/editing.ts -> src/core/documents/editing/brackets.ts",
+      "src/tui/documents/editing/editing.ts -> src/core/documents/editing/comments.ts",
+      "src/tui/documents/editing/editing.ts -> src/core/documents/editing/indent.ts",
+      "src/tui/documents/editing/editing.ts -> src/core/foundation/text/width.ts",
+      "src/tui/documents/editing/editing.ts -> src/tui/documents/editing/cursor.ts",
+      "src/tui/documents/editing/editing.ts -> src/tui/documents/editing/editable.ts",
+      "src/tui/documents/editing/editing.ts -> src/tui/documents/editing/snippets.ts",
+      "src/tui/documents/editing/editing.ts -> src/tui/shell/input/keys.ts",
+      "src/tui/documents/editing/snippets.ts -> src/tui/documents/editing/editing.ts"
+    ],
+    "added": [
+      "src/tui/documents/editing/editing.ts -> src/tui/documents/editing/source/deleting.ts",
+      "src/tui/documents/editing/editing.ts -> src/tui/documents/editing/source/keyboard.ts",
+      "src/tui/documents/editing/editing.ts -> src/tui/documents/editing/source/lifecycle.ts",
+      "src/tui/documents/editing/editing.ts -> src/tui/documents/editing/source/lines.ts",
+      "src/tui/documents/editing/editing.ts -> src/tui/documents/editing/source/newline.ts",
+      "src/tui/documents/editing/editing.ts -> src/tui/documents/editing/source/policy.ts",
+      "src/tui/documents/editing/editing.ts -> src/tui/documents/editing/source/position.ts",
+      "src/tui/documents/editing/editing.ts -> src/tui/documents/editing/source/selection.ts",
+      "src/tui/documents/editing/editing.ts -> src/tui/documents/editing/source/text.ts",
+      "src/tui/documents/editing/snippets.ts -> src/tui/documents/editing/source/position.ts",
+      "src/tui/documents/editing/source/deleting.ts -> src/core/documents/editing/brackets.ts",
+      "src/tui/documents/editing/source/deleting.ts -> src/tui/documents/editing/source/position.ts",
+      "src/tui/documents/editing/source/deleting.ts -> src/tui/documents/editing/source/text.ts",
+      "src/tui/documents/editing/source/keyboard.ts -> src/core/documents/editing/brackets.ts",
+      "src/tui/documents/editing/source/keyboard.ts -> src/tui/documents/editing/cursor.ts",
+      "src/tui/documents/editing/source/keyboard.ts -> src/tui/documents/editing/source/deleting.ts",
+      "src/tui/documents/editing/source/keyboard.ts -> src/tui/documents/editing/source/lifecycle.ts",
+      "src/tui/documents/editing/source/keyboard.ts -> src/tui/documents/editing/source/lines.ts",
+      "src/tui/documents/editing/source/keyboard.ts -> src/tui/documents/editing/source/newline.ts",
+      "src/tui/documents/editing/source/keyboard.ts -> src/tui/documents/editing/source/position.ts",
+      "src/tui/documents/editing/source/keyboard.ts -> src/tui/documents/editing/source/selection.ts",
+      "src/tui/documents/editing/source/keyboard.ts -> src/tui/documents/editing/source/text.ts",
+      "src/tui/documents/editing/source/keyboard.ts -> src/tui/shell/input/keys/decoding.ts",
+      "src/tui/documents/editing/source/lifecycle.ts -> src/tui/documents/editing/snippets.ts",
+      "src/tui/documents/editing/source/lifecycle.ts -> src/tui/documents/editing/source/policy.ts",
+      "src/tui/documents/editing/source/lifecycle.ts -> src/tui/documents/editing/source/position.ts",
+      "src/tui/documents/editing/source/lifecycle.ts -> src/tui/documents/editing/source/text.ts",
+      "src/tui/documents/editing/source/lines.ts -> src/core/documents/editing/comments.ts",
+      "src/tui/documents/editing/source/lines.ts -> src/core/documents/editing/indent.ts",
+      "src/tui/documents/editing/source/lines.ts -> src/tui/documents/editing/source/policy.ts",
+      "src/tui/documents/editing/source/lines.ts -> src/tui/documents/editing/source/position.ts",
+      "src/tui/documents/editing/source/newline.ts -> src/core/documents/editing/indent.ts",
+      "src/tui/documents/editing/source/newline.ts -> src/tui/documents/editing/source/position.ts",
+      "src/tui/documents/editing/source/newline.ts -> src/tui/documents/editing/source/text.ts",
+      "src/tui/documents/editing/source/policy.ts -> src/tui/documents/editing/editable.ts",
+      "src/tui/documents/editing/source/position.ts -> src/tui/documents/editing/cursor.ts",
+      "src/tui/documents/editing/source/selection.ts -> src/tui/documents/editing/source/position.ts",
+      "src/tui/documents/editing/source/text.ts -> src/core/foundation/text/width.ts",
+      "src/tui/documents/editing/source/text.ts -> src/tui/documents/editing/source/position.ts"
+    ]
+  },
+  "tests": {
+    "removed": [],
+    "added": [
+      "test: pending clipboard insertion applies only to the original active view and unchanged revision",
+      "test: source edit refusals retain their priority and document labels",
+      "test: source line helpers keep UTF-16 offsets while excluding CRLF endings from text",
+      "test: source outdenting consumes one tab or at most the configured number of spaces",
+      "test: source text boundaries retain whole graphemes and CRLF pairs",
+      "test: source-editing helpers reject facade, upper tiers and runtime App while retaining capabilities",
+      "test: typing key classification and word motion keep the existing modifier and boundary rules"
+    ]
+  },
+  "entries": {
+    "removed": [],
+    "added": []
+  },
+  "extraction": [
+    {
+      "from": "src/tui/documents/editing/editing.ts",
+      "to": "src/tui/documents/editing/source/position.ts",
+      "symbols": [
+        "offsetOf",
+        "offsetAtPos",
+        "placeAt",
+        "lineText",
+        "lineStart",
+        "lineEnd",
+        "lineOf",
+        "offsetAt"
+      ]
+    },
+    {
+      "from": "src/tui/documents/editing/editing.ts",
+      "to": "src/tui/documents/editing/source/policy.ts",
+      "symbols": [
+        "cannotEdit",
+        "lensWhat",
+        "toEditing"
+      ]
+    },
+    {
+      "from": "src/tui/documents/editing/editing.ts",
+      "to": "src/tui/documents/editing/source/lifecycle.ts",
+      "symbols": [
+        "startInsert",
+        "stopInsert"
+      ]
+    },
+    {
+      "from": "src/tui/documents/editing/editing.ts",
+      "to": "src/tui/documents/editing/source/text.ts",
+      "symbols": [
+        "insertText",
+        "prevBoundary",
+        "nextBoundary"
+      ]
+    },
+    {
+      "from": "src/tui/documents/editing/editing.ts",
+      "to": "src/tui/documents/editing/source/newline.ts",
+      "symbols": [
+        "newline",
+        "inFence",
+        "OPENS"
+      ]
+    },
+    {
+      "from": "src/tui/documents/editing/editing.ts",
+      "to": "src/tui/documents/editing/source/deleting.ts",
+      "symbols": [
+        "insertStop",
+        "backspace",
+        "deleteForward",
+        "deleteWordBack",
+        "deleteToLineStart"
+      ]
+    },
+    {
+      "from": "src/tui/documents/editing/editing.ts",
+      "to": "src/tui/documents/editing/source/lines.ts",
+      "symbols": [
+        "indentLine",
+        "commentStyleAt",
+        "commentLine",
+        "outdentLength",
+        "moveLines"
+      ]
+    },
+    {
+      "from": "src/tui/documents/editing/editing.ts",
+      "to": "src/tui/documents/editing/source/selection.ts",
+      "symbols": [
+        "typedSelection",
+        "deleteTypedSelection"
+      ]
+    },
+    {
+      "from": "src/tui/documents/editing/editing.ts",
+      "to": "src/tui/documents/editing/source/keyboard.ts",
+      "symbols": [
+        "insertKey",
+        "MOVING",
+        "selectingMove",
+        "selectTo",
+        "selectionKey",
+        "WORD_KEYS",
+        "wordFrom",
+        "rowsWhileTyping",
+        "pageWhileTyping",
+        "insertKeyNow"
+      ]
+    }
+  ],
+  "ownership": {
+    "source": "41 original declarations extracted intact to nine cohesive source owners; public facade re-exports the same 28 function bindings without wrappers",
+    "state": "original App/View/NoteBuffer passed through; history/marks/save and register ownership unchanged; original stale clipboard reply guards and async timing preserved",
+    "consumer": "snippets.ts imports original position functions directly from lower owner; body untouched",
+    "constants": "original OPENS/MOVING/WORD_KEYS objects retained in their single owners; no copied command or view data",
+    "keyChar": "same existing decoding function imported directly from keys/decoding.ts"
+  },
+  "guards": {
+    "owners": [
+      "src/tui/documents/editing/source/position.ts",
+      "src/tui/documents/editing/source/policy.ts",
+      "src/tui/documents/editing/source/text.ts",
+      "src/tui/documents/editing/source/lifecycle.ts",
+      "src/tui/documents/editing/source/newline.ts",
+      "src/tui/documents/editing/source/deleting.ts",
+      "src/tui/documents/editing/source/lines.ts",
+      "src/tui/documents/editing/source/selection.ts",
+      "src/tui/documents/editing/source/keyboard.ts"
+    ],
+    "tiers": {
+      "position": 0,
+      "policy": 0,
+      "text": 1,
+      "lifecycle": 2,
+      "newline": 2,
+      "deleting": 2,
+      "lines": 2,
+      "selection": 2,
+      "keyboard": 3
+    },
+    "rule": "sourceEditingViolations",
+    "forbidden": "reverse facade and higher-tier imports, runtime App; App types allowed"
+  },
+  "runtimeScc": {
+    "before": [
+      [
+        "src/tui/documents/editing/editing.ts",
+        "src/tui/documents/editing/snippets.ts"
+      ],
+      [
+        "src/tui/workspace/git/gitremote.ts",
+        "src/tui/workspace/git/views/review/rebase.ts"
+      ],
+      [
+        "src/core/rendering/export/formats/html.ts",
+        "src/core/rendering/export/formats/markdown.ts",
+        "src/core/rendering/export/stream.ts"
+      ],
+      [
+        "src/tui/app/runtime/app.ts",
+        "src/tui/app/settings/settings.ts",
+        "src/tui/workspace/history/history.ts",
+        "src/tui/workspace/session/session.ts",
+        "src/tui/workspace/vaults/vaults.ts"
+      ],
+      [
+        "src/tui/actions/actions.ts",
+        "src/tui/actions/documents/actions-edit.ts",
+        "src/tui/actions/documents/actions-find.ts",
+        "src/tui/actions/documents/actions-links.ts",
+        "src/tui/actions/documents/actions-lsp.ts",
+        "src/tui/actions/documents/actions-view.ts",
+        "src/tui/actions/shell/actions-panes.ts",
+        "src/tui/actions/workspace/actions-files.ts"
+      ]
+    ],
+    "after": [
+      [
+        "src/tui/workspace/git/gitremote.ts",
+        "src/tui/workspace/git/views/review/rebase.ts"
+      ],
+      [
+        "src/core/rendering/export/formats/html.ts",
+        "src/core/rendering/export/formats/markdown.ts",
+        "src/core/rendering/export/stream.ts"
+      ],
+      [
+        "src/tui/app/runtime/app.ts",
+        "src/tui/app/settings/settings.ts",
+        "src/tui/workspace/history/history.ts",
+        "src/tui/workspace/session/session.ts",
+        "src/tui/workspace/vaults/vaults.ts"
+      ],
+      [
+        "src/tui/actions/actions.ts",
+        "src/tui/actions/documents/actions-edit.ts",
+        "src/tui/actions/documents/actions-find.ts",
+        "src/tui/actions/documents/actions-links.ts",
+        "src/tui/actions/documents/actions-lsp.ts",
+        "src/tui/actions/documents/actions-view.ts",
+        "src/tui/actions/shell/actions-panes.ts",
+        "src/tui/actions/workspace/actions-files.ts"
+      ]
+    ]
+  }
+}

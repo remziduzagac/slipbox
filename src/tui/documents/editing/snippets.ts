@@ -8,7 +8,7 @@
 import type { Snippet } from "../../../core/documents/editing/snippet.ts";
 import type { App, View } from "../../app/runtime/app.ts";
 import { keyChar } from "../../shell/input/keys.ts";
-import { offsetOf, placeAt } from "./editing.ts";
+import { offsetOf, placeAt } from "./source/position.ts";
 
 export interface SnippetSession {
   view: View;
