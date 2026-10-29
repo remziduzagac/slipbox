@@ -131,6 +131,7 @@ that order:
   of a vault is read unless you follow it (VV-D6).
 - **Export** ([export.md](export.md)): notes as one document, in Word, PDF, a web page, an e-book or Markdown, every
   format written by slipbox itself (D184).
+  Bounded UTF-8 encoding is shared below dispatch and the HTML/Markdown writers; format imports stay lazy.
 - **Distribution** ([distribution.md](distribution.md)): folders per platform, the supply chain's gates, releases and
   previews, installing, channels, updates and the notices a release ships; the skill for agents in the binary.
 - **Testing** ([testing.md](testing.md)): the headless tests, the terminal tests in a herdr pane, the fixture and demo

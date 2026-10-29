@@ -92,6 +92,19 @@ export function graphCompositionViolations(from: string, text: string): string[]
   });
 }
 
+/** UTF-8 output is below dispatch, formats and export orchestration (ORG-T39). */
+export function exportEncodingViolations(from: string, text: string): string[] {
+  if (from !== "src/core/rendering/export/encoding.ts") return [];
+  const root = "src/core/rendering/export/";
+  const composers = ["stream", "index", "jobs", "assemble", "export-worker"];
+  return importsOf(text).flatMap((spec) => {
+    const target = targetOf(from, spec);
+    return composers.some((name) => target === root + name) || target.startsWith(`${root}formats/`)
+      ? [`${from}: imports ${spec} (export encoding must stay below dispatch and formats)`]
+      : [];
+  });
+}
+
 /** Lens/completion mechanisms use explicit inputs below their controllers and App runtime (ORG-T38). */
 export const EDITING_CONTEXT_HELPERS = [
   "src/tui/documents/editing/lens/contracts.ts",
@@ -750,6 +763,7 @@ if (import.meta.main) {
     violations.push(...bufferLayoutViolations(from, readFileSync(file, "utf8")));
     violations.push(...sourceEditingViolations(from, readFileSync(file, "utf8")));
     violations.push(...navigationHelperViolations(from, readFileSync(file, "utf8")));
+    violations.push(...exportEncodingViolations(from, readFileSync(file, "utf8")));
     violations.push(...editingContextViolations(from, readFileSync(file, "utf8")));
     violations.push(...renameMechanismViolations(from, readFileSync(file, "utf8")));
     violations.push(...searchMechanismViolations(from, readFileSync(file, "utf8")));

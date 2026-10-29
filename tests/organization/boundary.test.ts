@@ -47,6 +47,24 @@ describe("the boundary check (0.3, scripts/check-boundary.ts)", () => {
     expect(r.out).not.toContain("boundary check ok");
   });
 
+  test("export encoding rejects dispatch and format imports while retaining its bounded sink", () => {
+    for (const source of [
+      'import { streamExport } from "./stream.ts"; streamExport;',
+      'export type { ExportFormat } from "./index.ts";',
+      'export const load = () => import("./formats/html.ts");',
+    ]) {
+      const refused = check({ "src/core/rendering/export/encoding.ts": source });
+      expect(refused.code).toBe(1);
+      expect(refused.err).toContain("export encoding must stay below dispatch and formats");
+    }
+    expect(
+      check({
+        "src/core/rendering/export/encoding.ts":
+          'import { EXPORT_CHUNK, type ExportSink } from "./spool.ts"; export const size = EXPORT_CHUNK;',
+      }).code,
+    ).toBe(0);
+  });
+
   test("editing-context helpers reject controller and runtime App imports while retaining capabilities", () => {
     const refused = check({
       "src/tui/documents/editing/lens/contracts.ts": 'export type { LiveBase } from "../lens.ts";',
