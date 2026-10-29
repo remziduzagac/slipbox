@@ -875,7 +875,7 @@ describe("the walk's thread takes what the walk here takes (T12)", () => {
         if (!i.waiting) slices++;
         await Bun.sleep(1);
       }
-      return { slices, end: { opened: i.opened, result: i.result, failed: i.failed } };
+      return { slices, opened: i.opened, end: { result: i.result, failed: i.failed } };
     };
     // Opened and ended in one slice; opened in one, ended in a later one (no time left once it's opened): which of
     // the two a walk makes is the time it took, as a loaded machine or a thread just started can tell.
@@ -883,13 +883,25 @@ describe("the walk's thread takes what the walk here takes (T12)", () => {
     const sliced = await indexed(HERE, 0);
     expect(whole.slices).toBe(1);
     expect(sliced.slices).toBeGreaterThan(1);
-    expect(whole.end.opened?.key).toBeString();
+    expect(whole.opened?.key).toBeString();
     expect(sliced.end).toEqual(whole.end);
     expect(whole.end.result).toEqual({ vault: true, done: true, notes: 2, nested: [] });
-    // On the walk's thread, in one slice: the same.
+    // A different vault can be recorded while the worker starts. Opening metadata is a snapshot of that moment,
+    // not part of the index's completion result; its registry copies are allowed to differ.
+    const unrelated = tree({ ".slipbox/config.toml": '[vault]\nname = "index-copy-change"\n' });
+    const { recordFolder } = await import("../../../../src/core/workspace/vaults/folders.ts");
+    expect(recordFolder(unrelated)).not.toBeNull();
+    // On the walk's thread, in one slice: the same completion, with current opening metadata.
     const thread = new WalkThread();
     try {
-      expect((await indexed(thread, 60_000)).end).toEqual(whole.end);
+      const threaded = await indexed(thread, 60_000);
+      expect(threaded.end).toEqual(whole.end);
+      const { copies: beforeCopies, ...beforeIdentity } = whole.opened!;
+      const { copies: afterCopies, ...afterIdentity } = threaded.opened!;
+      expect(afterIdentity).toEqual(beforeIdentity);
+      expect(sliced.opened).toMatchObject(beforeIdentity);
+      expect(beforeCopies?.[unrelated]).toBeUndefined();
+      expect(afterCopies?.[unrelated]).toEqual({ real: unrelated, available: true });
     } finally {
       thread.stop();
     }
