@@ -3,7 +3,7 @@
 // Nothing in it reaches the network: a picture on the web it has no copy of is a link.
 
 import type { ExportSink } from "../spool.ts";
-import { utf8 } from "../stream.ts";
+import { utf8 } from "../encoding.ts";
 import type { Element, Root as HastRoot } from "hast";
 import { toHtml as serialise } from "hast-util-to-html";
 import { loadRasterizer } from "../../media/images/svg.ts";

@@ -696,6 +696,12 @@ During test splits, share setup only where environment, trust resets and cleanup
 scenario names in each test. ORG-T40 completes remaining protocol/setup clone triage and compares the final source and
 combined reports. Do not pursue a zero-duplication target or hide tests inside a generic runner.
 
+ORG-T39 separates bounded UTF-8 encoding below export dispatch and its HTML/Markdown clients, removing their runtime
+cycle. The original function remains re-exported for compatibility; all five lazy format imports and output lifecycle
+contracts stay unchanged. Its remaining measured core candidates have separate protocol, theme-role and release-metadata
+child scopes in [task 39](tasks/39-core-adapter-splits.md#bounded-child-sequence); other cohesive 500–600-line owners are
+recorded in its ledger. Generated server locks keep their independent cap and offline verification.
+
 ### Pattern assessment has a deliverable
 
 - **Workers, ORG-T40:** compare diagram, paint, regex, syntax, spelling, export and walk on admission, ownership,

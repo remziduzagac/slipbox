@@ -3,7 +3,7 @@ import * as fs from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { EXPORT_CHUNK, ExportSpool, PreparedExport, fileSink } from "../src/core/rendering/export/spool.ts";
-import { utf8 } from "../src/core/rendering/export/stream.ts";
+import { utf8 } from "../src/core/rendering/export/encoding.ts";
 import type { ExportDoc } from "../src/core/rendering/export/assemble.ts";
 import { assemble } from "../src/core/rendering/export/assemble.ts";
 import { prepareExport } from "../src/core/rendering/export/jobs.ts";

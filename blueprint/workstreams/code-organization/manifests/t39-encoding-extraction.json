@@ -1,0 +1,117 @@
+{
+  "moves": {},
+  "retained": [],
+  "renamedBasenames": {},
+  "edges": {
+    "removed": [
+      "src/core/rendering/export/formats/html.ts -> src/core/rendering/export/stream.ts",
+      "src/core/rendering/export/formats/markdown.ts -> src/core/rendering/export/stream.ts"
+    ],
+    "added": [
+      "src/core/rendering/export/encoding.ts -> src/core/rendering/export/spool.ts",
+      "src/core/rendering/export/formats/html.ts -> src/core/rendering/export/encoding.ts",
+      "src/core/rendering/export/formats/markdown.ts -> src/core/rendering/export/encoding.ts",
+      "src/core/rendering/export/stream.ts -> src/core/rendering/export/encoding.ts"
+    ]
+  },
+  "runtime": {
+    "removed": [
+      "src/core/rendering/export/formats/html.ts -> src/core/rendering/export/stream.ts",
+      "src/core/rendering/export/formats/markdown.ts -> src/core/rendering/export/stream.ts",
+      "src/core/rendering/export/stream.ts -> src/core/rendering/export/spool.ts"
+    ],
+    "added": [
+      "src/core/rendering/export/encoding.ts -> src/core/rendering/export/spool.ts",
+      "src/core/rendering/export/formats/html.ts -> src/core/rendering/export/encoding.ts",
+      "src/core/rendering/export/formats/markdown.ts -> src/core/rendering/export/encoding.ts",
+      "src/core/rendering/export/stream.ts -> src/core/rendering/export/encoding.ts"
+    ]
+  },
+  "tests": {
+    "removed": [],
+    "added": [
+      "test: UTF-8 encoding of empty text emits no chunk",
+      "test: UTF-8 encoding preserves lone surrogates and pairs at window boundaries",
+      "test: UTF-8 encoding propagates the sink refusal unchanged before further output",
+      "test: export encoding rejects dispatch and format imports while retaining its bounded sink"
+    ]
+  },
+  "entries": {
+    "removed": [],
+    "added": []
+  },
+  "extraction": [
+    {
+      "from": "src/core/rendering/export/stream.ts",
+      "to": "src/core/rendering/export/encoding.ts",
+      "symbols": [
+        "utf8"
+      ]
+    }
+  ],
+  "ownership": {
+    "encoding": "original UTF-8 function body and per-call encoder/buffer allocation below format dispatch; sink errors propagate unchanged",
+    "dispatch": "all five lazy imports and registration remain unchanged; stream re-exports original public utf8 binding",
+    "state": "no new state, worker URL, asset or publication/cancellation changes"
+  },
+  "guards": {
+    "owners": [
+      "src/core/rendering/export/encoding.ts"
+    ],
+    "rule": "exportEncodingViolations",
+    "forbidden": "stream/index/jobs/assembly/worker composition and format owners, including types"
+  },
+  "runtimeScc": {
+    "before": [
+      [
+        "src/tui/workspace/git/gitremote.ts",
+        "src/tui/workspace/git/views/review/rebase.ts"
+      ],
+      [
+        "src/core/rendering/export/formats/html.ts",
+        "src/core/rendering/export/formats/markdown.ts",
+        "src/core/rendering/export/stream.ts"
+      ],
+      [
+        "src/tui/app/runtime/app.ts",
+        "src/tui/app/settings/settings.ts",
+        "src/tui/workspace/history/history.ts",
+        "src/tui/workspace/session/session.ts",
+        "src/tui/workspace/vaults/vaults.ts"
+      ],
+      [
+        "src/tui/actions/actions.ts",
+        "src/tui/actions/documents/actions-edit.ts",
+        "src/tui/actions/documents/actions-find.ts",
+        "src/tui/actions/documents/actions-links.ts",
+        "src/tui/actions/documents/actions-lsp.ts",
+        "src/tui/actions/documents/actions-view.ts",
+        "src/tui/actions/shell/actions-panes.ts",
+        "src/tui/actions/workspace/actions-files.ts"
+      ]
+    ],
+    "after": [
+      [
+        "src/tui/workspace/git/gitremote.ts",
+        "src/tui/workspace/git/views/review/rebase.ts"
+      ],
+      [
+        "src/tui/app/runtime/app.ts",
+        "src/tui/app/settings/settings.ts",
+        "src/tui/workspace/history/history.ts",
+        "src/tui/workspace/session/session.ts",
+        "src/tui/workspace/vaults/vaults.ts"
+      ],
+      [
+        "src/tui/actions/actions.ts",
+        "src/tui/actions/documents/actions-edit.ts",
+        "src/tui/actions/documents/actions-find.ts",
+        "src/tui/actions/documents/actions-links.ts",
+        "src/tui/actions/documents/actions-lsp.ts",
+        "src/tui/actions/documents/actions-view.ts",
+        "src/tui/actions/shell/actions-panes.ts",
+        "src/tui/actions/workspace/actions-files.ts"
+      ]
+    ]
+  }
+}

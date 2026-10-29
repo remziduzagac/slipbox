@@ -26,6 +26,8 @@ for a person, and a command line for agents and scripts, both over the same plai
 - **`src/core/`** is everything that doesn't draw: finding a file's root, walking it, parsing notes, resolving and
   rewriting links, the graph and its indexes, search, laying a note out for a width, themes and glyphs, git, language
   servers, export, installing and updating. Both faces call it.
+  Export encoding sits below stream dispatch and the format writers; both writers share bounded UTF-8 output without
+  importing the dispatcher. Format libraries retain their lazy loading boundaries.
 - **`src/cli/`** is the command line: `cli.ts` parses a command line and runs the command, each group of commands in a
   module of its own (`links.ts`, `files.ts`, `git.ts`, …) and what they share in `common.ts`; `args.ts` parses flags.
 - **`src/tui/`** is the TUI: `app.ts` is the model (the shared state and the wiring), each feature a controller of its

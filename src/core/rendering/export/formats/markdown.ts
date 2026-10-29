@@ -7,7 +7,7 @@
 // Its frontmatter carries the mark that lets a later export replace it, though it's a note.
 
 import type { ExportSpool } from "../spool.ts";
-import { utf8 } from "../stream.ts";
+import { utf8 } from "../encoding.ts";
 import { readExportAsset } from "../reads.ts";
 import { basename, dirname, extname, isAbsolute, relative, sep } from "node:path";
 import type {
