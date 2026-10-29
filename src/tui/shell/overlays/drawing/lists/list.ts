@@ -179,4 +179,4 @@ export function drawList(
   return { x, y, w, h, listY, rows };
 }
 
-export const FOOTER_ROWS = 4;
+const FOOTER_ROWS = 4;

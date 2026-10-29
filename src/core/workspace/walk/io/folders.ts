@@ -14,7 +14,7 @@ export function slowDisk(env = process.env): { name: string; ms: number; deadlin
   return { name, ms: Number(ms), ...(Number(deadline) > 0 ? { deadline: Number(deadline) } : {}) };
 }
 
-export const readdirTyped = (abs: string): Dirent[] => {
+const readdirTyped = (abs: string): Dirent[] => {
   const slow = slowDisk();
   if (slow && basename(abs) === slow.name) Bun.sleepSync(slow.ms);
   return readdirSync(abs, { withFileTypes: true });

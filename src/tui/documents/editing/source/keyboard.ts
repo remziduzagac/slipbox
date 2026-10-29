@@ -36,7 +36,7 @@ export async function insertKey(app: App, view: View, key: string): Promise<void
 
 /** Typing's moves: the arrows, home and end, the page keys — and macOS's cmd+arrows, cmd+← / cmd+→ arriving as ctrl+a
  *  / ctrl+e — and ctrl+home / ctrl+end to the note's start and end, as cmd+↑ / cmd+↓. */
-export const MOVING = new Set([
+const MOVING = new Set([
   "left",
   "right",
   "up",
@@ -64,7 +64,7 @@ export function selectingMove(key: string): string | null {
 }
 
 /** A shifted move while typing: the selection from where it started (the cursor, the first time) to where it goes. */
-export function selectTo(app: App, view: View, move: string): void {
+function selectTo(app: App, view: View, move: string): void {
   if (!view.sel) app.views.select(view, { ...view.cur }, false);
   insertKeyNow(app, view, move);
   // Back where it started, nothing is selected.
@@ -77,7 +77,7 @@ export function selectTo(app: App, view: View, move: string): void {
  * `left` and `right` go to its start and end. Any other key lets it go, then does what it does. True when the key is
  * spent here.
  */
-export function selectionKey(app: App, view: View, key: string): boolean {
+function selectionKey(app: App, view: View, key: string): boolean {
   switch (key) {
     case "backspace":
     case "ctrl+h":
@@ -114,7 +114,7 @@ export function selectionKey(app: App, view: View, key: string): boolean {
 }
 
 /** Typing, by words: ctrl+← / ctrl+→, alt+← / alt+→ (macOS's option+arrows), alt+b / alt+f (what its terminals send). */
-export const WORD_KEYS: Record<string, -1 | 1> = {
+const WORD_KEYS: Record<string, -1 | 1> = {
   "ctrl+left": -1,
   "alt+left": -1,
   "alt+b": -1,
@@ -134,7 +134,7 @@ export function wordFrom(text: string, at: number, dir: -1 | 1): number {
  * Up to `n` rows up or down while typing (wrapped rows count), at the goal column, past a row's end allowed — only onto
  * rows of text: the lens's rules and the render beyond them stop it (normal mode moves on). The rows it went.
  */
-export function rowsWhileTyping(app: App, view: View, n: number): number {
+function rowsWhileTyping(app: App, view: View, n: number): number {
   const layout = app.currentLayout(view);
   const step = n < 0 ? -1 : 1;
   let row = view.cur.row;
@@ -157,7 +157,7 @@ export function rowsWhileTyping(app: App, view: View, n: number): number {
  * in source mode the view with it, so the cursor keeps its place on the screen. In the lens it stops at the lens's
  * rules, as the arrows do.
  */
-export function pageWhileTyping(app: App, view: View, dir: -1 | 1): void {
+function pageWhileTyping(app: App, view: View, dir: -1 | 1): void {
   const top = view.top;
   const went = rowsWhileTyping(app, view, dir * Math.max(1, view.height - 2));
   if (!went || view.live) return;
@@ -169,7 +169,7 @@ export function pageWhileTyping(app: App, view: View, dir: -1 | 1): void {
   app.views.setCursorAnchor(view, app.currentLayout(view));
 }
 
-export function insertKeyNow(app: App, view: View, key: string): void {
+function insertKeyNow(app: App, view: View, key: string): void {
   const typed = keyChar(key);
   switch (key) {
     case "escape":

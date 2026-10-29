@@ -82,7 +82,7 @@ export function planRelink(g: Graph, rels?: string[], opts: { pointers?: boolean
  * the pointer to write instead — for one that reaches the file, and for one broken where a copy of
  * that folder was (moved by hand). Only one that reaches the file now; the fragment kept.
  */
-export function pointerOffer(g: Graph, l: ResolvedLink, fromRel: string, said: Set<string>): string | null {
+function pointerOffer(g: Graph, l: ResolvedLink, fromRel: string, said: Set<string>): string | null {
   if (l.kind !== "markdown" && l.kind !== "image") return null;
   const hash = l.target.indexOf("#");
   const path = hash >= 0 ? l.target.slice(0, hash) : l.target;
@@ -135,7 +135,7 @@ export function pointerOffer(g: Graph, l: ResolvedLink, fromRel: string, said: S
 }
 
 /** This vault's last confirmed move to where it is now (20.5), if it has one. */
-export function lastMove(g: Graph): string | null {
+function lastMove(g: Graph): string | null {
   const entry = readRoots().find((v) => v.kind === "vault" && v.key === g.loc.key);
   const m = entry?.moved?.filter((x) => x.to === g.root).at(-1);
   return m && m.from !== g.root ? m.from : null;
@@ -148,7 +148,7 @@ export function lastMove(g: Graph): string | null {
  * this machine knows (as of their index), to where it is. Each in its own form (relative, `~/`,
  * absolute).
  */
-export function vaultMoveFixes(g: Graph, from: string, c: Collector): void {
+function vaultMoveFixes(g: Graph, from: string, c: Collector): void {
   const to = g.root;
   const pathOf = (target: string) => {
     const p = target.split("#")[0]!;

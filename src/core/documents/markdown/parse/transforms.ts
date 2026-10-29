@@ -17,7 +17,7 @@ export function finish(nodes: unknown[], text: string): void {
 /** `$…$` read as Obsidian and Pandoc read it (12.11): not maths where the `$`s hold a space just inside them, or a
  * digit follows the closing one — `$5 and $10` is money — so that span is its text again. `$$…$$` in text is maths
  * as written. */
-export function dollarsAsText(nodes: unknown[], text: string): void {
+function dollarsAsText(nodes: unknown[], text: string): void {
   for (const n of nodes) {
     const node = n as { children?: { type: string; position?: Position }[] };
     if (!node.children) continue;
@@ -34,10 +34,10 @@ export function dollarsAsText(nodes: unknown[], text: string): void {
 }
 
 /** A heading's trailing `{#id …}` (Pandoc's attributes): the id in group 1. */
-export const HEADING_ID = /\s*\{#([^\s{}#]+)(?:\s[^{}]*)?\}\s*$/;
+const HEADING_ID = /\s*\{#([^\s{}#]+)(?:\s[^{}]*)?\}\s*$/;
 
 /** A heading's trailing `{#id …}` (Pandoc's attributes): its id, kept on the node, the text without it. */
-export function markHeadingIds(nodes: unknown[]): void {
+function markHeadingIds(nodes: unknown[]): void {
   for (const n of nodes) {
     const node = n as Nodes;
     if (node.type === "heading") {
@@ -58,7 +58,7 @@ export function markHeadingIds(nodes: unknown[]): void {
  * wrote the brackets to be read, not a callout. Only the source tells (the escape is gone from the
  * text), so it's marked here, while the offsets are there.
  */
-export function markLiteralQuotes(nodes: unknown[], text: string): void {
+function markLiteralQuotes(nodes: unknown[], text: string): void {
   for (const n of nodes) {
     const node = n as Nodes;
     if (node.type === "blockquote") {

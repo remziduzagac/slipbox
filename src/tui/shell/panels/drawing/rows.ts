@@ -20,7 +20,7 @@ export interface SideView {
   hbar: Rect | null;
 }
 
-export const naturalWidths = new WeakMap<object, number>();
+const naturalWidths = new WeakMap<object, number>();
 
 export function sideView<T extends object>(
   rect: Rect,

@@ -5,7 +5,7 @@ import { keyChar } from "../keys.ts";
 import { takeCount } from "./state.ts";
 import { textObject } from "./motions.ts";
 import { operatorKey } from "./operators.ts";
-export function idle(app: App, view: View): boolean {
+function idle(app: App, view: View): boolean {
   const s = app.vim;
   return !s.count && !s.op && !s.awaitChar && !view.insert;
 }
@@ -33,7 +33,7 @@ export async function vimKey(app: App, view: View, key: string, dispatch: () => 
     s.lastChange = [...s.seq];
 }
 
-export async function handle(app: App, view: View, key: string, dispatch: () => Promise<void>): Promise<void> {
+async function handle(app: App, view: View, key: string, dispatch: () => Promise<void>): Promise<void> {
   const s = app.vim;
   if (s.awaitChar) {
     const f = s.awaitChar;

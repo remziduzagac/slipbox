@@ -9,7 +9,7 @@ import { nextBoundary, prevBoundary } from "./text.ts";
  * Where ctrl+u and ctrl+w stop first (vim's rule): the insert's start, when it is on this line
  * before the cursor. Once reached, it's spent — the next one goes on to the line's start.
  */
-export function insertStop(view: View, lineStart: number, at: number): number {
+function insertStop(view: View, lineStart: number, at: number): number {
   const s = view.insertFrom;
   // After only indentation (cc, o keep it), the insert's start is the line's: the indent goes too.
   if (s !== undefined && s > lineStart && s < at && view.buf.source.slice(lineStart, s).trim()) return s;

@@ -1,6 +1,6 @@
 // Reading movement and command bindings; window/tab additions retain their original ordered mutations.
 /** Movement commands: bound plain to move, and with `shift+` (or in visual mode) to extend. */
-export const MOVES: [id: string, keys: string[], extendKeys: string[]][] = [
+const MOVES: [id: string, keys: string[], extendKeys: string[]][] = [
   ["cursor.left", ["h", "left"], ["shift+left"]],
   ["cursor.right", ["l", "right"], ["shift+right"]],
   ["cursor.up", ["k", "up"], ["shift+up"]],
@@ -33,7 +33,7 @@ export const MOVES: [id: string, keys: string[], extendKeys: string[]][] = [
 
 export const MOVE_COMMANDS = new Set(MOVES.map((m) => m[0]));
 
-export function movementBindings(): Record<string, string> {
+function movementBindings(): Record<string, string> {
   const out: Record<string, string> = {};
   for (const [id, keys, ext] of MOVES) {
     for (const k of keys) out[k] = id;

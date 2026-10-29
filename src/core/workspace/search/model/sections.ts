@@ -20,12 +20,12 @@ export function tokensOf(text: string): number {
 }
 
 /** A name segment, encoded as scout's grammar has it: `%`, `~`, `/`, `#`, in that order. */
-export function segment(text: string): string {
+function segment(text: string): string {
   return text.replaceAll("%", "%25").replaceAll("~", "%7E").replaceAll("/", "%2F").replaceAll("#", "%23");
 }
 
 /** Sibling segments made distinct: a later one normKey-equal to an earlier gets `~2`, `~3`. */
-export function distinct(names: string[]): string[] {
+function distinct(names: string[]): string[] {
   const seen = new Map<string, number>();
   return names.map((n) => {
     const key = n.normalize("NFC").toLowerCase();
@@ -60,7 +60,7 @@ export function units(lines: DocLine[]): DocLine[][] {
  * Units packed into band-sized pieces, in order: a piece is flushed when the next unit would take it
  * over the band's top; a last piece under its bottom goes onto the one before.
  */
-export function pack(us: DocLine[][]): DocLine[][] {
+function pack(us: DocLine[][]): DocLine[][] {
   const pieces: DocLine[][] = [];
   let cur: DocLine[] = [];
   const text = (ls: DocLine[]) => ls.map((l) => l.text).join("\n");

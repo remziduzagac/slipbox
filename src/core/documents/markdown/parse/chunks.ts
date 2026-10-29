@@ -4,25 +4,25 @@ import type { Root } from "mdast";
 import { ORIGIN } from "./contracts.ts";
 
 /** A chunk ends before an ATX heading only after at least this many lines: fewer, larger parses. */
-export const CHUNK_LINES = 40;
+const CHUNK_LINES = 40;
 
-export const LIST_ITEM = /^(?:[-*+]|\d{1,9}[.)])(?:[ \t]|$)/;
+const LIST_ITEM = /^(?:[-*+]|\d{1,9}[.)])(?:[ \t]|$)/;
 
-export const BLOCK_TAGS =
+const BLOCK_TAGS =
   "address|article|aside|base|basefont|blockquote|body|caption|center|col|colgroup|dd|details|dialog|dir|div|dl|dt|fieldset|figcaption|figure|footer|form|frame|frameset|h[1-6]|head|header|hr|html|iframe|legend|li|link|main|menu|menuitem|nav|noframes|ol|optgroup|option|p|param|search|section|summary|table|tbody|td|tfoot|th|thead|title|tr|track|ul";
 
 /** CommonMark's HTML block kind 6: a block-level tag, which may even interrupt a paragraph. */
-export const HTML_BLOCK = new RegExp(`^ {0,3}</?(?:${BLOCK_TAGS})(?:[\\s/>]|$)`, "i");
+const HTML_BLOCK = new RegExp(`^ {0,3}</?(?:${BLOCK_TAGS})(?:[\\s/>]|$)`, "i");
 
 /** Kind 7: a line that is one whole tag, starting a block (it can't interrupt a paragraph). */
-export const HTML_TAG_LINE =
+const HTML_TAG_LINE =
   /^ {0,3}(?:<[A-Za-z][A-Za-z0-9-]*(?:\s+[A-Za-z_:][\w.:-]*(?:\s*=\s*(?:[^\s"'=<>`]+|'[^']*'|"[^"]*"))?)*\s*\/?>|<\/[A-Za-z][A-Za-z0-9-]*\s*>)\s*$/;
 
 /** HTML block kinds 1–5, which blank lines don't end, at a line's start. */
-export const HTML_OPEN = /^ {0,3}(<!--|<\?|<!\[CDATA\[|<![A-Za-z]|<(?:script|pre|style|textarea)(?=[\s>]|$))/i;
+const HTML_OPEN = /^ {0,3}(<!--|<\?|<!\[CDATA\[|<![A-Za-z]|<(?:script|pre|style|textarea)(?=[\s>]|$))/i;
 
 /** A list item at the first column with something in it (an empty one can't interrupt a paragraph). */
-export const FULL_ITEM = /^(?:[-*+]|\d{1,9}[.)])[ \t]+\S/;
+const FULL_ITEM = /^(?:[-*+]|\d{1,9}[.)])[ \t]+\S/;
 
 /**
  * Where the note can be parsed in pieces with the same result as whole, outside frontmatter,

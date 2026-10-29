@@ -11,7 +11,7 @@ import { dialogWidth } from "./prompt.ts";
 
 /** The help under a dialog's rule: as many rows as the longest row's help needs (at most three), so the window
  *  doesn't change its height as the cursor moves. */
-export function choiceHelpRows(o: DialogOverlay, w: number): number {
+function choiceHelpRows(o: DialogOverlay, w: number): number {
   const helps = [...o.choices.map((ch) => ch.help), ...o.checkboxes.map((b) => b.help)];
   return Math.min(3, Math.max(0, ...helps.map((h) => wrapWords(sanitize(h), w - 4).length)));
 }

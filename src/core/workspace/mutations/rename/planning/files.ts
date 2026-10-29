@@ -74,7 +74,7 @@ export function planFolderMove(g: Graph, fromDir: string, toInput: string): Rena
 }
 
 /** The folder `from` and every folder in it, each to where it goes under `to` (links to a folder, 21.2). */
-export function foldersMoving(g: Graph, from: string, to: string): Map<string, string> {
+function foldersMoving(g: Graph, from: string, to: string): Map<string, string> {
   const out = new Map<string, string>();
   for (const d of [from, ...g.dirs])
     if (d === from || d.startsWith(`${from}/`)) out.set(d, `${to}${d.slice(from.length)}`);

@@ -21,7 +21,7 @@ import { peekProbe } from "./probe.ts";
  * Each vault's catch-ups here, one after another (#10): an answer that comes while another's catch-up awaits its probe
  * is read against the graph that one leaves, never against one it let go of.
  */
-export const catching = new WeakMap<App, Map<string, Promise<void>>>();
+const catching = new WeakMap<App, Map<string, Promise<void>>>();
 
 /**
  * Another vault's graph, read on the main thread for its links (`vaultGraph`), caught up with what its thread just
@@ -52,7 +52,7 @@ export function caughtUp(
  * opened again from that index, the roots in and around it found again, every view laid out again. Its settings
  * changed since it was opened: opened anew with them.
  */
-export async function catchUp(app: App, asked: Graph, answer: BacklinksAnswer, holder: Holder): Promise<void> {
+async function catchUp(app: App, asked: Graph, answer: BacklinksAnswer, holder: Holder): Promise<void> {
   if (app.quitting || !answer.indexed) return;
   if (answer.wrote) noteIndexed(asked.loc.key);
   const others = answer.wrote || answer.others.length > 0;
@@ -76,7 +76,7 @@ export async function catchUp(app: App, asked: Graph, answer: BacklinksAnswer, h
 }
 
 /** The graph held for `asked`'s vault caught up with the answer (`catchUp`): true when it was, and laid out again. */
-export async function rebuilt(
+async function rebuilt(
   app: App,
   asked: Graph,
   answer: Extract<BacklinksAnswer, { indexed: true }>,
@@ -139,7 +139,7 @@ export function parseHere(app: App, graph: Graph, holder: Holder): void {
  * Another vault's graph opened anew, with its settings as they are now: let go of, every buffer reading through it
  * given the new one. Its settings are fixed when it's made, and with others it walks and resolves differently.
  */
-export function reopened(app: App, graph: Graph, reach: Reach): Graph | null {
+function reopened(app: App, graph: Graph, reach: Reach): Graph | null {
   // Not opened anew (the vault gone since): the old kept, its buffers reading through it still.
   const fresh = reach.reopen(graph.root);
   if (!fresh) return null;
@@ -152,15 +152,15 @@ export function reopened(app: App, graph: Graph, reach: Reach): Graph | null {
 }
 
 /** Other vaults' graphs being parsed here, a slice at a time (`catchUp`); and those let go of, opened anew. */
-export const parsing = new WeakSet<Graph>();
+const parsing = new WeakSet<Graph>();
 
-export const retired = new WeakSet<Graph>();
+const retired = new WeakSet<Graph>();
 
 /**
  * Every view laid out again once another vault's graph here caught up: a peek's or a kept tab's reads through it, and
  * this vault's own notes may reach a note of it by a name it has only now.
  */
-export function relayout(app: App): void {
+function relayout(app: App): void {
   // Not a screen going away.
   if (app.quitting) return;
   for (const b of everyBuffer(app)) b.invalidateLayouts();
@@ -169,14 +169,14 @@ export function relayout(app: App): void {
 }
 
 /** Every buffer open here: in the tabs, and the peek's. */
-export function everyBuffer(app: App): Set<NoteBuffer> {
+function everyBuffer(app: App): Set<NoteBuffer> {
   return new Set([...app.buffers.values(), ...app.allViews().map((v) => v.buf)]);
 }
 
 /** A graph's walk signature here, kept by its generation: `vaultSignature` sorts and hashes the whole walk. */
-export const signatures = new WeakMap<Graph, { generation: number; signature: string }>();
+const signatures = new WeakMap<Graph, { generation: number; signature: string }>();
 
-export function signatureOf(graph: Graph): string {
+function signatureOf(graph: Graph): string {
   const hit = signatures.get(graph);
   if (hit?.generation === graph.generation) return hit.signature;
   const signature = vaultSignature(graph);
@@ -185,7 +185,7 @@ export function signatureOf(graph: Graph): string {
 }
 
 /** The vaults nested in a vault, as its walk found them, in a word. */
-export function nestedIn(graph: Graph): string {
+function nestedIn(graph: Graph): string {
   return graph.nestedRoots().sort().join("\0");
 }
 
@@ -213,7 +213,7 @@ export function tuiReach(app: App, loc: VaultLocation): Reach {
  * from them counted here. Not this TUI's own vault, reached from another (`[[here:note]]`): its index is its own
  * graph's, indexed in the background here, and its state is written on this thread alone.
  */
-export function reachedFor(app: App, holder: Holder): (g: Graph) => void {
+function reachedFor(app: App, holder: Holder): (g: Graph) => void {
   return (g) =>
     queueMicrotask(() => {
       if (g.indexBehind && g.loc.key !== app.loc.key) keepCaughtUp(app, g, holder);
@@ -249,7 +249,7 @@ export function reachedAgain(app: App): void {
  * first). The roots nested in it and around it recorded here: its backlinks' thread reads them from the machine's
  * list, and indexes those without an index, writing to the list nothing itself (`backlinks-jobs.ts`).
  */
-export function reachFrom(app: App, graph: Graph): void {
+function reachFrom(app: App, graph: Graph): void {
   // A third vault its links reach, caught up as this TUI's are: held by this reach, as the graph has it then — while
   // this TUI holds the graph itself, not retired.
   const holder: Holder = () =>

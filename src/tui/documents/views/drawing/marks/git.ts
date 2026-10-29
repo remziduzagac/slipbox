@@ -13,7 +13,7 @@ export const SIGN_ROLE: Record<GitSign, Role> = {
   topdelete: "git_sign_delete",
 };
 
-export const SIGN_RANK: Record<GitSign, number> = { change: 3, add: 2, delete: 1, topdelete: 1 };
+const SIGN_RANK: Record<GitSign, number> = { change: 3, add: 2, delete: 1, topdelete: 1 };
 
 export function gitGlyph(g: Glyphs, s: GitSign): string {
   return s === "add" ? g.gitAdd : s === "change" ? g.gitChange : s === "delete" ? g.gitDelete : g.gitTopDelete;

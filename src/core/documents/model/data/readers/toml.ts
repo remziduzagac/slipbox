@@ -9,11 +9,7 @@ import { fieldLink } from "../links.ts";
 // ---------------------------------------------------------------------------------------------
 // TOML
 /** A value's end: where brackets and strings (triple-quoted too) close, and a trailing comment. */
-export function scanValue(
-  lines: string[],
-  i: number,
-  from: number,
-): { end: number; value: string; comment: string | null } {
+function scanValue(lines: string[], i: number, from: number): { end: number; value: string; comment: string | null } {
   let depth = 0;
   let str: string | null = null; // the open quote: ", ', """ or '''
   let value = "";
@@ -52,7 +48,7 @@ export function scanValue(
 }
 
 /** A TOML value as it reads: a basic or literal string unquoted, the rest as written. */
-export function tomlDisplay(raw: string): { value: string; kind: DataField["kind"] } {
+function tomlDisplay(raw: string): { value: string; kind: DataField["kind"] } {
   const m = /^"((?:[^"\\]|\\.)*)"$/.exec(raw);
   if (m)
     return {
@@ -141,7 +137,7 @@ export function readToml(source: string): ParsedData {
 }
 
 /** The `=` after a key (bare, quoted or dotted), or -1. */
-export function keyEnd(t: string): number {
+function keyEnd(t: string): number {
   let q: string | null = null;
   for (let k = 0; k < t.length; k++) {
     const ch = t[k]!;
@@ -157,7 +153,7 @@ export function keyEnd(t: string): number {
  * Runs of `[[name]]` entries whose keys are all plain values read better as one table: a row an
  * entry (on its header's line), a column a key.
  */
-export function tomlRecords(nodes: RootContent[]): RootContent[] {
+function tomlRecords(nodes: RootContent[]): RootContent[] {
   const out: RootContent[] = [];
   const isField = (n: RootContent | undefined) => (n as unknown as DataField | undefined)?.type === "dataField";
   for (let i = 0; i < nodes.length; i++) {

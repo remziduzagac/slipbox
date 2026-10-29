@@ -25,7 +25,7 @@ import { drawHScrollbar, drawScrollbar } from "./chrome/scrollbars.ts";
 import { drawCursor } from "./chrome/cursor.ts";
 import { drawPictures } from "./pictures.ts";
 
-export function paneIsActive(app: App, view: View): boolean {
+function paneIsActive(app: App, view: View): boolean {
   // The floating editor, while it's open, is the only active window (3.20).
   if (app.floating) return app.floating.view === view;
   const t: Tab | null = app.tab;

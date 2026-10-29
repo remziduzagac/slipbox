@@ -738,6 +738,10 @@ script entries before triaging Knip's reported 58 files, 186 exports and 54 type
 used, false positive, narrow visibility, proven unused removal, or deferred with evidence. Preserve optional external
 tools and documented scripts. Dependency candidates receive explicit retain/follow-up reasoning; do not silently change
 packages. Remove an export separately from its still-used implementation.
+The [T41 disposition ledger](tasks/41-naming-and-unused-code.md#discovery-and-dispositions) records entry-aware
+Knip discovery and 118 narrowed export sites with every implementation retained. All original research candidates and
+current configured symbols have explicit outcomes; remaining source contracts and type-only dependency ownership are
+deferred, rather than treated as proof of dead implementation.
 
 ORG-T42 inventories repeated custom AST casts and library adapters, reusing guards only for identical contracts. Keep
 runtime guards that validate external input; a cast is not a substitute. Document failure ownership at extracted

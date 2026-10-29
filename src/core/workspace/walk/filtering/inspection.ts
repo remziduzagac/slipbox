@@ -25,7 +25,7 @@ export function busyFolderWhyAt(abs: string, walk: Config["walk"]): BusyWhy | nu
 }
 
 /** The filter of the walk of the vault holding `abs`, and its path there; outside every vault, home's rules. */
-export function filterHolding(abs: string, walk: Config["walk"]): { filter: WalkFilter; rel: string } {
+function filterHolding(abs: string, walk: Config["walk"]): { filter: WalkFilter; rel: string } {
   const root = findVaultRoot(dirname(abs));
   const filter = new WalkFilter(root ?? dirname(abs), walk, { home: !root });
   return { filter, rel: root ? relative(root, abs).split(sep).join("/") : basename(abs) };

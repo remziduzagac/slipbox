@@ -100,7 +100,7 @@ export function show(app: App, p: Omit<Peek, "label">, text: string, anchor?: An
  * it; then, whatever it shows by then, the graph its links are read in caught up, laid out again. Never rejected:
  * nothing awaits it but a test.
  */
-export async function readBacklinks(app: App, peek: Peek, graph: Graph, text: string, rel: string): Promise<void> {
+async function readBacklinks(app: App, peek: Peek, graph: Graph, text: string, rel: string): Promise<void> {
   let state: BacklinksState;
   let answer: BacklinksAnswer | null = null;
   const stops = backlinkStops();

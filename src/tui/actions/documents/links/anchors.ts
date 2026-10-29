@@ -32,12 +32,12 @@ export function markdownText(s: string): string {
 }
 
 /** A note's path as a message gives it (21.9): from this root, else from home, else absolute. */
-export function shownAt(a: App, path: string): string {
+function shownAt(a: App, path: string): string {
   return isAbsolute(path) ? a.graph.shownPath(path) : path;
 }
 
 /** Where a heading lands in a note (landing.ts: an id, a heading by slug or text, a path of headings), as an anchor; nowhere, the note's top, said. */
-export function headingAnchor(a: App, path: string, heading: string, wiki = false): Anchor {
+function headingAnchor(a: App, path: string, heading: string, wiki = false): Anchor {
   // A note of another vault too (17.10): its heading is found in that vault's index.
   const note = a.graph.entryAnywhere(path);
   const hit = note ? findHeading(note.headings, note.anchors ?? [], heading, wiki) : null;

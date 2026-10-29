@@ -19,7 +19,7 @@ export const OMIT_HTML = new Set(
   "script style iframe frame frameset object embed applet template noscript head link meta base".split(" "),
 );
 
-export function htmlEntities(text: string): string {
+function htmlEntities(text: string): string {
   return text.replace(/&(#(?:[0-9]{1,7}|[xX][0-9a-fA-F]{1,6})|[a-zA-Z][a-zA-Z0-9]{0,31});/g, (raw, name: string) => {
     if (name[0] !== "#") return decodeNamedCharacterReference(name) || raw;
     const hex = /^#x/i.test(name);

@@ -8,10 +8,10 @@ import type { CellLink, DataField } from "./contracts.ts";
 /** Keys whose value is a reference by intent: counted whether or not it resolves. */
 export const REFERENCE_KEYS = /^(\$ref|\$schema|schema|include|includes|extends|import|imports|file|path)$/i;
 
-export const URL = /^[a-z][a-z0-9+.-]*:\/\/\S+$/i;
+const URL = /^[a-z][a-z0-9+.-]*:\/\/\S+$/i;
 
 /** A path-like value: no spaces, a separator or a file extension (`schemas/user.json`, `../base.toml`). */
-export const PATHLIKE =
+const PATHLIKE =
   /^(?:\.{0,2}\/)?[\w.@~-]+(?:\/[\w.@~-]+)*(?:\.[A-Za-z0-9]{1,10})(?:#\S*)?$|^(?:\.{0,2}\/)?[\w.@~-]+(?:\/[\w.@~-]+)+\/?$/;
 
 export interface DataLink {

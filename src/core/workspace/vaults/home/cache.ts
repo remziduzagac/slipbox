@@ -21,7 +21,7 @@ export function homeWalkFile(loc: Keyed): string {
   return join(cacheDir(loc), "walk.json");
 }
 
-export const TOO_LARGE = "larger than walk.max_file_size";
+const TOO_LARGE = "larger than walk.max_file_size";
 
 /** Home's walk kept, made with `filter`: what its graph is built from until the next one. */
 export function keepHomeWalk(
@@ -49,11 +49,10 @@ export function keepHomeWalk(
   } catch {}
 }
 
-export const strings = (v: unknown): string[] =>
-  Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : [];
+const strings = (v: unknown): string[] => (Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : []);
 
 /** Each folder's stamp as the walk kept saw it (`KeptWalk.times`), by its path: those known. */
-export function keptTimes(kept: KeptWalk): Map<string, Stamp> {
+function keptTimes(kept: KeptWalk): Map<string, Stamp> {
   const times = new Map<string, Stamp>();
   const { dirs, times: list } = kept;
   // Read beside its folders, before either is sorted or sifted: a list that doesn't match them says nothing.
@@ -299,7 +298,7 @@ export function keptWalk(
 }
 
 /** Two lists holding the same strings, in any order. */
-export function same(a: string[], b: string[]): boolean {
+function same(a: string[], b: string[]): boolean {
   if (a.length !== b.length) return false;
   const x = [...a].sort();
   const y = [...b].sort();
@@ -308,7 +307,7 @@ export function same(a: string[], b: string[]): boolean {
 
 /** Whether `kept` is a walk of home's to build from: made under `filter`'s settings (its signature), and holding home's
  *  top (one that couldn't read it holds none of home, and is made again, #12). */
-export function fits(kept: KeptWalk | null, filter?: WalkFilter): kept is KeptWalk {
+function fits(kept: KeptWalk | null, filter?: WalkFilter): kept is KeptWalk {
   return (
     kept?.version === 1 &&
     Array.isArray(kept.notes) &&

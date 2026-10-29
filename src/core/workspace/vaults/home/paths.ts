@@ -9,7 +9,7 @@ import type { WalkFilter } from "../../walk/filtering/filter.ts";
 /** Whether `rel` is the folder `dir` or in it (`""`: home's top, holding everything). */
 export const under = (rel: string, dir: string): boolean => dir === "" || rel === dir || rel.startsWith(`${dir}/`);
 
-export const isDir = (abs: string) => {
+const isDir = (abs: string) => {
   try {
     return statSync(abs).isDirectory();
   } catch {
@@ -21,7 +21,7 @@ export const isDir = (abs: string) => {
 export const inFolders = (rel: string, folders: readonly string[]): boolean =>
   folders.some((d) => d !== "" && under(rel, d));
 
-export const depth = (rel: string) => rel.split("/").length;
+const depth = (rel: string) => rel.split("/").length;
 
 /**
  * The order home's cap keeps in (VV-D2): the nearest the top first, then by path — so what it leaves out is the

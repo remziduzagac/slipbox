@@ -28,7 +28,7 @@ const codeFiles = (root: string, area: string) =>
     .sort();
 
 /** Bun's relative source resolution, including explicit assets and directory indexes. */
-export function resolveLocal(root: string, file: string, spec: string, directory = false): string | null {
+function resolveLocal(root: string, file: string, spec: string, directory = false): string | null {
   const path = normalize(join(directory ? file : dirname(file), spec));
   if (path.startsWith("../") || path.startsWith("/")) return null;
   for (const candidate of [path, `${path}.ts`, `${path}.tsx`, `${path}/index.ts`, `${path}/index.tsx`]) {

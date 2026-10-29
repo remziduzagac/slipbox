@@ -30,12 +30,12 @@ export function peekTitle(
 }
 
 /** Text read as Markdown as it is: what would format it, or end a link's text, escaped. */
-export function md(s: string): string {
+function md(s: string): string {
   return s.replace(/[\\`*_[\]<>|~$]/g, "\\$&");
 }
 
 /** A file's name on one line: a control character in it — a newline — shown as its escape (`\n`, `\x1b`). */
-export function visible(s: string): string {
+function visible(s: string): string {
   const named: Record<string, string> = { "\n": "\\n", "\r": "\\r", "\t": "\\t" };
   return s.replace(/[\x00-\x1f\x7f]/g, (c) => named[c] ?? `\\x${c.charCodeAt(0).toString(16).padStart(2, "0")}`);
 }
