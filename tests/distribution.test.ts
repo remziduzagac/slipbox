@@ -400,6 +400,7 @@ describe("the supply chain's gates (14.10)", () => {
       "src/core/w.ts": "export {};\n",
       "src/tui/documents/diagnostics/problems/rows.ts": "export const rows = [];\n",
       "tests/problems.test.ts": 'import "../src/tui/documents/diagnostics/problems/rows.ts";\n',
+      "src/core/application/distribution/updates/discovery.ts": "export {};\n",
       "src/tui/documents/navigation/peek/presentation.ts": 'export const label = "peek";\n',
       "tests/peek.test.ts": 'import "../src/tui/documents/navigation/peek/presentation.ts";\n',
       "tests/a.test.ts": 'import { a } from "../src/core/a.ts";\nexport { a };\n',
@@ -463,6 +464,13 @@ describe("the supply chain's gates (14.10)", () => {
         top,
       ),
     ).toMatchObject({ tests: ["tests/peek.test.ts", "tests/run.test.ts"], checks: ["peek"] });
+    expect(
+      reaches(
+        ["src/core/application/distribution/updates/discovery.ts"],
+        new Map([...g, ["src/main.ts", ["src/core/application/distribution/updates/discovery.ts"]]]),
+        top,
+      ),
+    ).toMatchObject({ tests: ["tests/run.test.ts"], checks: ["updates"] });
     expect(of("src/core/w.ts")).toMatchObject({ tests: ["tests/a.test.ts", "tests/run.test.ts"], checks: "all" });
     expect(of("tests/terminal/checks/one.ts")).toMatchObject({ tests: [], checks: ["one"] });
     expect(of("examples/home/n.md")).toMatchObject({ checks: "all" }); // a sample the checks' harness names

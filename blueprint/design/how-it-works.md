@@ -136,6 +136,8 @@ that order:
   Bounded UTF-8 encoding is shared below dispatch and the HTML/Markdown writers; format imports stay lazy.
 - **Distribution** ([distribution.md](distribution.md)): folders per platform, the supply chain's gates, releases and
   previews, installing, channels, updates and the notices a release ships; the skill for agents in the binary.
+  Release/channel discovery lives below update coordination in `application/distribution/updates/discovery.ts`, with
+  original fetch/cancellation behavior; installation, locks and replacement remain in the updater.
 - **Testing** ([testing.md](testing.md)): the headless tests, the terminal tests in a herdr pane, the fixture and demo
   vaults and the reference set.
 

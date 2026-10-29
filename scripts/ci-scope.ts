@@ -103,7 +103,7 @@ export const CHECKS_FOR: [RegExp, string[]][] = [
   [/^src\/tui\/shell\/overlays\/palette\.ts$/, ["palette", "help", "which-key"]],
   // Upgrading and restarting (UPG): the update offer, its dialog, the restart's note and hand-over.
   [
-    /^src\/(core\/application\/distribution\/(update|restart|skill-lifecycle)|tui\/(app\/distribution\/updates|shell\/overlays\/dialog))\.ts$/,
+    /^src\/(core\/application\/distribution\/(update|updates\/discovery|restart|skill-lifecycle)|tui\/(app\/distribution\/updates|shell\/overlays\/dialog))\.ts$/,
     ["updates"],
   ],
   [/^src\/tui\/documents\/tools\/outline\/outline\.ts$/, ["outline"]],

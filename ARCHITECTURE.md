@@ -32,6 +32,8 @@ for a person, and a command line for agents and scripts, both over the same plai
   `documents/servers/client/`; the client keeps requests, deadlines, transport and shutdown ownership.
   Semantic role vocabulary and compatibility aliases live in `rendering/theme/roles.ts` below palette construction
   and theme loading; public re-exports preserve the same arrays and objects.
+  Release/channel discovery lives below update coordination in `application/distribution/updates/discovery.ts`; the
+  updater keeps check state, privacy, install/download locks, process probes and replacement ownership.
 - **`src/cli/`** is the command line: `cli.ts` parses a command line and runs the command, each group of commands in a
   module of its own (`links.ts`, `files.ts`, `git.ts`, …) and what they share in `common.ts`; `args.ts` parses flags.
 - **`src/tui/`** is the TUI: `app.ts` is the model (the shared state and the wiring), each feature a controller of its
