@@ -10,6 +10,7 @@
 //   (a list whose last item does: a `%%` right after a list is its lazy line) — is a block of its own (`commentBlock`),
 //   whatever is between: made after the parse, where the blocks are.
 
+import type { Code, State, Effects, CompileContext } from "./tokenization/contracts.ts";
 import type { Parent, PhrasingContent, RootContent } from "mdast";
 
 export interface Highlight extends Parent {
@@ -47,9 +48,6 @@ declare module "mdast" {
 const EQUALS = 61;
 const PERCENT = 37;
 
-// Minimal structural types for micromark's tokenizer API (as in wikilink.ts): its packages aren't direct dependencies.
-type Code = number | null;
-type State = (code: Code) => State | undefined;
 interface Point {
   line: number;
   column: number;
@@ -71,11 +69,6 @@ interface Context {
 }
 type Event = ["enter" | "exit", Token, Context];
 type Resolver = (events: Event[], context: Context) => Event[];
-interface Effects {
-  enter(type: string): Token;
-  exit(type: string): Token;
-  consume(code: Code): void;
-}
 
 /** What a character beside a marker is, as CommonMark's flanking rules ask: white space (1), punctuation (2), else. */
 function classify(code: Code): 1 | 2 | undefined {
@@ -88,7 +81,7 @@ function classify(code: Code): 1 | 2 | undefined {
 
 /** A run of exactly two `marker`s, as a sequence that may open or close: `flanking` as a highlight's, else always. */
 function sequence(marker: number, kind: string, flanking: boolean) {
-  return function tokenize(this: Context, effects: Effects, ok: State, nok: State): State {
+  return function tokenize(this: Context, effects: Effects<Token>, ok: State, nok: State): State {
     const previous = this.previous;
     const events = this.events;
     let size = 0;
@@ -190,11 +183,6 @@ export const obsidianSyntax = {
 };
 
 // mdast-util-from-markdown extension. `this` is the compile context.
-interface CompileContext {
-  enter(node: unknown, token: unknown): void;
-  exit(token: unknown): void;
-}
-
 export const obsidianFromMarkdown = {
   canContainEols: ["highlight", "comment"],
   enter: {

@@ -748,6 +748,9 @@ runtime guards that validate external input; a cast is not a substitute. Documen
 boundaries: which layer refuses an operation, cleans up, retries or presents the error. Preserve WriteRefused, CliError
 and WorkerRequestError behavior, message/exit contracts and intentional cleanup suppression. Exercise failure and
 cancellation paths before and after an adapter extraction; avoid a global result type or compiler-flag overhaul.
+[T42](tasks/42-types-and-error-contracts.md#contract-and-cast-assessment) shares only identical tokenizer callback
+types, preserving concrete token results and extension-local capabilities. Its ledger retains the incompatible AST and
+library projections with reasons and records refusal, presentation, cleanup and retry ownership without changing it.
 
 ### Dependency and build evidence
 

@@ -3,6 +3,7 @@
 // the frontmatter's `tags:`. A micromark extension, as wikilinks are: never read inside code, a URL
 // (`page#part`) or a heading's `#` marker; each tag a node with its source position.
 
+import type { Code, State, Effects, LiteralCompileContext as CompileContext } from "./tokenization/contracts.ts";
 import type { Literal } from "mdast";
 
 export interface Hashtag extends Literal {
@@ -39,15 +40,6 @@ export function tagName(raw: string): string | null {
 /** The key tags are grouped by: `#Project` and `#project` are one tag. */
 export function tagKey(name: string): string {
   return name.normalize("NFC").toLowerCase();
-}
-
-// Minimal structural types for micromark's tokenizer API (as in wikilink.ts).
-type Code = number | null;
-type State = (code: Code) => State | undefined;
-interface Effects {
-  enter(type: string): unknown;
-  exit(type: string): unknown;
-  consume(code: Code): void;
 }
 
 const tagChar = (code: Code) => code !== null && code >= 0 && TAG_CHAR.test(String.fromCodePoint(code));
@@ -88,12 +80,6 @@ const construct = { name: "hashtag", tokenize, add: "before" as const };
 export const hashtagSyntax = { text: { [HASH]: construct } };
 
 // mdast-util-from-markdown extension. `this` is the compile context.
-interface CompileContext {
-  enter(node: unknown, token: unknown): void;
-  exit(token: unknown): void;
-  sliceSerialize(token: unknown): string;
-}
-
 export const hashtagFromMarkdown = {
   enter: {
     hashtag(this: CompileContext, token: unknown) {

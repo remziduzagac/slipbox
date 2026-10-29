@@ -4,6 +4,7 @@
 // Being a real tokenizer keeps the properties that matter: inline code and fenced blocks are
 // never scanned, `\[[escaped]]` stays literal, and every node carries its source position.
 
+import type { State, Effects, LiteralCompileContext } from "./tokenization/contracts.ts";
 import type { Literal } from "mdast";
 
 export interface WikiLink extends Literal {
@@ -29,15 +30,6 @@ declare module "mdast" {
 const EXCLAMATION = 33;
 const LEFT_BRACKET = 91;
 const RIGHT_BRACKET = 93;
-
-// Minimal structural types for micromark's tokenizer API; the package types are not a direct dep.
-type Code = number | null;
-type State = (code: Code) => State | undefined;
-interface Effects {
-  enter(type: string): unknown;
-  exit(type: string): unknown;
-  consume(code: Code): void;
-}
 
 function tokenize(this: unknown, effects: Effects, ok: State, nok: State): State {
   let opened = 0;
@@ -131,10 +123,7 @@ export function parseWikiTarget(raw: string): Pick<WikiLink, "target" | "heading
 }
 
 // mdast-util-from-markdown extension. `this` is the compile context.
-interface CompileContext {
-  enter(node: unknown, token: unknown): void;
-  exit(token: unknown): void;
-  sliceSerialize(token: unknown): string;
+interface CompileContext extends LiteralCompileContext {
   stack: unknown[];
 }
 
