@@ -1,0 +1,919 @@
+{
+  "task": "ORG-T11",
+  "scope": "Final ratchet and reconciliation, no product source extraction. Caps are explicit reviewed exceptions under ORG-D2, not blanket App exemptions.",
+  "policy": {
+    "LIMIT": 600,
+    "TEST_LIMIT": 1500,
+    "CAPPED": {
+      "src/cli/cli.ts": 609,
+      "src/core/workspace/graph/graph-resolve.ts": 605,
+      "src/core/workspace/graph/graph.ts": 998,
+      "src/tui/app/distribution/updates.ts": 667,
+      "src/tui/app/runtime/app.ts": 1366,
+      "src/tui/app/runtime/watch.ts": 666,
+      "src/tui/workspace/vaults/vaults.ts": 636
+    },
+    "GENERATED": {
+      "src/core/documents/servers/locks.ts": 1239
+    },
+    "TEST_CAPPED": {
+      "tests/distribution.test.ts": 2510,
+      "tests/export.test.ts": 1624,
+      "tests/render.test.ts": 1990,
+      "tests/servers.test.ts": 2038,
+      "tests/terminal/checks/links-and-files.ts": 3095,
+      "tests/terminal/checks/navigating.ts": 1824,
+      "tests/terminal/checks/outside-and-code.ts": 1900,
+      "tests/terminal/checks/reading.ts": 1737,
+      "tests/terminal/checks/vaults.ts": 2533
+    }
+  },
+  "sourceCaps": [
+    {
+      "file": "src/cli/cli.ts",
+      "cap": 609,
+      "responsibility": "CLI dispatch and error presentation",
+      "rationale": "Retain the existing cohesive state/lifecycle boundary; further extraction needs its own characterization and coherent child PR. Exact cap prevents any implementation growth.",
+      "followUpTask": "Split command dispatch from output/exit presentation",
+      "acceptance": "Keep argument admission, command dispatch order, text/JSON errors and exit codes; characterize both owners before extracting. Remove the cap at or below 600; retain the 500-line aim."
+    },
+    {
+      "file": "src/core/workspace/graph/graph-resolve.ts",
+      "cap": 605,
+      "responsibility": "Path/name/alias/pointer/hosting resolution and caches",
+      "rationale": "Retain the existing cohesive state/lifecycle boundary; further extraction needs its own characterization and coherent child PR. Exact cap prevents any implementation growth.",
+      "followUpTask": "Separate resolver admission from candidate lookup",
+      "acceptance": "Preserve resolution precedence, scope/cache identity, symlinks, aliases and ambiguity outcomes. Remove the cap at or below 600; retain the 500-line aim."
+    },
+    {
+      "file": "src/core/workspace/graph/graph.ts",
+      "cap": 998,
+      "responsibility": "One mutable graph/index, cache invalidation and feed coordination",
+      "rationale": "Retain the existing cohesive state/lifecycle boundary; further extraction needs its own characterization and coherent child PR. Exact cap prevents any implementation growth.",
+      "followUpTask": "Separate graph refresh/feed coordination from index state",
+      "acceptance": "Keep one mutable graph, generation ordering and live overlay/cache invalidation; no generic graph container. Remove the cap at or below 600; retain the 500-line aim."
+    },
+    {
+      "file": "src/tui/app/distribution/updates.ts",
+      "cap": 667,
+      "responsibility": "Quiet offer/restart and detached-child handover",
+      "rationale": "Retain the existing cohesive state/lifecycle boundary; further extraction needs its own characterization and coherent child PR. Exact cap prevents any implementation growth.",
+      "followUpTask": "Separate installed-version observation from update handover",
+      "acceptance": "Preserve quiet-input/answered-offer order, process ownership, restart refusal and child cleanup. Remove the cap at or below 600; retain the 500-line aim."
+    },
+    {
+      "file": "src/tui/app/runtime/app.ts",
+      "cap": 1366,
+      "responsibility": "Shared presentation state, feature wiring, opening/layout and the sole TUI note-write gate",
+      "rationale": "Retain the existing cohesive state/lifecycle boundary; further extraction needs its own characterization and coherent child PR. Exact cap prevents any implementation growth.",
+      "followUpTask": "Separate App opening/layout policy from composition",
+      "acceptance": "Keep TUI buffer ownership, initialization/disposal order, view anchors and App.writeBuffer authority; introduce focused capabilities rather than an App-shaped service bag. Remove the cap at or below 600; retain the 500-line aim."
+    },
+    {
+      "file": "src/tui/app/runtime/watch.ts",
+      "cap": 666,
+      "responsibility": "Graph feed, background parse/index and conflict-aware buffer reload",
+      "rationale": "Retain the existing cohesive state/lifecycle boundary; further extraction needs its own characterization and coherent child PR. Exact cap prevents any implementation growth.",
+      "followUpTask": "Separate background refresh from watcher reload delivery",
+      "acceptance": "Preserve graph/root identity guards, stopped/paused work, ordering, selection restoration and cleanup. Remove the cap at or below 600; retain the 500-line aim."
+    },
+    {
+      "file": "src/tui/workspace/vaults/vaults.ts",
+      "cap": 636,
+      "responsibility": "Ordered vault release/reset/restore and catalog interaction",
+      "rationale": "Retain the existing cohesive state/lifecycle boundary; further extraction needs its own characterization and coherent child PR. Exact cap prevents any implementation growth.",
+      "followUpTask": "Separate vault catalog/prompts from switch transaction",
+      "acceptance": "Preserve cancellation/reset/restore order, unsaved-buffer refusal, location identity and live UI focus. Remove the cap at or below 600; retain the 500-line aim."
+    }
+  ],
+  "cohesiveSourceOwners": [
+    {
+      "file": "src/core/application/distribution/report.ts",
+      "lines": 583,
+      "disposition": "cohesive above aim, within ceiling",
+      "reason": "One diagnostic report with redaction and environment ownership (T39)."
+    },
+    {
+      "file": "src/core/documents/servers/client.ts",
+      "lines": 574,
+      "disposition": "cohesive above aim, within ceiling",
+      "reason": "One server process/request lifecycle; protocol helpers are below it (T39)."
+    },
+    {
+      "file": "src/core/documents/servers/languages.ts",
+      "lines": 584,
+      "disposition": "cohesive above aim, within ceiling",
+      "reason": "One language detection/configuration catalog; no equivalent mechanism to merge (T39)."
+    },
+    {
+      "file": "src/core/documents/servers/manager.ts",
+      "lines": 534,
+      "disposition": "cohesive above aim, within ceiling",
+      "reason": "One multi-server ownership/routing lifecycle, distinct from per-client protocol (T39)."
+    },
+    {
+      "file": "src/core/rendering/layout/code/page/compose.ts",
+      "lines": 533,
+      "disposition": "cohesive above aim, within ceiling",
+      "reason": "One code-page composition context; wrapping, cells and framing already separate (T26)."
+    },
+    {
+      "file": "src/core/rendering/layout/diff/blockdiff.ts",
+      "lines": 551,
+      "disposition": "cohesive above aim, within ceiling",
+      "reason": "Block alignment/tint semantics differ from shared code layout; retained intentionally (T26)."
+    },
+    {
+      "file": "src/core/rendering/theme/glyphs.ts",
+      "lines": 531,
+      "disposition": "cohesive above aim, within ceiling",
+      "reason": "One terminal/glyph capability selection policy with compatibility mappings (T39)."
+    },
+    {
+      "file": "src/core/workspace/git/merge/merge.ts",
+      "lines": 549,
+      "disposition": "cohesive above aim, within ceiling",
+      "reason": "One three-way merge admission, edit and conflict policy (T39)."
+    },
+    {
+      "file": "src/core/workspace/links/reach.ts",
+      "lines": 517,
+      "disposition": "cohesive above aim, within ceiling",
+      "reason": "One graph pool and inbound-index freshness/owned-root lifecycle (T25)."
+    },
+    {
+      "file": "src/core/workspace/vaults/folders.ts",
+      "lines": 515,
+      "disposition": "cohesive above aim, within ceiling",
+      "reason": "One folder/root catalog policy with existing boundary checks (T39)."
+    },
+    {
+      "file": "src/core/workspace/vaults/vault.ts",
+      "lines": 584,
+      "disposition": "cohesive above aim, within ceiling",
+      "reason": "Location/vault admission and marker policy; home/walk mechanisms are separate (T39)."
+    },
+    {
+      "file": "src/tui/documents/buffers/buffer.ts",
+      "lines": 596,
+      "disposition": "cohesive above aim, within ceiling",
+      "reason": "One text/undo/revision/saved-baseline identity; layout mechanisms already extracted (T38)."
+    },
+    {
+      "file": "src/tui/documents/diagnostics/languages.ts",
+      "lines": 578,
+      "disposition": "cohesive above aim, within ceiling",
+      "reason": "Live language-service coordination; edit and protocol adapters already extracted (T37)."
+    },
+    {
+      "file": "src/tui/documents/diagnostics/problems.ts",
+      "lines": 535,
+      "disposition": "cohesive above aim, within ceiling",
+      "reason": "One diagnostic list/feed/selection lifecycle; rows/contracts already extracted (T37)."
+    },
+    {
+      "file": "src/tui/shell/panels/panels.ts",
+      "lines": 519,
+      "disposition": "cohesive above aim, within ceiling",
+      "reason": "One panel width/filter/position owner with extracted focus/navigation helpers (T10)."
+    },
+    {
+      "file": "src/tui/workspace/explorer/files.ts",
+      "lines": 574,
+      "disposition": "cohesive above aim, within ceiling",
+      "reason": "One file-write/preview/refusal lifecycle beside Explorer rows/navigation (T30)."
+    },
+    {
+      "file": "src/tui/workspace/git/git.ts",
+      "lines": 591,
+      "disposition": "cohesive above aim, within ceiling",
+      "reason": "Shared Git state and orchestration; read/cache/presentation collaborators already extracted (T30)."
+    },
+    {
+      "file": "src/tui/workspace/git/views/panel/gitpanel.ts",
+      "lines": 540,
+      "disposition": "cohesive above aim, within ceiling",
+      "reason": "One panel input/selection/action lifecycle; drawing is separate (T30)."
+    }
+  ],
+  "testCaps": [
+    {
+      "file": "tests/distribution.test.ts",
+      "cap": 2510,
+      "responsibility": "Existing feature integration/check registration owner; no test body is split in the ratchet phase.",
+      "followUpTask": "Split supply-chain, scope, release and bootstrap gates into distribution owners",
+      "acceptance": "Keep titles, assertions, hooks, snapshot/check identities and registration; each new owner <=1500, aim1000. Remove this cap at or below1500."
+    },
+    {
+      "file": "tests/export.test.ts",
+      "cap": 1624,
+      "responsibility": "Existing feature integration/check registration owner; no test body is split in the ratchet phase.",
+      "followUpTask": "Split format, picture and publication export scenarios",
+      "acceptance": "Keep titles, assertions, hooks, snapshot/check identities and registration; each new owner <=1500, aim1000. Remove this cap at or below1500."
+    },
+    {
+      "file": "tests/render.test.ts",
+      "cap": 1990,
+      "responsibility": "Existing feature integration/check registration owner; no test body is split in the ratchet phase.",
+      "followUpTask": "Split rendering feature owners with explicit snapshot identity mapping",
+      "acceptance": "Keep titles, assertions, hooks, snapshot/check identities and registration; each new owner <=1500, aim1000. Remove this cap at or below1500."
+    },
+    {
+      "file": "tests/servers.test.ts",
+      "cap": 2038,
+      "responsibility": "Existing feature integration/check registration owner; no test body is split in the ratchet phase.",
+      "followUpTask": "Split language/protocol/process diagnostics scenarios",
+      "acceptance": "Keep titles, assertions, hooks, snapshot/check identities and registration; each new owner <=1500, aim1000. Remove this cap at or below1500."
+    },
+    {
+      "file": "tests/terminal/checks/links-and-files.ts",
+      "cap": 3095,
+      "responsibility": "Existing feature integration/check registration owner; no test body is split in the ratchet phase.",
+      "followUpTask": "Split link/file/Git/peek terminal feature owners preserving registration",
+      "acceptance": "Keep titles, assertions, hooks, snapshot/check identities and registration; each new owner <=1500, aim1000. Remove this cap at or below1500."
+    },
+    {
+      "file": "tests/terminal/checks/navigating.ts",
+      "cap": 1824,
+      "responsibility": "Existing feature integration/check registration owner; no test body is split in the ratchet phase.",
+      "followUpTask": "Split navigation/key/window terminal feature owners",
+      "acceptance": "Keep titles, assertions, hooks, snapshot/check identities and registration; each new owner <=1500, aim1000. Remove this cap at or below1500."
+    },
+    {
+      "file": "tests/terminal/checks/outside-and-code.ts",
+      "cap": 1900,
+      "responsibility": "Existing feature integration/check registration owner; no test body is split in the ratchet phase.",
+      "followUpTask": "Split external-editor, code and export terminal feature owners",
+      "acceptance": "Keep titles, assertions, hooks, snapshot/check identities and registration; each new owner <=1500, aim1000. Remove this cap at or below1500."
+    },
+    {
+      "file": "tests/terminal/checks/reading.ts",
+      "cap": 1737,
+      "responsibility": "Existing feature integration/check registration owner; no test body is split in the ratchet phase.",
+      "followUpTask": "Split document/media reading terminal feature owners",
+      "acceptance": "Keep titles, assertions, hooks, snapshot/check identities and registration; each new owner <=1500, aim1000. Remove this cap at or below1500."
+    },
+    {
+      "file": "tests/terminal/checks/vaults.ts",
+      "cap": 2533,
+      "responsibility": "Existing feature integration/check registration owner; no test body is split in the ratchet phase.",
+      "followUpTask": "Split home/catalog/trust/vault terminal feature owners",
+      "acceptance": "Keep titles, assertions, hooks, snapshot/check identities and registration; each new owner <=1500, aim1000. Remove this cap at or below1500."
+    }
+  ],
+  "cohesiveTestOwners": [
+    {
+      "file": "tests/release.test.ts",
+      "lines": 1069,
+      "disposition": "Within test ceiling; retained feature integration/terminal scenarios and existing file-local lifetime. 1000 remains the aim."
+    },
+    {
+      "file": "tests/terminal/checks/editing.ts",
+      "lines": 1466,
+      "disposition": "Within test ceiling; retained feature integration/terminal scenarios and existing file-local lifetime. 1000 remains the aim."
+    },
+    {
+      "file": "tests/terminal/checks/source-control.ts",
+      "lines": 1473,
+      "disposition": "Within test ceiling; retained feature integration/terminal scenarios and existing file-local lifetime. 1000 remains the aim."
+    },
+    {
+      "file": "tests/tui/documents/navigation/peek/scheduling.test.ts",
+      "lines": 1233,
+      "disposition": "Within test ceiling; retained feature integration/terminal scenarios and existing file-local lifetime. 1000 remains the aim."
+    },
+    {
+      "file": "tests/tui/shell/updates/updates.test.ts",
+      "lines": 1083,
+      "disposition": "Within test ceiling; retained feature integration/terminal scenarios and existing file-local lifetime. 1000 remains the aim."
+    },
+    {
+      "file": "tests/tui/workspace/explorer/walk-thread.test.ts",
+      "lines": 1389,
+      "disposition": "Within test ceiling; retained feature integration/terminal scenarios and existing file-local lifetime. 1000 remains the aim."
+    },
+    {
+      "file": "tests/tui/workspace/git/panel/branches.test.ts",
+      "lines": 1088,
+      "disposition": "Within test ceiling; retained feature integration/terminal scenarios and existing file-local lifetime. 1000 remains the aim."
+    },
+    {
+      "file": "tests/tui/workspace/git/panel/stable-rows.test.ts",
+      "lines": 1343,
+      "disposition": "Within test ceiling; retained feature integration/terminal scenarios and existing file-local lifetime. 1000 remains the aim."
+    },
+    {
+      "file": "tests/tui/workspace/git/review-journeys.test.ts",
+      "lines": 1225,
+      "disposition": "Within test ceiling; retained feature integration/terminal scenarios and existing file-local lifetime. 1000 remains the aim."
+    },
+    {
+      "file": "tests/tui/workspace/vaults/autoindex.test.ts",
+      "lines": 1269,
+      "disposition": "Within test ceiling; retained feature integration/terminal scenarios and existing file-local lifetime. 1000 remains the aim."
+    }
+  ],
+  "originalInventory": [
+    {
+      "original": "src/tui/app.ts",
+      "baselineLines": 1446,
+      "task": "ORG-T10",
+      "current": "src/tui/app/runtime/app.ts",
+      "lines": 1366,
+      "disposition": "legacy exact cap with named follow-up",
+      "evidence": "tasks/10-responsibility-splits.md"
+    },
+    {
+      "original": "src/core/graph.ts",
+      "baselineLines": 1433,
+      "task": "ORG-T25",
+      "current": "src/core/workspace/graph/graph.ts",
+      "lines": 998,
+      "disposition": "legacy exact cap with named follow-up",
+      "evidence": "tasks/25-graph-splits.md"
+    },
+    {
+      "original": "src/core/layout/code.ts",
+      "baselineLines": 1417,
+      "task": "ORG-T26",
+      "current": "src/core/rendering/layout/code/code.ts",
+      "lines": 15,
+      "disposition": "extracted/within500",
+      "evidence": "tasks/26-code-layout-splits.md"
+    },
+    {
+      "original": "src/tui/explorer.ts",
+      "baselineLines": 1268,
+      "task": "ORG-T30",
+      "current": "src/tui/workspace/explorer/explorer.ts",
+      "lines": 278,
+      "disposition": "extracted/within500",
+      "evidence": "tasks/30-explorer-splits.md"
+    },
+    {
+      "original": "src/core/servers/locks.ts",
+      "baselineLines": 1239,
+      "task": "ORG-T39",
+      "current": "src/core/documents/servers/locks.ts",
+      "lines": 1239,
+      "disposition": "generated, separate measured cap",
+      "evidence": "tasks/39-core-adapter-splits.md"
+    },
+    {
+      "original": "src/core/syntax.ts",
+      "baselineLines": 1170,
+      "task": "ORG-T27",
+      "current": "src/core/documents/syntax/syntax.ts",
+      "lines": 33,
+      "disposition": "extracted/within500",
+      "evidence": "tasks/27-syntax-splits.md"
+    },
+    {
+      "original": "src/tui/keys.ts",
+      "baselineLines": 1166,
+      "task": "ORG-T31",
+      "current": "src/tui/shell/input/keys.ts",
+      "lines": 40,
+      "disposition": "extracted/within500",
+      "evidence": "tasks/31-input-splits.md"
+    },
+    {
+      "original": "src/core/layout/render.ts",
+      "baselineLines": 1076,
+      "task": "ORG-T28",
+      "current": "src/core/rendering/layout/markdown/render.ts",
+      "lines": 11,
+      "disposition": "extracted/within500",
+      "evidence": "tasks/28-markdown-layout-splits.md"
+    },
+    {
+      "original": "src/core/export/pdf.ts",
+      "baselineLines": 1038,
+      "task": "ORG-T29",
+      "current": "src/core/rendering/export/formats/pdf.ts",
+      "lines": 25,
+      "disposition": "extracted/within500",
+      "evidence": "tasks/29-pdf-splits.md"
+    },
+    {
+      "original": "src/core/config.ts",
+      "baselineLines": 998,
+      "task": "ORG-T32",
+      "current": "src/core/application/config/config.ts",
+      "lines": 10,
+      "disposition": "extracted/within500",
+      "evidence": "tasks/32-config-splits.md"
+    },
+    {
+      "original": "src/tui/gitbranchview.ts",
+      "baselineLines": 992,
+      "task": "ORG-T30",
+      "current": "src/tui/workspace/git/views/branches/gitbranchview.ts",
+      "lines": 473,
+      "disposition": "extracted/within500",
+      "evidence": "tasks/30-explorer-splits.md"
+    },
+    {
+      "original": "src/tui/draw-overlays.ts",
+      "baselineLines": 954,
+      "task": "ORG-T36",
+      "current": "src/tui/shell/overlays/draw-overlays.ts",
+      "lines": 12,
+      "disposition": "extracted/within500",
+      "evidence": "tasks/36-tui-render-splits.md"
+    },
+    {
+      "original": "src/tui/draw-pane.ts",
+      "baselineLines": 943,
+      "task": "ORG-T36",
+      "current": "src/tui/documents/views/draw-pane.ts",
+      "lines": 8,
+      "disposition": "extracted/within500",
+      "evidence": "tasks/36-tui-render-splits.md"
+    },
+    {
+      "original": "src/core/data.ts",
+      "baselineLines": 888,
+      "task": "ORG-T32",
+      "current": "src/core/documents/model/data.ts",
+      "lines": 45,
+      "disposition": "extracted/within500",
+      "evidence": "tasks/32-config-splits.md"
+    },
+    {
+      "original": "src/core/watch.ts",
+      "baselineLines": 866,
+      "task": "ORG-T33",
+      "current": "src/core/workspace/graph/watch.ts",
+      "lines": 360,
+      "disposition": "extracted/within500",
+      "evidence": "tasks/33-walk-splits.md"
+    },
+    {
+      "original": "src/tui/mouse.ts",
+      "baselineLines": 843,
+      "task": "ORG-T31",
+      "current": "src/tui/shell/input/mouse.ts",
+      "lines": 311,
+      "disposition": "extracted/within500",
+      "evidence": "tasks/31-input-splits.md"
+    },
+    {
+      "original": "src/core/walk.ts",
+      "baselineLines": 825,
+      "task": "ORG-T33",
+      "current": "src/core/workspace/walk/walk.ts",
+      "lines": 25,
+      "disposition": "extracted/within500",
+      "evidence": "tasks/33-walk-splits.md"
+    },
+    {
+      "original": "src/core/search.ts",
+      "baselineLines": 805,
+      "task": "ORG-T34",
+      "current": "src/core/workspace/search/search.ts",
+      "lines": 17,
+      "disposition": "extracted/within500",
+      "evidence": "tasks/34-search-splits.md"
+    },
+    {
+      "original": "src/core/rename.ts",
+      "baselineLines": 804,
+      "task": "ORG-T35",
+      "current": "src/core/workspace/mutations/rename/rename.ts",
+      "lines": 20,
+      "disposition": "extracted/within500",
+      "evidence": "tasks/35-rename-splits.md"
+    },
+    {
+      "original": "src/tui/draw.ts",
+      "baselineLines": 761,
+      "task": "ORG-T36",
+      "current": "src/tui/shell/screen/draw.ts",
+      "lines": 236,
+      "disposition": "extracted/within500",
+      "evidence": "tasks/36-tui-render-splits.md"
+    },
+    {
+      "original": "src/tui/problems.ts",
+      "baselineLines": 759,
+      "task": "ORG-T37",
+      "current": "src/tui/documents/diagnostics/problems.ts",
+      "lines": 535,
+      "disposition": "cohesive above500, within600",
+      "evidence": "tasks/37-tui-service-splits.md"
+    },
+    {
+      "original": "src/tui/vim.ts",
+      "baselineLines": 756,
+      "task": "ORG-T31",
+      "current": "src/tui/shell/input/vim.ts",
+      "lines": 11,
+      "disposition": "extracted/within500",
+      "evidence": "tasks/31-input-splits.md"
+    },
+    {
+      "original": "src/core/parse.ts",
+      "baselineLines": 736,
+      "task": "ORG-T32",
+      "current": "src/core/documents/markdown/parse.ts",
+      "lines": 229,
+      "disposition": "extracted/within500",
+      "evidence": "tasks/32-config-splits.md"
+    },
+    {
+      "original": "src/tui/gitpanel.ts",
+      "baselineLines": 713,
+      "task": "ORG-T30",
+      "current": "src/tui/workspace/git/views/panel/gitpanel.ts",
+      "lines": 540,
+      "disposition": "cohesive above500, within600",
+      "evidence": "tasks/30-explorer-splits.md"
+    },
+    {
+      "original": "src/tui/git.ts",
+      "baselineLines": 710,
+      "task": "ORG-T30",
+      "current": "src/tui/workspace/git/git.ts",
+      "lines": 591,
+      "disposition": "cohesive above500, within600",
+      "evidence": "tasks/30-explorer-splits.md"
+    },
+    {
+      "original": "src/tui/draw-panels.ts",
+      "baselineLines": 708,
+      "task": "ORG-T36",
+      "current": "src/tui/shell/panels/draw-panels.ts",
+      "lines": 53,
+      "disposition": "extracted/within500",
+      "evidence": "tasks/36-tui-render-splits.md"
+    },
+    {
+      "original": "src/tui/editing.ts",
+      "baselineLines": 691,
+      "task": "ORG-T38",
+      "current": "src/tui/documents/editing/editing.ts",
+      "lines": 14,
+      "disposition": "extracted/within500",
+      "evidence": "tasks/38-tui-buffer-splits.md"
+    },
+    {
+      "original": "src/tui/peek.ts",
+      "baselineLines": 691,
+      "task": "ORG-T38",
+      "current": "src/tui/documents/navigation/peek.ts",
+      "lines": 13,
+      "disposition": "extracted/within500",
+      "evidence": "tasks/38-tui-buffer-splits.md"
+    },
+    {
+      "original": "src/tui/languages.ts",
+      "baselineLines": 690,
+      "task": "ORG-T37",
+      "current": "src/tui/documents/diagnostics/languages.ts",
+      "lines": 578,
+      "disposition": "cohesive above500, within600",
+      "evidence": "tasks/37-tui-service-splits.md"
+    },
+    {
+      "original": "src/tui/buffer.ts",
+      "baselineLines": 679,
+      "task": "ORG-T38",
+      "current": "src/tui/documents/buffers/buffer.ts",
+      "lines": 596,
+      "disposition": "cohesive above500, within600",
+      "evidence": "tasks/38-tui-buffer-splits.md"
+    },
+    {
+      "original": "src/core/servers/client.ts",
+      "baselineLines": 677,
+      "task": "ORG-T39",
+      "current": "src/core/documents/servers/client.ts",
+      "lines": 574,
+      "disposition": "cohesive above500, within600",
+      "evidence": "tasks/39-core-adapter-splits.md"
+    },
+    {
+      "original": "src/tui/watch.ts",
+      "baselineLines": 666,
+      "task": "ORG-T10",
+      "current": "src/tui/app/runtime/watch.ts",
+      "lines": 666,
+      "disposition": "legacy exact cap with named follow-up",
+      "evidence": "tasks/10-responsibility-splits.md"
+    },
+    {
+      "original": "src/tui/updates.ts",
+      "baselineLines": 660,
+      "task": "ORG-T10",
+      "current": "src/tui/app/distribution/updates.ts",
+      "lines": 667,
+      "disposition": "legacy exact cap with named follow-up",
+      "evidence": "tasks/10-responsibility-splits.md"
+    },
+    {
+      "original": "src/tui/vaults.ts",
+      "baselineLines": 630,
+      "task": "ORG-T10",
+      "current": "src/tui/workspace/vaults/vaults.ts",
+      "lines": 636,
+      "disposition": "legacy exact cap with named follow-up",
+      "evidence": "tasks/10-responsibility-splits.md"
+    },
+    {
+      "original": "src/core/theme/theme.ts",
+      "baselineLines": 615,
+      "task": "ORG-T39",
+      "current": "src/core/rendering/theme/theme.ts",
+      "lines": 412,
+      "disposition": "extracted/within500",
+      "evidence": "tasks/39-core-adapter-splits.md"
+    },
+    {
+      "original": "src/core/graph-resolve.ts",
+      "baselineLines": 605,
+      "task": "ORG-T25",
+      "current": "src/core/workspace/graph/graph-resolve.ts",
+      "lines": 605,
+      "disposition": "legacy exact cap with named follow-up",
+      "evidence": "tasks/25-graph-splits.md"
+    },
+    {
+      "original": "src/core/update.ts",
+      "baselineLines": 605,
+      "task": "ORG-T39",
+      "current": "src/core/application/distribution/update.ts",
+      "lines": 500,
+      "disposition": "extracted/within500",
+      "evidence": "tasks/39-core-adapter-splits.md"
+    },
+    {
+      "original": "src/cli/cli.ts",
+      "baselineLines": 602,
+      "task": "ORG-T23",
+      "current": "src/cli/cli.ts",
+      "lines": 609,
+      "disposition": "legacy exact cap with named follow-up",
+      "evidence": "tasks/23-cli-test-boundaries.md"
+    },
+    {
+      "original": "src/core/home.ts",
+      "baselineLines": 586,
+      "task": "ORG-T33",
+      "current": "src/core/workspace/vaults/home.ts",
+      "lines": 150,
+      "disposition": "extracted/within500",
+      "evidence": "tasks/33-walk-splits.md"
+    },
+    {
+      "original": "src/core/servers/languages.ts",
+      "baselineLines": 584,
+      "task": "ORG-T39",
+      "current": "src/core/documents/servers/languages.ts",
+      "lines": 584,
+      "disposition": "cohesive above500, within600",
+      "evidence": "tasks/39-core-adapter-splits.md"
+    },
+    {
+      "original": "src/core/vault.ts",
+      "baselineLines": 584,
+      "task": "ORG-T39",
+      "current": "src/core/workspace/vaults/vault.ts",
+      "lines": 584,
+      "disposition": "cohesive above500, within600",
+      "evidence": "tasks/39-core-adapter-splits.md"
+    },
+    {
+      "original": "src/core/report.ts",
+      "baselineLines": 583,
+      "task": "ORG-T39",
+      "current": "src/core/application/distribution/report.ts",
+      "lines": 583,
+      "disposition": "cohesive above500, within600",
+      "evidence": "tasks/39-core-adapter-splits.md"
+    },
+    {
+      "original": "src/tui/views.ts",
+      "baselineLines": 583,
+      "task": "ORG-T38",
+      "current": "src/tui/documents/views/views.ts",
+      "lines": 497,
+      "disposition": "extracted/within500",
+      "evidence": "tasks/38-tui-buffer-splits.md"
+    },
+    {
+      "original": "src/tui/files.ts",
+      "baselineLines": 568,
+      "task": "ORG-T30",
+      "current": "src/tui/workspace/explorer/files.ts",
+      "lines": 574,
+      "disposition": "cohesive above500, within600",
+      "evidence": "tasks/30-explorer-splits.md"
+    },
+    {
+      "original": "src/core/merge.ts",
+      "baselineLines": 549,
+      "task": "ORG-T39",
+      "current": "src/core/workspace/git/merge/merge.ts",
+      "lines": 549,
+      "disposition": "cohesive above500, within600",
+      "evidence": "tasks/39-core-adapter-splits.md"
+    },
+    {
+      "original": "src/core/layout/blockdiff.ts",
+      "baselineLines": 544,
+      "task": "ORG-T26",
+      "current": "src/core/rendering/layout/diff/blockdiff.ts",
+      "lines": 551,
+      "disposition": "cohesive above500, within600",
+      "evidence": "tasks/26-code-layout-splits.md"
+    },
+    {
+      "original": "src/tui/actions-links.ts",
+      "baselineLines": 541,
+      "task": "ORG-T38",
+      "current": "src/tui/actions/documents/actions-links.ts",
+      "lines": 467,
+      "disposition": "extracted/within500",
+      "evidence": "tasks/38-tui-buffer-splits.md"
+    },
+    {
+      "original": "src/core/servers/manager.ts",
+      "baselineLines": 534,
+      "task": "ORG-T39",
+      "current": "src/core/documents/servers/manager.ts",
+      "lines": 534,
+      "disposition": "cohesive above500, within600",
+      "evidence": "tasks/39-core-adapter-splits.md"
+    },
+    {
+      "original": "src/core/glyphs.ts",
+      "baselineLines": 531,
+      "task": "ORG-T39",
+      "current": "src/core/rendering/theme/glyphs.ts",
+      "lines": 531,
+      "disposition": "cohesive above500, within600",
+      "evidence": "tasks/39-core-adapter-splits.md"
+    },
+    {
+      "original": "src/tui/completion.ts",
+      "baselineLines": 524,
+      "task": "ORG-T38",
+      "current": "src/tui/documents/editing/completion.ts",
+      "lines": 391,
+      "disposition": "extracted/within500",
+      "evidence": "tasks/38-tui-buffer-splits.md"
+    },
+    {
+      "original": "src/core/reach.ts",
+      "baselineLines": 517,
+      "task": "ORG-T25",
+      "current": "src/core/workspace/links/reach.ts",
+      "lines": 517,
+      "disposition": "cohesive above500, within600",
+      "evidence": "tasks/25-graph-splits.md"
+    },
+    {
+      "original": "src/tui/panels.ts",
+      "baselineLines": 517,
+      "task": "ORG-T10",
+      "current": "src/tui/shell/panels/panels.ts",
+      "lines": 519,
+      "disposition": "cohesive above500, within600",
+      "evidence": "tasks/10-responsibility-splits.md"
+    },
+    {
+      "original": "src/core/folders.ts",
+      "baselineLines": 508,
+      "task": "ORG-T39",
+      "current": "src/core/workspace/vaults/folders.ts",
+      "lines": 515,
+      "disposition": "cohesive above500, within600",
+      "evidence": "tasks/39-core-adapter-splits.md"
+    },
+    {
+      "original": "src/tui/lens.ts",
+      "baselineLines": 505,
+      "task": "ORG-T38",
+      "current": "src/tui/documents/editing/lens.ts",
+      "lines": 473,
+      "disposition": "extracted/within500",
+      "evidence": "tasks/38-tui-buffer-splits.md"
+    },
+    {
+      "original": "src/tui/search.ts",
+      "baselineLines": 503,
+      "task": "ORG-T34",
+      "current": "src/tui/workspace/search/search.ts",
+      "lines": 382,
+      "disposition": "extracted/within500",
+      "evidence": "tasks/34-search-splits.md"
+    }
+  ],
+  "generated": {
+    "file": "src/core/documents/servers/locks.ts",
+    "cap": 1239,
+    "verification": "bun scripts/lock-servers.ts --check, offline pinned-key and generator comparison"
+  },
+  "coverage": {
+    "issue": "#55 wanted items1-7",
+    "requirements": "ORG-R1 through ORG-R10",
+    "evidence": "tasks/43-measurement-and-build.md and manifests/t43-reconciliation.json",
+    "gateway": "Preparation only; execution/routing/transports and ENG document-owner changes remain the next stack.",
+    "performance": "Six completed mapped scopes; broad shared integration retained; no causal speedup claim.",
+    "findings": "T40 clone/pattern dispositions; T41 retained surfaces/dependencies; T42 retained incompatible casts/error ownership; T43 known fixture/clock/deadline failures remain named follow-ups."
+  },
+  "futureTasks": "Named follow-up task proposals, not extra implementation IDs in the approved44-task ORG sequence. Each needs characterization and its own review before implementation.",
+  "verificationDelta": {
+    "moves": {},
+    "retained": [],
+    "edges": {
+      "removed": [],
+      "added": []
+    },
+    "runtime": {
+      "removed": [],
+      "added": []
+    },
+    "tests": {
+      "removed": [],
+      "added": [
+        "test: test owners use their separate ceiling and exact ratchet instead of the source limit"
+      ]
+    },
+    "entries": {
+      "removed": [],
+      "added": []
+    },
+    "counts": {
+      "edges": {
+        "before": 2984,
+        "after": 2984
+      },
+      "runtime": {
+        "before": 2231,
+        "after": 2231
+      },
+      "tests": {
+        "before": 4016,
+        "after": 4017
+      },
+      "entries": {
+        "before": 12,
+        "after": 12
+      }
+    },
+    "runtimeScc": {
+      "before": [
+        [
+          "src/tui/actions/actions.ts",
+          "src/tui/actions/documents/actions-edit.ts",
+          "src/tui/actions/documents/actions-find.ts",
+          "src/tui/actions/documents/actions-links.ts",
+          "src/tui/actions/documents/actions-lsp.ts",
+          "src/tui/actions/documents/actions-view.ts",
+          "src/tui/actions/shell/actions-panes.ts",
+          "src/tui/actions/workspace/actions-files.ts"
+        ],
+        [
+          "src/tui/app/runtime/app.ts",
+          "src/tui/app/settings/settings.ts",
+          "src/tui/workspace/history/history.ts",
+          "src/tui/workspace/session/session.ts",
+          "src/tui/workspace/vaults/vaults.ts"
+        ],
+        [
+          "src/tui/workspace/git/gitremote.ts",
+          "src/tui/workspace/git/views/review/rebase.ts"
+        ]
+      ],
+      "after": [
+        [
+          "src/tui/actions/actions.ts",
+          "src/tui/actions/documents/actions-edit.ts",
+          "src/tui/actions/documents/actions-find.ts",
+          "src/tui/actions/documents/actions-links.ts",
+          "src/tui/actions/documents/actions-lsp.ts",
+          "src/tui/actions/documents/actions-view.ts",
+          "src/tui/actions/shell/actions-panes.ts",
+          "src/tui/actions/workspace/actions-files.ts"
+        ],
+        [
+          "src/tui/app/runtime/app.ts",
+          "src/tui/app/settings/settings.ts",
+          "src/tui/workspace/history/history.ts",
+          "src/tui/workspace/session/session.ts",
+          "src/tui/workspace/vaults/vaults.ts"
+        ],
+        [
+          "src/tui/workspace/git/gitremote.ts",
+          "src/tui/workspace/git/views/review/rebase.ts"
+        ]
+      ]
+    },
+    "unresolved": {
+      "before": [],
+      "after": []
+    }
+  }
+}

@@ -7,7 +7,7 @@ created: "2026-10-26"
 
 For [issue #55](https://github.com/remziduzagac/slipbox/issues/55): organize source/tests by feature, split oversized
 responsibilities, improve reuse and dependencies, and apply patterns where justified. The design was approved on
-2026-10-27; implementation starts with T1's contracts and migration gates. Roadmap `0.2`, `0.3`, `14.10`, D235 and D239
+2026-10-27; implementation follows T1's contracts and migration gates. Roadmap `0.2`, `0.3`, `14.10`, D235 and D239
 remain the baseline. Each task file records its current status and verification.
 
 - [design.md](design.md): design, verified findings, coverage, phase order and a short linked task index.
@@ -21,5 +21,11 @@ ownership difference with the draft [execution engine](../execution-engine/READM
 implementation. Gateway execution, client routing, socket transport and functionality migration are the next stack.
 
 [#56](https://github.com/remziduzagac/slipbox/issues/56) memory/loading work stays outside ORG. Timeout policy is an
-early, separate behavior-neutral phase after T1; defaults and product deadlines stay unchanged. Source and test files
-are unchanged at the approved-design checkpoint.
+early, separate behavior-neutral phase after T1; defaults and product deadlines stay unchanged. The approved-design
+checkpoint is historical; implemented phase evidence lives in each task file.
+
+
+The final ratchet and [reconciliation ledger](tasks/11-final-ratchet.md) record the implemented phases, exact remaining
+exceptions and named follow-up task proposals. Completion does not claim all files meet the default ceiling, all
+integration scope is narrow, or gateway execution exists. Root-blueprint consolidation and archiving remain separate;
+the workstream stays here with its task evidence.

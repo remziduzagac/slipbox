@@ -6,7 +6,7 @@ ORG-R1: Organize core, TUI and tests by feature or area, keeping the face bounda
 must express ownership; splitting a module must not create another large flat directory.
 
 ORG-R2: Aim for about 500 lines per handwritten source module, with responsibility determining the seam. Lower the size
-ceiling incrementally (currently 750 lines, ORG-T32), with explicit non-growing exceptions, preserving D235's
+ceiling incrementally (now 600 lines, ORG-T11), with explicit non-growing exceptions, preserving D235's
 prohibition on an all-purpose class. ORG-D2 permits a measured, documented cap reset solely for formatting longer import
 paths during moves. The same applies when import formatting alone moves a file from at or below the ceiling to above it;
 the file gets an exact cap equal to its measured size, recorded in the task and removed by its extraction task.

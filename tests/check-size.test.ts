@@ -1,18 +1,18 @@
 // The size check (D235, scripts/check-size.ts): no source file over LIMIT lines, the few past it capped.
 
 import { afterAll, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { CAPPED, GENERATED, judgeSizes, LIMIT, lineCount } from "../scripts/check-size.ts";
+import { CAPPED, GENERATED, judgeSizes, LIMIT, lineCount, TEST_CAPPED, TEST_LIMIT } from "../scripts/check-size.ts";
 
 const sandbox = mkdtempSync(join(tmpdir(), "slipbox-size-"));
 afterAll(() => rmSync(sandbox, { recursive: true, force: true }));
 
 describe("the size check (D235, scripts/check-size.ts)", () => {
   test("a file over the limit, or over its cap, is over; one a cap can come down for is said", () => {
-    expect(judgeSizes(new Map([["src/new.ts", 751]]), {}).over).toEqual([
-      { path: "src/new.ts", lines: 751, limit: 750 },
+    expect(judgeSizes(new Map([["src/new.ts", 601]]), {}).over).toEqual([
+      { path: "src/new.ts", lines: 601, limit: 600 },
     ]);
     const capped = { "src/big.ts": 3000, "src/shrunk.ts": 3000, "src/small.ts": 3000 };
     const v = judgeSizes(
@@ -59,7 +59,7 @@ describe("the size check (D235, scripts/check-size.ts)", () => {
   });
 
   /** A tree of its own, the script copied into it (it checks the tree it sits in), with these files. */
-  const run = (files: Record<string, string>) => {
+  const run = (files: Record<string, string>, prepare?: (top: string) => void) => {
     const top = mkdtempSync(join(sandbox, "tree-"));
     mkdirSync(join(top, "scripts"));
     writeFileSync(
@@ -70,6 +70,7 @@ describe("the size check (D235, scripts/check-size.ts)", () => {
       mkdirSync(join(top, rel, ".."), { recursive: true });
       writeFileSync(join(top, rel), text);
     }
+    prepare?.(top);
     const r = Bun.spawnSync([process.execPath, join(top, "scripts", "check-size.ts")]);
     return { code: r.exitCode, out: r.stdout.toString(), err: r.stderr.toString() };
   };
@@ -79,6 +80,39 @@ describe("the size check (D235, scripts/check-size.ts)", () => {
     expect(over.code).toBe(1);
     expect(over.err).toContain(`src/tui/new.ts has ${LIMIT + 1} lines, over ${LIMIT}`);
     expect(run({ "src/tui/new.ts": "x\n".repeat(LIMIT) }).code).toBe(0);
+  });
+
+  test("test owners use their separate ceiling and exact ratchet instead of the source limit", () => {
+    expect(LIMIT).toBe(600);
+    expect(TEST_LIMIT).toBe(1500);
+    expect(run({ "src/fine.ts": "", "tests/new.test.ts": "x\n".repeat(TEST_LIMIT) }).code).toBe(0);
+    const over = run({ "src/fine.ts": "", "tests/new.test.ts": "x\n".repeat(TEST_LIMIT + 1) });
+    expect(over.code).toBe(1);
+    expect(over.err).toContain(`tests/new.test.ts has ${TEST_LIMIT + 1} lines, over ${TEST_LIMIT}`);
+    expect(
+      judgeSizes(new Map([["tests/back.test.ts", TEST_LIMIT]]), { "tests/back.test.ts": TEST_LIMIT }, TEST_LIMIT).lower,
+    ).toEqual([{ path: "tests/back.test.ts", lines: TEST_LIMIT, cap: TEST_LIMIT }]);
+    const outside = join(sandbox, "fixture-data");
+    mkdirSync(outside);
+    writeFileSync(join(outside, "data.ts"), "x\n".repeat(TEST_LIMIT + 1));
+    const links = run({ "src/fine.ts": "" }, (top) => {
+      mkdirSync(join(top, "tests", "fixtures"), { recursive: true });
+      symlinkSync(join(outside, "data.ts"), join(top, "tests", "fixtures", "data.ts"));
+      symlinkSync(outside, join(top, "tests", "fixtures", "linked"));
+      symlinkSync(join(top, "tests"), join(top, "tests", "fixtures", "cycle"));
+    });
+    expect(links.code).toBe(0);
+    const file = "tests/distribution.test.ts";
+    const cap = TEST_CAPPED[file]!;
+    const shrunk = run({ "src/fine.ts": "", [file]: "x\n".repeat(cap - 1) });
+    expect(shrunk.code).toBe(1);
+    expect(shrunk.out).toContain(`lower the cap to ${cap - 1}`);
+    const back = run({ "src/fine.ts": "", [file]: "x\n".repeat(TEST_LIMIT) });
+    expect(back.code).toBe(1);
+    expect(back.out).toContain("drop it from TEST_CAPPED");
+    expect(judgeSizes(new Map([[file, TEST_LIMIT + 1]]), { [file]: TEST_LIMIT + 2 }, TEST_LIMIT).lower).toEqual([
+      { path: file, lines: TEST_LIMIT + 1, cap: TEST_LIMIT + 2 },
+    ]);
   });
 
   test("the script fails until a legacy cap is lowered, including a one-line shrink", () => {
@@ -92,6 +126,11 @@ describe("the size check (D235, scripts/check-size.ts)", () => {
   test("the repository itself passes, and every capped file still exists and is past the limit", () => {
     const r = Bun.spawnSync([process.execPath, join(import.meta.dir, "..", "scripts", "check-size.ts")]);
     expect(r.exitCode).toBe(0);
+    for (const [path, cap] of Object.entries(TEST_CAPPED)) {
+      const lines = lineCount(readFileSync(join(import.meta.dir, "..", path), "utf8"));
+      expect(lines).toBeGreaterThan(TEST_LIMIT);
+      expect(lines).toBe(cap);
+    }
     for (const path of Object.keys({ ...CAPPED, ...GENERATED })) {
       const lines = lineCount(readFileSync(join(import.meta.dir, "..", path), "utf8"));
       expect(lines).toBeGreaterThan(LIMIT);

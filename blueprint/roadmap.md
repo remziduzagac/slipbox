@@ -683,7 +683,8 @@ current requirements or product behavior. Start any resulting design change thro
 
 - [ ] **27.1** Evaluate a performance regression guard: small headless timing subset or comparable scheduled trends.
 - [ ] **27.2** Evaluate an accessible plain CLI follow workflow, including real screen-reader validation.
-- [ ] **27.3** Evaluate test-file size ratchets and splitting by owner with reusable fixtures.
+- [x] **27.3** Evaluated and implemented through [ORG](workstreams/code-organization/tasks/11-final-ratchet.md):
+  feature owners/reusable fixtures, a separate 1,500-line test ceiling and exact legacy caps.
 - [ ] **27.4** Evaluate a local diagnostics bundle, with explicit collection scope and privacy-preserving defaults.
 - [ ] **27.5** Review documented continuity and an isolated recovery drill; account-access changes remain owner choices.
 - [ ] **27.6** Evaluate a non-blocking screenshot-refresh reminder for relevant UI changes.

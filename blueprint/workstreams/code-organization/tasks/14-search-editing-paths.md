@@ -1,5 +1,5 @@
 ---
-status: review
+status: done
 assignee:
 blocked_by: [ORG-T5, ORG-T13]
 created: "2026-10-26"
