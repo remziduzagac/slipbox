@@ -92,6 +92,22 @@ export function graphCompositionViolations(from: string, text: string): string[]
   });
 }
 
+/** Client contracts and protocol adapters stay below process ownership (ORG-T39). */
+export const SERVER_PROTOCOL_HELPERS = [
+  "src/core/documents/servers/client/contracts.ts",
+  "src/core/documents/servers/client/protocol.ts",
+] as const;
+
+export function serverProtocolViolations(from: string, text: string): string[] {
+  if (!(SERVER_PROTOCOL_HELPERS as readonly string[]).includes(from)) return [];
+  const owners = ["client", "manager", "transport"].map((name) => `src/core/documents/servers/${name}`);
+  return importsOf(text).flatMap((spec) =>
+    owners.includes(targetOf(from, spec))
+      ? [`${from}: imports ${spec} (server protocol helper must stay below process lifecycle)`]
+      : [],
+  );
+}
+
 /** UTF-8 output is below dispatch, formats and export orchestration (ORG-T39). */
 export function exportEncodingViolations(from: string, text: string): string[] {
   if (from !== "src/core/rendering/export/encoding.ts") return [];
@@ -763,6 +779,7 @@ if (import.meta.main) {
     violations.push(...bufferLayoutViolations(from, readFileSync(file, "utf8")));
     violations.push(...sourceEditingViolations(from, readFileSync(file, "utf8")));
     violations.push(...navigationHelperViolations(from, readFileSync(file, "utf8")));
+    violations.push(...serverProtocolViolations(from, readFileSync(file, "utf8")));
     violations.push(...exportEncodingViolations(from, readFileSync(file, "utf8")));
     violations.push(...editingContextViolations(from, readFileSync(file, "utf8")));
     violations.push(...renameMechanismViolations(from, readFileSync(file, "utf8")));

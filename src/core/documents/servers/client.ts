@@ -7,7 +7,6 @@ import { type ChildProcess, spawn } from "node:child_process";
 import { pathToFileURL } from "node:url";
 import {
   CancellationTokenSource,
-  type ClientCapabilities,
   createProtocolConnection,
   type Diagnostic,
   DidChangeConfigurationNotification,
@@ -33,6 +32,11 @@ import { FramingError, ServerTransport } from "./transport.ts";
 import { serverPath } from "./find.ts";
 import { MAX_REQUEST_BYTES, MAX_UNANSWERED, PULL_FANOUT, RequestGate, keptDiagnostics } from "./limits.ts";
 
+import type { ServerSpec, ClientState, ClientHooks } from "./client/contracts.ts";
+import { CLIENT_CAPABILITIES, settingAt } from "./client/protocol.ts";
+export type { ServerSpec, ClientState, ClientHooks } from "./client/contracts.ts";
+export { CLIENT_CAPABILITIES, settingAt } from "./client/protocol.ts";
+
 /** How long a request waits for its answer, unless said otherwise: then it's cancelled, the server left running. */
 export const REQUEST_DEADLINE_MS = 10_000;
 /** A diagnostics pull's: asked for in the background, while a server may still be at its first analysis. */
@@ -40,113 +44,6 @@ export const PULL_DEADLINE_MS = 60_000;
 /** Requests whose callers see to a stale answer themselves (what's asked last stands): one for an older text of the
  *  file still answers them — a signature typed into keeps its help. */
 const OWN_STALENESS = new Set(["textDocument/completion", "textDocument/signatureHelp"]);
-
-/** How to start a server, and what to tell it. */
-export interface ServerSpec {
-  /** Its name, as the config and the messages say it. */
-  name: string;
-  /** The program and its arguments. */
-  argv: string[];
-  /** Added to the environment it runs in. */
-  env?: Record<string, string>;
-  /** Its settings: what `workspace/configuration` asks for, and `didChangeConfiguration` sends. */
-  settings?: Record<string, unknown>;
-  /** Sent with `initialize`, for servers that read their options there. */
-  initOptions?: unknown;
-  /** The project's top folder (absolute): its workspace. */
-  root: string;
-  /** How long every request waits for its answer (`slipbox diagnostics --timeout`); else REQUEST_DEADLINE_MS, and
-   *  PULL_DEADLINE_MS for a pull. */
-  timeoutMs?: number;
-}
-
-export type ClientState = "starting" | "running" | "stopping" | "stopped" | "failed";
-
-export interface ClientHooks {
-  /** A document's diagnostics, as the server has them now (sent or asked for). */
-  diagnostics?: (uri: string, diagnostics: Diagnostic[], version: number | null) => void;
-  /** What the server says for the user's log. */
-  log?: (message: string) => void;
-  /** What the user should know of the client's limits: a request not answered in time, the requests waiting their
-   *  turn, an answer's diagnostics left out — each said once while the server runs. */
-  notice?: (message: string) => void;
-  /** It ended after it was running: asked to (`expected`), it crashed, or slipbox stopped it (`stoppedByClient`: what
-   *  it sent couldn't be read); a start that fails rejects start() instead. */
-  exited?: (expected: boolean, why: string, stoppedByClient?: boolean) => void;
-  /** An edit it asks slipbox to make (after a command it was told to run): true when it was. */
-  applyEdit?: (edit: WorkspaceEdit) => boolean;
-}
-
-/** The parts of a client's capabilities slipbox uses: what a server may count on. */
-export const CLIENT_CAPABILITIES: ClientCapabilities = {
-  general: { positionEncodings: ["utf-16"] },
-  textDocument: {
-    synchronization: { didSave: true, dynamicRegistration: false },
-    publishDiagnostics: { relatedInformation: false, versionSupport: true, codeDescriptionSupport: true },
-    diagnostic: { dynamicRegistration: true, relatedDocumentSupport: false },
-    hover: { contentFormat: ["markdown", "plaintext"] },
-    definition: { linkSupport: false },
-    references: {},
-    documentSymbol: { hierarchicalDocumentSymbolSupport: true },
-    rename: { prepareSupport: true },
-    codeAction: {
-      codeActionLiteralSupport: {
-        codeActionKind: {
-          valueSet: [
-            "",
-            "quickfix",
-            "refactor",
-            "refactor.extract",
-            "refactor.inline",
-            "refactor.rewrite",
-            "source",
-            "source.organizeImports",
-            "source.fixAll",
-          ],
-        },
-      },
-      isPreferredSupport: true,
-      disabledSupport: true,
-      resolveSupport: { properties: ["edit"] },
-    },
-    formatting: {},
-    completion: {
-      completionItem: {
-        snippetSupport: true,
-        documentationFormat: ["markdown", "plaintext"],
-        labelDetailsSupport: true,
-      },
-      contextSupport: true,
-    },
-    signatureHelp: {
-      signatureInformation: {
-        documentationFormat: ["markdown", "plaintext"],
-        parameterInformation: { labelOffsetSupport: true },
-        activeParameterSupport: true,
-      },
-    },
-  },
-  workspace: {
-    configuration: true,
-    workspaceFolders: true,
-    didChangeConfiguration: { dynamicRegistration: false },
-    applyEdit: true,
-    workspaceEdit: { documentChanges: true },
-    symbol: { resolveSupport: { properties: ["location.range"] } },
-  },
-  window: { workDoneProgress: true },
-};
-
-/** A setting looked up by a dotted section (`css`, `python.analysis`); everything for none. */
-export function settingAt(settings: Record<string, unknown> | undefined, section: string | undefined): unknown {
-  if (!section) return settings ?? null;
-  let at: unknown = settings;
-  for (const key of section.split(".")) {
-    if (!at || typeof at !== "object") return null;
-    at = (at as Record<string, unknown>)[key];
-  }
-  return at ?? null;
-}
 
 export class LanguageClient {
   state: ClientState = "starting";

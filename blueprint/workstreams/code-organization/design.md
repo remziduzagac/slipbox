@@ -701,6 +701,9 @@ cycle. The original function remains re-exported for compatibility; all five laz
 contracts stay unchanged. Its remaining measured core candidates have separate protocol, theme-role and release-metadata
 child scopes in [task 39](tasks/39-core-adapter-splits.md#bounded-child-sequence); other cohesive 500–600-line owners are
 recorded in its ledger. Generated server locks keep their independent cap and offline verification.
+The language-client protocol child separates configuration/state/callback records and capability/settings adapters
+below the unchanged lifecycle. The client is 574 lines; its deadlines, transport, pending requests, hook receivers and
+shutdown ownership remain intact, with reverse-edge fixtures preventing helper imports of process owners.
 
 ### Pattern assessment has a deliverable
 

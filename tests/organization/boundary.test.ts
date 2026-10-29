@@ -47,6 +47,21 @@ describe("the boundary check (0.3, scripts/check-boundary.ts)", () => {
     expect(r.out).not.toContain("boundary check ok");
   });
 
+  test("server protocol helpers reject process owners while retaining protocol-only contracts", () => {
+    const refused = check({
+      "src/core/documents/servers/client/contracts.ts": 'export type { ServerSpec } from "../client.ts";',
+      "src/core/documents/servers/client/protocol.ts": 'export const load = () => import("../manager.ts");',
+    });
+    expect(refused.code).toBe(1);
+    expect(refused.err.match(/server protocol helper/g)?.length).toBe(2);
+    expect(
+      check({
+        "src/core/documents/servers/client/protocol.ts":
+          'import type { ClientCapabilities } from "vscode-languageserver-protocol/node"; export const capabilities = {};',
+      }).code,
+    ).toBe(0);
+  });
+
   test("export encoding rejects dispatch and format imports while retaining its bounded sink", () => {
     for (const source of [
       'import { streamExport } from "./stream.ts"; streamExport;',
