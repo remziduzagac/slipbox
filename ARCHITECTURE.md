@@ -45,6 +45,8 @@ for a person, and a command line for agents and scripts, both over the same plai
   cache getters under `documents/buffers/layout/`; replacing a cache never leaves them with an earlier snapshot.
   Source editing has lower position/text/selection and mutation owners under `documents/editing/source/`, with keyboard
   coordination above them. Its public entry re-exports the original functions; view/buffer and clipboard guards stay local.
+  Peek contracts, presentation, synchronization and navigation have separate owners under `navigation/peek/`. Pure
+  view-layout and link-anchor helpers stay below their controllers; their caches, probes and live state keep one owner.
 
 **The boundary.** `src/core/` never imports `src/tui/`, `src/cli/` or `@opentui/*`, and `src/cli/` never imports
 `src/tui/`. Inside the TUI, only `src/tui/shell/terminal/opentui.ts` (the `Canvas` over OpenTUI's buffer) and

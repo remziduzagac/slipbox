@@ -90,7 +90,10 @@ export const CHECKS_FOR: [RegExp, string[]][] = [
   [/^src\/core\/workspace\/vaults\/(home|mounts)\.ts$/, ["home", "Elsewhere"]],
   [/^src\/tui\/workspace\/vaults\/vaults\.ts$/, ["vaults", "home", "Elsewhere", "roots", "named folders"]],
   [/^src\/core\/workspace\/vaults\/symlinks\.ts$/, ["links", "rename"]],
-  [/^src\/tui\/documents\/navigation\/peek\.ts$/, ["peek"]],
+  [
+    /^src\/tui\/documents\/navigation\/peek(?:\/(?:contracts|state|paths|presentation|probe|synchronization|opening|history))?\.ts$/,
+    ["peek"],
+  ],
   // Replace, and renames with the links they rewrite.
   [/^src\/core\/(documents\/editing\/replace|workspace\/mutations\/replace-files)\.ts$/, ["replace", "find"]],
   [/^src\/tui\/documents\/search\/replacing\.ts$/, ["replace"]],

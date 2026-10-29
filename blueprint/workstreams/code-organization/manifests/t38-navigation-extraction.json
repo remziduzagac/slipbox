@@ -1,0 +1,408 @@
+{
+  "moves": {},
+  "retained": [],
+  "renamedBasenames": {},
+  "edges": {
+    "removed": [
+      "src/tui/documents/navigation/peek.ts -> src/core/documents/model/filetypes.ts",
+      "src/tui/documents/navigation/peek.ts -> src/core/foundation/platform/fsutil.ts",
+      "src/tui/documents/navigation/peek.ts -> src/core/foundation/text/sanitize.ts",
+      "src/tui/documents/navigation/peek.ts -> src/core/foundation/text/width.ts",
+      "src/tui/documents/navigation/peek.ts -> src/core/workspace/graph/backlinks-jobs.ts",
+      "src/tui/documents/navigation/peek.ts -> src/core/workspace/graph/graph.ts",
+      "src/tui/documents/navigation/peek.ts -> src/core/workspace/links/reach.ts",
+      "src/tui/documents/navigation/peek.ts -> src/core/workspace/session/position.ts",
+      "src/tui/documents/navigation/peek.ts -> src/core/workspace/vaults/names.ts",
+      "src/tui/documents/navigation/peek.ts -> src/core/workspace/vaults/registry.ts",
+      "src/tui/documents/navigation/peek.ts -> src/core/workspace/vaults/symlinks.ts",
+      "src/tui/documents/navigation/peek.ts -> src/core/workspace/vaults/vault.ts",
+      "src/tui/documents/navigation/peek.ts -> src/tui/app/runtime/app.ts",
+      "src/tui/documents/navigation/peek.ts -> src/tui/app/runtime/watch.ts",
+      "src/tui/documents/navigation/peek.ts -> src/tui/documents/buffers/buffer.ts"
+    ],
+    "added": [
+      "src/tui/actions/documents/actions-links.ts -> src/tui/actions/documents/links/anchors.ts",
+      "src/tui/actions/documents/links/anchors.ts -> src/core/workspace/links/landing.ts",
+      "src/tui/actions/documents/links/anchors.ts -> src/core/workspace/session/position.ts",
+      "src/tui/actions/documents/links/anchors.ts -> src/tui/app/runtime/app.ts",
+      "src/tui/documents/navigation/peek.ts -> src/tui/documents/navigation/peek/contracts.ts",
+      "src/tui/documents/navigation/peek.ts -> src/tui/documents/navigation/peek/history.ts",
+      "src/tui/documents/navigation/peek.ts -> src/tui/documents/navigation/peek/opening.ts",
+      "src/tui/documents/navigation/peek.ts -> src/tui/documents/navigation/peek/paths.ts",
+      "src/tui/documents/navigation/peek.ts -> src/tui/documents/navigation/peek/presentation.ts",
+      "src/tui/documents/navigation/peek.ts -> src/tui/documents/navigation/peek/probe.ts",
+      "src/tui/documents/navigation/peek.ts -> src/tui/documents/navigation/peek/state.ts",
+      "src/tui/documents/navigation/peek.ts -> src/tui/documents/navigation/peek/synchronization.ts",
+      "src/tui/documents/navigation/peek/contracts.ts -> src/core/workspace/graph/backlinks-jobs.ts",
+      "src/tui/documents/navigation/peek/contracts.ts -> src/core/workspace/links/reach.ts",
+      "src/tui/documents/navigation/peek/contracts.ts -> src/core/workspace/session/position.ts",
+      "src/tui/documents/navigation/peek/contracts.ts -> src/core/workspace/vaults/vault.ts",
+      "src/tui/documents/navigation/peek/history.ts -> src/core/foundation/platform/fsutil.ts",
+      "src/tui/documents/navigation/peek/history.ts -> src/core/workspace/vaults/names.ts",
+      "src/tui/documents/navigation/peek/history.ts -> src/core/workspace/vaults/symlinks.ts",
+      "src/tui/documents/navigation/peek/history.ts -> src/core/workspace/vaults/vault.ts",
+      "src/tui/documents/navigation/peek/history.ts -> src/tui/app/runtime/app.ts",
+      "src/tui/documents/navigation/peek/history.ts -> src/tui/documents/navigation/peek/opening.ts",
+      "src/tui/documents/navigation/peek/history.ts -> src/tui/documents/navigation/peek/paths.ts",
+      "src/tui/documents/navigation/peek/history.ts -> src/tui/documents/navigation/peek/presentation.ts",
+      "src/tui/documents/navigation/peek/history.ts -> src/tui/documents/navigation/peek/state.ts",
+      "src/tui/documents/navigation/peek/opening.ts -> src/core/documents/model/filetypes.ts",
+      "src/tui/documents/navigation/peek/opening.ts -> src/core/foundation/platform/fsutil.ts",
+      "src/tui/documents/navigation/peek/opening.ts -> src/core/workspace/graph/backlinks-jobs.ts",
+      "src/tui/documents/navigation/peek/opening.ts -> src/core/workspace/graph/graph.ts",
+      "src/tui/documents/navigation/peek/opening.ts -> src/core/workspace/session/position.ts",
+      "src/tui/documents/navigation/peek/opening.ts -> src/core/workspace/vaults/names.ts",
+      "src/tui/documents/navigation/peek/opening.ts -> src/core/workspace/vaults/vault.ts",
+      "src/tui/documents/navigation/peek/opening.ts -> src/tui/app/runtime/app.ts",
+      "src/tui/documents/navigation/peek/opening.ts -> src/tui/documents/buffers/buffer.ts",
+      "src/tui/documents/navigation/peek/opening.ts -> src/tui/documents/navigation/peek/contracts.ts",
+      "src/tui/documents/navigation/peek/opening.ts -> src/tui/documents/navigation/peek/paths.ts",
+      "src/tui/documents/navigation/peek/opening.ts -> src/tui/documents/navigation/peek/presentation.ts",
+      "src/tui/documents/navigation/peek/opening.ts -> src/tui/documents/navigation/peek/state.ts",
+      "src/tui/documents/navigation/peek/opening.ts -> src/tui/documents/navigation/peek/synchronization.ts",
+      "src/tui/documents/navigation/peek/paths.ts -> src/core/workspace/session/position.ts",
+      "src/tui/documents/navigation/peek/paths.ts -> src/core/workspace/vaults/vault.ts",
+      "src/tui/documents/navigation/peek/paths.ts -> src/tui/app/runtime/app.ts",
+      "src/tui/documents/navigation/peek/presentation.ts -> src/core/foundation/text/sanitize.ts",
+      "src/tui/documents/navigation/peek/presentation.ts -> src/core/foundation/text/width.ts",
+      "src/tui/documents/navigation/peek/presentation.ts -> src/core/workspace/vaults/names.ts",
+      "src/tui/documents/navigation/peek/presentation.ts -> src/core/workspace/vaults/symlinks.ts",
+      "src/tui/documents/navigation/peek/presentation.ts -> src/tui/documents/navigation/peek/contracts.ts",
+      "src/tui/documents/navigation/peek/probe.ts -> src/core/workspace/vaults/symlinks.ts",
+      "src/tui/documents/navigation/peek/state.ts -> src/tui/app/runtime/app.ts",
+      "src/tui/documents/navigation/peek/state.ts -> src/tui/documents/navigation/peek/contracts.ts",
+      "src/tui/documents/navigation/peek/synchronization.ts -> src/core/workspace/graph/backlinks-jobs.ts",
+      "src/tui/documents/navigation/peek/synchronization.ts -> src/core/workspace/graph/graph.ts",
+      "src/tui/documents/navigation/peek/synchronization.ts -> src/core/workspace/links/reach.ts",
+      "src/tui/documents/navigation/peek/synchronization.ts -> src/core/workspace/vaults/registry.ts",
+      "src/tui/documents/navigation/peek/synchronization.ts -> src/core/workspace/vaults/vault.ts",
+      "src/tui/documents/navigation/peek/synchronization.ts -> src/tui/app/runtime/app.ts",
+      "src/tui/documents/navigation/peek/synchronization.ts -> src/tui/app/runtime/watch.ts",
+      "src/tui/documents/navigation/peek/synchronization.ts -> src/tui/documents/buffers/buffer.ts",
+      "src/tui/documents/navigation/peek/synchronization.ts -> src/tui/documents/navigation/peek/contracts.ts",
+      "src/tui/documents/navigation/peek/synchronization.ts -> src/tui/documents/navigation/peek/probe.ts",
+      "src/tui/documents/views/layout/anchors.ts -> src/core/rendering/layout/ir.ts",
+      "src/tui/documents/views/layout/anchors.ts -> src/core/workspace/session/position.ts",
+      "src/tui/documents/views/layout/anchors.ts -> src/tui/documents/editing/cursor.ts",
+      "src/tui/documents/views/layout/selection.ts -> src/core/rendering/layout/ir.ts",
+      "src/tui/documents/views/layout/selection.ts -> src/tui/app/runtime/app.ts",
+      "src/tui/documents/views/layout/selection.ts -> src/tui/documents/editing/cursor.ts",
+      "src/tui/documents/views/layout/tasks.ts -> src/core/foundation/text/width.ts",
+      "src/tui/documents/views/layout/tasks.ts -> src/core/rendering/layout/ir.ts",
+      "src/tui/documents/views/layout/widths.ts -> src/core/foundation/text/width.ts",
+      "src/tui/documents/views/layout/widths.ts -> src/core/rendering/layout/ir.ts",
+      "src/tui/documents/views/views.ts -> src/tui/documents/views/layout/anchors.ts",
+      "src/tui/documents/views/views.ts -> src/tui/documents/views/layout/selection.ts",
+      "src/tui/documents/views/views.ts -> src/tui/documents/views/layout/tasks.ts",
+      "src/tui/documents/views/views.ts -> src/tui/documents/views/layout/widths.ts"
+    ]
+  },
+  "runtime": {
+    "removed": [
+      "src/tui/actions/documents/actions-links.ts -> src/core/workspace/session/position.ts",
+      "src/tui/documents/navigation/peek.ts -> src/core/documents/model/filetypes.ts",
+      "src/tui/documents/navigation/peek.ts -> src/core/foundation/platform/fsutil.ts",
+      "src/tui/documents/navigation/peek.ts -> src/core/foundation/text/sanitize.ts",
+      "src/tui/documents/navigation/peek.ts -> src/core/foundation/text/width.ts",
+      "src/tui/documents/navigation/peek.ts -> src/core/workspace/graph/backlinks-jobs.ts",
+      "src/tui/documents/navigation/peek.ts -> src/core/workspace/links/reach.ts",
+      "src/tui/documents/navigation/peek.ts -> src/core/workspace/vaults/names.ts",
+      "src/tui/documents/navigation/peek.ts -> src/core/workspace/vaults/registry.ts",
+      "src/tui/documents/navigation/peek.ts -> src/core/workspace/vaults/symlinks.ts",
+      "src/tui/documents/navigation/peek.ts -> src/core/workspace/vaults/vault.ts",
+      "src/tui/documents/navigation/peek.ts -> src/tui/app/runtime/watch.ts",
+      "src/tui/documents/navigation/peek.ts -> src/tui/documents/buffers/buffer.ts",
+      "src/tui/documents/views/views.ts -> src/core/workspace/session/position.ts"
+    ],
+    "added": [
+      "src/tui/actions/documents/actions-links.ts -> src/tui/actions/documents/links/anchors.ts",
+      "src/tui/actions/documents/links/anchors.ts -> src/core/workspace/links/landing.ts",
+      "src/tui/actions/documents/links/anchors.ts -> src/core/workspace/session/position.ts",
+      "src/tui/documents/navigation/peek.ts -> src/tui/documents/navigation/peek/history.ts",
+      "src/tui/documents/navigation/peek.ts -> src/tui/documents/navigation/peek/opening.ts",
+      "src/tui/documents/navigation/peek.ts -> src/tui/documents/navigation/peek/paths.ts",
+      "src/tui/documents/navigation/peek.ts -> src/tui/documents/navigation/peek/presentation.ts",
+      "src/tui/documents/navigation/peek.ts -> src/tui/documents/navigation/peek/probe.ts",
+      "src/tui/documents/navigation/peek.ts -> src/tui/documents/navigation/peek/state.ts",
+      "src/tui/documents/navigation/peek.ts -> src/tui/documents/navigation/peek/synchronization.ts",
+      "src/tui/documents/navigation/peek/history.ts -> src/core/foundation/platform/fsutil.ts",
+      "src/tui/documents/navigation/peek/history.ts -> src/core/workspace/vaults/names.ts",
+      "src/tui/documents/navigation/peek/history.ts -> src/core/workspace/vaults/symlinks.ts",
+      "src/tui/documents/navigation/peek/history.ts -> src/core/workspace/vaults/vault.ts",
+      "src/tui/documents/navigation/peek/history.ts -> src/tui/documents/navigation/peek/opening.ts",
+      "src/tui/documents/navigation/peek/history.ts -> src/tui/documents/navigation/peek/paths.ts",
+      "src/tui/documents/navigation/peek/history.ts -> src/tui/documents/navigation/peek/presentation.ts",
+      "src/tui/documents/navigation/peek/history.ts -> src/tui/documents/navigation/peek/state.ts",
+      "src/tui/documents/navigation/peek/opening.ts -> src/core/documents/model/filetypes.ts",
+      "src/tui/documents/navigation/peek/opening.ts -> src/core/foundation/platform/fsutil.ts",
+      "src/tui/documents/navigation/peek/opening.ts -> src/core/workspace/graph/backlinks-jobs.ts",
+      "src/tui/documents/navigation/peek/opening.ts -> src/core/workspace/vaults/names.ts",
+      "src/tui/documents/navigation/peek/opening.ts -> src/tui/documents/buffers/buffer.ts",
+      "src/tui/documents/navigation/peek/opening.ts -> src/tui/documents/navigation/peek/paths.ts",
+      "src/tui/documents/navigation/peek/opening.ts -> src/tui/documents/navigation/peek/presentation.ts",
+      "src/tui/documents/navigation/peek/opening.ts -> src/tui/documents/navigation/peek/state.ts",
+      "src/tui/documents/navigation/peek/opening.ts -> src/tui/documents/navigation/peek/synchronization.ts",
+      "src/tui/documents/navigation/peek/paths.ts -> src/core/workspace/vaults/vault.ts",
+      "src/tui/documents/navigation/peek/presentation.ts -> src/core/foundation/text/sanitize.ts",
+      "src/tui/documents/navigation/peek/presentation.ts -> src/core/foundation/text/width.ts",
+      "src/tui/documents/navigation/peek/presentation.ts -> src/core/workspace/vaults/names.ts",
+      "src/tui/documents/navigation/peek/presentation.ts -> src/core/workspace/vaults/symlinks.ts",
+      "src/tui/documents/navigation/peek/probe.ts -> src/core/workspace/vaults/symlinks.ts",
+      "src/tui/documents/navigation/peek/synchronization.ts -> src/core/workspace/graph/backlinks-jobs.ts",
+      "src/tui/documents/navigation/peek/synchronization.ts -> src/core/workspace/links/reach.ts",
+      "src/tui/documents/navigation/peek/synchronization.ts -> src/core/workspace/vaults/registry.ts",
+      "src/tui/documents/navigation/peek/synchronization.ts -> src/core/workspace/vaults/vault.ts",
+      "src/tui/documents/navigation/peek/synchronization.ts -> src/tui/app/runtime/watch.ts",
+      "src/tui/documents/navigation/peek/synchronization.ts -> src/tui/documents/navigation/peek/probe.ts",
+      "src/tui/documents/views/layout/anchors.ts -> src/core/workspace/session/position.ts",
+      "src/tui/documents/views/layout/anchors.ts -> src/tui/documents/editing/cursor.ts",
+      "src/tui/documents/views/layout/selection.ts -> src/tui/documents/editing/cursor.ts",
+      "src/tui/documents/views/layout/tasks.ts -> src/core/foundation/text/width.ts",
+      "src/tui/documents/views/layout/widths.ts -> src/core/foundation/text/width.ts",
+      "src/tui/documents/views/views.ts -> src/tui/documents/views/layout/anchors.ts",
+      "src/tui/documents/views/views.ts -> src/tui/documents/views/layout/selection.ts",
+      "src/tui/documents/views/views.ts -> src/tui/documents/views/layout/tasks.ts",
+      "src/tui/documents/views/views.ts -> src/tui/documents/views/layout/widths.ts"
+    ]
+  },
+  "tests": {
+    "removed": [],
+    "added": [
+      "test: link anchors preserve line fragments, nested pointer keys and Markdown punctuation",
+      "test: natural view width excludes long decorative tails, trailing blanks and far-right labels",
+      "test: navigation helpers reject facades, upper peek tiers and runtime App while retaining capabilities",
+      "test: peek backlink Markdown keeps pending states and encodes path punctuation without formatting labels",
+      "test: peek titles preserve complete labels when roomy and respect a narrow cell budget",
+      "test: selected text includes a wide grapheme once in either direction and preserves whole-line selection",
+      "test: task hit testing uses laid-out widths and excludes the checkbox's trailing space",
+      "test: view anchors round-trip wrapped source rows and retain insert-mode end columns"
+    ]
+  },
+  "entries": {
+    "removed": [],
+    "added": []
+  },
+  "extraction": [
+    {
+      "from": "src/tui/documents/navigation/peek.ts",
+      "to": "src/tui/documents/navigation/peek/contracts.ts",
+      "symbols": [
+        "Place",
+        "Peek",
+        "Holder",
+        "BacklinksState"
+      ]
+    },
+    {
+      "from": "src/tui/documents/navigation/peek.ts",
+      "to": "src/tui/documents/navigation/peek/state.ts",
+      "symbols": [
+        "peekOf",
+        "here"
+      ]
+    },
+    {
+      "from": "src/tui/documents/navigation/peek.ts",
+      "to": "src/tui/documents/navigation/peek/paths.ts",
+      "symbols": [
+        "unfollowed",
+        "leadsOut",
+        "ownPath",
+        "goThere"
+      ]
+    },
+    {
+      "from": "src/tui/documents/navigation/peek.ts",
+      "to": "src/tui/documents/navigation/peek/presentation.ts",
+      "symbols": [
+        "notRead",
+        "peekTitle",
+        "md",
+        "visible",
+        "withBacklinks",
+        "withoutIndex"
+      ]
+    },
+    {
+      "from": "src/tui/documents/navigation/peek.ts",
+      "to": "src/tui/documents/navigation/peek/probe.ts",
+      "symbols": [
+        "peekProbe"
+      ]
+    },
+    {
+      "from": "src/tui/documents/navigation/peek.ts",
+      "to": "src/tui/documents/navigation/peek/synchronization.ts",
+      "symbols": [
+        "catching",
+        "caughtUp",
+        "catchUp",
+        "rebuilt",
+        "parseHere",
+        "reopened",
+        "parsing",
+        "retired",
+        "relayout",
+        "everyBuffer",
+        "signatures",
+        "signatureOf",
+        "nestedIn",
+        "tuiReach",
+        "reachedFor",
+        "reachedAgain",
+        "reachFrom",
+        "keepCaughtUp",
+        "vaultGraph"
+      ]
+    },
+    {
+      "from": "src/tui/documents/navigation/peek.ts",
+      "to": "src/tui/documents/navigation/peek/opening.ts",
+      "symbols": [
+        "peekInstead",
+        "peekAt",
+        "show",
+        "readBacklinks"
+      ]
+    },
+    {
+      "from": "src/tui/documents/navigation/peek.ts",
+      "to": "src/tui/documents/navigation/peek/history.ts",
+      "symbols": [
+        "peekStep",
+        "peekGo",
+        "peekKeep",
+        "peekFill"
+      ]
+    },
+    {
+      "from": "src/tui/documents/views/views.ts",
+      "to": "src/tui/documents/views/layout/widths.ts",
+      "symbols": [
+        "NOWRAP_PROBE",
+        "naturalWidths",
+        "naturalWidth"
+      ]
+    },
+    {
+      "from": "src/tui/documents/views/views.ts",
+      "to": "src/tui/documents/views/layout/tasks.ts",
+      "symbols": [
+        "taskMarkAt"
+      ]
+    },
+    {
+      "from": "src/tui/documents/views/views.ts",
+      "to": "src/tui/documents/views/layout/selection.ts",
+      "symbols": [
+        "selectedText"
+      ]
+    },
+    {
+      "from": "src/tui/documents/views/views.ts",
+      "to": "src/tui/documents/views/layout/anchors.ts",
+      "symbols": [
+        "rowFromAnchor",
+        "cursorFromAnchor",
+        "cursorAnchorFor"
+      ],
+      "methods": true
+    },
+    {
+      "from": "src/tui/actions/documents/actions-links.ts",
+      "to": "src/tui/actions/documents/links/anchors.ts",
+      "symbols": [
+        "lineAnchor",
+        "fragmentAnchor",
+        "markdownText",
+        "shownAt",
+        "headingAnchor",
+        "pointerHeading"
+      ]
+    }
+  ],
+  "ownership": {
+    "peek": "44 original declarations separate into contracts/state/path/presentation/probe/synchronization/opening/history; original live App/View/Graph references and promise guards retained",
+    "caches": "catching/parsing/retired/signatures remain single allocations in synchronization; peekProbe remains one object re-exported from probe; naturalWidths remains one WeakMap read by Views",
+    "views": "all 30 members retain signatures; three state-free anchor methods delegate unchanged bodies; other 27 members and all field initializers unchanged",
+    "links": "six original anchor/punctuation helpers move below action composition; remaining 10 declarations and action registration table unchanged",
+    "state": "no buffer copies, save/history/marks ownership or per-view state changes; no new async wrappers"
+  },
+  "guards": {
+    "owners": [
+      "src/tui/documents/navigation/peek/contracts.ts",
+      "src/tui/documents/navigation/peek/state.ts",
+      "src/tui/documents/navigation/peek/paths.ts",
+      "src/tui/documents/navigation/peek/presentation.ts",
+      "src/tui/documents/navigation/peek/probe.ts",
+      "src/tui/documents/navigation/peek/synchronization.ts",
+      "src/tui/documents/navigation/peek/opening.ts",
+      "src/tui/documents/navigation/peek/history.ts",
+      "src/tui/documents/views/layout/widths.ts",
+      "src/tui/documents/views/layout/tasks.ts",
+      "src/tui/documents/views/layout/selection.ts",
+      "src/tui/documents/views/layout/anchors.ts",
+      "src/tui/actions/documents/links/anchors.ts"
+    ],
+    "rule": "navigationHelperViolations",
+    "forbidden": "reverse public/action facades and higher peek tiers; runtime App; App types allowed"
+  },
+  "runtimeScc": {
+    "before": [
+      [
+        "src/tui/workspace/git/gitremote.ts",
+        "src/tui/workspace/git/views/review/rebase.ts"
+      ],
+      [
+        "src/core/rendering/export/formats/html.ts",
+        "src/core/rendering/export/formats/markdown.ts",
+        "src/core/rendering/export/stream.ts"
+      ],
+      [
+        "src/tui/app/runtime/app.ts",
+        "src/tui/app/settings/settings.ts",
+        "src/tui/workspace/history/history.ts",
+        "src/tui/workspace/session/session.ts",
+        "src/tui/workspace/vaults/vaults.ts"
+      ],
+      [
+        "src/tui/actions/actions.ts",
+        "src/tui/actions/documents/actions-edit.ts",
+        "src/tui/actions/documents/actions-find.ts",
+        "src/tui/actions/documents/actions-links.ts",
+        "src/tui/actions/documents/actions-lsp.ts",
+        "src/tui/actions/documents/actions-view.ts",
+        "src/tui/actions/shell/actions-panes.ts",
+        "src/tui/actions/workspace/actions-files.ts"
+      ]
+    ],
+    "after": [
+      [
+        "src/tui/workspace/git/gitremote.ts",
+        "src/tui/workspace/git/views/review/rebase.ts"
+      ],
+      [
+        "src/core/rendering/export/formats/html.ts",
+        "src/core/rendering/export/formats/markdown.ts",
+        "src/core/rendering/export/stream.ts"
+      ],
+      [
+        "src/tui/app/runtime/app.ts",
+        "src/tui/app/settings/settings.ts",
+        "src/tui/workspace/history/history.ts",
+        "src/tui/workspace/session/session.ts",
+        "src/tui/workspace/vaults/vaults.ts"
+      ],
+      [
+        "src/tui/actions/actions.ts",
+        "src/tui/actions/documents/actions-edit.ts",
+        "src/tui/actions/documents/actions-find.ts",
+        "src/tui/actions/documents/actions-links.ts",
+        "src/tui/actions/documents/actions-lsp.ts",
+        "src/tui/actions/documents/actions-view.ts",
+        "src/tui/actions/shell/actions-panes.ts",
+        "src/tui/actions/workspace/actions-files.ts"
+      ]
+    ]
+  }
+}
