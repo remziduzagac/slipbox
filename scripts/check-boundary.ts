@@ -92,6 +92,34 @@ export function graphCompositionViolations(from: string, text: string): string[]
   });
 }
 
+/** Lens/completion mechanisms use explicit inputs below their controllers and App runtime (ORG-T38). */
+export const EDITING_CONTEXT_HELPERS = [
+  "src/tui/documents/editing/lens/contracts.ts",
+  "src/tui/documents/editing/lens/visibility.ts",
+  "src/tui/documents/editing/completion/contracts.ts",
+  "src/tui/documents/editing/completion/context.ts",
+  "src/tui/documents/editing/completion/items.ts",
+] as const;
+
+export function editingContextViolations(from: string, text: string): string[] {
+  if (!(EDITING_CONTEXT_HELPERS as readonly string[]).includes(from)) return [];
+  const owners = ["src/tui/documents/editing/lens", "src/tui/documents/editing/completion"];
+  return [
+    ...importsOf(text).flatMap((spec) =>
+      owners.includes(targetOf(from, spec))
+        ? [`${from}: imports ${spec} (editing-context helper must stay below controller)`]
+        : [],
+    ),
+    ...new Bun.Transpiler({ loader: "ts" })
+      .scanImports(text)
+      .flatMap(({ path }) =>
+        targetOf(from, path) === "src/tui/app/runtime/app"
+          ? [`${from}: imports ${path} (editing-context helper must not load App composition)`]
+          : [],
+      ),
+  ];
+}
+
 /** Navigation/layout helpers stay below their public facades and App runtime composition (ORG-T38). */
 export const NAVIGATION_HELPERS = [
   "src/tui/documents/navigation/peek/contracts.ts",
@@ -722,6 +750,7 @@ if (import.meta.main) {
     violations.push(...bufferLayoutViolations(from, readFileSync(file, "utf8")));
     violations.push(...sourceEditingViolations(from, readFileSync(file, "utf8")));
     violations.push(...navigationHelperViolations(from, readFileSync(file, "utf8")));
+    violations.push(...editingContextViolations(from, readFileSync(file, "utf8")));
     violations.push(...renameMechanismViolations(from, readFileSync(file, "utf8")));
     violations.push(...searchMechanismViolations(from, readFileSync(file, "utf8")));
     violations.push(...walkingMechanismViolations(from, readFileSync(file, "utf8")));

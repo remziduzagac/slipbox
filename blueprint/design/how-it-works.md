@@ -119,6 +119,8 @@ that order:
   peek, SOURCE view and the lens, saving, autosave and the conflict prompt, external changes, git: the git panel, diffs,
   the review, the merge screen; files beyond notes too. Its keys are the user's reference,
   [keys.md](../../docs/manual/keys.md).
+  Lens row visibility and completion parsing/item ordering live below their controllers in `documents/editing/lens/`
+  and `completion/`; buffers, view state, request epochs and timer ownership stay with their existing owners.
 - **Code as a notebook** ([code-view.md](code-view.md)): a source file rendered as a document, a cell per
   definition, its comments as prose, its tokens verbatim (D125).
 - **Document types** ([document-types.md](document-types.md)): notes of a kind, known by where they are: their

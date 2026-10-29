@@ -47,6 +47,8 @@ for a person, and a command line for agents and scripts, both over the same plai
   coordination above them. Its public entry re-exports the original functions; view/buffer and clipboard guards stay local.
   Peek contracts, presentation, synchronization and navigation have separate owners under `navigation/peek/`. Pure
   view-layout and link-anchor helpers stay below their controllers; their caches, probes and live state keep one owner.
+  Lens visibility and completion parsing/item helpers sit below their controllers under `documents/editing/`. Request
+  epochs, timers, word sets and view state stay in the original controllers; helper inputs retain live references.
 
 **The boundary.** `src/core/` never imports `src/tui/`, `src/cli/` or `@opentui/*`, and `src/cli/` never imports
 `src/tui/`. Inside the TUI, only `src/tui/shell/terminal/opentui.ts` (the `Canvas` over OpenTUI's buffer) and

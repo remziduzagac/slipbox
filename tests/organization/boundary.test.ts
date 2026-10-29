@@ -47,6 +47,24 @@ describe("the boundary check (0.3, scripts/check-boundary.ts)", () => {
     expect(r.out).not.toContain("boundary check ok");
   });
 
+  test("editing-context helpers reject controller and runtime App imports while retaining capabilities", () => {
+    const refused = check({
+      "src/tui/documents/editing/lens/contracts.ts": 'export type { LiveBase } from "../lens.ts";',
+      "src/tui/documents/editing/completion/context.ts": 'export const load = () => import("../completion.ts");',
+      "src/tui/documents/editing/completion/items.ts":
+        'import { App } from "../../../app/runtime/app.ts"; export const f = App;',
+    });
+    expect(refused.code).toBe(1);
+    expect(refused.err.match(/editing-context helper/g)?.length).toBe(3);
+    expect(
+      check({
+        "src/tui/documents/editing/completion/context.ts": 'import type { View } from "../../../app/runtime/app.ts";',
+        "src/tui/documents/editing/lens/visibility.ts":
+          'import type { Layout } from "../../../../core/rendering/layout/ir.ts";',
+      }).code,
+    ).toBe(0);
+  });
+
   test("navigation helpers reject facades, upper peek tiers and runtime App while retaining capabilities", () => {
     const refused = check({
       "src/tui/documents/navigation/peek/contracts.ts": 'export type { Peek } from "../peek.ts";',

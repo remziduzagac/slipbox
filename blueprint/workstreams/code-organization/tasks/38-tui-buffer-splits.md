@@ -149,5 +149,44 @@ The baseline is the preceding source-editing child. Exact deltas and state owner
   71 type/lower imports allowed). Removing the checker invocation makes the fixture fail. Types, sizes, boundary,
   Biome and all changed Markdown/docs gates are required before publishing.
 
-View/buffer/history/save ownership and all worker/probe/cancellation contracts remain unchanged. Lens and completion
-are the remaining T38 child; the active 750 ceiling and two legacy/one generated caps are unchanged.
+View/buffer/history/save ownership and all worker/probe/cancellation contracts remain unchanged. The active 750 ceiling
+and two legacy/one generated caps are unchanged.
+
+
+## Lens and completion child PR
+
+The baseline is the preceding navigation/views child. Exact graph, runtime and test deltas are recorded in
+[t38-contexts-extraction.json](../manifests/t38-contexts-extraction.json).
+
+- `editing/lens.ts` shrinks from 512 to 473 lines. Its live-layout contract and state-free visibility mechanisms live
+  in `lens/contracts.ts` and `lens/visibility.ts`. Two methods keep their signatures as forwarders; the other eighteen
+  members and `unparsedText` are unchanged. Live-layout composition and all per-view lens state remain with the controller.
+- `editing/completion.ts` shrinks from 524 to 391 lines. Completion/signature records, target/word/snippet context and
+  item construction/ordering separate into three owners under `completion/`. Timer, request epochs, word sets, request
+  admission, narrowing, acceptance, paste and stale-reply checks stay in the original controller as single allocations.
+- Token comparisons preserve thirteen extracted declarations/bodies and 33 retained declarations/members. Lens retains
+  its five public runtime exports and completion its seven, with unchanged names, arities, prototypes and direct
+  lower-owner binding identity. No asynchronous wrapper or new buffer snapshot is introduced.
+- Six characterizations pass against original bodies through export-only adapters and the extracted owners (24
+  assertions each): half-open hidden ranges, signed distances, visible movement/clamping, Unicode word starts,
+  target admission, stable item ordering/identity and snippet indentation/file variables.
+- The focused editing, views, link-completion and organization baseline passes 307 tests with 2,840 assertions across
+  48 files. The final combined run passes 314 tests with 2,867 assertions across 49 files, adding six characterizations
+  and one boundary fixture. Declarations change from 3,990 to 3,997 with nothing removed; assertions are host measurements.
+- Six source-terminal journeys pass before/after: lens sizing and following a link, retained/narrowed completion,
+  target changes and language-server completion/signature help. A fresh compiled binary passes lens sizing, retained
+  link completion and language-server completion/signature help.
+- Static edges change from 2,958 to 2,973 (five removed, twenty added), runtime edges from 2,221 to 2,226 (five removed,
+  ten added). All four runtime SCC memberships remain identical (2, 3, 5, 8); build entries and relative paths are valid.
+  No fixture labels, sample text, expected output, worker paths or shipped artifacts change.
+- All 262 original lens and 261 completion test-file selections remain intact; mapped lower owners add only the new
+  characterization file. Their terminal selector keeps its existing all-check fallback. `importGraph`/`reach` counts
+  all graph nodes: visibility reaches one, context parsing two, item construction 124 and the characterization test
+  128, all without App runtime or controller facades. Item construction retains its original graph/link dependencies.
+- Boundary fixtures reject controller imports, including types, and runtime App imports. Independent probes reject
+  140 forbidden import shapes and allow fifteen type capabilities; removing the checker invocation makes the fixture
+  fail. The active ceiling and exact legacy/generated caps are unchanged.
+
+All assigned T38 owners are within the final 600-line ceiling: buffer 596, source facade fourteen, peek facade thirteen,
+views 497, link actions 467, lens 473 and completion 391. Buffer/history/save and request lifetime ownership are unchanged.
+Typecheck, boundary, sizes, Biome, all touched Markdown and `check:docs` are required before publishing.
