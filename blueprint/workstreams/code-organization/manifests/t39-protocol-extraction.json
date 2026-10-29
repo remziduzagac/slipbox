@@ -1,0 +1,110 @@
+{
+  "moves": {},
+  "retained": [],
+  "renamedBasenames": {},
+  "edges": {
+    "removed": [],
+    "added": [
+      "src/core/documents/servers/client.ts -> src/core/documents/servers/client/contracts.ts",
+      "src/core/documents/servers/client.ts -> src/core/documents/servers/client/protocol.ts"
+    ]
+  },
+  "runtime": {
+    "removed": [],
+    "added": [
+      "src/core/documents/servers/client.ts -> src/core/documents/servers/client/protocol.ts"
+    ]
+  },
+  "tests": {
+    "removed": [],
+    "added": [
+      "test: server capabilities retain UTF-16 snippets versioned diagnostics and workspace edits",
+      "test: server configuration with no section keeps the original settings object",
+      "test: server dotted sections keep falsy values and refuse missing or primitive parents",
+      "test: server protocol helpers reject process owners while retaining protocol-only contracts"
+    ]
+  },
+  "entries": {
+    "removed": [],
+    "added": []
+  },
+  "extraction": [
+    {
+      "from": "src/core/documents/servers/client.ts",
+      "to": "src/core/documents/servers/client/contracts.ts",
+      "symbols": [
+        "ServerSpec",
+        "ClientState",
+        "ClientHooks"
+      ]
+    },
+    {
+      "from": "src/core/documents/servers/client.ts",
+      "to": "src/core/documents/servers/client/protocol.ts",
+      "symbols": [
+        "CLIENT_CAPABILITIES",
+        "settingAt"
+      ]
+    }
+  ],
+  "ownership": {
+    "protocol": "original capability object allocated once, original dotted-setting function, and original client contracts below process lifecycle",
+    "client": "all44 class members and all5 retained top-level declarations unchanged; deadlines, pending requests, transport, spawn, hooks and shutdown remain in the same controller"
+  },
+  "guards": {
+    "owners": [
+      "src/core/documents/servers/client/contracts.ts",
+      "src/core/documents/servers/client/protocol.ts"
+    ],
+    "rule": "serverProtocolViolations",
+    "forbidden": "client/manager/transport process composition including types"
+  },
+  "runtimeScc": {
+    "before": [
+      [
+        "src/tui/workspace/git/gitremote.ts",
+        "src/tui/workspace/git/views/review/rebase.ts"
+      ],
+      [
+        "src/tui/app/runtime/app.ts",
+        "src/tui/app/settings/settings.ts",
+        "src/tui/workspace/history/history.ts",
+        "src/tui/workspace/session/session.ts",
+        "src/tui/workspace/vaults/vaults.ts"
+      ],
+      [
+        "src/tui/actions/actions.ts",
+        "src/tui/actions/documents/actions-edit.ts",
+        "src/tui/actions/documents/actions-find.ts",
+        "src/tui/actions/documents/actions-links.ts",
+        "src/tui/actions/documents/actions-lsp.ts",
+        "src/tui/actions/documents/actions-view.ts",
+        "src/tui/actions/shell/actions-panes.ts",
+        "src/tui/actions/workspace/actions-files.ts"
+      ]
+    ],
+    "after": [
+      [
+        "src/tui/workspace/git/gitremote.ts",
+        "src/tui/workspace/git/views/review/rebase.ts"
+      ],
+      [
+        "src/tui/app/runtime/app.ts",
+        "src/tui/app/settings/settings.ts",
+        "src/tui/workspace/history/history.ts",
+        "src/tui/workspace/session/session.ts",
+        "src/tui/workspace/vaults/vaults.ts"
+      ],
+      [
+        "src/tui/actions/actions.ts",
+        "src/tui/actions/documents/actions-edit.ts",
+        "src/tui/actions/documents/actions-find.ts",
+        "src/tui/actions/documents/actions-links.ts",
+        "src/tui/actions/documents/actions-lsp.ts",
+        "src/tui/actions/documents/actions-view.ts",
+        "src/tui/actions/shell/actions-panes.ts",
+        "src/tui/actions/workspace/actions-files.ts"
+      ]
+    ]
+  }
+}

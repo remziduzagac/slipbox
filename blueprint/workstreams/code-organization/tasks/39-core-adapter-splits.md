@@ -33,13 +33,13 @@ Verify measured size exceptions and light/heavy import boundaries.
 ## Bounded child sequence
 
 1. Encoding: extract bounded UTF-8 output below dispatch; preserve all lazy format registrations and output contracts.
-2. Language-client protocol: separate immutable capability/setting adapters and contracts from the client lifecycle.
+2. Language-client protocol: separate capability/setting adapters and contracts from the client lifecycle.
 3. Theme roles: separate semantic role vocabulary/contracts from palette construction and terminal fallback.
 4. Update releases: separate release/channel metadata discovery from installation, replacement and upgrade locking.
 
 Each is an independent extraction PR with its own exact manifest, characterizations, reverse-edge fixture and narrow
-owner checks. The latter three are measured candidates, not completed by the encoding child. Public entry bindings,
-client deadlines, protocol lifecycle, theme tokens, persisted update data and process/publication behavior stay stable.
+owner checks. The protocol child follows encoding; theme/release remain candidates until their own evidence. Public entry
+bindings, client deadlines, protocol lifecycle, theme tokens, persisted update data and process/publication stay stable.
 Unused-code removal remains T41's responsibility; discovering an export is not evidence that it can be deleted.
 
 ## Core size ledger assessment
@@ -50,7 +50,7 @@ the original inventory. Modules within 500–600 lines retain cohesive responsib
 | Owner | Lines | Disposition and responsibility |
 | --- | ---: | --- |
 | `documents/servers/locks.ts` | 1,239 | Generated pins; retain separate cap and offline generator check |
-| `documents/servers/client.ts` | 677 | Protocol child separates contracts/capabilities from the live client |
+| `documents/servers/client.ts` | 677 | Protocol child: contracts/adapters below the unchanged 574-line client |
 | `rendering/theme/theme.ts` | 615 | Role-vocabulary child separates records from palette construction |
 | `application/distribution/update.ts` | 605 | Release child separates discovery from installation/locking |
 | `documents/servers/languages.ts` | 584 | Retain language/extension registrations and their configuration vocabulary |
@@ -95,3 +95,38 @@ in [t39-encoding-extraction.json](../manifests/t39-encoding-extraction.json).
 - The reverse-edge fixture rejects dispatch, orchestration and format imports, including types. Independent probes
   reject 100 forbidden shapes and permit ten sink import forms; removing the checker invocation fails the fixture.
   Typecheck, boundary, sizes, Biome, changed Markdown and `check:docs` are required before publishing.
+
+
+## Language-client protocol child evidence
+
+The baseline is the preceding encoding child. Its exact deltas and unchanged SCC memberships are in
+[t39-protocol-extraction.json](../manifests/t39-protocol-extraction.json).
+
+- `documents/servers/client.ts` shrinks from 677 to 574 lines. Two owners in `client/` separate the three configuration,
+  state and callback records from capability declaration/dotted-settings lookup. The lifecycle remains cohesive in
+  `LanguageClient`: all 44 original members and five retained top-level declarations have unchanged tokens. Client
+  transport, request admission, staleness, deadlines, hooks, process start/stop and restart behavior are unchanged.
+- All five moved declarations preserve their tokens. The same capability object is allocated once in the protocol
+  owner; the public client re-exports it and the original lookup function directly. All five public runtime exports
+  retain names, arities and prototype descriptors. No object is cloned or frozen, and no wrapper changes call timing.
+- Three characterizations pass original exports through an export-only adapter and the extracted owner (thirteen
+  assertions): whole-settings identity, dotted sections with falsy/missing/primitive parents, UTF-16 positions, snippet
+  support, versioned diagnostics and workspace-edit capabilities. No existing test or fixture text changes.
+- The focused core/TUI server and organization baseline passes 118 tests with 1,735 assertions across ten files. The
+  extraction passes 122 tests with 1,751 assertions across eleven files; three characterizations and one reverse-edge
+  fixture add four declarations, none removed. Assertion totals are host measurements.
+- Four affected source-terminal journeys pass before/after: TypeScript diagnostics, rename/actions/formatting,
+  completion/signature help and server crash/restart. A fresh production binary passes diagnostics, cursor queries
+  and completion/signature help. No preload-dependent check is used for the compiled probe.
+- Static edges change from 2,975 to 2,977 (two added), runtime edges from 2,227 to 2,228 (one added). All three runtime
+  SCC memberships stay identical (2, 5, 8). Build entries, worker URLs and assets are unchanged; relative imports resolve.
+- All 313 test files originally reached by the client remain selected; the runtime adapter adds only the new focused
+  test. Existing language-server/lint/problems terminal selectors are preserved. Type-only contracts retain their
+  existing harness-based selection (nine test files and the updates checks); that is measured separately from runtime
+  reach. `importGraph`/`reach` counts all graph nodes: each lower owner reaches one, the new test two, with no process owner.
+- Reverse-edge fixtures keep both helpers below client/manager/transport, including type imports. Independent probes
+  reject sixty forbidden import shapes and allow twenty protocol-package forms. Removing the checker invocation
+  makes the fixture fail. The active 750-line ceiling and two legacy/one generated caps are unchanged.
+
+Types, boundary, size, Biome, every touched Markdown file and `check:docs` are required before publishing. The remaining
+T39 children assess theme role vocabulary and update release discovery independently; no lifecycle policy is shared here.

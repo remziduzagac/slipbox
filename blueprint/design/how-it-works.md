@@ -127,6 +127,8 @@ that order:
   frontmatter's rules, their order, their status (D133).
 - **Language servers** ([lsp.md](lsp.md)): slipbox is a client of the language servers and linters of the code it
   opens; their problems are the file's, beside its own (D161, D163, D167).
+  Language-client records and capability/settings adapters live below process lifecycle in `documents/servers/client/`;
+  request, transport, diagnostics and shutdown ownership stay in the client.
 - **Trust** ([trust.md](trust.md)): nothing of a folder's own runs unless you trust its vault (D172), and no link out
   of a vault is read unless you follow it (VV-D6).
 - **Export** ([export.md](export.md)): notes as one document, in Word, PDF, a web page, an e-book or Markdown, every
