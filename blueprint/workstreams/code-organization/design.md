@@ -719,6 +719,10 @@ candidates meet the final 600 ceiling, with cohesive 500–600-line assessments 
   small lifecycle helper only for equivalent mechanisms, with disposal, late-delivery, saturation, cancellation and
   failure-cleanup coverage. Record feature policies that must stay separate. A reasoned retain outcome is valid;
   silently skipping the assessment is not.
+  [Task 40](tasks/40-worker-patterns-and-duplication.md#worker-policy-comparison) records the completed comparison:
+  existing mailbox adapters stay shared, while diagram/paint/export retain different readiness, cache, settlement and
+  progress policies. No new lifecycle base is introduced. Repeated scans record four source pairs and 183 combined
+  pairs, with every retained disposition and the split-test scaffolding trade-off documented.
 - **Export, ORG-T29/T39:** retain the existing lazy format strategy; separate UTF-8 encoding below dispatch and isolate
   PDF font/layout adapters. Verify all format registrations still dispatch through their existing loading boundaries,
   including output, cancellation, failure and cleanup. No replacement class hierarchy without a demonstrated need.
@@ -940,9 +944,9 @@ shares, retains or defers each candidate and why. Use identical scan settings an
 | footnotes:253 / info:251 | T10 | Shared row navigation; feature jumps/folding retained; see task 10 evidence |
 | explorer:1163 / history:288 | T10 | Shared leave in PanelFocus; close already shares visibility transitions |
 | footnotes:264 / outline:162 | T10 | Same shared row navigation; filtering/pinning order retained |
-| data:203 / data:372 | T32 | Keep format-specific parsing explicit unless equivalence is demonstrated |
-| diagram-jobs:99 / paint-jobs:54 | T40 | Compare lifecycle cleanup; preserve retry/cache/queue policies |
-| draw-panels:610 / draw-panels:680 | T36 | Compare selection/scroll mechanics with pinning and filtering coverage |
+| data:203 / data:372 | T32 | Retain format-specific readers; see T32 and T40 dispositions |
+| diagram-jobs:99 / paint-jobs:54 | T40 | Retain distinct readiness/settlement/cache policy; see T40 |
+| draw-panels:610 / draw-panels:680 | T36 | Shared `followSelection`; pin/filter checks in T36 |
 
 File names above refer to the source paths and lines in research.md. The combined report has 104 clone pairs, including
 setup/protocol similarities. T8/T19–T22 own fixture review during test splits; T40 accounts for remaining pairs,
