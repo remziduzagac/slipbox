@@ -47,6 +47,20 @@ describe("the boundary check (0.3, scripts/check-boundary.ts)", () => {
     expect(r.out).not.toContain("boundary check ok");
   });
 
+  test("release discovery rejects upgrade composition while retaining release records", () => {
+    const refused = check({
+      "src/core/application/distribution/updates/discovery.ts": 'export type { UpgradeResult } from "../update.ts";',
+    });
+    expect(refused.code).toBe(1);
+    expect(refused.err).toContain("release discovery must stay below upgrade composition");
+    expect(
+      check({
+        "src/core/application/distribution/updates/discovery.ts":
+          'import { tagOf } from "../release.ts"; export const tag = tagOf;',
+      }).code,
+    ).toBe(0);
+  });
+
   test("theme vocabulary rejects construction and loading imports including types", () => {
     for (const source of [
       'export type { Color } from "./theme.ts";',

@@ -698,8 +698,8 @@ combined reports. Do not pursue a zero-duplication target or hide tests inside a
 
 ORG-T39 separates bounded UTF-8 encoding below export dispatch and its HTML/Markdown clients, removing their runtime
 cycle. The original function remains re-exported for compatibility; all five lazy format imports and output lifecycle
-contracts stay unchanged. Its remaining measured core candidates have separate protocol, theme-role and release-metadata
-child scopes in [task 39](tasks/39-core-adapter-splits.md#bounded-child-sequence); other cohesive 500–600-line owners are
+contracts stay unchanged. Its protocol, theme-role and release-metadata children have separate
+evidence in [task 39](tasks/39-core-adapter-splits.md#bounded-child-sequence); other cohesive 500–600-line owners are
 recorded in its ledger. Generated server locks keep their independent cap and offline verification.
 The language-client protocol child separates configuration/state/callback records and capability/settings adapters
 below the unchanged lifecycle. The client is 574 lines; its deadlines, transport, pending requests, hook receivers and
@@ -707,6 +707,10 @@ shutdown ownership remain intact, with reverse-edge fixtures preventing helper i
 Theme vocabulary/contracts and compatibility aliases sit below construction and loading in `rendering/theme/roles.ts`.
 The constructor entry is 412 lines; its palette, terminal/monochrome and color bodies remain unchanged. Public arrays and
 aliases keep their original bindings, with reverse-edge fixtures guarding the lower owner.
+Release/channel discovery lives below update coordination in `application/distribution/updates/discovery.ts`; the public
+updater is 500 lines. Privacy/check state, installation/download locks, process probes and replacement stay in the
+unchanged coordinator. Public bindings and nullable failure/cancellation semantics are preserved. All T39 handwritten
+candidates meet the final 600 ceiling, with cohesive 500–600-line assessments and the separate generated-lock cap.
 
 ### Pattern assessment has a deliverable
 

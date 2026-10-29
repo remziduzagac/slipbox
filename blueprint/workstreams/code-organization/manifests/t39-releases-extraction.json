@@ -1,0 +1,114 @@
+{
+  "moves": {},
+  "retained": [],
+  "renamedBasenames": {},
+  "edges": {
+    "removed": [],
+    "added": [
+      "src/core/application/distribution/update.ts -> src/core/application/distribution/updates/discovery.ts",
+      "src/core/application/distribution/updates/discovery.ts -> src/core/application/distribution/install.ts",
+      "src/core/application/distribution/updates/discovery.ts -> src/core/application/distribution/release.ts"
+    ]
+  },
+  "runtime": {
+    "removed": [],
+    "added": [
+      "src/core/application/distribution/update.ts -> src/core/application/distribution/updates/discovery.ts",
+      "src/core/application/distribution/updates/discovery.ts -> src/core/application/distribution/release.ts"
+    ]
+  },
+  "tests": {
+    "removed": [],
+    "added": [
+      "test: preview discovery compares channel candidates and keeps their original release tags",
+      "test: release discovery keeps target suffixes and trims mirror URL slashes",
+      "test: release discovery keeps transport failures nullable and forwards caller cancellation",
+      "test: release discovery rejects upgrade composition while retaining release records"
+    ]
+  },
+  "entries": {
+    "removed": [],
+    "added": []
+  },
+  "extraction": [
+    {
+      "from": "src/core/application/distribution/update.ts",
+      "to": "src/core/application/distribution/updates/discovery.ts",
+      "symbols": [
+        "Fetcher",
+        "releasesBase",
+        "channelsBase",
+        "Latest",
+        "SEMVER",
+        "isVersion",
+        "limited",
+        "latestIn",
+        "isNewer",
+        "fetchLatest",
+        "Candidate",
+        "previewIn",
+        "fetchPreview",
+        "fetchNewest"
+      ]
+    }
+  ],
+  "ownership": {
+    "discovery": "all14 release/channel discovery declarations move verbatim, with export normalization only for shared Fetcher/SEMVER; same regexp singleton and call-time deadline/cancellation",
+    "upgrade": "all24 retained declarations unchanged including installation/download locks, privacy/check state, process probe and replacement; original9 metadata public bindings re-export directly"
+  },
+  "guards": {
+    "owners": [
+      "src/core/application/distribution/updates/discovery.ts"
+    ],
+    "rule": "releaseDiscoveryViolations",
+    "forbidden": "update/restart/skill lifecycle composition, including types"
+  },
+  "runtimeScc": {
+    "before": [
+      [
+        "src/tui/workspace/git/gitremote.ts",
+        "src/tui/workspace/git/views/review/rebase.ts"
+      ],
+      [
+        "src/tui/app/runtime/app.ts",
+        "src/tui/app/settings/settings.ts",
+        "src/tui/workspace/history/history.ts",
+        "src/tui/workspace/session/session.ts",
+        "src/tui/workspace/vaults/vaults.ts"
+      ],
+      [
+        "src/tui/actions/actions.ts",
+        "src/tui/actions/documents/actions-edit.ts",
+        "src/tui/actions/documents/actions-find.ts",
+        "src/tui/actions/documents/actions-links.ts",
+        "src/tui/actions/documents/actions-lsp.ts",
+        "src/tui/actions/documents/actions-view.ts",
+        "src/tui/actions/shell/actions-panes.ts",
+        "src/tui/actions/workspace/actions-files.ts"
+      ]
+    ],
+    "after": [
+      [
+        "src/tui/workspace/git/gitremote.ts",
+        "src/tui/workspace/git/views/review/rebase.ts"
+      ],
+      [
+        "src/tui/app/runtime/app.ts",
+        "src/tui/app/settings/settings.ts",
+        "src/tui/workspace/history/history.ts",
+        "src/tui/workspace/session/session.ts",
+        "src/tui/workspace/vaults/vaults.ts"
+      ],
+      [
+        "src/tui/actions/actions.ts",
+        "src/tui/actions/documents/actions-edit.ts",
+        "src/tui/actions/documents/actions-find.ts",
+        "src/tui/actions/documents/actions-links.ts",
+        "src/tui/actions/documents/actions-lsp.ts",
+        "src/tui/actions/documents/actions-view.ts",
+        "src/tui/actions/shell/actions-panes.ts",
+        "src/tui/actions/workspace/actions-files.ts"
+      ]
+    ]
+  }
+}

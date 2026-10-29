@@ -92,6 +92,17 @@ export function graphCompositionViolations(from: string, text: string): string[]
   });
 }
 
+/** Release discovery does not import upgrade/process composition (ORG-T39). */
+export function releaseDiscoveryViolations(from: string, text: string): string[] {
+  if (from !== "src/core/application/distribution/updates/discovery.ts") return [];
+  const owners = ["update", "restart", "skill-lifecycle"].map((name) => `src/core/application/distribution/${name}`);
+  return importsOf(text).flatMap((spec) =>
+    owners.includes(targetOf(from, spec))
+      ? [`${from}: imports ${spec} (release discovery must stay below upgrade composition)`]
+      : [],
+  );
+}
+
 /** Semantic role vocabulary stays below theme loading and construction (ORG-T39). */
 export function themeVocabularyViolations(from: string, text: string): string[] {
   if (from !== "src/core/rendering/theme/roles.ts") return [];
@@ -792,6 +803,7 @@ if (import.meta.main) {
     violations.push(...bufferLayoutViolations(from, readFileSync(file, "utf8")));
     violations.push(...sourceEditingViolations(from, readFileSync(file, "utf8")));
     violations.push(...navigationHelperViolations(from, readFileSync(file, "utf8")));
+    violations.push(...releaseDiscoveryViolations(from, readFileSync(file, "utf8")));
     violations.push(...themeVocabularyViolations(from, readFileSync(file, "utf8")));
     violations.push(...serverProtocolViolations(from, readFileSync(file, "utf8")));
     violations.push(...exportEncodingViolations(from, readFileSync(file, "utf8")));
