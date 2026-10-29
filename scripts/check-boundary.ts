@@ -92,6 +92,19 @@ export function graphCompositionViolations(from: string, text: string): string[]
   });
 }
 
+/** Semantic role vocabulary stays below theme loading and construction (ORG-T39). */
+export function themeVocabularyViolations(from: string, text: string): string[] {
+  if (from !== "src/core/rendering/theme/roles.ts") return [];
+  const owners = ["theme", "index", "base16", "builtin", "tokyo-night", "glyphs"].map(
+    (name) => `src/core/rendering/theme/${name}`,
+  );
+  return importsOf(text).flatMap((spec) =>
+    owners.includes(targetOf(from, spec))
+      ? [`${from}: imports ${spec} (theme vocabulary must stay below construction and loading)`]
+      : [],
+  );
+}
+
 /** Client contracts and protocol adapters stay below process ownership (ORG-T39). */
 export const SERVER_PROTOCOL_HELPERS = [
   "src/core/documents/servers/client/contracts.ts",
@@ -779,6 +792,7 @@ if (import.meta.main) {
     violations.push(...bufferLayoutViolations(from, readFileSync(file, "utf8")));
     violations.push(...sourceEditingViolations(from, readFileSync(file, "utf8")));
     violations.push(...navigationHelperViolations(from, readFileSync(file, "utf8")));
+    violations.push(...themeVocabularyViolations(from, readFileSync(file, "utf8")));
     violations.push(...serverProtocolViolations(from, readFileSync(file, "utf8")));
     violations.push(...exportEncodingViolations(from, readFileSync(file, "utf8")));
     violations.push(...editingContextViolations(from, readFileSync(file, "utf8")));

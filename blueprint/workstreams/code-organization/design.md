@@ -704,6 +704,9 @@ recorded in its ledger. Generated server locks keep their independent cap and of
 The language-client protocol child separates configuration/state/callback records and capability/settings adapters
 below the unchanged lifecycle. The client is 574 lines; its deadlines, transport, pending requests, hook receivers and
 shutdown ownership remain intact, with reverse-edge fixtures preventing helper imports of process owners.
+Theme vocabulary/contracts and compatibility aliases sit below construction and loading in `rendering/theme/roles.ts`.
+The constructor entry is 412 lines; its palette, terminal/monochrome and color bodies remain unchanged. Public arrays and
+aliases keep their original bindings, with reverse-edge fixtures guarding the lower owner.
 
 ### Pattern assessment has a deliverable
 

@@ -144,6 +144,8 @@ The CLI's commands are the user's reference, [cli.md](../../docs/manual/cli.md);
 
 ## Module map
 
+Theme vocabulary and compatibility aliases live in `rendering/theme/roles.ts` below palette construction and loading.
+
 | Module | Steps | Role |
 | --- | --- | --- |
 | `core/foundation/text/width.ts` | 0.7 | the one width function: graphemes, East Asian width, emoji |

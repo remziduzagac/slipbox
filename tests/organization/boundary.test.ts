@@ -47,6 +47,19 @@ describe("the boundary check (0.3, scripts/check-boundary.ts)", () => {
     expect(r.out).not.toContain("boundary check ok");
   });
 
+  test("theme vocabulary rejects construction and loading imports including types", () => {
+    for (const source of [
+      'export type { Color } from "./theme.ts";',
+      'export const load = () => import("./index.ts");',
+      'import { builtinThemes } from "./builtin.ts"; export const themes = builtinThemes;',
+    ]) {
+      const refused = check({ "src/core/rendering/theme/roles.ts": source });
+      expect(refused.code).toBe(1);
+      expect(refused.err).toContain("theme vocabulary must stay below construction and loading");
+    }
+    expect(check({ "src/core/rendering/theme/roles.ts": "export type Color = string;" }).code).toBe(0);
+  });
+
   test("server protocol helpers reject process owners while retaining protocol-only contracts", () => {
     const refused = check({
       "src/core/documents/servers/client/contracts.ts": 'export type { ServerSpec } from "../client.ts";',

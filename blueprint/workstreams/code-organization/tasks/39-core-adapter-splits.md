@@ -51,7 +51,7 @@ the original inventory. Modules within 500–600 lines retain cohesive responsib
 | --- | ---: | --- |
 | `documents/servers/locks.ts` | 1,239 | Generated pins; retain separate cap and offline generator check |
 | `documents/servers/client.ts` | 677 | Protocol child: contracts/adapters below the unchanged 574-line client |
-| `rendering/theme/theme.ts` | 615 | Role-vocabulary child separates records from palette construction |
+| `rendering/theme/theme.ts` | 615 | Role child: vocabulary below unchanged 412-line palette construction |
 | `application/distribution/update.ts` | 605 | Release child separates discovery from installation/locking |
 | `documents/servers/languages.ts` | 584 | Retain language/extension registrations and their configuration vocabulary |
 | `workspace/vaults/vault.ts` | 584 | Retain root discovery/admission and marker interpretation |
@@ -130,3 +130,37 @@ The baseline is the preceding encoding child. Its exact deltas and unchanged SCC
 
 Types, boundary, size, Biome, every touched Markdown file and `check:docs` are required before publishing. The remaining
 T39 children assess theme role vocabulary and update release discovery independently; no lifecycle policy is shared here.
+
+
+## Theme role child evidence
+
+The baseline is the preceding language-client protocol child. Exact deltas and SCC membership are recorded in
+[t39-theme-extraction.json](../manifests/t39-theme-extraction.json).
+
+- `rendering/theme/theme.ts` shrinks from 615 to 412 lines. `roles.ts` owns the original role vocabulary, compatibility
+  alias object and six type records in 216 lines. Eight moved declarations and all nine retained construction/color
+  declarations preserve their tokens. Palette, terminal and monochrome construction, overrides and fallback behavior
+  are unchanged; this is a responsibility split, without a new theme strategy or token vocabulary.
+- The nine public runtime exports preserve names, arities, prototypes and value shapes. `ROLES` and `OLD_ROLES` retain
+  direct lower-owner binding identity; each original object is allocated once. No cloning, freezing or token renaming
+  changes persisted configuration or callers that retain a reference.
+- A characterization passes against the original public exports through an export-only adapter and the extracted
+  owner (four assertions): shared public arrays/aliases, the `sidebar_vault` compatibility spelling and resolvable alias
+  targets. Existing theme/glyph fixtures, names, assertions and color data are untouched.
+- The focused theme/glyph/organization baseline passes 54 tests with 4,437 assertions across eleven files. The extraction
+  passes 56 tests with 4,448 assertions across twelve files. One characterization and one reverse-edge fixture add two
+  declarations; none disappear. Assertion totals are host measurements.
+- Four source-terminal journeys pass before/after: theme picker preview/commit/revert, global/per-theme color overrides,
+  settings theme/glyph previews and startup theme/NO_COLOR behavior. A fresh production binary passes the theme picker,
+  color overrides and startup theme/NO_COLOR checks.
+- Static edges change from 2,977 to 2,978 (one added), runtime edges from 2,228 to 2,229 (one added). All three SCC
+  memberships remain identical (2, 5, 8). Build/worker entries, assets and relative imports remain valid and unchanged.
+- All 320 originally reached test files remain selected; mapped owners add only the new characterization. The existing
+  all-terminal fallback remains. `importGraph`/`reach` counts all graph nodes: the vocabulary reaches one, the public-binding
+  test three (it deliberately imports the public constructor entry), with no theme loader or TUI composition.
+- The reverse-edge fixture keeps vocabulary below theme construction, loaders, builtins and glyph selection, including
+  types. Independent probes reject sixty forbidden shapes and permit ten unrelated import forms; removing the checker
+  invocation makes the fixture fail. The active 750 ceiling and two legacy/one generated caps are unchanged.
+
+Typecheck, boundary, sizes, Biome, all changed Markdown and `check:docs` are required before publishing. Release metadata
+is the last T39 child; generated locks and the other core size-ledger dispositions remain as assessed above.
