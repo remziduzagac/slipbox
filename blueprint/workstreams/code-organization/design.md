@@ -225,8 +225,8 @@ A method signature alone does not settle execution or delivery guarantees.
 
 #### Contract boundary and common rules (ORG-T44)
 
-**Proposed design, not implemented guarantees.** Source traces below refer to the tree at `4597a8f`, before the
-rendering/TUI moves. Existing-code examples establish current behavior; lifecycle requirements describe the future
+**Proposed design, not implemented guarantees.** Source traces below refer to the tooling repair preceding ORG-T44,
+before the rendering/TUI moves. Existing-code examples establish current behavior; lifecycle requirements describe the future
 gateway. No method is routed through a new layer in #55. Public CLI commands, exit codes and stored formats stay as
 implemented. These operation names are design vocabulary, not a new runtime catalog or transport schema.
 
@@ -471,6 +471,8 @@ uses the relevant contracts as an extraction checklist and must demonstrate real
 integration journeys. T43 reconciles each row with actual extractions and remaining migration work. Future runtime
 routing, transport, authorization, request replay/retention and connected-session editing remain the next stack.
 Existing public error behavior is mapped per operation; no global replacement error framework follows.
+[Task 43](tasks/43-measurement-and-build.md#gateway-to-owner-reconciliation) reconciles these historical examples with
+the current implementation, client and test owners; the eight sketches remain future contracts, not routed APIs.
 
 #### ENG reconciliation and future acceptance
 
@@ -1071,6 +1073,12 @@ removed; the largest new owner is 533 lines. Block-diff formatting is retained w
 The task records exact declaration/edge deltas and complete IR/source-map comparisons; no behavior change is intended.
 
 ### Measured completion and known failures
+
+[Task 43](tasks/43-measurement-and-build.md#completed-scoped-comparisons) records six completed baseline/current
+mapped unit scopes and twelve representative terminal checks, all passing. Exact selections, partial excluded samples,
+shared-integration limitations and the current owner/build/graph reconciliation remain explicit. Runtime components
+are 2/5/8 versus research's 3/3/64; no all-cycle removal or causal speedup is claimed. T11 still owns final cap decisions.
+
 
 T43 must publish completed, comparable scope runs for the mapped location/header, export-stream and regex cases. Report
 selected unit files and terminal checks separately; preserve shared integration selection. Document test identity
