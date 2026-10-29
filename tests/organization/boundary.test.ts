@@ -47,6 +47,23 @@ describe("the boundary check (0.3, scripts/check-boundary.ts)", () => {
     expect(r.out).not.toContain("boundary check ok");
   });
 
+  test("buffer-layout helpers reject runtime owners while retaining buffer and App types", () => {
+    const refused = check({
+      "src/tui/documents/buffers/layout/source.ts":
+        'import { NoteBuffer } from "../buffer.ts"; export const f = NoteBuffer;',
+      "src/tui/documents/buffers/layout/code.ts": 'export const load = () => import("../buffer.ts");',
+      "src/tui/documents/buffers/layout/note.ts": 'export { App } from "../../../app/runtime/app.ts";',
+    });
+    expect(refused.code).toBe(1);
+    expect(refused.err.match(/buffer-layout helper/g)?.length).toBe(3);
+    expect(
+      check({
+        "src/tui/documents/buffers/layout/contracts.ts": 'import type { NoteBuffer } from "../buffer.ts";',
+        "src/tui/documents/buffers/layout/source.ts": 'export type { View } from "../../../app/runtime/app.ts";',
+      }).code,
+    ).toBe(0);
+  });
+
   test("diagnostics helpers reject controllers and process owners but retain App types", () => {
     const refused = check({
       "src/tui/documents/diagnostics/problems/rows.ts": 'export type { Problems } from "../problems.ts";',

@@ -16,16 +16,9 @@ import { newRenderCache } from "../../../core/rendering/layout/markdown/render.t
 import type { Graph } from "../../../core/workspace/graph/graph.ts";
 import { readText, type Stamp, stamp } from "../../../core/foundation/platform/fsutil.ts";
 import type { Layout } from "../../../core/rendering/layout/ir.ts";
-import { layoutNote, type NoteRenderOptions } from "../../../core/documents/model/note.ts";
-import { layoutSource, newSourceCache } from "../../../core/rendering/layout/code/source.ts";
-import {
-  headingsOf,
-  newParseCache,
-  noteChunks,
-  type ParsedNote,
-  parseMarkdown,
-  slugify,
-} from "../../../core/documents/markdown/parse.ts";
+import type { NoteRenderOptions } from "../../../core/documents/model/note.ts";
+import { newSourceCache } from "../../../core/rendering/layout/code/source.ts";
+import { newParseCache, noteChunks, type ParsedNote, parseMarkdown } from "../../../core/documents/markdown/parse.ts";
 import { parseInBackground } from "../../../core/documents/markdown/parse-pool.ts";
 import { countWords } from "../../../core/foundation/text/words.ts";
 import { readerFor } from "../../../core/documents/model/readers.ts";
@@ -36,8 +29,13 @@ import type {
   Span as SyntaxSpan,
   SyntaxError,
 } from "../../../core/documents/syntax/syntax.ts";
-import { codeBlocks, layoutCode } from "../../../core/rendering/layout/code/code.ts";
+import { codeBlocks } from "../../../core/rendering/layout/code/code.ts";
 import { type Indent, indentFor, saveRules } from "../../../core/documents/editing/indent.ts";
+
+import type { BufferLayoutContext } from "./layout/contracts.ts";
+import { sourceLayout } from "./layout/source.ts";
+import { codeLayout } from "./layout/code.ts";
+import { noteLayout } from "./layout/note.ts";
 
 /** One change to the text: at `at`, `removed` was replaced by `inserted`. */
 export interface TextEdit {
@@ -86,6 +84,7 @@ export class NoteBuffer {
   private readonly parseCache = newParseCache();
   /** The render's blocks, reused across edits and reloads (only a changed block renders again). */
   private renderCache = newRenderCache();
+  private readonly layoutContext: BufferLayoutContext;
   /** Whether its last layout with pictures asked for one, its own or an embedded note's (PIC); unknown before. */
   asksPictures?: boolean;
 
@@ -186,7 +185,24 @@ export class NoteBuffer {
     readonly abs: string,
     /** Vault-relative path for anything inside the vault, else the absolute path. */
     readonly key: string = rel ?? abs,
-  ) {}
+  ) {
+    const buffer = this;
+    this.layoutContext = {
+      buffer,
+      get parsedVersion() {
+        return buffer.parsedVersion;
+      },
+      get layouts() {
+        return buffer.layouts;
+      },
+      get sourceCache() {
+        return buffer.sourceCache;
+      },
+      get renderCache() {
+        return buffer.renderCache;
+      },
+    };
+  }
 
   get name(): string {
     return (this.rel ?? this.abs).split("/").pop()!;
@@ -517,59 +533,7 @@ export class NoteBuffer {
   /** The raw markdown as a layout (source mode, 4.13), its headings the render's: the parse's, or
    *  while editing scanned from the text the way the render reads them. */
   sourceLayout(width: number, wrap: boolean, _glyphs: Glyphs): Layout {
-    const key = `src:${width}:${wrap ? 1 : 0}`;
-    let l = this.layouts.get(key);
-    if (!l) {
-      // With a parse of this very text at hand, its headings (the render's text and slugs);
-      // otherwise the ATX lines the layout finds as it goes — so a keystroke, or an undo back to
-      // the saved text, never re-parses the note (a 1 MB note would take a second).
-      const parsed = this.parsedVersion === this.version && !this.dirty;
-      // A note is coloured and its headings scanned by its format's reader (16.2); other files
-      // are highlighted by their language, with no headings from the text (a `# comment` in a
-      // shell script is no heading) — a source file's outline (16.8) stands in for them.
-      const note = this.kind.group === "note" ? readerFor(this.kind.format) : null;
-      // Tree-sitter's outline where it has one; else the language server's symbols (19.14).
-      const outline = this.syntax?.outline.length ? this.syntax.outline : (this.serverOutline ?? []);
-      const code = outline.map((o) => ({
-        level: Math.min(6, o.depth + 1),
-        text: o.name,
-        slug: slugify(o.name),
-        src: o.line,
-      }));
-      const fromParse = () =>
-        headingsOf(this.parsed.tree).map(({ depth, text, slug, line, id }) => ({
-          level: depth,
-          text,
-          slug,
-          src: line,
-          ...(id ? { id } : {}),
-        }));
-      const headings = !note
-        ? code
-        : parsed
-          ? fromParse()
-          : note.language === null
-            ? "scan"
-            : note.scanHeadings(this.source);
-      const spans = this.syntax?.spans;
-      const langs = this.syntax?.languages;
-      l = layoutSource(
-        this.source,
-        {
-          width,
-          wrap,
-          headings,
-          language: note ? note.language : this.kind.format,
-          tabWidth: this.indent().tabWidth,
-          ...(spans ? { spans: (line: number) => spans.get(line) } : {}),
-          ...(langs?.size ? { languageAt: (line: number) => langs.get(line) } : {}),
-        },
-        this.sourceCache,
-      );
-      if (this.layouts.size >= 6) this.layouts.delete(this.layouts.keys().next().value!);
-      this.layouts.set(key, l);
-    }
-    return l;
+    return sourceLayout(this.layoutContext, width, wrap, _glyphs);
   }
 
   /** The notes its layouts draw inside it (1.11), by absolute path: a change to one re-lays it out. */
@@ -593,37 +557,7 @@ export class NoteBuffer {
     cells: "box" | "band" = "box",
     problems: readonly { line: number; severity: Problem["severity"] }[] = [],
   ): Layout {
-    const marks = problems.map((p) => `${p.line}${p.severity[0]}`).join(",");
-    const key = `code:${width}:${wrap ? 1 : 0}:${glyphs.mode}:${cells}:${[...this.codeOpen].join(",")}:${[...this.codeFolded].join(",")}:${marks}:${this.syntax?.version ?? -1}`;
-    let l = this.layouts.get(key);
-    if (!l) {
-      const base = this.sourceLayout(1, false, glyphs);
-      const spans = this.syntax?.spans;
-      const fresh = this.syntax?.version === this.version;
-      // Its comments' paths (16.10), drawn as links in their prose.
-      const lines = this.lines();
-      const paths = fresh
-        ? (this.syntax?.links ?? []).flatMap((l) =>
-            l.href ? [{ line: l.line, text: (lines[l.line - 1] ?? "").slice(l.from, l.to), target: l.href }] : [],
-          )
-        : [];
-      l = layoutCode(this.source, base, fresh ? (this.syntax?.code ?? null) : null, {
-        width,
-        wrap,
-        glyphs,
-        open: this.codeOpen,
-        folded: this.codeFolded,
-        cells,
-        problems,
-        inside: (line) => !!spans?.get(line)?.length,
-        paths,
-        // Its headings as source mode's: the outline's definitions, not only its cells.
-        ...(fresh && this.syntax ? { outline: this.syntax.outline } : {}),
-      });
-      if (this.layouts.size >= 6) this.layouts.delete(this.layouts.keys().next().value!);
-      this.layouts.set(key, l);
-    }
-    return l;
+    return codeLayout(this.layoutContext, width, wrap, glyphs, cells, problems);
   }
 
   /** The code's blocks for the lens (24.8): its doc comments, its imports, its lines. */
@@ -657,36 +591,6 @@ export class NoteBuffer {
     caption: "bottom" | "top" = "bottom",
     html: Pick<NoteRenderOptions, "htmlTheme" | "htmlDetails"> = {},
   ): Layout {
-    const key = `${width}:${glyphs.mode}:${showUrls ? 1 : 0}:${codeScroll ? 1 : 0}:${pictures?.key ?? "-"}:${caption}`;
-    const variant = key + ":" + html.htmlTheme + ":" + JSON.stringify([...(html.htmlDetails ?? [])]);
-    let l = this.layouts.get(variant);
-    if (!l) {
-      // Another vault's file: its links and embeds read in its own vault.
-      const there = this.elsewhere?.graph && this.elsewhere.rel !== null ? this.elsewhere : null;
-      l = layoutNote(
-        this.parsed,
-        there ? there.graph : graph,
-        there ? there.rel : this.rel,
-        {
-          width,
-          glyphs,
-          showUrls,
-          codeScroll,
-          caption,
-          ...html,
-          ...(pictures
-            ? { picture: pictures.picture, drawings: pictures.drawings, pictureKey: pictures.sized ?? "" }
-            : {}),
-        },
-        this.renderCache,
-      );
-      // Whether it asks for pictures (PIC): then its window's rows are part of its key.
-      if (pictures) this.asksPictures = !!l.pictures;
-      for (const p of l.embedded ?? []) this.embedded.add(p);
-      // Keep the last few widths (a drag back and forth, a toggle and back): evict the oldest.
-      if (this.layouts.size >= 6) this.layouts.delete(this.layouts.keys().next().value!);
-      this.layouts.set(variant, l);
-    }
-    return l;
+    return noteLayout(this.layoutContext, width, glyphs, showUrls, graph, pictures, codeScroll, caption, html);
   }
 }

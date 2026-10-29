@@ -152,6 +152,11 @@ and records, and `diagnostics/languages/` protocol helpers. The row builder read
 server-edit previews accept through the original receiver. Trust, syntax/server/linter timers, abort ownership,
 cache keys and buffer ownership stay unchanged. Reverse-edge fixtures keep these helpers below process owners.
 
+ORG-T38 starts with the cohesive buffer-layout child: `documents/buffers/layout/` owns source/code/note layout bodies
+behind a live buffer/cache capability object. Text, history, marks, cache fields and reset sites stay in `NoteBuffer`.
+Source editing and the listed view/navigation/lens/completion owners follow in separate children without changing
+per-view state, save ownership or stale asynchronous-result guards.
+
 Within `shell/screen/`, separate top-bar and status-bar composition from drawing primitives. Top-bar composition draws
 branding/version/update controls, workspace/zoom/branch context and worker controls from their actual owners. Document
 view headers own breadcrumbs and read/lens/source controls; their drawing owns line-number gutters and scrollbars. The
