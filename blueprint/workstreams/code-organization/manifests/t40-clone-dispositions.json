@@ -1,0 +1,1923 @@
+{
+  "task": "ORG-T40",
+  "baseline": "research.md source and combined reports before ORG-T1",
+  "current": "preceding ORG-T39 release-discovery child",
+  "tool": {
+    "name": "jscpd",
+    "version": "5.4.2",
+    "minLines": 10,
+    "minTokens": 70,
+    "format": "typescript",
+    "scopes": [
+      "src",
+      "src tests"
+    ]
+  },
+  "statistics": {
+    "baselineSource": {
+      "clones": 6,
+      "duplicatedLines": 93,
+      "duplicatedTokens": 698,
+      "lines": 96532,
+      "percentage": 0.09634110968383541,
+      "percentageTokens": 0.09123383965064498,
+      "sources": 317,
+      "tokens": 765067
+    },
+    "currentSource": {
+      "clones": 4,
+      "duplicatedLines": 55,
+      "duplicatedTokens": 352,
+      "lines": 99665,
+      "percentage": 0.05518486931219586,
+      "percentageTokens": 0.04497844995572434,
+      "sources": 530,
+      "tokens": 782597
+    },
+    "baselineCombined": {
+      "clones": 104,
+      "duplicatedLines": 1508,
+      "duplicatedTokens": 12176,
+      "lines": 201252,
+      "percentage": 0.7493093236340508,
+      "percentageTokens": 0.6707752754084506,
+      "sources": 438,
+      "tokens": 1815213
+    },
+    "currentCombined": {
+      "clones": 183,
+      "duplicatedLines": 3141,
+      "duplicatedTokens": 25375,
+      "lines": 215422,
+      "percentage": 1.4580683495650397,
+      "percentageTokens": 1.3238623913519831,
+      "sources": 1078,
+      "tokens": 1916740
+    }
+  },
+  "groups": {
+    "baseline": {
+      "source": 6,
+      "unit-scenarios-and-owner-fixtures": 81,
+      "terminal-scenarios": 10,
+      "terminal-drivers": 6,
+      "terminal-runners": 1
+    },
+    "current": {
+      "source": 4,
+      "unit-scenarios-and-owner-fixtures": 162,
+      "terminal-scenarios": 10,
+      "terminal-drivers": 6,
+      "terminal-runners": 1
+    }
+  },
+  "terminalPairs": {
+    "before": 17,
+    "after": 17,
+    "identicalEndpointNamesLinesAndFragments": 17
+  },
+  "dispositionPolicy": {
+    "source": "Individual reasons in task40; navigation and selection mechanisms were already shared in T10/T36; retain reader/worker policies and public buffer signature",
+    "unit-scenarios-and-owner-fixtures": "Keep local output capture, wrapper context and scenario assertions visible; compatible sandbox/Git/peek factories already shared; no runner or fixture-lifetime changes from text matching alone",
+    "terminal-scenarios": "Keep explicit driving keys, case names and command coverage with their feature expectations",
+    "terminal-drivers": "Keep four small read queries and transport-owned setup/path/CLI/clipboard code explicit; asynchronous waiting/message/file deadlines differ by backend; no common session base",
+    "terminal-runners": "Keep argument/pool glue within each runner; no generic runner for one short parsing fragment"
+  },
+  "pairs": [
+    {
+      "id": "ORG-T40-C1",
+      "first": "src/core/documents/model/data/readers/ini.ts:8",
+      "second": "src/core/documents/model/data/readers/toml.ts:76",
+      "lines": 12,
+      "tokens": 104,
+      "group": "source",
+      "disposition": "retain",
+      "fragmentSha256": "10c60b83f3cd93b2a207f2fde4b5bf823cd5ba5882315985eeee55f8b1e74718",
+      "reason": "retain-format-readers"
+    },
+    {
+      "id": "ORG-T40-C2",
+      "first": "src/core/rendering/media/diagrams/diagram-jobs.ts:99",
+      "second": "src/core/rendering/media/paint/paint-jobs.ts:54",
+      "lines": 11,
+      "tokens": 70,
+      "group": "source",
+      "disposition": "retain",
+      "fragmentSha256": "4242315580ecad7f76a7b3151de1b67446084606853a4c2c8e629e7a4a70ebc9",
+      "reason": "retain-distinct-worker-cleanup"
+    },
+    {
+      "id": "ORG-T40-C3",
+      "first": "src/tui/documents/buffers/buffer.ts:578",
+      "second": "src/tui/documents/buffers/layout/note.ts:11",
+      "lines": 16,
+      "tokens": 81,
+      "group": "source",
+      "disposition": "retain",
+      "fragmentSha256": "82b1f9be557a6952cb68bae6ce48a1f6d010d005a154904905775b0b3e4fcc76",
+      "reason": "retain-compatible-buffer-signature"
+    },
+    {
+      "id": "ORG-T40-C4",
+      "first": "src/tui/documents/tools/footnotes/footnotes.ts:254",
+      "second": "src/tui/documents/tools/info/info.ts:252",
+      "lines": 16,
+      "tokens": 97,
+      "group": "source",
+      "disposition": "retain",
+      "fragmentSha256": "ecf4eebca3cc6e2d30b391a3b0cba4492b09c1d1b5941a22c4847fd3eb104590",
+      "reason": "retain-feature-coordination-after-shared-navigation"
+    },
+    {
+      "id": "ORG-T40-C5",
+      "first": "tests/cli/diagnostics/servers.test.ts:57",
+      "second": "tests/cli/diagnostics/servers.test.ts:77",
+      "lines": 11,
+      "tokens": 75,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "cde725f9b9d493c36b77e7f09bd7bf9d4856d03481bb6074563f76b52b679353"
+    },
+    {
+      "id": "ORG-T40-C6",
+      "first": "tests/cli/diagnostics/servers.test.ts:173",
+      "second": "tests/cli/files/operations.test.ts:181",
+      "lines": 14,
+      "tokens": 92,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "b2067fd55fe49aa5cd70ef0bfb4cc6ab465161213b7899462b26a86a3324a5eb"
+    },
+    {
+      "id": "ORG-T40-C7",
+      "first": "tests/cli/diagnostics/servers.test.ts:173",
+      "second": "tests/cli/files/plans.test.ts:87",
+      "lines": 14,
+      "tokens": 92,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "b2067fd55fe49aa5cd70ef0bfb4cc6ab465161213b7899462b26a86a3324a5eb"
+    },
+    {
+      "id": "ORG-T40-C8",
+      "first": "tests/cli/diagnostics/servers.test.ts:173",
+      "second": "tests/cli/links/process.test.ts:87",
+      "lines": 14,
+      "tokens": 92,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "b2067fd55fe49aa5cd70ef0bfb4cc6ab465161213b7899462b26a86a3324a5eb"
+    },
+    {
+      "id": "ORG-T40-C9",
+      "first": "tests/cli/diagnostics/servers.test.ts:173",
+      "second": "tests/cli/reading/text-files.test.ts:79",
+      "lines": 14,
+      "tokens": 92,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "b2067fd55fe49aa5cd70ef0bfb4cc6ab465161213b7899462b26a86a3324a5eb"
+    },
+    {
+      "id": "ORG-T40-C10",
+      "first": "tests/cli/diagnostics/servers.test.ts:173",
+      "second": "tests/cli/search/process.test.ts:41",
+      "lines": 14,
+      "tokens": 92,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "b2067fd55fe49aa5cd70ef0bfb4cc6ab465161213b7899462b26a86a3324a5eb"
+    },
+    {
+      "id": "ORG-T40-C11",
+      "first": "tests/cli/diagnostics/servers.test.ts:231",
+      "second": "tests/cli/editing/writing.test.ts:239",
+      "lines": 20,
+      "tokens": 149,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "9a626cb597cf946897c73102fc4615f7affa22718523c514d1a192ed112f7370"
+    },
+    {
+      "id": "ORG-T40-C12",
+      "first": "tests/cli/diagnostics/servers.test.ts:231",
+      "second": "tests/cli/files/operations.test.ts:215",
+      "lines": 20,
+      "tokens": 154,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "9a626cb597cf946897c73102fc4615f7affa22718523c514d1a192ed112f7370"
+    },
+    {
+      "id": "ORG-T40-C13",
+      "first": "tests/cli/diagnostics/servers.test.ts:231",
+      "second": "tests/cli/reading/metadata.test.ts:134",
+      "lines": 20,
+      "tokens": 149,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "9a626cb597cf946897c73102fc4615f7affa22718523c514d1a192ed112f7370"
+    },
+    {
+      "id": "ORG-T40-C14",
+      "first": "tests/cli/diagnostics/servers.test.ts:232",
+      "second": "tests/cli/editing/replace.test.ts:72",
+      "lines": 19,
+      "tokens": 146,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "067ca428f44703928bf5d7b4d55512bc58698dac18716d6e2533b18853132df9"
+    },
+    {
+      "id": "ORG-T40-C15",
+      "first": "tests/cli/diagnostics/servers.test.ts:233",
+      "second": "tests/cli/reading/themes.test.ts:9",
+      "lines": 18,
+      "tokens": 143,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "cd66f8dad74e4bf7a804881f583b718913c27450c24b71196ff2abf01e385d2f"
+    },
+    {
+      "id": "ORG-T40-C16",
+      "first": "tests/cli/diagnostics/spell.test.ts:15",
+      "second": "tests/core/workspace/graph/problems.test.ts:14",
+      "lines": 14,
+      "tokens": 117,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "c0b848d1b6788b6c977c0f71fd9cebb7fa2e1a85eea854cff685e0670a384b4a"
+    },
+    {
+      "id": "ORG-T40-C17",
+      "first": "tests/cli/diagnostics/spell.test.ts:15",
+      "second": "tests/core/workspace/graph/tags.test.ts:14",
+      "lines": 14,
+      "tokens": 117,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "c0b848d1b6788b6c977c0f71fd9cebb7fa2e1a85eea854cff685e0670a384b4a"
+    },
+    {
+      "id": "ORG-T40-C18",
+      "first": "tests/cli/diagnostics/spell.test.ts:15",
+      "second": "tests/core/workspace/mutations/replace-files.test.ts:17",
+      "lines": 16,
+      "tokens": 133,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "4d79544a1754ee95e90b435eeb7d5cebc87ff69e7eedaae52409795a527a787e"
+    },
+    {
+      "id": "ORG-T40-C19",
+      "first": "tests/cli/diagnostics/spell.test.ts:15",
+      "second": "tests/core/workspace/mutations/undo.test.ts:14",
+      "lines": 17,
+      "tokens": 148,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "af2815ddaa5f6d5468d10376d6683d4a25ff3c855ba4660641656bb2cb635f7b"
+    },
+    {
+      "id": "ORG-T40-C20",
+      "first": "tests/cli/diagnostics/spell.test.ts:15",
+      "second": "tests/core/workspace/vaults/init.test.ts:18",
+      "lines": 14,
+      "tokens": 117,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "c0b848d1b6788b6c977c0f71fd9cebb7fa2e1a85eea854cff685e0670a384b4a"
+    },
+    {
+      "id": "ORG-T40-C21",
+      "first": "tests/cli/editing/writing.test.ts:239",
+      "second": "tests/cli/state/history.test.ts:75",
+      "lines": 20,
+      "tokens": 152,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "f9a314bc0d61beec703aaccb7d92ff32d7ae07e892627d9a63f9eca298696615"
+    },
+    {
+      "id": "ORG-T40-C22",
+      "first": "tests/cli/files/excluded.test.ts:13",
+      "second": "tests/cli/files/refusals.test.ts:13",
+      "lines": 11,
+      "tokens": 92,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "a9abe072dd30307885e419b0a526ce15ea4ec775bea81c69a6cc26c477d71578"
+    },
+    {
+      "id": "ORG-T40-C23",
+      "first": "tests/cli/reading/paths.test.ts:8",
+      "second": "tests/core/workspace/links/resolution-integration.test.ts:7",
+      "lines": 14,
+      "tokens": 93,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "970bb45079267e84f32d2266619d359cb254fa48225826c08ae9e32b1dcb11d6"
+    },
+    {
+      "id": "ORG-T40-C24",
+      "first": "tests/cli/reading/paths.test.ts:39",
+      "second": "tests/core/workspace/git/review-integration.test.ts:14",
+      "lines": 30,
+      "tokens": 223,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "985ff284980a8856cb4ca578254bbb00eb5b0505afa760161cc8360fe51b04df"
+    },
+    {
+      "id": "ORG-T40-C25",
+      "first": "tests/cli/reading/paths.test.ts:39",
+      "second": "tests/core/workspace/graph/freshness.test.ts:14",
+      "lines": 14,
+      "tokens": 108,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "b78f2e4a75c6688fb723632ef28993ed0bb1b25f8c5acbdbbb9c5b38c8eb20f3"
+    },
+    {
+      "id": "ORG-T40-C26",
+      "first": "tests/cli/reading/paths.test.ts:39",
+      "second": "tests/core/workspace/links/redirects.test.ts:275",
+      "lines": 14,
+      "tokens": 107,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "b78f2e4a75c6688fb723632ef28993ed0bb1b25f8c5acbdbbb9c5b38c8eb20f3"
+    },
+    {
+      "id": "ORG-T40-C27",
+      "first": "tests/cli/reading/paths.test.ts:39",
+      "second": "tests/core/workspace/mutations/link-moves.test.ts:41",
+      "lines": 14,
+      "tokens": 108,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "b78f2e4a75c6688fb723632ef28993ed0bb1b25f8c5acbdbbb9c5b38c8eb20f3"
+    },
+    {
+      "id": "ORG-T40-C28",
+      "first": "tests/cli/reading/paths.test.ts:39",
+      "second": "tests/core/workspace/mutations/plans.test.ts:14",
+      "lines": 14,
+      "tokens": 108,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "b78f2e4a75c6688fb723632ef28993ed0bb1b25f8c5acbdbbb9c5b38c8eb20f3"
+    },
+    {
+      "id": "ORG-T40-C29",
+      "first": "tests/cli/reading/paths.test.ts:39",
+      "second": "tests/core/workspace/search/scope.test.ts:17",
+      "lines": 16,
+      "tokens": 130,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "9b54c2a55cf345eb895926ad6475da4e0de9aaece8aea22a6f04e632122ff5c1"
+    },
+    {
+      "id": "ORG-T40-C30",
+      "first": "tests/cli/reading/paths.test.ts:40",
+      "second": "tests/cli/vaults/elsewhere.test.ts:23",
+      "lines": 13,
+      "tokens": 103,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "ef9f82c70af21f4675a00288005aacdf57ba18649d9332817053c0f6b3e3033a"
+    },
+    {
+      "id": "ORG-T40-C31",
+      "first": "tests/cli/reading/paths.test.ts:41",
+      "second": "tests/core/workspace/graph/reached-index.test.ts:176",
+      "lines": 12,
+      "tokens": 79,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "3d0b8139de1e2388de4ef50d09b866651cc3b04206dea781b1bdfdb1f946fec3"
+    },
+    {
+      "id": "ORG-T40-C32",
+      "first": "tests/cli/reading/paths.test.ts:42",
+      "second": "tests/core/workspace/git/branch-switch.test.ts:21",
+      "lines": 11,
+      "tokens": 71,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "050943499dc3fbaa08f84031c2210d4cde8eb2218b0d0b7413f2e7dd956480ef"
+    },
+    {
+      "id": "ORG-T40-C33",
+      "first": "tests/cli/reading/themes.test.ts:1",
+      "second": "tests/cli/state/editors.test.ts:1",
+      "lines": 26,
+      "tokens": 202,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "9adf1e420a1615e27c5dba0a5cac85cd195694743e654dd1b09f95b6cc94925b"
+    },
+    {
+      "id": "ORG-T40-C34",
+      "first": "tests/cli/vaults/elsewhere.test.ts:22",
+      "second": "tests/core/workspace/vaults/identity.test.ts:764",
+      "lines": 15,
+      "tokens": 120,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "8972188839f6101c9a98a1d5e4aaf4c22bb47ca6e8a7507bbf0959b0493130cb"
+    },
+    {
+      "id": "ORG-T40-C35",
+      "first": "tests/cli/vaults/elsewhere.test.ts:26",
+      "second": "tests/core/workspace/git/branch-switch.test.ts:22",
+      "lines": 11,
+      "tokens": 84,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "b89badf67cc1b07993748ba0355db5545bdb7e1e08d676f97d8b44282113beb1"
+    },
+    {
+      "id": "ORG-T40-C36",
+      "first": "tests/cli/vaults/elsewhere.test.ts:26",
+      "second": "tests/core/workspace/graph/freshness.test.ts:18",
+      "lines": 11,
+      "tokens": 84,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "b89badf67cc1b07993748ba0355db5545bdb7e1e08d676f97d8b44282113beb1"
+    },
+    {
+      "id": "ORG-T40-C37",
+      "first": "tests/cli/vaults/elsewhere.test.ts:26",
+      "second": "tests/core/workspace/graph/reached-index.test.ts:178",
+      "lines": 11,
+      "tokens": 84,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "b89badf67cc1b07993748ba0355db5545bdb7e1e08d676f97d8b44282113beb1"
+    },
+    {
+      "id": "ORG-T40-C38",
+      "first": "tests/cli/vaults/elsewhere.test.ts:26",
+      "second": "tests/core/workspace/links/redirects.test.ts:279",
+      "lines": 11,
+      "tokens": 84,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "b89badf67cc1b07993748ba0355db5545bdb7e1e08d676f97d8b44282113beb1"
+    },
+    {
+      "id": "ORG-T40-C39",
+      "first": "tests/cli/vaults/elsewhere.test.ts:26",
+      "second": "tests/core/workspace/mutations/link-moves.test.ts:45",
+      "lines": 11,
+      "tokens": 84,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "b89badf67cc1b07993748ba0355db5545bdb7e1e08d676f97d8b44282113beb1"
+    },
+    {
+      "id": "ORG-T40-C40",
+      "first": "tests/cli/vaults/elsewhere.test.ts:26",
+      "second": "tests/core/workspace/mutations/plans.test.ts:18",
+      "lines": 11,
+      "tokens": 84,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "b89badf67cc1b07993748ba0355db5545bdb7e1e08d676f97d8b44282113beb1"
+    },
+    {
+      "id": "ORG-T40-C41",
+      "first": "tests/core/documents/diagnostics/lint.test.ts:112",
+      "second": "tests/core/documents/diagnostics/lint.test.ts:172",
+      "lines": 14,
+      "tokens": 123,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "2233bbce49dc27c7b75d355b563f0b990738d00ed99ba495699c003733e42ba2"
+    },
+    {
+      "id": "ORG-T40-C42",
+      "first": "tests/core/foundation/platform/atomic-files.test.ts:27",
+      "second": "tests/core/workspace/graph/write-stamps.test.ts:10",
+      "lines": 34,
+      "tokens": 219,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "2a62bcfe0939e044b79286014739e2cbb4f7474e70ab496ca94c3aa1fef48ad5"
+    },
+    {
+      "id": "ORG-T40-C43",
+      "first": "tests/core/foundation/platform/atomic-files.test.ts:31",
+      "second": "tests/tui/documents/navigation/peek/backlinks.test.ts:15",
+      "lines": 30,
+      "tokens": 203,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "10f77e0d063f52093054a061757fbf0b73a10e087a6a9077a28349eeec2847d7"
+    },
+    {
+      "id": "ORG-T40-C44",
+      "first": "tests/core/foundation/platform/atomic-files.test.ts:34",
+      "second": "tests/tui/documents/navigation/peek/catch-up.test.ts:45",
+      "lines": 27,
+      "tokens": 199,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "6cd00fda9c49db71f4edab67e20935f7ee519877ce9b70c714ea77cabce1180b"
+    },
+    {
+      "id": "ORG-T40-C45",
+      "first": "tests/core/foundation/platform/atomic-files.test.ts:34",
+      "second": "tests/tui/documents/navigation/peek/scheduling.test.ts:31",
+      "lines": 27,
+      "tokens": 199,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "6cd00fda9c49db71f4edab67e20935f7ee519877ce9b70c714ea77cabce1180b"
+    },
+    {
+      "id": "ORG-T40-C46",
+      "first": "tests/core/workspace/git/branch-switch.test.ts:17",
+      "second": "tests/core/workspace/git/status.test.ts:14",
+      "lines": 18,
+      "tokens": 166,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "221567bde8192486f582d5deaae4e74e35489d9c34b8a0bbe11e6e9b62b5f111"
+    },
+    {
+      "id": "ORG-T40-C47",
+      "first": "tests/core/workspace/git/branch-switch.test.ts:17",
+      "second": "tests/core/workspace/git/worktrees.test.ts:17",
+      "lines": 17,
+      "tokens": 158,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "5910585e9294e1e3adb620d70669213d9d0c35668ae02a909ba39d3024e98ab2"
+    },
+    {
+      "id": "ORG-T40-C48",
+      "first": "tests/core/workspace/git/branch-switch.test.ts:19",
+      "second": "tests/core/workspace/vaults/home/commands.test.ts:31",
+      "lines": 14,
+      "tokens": 113,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "1675e0bd409896ce470388bd2c450d74a8bcca5047ba9811a1fc96636fdfeb84"
+    },
+    {
+      "id": "ORG-T40-C49",
+      "first": "tests/core/workspace/git/branch-switch.test.ts:20",
+      "second": "tests/core/workspace/vaults/identity.test.ts:640",
+      "lines": 14,
+      "tokens": 113,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "ff5a9b4c62e81d5acbacb1c39e46fb85d5aa80c9bfdacf9e2858c51add6bec60"
+    },
+    {
+      "id": "ORG-T40-C50",
+      "first": "tests/core/workspace/git/branch-switch.test.ts:23",
+      "second": "tests/core/workspace/graph/freshness.test.ts:19",
+      "lines": 11,
+      "tokens": 70,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "bb2cfb14017eeaa61876adcac6a6c9a27aad2c0324b2a62da4c7777389bfe283"
+    },
+    {
+      "id": "ORG-T40-C51",
+      "first": "tests/core/workspace/git/branch-switch.test.ts:23",
+      "second": "tests/core/workspace/links/redirects.test.ts:280",
+      "lines": 11,
+      "tokens": 70,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "bb2cfb14017eeaa61876adcac6a6c9a27aad2c0324b2a62da4c7777389bfe283"
+    },
+    {
+      "id": "ORG-T40-C52",
+      "first": "tests/core/workspace/git/branch-switch.test.ts:23",
+      "second": "tests/core/workspace/mutations/link-moves.test.ts:46",
+      "lines": 11,
+      "tokens": 70,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "bb2cfb14017eeaa61876adcac6a6c9a27aad2c0324b2a62da4c7777389bfe283"
+    },
+    {
+      "id": "ORG-T40-C53",
+      "first": "tests/core/workspace/git/branch-switch.test.ts:23",
+      "second": "tests/core/workspace/mutations/plans.test.ts:19",
+      "lines": 11,
+      "tokens": 70,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "bb2cfb14017eeaa61876adcac6a6c9a27aad2c0324b2a62da4c7777389bfe283"
+    },
+    {
+      "id": "ORG-T40-C54",
+      "first": "tests/core/workspace/git/branch-switch.test.ts:23",
+      "second": "tests/core/workspace/vaults/identity.test.ts:769",
+      "lines": 11,
+      "tokens": 70,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "bb2cfb14017eeaa61876adcac6a6c9a27aad2c0324b2a62da4c7777389bfe283"
+    },
+    {
+      "id": "ORG-T40-C55",
+      "first": "tests/core/workspace/git/branches/remote.test.ts:23",
+      "second": "tests/core/workspace/git/merge/operations.test.ts:35",
+      "lines": 13,
+      "tokens": 85,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "4a00665f9d0150b60f4d10d813a43b39fdd881d867b3602acc881054f19c21ed"
+    },
+    {
+      "id": "ORG-T40-C56",
+      "first": "tests/core/workspace/git/merge/operations.test.ts:41",
+      "second": "tests/tui/workspace/git/review-journeys.test.ts:21",
+      "lines": 25,
+      "tokens": 162,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "e3e06adbd625eef326ef2d4c5b39cc0b1d0e22101a3e47584d3142e391be27bb"
+    },
+    {
+      "id": "ORG-T40-C57",
+      "first": "tests/core/workspace/git/merge/operations.test.ts:75",
+      "second": "tests/tui/workspace/git/review-journeys.test.ts:792",
+      "lines": 11,
+      "tokens": 77,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "e39f0888a77b7a205add6e3380d61139445db1bc693256438f8209797c9d2bbf"
+    },
+    {
+      "id": "ORG-T40-C58",
+      "first": "tests/core/workspace/graph/problems.test.ts:1",
+      "second": "tests/core/workspace/graph/tags.test.ts:1",
+      "lines": 14,
+      "tokens": 70,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "5a6d2a5e8810fdffa38f0eaaef7f35352f856cd4f22203434b46be2dbb7e2118"
+    },
+    {
+      "id": "ORG-T40-C59",
+      "first": "tests/core/workspace/graph/tags.test.ts:18",
+      "second": "tests/core/workspace/vaults/init.test.ts:22",
+      "lines": 11,
+      "tokens": 70,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "8bf15b362c6119b65d96f755caf812b3c5774210beaef721a8845fefb5f13822"
+    },
+    {
+      "id": "ORG-T40-C60",
+      "first": "tests/core/workspace/links/cross-vault.test.ts:14",
+      "second": "tests/core/workspace/vaults/identity.test.ts:37",
+      "lines": 21,
+      "tokens": 135,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "821743eec044b5e673feca49c3fedc6d7204f1cd78fc2415432b27f13ab8db81"
+    },
+    {
+      "id": "ORG-T40-C61",
+      "first": "tests/core/workspace/links/destinations.test.ts:1",
+      "second": "tests/core/workspace/search/sections.test.ts:1",
+      "lines": 15,
+      "tokens": 84,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "c72c56cfb684eef23a451d0fc25427d1688bf295a5e1f5493ae4737507a002b3"
+    },
+    {
+      "id": "ORG-T40-C62",
+      "first": "tests/core/workspace/links/fragile.test.ts:169",
+      "second": "tests/core/workspace/links/frontmatter.test.ts:62",
+      "lines": 17,
+      "tokens": 136,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "0b76fac7549c313624abbd301a46a9f0317e0ff504e614887f50bdea64c66e5e"
+    },
+    {
+      "id": "ORG-T40-C63",
+      "first": "tests/core/workspace/links/fragile.test.ts:169",
+      "second": "tests/core/workspace/links/redirects.test.ts:388",
+      "lines": 15,
+      "tokens": 134,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "a00d1c0e1189fe1b3b92a499f8417b87db933f49042b4ac286d1c37cd1119694"
+    },
+    {
+      "id": "ORG-T40-C64",
+      "first": "tests/core/workspace/links/fragile.test.ts:169",
+      "second": "tests/core/workspace/mutations/convert-links.test.ts:320",
+      "lines": 15,
+      "tokens": 135,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "a00d1c0e1189fe1b3b92a499f8417b87db933f49042b4ac286d1c37cd1119694"
+    },
+    {
+      "id": "ORG-T40-C65",
+      "first": "tests/core/workspace/links/fragile.test.ts:169",
+      "second": "tests/core/workspace/mutations/folders.test.ts:125",
+      "lines": 15,
+      "tokens": 134,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "a00d1c0e1189fe1b3b92a499f8417b87db933f49042b4ac286d1c37cd1119694"
+    },
+    {
+      "id": "ORG-T40-C66",
+      "first": "tests/core/workspace/links/fragile.test.ts:169",
+      "second": "tests/core/workspace/mutations/headings.test.ts:66",
+      "lines": 15,
+      "tokens": 134,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "a00d1c0e1189fe1b3b92a499f8417b87db933f49042b4ac286d1c37cd1119694"
+    },
+    {
+      "id": "ORG-T40-C67",
+      "first": "tests/core/workspace/links/fragile.test.ts:169",
+      "second": "tests/core/workspace/mutations/rename-integration.test.ts:202",
+      "lines": 15,
+      "tokens": 134,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "a00d1c0e1189fe1b3b92a499f8417b87db933f49042b4ac286d1c37cd1119694"
+    },
+    {
+      "id": "ORG-T40-C68",
+      "first": "tests/core/workspace/links/fragile.test.ts:169",
+      "second": "tests/core/workspace/vaults/named-folders.test.ts:402",
+      "lines": 15,
+      "tokens": 134,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "a00d1c0e1189fe1b3b92a499f8417b87db933f49042b4ac286d1c37cd1119694"
+    },
+    {
+      "id": "ORG-T40-C69",
+      "first": "tests/core/workspace/links/fragile.test.ts:171",
+      "second": "tests/core/workspace/mutations/attachments.test.ts:14",
+      "lines": 13,
+      "tokens": 128,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "67a5845cabc825f6cf4857d810078437b7361e2acf2fc3c204dcfbb917b2fdfe"
+    },
+    {
+      "id": "ORG-T40-C70",
+      "first": "tests/core/workspace/links/path-links.test.ts:1",
+      "second": "tests/core/workspace/mutations/path-moves.test.ts:1",
+      "lines": 14,
+      "tokens": 72,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "531cc9654192c54b1af02d720326ca5e9e4ec622c96e467a2ef3b468ffa31b19"
+    },
+    {
+      "id": "ORG-T40-C71",
+      "first": "tests/core/workspace/links/path-links.test.ts:14",
+      "second": "tests/core/workspace/links/redirects.test.ts:18",
+      "lines": 23,
+      "tokens": 152,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "c274ee9847cac8c6a517949de62a286e1c3f7f669005f6c9f0baf99a82ee4caf"
+    },
+    {
+      "id": "ORG-T40-C72",
+      "first": "tests/core/workspace/links/path-links.test.ts:14",
+      "second": "tests/core/workspace/mutations/rename-integration.test.ts:18",
+      "lines": 21,
+      "tokens": 151,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "e0e2bec2cd0dbee905f449e5b96f967726e747f324973d1406c0441e28af497d"
+    },
+    {
+      "id": "ORG-T40-C73",
+      "first": "tests/core/workspace/links/path-links.test.ts:14",
+      "second": "tests/core/workspace/vaults/nested.test.ts:14",
+      "lines": 23,
+      "tokens": 152,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "c274ee9847cac8c6a517949de62a286e1c3f7f669005f6c9f0baf99a82ee4caf"
+    },
+    {
+      "id": "ORG-T40-C74",
+      "first": "tests/core/workspace/links/redirects.test.ts:275",
+      "second": "tests/core/workspace/links/redirects.test.ts:351",
+      "lines": 16,
+      "tokens": 135,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "7a9ee2d2edceb755a24be8373d14c894cfc718aaa0a35e5381bfc8124f79d84b"
+    },
+    {
+      "id": "ORG-T40-C75",
+      "first": "tests/core/workspace/mutations/attachments.test.ts:3",
+      "second": "tests/core/workspace/mutations/folders.test.ts:3",
+      "lines": 14,
+      "tokens": 73,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "7eb0d08d5a25584ec2f0ce72b8a44da31235bd66565d9e0a0724ed5411cbe2ed"
+    },
+    {
+      "id": "ORG-T40-C76",
+      "first": "tests/core/workspace/mutations/convert-links.test.ts:319",
+      "second": "tests/core/workspace/vaults/init.test.ts:178",
+      "lines": 19,
+      "tokens": 164,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "a26630aac653748a0819c6ebcc1631b75e4dbb81671534a0fbe1752200c6d5f7"
+    },
+    {
+      "id": "ORG-T40-C77",
+      "first": "tests/core/workspace/mutations/link-moves.test.ts:33",
+      "second": "tests/core/workspace/mutations/write-policy.test.ts:24",
+      "lines": 53,
+      "tokens": 399,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "46a44140a109029f184d7b5ecdb83829076319dbd853be75c3e5fa2ec97a79d3"
+    },
+    {
+      "id": "ORG-T40-C78",
+      "first": "tests/core/workspace/mutations/link-moves.test.ts:46",
+      "second": "tests/core/workspace/mutations/write-policy.test.ts:37",
+      "lines": 41,
+      "tokens": 321,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "b6998c875ddfb0e7960db84a82463059738bb893518c8231849287b111541ebd"
+    },
+    {
+      "id": "ORG-T40-C79",
+      "first": "tests/core/workspace/mutations/link-moves.test.ts:54",
+      "second": "tests/core/workspace/vaults/symlinks/reading-writing.test.ts:43",
+      "lines": 15,
+      "tokens": 85,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "e8001f93cd796240d7bc402d6c589c9f3aaec13daf01dbc9e0cf66ca1a09ec06"
+    },
+    {
+      "id": "ORG-T40-C80",
+      "first": "tests/core/workspace/mutations/rename-integration.test.ts:41",
+      "second": "tests/core/workspace/mutations/undo.test.ts:30",
+      "lines": 11,
+      "tokens": 93,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "a0d5f73398e7d3515655e32a30cb732d3abd84cb2cf1b2c977d248df76f6e0aa"
+    },
+    {
+      "id": "ORG-T40-C81",
+      "first": "tests/core/workspace/vaults/home/commands.test.ts:6",
+      "second": "tests/core/workspace/vaults/home/filter.test.ts:8",
+      "lines": 26,
+      "tokens": 178,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "9b71ad0ee4b023cfafacaad8eb764db436aa3c9dd52982f9e195265ad9959787"
+    },
+    {
+      "id": "ORG-T40-C82",
+      "first": "tests/core/workspace/vaults/home/commands.test.ts:8",
+      "second": "tests/core/workspace/vaults/home/limits.test.ts:11",
+      "lines": 39,
+      "tokens": 285,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "c39246f384d0d035c3cfc7a0dc2c6ef878318e525bace7a14b08aa33177d4e4e"
+    },
+    {
+      "id": "ORG-T40-C83",
+      "first": "tests/core/workspace/vaults/home/commands.test.ts:8",
+      "second": "tests/core/workspace/vaults/home/links.test.ts:9",
+      "lines": 39,
+      "tokens": 288,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "c39246f384d0d035c3cfc7a0dc2c6ef878318e525bace7a14b08aa33177d4e4e"
+    },
+    {
+      "id": "ORG-T40-C84",
+      "first": "tests/core/workspace/vaults/home/commands.test.ts:8",
+      "second": "tests/core/workspace/vaults/home/persistence.test.ts:11",
+      "lines": 24,
+      "tokens": 171,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "ec25b828961706283aa2c26483e600fd93f5713ef56051b70cf628fd8f1e2798"
+    },
+    {
+      "id": "ORG-T40-C85",
+      "first": "tests/core/workspace/vaults/home/commands.test.ts:18",
+      "second": "tests/core/workspace/vaults/home/moves.test.ts:81",
+      "lines": 14,
+      "tokens": 146,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "7e660d6b871d0c698119c1d07a4e8d71528bbd1995f93d32aa8725eb95b4012c"
+    },
+    {
+      "id": "ORG-T40-C86",
+      "first": "tests/core/workspace/vaults/home/commands.test.ts:21",
+      "second": "tests/core/workspace/vaults/home/retry.test.ts:36",
+      "lines": 26,
+      "tokens": 183,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "34663ba6112aa957bce231e922d40a1cf6a0e716c5774931bc4c6b38afa6feba"
+    },
+    {
+      "id": "ORG-T40-C87",
+      "first": "tests/core/workspace/vaults/home/filter.test.ts:5",
+      "second": "tests/core/workspace/vaults/home/indexing.test.ts:5",
+      "lines": 30,
+      "tokens": 200,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "725a97b392e61f2e44c54c0f51c657be4bbfabfc33a2292b210d5ae39396212a"
+    },
+    {
+      "id": "ORG-T40-C88",
+      "first": "tests/core/workspace/vaults/home/filter.test.ts:22",
+      "second": "tests/core/workspace/vaults/home/mounts.test.ts:23",
+      "lines": 13,
+      "tokens": 71,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "ffc5808bbcb76b93ac0d5c85a4cdf557acb4ecc28d76f9ecbff07565ab46b1e5"
+    },
+    {
+      "id": "ORG-T40-C89",
+      "first": "tests/core/workspace/vaults/home/filter.test.ts:22",
+      "second": "tests/core/workspace/vaults/home/moves.test.ts:84",
+      "lines": 13,
+      "tokens": 71,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "ffc5808bbcb76b93ac0d5c85a4cdf557acb4ecc28d76f9ecbff07565ab46b1e5"
+    },
+    {
+      "id": "ORG-T40-C90",
+      "first": "tests/core/workspace/vaults/home/filter.test.ts:22",
+      "second": "tests/core/workspace/vaults/home/persistence.test.ts:24",
+      "lines": 13,
+      "tokens": 71,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "ffc5808bbcb76b93ac0d5c85a4cdf557acb4ecc28d76f9ecbff07565ab46b1e5"
+    },
+    {
+      "id": "ORG-T40-C91",
+      "first": "tests/core/workspace/vaults/home/limits.test.ts:6",
+      "second": "tests/core/workspace/vaults/home/mounts.test.ts:5",
+      "lines": 29,
+      "tokens": 192,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "0b7ad415563103a6ea5ad169fe866b7d927001ab0ec860c9362c97fcb9fdbda9"
+    },
+    {
+      "id": "ORG-T40-C92",
+      "first": "tests/core/workspace/vaults/home/moves.test.ts:21",
+      "second": "tests/core/workspace/vaults/home/watch.test.ts:12",
+      "lines": 76,
+      "tokens": 646,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "41eb0f0eb3f55f93c946f413789788ed581931b8f1d8a52ebc8324a4f747cad3"
+    },
+    {
+      "id": "ORG-T40-C93",
+      "first": "tests/core/workspace/vaults/home/persistence.test.ts:11",
+      "second": "tests/core/workspace/vaults/home/reached.test.ts:11",
+      "lines": 26,
+      "tokens": 177,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "ff4a28d41e8953be0813164594dad31557c78c15f34b081b99d2a5a5541bb8ae"
+    },
+    {
+      "id": "ORG-T40-C94",
+      "first": "tests/core/workspace/vaults/home/persistence.test.ts:11",
+      "second": "tests/core/workspace/vaults/home/retry.test.ts:23",
+      "lines": 24,
+      "tokens": 179,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "d2a8aba6e20a602f80c06cc943e944afa37a3b37258e94640aab2558ac41026f"
+    },
+    {
+      "id": "ORG-T40-C95",
+      "first": "tests/core/workspace/vaults/home/retry.test.ts:257",
+      "second": "tests/core/workspace/vaults/home/retry.test.ts:284",
+      "lines": 14,
+      "tokens": 76,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "4ee08e822e0576fc37b0ae93a3baa3c9f848eb9bfc32fc39add2a4c0af37d939"
+    },
+    {
+      "id": "ORG-T40-C96",
+      "first": "tests/core/workspace/vaults/symlinks/answers.test.ts:34",
+      "second": "tests/core/workspace/vaults/symlinks/following.test.ts:57",
+      "lines": 13,
+      "tokens": 99,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "44d6785766ecfbad2e971802703d5ffacb7f2bb68d25fdd8d1a9e78421f7c7eb"
+    },
+    {
+      "id": "ORG-T40-C97",
+      "first": "tests/core/workspace/vaults/symlinks/following.test.ts:57",
+      "second": "tests/core/workspace/vaults/symlinks/reading-writing.test.ts:31",
+      "lines": 14,
+      "tokens": 105,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "f24fd4664a5de9c9d2d4ebd3fcba74d1e249be46ec7492f9086a033f6380f02f"
+    },
+    {
+      "id": "ORG-T40-C98",
+      "first": "tests/regressions.test.ts:127",
+      "second": "tests/regressions.test.ts:250",
+      "lines": 11,
+      "tokens": 78,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "af39334d0c1197fb6beb57d02529316b9e615b429ab05024b1d6d8ddf54b8061"
+    },
+    {
+      "id": "ORG-T40-C99",
+      "first": "tests/regressions.test.ts:127",
+      "second": "tests/regressions.test.ts:320",
+      "lines": 11,
+      "tokens": 78,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "af39334d0c1197fb6beb57d02529316b9e615b429ab05024b1d6d8ddf54b8061"
+    },
+    {
+      "id": "ORG-T40-C100",
+      "first": "tests/regressions.test.ts:145",
+      "second": "tests/regressions.test.ts:192",
+      "lines": 12,
+      "tokens": 95,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "c9982b9fe6ddee0a84afe0585730aa429e84e7d07d1737892962c43b6c9c5ba6"
+    },
+    {
+      "id": "ORG-T40-C101",
+      "first": "tests/regressions.test.ts:192",
+      "second": "tests/regressions.test.ts:218",
+      "lines": 14,
+      "tokens": 103,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "73cba78d977d2f4130d716fe5cd89a0531072fdb83477ec3a9e3fa3d3aec907a"
+    },
+    {
+      "id": "ORG-T40-C102",
+      "first": "tests/regressions.test.ts:195",
+      "second": "tests/regressions.test.ts:221",
+      "lines": 12,
+      "tokens": 76,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "79adae14ad95a9dbf5e2ff1b827a1b57244e7337981fc235afcaf5846d28295b"
+    },
+    {
+      "id": "ORG-T40-C103",
+      "first": "tests/render.test.ts:82",
+      "second": "tests/render.test.ts:112",
+      "lines": 12,
+      "tokens": 131,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "77b39e849b65a61fb2d75711d8f9aaa0495ce3a96bcb9697dc15e93c1baa8b93"
+    },
+    {
+      "id": "ORG-T40-C104",
+      "first": "tests/terminal/checks/git-steady.ts:384",
+      "second": "tests/terminal/checks/git-steady.ts:496",
+      "lines": 11,
+      "tokens": 114,
+      "group": "terminal-scenarios",
+      "disposition": "retain",
+      "fragmentSha256": "6ec383836641ac43271e0b25a36b21914c83c32dc11d069d46a97a3b4ba03e63"
+    },
+    {
+      "id": "ORG-T40-C105",
+      "first": "tests/terminal/checks/links-and-files.ts:2914",
+      "second": "tests/terminal/checks/reading.ts:1107",
+      "lines": 12,
+      "tokens": 78,
+      "group": "terminal-scenarios",
+      "disposition": "retain",
+      "fragmentSha256": "90753d1ccce122d90b58184813770ce0f8525af1b7a16e1af4e93d5450d79e4e"
+    },
+    {
+      "id": "ORG-T40-C106",
+      "first": "tests/terminal/checks/peek-backlinks.ts:384",
+      "second": "tests/terminal/checks/peek-backlinks.ts:445",
+      "lines": 15,
+      "tokens": 86,
+      "group": "terminal-scenarios",
+      "disposition": "retain",
+      "fragmentSha256": "463acbb1f2f657889fdc675d1c3b3db845f10c4b65791cd73a159045ec6ed7c0"
+    },
+    {
+      "id": "ORG-T40-C107",
+      "first": "tests/terminal/checks/vaults.ts:259",
+      "second": "tests/terminal/checks/vaults.ts:329",
+      "lines": 12,
+      "tokens": 90,
+      "group": "terminal-scenarios",
+      "disposition": "retain",
+      "fragmentSha256": "a58c1fc75fcc420b9641990ae25e4ad080d999a05cc876a9c924dac0901f4dcd"
+    },
+    {
+      "id": "ORG-T40-C108",
+      "first": "tests/terminal/checks/vaults.ts:528",
+      "second": "tests/terminal/checks/vaults.ts:575",
+      "lines": 24,
+      "tokens": 179,
+      "group": "terminal-scenarios",
+      "disposition": "retain",
+      "fragmentSha256": "a7a15cb621f0c125e8fc9d41bcc2e339f8b387e8a3a1bd0a24cdd09c39524390"
+    },
+    {
+      "id": "ORG-T40-C109",
+      "first": "tests/terminal/checks/vaults.ts:960",
+      "second": "tests/terminal/checks/vaults.ts:1033",
+      "lines": 19,
+      "tokens": 122,
+      "group": "terminal-scenarios",
+      "disposition": "retain",
+      "fragmentSha256": "739591f62d8a846081c80acaf5bdf504486b60e73d27b3533cab84e3970eaff1"
+    },
+    {
+      "id": "ORG-T40-C110",
+      "first": "tests/terminal/checks/vaults.ts:1391",
+      "second": "tests/terminal/checks/vaults.ts:1435",
+      "lines": 12,
+      "tokens": 76,
+      "group": "terminal-scenarios",
+      "disposition": "retain",
+      "fragmentSha256": "6542fc850ab9c769d5aa4037033d9a4d29842fbfcb23dbb225cde8d435ad0361"
+    },
+    {
+      "id": "ORG-T40-C111",
+      "first": "tests/terminal/checks/vaults.ts:1843",
+      "second": "tests/terminal/checks/vaults.ts:1892",
+      "lines": 15,
+      "tokens": 76,
+      "group": "terminal-scenarios",
+      "disposition": "retain",
+      "fragmentSha256": "447e604cde4c1f6f309ac7ec998df42c07182ea1b38f2638d8b92c0d5a9b00e4"
+    },
+    {
+      "id": "ORG-T40-C112",
+      "first": "tests/terminal/checks/vaults.ts:1960",
+      "second": "tests/terminal/checks/vaults.ts:2005",
+      "lines": 14,
+      "tokens": 97,
+      "group": "terminal-scenarios",
+      "disposition": "retain",
+      "fragmentSha256": "63d9c295c2026e80c5fff8ada94f788a1c734480dfc887e091724f5481767a71"
+    },
+    {
+      "id": "ORG-T40-C113",
+      "first": "tests/terminal/checks/window-header.ts:437",
+      "second": "tests/terminal/checks/window-header.ts:487",
+      "lines": 17,
+      "tokens": 194,
+      "group": "terminal-scenarios",
+      "disposition": "retain",
+      "fragmentSha256": "a4aa14e32e27000a79e640e83888bb1d97c1d8a54434a30f788995d8f58bca83"
+    },
+    {
+      "id": "ORG-T40-C114",
+      "first": "tests/terminal/herdr/session.ts:72",
+      "second": "tests/terminal/session.ts:146",
+      "lines": 13,
+      "tokens": 140,
+      "group": "terminal-drivers",
+      "disposition": "retain",
+      "fragmentSha256": "fdeb9ffb51745a69373fefbc12d38838c963f4a9ae1aff036665e229249f6228"
+    },
+    {
+      "id": "ORG-T40-C115",
+      "first": "tests/terminal/herdr/session.ts:109",
+      "second": "tests/terminal/session.ts:204",
+      "lines": 13,
+      "tokens": 93,
+      "group": "terminal-drivers",
+      "disposition": "retain",
+      "fragmentSha256": "06e205baa913b42e52ab44b7cb5a6057e8262e5ff30586ff14393b652fcb814e"
+    },
+    {
+      "id": "ORG-T40-C116",
+      "first": "tests/terminal/herdr/session.ts:283",
+      "second": "tests/terminal/session.ts:405",
+      "lines": 17,
+      "tokens": 100,
+      "group": "terminal-drivers",
+      "disposition": "retain",
+      "fragmentSha256": "d8252b7f767809401fbe064fe5f1a0b3513cec1aa8bba7bd259e738d0ba4a7a6"
+    },
+    {
+      "id": "ORG-T40-C117",
+      "first": "tests/terminal/herdr/session.ts:303",
+      "second": "tests/terminal/session.ts:459",
+      "lines": 25,
+      "tokens": 167,
+      "group": "terminal-drivers",
+      "disposition": "retain",
+      "fragmentSha256": "aa65f8788f29466e9e98eb284bdda48cb23a9406c686edb394e7ec210252f729"
+    },
+    {
+      "id": "ORG-T40-C118",
+      "first": "tests/terminal/herdr/session.ts:331",
+      "second": "tests/terminal/session.ts:487",
+      "lines": 23,
+      "tokens": 156,
+      "group": "terminal-drivers",
+      "disposition": "retain",
+      "fragmentSha256": "a9a8b8036985a15d109eab599726316a2d7cbcdcf7a173c48ce1b3239181ca7b"
+    },
+    {
+      "id": "ORG-T40-C119",
+      "first": "tests/terminal/herdr/session.ts:400",
+      "second": "tests/terminal/session.ts:584",
+      "lines": 15,
+      "tokens": 119,
+      "group": "terminal-drivers",
+      "disposition": "retain",
+      "fragmentSha256": "1bbb2b2fbbc5e4c0f71d93ffbd90d0e3e94560f5b7aa5dd98809993e95541b2e"
+    },
+    {
+      "id": "ORG-T40-C120",
+      "first": "tests/terminal/run.ts:16",
+      "second": "tests/terminal/shots.ts:16",
+      "lines": 12,
+      "tokens": 120,
+      "group": "terminal-runners",
+      "disposition": "retain",
+      "fragmentSha256": "8b1754659a4a25a745228215662411ec7ac356c877e7b1e6351db0b20bffdaaa"
+    },
+    {
+      "id": "ORG-T40-C121",
+      "first": "tests/tui/app/windows/focus.test.ts:2",
+      "second": "tests/tui/documents/navigation/pointer.test.ts:4",
+      "lines": 11,
+      "tokens": 89,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "8d73af4ce548d3dec59b74b381ddb6d734ca29933bc351667e1ac572256d06b7"
+    },
+    {
+      "id": "ORG-T40-C122",
+      "first": "tests/tui/documents/diagnostics/code-actions.test.ts:13",
+      "second": "tests/tui/documents/diagnostics/servers.test.ts:14",
+      "lines": 12,
+      "tokens": 135,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "c76f010296a4c9a8826040962f500ad8598058a2fa1b5194bfb4740a1efb123e"
+    },
+    {
+      "id": "ORG-T40-C123",
+      "first": "tests/tui/documents/diagnostics/code-actions.test.ts:13",
+      "second": "tests/tui/documents/editing/server-completion.test.ts:12",
+      "lines": 16,
+      "tokens": 205,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "ea6676097d5d1ba82b4f789968f0ed465217829f54e63b0883fec6b2bd1428e6"
+    },
+    {
+      "id": "ORG-T40-C124",
+      "first": "tests/tui/documents/diagnostics/code-actions.test.ts:19",
+      "second": "tests/tui/documents/editing/server-completion.test.ts:18",
+      "lines": 11,
+      "tokens": 139,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "ed2265d2ba66f3511845b8d1816e517f8b881e9e050ea7d1e51ef67a181936a7"
+    },
+    {
+      "id": "ORG-T40-C125",
+      "first": "tests/tui/documents/diagnostics/spelling.test.ts:14",
+      "second": "tests/tui/documents/editing/shell.test.ts:20",
+      "lines": 13,
+      "tokens": 116,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "0da0a65f0b0265f18ac861beb7bb212c76da87cdfc6b484d013723843d4ac545"
+    },
+    {
+      "id": "ORG-T40-C126",
+      "first": "tests/tui/documents/editing/comments.test.ts:9",
+      "second": "tests/tui/documents/editing/indent.test.ts:9",
+      "lines": 15,
+      "tokens": 159,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "67b618b3915f977689d7f38894c0caa7a286c09c73ab7ad789ad0368b3fa93ba"
+    },
+    {
+      "id": "ORG-T40-C127",
+      "first": "tests/tui/documents/editing/insert.test.ts:254",
+      "second": "tests/tui/shell/input/operators.test.ts:45",
+      "lines": 14,
+      "tokens": 144,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "060de18f7b63a1d364e72876e833a5022db8662601b50f0872020d1b9f82d8a6"
+    },
+    {
+      "id": "ORG-T40-C128",
+      "first": "tests/tui/documents/editing/insert.test.ts:254",
+      "second": "tests/tui/shell/input/repeat.test.ts:43",
+      "lines": 14,
+      "tokens": 144,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "060de18f7b63a1d364e72876e833a5022db8662601b50f0872020d1b9f82d8a6"
+    },
+    {
+      "id": "ORG-T40-C129",
+      "first": "tests/tui/documents/editing/insert.test.ts:256",
+      "second": "tests/tui/documents/editing/undo.test.ts:8",
+      "lines": 12,
+      "tokens": 138,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "cd24e5cbe7dfa734185628b05f0c48aae6fb5b0836cfbbb5f91633ded1cd511e"
+    },
+    {
+      "id": "ORG-T40-C130",
+      "first": "tests/tui/documents/editing/lines.test.ts:31",
+      "second": "tests/tui/documents/editing/selection.test.ts:213",
+      "lines": 22,
+      "tokens": 265,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "6f73dceb42b304a0680499c8f45c62f09cedafc476639c42a924edf2c6dc801c"
+    },
+    {
+      "id": "ORG-T40-C131",
+      "first": "tests/tui/documents/editing/lines.test.ts:31",
+      "second": "tests/tui/shell/input/key-names.test.ts:14",
+      "lines": 22,
+      "tokens": 265,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "6f73dceb42b304a0680499c8f45c62f09cedafc476639c42a924edf2c6dc801c"
+    },
+    {
+      "id": "ORG-T40-C132",
+      "first": "tests/tui/documents/editing/lines.test.ts:31",
+      "second": "tests/tui/shell/input/operators.test.ts:131",
+      "lines": 22,
+      "tokens": 265,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "6f73dceb42b304a0680499c8f45c62f09cedafc476639c42a924edf2c6dc801c"
+    },
+    {
+      "id": "ORG-T40-C133",
+      "first": "tests/tui/documents/editing/lines.test.ts:31",
+      "second": "tests/tui/shell/input/repeat.test.ts:60",
+      "lines": 22,
+      "tokens": 265,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "6f73dceb42b304a0680499c8f45c62f09cedafc476639c42a924edf2c6dc801c"
+    },
+    {
+      "id": "ORG-T40-C134",
+      "first": "tests/tui/documents/editing/selection.test.ts:154",
+      "second": "tests/tui/documents/search/replace.test.ts:8",
+      "lines": 15,
+      "tokens": 195,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "dda07d4f1c49f9302aeb6bcabe49aec0f0ef5d89d1a829fe585afbf11e20566c"
+    },
+    {
+      "id": "ORG-T40-C135",
+      "first": "tests/tui/documents/editing/selection.test.ts:157",
+      "second": "tests/tui/documents/saving/conflicts.test.ts:172",
+      "lines": 12,
+      "tokens": 185,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "512e29935188d58467ce3f356c864cccd86b76ab59af2c8175c140fc1ba2f685"
+    },
+    {
+      "id": "ORG-T40-C136",
+      "first": "tests/tui/documents/editing/undo.test.ts:30",
+      "second": "tests/tui/shell/input/motions.test.ts:49",
+      "lines": 11,
+      "tokens": 77,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "37d58c0700a6cfb0929cc5f861fb8506dc59bcc4b3302db2f2f7a4da2f1055db"
+    },
+    {
+      "id": "ORG-T40-C137",
+      "first": "tests/tui/documents/media/pictures.test.ts:390",
+      "second": "tests/tui/documents/media/pictures.test.ts:670",
+      "lines": 13,
+      "tokens": 132,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "ecc4480b3892ed73d6a1b37bdea5fe403fed00d1dee7c63c7ae1fab118f593c5"
+    },
+    {
+      "id": "ORG-T40-C138",
+      "first": "tests/tui/documents/navigation/explicit-links.test.ts:194",
+      "second": "tests/tui/documents/navigation/explicit-links.test.ts:337",
+      "lines": 11,
+      "tokens": 91,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "adb2139f1d2ad1a3406058a5c4465cad8e55e8efd56f43100112c1c6e826df3d"
+    },
+    {
+      "id": "ORG-T40-C139",
+      "first": "tests/tui/documents/navigation/explicit-links.test.ts:212",
+      "second": "tests/tui/documents/navigation/explicit-links.test.ts:259",
+      "lines": 11,
+      "tokens": 103,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "cc37f872ed19d9d5262d3fdd762ae27631cc6ebbc9f96be72af3e7cf1c3be275"
+    },
+    {
+      "id": "ORG-T40-C140",
+      "first": "tests/tui/documents/navigation/explicit-links.test.ts:361",
+      "second": "tests/tui/documents/navigation/explicit-links.test.ts:387",
+      "lines": 13,
+      "tokens": 143,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "21254a85d1ea8ff767cd4c13f3c4be8b5c07cf399f4fe32fff6ef17828e631d7"
+    },
+    {
+      "id": "ORG-T40-C141",
+      "first": "tests/tui/documents/navigation/explicit-links.test.ts:361",
+      "second": "tests/tui/documents/navigation/explicit-links.test.ts:445",
+      "lines": 11,
+      "tokens": 109,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "9d3672299142b90432ca9debf4406114ae0010763ab868bc6879ab060d88aa67"
+    },
+    {
+      "id": "ORG-T40-C142",
+      "first": "tests/tui/documents/navigation/link-completion.test.ts:13",
+      "second": "tests/tui/documents/navigation/peek.test.ts:10",
+      "lines": 32,
+      "tokens": 210,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "21fce43f93926c4c45ff43e8692cc974b6c17f00b19b4f937c781098ac4f14d4"
+    },
+    {
+      "id": "ORG-T40-C143",
+      "first": "tests/tui/documents/navigation/link-completion.test.ts:13",
+      "second": "tests/tui/workspace/explorer/renaming.test.ts:8",
+      "lines": 32,
+      "tokens": 210,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "21fce43f93926c4c45ff43e8692cc974b6c17f00b19b4f937c781098ac4f14d4"
+    },
+    {
+      "id": "ORG-T40-C144",
+      "first": "tests/tui/documents/navigation/link-completion.test.ts:13",
+      "second": "tests/tui/workspace/vaults/explorer.test.ts:11",
+      "lines": 32,
+      "tokens": 210,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "21fce43f93926c4c45ff43e8692cc974b6c17f00b19b4f937c781098ac4f14d4"
+    },
+    {
+      "id": "ORG-T40-C145",
+      "first": "tests/tui/documents/navigation/peek.test.ts:10",
+      "second": "tests/tui/workspace/search/roots.test.ts:8",
+      "lines": 32,
+      "tokens": 214,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "f449530d26e2642511769ecb612a9cc3212ccd0acf5acaa81b18dfb78a8fb132"
+    },
+    {
+      "id": "ORG-T40-C146",
+      "first": "tests/tui/documents/navigation/peek/backlinks.test.ts:13",
+      "second": "tests/tui/documents/navigation/peek/index-cleanup.test.ts:11",
+      "lines": 32,
+      "tokens": 219,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "651964c0196c939bdd9b10f496f6fc34d9afa48ea38b2ff669365ace34dce913"
+    },
+    {
+      "id": "ORG-T40-C147",
+      "first": "tests/tui/documents/navigation/peek/backlinks.test.ts:13",
+      "second": "tests/tui/documents/navigation/peek/records.test.ts:16",
+      "lines": 32,
+      "tokens": 219,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "651964c0196c939bdd9b10f496f6fc34d9afa48ea38b2ff669365ace34dce913"
+    },
+    {
+      "id": "ORG-T40-C148",
+      "first": "tests/tui/documents/navigation/peek/scheduling.test.ts:194",
+      "second": "tests/tui/documents/navigation/peek/scheduling.test.ts:396",
+      "lines": 15,
+      "tokens": 108,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "415ebf6ace8febdcd7b2900c1400e2f8f043d16184ab11c7d1a7a6ffdca6120d"
+    },
+    {
+      "id": "ORG-T40-C149",
+      "first": "tests/tui/documents/navigation/peek/scheduling.test.ts:194",
+      "second": "tests/tui/documents/navigation/peek/scheduling.test.ts:1026",
+      "lines": 14,
+      "tokens": 87,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "352de6e5bb43114baae0e4354d1a4007d5e11631aaacd5a7494396892d49699b"
+    },
+    {
+      "id": "ORG-T40-C150",
+      "first": "tests/tui/documents/navigation/peek/scheduling.test.ts:567",
+      "second": "tests/tui/documents/navigation/peek/scheduling.test.ts:988",
+      "lines": 13,
+      "tokens": 114,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "96a0f420696e459290e241458e2c4c8dcf158d6b8fb028a774a78f75474285b9"
+    },
+    {
+      "id": "ORG-T40-C151",
+      "first": "tests/tui/documents/navigation/peek/scheduling.test.ts:962",
+      "second": "tests/tui/documents/navigation/peek/scheduling.test.ts:1096",
+      "lines": 13,
+      "tokens": 94,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "b1cb38889b0f9c4ef1c75c808a3b1bc8a8b8c50269dc14390160e1eab0c4d9a8"
+    },
+    {
+      "id": "ORG-T40-C152",
+      "first": "tests/tui/documents/navigation/peek/scheduling.test.ts:1065",
+      "second": "tests/tui/documents/navigation/peek/scheduling.test.ts:1171",
+      "lines": 11,
+      "tokens": 98,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "ad90cb7a8f6edc3728b795c4440352c7f34da43f386c7d937df56b12807a2f4f"
+    },
+    {
+      "id": "ORG-T40-C153",
+      "first": "tests/tui/documents/saving/conflicts.test.ts:164",
+      "second": "tests/tui/documents/saving/reload.test.ts:9",
+      "lines": 20,
+      "tokens": 249,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "13901e70ace0ad2e58510c61200a46d4868145ebb1af0b41e40d652558224c78"
+    },
+    {
+      "id": "ORG-T40-C154",
+      "first": "tests/tui/documents/search/find-navigation.test.ts:53",
+      "second": "tests/tui/documents/search/replace.test.ts:52",
+      "lines": 20,
+      "tokens": 189,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "73b954f4d5d2e9ecdc32454512eb880c2e178c29de0125bdf227385f9ffeed2d"
+    },
+    {
+      "id": "ORG-T40-C155",
+      "first": "tests/tui/documents/search/find-navigation.test.ts:53",
+      "second": "tests/tui/shell/input/operators.test.ts:62",
+      "lines": 20,
+      "tokens": 189,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "73b954f4d5d2e9ecdc32454512eb880c2e178c29de0125bdf227385f9ffeed2d"
+    },
+    {
+      "id": "ORG-T40-C156",
+      "first": "tests/tui/documents/search/replace.test.ts:5",
+      "second": "tests/tui/shell/input/motions.test.ts:5",
+      "lines": 18,
+      "tokens": 201,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "fda80e5130dc3cb77330946ee47892c39bce69d21ea9c8a233f3ce328745cd8a"
+    },
+    {
+      "id": "ORG-T40-C157",
+      "first": "tests/tui/documents/search/replace.test.ts:5",
+      "second": "tests/tui/shell/input/operators.test.ts:5",
+      "lines": 18,
+      "tokens": 204,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "fda80e5130dc3cb77330946ee47892c39bce69d21ea9c8a233f3ce328745cd8a"
+    },
+    {
+      "id": "ORG-T40-C158",
+      "first": "tests/tui/documents/search/replace.test.ts:5",
+      "second": "tests/tui/shell/input/paste.test.ts:5",
+      "lines": 18,
+      "tokens": 201,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "fda80e5130dc3cb77330946ee47892c39bce69d21ea9c8a233f3ce328745cd8a"
+    },
+    {
+      "id": "ORG-T40-C159",
+      "first": "tests/tui/documents/search/replace.test.ts:5",
+      "second": "tests/tui/shell/input/repeat.test.ts:5",
+      "lines": 18,
+      "tokens": 201,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "fda80e5130dc3cb77330946ee47892c39bce69d21ea9c8a233f3ce328745cd8a"
+    },
+    {
+      "id": "ORG-T40-C160",
+      "first": "tests/tui/documents/tools/footnotes.test.ts:188",
+      "second": "tests/tui/documents/tools/properties.test.ts:170",
+      "lines": 15,
+      "tokens": 131,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "41a329f60e9f487066da8dd522ea6f0d0a8c21b2123f497938b2a431ba611b9f"
+    },
+    {
+      "id": "ORG-T40-C161",
+      "first": "tests/tui/documents/tools/refusals.test.ts:2",
+      "second": "tests/tui/workspace/explorer/exclusions.test.ts:2",
+      "lines": 12,
+      "tokens": 97,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "39835dfa771e2474fefbbd31c02e30f68be54461b081668e3e1d69acab992f81"
+    },
+    {
+      "id": "ORG-T40-C162",
+      "first": "tests/tui/documents/views/code-comments.test.ts:94",
+      "second": "tests/tui/documents/views/code-notebook.test.ts:71",
+      "lines": 15,
+      "tokens": 104,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "966730f5dcfa9ef83dc1962af1aaa3e7fe02642020f8982bdf2b224cd6ea6acf"
+    },
+    {
+      "id": "ORG-T40-C163",
+      "first": "tests/tui/documents/views/header-controls.test.ts:1",
+      "second": "tests/tui/shell/overlays/lists.test.ts:2",
+      "lines": 13,
+      "tokens": 99,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "f75272a2b7a5397b23aa0ca5067a6eca6d2560045cea6af68c41bb5e5885b84c"
+    },
+    {
+      "id": "ORG-T40-C164",
+      "first": "tests/tui/documents/views/header-controls.test.ts:1",
+      "second": "tests/tui/shell/panels/pointer.test.ts:1",
+      "lines": 13,
+      "tokens": 109,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "f75272a2b7a5397b23aa0ca5067a6eca6d2560045cea6af68c41bb5e5885b84c"
+    },
+    {
+      "id": "ORG-T40-C165",
+      "first": "tests/tui/documents/views/header-controls.test.ts:2",
+      "second": "tests/tui/shell/screen/tab-strip.test.ts:4",
+      "lines": 12,
+      "tokens": 95,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "32e51f6e754d695a8ce6dd6edf8882576b759ae8fcf8346fe8e90afb750ebdce"
+    },
+    {
+      "id": "ORG-T40-C166",
+      "first": "tests/tui/documents/views/header.test.ts:551",
+      "second": "tests/tui/documents/views/header.test.ts:584",
+      "lines": 20,
+      "tokens": 241,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "59cb5f25b9cf2d2e95b23db5c451993f9adb589b15f75e5ff2c990d7ca464b8c"
+    },
+    {
+      "id": "ORG-T40-C167",
+      "first": "tests/tui/shell/updates/updates.test.ts:456",
+      "second": "tests/tui/shell/updates/updates.test.ts:809",
+      "lines": 12,
+      "tokens": 87,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "14890e3d9f0664a46e3709dfdf1e0a10bb1256f7ed038ea00a878f7fd740364b"
+    },
+    {
+      "id": "ORG-T40-C168",
+      "first": "tests/tui/workspace/explorer/renaming.test.ts:5",
+      "second": "tests/tui/workspace/vaults/switching.test.ts:6",
+      "lines": 35,
+      "tokens": 226,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "51b62244496c795ee3558f736711e70dc8d176085cbf6974a5ae9e4eff862a49"
+    },
+    {
+      "id": "ORG-T40-C169",
+      "first": "tests/tui/workspace/explorer/walk-thread.test.ts:200",
+      "second": "tests/tui/workspace/explorer/walk-thread.test.ts:221",
+      "lines": 11,
+      "tokens": 105,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "6dca538e59e19908e84d406cbf94841ece09f1e41a3465deec9e9928cbc171a8"
+    },
+    {
+      "id": "ORG-T40-C170",
+      "first": "tests/tui/workspace/git/commit.test.ts:10",
+      "second": "tests/tui/workspace/git/panel-commands.test.ts:11",
+      "lines": 11,
+      "tokens": 120,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "eb407caaa886d03f7432c5ac6ff9c75dadd2c29426b3e79fc8b44155e24cf060"
+    },
+    {
+      "id": "ORG-T40-C171",
+      "first": "tests/tui/workspace/git/commit.test.ts:43",
+      "second": "tests/tui/workspace/git/commit.test.ts:61",
+      "lines": 11,
+      "tokens": 73,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "d73274d78b6433b1da902c38dd1548fc0ce36487ac686a64300312defaa48909"
+    },
+    {
+      "id": "ORG-T40-C172",
+      "first": "tests/tui/workspace/git/panel/branches.test.ts:603",
+      "second": "tests/tui/workspace/git/panel/branches.test.ts:780",
+      "lines": 11,
+      "tokens": 86,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "6384ba11f5d75fc86a0defec05b55243a7575768c7aca6195a9ec0b220dcc3a6"
+    },
+    {
+      "id": "ORG-T40-C173",
+      "first": "tests/tui/workspace/git/panel/repositories.test.ts:21",
+      "second": "tests/tui/workspace/git/panel/stable-rows.test.ts:97",
+      "lines": 11,
+      "tokens": 130,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "c0bf77fb4adfcd5f3c3ad6cd49ffc64f060d0c8afe035c4dbda464d9e54d8069"
+    },
+    {
+      "id": "ORG-T40-C174",
+      "first": "tests/tui/workspace/git/panel/stable-rows.test.ts:71",
+      "second": "tests/tui/workspace/git/panel/stable-rows.test.ts:846",
+      "lines": 18,
+      "tokens": 250,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "937deef0cf41b47f006d6fb01d2e1b4bac1a7db36d0328f6221d2e2036334526"
+    },
+    {
+      "id": "ORG-T40-C175",
+      "first": "tests/tui/workspace/git/panel/stable-rows.test.ts:427",
+      "second": "tests/tui/workspace/git/panel/stable-rows.test.ts:688",
+      "lines": 17,
+      "tokens": 193,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "e625ece6892a571046f949cd0d2aae19c53f4d023d95489c838a70342e8cf5cd"
+    },
+    {
+      "id": "ORG-T40-C176",
+      "first": "tests/tui/workspace/git/panel/stable-rows.test.ts:427",
+      "second": "tests/tui/workspace/git/panel/stable-rows.test.ts:874",
+      "lines": 17,
+      "tokens": 195,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "e625ece6892a571046f949cd0d2aae19c53f4d023d95489c838a70342e8cf5cd"
+    },
+    {
+      "id": "ORG-T40-C177",
+      "first": "tests/tui/workspace/git/panel/stable-rows.test.ts:435",
+      "second": "tests/tui/workspace/git/panel/stable-rows.test.ts:467",
+      "lines": 11,
+      "tokens": 82,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "a0c2a1e5c777d4b25037e6c1d82b97b95cbde180153f0faaf964a53ebbaf74c8"
+    },
+    {
+      "id": "ORG-T40-C178",
+      "first": "tests/tui/workspace/git/panel/stable-rows.test.ts:489",
+      "second": "tests/tui/workspace/git/panel/stable-rows.test.ts:954",
+      "lines": 11,
+      "tokens": 160,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "14cf8a2b30375a07fa5d8876505953a97880403361387460f327e7b31b7153e2"
+    },
+    {
+      "id": "ORG-T40-C179",
+      "first": "tests/tui/workspace/git/panel/stable-rows.test.ts:731",
+      "second": "tests/tui/workspace/git/panel/stable-rows.test.ts:994",
+      "lines": 12,
+      "tokens": 160,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "5ec3dd2a2d6982b583ada089561cbe21fdd1045482237c629bce3b62270c5738"
+    },
+    {
+      "id": "ORG-T40-C180",
+      "first": "tests/tui/workspace/git/remote.test.ts:10",
+      "second": "tests/tui/workspace/git/review-journeys.test.ts:11",
+      "lines": 14,
+      "tokens": 138,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "b3f04f7ba1d5c3170d8df1ed413f68bd6a3d7790dd697d42086aa377425a65e5"
+    },
+    {
+      "id": "ORG-T40-C181",
+      "first": "tests/tui/workspace/vaults/autoindex.test.ts:643",
+      "second": "tests/tui/workspace/vaults/autoindex.test.ts:719",
+      "lines": 11,
+      "tokens": 101,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "2a350e5c711e912222650f141a989b12f66f41d2baaa29853c22086cdd0b2b0d"
+    },
+    {
+      "id": "ORG-T40-C182",
+      "first": "tests/tui/workspace/vaults/autoindex.test.ts:685",
+      "second": "tests/tui/workspace/vaults/autoindex.test.ts:729",
+      "lines": 21,
+      "tokens": 130,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "c87cf5eca700ee4bef31a50f40e6883a288591f89d84f08854ad0c38ffdde07e"
+    },
+    {
+      "id": "ORG-T40-C183",
+      "first": "tests/tui/workspace/vaults/autoindex.test.ts:705",
+      "second": "tests/tui/workspace/vaults/autoindex.test.ts:752",
+      "lines": 12,
+      "tokens": 124,
+      "group": "unit-scenarios-and-owner-fixtures",
+      "disposition": "retain",
+      "fragmentSha256": "05e13899edc014d12a20e342867ad8357f17771469a660c982e18ddb3bded906"
+    }
+  ],
+  "comparisonNote": "Independent scans; tool newClones/isNew flags are not a historical comparison. Source pairs are mapped in task40; terminal endpoint/line/fragment tuples match exactly."
+}
