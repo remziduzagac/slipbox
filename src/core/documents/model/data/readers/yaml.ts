@@ -89,7 +89,7 @@ export function readYaml(source: string, json: boolean): ParsedData {
 }
 
 /** A node's value as one line: scalars as they read, lists and maps inline. */
-export function inline(node: YamlNode | null | undefined): string {
+function inline(node: YamlNode | null | undefined): string {
   if (!node) return "";
   if (isScalar(node)) return node.value === null ? "null" : String(node.value);
   if (isSeq(node)) return `[${node.items.map((x) => inline(x as YamlNode)).join(", ")}]`;
@@ -98,7 +98,7 @@ export function inline(node: YamlNode | null | undefined): string {
   return String((node as { toString(): string }).toString()).replace(/\s+/g, " ");
 }
 
-export function scalarKind(node: YamlNode | null | undefined): DataField["kind"] {
+function scalarKind(node: YamlNode | null | undefined): DataField["kind"] {
   if (!node) return "null";
   if (isSeq(node)) return "list";
   if (isMap(node)) return "table";
@@ -112,10 +112,10 @@ export function scalarKind(node: YamlNode | null | undefined): DataField["kind"]
 }
 
 /** A small map of plain values reads on one line (`{connect: 5, idle: 300}`) up to this width. */
-export const INLINE_MAP = 40;
+const INLINE_MAP = 40;
 
 /** Whether a value is a leaf row: a scalar, a list of scalars, an empty or a small plain map. */
-export function leaf(node: YamlNode | null | undefined): boolean {
+function leaf(node: YamlNode | null | undefined): boolean {
   if (!node || (!isMap(node) && !isSeq(node))) return true;
   const items = (node as unknown as { items: unknown[] }).items;
   if (!items.length) return true;
@@ -133,12 +133,7 @@ export function leaf(node: YamlNode | null | undefined): boolean {
  * branch row with its children after it; a list of records is a table in the tree. Each row keeps
  * its own source lines, so the lens edits it. `lasts`: the parent's place; null at the top.
  */
-export function walkYaml(
-  node: YamlNode,
-  lasts: boolean[] | null,
-  out: RootContent[],
-  lineOf: (o: number) => number,
-): void {
+function walkYaml(node: YamlNode, lasts: boolean[] | null, out: RootContent[], lineOf: (o: number) => number): void {
   const lineAt = (n: YamlNode | null | undefined, fallback = 1) => (n?.range ? lineOf(n.range[0]) : fallback);
   type Child = { name: string; key: YamlNode | null; value: YamlNode | null; line: number };
   let children: Child[];
@@ -242,12 +237,12 @@ export function walkYaml(
 }
 
 /** A table of records as a row of the tree: drawn under its key, inside the guides. */
-export function treeTable(t: Table, lasts: boolean[]): RootContent {
+function treeTable(t: Table, lasts: boolean[]): RootContent {
   return { ...t, data: { ...t.data, tree: { lasts } } } as RootContent;
 }
 
 /** A list of two or more maps whose values are all plain: a table's rows. */
-export function records(seq: YamlNode): boolean {
+function records(seq: YamlNode): boolean {
   if (!isSeq(seq) || seq.items.length < 2) return false;
   return seq.items.every(
     (it) =>
@@ -258,7 +253,7 @@ export function records(seq: YamlNode): boolean {
   );
 }
 
-export function recordTable(seq: YamlNode, lineOf: (o: number) => number): Table {
+function recordTable(seq: YamlNode, lineOf: (o: number) => number): Table {
   const items = (seq as unknown as { items: YamlNode[] }).items;
   const cols = [
     ...new Set(items.flatMap((m) => (m as unknown as { items: { key: YamlNode }[] }).items.map((p) => inline(p.key)))),

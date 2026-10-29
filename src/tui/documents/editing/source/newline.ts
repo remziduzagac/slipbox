@@ -52,7 +52,7 @@ export function newline(app: App, view: View): void {
 }
 
 /** Whether source line `src` (1-based) is inside a fenced code block: the fences above it, counted. */
-export function inFence(view: View, src: number): boolean {
+function inFence(view: View, src: number): boolean {
   let fence: string | null = null;
   for (let n = 1; n < src; n++) {
     const f = /^\s{0,3}(`{3,}|~{3,})/.exec(lineText(view, n));
@@ -64,4 +64,4 @@ export function inFence(view: View, src: number): boolean {
 }
 
 /** The brackets a line ending in one opens: a new line inside goes a level in (25.1). */
-export const OPENS: Record<string, string> = { "{": "}", "[": "]", "(": ")" };
+const OPENS: Record<string, string> = { "{": "}", "[": "]", "(": ")" };

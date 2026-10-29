@@ -3,7 +3,7 @@
 // ---------------------------------------------------------------------------------------------
 // YAML and JSON
 /** Past whitespace and comments from `k`: the index of the next character that says something. */
-export function nextSignificant(s: string, k: number): number {
+function nextSignificant(s: string, k: number): number {
   while (k < s.length) {
     if (/\s/.test(s[k]!)) k++;
     else if (s.startsWith("//", k)) while (k < s.length && s[k] !== "\n") k++;

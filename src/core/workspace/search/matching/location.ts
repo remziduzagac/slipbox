@@ -6,7 +6,7 @@ import { indexDoc } from "../model/document.ts";
 import { fold, occurrences } from "./text.ts";
 
 /** How much of a line the snippet shows around the first match. */
-export const SNIPPET = 120;
+const SNIPPET = 120;
 
 /**
  * Where a matched file opens: the section with most of the query's words (the first such), at its
@@ -63,7 +63,7 @@ export function locate(path: string, group: "note" | "data", text: string, score
 }
 
 /** A line as a snippet: white space run together, cut to about 120 characters around its first match, the words marked. */
-export function snippetOf(raw: string, pos: QueryTerm[]): { snippet: string; marks: [number, number][] } {
+function snippetOf(raw: string, pos: QueryTerm[]): { snippet: string; marks: [number, number][] } {
   // Sanitized first, so the marks are where the words are in what's shown.
   let line = sanitize(raw).replace(/\s+/g, " ").trim();
   const find = () => {

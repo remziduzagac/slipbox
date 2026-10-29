@@ -225,6 +225,5 @@ export {
   type AnchorInfo,
 } from "./parse/contracts.ts";
 export { parseLegacy } from "./parse/engine.ts";
-export { HEADING_ID } from "./parse/transforms.ts";
 export { visit } from "./parse/visit.ts";
 export { anchorsOf, slugify, headingsOf, headingLabel, headingText, plainText, noteTitle } from "./parse/headings.ts";

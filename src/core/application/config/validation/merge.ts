@@ -7,26 +7,26 @@ import { isPlainObject } from "./predicates.ts";
 import { LANGUAGE_FIELDS, LINTER_FIELDS, SERVER_FIELDS, TYPE_FIELDS, checkFields } from "./fields.ts";
 
 /** Settings that were, and why they aren't: said once, never an unknown key's warning. */
-export const RETIRED: Record<string, string> = {
+const RETIRED: Record<string, string> = {
   "ui.top_bar": "the top bar is always shown",
   rename: "renames no longer write a note's old name into it; links reach notes by their paths",
 };
 
 /** Values your config may still say vault for, each read as the word that took its place (DF-D22). */
-export const OLD_VALUES: Record<string, Record<string, string>> = {
+const OLD_VALUES: Record<string, Record<string, string>> = {
   "capture.location": { vault: "root" },
   // The explorer's actions, bound in [keys.explorer].
   "keys.explorer": { rename_vault: "rename_root", make_vault: "make_root", unmake_vault: "unmake_root" },
 };
 
 /** The word that took an old one's place where `path` takes it, else the value as given. */
-export function renewed(path: string, value: string): string {
+function renewed(path: string, value: string): string {
   const old = Object.hasOwn(OLD_VALUES, path) ? OLD_VALUES[path]! : {};
   return Object.hasOwn(old, value) ? old[value]! : value;
 }
 
 /** Keys whose values come from a fixed set. Anything else is a warning and the default stays. */
-export const ENUMS: Record<string, readonly string[]> = {
+const ENUMS: Record<string, readonly string[]> = {
   "render.glyphs": ["auto", "nerd", "unicode", "ascii"],
   "render.show_urls": ["auto", "always", "never"],
   "render.code_cells": ["box", "band"],
@@ -56,7 +56,7 @@ export const ENUMS: Record<string, readonly string[]> = {
 };
 
 /** Numeric keys and their allowed range. */
-export const RANGES: Record<string, [number, number]> = {
+const RANGES: Record<string, [number, number]> = {
   "editor.lens_min_rows": [1, 200],
   "editor.lens_max": [0.1, 1],
   "editor.autosave_ms": [0, 3_600_000],
@@ -80,7 +80,7 @@ export const RANGES: Record<string, [number, number]> = {
 };
 
 /** Ranged settings that may be fractional; every other ranged number must be whole. */
-export const FRACTIONAL = new Set(["ui.split_ratio", "editor.lens_max"]);
+const FRACTIONAL = new Set(["ui.split_ratio", "editor.lens_max"]);
 
 /** Merge `over` into `base`, typed by `base`'s shape. Unknown keys and wrong types are warnings. */
 export function merge<T>(base: T, over: Record<string, unknown>, file: string, prefix: string, warnings: string[]): T {

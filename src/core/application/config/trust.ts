@@ -35,7 +35,7 @@ export const VAULT_FORBIDDEN_COMMANDS = [
 ];
 
 /** Of those, the ones that run a program (25.7, RPT-D6): a folder's key would run what the folder chose. */
-export const RUNS_A_PROGRAM = new Set(["shell.run", "shell.filter", "help.report_send"]);
+const RUNS_A_PROGRAM = new Set(["shell.run", "shell.filter", "help.report_send"]);
 
 export function dropUserOnly(data: Record<string, unknown>, file: string, warnings: string[]): void {
   // Keys and aliases (every mode's table) that name a command throwing work away.

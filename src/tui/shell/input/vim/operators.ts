@@ -110,15 +110,7 @@ export async function operatorKey(app: App, view: View, key: string): Promise<vo
 }
 
 /** An operator with f / t: f and t take the character they land on, F and T don't. */
-export function findRange(
-  app: App,
-  view: View,
-  op: Op,
-  kind: FindKind,
-  ch: string,
-  count: number,
-  repeat: boolean,
-): void {
+function findRange(app: App, view: View, op: Op, kind: FindKind, ch: string, count: number, repeat: boolean): void {
   const to = C.findChar(app.currentLayout(view), view.cur, kind, ch, count, repeat);
   if (!to)
     return app.message("info", `no ${ch} ${kind === "f" || kind === "t" ? "after" : "before"} the cursor on this line`);

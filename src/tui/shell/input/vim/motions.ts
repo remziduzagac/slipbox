@@ -4,7 +4,7 @@ import * as E from "../../../documents/editing/editing.ts";
 import type { Op, Range } from "./state.ts";
 /** Motions that take whole lines under an operator, and those that include the character they
  *  land on. */
-export const LINEWISE = new Set([
+const LINEWISE = new Set([
   "cursor.up",
   "cursor.down",
   "cursor.top",
@@ -15,7 +15,7 @@ export const LINEWISE = new Set([
   "cursor.page_up",
 ]);
 
-export const INCLUSIVE = new Set(["cursor.word_end", "cursor.line_end", "cursor.match_bracket"]);
+const INCLUSIVE = new Set(["cursor.word_end", "cursor.line_end", "cursor.match_bracket"]);
 
 /** Where a motion goes (run `count` times, then the cursor put back), as a text range. */
 export async function motionRange(app: App, view: View, spec: string, count: number, op: Op): Promise<Range | null> {

@@ -10,7 +10,7 @@ export interface KeyLike {
   sequence: string;
 }
 
-export const RENAME: Record<string, string> = {
+const RENAME: Record<string, string> = {
   return: "enter",
   esc: "escape",
   " ": "space",

@@ -18,7 +18,7 @@ export function dialogWidth(W: number): number {
 }
 
 /** The question's lines, wrapped to the window (at most six). */
-export function dialogLines(o: PromptOverlay, w: number): string[] {
+function dialogLines(o: PromptOverlay, w: number): string[] {
   return wrapWords(sanitize(o.label.trim()), w - 4).slice(0, 6);
 }
 

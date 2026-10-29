@@ -47,7 +47,7 @@ export function listDir(st: WalkState, dirRel: string, descend: (rel: string) =>
   }
 }
 
-export function handleSymlink(abs: string, rel: string, st: WalkState, descend: (rel: string) => void): void {
+function handleSymlink(abs: string, rel: string, st: WalkState, descend: (rel: string) => void): void {
   const { filter, out, realRoot } = st;
   const v = symlinkVerdict(abs, realRoot);
   if (!v.kept) {
@@ -80,7 +80,7 @@ export function handleSymlink(abs: string, rel: string, st: WalkState, descend: 
   if (added?.rel === rel) st.links.set(added, relative(realRoot, target).split(sep).join("/"));
 }
 
-export function addFile(abs: string, rel: string, filter: WalkFilter, out: WalkResult): void {
+function addFile(abs: string, rel: string, filter: WalkFilter, out: WalkResult): void {
   try {
     const st = statSync(abs);
     if (st.size > filter.maxFileSize) {

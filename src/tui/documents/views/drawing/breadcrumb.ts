@@ -63,4 +63,4 @@ export function drawBreadcrumb(
   });
 }
 
-export const CRUMB_MAX = 40;
+const CRUMB_MAX = 40;

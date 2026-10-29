@@ -201,7 +201,7 @@ export const GIT_ACTIONS = [
 ];
 
 /** Moving about a list pane — the outline, the footnotes, Info: key → action. */
-export const PANE_KEYS: Record<string, string> = {
+const PANE_KEYS: Record<string, string> = {
   j: "down",
   down: "down",
   k: "up",
@@ -218,7 +218,7 @@ export const PANE_KEYS: Record<string, string> = {
   escape: "leave",
 };
 
-export const PANE_ACTIONS = ["down", "up", "jump", "fold", "unfold", "top", "bottom", "filter", "close", "leave"];
+const PANE_ACTIONS = ["down", "up", "jump", "fold", "unfold", "top", "bottom", "filter", "close", "leave"];
 
 /** Keys inside the outline pane: key → outline action. */
 export const DEFAULT_OUTLINE_KEYS: Record<string, string> = { ...PANE_KEYS, r: "rename" };

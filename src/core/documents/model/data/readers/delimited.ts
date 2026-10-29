@@ -5,7 +5,7 @@ import type { ParsedData } from "../contracts.ts";
 import { pos, table } from "../nodes.ts";
 
 /** A CSV longer than this renders its first rows; source mode has them all. */
-export const CSV_ROWS = 2000;
+const CSV_ROWS = 2000;
 
 // ---------------------------------------------------------------------------------------------
 // CSV and TSV

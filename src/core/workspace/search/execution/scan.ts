@@ -9,7 +9,7 @@ import { indexDoc } from "../model/document.ts";
 import { fold, occurrences } from "../matching/text.ts";
 import { locate } from "../matching/location.ts";
 
-export function scanned(g: Graph, texts?: Map<string, string>, only?: string[]): Scanned[] {
+function scanned(g: Graph, texts?: Map<string, string>, only?: string[]): Scanned[] {
   const out: Scanned[] = [];
   const keep = only ? new Set(only) : null;
   for (const [path, s] of searchable(g)) {
@@ -28,16 +28,16 @@ export function scanned(g: Graph, texts?: Map<string, string>, only?: string[]):
 }
 
 /** ASCII letters lowered, as SQLite's LIKE compares them: the index's `path:` and the scan's agree. */
-export const asciiLower = (s: string) => s.replace(/[A-Z]/g, (c) => c.toLowerCase());
+const asciiLower = (s: string) => s.replace(/[A-Z]/g, (c) => c.toLowerCase());
 
-export function keeps(f: Scanned, q: SearchQuery): boolean {
+function keeps(f: Scanned, q: SearchQuery): boolean {
   if (q.paths.length && !q.paths.some((p) => asciiLower(f.path).startsWith(asciiLower(p)))) return false;
   const tags = f.doc.tags.map((t) => t.toLowerCase());
   return q.tags.every((t) => tags.some((x) => x === t || x.startsWith(`${t}/`)));
 }
 
 /** A scanned file's fields, folded: title, aliases, tags, path, headings, text (the index's columns). */
-export function foldedFields(f: Scanned): string[] {
+function foldedFields(f: Scanned): string[] {
   const d = f.doc;
   return [
     d.title,
@@ -50,7 +50,7 @@ export function foldedFields(f: Scanned): string[] {
 }
 
 /** How often a term occurs in each field (`title:` in the title and aliases only). */
-export function countsIn(fields: string[], t: QueryTerm): number[] {
+function countsIn(fields: string[], t: QueryTerm): number[] {
   return fields.map((x, k) => (t.title && k > 1 ? 0 : occurrences(x, t).length));
 }
 

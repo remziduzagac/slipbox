@@ -3,7 +3,7 @@
 import { tagName } from "../../../documents/markdown/tags.ts";
 import type { QueryTerm, SearchQuery } from "../model/contracts.ts";
 
-export const WORDY = /[\p{L}\p{N}]/u;
+const WORDY = /[\p{L}\p{N}]/u;
 
 /**
  * Words (all of them, by default), "phrases", prefix*, -not, title:word, and the filters #tag,

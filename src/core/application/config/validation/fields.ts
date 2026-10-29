@@ -10,10 +10,10 @@ import { isBoolean, isPlainObject, isString, isStrings, validRegex } from "./pre
  */
 export type FieldCheck = [check: (v: unknown) => boolean, must: string];
 
-export const STRINGS: FieldCheck = [isStrings, "a list of strings"];
+const STRINGS: FieldCheck = [isStrings, "a list of strings"];
 
 /** A language's server: its name, or `{ name, only-features, except-features }` (Helix's). */
-export const isServerRef = (v: unknown): boolean =>
+const isServerRef = (v: unknown): boolean =>
   isString(v) ||
   (isPlainObject(v) &&
     isString(v.name) &&

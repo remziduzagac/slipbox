@@ -45,9 +45,9 @@ export function problemLines(problems: Problem[]): Map<number, Problem[]> {
 }
 
 /** Each source line's first row in a layout: where the bar counts its problems. */
-export const firstRowCache = new WeakMap<Layout, Map<number, number>>();
+const firstRowCache = new WeakMap<Layout, Map<number, number>>();
 
-export function firstRows(layout: Layout): Map<number, number> {
+function firstRows(layout: Layout): Map<number, number> {
   let m = firstRowCache.get(layout);
   if (m) return m;
   m = new Map();

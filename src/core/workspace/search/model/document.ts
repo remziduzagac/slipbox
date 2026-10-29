@@ -9,10 +9,10 @@ import { BAND_MAX, cut, pieces, section, tokensOf, units } from "./sections.ts";
 import { ATX, FENCE, NOT_PARAGRAPH, SETEXT } from "./syntax.ts";
 
 /** Frontmatter bigger than this isn't read for a title, aliases and tags. */
-export const MAX_FRONTMATTER = 64 * 1024;
+const MAX_FRONTMATTER = 64 * 1024;
 
 /** The strings a frontmatter value holds: a list, or one string (split on commas for tags). */
-export function strings(v: unknown, split = false): string[] {
+function strings(v: unknown, split = false): string[] {
   if (Array.isArray(v)) return v.filter((x) => typeof x === "string" || typeof x === "number").map(String);
   if (typeof v === "string") return split ? v.split(/[,\s]+/).filter(Boolean) : [v];
   return [];

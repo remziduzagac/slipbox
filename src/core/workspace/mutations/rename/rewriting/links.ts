@@ -60,7 +60,7 @@ export function ownFileLinks(
  * `targetAbs`: `./` kept, an extension left off where it was, a folder's `/` and the fragment kept;
  * never encoded, since a comment or a data file's value isn't a URL.
  */
-export function relativeAs(written: string, fileAbs: string, targetAbs: string): string {
+function relativeAs(written: string, fileAbs: string, targetAbs: string): string {
   const hash = written.indexOf("#");
   const frag = hash >= 0 ? written.slice(hash) : "";
   const path = hash >= 0 ? written.slice(0, hash) : written;

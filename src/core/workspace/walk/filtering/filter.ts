@@ -23,7 +23,7 @@ export function holdsNotes(abs: string, isNoteName: (name: string) => boolean): 
 }
 
 /** Home's Downloads, as home's path for it: where the desktop says (`user-dirs.dirs`), else `Downloads`. */
-export function downloadsIn(home: string): string {
+function downloadsIn(home: string): string {
   const at = userFolders(home).find((f) => f.name === "Downloads")?.path;
   const rel = at ? relative(home, at).split(sep).join("/") : "";
   return rel && !rel.startsWith("..") ? rel : "Downloads";

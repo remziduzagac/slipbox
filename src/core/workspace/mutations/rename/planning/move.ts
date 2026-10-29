@@ -22,7 +22,7 @@ import { ownFileLinks, retargetBacklink } from "../rewriting/links.ts";
  * right for no name: that file left, and said. A file is judged by the first link on its way under the folder; where
  * a relative one leads after is read from its own text, from its folder's new place.
  */
-export function leftByFolderMove(from: string, to: string): (abs: string) => string | null {
+function leftByFolderMove(from: string, to: string): (abs: string) => string | null {
   const fromReal = realTarget(from);
   const toReal = realTarget(to);
   const within = (p: string, dir: string) => p === dir || p.startsWith(`${dir}${sep}`);

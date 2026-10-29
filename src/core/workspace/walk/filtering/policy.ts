@@ -54,7 +54,7 @@ export function busyWhy(name: string, ignored: () => boolean, notes: () => boole
 }
 
 /** The system's folders at home's top, by platform (VV-D2): an application's, never a person's notes. */
-export const SYSTEM_FOLDERS: Record<string, readonly string[]> = { darwin: ["Library"], win32: ["AppData"] };
+const SYSTEM_FOLDERS: Record<string, readonly string[]> = { darwin: ["Library"], win32: ["AppData"] };
 
 /**
  * Why home's walk leaves the folder `rel` (home's path for it) out, or null — home's skip list (VV-D2): a hidden folder
