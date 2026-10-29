@@ -371,6 +371,13 @@ The CLI's commands are the user's reference, [cli.md](../../docs/manual/cli.md);
 | [saveas.ts][o138] | 10.14 | the Save As window an export opens: places, the folder's entries, the name; its keys |
 | [where.ts][o144] | WSP-D4, WSP-D5 | where you are, on the top bar or the status line: vault, workspace, branch, cut |
 
+Document diagnostics keep `Problems` and `Languages` as their existing controllers. Under
+`src/tui/documents/diagnostics/`, `problems/` holds row presentation and panel records; `languages/` holds server-edit
+normalization/application/preview, outline conversion and protocol locations. The original receiver supplies live
+controller and buffer state. Syntax timers, trust prompts, server/linter lifecycle and cancellation remain in
+`Languages`; problem caches and selected/filter/fold state remain in `Problems`. The boundary checker keeps these
+helpers below controllers, App runtime composition, the server manager and the syntax worker facade.
+
 Search query grammar, document/section models, indexing, hit matching and indexed/scan execution have lower owners
 under `core/workspace/search/`. Scanning and SQLite share the same weight table without a runtime SQLite dependency
 for pure matching. Document find matches and replace-field interaction live under `tui/documents/search/`; workspace

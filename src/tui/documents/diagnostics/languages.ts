@@ -1,26 +1,22 @@
 // Code intelligence in the TUI: a file's syntax tree, its language servers (3.x) and linters (3.21), and the trust
 // a root needs before anything it brings runs.
 
-import { fileURLToPath, pathToFileURL } from "node:url";
-import { grammarFor, type OutlineEntry, type Span as SyntaxSpan } from "../../../core/documents/syntax/syntax.ts";
+import { pathToFileURL } from "node:url";
+import { grammarFor, type Span as SyntaxSpan } from "../../../core/documents/syntax/syntax.ts";
 import type {
   DocumentSymbol,
   SymbolInformation,
   TextEdit as LspTextEdit,
   WorkspaceEdit,
 } from "vscode-languageserver-protocol";
-import { TextDocument } from "vscode-languageserver-textdocument";
 import { SYNTAX_SOURCE_LIMIT, syntaxOnThread } from "../../../core/documents/syntax/syntax-thread.ts";
 import { WorkerRequestError } from "../../../core/foundation/workers/worker-requests.ts";
 import { extensionOf } from "../../../core/documents/model/filetypes.ts";
-import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { offsetOf } from "../editing/editing.ts";
 import { homedir } from "node:os";
 import { type Config, loadConfig } from "../../../core/application/config/config.ts";
 import { type LintCmd, type LintIssue, lintFailure, runLint } from "../../../core/documents/diagnostics/lint.ts";
 import { checkoutOf } from "../../../core/workspace/git/git.ts";
-import { diffLines } from "../../../core/workspace/git/merge/merge.ts";
 import { tildePath } from "../../../core/workspace/vaults/names.ts";
 import { isTrusted, setTrust, trustOf } from "../../../core/workspace/vaults/trust.ts";
 import { languageOf, serverTable, type ServerTable } from "../../../core/documents/servers/languages.ts";
@@ -28,8 +24,12 @@ import { type LinterDef, linterRoot, linterTable, runLinter } from "../../../cor
 import { rootFor } from "../../../core/documents/servers/find.ts";
 import { ServerManager } from "../../../core/documents/servers/manager.ts";
 import type { NoteBuffer } from "../buffers/buffer.ts";
-import type { App, View, ListItem } from "../../app/runtime/app.ts";
-import { SymbolKind } from "vscode-languageserver-protocol";
+import type { App, View } from "../../app/runtime/app.ts";
+
+import { editsOf, applyWorkspaceEdit, previewWorkspaceEdit } from "./languages/workspace-edits.ts";
+import { position, openLocation } from "./languages/locations.ts";
+import { outlineOf } from "./languages/symbols.ts";
+export { KIND_NAMES } from "./languages/symbols.ts";
 
 /** Syntax, language servers, linters, and the trust they need. */
 export class Languages {
@@ -265,20 +265,7 @@ export class Languages {
 
   /** A server's edit as each file's text edits: `changes`, or `documentChanges`' text edits (a file to make, move or delete is left out). */
   editsOf(edit: WorkspaceEdit): { path: string; edits: LspTextEdit[] }[] {
-    const out = new Map<string, LspTextEdit[]>();
-    const add = (uri: string, edits: LspTextEdit[]) => {
-      if (!uri.startsWith("file:")) return;
-      const path = fileURLToPath(uri);
-      out.set(path, [...(out.get(path) ?? []), ...edits]);
-    };
-    for (const [uri, edits] of Object.entries(edit.changes ?? {})) add(uri, edits);
-    for (const c of edit.documentChanges ?? [])
-      if ("textDocument" in c)
-        add(
-          c.textDocument.uri,
-          c.edits.filter((e): e is LspTextEdit => "newText" in e),
-        );
-    return [...out].map(([path, edits]) => ({ path, edits }));
+    return editsOf(edit);
   }
 
   /**
@@ -286,76 +273,12 @@ export class Languages {
    * shows is saved (writeBuffer), so what's on disk is the edit's; one shown is left for its saving.
    */
   applyWorkspaceEdit(edit: WorkspaceEdit): { files: number; edits: number } {
-    let files = 0;
-    let count = 0;
-    const shown = new Set(this.app.allViews().map((v) => v.buf));
-    for (const { path, edits } of this.editsOf(edit)) {
-      const inVault = path.startsWith(`${this.app.loc.root}/`);
-      const buf = this.app.buffer(inVault ? path.slice(this.app.loc.root.length + 1) : path);
-      if (!buf || !edits.length) continue;
-      const wasDirty = buf.dirty;
-      // Offsets as the preview's (and LSP's): a character past its line's end is the line's end.
-      const doc = TextDocument.create("", "", 0, buf.source);
-      const at = (p: { line: number; character: number }) => doc.offsetAt(p);
-      // Last first, so each edit's offsets still hold; of inserts at one place, the later one first,
-      // so their text reads in the array's order (as LSP has it, and as the preview showed it).
-      const sorted = edits
-        .map((e, i) => ({ from: at(e.range.start), to: at(e.range.end), text: e.newText, i }))
-        .sort((a, b) => b.from - a.from || b.i - a.i);
-      buf.beginStep(sorted.at(-1)!.from);
-      for (const e of sorted) buf.edit(e.from, e.to - e.from, e.text);
-      buf.endStep(sorted.at(-1)!.from);
-      for (const v of this.app.allViews()) if (v.buf === buf) v.layoutKey = "";
-      if (!shown.has(buf) && !wasDirty) this.app.saving.save(buf, true);
-      files++;
-      count += edits.length;
-    }
-    return { files, edits: count };
+    return applyWorkspaceEdit(this, edit);
   }
 
   /** A server's edit previewed: each line it changes, in each file, before and after; enter makes it. */
   previewWorkspaceEdit(title: string, edit: WorkspaceEdit, done: () => void = () => {}): void {
-    const items: ListItem[] = [];
-    let n = 0;
-    for (const { path, edits } of this.editsOf(edit)) {
-      const open = [...this.app.buffers.values()].find((b) => b.abs === path);
-      let text: string;
-      try {
-        text = open?.source ?? readFileSync(path, "utf8");
-      } catch {
-        continue;
-      }
-      const doc = TextDocument.create("", "", 0, text);
-      const next = TextDocument.applyEdits(doc, edits);
-      const a = text.split("\n");
-      const b = next.split("\n");
-      const shown = path.startsWith(`${this.app.loc.root}/`) ? path.slice(this.app.loc.root.length + 1) : path;
-      for (const h of diffLines(a, b)) {
-        for (let k = 0; k < Math.max(h.aLen, h.bLen); k++) {
-          items.push({
-            label: `${shown}:${h.aStart + k + 1}`,
-            detail: `${(a[h.aStart + k] ?? "").trim()}  →  ${(b[h.bStart + k] ?? "").trim()}`,
-            data: null,
-          });
-          n++;
-        }
-      }
-    }
-    if (!items.length) return this.app.message("info", "the server changes nothing");
-    const files = new Set(items.map((i) => i.label.slice(0, i.label.lastIndexOf(":")))).size;
-    this.app.overlays.openList({
-      title: `${title}: ${n} change${n === 1 ? "" : "s"} in ${files} file${files === 1 ? "" : "s"} — enter: do it, esc: cancel`,
-      items,
-      filterable: false,
-      accept: () => {
-        const r = this.applyWorkspaceEdit(edit);
-        this.app.message(
-          "info",
-          `${title}: ${r.edits} change${r.edits === 1 ? "" : "s"} in ${r.files} file${r.files === 1 ? "" : "s"}`,
-        );
-        done();
-      },
-    });
+    return previewWorkspaceEdit(this, title, edit, done);
   }
 
   /**
@@ -645,46 +568,11 @@ export class Languages {
 
   /** A position in a source-mode view as the protocol counts it: line and UTF-16 character, from 0. */
   position(view: View): { line: number; character: number } {
-    const at = offsetOf(this.app, view);
-    const starts = view.buf.lineStarts();
-    let line = starts.length - 1;
-    while (line > 0 && starts[line]! > at) line--;
-    return { line, character: at - starts[line]! };
+    return position(this.app, view);
   }
 
   /** Open a file (absolute) at a line and a UTF-16 character, from 0: a location a server gives. */
   openLocation(abs: string, line: number, character: number): void {
-    const inVault = abs.startsWith(`${this.app.loc.root}/`);
-    const target = inVault ? abs.slice(this.app.loc.root.length + 1) : abs;
-    this.app.open(target, { heading: null, headingIndex: 0, offset: 0, line: line + 1 });
-    const v = this.app.view;
-    if (!v || v.buf.abs !== abs) return;
-    const start = v.buf.lineStarts()[line] ?? 0;
-    const text = v.buf.source.slice(start, start + character);
-    this.app.placeAtLine(v, line + 1, [...text].length + 1);
-    this.app.region = "content";
+    return openLocation(this.app, abs, line, character);
   }
-}
-
-/** A symbol's kind by its number, as the outline names it (`function`, `class`). */
-export const KIND_NAMES: Record<number, string> = Object.fromEntries(
-  Object.entries(SymbolKind).map(([name, n]) => [n, name.toLowerCase()]),
-);
-
-/** A server's symbols as an outline: nested ones (`DocumentSymbol`) by their depth, flat ones in line order. */
-function outlineOf(symbols: DocumentSymbol[] | SymbolInformation[]): OutlineEntry[] {
-  const out: OutlineEntry[] = [];
-  const walk = (list: DocumentSymbol[], depth: number) => {
-    for (const d of [...list].sort((a, b) => a.selectionRange.start.line - b.selectionRange.start.line)) {
-      out.push({ name: d.name, kind: KIND_NAMES[d.kind] ?? "symbol", line: d.selectionRange.start.line + 1, depth });
-      if (d.children?.length) walk(d.children, depth + 1);
-    }
-  };
-  if (symbols.length && "selectionRange" in symbols[0]!) walk(symbols as DocumentSymbol[], 0);
-  else
-    for (const i of [...(symbols as SymbolInformation[])].sort(
-      (a, b) => a.location.range.start.line - b.location.range.start.line,
-    ))
-      out.push({ name: i.name, kind: KIND_NAMES[i.kind] ?? "symbol", line: i.location.range.start.line + 1, depth: 0 });
-  return out;
 }

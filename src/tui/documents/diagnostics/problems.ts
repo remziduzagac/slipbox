@@ -1,7 +1,7 @@
 // Problems (1.7, 19.x): the Problems panel's two tabs — the file on screen's problems from every source, and the
 // root's — the marks in the text, and going to a problem.
 
-import { join, relative } from "node:path";
+import { relative } from "node:path";
 import { placeAt } from "../editing/editing.ts";
 import type { LinkProblem } from "../../../core/workspace/graph/graph.ts";
 import { visibleLint, type LintVisibility } from "../../../core/documents/diagnostics/lint-visibility.ts";
@@ -22,6 +22,9 @@ import { match } from "../../shell/overlays/match.ts";
 import { keyChar } from "../../shell/input/keys.ts";
 import type { App, View } from "../../app/runtime/app.ts";
 import { readText } from "../../../core/foundation/platform/fsutil.ts";
+
+import type { ProblemRow, ProblemsPanel, PanelList } from "./problems/contracts.ts";
+import { problemRows } from "./problems/rows.ts";
 
 /** The Problems panel and the problems marked in the text. */
 export class Problems {
@@ -348,178 +351,7 @@ export class Problems {
 
   /** Its rows: each section's heading (with its count), its problems under it unless folded; `/` filters. */
   rows(): ProblemRow[] {
-    if (this.app.loc.mode === "folder") return [];
-    const q = this.panel.all.filter;
-    const p = this.app.graph.problems();
-    const out: ProblemRow[] = [];
-    const written = (l: LinkProblem) => (l.kind === "wiki" || l.kind === "embed" ? `[[${l.target}]]` : l.target);
-    const section = (name: string, list: LinkProblem[], why: (l: LinkProblem) => string) => {
-      const rows = list
-        .map((l) => ({ l, label: `L${l.line}`, detail: `${written(l)}${why(l) ? `  ${why(l)}` : ""}` }))
-        .filter((r) => !q || match(q, `${r.l.from} ${r.label} ${r.detail}`));
-      if (q && !rows.length) return;
-      const folded = !q && this.folded.has(name);
-      out.push({ section: name, heading: true, label: `${name} (${list.length})`, detail: "", text: name, folded });
-      if (folded) return;
-      // Under the note each is in: the path once, then its problems by line.
-      let note = "";
-      for (const r of rows) {
-        if (r.l.from !== note) {
-          note = r.l.from;
-          out.push({ section: name, heading: false, note, label: note, detail: "", text: note, folded: false });
-        }
-        out.push({
-          section: name,
-          heading: false,
-          label: r.label,
-          detail: r.detail,
-          text: `${r.l.from} ${r.label} ${r.detail}`,
-          folded: false,
-          link: r.l,
-        });
-      }
-    };
-    section("Broken links", p.broken, (l) => l.reason ?? "");
-    section("Ambiguous links", p.ambiguous, (l) => `— ${l.candidates.length} notes`);
-    // Won by where they're written: a note of the name nearer would take them (code actions name them for sure).
-    section("Fragile links", p.fragile, (l) => `— ${l.reason}; [[${l.fix}]] for sure`);
-    // Frontmatter (22.2): notes breaking their document type's rules, by note, each finding at its line.
-    const fm = frontmatterFindings(this.app.graph);
-    const fmRows = fm
-      .flatMap((f) =>
-        f.problems.map((x) => ({ path: f.path, line: x.start.line, label: `L${x.start.line}`, detail: x.message })),
-      )
-      .filter((r) => !q || match(q, `${r.path} ${r.label} ${r.detail}`));
-    if (fmRows.length) {
-      const folded = !q && this.folded.has("Frontmatter");
-      out.push({
-        section: "Frontmatter",
-        heading: true,
-        label: `Frontmatter (${fm.reduce((n, f) => n + f.problems.length, 0)})`,
-        detail: "",
-        text: "Frontmatter",
-        folded,
-      });
-      if (!folded) {
-        let note = "";
-        for (const r of fmRows) {
-          if (r.path !== note) {
-            note = r.path;
-            out.push({
-              section: "Frontmatter",
-              heading: false,
-              note,
-              label: note,
-              detail: "",
-              text: note,
-              folded: false,
-            });
-          }
-          out.push({
-            section: "Frontmatter",
-            heading: false,
-            label: r.label,
-            detail: r.detail,
-            text: `${r.path} ${r.label} ${r.detail}`,
-            folded: false,
-            frontmatter: { path: r.path, line: r.line },
-          });
-        }
-      }
-    }
-    // Lint (3.21): the linter's findings over the vault, by note; while it runs, said so.
-    if (this.app.languages.lintCmd || this.app.languages.vaultLint.issues) {
-      const all = this.app.languages.vaultLint.issues ? this.vaultLint().shown : null;
-      const rows = (all ?? [])
-        .map((i) => ({
-          i,
-          rel: relative(this.app.loc.root, i.file),
-          label: `L${i.line}`,
-          detail: `${i.rule} ${i.name}  ${i.description}`,
-        }))
-        .filter((r) => !q || match(q, `${r.rel} ${r.label} ${r.detail}`));
-      if (!q || rows.length) {
-        const folded = !q && this.folded.has("Lint");
-        out.push({
-          section: "Lint",
-          heading: true,
-          label: all
-            ? `Lint (${all.length})${this.app.languages.vaultLint.running ? " …" : ""}`
-            : this.app.languages.vaultLint.skipped && !this.app.languages.vaultLint.running
-              ? `Lint — not shown: ${this.app.languages.vaultLint.skipped}`
-              : "Lint — linting…",
-          detail: "",
-          text: "Lint",
-          folded,
-        });
-        if (!folded) {
-          let note = "";
-          for (const r of rows) {
-            if (r.rel !== note) {
-              note = r.rel;
-              out.push({ section: "Lint", heading: false, note, label: note, detail: "", text: note, folded: false });
-            }
-            out.push({
-              section: "Lint",
-              heading: false,
-              label: r.label,
-              detail: r.detail,
-              text: `${r.rel} ${r.label} ${r.detail}`,
-              folded: false,
-              lint: r.i,
-            });
-          }
-        }
-      }
-    }
-    // A merge's conflicts (5.12): the files git says are unmerged, each at its first marker.
-    const conflicts = [...(this.app.git.states ?? [])]
-      .filter(([, st]) => st === "conflict")
-      .map(([path]) => path)
-      .sort();
-    const shownConflicts = conflicts.filter((n) => !q || match(q, n));
-    if (shownConflicts.length) {
-      const folded = !q && this.folded.has("Conflicts");
-      out.push({
-        section: "Conflicts",
-        heading: true,
-        label: `Conflicts (${conflicts.length})`,
-        detail: "",
-        text: "Conflicts",
-        folded,
-      });
-      if (!folded) {
-        for (const path of shownConflicts) {
-          const line = conflictLine(join(this.app.loc.root, path));
-          out.push({
-            section: "Conflicts",
-            heading: false,
-            label: path,
-            detail: line ? `L${line}` : "",
-            text: path,
-            folded: false,
-            conflict: { path, line: Math.max(1, line) },
-          });
-        }
-      }
-    }
-    // Orphans (9.5): each a note's row alone.
-    const orphans = p.orphans.filter((n) => !q || match(q, n));
-    if (!q || orphans.length) {
-      const folded = !q && this.folded.has("Orphans");
-      out.push({
-        section: "Orphans",
-        heading: true,
-        label: `Orphans (${p.orphans.length})`,
-        detail: "",
-        text: "Orphans",
-        folded,
-      });
-      if (!folded)
-        for (const n of orphans)
-          out.push({ section: "Orphans", heading: false, note: n, label: n, detail: "", text: n, folded: false });
-    }
-    return out;
+    return problemRows(this, () => this.vaultLint());
   }
 
   /** Open a problem's note at it: the line, the cursor on the link. */
@@ -699,61 +531,5 @@ export class Problems {
   }
 }
 
-/** The first line of a file with a merge's conflict marker, or 0. */
-function conflictLine(abs: string): number {
-  try {
-    return (
-      readText(abs)
-        .text.split(/\r?\n/)
-        .findIndex((l) => /^<{7}( |$)/.test(l)) + 1
-    );
-  } catch {
-    return 0;
-  }
-}
-
-/** One row of the Problems panel's All tab (1.7): a section's heading, a note with problems under it, or a problem. */
-interface ProblemRow {
-  section: string;
-  heading: boolean;
-  /** A note's row (its problems under it): its path. */
-  note?: string;
-  /** What's shown first: a heading's name and count, a note's path, a problem's line (`L12`). */
-  label: string;
-  /** How it's written, and why it's a problem. */
-  detail: string;
-  text: string;
-  folded: boolean;
-  link?: LinkProblem;
-  /** A linter's finding (3.21). */
-  lint?: LintIssue;
-  /** A file in a merge's conflict (5.12), at its first marker. */
-  conflict?: { path: string; line: number };
-  /** Frontmatter that breaks its document type's rules (22.2), at its line. */
-  frontmatter?: { path: string; line: number };
-}
-
 /** The Problems panel's least height (1.7), its tabs' row included, on a screen tall enough for it. */
 export const PANEL_ROWS = 12;
-
-/**
- * The Problems panel (1.7, 19.8), full width at the bottom: in tabs, the file on screen's problems — from every
- * source, each with its line — and the root's (its links' and lint's, its conflicts, its orphans). Each tab keeps its
- * selection, its first row shown and its filter (`/`).
- */
-interface ProblemsPanel {
-  shown: boolean;
-  tab: "file" | "all";
-  /** Its height, its tabs' row included, as resized (resize mode, a drag of its rule); null: a third of the screen. */
-  height: number | null;
-  file: PanelList;
-  all: PanelList;
-}
-
-/** One of the Problems panel's lists: its selection, its first row shown, its filter and whether keys go to it. */
-interface PanelList {
-  selected: number;
-  scroll: number;
-  filter: string;
-  filtering: boolean;
-}

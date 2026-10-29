@@ -1,0 +1,192 @@
+{
+  "moves": {},
+  "retained": [],
+  "renamedBasenames": {},
+  "edges": {
+    "removed": [
+      "src/tui/documents/diagnostics/languages.ts -> src/core/workspace/git/merge/merge.ts",
+      "src/tui/documents/diagnostics/languages.ts -> src/tui/documents/editing/editing.ts"
+    ],
+    "added": [
+      "src/tui/documents/diagnostics/languages.ts -> src/tui/documents/diagnostics/languages/locations.ts",
+      "src/tui/documents/diagnostics/languages.ts -> src/tui/documents/diagnostics/languages/symbols.ts",
+      "src/tui/documents/diagnostics/languages.ts -> src/tui/documents/diagnostics/languages/workspace-edits.ts",
+      "src/tui/documents/diagnostics/languages/locations.ts -> src/tui/app/runtime/app.ts",
+      "src/tui/documents/diagnostics/languages/locations.ts -> src/tui/documents/editing/editing.ts",
+      "src/tui/documents/diagnostics/languages/symbols.ts -> src/core/documents/syntax/syntax.ts",
+      "src/tui/documents/diagnostics/languages/workspace-edits.ts -> src/core/workspace/git/merge/merge.ts",
+      "src/tui/documents/diagnostics/languages/workspace-edits.ts -> src/tui/app/runtime/app.ts",
+      "src/tui/documents/diagnostics/problems.ts -> src/tui/documents/diagnostics/problems/contracts.ts",
+      "src/tui/documents/diagnostics/problems.ts -> src/tui/documents/diagnostics/problems/rows.ts",
+      "src/tui/documents/diagnostics/problems/contracts.ts -> src/core/documents/diagnostics/lint.ts",
+      "src/tui/documents/diagnostics/problems/contracts.ts -> src/core/workspace/graph/graph.ts",
+      "src/tui/documents/diagnostics/problems/rows.ts -> src/core/documents/diagnostics/diagnostics.ts",
+      "src/tui/documents/diagnostics/problems/rows.ts -> src/core/documents/diagnostics/lint-visibility.ts",
+      "src/tui/documents/diagnostics/problems/rows.ts -> src/core/foundation/platform/fsutil.ts",
+      "src/tui/documents/diagnostics/problems/rows.ts -> src/core/workspace/graph/graph.ts",
+      "src/tui/documents/diagnostics/problems/rows.ts -> src/tui/app/runtime/app.ts",
+      "src/tui/documents/diagnostics/problems/rows.ts -> src/tui/documents/diagnostics/problems/contracts.ts",
+      "src/tui/documents/diagnostics/problems/rows.ts -> src/tui/shell/overlays/match.ts"
+    ]
+  },
+  "runtime": {
+    "removed": [
+      "src/tui/documents/diagnostics/languages.ts -> src/core/workspace/git/merge/merge.ts",
+      "src/tui/documents/diagnostics/languages.ts -> src/tui/documents/editing/editing.ts"
+    ],
+    "added": [
+      "src/tui/documents/diagnostics/languages.ts -> src/tui/documents/diagnostics/languages/locations.ts",
+      "src/tui/documents/diagnostics/languages.ts -> src/tui/documents/diagnostics/languages/symbols.ts",
+      "src/tui/documents/diagnostics/languages.ts -> src/tui/documents/diagnostics/languages/workspace-edits.ts",
+      "src/tui/documents/diagnostics/languages/locations.ts -> src/tui/documents/editing/editing.ts",
+      "src/tui/documents/diagnostics/languages/workspace-edits.ts -> src/core/workspace/git/merge/merge.ts",
+      "src/tui/documents/diagnostics/problems.ts -> src/tui/documents/diagnostics/problems/rows.ts",
+      "src/tui/documents/diagnostics/problems/rows.ts -> src/core/documents/diagnostics/diagnostics.ts",
+      "src/tui/documents/diagnostics/problems/rows.ts -> src/core/foundation/platform/fsutil.ts",
+      "src/tui/documents/diagnostics/problems/rows.ts -> src/tui/shell/overlays/match.ts"
+    ]
+  },
+  "tests": {
+    "removed": [],
+    "added": [
+      "test: diagnostics helpers reject controllers and process owners but retain App types",
+      "test: problem rows retain folds, expose matching rows and read deferred lint findings at their original point",
+      "test: server edit normalization merges file URI entries and excludes resource operations",
+      "test: server edit preview defers effects and dispatches through the current controller on acceptance",
+      "test: server inserts retain array order and save only clean buffers absent from every view",
+      "test: server locations re-read the active view and translate UTF-16 to the existing character column",
+      "test: server outline conversion preserves stable line ordering, nesting and kind labels"
+    ]
+  },
+  "entries": {
+    "removed": [],
+    "added": []
+  },
+  "extraction": [
+    {
+      "from": "src/tui/documents/diagnostics/problems.ts",
+      "to": "src/tui/documents/diagnostics/problems/contracts.ts",
+      "symbols": [
+        "ProblemRow",
+        "ProblemsPanel",
+        "PanelList"
+      ]
+    },
+    {
+      "from": "src/tui/documents/diagnostics/problems.ts",
+      "to": "src/tui/documents/diagnostics/problems/rows.ts",
+      "symbols": [
+        "rows",
+        "conflictLine"
+      ]
+    },
+    {
+      "from": "src/tui/documents/diagnostics/languages.ts",
+      "to": "src/tui/documents/diagnostics/languages/workspace-edits.ts",
+      "symbols": [
+        "editsOf",
+        "applyWorkspaceEdit",
+        "previewWorkspaceEdit"
+      ]
+    },
+    {
+      "from": "src/tui/documents/diagnostics/languages.ts",
+      "to": "src/tui/documents/diagnostics/languages/symbols.ts",
+      "symbols": [
+        "KIND_NAMES",
+        "outlineOf"
+      ]
+    },
+    {
+      "from": "src/tui/documents/diagnostics/languages.ts",
+      "to": "src/tui/documents/diagnostics/languages/locations.ts",
+      "symbols": [
+        "position",
+        "openLocation"
+      ]
+    }
+  ],
+  "ownership": {
+    "problems": "same controller receiver owns panel/folded/showAllLint, note WeakMap and vault parse/generation/issue caches; row builder reads its live fields and receives deferred vaultLint callback",
+    "languages": "same controller retains syntax/trigger/server/lint/linter maps, pendingTrust, exit registration, AbortController and vaultLint replacement; no cancellation/trust change",
+    "workspaceEdits": "explicit owner is the original Languages receiver; preview acceptance reads its current applyWorkspaceEdit method; no state copy or extra async wrapper",
+    "public": "existing controller methods and KIND_NAMES export preserved; no worker/build/assets/fixtures changed"
+  },
+  "guards": {
+    "owners": [
+      "src/tui/documents/diagnostics/problems/contracts.ts",
+      "src/tui/documents/diagnostics/problems/rows.ts",
+      "src/tui/documents/diagnostics/languages/workspace-edits.ts",
+      "src/tui/documents/diagnostics/languages/locations.ts",
+      "src/tui/documents/diagnostics/languages/symbols.ts"
+    ],
+    "rule": "diagnosticsHelperViolations",
+    "forbidden": "controller imports and process owners even for types; runtime App; App types allowed"
+  },
+  "runtimeScc": {
+    "before": [
+      [
+        "src/tui/documents/editing/editing.ts",
+        "src/tui/documents/editing/snippets.ts"
+      ],
+      [
+        "src/tui/workspace/git/gitremote.ts",
+        "src/tui/workspace/git/views/review/rebase.ts"
+      ],
+      [
+        "src/core/rendering/export/formats/html.ts",
+        "src/core/rendering/export/formats/markdown.ts",
+        "src/core/rendering/export/stream.ts"
+      ],
+      [
+        "src/tui/app/runtime/app.ts",
+        "src/tui/app/settings/settings.ts",
+        "src/tui/workspace/history/history.ts",
+        "src/tui/workspace/session/session.ts",
+        "src/tui/workspace/vaults/vaults.ts"
+      ],
+      [
+        "src/tui/actions/actions.ts",
+        "src/tui/actions/documents/actions-edit.ts",
+        "src/tui/actions/documents/actions-find.ts",
+        "src/tui/actions/documents/actions-links.ts",
+        "src/tui/actions/documents/actions-lsp.ts",
+        "src/tui/actions/documents/actions-view.ts",
+        "src/tui/actions/shell/actions-panes.ts",
+        "src/tui/actions/workspace/actions-files.ts"
+      ]
+    ],
+    "after": [
+      [
+        "src/tui/documents/editing/editing.ts",
+        "src/tui/documents/editing/snippets.ts"
+      ],
+      [
+        "src/tui/workspace/git/gitremote.ts",
+        "src/tui/workspace/git/views/review/rebase.ts"
+      ],
+      [
+        "src/core/rendering/export/formats/html.ts",
+        "src/core/rendering/export/formats/markdown.ts",
+        "src/core/rendering/export/stream.ts"
+      ],
+      [
+        "src/tui/app/runtime/app.ts",
+        "src/tui/app/settings/settings.ts",
+        "src/tui/workspace/history/history.ts",
+        "src/tui/workspace/session/session.ts",
+        "src/tui/workspace/vaults/vaults.ts"
+      ],
+      [
+        "src/tui/actions/actions.ts",
+        "src/tui/actions/documents/actions-edit.ts",
+        "src/tui/actions/documents/actions-find.ts",
+        "src/tui/actions/documents/actions-links.ts",
+        "src/tui/actions/documents/actions-lsp.ts",
+        "src/tui/actions/documents/actions-view.ts",
+        "src/tui/actions/shell/actions-panes.ts",
+        "src/tui/actions/workspace/actions-files.ts"
+      ]
+    ]
+  }
+}
