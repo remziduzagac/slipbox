@@ -1,0 +1,196 @@
+{
+  "moves": {},
+  "retained": [],
+  "renamedBasenames": {},
+  "edges": {
+    "removed": [
+      "src/tui/documents/editing/completion.ts -> src/core/documents/editing/indent.ts",
+      "src/tui/documents/editing/completion.ts -> src/core/foundation/platform/fsutil.ts",
+      "src/tui/documents/editing/completion.ts -> src/core/foundation/platform/paths.ts",
+      "src/tui/documents/editing/completion.ts -> src/core/workspace/vaults/registry.ts",
+      "src/tui/documents/editing/completion.ts -> src/core/workspace/vaults/vault.ts"
+    ],
+    "added": [
+      "src/tui/documents/editing/completion.ts -> src/tui/documents/editing/completion/context.ts",
+      "src/tui/documents/editing/completion.ts -> src/tui/documents/editing/completion/contracts.ts",
+      "src/tui/documents/editing/completion.ts -> src/tui/documents/editing/completion/items.ts",
+      "src/tui/documents/editing/completion/context.ts -> src/core/documents/editing/indent.ts",
+      "src/tui/documents/editing/completion/context.ts -> src/core/documents/editing/snippet.ts",
+      "src/tui/documents/editing/completion/context.ts -> src/tui/app/runtime/app.ts",
+      "src/tui/documents/editing/completion/contracts.ts -> src/core/workspace/links/convention.ts",
+      "src/tui/documents/editing/completion/contracts.ts -> src/tui/app/runtime/app.ts",
+      "src/tui/documents/editing/completion/items.ts -> src/core/foundation/platform/fsutil.ts",
+      "src/tui/documents/editing/completion/items.ts -> src/core/foundation/platform/paths.ts",
+      "src/tui/documents/editing/completion/items.ts -> src/core/workspace/links/convention.ts",
+      "src/tui/documents/editing/completion/items.ts -> src/core/workspace/links/write-link.ts",
+      "src/tui/documents/editing/completion/items.ts -> src/core/workspace/vaults/registry.ts",
+      "src/tui/documents/editing/completion/items.ts -> src/core/workspace/vaults/vault.ts",
+      "src/tui/documents/editing/completion/items.ts -> src/tui/app/runtime/app.ts",
+      "src/tui/documents/editing/lens.ts -> src/tui/documents/editing/lens/contracts.ts",
+      "src/tui/documents/editing/lens.ts -> src/tui/documents/editing/lens/visibility.ts",
+      "src/tui/documents/editing/lens/contracts.ts -> src/core/rendering/layout/ir.ts",
+      "src/tui/documents/editing/lens/contracts.ts -> src/core/rendering/layout/markdown/live.ts",
+      "src/tui/documents/editing/lens/visibility.ts -> src/core/rendering/layout/ir.ts"
+    ]
+  },
+  "runtime": {
+    "removed": [
+      "src/tui/documents/editing/completion.ts -> src/core/documents/editing/indent.ts",
+      "src/tui/documents/editing/completion.ts -> src/core/foundation/platform/fsutil.ts",
+      "src/tui/documents/editing/completion.ts -> src/core/foundation/platform/paths.ts",
+      "src/tui/documents/editing/completion.ts -> src/core/workspace/vaults/registry.ts",
+      "src/tui/documents/editing/completion.ts -> src/core/workspace/vaults/vault.ts"
+    ],
+    "added": [
+      "src/tui/documents/editing/completion.ts -> src/tui/documents/editing/completion/context.ts",
+      "src/tui/documents/editing/completion.ts -> src/tui/documents/editing/completion/items.ts",
+      "src/tui/documents/editing/completion/context.ts -> src/core/documents/editing/indent.ts",
+      "src/tui/documents/editing/completion/items.ts -> src/core/foundation/platform/fsutil.ts",
+      "src/tui/documents/editing/completion/items.ts -> src/core/foundation/platform/paths.ts",
+      "src/tui/documents/editing/completion/items.ts -> src/core/workspace/links/convention.ts",
+      "src/tui/documents/editing/completion/items.ts -> src/core/workspace/links/write-link.ts",
+      "src/tui/documents/editing/completion/items.ts -> src/core/workspace/vaults/registry.ts",
+      "src/tui/documents/editing/completion/items.ts -> src/core/workspace/vaults/vault.ts",
+      "src/tui/documents/editing/lens.ts -> src/tui/documents/editing/lens/visibility.ts"
+    ]
+  },
+  "tests": {
+    "removed": [],
+    "added": [
+      "test: completion ordering is stable and keeps the original array and item identities",
+      "test: completion target starts stay on their line and reject ended or spaced targets",
+      "test: completion word starts preserve identifier punctuation and Unicode letter offsets",
+      "test: editing-context helpers reject controller and runtime App imports while retaining capabilities",
+      "test: lens hidden intervals stay half-open and visible distances retain their sign",
+      "test: lens movement skips hidden rows in both directions without changing ranges",
+      "test: snippet context reads the current line, indentation and file variables without changing the buffer"
+    ]
+  },
+  "entries": {
+    "removed": [],
+    "added": []
+  },
+  "extraction": [
+    {
+      "from": "src/tui/documents/editing/lens.ts",
+      "to": "src/tui/documents/editing/lens/contracts.ts",
+      "symbols": [
+        "LiveBase"
+      ]
+    },
+    {
+      "from": "src/tui/documents/editing/lens.ts",
+      "to": "src/tui/documents/editing/lens/visibility.ts",
+      "symbols": [
+        "isHidden",
+        "stepVisible",
+        "visibleBetween"
+      ],
+      "methods": [
+        "stepVisible",
+        "visibleBetween"
+      ]
+    },
+    {
+      "from": "src/tui/documents/editing/completion.ts",
+      "to": "src/tui/documents/editing/completion/contracts.ts",
+      "symbols": [
+        "CompletionState",
+        "SignatureState"
+      ]
+    },
+    {
+      "from": "src/tui/documents/editing/completion.ts",
+      "to": "src/tui/documents/editing/completion/context.ts",
+      "symbols": [
+        "WORD",
+        "wordStart",
+        "linkTargetStart",
+        "wikiTargetStart",
+        "snippetContext"
+      ]
+    },
+    {
+      "from": "src/tui/documents/editing/completion.ts",
+      "to": "src/tui/documents/editing/completion/items.ts",
+      "symbols": [
+        "linkItems",
+        "inOrder"
+      ]
+    }
+  ],
+  "ownership": {
+    "lens": "18 untouched members plus unchanged unparsedText; two state-free visibility methods delegate with original signatures; live base contract extracted without state copies",
+    "completion": "all timers, request epochs, word sets, request/accept/cancel and stale-reply checks remain single allocations in the controller; only contracts, context parsing and item ordering move",
+    "state": "App/View/NoteBuffer remain the original live references; no new async wrappers, buffer snapshots or scheduling"
+  },
+  "guards": {
+    "owners": [
+      "src/tui/documents/editing/lens/contracts.ts",
+      "src/tui/documents/editing/lens/visibility.ts",
+      "src/tui/documents/editing/completion/contracts.ts",
+      "src/tui/documents/editing/completion/context.ts",
+      "src/tui/documents/editing/completion/items.ts"
+    ],
+    "rule": "editingContextViolations",
+    "forbidden": "lens/completion controllers including type imports; runtime App; type capabilities allowed"
+  },
+  "runtimeScc": {
+    "before": [
+      [
+        "src/tui/workspace/git/gitremote.ts",
+        "src/tui/workspace/git/views/review/rebase.ts"
+      ],
+      [
+        "src/core/rendering/export/formats/html.ts",
+        "src/core/rendering/export/formats/markdown.ts",
+        "src/core/rendering/export/stream.ts"
+      ],
+      [
+        "src/tui/app/runtime/app.ts",
+        "src/tui/app/settings/settings.ts",
+        "src/tui/workspace/history/history.ts",
+        "src/tui/workspace/session/session.ts",
+        "src/tui/workspace/vaults/vaults.ts"
+      ],
+      [
+        "src/tui/actions/actions.ts",
+        "src/tui/actions/documents/actions-edit.ts",
+        "src/tui/actions/documents/actions-find.ts",
+        "src/tui/actions/documents/actions-links.ts",
+        "src/tui/actions/documents/actions-lsp.ts",
+        "src/tui/actions/documents/actions-view.ts",
+        "src/tui/actions/shell/actions-panes.ts",
+        "src/tui/actions/workspace/actions-files.ts"
+      ]
+    ],
+    "after": [
+      [
+        "src/tui/workspace/git/gitremote.ts",
+        "src/tui/workspace/git/views/review/rebase.ts"
+      ],
+      [
+        "src/core/rendering/export/formats/html.ts",
+        "src/core/rendering/export/formats/markdown.ts",
+        "src/core/rendering/export/stream.ts"
+      ],
+      [
+        "src/tui/app/runtime/app.ts",
+        "src/tui/app/settings/settings.ts",
+        "src/tui/workspace/history/history.ts",
+        "src/tui/workspace/session/session.ts",
+        "src/tui/workspace/vaults/vaults.ts"
+      ],
+      [
+        "src/tui/actions/actions.ts",
+        "src/tui/actions/documents/actions-edit.ts",
+        "src/tui/actions/documents/actions-find.ts",
+        "src/tui/actions/documents/actions-links.ts",
+        "src/tui/actions/documents/actions-lsp.ts",
+        "src/tui/actions/documents/actions-view.ts",
+        "src/tui/actions/shell/actions-panes.ts",
+        "src/tui/actions/workspace/actions-files.ts"
+      ]
+    ]
+  }
+}

@@ -17,6 +17,11 @@ import type { NoteBuffer } from "../buffers/buffer.ts";
 import type { App, View } from "../../app/runtime/app.ts";
 import { type ViewMode, viewMode } from "../../shell/input/modes.ts";
 
+import type { LiveBase } from "./lens/contracts.ts";
+import { isHidden, stepVisible, visibleBetween } from "./lens/visibility.ts";
+export type { LiveBase } from "./lens/contracts.ts";
+export { isHidden } from "./lens/visibility.ts";
+
 export { MODES, type ViewMode, viewMode } from "../../shell/input/modes.ts";
 
 /** What's said of a data file that doesn't parse, each place it's said: one wording, so one click can tell it said it. */
@@ -436,16 +441,7 @@ export class Lens {
 
   /** From `row`, `n` shown rows on (back when negative), skipping hidden ones; within the layout. */
   stepVisible(layout: Layout, hidden: [number, number][], row: number, n: number): number {
-    let r = row;
-    let k = Math.abs(n);
-    const dir = n < 0 ? -1 : 1;
-    while (k > 0) {
-      const next = r + dir;
-      if (next < 0 || next > layout.lines.length) break;
-      r = next;
-      if (r < layout.lines.length && !isHidden(hidden, r)) k--;
-    }
-    return Math.max(0, Math.min(r, Math.max(0, layout.lines.length - 1)));
+    return stepVisible(layout, hidden, row, n);
   }
 
   /** The layout rows a window shows, top to bottom. */
@@ -459,9 +455,7 @@ export class Lens {
 
   /** How many shown rows lie between `a` and `b` (negative when `b` is before `a`). */
   visibleBetween(hidden: [number, number][], a: number, b: number): number {
-    let n = 0;
-    for (let r = Math.min(a, b); r < Math.max(a, b); r++) if (!isHidden(hidden, r)) n++;
-    return b >= a ? n : -n;
+    return visibleBetween(hidden, a, b);
   }
 
   /** The cursor inside an oversized lens: its window scrolls to keep it two rows from the rules. */
@@ -476,37 +470,4 @@ export class Lens {
     else if (idx > inner + max - 1 - m) inner = idx - max + 1 + m;
     view.lensInner = Math.max(0, inner);
   }
-}
-
-/** What live preview composes from: a render, the blocks of its parse, and which one is active. */
-export interface LiveBase {
-  rendered: Layout;
-  width: number;
-  wrap: boolean;
-  /** Its code blocks too wide kept whole, to scroll sideways (`[render] code_wrap`). */
-  codeScroll: boolean;
-  caption: "bottom" | "top";
-  /** Its pictures' key, as its window showed them (PIC). */
-  pictures: string;
-  /** The buffer version the render was made from, and the one the block was last matched to. */
-  renderedVersion: number;
-  version: number;
-  blocks: Block[];
-  /** The active block in the render's numbering, and now (grown or shrunk by typing). */
-  old: Block;
-  active: Block;
-  /** The text around the block when the render was made: typing must leave it alone. */
-  before: string;
-  after: string;
-  lineCount: number;
-  composed?: { key: string; layout: Layout };
-  /** The whole piece around a line when it fits the lens — a code cell (24.16), a note's innermost section — or null:
-   *  the lens opens on one alone, and moves to the next whole rather than gathering it. */
-  unit?: (line: number) => Block | null;
-}
-
-/** Whether layout row `r` is left out of the drawing (an oversized lens's hidden rows). */
-export function isHidden(hidden: [number, number][], r: number): boolean {
-  for (const [a, b] of hidden) if (r >= a && r < b) return true;
-  return false;
 }

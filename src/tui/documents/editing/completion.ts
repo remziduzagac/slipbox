@@ -7,63 +7,23 @@
 // (21.5) — a markdown link's path as its path and extension say, a wikilink's (`[[`) by name or path.
 // Anywhere, ctrl+n / ctrl+p with no popup completes a word from the open files' words, no server asked (25.5).
 
-import { existsSync } from "node:fs";
-import { basename, dirname, join, relative } from "node:path";
 import { pathToFileURL } from "node:url";
 import type { CompletionItem, CompletionList, SignatureHelp, TextEdit } from "vscode-languageserver-protocol";
 import { conventionOf, type LinkStyle } from "../../../core/workspace/links/convention.ts";
-import { linkDestination, linkEnds, type PointerMemo } from "../../../core/workspace/links/write-link.ts";
-import { readJson } from "../../../core/foundation/platform/fsutil.ts";
-import { cacheDir } from "../../../core/foundation/platform/paths.ts";
-import { readRoots } from "../../../core/workspace/vaults/registry.ts";
-import { homeFolder } from "../../../core/workspace/vaults/vault.ts";
+import { linkDestination } from "../../../core/workspace/links/write-link.ts";
 import type { App, View } from "../../app/runtime/app.ts";
 import { offsetOf, placeAt, prevBoundary } from "./editing.ts";
 import { keyChar } from "../../shell/input/keys.ts";
 import { RANKED, rank } from "../../shell/overlays/match.ts";
 import { PASTE } from "../../shell/input/vim.ts";
 import { startSnippet } from "./snippets.ts";
-import { expandSnippet, type SnippetContext } from "../../../core/documents/editing/snippet.ts";
-import { indentUnit } from "../../../core/documents/editing/indent.ts";
+import { expandSnippet } from "../../../core/documents/editing/snippet.ts";
 
-export interface CompletionState {
-  view: View;
-  /** Where the word being completed starts: a text offset. */
-  from: number;
-  items: CompletionItem[];
-  /** The items the typed word keeps, best first. */
-  shown: CompletionItem[];
-  selected: number;
-  /** The server said its list was partial: typing asks it again. */
-  incomplete: boolean;
-  /** A link's target being completed (20.13), in this style: slipbox's list, no server's. */
-  links?: LinkStyle;
-  /** A link's: where its target's line starts, and what's before the target on it, its indent aside: an indent leaves
-   *  both. */
-  lineStart?: number;
-  before?: string;
-  /** A link's words typed so far, each with the items it matched in the list's order: a word typed on from one
-   *  matches no other. */
-  steps?: { typed: string; matched: CompletionItem[] }[];
-  /** A word completed from the open files' words (25.5): narrowed by how it starts, kept in their order. */
-  words?: boolean;
-}
-
-/** A signature being typed: its label, and the active parameter's span in it. */
-export interface SignatureState {
-  view: View;
-  label: string;
-  active: [number, number] | null;
-}
-
-const WORD = /[\p{L}\p{N}_$]/u;
-
-/** Where the word ending at `at` starts. */
-export function wordStart(source: string, at: number): number {
-  let i = at;
-  while (i > 0 && WORD.test(source[i - 1]!)) i--;
-  return i;
-}
+import type { CompletionState } from "./completion/contracts.ts";
+import { WORD, wordStart, linkTargetStart, wikiTargetStart, snippetContext } from "./completion/context.ts";
+import { linkItems, inOrder } from "./completion/items.ts";
+export type { CompletionState, SignatureState } from "./completion/contracts.ts";
+export { wordStart, linkTargetStart, wikiTargetStart } from "./completion/context.ts";
 
 /** A key in insert mode while the popup shows: true when it's the popup's — moving, accepting, closing. */
 export function completionKey(app: App, view: View, key: string): boolean {
@@ -240,70 +200,6 @@ export function afterPaste(app: App): void {
   app.completion = null;
 }
 
-/** Inside a markdown link's target (`[text](do|`): where the target starts, else null. */
-export function linkTargetStart(source: string, at: number): number | null {
-  const line = source.slice(source.lastIndexOf("\n", at - 1) + 1, at);
-  const m = /\]\(([^()\s<>]*)$/.exec(line);
-  return m ? at - m[1]!.length : null;
-}
-
-/** Inside a wikilink's target (`[[Da|`, `![[pic`): where the target starts, else null. */
-export function wikiTargetStart(source: string, at: number): number | null {
-  const line = source.slice(source.lastIndexOf("\n", at - 1) + 1, at);
-  const m = /\[\[([^\]|#[]*)$/.exec(line);
-  return m ? at - m[1]!.length : null;
-}
-
-/**
- * The files a link from this note could reach (20.13): this vault's notes and files, each by its path
- * here, and (a markdown link's) other vaults' notes, each by its path as shown (21.9) — the full path beside each,
- * and either typed narrows. Picked, it's written as the root's convention writes it in `style` (21.5);
- * a wikilink reaches only its own root's (21.3).
- */
-function linkItems(app: App, view: View, style: LinkStyle): CompletionItem[] {
-  const g = app.graph;
-  const c = conventionOf(g, app.config, app.settings.origins, style);
-  const home = homeFolder();
-  const tilde = (abs: string) => (abs.startsWith(`${home}/`) ? `~/${relative(home, abs)}` : abs);
-  // Each other vault's pointer name worked out once, not once per note: per note it read every named folder.
-  const memo: PointerMemo = { root: g.root, naming: new Map() };
-  const item = (abs: string, form: string, here: boolean): CompletionItem => {
-    const ends = linkEnds(g, view.buf.abs, abs, memo);
-    const dest = linkDestination(c, style, ends);
-    return {
-      // A wikilink's shows what it writes (a name, a path); a markdown link's, the file by its path as shown (21.9).
-      label: style === "wiki" ? dest : form,
-      detail: style === "wiki" ? form : tilde(abs),
-      filterText: `${form} ${dest} ${abs}`,
-      sortText: `${here ? 0 : 1}${form}`,
-      insertText: dest,
-      // A pointer's name is settled when it's picked: asked on a clash, said when private (D74, D83).
-      ...(ends.pointer && ends.naming && (ends.naming.clash.length || ends.naming.private)
-        ? { data: { pointerTo: abs, style } }
-        : {}),
-    };
-  };
-  const out: CompletionItem[] = [];
-  for (const rel of [...g.notes.keys(), ...g.filePaths()]) {
-    const abs = g.abs(rel);
-    if (abs !== view.buf.abs) out.push(item(abs, rel, true));
-  }
-  if (style === "wiki") return out;
-  // Other vaults' notes, as of their last index: what the machine knows, read once per completion.
-  for (const v of readRoots()) {
-    if (v.kind !== "vault" || v.worktree || v.path === g.root || !existsSync(v.path)) continue;
-    const entries = readJson<{ entries?: Record<string, unknown> } | null>(
-      join(cacheDir(v), "index.json"),
-      null,
-    )?.entries;
-    for (const rel of Object.keys(entries ?? {})) {
-      const abs = join(v.path, rel);
-      out.push(item(abs, g.shownPath(abs), false));
-    }
-  }
-  return out;
-}
-
 /** Asked of the file's servers: what goes at the cursor (`trigger`, the character that asked). */
 async function ask(app: App, view: View, trigger: string | null): Promise<void> {
   const s = app.languages.servers!;
@@ -379,35 +275,6 @@ function narrow(app: App, c: CompletionState): void {
   c.shown = word ? rank(word, byServer, key).map((r) => r.item) : byServer;
   c.selected = 0;
   if (!c.shown.length) app.completion = null;
-}
-
-/** The items in the server's order: by `sortText`, else the label. */
-function inOrder(items: CompletionItem[]): CompletionItem[] {
-  return [...items].sort((a, b) => (a.sortText ?? a.label).localeCompare(b.sortText ?? b.label));
-}
-
-/** What a snippet (25.8) is expanded with here: the line's indentation, the file's unit, the file's variables. */
-function snippetContext(_app: App, view: View, at: number): SnippetContext {
-  const buf = view.buf;
-  const lineStart = buf.source.lastIndexOf("\n", at - 1) + 1;
-  const lineEnd = buf.source.indexOf("\n", at);
-  const line = buf.source.slice(lineStart, lineEnd < 0 ? undefined : lineEnd);
-  const n = buf.source.slice(0, at).split("\n").length;
-  return {
-    indent: /^[ \t]*/.exec(line)![0],
-    unit: indentUnit(buf.indent()),
-    vars: {
-      TM_FILENAME: basename(buf.abs),
-      TM_FILENAME_BASE: basename(buf.abs).replace(/\.[^.]*$/, ""),
-      TM_DIRECTORY: dirname(buf.abs),
-      TM_FILEPATH: buf.abs,
-      TM_LINE_INDEX: String(n - 1),
-      TM_LINE_NUMBER: String(n),
-      TM_CURRENT_LINE: line,
-      TM_CURRENT_WORD: buf.source.slice(wordStart(buf.source, at), at),
-      TM_SELECTED_TEXT: "",
-    },
-  };
 }
 
 /** The chosen item put in: its edit (from where it starts to the cursor), else its text over the word; then its other edits (an import). */
