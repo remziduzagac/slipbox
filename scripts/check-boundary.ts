@@ -92,6 +92,42 @@ export function graphCompositionViolations(from: string, text: string): string[]
   });
 }
 
+/** Source-editing mechanisms stay below the public facade and higher coordination tiers (ORG-T38). */
+export const SOURCE_EDITING_TIERS: Record<string, number> = {
+  position: 0,
+  policy: 0,
+  text: 1,
+  lifecycle: 2,
+  newline: 2,
+  deleting: 2,
+  lines: 2,
+  selection: 2,
+  keyboard: 3,
+};
+
+export function sourceEditingViolations(from: string, text: string): string[] {
+  const root = "src/tui/documents/editing/source/";
+  const name = from.startsWith(root) ? from.slice(root.length).replace(/\.ts$/, "") : "";
+  if (!Object.hasOwn(SOURCE_EDITING_TIERS, name)) return [];
+  return [
+    ...importsOf(text).flatMap((spec) => {
+      const target = targetOf(from, spec);
+      const tier = target.startsWith(root) ? SOURCE_EDITING_TIERS[target.slice(root.length)] : undefined;
+      return target === "src/tui/documents/editing/editing" ||
+        (tier !== undefined && tier > SOURCE_EDITING_TIERS[name]!)
+        ? [`${from}: imports ${spec} (source-editing helper must stay below facade and higher coordination)`]
+        : [];
+    }),
+    ...new Bun.Transpiler({ loader: "ts" })
+      .scanImports(text)
+      .flatMap(({ path }) =>
+        targetOf(from, path) === "src/tui/app/runtime/app"
+          ? [`${from}: imports ${path} (source-editing helper must not load App composition)`]
+          : [],
+      ),
+  ];
+}
+
 /** Buffer layouts keep cache capabilities below the buffer and App runtime owners (ORG-T38). */
 export const BUFFER_LAYOUT_HELPERS = [
   "src/tui/documents/buffers/layout/contracts.ts",
@@ -628,6 +664,7 @@ if (import.meta.main) {
     violations.push(...drawingOwnerViolations(from, readFileSync(file, "utf8")));
     violations.push(...diagnosticsHelperViolations(from, readFileSync(file, "utf8")));
     violations.push(...bufferLayoutViolations(from, readFileSync(file, "utf8")));
+    violations.push(...sourceEditingViolations(from, readFileSync(file, "utf8")));
     violations.push(...renameMechanismViolations(from, readFileSync(file, "utf8")));
     violations.push(...searchMechanismViolations(from, readFileSync(file, "utf8")));
     violations.push(...walkingMechanismViolations(from, readFileSync(file, "utf8")));

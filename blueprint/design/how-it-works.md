@@ -383,6 +383,12 @@ its text, undo/redo, marks, parse and cache state. A private capability object p
 cache getters, so invalidation, cache replacement, embed tracking and picture bookkeeping keep the same ownership.
 The layout helpers import buffer capabilities only as types, never the runtime buffer or App composition.
 
+`documents/editing/source/` separates source positions, edit admission, text changes, selection and insert-session
+lifecycle from keyboard coordination. `editing.ts` keeps its original function API through direct re-exports; snippets
+read source positions directly from the lower owner. App/View/NoteBuffer keep their existing state, including undo,
+marks, registers and guards rejecting stale clipboard replies. The boundary checker rejects reverse facade and
+higher-tier imports and runtime App dependencies from these helpers.
+
 Search query grammar, document/section models, indexing, hit matching and indexed/scan execution have lower owners
 under `core/workspace/search/`. Scanning and SQLite share the same weight table without a runtime SQLite dependency
 for pure matching. Document find matches and replace-field interaction live under `tui/documents/search/`; workspace

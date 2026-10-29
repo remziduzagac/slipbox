@@ -154,8 +154,10 @@ cache keys and buffer ownership stay unchanged. Reverse-edge fixtures keep these
 
 ORG-T38 starts with the cohesive buffer-layout child: `documents/buffers/layout/` owns source/code/note layout bodies
 behind a live buffer/cache capability object. Text, history, marks, cache fields and reset sites stay in `NoteBuffer`.
-Source editing and the listed view/navigation/lens/completion owners follow in separate children without changing
-per-view state, save ownership or stale asynchronous-result guards.
+Source editing has its own child under `documents/editing/source/`: position/text/selection and mutation mechanisms
+stay below keyboard coordination, with the original API re-exported by the facade. Snippets import positions directly;
+view and buffer state, save ownership and stale clipboard-result guards stay unchanged. The remaining view,
+navigation, lens and completion owners follow in their own children.
 
 Within `shell/screen/`, separate top-bar and status-bar composition from drawing primitives. Top-bar composition draws
 branding/version/update controls, workspace/zoom/branch context and worker controls from their actual owners. Document

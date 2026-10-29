@@ -47,6 +47,24 @@ describe("the boundary check (0.3, scripts/check-boundary.ts)", () => {
     expect(r.out).not.toContain("boundary check ok");
   });
 
+  test("source-editing helpers reject facade, upper tiers and runtime App while retaining capabilities", () => {
+    const refused = check({
+      "src/tui/documents/editing/source/position.ts": 'export { insertKey } from "../editing.ts";',
+      "src/tui/documents/editing/source/text.ts": 'export const load = () => import("./keyboard.ts");',
+      "src/tui/documents/editing/source/policy.ts":
+        'import { App } from "../../../app/runtime/app.ts"; export const f = App;',
+    });
+    expect(refused.code).toBe(1);
+    expect(refused.err.match(/source-editing helper/g)?.length).toBe(3);
+    expect(
+      check({
+        "src/tui/documents/editing/source/keyboard.ts": 'import type { App } from "../../../app/runtime/app.ts";',
+        "src/tui/documents/editing/source/text.ts":
+          'import { offsetOf } from "./position.ts"; export const f = offsetOf;',
+      }).code,
+    ).toBe(0);
+  });
+
   test("buffer-layout helpers reject runtime owners while retaining buffer and App types", () => {
     const refused = check({
       "src/tui/documents/buffers/layout/source.ts":
