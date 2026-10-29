@@ -3,7 +3,8 @@
 Contained parts of the work, each a folder with its key in its README's H1: active and complete ones here, consolidated,
 dropped and superseded ones in `archive/`. The roadmap gives their order.
 
-- Active: [ORG](code-organization/README.md), code organization and the final size/test ratchets.
+- Complete: [ORG](code-organization/README.md), code organization and the final size/test ratchets;
+  exact retained caps and follow-ups are recorded, with consolidation/archive separate.
 - Draft: [ENG](execution-engine/README.md), the execution engine; not built.
 - Consolidated before 2026-10-26: [DOC](archive/user-docs/README.md),
   [DF](archive/doc-findings/README.md), [GR](archive/greenrepo/README.md),
