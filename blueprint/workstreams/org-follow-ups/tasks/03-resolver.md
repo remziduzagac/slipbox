@@ -67,7 +67,7 @@ The required scoped check passes typecheck, boundary, sizes, dependencies, Biome
 (476 Markdown files, 1,735 spelt files). An initial documentation line-length error was corrected before this
 attempt reached tests. No product/user behavior changes, dependency, deadline, user-doc or changelog edit is included.
 
-## Retained verification failure; publication pending
+## Initial verification failure and prerequisite
 
 The required `gnutimeout -k 10 300 bun run check` selects 353 unit owners, not the whole suite. It fails the existing
 `stat` case at `tests/cli/reading/metadata.test.ts:65`: the expectation is `vault halden`, but the demo in this linked
@@ -77,16 +77,62 @@ uses `rootLabel` (`src/cli/info.ts:171`), whose existing worktree branch suffix 
 `src/core/workspace/vaults/names.ts:28–29`. None of these files changes in this extraction.
 
 [ORG-T43](../../code-organization/tasks/43-measurement-and-build.md) already records this exact
-host assumption immediately before its measurement protocol. Recommend isolating this metadata fixture in a separate
-test-only PR, with controlled ordinary-checkout and linked-worktree cases, before resuming this build. Do not weaken
-the product's label or retry the failure away.
+host assumption immediately before its measurement protocol. [ORF-T22](22-stat-fixture.md) isolates the fixture in
+its own PR, retaining the assertion and adding controlled ordinary-checkout and linked-worktree cases. The product
+label is unchanged. The original failure remains recorded rather than retried without a fix.
 
 The scoped run was stopped with SIGINT, exit 130; it has no passing aggregate result. Its final output also reports
 a null child exit at `tests/distribution.test.ts:1293` during the interruption; that observation remains undiagnosed,
-not presented as an independent established defect. Neither failure nor the selection was rerun. The compiled
-away-from-source info/resolution and real source/compiled backlinks-worker probes remain unexecuted. Their prepared
-diagnostics are local only. No commit, push or PR has been published; review and merge remain pending.
+not presented as an independent established defect. Neither was rerun before prerequisite ORF-T22 was fixed and merged.
 
 Local evidence: `tmp/issue/ORF-T3-before-unit.log`, `ORF-T3-after-unit.log`, `ORF-T3-before-terminal.log`,
 `ORF-T3-after-terminal.log`, `ORF-T3-body-audit.txt`, `ORF-T3-structure.log`, `ORF-T3-export-audit.log`,
 `ORF-T3-build.log` and `ORF-T3-check-final.log` (first failure at line 251). Preserve this incomplete scoped result.
+
+## Resumed build after ORF-T22
+
+The local extraction was rebased without conflict onto `origin/dev` at
+`5254a04494a9f57176795353c3b170c1ea89626d` after PR #175 merged. Its automatic
+[dev push](https://github.com/remziduzagac/slipbox/actions/runs/41243296407) passes on attempt 1, including both
+reached-unit platforms, lint/site and aggregate CI; terminal/status jobs are skipped for that test-only scope.
+The ORF-T2 and ORF-T22 completion records are carried unchanged. No source changes accompany the rebase.
+
+Structural reconciliation adds ORF-T22's one new metadata declaration to both sides of the historical extraction
+capture: all 4,047 declarations agree, all twelve entries agree, and the same static/runtime edge deltas have no
+unresolved references. No source changed in the prerequisite, so the recorded runtime cycle memberships still apply.
+
+The package-built binary has SHA256 `bd6c3e38263fb55883bd584188de6a7e719eb891f1bc13483824858164bab508`.
+Source and copied binary run by absolute path from a temporary directory away from the repository, with private
+home/config/state/cache/data directories. Both pass info identity, five resolution cases (filename, alias, path,
+ambiguous aliases and unresolved path), exact exit codes and two backlinks. The real backlinks client also starts
+one worker and returns two indexed backlinks in both source and compiled modes; no fallback is accepted. The compiled
+worker probe uses the package build's twelve-entry set with only main replaced by its diagnostic caller, retains
+the root/autoload flags, and runs outside the repository. Its temporary source and binary are removed.
+
+Logs: `tmp/issue/ORF-T3-resume-structure.log`, `ORF-T3-resume-binary-probe.log`,
+`ORF-T3-resume-worker-source.log`, `ORF-T3-resume-worker-build.log` and `ORF-T3-resume-worker-compiled.log`.
+
+## Retained autosave fixture failure; draft publication pending
+
+The resumed `gnutimeout -k 10 300 bun run check` passes all static/docs gates (477 Markdown files, 1,739 spelt
+files). Its 353-owner unit selection has no whole-suite fallback. All four resolver characterization cases pass,
+as do the isolated stat fixture and controlled worktree-label case from ORF-T22.
+
+The selection then fails `tests/tui/documents/saving/conflicts.test.ts:128`: the autosave Git-lock case expects
+`ab\n` while the file contains `abc\n`. The log records one failed case and 1,871 pass lines before interruption,
+with zero overflow warnings. These are partial observations, not a passing aggregate. The exact check process group
+1447951 was stopped with SIGINT (exit 130); no test, failed selection or historical failure was rerun afterward.
+Evidence: `tmp/issue/ORF-T3-resume-check.log:1890` (assertion), `:1900` (test identity).
+
+This matches the retained [ORG autosave finding](../../code-organization/design.md#focused-verification), which
+already traced the same assertion to cached ancestor-checkout discovery. The current fixture constructs App at
+`conflicts.test.ts:115` before creating its own `.git`/lock at lines 124–125. Autosave uses
+`src/tui/documents/saving/saving.ts:208`, and `src/tui/workspace/git/git.ts:79` prefers its cached checkout when
+checking the lock. The host's `/tmp/.git` exists. All these source/fixture files are byte-identical to origin/dev;
+the extraction changes candidate lookup only. The current failure was not instrumented or rerun to claim a fresh
+causal trace; the matching historical trace and unchanged fixture establish the retained finding separately.
+
+Recommend a separate test-only PR giving this autosave fixture its Git context before App construction, with a
+controlled ancestor-checkout regression; preserve its title, assertions and deadlines. Resume ORF-T3's scoped
+verification and publication after that prerequisite. No additional task, fixture fix, commit, push, draft PR,
+fresh review or merge is included in this waiting record. The rebased extraction and both completion edits remain.

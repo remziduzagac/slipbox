@@ -126,6 +126,6 @@
     "file": "tests/core/workspace/graph/resolver.test.ts",
     "addedLeafTests": 4,
     "addedAssertions": 21,
-    "baseline": "ORF-T3-before.json captured after adding characterization and before source extraction; extraction preserves every declaration"
+    "baseline": "ORF-T3-before.json captured after characterization, before extraction; ORF-T3-resume-before.json adds ORF-T22's metadata declaration to both sides (4047 each); extraction preserves every declaration"
   }
 }
