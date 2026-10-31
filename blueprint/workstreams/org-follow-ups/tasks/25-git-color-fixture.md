@@ -70,4 +70,11 @@ an observation bound for scoped verification, not a change to application or tes
 The preceding dev push at the exact base succeeds on attempt one; repository health last ran 2026-10-26, within
 eight days. Six changed files: this test owner, task and task index, resolver prerequisite, carried ORF-T24 completion
 and the common outer-wrapper policy. No user behavior, user documentation, changelog, dependency or CI change.
-Build publication is next; fresh review, ready marking, merge and automatic dev push remain separate stages.
+[Draft PR #178](https://github.com/remziduzagac/slipbox/pull/178) is open into dev. Implementation commit:
+`00e354644c1c7f047999a99887ae46ec8d30f493`. The staged-task documentation gate passes: 480 Markdown files,
+1,739 spelt files, zero link errors. Fresh review, ready marking, merge and automatic dev push remain separate stages.
+
+The resolver checkpoint remains local and unpushed at `47a324dc3e4867409aa15211520583f5f40c4b7a`.
+After this prerequisite's fresh review, exact-head merge and successful dev push, rebase that extraction onto newest
+dev and resume its publication with the combined scoped ledger retained. No unrelated failed batch retry, full suite,
+all-terminal run, branch promotion or release is included.
