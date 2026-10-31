@@ -55,9 +55,18 @@ The restored focused selection passes all three cases with 26 assertions (2.46 s
 Biome and documentation checks, then both reached owners: CLI dispatch and metadata, 18 tests, 243 assertions,
 zero failures (8.89 seconds). No failure was retried unchanged; no whole-suite run was used.
 
-Terminal scope reaches no checks; the scoped selector is verified separately. No TUI/product module, worker,
+`SLIPBOX_TERMINAL_JOBS=2 gnutimeout -k 10 300 bun run test:terminal:changed` succeeds with no checks reached.
+No TUI/product module, worker,
 entry point, snapshot, fixture path, dependency, cap or deadline moves. The only code change is this test owner,
 so no compiled build, terminal-feature execution, screenshot, user-doc or changelog update is required.
 
 Local logs: `tmp/issue/ORF-T22-negative.log`, `ORF-T22-stat-fixed.log`, `ORF-T22-check.log` and
-`ORF-T22-terminal-scope.log`. Fresh review, publication details and merge evidence remain pending.
+`ORF-T22-terminal-scope.log`.
+
+## Draft delivery
+
+Draft [PR #175](https://github.com/remziduzagac/slipbox/pull/175) is open into dev. Implementation commit:
+`bf94870491db624f658691810cf6c64b1546c12f`. Fresh review and merge remain pending; the task stays in review.
+Final documentation verification includes the new task: 477 Markdown files and 1,736 spelt files. No product tests
+are repeated for the delivery-record update. ORF-T3's local checkpoint remains separate and unpushed until this
+prerequisite completes its review, merge and successful dev push.
