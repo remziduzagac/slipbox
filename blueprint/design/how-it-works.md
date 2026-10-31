@@ -220,7 +220,8 @@ Theme vocabulary and compatibility aliases live in `rendering/theme/roles.ts` be
 | `graph/overlays/`, `queries/`, `reach/` | 11.8, 1.5–1.7, 20.8 | editor text, derived answers, file admission |
 | [graph-types.ts][o36] | 1.5–1.7 | a note's entry, a link as written and resolved, a backlink, a problem; how sure |
 | [graph-extract.ts][o37] | 1.5, 1.6, 20.11 | a note's entry from its text: title, headings, links, tags, names |
-| [graph-resolve.ts][o38] | 20.2, 21.2–21.7 | `LinkResolver`: by path, name, alias, pointer, hosting URL; moves |
+| [graph-resolve.ts][o38] | 20.2, 21.2–21.7 | `LinkResolver`: link admission and precedence; broken paths and move advice |
+| `core/workspace/graph/graph-lookup.ts` | ORF-T3 | `LinkLookup`: candidates and caches owned by one resolver |
 | [readers.ts][o48] | 16.2 | a reader per note format: its parse into mdast, headings and links off raw lines |
 | `core/documents/model/filetypes.ts` | 16.1 | a file's group (note, data, text, binary) and format, by extension |
 | [doctypes.ts][o49] | 22.2, 22.3 | document types: notes of a kind by where they are; their rules, order, status |

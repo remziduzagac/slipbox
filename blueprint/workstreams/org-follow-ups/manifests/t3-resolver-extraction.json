@@ -1,0 +1,131 @@
+{
+  "moves": {},
+  "retained": [],
+  "renamedBasenames": {},
+  "extraction": [
+    {
+      "from": "src/core/workspace/graph/graph-resolve.ts",
+      "to": "src/core/workspace/graph/graph-lookup.ts",
+      "symbols": [
+        "Names",
+        "exportMarks",
+        "nameCache",
+        "forgetNames",
+        "byFileName",
+        "exportPicturesFolder",
+        "marked",
+        "byAlias",
+        "byFilesystemPath",
+        "byPointer",
+        "remotesCache",
+        "ownRemotes",
+        "byHosting",
+        "intoNested",
+        "otherNames",
+        "byOtherName",
+        "movedWiki"
+      ]
+    }
+  ],
+  "entries": {
+    "removed": [],
+    "added": []
+  },
+  "ownership": {
+    "admission": "LinkResolver retains admission, precedence, current/legacy dispatch, old-form advice and broken-link diagnostics; Graph's public entry points remain unchanged",
+    "lookup": "One LinkLookup per resolver reads the same live Graph and owns the existing name, export-mark and remote caches; cache keys and invalidation sites stay unchanged",
+    "workers": "No worker entry, URL, asset or build entry moves; affected graph/backlinks execution is verified through its existing callers"
+  },
+  "edges": {
+    "removed": [
+      "src/core/workspace/graph/graph-resolve.ts -> src/core/rendering/export/mark.ts",
+      "src/core/workspace/graph/graph-resolve.ts -> src/core/workspace/git/git.ts",
+      "src/core/workspace/graph/graph-resolve.ts -> src/core/workspace/links/hosting.ts"
+    ],
+    "added": [
+      "src/core/workspace/graph/graph-lookup.ts -> src/core/documents/model/filetypes.ts",
+      "src/core/workspace/graph/graph-lookup.ts -> src/core/rendering/export/mark.ts",
+      "src/core/workspace/graph/graph-lookup.ts -> src/core/workspace/git/git.ts",
+      "src/core/workspace/graph/graph-lookup.ts -> src/core/workspace/graph/graph-types.ts",
+      "src/core/workspace/graph/graph-lookup.ts -> src/core/workspace/graph/graph.ts",
+      "src/core/workspace/graph/graph-lookup.ts -> src/core/workspace/links/hosting.ts",
+      "src/core/workspace/graph/graph-lookup.ts -> src/core/workspace/links/links.ts",
+      "src/core/workspace/graph/graph-lookup.ts -> src/core/workspace/links/pointer.ts",
+      "src/core/workspace/graph/graph-resolve.ts -> src/core/workspace/graph/graph-lookup.ts"
+    ]
+  },
+  "runtime": {
+    "removed": [
+      "src/core/workspace/graph/graph-resolve.ts -> src/core/rendering/export/mark.ts",
+      "src/core/workspace/graph/graph-resolve.ts -> src/core/workspace/git/git.ts",
+      "src/core/workspace/graph/graph-resolve.ts -> src/core/workspace/links/hosting.ts"
+    ],
+    "added": [
+      "src/core/workspace/graph/graph-lookup.ts -> src/core/documents/model/filetypes.ts",
+      "src/core/workspace/graph/graph-lookup.ts -> src/core/rendering/export/mark.ts",
+      "src/core/workspace/graph/graph-lookup.ts -> src/core/workspace/git/git.ts",
+      "src/core/workspace/graph/graph-lookup.ts -> src/core/workspace/links/hosting.ts",
+      "src/core/workspace/graph/graph-lookup.ts -> src/core/workspace/links/links.ts",
+      "src/core/workspace/graph/graph-lookup.ts -> src/core/workspace/links/pointer.ts",
+      "src/core/workspace/graph/graph-resolve.ts -> src/core/workspace/graph/graph-lookup.ts"
+    ]
+  },
+  "tests": {
+    "removed": [],
+    "added": []
+  },
+  "runtimeScc": {
+    "before": [
+      [
+        "src/tui/actions/actions.ts",
+        "src/tui/actions/documents/actions-edit.ts",
+        "src/tui/actions/documents/actions-find.ts",
+        "src/tui/actions/documents/actions-links.ts",
+        "src/tui/actions/documents/actions-lsp.ts",
+        "src/tui/actions/documents/actions-view.ts",
+        "src/tui/actions/shell/actions-panes.ts",
+        "src/tui/actions/workspace/actions-files.ts"
+      ],
+      [
+        "src/tui/app/runtime/app.ts",
+        "src/tui/app/settings/settings.ts",
+        "src/tui/workspace/history/history.ts",
+        "src/tui/workspace/session/session.ts",
+        "src/tui/workspace/vaults/vaults.ts"
+      ],
+      [
+        "src/tui/workspace/git/gitremote.ts",
+        "src/tui/workspace/git/views/review/rebase.ts"
+      ]
+    ],
+    "after": [
+      [
+        "src/tui/actions/actions.ts",
+        "src/tui/actions/documents/actions-edit.ts",
+        "src/tui/actions/documents/actions-find.ts",
+        "src/tui/actions/documents/actions-links.ts",
+        "src/tui/actions/documents/actions-lsp.ts",
+        "src/tui/actions/documents/actions-view.ts",
+        "src/tui/actions/shell/actions-panes.ts",
+        "src/tui/actions/workspace/actions-files.ts"
+      ],
+      [
+        "src/tui/app/runtime/app.ts",
+        "src/tui/app/settings/settings.ts",
+        "src/tui/workspace/history/history.ts",
+        "src/tui/workspace/session/session.ts",
+        "src/tui/workspace/vaults/vaults.ts"
+      ],
+      [
+        "src/tui/workspace/git/gitremote.ts",
+        "src/tui/workspace/git/views/review/rebase.ts"
+      ]
+    ]
+  },
+  "characterization": {
+    "file": "tests/core/workspace/graph/resolver.test.ts",
+    "addedLeafTests": 4,
+    "addedAssertions": 21,
+    "baseline": "ORF-T3-before.json captured after adding characterization and before source extraction; extraction preserves every declaration"
+  }
+}
