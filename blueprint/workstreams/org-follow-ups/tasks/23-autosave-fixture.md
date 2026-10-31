@@ -1,5 +1,5 @@
 ---
-status: review
+status: done
 assignee:
 blocked_by: [ORF-T22]
 created: "2026-11-01"
@@ -82,12 +82,31 @@ Evidence: `tmp/issue/ORF-T23-git-marker-sites.txt`, `ORF-T23-marker-owners.json`
 `ORF-T23-marker-module-{control,selection}.log`, `ORF-T23-marker-module-trace.jsonl`.
 The trace's method and limits are retained; no whole suite or all-terminal run.
 
-## Draft delivery
+## PR delivery, review and merge
 
-Draft [PR #176](https://github.com/remziduzagac/slipbox/pull/176) is open into dev. Implementation commit:
-`ac6c49bc`. Final documentation verification includes this task: 478 Markdown files and 1,737 spelt files,
-with zero link errors. Source, shared helpers and all caps compare unchanged to the base; the only test change
-is the autosave owner above. Fresh review and merge remain pending, and this task stays in review.
+[PR #176](https://github.com/remziduzagac/slipbox/pull/176) merged into dev at
+`e8662a7c59bac84b65dbf4fa42f218cffff4f5b1`, 2026-10-31 22:23:03 UTC. Implementation commit: `ac6c49bc`;
+reviewed head: `171712f23c9f28d116ce1a1615e09224037d2b7b`. Source, shared helpers and all caps compare
+unchanged to the base; the only test change is the autosave owner above.
 
-After merge, confirm the automatic dev push before the queued theme-fixture isolation PR and resumed ORF-T3 build.
-The resolver extraction remains saved separately; no ready marking, merge, full run or branch promotion here.
+Fresh review finds no actionable findings. Its whole-file audit reconstructs the base byte-for-byte after reversing
+only the documented fixture changes and added case. Fresh required scoped verification passes every static/docs gate
+and all 12 affected-owner tests, 71 assertions, zero failures (1.38 seconds); the explicit autosave terminal scenario
+passes, one check, five commands, two jobs (5.8 seconds). Documentation includes 478 Markdown and 1,737 spelt files,
+with zero link errors. The preserved negative control and unrelated failed diagnostic are not repeated.
+
+Before merge, the preceding [dev push](https://github.com/remziduzagac/slipbox/actions/runs/41243296407) succeeds at
+the exact base `5254a04494a9f57176795353c3b170c1ea89626d`, attempt 1. All executed PR CI and CodeQL checks succeed
+at the reviewed head, also on attempt 1. Marked ready and squash-merged with that exact head as the match guard;
+the merged tree is byte-identical to the reviewed tree.
+
+The automatic [dev push](https://github.com/remziduzagac/slipbox/actions/runs/41247944044) succeeds at the exact
+merge commit on attempt 1: both reached-unit platforms, lint/site, changes and aggregate CI pass. Terminal/status
+jobs are skipped for this test-only scope; no terminal execution is claimed for the push.
+
+Evidence: `tmp/issue/review-ORF-T23.md`, `ORF-T23-review-body-audit.txt`, `ORF-T23-review-check.log`,
+`ORF-T23-review-terminal.log`, `ORF-T23-merge-pr-final.json`, `ORF-T23-merge-previous-dev-result.json`,
+`ORF-T23-merge-result.json` and `ORF-T23-merge-dev-result.json`.
+
+The separate theme-fixture isolation PR is next, before resumed ORF-T3 build. The resolver extraction remains saved
+separately. The shared-run marker trigger remains unproved; no full run, branch promotion or release is included.

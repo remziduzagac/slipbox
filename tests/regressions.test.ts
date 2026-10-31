@@ -67,6 +67,33 @@ async function until(pred: () => boolean, ms = 25_000): Promise<void> {
 const rows = (md: string, width = 60) =>
   renderMarkdown(md, { width, glyphs: unicode, showUrls: false }).lines.map((l) => l.spans.map((s) => s.text).join(""));
 
+/** Run the colour-preview scenario independently of the invoking shell's colour preference. */
+async function emptyThemePreview(): Promise<void> {
+  const noColor = process.env.NO_COLOR;
+  delete process.env.NO_COLOR;
+  try {
+    const dir = vault({ "a.md": "# a\n" });
+    const config = structuredClone(DEFAULT_CONFIG);
+    config.ui.restore_session = false;
+    const loc = locateVault({ root: dir });
+    const app = new App({
+      loc,
+      config,
+      graph: openGraph(loc, config, false),
+      host: { requestRender() {}, osc52: () => true, quit() {} },
+      open: "a.md",
+      watch: false,
+    });
+    for (const k of ["space", "u", "t", "s", "o", "l", "z", "z", "z", "enter"]) await app.input.handleKey(k);
+    expect(app.messages.some((m) => m.text.includes("not bound"))).toBe(false);
+    expect(app.theme.name).toBe("tokyo-night");
+    expect(app.overlay).toBeNull();
+  } finally {
+    if (noColor === undefined) delete process.env.NO_COLOR;
+    else process.env.NO_COLOR = noColor;
+  }
+}
+
 describe("high", () => {
   test("a global flag before the subcommand still routes to the CLI", async () => {
     const proc = Bun.spawnSync(["bun", join(import.meta.dir, "..", "src", "main.ts"), "--root", ".", "ls"], {
@@ -315,23 +342,20 @@ describe("medium", () => {
 });
 
 describe("low", () => {
-  test("Enter on an empty theme list reverts the live preview", async () => {
-    const dir = vault({ "a.md": "# a\n" });
-    const config = structuredClone(DEFAULT_CONFIG);
-    config.ui.restore_session = false;
-    const loc = locateVault({ root: dir });
-    const app = new App({
-      loc,
-      config,
-      graph: openGraph(loc, config, false),
-      host: { requestRender() {}, osc52: () => true, quit() {} },
-      open: "a.md",
-      watch: false,
-    });
-    for (const k of ["space", "u", "t", "s", "o", "l", "z", "z", "z", "enter"]) await app.input.handleKey(k);
-    expect(app.messages.some((m) => m.text.includes("not bound"))).toBe(false);
-    expect(app.theme.name).toBe("tokyo-night");
-    expect(app.overlay).toBeNull();
+  test("Enter on an empty theme list reverts the live preview", emptyThemePreview);
+  test("the theme preview fixture restores inherited NO_COLOR, including empty and absent values", async () => {
+    const noColor = process.env.NO_COLOR;
+    try {
+      for (const inherited of ["1", "", undefined]) {
+        if (inherited === undefined) delete process.env.NO_COLOR;
+        else process.env.NO_COLOR = inherited;
+        await emptyThemePreview();
+        expect(process.env.NO_COLOR).toBe(inherited);
+      }
+    } finally {
+      if (noColor === undefined) delete process.env.NO_COLOR;
+      else process.env.NO_COLOR = noColor;
+    }
   });
   test("find columns are exact when case folding changes length", () => {
     const layout = renderMarkdown("İİİ foo\n", { width: 40, glyphs: unicode, showUrls: false });

@@ -25,6 +25,7 @@ from the latest origin/dev. Task status and evidence live in its file; completed
 - [ORF-T2: Investigate intermittent deadlines](tasks/02-intermittent-deadlines.md).
 - [ORF-T22: Isolate the stat metadata fixture](tasks/22-stat-fixture.md).
 - [ORF-T23: Isolate the autosave Git context](tasks/23-autosave-fixture.md).
+- [ORF-T24: Isolate the theme preview environment](tasks/24-theme-fixture.md).
 - [ORF-T3: Separate resolver admission from lookup](tasks/03-resolver.md).
 - [ORF-T4: Separate CLI dispatch from presentation](tasks/04-cli.md).
 - [ORF-T5: Separate vault prompts from switching](tasks/05-vaults.md).
