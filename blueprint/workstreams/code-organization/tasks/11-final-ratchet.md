@@ -43,6 +43,12 @@ within 1,500. The defaults do not redefine those aims. Generated server locks re
 and offline generator/pinned-key check. Snapshots are not TypeScript test files; process fixtures remain identified
 under tests.
 
+## Follow-up implementation
+
+[ORF](../../org-follow-ups/README.md) tracks issue #170 in delivery order: the overflowing timer and intermittent
+deadlines, the seven source and nine test caps below, unused-code proof and measured focused-test migrations.
+ORG-D1–ORG-D3 remain authoritative; ORG consolidation/archive and ENG are outside that work.
+
 ## Source cap follow-ups
 
 | Owner, relative to src/ | Exact cap | Retained responsibility |

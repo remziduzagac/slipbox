@@ -125,6 +125,9 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 
 ### Fixed
 
+- Keep message timers within their normal four/eight-second lifetime after the system clock moves backwards. A clock
+  correction could make a timer overflow and wake repeatedly after one millisecond.
+
 - Preserve Markdown paragraphs inside preformatted HTML containers.
 - Preserve nested HTML line breaks inside preformatted containers in READ and document exports.
 - Restore saved workspaces with document HTML without a startup error.

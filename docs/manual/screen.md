@@ -444,7 +444,8 @@ Messages float at the top right of the window, framed and marked by level:
 | `·` | information |
 
 Up to four stack up, the newest on top. Each stays four seconds once it's on screen, and an error stays eight. Messages
-never push the note down.
+never push the note down. If the system clock moves back before a message first appeared, its normal four or eight
+seconds start again at the corrected time.
 
 Click a message to see every message. `space m` or `:messages` lists everything slipbox has said, newest first. In that
 list, `enter` copies one.

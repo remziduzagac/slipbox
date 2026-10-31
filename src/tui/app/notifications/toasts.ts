@@ -28,6 +28,8 @@ export class ToastScheduler {
     if (this.toastTimer) this.timers.clearTimeout(this.toastTimer);
     this.toastTimer = null;
     const now = this.context.now();
+    // A corrected wall clock can precede the first frame: restart that toast's lifetime rather than overflow a timer.
+    for (const t of this.context.toasts) if (t.shown !== undefined && t.shown > now) t.shown = now;
     const ends = (t: Message) => (t.shown ?? now) + this.toastMs(t);
     this.context.toasts = this.context.toasts.filter((t) => ends(t) > now);
     const drawn = this.context.toasts.filter((t) => t.shown !== undefined);
