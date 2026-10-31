@@ -876,9 +876,9 @@ export const NAVIGATING: Check[] = [
   },
   {
     area: "navigating",
-    name: "start: a path that isn't there, a --root that isn't a root, a path outside it — a line and exit 3",
+    name: "start: a folder that isn't there, a --root that isn't a root, a path outside it — a line and exit 3",
     covers: { cases: ["opening"] },
-    options: { startAt: "nope/missing.md", noWait: true },
+    options: { startAt: "nope/", noWait: true },
     run: async (s) => {
       const failed = async (what: string, line: RegExp) => {
         await s.until(() => s.exited(), 10000, `slipbox to give up on ${what}`).catch(() => undefined);
@@ -888,7 +888,7 @@ export const NAVIGATING: Check[] = [
         s.expect(!/^\s+at /m.test(out), `no stack trace for ${what}\n${out}`);
         s.expect(s.exitCode() === 3, `exit 3 for ${what}, not ${s.exitCode()}`);
       };
-      await failed("a missing path", /slipbox: no such file or directory: .*nope\/missing\.md/);
+      await failed("a missing folder", /slipbox: no such directory: .*nope\//);
       // The check's own folder holds no marker: not a root.
       await s.restart({ args: ["--root", s.dir], startAt: "vault/home.md", noWait: true });
       await failed("a --root that isn't a root", /slipbox: --root .* isn't a vault/);
