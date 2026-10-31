@@ -173,21 +173,21 @@ export function editActions(): Record<string, Run> {
         if (k === "report" && a.floating?.view === v) return a.run("help.report_send");
         if ((k === "commit" || k === "merge") && a.floating?.view === v && v.buf.virtual)
           return void v.buf.virtual.save(v.buf.source);
-        if (!v.buf.dirty && !v.buf.changedOnDisk())
+        if (!v.buf.newFile && !v.buf.dirty && !v.buf.changedOnDisk())
           return a.message("info", `${a.displayName(v.buf)} has no changes to save`);
         if (a.saving.save(v.buf)) a.message("info", `saved ${a.displayName(v.buf)}${a.files.notIndexed(v.buf.abs)}`);
       }),
     "note.save_force": (a) =>
       withView(a, (v) => {
         // A virtual buffer (the floating window's: a commit's message, a report) has no file to force: `:w!` is `:w`.
-        if (v.buf.virtual) return a.run("note.save");
+        if (v.buf.virtual || v.buf.newFile) return a.run("note.save");
         if (a.writeBuffer(v.buf, v.buf.contentToSave(), true))
           a.message("info", `saved ${a.displayName(v.buf)}${a.files.notIndexed(v.buf.abs)} over the file on disk`);
       }),
     "note.revert": (a) => withView(a, (v) => revert(a, v.buf)),
     "note.resolve": (a) =>
       withView(a, (v) => {
-        if (!v.buf.dirty || !v.buf.changedOnDisk())
+        if ((!v.buf.newFile && !v.buf.dirty) || !v.buf.changedOnDisk())
           return a.message("info", `${a.displayName(v.buf)} has no conflict with the file on disk`);
         a.saving.conflictPrompt(v.buf);
       }),

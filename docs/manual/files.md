@@ -269,6 +269,15 @@ every link asks.
 
 ### A new note
 
+You can start with a new path in your shell: `slipbox ideas/coffee.md`, or `slipbox open ideas/coffee.md`. It opens
+empty, with the path and `[new]` in its tab. Nothing is made until you save; that save makes missing folders too.
+Quitting without typing leaves nothing on disk and asks nothing. With unsaved text, the usual unsaved-changes
+message asks you to save or discard it. If another program makes the file before your first save, the conflict
+prompt asks which version to keep. `space n c` brings that prompt back if you dismiss it, even before typing.
+The naming and refusal rules below apply to these new paths too.
+
+![An empty new note, its path and new mark in the tab, before its first save](../images/files-new-file.png)
+
 Press `ctrl+n` or `space n n`, or type `:new`. In the explorer, press `n`. slipbox asks for the note's name.
 
 It makes the note in the folder of the note you are reading. When the explorer has the keys, it makes it in the
@@ -278,9 +287,10 @@ explorer's selected folder instead, or beside the selected file. The question sa
   there. A name starting with `/` is from the vault's top: `/inbox`.
 - **`.md` is added**, unless the name ends in a data or code file's extension slipbox knows (`.toml`, `.json`,
   `.py`…). So `tasks.toml` is made as it is written.
-- **A new note starts with its title,** `# coffee`. It opens with you typing on the line after the blank one, in the
+- **`:new` makes the note at once, with its title,** `# coffee`. It opens with you typing after the blank line, in the
   lens. With `editor.edit_in = "source"`, it opens in SOURCE view instead.
-- **A name that is already there** opens that file, and makes nothing.
+- **A name that is already there** opens that file, and makes nothing. A folder at the new name, after adding `.md`
+  too, is refused.
 - **A name where slipbox would never find the note** is refused: in a folder tools fill that `.gitignore` leaves out,
   or deeper in one with no note at its top, such as `target/debug/plan`.
 - **A name another note has**, in another folder, would make a wikilink by that name (`[[coffee]]`) reach either of

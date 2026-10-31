@@ -535,19 +535,20 @@ describe("git worktrees in the TUI (17.19)", () => {
     });
   });
 
-  test("the start (prepare): a path that isn't there said in a line, exit 3; a note opens in its vault, the flags passed on; a folder, the view at it (VV-D5)", async () => {
+  test("the start (prepare): a missing folder said in a line, exit 3; a note opens in its vault, the flags passed on; a folder, the view at it (VV-D5)", async () => {
     const { prepare } = await import("../../../../src/tui/shell/terminal/run.ts");
+    const { setRootMarkers } = await import("../../../../src/core/workspace/vaults/vault.ts");
     const said: string[] = [];
     const write = process.stderr.write;
     process.stderr.write = ((s: string) => (said.push(s), true)) as typeof process.stderr.write;
     let missing: ReturnType<typeof prepare>;
     try {
-      missing = prepare([join(sandbox, "no-such-place", "x.md")]);
+      missing = prepare([join(sandbox, "no-such-place") + "/"]);
     } finally {
       process.stderr.write = write;
     }
     expect(missing).toBe(3);
-    expect(said).toEqual([`slipbox: no such file or directory: ${join(sandbox, "no-such-place", "x.md")}\n`]);
+    expect(said).toEqual([`slipbox: no such directory: ${join(sandbox, "no-such-place")}/\n`]);
     const root = makeVault();
     const start = prepare([join(root, "notes", "alpha.md"), "--theme", "nord"]);
     if (typeof start === "number") throw new Error(`exit ${start}`);
@@ -558,7 +559,10 @@ describe("git worktrees in the TUI (17.19)", () => {
     expect(start.graph.notes.has("notes/alpha.md")).toBe(true);
     const loose = mkdtempSync(join(sandbox, "loose-"));
     writeFileSync(join(loose, "a.md"), "# A\n");
-    const folder = prepare([loose]);
+    const config = join(loose, "config.toml");
+    writeFileSync(config, '[walk]\nroot_markers = [".slipbox"]\n');
+    const folder = prepare([loose, "--config", config]);
+    setRootMarkers(null);
     if (typeof folder === "number") throw new Error(`exit ${folder}`);
     expect(folder.loc.mode).toBe("folder");
     expect(folder.open).toBeNull();

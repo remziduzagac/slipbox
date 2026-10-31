@@ -625,7 +625,7 @@ export class Watch {
   reloadBuffer(buf: NoteBuffer, deleted = false): void {
     // Back after being deleted (recreated): not deleted any more, whatever happens next.
     if (!deleted && buf.deleted && existsSync(buf.abs)) buf.deleted = false;
-    if (buf.dirty && !deleted) {
+    if ((buf.dirty || buf.newFile) && !deleted) {
       // Unsaved changes here and a new version there: the conflict prompt decides (5.5).
       if (!buf.conflictKept) this.app.saving.conflictPrompt(buf);
       return;

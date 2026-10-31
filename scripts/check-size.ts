@@ -25,7 +25,7 @@ export const CAPPED: Record<string, number> = {
   "src/core/workspace/graph/graph-resolve.ts": 605,
   "src/core/workspace/graph/graph.ts": 998,
   "src/tui/app/distribution/updates.ts": 667,
-  "src/tui/app/runtime/app.ts": 1366,
+  "src/tui/app/runtime/app.ts": 1325,
   "src/tui/app/runtime/watch.ts": 666,
   "src/tui/workspace/vaults/vaults.ts": 636,
 };

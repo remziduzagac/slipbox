@@ -277,6 +277,9 @@ comes forward.
 
 ## D18: The CLI command list: small, read against zk and nb (9.1, 9.2, 9.3, 2026-09-25)
 
+> **Amended by D267 (2026-10-31):** opening the screen on a missing file starts a new note, written on first save;
+> exit 3 still means not found for CLI reads and writes without `--create`.
+
 > **Detailed by GR-D10, GR-D15 (2026-10-12):** the commands now include `skill`, the skill built into the binary,
 > and `channel`, the releases an install follows, beside `upgrade` and `uninstall` (D199, `14.8`); docs/manual/cli.md
 > lists them all.
@@ -609,3 +612,19 @@ grew because every feature's state lived in `App` and only the commands' entry p
 code matching the code around it, with no limit to stop it.
 
 **Not chosen:** splitting later, after VV and GIT: the seventeen tasks left would each add to it first.
+
+## D267: A missing file opens empty and is made on its first save (9.3, 4.6, 2026-10-31)
+
+**Decision:** `slipbox <path>` and `slipbox open <path>` open a missing file as an empty, clean buffer. This replaces
+exit 3 for that screen-opening case (D18, #168). Its tab shows its path and `[new]`. The nearest existing folder
+chooses its vault and the explorer's starting folder. Naming and refusals are `:new`'s; a missing path ending in `/`
+still means a missing folder. Saving makes missing parents and publishes the complete file exclusively, through
+`App.writeBuffer`; an entry made meanwhile raises the ordinary disk-conflict prompt. The CLI's commands keep their
+existing rules, including exit 3 for a missing read and `--create` for a new write.
+
+**Why:** a path at an editor's start is also a way to begin a file. Delaying creation until saving lets a misspelt
+path be abandoned without leaving a file or folders behind. Empty text keeps an untouched quit silent; an automatic
+title would turn it into unsaved work. `[new]` names the state plainly beside the tab's usual dirty mark, and the
+ordinary `saved <path>` message needs no second saving vocabulary.
+
+**Cost:** a buffer's file may not exist yet; its first write must create exclusively rather than replace by rename.

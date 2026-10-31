@@ -9,6 +9,7 @@ import {
   fstatSync,
   fsyncSync,
   lstatSync,
+  linkSync,
   mkdirSync,
   openSync,
   readdirSync,
@@ -71,7 +72,7 @@ export function tempPath(path: string): string {
  * rename keeps mtime and size) — never a stat of the path afterwards, which could see another
  * process's write that landed in between and take it for ours.
  */
-export function atomicWrite(path: string, content: string | Uint8Array): Stamp {
+export function atomicWrite(path: string, content: string | Uint8Array, create = false): Stamp {
   const dir = dirname(path);
   ensureDir(dir);
   // A file being replaced keeps its permissions.
@@ -120,7 +121,11 @@ export function atomicWrite(path: string, content: string | Uint8Array): Stamp {
     chmodSync(tmp, mode); // the umask may have narrowed it
   } catch {}
   try {
-    renameSync(tmp, path);
+    if (create) {
+      // Publishing a complete new file without replacing an entry made meanwhile.
+      linkSync(tmp, path);
+      unlinkSync(tmp);
+    } else renameSync(tmp, path);
   } catch (err) {
     try {
       unlinkSync(tmp);
@@ -141,8 +146,9 @@ export function writeNote(
   root: string,
   path: string,
   content: string | Uint8Array,
-  opts: { through?: boolean } = {},
+  opts: { through?: boolean; create?: boolean } = {},
 ): Stamp {
+  if (opts.create && entryAt(path)) throw new WriteRefused(`${path} was created on disk — not writing over it`);
   const target = realTarget(path);
   let realRoot = root;
   try {
@@ -151,7 +157,7 @@ export function writeNote(
   const rel = relative(realRoot, target);
   if (!opts.through && (rel === ".." || rel.startsWith(`..${sep}`) || isAbsolute(rel)))
     throw new WriteRefused(`${path} resolves outside the vault (${target}) — not writing there`);
-  return atomicWrite(target, content);
+  return atomicWrite(target, content, opts.create);
 }
 
 /**

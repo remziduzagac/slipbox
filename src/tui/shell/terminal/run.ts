@@ -21,7 +21,6 @@ import {
   homeAt,
   isHome,
   isVaultRoot,
-  locateVault,
   recordLocation,
   rootAt,
   configFilesFor,
@@ -36,6 +35,7 @@ import { type CameBack, cameBack, type Place } from "../../app/distribution/upda
 import { keyName } from "../input/keys.ts";
 import type { Canvas } from "./canvas.ts";
 import { AppRenderable, Pictures, toRGBA } from "./opentui.ts";
+import { checkNewFile, openingPath } from "./open-path.ts";
 
 /** What the App starts with, all found before the screen is taken. */
 export type Start = Omit<AppOptions, "host">;
@@ -69,16 +69,25 @@ export function prepare(argv: string[], back: CameBack | null = null): Start | n
   setTrustedRoots(yours.trust.roots);
   const at = back?.place ? placed(back.place) : null;
   let loc: VaultLocation;
+  let opening: ReturnType<typeof openingPath> | null = null;
   try {
-    loc = at ?? locateVault({ root: flag(args, "root"), path });
+    opening = at ? null : openingPath(path, flag(args, "root"));
+    loc = at ?? opening!.loc;
   } catch (err) {
-    // A path that isn't there, a --root that isn't one: said in a line, as the CLI says it, before
+    // A missing directory or invalid --root: said in a line, as the CLI says it, before
     // the screen is taken — and its exit code, the CLI's EXIT.notFound.
     if (!(err instanceof VaultError)) throw err;
     process.stderr.write(sanitize(`slipbox: ${err.message}\n`));
     return 3;
   }
   const loaded = loadConfig({ ...configFilesFor(loc), configFile: flag(args, "config") });
+  try {
+    if (opening?.newFile) checkNewFile(loc, loaded.config);
+  } catch (err) {
+    if (!(err instanceof VaultError)) throw err;
+    process.stderr.write(sanitize(`slipbox: ${err.message}\n`));
+    return 3;
+  }
   const warnings = [...loaded.warnings];
   const notes: string[] = [];
   // `--base <ref>` (GIT-D10, D255): the branch here measured against it, kept as "Compare against…" keeps it. A ref
@@ -107,6 +116,7 @@ export function prepare(argv: string[], back: CameBack | null = null): Start | n
     warnings,
     notes,
     open: at ? null : (loc.file ?? null),
+    newFile: opening?.newFile,
     themeName: flag(args, "theme"),
     configFile: flag(args, "config"),
     // A folder opened: the explorer's view starts there, in its vault (VV-D5); a restart's, home's folder it had open.
@@ -114,9 +124,11 @@ export function prepare(argv: string[], back: CameBack | null = null): Start | n
       ? at.mode === "home" && back?.place?.homeFolder
         ? join(at.root, back.place.homeFolder)
         : undefined
-      : path && !loc.file
-        ? resolve(path)
-        : undefined,
+      : opening?.folder
+        ? opening.folder
+        : path && !loc.file
+          ? resolve(path)
+          : undefined,
     recorded,
     ...(back ? { restarted: { session: at ? back.session : null, said: back.said } } : {}),
   };

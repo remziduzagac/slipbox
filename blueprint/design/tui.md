@@ -365,6 +365,11 @@ Notes open as buffers, shown in tabs, with one split (D141):
   differs; other blocks are kept as before, and a note that asks for none isn't laid out again when only its window's
   height changes. Buffers are internal: there is no buffer list. They're keyed by path, so a note deleted on disk
   keeps its buffer.
+  A file opened before it exists starts empty and clean (`newFile`, D267): its tab shows its path and `[new]`, beside
+  the usual dirty mark once typed into. Quitting untouched asks nothing and writes nothing; unsaved text uses the
+  usual warning. Saving makes its parents and file, removes `[new]` and says `saved <path>`. Another program's file
+  at that name is a disk conflict, even if it appeared during the first write; writing over it needs confirmation.
+  The conflict command can reopen this conflict while the new buffer is still clean.
 - **View** (a window): a buffer plus its own cursor, top row, selection, find and history.
   Two windows may show one buffer.
 - **Tab:** one window, or two in a split, with an orientation (side by side, or stacked) and a ratio (the first window's
