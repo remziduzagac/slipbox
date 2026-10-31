@@ -286,7 +286,9 @@ answering in the background (D263) — so it doesn't wait for the next key. One 
 something said on every frame would keep drawing; it shows on the next frame drawn, which may be the next key's (a
 spell checker's missing dictionary, said as a note is drawn). Clicking one opens the
 messages list and clears the boxes. Timing is delegated to `app/notifications/toasts.ts`; App retains the messages,
-visible boxes, per-click deduplication and drawing guard. The existing timer is cleared on dismissal; its quit
+visible boxes, per-click deduplication and drawing guard. If the wall clock moves back before a box's first-drawn
+time, that box starts its normal lifetime again at the corrected time, keeping the next timer within four/eight seconds
+rather than overflowing into repeated immediate wakeups. The existing timer is cleared on dismissal; its quit
 behavior is unchanged. Popups and questions draw over them. On a screen too small for a box (under 30 columns), a
 message takes over the status line while it shows.
 

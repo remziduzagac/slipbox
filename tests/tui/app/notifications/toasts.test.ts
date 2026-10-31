@@ -79,3 +79,40 @@ describe("notification timing without App", () => {
     expect(context.renders).toBe(0);
   });
 });
+
+test("a clock moved back to before a toast was drawn restarts its lifetime without an overflowing timer", () => {
+  const { context, scheduler, jobs, unrefs } = fixture();
+  context.time = 1_793_023_178_340;
+  const firstShown = context.time;
+  const info: Message = { level: "info", text: "short", at: firstShown };
+  const error: Message = { level: "error", text: "long", at: firstShown };
+  const undrawn: Message = { level: "warn", text: "waiting", at: firstShown };
+  context.toasts = [info, error, undrawn];
+  scheduler.toastsDrawn([info, error]);
+  expect([...jobs.values()].map((job) => job.ms)).toEqual([4000]);
+
+  // A pending wake sees a corrected wall clock, or a harness clock replaced after the first frame.
+  context.time = 10_000;
+  [...jobs.values()][0]!.run();
+  expect([...jobs.values()].map((job) => job.ms)).toEqual([4000]);
+  expect(info.shown).toBe(context.time);
+  expect(error.shown).toBe(context.time);
+  expect(undrawn.shown).toBeUndefined();
+  expect(info.at).toBe(firstShown);
+  expect(error.at).toBe(firstShown);
+
+  context.time += 3999;
+  scheduler.scheduleToasts();
+  expect(context.toasts).toEqual([info, error, undrawn]);
+  expect([...jobs.values()].map((job) => job.ms)).toEqual([10]);
+  context.time += 1;
+  [...jobs.values()][0]!.run();
+  expect(context.toasts).toEqual([error, undrawn]);
+  expect([...jobs.values()].map((job) => job.ms)).toEqual([4000]);
+  context.time += 4000;
+  [...jobs.values()][0]!.run();
+  expect(context.toasts).toEqual([undrawn]);
+  expect(jobs.size).toBe(0);
+  expect(context.renders).toBe(3);
+  expect(unrefs()).toBe(4);
+});
