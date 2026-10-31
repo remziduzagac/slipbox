@@ -112,7 +112,7 @@ the root/autoload flags, and runs outside the repository. Its temporary source a
 Logs: `tmp/issue/ORF-T3-resume-structure.log`, `ORF-T3-resume-binary-probe.log`,
 `ORF-T3-resume-worker-source.log`, `ORF-T3-resume-worker-build.log` and `ORF-T3-resume-worker-compiled.log`.
 
-## Retained autosave fixture failure; draft publication pending
+## Retained autosave fixture failure and isolation prerequisites
 
 The resumed `gnutimeout -k 10 300 bun run check` passes all static/docs gates (477 Markdown files, 1,739 spelt
 files). Its 353-owner unit selection has no whole-suite fallback. All four resolver characterization cases pass,
@@ -128,11 +128,86 @@ This matches the retained [ORG autosave finding](../../code-organization/design.
 already traced the same assertion to cached ancestor-checkout discovery. The current fixture constructs App at
 `conflicts.test.ts:115` before creating its own `.git`/lock at lines 124–125. Autosave uses
 `src/tui/documents/saving/saving.ts:208`, and `src/tui/workspace/git/git.ts:79` prefers its cached checkout when
-checking the lock. The host's `/tmp/.git` exists. All these source/fixture files are byte-identical to origin/dev;
-the extraction changes candidate lookup only. The current failure was not instrumented or rerun to claim a fresh
+checking the lock. A later namespace check saw a read-only `/tmp/.git` inside the sandbox and none on the
+unrestricted host; the initial sandbox observation does not establish the host state during this failed run. All
+these source/fixture files were byte-identical to origin/dev at that run; the extraction changes candidate lookup only.
+The current failure was not instrumented or rerun to claim a fresh
 causal trace; the matching historical trace and unchanged fixture establish the retained finding separately.
 
 Recommend a separate test-only PR giving this autosave fixture its Git context before App construction, with a
 controlled ancestor-checkout regression; preserve its title, assertions and deadlines. Resume ORF-T3's scoped
 verification and publication after that prerequisite. No additional task, fixture fix, commit, push, draft PR,
 fresh review or merge is included in this waiting record. The rebased extraction and both completion edits remain.
+
+
+## Resumed build after ORF-T23 and ORF-T24
+
+The saved, unpushed extraction was rebased without conflict onto `origin/dev` at
+`5dd078a231321e40e2c0e648676704305d14a729` after PRs #176 and #177 merged. PR #177's automatic
+[dev push](https://github.com/remziduzagac/slipbox/actions/runs/41249000773) succeeds on attempt 1; both reached-unit
+platforms, lint/site and aggregate CI pass, with terminal/status skipped for that test-only scope. The rebased source
+is unchanged, and the ORF-T24 completion record is carried unchanged alongside the existing ORF-T2 record.
+
+[ORF-T23](23-autosave-fixture.md) creates the autosave fixture's Git context before App construction and adds a
+controlled ancestor-checkout regression. Its corrected marker-writer diagnostic demonstrates no temporary-root
+marker producer; the original shared-run trigger remains unproved. The diagnostic separately exposed an inherited
+NO_COLOR theme assumption, isolated with a controlled regression in [ORF-T24](24-theme-fixture.md). Each prerequisite
+preserves the original assertions and deadlines and records its failing undone-fix control. Neither failure is hidden
+by retrying an unchanged fixture. The initial incomplete resolver scoped runs remain retained above.
+
+Final structural comparison captures current dev plus the identical characterization and the rebased extraction:
+3,001 → 3,007 static edges, 2,245 → 2,249 runtime edges, all 4,049 declaration identities and twelve entries retained,
+zero unresolved references. The initial disposable capture lacked installed dictionary assets; attaching the same
+node_modules resolves those four asset paths on both sides. Manifest deltas are unchanged. Source, characterization,
+size policy and module-map bytes match the saved extraction, preserving its body audit and compiled probe evidence.
+Logs: `tmp/issue/ORF-T3-final-structure-fixed-assets.log` and `ORF-T3-final-rebase-audit.txt`.
+
+## Aggregate external bound; draft publication pending
+
+The final `gnutimeout -k 10 300 bun run check` passes all static/docs gates (479 Markdown files, 1,741 spelt
+files), then reaches the unchanged 300-second external aggregate bound, exit 124. Its 353-owner selection has
+1,831 pass lines, zero failed test cases and zero overflow warnings, but no completed aggregate summary. The four
+resolver characterizations, isolated stat/worktree cases, autosave Git-lock case and theme preview case all pass.
+
+The log reaches 293 preceding file owners, then is interrupted in `tests/tui/shell/screen/rules.test.ts`; 59 selected
+owners have not started. SIGTERM is reported at lines 2455–2456, with the child exit 143 at line 2458. This is an
+external aggregate timeout, not a demonstrated assertion failure or a proven product performance cause. Existing
+per-test deadlines are unchanged. No selection, interrupted case or successful file is rerun after the timeout.
+
+Evidence: `tmp/issue/ORF-T3-final-check-verified-docs.log` and `ORF-T3-final-scope-completion.json`, which lists the
+selected, preceding, interrupted and remaining owners. The two earlier final attempts stopped at documentation
+wrapping errors before running tests; their logs remain, and the corrected task text passes its docs precheck.
+
+Recommend completing only the interrupted owner and the 59 owners not yet started in bounded batches, retaining this
+incomplete combined run and all existing deadlines. The handover's failed-check stop is retained for disposition;
+no fresh terminal run, commit, push, draft PR, review or merge follows this timeout. The existing before/after
+terminal results and source/compiled probes remain recorded above; this aggregate check is not claimed green.
+
+
+## Scoped completion and Git-panel color fixture
+
+The interrupted owner and 59 owners not yet reached run in two sequential 30-file batches, each with
+`gnutimeout -k 10 300 bun test --timeout 30000`. Whole bun run check commands use a 900-second outer wrapper;
+all test deadlines remain unchanged. The original exit 124 is retained, and no completed owner is repeated.
+The two initial pass lines from the interrupted owner are excluded from the combined counts below.
+
+| Part | Owners | Passes | Skips | Failures |
+| --- | ---: | ---: | ---: | ---: |
+| Completed before interruption | 293 | 1,829 | 0 | 0 |
+| Completion batch 1 | 30 | 272 | 2 | 0 |
+| Completion batch 2 | 30 | 266 | 0 | 1 |
+| Combined selected owners | 353 | 2,367 | 2 | 1 |
+
+Batch 1 passes in 49.974 seconds, with 2,330 assertions. Batch 2 finishes in 21.405 seconds, with 1,852 assertions,
+but fails `tests/tui/workspace/git/panel/input.test.ts:178`: expected the git_new foreground (undefined), received
+`default`. The case assumes color while App deliberately selects mono under inherited nonempty NO_COLOR
+(`src/tui/app/runtime/app.ts:657`). The fixture and App source are unchanged from dev; the invoking unrestricted
+shell has NO_COLOR present and nonempty. The combined scoped result is not green, and the failed batch is not retried.
+
+The standing fixture-isolation follow-up is ORF-T25: keep this case's title, body and assertions, isolate its color
+preference, and add a controlled nonempty/empty/absent environment regression in a separate test-only PR. The saved
+resolver extraction stays local while that prerequisite builds. No deadline, product behavior or shared helper changes.
+
+Evidence: `tmp/issue/ORF-T3-completion-batch-1.log`, `ORF-T3-completion-batch-2.log:27`,
+`ORF-T3-completion-results.json` and `ORF-T3-completion-summary.json`. The summary verifies exact coverage of all
+353 selected owners without repeating the 293 completed owners; no total first-part assertion count is inferred.
