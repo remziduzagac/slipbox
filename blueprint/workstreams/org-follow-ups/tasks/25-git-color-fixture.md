@@ -1,5 +1,5 @@
 ---
-status: review
+status: done
 assignee:
 blocked_by: [ORF-T24]
 created: "2026-11-01"
@@ -31,8 +31,9 @@ Branch: `refactor/issue-170-git-color-fixture`, from origin/dev at
 `5dd078a231321e40e2c0e648676704305d14a729`. Carry ORF-T24's completion record unchanged. ORF-T3 remains local,
 unpushed at `47a324dc`, with its completed source/compiled probes and scoped failure ledger preserved.
 
-Build, fresh review and merge remain separate stages. Resume ORF-T3 after this prerequisite merges and its automatic
-dev push succeeds; its combined scoped result has one retained failure until that fixture is fixed.
+Build, fresh review and merge are complete, including this prerequisite's successful automatic dev push.
+The saved ORF-T3 extraction and its scoped verification/publication resume next; its historical combined scoped
+result retains the fixture failure separately fixed here.
 
 
 ## Implementation and controlled regression
@@ -70,11 +71,36 @@ an observation bound for scoped verification, not a change to application or tes
 The preceding dev push at the exact base succeeds on attempt one; repository health last ran 2026-10-26, within
 eight days. Six changed files: this test owner, task and task index, resolver prerequisite, carried ORF-T24 completion
 and the common outer-wrapper policy. No user behavior, user documentation, changelog, dependency or CI change.
-[Draft PR #178](https://github.com/remziduzagac/slipbox/pull/178) is open into dev. Implementation commit:
-`00e354644c1c7f047999a99887ae46ec8d30f493`. The staged-task documentation gate passes: 480 Markdown files,
-1,739 spelt files, zero link errors. Fresh review, ready marking, merge and automatic dev push remain separate stages.
+The staged-task documentation gate passes: 480 Markdown files, 1,739 spelt files, zero link errors.
 
-The resolver checkpoint remains local and unpushed at `47a324dc3e4867409aa15211520583f5f40c4b7a`.
-After this prerequisite's fresh review, exact-head merge and successful dev push, rebase that extraction onto newest
-dev and resume its publication with the combined scoped ledger retained. No unrelated failed batch retry, full suite,
-all-terminal run, branch promotion or release is included.
+## PR delivery, review and merge
+
+[PR #178](https://github.com/remziduzagac/slipbox/pull/178) merged into dev at
+`f0bd367acd2ddd6573e8664c77f3b39960209136`, 2026-10-31 23:15:20 UTC. Implementation commit:
+`00e354644c1c7f047999a99887ae46ec8d30f493`; reviewed head:
+`386ebd38e6270e0f8c28b71bf8159a8c4799a958`. Product source and shared helpers remain unchanged.
+
+Fresh review finds no actionable findings. Its independent whole-file audit reconstructs the base byte-for-byte
+after reversing only the documented helper, registration and added regression. All nine original suite/leaf
+declarations retain text and order, with one added. Fresh scoped verification under NO_COLOR=1 passes every
+static/docs gate and all nine affected-owner tests, 68 assertions, zero failures (798 milliseconds). The explicit
+Git-panel terminal scenario passes one check, four commands, two jobs (0.8 seconds). Documentation includes
+480 Markdown and 1,739 spelt files, with zero link errors. The negative control and unrelated failed batch are retained.
+
+Before merge, the preceding [dev push](https://github.com/remziduzagac/slipbox/actions/runs/41249000773) succeeds at
+the exact base `5dd078a231321e40e2c0e648676704305d14a729`, attempt 1. All executed PR CI and CodeQL checks succeed
+at the reviewed head, also on attempt 1. Marked ready and squash-merged with that exact head as the match guard;
+the merged tree is byte-identical to the reviewed tree.
+
+The automatic [dev push](https://github.com/remziduzagac/slipbox/actions/runs/41251747777) succeeds at the exact
+merge commit on attempt 1: both reached-unit platforms, lint/site, changes and aggregate CI pass. Terminal/status
+jobs are skipped for this test-only scope; no terminal execution is claimed for the push.
+
+Evidence: `tmp/issue/review-ORF-T25.md`, `ORF-T25-review-body-audit.txt`, `ORF-T25-review-check.log`,
+`ORF-T25-review-terminal.log`, `ORF-T25-merge-pr-final.json`, `ORF-T25-merge-previous-dev-result.json`,
+`ORF-T25-merge-result.json`, `ORF-T25-merge-dev-result.json` and `ORF-T25-merge-completion-audit.txt`.
+
+The resolver checkpoint remains local and unpushed at `47a324dc3e4867409aa15211520583f5f40c4b7a` on
+`refactor/issue-170-resolver`. Next, rebase that extraction onto newest dev, retain its completion records, probes and
+combined scoped ledger, then resume verification/publication. ORF-T3 is not complete. No unrelated failed batch retry,
+full suite, all-terminal run, branch promotion or release is included.

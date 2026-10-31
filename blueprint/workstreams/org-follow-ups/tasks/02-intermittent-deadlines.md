@@ -1,5 +1,5 @@
 ---
-status: review
+status: done
 assignee:
 blocked_by: [ORF-T21]
 created: "2026-10-31"
@@ -26,7 +26,9 @@ implementation and review evidence do not by themselves close the task.
 
 Branch: `refactor/issue-170-deadlines`, from `origin/dev` at
 `3e92e8a72109b9e79f02e51c517b59cc9955fd44`. The preceding ORF-T21 dev push passes on attempt 1.
-Draft [PR #174](https://github.com/remziduzagac/slipbox/pull/174) is open into dev; fresh review and merge are pending.
+[PR #174](https://github.com/remziduzagac/slipbox/pull/174) merged into dev on 2026-10-31 as
+`19be598d2cbc783455e728484dc2fe7a8d72bbe8`, from reviewed head
+`44d736c015d48174d8832843bb37c5fa0d9b8fd9`.
 
 Read the original macOS Git failure and CLI-search partial sample before running controls. Trace the two fixtures
 and their process/output/cleanup ownership; compare isolated and bounded shared execution after ORF-T1. Separate
@@ -151,3 +153,22 @@ Diff whitespace check passes. No source/test relocations, generated assets, snap
 merge is part of this build stage. The only other tracked edits are the carried ORF-T1/T21 completion records.
 
 Local logs: `tmp/issue/ORF-T2-timeout-policy.log`, `ORF-T2-check.log` and `ORF-T2-terminal-scope.log`.
+
+## Review and delivery
+
+Fresh review at the merged PR head found no actionable findings. Its scoped check passes every static/docs gate;
+documentation-only unit selection reaches no tests. The bounded six-owner shared control passes 26 tests with
+162 assertions and zero overflow warnings (2.34 seconds). Terminal selection succeeds with no checks reached;
+no terminal-feature execution is claimed. PR CI and CodeQL pass at the exact reviewed head. Historical failures and
+diagnostic probes were inspected without repeating them. Both deadline causes and the possible Git
+environment-restoration cascade remain explicitly unresolved.
+
+The preceding [dev push](https://github.com/remziduzagac/slipbox/actions/runs/41239553858) at the base passes on its
+first attempt: both reached-unit platforms, lint/site and aggregate CI; terminal jobs are skipped. Its successful
+completion was verified before this merge. PR #174 was then marked ready and squash-merged with the reviewed head
+matched exactly.
+
+The automatic [dev push](https://github.com/remziduzagac/slipbox/actions/runs/41240966128) at
+`19be598d2cbc783455e728484dc2fe7a8d72bbe8` passes on its first attempt: lint/site, scope selection and aggregate CI.
+Unit, terminal and status jobs are skipped for this documentation-only scope; no product-test or terminal execution
+is claimed for this push. ORF-T3 build is next; no failed job or selection was rerun.
