@@ -7,8 +7,10 @@ they do not reopen ENG, introduce a gateway or change behavior during extraction
 ## Implementation seams
 
 The task index gives one reviewable PR per timer/deadline investigation, source owner, capped test/check owner and
-unused-code/focused-test batch. Sequence: timer, deadlines, source splits (resolver, CLI, vaults, watch, updates,
-graph, App), four unit owners, five terminal collections, unused-code proof, focused scenarios and scope measurement.
+unused-code/focused-test batch. Sequence: timer, uninstall fixture isolation (item 4's host assumptions), deadlines,
+source splits (resolver, CLI, vaults, watch, updates, graph, App), four unit owners, five terminal collections,
+unused-code proof, focused scenarios and scope measurement. ORF-T21 is a separate test-only PR immediately after
+ORF-T1's PR #171; existing task IDs stay unchanged.
 The [T11 ledger](../code-organization/manifests/t11-final-ratchet.json) supplies the split responsibilities and
 invariants. Tasks characterize them before extracting; App is last among source owners and may need child PRs.
 

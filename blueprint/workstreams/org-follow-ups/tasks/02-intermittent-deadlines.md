@@ -1,13 +1,13 @@
 ---
 status: todo
 assignee:
-blocked_by: [ORF-T1]
+blocked_by: [ORF-T21]
 created: "2026-10-31"
 ---
 
 # ORF-T2: Investigate intermittent deadlines
 
-Issue item 4; follows ORF-T1.
+Issue item 4; follows ORF-T21's separate uninstall fixture isolation after ORF-T1.
 
 ## Scope
 

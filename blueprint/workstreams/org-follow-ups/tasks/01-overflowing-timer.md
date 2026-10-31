@@ -1,5 +1,5 @@
 ---
-status: doing
+status: review
 assignee:
 blocked_by: []
 created: "2026-10-31"
@@ -23,8 +23,9 @@ implementation and review evidence do not by themselves close the task.
 
 ## Implementation and verification
 
-Branch: `refactor/issue-170-timer`, from `origin/dev` at `2521e4b5`. The first ORF draft PR awaits disposition of the
-known unrelated check failure below; review, merge and the subsequent dev run remain pending.
+Branch: `refactor/issue-170-timer`, from `origin/dev` at `2521e4b5`.
+Draft [PR #171](https://github.com/remziduzagac/slipbox/pull/171) awaits fresh review; merge and the subsequent dev run
+remain pending. The known unrelated check failure below has its own following task, ORF-T21.
 
 The overflow is in `src/tui/app/notifications/toasts.ts:30`: a toast drawn on the real clock can outlive a test's
 replacement clock, and a wall clock corrected backwards has the same effect. Its future `shown` timestamp produces
@@ -59,12 +60,12 @@ The separate four-owner clock/LSP probe passes 54 tests with 258 assertions; it 
 Sandbox language-server startup failures are environment-specific; the unrestricted client control passes.
 Intermittent deadline investigation remains ORF-T2; no timeout increase or retry policy is bundled here.
 
-## Required scoped check: waiting
+## Required scoped check: known host assumption
 
 `gnutimeout -k 10 300 bun run check` passes its static/documentation gates, then selects 262 reached unit owners.
 It fails `tests/cli/distribution/install.test.ts:15`: listing-only uninstall returns three installed host skills,
 while the fixture assumes an empty list. [ORG-T43](../../code-organization/tasks/43-measurement-and-build.md) already
 records this exact host-skill assumption. The scheduler is unrelated to uninstall discovery; no uninstall code or
-fixture changed. The run is stopped after identifying this failure and is not retried. The remaining selected tests
-are not claimed to pass. Recommend fixing fixture isolation separately before accepting this PR. No review or merge
-is performed while waiting for the maintainer's disposition.
+fixture changed. The run was stopped after identifying this failure and was not retried. The remaining selected tests
+are not claimed to pass. [ORF-T21](21-uninstall-fixture.md) addresses this host assumption under issue item 4, in its
+own test-only PR immediately after #171. ORF-T1 proceeds to fresh review with the failure retained in its evidence.

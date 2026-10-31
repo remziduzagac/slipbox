@@ -5,8 +5,9 @@
 ORF-R1: Close all six items of issue #170 with implemented work or explicit evidence-backed retained findings, using
 ORG-R1–ORG-R10 and ORG-D1–ORG-D3. ORG's TUI-owned buffers and App.writeBuffer authority take precedence over ENG.
 
-ORF-R2: Fix the overflowing timer first with a regression observed to fail without the fix. Then investigate the
-intermittent deadlines without raising any limit or concealing an unexplained failure behind retries.
+ORF-R2: Fix the overflowing timer first with a regression observed to fail without the fix. Follow it immediately
+with a separate test-only PR isolating the uninstall fixture's home under item 4's host assumptions. Then investigate
+the remaining intermittent deadlines without raising any limit or concealing an unexplained failure behind retries.
 
 ORF-R3: Remove all seven handwritten source caps and nine test caps through cohesive feature splits, preserving the
 invariants and identities named by ORG-T11. Source aim/ceiling remains 500/600; tests remain 1,000/1,500. Generated
