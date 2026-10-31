@@ -9,6 +9,33 @@ import { makeGitPanelFixture } from "../../../../support/tui/git-panel-fixture.t
 // File-owned Git-panel setup preserves its environment restoration and cleanup.
 const { git, repo, until, panel, typed, rowOf } = makeGitPanelFixture();
 
+/** Run the Git-mark colour scenario independently of the invoking shell's colour preference. */
+async function branchFileColors(): Promise<void> {
+  const noColor = process.env.NO_COLOR;
+  delete process.env.NO_COLOR;
+  try {
+    const root = repo();
+    git(root, "mv", "b.md", "e.md");
+    git(root, "commit", "-q", "-m", "e");
+    const { app, frame } = await panel(root);
+    expect(await until(() => (frame(), rowOf(app, (r) => r.kind === "ahead" && r.file.path === "e.md") >= 0))).toBe(
+      true,
+    );
+    const c = new TextCanvas(140, 40);
+    app.draw(c);
+    const drawn = (text: string) => {
+      const y = c.rows.findIndex((r) => r.join("").includes(text));
+      expect(y).toBeGreaterThanOrEqual(0);
+      return c.styles[y]![c.rows[y]!.join("").indexOf(text)]!.fg;
+    };
+    expect(drawn("+ c.md")).toBe(app.theme.roles.git_new.fg!);
+    expect(drawn("R e.md")).toBe(app.theme.roles.git_modified.fg!);
+  } finally {
+    if (noColor === undefined) delete process.env.NO_COLOR;
+    else process.env.NO_COLOR = noColor;
+  }
+}
+
 describe("the git panel by mouse as by keys (GIT-D8)", () => {
   test("the message box: i types in it, ctrl+enter commits what's staged with it, and it's empty again", async () => {
     const root = repo();
@@ -160,22 +187,19 @@ describe("the git panel by mouse as by keys (GIT-D8)", () => {
     expect(await until(() => (frame(), rowOf(app, (r) => r.kind === "ahead") < 0))).toBe(true);
   });
 
-  test("This branch's files marked as the explorer marks them: its letter, in its colour", async () => {
-    const root = repo();
-    git(root, "mv", "b.md", "e.md");
-    git(root, "commit", "-q", "-m", "e");
-    const { app, frame } = await panel(root);
-    expect(await until(() => (frame(), rowOf(app, (r) => r.kind === "ahead" && r.file.path === "e.md") >= 0))).toBe(
-      true,
-    );
-    const c = new TextCanvas(140, 40);
-    app.draw(c);
-    const drawn = (text: string) => {
-      const y = c.rows.findIndex((r) => r.join("").includes(text));
-      expect(y).toBeGreaterThanOrEqual(0);
-      return c.styles[y]![c.rows[y]!.join("").indexOf(text)]!.fg;
-    };
-    expect(drawn("+ c.md")).toBe(app.theme.roles.git_new.fg!);
-    expect(drawn("R e.md")).toBe(app.theme.roles.git_modified.fg!);
+  test("This branch's files marked as the explorer marks them: its letter, in its colour", branchFileColors);
+  test("the Git-mark colour fixture restores inherited NO_COLOR, including empty and absent values", async () => {
+    const noColor = process.env.NO_COLOR;
+    try {
+      for (const inherited of ["1", "", undefined]) {
+        if (inherited === undefined) delete process.env.NO_COLOR;
+        else process.env.NO_COLOR = inherited;
+        await branchFileColors();
+        expect(process.env.NO_COLOR).toBe(inherited);
+      }
+    } finally {
+      if (noColor === undefined) delete process.env.NO_COLOR;
+      else process.env.NO_COLOR = noColor;
+    }
   });
 });
