@@ -73,7 +73,7 @@ export class Saving {
         { label: "(d) Show the differences first", hotkey: "d", data: "d" },
       ],
       accept: (item) => {
-        if (item.data === "y" && this.app.writeBuffer(buf, buf.contentToSave(), true))
+        if (item.data === "y" && this.app.writeBuffer(buf, buf.contentToSave(), true, true))
           this.app.message(
             "info",
             `saved ${this.app.displayName(buf)}${this.app.files.notIndexed(buf.abs)} over the file on disk`,

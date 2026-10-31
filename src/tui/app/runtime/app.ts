@@ -28,8 +28,8 @@ import { onLoaded } from "../../../core/foundation/platform/lazy.ts";
 import { classify, extensionOf } from "../../../core/documents/model/filetypes.ts";
 import { accessSync, appendFileSync, constants as fsConstants } from "node:fs";
 import { dirname, isAbsolute, join, relative } from "node:path";
-import { climbsOut, folderUnreadable, WriteRefused, writeNote } from "../../../core/foundation/platform/fsutil.ts";
-import { linkSaid, writesThrough } from "../../../core/workspace/vaults/symlinks.ts";
+import { climbsOut, folderUnreadable } from "../../../core/foundation/platform/fsutil.ts";
+import { linkSaid } from "../../../core/workspace/vaults/symlinks.ts";
 import { writeDirty } from "../../../core/workspace/git/merge/stale.ts";
 import { placeAt, stopInsert } from "../../documents/editing/editing.ts";
 import { newVimState } from "../../shell/input/vim.ts";
@@ -109,6 +109,7 @@ import { Reporter } from "../distribution/report.ts";
 import type { TerminalAnswer } from "../../../core/application/distribution/report.ts";
 import { Watch } from "./watch.ts";
 import { Session } from "../../workspace/session/session.ts";
+import { writeBuffer } from "../../documents/saving/write-buffer.ts";
 import { Saving } from "../../documents/saving/saving.ts";
 import { Vaults, carried } from "../../workspace/vaults/vaults.ts";
 import { Renaming } from "../../workspace/explorer/renaming.ts";
@@ -389,6 +390,8 @@ export interface AppOptions {
   /** Said on opening, as information: what `--base` kept (D255). */
   notes?: string[];
   open?: string | null;
+  /** The startup path has no file yet; saving creates it. */
+  newFile?: boolean;
   themeName?: string;
   /** `--config`, remembered for reloads. */
   configFile?: string;
@@ -686,6 +689,7 @@ export class App {
       : !opts.open && this.config.ui.restore_session && this.session.restore();
     this.glyphs = this.settings.glyphSet(this.ui.glyphs);
     if (!restored) {
+      if (opts.newFile && opts.open) this.files.openNew(opts.open);
       const first = opts.open ?? this.defaultNote(this.homeFolder);
       if (first) this.openInNewTab(first);
     }
@@ -1133,53 +1137,8 @@ export class App {
   // watcher told it's ours, the buffer reloaded with its views' anchors kept.
 
   /** Write a buffer's file and take the result back in; false (with a message) if refused. */
-  writeBuffer(buf: NoteBuffer, content: string | Uint8Array, saving = false): boolean {
-    // A virtual buffer (3.20) is no file: its text goes where it belongs by its own save, never to its name on disk.
-    if (buf.virtual) {
-      this.message("warn", `${this.displayName(buf)} is the floating window's, not a file: not written`);
-      return false;
-    }
-    // Read through a link not followed now (VV-D6: looked at, or forgotten with unsaved text): never written through it.
-    if (buf.throughLink) {
-      this.message("warn", `${buf.key} not written: ${buf.readOnly ?? "read through a link not followed"}`);
-      return false;
-    }
-    // A vault's file stays inside the vault, one its graph doesn't know too (past `walk.max_file_size`); a file from
-    // outside it (the scratch) inside its folder. Through a link you follow, home's and Elsewhere's are written where it
-    // leads; a vault's never out of it (VV-D6).
-    const inVault =
-      buf.rel !== null || (this.loc.mode === "vault" && !buf.elsewhere && isInside(this.loc.root, buf.abs));
-    const root = inVault ? this.loc.root : dirname(buf.abs);
-    const through = this.loc.mode !== "vault" && !buf.elsewhere && writesThrough(this.loc, buf.abs);
-    let written: ReturnType<typeof writeNote>;
-    try {
-      written = writeNote(root, buf.abs, content, { through });
-    } catch (err) {
-      this.message(
-        "error",
-        err instanceof WriteRefused ? err.message : `can't write ${buf.key}: ${(err as Error).message}`,
-      );
-      return false;
-    }
-    // Stamped as written: an agent's write landing right after is a change, not ours.
-    if (buf.rel !== null) this.watcher?.noteOwnWrite(buf.rel, written);
-    this.git.refresh();
-    // The index learns what we wrote (the watcher skips our own writes): the note's links, for
-    // backlinks, and its stamp — a later watcher resync from the index must not take our own
-    // save for someone else's change.
-    if (buf.rel !== null && this.graph.notes.has(buf.rel))
-      this.graph.updateFile(buf.rel, { rel: buf.rel, abs: buf.abs, size: written.size, mtimeMs: written.mtimeMs });
-    else if (buf.rel !== null) this.graph.fileChanged(buf.rel);
-    if (saving) {
-      // The text on disk is what's in the buffer: keep it, its history and every cursor.
-      buf.deleted = false;
-      buf.markSaved(written);
-      this.languages.servers?.save(buf.abs, buf.source);
-      return true;
-    }
-    buf.load();
-    for (const v of this.allViews()) if (v.buf === buf) v.layoutKey = ""; // keeps the anchors (3.5)
-    return true;
+  writeBuffer(buf: NoteBuffer, content: string | Uint8Array, saving = false, overwriteNew = false): boolean {
+    return writeBuffer(this, buf, content, saving, overwriteNew);
   }
 
   /** The source line under the cursor (the span's it's on): where a hand-off opens the note. */

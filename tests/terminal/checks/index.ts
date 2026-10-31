@@ -8,6 +8,7 @@ import { GIT_DIFF } from "./git-diff.ts";
 import { GIT_STEADY } from "./git-steady.ts";
 import { LEFT_OUT_LINKS_AND_FILES, LINKS_AND_FILES } from "./links-and-files.ts";
 import { MOVING_LINKS } from "./moving-links.ts";
+import { NEW_FILE } from "./new-file.ts";
 import { LEFT_OUT_NAVIGATING, NAVIGATING } from "./navigating.ts";
 import { PEEK_BACKLINKS } from "./peek-backlinks.ts";
 import { LEFT_OUT_OUTSIDE_AND_CODE, OUTSIDE_AND_CODE } from "./outside-and-code.ts";
@@ -27,6 +28,7 @@ export const CHECK_FILES: Record<string, Check[]> = {
   html: HTML,
   reading: READING,
   editing: EDITING,
+  "new-file": NEW_FILE,
   navigating: NAVIGATING,
   "links-and-files": LINKS_AND_FILES,
   // The peek's backlinks (#10): their own file, in the links-and-files area.

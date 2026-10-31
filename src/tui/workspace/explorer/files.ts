@@ -1,7 +1,8 @@
 // File operations (18.x): a note or folder made, renamed, moved, copied, cut and pasted, deleted to the trash and
 // restored from it — each one a preview of the links it changes first.
 
-import { classify, extensionOf, isKnownExtension } from "../../../core/documents/model/filetypes.ts";
+import { classify } from "../../../core/documents/model/filetypes.ts";
+import { newNoteName } from "../../../core/documents/model/new-note.ts";
 import { existsSync, mkdirSync, statSync } from "node:fs";
 import { basename, dirname, join, posix, relative, sep } from "node:path";
 import { climbsOut, writeNote } from "../../../core/foundation/platform/fsutil.ts";
@@ -19,7 +20,7 @@ import {
 import { copyPath, linksInto, restorePath, trashPath } from "../../../core/workspace/mutations/files.ts";
 import { emptyTrash, listTrash, type TrashItem } from "../../../core/workspace/mutations/trash.ts";
 import { isInside, isListed } from "../../../core/workspace/vaults/vault.ts";
-import type { NoteBuffer } from "../../documents/buffers/buffer.ts";
+import { NoteBuffer } from "../../documents/buffers/buffer.ts";
 import { match } from "../../shell/overlays/match.ts";
 import type { App, ListItem, PromptOverlay } from "../../app/runtime/app.ts";
 import { editable } from "../../documents/editing/editable.ts";
@@ -119,7 +120,7 @@ export class Files {
 
   /** The folders a new path makes, known to the walk and the watcher (and the explorer shows); not
    *  one the walk leaves out (`walk.exclude`) or a root nested in this one, nor anything under it. */
-  private addFolders(rel: string): void {
+  addFolders(rel: string): void {
     const parts = rel.split("/");
     let added = false;
     for (let i = 1; i <= parts.length; i++) {
@@ -150,8 +151,7 @@ export class Files {
     if (base === null) return this.refuseOtherRoot(), null;
     let rel = this.newPath(input, base);
     if (!rel) return null;
-    const ext = extensionOf(rel);
-    if (!ext || !isKnownExtension(ext)) rel = `${rel}.md`;
+    rel = newNoteName(rel);
     const abs = join(this.app.loc.root, rel);
     let ours = this.app.graph.admits(rel);
     if (existsSync(abs)) {
@@ -194,6 +194,17 @@ export class Files {
     }
     this.app.message("info", `created ${rel}${this.notIndexed(abs)}`);
     return { rel, created: true, open };
+  }
+
+  /** An empty, clean startup buffer: the file and its folders are made only by saving. */
+  openNew(abs: string): void {
+    const rel = relative(this.app.loc.root, abs);
+    const key = this.app.loc.mode === "folder" ? abs : rel;
+    const buf = new NoteBuffer(null, abs, key);
+    buf.kind = classify(abs, this.app.config.walk.extensions);
+    buf.loadText("");
+    buf.newFile = true;
+    this.app.buffers.set(key, buf);
   }
 
   /**
@@ -239,8 +250,7 @@ export class Files {
   nameClash(input: string, base: string): { name: string; at: string; suggested: string } | null {
     const rel = this.newPath(input, base);
     if (!rel) return null;
-    const ext = extensionOf(rel);
-    const full = !ext || !isKnownExtension(ext) ? `${rel}.md` : rel;
+    const full = newNoteName(rel);
     if (classify(full, this.app.config.walk.extensions).group !== "note" || this.app.graph.notes.has(full)) return null;
     const name = posix.basename(full).replace(/\.(md|markdown)$/i, "");
     const same = (n: string) =>

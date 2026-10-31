@@ -28,8 +28,12 @@ export function drawTabs(app: App, c: Canvas, x0: number, band: Band, geo: Geome
     const changed = v.buf.dirty ? " •" : v.buf.changedAt && app.now() - v.buf.changedAt < CHANGE_MARKER_MS ? " ↻" : "";
     // Another vault's file, kept from a peek (VV-D7): marked with that vault's name.
     const e = v.buf.elsewhere;
-    const name = e?.rel ? `${e.vault}: ${e.rel.split("/").pop()!}` : app.displayName(v.buf).split("/").pop()!;
-    return ` ${i + 1} ${t.pinned ? `${app.glyphs.pin} ` : ""}${truncate(name, e ? 36 : 24)}${changed} `;
+    const name = v.buf.newFile
+      ? app.displayName(v.buf)
+      : e?.rel
+        ? `${e.vault}: ${e.rel.split("/").pop()!}`
+        : app.displayName(v.buf).split("/").pop()!;
+    return ` ${i + 1} ${t.pinned ? `${app.glyphs.pin} ` : ""}${truncate(name, v.buf.newFile ? 60 : e ? 36 : 24)}${v.buf.newFile ? " [new]" : ""}${changed} `;
   });
   const close = `${app.glyphs.close} `;
   const widths = labels.map((l) => stringWidth(l) + stringWidth(close) + 1);

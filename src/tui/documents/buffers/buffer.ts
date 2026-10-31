@@ -30,11 +30,12 @@ import type {
   SyntaxError,
 } from "../../../core/documents/syntax/syntax.ts";
 import { codeBlocks } from "../../../core/rendering/layout/code/code.ts";
-import { type Indent, indentFor, saveRules } from "../../../core/documents/editing/indent.ts";
+import { type Indent, indentFor } from "../../../core/documents/editing/indent.ts";
 
 import type { BufferLayoutContext } from "./layout/contracts.ts";
 import { sourceLayout } from "./layout/source.ts";
 import { codeLayout } from "./layout/code.ts";
+import { applySaveRules } from "./save-rules.ts";
 import { noteLayout } from "./layout/note.ts";
 
 /** One change to the text: at `at`, `removed` was replaced by `inserted`. */
@@ -75,6 +76,8 @@ export class NoteBuffer {
   private loaded = false;
   invalidUtf8 = false;
   deleted = false;
+  /** Opened before its first save; absence is expected, an intervening file is a conflict. */
+  newFile = false;
   /** When the file last changed under us (ms since epoch), for the change marker. */
   changedAt = 0;
   private layouts = new Map<string, Layout>();
@@ -252,6 +255,7 @@ export class NoteBuffer {
       this.savedText = this.source;
       this.stamp = stamp(this.abs);
       this.deleted = false;
+      this.newFile = false;
       this.layouts.clear();
       return true;
     } catch {
@@ -264,7 +268,7 @@ export class NoteBuffer {
   changedOnDisk(): boolean {
     if (this.virtual) return false;
     const s = stamp(this.abs);
-    if (!s) return !this.deleted;
+    if (!s) return !this.deleted && !this.newFile;
     return !this.stamp || s.mtimeMs !== this.stamp.mtimeMs || s.size !== this.stamp.size;
   }
 
@@ -346,22 +350,7 @@ export class NoteBuffer {
    * final newline added — one undo step, only where it changes anything.
    */
   applySaveRules(): void {
-    if (this.virtual) return;
-    const next = saveRules(this.source, this.indent());
-    if (next === this.source) return;
-    const a = this.source;
-    let head = 0;
-    while (head < a.length && head < next.length && a[head] === next[head]) head++;
-    let tail = 0;
-    while (
-      tail < a.length - head &&
-      tail < next.length - head &&
-      a[a.length - 1 - tail] === next[next.length - 1 - tail]
-    )
-      tail++;
-    this.endStep(head);
-    this.edit(head, a.length - head - tail, next.slice(head, next.length - tail), head);
-    this.endStep(head);
+    applySaveRules(this);
   }
 
   /** The file's content for `source`: with its BOM again. */
@@ -383,6 +372,7 @@ export class NoteBuffer {
 
   /** The file on disk is now `diskText` (after a merge): unsaved is measured against it. */
   rebase(diskText: string): void {
+    this.newFile = false;
     this.savedText = diskText;
     this.savedVersion = -1;
     this.dirtyMemo = { version: -1, dirty: false };
@@ -392,6 +382,7 @@ export class NoteBuffer {
 
   /** The text on disk is now this version (after a save). */
   markSaved(written?: Stamp): void {
+    this.newFile = false;
     this.savedVersion = this.version;
     this.savedText = this.source;
     this.stamp = written ?? stamp(this.abs);
