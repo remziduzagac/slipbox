@@ -1,5 +1,5 @@
 ---
-status: review
+status: done
 assignee:
 blocked_by: [ORF-T2]
 created: "2026-11-01"
@@ -65,8 +65,28 @@ Local logs: `tmp/issue/ORF-T22-negative.log`, `ORF-T22-stat-fixed.log`, `ORF-T22
 
 ## Draft delivery
 
-Draft [PR #175](https://github.com/remziduzagac/slipbox/pull/175) is open into dev. Implementation commit:
-`bf94870491db624f658691810cf6c64b1546c12f`. Fresh review and merge remain pending; the task stays in review.
+Draft [PR #175](https://github.com/remziduzagac/slipbox/pull/175) was opened into dev. Implementation commit:
+`bf94870491db624f658691810cf6c64b1546c12f`; final delivery head:
+`2a99075c0800108453b22374f06153c350543e13`.
 Final documentation verification includes the new task: 477 Markdown files and 1,736 spelt files. No product tests
-are repeated for the delivery-record update. ORF-T3's local checkpoint remains separate and unpushed until this
-prerequisite completes its review, merge and successful dev push.
+are repeated for the delivery-record update. ORF-T3's local checkpoint remains separate and unpushed.
+
+## Review and merge
+
+Fresh review at the final delivery head found no actionable findings. Its independent scoped check passes every
+static/docs gate and both reached unit owners: 18 tests, 243 assertions, zero failures (8.69 seconds). Terminal
+selection succeeds with no checks reached. PR CI and CodeQL pass at that exact head on their first attempts;
+the preserved negative control was inspected without repeating it.
+
+The preceding [dev push](https://github.com/remziduzagac/slipbox/actions/runs/41240966128) at the base passes on
+its first attempt. Lint/site and aggregate CI pass; unit and terminal jobs are skipped for that documentation-only
+scope. Its successful completion and the unchanged remote base were verified before this merge.
+
+PR #175 was marked ready and squash-merged with the reviewed head matched exactly, on 2026-10-31 at 21:22:29 UTC,
+as `5254a04494a9f57176795353c3b170c1ea89626d`. The merged tree is byte-identical to the reviewed head.
+The automatic [dev push](https://github.com/remziduzagac/slipbox/actions/runs/41243296407) at that merge passes on
+its first attempt: both reached-unit platforms, lint/site, changes and aggregate CI. Terminal/status jobs are
+skipped for this test-only scope; no terminal-feature execution is claimed.
+
+ORF-T3 build is next: rebase its saved extraction onto latest dev, then finish its remaining probes, scoped check
+and publication. ORF-T3 is not complete; no failed job or selection was rerun.
