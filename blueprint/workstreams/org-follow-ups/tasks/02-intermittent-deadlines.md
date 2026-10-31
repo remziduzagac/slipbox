@@ -26,6 +26,7 @@ implementation and review evidence do not by themselves close the task.
 
 Branch: `refactor/issue-170-deadlines`, from `origin/dev` at
 `3e92e8a72109b9e79f02e51c517b59cc9955fd44`. The preceding ORF-T21 dev push passes on attempt 1.
+Draft [PR #174](https://github.com/remziduzagac/slipbox/pull/174) is open into dev; fresh review and merge are pending.
 
 Read the original macOS Git failure and CLI-search partial sample before running controls. Trace the two fixtures
 and their process/output/cleanup ownership; compare isolated and bounded shared execution after ORF-T1. Separate
