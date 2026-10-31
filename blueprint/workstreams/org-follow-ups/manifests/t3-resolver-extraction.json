@@ -126,6 +126,6 @@
     "file": "tests/core/workspace/graph/resolver.test.ts",
     "addedLeafTests": 4,
     "addedAssertions": 21,
-    "baseline": "ORF-T3-before.json captured after characterization, before extraction (4046 declarations); ORF-T3-resume-before.json adds ORF-T22 (4047); ORF-T3-final-before.json captures dev@5dd078a2 plus identical characterization after ORF-T23/T24 (4049); extraction preserves every declaration"
+    "baseline": "ORF-T3-before.json captured after characterization, before extraction (4046 declarations); ORF-T3-resume-before.json adds ORF-T22 (4047); ORF-T3-final-before.json captures dev@5dd078a2 plus identical characterization after ORF-T23/T24 (4049); extraction preserves every declaration; ORF-T3-publish-before.json captures dev@f0bd367a plus identical characterization after ORF-T25 (4050); all declarations and manifest edge deltas match"
   }
 }

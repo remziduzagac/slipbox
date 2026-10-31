@@ -1,5 +1,5 @@
 ---
-status: doing
+status: review
 assignee:
 blocked_by: [ORF-T25]
 created: "2026-10-31"
@@ -211,3 +211,39 @@ resolver extraction stays local while that prerequisite builds. No deadline, pro
 Evidence: `tmp/issue/ORF-T3-completion-batch-1.log`, `ORF-T3-completion-batch-2.log:27`,
 `ORF-T3-completion-results.json` and `ORF-T3-completion-summary.json`. The summary verifies exact coverage of all
 353 selected owners without repeating the 293 completed owners; no total first-part assertion count is inferred.
+
+
+## Publication after ORF-T25
+
+The saved local extraction rebases without conflict onto current dev at
+`f0bd367acd2ddd6573e8664c77f3b39960209136`, after [ORF-T25](25-git-color-fixture.md), PR #178, merges. Its
+[automatic dev push](https://github.com/remziduzagac/slipbox/actions/runs/41251747777) succeeds at that exact
+commit on attempt 1. Both reached-unit platforms, lint/site and aggregate CI pass; terminal/status are skipped
+for this test-only prerequisite. The ORF-T25 completion record is carried unchanged, alongside ORF-T2's record.
+
+All source, characterization, size-policy and module-map bytes are identical to saved extraction `47a324dc`.
+The package build entries and fixed Git-color owner equal current dev. The original body/export audits,
+before/after characterizations, three affected terminal scenarios, package build, isolated CLI probes and real
+source/compiled backlinks-worker requests therefore remain applicable; no product source changed in any prerequisite.
+The fresh structural comparison against dev plus the identical characterization preserves all 4,050 declaration
+identities and twelve entries. Static edges remain 3,001 → 3,007 and runtime edges 2,245 → 2,249, exactly the
+manifest's deltas, with zero unresolved or stale references. The extra declaration is ORF-T25's regression.
+
+The current selector names exactly the same 353 owners, with no whole-suite fallback. Its conservative terminal
+selection remains all; only the three affected scenarios recorded above were executed. On the rebased tree under
+NO_COLOR=1, the changed Git-color owner passes nine tests, 68 assertions, zero failures (904 milliseconds),
+including the preserved original case and the new environment-restoration regression. No unrelated failed batch
+or previously completed unchanged owner is repeated. Replacing only that owner's seven passes/one failure in the
+retained ledger with its nine passes yields 2,369 passing tests and two skips across all 353 selected owners.
+This is combined owner coverage, not a single completed aggregate check. The original exit 124, interrupted runs
+and one-failure batch remain recorded above and in their original logs; no total first-part assertion count is inferred.
+
+Publication evidence: `tmp/issue/ORF-T3-publish-previous-dev.json`, `ORF-T3-publish-rebase-audit.txt`,
+`ORF-T3-publish-structure.log`, `ORF-T3-publish-scope.json`, `ORF-T3-publish-fixed-owner.log` and
+`ORF-T3-publish-verification-summary.json`. Final publication gates pass: typecheck, boundary, size, dependency
+checks, Biome, workflow checks and documentation. Logs: `ORF-T3-publish-static-results.json` and each
+`ORF-T3-publish-<gate>.log`. The size gate counts 562 source files with six handwritten/one generated caps and
+559 test/fixture files with nine legacy caps. The package binary still matches the SHA256 recorded above.
+
+Draft publication is next on `refactor/issue-170-resolver`, targeting dev. Fresh review and merge remain separate
+stages; review is pending. No full suite, all-terminal run, deadline change or user behavior change.
