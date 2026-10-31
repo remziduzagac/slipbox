@@ -23,6 +23,7 @@ from the latest origin/dev. Task status and evidence live in its file; completed
 - [ORF-T1: Fix the overflowing timer](tasks/01-overflowing-timer.md).
 - [ORF-T21: Isolate the uninstall fixture's home](tasks/21-uninstall-fixture.md).
 - [ORF-T2: Investigate intermittent deadlines](tasks/02-intermittent-deadlines.md).
+- [ORF-T22: Isolate the stat metadata fixture](tasks/22-stat-fixture.md).
 - [ORF-T3: Separate resolver admission from lookup](tasks/03-resolver.md).
 - [ORF-T4: Separate CLI dispatch from presentation](tasks/04-cli.md).
 - [ORF-T5: Separate vault prompts from switching](tasks/05-vaults.md).
