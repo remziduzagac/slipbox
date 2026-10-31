@@ -245,5 +245,10 @@ checks, Biome, workflow checks and documentation. Logs: `ORF-T3-publish-static-r
 `ORF-T3-publish-<gate>.log`. The size gate counts 562 source files with six handwritten/one generated caps and
 559 test/fixture files with nine legacy caps. The package binary still matches the SHA256 recorded above.
 
-Draft publication is next on `refactor/issue-170-resolver`, targeting dev. Fresh review and merge remain separate
-stages; review is pending. No full suite, all-terminal run, deadline change or user behavior change.
+[Draft PR #179](https://github.com/remziduzagac/slipbox/pull/179) is open into dev on
+`refactor/issue-170-resolver`. Rebased extraction commit: `915fe433`; completed build evidence:
+`55e9ac30ceaf1050d46846307316cc0d4d6ae5b2`. Both are pushed without force. The completed-evidence documentation
+gate passes: 480 Markdown files, 1,742 spelt files, zero link errors.
+
+Fresh review and merge remain separate stages; review is pending. Final-head CI is not claimed green. No full suite,
+all-terminal run, ready marking, merge, deadline change, promotion, release or user behavior change.
