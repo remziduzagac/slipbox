@@ -68,9 +68,10 @@ makes nothing and asks nothing; with unsaved text, slipbox asks you to save or d
 the file before your first save, the usual conflict prompt asks which version to keep.
 
 The vault is the nearest existing folder's, and the explorer starts on that folder. A path ending in `/` names a
-folder: one that isn't there is still `no such directory`. A new file outside `--root`, through a link that cannot be
-written through, or where `:new` would refuse it is refused before the screen is taken, with exit code 3. `/` cannot
-be a vault. The CLI commands keep their rules: `read missing.md` exits 3, and `write` needs `--create` for a new file.
+folder: one that isn't there is still `no such directory`. If adding `.md` finds a folder, that new name is refused.
+A new file outside `--root`, through a link that cannot be written through, or where `:new` would refuse it is refused
+before the screen is taken, with exit code 3. `/` cannot be a vault. The CLI commands keep their rules:
+`read missing.md` exits 3, and `write` needs `--create` for a new file.
 
 `--base <ref>` measures the branch checked out there against `<ref>`, and keeps it for that branch, as Compare against…
 in the git panel does ([The base of each branch](git.md#the-base-of-each-branch)). A worktree opened for a pull request

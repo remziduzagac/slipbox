@@ -187,7 +187,7 @@ export function editActions(): Record<string, Run> {
     "note.revert": (a) => withView(a, (v) => revert(a, v.buf)),
     "note.resolve": (a) =>
       withView(a, (v) => {
-        if (!v.buf.dirty || !v.buf.changedOnDisk())
+        if ((!v.buf.newFile && !v.buf.dirty) || !v.buf.changedOnDisk())
           return a.message("info", `${a.displayName(v.buf)} has no conflict with the file on disk`);
         a.saving.conflictPrompt(v.buf);
       }),

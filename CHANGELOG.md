@@ -89,7 +89,8 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 - Opening a path that isn't there (`slipbox ideas/coffee.md`, or `slipbox open ideas/coffee`) opens an empty new note
   instead of exiting 3. Its tab shows the path and `[new]`; the first save makes the file and missing folders.
   Quitting untouched makes nothing. Naming and refusals follow `:new`, and a file made meanwhile is never overwritten
-  without asking. CLI reads and writes keep their existing rules.
+  without asking. A folder occupying the new name after adding `.md` is refused. CLI reads and writes keep their
+  existing rules.
 
 - New slipbox branding in the README, documentation header, favicons and shared-link card, with variants for light
   and dark backgrounds, in the purple of Tokyo Night Moon, the family of slipbox's default theme.

@@ -247,6 +247,44 @@ describe("opening a new file (#168)", () => {
     expect(h.app.graph.notes.has("keep.md")).toBe(true);
   });
 
+  test("an untouched new file can reopen its disk conflict with note.resolve", async () => {
+    const path = join(makeVault(), "resolve.md");
+    const h = started(path);
+    const b = h.app.view!.buf;
+    writeFileSync(path, "Theirs\n");
+    h.app.watch.reloadBuffer(b);
+    const prompt = h.app.overlay;
+    expect(prompt?.kind).toBe("list");
+    if (prompt?.kind !== "list") throw new Error("expected disk conflict");
+    h.app.overlay = null;
+    prompt.cancel?.();
+    expect(b.dirty).toBe(false);
+    await h.app.run("note.resolve");
+    const reopened = h.app.overlay as App["overlay"];
+    expect(reopened?.kind).toBe("list");
+    expect(b.source).toBe("");
+    expect(b.newFile).toBe(true);
+    expect(readFileSync(path, "utf8")).toBe("Theirs\n");
+  });
+
+  test("a folder occupying the normalized new name refuses before the screen", () => {
+    const root = makeVault();
+    mkdirSync(join(root, "coffee.md"));
+    const stderr = spyOn(process.stderr, "write").mockImplementation(() => true);
+    try {
+      const result = prepare([join(root, "coffee")]);
+      expect(typeof result).toBe("number");
+      expect(result).toBe(3);
+      expect(stderr.mock.calls.map((c) => c[0]).join("")).toContain("is a folder");
+      const folder = prepared(join(root, "coffee.md"));
+      expect(folder.newFile).toBe(false);
+      expect(folder.open).toBeNull();
+      expect(folder.folder).toBe(join(root, "coffee.md"));
+    } finally {
+      stderr.mockRestore();
+    }
+  });
+
   test("a file appearing during the atomic first save is never replaced", () => {
     const path = join(makeVault(), "race.md");
     const h = started(path);

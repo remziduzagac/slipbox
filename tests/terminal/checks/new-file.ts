@@ -1,6 +1,6 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import type { Check } from "../check.ts";
+import { type Check, leader } from "../check.ts";
 
 export const NEW_FILE: Check[] = [
   {
@@ -20,6 +20,25 @@ export const NEW_FILE: Check[] = [
       s.expect(s.read("new-folder/2027/coffee.md") === "Coffee for the morning.", "typed text saved");
       await s.see("saved new-folder/2027/coffee.md");
       await s.until(() => !s.screen().some((r) => r.includes("[new]")), undefined, "new mark to clear");
+    },
+  },
+  {
+    area: "editing",
+    name: "opening a new file: resolve reopens an untouched file's dismissed disk conflict (#168)",
+    covers: { commands: ["note.resolve"], cases: ["opening", "new-note", "conflict"] },
+    options: { open: "collision.md" },
+    run: async (s) => {
+      await s.see("collision.md [new]");
+      s.write("collision.md", "Written elsewhere.\n");
+      await s.see("(l) Load theirs", 5000);
+      await s.keys("escape");
+      await s.notSee("(l) Load theirs");
+      await leader(s, "n", "c");
+      await s.see("(l) Load theirs");
+      s.expect(s.read("collision.md") === "Written elsewhere.\n", "resolving hasn't replaced the file");
+      await s.keys("l");
+      await s.see("Written elsewhere.");
+      await s.until(() => !s.screen().some((r) => r.includes("[new]")), undefined, "loaded file to clear the new mark");
     },
   },
   {

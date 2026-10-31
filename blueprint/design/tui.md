@@ -369,6 +369,7 @@ Notes open as buffers, shown in tabs, with one split (D141):
   the usual dirty mark once typed into. Quitting untouched asks nothing and writes nothing; unsaved text uses the
   usual warning. Saving makes its parents and file, removes `[new]` and says `saved <path>`. Another program's file
   at that name is a disk conflict, even if it appeared during the first write; writing over it needs confirmation.
+  The conflict command can reopen this conflict while the new buffer is still clean.
 - **View** (a window): a buffer plus its own cursor, top row, selection, find and history.
   Two windows may show one buffer.
 - **Tab:** one window, or two in a split, with an orientation (side by side, or stacked) and a ratio (the first window's

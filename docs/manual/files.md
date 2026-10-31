@@ -273,7 +273,8 @@ You can start with a new path in your shell: `slipbox ideas/coffee.md`, or `slip
 empty, with the path and `[new]` in its tab. Nothing is made until you save; that save makes missing folders too.
 Quitting without typing leaves nothing on disk and asks nothing. With unsaved text, the usual unsaved-changes
 message asks you to save or discard it. If another program makes the file before your first save, the conflict
-prompt asks which version to keep. The naming and refusal rules below apply to these new paths too.
+prompt asks which version to keep. `space n c` brings that prompt back if you dismiss it, even before typing.
+The naming and refusal rules below apply to these new paths too.
 
 ![An empty new note, its path and new mark in the tab, before its first save](../images/files-new-file.png)
 
@@ -288,7 +289,8 @@ explorer's selected folder instead, or beside the selected file. The question sa
   `.py`…). So `tasks.toml` is made as it is written.
 - **`:new` makes the note at once, with its title,** `# coffee`. It opens with you typing after the blank line, in the
   lens. With `editor.edit_in = "source"`, it opens in SOURCE view instead.
-- **A name that is already there** opens that file, and makes nothing.
+- **A name that is already there** opens that file, and makes nothing. A folder at the new name, after adding `.md`
+  too, is refused.
 - **A name where slipbox would never find the note** is refused: in a folder tools fill that `.gitignore` leaves out,
   or deeper in one with no note at its top, such as `target/debug/plan`.
 - **A name another note has**, in another folder, would make a wikilink by that name (`[[coffee]]`) reach either of

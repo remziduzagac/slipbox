@@ -26,7 +26,10 @@ export function openingPath(
   if (!path || existsSync(resolve(path))) return { loc: locateVault({ path, root }), newFile: false };
   if (path.endsWith("/")) throw new VaultError(`no such directory: ${path}`);
   const abs = resolve(newNoteName(path));
-  if (existsSync(abs)) return { loc: locateVault({ path: abs, root }), newFile: false };
+  if (existsSync(abs)) {
+    if (statSync(abs).isDirectory()) throw new VaultError(`${abs} is a folder`);
+    return { loc: locateVault({ path: abs, root }), newFile: false };
+  }
   const folder = existingFolder(abs);
   if (root) {
     locateVault({ root });

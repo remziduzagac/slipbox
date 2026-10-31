@@ -66,10 +66,11 @@ vault). The App is told what that found, and doesn't record the vault a second t
 
 A missing file path is prepared by `open-path.ts` (D267, #168): its vault is the nearest existing folder's, its name
 uses `newNoteName` as `:new` does, and `Graph.neverIndexed` and the write-through policy refuse it before the screen
-is taken (exit 3). A missing path ending in `/` stays a missing directory. The App opens an empty, clean buffer marked
-`newFile`, with its path and `[new]` in the tab; the explorer starts on the nearest existing folder. No folders or file
-are made until saving through `App.writeBuffer` (`documents/saving/write-buffer.ts`). Its first write publishes the
-complete temporary file with an exclusive hard link, refusing an entry made meanwhile; subsequent writes use the
+is taken (exit 3). A folder occupying the normalized new-file name is refused too; an existing folder named directly
+still opens as a folder. A missing path ending in `/` stays a missing directory. The App opens an empty, clean buffer
+marked `newFile`, with its path and `[new]` in the tab; the explorer starts on the nearest existing folder. No folders
+or file are made until saving through `App.writeBuffer` (`documents/saving/write-buffer.ts`). Its first write publishes
+the complete temporary file with an exclusive hard link, refusing an entry made meanwhile; subsequent writes use the
 ordinary atomic rename. An intervening file uses the normal conflict prompt, including confirmation after Keep.
 The CLI's readers and writers still use their existing missing-file rules (`9.3`, `4.6`, `5.5`, `7.5`).
 
