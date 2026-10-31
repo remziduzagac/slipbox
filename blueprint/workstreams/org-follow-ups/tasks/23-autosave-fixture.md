@@ -81,3 +81,13 @@ Evidence: `tmp/issue/ORF-T23-git-marker-sites.txt`, `ORF-T23-marker-owners.json`
 `ORF-T23-marker-selection.log`, `ORF-T23-marker-selection-traced.log`, `ORF-T23-marker-trace.jsonl` and
 `ORF-T23-marker-module-{control,selection}.log`, `ORF-T23-marker-module-trace.jsonl`.
 The trace's method and limits are retained; no whole suite or all-terminal run.
+
+## Draft delivery
+
+Draft [PR #176](https://github.com/remziduzagac/slipbox/pull/176) is open into dev. Implementation commit:
+`ac6c49bc`. Final documentation verification includes this task: 478 Markdown files and 1,737 spelt files,
+with zero link errors. Source, shared helpers and all caps compare unchanged to the base; the only test change
+is the autosave owner above. Fresh review and merge remain pending, and this task stays in review.
+
+After merge, confirm the automatic dev push before the queued theme-fixture isolation PR and resumed ORF-T3 build.
+The resolver extraction remains saved separately; no ready marking, merge, full run or branch promotion here.
