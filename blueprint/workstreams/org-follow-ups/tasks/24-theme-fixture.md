@@ -59,3 +59,14 @@ shared harness, dependency, deadline or CI changes; no user documentation or cha
 Logs: `tmp/issue/ORF-T24-check.log`, `ORF-T24-terminal-scope.log` and `ORF-T24-terminal.log`.
 The preceding dev push at the exact base succeeds on attempt 1 (`ORF-T24-previous-dev.json`).
 Fresh review, merge and this prerequisite's dev push remain pending. ORF-T3 stays saved separately.
+
+## Draft delivery
+
+Draft [PR #177](https://github.com/remziduzagac/slipbox/pull/177) is open into dev. Implementation commit: `2245eeb3`.
+Final documentation verification includes this task: 479 Markdown files and 1,738 spelt files, with zero link
+errors. Exactly five files change: this test owner, the ORF task index and resolver dependency, this task's
+evidence and the carried ORF-T23 completion record. Product source and shared helpers compare unchanged to the base.
+
+Fresh review and merge remain pending; the task stays in review. No failed diagnostic retry, whole-suite run,
+all-terminal run, ready marking or branch promotion. ORF-T3 remains local at `49697569`; after this prerequisite's
+review/merge and green dev push, rebase the saved extraction onto newest dev and resume scoped verification/publication.
