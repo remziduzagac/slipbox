@@ -1,5 +1,5 @@
 ---
-status: review
+status: done
 assignee:
 blocked_by: [ORF-T23]
 created: "2026-11-01"
@@ -27,8 +27,8 @@ and applicable terminal checks. Preserve the failed diagnostic without retrying 
 
 Branch: `refactor/issue-170-theme-fixture`, from origin/dev at
 `e8662a7c59bac84b65dbf4fa42f218cffff4f5b1`. Carry ORF-T23's completion record unchanged.
-Build, fresh review and merge remain separate stages. Confirm this prerequisite's automatic dev push
-before resuming the saved ORF-T3 extraction and its scoped verification/publication.
+Build, fresh review and merge are complete, including this prerequisite's successful automatic dev push.
+The saved ORF-T3 extraction and its scoped verification/publication resume next.
 
 ## Implementation and controlled regression
 
@@ -58,15 +58,36 @@ shared harness, dependency, deadline or CI changes; no user documentation or cha
 
 Logs: `tmp/issue/ORF-T24-check.log`, `ORF-T24-terminal-scope.log` and `ORF-T24-terminal.log`.
 The preceding dev push at the exact base succeeds on attempt 1 (`ORF-T24-previous-dev.json`).
-Fresh review, merge and this prerequisite's dev push remain pending. ORF-T3 stays saved separately.
+Fresh review and merge results are recorded below. ORF-T3 stays saved separately.
 
-## Draft delivery
+## PR delivery, review and merge
 
-Draft [PR #177](https://github.com/remziduzagac/slipbox/pull/177) is open into dev. Implementation commit: `2245eeb3`.
-Final documentation verification includes this task: 479 Markdown files and 1,738 spelt files, with zero link
-errors. Exactly five files change: this test owner, the ORF task index and resolver dependency, this task's
-evidence and the carried ORF-T23 completion record. Product source and shared helpers compare unchanged to the base.
+[PR #177](https://github.com/remziduzagac/slipbox/pull/177) merged into dev at
+`5dd078a231321e40e2c0e648676704305d14a729`, 2026-10-31 22:37:06 UTC. Implementation commit: `2245eeb3`;
+reviewed head: `036bcb1cd45a1fdf447940d09e602cb3aeea2e9f`. Exactly five files change: this test owner,
+the ORF task index and resolver dependency, this task's evidence and the carried ORF-T23 completion record.
+Product source and shared helpers compare unchanged to the base.
 
-Fresh review and merge remain pending; the task stays in review. No failed diagnostic retry, whole-suite run,
-all-terminal run, ready marking or branch promotion. ORF-T3 remains local at `49697569`; after this prerequisite's
-review/merge and green dev push, rebase the saved extraction onto newest dev and resume scoped verification/publication.
+Fresh review finds no actionable findings. Its independent whole-file audit reconstructs the base byte-for-byte
+after reversing only the documented fixture changes and added case. All 33 original suite/leaf declarations retain
+their text and order, with one added. Fresh scoped verification under NO_COLOR=1 passes every static/docs gate and
+all 30 affected-owner tests, 292 assertions, zero failures (1.24 seconds). The explicit theme-picker terminal scenario
+passes, one check, five commands, two jobs (2.8 seconds). Documentation includes 479 Markdown and 1,738 spelt files,
+with zero link errors. The preserved negative control and unrelated failed diagnostic are not repeated.
+
+Before merge, the preceding [dev push](https://github.com/remziduzagac/slipbox/actions/runs/41247944044) succeeds at
+the exact base `e8662a7c59bac84b65dbf4fa42f218cffff4f5b1`, attempt 1. All executed PR CI and CodeQL checks succeed
+at the reviewed head, also on attempt 1. Marked ready and squash-merged with that exact head as the match guard;
+the merged tree is byte-identical to the reviewed tree.
+
+The automatic [dev push](https://github.com/remziduzagac/slipbox/actions/runs/41249000773) succeeds at the exact
+merge commit on attempt 1: both reached-unit platforms, lint/site, changes and aggregate CI pass. Terminal/status
+jobs are skipped for this test-only scope; no terminal execution is claimed for the push.
+
+Evidence: `tmp/issue/review-ORF-T24.md`, `ORF-T24-review-body-audit.txt`, `ORF-T24-review-check.log`,
+`ORF-T24-review-terminal.log`, `ORF-T24-merge-pr-final.json`, `ORF-T24-merge-previous-dev-result.json`,
+`ORF-T24-merge-result.json` and `ORF-T24-merge-dev-result.json`.
+
+ORF-T3 remains local at `4969756954b6ededdbe8758e9e16ef06341c8ca8` on `refactor/issue-170-resolver`.
+Next, rebase the saved extraction onto newest dev, retain its completion records and probes, then resume scoped
+verification/publication. No failed diagnostic retry, whole-suite run, all-terminal run, branch promotion or release.

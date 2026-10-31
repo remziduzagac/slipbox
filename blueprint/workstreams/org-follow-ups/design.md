@@ -28,9 +28,11 @@ or location in the same PR. Root-blueprint consolidation and ORG archive are sep
   Keep rendered path strings, snapshots, test/check names, hooks and assertion bodies unchanged.
 - Follow ORG's move gates for resolved dependencies, compiled binary, relocated entry points and real worker requests
   from source and compiled modes. Characterize responsibilities before extraction; record retained lifecycle/state owners.
-- Run only affected tests with a 300-second external bound and 10-second kill grace, and affected terminal checks with
-  SLIPBOX_TERMINAL_JOBS=2. Before the PR run typecheck, lint, boundary, check:size and check:docs plus applicable scoped
-  checks. Never run the whole suite or every terminal check. Raise no product, test, terminal or CI deadline.
+- Run only affected tests: focused batches have a 300-second external bound; the complete bun run check has a
+  900-second external bound. Both use a 10-second kill grace. These wrappers do not change test deadlines. Run affected
+  terminal checks with SLIPBOX_TERMINAL_JOBS=2. Before the PR run typecheck, lint, boundary, check:size and check:docs
+  plus applicable scoped checks. Never run the whole suite or every terminal check. Raise no product, test, terminal
+  or CI deadline.
 - Verify each bug regression once with the fix undone, then restore it. Record the commands, observed failure and
   passing checks in its task. A failure unrelated to the change stays visible with evidence and a recommended next step;
   it is not rerun away.
