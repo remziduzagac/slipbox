@@ -1,13 +1,23 @@
 import { describe, expect, test } from "bun:test";
-import { mkdirSync, readFileSync, rmSync, utimesSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import {
+  existsSync,
+  mkdtempSync,
+  mkdirSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  utimesSync,
+  writeFileSync,
+} from "node:fs";
+import { dirname, join } from "node:path";
+import { checkoutOf } from "../../../../src/core/workspace/git/git.ts";
 import type { Config } from "../../../../src/core/application/config/config.ts";
 import type { ListOverlay, Host } from "../../../../src/tui/app/runtime/app.ts";
 
 import { makeSandbox, makeVault, harness, statusRow, type Harness } from "../../../tui-harness.ts";
 
 // The model harness applies the file-local timeout and sandbox policy.
-makeSandbox();
+const sandbox = makeSandbox();
 
 describe("saving and conflicts (step 4)", () => {
   const touch = async (file: string, text: string) => {
@@ -15,12 +25,16 @@ describe("saving and conflicts (step 4)", () => {
     const future = Date.now() / 1000 + 5;
     (await import("node:fs")).utimesSync(file, future, future);
   };
-  const setup = async (text: string, config?: (c: Config) => void) => {
-    const root = makeVault();
+  const setup = async (text: string, config?: (c: Config) => void, root = makeVault()) => {
     const file = join(root, "c.md");
     writeFileSync(file, text);
     const h = await harness({ root, open: "c.md", width: 100, height: 30, config });
     return { h, file, v: h.app.view!, root };
+  };
+  const autosaveVault = () => {
+    const root = makeVault();
+    mkdirSync(join(root, ".git"));
+    return root;
   };
   test("an outside change to a clean note reloads it as an undo step: u brings back what you had", async () => {
     const { h, file, v } = await setup("mine\n");
@@ -112,7 +126,7 @@ describe("saving and conflicts (step 4)", () => {
     expect(v.buf.dirty).toBe(true);
   });
   test("autosave: after the idle delay; not mid-insert, not after keep, not during a git commit", async () => {
-    const { h, file, v, root } = await setup("a\n", (c) => (c.editor.autosave_ms = 20));
+    const { h, file, v, root } = await setup("a\n", (c) => (c.editor.autosave_ms = 20), autosaveVault());
     await h.keys("shift+a", "b");
     await Bun.sleep(60);
     expect(readFileSync(file, "utf8")).toBe("a\n"); // still typing
@@ -139,6 +153,30 @@ describe("saving and conflicts (step 4)", () => {
     // …nor does the prompt come back at each idle delay.
     await Bun.sleep(60);
     expect(h.app.overlay).toBeNull();
+  });
+  test("autosave uses its own Git context when an ancestor is also a checkout", async () => {
+    const ancestor = mkdtempSync(join(sandbox, "autosave-ancestor-"));
+    mkdirSync(join(ancestor, ".git"));
+    const root = join(ancestor, "vault");
+    renameSync(autosaveVault(), root);
+    expect(checkoutOf(dirname(root))?.root).toBe(ancestor);
+    const { h, file, v } = await setup("a\n", (c) => (c.editor.autosave_ms = 20), root);
+    expect(h.app.git.checkout?.root).toBe(root);
+    await h.keys("shift+a", "b", "escape");
+    await Bun.sleep(60);
+    expect(readFileSync(file, "utf8")).toBe("ab\n");
+    expect(v.buf.dirty).toBe(false);
+    writeFileSync(join(root, ".git", "index.lock"), "");
+    expect(h.app.git.indexLocked()).toBe(true);
+    expect(existsSync(join(ancestor, ".git", "index.lock"))).toBe(false);
+    await h.keys("shift+a", "c", "escape");
+    await Bun.sleep(60);
+    expect(readFileSync(file, "utf8")).toBe("ab\n");
+    expect(v.buf.dirty).toBe(true);
+    rmSync(join(root, ".git", "index.lock"));
+    await Bun.sleep(60);
+    expect(readFileSync(file, "utf8")).toBe("abc\n");
+    expect(v.buf.dirty).toBe(false);
   });
   test("unsaved notes are listed for the CLI (the staleness file, 9.9) until saved or quit", async () => {
     const { readStale } = await import("../../../../src/core/workspace/git/merge/stale.ts");
