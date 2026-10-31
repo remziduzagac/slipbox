@@ -1,5 +1,5 @@
 ---
-status: review
+status: done
 assignee:
 blocked_by: [ORF-T1]
 created: "2026-10-31"
@@ -31,7 +31,9 @@ after #171, with product source unchanged. Mark done only after merge; review an
 
 Branch: `refactor/issue-170-uninstall`, from `origin/dev` at
 `3a83e20eda58486b3cf5bf59b06e3eba0c69cc80` (#171's squash).
-Draft [PR #173](https://github.com/remziduzagac/slipbox/pull/173) awaits fresh review; merge remains pending.
+[PR #173](https://github.com/remziduzagac/slipbox/pull/173) merged into dev on 2026-10-31 as
+`3e92e8a72109b9e79f02e51c517b59cc9955fd44`, from reviewed head
+`4ca729c8735de431afa7bb89f36188cc89e4a6b9`.
 
 `tests/cli/distribution/install.test.ts:13` wraps this owner's CLI calls with a home inside its existing sandbox,
 clearing the inherited Claude/Codex directory overrides and their Homebrew-prefixed fallbacks. The shared CLI helper
@@ -55,6 +57,18 @@ and documentation checks, then both reached unit owners: 16 tests, 285 assertion
 No product source, deadline, dependency, screenshot or user-visible behavior changes, so no user-doc/changelog change
 is needed. The carried ORF-T1 completion record is the only other task edited.
 
-The preceding [dev push](https://github.com/remziduzagac/slipbox/actions/runs/41237804189) at the base is still running,
-with no completed failure observed during this build. Its successful completion remains a prerequisite for the next
-merge; this build does not mark it green.
+## Review and delivery
+
+Fresh review at the merged PR head found no actionable findings. Its scoped check passes every static/docs gate and
+both reached unit owners: 16 tests, 285 assertions, zero failures (6.74 seconds). Terminal selection succeeds with no
+checks reached; no terminal-feature execution is claimed. PR CI and CodeQL pass at the exact reviewed head. The
+preserved three-case negative control was inspected without repeating it.
+
+The preceding [dev push](https://github.com/remziduzagac/slipbox/actions/runs/41237804189) at the base passes on its
+first attempt, including both unit platforms and all three terminal platforms. Its successful completion was verified
+before this merge. PR #173 was then marked ready and squash-merged with the reviewed head matched exactly.
+
+The automatic [dev push](https://github.com/remziduzagac/slipbox/actions/runs/41239553858) at
+`3e92e8a72109b9e79f02e51c517b59cc9955fd44` passes on its first attempt: both reached-unit platforms, lint/site and
+aggregate CI. Terminal checks are skipped for this test-only scope; the preceding timer push's terminal matrix above
+is the completed terminal evidence. ORF-T2 build is next; no failed job or selection was rerun.

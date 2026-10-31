@@ -26,7 +26,7 @@ implementation and review evidence do not by themselves close the task.
 Branch: `refactor/issue-170-timer`, from `origin/dev` at `2521e4b5`.
 [PR #171](https://github.com/remziduzagac/slipbox/pull/171) merged into dev on 2026-10-31 as `3a83e20e`, from reviewed
 head `7d8d76b81b5a2cc369a5b5446efd906855b5fab0`. The known unrelated check failure below has its own following task,
-ORF-T21. The subsequent dev push run is pending; see the delivery record below.
+ORF-T21. The subsequent dev push run passes; see the delivery record below.
 
 The overflow is in `src/tui/app/notifications/toasts.ts:30`: a toast drawn on the real clock can outlive a test's
 replacement clock, and a wall clock corrected backwards has the same effect. Its future `shown` timestamp produces
@@ -86,4 +86,7 @@ No failed run was retried. Its file is outside this PR's diff; the reviewed time
 
 PR #171 was marked ready and squash-merged with its reviewed head matched exactly. Its
 [dev push](https://github.com/remziduzagac/slipbox/actions/runs/41237804189), at
-`3a83e20eda58486b3cf5bf59b06e3eba0c69cc80`, is pending. Check its result before the next merge. ORF-T21 build is next.
+`3a83e20eda58486b3cf5bf59b06e3eba0c69cc80`, passes on its first attempt: both unit platforms, lint/site, aggregate CI
+and all three terminal platforms. Terminal totals are 548/548 on each Linux platform and 547/547 on macOS, with the
+unchanged four/four/five skips. Both affected message/config checks pass on every platform. This result was verified
+before ORF-T21's following merge; no failed job or selection was rerun.
