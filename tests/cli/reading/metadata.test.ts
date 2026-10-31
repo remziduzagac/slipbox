@@ -58,11 +58,36 @@ describe("the vault and the tool", () => {
     expect(readFileSync(note, "utf8")).toBe("# F\r\n\r\nA claim here.[^later]\r\n\r\n[^later]: Second\r\n");
   });
   test("stat: which root a note is in, and its properties — the frontmatter, as the Info view shows it (3.19, 21.10)", () => {
-    const r = slipbox(["stat", "people/kenji-mori.md", "--json"], { cwd: DEMO }).json.data;
-    expect(r).toMatchObject({ root: DEMO, name: "halden" }); // its path, and the name pointers give it
+    const r = slipbox(["stat", "people/kenji-mori.md", "--json"], { cwd: vault }).json.data;
+    expect(r).toMatchObject({ root: vault, name: "halden" }); // its path, and the name pointers give it
     expect(r.vault).toBeUndefined();
     expect(r.properties).toMatchObject({ title: "Kenji Mori", office: { building: "Workshop", desk: 2 } });
-    expect(slipbox(["stat", "people/kenji-mori.md"], { cwd: DEMO }).out).toMatch(/vault\s+halden\n/);
+    expect(slipbox(["stat", "people/kenji-mori.md"], { cwd: vault }).out).toMatch(/vault\s+halden\n/);
+  });
+  test("stat keeps a linked worktree's branch suffix and the main checkout's plain label", () => {
+    const base = mkdtempSync(join(sandbox, "stat-worktree-"));
+    const main = join(base, "main");
+    const linked = join(base, "linked");
+    mkdirSync(join(main, ".slipbox"), { recursive: true });
+    writeFileSync(join(main, ".slipbox", "config.toml"), '[vault]\nid = "aabbccddeeff0011"\nname = "stat-notes"\n');
+    writeFileSync(join(main, "note.md"), "# Note\n");
+    const git = (...args: string[]) => {
+      const r = Bun.spawnSync(["git", "-c", "user.email=t@example.invalid", "-c", "user.name=t", "-C", main, ...args]);
+      expect({ code: r.exitCode, err: r.stderr.toString() }).toMatchObject({ code: 0 });
+    };
+    git("init", "-q", "-b", "main");
+    git("add", ".slipbox/config.toml", "note.md");
+    git("commit", "-q", "-m", "notes");
+    git("worktree", "add", "-q", "-b", "feature/stat-label", linked);
+    const ordinary = slipbox(["stat", "note.md"], { cwd: main });
+    expect(ordinary.code).toBe(0);
+    expect(ordinary.out).toMatch(/vault\s+stat-notes\n/);
+    const worktree = slipbox(["stat", "note.md"], { cwd: linked });
+    expect(worktree.code).toBe(0);
+    expect(worktree.out).toMatch(/vault\s+stat-notes@feature\/stat-label\n/);
+    const json = slipbox(["stat", "note.md", "--json"], { cwd: linked });
+    expect(json.code).toBe(0);
+    expect(json.json.data).toMatchObject({ root: linked, name: "stat-notes" });
   });
   test("problems: the demo's broken links; a path is never ambiguous (1.7)", () => {
     const p = slipbox(["problems", "--json"], { cwd: DEMO }).json.data;
