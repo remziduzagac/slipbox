@@ -1,5 +1,5 @@
 ---
-status: review
+status: done
 assignee:
 blocked_by: []
 created: "2026-10-31"
@@ -24,8 +24,9 @@ implementation and review evidence do not by themselves close the task.
 ## Implementation and verification
 
 Branch: `refactor/issue-170-timer`, from `origin/dev` at `2521e4b5`.
-Draft [PR #171](https://github.com/remziduzagac/slipbox/pull/171) awaits fresh review; merge and the subsequent dev run
-remain pending. The known unrelated check failure below has its own following task, ORF-T21.
+[PR #171](https://github.com/remziduzagac/slipbox/pull/171) merged into dev on 2026-10-31 as `3a83e20e`, from reviewed
+head `7d8d76b81b5a2cc369a5b5446efd906855b5fab0`. The known unrelated check failure below has its own following task,
+ORF-T21. The subsequent dev push run is pending; see the delivery record below.
 
 The overflow is in `src/tui/app/notifications/toasts.ts:30`: a toast drawn on the real clock can outlive a test's
 replacement clock, and a wall clock corrected backwards has the same effect. Its future `shown` timestamp produces
@@ -69,3 +70,20 @@ records this exact host-skill assumption. The scheduler is unrelated to uninstal
 fixture changed. The run was stopped after identifying this failure and was not retried. The remaining selected tests
 are not claimed to pass. [ORF-T21](21-uninstall-fixture.md) addresses this host assumption under issue item 4, in its
 own test-only PR immediately after #171. ORF-T1 proceeds to fresh review with the failure retained in its evidence.
+
+## Review and delivery
+
+Fresh review at the merged head found no actionable findings. Its focused verification passes 59 tests with 503
+assertions and no overflow warnings, plus both affected terminal checks with eight commands. The preserved negative
+control and incomplete scoped-check evidence above remain retained. PR CI and CodeQL pass at the exact reviewed head.
+
+Before merging, the preceding dev push exposed a stale terminal startup expectation from #169: a missing note now
+opens as a new note, while the check still expected exit 3. Separate test-only
+[PR #172](https://github.com/remziduzagac/slipbox/pull/172) changes that case to the retained `nope/` missing-directory
+refusal, keeping both root cases. Its [dev push](https://github.com/remziduzagac/slipbox/actions/runs/41235868289)
+passes at `090db7a2`: both unit platforms and all three terminal platforms, with the corrected check passing on each.
+No failed run was retried. Its file is outside this PR's diff; the reviewed timer head stays unchanged.
+
+PR #171 was marked ready and squash-merged with its reviewed head matched exactly. Its
+[dev push](https://github.com/remziduzagac/slipbox/actions/runs/41237804189), at
+`3a83e20eda58486b3cf5bf59b06e3eba0c69cc80`, is pending. Check its result before the next merge. ORF-T21 build is next.
