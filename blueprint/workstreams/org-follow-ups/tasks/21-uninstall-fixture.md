@@ -30,7 +30,8 @@ after #171, with product source unchanged. Mark done only after merge; review an
 ## Implementation and verification
 
 Branch: `refactor/issue-170-uninstall`, from `origin/dev` at
-`3a83e20eda58486b3cf5bf59b06e3eba0c69cc80` (#171's squash). Build is complete; fresh review and merge are pending.
+`3a83e20eda58486b3cf5bf59b06e3eba0c69cc80` (#171's squash).
+Draft [PR #173](https://github.com/remziduzagac/slipbox/pull/173) awaits fresh review; merge remains pending.
 
 `tests/cli/distribution/install.test.ts:13` wraps this owner's CLI calls with a home inside its existing sandbox,
 clearing the inherited Claude/Codex directory overrides and their Homebrew-prefixed fallbacks. The shared CLI helper
@@ -50,6 +51,7 @@ The fix was restored byte-for-byte before verification. The failed control is re
 `gnutimeout -k 10 300 bun run check` passes typecheck, boundary, source/test sizes, dependency/workflow gates, Biome
 and documentation checks, then both reached unit owners: 16 tests, 285 assertions, zero failures (7.59 seconds).
 `scripts/ci-scope.ts` selects this fixture and `tests/cli/launcher/dispatch.test.ts`, with no terminal checks reached.
+`SLIPBOX_TERMINAL_JOBS=2 bun run test:terminal:changed` confirms that empty terminal selection and succeeds.
 No product source, deadline, dependency, screenshot or user-visible behavior changes, so no user-doc/changelog change
 is needed. The carried ORF-T1 completion record is the only other task edited.
 
