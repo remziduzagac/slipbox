@@ -72,3 +72,15 @@ raw executed identity comparison and T12 carry checks pass. Evidence: `tmp/issue
 No product/worker/build/asset/terminal implementation moves, so compiled-product probes from the preceding source
 work remain applicable; no repeated build is needed for this test-only setup change. Historical T13 failures, the
 new controlled negative and all baseline results remain preserved. Fresh review and merge are pending separately.
+
+## Draft publication
+
+Draft [PR #191](https://github.com/remziduzagac/slipbox/pull/191) is open into `dev` on
+`fix/issue-170-export-fixture`. Implementation/evidence commit: `fcb2b5bd`. Required scoped and affected terminal
+checks pass as recorded above; the controlled negative and original T13 failure are retained. No product or test
+change follows that passing verification.
+
+Fresh review and merge are pending. Keep the PR draft; its final-head CI result is not yet claimed green. The T13
+split remains local at `5035ecb1`; after this prerequisite's review/merge and green dev push, resume that build with
+the helper and new subprocess reader accounted for in its manifest. No full-suite/all-terminal run, deadline change,
+branch promotion or release is included.
