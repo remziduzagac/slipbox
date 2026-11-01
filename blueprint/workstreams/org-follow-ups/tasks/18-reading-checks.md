@@ -63,3 +63,9 @@ settings, including all 57 moved checks. Log: `tmp/issue/ORF-T18-terminal-correc
 Typecheck, lint, boundary, size and docs gates pass. The required
 `TMPDIR=/var/tmp gnutimeout -k 10 900 bun run check` passes, including 22 tests across the same three affected unit
 owners. Log: `tmp/issue/ORF-T18-check.log`. Fresh review and merge are separate stages.
+
+## Delivery
+
+[Draft PR #197](https://github.com/remziduzagac/slipbox/pull/197) targets `dev` from
+`refactor/issue-170-reading-checks`. Implementation and verification commit:
+`ec9d38d47aa45204ded7302063971caaaa0b67bc`. The results above are local; final-head CI is pending.
