@@ -69,5 +69,13 @@ two existing walk-thread skips, zero failures, 17,161 assertions, 329.06 seconds
 whole-suite fallback. Docs cover 480 Markdown / 1,749 spelt files, zero link errors; four handwritten source caps,
 one generated cap and nine test caps remain. Log: `tmp/issue/ORF-T5-check.log`.
 
-Draft publication follows; fresh review and merge remain separate stages. No behavior change, discovered product
-bug, user-documentation/changelog change, dependency/CI change or full-suite/all-terminal run is included.
+## Delivery
+
+Draft PR [#181](https://github.com/remziduzagac/slipbox/pull/181) targets `dev`, on
+`refactor/issue-170-vaults`. Implementation/evidence commit: `ce70c4066a2dc5d313dde9757373f959cffcfa40`.
+Final staged-file documentation and Biome checks pass: 480 Markdown / 1,749 spelt files, zero link errors;
+`tmp/issue/ORF-T5-build-docs.log` and `ORF-T5-final-lint.log`. Product tests are not repeated for delivery-only edits.
+
+Fresh review is pending in its separate stage; keep the PR draft. Merge/dev-push verification follow only after that
+review. No behavior change, discovered product bug, user-documentation/changelog change, dependency/CI change or
+full-suite/all-terminal run is included. ORF-T5 remains review until merge.
