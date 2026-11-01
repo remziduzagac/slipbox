@@ -54,4 +54,6 @@ fresh review and merge remain separate stages. ORF-T12 resumes after this prereq
   Evidence: tmp/issue/ORF-T27-audit.json. No product entry or worker path moved, so no new compiled probe is needed.
 - Size gate: 577 source and 580 test/fixture files; seven test caps unchanged. Docs: 482 Markdown, 1,788 spelt files;
   lint: 1,187 files. User behavior is unchanged; no user-doc/changelog update applies to this test-only fix.
-- Commit, draft publication and separate fresh review follow. ORF-T12 remains todo until this prerequisite lands.
+- Draft PR: [#189](https://github.com/remziduzagac/slipbox/pull/189), open into dev. Implementation/evidence
+  commit: 21364bd148b2f01a55daccfc92ef50993e7d1a77. Fresh review and merge are pending separate stages.
+  ORF-T12 remains todo until this prerequisite lands; its planned relocation and original baseline are preserved.
