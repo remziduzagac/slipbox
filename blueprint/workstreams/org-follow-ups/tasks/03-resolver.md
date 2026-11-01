@@ -1,5 +1,5 @@
 ---
-status: review
+status: done
 assignee:
 blocked_by: [ORF-T25]
 created: "2026-10-31"
@@ -250,5 +250,31 @@ checks, Biome, workflow checks and documentation. Logs: `ORF-T3-publish-static-r
 `55e9ac30ceaf1050d46846307316cc0d4d6ae5b2`. Both are pushed without force. The completed-evidence documentation
 gate passes: 480 Markdown files, 1,742 spelt files, zero link errors.
 
-Fresh review and merge remain separate stages; review is pending. Final-head CI is not claimed green. No full suite,
-all-terminal run, ready marking, merge, deadline change, promotion, release or user behavior change.
+## Review and merge completion
+
+Fresh review at `0738052d0618761ca8e1b821e5edaa878df9cab3` has no actionable findings. Its independent body,
+export, cache/invalidation, declaration/entry, dependency and combined-owner audits agree with the extraction
+manifest and retained evidence. Fresh focused verification passes 53 tests / 323 assertions across eight owners,
+and the three affected terminal scenarios pass nine commands with two jobs. Typecheck, boundary, size, dependency,
+lint, workflow and documentation gates all pass. Review: `tmp/issue/review-ORF-T3.md`.
+
+Final-head [PR CI](https://github.com/remziduzagac/slipbox/actions/runs/41252417122) and
+[CodeQL](https://github.com/remziduzagac/slipbox/actions/runs/41252414855) succeed on attempt 1. Both unit
+platforms, lint/site and aggregate CI pass; terminal/status jobs are skipped by PR policy. The preceding PR #178
+dev push above succeeds at the exact unchanged base before merge. The PR description records the completed review
+and passing checks; its head remains unchanged.
+
+PR #179 was marked ready, then squash-merged with the reviewed head enforced by --match-head-commit. Merge:
+`1af50deec5b3f6b31971ad2ba70f9a297826da28`, 2026-10-31 23:35:09 UTC. Its automatic
+[dev push](https://github.com/remziduzagac/slipbox/actions/runs/41253152724) succeeds at that exact merge on
+attempt 1: both unit platforms, lint/site, all three terminal platforms and aggregate CI pass. Terminal totals:
+ARM 548/548, Linux x64 548/548, macOS 547/547, with unchanged four/four/five skips and 329 commands per platform.
+All three affected resolver scenarios pass on each platform. Origin/dev is fetched at the merge, and the merged
+tree equals the reviewed head byte-for-byte before this completion edit.
+
+Merge evidence: `tmp/issue/ORF-T3-merge-pr-final.json`, `ORF-T3-merge-ci.json`, `ORF-T3-merge-codeql.json`,
+`ORF-T3-merge-previous-dev-result.json`, `ORF-T3-merge-result.json`, `ORF-T3-merge-dev-result.json`,
+`ORF-T3-merge-dev-arm.log`, `ORF-T3-merge-dev-linux.log` and `ORF-T3-merge-dev-macos.log`. The original interrupted
+and failed scoped runs remain retained; no failed selection or job is retried. No full run, manual all-terminal
+run, deadline change, branch promotion, release or next-task implementation is performed in this merge stage.
+This completion record is carried onto the next branch; ORF-T4 build is next.

@@ -341,7 +341,8 @@ Theme vocabulary and compatibility aliases live in `rendering/theme/roles.ts` be
 | `cli/report.ts` | RPT | `report`, run before any vault is looked for |
 | [wsl.ts][o16] | 14.12 | WSL known; Windows' drives from its mounts; their fonts; notes on one, said |
 | [stale.ts][o104] | 9.9 | advisory list of unsaved paths, pid-stamped: the TUI writes it, the CLI reads it |
-| `cli/cli.ts` | 9.1–9.6 | the CLI face: the dispatcher, the help, each command's arguments and flags; `--json` |
+| `cli/cli.ts` | 9.1–9.6 | CLI argument admission, root/session setup and command dispatch |
+| `cli/output.ts` | 9.1–9.6 | Help, text/JSON output, error exit codes and process streams |
 | `cli/common.ts` | 9.2, 9.4, 9.10 | the session; errors, exit codes; a note named, resolved; a note read and written |
 | `cli/render.ts` | 2.x, 10.x | `render`, `export` |
 | `cli/reading.ts` | 9.5, 25.6 | `outline`, `read`, `ls`, `find`, `spell` |
