@@ -275,9 +275,9 @@ export function scope(files: string[] | null, graph = importGraph(), root = ROOT
       why.push(`${f}: ${[...sample.tests, ...sample.checks].join(", ") || "nothing"}`);
       continue;
     }
-    const snapshot = /^tests\/__snapshots__\/(.+)\.snap$/.exec(f);
+    const snapshot = /^(tests(?:\/[^/]+)*)\/__snapshots__\/(.+)\.snap$/.exec(f);
     if (snapshot) {
-      tests.add(`tests/${snapshot[1]}`);
+      tests.add(`${snapshot[1]}/${snapshot[2]}`);
       continue;
     }
     // The file, or a folder holding it, as something uses it.

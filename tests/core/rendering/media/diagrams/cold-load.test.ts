@@ -38,10 +38,13 @@ test("the cold diagram fixture stays cold with a warm startup cache across two r
   expect(warm()).toEqual([null, null]);
 
   for (let run = 0; run < 2; run++) {
-    const result = Bun.spawnSync(["bun", "test", "tests/render.test.ts", "-t", "drawn while its library loads:"], {
-      cwd: root,
-      env,
-    });
+    const result = Bun.spawnSync(
+      ["bun", "test", "tests/core/rendering/media/drawings.test.ts", "-t", "drawn while its library loads:"],
+      {
+        cwd: root,
+        env,
+      },
+    );
     expect(result.exitCode).toBe(0);
     expect(result.stderr.toString()).toContain("1 pass");
     expect(result.stderr.toString()).toContain("0 fail");

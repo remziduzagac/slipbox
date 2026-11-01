@@ -432,8 +432,8 @@ unmet width.
 `fit` in `rendering/layout/wrap.ts` answer "how many rows at width w" without building spans, using the same packing
 rule `wrapSpans` draws with — grapheme by grapheme when a segment is longer than a row, since a wide character is never
 split and can leave a row a column short, and with no row counted after a final hard break. So the allocator's
-prediction is exactly what is drawn; `tests/render.test.ts` checks it on 39,000 random mixes of ASCII, CJK, kinsoku
-punctuation, emoji, ZWJ sequences and breaks.
+prediction is exactly what is drawn; `tests/core/rendering/layout/wrapping.test.ts` checks it on 39,000 random mixes of
+ASCII, CJK, kinsoku punctuation, emoji, ZWJ sequences and breaks.
 
 **Cost.** A re-layout on resize, tables included, measured on 2026-09-29 (widths 40 to 200):
 
@@ -447,11 +447,10 @@ punctuation, emoji, ZWJ sequences and breaks.
 of the width), values wrapped beside them. A table with a header row only shows its column names,
 one per row, rather than nothing.
 
-**Verified by properties.** `tests/render.test.ts` runs 5,000 generated allocations checking
-the budget and minimums. It also runs 400 generated tables where the chosen allocation must
-never cost more than water-filling. A resize sweep from 150 down to 40 columns and back in the
-live TUI showed every table row closing inside the width at every step, with the reading
-position kept.
+**Verified by properties.** `tests/core/rendering/layout/markdown/table.test.ts` runs 5,000 generated allocations
+checking the budget and minimums. It also runs 400 generated tables where the chosen allocation must never cost more
+than water-filling. A resize sweep from 150 down to 40 columns and back in the live TUI showed every table row closing
+inside the width at every step, with the reading position kept.
 
 Cells wrap with the same wrapper as paragraphs. Separators between body rows appear only when
 some row wraps. The header separator is doubled (`╞═╪═╡`).
@@ -489,12 +488,12 @@ other text becomes look-alikes; 20 or more container markers, or 96 columns of i
 no-break space at the cap, which ends the nesting there. Frontmatter over 64 KB shows as text; YAML is parsed without
 the (quadratic) duplicate-key check.
 
-Nothing ever overflows the layout width but a code block's rows that scroll sideways (`scroll`), whose code is
-whole by design: what's before their code, and their window on it, fit. As a last defence the renderer cuts any other
-row still too wide (`enforceRow`) and counts it in `Layout.clipped`, since a cut row is a block's bug and lost text:
-`tests/render.test.ts` renders every demo note at six widths in two glyph sets and asserts that no
-row was cut (a width check alone could never fail, with the cut in place), and every note of the demo vault and the
-reference set with `codeScroll` too.
+Nothing ever overflows the layout width but a code block's rows that scroll sideways (`scroll`), whose code is whole by
+design: what's before their code, and their window on it, fit. As a last defence the renderer cuts any other row still
+too wide (`enforceRow`) and counts it in `Layout.clipped`, since a cut row is a block's bug and lost text:
+`tests/core/rendering/layout/markdown/samples.test.ts` renders every demo note at six widths in two glyph sets and
+asserts that no row was cut (a width check alone could never fail, with the cut in place), and every note of the demo
+vault and the reference set with `codeScroll` too.
 
 ## Readability defaults (plan `2.7`)
 

@@ -1,5 +1,5 @@
 ---
-status: review
+status: done
 assignee:
 blocked_by: [ORF-T11]
 created: "2026-11-01"
@@ -57,3 +57,24 @@ fresh review and merge remain separate stages. ORF-T12 resumes after this prereq
 - Draft PR: [#189](https://github.com/remziduzagac/slipbox/pull/189), open into dev. Implementation/evidence
   commit: 21364bd148b2f01a55daccfc92ef50993e7d1a77. Fresh review and merge are pending separate stages.
   ORF-T12 remains todo until this prerequisite lands; its planned relocation and original baseline are preserved.
+
+## Review and merge
+
+- Fresh review at 9b312ff034e729852f2e8421c1827f3075cc1218 finds no actionable issue. Exact-base reversal
+  preserves the complete original owner, timeout inventory, snapshot bytes and carried T11 completion.
+  Source graphs remain 3131 static / 2290 runtime edges, twelve entries and zero unresolved references.
+- Fresh bounded scoped check passes all gates and 527 tests / zero failures / 39 snapshots / 60311 assertions /
+  three owners / 22.17 seconds unit time. The affected diagram terminal scenario passes one check / six commands /
+  two jobs / 1.8 seconds. Preserved negative control inspected without repeating it.
+  Review: tmp/issue/review-ORF-T27.md; logs: ORF-T27-review-check.log and ORF-T27-review-terminal.log.
+- [CI 41305707399](https://github.com/remziduzagac/slipbox/actions/runs/41305707399) and
+  [CodeQL 41305704045](https://github.com/remziduzagac/slipbox/actions/runs/41305704045) succeed at that head
+  on attempt 1. Previous dev 41304394407 succeeds at unchanged base 01173b89 on attempt 1.
+- Marked [PR #189](https://github.com/remziduzagac/slipbox/pull/189) ready and squash-merged with the exact-head
+  guard. Squash: 7e697b80bc8e8a348f91a8c4cd80250c51f5d586, 2026-11-01 12:20:22 UTC. The entire merged
+  tree equals the reviewed head; sole parent is the preceding green base.
+- Automatic [dev push 41306016020](https://github.com/remziduzagac/slipbox/actions/runs/41306016020) succeeds
+  at that squash on attempt 1, including both reached-unit platforms, lint/site/changes and aggregate CI.
+  Terminal/status jobs are skipped for test-only scope; no terminal execution claimed for the push.
+- Carry this completion record onto the resumed ORF-T12 branch from latest dev. Original baseline failure remains
+  recorded; no failed selection or job retried, no product behavior or deadline changed.

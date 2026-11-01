@@ -1,0 +1,385 @@
+{
+  "moves": {
+    "tests/render.test.ts": "tests/core/rendering/layout/markdown/layout.test.ts",
+    "tests/__snapshots__/render.test.ts.snap": "tests/core/rendering/layout/markdown/__snapshots__/layout.test.ts.snap"
+  },
+  "splits": {
+    "tests/render.test.ts": [
+      "tests/core/rendering/layout/markdown/samples.test.ts",
+      "tests/core/rendering/layout/markdown/layout.test.ts",
+      "tests/core/rendering/layout/markdown/table.test.ts",
+      "tests/core/rendering/layout/wrapping.test.ts",
+      "tests/core/rendering/layout/ansi-colors.test.ts",
+      "tests/core/rendering/layout/markdown/cache.test.ts",
+      "tests/core/rendering/media/drawings.test.ts",
+      "tests/core/rendering/layout/diff/layout.test.ts"
+    ]
+  },
+  "support": [
+    "tests/support/render-sandbox.ts",
+    "tests/support/render-layout.ts"
+  ],
+  "suiteOwners": {
+    "tests/core/rendering/layout/markdown/samples.test.ts": [
+      "no rendered row ever exceeds the layout width",
+      "no rendered row ever exceeds the layout width: the reference set",
+      "no rendered row exceeds the layout width but a scrolling code block's code, kept whole"
+    ],
+    "tests/core/rendering/layout/markdown/layout.test.ts": [
+      "snapshots of the layout IR as text",
+      "blocks and inlines (2.2)",
+      "rows back to their source (the layout IR)",
+      "deep nesting at the narrowest widths loses nothing (review cycle 2)",
+      "review cycle 2 (rendering)",
+      "review cycle 4 (markdown against the specs)",
+      "review cycle 5 (render, from mutation testing)",
+      "review cycle 5 (render: what the snapshots can't see)",
+      "narrow panes: embeds, callouts and data trees cut nothing (review cycle 1, 21.x)",
+      "headings: the render, the graph and source mode read one text (review cycle 2, render)",
+      "an HTML block's comments (review cycle 2, render)",
+      "links inside a data file's records (review cycle 2, render)",
+      "what rendering.md promises (review: docs against the tests)"
+    ],
+    "tests/core/rendering/layout/markdown/table.test.ts": [
+      "table allocator (2.3) \u2014 properties over generated inputs",
+      "table allocator \u2014 height minimisation over generated tables"
+    ],
+    "tests/core/rendering/layout/wrapping.test.ts": [
+      "the allocator predicts exactly what is drawn (review cycle 2)",
+      "wrapping ASCII by ranges gives the grapheme wrap's rows, exactly (15.1)"
+    ],
+    "tests/core/rendering/layout/ansi-colors.test.ts": [
+      "ANSI writer",
+      "ANSI writer: colours the terminal can't show as given"
+    ],
+    "tests/core/rendering/layout/markdown/cache.test.ts": [
+      "highlighting: languages and the cache's bounds (15.1)",
+      "the render cache (15.1)"
+    ],
+    "tests/core/rendering/media/drawings.test.ts": [
+      "Mermaid (12.10)",
+      "maths (12.11)",
+      "drawn as pictures, by choice (12.16, 12.17)"
+    ],
+    "tests/core/rendering/layout/diff/layout.test.ts": [
+      "a diff's rows as drawn (GIT-D2)",
+      "a note's diff before and after, laid out (GIT-D2)",
+      "a code file's diff side by side (GIT-D7)",
+      "a screen of diffs: the review's and the merge screen's (GIT-D3, GIT-D5)"
+    ]
+  },
+  "originalRanges": {
+    "tests/core/rendering/layout/markdown/samples.test.ts": [
+      [
+        77,
+        155
+      ]
+    ],
+    "tests/core/rendering/layout/markdown/layout.test.ts": [
+      [
+        156,
+        408
+      ],
+      [
+        566,
+        581
+      ],
+      [
+        745,
+        909
+      ],
+      [
+        972,
+        1176
+      ]
+    ],
+    "tests/core/rendering/layout/markdown/table.test.ts": [
+      [
+        409,
+        517
+      ]
+    ],
+    "tests/core/rendering/layout/wrapping.test.ts": [
+      [
+        599,
+        744
+      ]
+    ],
+    "tests/core/rendering/layout/ansi-colors.test.ts": [
+      [
+        518,
+        565
+      ]
+    ],
+    "tests/core/rendering/layout/markdown/cache.test.ts": [
+      [
+        582,
+        598
+      ],
+      [
+        910,
+        971
+      ]
+    ],
+    "tests/core/rendering/media/drawings.test.ts": [
+      [
+        1177,
+        1455
+      ]
+    ],
+    "tests/core/rendering/layout/diff/layout.test.ts": [
+      [
+        1456,
+        1990
+      ]
+    ]
+  },
+  "retained": [
+    {
+      "file": "blueprint/workstreams/org-follow-ups/tasks/12-render-tests.md",
+      "text": "tests/render.test",
+      "reason": "Historical task, research or measured inventory records the owner at that revision; current owners are listed in this manifest."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/tasks/11-final-ratchet.md",
+      "text": "tests/render.test",
+      "reason": "Historical task, research or measured inventory records the owner at that revision; current owners are listed in this manifest."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/tasks/28-markdown-layout-splits.md",
+      "text": "tests/render.test",
+      "reason": "Historical task, research or measured inventory records the owner at that revision; current owners are listed in this manifest."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/tasks/06-render-export.md",
+      "text": "tests/render.test",
+      "reason": "Historical task, research or measured inventory records the owner at that revision; current owners are listed in this manifest."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/manifests/t11-final-ratchet.json",
+      "text": "tests/render.test",
+      "reason": "Historical task, research or measured inventory records the owner at that revision; current owners are listed in this manifest."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/manifests/t43-reconciliation.json",
+      "text": "tests/__snapshots__/render.test.ts.snap",
+      "reason": "Historical task, research or measured inventory records the owner at that revision; current owners are listed in this manifest."
+    },
+    {
+      "file": "blueprint/workstreams/archive/window-header/notes.md",
+      "text": "tests/render.test",
+      "reason": "Historical task, research or measured inventory records the owner at that revision; current owners are listed in this manifest."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/manifests/t40-clone-dispositions.json",
+      "text": "tests/render.test",
+      "reason": "Historical task, research or measured inventory records the owner at that revision; current owners are listed in this manifest."
+    },
+    {
+      "file": "blueprint/workstreams/archive/picture-sizes/tasks/archive/checks-and-live.md",
+      "text": "tests/render.test",
+      "reason": "Historical task, research or measured inventory records the owner at that revision; current owners are listed in this manifest."
+    },
+    {
+      "file": "blueprint/workstreams/archive/greenrepo/tasks/archive/tests-on-ci.md",
+      "text": "tests/render.test",
+      "reason": "Historical task, research or measured inventory records the owner at that revision; current owners are listed in this manifest."
+    },
+    {
+      "file": "blueprint/tasks/archive/flaky-tests-on-ci.md",
+      "text": "tests/render.test",
+      "reason": "Historical task, research or measured inventory records the owner at that revision; current owners are listed in this manifest."
+    }
+  ],
+  "fixtureReaders": [
+    {
+      "path": "tests/distribution/supply-chain.test.ts",
+      "adaptation": "Point the snapshot selector case at the relocated snapshot and its real owner; keep the assertions unchanged."
+    },
+    {
+      "path": "tests/core/rendering/media/diagrams/cold-load.test.ts",
+      "adaptation": "Run the same cold Mermaid case from its relocated drawings owner; preserve both runs and all assertions."
+    },
+    {
+      "path": "scripts/ci-scope.ts",
+      "adaptation": "Resolve a snapshot to its sibling test at any tests/ depth, preserving the original root snapshot rule and all other selection policy. The relocated real snapshot-selector assertion is the regression."
+    },
+    {
+      "path": "_typos.toml",
+      "adaptation": "Keep rendered snapshot text excluded from spelling at every tests/ depth; snapshot bytes remain untouched."
+    }
+  ],
+  "invariants": {
+    "suites": "All 31 top-level suites move whole; titles, hooks, assertions and fixture strings unchanged except relative executable paths resolving to the same targets.",
+    "snapshots": "Move the sole snapshot file byte-for-byte alongside both snapshot-bearing suites; no regeneration or key change.",
+    "hooks": "Each owner calls makeRenderSandbox once for the original XDG setup, filesystem cleanup and Mermaid preload before its suites.",
+    "helpers": "Original renderReady, text, samples, unicode and c0 bodies preserved; c0 stays with allocator properties.",
+    "paths": "Update static/type/dynamic imports, sample filesystem paths and child-process cwd; preserve the embedded source scripts byte-for-byte.",
+    "caps": "Remove only the original rendering test cap; every new owner below 1000 lines and no new caps.",
+    "product": "No product source, worker/asset paths, build entries, timeout policy, dependencies, CI or user behavior changes.",
+    "scope": "Preserve all old consumers except the retired owner, replacing it only with actual new consumers. Support sibling __snapshots__ at the relocated owner depth; all other selectors and SCOPE_VERSION remain unchanged."
+  },
+  "baseline": {
+    "commit": "7e697b80bc8e8a348f91a8c4cd80250c51f5d586",
+    "fixedOriginal": "tmp/issue/ORF-T12-fixed-original.ts.txt",
+    "originalFailure": "tmp/issue/ORF-T12-before-unit.log",
+    "correctedBefore": "tmp/issue/ORF-T27-review-check.log",
+    "note": "Reuse the fresh passing original-owner selection at the byte-identical prerequisite tree. Original failed baseline is retained."
+  },
+  "verification": {
+    "source": {
+      "staticEdges": [
+        3131,
+        3131
+      ],
+      "runtimeEdges": [
+        2290,
+        2290
+      ],
+      "entries": 12,
+      "declarations": [
+        4086,
+        4086
+      ],
+      "unresolved": []
+    },
+    "scope": {
+      "src/core/rendering/layout/markdown/render.ts": {
+        "beforeOwners": 341,
+        "afterOwners": 346,
+        "removed": [
+          "tests/render.test.ts"
+        ],
+        "added": [
+          "tests/core/rendering/layout/ansi-colors.test.ts",
+          "tests/core/rendering/layout/diff/layout.test.ts",
+          "tests/core/rendering/layout/markdown/cache.test.ts",
+          "tests/core/rendering/layout/markdown/layout.test.ts",
+          "tests/core/rendering/layout/markdown/samples.test.ts",
+          "tests/core/rendering/media/drawings.test.ts"
+        ],
+        "checks": "all"
+      },
+      "src/core/rendering/layout/markdown/table.ts": {
+        "beforeOwners": 341,
+        "afterOwners": 347,
+        "removed": [
+          "tests/render.test.ts"
+        ],
+        "added": [
+          "tests/core/rendering/layout/ansi-colors.test.ts",
+          "tests/core/rendering/layout/diff/layout.test.ts",
+          "tests/core/rendering/layout/markdown/cache.test.ts",
+          "tests/core/rendering/layout/markdown/layout.test.ts",
+          "tests/core/rendering/layout/markdown/samples.test.ts",
+          "tests/core/rendering/layout/markdown/table.test.ts",
+          "tests/core/rendering/media/drawings.test.ts"
+        ],
+        "checks": "all"
+      },
+      "src/core/rendering/layout/wrap.ts": {
+        "beforeOwners": 342,
+        "afterOwners": 349,
+        "removed": [
+          "tests/render.test.ts"
+        ],
+        "added": [
+          "tests/core/rendering/layout/ansi-colors.test.ts",
+          "tests/core/rendering/layout/diff/layout.test.ts",
+          "tests/core/rendering/layout/markdown/cache.test.ts",
+          "tests/core/rendering/layout/markdown/layout.test.ts",
+          "tests/core/rendering/layout/markdown/samples.test.ts",
+          "tests/core/rendering/layout/markdown/table.test.ts",
+          "tests/core/rendering/layout/wrapping.test.ts",
+          "tests/core/rendering/media/drawings.test.ts"
+        ],
+        "checks": "all"
+      },
+      "src/core/rendering/layout/ansi.ts": {
+        "beforeOwners": 103,
+        "afterOwners": 103,
+        "removed": [
+          "tests/render.test.ts"
+        ],
+        "added": [
+          "tests/core/rendering/layout/ansi-colors.test.ts"
+        ],
+        "checks": "all"
+      },
+      "src/core/rendering/layout/markdown/highlight.ts": {
+        "beforeOwners": 382,
+        "afterOwners": 387,
+        "removed": [
+          "tests/render.test.ts"
+        ],
+        "added": [
+          "tests/core/rendering/layout/ansi-colors.test.ts",
+          "tests/core/rendering/layout/diff/layout.test.ts",
+          "tests/core/rendering/layout/markdown/cache.test.ts",
+          "tests/core/rendering/layout/markdown/layout.test.ts",
+          "tests/core/rendering/layout/markdown/samples.test.ts",
+          "tests/core/rendering/media/drawings.test.ts"
+        ],
+        "checks": "all"
+      },
+      "src/core/rendering/layout/diff/diff.ts": {
+        "beforeOwners": 269,
+        "afterOwners": 269,
+        "removed": [
+          "tests/render.test.ts"
+        ],
+        "added": [
+          "tests/core/rendering/layout/diff/layout.test.ts"
+        ],
+        "checks": [
+          "conflict",
+          "git"
+        ]
+      },
+      "src/core/rendering/media/diagrams/diagrams.ts": {
+        "beforeOwners": 342,
+        "afterOwners": 349,
+        "removed": [
+          "tests/render.test.ts"
+        ],
+        "added": [
+          "tests/core/rendering/layout/ansi-colors.test.ts",
+          "tests/core/rendering/layout/diff/layout.test.ts",
+          "tests/core/rendering/layout/markdown/cache.test.ts",
+          "tests/core/rendering/layout/markdown/layout.test.ts",
+          "tests/core/rendering/layout/markdown/samples.test.ts",
+          "tests/core/rendering/layout/markdown/table.test.ts",
+          "tests/core/rendering/layout/wrapping.test.ts",
+          "tests/core/rendering/media/drawings.test.ts"
+        ],
+        "checks": "all"
+      }
+    },
+    "selected": {
+      "all": null,
+      "tests": [
+        "tests/check-size.test.ts",
+        "tests/ci-range.test.ts",
+        "tests/core/rendering/layout/ansi-colors.test.ts",
+        "tests/core/rendering/layout/diff/layout.test.ts",
+        "tests/core/rendering/layout/markdown/cache.test.ts",
+        "tests/core/rendering/layout/markdown/layout.test.ts",
+        "tests/core/rendering/layout/markdown/samples.test.ts",
+        "tests/core/rendering/layout/markdown/table.test.ts",
+        "tests/core/rendering/layout/wrapping.test.ts",
+        "tests/core/rendering/media/diagrams/cold-load.test.ts",
+        "tests/core/rendering/media/drawings.test.ts",
+        "tests/distribution/supply-chain.test.ts",
+        "tests/organization/tui-primitives.test.ts",
+        "tests/release.test.ts",
+        "tests/terminal-coverage.test.ts"
+      ],
+      "checks": [],
+      "why": []
+    },
+    "bodyAudit": "tmp/issue/ORF-T12-body-audit.json",
+    "identityAudit": "tmp/issue/ORF-T12-identity-audit.json",
+    "snapshotBytes": "unchanged",
+    "caps": "Only the 1990-line render cap removed; six legacy test caps remain."
+  }
+}
