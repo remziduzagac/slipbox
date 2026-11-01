@@ -1,0 +1,210 @@
+{
+  "task": "ORF-T17",
+  "base": "bfae98acae27298202428268887f3dad167faa86",
+  "moves": [
+    {
+      "from": "tests/terminal/checks/navigating.ts",
+      "to": "tests/terminal/checks/windows-and-tabs.ts",
+      "method": "git mv",
+      "retains": [
+        "WINDOWS_AND_TABS"
+      ]
+    }
+  ],
+  "extractions": [
+    {
+      "from": "tests/terminal/checks/navigating.ts",
+      "to": "tests/terminal/checks/navigation-tools.ts",
+      "declarations": [
+        "NAVIGATION_TOOLS"
+      ],
+      "originalLines": [
+        352,
+        478
+      ]
+    },
+    {
+      "from": "tests/terminal/checks/navigating.ts",
+      "to": "tests/terminal/checks/finding.ts",
+      "declarations": [
+        "FINDING"
+      ],
+      "originalLines": [
+        479,
+        602
+      ]
+    },
+    {
+      "from": "tests/terminal/checks/navigating.ts",
+      "to": "tests/terminal/checks/palette.ts",
+      "declarations": [
+        "PALETTE"
+      ],
+      "originalLines": [
+        603,
+        619
+      ]
+    },
+    {
+      "from": "tests/terminal/checks/navigating.ts",
+      "to": "tests/terminal/checks/ui-settings.ts",
+      "declarations": [
+        "UI_SETTINGS"
+      ],
+      "originalLines": [
+        620,
+        845
+      ]
+    },
+    {
+      "from": "tests/terminal/checks/navigating.ts",
+      "to": "tests/terminal/checks/terminal-state.ts",
+      "declarations": [
+        "TERMINAL_STATE"
+      ],
+      "originalLines": [
+        846,
+        1042
+      ]
+    },
+    {
+      "from": "tests/terminal/checks/navigating.ts",
+      "to": "tests/terminal/checks/terminal-input.ts",
+      "declarations": [
+        "TERMINAL_INPUT"
+      ],
+      "originalLines": [
+        1043,
+        1242
+      ]
+    },
+    {
+      "from": "tests/terminal/checks/navigating.ts",
+      "to": "tests/terminal/checks/appearance.ts",
+      "declarations": [
+        "APPEARANCE"
+      ],
+      "originalLines": [
+        1243,
+        1320
+      ]
+    },
+    {
+      "from": "tests/terminal/checks/navigating.ts",
+      "to": "tests/terminal/checks/list-interactions.ts",
+      "declarations": [
+        "LIST_INTERACTIONS"
+      ],
+      "originalLines": [
+        1321,
+        1457
+      ]
+    },
+    {
+      "from": "tests/terminal/checks/navigating.ts",
+      "to": "tests/terminal/checks/help.ts",
+      "declarations": [
+        "HELP"
+      ],
+      "originalLines": [
+        1458,
+        1477
+      ]
+    },
+    {
+      "from": "tests/terminal/checks/navigating.ts",
+      "to": "tests/terminal/checks/index-settings.ts",
+      "declarations": [
+        "INDEX_SETTINGS"
+      ],
+      "originalLines": [
+        1478,
+        1667
+      ]
+    },
+    {
+      "from": "tests/terminal/checks/navigating.ts",
+      "to": "tests/terminal/checks/which-key.ts",
+      "declarations": [
+        "WHICH_KEY"
+      ],
+      "originalLines": [
+        1668,
+        1747
+      ]
+    },
+    {
+      "from": "tests/terminal/checks/navigating.ts",
+      "to": "tests/terminal/checks/quitting.ts",
+      "declarations": [
+        "QUITTING"
+      ],
+      "originalLines": [
+        1748,
+        1821
+      ]
+    },
+    {
+      "from": "tests/terminal/checks/navigating.ts",
+      "to": "tests/terminal/support/navigation.ts",
+      "declarations": [
+        "windows",
+        "findRow",
+        "exits",
+        "goto",
+        "lineOf",
+        "toSource",
+        "configFile"
+      ]
+    },
+    {
+      "from": "tests/terminal/checks/navigating.ts",
+      "to": "tests/terminal/support/appearance.ts",
+      "declarations": [
+        "stylesOf",
+        "drawnIn",
+        "TOKYO",
+        "NORD"
+      ]
+    }
+  ],
+  "entryPoints": [
+    "tests/terminal/checks/index.ts",
+    "tests/terminal/run.ts",
+    "tests/terminal/worker.ts"
+  ],
+  "registration": {
+    "before": [
+      "NAVIGATING"
+    ],
+    "after": [
+      "WINDOWS_AND_TABS",
+      "NAVIGATION_TOOLS",
+      "FINDING",
+      "PALETTE",
+      "UI_SETTINGS",
+      "TERMINAL_STATE",
+      "TERMINAL_INPUT",
+      "APPEARANCE",
+      "LIST_INTERACTIONS",
+      "HELP",
+      "INDEX_SETTINGS",
+      "WHICH_KEY",
+      "QUITTING"
+    ],
+    "preserve": "CHECKS order, check names, areas, coverage, options and run bodies",
+    "leftOut": "The unchanged empty LEFT_OUT_NAVIGATING moves to checks/index.ts."
+  },
+  "sourceSelectors": {
+    "file": "scripts/ci-scope.ts",
+    "preserve": "Existing selectors use unchanged name pieces and areas; none names the removed check file."
+  },
+  "retainedData": "All check bodies, options, comments, fixture strings and deadlines are retained; no snapshots belong to this collection.",
+  "localHelpers": {
+    "tests/terminal/checks/terminal-state.ts": [
+      "widthOf"
+    ]
+  },
+  "design": "blueprint/design/testing.md",
+  "capRemoval": "tests/terminal/checks/navigating.ts"
+}

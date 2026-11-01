@@ -1,5 +1,5 @@
 ---
-status: review
+status: done
 assignee:
 blocked_by: [ORF-T15]
 created: "2026-10-31"
@@ -83,3 +83,14 @@ original 67 checks. Log: `tmp/issue/ORF-T16-check.log`.
 `refactor/issue-170-outside-code-checks`. Implementation/evidence commit:
 `11153ddd2f385dc0d12c8a25565a4bb328fe5e6c`. The passing results above are local; final-head CI is pending.
 Fresh review and merge remain separate stages; this task stays in review until both are complete.
+
+## Review and merge
+
+The fresh review found no actionable findings at `e8271433becc072ce05401c725299e1cfe00fd9d`.
+Both unit platforms, aggregate CI and CodeQL pass at that exact head. The preceding `dev` push run,
+41327187225, also passes, including all three terminal platforms.
+
+[PR #195](https://github.com/remziduzagac/slipbox/pull/195) was marked ready and squash-merged into `dev` on
+2026-11-01 as `bfae98acae27298202428268887f3dad167faa86`. The automatic
+[dev push run](https://github.com/remziduzagac/slipbox/actions/runs/41330961580) passes, including both unit
+platforms, all three terminal platforms, lint, site and aggregate CI.
