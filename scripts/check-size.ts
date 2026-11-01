@@ -27,7 +27,6 @@ export const GENERATED: Record<string, number> = { "src/core/documents/servers/l
 
 /** Existing test owners only; exact caps ratchet down, never exempt new/split files (ORG-D2). */
 export const TEST_CAPPED: Record<string, number> = {
-  "tests/terminal/checks/navigating.ts": 1824,
   "tests/terminal/checks/reading.ts": 1737,
 };
 

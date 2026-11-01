@@ -1,6 +1,6 @@
 // Reporting a problem (RPT): the report's window opened by its key, the palette and help; the screen and where you were
 // added on your say; sent by the browser, a copy or gh — each program a fake on the check's PATH, the clipboard its
-// file. In the navigating area, as help's: its own file, navigating.ts being past the size limit.
+// file. In the navigating area, as help's: its own file.
 
 import { chmodSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";

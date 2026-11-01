@@ -1,33 +1,40 @@
-import { HTML } from "./html.ts";
 // Every terminal check, by area (TT-D3): each area's file holds its checks and what it leaves out (TT-D4).
 
 import { type Check, CLI_CASES, type LeftOut } from "../check.ts";
 import { AGENTS } from "./agents.ts";
+import { APPEARANCE } from "./appearance.ts";
 import { CONFIGURATION } from "./configuration.ts";
 import { EDITING, LEFT_OUT_EDITING } from "./editing.ts";
 import { ELSEWHERE } from "./elsewhere.ts";
 import { EXPLORER_MARKS } from "./explorer-marks.ts";
-import { EXPORT } from "./export.ts";
 import { EXPORT_ENTRY } from "./export-entry.ts";
+import { EXPORT } from "./export.ts";
 import { FILE_OPERATIONS } from "./files.ts";
-import { GIT } from "./git.ts";
+import { FINDING } from "./finding.ts";
 import { GIT_BRANCHES } from "./git-branches.ts";
 import { GIT_DIFF } from "./git-diff.ts";
 import { GIT_STEADY } from "./git-steady.ts";
-import { HOME } from "./home.ts";
+import { GIT } from "./git.ts";
+import { HELP } from "./help.ts";
 import { UNWALKED_HOME } from "./home-watching.ts";
+import { HOME } from "./home.ts";
+import { HTML } from "./html.ts";
+import { INDEX_SETTINGS } from "./index-settings.ts";
 import { LANGUAGE_SERVERS } from "./language-servers.ts";
 import { LEFT_OUT_LINKS_AND_FILES, LINKS } from "./links.ts";
+import { LIST_INTERACTIONS } from "./list-interactions.ts";
 import { MOVING_LINKS } from "./moving-links.ts";
 import { NAMED } from "./named-folders.ts";
-import { LEFT_OUT_NAVIGATING, NAVIGATING } from "./navigating.ts";
+import { NAVIGATION_TOOLS } from "./navigation-tools.ts";
 import { NEW_FILE } from "./new-file.ts";
 import { NOTES } from "./notes.ts";
+import { PALETTE } from "./palette.ts";
 import { PANELS } from "./panels.ts";
-import { PEEK } from "./peek.ts";
 import { PEEK_BACKLINKS } from "./peek-backlinks.ts";
+import { PEEK } from "./peek.ts";
 import { PICTURES } from "./pictures.ts";
 import { PROBLEMS_AND_LINT } from "./problems-and-lint.ts";
+import { QUITTING } from "./quitting.ts";
 import { LEFT_OUT_READING, READING } from "./reading.ts";
 import { REPORTING } from "./reporting.ts";
 import { GIT_PANEL } from "./repositories.ts";
@@ -38,12 +45,17 @@ import { SHELL_AND_CONTEXT } from "./shell-and-context.ts";
 import { SLOW_DISK } from "./slow-disk.ts";
 import { SOURCE_CONTROL } from "./source-control.ts";
 import { LINKED } from "./symlinks.ts";
+import { TERMINAL_INPUT } from "./terminal-input.ts";
+import { TERMINAL_STATE } from "./terminal-state.ts";
+import { UI_SETTINGS } from "./ui-settings.ts";
 import { UPDATES } from "./updates.ts";
 import { PEEKED } from "./vault-peek.ts";
 import { VAULTS } from "./vaults.ts";
 import { WATCHING } from "./watching.ts";
 import { WHERE } from "./where.ts";
+import { WHICH_KEY } from "./which-key.ts";
 import { WINDOW_HEADER } from "./window-header.ts";
+import { WINDOWS_AND_TABS } from "./windows-and-tabs.ts";
 
 /** Each file's checks, by its name: `bun run test:terminal <name>` runs them. */
 export const CHECK_FILES: Record<string, Check[]> = {
@@ -51,7 +63,21 @@ export const CHECK_FILES: Record<string, Check[]> = {
   reading: READING,
   editing: EDITING,
   "new-file": NEW_FILE,
-  navigating: NAVIGATING,
+  // The screen and navigation: panes, tabs, windows, the palette, which-key, find, replace, search, tags, the
+  // explorer, settings, and the terminal's own behaviour: keys as sent, pastes, the session, resizes, signals (TT-T5).
+  "windows-and-tabs": WINDOWS_AND_TABS,
+  "navigation-tools": NAVIGATION_TOOLS,
+  finding: FINDING,
+  palette: PALETTE,
+  "ui-settings": UI_SETTINGS,
+  "terminal-state": TERMINAL_STATE,
+  "terminal-input": TERMINAL_INPUT,
+  appearance: APPEARANCE,
+  "list-interactions": LIST_INTERACTIONS,
+  help: HELP,
+  "index-settings": INDEX_SETTINGS,
+  "which-key": WHICH_KEY,
+  quitting: QUITTING,
   links: LINKS,
   roots: ROOTS,
   "named-folders": NAMED,
@@ -90,7 +116,7 @@ export const CHECK_FILES: Record<string, Check[]> = {
   // control's too, in a file of their own, source-control.ts being near the size limit.
   "git-diff": GIT_DIFF,
   // The panels as the checks' shared helpers drive them (#18): the which-key popup, the explorer, the outline, the git
-  // panel; in the navigating area, navigating.ts being past the size limit.
+  // panel; in the navigating area, in a file of their own.
   panels: PANELS,
   // A slow disk read off the main thread (T12): home's walk, the background index, the explorer's listings.
   "slow-disk": SLOW_DISK,
@@ -98,7 +124,7 @@ export const CHECK_FILES: Record<string, Check[]> = {
   "window-header": WINDOW_HEADER,
   // What the branches do once git answers in the background (D263): source control's too, in a file of their own.
   "git-branches": GIT_BRANCHES,
-  // Reporting a problem (RPT): help's, in the navigating area, navigating.ts being past the size limit.
+  // Reporting a problem (RPT): help's, in the navigating area, in a file of their own.
   reporting: REPORTING,
   // Pictures sized to their window, at their own size on a click (#52): in the reading area, reading.ts being past the
   // size limit.
@@ -113,6 +139,7 @@ export const CHECK_FILES: Record<string, Check[]> = {
 
 export const CHECKS: Check[] = Object.values(CHECK_FILES).flat();
 
+const LEFT_OUT_NAVIGATING: LeftOut = {};
 const LEFT_OUT_OUTSIDE_AND_CODE: LeftOut = {};
 
 const AREAS: LeftOut[] = [
