@@ -55,7 +55,7 @@ implementation and review evidence do not by themselves close the task.
   one host release is built per run, with the original named budget and all compiled-package assertions.
 - All seven describe blocks are byte-identical after reversing only the real scope guard's owner-path list.
   Synthetic graph fixture text is unchanged. The tree/pack/release helper bodies agree exactly after indentation
-  normalization; file-owned cleanup and repository-root resolution retain their meaning. No test/snapshot renamed.
+  normalization; file-owned cleanup and repository-root resolution retain their meaning. Test/snapshot identities stay.
 - Removed only the distribution test cap. The size fixture now injects a synthetic legacy test cap into its copied
   script. All existing assertions are byte-identical; reversing that setup reconstructs the complete base file.
   Fixture-only undo fails with expected exit 1 / received 0, then fixed bytes are restored exactly.
@@ -92,3 +92,10 @@ implementation and review evidence do not by themselves close the task.
   No unexplained failure or CI job is retried; no budget, dependency, product behavior or CI setting changes.
 - Logs/results: `tmp/issue/ORF-T10-check.log`, result JSON and verification/body/scope/migration records. Carry the
   T9/T26 completion records unchanged. Draft publication follows; fresh review and merge remain separate stages.
+
+- Draft [PR #187](https://github.com/remziduzagac/slipbox/pull/187) is open into dev on
+  refactor/issue-170-distribution-tests. Implementation/evidence commit 9813b605a8fe4251ace275d6795c7cb482346ad4
+  is pushed without force; this publication record is documentation-only. Fresh review remains pending.
+- Final build-record documentation and Biome checks pass with the counts above. Test/source bytes and carried
+  completion records remain those verified; no additional product or terminal run is needed for this record.
+  Keep the PR draft. Final-head remote CI remains to verify during the separate review/merge stages.
