@@ -39,7 +39,7 @@ import {
   TSC,
 } from "../check.ts";
 import { type Session, sleep } from "../session.ts";
-import { messagesSaying } from "./links-and-files.ts";
+import { messagesSaying } from "../support/links.ts";
 
 const KENJI = "people/kenji-mori.md";
 /** The reference set's share links (kestrel's web app): a type error on purpose, a function used from another file. */

@@ -33,7 +33,7 @@ import {
   switcherListed,
 } from "../check.ts";
 import { CheckFailed, type Session, Skipped, sleep } from "../session.ts";
-import { ARCHITECTURE, crumbs, lastMessage, listed, messagesSaying, PEEK_HINT, toLink } from "./links-and-files.ts";
+import { ARCHITECTURE, crumbs, lastMessage, listed, messagesSaying, PEEK_HINT, toLink } from "../support/links.ts";
 
 /**
  * Home never walked while a check runs: the background index off, and the TUI's own walk of home, made while nobody

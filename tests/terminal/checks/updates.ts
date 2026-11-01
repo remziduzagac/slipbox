@@ -21,7 +21,7 @@ import { VERSION } from "../../../src/version.ts";
 import { type Check, open } from "../check.ts";
 import { type Releases, releasesBuilt } from "../releases.ts";
 import { type Session, Skipped, sleep } from "../session.ts";
-import { lastMessage } from "./links-and-files.ts";
+import { lastMessage } from "../support/links.ts";
 
 /** The run's two release builds; without them the check is skipped, saying why. */
 function builds(): Releases {

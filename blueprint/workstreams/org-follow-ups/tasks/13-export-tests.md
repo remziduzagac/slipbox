@@ -1,5 +1,5 @@
 ---
-status: review
+status: done
 assignee:
 blocked_by: [ORF-T12, ORF-T28]
 created: "2026-10-31"
@@ -133,3 +133,19 @@ files. T28's completion remains byte-identical. All original failures and the re
 Final-head CI is pending and is not claimed green. Fresh review and merge remain separate requested stages;
 keep the PR draft and stop at the build handoff. No full-suite/all-terminal run, deadline/dependency/CI change,
 branch promotion, release or next-task implementation is included.
+
+## Review, merge and dev verification
+
+Fresh review at `a5d8b2b6ae679c4fbc8518685abc6ef0473391e6` found no actionable defect. PR
+[CI](https://github.com/remziduzagac/slipbox/actions/runs/41311817483) passes on attempt 1; the separate
+CodeQL status has an accepted exception for pre-existing findings. No additional finding is covered by that exception.
+
+The preceding [dev push](https://github.com/remziduzagac/slipbox/actions/runs/41310467440) passes at exact base
+`9f975f5977018c16edb91ddd2bb616ed3ce5de77` on attempt 1. PR #192 was marked ready and squash-merged with
+`--match-head-commit a5d8b2b6ae679c4fbc8518685abc6ef0473391e6` on 2026-11-01 at 14:56:35 UTC. Squash:
+`332012335374f51e2ee306955d8af80acaa88b7c`. Its tree equals the reviewed head; its sole parent is that green base.
+
+The automatic [dev push](https://github.com/remziduzagac/slipbox/actions/runs/41318669758) passes at that squash
+on attempt 1. Both reached-unit platforms, lint/site/changes and aggregate CI pass; terminal/status jobs skip for
+test-only scope. Evidence: `tmp/issue/ORF-T13-merge-dev-result.json` and `ORF-T13-merge-commit.json`.
+This completion record is carried into the next task, ORF-T14.

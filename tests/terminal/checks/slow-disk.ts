@@ -6,7 +6,7 @@
 import { chmodSync } from "node:fs";
 import { type Check, explorerOpen, explorerRow, follow, leader, open } from "../check.ts";
 import type { Session } from "../session.ts";
-import { crumbs, lastMessage, listed } from "./links-and-files.ts";
+import { crumbs, lastMessage, listed } from "../support/links.ts";
 
 /** The folder name every check's slow disk has. */
 const SLOW = "slowdisk";

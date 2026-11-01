@@ -22,7 +22,7 @@ import { setLinkAnswer } from "../../../src/core/workspace/vaults/symlinks.ts";
 import { configFilesFor, initVault, recordLocation, rootAt } from "../../../src/core/workspace/vaults/vault.ts";
 import { type Check, explorerOpen, follow, inSwitcher, leader, opened } from "../check.ts";
 import { type Session, sleep } from "../session.ts";
-import { ARCHITECTURE } from "./links-and-files.ts";
+import { ARCHITECTURE } from "../support/links.ts";
 import { markOf } from "./vaults.ts";
 
 const TITLE = "kestrel › docs/architecture.md";

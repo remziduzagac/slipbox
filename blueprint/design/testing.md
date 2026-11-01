@@ -343,6 +343,11 @@ the outside and code's, in files of their own (`source-control.ts`; the diff win
 the first file being near its size limit): each makes its repository with git in its own folder (commits, branches,
 a worktree, a bare repository as the remote, a conflict from a real merge or rebase).
 
+The links and files area keeps its checks in `links.ts`, `roots.ts`, `named-folders.ts`, `files.ts`, `git.ts`,
+`notes.ts` and `peek.ts` under `tests/terminal/checks/`. Each registers directly in `checks/index.ts`; the files
+retain the area and original order of their checks. Shared screen, message, link navigation and Git fixture
+helpers live in `tests/terminal/support/links.ts`, below the check collections that use them (ORG-D1, ORG-D2).
+
 **Coverage** (`tests/terminal/coverage.ts`, tests/terminal-coverage.test.ts in `bun run test`): every command and every
 area of `CASES.md` (its "By area" part) is covered by a check, or left out, with its reason, in its area's file; the
 command line's own areas are left out together (tests/cli/ covers them). Each command group and each area has
