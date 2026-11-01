@@ -1,0 +1,103 @@
+{
+  "task": "ORF-T16",
+  "base": "9bee02b88a87fe427811216691728aa99a4efbf2",
+  "moves": [
+    {
+      "from": "tests/terminal/checks/outside-and-code.ts",
+      "to": "tests/terminal/checks/export.ts",
+      "method": "git mv",
+      "retains": ["EXPORT (export window and publication checks)"]
+    }
+  ],
+  "extractions": [
+    {
+      "from": "tests/terminal/checks/outside-and-code.ts",
+      "to": "tests/terminal/checks/export-entry.ts",
+      "declarations": ["EXPORT_ENTRY (background work and Info export)"]
+    },
+    {
+      "from": "tests/terminal/checks/outside-and-code.ts",
+      "to": "tests/terminal/checks/problems-and-lint.ts",
+      "declarations": ["PROBLEMS_AND_LINT (including generated lint visibility checks)"]
+    },
+    {
+      "from": "tests/terminal/checks/outside-and-code.ts",
+      "to": "tests/terminal/checks/language-servers.ts",
+      "declarations": ["SHARE", "TS_CONFIG", "childOf", "LANGUAGE_SERVERS"]
+    },
+    {
+      "from": "tests/terminal/checks/outside-and-code.ts",
+      "to": "tests/terminal/checks/watching.ts",
+      "declarations": ["indexCached", "lineIs", "WATCHING"]
+    },
+    {
+      "from": "tests/terminal/checks/outside-and-code.ts",
+      "to": "tests/terminal/checks/agents.ts",
+      "declarations": ["AGENTS"]
+    },
+    {
+      "from": "tests/terminal/checks/outside-and-code.ts",
+      "to": "tests/terminal/checks/save-conflicts.ts",
+      "declarations": ["CONFLICT", "SAVE_CONFLICTS"]
+    },
+    {
+      "from": "tests/terminal/checks/outside-and-code.ts",
+      "to": "tests/terminal/checks/configuration.ts",
+      "declarations": ["themeFg", "configFile", "parseEstimate", "bigParse", "CONFIGURATION"]
+    },
+    {
+      "from": "tests/terminal/checks/outside-and-code.ts",
+      "to": "tests/terminal/checks/saving.ts",
+      "declarations": ["SAVING (autosave, reindex and editor handoff)"]
+    },
+    {
+      "from": "tests/terminal/checks/outside-and-code.ts",
+      "to": "tests/terminal/checks/shell-and-context.ts",
+      "declarations": ["SHELL_AND_CONTEXT"]
+    },
+    {
+      "from": "tests/terminal/checks/outside-and-code.ts",
+      "to": "tests/terminal/support/outside-and-code.ts",
+      "declarations": ["KENJI", "onto", "typedAtEnd", "typingAtEnd", "append"]
+    },
+    {
+      "from": "tests/terminal/checks/outside-and-code.ts",
+      "to": "tests/terminal/support/diagnostics.ts",
+      "declarations": ["styleAt", "numberStyle"]
+    },
+    {
+      "from": "tests/terminal/checks/outside-and-code.ts",
+      "to": "tests/terminal/support/export.ts",
+      "declarations": ["format", "hold", "HOLD", "cancelExport"]
+    }
+  ],
+  "entryPoints": [
+    "tests/terminal/checks/index.ts",
+    "tests/terminal/run.ts",
+    "tests/terminal/worker.ts"
+  ],
+  "registration": {
+    "before": ["OUTSIDE_AND_CODE"],
+    "after": [
+      "EXPORT_ENTRY",
+      "PROBLEMS_AND_LINT",
+      "LANGUAGE_SERVERS",
+      "WATCHING",
+      "AGENTS",
+      "SAVE_CONFLICTS",
+      "CONFIGURATION",
+      "SAVING",
+      "SHELL_AND_CONTEXT",
+      "EXPORT"
+    ],
+    "preserve": "CHECKS order, check names, areas, coverage, options and run bodies",
+    "leftOut": "The unchanged empty LEFT_OUT_OUTSIDE_AND_CODE moves to checks/index.ts."
+  },
+  "sourceSelectors": {
+    "file": "scripts/ci-scope.ts",
+    "preserve": "Existing source selectors use unchanged name pieces and areas; none names the removed check file."
+  },
+  "retainedData": "All check bodies, options, comments, fixture strings and deadlines are retained; no snapshots belong to this collection.",
+  "design": "blueprint/design/testing.md",
+  "capRemoval": "tests/terminal/checks/outside-and-code.ts"
+}
