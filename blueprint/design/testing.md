@@ -64,7 +64,6 @@ The root and staging helpers close over that sandbox; the PNG remains a live bin
 `export-pictures.ts`, `export-nodes.ts` and `export-readers.ts` share picture fixtures, node traversal and document
 readback. Whole suites retain their titles, assertions, unit defaults and cross-format integration coverage.
 
-
 CLI process scenarios use `tests/support/cli-process.ts`: each owner gets a fresh demo copy, child environment and
 cleanup hooks. `tests/cli/launcher/` retains dispatch, argument/error, terminal refusal, installer and compiled-entry
 coverage. The catalog guard parses the area suites and checks that every command has an executable process call,
