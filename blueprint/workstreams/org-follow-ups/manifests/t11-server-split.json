@@ -1,0 +1,306 @@
+{
+  "moves": {
+    "tests/servers.test.ts": "tests/core/documents/servers/manager.test.ts"
+  },
+  "splits": {
+    "tests/servers.test.ts": [
+      "tests/core/documents/servers/client.test.ts",
+      "tests/core/documents/servers/discovery.test.ts",
+      "tests/core/documents/servers/manager.test.ts",
+      "tests/core/documents/servers/linters.test.ts"
+    ]
+  },
+  "support": [
+    "tests/support/server-sandbox.ts",
+    "tests/support/server-process.ts"
+  ],
+  "suiteOwners": {
+    "tests/core/documents/servers/client.test.ts": [
+      "the client's limits (19.1): they keep a broken server from costing slipbox, never stop a working one",
+      "the client (19.1)",
+      "the client (19.1): what a server says and asks besides diagnostics"
+    ],
+    "tests/core/documents/servers/discovery.test.ts": [
+      "which servers, where (19.2–19.5)",
+      "found only where it's surely the one (19.4)",
+      "slipbox's installs behind their locks, said and acted on (14.11)"
+    ],
+    "tests/core/documents/servers/manager.test.ts": [
+      "the servers of open files (19.1)"
+    ],
+    "tests/core/documents/servers/linters.test.ts": [
+      "linters without a server (19.19)"
+    ]
+  },
+  "retained": [
+    {
+      "file": "blueprint/tasks/archive/flaky-tests-on-ci.md",
+      "text": "tests/servers.test",
+      "reason": "Historical task, research or measured inventory names the owner at its recorded revision; current owners are listed in this manifest."
+    },
+    {
+      "file": "blueprint/tasks/archive/mason-on-server-path.md",
+      "text": "tests/servers.test",
+      "reason": "Historical task, research or measured inventory names the owner at its recorded revision; current owners are listed in this manifest."
+    },
+    {
+      "file": "blueprint/workstreams/archive/doc-findings/tasks/archive/cli-words.md",
+      "text": "tests/servers.test",
+      "reason": "Historical task, research or measured inventory names the owner at its recorded revision; current owners are listed in this manifest."
+    },
+    {
+      "file": "blueprint/workstreams/archive/doc-findings/tasks/archive/exports.md",
+      "text": "tests/servers.test",
+      "reason": "Historical task, research or measured inventory names the owner at its recorded revision; current owners are listed in this manifest."
+    },
+    {
+      "file": "blueprint/workstreams/archive/greenrepo/tasks/archive/docs-checks.md",
+      "text": "tests/servers.test",
+      "reason": "Historical task, research or measured inventory names the owner at its recorded revision; current owners are listed in this manifest."
+    },
+    {
+      "file": "blueprint/workstreams/archive/greenrepo/tasks/archive/tests-on-ci.md",
+      "text": "tests/servers.test",
+      "reason": "Historical task, research or measured inventory names the owner at its recorded revision; current owners are listed in this manifest."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/manifests/t11-final-ratchet.json",
+      "text": "tests/servers.test",
+      "reason": "Historical task, research or measured inventory names the owner at its recorded revision; current owners are listed in this manifest."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/manifests/t21.json",
+      "text": "tests/servers.test",
+      "reason": "Historical task, research or measured inventory names the owner at its recorded revision; current owners are listed in this manifest."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/manifests/t23.json",
+      "text": "tests/servers.test",
+      "reason": "Historical task, research or measured inventory names the owner at its recorded revision; current owners are listed in this manifest."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/manifests/t40-clone-dispositions.json",
+      "text": "tests/servers.test",
+      "reason": "Historical task, research or measured inventory names the owner at its recorded revision; current owners are listed in this manifest."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/manifests/t43-reconciliation.json",
+      "text": "tests/servers.test",
+      "reason": "Historical task, research or measured inventory names the owner at its recorded revision; current owners are listed in this manifest."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "tests/servers.test",
+      "reason": "Historical task, research or measured inventory names the owner at its recorded revision; current owners are listed in this manifest."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/tasks/11-final-ratchet.md",
+      "text": "tests/servers.test",
+      "reason": "Historical task, research or measured inventory names the owner at its recorded revision; current owners are listed in this manifest."
+    },
+    {
+      "file": "blueprint/workstreams/org-follow-ups/tasks/11-server-tests.md",
+      "text": "tests/servers.test",
+      "reason": "Historical task, research or measured inventory names the owner at its recorded revision; current owners are listed in this manifest."
+    }
+  ],
+  "fixtureReaders": [
+    {
+      "path": "tests/organization/timeouts.test.ts",
+      "adaptation": "Replace only the retired owner with four file-local UNIT_TIMEOUT_MS entries; all named test budgets remain in the whole manager suite."
+    },
+    {
+      "path": "examples/home/CASES.md",
+      "adaptation": "Point the live fake-server case at the client and manager feature owners."
+    }
+  ],
+  "invariants": {
+    "suiteAndLeafIdentities": "All top-level describe blocks move whole with byte-identical bodies, including computed cases and nested suite.",
+    "hooks": "Each owner calls makeServerSandbox once: its XDG/config setup, cleanup and afterEach trust reset retain original order and bodies.",
+    "helpers": "Original lockFor/serverPackage bodies close over each owner sandbox; original event/wait mechanisms shared, fake client stays local.",
+    "fixtures": "Fake LSP path resolves to the same tests/fixtures/fake-lsp.ts; all rendered/fixture strings unchanged.",
+    "sourceEntriesWorkersSnapshots": "No product source, worker/asset paths, build entries, package settings or snapshot change.",
+    "caps": "Remove only original server test cap. Four owners aim below 1000; no new cap.",
+    "basename": "servers.test.ts remains a live CLI diagnostics basename; scan the retired full path separately."
+  },
+  "verification": {
+    "source": {
+      "static": [
+        3131,
+        3131
+      ],
+      "runtime": [
+        2290,
+        2290
+      ],
+      "entries": 12,
+      "declarations": [
+        4085,
+        4085
+      ],
+      "unresolved": []
+    },
+    "scope": {
+      "src/core/documents/servers/client.ts": {
+        "beforeOwners": 319,
+        "afterOwners": 322,
+        "removed": [
+          "tests/servers.test.ts"
+        ],
+        "added": [
+          "tests/core/documents/servers/client.test.ts",
+          "tests/core/documents/servers/discovery.test.ts",
+          "tests/core/documents/servers/linters.test.ts",
+          "tests/core/documents/servers/manager.test.ts"
+        ],
+        "checks": [
+          "language servers",
+          "lint",
+          "problems"
+        ],
+        "fallback": false
+      },
+      "src/core/documents/servers/find.ts": {
+        "beforeOwners": 323,
+        "afterOwners": 326,
+        "removed": [
+          "tests/servers.test.ts"
+        ],
+        "added": [
+          "tests/core/documents/servers/client.test.ts",
+          "tests/core/documents/servers/discovery.test.ts",
+          "tests/core/documents/servers/linters.test.ts",
+          "tests/core/documents/servers/manager.test.ts"
+        ],
+        "checks": [
+          "language servers",
+          "lint",
+          "problems"
+        ],
+        "fallback": false
+      },
+      "src/core/documents/servers/install.ts": {
+        "beforeOwners": 323,
+        "afterOwners": 326,
+        "removed": [
+          "tests/servers.test.ts"
+        ],
+        "added": [
+          "tests/core/documents/servers/client.test.ts",
+          "tests/core/documents/servers/discovery.test.ts",
+          "tests/core/documents/servers/linters.test.ts",
+          "tests/core/documents/servers/manager.test.ts"
+        ],
+        "checks": [
+          "language servers",
+          "lint",
+          "problems"
+        ],
+        "fallback": false
+      },
+      "src/core/documents/servers/manager.ts": {
+        "beforeOwners": 319,
+        "afterOwners": 321,
+        "removed": [
+          "tests/servers.test.ts"
+        ],
+        "added": [
+          "tests/core/documents/servers/discovery.test.ts",
+          "tests/core/documents/servers/linters.test.ts",
+          "tests/core/documents/servers/manager.test.ts"
+        ],
+        "checks": [
+          "language servers",
+          "lint",
+          "problems"
+        ],
+        "fallback": false
+      },
+      "src/core/documents/servers/languages.ts": {
+        "beforeOwners": 390,
+        "afterOwners": 392,
+        "removed": [
+          "tests/servers.test.ts"
+        ],
+        "added": [
+          "tests/core/documents/servers/discovery.test.ts",
+          "tests/core/documents/servers/linters.test.ts",
+          "tests/core/documents/servers/manager.test.ts"
+        ],
+        "checks": [
+          "language servers",
+          "lint",
+          "problems"
+        ],
+        "fallback": false
+      },
+      "src/core/documents/servers/linters.ts": {
+        "beforeOwners": 390,
+        "afterOwners": 391,
+        "removed": [
+          "tests/servers.test.ts"
+        ],
+        "added": [
+          "tests/core/documents/servers/discovery.test.ts",
+          "tests/core/documents/servers/linters.test.ts"
+        ],
+        "checks": [
+          "language servers",
+          "lint",
+          "problems"
+        ],
+        "fallback": false
+      },
+      "tests/fixtures/fake-lsp.ts": {
+        "beforeOwners": 6,
+        "afterOwners": 7,
+        "removed": [
+          "tests/servers.test.ts"
+        ],
+        "added": [
+          "tests/core/documents/servers/client.test.ts",
+          "tests/core/documents/servers/manager.test.ts"
+        ],
+        "checks": [],
+        "fallback": false
+      }
+    },
+    "ownerLines": {
+      "tests/core/documents/servers/client.test.ts": 479,
+      "tests/core/documents/servers/discovery.test.ts": 569,
+      "tests/core/documents/servers/manager.test.ts": 715,
+      "tests/core/documents/servers/linters.test.ts": 259
+    },
+    "beforeAfterTests": {
+      "executedIdentities": 73,
+      "beforeAfterNamesEqual": true,
+      "before": {
+        "passes": 73,
+        "assertions": 877,
+        "owners": 2,
+        "seconds": 13.84
+      },
+      "after": {
+        "passes": 73,
+        "assertions": 877,
+        "owners": 5,
+        "seconds": 13.9
+      },
+      "scopeFailures": []
+    },
+    "bodyAudit": "Eight whole top-level suites byte-identical; setup, trust/cleanup and package helpers identical after dedenting; event/wait helpers identical after export reversal.",
+    "localImports": "Original resolved import-target union preserved across four owners and two support fixtures; all local static/type/runtime imports resolve.",
+    "compiledGate": "Test-only relocation: product source, worker callers and paths, asset URLs, package build and entry bytes are unchanged; no relocated product entry requires a new compile or worker probe.",
+    "renameReview": "git mv before splitting; explicit git diff -M30% recognizes manager.test.ts at 33%; default threshold cannot infer this one-to-four split.",
+    "requiredCheck": {
+      "command": "gnutimeout -k 10 900 bun run check",
+      "exit": 0,
+      "passes": 110,
+      "failures": 0,
+      "assertions": 1015,
+      "owners": 8,
+      "unitSeconds": 14.63,
+      "overflowWarnings": 0
+    }
+  }
+}

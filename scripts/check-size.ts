@@ -29,7 +29,6 @@ export const GENERATED: Record<string, number> = { "src/core/documents/servers/l
 export const TEST_CAPPED: Record<string, number> = {
   "tests/export.test.ts": 1624,
   "tests/render.test.ts": 1990,
-  "tests/servers.test.ts": 2038,
   "tests/terminal/checks/links-and-files.ts": 3095,
   "tests/terminal/checks/navigating.ts": 1824,
   "tests/terminal/checks/outside-and-code.ts": 1900,
