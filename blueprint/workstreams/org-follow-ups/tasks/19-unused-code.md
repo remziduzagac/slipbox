@@ -1,5 +1,5 @@
 ---
-status: review
+status: done
 assignee:
 blocked_by: [ORF-T18]
 created: "2026-10-31"
@@ -90,6 +90,21 @@ pass in that run. Log: `tmp/issue/ORF-T19-check.log`. Branch: `refactor/issue-17
 
 ## Delivery
 
-[Draft PR #198](https://github.com/remziduzagac/slipbox/pull/198) targets `dev` from
+[PR #198](https://github.com/remziduzagac/slipbox/pull/198) targets `dev` from
 `refactor/issue-170-unused-code`. Implementation and verification commit:
-`eea8a09e54ee83b258abdf3cc27fc61c4093cbb4`. Local checks above pass; final-head CI and fresh review are pending.
+`eea8a09e54ee83b258abdf3cc27fc61c4093cbb4`. Final reviewed and merged head:
+`aaf984955a0ad82b0675b4560bfe0c7c08a5a172`.
+
+## Review and merge
+
+The fresh review found no actionable issues. All 285 candidate sites reconcile: eleven removals and 274 retained
+sites with 397 compiler-resolved cited uses. Fresh affected tests pass 79/79 with 704 assertions; typecheck, size,
+boundary and diff checks pass. Review: `tmp/issue/review-ORF-T19.md` and `ORF-T19-review-*.log`.
+
+CI and CodeQL pass at the exact reviewed head. Before merge, the preceding dev push
+[41336398508](https://github.com/remziduzagac/slipbox/actions/runs/41336398508) passed, including all three terminal
+platforms. PR #198 was marked ready and squash-merged on 2026-11-01 with the reviewed-head guard; squash:
+`703b60e950218591b8801b9096200158a72618b9`.
+
+The automatic dev push [41339227065](https://github.com/remziduzagac/slipbox/actions/runs/41339227065) is running.
+Merge evidence: `tmp/issue/ORF-T19-merge-*.json`.
