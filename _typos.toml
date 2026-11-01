@@ -8,7 +8,7 @@ extend-exclude = [
   # Third parties' licence texts, kept word for word: `declatory` is MPL-1.1's own.
   "notices/",
   # Rendered screens, their words cut at a column's edge: `anually`, `righ`.
-  "tests/__snapshots__/",
+  "tests/**/__snapshots__/",
 ]
 
 [default]

@@ -21,7 +21,14 @@ through OpenTUI itself, to prove the adapter and real key parsing.
 | File | Covers |
 | --- | --- |
 | `tests/core/` | width, sanitize, wikilinks, link resolution, capture, config, themes, keymap, glyph sets |
-| `tests/render.test.ts` | snapshots, the no-overflow property, allocator properties, blocks, ANSI output |
+| `tests/core/rendering/layout/markdown/layout.test.ts` | Markdown snapshots, blocks, inlines and source mapping |
+| `tests/core/rendering/layout/markdown/samples.test.ts` | Demo/reference layout widths and scrolling code |
+| `tests/core/rendering/layout/markdown/table.test.ts` | Generated allocator budget and height properties |
+| `tests/core/rendering/layout/markdown/cache.test.ts` | Highlighting bounds and render caches |
+| `tests/core/rendering/layout/wrapping.test.ts` | Measured wrapping and drawn-row properties |
+| `tests/core/rendering/layout/ansi-colors.test.ts` | ANSI output and terminal color conversion |
+| `tests/core/rendering/layout/diff/layout.test.ts` | Block, note, split-code and screen diff layouts |
+| `tests/core/rendering/media/drawings.test.ts` | Mermaid, math and picture layout |
 | `tests/core/workspace/`, `tests/cli/` | vaults, walk, links/graph, mutations, search/Git and CLI parity |
 | `tests/cli/` | command-area process scenarios, focused handlers and launcher/argument/error coverage |
 
@@ -60,6 +67,13 @@ module does not import App.
 The server owners each call `tests/support/server-sandbox.ts` for their own XDG setup, cleanup and trust reset.
 Local package/lock fixtures close over that sandbox. Client and manager suites share the event/wait helpers and
 unchanged fake-server path in `tests/support/server-process.ts`; protocol and process assertions stay with their owners.
+
+The rendering owners each call `tests/support/render-sandbox.ts` for their own original XDG setup, cleanup and
+Mermaid preload. `tests/support/render-layout.ts` keeps the shared sample discovery and layout helpers. Both
+snapshot-bearing suites live in `tests/core/rendering/layout/markdown/layout.test.ts`; its snapshot retains the same
+keys and bytes beside that owner. The scope selector maps a sibling `__snapshots__` directory back to its test at
+any depth under `tests/`. The cold-cache regression invokes the Mermaid case in
+`tests/core/rendering/media/drawings.test.ts` twice with a controlled warm startup cache.
 
 `tests/distribution/release.test.ts` builds a release for this machine and drives it as a user would: the packed binary
 printing the skill, the release's notes, installed by the release's installer and through the Pages bootstrap,
@@ -123,15 +137,15 @@ Timings are the benchmark's (§ Timings), read and not asserted.
 
 **Nothing a test file leaves behind changes another's results.** `bun test` runs every file in one process, so what
 loads lazily (`16.6`), Mermaid or MathJax, is loaded by whichever file asked first. A file whose output depends on one
-loads it before it renders: `tests/render.test.ts` loads Mermaid first, so the samples' snapshots show their diagrams as
-the TUI draws them once it's in, whichever file ran before. What's drawn while a library loads is tested in a process of
-its own. That child receives the owner's runtime environment explicitly: Bun's default child environment can retain the
-startup cache path after the test sets a private XDG cache. A warm inherited-cache regression exercises the cold-load
-case twice against the same foreign cache. Nor does a test lean on the tests before it in its file: it makes the state
-it needs (a vault opened first, a state folder), so it passes alone, filtered or in order. The vaults a file's tests
-open stay on the machine's list, hundreds by its end: a test whose work reads them all (a link's target offered from
-every vault) runs with only its own listed (`onlyRootsUnder` in `tests/tui-harness.ts`), or it slows with each test
-added before it.
+loads it before it renders: the rendering owners preload Mermaid through `tests/support/render-sandbox.ts`, so the
+samples' snapshots show their diagrams as the TUI draws them once it's in, whichever file ran before. What's drawn while
+a library loads is tested in a process of its own. That child receives the owner's runtime environment explicitly: Bun's
+default child environment can retain the startup cache path after the test sets a private XDG cache. A warm
+inherited-cache regression exercises the cold-load case twice against the same foreign cache. Nor does a test lean on
+the tests before it in its file: it makes the state it needs (a vault opened first, a state folder), so it passes alone,
+filtered or in order. The vaults a file's tests open stay on the machine's list, hundreds by its end: a test whose work
+reads them all (a link's target offered from every vault) runs with only its own listed (`onlyRootsUnder` in
+`tests/tui-harness.ts`), or it slows with each test added before it.
 
 **Flaky tests are fixed, or quarantined by name; never retried.** No test is retried, by the runner or by itself: one
 that fails at random has a cause, in the code or in the test. It is fixed, the failure shown before the fix (in the bad
@@ -219,13 +233,14 @@ tests, the design docs and the roadmap) and the files that cover it. Halden is i
 
 **Built, not used in place.** A `.git` folder can't be committed inside this repository, so the mock repositories
 (`work/kestrel`, `work/product`, `work/infra`) are committed as plain folders, their histories described in
-`.build/<repo>.toml` — commits, branches, merges, a worktree, a remote. `bun scripts/build-home.ts <dir>` copies the
-set to `<dir>/home` and halden to `<dir>/vault`, replays each history with git (its `main` checked to end at the
-folder as committed), and makes from `.build/extras.toml` the files that can't be committed: hostile names, symlinks,
-a file over the size cap, an unreadable one. The terminal checks build a fresh copy and use it as `$HOME`
-(`home`), and the tests check it: the build (`tests/home.test.ts`), that the set stays complete, that every data file
-parses or fails as it means to, that every note renders inside its width at four widths (`tests/render.test.ts`),
-and that no open in place gave its folders this machine's identity.
+`.build/<repo>.toml` — commits, branches, merges, a worktree, a remote. `bun scripts/build-home.ts <dir>` copies the set
+to `<dir>/home` and halden to `<dir>/vault`, replays each history with git (its `main` checked to end at the folder as
+committed), and makes from `.build/extras.toml` the files that can't be committed: hostile names, symlinks, a file over
+the size cap, an unreadable one. The terminal checks build a fresh copy and use it as `$HOME` (`home`), and the tests
+check it: the build (`tests/home.test.ts`), that the set stays complete, that every data file parses or fails as it
+means to, that every note renders inside its width at four widths
+(`tests/core/rendering/layout/markdown/samples.test.ts`), and that no open in place gave its folders this machine's
+identity.
 
 Each reference-set area is covered by a terminal check or explicitly left out with its reason (TT-D4).
 Checks take their content from `examples/`, extending the samples when a case is missing (TT-D5).
