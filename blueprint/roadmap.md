@@ -9,6 +9,9 @@ Vaults and the explorer's view (VV) and reviewing, diffing and merging (GIT) are
 work together (§ Agent surface), and search's improvements (§ Search).
 Automatic installation and maintenance of the bundled skill (#50) is built and consolidated as
 [ASI](workstreams/archive/agent-skill-install/README.md), extending `14.4`, `14.7` and `14.8`.
+Code organization is built and consolidated as [ORG](workstreams/archive/code-organization/README.md)
+(2026-11-02); its follow-ups, ORF, are complete and await consolidation. Gateway execution and the proposed window/tab
+model remain in [Later](#later).
 
 Each step's ID is the plan's stable item ID: cite it (`3.3`, `10.1`) rather than restating the work. Phases and
 clusters differ: a cluster groups related items in dependency order, and its line in italics says which phase it
@@ -683,11 +686,20 @@ current requirements or product behavior. Start any resulting design change thro
 
 - [ ] **27.1** Evaluate a performance regression guard: small headless timing subset or comparable scheduled trends.
 - [ ] **27.2** Evaluate an accessible plain CLI follow workflow, including real screen-reader validation.
-- [x] **27.3** Evaluated and implemented through [ORG](workstreams/code-organization/tasks/11-final-ratchet.md):
+- [x] **27.3** Evaluated and implemented through [ORG][org-test-ratchet]:
   feature owners/reusable fixtures, a separate 1,500-line test ceiling and exact legacy caps.
 - [ ] **27.4** Evaluate a local diagnostics bundle, with explicit collection scope and privacy-preserving defaults.
 - [ ] **27.5** Review documented continuity and an isolated recovery drill; account-access changes remain owner choices.
 - [ ] **27.6** Evaluate a non-blocking screenshot-refresh reminder for relevant UI changes.
+
+[org-test-ratchet]: workstreams/archive/code-organization/tasks/11-final-ratchet.md
+
+## Code organization
+
+- [x] **[ORG](workstreams/archive/code-organization/README.md)**: all 44 tasks complete; feature/ownership groups,
+  focused contracts and tests, dependency checks, reuse/pattern dispositions and the final size ratchet consolidated
+  2026-11-02 (ORG-D1–ORG-D3). ORG-T12 implemented the separate unchanged-timeout-policy phase; ORG-T44 prepared
+  contracts without gateway execution. The archived tasks/manifests/research retain the evidence and historical caps.
 
 
 ## Documentation people can follow
@@ -724,6 +736,19 @@ Items 5 and 7 are consolidated as CIW. The remaining work is tracked in the root
 
 Agreed, but not scheduled.
 
+- [ ] **Gateway execution and client migration** (ORG-R10, ORG-D3): implement the
+  [ORG-T44 contracts][org-gateway] and the [owner reconciliation][org-gateway-owners] as a separate workstream.
+  Keep TUI-owned buffers/undo and `App.writeBuffer` authoritative; reconcile ENG's conflicting draft before adopting
+  any different document owner. Define explicit target/content identity, authority/staleness checks, bounded work or
+  workers, progress/cancellation and partial-effect outcomes, mutation ordering, result retention/reconnect and
+  publication/cleanup settlement. Verify late delivery after focus/vault/view changes and saving an older snapshot
+  while newer text stays dirty. Client routing, functionality migration, socket transport and connected-edit
+  coordination remain unbuilt; a Promise alone gives no thread isolation. #56 loading/memory stays separate.
+- [ ] **Window/tab ownership and document tools** (`3.3`, `3.15`, ORG-D1): a separate workstream for windows owning
+  tab lists, session migration, focus, tab/split commands and scratch. Settle active-document tool context while a
+  floating editor is open and the key/lifetime for per-document tool state; preserve properties/virtual-buffer
+  coverage. The [ORG ownership assessment][org-tui-ownership] also retains moving version/update controls beside
+  branding as a separate layout/screenshot change. None is implemented by the organization moves.
 - [ ] **10.13** Colour emoji in a PDF: the colour emoji font's own pictures, in a line (`10.11`; deferred 2026-10-09,
   D189).
 - [ ] **13.1** Tier 0: commands shelling out with context substitution; `25.7` built the part that runs what you type
@@ -738,6 +763,10 @@ Agreed, but not scheduled.
   (defaults, allowed values, unknown keys) (`16.x`, D107).
 - [ ] **24.20** Tabular code in columns: assignments, enum members, keys; columns inside rows (deferred 2026-10-09,
   D132).
+
+[org-gateway]: workstreams/archive/code-organization/design.md
+[org-gateway-owners]: workstreams/archive/code-organization/tasks/43-measurement-and-build.md
+[org-tui-ownership]: workstreams/archive/code-organization/design.md
 
 The design's deferred list was sorted 2026-10-07, and most of it now has IDs: Mermaid and LaTeX are `12.10`–`12.11` and
 `12.15`–`12.17`; composing notes, `10.9`; a note's history, frontmatter rules and document types, `22.x`; the live

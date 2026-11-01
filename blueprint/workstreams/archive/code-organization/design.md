@@ -479,8 +479,8 @@ the current implementation, client and test owners; the eight sketches remain fu
 **Recommendation:** keep the maintainer-approved TUI-owned-buffer model authoritative for this contract design. Adopt
 compatible lifecycle principles, not ENG's proposed document owner. ENG's Documents design moves text, undo and
 saved-baseline state into the engine; it cannot simultaneously own the same live record as NoteBuffer. See the [ENG
-principles](../execution-engine/decisions.md) and [engine document
-proposal](../execution-engine/design/how-it-works.md#documents-and-presentation-buffers). This is a real alternative,
+principles](../../execution-engine/decisions.md) and [engine document
+proposal](../../execution-engine/design/how-it-works.md#documents-and-presentation-buffers). This is a real alternative,
 not a naming difference. ENG's accepted decision records and draft architecture are not amended here.
 
 | ENG principle | Compatible application in this proposal |

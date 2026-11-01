@@ -43,6 +43,11 @@ still apply. This exception does not permit implementation growth.
 The same applies when import formatting alone moves a file from at or below the ceiling to above it; the file gets an
 exact cap equal to its measured size, recorded in the task and removed by its extraction task.
 
+**2026-11-02 consolidation note:** The source/test aims and final ceilings are now recorded in the root
+[maintainability requirements](../../../requirements.md#maintainability) and
+[size conventions](../../../design/how-it-works.md#size-and-shared-code-conventions). The staged caps and measured
+move deltas remain historical evidence in the tasks and manifests; this note does not reopen the import-growth rule.
+
 ## ORG-D3: Early timeout policy and independent gateway preparation (2026-10-27)
 
 **Decision:** T12 follows T1 and centralizes unchanged defaults and named existing budgets. T23 handles compound CLI

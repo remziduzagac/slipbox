@@ -613,6 +613,15 @@ code matching the code around it, with no limit to stop it.
 
 **Not chosen:** splitting later, after VV and GIT: the seventeen tasks left would each add to it first.
 
+**2026-11-02 consolidation note:** [ORG-D1–ORG-D3][org-decisions] extend this decision: feature ownership and explicit
+App wiring remain; handwritten source aims for 500 lines with a final 600-line ceiling, tests for 1,000 with a separate
+1,500-line ceiling. Exact legacy caps ratchet down; ORG-D2's dated exception allows only measured import-formatting
+growth in source moves, recorded with its delta and extraction owner. Generated server locks retain a separate
+measured cap and offline generator check. `App` now lives in `src/tui/app/runtime/app.ts` and remains the TUI's shared
+state/wiring owner and note-write gate.
+
+[org-decisions]: ../workstreams/archive/code-organization/decisions.md
+
 ## D267: A missing file opens empty and is made on its first save (9.3, 4.6, 2026-10-31)
 
 **Decision:** `slipbox <path>` and `slipbox open <path>` open a missing file as an empty, clean buffer. This replaces

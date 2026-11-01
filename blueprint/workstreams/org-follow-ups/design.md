@@ -1,7 +1,7 @@
 # ORF design and delivery
 
-The existing [ORG design](../code-organization/design.md) and
-[ORG-D1–ORG-D3](../code-organization/decisions.md) remain authoritative. These tasks implement its retained seams;
+The existing [ORG design](../archive/code-organization/design.md) and
+[ORG-D1–ORG-D3](../archive/code-organization/decisions.md) remain authoritative. These tasks implement its retained seams;
 they do not reopen ENG, introduce a gateway or change behavior during extractions.
 
 ## Implementation seams
@@ -11,7 +11,7 @@ unused-code/focused-test batch. Sequence: timer, uninstall fixture isolation (it
 source splits (resolver, CLI, vaults, watch, updates, graph, App), four unit owners, five terminal collections,
 unused-code proof, focused scenarios and scope measurement. ORF-T21 is a separate test-only PR immediately after
 ORF-T1's PR #171; existing task IDs stay unchanged.
-The [T11 ledger](../code-organization/manifests/t11-final-ratchet.json) supplies the split responsibilities and
+The [T11 ledger](../archive/code-organization/manifests/t11-final-ratchet.json) supplies the split responsibilities and
 invariants. Tasks characterize them before extracting; App is last among source owners and may need child PRs.
 
 ORF-T27 is a separate test-only prerequisite before ORF-T12: a cold diagram child explicitly receives the rendering

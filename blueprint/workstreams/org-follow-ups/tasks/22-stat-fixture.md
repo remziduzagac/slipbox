@@ -14,7 +14,7 @@ Issue item 4, host assumptions; a separate test-only prerequisite to publishing 
 Run the stat scenario in `tests/cli/reading/metadata.test.ts` against its existing sandbox copy of the demo vault.
 Keep its title, properties assertions and `/vault\s+halden\n/` expectation; the checkout's location must not decide
 the expected label. The known linked-worktree assumption is recorded by
-[ORG-T43](../../code-organization/tasks/43-measurement-and-build.md), and blocks ORF-T3's scoped check.
+[ORG-T43](../../archive/code-organization/tasks/43-measurement-and-build.md), and blocks ORF-T3's scoped check.
 
 Existing root-label tests cover only locations without a worktree. Add a controlled main checkout and linked
 worktree case that exercises stat's plain versus branch-qualified human label and its unchanged JSON identity.

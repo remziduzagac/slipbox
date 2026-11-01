@@ -73,7 +73,7 @@ The original incomplete ORG-T43 regex sample is retained as
 `tmp/issue/ORF-T2-original-t43-serial-before-regex-jobs-38.log:5`. The first scenario reaches its last `info` call,
 receives empty stdout and fails at 30,031.11 ms, with a 30,000 ms timeout report and one dangling process killed.
 The next two cases pass in 4.10 and 3.67 seconds. The partial sample is still excluded from passing/timing comparisons
-in [ORG-T43's reconciliation record](../../code-organization/manifests/t43-reconciliation.json).
+in [ORG-T43's reconciliation record](../../archive/code-organization/manifests/t43-reconciliation.json).
 
 `tests/cli/search/process.test.ts:12` makes five sequential CLI calls under one test deadline. Its helper at
 `tests/support/cli-process.ts:50` gives each child a separate unchanged 20-second bound, captures stdout/stderr, and

@@ -6,9 +6,9 @@ created: "2026-10-31"
 # ORF: Organization follow-ups
 
 Implements [issue #170](https://github.com/remziduzagac/slipbox/issues/170), the work retained by
-[ORG-T11](../code-organization/tasks/11-final-ratchet.md),
-[ORG-T43](../code-organization/tasks/43-measurement-and-build.md) and
-[ORG-T41](../code-organization/tasks/41-naming-and-unused-code.md).
+[ORG-T11](../archive/code-organization/tasks/11-final-ratchet.md),
+[ORG-T43](../archive/code-organization/tasks/43-measurement-and-build.md) and
+[ORG-T41](../archive/code-organization/tasks/41-naming-and-unused-code.md).
 
 The approved ORG-D1–ORG-D3 ownership, requirements and move rules govern this work. ORG takes precedence over ENG's
 conflicting draft; ENG is unchanged. No new gateway, buffer owner, dependency, timeout increase, CI policy, #56 work,

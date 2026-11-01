@@ -166,11 +166,11 @@ justify a shared session superclass. Asynchronous `message`/`file` differ in loo
 - Typecheck, boundary, sizes, Biome, changed Markdown and `check:docs` are required before publishing. No terminal
   feature run is needed for a record-only phase with no screen or protocol changes; this is not a whole-suite run.
 
-[w0]: ../../../../src/core/foundation/workers/worker-requests.ts
-[w1]: ../../../../src/core/rendering/media/diagrams/diagram-jobs.ts
-[w2]: ../../../../src/core/rendering/media/paint/paint-jobs.ts
-[w3]: ../../../../src/core/workspace/search/regex-jobs.ts
-[w4]: ../../../../src/core/documents/syntax/syntax-thread.ts
-[w5]: ../../../../src/core/documents/diagnostics/spell-thread.ts
-[w6]: ../../../../src/core/rendering/export/jobs.ts
-[w7]: ../../../../src/core/workspace/walk/walk-thread.ts
+[w0]: ../../../../../src/core/foundation/workers/worker-requests.ts
+[w1]: ../../../../../src/core/rendering/media/diagrams/diagram-jobs.ts
+[w2]: ../../../../../src/core/rendering/media/paint/paint-jobs.ts
+[w3]: ../../../../../src/core/workspace/search/regex-jobs.ts
+[w4]: ../../../../../src/core/documents/syntax/syntax-thread.ts
+[w5]: ../../../../../src/core/documents/diagnostics/spell-thread.ts
+[w6]: ../../../../../src/core/rendering/export/jobs.ts
+[w7]: ../../../../../src/core/workspace/walk/walk-thread.ts

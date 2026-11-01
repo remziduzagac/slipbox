@@ -1,5 +1,5 @@
 ---
-synced_with: dev@7c2e3c6
+synced_with: dev@a42fe8b7
 ---
 
 # slipbox blueprint
@@ -34,6 +34,7 @@ search's improvements.
 
 - [tasks/](tasks/README.md): small work not worth a workstream; open tasks are its files.
 - [workstreams/](workstreams/README.md): contained parts of the work; the roadmap gives their order.
+  ORG is consolidated (2026-11-02); ORF is complete and awaits consolidation.
   ENG is a draft, not built. Completed workstreams are consolidated into the root and retained in
   `workstreams/archive/`; the workstream index records each status and archive location.
 

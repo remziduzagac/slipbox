@@ -11,6 +11,22 @@ one that stopped short (`--bail`, a crash) is removed by the next run, its proce
 
 ## Strategy (`0.4`)
 
+Feature owners follow `tests/core/<group>/<feature>/`, `tests/tui/<scope>/<feature>/` and `tests/cli/<area>/`;
+shared fixtures and helpers live in `tests/support/`. Pure document edits stay separate from TUI buffer/view tests.
+Terminal checks retain their feature hierarchy and fixtures stay under `tests/fixtures/` (ORG-D1).
+
+Split scenarios by behavior while preserving titles, assertions, hooks, sandbox lifetime, trust/XDG resets, preload
+behavior and snapshot names/content. The model harness stays separate from filesystem/process and canvas helpers;
+pure tests must not import it. Handler tests call handlers directly while launcher dispatch/argument/error tests
+retain process integration. Focused controllers use actual collaborators and small explicit capabilities, alongside
+shared App journeys.
+
+Selection recursively follows tests, helper dependencies, sibling snapshots, dynamic imports and worker URLs (D239).
+It does not exclude App or other shared composition to manufacture a smaller scope. Compare mapped pre/post scopes
+with completed runs, recording selected unit files and terminal checks separately, wall time, pass/fail/skip,
+host/cache conditions and external bounds. A partial aggregate run supplies no green timing baseline; report fixture
+and host failures separately. CIW-T6 and CIW-T9 retain selector/slow-case coordination.
+
 The terminal tests form a layer beside the headless unit tests: `bun run test` drives the model,
 `bun run test:terminal` drives slipbox through a terminal (TT-D6). Both run in CI, scoped to the change (D239).
 
@@ -135,12 +151,24 @@ remaining collections migrate in their assigned phases.
 from the high bits: a plain `seed * 1103515245` passes 2^53, loses its low bits, and the "5,000
 inputs" were a few hundred distinct ones (the allocator's floor bug hid behind that).
 
-**Slow is not stuck.** Every test is bounded at 30 s by `bun run test`'s `--timeout 30000`, which the check, CI and
-the release's build run: a harness copies and indexes a vault, a CLI test starts processes, and a loaded machine or a
-small runner (a shared CI runner) makes either take seconds. A preload's `setDefaultTimeout` reaches the first test file
-alone, so the bound is the runner's flag, and a test holds the script to it; most files set the same bound
-themselves, for a run of one file by `bun test`. A test that needs longer says so itself (every command the skill
-shows, run: 3 minutes).
+### Timeout policy
+
+**Slow is not stuck.** `tests/support/timeouts.ts` owns the unchanged 30,000 ms unit default and operation-named
+existing slow budgets, each with its reason (ORG-D3, ORG-T12). `test` and `test:docs` keep matching numeric package
+fallbacks, checked by `tests/organization/timeouts.test.ts`. A preload's `setDefaultTimeout` reaches the first test
+file alone, so existing file-local initialization stays in place for focused `bun test` runs. Export reads retain
+their 60-second file default; skill integration has 180 seconds and the release-build hook 240 seconds.
+
+Product worker/process deadlines, CLI child-process bounds, terminal observation waits, frame/check lifetimes,
+cleanup grace and CI job ceilings remain separate policies with their own owners. A compound test's aggregate time
+is distinct from each CLI child's 20-second bound. The SIGTERM-resistant child check still exercises forced cleanup.
+Centralizing budgets does not shorten execution or fix clock arithmetic.
+
+A later increase requires repeated focused measurements on supported CI hosts after narrowing/splitting: record the
+distribution and slowest passing run and obtain approval for the smallest justified named budget. No blanket increase
+or unexplained retry conceals an assertion, fixture or deadline failure.
+
+### Waiting and measurement
 
 **A test waits for a condition, never a fixed time, and counts work rather than timing it.** A CI runner, or a machine
 busy with other work, is slower by a different amount each run. A test waits until what it needs has happened (a
