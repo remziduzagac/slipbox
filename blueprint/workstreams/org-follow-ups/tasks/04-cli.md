@@ -74,7 +74,7 @@ once below 600; retain the 500-line aim. Review and merge are separate stages.
 
 The focused test commands use `gnutimeout -k 10 300`; the required scoped check uses `gnutimeout -k 10 900 bun run
 check`. Test-bearing execution is sequential outside the sandbox, retaining ORF-T1's fixture-cleanup constraint.
-Final scoped/static result, branch/PR and fresh-review handoff follow once complete; none is claimed green early.
+The completed scoped/static result and fresh-review handoff are recorded below.
 
 ## Build result and handoff
 
@@ -87,6 +87,10 @@ Staged-new-file docs verification passes: 480 Markdown files, 1,746 spelt files 
 CLI export-name set is unchanged. Build artifacts and ignored command logs retain their recorded identity/results;
 no product/terminal tests are repeated for the final evidence edits.
 
-Branch: `refactor/issue-170-cli`, into `dev`; draft publication follows. Fresh review and merge are pending separate
-stages. ORF-T4 remains review until merge; the preceding ORF-T3 completion record stays byte-identical to its saved
+Branch: `refactor/issue-170-cli`, into `dev`; draft [PR #180](https://github.com/remziduzagac/slipbox/pull/180).
+Implementation commit: `266691f03715f827d9559e8b3ac23972433c6cbf`. Fresh review and merge are pending separate stages. ORF-T4 remains review until merge; the preceding ORF-T3 completion record stays byte-identical to its saved
 post-merge file. No ready marking, merge, promotion, release or next-task implementation is part of this build.
+
+The PR is published as draft. The delivery-record commit adds only this publication evidence; product and terminal
+checks are not repeated for it. The new-head CI result is pending and is not claimed green. Next: ORF-T4 review in a
+fresh session at the final pushed head; no review, ready marking, merge or next-task work in this build stage.
