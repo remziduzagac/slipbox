@@ -95,5 +95,11 @@ Branch: refactor/issue-170-updates, from origin/dev 01e414690c127a16f1c691fc151f
 push 41263235711 passes at that exact base on attempt 1, including all three terminal platforms. Health #106 last
 ran 2026-10-26, within eight days. T6's completion record is carried unchanged.
 
-Draft publication follows final evidence/docs and whitespace gates; fresh review remains pending. Do not mark done
-before the separate reviewed merge and its dev-push verification.
+Draft PR: [#183](https://github.com/remziduzagac/slipbox/pull/183), open into dev. Implementation/evidence commit
+dcfa0bf1b9e96ce1cc1c2690c4872280b39f787e is pushed; this delivery record follows it. Final build-record docs and
+Biome checks pass (480 Markdown / 1756 spelt files; 1161 linted files). Initial inline-type lint finding is retained
+separately and corrected; no unrelated failure is hidden or retried.
+
+Fresh review remains pending; keep draft. No ready marking, merge, branch promotion, release or next-task work.
+Final-head CI is pending and is not claimed green. Mark done only after the separate reviewed merge and dev-push
+verification. Next: ORF-T7 review at the final pushed head.
