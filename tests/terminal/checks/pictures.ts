@@ -1,6 +1,6 @@
 // Pictures sized to their window, shown at their own size on a click (issue #52), read off the screen as Kitty's
 // Unicode placeholders: each cell names the picture's row and column it shows, so a check sees how big a picture is
-// drawn, which part of it shows, and where. In the reading area; reading.ts is past the size limit.
+// drawn, which part of it shows, and where. In the reading area.
 
 import { stringWidth } from "../../../src/core/foundation/text/width.ts";
 import { placeholderCell } from "../../../src/tui/shell/terminal/placeholders.ts";

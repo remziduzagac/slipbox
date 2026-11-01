@@ -370,6 +370,13 @@ and session lifecycle stay with each check. Shared screen and cursor helpers liv
 theme style helpers live in `support/appearance.ts`. Source mappings retain the same name pieces and areas
 (ORG-D1, ORG-D2).
 
+Reading checks register directly in their original order under `start.ts`, `diagrams.ts`, `markdown-content.ts`,
+`text-files.ts`, `data-files.ts`, `code-files.ts`, `markdown-inline.ts`, `info.ts`, `trust-and-privacy.ts`,
+`markdown-blocks.ts`, `themes-and-glyphs.ts`, `status-line.ts`, `document-structure.ts`, `code-cells.ts` and
+`samples.ts`. Shared navigation, outline and table-alignment helpers live in `support/reading.ts`; check-specific
+helpers stay with their feature. Areas, names, coverage, session lifecycle and the code-cell exclusion reason remain
+unchanged (ORG-D1, ORG-D2).
+
 **Coverage** (`tests/terminal/coverage.ts`, tests/terminal-coverage.test.ts in `bun run test`): every command and every
 area of `CASES.md` (its "By area" part) is covered by a check, or left out, with its reason, in its area's file; the
 command line's own areas are left out together (tests/cli/ covers them). Each command group and each area has

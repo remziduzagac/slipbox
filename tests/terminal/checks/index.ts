@@ -3,7 +3,12 @@
 import { type Check, CLI_CASES, type LeftOut } from "../check.ts";
 import { AGENTS } from "./agents.ts";
 import { APPEARANCE } from "./appearance.ts";
+import { CODE_CELLS, LEFT_OUT_READING } from "./code-cells.ts";
+import { CODE_FILES } from "./code-files.ts";
 import { CONFIGURATION } from "./configuration.ts";
+import { DATA_FILES } from "./data-files.ts";
+import { DIAGRAMS } from "./diagrams.ts";
+import { DOCUMENT_STRUCTURE } from "./document-structure.ts";
 import { EDITING, LEFT_OUT_EDITING } from "./editing.ts";
 import { ELSEWHERE } from "./elsewhere.ts";
 import { EXPLORER_MARKS } from "./explorer-marks.ts";
@@ -20,9 +25,13 @@ import { UNWALKED_HOME } from "./home-watching.ts";
 import { HOME } from "./home.ts";
 import { HTML } from "./html.ts";
 import { INDEX_SETTINGS } from "./index-settings.ts";
+import { INFO } from "./info.ts";
 import { LANGUAGE_SERVERS } from "./language-servers.ts";
 import { LEFT_OUT_LINKS_AND_FILES, LINKS } from "./links.ts";
 import { LIST_INTERACTIONS } from "./list-interactions.ts";
+import { MARKDOWN_BLOCKS } from "./markdown-blocks.ts";
+import { MARKDOWN_CONTENT } from "./markdown-content.ts";
+import { MARKDOWN_INLINE } from "./markdown-inline.ts";
 import { MOVING_LINKS } from "./moving-links.ts";
 import { NAMED } from "./named-folders.ts";
 import { NAVIGATION_TOOLS } from "./navigation-tools.ts";
@@ -35,18 +44,23 @@ import { PEEK } from "./peek.ts";
 import { PICTURES } from "./pictures.ts";
 import { PROBLEMS_AND_LINT } from "./problems-and-lint.ts";
 import { QUITTING } from "./quitting.ts";
-import { LEFT_OUT_READING, READING } from "./reading.ts";
 import { REPORTING } from "./reporting.ts";
 import { GIT_PANEL } from "./repositories.ts";
 import { ROOTS } from "./roots.ts";
+import { SAMPLES } from "./samples.ts";
 import { SAVE_CONFLICTS } from "./save-conflicts.ts";
 import { SAVING } from "./saving.ts";
 import { SHELL_AND_CONTEXT } from "./shell-and-context.ts";
 import { SLOW_DISK } from "./slow-disk.ts";
 import { SOURCE_CONTROL } from "./source-control.ts";
+import { START } from "./start.ts";
+import { STATUS_LINE } from "./status-line.ts";
 import { LINKED } from "./symlinks.ts";
 import { TERMINAL_INPUT } from "./terminal-input.ts";
 import { TERMINAL_STATE } from "./terminal-state.ts";
+import { TEXT_FILES } from "./text-files.ts";
+import { THEMES_AND_GLYPHS } from "./themes-and-glyphs.ts";
+import { TRUST_AND_PRIVACY } from "./trust-and-privacy.ts";
 import { UI_SETTINGS } from "./ui-settings.ts";
 import { UPDATES } from "./updates.ts";
 import { PEEKED } from "./vault-peek.ts";
@@ -60,7 +74,21 @@ import { WINDOWS_AND_TABS } from "./windows-and-tabs.ts";
 /** Each file's checks, by its name: `bun run test:terminal <name>` runs them. */
 export const CHECK_FILES: Record<string, Check[]> = {
   html: HTML,
-  reading: READING,
+  start: START,
+  diagrams: DIAGRAMS,
+  "markdown-content": MARKDOWN_CONTENT,
+  "text-files": TEXT_FILES,
+  "data-files": DATA_FILES,
+  "code-files": CODE_FILES,
+  "markdown-inline": MARKDOWN_INLINE,
+  info: INFO,
+  "trust-and-privacy": TRUST_AND_PRIVACY,
+  "markdown-blocks": MARKDOWN_BLOCKS,
+  "themes-and-glyphs": THEMES_AND_GLYPHS,
+  "status-line": STATUS_LINE,
+  "document-structure": DOCUMENT_STRUCTURE,
+  "code-cells": CODE_CELLS,
+  samples: SAMPLES,
   editing: EDITING,
   "new-file": NEW_FILE,
   // The screen and navigation: panes, tabs, windows, the palette, which-key, find, replace, search, tags, the
@@ -126,8 +154,7 @@ export const CHECK_FILES: Record<string, Check[]> = {
   "git-branches": GIT_BRANCHES,
   // Reporting a problem (RPT): help's, in the navigating area, in a file of their own.
   reporting: REPORTING,
-  // Pictures sized to their window, at their own size on a click (#52): in the reading area, reading.ts being past the
-  // size limit.
+  // Pictures sized to their window, at their own size on a click (#52): in the reading area.
   pictures: PICTURES,
   // Where you are on the top bar (WSP-D4, WSP-D5): its cases of its own, in the areas they belong to.
   where: WHERE,
