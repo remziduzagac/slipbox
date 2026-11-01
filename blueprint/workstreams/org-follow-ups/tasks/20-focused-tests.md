@@ -1,5 +1,5 @@
 ---
-status: review
+status: done
 assignee:
 blocked_by: [ORF-T19]
 created: "2026-10-31"
@@ -92,6 +92,11 @@ shows only the new manifest and focused worker owner, with no retired filename.
 
 ## Delivery
 
-[Draft PR #199](https://github.com/remziduzagac/slipbox/pull/199) targets `dev` from
-`refactor/issue-170-focused-tests`. Implementation and verification commit:
-`39a3033c9310d5b355946f20f54bb5742dd90d67`. Local checks pass; final-head CI and fresh review are pending.
+[PR #199](https://github.com/remziduzagac/slipbox/pull/199) merged into `dev` on 2026-11-01 as
+`9bb4e2cd97a4948c9ac3fa8358ea2c0faa93915e`, from `refactor/issue-170-focused-tests`. Implementation and verification
+commit: `39a3033c9310d5b355946f20f54bb5742dd90d67`; reviewed head:
+`699c210ed76f5e3b8a4f656c19b71a2520f9833d`. The fresh review found no actionable issue; final-head CI and CodeQL
+passed, and the previous dev push was green before merge. Issue #170 closed with this final PR.
+
+The post-merge [dev run](https://github.com/remziduzagac/slipbox/actions/runs/41341263809) passed, including unit
+tests on Ubuntu and macOS. Its scoped terminal selection was empty.
