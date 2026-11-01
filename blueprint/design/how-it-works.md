@@ -332,7 +332,8 @@ Theme vocabulary and compatibility aliases live in `rendering/theme/roles.ts` be
 | [libc.ts][o14] | UPG | libc through `bun:ffi`, opened once: `setenv` (D221), `execve`, `close_range`, `tcflush` |
 | [processes.ts][o15] | UPG | whether a process still runs: a lock's holder, a TUI's unsaved notes, an export's spool |
 | `tui/shell/overlays/dialog.ts` | UPG | the dialog: text, a select and checkboxes; its keys and clicks |
-| [updates.ts][o146] | UPG | the update offer, `app.upgrade`, `app.restart`, an upgrade underneath noticed |
+| [updates.ts][o146] | UPG | quiet offers, `app.upgrade`, `app.restart`, detached upgrades and restart refusal |
+| `tui/app/distribution/update-observation.ts` | UPG | daily discovery and installed-version polling/cache |
 | [skill.ts][o101] | GR-D10 | the skill for agents, built in: printed; installed, never over another's file or a link |
 | [skill-lifecycle.ts][o102] | ASI | detected user skill folders, safe refresh and uninstall ownership checks |
 | [report.ts][o103] | RPT | a bug report's facts (slipbox, the system, the terminal); its text read back; the address |
