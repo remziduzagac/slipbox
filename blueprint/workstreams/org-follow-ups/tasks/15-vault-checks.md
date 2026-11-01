@@ -1,5 +1,5 @@
 ---
-status: review
+status: done
 assignee:
 blocked_by: [ORF-T14]
 created: "2026-10-31"
@@ -108,3 +108,15 @@ Size and diff whitespace checks pass. Logs: `tmp/issue/ORF-T15-review-terminal.l
 The required bounded scoped gate passes all gates and 109 tests / 2,546 assertions across eight reached owners.
 Coverage now passes 12 tests / 127 assertions, including the two new regression cases. Log:
 `tmp/issue/ORF-T15-review-check.log`. No actionable finding remains after the correction; merge is a separate stage.
+
+## Review and merge
+
+The fresh review found one source-selection regression, corrected in
+`4521429d3bc4828df71fb44613159418acce258e` with two regression cases that fail with the mapping fix undone.
+No actionable finding remains. Both unit platforms, aggregate CI and CodeQL pass at that exact head. The preceding
+`dev` push run, 41322204637, also passes, including all three terminal platforms.
+
+[PR #194](https://github.com/remziduzagac/slipbox/pull/194) was marked ready and squash-merged into `dev` on
+2026-11-01 as `9bee02b88a87fe427811216691728aa99a4efbf2`. The automatic
+[dev push run](https://github.com/remziduzagac/slipbox/actions/runs/41327187225) passes, including both unit
+platforms, all three terminal platforms, lint, site and aggregate CI.

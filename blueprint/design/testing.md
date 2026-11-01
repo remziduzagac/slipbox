@@ -356,6 +356,13 @@ helpers directly (ORG-D1, ORG-D2).
 Vault switching and rename source mappings include all eight vault check owners, preserving their terminal coverage
 after the split.
 
+External changes and code checks register by feature in the same order: `export-entry.ts`, `problems-and-lint.ts`,
+`language-servers.ts`, `watching.ts`, `agents.ts`, `save-conflicts.ts`, `configuration.ts`, `saving.ts`,
+`shell-and-context.ts` and `export.ts`. Their existing areas and coverage stay with each check, including lint's
+editing cases. Shared navigation and editing helpers live in `tests/terminal/support/outside-and-code.ts`, gutter
+styles in `support/diagnostics.ts`, and export controls and held-publication fixtures in `support/export.ts`.
+Source mappings still select their unchanged check names and areas (ORG-D1, ORG-D2).
+
 **Coverage** (`tests/terminal/coverage.ts`, tests/terminal-coverage.test.ts in `bun run test`): every command and every
 area of `CASES.md` (its "By area" part) is covered by a check, or left out, with its reason, in its area's file; the
 command line's own areas are left out together (tests/cli/ covers them). Each command group and each area has

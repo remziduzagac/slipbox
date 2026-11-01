@@ -2,9 +2,13 @@ import { HTML } from "./html.ts";
 // Every terminal check, by area (TT-D3): each area's file holds its checks and what it leaves out (TT-D4).
 
 import { type Check, CLI_CASES, type LeftOut } from "../check.ts";
+import { AGENTS } from "./agents.ts";
+import { CONFIGURATION } from "./configuration.ts";
 import { EDITING, LEFT_OUT_EDITING } from "./editing.ts";
 import { ELSEWHERE } from "./elsewhere.ts";
 import { EXPLORER_MARKS } from "./explorer-marks.ts";
+import { EXPORT } from "./export.ts";
+import { EXPORT_ENTRY } from "./export-entry.ts";
 import { FILE_OPERATIONS } from "./files.ts";
 import { GIT } from "./git.ts";
 import { GIT_BRANCHES } from "./git-branches.ts";
@@ -12,27 +16,32 @@ import { GIT_DIFF } from "./git-diff.ts";
 import { GIT_STEADY } from "./git-steady.ts";
 import { HOME } from "./home.ts";
 import { UNWALKED_HOME } from "./home-watching.ts";
+import { LANGUAGE_SERVERS } from "./language-servers.ts";
 import { LEFT_OUT_LINKS_AND_FILES, LINKS } from "./links.ts";
 import { MOVING_LINKS } from "./moving-links.ts";
 import { NAMED } from "./named-folders.ts";
 import { LEFT_OUT_NAVIGATING, NAVIGATING } from "./navigating.ts";
 import { NEW_FILE } from "./new-file.ts";
 import { NOTES } from "./notes.ts";
-import { LEFT_OUT_OUTSIDE_AND_CODE, OUTSIDE_AND_CODE } from "./outside-and-code.ts";
 import { PANELS } from "./panels.ts";
 import { PEEK } from "./peek.ts";
 import { PEEK_BACKLINKS } from "./peek-backlinks.ts";
 import { PICTURES } from "./pictures.ts";
+import { PROBLEMS_AND_LINT } from "./problems-and-lint.ts";
 import { LEFT_OUT_READING, READING } from "./reading.ts";
 import { REPORTING } from "./reporting.ts";
 import { GIT_PANEL } from "./repositories.ts";
 import { ROOTS } from "./roots.ts";
+import { SAVE_CONFLICTS } from "./save-conflicts.ts";
+import { SAVING } from "./saving.ts";
+import { SHELL_AND_CONTEXT } from "./shell-and-context.ts";
 import { SLOW_DISK } from "./slow-disk.ts";
 import { SOURCE_CONTROL } from "./source-control.ts";
 import { LINKED } from "./symlinks.ts";
 import { UPDATES } from "./updates.ts";
 import { PEEKED } from "./vault-peek.ts";
 import { VAULTS } from "./vaults.ts";
+import { WATCHING } from "./watching.ts";
 import { WHERE } from "./where.ts";
 import { WINDOW_HEADER } from "./window-header.ts";
 
@@ -63,7 +72,18 @@ export const CHECK_FILES: Record<string, Check[]> = {
   repositories: GIT_PANEL,
   // A link renamed or moved itself, and what a rename writes through links (D260): links-and-files', a file of their own.
   "moving-links": MOVING_LINKS,
-  "outside-and-code": OUTSIDE_AND_CODE,
+  // What comes from outside (agents' edits, the watcher, the CLI beside the TUI), language servers, linters, the
+  // problems panel, your shell, and export (TT-T7).
+  "export-entry": EXPORT_ENTRY,
+  "problems-and-lint": PROBLEMS_AND_LINT,
+  "language-servers": LANGUAGE_SERVERS,
+  watching: WATCHING,
+  agents: AGENTS,
+  "save-conflicts": SAVE_CONFLICTS,
+  configuration: CONFIGURATION,
+  saving: SAVING,
+  "shell-and-context": SHELL_AND_CONTEXT,
+  export: EXPORT,
   // Source control's, in the outside-and-code area: their own file.
   "source-control": SOURCE_CONTROL,
   // The diff window's later edges (a block by its lines, enter on a line before, what no line shows): source
@@ -92,6 +112,8 @@ export const CHECK_FILES: Record<string, Check[]> = {
 };
 
 export const CHECKS: Check[] = Object.values(CHECK_FILES).flat();
+
+const LEFT_OUT_OUTSIDE_AND_CODE: LeftOut = {};
 
 const AREAS: LeftOut[] = [
   LEFT_OUT_READING,
