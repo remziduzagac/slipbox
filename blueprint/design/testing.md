@@ -28,7 +28,10 @@ through OpenTUI itself, to prove the adapter and real key parsing.
 | `tests/tui/documents/`, `tests/tui/shell/input/` | editor, source/lens, edit/save and keyboard/mouse behavior |
 | `tests/tui/app/`, `tests/tui/shell/` | retained App state/watch/windows, settings, screen, overlays and terminal |
 | `tests/tui/workspace/git/` | source control: worktrees, panel, marks, diff, review, merge, pull, rebase |
-| `tests/servers.test.ts` | slipbox as a client of language servers, against a fake one (`tests/fixtures/fake-lsp.ts`) |
+| `tests/core/documents/servers/client.test.ts` | Language-client protocol, diagnostics and request limits |
+| `tests/core/documents/servers/discovery.test.ts` | Language tables, finding/installing servers, locks and doctor |
+| `tests/core/documents/servers/manager.test.ts` | Server lifecycle, open files and restarts against a fake server |
+| `tests/core/documents/servers/linters.test.ts` | Linter formats, findings, roots, execution and trust |
 | `tests/regressions.test.ts` | one test per bug found in review (later: "review round/cycle N" blocks) |
 | `tests/home.test.ts` | the reference set's build (`scripts/build-home.ts`): histories, extras, the checks |
 | `tests/export.test.ts` | export (`10.x`): the assembler; each format read back (zips unzipped, PDF pages' text) |
@@ -53,6 +56,10 @@ sequences stay together. The unit default and each process deadline are unchange
 The core split also places boundary fixtures under `tests/organization/` and pure switcher matching under
 `tests/tui/shell/overlays/`. Every owner file retains its timeout and equivalent file-owned core sandbox; the support
 module does not import App.
+
+The server owners each call `tests/support/server-sandbox.ts` for their own XDG setup, cleanup and trust reset.
+Local package/lock fixtures close over that sandbox. Client and manager suites share the event/wait helpers and
+unchanged fake-server path in `tests/support/server-process.ts`; protocol and process assertions stay with their owners.
 
 `tests/distribution/release.test.ts` builds a release for this machine and drives it as a user would: the packed binary
 printing the skill, the release's notes, installed by the release's installer and through the Pages bootstrap,

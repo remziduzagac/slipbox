@@ -974,7 +974,7 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
   `work/kestrel/go.work`, `work/kestrel/package.json`, `work/kestrel/tsconfig.json` (lsp.md 19.3)
 - Fake language server fixture for deterministic diagnostics, hover, definition, rename, completion —
   `work/infra/dotfiles/slipbox/config.toml`, `work/kestrel/tools/fake/hello.fake` (tests/fixtures/fake-lsp.ts;
-  tests/servers.test.ts)
+  tests/core/documents/servers/client.test.ts; tests/core/documents/servers/manager.test.ts)
 - Per-language server config in vault config: \[language-server.x\] config tuning allowed, command ignored with warning
   — `work/infra/dotfiles/slipbox/config.toml`, `work/kestrel/.slipbox/config.toml` (lsp.md 'A vault's config may
   tune…')
