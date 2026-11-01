@@ -88,8 +88,9 @@ CLI export-name set is unchanged. Build artifacts and ignored command logs retai
 no product/terminal tests are repeated for the final evidence edits.
 
 Branch: `refactor/issue-170-cli`, into `dev`; draft [PR #180](https://github.com/remziduzagac/slipbox/pull/180).
-Implementation commit: `266691f03715f827d9559e8b3ac23972433c6cbf`. Fresh review and merge are pending separate stages. ORF-T4 remains review until merge; the preceding ORF-T3 completion record stays byte-identical to its saved
-post-merge file. No ready marking, merge, promotion, release or next-task implementation is part of this build.
+Implementation commit: `266691f03715f827d9559e8b3ac23972433c6cbf`. Fresh review and merge are pending separate stages.
+ORF-T4 remains review until merge; the preceding ORF-T3 completion record stays byte-identical to its saved post-merge
+file. No ready marking, merge, promotion, release or next-task implementation is part of this build.
 
 The PR is published as draft. The delivery-record commit adds only this publication evidence; product and terminal
 checks are not repeated for it. The new-head CI result is pending and is not claimed green. Next: ORF-T4 review in a
