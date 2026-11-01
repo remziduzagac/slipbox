@@ -109,3 +109,11 @@ Final evidence: tmp/issue/ORF-T8-check-corrected.log and check-result.json, chec
 check-doc-wrap.log (static-only), structure-final.log, public-api-audit.json and field-audit.json.
 No user-visible behavior, persistence format, dependency, product/test/terminal deadline or CI policy changes.
 Fresh review and merge remain separate stages; draft publication follows, with review pending.
+
+### Draft published
+
+[Draft PR #184](https://github.com/remziduzagac/slipbox/pull/184) is open into dev on refactor/issue-170-graph.
+Implementation/evidence commit `b0b73507bf60562de828d0903dc67bd016b34f14` is pushed without force. A documentation-only
+record adds this draft link; final head is recorded in the build handoff. Final evidence docs/Biome pass at
+480 Markdown / 1760 spelt files / zero link errors and 1164 linted files. Product tests and compiled probes are
+not repeated for this delivery record. Fresh review is pending; no ready marking or merge in this build stage.
