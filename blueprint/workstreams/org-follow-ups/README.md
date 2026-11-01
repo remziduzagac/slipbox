@@ -39,6 +39,7 @@ from the latest origin/dev. Task status and evidence live in its file; completed
 - [ORF-T11: Split server tests by feature](tasks/11-server-tests.md).
 - [ORF-T27: Isolate the cold diagram fixture](tasks/27-diagram-fixture.md).
 - [ORF-T12: Split rendering tests by feature](tasks/12-render-tests.md).
+- [ORF-T28: Isolate export fixture root discovery](tasks/28-export-fixture.md).
 - [ORF-T13: Split export tests by feature](tasks/13-export-tests.md).
 - [ORF-T14: Split link and file terminal checks](tasks/14-links-files-checks.md).
 - [ORF-T15: Split vault terminal checks](tasks/15-vault-checks.md).

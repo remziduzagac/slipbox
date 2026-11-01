@@ -18,6 +18,11 @@ ORF-T27 is a separate test-only prerequisite before ORF-T12: a cold diagram chil
 owner's runtime environment rather than Bun's startup environment. Controlled warm-cache coverage preserves the
 original pending/code/drawn assertions and all deadlines; product cache policy is unchanged.
 
+ORF-T28 is a separate test-only prerequisite before ORF-T13: export fixture discovery uses its own `.slipbox`
+markers, restoring the previous marker list afterward. An ancestor checkout must not make its loose-file examples
+vault notes. A controlled ancestor regression runs the unchanged original overwrite scenarios; product discovery,
+assertions and deadlines are unchanged.
+
 ## Requirements and design changes
 
 The timer investigation records the actual cause and any product behavior correction in ORF-T1, with the matching

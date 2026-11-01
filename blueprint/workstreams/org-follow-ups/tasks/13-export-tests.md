@@ -1,7 +1,7 @@
 ---
 status: todo
 assignee:
-blocked_by: [ORF-T12]
+blocked_by: [ORF-T12, ORF-T28]
 created: "2026-10-31"
 ---
 

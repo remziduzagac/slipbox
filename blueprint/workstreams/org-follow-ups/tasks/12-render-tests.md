@@ -1,5 +1,5 @@
 ---
-status: review
+status: done
 assignee:
 blocked_by: [ORF-T11, ORF-T27]
 created: "2026-10-31"
@@ -96,3 +96,27 @@ before/after audit; source, snapshot and fixture bytes have not moved.
   the task file; product tests are not repeated for it.
 - Final build-record docs and Biome pass with the counts above. Keep the PR draft; fresh review and merge remain
   separate stages. Final-head CI is pending verification. Stop after this build handoff.
+
+## Review and merge
+
+- Fresh review at 81616081fada38fd87e03d98ac68a2822d741e90 finds no actionable issue; no tracked correction.
+  Independent exact-base audits preserve all 31 suites, helper/hook bodies, assertions, import targets and
+  declaration identities. Snapshot bytes and the carried T27 completion remain identical; actual scopes agree.
+- Fresh bounded scoped check passes all static/docs gates and 628 tests / zero failures / 39 snapshots /
+  62730 assertions across fifteen owners, 24.97 seconds unit time / 34.193 seconds overall. The same table,
+  changed-word/scrolling-diff and background-diagram terminal scenarios pass three checks / eleven commands /
+  two jobs / 3.2 seconds. Review and logs: `tmp/issue/review-ORF-T12.md`, `ORF-T12-review-check.log` and
+  `ORF-T12-review-terminal.log`. Preserved negative controls and historical failures were not repeated.
+- [CI 41307087106](https://github.com/remziduzagac/slipbox/actions/runs/41307087106) and
+  [CodeQL 41307084203](https://github.com/remziduzagac/slipbox/actions/runs/41307084203) pass at that exact head
+  on attempt 1. Both PR unit platforms, lint/site/changes and aggregate CI pass; terminal/status skipped by policy.
+  Immediately before merge, preceding dev 41306016020 remains green at unchanged base 7e697b80, attempt 1.
+- Marked [PR #190](https://github.com/remziduzagac/slipbox/pull/190) ready and squash-merged with the exact-head
+  guard. Merge: aae897b4dc8c92b39112e1b055967896335e1481, 2026-11-01 12:44:13 UTC. The entire merged tree
+  equals the reviewed head; sole parent is the preceding green base. Local branch/head remain unchanged.
+- Automatic [dev push 41307899497](https://github.com/remziduzagac/slipbox/actions/runs/41307899497) succeeds
+  at that exact squash on attempt 1. Both reached-unit platforms, lint/site/changes and aggregate CI pass;
+  terminal/status jobs are skipped for this test-only scope. No terminal execution is claimed for this push.
+- Final metadata and tree audit: `tmp/issue/ORF-T12-merge-*.json`. No test, failed selection, job, probe or
+  control repeated during merge. Carry this completion record onto ORF-T13's fresh branch from latest dev;
+  no next-task implementation is included.

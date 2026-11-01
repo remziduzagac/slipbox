@@ -53,6 +53,11 @@ through OpenTUI itself, to prove the adapter and real key parsing.
 | `tests/docs.test.ts` | the user docs and agent guide: links, anchors, commands, flags, keys; no ID; vault, not root |
 | `tests/site.test.ts` | the docs' site: pages gathered from the docs map, links rewritten, the home's cards (DS) |
 
+The export fixture uses `tests/support/export-sandbox.ts` for its XDG setup and explicit `.slipbox` root markers,
+restoring the previous marker list after the owner. Its roots already create those markers; an ancestor Git checkout
+cannot turn its loose-file examples into vault notes. The ancestor-fixture regression drives the original overwrite
+scenarios from beneath a controlled checkout, preserving their assertions and deadlines.
+
 CLI process scenarios use `tests/support/cli-process.ts`: each owner gets a fresh demo copy, child environment and
 cleanup hooks. `tests/cli/launcher/` retains dispatch, argument/error, terminal refusal, installer and compiled-entry
 coverage. The catalog guard parses the area suites and checks that every command has an executable process call,
