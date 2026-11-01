@@ -1,0 +1,133 @@
+{
+  "moves": {},
+  "retained": [],
+  "renamedBasenames": {},
+  "extraction": [
+    {
+      "from": "src/tui/workspace/vaults/vaults.ts",
+      "to": "src/tui/workspace/vaults/vault-prompts.ts",
+      "symbols": [
+        "makeHere",
+        "unmakeHere",
+        "unmakeThis",
+        "makeItem",
+        "unmakeItem",
+        "renameItem",
+        "askDefaultCopy",
+        "choices",
+        "offerMovedRelink",
+        "make",
+        "openFolders",
+        "chooseDefaultCopy"
+      ]
+    }
+  ],
+  "entries": {
+    "removed": [],
+    "added": []
+  },
+  "ownership": {
+    "transaction": "Vaults retains switchVault, chooseSwitch, pendingSwitch, trail, visits, home-folder admission and back/location navigation; existing methods forward prompt calls",
+    "prompts": "VaultPrompts owns catalog, copy-choice and vault mutation interactions through live prompt capabilities and a switch callback; no retained graph/location/view snapshot",
+    "resources": "App retains buffers, shared workspace state and writeBuffer; Graph/config/session/watch/language/reset ordering stays in Vaults; no worker, URL, entry or asset changes"
+  },
+  "edges": {
+    "removed": [
+      "src/tui/workspace/vaults/vaults.ts -> src/core/workspace/links/reach.ts",
+      "src/tui/workspace/vaults/vaults.ts -> src/core/workspace/mutations/rename/rename.ts",
+      "src/tui/workspace/vaults/vaults.ts -> src/core/workspace/vaults/folders.ts",
+      "src/tui/workspace/vaults/vaults.ts -> src/tui/workspace/vaults/vault-list.ts"
+    ],
+    "added": [
+      "src/tui/workspace/vaults/vault-prompts.ts -> src/core/workspace/graph/graph.ts",
+      "src/tui/workspace/vaults/vault-prompts.ts -> src/core/workspace/links/reach.ts",
+      "src/tui/workspace/vaults/vault-prompts.ts -> src/core/workspace/mutations/rename/rename.ts",
+      "src/tui/workspace/vaults/vault-prompts.ts -> src/core/workspace/session/position.ts",
+      "src/tui/workspace/vaults/vault-prompts.ts -> src/core/workspace/vaults/folders.ts",
+      "src/tui/workspace/vaults/vault-prompts.ts -> src/core/workspace/vaults/names.ts",
+      "src/tui/workspace/vaults/vault-prompts.ts -> src/core/workspace/vaults/vault.ts",
+      "src/tui/workspace/vaults/vault-prompts.ts -> src/tui/shell/overlays/list-types.ts",
+      "src/tui/workspace/vaults/vault-prompts.ts -> src/tui/shell/overlays/overlays.ts",
+      "src/tui/workspace/vaults/vault-prompts.ts -> src/tui/workspace/explorer/contracts.ts",
+      "src/tui/workspace/vaults/vault-prompts.ts -> src/tui/workspace/explorer/explorer.ts",
+      "src/tui/workspace/vaults/vault-prompts.ts -> src/tui/workspace/explorer/renaming.ts",
+      "src/tui/workspace/vaults/vault-prompts.ts -> src/tui/workspace/vaults/vault-list.ts",
+      "src/tui/workspace/vaults/vaults.ts -> src/tui/workspace/vaults/vault-prompts.ts"
+    ]
+  },
+  "runtime": {
+    "removed": [
+      "src/tui/workspace/vaults/vaults.ts -> src/core/workspace/links/reach.ts",
+      "src/tui/workspace/vaults/vaults.ts -> src/core/workspace/mutations/rename/rename.ts",
+      "src/tui/workspace/vaults/vaults.ts -> src/core/workspace/vaults/folders.ts",
+      "src/tui/workspace/vaults/vaults.ts -> src/tui/workspace/vaults/vault-list.ts"
+    ],
+    "added": [
+      "src/tui/workspace/vaults/vault-prompts.ts -> src/core/workspace/links/reach.ts",
+      "src/tui/workspace/vaults/vault-prompts.ts -> src/core/workspace/mutations/rename/rename.ts",
+      "src/tui/workspace/vaults/vault-prompts.ts -> src/core/workspace/vaults/folders.ts",
+      "src/tui/workspace/vaults/vault-prompts.ts -> src/core/workspace/vaults/names.ts",
+      "src/tui/workspace/vaults/vault-prompts.ts -> src/core/workspace/vaults/vault.ts",
+      "src/tui/workspace/vaults/vault-prompts.ts -> src/tui/workspace/vaults/vault-list.ts",
+      "src/tui/workspace/vaults/vaults.ts -> src/tui/workspace/vaults/vault-prompts.ts"
+    ]
+  },
+  "tests": {
+    "removed": [],
+    "added": []
+  },
+  "runtimeScc": {
+    "before": [
+      [
+        "src/tui/actions/actions.ts",
+        "src/tui/actions/documents/actions-edit.ts",
+        "src/tui/actions/documents/actions-find.ts",
+        "src/tui/actions/documents/actions-links.ts",
+        "src/tui/actions/documents/actions-lsp.ts",
+        "src/tui/actions/documents/actions-view.ts",
+        "src/tui/actions/shell/actions-panes.ts",
+        "src/tui/actions/workspace/actions-files.ts"
+      ],
+      [
+        "src/tui/app/runtime/app.ts",
+        "src/tui/app/settings/settings.ts",
+        "src/tui/workspace/history/history.ts",
+        "src/tui/workspace/session/session.ts",
+        "src/tui/workspace/vaults/vaults.ts"
+      ],
+      [
+        "src/tui/workspace/git/gitremote.ts",
+        "src/tui/workspace/git/views/review/rebase.ts"
+      ]
+    ],
+    "after": [
+      [
+        "src/tui/actions/actions.ts",
+        "src/tui/actions/documents/actions-edit.ts",
+        "src/tui/actions/documents/actions-find.ts",
+        "src/tui/actions/documents/actions-links.ts",
+        "src/tui/actions/documents/actions-lsp.ts",
+        "src/tui/actions/documents/actions-view.ts",
+        "src/tui/actions/shell/actions-panes.ts",
+        "src/tui/actions/workspace/actions-files.ts"
+      ],
+      [
+        "src/tui/app/runtime/app.ts",
+        "src/tui/app/settings/settings.ts",
+        "src/tui/workspace/history/history.ts",
+        "src/tui/workspace/session/session.ts",
+        "src/tui/workspace/vaults/vaults.ts"
+      ],
+      [
+        "src/tui/workspace/git/gitremote.ts",
+        "src/tui/workspace/git/views/review/rebase.ts"
+      ]
+    ]
+  },
+  "characterization": {
+    "file": "tests/tui/workspace/vaults/switch-order.test.ts",
+    "addedLeafTests": 3,
+    "beforeDeclarations": 4064,
+    "baselineDeclarations": 4061
+  }
+}

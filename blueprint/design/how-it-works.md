@@ -392,6 +392,11 @@ Theme vocabulary and compatibility aliases live in `rendering/theme/roles.ts` be
 | [saveas.ts][o138] | 10.14 | the Save As window an export opens: places, the folder's entries, the name; its keys |
 | [where.ts][o144] | WSP-D4, WSP-D5 | where you are, on the top bar or the status line: vault, workspace, branch, cut |
 
+`workspace/vaults/vaults.ts` owns the ordered vault switch, pending unsaved choice, trail and visit identity,
+including leave/reset/restore and home-folder admission. Its `VaultPrompts` collaborator in `vault-prompts.ts` owns
+catalog, default-copy choices and mutation prompts through live workspace capabilities and a switch callback.
+Existing `Vaults` entry methods remain; App retains shared state and the sole note-write gate.
+
 Document diagnostics keep `Problems` and `Languages` as their existing controllers. Under
 `src/tui/documents/diagnostics/`, `problems/` holds row presentation and panel records; `languages/` holds server-edit
 normalization/application/preview, outline conversion and protocol locations. The original receiver supplies live
