@@ -95,3 +95,37 @@ file. No ready marking, merge, promotion, release or next-task implementation is
 The PR is published as draft. The delivery-record commit adds only this publication evidence; product and terminal
 checks are not repeated for it. The new-head CI result is pending and is not claimed green. Next: ORF-T4 review in a
 fresh session at the final pushed head; no review, ready marking, merge or next-task work in this build stage.
+
+## Review correction and verification
+
+Review of `0b00e0e04251df5203679d5df4f217ccdd075494` found one missed source-reader reference:
+tests/docs.test.ts:613 still read cli.ts for HELP's description after its extraction into output.ts. The
+[original CI lint job](https://github.com/remziduzagac/slipbox/actions/runs/41255644668/job/124698150207)
+fails the existing description regression for that path. Update only the source path; preserve both existing
+description-test names, bodies and assertions. The extraction manifest now records this source reader.
+
+The focused description regression fails before correction and once with the correction undone, then passes after
+restoring the exact fixed bytes. Full documentation tests pass: 65 tests, zero failures, 395 assertions across the
+two existing owners. Logs: `tmp/issue/ORF-T4-review-negative.log`, `ORF-T4-review-undone.log`,
+`ORF-T4-review-restored.log` and `ORF-T4-review-doc-tests.log`. This corrects the test's source location; public
+help bytes and product behavior remain unchanged. No additional regression scenario or changelog entry is needed.
+
+The independent exact-base audit preserves constants, helper/table bodies, result/error tokens and comments,
+dispatch order, all 4,050 original declarations, twelve entries and the carried ORF-T3 completion. Static edges
+remain 3,007 → 3,011 and runtime edges 2,249 → 2,253, with zero unresolved references. Runtime SCC memberships
+remain identical, sizes 2/5/8. Reach retains all 99 original owners and adds only the two new focused owners;
+the 101-owner selection has no whole-suite fallback. Documentation tests run separately in CI's lint job.
+Audit: `tmp/issue/ORF-T4-review-audit.json`. No other actionable finding remains.
+
+Fresh focused CLI verification passes 48 tests / 465 assertions across seven owners. The affected startup terminal
+scenario passes one check / three commands with two jobs. Typecheck, boundary, size, dependency, Biome, workflow
+and documentation gates pass: 480 Markdown files / 1,746 spelt files, zero link errors. Logs are
+`tmp/issue/ORF-T4-review-unit.log`, `ORF-T4-review-terminal.log` and `ORF-T4-review-<gate>.log`.
+Test-bearing runs are sequential outside the sandbox with existing limits. The earlier completed 691-test scoped
+check, package build and isolated source/compiled probes remain applicable: product/build bytes are unchanged,
+and the binary still matches its recorded SHA256. No redundant full scoped run, full suite or all-terminal run.
+
+The preceding ORF-T3 dev push succeeds at the exact base on attempt 1, including all three terminal platforms.
+Original-head CodeQL succeeds on attempt 1; original-head lint failure is retained above, rather than retried.
+The corrected head needs its own CI result before the separate merge stage. ORF-T4 remains review and PR #180
+remains draft; no ready marking, merge, branch promotion, release or next-task implementation.

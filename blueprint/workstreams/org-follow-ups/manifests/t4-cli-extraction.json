@@ -28,6 +28,14 @@
     "presentation": "output.ts owns help bytes, safe JSON envelopes, stdout/stderr selection, result/warning/stale presentation, error exit classification and defaultIo; cli.ts re-exports existing public presentation symbols",
     "workers": "No worker, build entry, URL or asset moves; command handler dependencies and real worker callers remain unchanged"
   },
+  "sourceReaders": [
+    {
+      "file": "tests/docs.test.ts",
+      "from": "src/cli/cli.ts",
+      "to": "src/cli/output.ts",
+      "reason": "The description guard reads HELP's new owner; command metadata imports stay in cli.ts. Existing test names and assertions are unchanged."
+    }
+  ],
   "edges": {
     "removed": [
       "src/cli/cli.ts -> src/core/foundation/text/sanitize.ts",

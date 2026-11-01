@@ -610,7 +610,7 @@ describe("what the manual promises of the code (DOC)", () => {
 describe("how slipbox describes itself (SEO-D1)", () => {
   const read = (file: string) => readFileSync(join(TOP, file), "utf8");
   // Each file read as text: the help's line, the formula's desc, the package's description, the README's first line.
-  const WHOLE = ["README.md", "package.json", "src/cli/cli.ts", "scripts/homebrew.template.rb", "docs/README.md"];
+  const WHOLE = ["README.md", "package.json", "src/cli/output.ts", "scripts/homebrew.template.rb", "docs/README.md"];
 
   test("one line, the site's, wherever slipbox says what it is", () => {
     for (const file of WHOLE) expect(read(file).toLowerCase(), file).toContain(LINE);
