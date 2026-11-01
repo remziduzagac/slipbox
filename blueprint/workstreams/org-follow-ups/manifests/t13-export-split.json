@@ -1,0 +1,484 @@
+{
+  "moves": {
+    "tests/export.test.ts": "tests/core/rendering/export/assemble.test.ts"
+  },
+  "splits": {
+    "tests/export.test.ts": [
+      "tests/core/rendering/export/assemble.test.ts",
+      "tests/core/rendering/export/formats/docx.test.ts",
+      "tests/core/rendering/export/formats/html.test.ts",
+      "tests/core/rendering/export/formats/markdown.test.ts",
+      "tests/core/rendering/export/formats/epub.test.ts",
+      "tests/core/rendering/export/formats/pdf.test.ts",
+      "tests/core/rendering/export/assets/pictures.test.ts",
+      "tests/core/rendering/export/publication.test.ts"
+    ]
+  },
+  "support": [
+    "tests/support/export-fixture.ts",
+    "tests/support/export-pictures.ts",
+    "tests/support/export-readers.ts",
+    "tests/support/export-nodes.ts",
+    "tests/support/export-sandbox.ts"
+  ],
+  "suiteOwners": {
+    "tests/core/rendering/export/assemble.test.ts": [
+      "export: the assembler (10.1)",
+      "export: what the assembler keeps safe and says (10.1)"
+    ],
+    "tests/core/rendering/export/formats/docx.test.ts": [
+      "export: Word (10.4)"
+    ],
+    "tests/core/rendering/export/formats/html.test.ts": [
+      "export: a web page (10.2)"
+    ],
+    "tests/core/rendering/export/formats/markdown.test.ts": [
+      "export: Markdown (10.3)"
+    ],
+    "tests/core/rendering/export/formats/epub.test.ts": [
+      "export: an e-book (10.6)"
+    ],
+    "tests/core/rendering/export/formats/pdf.test.ts": [
+      "export: PDF (10.5)",
+      "export: a PDF's fonts",
+      "export: a PDF's lines laid out (10.11)"
+    ],
+    "tests/core/rendering/export/assets/pictures.test.ts": [
+      "export: pictures made PNG before an export (10.10)",
+      "export: pictures' sizes, read from their headers"
+    ],
+    "tests/core/rendering/export/publication.test.ts": [
+      "export: over a file only when it's an earlier export (D243)",
+      "export: your folders (10.14)",
+      "export: the formats"
+    ]
+  },
+  "originalRanges": {
+    "tests/core/rendering/export/assemble.test.ts": [
+      [
+        343,
+        599
+      ]
+    ],
+    "tests/core/rendering/export/formats/docx.test.ts": [
+      [
+        600,
+        718
+      ]
+    ],
+    "tests/core/rendering/export/formats/html.test.ts": [
+      [
+        719,
+        813
+      ]
+    ],
+    "tests/core/rendering/export/formats/markdown.test.ts": [
+      [
+        814,
+        964
+      ]
+    ],
+    "tests/core/rendering/export/formats/epub.test.ts": [
+      [
+        1082,
+        1169
+      ]
+    ],
+    "tests/core/rendering/export/formats/pdf.test.ts": [
+      [
+        1170,
+        1356
+      ],
+      [
+        1466,
+        1530
+      ]
+    ],
+    "tests/core/rendering/export/assets/pictures.test.ts": [
+      [
+        1357,
+        1465
+      ],
+      [
+        1531,
+        1578
+      ]
+    ],
+    "tests/core/rendering/export/publication.test.ts": [
+      [
+        965,
+        1081
+      ],
+      [
+        1579,
+        1619
+      ]
+    ]
+  },
+  "retained": [
+    {
+      "file": "blueprint/workstreams/archive/doc-findings/tasks/archive/code-and-rendering.md",
+      "text": "export.test.ts",
+      "reason": "Historical completed task names its test owner at that revision."
+    },
+    {
+      "file": "blueprint/workstreams/archive/doc-findings/tasks/archive/exports.md",
+      "text": "export.test.ts",
+      "reason": "Historical completed task names its test owner at that revision."
+    },
+    {
+      "file": "blueprint/workstreams/archive/doc-findings/tasks/archive/merge-and-check.md",
+      "text": "export.test.ts",
+      "reason": "Historical completed task names its test owner at that revision."
+    },
+    {
+      "file": "blueprint/workstreams/archive/document-html/tasks/adapter.md",
+      "text": "tests/export.test",
+      "reason": "Historical task or measured inventory records the owner at that revision; current owners are listed in this manifest."
+    },
+    {
+      "file": "blueprint/workstreams/archive/greenrepo/tasks/archive/tests-on-ci.md",
+      "text": "tests/export.test",
+      "reason": "Historical task or measured inventory records the owner at that revision; current owners are listed in this manifest."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/manifests/t11-final-ratchet.json",
+      "text": "tests/export.test",
+      "reason": "Historical task or measured inventory records the owner at that revision; current owners are listed in this manifest."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/manifests/t43-reconciliation.json",
+      "text": "tests/export.test",
+      "reason": "Historical task or measured inventory records the owner at that revision; current owners are listed in this manifest."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/tasks/11-final-ratchet.md",
+      "text": "tests/export.test",
+      "reason": "Historical task or measured inventory records the owner at that revision; current owners are listed in this manifest."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/tasks/29-pdf-splits.md",
+      "text": "tests/export.test",
+      "reason": "Historical task or measured inventory records the owner at that revision; current owners are listed in this manifest."
+    },
+    {
+      "file": "blueprint/workstreams/org-follow-ups/tasks/13-export-tests.md",
+      "text": "tests/export.test",
+      "reason": "Historical task or measured inventory records the owner at that revision; current owners are listed in this manifest."
+    },
+    {
+      "file": "blueprint/workstreams/org-follow-ups/manifests/t28-export-fixture.json",
+      "text": "tests/export.test",
+      "reason": "Completed prerequisite manifest records the pre-split owner and setup extraction. The live subprocess reader is adapted in this manifest."
+    }
+  ],
+  "fixtureReaders": [
+    {
+      "path": "tests/organization/timeouts.test.ts",
+      "adaptation": "Replace the original file-local timeout site with the eight relocated owners; keep UNIT_TIMEOUT_MS and both guard assertions unchanged."
+    },
+    {
+      "path": "tests/core/rendering/export/ancestor-fixture.test.ts",
+      "adaptation": "The existing ancestor regression invokes the relocated publication and Markdown owners with the original two-case filter, assertions, environment and deadline unchanged."
+    }
+  ],
+  "invariants": {
+    "suites": "All fourteen top-level suites move whole; all titles, assertions, fixture strings and internal hooks remain unchanged. No snapshot is owned by this file.",
+    "hooks": "Each owner calls makeExportFixture once before its suites. It delegates to the unchanged T28 makeExportSandbox, registering original XDG setup and .slipbox marker restoration, then the original beforeAll PNG initialization. The PNG is a live module binding; root/exportOf close over the owner sandbox. Original run-folder cleanup in tests/setup.ts remains.",
+    "helpers": "Move each original helper/comment/constant once into four focused support modules, retaining T28 export-sandbox as the sole environment setup. Only export modifiers, indentation, imports and the WEBP reference-set path change.",
+    "caps": "Remove only the current 1619-line export test cap, lowered from 1624 by T28; new owners aim below 1000 and must remain below 1500.",
+    "product": "No product source, workers, assets, package/build entries, dependencies, deadlines, CI or user behavior change. Test-only relocation uses existing product/build/worker evidence.",
+    "scope": "Preserve every existing source consumer except the retired owner, replacing it with actual new consumers. Do not alter selectors or conservative fallback."
+  },
+  "baseline": {
+    "commit": "9f975f5977018c16edb91ddd2bb616ed3ce5de77",
+    "original": "tmp/issue/ORF-T13-resume-original.ts.txt",
+    "checkpointCommit": "aae897b4dc8c92b39112e1b055967896335e1481",
+    "correctedEvidence": "ORF-T28 original-owner verification: 63 tests / 717 assertions including ancestor regression and timeout inventory; all moving suite bodies unchanged.",
+    "checkpointOriginal": "tmp/issue/ORF-T13-original.ts.txt"
+  },
+  "checkpointRanges": {
+    "tests/core/rendering/export/assemble.test.ts": [
+      [
+        348,
+        604
+      ]
+    ],
+    "tests/core/rendering/export/formats/docx.test.ts": [
+      [
+        605,
+        723
+      ]
+    ],
+    "tests/core/rendering/export/formats/html.test.ts": [
+      [
+        724,
+        818
+      ]
+    ],
+    "tests/core/rendering/export/formats/markdown.test.ts": [
+      [
+        819,
+        969
+      ]
+    ],
+    "tests/core/rendering/export/formats/epub.test.ts": [
+      [
+        1087,
+        1174
+      ]
+    ],
+    "tests/core/rendering/export/formats/pdf.test.ts": [
+      [
+        1175,
+        1361
+      ],
+      [
+        1471,
+        1535
+      ]
+    ],
+    "tests/core/rendering/export/assets/pictures.test.ts": [
+      [
+        1362,
+        1470
+      ],
+      [
+        1536,
+        1583
+      ]
+    ],
+    "tests/core/rendering/export/publication.test.ts": [
+      [
+        970,
+        1086
+      ],
+      [
+        1584,
+        1624
+      ]
+    ]
+  },
+  "scopeEvidence": {
+    "src/core/rendering/export/assemble.ts": {
+      "before": 324,
+      "after": 331,
+      "removed": [
+        "tests/export.test.ts"
+      ],
+      "added": [
+        "tests/core/rendering/export/assemble.test.ts",
+        "tests/core/rendering/export/assets/pictures.test.ts",
+        "tests/core/rendering/export/formats/docx.test.ts",
+        "tests/core/rendering/export/formats/epub.test.ts",
+        "tests/core/rendering/export/formats/html.test.ts",
+        "tests/core/rendering/export/formats/markdown.test.ts",
+        "tests/core/rendering/export/formats/pdf.test.ts",
+        "tests/core/rendering/export/publication.test.ts"
+      ],
+      "checks": [
+        "export"
+      ]
+    },
+    "src/core/rendering/export/jobs.ts": {
+      "before": 323,
+      "after": 330,
+      "removed": [
+        "tests/export.test.ts"
+      ],
+      "added": [
+        "tests/core/rendering/export/assemble.test.ts",
+        "tests/core/rendering/export/assets/pictures.test.ts",
+        "tests/core/rendering/export/formats/docx.test.ts",
+        "tests/core/rendering/export/formats/epub.test.ts",
+        "tests/core/rendering/export/formats/html.test.ts",
+        "tests/core/rendering/export/formats/markdown.test.ts",
+        "tests/core/rendering/export/formats/pdf.test.ts",
+        "tests/core/rendering/export/publication.test.ts"
+      ],
+      "checks": [
+        "export"
+      ]
+    },
+    "src/core/rendering/export/index.ts": {
+      "before": 323,
+      "after": 330,
+      "removed": [
+        "tests/export.test.ts"
+      ],
+      "added": [
+        "tests/core/rendering/export/assemble.test.ts",
+        "tests/core/rendering/export/assets/pictures.test.ts",
+        "tests/core/rendering/export/formats/docx.test.ts",
+        "tests/core/rendering/export/formats/epub.test.ts",
+        "tests/core/rendering/export/formats/html.test.ts",
+        "tests/core/rendering/export/formats/markdown.test.ts",
+        "tests/core/rendering/export/formats/pdf.test.ts",
+        "tests/core/rendering/export/publication.test.ts"
+      ],
+      "checks": [
+        "export"
+      ]
+    },
+    "src/core/rendering/export/formats/docx.ts": {
+      "before": 324,
+      "after": 331,
+      "removed": [
+        "tests/export.test.ts"
+      ],
+      "added": [
+        "tests/core/rendering/export/assemble.test.ts",
+        "tests/core/rendering/export/assets/pictures.test.ts",
+        "tests/core/rendering/export/formats/docx.test.ts",
+        "tests/core/rendering/export/formats/epub.test.ts",
+        "tests/core/rendering/export/formats/html.test.ts",
+        "tests/core/rendering/export/formats/markdown.test.ts",
+        "tests/core/rendering/export/formats/pdf.test.ts",
+        "tests/core/rendering/export/publication.test.ts"
+      ],
+      "checks": [
+        "export"
+      ]
+    },
+    "src/core/rendering/export/formats/html.ts": {
+      "before": 324,
+      "after": 331,
+      "removed": [
+        "tests/export.test.ts"
+      ],
+      "added": [
+        "tests/core/rendering/export/assemble.test.ts",
+        "tests/core/rendering/export/assets/pictures.test.ts",
+        "tests/core/rendering/export/formats/docx.test.ts",
+        "tests/core/rendering/export/formats/epub.test.ts",
+        "tests/core/rendering/export/formats/html.test.ts",
+        "tests/core/rendering/export/formats/markdown.test.ts",
+        "tests/core/rendering/export/formats/pdf.test.ts",
+        "tests/core/rendering/export/publication.test.ts"
+      ],
+      "checks": [
+        "export"
+      ]
+    },
+    "src/core/rendering/export/formats/markdown.ts": {
+      "before": 324,
+      "after": 331,
+      "removed": [
+        "tests/export.test.ts"
+      ],
+      "added": [
+        "tests/core/rendering/export/assemble.test.ts",
+        "tests/core/rendering/export/assets/pictures.test.ts",
+        "tests/core/rendering/export/formats/docx.test.ts",
+        "tests/core/rendering/export/formats/epub.test.ts",
+        "tests/core/rendering/export/formats/html.test.ts",
+        "tests/core/rendering/export/formats/markdown.test.ts",
+        "tests/core/rendering/export/formats/pdf.test.ts",
+        "tests/core/rendering/export/publication.test.ts"
+      ],
+      "checks": [
+        "export"
+      ]
+    },
+    "src/core/rendering/export/formats/epub.ts": {
+      "before": 324,
+      "after": 331,
+      "removed": [
+        "tests/export.test.ts"
+      ],
+      "added": [
+        "tests/core/rendering/export/assemble.test.ts",
+        "tests/core/rendering/export/assets/pictures.test.ts",
+        "tests/core/rendering/export/formats/docx.test.ts",
+        "tests/core/rendering/export/formats/epub.test.ts",
+        "tests/core/rendering/export/formats/html.test.ts",
+        "tests/core/rendering/export/formats/markdown.test.ts",
+        "tests/core/rendering/export/formats/pdf.test.ts",
+        "tests/core/rendering/export/publication.test.ts"
+      ],
+      "checks": [
+        "export"
+      ]
+    },
+    "src/core/rendering/export/formats/pdf.ts": {
+      "before": 323,
+      "after": 330,
+      "removed": [
+        "tests/export.test.ts"
+      ],
+      "added": [
+        "tests/core/rendering/export/assemble.test.ts",
+        "tests/core/rendering/export/assets/pictures.test.ts",
+        "tests/core/rendering/export/formats/docx.test.ts",
+        "tests/core/rendering/export/formats/epub.test.ts",
+        "tests/core/rendering/export/formats/html.test.ts",
+        "tests/core/rendering/export/formats/markdown.test.ts",
+        "tests/core/rendering/export/formats/pdf.test.ts",
+        "tests/core/rendering/export/publication.test.ts"
+      ],
+      "checks": [
+        "export"
+      ]
+    },
+    "src/core/rendering/export/assets/convert.ts": {
+      "before": 324,
+      "after": 331,
+      "removed": [
+        "tests/export.test.ts"
+      ],
+      "added": [
+        "tests/core/rendering/export/assemble.test.ts",
+        "tests/core/rendering/export/assets/pictures.test.ts",
+        "tests/core/rendering/export/formats/docx.test.ts",
+        "tests/core/rendering/export/formats/epub.test.ts",
+        "tests/core/rendering/export/formats/html.test.ts",
+        "tests/core/rendering/export/formats/markdown.test.ts",
+        "tests/core/rendering/export/formats/pdf.test.ts",
+        "tests/core/rendering/export/publication.test.ts"
+      ],
+      "checks": [
+        "export"
+      ]
+    },
+    "src/core/rendering/export/assets/images.ts": {
+      "before": 325,
+      "after": 332,
+      "removed": [
+        "tests/export.test.ts"
+      ],
+      "added": [
+        "tests/core/rendering/export/assemble.test.ts",
+        "tests/core/rendering/export/assets/pictures.test.ts",
+        "tests/core/rendering/export/formats/docx.test.ts",
+        "tests/core/rendering/export/formats/epub.test.ts",
+        "tests/core/rendering/export/formats/html.test.ts",
+        "tests/core/rendering/export/formats/markdown.test.ts",
+        "tests/core/rendering/export/formats/pdf.test.ts",
+        "tests/core/rendering/export/publication.test.ts"
+      ],
+      "checks": [
+        "export"
+      ]
+    }
+  },
+  "structureEvidence": {
+    "staticEdges": 3131,
+    "runtimeEdges": 2290,
+    "entries": 12,
+    "declarations": 4087,
+    "unresolved": [],
+    "selectedOwners": [
+      "tests/check-size.test.ts",
+      "tests/core/rendering/export/ancestor-fixture.test.ts",
+      "tests/core/rendering/export/assemble.test.ts",
+      "tests/core/rendering/export/assets/pictures.test.ts",
+      "tests/core/rendering/export/formats/docx.test.ts",
+      "tests/core/rendering/export/formats/epub.test.ts",
+      "tests/core/rendering/export/formats/html.test.ts",
+      "tests/core/rendering/export/formats/markdown.test.ts",
+      "tests/core/rendering/export/formats/pdf.test.ts",
+      "tests/core/rendering/export/publication.test.ts",
+      "tests/organization/timeouts.test.ts"
+    ]
+  }
+}

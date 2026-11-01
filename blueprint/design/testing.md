@@ -41,7 +41,10 @@ through OpenTUI itself, to prove the adapter and real key parsing.
 | `tests/core/documents/servers/linters.test.ts` | Linter formats, findings, roots, execution and trust |
 | `tests/regressions.test.ts` | one test per bug found in review (later: "review round/cycle N" blocks) |
 | `tests/home.test.ts` | the reference set's build (`scripts/build-home.ts`): histories, extras, the checks |
-| `tests/export.test.ts` | export (`10.x`): the assembler; each format read back (zips unzipped, PDF pages' text) |
+| `tests/core/rendering/export/assemble.test.ts` | Export assembly, content and cross-format safeguards |
+| `tests/core/rendering/export/formats/` | Word, HTML, Markdown, EPUB and PDF read back; PDF fonts and lines |
+| `tests/core/rendering/export/assets/pictures.test.ts` | Raster conversion, encoded pixels and picture sizing |
+| `tests/core/rendering/export/publication.test.ts` | Export marks, overwrite refusal, folders and format names |
 | `tests/distribution/supply-chain.test.ts` | supply-chain gates, notices, SBOMs, workflow scope and advisories |
 | `tests/distribution/release.test.ts` | release planning and the real host package built, installed and exercised |
 | `tests/distribution/installation.test.ts` | install identity and uninstall planning/refusal |
@@ -53,10 +56,13 @@ through OpenTUI itself, to prove the adapter and real key parsing.
 | `tests/docs.test.ts` | the user docs and agent guide: links, anchors, commands, flags, keys; no ID; vault, not root |
 | `tests/site.test.ts` | the docs' site: pages gathered from the docs map, links rewritten, the home's cards (DS) |
 
-The export fixture uses `tests/support/export-sandbox.ts` for its XDG setup and explicit `.slipbox` root markers,
-restoring the previous marker list after the owner. Its roots already create those markers; an ancestor Git checkout
-cannot turn its loose-file examples into vault notes. The ancestor-fixture regression drives the original overwrite
-scenarios from beneath a controlled checkout, preserving their assertions and deadlines.
+The export owners use `tests/support/export-fixture.ts` for their original per-file sandbox and PNG beforeAll.
+`export-sandbox.ts` owns XDG setup and explicit `.slipbox` root markers, restoring the previous marker list after
+its owner. An ancestor Git checkout cannot turn the loose-file examples into vault notes. The ancestor-fixture
+regression drives the original overwrite scenarios beneath a controlled checkout, preserving assertions and deadlines.
+The root and staging helpers close over that sandbox; the PNG remains a live binding initialized by the hook.
+`export-pictures.ts`, `export-nodes.ts` and `export-readers.ts` share picture fixtures, node traversal and document
+readback. Whole suites retain their titles, assertions, unit defaults and cross-format integration coverage.
 
 CLI process scenarios use `tests/support/cli-process.ts`: each owner gets a fresh demo copy, child environment and
 cleanup hooks. `tests/cli/launcher/` retains dispatch, argument/error, terminal refusal, installer and compiled-entry

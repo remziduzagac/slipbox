@@ -36,7 +36,8 @@ test("the export fixture keeps loose files outside roots beneath an ancestor che
     [
       "bun",
       "test",
-      "tests/export.test.ts",
+      "tests/core/rendering/export/publication.test.ts",
+      "tests/core/rendering/export/formats/markdown.test.ts",
       "-t",
       "any other file there, of the format or not|never over a note of any root",
     ],
