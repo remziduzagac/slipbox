@@ -1,0 +1,206 @@
+{
+  "moves": {},
+  "retained": [],
+  "renamedBasenames": {},
+  "extraction": [
+    {
+      "from": "src/core/workspace/graph/graph.ts",
+      "to": "src/core/workspace/graph/refresh.ts",
+      "symbols": [
+        "askedFolders",
+        "askFolders",
+        "homePath",
+        "waitsForHomeWalk",
+        "listForWalk",
+        "build",
+        "usesCache",
+        "cachePath",
+        "indexChanged",
+        "indexedAt",
+        "pendingCount",
+        "pendingPaths",
+        "reachable",
+        "reachFile",
+        "reachLinked",
+        "adopt",
+        "unparsedOver",
+        "entry",
+        "parseSome",
+        "ensureAll",
+        "indexBehind",
+        "writeCache",
+        "stampOf",
+        "asked",
+        "useCache",
+        "cacheDirty",
+        "indexStamp",
+        "adopted",
+        "loadGrammars",
+        "grammarsChanged",
+        "admits",
+        "neverIndexed",
+        "notIndexed"
+      ]
+    },
+    {
+      "from": "src/core/workspace/graph/graph.ts",
+      "to": "src/core/workspace/graph/feed.ts",
+      "symbols": [
+        "onBuild",
+        "buildListeners",
+        "onChange",
+        "listeners",
+        "emit",
+        "moved",
+        "updateFile",
+        "onRetarget",
+        "retargetListeners",
+        "namesakeLinks",
+        "reportRetargets",
+        "addAsset",
+        "removeAsset",
+        "removeFile",
+        "fileChanged"
+      ]
+    }
+  ],
+  "ownership": {
+    "index": "Graph retains the single notes/index/assets/reached/overlay/pending maps, generation, derived caches, resolver, move reconciler, public build state and public API. Identical invalidation order is a private callback.",
+    "refresh": "GraphRefresh coordinates home/build/parse/reach/cache policy through live graph capabilities and Graph-owned pending/overlay maps. It owns refresh-only flags, asked folders, stamps and explicit adoption cache.",
+    "feed": "GraphFeed owns listeners and ordered file/asset/retarget delivery over the same Graph maps, using live invalidation, dirty, move and alias callbacks.",
+    "entries": "No file relocation, retired path, entry/worker URL or asset move. Existing Graph/openGraph exports and all workers remain."
+  },
+  "entries": {
+    "removed": [],
+    "added": []
+  },
+  "edges": {
+    "removed": [
+      "src/core/workspace/graph/graph.ts -> src/core/documents/markdown/parsecache.ts",
+      "src/core/workspace/graph/graph.ts -> src/core/foundation/platform/fsutil.ts",
+      "src/core/workspace/graph/graph.ts -> src/core/workspace/graph/index/schema.ts",
+      "src/core/workspace/graph/graph.ts -> src/core/workspace/graph/index/storage.ts",
+      "src/core/workspace/graph/graph.ts -> src/core/workspace/graph/reach/files.ts"
+    ],
+    "added": [
+      "src/core/workspace/graph/feed.ts -> src/core/workspace/graph/graph-extract.ts",
+      "src/core/workspace/graph/feed.ts -> src/core/workspace/graph/graph-types.ts",
+      "src/core/workspace/graph/feed.ts -> src/core/workspace/graph/overlays/editor.ts",
+      "src/core/workspace/graph/feed.ts -> src/core/workspace/graph/queries/indexes.ts",
+      "src/core/workspace/graph/feed.ts -> src/core/workspace/links/links.ts",
+      "src/core/workspace/graph/feed.ts -> src/core/workspace/walk/walk.ts",
+      "src/core/workspace/graph/graph.ts -> src/core/workspace/graph/feed.ts",
+      "src/core/workspace/graph/graph.ts -> src/core/workspace/graph/refresh.ts",
+      "src/core/workspace/graph/refresh.ts -> src/core/application/config/config.ts",
+      "src/core/workspace/graph/refresh.ts -> src/core/documents/markdown/parse.ts",
+      "src/core/workspace/graph/refresh.ts -> src/core/documents/markdown/parsecache.ts",
+      "src/core/workspace/graph/refresh.ts -> src/core/documents/model/filetypes.ts",
+      "src/core/workspace/graph/refresh.ts -> src/core/documents/syntax/syntax.ts",
+      "src/core/workspace/graph/refresh.ts -> src/core/foundation/platform/fsutil.ts",
+      "src/core/workspace/graph/refresh.ts -> src/core/foundation/platform/paths.ts",
+      "src/core/workspace/graph/refresh.ts -> src/core/workspace/graph/graph-extract.ts",
+      "src/core/workspace/graph/refresh.ts -> src/core/workspace/graph/graph-types.ts",
+      "src/core/workspace/graph/refresh.ts -> src/core/workspace/graph/index/schema.ts",
+      "src/core/workspace/graph/refresh.ts -> src/core/workspace/graph/index/storage.ts",
+      "src/core/workspace/graph/refresh.ts -> src/core/workspace/graph/overlays/editor.ts",
+      "src/core/workspace/graph/refresh.ts -> src/core/workspace/graph/reach/files.ts",
+      "src/core/workspace/graph/refresh.ts -> src/core/workspace/links/links.ts",
+      "src/core/workspace/graph/refresh.ts -> src/core/workspace/vaults/home.ts",
+      "src/core/workspace/graph/refresh.ts -> src/core/workspace/vaults/vault.ts",
+      "src/core/workspace/graph/refresh.ts -> src/core/workspace/walk/walk.ts"
+    ]
+  },
+  "runtime": {
+    "removed": [
+      "src/core/workspace/graph/graph.ts -> src/core/documents/markdown/parsecache.ts",
+      "src/core/workspace/graph/graph.ts -> src/core/foundation/platform/fsutil.ts",
+      "src/core/workspace/graph/graph.ts -> src/core/workspace/graph/index/storage.ts",
+      "src/core/workspace/graph/graph.ts -> src/core/workspace/graph/reach/files.ts",
+      "src/core/workspace/graph/graph.ts -> src/core/workspace/vaults/home.ts"
+    ],
+    "added": [
+      "src/core/workspace/graph/feed.ts -> src/core/workspace/graph/graph-extract.ts",
+      "src/core/workspace/graph/feed.ts -> src/core/workspace/graph/queries/indexes.ts",
+      "src/core/workspace/graph/graph.ts -> src/core/workspace/graph/feed.ts",
+      "src/core/workspace/graph/graph.ts -> src/core/workspace/graph/refresh.ts",
+      "src/core/workspace/graph/refresh.ts -> src/core/documents/markdown/parsecache.ts",
+      "src/core/workspace/graph/refresh.ts -> src/core/documents/model/filetypes.ts",
+      "src/core/workspace/graph/refresh.ts -> src/core/documents/syntax/syntax.ts",
+      "src/core/workspace/graph/refresh.ts -> src/core/foundation/platform/fsutil.ts",
+      "src/core/workspace/graph/refresh.ts -> src/core/foundation/platform/paths.ts",
+      "src/core/workspace/graph/refresh.ts -> src/core/workspace/graph/graph-extract.ts",
+      "src/core/workspace/graph/refresh.ts -> src/core/workspace/graph/index/storage.ts",
+      "src/core/workspace/graph/refresh.ts -> src/core/workspace/graph/reach/files.ts",
+      "src/core/workspace/graph/refresh.ts -> src/core/workspace/links/links.ts",
+      "src/core/workspace/graph/refresh.ts -> src/core/workspace/vaults/home.ts",
+      "src/core/workspace/graph/refresh.ts -> src/core/workspace/vaults/vault.ts",
+      "src/core/workspace/graph/refresh.ts -> src/core/workspace/walk/walk.ts"
+    ]
+  },
+  "tests": {
+    "removed": [],
+    "added": []
+  },
+  "runtimeScc": {
+    "before": [
+      [
+        "src/tui/actions/actions.ts",
+        "src/tui/actions/documents/actions-edit.ts",
+        "src/tui/actions/documents/actions-find.ts",
+        "src/tui/actions/documents/actions-links.ts",
+        "src/tui/actions/documents/actions-lsp.ts",
+        "src/tui/actions/documents/actions-view.ts",
+        "src/tui/actions/shell/actions-panes.ts",
+        "src/tui/actions/workspace/actions-files.ts"
+      ],
+      [
+        "src/tui/app/runtime/app.ts",
+        "src/tui/app/settings/settings.ts",
+        "src/tui/workspace/history/history.ts",
+        "src/tui/workspace/session/session.ts",
+        "src/tui/workspace/vaults/vaults.ts"
+      ],
+      [
+        "src/tui/workspace/git/gitremote.ts",
+        "src/tui/workspace/git/views/review/rebase.ts"
+      ]
+    ],
+    "after": [
+      [
+        "src/tui/actions/actions.ts",
+        "src/tui/actions/documents/actions-edit.ts",
+        "src/tui/actions/documents/actions-find.ts",
+        "src/tui/actions/documents/actions-links.ts",
+        "src/tui/actions/documents/actions-lsp.ts",
+        "src/tui/actions/documents/actions-view.ts",
+        "src/tui/actions/shell/actions-panes.ts",
+        "src/tui/actions/workspace/actions-files.ts"
+      ],
+      [
+        "src/tui/app/runtime/app.ts",
+        "src/tui/app/settings/settings.ts",
+        "src/tui/workspace/history/history.ts",
+        "src/tui/workspace/session/session.ts",
+        "src/tui/workspace/vaults/vaults.ts"
+      ],
+      [
+        "src/tui/workspace/git/gitremote.ts",
+        "src/tui/workspace/git/views/review/rebase.ts"
+      ]
+    ]
+  },
+  "characterization": {
+    "file": "tests/core/workspace/graph/refresh-feed.test.ts",
+    "addedLeafTests": 4,
+    "beforeDeclarations": 4076,
+    "baselineDeclarations": 4072
+  },
+  "fixtureReaders": [
+    {
+      "file": "tests/tui/workspace/explorer/walk-thread.test.ts",
+      "old": "(h.app.graph as unknown as { asked: string[] }).asked",
+      "new": "(h.app.graph.askedFolders as string[])",
+      "reason": "The fixture mutates the asked-folder array without building; the existing accessor returns that same array after ownership extraction. Titles, assertions and limits remain."
+    }
+  ]
+}

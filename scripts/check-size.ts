@@ -21,7 +21,6 @@ export const TEST_LIMIT = 1500;
 
 /** Legacy handwritten files: exact caps; only reviewed import-formatting growth may reset one (ORG-D2). */
 export const CAPPED: Record<string, number> = {
-  "src/core/workspace/graph/graph.ts": 998,
   "src/tui/app/runtime/app.ts": 1325,
 };
 

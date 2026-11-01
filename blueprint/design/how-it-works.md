@@ -214,9 +214,11 @@ Theme vocabulary and compatibility aliases live in `rendering/theme/roles.ts` be
 | [autoindex.ts][o34] | 20.9 | the background auto-index: home walked in slices and indexed, then the vaults in it |
 | [sqlite.ts][o6] | 6.6 | the runtime's SQLite (`node:sqlite`): the few calls the index and the parse cache make |
 | [trust.ts][o26] | 23.x | the vaults whose own code may run: your answers (`trust.json`), your `[trust] roots` |
-| [graph.ts][o35] | 1.5–1.9, 6.7, 11.8 | notes, links, backlinks, lazy parsing, the index; change feed; unsaved text |
-| `core/workspace/graph/index/` | 1.9 | index schema, live-map reuse and persistence below Graph's cache/error policy |
-| `core/workspace/graph/moves/` | 17.12, 20.21 | content/git move evidence; Graph retains redirects and file events |
+| [graph.ts][o35] | 1.5–1.9, 6.7, 11.8 | authoritative index, generation, derived caches and public graph API |
+| `core/workspace/graph/refresh.ts` | ORF-T8 | build, home, lazy parsing, admission and index refresh coordination |
+| `core/workspace/graph/feed.ts` | ORF-T8 | file/asset changes and ordered build, change and retarget delivery |
+| `core/workspace/graph/index/` | 1.9 | index schema, live-map reuse and persistence below refresh policy |
+| `core/workspace/graph/moves/` | 17.12, 20.21 | content/git move evidence; Graph redirects and ordered feed events |
 | `graph/overlays/`, `queries/`, `reach/` | 11.8, 1.5–1.7, 20.8 | editor text, derived answers, file admission |
 | [graph-types.ts][o36] | 1.5–1.7 | a note's entry, a link as written and resolved, a backlink, a problem; how sure |
 | [graph-extract.ts][o37] | 1.5, 1.6, 20.11 | a note's entry from its text: title, headings, links, tags, names |
@@ -438,6 +440,12 @@ Rename planning separates target/source admission, moves, nested roots and relin
 `rewriting/` preserves link forms and `collecting/` owns the original read-once Collector, plan records, admission
 policy and dirty-tree warnings. The public entries remain compatible; apply, undo and content-hash checks retain
 their existing execution owner.
+
+Graph keeps one mutable notes/index/assets/reached/overlay/pending state and its generation and derived caches.
+`GraphRefresh` coordinates walking, parsing, admission and persistence over that live state; its own state is limited
+to refresh flags, asked folders, stamps and the explicit-read cache. `GraphFeed` owns subscriptions and incremental
+file/asset changes, calling Graph's cache invalidation before change delivery and retarget delivery afterwards.
+Both use focused capabilities and callbacks; Graph retains its public entry points, write flags and observable errors.
 
 ## Data flow for one note
 
