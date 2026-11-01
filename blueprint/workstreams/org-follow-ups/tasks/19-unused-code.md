@@ -87,3 +87,9 @@ The required `TMPDIR=/var/tmp gnutimeout -k 10 900 bun run check` passes: **3,22
 snapshots**, **91,066 assertions**, across **427 selected files** in 497.66 seconds. All preceding static/docs gates
 pass in that run. Log: `tmp/issue/ORF-T19-check.log`. Branch: `refactor/issue-170-unused-code`, based on
 `6ca74642fa5de706405db8176c18dae25cbb5110`. The preceding dev push 41336398508 passes on all three terminal platforms.
+
+## Delivery
+
+[Draft PR #198](https://github.com/remziduzagac/slipbox/pull/198) targets `dev` from
+`refactor/issue-170-unused-code`. Implementation and verification commit:
+`eea8a09e54ee83b258abdf3cc27fc61c4093cbb4`. Local checks above pass; final-head CI and fresh review are pending.
