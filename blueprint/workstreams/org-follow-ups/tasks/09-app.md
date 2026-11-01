@@ -89,3 +89,10 @@ implementation and review evidence do not by themselves close the task.
   shared/controller field initializers keep their order and values, including the clipboard.
 - Source and artifact bytes remain those characterized and probed above. No extra product run for delivery records.
   Draft publication follows; fresh review and merge remain separate. Keep the task in review until merge.
+
+- Draft PR [#185](https://github.com/remziduzagac/slipbox/pull/185) is open into dev on
+  `refactor/issue-170-app`. Implementation/evidence commit `9a3677631c5504f87637a38b6d335aae53c519cc` is pushed;
+  a documentation-only delivery record follows. Final-head CI is pending, not claimed green.
+- Build-record docs and Biome pass: 480 Markdown / 1771 spelt files / zero link errors; 1174 linted files.
+  Fresh review remains pending. No ready marking, merge, next-task work, full-suite/all-terminal invocation,
+  deadline/dependency/CI-policy change or unrelated-failure retry. Stop after this build stage.
