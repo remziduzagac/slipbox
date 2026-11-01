@@ -1,33 +1,40 @@
 import { HTML } from "./html.ts";
 // Every terminal check, by area (TT-D3): each area's file holds its checks and what it leaves out (TT-D4).
 
-import { CLI_CASES, type Check, type LeftOut } from "../check.ts";
+import { type Check, CLI_CASES, type LeftOut } from "../check.ts";
 import { EDITING, LEFT_OUT_EDITING } from "./editing.ts";
+import { ELSEWHERE } from "./elsewhere.ts";
+import { EXPLORER_MARKS } from "./explorer-marks.ts";
+import { FILE_OPERATIONS } from "./files.ts";
+import { GIT } from "./git.ts";
 import { GIT_BRANCHES } from "./git-branches.ts";
 import { GIT_DIFF } from "./git-diff.ts";
 import { GIT_STEADY } from "./git-steady.ts";
-import { FILE_OPERATIONS } from "./files.ts";
-import { GIT } from "./git.ts";
+import { HOME } from "./home.ts";
+import { UNWALKED_HOME } from "./home-watching.ts";
 import { LEFT_OUT_LINKS_AND_FILES, LINKS } from "./links.ts";
-import { NAMED } from "./named-folders.ts";
-import { NOTES } from "./notes.ts";
-import { PEEK } from "./peek.ts";
-import { ROOTS } from "./roots.ts";
 import { MOVING_LINKS } from "./moving-links.ts";
-import { NEW_FILE } from "./new-file.ts";
+import { NAMED } from "./named-folders.ts";
 import { LEFT_OUT_NAVIGATING, NAVIGATING } from "./navigating.ts";
-import { PEEK_BACKLINKS } from "./peek-backlinks.ts";
+import { NEW_FILE } from "./new-file.ts";
+import { NOTES } from "./notes.ts";
 import { LEFT_OUT_OUTSIDE_AND_CODE, OUTSIDE_AND_CODE } from "./outside-and-code.ts";
 import { PANELS } from "./panels.ts";
+import { PEEK } from "./peek.ts";
+import { PEEK_BACKLINKS } from "./peek-backlinks.ts";
 import { PICTURES } from "./pictures.ts";
 import { LEFT_OUT_READING, READING } from "./reading.ts";
 import { REPORTING } from "./reporting.ts";
+import { GIT_PANEL } from "./repositories.ts";
+import { ROOTS } from "./roots.ts";
 import { SLOW_DISK } from "./slow-disk.ts";
 import { SOURCE_CONTROL } from "./source-control.ts";
+import { LINKED } from "./symlinks.ts";
 import { UPDATES } from "./updates.ts";
+import { PEEKED } from "./vault-peek.ts";
 import { VAULTS } from "./vaults.ts";
-import { WINDOW_HEADER } from "./window-header.ts";
 import { WHERE } from "./where.ts";
+import { WINDOW_HEADER } from "./window-header.ts";
 
 /** Each file's checks, by its name: `bun run test:terminal <name>` runs them. */
 export const CHECK_FILES: Record<string, Check[]> = {
@@ -45,8 +52,15 @@ export const CHECK_FILES: Record<string, Check[]> = {
   peek: PEEK,
   // The peek's backlinks (#10): their own file, in the links-and-files area.
   "peek-backlinks": PEEK_BACKLINKS,
-  // Vaults, home and Elsewhere, the view, marks, links, the peek: their own file, in the areas they belong to.
+  // Vault switching, home and Elsewhere, the view, marks, links, peek and repositories, in their original order.
   vaults: VAULTS,
+  home: HOME,
+  "home-watching": UNWALKED_HOME,
+  elsewhere: ELSEWHERE,
+  "explorer-marks": EXPLORER_MARKS,
+  symlinks: LINKED,
+  "vault-peek": PEEKED,
+  repositories: GIT_PANEL,
   // A link renamed or moved itself, and what a rename writes through links (D260): links-and-files', a file of their own.
   "moving-links": MOVING_LINKS,
   "outside-and-code": OUTSIDE_AND_CODE,

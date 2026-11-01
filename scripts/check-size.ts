@@ -30,7 +30,6 @@ export const TEST_CAPPED: Record<string, number> = {
   "tests/terminal/checks/navigating.ts": 1824,
   "tests/terminal/checks/outside-and-code.ts": 1900,
   "tests/terminal/checks/reading.ts": 1737,
-  "tests/terminal/checks/vaults.ts": 2533,
 };
 
 export interface SizeVerdict {

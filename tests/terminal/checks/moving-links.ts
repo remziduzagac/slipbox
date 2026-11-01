@@ -22,7 +22,7 @@ import { type Check, explorerOpen, explorerRow, leader, opened } from "../check.
 import { vaultKey } from "../../../src/core/foundation/platform/paths.ts";
 import type { Session } from "../session.ts";
 import { toLink } from "../support/links.ts";
-import { markOf } from "./vaults.ts";
+import { markOf } from "../support/vaults.ts";
 
 const escaped = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 

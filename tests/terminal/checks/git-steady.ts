@@ -26,7 +26,7 @@ import {
   WHO,
 } from "./source-control.ts";
 import { selectedPath } from "./slow-disk.ts";
-import { repositories } from "./vaults.ts";
+import { repositories } from "../support/vaults.ts";
 
 /** The folder of repositories (vaults.ts's): alpha clean, beta's worktree's new file to review, gamma changed. */
 const PROJECTS: SessionOptions = {

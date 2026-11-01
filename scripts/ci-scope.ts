@@ -39,9 +39,21 @@ export function codeChanged(files: string[]): string | null {
   return files.find((f) => !isDocs(f)) ?? null;
 }
 
+// The former vaults.ts collection: source mappings keep every check after its feature split.
+const VAULT_CHECKS = [
+  "vaults",
+  "home",
+  "home-watching",
+  "elsewhere",
+  "explorer-marks",
+  "symlinks",
+  "vault-peek",
+  "repositories",
+];
+
 /**
- * The terminal checks a changed file of the app's runs, by a piece of their names (`bun run test:terminal <piece>…`
- * runs every check whose name holds it): a feature's own files, which only its checks drive. A file of the app's none
+ * The terminal checks a changed file of the app's runs, by check file or a piece of their names
+ * (`bun run test:terminal <piece>…`): a feature's own files, which only its checks drive. A file of the app's none
  * of these matches runs every check — the shared ones (the app, drawing, the parser, the index, the config) and those
  * not sorted yet. An empty list: no check runs it (the command line's commands, which the TUI never calls).
  */
@@ -88,7 +100,7 @@ export const CHECKS_FOR: [RegExp, string[]][] = [
   [/^src\/tui\/workspace\/explorer\/listings\.ts$/, ["slow disk", "view", "Elsewhere", "marks"]],
   // Vaults, home and Elsewhere; a link followed out; the peek (VV).
   [/^src\/core\/workspace\/vaults\/(home|mounts)\.ts$/, ["home", "Elsewhere"]],
-  [/^src\/tui\/workspace\/vaults\/vaults\.ts$/, ["vaults", "home", "Elsewhere", "roots", "named folders"]],
+  [/^src\/tui\/workspace\/vaults\/vaults\.ts$/, [...VAULT_CHECKS, "roots", "named folders"]],
   [/^src\/core\/workspace\/vaults\/symlinks\.ts$/, ["links", "rename"]],
   [
     /^src\/tui\/documents\/navigation\/peek(?:\/(?:contracts|state|paths|presentation|probe|synchronization|opening|history))?\.ts$/,
@@ -97,7 +109,7 @@ export const CHECKS_FOR: [RegExp, string[]][] = [
   // Replace, and renames with the links they rewrite.
   [/^src\/core\/(documents\/editing\/replace|workspace\/mutations\/replace-files)\.ts$/, ["replace", "find"]],
   [/^src\/tui\/documents\/search\/replacing\.ts$/, ["replace"]],
-  [/^src\/core\/workspace\/mutations\/rename\/rename[\w-]*\.ts$/, ["rename", "naming", "vaults"]],
+  [/^src\/core\/workspace\/mutations\/rename\/rename[\w-]*\.ts$/, ["rename", "naming", ...VAULT_CHECKS]],
   [/^src\/tui\/workspace\/explorer\/renaming\.ts$/, ["rename", "naming"]],
   // Features of a window or a command of their own.
   [/^src\/tui\/shell\/overlays\/palette\.ts$/, ["palette", "help", "which-key"]],

@@ -1,0 +1,143 @@
+{
+  "task": "ORF-T15",
+  "base": "81a3346937d5480a3aa6b643ef208602bcc6d04d",
+  "moves": [
+    {
+      "from": "tests/terminal/checks/vaults.ts",
+      "to": "tests/terminal/checks/home.ts",
+      "method": "git mv",
+      "retains": [
+        "HOME"
+      ]
+    }
+  ],
+  "extractions": [
+    {
+      "from": "tests/terminal/checks/vaults.ts",
+      "to": "tests/terminal/checks/vaults.ts",
+      "declarations": [
+        "VAULTS (switch choices only)"
+      ]
+    },
+    {
+      "from": "tests/terminal/checks/vaults.ts",
+      "to": "tests/terminal/checks/home-watching.ts",
+      "declarations": [
+        "UNWALKED_QUICK",
+        "journal",
+        "switcherLists",
+        "untilListed",
+        "neverListed",
+        "UNWALKED_HOME"
+      ]
+    },
+    {
+      "from": "tests/terminal/checks/vaults.ts",
+      "to": "tests/terminal/checks/elsewhere.ts",
+      "declarations": [
+        "ELSEWHERE"
+      ]
+    },
+    {
+      "from": "tests/terminal/checks/vaults.ts",
+      "to": "tests/terminal/checks/explorer-marks.ts",
+      "declarations": [
+        "VIEW",
+        "MARKED"
+      ]
+    },
+    {
+      "from": "tests/terminal/checks/vaults.ts",
+      "to": "tests/terminal/checks/symlinks.ts",
+      "declarations": [
+        "LINKED"
+      ]
+    },
+    {
+      "from": "tests/terminal/checks/vaults.ts",
+      "to": "tests/terminal/checks/vault-peek.ts",
+      "declarations": [
+        "PEEKED"
+      ]
+    },
+    {
+      "from": "tests/terminal/checks/vaults.ts",
+      "to": "tests/terminal/checks/repositories.ts",
+      "declarations": [
+        "GIT_PANEL"
+      ]
+    },
+    {
+      "from": "tests/terminal/checks/vaults.ts",
+      "to": "tests/terminal/support/vaults.ts",
+      "declarations": [
+        "UNWALKED",
+        "WIDE",
+        "MARKS",
+        "escaped",
+        "paneRows",
+        "rowEnd",
+        "markOf",
+        "tab",
+        "quits",
+        "symlinkOnce",
+        "git",
+        "homeFolders",
+        "homeWalked",
+        "walkJson",
+        "stampOf",
+        "restampOf",
+        "shell",
+        "switcherShows",
+        "shelf",
+        "asked",
+        "repositories"
+      ]
+    }
+  ],
+  "entryPoints": [
+    "tests/terminal/checks/index.ts",
+    "tests/terminal/run.ts",
+    "tests/terminal/worker.ts"
+  ],
+  "registration": {
+    "before": [
+      "VAULTS switch choices",
+      "HOME",
+      "UNWALKED_HOME",
+      "ELSEWHERE",
+      "VIEW",
+      "MARKED",
+      "LINKED",
+      "PEEKED",
+      "GIT_PANEL"
+    ],
+    "after": [
+      "VAULTS",
+      "HOME",
+      "UNWALKED_HOME",
+      "ELSEWHERE",
+      "VIEW + MARKED",
+      "LINKED",
+      "PEEKED",
+      "GIT_PANEL"
+    ],
+    "preserve": "CHECKS order, check names, areas, coverage, options and run bodies"
+  },
+  "helperConsumers": [
+    "tests/terminal/checks/moving-links.ts",
+    "tests/terminal/checks/peek-backlinks.ts",
+    "tests/terminal/checks/git-steady.ts"
+  ],
+  "sourceSelectors": {
+    "file": "scripts/ci-scope.ts",
+    "sources": [
+      "src/tui/workspace/vaults/vaults.ts",
+      "src/core/workspace/mutations/rename/rename*.ts"
+    ],
+    "preserve": "All original vault checks remain selected through the eight split owners."
+  },
+  "retainedData": "All check bodies, options, comments, fixture strings and deadlines are retained; no snapshots belong to this collection.",
+  "design": "blueprint/design/testing.md",
+  "capRemoval": "tests/terminal/checks/vaults.ts"
+}
