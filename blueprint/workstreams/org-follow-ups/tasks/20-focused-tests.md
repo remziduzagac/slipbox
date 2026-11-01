@@ -89,3 +89,9 @@ The required `TMPDIR=/var/tmp gnutimeout -k 10 900 bun run check` passes: all st
 14 files, with 4,066 assertions. The selection contains the thirteen migration owners and the four organization
 guard cases. Log: `tmp/issue/ORF-T20-check.log`. Title/destination and stale-import checks pass; `git diff -M --summary`
 shows only the new manifest and focused worker owner, with no retired filename.
+
+## Delivery
+
+[Draft PR #199](https://github.com/remziduzagac/slipbox/pull/199) targets `dev` from
+`refactor/issue-170-focused-tests`. Implementation and verification commit:
+`39a3033c9310d5b355946f20f54bb5742dd90d67`. Local checks pass; final-head CI and fresh review are pending.
