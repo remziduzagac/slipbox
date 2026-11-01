@@ -301,11 +301,6 @@ export function blockComments<T>(nodes: T[]): T[] {
 // ---------------------------------------------------------------------------------------------
 // Reading them.
 
-/** A comment, in a paragraph or over blank lines: never drawn. */
-export function isComment(n: { type: string }): boolean {
-  return n.type === "comment" || n.type === "commentBlock";
-}
-
 /** A paragraph that holds nothing but comments (and the spaces and breaks around them): no paragraph to draw. */
 export function onlyComments(children: readonly PhrasingContent[]): boolean {
   return (

@@ -74,10 +74,6 @@ export function setWidthMethod(next: WidthMethod): void {
   shortCache.clear();
 }
 
-export function widthMethod(): WidthMethod {
-  return method;
-}
-
 const cache = new Map<string, number>();
 
 export function graphemeWidth(g: string): number {

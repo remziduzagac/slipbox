@@ -1,0 +1,4993 @@
+{
+  "task": "ORF-T19",
+  "base": "6ca74642fa5de706405db8176c18dae25cbb5110",
+  "tool": "knip@6.43.0",
+  "command": "bunx --bun knip@6.43.0 --reporter json --no-progress",
+  "coverage": {
+    "T41": {
+      "exports": 197,
+      "types": 84
+    },
+    "currentBefore": {
+      "exports": 198,
+      "types": 84
+    },
+    "currentAfter": {
+      "exports": 187,
+      "types": 84
+    },
+    "union": 285,
+    "removed": 11,
+    "kept": 274
+  },
+  "audit": {
+    "discovery": "Unchanged knip.config.ts and scripts/organization/knip-entries.ts: build workers, source, dynamic imports, tests, process fixtures, terminal/shot entries, documented scripts and site; generated assets and optional tools retained.",
+    "references": "Compiler-resolved identifiers across the tsconfig project, including imports, re-exports and static accesses through dynamic/namespace imports; declaration-only bindings checked separately against repository text before removal. Self-references inside a declaration do not count as callers; the HAST plain helper is recursive but unreachable. Every retained candidate also has a reference path to a use outside the candidate declarations, excluding isolated recursive or mutually dependent dead groups.",
+    "nonTypeScript": "Tracked source/script/fixture/documentation text searched for all eleven removed names. No invocation found. Historical blueprint ledgers remain evidence, not callers. Update the links design pointerTo reference to its live pointerAt owner.",
+    "collisions": [
+      {
+        "name": "widthMethod",
+        "reference": "src/tui/shell/terminal/run.ts:282",
+        "reason": "OpenTUI renderer property; not the removed width getter. The same property is documented in blueprint/design/how-it-works.md."
+      },
+      {
+        "name": "snippetText",
+        "reference": "src/core/workspace/mutations/capture.ts:145",
+        "reason": "Capture-input field and CLI local variables, not an import of the snippet convenience wrapper."
+      },
+      {
+        "name": "pointerTo",
+        "reference": "src/tui/documents/editing/completion.ts:283",
+        "reason": "Completion payload field, not the removed pointer convenience wrapper."
+      },
+      {
+        "name": "vaultPath",
+        "reference": "src/core/workspace/mutations/files.ts:22",
+        "reason": "Separate, used file-mutation-local function with a different signature."
+      },
+      {
+        "name": "commandSpec",
+        "reference": "src/core/application/commands/registry.ts:181",
+        "reason": "Local parameter name, not a call to the removed catalog lookup."
+      },
+      {
+        "name": "plain",
+        "reference": "scripts/screenshot.ts:48",
+        "reason": "Separate screenshot style helper; other plain bindings, fixture text and --plain flags are unrelated to the unused HAST text helper."
+      }
+    ],
+    "deltas": "Three T41 tokenizer callback exports gained direct tests in ORG-T42. ORF-T4/T9 added four report sites by keeping output/opening exports and compatibility aliases. No prior candidate is silently omitted.",
+    "otherFindings": "Zero unused files, dependencies, development dependencies, binaries, duplicate aliases or unresolved entries. Six existing type-only hast/unist ownership findings retained; no dependency changes."
+  },
+  "moves": [],
+  "candidates": [
+    {
+      "file": "src/cli/cli.ts",
+      "name": "CliError",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/cli/common.ts:49"
+      ],
+      "uses": [
+        "src/cli/render.ts:108",
+        "src/cli/render.ts:132"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/cli/cli.ts",
+      "name": "HELP",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/cli/output.ts:24"
+      ],
+      "uses": [
+        "src/cli/output.ts:154"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/cli/cli.ts",
+      "name": "JSON_SCHEMA",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/cli/output.ts:22"
+      ],
+      "uses": [
+        "src/cli/output.ts:137",
+        "src/cli/output.ts:167"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/cli/cli.ts",
+      "name": "retargetSaid",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/cli/common.ts:236"
+      ],
+      "uses": [
+        "src/cli/common.ts:126"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/cli/common.ts",
+      "name": "retargetSaid",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/cli/common.ts:236"
+      ],
+      "uses": [
+        "src/cli/common.ts:126"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/cli/output.ts",
+      "name": "HELP",
+      "kind": "exports",
+      "reports": [
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/cli/output.ts:24"
+      ],
+      "uses": [
+        "src/cli/output.ts:154"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/cli/output.ts",
+      "name": "JSON_SCHEMA",
+      "kind": "exports",
+      "reports": [
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/cli/output.ts:22"
+      ],
+      "uses": [
+        "src/cli/output.ts:137",
+        "src/cli/output.ts:167"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/application/commands/catalog.ts",
+      "name": "commandSpec",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "remove",
+      "definitionBefore": [
+        "src/core/application/commands/catalog.ts:28"
+      ],
+      "reason": "No local, imported, re-exported or dynamic symbol consumer; no worker/build entry, test/script or documented invocation. Remove the unused declaration."
+    },
+    {
+      "file": "src/core/application/config/config.ts",
+      "name": "USER_ONLY",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/application/config/trust.ts:13"
+      ],
+      "uses": [
+        "src/core/application/config/trust.ts:112"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/core/application/config/config.ts",
+      "name": "VAULT_FORBIDDEN_COMMANDS",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/application/config/trust.ts:27"
+      ],
+      "uses": [
+        "src/core/application/config/trust.ts:46"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/core/application/config/config.ts",
+      "name": "LoadConfigOptions",
+      "kind": "types",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/application/config/contracts.ts:309"
+      ],
+      "uses": [
+        "src/core/application/config/loading.ts:15"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/core/application/config/config.ts",
+      "name": "LoadedConfig",
+      "kind": "types",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/application/config/contracts.ts:301"
+      ],
+      "uses": [
+        "src/core/application/config/loading.ts:15"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/core/application/config/trust.ts",
+      "name": "USER_ONLY",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/application/config/trust.ts:13"
+      ],
+      "uses": [
+        "src/core/application/config/trust.ts:112"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/application/config/trust.ts",
+      "name": "VAULT_FORBIDDEN_COMMANDS",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/application/config/trust.ts:27"
+      ],
+      "uses": [
+        "src/core/application/config/trust.ts:46"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/application/distribution/crash-reports.ts",
+      "name": "CRASH_SWITCHES",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/application/distribution/crash-reports.ts:9"
+      ],
+      "uses": [
+        "src/core/application/distribution/crash-reports.ts:19"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/application/distribution/gh.ts",
+      "name": "POST_TIMEOUT",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/application/distribution/gh.ts:59"
+      ],
+      "uses": [
+        "src/core/application/distribution/gh.ts:71"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/application/distribution/install.ts",
+      "name": "CHANNELS",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/application/distribution/install.ts:57"
+      ],
+      "uses": [
+        "src/core/application/distribution/install.ts:60"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/application/distribution/install.ts",
+      "name": "stores",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/application/distribution/install.ts:88"
+      ],
+      "uses": [
+        "src/core/application/distribution/install.ts:162",
+        "src/core/application/distribution/install.ts:200"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/application/distribution/install.ts",
+      "name": "Item",
+      "kind": "types",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/application/distribution/install.ts:137"
+      ],
+      "uses": [
+        "src/core/application/distribution/install.ts:144",
+        "src/core/application/distribution/install.ts:146"
+      ],
+      "reason": "Type used in the owner or its exposed structural contract at the named reference; retain the model and its established visibility."
+    },
+    {
+      "file": "src/core/application/distribution/report.ts",
+      "name": "Installed",
+      "kind": "types",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/application/distribution/report.ts:61"
+      ],
+      "uses": [
+        "src/core/application/distribution/report.ts:67",
+        "src/core/application/distribution/report.ts:180"
+      ],
+      "reason": "Type used in the owner or its exposed structural contract at the named reference; retain the model and its established visibility."
+    },
+    {
+      "file": "src/core/application/distribution/restart.ts",
+      "name": "flushInput",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/application/distribution/restart.ts:193"
+      ],
+      "uses": [
+        "src/core/application/distribution/restart.ts:230"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/application/distribution/restart.ts",
+      "name": "restartDir",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/application/distribution/restart.ts:36"
+      ],
+      "uses": [
+        "src/core/application/distribution/restart.ts:43",
+        "src/core/application/distribution/restart.ts:56"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/application/distribution/restart.ts",
+      "name": "startAndWait",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/application/distribution/restart.ts:205"
+      ],
+      "uses": [
+        "src/core/application/distribution/restart.ts:289"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/application/distribution/skill-lifecycle.ts",
+      "name": "ownedSkill",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/application/distribution/skill-lifecycle.ts:83"
+      ],
+      "uses": [
+        "src/core/application/distribution/skill-lifecycle.ts:95",
+        "src/core/application/distribution/skill-lifecycle.ts:108"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/application/distribution/skill.ts",
+      "name": "SkillStatus",
+      "kind": "types",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/application/distribution/skill.ts:28"
+      ],
+      "uses": [
+        "src/core/application/distribution/skill.ts:33",
+        "src/core/application/distribution/skill.ts:92"
+      ],
+      "reason": "Type used in the owner or its exposed structural contract at the named reference; retain the model and its established visibility."
+    },
+    {
+      "file": "src/core/application/distribution/update.ts",
+      "name": "sayOut",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/application/distribution/update.ts:90"
+      ],
+      "uses": [
+        "src/core/application/distribution/update.ts:162",
+        "src/core/application/distribution/update.ts:206"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/application/distribution/update.ts",
+      "name": "Candidate",
+      "kind": "types",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/application/distribution/updates/discovery.ts:74"
+      ],
+      "uses": [
+        "src/core/application/distribution/updates/discovery.ts:93",
+        "src/core/application/distribution/updates/discovery.ts:121"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/core/application/distribution/update.ts",
+      "name": "Latest",
+      "kind": "types",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/application/distribution/updates/discovery.ts:18"
+      ],
+      "uses": [
+        "src/core/application/distribution/updates/discovery.ts:36",
+        "src/core/application/distribution/updates/discovery.ts:60"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/core/documents/diagnostics/diagnostics.ts",
+      "name": "conflictProblems",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/documents/diagnostics/diagnostics.ts:255"
+      ],
+      "uses": [
+        "src/core/documents/diagnostics/diagnostics.ts:211"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/documents/diagnostics/diagnostics.ts",
+      "name": "fragmentOf",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/documents/diagnostics/diagnostics.ts:52"
+      ],
+      "uses": [
+        "src/core/documents/diagnostics/diagnostics.ts:96"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/documents/diagnostics/lint-visibility.ts",
+      "name": "HiddenReason",
+      "kind": "types",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/documents/diagnostics/lint-visibility.ts:6"
+      ],
+      "uses": [
+        "src/core/documents/diagnostics/lint-visibility.ts:39",
+        "src/core/documents/diagnostics/lint-visibility.ts:51"
+      ],
+      "reason": "Type used in the owner or its exposed structural contract at the named reference; retain the model and its established visibility."
+    },
+    {
+      "file": "src/core/documents/diagnostics/spell.ts",
+      "name": "BUNDLED_LANGUAGES",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "remove",
+      "definitionBefore": [
+        "src/core/documents/diagnostics/spell.ts:54"
+      ],
+      "reason": "No local, imported, re-exported or dynamic symbol consumer; no worker/build entry, test/script or documented invocation. Remove the unused declaration."
+    },
+    {
+      "file": "src/core/documents/diagnostics/spell.ts",
+      "name": "systemDictionaryDirs",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/documents/diagnostics/spell.ts:54"
+      ],
+      "uses": [
+        "src/core/documents/diagnostics/spell.ts:81"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/documents/editing/snippet.ts",
+      "name": "snippetText",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "remove",
+      "definitionBefore": [
+        "src/core/documents/editing/snippet.ts:164"
+      ],
+      "reason": "No local, imported, re-exported or dynamic symbol consumer; no worker/build entry, test/script or documented invocation. Remove the unused declaration."
+    },
+    {
+      "file": "src/core/documents/editing/snippet.ts",
+      "name": "SnippetStop",
+      "kind": "types",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/documents/editing/snippet.ts:9"
+      ],
+      "uses": [
+        "src/core/documents/editing/snippet.ts:17"
+      ],
+      "reason": "Type used in the owner or its exposed structural contract at the named reference; retain the model and its established visibility."
+    },
+    {
+      "file": "src/core/documents/markdown/html-adapter.ts",
+      "name": "htmlPresentation",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/documents/markdown/html-adapter.ts:69"
+      ],
+      "uses": [
+        "src/core/documents/markdown/html-adapter.ts:120"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/documents/markdown/html-adapter.ts",
+      "name": "htmlUrl",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/documents/markdown/html-adapter.ts:110"
+      ],
+      "uses": [
+        "src/core/documents/markdown/html-adapter.ts:187",
+        "src/core/documents/markdown/html-adapter.ts:211"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/documents/markdown/html-adapter.ts",
+      "name": "HtmlAlign",
+      "kind": "types",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/documents/markdown/html-adapter.ts:14"
+      ],
+      "uses": [
+        "src/core/documents/markdown/html-adapter.ts:20",
+        "src/core/documents/markdown/html-adapter.ts:72"
+      ],
+      "reason": "Type used in the owner or its exposed structural contract at the named reference; retain the model and its established visibility."
+    },
+    {
+      "file": "src/core/documents/markdown/html-adapter.ts",
+      "name": "HtmlContainer",
+      "kind": "types",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/documents/markdown/html-adapter.ts:36"
+      ],
+      "uses": [
+        "src/core/documents/markdown/html-adapter.ts:52"
+      ],
+      "reason": "Type used in the owner or its exposed structural contract at the named reference; retain the model and its established visibility."
+    },
+    {
+      "file": "src/core/documents/markdown/html-adapter.ts",
+      "name": "HtmlDetails",
+      "kind": "types",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/documents/markdown/html-adapter.ts:40"
+      ],
+      "uses": [
+        "src/core/documents/markdown/html-adapter.ts:53"
+      ],
+      "reason": "Type used in the owner or its exposed structural contract at the named reference; retain the model and its established visibility."
+    },
+    {
+      "file": "src/core/documents/markdown/html-adapter.ts",
+      "name": "HtmlInline",
+      "kind": "types",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/documents/markdown/html-adapter.ts:32"
+      ],
+      "uses": [
+        "src/core/documents/markdown/html-adapter.ts:48",
+        "src/core/documents/markdown/html-adapter.ts:51"
+      ],
+      "reason": "Type used in the owner or its exposed structural contract at the named reference; retain the model and its established visibility."
+    },
+    {
+      "file": "src/core/documents/markdown/obsidian.ts",
+      "name": "isComment",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "remove",
+      "definitionBefore": [
+        "src/core/documents/markdown/obsidian.ts:305"
+      ],
+      "reason": "No local, imported, re-exported or dynamic symbol consumer; no worker/build entry, test/script or documented invocation. Remove the unused declaration."
+    },
+    {
+      "file": "src/core/documents/markdown/obsidian.ts",
+      "name": "obsidianFromMarkdown",
+      "kind": "exports",
+      "reports": [
+        "T41"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/documents/markdown/obsidian.ts:186"
+      ],
+      "uses": [
+        "tests/core/documents/markdown/tokenization-contracts.test.ts:46",
+        "tests/core/documents/markdown/tokenization-contracts.test.ts:47"
+      ],
+      "reason": "Live source/test/script consumer at the named reference; retain the implementation and export."
+    },
+    {
+      "file": "src/core/documents/markdown/obsidian.ts",
+      "name": "obsidianSyntax",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/documents/markdown/obsidian.ts:178"
+      ],
+      "uses": [
+        "src/core/documents/markdown/obsidian.ts:209"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/documents/markdown/obsidian.ts",
+      "name": "Comment",
+      "kind": "types",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/documents/markdown/obsidian.ts:22"
+      ],
+      "uses": [
+        "src/core/documents/markdown/obsidian.ts:36",
+        "src/core/documents/markdown/obsidian.ts:43"
+      ],
+      "reason": "Type used in the owner or its exposed structural contract at the named reference; retain the model and its established visibility."
+    },
+    {
+      "file": "src/core/documents/markdown/obsidian.ts",
+      "name": "CommentBlock",
+      "kind": "types",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/documents/markdown/obsidian.ts:28"
+      ],
+      "uses": [
+        "src/core/documents/markdown/obsidian.ts:39",
+        "src/core/documents/markdown/obsidian.ts:44"
+      ],
+      "reason": "Type used in the owner or its exposed structural contract at the named reference; retain the model and its established visibility."
+    },
+    {
+      "file": "src/core/documents/markdown/obsidian.ts",
+      "name": "Highlight",
+      "kind": "types",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/documents/markdown/obsidian.ts:16"
+      ],
+      "uses": [
+        "src/core/documents/markdown/obsidian.ts:35",
+        "src/core/documents/markdown/obsidian.ts:42"
+      ],
+      "reason": "Type used in the owner or its exposed structural contract at the named reference; retain the model and its established visibility."
+    },
+    {
+      "file": "src/core/documents/markdown/tags.ts",
+      "name": "hashtagFromMarkdown",
+      "kind": "exports",
+      "reports": [
+        "T41"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/documents/markdown/tags.ts:83"
+      ],
+      "uses": [
+        "tests/core/documents/markdown/tokenization-contracts.test.ts:44",
+        "tests/core/documents/markdown/tokenization-contracts.test.ts:45"
+      ],
+      "reason": "Live source/test/script consumer at the named reference; retain the implementation and export."
+    },
+    {
+      "file": "src/core/documents/markdown/tags.ts",
+      "name": "hashtagSyntax",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/documents/markdown/tags.ts:80"
+      ],
+      "uses": [
+        "src/core/documents/markdown/tags.ts:100"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/documents/markdown/tags.ts",
+      "name": "isTagChar",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/documents/markdown/tags.ts:29"
+      ],
+      "uses": [
+        "src/core/documents/markdown/tags.ts:36"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/documents/markdown/wikilink.ts",
+      "name": "wikiLinkFromMarkdown",
+      "kind": "exports",
+      "reports": [
+        "T41"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/documents/markdown/wikilink.ts:130"
+      ],
+      "uses": [
+        "tests/core/documents/markdown/tokenization-contracts.test.ts:24",
+        "tests/core/documents/markdown/tokenization-contracts.test.ts:25"
+      ],
+      "reason": "Live source/test/script consumer at the named reference; retain the implementation and export."
+    },
+    {
+      "file": "src/core/documents/markdown/wikilink.ts",
+      "name": "wikiLinkSyntax",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/documents/markdown/wikilink.ts:87"
+      ],
+      "uses": [
+        "src/core/documents/markdown/wikilink.ts:150"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/documents/model/context.ts",
+      "name": "CONTEXT_MAX_FILE",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/documents/model/context.ts:58"
+      ],
+      "uses": [
+        "src/core/documents/model/context.ts:82"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/documents/model/context.ts",
+      "name": "ContextItem",
+      "kind": "types",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/documents/model/context.ts:27"
+      ],
+      "uses": [
+        "src/core/documents/model/context.ts:47",
+        "src/core/documents/model/context.ts:62"
+      ],
+      "reason": "Type used in the owner or its exposed structural contract at the named reference; retain the model and its established visibility."
+    },
+    {
+      "file": "src/core/documents/model/context.ts",
+      "name": "ContextLeft",
+      "kind": "types",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/documents/model/context.ts:39"
+      ],
+      "uses": [
+        "src/core/documents/model/context.ts:49",
+        "src/core/documents/model/context.ts:63"
+      ],
+      "reason": "Type used in the owner or its exposed structural contract at the named reference; retain the model and its established visibility."
+    },
+    {
+      "file": "src/core/documents/model/context.ts",
+      "name": "ContextWhy",
+      "kind": "types",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/documents/model/context.ts:25"
+      ],
+      "uses": [
+        "src/core/documents/model/context.ts:30",
+        "src/core/documents/model/context.ts:41"
+      ],
+      "reason": "Type used in the owner or its exposed structural contract at the named reference; retain the model and its established visibility."
+    },
+    {
+      "file": "src/core/documents/model/data.ts",
+      "name": "DataLink",
+      "kind": "types",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/documents/model/data/links.ts:17"
+      ],
+      "uses": [
+        "src/core/documents/model/data/links.ts:43",
+        "src/core/documents/model/data/links.ts:44"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/core/documents/model/docformats.ts",
+      "name": "DocTag",
+      "kind": "types",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/documents/model/docformats.ts:6"
+      ],
+      "uses": [
+        "src/core/documents/model/docformats.ts:18",
+        "src/core/documents/model/docformats.ts:43"
+      ],
+      "reason": "Type used in the owner or its exposed structural contract at the named reference; retain the model and its established visibility."
+    },
+    {
+      "file": "src/core/documents/model/doctypes.ts",
+      "name": "BUILT_IN_TYPES",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/documents/model/doctypes.ts:44"
+      ],
+      "uses": [
+        "src/core/documents/model/doctypes.ts:66",
+        "src/core/documents/model/doctypes.ts:70"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/documents/model/doctypes.ts",
+      "name": "frontmatterBlock",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/documents/model/doctypes.ts:98"
+      ],
+      "uses": [
+        "src/core/documents/model/doctypes.ts:179",
+        "src/core/documents/model/doctypes.ts:239"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/documents/model/doctypes.ts",
+      "name": "isKind",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/documents/model/doctypes.ts:134"
+      ],
+      "uses": [
+        "src/core/documents/model/doctypes.ts:206"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/documents/model/footnotes.ts",
+      "name": "footnoteLabelOk",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/documents/model/footnotes.ts:108"
+      ],
+      "uses": [
+        "src/core/documents/model/footnotes.ts:176"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/documents/model/footnotes.ts",
+      "name": "nextFootnoteLabel",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/documents/model/footnotes.ts:113"
+      ],
+      "uses": [
+        "src/core/documents/model/footnotes.ts:135"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/documents/model/note.ts",
+      "name": "effectiveInset",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/documents/model/note.ts:23"
+      ],
+      "uses": [
+        "src/core/documents/model/note.ts:28"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/documents/model/note.ts",
+      "name": "linkResolver",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/documents/model/note.ts:49"
+      ],
+      "uses": [
+        "src/core/documents/model/note.ts:114",
+        "src/core/documents/model/note.ts:237"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/documents/servers/client.ts",
+      "name": "CLIENT_CAPABILITIES",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/documents/servers/client/protocol.ts:6"
+      ],
+      "uses": [
+        "tests/core/documents/servers/protocol.test.ts:22",
+        "tests/core/documents/servers/protocol.test.ts:23"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/core/documents/servers/client.ts",
+      "name": "PULL_DEADLINE_MS",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/documents/servers/client.ts:43"
+      ],
+      "uses": [
+        "src/core/documents/servers/client.ts:385"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/documents/servers/client.ts",
+      "name": "REQUEST_DEADLINE_MS",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/documents/servers/client.ts:41"
+      ],
+      "uses": [
+        "src/core/documents/servers/client.ts:442"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/documents/servers/find.ts",
+      "name": "masonBin",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/documents/servers/find.ts:57"
+      ],
+      "uses": [
+        "src/core/documents/servers/find.ts:64",
+        "src/core/documents/servers/find.ts:72"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/documents/servers/find.ts",
+      "name": "runnable",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/documents/servers/find.ts:151"
+      ],
+      "uses": [
+        "src/core/documents/servers/find.ts:165",
+        "src/core/documents/servers/find.ts:168"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/documents/servers/languages.ts",
+      "name": "ADD_ON_FEATURES",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/documents/servers/languages.ts:29"
+      ],
+      "uses": [
+        "src/core/documents/servers/languages.ts:118"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/documents/servers/languages.ts",
+      "name": "LANGUAGES",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/documents/servers/languages.ts:344"
+      ],
+      "uses": [
+        "src/core/documents/servers/languages.ts:546"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/documents/servers/languages.ts",
+      "name": "olderTypeScript",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/documents/servers/languages.ts:332"
+      ],
+      "uses": [
+        "src/core/documents/servers/languages.ts:158"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/documents/servers/languages.ts",
+      "name": "venvPackages",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/documents/servers/languages.ts:70"
+      ],
+      "uses": [
+        "src/core/documents/servers/languages.ts:177"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/documents/servers/limits.ts",
+      "name": "CANCEL_GRACE_MS",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/documents/servers/limits.ts:14"
+      ],
+      "uses": [
+        "src/core/documents/servers/limits.ts:66"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/documents/servers/limits.ts",
+      "name": "MAX_DIAGNOSTICS",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/documents/servers/limits.ts:18"
+      ],
+      "uses": [
+        "src/core/documents/servers/limits.ts:115"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/documents/servers/limits.ts",
+      "name": "MAX_DIAGNOSTIC_BYTES",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/documents/servers/limits.ts:19"
+      ],
+      "uses": [
+        "src/core/documents/servers/limits.ts:117"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/documents/servers/limits.ts",
+      "name": "MAX_PENDING_BYTES",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/documents/servers/limits.ts:12"
+      ],
+      "uses": [
+        "src/core/documents/servers/limits.ts:80"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/documents/servers/linters.ts",
+      "name": "markerRoot",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/documents/servers/linters.ts:250"
+      ],
+      "uses": [
+        "src/core/documents/servers/linters.ts:260"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/documents/servers/manager.ts",
+      "name": "problemOf",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/documents/servers/manager.ts:83"
+      ],
+      "uses": [
+        "src/core/documents/servers/manager.ts:424"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/documents/servers/manager.ts",
+      "name": "settingsFor",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/documents/servers/manager.ts:101"
+      ],
+      "uses": [
+        "src/core/documents/servers/manager.ts:408"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/documents/syntax/syntax.ts",
+      "name": "SyntaxTree",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/documents/syntax/tree/tree.ts:12"
+      ],
+      "uses": [
+        "src/core/documents/syntax/tree/tree.ts:14",
+        "src/core/documents/syntax/tree/tree.ts:195"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/core/documents/syntax/syntax.ts",
+      "name": "Comment",
+      "kind": "types",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/documents/syntax/contracts.ts:59"
+      ],
+      "uses": [
+        "src/core/documents/syntax/tree/tree.ts:150",
+        "src/core/documents/syntax/links/tokens.ts:37"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/core/foundation/platform/paths.ts",
+      "name": "CACHEDIR_TAG",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/foundation/platform/paths.ts:95"
+      ],
+      "uses": [
+        "src/core/foundation/platform/paths.ts:106"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/foundation/platform/paths.ts",
+      "name": "userConfigDir",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/foundation/platform/paths.ts:52"
+      ],
+      "uses": [
+        "src/core/foundation/platform/paths.ts:57",
+        "src/core/foundation/platform/paths.ts:61"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/foundation/platform/shell.ts",
+      "name": "OUTPUT_MAX",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/foundation/platform/shell.ts:65"
+      ],
+      "uses": [
+        "src/core/foundation/platform/shell.ts:107",
+        "src/core/foundation/platform/shell.ts:131"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/foundation/platform/shell.ts",
+      "name": "STDOUT_MAX",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/foundation/platform/shell.ts:66"
+      ],
+      "uses": [
+        "src/core/foundation/platform/shell.ts:109",
+        "src/core/foundation/platform/shell.ts:132"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/foundation/platform/sqlite.ts",
+      "name": "RunResult",
+      "kind": "types",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/foundation/platform/sqlite.ts:13"
+      ],
+      "uses": [
+        "src/core/foundation/platform/sqlite.ts:22"
+      ],
+      "reason": "Type used in the owner or its exposed structural contract at the named reference; retain the model and its established visibility."
+    },
+    {
+      "file": "src/core/foundation/platform/tool-process.ts",
+      "name": "TOOL_OUTPUT_BYTES",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/foundation/platform/tool-process.ts:7"
+      ],
+      "uses": [
+        "src/core/foundation/platform/tool-process.ts:114"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/foundation/platform/tool-process.ts",
+      "name": "ToolFailure",
+      "kind": "types",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/foundation/platform/tool-process.ts:14"
+      ],
+      "uses": [
+        "src/core/foundation/platform/tool-process.ts:23",
+        "src/core/foundation/platform/tool-process.ts:49"
+      ],
+      "reason": "Type used in the owner or its exposed structural contract at the named reference; retain the model and its established visibility."
+    },
+    {
+      "file": "src/core/foundation/text/width.ts",
+      "name": "widthMethod",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "remove",
+      "definitionBefore": [
+        "src/core/foundation/text/width.ts:77"
+      ],
+      "reason": "No local, imported, re-exported or dynamic symbol consumer; no worker/build entry, test/script or documented invocation. Remove the unused declaration."
+    },
+    {
+      "file": "src/core/foundation/workers/worker-context.ts",
+      "name": "walkEnvName",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/foundation/workers/worker-context.ts:16"
+      ],
+      "uses": [
+        "src/core/foundation/workers/worker-context.ts:23",
+        "src/core/foundation/workers/worker-context.ts:30"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/rendering/export/assets/fonts.ts",
+      "name": "faceName",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "remove",
+      "definitionBefore": [
+        "src/core/rendering/export/assets/fonts.ts:197"
+      ],
+      "reason": "No local, imported, re-exported or dynamic symbol consumer; no worker/build entry, test/script or documented invocation. Remove the unused declaration."
+    },
+    {
+      "file": "src/core/rendering/export/assets/fonts.ts",
+      "name": "fontFiles",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/rendering/export/assets/fonts.ts:118"
+      ],
+      "uses": [
+        "src/core/rendering/export/assets/fonts.ts:174"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/rendering/export/assets/style.ts",
+      "name": "CALLOUT_COLOURS",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/rendering/export/assets/style.ts:16"
+      ],
+      "uses": [
+        "src/core/rendering/export/assets/style.ts:38"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/rendering/export/formats/hast.ts",
+      "name": "PAGE_CSS_PX",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/rendering/export/formats/hast.ts:25"
+      ],
+      "uses": [
+        "src/core/rendering/export/formats/hast.ts:105"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/rendering/export/formats/hast.ts",
+      "name": "plain",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "remove",
+      "reason": "Only a self-recursive reference inside its own body; no external or owner-local caller, dynamic consumer, worker/build entry, test/script use or documented invocation.",
+      "definitionBefore": [
+        "src/core/rendering/export/formats/hast.ts:191"
+      ]
+    },
+    {
+      "file": "src/core/rendering/export/formats/pdf/contracts.ts",
+      "name": "FlowOptions",
+      "kind": "types",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/rendering/export/formats/pdf/contracts.ts:63"
+      ],
+      "uses": [
+        "src/core/rendering/export/formats/pdf/contracts.ts:64"
+      ],
+      "reason": "Type used in the owner or its exposed structural contract at the named reference; retain the model and its established visibility."
+    },
+    {
+      "file": "src/core/rendering/export/formats/pdf/contracts.ts",
+      "name": "Run",
+      "kind": "types",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/rendering/export/formats/pdf/contracts.ts:20"
+      ],
+      "uses": [
+        "src/core/rendering/export/formats/pdf/contracts.ts:31"
+      ],
+      "reason": "Type used in the owner or its exposed structural contract at the named reference; retain the model and its established visibility."
+    },
+    {
+      "file": "src/core/rendering/export/index.ts",
+      "name": "isMarkdownExport",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/rendering/export/mark.ts:25"
+      ],
+      "uses": [
+        "src/core/workspace/graph/graph-lookup.ts:72"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/core/rendering/export/jobs.ts",
+      "name": "ExportStage",
+      "kind": "types",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/rendering/export/jobs.ts:13"
+      ],
+      "uses": [
+        "src/core/rendering/export/jobs.ts:31",
+        "src/core/rendering/export/jobs.ts:162"
+      ],
+      "reason": "Type used in the owner or its exposed structural contract at the named reference; retain the model and its established visibility."
+    },
+    {
+      "file": "src/core/rendering/export/stream.ts",
+      "name": "utf8",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/rendering/export/encoding.ts:6"
+      ],
+      "uses": [
+        "src/core/rendering/export/formats/html.ts:48",
+        "src/core/rendering/export/formats/html.ts:56"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/core/rendering/layout/code/code.ts",
+      "name": "CodeLayoutOptions",
+      "kind": "types",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/rendering/layout/code/contracts.ts:7"
+      ],
+      "uses": [
+        "src/core/rendering/layout/code/page/compose.ts:24"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/core/rendering/layout/code/code.ts",
+      "name": "CommentPath",
+      "kind": "types",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/rendering/layout/code/contracts.ts:32"
+      ],
+      "uses": [
+        "src/core/rendering/layout/code/documentation/layout.ts:138",
+        "src/core/rendering/layout/code/documentation/layout.ts:139"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/core/rendering/layout/ir.ts",
+      "name": "spanWidthText",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "remove",
+      "definitionBefore": [
+        "src/core/rendering/layout/ir.ts:201"
+      ],
+      "reason": "No local, imported, re-exported or dynamic symbol consumer; no worker/build entry, test/script or documented invocation. Remove the unused declaration."
+    },
+    {
+      "file": "src/core/rendering/layout/markdown/contracts.ts",
+      "name": "CachedBlock",
+      "kind": "types",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/rendering/layout/markdown/contracts.ts:91"
+      ],
+      "uses": [
+        "src/core/rendering/layout/markdown/contracts.ts:88"
+      ],
+      "reason": "Type used in the owner or its exposed structural contract at the named reference; retain the model and its established visibility."
+    },
+    {
+      "file": "src/core/rendering/layout/markdown/contracts.ts",
+      "name": "PictureSize",
+      "kind": "types",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/rendering/layout/markdown/contracts.ts:56"
+      ],
+      "uses": [
+        "src/core/rendering/layout/markdown/contracts.ts:50",
+        "src/core/rendering/layout/markdown/contracts.ts:51"
+      ],
+      "reason": "Type used in the owner or its exposed structural contract at the named reference; retain the model and its established visibility."
+    },
+    {
+      "file": "src/core/rendering/layout/markdown/render.ts",
+      "name": "heading",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/rendering/layout/markdown/blocks/headings.ts:11"
+      ],
+      "uses": [
+        "src/core/rendering/layout/markdown/blocks/dispatch.ts:94"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/core/rendering/layout/markdown/render.ts",
+      "name": "Embedded",
+      "kind": "types",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/rendering/layout/markdown/contracts.ts:62"
+      ],
+      "uses": [
+        "src/core/rendering/layout/markdown/pictures/layout.ts:149",
+        "src/core/rendering/layout/markdown/blocks/dispatch.ts:274"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/core/rendering/layout/markdown/render.ts",
+      "name": "PictureSize",
+      "kind": "types",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/rendering/layout/markdown/contracts.ts:56"
+      ],
+      "uses": [
+        "src/core/rendering/layout/markdown/contracts.ts:50",
+        "src/core/rendering/layout/markdown/contracts.ts:51"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/core/rendering/media/diagrams/diagram-render.ts",
+      "name": "MERMAID",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/rendering/media/diagrams/diagram-render.ts:10"
+      ],
+      "uses": [
+        "src/core/rendering/media/diagrams/diagram-render.ts:15",
+        "src/core/rendering/media/diagrams/diagram-render.ts:20"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/rendering/media/diagrams/diagram-render.ts",
+      "name": "mermaid",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/rendering/media/diagrams/diagram-render.ts:14"
+      ],
+      "uses": [
+        "src/core/rendering/media/diagrams/diagram-render.ts:38",
+        "src/core/rendering/media/diagrams/diagram-render.ts:81"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/rendering/media/diagrams/diagram-render.ts",
+      "name": "withoutWindow",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/rendering/media/diagrams/diagram-render.ts:53"
+      ],
+      "uses": [
+        "src/core/rendering/media/diagrams/diagram-render.ts:41"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/rendering/theme/glyphs.ts",
+      "name": "detectGlyphMode",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/rendering/theme/glyphs.ts:495"
+      ],
+      "uses": [
+        "src/core/rendering/theme/glyphs.ts:515"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/rendering/theme/index.ts",
+      "name": "DEFAULT_THEME",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/rendering/theme/index.ts:22"
+      ],
+      "uses": [
+        "src/core/rendering/theme/index.ts:71",
+        "src/core/rendering/theme/index.ts:75"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/workspace/git/branches/gitbranches.ts",
+      "name": "DEFAULT_WORKTREES",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/workspace/git/branches/gitbranches.ts:289"
+      ],
+      "uses": [
+        "src/core/workspace/git/branches/gitbranches.ts:297"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/workspace/git/branches/gitbranches.ts",
+      "name": "IGNORED_MAX",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/workspace/git/branches/gitbranches.ts:149"
+      ],
+      "uses": [
+        "src/core/workspace/git/branches/gitbranches.ts:169"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/workspace/git/branches/gitbranches.ts",
+      "name": "gitLater",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/workspace/git/branches/gitbranches.ts:31"
+      ],
+      "uses": [
+        "src/core/workspace/git/branches/gitbranches.ts:105",
+        "src/core/workspace/git/branches/gitbranches.ts:157"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/workspace/git/branches/gitbranches.ts",
+      "name": "gitNow",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/workspace/git/branches/gitbranches.ts:42"
+      ],
+      "uses": [
+        "src/core/workspace/git/branches/gitbranches.ts:345",
+        "src/core/workspace/git/branches/gitbranches.ts:353"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/workspace/git/branches/gitbranches.ts",
+      "name": "parseBranches",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/workspace/git/branches/gitbranches.ts:91"
+      ],
+      "uses": [
+        "src/core/workspace/git/branches/gitbranches.ts:120"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/workspace/git/branches/gitremote.ts",
+      "name": "parseStashes",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/workspace/git/branches/gitremote.ts:383"
+      ],
+      "uses": [
+        "src/core/workspace/git/branches/gitremote.ts:396"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/workspace/git/gitbase.ts",
+      "name": "basesFile",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/workspace/git/gitbase.ts:15"
+      ],
+      "uses": [
+        "src/core/workspace/git/gitbase.ts:31",
+        "src/core/workspace/git/gitbase.ts:60"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/workspace/git/gitbase.ts",
+      "name": "plainName",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/workspace/git/gitbase.ts:222"
+      ],
+      "uses": [
+        "src/core/workspace/git/gitbase.ts:244"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/workspace/git/gitrepos.ts",
+      "name": "REPO_DEPTH",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/workspace/git/gitrepos.ts:26"
+      ],
+      "uses": [
+        "src/core/workspace/git/gitrepos.ts:36"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/workspace/git/gitrepos.ts",
+      "name": "groupRepos",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/workspace/git/gitrepos.ts:68"
+      ],
+      "uses": [
+        "src/core/workspace/git/gitrepos.ts:64"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/workspace/git/history/gitlog.ts",
+      "name": "parseBlame",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/workspace/git/history/gitlog.ts:59"
+      ],
+      "uses": [
+        "src/core/workspace/git/history/gitlog.ts:76",
+        "src/core/workspace/git/history/gitlog.ts:128"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/workspace/git/history/gitlog.ts",
+      "name": "parseLog",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/workspace/git/history/gitlog.ts:85"
+      ],
+      "uses": [
+        "src/core/workspace/git/history/gitlog.ts:112",
+        "src/core/workspace/git/history/gitlog.ts:155"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/workspace/git/merge/conflicts.ts",
+      "name": "settle",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/workspace/git/merge/conflicts.ts:231"
+      ],
+      "uses": [
+        "src/core/workspace/git/merge/conflicts.ts:277"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/workspace/git/merge/conflicts.ts",
+      "name": "Plain",
+      "kind": "types",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/workspace/git/merge/conflicts.ts:50"
+      ],
+      "uses": [
+        "src/core/workspace/git/merge/conflicts.ts:55"
+      ],
+      "reason": "Type used in the owner or its exposed structural contract at the named reference; retain the model and its established visibility."
+    },
+    {
+      "file": "src/core/workspace/git/merge/conflicts.ts",
+      "name": "Segment",
+      "kind": "types",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/workspace/git/merge/conflicts.ts:55"
+      ],
+      "uses": [
+        "src/core/workspace/git/merge/conflicts.ts:59",
+        "src/core/workspace/git/merge/conflicts.ts:121"
+      ],
+      "reason": "Type used in the owner or its exposed structural contract at the named reference; retain the model and its established visibility."
+    },
+    {
+      "file": "src/core/workspace/git/merge/conflicts.ts",
+      "name": "Split",
+      "kind": "types",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/workspace/git/merge/conflicts.ts:12"
+      ],
+      "uses": [
+        "src/core/workspace/git/merge/conflicts.ts:39",
+        "src/core/workspace/git/merge/conflicts.ts:164"
+      ],
+      "reason": "Type used in the owner or its exposed structural contract at the named reference; retain the model and its established visibility."
+    },
+    {
+      "file": "src/core/workspace/git/merge/merge.ts",
+      "name": "splitLines",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/workspace/git/merge/merge.ts:8"
+      ],
+      "uses": [
+        "src/core/workspace/git/merge/merge.ts:96",
+        "src/core/workspace/git/merge/merge.ts:477"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/workspace/git/staging/gitstage.ts",
+      "name": "conflicted",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/workspace/git/staging/gitstage.ts:57"
+      ],
+      "uses": [
+        "src/core/workspace/git/staging/gitstage.ts:67",
+        "src/core/workspace/git/staging/gitstage.ts:68"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/workspace/links/convention.ts",
+      "name": "OURS",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/workspace/links/convention.ts:61"
+      ],
+      "uses": [
+        "src/core/workspace/links/convention.ts:213",
+        "src/core/workspace/links/convention.ts:228"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/workspace/links/convention.ts",
+      "name": "LinkExtension",
+      "kind": "types",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/workspace/links/convention.ts:23"
+      ],
+      "uses": [
+        "src/core/workspace/links/convention.ts:39",
+        "src/core/workspace/links/convention.ts:51"
+      ],
+      "reason": "Type used in the owner or its exposed structural contract at the named reference; retain the model and its established visibility."
+    },
+    {
+      "file": "src/core/workspace/links/convention.ts",
+      "name": "LinkPath",
+      "kind": "types",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/workspace/links/convention.ts:22"
+      ],
+      "uses": [
+        "src/core/workspace/links/convention.ts:38",
+        "src/core/workspace/links/convention.ts:50"
+      ],
+      "reason": "Type used in the owner or its exposed structural contract at the named reference; retain the model and its established visibility."
+    },
+    {
+      "file": "src/core/workspace/links/landing.ts",
+      "name": "LANDING_LINES",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/workspace/links/landing.ts:184"
+      ],
+      "uses": [
+        "src/core/workspace/links/landing.ts:196"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/workspace/links/landing.ts",
+      "name": "codeLines",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/workspace/links/landing.ts:143"
+      ],
+      "uses": [
+        "src/core/workspace/links/landing.ts:174"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/workspace/links/links.ts",
+      "name": "UrlKind",
+      "kind": "types",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/workspace/links/links.ts:198"
+      ],
+      "uses": [
+        "src/core/workspace/links/links.ts:201"
+      ],
+      "reason": "Type used in the owner or its exposed structural contract at the named reference; retain the model and its established visibility."
+    },
+    {
+      "file": "src/core/workspace/links/write-link.ts",
+      "name": "pointerTo",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "remove",
+      "definitionBefore": [
+        "src/core/workspace/links/write-link.ts:155"
+      ],
+      "reason": "No local, imported, re-exported or dynamic symbol consumer; no worker/build entry, test/script or documented invocation. Remove the unused declaration."
+    },
+    {
+      "file": "src/core/workspace/mutations/capture.ts",
+      "name": "AT",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/workspace/mutations/capture.ts:154"
+      ],
+      "uses": [
+        "src/core/workspace/mutations/capture.ts:165"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/workspace/mutations/capture.ts",
+      "name": "NOTE",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/workspace/mutations/capture.ts:155"
+      ],
+      "uses": [
+        "src/core/workspace/mutations/capture.ts:190",
+        "src/core/workspace/mutations/capture.ts:194"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/workspace/mutations/files.ts",
+      "name": "within",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/workspace/mutations/files.ts:40"
+      ],
+      "uses": [
+        "src/core/workspace/mutations/files.ts:58",
+        "src/core/workspace/mutations/files.ts:71"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/workspace/mutations/rename/collecting/policy.ts",
+      "name": "landsHidden",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/workspace/mutations/rename/collecting/policy.ts:25"
+      ],
+      "uses": [
+        "src/core/workspace/mutations/rename/collecting/policy.ts:13",
+        "src/core/workspace/mutations/rename/collecting/policy.ts:52"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/workspace/mutations/rename/rename-log.ts",
+      "name": "LoggedFile",
+      "kind": "types",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/workspace/mutations/rename/rename-log.ts:10"
+      ],
+      "uses": [
+        "src/core/workspace/mutations/rename/rename-log.ts:40"
+      ],
+      "reason": "Type used in the owner or its exposed structural contract at the named reference; retain the model and its established visibility."
+    },
+    {
+      "file": "src/core/workspace/mutations/rename/rename-plan.ts",
+      "name": "landsHidden",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/workspace/mutations/rename/collecting/policy.ts:25"
+      ],
+      "uses": [
+        "src/core/workspace/mutations/rename/collecting/policy.ts:13",
+        "src/core/workspace/mutations/rename/collecting/policy.ts:52"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/core/workspace/search/model/sections.ts",
+      "name": "BAND_MIN",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/workspace/search/model/sections.ts:13"
+      ],
+      "uses": [
+        "src/core/workspace/search/model/sections.ts:75",
+        "src/core/workspace/search/model/sections.ts:116"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/workspace/search/regex-jobs.ts",
+      "name": "regexDeadline",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/workspace/search/regex-jobs.ts:37"
+      ],
+      "uses": [
+        "src/core/workspace/search/regex-jobs.ts:74",
+        "src/core/workspace/search/regex-jobs.ts:120"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/workspace/search/regex-jobs.ts",
+      "name": "LayoutMatches",
+      "kind": "types",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/workspace/search/regex-jobs.ts:30"
+      ],
+      "uses": [
+        "src/core/workspace/search/regex-jobs.ts:89",
+        "src/core/workspace/search/regex-jobs.ts:118"
+      ],
+      "reason": "Type used in the owner or its exposed structural contract at the named reference; retain the model and its established visibility."
+    },
+    {
+      "file": "src/core/workspace/search/search-index.ts",
+      "name": "WEIGHTS",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/workspace/search/indexing/weights.ts:2"
+      ],
+      "uses": [
+        "src/core/workspace/search/execution/scan.ts:98"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/core/workspace/search/search.ts",
+      "name": "BAND_MIN",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/workspace/search/model/sections.ts:13"
+      ],
+      "uses": [
+        "src/core/workspace/search/model/sections.ts:75",
+        "src/core/workspace/search/model/sections.ts:116"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/core/workspace/search/search.ts",
+      "name": "searchable",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/workspace/search/indexing/files.ts:11"
+      ],
+      "uses": [
+        "src/core/workspace/search/execution/scan.ts:15"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/core/workspace/search/search.ts",
+      "name": "Doc",
+      "kind": "types",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/workspace/search/model/contracts.ts:31"
+      ],
+      "uses": [
+        "src/core/workspace/search/model/document.ts:27"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/core/workspace/search/search.ts",
+      "name": "DocLine",
+      "kind": "types",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/workspace/search/model/contracts.ts:4"
+      ],
+      "uses": [
+        "src/core/workspace/search/model/sections.ts:39"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/core/workspace/search/search.ts",
+      "name": "DocSection",
+      "kind": "types",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/workspace/search/model/contracts.ts:14"
+      ],
+      "uses": [
+        "src/core/workspace/search/model/sections.ts:82",
+        "src/core/workspace/search/model/sections.ts:97"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/core/workspace/search/search.ts",
+      "name": "QueryTerm",
+      "kind": "types",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/workspace/search/model/contracts.ts:60"
+      ],
+      "uses": [
+        "src/core/workspace/search/query/parsing.ts:38",
+        "src/core/workspace/search/matching/text.ts:25"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/core/workspace/search/search.ts",
+      "name": "SearchQuery",
+      "kind": "types",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/workspace/search/model/contracts.ts:72"
+      ],
+      "uses": [
+        "src/core/workspace/search/query/parsing.ts:12",
+        "src/core/workspace/search/query/parsing.ts:13"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/core/workspace/session/position.ts",
+      "name": "isAnchor",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/workspace/session/position.ts:340"
+      ],
+      "uses": [
+        "src/core/workspace/session/position.ts:127",
+        "src/core/workspace/session/position.ts:146"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/workspace/session/position.ts",
+      "name": "isCursorAnchor",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/workspace/session/position.ts:125"
+      ],
+      "uses": [
+        "src/core/workspace/session/position.ts:149",
+        "src/core/workspace/session/position.ts:285"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/workspace/session/position.ts",
+      "name": "SessionPane",
+      "kind": "types",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/workspace/session/position.ts:271"
+      ],
+      "uses": [
+        "src/core/workspace/session/position.ts:299"
+      ],
+      "reason": "Type used in the owner or its exposed structural contract at the named reference; retain the model and its established visibility."
+    },
+    {
+      "file": "src/core/workspace/session/position.ts",
+      "name": "SessionPlace",
+      "kind": "types",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/workspace/session/position.ts:265"
+      ],
+      "uses": [
+        "src/core/workspace/session/position.ts:276",
+        "src/core/workspace/session/position.ts:277"
+      ],
+      "reason": "Type used in the owner or its exposed structural contract at the named reference; retain the model and its established visibility."
+    },
+    {
+      "file": "src/core/workspace/vaults/home.ts",
+      "name": "under",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/workspace/vaults/home/paths.ts:10"
+      ],
+      "uses": [
+        "src/core/workspace/vaults/home/cache.ts:105",
+        "src/core/workspace/vaults/home/cache.ts:188"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/core/workspace/vaults/mounts.ts",
+      "name": "mountTable",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/workspace/vaults/mounts.ts:62"
+      ],
+      "uses": [
+        "src/core/workspace/vaults/mounts.ts:57",
+        "src/core/workspace/vaults/mounts.ts:82"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/workspace/vaults/names.ts",
+      "name": "branchAt",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/workspace/vaults/names.ts:11"
+      ],
+      "uses": [
+        "src/core/workspace/vaults/names.ts:28"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/workspace/vaults/registry.ts",
+      "name": "identityOf",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/workspace/vaults/registry.ts:76"
+      ],
+      "uses": [
+        "src/core/workspace/vaults/registry.ts:72",
+        "src/core/workspace/vaults/registry.ts:138"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/workspace/vaults/symlinks.ts",
+      "name": "unfollowedLink",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/workspace/vaults/symlinks.ts:297"
+      ],
+      "uses": [
+        "src/core/workspace/vaults/symlinks.ts:356"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/workspace/vaults/vault-feed.ts",
+      "name": "SWITCH_SETTLE_MS",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/workspace/vaults/vault-feed.ts:21"
+      ],
+      "uses": [
+        "src/core/workspace/vaults/vault-feed.ts:176"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/workspace/walk/filtering/policy.ts",
+      "name": "BUSY_FOLDERS",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/workspace/walk/filtering/policy.ts:16"
+      ],
+      "uses": [
+        "src/core/workspace/walk/filtering/policy.ts:34"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/workspace/walk/walk-jobs.ts",
+      "name": "answerWalk",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/workspace/walk/walk-jobs.ts:54"
+      ],
+      "uses": [
+        "src/core/workspace/walk/walk-jobs.ts:95"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/core/workspace/walk/walk.ts",
+      "name": "BUSY_FOLDERS",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/workspace/walk/filtering/policy.ts:16"
+      ],
+      "uses": [
+        "src/core/workspace/walk/filtering/policy.ts:34"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/core/workspace/walk/walk.ts",
+      "name": "SETTLE_MS",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/workspace/walk/io/stamps.ts:11"
+      ],
+      "uses": [
+        "src/core/workspace/vaults/home/cache.ts:146",
+        "src/core/workspace/vaults/home/cache.ts:154"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/core/workspace/walk/walk.ts",
+      "name": "busyWhy",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/workspace/walk/filtering/policy.ts:51"
+      ],
+      "uses": [
+        "src/core/workspace/walk/filtering/filter.ts:203",
+        "tests/core/workspace/walk/mechanisms.test.ts:50"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/core/workspace/walk/walk.ts",
+      "name": "dirStamp",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/workspace/walk/io/stamps.ts:45"
+      ],
+      "uses": [
+        "src/core/workspace/walk/traversal/listing.ts:18"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/core/workspace/walk/walk.ts",
+      "name": "lost",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/workspace/walk/io/stamps.ts:20"
+      ],
+      "uses": [
+        "src/core/workspace/walk/traversal/listing.ts:94",
+        "src/core/workspace/vaults/home/cache.ts:138"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/core/workspace/walk/walk.ts",
+      "name": "parentOf",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/workspace/walk/io/stamps.ts:26"
+      ],
+      "uses": [
+        "src/core/workspace/walk/traversal/listing.ts:56",
+        "src/core/workspace/walk/traversal/listing.ts:94"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/core/workspace/walk/walk.ts",
+      "name": "settled",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/workspace/walk/io/stamps.ts:15"
+      ],
+      "uses": [
+        "src/core/workspace/graph/watch/directories.ts:145",
+        "src/core/workspace/graph/watch.ts:266"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/core/workspace/walk/walk.ts",
+      "name": "symlinkVerdict",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/workspace/walk/traversal/symlinks.ts:29"
+      ],
+      "uses": [
+        "src/core/workspace/walk/traversal/listing.ts:52",
+        "src/core/workspace/vaults/home/paths.ts:66"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/core/workspace/walk/walk.ts",
+      "name": "HomeSkip",
+      "kind": "types",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/workspace/walk/contracts.ts:45"
+      ],
+      "uses": [
+        "src/core/workspace/walk/filtering/policy.ts:66"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/core/workspace/walk/walk.ts",
+      "name": "LinkVerdict",
+      "kind": "types",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/workspace/walk/contracts.ts:65"
+      ],
+      "uses": [
+        "src/core/workspace/walk/traversal/symlinks.ts:29"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/core/workspace/walk/walk.ts",
+      "name": "Stamp",
+      "kind": "types",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/core/workspace/walk/contracts.ts:36"
+      ],
+      "uses": [
+        "src/core/workspace/walk/io/stamps.ts:32",
+        "src/core/workspace/walk/io/stamps.ts:39"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/tui/app/runtime/app.ts",
+      "name": "fileUnwritable",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/documents/buffers/opening.ts:34"
+      ],
+      "uses": [
+        "src/tui/documents/buffers/opening.ts:29"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/tui/app/runtime/app.ts",
+      "name": "lockedSaid",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/documents/buffers/opening.ts:28"
+      ],
+      "uses": [
+        "src/tui/documents/buffers/opening.ts:93",
+        "src/tui/documents/buffers/opening.ts:144"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/tui/documents/buffers/buffer.ts",
+      "name": "TextEdit",
+      "kind": "types",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/documents/buffers/buffer.ts:42"
+      ],
+      "uses": [
+        "src/tui/documents/buffers/buffer.ts:50"
+      ],
+      "reason": "Type used in the owner or its exposed structural contract at the named reference; retain the model and its established visibility."
+    },
+    {
+      "file": "src/tui/documents/buffers/opening.ts",
+      "name": "fileUnwritable",
+      "kind": "exports",
+      "reports": [
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/documents/buffers/opening.ts:34"
+      ],
+      "uses": [
+        "src/tui/documents/buffers/opening.ts:29"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/tui/documents/buffers/opening.ts",
+      "name": "lockedSaid",
+      "kind": "exports",
+      "reports": [
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/documents/buffers/opening.ts:28"
+      ],
+      "uses": [
+        "src/tui/documents/buffers/opening.ts:93",
+        "src/tui/documents/buffers/opening.ts:144"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/tui/documents/editing/completion.ts",
+      "name": "linkTargetStart",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/documents/editing/completion/context.ts:18"
+      ],
+      "uses": [
+        "tests/tui/documents/editing/contexts.test.ts:47",
+        "tests/tui/documents/editing/contexts.test.ts:50"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/tui/documents/editing/completion.ts",
+      "name": "wikiTargetStart",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/documents/editing/completion/context.ts:25"
+      ],
+      "uses": [
+        "tests/tui/documents/editing/contexts.test.ts:48",
+        "tests/tui/documents/editing/contexts.test.ts:49"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/tui/documents/editing/completion.ts",
+      "name": "wordStart",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/documents/editing/completion/context.ts:11"
+      ],
+      "uses": [
+        "tests/tui/documents/editing/contexts.test.ts:41",
+        "tests/tui/documents/editing/contexts.test.ts:42"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/tui/documents/editing/cursor.ts",
+      "name": "lastRow",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/documents/editing/cursor.ts:63"
+      ],
+      "uses": [
+        "src/tui/documents/editing/cursor.ts:76",
+        "src/tui/documents/editing/cursor.ts:80"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/tui/documents/editing/cursor.ts",
+      "name": "samePos",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "remove",
+      "definitionBefore": [
+        "src/tui/documents/editing/cursor.ts:291"
+      ],
+      "reason": "No local, imported, re-exported or dynamic symbol consumer; no worker/build entry, test/script or documented invocation. Remove the unused declaration."
+    },
+    {
+      "file": "src/tui/documents/editing/editing.ts",
+      "name": "backspace",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/documents/editing/source/deleting.ts:20"
+      ],
+      "uses": [
+        "src/tui/documents/editing/source/keyboard.ts:183"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/tui/documents/editing/editing.ts",
+      "name": "commentLine",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/documents/editing/source/lines.ts:34"
+      ],
+      "uses": [
+        "src/tui/documents/editing/source/keyboard.ts:194"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/tui/documents/editing/editing.ts",
+      "name": "deleteForward",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/documents/editing/source/deleting.ts:33"
+      ],
+      "uses": [
+        "src/tui/documents/editing/source/keyboard.ts:185"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/tui/documents/editing/editing.ts",
+      "name": "deleteToLineStart",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/documents/editing/source/deleting.ts:57"
+      ],
+      "uses": [
+        "src/tui/documents/editing/source/keyboard.ts:191"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/tui/documents/editing/editing.ts",
+      "name": "deleteWordBack",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/documents/editing/source/deleting.ts:42"
+      ],
+      "uses": [
+        "src/tui/documents/editing/source/keyboard.ts:189"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/tui/documents/editing/editing.ts",
+      "name": "indentLine",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/documents/editing/source/lines.ts:10"
+      ],
+      "uses": [
+        "src/tui/documents/editing/source/keyboard.ts:196",
+        "src/tui/documents/editing/source/keyboard.ts:198"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/tui/documents/editing/editing.ts",
+      "name": "lensWhat",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/documents/editing/source/policy.ts:17"
+      ],
+      "uses": [
+        "tests/tui/documents/editing/source-mechanisms.test.ts:48",
+        "tests/tui/documents/editing/source-mechanisms.test.ts:50"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/tui/documents/editing/lens.ts",
+      "name": "MODES",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/shell/input/modes.ts:10"
+      ],
+      "uses": [
+        "src/tui/documents/views/header-layout.ts:62",
+        "src/tui/documents/views/header-layout.ts:66"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/tui/documents/export/exporter.ts",
+      "name": "isDir",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/documents/export/exporter.ts:273"
+      ],
+      "uses": [
+        "src/tui/documents/export/exporter.ts:186"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/tui/documents/media/images.ts",
+      "name": "SCREEN_PIXELS",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/documents/media/images.ts:27"
+      ],
+      "uses": [
+        "src/tui/documents/media/images.ts:50"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/tui/documents/media/images.ts",
+      "name": "SCREEN_SIDE",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/documents/media/images.ts:28"
+      ],
+      "uses": [
+        "src/tui/documents/media/images.ts:50"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/tui/documents/media/pictures.ts",
+      "name": "DRAWING_ROWS",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/documents/media/pictures.ts:417"
+      ],
+      "uses": [
+        "src/tui/documents/media/pictures.ts:371"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/tui/documents/media/pictures.ts",
+      "name": "pictureAt",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/documents/media/pictures.ts:436"
+      ],
+      "uses": [
+        "src/tui/documents/media/pictures.ts:143",
+        "src/tui/documents/media/pictures.ts:168"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/tui/documents/navigation/peek.ts",
+      "name": "goThere",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/documents/navigation/peek/paths.ts:49"
+      ],
+      "uses": [
+        "src/tui/documents/navigation/peek/opening.ts:29",
+        "src/tui/documents/navigation/peek/history.ts:59"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/tui/documents/saving/saveas.ts",
+      "name": "chosen",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/documents/saving/saveas.ts:161"
+      ],
+      "uses": [
+        "src/tui/documents/saving/saveas.ts:172"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/tui/documents/saving/saveas.ts",
+      "name": "go",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/documents/saving/saveas.ts:128"
+      ],
+      "uses": [
+        "src/tui/documents/saving/saveas.ts:122",
+        "src/tui/documents/saving/saveas.ts:154"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/tui/documents/search/replacing.ts",
+      "name": "replaceEvery",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/documents/search/replacing.ts:206"
+      ],
+      "uses": [
+        "src/tui/documents/search/replacing.ts:197"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/tui/documents/search/replacing.ts",
+      "name": "Confirm",
+      "kind": "types",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/documents/search/replacing.ts:34"
+      ],
+      "uses": [
+        "src/tui/documents/search/replacing.ts:30",
+        "src/tui/documents/search/replacing.ts:294"
+      ],
+      "reason": "Type used in the owner or its exposed structural contract at the named reference; retain the model and its established visibility."
+    },
+    {
+      "file": "src/tui/documents/views/draw-pane.ts",
+      "name": "MARK_ROLE",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/documents/views/drawing/marks/problems.ts:30"
+      ],
+      "uses": [
+        "src/tui/documents/diagnostics/draw-problems.ts:163"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/tui/documents/views/draw-pane.ts",
+      "name": "SEVERITY_ROLE",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/documents/views/drawing/marks/problems.ts:22"
+      ],
+      "uses": [
+        "src/tui/documents/diagnostics/draw-problems.ts:112",
+        "src/tui/shell/screen/statusbar/draw-status.ts:228"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/tui/documents/views/draw-pane.ts",
+      "name": "drawCompletion",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/documents/views/drawing/chrome/popups.ts:11"
+      ],
+      "uses": [
+        "src/tui/shell/screen/draw.ts:214"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/tui/documents/views/draw-pane.ts",
+      "name": "drawHScrollbar",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/documents/views/drawing/chrome/scrollbars.ts:29"
+      ],
+      "uses": [
+        "src/tui/shell/panels/drawing/rows.ts:67",
+        "src/tui/documents/views/drawing/pane.ts:381"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/tui/documents/views/draw-pane.ts",
+      "name": "drawSignature",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/documents/views/drawing/chrome/popups.ts:43"
+      ],
+      "uses": [
+        "src/tui/shell/screen/draw.ts:211"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/tui/documents/views/draw-pane.ts",
+      "name": "paneScrollbar",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/documents/views/drawing/chrome/scrollbars.ts:11"
+      ],
+      "uses": [
+        "src/tui/workspace/git/views/panel/draw-git.ts:122",
+        "src/tui/workspace/explorer/drawing/panel.ts:172"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/tui/documents/views/draw-pane.ts",
+      "name": "severityGlyph",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/documents/views/drawing/marks/problems.ts:11"
+      ],
+      "uses": [
+        "src/tui/documents/diagnostics/draw-problems.ts:110",
+        "src/tui/shell/screen/statusbar/draw-status.ts:222"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/tui/shell/input/input.ts",
+      "name": "mergeSameAction",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/shell/input/input.ts:459"
+      ],
+      "uses": [
+        "src/tui/shell/input/input.ts:248",
+        "src/tui/shell/input/input.ts:280"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/tui/shell/input/keys.ts",
+      "name": "MOVE_COMMANDS",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/shell/input/keys/bindings.ts:34"
+      ],
+      "uses": [
+        "tests/tui/shell/input/mechanisms/keys.test.ts:17"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/tui/shell/input/keys.ts",
+      "name": "KeyLike",
+      "kind": "types",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/shell/input/keys/decoding.ts:3"
+      ],
+      "uses": [
+        "src/tui/shell/input/keys/decoding.ts:32"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/tui/shell/input/vim.ts",
+      "name": "firstNonBlank",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/shell/input/vim/motions.ts:117"
+      ],
+      "uses": [
+        "src/tui/shell/input/vim/edits.ts:45",
+        "src/tui/shell/input/vim/edits.ts:80"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/tui/shell/input/vim.ts",
+      "name": "indentLines",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/shell/input/vim/edits.ts:66"
+      ],
+      "uses": [
+        "src/tui/shell/input/vim/edits.ts:25"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/tui/shell/input/vim.ts",
+      "name": "textObject",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/shell/input/vim/motions.ts:125"
+      ],
+      "uses": [
+        "src/tui/shell/input/vim/operators.ts:41",
+        "src/tui/shell/input/vim/grammar.ts:92"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/tui/shell/input/vim.ts",
+      "name": "VimState",
+      "kind": "types",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/shell/input/vim/state.ts:20"
+      ],
+      "uses": [
+        "src/tui/shell/input/vim/state.ts:48"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/tui/shell/input/vim/edits.ts",
+      "name": "indentLines",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/shell/input/vim/edits.ts:66"
+      ],
+      "uses": [
+        "src/tui/shell/input/vim/edits.ts:25"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/tui/shell/overlays/dialog.ts",
+      "name": "DROP_MS",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/shell/overlays/dialog.ts:49"
+      ],
+      "uses": [
+        "src/tui/shell/overlays/dialog.ts:88"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/tui/shell/overlays/dialog.ts",
+      "name": "tooEarly",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/shell/overlays/dialog.ts:87"
+      ],
+      "uses": [
+        "src/tui/shell/overlays/dialog.ts:135",
+        "src/tui/shell/overlays/dialog.ts:155"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/tui/shell/overlays/overlays.ts",
+      "name": "step",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/shell/overlays/overlays.ts:403"
+      ],
+      "uses": [
+        "src/tui/shell/overlays/overlays.ts:305",
+        "src/tui/shell/overlays/overlays.ts:310"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/tui/shell/panels/draw-panels.ts",
+      "name": "drawFootnotes",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/documents/tools/footnotes/draw.ts:23"
+      ],
+      "uses": [
+        "src/tui/shell/screen/draw.ts:161"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/tui/shell/panels/draw-panels.ts",
+      "name": "drawInfo",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/documents/tools/info/draw.ts:20"
+      ],
+      "uses": [
+        "src/tui/shell/screen/draw.ts:163"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/tui/shell/panels/draw-panels.ts",
+      "name": "drawOutline",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/documents/tools/outline/draw.ts:18"
+      ],
+      "uses": [
+        "src/tui/shell/screen/draw.ts:164"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/tui/shell/panels/draw-panels.ts",
+      "name": "filterRow",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/shell/panels/drawing/chrome.ts:32"
+      ],
+      "uses": [
+        "src/tui/workspace/git/views/panel/draw-git.ts:95",
+        "src/tui/documents/tools/info/draw.ts:33"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/tui/shell/panels/draw-panels.ts",
+      "name": "followSelection",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/shell/panels/drawing/selection.ts:10"
+      ],
+      "uses": [
+        "src/tui/workspace/git/views/panel/draw-git.ts:100",
+        "src/tui/workspace/explorer/drawing/panel.ts:81"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/tui/shell/panels/draw-panels.ts",
+      "name": "smallButton",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/shell/panels/drawing/chrome.ts:56"
+      ],
+      "uses": [
+        "src/tui/workspace/explorer/drawing/panel.ts:138",
+        "src/tui/documents/tools/footnotes/draw.ts:34"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/tui/shell/screen/draw.ts",
+      "name": "drawBreadcrumb",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/documents/views/drawing/breadcrumb.ts:16"
+      ],
+      "uses": [
+        "src/tui/documents/views/draw-header.ts:61"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/tui/shell/screen/draw.ts",
+      "name": "PaneGeom",
+      "kind": "types",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/shell/screen/geometry/contracts.ts:9"
+      ],
+      "uses": [
+        "src/tui/shell/input/mouse/gestures.ts:40"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/tui/shell/screen/draw.ts",
+      "name": "ScrollbarGeom",
+      "kind": "types",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/shell/screen/geometry/contracts.ts:22"
+      ],
+      "uses": [
+        "src/tui/shell/input/mouse/gestures.ts:19",
+        "src/tui/shell/input/mouse/gestures.ts:210"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/tui/shell/screen/draw.ts",
+      "name": "Separator",
+      "kind": "types",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/shell/screen/geometry/contracts.ts:16"
+      ],
+      "uses": [
+        "src/tui/shell/input/mouse/gestures.ts:18"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/tui/shell/screen/geometry/contracts.ts",
+      "name": "PaneGeom",
+      "kind": "types",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/shell/screen/geometry/contracts.ts:9"
+      ],
+      "uses": [
+        "src/tui/shell/input/mouse/gestures.ts:40"
+      ],
+      "reason": "Type used in the owner or its exposed structural contract at the named reference; retain the model and its established visibility."
+    },
+    {
+      "file": "src/tui/shell/screen/geometry/contracts.ts",
+      "name": "ScrollbarGeom",
+      "kind": "types",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/shell/screen/geometry/contracts.ts:22"
+      ],
+      "uses": [
+        "src/tui/shell/input/mouse/gestures.ts:19",
+        "src/tui/shell/input/mouse/gestures.ts:210"
+      ],
+      "reason": "Type used in the owner or its exposed structural contract at the named reference; retain the model and its established visibility."
+    },
+    {
+      "file": "src/tui/shell/screen/geometry/contracts.ts",
+      "name": "Separator",
+      "kind": "types",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/shell/screen/geometry/contracts.ts:16"
+      ],
+      "uses": [
+        "src/tui/shell/input/mouse/gestures.ts:18"
+      ],
+      "reason": "Type used in the owner or its exposed structural contract at the named reference; retain the model and its established visibility."
+    },
+    {
+      "file": "src/tui/shell/terminal/canvas.ts",
+      "name": "safeCell",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/shell/terminal/canvas.ts:80"
+      ],
+      "uses": [
+        "src/tui/shell/terminal/canvas.ts:90"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/tui/workspace/explorer/contracts.ts",
+      "name": "ExplorerPosition",
+      "kind": "types",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/workspace/explorer/contracts.ts:165"
+      ],
+      "uses": [
+        "src/tui/workspace/explorer/contracts.ts:177",
+        "src/tui/workspace/explorer/contracts.ts:182"
+      ],
+      "reason": "Type used in the owner or its exposed structural contract at the named reference; retain the model and its established visibility."
+    },
+    {
+      "file": "src/tui/workspace/explorer/contracts.ts",
+      "name": "ExplorerUiContext",
+      "kind": "types",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/workspace/explorer/contracts.ts:80"
+      ],
+      "uses": [
+        "src/tui/workspace/explorer/contracts.ts:98",
+        "src/tui/workspace/explorer/contracts.ts:111"
+      ],
+      "reason": "Type used in the owner or its exposed structural contract at the named reference; retain the model and its established visibility."
+    },
+    {
+      "file": "src/tui/workspace/explorer/contracts.ts",
+      "name": "LinkRow",
+      "kind": "types",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/workspace/explorer/contracts.ts:12"
+      ],
+      "uses": [
+        "src/tui/workspace/explorer/contracts.ts:56"
+      ],
+      "reason": "Type used in the owner or its exposed structural contract at the named reference; retain the model and its established visibility."
+    },
+    {
+      "file": "src/tui/workspace/explorer/explorer.ts",
+      "name": "LinkRow",
+      "kind": "types",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/workspace/explorer/contracts.ts:12"
+      ],
+      "uses": [
+        "src/tui/workspace/explorer/contracts.ts:56"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/tui/workspace/explorer/listings.ts",
+      "name": "RETRY_MS",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/workspace/explorer/listings.ts:19"
+      ],
+      "uses": [
+        "src/tui/workspace/explorer/listings.ts:91"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/tui/workspace/git/gitsteady.ts",
+      "name": "keysOf",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/workspace/git/gitsteady.ts:60"
+      ],
+      "uses": [
+        "src/tui/workspace/git/gitsteady.ts:77",
+        "src/tui/workspace/git/gitsteady.ts:146"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/tui/workspace/git/gitsteady.ts",
+      "name": "rowKey",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/workspace/git/gitsteady.ts:19"
+      ],
+      "uses": [
+        "src/tui/workspace/git/gitsteady.ts:65"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/tui/workspace/git/views/branches/gitbranchview.ts",
+      "name": "vaultPath",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "remove",
+      "definitionBefore": [
+        "src/tui/workspace/git/views/branches/gitbranchview.ts:470"
+      ],
+      "reason": "No local, imported, re-exported or dynamic symbol consumer; no worker/build entry, test/script or documented invocation. Remove the unused declaration."
+    },
+    {
+      "file": "src/tui/workspace/git/views/branches/gitbranchview.ts",
+      "name": "BranchButtonsRow",
+      "kind": "types",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/workspace/git/views/contracts.ts:79"
+      ],
+      "uses": [
+        "src/tui/workspace/git/views/contracts.ts:105"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/tui/workspace/git/views/branches/gitbranchview.ts",
+      "name": "BranchLineRow",
+      "kind": "types",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/workspace/git/views/contracts.ts:71"
+      ],
+      "uses": [
+        "src/tui/workspace/git/views/contracts.ts:105"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/tui/workspace/git/views/branches/gitbranchview.ts",
+      "name": "BranchRow",
+      "kind": "types",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/workspace/git/views/contracts.ts:64"
+      ],
+      "uses": [
+        "src/tui/workspace/git/views/contracts.ts:105"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/tui/workspace/git/views/branches/gitbranchview.ts",
+      "name": "BranchSubRow",
+      "kind": "types",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/workspace/git/views/contracts.ts:98"
+      ],
+      "uses": [
+        "src/tui/workspace/git/views/contracts.ts:105"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/tui/workspace/git/views/branches/gitreposview.ts",
+      "name": "RepoCheckoutRow",
+      "kind": "types",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/workspace/git/views/contracts.ts:142"
+      ],
+      "uses": [
+        "src/tui/workspace/git/views/contracts.ts:156"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/tui/workspace/git/views/branches/gitreposview.ts",
+      "name": "RepoRow",
+      "kind": "types",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/workspace/git/views/contracts.ts:135"
+      ],
+      "uses": [
+        "src/tui/workspace/git/views/contracts.ts:156"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/tui/workspace/git/views/changes/diffview.ts",
+      "name": "blocksOf",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/workspace/git/views/changes/diffview.ts:75"
+      ],
+      "uses": [
+        "src/tui/workspace/git/views/changes/diffview.ts:65",
+        "src/tui/workspace/git/views/changes/diffview.ts:72"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/tui/workspace/git/views/contracts.ts",
+      "name": "BranchButtonsRow",
+      "kind": "types",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/workspace/git/views/contracts.ts:79"
+      ],
+      "uses": [
+        "src/tui/workspace/git/views/contracts.ts:105"
+      ],
+      "reason": "Type used in the owner or its exposed structural contract at the named reference; retain the model and its established visibility."
+    },
+    {
+      "file": "src/tui/workspace/git/views/contracts.ts",
+      "name": "BranchLineRow",
+      "kind": "types",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/workspace/git/views/contracts.ts:71"
+      ],
+      "uses": [
+        "src/tui/workspace/git/views/contracts.ts:105"
+      ],
+      "reason": "Type used in the owner or its exposed structural contract at the named reference; retain the model and its established visibility."
+    },
+    {
+      "file": "src/tui/workspace/git/views/contracts.ts",
+      "name": "BranchRow",
+      "kind": "types",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/workspace/git/views/contracts.ts:64"
+      ],
+      "uses": [
+        "src/tui/workspace/git/views/contracts.ts:105"
+      ],
+      "reason": "Type used in the owner or its exposed structural contract at the named reference; retain the model and its established visibility."
+    },
+    {
+      "file": "src/tui/workspace/git/views/contracts.ts",
+      "name": "BranchSubRow",
+      "kind": "types",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/workspace/git/views/contracts.ts:98"
+      ],
+      "uses": [
+        "src/tui/workspace/git/views/contracts.ts:105"
+      ],
+      "reason": "Type used in the owner or its exposed structural contract at the named reference; retain the model and its established visibility."
+    },
+    {
+      "file": "src/tui/workspace/git/views/contracts.ts",
+      "name": "NoteRow",
+      "kind": "types",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/workspace/git/views/contracts.ts:25"
+      ],
+      "uses": [
+        "src/tui/workspace/git/views/contracts.ts:47"
+      ],
+      "reason": "Type used in the owner or its exposed structural contract at the named reference; retain the model and its established visibility."
+    },
+    {
+      "file": "src/tui/workspace/git/views/contracts.ts",
+      "name": "PanelPresentationContext",
+      "kind": "types",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/workspace/git/views/contracts.ts:207"
+      ],
+      "uses": [
+        "src/tui/workspace/git/views/contracts.ts:216"
+      ],
+      "reason": "Type used in the owner or its exposed structural contract at the named reference; retain the model and its established visibility."
+    },
+    {
+      "file": "src/tui/workspace/git/views/contracts.ts",
+      "name": "RepoCheckoutRow",
+      "kind": "types",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/workspace/git/views/contracts.ts:142"
+      ],
+      "uses": [
+        "src/tui/workspace/git/views/contracts.ts:156"
+      ],
+      "reason": "Type used in the owner or its exposed structural contract at the named reference; retain the model and its established visibility."
+    },
+    {
+      "file": "src/tui/workspace/git/views/contracts.ts",
+      "name": "RepoRow",
+      "kind": "types",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/workspace/git/views/contracts.ts:135"
+      ],
+      "uses": [
+        "src/tui/workspace/git/views/contracts.ts:156"
+      ],
+      "reason": "Type used in the owner or its exposed structural contract at the named reference; retain the model and its established visibility."
+    },
+    {
+      "file": "src/tui/workspace/git/views/contracts.ts",
+      "name": "ThisFileRow",
+      "kind": "types",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/workspace/git/views/contracts.ts:39"
+      ],
+      "uses": [
+        "src/tui/workspace/git/views/contracts.ts:51"
+      ],
+      "reason": "Type used in the owner or its exposed structural contract at the named reference; retain the model and its established visibility."
+    },
+    {
+      "file": "src/tui/workspace/git/views/panel/gitmouse.ts",
+      "name": "stageSign",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/workspace/git/views/panel/gitmouse.ts:232"
+      ],
+      "uses": [
+        "src/tui/workspace/git/views/panel/gitmouse.ts:226"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/tui/workspace/git/views/panel/gitpanel.ts",
+      "name": "NoteRow",
+      "kind": "types",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/workspace/git/views/contracts.ts:25"
+      ],
+      "uses": [
+        "src/tui/workspace/git/views/contracts.ts:47"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/tui/workspace/git/views/panel/gitpanel.ts",
+      "name": "ThisFileRow",
+      "kind": "types",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/workspace/git/views/contracts.ts:39"
+      ],
+      "uses": [
+        "src/tui/workspace/git/views/contracts.ts:51"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/tui/workspace/git/views/panel/gitview.ts",
+      "name": "fileChanges",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/workspace/git/views/panel/gitview.ts:116"
+      ],
+      "uses": [
+        "src/tui/workspace/git/views/panel/gitview.ts:151",
+        "src/tui/workspace/git/views/panel/gitview.ts:327"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/tui/workspace/git/views/panel/gitview.ts",
+      "name": "openWorkFile",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/workspace/git/views/panel/gitview.ts:313"
+      ],
+      "uses": [
+        "src/tui/workspace/git/views/panel/gitview.ts:352"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/tui/workspace/git/views/panel/gitview.ts",
+      "name": "showWorkDiff",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/workspace/git/views/panel/gitview.ts:279"
+      ],
+      "uses": [
+        "src/tui/workspace/git/views/panel/gitview.ts:285",
+        "src/tui/workspace/git/views/panel/gitview.ts:350"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/tui/workspace/git/views/panel/gitview.ts",
+      "name": "stateLetter",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/workspace/git/views/panel/gitview.ts:45"
+      ],
+      "uses": [
+        "src/tui/workspace/git/views/panel/gitview.ts:147"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/tui/workspace/git/views/panel/gitview.ts",
+      "name": "ChangeRow",
+      "kind": "types",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/workspace/git/views/contracts.ts:170"
+      ],
+      "uses": [
+        "src/tui/workspace/git/views/contracts.ts:49",
+        "src/tui/workspace/git/views/panel/gitview.ts:35"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/tui/workspace/git/views/panel/gitview.ts",
+      "name": "FileRow",
+      "kind": "types",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/workspace/git/views/contracts.ts:161"
+      ],
+      "uses": [
+        "src/tui/workspace/git/views/contracts.ts:48",
+        "src/tui/workspace/git/views/panel/gitview.ts:35"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "src/tui/workspace/git/views/review/rebase.ts",
+      "name": "operationTitle",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/workspace/git/views/review/rebase.ts:229"
+      ],
+      "uses": [
+        "src/tui/workspace/git/views/review/rebase.ts:244"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/tui/workspace/git/views/review/review.ts",
+      "name": "endReview",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/workspace/git/views/review/review.ts:434"
+      ],
+      "uses": [
+        "src/tui/workspace/git/views/review/review.ts:227"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "src/tui/workspace/search/search.ts",
+      "name": "computeFindReady",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "src/tui/documents/search/find.ts:94"
+      ],
+      "uses": [
+        "src/tui/actions/documents/actions-find.ts:259"
+      ],
+      "reason": "Compatibility re-export of the live lower owner; retain the established entry surface under ORG-D1. The named use consumes that implementation, not this alias."
+    },
+    {
+      "file": "tests/terminal/check.ts",
+      "name": "MODES",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "tests/terminal/check.ts:224"
+      ],
+      "uses": [
+        "tests/terminal/check.ts:237",
+        "tests/terminal/check.ts:241"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "tests/terminal/checks/source-control.ts",
+      "name": "git",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "tests/terminal/checks/source-control.ts:45"
+      ],
+      "uses": [
+        "tests/terminal/checks/source-control.ts:52",
+        "tests/terminal/checks/source-control.ts:846"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "tests/terminal/herdr/session.ts",
+      "name": "CheckFailed",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "tests/terminal/herdr/session.ts:46"
+      ],
+      "uses": [
+        "tests/terminal/herdr/session.ts:194",
+        "tests/terminal/herdr/session.ts:371"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "tests/terminal/herdr/session.ts",
+      "name": "DEMO",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "tests/terminal/herdr/session.ts:14"
+      ],
+      "uses": [
+        "tests/terminal/herdr/session.ts:71"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "tests/terminal/herdr/session.ts",
+      "name": "Stuck",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "tests/terminal/herdr/session.ts:49"
+      ],
+      "uses": [
+        "tests/terminal/herdr/session.ts:169"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "tests/terminal/release-builds.ts",
+      "name": "REPO_NAME",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "tests/terminal/release-builds.ts:16"
+      ],
+      "uses": [
+        "tests/terminal/release-builds.ts:37"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "tests/terminal/release-builds.ts",
+      "name": "buildReleases",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "tests/terminal/release-builds.ts:42"
+      ],
+      "uses": [
+        "tests/terminal/release-builds.ts:79"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "tests/terminal/release-builds.ts",
+      "name": "nextVersion",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "tests/terminal/release-builds.ts:19"
+      ],
+      "uses": [
+        "tests/terminal/release-builds.ts:46"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    },
+    {
+      "file": "tests/terminal/session.ts",
+      "name": "DEMO",
+      "kind": "exports",
+      "reports": [
+        "T41",
+        "current"
+      ],
+      "disposition": "keep",
+      "definition": [
+        "tests/terminal/session.ts:27"
+      ],
+      "uses": [
+        "tests/terminal/session.ts:145"
+      ],
+      "reason": "Live owner-local use at the named reference; retain the implementation and established visibility. Knip reports the export surface, not dead behavior."
+    }
+  ]
+}

@@ -151,11 +151,6 @@ function folderNaming(root: string, there: string, memo?: PointerMemo): PointerN
   return memo ? pointerNaming(ident, (memo.folders ??= readFolders())) : pointerNaming(ident);
 }
 
-/** The pointer to `abs`, as `pointerAt` writes it; null when none is. */
-export function pointerTo(root: string, abs: string): string | null {
-  return pointerAt(root, abs)?.pointer ?? null;
-}
-
 /**
  * A link's ends in a graph: `to` in its root when the root's walk has it (a nested root's file isn't). `memo`, for many
  * links at once: what their pointers share, worked out once.

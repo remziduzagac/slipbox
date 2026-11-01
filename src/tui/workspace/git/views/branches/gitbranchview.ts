@@ -9,7 +9,7 @@
 import { beginGitRead } from "../../gitquery.ts";
 import { existsSync } from "node:fs";
 import { join, relative } from "node:path";
-import { inVault, showLater } from "../../../../../core/workspace/git/branches/gitops.ts";
+import { showLater } from "../../../../../core/workspace/git/branches/gitops.ts";
 import { backToPanel, readForDiff } from "../panel/gitview.ts";
 import {
   type Branch,
@@ -464,10 +464,4 @@ export class BranchView {
     if (here) app.git.beforeCheckout(go, { verb: "merge", noun: "the merge", done: "merged" });
     else go();
   }
-}
-
-/** A path of the checkout, as the vault knows it; null outside it. */
-export function vaultPath(app: App, path: string): string | null {
-  const c = app.git.checkout;
-  return c ? inVault(c, app.loc.root, path) : null;
 }
