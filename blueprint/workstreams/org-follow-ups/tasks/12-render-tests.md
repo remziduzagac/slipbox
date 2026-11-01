@@ -87,3 +87,12 @@ before/after audit; source, snapshot and fixture bytes have not moved.
   Evidence: tmp/issue/ORF-T12-check.log:694, check.exit and verification-summary.json.
 - Build complete; fresh review and merge remain separate stages. Final publication records follow. No full
   suite/all-terminal run, failed-job retry, product behavior change, dependency addition or deadline increase.
+
+## Draft publication
+
+- Draft [PR #190](https://github.com/remziduzagac/slipbox/pull/190) is open into dev from
+  refactor/issue-170-render-tests. Implementation/evidence commit
+  a824c8ccdbb4d6e6a1cfa5efc4d3f880abc3046c is pushed without force. This publication record changes only
+  the task file; product tests are not repeated for it.
+- Final build-record docs and Biome pass with the counts above. Keep the PR draft; fresh review and merge remain
+  separate stages. Final-head CI is pending verification. Stop after this build handoff.
