@@ -50,9 +50,6 @@ const BUNDLED: Record<string, { aff: string; dic: string }> = {
   tr: { aff: trAff, dic: trDic },
 };
 
-/** The languages slipbox brings a dictionary for. */
-export const BUNDLED_LANGUAGES = Object.keys(BUNDLED);
-
 /** Where systems keep Hunspell's dictionaries: Linux's, Homebrew's, macOS's. */
 export function systemDictionaryDirs(home = homedir()): string[] {
   return [

@@ -240,7 +240,7 @@ the CLI: [docs/manual/cli.md](../../docs/manual/cli.md) § `resolve` (`slipbox l
 
 ## Between folders
 
-A link from one file to another is written (D73; `travelTogether` in `core/workspace/vaults/folders.ts`, `pointerTo` in
+A link from one file to another is written (D73; `travelTogether` in `core/workspace/vaults/folders.ts`, `pointerAt` in
 `core/workspace/links/write-link.ts`):
 
 1. in the file's convention, when the two travel together: one clone, or one folder moved as a whole, carries both

@@ -1,5 +1,5 @@
 ---
-status: review
+status: done
 assignee:
 blocked_by: [ORF-T17]
 created: "2026-10-31"
@@ -66,6 +66,23 @@ owners. Log: `tmp/issue/ORF-T18-check.log`. Fresh review and merge are separate 
 
 ## Delivery
 
-[Draft PR #197](https://github.com/remziduzagac/slipbox/pull/197) targets `dev` from
+[PR #197](https://github.com/remziduzagac/slipbox/pull/197) targets `dev` from
 `refactor/issue-170-reading-checks`. Implementation and verification commit:
-`ec9d38d47aa45204ded7302063971caaaa0b67bc`. The results above are local; final-head CI is pending.
+`ec9d38d47aa45204ded7302063971caaaa0b67bc`. Final reviewed and merged head:
+`2aa308c5caf46fad7d268fc65367c3869eb2baf7`.
+
+## Review and merge
+
+The fresh review found no actionable issues. Names, all 552 ordered registrations, the exclusion ledger, all 42
+selectors and the move rules compare equal. Focused verification passes 22 tests and the size gate; the build's
+72/72 terminal results remain the before/after evidence. Review: `tmp/issue/review-ORF-T18.md` and
+`ORF-T18-review-{unit,size,identities}.log`.
+
+CI and CodeQL pass at the exact reviewed head. Before merge, the preceding dev push
+[41334509168](https://github.com/remziduzagac/slipbox/actions/runs/41334509168) passed, including all three terminal
+platforms. PR #197 was marked ready and squash-merged on 2026-11-01 with the reviewed-head guard; squash:
+`6ca74642fa5de706405db8176c18dae25cbb5110`.
+
+The automatic dev push [41336398508](https://github.com/remziduzagac/slipbox/actions/runs/41336398508) passed, including
+all three terminal platforms. Merge evidence: `tmp/issue/ORF-T18-merge-*.json`; completed-run evidence:
+`tmp/issue/ORF-T19-previous-dev.json`.

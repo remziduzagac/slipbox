@@ -5,7 +5,7 @@
 
 import { readdirSync, statSync } from "node:fs";
 import { homedir } from "node:os";
-import { basename, join } from "node:path";
+import { join } from "node:path";
 import { type Font, type FontCollection, openSync } from "fontkit";
 import { isWsl, windowsFontsDir } from "../../../foundation/platform/wsl.ts";
 
@@ -192,6 +192,3 @@ export function findFonts(files = fontFiles()): Fonts {
     builtin: false,
   };
 }
-
-/** A face's name for a reader: its file's. */
-export const faceName = (f: Face) => f.ps ?? basename(f.path);

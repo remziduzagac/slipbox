@@ -288,10 +288,6 @@ export function ordered(a: Pos, b: Pos): [Pos, Pos] {
   return b.row < a.row || (b.row === a.row && b.col < a.col) ? [b, a] : [a, b];
 }
 
-export function samePos(a: Pos, b: Pos): boolean {
-  return a.row === b.row && a.col === b.col;
-}
-
 /** The word (same-kind run) under a position, as [start, end] columns — for double-click. */
 export function wordAt(layout: Layout, p: Pos): [number, number] {
   const cs = cells(layout.lines[p.row]);

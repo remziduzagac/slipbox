@@ -159,8 +159,3 @@ export function expandSnippet(src: string, ctx: SnippetContext): Snippet {
   const order = [...stops.keys()].filter((n) => n > 0).sort((a, b) => a - b);
   return { text: out, stops: [...order, 0].map((n) => ({ n, ranges: stops.get(n)! })) };
 }
-
-/** A snippet's text alone: what it puts in, stops and all, with nothing to tab through (no session). */
-export function snippetText(src: string, ctx: SnippetContext): string {
-  return expandSnippet(src, ctx).text;
-}

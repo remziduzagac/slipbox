@@ -25,10 +25,6 @@ export const COMMAND_SPECS: CommandSpec[] = [
   ...FILE_SPECS,
 ];
 
-export function commandSpec(id: string): CommandSpec | undefined {
-  return COMMAND_SPECS.find((c) => c.id === id);
-}
-
 /**
  * The groups commands are listed under in help and the palette: the sections of
  * docs/manual/keys.md, in its order. The first group whose pattern matches an id wins.

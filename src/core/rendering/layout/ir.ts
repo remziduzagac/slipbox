@@ -198,10 +198,6 @@ export function extentOf(layout: Layout): number {
   return Math.max(layout.width, layout.extent ?? 0);
 }
 
-export function spanWidthText(spans: Span[]): string {
-  return spans.map((s) => s.text).join("");
-}
-
 /**
  * The source line of what's at column `col` of a row: its span's own (a rendered paragraph joins
  * its source lines into rows that carry only the first), else the row's.

@@ -4,7 +4,7 @@
 // Obsidian's highlights marked (`<mark>`), footnotes at the chapter's end. Text is escaped by the serialiser, never written raw.
 
 import type { Element, ElementContent, Root as HastRoot } from "hast";
-import type { Heading, Nodes, PhrasingContent, RootContent, Text } from "mdast";
+import type { Heading, Nodes, RootContent, Text } from "mdast";
 import { toHast } from "mdast-util-to-hast";
 import { highlight } from "../../layout/markdown/highlight.ts";
 import { mathRows, mathText } from "../../media/math.ts";
@@ -185,17 +185,4 @@ function prepare(nodes: Nodes[], o: HastOptions): void {
     }
     if ("children" in n) prepare(n.children as Nodes[], o);
   }
-}
-
-/** An inline run's text: what a picture's words or a heading's are. */
-export function plain(nodes: readonly PhrasingContent[]): string {
-  return nodes
-    .map((n) =>
-      n.type === "text" || n.type === "inlineCode" || n.type === "inlineMath"
-        ? n.value
-        : "children" in n
-          ? plain(n.children as PhrasingContent[])
-          : "",
-    )
-    .join("");
 }
