@@ -23,7 +23,7 @@ import { configFilesFor, initVault, recordLocation, rootAt } from "../../../src/
 import { type Check, explorerOpen, follow, inSwitcher, leader, opened } from "../check.ts";
 import { type Session, sleep } from "../session.ts";
 import { ARCHITECTURE } from "../support/links.ts";
-import { markOf } from "./vaults.ts";
+import { markOf } from "../support/vaults.ts";
 
 const TITLE = "kestrel › docs/architecture.md";
 const LIST = /Linked from \((\d+)\):/;

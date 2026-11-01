@@ -1,5 +1,5 @@
 ---
-status: review
+status: done
 assignee:
 blocked_by: [ORF-T13]
 created: "2026-10-31"
@@ -111,7 +111,20 @@ check and cap removal are complete. The final bounded scoped gate passes all gat
 across four reached owners, using an isolated temporary parent outside `/tmp`.
 Log: `tmp/issue/ORF-T14-check-final.log`.
 
-[PR #193](https://github.com/remziduzagac/slipbox/pull/193) is a draft into `dev`, on
+[PR #193](https://github.com/remziduzagac/slipbox/pull/193) was opened as a draft into `dev`, on
 `refactor/issue-170-links-files-checks`. Implementation/evidence commit:
-`e249c35cad76797c8d5e912f611b838e5e8ed239`. Final-head CI is pending; the passing results above are local.
-Fresh review and merge are separate stages; this task remains in review until they are complete.
+`e249c35cad76797c8d5e912f611b838e5e8ed239`. The passing build results above are local; final-head CI is recorded below.
+Fresh review and merge were completed separately, as recorded below.
+
+## Review and merge
+
+The fresh review found no actionable findings at `2e7ecff33d4d7a271418d8509b877d1e6d4426f9`. Names, registration,
+manifest, move review, stale references, cap removal and testing ownership match the approved split. The fresh reached
+selection passes 22 tests / 73 assertions; size and diff whitespace checks pass. Both unit platforms, aggregate CI
+and CodeQL pass at that head. The preceding `dev` push run, 41318669758, also passes.
+
+[PR #193](https://github.com/remziduzagac/slipbox/pull/193) was marked ready and squash-merged into `dev` on
+2026-11-01 as `81a3346937d5480a3aa6b643ef208602bcc6d04d`. The squash tree matches the reviewed head; its sole
+parent is `332012335374f51e2ee306955d8af80acaa88b7c`. The automatic
+[dev push run](https://github.com/remziduzagac/slipbox/actions/runs/41322204637) passes on its first attempt,
+including both unit platforms, all three terminal platforms, lint, site and aggregate CI.

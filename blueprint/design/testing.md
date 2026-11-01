@@ -348,6 +348,12 @@ The links and files area keeps its checks in `links.ts`, `roots.ts`, `named-fold
 retain the area and original order of their checks. Shared screen, message, link navigation and Git fixture
 helpers live in `tests/terminal/support/links.ts`, below the check collections that use them (ORG-D1, ORG-D2).
 
+Vault switching stays in `vaults.ts`; home and its first-walk watcher checks live in `home.ts` and
+`home-watching.ts`. `elsewhere.ts`, `explorer-marks.ts`, `symlinks.ts`, `vault-peek.ts` and `repositories.ts` own the
+remaining vault feature groups. They register directly in the original order and areas. Shared fixtures, explorer
+row marks and repository setup live in `tests/terminal/support/vaults.ts`; other check collections import those
+helpers directly (ORG-D1, ORG-D2).
+
 **Coverage** (`tests/terminal/coverage.ts`, tests/terminal-coverage.test.ts in `bun run test`): every command and every
 area of `CASES.md` (its "By area" part) is covered by a check, or left out, with its reason, in its area's file; the
 command line's own areas are left out together (tests/cli/ covers them). Each command group and each area has
