@@ -26,9 +26,7 @@ export const CAPPED: Record<string, number> = {};
 export const GENERATED: Record<string, number> = { "src/core/documents/servers/locks.ts": 1239 };
 
 /** Existing test owners only; exact caps ratchet down, never exempt new/split files (ORG-D2). */
-export const TEST_CAPPED: Record<string, number> = {
-  "tests/terminal/checks/reading.ts": 1737,
-};
+export const TEST_CAPPED: Record<string, number> = {};
 
 export interface SizeVerdict {
   /** Files past their group limit or exact cap. */

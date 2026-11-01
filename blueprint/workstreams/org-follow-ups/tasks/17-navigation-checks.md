@@ -1,5 +1,5 @@
 ---
-status: review
+status: done
 assignee:
 blocked_by: [ORF-T16]
 created: "2026-10-31"
@@ -63,10 +63,26 @@ removed path. Logs: `tmp/issue/ORF-T17-move-{diff,summary}.log`, `ORF-T17-stale-
 Typecheck, lint, boundary, size and docs checks pass. An initial typecheck included the saved baseline copy under
 `tmp/issue/` as source; renaming that scratch copy to `.ts.txt` resolves it without a code change. The required
 `TMPDIR=/var/tmp gnutimeout -k 10 900 bun run check` passes, including 22 tests across the three affected unit files.
-Log: `tmp/issue/ORF-T17-check.log`. Fresh review and merge are separate stages; this task remains in review.
+Log: `tmp/issue/ORF-T17-check.log`. Review and merge evidence follows.
 
 ## Delivery
 
-[Draft PR #196](https://github.com/remziduzagac/slipbox/pull/196) targets `dev` from
+[PR #196](https://github.com/remziduzagac/slipbox/pull/196) targets `dev` from
 `refactor/issue-170-navigation-checks`. Implementation and verification commit:
-`ba55c48799d4c5675cdeab47bedb223576ee72dc`. The results above are local; final-head CI is pending.
+`ba55c48799d4c5675cdeab47bedb223576ee72dc`. Final reviewed and merged head:
+`ee0fc51ded2cb8371065e95668e0d6b2454a8241`.
+
+## Review and merge
+
+The fresh review found no actionable issues. Names, registration order, the left-out ledger, move rules and stale
+references were checked. Review verification passes 22 focused unit tests, the size gate and all 90 navigation-area
+terminal checks, including the 56 moved checks, with the same existing #100 quarantine. Report and logs:
+`tmp/issue/review-ORF-T17.md` and `ORF-T17-review-{unit,size,terminal,identities}.log`.
+
+CI and CodeQL pass at the exact reviewed head. Before merge, the preceding dev push
+[41330961580](https://github.com/remziduzagac/slipbox/actions/runs/41330961580) passes, including all three terminal
+platforms. PR #196 was marked ready and squash-merged on 2026-11-01 with the reviewed-head guard; squash:
+`8b0f1e092605c1f7ea9e2f45a2ed73b6f632b8bb`.
+
+The automatic dev push [41334509168](https://github.com/remziduzagac/slipbox/actions/runs/41334509168) is in progress
+at this handoff; verify its result before the next merge. Merge evidence: `tmp/issue/ORF-T17-merge-*.json`.
