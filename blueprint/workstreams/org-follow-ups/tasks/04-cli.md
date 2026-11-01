@@ -1,5 +1,5 @@
 ---
-status: review
+status: done
 assignee:
 blocked_by: [ORF-T3]
 created: "2026-10-31"
@@ -129,3 +129,31 @@ The preceding ORF-T3 dev push succeeds at the exact base on attempt 1, including
 Original-head CodeQL succeeds on attempt 1; original-head lint failure is retained above, rather than retried.
 The corrected head needs its own CI result before the separate merge stage. ORF-T4 remains review and PR #180
 remains draft; no ready marking, merge, branch promotion, release or next-task implementation.
+
+## Merge and completion
+
+Review is complete at corrected head `5ef832ad50e9010d7618e2410714aff7fce69ecf`, with the source-reader finding
+fixed and its regression verified. The preceding ORF-T3 dev push 41253152724 succeeds at exact base `1af50dee`
+on attempt 1, including all three terminal platforms. The corrected head's
+[CI 41256148082](https://github.com/remziduzagac/slipbox/actions/runs/41256148082) and
+[CodeQL 41256144937](https://github.com/remziduzagac/slipbox/actions/runs/41256144937) succeed on attempt 1;
+both unit platforms, lint/site and aggregate CI pass. Terminal/status jobs are skipped by PR policy. The original
+lint failure remains recorded; no failed job was retried.
+
+[PR #180](https://github.com/remziduzagac/slipbox/pull/180) was marked ready and squash-merged into dev with
+`--match-head-commit 5ef832ad50e9010d7618e2410714aff7fce69ecf`. Merge:
+`4a14ff8d7afbc51eb0b9534b4aabe0f6fb359004`, 2026-11-01 00:24:30 UTC. The merged tree equals the reviewed tree
+byte-for-byte. Metadata: `tmp/issue/ORF-T4-merge-result.json`, `ORF-T4-merge-pr-final.json` and
+`ORF-T4-merge-tree-audit.json`.
+
+The automatic [dev push 41256614355](https://github.com/remziduzagac/slipbox/actions/runs/41256614355) succeeds
+at that exact merge on attempt 1. Both unit platforms, lint/site, changes, all three terminal platforms and
+aggregate CI pass; only status is skipped. Terminal totals: ARM 548/548, Linux x64 548/548, macOS 547/547,
+with the unchanged four/four/five skips. Each exercises 329 commands, and the affected startup-refusal scenario
+passes on each platform. Final metadata: `tmp/issue/ORF-T4-merge-dev-result.json`. Completed job logs:
+`ORF-T4-merge-dev-arm.log:461,894–895`, `ORF-T4-merge-dev-linux.log:461,894–895` and
+`ORF-T4-merge-dev-macos.log:450,883–884` in tmp/issue.
+
+Product tests, build/probes and negative controls were not repeated during merge. No manual full-suite or
+all-terminal invocation, deadline/dependency/CI change, branch promotion or release. ORF-T4 is done; ORF-T5 build
+is next, with no next-task implementation in this stage.

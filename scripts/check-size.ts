@@ -25,7 +25,6 @@ export const CAPPED: Record<string, number> = {
   "src/tui/app/distribution/updates.ts": 667,
   "src/tui/app/runtime/app.ts": 1325,
   "src/tui/app/runtime/watch.ts": 666,
-  "src/tui/workspace/vaults/vaults.ts": 636,
 };
 
 /** Generated data: separate measured cap; verify offline with `bun scripts/lock-servers.ts --check` (ORG-D2). */
