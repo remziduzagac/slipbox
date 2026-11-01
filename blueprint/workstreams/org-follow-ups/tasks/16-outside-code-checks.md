@@ -76,3 +76,10 @@ Typecheck, lint, boundary, size and docs pass individually. The required bounded
 `TMPDIR=/var/tmp gnutimeout -k 10 900 bun run check`, passes all gates and 22 tests / 169 assertions across three
 reached owners. Its conservative terminal selection is all; the local terminal comparison explicitly runs the
 original 67 checks. Log: `tmp/issue/ORF-T16-check.log`.
+
+## Build delivery
+
+[PR #195](https://github.com/remziduzagac/slipbox/pull/195) is a draft into `dev`, on
+`refactor/issue-170-outside-code-checks`. Implementation/evidence commit:
+`11153ddd2f385dc0d12c8a25565a4bb328fe5e6c`. The passing results above are local; final-head CI is pending.
+Fresh review and merge remain separate stages; this task stays in review until both are complete.
