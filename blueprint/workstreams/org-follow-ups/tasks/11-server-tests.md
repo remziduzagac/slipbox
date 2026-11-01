@@ -63,4 +63,8 @@ implementation and review evidence do not by themselves close the task.
 - No source behavior or user-visible command/path changes: user documentation and CHANGELOG need no update.
   The live example-case index and blueprint test ownership map follow the relocated tests. No full-suite run,
   all-terminal run, timeout change, dependency change or unrelated-failure retry.
-- Fresh review remains pending. Publish a draft into dev, then stop after build; do not mark done before merge.
+- Draft [PR #188](https://github.com/remziduzagac/slipbox/pull/188) is open into dev on
+  refactor/issue-170-server-tests. Implementation/evidence commit
+  `d6c31e1f2d955eee41aec1287939e24b368a7741` is pushed without force; this publication record is documentation-only.
+- Final build-record docs and Biome pass with the counts above. Fresh review remains pending; keep the PR draft
+  and stop after build. Final-head remote checks remain to verify during the separate review/merge stages.
