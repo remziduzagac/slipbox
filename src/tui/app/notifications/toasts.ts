@@ -1,4 +1,4 @@
-// Timing only: App owns the visible messages, history, deduplication and drawing guard.
+// Timing only: App owns visible messages/history; Messages owns deduplication and the drawing guard.
 import type { Message } from "./contracts.ts";
 
 export interface ToastContext {

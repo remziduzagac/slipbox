@@ -116,8 +116,16 @@ describe("the size check (D235, scripts/check-size.ts)", () => {
   });
 
   test("the script fails until a legacy cap is lowered, including a one-line shrink", () => {
-    const cap = CAPPED["src/tui/app/runtime/app.ts"]!;
-    const shrunk = run({ "src/tui/app/runtime/app.ts": "x\n".repeat(cap - 1) });
+    const cap = LIMIT + 100;
+    const file = "src/legacy.ts";
+    const shrunk = run({ [file]: "x\n".repeat(cap - 1) }, (top) => {
+      const script = join(top, "scripts", "check-size.ts");
+      const source = readFileSync(script, "utf8").replace(
+        /export const CAPPED: Record<string, number> = \{[^}]*\};/,
+        `export const CAPPED: Record<string, number> = { ${JSON.stringify(file)}: ${cap} };`,
+      );
+      writeFileSync(script, source);
+    });
     expect(shrunk.code).toBe(1);
     expect(shrunk.out).toContain(`lower the cap to ${cap - 1}`);
     expect(Math.max(...Object.values(CAPPED))).toBeLessThanOrEqual(1500);

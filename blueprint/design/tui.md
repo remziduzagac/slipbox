@@ -13,7 +13,14 @@ Code, in `src/tui/`:
 | --- | --- |
 | `app/runtime/app.ts` | shared state (tabs, windows, buffers, panes, overlays, messages) and feature wiring |
 | `app/clipboard/clipboard.ts` | serial clipboard helpers, immediate OSC 52 and quit cancellation |
-| `app/notifications/toasts.ts` | notification deadlines; App owns messages and visible toasts |
+| `app/runtime/contracts.ts` | independent host, buffer-view, tab, pane, overlay and startup records |
+| `app/runtime/startup.ts` | initial session/UI restoration and first-window/explorer admission |
+| `app/settings/ui-state.ts` | UI defaults, including the configured URL display policy |
+| `app/notifications/messages.ts`, `toasts.ts` | message deduplication, draw guard and notification deadlines |
+| `documents/buffers/opening.ts` | buffer admission, path identity, graph claims and read-only reasons |
+| `documents/navigation/opening.ts` | ordered note/tab opening, pinned/floating rules and navigation history |
+| `documents/views/policy.ts` | new views, render eligibility, cursor placement and lazy-layout invalidation |
+| `shell/screen/frame.ts` | terminal title, frame completion and recovery from drawing failures |
 | `documents/tools/navigation.ts` | the four shared row-selection commands of outline, Info and footnotes |
 | `settings.ts`, `session.ts` | the keymaps, theme, glyphs, UI settings, live reload; the workspaces kept and restored |
 | `views.ts`, `lens.ts`, `code.ts` | a window's layout, cursor and scrolling; the lens and SOURCE view; code blocks |
@@ -48,6 +55,12 @@ Code, in `src/tui/`:
 | `match.ts` | the matching and ranking every list and filter uses |
 | `keys.ts` | the default keymaps, groups, aliases, and the in-pane actions' titles |
 | `run.ts`, `opentui.ts` | the OpenTUI binding |
+
+App owns the single buffer map, text/undo through each NoteBuffer, shared window/pane state and the sole
+`App.writeBuffer` note-write gate. It keeps controller wiring and startup/disposal order. Opening, view, initial-window,
+message and frame policy use separate live capability contracts and callbacks for the existing editing, graph catch-up
+and drawing clients; none imports App. App forwards the existing methods, helper exports and types. The view policy's
+foreign-buffer catch-up WeakSet keeps its module lifetime. Drawing still runs inside the same nested message guard.
 
 The `shell/input/keys.ts` and `vim.ts` entry points preserve their exports. `keys/` separates binding tables (including
 ordered window/tab additions), context bindings, help/groups, aliases and terminal decoding. `vim/` separates state

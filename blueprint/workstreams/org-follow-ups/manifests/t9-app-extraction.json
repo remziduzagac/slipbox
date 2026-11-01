@@ -1,0 +1,365 @@
+{
+  "moves": {},
+  "retained": [],
+  "renamedBasenames": {},
+  "extraction": [
+    {
+      "from": "src/tui/app/runtime/app.ts",
+      "to": "src/tui/app/runtime/contracts.ts",
+      "symbols": [
+        "Host",
+        "Loc",
+        "Selection",
+        "FindState",
+        "View",
+        "Tab",
+        "PromptOverlay",
+        "Overlay",
+        "SidePaneState",
+        "UiState",
+        "AppOptions",
+        "floating type"
+      ]
+    },
+    {
+      "from": "src/tui/app/runtime/app.ts",
+      "to": "src/tui/app/settings/ui-state.ts",
+      "symbols": [
+        "uiDefaults"
+      ]
+    },
+    {
+      "from": "src/tui/app/runtime/app.ts",
+      "to": "src/tui/documents/buffers/opening.ts",
+      "symbols": [
+        "lockedSaid",
+        "fileUnwritable",
+        "claimKnown",
+        "claim",
+        "claimThroughLink",
+        "claimed",
+        "buffer",
+        "markElsewhere",
+        "displayName"
+      ]
+    },
+    {
+      "from": "src/tui/app/runtime/app.ts",
+      "to": "src/tui/documents/navigation/opening.ts",
+      "symbols": [
+        "defaultNote",
+        "absOf",
+        "openInNewTab",
+        "openOrSwitchTab",
+        "open",
+        "openWhere",
+        "openAt"
+      ]
+    },
+    {
+      "from": "src/tui/app/runtime/app.ts",
+      "to": "src/tui/documents/views/policy.ts",
+      "symbols": [
+        "caughtUpOnce",
+        "makeView",
+        "canRender",
+        "isCodeDocument",
+        "relayoutAll",
+        "widthsChanged",
+        "currentLayout",
+        "moveCursor",
+        "cursorLine",
+        "placeAtLine",
+        "loadCodeGrammars",
+        "lazy completion subscription"
+      ]
+    },
+    {
+      "from": "src/tui/app/runtime/app.ts",
+      "to": "src/tui/shell/screen/frame.ts",
+      "symbols": [
+        "drawFrame",
+        "drawFailed",
+        "termTitle"
+      ]
+    },
+    {
+      "from": "src/tui/app/runtime/app.ts",
+      "to": "src/tui/app/runtime/startup.ts",
+      "symbols": [
+        "initial session/UI restoration",
+        "initial note and explorer admission",
+        "startup copy/relink offers"
+      ]
+    },
+    {
+      "from": "src/tui/app/runtime/app.ts",
+      "to": "src/tui/app/notifications/messages.ts",
+      "symbols": [
+        "MESSAGE_LIMIT",
+        "TOAST_LIMIT",
+        "saidInClick",
+        "drawing",
+        "toastScheduler",
+        "sayingOnce",
+        "message",
+        "whileDrawing",
+        "listMessage",
+        "toastsDrawn",
+        "dismissToasts"
+      ]
+    }
+  ],
+  "ownership": {
+    "app": "App retains shared mutable state and buffers, controller creation, exact startup and disposal order, all existing public entries and sole writeBuffer gate. Type exports forward unchanged.",
+    "buffers": "BufferOpening admits and claims buffers through live location/config/graph/following capabilities, using existing graph lookup callback. It owns no text, revision, undo or baseline.",
+    "opening": "Opening owns ordered note/tab/history/floating/pinned admission through focused navigation capabilities and existing edit/cancel callbacks.",
+    "layout": "ViewPolicy creates views and applies layout/cursor policy with focused live view capabilities. Existing Views keeps layout/anchor/scroll mechanisms; module WeakSet scope remains.",
+    "frame": "Frame owns title and draw-failure flags; App supplies the existing drawing callback and keeps the drawing guard.",
+    "entries": "No file relocation, retired path, entry, worker URL or asset move; no git mv needed. Worker implementations/requests untouched.",
+    "startup": "Initial-window policy restores history/UI and opens the first windows through focused startup capabilities. Its contiguous call remains between startup warning delivery and lazy subscription, preserving exact order.",
+    "messages": "Messages owns click deduplication, draw nesting and toast scheduling; App retains public messages/toasts and forwarding entries."
+  },
+  "edges": {
+    "removed": [
+      "src/tui/app/runtime/app.ts -> src/core/application/distribution/report.ts",
+      "src/tui/app/runtime/app.ts -> src/core/documents/model/filetypes.ts",
+      "src/tui/app/runtime/app.ts -> src/core/documents/syntax/syntax.ts",
+      "src/tui/app/runtime/app.ts -> src/core/foundation/platform/fsutil.ts",
+      "src/tui/app/runtime/app.ts -> src/core/foundation/platform/lazy.ts",
+      "src/tui/app/runtime/app.ts -> src/core/foundation/platform/paths.ts",
+      "src/tui/app/runtime/app.ts -> src/core/foundation/text/sanitize.ts",
+      "src/tui/app/runtime/app.ts -> src/core/foundation/text/width.ts",
+      "src/tui/app/runtime/app.ts -> src/core/rendering/media/diagrams/diagrams.ts",
+      "src/tui/app/runtime/app.ts -> src/core/workspace/vaults/names.ts",
+      "src/tui/app/runtime/app.ts -> src/core/workspace/vaults/symlinks.ts",
+      "src/tui/app/runtime/app.ts -> src/tui/app/notifications/toasts.ts",
+      "src/tui/app/runtime/app.ts -> src/tui/documents/saving/saveas.ts",
+      "src/tui/app/runtime/app.ts -> src/tui/documents/search/replacing.ts",
+      "src/tui/app/runtime/app.ts -> src/tui/shell/overlays/dialog.ts",
+      "src/tui/app/runtime/app.ts -> src/tui/workspace/git/views/changes/diffview.ts",
+      "src/tui/app/runtime/app.ts -> src/tui/workspace/git/views/review/mergescreen.ts",
+      "src/tui/app/runtime/app.ts -> src/tui/workspace/git/views/review/review.ts"
+    ],
+    "added": [
+      "src/tui/app/notifications/messages.ts -> src/tui/app/notifications/contracts.ts",
+      "src/tui/app/notifications/messages.ts -> src/tui/app/notifications/toasts.ts",
+      "src/tui/app/runtime/app.ts -> src/tui/app/notifications/messages.ts",
+      "src/tui/app/runtime/app.ts -> src/tui/app/runtime/contracts.ts",
+      "src/tui/app/runtime/app.ts -> src/tui/app/runtime/startup.ts",
+      "src/tui/app/runtime/app.ts -> src/tui/app/settings/ui-state.ts",
+      "src/tui/app/runtime/app.ts -> src/tui/documents/buffers/opening.ts",
+      "src/tui/app/runtime/app.ts -> src/tui/documents/navigation/opening.ts",
+      "src/tui/app/runtime/app.ts -> src/tui/documents/views/policy.ts",
+      "src/tui/app/runtime/app.ts -> src/tui/shell/screen/frame.ts",
+      "src/tui/app/runtime/contracts.ts -> src/core/application/config/config.ts",
+      "src/tui/app/runtime/contracts.ts -> src/core/application/distribution/report.ts",
+      "src/tui/app/runtime/contracts.ts -> src/core/workspace/graph/graph.ts",
+      "src/tui/app/runtime/contracts.ts -> src/core/workspace/session/position.ts",
+      "src/tui/app/runtime/contracts.ts -> src/core/workspace/vaults/vault.ts",
+      "src/tui/app/runtime/contracts.ts -> src/tui/app/notifications/contracts.ts",
+      "src/tui/app/runtime/contracts.ts -> src/tui/documents/buffers/buffer.ts",
+      "src/tui/app/runtime/contracts.ts -> src/tui/documents/editing/cursor.ts",
+      "src/tui/app/runtime/contracts.ts -> src/tui/documents/editing/lens.ts",
+      "src/tui/app/runtime/contracts.ts -> src/tui/documents/navigation/peek.ts",
+      "src/tui/app/runtime/contracts.ts -> src/tui/documents/saving/saveas.ts",
+      "src/tui/app/runtime/contracts.ts -> src/tui/documents/search/replacing.ts",
+      "src/tui/app/runtime/contracts.ts -> src/tui/shell/overlays/dialog.ts",
+      "src/tui/app/runtime/contracts.ts -> src/tui/shell/overlays/list-types.ts",
+      "src/tui/app/runtime/contracts.ts -> src/tui/shell/panels/panels.ts",
+      "src/tui/app/runtime/contracts.ts -> src/tui/workspace/git/views/changes/diffview.ts",
+      "src/tui/app/runtime/contracts.ts -> src/tui/workspace/git/views/review/mergescreen.ts",
+      "src/tui/app/runtime/contracts.ts -> src/tui/workspace/git/views/review/review.ts",
+      "src/tui/app/runtime/startup.ts -> src/core/application/config/config.ts",
+      "src/tui/app/runtime/startup.ts -> src/core/foundation/platform/fsutil.ts",
+      "src/tui/app/runtime/startup.ts -> src/core/rendering/theme/glyphs.ts",
+      "src/tui/app/runtime/startup.ts -> src/core/workspace/session/position.ts",
+      "src/tui/app/runtime/startup.ts -> src/core/workspace/vaults/names.ts",
+      "src/tui/app/runtime/startup.ts -> src/core/workspace/vaults/vault.ts",
+      "src/tui/app/runtime/startup.ts -> src/tui/app/notifications/contracts.ts",
+      "src/tui/app/runtime/startup.ts -> src/tui/app/runtime/contracts.ts",
+      "src/tui/app/runtime/startup.ts -> src/tui/app/settings/settings.ts",
+      "src/tui/app/runtime/startup.ts -> src/tui/documents/saving/handoff.ts",
+      "src/tui/app/runtime/startup.ts -> src/tui/workspace/explorer/explorer.ts",
+      "src/tui/app/runtime/startup.ts -> src/tui/workspace/explorer/files.ts",
+      "src/tui/app/runtime/startup.ts -> src/tui/workspace/history/history.ts",
+      "src/tui/app/runtime/startup.ts -> src/tui/workspace/session/session.ts",
+      "src/tui/app/runtime/startup.ts -> src/tui/workspace/vaults/vaults.ts",
+      "src/tui/app/settings/ui-state.ts -> src/core/application/config/config.ts",
+      "src/tui/app/settings/ui-state.ts -> src/tui/app/runtime/contracts.ts",
+      "src/tui/documents/buffers/opening.ts -> src/core/application/config/config.ts",
+      "src/tui/documents/buffers/opening.ts -> src/core/documents/model/filetypes.ts",
+      "src/tui/documents/buffers/opening.ts -> src/core/foundation/platform/fsutil.ts",
+      "src/tui/documents/buffers/opening.ts -> src/core/foundation/platform/paths.ts",
+      "src/tui/documents/buffers/opening.ts -> src/core/workspace/graph/graph.ts",
+      "src/tui/documents/buffers/opening.ts -> src/core/workspace/vaults/names.ts",
+      "src/tui/documents/buffers/opening.ts -> src/core/workspace/vaults/symlinks.ts",
+      "src/tui/documents/buffers/opening.ts -> src/core/workspace/vaults/vault.ts",
+      "src/tui/documents/buffers/opening.ts -> src/tui/app/notifications/contracts.ts",
+      "src/tui/documents/buffers/opening.ts -> src/tui/documents/buffers/buffer.ts",
+      "src/tui/documents/buffers/opening.ts -> src/tui/documents/navigation/following.ts",
+      "src/tui/documents/navigation/opening.ts -> src/core/application/config/config.ts",
+      "src/tui/documents/navigation/opening.ts -> src/core/workspace/graph/graph.ts",
+      "src/tui/documents/navigation/opening.ts -> src/core/workspace/session/position.ts",
+      "src/tui/documents/navigation/opening.ts -> src/core/workspace/vaults/vault.ts",
+      "src/tui/documents/navigation/opening.ts -> src/tui/app/runtime/contracts.ts",
+      "src/tui/documents/navigation/opening.ts -> src/tui/documents/buffers/buffer.ts",
+      "src/tui/documents/navigation/opening.ts -> src/tui/documents/editing/lens.ts",
+      "src/tui/documents/navigation/opening.ts -> src/tui/documents/navigation/following.ts",
+      "src/tui/documents/navigation/opening.ts -> src/tui/shell/overlays/overlays.ts",
+      "src/tui/documents/navigation/opening.ts -> src/tui/workspace/explorer/explorer.ts",
+      "src/tui/documents/navigation/opening.ts -> src/tui/workspace/history/history.ts",
+      "src/tui/documents/navigation/opening.ts -> src/tui/workspace/vaults/vaults.ts",
+      "src/tui/documents/views/policy.ts -> src/core/documents/model/filetypes.ts",
+      "src/tui/documents/views/policy.ts -> src/core/documents/syntax/syntax.ts",
+      "src/tui/documents/views/policy.ts -> src/core/foundation/platform/lazy.ts",
+      "src/tui/documents/views/policy.ts -> src/core/rendering/layout/ir.ts",
+      "src/tui/documents/views/policy.ts -> src/core/rendering/media/diagrams/diagrams.ts",
+      "src/tui/documents/views/policy.ts -> src/core/workspace/graph/graph.ts",
+      "src/tui/documents/views/policy.ts -> src/core/workspace/search/regex-jobs.ts",
+      "src/tui/documents/views/policy.ts -> src/core/workspace/session/position.ts",
+      "src/tui/documents/views/policy.ts -> src/tui/app/runtime/contracts.ts",
+      "src/tui/documents/views/policy.ts -> src/tui/documents/buffers/buffer.ts",
+      "src/tui/documents/views/policy.ts -> src/tui/documents/diagnostics/languages.ts",
+      "src/tui/documents/views/policy.ts -> src/tui/documents/editing/cursor.ts",
+      "src/tui/documents/views/policy.ts -> src/tui/documents/editing/lens.ts",
+      "src/tui/documents/views/policy.ts -> src/tui/documents/views/code.ts",
+      "src/tui/documents/views/policy.ts -> src/tui/documents/views/html.ts",
+      "src/tui/documents/views/policy.ts -> src/tui/documents/views/views.ts",
+      "src/tui/shell/screen/frame.ts -> src/core/foundation/text/sanitize.ts",
+      "src/tui/shell/screen/frame.ts -> src/core/foundation/text/width.ts",
+      "src/tui/shell/screen/frame.ts -> src/tui/app/distribution/report.ts",
+      "src/tui/shell/screen/frame.ts -> src/tui/app/notifications/contracts.ts",
+      "src/tui/shell/screen/frame.ts -> src/tui/app/runtime/contracts.ts",
+      "src/tui/shell/screen/frame.ts -> src/tui/shell/screen/draw.ts",
+      "src/tui/shell/screen/frame.ts -> src/tui/shell/terminal/canvas.ts"
+    ]
+  },
+  "runtime": {
+    "removed": [
+      "src/tui/app/runtime/app.ts -> src/core/documents/model/filetypes.ts",
+      "src/tui/app/runtime/app.ts -> src/core/documents/syntax/syntax.ts",
+      "src/tui/app/runtime/app.ts -> src/core/foundation/platform/fsutil.ts",
+      "src/tui/app/runtime/app.ts -> src/core/foundation/platform/lazy.ts",
+      "src/tui/app/runtime/app.ts -> src/core/foundation/platform/paths.ts",
+      "src/tui/app/runtime/app.ts -> src/core/foundation/text/sanitize.ts",
+      "src/tui/app/runtime/app.ts -> src/core/foundation/text/width.ts",
+      "src/tui/app/runtime/app.ts -> src/core/rendering/layout/ir.ts",
+      "src/tui/app/runtime/app.ts -> src/core/rendering/media/diagrams/diagrams.ts",
+      "src/tui/app/runtime/app.ts -> src/core/workspace/vaults/names.ts",
+      "src/tui/app/runtime/app.ts -> src/core/workspace/vaults/symlinks.ts",
+      "src/tui/app/runtime/app.ts -> src/tui/app/notifications/toasts.ts",
+      "src/tui/app/runtime/app.ts -> src/tui/documents/buffers/buffer.ts",
+      "src/tui/app/runtime/app.ts -> src/tui/documents/editing/cursor.ts",
+      "src/tui/app/runtime/app.ts -> src/tui/shell/terminal/canvas.ts"
+    ],
+    "added": [
+      "src/tui/app/notifications/messages.ts -> src/tui/app/notifications/toasts.ts",
+      "src/tui/app/runtime/app.ts -> src/tui/app/notifications/messages.ts",
+      "src/tui/app/runtime/app.ts -> src/tui/app/runtime/startup.ts",
+      "src/tui/app/runtime/app.ts -> src/tui/app/settings/ui-state.ts",
+      "src/tui/app/runtime/app.ts -> src/tui/documents/buffers/opening.ts",
+      "src/tui/app/runtime/app.ts -> src/tui/documents/navigation/opening.ts",
+      "src/tui/app/runtime/app.ts -> src/tui/documents/views/policy.ts",
+      "src/tui/app/runtime/app.ts -> src/tui/shell/screen/frame.ts",
+      "src/tui/app/runtime/startup.ts -> src/core/foundation/platform/fsutil.ts",
+      "src/tui/app/runtime/startup.ts -> src/core/workspace/session/position.ts",
+      "src/tui/app/runtime/startup.ts -> src/core/workspace/vaults/names.ts",
+      "src/tui/app/runtime/startup.ts -> src/core/workspace/vaults/vault.ts",
+      "src/tui/documents/buffers/opening.ts -> src/core/documents/model/filetypes.ts",
+      "src/tui/documents/buffers/opening.ts -> src/core/foundation/platform/fsutil.ts",
+      "src/tui/documents/buffers/opening.ts -> src/core/foundation/platform/paths.ts",
+      "src/tui/documents/buffers/opening.ts -> src/core/workspace/vaults/names.ts",
+      "src/tui/documents/buffers/opening.ts -> src/core/workspace/vaults/symlinks.ts",
+      "src/tui/documents/buffers/opening.ts -> src/core/workspace/vaults/vault.ts",
+      "src/tui/documents/buffers/opening.ts -> src/tui/documents/buffers/buffer.ts",
+      "src/tui/documents/views/policy.ts -> src/core/documents/model/filetypes.ts",
+      "src/tui/documents/views/policy.ts -> src/core/documents/syntax/syntax.ts",
+      "src/tui/documents/views/policy.ts -> src/core/foundation/platform/lazy.ts",
+      "src/tui/documents/views/policy.ts -> src/core/rendering/layout/ir.ts",
+      "src/tui/documents/views/policy.ts -> src/core/rendering/media/diagrams/diagrams.ts",
+      "src/tui/documents/views/policy.ts -> src/core/workspace/search/regex-jobs.ts",
+      "src/tui/documents/views/policy.ts -> src/core/workspace/session/position.ts",
+      "src/tui/documents/views/policy.ts -> src/tui/documents/editing/cursor.ts",
+      "src/tui/shell/screen/frame.ts -> src/core/foundation/text/sanitize.ts",
+      "src/tui/shell/screen/frame.ts -> src/core/foundation/text/width.ts",
+      "src/tui/shell/screen/frame.ts -> src/tui/shell/terminal/canvas.ts"
+    ]
+  },
+  "tests": {
+    "removed": [],
+    "added": [
+      "test: buffer admission refuses to claim virtual and foreign buffers",
+      "test: buffer admission rejects binary extensions and binary bytes without caching a buffer",
+      "test: buffer admission reuses path identity and claims against the live graph only after a reload"
+    ]
+  },
+  "entries": {
+    "removed": [],
+    "added": []
+  },
+  "runtimeScc": {
+    "before": [
+      [
+        "src/tui/actions/actions.ts",
+        "src/tui/actions/documents/actions-edit.ts",
+        "src/tui/actions/documents/actions-find.ts",
+        "src/tui/actions/documents/actions-links.ts",
+        "src/tui/actions/documents/actions-lsp.ts",
+        "src/tui/actions/documents/actions-view.ts",
+        "src/tui/actions/shell/actions-panes.ts",
+        "src/tui/actions/workspace/actions-files.ts"
+      ],
+      [
+        "src/tui/app/runtime/app.ts",
+        "src/tui/app/settings/settings.ts",
+        "src/tui/workspace/history/history.ts",
+        "src/tui/workspace/session/session.ts",
+        "src/tui/workspace/vaults/vaults.ts"
+      ],
+      [
+        "src/tui/workspace/git/gitremote.ts",
+        "src/tui/workspace/git/views/review/rebase.ts"
+      ]
+    ],
+    "after": [
+      [
+        "src/tui/actions/actions.ts",
+        "src/tui/actions/documents/actions-edit.ts",
+        "src/tui/actions/documents/actions-find.ts",
+        "src/tui/actions/documents/actions-links.ts",
+        "src/tui/actions/documents/actions-lsp.ts",
+        "src/tui/actions/documents/actions-view.ts",
+        "src/tui/actions/shell/actions-panes.ts",
+        "src/tui/actions/workspace/actions-files.ts"
+      ],
+      [
+        "src/tui/app/runtime/app.ts",
+        "src/tui/app/settings/settings.ts",
+        "src/tui/workspace/history/history.ts",
+        "src/tui/workspace/session/session.ts",
+        "src/tui/workspace/vaults/vaults.ts"
+      ],
+      [
+        "src/tui/workspace/git/gitremote.ts",
+        "src/tui/workspace/git/views/review/rebase.ts"
+      ]
+    ]
+  },
+  "characterization": {
+    "files": [
+      "tests/tui/app/runtime/opening-policy.test.ts",
+      "tests/tui/documents/buffers/opening-policy.test.ts"
+    ],
+    "addedLeafTests": 7,
+    "beforeDeclarations": 4080,
+    "baselineDeclarations": 4076
+  },
+  "fixtureReaders": [
+    {
+      "path": "tests/check-size.test.ts",
+      "adaptation": "Keep the existing exact-cap scenario/title/assertions; inject a synthetic cap into its copied script instead of requiring the removed final App cap.",
+      "scope": "Test-local fixture only; no cap added to the repository."
+    }
+  ]
+}
