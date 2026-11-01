@@ -107,5 +107,11 @@ environment failures. The final required scoped gate and draft publication are r
 ## Build delivery
 
 All sorted check names and the complete ordered registry remain equal; the manifest, rename review, stale-reference
-check and cap removal are complete. The final bounded scoped gate runs with an isolated temporary parent outside
-`/tmp`. Fresh review and merge are separate stages; this task remains in review until they are complete.
+check and cap removal are complete. The final bounded scoped gate passes all gates and 22 tests / 73 assertions
+across four reached owners, using an isolated temporary parent outside `/tmp`.
+Log: `tmp/issue/ORF-T14-check-final.log`.
+
+[PR #193](https://github.com/remziduzagac/slipbox/pull/193) is a draft into `dev`, on
+`refactor/issue-170-links-files-checks`. Implementation/evidence commit:
+`e249c35cad76797c8d5e912f611b838e5e8ed239`. Final-head CI is pending; the passing results above are local.
+Fresh review and merge are separate stages; this task remains in review until they are complete.
