@@ -123,12 +123,15 @@ Timings are the benchmark's (§ Timings), read and not asserted.
 
 **Nothing a test file leaves behind changes another's results.** `bun test` runs every file in one process, so what
 loads lazily (`16.6`), Mermaid or MathJax, is loaded by whichever file asked first. A file whose output depends on one
-loads it before it renders: `tests/render.test.ts` loads Mermaid first, so the samples' snapshots show their diagrams
-as the TUI draws them once it's in, whichever file ran before. What's drawn while a library loads is tested in a
-process of its own. Nor does a test lean on the tests before it in its file: it makes the state it needs (a vault opened
-first, a state folder), so it passes alone, filtered or in order. The vaults a file's tests open stay on the machine's
-list, hundreds by its end: a test whose work reads them all (a link's target offered from every vault) runs with only
-its own listed (`onlyRootsUnder` in `tests/tui-harness.ts`), or it slows with each test added before it.
+loads it before it renders: `tests/render.test.ts` loads Mermaid first, so the samples' snapshots show their diagrams as
+the TUI draws them once it's in, whichever file ran before. What's drawn while a library loads is tested in a process of
+its own. That child receives the owner's runtime environment explicitly: Bun's default child environment can retain the
+startup cache path after the test sets a private XDG cache. A warm inherited-cache regression exercises the cold-load
+case twice against the same foreign cache. Nor does a test lean on the tests before it in its file: it makes the state
+it needs (a vault opened first, a state folder), so it passes alone, filtered or in order. The vaults a file's tests
+open stay on the machine's list, hundreds by its end: a test whose work reads them all (a link's target offered from
+every vault) runs with only its own listed (`onlyRootsUnder` in `tests/tui-harness.ts`), or it slows with each test
+added before it.
 
 **Flaky tests are fixed, or quarantined by name; never retried.** No test is retried, by the runner or by itself: one
 that fails at random has a cause, in the code or in the test. It is fixed, the failure shown before the fix (in the bad

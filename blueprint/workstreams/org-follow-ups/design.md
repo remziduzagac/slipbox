@@ -14,6 +14,10 @@ ORF-T1's PR #171; existing task IDs stay unchanged.
 The [T11 ledger](../code-organization/manifests/t11-final-ratchet.json) supplies the split responsibilities and
 invariants. Tasks characterize them before extracting; App is last among source owners and may need child PRs.
 
+ORF-T27 is a separate test-only prerequisite before ORF-T12: a cold diagram child explicitly receives the rendering
+owner's runtime environment rather than Bun's startup environment. Controlled warm-cache coverage preserves the
+original pending/code/drawn assertions and all deadlines; product cache policy is unchanged.
+
 ## Requirements and design changes
 
 The timer investigation records the actual cause and any product behavior correction in ORF-T1, with the matching
