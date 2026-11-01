@@ -64,3 +64,9 @@ Typecheck, lint, boundary, size and docs checks pass. An initial typecheck inclu
 `tmp/issue/` as source; renaming that scratch copy to `.ts.txt` resolves it without a code change. The required
 `TMPDIR=/var/tmp gnutimeout -k 10 900 bun run check` passes, including 22 tests across the three affected unit files.
 Log: `tmp/issue/ORF-T17-check.log`. Fresh review and merge are separate stages; this task remains in review.
+
+## Delivery
+
+[Draft PR #196](https://github.com/remziduzagac/slipbox/pull/196) targets `dev` from
+`refactor/issue-170-navigation-checks`. Implementation and verification commit:
+`ba55c48799d4c5675cdeab47bedb223576ee72dc`. The results above are local; final-head CI is pending.
