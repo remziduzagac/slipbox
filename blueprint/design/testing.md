@@ -353,6 +353,8 @@ Vault switching stays in `vaults.ts`; home and its first-walk watcher checks liv
 remaining vault feature groups. They register directly in the original order and areas. Shared fixtures, explorer
 row marks and repository setup live in `tests/terminal/support/vaults.ts`; other check collections import those
 helpers directly (ORG-D1, ORG-D2).
+Vault switching and rename source mappings include all eight vault check owners, preserving their terminal coverage
+after the split.
 
 **Coverage** (`tests/terminal/coverage.ts`, tests/terminal-coverage.test.ts in `bun run test`): every command and every
 area of `CASES.md` (its "By area" part) is covered by a check, or left out, with its reason, in its area's file; the

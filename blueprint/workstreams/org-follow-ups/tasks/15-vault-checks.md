@@ -86,3 +86,25 @@ original 52 checks. Log: `tmp/issue/ORF-T15-check.log`.
 `refactor/issue-170-vault-checks`. Implementation/evidence commit:
 `8917d2f8b2d8532566ff4d5ad09fe42f1617ee70`. The passing results above are local; final-head CI is pending.
 Fresh review and merge remain separate stages; this task stays in review until both are complete.
+
+## Fresh review correction
+
+Review of `e5435a18486fd5ae0bb4f2ca4d04e9d8ba88523f` found one selection regression: `CHECK_FILES.vaults`
+now holds only the switch check, while vault switching and rename source mappings still used that collection name.
+Vault switching selected 69 checks instead of 88, losing 19; renames selected 47 instead of 94, losing 47.
+
+Both mappings now include all eight split owners. No earlier check is lost; the runner's existing name matching also
+includes two additional checks for vault switching and fifteen for renames. The coverage guard recognizes valid file
+selectors as well as name pieces. Two new regression cases exercise source scope through the runner's actual list;
+both pass and both fail with just the mapping fix undone, before restoration. The original ten coverage test names
+are retained. Logs: `tmp/issue/ORF-T15-review-selectors-before.log`, `ORF-T15-review-selectors-after.log`,
+`ORF-T15-review-regression.log` and `ORF-T15-review-negative.log`.
+
+The manifest, move review, stale references, cap removal and testing ownership are consistent with the split. All
+52 original check names and 552 ordered registry entries still match. The affected terminal collection passes all
+51 runnable checks with the existing #73 skip and 38 commands exercised, using two jobs outside the sandbox.
+Size and diff whitespace checks pass. Logs: `tmp/issue/ORF-T15-review-terminal.log` and `ORF-T15-review-size.log`.
+
+The required bounded scoped gate passes all gates and 109 tests / 2,546 assertions across eight reached owners.
+Coverage now passes 12 tests / 127 assertions, including the two new regression cases. Log:
+`tmp/issue/ORF-T15-review-check.log`. No actionable finding remains after the correction; merge is a separate stage.

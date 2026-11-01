@@ -9,7 +9,8 @@ import type { Check } from "./terminal/check.ts";
 import { CHECK_FILES, CHECKS, LEFT_OUT } from "./terminal/checks/index.ts";
 import { caseAreas, coverage, ownerOfCase, ownerOfCommand, report } from "./terminal/coverage.ts";
 import { COMMAND_SPECS } from "../src/core/application/commands/catalog.ts";
-import { CHECKS_FOR, importGraph, SAMPLES_FOR } from "../scripts/ci-scope.ts";
+import { CHECKS_FOR, importGraph, SAMPLES_FOR, scope } from "../scripts/ci-scope.ts";
+import { TEST_BUDGETS } from "./support/timeouts.ts";
 
 describe("the terminal checks' coverage", () => {
   test("every command and every area of the reference set has a check, or is left out with its reason", () => {
@@ -35,13 +36,43 @@ describe("the terminal checks' coverage", () => {
     const names = CHECKS.map((c) => c.name.toLowerCase());
     expect(CHECKS_FOR.filter(([re]) => !known.some((f) => re.test(f))).map(([re]) => String(re))).toEqual([]);
     const pieces = [...CHECKS_FOR.flatMap(([, p]) => p), ...Object.values(SAMPLES_FOR).flatMap((s) => s.checks)];
-    expect(pieces.filter((p) => !names.some((n) => n.includes(p.toLowerCase())))).toEqual([]);
+    expect(
+      pieces.filter((p) => !CHECK_FILES[p.toLowerCase()] && !names.some((n) => n.includes(p.toLowerCase()))),
+    ).toEqual([]);
     const samples = Object.entries(SAMPLES_FOR).flatMap(([f, s]) => [f, ...s.tests]);
     expect(samples.filter((f) => !existsSync(join(top, f)))).toEqual([]);
   });
   test("the git panel's rows kept by what they are (gitsteady.ts) run the git checks, not every check", () => {
     expect(CHECKS_FOR.find(([re]) => re.test("src/tui/workspace/git/gitsteady.ts"))?.[1]).toEqual(["git"]);
   });
+
+  test.each(["src/tui/workspace/vaults/vaults.ts", "src/core/workspace/mutations/rename/rename.ts"])(
+    "vault and rename changes retain every split vault check: %s",
+    (source) => {
+      const selected = scope([source]);
+      expect(selected.all).toBeNull();
+      if (selected.all !== null || selected.checks === "all") throw new Error("expected a focused terminal selection");
+      expect(Array.isArray(selected.checks)).toBe(true);
+      const listed = Bun.spawnSync([process.execPath, "tests/terminal/run.ts", "--list", ...selected.checks], {
+        cwd: join(import.meta.dir, ".."),
+        env: { ...process.env },
+      });
+      expect(listed.exitCode).toBe(0);
+      const expected = [
+        "vaults",
+        "home",
+        "home-watching",
+        "elsewhere",
+        "explorer-marks",
+        "symlinks",
+        "vault-peek",
+        "repositories",
+      ].flatMap((file) => CHECK_FILES[file]!.map((c) => `${c.area}: ${c.name}`));
+      const output = listed.stdout.toString();
+      for (const name of expected) expect(output).toContain(name);
+    },
+    TEST_BUDGETS.terminalRunner,
+  );
 
   test("each reason says something", () => {
     const reasons = [...Object.values(LEFT_OUT.commands), ...Object.values(LEFT_OUT.cases)];

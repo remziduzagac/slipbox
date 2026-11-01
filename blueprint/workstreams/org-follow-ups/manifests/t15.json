@@ -129,6 +129,14 @@
     "tests/terminal/checks/peek-backlinks.ts",
     "tests/terminal/checks/git-steady.ts"
   ],
+  "sourceSelectors": {
+    "file": "scripts/ci-scope.ts",
+    "sources": [
+      "src/tui/workspace/vaults/vaults.ts",
+      "src/core/workspace/mutations/rename/rename*.ts"
+    ],
+    "preserve": "All original vault checks remain selected through the eight split owners."
+  },
   "retainedData": "All check bodies, options, comments, fixture strings and deadlines are retained; no snapshots belong to this collection.",
   "design": "blueprint/design/testing.md",
   "capRemoval": "tests/terminal/checks/vaults.ts"
