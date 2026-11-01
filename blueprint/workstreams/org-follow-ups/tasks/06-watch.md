@@ -80,5 +80,7 @@ Focused and aggregate test-bearing commands run sequentially outside the sandbox
 The original logs, structural/body audits, worker diagnostics and binary hash remain in tmp/issue/ORF-T6-*.
 No unrelated failure, failed selection or job was retried; no full suite or all-terminal run was performed.
 
-Fresh review is pending in a separate session. Draft publication follows; no ready marking or merge is performed.
+Draft PR: [#182](https://github.com/remziduzagac/slipbox/pull/182), into dev. Implementation/evidence commit:
+78267dea4359482907c3361afabc24d9685e2c7a. All local build gates above pass; final-head CI is pending.
+Fresh review is pending in a separate session. No ready marking, merge, full run or next-task work is performed.
 This task remains review until its reviewed change is merged.
