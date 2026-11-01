@@ -96,3 +96,41 @@ implementation and review evidence do not by themselves close the task.
 - Build-record docs and Biome pass: 480 Markdown / 1771 spelt files / zero link errors; 1174 linted files.
   Fresh review remains pending. No ready marking, merge, next-task work, full-suite/all-terminal invocation,
   deadline/dependency/CI-policy change or unrelated-failure retry. Stop after this build stage.
+
+## Review and merge
+
+- Fresh review at `bf2979ad778dd96282570b7b743d77c8d92b4cd4` finds no actionable findings. Independent body,
+  constructor, ownership, contract and initializer audits preserve behavior; all 68 retained single-line field
+  initializers agree in value/order, with multiline and moved private initializers checked separately.
+- Fresh verification passes 51 focused tests / 284 assertions, four affected terminal checks / 27 commands,
+  and all static/docs gates. The completed 268-owner scoped check, package build and source/compiled probes remain
+  applicable. No completed aggregate, build/probe, negative control or unrelated failed selection is repeated.
+- Required [CI 41274098730](https://github.com/remziduzagac/slipbox/actions/runs/41274098730) and
+  [CodeQL 41274094583](https://github.com/remziduzagac/slipbox/actions/runs/41274094583) pass at the exact reviewed
+  head on attempt 1. The preceding #184 dev push 41271073138 also passes on attempt 1, including all terminal platforms.
+- Marked ready and squash-merged [#185](https://github.com/remziduzagac/slipbox/pull/185) with the exact reviewed
+  head guard. Merge: `fab06fa8facd960b37680deec05f73dfb8b0ba07`, 2026-11-01 04:54:39 UTC. Its entire tree equals
+  the reviewed head, and its sole parent is the preceding green base. Local branch remains refactor/issue-170-app.
+
+## Dev verification: unrelated terminal fixture failure
+
+- Automatic [dev push 41274875052](https://github.com/remziduzagac/slipbox/actions/runs/41274875052) completes at
+  the exact squash on attempt 1 with a failure. Both unit platforms, lint/site/changes and both Linux terminal
+  platforms pass. macOS terminal and aggregate CI fail; status is skipped. No run or job is retried.
+- Linux x64 and ARM each pass 548/548 terminal checks with four existing skips; macOS passes 546/547 with five
+  existing skips. Every platform exercises 329 commands. All four affected opening/layout scenarios pass on each.
+  Exact results and completed logs are retained in `tmp/issue/ORF-T9-merge-dev-*`.
+- The sole failure is the D261 Git-panel check at `tests/terminal/checks/git-steady.ts:384`, timing out after
+  32553 ms waiting for the last row shown. Its predicate at line 402 accepts only Merged or older or ridge-notes.
+  The captured branch list instead ends with ridge-notes above dawn-start; no folded older group is present.
+- The fixture at `git-steady.ts:69` commits dawn-start and then ridge-notes without controlled dates. The unchanged
+  Git reader uses second-resolution committer dates; `orderBranches` at
+  `src/core/workspace/git/branches/gitbranches.ts:270` sorts newest first, then alphabetically on equal dates.
+  Equal dates put ridge-notes last; distinct dates can put dawn-start last. The capture agrees with the latter.
+  This identifies an existing fixture assumption; no causal reproduction or new product defect is claimed.
+- The check, its helpers, Git reading/sorting/panel navigation, key handling and panel drawing are unchanged from base.
+  App's expanded constructor and moved/retained bodies have the preserved review audit. The same check passes on
+  both Linux platforms at this squash and on macOS in the preceding dev run. This differs from #73, #74 and #75.
+- Recommend a separate test-only fixture fix with controlled commit dates and coverage of the date-order condition,
+  preserving existing assertions, title and limits, before ORF-T10. Task completion waits for disposition of this
+  red dev run. No fixture implementation, issue filing, next-task build or failed-check rerun is included here.

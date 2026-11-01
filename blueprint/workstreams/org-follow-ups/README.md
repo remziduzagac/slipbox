@@ -34,6 +34,7 @@ from the latest origin/dev. Task status and evidence live in its file; completed
 - [ORF-T7: Separate update observation from handover](tasks/07-updates.md).
 - [ORF-T8: Separate graph refresh from index state](tasks/08-graph.md).
 - [ORF-T9: Separate App opening and layout policy](tasks/09-app.md).
+- [ORF-T26: Control Git fixture commit dates](tasks/26-git-branch-dates.md).
 - [ORF-T10: Split distribution tests by feature](tasks/10-distribution-tests.md).
 - [ORF-T11: Split server tests by feature](tasks/11-server-tests.md).
 - [ORF-T12: Split rendering tests by feature](tasks/12-render-tests.md).
