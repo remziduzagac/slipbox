@@ -1241,7 +1241,7 @@ describe("Mermaid (12.10)", async () => {
       const second = renderTree(parsed.tree, opts, null, cache);
       console.log(JSON.stringify({ pending: [first.pending, second.pending ?? null, host.pending], code: text(first).includes("A[Write]"), drawn: /│\\s+Write\\s+│/.test(text(second)) }));
     `;
-    const r = Bun.spawnSync(["bun", "-e", script], { cwd: join(import.meta.dir, "..") });
+    const r = Bun.spawnSync(["bun", "-e", script], { env: process.env, cwd: join(import.meta.dir, "..") });
     expect(r.stderr.toString()).toBe("");
     expect(JSON.parse(r.stdout.toString())).toEqual({
       pending: [["mermaid"], null, ["mermaid"]],
