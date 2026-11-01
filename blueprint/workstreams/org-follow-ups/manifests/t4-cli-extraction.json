@@ -1,0 +1,130 @@
+{
+  "moves": {},
+  "retained": [],
+  "renamedBasenames": {},
+  "extraction": [
+    {
+      "from": "src/cli/cli.ts",
+      "to": "src/cli/output.ts",
+      "symbols": [
+        "safeJson",
+        "JSON_SCHEMA",
+        "HELP",
+        "envelope",
+        "parse-error presentation",
+        "version/help/report presentation",
+        "handler-result presentation",
+        "error classification/presentation",
+        "defaultIo"
+      ]
+    }
+  ],
+  "entries": {
+    "removed": [],
+    "added": []
+  },
+  "ownership": {
+    "dispatch": "cli.ts retains argument parsing, commandIn, help/version/report dispatch order, config/root/pointer/session setup, checkUsage, handler lookup and probeLinks ordering",
+    "presentation": "output.ts owns help bytes, safe JSON envelopes, stdout/stderr selection, result/warning/stale presentation, error exit classification and defaultIo; cli.ts re-exports existing public presentation symbols",
+    "workers": "No worker, build entry, URL or asset moves; command handler dependencies and real worker callers remain unchanged"
+  },
+  "sourceReaders": [
+    {
+      "file": "tests/docs.test.ts",
+      "from": "src/cli/cli.ts",
+      "to": "src/cli/output.ts",
+      "reason": "The description guard reads HELP's new owner; command metadata imports stay in cli.ts. Existing test names and assertions are unchanged."
+    }
+  ],
+  "edges": {
+    "removed": [
+      "src/cli/cli.ts -> src/core/foundation/text/sanitize.ts",
+      "src/cli/cli.ts -> src/version.ts"
+    ],
+    "added": [
+      "src/cli/cli.ts -> src/cli/output.ts",
+      "src/cli/output.ts -> src/cli/args.ts",
+      "src/cli/output.ts -> src/cli/common.ts",
+      "src/cli/output.ts -> src/core/foundation/text/sanitize.ts",
+      "src/cli/output.ts -> src/core/workspace/vaults/vault.ts",
+      "src/cli/output.ts -> src/version.ts"
+    ]
+  },
+  "runtime": {
+    "removed": [
+      "src/cli/cli.ts -> src/core/foundation/text/sanitize.ts",
+      "src/cli/cli.ts -> src/version.ts"
+    ],
+    "added": [
+      "src/cli/cli.ts -> src/cli/output.ts",
+      "src/cli/output.ts -> src/cli/args.ts",
+      "src/cli/output.ts -> src/cli/common.ts",
+      "src/cli/output.ts -> src/core/foundation/text/sanitize.ts",
+      "src/cli/output.ts -> src/core/workspace/vaults/vault.ts",
+      "src/cli/output.ts -> src/version.ts"
+    ]
+  },
+  "tests": {
+    "removed": [],
+    "added": [
+      "describe: CLI output policy",
+      "test: JSON success retains handler data, nonzero codes and omitted undefined data; init never reads stale",
+      "test: errors retain code/data/warnings and tolerate a failing stale read",
+      "test: human result, warnings and stale diagnostics keep stream/order; render retains its layout escapes",
+      "test: only unexpected human errors add a debug stack; parse failures always use exit 2"
+    ]
+  },
+  "runtimeScc": {
+    "before": [
+      [
+        "src/tui/actions/actions.ts",
+        "src/tui/actions/documents/actions-edit.ts",
+        "src/tui/actions/documents/actions-find.ts",
+        "src/tui/actions/documents/actions-links.ts",
+        "src/tui/actions/documents/actions-lsp.ts",
+        "src/tui/actions/documents/actions-view.ts",
+        "src/tui/actions/shell/actions-panes.ts",
+        "src/tui/actions/workspace/actions-files.ts"
+      ],
+      [
+        "src/tui/app/runtime/app.ts",
+        "src/tui/app/settings/settings.ts",
+        "src/tui/workspace/history/history.ts",
+        "src/tui/workspace/session/session.ts",
+        "src/tui/workspace/vaults/vaults.ts"
+      ],
+      [
+        "src/tui/workspace/git/gitremote.ts",
+        "src/tui/workspace/git/views/review/rebase.ts"
+      ]
+    ],
+    "after": [
+      [
+        "src/tui/actions/actions.ts",
+        "src/tui/actions/documents/actions-edit.ts",
+        "src/tui/actions/documents/actions-find.ts",
+        "src/tui/actions/documents/actions-links.ts",
+        "src/tui/actions/documents/actions-lsp.ts",
+        "src/tui/actions/documents/actions-view.ts",
+        "src/tui/actions/shell/actions-panes.ts",
+        "src/tui/actions/workspace/actions-files.ts"
+      ],
+      [
+        "src/tui/app/runtime/app.ts",
+        "src/tui/app/settings/settings.ts",
+        "src/tui/workspace/history/history.ts",
+        "src/tui/workspace/session/session.ts",
+        "src/tui/workspace/vaults/vaults.ts"
+      ],
+      [
+        "src/tui/workspace/git/gitremote.ts",
+        "src/tui/workspace/git/views/review/rebase.ts"
+      ]
+    ]
+  },
+  "characterization": {
+    "file": "tests/cli/contracts/dispatch.test.ts",
+    "addedLeafTests": 5,
+    "baseline": "ORF-T4-before.json captured after five admission/output characterization tests, before extraction; base has 4050 declarations, baseline 4056; four focused output tests added after extraction yield 4061"
+  }
+}
