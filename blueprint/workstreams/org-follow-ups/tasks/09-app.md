@@ -1,5 +1,5 @@
 ---
-status: review
+status: done
 assignee:
 blocked_by: [ORF-T8]
 created: "2026-10-31"
@@ -134,3 +134,16 @@ implementation and review evidence do not by themselves close the task.
 - Recommend a separate test-only fixture fix with controlled commit dates and coverage of the date-order condition,
   preserving existing assertions, title and limits, before ORF-T10. Task completion waits for disposition of this
   red dev run. No fixture implementation, issue filing, next-task build or failed-check rerun is included here.
+
+## Corrective fixture verification and completion
+
+- [ORF-T26](26-git-branch-dates.md) fixes the date-dependent fixture in separate test-only
+  [PR #186](https://github.com/remziduzagac/slipbox/pull/186), squash e0b013aaf1d1690a73162898b2f2ea255f5bac1c.
+  Both author and committer dates are controlled a minute apart; existing titles/assertions/limits are unchanged.
+  Its equal-second regression and fixture-only negative control establish the correction; no product change.
+- Corrective [dev push 41297049491](https://github.com/remziduzagac/slipbox/actions/runs/41297049491) succeeds at
+  that exact squash on attempt 1. Both unit platforms, lint/site/changes, all three terminal platforms and aggregate
+  CI pass. Linux x64/ARM pass 548/548 and macOS 547/547 terminal checks, with four/four/five existing skips.
+- The repaired D261 check and all four T9 opening/layout scenarios pass on every platform. Each exercises
+  329 commands. The original red run remains recorded; it was not retried. Completed logs/metadata and exact
+  line evidence are retained in `tmp/issue/ORF-T26-dev-*`. ORF-T9 is done; ORF-T10 may proceed.

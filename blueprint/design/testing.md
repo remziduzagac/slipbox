@@ -32,7 +32,11 @@ through OpenTUI itself, to prove the adapter and real key parsing.
 | `tests/regressions.test.ts` | one test per bug found in review (later: "review round/cycle N" blocks) |
 | `tests/home.test.ts` | the reference set's build (`scripts/build-home.ts`): histories, extras, the checks |
 | `tests/export.test.ts` | export (`10.x`): the assembler; each format read back (zips unzipped, PDF pages' text) |
-| `tests/distribution.test.ts` | distribution (`14.x`): gates, notices, SBOMs, the scanner; a release built, installed |
+| `tests/distribution/supply-chain.test.ts` | supply-chain gates, notices, SBOMs, workflow scope and advisories |
+| `tests/distribution/release.test.ts` | release planning and the real host package built, installed and exercised |
+| `tests/distribution/installation.test.ts` | install identity and uninstall planning/refusal |
+| `tests/distribution/updates.test.ts` | release discovery, update checks and publication/refusal |
+| `tests/distribution/channels.test.ts` | Pages bootstrap, channel selection and channel release discovery |
 | `tests/release.test.ts` | previews and the Pages site: versions, tags, notes, the channel files, the workflows |
 | `tests/health.test.ts` | the health check (`scripts/health.ts`): the upkeep files, signals, the issue, its workflow |
 | `tests/check-docs.test.ts` | the docs' check on a repository of its own: a misspelling, a broken link, a long line |
@@ -50,7 +54,7 @@ The core split also places boundary fixtures under `tests/organization/` and pur
 `tests/tui/shell/overlays/`. Every owner file retains its timeout and equivalent file-owned core sandbox; the support
 module does not import App.
 
-`tests/distribution.test.ts` builds a release for this machine and drives it as a user would: the packed binary
+`tests/distribution/release.test.ts` builds a release for this machine and drives it as a user would: the packed binary
 printing the skill, the release's notes, installed by the release's installer and through the Pages bootstrap,
 `slipbox channel`, upgraded on either channel, removed; the bootstrap and the channel files are tested apart too, with
 fake `uname` and `ldd`, on any machine. `tests/check-docs.test.ts` holds the docs' check (`scripts/check-docs.ts`) to
