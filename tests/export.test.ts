@@ -1,3 +1,4 @@
+import { makeExportSandbox } from "./support/export-sandbox.ts";
 import { UNIT_TIMEOUT_MS } from "./support/timeouts.ts";
 // Export (plan 10.x): the assembler against a vault of its own, each writer's file opened and read back — a .docx or an
 // EPUB unzipped here and its XML read, a PDF's pages read back to their text, the HTML and Markdown as they are — and
@@ -5,7 +6,6 @@ import { UNIT_TIMEOUT_MS } from "./support/timeouts.ts";
 
 import { beforeAll, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, symlinkSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
 import { crc32, inflateRawSync, inflateSync } from "node:zlib";
 import { Document, Packer } from "docx";
@@ -53,12 +53,7 @@ import { locateVault } from "../src/core/workspace/vaults/vault.ts";
 
 // Drawing diagrams and maths, writing a document: slow on a loaded machine, not stuck.
 setDefaultTimeout(UNIT_TIMEOUT_MS);
-const sandbox = mkdtempSync(join(tmpdir(), "slipbox-export-"));
-process.env.XDG_STATE_HOME = join(sandbox, "state");
-process.env.XDG_CACHE_HOME = join(sandbox, "cache");
-process.env.XDG_CONFIG_HOME = join(sandbox, "config");
-process.env.XDG_DATA_HOME = join(sandbox, "data");
-delete process.env.SLIPBOX_CONFIG;
+const sandbox = makeExportSandbox();
 
 /** A plain blue rectangle, `w` by `h`: a picture with nothing in it. */
 const rect = (w: number, h: number) =>

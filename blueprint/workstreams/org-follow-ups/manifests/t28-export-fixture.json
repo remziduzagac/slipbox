@@ -1,0 +1,42 @@
+{
+  "moves": {},
+  "retained": [],
+  "extraction": {
+    "from": "tests/export.test.ts:56-61",
+    "to": "tests/support/export-sandbox.ts",
+    "preserved": "Sandbox prefix and all XDG/SLIPBOX_CONFIG setup bytes after indent reversal; original PNG beforeAll remains in owner.",
+    "addition": "Save prior root markers, select the existing .slipbox fixture markers, restore prior markers in afterAll."
+  },
+  "regression": "tests/core/rendering/export/ancestor-fixture.test.ts",
+  "originalOwnerLines": [
+    1624,
+    1619
+  ],
+  "invariants": [
+    "All original titles, assertions, hooks, helper bodies and deadlines retained.",
+    "Source/worker/build/package/lock/CI unchanged.",
+    "T13 split remains local and unpublished; T12 completion carried byte-identically.",
+    "Ancestor marker and all child files belong to regression sandbox cleanup."
+  ],
+  "verification": {
+    "sourceStaticEdges": 3131,
+    "sourceRuntimeEdges": 2290,
+    "entries": 12,
+    "declarations": [
+      4086,
+      4087
+    ],
+    "unresolved": [],
+    "selectedOwners": [
+      "tests/check-size.test.ts",
+      "tests/core/rendering/export/ancestor-fixture.test.ts",
+      "tests/export.test.ts"
+    ],
+    "scopedTests": 69,
+    "scopedAssertions": 754,
+    "terminalChecks": 3,
+    "terminalCommands": 4,
+    "T13Checkpoint": "5035ecb1",
+    "T12Carry": "unchanged"
+  }
+}
