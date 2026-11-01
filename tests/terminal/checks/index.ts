@@ -6,7 +6,13 @@ import { EDITING, LEFT_OUT_EDITING } from "./editing.ts";
 import { GIT_BRANCHES } from "./git-branches.ts";
 import { GIT_DIFF } from "./git-diff.ts";
 import { GIT_STEADY } from "./git-steady.ts";
-import { LEFT_OUT_LINKS_AND_FILES, LINKS_AND_FILES } from "./links-and-files.ts";
+import { FILE_OPERATIONS } from "./files.ts";
+import { GIT } from "./git.ts";
+import { LEFT_OUT_LINKS_AND_FILES, LINKS } from "./links.ts";
+import { NAMED } from "./named-folders.ts";
+import { NOTES } from "./notes.ts";
+import { PEEK } from "./peek.ts";
+import { ROOTS } from "./roots.ts";
 import { MOVING_LINKS } from "./moving-links.ts";
 import { NEW_FILE } from "./new-file.ts";
 import { LEFT_OUT_NAVIGATING, NAVIGATING } from "./navigating.ts";
@@ -30,7 +36,13 @@ export const CHECK_FILES: Record<string, Check[]> = {
   editing: EDITING,
   "new-file": NEW_FILE,
   navigating: NAVIGATING,
-  "links-and-files": LINKS_AND_FILES,
+  links: LINKS,
+  roots: ROOTS,
+  "named-folders": NAMED,
+  files: FILE_OPERATIONS,
+  git: GIT,
+  notes: NOTES,
+  peek: PEEK,
   // The peek's backlinks (#10): their own file, in the links-and-files area.
   "peek-backlinks": PEEK_BACKLINKS,
   // Vaults, home and Elsewhere, the view, marks, links, the peek: their own file, in the areas they belong to.

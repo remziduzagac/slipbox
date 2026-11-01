@@ -1,0 +1,127 @@
+{
+  "task": "ORF-T14",
+  "base": "332012335374f51e2ee306955d8af80acaa88b7c",
+  "moves": [
+    {
+      "from": "tests/terminal/checks/links-and-files.ts",
+      "to": "tests/terminal/checks/links.ts",
+      "method": "git mv",
+      "retains": [
+        "LINKS",
+        "LEFT_OUT_LINKS_AND_FILES"
+      ]
+    }
+  ],
+  "extractions": [
+    {
+      "from": "tests/terminal/checks/links-and-files.ts",
+      "to": "tests/terminal/checks/roots.ts",
+      "declarations": [
+        "tree",
+        "before",
+        "clickCrumb",
+        "ROOTS"
+      ]
+    },
+    {
+      "from": "tests/terminal/checks/links-and-files.ts",
+      "to": "tests/terminal/checks/named-folders.ts",
+      "declarations": [
+        "worktreeRows",
+        "NAMED"
+      ]
+    },
+    {
+      "from": "tests/terminal/checks/links-and-files.ts",
+      "to": "tests/terminal/checks/files.ts",
+      "declarations": [
+        "FILES",
+        "RENAMES"
+      ]
+    },
+    {
+      "from": "tests/terminal/checks/links-and-files.ts",
+      "to": "tests/terminal/checks/git.ts",
+      "declarations": [
+        "themeFg",
+        "gitOk",
+        "KESTREL",
+        "IDENTITY",
+        "SYNC",
+        "bareOrigin",
+        "pushedElsewhere",
+        "GIT"
+      ]
+    },
+    {
+      "from": "tests/terminal/checks/links-and-files.ts",
+      "to": "tests/terminal/checks/notes.ts",
+      "declarations": [
+        "NOTES"
+      ]
+    },
+    {
+      "from": "tests/terminal/checks/links-and-files.ts",
+      "to": "tests/terminal/checks/peek.ts",
+      "declarations": [
+        "peekTitleAt",
+        "PEEK"
+      ]
+    },
+    {
+      "from": "tests/terminal/checks/links-and-files.ts",
+      "to": "tests/terminal/support/links.ts",
+      "declarations": [
+        "git",
+        "explorer",
+        "crumbs",
+        "listed",
+        "names",
+        "messagesSaying",
+        "lastMessage",
+        "linkHere",
+        "toLink",
+        "ARCHITECTURE",
+        "PEEK_HINT"
+      ]
+    }
+  ],
+  "entryPoints": [
+    "tests/terminal/checks/index.ts",
+    "tests/terminal/run.ts",
+    "tests/terminal/worker.ts"
+  ],
+  "registration": {
+    "before": [
+      "LINKS",
+      "ROOTS",
+      "NAMED",
+      "FILES",
+      "RENAMES",
+      "GIT",
+      "NOTES",
+      "PEEK"
+    ],
+    "after": [
+      "LINKS",
+      "ROOTS",
+      "NAMED",
+      "FILES + RENAMES",
+      "GIT",
+      "NOTES",
+      "PEEK"
+    ],
+    "preserve": "CHECKS order, check names, areas, coverage, options and run bodies"
+  },
+  "helperConsumers": [
+    "tests/terminal/checks/vaults.ts",
+    "tests/terminal/checks/updates.ts",
+    "tests/terminal/checks/slow-disk.ts",
+    "tests/terminal/checks/moving-links.ts",
+    "tests/terminal/checks/peek-backlinks.ts",
+    "tests/terminal/checks/outside-and-code.ts"
+  ],
+  "retainedData": "All check bodies, options, comments, fixture strings and deadlines are retained; no snapshots belong to this collection.",
+  "design": "blueprint/design/testing.md",
+  "capRemoval": "tests/terminal/checks/links-and-files.ts"
+}
