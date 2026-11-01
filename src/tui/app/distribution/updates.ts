@@ -6,62 +6,34 @@
 // hands over once the screen is given back, and the slipbox that starts takes the note and comes back where you
 // were.
 
-import { closeSync, existsSync, mkdirSync, openSync, readFileSync, realpathSync, rmSync, statSync } from "node:fs";
+import { closeSync, existsSync, mkdirSync, openSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { VERSION } from "../../../version.ts";
 import { sanitize } from "../../../core/foundation/text/sanitize.ts";
 import { tagOf } from "../../../core/application/distribution/release.ts";
 import { readJson } from "../../../core/foundation/platform/fsutil.ts";
-import { removeOlderThan } from "../../../core/foundation/platform/fsutil.ts";
-import {
-  type Channel,
-  currentVersion,
-  homebrewPrefix,
-  type InstalledBy,
-  howToUpgrade,
-} from "../../../core/application/distribution/install.ts";
+import { currentVersion, howToUpgrade } from "../../../core/application/distribution/install.ts";
 import { type SessionState, sessionFrom } from "../../../core/workspace/session/position.ts";
-import type { ReleaseBuild } from "../../../core/application/distribution/release.ts";
 import { type RestartNote, writeNote } from "../../../core/application/distribution/restart.ts";
 import {
   askNewest,
-  dailyUpdateCheck,
   doNotTrack,
   FROM_SOURCE,
   type Found,
   isNewer,
-  isVersion,
   releasesBase,
   skipVersion,
   type UpgradeResult,
   upgradeSaid,
-  versionOf,
 } from "../../../core/application/distribution/update.ts";
 import type { VaultMode } from "../../../core/workspace/vaults/vault.ts";
 import type { App, Level } from "../runtime/app.ts";
 import { openDialog } from "../../shell/overlays/dialog.ts";
 import { stopInsert } from "../../documents/editing/editing.ts";
+import type { UpdateEnv } from "./update-env.ts";
+import { UpdateObservation } from "./update-observation.ts";
 
-/** What slipbox knows of itself and where it keeps things: `tui/shell/terminal/run.ts`'s, a test's own. */
-export interface UpdateEnv {
-  release: ReleaseBuild | null;
-  version: string;
-  by: InstalledBy;
-  /** The installer's install's channel; any other follows stable releases. */
-  channel: Channel;
-  /** The installer's data folder. */
-  data: string;
-  /** This binary: `slipbox upgrade --json` is run with it. */
-  execPath: string;
-  /** The file it was started by, as the shell found it (`startedPath`): one put by hand is watched there. */
-  startedBy: string | null;
-  /** slipbox's state folder: `update.json`, a background upgrade's answer. */
-  stateDir: string;
-  env: Record<string, string | undefined>;
-  /** Your own config's `[update] check`, read again. */
-  checkOn: () => boolean;
-  fetcher?: (url: string, init?: RequestInit) => Promise<Response>;
-}
+export type { UpdateEnv } from "./update-env.ts";
 
 /** Where a restart comes back to (UPG-D4): the vault, home or Elsewhere's folder, and home's folder opened by name. */
 export interface Place {
@@ -77,6 +49,14 @@ export const QUIET_MS = 2000;
 export class Updates {
   constructor(readonly app: App) {}
 
+  private readonly observation = new UpdateObservation({
+    env: () => this.env,
+    quitting: () => this.app.quitting,
+    found: (found) => this.found(found),
+    installed: (version) => this.installed(version),
+    tryOffer: () => this.tryOffer(),
+  });
+
   /** `tui/shell/terminal/run.ts` sets it; without it (a test's App, unless it sets one) nothing is checked or offered. */
   env: UpdateEnv | null = null;
   /** Latest available release, kept on the bar after its offer closes. */
@@ -84,9 +64,6 @@ export class Updates {
   /** What waits for a quiet moment to be shown, in turn, each once (by its key): an offer, a restart's, the restart's
    *  question after waiting for an upgrade. */
   private queue: { key: string; show: () => void }[] = [];
-  /** The installer's `current` at start: what was installed then is no upgrade underneath — a version you went back to
-   *  on purpose isn't offered to leave again. */
-  private startedWith: string | null = null;
   /** The upgrade running beside the TUI (Upgrade, restart later). */
   background: { version: string; done: Promise<void> } | null = null;
   /** The versions this window's own background upgrade installed: said already, never offered again underneath. */
@@ -96,11 +73,6 @@ export class Updates {
   /** `:upgrade` asking, or a restart waiting for an upgrade beside the TUI: asked again meanwhile, nothing more. */
   private checking = false;
   private restarting = false;
-  private timer: ReturnType<typeof setInterval> | null = null;
-  private ticks = 0;
-  /** What was last seen where the next version would be (UPG-T6): the file's stamp, and the version it said. */
-  private underneath: { stamp: string; version: string | null } | null = null;
-  private looking = false;
   /** The versions installed underneath offered already: each once. */
   private readonly offeredUnderneath = new Set<string>();
 
@@ -154,87 +126,32 @@ export class Updates {
     });
   }
 
-  /** A release build's: the daily check started, and every second what waits looked at, every ten what's underneath. */
+  /** A release build's daily check and installed-version polling. */
   start(): void {
-    const env = this.env;
-    if (!env?.release) return;
-    // Background upgrades' answers left by a TUI that quit before they came, a day old.
-    removeOlderThan(env.stateDir, 24 * 60 * 60 * 1000, /^upgrade-\d+\.json$/);
-    void dailyUpdateCheck({
-      release: env.release,
-      version: env.version,
-      enabled: env.checkOn(),
-      env: env.env,
-      stateFile: this.stateFile,
-      by: env.by,
-      channel: env.channel,
-      fetcher: env.fetcher,
-    }).then((f) => {
-      if (f) this.found(f);
-    });
-    // What's there now is this one: never started to ask it.
-    const where = this.watched(env);
-    if (where && sameFile(where, env.execPath)) this.underneath = { stamp: stampOf(where) ?? "", version: env.version };
-    if (env.by === "installer") this.startedWith = currentVersion(env.data);
-    this.timer = setInterval(() => this.tick(), 1000);
-    (this.timer as { unref?: () => void }).unref?.();
+    this.observation.start();
   }
 
   tick(): void {
-    if (this.app.quitting) {
-      if (this.timer) clearInterval(this.timer);
-      return;
-    }
-    if (++this.ticks % 10 === 0) void this.lookUnderneath();
-    this.tryOffer();
+    this.observation.tick();
   }
 
-  /** Where Homebrew's or a hand-put slipbox's next version would be: `opt`'s binary, or the path it was started by. */
-  private watched(env: UpdateEnv): string | null {
-    if (env.by === "homebrew") {
-      const prefix = homebrewPrefix(env.execPath);
-      return prefix ? join(prefix, "opt", "slipbox", "bin", "slipbox") : null;
-    }
-    return env.by === "other" ? env.startedBy : null;
+  lookUnderneath(): Promise<void> {
+    return this.observation.lookUnderneath();
   }
 
-  /**
-   * An upgrade underneath (UPG-T6), looked at every ten seconds — this machine's files only, so whatever the check's
-   * switches say (UPG-D5): the version the installer's `current` names; Homebrew's `opt` binary, or the path a hand-put
-   * one was started by, asked its version once its link or file changed. One newer than this is offered as the restart
-   * alone, once; this window's own background upgrade is said already.
-   */
-  async lookUnderneath(): Promise<void> {
-    const env = this.env;
-    if (!env?.release || this.looking) return;
-    this.looking = true;
-    try {
-      const seen = await this.versionUnderneath(env);
-      if (!seen || !isNewer(seen, env.version) || seen === this.startedWith || this.offeredUnderneath.has(seen)) return;
-      // This window's own upgrade, running or done, is said by its message: whatever version it installs.
-      if (this.mine.has(seen) || this.background) return;
-      // An offer waiting of this version, or an older one, is out of date: it's installed; the restart starts it.
-      this.queue = this.queue.filter((q) => !q.key.startsWith("offer:") || isNewer(q.key.slice(6), seen));
-      this.clearInstalled(seen);
-      this.whenQuiet(`restart:${seen}`, () => this.offerRestart(seen));
-    } finally {
-      this.looking = false;
-    }
+  installedNewer(): string | null {
+    return this.observation.installedNewer();
   }
 
-  private async versionUnderneath(env: UpdateEnv): Promise<string | null> {
-    if (env.by === "installer") {
-      const current = currentVersion(env.data);
-      return current && isVersion(current) ? current : null;
-    }
-    const where = this.watched(env);
-    const stamp = where ? stampOf(where) : null;
-    if (!where || !stamp) return null;
-    if (this.underneath?.stamp === stamp) return this.underneath.version;
-    const said = await versionOf(where, 10_000);
-    const version = /^slipbox (\S+)$/.exec(said ?? "")?.[1] ?? null;
-    this.underneath = { stamp, version: version && isVersion(version) ? version : null };
-    return this.underneath.version;
+  /** An observed newer installation, admitted to the same ordered offer queue. */
+  private installed(seen: string): void {
+    if (this.offeredUnderneath.has(seen)) return;
+    // This window's own upgrade, running or done, is said by its message: whatever version it installs.
+    if (this.mine.has(seen) || this.background) return;
+    // An offer waiting of this version, or an older one, is out of date: it's installed; the restart starts it.
+    this.queue = this.queue.filter((q) => !q.key.startsWith("offer:") || isNewer(q.key.slice(6), seen));
+    this.clearInstalled(seen);
+    this.whenQuiet(`restart:${seen}`, () => this.offerRestart(seen));
   }
 
   /** What the daily check found: its line kept in the messages list, and the offer opened once the TUI is quiet. */
@@ -390,15 +307,6 @@ export class Updates {
       done: (choice) => (choice === "restart" ? void this.restart(null) : later()),
       cancel: later,
     });
-  }
-
-  /** The newest version installed underneath this one, when it's newer: the installer's `current`, or what was last
-   *  seen of Homebrew's or a hand-put one. */
-  installedNewer(): string | null {
-    const env = this.env;
-    if (!env) return null;
-    const v = env.by === "installer" ? currentVersion(env.data) : (this.underneath?.version ?? null);
-    return v && isVersion(v) && isNewer(v, env.version) ? v : null;
   }
 
   /**
@@ -614,25 +522,6 @@ export class Updates {
   /** Where this window is: the vault, home's folder by name, or Elsewhere's folder. */
   place(): Place {
     return { mode: this.app.loc.mode, root: this.app.loc.root, homeFolder: this.app.homeFolder };
-  }
-}
-
-/** A file as it is now — where its links lead, its size, time and inode — or null when it isn't there. */
-function stampOf(file: string): string | null {
-  try {
-    const real = realpathSync(file);
-    const st = statSync(real);
-    return `${real}:${st.size}:${st.mtimeMs}:${st.ino}`;
-  } catch {
-    return null;
-  }
-}
-
-function sameFile(a: string, b: string): boolean {
-  try {
-    return realpathSync(a) === realpathSync(b);
-  } catch {
-    return false;
   }
 }
 

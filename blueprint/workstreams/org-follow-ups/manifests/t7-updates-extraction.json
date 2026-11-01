@@ -1,0 +1,130 @@
+{
+  "moves": {},
+  "retained": [],
+  "renamedBasenames": {},
+  "extraction": [
+    {
+      "from": "src/tui/app/distribution/updates.ts",
+      "to": "src/tui/app/distribution/update-observation.ts",
+      "symbols": [
+        "start",
+        "tick",
+        "watched",
+        "lookUnderneath",
+        "versionUnderneath",
+        "installedNewer",
+        "startedWith",
+        "timer",
+        "ticks",
+        "underneath",
+        "looking",
+        "stampOf",
+        "sameFile"
+      ]
+    },
+    {
+      "from": "src/tui/app/distribution/updates.ts",
+      "to": "src/tui/app/distribution/update-env.ts",
+      "symbols": [
+        "UpdateEnv"
+      ]
+    }
+  ],
+  "entries": {
+    "removed": [],
+    "added": []
+  },
+  "ownership": {
+    "observation": "UpdateObservation owns daily discovery, polling cadence, initial installer version, file-stamp cache and concurrent lookup guard; live environment/quitting callbacks and found/installed/offer delivery callbacks",
+    "handover": "Updates retains quiet/answered offer order, already-offered and own-upgrade suppression, dialogs, detached background process/result cleanup and restart refusal/note/quit; public methods and UpdateEnv type export remain",
+    "resources": "App retains buffers, save authority and shared state; terminal run owns post-screen handover; no relocated file, worker, URL, asset or entry"
+  },
+  "edges": {
+    "removed": [],
+    "added": [
+      "src/tui/app/distribution/update-env.ts -> src/core/application/distribution/install.ts",
+      "src/tui/app/distribution/update-env.ts -> src/core/application/distribution/release.ts",
+      "src/tui/app/distribution/update-observation.ts -> src/core/application/distribution/install.ts",
+      "src/tui/app/distribution/update-observation.ts -> src/core/application/distribution/update.ts",
+      "src/tui/app/distribution/update-observation.ts -> src/core/foundation/platform/fsutil.ts",
+      "src/tui/app/distribution/update-observation.ts -> src/tui/app/distribution/update-env.ts",
+      "src/tui/app/distribution/updates.ts -> src/tui/app/distribution/update-env.ts",
+      "src/tui/app/distribution/updates.ts -> src/tui/app/distribution/update-observation.ts"
+    ]
+  },
+  "runtime": {
+    "removed": [],
+    "added": [
+      "src/tui/app/distribution/update-observation.ts -> src/core/application/distribution/install.ts",
+      "src/tui/app/distribution/update-observation.ts -> src/core/application/distribution/update.ts",
+      "src/tui/app/distribution/update-observation.ts -> src/core/foundation/platform/fsutil.ts",
+      "src/tui/app/distribution/updates.ts -> src/tui/app/distribution/update-observation.ts"
+    ]
+  },
+  "tests": {
+    "removed": [],
+    "added": []
+  },
+  "runtimeScc": {
+    "before": [
+      [
+        "src/tui/actions/actions.ts",
+        "src/tui/actions/documents/actions-edit.ts",
+        "src/tui/actions/documents/actions-find.ts",
+        "src/tui/actions/documents/actions-links.ts",
+        "src/tui/actions/documents/actions-lsp.ts",
+        "src/tui/actions/documents/actions-view.ts",
+        "src/tui/actions/shell/actions-panes.ts",
+        "src/tui/actions/workspace/actions-files.ts"
+      ],
+      [
+        "src/tui/app/runtime/app.ts",
+        "src/tui/app/settings/settings.ts",
+        "src/tui/workspace/history/history.ts",
+        "src/tui/workspace/session/session.ts",
+        "src/tui/workspace/vaults/vaults.ts"
+      ],
+      [
+        "src/tui/workspace/git/gitremote.ts",
+        "src/tui/workspace/git/views/review/rebase.ts"
+      ]
+    ],
+    "after": [
+      [
+        "src/tui/actions/actions.ts",
+        "src/tui/actions/documents/actions-edit.ts",
+        "src/tui/actions/documents/actions-find.ts",
+        "src/tui/actions/documents/actions-links.ts",
+        "src/tui/actions/documents/actions-lsp.ts",
+        "src/tui/actions/documents/actions-view.ts",
+        "src/tui/actions/shell/actions-panes.ts",
+        "src/tui/actions/workspace/actions-files.ts"
+      ],
+      [
+        "src/tui/app/runtime/app.ts",
+        "src/tui/app/settings/settings.ts",
+        "src/tui/workspace/history/history.ts",
+        "src/tui/workspace/session/session.ts",
+        "src/tui/workspace/vaults/vaults.ts"
+      ],
+      [
+        "src/tui/workspace/git/gitremote.ts",
+        "src/tui/workspace/git/views/review/rebase.ts"
+      ]
+    ]
+  },
+  "characterization": {
+    "file": "tests/tui/shell/updates/observation.test.ts",
+    "addedLeafTests": 3,
+    "beforeDeclarations": 4072,
+    "baselineDeclarations": 4069
+  },
+  "copied": [
+    {
+      "from": "src/tui/app/distribution/updates.ts",
+      "to": "src/tui/app/distribution/update-observation.ts",
+      "symbol": "stateFile",
+      "reason": "Both retain the same trivial live environment path calculation; the observer evaluates it after checkOn just as start did before extraction."
+    }
+  ]
+}
