@@ -119,3 +119,17 @@ unchanged test selection or historical failure retry is involved. One new long e
 
 Fresh review and merge remain separate stages. No user-visible behavior or command/documented path changes,
 so no user-doc or CHANGELOG edit is needed.
+
+
+## Draft publication
+
+Draft [PR #192](https://github.com/remziduzagac/slipbox/pull/192) is open into `dev` on
+`refactor/issue-170-export-tests`. Rebased move/split commits are `e0e44878` and `5616642b`; completed build
+evidence is `6096eabf`. The documentation-only publication record follows those commits. The required scoped
+check and three affected terminal checks pass as recorded above; no source or test change follows that validation.
+
+Final staged-record docs and Biome checks pass: 483 Markdown / 1,814 spelt files / zero link errors / 1,209 linted
+files. T28's completion remains byte-identical. All original failures and the reader control are retained.
+Final-head CI is pending and is not claimed green. Fresh review and merge remain separate requested stages;
+keep the PR draft and stop at the build handoff. No full-suite/all-terminal run, deadline/dependency/CI change,
+branch promotion, release or next-task implementation is included.
