@@ -397,6 +397,12 @@ including leave/reset/restore and home-folder admission. Its `VaultPrompts` coll
 catalog, default-copy choices and mutation prompts through live workspace capabilities and a switch callback.
 Existing `Vaults` entry methods remain; App retains shared state and the sole note-write gate.
 
+`app/runtime/watch.ts` retains graph subscriptions, watcher lifecycle, polling, batch delivery, selection restoration
+and conflict-aware reload. Its `GraphRefresh` collaborator in `graph-refresh.ts` owns background parse coordination,
+auto-index instances and home refresh generation/promise. It reads live graph/location capabilities and calls back to
+Watch to remember selections and deliver a rebuild; existing entry methods and the parseInSlices export remain.
+App retains shared indexing/input state, buffers and the sole note-write gate.
+
 Document diagnostics keep `Problems` and `Languages` as their existing controllers. Under
 `src/tui/documents/diagnostics/`, `problems/` holds row presentation and panel records; `languages/` holds server-edit
 normalization/application/preview, outline conversion and protocol locations. The original receiver supplies live
