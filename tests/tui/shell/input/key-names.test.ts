@@ -1,19 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { keyName } from "../../../../src/tui/shell/input/keys.ts";
 import { makeSandbox, makeVault, harness } from "../../../tui-harness.ts";
 
 // The model harness applies the file-local timeout and sandbox policy.
 makeSandbox();
-
-describe("review round 3", () => {
-  test("keypad keys and legacy ctrl+j arrive under the names the keymaps use", () => {
-    expect(keyName({ name: "kpenter", sequence: "\u001b[57414u" } as never)).toBe("enter");
-    expect(keyName({ name: "kpleft", sequence: "\u001b[57417u" } as never)).toBe("left");
-    expect(keyName({ name: "linefeed", sequence: "\n" } as never)).toBe("ctrl+j");
-  });
-});
 
 describe("review (tui): vim and editing edges", () => {
   const setup = async (text: string, name = "v.md", files: Record<string, string> = {}) => {

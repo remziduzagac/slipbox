@@ -1,6 +1,6 @@
 import { UNIT_TIMEOUT_MS } from "../../../support/timeouts.ts";
 import { describe, expect, test } from "bun:test";
-import { DEFAULT_GROUPS, DEFAULT_KEYS, keyChar, parseGroup } from "../../../../src/tui/shell/input/keys.ts";
+import { DEFAULT_GROUPS, parseGroup } from "../../../../src/tui/shell/input/keys.ts";
 import { makeSandbox, harness } from "../../../tui-harness.ts";
 
 // The model harness applies the file-local timeout and sandbox policy.
@@ -79,16 +79,7 @@ describe("which-key", () => {
     expect(popup.x).toBeGreaterThanOrEqual(0);
     expect(popup.x + popup.w).toBeLessThanOrEqual(120);
   });
-  test("the explanations of g, z, [ and ] name every key under them", () => {
-    for (const prefix of ["g", "z", "[", "]"]) {
-      const { desc } = parseGroup(DEFAULT_GROUPS[prefix]!);
-      const named = [...desc.matchAll(/\(([^)]*)\)/g)].flatMap((m) => m[1]!.split(" "));
-      const under = Object.keys(DEFAULT_KEYS)
-        .filter((k) => k.startsWith(`${prefix} `))
-        .map((k) => keyChar(k.slice(prefix.length + 1)) ?? k);
-      for (const k of under) expect([prefix, k, named.includes(k)]).toEqual([prefix, k, true]);
-    }
-  });
+
   test("a top-level prefix's popup says its group's explanation in its title, which nothing else shows (DF-D31)", async () => {
     const h = await harness({
       width: 200,

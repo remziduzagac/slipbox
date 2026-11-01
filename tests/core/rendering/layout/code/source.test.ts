@@ -1,6 +1,6 @@
 import { UNIT_TIMEOUT_MS } from "../../../../support/timeouts.ts";
 import { describe, expect, setDefaultTimeout, test } from "bun:test";
-import { layoutSource } from "../../../../../src/core/rendering/layout/code/source.ts";
+import { layoutSource, newSourceCache } from "../../../../../src/core/rendering/layout/code/source.ts";
 import { makeCoreSandbox } from "../../../../support/core-sandbox.ts";
 
 // File-local default: tests/support/timeouts.ts.
@@ -116,4 +116,17 @@ describe("the incremental source layout (15.1)", () => {
       }
     }
   });
+});
+
+test("source fences retain shading and multiline syntax after edits", () => {
+  const cache = newSourceCache();
+  const text = "```js\n/* first\ncontinued */\nconst x = 1;\n```\n\n```mermaid\ngraph LR\n```";
+  const layout = (source: string) => layoutSource(source, { width: 80, wrap: true, headings: "scan" }, cache);
+  let rows = layout(text).lines;
+  expect(rows[2]!.fill).toBe("code_block");
+  expect(rows[2]!.spans.every((span) => span.role === "syn_comment")).toBe(true);
+  expect(rows[3]!.spans.some((span) => span.role === "code_block")).toBe(true);
+  expect(rows[7]!.spans.every((span) => span.role === "code_block")).toBe(true);
+  rows = layout(text.replace("/* first", "// first")).lines;
+  expect(rows[2]!.spans.some((span) => span.role !== "syn_comment")).toBe(true);
 });

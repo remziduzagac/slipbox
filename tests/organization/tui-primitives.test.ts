@@ -107,6 +107,11 @@ test("pure geometry, editing and filesystem cases have no transitive App or draw
     "tests/core/foundation/platform/atomic-files.test.ts",
     "tests/core/workspace/graph/write-stamps.test.ts",
     "tests/core/workspace/links/reach-policy.test.ts",
+    "tests/tui/shell/overlays/match.test.ts",
+    "tests/tui/shell/input/mechanisms/keys.test.ts",
+    "tests/core/application/config/config.test.ts",
+    "tests/core/rendering/layout/code/source.test.ts",
+    "tests/core/workspace/search/regex-jobs.test.ts",
   ]) {
     const seen = new Set<string>();
     const visit = (from: string) => {

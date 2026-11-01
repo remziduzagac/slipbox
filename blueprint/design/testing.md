@@ -106,6 +106,18 @@ Git-panel fixtures retain their separate saved-environment restoration; peek fix
 mock restoration. These policies are shared only within their original collection, preserving each file's cleanup
 lifetime.
 
+Independent cases in mixed model owners run in focused contexts: filter matching in
+`tests/tui/shell/overlays/match.test.ts`, key decoding/bindings/help in
+`tests/tui/shell/input/mechanisms/keys.test.ts`, breadcrumb geometry in
+`tests/tui/documents/views/header-layout.test.ts`, rendering configuration in
+`tests/core/application/config/config.test.ts`, source-fence layout in
+`tests/core/rendering/layout/code/source.test.ts`, and regex-worker matching/replacement in
+`tests/core/workspace/search/regex-jobs.test.ts`. They keep the original suite titles and assertions; configuration
+loading uses a temporary file without constructing App. Each regex owner stops its worker after its own file.
+`tests/organization/tui-primitives.test.ts` checks these owners' transitive independence from App, the model harness
+and drawing composition. Shared input, drawing, breadcrumb dropdown and replacement-delivery journeys remain in the
+model owners; conservative dependency selection still follows App, lazy imports and worker URLs (D239).
+
 Regression tests follow their feature owner. Existing review-round/cycle parent titles are preserved while mixed
 collections split scenario by scenario; core cases now live in tests/core and the focused organization/TUI owners, while
 remaining collections migrate in their assigned phases.

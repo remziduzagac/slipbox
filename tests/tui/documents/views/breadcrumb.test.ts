@@ -1,26 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import type { ListOverlay } from "../../../../src/tui/app/runtime/app.ts";
-import { crumbLayout } from "../../../../src/tui/documents/views/header-layout.ts";
 import { makeSandbox, harness } from "../../../tui-harness.ts";
 
 // The model harness applies the file-local timeout and sandbox policy.
 makeSandbox();
 
 describe("breadcrumb collapse (…) and the path dropdown", () => {
-  test("crumbLayout: all, then first … innermost, then cut, then … last, then …", () => {
-    const shape = (ps: ReturnType<typeof crumbLayout>) =>
-      ps.map((p) => (p === "more" ? "…" : `${p.i}:${p.w}`)).join(" ");
-    const ws = [20, 15, 15, 20];
-    expect(shape(crumbLayout(ws, 200, 3))).toBe("0:20 1:15 2:15 3:20");
-    expect(shape(crumbLayout(ws, 70, 3))).toBe("0:20 … 2:15 3:20"); // 20+3+1+3+15+3+20 = 65
-    expect(shape(crumbLayout(ws, 50, 3))).toBe("0:20 … 3:20");
-    expect(shape(crumbLayout(ws, 30, 3))).toBe("0:8 … 3:15"); // cut, the last keeps the most
-    expect(shape(crumbLayout(ws, 20, 3))).toBe("… 3:16");
-    expect(shape(crumbLayout(ws, 10, 3))).toBe("…");
-    expect(shape(crumbLayout([30, 30], 40, 3))).toBe("0:8 1:29"); // two: no … until the first goes
-    expect(shape(crumbLayout([30], 12, 3))).toBe("0:12");
-    expect(shape(crumbLayout([30], 5, 3))).toBe("…");
-  });
   test("space f b with the which-key popup drawn over the breadcrumb after space f: the dropdown under it all the same (#40)", async () => {
     const h = await harness({
       open: "samples/handbook/operations-handbook.md",

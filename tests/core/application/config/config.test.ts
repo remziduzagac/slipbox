@@ -487,3 +487,19 @@ test("a value not allowed is quoted as JSON in the warning: an escape in it show
   writeFileSync(f, '[render]\nglyphs = "\\u001b[31mnerd"\n');
   expect(loadConfig({ configFile: f }).warnings.join("\n")).toContain('(got "\\u001b[31mnerd")');
 });
+
+test("rendering config accepts booleans and reads the legacy code and editing values", async () => {
+  const configFile = join(sandbox, "opening.toml");
+  for (const [value, expected] of [
+    ["true", true],
+    ["false", false],
+    ['"document"', true],
+    ['"source"', false],
+  ] as const) {
+    writeFileSync(configFile, `[render]\nnotes = false\ndata = false\ncode = ${value}\n[editor]\nedit_in = "live"\n`);
+    const loaded = loadConfig({ configFile });
+    expect(loaded.config.render).toMatchObject({ notes: false, data: false, code: expected });
+    expect(loaded.config.editor.edit_in).toBe("lens");
+    expect(loaded.warnings).toEqual([]);
+  }
+});
