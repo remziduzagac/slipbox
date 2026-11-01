@@ -20,7 +20,7 @@ run folder that `tests/setup.ts` installs as TMPDIR. Fix a demonstrated producer
 with a regression that fails without its isolation fix. Distinguish sandbox visibility from host observations;
 do not change a shared temporary directory to hide the problem.
 
-The existing [ORG finding](../../archive/code-organization/design.md#focused-verification) records the ancestor-checkout
+The existing [ORG finding](../../code-organization/design.md#focused-verification) records the ancestor-checkout
 and cached-context interaction. Product source, shared harness behavior, deadlines, dependencies and CI stay unchanged.
 
 ## Acceptance and evidence

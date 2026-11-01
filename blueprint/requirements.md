@@ -437,6 +437,24 @@ How: design/distribution.md § What the site tells search engines and agents.
 The [ORG requirements](workstreams/archive/code-organization/requirements.md) and its completed tasks retain the
 acceptance record, including the separate timeout-policy phase and contract design.
 
+### Maintainability follow-up acceptance
+
+- Every accepted cleanup finding has implemented work or an evidence-backed retained disposition. TUI-owned
+  buffers/undo and `App.writeBuffer` authority remain the baseline; ENG is a conflicting draft, not a second owner
+  (ORF-R1).
+- Timer/deadline findings require a reproduced cause and regression for a product correction. Isolate fixture host
+  assumptions separately, preserve limits and assertions, and leave unexplained failures visible rather than
+  retrying them away (ORF-R2). The message scheduler restarts a drawn message's normal lifetime when the wall clock
+  moves backwards; undrawn messages retain their first-frame lifetime (design/tui.md § Screen layout).
+- All handwritten source and test files now meet their respective 600/1,500-line defaults: no legacy source or test
+  cap remains. The 500/1,000-line aims, cohesive ownership and separate generated-lock policy still hold (ORF-R3).
+- Every unused-code candidate has proof of removal or a reason to retain. Suitable App-wide cases use focused
+  contexts with equivalent assertions and measured conservative reach; shared integration journeys stay (ORF-R4,
+  D239). Completion does not imply every feature change selects a small test set or that no diagnostic remains.
+
+The completed [ORF requirements and tasks](workstreams/archive/org-follow-ups/README.md) retain acceptance evidence,
+fixture investigations and the unused-code/focused-test dispositions; all 28 tasks are done.
+
 ## Constraints
 
 Fixed rules every part keeps. The roadmap's constraint items (`2.9`, `7.5`, `12.5`, `13.2`) point here.

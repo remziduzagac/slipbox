@@ -45,7 +45,7 @@ under tests.
 
 ## Follow-up implementation
 
-[ORF](../../../org-follow-ups/README.md) tracks issue #170 in delivery order: the overflowing timer and intermittent
+[ORF](../../org-follow-ups/README.md) tracks issue #170 in delivery order: the overflowing timer and intermittent
 deadlines, the seven source and nine test caps below, unused-code proof and measured focused-test migrations.
 ORG-D1–ORG-D3 remain authoritative; ORG consolidation/archive and ENG are outside that work.
 

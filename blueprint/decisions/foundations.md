@@ -622,6 +622,11 @@ state/wiring owner and note-write gate.
 
 [org-decisions]: ../workstreams/archive/code-organization/decisions.md
 
+**2026-11-02 ORF consolidation note:** All seven handwritten source and nine test caps retained by ORG have been
+removed through the [completed follow-ups](../workstreams/archive/org-follow-ups/README.md). `CAPPED` and
+`TEST_CAPPED` are empty; the 500/600 source and 1,000/1,500 test aims/ceilings and generated-lock policy remain.
+The archived ORG ledgers retain the caps as historical evidence, not current exceptions to this decision.
+
 ## D267: A missing file opens empty and is made on its first save (9.3, 4.6, 2026-10-31)
 
 **Decision:** `slipbox <path>` and `slipbox open <path>` open a missing file as an empty, clean buffer. This replaces

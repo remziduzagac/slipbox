@@ -517,17 +517,22 @@ neither correct initialization nor cancellation/cleanup behavior.
 
 `scripts/check-size.ts` enforces a 600-line handwritten source ceiling and a separate 1,500-line test/fixture ceiling.
 The aims remain about 500 and 1,000 lines respectively (D235, ORG-D2); responsibility, not a line quota, determines a
-useful split. No blanket App exemption applies. Exact legacy caps, where needed, ratchet down with their file and
-disappear at its ceiling. A source cap never exceeds 1,500 lines; each exception names its responsibility, rationale
+useful split. All handwritten source and test files now meet their defaults: `CAPPED` and `TEST_CAPPED` are empty
+(ORF-R3). No blanket App exemption applies. Any source exception follows ORG-D2's exact non-growing ratchet and
+disappears at its ceiling. A source cap never exceeds 1,500 lines; each exception names its responsibility, rationale
 and follow-up. Only measured import-formatting growth in source moves may reset or introduce a cap;
 record old/new size, delta and extraction owner, preserve non-import code/comments and normal formatting, and verify
 resolved dependencies and executable bodies. Test caps have no import-growth exception.
 
 Generated server locks have a separate measured cap and offline `bun scripts/lock-servers.ts --check` verification;
 embedded generated strings are not split by hand. The original 55-module inventory, cohesive owners above the
-500-line aim and the staged ratchet remain in the [ORG ledger][org-ratchet].
+500-line aim and the staged ratchet remain in the [ORG ledger][org-ratchet]. ORF removed its seven source and nine
+test caps through cohesive splits; the [completed follow-ups][orf-completion] retain that evidence. The historical
+cap lists in ORG are not current exceptions. The sole generated-lock cap is 1,239 lines for
+`src/core/documents/servers/locks.ts`.
 
 [org-ratchet]: ../workstreams/archive/code-organization/tasks/11-final-ratchet.md
+[orf-completion]: ../workstreams/archive/org-follow-ups/README.md
 
 ## Duplication, patterns and code quality
 
@@ -554,10 +559,14 @@ result-type conversion follows from an extraction.
 The completed [pattern and clone assessment][org-patterns], [unused-code ledger][org-unused] and
 [type/error assessment][org-errors] retain dispositions and comparable tool settings. Measurements distinguish
 completed comparable runs from host-sensitive failures and incomplete samples; they promise no universal speedup.
+The [ORF unused-code proof][orf-unused] reconciles the retained ORG candidates with eleven proven removals and
+274 retained sites with live uses or compatibility contracts. Its six type-package ownership findings remain
+explicit; a nonzero unused-code diagnostic is not silently presented as a clean gate.
 
 [org-patterns]: ../workstreams/archive/code-organization/tasks/40-worker-patterns-and-duplication.md
 [org-unused]: ../workstreams/archive/code-organization/tasks/41-naming-and-unused-code.md
 [org-errors]: ../workstreams/archive/code-organization/tasks/42-types-and-error-contracts.md
+[orf-unused]: ../workstreams/archive/org-follow-ups/tasks/19-unused-code.md
 
 ## Data flow for one note
 

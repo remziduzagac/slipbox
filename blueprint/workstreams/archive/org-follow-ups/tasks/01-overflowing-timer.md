@@ -65,7 +65,7 @@ Intermittent deadline investigation remains ORF-T2; no timeout increase or retry
 
 `gnutimeout -k 10 300 bun run check` passes its static/documentation gates, then selects 262 reached unit owners.
 It fails `tests/cli/distribution/install.test.ts:15`: listing-only uninstall returns three installed host skills,
-while the fixture assumes an empty list. [ORG-T43](../../archive/code-organization/tasks/43-measurement-and-build.md) already
+while the fixture assumes an empty list. [ORG-T43](../../code-organization/tasks/43-measurement-and-build.md) already
 records this exact host-skill assumption. The scheduler is unrelated to uninstall discovery; no uninstall code or
 fixture changed. The run was stopped after identifying this failure and was not retried. The remaining selected tests
 are not claimed to pass. [ORF-T21](21-uninstall-fixture.md) addresses this host assumption under issue item 4, in its

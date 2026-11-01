@@ -1,14 +1,14 @@
 ---
-status: complete
+status: consolidated
 created: "2026-10-31"
 ---
 
 # ORF: Organization follow-ups
 
 Implements [issue #170](https://github.com/remziduzagac/slipbox/issues/170), the work retained by
-[ORG-T11](../archive/code-organization/tasks/11-final-ratchet.md),
-[ORG-T43](../archive/code-organization/tasks/43-measurement-and-build.md) and
-[ORG-T41](../archive/code-organization/tasks/41-naming-and-unused-code.md).
+[ORG-T11](../code-organization/tasks/11-final-ratchet.md),
+[ORG-T43](../code-organization/tasks/43-measurement-and-build.md) and
+[ORG-T41](../code-organization/tasks/41-naming-and-unused-code.md).
 
 The approved ORG-D1–ORG-D3 ownership, requirements and move rules govern this work. ORG takes precedence over ENG's
 conflicting draft; ENG is unchanged. No new gateway, buffer owner, dependency, timeout increase, CI policy, #56 work,
@@ -19,6 +19,10 @@ and gates. Tasks are in delivery order, one PR each unless a large task first re
 from the latest origin/dev. Task status and evidence live in its file; completed tasks stay here until consolidation.
 
 ## Completion
+
+Consolidated into the root requirements, size/testing policy and message design on 2026-11-02. This archive retains
+all tasks and manifests as the implementation record. ORG's seven source and nine test caps are gone; generated
+locks retain their separate policy. Gateway execution and the proposed window/tab changes remain later work.
 
 All 28 tasks are done. The final [PR #199](https://github.com/remziduzagac/slipbox/pull/199) closed issue #170 on
 2026-11-01, merging as `9bb4e2cd97a4948c9ac3fa8358ea2c0faa93915e`; its post-merge

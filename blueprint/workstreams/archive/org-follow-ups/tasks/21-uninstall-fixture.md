@@ -14,7 +14,7 @@ Issue item 4, host assumptions; follows ORF-T1's PR #171 immediately, before ORF
 Give the uninstall fixture in `tests/cli/distribution/install.test.ts` its own temporary home so it discovers only
 what the fixture installed. The listing-only assertion at line 15 currently discovers installed host skills instead
 of an empty list, the assumption already recorded by
-[ORG-T43](../../archive/code-organization/tasks/43-measurement-and-build.md). Preserve the existing uninstall
+[ORG-T43](../../code-organization/tasks/43-measurement-and-build.md). Preserve the existing uninstall
 assertions and cleanup; change no product behavior, dependency or timeout.
 
 ## Acceptance and evidence

@@ -134,6 +134,13 @@ loading uses a temporary file without constructing App. Each regex owner stops i
 and drawing composition. Shared input, drawing, breadcrumb dropdown and replacement-delivery journeys remain in the
 model owners; conservative dependency selection still follows App, lazy imports and worker URLs (D239).
 
+The completed [ORF focused-test comparison][orf-focused] records equivalent assertions and full test identities,
+smaller focused dependency closures and retained broad integration reach. Its completed before/after timings are
+observations with uncontrolled host/cache state, not a causal speedup claim. ORF's fixture investigations and their
+original failed runs remain in the archived tasks; test and product deadlines were not increased.
+
+[orf-focused]: ../workstreams/archive/org-follow-ups/tasks/20-focused-tests.md
+
 Regression tests follow their feature owner. Existing review-round/cycle parent titles are preserved while mixed
 collections split scenario by scenario; core cases now live in tests/core and the focused organization/TUI owners, while
 remaining collections migrate in their assigned phases.

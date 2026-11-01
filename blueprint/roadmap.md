@@ -9,9 +9,10 @@ Vaults and the explorer's view (VV) and reviewing, diffing and merging (GIT) are
 work together (§ Agent surface), and search's improvements (§ Search).
 Automatic installation and maintenance of the bundled skill (#50) is built and consolidated as
 [ASI](workstreams/archive/agent-skill-install/README.md), extending `14.4`, `14.7` and `14.8`.
-Code organization is built and consolidated as [ORG](workstreams/archive/code-organization/README.md)
-(2026-11-02); its follow-ups, ORF, are complete and await consolidation. Gateway execution and the proposed window/tab
-model remain in [Later](#later).
+Code organization and its follow-ups are built and consolidated as
+[ORG](workstreams/archive/code-organization/README.md) and [ORF](workstreams/archive/org-follow-ups/README.md)
+(2026-11-02); no handwritten source or test caps remain. Gateway execution and the proposed window/tab model remain
+in [Later](#later).
 
 Each step's ID is the plan's stable item ID: cite it (`3.3`, `10.1`) rather than restating the work. Phases and
 clusters differ: a cluster groups related items in dependency order, and its line in italics says which phase it
@@ -687,19 +688,22 @@ current requirements or product behavior. Start any resulting design change thro
 - [ ] **27.1** Evaluate a performance regression guard: small headless timing subset or comparable scheduled trends.
 - [ ] **27.2** Evaluate an accessible plain CLI follow workflow, including real screen-reader validation.
 - [x] **27.3** Evaluated and implemented through [ORG][org-test-ratchet]:
-  feature owners/reusable fixtures, a separate 1,500-line test ceiling and exact legacy caps.
+  feature owners/reusable fixtures and a separate 1,500-line test ceiling. ORF removed every legacy test cap.
 - [ ] **27.4** Evaluate a local diagnostics bundle, with explicit collection scope and privacy-preserving defaults.
 - [ ] **27.5** Review documented continuity and an isolated recovery drill; account-access changes remain owner choices.
 - [ ] **27.6** Evaluate a non-blocking screenshot-refresh reminder for relevant UI changes.
 
 [org-test-ratchet]: workstreams/archive/code-organization/tasks/11-final-ratchet.md
 
-## Code organization
+## Code organization and follow-ups
 
 - [x] **[ORG](workstreams/archive/code-organization/README.md)**: all 44 tasks complete; feature/ownership groups,
   focused contracts and tests, dependency checks, reuse/pattern dispositions and the final size ratchet consolidated
   2026-11-02 (ORG-D1–ORG-D3). ORG-T12 implemented the separate unchanged-timeout-policy phase; ORG-T44 prepared
   contracts without gateway execution. The archived tasks/manifests/research retain the evidence and historical caps.
+- [x] **[ORF](workstreams/archive/org-follow-ups/README.md)**: all 28 tasks complete; timer/fixture corrections,
+  cohesive source/test splits removing all seven source and nine test caps, unused-code proof and measured focused
+  scenarios with shared integration retained. Consolidated 2026-11-02; issue #170 closed by PR #199 on 2026-11-01.
 
 
 ## Documentation people can follow

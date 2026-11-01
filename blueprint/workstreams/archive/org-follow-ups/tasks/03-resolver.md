@@ -76,7 +76,7 @@ worktree correctly prints `vault halden@refactor/issue-170-resolver`. The shared
 uses `rootLabel` (`src/cli/info.ts:171`), whose existing worktree branch suffix is in
 `src/core/workspace/vaults/names.ts:28–29`. None of these files changes in this extraction.
 
-[ORG-T43](../../archive/code-organization/tasks/43-measurement-and-build.md) already records this exact
+[ORG-T43](../../code-organization/tasks/43-measurement-and-build.md) already records this exact
 host assumption immediately before its measurement protocol. [ORF-T22](22-stat-fixture.md) isolates the fixture in
 its own PR, retaining the assertion and adding controlled ordinary-checkout and linked-worktree cases. The product
 label is unchanged. The original failure remains recorded rather than retried without a fix.
@@ -124,7 +124,7 @@ with zero overflow warnings. These are partial observations, not a passing aggre
 1447951 was stopped with SIGINT (exit 130); no test, failed selection or historical failure was rerun afterward.
 Evidence: `tmp/issue/ORF-T3-resume-check.log:1890` (assertion), `:1900` (test identity).
 
-This matches the retained [ORG autosave finding](../../archive/code-organization/design.md#focused-verification), which
+This matches the retained [ORG autosave finding](../../code-organization/design.md#focused-verification), which
 already traced the same assertion to cached ancestor-checkout discovery. The current fixture constructs App at
 `conflicts.test.ts:115` before creating its own `.git`/lock at lines 124–125. Autosave uses
 `src/tui/documents/saving/saving.ts:208`, and `src/tui/workspace/git/git.ts:79` prefers its cached checkout when
