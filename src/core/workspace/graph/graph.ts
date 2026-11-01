@@ -8,32 +8,20 @@
 // keeps of a note and its links is graph-types.ts's, a note's entry made from its text graph-extract.ts's,
 // and how a link resolves graph-resolve.ts's (`LinkResolver`). All of it is imported from here.
 
-import { statSync } from "node:fs";
-import { grammar, grammarFor, type Grammar } from "../../documents/syntax/syntax.ts";
-import { basename, isAbsolute, join, relative, sep } from "node:path";
+import { grammarFor } from "../../documents/syntax/syntax.ts";
+import { isAbsolute, join, relative, sep } from "node:path";
 import { isMainThread } from "node:worker_threads";
 import type { Config } from "../../application/config/config.ts";
-import { climbsOut, readJson } from "../../foundation/platform/fsutil.ts";
 import { countForms, type FormCounts } from "../links/convention.ts";
-import { LinkIndex, onDisk, type Resolution } from "../links/links.ts";
+import { LinkIndex, type Resolution } from "../links/links.ts";
 import type { ParseCache as ChunkCache } from "../../documents/markdown/parse.ts";
 import { tildePath } from "../vaults/names.ts";
-import { sharedParseCache } from "../../documents/markdown/parsecache.ts";
-import { cacheDir, stateDir } from "../../foundation/platform/paths.ts";
+import { stateDir } from "../../foundation/platform/paths.ts";
 import { Redirects } from "../links/redirects.ts";
 import { classify, extensionOf } from "../../documents/model/filetypes.ts";
-import { type AskedWhole, type HomeWalk, homeWalk, inFolders, walksInto } from "../vaults/home.ts";
+import type { AskedWhole, HomeWalk } from "../vaults/home.ts";
 import { findVaultRoot, isListed, type VaultLocation } from "../vaults/vault.ts";
-import {
-  HOME_LIMITS,
-  listDirectory,
-  type NoteFile,
-  type Skipped,
-  type WalkCap,
-  WalkFilter,
-  walkVault,
-} from "../walk/walk.ts";
-import { tagKey, tagName } from "../../documents/markdown/tags.ts";
+import { type NoteFile, type Skipped, type WalkCap, WalkFilter } from "../walk/walk.ts";
 import type {
   LinkRef,
   NoteEntry,
@@ -45,16 +33,15 @@ import type {
   LinkProblem,
   Backlink,
 } from "./graph-types.ts";
-import { INDEX_VERSION, extractNote } from "./graph-extract.ts";
+import { tagKey, tagName } from "../../documents/markdown/tags.ts";
 import type { GraphStats } from "./graph-types.ts";
 import { LinkResolver } from "./graph-resolve.ts";
-import type { IndexFile } from "./index/schema.ts";
-import { cacheEntries, isUnreadable, persistIndex, reuseEntries, stub } from "./index/storage.ts";
+import { GraphRefresh } from "./refresh.ts";
+import { GraphFeed } from "./feed.ts";
 import { GraphMoves } from "./moves/reconcile.ts";
 import { applyOverlay, overlayText, type EditorOverlay } from "./overlays/editor.ts";
-import { collectBacklinks, collectProblems, collectTags, namesakeLinks, findNote } from "./queries/indexes.ts";
+import { collectBacklinks, collectProblems, collectTags, findNote } from "./queries/indexes.ts";
 import { fileLinksOf, commentPath } from "./queries/file-links.ts";
-import { neverIndexed, reachable, reachLinked } from "./reach/files.ts";
 
 export { certainty, fragile, describeLanding, disambiguated } from "./graph-types.ts";
 export type {
@@ -76,6 +63,8 @@ export { INDEX_VERSION, extractNote, extractText, frontmatterLinks, extractFromS
 export { VAULT_LINK } from "./graph-resolve.ts";
 
 export class Graph {
+  private readonly refresh: GraphRefresh;
+  private readonly feed: GraphFeed;
   readonly filter: WalkFilter;
   notes = new Map<string, NoteEntry>();
   index = new LinkIndex([]);
@@ -100,6 +89,13 @@ export class Graph {
     orphans: string[];
   } | null = null;
   private formCache: { generation: number; counts: FormCounts } | null = null;
+  private invalidate(): void {
+    this.backlinkCache = null;
+    this.tagCache = null;
+    this.generation++;
+    this.resolver.forgetNames();
+  }
+
   private readonly dataLinkCache = new Map<string, { stamp: string; links: LinkRef[] }>();
   /** How its links resolve (graph-resolve.ts): by path, by name or alias, by pointer or hosting URL; moves seen. */
   private readonly resolver = new LinkResolver(this);
@@ -118,166 +114,62 @@ export class Graph {
     asked: readonly string[] = [],
   ) {
     this.filter = new WalkFilter(loc.root, config.walk, { home: loc.mode === "home" });
-    this.asked = [...asked];
+    this.feed = new GraphFeed(this, this.unparsed, this.overlays, {
+      invalidate: () => this.invalidate(),
+      dirty: () => {
+        this.refresh.cacheDirty = true;
+      },
+      pairMove: (hash, rel, side) => this.moves.pairMove(hash, rel, side),
+      forgetFileLinks: (rel) => {
+        if (rel === undefined) this.dataLinkCache.clear();
+        else this.dataLinkCache.delete(rel);
+      },
+      aliases: () => this.resolver.otherNames().aliases,
+    });
+    this.refresh = new GraphRefresh(
+      this,
+      this.unparsed,
+      this.overlays,
+      {
+        invalidate: () => this.invalidate(),
+        emit: (change) => this.feed.emit(change),
+        built: () => this.feed.built(),
+        detectMoves: (vanished, fresh) => this.moves.detectMoves(vanished, fresh),
+      },
+      asked,
+    );
   }
 
   /** Home's walk (VV-D2): when it was made (null: not yet, its top alone looked at), what its cap left out, the folders
    *  asked for by name walked into it whole. Null in a vault or a plain folder, which are walked whole at each build. */
   home: { walked: number | null; capped: WalkCap | null; asked?: AskedWhole } | null = null;
 
-  /** The folders of home asked for by name (VV-D2), home's paths for them: walked at each build its walk doesn't
-   *  cover them. */
-  private readonly asked: string[];
-
-  /** The folders of home asked for by name (VV-D2): a graph built anew for home (a `[walk]` setting changed) carries
-   *  them over, so what was asked for keeps its notes. */
   get askedFolders(): readonly string[] {
-    return this.asked;
+    return this.refresh.askedFolders;
   }
 
-  /**
-   * Folders of home asked for by name (VV-D2: `slipbox ~/notes`, a file in it, the tabs a session brings back, each
-   * one's), by their whole paths: their notes known now. Those home's walk doesn't cover yet — never made, or its cap
-   * reached short of them — have the graph built again once for them all, as it is at each build after until the walk
-   * covers them (`homeWalk`); a graph not built yet is built now, whatever is asked. True when it was built.
-   */
   askFolders(abs: readonly string[]): boolean {
-    let walk = this.builds === 0;
-    for (const a of abs) {
-      const rel = this.homePath(a);
-      if (rel === null || this.asked.includes(rel)) continue;
-      this.asked.push(rel);
-      // Listed by the build, as home's walk had it: a walk that stopped at its cap covers no folder whole, since one it
-      // listed may hold folders it didn't; a folder walked whole, asked for before, covers those in it.
-      const covered =
-        this.dirs.includes(rel) &&
-        ((this.home?.walked != null && !this.home.capped) || inFolders(rel, this.home?.asked?.folders ?? []));
-      if (!covered && walksInto(this.root, this.filter, rel)) walk = true;
-    }
-    // Never built: with the index kept, as `openGraph` builds.
-    if (walk) this.build(this.builds > 0 ? this.useCache : true, "lazy");
-    return walk;
+    return this.refresh.askFolders(abs);
   }
 
-  /** Home's path for a folder of home, by its whole path; null in a vault, for home's top, or outside it. */
   homePath(abs: string): string | null {
-    if (this.loc.mode !== "home") return null;
-    const rel = relative(this.root, abs).split(sep).join("/");
-    return !rel || climbsOut(rel) || isAbsolute(rel) ? null : rel;
+    return this.refresh.homePath(abs);
   }
 
-  /**
-   * Whether the folder `rel` waits for home's first walk (VV-D2): home not walked yet, a folder its graph hasn't looked
-   * into — any but its top and the folders asked for by name, which are whole. The watcher leaves it to the walk. False
-   * once a walk is kept, one capped too, and in a vault.
-   */
   waitsForHomeWalk(rel: string): boolean {
-    return this.home?.walked === null && rel !== "" && !inFolders(rel, this.asked);
+    return this.refresh.waitsForHomeWalk(rel);
   }
 
-  /**
-   * A folder come into home's top before its walk (VV-D2: `WatchBatch.toWalk`), listed as its top's folders are, never
-   * looked into — while home's walk would go into it, and is still to make: named in a batch held while git wrote, it
-   * may have gone, or become a vault, or home been walked, since. Whether it's listed.
-   */
   listForWalk(rel: string): boolean {
-    if (this.home?.walked !== null || !walksInto(this.root, this.filter, rel)) return false;
-    if (!this.dirs.includes(rel)) this.dirs.push(rel); // listed before: gone and come again, looked at all the same
-    return true;
+    return this.refresh.listForWalk(rel);
   }
 
   get root(): string {
     return this.loc.root;
   }
 
-  /**
-   * Walk and index. `useCache` reads and refreshes the persisted index (vault mode only).
-   *
-   * `parse: "lazy"` parses nothing that the cache cannot supply: link resolution needs only the
-   * walk's note names, so `render` and `resolve` never pay for parsing the whole vault. Entries
-   * not yet parsed are stubs until `entry()`, `ensureAll()` or `parseSome()` fills them.
-   *
-   * Home (VV-D2) is never walked here: its walk is the one kept (`homeWalk`), the folders asked for that it doesn't
-   * cover walked with it (`askFolders`), or `given` — one just made, a slice at a time, by the background index or the
-   * TUI.
-   */
   build(useCache = true, parse: "all" | "lazy" = "all", given?: HomeWalk): this {
-    const t0 = performance.now();
-    this.builds++;
-    this.walkedAt = Date.now();
-    const home =
-      this.loc.mode === "home"
-        ? (given ?? homeWalk(this.loc, this.filter, this.asked, HOME_LIMITS, this.keepsWalk))
-        : null;
-    // What changed after home's walk began may be missing from it: the watcher looks at those folders again.
-    if (home?.walked) this.walkedAt = home.walked;
-    this.home = home
-      ? { walked: home.walked, capped: home.capped, ...(home.asked ? { asked: home.asked } : {}) }
-      : null;
-    const walk = home
-      ? home.walk
-      : isListed(this.loc)
-        ? listDirectory(this.root, this.filter)
-        : walkVault(this.root, this.filter);
-    this.dirs = walk.dirs;
-    this.assets.clear();
-    for (const a of walk.assets) this.addAsset(a);
-    this.skipped = walk.skipped;
-    this.errors = walk.errors;
-    // `$HOME` or `/` opened as a plain folder is listed, never indexed: nothing to keep (20.22).
-    this.useCache = useCache && !isListed(this.loc);
-    // What it reads, by its stamp: written since by anyone (its thread, the background index, the CLI), it's newer.
-    this.indexStamp = this.useCache ? stampOf(this.cachePath) : "";
-    const cached = this.useCache ? readJson<IndexFile | null>(this.cachePath, null) : null;
-    this.indexRead = cached?.version === INDEX_VERSION;
-    const old = this.indexRead ? cached!.entries : {};
-    const reused = reuseEntries(
-      this,
-      this.unparsed,
-      walk.files,
-      this.useCache ? (cached?.reached ?? []) : [],
-      old,
-      (rel) => this.reachable(rel),
-    );
-    this.index = new LinkIndex(this.notes.keys());
-    // Notes the index had that the walk no longer finds: moved, if one new file has the same text —
-    // unless the index was written on another branch (5.9): a note only one branch has is no move.
-    if (this.useCache && this.writesState && (cached?.branch === undefined || cached.branch === this.branchNow())) {
-      const vanished = Object.values(old).filter((e) => !this.notes.has(e.rel));
-      if (vanished.length)
-        this.detectMoves(
-          vanished,
-          walk.files.filter((f) => !old[f.rel]),
-        );
-    }
-    // And git's renames, when HEAD moved on the branch since this copy last looked (20.21).
-    if (this.useCache && this.writesState) this.catchUpWithGit();
-    // An editor's unsaved text stays over the new walk's entries (11.8); a note gone takes its own.
-    const texts = [...this.overlays].map(([rel, o]) => [rel, o.text] as const);
-    this.overlays.clear();
-    for (const [rel, text] of texts) this.overlay(rel, text);
-    this.backlinkCache = null;
-    this.tagCache = null;
-    this.generation++;
-    this.resolver.forgetNames();
-    // An index of this version written once at least: one with none, every note of it unreadable, has an empty one.
-    this.cacheDirty = Object.keys(old).length !== reused || (this.useCache && !this.indexRead);
-    const toParse = this.unparsed.size;
-    if (parse === "all") this.ensureAll();
-    else if (this.cacheDirty && !toParse) this.writeCache();
-    const gone = Object.keys(old).filter((rel) => !this.notes.has(rel)).length;
-    this.stats = {
-      notes: this.notes.size,
-      parsed: parse === "all" ? toParse : 0,
-      cached: reused,
-      gone,
-      ms: performance.now() - t0,
-    };
-    for (const fn of this.buildListeners) {
-      try {
-        fn();
-      } catch {}
-    }
+    this.refresh.build(useCache, parse, given);
     return this;
   }
 
@@ -285,25 +177,14 @@ export class Graph {
    *  TUI's is first built as the folders asked for are (`askFolders`). */
   builds = 0;
 
-  private readonly buildListeners = new Set<() => void>();
-
-  /** After each build: what the graph knows may be new (the TUI's buffers opened before it knew their files). */
   onBuild(fn: () => void): () => void {
-    this.buildListeners.add(fn);
-    return () => this.buildListeners.delete(fn);
+    return this.feed.onBuild(fn);
   }
 
   private readonly unparsed = new Map<string, NoteFile>();
-  private useCache = false;
-  private cacheDirty = false;
 
-  /** Whether it reads and refreshes the persisted index (`build`'s `useCache`): a graph made again from it does too. */
   get usesCache(): boolean {
-    return this.useCache;
-  }
-
-  private get cachePath(): string {
-    return join(cacheDir(this.loc), "index.json");
+    return this.refresh.usesCache;
   }
 
   /** A file as it's shown (21.9). */
@@ -314,31 +195,20 @@ export class Graph {
     return tildePath(abs);
   }
 
-  /** When the index on disk was last written (20.10): how fresh it is; null when there's none. */
-  /** The stamp of the index it was built from (`build`): "" for none. */
-  private indexStamp = "";
-
-  /** Its index on disk isn't the one it was built from: written since, by anyone. */
   indexChanged(): boolean {
-    return this.useCache && stampOf(this.cachePath) !== this.indexStamp;
+    return this.refresh.indexChanged();
   }
 
   indexedAt(): Date | null {
-    try {
-      return statSync(this.cachePath).mtime;
-    } catch {
-      return null;
-    }
+    return this.refresh.indexedAt();
   }
 
-  /** Notes still waiting to be parsed. */
   get pendingCount(): number {
-    return this.unparsed.size;
+    return this.refresh.pendingCount;
   }
 
-  /** The notes still waiting to be parsed, by their paths: the explorer marks their folders as being indexed (VV-D9). */
   pendingPaths(): IterableIterator<string> {
-    return this.unparsed.keys();
+    return this.refresh.pendingPaths();
   }
 
   /**
@@ -347,146 +217,40 @@ export class Graph {
    */
   readonly reached = new Set<string>();
 
-  /**
-   * Whether a path of the vault can be one of its files or folders: not excluded by `walk.exclude`
-   * nor inside a root of its own (a hidden or git-ignored one can, when reached: 20.8). `isDir`: a
-   * folder, which is also refused when it is a root of its own.
-   */
   admits(rel: string, isDir = false): boolean {
-    if (!this.filter.reachable(rel)) return false;
-    const why = isDir ? this.filter.exclusion(rel, true) : null;
-    return why === null || why === "hidden" || why === ".gitignore";
+    return this.refresh.admits(rel, isDir);
   }
 
-  /**
-   * Why a new file at `rel` — a folder, with `isDir` — would never be indexed once written, said (VV-D8: a busy folder
-   * is listed, never indexed), or null: a folder on its way the walk's filter leaves out whatever reaches it, a busy one
-   * (D237) or one always skipped. Asked of the filter, so it follows it: a root of its own on the way answers for
-   * itself, and Elsewhere indexes nothing to begin with. The folder the write puts it in holds a note after it when
-   * `notes` says so — by default when a file is named as a note; a moved or copied folder's, when it has one directly
-   * in it — so a busy name there, not ignored, is a folder like any. A new note, a move or a copy refused here would be
-   * found by nothing.
-   */
   neverIndexed(rel: string, isDir = false, notes?: boolean): string | null {
-    return neverIndexed(this, rel, isDir, notes);
+    return this.refresh.neverIndexed(rel, isDir, notes);
   }
 
-  /**
-   * Why a file written at `rel` — a folder, with `isDir` — is never indexed though the write is allowed (D246,
-   * `WalkFilter.notIndexed`): `walk.exclude` names it, or a folder on its way. Not refused, as `neverIndexed`'s are,
-   * but said after the write (`notIndexedSaid`). Null in Elsewhere, which indexes nothing.
-   */
   notIndexed(rel: string, isDir = false): "walk.exclude" | null {
-    return isListed(this.loc) ? null : this.filter.notIndexed(rel, isDir);
+    return this.refresh.notIndexed(rel, isDir);
   }
 
-  /** `rel` as a file to index when reached: there, a file inside the vault, and only left out softly. */
-  private reachable(rel: string): NoteFile | null {
-    return reachable(this, rel);
-  }
-
-  /**
-   * Index `rel`, a file the walk leaves out, now that it's reached (20.8): a note joins the notes (its
-   * links, its backlinks), any other file the files. True when it's the vault's now — or was already.
-   * `keep`: reached by being opened or named, it's parsed and the index written at once, so it stays.
-   */
   reachFile(rel: string, opts: { keep?: boolean } = {}): boolean {
-    if (this.known(rel)) return true;
-    // Where the filesystem folds case (macOS's), `Note.md` opens `note.md`: the file is reached by the name its folder
-    // lists, never a second time by a link's spelling.
-    const real = onDisk(this.root, rel);
-    if (real !== rel) return this.reachFile(real, opts);
-    const f = this.reachable(rel);
-    if (!f) return false;
-    this.reached.add(rel);
-    this.cacheDirty = true;
-    if (!this.filter.isNoteName(basename(rel))) {
-      this.addAsset(rel);
-      if (opts.keep) this.writeCache();
-      return true;
-    }
-    this.notes.set(rel, stub(f));
-    this.unparsed.set(rel, f);
-    this.index.add(rel);
-    this.backlinkCache = null;
-    this.tagCache = null;
-    this.generation++;
-    this.resolver.forgetNames();
-    this.emit({ kind: "changed", path: rel });
-    if (opts.keep) {
-      this.entry(rel);
-      this.writeCache();
-    }
-    return true;
+    return this.refresh.reachFile(rel, opts);
   }
 
-  /** The files a note links to that the walk leaves out: reached by the link (20.8). */
-  private reachLinked(e: NoteEntry): void {
-    return reachLinked(this, e, (rel) => this.reachable(rel));
-  }
-
-  /** Files read on explicit request that the walk excludes, and can't reach (20.8). Not part of the vault's index. */
-  private readonly adopted = new Map<string, NoteEntry>();
-
-  /** Read a file the walk excluded because the user named it; it never joins the index. */
   adopt(rel: string): NoteEntry | undefined {
-    if (this.notes.has(rel)) return this.entry(rel);
-    let e = this.adopted.get(rel);
-    if (!e) {
-      try {
-        const st = statSync(join(this.root, rel));
-        e = extractNote({ rel, abs: join(this.root, rel), size: st.size, mtimeMs: st.mtimeMs });
-        this.adopted.set(rel, e);
-      } catch {
-        return undefined;
-      }
-    }
-    return e;
+    return this.refresh.adopt(rel);
   }
 
-  /** The notes not parsed yet of at least `min` bytes: a background pass parses them on other threads first. */
   unparsedOver(min: number): NoteFile[] {
-    return [...this.unparsed.values()].filter((f) => f.size >= min);
+    return this.refresh.unparsedOver(min);
   }
 
-  /** The parsed entry for a note, parsing it now if needed (its chunks from `chunks` when parsed elsewhere). */
   entry(rel: string, chunks?: ChunkCache): NoteEntry | undefined {
-    const adopted = this.adopted.get(rel);
-    if (adopted) return adopted;
-    const f = this.unparsed.get(rel);
-    if (f) {
-      const e = extractNote(f, sharedParseCache(), chunks);
-      if (isUnreadable(e)) this.errors.push(`${rel}: ${e.flags.find((x) => x.startsWith("unreadable"))}`);
-      this.notes.set(rel, e);
-      this.unparsed.delete(rel);
-      this.reachLinked(e);
-      // One it can't read is never written to the index: its index the same, not written again for it at each open.
-      if (!isUnreadable(e)) this.cacheDirty = true;
-      this.backlinkCache = null;
-      this.tagCache = null;
-      this.generation++;
-      this.resolver.forgetNames();
-    }
-    return this.notes.get(rel);
+    return this.refresh.entry(rel, chunks);
   }
 
-  /** Parse for up to `budgetMs`; returns how many remain. The TUI calls this between frames. */
   parseSome(budgetMs: number, skip?: ReadonlySet<string>): number {
-    const end = performance.now() + budgetMs;
-    for (const rel of this.unparsed.keys()) {
-      // Being parsed elsewhere (a big note, on other threads): not here, not now.
-      if (skip?.has(rel)) continue;
-      this.entry(rel);
-      if (performance.now() >= end) break;
-    }
-    if (!this.unparsed.size && this.cacheDirty) this.writeCache();
-    return this.unparsed.size;
+    return this.refresh.parseSome(budgetMs, skip);
   }
 
   ensureAll(): void {
-    // Until none is left: a note parsed can reach more (20.8).
-    while (this.unparsed.size) for (const rel of [...this.unparsed.keys()]) this.entry(rel);
-    if (this.cacheDirty) this.writeCache();
+    this.refresh.ensureAll();
   }
 
   /** When this graph last wrote its index (`writeCache`); null: it hasn't — nothing to write, or the write failed. */
@@ -515,23 +279,8 @@ export class Graph {
   /** Its index was read, of this version: false when there was none, or one another version wrote (unread). */
   indexRead = false;
 
-  /**
-   * Its index is behind its walk: notes to parse, or entries gone or changed that it hasn't written — one that doesn't
-   * write its own (`writesIndex`) has it caught up elsewhere (#10).
-   */
   get indexBehind(): boolean {
-    return this.useCache && (this.cacheDirty || this.unparsed.size > 0);
-  }
-
-  private writeCache(): void {
-    if (!this.useCache || !this.writesIndex) return;
-    this.cacheDirty = false;
-    const entries = cacheEntries(this.notes, this.unparsed, this.overlays);
-    try {
-      this.writtenAt = persistIndex(this, entries);
-    } catch (err) {
-      this.errors.push(`cache: ${(err as Error).message}`);
-    }
+    return this.refresh.indexBehind;
   }
 
   // -------------------------------------------------------------------------------------------
@@ -564,14 +313,6 @@ export class Graph {
   }
 
   /**
-   * A note is moved when its text is gone from one path and turns up at exactly one new path, and
-   * no other vanished note had the same text (an empty template made twice is no move).
-   */
-  private detectMoves(vanished: NoteEntry[], fresh: NoteFile[]): void {
-    return this.moves.detectMoves(vanished, fresh);
-  }
-
-  /**
    * After a merge or a pull (20.21): a branch moved since this copy last saw it, so git's renames
    * between the two commits — paired by similarity — are evidence of moves, recorded as redirects by
    * that change: a broken link to a renamed file then says where it went, and the relink fixes it.
@@ -593,81 +334,20 @@ export class Graph {
     return this.moves.branchNow();
   }
 
-  private readonly listeners = new Set<(c: VaultChange) => void>();
-
-  /** Hear of every change to the vault's files (6.7); the returned function stops it. */
   onChange(fn: (c: VaultChange) => void): () => void {
-    this.listeners.add(fn);
-    return () => this.listeners.delete(fn);
+    return this.feed.onChange(fn);
   }
 
-  private emit(c: VaultChange): void {
-    for (const fn of this.listeners) {
-      try {
-        fn(c);
-      } catch {}
-    }
-  }
-
-  /** Files moved (by a rename here, or seen by their content): said to the listeners. */
   moved(pairs: [string, string][]): void {
-    for (const [from, to] of pairs) this.emit({ kind: "moved", from, to });
+    this.feed.moved(pairs);
   }
 
-  /** Incremental single-file update (1.8). Returns false when the file is not part of the vault. */
   updateFile(rel: string, file: NoteFile): boolean {
-    const isNew = !this.notes.has(rel);
-    const watch = isNew ? this.namesakeLinks(rel) : null;
-    this.unparsed.delete(rel);
-    this.cacheDirty = true;
-    const entry = extractNote(file);
-    // An editor's unsaved text still stands for the note: the file's entry is kept behind it.
-    const over = this.overlays.get(rel);
-    if (over) over.disk = entry;
-    else this.notes.set(rel, entry);
-    if (isNew && entry.size > 0) this.moves.pairMove(entry.hash, rel, "came");
-    if (isNew) this.index.add(rel);
-    this.backlinkCache = null;
-    this.tagCache = null;
-    this.generation++;
-    this.resolver.forgetNames();
-    this.emit({ kind: "changed", path: rel });
-    if (watch) this.reportRetargets(watch);
-    return true;
+    return this.feed.updateFile(rel, file);
   }
 
-  private readonly retargetListeners = new Set<(r: Retarget[]) => void>();
-
-  /** Told when a note coming or going sends links by name elsewhere (not when they break or heal). */
   onRetarget(fn: (r: Retarget[]) => void): () => void {
-    this.retargetListeners.add(fn);
-    return () => this.retargetListeners.delete(fn);
-  }
-
-  /**
-   * Before a note comes or goes: the links by name it could send elsewhere — only when another note or
-   * an alias has its name, so a unique name costs nothing — each where it reaches now. Null when none can.
-   */
-  private namesakeLinks(rel: string): { from: string; link: LinkRef; was: string }[] | null {
-    if (!this.retargetListeners.size) return null;
-    return namesakeLinks(this, rel, () => this.resolver.otherNames().aliases);
-  }
-
-  /** After: the watched links that reach somewhere else now, told to whoever listens. */
-  private reportRetargets(watch: { from: string; link: LinkRef; was: string }[]): void {
-    const moved: Retarget[] = [];
-    for (const w of watch) {
-      if (!this.notes.has(w.from)) continue;
-      const r = this.resolveLink(w.link, w.from);
-      if ((r.resolvedKind === "note" || r.resolvedKind === "file") && r.path && r.path !== w.was)
-        moved.push({ from: w.from, line: w.link.line, target: w.link.target, was: w.was, now: r.path });
-    }
-    if (!moved.length) return;
-    for (const fn of this.retargetListeners) {
-      try {
-        fn(moved);
-      } catch {}
-    }
+    return this.feed.onRetarget(fn);
   }
 
   /** Every non-note file the walk saw (data, text and binary alike), vault-relative. */
@@ -675,64 +355,16 @@ export class Graph {
     return [...this.assets.values()].flat();
   }
 
-  /** Index an attachment by file name; true if the index changed. */
   addAsset(rel: string): boolean {
-    const key = rel
-      .slice(rel.lastIndexOf("/") + 1)
-      .normalize("NFC")
-      .toLowerCase();
-    const list = this.assets.get(key);
-    if (!list) this.assets.set(key, [rel]);
-    else if (!list.includes(rel)) list.push(rel);
-    else return false;
-    this.backlinkCache = null;
-    this.tagCache = null;
-    this.generation++;
-    this.resolver.forgetNames();
-    this.dataLinkCache.clear(); // a path in a data file or a comment may resolve now
-    this.emit({ kind: "changed", path: rel });
-    return true;
+    return this.feed.addAsset(rel);
   }
 
-  /** Forget an attachment; true if the index changed. */
   removeAsset(rel: string): boolean {
-    const key = rel
-      .slice(rel.lastIndexOf("/") + 1)
-      .normalize("NFC")
-      .toLowerCase();
-    const before = this.assets.get(key);
-    if (!before?.includes(rel)) return false;
-    const list = before.filter((p) => p !== rel);
-    if (list.length) this.assets.set(key, list);
-    else this.assets.delete(key);
-    this.dataLinkCache.clear(); // and paths to it no longer resolve
-    this.backlinkCache = null;
-    this.tagCache = null;
-    this.generation++;
-    this.resolver.forgetNames();
-    this.emit({ kind: "removed", path: rel });
-    return true;
+    return this.feed.removeAsset(rel);
   }
 
   removeFile(rel: string): void {
-    // Its file is gone: never parsed now, when the namesakes' look reads every note (an undone move's
-    // old path warned "unreadable: ENOENT").
-    this.unparsed.delete(rel);
-    const watch = this.notes.has(rel) ? this.namesakeLinks(rel) : null;
-    this.reached.delete(rel);
-    // A move is known by the file's text, not by what an editor had of it.
-    const gone = this.overlays.get(rel)?.disk ?? this.notes.get(rel);
-    this.overlays.delete(rel);
-    if (!this.notes.delete(rel)) return;
-    if (gone && gone.size > 0) this.moves.pairMove(gone.hash, rel, "went");
-    this.cacheDirty = true;
-    this.index.remove(rel);
-    this.backlinkCache = null;
-    this.tagCache = null;
-    this.generation++;
-    this.resolver.forgetNames();
-    this.emit({ kind: "removed", path: rel });
-    if (watch) this.reportRetargets(watch);
+    this.feed.removeFile(rel);
   }
 
   /** Notes an editor has open (11.8): the text it has, and the file's own entry behind it. */
@@ -745,10 +377,7 @@ export class Graph {
    */
   overlay(rel: string, text: string | null): void {
     if (!applyOverlay(this, this.overlays, rel, text)) return;
-    this.backlinkCache = null;
-    this.tagCache = null;
-    this.generation++;
-    this.resolver.forgetNames();
+    this.invalidate();
   }
 
   /** Whether an editor's text stands for the note (11.8). */
@@ -907,27 +536,12 @@ export class Graph {
     });
   }
 
-  /** The grammars the vault's code needs, loaded (the CLI, before it lists links or backlinks). */
-  async loadGrammars(): Promise<void> {
-    const gs = new Set<Grammar>();
-    for (const p of this.filePaths()) {
-      const k = classify(p, this.config.walk.extensions);
-      const g = k.group === "text" ? grammarFor(k.format, extensionOf(p)) : null;
-      if (g) gs.add(g);
-    }
-    await Promise.all([...gs].map((g) => grammar(g)));
-    this.backlinkCache = null;
-    this.tagCache = null;
-    this.generation++;
-    this.resolver.forgetNames();
+  loadGrammars(): Promise<void> {
+    return this.refresh.loadGrammars();
   }
 
-  /** A grammar finished loading: code files' links can be read now (the TUI hears of it). */
   grammarsChanged(): void {
-    this.backlinkCache = null;
-    this.tagCache = null;
-    this.generation++;
-    this.resolver.forgetNames();
+    this.refresh.grammarsChanged();
   }
 
   /** Whether a vault-relative path is a note or a file of the vault (by the index: no disk). */
@@ -964,14 +578,8 @@ export class Graph {
     return fileLinksOf(this, this.dataLinkCache, rel);
   }
 
-  /** A data file changed or went: its links are read again, and backlinks recomputed. */
   fileChanged(rel: string): void {
-    this.dataLinkCache.delete(rel);
-    this.backlinkCache = null;
-    this.tagCache = null;
-    this.generation++;
-    this.resolver.forgetNames();
-    this.emit({ kind: "changed", path: rel });
+    this.feed.fileChanged(rel);
   }
 }
 
@@ -985,14 +593,4 @@ export function notIndexedSaid(why: string | null): string {
 
 export function openGraph(loc: VaultLocation, config: Config, useCache = true, parse: "all" | "lazy" = "all"): Graph {
   return new Graph(loc, config).build(useCache, parse);
-}
-
-/** A file's stamp, its mtime and size in a word: "" for none. */
-function stampOf(path: string): string {
-  try {
-    const st = statSync(path);
-    return `${st.mtimeMs}:${st.size}`;
-  } catch {
-    return "";
-  }
 }

@@ -705,7 +705,7 @@ describe("the TUI's walks on their own thread (T12, #9)", () => {
         await stepToEnd(h.app.watch.indexJob()!);
         expect(walks).toHaveBeenCalledTimes(1);
         // As a folder asked for that home's walk was taken to cover: in the asked list, the graph not built.
-        (h.app.graph as unknown as { asked: string[] }).asked.push("later");
+        (h.app.graph.askedFolders as string[]).push("later");
         await h.app.watch.homeRefreshed;
         expect(walks).toHaveBeenCalledTimes(2);
         expect(walks.mock.calls[1]![2]).toContain("later");
