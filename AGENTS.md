@@ -15,8 +15,9 @@ a change users will see updates it in the same piece of work, without the bluepr
   touch OpenTUI. Diagrams are drawn in their worker alone: only `src/core/rendering/media/diagrams/diagram-worker.ts`
   imports `src/core/rendering/media/diagrams/diagram-render.ts` for more than types (the same check), since drawing on
   the screen's thread can freeze it.
-- **Source files have a 600-line ceiling, and no class does everything** (D235, ORG-D2). Existing handwritten
-  exceptions have exact non-growing caps, never above 1,500. Moves may reset a cap solely for measured import-formatting
+- **Source files have a 600-line ceiling, and no class does everything** (D235, ORG-D2). Handwritten source and tests
+  have no remaining legacy caps (ORF-R3). Any source exception has an exact non-growing cap, never above 1,500.
+  Moves may reset a cap solely for measured import-formatting
   growth, recording its delta in the task (ORG-D2); preserve non-import code/comments and normal formatting.
   The same applies when import formatting alone moves a file from at or below the ceiling to above it; the file gets an
   exact cap equal to its measured size, recorded in the task and removed by its extraction task. Generated
@@ -24,8 +25,8 @@ a change users will see updates it in the same piece of work, without the bluepr
   cap whenever its file shrinks; remove the exception at or below 600. A feature goes in a module of its own; `App`
   (`src/tui/app/runtime/app.ts`) keeps the shared state and the wiring, and a feature is a controller in its own file
   that `App` owns (`src/tui/workspace/explorer/explorer.ts` is `app.explorer`), holding the state that is the feature's
-  alone. Tests aim for 1,000 lines with a separate 1,500-line ceiling; existing larger owners have exact
-  non-growing caps, removed at or below 1,500. `bun run check:size` enforces both defaults and caps.
+  alone. Tests aim for 1,000 lines with a separate 1,500-line ceiling. `bun run check:size` enforces both defaults
+  and the separate generated-lock cap.
 - **Every user action is a named command.** Add it to the `src/core/application/commands/areas/` file of its area
   (`git.ts`, `editing.ts`, …; `catalog.ts` joins them into `COMMAND_SPECS`) with its CLI equivalent (or `null` for a
   pure interaction), then implement it in its area under `src/tui/actions/documents/`, `workspace/` or `shell/`.
@@ -35,7 +36,7 @@ a change users will see updates it in the same piece of work, without the bluepr
   requirements or design goes through a workstream.
 - **Nothing measures text except `src/core/foundation/text/width.ts`**, and every string entering the layout
   passes through `sanitize`.
-- Phase 3 (editing) has begun: the TUI writes notes only through `App.writeBuffer` (atomic, inside
+- The TUI writes notes only through `App.writeBuffer` (atomic, inside
   the vault, the watcher told) — never with its own `writeFile`. Besides notes, it writes its own
   state and cache, the scratch, and an export where you said (`writeExport`: never over a note, but an
   earlier Markdown export).

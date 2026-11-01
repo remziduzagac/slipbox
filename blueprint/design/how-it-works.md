@@ -156,6 +156,30 @@ The CLI's commands are the user's reference, [cli.md](../../docs/manual/cli.md);
 
 ## Module map
 
+The faces keep their boundaries (`0.2`, `0.3`); within them, folders express functionality and state ownership
+(ORG-D1). Paths in the following table are relative to `src/core/`. A group is a directory, not a package.
+
+| Group | Features | Owns |
+| --- | --- | --- |
+| `foundation/` | `text/`, `platform/`, `workers/` | text primitives, OS helpers, worker URLs and request mailbox |
+| `application/` | `config/`, `commands/`, `distribution/` | config, command contracts/catalog, install/update/report |
+| `workspace/` | `vaults/`, `session/`, `walk/` | vault identity/trust, positions and sessions, traversal/listing |
+| `workspace/` | `links/`, `graph/`, `search/` | conventions/resolution, index/change feed, ranked and regex search |
+| `workspace/` | `mutations/`, `git/` | checked file operations and plans; Git processes, status and review |
+| `documents/` | `model/`, `markdown/`, `syntax/` | note/data models, parsing/cache, grammars and code models |
+| `documents/` | `editing/`, `external-editors/` | reusable text operations; editor discovery and handoff helpers |
+| `documents/` | `diagnostics/`, `servers/` | syntax/lint/spelling, server clients/installs and generated locks |
+| `rendering/` | `layout/`, `media/`, `export/`, `theme/` | rows and diffs, pictures/diagrams, document formats, roles |
+
+Workers and contracts stay with the feature that owns their resource lifetime. Media has `images/`, `diagrams/`
+and `paint/`; layout has `code/`, `markdown/` and `diff/`; export has `formats/` and `assets/`; mutations has
+`rename/`. Position/session persistence and anchors remain together in `workspace/session/position.ts`.
+The TUI's app, workspace, windows, documents, shell and action groups are mapped in [tui.md](tui.md).
+
+Use explicit relative file imports, kebab-case for new multiword paths and meaningful local role names. No aliases,
+workspace packages or empty future directories are needed. Review a directory approaching 20 direct implementation
+files for a meaningful subarea; this is a review trigger, not a CI limit or a reason for arbitrary subdivisions.
+
 Theme vocabulary and compatibility aliases live in `rendering/theme/roles.ts` below palette construction and loading.
 
 | Module | Steps | Role |
@@ -446,6 +470,103 @@ Graph keeps one mutable notes/index/assets/reached/overlay/pending state and its
 to refresh flags, asked folders, stamps and the explicit-read cache. `GraphFeed` owns subscriptions and incremental
 file/asset changes, calling Graph's cache invalidation before change delivery and retarget delivery afterwards.
 Both use focused capabilities and callbacks; Graph retains its public entry points, write flags and observable errors.
+
+## Client interaction and future gateway boundary
+
+Clients call core implementations directly. TUI coordinators own selection, confirmation, focus, views and live
+NoteBuffer text/undo; core features own reusable calculations and file/process policy. Text cut/paste edits a buffer,
+while Explorer cut/paste invokes a file operation. A named command (`0.8`) need not cross an application boundary.
+Pure editing and layout functions take text, positions and explicit data rather than App or a live buffer.
+
+Saving still goes through `App.writeBuffer`, synchronously checking and atomically writing a note, then updating
+watcher/graph/buffer state. Rename planning/application stays in `workspace/mutations/rename/`, Git in
+`workspace/git/`, search in `workspace/search/`, and export in `rendering/export/`. The clients keep their interaction
+and presentation; the feature owners keep workers, staging, caches and cleanup. A Promise alone moves no synchronous
+work off the screen's thread.
+
+The [gateway-to-owner ledger](../workstreams/archive/code-organization/tasks/43-measurement-and-build.md) maps the
+eight proposed operations to their actual callers and tests. Gateway execution, asynchronous save reconciliation,
+client routing and socket transport remain [later work](../roadmap.md#later). ENG remains an unchanged draft
+alternative; its engine-owned live documents are not the TUI-owned-buffer model implemented here (ORG-D1, ORG-D3).
+
+## Import contracts and loading
+
+Heavy features have named entries, including `syntax.ts`, image/diagram/paint entries and spelling; a worker entry is
+not its caller API. Light contracts import no heavy implementation for values. Avoid re-export-all barrels that turn
+first-use loading into an eager import. `foundation/platform/lazy.ts` supplies the existing shared loader.
+
+Export's five format writers remain dynamically imported by `rendering/export/stream.ts`; paint loaders retain their
+first-use boundary. Hunspell, diagram drawing and export libraries stay worker-local. Syntax and highlighting retain
+their existing eagerness; loading/memory work under #56 is separate. A worker move updates source URL resolution,
+compiled build entries, assets and scope discovery together, verified by real source and compiled requests (ORG-D1).
+
+## Internal dependency direction
+
+Contracts and primitives stay below their composers. `application/commands/contracts.ts` is independent of the
+catalog; area catalogs do not import their composer. Mutation marker/trash storage is below file/rename
+orchestration. Export's bounded UTF-8 encoding is below stream dispatch and the HTML/Markdown writers. Editable and
+drawing helpers are below App and screen composition. These seams and other extracted feature helpers have focused
+checks in `scripts/check-boundary.ts` and fixtures under `tests/organization/` (ORG-R7).
+
+Use `import type` for genuine type dependencies; do not hide runtime work with casts. The checks target specific
+forbidden edges, including some type edges, rather than prohibiting every cross-feature import or type cycle. Import
+graph comparisons report runtime component membership and worker URL edges separately. A smaller cycle alone proves
+neither correct initialization nor cancellation/cleanup behavior.
+
+## Size and shared-code conventions
+
+`scripts/check-size.ts` enforces a 600-line handwritten source ceiling and a separate 1,500-line test/fixture ceiling.
+The aims remain about 500 and 1,000 lines respectively (D235, ORG-D2); responsibility, not a line quota, determines a
+useful split. All handwritten source and test files now meet their defaults: `CAPPED` and `TEST_CAPPED` are empty
+(ORF-R3). No blanket App exemption applies. Any source exception follows ORG-D2's exact non-growing ratchet and
+disappears at its ceiling. A source cap never exceeds 1,500 lines; each exception names its responsibility, rationale
+and follow-up. Only measured import-formatting growth in source moves may reset or introduce a cap;
+record old/new size, delta and extraction owner, preserve non-import code/comments and normal formatting, and verify
+resolved dependencies and executable bodies. Test caps have no import-growth exception.
+
+Generated server locks have a separate measured cap and offline `bun scripts/lock-servers.ts --check` verification;
+embedded generated strings are not split by hand. The original 55-module inventory, cohesive owners above the
+500-line aim and the staged ratchet remain in the [ORG ledger][org-ratchet]. ORF removed its seven source and nine
+test caps through cohesive splits; the [completed follow-ups][orf-completion] retain that evidence. The historical
+cap lists in ORG are not current exceptions. The sole generated-lock cap is 1,239 lines for
+`src/core/documents/servers/locks.ts`.
+
+[org-ratchet]: ../workstreams/archive/code-organization/tasks/11-final-ratchet.md
+[orf-completion]: ../workstreams/archive/org-follow-ups/README.md
+
+## Duplication, patterns and code quality
+
+Shared tool-row navigation lives below outline, Info and footnotes, and panel focus/leave transitions retain their
+selection, filtering and pinning rules. Drawing uses the shared pin-aware selection helper. TOML and INI readers stay
+separate because their validation, sections and values differ. Test support shares compatible setup and protocol
+framing; assertions and scenario names stay visible in each owner, not in a generic assertion runner (ORG-R6).
+
+WorkerRequests remains the bounded mailbox for its existing callers. Diagram retry/persistence, paint's byte cache
+and export's progress/spooling/settlement keep distinct feature owners; no universal scheduler or lifecycle base is
+introduced. Export retains its lazy format strategy and PDF-specific font/layout adapters, with no replacement class
+hierarchy. App wiring and small real capability contracts support focused tests alongside integration journeys;
+there is no global App-shaped context or dependency-injection container (ORG-R9).
+
+Role-based naming preserves meaningful established names, public commands and persisted keys. Unused-code analysis
+accounts for launcher, workers, compiled entries, fixtures, scripts, site and optional integrations before narrowing
+visibility or removing a declaration. A removed export need not mean its implementation is unused (ORG-R8).
+
+Custom AST guards and library adapters are shared only for identical contracts; external input still needs runtime
+validation. Failure ownership stays explicit: refusal, presentation, retry and cleanup remain with their existing
+owners. WriteRefused, CliError and WorkerRequestError keep their message, exit and cleanup semantics; no global
+result-type conversion follows from an extraction.
+
+The completed [pattern and clone assessment][org-patterns], [unused-code ledger][org-unused] and
+[type/error assessment][org-errors] retain dispositions and comparable tool settings. Measurements distinguish
+completed comparable runs from host-sensitive failures and incomplete samples; they promise no universal speedup.
+The [ORF unused-code proof][orf-unused] reconciles the retained ORG candidates with eleven proven removals and
+274 retained sites with live uses or compatibility contracts. Its six type-package ownership findings remain
+explicit; a nonzero unused-code diagnostic is not silently presented as a clean gate.
+
+[org-patterns]: ../workstreams/archive/code-organization/tasks/40-worker-patterns-and-duplication.md
+[org-unused]: ../workstreams/archive/code-organization/tasks/41-naming-and-unused-code.md
+[org-errors]: ../workstreams/archive/code-organization/tasks/42-types-and-error-contracts.md
+[orf-unused]: ../workstreams/archive/org-follow-ups/tasks/19-unused-code.md
 
 ## Data flow for one note
 

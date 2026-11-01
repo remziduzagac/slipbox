@@ -22,39 +22,31 @@ Code, in `src/tui/`:
 | `documents/views/policy.ts` | new views, render eligibility, cursor placement and lazy-layout invalidation |
 | `shell/screen/frame.ts` | terminal title, frame completion and recovery from drawing failures |
 | `documents/tools/navigation.ts` | the four shared row-selection commands of outline, Info and footnotes |
-| `settings.ts`, `session.ts` | the keymaps, theme, glyphs, UI settings, live reload; the workspaces kept and restored |
-| `views.ts`, `lens.ts`, `code.ts` | a window's layout, cursor and scrolling; the lens and SOURCE view; code blocks |
-| `input.ts`, `mouse.ts` | keys and pastes, dispatched in order, the which-key popup; clicks, drags, the wheel |
-| `overlays.ts`, `properties.ts` | lists, prompts and dialogs; the properties editor in the floating window |
-| `panels.ts`, `focus.ts`, `history.ts` | panel wiring/widths/filters; visibility/focus transitions; the history |
+| `app/settings/`, `workspace/session/` | keymaps, theme, UI settings/reload; saved workspaces and positions |
+| `documents/views/`, `documents/editing/lens/` | view layout/scrolling, SOURCE, lens and code blocks |
+| `shell/input/` | ordered keys/pastes, which-key, mouse routing/gestures, vim grammar and replay |
+| `shell/overlays/`, `documents/tools/info/properties.ts` | shared floating UI; document properties editing |
+| `shell/panels/`, `workspace/history/` | panel widths/filter/focus mechanics; workspace history |
 | `workspace/explorer/` | Explorer state and cache; row, navigation and action mechanisms; disk reads and marks |
-| `following.ts`, `peek.ts` | links followed only when you say so; the peek at another vault's file |
-| `git.ts`, `info.ts`, `outline.ts`, `footnotes.ts` | git's state, changes and commits; Info; the outline; footnotes |
-| `gitpanel.ts`, `gitview.ts`, `gitmouse.ts`, `draw-git.ts` | the git panel: rows, keys, buttons, footer; mouse |
-| `gitsteady.ts` | the git panel's rows by what they are: the selection, the pointer's row, a click's |
-| `gitbranchview.ts`, `gitreposview.ts` | the git panel's branches and worktrees; the repositories in the view |
-| `diffview.ts`, `review.ts`, `mergescreen.ts` | the diff window; reviewing a change; the merge screen |
-| `gitremote.ts`, `rebase.ts` | fetch, pull, push and stash; a diverged pull, rebasing, what's under way |
-| `problems.ts`, `languages.ts` | the Problems panel and marks; syntax, language servers, linters, trust |
-| `windows.ts`, `files.ts`, `vaults.ts` | windows and tabs; file operations and the trash; vaults gone into and made |
-| `renaming.ts`, `linking.ts`, `search.ts` | renames previewed; links under the cursor, inserted; search, tags, types |
-| `watch.ts`, `saving.ts` | the watcher, polling, indexing, reloads; saving, autosave, conflicts, quitting |
-| `pictures.ts`, `exporter.ts`, `handoff.ts`, `scratch.ts` | pictures; export; hand-offs to an editor; scratch |
-| `report.ts` | reporting a problem: the window, the screen and place kept, sending (§ Reporting a problem) |
-| `actions.ts`, `actions-*.ts` | the command implementations, by area; `registerActions` registers them all |
-| `palette.ts` | the command palette and the help list |
-| `buffer.ts` | a note's text, its undo steps, unsaved state, and cached layouts |
-| `canvas.ts` | the drawing surface; `TextCanvas` for headless tests |
-| `cursor.ts` | the motions |
-| `draw.ts`, `draw-*.ts` | painting — the frame, then each region in a file of its own — and the mouse's geometry |
-| `where.ts` | where you are, for the top bar and the status line: the vault, the workspace, the branch, cut to fit |
-| `editing.ts` | the cursor as a text offset; insert mode |
-| `completion.ts` | completion while typing, signature help (`19.16`); a link's target completed by slipbox (`21.5`) |
-| `vim.ts` | normal mode in source and the lens: counts, operators, the register, `.` |
-| `replacing.ts` | find and replace: the replace row, `:s` and its confirm |
-| `match.ts` | the matching and ranking every list and filter uses |
-| `keys.ts` | the default keymaps, groups, aliases, and the in-pane actions' titles |
-| `run.ts`, `opentui.ts` | the OpenTUI binding |
+| `documents/navigation/` | following/linking, peek, opening and editor handoff |
+| `documents/tools/` | shared active-view tools: Info/properties, outline and footnotes, including painting |
+| `workspace/git/` | Git state, panel/input/selection, branch/repository views, remote operations and rebase |
+| `workspace/git/views/` | diff/review/merge windows and their Git-specific interaction |
+| `documents/diagnostics/` | Problems, spelling, syntax/server/linter lifecycle and language interaction |
+| `windows/layout/`, `windows/drawing/` | global tabs and their split views; layout, tab strip and window drawing |
+| `workspace/vaults/`, `workspace/explorer/files.ts` | active vault switching; Explorer file operations and trash |
+| `workspace/search/`, `documents/search/` | vault search/tags/types; in-document find and replace controls |
+| `app/runtime/watch.ts`, `documents/saving/` | graph/watch delivery; saving/autosave, conflicts and quit |
+| `documents/media/`, `documents/export/`, `app/scratch/` | picture/export interaction and scratch coordination |
+| `app/distribution/` | update/report interaction, restart and handover (§ Reporting a problem) |
+| `actions/documents/`, `workspace/`, `shell/` | command-area implementations, joined by `actions/actions.ts` |
+| `shell/overlays/palette.ts`, `match.ts` | command/help lists; shared matching and ranking |
+| `documents/buffers/`, `documents/editing/` | text, history, layout caches, cursor/source/lens/completion |
+| `shell/screen/` | frame composition, top/status bars and shared geometry below feature drawing |
+| `shell/terminal/canvas.ts` | drawing surface and the headless TextCanvas |
+| `shell/terminal/run.ts`, `opentui.ts` | the only OpenTUI binding |
+
+## Feature controllers
 
 App owns the single buffer map, text/undo through each NoteBuffer, shared window/pane state and the sole
 `App.writeBuffer` note-write gate. It keeps controller wiring and startup/disposal order. Opening, view, initial-window,
@@ -75,6 +67,38 @@ state is read from its owner. Positions, filters,
 resize behavior and active-view selection stay in their existing owners. The location selectors under
 `shell/screen/topbar/` read explicit data contracts and use core's Git-operation observation; they do not load the
 Git interaction coordinator. App still owns the buffers, focus and shared state and remains the note-write gate.
+
+Feature-only state belongs to the App-owned controller; shared state and explicit startup/disposal wiring stay in
+App (D235, ORG-D1). Clipboard serialization and notification scheduling have separate collaborators. Their live
+capabilities expose actual needs without copying state or creating a second mock App. App-backed integration tests
+retain wiring, write refusal, focus and disposal coverage.
+
+Buffer layout bodies live in `documents/buffers/layout/`, while NoteBuffer retains text, history, marks, caches and
+reset sites. Source mechanisms, lens visibility and completion context/items stay below their interaction controllers.
+Peek separates contracts, presentation, synchronization and interaction with one owner for its queues/probe/caches.
+Problems presentation and language protocol helpers stay below diagnostics controllers, which retain timers,
+cancellation, trust and buffer identity. Feature drawing is called explicitly by screen composition; primitives do
+not import their composer. Top/status bars compose data from their actual owners (ORG-T36–T38).
+
+## Ownership verification and separate adjustments
+
+The implemented model keeps one App buffer map and a global tab list; a tab contains one or two views
+(`app/runtime/app.ts`, `app/runtime/contracts.ts`, `windows/layout/windows.ts`). Splitting shares a NoteBuffer and
+undo history while each view keeps its cursor, selection, scroll and mode. Workspace session persistence stores this
+tab-with-views arrangement (`3.3`, `3.15`), not windows containing independent tab lists.
+
+The shared right tools read `app.view`: the floating editor when present, otherwise the active view of the active
+tab. Panel positions are keyed by tool kind, and outline fold/scroll state resets when its buffer key changes;
+per-document restoration is not promised. App keeps one active vault context while supporting home, Elsewhere,
+peeks and read-only outside-vault tabs (VV, `17.10`). Local editing mutates the TUI buffer; clipboard delivery checks
+focus/version and saving keeps the common synchronous write gate.
+
+The [later work](../roadmap.md#later) retains the proposed window/tab hierarchy, document-tool context/lifetime and
+version/update placement changes. Those proposals do not follow from the folder names. The original source probes
+and their limits remain in the [ORG ownership assessment][org-ownership]; they are historical evidence, not a general
+latency or race-safety guarantee.
+
+[org-ownership]: ../workstreams/archive/code-organization/design.md
 
 ## Screen layout (plan `3.1`)
 
@@ -301,7 +325,9 @@ spell checker's missing dictionary, said as a note is drawn). Clicking one opens
 messages list and clears the boxes. Timing is delegated to `app/notifications/toasts.ts`; App retains the messages,
 visible boxes, per-click deduplication and drawing guard. If the wall clock moves back before a box's first-drawn
 time, that box starts its normal lifetime again at the corrected time, keeping the next timer within four/eight seconds
-rather than overflowing into repeated immediate wakeups. The existing timer is cleared on dismissal; its quit
+rather than overflowing into repeated immediate wakeups (ORF-T1). Undrawn boxes keep their full lifetime for the first
+frame. Message-history timestamps, deduplication and the ten-millisecond scheduling floor remain unchanged.
+The existing timer is cleared on dismissal; its quit
 behavior is unchanged. Popups and questions draw over them. On a screen too small for a box (under 30 columns), a
 message takes over the status line while it shows.
 

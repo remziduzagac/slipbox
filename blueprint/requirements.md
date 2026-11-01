@@ -403,6 +403,58 @@ How: design/distribution.md § What the site tells search engines and agents.
   checks, never the CLI; `DO_NOT_TRACK` or the config turns it off. Bun's own crash reports are turned off at start
   (D221; design/distribution.md § Updates).
 
+## Maintainability
+
+- Core, TUI and tests are grouped by feature and ownership, preserving the face boundaries of `0.2` and `0.3`.
+  Feature subfolders keep implementation, contracts and workers with their owner; a split must not create another
+  large flat directory (ORG-R1, ORG-D1).
+- Handwritten source aims for 500 lines per module with a 600-line ceiling; tests aim for 1,000 with a separate
+  1,500-line ceiling. Responsibility determines the seam, and no class does everything (D235, ORG-R2, ORG-D2).
+  Any legacy exception has an exact non-growing cap, lowered when its file shrinks and removed at its ceiling;
+  source caps never exceed 1,500 and each exception names its responsibility, rationale and follow-up.
+  Only measured import-formatting growth during a source move can reset or introduce such a cap, with its delta
+  and extraction owner recorded. Generated server locks have their own measured cap and offline generator check.
+- Tests follow the behavior exercised, with focused collaborators where practical and shared integration journeys
+  retained. Selection stays conservative through App, dynamic imports and workers (D239, ORG-R3). Scope and timing
+  claims require completed comparable runs; an incomplete run proves no speedup.
+- Responsibility extractions preserve application behavior, public commands, persisted formats, failure and cleanup
+  contracts, loading boundaries and worker ownership. A discovered bug is fixed separately with a regression that
+  fails without its fix (ORG-R4, ORG-R8).
+- Test defaults and operation-named slow budgets are explicit and kept separate from product deadlines, terminal
+  observation waits, process-kill policy and CI ceilings. Reorganization raises none of them (ORG-R5, ORG-D3).
+- Share repetition only where mechanism and policy agree; record why similar code is retained. Compare duplication
+  reports with matching tool settings and scopes, without a zero-duplication target (ORG-R6).
+- Reusable contracts and primitives stay below their composition owners, with focused forbidden-edge fixtures.
+  Type-only imports and worker/loading distinctions remain explicit (ORG-R7).
+- Naming, unused declarations, types and error handling are reviewed against real entries and callers. A tool's
+  finding alone is no proof of unused behavior. Preserve public commands and external integrations (ORG-R8).
+- Worker lifecycle, export formats and TUI composition use patterns that solve demonstrated problems. Retained
+  differences have reasons and ownership/lifecycle coverage (ORG-R9).
+- Reusable application calculations stay independent of client selection and presentation. The TUI owns live
+  buffers and undo, and `App.writeBuffer` remains its sole note-write gate (ORG-R10). The gateway contracts are
+  preparation for the [later work](roadmap.md#later), not a running gateway or a second document owner.
+
+The [ORG requirements](workstreams/archive/code-organization/requirements.md) and its completed tasks retain the
+acceptance record, including the separate timeout-policy phase and contract design.
+
+### Maintainability follow-up acceptance
+
+- Every accepted cleanup finding has implemented work or an evidence-backed retained disposition. TUI-owned
+  buffers/undo and `App.writeBuffer` authority remain the baseline; ENG is a conflicting draft, not a second owner
+  (ORF-R1).
+- Timer/deadline findings require a reproduced cause and regression for a product correction. Isolate fixture host
+  assumptions separately, preserve limits and assertions, and leave unexplained failures visible rather than
+  retrying them away (ORF-R2). The message scheduler restarts a drawn message's normal lifetime when the wall clock
+  moves backwards; undrawn messages retain their first-frame lifetime (design/tui.md § Screen layout).
+- All handwritten source and test files now meet their respective 600/1,500-line defaults: no legacy source or test
+  cap remains. The 500/1,000-line aims, cohesive ownership and separate generated-lock policy still hold (ORF-R3).
+- Every unused-code candidate has proof of removal or a reason to retain. Suitable App-wide cases use focused
+  contexts with equivalent assertions and measured conservative reach; shared integration journeys stay (ORF-R4,
+  D239). Completion does not imply every feature change selects a small test set or that no diagnostic remains.
+
+The completed [ORF requirements and tasks](workstreams/archive/org-follow-ups/README.md) retain acceptance evidence,
+fixture investigations and the unused-code/focused-test dispositions; all 28 tasks are done.
+
 ## Constraints
 
 Fixed rules every part keeps. The roadmap's constraint items (`2.9`, `7.5`, `12.5`, `13.2`) point here.
