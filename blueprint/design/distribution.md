@@ -126,7 +126,7 @@ installer accept `--no-skill`; `SLIPBOX_NO_SKILL=1` skips automatic writes every
 `skill --auto` after committing `current`, so its skill matches its commands; `upgrade --no-skill` skips this.
 Failures are reported without undoing the binary installation. TUI background completion and foreground restart
 messages retain skill reports, including destinations, refusals and skips. `tests/skill-lifecycle.test.ts` exercises
-the lifecycle; `tests/distribution.test.ts` checks the packed binary prints the source's file.
+the lifecycle; `tests/distribution/release.test.ts` checks the packed binary prints the source's file.
 
 CI does it on a tag `v<version>`. `.github/workflows/release.yml` checks first that the tag is the version's and that
 the changelog has its section, then calls `.github/workflows/build.yml`, the build it shares with previews (§ Previews),
@@ -780,7 +780,8 @@ of its licence (`notices/licenses/`, from SPDX's list) with its author put in; f
 Hunspell (taken under MPL-1.1) in `hunspell-asm`, libwebp in `@jsquash/webp` — and Bun's own licence page, since the
 runtime is in the binary: Bun is MIT, and links JavaScriptCore and WebKit (LGPL-2), tinycc (LGPL-2.1) and the libraries
 it lists, the LGPL's text after it. slipbox's own licence, Apache-2.0 (GR-D3), is `LICENSE`, in the repository and in
-each pack beside `NOTICES.txt`; `tests/distribution.test.ts` keeps it Apache-2.0's text, and `package.json`'s
+each pack beside `NOTICES.txt`; `tests/distribution/supply-chain.test.ts` keeps it Apache-2.0's text, and
+`package.json`'s
 `license` saying so.
 
 What the binary bundles, by licence (D192, D194). Weak copyleft, accepted for use: `elkjs` (EPL-2.0, under

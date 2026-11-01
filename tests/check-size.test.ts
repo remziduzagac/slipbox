@@ -102,12 +102,21 @@ describe("the size check (D235, scripts/check-size.ts)", () => {
       symlinkSync(join(top, "tests"), join(top, "tests", "fixtures", "cycle"));
     });
     expect(links.code).toBe(0);
-    const file = "tests/distribution.test.ts";
-    const cap = TEST_CAPPED[file]!;
-    const shrunk = run({ "src/fine.ts": "", [file]: "x\n".repeat(cap - 1) });
+    const file = "tests/legacy.test.ts";
+    const cap = TEST_LIMIT + 100;
+    const capped = (files: Record<string, string>) =>
+      run({ "src/fine.ts": "", ...files }, (top) => {
+        const script = join(top, "scripts", "check-size.ts");
+        const source = readFileSync(script, "utf8").replace(
+          /export const TEST_CAPPED: Record<string, number> = \{[^}]*\};/,
+          `export const TEST_CAPPED: Record<string, number> = { ${JSON.stringify(file)}: ${cap} };`,
+        );
+        writeFileSync(script, source);
+      });
+    const shrunk = capped({ [file]: "x\n".repeat(cap - 1) });
     expect(shrunk.code).toBe(1);
     expect(shrunk.out).toContain(`lower the cap to ${cap - 1}`);
-    const back = run({ "src/fine.ts": "", [file]: "x\n".repeat(TEST_LIMIT) });
+    const back = capped({ [file]: "x\n".repeat(TEST_LIMIT) });
     expect(back.code).toBe(1);
     expect(back.out).toContain("drop it from TEST_CAPPED");
     expect(judgeSizes(new Map([[file, TEST_LIMIT + 1]]), { [file]: TEST_LIMIT + 2 }, TEST_LIMIT).lower).toEqual([

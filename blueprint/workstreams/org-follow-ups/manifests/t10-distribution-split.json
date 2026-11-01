@@ -1,0 +1,283 @@
+{
+  "moves": {
+    "tests/distribution.test.ts": "tests/distribution/release.test.ts"
+  },
+  "splits": {
+    "tests/distribution.test.ts": [
+      "tests/distribution/supply-chain.test.ts",
+      "tests/distribution/release.test.ts",
+      "tests/distribution/installation.test.ts",
+      "tests/distribution/updates.test.ts",
+      "tests/distribution/channels.test.ts"
+    ]
+  },
+  "support": [
+    "tests/support/distribution-sandbox.ts",
+    "tests/support/distribution-packs.ts"
+  ],
+  "suiteOwners": {
+    "tests/distribution/supply-chain.test.ts": [
+      "the supply chain's gates (14.10)",
+      "the dependencies' advisories (GR-D9)"
+    ],
+    "tests/distribution/release.test.ts": [
+      "a release (14.2)"
+    ],
+    "tests/distribution/installation.test.ts": [
+      "uninstall's plan (14.8)",
+      "how slipbox was installed, and what's said for it (14.3)"
+    ],
+    "tests/distribution/updates.test.ts": [
+      "updates (14.4)"
+    ],
+    "tests/distribution/channels.test.ts": [
+      "channels: the installer on Pages, and which releases an install follows (GR-D13, GR-D14, GR-D15)"
+    ]
+  },
+  "retained": [
+    {
+      "file": "blueprint/workstreams/org-follow-ups/tasks/03-resolver.md",
+      "text": "tests/distribution.test",
+      "reason": "Historical research, completed task or measured inventory at its recorded revision; the original evidence path is retained."
+    },
+    {
+      "file": "blueprint/workstreams/org-follow-ups/tasks/10-distribution-tests.md",
+      "text": "tests/distribution.test",
+      "reason": "Original task scope names the retired owner; final implementation and manifest identify its replacements."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/tasks/11-final-ratchet.md",
+      "text": "tests/distribution.test",
+      "reason": "Historical research, completed task or measured inventory at its recorded revision; the original evidence path is retained."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/tasks/17-tui-panel-paths.md",
+      "text": "tests/distribution.test",
+      "reason": "Historical research, completed task or measured inventory at its recorded revision; the original evidence path is retained."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/tasks/02-core-foundations.md",
+      "text": "tests/distribution.test",
+      "reason": "Historical research, completed task or measured inventory at its recorded revision; the original evidence path is retained."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/research.md",
+      "text": "tests/distribution.test",
+      "reason": "Historical research, completed task or measured inventory at its recorded revision; the original evidence path is retained."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/manifests/t43-reconciliation.json",
+      "text": "tests/distribution.test",
+      "reason": "Historical research, completed task or measured inventory at its recorded revision; the original evidence path is retained."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/manifests/t11-final-ratchet.json",
+      "text": "tests/distribution.test",
+      "reason": "Historical research, completed task or measured inventory at its recorded revision; the original evidence path is retained."
+    },
+    {
+      "file": "blueprint/workstreams/code-organization/design.md",
+      "text": "tests/distribution.test",
+      "reason": "Approved ORG move-gate example cites the original worker/build-entry test cases; their current equivalents relocate without worker-path changes."
+    },
+    {
+      "file": "blueprint/workstreams/archive/upgrade-restart/tasks/archive/upgrade-safely.md",
+      "text": "tests/distribution.test",
+      "reason": "Historical research, completed task or measured inventory at its recorded revision; the original evidence path is retained."
+    },
+    {
+      "file": "blueprint/workstreams/archive/upgrade-restart/tasks/archive/update-offer.md",
+      "text": "tests/distribution.test",
+      "reason": "Historical research, completed task or measured inventory at its recorded revision; the original evidence path is retained."
+    },
+    {
+      "file": "blueprint/tasks/archive/walk-off-the-main-thread.md",
+      "text": "tests/distribution.test",
+      "reason": "Historical research, completed task or measured inventory at its recorded revision; the original evidence path is retained."
+    },
+    {
+      "file": "blueprint/workstreams/archive/greenrepo/tasks/archive/skill-in-binary.md",
+      "text": "tests/distribution.test",
+      "reason": "Historical research, completed task or measured inventory at its recorded revision; the original evidence path is retained."
+    },
+    {
+      "file": "blueprint/tasks/archive/quarantine-flaky-tests.md",
+      "text": "tests/distribution.test",
+      "reason": "Historical research, completed task or measured inventory at its recorded revision; the original evidence path is retained."
+    },
+    {
+      "file": "blueprint/workstreams/archive/greenrepo/tasks/archive/previews-and-pages.md",
+      "text": "tests/distribution.test",
+      "reason": "Historical research, completed task or measured inventory at its recorded revision; the original evidence path is retained."
+    },
+    {
+      "file": "blueprint/workstreams/archive/greenrepo/tasks/archive/hardened-ci.md",
+      "text": "tests/distribution.test",
+      "reason": "Historical research, completed task or measured inventory at its recorded revision; the original evidence path is retained."
+    },
+    {
+      "file": "blueprint/tasks/archive/crash-reports-off.md",
+      "text": "tests/distribution.test",
+      "reason": "Historical research, completed task or measured inventory at its recorded revision; the original evidence path is retained."
+    },
+    {
+      "file": "blueprint/workstreams/archive/greenrepo/tasks/archive/dependencies.md",
+      "text": "tests/distribution.test",
+      "reason": "Historical research, completed task or measured inventory at its recorded revision; the original evidence path is retained."
+    },
+    {
+      "file": "blueprint/workstreams/archive/greenrepo/tasks/archive/channels.md",
+      "text": "tests/distribution.test",
+      "reason": "Historical research, completed task or measured inventory at its recorded revision; the original evidence path is retained."
+    },
+    {
+      "file": "blueprint/research/maintenance-gaps.md",
+      "text": "tests/distribution.test",
+      "reason": "Historical research, completed task or measured inventory at its recorded revision; the original evidence path is retained."
+    },
+    {
+      "file": "blueprint/tasks/archive/last-export-remembered-at-once.md",
+      "text": "tests/distribution.test",
+      "reason": "Historical research, completed task or measured inventory at its recorded revision; the original evidence path is retained."
+    },
+    {
+      "file": "blueprint/workstreams/archive/greenrepo/design.md",
+      "text": "tests/distribution.test",
+      "reason": "Historical research, completed task or measured inventory at its recorded revision; the original evidence path is retained."
+    },
+    {
+      "file": "blueprint/workstreams/archive/doc-findings/tasks/archive/privacy-and-messages.md",
+      "text": "tests/distribution.test",
+      "reason": "Historical research, completed task or measured inventory at its recorded revision; the original evidence path is retained."
+    },
+    {
+      "file": "blueprint/workstreams/archive/ci-waits/notes.md",
+      "text": "tests/distribution.test",
+      "reason": "Historical research, completed task or measured inventory at its recorded revision; the original evidence path is retained."
+    },
+    {
+      "file": "blueprint/workstreams/archive/ci-waits/tasks/archive/range-from-last-pass.md",
+      "text": "tests/distribution.test",
+      "reason": "Historical research, completed task or measured inventory at its recorded revision; the original evidence path is retained."
+    }
+  ],
+  "renamedBasenames": {
+    "distribution.test.ts": "release.test.ts"
+  },
+  "fixtureReaders": [
+    {
+      "path": "tests/distribution/supply-chain.test.ts",
+      "adaptation": "Update only the real release-script scope owner list to the exact relocated consumers; synthetic graph data stays byte-identical."
+    },
+    {
+      "path": "tests/organization/timeouts.test.ts",
+      "adaptation": "Replace the retired owner entry with the five actual owners and their unchanged UNIT_TIMEOUT_MS policy.",
+      "baselineReconciliation": [
+        "tests/cli/contracts/dispatch.test.ts",
+        "tests/cli/contracts/output.test.ts",
+        "tests/core/workspace/graph/resolver.test.ts",
+        "tests/terminal-git-fixtures.test.ts"
+      ],
+      "policy": "Record existing explicit UNIT_TIMEOUT_MS sites; no budget changes or weakened equality assertion."
+    },
+    {
+      "path": "tests/check-size.test.ts",
+      "adaptation": "Inject a synthetic TEST_CAPPED entry in copied scripts; preserve the existing test title and assertions after removing the real distribution cap."
+    }
+  ],
+  "invariants": {
+    "suiteAndLeafIdentities": "unchanged; all describe blocks move whole",
+    "existingAssertionLogic": "unchanged except mechanical live owner paths; cap adaptation changes setup only",
+    "compiledBuildHook": "one per release owner, original budget and order",
+    "sourceEdgesRuntimeEntriesWorkers": "unchanged",
+    "defaultBudget": "UNIT_TIMEOUT_MS in each owner",
+    "caps": "remove only distribution cap; new owners below 1500, aim 1000"
+  },
+  "verification": {
+    "sourceStaticEdges": 3131,
+    "sourceRuntimeEdges": 2290,
+    "buildEntries": 12,
+    "literalDeclarations": 4085,
+    "unresolved": 0,
+    "sourceSnapshots": "byte-identical before/after capture",
+    "suiteBlocks": "all seven byte-identical after one live scope-owner path-list reversal",
+    "helperBodies": "tree/fakePack/fakeReleases byte-identical after indentation normalization",
+    "timeoutReader": "exact base reconstructed by reversing only actual owner metadata and the four pre-existing UNIT_TIMEOUT_MS entries",
+    "sizeReader": "exact base reconstructed by reversing only the synthetic-cap setup; assertion fragments byte-identical",
+    "scope": {
+      "scripts/release.ts": {
+        "beforeOwners": 4,
+        "afterOwners": 6,
+        "removed": [
+          "tests/distribution.test.ts"
+        ],
+        "added": [
+          "tests/distribution/channels.test.ts",
+          "tests/distribution/release.test.ts",
+          "tests/distribution/updates.test.ts"
+        ],
+        "terminalBeforeAfter": [
+          "updates"
+        ],
+        "fallback": false
+      },
+      "scripts/check-deps.ts": {
+        "beforeOwners": 4,
+        "afterOwners": 7,
+        "removed": [
+          "tests/distribution.test.ts"
+        ],
+        "added": [
+          "tests/distribution/channels.test.ts",
+          "tests/distribution/release.test.ts",
+          "tests/distribution/supply-chain.test.ts",
+          "tests/distribution/updates.test.ts"
+        ],
+        "terminalBeforeAfter": [
+          "updates"
+        ],
+        "fallback": false
+      },
+      "src/core/application/distribution/install.ts": {
+        "beforeOwners": 320,
+        "afterOwners": 323,
+        "removed": [
+          "tests/distribution.test.ts"
+        ],
+        "added": [
+          "tests/distribution/channels.test.ts",
+          "tests/distribution/installation.test.ts",
+          "tests/distribution/release.test.ts",
+          "tests/distribution/updates.test.ts"
+        ],
+        "terminalBeforeAfter": "all",
+        "fallback": false
+      },
+      "src/core/application/distribution/update.ts": {
+        "beforeOwners": 319,
+        "afterOwners": 322,
+        "removed": [
+          "tests/distribution.test.ts"
+        ],
+        "added": [
+          "tests/distribution/channels.test.ts",
+          "tests/distribution/installation.test.ts",
+          "tests/distribution/release.test.ts",
+          "tests/distribution/updates.test.ts"
+        ],
+        "terminalBeforeAfter": [
+          "updates"
+        ],
+        "fallback": false
+      }
+    },
+    "ownerLines": {
+      "tests/distribution/supply-chain.test.ts": 676,
+      "tests/distribution/release.test.ts": 917,
+      "tests/distribution/installation.test.ts": 194,
+      "tests/distribution/updates.test.ts": 256,
+      "tests/distribution/channels.test.ts": 509
+    },
+    "renameReview": "git mv; explicit -M30% detects release.test.ts at 36%; default threshold does not infer this one-to-five split"
+  }
+}

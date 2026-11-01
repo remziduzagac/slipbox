@@ -1,5 +1,5 @@
 ---
-status: review
+status: done
 assignee:
 blocked_by: [ORF-T8]
 created: "2026-11-01"
@@ -83,3 +83,20 @@ documentation and changelog are unchanged. The required scoped check and publica
   regressions. All 28 affected terminal checks passed locally above. No unrelated failed check/job is retried.
 - Build evidence: `tmp/issue/ORF-T26-check.log` and result JSON. Fresh diff review, PR CI, merge and automatic
   dev verification follow. Keep ORF-T9 completion pending until the corrective dev push passes on all platforms.
+
+## Review, merge and completion
+
+- Review at 929475f485487f374bbcf20d6157fd9a7c733e25 finds no actionable findings. Whole-file reversals preserve
+  the existing check array and helper bodies; real Git dates/order, isolated environment and cleanup agree.
+  `tmp/issue/review-ORF-T26.md` and `ORF-T26-review-audit.json` retain the complete review.
+- [PR #186](https://github.com/remziduzagac/slipbox/pull/186), `test(git): pin branch fixture commit dates`, passes
+  required CI 41296785089 and CodeQL 41296782929 at the reviewed head on attempt 1. Marked ready and squash-merged
+  with the exact head guard: e0b013aaf1d1690a73162898b2f2ea255f5bac1c, 2026-11-01 10:20:18 UTC.
+- Corrective [dev push 41297049491](https://github.com/remziduzagac/slipbox/actions/runs/41297049491) succeeds at
+  the exact squash on attempt 1: both unit platforms, lint/site/changes, all three terminal platforms and aggregate
+  CI pass. Linux x64/ARM each pass 548/548 terminal checks, macOS 547/547, with unchanged four/four/five skips.
+- Every platform passes the repaired last-row check and all four T9 scenarios, exercising 329 commands. Logs,
+  metadata and exact line evidence: `tmp/issue/ORF-T26-dev-*`. No failed run or job was retried. The merged tree
+  equals the reviewed head; no local branch deletion, promotion or release. ORF-T26 and ORF-T9 are done.
+- Carry these two post-merge completion records onto the fresh ORF-T10 branch from latest dev. No further fixture
+  adjustment or additional date-order assumption was found during review or the passing cross-platform run.
