@@ -54,6 +54,16 @@ export function gitOk(s: Session, cwd: string, ...args: string[]): string {
   return r.out.trim();
 }
 
+/** A staged change committed at an explicit Unix second, for fixtures whose order depends on dates. */
+export function commitAt(s: Session, cwd: string, message: string, second: number): void {
+  const date = `${second} +0000`;
+  const r = spawnSync("git", ["-C", s.path(cwd), "commit", "-q", "-m", message], {
+    encoding: "utf8",
+    env: { ...gitEnv(s), GIT_AUTHOR_DATE: date, GIT_COMMITTER_DATE: date },
+  });
+  s.expect(r.status === 0, `git commit (exit ${r.status})\n${r.stderr.trim()}`);
+}
+
 /** Files written in a folder (`~/…`). */
 export function put(s: Session, at: string, files: Record<string, string>): void {
   for (const [f, t] of Object.entries(files)) s.write(`${at}/${f}`, t);

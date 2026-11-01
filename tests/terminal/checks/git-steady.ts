@@ -10,6 +10,7 @@ import { type Check, EXPLORER, explorerOpen, explorerRow, leader } from "../chec
 import type { Session, SessionOptions } from "../session.ts";
 import {
   bgOf,
+  commitAt,
   gitOk,
   isSelected,
   mouse,
@@ -68,11 +69,16 @@ const away = (s: Session) => mouse(s, 150, 10, "move");
 /** The trail repository with two branches besides main, a commit of its own on each (not merged, so listed). */
 function branches(s: Session): void {
   trail(s);
-  for (const b of ["dawn-start", "ridge-notes"]) {
+  const now = Math.floor(Date.now() / 1000);
+  // Newest first, a minute apart: ridge-notes is last even when both commits are made within the same second.
+  for (const [b, date] of [
+    ["dawn-start", now],
+    ["ridge-notes", now - 60],
+  ] as const) {
     gitOk(s, TRAIL, "switch", "-q", "-c", b);
     put(s, TRAIL, { [`${b}.md`]: `# ${b}\n` });
     gitOk(s, TRAIL, "add", "-A");
-    gitOk(s, TRAIL, "commit", "-q", "-m", b);
+    commitAt(s, TRAIL, b, date);
     gitOk(s, TRAIL, "switch", "-q", "main");
   }
 }
