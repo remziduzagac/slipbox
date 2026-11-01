@@ -1,5 +1,5 @@
 ---
-status: active
+status: complete
 created: "2026-10-31"
 ---
 
@@ -17,6 +17,12 @@ ORG archive or parent-blueprint consolidation is included.
 [Requirements](requirements.md) retain the accepted constraints; [design](design.md) records the implementation seams
 and gates. Tasks are in delivery order, one PR each unless a large task first records numbered child PRs. Each PR starts
 from the latest origin/dev. Task status and evidence live in its file; completed tasks stay here until consolidation.
+
+## Completion
+
+All 28 tasks are done. The final [PR #199](https://github.com/remziduzagac/slipbox/pull/199) closed issue #170 on
+2026-11-01, merging as `9bb4e2cd97a4948c9ac3fa8358ea2c0faa93915e`; its post-merge
+[dev run](https://github.com/remziduzagac/slipbox/actions/runs/41341263809) passed.
 
 ## Tasks
 
