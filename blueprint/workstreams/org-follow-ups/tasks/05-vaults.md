@@ -1,5 +1,5 @@
 ---
-status: review
+status: done
 assignee:
 blocked_by: [ORF-T4]
 created: "2026-10-31"
@@ -76,6 +76,27 @@ Draft PR [#181](https://github.com/remziduzagac/slipbox/pull/181) targets `dev`,
 Final staged-file documentation and Biome checks pass: 480 Markdown / 1,749 spelt files, zero link errors;
 `tmp/issue/ORF-T5-build-docs.log` and `ORF-T5-final-lint.log`. Product tests are not repeated for delivery-only edits.
 
-Fresh review is pending in its separate stage; keep the PR draft. Merge/dev-push verification follow only after that
-review. No behavior change, discovered product bug, user-documentation/changelog change, dependency/CI change or
-full-suite/all-terminal run is included. ORF-T5 remains review until merge.
+Fresh review completed at `d573efec1eeb9554d7d6251d4a8e2b030b25f3ff`, with no actionable findings or
+corrections. No behavior change, discovered product bug, user-documentation/changelog change, dependency/CI change
+or full-suite/all-terminal run is included.
+
+## Review and merge
+
+The fresh review independently verifies all twelve moved bodies/comments, ten retained methods, exact forwarding,
+state ownership, dependency deltas, declarations, entries and unchanged runtime SCCs. Fresh focused verification
+passes 15 tests / 127 assertions and three affected terminal scenarios / 17 commands; all static/docs gates pass.
+Review and audits: `tmp/issue/review-ORF-T5.md`, `ORF-T5-review-audit.json` and `ORF-T5-review-static-results.json`.
+
+[PR CI](https://github.com/remziduzagac/slipbox/actions/runs/41259346705) and
+[CodeQL](https://github.com/remziduzagac/slipbox/actions/runs/41259344311) pass at the exact reviewed head on
+attempt 1. Both unit platforms, lint/site and aggregate CI pass; terminal/status are skipped by PR policy.
+The preceding #180 dev push remains green at the exact base, including all three terminal platforms.
+
+Marked ready and squash-merged as `c856a63090b968be673ee5f92c87c3a81ec2f3bd` on 2026-11-01 at 01:12:27 UTC,
+with the reviewed head pinned. The merged tree equals the reviewed tree byte-for-byte. Automatic
+[dev push 41260100363](https://github.com/remziduzagac/slipbox/actions/runs/41260100363)
+succeeds at that exact merge on attempt 1. Both unit platforms, lint/site, all three terminal platforms and
+aggregate CI pass; only status is skipped. Terminal totals: Linux x64 and ARM 548/548, macOS 547/547, with
+four/four/five existing skips; 329 commands per platform. All three affected vault scenarios pass on each platform.
+Final metadata and terminal job logs: `tmp/issue/ORF-T5-merge-dev-result.json` and
+`ORF-T5-merge-dev-{arm,linux,macos}.log`. No failed job, test, build/probe or negative control was repeated.

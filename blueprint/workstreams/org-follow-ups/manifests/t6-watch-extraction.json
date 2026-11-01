@@ -1,0 +1,147 @@
+{
+  "moves": {},
+  "retained": [],
+  "renamedBasenames": {},
+  "extraction": [
+    {
+      "from": "src/tui/app/runtime/watch.ts",
+      "to": "src/tui/app/runtime/graph-refresh.ts",
+      "symbols": [
+        "parseInSlices",
+        "indexInBackground",
+        "whenIndexed",
+        "autoIndex",
+        "homeIndex",
+        "autoIndexDue",
+        "nobodyWorking",
+        "indexJob",
+        "gaveUp",
+        "walkHomeAgain",
+        "startAutoIndex",
+        "homeIndexed",
+        "refreshHome",
+        "homeRefresh",
+        "homeRefreshed",
+        "homeBuilt"
+      ]
+    }
+  ],
+  "entries": {
+    "removed": [],
+    "added": []
+  },
+  "ownership": {
+    "refresh": "GraphRefresh owns background parse coordination, auto-index instances and home refresh generation/promise; live graph, location and progress capabilities, with selection and rebuilt callbacks",
+    "watcher": "Watch retains subscriptions, watcher lifecycle, polling stamps, batch delivery, selection restoration, relink offers and conflict-aware reload; existing entry methods forward",
+    "resources": "App retains shared indexing/input state, buffers and writeBuffer; no moved workers, URLs, build entries or assets; parseInSlices remains exported from watch.ts"
+  },
+  "edges": {
+    "removed": [
+      "src/tui/app/runtime/watch.ts -> src/core/application/config/config.ts",
+      "src/tui/app/runtime/watch.ts -> src/core/documents/markdown/parse-pool.ts",
+      "src/tui/app/runtime/watch.ts -> src/core/documents/markdown/parse.ts",
+      "src/tui/app/runtime/watch.ts -> src/core/workspace/graph/graph.ts",
+      "src/tui/app/runtime/watch.ts -> src/core/workspace/vaults/home.ts",
+      "src/tui/app/runtime/watch.ts -> src/core/workspace/walk/walk-thread.ts"
+    ],
+    "added": [
+      "src/tui/app/runtime/graph-refresh.ts -> src/core/application/config/config.ts",
+      "src/tui/app/runtime/graph-refresh.ts -> src/core/documents/markdown/parse-pool.ts",
+      "src/tui/app/runtime/graph-refresh.ts -> src/core/documents/markdown/parse.ts",
+      "src/tui/app/runtime/graph-refresh.ts -> src/core/foundation/platform/fsutil.ts",
+      "src/tui/app/runtime/graph-refresh.ts -> src/core/workspace/graph/autoindex.ts",
+      "src/tui/app/runtime/graph-refresh.ts -> src/core/workspace/graph/graph.ts",
+      "src/tui/app/runtime/graph-refresh.ts -> src/core/workspace/vaults/home.ts",
+      "src/tui/app/runtime/graph-refresh.ts -> src/core/workspace/vaults/vault-feed.ts",
+      "src/tui/app/runtime/graph-refresh.ts -> src/core/workspace/vaults/vault.ts",
+      "src/tui/app/runtime/graph-refresh.ts -> src/core/workspace/walk/walk-thread.ts",
+      "src/tui/app/runtime/graph-refresh.ts -> src/core/workspace/walk/walk.ts",
+      "src/tui/app/runtime/graph-refresh.ts -> src/tui/app/notifications/contracts.ts",
+      "src/tui/app/runtime/graph-refresh.ts -> src/tui/app/runtime/background.ts",
+      "src/tui/app/runtime/graph-refresh.ts -> src/tui/documents/buffers/buffer.ts",
+      "src/tui/app/runtime/watch.ts -> src/tui/app/runtime/graph-refresh.ts"
+    ]
+  },
+  "runtime": {
+    "removed": [
+      "src/tui/app/runtime/watch.ts -> src/core/application/config/config.ts",
+      "src/tui/app/runtime/watch.ts -> src/core/documents/markdown/parse-pool.ts",
+      "src/tui/app/runtime/watch.ts -> src/core/documents/markdown/parse.ts",
+      "src/tui/app/runtime/watch.ts -> src/core/workspace/graph/autoindex.ts",
+      "src/tui/app/runtime/watch.ts -> src/core/workspace/vaults/home.ts",
+      "src/tui/app/runtime/watch.ts -> src/core/workspace/walk/walk-thread.ts",
+      "src/tui/app/runtime/watch.ts -> src/tui/documents/buffers/buffer.ts"
+    ],
+    "added": [
+      "src/tui/app/runtime/graph-refresh.ts -> src/core/application/config/config.ts",
+      "src/tui/app/runtime/graph-refresh.ts -> src/core/documents/markdown/parse-pool.ts",
+      "src/tui/app/runtime/graph-refresh.ts -> src/core/documents/markdown/parse.ts",
+      "src/tui/app/runtime/graph-refresh.ts -> src/core/foundation/platform/fsutil.ts",
+      "src/tui/app/runtime/graph-refresh.ts -> src/core/workspace/graph/autoindex.ts",
+      "src/tui/app/runtime/graph-refresh.ts -> src/core/workspace/vaults/home.ts",
+      "src/tui/app/runtime/graph-refresh.ts -> src/core/workspace/vaults/vault-feed.ts",
+      "src/tui/app/runtime/graph-refresh.ts -> src/core/workspace/vaults/vault.ts",
+      "src/tui/app/runtime/graph-refresh.ts -> src/core/workspace/walk/walk-thread.ts",
+      "src/tui/app/runtime/graph-refresh.ts -> src/tui/documents/buffers/buffer.ts",
+      "src/tui/app/runtime/watch.ts -> src/tui/app/runtime/graph-refresh.ts"
+    ]
+  },
+  "tests": {
+    "removed": [],
+    "added": []
+  },
+  "runtimeScc": {
+    "before": [
+      [
+        "src/tui/actions/actions.ts",
+        "src/tui/actions/documents/actions-edit.ts",
+        "src/tui/actions/documents/actions-find.ts",
+        "src/tui/actions/documents/actions-links.ts",
+        "src/tui/actions/documents/actions-lsp.ts",
+        "src/tui/actions/documents/actions-view.ts",
+        "src/tui/actions/shell/actions-panes.ts",
+        "src/tui/actions/workspace/actions-files.ts"
+      ],
+      [
+        "src/tui/app/runtime/app.ts",
+        "src/tui/app/settings/settings.ts",
+        "src/tui/workspace/history/history.ts",
+        "src/tui/workspace/session/session.ts",
+        "src/tui/workspace/vaults/vaults.ts"
+      ],
+      [
+        "src/tui/workspace/git/gitremote.ts",
+        "src/tui/workspace/git/views/review/rebase.ts"
+      ]
+    ],
+    "after": [
+      [
+        "src/tui/actions/actions.ts",
+        "src/tui/actions/documents/actions-edit.ts",
+        "src/tui/actions/documents/actions-find.ts",
+        "src/tui/actions/documents/actions-links.ts",
+        "src/tui/actions/documents/actions-lsp.ts",
+        "src/tui/actions/documents/actions-view.ts",
+        "src/tui/actions/shell/actions-panes.ts",
+        "src/tui/actions/workspace/actions-files.ts"
+      ],
+      [
+        "src/tui/app/runtime/app.ts",
+        "src/tui/app/settings/settings.ts",
+        "src/tui/workspace/history/history.ts",
+        "src/tui/workspace/session/session.ts",
+        "src/tui/workspace/vaults/vaults.ts"
+      ],
+      [
+        "src/tui/workspace/git/gitremote.ts",
+        "src/tui/workspace/git/views/review/rebase.ts"
+      ]
+    ]
+  },
+  "characterization": {
+    "file": "tests/tui/app/watch/refresh.test.ts",
+    "addedLeafTests": 4,
+    "beforeDeclarations": 4069,
+    "baselineDeclarations": 4064
+  }
+}
