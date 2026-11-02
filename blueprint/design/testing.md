@@ -363,7 +363,10 @@ A check that must hold slipbox mid-work has Bun preload a script of the tests' i
 and writes the hold's state to another; the export checks that act while an export's staging is cleared (the window
 opened then, Cancel export, a cleanup that fails) preload `tests/terminal/export-hold.ts`, which holds the first
 export's cleanup (`PreparedExport.dispose`) the same way, or, with `EXPORT_HOLD_AT=publication`, its publication
-once its document is in place.
+once its document is in place. A check that must have git answer only after its keys (a prompt opened before git's
+answer would open a question or a menu) holds git itself, never counting on the keys to beat it: `keys` writes each key
+on its own, and a busy machine can hand slipbox the last after git has answered. The repository, trusted, runs an
+fsmonitor that waits while a file the check writes is there (`heldGit` in `tests/terminal/checks/git-branches.ts`).
 
 **A slow disk, stood in for** (T12): `SLIPBOX_SLOW_DISK=<folder name>:<ms>[:<deadline ms>]` makes a folder of that
 name take so long to list, on whichever thread lists it (`slowDisk` in `core/workspace/walk/walk.ts`), and shortens the

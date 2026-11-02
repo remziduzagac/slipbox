@@ -8,7 +8,7 @@
 // out…, making…, removing…) still on screen with git's answer. Without a frame of its own, the answer is drawn only
 // by the frame that message asks for when its four seconds are up — which it's gone from.
 
-import { chmodSync } from "node:fs";
+import { chmodSync, rmSync } from "node:fs";
 import type { Check } from "../check.ts";
 import type { Session } from "../session.ts";
 import {
@@ -77,6 +77,21 @@ function hookSaysNo(s: Session): void {
   chmodSync(s.path(`${TRAIL}/.git/hooks/post-checkout`), 0o755);
 }
 const TRUSTED = `${WIDE}[trust]\nroots = ["{home}/work/trail"]\n`;
+/** The trail and its agent/done and agent/ahead worktrees trusted: git runs the repository's fsmonitor in each. */
+const WORKTREES_TRUSTED = `${WIDE}[trust]\nroots = ["{home}/work/trail", "{home}/work/trail-agent-done", "{home}/work/trail-agent-ahead"]\n`;
+
+/** While this file is there, git's look at what's changed in an agent/… worktree waits (`heldGit`). */
+const HELD = "~/git-held";
+
+/** A file-system monitor that waits in the agent/… worktrees while HELD is there (WORKTREES_TRUSTED, so git runs it):
+ *  git's answer to what asks `git status` there — Remove…'s question, Merge…'s menu — held back until the check lets it
+ *  go, however late the keys before it reach slipbox. */
+function heldGit(s: Session): void {
+  const wait = `while [ -e '${s.path(HELD)}' ]; do sleep 0.02; done`;
+  put(s, TRAIL, { ".git/held-monitor": `#!/bin/sh\ncase "$PWD" in */trail-agent-*) ${wait} ;; esac\nexit 1\n` });
+  chmodSync(s.path(`${TRAIL}/.git/held-monitor`), 0o755);
+  gitOk(s, TRAIL, "config", "core.fsmonitor", s.path(`${TRAIL}/.git/held-monitor`));
+}
 
 /** So many files a checkout of them takes a while: keys sent meanwhile are taken before git answers. */
 const MANY = Object.fromEntries(Array.from({ length: 3000 }, (_, i) => [`data/leg-${i}.md`, `# Leg ${i}\n`]));
@@ -267,9 +282,7 @@ export const GIT_BRANCHES: Check[] = [
         chmodSync(s.path(`${TRAIL}/.git/slow-monitor`), 0o755);
         gitOk(s, TRAIL, "config", "core.fsmonitor", s.path(`${TRAIL}/.git/slow-monitor`));
       },
-      {
-        config: `${WIDE}[trust]\nroots = ["{home}/work/trail", "{home}/work/trail-agent-done", "{home}/work/trail-agent-ahead"]\n`,
-      },
+      { config: WORKTREES_TRUSTED },
     ),
     run: async (s) => {
       await toPanel(s);
@@ -364,18 +377,25 @@ export const GIT_BRANCHES: Check[] = [
     area: "outside-and-code",
     name: "git branches: Remove…'s question and Merge…'s menu, a prompt opened before git answers — nothing pops up over it; Merge… with no base says so",
     covers: { cases: ["git", "multiple-roots"], commands: ["git.view"] },
-    options: repoAt((s) => {
-      trail(s);
-      worktree(s, "agent/done");
-      commit(s, worktree(s, "agent/ahead"), { "ridge.md": "# The ridge\n" }, "The ridge");
-    }),
+    options: repoAt(
+      (s) => {
+        trail(s);
+        worktree(s, "agent/done");
+        commit(s, worktree(s, "agent/ahead"), { "ridge.md": "# The ridge\n" }, "The ridge");
+        heldGit(s);
+      },
+      { config: WORKTREES_TRUSTED },
+    ),
     run: async (s) => {
       await toPanel(s);
-      // Remove…, from the branch's menu, and n's prompt in the same keys: open before git has answered.
+      // Remove…, from the branch's menu, and n's prompt in the same keys: open before git has answered — git held
+      // until it is, as the keys each go on their own and a busy machine may hand slipbox n after git's answer.
       await selectRow(s, "agent/done");
+      s.write(HELD, "");
       await s.keys(".", "down", "down", "down", "enter", "n");
       await s.see("new branch:");
       await s.type("half");
+      rmSync(s.path(HELD));
       // No sign over the prompt that git answered (the prompt draws over the messages): a while for it to, then no
       // question over it, the prompt's text kept; closed, the messages say it wasn't asked.
       await Bun.sleep(1500);
@@ -388,8 +408,10 @@ export const GIT_BRANCHES: Check[] = [
         "Remove the worktree ~/work/trail-agent-done? — not asked over what you were doing: ask again",
       );
       await selectRow(s, "agent/ahead");
+      s.write(HELD, "");
       await s.keys(".", "down", "enter", "n");
       await s.see("new branch:");
+      rmSync(s.path(HELD));
       await Bun.sleep(1500);
       s.expect(s.rowOf("The links it would break") < 0, "no menu over the prompt");
       await s.keys("escape");
@@ -447,9 +469,7 @@ export const GIT_BRANCHES: Check[] = [
         chmodSync(s.path(`${TRAIL}/.git/slow-monitor`), 0o755);
         gitOk(s, TRAIL, "config", "core.fsmonitor", s.path(`${TRAIL}/.git/slow-monitor`));
       },
-      {
-        config: `${WIDE}[trust]\nroots = ["{home}/work/trail", "{home}/work/trail-agent-done", "{home}/work/trail-agent-ahead"]\n`,
-      },
+      { config: WORKTREES_TRUSTED },
     ),
     run: async (s) => {
       await toPanel(s);
