@@ -27,14 +27,27 @@ describe("SVG drawn (12.15), and what slipbox draws as pictures (12.16, 12.17)",
       const d = await import(${JSON.stringify(join(import.meta.dir, "../../../../../src/core/rendering/media/diagrams/diagrams.ts"))});
       await d.loadMermaid();
       const colors = { bg: "#ffffff", fg: "#000000", line: "#888888", accent: "#0000ff", muted: "#999999" };
-      d.mermaidSvg("graph TD\\n  A-->B", colors, "DejaVu Sans");
+      const first = d.mermaidSvg("graph TD\\n  A-->B", colors, "DejaVu Sans");
       await d.loadMermaid();
       const svg = d.mermaidSvg("graph TD\\n  A-->B", colors, "DejaVu Sans");
       const fired = await Promise.race([new Promise((r) => setTimeout(() => r(true), 5)), Bun.sleep(2000).then(() => false)]);
-      console.log(JSON.stringify({ svg: typeof svg === "string" && svg.startsWith("<svg"), fired, window: "window" in globalThis }));
+      console.log(JSON.stringify({ cold: first === null, svg: typeof svg === "string" && svg.startsWith("<svg"), fired, window: "window" in globalThis }));
     `;
-    const r = Bun.spawnSync([process.execPath, "-e", script], { stdout: "pipe", stderr: "pipe", timeout: 30_000 });
-    expect(JSON.parse(r.stdout.toString().trim().split("\n").pop()!)).toEqual({ svg: true, fired: true, window: true });
+    // The sandbox's environment, given: left to itself, Bun hands a child the one it started with, whose cache is the
+    // machine's — the drawing there from an earlier run, never drawn here, and this run's results left there.
+    const r = Bun.spawnSync([process.execPath, "-e", script], {
+      env: process.env,
+      stdout: "pipe",
+      stderr: "pipe",
+      timeout: 30_000,
+    });
+    const last = r.stdout.toString().trim().split("\n").pop();
+    expect(last ? JSON.parse(last) : null, r.stderr.toString()).toEqual({
+      cold: true,
+      svg: true,
+      fired: true,
+      window: true,
+    });
   });
   const pngWidth = (png: Uint8Array) => new DataView(png.buffer, png.byteOffset).getUint32(16);
   test("CSS custom properties put in place: the root's and the style's, fallbacks, color-mix — an @import gone", () => {

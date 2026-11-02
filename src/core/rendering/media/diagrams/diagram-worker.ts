@@ -1,10 +1,11 @@
 // Diagram layout belongs off the UI thread. Its owner enforces each request's deadline.
-import { loadMermaid, renderSvg, renderText } from "./diagram-render.ts";
+import { loadMermaid, renderSvg, renderText, setUpLayout } from "./diagram-render.ts";
 import type { DiagramRequest } from "./diagram-jobs.ts";
 
 declare const self: Worker;
 
 await loadMermaid();
+setUpLayout(); // before `ready`: what it costs counts against starting, never against a request's deadline
 self.onmessage = (e: MessageEvent<{ id: number; request: DiagramRequest }>) => {
   const { id, request: r } = e.data;
   try {
