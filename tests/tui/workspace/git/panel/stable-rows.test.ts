@@ -22,6 +22,11 @@ describe("the panel's rows by what they are, not where they were: as rows come a
   };
   const indexOf = (app: App, name: string) =>
     app.gitPanel.rows().findIndex((r) => r.kind === "branch" && r.branch.name === name);
+  /**
+   * This branch against main in: git answers it apart from the branches, in its own time, and its rows (c.md, the
+   * branch's commit) come above the branches' whenever that is — on a slow machine, after them.
+   */
+  const ahead = (app: App) => app.gitPanel.rows().some((r) => r.kind === "ahead");
   /** The screen line the last frame drew row `i` on; undefined off the screen. */
   const lineOf = (app: App, i: number) => app.geometry!.hot.find((h) => h.id === `git:row:${i}`)?.y;
 
@@ -44,7 +49,10 @@ describe("the panel's rows by what they are, not where they were: as rows come a
   test("the row under a resting pointer stays on its line as rows arrive above it; the wheel's scroll stays", async () => {
     const root = repo();
     const { app, frame } = await panel(root);
-    expect(await until(() => (frame(), indexOf(app, "main") >= 0))).toBe(true);
+    // Git's answers in before the pointer rests: the rows arriving above it are the new files' alone, the scroll held
+    // for them within the wheel's notch — not This branch's too, which would scroll it further past the list's end,
+    // where the wheel up comes back to the end, not a notch.
+    expect(await until(() => (frame(), indexOf(app, "main") >= 0 && ahead(app)))).toBe(true);
     const y = lineOf(app, indexOf(app, "main"))!;
     app.mouse.handle({ type: "move", x: 6, y, button: 0 });
     frame();
@@ -807,7 +815,8 @@ describe("the panel's rows by what they are, not where they were: as rows come a
     const { app, frame } = await panel(root);
     const fileAt = (path: string) => rowOf(app, (r) => r.kind === "file" && r.entry.path === path);
     const branch = () => rowOf(app, (r) => r.kind === "branch");
-    expect(await until(() => (frame(), fileAt("n3.md") >= 0 && branch() >= 0))).toBe(true);
+    // This branch's rows in too (n1 to n3 among them, new): come while git's asked again, they'd lengthen the list.
+    expect(await until(() => (frame(), fileAt("n3.md") >= 0 && branch() >= 0 && ahead(app)))).toBe(true);
     await app.gitPanel.action("filter");
     for (const c of "n") await app.panels.filterKey(c);
     frame();
