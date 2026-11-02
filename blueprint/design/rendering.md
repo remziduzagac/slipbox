@@ -167,22 +167,26 @@ context, so an asset finishing during export cannot move a screen relayout into 
 `diagram-worker.ts`, and only there: the renderer (`diagram-render.ts`) is imported for more than its types by the
 worker alone, which `bun run check:boundary` holds; one active request and at most eight outstanding. Temporary queue
 saturation leaves the block pending: subsequent layouts admit it as capacity becomes available. The CLI repeats layout
-and drains until there is no pending work. Worker startup has a two-second deadline; each screen render has 500 ms. A
-timeout terminates the screen worker and retries the request once, then remembers a specific fallback reason without
-retrying on every redraw. Source is limited to 32,768 UTF-16 code units, each result to one MiB, and the screen result
-cache to two MiB and 2,048 entries. Cache keys include source and rendering options; failures are cached too. An idle
-worker is stopped after 30 seconds; its idle timer and worker are unreferenced so they do not delay exit. CLI rendering
-and export assembly each own a separate worker and cache through `withMermaidBatch`, with five seconds per diagram, no
-automatic retry, and a 32 MiB, 2,048-entry result budget. At that document budget, new diagrams stay as source with a
-specific reason, preserving completed results instead of eviction and repeated rendering. The batch disposes its worker
-and cache when finished. Completed results also use `core/rendering/media/diagrams/diagram-cache.ts`, a machine-shared
-SQLite cache at `cacheHome()/diagrams.db`, never in the vault (#180; D39, D253). Text and SVG keys include the rendering
-implementation epoch, slipbox's and the Mermaid library's versions and all rendering inputs: source, width, glyph/scroll
-mode or colours and font. Warm cache hits are synchronous and shared by the screen, CLI and export. The store keeps at
-most 2,048 rows and 32 MiB of serialized results; SQLite pages/WAL add storage overhead. Old least-recently-used entries
-are evicted. Reads and writes are best-effort with a short lock wait; a missing, corrupt or unavailable store falls back
-to rendering. `SLIPBOX_DIAGRAM_CACHE=off` bypasses disk reuse. Supported rendering failures and timeouts are retained,
-but deadline/retry policy partitions failure keys so a screen timeout cannot suppress the longer batch attempt.
+and drains until there is no pending work. Worker startup has a two-second deadline; each screen render has 500 ms.
+Starting includes the layout library's one-time set-up: the worker draws a small picture before it reports ready, so a
+request's deadline counts its own drawing. The set-up costs about twenty times a small diagram's drawing; charged to the
+first picture, on a slow machine it would time that picture out in every fresh worker, retry included, and the timeout
+would be remembered. A timeout terminates the screen worker and retries the request once, then remembers a specific
+fallback reason without retrying on every redraw. Source is limited to 32,768 UTF-16 code units, each result to one MiB,
+and the screen result cache to two MiB and 2,048 entries. Cache keys include source and rendering options; failures are
+cached too. An idle worker is stopped after 30 seconds; its idle timer and worker are unreferenced so they do not delay
+exit. CLI rendering and export assembly each own a separate worker and cache through `withMermaidBatch`, with five
+seconds per diagram, no automatic retry, and a 32 MiB, 2,048-entry result budget. At that document budget, new diagrams
+stay as source with a specific reason, preserving completed results instead of eviction and repeated rendering. The
+batch disposes its worker and cache when finished. Completed results also use
+`core/rendering/media/diagrams/diagram-cache.ts`, a machine-shared SQLite cache at `cacheHome()/diagrams.db`, never in
+the vault (#180; D39, D253). Text and SVG keys include the rendering implementation epoch, slipbox's and the Mermaid
+library's versions and all rendering inputs: source, width, glyph/scroll mode or colours and font. Warm cache hits are
+synchronous and shared by the screen, CLI and export. The store keeps at most 2,048 rows and 32 MiB of serialized
+results; SQLite pages/WAL add storage overhead. Old least-recently-used entries are evicted. Reads and writes are
+best-effort with a short lock wait; a missing, corrupt or unavailable store falls back to rendering.
+`SLIPBOX_DIAGRAM_CACHE=off` bypasses disk reuse. Supported rendering failures and timeouts are retained, but
+deadline/retry policy partitions failure keys so a screen timeout cannot suppress the longer batch attempt.
 Startup/worker availability failures stay session-only.
 
 Deadlines apply per diagram, not to the whole note: screen jobs allow two attempts, batch jobs one, plus worker startup

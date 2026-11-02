@@ -141,6 +141,32 @@ test("a worker that never becomes ready meets the startup deadline", async () =>
   expect(jobs.get(ask("ordinary"))).toHaveProperty("why");
 });
 
+test("the layout library sets itself up as its worker starts: slow at that, a picture still meets its own deadline", async () => {
+  // The screen's deadlines: two seconds to start, 500 ms to draw. The set-up takes 600 ms here, as on a slow machine.
+  const heard: string[] = [];
+  const jobs = new DiagramJobs(
+    () => {},
+    () => {
+      const w = new Worker(new URL("./fixtures/diagram/slow-setup-worker.ts", import.meta.url).href);
+      w.addEventListener("message", (e: MessageEvent) => {
+        if (e.data.setUp) heard.push("set up");
+        if (e.data.ready) heard.push("ready");
+      });
+      return w;
+    },
+  );
+  const colors = { bg: "#101010", fg: "#e0e0e0", line: "#707070", accent: "#3080f0", muted: "#909090" };
+  const picture: DiagramRequest = { kind: "svg", source: "graph TD\n  A --> B", colors, family: "DejaVu Sans" };
+  try {
+    jobs.get(picture);
+    await jobs.settle();
+    expect(jobs.get(picture)).toStartWith("<svg");
+    expect(heard).toEqual(["set up", "ready"]);
+  } finally {
+    jobs.dispose();
+  }
+});
+
 test("a late answer from a replaced worker cannot overwrite another request", async () => {
   type Fake = {
     onmessage: ((e: MessageEvent) => void) | null;

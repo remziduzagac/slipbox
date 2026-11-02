@@ -45,6 +45,17 @@ export function renderSvg(source: string, colors: DrawingColors, family: string 
 }
 
 /**
+ * The layout library set up, as it sets itself up on its first picture: about twenty times what drawing a small one
+ * takes. The worker does it as it starts, inside the startup deadline, so a picture's own deadline is its drawing's —
+ * else, on a slow machine, a fresh worker's first picture (its retry in another fresh worker too) would be remembered as
+ * taking too long to draw.
+ */
+export function setUpLayout(): void {
+  const colors = { bg: "#000000", fg: "#ffffff", line: "#ffffff", accent: "#ffffff", muted: "#ffffff" };
+  renderSvg("graph TD\n  A --> B", colors, "sans-serif");
+}
+
+/**
  * `fn` run as the diagram's layout library needs. It sets itself up on its first use, and takes a `window` for a
  * browser's: OpenTUI's renderer makes one (`{}`, for its animation frames), on which it breaks — so none is there while
  * it runs. And setting up, it swaps `setTimeout` for its own until it's done: should it throw, the real one is put back

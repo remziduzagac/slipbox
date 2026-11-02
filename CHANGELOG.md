@@ -125,6 +125,10 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 
 ### Fixed
 
+- On a slow or busy machine, a diagram drawn as a picture (`render.mermaid = "picture"`) is drawn, not left as its code
+  labelled "took too long to draw" in that session and later ones. The drawing library's one-time set-up counted against
+  the first diagram's time limit, its retry's too; it now happens as the background drawing starts.
+
 - Keep message timers within their normal four/eight-second lifetime after the system clock moves backwards. A clock
   correction could make a timer overflow and wake repeatedly after one millisecond.
 
