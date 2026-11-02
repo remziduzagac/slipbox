@@ -590,7 +590,11 @@ export const GIT_BRANCHES: Check[] = [
       await toPanel(s);
       await newBranch(s, "agent/x", "dev", "down", "down", "down", "enter");
       await s.message("made agent/x from dev");
-      // Opened up and selected once made; refused the second time, left so, its base dev (merged into it: ✓).
+      // Opened up and selected once git lists it — waited for: + New clicked before then is the panel used, which
+      // leaves the branch folded with the older ones, as you put it (made from its base, it's merged).
+      await s.until(() => isSelected(s, "agent/x"), undefined, "agent/x selected once git lists it");
+      await panelRow(s, "Against dev");
+      // Refused the second time, left so, its base dev (merged into it: ✓).
       await newBranch(s, "agent/x", "main");
       await s.message("already exists");
       await panelRow(s, "Against dev");
