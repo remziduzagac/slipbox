@@ -159,7 +159,7 @@ export class Code {
             {
               ref: { path: v.buf.abs, startLine: cell.from, endLine: cell.to },
               snippetText: text,
-              lang: "",
+              lang: this.app.scratch.language(v.buf),
               ask: true,
             },
             this.app.loc.root,

@@ -40,7 +40,10 @@ export function codeBlock(
   const widest = Math.max(0, ...sourceLines.map((l) => stringWidth(l)));
   const scroll: CodeScroll | undefined =
     ctx.opts.codeScroll && widest > inner ? { x: 1, w: inner, total: widest } : undefined;
-  out.push({ spans: top, src, fill: "code_block", ...(scroll ? { scroll: { ...scroll, part: "top" } } : {}) });
+  // With neither a label nor a scrollbar, its first and last rows would be empty: left out, the block its code alone.
+  const padded = !!label || !!scroll;
+  if (padded)
+    out.push({ spans: top, src, fill: "code_block", ...(scroll ? { scroll: { ...scroll, part: "top" } } : {}) });
   sourceLines.forEach((text, i) => {
     const lineSrc = originalLines?.[i] ?? src + firstLine + i;
     const spans: Span[] = tokens?.[i]?.length
@@ -60,11 +63,12 @@ export function codeBlock(
       });
     });
   });
-  out.push({
-    spans: [],
-    src: originalLines?.at(-1) ?? src + sourceLines.length + 1,
-    fill: "code_block",
-    ...(scroll ? { scroll: { ...scroll, part: "bar" } } : {}),
-  });
+  if (padded)
+    out.push({
+      spans: [],
+      src: originalLines?.at(-1) ?? src + sourceLines.length + 1,
+      fill: "code_block",
+      ...(scroll ? { scroll: { ...scroll, part: "bar" } } : {}),
+    });
   return out;
 }

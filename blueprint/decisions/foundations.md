@@ -567,6 +567,9 @@ has no AI of its own; "notes app" as the lead (ideas.md § Product).
 
 ## D229: The scratch floats in the middle for quick capture, or sits on the right by a setting (8.3, 2026-10-13)
 
+> **Amended by D268 (2026-11-08):** `esc` never closes the scratch, only `q`; an entry's lines sit on consecutive
+> lines, `**When:**` first.
+
 **Decision:** `space s s` opens the scratch in a floating window in the middle of the screen, three quarters of it: a
 window like any inside, the scratch rendered and the lens to edit it, every key. `q` closes it, back where you were,
 what was typed saved; `esc` leaves typing and the lens first, as anywhere, and closes it last. It opens empty too.
@@ -642,3 +645,23 @@ title would turn it into unsaved work. `[new]` names the state plainly beside th
 ordinary `saved <path>` message needs no second saving vocabulary.
 
 **Cost:** a buffer's file may not exist yet; its first write must create exclusively rather than replace by rename.
+
+## D268: A scratch entry says when, its place followed and checked; esc never closes the scratch (8.3, 2026-11-08)
+
+**Decision:** An entry is one paragraph, a line each after a hard break (`\`): `**When:**` (local time to the minute
+and its offset, named: `2026-11-08 14:05 UTC+03:00`), `**At:**` and `**Note:**`. Lines captured with it stand apart,
+fenced, a blank line either side; text alone follows `**When:**` on the next line, or after a blank line when it opens
+with a list, a heading or a fence. A selection made in a rendered note is captured as written, a code file's with its
+language. An entry's `**At:**` is a link: followed, its file at its lines, where they are now when they moved. The
+scratch checks each place with lines against its file: lines moved are said with their new place (a code action points
+the `**At:**` there), lines changed or a file gone are said too, each a warning on the `**At:**`. `space s e` copies the
+entry under the cursor and `space s x` deletes it with its rule. `esc` leaves typing and the lens, and never closes the
+scratch: `q` does. Decided while the maintainer tried the scratch in a review; one pull request.
+
+**Why:** The maintainer's calls. Blank lines between a reference and its note spread a two-line entry over four rows;
+when an entry was made matters once the scratch holds a day's captures, and an offset without `UTC` leaves a reader to
+guess what it is. A place that can't be followed or that has silently moved is a reference an agent or you act on
+wrongly. `esc` pressed once too many shut what you were writing in; `q` is what closes a window.
+
+**Cost:** entries written before keep their old shape (blank lines, no `**When:**`); an entry without captured lines
+(a line's capture, text alone) or with a review's diff has nothing to check its place against.

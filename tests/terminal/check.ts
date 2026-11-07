@@ -217,8 +217,8 @@ export function downloadsVault(s: Session): void {
 /** Leader sequences: space, then the keys. */
 export const leader = (s: Session, ...keys: string[]) => s.keys("space", ...keys);
 
-/** The floating scratch's bottom border, how it closes (#43): on screen while it's open. */
-export const SCRATCH_FLOATING = "esc · q closes, saved";
+/** The floating scratch's bottom border, how it closes (#43, D268: q alone): on screen while it's open. */
+export const SCRATCH_FLOATING = " q closes, saved ";
 
 /** The modes the status line's chip names (draw-status.ts, a test holding the two the same): a note's, a panel's. */
 export const MODES = new Set(

@@ -6,6 +6,7 @@ import { basename, join } from "node:path";
 import { runCli } from "../../../src/cli/cli.ts";
 import { cli } from "../../support/vault-cli.ts";
 import { makeVaultSandbox } from "../../support/vault-sandbox.ts";
+import { untimed } from "../../support/scratch-entries.ts";
 
 // File-local default: tests/support/timeouts.ts.
 setDefaultTimeout(UNIT_TIMEOUT_MS);
@@ -332,14 +333,17 @@ describe("what cli.md and the skill promise a caller (9.2)", () => {
   test("the scratch's project is the root, from any folder in it; else the folder you're in — whose scratch stays in its state", async () => {
     const dir = demo();
     const fromSub = (await run(["capture", "--ref", "kenji-mori.md:3", "--json"], join(dir, "people"))).json.data;
-    expect(fromSub).toMatchObject({ project: dir, entry: "**At:** `people/kenji-mori.md:3`" });
+    expect({ ...fromSub, entry: untimed(fromSub.entry) }).toMatchObject({
+      project: dir,
+      entry: "**At:** `people/kenji-mori.md:3`",
+    });
     expect((await run(["capture", "a thought", "--json"], dir)).json.data.scratch).toBe(fromSub.scratch); // one scratch per project
     const plain = mkdtempSync(join(tmpdir(), "slipbox-plain-scratch-"));
     writeFileSync(join(plain, "loose.md"), "# Loose\n");
     const cfg = join(plain, "..", `${basename(plain)}.toml`);
     writeFileSync(cfg, '[capture]\nlocation = "vault"\n');
     const loose = (await run(["capture", "--ref", "loose.md:1", "--json", "--config", cfg], plain)).json.data;
-    expect(loose).toMatchObject({ project: plain, entry: "**At:** `loose.md:1`" });
+    expect({ ...loose, entry: untimed(loose.entry) }).toMatchObject({ project: plain, entry: "**At:** `loose.md:1`" });
     expect(loose.scratch.startsWith(plain)).toBe(false); // nothing written into a plain folder
     expect(existsSync(join(plain, "scratch.md"))).toBe(false);
     // A vault takes location = "vault": its scratch is in it.

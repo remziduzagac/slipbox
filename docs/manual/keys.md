@@ -723,6 +723,8 @@ The scratch is a note slipbox keeps for collecting references to hand to an agen
 | `space s r` | open the scratch in the window on the right |
 | `space s a` | add the selection with its `path:line-line`, or the cursor's row with its `path:line`, and show it |
 | `space s y` | copy the whole scratch |
+| `space s e` | in the scratch: copy the entry under the cursor |
+| `space s x` | in the scratch: delete the entry under the cursor, with its rule (`u` brings it back) |
 | `space s c` | copy the note's context for an agent: it, what it links to, what links to it |
 | `space s d` | clear the scratch, after asking |
 

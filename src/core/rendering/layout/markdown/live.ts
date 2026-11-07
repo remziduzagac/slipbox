@@ -59,6 +59,32 @@ export function sectionRanges(tree: Root, lineCount: number): Block[] {
   });
 }
 
+/**
+ * A note's parts between its rules (`---`): the top-level blocks from a rule to the next rule or heading, or from the
+ * note's start or a heading to a rule — a scratch's entries. A part never holds a rule or a heading, so it sits inside
+ * a heading's section, and the lens opens on it whole as on a section.
+ */
+export function ruleParts(tree: Root, lineCount: number): Block[] {
+  const out: Block[] = [];
+  let start: number | null = null;
+  let ruled = false; // the run began after a rule
+  const close = (end: number, byRule: boolean) => {
+    if (start !== null && (ruled || byRule)) out.push([start, end]);
+    start = null;
+  };
+  for (const n of tree.children) {
+    const at = n.position?.start.line;
+    if (at === undefined) continue;
+    const rule = n.type === "thematicBreak";
+    if (rule || n.type === "heading" || n.type === "yaml" || (n.type as string) === "toml") {
+      close(at - 1, rule);
+      ruled = rule;
+    } else start ??= at;
+  }
+  close(lineCount, false);
+  return out;
+}
+
 type TreeRow = { depth: number; branch: boolean };
 
 function rowOf(n: RootContent): TreeRow | null {

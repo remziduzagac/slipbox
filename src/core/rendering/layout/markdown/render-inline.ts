@@ -10,7 +10,7 @@ import type { Role } from "../../theme/theme.ts";
 import { graphemes, graphemeWidth } from "../../../foundation/text/width.ts";
 import type { Hashtag } from "../../../documents/markdown/tags.ts";
 import type { WikiLink } from "../../../documents/markdown/wikilink.ts";
-import { A_BOLD, A_ITALIC, A_STRIKE, type Span } from "../ir.ts";
+import { A_BOLD, A_ITALIC, A_STRIKE, A_UNDERLINE, type Span } from "../ir.ts";
 import { type Ctx, type Style, status, addLink, textOf } from "./render-context.ts";
 
 /** A URL that names a note: an image-syntax link to it embeds it. */
@@ -28,6 +28,24 @@ function joinsWithoutSpace(g: string): boolean {
 
 /** What closes a sentence or a bracket: no space before it, where a comment was. */
 const CLOSING = /^[.,;:!?)\]}…]/;
+
+/** A place as a scratch entry writes it: `path:12`, `path:12-20`, `path:12:3-20:8`. */
+const PLACE = /^[^\s`].*:\d+(?::\d+)?(?:-\d+(?::\d+)?)?$/;
+
+/** The code span at `i` is an entry's place: `**At:**`, a space, then the span (D229). */
+function isAtRef(ns: PhrasingContent[], i: number): boolean {
+  const label = ns[i - 2];
+  const gap = ns[i - 1];
+  const code = ns[i];
+  return (
+    label?.type === "strong" &&
+    textOf(label) === "At:" &&
+    gap?.type === "text" &&
+    gap.value === " " &&
+    code?.type === "inlineCode" &&
+    PLACE.test(code.value)
+  );
+}
 
 export function inline(nodes: PhrasingContent[], ctx: Ctx, style: Style, src: number): Span[] {
   if (nodes.some((n) => n.type === "html")) {
@@ -79,7 +97,7 @@ export function inline(nodes: PhrasingContent[], ctx: Ctx, style: Style, src: nu
     });
   };
   const walk = (ns: PhrasingContent[], st: Style, extra: Partial<Span> = {}) => {
-    for (const n of ns) {
+    for (const [i, n] of ns.entries()) {
       if (n.position) line = n.position.start.line;
       switch (n.type) {
         case "htmlInline": {
@@ -134,9 +152,22 @@ export function inline(nodes: PhrasingContent[], ctx: Ctx, style: Style, src: nu
           // Obsidian's `%%comment%%`: hidden while reading (source mode and the lens show the text as typed).
           squeeze = true;
           break;
-        case "inlineCode":
-          push(expandTabs(sanitize(n.value).replace(/\n/g, " "), 2), { role: "code_inline", attrs: 0 }, extra);
+        case "inlineCode": {
+          const shown = expandTabs(sanitize(n.value).replace(/\n/g, " "), 2);
+          // A scratch entry's place (`**At:** `path:12-20``, D229): a link to its lines, underlined to say so.
+          if (extra.link === undefined && isAtRef(ns, i)) {
+            const id = addLink(ctx, {
+              kind: "ref",
+              target: n.value,
+              heading: null,
+              text: n.value,
+              status: "unknown",
+              src: line,
+            });
+            push(shown, { role: "code_inline", attrs: A_UNDERLINE }, { ...extra, link: id });
+          } else push(shown, { role: "code_inline", attrs: 0 }, extra);
           break;
+        }
         case "inlineMath":
           // Maths as Unicode text (12.11); one that can't be, as written.
           push(

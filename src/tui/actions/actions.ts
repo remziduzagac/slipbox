@@ -123,9 +123,10 @@ export function registerActions(app: App): void {
       if (!v) return;
       const floating = a.floating && v === a.floating.view;
       if (v.sel || v.visual) Object.assign(v, { visual: null, sel: null });
-      // The floating scratch is a window like any (#43): esc leaves its lens first, and closes it last.
+      // The floating scratch is a window like any (#43): esc leaves its lens, and never closes it — `q` does, so a press
+      // too many doesn't shut what you're writing in.
       else if (floating && a.floating?.kind === "scratch" && v.live) a.lens.setViewMode(v, "rendered");
-      else if (floating && !v.find)
+      else if (floating && a.floating?.kind !== "scratch" && !v.find)
         return a.overlays.leaveFloating(); // the floating editor: closed, written back (3.20); a diff's, back where it was opened
       else if (v.live)
         a.lens.setViewMode(v, "rendered"); // esc in normal mode closes the lens
@@ -233,12 +234,24 @@ export function registerActions(app: App): void {
           const [p, q] = C.ordered(v.sel.anchor, v.cur);
           const r1 = layout.lines[p.row]?.src ?? 1;
           const r2 = layout.lines[q.row]?.src ?? r1;
+          // Made in the rendered note: as written — in the lines its `At:` names — not as drawn (`•` for `-`). What's
+          // selected when they hold it as it's drawn (a word), else the lines themselves.
+          const drawn = !v.source && !v.live && !E.typedSelection(a, v) && !a.isCodeDocument(v.buf);
+          const selected = a.views.selectionText(v);
+          const written = drawn
+            ? v.buf
+                .lines()
+                .slice(r1 - 1, r2)
+                .map((l) => l.replace(/\r$/, ""))
+                .join("\n")
+            : selected;
+          const snippetText = written.includes(selected) ? selected : written;
           a.scratch.capture(
             formatEntry(
               {
                 ref: { path: v.buf.abs, startLine: r1, endLine: r2 },
-                snippetText: a.views.selectionText(v),
-                lang: "",
+                snippetText,
+                lang: a.scratch.language(v.buf),
                 ask: true,
               },
               a.loc.root,
@@ -258,6 +271,8 @@ export function registerActions(app: App): void {
       if (!text.trim()) return a.message("info", "the scratch is empty");
       a.copy(dropEmptyAsks(text));
     },
+    "scratch.copy_entry": (a) => a.scratch.copyEntry(),
+    "scratch.delete_entry": (a) => a.scratch.deleteEntry(),
     "scratch.clear": (a) => {
       a.overlays.confirm("Clear the scratch?", () => {
         clearScratch(a.scratch.location());

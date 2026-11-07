@@ -23,7 +23,7 @@ export class Linking {
   /** How a link under the cursor landed when a tie decided it ("the nearest of 2 named so"); else null. */
   linkLanded(view: View, link: LayoutLink): string | null {
     const from = link.from ?? view.buf.rel;
-    if (from === null || link.kind === "tag" || link.kind === "footnote") return null;
+    if (from === null || link.kind === "tag" || link.kind === "footnote" || link.kind === "ref") return null;
     return describeLanding(this.app.graph.resolveLink({ kind: link.kind, target: link.target }, from));
   }
 

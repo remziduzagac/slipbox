@@ -177,6 +177,18 @@ export const UI_SPECS: CommandSpec[] = [
   },
   { id: "scratch.copy", title: "Copy the scratch", cli: "slipbox scratch copy", desc: "Copies the whole scratch" },
   {
+    id: "scratch.copy_entry",
+    title: "Copy the scratch's entry",
+    cli: I,
+    desc: "In the scratch: copies the entry under the cursor, its lines between two rules",
+  },
+  {
+    id: "scratch.delete_entry",
+    title: "Delete the scratch's entry",
+    cli: I,
+    desc: "In the scratch: deletes the entry under the cursor and its rule (u brings it back)",
+  },
+  {
     id: "context.copy",
     title: "Copy the note's context for an agent",
     cli: "slipbox context <note> --copy",
