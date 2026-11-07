@@ -256,6 +256,8 @@ export const DEFAULT_KEYS: Record<string, string> = {
   "leader s r": "scratch.open_right",
   "leader s a": "scratch.add",
   "leader s y": "scratch.copy",
+  "leader s e": "scratch.copy_entry",
+  "leader s x": "scratch.delete_entry",
   "leader s c": "context.copy",
   "leader s d": "scratch.clear",
   // The git panel (GIT-D12): open, focus, close, as space e the explorer; its own keys act there ([keys.git]).

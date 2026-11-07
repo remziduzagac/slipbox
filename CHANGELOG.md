@@ -8,6 +8,11 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 
 ### Added
 
+- Each scratch entry says when it was added: `When:` with your local time and its offset from UTC. An entry's `At:`
+  is a link that opens the file at those lines. The scratch marks a place whose lines have moved (`space c a` points
+  it at their new place), changed or lost their file. In the scratch, `space s e` copies the entry under the cursor and
+  `space s x` deletes it.
+
 - The top bar always shows the work count and running version. Open live task controls and recent outcomes with
   `space b`, or full version and upgrade information with `space a`; a green arrow marks an available upgrade.
   The leader popup keeps group explanations visible by shortening wide columns when needed.
@@ -85,6 +90,11 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 
 ### Changed
 
+- A scratch entry's `When:`, `At:` and `Note:` sit on consecutive lines, the captured lines between them with one
+  blank line each side. `esc` no longer closes the floating scratch; `q` does. The lens opens on what lies between two
+  horizontal rules, as it does on a heading's section, so it holds one scratch entry. A code block with no language and
+  no sideways scrollbar is drawn without its empty first and last rows.
+
 - Opening a path that isn't there (`slipbox ideas/coffee.md`, or `slipbox open ideas/coffee`) opens an empty new note
   instead of exiting 3. Its tab shows the path and `[new]`; the first save makes the file and missing folders.
   Quitting untouched makes nothing. Naming and refusals follow `:new`, and a file made meanwhile is never overwritten
@@ -123,6 +133,10 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
   downloading it again.
 
 ### Fixed
+
+- A selection captured in a rendered note goes to the scratch as the file has it (`- item`), not as drawn (`• item`).
+  Code captured from a code file is highlighted in the scratch. Code blocks show in floating windows such as the
+  scratch, whose background matched theirs.
 
 - On a slow or busy machine, a diagram drawn as a picture (`render.mermaid = "picture"`) is drawn, not left as its code
   labelled "took too long to draw" in that session and later ones. The drawing library's one-time set-up counted against

@@ -8,6 +8,7 @@ import {
   dropEmptyAsks,
   formatEntry,
   formatRef,
+  formatWhen,
   parseRef,
   readScratch,
   scratchLocation,
@@ -19,6 +20,10 @@ import { makeCoreSandbox } from "../../../support/core-sandbox.ts";
 setDefaultTimeout(UNIT_TIMEOUT_MS);
 makeCoreSandbox();
 
+/** An entry's time, fixed; its `When:` line as written. */
+const when = new Date(2026, 10, 8, 14, 5);
+const W = `**When:** ${formatWhen(when)}`;
+
 describe("capture format (8.3, 8.4)", () => {
   test("refs round-trip in prompt-buffer.lua's four shapes", () => {
     for (const s of ["a.ts:42", "a.ts:42-50", "a.ts:42:10-30", "a.ts:42:10-50:30"]) {
@@ -29,23 +34,26 @@ describe("capture format (8.3, 8.4)", () => {
   test("snippet is fenced with the file's language and read from disk", () => {
     const dir = mkdtempSync(join(tmpdir(), "slipbox-cap-"));
     writeFileSync(join(dir, "f.ts"), "one\ntwo\nthree\n");
-    const entry = formatEntry({ ref: parseRef("f.ts:2-3")!, snippet: true, cwd: dir }, dir);
-    expect(entry).toBe("**At:** `f.ts:2-3`\n\n```typescript\ntwo\nthree\n```");
+    const entry = formatEntry({ ref: parseRef("f.ts:2-3")!, snippet: true, when, cwd: dir }, dir);
+    expect(entry).toBe(`${W}\\\n**At:** \`f.ts:2-3\`\n\n\`\`\`typescript\ntwo\nthree\n\`\`\``);
   });
   test("a name that merely starts with dots (`..notes/`) is in the project: its path from there, not its absolute one", () => {
     const dir = mkdtempSync(join(tmpdir(), "slipbox-cap-"));
     mkdirSync(join(dir, "..notes"));
     writeFileSync(join(dir, "..notes", "a.md"), "one\n");
-    expect(formatEntry({ ref: parseRef("..notes/a.md:1")!, cwd: dir }, dir)).toBe("**At:** `..notes/a.md:1`");
+    expect(formatEntry({ ref: parseRef("..notes/a.md:1")!, when, cwd: dir }, dir)).toBe(
+      `${W}\\\n**At:** \`..notes/a.md:1\``,
+    );
   });
   test("an entry says where it's at, and a note on it; a rule between entries, never under a line; empty notes dropped (D229)", () => {
     const dir = mkdtempSync(join(tmpdir(), "slipbox-cap-"));
     const ref = parseRef("a.md:5")!;
     // The text with a reference is the note on it; the TUI's capture, with none, ends on the note to type after.
-    expect(formatEntry({ ref, text: "check it\n", cwd: dir }, dir)).toBe("**At:** `a.md:5`\n\n**Note:** check it");
-    expect(formatEntry({ ref, ask: true, cwd: dir }, dir)).toBe("**At:** `a.md:5`\n\n**Note:** ");
-    expect(formatEntry({ ref, cwd: dir }, dir)).toBe("**At:** `a.md:5`");
-    expect(formatEntry({ text: "a thought", ask: true, cwd: dir }, dir)).toBe("a thought"); // no reference, no labels
+    const at = `${W}\\\n**At:** \`a.md:5\``;
+    expect(formatEntry({ ref, text: "check it\n", when, cwd: dir }, dir)).toBe(`${at}\\\n**Note:** check it`);
+    expect(formatEntry({ ref, ask: true, when, cwd: dir }, dir)).toBe(`${at}\\\n**Note:** `);
+    expect(formatEntry({ ref, when, cwd: dir }, dir)).toBe(at);
+    expect(formatEntry({ text: "a thought", ask: true, when, cwd: dir }, dir)).toBe(`${W}\\\na thought`); // no labels
     const loc = { path: join(dir, "scratch.md"), project: dir };
     expect(appendScratch(loc, "one")).toBe("one\n"); // the first: nothing to divide it from
     // Typed right under the last line, the rule still comes after a blank line: not `one` made a heading.
@@ -68,6 +76,48 @@ describe("capture format (8.3, 8.4)", () => {
     );
     expect(readScratch(loc)).toContain("**Note:** that");
     expect(dropEmptyAsks("**Note:**\nrest\n**At:** `a.md:1`\n\n**Note:**\t")).toBe("\nrest\n**At:** `a.md:1`");
+  });
+});
+
+describe("an entry's lines (D268)", () => {
+  test("when, where and the note sit on consecutive lines after hard breaks; lines fenced apart, a blank line each side", () => {
+    const dir = mkdtempSync(join(tmpdir(), "slipbox-cap-"));
+    const ref = parseRef("a.md:5")!;
+    expect(formatEntry({ ref, text: "check it", when, cwd: dir }, dir)).toBe(
+      `${W}\\\n**At:** \`a.md:5\`\\\n**Note:** check it`,
+    );
+    expect(formatEntry({ ref, ask: true, when, cwd: dir }, dir)).toBe(`${W}\\\n**At:** \`a.md:5\`\\\n**Note:** `);
+    expect(formatEntry({ ref, when, cwd: dir }, dir)).toBe(`${W}\\\n**At:** \`a.md:5\``);
+    expect(formatEntry({ ref, snippetText: "x", lang: "", ask: true, when, cwd: dir }, dir)).toBe(
+      `${W}\\\n**At:** \`a.md:5\`\n\n\`\`\`\nx\n\`\`\`\n\n**Note:** `,
+    );
+    // Text alone: on the next line when it opens with a paragraph; after a blank line when a hard break would be a
+    // stray `\` before it (a list, a heading, a fence, a setext heading).
+    expect(formatEntry({ text: "a thought\nmore", when }, dir)).toBe(`${W}\\\na thought\nmore`);
+    for (const text of ["- a list", "# heading", "Title\n===", "---\nx: 1\n---\nbody"])
+      expect(formatEntry({ text, when }, dir)).toBe(`${W}\n\n${text}`);
+    expect(formatEntry({ snippetText: "x", lang: "ts", when }, dir)).toBe(`${W}\n\n\`\`\`ts\nx\n\`\`\``);
+  });
+  test("an empty note goes with the hard break before it", () => {
+    const entry = `${W}\\\n**At:** \`a.md:5\`\\\n**Note:** \n`;
+    expect(dropEmptyAsks(entry)).toBe(`${W}\\\n**At:** \`a.md:5\`\n`);
+    expect(dropEmptyAsks(`${W}\\\n**At:** \`a.md:5\`\\\n**Note:** said\n`)).toContain("**Note:** said");
+  });
+  test("the time: local, to the minute, its offset from UTC named — east, west, a half hour, UTC itself", () => {
+    const at = (offset: number) => Object.assign(new Date(2026, 10, 8, 14, 5), { getTimezoneOffset: () => offset });
+    expect(formatWhen(at(-180))).toBe("2026-11-08 14:05 UTC+03:00");
+    expect(formatWhen(at(210))).toBe("2026-11-08 14:05 UTC-03:30");
+    expect(formatWhen(at(0))).toBe("2026-11-08 14:05 UTC+00:00");
+    expect(formatWhen(new Date(2026, 0, 2, 3, 4))).toMatch(/^2026-01-02 03:04 UTC[+-]\d\d:\d\d$/);
+  });
+  test("a note's lines from disk, unlabelled; a code file's in its language", () => {
+    const dir = mkdtempSync(join(tmpdir(), "slipbox-cap-"));
+    writeFileSync(join(dir, "n.md"), "- one\n- two\n");
+    writeFileSync(join(dir, "f.py"), "x = 1\n");
+    expect(formatEntry({ ref: parseRef("n.md:1-2")!, snippet: true, when, cwd: dir }, dir)).toContain(
+      "\n\n```\n- one\n- two\n```",
+    );
+    expect(formatEntry({ ref: parseRef("f.py:1")!, snippet: true, when, cwd: dir }, dir)).toContain("```python\nx = 1");
   });
 });
 

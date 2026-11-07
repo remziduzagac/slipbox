@@ -1,22 +1,67 @@
 // The scratch (4.10, #43): a note of your own outside the vault for what you capture, floating over the windows or
 // in the window on the right.
 
+import { statSync } from "node:fs";
 import { relative } from "node:path";
+import { readRegular } from "../../../core/foundation/platform/fsutil.ts";
+import { type StalePlace, stalePlaces } from "../../../core/workspace/mutations/scratch-places.ts";
+import { parseMarkdown } from "../../../core/documents/markdown/parse.ts";
+import { ruleParts } from "../../../core/rendering/layout/markdown/live.ts";
 import { climbsOut } from "../../../core/foundation/platform/fsutil.ts";
 import { placeAt, startInsert } from "../../documents/editing/editing.ts";
 import {
   appendScratch,
   dropEmptyAsks,
   ensureScratch,
+  fenceLanguage,
   scratchLocation,
 } from "../../../core/workspace/mutations/capture.ts";
 import type { NoteBuffer } from "../../documents/buffers/buffer.ts";
-import type { App, UiState } from "../runtime/app.ts";
+import type { App, UiState, View } from "../runtime/app.ts";
 import { editable } from "../../documents/editing/editable.ts";
+
+/** The most of a file read to check a place in it. */
+const PLACE_FILE = 16 << 20;
 
 /** The scratch and capture. */
 export class Scratch {
   constructor(readonly app: App) {}
+
+  /** Its places checked, for its text's version, again at most every two seconds; the files read, by when changed. */
+  private checked: { version: number; at: number; list: StalePlace[] } | null = null;
+  private readonly files = new Map<string, { stamp: string; text: string | null }>();
+
+  /** Its places whose lines aren't what was captured (D229): moved, changed, or their file gone. */
+  places(buf: NoteBuffer): StalePlace[] {
+    const now = Date.now();
+    const c = this.checked;
+    if (c && c.version === buf.version && now - c.at < 2000) return c.list;
+    const read = (abs: string): string | null => {
+      let stamp: string;
+      try {
+        const st = statSync(abs);
+        stamp = `${st.mtimeMs}:${st.size}`;
+      } catch {
+        return null;
+      }
+      const hit = this.files.get(abs);
+      if (hit?.stamp === stamp) return hit.text;
+      let text: string | null = null;
+      try {
+        text = readRegular(abs, PLACE_FILE).toString("utf8");
+      } catch {}
+      this.files.set(abs, { stamp, text });
+      return text;
+    };
+    const list = stalePlaces(buf.source, this.app.loc.root, read);
+    this.checked = { version: buf.version, at: now, list };
+    return list;
+  }
+
+  /** Where a place written `target` has its lines now, when they moved since captured: its first line. */
+  movedTo(target: string): number | null {
+    return this.checked?.list.find((p) => p.target === target && p.now)?.now?.startLine ?? null;
+  }
 
   location() {
     return scratchLocation(this.app.loc, this.app.config);
@@ -59,6 +104,61 @@ export class Scratch {
     if (!editable(v)) this.app.lens.setViewMode(v, this.app.lens.editMode(v)); // the lens opened on the entry, or the source
     startInsert(this.app, v, () => at);
     this.app.message("info", `added to the scratch${this.notIndexed()}; add a note, esc then q closes it`);
+  }
+
+  /** A capture's fence language: a code file's, highlighted in the scratch; none for a note's lines, read as written. */
+  language(buf: NoteBuffer): string {
+    return buf.kind.group === "note" ? "" : fenceLanguage(buf.abs);
+  }
+
+  /**
+   * The entry under the cursor in the scratch: its lines between two rules (with no rule, all of it), and the lines a
+   * delete takes — it and the rule before it, or, the first, the rule after it. A string says why there's none.
+   */
+  private entry(): { view: View; lines: [number, number]; cut: [number, number] } | string {
+    const v = this.app.view;
+    if (!v || v.buf.abs !== this.location().path)
+      return "in the scratch: the entry under the cursor (space s s opens it)";
+    const line = this.app.currentLayout(v).lines[v.cur.row]?.src ?? 1;
+    const tree = parseMarkdown(v.buf.source).tree;
+    const count = v.buf.lineStarts().length;
+    const parts = ruleParts(tree, count);
+    if (!parts.length)
+      return v.buf.source.trim() ? { view: v, lines: [1, count], cut: [1, count] } : "the scratch is empty";
+    const i = parts.findIndex((p) => line >= p[0] && line <= p[1]);
+    if (i < 0) return "on a rule: no entry here";
+    const part = parts[i]!;
+    const rule = tree.children
+      .filter((n) => n.type === "thematicBreak" && (n.position?.start.line ?? count) < part[0])
+      .at(-1)?.position?.start.line;
+    const next = parts[i + 1]?.[0];
+    const cut: [number, number] =
+      rule !== undefined ? [rule, part[1]] : next !== undefined ? [part[0], next - 1] : part;
+    return { view: v, lines: part, cut };
+  }
+
+  /** The entry under the cursor copied: its lines, an empty note left out. */
+  copyEntry(): void {
+    const e = this.entry();
+    if (typeof e === "string") return this.app.message("info", e);
+    const text = dropEmptyAsks(
+      e.view.buf
+        .lines()
+        .slice(e.lines[0] - 1, e.lines[1])
+        .join("\n"),
+    ).trim();
+    if (!text) return this.app.message("info", "the entry is empty");
+    this.app.copy(`${text}\n`, true, "the entry");
+  }
+
+  /** The entry under the cursor deleted, with its rule: one undo step, saved. */
+  deleteEntry(): void {
+    const e = this.entry();
+    if (typeof e === "string") return this.app.message("info", e);
+    const starts = e.view.buf.lineStarts();
+    const at = starts[e.cut[0] - 1] ?? 0;
+    const end = starts[e.cut[1]] ?? e.view.buf.source.length;
+    this.app.views.applyNoteEdits([{ at, length: end - at, text: "" }], "entry deleted · u brings it back", at);
   }
 
   /** The scratch's empty notes dropped as it closes (D229): a capture with nothing said about it is its reference. */

@@ -1,10 +1,10 @@
 // Scratch capture (plan 8.x) — the accumulator from prompt-buffer.lua, CLI-shaped so nvim, agents
 // and scripts share one entry point (8.1). Markdown in, markdown out: each entry carries its
 // source reference, and the file is readable and pasteable as-is (8.4). An entry says the place it's
-// at and your note on it, a rule between it and the one before (D229):
+// at and your note on it, a rule between it and the one before (D229), and when it was added:
 //
-//   **At:** `notes/coffee.md:5`
-//
+//   **When:** 2026-11-08 14:05 UTC+03:00\
+//   **At:** `notes/coffee.md:5`\
 //   **Note:** check the ratio for the small pot
 //
 //   ---
@@ -15,6 +15,7 @@
 import { existsSync, lstatSync } from "node:fs";
 import { extname, isAbsolute, join, relative, resolve } from "node:path";
 import { type Config, isSafeRelative } from "../../application/config/config.ts";
+import { parseMarkdown } from "../../documents/markdown/parse.ts";
 import { atomicWrite, climbsOut, ensureDir, landsInside, readRegular } from "../../foundation/platform/fsutil.ts";
 import { type Keyed, stateDir } from "../../foundation/platform/paths.ts";
 import { sanitize } from "../../foundation/text/sanitize.ts";
@@ -148,21 +149,47 @@ export interface CaptureInput {
   cwd?: string;
   /** An entry with a reference and no text ends on its note, empty: the TUI's cursor types it (D229). */
   ask?: boolean;
+  /** When it's added (default: now). */
+  when?: Date;
 }
 
 /** The labels of an entry's reference and its text: the place it's at, and your note on it (D229). */
 export const AT = "**At:**";
 export const NOTE = "**Note:**";
+/** The label of when an entry was added. */
+export const WHEN = "**When:**";
+
+/**
+ * A time as an entry says it: local, to the minute, and its offset from UTC, named (`2026-11-08 14:05 UTC+03:00`) —
+ * a zone's abbreviation is ambiguous, and often missing; a bare `+03:00` leaves a reader to guess what it is.
+ */
+export function formatWhen(d: Date): string {
+  const two = (n: number) => String(n).padStart(2, "0");
+  const off = -d.getTimezoneOffset();
+  const zone = `UTC${off < 0 ? "-" : "+"}${two(Math.floor(Math.abs(off) / 60))}:${two(Math.abs(off) % 60)}`;
+  const day = `${d.getFullYear()}-${two(d.getMonth() + 1)}-${two(d.getDate())}`;
+  return `${day} ${two(d.getHours())}:${two(d.getMinutes())} ${zone}`;
+}
+
+/** Text that goes on after a hard break as the same paragraph: it opens with one, on its first line. */
+function opensParagraph(text: string): boolean {
+  const parsed = parseMarkdown(text);
+  const first = parsed.tree.children[0];
+  return !parsed.frontmatter && first?.type === "paragraph" && first.position?.start.line === 1;
+}
 
 /** Build the markdown block for one entry. Pure apart from reading the snippet file. */
 export function formatEntry(input: CaptureInput, project: string): string {
   const parts: string[] = [];
+  let fenced = false;
+  const when = `${WHEN} ${formatWhen(input.when ?? new Date())}`;
   if (input.ref) {
     const cwd = input.cwd ?? process.cwd();
     const abs = isAbsolute(input.ref.path) ? input.ref.path : resolve(cwd, input.ref.path);
     const rel = relative(project, abs);
     const shown = rel && !climbsOut(rel) ? rel : abs;
-    parts.push(`${AT} ${formatRef({ ...input.ref, path: shown })}`);
+    // When, then where: a line each, after a hard break (`\`), one paragraph.
+    parts.push(`${when}\\\n${AT} ${formatRef({ ...input.ref, path: shown })}`);
     if (input.snippet || input.snippetText !== undefined) {
       let body = input.snippetText;
       if (body === undefined) {
@@ -182,7 +209,12 @@ export function formatEntry(input: CaptureInput, project: string): string {
           throw new CaptureError(`${input.ref.path} has ${lines.length} lines; ${last} is past the end`);
         body = lines.slice(input.ref.startLine - 1, input.ref.endLine).join("\n");
       }
-      if (body !== undefined) parts.push(fence(sanitize(body), input.lang ?? fenceLanguage(abs)));
+      if (body !== undefined) {
+        // A note's lines unlabelled, read as written, as the TUI captures them; code's, its language.
+        const lang = input.lang ?? (fenceLanguage(abs) === "markdown" ? "" : fenceLanguage(abs));
+        parts.push(fence(sanitize(body), lang));
+        fenced = true;
+      }
     }
   }
   if (input.text?.trim()) {
@@ -193,6 +225,12 @@ export function formatEntry(input: CaptureInput, project: string): string {
   } else if (input.ref && input.ask) {
     parts.push(`${NOTE} `);
   }
+  // A reference and its note, nothing between them: one paragraph, the note on a line of its own after a hard break
+  // (`\`), no blank line between the two. Lines fenced between them stand apart, a blank line either side.
+  if (input.ref && !fenced && parts.length === 2) return `${parts[0]}\\\n${parts[1]}`;
+  // Text alone: when, then the text — on the next line when it opens with a paragraph, else after a blank line (a hard
+  // break before a list, a heading or a fence would be a stray `\`).
+  if (!input.ref && parts.length === 1) return `${when}${opensParagraph(parts[0]!) ? "\\\n" : "\n\n"}${parts[0]}`;
   return parts.join("\n\n");
 }
 
@@ -215,8 +253,9 @@ export function readScratch(loc: ScratchLocation): string {
 /** The scratch ends on a rule already: none goes before the next entry. */
 const ENDS_ON_RULE = /(?:^|\n) {0,3}(?:-{3,}|\*{3,}|_{3,})\s*$/;
 
-/** A note left empty, and the blank line before it: a capture closed with nothing said about it (D229). */
-const EMPTY_ASK = /\n*(?:^|\n)\*\*Note:\*\*[ \t]*(?=\n|$)/g;
+/** A note left empty, and the blank line or the hard break before it: a capture closed with nothing said about it
+ *  (D229). */
+const EMPTY_ASK = /(?:\\\n|\n*(?:^|\n))\*\*Note:\*\*[ \t]*(?=\n|$)/g;
 
 /** The scratch without its empty notes (each an ask: the slot for yours). */
 export function dropEmptyAsks(text: string): string {

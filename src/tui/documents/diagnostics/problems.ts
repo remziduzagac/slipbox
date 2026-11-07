@@ -150,6 +150,8 @@ export class Problems {
       }
       out.push(...hit.list);
     }
+    // The scratch's places (D229): an `At:` whose lines moved or changed since captured, or whose file went.
+    if (buf.abs === this.app.scratch.location().path) out.push(...this.app.scratch.places(buf).map((p) => p.problem));
     const min = this.app.config.diagnostics.severity;
     return out.filter((p) => atLeast(p.severity, min));
   }

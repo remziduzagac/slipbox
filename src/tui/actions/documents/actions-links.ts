@@ -13,7 +13,9 @@ import * as E from "../../documents/editing/editing.ts";
 import { linkTokens } from "../../../core/documents/syntax/syntax.ts";
 import { readerFor } from "../../../core/documents/model/readers.ts";
 import type { Anchor } from "../../../core/workspace/session/position.ts";
+import { existsSync } from "node:fs";
 import { isAbsolute, join, posix } from "node:path";
+import { parseRef, type Ref } from "../../../core/workspace/mutations/capture.ts";
 import { isNotePath, pathLink, pathForm } from "../../../core/workspace/links/links.ts";
 import { isFile } from "../workspace/actions-files.ts";
 import { isPointer, parsePointer, resolvePointer } from "../../../core/workspace/links/pointer.ts";
@@ -201,6 +203,12 @@ function openInto(a: App, into: Into, path: string, anchor?: Anchor, go = false)
   a.open(path, anchor);
 }
 
+/** A scratch entry's place: its reference, its path from the vault's top (or as written, absolute). */
+function refPlace(a: App, target: string): { ref: Ref; path: string } | null {
+  const ref = parseRef(target);
+  return ref ? { ref, path: isAbsolute(ref.path) ? ref.path : join(a.loc.root, ref.path) } : null;
+}
+
 function followLink(a: App, link: LayoutLink, into: Into, goOut = false): void | Promise<void> {
   const view = a.view;
   if (!view) return;
@@ -226,6 +234,16 @@ function followLink(a: App, link: LayoutLink, into: Into, goOut = false): void |
     case "tag":
       // A tag (1.6): the notes that carry it.
       return a.search.openTagNotes(link.target);
+    case "ref": {
+      // A scratch entry's place (D229): its file, at its first line.
+      const place = refPlace(a, link.target);
+      if (!place) return a.message("warn", `${link.target}: not a place (path:line)`);
+      if (!existsSync(place.path)) return a.message("warn", `${place.ref.path}: no such file`);
+      // Its lines moved since captured: where they are now.
+      const line =
+        (view.buf.abs === a.scratch.location().path && a.scratch.movedTo(link.target)) || place.ref.startLine;
+      return openInto(a, into, place.path, { heading: null, headingIndex: 0, offset: 0, line }, goOut);
+    }
     case "footnote": {
       const layout = lay(a, view);
       // The definition's first row, by identifier (whatever the label's case, in a quote or a list).
@@ -461,6 +479,7 @@ function cycleLink(a: App, dir: 1 | -1): void {
 
 export function linkTarget(a: App, v: View, link: LayoutLink): string {
   if (link.kind === "tag") return `#${link.target}`;
+  if (link.kind === "ref") return refPlace(a, link.target)?.path ?? link.target;
   if (!v.buf.rel || link.kind === "footnote") return link.target;
   const r = a.graph.resolveLink({ kind: link.kind, target: link.target }, v.buf.rel);
   return r.path && r.resolvedKind !== "external" ? join(a.loc.root, r.path) : link.target;

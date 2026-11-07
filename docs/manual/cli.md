@@ -1519,9 +1519,11 @@ slipbox's state, one for the machine.
 
 ### `capture`
 
-Appends some text, a reference to lines of a file, or both, to the scratch. Each entry goes after a rule (`---`).
-A reference is written `` **At:** `path:line` ``. Text given with a reference is written `**Note:** text`: the note on
-that place.
+Appends some text, a reference to lines of a file, or both, to the scratch. Each entry goes after a rule (`---`) and
+starts with when it was added, `**When:** 2026-11-08 14:05 UTC+03:00`: your local time and its offset from UTC. A
+reference is written `` **At:** `path:line` ``. Text given with a reference is written `**Note:** text`: the note on
+that place. Each ends its line with a backslash, so they sit on consecutive lines; lines fenced go between them, a blank
+line on each side.
 
 ```bash
 slipbox capture "Ask about the grinder"
@@ -1535,8 +1537,8 @@ printf 'brew ratio 1:16\n' | slipbox capture --stdin --lang text
   - `path:42-50`
   - `path:42:10-30`, columns 10 to 30 of line 42
   - `path:42:10-50:30`, line 42 column 10 to line 50 column 30
-- `--snippet`: read the referenced lines from disk, and add them fenced, in the file's language. A reference past the
-  file's end is exit 3.
+- `--snippet`: read the referenced lines from disk, and add them fenced, in the file's language (a note's without
+  one). A reference past the file's end is exit 3.
 - `--stdin`: read from stdin. With `--ref`, stdin is the snippet (a selection piped from your editor). Without `--ref`,
   it's the text. Empty stdin is refused (exit 2).
 - `--lang <language>`: fence stdin as code in this language.

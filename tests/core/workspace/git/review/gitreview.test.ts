@@ -22,6 +22,7 @@ import {
 import { gitChanges } from "../../../../../src/core/workspace/git/gitsigns.ts";
 import { blockDiff, blockText, noteBlocks } from "../../../../../src/core/foundation/text/blockdiff.ts";
 import { makeCoreSandbox } from "../../../../support/core-sandbox.ts";
+import { untimed } from "../../../../support/scratch-entries.ts";
 
 // File-local default: tests/support/timeouts.ts.
 setDefaultTimeout(UNIT_TIMEOUT_MS);
@@ -594,7 +595,7 @@ describe("reviewing a change, a hunk at a time (GIT-D3)", () => {
     expect(movedBy(first!, third!, "kept")).toBe(first!);
   });
   test("a note for the agent: where the hunk is, its diff, the note; what the review says at its end", () => {
-    expect(hunkEntry("/v/docs/sync.md", changes[0]!, "keep the old wording", "/v")).toBe(
+    expect(untimed(hunkEntry("/v/docs/sync.md", changes[0]!, "keep the old wording", "/v"))).toBe(
       "**At:** `docs/sync.md:3`\n\n```diff\n-three\n+THREE\n```\n\n**Note:** keep the old wording",
     );
     expect(tallyText({ kept: 1, reverted: 1, noted: 1, skipped: 0, left: 0 })).toBe(

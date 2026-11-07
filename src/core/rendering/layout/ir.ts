@@ -141,7 +141,8 @@ export interface Picture {
   scrolls?: boolean;
 }
 
-export type LinkKind = "wiki" | "embed" | "markdown" | "image" | "footnote" | "tag";
+/** `ref`: a place, `path:12-20` — a scratch entry's `**At:**` (D229), its path from the vault's top. */
+export type LinkKind = "wiki" | "embed" | "markdown" | "image" | "footnote" | "tag" | "ref";
 
 export interface LayoutLink {
   kind: LinkKind;

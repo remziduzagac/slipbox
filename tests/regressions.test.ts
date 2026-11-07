@@ -21,6 +21,7 @@ import { TextCanvas } from "../src/tui/shell/terminal/canvas.ts";
 import { importsOf } from "../scripts/check-boundary.ts";
 import { computeFind } from "../src/tui/workspace/search/search.ts";
 import { watcherState } from "./support/watcher-access.ts";
+import { untimed } from "./support/scratch-entries.ts";
 import { selectedText } from "../src/tui/documents/views/views.ts";
 
 const sandbox = mkdtempSync(join(tmpdir(), "slipbox-reg-"));
@@ -418,7 +419,7 @@ describe("low", () => {
     expect((await cli(["capture", "--ref", "f.md:0"], dir)).code).toBe(2);
     expect((await cli(["capture", "--ref", "f.md:999", "--snippet"], dir)).code).toBe(3);
     const r = await cli(["capture", "--stdin", "--lang", "ts", "--json"], dir, "const x = 1");
-    expect(JSON.parse(r.out).data.entry).toBe("```ts\nconst x = 1\n```");
+    expect(untimed(JSON.parse(r.out).data.entry)).toBe("```ts\nconst x = 1\n```");
   });
   test("selection starting on the right half of a wide character includes it", () => {
     const layout = renderMarkdown("日本語\n", { width: 40, glyphs: unicode, showUrls: false });

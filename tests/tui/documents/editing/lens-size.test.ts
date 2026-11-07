@@ -55,6 +55,25 @@ describe("the lens's modes and size", () => {
     await h.keys("+");
     expect(h.app.messages.at(-1)!.text).toContain("isn't open");
   });
+  test("a rule divides as a heading does: the lens opens on the part between two rules whole, the innermost (D268)", async () => {
+    const root = makeVault();
+    // Under a heading that fits too: the part is the innermost. Without a heading: the part, not blocks padded to six
+    // rows spilling over the rules (a scratch's entries).
+    writeFileSync(join(root, "p.md"), "# T\n\nintro\n\n---\n\nA one\nA two\n\nA three\n\n---\n\nB\n");
+    writeFileSync(join(root, "q.md"), "one\n\n---\n\ntwo a\n\ntwo b\n\n---\n\nthree\n\n---\n\nfour\n");
+    let h = await harness({ root, open: "p.md", width: 80, height: 40 });
+    const lensOn = async (src: number) => {
+      const v = h.app.view!;
+      h.app.moveCursor(v, { row: h.app.currentLayout(v).lines.findIndex((l) => l.src === src), col: 0 });
+      await h.keys("space", "n", "l");
+      const label = lensLabel(h);
+      await h.keys("escape");
+      return label;
+    };
+    expect(await lensOn(7)).toBe("source 7–11");
+    h = await harness({ root, open: "q.md", width: 80, height: 40 });
+    expect(await lensOn(5)).toBe("source 5–8");
+  });
   test("on a CSV, + takes a record more and the lens slides at that size", async () => {
     const root = makeVault();
     // Records counted, a row each: no counters to make a long one wrap.

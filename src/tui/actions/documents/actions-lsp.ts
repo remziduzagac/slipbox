@@ -183,10 +183,11 @@ export function lspActions(): Record<string, Run> {
         const s = a.languages.servers;
         // In a note, slipbox's own fixes for the cursor's line too (a fragile link named for sure).
         const line = a.languages.position(v).line + 1;
-        const own =
-          v.buf.kind.group === "note" && v.buf.rel !== null
-            ? noteProblems(a.graph, v.buf.rel).filter((p) => p.fix && p.start.line <= line && line <= p.end.line)
-            : [];
+        // The scratch's: an `At:` pointed to where its lines moved (D229).
+        const own = [
+          ...(v.buf.kind.group === "note" && v.buf.rel !== null ? noteProblems(a.graph, v.buf.rel) : []),
+          ...(v.buf.abs === a.scratch.location().path ? a.scratch.places(v.buf).map((p) => p.problem) : []),
+        ].filter((p) => p.fix && p.start.line <= line && line <= p.end.line);
         const fix = (p: Problem) => {
           const starts = v.buf.lineStarts();
           const at = starts[p.start.line - 1]! + p.start.column - 1;

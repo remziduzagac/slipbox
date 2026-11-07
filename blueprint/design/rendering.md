@@ -54,7 +54,7 @@ contracts and stay separate. Context identity, callbacks, cache keys, source map
 | task item | checkbox glyph (after the number in an ordered list); a checked item's text is dimmed |
 | blockquote | `▎` bar per row, italic dim text |
 | callout | `> [!note] Title` (Obsidian and GitHub): icon, title, bar in the kind's colour; `> \[!note]` stays a quote |
-| code | full width, background fill, language label at top right, highlighted; too wide, kept whole (below) |
+| code | full width, filled, highlighted; a row above for its label, below for a scrollbar, if any; too wide: below |
 | table | the allocator below |
 | thematic break | a rule across the width |
 | frontmatter | a "properties" block: aligned rows, a long key cut with `…`; a value's `[[link]]` a link; raw: broken |

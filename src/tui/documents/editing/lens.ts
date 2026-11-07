@@ -9,6 +9,7 @@ import {
   blockRanges,
   composeLive,
   LENS_COUNTERS,
+  ruleParts,
   sectionRanges,
 } from "../../../core/rendering/layout/markdown/live.ts";
 import type { Layout } from "../../../core/rendering/layout/ir.ts";
@@ -228,7 +229,9 @@ export class Lens {
         blocks = cells.blocks;
         unit = (at) => blocks.find((b) => at >= b[0] && at <= b[1] && cells.whole.has(b[0])) ?? null;
       } else if (buf.kind.group === "note") {
-        const sections = sectionRanges(buf.parsed.tree, lineCount);
+        // Its sections, and its parts between rules (a scratch's entries): the innermost around the cursor, by start.
+        const tree = buf.parsed.tree;
+        const sections = [...sectionRanges(tree, lineCount), ...ruleParts(tree, lineCount)].sort((x, y) => x[0] - y[0]);
         unit = (at) => {
           const s = sections.filter((x) => x[0] <= at).at(-1);
           return s && at <= s[1] && fits(s[0], s[1]) ? s : null;

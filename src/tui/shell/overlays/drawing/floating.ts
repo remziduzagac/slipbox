@@ -4,7 +4,7 @@ import type { App } from "../../../app/runtime/app.ts";
 import { type Canvas, drawText } from "../../terminal/canvas.ts";
 import type { Geometry } from "../../screen/geometry/contracts.ts";
 import type { Rect } from "../../screen/geometry.ts";
-import { roleStyle } from "../../screen/style.ts";
+import { pageBg, roleStyle } from "../../screen/style.ts";
 import { truncate, stringWidth } from "../../../../core/foundation/text/width.ts";
 import { peekTitle } from "../../../documents/navigation/peek.ts";
 import { drawPane } from "../../../documents/views/drawing/pane.ts";
@@ -51,6 +51,9 @@ export function drawFloating(app: App, c: Canvas, mainY: number, mainH: number, 
   const dim = roleStyle(theme, "overlay_dim", null);
   const b = app.glyphs.box;
   c.fill(full ? x : x - 2, full ? y : y - 1, full ? w : w + 4, full ? h : h + 2, bg.bg);
+  // Inside the frame, the page's background, as a window has: what's drawn there is coloured against it. On the
+  // frame's darker one, a code block's band, the same colour, vanished, and a paragraph's text sat on patches.
+  c.fill(x + 1, y + 1, w - 2, h - 2, pageBg(theme));
   drawText(c, x, y, `${b.tl}${b.h}`, border);
   // A peek's: its path cut from the front, where it is and the file's name kept (VV-D7).
   const title = f.kind === "peek" ? peekTitle(f.peek, f.view.buf.elsewhere?.rel ?? null, w - 8) : f.title;
@@ -72,7 +75,7 @@ export function drawFloating(app: App, c: Canvas, mainY: number, mainH: number, 
           : f.kind === "report"
             ? " ctrl+s sends it or adds the screen · esc · q leaves it "
             : f.kind === "scratch"
-              ? " esc · q closes, saved "
+              ? " q closes, saved "
               : f.kind === "peek"
                 ? ` o go there · t keep as a tab · z ${f.peek.full ? "smaller" : "fill"}${f.peek.back.length ? " · ctrl+o back" : ""} · esc closes `
                 : f.kind === "review"

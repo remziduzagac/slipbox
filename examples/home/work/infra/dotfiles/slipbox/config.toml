@@ -503,6 +503,8 @@ sidebar_vault = { bold = true, underline = true }
 "leader ; E a" = "context.copy"
 "leader ; p d" = "scratch.clear"
 "leader ; p e" = "scratch.open_right"
+"leader ; p f" = "scratch.copy_entry"
+"leader ; p g" = "scratch.delete_entry"
 "leader ; d g" = "note.create"
 "leader ; j a" = "folder.create"
 "leader ; d h" = "note.reload"

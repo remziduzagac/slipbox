@@ -136,9 +136,11 @@ lens, and the whole note renders again.
 - The mouse wheel scrolls the page, and the lens rides with its text.
 - While you type, the arrow keys stop at its rules.
 
-**Its size.** The lens opens on the section the cursor is in: the heading and everything under it. It does so when that
-section fits in half the window (`editor.lens_max`). Otherwise it opens on the cursor's block and its neighbours, until
-it holds at least six rows of Markdown (`editor.lens_min_rows`).
+**Its size.** The lens opens on the section the cursor is in: the heading and everything under it. A horizontal rule
+(`---`) divides a note too: what lies between two rules, or between a rule and a heading, is a part of its own, like
+each entry in the scratch. The lens opens on the smallest of these around the cursor when it fits in half the window
+(`editor.lens_max`). Otherwise it opens on the cursor's block and its neighbours, until it holds at least six rows of
+Markdown (`editor.lens_min_rows`).
 
 | Key | What it does |
 | --- | --- |

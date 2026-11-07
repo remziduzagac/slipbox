@@ -4,6 +4,7 @@ import { dirname } from "node:path";
 import type { Config } from "../../../../src/core/application/config/config.ts";
 import { lineOf, offsetOf } from "../../../../src/tui/documents/editing/editing.ts";
 import { makeSandbox, makeVault, harness, rowStarting, type Harness } from "../../../tui-harness.ts";
+import { untimed } from "../../../support/scratch-entries.ts";
 
 // The model harness applies the file-local timeout and sandbox policy.
 makeSandbox();
@@ -34,7 +35,7 @@ describe("scratch (space s)", () => {
   /** The line the window's cursor is on, from 1. */
   const lineAt = (h: Harness, v = h.app.view!) => lineOf(v, offsetOf(h.app, v));
 
-  test("add the cursor row reference, add a selection: each shown floating, typing its note; esc then q back, a note left empty dropped; open, copy (#43, D229)", async () => {
+  test("add the cursor row reference, add a selection: each shown floating, typing its note; esc then q back, a note left empty dropped; open, copy (#43, D229, D268)", async () => {
     const h = await harness({ open: "notes/alpha.md" });
     const path = h.app.scratch.location().path;
     await h.keys("space", "s", "a");
@@ -42,22 +43,22 @@ describe("scratch (space s)", () => {
     expect(at()).toEqual(["scratch", "scratch", 3, true]);
     await h.keys("f", "i", "x", "escape", "q");
     expect([h.app.floating, h.app.view!.buf.key]).toEqual([null, "notes/alpha.md"]);
-    expect(readFileSync(path, "utf8")).toBe("**At:** `notes/alpha.md:1`\n\n**Note:** fix\n");
+    expect(untimed(readFileSync(path, "utf8"))).toBe("**At:** `notes/alpha.md:1`\\\n**Note:** fix\n");
     h.app.moveCursor(h.app.view!, { row: rowStarting(h, "Back to"), col: 0 });
     await h.keys("v", "e", "space", "s", "a");
-    expect(readFileSync(path, "utf8")).toEndWith(
+    expect(untimed(readFileSync(path, "utf8"))).toEndWith(
       "\n\n---\n\n**At:** `notes/alpha.md:9`\n\n```\nBack\n```\n\n**Note:** \n",
     );
-    expect(at()).toEqual(["scratch", "scratch", 13, true]);
+    expect(at()).toEqual(["scratch", "scratch", 14, true]);
     // Copied with nothing said yet: the empty note isn't in it.
     await h.keys("escape", "space", "s", "y");
     expect(h.copied.at(-1)).toEndWith("```\nBack\n```\n");
-    // Nothing said: esc (out of typing, then the scratch), and the empty note goes.
-    await h.keys("escape");
+    // Nothing said: q closes it, and the empty note goes.
+    await h.keys("q");
     expect([h.app.floating, h.app.view!.buf.key]).toEqual([null, "notes/alpha.md"]);
     const text = readFileSync(path, "utf8");
-    expect(text).toBe(
-      "**At:** `notes/alpha.md:1`\n\n**Note:** fix\n\n---\n\n**At:** `notes/alpha.md:9`\n\n```\nBack\n```\n",
+    expect(untimed(text)).toBe(
+      "**At:** `notes/alpha.md:1`\\\n**Note:** fix\n\n---\n\n**At:** `notes/alpha.md:9`\n\n```\nBack\n```\n",
     );
     await h.keys("space", "s", "s");
     expect([h.app.floating?.kind, h.app.displayName(h.app.view!.buf)]).toEqual(["scratch", "scratch"]);
@@ -78,14 +79,14 @@ describe("scratch (space s)", () => {
     const [y, rows] = [box.y + 1, box.h - 2];
     expect(Math.abs(y - pane.y - (pane.y + pane.h - (y + rows)))).toBeLessThanOrEqual(3);
     expect([box.w - 4, rows >= Math.floor((pane.h * 2) / 3)]).toEqual([90, true]);
-    expect(h.frame()).toContain("esc · q closes, saved");
+    expect(h.frame()).toContain("─ q closes, saved ");
     await h.keys("i", "i", "d", "e", "a", "escape");
     expect(h.app.view!.buf.dirty).toBe(true);
     await h.keys("q");
     expect([h.app.floating, readFileSync(path, "utf8")]).toEqual([null, "idea"]);
   });
 
-  test("the floating scratch is a window like any: rendered, the lens, ctrl+k; esc leaves the lens and a find first, and closes it last (#43)", async () => {
+  test("the floating scratch is a window like any: rendered, the lens, ctrl+k; esc leaves the lens and a find, never the scratch: q does (#43, D268)", async () => {
     // The lens, as slipbox's own default has it (the harness edits in source mode).
     const h = await harness({
       open: "notes/alpha.md",
@@ -114,10 +115,12 @@ describe("scratch (space s)", () => {
     expect(h.app.view!.find).not.toBeNull();
     await h.keys("escape");
     expect([h.app.floating?.kind, h.app.view!.find]).toEqual(["scratch", null]);
-    // ctrl+k: its markdown, still floating; esc, with nothing else to leave, closes it.
+    // ctrl+k: its markdown, still floating; esc, with nothing else to leave, leaves it open; q closes it.
     await h.keys("ctrl+k");
     expect([h.app.floating?.kind, status()]).toEqual(["scratch", expect.stringMatching(/^ SOURCE /)]);
     await h.keys("escape");
+    expect(h.app.floating?.kind).toBe("scratch");
+    await h.keys("q");
     expect([h.app.floating, h.app.view!.buf.key]).toEqual([null, "notes/alpha.md"]);
   });
 
@@ -134,9 +137,9 @@ describe("scratch (space s)", () => {
     await h.keys("d", "o", "escape");
     expect([h.app.floating?.kind, status()]).toEqual(["scratch", expect.stringMatching(/^ READ·LENS /)]);
     await h.keys("q");
-    expect([h.app.floating, readFileSync(h.app.scratch.location().path, "utf8")]).toEqual([
+    expect([h.app.floating, untimed(readFileSync(h.app.scratch.location().path, "utf8"))]).toEqual([
       null,
-      "**At:** `notes/alpha.md:1`\n\n**Note:** do\n",
+      "**At:** `notes/alpha.md:1`\\\n**Note:** do\n",
     ]);
   });
 
@@ -176,7 +179,7 @@ describe("scratch (space s)", () => {
     await h.keys("escape", "q");
     expect([t.views.length, h.app.view!.buf.key]).toEqual([1, "notes/alpha.md"]);
     const entry = "\\*\\*At:\\*\\* `notes\\/alpha\\.md:\\d+`\\n";
-    expect(readFileSync(path, "utf8")).toMatch(
+    expect(untimed(readFileSync(path, "utf8"))).toMatch(
       new RegExp(`\\n\\*\\*Note:\\*\\* why\\n\\n---\\n\\n${entry}\\n---\\n\\n${entry}$`),
     );
     // The UI settings: floating now, kept from one start to the next; space s r, on the right all the same.

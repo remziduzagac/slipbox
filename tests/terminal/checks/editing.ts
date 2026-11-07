@@ -1326,8 +1326,18 @@ export const EDITING: Check[] = [
   // --- the scratch, the context, the hand-off ---------------------------------------------------
   {
     area: "editing",
-    name: "scratch: add, shown floating at once, typing a note; esc then q closes it; open, copy, clear",
-    covers: { cases: ["scratch"], commands: ["scratch.add", "scratch.open", "scratch.copy", "scratch.clear"] },
+    name: "scratch: add, shown floating at once, typing a note; esc then q closes it; open, copy, an entry, clear",
+    covers: {
+      cases: ["scratch"],
+      commands: [
+        "scratch.add",
+        "scratch.open",
+        "scratch.copy",
+        "scratch.copy_entry",
+        "scratch.delete_entry",
+        "scratch.clear",
+      ],
+    },
     run: async (s) => {
       await ready(s);
       await s.keys("j", "j");
@@ -1344,13 +1354,18 @@ export const EDITING: Check[] = [
       await s.see(SCRATCH_FLOATING);
       await leader(s, "s", "y");
       await s.message("copied");
-      // What space s a added: home's third row, with its path and line, and the note on it.
-      await s.until(
-        () => /\*\*At:\*\* `home\.md:\d+`\n\n\*\*Note:\*\* check the date\n/.test(s.clipboard()),
-        3000,
-        "the scratch holding home.md:line and its note",
-      );
-      await s.keys("q");
+      // What space s a added: when, home's third row, with its path and line, and the note on it (D268).
+      const entry =
+        /^\*\*When:\*\* [\d-]+ [\d:]+ UTC[+-][\d:]+\\\n\*\*At:\*\* `home\.md:\d+`\\\n\*\*Note:\*\* check the date\n$/;
+      await s.until(() => entry.test(s.clipboard()), 3000, "the scratch holding home.md:line and its note");
+      // An entry of its own: copied, deleted — esc never closes the scratch, q does.
+      await s.keys("escape");
+      await leader(s, "s", "e");
+      await s.message("copied the entry");
+      await leader(s, "s", "x");
+      await s.message("entry deleted");
+      await s.see(SCRATCH_FLOATING);
+      await s.keys("u", "q");
       await s.notSee(SCRATCH_FLOATING);
       await leader(s, "s", "d");
       await s.see("Clear the scratch?"); // a question: its own window

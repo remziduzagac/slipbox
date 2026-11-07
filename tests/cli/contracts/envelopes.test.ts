@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { cli } from "../../support/vault-cli.ts";
 import { makeVaultSandbox } from "../../support/vault-sandbox.ts";
+import { untimed, WHEN } from "../../support/scratch-entries.ts";
 
 // File-local default: tests/support/timeouts.ts.
 setDefaultTimeout(UNIT_TIMEOUT_MS);
@@ -81,18 +82,19 @@ describe("CLI (9.x)", () => {
     await cli(["capture", "--ref", "index.md:3", "--stdin"], "piped selection");
     await cli(["capture", "--ref", "index.md:1", "say", "more"]); // with a reference, the text is its note (D229)
     const shown = JSON.parse((await cli(["scratch", "show", "--json"])).out).data;
-    expect(shown.content).toBe(
+    // Each entry says when (D268); a note's lines unlabelled, as written; the note on the line after its place.
+    expect(shown.content.match(new RegExp(WHEN.source, "g"))).toHaveLength(4);
+    expect(untimed(shown.content)).toBe(
       [
         "first thought",
         "---",
         "**At:** `notes/alpha.md:7-9`",
-        "```markdown\n## Section One\n\nBack to [index](../index.md) and on to [beta](beta.md).\n```",
+        "```\n## Section One\n\nBack to [index](../index.md) and on to [beta](beta.md).\n```",
         "---",
         "**At:** `index.md:3`",
-        "```markdown\npiped selection\n```",
+        "```\npiped selection\n```",
         "---",
-        "**At:** `index.md:1`",
-        "**Note:** say more\n",
+        "**At:** `index.md:1`\\\n**Note:** say more\n",
       ].join("\n\n"),
     );
     expect((await cli(["scratch", "clear", "--if-unchanged", "0000"])).code).toBe(5);

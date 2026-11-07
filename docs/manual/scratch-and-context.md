@@ -17,6 +17,8 @@ Each vault has its own scratch, kept in slipbox's own state folder. It is outsid
 | `space s s` | Opens the scratch. It updates as things are added |
 | `space s r` | Opens the scratch in the window on the right |
 | `space s y` | Copies the whole scratch |
+| `space s e` | In the scratch: copies the entry under the cursor |
+| `space s x` | In the scratch: deletes the entry under the cursor (`u` brings it back) |
 | `space s d` | Clears the scratch, after asking |
 | `space s c` | Copies the note's context for an agent: the note, what it links to, what links to it |
 
@@ -27,7 +29,8 @@ It's a window like any other. The scratch is rendered, the lens edits it, and `c
 you move and edit with works there.
 
 - `q` closes it and takes you back where you were. What you typed is saved.
-- `esc` stops typing and leaves the lens, as it always does. Then it closes the scratch.
+- `esc` stops typing and leaves the lens, as it always does. It never closes the scratch, so pressing it once too
+  often doesn't shut what you're writing in.
 
 It opens when it's empty too.
 
@@ -37,15 +40,16 @@ on the right instead, beside your note. `ctrl+w w` goes back and forth.
 Each time you add to it, it opens on what you added, ready for you to type a note about it:
 
 ````markdown
-**At:** `ideas/coffee.md:5`
-
+**When:** 2026-11-08 14:05 UTC+03:00\
+**At:** `ideas/coffee.md:5`\
 **Note:** check the ratio for the small pot
 
 ---
 
+**When:** 2026-11-08 14:12 UTC+03:00\
 **At:** `ideas/coffee.md:3-5`
 
-```markdown
+```
 ## Brewing
 
 A ratio of 1 to 16 suits a pour-over.
@@ -54,8 +58,30 @@ A ratio of 1 to 16 suits a pour-over.
 **Note:** ▌
 ````
 
+Each entry says when it was added, in your local time with its offset from UTC, where it's at, and your note. The
+backslash ends a line without starting a paragraph, so the three sit on consecutive lines. The lines you selected sit
+between them, as the file has them, even when you selected them in the rendered note. Lines from a code file carry its
+language, so they're highlighted.
+
 `esc` then `q` takes you back to the note. If you close it without typing, the empty **Note:** goes. So you can add a
-few places quickly and write one note at the last. A line divides each entry from the one before.
+few places quickly and write one note at the last. A line divides each entry from the one before, and the lens opens
+on one entry whole.
+
+### Going back to a place
+
+An entry's **At:** is a link. `enter` on it, or a click, opens that file at those lines.
+
+The scratch keeps checking each place against its file, when the entry holds the lines you selected. If the file has
+changed since, the **At:**'s line number turns to a warning, and the Problems panel (`space n q`) says what happened:
+
+| Problem | What it means |
+| --- | --- |
+| `lines 42–51 moved: now 44–53` | The same lines are elsewhere in the file. Following the link lands there |
+| `lines 42–51 changed since captured` | The lines aren't in the file any more |
+| `ideas/coffee.md: no such file` | The file was moved or deleted |
+
+On a moved place, `space c a` offers to point the **At:** at the lines' new place. An entry without lines has nothing
+to compare: a cursor row's capture, text on its own, or a review's diff.
 
 Other programs add to the scratch with `slipbox capture`. That is how your editor or an agent puts things there:
 

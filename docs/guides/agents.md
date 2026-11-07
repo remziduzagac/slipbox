@@ -174,8 +174,8 @@ The scratch is a Markdown file where references collect for your next prompt. Th
 Elsewhere. You and the agent both add to it. You read it, and paste it into the agent.
 
 1. In slipbox, open `ideas/coffee.md`.
-2. Put the cursor on the line `A ratio of 1 to 16 suits a pour-over.`, and press `space s a`. The scratch gets that
-   line's place, `path:line`: `` **At:** `ideas/coffee.md:5` ``.
+2. Put the cursor on the line `A ratio of 1 to 16 suits a pour-over.`, and press `space s a`. The scratch gets when
+   you added it and that line's place, `path:line`: `` **At:** `ideas/coffee.md:5` ``.
 
    If you select lines first (`shift+v`, then `j`), the scratch gets `path:line-line` and the lines themselves.
 3. The scratch opens, floating in the middle of the screen, ready to type after **Note:**. Say what you want about the
@@ -190,7 +190,11 @@ Elsewhere. You and the agent both add to it. You read it, and paste it into the 
    slipbox capture --ref ideas/coffee.md:5 "Check the ratio"   # the place, and a note on it
    ```
 
-5. Press `space s y` to copy the whole scratch, to paste into a prompt.
+5. Press `space s y` to copy the whole scratch, to paste into a prompt. In the scratch, `space s e` copies just the
+   entry under the cursor, and `space s x` deletes it once it's dealt with.
+
+An entry's **At:** is a link back to its place: `enter` on it opens the file at those lines. If the lines have moved or
+changed since, the scratch says so ([Going back to a place](../manual/scratch-and-context.md#going-back-to-a-place)).
 
 `space s d` clears the scratch, after asking.
 

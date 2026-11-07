@@ -3067,6 +3067,8 @@ The same notes, one per tab.
 - `scratch.clear` — Clear the scratch — `notes/daily/2026-09-22.md`, `work/kestrel/api/kestrel_api/sync.py`
   (catalog.ts)
 - `scratch.open_right` — Open the scratch on the right — `notes/daily/2026-09-22.md` (catalog.ts)
+- `scratch.copy_entry` — Copy the scratch's entry — `notes/daily/2026-09-22.md` (catalog.ts)
+- `scratch.delete_entry` — Delete the scratch's entry — `notes/daily/2026-09-22.md` (catalog.ts)
 - `ui.scratch_in` — Scratch: floating or on the right — `notes/daily/2026-09-22.md`, `notes/index.md`
   (catalog.ts)
 

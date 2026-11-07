@@ -1304,31 +1304,43 @@ keys.
   n i`, the `ℹ` button, `slipbox stat` (its `root`, `name` and `properties` too). `e` edits the properties (below).
 - **The properties editor** (`3.20`; D151): `e` in the Info view, or `space n shift+p`, opens the note's frontmatter —
   YAML or TOML, as the note has it — in a floating window over the others: framed, titled "Properties — note (YAML)", as
-  tall as its text. Inside is a window like any — a view of a buffer that isn't a file — in SOURCE view, with every
-  editing key there is; the keys and commands act on it while it's open. `esc` (in normal mode), `q` or `:q` close it,
-  writing its text back when it changed, and a click outside its box does too (that click does nothing else: a tab or a
-  pane under it isn't reached); `ctrl+s` (`:w`) writes it back and keeps it open, as does `:wa` (after a yes to a
-  question below too). Quitting (`ctrl+q`, `:qa`, `:x`) closes it first, writing back — `:q!` doesn't. The write is one
-  edit to the note — its text goes back over the frontmatter's bytes as one splice, never parsed and re-serialised
-  (`7.6`; D148), one undo step there — and the note is saved. A note without a frontmatter gets one first; an emptied
-  one is removed. Text that doesn't parse asks before it's written (no keeps you editing, and the app open), as does a
-  frontmatter changed in the note meanwhile. Following a link from inside it closes it first, as do a split and "in the
-  split": they're of the window under it. A note deleted on disk, or not valid UTF-8, has no properties editor (nor is
-  it written into, gone meanwhile), as typing into it is refused. Never a reading position, nor in the history.
+  tall as its text. Inside is a window like any — a view of a buffer that isn't a file — in SOURCE view, on the page's
+  background as a window is (its frame darker; every floating window's alike), with every editing key there is; the keys
+  and commands act on it while it's open. `esc` (in normal mode), `q` or `:q` close it, writing its text back when it
+  changed, and a click outside its box does too (that click does nothing else: a tab or a pane under it isn't reached);
+  `ctrl+s` (`:w`) writes it back and keeps it open, as does `:wa` (after a yes to a question below too). Quitting
+  (`ctrl+q`, `:qa`, `:x`) closes it first, writing back — `:q!` doesn't. The write is one edit to the note — its text
+  goes back over the frontmatter's bytes as one splice, never parsed and re-serialised (`7.6`; D148), one undo step
+  there — and the note is saved. A note without a frontmatter gets one first; an emptied one is removed. Text that
+  doesn't parse asks before it's written (no keeps you editing, and the app open), as does a frontmatter changed in the
+  note meanwhile. Following a link from inside it closes it first, as do a split and "in the split": they're of the
+  window under it. A note deleted on disk, or not valid UTF-8, has no properties editor (nor is it written into, gone
+  meanwhile), as typing into it is refused. Never a reading position, nor in the history.
 - **The scratch** (`8.3`; D229): `space s s` opens it as `[capture] open_in` says, or the UI settings' Scratch opens.
   `"float"`, the default: a floating window framed as the properties editor's, but of the scratch's own file and a
   window like any inside — rendered, the lens to edit it, `ctrl+k` its markdown — three quarters of the screen and in
   the middle of it, its size fixed as entries come. `q` or `:q` close it, back where you were, what was typed saved (a
-  save refused, the file changed on disk meanwhile, keeps it open); `esc` ends a selection, a find and the lens first,
-  as in any window, and closes it last. `"right"`:
-  the tab's window on the right, side by side — in a split already, its other window takes it — and `q` there closes
-  that window, saving it too. `space s r` opens it on the right whatever the setting. The scratch's file is made,
-  empty, when it isn't there yet: it opens to be typed in before anything is captured. A capture in the TUI (`space s
-  a`, a code cell's `space k s`) opens it on the new entry — `**At:**` its reference, its lines fenced, `**Note:**`, a
-  rule (`---`) before it when there's anything above — typing after `**Note:**` in the lens (or the source, as `[editor]
-  edit_in` says); on the right, the cursor goes there. A `**Note:**` left empty is dropped as the scratch closes, as the
-  TUI adds the next entry, and from `space s y`'s copy (`dropEmptyAsks`). What `slipbox capture` adds, the same shape,
-  shows in an open scratch (the file is polled) and opens nothing.
+  save refused, the file changed on disk meanwhile, keeps it open); `esc` ends a selection, a find and the lens, as in
+  any window, and never closes it (D268). `"right"`: the tab's window on the right, side by side — in a split already,
+  its other window takes it — and `q` there closes that window, saving it too. `space s r` opens it on the right
+  whatever the setting. The scratch's file is made, empty, when it isn't there yet: it opens to be typed in before
+  anything is captured. A capture in the TUI (`space s a`, a code cell's `space k s`) opens it on the new entry —
+  `**When:**`, `**At:**` its reference and `**Note:**`, a line each after a hard break; its lines, when there are some,
+  fenced between them, a blank line either side; a rule (`---`) before it when there's anything above — typing after
+  `**Note:**` in the lens (or the source, as `[editor] edit_in` says); on the right, the cursor goes there. A selection
+  in the rendered note is captured as written (`-`, not the `•` drawn): the words selected when its lines hold them so,
+  else those lines; a code file's with its language. A `**Note:**` left empty is dropped, with the hard break before it,
+  as the scratch closes, as the TUI adds the next entry, and from `space s y`'s copy (`dropEmptyAsks`). What `slipbox
+  capture` adds, the same shape, shows in an open scratch (the file is polled) and opens nothing.
+  - **Its entries** (D268): the lens opens on one whole (the part between two rules, § The lens). `space s e` copies
+    the entry under the cursor, an empty `**Note:**` left out; `space s x` deletes it with its rule (the one before
+    it, or the first's after it), one undo step, saved.
+  - **Its places** (D268): an entry's `**At:**` code span is a link (`ref`), underlined; followed (`enter`, a click),
+    its file opens at its first line — the vault's top its paths' start — or where its lines are now when they moved.
+    Each place with lines fenced after it is checked against its file (`stalePlaces`; read again when the file
+    changes, at most every two seconds): its lines still there, nothing; found elsewhere, `lines 42–51 moved: now
+    44–53`, `space c a` offering to point the `**At:**` there; found nowhere, `changed since captured`; its file gone,
+    said. Each a warning on the `**At:**`, in the Problems panel and the bar. A review's diff isn't checked.
 - **Outline (right):** the current note's headings, indented, foldable (`h`/`l`). While not
   focused it follows the cursor's section, and `enter` jumps to the heading.
 - **Footnotes (right, `3.17`):** the current note's footnotes, in the order the note first refers to them (as GFM
@@ -2053,14 +2065,15 @@ size rather than growing, sections or not — until `=` lets it size itself agai
 
 **Its size.** It opens on the cursor's section whole when it fits within `[editor] lens_max` of the window (half): the
 innermost one around the cursor — its heading and everything under it to the next heading of its level or higher, a
-subsection with it — not padded. A section too tall for it, or text before the first heading, is its blocks: it opens on
-the cursor's block and takes in the neighbours (below, then above) until it has `[editor] lens_min_rows` rows of
-markdown (6), so a one-line paragraph isn't a sliver and small moves don't reshape it. It never splits a block. An edit
-inside it (typing, `dd`, a replace) keeps its lines, grown or shrunk by the edit; typing that reaches past an edge (a
-join at its last line, a backspace at its first) extends it to the cursor, so the cursor always sits on a source row and
-an edit goes where you see it. A change from elsewhere while you aren't typing (an agent's write, a `:%s`) reopens it on
-the cursor's block at its opening size, never stretched by the lines the change added. The cursor placed on a line
-outside it (`cgn`, `n`, undo) moves it there first.
+subsection with it — not padded. A rule (`---`) divides as a heading does: the blocks between two rules, or between a
+rule and a heading, are a part, the innermost of all (a scratch's entry, D268). A section too tall for it, or text
+before the first heading and no rule, is its blocks: it opens on the cursor's block and takes in the neighbours (below,
+then above) until it has `[editor] lens_min_rows` rows of markdown (6), so a one-line paragraph isn't a sliver and small
+moves don't reshape it. It never splits a block. An edit inside it (typing, `dd`, a replace) keeps its lines, grown or
+shrunk by the edit; typing that reaches past an edge (a join at its last line, a backspace at its first) extends it to
+the cursor, so the cursor always sits on a source row and an edit goes where you see it. A change from elsewhere while
+you aren't typing (an agent's write, a `:%s`) reopens it on the cursor's block at its opening size, never stretched by
+the lines the change added. The cursor placed on a line outside it (`cgn`, `n`, undo) moves it there first.
 
 **Moving while it's open.** The cursor stays in it. Moving inside changes nothing; moving past an edge into a section
 that fits moves it to that section whole, and elsewhere brings the next block in, dropping the far ones once it's taller
