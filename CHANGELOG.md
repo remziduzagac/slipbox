@@ -8,6 +8,10 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 
 ### Added
 
+- The top bar counts the messages said since you last opened their list (`✉ 2`), in the warning or error colour when
+  one of them is a warning or an error; a click on it opens the list. About slipbox starts with what slipbox is and
+  ends with where to start: all keys and commands and the command palette, run from it with your keys, and the key
+  that opens the which-key popup.
 - Each scratch entry says when it was added: `When:` with your local time and its offset from UTC. An entry's `At:`
   is a link that opens the file at those lines. The scratch marks a place whose lines have moved (`space c a` points
   it at their new place), changed or lost their file. In the scratch, `space s e` copies the entry under the cursor and
@@ -90,6 +94,9 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 
 ### Changed
 
+- The top bar: `slipbox` at the left opens About slipbox, not the command palette, with a green `↑` right after it when
+  an upgrade is available. The version is no longer on the bar; About slipbox shows it. Where you are moved from the
+  middle to the right, next to the work and messages counts.
 - A scratch entry's `When:`, `At:` and `Note:` sit on consecutive lines, the captured lines between them with one
   blank line each side. `esc` no longer closes the floating scratch; `q` does. The lens opens on what lies between two
   horizontal rules, as it does on a heading's section, so it holds one scratch entry. A code block with no language and

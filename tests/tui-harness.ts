@@ -16,7 +16,7 @@ import { openGraph } from "../src/core/workspace/graph/graph.ts";
 import { locateVault } from "../src/core/workspace/vaults/vault.ts";
 import { App, type Host } from "../src/tui/app/runtime/app.ts";
 import { TextCanvas } from "../src/tui/shell/terminal/canvas.ts";
-import { locationItems } from "../src/tui/shell/screen/topbar/location.ts";
+import { whereSegments } from "../src/tui/shell/screen/topbar/location.ts";
 import type { Line } from "../src/core/rendering/layout/ir.ts";
 
 export { onlyRootsUnder } from "./support/vault-roots.ts";
@@ -162,7 +162,7 @@ export const statusRow = (frame: string) => frame.split("\n").at(-1)!;
 export const topRow = (frame: string) => frame.split("\n")[0]!;
 /** Uncut workspace/git items from the permanent bar; zoom has a separate target (VB-D3). */
 export const whereNow = (h: Harness) =>
-  locationItems(h.app)
+  whereSegments(h.app)
     .filter((item) => item.id === "top:vault" || item.id === "top:branch")
     .map((item) => item.text.slice(item.text.indexOf(" ") + 1))
     .join(" │ ");

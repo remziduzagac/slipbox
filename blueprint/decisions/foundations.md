@@ -665,3 +665,23 @@ wrongly. `esc` pressed once too many shut what you were writing in; `q` is what 
 
 **Cost:** entries written before keep their old shape (blank lines, no `**When:**`); an entry without captured lines
 (a line's capture, text alone) or with a review's diff has nothing to check its place against.
+
+## D269: The top bar in sections: the branding and its badge at the left, About's; no version on it (#104, 2026-11-08)
+
+**Decision:** A bar is made of **segments**, each a part clicked on its own, grouped into **sections**; the glossary,
+the docs and the code's types (`Segment`) use the two words. The top bar's left section is the branding, `slipbox`, and
+a green `↑` right after it when a newer version is available: both open About, which the palette's click gives way to.
+The version is no longer on the bar; About has it, with a line on what slipbox is and its basics: all keys and commands
+and the palette, run from it with the keys as configured, and the leader that opens the which-key. At the right, Where
+you are, then the work count and a messages count: what was said since the messages list was last opened, coloured by
+the worst of it, a click opening the list. Short of room, the two counts shrink, then go, before Where you are gives
+way; the branding and its badge stay. Decided in a review of the screen, tried in a running build; one pull request.
+
+**Why:** The maintainer's calls. "Item", "group", "block" and "chip" named the same two things differently in each
+place. The version is information you look up, not watch: About is a click away, and the bar's room goes to where you
+are. The branding is what a first-time user clicks; About is where they learn the three things that lead to the rest.
+A message fades from the status line in seconds, and a warning missed there was lost until the list was opened.
+
+**Cost:** the palette has no click of its own on the bar (it has three keys, and a row in About); a preview build no
+longer says so on the bar, only in About; the messages count moves with every message, informational ones included.
+Where you are at the left, after the badge, was tried too and is left to decide later.

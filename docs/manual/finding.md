@@ -467,8 +467,8 @@ From the command line, `slipbox types` lists the types, and `slipbox types adr` 
 
 ## A command by its name: the palette
 
-1. Press `:` to open the command palette. `ctrl+shift+p`, `space f p` or a click on the `slipbox` chip in the top bar
-   opens it too.
+1. Press `:` to open the command palette. `ctrl+shift+p` or `space f p` opens it too, and so does its row in About
+   slipbox (a click on `slipbox` in the top bar).
 2. Type part of a command's name.
 3. Press `enter` to run it.
 

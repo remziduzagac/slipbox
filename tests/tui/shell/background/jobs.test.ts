@@ -24,22 +24,24 @@ function environment(version = "0.5.1", by: UpdateEnv["by"] = "installer"): Upda
 }
 
 describe("work and version (#94)", () => {
-  test("idle, busy, paused and preview bar items; upgrade has its own green role", async () => {
+  test("idle, busy and paused work on the bar; no version there, About has it; an upgrade a green badge after slipbox (#104)", async () => {
     const h = await harness({ width: 220 });
     h.app.updates.env = environment();
     expect(topRow(h.frame())).toContain(" 0 ");
-    expect(topRow(h.frame())).toContain("0.5.1");
+    expect(topRow(h.frame())).not.toContain("0.5.1");
     const done = h.app.background.begin("Indexing", () => {}, { pause: () => {} });
     expect(topRow(h.frame())).toContain(" 1 ");
     const id = [...h.app.background.tasks.keys()][0]!;
     await h.app.run(`background.pause ${id}`);
     expect(topRow(h.frame())).toContain(" 1 ");
     h.app.updates.env = environment("0.5.2-preview.202610251200.gabcdef1");
-    expect(topRow(h.frame())).toContain("0.5.2-P");
-    expect(topRow(h.frame())).not.toContain("abcdef1");
+    expect(topRow(h.frame())).not.toMatch(/0\.5\.2|abcdef1/);
+    expect(h.app.geometry!.hot.some((r) => r.id === "top:upgrade")).toBe(false);
     h.app.updates.available = "0.5.2";
     const canvas = h.canvas();
     const hit = h.app.geometry!.hot.find((r) => r.id === "top:upgrade")!;
+    const brand = h.app.geometry!.hot.find((r) => r.id === "top:brand")!;
+    expect([topRow(h.frame()).startsWith(" slipbox ↑ "), hit.x]).toEqual([true, brand.x + brand.w]);
     expect(canvas.styles[hit.y]![hit.x]!.fg).toBe(h.app.theme.roles.upgrade_available.fg!);
     done();
   });
@@ -164,9 +166,16 @@ describe("work and version (#94)", () => {
     h.app.updates.env = env;
     await h.keys("space", "a");
     expect(list(h.app).items.map((r) => r.label)).toEqual([
+      "Read, review and edit what your coding agent writes, in your terminal.",
+      "",
       "slipbox 0.5.1",
       "Channel: stable",
       "Previous version: 0.5.0",
+      "",
+      "Start here",
+      "All keys and commands",
+      "The command palette: any command by its name",
+      "The which-key: the keys that can come next",
     ]);
     expect(h.frame()).toContain("slipbox 0.5.1");
     expect(h.frame()).not.toContain("nothing here");
@@ -178,8 +187,8 @@ describe("work and version (#94)", () => {
     h.app.updates.env = environment("0.5.2-preview.202610251200.gabcdef1", "homebrew");
     await h.app.run("app.about");
     const rows = list(h.app).items;
-    expect(rows[0]!.label).toContain("202610251200.gabcdef1");
-    expect(rows[1]!.label).toBe("Channel: preview");
+    expect(rows[2]!.label).toContain("202610251200.gabcdef1");
+    expect(rows[3]!.label).toBe("Channel: preview");
     expect(rows.some((r) => r.label.includes("brew upgrade slipbox"))).toBe(true);
     expect(rows.some((r) => r.data === "app.upgrade")).toBe(false);
     h.app.updates.available = "0.5.3-preview.202610251201.gabcdef2";

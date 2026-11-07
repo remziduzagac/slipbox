@@ -1,4 +1,4 @@
-// Capabilities read by the permanent location group; the active client still owns every value.
+// Capabilities read by the top bar's Where you are section; the active client still owns every value.
 import type { Glyphs } from "../../../../core/rendering/theme/glyphs.ts";
 import type { VaultLocation } from "../../../../core/workspace/vaults/vault.ts";
 import type { Track } from "../../../../core/workspace/git/branches/gitremote.ts";

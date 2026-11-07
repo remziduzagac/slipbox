@@ -119,6 +119,10 @@ what replaced them.
   [how-it-works.md](how-it-works.md) § Storage.
 - **Row marks**: an explorer row's columns at its right: the index's state, git's mark, what describes the row
   (VV-D9); why one is `⊘`, on the status line and in Info (D244). [tui.md](tui.md) § Side panes.
+- **Section**: a named group of a bar's segments, drawn as one, with its own background: on the top bar, the
+  branding and its badge, Where you are, the work and the messages (D269). [tui.md](tui.md) § Screen layout.
+- **Segment**: one part of a bar, clicked on its own: `◈ halden`, `● 3`, `190 words` (D269). Not "item", "block" or
+  "chip". [tui.md](tui.md) § Screen layout.
 - **Session**: the file a vault's workspaces are kept in, with what they share (`session.json`, the `Session`); users
   read workspace (WSP-D6). [tui.md](tui.md) § Positions.
 - **SOURCE view**: a note shown as its raw markdown: another layout of the same note. [tui.md](tui.md) § SOURCE view.
@@ -142,7 +146,7 @@ what replaced them.
   still holds a buffer with its own cursor, top row, selection and find; a **tab** holds one, or two in a split.
   [tui.md](tui.md) § Buffers, views, tabs, windows.
 - **The walk**: the listing of a vault's files, shared by the index and the watcher. [roots.md](roots.md) § The walk.
-- **Where you are**: explorer zoom, workspace and git, grouped on the permanent top bar (VB-D3, VB-D6).
+- **Where you are**: explorer zoom, workspace and git, a section of the permanent top bar (VB-D3, VB-D6, D269).
   [tui.md](tui.md) § Screen layout.
 - **Which-key**: the popup listing the keys a pending sequence can take next. [tui.md](tui.md) § Screen layout.
 - **Wikilink**: `[[name]]` or `[[path#heading|text]]`, a link by name or path, within its vault.

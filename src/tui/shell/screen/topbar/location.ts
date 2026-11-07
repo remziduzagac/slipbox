@@ -3,9 +3,10 @@ import type { Role } from "../../../../core/rendering/theme/theme.ts";
 import { sanitize } from "../../../../core/foundation/text/sanitize.ts";
 import { tildePath } from "../../../../core/workspace/vaults/names.ts";
 import { whereOf } from "./where.ts";
-import type { LocationItem } from "./fit-location.ts";
+import type { Segment } from "./fit-location.ts";
 
-export function locationItems(app: LocationContext): LocationItem[] {
+/** Where you are's segments: the explorer's place, the workspace, the branch, the changed count. */
+export function whereSegments(app: LocationContext): Segment[] {
   const w = whereOf(app);
   const g = app.glyphs;
   const workspace = app.homeFolder ?? (app.loc.mode === "home" ? "~" : w.vault);

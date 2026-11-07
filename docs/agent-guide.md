@@ -25,7 +25,7 @@ saved files. Unsaved TUI changes remain in its buffer until saved.
 1. **Notes are files.** A note is a Markdown file in a folder. slipbox has no proprietary database of notes; indexes
    are rebuildable caches. Opening a folder writes nothing
    into it.
-2. **The screen.** The top bar shows place, work and version; the explorer is on the left, the note on the right,
+2. **The screen.** The top bar shows place, work and messages; the explorer is on the left, the note on the right,
    and the status line at the bottom. The mouse works
    everywhere: click a note, a link, a tab.
 3. **Two keys teach the rest.** `space` shows the keys that can follow it. `?` lists every key, with a filter. The

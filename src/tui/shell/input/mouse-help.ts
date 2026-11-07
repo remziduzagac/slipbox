@@ -32,7 +32,11 @@ export const MOUSE_HELP: [string, string[], string][] = [
     ["click"],
     "On a rail: ≡ the explorer, ◷ the history, ± source control, ℹ Info, ▤ the outline, ¹ the footnotes, focused; again hides it",
   ],
-  ["Open the command palette", ["click"], "On the top bar's slipbox"],
+  [
+    "About slipbox",
+    ["click"],
+    "On the top bar's slipbox or the upgrade's arrow: what it is, the version, the upgrade, help and the palette",
+  ],
   ["Go into another vault", ["click"], "On the top bar's workspace: the vault list, enter goes into one"],
   [
     "Switch a window's mode",

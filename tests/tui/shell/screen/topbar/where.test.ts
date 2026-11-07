@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { locationItems } from "../../../../../src/tui/shell/screen/topbar/location.ts";
+import { whereSegments } from "../../../../../src/tui/shell/screen/topbar/location.ts";
 import { whereOf } from "../../../../../src/tui/shell/screen/topbar/where.ts";
 import type { LocationContext } from "../../../../../src/tui/shell/screen/topbar/contracts.ts";
 import { makeCoreSandbox } from "../../../../support/core-sandbox.ts";
@@ -20,7 +20,7 @@ describe("location selectors from explicit data capabilities", () => {
   test("vault, branch and distinct changed paths keep independent item identities", () => {
     const host = fixture();
     const context = { ...host, git: { ...host.git, entries: [{ path: "a.md" }, { path: "a.md" }, { path: "b.md" }] } };
-    expect(locationItems(context)).toEqual([
+    expect(whereSegments(context)).toEqual([
       { text: "E /example/zoom", id: "top:zoom", role: "topbar" },
       { text: "V work", id: "top:vault", role: "topbar" },
       { text: "B topic", compact: "B topic", id: "top:branch", role: "status_dim" },
@@ -44,13 +44,13 @@ describe("location selectors from explicit data capabilities", () => {
       },
     };
     expect(whereOf(context)).toEqual({ vault: "Elsewhere", branch: null, track: "", op: "" });
-    expect(locationItems(context).map((item) => item.id)).toEqual(["top:zoom", "top:vault"]);
+    expect(whereSegments(context).map((item) => item.id)).toEqual(["top:zoom", "top:vault"]);
   });
 
   test("workspace label stays independent of zoom and branch text is sanitized", () => {
     const host = fixture();
     const context = { ...host, homeFolder: "workspace", git: { ...host.git, branch: () => "topic\u001b[31m" } };
-    const items = locationItems(context);
+    const items = whereSegments(context);
     expect(items[0]!.text).toBe("E /example/zoom");
     expect(items[1]!.text).toBe("V workspace");
     expect(items[2]!.text).toBe("B topic");

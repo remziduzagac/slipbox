@@ -481,7 +481,7 @@ These are the roles of the screen most worth changing:
 | Role | What it colours |
 | --- | --- |
 | `border` | the frame, the panes' borders and the rules |
-| `topbar_chip` | the `slipbox` chip |
+| `topbar_chip` | the top bar's `slipbox` |
 | `upgrade_available` | the available-upgrade arrow, green by default |
 | `topbar_group` | the faint background of each top-bar group |
 | `picture_caption` | a standalone picture caption's background |

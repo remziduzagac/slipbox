@@ -1,9 +1,10 @@
 import type { Role } from "../../../../core/rendering/theme/theme.ts";
 import { stringWidth, truncateStart, truncate } from "../../../../core/foundation/text/width.ts";
 
-export type LocationItem = { text: string; id: string; role: Role; compact?: string };
-/** Location survives narrowing; tracking gives way before branch, then the changed count. */
-export function fitLocation(items: LocationItem[], width: number, separator: string, tight = false): LocationItem[] {
+/** One part of a bar (`◈ halden`, `190 words`); a section is a named group of them (#104). */
+export type Segment = { text: string; id: string; role: Role; compact?: string };
+/** Where you are, fitted: the place survives narrowing; tracking gives way before branch, then the changed count. */
+export function fitLocation(items: Segment[], width: number, separator: string, tight = false): Segment[] {
   const out = items.map((item) => ({ ...item }));
   const size = () =>
     out.reduce((n, item) => n + stringWidth(item.text) + (tight ? 0 : 2), tight ? 0 : 2) +

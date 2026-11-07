@@ -1100,8 +1100,8 @@ it back to the terminal.
 | `▤` on the right rail (without it, on the window header or the top bar) | shows the outline, focused, or hides it |
 | `¹` on the right rail | shows the footnotes, focused, or hides them |
 | the top bar's work count | opens background work; `s` stops, `r` restarts, `p` pauses or resumes |
-| the top bar's version or upgrade arrow | opens About slipbox |
-| the top bar's `slipbox` | opens the command palette |
+| the top bar's `slipbox` or upgrade arrow | opens About slipbox: the version, the upgrade, help and the palette |
+| the top bar's messages count | opens the messages list, setting the count back to `0` |
 | a window header's `Read` / `Lens` / `Source` | shows it rendered, in the lens or as written; one in italics, why not |
 | the top bar's explorer zoom | opens and focuses the explorer |
 | the top bar's changed-file count | opens source control |

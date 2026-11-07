@@ -13,6 +13,8 @@ export interface Glyphs {
   groupRight: string;
   workSpinner: string[];
   upgrade: string;
+  /** The top bar's messages segment (#104). */
+  messages: string;
   changed: string;
   lensJoin: string;
   heading: [string, string, string, string, string, string];
@@ -186,6 +188,7 @@ const unicode: Glyphs = {
   groupRight: " ",
   workSpinner: ["◴", "◷", "◶", "◵"],
   upgrade: "⇡",
+  messages: "✉",
   changed: "●",
   lensJoin: "·",
   heading: ["▌", "▌", "▌", "▌", "▌", "▌"],
@@ -313,6 +316,7 @@ const unicode: Glyphs = {
 
 const nerd: Glyphs = {
   ...unicode,
+  messages: "\u{ea6b}", // nf-cod-comment
   problemError: "\u{ea87}", // nf-cod-error
   problemWarn: "\u{ea6c}", // nf-cod-warning
   problemInfo: "\u{ea74}", // nf-cod-info
@@ -366,6 +370,7 @@ const ascii: Glyphs = {
   groupRight: " ",
   workSpinner: ["~"],
   upgrade: "^",
+  messages: "m",
   changed: "*",
   lensJoin: "-",
   heading: ["#", "##", "###", "####", "#####", "######"],
