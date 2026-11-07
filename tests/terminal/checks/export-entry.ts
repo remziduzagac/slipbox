@@ -10,10 +10,12 @@ export const EXPORT_ENTRY: Check[] = [
     covers: { cases: ["ui"], commands: ["background.open", "background.cancel", "note.export"] },
     options: { ...HOLD, env: { ...HOLD.env, EXPORT_HOLD_AT: "before-publication" } },
     run: async (s) => {
+      // The vault's own index pass over first: a slow runner still has it going, a second task counted.
+      await s.until(() => / 0 /.test(s.topBar()), 15000, "the vault's index pass over");
       await format(s, "home.md", "html");
       await s.keys("enter");
       await s.until(() => hold(s) === "waiting", 15000, "export held before publication");
-      s.expect(/ 1 /.test(s.topBar()), "busy count shown without a spinner");
+      await s.until(() => / 1 /.test(s.topBar()), 5000, "busy count shown without a spinner");
       await leader(s, "b");
       await s.see("Background work");
       await s.see("Restart");
