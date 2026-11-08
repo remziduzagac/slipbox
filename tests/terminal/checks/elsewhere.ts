@@ -2,7 +2,7 @@
 
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { type Check, downloadsElsewhere, open, opened } from "../check.ts";
+import { type Check, downloadsElsewhere, goInto, open, opened } from "../check.ts";
 import { sleep } from "../session.ts";
 import { lastMessage } from "../support/links.ts";
 import { symlinkOnce, tab } from "../support/vaults.ts";
@@ -25,11 +25,13 @@ export const ELSEWHERE: Check[] = [
       await s.see(tab(2, "sync-rewrite.md"));
       // A file outside home and every vault, chosen: into Elsewhere (VV-D3, VV-D4), its tabs, none of notes'.
       await s.ex(`e ${join(s.dir, "elsewhere", "stray-note.md")}`);
+      await goInto(s);
       await s.where("Elsewhere", /stray-note\.md/, 5000);
       await s.notSee(tab("\\d", "sync-rewrite.md"));
       await s.notSee(tab("\\d", "index.md"));
       // Back: notes, its two tabs, at the note left.
       await s.keys("ctrl+o");
+      await goInto(s);
       await opened(s, "projects/sync-rewrite.md");
       await s.where(/^notes(?: │|$)/);
       await s.see(tab(1, "index.md"));

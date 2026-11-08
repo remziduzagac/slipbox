@@ -1,6 +1,6 @@
 // The Git panel in a vault holding repositories: attention order, checkouts, diffs and navigation.
 
-import { type Check, leader } from "../check.ts";
+import { type Check, goInto, leader } from "../check.ts";
 import { repositories } from "../support/vaults.ts";
 
 export const GIT_PANEL: Check[] = [
@@ -43,6 +43,7 @@ export const GIT_PANEL: Check[] = [
       await s.keys("shift+g");
       await s.see("o go in");
       await s.keys("o");
+      await goInto(s);
       await s.where(/alpha │ main$/, null, 5000);
     },
   },

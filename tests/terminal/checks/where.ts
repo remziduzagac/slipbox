@@ -3,7 +3,7 @@
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { VERSION } from "../../../src/version.ts";
-import { type Check, leader } from "../check.ts";
+import { type Check, goInto, leader } from "../check.ts";
 import { SIZE, type Session } from "../session.ts";
 import { columnOf, mouse } from "./source-control.ts";
 
@@ -121,6 +121,7 @@ export const WHERE: Check[] = [
       await s.keys("/");
       await s.type("kestrel");
       await s.keys("enter");
+      await goInto(s);
       await s.where(/^kestrel │ main\b/, /‹ README\.md/, 5000);
     },
   },

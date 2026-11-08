@@ -103,7 +103,12 @@ export interface ExplorerNavigationContext extends ExplorerUiContext {
   readonly settings: { setUi(name: "hidden_files", value: boolean): void };
   readonly scratch: { location(): { path: string } };
   readonly vaults: {
-    switchVault(target: VaultLocation, open: string | null, anchor?: undefined, how?: { folder: string }): boolean;
+    switchVault(
+      target: VaultLocation,
+      open: string | null,
+      anchor?: undefined,
+      how?: { folder: string; after: () => void },
+    ): boolean;
   };
 }
 

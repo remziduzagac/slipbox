@@ -8,6 +8,9 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 
 ### Added
 
+- The explorer dims what's outside the vault you are in: nothing there is changed from it. A theme role of its own,
+  `sidebar_outside`, sets its colour.
+
 - The top bar counts the messages said since you last opened their list (`✉ 2`), in the warning or error colour when
   one of them is a warning or an error; a click on it opens the list. About slipbox starts with what slipbox is and
   ends with where to start: all keys and commands and the command palette, run from it with your keys, and the key
@@ -94,6 +97,10 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 
 ### Changed
 
+- Going into another vault asks first, whatever the way in (the explorer, `space v v`, `ctrl+click`, `:e`, git's Open,
+  `o` in a peek, `ctrl+o` back): **Go**, **Stay**, or, when you were opening a note, **Peek at** it, read-only, where
+  you are. With unsaved notes, their question is the only one.
+
 - The top bar: `slipbox` at the left opens About slipbox, not the command palette, with a green `↑` right after it when
   an upgrade is available. The version is no longer on the bar; About slipbox shows it. Where you are moved from the
   middle to the right, next to the work and messages counts.
@@ -143,6 +150,9 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 
 - The explorer's breadcrumb: a click on `…`, where the first folders fold when they don't fit, zooms out to the
   nearest of them, as a click on that folder would. It did nothing.
+
+- The explorer's keys on a row outside the vault say it's outside (or that it's the vault you are in, or left out of
+  it), not "select a note, file or folder first".
 
 - A selection captured in a rendered note goes to the scratch as the file has it (`- item`), not as drawn (`• item`).
   Code captured from a code file is highlighted in the scratch. Code blocks show in floating windows such as the

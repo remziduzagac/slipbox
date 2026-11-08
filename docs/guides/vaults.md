@@ -198,7 +198,7 @@ repository gets the notes vault too. `--private` keeps it on this machine, out o
 
 From kestrel, now:
 
-- The explorer marks `notes` `◈`, as a vault. `enter` on it goes into it.
+- The explorer marks `notes` `◈`, as a vault. `enter` on it asks, then goes into it.
 - kestrel's search doesn't find the notes, and `ctrl+a` widens it to them.
 - A link from `docs/architecture.md` to `../notes/decisions.md` opens a peek, `kestrel-notes › decisions.md`.
 

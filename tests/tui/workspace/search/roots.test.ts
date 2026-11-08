@@ -5,7 +5,7 @@ import { DEFAULT_CONFIG } from "../../../../src/core/application/config/config.t
 import { openGraph } from "../../../../src/core/workspace/graph/graph.ts";
 import type { ListOverlay } from "../../../../src/tui/app/runtime/app.ts";
 
-import { makeSandbox, harness, onlyRootsUnder } from "../../../tui-harness.ts";
+import { answerSwitch, makeSandbox, harness, onlyRootsUnder } from "../../../tui-harness.ts";
 
 // The model harness applies the file-local timeout and sandbox policy.
 const sandbox = makeSandbox();
@@ -63,6 +63,7 @@ describe("vaults in the TUI (17.x)", () => {
       expect(h.app.view!.buf.abs).toBe(join(app, "w2.md"));
       expect(h.app.view!.curAnchor.anchor.line).toBe(3);
       await h.keys("o");
+      await answerSwitch(h);
       expect(h.app.loc.root).toBe(app);
       expect(h.app.view!.buf.rel).toBe("w2.md");
       expect(h.app.view!.curAnchor.anchor.line).toBe(3);

@@ -154,7 +154,14 @@ describe("the explorer's file operations and buttons (18.x)", () => {
     h.app.explorer.select("notes/alpha.md");
     await h.keys("d", "y");
     expect(existsSync(join(a, "notes", "alpha.md"))).toBe(false);
-    h.app.vaults.switchVault((await import("../../../../src/core/workspace/vaults/vault.ts")).rootAt(b), null);
+    h.app.vaults.switchVault(
+      (await import("../../../../src/core/workspace/vaults/vault.ts")).rootAt(b),
+      null,
+      undefined,
+      {
+        asked: true,
+      },
+    );
     expect(h.app.loc.root).toBe(b);
     h.app.files.pasteItem();
     expect(h.app.messages.at(-1)!.text).toBe("nothing copied or cut: y copies, x cuts");

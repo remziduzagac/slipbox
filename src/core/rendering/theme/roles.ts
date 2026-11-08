@@ -102,6 +102,9 @@ export const ROLES = [
   "sidebar_selected",
   "sidebar_active",
   "sidebar_root",
+  // a row outside the vault open's own tree (#104): above it, beside it, in another vault, left out by its walk —
+  // nothing there is this vault's to change
+  "sidebar_outside",
   // a row's mark in the explorer that it's indexed (VV-D9): dimmed, since most folders are
   "sidebar_mark",
   // a file's git state in the explorer (5.11); a diff's added and removed lines (5.13), and a changed line's changed

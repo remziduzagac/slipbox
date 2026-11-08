@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { DEFAULT_CONFIG } from "../../../../src/core/application/config/config.ts";
-import { makeSandbox, makeVault, harness, type Harness } from "../../../tui-harness.ts";
+import { answerSwitch, makeSandbox, makeVault, harness, type Harness } from "../../../tui-harness.ts";
 
 // The model harness applies the file-local timeout and sandbox policy.
 makeSandbox();
@@ -112,6 +112,7 @@ describe("review (tui): the app's floating windows, new paths, roots and repeats
     await type(h, "nested-vault/idea");
     await h.keys("enter");
     expect(existsSync(join(root, "nested-vault", "idea.md"))).toBe(true);
+    await answerSwitch(h); // into the nested root, asked (D270)
     expect(h.app.loc.root).toBe(join(root, "nested-vault"));
     expect(h.app.view!.buf.rel).toBe("idea.md");
     expect(h.app.view!.insert).toBe(true); // typed into, as any new note

@@ -1,7 +1,7 @@
 // Named folders, their copies and pointers, and linked-folder search (TT-T6).
 
 import { readFileSync } from "node:fs";
-import { type Check, follow, leader, moveTo, opened } from "../check.ts";
+import { type Check, follow, goInto, leader, moveTo, opened } from "../check.ts";
 import type { Session } from "../session.ts";
 import { lastMessage, PEEK_HINT } from "../support/links.ts";
 
@@ -93,6 +93,7 @@ export const NAMED: Check[] = [
       await follow(s, "Kyoto notes");
       await s.see("photography › trips/", 5000); // a peek (VV-D7): o goes into photography
       await s.keys("o");
+      await goInto(s);
       await s.notSee(PEEK_HINT);
       await s.where(/^photography(?: │|$)/);
       await s.see("Kyoto"); // the trip's index, in the photography folder
@@ -102,6 +103,7 @@ export const NAMED: Check[] = [
       await follow(s, "his notes");
       await s.see("notes › projects/sync-rewrite.md", 5000);
       await s.keys("o");
+      await goInto(s);
       await s.notSee(PEEK_HINT);
       await s.where(/^notes(?: │|$)/);
       await opened(s, "projects/sync-rewrite.md");
@@ -111,6 +113,7 @@ export const NAMED: Check[] = [
       await s.keys("enter", "escape", "tab", "enter");
       await s.see(PEEK_HINT, 5000);
       await s.keys("o");
+      await goInto(s);
       await s.notSee(PEEK_HINT);
       await s.where(/^kestrel │ agent\/sync-retry\b/);
       await opened(s, "docs/sync.md");
@@ -181,6 +184,7 @@ export const NAMED: Check[] = [
       await follow(s, "qualified.");
       await s.see("kestrel › docs/architecture.md", 5000); // a peek (VV-D7): o goes there
       await s.keys("o");
+      await goInto(s);
       await s.where(/^kestrel(?: │|$)/);
       await opened(s, "docs/architecture.md");
       s.expect(!/engine-spike/.test(s.whereText()), `kestrel, not the spike:\n${s.topBar()}`);
@@ -194,6 +198,7 @@ export const NAMED: Check[] = [
       await s.keys("enter");
       await s.see("kestrel › README.md", 5000);
       await s.keys("o");
+      await goInto(s);
       await s.where(/^kestrel(?: │|$)/);
       await opened(s, "README.md");
       s.expect(!/engine-spike/.test(s.whereText()), `kestrel, not the spike:\n${s.topBar()}`);
@@ -248,6 +253,7 @@ export const NAMED: Check[] = [
         await follow(s, link);
         await s.see("product › prd/route-sharing.md", 5000); // a peek (VV-D7), at its top; o goes there
         await s.keys("o");
+        await goInto(s);
         await opened(s, "prd/route-sharing.md");
         await s.where(/^product(?: │|$)/);
         await s.status(/L1:/);

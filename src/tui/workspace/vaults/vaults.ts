@@ -3,8 +3,8 @@ import { VaultPrompts } from "./vault-prompts.ts";
 // and their copies (21.x).
 
 import { cancelGitRead } from "../git/gitquery.ts";
-import { existsSync } from "node:fs";
-import { dirname, isAbsolute, join } from "node:path";
+import { existsSync, statSync } from "node:fs";
+import { basename, dirname, isAbsolute, join } from "node:path";
 import { writeDirty } from "../../../core/workspace/git/merge/stale.ts";
 import { loadConfig } from "../../../core/application/config/config.ts";
 import { Graph } from "../../../core/workspace/graph/graph.ts";
@@ -20,6 +20,7 @@ import {
 } from "../../../core/workspace/session/position.ts";
 import { stopBacklinkJobs } from "../../../core/workspace/graph/backlinks-jobs.ts";
 import { tuiReach } from "../../documents/navigation/peek.ts";
+import { peekAt } from "../../documents/navigation/peek/opening.ts";
 import { rootLabel, tildePath } from "../../../core/workspace/vaults/names.ts";
 import {
   configFilesFor,
@@ -34,6 +35,10 @@ import {
 import type { App } from "../../app/runtime/app.ts";
 import { uiDefaults, RECENT_MAX, RECENT_NOTES_MAX } from "../../app/runtime/app.ts";
 import { type ExplorerItem, listedDown, type TreeRow } from "../explorer/explorer.ts";
+
+/** How a switch goes: `back` along the trail, into home's `folder` by name, `asked` already (a question answered),
+ *  `made` (a vault made or made part of another: no question), and `after` runs once it went. */
+export type SwitchHow = { back?: boolean; folder?: string; asked?: boolean; made?: boolean; after?: () => void };
 
 /** Vaults: switching, making and unmaking, named folders. */
 export class Vaults {
@@ -55,21 +60,25 @@ export class Vaults {
     target: VaultLocation;
     open: string | null;
     anchor?: Anchor;
-    how: { back?: boolean; folder?: string };
+    how: SwitchHow;
   } | null = null;
 
-  chooseSwitch(choice: "save" | "discard" | "stay"): void {
+  /** The answer to a switch's question: unsaved notes saved or left, the vault gone into, its note peeked at instead
+   *  (D270), or none of it. */
+  chooseSwitch(choice: "save" | "discard" | "go" | "peek" | "stay"): void {
     const pending = this.pendingSwitch;
     this.pendingSwitch = null;
     if (!pending || choice === "stay") return;
+    if (choice === "peek") {
+      if (pending.open) peekAt(this.app, pending.open, pending.target, pending.anchor);
+      return;
+    }
     if (choice === "save") {
       for (const buffer of this.app.dirtyBuffers()) if (!this.app.saving.save(buffer)) return;
     }
-    if (
-      this.switchVault(pending.target, pending.open, pending.anchor, { ...pending.how, discard: true }) &&
-      pending.how.back
-    )
-      this.trail.pop();
+    if (!this.switchVault(pending.target, pending.open, pending.anchor, { ...pending.how, asked: true })) return;
+    if (pending.how.back) this.trail.pop();
+    pending.how.after?.();
   }
 
   /**
@@ -148,17 +157,14 @@ export class Vaults {
   /**
    * Become another root's TUI, as if started there (17.10): its config, index, watcher, reading
    * positions and session — with `open` open (an absolute path), or the session's tabs. Leaving
-   * saves this one's as quitting does. Unsaved notes ask to save all, discard or stay.
+   * saves this one's as quitting does. It asks first (D270): to go, peek at `open` instead or stay — or, with unsaved
+   * notes, to save all, discard or stay. False while it asks; `how.after` runs once it went.
    * `folder`: a folder of home gone into by name (VV-D2: a folder revealed), as `slipbox ~/notes` opens it.
    */
-  switchVault(
-    target: VaultLocation,
-    open: string | null,
-    anchor?: Anchor,
-    how: { back?: boolean; folder?: string; discard?: boolean } = {},
-  ): boolean {
+  switchVault(target: VaultLocation, open: string | null, anchor?: Anchor, how: SwitchHow = {}): boolean {
+    const peeking = this.app.floating?.kind === "peek";
     if (this.app.floating && !this.app.overlays.closeFloating()) return false;
-    if (!how.discard && this.app.dirtyBuffers().length) {
+    if (!how.asked && this.app.dirtyBuffers().length) {
       this.pendingSwitch = { target, open, anchor, how };
       this.app.overlays.openList({
         title: "Unsaved notes — change vault?",
@@ -166,6 +172,28 @@ export class Vaults {
         items: [
           { label: "Save all and go", hotkey: "s", data: "save" },
           { label: "Discard and go", hotkey: "d", data: "discard" },
+          { label: "Stay", hotkey: "c", data: "stay" },
+        ],
+        accept: (item) => this.app.run(`vault.switch_${item.data}`),
+        cancel: () => {
+          this.pendingSwitch = null;
+        },
+      });
+      return false;
+    }
+    // Every way into another vault asks (D270): your workspace there takes this one's place. A vault made, or made part
+    // of the one holding it, is gone into as that was what was asked.
+    if (!how.asked && !how.made) {
+      this.pendingSwitch = { target, open, anchor, how };
+      const name = how.folder && target.mode === "home" ? tildePath(how.folder) : rootLabel(target);
+      // From a peek, staying is going back to it: no other peek offered.
+      const file = open && !peeking && existsSync(open) && statSync(open).isFile() ? open : null;
+      this.app.overlays.openList({
+        title: `Go into ${name}? Your tabs there replace these`,
+        filterable: false,
+        items: [
+          { label: "Go", hotkey: "g", data: "go" },
+          ...(file ? [{ label: `Peek at ${basename(file)}: read it here, read-only`, hotkey: "p", data: "peek" }] : []),
           { label: "Stay", hotkey: "c", data: "stay" },
         ],
         accept: (item) => this.app.run(`vault.switch_${item.data}`),
@@ -377,7 +405,7 @@ export class Vaults {
    * (17.10, VV-D4); true when it was (or the switch was refused). In Elsewhere, a file of Elsewhere opens there: it's
    * one place, wherever its files are.
    */
-  intoOther(path: string, anchor?: Anchor): boolean {
+  intoOther(path: string, anchor?: Anchor, after?: () => void): boolean {
     // slipbox's own files (the scratch, in its state folder under ~) are no vault's to go into, home's neither (VV-D2).
     if (!isAbsolute(path) || !existsSync(path) || slipboxOwn(path)) return false;
     let target: VaultLocation;
@@ -387,7 +415,7 @@ export class Vaults {
       return false;
     }
     if (target.mode === "folder" ? this.app.loc.mode === "folder" : target.root === this.app.loc.root) return false;
-    this.switchVault(target, path, anchor);
+    if (this.switchVault(target, path, anchor, after ? { after } : {})) after?.();
     return true;
   }
 

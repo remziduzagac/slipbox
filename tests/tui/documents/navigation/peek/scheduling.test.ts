@@ -24,7 +24,7 @@ import { homeAt, initVault, locateVault, recordLocation } from "../../../../../s
 import * as vaultModule from "../../../../../src/core/workspace/vaults/vault.ts";
 
 import { keepCaughtUp, peekOf, peekProbe, vaultGraph } from "../../../../../src/tui/documents/navigation/peek.ts";
-import { harness, onlyRootsUnder } from "../../../../tui-harness.ts";
+import { answerSwitch, harness, onlyRootsUnder } from "../../../../tui-harness.ts";
 import { makePeekFixture } from "../../../../support/tui/peek-fixture.ts";
 
 // File-owned peek setup retains its model sandbox and afterEach mock reset.
@@ -181,6 +181,7 @@ test("going into the peeked vault lets go of what its thread works on: its answe
       expect(sent.map((m) => m.rel)).toEqual(["design.md"]);
       const reading = peekOf(h.app)!.reading;
       await h.keys("o");
+      await answerSwitch(h);
       expect(h.app.loc.root).toBe(app);
       expect(thread.stopped).toBe(1);
       await reading; // answered null: nothing shown, nothing waited for

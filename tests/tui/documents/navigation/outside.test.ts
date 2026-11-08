@@ -8,7 +8,7 @@ import { tildePath } from "../../../../src/core/foundation/platform/paths.ts";
 import { probe, setLinkAnswer } from "../../../../src/core/workspace/vaults/symlinks.ts";
 import type { ListOverlay } from "../../../../src/tui/app/runtime/app.ts";
 import { peekOf } from "../../../../src/tui/documents/navigation/peek.ts";
-import { makeSandbox, harness, onlyRootsUnder, type Harness } from "../../../tui-harness.ts";
+import { answerSwitch, makeSandbox, harness, onlyRootsUnder, type Harness } from "../../../tui-harness.ts";
 
 // The model harness applies the file-local timeout and sandbox policy.
 const sandbox = makeSandbox();
@@ -51,6 +51,7 @@ describe("out of the vault open, the links of the place a file is in: the peek, 
     expect(h.app.floating?.kind).toBe("peek");
     expect(held(h)).toBe(false);
     await h.keys("o");
+    await answerSwitch(h);
     expect(h.app.loc.root).toBe(cloned);
     expect((h.app.overlay as ListOverlay).title).toContain("leads out of");
     expect(held(h)).toBe(false);

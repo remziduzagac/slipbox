@@ -7,7 +7,7 @@ import { locateVault } from "../../../../src/core/workspace/vaults/vault.ts";
 import type { ListOverlay } from "../../../../src/tui/app/runtime/app.ts";
 
 import { peekOf } from "../../../../src/tui/documents/navigation/peek.ts";
-import { makeSandbox, makeVault, harness, onlyRootsUnder } from "../../../tui-harness.ts";
+import { answerSwitch, makeSandbox, makeVault, harness, onlyRootsUnder } from "../../../tui-harness.ts";
 
 // The model harness applies the file-local timeout and sandbox policy.
 const sandbox = makeSandbox();
@@ -102,6 +102,7 @@ describe("vaults in the TUI (17.x)", () => {
     const { notes, app, n } = await twoVaults();
     const h = await harness({ root: notes, open: "index.md" });
     await h.keys("tab", "enter", "o");
+    await answerSwitch(h);
     expect(h.app.floating).toBeNull();
     expect(h.app.loc.root).toBe(app);
     expect(h.app.loc.name).toBe(`tapp${n}`);
@@ -112,11 +113,13 @@ describe("vaults in the TUI (17.x)", () => {
     expect(h.frame()).toContain("Design");
     // The first place in this vault: back goes to the vault before, at the link.
     await h.app.run("history.back");
+    await answerSwitch(h);
     expect(h.app.loc.root).toBe(notes);
     expect(h.app.view!.buf.rel).toBe("index.md");
     // A path out of the root, without a heading: ctrl+click's command goes there at once, no peek between.
     await h.keys("tab", "tab");
     await h.app.run("link.go");
+    await answerSwitch(h);
     expect(h.app.floating).toBeNull();
     expect(h.app.loc.root).toBe(app);
     expect(h.app.view!.buf.rel).toBe("design.md");
@@ -161,10 +164,12 @@ describe("vaults in the TUI (17.x)", () => {
     expect(h.app.messages.at(-1)!.text).toContain(`read-only here: tapp${n}'s — go into tapp${n} to edit it`);
     // Go there, from the tab: into its vault, at the same place; back, into this vault again.
     await h.app.run("peek.go");
+    await answerSwitch(h);
     expect(h.app.loc.root).toBe(app);
     expect(h.app.view!.buf.rel).toBe("design.md");
     expect(h.app.view!.buf.readOnly).toBeNull();
     await h.app.run("history.back");
+    await answerSwitch(h);
     expect(h.app.loc.root).toBe(notes);
   });
 
@@ -281,6 +286,7 @@ describe("vaults in the TUI (17.x)", () => {
     h.frame();
     await Bun.sleep(400); // past a double-click
     await click(true);
+    await answerSwitch(h);
     expect(h.app.floating).toBeNull();
     expect(h.app.loc.root).toBe(app);
     expect(h.app.view!.buf.rel).toBe("design.md");
@@ -357,9 +363,11 @@ describe("vaults in the TUI (17.x)", () => {
       expect(h.app.view!.curAnchor.anchor.line).toBe(5);
       expect(h.copied).toEqual([]); // followed, not copied as a URL
       await h.keys("o");
+      await answerSwitch(h);
       expect(h.app.loc.root).toBe(app);
       expect(h.app.view!.buf.rel).toBe("design.md");
       await h.app.run("history.back");
+      await answerSwitch(h);
       expect(h.app.view!.buf.rel).toBe("paths.md");
       await h.keys("tab", "tab", "enter");
       expect(h.app.loc.root).toBe(notes);

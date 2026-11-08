@@ -4,7 +4,7 @@ import { homedir } from "node:os";
 import { basename, dirname, join } from "node:path";
 import { DEFAULT_CONFIG } from "../../../../src/core/application/config/config.ts";
 import { tildePath } from "../../../../src/core/foundation/platform/paths.ts";
-import { makeSandbox, harness, type Harness } from "../../../tui-harness.ts";
+import { answerSwitch, makeSandbox, harness, type Harness } from "../../../tui-harness.ts";
 
 // The model harness applies the file-local timeout and sandbox policy.
 const sandbox = makeSandbox();
@@ -219,13 +219,15 @@ describe("the explorer's view (VV-D5)", () => {
     expect(shown(h)).toContain("  x.md");
     await select(h, "x.md");
     expect(h.app.explorer.item()).toBeNull();
-    // Another vault unfolds in place with l, the vault open unchanged; enter goes into it, the view staying.
+    // Another vault unfolds in place with l, the vault open unchanged; enter goes into it, asked (D270), the view
+    // staying.
     await select(h, "code");
     await h.keys("l");
     expect(shown(h)).toContain("  main.ts");
     expect(h.app.loc.root).toBe(join(P, "notes"));
     await select(h, "main.ts");
     await h.keys("enter");
+    await answerSwitch(h);
     expect(h.app.loc.root).toBe(join(P, "code"));
     expect(h.app.view!.buf.abs).toBe(join(P, "code", "main.ts"));
     expect(h.app.explorer.top).toBe(P);
@@ -244,6 +246,7 @@ describe("the explorer's view (VV-D5)", () => {
     await h.keys("-");
     await select(h, "notes");
     await h.keys("enter");
+    await answerSwitch(h);
     expect(h.app.loc.root).toBe(join(P, "notes"));
   });
 

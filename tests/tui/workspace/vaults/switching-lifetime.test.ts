@@ -7,7 +7,7 @@ import { loadSession } from "../../../../src/core/workspace/session/position.ts"
 import { recordRoot } from "../../../../src/core/workspace/vaults/registry.ts";
 import { vaultChoices } from "../../../../src/tui/workspace/vaults/vault-list.ts";
 import type { ListOverlay } from "../../../../src/tui/app/runtime/app.ts";
-import { harness, makeSandbox, makeVault } from "../../../tui-harness.ts";
+import { answerSwitch, harness, makeSandbox, makeVault } from "../../../tui-harness.ts";
 
 makeSandbox();
 
@@ -20,6 +20,7 @@ test("vault switch choices: stay, save all, discard and return from disk", async
     await h.keys("ctrl+k", "i", "x", "escape");
     expect(h.app.view!.buf.dirty).toBe(true);
     expect(h.app.vaults.switchVault(rootAt(b), null)).toBe(false);
+    expect((h.app.overlay as ListOverlay).title).toBe("Unsaved notes — change vault?");
     expect((h.app.overlay as ListOverlay).items.map((item) => item.label)).toEqual([
       "Save all and go",
       "Discard and go",
@@ -34,6 +35,7 @@ test("vault switch choices: stay, save all, discard and return from disk", async
       expect(readFileSync(join(a, "index.md"), "utf8")).toBe(choice === "save" ? `x${original}` : original);
       expect(loadSession(rootAt(a))?.tabs.length).toBeGreaterThan(0);
       h.app.vaults.back();
+      await answerSwitch(h);
       expect(h.app.loc.root).toBe(a);
       expect(h.app.view!.buf.source).toBe(choice === "save" ? `x${original}` : original);
       expect(h.app.view!.buf.dirty).toBe(false);
@@ -93,7 +95,7 @@ test("alternating vaults releases old notes, parses and index owners; history ke
     const index = h.app.search.index;
     h.app.search.open("Index");
     h.app.completion = null;
-    expect(h.app.vaults.switchVault(rootAt(i % 2 ? a : b), null)).toBe(true);
+    expect(h.app.vaults.switchVault(rootAt(i % 2 ? a : b), null, undefined, { asked: true })).toBe(true);
     await h.app.search.whenIndexed();
     expect(owns(h.app, buffer)).toBe(false);
     expect(owns(h.app, parsed)).toBe(false);
@@ -120,7 +122,7 @@ test("home folders restore their workspace and worktrees group under the reposit
   try {
     const h = await harness({ loc: homeAt(home), folder: join(home, "notes"), open: "notes/a.md" });
     const other = makeVault();
-    h.app.vaults.switchVault(rootAt(other), null);
+    h.app.vaults.switchVault(rootAt(other), null, undefined, { asked: true });
     const tree = makeVault();
     recordRoot({ path: tree, kind: "vault", worktree: { main: other, name: "topic" } });
     const rows = vaultChoices();
@@ -135,6 +137,7 @@ test("home folders restore their workspace and worktrees group under the reposit
     expect(list.input).toBe("notes");
     expect(list.filtered.some((entry) => entry.item.label === "notes")).toBe(true);
     list.accept(folder);
+    await answerSwitch(h);
     expect(h.app.loc.root).toBe(home);
     expect(h.app.homeFolder).toBe("notes");
     expect(h.app.view!.buf.abs).toBe(join(home, "notes", "a.md"));
@@ -168,7 +171,7 @@ test("back after an unsaved choice consumes its stop once; stay preserves it", a
     const a = makeVault();
     const b = makeVault();
     const h = await harness({ root: a });
-    h.app.vaults.switchVault(rootAt(b), null);
+    h.app.vaults.switchVault(rootAt(b), null, undefined, { asked: true });
     await h.keys("ctrl+k", "i", "x", "escape");
     expect(h.app.vaults.back()).toBe(true);
     await h.app.run(`vault.switch_${choice}`);

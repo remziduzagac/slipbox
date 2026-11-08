@@ -3,7 +3,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { rootAt } from "../../../../src/core/workspace/vaults/vault.ts";
 import type { ListOverlay } from "../../../../src/tui/shell/overlays/list-types.ts";
-import { harness, makeSandbox, makeVault } from "../../../tui-harness.ts";
+import { answerSwitch, harness, makeSandbox, makeVault } from "../../../tui-harness.ts";
 
 makeSandbox();
 
@@ -36,7 +36,7 @@ test("vault switching cancels old work before resetting identity and restores be
     app.git.entries = [];
     app.gitPanel.message = "old commit";
     app.region = "sidebar";
-    expect(app.vaults.switchVault(rootAt(b), join(b, "index.md"))).toBe(true);
+    expect(app.vaults.switchVault(rootAt(b), join(b, "index.md"), undefined, { asked: true })).toBe(true);
     expect(events.map((event) => event.name)).toEqual([
       "save",
       "cancel",
@@ -90,8 +90,9 @@ test("vault prompts read the current workspace after a switch and return focus t
   const b = makeVault();
   const config = join(b, "nested-vault", ".slipbox", "config.toml");
   writeFileSync(config, readFileSync(config, "utf8").replace("fixture-nested", "destination-inner"));
-  const { app } = await harness({ root: a });
-  app.vaults.switchVault(rootAt(b), null);
+  const h = await harness({ root: a });
+  const app = h.app;
+  app.vaults.switchVault(rootAt(b), null, undefined, { asked: true });
   const prompt = spyOn(app.overlays, "prompt");
   try {
     app.vaults.renameItem({ rel: "nested-vault", vault: true, dir: true });
@@ -102,6 +103,7 @@ test("vault prompts read the current workspace after a switch and return focus t
     const destination = list.items.find((item) => (item.data as { root?: string } | null)?.root === a)!;
     expect(destination).toBeDefined();
     list.accept(destination);
+    await answerSwitch(h);
     expect(app.loc.root).toBe(a);
     expect(app.region).toBe("content");
     expect(app.vaults.visits).toBe(2);

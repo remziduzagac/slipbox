@@ -9,6 +9,7 @@ import {
   EXPLORER,
   explorerRow,
   follow,
+  goInto,
   leader,
   moveTo,
   open,
@@ -61,9 +62,11 @@ export const ROOTS: Check[] = [
       await follow(s, ARCHITECTURE);
       await s.see(PEEK_HINT, 5000);
       await s.keys("o");
+      await goInto(s);
       await s.message(/kestrel — /);
       await s.where(/^kestrel │ main\b/, /‹ docs\/architecture\.md/, 5000);
       await s.keys("ctrl+o");
+      await goInto(s);
       await s.where(/^notes(?: │|$)/, /index\.md/, 5000);
       // A pointer to a name this machine has never seen: said so, nothing opened.
       await follow(s, "the secret project");
@@ -73,6 +76,7 @@ export const ROOTS: Check[] = [
       await follow(s, ARCHITECTURE);
       await s.see(PEEK_HINT, 5000);
       await s.keys("o");
+      await goInto(s);
       await s.where(/^kestrel │ main\b/, /‹ docs\/architecture\.md/, 5000);
       await leader(s, "l", "b");
       await s.see("Linking to", 10000);
@@ -90,6 +94,7 @@ export const ROOTS: Check[] = [
       await s.keys("shift+g", "enter");
       await s.see("outreach › index.md", 5000);
       await s.keys("o");
+      await goInto(s);
       await s.message(" outreach — "); // as the switch says it: name — path
       await s.status("index.md");
       await s.see("The observatory's public programme");
@@ -97,12 +102,15 @@ export const ROOTS: Check[] = [
       await s.keys("g", "g", "tab", "tab", "enter");
       await s.see("outreach-school-visits › index.md", 5000);
       await s.keys("o");
+      await goInto(s);
       await s.message(" outreach-school-visits — ");
       await s.see("A vault nested two deep");
       // Back, and back again: to the observatory's home.
       await s.keys("ctrl+o");
+      await goInto(s);
       await s.status("index.md");
       await s.keys("ctrl+o");
+      await goInto(s);
       await s.status("home.md");
       await s.see("Halden Ridge Observatory");
       // home's backlinks: from both nested roots, each by its path (21.9).
@@ -268,9 +276,11 @@ export const ROOTS: Check[] = [
       await s.keys("/");
       await s.type("notes");
       await s.keys("enter");
+      await goInto(s);
       await s.message(" notes — ");
       await s.where(/^notes(?: │|$)/);
       await s.keys("ctrl+o");
+      await goInto(s);
       await s.where("Elsewhere", /stray-note\.md/, 5000);
     },
   },
@@ -314,14 +324,17 @@ export const ROOTS: Check[] = [
       // notes is a vault of its own: enter goes into it.
       await explorerRow(s, "notes");
       await s.keys("enter");
+      await goInto(s);
       await s.where(/^notes(?: │|$)/, /index\.md/, 5000);
       // Across roots by a relative path: a peek, o into the kestrel repository, its top the root; back.
       await s.keys("escape");
       await follow(s, ARCHITECTURE);
       await s.see(PEEK_HINT, 5000);
       await s.keys("o");
+      await goInto(s);
       await s.where(/^kestrel │ main\b/, /‹ docs\/architecture\.md/, 5000);
       await s.keys("ctrl+o");
+      await goInto(s);
       await s.where(/^notes(?: │|$)/, /index\.md/, 5000);
     },
   },
@@ -354,6 +367,7 @@ export const ROOTS: Check[] = [
       await s.until(() => listed(s, /202608151900-index\.md$/), 3000, "cycling unfolded");
       await explorerRow(s, "202608151900-index\\.md");
       await s.keys("enter");
+      await goInto(s);
       await s.where(/^~\/hobbies\/cycling(?: │|$)/, /‹ 202608151900-index\.md/, 5000);
       await explorerOpen(s);
       await s.until(() => listed(s, /\scooking$/), 3000, "the explorer still in hobbies");
@@ -397,6 +411,7 @@ export const ROOTS: Check[] = [
       await s.see("Worktrees (2) — enter: this note there");
       await s.type("sync-retry");
       await s.keys("enter");
+      await goInto(s);
       await s.where(/^kestrel │ agent\/sync-retry\b/, /‹ README\.md/, 5000);
       // The view zoomed out to ~/work, the common parent; the breadcrumb leads on to the worktree, where you went.
       await explorerOpen(s);
@@ -458,6 +473,7 @@ export const ROOTS: Check[] = [
       await s.keys("/");
       await s.type("photography");
       await s.keys("enter");
+      await goInto(s);
       await s.message(" photography — "); // as the switch says it: name — path
       await s.where(/^photography(?: │|$)/);
       // An Obsidian vault with no .slipbox/ name and no remote: its path, from home.
@@ -469,10 +485,12 @@ export const ROOTS: Check[] = [
       await follow(s, "the worker log");
       await s.see("~ › Downloads/sync-worker-2026-09-22.log.md", 5000);
       await s.keys("o");
+      await goInto(s);
       await s.notSee(PEEK_HINT);
       await s.where("~", /‹ Downloads\/sync-worker-2026-09-22\.log\.md/, 5000);
       await s.see("§ sync-worker log, 2026-09-22", 10000); // read and drawn
       await s.keys("ctrl+o");
+      await goInto(s);
       await s.where(/^notes(?: │|$)/, /2026-09-22\.md/, 5000);
       // A file of Elsewhere's a link leads to: peeked at, Elsewhere naming it; o goes into Elsewhere, its tabs.
       s.write("~/notes/daily/2026-09-22.md", `[elsewhere](${join(s.dir, "elsewhere", "stray-note.md")})\n`);
@@ -480,6 +498,7 @@ export const ROOTS: Check[] = [
       await follow(s, "elsewhere");
       await s.see("Elsewhere › ", 5000);
       await s.keys("o");
+      await goInto(s);
       await s.notSee(PEEK_HINT);
       await s.where("Elsewhere", /stray-note\.md/, 5000);
     },

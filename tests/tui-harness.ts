@@ -174,3 +174,14 @@ export const rowStarting = (h: Harness, prefix: string) =>
       .join("")
       .startsWith(prefix),
   );
+
+/** A switch into another vault asks first (D270): the question open, answered — `g` goes, `p` peeks, `c` stays. */
+export async function answerSwitch(
+  h: { app: App; keys: (...ks: string[]) => Promise<unknown> },
+  key: "g" | "p" | "c" = "g",
+): Promise<void> {
+  const o = h.app.overlay;
+  if (o?.kind !== "list" || !o.title.startsWith("Go into "))
+    throw new Error(`no switch question open: ${o?.kind === "list" ? o.title : (o?.kind ?? "nothing")}`);
+  await h.keys(key);
+}

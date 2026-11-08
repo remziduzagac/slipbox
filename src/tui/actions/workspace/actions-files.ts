@@ -173,6 +173,8 @@ export function fileActions(): Record<string, Run> {
       }),
     "vault.switch_save": (a) => a.vaults.chooseSwitch("save"),
     "vault.switch_discard": (a) => a.vaults.chooseSwitch("discard"),
+    "vault.switch_go": (a) => a.vaults.chooseSwitch("go"),
+    "vault.switch_peek": (a) => a.vaults.chooseSwitch("peek"),
     "vault.switch_stay": (a) => a.vaults.chooseSwitch("stay"),
     "folders.open": (a) => a.vaults.openFolders(),
     "folders.default": (a) => a.vaults.chooseDefaultCopy(),

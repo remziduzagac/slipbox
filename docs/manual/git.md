@@ -599,8 +599,8 @@ its name.
 - **Open**, or `o`, goes into the worktree, a vault of its own. You land at the same note when it's there, else at its
   top folder. `ctrl+o` comes back.
 - **Check out here** checks the branch out in this checkout.
-- **Open in a worktree** makes a worktree for the branch, in the folder `git.worktrees` names, and goes into it. If
-  you've opened a question or started typing by the time git is done, it stays where you are, and `o` goes into it.
+- **Open in a worktree** makes a worktree for the branch, in the folder `git.worktrees` names, and asks to go into it.
+  If you've opened a question or started typing by the time git is done, it stays where you are, and `o` goes into it.
 - **Merge…**, or `m`, merges the branch into its base. It offers the links the merge would break first
   ([Reviewing a merge](#reviewing-a-merge)), then the merge itself, run where the base is checked out: here, or in its
   worktree. Into another branch… picks another. A merge that conflicts stops, git's words said, its files under

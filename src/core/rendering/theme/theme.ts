@@ -190,6 +190,8 @@ export function themeFromPalette(
     // A folder that is a root of its own, nested (17.13): a folder's colour — its icon tells it apart —
     // and a role of its own, for [colors] to set.
     sidebar_root: { fg: p.blue },
+    // Outside the vault open's own tree (#104): dimmed, as the explorer can't change it.
+    sidebar_outside: { fg: p.comment },
     // That a row is indexed (VV-D9), at its right: dimmer than its name, since most folders are.
     sidebar_mark: { fg: p.comment },
     git_new: { fg: p.green },
@@ -378,6 +380,7 @@ export function monoTheme(): Theme {
   roles.hover = { inverse: true };
   roles.topbar_button_on = { bold: true };
   roles.sidebar_active = { bold: true }; // the current note / section, without colour
+  roles.sidebar_outside = { dim: true };
   // Focus without colour: the focused title and the active tab are underlined too.
   roles.pane_title = { bold: true };
   roles.pane_title_active = { bold: true, underline: true };

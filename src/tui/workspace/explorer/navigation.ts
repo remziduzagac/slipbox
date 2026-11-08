@@ -279,9 +279,11 @@ export class ExplorerNavigation {
   revealFolder(path: string): void {
     if (isAbsolute(path)) {
       // Its vault: a marker's, home (VV-D2) — the folder gone into by name, its notes there at once — else the plain
-      // folder.
-      if (!this.app.vaults.switchVault(locationAt(path), null, undefined, { folder: path })) return;
-      path = relative(this.app.loc.root, path) || ".";
+      // folder; shown there once gone into, the switch asked first (D270).
+      const abs = path;
+      const shown = () => this.revealFolder(relative(this.app.loc.root, abs) || ".");
+      if (this.app.vaults.switchVault(locationAt(abs), null, undefined, { folder: abs, after: shown })) shown();
+      return;
     }
     this.app.panels.switchLeftView("explorer");
     this.app.sidebar.filter = "";

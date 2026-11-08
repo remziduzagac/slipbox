@@ -277,7 +277,7 @@ describe("the panel's rows by what they are, not where they were: as rows come a
     app.mouse.handle({ type: "move", x: 6, y: lineOf(app, i)!, button: 0 });
     frame();
     // Into b, whose new files come before its branches: its main isn't scrolled to the pointer's line.
-    app.vaults.switchVault(locateVault({ root: b }), null);
+    app.vaults.switchVault(locateVault({ root: b }), null, undefined, { asked: true });
     await app.git.refreshNow();
     frame();
     expect(await until(() => (frame(), indexOf(app, "main") > i))).toBe(true);
@@ -549,7 +549,7 @@ describe("the panel's rows by what they are, not where they were: as rows come a
     app.gitPanel.select(0);
     frame();
     // Into b, the panel's selection at the top as before (a switch that starts it there): b's Staged, not its Changes.
-    app.vaults.switchVault(locateVault({ root: b }), null);
+    app.vaults.switchVault(locateVault({ root: b }), null, undefined, { asked: true });
     app.sidebar.selected = 0;
     await app.git.refreshNow();
     expect(await until(() => (frame(), heading("unstaged") > 0))).toBe(true);
@@ -775,7 +775,7 @@ describe("the panel's rows by what they are, not where they were: as rows come a
     app.gitPanel.select(indexOf(app, "main"));
     const i = app.sidebar.selected;
     const drawn = app.geometry!.hot.find((h) => h.id === `git:row:${i}`)!;
-    app.vaults.switchVault(locateVault({ root: b }), null);
+    app.vaults.switchVault(locateVault({ root: b }), null, undefined, { asked: true });
     app.sidebar.selected = i;
     await app.git.refreshNow();
     expect(await until(() => indexOf(app, "main") >= 0)).toBe(true);
@@ -1032,7 +1032,7 @@ describe("the panel's rows by what they are, not where they were: as rows come a
     expect(await until(() => (frame(), indexOf(app, "main") >= 0))).toBe(true);
     app.gitPanel.select(indexOf(app, "main"));
     frame();
-    app.vaults.switchVault(locateVault({ root: b }), null);
+    app.vaults.switchVault(locateVault({ root: b }), null, undefined, { asked: true });
     await app.git.refreshNow();
     expect(await until(() => indexOf(app, "main") >= 0)).toBe(true);
     // The panel's pick in b, made before b's first frame (as showing the panel there does): enter opens main up.
@@ -1221,7 +1221,7 @@ describe("the panel's rows by what they are, not where they were: as rows come a
     frame();
     app.explorer.zoomTo(a);
     // Into b, no note to open there; its explorer shown: its first row, not its sub/.
-    app.vaults.switchVault(locateVault({ root: b }), null);
+    app.vaults.switchVault(locateVault({ root: b }), null, undefined, { asked: true });
     frame();
     app.panels.openLeftView("explorer");
     frame();
@@ -1266,7 +1266,7 @@ describe("the panel's rows by what they are, not where they were: as rows come a
     expect(await until(() => (frame(), indexOf(app, "main") >= 0))).toBe(true);
     app.gitPanel.select(indexOf(app, "main"));
     frame();
-    app.vaults.switchVault(locateVault({ root: b }), null);
+    app.vaults.switchVault(locateVault({ root: b }), null, undefined, { asked: true });
     await app.git.refreshNow();
     expect(await until(() => indexOf(app, "main") >= 0)).toBe(true);
     // main picked in b before its first frame; a file new in b before that frame.

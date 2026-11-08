@@ -21,7 +21,7 @@ import { NoteBuffer } from "../../../../src/tui/documents/buffers/buffer.ts";
 import { placeAt } from "../../../../src/tui/documents/editing/editing.ts";
 import type { ListOverlay } from "../../../../src/tui/app/runtime/app.ts";
 import { TextCanvas } from "../../../../src/tui/shell/terminal/canvas.ts";
-import { type Harness, harness, makeSandbox, makeVault } from "../../../tui-harness.ts";
+import { answerSwitch, type Harness, harness, makeSandbox, makeVault } from "../../../tui-harness.ts";
 
 const sandbox = makeSandbox();
 
@@ -270,6 +270,7 @@ describe("the screen and where you were (RPT-D2)", () => {
     const outside = join(sandbox, "outside.md");
     writeFileSync(outside, "first\n\nsecond line\n");
     const h2 = await harness({ open: outside });
+    await answerSwitch(h2);
     await h2.keys("G");
     await h2.app.run("help.report where");
     h2.frame();

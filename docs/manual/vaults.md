@@ -265,6 +265,16 @@ Elsewhere, by any of these:
 Following a link, a pointer, a backlink or a search hit into another vault only peeks at the note. Nothing switches
 until you choose to go.
 
+Every way in asks first, `ctrl+o` back to the vault before too: **Go into kestrel? Your tabs there replace these.**
+
+- **Go** (`g`) goes into it.
+- **Peek at** the note (`p`), when you were opening one, reads it where you are, read-only, as a link into another
+  vault does ([A peek at another vault](links-and-vaults.md#a-peek-at-another-vault)). Nothing switches.
+- **Stay** (`c`, or `esc`) leaves you where you were. If you were in a peek, you're back in it.
+
+A folder you give a `.slipbox/`, or a vault you make part of the one holding it, is gone into without asking: that's
+what you asked for.
+
 slipbox becomes that vault's, as if you had started it there. You get:
 
 - its settings
@@ -276,8 +286,8 @@ A message names the vault you are now in.
 
 - **Back returns.** `ctrl+o` from the first place you visited in a vault takes you back to the vault before. You are
   at the note and place you left. A chain of switches unwinds one at a time.
-- **Unsaved notes ask before a switch.** Choose **Save all and go**, **Discard and go**, or **Stay**. A failed save
-  keeps you in the current vault. Properties edits are resolved first.
+- **Unsaved notes ask before a switch,** in place of the question above. Choose **Save all and go**, **Discard and
+  go**, or **Stay**. A failed save keeps you in the current vault. Properties edits are resolved first.
   Save it (`:wa` saves them all) or revert it first.
 - **The explorer shows where you went.** It's one tree: going into a vault outside its view zooms the view out to the
   folder holding both, the two unfolded and the vault you are in now highlighted ([Files](files.md#the-zoom)).

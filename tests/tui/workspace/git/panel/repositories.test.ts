@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { makeGitPanelFixture } from "../../../../support/tui/git-panel-fixture.ts";
+import { answerSwitch } from "../../../../tui-harness.ts";
 
 // File-owned Git-panel setup preserves its environment restoration and cleanup.
 const { sandbox, git, until, panel, rowOf } = makeGitPanelFixture();
@@ -53,6 +54,7 @@ describe("the repositories in the view (VV-D10)", () => {
     // o goes into one.
     app.sidebar.selected = rowOf(app, (r) => r.kind === "repo" && r.repo.name === "alpha");
     await keys("o");
+    await answerSwitch({ app, keys });
     expect(app.loc.root).toBe(join(root, "alpha"));
   });
 });
