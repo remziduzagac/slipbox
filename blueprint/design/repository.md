@@ -139,7 +139,8 @@ and reports `full` instead of `ci`. Jobs call package.json scripts.
 
 **What a change reaches** (D239, `scripts/ci-scope.ts`). The tests: each that uses a changed file — imports it, at
 any depth, statically or not, code or not (the skill's text, a dictionary), or names it by its path from the
-repository (`join(ROOT, "examples", "home")`, the entry point a test runs) — and a changed snapshot's own. The
+repository (`join(ROOT, "examples", "home")`, the entry point a test runs) — and a changed snapshot's own; a file of the
+tests' also runs the tests that read them all and name none (`EVERY_TEST_FILE`: the file-local timeouts' map). The
 terminal checks, which drive slipbox as a process and import none of it: a changed check file's (`bun run
 test:terminal <file>`); for a changed file of the app's, the features `CHECKS_FOR` names it under (`git`, `export`,
 `spelling`…, pieces of the checks' names), or every check for one it doesn't list (the app, drawing, the parser, the

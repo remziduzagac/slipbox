@@ -380,6 +380,7 @@ describe("the supply chain's gates (14.10)", () => {
   test("a pull request runs the tests and the terminal checks its files reach (D239)", () => {
     const g = importGraph();
     const of = (...files: string[]) => reaches(files, g);
+    const TIMEOUTS = "tests/organization/timeouts.test.ts";
     // A feature's own file: the tests that use it, at any depth, and its checks.
     const git = of("src/tui/workspace/git/views/branches/gitbranchview.ts");
     expect(git.all).toBeNull();
@@ -426,8 +427,13 @@ describe("the supply chain's gates (14.10)", () => {
       tests: ["tests/home.test.ts", "tests/terminal-coverage.test.ts"],
       checks: [],
     });
-    expect(of("tests/terminal/spell-hold.ts")).toMatchObject({ tests: [], checks: ["spelling"] });
-    expect(of("tests/terminal/export-hold.ts")).toMatchObject({ tests: [], checks: ["export"] });
+    expect(of("tests/terminal/spell-hold.ts")).toMatchObject({ tests: [TIMEOUTS], checks: ["spelling"] });
+    expect(of("tests/terminal/export-hold.ts")).toMatchObject({ tests: [TIMEOUTS], checks: ["export"] });
+    // A file of the tests', new or changed: the map of the timeouts they set, which reads them all and names none.
+    expect(of("tests/core/documents/editing/reflow.test.ts")).toMatchObject({
+      tests: ["tests/core/documents/editing/reflow.test.ts", TIMEOUTS],
+    });
+    expect(of("tests/fixtures/fake-lsp.ts")).not.toMatchObject({ tests: expect.arrayContaining([TIMEOUTS]) });
     // A snapshot: its test. The lint's config: the lint alone.
     expect(of("tests/core/rendering/layout/markdown/__snapshots__/layout.test.ts.snap")).toMatchObject({
       tests: ["tests/core/rendering/layout/markdown/layout.test.ts"],
