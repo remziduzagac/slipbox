@@ -30,16 +30,18 @@ describe("the top bar's sections (#104)", () => {
           .slice(r.x, r.x + r.w)
           .trim(),
         fg: h.canvas().styles[r.y]![r.x + 1]!.fg,
+        underline: h.canvas().styles[r.y]![r.x + 1]!.underline,
       };
     };
     const roles = h.app.theme.roles;
-    expect(segment()).toEqual({ text: "✉ 0", fg: roles.status_dim.fg! });
+    expect(segment()).toEqual({ text: "✉ 0", fg: roles.status_dim.fg!, underline: false });
     h.app.message("info", "copied");
-    expect(segment()).toEqual({ text: "✉ 1", fg: roles.topbar.fg ?? h.app.theme.fg });
+    expect(segment()).toEqual({ text: "✉ 1", fg: roles.topbar.fg ?? h.app.theme.fg, underline: false });
     h.app.message("warn", "a link is broken");
-    expect(segment()).toEqual({ text: "✉ 2", fg: roles.problem_warn.fg! });
+    // The status bar's colours for a message, not a problem's underline.
+    expect(segment()).toEqual({ text: "✉ 2", fg: roles.warn.fg!, underline: false });
     h.app.message("error", "the save failed");
-    expect(segment().fg).toBe(roles.problem_error.fg!);
+    expect(segment()).toMatchObject({ fg: roles.error.fg!, underline: false });
     // A click opens the list: all of it seen, the count back to 0.
     click(h, "top:messages");
     expect(list(h).title).toBe("Messages");

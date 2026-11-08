@@ -1,4 +1,4 @@
-// The permanent grouped location bar: independent zoom/workspace/git targets and its compact form (VB-D3).
+// The permanent top bar's sections: independent zoom/workspace/git targets, the counts, About (VB-D3, D269).
 
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -55,17 +55,14 @@ export const WHERE: Check[] = [
   },
   {
     area: "navigating",
-    name: "work and version: idle count, work popup and About by click and leader keys",
+    name: "work and messages: idle count, work popup, the messages count, About by the branding and leader keys (D269)",
     covers: {
       cases: ["ui", "status"],
-      commands: ["background.open", "app.about"],
+      commands: ["background.open", "app.about", "messages.open"],
     },
     run: async (s) => {
-      await s.until(
-        () => s.topBar().includes(VERSION) && / 0 /.test(s.topBar()),
-        15000,
-        "idle work and running version",
-      );
+      await s.until(() => / 0 │ ✉ \d+/.test(s.topBar()), 15000, "idle work and the messages count");
+      s.expect(!s.topBar().includes(VERSION), "no version on the top bar: About has it");
       await onTopBar(s, " 0 ");
       await s.see("Background work");
       await s.see("No work running");
@@ -73,10 +70,18 @@ export const WHERE: Check[] = [
       await leader(s, "b");
       await s.see("Background work");
       await s.keys("escape");
-      await onTopBar(s, VERSION);
+      // Something said, counted; the list opened by a click, the count back to 0.
+      await leader(s, "s", "y");
+      await s.until(() => !/✉ 0\b/.test(s.topBar()), undefined, "a message counted");
+      await onTopBar(s, "✉");
+      await s.see("Messages");
+      await s.keys("escape");
+      await s.until(() => /✉ 0\b/.test(s.topBar()), undefined, "the messages seen");
+      await onTopBar(s, "slipbox");
       await s.see("About slipbox");
       await s.see(`slipbox ${VERSION}`);
       await s.see("Channel: stable");
+      await s.see("Start here");
       await s.keys("escape");
       await leader(s, "a");
       await s.see("Previous version: not recorded");

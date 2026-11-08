@@ -146,8 +146,8 @@ of segments (`Segment`, D269):
   home or vault fallback (VB-D4, VB-D6);
 - at the right end, the permanent work count (`top:work`, `background.open`, `space b`), dim at zero and bright
   otherwise, and the messages count (`top:messages`, `messages.open`, `space m`): the messages said since the list was
-  last opened (`Messages.unseen`, set back by opening it), dim at zero, `problem_warn` or `problem_error` when one of
-  them is a warning or an error.
+  last opened (`Messages.unseen`, set back by opening it), dim at zero, `warn` or `error` when one of them is a warning
+  or an error, as the status bar draws a message.
 
 `topbar_group` supplies a section's faint background. Sections have spaces between them and Nerd rounded ends, plain
 ends in Unicode and ASCII. Segments have a dim thin separator and individual hover regions. Names pass through

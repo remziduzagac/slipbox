@@ -49,8 +49,8 @@ async function take(shot: Shot): Promise<{ error: string | null; lacking: string
   try {
     await s.start();
     await shot.take(s);
-    // The background index's count in the top bar is a passing state, not part of the picture.
-    await s.until(() => !/ [1-9]\d* +\d+\.\d+\.\d+/.test(s.topBar()), 30000, "indexing to finish");
+    // The background index's count in the top bar, before the messages', is a passing state, not part of the picture.
+    await s.until(() => !/ [1-9]\d* │ ✉/.test(s.topBar()), 30000, "indexing to finish");
     await s.settle(undefined, 3000, 250);
     const screen = fromCells(s.term.cells());
     const svg = toSvg(screen, { cols: s.cols, rows: s.rows, pictures: shot.pictures?.map((p) => join(s.dir, p)) });

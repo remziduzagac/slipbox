@@ -72,19 +72,12 @@ export function drawTopBar(app: App, c: Canvas, band: Band, geo: Geometry): void
     );
   const count = app.background.tasks.size;
   // At the right, the background work and the messages said since their list was last opened, coloured by the worst
-  // of them.
+  // of them as the status bar colours a message (not underlined, as a problem in the text is).
   const said = app.notifications.unseen();
   const messages: Segment = {
     text: `${app.glyphs.messages} ${said.count}`,
     id: "top:messages",
-    role:
-      said.level === "error"
-        ? "problem_error"
-        : said.level === "warn"
-          ? "problem_warn"
-          : said.count
-            ? "topbar"
-            : "status_dim",
+    role: said.level === "error" ? "error" : said.level === "warn" ? "warn" : said.count ? "topbar" : "status_dim",
   };
   let activity: Segment[] = [
     { text: String(count), id: "top:work", role: (count ? "topbar_button_on" : "status_dim") as Role },
