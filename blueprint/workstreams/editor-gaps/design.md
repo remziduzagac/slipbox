@@ -26,7 +26,7 @@ D235, ORG-D1), else the feature's module:
 | `documents/diagnostics/problems/at-cursor.ts` | problem jumps, the cursor's problem and its window (EG-D5) |
 | `documents/diagnostics/todos.ts` | TODO marks in the file, the vault's list (`app.todos`; EG-D9) |
 | `documents/editing/undo-list.ts` | undo by time and the undo list (EG-D13) |
-| `app/clipboard/yanks.ts` | the copies kept: `space p`, `[ y` / `] y` (`app.yanks`; EG-D20) |
+| `app/clipboard/yanks.ts` | the copies kept: `space p` (`app.yanks`; EG-D20) |
 | `documents/navigation/marks.ts` | marks (`app.noteMarks`, apart from the explorer's `Marks`; EG-D20) |
 | `documents/navigation/calls.ts` | the call hierarchy's list (EG-D19) |
 | `workspace/git/views/log/` | a branch's commits, a commit's files and its change to one (`app.gitLog`; EG-D4) |
@@ -80,15 +80,12 @@ Adds, after "What follows from it":
   block, by the code's grammar (§ Editing, "The structure"); in a note, `] o` / `[ o` go to the next or previous fenced
   code block. Classes and types stay on `]]` / `[[`. Each is a motion, after an operator too. **Open:** inside a note's
   fenced block, whether `] o` is the code's next block or the next fence; in which views (the code view's reading too).
-- **`alt+.`** (`cursor.repeat_motion`, EG-D22): the last motion run in this window again, with its count — any cursor
-  command, a `] d` or a `w` as well as an `f x`; `;` and `,` stay `f` and `t`'s.
 
 And to **Selection**:
 
-- **Growing and shrinking it** (EG-D7; `visual.grow` `alt+o`, `visual.shrink` `alt+i`, `visual.sibling_next` `alt+n`,
-  `visual.sibling_prev` `alt+p`; in SOURCE view and the lens): `alt+o` with nothing selected selects the cursor's word,
-  in visual mode; each `alt+o` after it selects the smallest node that encloses the selection and is larger than it;
-  `alt+i` goes back a step; `alt+n` / `alt+p` move the selection to the node's next or previous sibling. A note's nodes
+- **Growing and shrinking it** (EG-D7; `visual.grow` `alt+o`, `visual.shrink` `alt+i`; in SOURCE view and the
+  lens): `alt+o` with nothing selected selects the cursor's word, in visual mode; each `alt+o` after it selects the
+  smallest node that encloses the selection and is larger than it; `alt+i` goes back a step. A note's nodes
   are its Markdown tree's (a word, an inline node, a paragraph, a list item, a list, a section with its heading); code's
   are its grammar's — a code file's, a code cell's, a fenced block's by its language, then the fence and the note's
   tree above it. The steps grown through are kept on the view (`Structure`), so `alt+i` returns exactly; any other
@@ -158,13 +155,9 @@ Adds to **Saved state**:
   agent's rewrite — finds it again as a reading position is found. `space h m` lists them, this note's then the
   vault's, each its letter, `path:line` and the line's text, with the preview (§ Overlays). Kept with the session, in
   the vault's `session.json`. **Open:** per workspace, or shared by them as the recent notes are.
-- **Quitting without it, this once** (EG-D22; `app.quit_no_session`, `space q d`): quits as `app.quit` does (refused
-  while a note is unsaved), the workspace not written, so the next start restores the one before. `ui.restore_session`
-  is unchanged. **Open:** whether the reading positions are written.
 
 Previously: a workspace is the tabs, the active and pinned ones, splits with their orientation and ratio, and each
-window's note, cursor and history; nothing keeps folds or marks; quitting always writes the positions and the
-workspace.
+window's note, cursor and history; nothing keeps folds or marks.
 
 ## MODIFIED design/tui.md § History (plan `3.6`)
 
@@ -247,11 +240,10 @@ worktree, its buttons, its uncommitted files and its files against its base, no 
 - **Find in every note** (EG-D10; `find.vault`, `ctrl+shift+f`, `space f g`): no question first. The list has a query
   row of its own, matched as it's typed — each query a request to the regex worker, a newer one taking back the one
   before (search.md § Native regex matching) — the window's toggles in it (`alt+r`, `alt+w`). It opens with the
-  selection on one line, else the cursor's word, typed and selected, so typing replaces it; `space f w`
-  (`find.vault_word`) lists that word's hits at once. A `path:ops/` word narrows the files to those whose path starts
-  so, as in a search; the rest is the text or the regex. After a pick closes it, `] q` / `[ q` (`find.vault_next`,
-  `find.vault_prev`) open its next or previous hit, in its order, around the ends, kept in `Places` with the list.
-  **Open:** whether `] q` steps through the last list of places whatever its kind.
+  selection on one line, else the cursor's word, typed and selected, so typing replaces it. A `path:ops/` word narrows
+  the files to those whose path starts so, as in a search; the rest is the text or the regex. After a pick closes it, `]
+  q` / `[ q` (`find.vault_next`, `find.vault_prev`) open its next or previous hit, in its order, around the ends, kept
+  in `Places` with the list. **Open:** whether `] q` steps through the last list of places whatever its kind.
 - **Replace in every note** (EG-D10): in its preview, each row shows its line before and after; `ctrl+x`, or a click
   on the row's mark, drops a row — that match stays as it is — or brings it back, and the title counts what's kept
   (`18 of 20 to replace`). `enter` replaces the rows kept, the plan built without the matches dropped
@@ -332,19 +324,16 @@ Adds:
   `[editor] text_width` when set, else the file's markdownlint `MD013` `line_length` (the config the lint surface finds
   for it, read as data, never one that's code: `.cjs`, `.mjs`), else `.editorconfig`'s `max_line_length` (read as
   indentation reads it, `25.1`), else 80. One undo step, its line endings the file's.
-- **Undo by time, and its list** (EG-D13; `edit.earlier` `:earlier 10m`, `edit.later` `:later 10m`, `edit.undo_list`
-  `space h u`): each `UndoStep` (`NoteBuffer`) gains when it was made and its kind — typing, an edit, a reload from
-  disk, a replace, a server's edit, a merge — and a save marks the step it saved. `:earlier` and `:later` take `s`, `m`,
-  `h` and `f` (saves: `1f` the text at the last save before this one) and undo or redo to the newest step at or before
-  that time, a step at a time, so `u` and `ctrl+r` go on from there. `space h u` lists the note's steps newest first,
-  each its time and kind, the saves marked; `enter` undoes or redoes to it, the preview showing that step's text's diff
-  to now (`layoutDiff`). Undo stays linear: an edit after an undo drops what was undone, as now. Kept in the buffer
+- **Undo by time, and its list** (EG-D13; `edit.undo_list` `space h u`): each `UndoStep` (`NoteBuffer`) gains when it
+  was made and its kind — typing, an edit, a reload from disk, a replace, a server's edit, a merge — and a save marks
+  the step it saved. `space h u` lists the note's steps newest first, each its time and kind, the saves marked; `enter`
+  undoes or redoes to it, a step at a time, so `u` and `ctrl+r` go on from there, the preview showing that step's text's
+  diff to now (`layoutDiff`). Undo stays linear: an edit after an undo drops what was undone, as now. Kept in the buffer
   while slipbox runs, as undo is.
-- **The copies kept** (EG-D20; `yank.list` `space p`, `yank.prev` `[ y`, `yank.next` `] y`; `Yanks`): the last 20
+- **The copies kept** (EG-D20; `yank.list` `space p`; `Yanks`): the last 20
   copies and cuts — each text that reaches the clipboard and the register — newest first, the same text once, for the
   session, not saved. `space p` lists them with the preview, `enter` pasting the one picked after the cursor (in an
-  editable window). Right after a paste, `[ y` / `] y` (`[keys.source]`) put the previous or next copy in its place, one
-  undo step with the paste. The clipboard stays the one register. **Open:** whether an operator's delete (`d`, `x`),
+  editable window). The clipboard stays the one register. **Open:** whether an operator's delete (`d`, `x`),
   which writes the register, counts as a cut.
 - **Case, and visual mode's keys** (EG-D22): `g u`, `g shift+u` and `g ~` (`edit.op_lower`, `edit.op_upper`,
   `edit.op_toggle_case`) are operators in `[keys.source]`; visual mode adds `u`, `shift+u`, `~` (`visual.lower`,
@@ -377,14 +366,9 @@ Adds (EG-D19; lsp.md § The client for code has the requests):
   (`callHierarchy/outgoingCalls`), as a list of places with the preview, each its name, its container and `path:line`.
   `right` on one asks for its own callers (or callees) and shows them under it, indented — the list's folding, as a
   tree (`shell/overlays/overlays.ts`) — and `left` folds them.
-- **Formatting a selection** (`visual.format` visual `=`, `edit.op_format` `g =` with a motion or object): the range,
-  formatted by the first of the file's servers that formats a range (`textDocument/rangeFormatting`), with `space c
-  f`'s indentation; one undo step, left unsaved. A server that formats only whole files is said.
-- **`:lsp-restart`** (`lsp.restart`): the file's servers stopped and started again, told their files again, their
-  crashes counted afresh.
 
 Previously: `shift+k` hover, `g d`, `g r`, `g y`, `g shift+i`; `space c r`, `space c a` and `space c f` (the whole
-file); completion, snippets and signature help while typing; no hints, uses, calls, range formatting or restart.
+file); completion, snippets and signature help while typing; no hints, uses or calls.
 
 ## MODIFIED design/tui.md § Problems where they are (plans `19.8`–`19.11`)
 
@@ -405,17 +389,15 @@ Adds (EG-D5; `problems/at-cursor.ts`, reading the file's problems as the Problem
 Previously: a file's problems show in the bar, as marks, and as counts on the status line; what one says is the
 Problems panel's, whose `j` / `k` move the note through them; no key goes to the next one.
 
-## ADDED design/tui.md § TODOs and stubs
+## ADDED design/tui.md § TODOs
 
 After § The Problems panel (EG-D9; `core/documents/diagnostics/todos.ts` finds them, `Todos` keeps the vault's):
 
 - **What one is:** TODO, FIXME, FIX, HACK, XXX or BUG where it's a mark — in a code comment, the word followed by `:`;
-  in a note, a line or a list item (a task's too) starting with one and `:` — and the stubs agents leave, found among
-  the grammar's tokens outside strings and comments: `todo!()`, `unimplemented!()`, `raise NotImplementedError`,
-  `throw new Error("not implemented")`. Code's comments are the syntax pass's (§ Files beyond notes), a note's fenced
-  code among them; a note's lines are its parse's, never inside a code span.
+  in a note, a line or a list item (a task's too) starting with one and `:`. Code's comments are the syntax pass's (§
+  Files beyond notes), a note's fenced code among them; a note's lines are its parse's, never inside a code span.
 - **Coloured** in every view — rendered, SOURCE view, the lens, the code view — the word and its `:` in `todo` (FIXME,
-  FIX and BUG in `todo_fix`), a stub whole.
+  FIX and BUG in `todo_fix`).
 - **In the file:** `] x` / `[ x` (`todo.next`, `todo.prev`), around the ends.
 - **In the vault:** `space f x` (`todo.list`) lists those of every note and every text file the explorer shows, each
   its word, `path:line` and its text, with the preview (§ Overlays). Gathered where the graph gathers code comments'
@@ -424,19 +406,19 @@ After § The Problems panel (EG-D9; `core/documents/diagnostics/todos.ts` finds 
 
 ## MODIFIED design/tui.md § Git (plans `5.11`–`5.14`, `26.x`)
 
-- **`space g`, a group** (EG-D15): `space g` shows the which-key popup, and `space g g` opens the panel
-  (`git.view`), whose keys act there as now. Beside it, the note's own change and file, the cursor standing for the
-  panel's selected row — the change on its line (the gutter's hunk) when it's on one, else the note's file — with the
-  panel's letters where the panel has the action: `space g s` stages that change (`git.change_stage`, as the gutter
-  menu's Stage it, `stageSign`) or the file (refused while it's unsaved, as git stages what's on disk); `space g u`
-  unstages the file (the gutter's changes are against what's staged, so the line holds none staged); `space g d`
-  reverts the change (`git.change_undo`, asked first now, one undo step as Revert it is). The rest take letters the
-  panel uses only to move: `space g enter` previews the change (`git.change_preview`, as `enter` shows a row's diff),
-  `space g h` this file's history (`git.history`), `space g l` the branch's commits (`git.log`), `space g o` the inline
-  diff, `space g b` the blame column, `space g shift+b` who changed this line (`git.blame`), `space g shift+d` the
-  file's diff against the base (`git.diff`), `space g y` / `space g w` the line's web link. Each is an interaction
-  (D156). Commit, amend, fetch, pull, push, stash, review, a new branch, merge, the merge screen and rebase stay the
-  panel's keys. GIT-D12 gets a note: `space g` is a group again, the panel on `space g g`.
+- **`space g`, a group** (EG-D15): `space g` shows the which-key popup, and `space g g` opens the panel (`git.view`),
+  whose keys act there as now. Beside it, the note's own change and file, the cursor standing for the panel's selected
+  row — the change on its line (the gutter's hunk) when it's on one, else the note's file — with the panel's letters
+  where the panel has the action: `space g s` stages that change (`git.change_stage`, as the gutter menu's Stage it,
+  `stageSign`) or the file (refused while it's unsaved, as git stages what's on disk); `space g u` unstages the file
+  (the gutter's changes are against what's staged, so the line holds none staged); `space g d` reverts the change
+  (`git.change_undo`, asked first now, one undo step as Revert it is). The rest take letters the panel uses only to
+  move: `space g enter` previews the change (`git.change_preview`, as `enter` shows a row's diff), `space g l` the
+  branch's commits (`git.log`), `space g o` the inline diff, `space g b` the blame column, `space g y` / `space g w` the
+  line's web link. Each is an interaction (D156). This file's history, who changed this line and the file's diff stay
+  where GIT-D12 put them, in the panel's This file and the palette. Commit, amend, fetch, pull, push, stash, review, a
+  new branch, merge, the merge screen and rebase stay the panel's keys. GIT-D12 gets a note: `space g` is a group again,
+  the panel on `space g g`.
 - **A branch's commits** (EG-D4; `git.log`, `:log`; `core/workspace/git/history/gitlog.ts`): `branchLogLater` reads
   `git log base..branch` (the branch's own base, `Git.baseOf`; this branch, or one opened up in Branches), newest first,
   each its hash, subject, author and date; `commitFilesLater` a commit's files (`git diff-tree -r -M --name-status
@@ -449,8 +431,8 @@ After § The Problems panel (EG-D9; `core/documents/diagnostics/todos.ts` finds 
   `blameFileLater`, `git blame --porcelain HEAD`), mapped to the text now through the line diff, a line changed since
   `not committed yet`. Each run of lines from one commit gets its short hash, author and age on its first row, newer
   commits brighter (`blame`, from dim toward the text's colour by age); by line in SOURCE view, by block in a rendered
-  note (the newest commit among its lines). `space g shift+b` on a line, or a click on an entry, shows its commit as
-  now; the cursor never stops on the column. Asked again when git has news. Its width is the file's widest entry, the
+  note (the newest commit among its lines). A click on an entry shows its commit as Who changed this line does; the
+  cursor never stops on the column. Asked again when git has news. Its width is the file's widest entry, the
   author cut first, by `width.ts`. **Open:** the code view's rows.
 - **The inline diff** (EG-D17; `git.inline_diff`, `space g o`; `InlineDiff`): in the window itself, first against
   what's staged (the gutter's hunks), again against the branch's base (`Git.baseOf`'s merge base), again off. Removed
@@ -461,7 +443,7 @@ After § The Problems panel (EG-D9; `core/documents/diagnostics/todos.ts` finds 
 - **A line's web link** (EG-D18; `git.web_copy` `space g y`, `git.web_open` `space g w`;
   `core/workspace/git/forge.ts`): the cursor's line, or a selection's lines as a range, at the commit checked out (its
   hash), on the forge the remote names (the branch's upstream's remote, else origin) — its URL, `git@host:owner/repo`,
-  `ssh://` or `https://`, read for GitHub, GitLab, Codeberg or Bitbucket, each in its own form (GitHub's
+  `ssh://` or `https://`, read for GitHub or GitLab, each in its own form (GitHub's
   `/blob/<hash>/<path>#L10-L20`, GitLab's `#L10-20`; memory, checked in its task). `space g y` copies it, `space g w`
   opens it with the platform's opener, as a problem report opens (RPT-D3: `open`, `wslview` or `explorer.exe`,
   `xdg-open` with a display) — never over SSH, where it's copied instead, as § Following links says of a URL. Another
@@ -488,14 +470,14 @@ Labels come in the dispatch order right after a key awaited as a character. The 
 | Keymap | Keys |
 | --- | --- |
 | normal | `s`, `g w`; `] d` `[ d` `] e` `[ e`; `] x` `[ x`; `] q` `[ q`; `] r` `[ r` |
-| normal | `] f` `[ f` `] a` `[ a` `] o` `[ o`; `alt+.`; `m`, `` ` ``, `'`; `ctrl+^`; `ctrl+w z` |
+| normal | `] f` `[ f` `] a` `[ a` `] o` `[ o`; `m`, `` ` ``, `'`; `ctrl+^`; `ctrl+w z` |
 | normal | `z c`, `z o`, `z shift+m`, `z shift+r`; `z a` now `fold.toggle` |
-| leader | `space '`, `space p`, ``space ` ``; `space c d` `i` `o`; `space f w` `x`; `space h m` `u` |
-| leader | `space g` (a group: `g`, `s` `u` `d`, `enter` `h` `l` `o` `b` `shift+b` `shift+d` `y` `w`) |
-| leader | `space u h` `shift+r` `i`; `space w m`; `space q d` |
-| source | `y s`, `d s`, `c s`; `g q`, `g shift+q`; `g u`, `g shift+u`, `g ~`; `g =`; `[ y` `] y`; `alt+o` |
-| visual | `shift+s`; `g q`, `g shift+q`; `u`, `shift+u`, `~`, `shift+j`, `r`, `p`; `=` |
-| visual | `alt+o`, `alt+i`, `alt+n`, `alt+p` |
+| leader | `space '`, `space p`, ``space ` ``; `space c d` `i` `o`; `space f x`; `space h m` `u` |
+| leader | `space g` (a group: `g`, `s` `u` `d`, `enter` `l` `o` `b` `y` `w`) |
+| leader | `space u h` `shift+r` `i`; `space w m` |
+| source | `y s`, `d s`, `c s`; `g q`, `g shift+q`; `g u`, `g shift+u`, `g ~`; `alt+o` |
+| visual | `shift+s`; `g q`, `g shift+q`; `u`, `shift+u`, `~`, `shift+j`, `r`, `p` |
+| visual | `alt+o`, `alt+i` |
 | a list | `ctrl+t`, `alt+enter`; in replace in every note's preview, `ctrl+x` |
 | problem window | `y`, `s` (`DEFAULT_PROBLEM_KEYS`) |
 | several selections | its task's (EG-D14) |
@@ -505,9 +487,8 @@ and normal; `z a` is `cell.fold`; `space g` is `git.view`.
 
 ## MODIFIED design/tui.md § Parity with the CLI
 
-Adds: EG's commands are interactions — the cursor, selections, folds, lists, editing (D14), git in the editor (D156),
-the language servers' — but `find.vault_word`, which is `slipbox find <word> --whole` as `find.vault` is
-`slipbox find <query>`. **Open:** `path:` in `slipbox find`; `todo.list`'s; the rename's imports in `slipbox mv`; a
+Adds: EG's commands are interactions: the cursor, selections, folds, lists, editing (D14), git in the editor (D156),
+the language servers'. **Open:** `path:` in `slipbox find`; `todo.list`'s; the rename's imports in `slipbox mv`; a
 replace with rows left out, which `slipbox replace --all` has no form for.
 
 Previously: each command is declared with the CLI invocation that reaches its state change, or as an interaction.
@@ -517,18 +498,15 @@ Previously: each command is declared with the CLI invocation that reaches its st
 Adds (EG-D19):
 
 - **What slipbox says it takes** at `initialize`: inlay hints (and `workspace/inlayHint/refresh`, answered by asking
-  again), document highlights, the call hierarchy, range formatting, and file operations (`workspace.fileOperations`:
+  again), document highlights, the call hierarchy, and file operations (`workspace.fileOperations`:
   `willRename`, `didRename`).
 - **Several servers on one file:** the features gain Helix's `inlay-hints` and `document-highlight`, and slipbox's
   `call-hierarchy` and `file-rename`, each limited as the others are (`only-features`, `except-features`). A main server
   does them all, an add-on none of them; hints, highlights and the call hierarchy go to the first that does them and
   answers, a file rename to every server that registered for it, their edits together.
-- **Restarting** (`lsp.restart`): a server stopped as quitting stops it (`shutdown`, `exit`, then a kill), started
-  again and told its files, its crashes counted afresh; one that failed to start is tried again.
 
 Previously: the client asks for diagnostics, hover, definitions, references, symbols, completion, signature help,
-renames, code actions and formatting the file — Helix's thirteen feature names; a server starts again only after a
-crash, and is left stopped past three in five minutes.
+renames, code actions and formatting the file — Helix's thirteen feature names.
 
 ## MODIFIED design/search.md § Find
 

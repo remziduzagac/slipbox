@@ -12,7 +12,7 @@ EG-D10.
 ## Description
 
 - The list fills as the query is typed, each query a request to the regex worker, a newer one taking back the last.
-- It opens on the selection or the cursor's word, selected; `space f w`.
+- It opens on the selection or the cursor's word, selected.
 - `path:` narrows the files; `] q` / `[ q` after it closes.
 - Replace's preview: before and after on each row, `ctrl+x` and a click dropping a row, the title counting those kept;
   one undo step.

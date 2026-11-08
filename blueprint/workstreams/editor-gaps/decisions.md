@@ -32,6 +32,8 @@ how every edit, undo step and server edit is made, so they wait until everything
 
 ## EG-D2: Lists of places: a preview, where a pick opens, the last list again (2026-11-08)
 
+> **Amended by EG-D23 (2026-11-08):** `alt+enter` offers here, the split and a new tab; the peek is dropped.
+
 **Decision:** The lists whose rows are places (the switcher, search, find in every note, references, backlinks, links,
 and the lists EG adds of places) show the selected row's place: the file as slipbox shows it, at the hit, the hit
 marked. Beside the list on a wide screen, under it on a narrow one; `ctrl+t` hides or shows it. The palette, help and
@@ -69,6 +71,8 @@ just since the base.
 
 ## EG-D5: Problems where they are: jumps, the status line, the whole message (2026-11-08)
 
+> **Amended by EG-D23 (2026-11-08):** `] e` / `[ e`, errors only, dropped.
+
 **Decision:** `] d` / `[ d` go to the next or previous problem shown in the file, around its ends; `] e` / `[ e` to
 errors only. With the cursor on a problem, the status line shows its message. `space c d` opens it in full in a
 floating window, with who found it; there `y` copies it and `s` adds it to the scratch for an agent.
@@ -93,6 +97,8 @@ Classes and types stay on `]]` / `[[`, since `] c` is git's and `] t` a note typ
 
 ## EG-D7: Growing and shrinking the selection by syntax (2026-11-08)
 
+> **Amended by EG-D23 (2026-11-08):** `alt+n` / `alt+p`, the siblings, dropped.
+
 **Decision:** In SOURCE view and the lens, `alt+o` grows the selection to the node around it (from the cursor's word
 when nothing is selected, in visual mode), `alt+i` shrinks it back a step, `alt+n` / `alt+p` move it to the next or
 previous sibling. Notes by their Markdown tree, code by its grammar. `ctrl+space` stays unbound: it's the user's.
@@ -115,6 +121,8 @@ a selection a mark is typed over.
 
 ## EG-D9: TODOs and stubs (2026-11-08)
 
+> **Amended by EG-D23 (2026-11-08):** the stubs dropped; the words stay.
+
 **Decision:** TODO, FIXME, FIX, HACK, XXX and BUG are coloured where they're marks: in a code comment, or at the
 start of a note's line or list item, followed by `:`. So are the stubs agents leave: `todo!()`, `unimplemented!()`,
 `raise NotImplementedError`, `throw new Error("not implemented")`. `] x` / `[ x` step through the file's; `space f x`
@@ -125,6 +133,8 @@ lists the vault's, with the preview.
 **Not chosen:** TODOs as problems of their own kind, in a tab of the Problems panel; colour alone.
 
 ## EG-D10: Find in every note, and a replace with rows left out (2026-11-08)
+
+> **Amended by EG-D23 (2026-11-08):** `space f w` dropped.
 
 **Decision:** Find in every note fills its list as you type. It opens with the selection on one line, else the
 cursor's word, typed and selected, and `space f w` finds that word at once. `path:ops/` narrows the files, as in
@@ -165,6 +175,8 @@ paragraph a line.
 
 ## EG-D13: Undo by time, and its steps as a list (2026-11-08)
 
+> **Amended by EG-D23 (2026-11-08):** `:earlier` and `:later` dropped; the list stays.
+
 **Decision:** `:earlier 10m` / `:later 10m` (and `1h`, and `1f` for a save). `space h u` lists the note's undo steps,
 newest first, each its time and kind (typing, a reload from disk, a replace, a save); `enter` goes back to one, the
 preview showing its diff to now. Kept while slipbox runs, as undo is.
@@ -190,6 +202,9 @@ so its task proposes keys, mostly inside visual mode, for the user to settle bef
 ## EG-D15: `space g` a group, for the note's change and file (2026-11-08)
 
 > Amends GIT-D12, whose `space g` was the git panel alone.
+>
+> **Amended by EG-D23 (2026-11-08):** `space g h`, `space g shift+b` and `space g shift+d` dropped; history, who
+> changed a line and the file's diff stay in the panel's This file and the palette.
 
 **Decision:** `space g` shows which-key and `space g g` opens the git panel, whose keys work there as now. Beside it,
 the keys for the note's own change and file, the cursor standing for the panel's selected row (the change on its line,
@@ -231,6 +246,8 @@ again, against the branch's base; again, off. By block in a rendered note; `] c`
 
 ## EG-D18: A line's web link (2026-11-08)
 
+> **Amended by EG-D23 (2026-11-08):** GitHub and GitLab only; Codeberg and Bitbucket dropped.
+
 **Decision:** `space g y` copies the web link to the cursor's line, or a selection's lines as a range, at the current
 commit; `space g w` opens it with the platform's opener, or copies it over SSH, as RPT-D3 does. The forge is the
 remote's: GitHub, GitLab, Codeberg, Bitbucket.
@@ -240,6 +257,8 @@ remote's: GitHub, GitLab, Codeberg, Bitbucket.
 **Not chosen:** copying alone.
 
 ## EG-D19: What the language servers add (2026-11-08)
+
+> **Amended by EG-D23 (2026-11-08):** formatting a selection and `:lsp-restart` dropped.
 
 **Decision:**
 
@@ -263,6 +282,8 @@ the call hierarchy alone.
 ## EG-D20: The copies kept, and marks (2026-11-08)
 
 > Amends D155, which didn't want vim's marks; its macros, named registers and block selection stay out.
+>
+> **Amended by EG-D23 (2026-11-08):** `[ y` / `] y` dropped; `space p` stays.
 
 **Decision:** The last 20 copies and cuts are kept for the session: `space p` lists them, with the preview, to paste
 one, and right after a paste `[ y` / `] y` swap it for the previous or next copy; the clipboard stays the one register.
@@ -292,6 +313,8 @@ one split as the least that reads one note beside another, not as a limit wanted
 ## EG-D22: The smaller keys and defaults (2026-11-08)
 
 > Amends D155, whose closing pairs were opt-in.
+>
+> **Amended by EG-D23 (2026-11-08):** `alt+.` and `space q d` dropped.
 
 **Decision:**
 
@@ -307,3 +330,19 @@ one split as the least that reads one note beside another, not as a limit wanted
 both editors close them, a motion repeated, the other file, the depth of a long list, a session not saved.
 
 **Not chosen:** none of the four in either group was dropped.
+
+## EG-D23: Second routes and marginal extras dropped (2026-11-08)
+
+**Decision:** Dropped, as second routes to what's a step away: `space g h`, `space g shift+b` and `space g shift+d`
+(in the panel's This file and the palette, where GIT-D12 put them), `space f w` (find opens on the cursor's word),
+`[ y` / `] y` (the `space p` list), `:earlier` / `:later` (the `space h u` list), and the peek in `alt+enter`'s menu
+(the preview reads the file already, and the peek stays for other vaults). Dropped as marginal: `] e` / `[ e`,
+`alt+n` / `alt+p`, the stubs among the TODOs, Codeberg's and Bitbucket's links, `alt+.`, `space q d`, formatting a
+selection, and `:lsp-restart`.
+
+**Why:** Asked whether EG added things it didn't need, as the git panel's keys mirrored from the note had been
+(EG-D15). Each key costs a binding, a case in the reference set, a terminal check and its docs; these gave little
+for it.
+
+**Not chosen:** dropping code's editing by syntax (its text objects, jumps and growing, and the call hierarchy) as an
+IDE's, and several selections (EG-D14), the costliest: both offered, both kept.
