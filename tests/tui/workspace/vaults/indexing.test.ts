@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, realpathSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { makeSandbox, makeVault, harness } from "../../../tui-harness.ts";
+import { answerSwitch, makeSandbox, makeVault, harness } from "../../../tui-harness.ts";
 
 // The model harness applies the file-local timeout and sandbox policy.
 const sandbox = makeSandbox();
@@ -78,6 +78,7 @@ describe("the index on demand in the TUI (20.8)", () => {
       const root = makeVault();
       const h = await harness({ root, open: "index.md" });
       await h.app.run(`note.open ${whole ? join(root, "nested-vault", "inner.md") : "nested-vault/inner.md"}`);
+      await answerSwitch(h);
       expect(h.app.loc.root).toBe(join(root, "nested-vault"));
       expect(h.app.view!.buf.rel).toBe("inner.md");
     }

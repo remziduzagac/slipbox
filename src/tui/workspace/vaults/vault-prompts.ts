@@ -44,7 +44,12 @@ interface VaultPromptContext {
   message(level: "info" | "warn" | "error", text: string): void;
 }
 
-type SwitchVault = (target: VaultLocation, open: string | null, anchor?: Anchor, how?: { folder?: string }) => boolean;
+type SwitchVault = (
+  target: VaultLocation,
+  open: string | null,
+  anchor?: Anchor,
+  how?: { folder?: string; made?: boolean },
+) => boolean;
 
 /** Vault catalog, copy choices and mutation previews, reading the workspace when invoked. */
 export class VaultPrompts {
@@ -105,7 +110,8 @@ export class VaultPrompts {
           return this.app.message("error", (err as Error).message);
         }
         const n = plan.files.reduce((k, f) => k + f.edits.length, 0);
-        this.switchVault(vaultAt(holder), open && existsSync(open) ? open : null);
+        // This vault is part of the one holding it now: there, unasked (D270).
+        this.switchVault(vaultAt(holder), open && existsSync(open) ? open : null, undefined, { made: true });
         this.app.message(
           "info",
           `made ${rel}/ part of ${plan.to} (its .slipbox/ is in the trash): ${n} change${n === 1 ? "" : "s"} in ${applied.written.length} file${applied.written.length === 1 ? "" : "s"}`,
@@ -215,7 +221,8 @@ export class VaultPrompts {
     } catch (err) {
       return this.app.message("warn", (err as Error).message);
     }
-    this.switchVault(rootAt(r.root), open && existsSync(open) && open.startsWith(`${r.root}/`) ? open : null);
+    const at = open && existsSync(open) && open.startsWith(`${r.root}/`) ? open : null;
+    this.switchVault(rootAt(r.root), at, undefined, { made: true }); // the vault made, gone into unasked (D270)
     this.app.message(
       "info",
       `${tildePath(r.root)} has its .slipbox/ now${r.excluded ? ` (private: in ${r.excluded})` : ""} — :name names it for pointers`,

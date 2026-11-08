@@ -3,7 +3,7 @@ import { chmodSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { delimiter, join } from "node:path";
 import type { ListOverlay } from "../../../../src/tui/app/runtime/app.ts";
 import { stringWidth } from "../../../../src/core/foundation/text/width.ts";
-import { makeSandbox, makeVault, harness, statusRow, topRow } from "../../../tui-harness.ts";
+import { answerSwitch, makeSandbox, makeVault, harness, statusRow, topRow } from "../../../tui-harness.ts";
 
 // The model harness applies the file-local timeout and sandbox policy.
 const sandbox = makeSandbox();
@@ -317,6 +317,7 @@ describe("git in the TUI: marks, what changed, a note's diff, worktrees, conflic
       ["  ⎇ other", wt],
     ]);
     await h.keys("down", "enter");
+    await answerSwitch(h);
     expect(h.app.loc.root).toBe(wt);
     expect(h.app.view!.buf.rel).toBe("notes/b.md"); // the same note, there
     expect(h.app.view!.buf.source).toBe("# B\n"); // as the other branch has it

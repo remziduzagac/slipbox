@@ -53,8 +53,8 @@ test("Info keeps export paths in memory and reloads them when the vault changes"
   expect(h.app.exporter.lastPath("index.md")).toBe("/first.html");
   writeJson(join(stateDir(h.app.loc), "export.json"), { paths: { "index.md": "/second.html" } });
   for (let i = 0; i < 3; i++) expect(h.app.exporter.lastPath("index.md")).toBe("/first.html");
-  h.app.vaults.switchVault(rootAt(other), null);
+  h.app.vaults.switchVault(rootAt(other), null, undefined, { asked: true });
   expect(h.app.exporter.lastPath("index.md")).toBeNull();
-  h.app.vaults.switchVault(rootAt(root), null);
+  h.app.vaults.switchVault(rootAt(root), null, undefined, { asked: true });
   expect(h.app.exporter.lastPath("index.md")).toBe("/second.html");
 });

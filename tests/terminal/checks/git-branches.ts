@@ -9,7 +9,7 @@
 // by the frame that message asks for when its four seconds are up — which it's gone from.
 
 import { chmodSync, rmSync } from "node:fs";
-import type { Check } from "../check.ts";
+import { type Check, goInto } from "../check.ts";
 import type { Session } from "../session.ts";
 import {
   branchButton,
@@ -291,6 +291,7 @@ export const GIT_BRANCHES: Check[] = [
       await s.see("Remove the worktree ~/work/trail-agent-done?");
       // Removed, its branch kept; then into agent/ahead's checkout by :worktrees, in the same keys, before git is done.
       await s.keys("enter", ":", ..."worktrees", "enter", ..."agent/ahead", "enter");
+      await goInto(s);
       await s.where(/trail-agent-ahead │ agent\/ahead(?: |$)/);
       s.expect(s.rowOf("removed the worktree") < 0, "gone into agent/ahead's checkout before git removed the worktree");
       await toPanel(s);
@@ -318,6 +319,7 @@ export const GIT_BRANCHES: Check[] = [
       await s.message("made agent/fresh from main, in a new worktree");
       await s.until(() => isSelected(s, "agent/fresh"), undefined, "agent/fresh selected");
       await s.keys("o");
+      await goInto(s);
       await s.where(/trail-agent-fresh │ agent\/fresh(?: |$)/);
     },
   },
@@ -447,6 +449,7 @@ export const GIT_BRANCHES: Check[] = [
       await s.see("The worktree's folder");
       // Into agent/done's checkout by :worktrees, in the same keys: before git has answered.
       await s.keys("enter", ":", ..."worktrees", "enter", ..."agent/done", "enter");
+      await goInto(s);
       await s.where(/trail-agent-done │ agent\/done(?: |$)/);
       await s.message("loose is in a worktree at");
       await Bun.sleep(1500);
@@ -476,6 +479,7 @@ export const GIT_BRANCHES: Check[] = [
       // Remove…, then into agent/ahead's checkout by :worktrees, in the same keys.
       await selectRow(s, "agent/done");
       await s.keys(".", "down", "down", "down", "enter", ":", ..."worktrees", "enter", ..."agent/ahead", "enter");
+      await goInto(s);
       await s.where(/trail-agent-ahead │ agent\/ahead(?: |$)/);
       await Bun.sleep(3000);
       s.expect(s.rowOf("Remove it, keep") < 0, "no question opened in the checkout gone into");
@@ -483,12 +487,14 @@ export const GIT_BRANCHES: Check[] = [
       await s.ex("worktrees");
       await s.type("main");
       await s.keys("enter");
+      await goInto(s);
       await s.where(/ │ main(?: |$)/);
       await toPanel(s);
       // Back in the main checkout: its row clicked, selected (and opened up).
       await on(s, "⎇ agent/ahead");
       await s.until(() => isSelected(s, "agent/ahead"), undefined, "agent/ahead selected");
       await s.keys(".", "down", "enter", ":", ..."worktrees", "enter", ..."agent/done", "enter");
+      await goInto(s);
       await s.where(/trail-agent-done │ agent\/done(?: |$)/);
       await Bun.sleep(3000);
       s.expect(s.rowOf("The links it would break") < 0, "no menu opened in the checkout gone into");
@@ -496,6 +502,7 @@ export const GIT_BRANCHES: Check[] = [
       await s.ex("worktrees");
       await s.type("main");
       await s.keys("enter");
+      await goInto(s);
       await s.where(/ │ main(?: |$)/);
       await toPanel(s);
       await on(s, "⎇ agent/done");

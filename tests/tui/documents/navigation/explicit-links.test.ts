@@ -107,7 +107,7 @@ describe("links followed only when you say so (VV-D6)", () => {
     expect(h.app.explorer.rows().some((r) => r.path === join(link, "far.md"))).toBe(true);
     expect(h.app.following.describe(row(h, "data")!)).toContain("just looking");
     // Gone into another vault: what was looked at is behind you.
-    h.app.vaults.switchVault(locateVault({ root: makeVault() }), null);
+    h.app.vaults.switchVault(locateVault({ root: makeVault() }), null, undefined, { asked: true });
     expect(h.app.following.looking.size).toBe(0);
   });
 

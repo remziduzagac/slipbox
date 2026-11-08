@@ -370,8 +370,15 @@ export class Git {
           );
         const there = note && existsSync(join(vault, note)) ? join(vault, note) : null;
         const v = this.app.view;
-        this.app.vaults.switchVault(rootAt(vault), there, there && v ? { ...v.topAnchor } : undefined);
-        if (note && !there) this.app.message("info", `${note} isn't on that branch: its vault opened instead`);
+        const missing = () => {
+          if (note && !there) this.app.message("info", `${note} isn't on that branch: its vault opened instead`);
+        };
+        if (
+          this.app.vaults.switchVault(rootAt(vault), there, there && v ? { ...v.topAnchor } : undefined, {
+            after: missing,
+          })
+        )
+          missing();
       },
     });
   }

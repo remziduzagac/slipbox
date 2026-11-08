@@ -126,6 +126,7 @@ design/document-types.md.
   is found from evidence, and the relink is offered; before a merge, the links it would break are shown (D63, D66,
   D78, D143, D152).
 
+- Going into another vault, by any way, asks first: Go, Peek at the note, or Stay; a peek never switches (D270).
 - Switching vaults with unsaved edits asks Save all and go, Discard and go, or Stay; saves must succeed first.
   The outgoing notes, parses and index are released; workspace state on disk supports return. The switch list
   includes unnamed vaults, home folders marked as home's, and worktrees grouped by repository (VB-D4, VB-D5).

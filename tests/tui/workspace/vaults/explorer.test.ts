@@ -8,7 +8,15 @@ import { openGraph } from "../../../../src/core/workspace/graph/graph.ts";
 import { type ListOverlay, App, type Host } from "../../../../src/tui/app/runtime/app.ts";
 
 import { DEFAULT_ALIASES } from "../../../../src/tui/shell/input/keys.ts";
-import { makeSandbox, makeVault, harness, onlyRootsUnder, topRow, whereNow } from "../../../tui-harness.ts";
+import {
+  answerSwitch,
+  makeSandbox,
+  makeVault,
+  harness,
+  onlyRootsUnder,
+  topRow,
+  whereNow,
+} from "../../../tui-harness.ts";
 
 // The model harness applies the file-local timeout and sandbox policy.
 const sandbox = makeSandbox();
@@ -44,6 +52,7 @@ describe("vaults in the TUI (17.x)", () => {
     const h = await harness({ root: notes, open: "index.md" });
     expect(h.app.explorer.top).toBe(notes);
     await h.keys("tab", "enter", "o"); // into the app vault, by the link: its peek, then o
+    await answerSwitch(h);
     expect(h.app.loc.root).toBe(app);
     const shown = () =>
       h.app.explorer.rows().map((r) => `${"  ".repeat(r.depth)}${r.name}${r.root?.here ? " (here)" : ""}`);
@@ -61,12 +70,14 @@ describe("vaults in the TUI (17.x)", () => {
     h.app.sidebar.selected = h.app.explorer.rows().findIndex((r) => r.name === "todo.md");
     expect(h.app.explorer.item()).toBeNull(); // not this vault's to rename or delete
     await h.keys("enter");
+    await answerSwitch(h);
     expect(h.app.loc.root).toBe(notes);
     expect(h.app.view!.buf.rel).toBe("todo.md");
     expect(h.app.explorer.top).toBe(base);
     expect(own()).toBe(true);
     // Back: into app again, the view as it was.
     await h.app.run("history.back");
+    await answerSwitch(h);
     expect(h.app.loc.root).toBe(app);
     expect(h.app.explorer.top).toBe(base);
     // Zoomed in on app, notes outside the view — the vault opened, gone into since: nothing lists it beside the tree.
@@ -82,6 +93,7 @@ describe("vaults in the TUI (17.x)", () => {
     const { notes, n } = await twoVaults();
     const h = await harness({ root: notes, open: "index.md", width: 120, height: 30 });
     await h.keys("tab", "enter", "o"); // into the app vault, by the link: its peek, then o
+    await answerSwitch(h);
     h.app.leftView = "explorer";
     h.app.region = "sidebar";
     h.app.sidebar.selected = h.app.explorer.rows().findIndex((r) => r.root?.abs === notes);
@@ -104,12 +116,14 @@ describe("vaults in the TUI (17.x)", () => {
     const inner = join(outer, "nested-vault");
     const h = await harness({ loc: locateVault({ path: outer }), open: null });
     h.app.vaults.switchVault(locateVault({ path: inner }), null);
+    await answerSwitch(h);
     expect(h.app.loc.root).toBe(inner);
     expect(h.app.explorer.top).toBe(outer);
     const here = h.app.explorer.rows().findIndex((r) => r.root?.here);
     expect(h.app.explorer.rows()[here]).toMatchObject({ name: "nested-vault", path: inner, depth: 0 });
     expect(h.app.explorer.rows()[here + 1]!.depth).toBe(1); // unfolded: its tree under it
     h.app.vaults.switchVault(locateVault({ path: outer }), null);
+    await answerSwitch(h);
     expect(h.app.explorer.top).toBe(outer);
     expect(h.app.explorer.rows().find((r) => r.name === "nested-vault")).toMatchObject({ path: "nested-vault" });
   });
@@ -118,6 +132,7 @@ describe("vaults in the TUI (17.x)", () => {
     const { notes, app } = await twoVaults();
     const h = await harness({ root: notes, open: "index.md" });
     await h.keys("tab", "enter", "o"); // into app (its peek, then o); notes beside it in the view, unfolded
+    await answerSwitch(h);
     expect(h.app.loc.root).toBe(app);
     h.app.leftView = "explorer";
     h.app.region = "sidebar";
@@ -138,6 +153,7 @@ describe("vaults in the TUI (17.x)", () => {
     const { notes, app } = await twoVaults();
     const h = await harness({ root: notes, open: "index.md" });
     await h.keys("tab", "enter", "o"); // into app (its peek, then o); notes beside it in the view
+    await answerSwitch(h);
     expect(h.app.loc.root).toBe(app);
     h.app.leftView = "explorer";
     h.app.region = "sidebar";
@@ -184,6 +200,7 @@ describe("vaults in the TUI (17.x)", () => {
     expect(h.app.floating?.kind).toBe("peek");
     expect(h.app.explorer.top).toBe(root); // looking never moves the view
     await h.keys("o");
+    await answerSwitch(h);
     expect(h.app.floating).toBeNull();
     expect(h.app.loc).toMatchObject({ mode: "folder", root: loose });
     expect(h.app.view?.buf.abs).toBe(join(loose, "l.md"));
@@ -194,6 +211,7 @@ describe("vaults in the TUI (17.x)", () => {
     expect(h.app.explorer.rows()[h.app.sidebar.selected]!.path).toBe(join(loose, "l.md"));
     // Back: into the vault, beside.md; the view holds both still.
     await h.app.run("history.back");
+    await answerSwitch(h);
     expect(h.app.loc.root).toBe(root);
     expect(h.app.view?.buf.rel).toBe("beside.md");
     expect(h.app.explorer.top).toBe(base);
@@ -223,6 +241,7 @@ describe("vaults in the TUI (17.x)", () => {
     expect(c.styles[y]![x]).toMatchObject({ fg: h.app.theme.roles.sidebar_root.fg });
     h.app.sidebar.selected = i;
     await h.keys("enter");
+    await answerSwitch(h);
     expect(h.app.loc.root).toBe(join(root, "nested-vault"));
     expect(h.app.view!.buf.rel).toBe("inner.md");
   });
@@ -248,6 +267,7 @@ describe("vaults in the TUI (17.x)", () => {
     expect(whereNow(h)).toBe("Elsewhere"); // one place, wherever it's opened (VV-D3)
     expect(topRow(h.frame())).toContain("Elsewhere");
     h.app.vaults.enterRoot(h.app.explorer.rows()[0]!);
+    await answerSwitch(h);
     expect(h.app.loc).toMatchObject({ mode: "vault", root: join(dir, "box") });
   });
 
@@ -301,6 +321,7 @@ describe("vaults in the TUI (17.x)", () => {
       const items = (h.app.overlay as ListOverlay).items.map((it) => it.label);
       for (let i = 0; i < items.indexOf(`tnotes${n}`); i++) await h.keys("down");
       await h.keys("enter");
+      await answerSwitch(h);
       expect(h.app.loc.root).toBe(notes);
       await h.keys("space", "v", "v");
       expect(h.frame()).toContain(`tapp${n}`);

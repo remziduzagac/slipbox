@@ -174,6 +174,12 @@ export async function follow(s: Session, text: string): Promise<void> {
   await s.keys("enter", "escape", "enter");
 }
 
+/** Going into another vault asks first (D270): Go, once the question is up. */
+export async function goInto(s: Session): Promise<void> {
+  await s.see("Go into ", 5000);
+  await s.keys("g");
+}
+
 /**
  * A problem's severity sign, as the glyph set in use draws it (19.9) — on the status line, in the bar and the
  * Problems panel: unicode's, or the Nerd Font's.

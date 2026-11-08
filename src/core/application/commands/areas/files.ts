@@ -248,6 +248,18 @@ export const FILE_SPECS: CommandSpec[] = [
     cli: null,
     desc: "Leaves unsaved notes behind for the pending switch",
   },
+  {
+    id: "vault.switch_go",
+    title: "Go into the vault",
+    cli: null,
+    desc: "Goes into the vault the pending switch names",
+  },
+  {
+    id: "vault.switch_peek",
+    title: "Peek instead",
+    cli: null,
+    desc: "Reads the pending switch's note in a peek, read-only, without going into its vault",
+  },
   { id: "vault.switch_stay", title: "Stay in this vault", cli: null, desc: "Cancels the pending vault switch" },
   {
     id: "folders.open",

@@ -1,7 +1,7 @@
 // docs/guides/vaults.md: the explorer zoomed out past the vault you're in, its breadcrumb and its rows' marks; a peek
 // into another vault; a folder's symlinks as the explorer shows them, and the question one leading out asks.
 
-import { explorerOpen, follow, leader } from "../check.ts";
+import { explorerOpen, follow, goInto, leader } from "../check.ts";
 import { HOME, quiet, type Shot } from "../shot.ts";
 
 /** A wider explorer, so a row's marks and what describes it (a branch, where a link leads) fit beside its name. */
@@ -71,6 +71,7 @@ export const SHOTS: Shot[] = [
       await follow(s, "architecture. The");
       await s.see("o go there · t keep as a tab", 5000);
       await s.keys("o");
+      await goInto(s);
       await s.where(/^kestrel(?: │| ·|$)/);
       await s.status("architecture.md");
       // What going in says, gone: kestrel's own config's warnings, and the message naming where it is.

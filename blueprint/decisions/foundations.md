@@ -685,3 +685,24 @@ A message fades from the status line in seconds, and a warning missed there was 
 **Cost:** the palette has no click of its own on the bar (it has three keys, and a row in About); a preview build no
 longer says so on the bar, only in About; the messages count moves with every message, informational ones included.
 Where you are at the left, after the badge, was tried too and is left to decide later.
+
+## D270: Going into another vault asks first; the explorer dims what's outside the vault open (#104, 2026-11-08)
+
+**Decision:** Every way into another vault asks before the workspace changes: the explorer (another vault's row, or a
+file of one), `:e` and pointers, `space v v` and the top bar's vault list, `ctrl+click` on a link, the git panel's Open,
+a folder link that leads out, `o` in a peek, and `ctrl+o` back into the vault before. The question names the vault and
+offers Go and Stay, and Peek when the switch would open a file and didn't come from a peek: the file read there,
+read-only, as a link into another vault opens it. With unsaved notes, their question (Save all and go, Discard and go,
+Stay) is the one asked. A vault made, or made part of the one holding it, is gone into unasked: the switch is what was
+asked. A peek never switches, so it never asks. In the explorer, every row outside the vault open's own tree is drawn
+dim, with a theme role of its own (`sidebar_outside`), and the keys that would change one say why they don't.
+
+**Why:** The maintainer's calls, in a review of the screen. A switch replaces every tab with the other vault's, and one
+keystroke in the explorer did it, as a side effect of opening a file. One rule, every switch asks, is easier to know
+than a list of the ones that do. Rows outside the vault looked like the vault's own, though nothing there can be
+renamed, moved or deleted from it, and the keys answered "select a note first" with one selected. Dim, not a colour for
+the vault open: the usual view, inside the vault, doesn't change; orange already means warnings and changes; dim still
+shows without colour.
+
+**Cost:** a deliberate switch (`space v v`, `o` in a peek, git's Open) takes one key more. The walk's left-out rows
+inside the vault are dimmed too, as nothing changes them from the explorer either.

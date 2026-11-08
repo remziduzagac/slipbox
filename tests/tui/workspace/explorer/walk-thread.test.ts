@@ -45,7 +45,7 @@ import {
 import { SLOW_MS, STUCK_MS, slowFolders } from "../../../fixtures/walk/slow.ts";
 import type { TreeRow } from "../../../../src/tui/workspace/explorer/explorer.ts";
 import { Listings, PENDING_MS, REREAD_MS } from "../../../../src/tui/workspace/explorer/listings.ts";
-import { type Harness, harness, makeSandbox, stepToEnd } from "../../../tui-harness.ts";
+import { answerSwitch, type Harness, harness, makeSandbox, stepToEnd } from "../../../tui-harness.ts";
 
 const sandbox = makeSandbox();
 const slowWorker = () => new Worker(new URL("../../../fixtures/walk/slow-worker.ts", import.meta.url).href);
@@ -187,6 +187,7 @@ describe("the TUI's walks on their own thread (T12, #9)", () => {
       homeIndexed();
       const v = tree({ ".slipbox/config.toml": "", "index.md": "# V\n" });
       expect(h.app.vaults.intoOther(join(v, "index.md"))).toBe(true);
+      await answerSwitch(h);
       expect(h.app.loc.root).toBe(v);
       const graph = h.app.graph;
       const vaultBuilds = graph.builds;

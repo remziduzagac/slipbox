@@ -103,7 +103,8 @@ its own is a vault of its own: a git repository you cloned there (`.git`), a zk 
 - Search in your vault doesn't find them, until you widen it with `ctrl+a`.
 - A wikilink by name doesn't reach them. Write a path, `[[clone/README]]`, and following it opens a peek: the note read
   in a floating window, your vault left as it was. `o` goes into the inner vault.
-- The explorer marks its folder `◈`. `enter` on it goes into it, with its own tabs, and `ctrl+o` comes back.
+- The explorer marks its folder `◈`. `enter` on it asks, then goes into it, with its own tabs, and `ctrl+o` comes
+  back.
 
 [Working across folders and vaults](vaults.md) explains vaults, the peek and the rest with examples.
 

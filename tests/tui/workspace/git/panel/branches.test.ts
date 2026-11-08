@@ -12,6 +12,7 @@ import {
 } from "../../../../../src/tui/workspace/git/views/branches/gitbranchview.ts";
 import type { Branch } from "../../../../../src/core/workspace/git/branches/gitbranches.ts";
 import { DIFF_MAX } from "../../../../../src/tui/workspace/git/views/panel/gitview.ts";
+import { answerSwitch } from "../../../../tui-harness.ts";
 import { makeGitPanelFixture } from "../../../../support/tui/git-panel-fixture.ts";
 
 // File-owned Git-panel setup preserves its environment restoration and cleanup.
@@ -300,6 +301,9 @@ describe("the branches (GIT-D9, GIT-D10, GIT-D13)", () => {
     app.gitPanel.branches.button(branchOf(app, "loose")!, "worktree");
     expect(listTitle(app)).toBe("The worktree's folder");
     await keys("enter");
+    // The worktree made, going into it asks first (D270).
+    expect(await until(() => listTitle(app).startsWith("Go into "))).toBe(true);
+    await answerSwitch({ app, keys });
     // By the folders' real paths: a temporary folder may be reached through a link (macOS's /var).
     const at = `${realpathSync(root)}-loose`;
     expect(await until(() => realpathSync(app.loc.root) === at)).toBe(true);
@@ -457,7 +461,7 @@ describe("the branches (GIT-D9, GIT-D10, GIT-D13)", () => {
       say(...m);
       // Gone into sub/ as git is asked to remove it, and agent/done opened up there.
       if (m[1].startsWith("removing the worktree ")) {
-        app.vaults.switchVault(locateVault({ root: sub }), null);
+        app.vaults.switchVault(locateVault({ root: sub }), null, undefined, { asked: true });
         app.gitPanel.branches.opened.add("agent/done");
       }
     };
@@ -481,12 +485,12 @@ describe("the branches (GIT-D9, GIT-D10, GIT-D13)", () => {
       ["agent/ahead", "merge"],
     ] as const) {
       // In the repository again (no watcher here: git asked by hand, as gone into).
-      expect(app.vaults.switchVault(locateVault({ root }), null)).toBe(true);
+      expect(app.vaults.switchVault(locateVault({ root }), null, undefined, { asked: true })).toBe(true);
       await app.git.refreshNow();
       expect(await until(() => (frame(), !!branchOf(app, name)))).toBe(true);
       const before = weighed();
       app.gitPanel.branches.button(branchOf(app, name)!, action);
-      expect(app.vaults.switchVault(locateVault({ root: sub }), null)).toBe(true);
+      expect(app.vaults.switchVault(locateVault({ root: sub }), null, undefined, { asked: true })).toBe(true);
       expect(await until(() => weighed() > before)).toBe(true);
       expect(app.overlay).toBeNull();
     }
@@ -515,7 +519,8 @@ describe("the branches (GIT-D9, GIT-D10, GIT-D13)", () => {
     const say = app.message.bind(app);
     app.message = (...m: Parameters<App["message"]>) => {
       say(...m);
-      if (m[1].startsWith("checking loose out at ")) app.vaults.switchVault(locateVault({ root: sub }), null);
+      if (m[1].startsWith("checking loose out at "))
+        app.vaults.switchVault(locateVault({ root: sub }), null, undefined, { asked: true });
     };
     app.gitPanel.branches.button(branchOf(app, "loose")!, "worktree");
     await keys("enter");
@@ -526,7 +531,7 @@ describe("the branches (GIT-D9, GIT-D10, GIT-D13)", () => {
     await app.git.refreshNow();
     expect(app.loc.root).toBe(went);
     // Back, and the next one: gone into sub/ once git has answered, while the list is asked again.
-    expect(app.vaults.switchVault(locateVault({ root }), null)).toBe(true);
+    expect(app.vaults.switchVault(locateVault({ root }), null, undefined, { asked: true })).toBe(true);
     await app.git.refreshNow();
     expect(await until(() => (frame(), !!branchOf(app, "later")))).toBe(true);
     const refresh = app.git.refreshNow.bind(app.git);
@@ -535,7 +540,7 @@ describe("the branches (GIT-D9, GIT-D10, GIT-D13)", () => {
       const asked = refresh();
       if (armed) {
         armed = false;
-        app.vaults.switchVault(locateVault({ root: sub }), null);
+        app.vaults.switchVault(locateVault({ root: sub }), null, undefined, { asked: true });
       }
       return asked;
     };
@@ -637,7 +642,7 @@ describe("the branches (GIT-D9, GIT-D10, GIT-D13)", () => {
     await made("agent/b");
     expect(app.sidebar.selected).toBe(moved);
     // Another vault gone into meanwhile: not opened up there, nor anything selected.
-    meanwhile = () => app.vaults.switchVault(locateVault({ root: sub }), null);
+    meanwhile = () => app.vaults.switchVault(locateVault({ root: sub }), null, undefined, { asked: true });
     await newBranch(app, keys, "agent/c", "main");
     expect(await until(() => app.messages.some((m) => m.text.startsWith("made agent/c from")))).toBe(true);
     await app.git.refreshNow();
@@ -953,7 +958,7 @@ describe("the branches (GIT-D9, GIT-D10, GIT-D13)", () => {
     git(other, "branch", "only-there", "main");
     const { app, frame } = await panel(root);
     expect(await until(() => (frame(), !!branchOf(app, "feature")))).toBe(true);
-    expect(app.vaults.switchVault(locateVault({ root: other }), null)).toBe(true);
+    expect(app.vaults.switchVault(locateVault({ root: other }), null, undefined, { asked: true })).toBe(true);
     // The same generation as before: nothing of the last repository's carried over to show while it's asked.
     expect(app.gitPanel.branches.branches()).toBeNull();
     await app.git.refreshNow();

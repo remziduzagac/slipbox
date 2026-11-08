@@ -14,7 +14,7 @@ import {
 import { join, relative } from "node:path";
 import { type Config, DEFAULT_CONFIG } from "../../../../src/core/application/config/config.ts";
 import { type ListOverlay, App } from "../../../../src/tui/app/runtime/app.ts";
-import { makeSandbox, makeVault, harness, stepToEnd, type Harness } from "../../../tui-harness.ts";
+import { answerSwitch, makeSandbox, makeVault, harness, stepToEnd, type Harness } from "../../../tui-harness.ts";
 
 // The model harness applies the file-local timeout and sandbox policy.
 const sandbox = makeSandbox();
@@ -220,6 +220,7 @@ describe("the background auto-index in the TUI (20.9)", () => {
       expect(h.app.view!.buf.readOnly).toContain("go into ~ to edit it");
       // o: into home, the note its own there.
       await h.app.run("peek.go");
+      await answerSwitch(h);
       expect(h.app.loc).toMatchObject({ mode: "home", root: home });
       expect(h.app.view!.buf.rel).toBe("todo.md");
       expect(h.app.view!.buf.readOnly).toBeNull();
@@ -229,6 +230,7 @@ describe("the background auto-index in the TUI (20.9)", () => {
       expect(h.app.view!.buf.rel).toBe("more.md");
       await h.app.run("history.back");
       await h.app.run("history.back");
+      await answerSwitch(h);
       expect(h.app.loc.root).toBe(notes);
       // The scratch, in slipbox's state folder under ~, opens beside: no vault's to go into, home's neither.
       h.app.scratch.open("right");
@@ -358,6 +360,7 @@ describe("the background auto-index in the TUI (20.9)", () => {
       const h = await harness({ root: vault, open: "index.md" });
       // A note of it opened by choice (`:e`, the explorer, a peek's `o`): into home, its folder's notes known.
       expect(h.app.vaults.intoOther(join(home, "notes", "inbox.md"))).toBe(true);
+      await answerSwitch(h);
       expect(h.app.loc).toMatchObject({ mode: "home", root: home });
       expect(homeWalkKept(homeAt(home))).toBe(false);
       expect(h.app.view?.buf.rel).toBe("notes/inbox.md");
@@ -366,8 +369,10 @@ describe("the background auto-index in the TUI (20.9)", () => {
       ]);
       // Back in the vault, the folder revealed (a link to it): its notes there, its own note open.
       h.app.vaults.back();
+      await answerSwitch(h);
       expect(h.app.loc.root).toBe(vault);
       h.app.explorer.revealFolder(join(home, "notes"));
+      await answerSwitch(h);
       expect(h.app.loc.mode).toBe("home");
       expect(h.app.homeFolder).toBe("notes");
       expect(h.app.graph.notes.has("notes/ideas/coffee.md")).toBe(true);
@@ -668,6 +673,7 @@ describe("the background auto-index in the TUI (20.9)", () => {
       const build = spyOn(Graph.prototype, "build");
       try {
         expect(h.app.vaults.intoOther(join(home, "other", "o.md"))).toBe(true);
+        await answerSwitch(h);
         expect(build).toHaveBeenCalledTimes(1);
       } finally {
         build.mockRestore();
@@ -1261,6 +1267,7 @@ describe("the background auto-index in the TUI (20.9)", () => {
       // Gone into from a vault, revealed: the same.
       const v = await harness({ root: vault, open: "index.md" });
       v.app.explorer.revealFolder(join(home, "work"));
+      await answerSwitch(v);
       expect(v.app.graph.nestedRoots().sort()).toEqual(["work/clients/heron", "work/kestrel"]);
     } finally {
       process.env.HOME = before;

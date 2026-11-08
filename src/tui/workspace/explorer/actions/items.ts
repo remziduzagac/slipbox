@@ -50,13 +50,28 @@ export class ExplorerActions {
     return { rel: row.path, dir: row.kind === "dir" };
   }
 
+  /** Said when `what` finds no item: why, for a row the explorer won't change (#104), else to select one. */
+  private noItem(what: string): void {
+    const row = this.app.leftView === "explorer" ? this.host.rows()[this.app.sidebar.selected] : undefined;
+    this.app.message(
+      "info",
+      row?.root?.here
+        ? `${what}: ${row.name} is the vault you are in — select something in it`
+        : row?.leftOut && !row.link?.reason
+          ? `${what}: ${row.name} is left out of this vault (${row.leftOut}) — not changed from here`
+          : row?.outside
+            ? `${what}: ${row.name} is outside this vault — go into its own to change it`
+            : `${what}: select a note, file or folder first`,
+    );
+  }
+
   /**
    * The selected row's menu (its `…` button, `.`): what can be done to it, each with its key in the
    * explorer, which picks it here too. It hangs from the button (by key without one: the row).
    */
   openItemMenu(): void {
     const item = this.item();
-    if (!item) return this.app.message("info", "menu: select a note, file or folder first");
+    if (!item) return this.noItem("menu");
     const actions: [string, string][] = [];
     if (item.dir) actions.push(["zoom_in", "Zoom in here"]);
     if (item.dir && !item.vault) actions.push(["new_note", "New note here"], ["new_folder", "New folder here"]);
@@ -314,7 +329,7 @@ export class ExplorerActions {
       case "unmake_root": {
         // On the selected note, file, folder or vault (18.x).
         const item = this.item();
-        if (!item) return this.app.message("info", `${action.replace("_", " ")}: select a note, file or folder first`);
+        if (!item) return this.noItem(action.replace("_", " "));
         return this.itemAction(action, item);
       }
       case "paste":

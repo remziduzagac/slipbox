@@ -88,18 +88,21 @@ export function drawTree(app: App, c: Canvas, list: Rect, bg: Color | null, geo:
     if (!row) break;
     const y = rect.y + i;
     const selected = s.scroll + i === s.selected && app.region === "sidebar";
-    // The vault open, in a view above it (VV-D5): highlighted, as the note open is.
+    // The vault open, in a view above it (VV-D5): highlighted, as the note open is; what's outside its own tree
+    // dimmed, nothing there being this vault's to change (#104) — but the note open, still highlighted.
     let role: Role = row.placeholder
       ? "dim"
       : row.root?.here
         ? "sidebar_active"
-        : row.root?.kind === "vault"
-          ? "sidebar_root"
-          : row.kind !== "note"
-            ? "sidebar_dir"
-            : row.path === current || (row.outside && row.path === currentAbs)
-              ? "sidebar_active"
-              : "sidebar";
+        : row.outside && row.path !== currentAbs
+          ? "sidebar_outside"
+          : row.root?.kind === "vault"
+            ? "sidebar_root"
+            : row.kind !== "note"
+              ? "sidebar_dir"
+              : row.path === current || (row.outside && row.path === currentAbs)
+                ? "sidebar_active"
+                : "sidebar";
     if (selected) role = "sidebar_selected";
     const st = roleStyle(theme, role, bg);
     if (selected) c.fill(rect.x, y, rect.w, 1, st.bg);

@@ -202,6 +202,6 @@ test("leaving the vault lets go of its code files' passes: the thread working on
   }
   const working = made.filter((w) => w.sent > 0);
   expect(working.length).toBe(1);
-  expect(h.app.vaults.switchVault(locateVault({ root: makeVault() }), null)).toBe(true);
+  expect(h.app.vaults.switchVault(locateVault({ root: makeVault() }), null, undefined, { asked: true })).toBe(true);
   expect(working.map((w) => w.terminated)).toEqual([true]);
 });

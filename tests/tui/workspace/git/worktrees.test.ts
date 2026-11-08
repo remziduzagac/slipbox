@@ -3,7 +3,15 @@ import { mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync
 import { basename, dirname, join, relative } from "node:path";
 import { type ListOverlay, App } from "../../../../src/tui/app/runtime/app.ts";
 import { stringWidth } from "../../../../src/core/foundation/text/width.ts";
-import { makeSandbox, makeVault, harness, onlyRootsUnder, statusRow, topRow } from "../../../tui-harness.ts";
+import {
+  answerSwitch,
+  makeSandbox,
+  makeVault,
+  harness,
+  onlyRootsUnder,
+  statusRow,
+  topRow,
+} from "../../../tui-harness.ts";
 
 // The model harness applies the file-local timeout and sandbox policy.
 const sandbox = makeSandbox();
@@ -136,6 +144,7 @@ describe("git worktrees in the TUI (17.19)", () => {
     expect(list.items[at]).toMatchObject({ detail: tildePath(one) });
     list.selected = at;
     await h.keys("enter");
+    await answerSwitch(h);
     // Into the selected copy; pointer-copy preference is asked independently, once (21.6).
     expect(h.app.loc.root).toBe(one);
     expect((h.app.overlay as ListOverlay).title).toBe(`f${tag}: 2 copies on this machine — which do links to it open?`);
@@ -151,6 +160,7 @@ describe("git worktrees in the TUI (17.19)", () => {
     expect(readFolders().find((f) => f.name === `f${tag}`)?.default).toBe(two);
     // Back to the repository: named, a .slipbox/ to hold it.
     await h.app.run("history.back");
+    await answerSwitch(h);
     expect(h.app.loc.root).toBe(repo);
     await h.app.run(`folder.name r${tag}`);
     expect(readFileSync(join(repo, ".slipbox", "config.toml"), "utf8")).toContain(`name = "r${tag}"`);
@@ -159,6 +169,7 @@ describe("git worktrees in the TUI (17.19)", () => {
     expect(topRow(h.frame())).toContain(`r${tag}`);
     // :open with a pointer: the note in the copy links open.
     await h.app.run(`note.open slipbox://f${tag}/n.md`);
+    await answerSwitch(h);
     expect(h.app.view!.buf.abs).toBe(join(two, "n.md"));
   });
 
@@ -368,6 +379,7 @@ describe("git worktrees in the TUI (17.19)", () => {
     expect(h.app.floating?.kind).toBe("peek");
     expect(h.app.currentLayout(h.app.view!).lines[h.app.view!.cur.row]!.src).toBe(5);
     await h.keys("o");
+    await answerSwitch(h);
     expect(h.app.loc.root).toBe(b);
     expect(h.app.view!.buf.rel).toBe("x.md");
     expect(h.app.currentLayout(h.app.view!).lines[h.app.view!.cur.row]!.src).toBe(5); // at ## Top

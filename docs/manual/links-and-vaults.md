@@ -83,7 +83,7 @@ A peek is for reading. `/` finds in it, and you can select and copy, but you can
 
 | Key | Does |
 | --- | --- |
-| `o` | goes there: into the note's vault, with its own tabs, as [switching vaults](vaults.md#switching-vaults) does |
+| `o` | asks, then goes there: into its vault, its own tabs, as [switching vaults](vaults.md#switching-vaults) does |
 | `t` | keeps it as a tab in this vault, read-only, the tab marked with its vault's name (`kestrel: sync.md`) |
 | `z` | fills the screen, or makes it most of the screen again |
 | `esc` | closes it. You are where you were |
@@ -102,8 +102,7 @@ background index (see [Backlinks](#backlinks)), and until then the peek says so:
 
 The same peek opens for a backlink from another vault, for another vault's hit in a search widened with `ctrl+a`, and
 for a file of [Elsewhere's](vaults.md#elsewhere) that a link reaches. With the mouse, a click on such a link peeks, and
-`ctrl+click`
-goes there at once. `ctrl+enter` still follows a link of this vault into a new tab.
+`ctrl+click` asks to go there at once. `ctrl+enter` still follows a link of this vault into a new tab.
 
 ## The forms a link takes
 

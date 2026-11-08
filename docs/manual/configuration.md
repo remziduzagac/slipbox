@@ -503,6 +503,7 @@ These are the roles of the screen most worth changing:
 | `breadcrumb_icon`, `breadcrumb_sep` | the breadcrumb's icon and separators |
 | `tree_guide` | the explorer's and the outline's tree lines |
 | `sidebar_root` | in the explorer, a folder that is a vault of its own |
+| `sidebar_outside` | in the explorer, what's outside the vault you are in, dimmed: nothing there is changed from it |
 | `sidebar_mark` | in the explorer, a row's mark that it's indexed, at its end |
 | `scrollbar`, `scrollbar_track` | the scrollbar's thumb and track |
 | `cursor`, `cursor_line` | the cursor, and its row |
@@ -522,13 +523,13 @@ Every role, by what it colours:
 - **Git:** `git_new`, `git_modified`, `git_conflict`, `diff_add`, `diff_del`, `diff_head`, `diff_add_word`,
   `diff_del_word`, `git_sign_add`, `git_sign_change`, `git_sign_delete`.
 - **The screen:** `border`, `status`, `status_accent`, `status_dim`, `sidebar`, `sidebar_dir`, `sidebar_selected`,
-  `sidebar_active`, `sidebar_root`, `sidebar_mark`, `tab`, `tab_active`, `tab_active_idle`, `pane_title`,
-  `pane_title_active`, `overlay`, `overlay_border`, `overlay_selected`, `overlay_match`, `overlay_dim`, `overlay_group`,
-  `keycap`, `keycap_selected`, `selection`, `bracket_match`, `error`, `warn`, `info`, `scrollbar`, `scrollbar_track`,
-  `cursor`, `cursor_line`, `line_number`, `line_number_current`, `gutter`, `cell_line`, `which_key_key`,
-  `which_key_group`, `topbar`, `topbar_button`, `topbar_button_on`, `topbar_button_disabled`, `topbar_chip`, `hover`,
-  `breadcrumb`, `breadcrumb_current`, `breadcrumb_sep`, `breadcrumb_icon`, `breadcrumb_band`, `tree_guide`, `rail`,
-  `lens`, `lens_band`, `lens_edit`, `lens_band_edit`.
+  `sidebar_active`, `sidebar_root`, `sidebar_outside`, `sidebar_mark`, `tab`, `tab_active`, `tab_active_idle`,
+  `pane_title`, `pane_title_active`, `overlay`, `overlay_border`, `overlay_selected`, `overlay_match`, `overlay_dim`,
+  `overlay_group`, `keycap`, `keycap_selected`, `selection`, `bracket_match`, `error`, `warn`, `info`, `scrollbar`,
+  `scrollbar_track`, `cursor`, `cursor_line`, `line_number`, `line_number_current`, `gutter`, `cell_line`,
+  `which_key_key`, `which_key_group`, `topbar`, `topbar_button`, `topbar_button_on`, `topbar_button_disabled`,
+  `topbar_chip`, `hover`, `breadcrumb`, `breadcrumb_current`, `breadcrumb_sep`, `breadcrumb_icon`, `breadcrumb_band`,
+  `tree_guide`, `rail`, `lens`, `lens_band`, `lens_edit`, `lens_band_edit`.
 
 ## Indentation: `.editorconfig`
 

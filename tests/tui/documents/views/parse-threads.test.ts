@@ -236,7 +236,7 @@ describe("a big note opened (15.1)", () => {
     const parse = h.app.view!.buf.parsing;
     const working = made.filter((w) => w.sent > 0);
     expect(working.length).toBeGreaterThan(0);
-    expect(h.app.vaults.switchVault(locateVault({ root: makeVault() }), null)).toBe(true);
+    expect(h.app.vaults.switchVault(locateVault({ root: makeVault() }), null, undefined, { asked: true })).toBe(true);
     expect(working.map((w) => w.terminated)).toEqual(working.map(() => true));
     await parse;
   });

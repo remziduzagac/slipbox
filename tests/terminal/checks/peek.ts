@@ -1,4 +1,4 @@
-import { type Check, follow, leader, opened } from "../check.ts";
+import { type Check, follow, goInto, leader, opened } from "../check.ts";
 import { type Session, sleep } from "../session.ts";
 import { linkHere, ARCHITECTURE, PEEK_HINT } from "../support/links.ts";
 
@@ -62,12 +62,14 @@ export const PEEK: Check[] = [
       await s.keys("enter");
       await s.see(title, 5000);
       await s.keys("o");
+      await goInto(s);
       await s.where(/^kestrel │ main\b/, /‹ docs\/architecture\.md/, 5000);
       // Indexed there: its backlinks, notes' among them, now in a peek from notes.
       await leader(s, "l", "b");
       await s.see("~/notes/index.md", 10000);
       await s.keys("escape");
       await s.keys("ctrl+o");
+      await goInto(s);
       await s.where(/^notes(?: │|$)/, /index\.md/, 5000);
       await follow(s, ARCHITECTURE);
       await s.see(title, 5000);
@@ -154,6 +156,7 @@ export const PEEK: Check[] = [
       await opened(s, "home.md");
       await sleep(600); // past a double-click
       await click("outreach — the public", 16);
+      await goInto(s);
       await s.message(" outreach — "); // as the switch says it: name — path
       await s.where(/^outreach(?: │|$)/, /index\.md/);
       s.expect(!s.text().includes(PEEK_HINT), "no peek on the way");

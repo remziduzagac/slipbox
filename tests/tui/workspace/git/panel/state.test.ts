@@ -16,7 +16,7 @@ describe("the panel's state, by vault and in flight (GIT-D8)", () => {
     await keys("i", ...typed("half a message"));
     expect(app.git.entries?.length).toBe(1);
     app.git.opened.add("unstaged:a.md");
-    app.vaults.switchVault(locateVault({ root: other }), null);
+    app.vaults.switchVault(locateVault({ root: other }), null, undefined, { asked: true });
     expect([app.gitPanel.message, app.gitPanel.typing, app.git.entries, app.git.track]).toEqual([
       "",
       false,

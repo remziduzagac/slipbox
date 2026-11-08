@@ -228,16 +228,20 @@ export class Files {
       if (!r) return;
       this.app.region = "content";
       const abs = join(this.app.loc.root, r.rel); // before the open, which may switch roots
-      this.app.open(r.open);
-      const v = this.app.view;
-      // Typing on the line after the title's blank one (as `o` there would): a source view has no
-      // row past the file's last line break, so the insert begins with one.
-      if (r.created && v?.buf.abs === abs) {
+      const typeInto = () => {
+        const v = this.app.view;
+        // Typing on the line after the title's blank one (as `o` there would): a source view has no
+        // row past the file's last line break, so the insert begins with one.
+        if (!r.created || v?.buf.abs !== abs) return;
         // Typed into at once, in the lens or source mode (`edit_in`): making the note was the editing key's first press.
         if (!editable(v)) this.app.lens.setViewMode(v, this.app.lens.editMode(v));
         startInsert(this.app, v, (w) => w.buf.source.length);
         if (v.insert) insertText(this.app, v, v.buf.eol);
-      }
+      };
+      // Made in a vault of its own (a nested one): typed into once gone there, which is asked first (D270).
+      if (this.app.vaults.intoOther(abs, undefined, typeInto)) return;
+      this.app.open(r.open);
+      typeInto();
     };
     this.app.overlays.prompt(`new note in ${base ? `${base}/` : "the vault's top folder"}`, make);
     if (prefill && this.app.overlay?.kind === "prompt") this.app.overlay.text = prefill;

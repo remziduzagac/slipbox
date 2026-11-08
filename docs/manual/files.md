@@ -108,9 +108,11 @@ gives way to the nearest folder still there, and slipbox says so.
 Zoomed out past the vault you are in, the explorer lists folders one level at a time:
 
 - The vault you are in is highlighted, with its tree under it.
-- Another vault has its icon. `l` unfolds it in place. `enter`, or opening one of its files, goes into it
-  ([Vaults, home and Elsewhere](vaults.md#switching-vaults)).
-- Nothing outside the vault you are in can be renamed, moved or deleted from there.
+- Another vault has its icon. `l` unfolds it in place. `enter`, or opening one of its files, asks to go into it, or
+  to peek at the file ([Vaults, home and Elsewhere](vaults.md#switching-vaults)).
+- Everything outside the vault you are in is dimmed: nothing there can be renamed, moved or deleted from it. The keys
+  that would change something there say why, such as `rename: app is outside this vault — go into its own to change it`.
+  What the vault's own index leaves out (`node_modules`, what `.gitignore` names) is dimmed too, for the same reason.
 
 You can open any folder you may read, inside your home folder or not. Outside home and every vault, it's
 [Elsewhere](vaults.md#elsewhere), whose folders are listed a level at a time:

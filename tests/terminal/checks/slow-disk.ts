@@ -4,7 +4,7 @@
 // to list, on whichever thread lists it. Each check builds a small home of its own.
 
 import { chmodSync } from "node:fs";
-import { type Check, explorerOpen, explorerRow, follow, leader, open } from "../check.ts";
+import { type Check, explorerOpen, explorerRow, follow, goInto, leader, open } from "../check.ts";
 import type { Session } from "../session.ts";
 import { crumbs, lastMessage, listed } from "../support/links.ts";
 
@@ -369,6 +369,7 @@ export const SLOW_DISK: Check[] = [
       await s.keys("escape");
       await follow(s, "the other vault's note");
       await s.keys("o");
+      await goInto(s);
       await s.where(/^~\/other(?: │|$)/, /o\.md/, 5000);
       await explorerOpen(s);
       await s.until(() => listed(s, /\saaa$/) && listed(s, /\szzz$/), 10_000, "home's rows, after the vault changed");

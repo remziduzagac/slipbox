@@ -15,7 +15,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
-import { type Check, explorerOpen, explorerRow, inSwitcher, leader, open, opened } from "../check.ts";
+import { type Check, explorerOpen, explorerRow, goInto, inSwitcher, leader, open, opened } from "../check.ts";
 import { CheckFailed, Skipped, sleep } from "../session.ts";
 import { crumbs, lastMessage, listed, messagesSaying } from "../support/links.ts";
 import {
@@ -80,6 +80,7 @@ export const HOME: Check[] = [
       // Its note opened: into home (VV-D4), the note open there.
       await explorerRow(s, "bike-insurance\\.md");
       await s.keys("enter");
+      await goInto(s);
       await s.where("~", /household\/bike-insurance\.md/, 5000); // a note of it opened: home's own
       // household walked as it was gone into: its note a folder down known, home's walk still to make.
       await s.keys("ctrl+p");
@@ -243,6 +244,7 @@ export const HOME: Check[] = [
       await s.restart({ startAt: "home/notes/index.md" });
       await s.where(/^notes(?: │|$)/);
       await s.ex(`e ${s.path("~/todo.md")}`);
+      await goInto(s);
       await s.where("~", /todo\.md/, 5000);
       await s.see(tab(1, "bike-insurance.md"));
       await inSwitcher(s, "2025-policy", "household/archive/2025-policy.md");

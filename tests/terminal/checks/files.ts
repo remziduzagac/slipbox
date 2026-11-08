@@ -2,7 +2,7 @@
 
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
-import { type Check, follow, leader, open, opened } from "../check.ts";
+import { type Check, follow, goInto, leader, open, opened } from "../check.ts";
 
 const FILES: Check[] = [
   {
@@ -188,6 +188,7 @@ const FILES: Check[] = [
       await s.keys("shift+g", "enter");
       await s.see("outreach › index.md", 5000); // a peek (VV-D7): o goes into it
       await s.keys("o");
+      await goInto(s);
       await s.message(" outreach — ");
       await leader(s, "v", "shift+m");
       await s.see(/outreach\/ → part of halden: \d+ changes? in \d+ files?/);

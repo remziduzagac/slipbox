@@ -3,7 +3,7 @@
 import { spawnSync } from "node:child_process";
 import { chmodSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { explorerOpen, type Check, leader, moveTo, opened, pos, problemListed } from "../check.ts";
+import { explorerOpen, type Check, goInto, leader, moveTo, opened, pos, problemListed } from "../check.ts";
 import { loadTheme, type Role } from "../../../src/core/rendering/theme/index.ts";
 import type { Session } from "../session.ts";
 import { git, messagesSaying, lastMessage } from "../support/links.ts";
@@ -247,9 +247,11 @@ export const GIT: Check[] = [
       await s.see(/●\s+(\S+\s+)?agent\/sync-retry\s+\/\S+\/work\/kestrel-agent-sync-retry/); // this one, marked
       await s.type("main");
       await s.keys("enter");
+      await goInto(s);
       await s.where(/^kestrel │ main\b/, /‹ README\.md/, 5000);
       // Back: the worktree again, as a vault of its own.
       await s.keys("ctrl+o");
+      await goInto(s);
       await s.where(/^kestrel │ agent\/sync-retry\b/, /‹ README\.md/, 5000);
     },
   },

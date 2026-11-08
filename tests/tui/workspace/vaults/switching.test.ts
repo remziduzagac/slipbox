@@ -6,7 +6,7 @@ import { openGraph } from "../../../../src/core/workspace/graph/graph.ts";
 import { locateVault } from "../../../../src/core/workspace/vaults/vault.ts";
 import type { ListOverlay } from "../../../../src/tui/app/runtime/app.ts";
 
-import { makeSandbox, makeVault, harness } from "../../../tui-harness.ts";
+import { answerSwitch, makeSandbox, makeVault, harness } from "../../../tui-harness.ts";
 
 // The model harness applies the file-local timeout and sandbox policy.
 const sandbox = makeSandbox();
@@ -48,13 +48,17 @@ describe("vaults in the TUI (17.x)", () => {
     expect((h.app.overlay as ListOverlay).title).toBe("Unsaved notes — change vault?");
     await h.keys("c");
     await h.keys("ctrl+s");
-    expect(h.app.vaults.switchVault(locateVault({ root: app }), join(app, "design.md"))).toBe(true);
+    expect(h.app.vaults.switchVault(locateVault({ root: app }), join(app, "design.md"))).toBe(false);
+    await answerSwitch(h);
+    expect(h.app.loc.root).toBe(app);
     await h.app.run("tab.new");
     await h.app.run("note.open links.md");
     h.app.vaults.switchVault(locateVault({ root: notes }), null);
+    await answerSwitch(h);
     expect(h.app.loc.root).toBe(notes);
     // Into app again: its session comes back, its two tabs.
     h.app.vaults.switchVault(locateVault({ root: app }), null);
+    await answerSwitch(h);
     expect(h.app.tabs.map((t) => t.views[0]!.buf.rel).sort()).toEqual(["design.md", "links.md"]);
   });
 
@@ -79,7 +83,8 @@ describe("vaults in the TUI (17.x)", () => {
     await type("a: 1");
     await h.keys("escape");
     // Parses: written into index.md, the editor closed, then the switch.
-    expect(h.app.vaults.switchVault(locateVault({ root: app }), null)).toBe(true);
+    expect(h.app.vaults.switchVault(locateVault({ root: app }), null)).toBe(false);
+    await answerSwitch(h);
     expect(h.app.floating).toBeNull();
     expect(h.app.loc.root).toBe(app);
     expect(h.app.view?.buf.key).not.toContain("#properties");
@@ -93,7 +98,7 @@ describe("review (tui): the app's floating windows, new paths, roots and repeats
     h.app.git.states = new Map([["notes/alpha.md", "conflict"]]);
     h.app.git.folders.set("notes", "conflict");
     expect(h.app.problems.rows().some((r) => r.section === "Conflicts")).toBe(true);
-    expect(h.app.vaults.switchVault(locateVault({ root: makeVault() }), null)).toBe(true);
+    expect(h.app.vaults.switchVault(locateVault({ root: makeVault() }), null, undefined, { asked: true })).toBe(true);
     expect(h.app.git.states).toBeNull();
     expect(h.app.git.folders.size).toBe(0);
     expect(h.app.problems.rows().some((r) => r.section === "Conflicts")).toBe(false);

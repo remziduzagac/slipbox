@@ -514,7 +514,7 @@ describe("busy folders listed, not indexed (VV-D8)", () => {
     mkdirSync(join(dep, ".slipbox"));
     const h = await harness({ root: p.kestrel });
     h.app.explorer.zoomTo(p.P);
-    h.app.vaults.switchVault(locateVault({ root: dep }), null);
+    h.app.vaults.switchVault(locateVault({ root: dep }), null, undefined, { asked: true });
     expect(h.app.loc.root).toBe(dep);
     expect(h.app.explorer.top).toBe(p.P);
     expect(h.app.explorer.rows().find((r) => r.root?.here)?.path).toBe(dep);

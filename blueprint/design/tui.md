@@ -491,19 +491,26 @@ forward with the mouse; the path, clicked, lists the window's timeline (see the 
 The TUI is always in one vault ([roots.md](roots.md)): a folder holding a vault marker, home (`~`, a vault without one),
 or Elsewhere, the rest of the file system, one place for the machine (VV-D1–VV-D3); each with its workspaces, its own
 (`21.8`; D76, WSP-D1). The current vault is the one whose tabs are shown. **Choosing a file or folder of another vault
-goes into it** (VV-D4; `switchVault` in `tui/workspace/vaults/vaults.ts`): `enter` or a double-click on another vault's
-row in the explorer, a file of another vault opened from the explorer or with `:e` (a path, a pointer; `intoOther`), `o`
-in a peek (§ The peek), the git panel's `o` on a repository, a checkout or a branch's worktree (Open), a named folder
-picked from `space v v` or from the top bar's vault, clicked (WSP-D4), a folder link that leads out of the vault
-(revealed in its own vault, D81). The TUI becomes that vault's, as if started there — its config, its index (refreshed),
-its watcher, its reading positions and your workspace there, whose tabs come back, with the note open (at its heading).
-What git said of the vault left is forgotten — its files' states, the git panel's files, where its branch stood, those
-opened up — and the git panel's message box is emptied: a message typed in one vault is never committed in another.
-Leaving saves the one before as quitting does. Unsaved notes ask Save all and go, Discard and go, or Stay (VB-D4); all
-saves must succeed before leaving. Release the outgoing buffers, parses, index and pending work; keep return history
-only as paths and positions, restoring from disk. The properties editor closes first, writing its edits into the note —
-or, while it asks, nothing switches. **Looking never moves you** (VV-D7): following a link into another vault, a
-backlink from one and another vault's search hit open a peek instead, going there a choice (§ The peek).
+asks to go into it** (VV-D4, D270; `switchVault` in `tui/workspace/vaults/vaults.ts`): `enter` or a double-click on
+another vault's row in the explorer, a file of another vault opened from the explorer or with `:e` (a path, a pointer;
+`intoOther`), `o` in a peek (§ The peek), the git panel's `o` on a repository, a checkout or a branch's worktree (Open),
+a named folder picked from `space v v` or from the top bar's vault, clicked (WSP-D4), a folder link that leads out of
+the vault (revealed in its own vault, D81). The TUI becomes that vault's, as if started there — its config, its index
+(refreshed), its watcher, its reading positions and your workspace there, whose tabs come back, with the note open (at
+its heading). What git said of the vault left is forgotten — its files' states, the git panel's files, where its branch
+stood, those opened up — and the git panel's message box is emptied: a message typed in one vault is never committed in
+another. **Every way in asks first** (D270), `ctrl+o` back into the vault before too: `Go into kestrel? Your tabs there
+replace these` — Go (`vault.switch_go`, `g`), Stay (`vault.switch_stay`, `c`, `esc`) and, going to a file not from a
+peek, Peek at it (`vault.switch_peek`, `p`): read there, read-only, nothing switched. Staying keeps the trail, and from
+a peek its `o` asked, the peek. A vault made (`Give it .slipbox/`, `:init`) or made part of the one holding it is gone
+into unasked (`how.made`): that was what was asked. What waits on the switch, a folder link's folder revealed, git's
+word that the note isn't on the branch or a new note made in a nested vault typed into, runs once it went (`how.after`).
+Leaving saves the one before as quitting does. Unsaved notes ask Save all and go, Discard and go, or Stay (VB-D4), the
+one question then; all saves must succeed before leaving. Release the outgoing buffers, parses, index and pending work;
+keep return history only as paths and positions, restoring from disk. The properties editor closes first, writing its
+edits into the note — or, while it asks, nothing switches. **Looking never moves you** (VV-D7): following a link into
+another vault, a backlink from one and another vault's search hit open a peek instead, going there a choice (§ The
+peek).
 
 **Back returns.** `back` (`ctrl+o`) from the first place in a vault goes to the vault before, at the note and place
 you left; each switch is remembered, so a chain of them unwinds one by one. From a vault gone into from a tab kept from
@@ -746,7 +753,8 @@ it, from a peek too.
   selection and `y` as in any rendered note. The keymap has no table of its own in the config: a key for its commands
   is bound in `[keys]`.
 - **`o` (`peek.go`):** into its vault as a switch does (`switchVault`, at the cursor's place in the peek), the trail
-  kept, so `ctrl+o` comes back; unsaved notes ask to save all, discard or stay. Outside every vault, into Elsewhere,
+  kept, so `ctrl+o` comes back; asked first, as every switch is (D270), Stay leaving you in the peek; unsaved notes ask
+  to save all, discard or stay instead. Outside every vault, into Elsewhere,
   the file editable there (VV-D3). On a tab kept from a peek, from the palette: the same, into that file's vault.
 - **`t` (`peek.tab`):** a tab here of the file (`buffer`'s path-keyed buffer beside the vault), at the peek's place. A
   file of another vault is read-only whenever it's open here (`markElsewhere`: `read-only here: kestrel's — go into
@@ -912,55 +920,58 @@ keys.
   it: one at a time on each thread, the others wait in one line, each going to a thread once it's free — never behind a
   folder that doesn't answer while the other thread is free. Stopped (the TUI quitting), a listing asked or waiting is
   refused, never a thread started again for it. Until a folder's first listing answers, nothing is under it; after 150
-  ms a dim `listing…` row says it's being read, and one that can't be listed says why, in `l`'s words
-  (`can't read: it isn't there`; `can't read: no answer in time`): rows that only say something, never opened or marked.
-  On one, nothing acts on its own path (opening, zooming, copying its path, renaming, moving, deleting, copying or
-  cutting it, a vault made of it: `ON_THE_ROW`); the rest does as on any row of its folder (moving, folding it, a new
-  note or folder there, a paste, a restore, the menu). One that failed is read again a minute later (`RETRY_MS`), not at
-  every rebuild; a folder listed before whose thread gives no answer when it's read again stays as it was listed. A
-  folder `l` refuses as its folder's listing said it (you may not read it) has that listing, and its own, read again
-  (`Listings.again`), nothing else in its folder: one you may read now unfolds at the next `l`. A test's App, not the
-  TUI's, lists at once here (`AppOptions.listOffThread`). There the vault open is a row, highlighted (`sidebar_active`),
-  its tree under it while unfolded; another vault is a row with the vault's icon (`◈`, Nerd: a bookshelf; `17.13`, D51)
-  in a folder's blue (`sidebar_root`, for `[colors]` to set; `sidebar_vault`, its old name, read as it: DF-D22), its
-  name dimmed after the folder's when they differ, its branch among its marks (below). A row's path is its path in the
-  vault for what the vault's own tree holds, else absolute (`outside`), and so is a folder's key in `expanded`; none of
-  this vault's file operations act on an `outside` row (a paste, new note or new folder there says
-  `another vault's folder: select a folder of this vault`), but one `walk.exclude` leaves out (D246, below). **It
-  starts** at the folder opened (`slipbox x/y`: y, in vault x; `prepare`'s `folder`), set once the notes are open, so
-  the note shown outside it leaves it be; opened on a note, at its vault. In Elsewhere it has no tree of its own: every
-  folder is listed a level at a time, by its whole path, the view starting at the folder opened. **The breadcrumb**, on
-  the row under the pane's title, says where the view is: `~` for home when the view is in it (else `/`, home by its
-  name), then each folder down to the view and a `›`, the view always among them; a vault with its icon, the vault open
-  highlighted, the view bold. Past the view, dimmed, the trail (`explorer.trail`): the folders it can zoom back into —
-  the view zoomed out from, or where you went when it zoomed out by itself — kept while the view is on their way. Too
-  long for the pane, the trail gives way first (from its end, its first folder cut short, kept while four columns are
-  left), then the folders above the view, from the start, to `…`. A click on a folder of it zooms the view there
-  (`xcrumb:<path>`); on `…`, to the nearest folder given way, so each click goes a folder higher (#104). **Zooming**
-  on purpose (`zoomTo`): `z` (`zoom_in`) on a folder or vault, a file's folder on a file; `-` (`zoom_out`,
-  nvim-tree's and oil's key for the parent) a folder up, the folder left unfolded and selected; nothing above `/`,
-  said. **By itself** (`zoomToHold`), only outward: going somewhere outside the view — a note opened,
-  followed to, gone back or forward to, revealed (`space shift+e`), a folder link followed, a vault gone into — zooms
-  the view out to the common parent of the view and the place, only their two paths unfolded (what was unfolded in the
-  old view kept, every other folder folded), the trail at the place. Not for what the tree doesn't list (a hidden
-  folder's file while hidden names aren't listed, `.git`'s always: `listedDown`), nor the scratch; the explorer's first
-  showing, a workspace's tabs restored, and the filter's `esc` reveal the note only inside the view. **A folder gone:**
-  the view and the trail go with a folder slipbox renames or moves (`followMove`, from `Renaming.apply`, as the folds
-  do); one deleted, or gone outside slipbox, gives way to its nearest folder still there when the tree or the breadcrumb
-  is built again (`keepToWhatsThere`), the view's said (`~/x isn't there any more: the view is on ~`). **Keys on a
-  row:** `enter` (or a double-click) folds or unfolds a folder and the vault open's row, opens a note as a tab (or
-  switches to the tab already showing it), goes into another vault (VV-D4; § Going into a vault); `l` unfolds any folder
-  or vault in place, another vault's listed a level at a time, its rows not this vault's to change; `h` folds an
-  unfolded folder or vault, else the folder holding the row (when it's a row of the view); `o` replaces the current
-  window's note (on a folder, unfolds it), and `s` opens it in the split's other window. Moving the selection, or a
-  click on a note, only selects; a click on a folder folds or unfolds it. New notes and folders, renames, moves,
-  deletes, copies: "Files in the explorer", above. **Any folder you may read:** a folder you may not read says why when
-  it's opened on, unfolded or zoomed into (`can't read ~/x: you may not read it (no permission)`), nothing unfolded; a
-  file you may not write — it, or its folder, for the save's rename — opens read-only (`buf.readOnly`), said at once and
-  when typing is refused (`notes/a.md is read-only: you may not write it (no permission)`). Gone with VV-D5: `..` and
-  climbing above the vault, the other roots beside the tree (the one opened, those pinned, a loose file's folder: the
-  view holds them now), `:pin-root` (`vault.pin_root`, its `roots.json` in the vault's state no longer read). Not done:
-  Windows' drives and shares above everything (VV-D5), with native Windows; the breadcrumb's top is `~` or `/`.
+  ms a dim `listing…` row says it's being read, and one that can't be listed says why, in `l`'s words (`can't read: it
+  isn't there`; `can't read: no answer in time`): rows that only say something, never opened or marked. On one, nothing
+  acts on its own path (opening, zooming, copying its path, renaming, moving, deleting, copying or cutting it, a vault
+  made of it: `ON_THE_ROW`); the rest does as on any row of its folder (moving, folding it, a new note or folder there,
+  a paste, a restore, the menu). One that failed is read again a minute later (`RETRY_MS`), not at every rebuild; a
+  folder listed before whose thread gives no answer when it's read again stays as it was listed. A folder `l` refuses as
+  its folder's listing said it (you may not read it) has that listing, and its own, read again (`Listings.again`),
+  nothing else in its folder: one you may read now unfolds at the next `l`. A test's App, not the TUI's, lists at once
+  here (`AppOptions.listOffThread`). There the vault open is a row, highlighted (`sidebar_active`), its tree under it
+  while unfolded; another vault is a row with the vault's icon (`◈`, Nerd: a bookshelf; `17.13`, D51) in a folder's blue
+  (`sidebar_root`, for `[colors]` to set; `sidebar_vault`, its old name, read as it: DF-D22), its name dimmed after the
+  folder's when they differ, its branch among its marks (below). A row's path is its path in the vault for what the
+  vault's own tree holds, else absolute (`outside`), and so is a folder's key in `expanded`; none of this vault's file
+  operations act on an `outside` row (a paste, new note or new folder there says `another vault's folder: select a
+  folder of this vault`), but one `walk.exclude` leaves out (D246, below). **It starts** at the folder opened (`slipbox
+  x/y`: y, in vault x; `prepare`'s `folder`), set once the notes are open, so the note shown outside it leaves it be;
+  opened on a note, at its vault. In Elsewhere it has no tree of its own: every folder is listed a level at a time, by
+  its whole path, the view starting at the folder opened. **The breadcrumb**, on the row under the pane's title, says
+  where the view is: `~` for home when the view is in it (else `/`, home by its name), then each folder down to the view
+  and a `›`, the view always among them; a vault with its icon, the vault open highlighted, the view bold. Past the
+  view, dimmed, the trail (`explorer.trail`): the folders it can zoom back into — the view zoomed out from, or where you
+  went when it zoomed out by itself — kept while the view is on their way. Too long for the pane, the trail gives way
+  first (from its end, its first folder cut short, kept while four columns are left), then the folders above the view,
+  from the start, to `…`. A click on a folder of it zooms the view there (`xcrumb:<path>`); on `…`, to the nearest
+  folder given way, so each click goes a folder higher (#104). **Zooming** on purpose (`zoomTo`): `z` (`zoom_in`) on a
+  folder or vault, a file's folder on a file; `-` (`zoom_out`, nvim-tree's and oil's key for the parent) a folder up,
+  the folder left unfolded and selected; nothing above `/`, said. **By itself** (`zoomToHold`), only outward: going
+  somewhere outside the view — a note opened, followed to, gone back or forward to, revealed (`space shift+e`), a folder
+  link followed, a vault gone into — zooms the view out to the common parent of the view and the place, only their two
+  paths unfolded (what was unfolded in the old view kept, every other folder folded), the trail at the place. Not for
+  what the tree doesn't list (a hidden folder's file while hidden names aren't listed, `.git`'s always: `listedDown`),
+  nor the scratch; the explorer's first showing, a workspace's tabs restored, and the filter's `esc` reveal the note
+  only inside the view. **A folder gone:** the view and the trail go with a folder slipbox renames or moves
+  (`followMove`, from `Renaming.apply`, as the folds do); one deleted, or gone outside slipbox, gives way to its nearest
+  folder still there when the tree or the breadcrumb is built again (`keepToWhatsThere`), the view's said (`~/x isn't
+  there any more: the view is on ~`). **Keys on a row:** `enter` (or a double-click) folds or unfolds a folder and the
+  vault open's row, opens a note as a tab (or switches to the tab already showing it), asks to go into another vault
+  (VV-D4, D270; § Going into a vault); `l` unfolds any folder or vault in place, another vault's listed a level at a
+  time, its rows not this vault's to change. **Outside the vault open's own tree** (#104) — above it, beside it, another
+  vault's, what its walk leaves out — rows are drawn dim (`sidebar_outside`), but the note open; the keys that would
+  change one say why not (`rename: app is outside this vault — go into its own to change it`; the vault open's own row,
+  a left-out one, each its own words); `h` folds an unfolded folder or vault, else the folder holding the row (when it's
+  a row of the view); `o` replaces the current window's note (on a folder, unfolds it), and `s` opens it in the split's
+  other window. Moving the selection, or a click on a note, only selects; a click on a folder folds or unfolds it. New
+  notes and folders, renames, moves, deletes, copies: "Files in the explorer", above. **Any folder you may read:** a
+  folder you may not read says why when it's opened on, unfolded or zoomed into (`can't read ~/x: you may not read it
+  (no permission)`), nothing unfolded; a file you may not write — it, or its folder, for the save's rename — opens
+  read-only (`buf.readOnly`), said at once and when typing is refused (`notes/a.md is read-only: you may not write it
+  (no permission)`). Gone with VV-D5: `..` and climbing above the vault, the other roots beside the tree (the one
+  opened, those pinned, a loose file's folder: the view holds them now), `:pin-root` (`vault.pin_root`, its `roots.json`
+  in the vault's state no longer read). Not done: Windows' drives and shares above everything (VV-D5), with native
+  Windows; the breadcrumb's top is `~` or `/`.
 - **What the walk leaves out, listed** (VV-D8; `tui/workspace/explorer/explorer-disk.ts`). In each folder of the vault's
   own tree the explorer shows — the view's, and each unfolded under it — what's on the disk that the walk didn't give is
   read (`fromDisk`), a link aside (§ Links followed only when you say so, [roots.md](roots.md)), and a hidden name
@@ -3150,11 +3161,12 @@ READ and its lens remain available where supported. Legacy code `"document"`/`"s
 
 ## Vault-switch ownership (VB-D4, VB-T3–T5)
 
-The switch resolves floating properties edits first, then asks Save all and go, Discard and go, or Stay. Each choice
-runs its named vault.switch command. Save uses Saving.save through App.writeBuffer and proceeds only if all saves
-succeed. The outgoing workspace is persisted; its geometry, completion, snippet, buffers, views, search list and
-index, language timers and servers and background tasks are released before restoration. Return history retains
-paths and positions only. A repeated-switch ownership test checks notes, parses and indexes, including stale geometry.
+The switch resolves floating properties edits first, then asks Save all and go, Discard and go, or Stay — without
+unsaved notes, Go, Peek or Stay (D270). Each choice runs its named vault.switch command. Save uses Saving.save through
+App.writeBuffer and proceeds only if all saves succeed. The outgoing workspace is persisted; its geometry, completion,
+snippet, buffers, views, search list and index, language timers and servers and background tasks are released before
+restoration. Return history retains paths and positions only. A repeated-switch ownership test checks notes, parses and
+indexes, including stale geometry.
 
 The Vaults popup uses known roots independently of named pointer lookup. It sorts by recent use, includes unnamed
 vaults and home-folder workspaces, and groups worktrees under their repository. Filtering keeps group context.

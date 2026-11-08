@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, realpathSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tildePath } from "../../../../src/core/foundation/platform/paths.ts";
-import { makeSandbox, makeVault, harness, statusRow, topRow, whereNow } from "../../../tui-harness.ts";
+import { answerSwitch, makeSandbox, makeVault, harness, statusRow, topRow, whereNow } from "../../../tui-harness.ts";
 
 // The model harness applies the file-local timeout and sandbox policy.
 const sandbox = makeSandbox();
@@ -82,17 +82,20 @@ describe("Elsewhere: no-vault (VV-D3)", () => {
     const h = await harness({ root, open: "index.md" });
     // Chosen (:e), a file of Elsewhere's goes into Elsewhere, as into a vault (VV-D4): its own tabs.
     await h.app.run(`note.open ${join(dir, "a.md")}`);
+    await answerSwitch(h);
     expect(h.app.loc).toMatchObject({ mode: "folder", root: dir });
     expect(h.app.tabs.map((t) => t.views[0]!.buf.key)).toContain(join(dir, "a.md"));
     expect(h.app.view!.buf.key).toBe(join(dir, "a.md"));
     expect(h.app.messages.some((m) => m.text === `Elsewhere — ${tildePath(join(dir, "a.md"))}`)).toBe(true);
     // Back into the vault: its tabs.
     expect(h.app.vaults.back()).toBe(true);
+    await answerSwitch(h);
     expect(h.app.loc.root).toBe(root);
     expect(h.app.tabs.map((t) => t.views[0]!.buf.rel)).toEqual(["index.md"]);
     // Elsewhere again, from another folder: the same tabs, the new file among them.
     const other = nowhere();
     h.app.open(join(other, "b.md"));
+    await answerSwitch(h);
     expect(h.app.loc).toMatchObject({ mode: "folder", root: other });
     expect(h.app.tabs.map((t) => t.views[0]!.buf.key)).toContain(join(dir, "a.md"));
     expect(h.app.view!.buf.abs).toBe(join(other, "b.md"));
@@ -114,6 +117,7 @@ describe("Elsewhere: no-vault (VV-D3)", () => {
     expect(h.app.view!.buf.readOnly).toBe("read-only here: Elsewhere's — o goes there, to edit it");
     expect(h.app.loc.root).toBe(root);
     await h.app.run("peek.go");
+    await answerSwitch(h);
     expect(h.app.loc).toMatchObject({ mode: "folder", root: dir });
     expect(h.app.view!.buf.abs).toBe(join(dir, "b.md"));
     expect(h.app.view!.buf.readOnly).toBeNull();
