@@ -38,7 +38,8 @@ export interface Geometry {
   sidebarPane: Rect | null;
   outlinePane: Rect | null;
   tabs: (Rect & { index: number })[];
-  overlay: (Rect & { listY: number; rows: number }) | null;
+  /** A list: its rows; with a preview (EG-D2), the whole of both, and the button that hides it. */
+  overlay: (Rect & { listY: number; rows: number; box?: Rect; toggle?: Rect }) | null;
   hot: Hot[];
   separators: Separator[];
   scrollbars: ScrollbarGeom[];

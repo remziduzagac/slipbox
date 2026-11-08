@@ -128,10 +128,18 @@ export function findActions(): Record<string, Run> {
             lastLine = line;
             const start = text.lastIndexOf("\n", m.from - 1) + 1;
             const end = text.indexOf("\n", m.from);
-            const row = sanitize(text.slice(start, end < 0 ? text.length : end).replace(/\t/g, " ")).trim();
+            const stop = end < 0 ? text.length : end;
+            const row = sanitize(text.slice(start, stop).replace(/\t/g, " ")).trim();
             items.push({
               label: `${rel}:${line}`,
               detail: row.length > 160 ? `${row.slice(0, 160)}…` : row,
+              // The match on its line, marked in the preview (EG-D2): its first line, a match across lines.
+              place: {
+                abs: a.graph.abs(rel),
+                line,
+                range: [m.from - start, Math.min(m.to, stop) - start],
+                text: text.slice(m.from, Math.min(m.to, stop)),
+              },
               data: { rel, line },
             });
           }
@@ -140,6 +148,7 @@ export function findActions(): Record<string, Run> {
         a.overlays.openList({
           title: `"${query}" — ${total}${limited ? "+" : ""} match${total === 1 ? "" : "es"} in ${new Set(items.map((i) => (i.data as { rel: string }).rel)).size} files${items.length >= VAULT_SEARCH_MAX ? ` (the first ${VAULT_SEARCH_MAX} lines)` : ""}`,
           items,
+          places: "find",
           accept: (item) => {
             const { rel, line } = item.data as { rel: string; line: number };
             a.open(rel, { heading: null, headingIndex: 0, offset: 0, line });
@@ -219,9 +228,15 @@ export function findActions(): Record<string, Run> {
               .pop()
               ? n.title
               : undefined,
+          place: { abs: a.graph.abs(n.rel), line: 0 },
           data: n.rel,
         })),
-        ...files.map((f) => ({ label: f.path, hint: f.group === "data" ? "data" : "file", data: f.path })),
+        ...files.map((f) => ({
+          label: f.path,
+          hint: f.group === "data" ? "data" : "file",
+          place: { abs: a.graph.abs(f.path), line: 0 },
+          data: f.path,
+        })),
       ];
       // Notes and files together: a recent file comes before notes not opened lately.
       const ordered = items
@@ -232,6 +247,7 @@ export function findActions(): Record<string, Run> {
         title: files.length ? `Open (${notes.length} notes, ${files.length} files)` : `Open note (${notes.length})`,
         items: ordered,
         source: (input) => (input.startsWith("#") ? symbols.list(input.slice(1)) : null),
+        places: "switcher",
         accept: (item) => {
           const at = item.data as string | Spot;
           if (typeof at === "string") a.open(at);
@@ -373,6 +389,7 @@ function workspaceSymbols(a: App, overlay: App["overlay"]): { list: (query: stri
             label: sym.name,
             hint: KIND_NAMES[sym.kind] ?? "",
             detail: `${sym.containerName ? `${sym.containerName} · ` : ""}${where}:${line}`,
+            place: { abs, line, range: [data.character, data.character + sym.name.length], text: sym.name },
             data,
           };
         });
@@ -393,6 +410,7 @@ function workspaceSymbols(a: App, overlay: App["overlay"]): { list: (query: stri
             label: h.text,
             hint: "#".repeat(h.depth),
             detail: `${n.rel}:${h.line}`,
+            place: { abs: a.graph.abs(n.rel), line: h.line, text: h.text },
             data: { rel: n.rel, line: h.line } as Spot,
           }),
         ),

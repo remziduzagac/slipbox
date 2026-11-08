@@ -65,13 +65,16 @@ export class MouseRouting {
       return;
     }
     if (ev.type !== "down") return;
+    // A list of places' `ctrl+t hide` (EG-D2, D99): the preview hidden or shown, as the key does.
+    if (r.toggle && inRect(r.toggle, ev.x, ev.y)) return this.app.preview.toggle();
     const idx = ev.y - r.listY + o.scroll;
     if (ev.x >= r.x && ev.x < r.x + r.w && ev.y >= r.listY && ev.y < r.listY + r.rows && idx < o.filtered.length) {
       if (o.filtered[idx]!.item.header) return;
       o.selected = idx;
       return void this.app.overlays.key(o, "enter");
     }
-    if (!inRect(r, ev.x, ev.y)) this.app.overlays.close(true);
+    // Outside the list and its preview, it closes.
+    if (!inRect(r.box ?? r, ev.x, ev.y)) this.app.overlays.close(true);
   }
 
   wheel(

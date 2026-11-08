@@ -18,6 +18,8 @@ D235, ORG-D1), else the feature's module:
 | --- | --- |
 | `documents/navigation/labels.ts` | jump labels: targets, labels drawn, keys typed (`app.labels`; EG-D3) |
 | `shell/overlays/preview.ts` | a list of places' preview (`app.preview`; EG-D2) |
+| `shell/overlays/drawing/lists/preview.ts` | the list and its preview placed, the preview drawn (EG-D2) |
+| `documents/views/drawing/marks/hit.ts` | the preview's hit, marked in its window (EG-D2) |
 | `shell/overlays/places.ts` | the last list of places and its hits, `space '` and `] q` (`app.places`; EG-D2, EG-D10) |
 | `documents/editing/structure.ts` | text objects, syntax jumps, growing the selection (`app.structure`; EG-D6, EG-D7) |
 | `documents/editing/surround.ts` | surround: add, delete, change, wrap on type (EG-D8) |
@@ -183,16 +185,6 @@ Previously: a rename's preview lists every line it changes in every vault — th
 comments and strings that name the file with its extension (`16.10`); an import written without one (`./old`) is left
 as it is.
 
-## MODIFIED design/tui.md § The peek
-
-Adds (EG-D2): a pick from a list of places can open in a peek (`alt+enter`, § Overlays), whatever vault holds it, this
-one too: the same floating window (`peek:<path>`, read-only, never a remembered place), at the pick's line. On a file
-of the current vault, `o` opens it in the window under the peek, no vault gone into, and `t` keeps it as a tab, as on
-any other.
-
-Previously: only what leads out of the current vault peeks (VV-D7); `o` goes into the peeked file's vault, as a switch
-does, asked first.
-
 ## MODIFIED design/tui.md § Side panes ("Source control")
 
 - **Opening it** (EG-D15): `space g g` (`git.view`) opens it and focuses it, again closes it, as `space e` the
@@ -222,21 +214,32 @@ worktree, its buttons, its uncommitted files and its files against its base, no 
 - **The preview** (EG-D2; `ListPreview`): the selected row's place, as slipbox shows its file — a note rendered, code
   in the code view, a data file rendered, else SOURCE view — in a read-only view: of the file's buffer when it's open
   (unsaved text as typed), else of a virtual buffer read for it (`preview:<path>`, as a peek's: never written, never a
-  remembered place, the last few kept while the list is open); another vault's file through its graph, as a peek reads
-  it. At the hit: landed as a link to a line lands (§ Following links), its range marked (`link_focus`), a third of the
-  way down. A file is read off the keys: moving on before it's read drops it, `reading…` meanwhile. Beside the list on
-  a screen `ui.narrow_width` (90) wide or more, the list keeping its width; under it on a narrower one. `ctrl+t`, a
-  list's own key, or a click on the footer's `ctrl+t hide` (D99: every `ctrl` chord has another route), hides or
-  shows it for every list of places until it's pressed again. The copies' list (EG-D20)
-  previews the text itself. **Open:** whether `ctrl+t`'s choice is remembered as a UI setting.
+  remembered place, no language server or linter, the last eight kept while the list is open); another vault's file
+  through its graph, as a peek reads it, and a file a link not followed leads to (VV-D6) or a binary one said instead.
+  At the hit: landed as a link to a line lands (§ Following links), a third of the way down, once for each layout the
+  window is given; its range marked (`link_focus`), or, without a range, the text the row found, else the line's
+  words. A file is read off the keys: moving on before it's read drops it, `reading…` meanwhile. Its title, in its
+  frame, is the place (`notes/index.md:12`, another vault's as a peek names it). On a screen `ui.narrow_width` (90)
+  wide or more it's beside the list: both as tall as a full list (30 rows, or the content area less two), the list
+  half the width (its usual 100 columns at most) and the preview the rest. On a narrower one it's under the list: the
+  list's usual width, two-fifths of the height its rows, the preview the rest. With less room than 8 rows and 30
+  columns for it, the list is drawn alone. The list's bottom border says `ctrl+t hide · alt+enter where`; `ctrl+t`, a
+  list's own key, or a click on `ctrl+t hide` (D99: every `ctrl` chord has another route), hides or shows it for every
+  list of places until it's pressed again. A click in the preview leaves the list open. The copies' list (EG-D20)
+  previews the text itself. **Settled** (EG-T1): `ctrl+t`'s choice is not a UI setting; it's kept while slipbox runs,
+  as the list itself is.
 - **Where a pick opens** (EG-D2; `list.open_where`, `alt+enter`, an interaction): a question with a key a choice — `h`
-  here, `s` the split (§ Buffers, views, tabs, windows), `t` a new tab, `p` a peek (§ The peek) — as the conflict prompt
-  asks. Windows Terminal takes `alt+enter` for full screen by default, so the palette's command is the other way.
-  **Open:** the palette opens over the list and closes it, so its command must reach the pick of the list `space '`
-  would reopen.
-- **The last list** (EG-D2; `list.resume`, `space '`; `Places`): the last list of places closed — on a pick or `esc` —
-  opens again as it was: its kind, its query, its rows (not asked again), the row selected, its scroll, its preview
-  shown or hidden. Kept while slipbox runs in this vault; going into another drops it.
+  here, `s` the split (§ Buffers, views, tabs, windows: the other window, or a new one beside this), `t` a new tab — as
+  the conflict prompt asks; `esc` goes back to the list. `h` does what the list's `enter` does; `s` and `t` open the
+  row's place at its line, on its range. Another vault's file opens in a peek wherever it's asked to, as a link to it
+  does (VV-D7). Windows Terminal takes `alt+enter` for full screen by default, so the palette's command is the other
+  way. **Settled** (EG-T1): the palette opens over the list and closes it, so `list.open_where` asks about the open
+  list of places, else the last one (`space '`'s), its row selected; `alt+enter` in a list runs the same command.
+- **The last list** (EG-D2; `list.resume`, `space '`; `Places`): the last list of places opened, once it's closed — on
+  a pick or `esc` — opens again as it was: the list itself, kept, so its kind, its query, its rows (not asked again),
+  the row selected, its scroll, its preview shown or hidden. Its preview is read again, a file having maybe changed. A
+  links list opened again over another note opens its pick where its link leads (its place), not a link of that note.
+  Kept while slipbox runs in this vault; going into another drops it. Nothing happens while another overlay is open.
 - **Find in every note** (EG-D10; `find.vault`, `ctrl+shift+f`, `space f g`): no question first. The list has a query
   row of its own, matched as it's typed — each query a request to the regex worker, a newer one taking back the one
   before (search.md § Native regex matching) — the window's toggles in it (`alt+r`, `alt+w`). It opens with the

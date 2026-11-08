@@ -34,6 +34,7 @@ const COMMAND_OWNERS: Record<string, Area> = {
       "find",
       "search",
       "switcher",
+      "list",
       "palette",
       "ui",
       "background",

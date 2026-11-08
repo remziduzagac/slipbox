@@ -37,6 +37,9 @@ export function paneActions(): Record<string, Run> {
     "change.next": (a) => changeStep(a, 1),
     "history.back": (a) => a.history.go("back"),
     "history.forward": (a) => a.history.go("forward"),
+    // Lists of places (EG-D2): where a pick opens (alt+enter), the last list again (space ').
+    "list.open_where": (a) => a.places.askWhere(),
+    "list.resume": (a) => a.places.resume(),
     // The left panel on the history, like the explorer: open and focus, focus, close.
     "history.list": (a) =>
       withView(a, (v) => {

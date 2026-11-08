@@ -4,13 +4,13 @@ import { numberStyle } from "../support/diagnostics.ts";
 import { onto } from "../support/outside-and-code.ts";
 
 /** The reference set's share links (kestrel's web app): a type error on purpose, a function used from another file. */
-const SHARE = "home/work/kestrel/src/routes/share.ts";
+export const SHARE = "home/work/kestrel/src/routes/share.ts";
 
 /**
  * TypeScript's own server, the repository's (19.x): nothing installed or fetched, the only server of its files. Code
  * in source mode, a line to a row, each numbered; kestrel trusted, so nothing asks first (23.x).
  */
-const TS_CONFIG = `[render]
+export const TS_CONFIG = `[render]
 code = "source"
 
 [lsp]

@@ -27,6 +27,8 @@ import { findHeading } from "../../../core/workspace/links/landing.ts";
 import { anchorsOf, headingsOf } from "../../../core/documents/markdown/parse.ts";
 
 import { lineAnchor, fragmentAnchor, pointerHeading } from "./links/anchors.ts";
+import { linkPlace } from "./links/places.ts";
+import { openPlace } from "../../shell/overlays/places.ts";
 export { markdownText } from "./links/anchors.ts";
 
 /** Links: followed, peeked at, cycled through, listed (links and backlinks), inserted and converted. */
@@ -89,6 +91,7 @@ export function linkActions(): Record<string, Run> {
       withView(a, (v) => {
         const layout = lay(a, v);
         if (!layout.links.length) return a.message("info", "no links in this note");
+        const buf = v.buf;
         a.overlays.openList({
           title: `Links from ${v.buf.name}`,
           items: layout.links.map((l, i) => ({
@@ -98,9 +101,13 @@ export function linkActions(): Record<string, Run> {
                 ? l.target
                 : `[[${l.target}${l.heading ? `#${l.heading}` : ""}]]`,
             hint: l.status,
+            place: linkPlace(a, v, l),
             data: i,
           })),
+          places: "links",
           accept: (item) => {
+            // Opened again (`space '`) over another note: where the link leads, its note no longer here to follow it.
+            if (v.buf !== buf || !a.allViews().includes(v)) return item.place && openPlace(a, item.place, "here");
             const l = layout.links[item.data as number]!;
             if (l.line >= 0) a.moveCursor(v, { row: l.line, col: l.col });
             return followLink(a, l, "here");
@@ -125,8 +132,16 @@ export function linkActions(): Record<string, Run> {
             label: b.vault ? a.graph.shownPath(b.from) : b.from,
             detail: b.text,
             hint: `${b.line}`,
+            // The link here, marked in the preview (EG-D2).
+            place: {
+              abs: a.absOf(b.from),
+              line: b.line,
+              ...(b.end.line === b.line ? { range: [b.column - 1, b.end.column - 1] as [number, number] } : {}),
+              text: b.text,
+            },
             data: b,
           })),
+          places: "backlinks",
           accept: (item) => {
             const b = item.data as { from: string; line: number };
             const at = { heading: null, headingIndex: 0, offset: b.line - 1, line: b.line };

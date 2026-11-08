@@ -19,7 +19,8 @@ describe("review (tui): what a filter or a search marks, drawn where it is", () 
     const h = await harness({ root, open: "index.md", width: 120, height: 30 });
     await h.keys("ctrl+p", "r", "i", "n", "g");
     const rows = h.canvas().toString().split("\n");
-    const y = rows.findIndex((r) => r.includes("bellring.md"));
+    // The list's row, not the preview's title beside the list's (EG-D2).
+    const y = rows.findIndex((r) => r.includes("│ bellring.md"));
     expect(y).toBeGreaterThan(-1);
     expect(lit(h, y)).toBe("ring");
   });

@@ -8,6 +8,10 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 
 ### Added
 
+- The switcher, search, find in every note, references, backlinks and links preview the selected row's place beside
+  the list, read-only, its match marked; under the list on a narrow screen. `ctrl+t` hides it. `alt+enter` opens the
+  pick here, in the split or in a new tab, and `space '` brings the last of these lists back as you left it.
+
 - The explorer dims what's outside the vault you are in: nothing there is changed from it. A theme role of its own,
   `sidebar_outside`, sets its colour.
 

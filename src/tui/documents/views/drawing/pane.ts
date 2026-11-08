@@ -21,6 +21,7 @@ import { SEVERITY_ROLE, barRows, problemLines, problemMarks, severityGlyph } fro
 import { commentLinksShown } from "./marks/links.ts";
 import { SIGN_ROLE, gitGlyph, rowSign } from "./marks/git.ts";
 import { codeMarks, drawLine, offsetMarks } from "./lines.ts";
+import { hitMarks } from "./marks/hit.ts";
 import { drawHScrollbar, drawScrollbar } from "./chrome/scrollbars.ts";
 import { drawCursor } from "./chrome/cursor.ts";
 import { drawPictures } from "./pictures.ts";
@@ -54,7 +55,8 @@ export function drawPane(
   let body = rect;
   // The window header (HDR-D1, HDR-D3): between two rules, a split window's name, the breadcrumb, the mode's
   // buttons and ▤; none in zen, in a window under 8 rows or in the floating one.
-  const header = app.ui.window_header && !app.ui.zen && rect.h >= 8 && app.floating?.view !== view;
+  // A list's preview (EG-D2) has none either: its frame names the place.
+  const header = app.ui.window_header && !app.ui.zen && rect.h >= 8 && app.floating?.view !== view && !view.preview;
   const typing = app.overlay?.kind === "prompt" && app.overlay.view === view ? app.overlay : null;
   {
     // The window's text size, set before anything lays it out: the header asks for the layout
@@ -362,6 +364,7 @@ export function drawPane(
       marks.push(...problemMarks(line, layout, markedOn, layout.lines[row + 1]?.src !== line.src));
     if (chosenOn && !line.decor)
       marks.push(...problemMarks(line, layout, chosenOn, layout.lines[row + 1]?.src !== line.src, "link_focus"));
+    if (view.preview) marks.push(...hitMarks(line, view.preview));
     if (links) marks.push(...offsetMarks(line, links.get(line.src), false, "link"));
     if (brackets && !line.decor) marks.push(...offsetMarks(line, brackets.get(line.src), false, "bracket_match"));
     if (stop && !line.decor) marks.push(...offsetMarks(line, stopLines.get(line.src), false, "selection"));

@@ -2,12 +2,13 @@
 
 import type { App, ListOverlay } from "../../../../app/runtime/app.ts";
 import { type Canvas, drawText } from "../../../terminal/canvas.ts";
-import type { Rect } from "../../../screen/geometry.ts";
+import type { Geometry } from "../../../screen/geometry/contracts.ts";
 import { roleStyle } from "../../../screen/style.ts";
 import { truncate, stringWidth, graphemes, graphemeWidth } from "../../../../../core/foundation/text/width.ts";
 import { sanitize } from "../../../../../core/foundation/text/sanitize.ts";
 import { drawFooter } from "./footer.ts";
 import { drawKeys, marked } from "../common/labels.ts";
+import { drawPlacesKeys, drawPreview, type ListGeometry, listBox, spanning } from "./preview.ts";
 
 export function drawList(
   app: App,
@@ -15,25 +16,24 @@ export function drawList(
   o: ListOverlay,
   mainY: number,
   mainH: number,
-): Rect & { listY: number; rows: number } {
+  geo?: Geometry,
+): ListGeometry {
   const theme = app.theme;
   const W = c.width;
-  const w = Math.min(100, W - (W > 60 ? 8 : 0));
   // Rows besides the list: the borders, the input, and the footer (a rule, the entry's name, two
   // rows of explanation, its other keys).
   // The footer only when the list keeps at least four rows beside it.
   const footer = !!o.footer && Math.min(mainH - 2, 30) - ((o.filterable ? 3 : 2) + FOOTER_ROWS + 2) >= 4;
   const inner = (o.filterable ? 3 : 2) + (footer ? FOOTER_ROWS + 1 : 0);
-  // Never taller than the content area: on a short screen the status line and the rule stay.
-  const h = Math.min(mainH, Math.max(inner + 1, Math.min(o.filtered.length + inner + 1, mainH - 2, 30)));
-  const x = Math.floor((W - w) / 2);
-  const y = mainY + Math.max(0, Math.min(2, mainH - h));
+  // A list of places (EG-D2): its preview beside it, or under it on a narrow screen, as tall as a full list.
+  const { x, y, w, h, preview } = listBox(app, o, W, mainY, mainH, inner);
   const bg = roleStyle(theme, "overlay", null);
   const border = roleStyle(theme, "overlay_border", null);
   const dim = roleStyle(theme, "overlay_dim", null);
   // A margin in the window's own colour sets it apart from the content behind it: one row above
   // and below, two columns at the sides (a cell is about twice as tall as it is wide).
-  c.fill(x - 2, y - 1, w + 4, h + 2, bg.bg);
+  const box = preview ? spanning({ x, y, w, h }, preview) : { x, y, w, h };
+  c.fill(box.x - 2, box.y - 1, box.w + 4, box.h + 2, bg.bg);
   const b = app.glyphs.box;
   drawText(c, x, y, `${b.tl}${b.h}`, border);
   const tw = drawText(c, x + 2, y, truncate(` ${o.title} `, w - 6), { ...border, bold: true });
@@ -48,6 +48,9 @@ export function drawList(
   const bottom = `${b.bl}${b.h.repeat(Math.max(0, w - 2 - stringWidth(count)))}`;
   drawText(c, x, y + h - 1, bottom, border);
   drawText(c, x + stringWidth(bottom), y + h - 1, count + b.br, dim);
+  // Its keys in the bottom border, `ctrl+t hide` (or `show`) a button too (D99).
+  const toggle = o.places ? drawPlacesKeys(app, c, x + 2, y + h - 1, w - 4 - stringWidth(count), dim) : null;
+  if (preview && geo) drawPreview(app, c, o, preview, geo);
 
   let listY = y + 1;
   if (o.filterable) {
@@ -176,7 +179,7 @@ export function drawList(
   }
   if (!selectableCount && !o.filtered.some((entry) => entry.item.informational))
     drawText(c, x + 2, listY, o.input ? "no matches" : "nothing here", dim);
-  return { x, y, w, h, listY, rows };
+  return { x, y, w, h, listY, rows, ...(preview ? { box } : {}), ...(toggle ? { toggle } : {}) };
 }
 
 const FOOTER_ROWS = 4;

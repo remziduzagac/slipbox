@@ -749,6 +749,9 @@ export const PEEK_BACKLINKS: Check[] = [
       await sleep(3000);
       // The index's backlinks: the nested vault found, its index built on the thread.
       await leader(s, "l", "b");
+      // The list's preview hidden: the list alone, in the middle, the explorer's rows beside it.
+      await s.see("Linking to index.md");
+      await s.keys("ctrl+t");
       await s.until(() => markOf(s, "nest") === "●", SLOW, "nest, its index built: ●");
     },
   },

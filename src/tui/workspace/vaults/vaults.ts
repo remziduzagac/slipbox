@@ -230,6 +230,7 @@ export class Vaults {
     this.app.background.cancelAll();
     this.app.exporter.cancel(true);
     this.app.search.stop();
+    this.app.places.left();
     this.app.languages.leaveVault();
     this.app.geometry = null;
     this.app.mouse.leaveVault();

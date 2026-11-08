@@ -67,7 +67,9 @@ export const LIST_INTERACTIONS: Check[] = [
       await s.keys("ctrl+p");
       await s.see(/Open (note|\()/);
       await s.type("#O22");
-      await s.see(/│ O22: Remote access through one gateway .* handbook\/operations-handbook\.md:\d+/);
+      await s.see(/│ O22: Remote access through one gateway/);
+      // Its place, named by the preview beside the list.
+      await s.see(/┌─ handbook\/operations-handbook\.md:\d+ ─/);
       await s.keys("enter");
       await s.until(() => pos(s).line === lineOf(s, HANDBOOK, "## O22:"), 3000, "the cursor on O22's heading");
     },

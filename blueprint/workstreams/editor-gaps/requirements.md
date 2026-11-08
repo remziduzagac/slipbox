@@ -43,8 +43,8 @@
 
 - **Lists of places** (EG-T1): the switcher, search, find in every note, references, backlinks and links preview the
   selected row's place, beside the list on a wide screen and under it on a narrow one; `ctrl+t` hides and shows it;
-  `alt+enter` opens a pick here, in the split, in a new tab or in a peek; `space '` reopens the last one as it was. A
-  terminal check covers each at 120 and 80 columns.
+  `alt+enter` opens a pick here, in the split or in a new tab; `space '` reopens the last one as it was. A terminal
+  check covers each at 120 and 80 columns.
 - **Jump labels** (EG-T2): `s` while reading and `g w` in SOURCE view label the words and links of both windows of a
   split; a label typed moves the cursor and focuses its window; `esc` leaves it as it was.
 - **Problems** (EG-T3): on the reference set, `] d` and `] e` visit a file's problems and errors in order, around the

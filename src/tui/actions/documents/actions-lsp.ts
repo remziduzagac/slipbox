@@ -320,7 +320,18 @@ function pickLocation(a: App, title: string, locs: { path: string; line: number;
   const shown = (p: string) => (p.startsWith(`${a.loc.root}/`) ? p.slice(a.loc.root.length + 1) : p);
   a.overlays.openList({
     title,
-    items: locs.map((l) => ({ label: `${shown(l.path)}:${l.line + 1}`, detail: lineOf(l.path, l.line), data: l })),
+    items: locs.map((l) => {
+      const raw = rawLineOf(l.path, l.line);
+      // Its name, marked in the preview (EG-D2): the word a server's position starts.
+      const word = /^[\p{L}\p{N}_$]+/u.exec(raw.slice(l.character))?.[0] ?? "";
+      return {
+        label: `${shown(l.path)}:${l.line + 1}`,
+        detail: raw.trim(),
+        place: { abs: l.path, line: l.line + 1, range: [l.character, l.character + word.length], text: word },
+        data: l,
+      };
+    }),
+    places: "locations",
     accept: (item) => {
       const l = item.data as { path: string; line: number; character: number };
       a.languages.openLocation(l.path, l.line, l.character);
@@ -328,10 +339,10 @@ function pickLocation(a: App, title: string, locs: { path: string; line: number;
   });
 }
 
-/** A file's line, trimmed (for a list of locations); empty when it can't be read. */
-function lineOf(path: string, line: number): string {
+/** A file's line (for a list of locations); empty when it can't be read. */
+function rawLineOf(path: string, line: number): string {
   try {
-    return (readFileSync(path, "utf8").split("\n")[line] ?? "").trim();
+    return readFileSync(path, "utf8").split("\n")[line] ?? "";
   } catch {
     return "";
   }

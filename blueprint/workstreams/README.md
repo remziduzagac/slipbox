@@ -7,8 +7,8 @@ dropped and superseded ones in `archive/`. The roadmap gives their order.
 - Consolidated 2026-11-02: [ORF](archive/org-follow-ups/README.md), issue #170: all legacy caps removed, timer/fixture
   corrections, unused-code proof and focused tests with shared integration retained.
 - Draft: [ENG](execution-engine/README.md), the execution engine; not built.
-- Draft: [EG](editor-gaps/README.md), what LazyVim and Helix users reach for; settled item by item on 2026-11-08,
-  to be accepted before it's built.
+- Active: [EG](editor-gaps/README.md), what LazyVim and Helix users reach for; settled item by item on 2026-11-08,
+  being built.
 - Consolidated before 2026-10-26: [DOC](archive/user-docs/README.md),
   [DF](archive/doc-findings/README.md), [GR](archive/greenrepo/README.md),
   [DS](archive/docs-site/README.md), [VV](archive/vaults-and-view/README.md),

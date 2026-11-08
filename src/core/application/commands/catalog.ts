@@ -39,7 +39,7 @@ export const COMMAND_GROUPS: { title: string; ids: RegExp }[] = [
   { title: "Outline", ids: /^(outline\.(cycle|toggle)$|footnotes?\.)/ },
   {
     title: "Find",
-    ids: /^(find\.|switcher\.|search\.|tag\.list$|type\.|outline\.pick$|breadcrumb\.path$|palette\.|note\.open$)/,
+    ids: /^(find\.|switcher\.|list\.|search\.|tag\.list$|type\.|outline\.pick$|breadcrumb\.path$|palette\.|note\.open$)/,
   },
   {
     title: "Editing",

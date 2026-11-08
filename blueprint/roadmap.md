@@ -738,8 +738,7 @@ Items 5 and 7 are consolidated as CIW. The remaining work is tracked in the root
 
 ## What LazyVim and Helix users reach for
 
-*Not a phase. Proposed 2026-11-08, its items settled one at a time with the user; a draft, to be accepted before any
-of it is built.*
+*Not a phase. Proposed 2026-11-08, its items settled one at a time with the user; accepted, and being built.*
 
 - [ ] **[What LazyVim and Helix users reach for](workstreams/editor-gaps/README.md)** (EG): jump labels; lists of
   places previewed; a branch's commits; problems stepped through; text objects, jumps and selections by syntax;
