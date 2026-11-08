@@ -96,6 +96,7 @@ test("Bun file-local timeout sites stay named; update this map when a file moves
     ["tests/core/rendering/theme/theme.test.ts", "UNIT_TIMEOUT_MS"],
     ["tests/core/workspace/git/branches/remote.test.ts", "UNIT_TIMEOUT_MS"],
     ["tests/core/workspace/git/history/blame.test.ts", "UNIT_TIMEOUT_MS"],
+    ["tests/core/workspace/git/history/commits.test.ts", "UNIT_TIMEOUT_MS"],
     ["tests/core/workspace/git/merge/conflicts.test.ts", "UNIT_TIMEOUT_MS"],
     ["tests/core/workspace/git/merge/merge.test.ts", "UNIT_TIMEOUT_MS"],
     ["tests/core/workspace/git/merge/operations.test.ts", "UNIT_TIMEOUT_MS"],
