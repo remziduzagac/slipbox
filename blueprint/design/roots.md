@@ -577,6 +577,8 @@ deleted (D61). Each vault's is in its cache folder (the link index, the search i
   setting goes into the key, since parsing reads none. A title from the file's name, the file's BOM and line endings
   are the file's own, never cached. Where a link points depends on where the file is, so links are resolved, and
   backlinks derived, per vault (D76; [links.md](links.md) § Backlinks). `SLIPBOX_PARSE_CACHE=off` goes without it.
+  One that doesn't open is tried again ten seconds on, not per note: a moment's failure (its folder emptied, a lock)
+  doesn't leave the session without it. The cache folder, gone meanwhile, is made again (`ensureCacheHome`).
 
 ## Named folders
 

@@ -14,8 +14,9 @@ makeVaultSandbox();
 
 describe("the parse cache by content (20.11)", () => {
   test("a second copy is read from what the first parsed; titles, flags and links are each copy's own", async () => {
-    const { sharedParseCache } = await import("../../../../src/core/documents/markdown/parsecache.ts");
-    const cache = sharedParseCache()!;
+    const { ParseCache, sharedParseCache } = await import("../../../../src/core/documents/markdown/parsecache.ts");
+    const cache = sharedParseCache();
+    if (!cache) throw new Error(`no parse cache: ${ParseCache.failure}`);
     const base = mkdtempSync(join(tmpdir(), "slipbox-pc-"));
     const a = join(base, "a");
     mkdirSync(join(a, ".slipbox"), { recursive: true });
@@ -114,6 +115,28 @@ describe("the parse cache by content (20.11)", () => {
       expect(sharedParseCache()!.get(key)).toBeNull(); // the folder's own cache, not the one that went
       sharedParseCache()!.put(key, { title: "T", links: [], headings: [], tags: [], tasks: [] } as never);
       expect(sharedParseCache()!.get(key)).not.toBeNull();
+    } finally {
+      if (was === undefined) delete process.env.XDG_CACHE_HOME;
+      else process.env.XDG_CACHE_HOME = was;
+    }
+  });
+
+  test("one that didn't open is tried again after a while, not gone without for the session; why it failed is kept", async () => {
+    const { ParseCache, PARSE_CACHE_RETRY_MS, sharedParseCache } = await import(
+      "../../../../src/core/documents/markdown/parsecache.ts"
+    );
+    const was = process.env.XDG_CACHE_HOME;
+    const base = mkdtempSync(join(tmpdir(), "slipbox-pcretry-"));
+    try {
+      process.env.XDG_CACHE_HOME = base;
+      writeFileSync(join(base, "slipbox"), "a file where the cache's folder goes\n"); // nothing opens under it
+      const at = 1e12;
+      expect(sharedParseCache(at)).toBeNull();
+      expect(ParseCache.failure).toContain(join(base, "slipbox", "parsed.db"));
+      rmSync(join(base, "slipbox"));
+      expect(sharedParseCache(at + PARSE_CACHE_RETRY_MS - 1)).toBeNull(); // not tried per note meanwhile
+      expect(sharedParseCache(at + PARSE_CACHE_RETRY_MS)).not.toBeNull();
+      expect(ParseCache.failure).toBeNull();
     } finally {
       if (was === undefined) delete process.env.XDG_CACHE_HOME;
       else process.env.XDG_CACHE_HOME = was;

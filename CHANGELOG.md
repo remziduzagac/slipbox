@@ -165,6 +165,9 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 
 ### Fixed
 
+- The shared parse cache, when it couldn't open once, was gone without until slipbox restarted, so every note was
+  parsed again; it's tried again ten seconds later. A cache folder emptied while slipbox runs is made again.
+
 - The explorer's breadcrumb: a click on `…`, where the first folders fold when they don't fit, zooms out to the
   nearest of them, as a click on that folder would. It did nothing.
 

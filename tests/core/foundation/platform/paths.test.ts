@@ -1,6 +1,6 @@
 import { UNIT_TIMEOUT_MS } from "../../../support/timeouts.ts";
 import { describe, expect, setDefaultTimeout, test } from "bun:test";
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { ensureCacheHome, type StoreKind, storeDir } from "../../../../src/core/foundation/platform/paths.ts";
 import { makeCoreSandbox } from "../../../support/core-sandbox.ts";
@@ -48,5 +48,12 @@ describe("where slipbox keeps things (14.9)", () => {
     writeFileSync(join(other, "CACHEDIR.TAG"), "Signature: 8a477f597d28d172789f06886806bc55\n# someone else's\n");
     ensureCacheHome(other);
     expect(readFileSync(join(other, "CACHEDIR.TAG"), "utf8")).toEndWith("# someone else's\n");
+  });
+  test("a cache folder gone while slipbox runs (emptied by hand) is made again, its tag with it", () => {
+    const dir = join(mkdtempSync(join(sandbox, "gone-")), "slipbox");
+    ensureCacheHome(dir);
+    rmSync(dir, { recursive: true });
+    expect(ensureCacheHome(dir)).toBe(dir);
+    expect(existsSync(join(dir, "CACHEDIR.TAG"))).toBe(true);
   });
 });

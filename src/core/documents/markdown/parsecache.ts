@@ -37,6 +37,9 @@ export class ParseCache {
     this.put_ = db.prepare("insert or replace into parsed (key, data) values (?, ?)");
   }
 
+  /** Why the last open failed, and where; null once one opens. What a test says when there's no cache. */
+  static failure: string | null = null;
+
   /** The machine's parse cache, made when missing; null when it can't be (a read-only cache). */
   static open(file = join(cacheHome(), "parsed.db")): ParseCache | null {
     let db: Database | null = null;
@@ -51,8 +54,10 @@ export class ParseCache {
         db.pragma(`user_version = ${PARSE_CACHE_VERSION}`);
       }
       db.exec("create table if not exists parsed (key text primary key, data text not null)");
+      ParseCache.failure = null;
       return new ParseCache(db);
-    } catch {
+    } catch (err) {
+      ParseCache.failure = `${file}: ${String(err)}`;
       try {
         db?.close();
       } catch {}
@@ -90,18 +95,24 @@ export class ParseCache {
   }
 }
 
-let shared: { file: string; cache: ParseCache | null } | undefined;
+/** How long a cache that didn't open is gone without before it's tried again: one failure (the folder away for a
+ *  moment, a lock) doesn't leave the rest of the session without it, nor is a cache that can't open tried per note. */
+export const PARSE_CACHE_RETRY_MS = 10_000;
+
+let shared: { file: string; cache: ParseCache | null; tried: number } | undefined;
 
 /**
  * This process's parse cache, opened on first use (`SLIPBOX_PARSE_CACHE=off`: none) — in the cache folder as it is now:
- * moved (`XDG_CACHE_HOME`, as each test file sets it), the old one is let go, and may be gone.
+ * moved (`XDG_CACHE_HOME`, as each test file sets it), the old one is let go, and may be gone. One that didn't open is
+ * tried again once `PARSE_CACHE_RETRY_MS` have passed (`now`, in milliseconds).
  */
-export function sharedParseCache(): ParseCache | null {
+export function sharedParseCache(now = performance.now()): ParseCache | null {
   if (process.env.SLIPBOX_PARSE_CACHE === "off") return null;
   const file = join(cacheHome(), "parsed.db");
   if (shared?.file !== file) {
     shared?.cache?.close();
-    shared = { file, cache: ParseCache.open(file) };
-  }
+    shared = { file, cache: ParseCache.open(file), tried: now };
+  } else if (!shared.cache && now - shared.tried >= PARSE_CACHE_RETRY_MS)
+    shared = { file, cache: ParseCache.open(file), tried: now };
   return shared.cache;
 }
