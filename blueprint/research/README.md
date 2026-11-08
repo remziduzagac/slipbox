@@ -12,6 +12,8 @@ obtained. Research informs the decisions but decides nothing; each file's summar
 - [link-conventions.md](link-conventions.md): how other tools give a link its meaning (roots, a leading `/`, names,
   moves), and how Obsidian and zk write one.
 - [keymap-comparison.md](keymap-comparison.md): slipbox's keys beside vim's, VS Code's and Obsidian's.
+- [lazyvim-helix.md](lazyvim-helix.md): what LazyVim and Helix have that slipbox lacks, ranked, with where slipbox
+  stands on each.
 - [ttt.md](ttt.md): ttt, a code editor in the terminal: adjacent, not a competitor; its editing and testing ideas.
 - [plannotator.md](plannotator.md): Plannotator and plannotator-tui, reviewing an agent's plan and sending the
   feedback back: adjacent, with real overlap; their ideas for slipbox and its agent.

@@ -736,6 +736,17 @@ Items 5 and 7 are consolidated as CIW. The remaining work is tracked in the root
 - [ ] **[CIW-T5: The Linux jobs split across runners](tasks/ciw-shard-linux.md)**.
 - [ ] **[CIW-T9: The slowest tests found and kept in check](tasks/ciw-slowest-tests.md)**.
 
+## What LazyVim and Helix users reach for
+
+*Not a phase. Proposed 2026-11-08, its items settled one at a time with the user; a draft, to be accepted before any
+of it is built.*
+
+- [ ] **[What LazyVim and Helix users reach for](workstreams/editor-gaps/README.md)** (EG): jump labels; lists of
+  places previewed; a branch's commits; problems stepped through; text objects, jumps and selections by syntax;
+  surround, reflow, TODOs, folded sections, undo by time; `space g` as a group with blame as a column and the diff in
+  the file; the servers' hints, uses, calls and imports; copies kept and marks; windows split freely and zoomed;
+  several selections. Its windows wait on the Later item below on windows and tabs.
+
 ## Later
 
 Agreed, but not scheduled.
