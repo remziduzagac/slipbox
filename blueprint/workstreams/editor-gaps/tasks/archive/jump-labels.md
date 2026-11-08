@@ -1,5 +1,5 @@
 ---
-status: todo
+status: done
 assignee: ""
 blocked_by: []
 created: "2026-11-08"
@@ -24,5 +24,7 @@ EG-D3.
 
 ## Open
 
-- The lens, whose keys are SOURCE view's.
-- Whether a label is an operator's motion (`d g w`).
+Both settled here, for the maintainer to confirm; design.md § "MODIFIED design/tui.md § The cursor" says how.
+
+- The lens, whose keys are SOURCE view's: `g w` labels there, `s` stays substitute; its targets are what it draws.
+- Whether a label is an operator's motion (`d g w`): not one; the operator says it doesn't take it.

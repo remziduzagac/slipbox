@@ -43,6 +43,7 @@ The cursor moves by the rows you see:
 | a page | `pagedown` and `pageup` |
 | to a line by its number | `ctrl+g`, or `:42` |
 | to the next or previous link | `tab` and `shift+tab` |
+| to a word or a link on screen, by its label | `s` or `g w`, then the label |
 
 | To scroll the cursor's row to the window's | Press |
 | --- | --- |
@@ -51,6 +52,12 @@ The cursor moves by the rows you see:
 | bottom | `z b` |
 
 The window keeps `ui.scrolloff` rows (3) between the cursor and its top and bottom edges.
+
+To go somewhere you can see, press `s`. Every word and link on the screen gets a label of one or two letters, in both
+windows of a split, and the status line says `JUMP`. The labels nearest the cursor are the shortest. Type a label: the
+cursor goes there, and its window gets the focus. On a link, `enter` then follows it. `esc`, or a key no label goes on
+with, puts the labels away and leaves the cursor where it was. When a screen holds more words than 676 labels can
+mark, the farthest have none. `g w` does the same, and is the key in SOURCE view, where `s` replaces a character.
 
 The mouse wheel scrolls the page, and moves the cursor only as far as it must to stay on it. A click puts the cursor
 where you click. A click on a link follows it.

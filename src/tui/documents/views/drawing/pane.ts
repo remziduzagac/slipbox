@@ -469,6 +469,8 @@ export function drawPane(
     }
   }
   if (c.image && app.pictures.now(view, layout)) drawPictures(app, c, view, layout, shown, body.y, textX, textW, geo);
+  // Jump labels (EG-D3), over everything the rows drew.
+  app.labels.draw(c, view, layout, shown, body.y, textX, textW);
 
   if (hbar) {
     const r = { x: textX, y: body.y + body.h, w: textW, h: 1 };

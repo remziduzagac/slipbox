@@ -136,6 +136,8 @@ export const ROLES = [
   "keycap_selected",
   "selection",
   "bracket_match",
+  // a jump label over what it goes to (EG-D3)
+  "jump_label",
   "error",
   "warn",
   "info",

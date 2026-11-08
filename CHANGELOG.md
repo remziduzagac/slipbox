@@ -32,6 +32,10 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
   `space b`, or full version and upgrade information with `space a`; a green arrow marks an available upgrade.
   The leader popup keeps group explanations visible by shortening wide columns when needed.
 
+- Jump labels: `s` while reading, and `g w` there and in SOURCE view, put a label of one or two letters on every word
+  and link the windows of the tab show. Typing one moves the cursor there and focuses its window; `esc` puts them
+  away. A theme role of its own, `jump_label`, sets their colour.
+
 - Markdown document HTML now renders with scoped formatting, aligned images, theme-aware picture alternatives,
   headings and collapsible details. Image permissions still apply. Noninteractive output expands details; Markdown
   exports preserve original HTML except omitted non-document content.

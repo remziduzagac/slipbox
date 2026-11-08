@@ -116,6 +116,11 @@ window's edge. [Reading](reading.md) says more.
 | up to the next / previous character you type | `t` / `shift+t` | |
 | the last `f` or `t` again / the other way | `;` / `,` | |
 | a line by its number | `42 g g`, `42 shift+g` (SOURCE view) | `ctrl+g`, `space f l`, `:42` |
+| a word or a link on screen, by its label | | `s` (reading), `g w` |
+
+`s` (or `g w`) puts a label of one or two letters on every word and link the windows of the tab show. Type a label
+to move the cursor there, into its window. The nearest labels are the shortest. `esc`, or a key no label goes on with,
+leaves the cursor where it was. In SOURCE view and the lens, `s` replaces a character, so use `g w` there.
 
 ### Scrolling
 
@@ -580,7 +585,7 @@ These keys belong to SOURCE view and the lens. In your configuration, they are u
 | do the last change again, here | `.` |
 
 The motions are the cursor's keys: `w`, `b`, `e`, `0`, `^`, `$`, `j`, `k`, `g g`, `shift+g`, `{`, `}`, `%`, `f`, `t` and
-the rest.
+the rest. A jump label isn't one: `d g w` does nothing.
 
 A search is a motion too. For example, `d`, then `/`, the text and `enter` deletes up to the match. `d n` deletes up to
 the next one.

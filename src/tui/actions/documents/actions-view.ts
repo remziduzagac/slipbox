@@ -47,6 +47,8 @@ export function viewActions(): Record<string, Run> {
         if (to < 0) return a.message("info", `no ${text[from]} to match this one`);
         E.placeAt(a, v, to);
       }),
+    // Jump labels (EG-D3): the words and links on screen labelled; the keys after are the labels' (labels.ts).
+    "cursor.jump": (a) => a.labels.start(),
     "scroll.center": (a) => withView(a, (v) => a.views.scrollCursorTo(v, "center")),
     "scroll.top": (a) => withView(a, (v) => a.views.scrollCursorTo(v, "top")),
     "scroll.bottom": (a) => withView(a, (v) => a.views.scrollCursorTo(v, "bottom")),

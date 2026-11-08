@@ -233,6 +233,7 @@ sidebar_vault = { bold = true, underline = true }
 "leader ; 0 m" = "background.pause"
 "leader ; 0 n" = "background.dismiss"
 "leader ; 0 o" = "app.about"
+"leader ; 0 shift+j" = "cursor.jump"
 "leader ; 0 p" = "app.release_notes"
 "leader ; 0 x" = "list.open_where"
 "leader ; 0 y" = "list.resume"

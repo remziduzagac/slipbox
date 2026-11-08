@@ -18,6 +18,7 @@ export const DEFAULT_SOURCE_KEYS: Record<string, string> = {
   "~": "edit.toggle_case",
   ".": "edit.repeat",
   "g c": "edit.op_comment",
+  "g w": "cursor.jump",
   "ctrl+/": "edit.comment_line",
   "ctrl+_": "edit.comment_line",
 };

@@ -51,7 +51,9 @@ export function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void
                       : " OUTLINE "
                   : view?.insert
                     ? " INSERT "
-                    : " NORMAL ";
+                    : app.labels.shown // jump labels showing (EG-D3): the keys are theirs
+                      ? " JUMP "
+                      : " NORMAL ";
   let x = 0;
   let label = view ? (view.source ? " SOURCE " : view.live ? ` READ${app.glyphs.lensJoin}LENS ` : " READ ") : "";
   let mode = view?.insert ? " INSERT " : view?.visual === "line" ? " V-LINE " : view?.visual ? " VISUAL " : " NORMAL ";

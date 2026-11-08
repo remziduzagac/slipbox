@@ -36,8 +36,8 @@ export class Input {
 
   // -------------------------------------------------------------------------------------------
   // Input. Dispatch order (decision 3.11): a paste → overlay → a pane's filter → insert (the
-  // completion popup's keys first) → a character awaited (f, t, r) → (in source and the lens: counts
-  // and an operator's motion around the rest, vim.ts) → resize mode → pending sequence → the
+  // completion popup's keys first) → a character awaited (f, t, r) → jump labels (labels.ts) → (in source
+  // and the lens: counts and an operator's motion around the rest, vim.ts) → resize mode → pending sequence → the
   // focused pane's keys → visual mode's → source mode's → the normal keymap. The which-key popup
   // shows while a sequence is pending.
 
@@ -389,6 +389,8 @@ export class Input {
       if (ch !== null) f(ch);
       return;
     }
+    // Jump labels showing (EG-D3): the key is the labels', in every view.
+    if (this.app.labels.shown) return this.app.labels.key(key);
     // Source mode's normal mode: counts, operators and `.` around the keymaps (vim.ts).
     if (this.app.region === "content" && iv && editable(iv) && !iv.visual && !this.app.panels.resizeMode)
       return vimKey(this.app, iv, key, () => this.dispatchMapped(key));

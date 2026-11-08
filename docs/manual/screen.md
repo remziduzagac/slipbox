@@ -404,7 +404,8 @@ The status line describes the file in the focused window. From the left:
 - **The view and mode**, in two coloured segments: `READ │ NORMAL`, `READ·LENS │ INSERT` or `SOURCE │ VISUAL`.
   The first segment stays visible while typing or selecting. The second is vim's `NORMAL`, `INSERT`, `VISUAL` or
   `V-LINE`. In ASCII the divider is `|` and the lens label is `READ-LENS`. Panel focus (`FILES`, `GIT`, `INFO`,
-  `OUTLINE`, `FOOTNOTES`, `PROBLEMS`), `RESIZE` and pending keys appear alongside them.
+  `OUTLINE`, `FOOTNOTES`, `PROBLEMS`), `RESIZE`, `JUMP` (while jump labels show) and pending keys appear alongside
+  them.
   Short of room, the view becomes `R`, `R·L` or `S`, then the mode becomes `N`, `I`, `V` or `V-L`, before the
   file name shortens. Without a window, the chip says `NORMAL`.
 - **The file's path**, between `‹` and `›`. These two go back and forward in the window's history, as a browser's

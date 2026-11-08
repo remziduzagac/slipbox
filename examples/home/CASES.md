@@ -1167,6 +1167,9 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
 - reading position per note and repeated headings: prepending an entry above does not move the reader —
   `hobbies/cycling/rides/202609131900-300k-brevet.md`, `notes/daily/2026-09-22.md`, `notes/meetings/standup-log.md`
   (tui.md Following links last para; test 'repeated headings: an entry prepended above doesn't move the reader')
+- jump labels (s, g w) on the words and links of both windows of a split, the nearest the shortest; esc, or a key no
+  label goes on with, leaves the cursor — `notes/index.md`, `notes/projects/kestrel-v2-3.md` (cursor.jump; tests
+  'jump labels: s and g w')
 
 ### selection
 
@@ -2518,6 +2521,7 @@ A long note: headings, paragraphs, pages to move through; the daily note has the
   `work/kestrel/api/kestrel_api/sync.py` (catalog.ts)
 - `cursor.goto_line` — Go to line — `notes/meetings/all-hands-archive.md`, `notes/daily/2026-10-05.md`
   (catalog.ts)
+- `cursor.jump` — Jump to a label — `notes/index.md`, `notes/projects/kestrel-v2-3.md` (catalog.ts)
 
 ### scroll
 

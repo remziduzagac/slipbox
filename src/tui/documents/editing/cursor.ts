@@ -157,6 +157,19 @@ function kind(c: Cell): Kind {
   return /^[\p{L}\p{N}_\p{M}]+$/u.test(c.g) ? 1 : 2;
 }
 
+/** The columns where a row's words start, by these classes: each run of letters or of other non-blank characters, and
+ *  each wide character (the jump labels' targets, EG-D3). */
+export function wordStarts(line: Line | undefined): number[] {
+  const out: number[] = [];
+  let prev: Kind = 0;
+  for (const c of cells(line)) {
+    const k = kind(c);
+    if (k !== 0 && (k !== prev || k === 3)) out.push(c.x);
+    prev = k;
+  }
+  return out;
+}
+
 interface Stop {
   row: number;
   i: number;

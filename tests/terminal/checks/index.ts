@@ -26,6 +26,7 @@ import { HOME } from "./home.ts";
 import { HTML } from "./html.ts";
 import { INDEX_SETTINGS } from "./index-settings.ts";
 import { INFO } from "./info.ts";
+import { JUMP_LABELS } from "./jump-labels.ts";
 import { LANGUAGE_SERVERS } from "./language-servers.ts";
 import { LEFT_OUT_LINKS_AND_FILES, LINKS } from "./links.ts";
 import { LIST_INTERACTIONS } from "./list-interactions.ts";
@@ -96,6 +97,8 @@ export const CHECK_FILES: Record<string, Check[]> = {
   // explorer, settings, and the terminal's own behaviour: keys as sent, pastes, the session, resizes, signals (TT-T5).
   "windows-and-tabs": WINDOWS_AND_TABS,
   "navigation-tools": NAVIGATION_TOOLS,
+  // Jump labels (EG-D3): the navigating area's, in a file of their own.
+  "jump-labels": JUMP_LABELS,
   finding: FINDING,
   palette: PALETTE,
   "ui-settings": UI_SETTINGS,
