@@ -45,3 +45,9 @@ what one says (EG-D5).
 - The toggles: `space u shift+r` for the uses of a name, `space u i` for indent guides.
 - `space g u` unstages the note's file: the gutter's changes are against what's staged, so the cursor's line holds
   none staged.
+
+## Trimmed the same day
+
+Asked whether EG added things it didn't need, as the mirrored git panel keys had been, the decisions were gone through
+again for second routes and for what's rarely needed. The user dropped both kinds (EG-D23) and kept code's editing by
+syntax and several selections, which were offered too.

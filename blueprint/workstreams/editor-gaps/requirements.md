@@ -12,8 +12,8 @@
   links wrapped round text and taken off again; paragraphs wrapped to the width the linter wants, and back (EG-D6–EG-D8,
   EG-D12).
 - An agent's long document read by its headings, its sections folded (EG-D11).
-- Going back in time: an undo step by its time or from a list, an earlier copy pasted, a place marked and returned to
-  (EG-D13, EG-D20).
+- Going back in time: an undo step picked from a list, each with its time, an earlier copy pasted, a place marked and
+  returned to (EG-D13, EG-D20).
 - The servers' help in the file: the types left implicit, the uses of a name, who calls a function, the imports a move
   breaks fixed with it (EG-D19).
 - Several places edited at once, Helix's way (EG-D14).
@@ -57,7 +57,7 @@
   Python and Rust, take what they name; `] f` and `] o` go there; `alt+o` grows through a note's tree and a function's,
   and `alt+i` comes back; `y s i w b`, `c s *` then a backtick, `d s (` and a mark typed over a selection wrap and
   unwrap.
-- **TODOs** (EG-T7): the reference set's TODOs and stubs are coloured where they're marks and not in prose or a string;
+- **TODOs** (EG-T7): the reference set's TODOs are coloured where they're marks and not in prose or a string;
   `] x` visits the file's; `space f x` lists the vault's.
 - **Find and replace** (EG-T8): the list fills as the query is typed; it opens on the cursor's word; `path:` narrows it;
   `] q` steps after it's closed; a replace with two rows dropped leaves those two matches and undoes in one step.
@@ -66,11 +66,11 @@
   rewrite kept stays folded.
 - **Reflow** (EG-T10): `g q i p` wraps a list item, a quote and a paragraph with a link and a code span longer than
   the width, as EG-D12 says; `g shift+q` joins them back; the width comes from the reference set's markdownlint config.
-- **Undo** (EG-T11): after three reloads from disk, `:earlier 10m` and `space h u` go back before them.
+- **Undo** (EG-T11): after three reloads from disk, `space h u` goes back before them.
 - **Language servers** (EG-T13): with the TypeScript server, inlay hints show and hide; the uses of a name are marked
-  and `] r` steps; `space c i` lists the callers; moving a file fixes an import in the preview; visual `=` formats the
-  range; `:lsp-restart` restarts it. Live checks against the server, listed for approval first (D207).
-- **Copies and marks** (EG-T14): `space p` pastes the third copy back; `] y` swaps a paste; `m a` and `` ` a `` return
+  and `] r` steps; `space c i` lists the callers; moving a file fixes an import in the preview. Live checks against the
+  server, listed for approval first (D207).
+- **Copies and marks** (EG-T14): `space p` pastes the third copy back; `m a` and `` ` a `` return
   after an edit above and after an agent's rewrite; `m A` from another note.
 - **Smaller ones** (EG-T15): each of EG-D22's keys does what it says; closing pairs are on in a fresh config.
 - **Windows** (EG-T16): three windows in a tab, in both orientations, saved and restored; `ctrl+w z` zooms one and
@@ -114,8 +114,7 @@ opt-in.
 ### MODIFIED requirements.md § Code intelligence
 
 Adds: problems stepped through where they are, the cursor's said on the status line and shown whole (EG-D5); inlay
-hints, the uses of a name marked, the call hierarchy, imports fixed on a file's rename, a range formatted and a server
-restarted (EG-D19).
+hints, the uses of a name marked, the call hierarchy and imports fixed on a file's rename (EG-D19).
 
 Previously: "problems, hover, definitions, references, symbols, rename, code actions, formatting, completion (D161)".
 

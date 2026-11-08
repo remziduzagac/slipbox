@@ -12,11 +12,11 @@ EG-D15, EG-D4, EG-D18.
 ## Description
 
 - `space g` a which-key group, `space g g` the panel; `s`, `u` and `d` on the cursor's change or the note's file,
-  by the panel's letters; the note's own on `enter`, `h`, `l`, `shift+b`, `shift+d`, `y`, `w`. Commit, push and the
+  by the panel's letters; the note's own on `enter`, `l`, `y`, `w`. Commit, push and the
   rest stay the panel's.
 - This branch's commits in the panel and `:log`, and a branch's commits when it's opened up in Branches: a commit's
   files, a file's change in the diff window, read in the background as the panel's reads are.
-- The web link: the forge from the remote (GitHub, GitLab, Codeberg, Bitbucket), the commit checked out, a range for
+- The web link: the forge from the remote (GitHub, GitLab), the commit checked out, a range for
   a selection; copied, or opened with RPT-D3's opener, never over SSH.
 - A note under GIT-D12 at consolidation.
 

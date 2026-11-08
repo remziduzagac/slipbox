@@ -15,7 +15,7 @@ EG-D6, EG-D7.
   worker beside its pass.
 - Text objects `f` `c` `a` `o` in code and `h` `l` `o` `k` in notes, after the operators and in visual mode.
 - `] f`, `] a`, `] o` and their `[` halves, as motions.
-- `alt+o`, `alt+i`, `alt+n`, `alt+p`, the steps grown through kept on the view.
+- `alt+o` and `alt+i`, the steps grown through kept on the view.
 
 ## Acceptance criteria
 

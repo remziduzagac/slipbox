@@ -12,13 +12,12 @@ EG-D19.
 ## Description
 
 - Inlay hints (off by default, `space u h`), the uses of a name (`] r`, `space u shift+r`), the call hierarchy
-  (`space c i`, `space c o`), imports fixed on a file's rename in the rename's preview, a range formatted (visual `=`,
-  `g =`), `:lsp-restart`.
+  (`space c i`, `space c o`), imports fixed on a file's rename in the rename's preview.
 - The client says it takes them at `initialize`, and the features' names for several servers on one file.
 
 ## Acceptance criteria
 
-- Live checks with the TypeScript server, listed for approval before they run (D207): each of the six.
+- Live checks with the TypeScript server, listed for approval before they run (D207): each of the four.
 - Unit tests with a fake server for each request and its answer dropped when stale.
 - Every bug found gets a regression test; `bun run check` passes; the user docs and a CHANGELOG line come with it.
 

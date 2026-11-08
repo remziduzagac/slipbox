@@ -11,7 +11,7 @@ roadmap's Later item on windows and tabs; EG-T17 last, its keys settled first; E
 - [EG-T4](git-keys-and-commits.md): `space g` as a group, a branch's commits, a line's web link.
 - [EG-T5](structure.md): The structure: text objects, syntax jumps, growing the selection.
 - [EG-T6](surround.md): Surround, and wrapping on type.
-- [EG-T7](todos.md): TODOs and stubs.
+- [EG-T7](todos.md): TODOs.
 - [EG-T8](find-and-replace.md): Find in every note, and a replace with rows left out.
 - [EG-T9](folds.md): Folding a note's sections.
 - [EG-T10](reflow.md): Reflow, both ways.
