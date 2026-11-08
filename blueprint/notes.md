@@ -523,3 +523,11 @@ dates. Each says what was asked, decided, built and found, and cites the decisio
   decides which is right.
 - The same day, the maintainer settled it: the design is right. The screen's rasteriser now names a font only where the
   machine has one (#32).
+
+## What LazyVim and Helix users reach for (2026-11-08)
+
+- The user asked what LazyVim and Helix have that slipbox lacks; [research](research/lazyvim-helix.md) ranked it, and
+  every item was settled with them one at a time. The outcome is a draft workstream,
+  [EG](workstreams/editor-gaps/README.md), whose notes say how each was settled.
+- It reopens D141 (one split), D155 (marks; closing pairs opt-in) and GIT-D12 (`space g` the panel alone), each
+  raised with the user and kept; their notes are written when EG is consolidated.
