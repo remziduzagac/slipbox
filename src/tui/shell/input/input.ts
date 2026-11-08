@@ -22,6 +22,7 @@ import {
 } from "./keys.ts";
 import type { App } from "../../app/runtime/app.ts";
 import { editable } from "../../documents/editing/editable.ts";
+import { PROBLEM_KEYMAP } from "../../documents/diagnostics/problems/at-cursor.ts";
 import { refilter } from "../overlays/overlays.ts";
 
 /** Keys and pastes: dispatch, sequences, the which-key popup. */
@@ -235,6 +236,9 @@ export class Input {
     // A diff window's (GIT-D2): tab switches a note's between its blocks and its lines.
     else if (this.app.region === "content" && this.app.floating?.kind === "diff")
       out.push({ map: this.app.diffKeys, run: (s) => this.app.run(s) });
+    // The problem window's (EG-D5): y copies, s adds to the scratch.
+    else if (this.app.region === "content" && this.app.floating?.kind === "problem")
+      out.push({ map: PROBLEM_KEYMAP, run: (s) => this.app.run(s) });
     // Source mode's own keys (x deletes a character there) before the reading ones.
     if (this.app.region === "content" && editable(this.app.view) && !this.app.view!.visual)
       out.push({ map: this.app.sourceKeys, run: (s) => this.app.run(s) });

@@ -268,6 +268,12 @@ export const DEFAULT_PEEK_KEYS: Record<string, string> = {
   z: "peek.fill",
 };
 
+/** The problem window's own keys (EG-D5), over the note's while it's open: commands, as a peek's are. */
+export const DEFAULT_PROBLEM_KEYS: Record<string, string> = {
+  y: "problem.copy",
+  s: "problem.scratch",
+};
+
 /** A review's own keys (GIT-D3), over the note's while it's open: commands, as the note's keys are. */
 export const DEFAULT_REVIEW_KEYS: Record<string, string> = {
   y: "git.review_keep",

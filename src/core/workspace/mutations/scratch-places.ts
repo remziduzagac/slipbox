@@ -1,13 +1,16 @@
 // The scratch's places checked (D229): an entry's `**At:**` with its lines fenced after it, against its file now. The
 // lines still there, nothing is said; found elsewhere in the file, they moved — the `At:` offered their new place; found
 // nowhere, they changed; the file gone, it's said. An entry without lines (a line's capture, text alone) has nothing to
-// compare, nor has a review's diff, which is no file's text.
+// compare, nor has a review's diff or a problem's message, which are no file's text.
 
 import { isAbsolute, join } from "node:path";
 import type { Code, InlineCode, Paragraph, RootContent } from "mdast";
 import { parseMarkdown } from "../../documents/markdown/parse.ts";
 import type { Problem } from "../../documents/diagnostics/diagnostics.ts";
 import { AT, formatRef, parseRef, type Ref } from "./capture.ts";
+
+/** The fence a problem's message goes into the scratch in, after its place (EG-D5): no file's lines, never compared. */
+export const MESSAGE_FENCE = "text";
 
 /** A place that no longer holds its lines: the problem on its `At:`, and where they are now when they moved. */
 export interface StalePlace {
@@ -51,7 +54,7 @@ export function stalePlaces(scratch: string, project: string, read: (abs: string
     const code = placeIn(n);
     const ref = code ? parseRef(code.value) : null;
     const lines = (next as Code).value;
-    if (!code?.position || !ref || !lines || next.lang === "diff") return;
+    if (!code?.position || !ref || !lines || next.lang === "diff" || next.lang === MESSAGE_FENCE) return;
     const at = { start: code.position.start, end: code.position.end };
     const problem = (id: string, message: string, fix?: Problem["fix"]): Problem => ({
       start: { line: at.start.line, column: at.start.column },

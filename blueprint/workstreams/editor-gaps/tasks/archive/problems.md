@@ -1,6 +1,6 @@
 ---
-status: todo
-assignee: ""
+status: done
+assignee: claude-cli
 blocked_by: []
 created: "2026-11-08"
 ---
@@ -11,7 +11,7 @@ EG-D5.
 
 ## Description
 
-- `] d` / `[ d`, `] e` / `[ e` over the problems shown, by where each starts, around the ends.
+- `] d` / `[ d` over the problems shown, by where each starts, around the ends.
 - The cursor's problem on the status line, in its severity's colour, giving the word count and the tab's place way.
 - `space c d`: a floating window with each problem at the cursor and who found it; `y` copies, `s` adds it to the
   scratch.
@@ -25,4 +25,5 @@ EG-D5.
 
 ## Open
 
-- Where the message goes when the cursor is also on a link.
+- Where the message goes when the cursor is also on a link. Settled: the message first, the link after it, the link
+  giving way before the message (design.md § Screen layout).

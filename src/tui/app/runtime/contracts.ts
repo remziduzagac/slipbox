@@ -16,6 +16,7 @@ import type { MergeState } from "../../workspace/git/views/review/mergescreen.ts
 import type { Review } from "../../workspace/git/views/review/review.ts";
 import type { Peek } from "../../documents/navigation/peek.ts";
 import type { Level } from "../notifications/contracts.ts";
+import type { Problem } from "../../../core/documents/diagnostics/diagnostics.ts";
 export interface Host {
   requestRender(): void;
   /** OSC 52 through the renderer, which owns the terminal. */
@@ -256,6 +257,8 @@ export type FloatingWindow =
   | ((
       | { kind: "properties"; note: NoteBuffer; format: "yaml" | "toml"; original: string }
       | { kind: "hover" }
+      // The problems at the cursor in full (EG-D5): the ones it shows and their file, for `y` and `s`.
+      | { kind: "problem"; problems: Problem[]; abs: string; path: string }
       | { kind: "commit"; amend: boolean; from: Region }
       | { kind: "scratch" }
       | { kind: "diff"; diff: DiffWindow }

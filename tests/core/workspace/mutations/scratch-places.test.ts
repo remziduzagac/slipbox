@@ -38,9 +38,11 @@ describe("the scratch's places checked (D268)", () => {
       "gone.md: no such file",
     ]);
   });
-  test("nothing to compare: no lines, a review's diff, entries written before (blank lines, no When:) checked alike", () => {
+  test("nothing to compare: no lines, a review's diff, a problem's message, entries written before (blank lines, no When:) checked alike", () => {
     expect(stalePlaces("**At:** `f.md:1`\\\n**Note:** n\n", "/v", read)).toEqual([]);
     expect(stalePlaces(entry("f.md:1", "-a\n+b", "diff"), "/v", read)).toEqual([]);
+    // A problem's message, after its place (EG-D5): no line of the file, never "changed since captured".
+    expect(stalePlaces(entry("f.md:2:1-1", "warning: a message (fake)", "text"), "/v", read)).toEqual([]);
     const old = "**At:** `f.md:1-2`\n\n```\nzz\n```\n\n**Note:** n\n";
     expect(stalePlaces(old, "/v", read).map((s) => s.problem.code)).toEqual(["place-changed"]);
   });

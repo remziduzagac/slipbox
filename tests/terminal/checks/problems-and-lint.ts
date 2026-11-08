@@ -97,6 +97,74 @@ export const PROBLEMS_AND_LINT: Check[] = [
       await s.status(/‹ home\.md › +\S+ 0 /);
     },
   },
+  {
+    area: "outside-and-code",
+    name: "problems where they are: ] d / [ d round the file's problems; the status line says the cursor's; space c d shows them whole, y copies, s adds to the scratch, q closes",
+    covers: {
+      cases: ["problems", "lint"],
+      commands: ["problem.next", "problem.prev", "problem.show", "problem.copy", "problem.scratch"],
+    },
+    // The three pictures not taken yet, and a stand-in linter's finding on the one without its words (line 143).
+    options: {
+      open: "equipment/instrument-inventory.md",
+      config: `[lint]\nenabled = "on"\ncommand = ["sh", "-c", ${JSON.stringify(`for f; do case "$f" in */instrument-inventory.md) printf '%s:143:1 error MD045/no-alt-text Images should have alternate text\\n' "$f";; esac; done; exit 1`)}, "lint"]\n`,
+    },
+    run: async (s) => {
+      await s.status(signed("{warning} 4"), 10_000);
+      await s.keys("]", "d");
+      await s.status(/L139:/);
+      await s.status(signed("{warning} broken link: images/lyra-slit\\.png"));
+      // Line 143: the linter's finding where the line starts, then the link as drawn, where both are.
+      await s.keys("]", "d");
+      await s.status("L143:1");
+      await s.status(signed("{warning} no-alt-text: Images should have alternate text  "));
+      await s.keys("]", "d");
+      await s.status(/ \+1 .*L143:/);
+      await s.keys("]", "d");
+      await s.status(/L147:/);
+      await s.status("broken link: missing-flat-field.png");
+      // Round the ends, both ways.
+      await s.keys("]", "d");
+      await s.status(/L139:/);
+      await s.keys("[", "d");
+      await s.status(/L147:/);
+      await s.keys("[", "d");
+      await s.status(/ \+1 .*L143:/);
+      // space c d: both, in full; y copies them, a line each.
+      await leader(s, "c", "d");
+      await s.see("2 problems at equipment/instrument-inventory.md:143");
+      await s.see("Images should have alternate text");
+      await s.see("broken link: images/tern-frame.jpg");
+      await s.keys("y");
+      const copied = [
+        "equipment/instrument-inventory.md:143:1 warning: broken link: images/tern-frame.jpg (slipbox unresolved)",
+        "equipment/instrument-inventory.md:143:1 warning: no-alt-text: Images should have alternate text (markdownlint MD045)",
+      ];
+      await s.until(
+        () => copied.every((l) => s.clipboard().split("\n").includes(l)),
+        3000,
+        `the clipboard to hold ${copied.join(" and ")}`,
+      );
+      // s: each into the scratch, its place and its message; q closes the window.
+      await s.keys("s");
+      await s.message("2 problems added to the scratch");
+      await s.keys("q");
+      await s.notSee("2 problems at equipment/instrument-inventory.md:143");
+      await s.status(/L143:/);
+      await leader(s, "s", "y");
+      await s.until(
+        () => {
+          const scratch = s.clipboard();
+          return (
+            scratch.includes("**At:** `equipment/instrument-inventory.md:143:1-") &&
+            scratch.includes("```text\nwarning: no-alt-text: Images should have alternate text (markdownlint MD045)")
+          );
+        },
+        3000,
+        "the scratch to hold both, each at its place",
+      );
+    },
+  },
 
   // --- linters ------------------------------------------------------------------------------------
 

@@ -1476,6 +1476,10 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
 - problems where they are: bar column signs by severity, the count past one (+ past 9), marks at a level (errors by
   default; space u shift+d cycles), status line, severity threshold — `work/kestrel/src/routes/RouteMap.tsx`,
   `work/product/drafts/notes-from-offsite.md` (Problems where they are 19.8-11)
+- problems one by one: ] d / [ d through the file's problems at the severity shown, round the ends, onto a link's
+  problem as drawn; the cursor's problem said on the status line in its colour, worst first, +n; space c d shows them
+  whole, y copies, s adds to the scratch — `notes/meetings/2026-09-05-feedback-synthesis.md`,
+  `work/product/drafts/notes-from-offsite.md` (code.md Going from one problem to the next; at-cursor.test)
 - problems lists broken, ambiguous links and orphans; a path is never ambiguous —
   `notes/meetings/2026-09-05-feedback-synthesis.md`, `notes/projects/kestrel-v2-3.md`, `notes/reading/the-long-ride.md`
   (cli.md problems; cli.test 'problems')
@@ -3175,6 +3179,16 @@ Wide tables and code blocks to edit in place.
 - `ui.code_wrap` — Code blocks: scroll or wrap — `notes/projects/sync-rewrite.md`,
   `work/kestrel/docs/qa/render-torture.md` (catalog.ts)
 - `problems.file` — This file's problems — `work/kestrel/src/routes/RouteMap.tsx`, `notes/index.md` (catalog.ts)
+- `problem.next` — Next problem — `notes/meetings/2026-09-05-feedback-synthesis.md`,
+  `work/product/drafts/notes-from-offsite.md` (catalog.ts)
+- `problem.prev` — Previous problem — `notes/meetings/2026-09-05-feedback-synthesis.md`,
+  `work/product/drafts/notes-from-offsite.md` (catalog.ts)
+- `problem.show` — The problem at the cursor, in full — `notes/meetings/2026-09-05-feedback-synthesis.md`,
+  `work/kestrel/src/routes/RouteMap.tsx` (catalog.ts)
+- `problem.copy` — Copy the problem — `notes/meetings/2026-09-05-feedback-synthesis.md`,
+  `work/kestrel/src/routes/RouteMap.tsx` (catalog.ts)
+- `problem.scratch` — Add the problem to the scratch — `notes/meetings/2026-09-05-feedback-synthesis.md`,
+  `work/kestrel/src/routes/RouteMap.tsx` (catalog.ts)
 
 ### tag
 

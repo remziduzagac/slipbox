@@ -57,7 +57,9 @@ const COMMAND_OWNERS: Record<string, Area> = {
       (g) => [g, "links-and-files" as const],
     ),
   ),
-  ...Object.fromEntries(["lsp", "problems", "shell", "context"].map((g) => [g, "outside-and-code" as const])),
+  ...Object.fromEntries(
+    ["lsp", "problems", "problem", "shell", "context"].map((g) => [g, "outside-and-code" as const]),
+  ),
 };
 
 /** Which area's task owns a CASES.md area; `cli` for the command line's own, which tests/cli/ covers. */

@@ -51,7 +51,7 @@ export const COMMAND_GROUPS: { title: string; ids: RegExp }[] = [
   { title: "Git", ids: /^git\./ },
   {
     title: "Note, folder, app",
-    ids: /^(note\.|folder\.|folders\.|root\.|heading\.|rename\.|trash\.|problems\.|info\.|vault\.|config\.|messages\.|help\.|app\.)/,
+    ids: /^(note\.|folder\.|folders\.|root\.|heading\.|rename\.|trash\.|problems?\.|info\.|vault\.|config\.|messages\.|help\.|app\.)/,
   },
 ];
 

@@ -15,6 +15,7 @@ import { sanitize } from "../../../../core/foundation/text/sanitize.ts";
 import type { Role, Color } from "../../../../core/rendering/theme/theme.ts";
 import { SEVERITIES, worst } from "../../../../core/documents/diagnostics/diagnostics.ts";
 import { severityGlyph, SEVERITY_ROLE } from "../../../documents/views/drawing/marks/problems.ts";
+import { oneLine, problemsAt } from "../../../documents/diagnostics/problems/at-cursor.ts";
 
 export function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void {
   const theme = app.theme;
@@ -129,18 +130,48 @@ export function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void
   const markerW = stringWidth(pathMarker(app, view));
   const room = c.width - chipWidth - 2 - Math.min(16, stringWidth(app.displayName(view.buf))) - markerW;
   const fits = (s: string) => stringWidth(s) + 1 <= room;
-  let right = `${linkText}${whyText}${words}${tabs}${pos}`;
-  if (!fits(right)) right = `${linkText}${whyText}${tabs}${pos}`;
-  if (!fits(right)) right = `${whyText}${tabs}${pos}`;
-  // The row's reason cut to the room left, while that says something.
-  if (!fits(right) && whyText) {
-    const left = room - 1 - stringWidth(`${tabs}${pos}`);
-    right = left >= 16 ? `${truncate(whyText.trimEnd(), left - 2)}  ${tabs}${pos}` : `${tabs}${pos}`;
+  // The file's problems (19.8), from every source: counted after the path; the cursor's said on the right (EG-D5).
+  const problems = app.problems.ofView(view);
+  const counts = problems.length
+    ? `  ${SEVERITIES.map((sev) => [sev, problems.filter((p) => p.severity === sev).length] as const)
+        .filter(([, n]) => n)
+        .map(([sev, n]) => `${severityGlyph(app.glyphs, sev)} ${n}`)
+        .join("  ")}`
+    : "";
+  const here = problemsAt(app, view, problems);
+  // Its message, the worst first, in its colour: the words and the tab count give way to it, then the link and the
+  // explorer row's reason, then it's cut — the counts keeping their room.
+  let lead = here.length
+    ? `${severityGlyph(app.glyphs, here[0]!.severity)} ${oneLine(here[0]!.message)}${here.length > 1 ? ` +${here.length - 1}` : ""}  `
+    : "";
+  let right: string;
+  if (lead) {
+    // The counts' room: theirs, the gaps around them, and the arrows around the path, which `room` leaves out.
+    const kept = room - (counts ? stringWidth(counts) + 7 : 0);
+    const leadFits = (s: string) => stringWidth(lead + s) + 1 <= kept;
+    right =
+      [
+        `${linkText}${whyText}${words}${tabs}${pos}`,
+        `${linkText}${whyText}${tabs}${pos}`,
+        `${linkText}${whyText}${pos}`,
+        `${whyText}${pos}`,
+      ].find(leadFits) ?? pos;
+    const left = kept - 1 - stringWidth(right);
+    if (!leadFits(right)) lead = left >= 16 ? `${truncate(lead.trimEnd(), left - 2)}  ` : "";
+  } else {
+    right = `${linkText}${whyText}${words}${tabs}${pos}`;
+    if (!fits(right)) right = `${linkText}${whyText}${tabs}${pos}`;
+    if (!fits(right)) right = `${whyText}${tabs}${pos}`;
+    // The row's reason cut to the room left, while that says something.
+    if (!fits(right) && whyText) {
+      const left = room - 1 - stringWidth(`${tabs}${pos}`);
+      right = left >= 16 ? `${truncate(whyText.trimEnd(), left - 2)}  ${tabs}${pos}` : `${tabs}${pos}`;
+    }
+    if (!fits(right)) right = `${tabs}${pos}`;
+    if (!fits(right)) right = pos;
   }
-  if (!fits(right)) right = `${tabs}${pos}`;
-  if (!fits(right)) right = pos;
 
-  const rightW = stringWidth(right) + 1;
+  const rightW = stringWidth(lead) + stringWidth(right) + 1;
   x += drawText(c, x, y, " ", st);
   // The status line keeps the file; the permanent top bar carries location (VB-D3).
   const pathId = "status:path";
@@ -203,8 +234,6 @@ export function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void
         }
       : { text: "○ not watching", role: "status_dim" as Role };
   const rx = c.width - rightW;
-  // The file's problems (19.8), from every source: how many of each (what they say is the Problems panel's).
-  const problems = app.problems.ofView(view);
   // None here: the Problems panel's button, dim — clicked, the root's (1.7).
   if (!problems.length && rx - x - 3 - stringWidth(watch.text) > 8) {
     const id = "status:problems";
@@ -222,11 +251,9 @@ export function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void
     x += w;
   }
   if (problems.length) {
-    const text = `  ${SEVERITIES.map((sev) => [sev, problems.filter((p) => p.severity === sev).length] as const)
-      .filter(([, n]) => n)
-      .map(([sev, n]) => `${severityGlyph(app.glyphs, sev)} ${n}`)
-      .join("  ")}`;
-    const room = rx - x - 3 - stringWidth(watch.text);
+    const text = counts;
+    // The cursor's problem said, their room was kept: the watching marker gives way first.
+    const room = rx - x - 3 - (lead ? 0 : stringWidth(watch.text));
     // Clicked, the Problems panel on this file's (1.7).
     const id = "status:problems";
     if (room > 8) {
@@ -241,7 +268,11 @@ export function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void
   }
   if (x + stringWidth(watch.text) + 3 < rx)
     x += drawText(c, x, y, `  ${watch.text}`, { ...roleStyle(theme, watch.role, st.bg), bg: st.bg });
-  if (rx > x) drawText(c, rx, y, right, dim);
+  if (rx <= x) return;
+  const lw = lead
+    ? drawText(c, rx, y, lead, { ...roleStyle(theme, SEVERITY_ROLE[here[0]!.severity], st.bg), bg: st.bg })
+    : 0;
+  drawText(c, rx + lw, y, right, dim);
 }
 
 /** The marker after the status line's path (its length is what the right side must leave room for);

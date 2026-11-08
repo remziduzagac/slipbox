@@ -181,6 +181,10 @@ export const DEFAULT_KEYS: Record<string, string> = {
   "leader c r": "lsp.rename",
   "leader c a": "lsp.code_action",
   "leader c f": "lsp.format",
+  // Problems where they are (EG-D5), as LazyVim and Helix step through them.
+  "] d": "problem.next",
+  "[ d": "problem.prev",
+  "leader c d": "problem.show",
   // the lens's size, by hand
   "+": "lens.grow",
   "-": "lens.shrink",

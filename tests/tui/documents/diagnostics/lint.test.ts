@@ -36,9 +36,11 @@ describe("the lint surface: your linter's findings in notes (3.21)", () => {
     h.frame();
     await until(() => h.app.view!.buf.lint !== null);
     expect(statusRow(h.frame())).toContain("⚠ 1"); // how many of each severity (19.8)
-    await h.keys("j", "j"); // line 3: the status line still counts, never says what (the Problems panel does)
+    // Elsewhere, only counted; on line 3's text, what it says too (EG-D5).
+    expect(statusRow(h.frame())).not.toContain("line-length");
+    await h.keys("j", "j");
     expect(statusRow(h.frame())).toContain("⚠ 1");
-    expect(statusRow(h.frame())).not.toContain("MD013");
+    expect(statusRow(h.frame())).toContain("⚠ line-length: Line length [Expected: 80]");
     const c = h.canvas();
     const rows = c.toString().split("\n");
     const at = (n: string, text: string) => {

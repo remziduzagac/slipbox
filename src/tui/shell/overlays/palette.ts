@@ -24,6 +24,7 @@ import { parseBang } from "../../../core/foundation/platform/shell.ts";
 import { rank } from "./match.ts";
 import { MOUSE_HELP } from "../input/mouse-help.ts";
 import { REPORT_ADDS, REPORT_SENDS } from "../../app/distribution/report.ts";
+import { PROBLEM_KEYMAP } from "../../documents/diagnostics/problems/at-cursor.ts";
 
 // ---------------------------------------------------------------------------------------------
 // The `:` prompt: matching commands, plus exact aliases that win, plus argument completion.
@@ -297,7 +298,7 @@ export function openPalette(a: App, typed = ""): void {
 export function openHelp(a: App): void {
   const commands: ListItem[] = inSpecOrder(a.registry.list()).map((c) => {
     // Every keymap's keys: the reading ones, source mode's own ([keys.source]), visual mode's, a peek's, a review's,
-    // the merge screen's and a diff's.
+    // the merge screen's, a diff's and the problem window's.
     const plain = [
       ...a.keymap.keysFor(c.id),
       ...a.sourceKeys.keysFor(c.id),
@@ -306,6 +307,7 @@ export function openHelp(a: App): void {
       ...a.reviewKeys.keysFor(c.id),
       ...a.mergeKeys.keysFor(c.id),
       ...a.diffKeys.keysFor(c.id),
+      ...PROBLEM_KEYMAP.keysFor(c.id),
     ].map(spellKey);
     // Bindings with an argument (e.g. "cursor.down extend") are variants: shown after the plain ones.
     const variants = a.keymap

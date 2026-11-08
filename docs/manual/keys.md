@@ -916,6 +916,19 @@ editing key there; what's in it is what leaves. Nothing leaves until you choose 
 | `u` | take out what was just added, as any edit |
 | `esc`, `q` | leave it, kept as it is until slipbox quits (`esc` twice while typing) |
 
+### Problems where they are
+
+With the cursor on a problem, the status line says what's wrong
+([Going from one problem to the next](code.md#going-from-one-problem-to-the-next)).
+
+| Keys | What |
+| --- | --- |
+| `] d` / `[ d` | the file's next / previous problem, round from the last to the first |
+| `space c d` | the problems at the cursor, in full, in a floating window |
+| `y` | in that window, copy them, a line each: the place, the severity, the message and what found it |
+| `s` | in that window, add each to the scratch, its place and its message |
+| `esc`, `q` | close the window |
+
 ### Inside Problems
 
 The Problems panel lies across the bottom, in two tabs: This file (`space n q`) and All (`space v p`).
