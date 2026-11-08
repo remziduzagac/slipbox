@@ -226,6 +226,6 @@ export function diffSwitch(app: App): void {
   const shown = (k: number) => /^[-+ ] /.test(text[k] ?? "") && (lines[k] ?? 0) >= line;
   const rows = app.currentLayout(view).lines;
   const row = rows.findIndex((l) => !l.decor && shown(l.src - 1));
-  app.moveCursor(view, { row: row < 0 ? 0 : row, col: 0 });
+  app.moveCursor(view, { row: Math.max(row, 0), col: 0 });
   app.message("info", switchedText(w.blocks.on));
 }

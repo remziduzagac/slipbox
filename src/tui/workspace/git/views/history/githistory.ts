@@ -23,10 +23,10 @@ const day = (time: number) => new Date(time * 1000).toISOString().slice(0, 10);
 /** The window's file in the checkout (its path there), or why there's none (said). */
 function fileHere(app: App, view: View | null): string | null {
   const c = app.git.checkout;
-  if (!c) return app.message("info", "not a git checkout"), null;
-  if (!view?.buf.abs || view.buf.virtual) return app.message("info", "open a file first"), null;
+  if (!c) return (app.message("info", "not a git checkout"), null);
+  if (!view?.buf.abs || view.buf.virtual) return (app.message("info", "open a file first"), null);
   const path = relative(c.root, view.buf.abs);
-  if (climbsOut(path)) return app.message("info", "this file isn't in the checkout"), null;
+  if (climbsOut(path)) return (app.message("info", "this file isn't in the checkout"), null);
   return path;
 }
 

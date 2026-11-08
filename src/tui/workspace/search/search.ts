@@ -165,7 +165,7 @@ export class Search {
       };
     };
     const source = (input: string): ListItem[] => {
-      if (!input.trim()) return titled(`${HELP}${where()}`), [];
+      if (!input.trim()) return (titled(`${HELP}${where()}`), []);
       const job = this.job;
       if (job && this.index)
         return (

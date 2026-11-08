@@ -216,7 +216,10 @@ export async function startAndWait(
       env,
     });
     const code = await child.exited;
-    return child.signalCode ? 128 + (os.signals[child.signalCode] ?? 0) : code;
+    // Bun's types say a signal by its name or its number.
+    const signal = child.signalCode;
+    if (!signal) return code;
+    return 128 + (typeof signal === "number" ? signal : (os.signals[signal] ?? 0));
   } catch (err) {
     say(`slipbox: couldn't start ${launch.file}: ${(err as Error).message}`);
     return null;

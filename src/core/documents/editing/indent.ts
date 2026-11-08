@@ -50,7 +50,7 @@ export function detectIndent(text: string): { tabs: boolean; size: number } | nu
   if (tabs + spaces < 2) return null;
   if (tabs > spaces) return { tabs: true, size: 4 };
   const best = [...steps].sort((a, b) => b[1] - a[1] || a[0] - b[0])[0];
-  return best ? { tabs: false, size: best[0] > 8 ? 8 : best[0] } : null;
+  return best ? { tabs: false, size: Math.min(best[0], 8) } : null;
 }
 
 /** Languages indented with tabs, by extension or file name; with four spaces; the rest with two. */

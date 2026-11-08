@@ -59,7 +59,7 @@ export function findActions(): Record<string, Run> {
             const first = v.find.matches.findIndex(
               (m) => m.row > start.row || (m.row === start.row && m.col >= start.col),
             );
-            const i = first >= 0 ? first : 0;
+            const i = Math.max(first, 0);
             const m = v.find.matches[i];
             if (m) {
               v.find.current = i;

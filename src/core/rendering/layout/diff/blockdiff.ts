@@ -532,7 +532,7 @@ function phrasing(
             const shown = w.alias ?? (w.heading ? `${w.target} › ${w.heading}` : w.target || w.value);
             // An alias is after the `|`: its characters found there, not in the target.
             const bar = w.alias ? text.lastIndexOf("|", e) : -1;
-            put(shown, bar > s ? bar : s, e, w.embed ? "embed" : "wikilink", a);
+            put(shown, Math.max(bar, s), e, w.embed ? "embed" : "wikilink", a);
           } else if (type === "hashtag") put(`#${(n as unknown as { value: string }).value}`, s, e, "tag", a);
           else if (type === "highlight") walk((n as unknown as Parents).children as PhrasingContent[], "highlight", a);
           else if ("children" in n) walk((n as unknown as Parents).children as PhrasingContent[], r, a);
