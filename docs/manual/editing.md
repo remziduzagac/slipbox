@@ -363,6 +363,40 @@ match.
 - `c i "` changes what is in quotes
 - `y a p` copies a paragraph
 
+Other objects go by what the text is made of. In code, as its language reads it:
+
+| Object | Around (`a`) | Inside (`i`) |
+| --- | --- | --- |
+| `f`, a function or method | with its `export`, decorators or attributes | its body |
+| `c`, a class, a type, a struct | the whole definition | between its braces |
+| `a`, an argument or a parameter | with its comma | the argument |
+| `o`, a block | the block; in Python, with its `if` or `for` line | its lines |
+
+In a note:
+
+| Object | Around (`a`) | Inside (`i`) |
+| --- | --- | --- |
+| `h`, a section | its heading, and what's under it up to the next heading of its level | what's under its heading |
+| `l`, a list item | its lines, with what's nested in it | its text, without the marker or the task box |
+| `o`, a fenced block | its lines, the fences included | the lines between the fences |
+| `k`, a link | the link | its text, a wikilink's alias, an image's description |
+
+Inside a note's fenced block, `f`, `c` and `a` are the code's, by the block's language, and `o` stays the fenced block.
+For example:
+
+- `d a h` deletes a section
+- `c i k` changes a link's text
+- `y a l` copies a list item
+- `v i o` selects a fenced block's code
+- `d a f` deletes the function the cursor is in
+
+An object of whole lines selects whole rows, as `shift+v` does. Off a link, `k` takes the next one on the line, as vim
+does with quotes. A count takes the one around it: `d 2 a h` deletes the section the cursor's section is in.
+
+**Jumps by structure** go to the next or previous function (`] f` / `[ f`), argument (`] a` / `[ a`) and block
+(`] o` / `[ o`). In a note, `] o` goes to the next fenced block, and `] f` and `] a` go by the fenced blocks' code. They
+work while reading too, and after an operator: `d ] f` deletes up to the next function.
+
 **Counts** go before the command, the motion or the object: `3 d d`, `d 2 w`, `5 j`.
 
 **`.`** repeats the last change, the text typed with it included. After `c g n` (change the search's next match), type
@@ -390,6 +424,12 @@ system clipboard, as in vim with `clipboard=unnamedplus`. `p` puts what the clip
 
 A selection made with `shift` and a move, or with a drag, starts visual mode too.
 
+**Growing the selection.** `alt+o` selects the word at the cursor. Each press after grows the selection to the next
+thing around it. In a note, that's the link, the paragraph, the list item, the list, the section, then the section
+around it. In code, it's the next piece of the code's syntax: an argument, the call, the statement, the block, the
+function. `alt+i` goes back a step, and from the word to the cursor alone. A move or an edit starts over. Growing
+works in SOURCE view and the lens. While reading, `alt+o` says where it works.
+
 [Keys](keys.md) lists every key, and they can be changed. SOURCE view's keys are `[keys.source]` in your configuration,
 and visual mode's are `[keys.visual]` ([Configuration](configuration.md)).
 
@@ -415,6 +455,8 @@ and visual mode's are `[keys.visual]` ([Configuration](configuration.md)).
 - Each CJK character is a word for `w`, `b` and `e`. `i w`, `*` and `#` take the whole run of them.
 - `:s` takes the ranges `%` and `'<,'>`, not line numbers.
 - A note without a last line break gets one when a line is added after its last.
+- The objects and jumps by structure (`f`, `c`, `a`, `o`, `h`, `l`, `k`) are slipbox's own, like those of the plugins
+  that add them to vim. They don't wrap around the file's ends.
 
 ## Saving
 

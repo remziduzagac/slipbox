@@ -60,6 +60,7 @@ import { SOURCE_CONTROL } from "./source-control.ts";
 import { START } from "./start.ts";
 import { STATUS_LINE } from "./status-line.ts";
 import { LINKED } from "./symlinks.ts";
+import { SYNTAX_STRUCTURE } from "./syntax-structure.ts";
 import { TERMINAL_INPUT } from "./terminal-input.ts";
 import { TERMINAL_STATE } from "./terminal-state.ts";
 import { TEXT_FILES } from "./text-files.ts";
@@ -103,6 +104,8 @@ export const CHECK_FILES: Record<string, Check[]> = {
   "navigation-tools": NAVIGATION_TOOLS,
   // Jump labels (EG-D3): the navigating area's, in a file of their own.
   "jump-labels": JUMP_LABELS,
+  // Text objects, syntax jumps and growing the selection (EG-D6, EG-D7): editing's, in a file of their own.
+  "syntax-structure": SYNTAX_STRUCTURE,
   finding: FINDING,
   palette: PALETTE,
   "ui-settings": UI_SETTINGS,

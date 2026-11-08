@@ -7,6 +7,7 @@ import { textMatches } from "../../../documents/search/replacing.ts";
 import { takeCount, reverseFind, type Op, type FindKind } from "./state.ts";
 import { motionRange, linesRange, textObject } from "./motions.ts";
 import { apply } from "./edits.ts";
+import { STRUCTURE_OBJECTS } from "../../../documents/editing/structure.ts";
 /** Start an operator (the command bound to `d`, `c`…): it waits for a motion or a text object. */
 export function startOperator(app: App, op: Op): void {
   const given = !!app.vim.count;
@@ -35,11 +36,14 @@ export async function operatorKey(app: App, view: View, key: string): Promise<vo
     s.lastFind = { kind: o.char, ch };
     return findRange(app, view, o.op, o.char, ch, count, false);
   }
-  // A text object: i or a, then its character.
+  // A text object: i or a, then its character — the structure's (EG-D6) by the note's tree or the code's grammar.
   if (o.object) {
     const ch = keyChar(key) ?? key;
-    const r = textObject(view, E.offsetOf(app, view), o.object, ch, count);
     s.op = null;
+    const at = E.offsetOf(app, view);
+    const r = STRUCTURE_OBJECTS.has(ch)
+      ? await app.structure.object(view, at, o.object, ch, count)
+      : textObject(view, at, o.object, ch, count);
     if (!r) return app.message("info", `no ${o.object}${ch} here`);
     return apply(app, view, o.op, r);
   }

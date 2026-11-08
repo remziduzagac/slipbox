@@ -49,6 +49,13 @@ export function viewActions(): Record<string, Run> {
       }),
     // Jump labels (EG-D3): the words and links on screen labelled; the keys after are the labels' (labels.ts).
     "cursor.jump": (a) => a.labels.start(),
+    // Syntax jumps (EG-D6): by the code's grammar, a note's fenced blocks (structure.ts); a count before goes that many.
+    "cursor.function_next": (a) => withView(a, (v) => a.structure.jump(v, "function", 1, V.takeCount(a))),
+    "cursor.function_prev": (a) => withView(a, (v) => a.structure.jump(v, "function", -1, V.takeCount(a))),
+    "cursor.argument_next": (a) => withView(a, (v) => a.structure.jump(v, "argument", 1, V.takeCount(a))),
+    "cursor.argument_prev": (a) => withView(a, (v) => a.structure.jump(v, "argument", -1, V.takeCount(a))),
+    "cursor.block_next": (a) => withView(a, (v) => a.structure.jump(v, "block", 1, V.takeCount(a))),
+    "cursor.block_prev": (a) => withView(a, (v) => a.structure.jump(v, "block", -1, V.takeCount(a))),
     "scroll.center": (a) => withView(a, (v) => a.views.scrollCursorTo(v, "center")),
     "scroll.top": (a) => withView(a, (v) => a.views.scrollCursorTo(v, "top")),
     "scroll.bottom": (a) => withView(a, (v) => a.views.scrollCursorTo(v, "bottom")),
@@ -107,6 +114,9 @@ export function viewActions(): Record<string, Run> {
         a.views.select(v, { ...v.cur }, v.sel.line);
         a.moveCursor(v, anchor);
       }),
+    // Growing the selection by syntax and back (EG-D7; structure.ts).
+    "visual.grow": (a) => withView(a, (v) => a.structure.grow(v)),
+    "visual.shrink": (a) => withView(a, (v) => a.structure.shrink(v)),
     "visual.yank": (a) =>
       withView(a, (v) => {
         const text = a.views.selectionText(v);

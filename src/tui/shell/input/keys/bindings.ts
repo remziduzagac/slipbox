@@ -66,6 +66,13 @@ export const DEFAULT_KEYS: Record<string, string> = {
   "[ t": "type.prev",
   "] c": "git.change_next",
   "[ c": "git.change_prev",
+  // Syntax jumps (EG-D6): a function, an argument, a block; in a note, `] o` the next fenced block.
+  "] f": "cursor.function_next",
+  "[ f": "cursor.function_prev",
+  "] a": "cursor.argument_next",
+  "[ a": "cursor.argument_prev",
+  "] o": "cursor.block_next",
+  "[ o": "cursor.block_prev",
   "[ s": "spell.prev",
   "z =": "spell.suggest",
   "z g": "spell.add",

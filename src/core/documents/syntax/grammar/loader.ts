@@ -6,6 +6,7 @@ import type { Grammar, Loaded } from "../contracts.ts";
 import { WASM } from "./assets.ts";
 import { EMBEDS } from "./descriptors.ts";
 import { QUERIES } from "./queries.ts";
+import { TEXTOBJECTS } from "./textobjects.ts";
 
 let runtimeReady: Promise<void> | null = null;
 
@@ -16,6 +17,7 @@ async function loadGrammar(g: Grammar): Promise<Loaded> {
   const parser = new Parser();
   parser.setLanguage(language);
   const q = QUERIES[g];
+  const objects = TEXTOBJECTS[g];
   return {
     grammar: g,
     parser,
@@ -23,6 +25,7 @@ async function loadGrammar(g: Grammar): Promise<Loaded> {
     defs: q.defs.trim() ? new Query(language, q.defs) : null,
     comments: new Query(language, q.comments),
     strings: new Query(language, q.strings),
+    objects: objects ? new Query(language, objects) : null,
   };
 }
 

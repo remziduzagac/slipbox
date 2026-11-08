@@ -21,6 +21,8 @@ export const DEFAULT_SOURCE_KEYS: Record<string, string> = {
   "g q": "edit.op_reflow",
   "g shift+q": "edit.op_unwrap",
   "g w": "cursor.jump",
+  // Growing the selection by syntax (EG-D7): from the cursor's word; `ctrl+space` stays the user's.
+  "alt+o": "visual.grow",
   "ctrl+/": "edit.comment_line",
   "ctrl+_": "edit.comment_line",
 };
@@ -47,6 +49,8 @@ export const DEFAULT_VISUAL_KEYS: Record<string, string> = {
   escape: "visual.exit",
   v: "visual.char",
   "shift+v": "visual.line",
+  "alt+o": "visual.grow",
+  "alt+i": "visual.shrink",
 };
 
 /** Keys inside the explorer: key → explorer action. */

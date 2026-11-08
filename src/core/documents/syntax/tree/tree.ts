@@ -1,6 +1,18 @@
 // A parse owns its embedded trees and frees each child before its own tree.
 import type { Node, Query, Tree } from "web-tree-sitter";
-import type { Loaded, Part, Pos, Entry, OutlineEntry, SyntaxError, Span, Comment, CodeModel } from "../contracts.ts";
+import type {
+  Loaded,
+  Part,
+  Pos,
+  Entry,
+  OutlineEntry,
+  SyntaxError,
+  Span,
+  Comment,
+  CodeModel,
+  CodeStructure,
+} from "../contracts.ts";
+import { codeObjects, nodeRanges } from "./structure.ts";
 import { grammarNow } from "../grammar/loader.ts";
 import { MARKUP, HIGHLIGHT } from "../grammar/descriptors.ts";
 import { partsOf, markupOutline } from "./markup.ts";
@@ -169,6 +181,19 @@ export class SyntaxTree {
   codeModel(): CodeModel | null {
     if (!DOCUMENT_GRAMMARS.has(this.g.grammar)) return null;
     return buildCodeModel(this.g, this.tree, this.source);
+  }
+
+  /** What the structure keys read (EG-D6, EG-D7): the text objects and the named nodes, its parts' placed in it. */
+  structure(base = 0): CodeStructure {
+    const objects = codeObjects(this.g, this.tree.rootNode, this.source, base);
+    const nodes = nodeRanges(this.tree.rootNode, base);
+    for (const e of this.embedded) {
+      const part = e.tree?.structure(base + e.part.text.startIndex);
+      if (!part) continue;
+      objects.push(...part.objects);
+      for (const n of part.nodes) nodes.push(n);
+    }
+    return { objects: objects.sort((a, b) => a.from - b.from || b.to - a.to), nodes: Int32Array.from(nodes) };
   }
 
   /**

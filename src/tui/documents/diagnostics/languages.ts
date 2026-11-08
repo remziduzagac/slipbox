@@ -39,7 +39,7 @@ export class Languages {
    * A source file's tree-sitter pass (16.7–16.9): grammar loading, parsing and model extraction in a worker.
    * Edits debounce for 150 ms; old replies never replace a newer revision.
    */
-  ensureSyntax(buf: NoteBuffer): void {
+  ensureSyntax(buf: NoteBuffer, now = false): void {
     if (
       this.app.quitting ||
       buf.kind.group !== "text" ||
@@ -64,9 +64,9 @@ export class Languages {
         return;
       }
       const abort = new AbortController();
-      const pending = { version, abort };
+      const pending = { version, abort, done: Promise.resolve() };
       this.syntaxPending.set(buf, pending);
-      void syntaxOnThread(g, buf.source, abort.signal)
+      pending.done = syntaxOnThread(g, buf.source, abort.signal)
         .then((value) => {
           if (
             abort.signal.aborted ||
@@ -109,12 +109,27 @@ export class Languages {
           if (!this.app.quitting && buf.version !== version) this.ensureSyntax(buf);
         });
     };
+    if (now) return run();
     const timer = setTimeout(run, buf.syntax ? 150 : 0);
     timer.unref();
     this.syntaxTimers.set(buf, timer);
   }
 
-  private readonly syntaxPending = new Map<NoteBuffer, { version: number; abort: AbortController }>();
+  /** The pass of the text as it is, begun now — typing's pause not waited for — and waited for (EG-D6): null when the
+   *  file has no grammar, the pass failed, or the text changed meanwhile. */
+  async syntaxNow(buf: NoteBuffer): Promise<NoteBuffer["syntax"]> {
+    const timer = this.syntaxTimers.get(buf);
+    if (timer) clearTimeout(timer);
+    this.syntaxTimers.delete(buf);
+    this.ensureSyntax(buf, true);
+    await this.syntaxPending.get(buf)?.done;
+    return buf.syntax?.version === buf.version ? buf.syntax : null;
+  }
+
+  private readonly syntaxPending = new Map<
+    NoteBuffer,
+    { version: number; abort: AbortController; done: Promise<void> }
+  >();
   /** The text a pass failed on, until it changes; `transient`: why was the thread's (the deadline, a crash), not the
    *  code's, and opening the file again tries once more. */
   private readonly syntaxFailed = new WeakMap<NoteBuffer, { version: number; transient: boolean }>();

@@ -316,8 +316,8 @@ export const DEFAULT_GROUPS: Record<string, string> = {
   "ctrl+t": "tabs: open, switch, reorder, close",
   g: "go: top (g), a label (w), definition (d), type (y), implementations (I), references (r), link (f x), tabs (t T), changes (; ,), last insert (i)",
   z: "scroll: the cursor's line to the middle (z), top (t), bottom (b); a picture: its own size (p), sideways (h l); spelling: suggestions (=), add the word (g); fold the cell (a)",
-  "[": "previous: heading ([), link (l), misspelt word (s), change (c), note of this type (t), problem (d)",
-  "]": "next: heading (]), link (l), misspelt word (s), change (c), note of this type (t), problem (d)",
+  "[": "previous: heading ([), link (l), misspelt word (s), change (c), note of this type (t), problem (d), function (f), argument (a), block (o)",
+  "]": "next: heading (]), link (l), misspelt word (s), change (c), note of this type (t), problem (d), function (f), argument (a), block (o)",
 };
 
 /** A group's value is "name" or "name: explanation". */

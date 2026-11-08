@@ -5,7 +5,7 @@
 // (worker-requests.ts): past its room a request waits its turn; one that takes over twenty seconds once the thread has
 // it, or that the thread fails on, ends alone with why, and the thread is started afresh for the rest.
 
-import type { Grammar } from "./syntax.ts";
+import type { CodeStructure, Grammar } from "./syntax.ts";
 import type { SyntaxSnapshot } from "./syntax-worker.ts";
 import { WorkerRequests } from "../../foundation/workers/worker-requests.ts";
 import { workerUrl } from "../../foundation/workers/url.ts";
@@ -17,6 +17,10 @@ let channel: WorkerRequests | null = null;
 
 /** A source's structure, from the thread; rejected (a `WorkerRequestError`) with why it couldn't be had. */
 export function syntaxOnThread(grammar: Grammar, source: string, signal?: AbortSignal): Promise<SyntaxSnapshot> {
+  return request<SyntaxSnapshot>({ grammar, source }, source, signal);
+}
+
+function request<T>(message: object, source: string, signal?: AbortSignal): Promise<T> {
   // A pass is one source's, whole: a 4 MB minified bundle's takes over four seconds on a fast machine, more on a busy
   // one, so the deadline is for a thread that's stuck, not a big file (the spelling thread's). No cap on an answer:
   // its size follows its source's, which SYNTAX_SOURCE_LIMIT bounds.
@@ -25,9 +29,12 @@ export function syntaxOnThread(grammar: Grammar, source: string, signal?: AbortS
     bytes: 16 * 1024 * 1024,
     result: Infinity,
   });
-  return channel
-    .request<{ value: SyntaxSnapshot }>({ grammar, source }, { signal, bytes: source.length * 2 })
-    .then((answer) => answer.value);
+  return channel.request<{ value: T }>(message, { signal, bytes: source.length * 2 }).then((answer) => answer.value);
+}
+
+/** A text's structure alone (EG-D6), from the same thread: a note's fenced block, parsed in its language. */
+export function structureOnThread(grammar: Grammar, source: string, signal?: AbortSignal): Promise<CodeStructure> {
+  return request<CodeStructure>({ grammar, source, structure: true }, source, signal);
 }
 
 /** Stop the thread and settle every request; a later request starts a fresh one. */

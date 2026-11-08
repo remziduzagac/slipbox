@@ -38,6 +38,7 @@ The cursor moves by the rows you see:
 | to the top or bottom of the note | `ctrl+home` and `ctrl+end`, or `g g` and `shift+g` |
 | to the next or previous heading | `alt+down` and `alt+up`, or `] ]` and `[ [` |
 | to the next or previous paragraph | `ctrl+down` and `ctrl+up`, or `}` and `{` |
+| to the next or previous fenced block | `] o` and `[ o` |
 | to the top, middle or bottom of the window | `shift+h`, `shift+m`, `shift+l` |
 | half a page | `ctrl+d` and `ctrl+u` |
 | a page | `pagedown` and `pageup` |

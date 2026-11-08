@@ -31,7 +31,7 @@ export const COMMAND_SPECS: CommandSpec[] = [
  */
 export const COMMAND_GROUPS: { title: string; ids: RegExp }[] = [
   { title: "Cursor", ids: /^(cursor|scroll|picture)\./ },
-  { title: "Selection & copy", ids: /^(visual\.(char|line|swap|yank|exit)$|copy\.|app\.escape$)/ },
+  { title: "Selection & copy", ids: /^(visual\.(char|line|swap|yank|exit|grow|shrink)$|copy\.|app\.escape$)/ },
   { title: "Links & history", ids: /^(link\.|links\.|backlinks\.|peek\.|history\.|change\.|lsp\.)/ },
   { title: "Windows", ids: /^window\./ },
   { title: "Tabs", ids: /^tab\./ },
