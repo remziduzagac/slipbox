@@ -425,22 +425,18 @@ After § The Problems panel (EG-D9; `core/documents/diagnostics/todos.ts` finds 
 ## MODIFIED design/tui.md § Git (plans `5.11`–`5.14`, `26.x`)
 
 - **`space g`, a group** (EG-D15): `space g` shows the which-key popup, and `space g g` opens the panel
-  (`git.view`), whose keys act there as now. The panel's own keys work from the note too, under `space g`, with the
-  same letters: the cursor stands for the panel's selected row — the change on its line (the gutter's hunk) when it's
-  on one, else the note's file. So `space g s` stages that change (`git.change_stage`, as the gutter menu's Stage it,
-  `stageSign`) or the file (refused while it's unsaved, as git stages what's on disk); `space g u` unstages the file
-  (the gutter's changes are against what's staged, so the line holds none staged); `space g d` reverts the change
-  (`git.change_undo`, asked first now, one undo step as Revert it is), else discards the file's unstaged changes after
-  asking, as the panel's `d`; `space g a` / `space g shift+u` stage / unstage everything; `space g i`, `c`, `shift+c`
-  the message, commit and amend; `space g f`, `p`, `shift+p`, `z` fetch, pull, push and the stashes; `space g v` the
-  review, `n` a new branch, `m` merge, `x` the merge screen on this file in conflict, `shift+r` rebase. Each runs the
-  panel's action (`GIT_ACTIONS`) on that row, the panel left as it is, open or not. The note's own keys take the
-  letters the panel uses only to move, which mean nothing from the note: `space g enter` previews the change
-  (`git.change_preview`, as `enter` shows a row's diff), `space g h` this file's history (`git.history`), `space g l`
-  the branch's commits (`git.log`), `space g o` the inline diff, `space g b` the blame column, `space g shift+b` who
-  changed this line (`git.blame`), `space g shift+d` the file's diff against the base (`git.diff`), `space g y` /
-  `space g w` the line's web link. Each is an interaction (D156). GIT-D12 gets a note: `space g` is a group again,
-  its keys the panel's own.
+  (`git.view`), whose keys act there as now. Beside it, the note's own change and file, the cursor standing for the
+  panel's selected row — the change on its line (the gutter's hunk) when it's on one, else the note's file — with the
+  panel's letters where the panel has the action: `space g s` stages that change (`git.change_stage`, as the gutter
+  menu's Stage it, `stageSign`) or the file (refused while it's unsaved, as git stages what's on disk); `space g u`
+  unstages the file (the gutter's changes are against what's staged, so the line holds none staged); `space g d`
+  reverts the change (`git.change_undo`, asked first now, one undo step as Revert it is). The rest take letters the
+  panel uses only to move: `space g enter` previews the change (`git.change_preview`, as `enter` shows a row's diff),
+  `space g h` this file's history (`git.history`), `space g l` the branch's commits (`git.log`), `space g o` the inline
+  diff, `space g b` the blame column, `space g shift+b` who changed this line (`git.blame`), `space g shift+d` the
+  file's diff against the base (`git.diff`), `space g y` / `space g w` the line's web link. Each is an interaction
+  (D156). Commit, amend, fetch, pull, push, stash, review, a new branch, merge, the merge screen and rebase stay the
+  panel's keys. GIT-D12 gets a note: `space g` is a group again, the panel on `space g g`.
 - **A branch's commits** (EG-D4; `git.log`, `:log`; `core/workspace/git/history/gitlog.ts`): `branchLogLater` reads
   `git log base..branch` (the branch's own base, `Git.baseOf`; this branch, or one opened up in Branches), newest first,
   each its hash, subject, author and date; `commitFilesLater` a commit's files (`git diff-tree -r -M --name-status
@@ -495,7 +491,7 @@ Labels come in the dispatch order right after a key awaited as a character. The 
 | normal | `] f` `[ f` `] a` `[ a` `] o` `[ o`; `alt+.`; `m`, `` ` ``, `'`; `ctrl+^`; `ctrl+w z` |
 | normal | `z c`, `z o`, `z shift+m`, `z shift+r`; `z a` now `fold.toggle` |
 | leader | `space '`, `space p`, ``space ` ``; `space c d` `i` `o`; `space f w` `x`; `space h m` `u` |
-| leader | `space g` (a group: `g`, the panel's keys, `enter` `h` `l` `o` `b` `shift+b` `shift+d` `y` `w`) |
+| leader | `space g` (a group: `g`, `s` `u` `d`, `enter` `h` `l` `o` `b` `shift+b` `shift+d` `y` `w`) |
 | leader | `space u h` `shift+r` `i`; `space w m`; `space q d` |
 | source | `y s`, `d s`, `c s`; `g q`, `g shift+q`; `g u`, `g shift+u`, `g ~`; `g =`; `[ y` `] y`; `alt+o` |
 | visual | `shift+s`; `g q`, `g shift+q`; `u`, `shift+u`, `~`, `shift+j`, `r`, `p`; `=` |

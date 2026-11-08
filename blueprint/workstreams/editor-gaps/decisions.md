@@ -187,24 +187,26 @@ so its task proposes keys, mostly inside visual mode, for the user to settle bef
 **Not chosen:** leaving it out, with `c g n` and `.` shown better; the next match alone (VS Code's `ctrl+d`, on
 `alt+d`); a block selection on `alt+v`.
 
-## EG-D15: `space g` a group, with the panel's own keys (2026-11-08)
+## EG-D15: `space g` a group, for the note's change and file (2026-11-08)
 
 > Amends GIT-D12, whose `space g` was the git panel alone.
 
-**Decision:** `space g` shows which-key and `space g g` opens the git panel, whose keys work there as now. The panel's
-keys also work from the note under `space g`, with the same letters, the cursor standing for the selected row: the
-change on its line, else the note's file. So `space g s` stages, `space g u` unstages the file, `space g d` reverts the
-change (after asking), and commit, amend, fetch, pull, push, stash, review, new branch, merge, the merge screen and
-rebase keep their letters. The note's own keys take the letters the panel uses only to move: `space g enter` previews
-the change, `h` this file's history, `l` the branch's commits, `o` the inline diff, `b` the blame column, `shift+b`
-who changed this line, `shift+d` the file's diff against the base, `y` / `w` the line's web link.
+**Decision:** `space g` shows which-key and `space g g` opens the git panel, whose keys work there as now. Beside it,
+the keys for the note's own change and file, the cursor standing for the panel's selected row (the change on its line,
+else the note's file), with the panel's letters where the panel has the action: `space g s` stages the change or the
+file, `space g u` unstages the file, `space g d` reverts the change after asking. The rest take letters the panel uses
+only to move: `space g enter` previews the change, `h` this file's history, `l` the branch's commits, `o` the inline
+diff, `b` the blame column, `shift+b` who changed this line, `shift+d` the file's diff against the base, `y` / `w` the
+line's web link. Commit, amend, fetch, pull, push, stash, review, new branch, merge, the merge screen and rebase stay
+the panel's.
 
-**Why:** The cursor's change and file needed keys without going into the panel. The user put the two together: one
-prefix, and a key meaning the same in the panel and in the note. GIT-D12's core stands: the panel's keys act in the
-panel, its footer saying them. The panel costs one key more.
+**Why:** The cursor's change and file needed keys without going into the panel; the user proposed `space g` as a group
+with the panel on `space g g`. GIT-D12's core stands: the panel's work is done in the panel, its footer saying its
+keys. Mirroring every panel key from the note was proposed, then dropped: it saved one key (`space g c` against `space
+g g c`), committed what's staged without showing it, acted on the branch from a note, and doubled the popup.
 
-**Not chosen:** `space g` left as the panel, the new keys on a `g h` group; `space g` with the note's keys only, commit
-and the rest left inside the panel; the panel and the palette alone.
+**Not chosen:** `space g` left as the panel, the new keys on a `g h` group; every panel key mirrored under `space g`;
+the panel and the palette alone.
 
 ## EG-D16: Blame for the file, as a column (2026-11-08)
 

@@ -5,13 +5,13 @@ created: "2026-11-08"
 
 # EG: What LazyVim and Helix users reach for
 
-What slipbox lacks beside LazyVim and Helix, turned into what it will do: jump labels; lists of places previewed;
-a branch's commits; problems stepped through where they are; text objects, jumps and selections by syntax, Markdown's
-and code's; surround and reflow; TODOs; a better find in every note; a note's sections folded; undo by time; the git
-panel's keys from the note, blame as a column and the diff in the file; the language servers' hints, uses, calls and
-imports; copies kept and marks; windows split freely and zoomed; several selections, Helix's way. Proposed on
-2026-11-08, from [the comparison](../../research/lazyvim-helix.md), its items settled one at a time with the user; to
-be read and accepted before any of it is built.
+What slipbox lacks beside LazyVim and Helix, turned into what it will do: jump labels; lists of places previewed; a
+branch's commits; problems stepped through where they are; text objects, jumps and selections by syntax, Markdown's and
+code's; surround and reflow; TODOs; a better find in every note; a note's sections folded; undo by time; the note's
+change and file under `space g`, blame as a column and the diff in the file; the language servers' hints, uses, calls
+and imports; copies kept and marks; windows split freely and zoomed; several selections, Helix's way. Proposed on
+2026-11-08, from [the comparison](../../research/lazyvim-helix.md), its items settled one at a time with the user; to be
+read and accepted before any of it is built.
 
 - [requirements.md](requirements.md): its goals, acceptance criteria and its changes to the root's requirements.
 - [design.md](design.md): its changes to the root's design; what a decision leaves to its task is marked **Open**.

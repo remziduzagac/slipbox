@@ -122,8 +122,8 @@ Previously: "problems, hover, definitions, references, symbols, rename, code act
 ### MODIFIED requirements.md § Git
 
 Adds: a branch's commits listed, each commit's files and its change to one (EG-D4); blame for the whole file, as a
-column (EG-D16); the changes drawn in the file itself (EG-D17); a line's web link (EG-D18); `space g` a group, the
-panel's keys working from the note on the cursor's change or file (EG-D15).
+column (EG-D16); the changes drawn in the file itself (EG-D17); a line's web link (EG-D18); `space g` a group for
+the note's change and file, the panel on `space g g` (EG-D15).
 
 Previously: "blame and a file's history", blame the cursor's line; the git panel on `space g` (GIT-D12).
 

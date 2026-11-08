@@ -14,8 +14,9 @@ question offered a recommendation and the alternatives; decisions.md records bot
 - **`ctrl+space`:** kept free, the user's own (EG-D7).
 - **`space g`:** the user asked how the git panel works today: `space g` goes straight into it, single keys act on the
   selected row there, and its footer says them; from the note there's only `] c` / `[ c` and the gutter's click. The
-  user proposed `space g` as a which-key group with `space g g` the panel, and the panel's keys working from the note
-  too (EG-D15).
+  user proposed `space g` as a which-key group with `space g g` the panel (EG-D15). Every panel key mirrored under
+  `space g` from the note was proposed on top of it, and dropped once its costs were laid out: one key saved, a commit
+  made without seeing what's staged, the branch acted on from a note, a popup twice as long.
 - **Several selections:** the recommendation was to leave them out, for their cost; the user chose Helix's whole
   model (EG-D14), its keys to be settled in its task.
 
@@ -29,7 +30,7 @@ Raised with the user after the items were settled, each with the reasons recorde
 - **D141, one split:** the least that reads one note beside another. A tab splits freely now (EG-D21), with or after
   the roadmap's Later item on windows and tabs.
 - **GIT-D12, `space g`:** the panel alone, the old `space g` keys retired because most of their work was the panel's.
-  A group again, its keys the panel's own (EG-D15).
+  A group again, for the note's own change and file, the panel on `space g g` (EG-D15).
 
 The design also changes one line no decision stands behind: the status line said how many problems a file has, never
 what one says (EG-D5).
