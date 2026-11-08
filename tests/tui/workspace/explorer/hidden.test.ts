@@ -39,13 +39,13 @@ describe("hidden files in the explorer (files.hidden, shift+h)", () => {
     return statusRow(h.frame());
   };
 
-  test("off by default, nothing hidden listed; files.hidden lists them ⊘, said hidden, .slipbox slipbox's own, .git never", async () => {
-    expect(DEFAULT_CONFIG.files.hidden).toBe(false);
+  test("on by default, listed ⊘, said hidden, .slipbox slipbox's own, .git never; files.hidden = false lists none", async () => {
+    expect(DEFAULT_CONFIG.files.hidden).toBe(true); // D271
     const root = hiddenVault();
-    const off = await harness({ root, open: "index.md" });
+    const off = await harness({ root, open: "index.md", config: (c) => (c.files.hidden = false) });
     expect(off.app.ui.hidden_files).toBe(false);
     expect(names(off)).toEqual(["docs", "inner", "index.md"]);
-    const h = await harness({ root, open: "index.md", config: (c) => (c.files.hidden = true) });
+    const h = await harness({ root, open: "index.md" });
     expect(names(h)).toEqual([".github", ".notes", ".slipbox", "docs", "inner", ".prettierrc.json", "index.md"]);
     // By their paths, as the busy folders are: not this vault's to change, never indexed.
     expect(h.app.explorer.rows()[rowOf(h, ".github")]).toMatchObject({
@@ -89,28 +89,28 @@ describe("hidden files in the explorer (files.hidden, shift+h)", () => {
     await h.keys("space", "e"); // focus the explorer
     h.app.sidebar.selected = rowOf(h, "docs");
     await h.keys("shift+h");
-    expect(h.app.messages.at(-1)?.text).toBe("explorer: hidden files shown");
-    expect(h.app.ui.hidden_files).toBe(true);
-    expect(names(h)).toContain(".github");
+    expect(h.app.messages.at(-1)?.text).toBe("explorer: hidden files not shown");
+    expect(h.app.ui.hidden_files).toBe(false);
+    expect(names(h)).not.toContain(".github");
     expect(h.app.explorer.rows()[h.app.sidebar.selected]?.name).toBe("docs");
     await h.keys("shift+h");
-    expect(h.app.messages.at(-1)?.text).toBe("explorer: hidden files not shown");
-    expect(names(h)).not.toContain(".github");
+    expect(h.app.messages.at(-1)?.text).toBe("explorer: hidden files shown");
+    expect(names(h)).toContain(".github");
     expect(h.app.explorer.rows()[h.app.sidebar.selected]?.name).toBe("docs");
     // Kept for the vault as a UI setting is, against its config value.
     await h.keys("shift+h");
-    expect(h.app.settings.uiOverrides.hidden_files).toEqual({ value: true, base: false });
+    expect(h.app.settings.uiOverrides.hidden_files).toEqual({ value: false, base: true });
     // :hidden, from the note.
     expect(h.app.aliases.hidden).toBe("explorer.toggle_hidden");
     await h.keys("escape", ":", ...[..."hidden"], "enter");
-    expect(h.app.messages.at(-1)?.text).toBe("explorer: hidden files not shown");
-    expect(names(h)).not.toContain(".github");
+    expect(h.app.messages.at(-1)?.text).toBe("explorer: hidden files shown");
+    expect(names(h)).toContain(".github");
     // The UI settings list it with its value; picked, it changes.
     await h.keys("space", "u", "u");
-    expect(h.frame()).toMatch(/Hidden files in the explorer +off/);
+    expect(h.frame()).toMatch(/Hidden files in the explorer +on/);
     await h.keys(...[..."hidden"], "enter");
-    expect(h.app.ui.hidden_files).toBe(true);
-    expect(names(h)).toContain(".github");
+    expect(h.app.ui.hidden_files).toBe(false);
+    expect(names(h)).not.toContain(".github");
   });
 
   test("hidden again, a view zoomed into a hidden folder goes out to the folder holding it", async () => {
@@ -123,18 +123,18 @@ describe("hidden files in the explorer (files.hidden, shift+h)", () => {
     expect(names(h)).toEqual(["docs", "inner", "index.md"]);
   });
 
-  test("a vault's own config can turn it on, read again live", async () => {
+  test("a vault's own config can turn it off, read again live", async () => {
     const root = hiddenVault();
     const cfg = join(root, "user.toml");
     writeFileSync(cfg, "");
     const h = await harness({ root, open: "index.md", configFile: cfg });
     h.app.settings.reload();
-    expect(names(h)).not.toContain(".github");
-    writeFileSync(join(root, ".slipbox", "config.toml"), "[files]\nhidden = true\n");
+    expect(names(h)).toContain(".github");
+    writeFileSync(join(root, ".slipbox", "config.toml"), "[files]\nhidden = false\n");
     h.app.settings.reload();
     expect(h.app.messages.filter((m) => m.level === "warn").map((m) => m.text)).toEqual([]);
-    expect(h.app.config.files.hidden).toBe(true);
-    expect(names(h)).toContain(".github");
+    expect(h.app.config.files.hidden).toBe(false);
+    expect(names(h)).not.toContain(".github");
   });
 
   test("a hidden file opened from its row joins the vault's index (20.8); one of .slipbox opens, never indexed", async () => {

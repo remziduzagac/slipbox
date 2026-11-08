@@ -44,8 +44,8 @@ export const EXPLORER_ACTION_INFO: Record<string, { title: string; desc: string 
   bottom: { title: "Bottom", desc: "Selects the last row" },
   filter: { title: "Filter", desc: "Type to narrow the rows (the tree keeps its folders); enter opens, esc clears" },
   all_files: {
-    title: "All files",
-    desc: "Shows every text file, or back to what files.show lists (auto: notes and data files in a notes vault)",
+    title: "Other files",
+    desc: "The other way from files.show: notes and data files alone, or every text file when it lists fewer; again, back",
   },
   toggle_hidden: {
     title: "Hidden files",

@@ -2,12 +2,18 @@ import { describe, expect, test } from "bun:test";
 import { chmodSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename, dirname, join } from "node:path";
-import { DEFAULT_CONFIG } from "../../../../src/core/application/config/config.ts";
+import type { Config } from "../../../../src/core/application/config/config.ts";
 import { tildePath } from "../../../../src/core/foundation/platform/paths.ts";
 import { answerSwitch, makeSandbox, harness, type Harness } from "../../../tui-harness.ts";
 
 // The model harness applies the file-local timeout and sandbox policy.
 const sandbox = makeSandbox();
+
+/** The rows these tests count: `files.show = "auto"`'s, no hidden names — not the defaults, every file (D271). */
+const asListed = (c: Config) => {
+  c.files.show = "auto";
+  c.files.hidden = false;
+};
 
 describe("the explorer's view (VV-D5)", () => {
   /** A folder of vaults: a notes vault, a repository, a plain folder, a loose note and a picture. */
@@ -58,15 +64,14 @@ describe("the explorer's view (VV-D5)", () => {
     const h = await harness({
       root: join(P, "notes"),
       open: "a.md",
-      config: (c) => (c.files.show = DEFAULT_CONFIG.files.show),
+      config: asListed,
     });
-    expect(DEFAULT_CONFIG.files.show).toBe("auto");
     expect(h.app.explorer.filesShown()).toBe("renderable");
     expect(shown(h)).toEqual(["other", "sub", "a.md", "data.json"]);
     const code = await harness({
       root: join(P, "code"),
       open: null,
-      config: (c) => (c.files.show = DEFAULT_CONFIG.files.show),
+      config: asListed,
     });
     expect(code.app.explorer.filesShown()).toBe("all");
     expect(shown(code)).toEqual(["main.ts"]);
@@ -78,7 +83,7 @@ describe("the explorer's view (VV-D5)", () => {
     const start = prepare([join(P, "notes", "sub")]);
     if (typeof start === "number") throw new Error(`exit ${start}`);
     expect(start.folder).toBe(join(P, "notes", "sub"));
-    const h = await harness({ root: join(P, "notes"), open: null, folder: join(P, "notes", "sub") });
+    const h = await harness({ root: join(P, "notes"), open: null, folder: join(P, "notes", "sub"), config: asListed });
     expect(h.app.explorer.top).toBe(join(P, "notes", "sub"));
     expect(shown(h)).toEqual(["b.md"]);
     // The breadcrumb: the folders down to the view, the vault open marked as one and current.
@@ -190,7 +195,7 @@ describe("the explorer's view (VV-D5)", () => {
 
   test("- past the vault: it highlighted, its tree under it; l unfolds another vault in place, enter goes into it (VV-D4)", async () => {
     const P = place();
-    const h = await harness({ root: join(P, "notes"), open: "a.md", config: (c) => (c.files.show = "auto") });
+    const h = await harness({ root: join(P, "notes"), open: "a.md", config: asListed });
     await select(h, "a.md");
     await h.keys("-");
     expect(h.app.explorer.top).toBe(P);
@@ -272,7 +277,7 @@ describe("the explorer's view (VV-D5)", () => {
 
   test("a note opened outside the view: it zooms out to the common parent, only the two paths unfolded", async () => {
     const P = place();
-    const h = await harness({ root: join(P, "notes"), open: null, folder: join(P, "notes", "sub") });
+    const h = await harness({ root: join(P, "notes"), open: null, folder: join(P, "notes", "sub"), config: asListed });
     expect(h.app.explorer.top).toBe(join(P, "notes", "sub"));
     h.app.explorer.expanded.add("elsewhere"); // unfolded once, out of sight: folded by the zoom
     await h.app.run("note.open other/c.md");

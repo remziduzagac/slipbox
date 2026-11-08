@@ -287,13 +287,14 @@ export class Vaults {
     this.app.overlay = null;
     // The explorer's view (VV-D5): holding the vault gone into, it stays, the vault unfolded in it; else it
     // zooms out to the common parent of the two, only their paths unfolded. Where the tree can't show the
-    // vault (in a hidden folder: a worktree in .claude/), it moves to the vault.
+    // vault (in a hidden folder, hidden names not listed: a worktree in .claude/), it moves to the vault.
     this.app.explorer.expanded = new Set(unfolded.map((a) => this.app.explorer.rowPath(a)));
     this.app.explorer.invalidateTree();
     const T = this.app.explorer.top;
-    if (
-      isInside(T, target.root) ? !listedDown(T, target.root) : !this.app.explorer.zoomToHold(target.root, target.root)
-    ) {
+    const held = isInside(T, target.root)
+      ? listedDown(T, target.root, this.app.ui.hidden_files)
+      : this.app.explorer.zoomToHold(target.root, target.root);
+    if (!held) {
       this.app.explorer.top = this.app.explorer.trail = target.root;
       this.app.explorer.expanded.clear();
     } else if (isInside(T, target.root)) {

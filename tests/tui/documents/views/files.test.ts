@@ -19,22 +19,25 @@ describe("files beyond notes (16.3–16.5)", () => {
     writeFileSync(join(root, "links-out.md"), "# L\n\nSee [the config](cfg/app.toml) and [run.py](run.py).\n");
     return root;
   };
-  test("the explorer lists data files by default; `a` shows every text file; binary never", async () => {
+  test("the explorer lists every text file by default; `a` shows notes and data files alone; binary never", async () => {
     const h = await harness({ root: await setup(), width: 120 });
     await h.keys("space", "e"); // focus the explorer
     const paths = () => h.app.explorer.rows().map((r) => r.path);
     h.app.explorer.expanded.add("cfg");
     h.app.explorer.invalidateTree();
     expect(paths()).toContain("cfg/app.toml");
-    expect(paths()).not.toContain("run.py");
+    expect(paths()).toContain("run.py");
+    expect(paths()).not.toContain("blob.dat");
     const row = h.app.explorer.rows().find((r) => r.path === "cfg/app.toml")!;
     expect(row.group).toBe("data");
     expect(h.frame()).toContain("app.toml"); // shown with its extension
     await h.keys("a");
+    expect(h.app.messages.at(-1)?.text).toBe("explorer: notes and data files");
+    expect(paths()).toContain("cfg/app.toml");
+    expect(paths()).not.toContain("run.py");
+    await h.keys("a");
     expect(paths()).toContain("run.py");
     expect(paths()).not.toContain("blob.dat");
-    await h.keys("a");
-    expect(paths()).not.toContain("run.py");
   });
   test("a code file opens in SOURCE by default, highlighted, with READ available; a note after it renders", async () => {
     // Code as [render] code = "source" opens it (Python has the code view by default, 24.x).
@@ -140,11 +143,12 @@ describe("files beyond notes (16.3–16.5)", () => {
     expect(h.app.buffer("in.md")?.source).toBe(readFileSync(join(root, "links-out.md"), "utf8"));
   });
   test("the switcher lists the files the explorer shows", async () => {
-    const h = await harness({ root: await setup() });
+    const h = await harness({ root: await setup(), config: (c) => (c.files.show = "renderable") });
     await h.keys("ctrl+p");
     const o = h.app.overlay as { items: { data: unknown }[] };
     const data = o.items.map((i) => i.data);
     expect(data).toContain("cfg/app.toml");
     expect(data).not.toContain("run.py");
+    expect(data).not.toContain("blob.dat");
   });
 });

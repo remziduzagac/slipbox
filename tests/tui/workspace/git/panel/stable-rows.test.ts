@@ -1209,11 +1209,13 @@ describe("the panel's rows by what they are, not where they were: as rows come a
     // b in a hidden folder (the view can't hold both, and moves to b), no note in it: aaa/ and sub/, a data file each.
     const b = join(mkdtempSync(join(sandbox, ".hidden-")), "b");
     mkdirSync(join(b, ".slipbox"), { recursive: true });
+    writeFileSync(join(b, ".slipbox", "config.toml"), "[files]\nhidden = false\n"); // hidden folders not listed there
     for (const d of ["aaa", "sub"]) {
       mkdirSync(join(b, d), { recursive: true });
       writeFileSync(join(b, d, "data.json"), "{}\n");
     }
     const { app, frame } = await panel(a, "a.md", false);
+    app.ui.hidden_files = false; // nor here: b's folder not one the view can hold
     frame();
     // The explorer zoomed into sub/; the git panel shown; the view zoomed out to a meanwhile: sub/ noted, where it was.
     app.explorer.zoomTo(join(a, "sub"));

@@ -43,7 +43,11 @@ export const LIST_INTERACTIONS: Check[] = [
       await s.type("hand guide");
       await s.until(() => total() === 1, 3000, "the writing guide alone with hand and guide");
       await s.keys("ctrl+w");
-      await s.until(() => s.rowOf(/› hand\s*│/) >= 0 && total() === 2, 3000, "ctrl+w: guide gone, both handbook notes");
+      await s.until(
+        () => s.rowOf(/› hand\s*│/) >= 0 && total() === 3,
+        3000,
+        "ctrl+w: guide gone, the handbook's two notes and its .adoc",
+      );
       await s.keys("backspace", "backspace", "backspace", "backspace", "backspace");
       await s.until(() => total() === n, 3000, "backspace to an empty filter: every entry again");
       await s.keys("escape");

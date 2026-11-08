@@ -935,7 +935,8 @@ describe("the explorer's listings off the main thread (T12, #9)", () => {
       "quick/q.md": "# Q\n",
       ...files,
     });
-    const h = await harness({ root: join(top, "vault") });
+    // Without hidden names (on by default, D271): the rows counted are the folders listed.
+    const h = await harness({ root: join(top, "vault"), config: (c) => (c.files.hidden = false) });
     h.app.explorer.listings = new Listings(h.app, true);
     h.app.explorer.zoomTo(top);
     await listed(h);
@@ -1230,7 +1231,8 @@ describe("the explorer's listings off the main thread (T12, #9)", () => {
 
   test("a folder that couldn't be listed is read again a minute later, not at every rebuild", async () => {
     const top = tree({ "vault/.slipbox/config.toml": "", "vault/index.md": "# Index\n" });
-    const h = await harness({ root: join(top, "vault") });
+    // Without hidden names (on by default, D271): the rows counted are the folders listed.
+    const h = await harness({ root: join(top, "vault"), config: (c) => (c.files.hidden = false) });
     h.app.explorer.listings = new Listings(h.app, true);
     const ex = h.app.explorer;
     const gone = join(top, "gone");

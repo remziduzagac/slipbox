@@ -8,8 +8,8 @@ export class ExplorerFileRows {
   constructor(private readonly app: ExplorerReadContext) {}
 
   /**
-   * The files beyond notes the explorer and the switcher list (16.5): by `files.show` — or all
-   * text files while the explorer's toggle is on — then `files.include` patterns always, and
+   * The files beyond notes the explorer and the switcher list (16.5): by `files.show` — or the
+   * other way while the explorer's `a` is on — then `files.include` patterns always, and
    * `files.exclude` never. Binary files are never listed.
    */
   shownFiles(): { path: string; group: FileGroup }[] {
@@ -25,7 +25,7 @@ export class ExplorerFileRows {
   /** Whether the explorer lists a file of the vault, by its path in it and its kind: `shownFiles`' rule. */
   listsFiles(): (path: string, group: FileGroup) => boolean {
     const f = this.app.config.files;
-    const mode = this.app.sidebar.allFiles ? "all" : this.filesShown();
+    const mode = this.explorerShows();
     const incl = f.include.length ? ignore().add(f.include) : null;
     const excl = f.exclude.length ? ignore().add(f.exclude) : null;
     return (path, group) => {
@@ -33,6 +33,13 @@ export class ExplorerFileRows {
       if (group === "binary" || excl?.ignores(path)) return false;
       return !!incl?.ignores(path) || mode === "all" || (mode === "renderable" && group === "data");
     };
+  }
+
+  /** What the explorer lists: what `files.show` does, or, `a` pressed, the other way — every text file, or notes and
+   *  data files when every one is what it lists. */
+  explorerShows(): "notes" | "renderable" | "all" {
+    const shown = this.filesShown();
+    return this.app.sidebar.otherFiles ? (shown === "all" ? "renderable" : "all") : shown;
   }
 
   /**

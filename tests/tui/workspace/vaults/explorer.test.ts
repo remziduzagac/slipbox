@@ -57,7 +57,16 @@ describe("vaults in the TUI (17.x)", () => {
     const shown = () =>
       h.app.explorer.rows().map((r) => `${"  ".repeat(r.depth)}${r.name}${r.root?.here ? " (here)" : ""}`);
     expect(h.app.explorer.top).toBe(base);
-    expect(shown()).toEqual(["app (here)", "  design.md", "  links.md", "notes", "  index.md", "  todo.md"]);
+    expect(shown()).toEqual([
+      "app (here)",
+      "  .slipbox",
+      "  design.md",
+      "  links.md",
+      "notes",
+      "  .slipbox",
+      "  index.md",
+      "  todo.md",
+    ]);
     // The breadcrumb leads to where you went.
     expect(h.app.explorer.crumbs().at(-1)).toMatchObject({ abs: app, current: true, past: true });
     // One tree: every row is the view's or under one of its folders — no vault listed beside it (20.15's are gone).
@@ -126,6 +135,27 @@ describe("vaults in the TUI (17.x)", () => {
     await answerSwitch(h);
     expect(h.app.explorer.top).toBe(outer);
     expect(h.app.explorer.rows().find((r) => r.name === "nested-vault")).toMatchObject({ path: "nested-vault" });
+  });
+
+  test("a vault in a hidden folder of the one open, as a worktree in .claude/: held while hidden names are listed", async () => {
+    const { locateVault } = await import("../../../../src/core/workspace/vaults/vault.ts");
+    for (const hidden of [true, false]) {
+      const outer = makeVault();
+      const inner = join(outer, ".claude", "worktrees", "w");
+      mkdirSync(join(inner, ".slipbox"), { recursive: true });
+      writeFileSync(join(inner, "w.md"), "# W\n");
+      const h = await harness({
+        loc: locateVault({ path: outer }),
+        open: null,
+        config: (c) => (c.files.hidden = hidden),
+      });
+      h.app.vaults.switchVault(locateVault({ path: inner }), null);
+      await answerSwitch(h);
+      expect(h.app.loc.root).toBe(inner);
+      // Listed, the view keeps it, the folders down to it unfolded; not listed, the view moves to it.
+      expect(h.app.explorer.top).toBe(hidden ? outer : inner);
+      if (hidden) expect(h.app.explorer.rows().find((r) => r.root?.here)).toMatchObject({ name: "w", depth: 2 });
+    }
   });
 
   test("h on another vault's row folds it, the selection staying there", async () => {
@@ -207,7 +237,7 @@ describe("vaults in the TUI (17.x)", () => {
     expect(h.app.view?.buf.readOnly).toBeNull();
     expect(h.app.explorer.top).toBe(base);
     const shown = () => h.app.explorer.rows().map((r) => `${"  ".repeat(r.depth)}${r.name}`);
-    expect(shown()).toEqual(["loose", "  l.md", "  m.md", "v", "  beside.md"]);
+    expect(shown()).toEqual(["loose", "  l.md", "  m.md", "v", "  .slipbox", "  beside.md"]);
     expect(h.app.explorer.rows()[h.app.sidebar.selected]!.path).toBe(join(loose, "l.md"));
     // Back: into the vault, beside.md; the view holds both still.
     await h.app.run("history.back");

@@ -27,26 +27,34 @@ function context(files: Record<string, string>): ExplorerReadContext {
     loc,
     graph: openGraph(loc, config, false),
     ui: { hidden_files: false },
-    sidebar: { allFiles: false },
+    sidebar: { otherFiles: false },
   } satisfies ExplorerReadContext;
 }
 
 test("file-row visibility reads live mode, include and exclude rules; notes precede those rules", () => {
   const app = context({ "a.md": "# A\n", "data.json": "{}", "main.ts": "export {};", "pic.png": "picture" });
   const files = new ExplorerFileRows(app);
-  expect(files.filesShown()).toBe("renderable");
+  expect(files.filesShown()).toBe("all"); // every text file by default (D271)
   const lists = () => files.listsFiles();
   expect(lists()("data.json", "data")).toBe(true);
-  expect(lists()("main.ts", "text")).toBe(false);
-  app.sidebar.allFiles = true;
   expect(lists()("main.ts", "text")).toBe(true);
+  expect(lists()("pic.png", "binary")).toBe(false);
+  // The explorer's `a`, the other way: notes and data files.
+  app.sidebar.otherFiles = true;
+  expect(lists()("main.ts", "text")).toBe(false);
+  expect(lists()("data.json", "data")).toBe(true);
+  app.sidebar.otherFiles = false;
   app.config.files.exclude = ["main.ts", "a.md"];
   expect(lists()("main.ts", "text")).toBe(false);
   expect(lists()("a.md", "note")).toBe(true);
-  expect(lists()("pic.png", "binary")).toBe(false);
-  app.sidebar.allFiles = false;
+  // Notes and data files by files.show: include lists one anyway, `a` every text file.
+  app.config.files.show = "renderable";
   app.config.files.include = ["main.ts"];
   app.config.files.exclude = [];
+  expect(lists()("main.ts", "text")).toBe(true);
+  app.config.files.include = [];
+  expect(lists()("main.ts", "text")).toBe(false);
+  app.sidebar.otherFiles = true;
   expect(lists()("main.ts", "text")).toBe(true);
 });
 

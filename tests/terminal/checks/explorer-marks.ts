@@ -249,16 +249,14 @@ const MARKED: Check[] = [
   },
   {
     area: "navigating",
-    name: "hidden files: shift+h lists .github and the rest ⊘, said hidden, .git never; a workflow opened is indexed; shift+h again hides the rest",
+    name: "hidden files: .github and the rest listed ⊘ by default, said hidden, .git never; a workflow opened is indexed; shift+h hides the rest, and lists them again",
     covers: { cases: ["explorer", "index", "status"], commands: ["explorer.toggle_hidden"] },
     // kestrel, a repository: .github/workflows/ci.yml, .vscode, .env.example and the like at its top.
     options: { home: true, startAt: "home/work/kestrel/README.md" },
     run: async (s) => {
       await explorerOpen(s);
       await explorerRow(s, "docs");
-      s.expect(rowEnd(s, ".github") === null && rowEnd(s, "docs") !== null, "no hidden name listed at first");
-      await s.keys("shift+h");
-      await s.message("explorer: hidden files shown");
+      // Listed from the start (files.hidden, D271).
       await s.until(() => markOf(s, ".github") === "⊘" && markOf(s, ".vscode") === "⊘", 3000, ".github, .vscode: ⊘");
       s.expect(rowEnd(s, ".git") === null, ".git never listed");
       // The cursor on one: why it isn't indexed.
@@ -281,6 +279,9 @@ const MARKED: Check[] = [
         3000,
         ".vscode gone, .github the vault's: ●",
       );
+      await s.keys("shift+h");
+      await s.message("explorer: hidden files shown");
+      await s.until(() => markOf(s, ".vscode") === "⊘", 3000, ".vscode listed again: ⊘");
     },
   },
 ];

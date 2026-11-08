@@ -517,11 +517,10 @@ you left; each switch is remembered, so a chain of them unwinds one by one. From
 a peek, back goes into the vault it was kept in.
 
 **The zoom follows** (VV-D5, VB-D1): the explorer's unfolded folders are kept by their absolute paths, then given the
-new
-vault's keys; a zoom holding the new vault stays, the folders down to the vault unfolded; one not holding it zooms out
-to the common parent (§ Side panes); where the tree can't show the vault (its path has a hidden folder: a worktree in
-`.claude/worktrees/`), the zoom moves to the vault. Started in a folder outside every vault (`slipbox /srv/x`),
-Elsewhere's, or in `~`, home, nothing opens over the explorer: the launcher of D50 is gone.
+new vault's keys; a zoom holding the new vault stays, the folders down to the vault unfolded; one not holding it zooms
+out to the common parent (§ Side panes); where the tree can't show the vault (its path has a hidden folder, the hidden
+names not listed: a worktree in `.claude/worktrees/`), the zoom moves to the vault. Started in a folder outside every
+vault (`slipbox /srv/x`), Elsewhere's, or in `~`, home, nothing opens over the explorer: the launcher of D50 is gone.
 
 **The vaults** (`space v v`, `:folders`, `folders.open`; `slipbox vaults`) list every known vault, named or not,
 most recent first. Home's folders appear as home workspaces, and worktrees group under their repository. `/` starts
@@ -894,8 +893,9 @@ keys.
 - **Explorer (left, `≡`): one tree, the view a part of it** (VV-D5; `tui/workspace/explorer/explorer.ts`). The view
   (`explorer.top`, absolute) is a folder: its rows are what's in it. In the vault open, the vault's own tree from there
   (`rootTree(sub)`): the walked notes, directories first, with the files `files.show` lists beside them — by default
-  (`auto`) every text file in a repository, where code lives, and the data files (JSON, YAML, TOML, INI, CSV) in a notes
-  vault (one with `.slipbox/`), shown with their extension and their own icon; `a` toggles to every text file and back
+  (`all`, D271) every text file, shown with their extension and their own icon (`auto`: every text file in a repository,
+  where code lives, and the data files — JSON, YAML, TOML, INI, CSV — in a notes vault, one with `.slipbox/`); `a`
+  toggles the other way and back, to notes and data files while every text file is listed, else to every text file
   (`16.5`, "Files beyond notes" below), `shift+h` to the hidden names too and back (below) — the walk's folders, nested
   vaults by their rows. Anywhere else — above the vault, beside it, in another vault, a nested one's folder — the folder
   is listed a level at a time, never walked (`outsideRows`): its folders, then its files as this vault's `files.show`
@@ -978,37 +978,38 @@ keys.
   unless they're listed (below). What the walk leaves out — `node_modules` and the other busy folders (D237: ignored, or
   no note at their top; a notes `build/` is the vault's own), what `.gitignore` or `walk.exclude` leaves out, home's
   skip list — is a row by its absolute path (`outside`, its `leftOut` the reason `exclusion` gives), listed a level at a
-  time as a folder outside the vault, never this vault's to rename, move or delete, nor to make a note in
-  (`a folder this vault doesn't index: select one it does`) — but what `walk.exclude` leaves out, your own setting,
-  takes a new note, a new folder or a paste as a typed path into it does, said `not indexed` (D246: `Files.newItemBase`
-  gives the row's folder when `Graph.notIndexed` says so of the row's path; a busy folder, a `.gitignore`'s, home's skip
-  list or a vault there is refused as before); a file of it opens from the explorer, and by `:e` the same way (D249),
-  never indexed; a note of it a link reached (`20.8`) is listed there, not under a folder of the vault's own. What it
-  hasn't reached — a folder it couldn't read, home's folders before its walk, a folder or file come since the walk — is
-  the vault's, by its path in it (`unwalked`), listed from the disk until the walk has it: so a top-level folder of home
+  time as a folder outside the vault, never this vault's to rename, move or delete, nor to make a note in (`a folder
+  this vault doesn't index: select one it does`) — but what `walk.exclude` leaves out, your own setting, takes a new
+  note, a new folder or a paste as a typed path into it does, said `not indexed` (D246: `Files.newItemBase` gives the
+  row's folder when `Graph.notIndexed` says so of the row's path; a busy folder, a `.gitignore`'s, home's skip list or a
+  vault there is refused as before); a file of it opens from the explorer, and by `:e` the same way (D249), never
+  indexed; a note of it a link reached (`20.8`) is listed there, not under a folder of the vault's own. What it hasn't
+  reached — a folder it couldn't read, home's folders before its walk, a folder or file come since the walk — is the
+  vault's, by its path in it (`unwalked`), listed from the disk until the walk has it: so a top-level folder of home
   unfolded before home was ever walked lists what's in it at once. `rowPath` gives a path at or under what the walk
   leaves out its absolute path (a hidden one only in home); the view zooms out by itself to hold such a file
-  (`zoomToHold`: only a hidden folder's isn't, `listedDown`), and the view's own folder can be one (`ownView` null). The
-  busy folders whose names start with a dot (`.venv`, `.cache`) are hidden, listed only with the hidden names.
-- **Hidden names, listed when asked** (D250; `files.hidden`, the explorer's `shift+h`). Off by default: nothing whose
-  name starts with a dot is listed (`listsName`), as before. On — `files.hidden` in your config or a vault's, or a UI
-  setting (`hidden_files`, `uiDefaults`) changed by `shift+h` (`toggle_hidden`, the command `explorer.toggle_hidden`,
-  `:hidden`) or the UI settings' list, kept for the vault as the others are; it says `explorer: hidden files shown` or
-  `… not shown` and keeps the selection on its row (`Explorer.toggleHidden`) — they're listed as the walk's other
-  left-outs are: in the vault's own tree a hidden folder or file is a row by its absolute path, its `leftOut` the walk's
-  reason — `hidden`, or `.slipbox`'s `always skipped`, said `slipbox's own folder` — whatever the walk knows of it (a
-  hidden folder a note was made in, among `graph.dirs`, is only that row, the note in its rows); a folder of them
-  listed a level at a time, the reason carried down. Listed a level at a time anywhere else (above the vault, another
-  vault's, Elsewhere), a hidden name carries the same reason itself (`hiddenOut`). `.git` is never listed. So each is
-  `⊘`, and the status line says `hidden` (D244). `rowPath` gives a path at or under a hidden name its absolute path
-  while they're listed (in a vault; in home always), but a hidden file reached keeps its path in the vault. A hidden
-  file opened from its row in a vault is reached (`20.8`; `reachHidden`, `Graph.reachFile`), as `:e` reaches it:
-  indexed from then on, its row `●` — a reached file under a left-out folder is (`Graph.known`) — its folder still
-  `⊘`, and hidden names hidden again, it stays in the vault's tree by its path there, as one reached always was; in
-  home, whose walk never takes a hidden folder, and in `.slipbox`, it opens unreached. The walks — home's and
-  every vault's — are unchanged: only what the explorer lists changes. The switcher, the explorer's filter, search and
-  find list what's indexed, as for the busy folders: a hidden file only once reached. Hidden again, a view in a hidden
-  folder (not the vault's own way to it) goes out to the folder holding it.
+  (`zoomToHold`: only a hidden folder's isn't, the hidden names not listed, `listedDown`), and the view's own folder can
+  be one (`ownView` null). The busy folders whose names start with a dot (`.venv`, `.cache`) are hidden, listed only
+  with the hidden names.
+- **Hidden names, listed unless turned off** (D250, D271; `files.hidden`, the explorer's `shift+h`). Off, nothing whose
+  name starts with a dot is listed (`listsName`). On, the default since D271 — `files.hidden` in your config or a
+  vault's, or a UI setting (`hidden_files`, `uiDefaults`) changed by `shift+h` (`toggle_hidden`, the command
+  `explorer.toggle_hidden`, `:hidden`) or the UI settings' list, kept for the vault as the others are; it says
+  `explorer: hidden files shown` or `… not shown` and keeps the selection on its row (`Explorer.toggleHidden`) — they're
+  listed as the walk's other left-outs are: in the vault's own tree a hidden folder or file is a row by its absolute
+  path, its `leftOut` the walk's reason — `hidden`, or `.slipbox`'s `always skipped`, said `slipbox's own folder` —
+  whatever the walk knows of it (a hidden folder a note was made in, among `graph.dirs`, is only that row, the note in
+  its rows); a folder of them listed a level at a time, the reason carried down. Listed a level at a time anywhere else
+  (above the vault, another vault's, Elsewhere), a hidden name carries the same reason itself (`hiddenOut`). `.git` is
+  never listed. So each is `⊘`, and the status line says `hidden` (D244). `rowPath` gives a path at or under a hidden
+  name its absolute path while they're listed (in a vault; in home always), but a hidden file reached keeps its path in
+  the vault. A hidden file opened from its row in a vault is reached (`20.8`; `reachHidden`, `Graph.reachFile`), as `:e`
+  reaches it: indexed from then on, its row `●` — a reached file under a left-out folder is (`Graph.known`) — its folder
+  still `⊘`, and hidden names hidden again, it stays in the vault's tree by its path there, as one reached always was;
+  in home, whose walk never takes a hidden folder, and in `.slipbox`, it opens unreached. The walks — home's and every
+  vault's — are unchanged: only what the explorer lists changes. The switcher, the explorer's filter, search and find
+  list what's indexed, as for the busy folders: a hidden file only once reached. Hidden again, a view in a hidden folder
+  (not the vault's own way to it) goes out to the folder holding it.
 - **A row's marks** (VV-D9; `tui/workspace/explorer/marks.ts`, drawn by `drawTree`). At a row's right, in columns that
   line up: the index's state in the last (`indexGlyph`, `INDEX_ROLE`) — indexed `●` (`sidebar_mark`: dimmer than a
   name), indexing `◐` (`info`), not indexed `⊘` (`sidebar`), can't read `⚿` (a lock in Nerd; `warn`), a problem `⚠`
@@ -2219,15 +2220,14 @@ the only one (`16.16`, `16.17`; D112): Org and AsciiDoc files open as text.
     before any code file is opened, and a rename or move rewrites them.
 - **Editing and saving** work as for notes: the same undo, saves, autosave and conflict prompt; an
   agent's change to an open file reloads it.
-- **What lists them.** The explorer and the switcher show what `files.show` says (`auto`, the default: `renderable` in
-  a notes vault — one with `.slipbox/` — and `all` elsewhere, a repository where code lives; `notes`; `renderable` —
-  notes and data files; or `all` text files), plus `files.include`
-  patterns, minus `files.exclude`; the explorer's `a` toggles to all and back, and its `shift+h` adds the hidden names
-  (`files.hidden`, D250; § Side panes), which the switcher never lists unless reached. The explorer, the
-  tabs and the history show every name with its extension (the switcher lists paths), notes' too
-  (`home.md`, `halley.toml`): the formats sit side by side, and the extension says which is which.
-  Folders show whether or not anything in them is listed, so a new or empty one is there to open and
-  create in.
+- **What lists them.** The explorer and the switcher show what `files.show` says (`all`, the default since D271: every
+  text file; `renderable` — notes and data files; `notes`; or `auto`: `renderable` in a notes vault — one with
+  `.slipbox/` — and `all` elsewhere, a repository where code lives), plus `files.include` patterns, minus
+  `files.exclude`; the explorer's `a` toggles the other way and back (`renderable` from `all`, else `all`), and its
+  `shift+h` hides the hidden names or lists them again (`files.hidden`, D250; § Side panes), which the switcher never
+  lists unless reached. The explorer, the tabs and the history show every name with its extension (the switcher lists
+  paths), notes' too (`home.md`, `halley.toml`): the formats sit side by side, and the extension says which is which.
+  Folders show whether or not anything in them is listed, so a new or empty one is there to open and create in.
 - **New notes and folders** (`ctrl+n`, `space n n`, `:new`; `space d n`, `:mkdir`; `n` and `shift+n` in
   the explorer): a name, from the current note's folder — or the explorer's selected folder when it
   has focus, or the vault's top with a leading `/` — and folders on the way are made. `.md` is added

@@ -126,9 +126,10 @@ export class ExplorerTree {
         });
       if (this.state.expanded.has(abs)) this.outsideRows(abs, depth + 1, out, vault ? null : why);
     }
-    // Its files as their vault lists them: auto, every text file but in a notes vault.
-    const show = this.app.sidebar.allFiles ? "all" : this.app.config.files.show;
-    const mode = show === "auto" ? (listing.notes ? "renderable" : "all") : show;
+    // Its files as their vault lists them (auto: every text file but in a notes vault), or `a`'s other way.
+    const show = this.app.config.files.show;
+    const own = show === "auto" ? (listing.notes ? "renderable" : "all") : show;
+    const mode = this.app.sidebar.otherFiles ? (own === "all" ? "renderable" : "all") : own;
     for (const e of shown.filter((e) => e.file).sort(byName)) {
       const abs = join(dir, e.name);
       const { group } = classify(abs, this.app.config.walk.extensions);

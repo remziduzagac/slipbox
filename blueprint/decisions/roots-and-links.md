@@ -1093,6 +1093,8 @@ folders' rule); a second path for `:e` beside the explorer's, which could open i
 
 ## D250: Hidden files in the explorer, by a setting and a key, never indexed (2026-10-17)
 
+> **Amended by D271 (2026-11-08):** `files.hidden` defaults to `true`: the hidden names are listed unless turned off.
+
 **Decision:** A setting, `files.hidden` (default `false`; your config, a vault's `.slipbox/config.toml`, and the UI
 settings), and a key in the explorer that toggles it, `shift+h` (`toggle_hidden`; the command
 `explorer.toggle_hidden`, `:hidden`), modelled on `a`: it says `explorer: hidden files shown` or `explorer: hidden
@@ -1176,3 +1178,27 @@ when the second fails, the first is taken back.
 **Not chosen:** the renamed link asked about again (the move undoing what you said of it); a relative link's move
 refused, or made as the shell's `mv` makes it, with a warning; the answers of links inside a moved folder carried too
 (wider than #11, and a relative link inside may lead elsewhere after the move).
+
+## D271: Every text file and the hidden names listed by default; `a` the other way (2026-11-08)
+
+**Decision:** `files.show` defaults to `"all"`, every text file, wherever the explorer is, and `files.hidden` to `true`,
+the hidden names listed `⊘` as D250 lists them. `auto`, the default before (notes and data files in a folder with
+`.slipbox/`, every text file elsewhere), stays a value to choose. The explorer's `a` switches for the moment to the
+other way from what `files.show` lists, and back: notes and data files while it lists every text file, every text file
+otherwise. The switcher and replace in every note follow `files.show` as before, so a notes vault's code files are
+theirs too now; search and find list what's indexed, as before. A vault in a hidden folder of the explorer's view, as a
+worktree in `.claude/`, is held in the view while the hidden names are listed, the folders down to it unfolded; the
+view moves to it only when they aren't. As built: `DEFAULT_CONFIG.files` (`core/application/config/defaults.ts`),
+`ExplorerFileRows.explorerShows` (`tui/workspace/explorer/rows/files.ts`), `Vaults.switchVault`; design/tui.md § Side
+panes. One pull request.
+
+**Why:** The maintainer's call, 2026-11-08: what a folder holds is what the explorer shows first, as a file manager or
+an editor's tree shows it; a notes vault's code, and `.github/` or `.claude/` anywhere, were reached only by knowing a
+key. Narrowing is a key away, and a setting keeps it.
+
+**Cost:** A notes vault's explorer lists its code and config beside its notes, and each vault's folder shows its
+`.slipbox`. The switcher lists a notes vault's code files, and replace in every note can change them (previewed line by
+line first). Each folder shown reads its hidden entries too (D250's cost, now by default).
+
+**Not chosen:** `files.hidden` alone changed, `auto` kept; `a` kept as "every text file", which would do nothing with
+`all` the default.
