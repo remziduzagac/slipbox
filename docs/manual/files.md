@@ -47,8 +47,8 @@ While it has the keys:
 | `o` | Open the note in this window, in place of the one it shows |
 | `s` | Open it in the other window of a split, splitting first |
 | `/` | Filter: type to narrow the tree, the folders kept. `enter` opens, `esc` clears |
-| `a` | Show every text file, or back to what it shows by default (below) |
-| `shift+h` | Show hidden files and folders too, or hide them again (below) |
+| `a` | Show notes and data files alone, or every text file again (below) |
+| `shift+h` | Hide hidden files and folders, or show them again (below) |
 | `shift+y` | Copy the selected row's whole path |
 | `.` | The selected row's menu: for a folder, Zoom in here first; Copy path among the rest |
 | `esc` | Back to the note. The explorer stays open |
@@ -194,13 +194,14 @@ one, so there is somewhere to make a new note.
 
 Which other files it lists is up to `files.show` ([Configuration](configuration.md)):
 
-- `"auto"`, the default, lists notes and data files in a folder with a `.slipbox/`. Data files are JSON, YAML, TOML,
-  INI, CSV and the like. Anywhere else, such as a code repository, it lists every text file.
+- `"all"`, the default, lists every text file.
+- `"renderable"` lists notes and data files. Data files are JSON, YAML, TOML, INI, CSV and the like.
 - `"notes"` lists notes only.
-- `"renderable"` lists notes and data files.
-- `"all"` lists every text file.
+- `"auto"` lists notes and data files in a folder with a `.slipbox/`. Anywhere else, such as a code repository, it
+  lists every text file.
 
-`a` in the explorer switches to every text file for the moment, and back.
+`a` in the explorer switches the other way for the moment, and back: to notes and data files while it lists every
+text file, and to every text file otherwise.
 
 Two more settings name files:
 
@@ -216,12 +217,12 @@ Some files are never listed:
 
 - pictures, archives and other binary files, which slipbox doesn't open
 - `.git`, git's own folder
-- hidden files and folders, whose names start with `.`, unless you ask for them
+- hidden files and folders, whose names start with `.`, if you turn them off
 
-`shift+h` in the explorer lists the hidden files and folders too, such as `.github` and `.env`, and hides them again.
-`:hidden` does the same, and so does the UI settings list (`space u u`). Your choice is remembered for the folder. To
-list them from the start, set `files.hidden = true` in your configuration, or in a vault's own `.slipbox/config.toml`
-([Configuration](configuration.md)).
+The explorer lists the hidden files and folders, such as `.github` and `.env`. `shift+h` in the explorer hides them, and
+lists them again. `:hidden` does the same, and so does the UI settings list (`space u u`). Your choice is remembered for
+the folder. To leave them out from the start, set `files.hidden = false` in your configuration, or in a vault's own
+`.slipbox/config.toml` ([Configuration](configuration.md)).
 
 Hidden files and folders are not indexed, so they are marked `⊘`, and the status line says `hidden` while the cursor is
 on one. `.slipbox` says `slipbox's own folder`. A hidden file you open from the explorer is indexed from then on, and

@@ -232,6 +232,11 @@ export class Explorer {
     return this.fileRows.filesShown();
   }
 
+  /** What the explorer lists: `files.show`'s, or `a`'s other way. */
+  explorerShows(): "notes" | "renderable" | "all" {
+    return this.fileRows.explorerShows();
+  }
+
   treeRows(): TreeRow[] {
     if (this.tree) return this.tree;
     this.listings.newTree();

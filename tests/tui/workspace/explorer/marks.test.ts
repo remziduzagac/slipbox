@@ -103,6 +103,7 @@ async function harness(
   config.render.glyphs = (opts.glyphs ?? "unicode") as Config["render"]["glyphs"];
   config.walk.exclude = ["drafts/"];
   config.walk.max_file_size = 1000;
+  config.files.hidden = false; // the rows these tests count, hidden names aside (listed by default, D271)
   config.ui.sidebar_width = opts.sidebar ?? 40; // a worktree's branch whole beside its name
   const loc = opts.loc ?? locateVault({ root: opts.root! });
   const host: Host = {

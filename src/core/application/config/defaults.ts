@@ -28,7 +28,7 @@ export const DEFAULT_CONFIG: Config = {
   },
   links: { style: "auto", path: "auto", extension: "auto" },
   trust: { roots: [] },
-  files: { show: "auto", include: [], exclude: [], hidden: false },
+  files: { show: "all", include: [], exclude: [], hidden: true },
   ui: {
     sidebar: true,
     sidebar_width: 30,

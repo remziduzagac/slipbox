@@ -73,7 +73,7 @@ export interface ExplorerReadContext {
   readonly config: Pick<Config, "files" | "walk">;
   readonly graph: Pick<Graph, "filePaths" | "notes" | "dirs" | "skipped" | "filter" | "known">;
   readonly ui: { hidden_files: boolean };
-  readonly sidebar: { allFiles?: boolean };
+  readonly sidebar: { otherFiles?: boolean };
 }
 
 /** Shared interactive state, read live rather than copied when a collaborator is constructed. */
@@ -87,7 +87,7 @@ export interface ExplorerUiContext {
     pinned?: boolean;
     filter?: string;
     filtering?: boolean;
-    allFiles?: boolean;
+    otherFiles?: boolean;
     overlay: boolean;
   };
   readonly ui: { hidden_files: boolean; zen: boolean };
@@ -190,6 +190,7 @@ export interface ExplorerActionHost extends ExplorerPosition {
   leftOutAt(abs: string): LeftOut | null;
   treeRows(): TreeRow[];
   filesShown(): "notes" | "renderable" | "all";
+  explorerShows(): "notes" | "renderable" | "all";
   reveal(rel?: string | null, open?: boolean, zoom?: boolean): void;
   zoomIn(): void;
   zoomOut(): void;

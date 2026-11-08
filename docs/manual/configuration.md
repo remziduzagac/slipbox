@@ -72,11 +72,11 @@ extension = "auto"             # auto | keep | drop: the .md
 roots = []                     # paths and globs, each with what's inside it: ["~/Projects/*", "~/notes"]
 
 [files]                        # files besides notes, in the explorer and the switcher
-show = "auto"                  # auto (renderable in a vault with .slipbox/, else all) | notes
-                               # | renderable (notes and data files) | all (every text file)
+show = "all"                   # all (every text file) | renderable (notes and data files) | notes
+                               # | auto (renderable in a vault with .slipbox/, else all)
 include = []                   # always listed, in .gitignore's syntax: ["*.ts", "scripts/"]
 exclude = []                   # never listed, in .gitignore's syntax
-hidden = false                 # hidden files and folders listed too, never indexed (.git never); shift+h there
+hidden = true                  # hidden files and folders listed too, never indexed (.git never); shift+h there
 
 [ui]                           # the screen
 sidebar = true                 # the explorer open beside the text on a wide terminal

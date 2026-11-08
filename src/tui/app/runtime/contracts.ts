@@ -185,8 +185,8 @@ export interface SidePaneState {
   /** The left panel's filter (`/`): its text, and whether keys go to it. */
   filter?: string;
   filtering?: boolean;
-  /** The explorer's toggle (`a`): every text file, whatever `files.show` says. */
-  allFiles?: boolean;
+  /** The explorer's toggle (`a`): the other way from `files.show` — notes and data files, or every text file. */
+  otherFiles?: boolean;
 }
 
 export type { Region };

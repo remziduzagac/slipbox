@@ -165,13 +165,14 @@ What a worktree's links mean:
 In home, the git panel lists the worktree under kestrel, as one repository. `◆` marks a worktree with uncommitted
 files: work for you to review.
 
-When an agent keeps its worktree inside the repository, in `.claude/worktrees/`, it's a vault inside kestrel. `.claude`
-is a hidden folder, so going into the worktree moves the explorer's zoom to the worktree itself.
+When an agent keeps its worktree inside the repository, in `.claude/worktrees/`, it's a vault inside kestrel. Going
+into it keeps kestrel in the explorer, `.claude` unfolded down to the worktree. With hidden folders hidden (`shift+h`),
+`.claude` isn't listed, so the explorer's zoom moves to the worktree itself.
 
 ### A notes vault inside a repository
 
-Kestrel's team keeps its notes beside its code, and you want them to work as notes: their own tabs, a wikilink's names
-reaching only them, and an explorer listing notes rather than every text file.
+Kestrel's team keeps its notes beside its code, and you want them to work as notes: their own tabs, and a wikilink's
+names reaching only them.
 
 ```text
 ~/Projects/kestrel/              the vault kestrel: .git
@@ -205,7 +206,8 @@ From kestrel, now:
 In `notes`:
 
 - `/` at a path's start, and a wikilink's name, reach the notes' own.
-- The explorer lists its notes and data files, as `files.show` does in a folder with `.slipbox/`. `a` shows the rest.
+- The explorer lists every text file in it, as anywhere. `a` narrows it to the notes and data files, and
+  `files.show = "auto"` does that in every folder with a `.slipbox/`.
 - The top bar says `◈ kestrel-notes │ ⎇ main`: its git is the repository's, and you commit from the git panel as in
   kestrel.
 

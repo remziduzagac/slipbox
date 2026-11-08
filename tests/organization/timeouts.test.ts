@@ -181,6 +181,7 @@ test("Bun file-local timeout sites stay named; update this map when a file moves
     ["tests/core/workspace/mutations/refusals.test.ts", "UNIT_TIMEOUT_MS"],
     ["tests/core/workspace/mutations/rename-integration.test.ts", "UNIT_TIMEOUT_MS"],
     ["tests/core/workspace/mutations/replace-files.test.ts", "UNIT_TIMEOUT_MS"],
+    ["tests/core/workspace/mutations/scratch-places.test.ts", "UNIT_TIMEOUT_MS"],
     ["tests/core/workspace/mutations/undo.test.ts", "UNIT_TIMEOUT_MS"],
     ["tests/core/workspace/mutations/write-policy.test.ts", "UNIT_TIMEOUT_MS"],
     ["tests/core/workspace/search/index.test.ts", "UNIT_TIMEOUT_MS"],

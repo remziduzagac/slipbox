@@ -19,11 +19,12 @@ slipbox ~/notes
 To slipbox, a folder holding `.obsidian/` or `.zk/` is a vault: one collection of notes. Name any note or subfolder in
 it, and slipbox opens the whole vault, the explorer showing the subfolder you named.
 
-The explorer (`space e`) lists its notes and folders. Hidden ones aren't listed, such as `.obsidian/` itself and
-Obsidian's `.trash/`. A folder with a name tools give their output, such as `build`, `target`, `dist`, `vendor` or a
-`cache`, is listed but not indexed when it looks made by a tool: your `.gitignore` leaves it out, or no note is directly
-in it. Search doesn't find its notes then, and their links don't count. A folder of your notes with such a name, notes
-at its top, is indexed as any other ([Files](../manual/files.md#what-the-explorer-lists)).
+The explorer (`space e`) lists its notes, its folders and its other text files. Hidden ones, such as `.obsidian/` itself
+and Obsidian's `.trash/`, are listed `⊘`, never indexed, and `shift+h` hides them. A folder with a name tools give their
+output, such as `build`, `target`, `dist`, `vendor` or a `cache`, is listed but not indexed when it looks made by a
+tool: your `.gitignore` leaves it out, or no note is directly in it. Search doesn't find its notes then, and their links
+don't count. A folder of your notes with such a name, notes at its top, is indexed as any other
+([Files](../manual/files.md#what-the-explorer-lists)).
 
 To follow a link:
 

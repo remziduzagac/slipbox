@@ -347,19 +347,16 @@ export class ExplorerActions {
       case "undo_rename":
         return this.app.renaming.undo();
       case "all_files": {
-        // Every text file, or back to what files.show lists; the selection stays on its row.
+        // The other way from what files.show lists — every text file, or notes and data files — or back; the
+        // selection stays on its row.
         const at = row?.path;
-        this.app.sidebar.allFiles = !this.app.sidebar.allFiles;
+        this.app.sidebar.otherFiles = !this.app.sidebar.otherFiles;
         this.host.invalidateTree();
         const again = this.host.rows().findIndex((r) => r.path === at);
         if (again >= 0) this.app.sidebar.selected = again;
-        const shown = this.host.filesShown();
-        this.app.message(
-          "info",
-          this.app.sidebar.allFiles
-            ? "explorer: every text file"
-            : `explorer: ${shown === "notes" ? "notes" : shown === "all" ? "every text file" : "notes and data files"} (files.show)`,
-        );
+        const shown = this.host.explorerShows();
+        const what = shown === "notes" ? "notes" : shown === "all" ? "every text file" : "notes and data files";
+        this.app.message("info", `explorer: ${what}${this.app.sidebar.otherFiles ? "" : " (files.show)"}`);
         break;
       }
       case "toggle_hidden":

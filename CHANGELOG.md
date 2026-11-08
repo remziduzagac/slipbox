@@ -101,6 +101,11 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
   `o` in a peek, `ctrl+o` back): **Go**, **Stay**, or, when you were opening a note, **Peek at** it, read-only, where
   you are. With unsaved notes, their question is the only one.
 
+- The explorer lists every text file and the hidden files and folders from the start: `files.show` defaults to
+  `"all"` and `files.hidden` to `true`. `a` now switches to notes and data files alone, and back; `shift+h` hides the
+  hidden ones. `files.show = "auto"` and `files.hidden = false` give the old explorer. The switcher and replace in every
+  note list the files the explorer does, code files included. Going into a vault inside a hidden folder, such as a
+  worktree in `.claude/`, keeps the explorer where it is, that folder unfolded.
 - The top bar: `slipbox` at the left opens About slipbox, not the command palette, with a green `↑` right after it when
   an upgrade is available. The version is no longer on the bar; About slipbox shows it. Where you are moved from the
   middle to the right, next to the work and messages counts.

@@ -24,7 +24,14 @@ describe("replace in every note (25.4)", () => {
       "q4.yaml": "name: Zorvex\n",
       "q5.ts": "// Zorvex\n",
     });
-    const h = await harness({ root, open: "q1.md", width: 160, height: 40 });
+    // Notes and data files listed, not code, as files.show = "renderable" lists them.
+    const h = await harness({
+      root,
+      open: "q1.md",
+      width: 160,
+      height: 40,
+      config: (c) => (c.files.show = "renderable"),
+    });
     h.app.graph.build(true);
     await h.keys("ctrl+shift+h");
     expect(label(h)).toBe("replace in every note — find");

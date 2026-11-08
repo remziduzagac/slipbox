@@ -260,8 +260,9 @@ export const SLOW_DISK: Check[] = [
     covers: { cases: ["explorer"], commands: [] },
     options: {
       startAt: "home/notes/index.md",
-      // A busy name: the listing would look into it for a note, as the explorer's marks do.
+      // A busy name: the listing would look into it for a note, as the explorer's marks do. Hidden names not listed.
       env: { SLIPBOX_SLOW_DISK: ".cache:4000" },
+      config: "[files]\nhidden = false\n",
       setup: (s) => smallHome(s, { "~/mixed/a.md": "# A\n", "~/mixed/.cache/c.md": "# C\n" }),
     },
     run: async (s) => {
@@ -323,6 +324,8 @@ export const SLOW_DISK: Check[] = [
     options: {
       startAt: "home/notes/index.md",
       env: { SLIPBOX_SLOW_DISK: `${SLOW}:8000` },
+      // Hidden names not listed until shift+h.
+      config: "[files]\nhidden = false\n",
       setup: (s) => smallHome(s, { "~/aaa/.ha.md": "# Hidden A\n", "~/zzz/.hz.md": "# Hidden Z\n" }),
     },
     run: async (s) => {
