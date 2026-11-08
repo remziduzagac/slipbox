@@ -4,6 +4,9 @@ import { onto } from "../support/outside-and-code.ts";
 import { tab } from "../support/vaults.ts";
 import { SHARE, TS_CONFIG } from "./language-servers.ts";
 
+/** The reference set's tracking note for Kestrel 2.3: links into kestrel's repository, and notes linking to it. */
+const KESTREL_23 = "home/notes/projects/kestrel-v2-3.md";
+
 /** The preview's title in its frame's top border, `┌─ <place> ─`: its row and column, or null while it isn't drawn. */
 function previewTitle(s: Session, place: RegExp): { row: number; col: number } | null {
   const frame = new RegExp(`┌─ ${place.source} ─`);
@@ -64,37 +67,39 @@ export const LISTS_OF_PLACES: Check[] = [
       cases: ["lists-prompts", "switcher", "search", "vault-find"],
       commands: ["switcher.open", "search.open", "find.vault", "backlinks.open", "links.open"],
     },
-    options: { open: "projects/dome-refit.md", size: { cols: 120, rows: 40 } },
+    options: { home: true, startAt: KESTREL_23, size: { cols: 120, rows: 40 } },
     run: async (s) => {
+      await opened(s, "projects/kestrel-v2-3.md");
       for (const wide of [true, false]) {
         if (!wide) await s.resize(80, 40);
         await s.keys("ctrl+p");
-        await s.type("operations handbook");
-        await previewed(s, /handbook\/operations-handbook\.md/, wide);
+        await s.type("route sharing");
+        await previewed(s, /projects\/route-sharing\.md/, wide);
         await s.keys("escape");
         await leader(s, "f", "s");
-        await s.type("dome shutter");
-        await previewed(s, /projects\/dome-refit\.md:\d+/, wide);
+        await s.type("operation log");
+        await previewed(s, /[\w/.-]+\.md:\d+/, wide);
         await s.keys("escape");
         // Read off the keys: its match's line, in the preview's window as in the note.
         await s.keys("ctrl+shift+f");
-        await s.type("jammed twice");
+        await s.type("which is why this note answers");
         await s.keys("enter");
-        await previewed(s, /projects\/dome-refit\.md:14/, wide);
+        await previewed(s, /projects\/kestrel-v2-3\.md:28/, wide);
         await s.keys("escape");
         await leader(s, "l", "b");
-        await previewed(s, /home\.md:12/, wide);
+        await previewed(s, /[\w/.-]+\.md:\d+/, wide);
         await s.keys("escape");
+        // The first link leads into kestrel's repository: another vault's file, read through its graph.
         await leader(s, "l", "l");
-        await previewed(s, /logs\/observing-log-2026\.md/, wide);
+        await previewed(s, /kestrel › docs\/release-notes\/2\.3\.md/, wide);
         await s.keys("escape");
       }
       // ctrl+t hides it, for the next list too; `ctrl+t show` clicked shows it again.
       await s.resize(120, 40);
       await leader(s, "l", "b");
-      await previewed(s, /home\.md:12/, true);
+      await previewed(s, /[\w/.-]+\.md:\d+/, true);
       await s.keys("ctrl+t");
-      await s.until(() => !previewTitle(s, /home\.md:12/), 3000, "ctrl+t: the preview hidden");
+      await s.until(() => !previewTitle(s, /[\w/.-]+\.md:\d+/), 3000, "ctrl+t: the preview hidden");
       await s.see("ctrl+t show");
       await s.keys("escape", "ctrl+p");
       await s.see("ctrl+t show");
@@ -111,8 +116,9 @@ export const LISTS_OF_PLACES: Check[] = [
       cases: ["lists-prompts", "switcher", "tabs"],
       commands: ["list.open_where", "list.resume", "switcher.open"],
     },
-    options: { size: { cols: 120, rows: 40 } },
+    options: { home: true, startAt: KESTREL_23, size: { cols: 120, rows: 40 } },
     run: async (s) => {
+      await opened(s, "projects/kestrel-v2-3.md");
       const where = async (query: string, asked: string, key: string) => {
         await s.keys("ctrl+p");
         await s.type(query);
@@ -122,39 +128,39 @@ export const LISTS_OF_PLACES: Check[] = [
         await s.keys(key);
         await s.notSee(`Open ${asked} where?`);
       };
-      await where("dome refit", "projects/dome-refit.md", "h");
-      await opened(s, "projects/dome-refit.md");
+      await where("route sharing", "projects/route-sharing.md", "h");
+      await opened(s, "projects/route-sharing.md");
       // The split's two windows, their headers side by side.
-      const split = () => s.rowOf(/projects\/dome-refit.*handbook\/writing-gu/) >= 0;
+      const split = () => s.rowOf(/projects\/route-shar.*projects\/sync-rew/) >= 0;
       s.expect(!split(), "here: one window still");
-      await where("writing guide", "handbook/writing-guide.md", "s");
-      await s.until(split, 3000, "s: the split, the guide in it");
-      await opened(s, "handbook/writing-guide.md");
+      await where("sync rewrite", "projects/sync-rewrite.md", "s");
+      await s.until(split, 3000, "s: the split, the sync rewrite in it");
+      await opened(s, "projects/sync-rewrite.md");
       // Narrower, the same: a new tab.
       await s.resize(80, 40);
-      await where("survey variable", "projects/variable-star-survey.md", "t");
-      await s.see(tab(2, "variable-star-survey.md"));
+      await where("q4 okrs", "projects/q4-okrs.md", "t");
+      await s.see(tab(2, "q4-okrs.md"));
       // esc goes back to the list; space ' brings the last one back as it was, its query kept.
       await s.keys("ctrl+p");
-      await s.type("kenji");
-      await s.see("│ people/kenji-mori.md");
+      await s.type("priya nair");
+      await s.see("│ people/priya-nair.md");
       await s.keys("alt+enter");
-      await s.see("Open people/kenji-mori.md where?");
+      await s.see("Open people/priya-nair.md where?");
       await s.keys("escape");
-      await s.see("│ people/kenji-mori.md");
+      await s.see("│ people/priya-nair.md");
       await s.keys("escape");
-      await s.notSee("│ people/kenji-mori.md");
+      await s.notSee("│ people/priya-nair.md");
       await leader(s, "'");
-      await s.see(/› kenji/);
-      await s.see("│ people/kenji-mori.md");
+      await s.see(/› priya nair/);
+      await s.see("│ people/priya-nair.md");
       await s.keys("escape");
       // From the palette, for a terminal that keeps alt+enter: the last list's pick, asked where.
       await s.keys(":");
       await s.type("Open the pick where");
       await s.keys("enter");
-      await s.see("Open people/kenji-mori.md where?");
+      await s.see("Open people/priya-nair.md where?");
       await s.keys("t");
-      await s.see(tab(3, "kenji-mori.md"));
+      await s.see(tab(3, "priya-nair.md"));
     },
   },
   {
