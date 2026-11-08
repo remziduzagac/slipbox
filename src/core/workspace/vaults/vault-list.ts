@@ -34,6 +34,7 @@ export function knownVaults(): VaultEntry[] {
     groups.set(key, group);
   }
   const blocks: { at: string; rows: VaultEntry[] }[] = [];
+  // biome-ignore lint/complexity/useMathMinMax: ISO times, compared as strings
   const recent = (group: typeof roots) => group.reduce((last, root) => (root.seen > last ? root.seen : last), "");
   for (const [main, group] of [...groups].sort((a, b) => recent(b[1]).localeCompare(recent(a[1])))) {
     const rows: VaultEntry[] = [];

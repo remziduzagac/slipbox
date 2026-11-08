@@ -148,7 +148,7 @@ export class Files {
    * the nested root). One in a busy folder (`build/`…), which nothing indexes, is refused.
    */
   createNote(input: string, base: string | null): { rel: string; created: boolean; open: string } | null {
-    if (base === null) return this.refuseOtherRoot(), null;
+    if (base === null) return (this.refuseOtherRoot(), null);
     let rel = this.newPath(input, base);
     if (!rel) return null;
     rel = newNoteName(rel);
@@ -558,7 +558,7 @@ export class Files {
 
   /** Create a folder (`shift+n` in the explorer, `space d n`, `:mkdir`): selected in the explorer. */
   createFolder(input: string, base: string | null): string | null {
-    if (base === null) return this.refuseOtherRoot(), null;
+    if (base === null) return (this.refuseOtherRoot(), null);
     const rel = this.newPath(input, base);
     if (!rel) return null;
     const abs = join(this.app.loc.root, rel);

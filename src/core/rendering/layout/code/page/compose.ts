@@ -209,7 +209,7 @@ export function layoutCode(source: string, base: Layout, model: CodeModel | null
         section: false,
         depth: c.def.depth,
         text: c.title,
-        row: first > header ? first : header,
+        row: Math.max(first, header),
         src: c.from,
       });
     };

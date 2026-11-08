@@ -91,8 +91,8 @@ export function snippetKey(app: App, view: View, key: string): boolean {
   const s = app.snippet;
   if (!s || s.view !== view) return false;
   // `esc` leaves insert, which ends it (stopInsert).
-  if (key === "tab") return go(app, s, s.at + 1), true;
-  if (key === "shift+tab") return go(app, s, Math.max(0, s.at - 1)), true;
+  if (key === "tab") return (go(app, s, s.at + 1), true);
+  if (key === "shift+tab") return (go(app, s, Math.max(0, s.at - 1)), true);
   if (!s.fresh) return false;
   const [a, b] = s.stops[s.at]!.ranges[0]!;
   const typed = keyChar(key);

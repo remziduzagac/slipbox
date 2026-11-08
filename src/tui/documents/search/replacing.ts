@@ -121,7 +121,7 @@ export async function refresh(app: App, o: PromptOverlay, view: View): Promise<v
   const at = E.offsetOf(app, view);
   const i = list.findIndex((m) => m.to > at);
   r.total = list.length;
-  r.current = list.length ? (i < 0 ? 0 : i) : 0;
+  r.current = list.length ? Math.max(i, 0) : 0;
   const f = view.findOpts ?? { regex: false, whole: false };
   view.find = o.text
     ? computeFind(app.currentLayout(view), o.text, view.find?.current ?? 0, f.whole, f.regex, false, view)
@@ -342,7 +342,7 @@ async function nextConfirm(app: App, o: PromptOverlay, view: View): Promise<bool
   // Case as the pattern has it (:s…/i ignores it), so the highlights are the matches it asks about.
   const f = computeFind(app.currentLayout(view), o.text, 0, false, true, c.re.flags.includes("i"), view);
   const i = f.matches.findIndex((m) => m.row > view.cur.row || (m.row === view.cur.row && m.col >= view.cur.col));
-  f.current = i < 0 ? 0 : i;
+  f.current = Math.max(i, 0);
   view.find = f;
   return true;
 }
