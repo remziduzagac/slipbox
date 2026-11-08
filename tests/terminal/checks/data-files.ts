@@ -160,7 +160,7 @@ export const DATA_FILES: Check[] = [
       s.expect(!s.text().includes("doesn't parse"), "no parse error said");
       await s.see(/target\s+ES2022/);
       await s.see(/strict\s+true/);
-      // A 3,248-line lock file: G at its end at once.
+      // A 3,246-line lock file: G at its end at once.
       await edit(s, "package-lock.json");
       await s.status(/READ/);
       await moveTo(s, ["G"], (l) => l > 3200, "G to the lock file's end");

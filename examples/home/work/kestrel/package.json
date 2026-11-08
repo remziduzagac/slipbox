@@ -30,7 +30,7 @@
     "react-dom": "^18.3.1",
     "react-router": "^6.27.0",
     "ulid": "^2.3.0",
-    "zod": "^3.23.8",
+    "zod": "^4.6.6",
     "zustand": "^4.5.5"
   },
   "devDependencies": {
