@@ -1,11 +1,15 @@
 #!/usr/bin/env bun
-// The dependencies' known vulnerabilities (greenrepo DEP-04), run by `bun run audit`: `bun audit`, which reads
-// bun.lock and asks npm's advisory database, every package in it (the dev tools too: they run here and in CI).
-// `.github/workflows/audit.yml` runs it weekly and when bun.lock changes; it is never part of `bun run check`, so a
+// The dependencies' known vulnerabilities (greenrepo DEP-04), run by `bun run audit`: `bun audit`, which reads a
+// bun.lock and asks npm's advisory database, every package in it (the dev tools too: they run here and in CI) — the
+// repository's, then the docs' site's (`site/bun.lock`, its own install). `.github/workflows/audit.yml` runs it weekly
+// and when either lockfile changes; it is never part of `bun run check`, so a
 // new advisory doesn't fail unrelated work. An advisory looked at and accepted is listed below, with why and the date
 // to look at it again: past that date it counts again, and the run fails until it's fixed or looked at anew.
 
 import { resolve } from "node:path";
+
+/** The folders whose bun.lock is audited: the repository's, and the docs' site's, an install of its own. */
+export const AUDITED = [".", "site"] as const;
 
 /** Advisories accepted, by package: their ids (GHSA), why, and the date to look again (YYYY-MM-DD). */
 export interface Accepted {
@@ -116,10 +120,15 @@ if (import.meta.main) {
     process.stderr.write(
       `audit: ${e.package}'s advisories were to be looked at again by ${e.until}: they count again\n`,
     );
-  const r = Bun.spawnSync([process.execPath, "audit", ...args], {
-    cwd: resolve(import.meta.dir, ".."),
-    stdout: "inherit",
-    stderr: "inherit",
-  });
-  process.exit(r.exitCode ?? 1);
+  let code = 0;
+  for (const dir of AUDITED) {
+    process.stdout.write(`audit: ${dir === "." ? "" : `${dir}/`}bun.lock\n`);
+    const r = Bun.spawnSync([process.execPath, "audit", ...args], {
+      cwd: resolve(import.meta.dir, "..", dir),
+      stdout: "inherit",
+      stderr: "inherit",
+    });
+    if (r.exitCode !== 0) code = r.exitCode ?? 1;
+  }
+  process.exit(code);
 }

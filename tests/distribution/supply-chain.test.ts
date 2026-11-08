@@ -3,7 +3,7 @@ import { describe, expect, setDefaultTimeout, test } from "bun:test";
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { ACCEPTED, type Accepted, acceptedProblems, ignoreArgs } from "../../scripts/audit.ts";
+import { ACCEPTED, AUDITED, type Accepted, acceptedProblems, ignoreArgs } from "../../scripts/audit.ts";
 import {
   bunfigProblems,
   checkDeps,
@@ -654,6 +654,19 @@ describe("the dependencies' advisories (GR-D9)", () => {
     advisories,
     why: "not reached",
     until,
+  });
+
+  test("every bun.lock the repository tracks is audited, the docs' site's too, and a change to one runs the audit", () => {
+    const tracked = Bun.spawnSync(["git", "ls-files", "--", "bun.lock", "*/bun.lock"], { cwd: ROOT })
+      .stdout.toString()
+      .split("\n")
+      .filter((f) => f && !f.startsWith("examples/"));
+    expect(tracked.sort()).toEqual(AUDITED.map((d) => (d === "." ? "bun.lock" : `${d}/bun.lock`)).sort());
+    const audit = Bun.YAML.parse(readFileSync(join(ROOT, ".github", "workflows", "audit.yml"), "utf8")) as {
+      on: { pull_request: { paths: string[] }; push: { paths: string[] } };
+    };
+    for (const paths of [audit.on.pull_request.paths, audit.on.push.paths])
+      expect(paths).toEqual(expect.arrayContaining(tracked));
   });
 
   test("an advisory accepted counts again after its date: its --ignore dropped, and said", () => {
