@@ -936,9 +936,10 @@ keys.
   the view zoomed out from, or where you went when it zoomed out by itself — kept while the view is on their way. Too
   long for the pane, the trail gives way first (from its end, its first folder cut short, kept while four columns are
   left), then the folders above the view, from the start, to `…`. A click on a folder of it zooms the view there
-  (`xcrumb:<path>`). **Zooming** on purpose (`zoomTo`): `z` (`zoom_in`) on a folder or vault, a file's folder on a file;
-  `-` (`zoom_out`, nvim-tree's and oil's key for the parent) a folder up, the folder left unfolded and selected; nothing
-  above `/`, said. **By itself** (`zoomToHold`), only outward: going somewhere outside the view — a note opened,
+  (`xcrumb:<path>`); on `…`, to the nearest folder given way, so each click goes a folder higher (#104). **Zooming**
+  on purpose (`zoomTo`): `z` (`zoom_in`) on a folder or vault, a file's folder on a file; `-` (`zoom_out`,
+  nvim-tree's and oil's key for the parent) a folder up, the folder left unfolded and selected; nothing above `/`,
+  said. **By itself** (`zoomToHold`), only outward: going somewhere outside the view — a note opened,
   followed to, gone back or forward to, revealed (`space shift+e`), a folder link followed, a vault gone into — zooms
   the view out to the common parent of the view and the place, only their two paths unfolded (what was unfolded in the
   old view kept, every other folder folded), the trail at the place. Not for what the tree doesn't list (a hidden

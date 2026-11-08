@@ -177,7 +177,7 @@ export function drawTree(app: App, c: Canvas, list: Rect, bg: Color | null, geo:
 /**
  * The breadcrumb over the explorer (VV-D5): the folders down to the view, `~` for home, each a click away — the
  * vault open highlighted, a vault by its icon, the view bold — then, dimmed, those past the view it can zoom back
- * into. Too long, the folders at its start give way to `…`.
+ * into. Too long, the folders at its start give way to `…`, a click on it zooming out to the nearest of them.
  */
 export function drawCrumbs(
   app: App,
@@ -219,7 +219,14 @@ export function drawCrumbs(
     cx += n;
     return n;
   };
-  if (from) put(g.ellipsis + between, dim);
+  if (from) {
+    // The folders given way: `…` zooms out to the nearest of them, as that folder would.
+    const id = `xcrumb:${list[from - 1]!.cr.abs}`;
+    const at = cx;
+    const n = put(g.ellipsis, app.mouse.hover === id ? roleStyle(theme, "hover", bg) : dim);
+    if (n > 0) geo.hot.push({ id, x: at, y, w: n, h: 1 });
+    put(between, dim);
+  }
   list.slice(from).forEach(({ cr, text }, i) => {
     if (i) put(between, dim);
     const id = `xcrumb:${cr.abs}`;
