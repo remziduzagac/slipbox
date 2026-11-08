@@ -134,6 +134,9 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 
 ### Fixed
 
+- The explorer's breadcrumb: a click on `…`, where the first folders fold when they don't fit, zooms out to the
+  nearest of them, as a click on that folder would. It did nothing.
+
 - A selection captured in a rendered note goes to the scratch as the file has it (`- item`), not as drawn (`• item`).
   Code captured from a code file is highlighted in the scratch. Code blocks show in floating windows such as the
   scratch, whose background matched theirs.

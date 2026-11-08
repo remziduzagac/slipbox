@@ -149,6 +149,45 @@ describe("the explorer's view (VV-D5)", () => {
     }
   });
 
+  test("too long, its first folders fold into …: a click on it zooms out to the nearest of them, a folder higher each time (#104)", async () => {
+    const P = place();
+    const deep = join(P, "notes", "sub", "alpha-folder", "beta-folder");
+    mkdirSync(deep, { recursive: true });
+    const before = process.env.HOME;
+    process.env.HOME = P;
+    try {
+      const h = await harness({ root: join(P, "notes"), open: null, folder: deep });
+      /** The breadcrumb's `…`, clickable: the folder it zooms to. */
+      const fold = () => {
+        const row = crumbRow(h);
+        const list = h.app.geometry!.sidebar!;
+        const x = list.x + [...row].indexOf("…");
+        return h.app.geometry!.hot.find((r) => r.y === list.y - 1 && r.x === x)?.id;
+      };
+      const N = join(P, "notes");
+      // Only the view fits after it; the folders above it, down to alpha-folder, given way.
+      expect(crumbRow(h).trim()).toBe("… › beta-folder ›");
+      expect(fold()).toBe(`xcrumb:${join(N, "sub", "alpha-folder")}`);
+      // Hovered, it lights up as a folder of the breadcrumb does.
+      const hot = h.app.geometry!.hot.find((r) => r.id === fold())!;
+      h.app.mouse.handle({ type: "move", x: hot.x, y: hot.y, button: 0 });
+      expect(h.canvas().styles[hot.y]![hot.x]!.fg).toBe(h.app.theme.roles.hover.fg!);
+      // Each click a folder higher, the trail dimmed past the view, until the whole way down fits.
+      clickCrumb(h, join(N, "sub", "alpha-folder"));
+      expect(h.app.explorer.top).toBe(join(N, "sub", "alpha-folder"));
+      expect(crumbRow(h).trim()).toBe("… › alpha-folder › beta-fold…");
+      expect(fold()).toBe(`xcrumb:${join(N, "sub")}`);
+      clickCrumb(h, join(N, "sub"));
+      expect(crumbRow(h).trim()).toBe("… › sub › alpha-folder");
+      expect(fold()).toBe(`xcrumb:${N}`);
+      clickCrumb(h, N);
+      expect(h.app.explorer.top).toBe(N);
+      expect(crumbRow(h).trim()).toBe("~ › ◈ notes › sub");
+    } finally {
+      process.env.HOME = before;
+    }
+  });
+
   test("- past the vault: it highlighted, its tree under it; l unfolds another vault in place, enter goes into it (VV-D4)", async () => {
     const P = place();
     const h = await harness({ root: join(P, "notes"), open: "a.md", config: (c) => (c.files.show = "auto") });

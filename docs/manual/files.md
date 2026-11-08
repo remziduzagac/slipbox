@@ -83,6 +83,8 @@ Above the tree, a breadcrumb says where the zoom is:
 - `~` is your home folder. With the zoom outside it, the breadcrumb starts at `/`, and your home folder has its name.
 - A vault has its icon. The vault you are in is highlighted.
 - A click on a folder in it zooms the zoom to that folder.
+- When the folders don't all fit, the first ones fold into `…`. A click on it zooms out to the nearest of them, and
+  each further click goes a folder higher.
 
 You zoom in and out yourself:
 
