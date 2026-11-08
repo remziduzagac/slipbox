@@ -74,6 +74,12 @@ export const MOTION_SPECS: CommandSpec[] = [
     desc: "Asks for a line number and goes there (:42 does too)",
   },
   {
+    id: "cursor.jump",
+    title: "Jump to a label",
+    cli: I,
+    desc: "Labels every word and link the windows show; typing a label moves the cursor there, esc leaves it",
+  },
+  {
     id: "scroll.center",
     title: "Cursor's line to the middle",
     cli: I,

@@ -95,7 +95,8 @@ export async function operatorKey(app: App, view: View, key: string): Promise<vo
     s.searchOp = { op: o.op, from: E.offsetOf(app, view) };
     return app.run(spec);
   }
-  if (!spec?.startsWith("cursor.") && spec !== "find.next" && spec !== "find.prev")
+  // Jump labels aren't a motion (EG-D3): `d g w` (and `d s`, `s` being the reading keys') does nothing, said so.
+  if (spec === "cursor.jump" || (!spec?.startsWith("cursor.") && spec !== "find.next" && spec !== "find.prev"))
     return app.message("info", `${o.op} doesn't take ${seq}`);
   // G and gg with a count go to that line (d3G), not that many times to the end.
   if ((spec === "cursor.bottom" || spec === "cursor.top") && given) {

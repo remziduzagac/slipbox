@@ -48,6 +48,9 @@ split and `ctrl+enter` for a new tab, or the split alone.
 
 ## EG-D3: Jump labels (2026-11-08)
 
+> **Amended by EG-D24 (2026-11-08):** a word start is labelled only when its word has two word characters or more;
+> each CJK character and every link still are; punctuation, a letter alone and an icon aren't.
+
 **Decision:** One command labels every visible word start and link, in both windows of a split; typing a label moves
 the cursor there, and `enter` on a link then follows it. `s` while reading, where it's free, and `g w` there and in
 SOURCE view, where `s` stays vim's substitute.
@@ -346,3 +349,18 @@ for it.
 
 **Not chosen:** dropping code's editing by syntax (its text objects, jumps and growing, and the call hierarchy) as an
 IDE's, and several selections (EG-D14), the costliest: both offered, both kept.
+
+## EG-D24: Jump labels on words of two letters or more (2026-11-08)
+
+> Amends EG-D3, whose targets were every visible word start.
+
+**Decision:** A jump label goes on a word start only when the word has two word characters or more (letters, digits,
+`_`, marks: `cursor.ts`'s word class), as Helix's `g w` does. Each CJK character, a word of its own, still gets one, and
+so does every link, however short. Punctuation runs, a letter alone, and glyphs such as a heading's icon or an emoji get
+none.
+
+**Why:** With every word start labelled, punctuation and icons included, a split of an ordinary note held about 700
+targets: more than 676, the two-letter labels there are, so no label was a single letter and the farthest went without.
+The places left are the ones a jump is for.
+
+**Not chosen:** every word start, punctuation runs, letters alone and icons included, as first built.

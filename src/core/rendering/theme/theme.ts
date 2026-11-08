@@ -228,6 +228,8 @@ export function themeFromPalette(
     selection: { bg: p.surface2 },
     // The bracket matching the one at the cursor, and that one (25.3).
     bracket_match: { fg: p.fg_strong, bg: p.surface2, bold: true },
+    // A jump label (EG-D3): the page's colour on the accent, bold, over the text it labels.
+    jump_label: { fg: p.bg, bg: p.magenta, bold: true },
     error: { fg: p.red, bold: true },
     warn: { fg: p.yellow },
     info: { fg: p.cyan },
@@ -321,6 +323,7 @@ export function terminalTheme(): Theme {
     highlight: { fg: a(0), bg: a(3) },
     status: { fg: a(7) },
     link_focus: { fg: a(0), bg: a(6) },
+    jump_label: { fg: a(0), bg: a(5), bold: true },
     cursor: { fg: a(0), bg: a(15) },
     cursor_line: { bg: a(0) },
     which_key_key: { fg: a(3), bg: a(0), bold: true },
@@ -375,6 +378,7 @@ export function monoTheme(): Theme {
   roles.status_accent = { bold: true };
   roles.selection = { underline: true };
   roles.bracket_match = { bold: true, underline: true };
+  roles.jump_label = { bold: true, inverse: true };
   roles.cursor = { inverse: true };
   roles.cursor_line = {};
   roles.hover = { inverse: true };

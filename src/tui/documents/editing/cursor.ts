@@ -151,10 +151,26 @@ export function bottom(layout: Layout): Pos {
 
 type Kind = 0 | 1 | 2 | 3; // 0 blank, 1 word, 2 punctuation, 3 wide (each its own word)
 
+const WORD_CHARS = /^[\p{L}\p{N}_\p{M}]+$/u; // letters, digits, `_` and marks
+
 function kind(c: Cell): Kind {
   if (/^\s$/.test(c.g)) return 0;
   if (c.w === 2) return 3;
-  return /^[\p{L}\p{N}_\p{M}]+$/u.test(c.g) ? 1 : 2;
+  return WORD_CHARS.test(c.g) ? 1 : 2;
+}
+
+/**
+ * The columns where a row's words of two word characters or more start (a run of class 1: letters, digits, `_`, marks),
+ * and each wide letter's (a CJK character, a word of its own): the jump labels' targets (EG-D3, EG-D24). Punctuation, a
+ * one-letter word, an icon or an emoji gets none.
+ */
+export function longWordStarts(line: Line | undefined): number[] {
+  const cs = cells(line);
+  const word = (i: number) => i >= 0 && i < cs.length && kind(cs[i]!) === 1;
+  return cs.flatMap((c, i) => {
+    if (kind(c) === 3) return WORD_CHARS.test(c.g) ? [c.x] : [];
+    return word(i) && !word(i - 1) && word(i + 1) ? [c.x] : [];
+  });
 }
 
 interface Stop {

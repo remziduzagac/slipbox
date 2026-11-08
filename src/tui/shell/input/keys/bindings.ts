@@ -164,6 +164,9 @@ export const DEFAULT_KEYS: Record<string, string> = {
   "z l": "picture.scroll_right",
   "ctrl+g": "cursor.goto_line",
   "leader f l": "cursor.goto_line",
+  // Jump labels (EG-D3): `s` while reading, where it's free; `g w` there and in SOURCE view, where `s` substitutes.
+  s: "cursor.jump",
+  "g w": "cursor.jump",
   // moving lines (VS Code's alt+up/down are the heading jumps here; JetBrains' keys, then)
   "alt+shift+up": "edit.move_line_up",
   "alt+shift+down": "edit.move_line_down",

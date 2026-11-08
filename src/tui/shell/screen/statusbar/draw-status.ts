@@ -33,9 +33,9 @@ export function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void
         ` ${vim.op ? `${vim.op.count > 1 ? vim.op.count : ""}${vim.op.op}${vim.count}${vim.op.object ?? ""}${vim.op.keys.map((k) => keyChar(k) ?? k).join("")}` : vim.awaitChar ? (vim.awaitKey ?? "r") : vim.count} `
       : app.panels.resizeMode
         ? " RESIZE "
-        : view?.visual === "char"
+        : view?.visual === "char" && !app.labels.shown // labels in visual mode: JUMP beside VISUAL, as below
           ? " VISUAL "
-          : view?.visual === "line"
+          : view?.visual === "line" && !app.labels.shown
             ? " V-LINE "
             : app.region === "sidebar"
               ? app.leftView === "git"
@@ -51,7 +51,9 @@ export function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void
                       : " OUTLINE "
                   : view?.insert
                     ? " INSERT "
-                    : " NORMAL ";
+                    : app.labels.shown // jump labels showing (EG-D3): the keys are theirs
+                      ? " JUMP "
+                      : " NORMAL ";
   let x = 0;
   let label = view ? (view.source ? " SOURCE " : view.live ? ` READ${app.glyphs.lensJoin}LENS ` : " READ ") : "";
   let mode = view?.insert ? " INSERT " : view?.visual === "line" ? " V-LINE " : view?.visual ? " VISUAL " : " NORMAL ";

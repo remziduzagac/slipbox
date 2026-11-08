@@ -66,6 +66,9 @@ export class Mouse {
     this.at = { x: ev.x, y: ev.y };
     // A wheel spun (12.7): pictures held back from its first tick until it rests.
     if (ev.type === "scroll") this.app.pictures.wheelAt = this.app.now();
+    // A press or a wheel puts the jump labels away (EG-D3): the keys after it are the screen's again, and no label
+    // stays on for a row scrolled out of sight.
+    if (ev.type === "down" || ev.type === "scroll") this.app.labels.shown = null;
     // A big note still parsing (15.1): a click or a scroll would land on its placeholder.
     if (this.app.views.parses.size) return;
     this.handleNow(ev);

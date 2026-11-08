@@ -98,7 +98,7 @@ import { Renaming } from "../../workspace/explorer/renaming.ts";
 import { Speller } from "../../documents/diagnostics/spelling.ts";
 import { Following } from "../../documents/navigation/following.ts";
 import { Updates } from "../distribution/updates.ts";
-
+import { JumpLabels } from "../../documents/navigation/labels.ts";
 import type { Level, Message } from "../notifications/contracts.ts";
 export type { Level, Message } from "../notifications/contracts.ts";
 
@@ -251,6 +251,7 @@ export class App {
   readonly info = new Info(this);
   /** Links under the cursor, and links inserted. */
   readonly linking = new Linking(this);
+  readonly labels = new JumpLabels(this); // jump labels (EG-D3): the targets labelled, the keys typed to them
   /** The explorer: its tree, its view and breadcrumb, its keys. */
   readonly explorer = new Explorer(this);
   /** Each window's history, the notes read lately, and the history view. */
