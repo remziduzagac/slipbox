@@ -656,7 +656,8 @@ A server's or a linter's problems are for the text they were found in. So typing
   sign is on the row the line starts on. After it comes how many problems there are, when more than one (`+` past
   nine).
 - **Marks**: the problem's own text is underlined in its severity's colour.
-- **The status line** counts them by severity: `✖ 1  ⚠ 3  ℹ 2`.
+- **The status line** counts them by severity: `✖ 1  ⚠ 3  ℹ 2`. With the cursor on a problem, it also says what's
+  wrong ([Going from one problem to the next](#going-from-one-problem-to-the-next)).
 - **A code cell's header** counts its own, as its `⚠ n` button.
 
 The bar's signs are these:
@@ -691,6 +692,32 @@ A link that reaches nothing, or several notes, keeps its own colour whatever the
 
 A click on a sign or a coloured line number opens the Problems panel at that problem. A click on the status line's
 count opens it on the file's problems, or on the vault's when the file has none.
+
+### Going from one problem to the next
+
+`] d` goes to the file's next problem and `[ d` to the one before, round from the last to the first. They visit the
+problems that show: those at `diagnostics.severity` and up, without the lint findings the Problems panel hides.
+`ctrl+o` comes back.
+
+In SOURCE view and the code view, the cursor lands on the problem's first character. In a note drawn as a page, it
+lands on the link a link's problem is about, and on the problem's line for the others.
+
+With the cursor on a problem, the status line says what's wrong, in its severity's colour:
+`⚠ broken link: images/slit.png`. Where several problems meet, the worst comes first, then how many others: `+1`. On
+a link with a problem, the problem comes first, then the link. When the line is short, the word count and the tab
+count give way first, then the link, and then the problem's words are cut short.
+
+`space c d` shows every problem at the cursor in full: each one's severity, what found it, where it is, and its whole
+message. In that window:
+
+| Key | Does |
+| --- | --- |
+| `y` | Copies them, a line each: `notes/coffee.md:12:5 warning: broken link: images/slit.png (slipbox unresolved)` |
+| `s` | Adds each to [the scratch](editing.md#the-scratch), its place and its message |
+| `esc`, `q` | Close it |
+
+**Copy the problem** and **Add the problem to the scratch**, from the command palette, do the same for the problems at
+the cursor.
 
 ### The Problems panel
 

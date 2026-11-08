@@ -276,6 +276,37 @@ export const MOTION_SPECS: CommandSpec[] = [
     desc: "The language servers' fixes and refactorings for the cursor's line, to pick from",
   },
   { id: "lsp.format", title: "Format the file", cli: I, desc: "As its language server formats it: one undo step" },
+  // Problems where they are (EG-D5): stepped through in the file, the cursor's in full.
+  {
+    id: "problem.next",
+    title: "Next problem",
+    cli: I,
+    desc: "Moves the cursor to the next problem shown in the file, around its end",
+  },
+  {
+    id: "problem.prev",
+    title: "Previous problem",
+    cli: I,
+    desc: "Moves the cursor to the problem shown before it, around the file's start",
+  },
+  {
+    id: "problem.show",
+    title: "The problem at the cursor, in full",
+    cli: I,
+    desc: "Each problem at the cursor in a floating window: its whole message, who found it, its place",
+  },
+  {
+    id: "problem.copy",
+    title: "Copy the problem",
+    cli: I,
+    desc: "In the problem window: copies each as path:line:col severity: message (who)",
+  },
+  {
+    id: "problem.scratch",
+    title: "Add the problem to the scratch",
+    cli: I,
+    desc: "In the problem window: adds each to the scratch for an agent, its place and its message",
+  },
   { id: "change.prev", title: "Older change", cli: I, desc: "Goes to where the note was changed before (vim's g;)" },
   { id: "change.next", title: "Newer change", cli: I, desc: "Goes to where the note was changed after (vim's g,)" },
   {

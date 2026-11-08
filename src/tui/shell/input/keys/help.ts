@@ -303,7 +303,7 @@ export const DEFAULT_GROUPS: Record<string, string> = {
   "leader u": "ui: theme, icons, width, zen, toggles",
   "leader s": "scratch: collect references for agents",
   "leader k": "cell: fold, edit, copy, references, problems, scratch — the code view's cell at the cursor",
-  "leader c": "code: rename, actions, format — the language server's",
+  "leader c": "code: rename, actions, format — the language server's; the problem at the cursor (d)",
   "leader n": "note: new, rename, move, delete, copy, cut, source, the lens, save, edit elsewhere, reload, info",
   "leader d": "folder: new, rename, move, delete, copy, cut, paste — the explorer's selected one, or this note's",
   "leader v":
@@ -314,8 +314,8 @@ export const DEFAULT_GROUPS: Record<string, string> = {
   "ctrl+t": "tabs: open, switch, reorder, close",
   g: "go: top (g), definition (d), type (y), implementations (I), references (r), link (f x), tabs (t T), changes (; ,), last insert (i)",
   z: "scroll: the cursor's line to the middle (z), top (t), bottom (b); a picture: its own size (p), sideways (h l); spelling: suggestions (=), add the word (g); fold the cell (a)",
-  "[": "previous: heading ([), link (l), misspelt word (s), change (c), note of this type (t)",
-  "]": "next: heading (]), link (l), misspelt word (s), change (c), note of this type (t)",
+  "[": "previous: heading ([), link (l), misspelt word (s), change (c), note of this type (t), problem (d)",
+  "]": "next: heading (]), link (l), misspelt word (s), change (c), note of this type (t), problem (d)",
 };
 
 /** A group's value is "name" or "name: explanation". */

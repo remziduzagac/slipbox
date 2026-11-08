@@ -47,8 +47,8 @@
   check covers each at 120 and 80 columns.
 - **Jump labels** (EG-T2): `s` while reading and `g w` in SOURCE view label the words and links of both windows of a
   split; a label typed moves the cursor and focuses its window; `esc` leaves it as it was.
-- **Problems** (EG-T3): on the reference set, `] d` and `] e` visit a file's problems and errors in order, around the
-  ends; the status line says the cursor's; `space c d`'s `y` copies it and `s` puts it in the scratch.
+- **Problems** (EG-T3): on the reference set, `] d` and `[ d` visit a file's problems in order, around the ends; the
+  status line says the cursor's; `space c d`'s `y` copies it and `s` puts it in the scratch.
 - **Git** (EG-T4, EG-T12): `space g g` opens the panel; from a note, `space g s` stages the change at the cursor and
   `space g d` reverts it after asking; the panel lists a branch's commits since its base, a commit's files and a
   file's change; `:log` too; `space g y` copies a GitHub and a GitLab line link; `space g b` shows the blame column,

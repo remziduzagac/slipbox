@@ -427,8 +427,11 @@ The status line describes the file in the focused window. From the left:
 
 At the right end:
 
+- **The problem under the cursor**, what it says, in its severity's colour: `⚠ broken link: images/slit.png`. When
+  more than one is there, the worst comes first, then how many others (`+1`). See
+  [Going from one problem to the next](code.md#going-from-one-problem-to-the-next).
 - **The link under the cursor**, in a note drawn as a page, and whether it reaches anything. For example:
-  `→ ideas/coffee.md (resolved)`.
+  `→ ideas/coffee.md (resolved)`. On a link with a problem, the problem comes first.
 - **The note's words**. While you select, it counts the selection's words instead (`12 words selected`). Front matter
   isn't counted. Each Chinese or Japanese character counts as a word.
 - **`tab 2/3`**, when there's more than one tab.
@@ -436,6 +439,8 @@ At the right end:
   far down the window is (`all` when the whole note fits).
 
 When the line is short, the word count goes first, then the link, then the tab count. The position always stays.
+With the cursor on a problem, the word count and the tab count go first, then the link, and then the problem's words
+are cut short. The problem count stays.
 The top bar keeps where you are visible while the status line makes room for the file.
 
 ## Messages and questions
@@ -549,6 +554,7 @@ The same pause is how long a key waits before it runs, when it is both a command
 Some things show in a floating window over the note, framed, near the top of the content:
 
 - what's under the cursor (`shift+k`): a link's destination in a note, or a language server's description in code
+- the problems at the cursor, in full (`space c d`), where `y` copies them and `s` adds them to the scratch
 - who last changed the cursor's line (Who changed this line, in the git panel's This file or the palette)
 - a change shown as a diff (Preview the change, in the palette)
 - a file as it was in an older commit (This file's history), or as it is on another branch when a link leads there

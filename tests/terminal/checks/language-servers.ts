@@ -181,4 +181,31 @@ export const LANGUAGE_SERVERS: Check[] = [
       await problemListed(s, "Type 'number' is not assignable to type 'string'", 15000);
     },
   },
+  {
+    area: "outside-and-code",
+    name: "language servers: ] d onto the server's error, round to it again; the status line says it; space c d, y copies it",
+    covers: { cases: ["lsp", "problems"], commands: ["problem.next", "problem.prev", "problem.show", "problem.copy"] },
+    options: { home: true, startAt: SHARE, config: TS_CONFIG },
+    run: async (s) => {
+      await s.status(signed("{error} 1"), 15000);
+      // From the top: onto the error's first character, `"3600"` on line 35.
+      await s.keys("g", "g", "]", "d");
+      await s.status(/L35:\d+/);
+      await s.status(signed("{error} Type 'string' is not assignable to type 'number'"));
+      await s.see(/ttlSeconds: "3600"/);
+      const at = /L35:(\d+)/.exec(s.statusLine())![1]!;
+      // The only one: round to it again, both ways.
+      await s.keys("g", "g", "[", "d");
+      await s.status(`L35:${at}`);
+      await leader(s, "c", "d");
+      await s.see(/problem at \S*share\.ts:35\b/);
+      await s.keys("y");
+      const line = new RegExp(
+        `^\\S*share\\.ts:35:${at} error: Type 'string' is not assignable to type 'number'\\.? \\(\\S+.*\\)$`,
+      );
+      await s.until(() => line.test(s.clipboard()), 3000, `the clipboard to hold ${line}`);
+      await s.keys("escape");
+      await s.notSee(/problem at \S*share\.ts:35\b/);
+    },
+  },
 ];

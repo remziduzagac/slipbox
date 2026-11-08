@@ -83,7 +83,7 @@ export const CHECKS_FOR: [RegExp, string[]][] = [
   [/^src\/core\/documents\/servers\//, ["language servers", "lint", "problems"]],
   [/^src\/core\/documents\/diagnostics\/lint\.ts$/, ["lint", "problems"]],
   [
-    /^src\/tui\/(?:actions\/documents\/actions-lsp|documents\/diagnostics\/(?:problems(?:\/(?:contracts|rows))?|draw-problems))\.ts$/,
+    /^src\/tui\/(?:actions\/documents\/actions-(?:lsp|problems)|documents\/diagnostics\/(?:problems(?:\/(?:contracts|rows|at-cursor))?|draw-problems))\.ts$/,
     ["language servers", "lint", "problems"],
   ],
   // Spelling, off unless asked for.

@@ -12,6 +12,10 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
   the list, read-only, its match marked; under the list on a narrow screen. `ctrl+t` hides it. `alt+enter` opens the
   pick here, in the split or in a new tab, and `space '` brings the last of these lists back as you left it.
 
+- `] d` and `[ d` go to a file's next and previous problem. With the cursor on one, the status line says what's
+  wrong, in its severity's colour. `space c d` shows the problems at the cursor in full: `y` copies them, `s` adds
+  them to the scratch.
+
 - The explorer dims what's outside the vault you are in: nothing there is changed from it. A theme role of its own,
   `sidebar_outside`, sets its colour.
 

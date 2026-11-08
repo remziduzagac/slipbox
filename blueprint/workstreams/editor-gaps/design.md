@@ -54,9 +54,12 @@ Previously: a tab contains one or two views (`app/runtime/contracts.ts` `Tab`: `
 ## MODIFIED design/tui.md § Screen layout (plan `3.1`)
 
 - **The status line** (EG-D5): with the cursor on a problem shown in the file (§ Problems where they are), its right
-  side says the problem's message — the worst at the cursor, `+n` when more are there — in its severity's colour,
-  sanitized and cut to the room left; the words count and `tab N/M` give way to it first. The counts stay as they are.
-  **Open:** its place against the link under the cursor, on a link that has a problem.
+  side says the problem's message — the worst at the cursor, its severity's sign first, `+n` when more are there — in
+  its severity's colour, sanitized, on one line and cut to the room left (dropped under 16 columns); the words count
+  and `tab N/M` give way to it first, then the link, then the explorer row's reason. The counts stay as they are, their
+  room kept: the `● watching` marker gives way before them. On a link that has a problem (the rendered view's: SOURCE
+  view and the lens name no link), the message comes first and the link after it, the link giving way before the
+  message (settled in EG-T3).
 - **The window header** (EG-D21): a zoomed window's header says `zoomed` after its name (`drawWindowHeader`); the status
   line and the top bar stay. **Open:** where it's said with no header (turned off, zen, a window under 8 rows).
 
@@ -378,16 +381,21 @@ file); completion, snippets and signature help while typing; no hints, uses or c
 Adds (EG-D5; `problems/at-cursor.ts`, reading the file's problems as the Problems panel's This file lists them):
 
 - **Jumps:** `] d` / `[ d` (`problem.next`, `problem.prev`) go to the next or previous problem shown in the file — at
-  `[diagnostics] severity` and up, the lint surface's filters applied — by where it starts, around the ends; `] e` /
-  `[ e` (`problem.error_next`, `problem.error_prev`) errors only. SOURCE view and the lens land on its column, the
-  rendered view as a link to a line lands.
-- **On the status line:** the cursor on a problem — inside its range in SOURCE view and the lens, on the text its line
-  became in the rendered view — puts its message there (§ Screen layout).
+  `[diagnostics] severity` and up, the lint surface's filters applied — by where it starts, around the ends. SOURCE
+  view, the lens and a code file's lines land on its first character (one past its line's end, on the line's last);
+  the rendered view on a link's problem's link as drawn, any other's where its line's text starts (a line drawn as
+  nothing: the next row drawn, where the bar shows it). Problems that land in one place are one stop.
+- **On the status line:** the cursor on a problem — inside its range in SOURCE view and the lens (a character at least,
+  as it's marked); in the rendered view, on a link's problem's link as drawn, else on the text its lines became (a
+  line drawn as nothing: the next row drawn) — puts its message there (§ Screen layout).
 - **In full** (`problem.show`, `space c d`): a floating window, read-only as the hover's, with each problem at the
   cursor: its severity, its whole message, who found it (`slipbox unresolved`, `markdownlint MD013`, a server and its
-  code) and its place. Its own keys (`DEFAULT_PROBLEM_KEYS`, as a peek has its own): `y` (`problem.copy`) copies it as
-  `path:line:col severity: message (who)`, `s` (`problem.scratch`) adds it to the scratch without opening it
-  (`Scratch.add`, as the review's note: its place on `**At:**`, its message fenced); `esc` and `q` close it.
+  code) and its place. Its own keys (`DEFAULT_PROBLEM_KEYS`, as a peek has its own): `y` (`problem.copy`) copies each,
+  a line each, as `path:line:col severity: message (who)`, the message on one line; `s` (`problem.scratch`) adds each
+  to the scratch without opening it (`Scratch.add`, as the review's note: its place on `**At:**`, its columns first to
+  last, then `severity: message (who)` fenced as `text`, a fence the scratch's places never compare with the file, as
+  they never compare a review's `diff`); `esc` and `q` close it. From the palette, out of the window, `y`'s and `s`'s
+  commands take the cursor's problems.
 
 Previously: a file's problems show in the bar, as marks, and as counts on the status line; what one says is the
 Problems panel's, whose `j` / `k` move the note through them; no key goes to the next one.
@@ -472,7 +480,7 @@ Labels come in the dispatch order right after a key awaited as a character. The 
 
 | Keymap | Keys |
 | --- | --- |
-| normal | `s`, `g w`; `] d` `[ d` `] e` `[ e`; `] x` `[ x`; `] q` `[ q`; `] r` `[ r` |
+| normal | `s`, `g w`; `] d` `[ d`; `] x` `[ x`; `] q` `[ q`; `] r` `[ r` |
 | normal | `] f` `[ f` `] a` `[ a` `] o` `[ o`; `m`, `` ` ``, `'`; `ctrl+^`; `ctrl+w z` |
 | normal | `z c`, `z o`, `z shift+m`, `z shift+r`; `z a` now `fold.toggle` |
 | leader | `space '`, `space p`, ``space ` ``; `space c d` `i` `o`; `space f x`; `space h m` `u` |

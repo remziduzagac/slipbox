@@ -82,7 +82,9 @@ export function drawFloating(app: App, c: Canvas, mainY: number, mainH: number, 
                   ? " esc ends the review "
                   : f.kind === "merge"
                     ? ` esc ${f.merge.prompt ? "goes back to the question" : "closes, what's settled kept"} `
-                    : ` esc · q closes, writing back · ctrl+s writes `;
+                    : f.kind === "problem"
+                      ? " y copies · s adds to the scratch · esc · q closes "
+                      : ` esc · q closes, writing back · ctrl+s writes `;
   const bottom = `${b.bl}${b.h.repeat(Math.max(0, w - 2 - stringWidth(hint)))}`;
   drawText(c, x, y + h - 1, bottom, border);
   drawText(c, x + stringWidth(bottom), y + h - 1, truncate(hint, w - stringWidth(bottom) - 1) + b.br, dim);

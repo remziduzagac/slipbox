@@ -22,6 +22,7 @@ import { findActions } from "./documents/actions-find.ts";
 import { paneActions } from "./shell/actions-panes.ts";
 import { fileActions } from "./workspace/actions-files.ts";
 import { lspActions } from "./documents/actions-lsp.ts";
+import { problemActions } from "./documents/actions-problems.ts";
 
 export type Run = Command<App>["run"];
 
@@ -117,6 +118,7 @@ export function registerActions(app: App): void {
     ...paneActions(),
     ...fileActions(),
     ...lspActions(),
+    ...problemActions(),
     "app.escape": (a) => {
       cancelGitRead(a);
       const v = a.view;
