@@ -238,6 +238,8 @@ sidebar_vault = { bold = true, underline = true }
 "leader ; 0 i" = "vault.switch_save"
 "leader ; 0 j" = "vault.switch_discard"
 "leader ; 0 k" = "vault.switch_stay"
+"leader ; 0 r" = "vault.switch_go"
+"leader ; 0 s" = "vault.switch_peek"
 "ctrl+j" = "cursor.down"
 "alt+down" = "window.focus_down"
 "ctrl+alt+h" = "history.back"

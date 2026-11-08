@@ -1,6 +1,7 @@
-// Vault switch choices with unsaved notes, and the destination list.
+// Vault switch choices with unsaved notes, the question going into another vault asks, and the destination list.
 
 import { type Check, leader } from "../check.ts";
+import { PEEK_HINT } from "../support/links.ts";
 
 export const VAULTS: Check[] = [
   {
@@ -39,6 +40,33 @@ export const VAULTS: Check[] = [
       await s.keys("s");
       await s.status("index.md");
       s.expect(s.read("~/work/kestrel/README.md").includes("saved "), "save all wrote before switching");
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "going into another vault asks first (D270): Stay keeps you here, Peek reads its note here, Go goes",
+    covers: { cases: ["vault"], commands: ["vault.switch_go", "vault.switch_peek"] },
+    options: { home: true, startAt: "home/notes/index.md" },
+    run: async (s) => {
+      await s.status("index.md");
+      const ask = async () => {
+        await s.ex(`e ${s.path("~/work/kestrel/README.md")}`);
+        await s.see("Go into kestrel? Your tabs there replace these");
+        await s.see("Peek at README.md: read it here, read-only");
+      };
+      await ask();
+      await s.keys("c");
+      await s.notSee("Go into kestrel?");
+      await s.where(/^notes(?: │|$)/, /index\.md/);
+      await ask();
+      await s.keys("p");
+      await s.see(PEEK_HINT, 5000);
+      await s.see("kestrel › README.md");
+      await s.where(/^notes(?: │|$)/);
+      await s.keys("escape");
+      await ask();
+      await s.keys("g");
+      await s.where(/^kestrel(?: │|$)/, /README\.md/, 5000);
     },
   },
 ];
