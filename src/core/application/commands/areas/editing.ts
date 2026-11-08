@@ -132,6 +132,31 @@ export const EDITING_SPECS: CommandSpec[] = [
     cli: I,
     desc: "This line (a count: that many) commented, or uncommented when it is, as gcc; ctrl+/ in insert mode too",
   },
+  // Reflow (EG-D12): a note's paragraphs wrapped to a width, or joined back to one line each.
+  {
+    id: "edit.op_reflow",
+    title: "Reflow (operator)",
+    cli: I,
+    desc: "The paragraphs the next motion touches wrapped to the width, at spaces: gqip, gqq; markers, quotes, hard breaks and links kept",
+  },
+  {
+    id: "edit.op_unwrap",
+    title: "Unwrap (operator)",
+    cli: I,
+    desc: "Each paragraph the next motion touches joined back to one line: g shift+q ip; hard breaks kept",
+  },
+  {
+    id: "edit.reflow",
+    title: "Reflow paragraphs",
+    cli: I,
+    desc: ":reflow [width] — the selection's paragraphs, else the cursor's, wrapped to the width: editor.text_width, else markdownlint's MD013, .editorconfig, 80",
+  },
+  {
+    id: "edit.unwrap",
+    title: "Unwrap paragraphs",
+    cli: I,
+    desc: ":unwrap — the selection's paragraphs, else the cursor's, each joined back to one line",
+  },
   {
     id: "edit.delete_to_end",
     title: "Delete to the line's end",
@@ -213,6 +238,18 @@ export const EDITING_SPECS: CommandSpec[] = [
     title: "Comment or uncomment the selection",
     cli: I,
     desc: "The selected lines commented, or uncommented when they all are (source mode): gc, ctrl+/",
+  },
+  {
+    id: "visual.reflow",
+    title: "Reflow the selection",
+    cli: I,
+    desc: "The paragraphs the selection touches wrapped to the width (source mode): g q",
+  },
+  {
+    id: "visual.unwrap",
+    title: "Unwrap the selection",
+    cli: I,
+    desc: "Each paragraph the selection touches joined back to one line (source mode): g shift+q",
   },
   { id: "edit.undo", title: "Undo", cli: I, desc: "Undoes the last change (a whole insert session is one)" },
   { id: "edit.redo", title: "Redo", cli: I, desc: "Redoes what undo undid" },

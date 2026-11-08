@@ -167,6 +167,8 @@ edit_in = "lens"               # where i, a, o… take a rendered window: lens |
 lens_min_rows = 6              # 1–200: the lens takes in the blocks around the cursor up to at least this many rows…
 lens_max = 0.5                 # 0.1–1: …and stops at this share of the window
 auto_pairs = false             # typing ( [ { " ' or ` puts its closing pair after the cursor
+text_width = 0                 # 0–1000: g q wraps a note's paragraphs to this; 0, the folder's markdownlint
+                               # line_length, else .editorconfig's max_line_length, else 80 (see Editing)
 remote = ["nvim"]              # space n s: an editor already running, to send the note to; "nvim" finds the
                                # running nvims (space n p picks); else commands, run in order; your file only
 

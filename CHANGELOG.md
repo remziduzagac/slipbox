@@ -36,6 +36,12 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
   two letters or more and every link the windows of the tab show. Typing one moves the cursor there and focuses its
   window; `esc` puts them away. A theme role of its own, `jump_label`, sets their colour.
 
+- `g q` wraps a note's paragraphs to a width, and `g shift+q` joins each back to one line: `g q i p`, `g q q`, or on a
+  selection. List markers, quotes and hard breaks are kept, a link or code span is never broken, and headings, tables,
+  code and front matter are left alone. The width is `editor.text_width`, else your markdownlint config's `MD013`
+  `line_length`, else `.editorconfig`'s `max_line_length`, else 80. `:reflow [width]` and `:unwrap` do the same at
+  the `:` prompt, with a range before them (`:%reflow`, `:'<,'>reflow`).
+
 - Markdown document HTML now renders with scoped formatting, aligned images, theme-aware picture alternatives,
   headings and collapsible details. Image permissions still apply. Noninteractive output expands details; Markdown
   exports preserve original HTML except omitted non-document content.

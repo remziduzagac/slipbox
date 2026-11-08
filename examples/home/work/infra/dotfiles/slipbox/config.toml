@@ -152,6 +152,7 @@ edit_in = "live"
 lens_min_rows = 8
 lens_max = 0.4
 auto_pairs = true                # typing ( [ { " ' ` puts its closing half after the cursor
+text_width = 100                # g q wraps to 100; 0 takes markdownlint's line_length, then .editorconfig's, then 80
 remote = [                      # run in order, each after the last; the first failure stops
   "nvim --server {server} --remote {file}",
   "nvim --server {server} --remote-send '<C-\\><C-N>:{line}<CR>'",
@@ -421,6 +422,13 @@ sidebar_vault = { bold = true, underline = true }
 "leader ; h n" = "visual.comment"
 "leader ; h j" = "edit.cut"
 "leader ; h k" = "edit.paste"
+# reflow, past the letters: wrapped to a width and joined back
+"leader ; 5 a" = "edit.op_reflow"
+"leader ; 5 b" = "edit.op_unwrap"
+"leader ; 5 c" = "edit.reflow"
+"leader ; 5 d" = "edit.unwrap"
+"leader ; 5 e" = "visual.reflow"
+"leader ; 5 f" = "visual.unwrap"
 "leader ; a z" = "edit.undo"
 "leader ; a A" = "edit.redo"
 "leader ; d a" = "note.save"

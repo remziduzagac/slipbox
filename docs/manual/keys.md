@@ -574,7 +574,8 @@ These keys belong to SOURCE view and the lens. In your configuration, they are u
 | delete / change / copy what a motion or a text object covers | `d` / `c` / `y`, then the motion |
 | indent / outdent the lines it covers, a level as the file indents | `>` / `<`, then the motion |
 | comment or uncomment the lines it covers, as the language writes comments | `g c`, then the motion |
-| the same on whole lines (with a count first, that many) | `d d`, `c c`, `y y`, `> >`, `< <`, `g c c` |
+| wrap the paragraphs it touches to the width / join each back to one line | `g q` / `g shift+q`, then the motion |
+| the same on whole lines (with a count first, that many) | `d d`, `c c`, `y y`, `> >`, `< <`, `g c c`, `g q q` |
 | comment or uncomment the line | `ctrl+/` |
 | delete / change to the line's end | `shift+d` / `shift+c` |
 | delete the character under the cursor | `x` |
@@ -618,6 +619,7 @@ they are under [`[keys.visual]`](configuration.md).
 | delete it and type in its place | `c` |
 | indent / outdent its lines | `>` / `<` |
 | comment or uncomment its lines | `g c`, `ctrl+/` |
+| wrap its paragraphs to the width / join each back to one line | `g q` / `g shift+q` |
 | select a text object (`v i w`, `v i (`) | `i` or `a`, then the object |
 | filter its lines through a shell command (types `:'<,'>!`) | `!` |
 
@@ -1007,6 +1009,8 @@ Your configuration's [`[aliases]`](configuration.md) adds more commands, or rena
 | `:tags` / `:tag <name>` | the tags here / a tag's notes |
 | `:types` / `:type <name>` | the document types here / a type's notes in order |
 | `:noh` | clear the find highlights |
+| `:reflow [width]`, `:%reflow` | wrap the paragraph at the cursor, or every one, to the width ([Editing](editing.md)) |
+| `:unwrap`, `:%unwrap` | join the paragraph at the cursor, or every one, back to one line |
 | `:problems` | the Problems panel's All tab |
 | `:footnotes` | show or hide the footnotes |
 | `:context` | copy the note's context for an agent |

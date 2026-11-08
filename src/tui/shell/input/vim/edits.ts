@@ -3,6 +3,7 @@ import type { App, View } from "../../../app/runtime/app.ts";
 import * as E from "../../../documents/editing/editing.ts";
 import { indentUnit } from "../../../../core/documents/editing/indent.ts";
 import { toggleComments } from "../../../../core/documents/editing/comments.ts";
+import { reflowLines } from "../../../documents/editing/reflow.ts";
 import { takeCount, type Op, type Range } from "./state.ts";
 import { firstNonBlank } from "./motions.ts";
 /** Do `op` on a range: the register gets the text; d/c take it out (c then types); y copies. */
@@ -31,6 +32,14 @@ export function apply(app: App, view: View, op: Op, r: Range): void {
       r.times ?? 1,
     );
   if (op === "gc") return commentLines(app, view, E.lineOf(view, r.from), E.lineOf(view, Math.max(r.from, r.to - 1)));
+  if (op === "gq" || op === "gQ")
+    return reflowLines(
+      app,
+      view,
+      E.lineOf(view, r.from),
+      E.lineOf(view, Math.max(r.from, r.to - 1)),
+      op === "gq" ? "wrap" : "join",
+    );
   app.vim.register = { text, linewise: r.linewise };
   // A cut is a copy too: the system clipboard gets it (vim with clipboard=unnamedplus).
   if (text) app.copy(text, false);

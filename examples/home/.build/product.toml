@@ -933,6 +933,7 @@ message = "Close out 2.3: roadmap, OKR scores, synthesis, release plan, componen
 add = [
   "README.md",
   "design/components.md",
+  "drafts/2.3-retro.md",
   "okrs/2026-q4.md",
   "prd/offline-sync.md",
   "releases/2.3-plan.md",

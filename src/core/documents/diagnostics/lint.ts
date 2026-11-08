@@ -26,7 +26,7 @@ export interface LintIssue {
 }
 
 /** The config files markdownlint-cli2 reads by itself, from where it runs. */
-const VAULT_CONFIGS = [
+export const VAULT_CONFIGS = [
   ".markdownlint-cli2.jsonc",
   ".markdownlint-cli2.yaml",
   ".markdownlint-cli2.cjs",
@@ -40,7 +40,12 @@ const VAULT_CONFIGS = [
 ];
 
 /** markdownlint-cli2's configs that are code, and the keys by which one names code it loads. */
-const CODE_CONFIGS = [".markdownlint-cli2.cjs", ".markdownlint-cli2.mjs", ".markdownlint.cjs", ".markdownlint.mjs"];
+export const CODE_CONFIGS = [
+  ".markdownlint-cli2.cjs",
+  ".markdownlint-cli2.mjs",
+  ".markdownlint.cjs",
+  ".markdownlint.mjs",
+];
 const LOADS_CODE = /["']?(customRules|markdownItPlugins|outputFormatters)["']?\s*:/;
 
 /**

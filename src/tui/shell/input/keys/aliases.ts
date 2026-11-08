@@ -44,6 +44,9 @@ export const DEFAULT_ALIASES: Record<string, string> = {
   tabpin: "tab.pin",
   tabo: "tab.close_others",
   noh: "find.clear",
+  // Reflow (EG-D12): `:reflow 72`, `:'<,'>reflow`, `:unwrap`.
+  reflow: "edit.reflow",
+  unwrap: "edit.unwrap",
   messages: "messages.open",
   report: "help.report",
   reload: "note.reload",

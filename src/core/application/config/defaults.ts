@@ -83,6 +83,7 @@ export const DEFAULT_CONFIG: Config = {
     lens_min_rows: 6,
     lens_max: 0.5,
     auto_pairs: false,
+    text_width: 0,
   },
   spell: { enabled: false, languages: ["en"], dictionaries: {} },
   watch: { enabled: true, debounce_ms: 120, poll_ms: 2000 },

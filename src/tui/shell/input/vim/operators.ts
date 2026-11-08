@@ -48,8 +48,8 @@ export async function operatorKey(app: App, view: View, key: string): Promise<vo
     o.count = count; // d2i( and 2di( both: a count before the object counts too
     return;
   }
-  // The operator doubled (dd, cc, yy, >>, <<): whole lines, count of them.
-  const opKey = { d: "d", c: "c", y: "y", ">": ">", "<": "<", gc: "c" }[o.op];
+  // The operator doubled (dd, cc, yy, >>, <<, gcc, gqq): whole lines, count of them.
+  const opKey = { d: "d", c: "c", y: "y", ">": ">", "<": "<", gc: "c", gq: "q", gQ: "shift+q" }[o.op];
   if (!o.keys.length && key === opKey) {
     s.op = null;
     const at = E.offsetOf(app, view);

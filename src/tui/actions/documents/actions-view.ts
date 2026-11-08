@@ -170,6 +170,8 @@ export function viewActions(): Record<string, Run> {
     "visual.indent": (a) => visualOp(a, ">"),
     "visual.outdent": (a) => visualOp(a, "<"),
     "visual.comment": (a) => visualOp(a, "gc"),
+    "visual.reflow": (a) => visualOp(a, "gq"),
+    "visual.unwrap": (a) => visualOp(a, "gQ"),
   };
 }
 
