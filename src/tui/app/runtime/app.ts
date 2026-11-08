@@ -1,20 +1,8 @@
 import { openInitialWindows, RECENT_MAX } from "./startup.ts";
 export { RECENT_MAX, RECENT_NOTES_MAX } from "./startup.ts";
 import type { Host, View, Tab, Overlay, SidePaneState, UiState, AppOptions, FloatingWindow } from "./contracts.ts";
-export type {
-  Host,
-  Loc,
-  Selection,
-  FindState,
-  View,
-  Tab,
-  PromptOverlay,
-  Overlay,
-  SidePaneState,
-  UiState,
-  AppOptions,
-  Region,
-} from "./contracts.ts";
+export type { Host, Loc, Selection, FindState, View, Tab, PromptOverlay } from "./contracts.ts";
+export type { Overlay, SidePaneState, UiState, AppOptions, Region } from "./contracts.ts";
 import { uiDefaults } from "../settings/ui-state.ts";
 export { uiDefaults } from "../settings/ui-state.ts";
 export { lockedSaid, fileUnwritable } from "../../documents/buffers/opening.ts";
@@ -88,6 +76,8 @@ import { Panels, type LeftView, type RightView, type Region } from "../../shell/
 import { Footnotes } from "../../documents/tools/footnotes/footnotes.ts";
 import { Properties } from "../../documents/tools/info/properties.ts";
 import { Overlays } from "../../shell/overlays/overlays.ts";
+import { ListPreview } from "../../shell/overlays/preview.ts";
+import { Places } from "../../shell/overlays/places.ts";
 import { Problems } from "../../documents/diagnostics/problems.ts";
 import { Info } from "../../documents/tools/info/info.ts";
 import { Linking } from "../../documents/navigation/linking.ts";
@@ -252,6 +242,9 @@ export class App {
   readonly properties = new Properties(this);
   /** Lists, prompts, dialogs, and the floating window's closing. */
   readonly overlays = new Overlays(this);
+  /** The lists of places (EG-D2): the selected row's place previewed; the last list again, and where a pick opens. */
+  readonly preview = new ListPreview(this);
+  readonly places = new Places(this);
   /** The Problems panel and the problems marked in the text. */
   readonly problems = new Problems(this);
   /** The Info view. */

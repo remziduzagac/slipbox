@@ -113,6 +113,11 @@ export const CHECKS_FOR: [RegExp, string[]][] = [
   [/^src\/tui\/workspace\/explorer\/renaming\.ts$/, ["rename", "naming"]],
   // Features of a window or a command of their own.
   [/^src\/tui\/shell\/overlays\/palette\.ts$/, ["palette", "help", "which-key"]],
+  // The lists of places: their preview, its hit marked, where a pick opens, the last list again (EG-D2).
+  [
+    /^src\/tui\/(shell\/overlays\/(places|preview|drawing\/lists\/preview)|actions\/documents\/links\/places|documents\/views\/drawing\/marks\/hit)\.ts$/,
+    ["lists-of-places"],
+  ],
   // Upgrading and restarting (UPG): the update offer, its dialog, the restart's note and hand-over.
   [
     /^src\/(core\/application\/distribution\/(update|updates\/discovery|restart|skill-lifecycle)|tui\/(app\/distribution\/updates|shell\/overlays\/dialog))\.ts$/,

@@ -94,6 +94,8 @@ export class Overlays {
     input?: string;
     fold?: (item: ListItem, open: boolean) => boolean;
     widen?: () => void;
+    /** A list of places (EG-D2), of this kind: its rows' places previewed, `space '` opens it again. */
+    places?: string;
   }): void {
     const o: ListOverlay = {
       kind: "list",
@@ -118,11 +120,13 @@ export class Overlays {
       menu: opts.menu,
       fold: opts.fold,
       widen: opts.widen,
+      places: opts.places,
     };
     refilter(o);
     if (opts.selected !== undefined)
       o.selected = selectable(o, Math.max(0, Math.min(opts.selected, o.filtered.length - 1)), 1);
     this.app.overlay = o;
+    if (o.places) this.app.places.opened(o);
   }
 
   /**
@@ -266,6 +270,9 @@ export class Overlays {
       return;
     }
     if (o.key?.(key, o.filtered[o.selected]?.item)) return;
+    // A list of places (EG-D2): ctrl+t hides or shows the preview, alt+enter asks where the pick opens.
+    if (o.places && key === "ctrl+t") return this.app.preview.toggle();
+    if (o.places && key === "alt+enter") return void this.app.run("list.open_where");
     // A tree (the folder picker): ← folds, → unfolds; the selection stays on its item.
     if (o.fold && (key === "left" || key === "right")) {
       const cur = o.filtered[o.selected]?.item;

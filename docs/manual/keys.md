@@ -482,6 +482,7 @@ The properties editor floats over the windows with the note's front matter. Open
 | replace in every note and file, after a preview | `ctrl+shift+h` | `space f shift+r` |
 | search: notes ranked by your words as you type | | `space f s` |
 | the quick switcher: a note by its name, or a symbol after `#` | `ctrl+p` | `space f f` |
+| the last list of places again, as you left it | | `space '` |
 | a heading of this note | | `space f o` |
 | the headings the cursor is under, as a dropdown | | `space f b` |
 | the tags here, then a tag's notes | | `space f t` |
@@ -1050,8 +1051,14 @@ The switcher, the palette, help, pickers and menus share these keys:
 | an entry's key | in a menu, pick that entry (`shift+r` and `r` differ) |
 | `left` / `right` | in a tree of folders, fold / unfold |
 | `ctrl+a` | in search, more folders: those linked with this one, then every vault, then this one again |
+| `ctrl+t` | in a list of places, hide or show the preview (a click on `ctrl+t hide` in its bottom border too) |
+| `alt+enter` | in a list of places, ask where the pick opens: `h` here, `s` in the split, `t` in a new tab |
 
 Pasting puts the first line of the text in the list's filter or the prompt.
+
+The switcher, search, find in every note, references, backlinks and links are lists of places
+([Finding things](finding.md#lists-of-places)). Where a terminal keeps `alt+enter` for itself, close the list and run
+"Open the pick where…" from the palette: it asks about the last list's pick.
 
 A prompt is one line to type, such as a new note's name. It takes:
 

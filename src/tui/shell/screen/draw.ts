@@ -223,7 +223,7 @@ export function drawApp(app: App, c: Canvas): Geometry {
         ? drawMenu(app, c, o, o.anchor, mainY, mainY + mainH)
         : o.anchor
           ? drawDropdown(app, c, o, o.anchor, mainY + mainH)
-          : drawList(app, c, o, mainY, mainH);
+          : drawList(app, c, o, mainY, mainH, geo);
   }
   if (app.overlay?.kind === "saveas") geo.saveas = drawSaveAs(app, c, app.overlay, mainY, mainH, geo);
   if (app.overlay?.kind === "dialog") geo.choices = drawChoiceDialog(app, c, app.overlay, mainY, mainH);

@@ -1,6 +1,18 @@
 // Shared picker and menu state.
 import type { Role } from "../../../core/rendering/theme/theme.ts";
 
+/**
+ * The place a row of a list of places carries (EG-D2): a file by its absolute path — its vault is the one holding it —
+ * a line (1-based; 0, none: its reading position, else its top), and the hit on it: UTF-16 offsets in the line, for a
+ * row with source columns, and its text, found in a rendered row (which has none).
+ */
+export interface ListPlace {
+  abs: string;
+  line: number;
+  range?: [number, number];
+  text?: string;
+}
+
 export interface ListItem {
   label: string;
   /** The label's colour (a diff's lines, a change's state), when not the list's. */
@@ -24,6 +36,8 @@ export interface ListItem {
   hotkey?: string;
   /** Shown for where the matches are (a tree's parents): the selection starts past it. */
   context?: boolean;
+  /** Its place, in a list of places (EG-D2): previewed while it's selected, opened where `alt+enter` asks. */
+  place?: ListPlace;
   data: unknown;
 }
 
@@ -63,4 +77,6 @@ export interface ListOverlay {
   fold?: (item: ListItem, open: boolean) => boolean;
   /** `ctrl+a`: widen what the list covers (search: more vaults, 20.16); `source` then gives it again. */
   widen?: () => void;
+  /** A list of places (EG-D2), by its kind (`switcher`, `search`…): its rows previewed, `space '` opens it again. */
+  places?: string;
 }

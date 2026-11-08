@@ -31,7 +31,7 @@ describe("review (tui): what a filter or a search marks, drawn where it is", () 
     const hit = list.filtered.find((e) => e.item.label.startsWith("esc.md"));
     expect(hit?.item.detail).toContain("\x1b[31m"); // its heading, as written, leads the line: drawn sanitized
     const rows = h.canvas().toString().split("\n");
-    const y = rows.findIndex((r) => r.includes("esc.md:3"));
+    const y = rows.findIndex((r) => r.includes("│ esc.md:3")); // the list's row, not the preview's title (EG-D2)
     expect(lit(h, y)).toBe("quetzal");
   });
 });

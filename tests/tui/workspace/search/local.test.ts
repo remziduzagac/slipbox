@@ -57,7 +57,7 @@ describe("search in the TUI (6.5, 6.9)", () => {
     // The words drawn as matches, the rest of the line dim.
     const c = h.canvas();
     const rows = c.toString().split("\n");
-    const y = rows.findIndex((r) => r.includes("dome.md:3"));
+    const y = rows.findIndex((r) => r.includes("│ dome.md:3")); // the list's row, not the preview's title (EG-D2)
     const at = (w: string) => c.styles[y]![rows[y]!.indexOf(w)]!.fg;
     expect(at("quetzal")).toBe(h.app.theme.roles.overlay_match.fg!);
     expect(at("replaced")).not.toBe(h.app.theme.roles.overlay_match.fg!);

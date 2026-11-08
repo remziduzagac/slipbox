@@ -17,6 +17,7 @@ Following links and backlinks, the other way to get around, is in [Links and bac
 | notes with a tag | `space f t` |
 | notes of a kind, such as decision records | `space f d` |
 | a command | `:`, `ctrl+shift+p`, `space f p`, `?` |
+| the last list of places again | `space '` |
 
 ## A note by its name: the switcher
 
@@ -293,6 +294,49 @@ Replacing is refused while a file with a match has unsaved changes, since what y
 
 From the command line, run `slipbox replace --all <old> <new>`. `--dry-run` shows the preview, and `slipbox undo` takes
 it back.
+
+## Lists of places
+
+The switcher, search, find in every note, a language server's references, backlinks and links are lists of places.
+Each row is a file, and often a line in it. They share a preview, a choice of where the pick opens, and a key that
+brings the last one back.
+
+### The preview
+
+Beside the list, slipbox shows the selected row's place: the file, read-only, at that line, with what the row found
+marked. Move through the list and the preview follows. Its title is the place, such as `ideas/coffee.md:12`.
+
+- On a screen [`ui.narrow_width`](configuration.md) columns wide (90) or more, the preview is beside the list. On a
+  narrower one, it's under the list.
+- A note you have open shows as it is now, unsaved changes and all. Another file is read from disk without holding up
+  your keys, and the preview says `reading…` until it's there.
+- `ctrl+t` hides the preview for every list of places, until you press it again or quit. A click on `ctrl+t hide` in
+  the list's bottom border does the same.
+
+The palette, menus and the history list have no preview.
+
+### Where a pick opens
+
+`enter` opens the pick as the list always has. `alt+enter` asks where instead:
+
+| Key | Opens it |
+| --- | --- |
+| `h` | here, as `enter` does |
+| `s` | in the split: the other window, or a new one beside this one |
+| `t` | in a new tab |
+
+`esc` goes back to the list. A file of another vault opens in a peek wherever you say, as a link to it does
+([Links and backlinks](links-and-vaults.md)).
+
+Some terminals keep `alt+enter` for themselves. There, close the list and run "Open the pick where…" from the palette.
+It asks about the last list's selected row.
+
+### The last list again
+
+`space '` opens the last list of places again, as you left it: what you typed, its rows and the one selected. It isn't
+searched again. A pick from links you opened again over another note still goes where its link leads.
+
+Going into another vault forgets it.
 
 ## The outline
 

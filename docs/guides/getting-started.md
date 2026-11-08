@@ -99,11 +99,11 @@ This is reading history, rather than undo. It brings you back after following a 
 ## Find a note by name
 
 Press `ctrl+p`, type `coffee`, select `ideas/coffee.md` and press `enter`. You should be in Coffee again. The
-switcher filters by path and title; you do not need to type the whole name. Search stays within this practice vault
-unless you explicitly widen it.
+switcher filters by path and title; you do not need to type the whole name. Beside the list, a preview shows the note
+selected. Search stays within this practice vault unless you explicitly widen it.
 
-![The switcher, Open note, with coffee typed and ideas/coffee.md listed beside its title,
-Coffee](../images/getting-started-switcher.png)
+![The switcher, Open note, with coffee typed and ideas/coffee.md listed beside its title, Coffee; beside the list, a
+preview of the note](../images/getting-started-switcher.png)
 
 To find a word in that note, press `ctrl+f`, type `Washed`, and press `enter`. To search the vault's files instead,
 press `space f s` and type `coffee`. `esc` leaves the results without opening one.

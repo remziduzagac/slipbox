@@ -254,6 +254,19 @@ export const EDITING_SPECS: CommandSpec[] = [
     cli: "slipbox ls",
     desc: "Opens a note by typing part of its name",
   },
+  // Lists of places (EG-D2): where a pick opens, and the last list again.
+  {
+    id: "list.open_where",
+    title: "Open the pick where…",
+    cli: I,
+    desc: "Asks where the list's selected place opens: here, in the split or in a new tab — the last list's, from the palette",
+  },
+  {
+    id: "list.resume",
+    title: "The last list again",
+    cli: I,
+    desc: "Opens the last list of places again as it was: its query, its rows, the one selected",
+  },
   {
     id: "outline.pick",
     title: "Find a heading in this note",

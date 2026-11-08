@@ -5,7 +5,7 @@ EG-T1 first; beside it, each on its own, EG-T2, EG-T3, EG-T4, EG-T5, EG-T9 and E
 EG-T11 and EG-T14; after EG-T5, EG-T6; after EG-T4, EG-T12; EG-T13 and EG-T15 any time; EG-T16 with or after the
 roadmap's Later item on windows and tabs; EG-T17 last, its keys settled first; EG-T18 at the end.
 
-- [EG-T1](lists-of-places.md): Lists of places: the preview, where a pick opens, the last list again.
+- [EG-T1](archive/lists-of-places.md): Lists of places: the preview, where a pick opens, the last list again. Done.
 - [EG-T2](jump-labels.md): Jump labels.
 - [EG-T3](problems.md): Problems where they are: jumps, the status line, the whole message.
 - [EG-T4](git-keys-and-commits.md): `space g` as a group, a branch's commits, a line's web link.

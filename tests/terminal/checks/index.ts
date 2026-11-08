@@ -29,6 +29,7 @@ import { INFO } from "./info.ts";
 import { LANGUAGE_SERVERS } from "./language-servers.ts";
 import { LEFT_OUT_LINKS_AND_FILES, LINKS } from "./links.ts";
 import { LIST_INTERACTIONS } from "./list-interactions.ts";
+import { LISTS_OF_PLACES } from "./lists-of-places.ts";
 import { MARKDOWN_BLOCKS } from "./markdown-blocks.ts";
 import { MARKDOWN_CONTENT } from "./markdown-content.ts";
 import { MARKDOWN_INLINE } from "./markdown-inline.ts";
@@ -102,6 +103,8 @@ export const CHECK_FILES: Record<string, Check[]> = {
   "terminal-input": TERMINAL_INPUT,
   appearance: APPEARANCE,
   "list-interactions": LIST_INTERACTIONS,
+  // The lists of places: the preview, where a pick opens, the last list again (EG-D2); in a file of their own.
+  "lists-of-places": LISTS_OF_PLACES,
   help: HELP,
   "index-settings": INDEX_SETTINGS,
   "which-key": WHICH_KEY,

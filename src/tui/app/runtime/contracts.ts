@@ -139,6 +139,8 @@ export interface View {
   insert?: boolean;
   /** Where the current insert began (moved by arrow keys): ctrl+u and ctrl+w stop there first. */
   insertFrom?: number;
+  /** A list's preview (EG-D2): drawn without a header, the place's hit marked; `landed`, the layout it was landed in. */
+  preview?: { line: number; range?: [number, number]; text?: string; landed?: string };
 }
 
 export interface Tab {

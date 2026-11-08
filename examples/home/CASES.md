@@ -1666,6 +1666,11 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
 - list pickers: wrap-around moves, pagedown 10, j/k only without filter, paste first line, backspace/ctrl+w, counter
   n/m, groups, footer, empty state, wheel 3 rows, clicks on border do nothing — `notes/projects/kestrel-v2-3.md`,
   `notes/reading/bookmarks.md` (Overlays, In lists and prompts)
+- lists of places (the switcher, search, find in every note, references, backlinks, links): the selected row's place
+  previewed read-only beside the list from ui.narrow_width, under it when narrower, `reading…` while a file is read;
+  ctrl+t or a click on `ctrl+t hide` hides it; alt+enter opens the pick here, in the split or in a new tab; space '
+  brings the last list back as it was — `notes/index.md`, `notes/projects/kestrel-v2-3.md` (Overlays, Lists of places;
+  tests 'lists of places')
 
 ### questions
 
@@ -3010,6 +3015,11 @@ The same notes, one per tab.
 ### switcher
 
 - `switcher.open` — Quick switcher: find a note — `notes/index.md` (catalog.ts)
+
+### list
+
+- `list.open_where` — Open the pick where… — `notes/index.md`, `notes/projects/kestrel-v2-3.md` (catalog.ts)
+- `list.resume` — The last list again — `notes/index.md`, `notes/projects/kestrel-v2-3.md` (catalog.ts)
 
 ### palette
 

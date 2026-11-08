@@ -148,13 +148,19 @@ export class Search {
       scope === "here" ? "" : scope === "linked" ? " — and the folders linked to it" : " — and every folder known";
     const HELP =
       'search here — words, "a phrase", prefix*, -not, title:word, #tag, path:folder/ — ctrl+a: more folders';
-    const item = (h: SearchHit & { shown?: string }): ListItem => {
+    const item = (h: SearchHit & { shown?: string; abs?: string }): ListItem => {
       const lead = h.heading ? `${h.heading} — ` : "";
       return {
         label: `${h.shown ?? h.path}:${h.line}`,
         detail: `${lead}${h.snippet}`,
         detailMarks: h.marks.map(([a, b]) => [a + lead.length, b + lead.length] as [number, number]),
         hint: h.more ? `+${h.more}` : undefined,
+        // Previewed at its line, its first word marked (EG-D2).
+        place: {
+          abs: h.abs ?? this.app.graph.abs(h.path),
+          line: h.line,
+          ...(h.marks[0] ? { text: h.snippet.slice(h.marks[0][0], h.marks[0][1]) } : {}),
+        },
         data: h,
       };
     };
@@ -187,6 +193,7 @@ export class Search {
       items: [],
       source,
       input: seed,
+      places: "search",
       accept: (item) => {
         const h = item.data as { path: string; line: number; column: number; abs?: string; vault?: string | null };
         // Another vault's: read in a peek, at the line (VV-D7), going there a choice.
