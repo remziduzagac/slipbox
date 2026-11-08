@@ -349,8 +349,9 @@ capitals switch to editing first. `d`, `c`, `x` or `p` do nothing there.
 | `y` | Yanks (copies) |
 | `>` and `<` | Indent and outdent |
 | `g c` | Comments out or back in |
+| `g q` and `g shift+q` | Wrap paragraphs to a width and join them back ([Reflowing](#reflowing-paragraphs)) |
 
-Doubled, an operator takes the whole line: `d d`, `c c`, `y y`, `> >`, `< <`, `g c c`.
+Doubled, an operator takes the whole line: `d d`, `c c`, `y y`, `> >`, `< <`, `g c c`, `g q q`.
 
 **Motions** are the keys that move the cursor: `w`, `b`, `e`, `0`, `^`, `$`, `j`, `k`, `g g`, `shift+g`, `{`, `}`,
 `%`, `f`, `t` and the rest. A search is one too. For example, `d`, then `/`, the text and `enter`, deletes up to the
@@ -381,6 +382,7 @@ system clipboard, as in vim with `clipboard=unnamedplus`. `p` puts what the clip
 | `y` | Copies it |
 | `>` and `<` | Indent or outdent it |
 | `g c` | Comments it |
+| `g q` and `g shift+q` | Wrap its paragraphs to a width and join them back |
 | `o` | Jumps to its other end |
 | `i` or `a` with an object | Selects that object (`v i w`) |
 | `:` | Types `'<,'>` for a command on its lines |
@@ -615,6 +617,41 @@ motion does it too.
 
 A note's comments are HTML's: `<!--` and `-->`. A code file's are its language's.
 
+## Reflowing paragraphs
+
+`g q` wraps a note's paragraphs to a width: `g q i p` the paragraph at the cursor, `g q q` the one on its line, `g q`
+on a selection those on its lines. `g shift+q` joins each paragraph back to one line, for a vault that keeps a
+paragraph a line, or text to paste where it wraps by itself. Each is one step to undo, and `.` does it again.
+
+Every paragraph the keys touch is reflowed whole, list items, tasks and quotes among them. A reflow keeps:
+
+- a list item's marker, with its other lines indented under the item's text, and a task's box on its first line
+- a quote's `>` on every line, nested ones too
+- hard breaks: a line that ends in two spaces or a backslash still ends there
+- a link, an image, a code span, inline maths and inline HTML whole: one longer than the width gets a line to itself
+- a callout's first line, its title, as it is
+
+No line it makes starts with what would begin a list, a heading, a quote or a code block, such as `-`, `1.` or `#`, nor
+ends in a backslash. Headings, tables, code blocks, HTML, maths blocks and front matter stay as they are. Lines break
+at spaces only, so a run of Chinese or Japanese stays on its line.
+
+**The width** is the first of these:
+
+1. `editor.text_width` in your configuration, unless it's 0 ([Configuration](configuration.md))
+2. markdownlint's `MD013` `line_length`, from the nearest markdownlint config between the note's folder and the
+   vault's top, else `~/.markdownlint-cli2.jsonc` where the vault has none. The config is read, never run: a `.cjs`
+   or `.mjs` one is passed over, and an `MD013` turned off goes on to the next
+3. `.editorconfig`'s `max_line_length` for the note
+4. 80
+
+The message after it says the width and where it came from.
+
+At the `:` prompt, `:reflow` and `:unwrap` do the same to the paragraph at the cursor. `:reflow 72` wraps to 72
+columns this once. A range goes first: `:%reflow` the whole note, `:'<,'>reflow` the selection's lines (`:` on a
+selection types `'<,'>` for you), `:3,20unwrap` lines 3 to 20.
+
+Reflowing is for Markdown notes. In any other file it says so and changes nothing.
+
 ## Footnotes and properties
 
 `space n shift+f` adds a footnote at the cursor, asking its text. The footnotes view (`space n f`) edits, renames and
@@ -644,6 +681,7 @@ Either way, what you changed is written into the note and saved. A note without 
 | `:source` / `:lens` | SOURCE view / the lens, on or off |
 | `:42` | Go to line 42 |
 | `:s/old/new/`, `:%s/old/new/g` | Substitute, on this line / in the whole note ([Finding things](finding.md)) |
+| `:reflow [width]`, `:unwrap` | Wrap the paragraph to a width / join it back ([Reflowing](#reflowing-paragraphs)) |
 | `:!cmd`, `:%!cmd` | Run a command / filter lines through one (next section) |
 | `:new name`, `:mkdir name` | A new note / folder ([Files](files.md)) |
 | `:rename path`, `:delete` | Rename or delete the note ([Files](files.md)) |

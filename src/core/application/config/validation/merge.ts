@@ -60,6 +60,7 @@ const RANGES: Record<string, [number, number]> = {
   "editor.lens_min_rows": [1, 200],
   "editor.lens_max": [0.1, 1],
   "editor.autosave_ms": [0, 3_600_000],
+  "editor.text_width": [0, 1000],
   "render.inset": [0, 40],
   "render.max_width": [0, 1000],
   "walk.max_file_size": [1, 1 << 30],

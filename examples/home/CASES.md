@@ -1047,6 +1047,10 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
   `notes/daily/2026-08-24.md` (Where source mode isn't vim)
 - differential vs nvim of many keystroke cases (source and lens) — `notes/projects/kestrel-v2-3.md`,
   `work/kestrel/docs/sync.md` (test '\${mode}: \${CASES.length} cases agree with nvim')
+- reflow both ways: g q ip wraps a task item, a quote and a paragraph to the product repository's MD013 120 columns,
+  each with a link and a code span kept whole, the heading and table left; g shift+q ip joins each back; V's lines, a
+  width typed (:reflow 60), :unwrap — the note is unwrapped on purpose — `work/product/drafts/2.3-retro.md`,
+  `work/product/.markdownlint-cli2.jsonc` (editing.md Reflow; terminal check 'reflow')
 
 ### yaml-frontmatter
 
@@ -2554,6 +2558,8 @@ A long note: headings, paragraphs, pages to move through; the daily note has the
   (catalog.ts)
 - `visual.comment` — Comment or uncomment the selection — `work/kestrel/src/sync/queue.ts`, `notes/inbox.md`
   (catalog.ts)
+- `visual.reflow` — Reflow the selection — `work/product/drafts/2.3-retro.md` (catalog.ts)
+- `visual.unwrap` — Unwrap the selection — `work/product/drafts/2.3-retro.md` (catalog.ts)
 
 ### app
 
@@ -2697,6 +2703,10 @@ Notes being written today: lists, tasks, tables, quotes, code to change.
   `work/kestrel/api/kestrel_api/sync.py`, `notes/inbox.md` (catalog.ts)
 - `edit.comment_line` — Comment or uncomment the line — `work/kestrel/tools/greeter/greeter.go`,
   `work/kestrel/kestrel.toml` (catalog.ts)
+- `edit.op_reflow` — Reflow (operator) — `work/product/drafts/2.3-retro.md` (catalog.ts)
+- `edit.op_unwrap` — Unwrap (operator) — `work/product/drafts/2.3-retro.md` (catalog.ts)
+- `edit.reflow` — Reflow paragraphs — `work/product/drafts/2.3-retro.md` (catalog.ts)
+- `edit.unwrap` — Unwrap paragraphs — `work/product/drafts/2.3-retro.md` (catalog.ts)
 - `edit.delete_to_end` — Delete to the line's end — `notes/daily/2026-10-06.md`, `notes/projects/kestrel-v2-3.md`,
   `notes/daily/2026-10-05.md` (catalog.ts)
 - `edit.change_to_end` — Change to the line's end — `notes/daily/2026-10-06.md`, `notes/projects/kestrel-v2-3.md`,

@@ -23,6 +23,7 @@ D235, ORG-D1), else the feature's module:
 | `shell/overlays/places.ts` | the last list of places and its hits, `space '` and `] q` (`app.places`; EG-D2, EG-D10) |
 | `documents/editing/structure.ts` | text objects, syntax jumps, growing the selection (`app.structure`; EG-D6, EG-D7) |
 | `documents/editing/surround.ts` | surround: add, delete, change, wrap on type (EG-D8) |
+| `documents/editing/reflow.ts` | reflow: a range's paragraphs wrapped or joined, `:reflow` and `:unwrap` (EG-D12) |
 | `documents/editing/selections.ts` | several selections, by view (`app.selections`; EG-D14) |
 | `documents/views/folds.ts` | each tab's folded sections (`app.folds`; EG-D11) |
 | `documents/diagnostics/problems/at-cursor.ts` | problem jumps, the cursor's problem and its window (EG-D5) |
@@ -35,8 +36,8 @@ D235, ORG-D1), else the feature's module:
 | `workspace/git/blame-column.ts` | blame for the file, as a column (`app.blameColumn`; EG-D16) |
 | `workspace/git/inline-diff.ts` | the inline diff (`app.inlineDiff`; EG-D17) |
 
-In the core, pure: `core/documents/editing/reflow.ts` (EG-D12), `core/documents/diagnostics/todos.ts` (EG-D9),
-`core/workspace/git/forge.ts` (EG-D18).
+In the core, pure: `core/documents/editing/reflow.ts` and the width's search, `core/documents/editing/reflow-width.ts`
+(EG-D12), `core/documents/diagnostics/todos.ts` (EG-D9), `core/workspace/git/forge.ts` (EG-D18).
 
 Previously: none of these; the table ends with the OpenTUI binding.
 
@@ -329,16 +330,35 @@ Adds:
 - **Wrap on type** (EG-D8): while typing, a mark typed over the selection (`typedSelection`) wraps it instead of
   replacing it, the selection kept on the text inside. **Open:** whether only with `editor.auto_pairs` on, and which
   characters (the brackets and quotes `autoPair` closes; `*`, `~`, `` ` ``).
-- **Reflow** (EG-D12; `edit.op_reflow` `g q`, `visual.reflow` visual `g q`, `edit.op_unwrap` `g shift+q`,
-  `visual.unwrap`; `:reflow [width]` `edit.reflow` and `:unwrap` `edit.unwrap`, on the selection's lines, else the
-  paragraph at the cursor): `core/documents/editing/reflow.ts`, pure, over the note's tree for the range. `g q` wraps
-  each paragraph and list item to the width at spaces, widths by `core/foundation/text/width.ts`; `g shift+q` joins
-  each back to one line. A list item's marker and its continuation's indent, a quote's `>` on every line and a hard
-  break (two spaces, `\`) are kept; a link, a wikilink and a code span are never broken (one longer than the width has
-  a line of its own); headings, tables, fenced code, HTML and the front matter are left as they are. The width:
-  `[editor] text_width` when set, else the file's markdownlint `MD013` `line_length` (the config the lint surface finds
-  for it, read as data, never one that's code: `.cjs`, `.mjs`), else `.editorconfig`'s `max_line_length` (read as
-  indentation reads it, `25.1`), else 80. One undo step, its line endings the file's.
+- **Reflow** (EG-D12; `edit.op_reflow` `g q` and `edit.op_unwrap` `g shift+q`, operators of the vim grammar (`gq`,
+  `gQ`; doubled, `g q q` and `g shift+q shift+q`), in `[keys.source]`; `visual.reflow` and `visual.unwrap`, visual `g q`
+  and `g shift+q`; `:reflow [width]` `edit.reflow` and `:unwrap` `edit.unwrap`, aliases, on a range's lines — `'<,'>`,
+  `%`, `.`, `N,M`, the palette taking a range before either name — else the selection's, else the paragraph at the
+  cursor; the TUI's `documents/editing/reflow.ts`): `core/documents/editing/reflow.ts`, pure, over the note's tree.
+  Every paragraph a range of lines touches is taken whole — at the top, in a quote, a list item or a footnote's
+  definition — and wrapped to the width, greedily, or joined to one line. Words break at ASCII spaces and tabs only, so
+  a CJK run and a no-break space stay; widths by `core/foundation/text/width.ts`. Kept: a list item's marker, its other
+  lines at the item's text column (a deeper indent already there kept), a task's box on its first line, a footnote's
+  lines after its first indented four; a quote's `>` on every line, as deep as it is; a hard break (two spaces, `\`); a
+  link, an image, a reference, a wikilink, a code span, inline maths, inline HTML, a footnote reference and an Obsidian
+  `%%` comment whole (one longer than the width has a line of its own, overflowing); a callout's first line as it is.
+  No line starts with a word that would open a block there (a list marker, `#` to `######`, `>`, a fence, `$$`, a rule
+  or setext underline, an HTML tag): the word before goes down with it, else the line overflows; nor ends in a word
+  ending in a backslash, a hard break then. Left alone: headings, tables, code, HTML blocks, maths, front matter, the
+  paragraphs of an Obsidian comment block, a paragraph with text after it on its last line. One undo step, the file's
+  line endings; the cursor on the first non-blank of the last line reflowed, as vim's `g q` leaves it. The width
+  (`core/documents/editing/reflow-width.ts`): `[editor] text_width` (0–1000; 0, unset); else the `MD013` `line_length`
+  stated in the nearest markdownlint data config from the file's folder to the vault's top (`lint.ts`'s
+  `VAULT_CONFIGS`, never a `CODE_CONFIGS` one; the rule by `MD013`, `line-length` or either in lower case, a cli2
+  config's under `config`; `MD013: false` goes on to `.editorconfig`; `extends` not followed), then
+  `~/.markdownlint-cli2.jsonc` where the vault's top has no config, as the linter runs; else `.editorconfig`'s
+  `max_line_length` for the file (`editorConfigFor`, as indentation reads it, `25.1`); else 80. A width typed after
+  `:reflow` wins for that once. The message says the width and where it came from (`MD013 in <config>`, the path from
+  the vault's top). Markdown notes only: in another file it says so. `:reflow` in a rendered window switches it to
+  editing, as a filter does. **Settled (EG-T10):** a range reflows each paragraph it touches whole; continuation
+  indents as above; a block-opening word never starts a line; inline HTML, maths, footnote references and `%%`
+  comments are whole as links are; a callout's title line kept; only a stated `line_length` counts (an `MD013` left
+  on at markdownlint's default says nothing); the palette's range before `reflow` and `unwrap`.
 - **Undo by time, and its list** (EG-D13; `edit.undo_list` `space h u`): each `UndoStep` (`NoteBuffer`) gains when it
   was made and its kind — typing, an edit, a reload from disk, a replace, a server's edit, a merge — and a save marks
   the step it saved. `space h u` lists the note's steps newest first, each its time and kind, the saves marked; `enter`

@@ -131,6 +131,7 @@ export const CHECKS_FOR: [RegExp, string[]][] = [
   [/^src\/(core\/foundation\/platform\/shell|tui\/documents\/editing\/shellrun)\.ts$/, ["shell"]],
   [/^src\/core\/documents\/editing\/tasks\.ts$/, ["tasks"]],
   [/^src\/core\/documents\/editing\/comments\.ts$/, ["comments"]],
+  [/^src\/(core\/documents\/editing\/reflow(-width)?|tui\/documents\/editing\/reflow)\.ts$/, ["reflow"]],
   [/^src\/core\/documents\/model\/data\.ts$/, ["data"]],
   // The command line's commands, and the agents' skill it installs: main.ts loads them with the TUI, which never calls
   // them — but `upgrade` (install.ts), which Upgrade, restart later runs beside it (UPG).

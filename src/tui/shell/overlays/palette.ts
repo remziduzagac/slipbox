@@ -73,7 +73,18 @@ const FREE_ARG = new Set([
   "folder.name",
   "shell.run",
   "shell.filter",
+  "edit.reflow",
 ]);
+
+/** Commands a line range may come before, as `:'<,'>reflow` (EG-D12): the range is given them first in their argument. */
+const RANGED = new Set(["edit.reflow", "edit.unwrap"]);
+
+/** `:'<,'>reflow 72`, `:%unwrap`: a range, then an alias of a command that takes one, then the rest; null otherwise. */
+function ranged(a: App, input: string): { alias: string; spec: string; arg: string } | null {
+  const m = /^\s*('<,'>|%|\.|\d+\s*,\s*\d+)\s*([^\s\d'%.,][^\s]*)(?:\s+(.*))?$/.exec(input);
+  const spec = m ? a.aliases[m[2]!] : undefined;
+  return m && spec && RANGED.has(spec) ? { alias: m[2]!, spec, arg: `${m[1]} ${m[3]?.trim() ?? ""}`.trim() } : null;
+}
 
 /** Commands in the order of core/application/commands/catalog.ts, which follows docs/manual/keys.md. */
 const SPEC_ORDER = new Map(COMMAND_SPECS.map((c, i) => [c.id, i]));
@@ -206,6 +217,14 @@ export function openPalette(a: App, typed = ""): void {
               }
             : { label: "Run in the shell", detail: bang.command, keys: ["", ":!"], data: `shell.run ${bang.command}` },
         ];
+      // A range, then a command that takes one (:'<,'>reflow): one entry, run by enter.
+      const range = ranged(a, input);
+      if (range) {
+        const title = a.registry.get(range.spec)?.title ?? range.spec;
+        return [
+          { label: title, detail: input.trim(), keys: ["", `:${range.alias}`], data: `${range.spec} ${range.arg}` },
+        ];
+      }
       const m = /^(\S+)\s(.*)$/.exec(input);
       const aliasSpec = m ? a.aliases[m[1]!] : undefined;
       if (aliasSpec) {
@@ -254,6 +273,12 @@ export function openPalette(a: App, typed = ""): void {
       if (/^\s*\d+\s*$/.test(input)) {
         a.overlay = null;
         void a.run(`cursor.goto_line ${input.trim()}`).then(() => a.host.requestRender());
+        return true;
+      }
+      const range = ranged(a, input);
+      if (range) {
+        a.overlay = null;
+        runChosen(a, `${range.spec} ${range.arg}`);
         return true;
       }
       // An exact alias (optionally with an argument) wins over the matches, unless another

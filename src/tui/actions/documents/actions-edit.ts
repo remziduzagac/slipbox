@@ -10,6 +10,7 @@ import type { App, View } from "../../app/runtime/app.ts";
 import { editable } from "../../documents/editing/editable.ts";
 import { endSnippet } from "../../documents/editing/snippets.ts";
 import * as C from "../../documents/editing/cursor.ts";
+import { reflowCommand } from "../../documents/editing/reflow.ts";
 
 /** Editing: insert mode, vim's operators, the register, undo, spelling; saving, and hand-offs to an editor. */
 export function editActions(): Record<string, Run> {
@@ -80,6 +81,11 @@ export function editActions(): Record<string, Run> {
         V.commentLines(a, v, first, first + n - 1);
       }),
     "edit.op_outdent": (a) => sourceEdit(a, () => V.startOperator(a, "<")),
+    // Reflow (EG-D12): operators as g c is; :reflow [width] and :unwrap on a range, else the cursor's paragraph.
+    "edit.op_reflow": (a) => sourceEdit(a, () => V.startOperator(a, "gq")),
+    "edit.op_unwrap": (a) => sourceEdit(a, () => V.startOperator(a, "gQ")),
+    "edit.reflow": (a, arg) => reflowCommand(a, "wrap", arg),
+    "edit.unwrap": (a, arg) => reflowCommand(a, "join", arg),
     "edit.delete_to_end": (a) =>
       sourceEdit(a, (v) => {
         const r = toLineEnd(a, v, V.takeCount(a));
@@ -330,8 +336,11 @@ function selectionRange(a: App, v: View): { range: V.Range; from: number; to: nu
   return { range, from, to };
 }
 
-/** d / c / > / < on a visual selection (char or line), in source mode. */
-export function visualOp(a: App, op: "d" | "c" | ">" | "<" | "gc"): void {
+/** The keys a visual operator is repeated by (`.`), where they aren't its name. */
+const VISUAL_KEYS: Record<string, string[]> = { gc: ["g", "c"], gq: ["g", "q"], gQ: ["g", "shift+q"] };
+
+/** d / c / > / < / g c / g q / g shift+q on a visual selection (char or line), in source mode. */
+export function visualOp(a: App, op: "d" | "c" | ">" | "<" | "gc" | "gq" | "gQ"): void {
   withView(a, (v) => {
     if (!editable(v)) return a.message("info", "editing is in the lens (space n l) or source mode (ctrl+k)");
     const why = E.cannotEdit(v);
@@ -342,7 +351,7 @@ export function visualOp(a: App, op: "d" | "c" | ">" | "<" | "gc"): void {
     // For `.`: the same change on as much text, said in keys.
     const lines = E.lineOf(v, to) - E.lineOf(v, from) + 1;
     const chars = graphemes(v.buf.source.slice(r.from, r.to)).length; // as l moves: by character
-    const opKeys = op === "gc" ? ["g", "c"] : [op];
+    const opKeys = VISUAL_KEYS[op] ?? [op];
     const keys = line
       ? ["shift+v", ...Array(lines - 1).fill("j"), ...opKeys]
       : lines === 1

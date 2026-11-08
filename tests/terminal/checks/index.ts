@@ -46,6 +46,7 @@ import { PEEK } from "./peek.ts";
 import { PICTURES } from "./pictures.ts";
 import { PROBLEMS_AND_LINT } from "./problems-and-lint.ts";
 import { QUITTING } from "./quitting.ts";
+import { REFLOW } from "./reflow.ts";
 import { REPORTING } from "./reporting.ts";
 import { GIT_PANEL } from "./repositories.ts";
 import { ROOTS } from "./roots.ts";
@@ -92,6 +93,8 @@ export const CHECK_FILES: Record<string, Check[]> = {
   "code-cells": CODE_CELLS,
   samples: SAMPLES,
   editing: EDITING,
+  // Reflow (EG-D12): the editing area's, in a file of their own.
+  reflow: REFLOW,
   "new-file": NEW_FILE,
   // The screen and navigation: panes, tabs, windows, the palette, which-key, find, replace, search, tags, the
   // explorer, settings, and the terminal's own behaviour: keys as sent, pastes, the session, resizes, signals (TT-T5).

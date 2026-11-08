@@ -14,7 +14,7 @@ roadmap's Later item on windows and tabs; EG-T17 last, its keys settled first; E
 - [EG-T7](todos.md): TODOs.
 - [EG-T8](find-and-replace.md): Find in every note, and a replace with rows left out.
 - [EG-T9](folds.md): Folding a note's sections.
-- [EG-T10](reflow.md): Reflow, both ways.
+- [EG-T10](archive/reflow.md): Reflow, both ways. Done.
 - [EG-T11](undo-by-time.md): Undo by time, and its steps as a list.
 - [EG-T12](blame-and-inline-diff.md): Blame for the file, and the inline diff.
 - [EG-T13](language-servers.md): What the language servers add.

@@ -251,6 +251,11 @@ export interface Config {
     lens_max: number;
     /** Typing an opening bracket or a quote puts its closing one after the cursor (25.3); off by default. */
     auto_pairs: boolean;
+    /**
+     * The width `g q` and `:reflow` wrap a note to (EG-D12); 0: the file's markdownlint `MD013` `line_length`, else
+     * `.editorconfig`'s `max_line_length`, else 80.
+     */
+    text_width: number;
   };
   /** Spelling in notes (25.6). */
   spell: {
