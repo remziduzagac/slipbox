@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Line } from "../../../../src/core/rendering/layout/ir.ts";
-import { wordStarts } from "../../../../src/tui/documents/editing/cursor.ts";
+import { cells, longWordStarts } from "../../../../src/tui/documents/editing/cursor.ts";
 import { ALPHABET, labelsFor, nearestFirst, type Target } from "../../../../src/tui/documents/navigation/labels.ts";
 import { harness, makeSandbox, makeVault, rowStarting, rowText } from "../../../tui-harness.ts";
 
@@ -29,11 +29,14 @@ describe("jump labels: the labels and the targets", () => {
     expect(labelsFor(700).length).toBe(26 * 26);
   });
 
-  test("a row's word starts by the word motions' classes: a run of letters, of punctuation, each wide character", () => {
-    // f0 o1 o2 ,3 _4 b5 a6 r7 .8 b9 a10 z11 _12 中13 文15 _17 x18
-    expect(wordStarts(row("foo, bar.baz 中文 x"))).toEqual([0, 3, 5, 8, 9, 13, 15, 18]);
-    expect(wordStarts(row("   "))).toEqual([]);
-    expect(wordStarts(undefined)).toEqual([]);
+  test("a row's targets: words of two word characters or more, each wide letter; no punctuation, letter alone, icon or emoji", () => {
+    // f0 o1 o2 ,3 _4 a5 _6 b7 a8 r9 .10 b11 a12 z13 _14 中15 文17 _19 x20 _21 📝22 _24 a25 b26 _27 c28 _29 󰲡30 _31 é32 é33
+    // (each é an e and a combining accent: one cell, a letter and a mark)
+    const text = "foo, a bar.baz 中文 x 📝 ab_c 󰲡 éé";
+    expect(longWordStarts(row(text))).toEqual([0, 7, 11, 15, 17, 25, 32]);
+    expect(longWordStarts(row("   "))).toEqual([]);
+    expect(longWordStarts(row("a - b, c."))).toEqual([]);
+    expect(longWordStarts(undefined)).toEqual([]);
   });
 
   test("the nearest the cursor first, by distance on screen with a row as two columns; ties in reading order", () => {
@@ -80,12 +83,12 @@ const labelOf = (h: Awaited<ReturnType<typeof harness>>, view: unknown, word: st
 describe("jump labels: s and g w", () => {
   test("s labels both windows of a split; a label typed moves the cursor there and focuses its window", async () => {
     const { h, a, b } = await split();
-    await h.keys("s");
+    await h.keys("w", "s"); // the cursor from the heading's icon onto its word
     const shown = h.app.labels.shown!;
     expect(shown.targets.some((t) => t.view === a)).toBe(true);
     expect(shown.targets.some((t) => t.view === b)).toBe(true);
     // Never the cursor's own place, a word start though it is.
-    expect(wordStarts(h.app.currentLayout(b).lines[b.cur.row])).toContain(b.cur.col);
+    expect(longWordStarts(h.app.currentLayout(b).lines[b.cur.row])).toContain(b.cur.col);
     expect(shown.targets.some((t) => t.view === b && t.pos.row === b.cur.row && t.pos.col === b.cur.col)).toBe(false);
     // The link is a target of its own, its index in the layout's links.
     expect(shown.targets.some((t) => t.view === a && t.link !== undefined)).toBe(true);
@@ -219,10 +222,17 @@ describe("jump labels: s and g w", () => {
     const start = { ...b.cur };
     await h.keys("v", "s");
     expect(h.app.labels.shown!.targets.every((t) => t.view === b)).toBe(true);
+    // The status line says so, beside VISUAL, as it does beside NORMAL.
+    const status = h.frame().split("\n").at(-1)!;
+    expect(status).toContain("VISUAL");
+    expect(status).toContain("JUMP");
     await h.keys(...labelOf(h, b, "tango"));
     expect(b.visual).toBe("char");
     expect(b.sel?.anchor).toEqual(start);
     expect(b.cur).toEqual({ row: rowStarting(h, "Bravo zulu"), col: "Bravo zulu ".length });
+    expect(h.frame().split("\n").at(-1)).not.toContain("JUMP");
+    await h.keys("escape", "shift+v", "s");
+    expect(h.frame().split("\n").at(-1)).toContain("JUMP");
   });
 
   test("a mouse press puts the labels away: the next key is the note's again", async () => {
@@ -231,6 +241,46 @@ describe("jump labels: s and g w", () => {
     const pane = h.app.geometry!.panes[0]!;
     h.app.mouse.handle({ type: "down", x: pane.textX, y: pane.y, button: 0 });
     expect(h.app.labels.shown).toBeNull();
+  });
+
+  test("a wheel puts the labels away too: none left on a row scrolled out of sight", async () => {
+    const { h } = await split("zulu tango\n\n".repeat(40));
+    await h.keys("s");
+    expect(h.app.labels.shown).not.toBeNull();
+    const pane = h.app.geometry!.panes[1]!;
+    const scroll = { direction: "down" as const, delta: 1 };
+    h.app.mouse.handle({ type: "scroll", x: pane.x + 2, y: pane.y + 2, button: 0, scroll });
+    expect(h.app.labels.shown).toBeNull();
+    expect(h.frame().split("\n").at(-1)).not.toContain("JUMP");
+  });
+
+  test("only words of two letters or more, each CJK character and every link get a label (EG-D24)", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "jump-words.md"), "# Heading here\n\nA b — cd, ef. x_y 中 📝 see [a](jump-words.md).\n");
+    const h = await harness({ root, open: "jump-words.md" });
+    await h.keys("shift+g"); // the cursor on "A", no target of its own
+    await h.keys("s");
+    const v = h.app.view!;
+    const lines = h.app.currentLayout(v).lines;
+    const targets = [...h.app.labels.shown!.targets].sort((p, q) => p.pos.row - q.pos.row || p.pos.col - q.pos.col);
+    const at = (t: Target) =>
+      cells(lines[t.pos.row])
+        .filter((c) => c.x >= t.pos.col)
+        .map((c) => c.g)
+        .join("")
+        .match(/^(?:[\p{L}\p{N}_\p{M}]+|\S)/u)?.[0];
+    expect(targets.filter((t) => t.link === undefined).map(at)).toEqual([
+      "Heading",
+      "here",
+      "cd",
+      "ef",
+      "x_y",
+      "中",
+      "see",
+    ]);
+    // The link of one letter has its label all the same.
+    expect(targets.filter((t) => t.link !== undefined).map(at)).toEqual(["a"]);
+    await h.keys("escape");
   });
 
   test("nothing on screen to label: said so, no labels", async () => {

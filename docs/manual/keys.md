@@ -118,9 +118,10 @@ window's edge. [Reading](reading.md) says more.
 | a line by its number | `42 g g`, `42 shift+g` (SOURCE view) | `ctrl+g`, `space f l`, `:42` |
 | a word or a link on screen, by its label | | `s` (reading), `g w` |
 
-`s` (or `g w`) puts a label of one or two letters on every word and link the windows of the tab show. Type a label
-to move the cursor there, into its window. The nearest labels are the shortest. `esc`, or a key no label goes on with,
-leaves the cursor where it was. In SOURCE view and the lens, `s` replaces a character, so use `g w` there.
+`s` (or `g w`) puts a label of one or two letters on every word of two letters or more and every link the windows of the
+tab show. Each Chinese, Japanese or Korean character counts as a word; punctuation, single letters and icons get none.
+Type a label to move the cursor there, into its window. The nearest labels are the shortest. `esc`, or a key no label
+goes on with, leaves the cursor where it was. In SOURCE view and the lens, `s` replaces a character, so use `g w` there.
 
 ### Scrolling
 

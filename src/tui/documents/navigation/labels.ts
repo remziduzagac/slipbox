@@ -1,16 +1,16 @@
 // Jump labels (EG-D3; `cursor.jump`: `s` while reading, `g w` there and in SOURCE view): what each window of the tab
-// shows gets a label — every word start, by the word motions' classes, and every link where it's drawn — of one or two
-// letters from a home-row alphabet, the nearest to the cursor the shortest, drawn over the target's first cells. The
-// keys after it are the labels' (input.ts, right after a character awaited): each narrows them, a whole label moves the
-// cursor there and focuses its window, and `esc`, or a key no label goes on with, leaves everything as it was. On a
-// link, `enter` then follows it, as `enter` does.
+// shows gets a label — every word of two letters or more and each CJK character (EG-D24), and every link where it's
+// drawn — of one or two letters from a home-row alphabet, the nearest to the cursor the shortest, drawn over the
+// target's first cells. The keys after it are the labels' (input.ts, right after a character awaited): each narrows
+// them, a whole label moves the cursor there and focuses its window, and `esc`, a key no label goes on with, a mouse
+// press or a wheel leaves everything as it was. On a link, `enter` then follows it, as `enter` does.
 
 import { stringWidth } from "../../../core/foundation/text/width.ts";
 import { type Layout, scrolledInSight } from "../../../core/rendering/layout/ir.ts";
 import type { App, View } from "../../app/runtime/app.ts";
 import { pageBg, roleStyle } from "../../shell/screen/style.ts";
 import { type Canvas, drawText } from "../../shell/terminal/canvas.ts";
-import { cells, type Pos, wordStarts } from "../editing/cursor.ts";
+import { cells, longWordStarts, type Pos } from "../editing/cursor.ts";
 
 /** The letters labels are made of: the home row first, then the row above it and the one below. */
 export const ALPHABET = "asdfghjklqwertyuiopzxcvbnm";
@@ -99,7 +99,7 @@ export class JumpLabels {
         // Never a frame row: the lens's rules, a code cell's header and borders.
         if (!line || line.decor) return;
         const here = links.get(row);
-        const cols = [...new Set([...wordStarts(line), ...(here?.keys() ?? [])])].sort((a, b) => a - b);
+        const cols = [...new Set([...longWordStarts(line), ...(here?.keys() ?? [])])].sort((a, b) => a - b);
         for (const col of cols) {
           const x = screenX(app, view, layout, row, col, pane.textX);
           if (x === null || x < pane.textX || x >= right) continue;

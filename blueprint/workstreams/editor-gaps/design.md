@@ -16,7 +16,7 @@ D235, ORG-D1), else the feature's module:
 
 | File | Role |
 | --- | --- |
-| `documents/navigation/labels.ts` | jump labels: targets, labels drawn, keys typed (`app.labels`; EG-D3) |
+| `documents/navigation/labels.ts` | jump labels: targets, labels drawn, keys typed (`app.labels`; EG-D3, EG-D24) |
 | `shell/overlays/preview.ts` | a list of places' preview (`app.preview`; EG-D2) |
 | `shell/overlays/drawing/lists/preview.ts` | the list and its preview placed, the preview drawn (EG-D2) |
 | `documents/views/drawing/marks/hit.ts` | the preview's hit, marked in its window (EG-D2) |
@@ -72,21 +72,23 @@ Adds, after "What follows from it":
 
 - **Jump labels** (EG-D3; `cursor.jump`, an interaction; `s` in the reading keymap, `g w` there and in `[keys.source]`;
   `JumpLabels`, `app.labels`): one command, in reading and in SOURCE view. Its targets are what each window of the tab
-  shows on screen as last drawn (both of a split; the floating window alone while it's open): every word start, by
-  `cursor.ts`'s word classes (`wordStarts`: a run of letters, a run of other non-blank characters, each CJK character),
-  and every link, by its drawn position in `Layout.links`; never a decor row (the lens's rules, a cell's header, a fold
-  row), nor the cursor's own place. Each gets a label of one or two letters from a home-row alphabet (the home row, then
-  the rows above and below it: 26 letters), none the start of another, the nearest to the cursor the shortest: by
-  distance on screen, a row counting as two columns. Past 676 targets (26²) the farthest go without, as Helix's `g w`
-  does. A label is drawn over the target's first cells (`jump_label`), its width by `core/foundation/text/width.ts`, a
-  wide character covered whole. The keys after it are the labels' (§ Modes and dispatch): each narrows them, the letters
-  still to type drawn; a whole label moves the cursor there and focuses its window; `esc`, or a key no label goes on
-  with, cancels, and so does a mouse press. The status line's chip says `JUMP` meanwhile. On a link, `enter` then
-  follows it, as `enter` does. In visual mode only the cursor's window is labelled, and a label extends the selection,
-  as a motion does there. **Settled (EG-T2):** in the lens, whose keys are SOURCE view's, `g w` labels and `s` stays
-  substitute; the targets are what it draws, its source rows and the rendered rows around them alike, and a label
-  outside it moves the lens there, as the cursor does. A label is no operator's motion: after an operator, `g w` (or
-  `s`, the reading keys' after one) says the operator doesn't take it, and does nothing.
+  shows on screen as last drawn (both of a split; the floating window alone while it's open): every word of two word
+  characters or more and each CJK character, as Helix's `g w` (EG-D24; `longWordStarts`, by `cursor.ts`'s word class:
+  letters, digits, `_`, marks), never punctuation, a letter alone or an icon; and every link, however short, by its
+  drawn position in `Layout.links`; never a decor row (the lens's rules, a cell's header, a fold row), nor the cursor's
+  own place. Each gets a label of one or two letters from a home-row alphabet (the home row, then the rows above and
+  below it: 26 letters), none the start of another, the nearest to the cursor the shortest: by distance on screen, a row
+  counting as two columns. Past 676 targets (26²) the farthest go without, as Helix's `g w` does. A label is drawn over
+  the target's first cells (`jump_label`), its width by `core/foundation/text/width.ts`, a wide character covered whole.
+  The keys after it are the labels' (§ Modes and dispatch): each narrows them, the letters still to type drawn; a whole
+  label moves the cursor there and focuses its window; `esc`, or a key no label goes on with, cancels, and so does a
+  mouse press or a wheel (no label is left on a row scrolled away). The status line says `JUMP` meanwhile, after
+  `NORMAL` or `VISUAL`. On a link, `enter` then follows it, as `enter` does. In visual mode only the cursor's window is
+  labelled, and a label extends the selection, as a motion does there. **Settled (EG-T2):** in the lens, whose keys are
+  SOURCE view's, `g w` labels and `s` stays substitute; the targets are what it draws, its source rows and the rendered
+  rows around them alike, and a label outside it moves the lens there, as the cursor does. A label is no operator's
+  motion: after an operator, `g w` (or `s`, the reading keys' after one) says the operator doesn't take it, and does
+  nothing.
 - **Syntax jumps** (EG-D6): `] f` / `[ f` (`cursor.function_next`, `cursor.function_prev`) the next or previous
   function, `] a` / `[ a` (`cursor.argument_next`, `_prev`) argument, `] o` / `[ o` (`cursor.block_next`, `_prev`)
   block, by the code's grammar (§ Editing, "The structure"); in a note, `] o` / `[ o` go to the next or previous fenced

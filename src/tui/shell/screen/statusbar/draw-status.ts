@@ -33,9 +33,9 @@ export function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void
         ` ${vim.op ? `${vim.op.count > 1 ? vim.op.count : ""}${vim.op.op}${vim.count}${vim.op.object ?? ""}${vim.op.keys.map((k) => keyChar(k) ?? k).join("")}` : vim.awaitChar ? (vim.awaitKey ?? "r") : vim.count} `
       : app.panels.resizeMode
         ? " RESIZE "
-        : view?.visual === "char"
+        : view?.visual === "char" && !app.labels.shown // labels in visual mode: JUMP beside VISUAL, as below
           ? " VISUAL "
-          : view?.visual === "line"
+          : view?.visual === "line" && !app.labels.shown
             ? " V-LINE "
             : app.region === "sidebar"
               ? app.leftView === "git"
