@@ -31,7 +31,7 @@ Open a note inside a repository or notes vault, for example:
 slipbox ~/work/kestrel/docs/sync.md
 ```
 
-Check the vault's name or path in the middle of the top bar. Your tabs there, your workspace, and its scratch belong
+Check the vault's name or path at the right of the top bar. Your tabs there, your workspace, and its scratch belong
 to that vault. In the explorer,
 `esc` returns to the document; `space e` opens or focuses the explorer again.
 

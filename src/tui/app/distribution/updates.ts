@@ -32,6 +32,7 @@ import { openDialog } from "../../shell/overlays/dialog.ts";
 import { stopInsert } from "../../documents/editing/editing.ts";
 import type { UpdateEnv } from "./update-env.ts";
 import { UpdateObservation } from "./update-observation.ts";
+import { ABOUT, ABOUT_RUNS, aboutBasics } from "./about.ts";
 
 export type { UpdateEnv } from "./update-env.ts";
 
@@ -101,6 +102,8 @@ export class Updates {
         ? readJson<{ version?: unknown }>(join(env.data, "versions", current, "previous.json"), {}).version
         : null;
     const rows = [
+      { label: ABOUT, header: true, data: "about" },
+      { label: "", header: true, data: null },
       { label: `slipbox ${sanitize(version)}`, header: true, data: "version" },
       { label: `Channel: ${env?.channel ?? "stable"}`, header: true, data: "channel" },
       {
@@ -118,10 +121,10 @@ export class Updates {
       rows.push({ label: "Upgrade", header: false, data: "app.upgrade" });
     this.app.overlays.openList({
       title: "About slipbox",
-      items: rows.map((row) => (row.header ? { ...row, informational: true } : row)),
+      items: [...rows.map((row) => (row.header ? { ...row, informational: true } : row)), ...aboutBasics(this.app)],
       filterable: false,
       accept: (item) => {
-        if (String(item.data).startsWith("app.")) return this.app.run(String(item.data));
+        if (ABOUT_RUNS.has(String(item.data))) return this.app.run(String(item.data));
       },
     });
   }

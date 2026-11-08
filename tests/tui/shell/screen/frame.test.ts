@@ -18,7 +18,7 @@ describe("top bar, tab strip, status line", () => {
     h.app.mouse.handle({ type: "up", x, y, button });
     h.frame();
   };
-  test("top bar: explorer and outline buttons, the chip opens the palette, vault state on the right", async () => {
+  test("top bar: explorer and outline buttons, the branding opens About, vault state on the right (#104)", async () => {
     // Without the left rail, the explorer's button is the top bar's.
     const h = await harness({ width: 160, config: (c) => (c.ui.left_rail = false) });
     const top = topRow(h.frame());
@@ -29,11 +29,12 @@ describe("top bar, tab strip, status line", () => {
     expect(statusRow(h.frame())).toMatch(/‹ index\.md › +⚠ 0 +○ not watching/); // no problems: the panel's button; watch: false in the harness
     // The bar and its chip sit on the page, so the frame's rule right under it gives it the same
     // air as the rows below.
-    const chipR = h.app.geometry!.hot.find((r) => r.id === "btn:palette")!;
+    const chipR = h.app.geometry!.hot.find((r) => r.id === "top:brand")!;
     const page = h.app.theme.roles.text.bg ?? h.app.theme.bg;
     expect(h.app.theme.roles.topbar.bg).toBeUndefined();
     expect(h.canvas().styles[chipR.y]![chipR.x + 2]!.bg).toBe(page);
-    expect(h.canvas().styles[0]![80]?.bg).toBe(h.app.theme.roles.topbar_group.bg!);
+    const vault = hot(h, "top:vault");
+    expect(h.canvas().styles[0]![vault.x + 1]?.bg).toBe(h.app.theme.roles.topbar_group.bg!);
     expect(h.frame().split("\n")[1]!.startsWith("━━━━")).toBe(true);
     const ex = hot(h, "top:zoom");
     h.app.panels.showSidebar(false);
@@ -46,9 +47,9 @@ describe("top bar, tab strip, status line", () => {
     expect(ol.y).toBe(hot(h, "btn:info").y + 1);
     click(h, ol.x + 1, ol.y);
     expect(h.app.panels.outlineShown).toBe(true);
-    const chip = hot(h, "btn:palette");
+    const chip = hot(h, "top:brand");
     click(h, chip.x + 2, chip.y);
-    expect(h.app.overlay?.kind).toBe("list");
+    expect(h.app.overlay?.kind === "list" && h.app.overlay.title).toBe("About slipbox");
   });
   test("hover highlights what is under the mouse", async () => {
     const h = await harness({ width: 160 });

@@ -164,7 +164,7 @@ export class App {
   messages: Message[] = [];
   /** The messages showing as floating boxes, newest first (each for 4 s, 8 s an error, from when it's first drawn). */
   toasts: Message[] = [];
-  private readonly notifications = new Messages(this);
+  readonly notifications = new Messages(this);
 
   /** The newest message still showing. */
   get transient(): Message | null {

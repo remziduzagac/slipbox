@@ -134,23 +134,31 @@ panes). Zen mode has no frame. The lines are light by default (`ui.lines = "ligh
 **The terminal's title** is `slipbox — <the file on screen>` (its path in its vault), else the
 folder open in its place: told when it changes, its control characters stripped.
 
-**The top bar** is permanent, including zen (VB-D3, VB-T2, #86). `draw-topbar.ts` draws the grouped items:
+**The top bar** is permanent, including zen (VB-D3, VB-T2, #86). `draw-topbar.ts` draws its sections, each a group
+of segments (`Segment`, D269):
 
-- the `slipbox` palette chip at left;
-- the central location block: explorer zoom (`top:zoom`, `explorer.focus`), workspace labelled by its vault, or home
-  folder
-  (`top:vault`, `folders.open`), branch with tracking and operation (`top:branch`, branches menu), changed-file count
-  (`top:changed`, `git.focus`). The vault remains in Info. Workspace ownership remains per branch, home folder, home or
-  vault fallback (VB-D4, VB-D6);
-- at right, the permanent work count (`top:work`, `background.open`, `space b`), dim at zero and bright otherwise,
-  and running version (`top:version`, `app.about`, `space a`), shortened to `x.y.z-P` for previews. An available
-  upgrade adds an arrow (`top:upgrade`, `app.about`) in the theme's green `upgrade_available` role (VB-D7, VB-T7).
+- at the left, the branding, `slipbox` (`top:brand`, `app.about`), and right after it, when a newer version is
+  available, a green arrow (`top:upgrade`, `app.about`, the theme's `upgrade_available`, VB-D7, VB-T7). No version:
+  About has it;
+- at the right, Where you are: explorer zoom (`top:zoom`, `explorer.focus`), workspace labelled by its vault, or home
+  folder (`top:vault`, `folders.open`), branch with tracking and operation (`top:branch`, branches menu), changed-file
+  count (`top:changed`, `git.focus`). The vault remains in Info. Workspace ownership remains per branch, home folder,
+  home or vault fallback (VB-D4, VB-D6);
+- at the right end, the permanent work count (`top:work`, `background.open`, `space b`), dim at zero and bright
+  otherwise, and the messages count (`top:messages`, `messages.open`, `space m`): the messages said since the list was
+  last opened (`Messages.unseen`, set back by opening it), dim at zero, `warn` or `error` when one of them is a warning
+  or an error, as the status bar draws a message.
 
-`topbar_group` supplies the faint background. Groups have spaces between them and Nerd rounded ends, plain ends in
-Unicode and ASCII. Items have a dim thin separator and individual hover regions. Names pass through sanitize and
-widths through core/foundation/text/width.ts. Right blocks shrink to icons then go; tracking, cut branch, branch and
-changed count
-then give way. Zoom and workspace keep their icons and shortened names, paths cut from the front.
+`topbar_group` supplies a section's faint background. Sections have spaces between them and Nerd rounded ends, plain
+ends in Unicode and ASCII. Segments have a dim thin separator and individual hover regions. Names pass through
+sanitize and widths through core/foundation/text/width.ts. Short of room, the work and messages counts shrink to their
+icons, then go; then tracking, cut branch, branch and changed count give way. The branding and its arrow stay. Zoom
+and workspace keep their icons and shortened names, paths cut from the front.
+
+**About** (`app.about`, `space a`, `about.ts`): a line on what slipbox is, the version rows (full version, channel,
+previous version, an available one with its release notes and Upgrade, or a package manager's command), then Start
+here: all keys and commands (`help.open`) and the palette (`palette.open`), run from it with `enter`, their keys as
+configured (`keysFor`), and the leader that opens the which-key, a row to read.
 
 `Background`, owned by App, tracks task progress, start time, cancellation and supported restart/pause closures.
 Its live list updates elapsed seconds once a second while open; the bar needs no spinner timer. Named commands

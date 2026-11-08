@@ -22,6 +22,8 @@ export class Messages {
   /** Frames being painted, by `whileDrawing`: a message said meanwhile asks for no other (`message`). */
   private drawing = 0;
   private readonly toastScheduler: ToastScheduler;
+  /** When the messages list was last opened: what's said since is counted on the top bar (#104). */
+  private seenAt = 0;
 
   constructor(private readonly context: MessagesContext) {
     this.toastScheduler = new ToastScheduler(context);
@@ -39,6 +41,22 @@ export class Messages {
     } finally {
       this.saidInClick = was;
     }
+  }
+
+  /** The messages said since the list was last opened, and the worst of their levels. */
+  unseen(): { count: number; level: Level | null } {
+    const since = this.context.messages.filter((m) => m.at > this.seenAt);
+    const level = since.some((m) => m.level === "error")
+      ? "error"
+      : since.some((m) => m.level === "warn")
+        ? "warn"
+        : null;
+    return { count: since.length, level: since.length ? (level ?? "info") : null };
+  }
+
+  /** The list opened: everything in it seen. */
+  seen(): void {
+    this.seenAt = this.context.now();
   }
 
   message(level: Level, text: string): void {

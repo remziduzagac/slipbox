@@ -246,10 +246,10 @@ A release build asks once a day, while you use it, whether a newer release is ou
 preview too. It sends nothing about you. To turn it off, set `update.check = false` in your settings, or set
 `DO_NOT_TRACK` in your environment. The [privacy chapter](../manual/privacy.md) has what slipbox sends, and when.
 
-The top bar always shows the version you are running, shortening a preview to `0.5.2-P`. Click it or press
-`space a` for the full version and channel, the previous version recorded by the last installer upgrade, and any
-available upgrade. The release notes address can be copied from that popup. A package-manager install shows its
-upgrade command. The previous version is informational; upgrading always moves forward.
+A green `↑` beside `slipbox` on the top bar means a newer version is available. Click `slipbox` or the arrow, or press
+`space a`, for the version you are running and its channel, the previous version recorded by the last installer
+upgrade, and any available upgrade. The release notes address can be copied from that popup. A package-manager install
+shows its upgrade command. The previous version is informational; upgrading always moves forward.
 
 ### When a newer version is out
 

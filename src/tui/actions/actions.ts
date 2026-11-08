@@ -283,7 +283,11 @@ export function registerActions(app: App): void {
     },
     "config.reload": (a) => a.settings.reload("manual"),
     "messages.open": (a) => {
-      if (!a.messages.length) return a.message("info", "no messages");
+      if (!a.messages.length) {
+        a.message("info", "no messages");
+        return a.notifications.seen();
+      }
+      a.notifications.seen();
       a.overlays.openList({
         title: "Messages",
         items: [...a.messages].reverse().map((m) => ({

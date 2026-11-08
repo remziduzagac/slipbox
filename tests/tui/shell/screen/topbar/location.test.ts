@@ -105,7 +105,7 @@ describe("permanent location bar (VB-T2)", () => {
     expect(hot(h, "top:upgrade")).toBeDefined();
   });
 
-  test("narrowing keeps zoom and workspace in every glyph set", async () => {
+  test("narrowing keeps zoom, workspace and an upgrade's badge in every glyph set, none over another (#104)", async () => {
     for (const [glyphs, width] of (["nerd", "unicode", "ascii"] as const).flatMap((glyphs) =>
       [25, 40].map((width) => [glyphs, width] as const),
     )) {
@@ -120,9 +120,10 @@ describe("permanent location bar (VB-T2)", () => {
       h.frame();
       expect(hot(h, "top:zoom")).toBeDefined();
       expect(hot(h, "top:vault")).toBeDefined();
-      expect(hot(h, "top:upgrade")).toBeUndefined();
-      const regions = h.app.geometry!.hot.filter((r) => r.id.startsWith("top:"));
+      expect(hot(h, "top:upgrade")).toBeDefined();
+      const regions = h.app.geometry!.hot.filter((r) => r.id.startsWith("top:")).sort((a, b) => a.x - b.x);
       for (const r of regions) expect(r.x + r.w).toBeLessThanOrEqual(width);
+      regions.slice(1).forEach((r, i) => expect(r.x).toBeGreaterThanOrEqual(regions[i]!.x + regions[i]!.w));
     }
   });
 });

@@ -17,9 +17,9 @@ line](../images/screen-map.png)
 
 From the top:
 
-- **The top bar** holds the `slipbox` chip, which opens the command palette. In its middle, it says where you are:
-  the explorer zoom, workspace and git state. At its right end, it always shows the work count and running version;
-  an arrow marks an available upgrade.
+- **The top bar** holds `slipbox` at its left, which opens About slipbox; a green arrow beside it marks an available
+  upgrade. At its right, it says where you are: the explorer zoom, workspace and git state. At its right end, it always
+  shows the work count and the messages count.
 - **The tab strip** has a tab for each note you have open.
 - **The explorer**, on the left, shows the folder's notes and files as a tree. The column of buttons at the left edge
   is the **left rail**.
@@ -42,11 +42,13 @@ and marks look different. See [Glyphs](reading.md#glyphs).
 
 ## The top bar
 
-The top bar is always visible, including in zen mode, with the note beginning below it. Click `slipbox` at the left
-to open the
-[command palette](#the-command-palette).
+The top bar is always visible, including in zen mode, with the note beginning below it. It is made of **sections**,
+each a group of **segments**: the parts you can click, such as `◈ halden` or `● 3`.
 
-The middle block says **where you are**, with a dim separator between each clickable item:
+At the left, click `slipbox` for About slipbox (below). A green `↑` right after it means a newer version is available
+(`^` with ASCII glyphs); it opens About slipbox too. The version itself is in About slipbox, not on the bar.
+
+At the right, the **Where you are** section, with a dim separator between its segments:
 
 - **Explorer zoom**, after `≡`: the folder the explorer shows. Click to open and focus the explorer at that zoom.
 - **Workspace**, after `◈`: its name, without the vault prefix. A named folder of home shows `◈ notes`; a branch
@@ -57,12 +59,12 @@ The middle block says **where you are**, with a dim separator between each click
 - **Changed files**, `● 3`, in the changed-file colour: the number of files changed in the working tree. Click to
   open source control.
 
-Each group has a faint background. Nerd Font groups have rounded ends; Unicode and ASCII groups have plain ends.
-Only the item under the mouse lights up.
+Each section has a faint background. Nerd Font sections have rounded ends; Unicode and ASCII sections have plain
+ends. Only the segment under the mouse lights up.
 
-The right side always shows the **work count**, dim at `0` and bright while work runs, and the **running version**.
-A preview uses the short form `0.5.2-P`. A green `↑` beside the version means a newer one is available (`^` with
-ASCII glyphs). These blocks shrink to icons, then disappear on narrow screens before the location is shortened.
+The right end always shows the **work count**, dim at `0` and bright while work runs, and the **messages count**,
+`✉ 2`: what slipbox has said since you last opened the messages list, dim at `0`, in the warning or error colour when a
+warning or an error is among it. Click it or press `space m` for the list, which sets the count back to `0`.
 
 Click the count or press `space b` for **Background work**. The live list shows each task's progress and elapsed
 seconds. Its Stop, Restart and Pause or Resume rows appear only where supported; `s`, `r` and `p` act on the selected
@@ -70,17 +72,20 @@ task. Indexing supports all three, exports, fetches and server startup support S
 supports Stop until its installed version changes. Recent shows the last five outcomes, plus older failures kept
 with their errors until dismissed. Select Dismiss or press `d` to remove one. `esc` closes the list.
 
-Click the version or arrow, or press `space a`, for **About slipbox**: its full version, stable or preview channel,
-and the previous version retained by the last installer upgrade, when recorded. A newer version adds its release
-notes address (select it to copy) and Upgrade; a package-manager install shows its upgrade command instead.
-Closing this popup keeps the available-version arrow.
+Click `slipbox` or the arrow, or press `space a`, for **About slipbox**: a line on what slipbox is, then its full
+version, stable or preview channel, and the previous version retained by the last installer upgrade, when recorded. A
+newer version adds its release notes address (select it to copy) and Upgrade; a package-manager install shows its
+upgrade command instead. Closing this popup keeps the available-version arrow. Under **Start here**, All keys and
+commands and the [command palette](#the-command-palette) run from it with `enter`, each shown with the keys you have
+for it, and the last row says which key opens the [which-key popup](#the-which-key-popup): the leader.
 
 ![Background work with recent outcomes](../images/screen-background.png)
 
 ![About slipbox with its full version and channel](../images/screen-about.png)
 
-Short of room, the right blocks shrink to icons, then disappear. Git loses ahead and behind, then its branch is cut
-and dropped, then the changed count goes. Zoom and workspace stay; long paths lose their front, keeping their end.
+Short of room, the work count and the messages count shrink to their icons, then disappear; `slipbox` and the arrow
+stay. Then git loses ahead and behind, then its branch is cut and dropped, then the changed count goes. Zoom and
+workspace stay; long paths lose their front, keeping their end.
 
 The retired `ui.top_bar` setting gives a notice and is ignored. The status line keeps its room for the file.
 
@@ -480,7 +485,7 @@ Every key that works in a list is in [Keys](keys.md).
 
 ### The command palette
 
-To open the command palette, press `:`, `ctrl+shift+p` or `space f p`, or click the `slipbox` chip.
+To open the command palette, press `:`, `ctrl+shift+p` or `space f p`, or select it in About slipbox.
 
 With nothing typed, the palette lists the last five commands you ran from it or from help. Then it lists every
 command, in groups. Type part of a command's name and press `enter` to run it.

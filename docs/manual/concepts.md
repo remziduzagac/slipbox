@@ -32,7 +32,7 @@ save or pick it: slipbox keeps it for you.
 
 ## Where you are
 
-The explorer zoom, your workspace and git state, shown in the middle of the top bar
+The explorer zoom, your workspace and git state, shown at the right of the top bar
 (`≡ ~/work/kestrel │ ◈ kestrel │ ⎇ main`). Click the workspace for the vault list, or the branch for the branches.
 
 [Details](screen.md#the-top-bar)

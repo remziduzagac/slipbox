@@ -217,7 +217,6 @@ export class MouseRouting {
         else if (arg === "outline") void this.app.run("outline.toggle");
         else if (arg === "footnotes") void this.app.run("footnotes.toggle");
         else if (arg === "info") void this.app.run("info.toggle");
-        else if (arg === "palette") void this.app.run("palette.open");
         break;
       case "tabclose":
         this.app.windows.closeTabAt(Number(arg));
@@ -280,12 +279,14 @@ export class MouseRouting {
       case "crumbicon":
         if (this.focusWindow(Number(arg))) void this.app.run("outline.pick");
         break;
-      // Where you are on the top bar (WSP-D4): the vault, the named folders to go into; the branch, the branches' menu.
+      // The top bar: its left section (the branding, an upgrade's arrow) About (#104); Where you are
+      // (WSP-D4): the vault, the named folders to go into; the branch, the branches' menu.
       case "top":
         if (arg === "zoom") void this.app.run("explorer.focus");
         else if (arg === "changed") void this.app.run("git.focus");
         else if (arg === "work") void this.app.run("background.open");
-        else if (arg === "version" || arg === "upgrade") void this.app.run("app.about");
+        else if (arg === "messages") void this.app.run("messages.open");
+        else if (arg === "brand" || arg === "upgrade") void this.app.run("app.about");
         else if (arg === "vault") void this.app.run("folders.open");
         else if (arg === "branch") void this.app.run("git.menu");
         break;
