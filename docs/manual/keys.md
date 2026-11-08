@@ -756,12 +756,18 @@ Each button has a key, which acts on the cell at the cursor.
 
 | Keys | What |
 | --- | --- |
-| `space g` | the git panel: opens it, focuses it, closes it, in turn |
+| `space g g` | the git panel: opens it, focuses it, closes it, in turn |
+| `space g s` | stage the change at the cursor; off a change, the whole file |
+| `space g u` | unstage this file |
+| `space g d` | undo the change at the cursor, after asking: its lines as staged, one undo step |
+| `space g enter` | preview the change at the cursor, against what's staged |
+| `space g l` | this branch's commits since its base, as `:log` lists them |
+| `space g y` / `space g w` | copy / open the web link to the cursor's line, or the selection's, on GitHub or GitLab |
 | `] c` / `[ c` | the next / previous line changed against what's staged, as the gutter marks them |
 
-The rest of git is the panel's, and the palette's: `:changes`, `:diff`, `:worktrees`, `:merge-review`, and the commands
-titled Branches, Who changed this line, This file's history, Preview the change and Undo the change. A click on a
-change's sign in the gutter shows the change, with Revert and Stage. [Git](git.md) explains each of these.
+The rest of git is the panel's, and the palette's: `:changes`, `:diff`, `:log`, `:worktrees`, `:merge-review`, and
+the commands titled Branches, Who changed this line and This file's history. A click on a change's sign in the gutter
+shows the change, with Revert and Stage. [Git](git.md) explains each of these.
 
 ### Inside a diff
 
@@ -1017,6 +1023,7 @@ Your configuration's [`[aliases]`](configuration.md) adds more commands, or rena
 | `:export [format]` | export the note, and a format (`docx`, `pdf`, `html`, `epub`, `md`) skips the list |
 | `:export-notes` | export notes as one document |
 | `:changes` / `:diff` | the branch's changed files / this note's diff, against the base |
+| `:log` | this branch's commits since its base: `enter` on one, its files; on a file, the commit's change to it |
 | `:worktrees` / `:merge-review` | the worktrees / the links a merge would break |
 | `:fetch` / `:pull` / `:push` | fetch, pull or push, as source control's `f`, `p` and `shift+p` |
 | `:stash` | the stashes, as source control's `z` |

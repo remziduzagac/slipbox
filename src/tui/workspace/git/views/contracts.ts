@@ -10,10 +10,11 @@ import type { BranchStats } from "../../../../core/workspace/git/branches/gitbra
 import type { Track } from "../../../../core/workspace/git/branches/gitremote.ts";
 import type { OperationContext } from "../../../../core/workspace/git/branches/operation-status.ts";
 import type { Glyphs } from "../../../../core/rendering/theme/glyphs.ts";
+import type { BranchCommit } from "../../../../core/workspace/git/history/gitlog.ts";
 
-/** A section of the panel: the working tree's four; the branch's, this file's; the branches, the merged and older among
- *  them; the other repositories, the rest of home's. */
-export type SectionId = GitSection | "ahead" | "file" | "branches" | "older" | "repos" | "home";
+/** A section of the panel: the working tree's four; the branch's files and its commits, this file's; the branches, the
+ *  merged and older among them; the other repositories, the rest of home's. */
+export type SectionId = GitSection | "ahead" | "commits" | "file" | "branches" | "older" | "repos" | "home";
 
 export interface HeadingRow {
   kind: "heading";
@@ -42,12 +43,32 @@ export interface ThisFileRow {
   label: string;
 }
 
+/** A branch's commit (EG-D4): this branch's since its base (`branch` null), or one opened up in Branches. */
+export interface CommitRow {
+  kind: "commit";
+  commit: BranchCommit;
+  branch: Branch | null;
+  /** Opened up into its files. */
+  open: boolean;
+}
+
+/** A file a commit changed, the commit opened up: its vault path (null outside the vault). */
+export interface CommitFileRow {
+  kind: "cfile";
+  commit: BranchCommit;
+  branch: Branch | null;
+  file: Changed;
+  rel: string | null;
+}
+
 export type PanelRow =
   | HeadingRow
   | NoteRow
   | FileRow
   | ChangeRow
   | AheadRow
+  | CommitRow
+  | CommitFileRow
   | ThisFileRow
   | BranchViewRow
   | RepoViewRow;
@@ -94,11 +115,12 @@ export interface BranchFileRow {
   base: string | null;
 }
 
-/** A label over a branch's files: "Uncommitted (2)", "Against main (5)"; `against`, which, as its files say. */
+/** A label over a branch's files or its commits: "Uncommitted (2)", "Against main (5)", "Commits (3)"; `against`, which,
+ *  as its rows say. */
 export interface BranchSubRow {
   kind: "bsub";
   branch: Branch;
-  against: "base" | "uncommitted";
+  against: "base" | "uncommitted" | "commits";
   label: string;
 }
 
@@ -198,6 +220,8 @@ export interface BranchRowHost {
   readonly app: {
     now(): number;
     readonly gitPanel: { filter(): string; readonly folded: Set<SectionId> };
+    /** A branch opened up's commits since its base (EG-D4), under their label. */
+    readonly gitLog: { branchRows(branch: Branch, base: string): PanelRow[] };
   };
   branches(): { branches: Branch[]; merged: Set<string> } | null;
   statsOf(branch: Branch): BranchStats | null;

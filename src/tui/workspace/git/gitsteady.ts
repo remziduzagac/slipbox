@@ -31,6 +31,11 @@ export function rowKey(row: PanelRow | undefined): string | null {
     }
     case "ahead":
       return `ahead\0${row.file.path}`;
+    // A commit by its hash, a file by its commit and path (EG-D4): under this branch, or a branch's.
+    case "commit":
+      return `commit\0${row.branch?.name ?? ""}\0${row.commit.hash}`;
+    case "cfile":
+      return `cfile\0${row.branch?.name ?? ""}\0${row.commit.hash}\0${row.file.path}`;
     case "thisfile":
       return `thisfile\0${row.command}`;
     case "branch":

@@ -20,6 +20,7 @@ import type { PanelRow } from "./gitpanel.ts";
 import { GIT_MARK } from "../../marks.ts";
 import { rowActions } from "./gitmouse.ts";
 import { hotRow } from "../../gitsteady.ts";
+import { day } from "../log/list.ts";
 
 /**
  * A file's state letter's colour (26.2): git's status letters, and the explorer's marks (`GIT_MARK`) in the explorer's
@@ -290,6 +291,25 @@ function drawRow(
         return;
       case "ahead":
         x += 2;
+        letter(GIT_MARK[row.file.state]);
+        x += 1;
+        return put(sanitize(row.rel ?? row.file.path), st);
+      case "commit": {
+        // Its short hash and subject, its author and day at its end (EG-D4): short of room, the subject gives way
+        // first, then the author.
+        const k = row.commit;
+        const when = day(k.time);
+        tail(
+          [[{ text: `${sanitize(k.author)} · ${when}`, role: "dim" }], [{ text: when, role: "dim" }]],
+          row.branch ? 26 : 20,
+        );
+        x += row.branch ? 8 : 2;
+        put(`${row.open ? g.foldOpen : g.foldClosed} `, dim);
+        put(`${k.hash.slice(0, 7)} `, dim);
+        return put(sanitize(k.subject), st);
+      }
+      case "cfile":
+        x += row.branch ? 10 : 4;
         letter(GIT_MARK[row.file.state]);
         x += 1;
         return put(sanitize(row.rel ?? row.file.path), st);

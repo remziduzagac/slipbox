@@ -124,12 +124,12 @@ export const bgOf = (role: Role) => ROLES[role].bg!.toLowerCase();
 
 /**
  * The panel's own title, at its top: "Source control" and the spaces up to its border. Not the leader's which-key
- * popup, on screen between `space` and `g`, whose line for `space g` says "Source control in the left panel…".
+ * popup, on screen between `space` and `g g`.
  */
 const TITLE = /Source control +[│┃]/;
 
-/** The git panel open and focused (GIT): `space g`, as `panelFocused` presses a panel's key. */
-export const toPanel = (s: Session) => panelFocused(s, "g", "GIT", TITLE);
+/** The git panel open and focused (GIT): `space g g`, as `panelFocused` presses a panel's key. */
+export const toPanel = (s: Session) => panelFocused(s, "g g", "GIT", TITLE);
 
 /** The left panel's part of a screen row: up to its border, the first `│` or `┃` of its title's row. */
 export function panelPart(s: Session, row: number): string {
@@ -263,17 +263,17 @@ function twoChanged(s: Session): void {
 const PANEL: Check[] = [
   {
     area: "outside-and-code",
-    name: "git panel: space g opens it and focuses it — the repository and its branch at its top; again, it closes",
+    name: "git panel: space g g opens it and focuses it — the repository and its branch at its top; again, it closes",
     covers: { cases: ["git"], commands: ["git.view"] },
     options: repoAt((s) => trail(s)),
     run: async (s) => {
       await s.where(/ │ main$/);
-      await leader(s, "g");
+      await leader(s, "g", "g");
       await s.status("GIT");
       await s.see("Source control");
       await panelRow(s, "trail · main");
       await panelRow(s, "nothing uncommitted");
-      await leader(s, "g");
+      await leader(s, "g", "g");
       await s.notSee("Source control");
       await s.until(() => !s.statusLine().includes("GIT"), undefined, "the panel's keys gone with it");
     },
@@ -450,7 +450,7 @@ const BRANCHES: Check[] = [
       await panelRow(s, /⎇ agent\/cache/);
       // An agent commits there; the panel shown again: one ahead of dev, the base it was made from, kept.
       commit(s, folder, { "cache.md": "# The cache\n" }, "The cache");
-      await leader(s, "g");
+      await leader(s, "g", "g");
       await s.notSee("Source control");
       await toPanel(s);
       await panelRow(s, /⎇ agent\/cache\s+↑1 on dev/);

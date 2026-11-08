@@ -1588,10 +1588,10 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
 
 ### git
 
-- space g c changes list M + R ! states, enter diff, esc back — `.build/extras.toml`, `.build/kestrel.toml`,
+- :changes list M + R ! states, enter diff, esc back — `.build/extras.toml`, `.build/kestrel.toml`,
   `work/kestrel/docs/sync.md`
   (git.changes 5.13)
-- space g d per-note diff with unsaved changes, @@ headers, enter on line goes — `.build/kestrel.toml`,
+- :diff per-note diff with unsaved changes, @@ headers, enter on line goes — `.build/kestrel.toml`,
   `work/kestrel/docs/sync.md` (git.diff)
 - a diff's changed words marked in a changed line, lines highlighted, unchanged stretches folded, the agent's longest
   line scrolled sideways to its end, never cut — `.build/kestrel.toml`, `work/kestrel/docs/sync.md` (git.diff GIT-D2)
@@ -2878,7 +2878,21 @@ The same notes, one per tab.
   (catalog.ts)
 - `git.change_preview` — Preview the change — `notes/index.md`, `work/kestrel/README.md` (catalog.ts)
 - `git.change_undo` — Undo the change — `notes/index.md`, `work/kestrel/README.md` (catalog.ts)
-- signs in the gutter for unsaved edits, ] c, space g p, space g r; an untracked file all added; staged, none —
+- `git.change_stage` — Stage the change — `notes/index.md`, `work/kestrel/README.md` (catalog.ts)
+- `git.file_unstage` — Unstage this file — `notes/index.md`, `work/kestrel/README.md` (catalog.ts)
+- `git.log` — This branch's commits — `notes/index.md`, `work/kestrel/README.md` (catalog.ts)
+- `git.web_copy` — Copy the line's web link — `work/kestrel/README.md`, `work/kestrel/src/sync/retry.ts` (catalog.ts)
+- `git.web_open` — Open the line's web link — `work/kestrel/README.md`, `work/kestrel/src/sync/retry.ts` (catalog.ts)
+- space g, a group: g the panel; s stages the change at the cursor, off one the file, unsaved or in conflict refused;
+  u unstages the file; d undoes the change after asking, nothing when it moved since; enter previews it —
+  `work/kestrel/README.md`, `notes/index.md` (tui.md space g (EG-D15); tests 'space g, a group')
+- a branch's commits since its base: the panel's This branch's commits, a branch's under Branches, :log and space g l;
+  a commit's files with their states, a rename's old name, a file's change in the diff window, esc back a step —
+  `work/kestrel/README.md` (tui.md A branch's commits (EG-D4); tests 'this branch's commits', ':log')
+- a line's web link: space g y copies, space g w opens (copied over SSH or before a push); GitHub's and GitLab's remote
+  forms, a selection's range, lines added since mapped, a line not committed or a remote elsewhere said —
+  `work/kestrel/README.md`, `work/kestrel/src/sync/retry.ts` (tui.md A line's web link (EG-D18); tests 'web link')
+- signs in the gutter for unsaved edits, ] c, space g enter, space g d; an untracked file all added; staged, none —
   `work/kestrel/README.md`, `notes/index.md` (tui.md The working tree's changes (26.1); tests 'changes against what's
   staged, in the gutter')
 - the signs where `[git] signs_at` puts them — the gutter's first column, its last, the window's right edge — with line

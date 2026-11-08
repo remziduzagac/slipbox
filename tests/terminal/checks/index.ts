@@ -18,6 +18,7 @@ import { FILE_OPERATIONS } from "./files.ts";
 import { FINDING } from "./finding.ts";
 import { GIT_BRANCHES } from "./git-branches.ts";
 import { GIT_DIFF } from "./git-diff.ts";
+import { GIT_KEYS } from "./git-keys.ts";
 import { GIT_STEADY } from "./git-steady.ts";
 import { GIT } from "./git.ts";
 import { HELP } from "./help.ts";
@@ -169,6 +170,8 @@ export const CHECK_FILES: Record<string, Check[]> = {
   where: WHERE,
   // The git panel holding still as git answers (D261): source control's too, in a file of its own.
   "git-steady": GIT_STEADY,
+  // `space g`, a group (EG-D15): from a note, a branch's commits, a line's web link; a file of their own.
+  "git-keys": GIT_KEYS,
   // Upgrading and restarting (UPG): two release builds of this checkout, made once a run.
   updates: UPDATES,
 };

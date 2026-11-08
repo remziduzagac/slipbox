@@ -1,10 +1,10 @@
 // The git panel (GIT-D8, GIT-D12): source control, the left panel's third view, worked by mouse as by keys, its keys
 // shown. At its top, the repository and its branch, against its base and its upstream; a message box, typed in, where
 // ctrl+enter commits; the buttons — commit, amend, pull, push, fetch, stash — each saying its key under the pointer.
-// Under them its sections: the working tree's (gitview.ts), what this branch changed against its base, this file's
-// diff, history and blame, the branches (gitbranchview.ts), the other repositories in the view (gitreposview.ts) — or,
-// in a vault that isn't a repository, those repositories alone (VV-D10). Its keys (`[keys.git]`) act on the row
-// selected, and its footer says them; `space g` opens it and focuses it (`git.view`).
+// Under them its sections: the working tree's (gitview.ts), what this branch changed against its base and its commits
+// (log/), this file's diff, history and blame, the branches (gitbranchview.ts), the other repositories in the view
+// (gitreposview.ts) — or, in a vault that isn't a repository, those repositories alone (VV-D10). Its keys
+// (`[keys.git]`) act on the row selected, and its footer says them; `space g g` opens it and focuses it (`git.view`).
 
 import { basename } from "node:path";
 import { headOf } from "../../../../../core/workspace/git/git.ts";
@@ -145,6 +145,7 @@ export class GitPanel {
     if (!work.length && !q) rows.push({ kind: "note", text: "nothing uncommitted" });
     rows.push(
       ...this.aheadRows(q),
+      ...app.gitLog.rows(q),
       ...this.fileRows(q),
       ...this.branches.rows(),
       ...this.repos.rows("others", drawing),
@@ -354,6 +355,9 @@ export class GitPanel {
         return workAction(app, row, action);
       case "ahead":
         return this.aheadAction(row, action);
+      case "commit":
+      case "cfile":
+        return app.gitLog.action(row, action);
       case "thisfile":
         if (action === "open" || action === "go" || action === "expand") return void app.run(row.command);
         return;
@@ -481,6 +485,7 @@ export class GitPanel {
     )
       return this.branches.menu(row.branch, at);
     if (row.kind === "repo" || row.kind === "rcheckout" || row.kind === "rfile") return this.repos.menu(row, at);
+    if (row.kind === "commit" || row.kind === "cfile") return app.gitLog.menu(row, at);
     if (row.kind !== "file" && row.kind !== "change" && row.kind !== "ahead") return;
     const items: { label: string; action: string; run: () => void }[] = [];
     const add = (label: string, action: string, run: () => void) => items.push({ label, action, run });

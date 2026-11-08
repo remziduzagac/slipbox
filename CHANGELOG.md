@@ -8,6 +8,12 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 
 ### Added
 
+- `space g` is git's group of keys. From a note, `space g s` stages the change at the cursor, or the file;
+  `space g u` unstages the file; `space g d` undoes the change, after asking; `space g enter` previews it. A branch's
+  commits since its base are in the git panel, under a branch in Branches and in `:log` (`space g l`): each opens into
+  its files, and a file into the commit's change. `space g y` copies the web link to the cursor's line, or a
+  selection's, on GitHub or GitLab; `space g w` opens it, and copies it over SSH.
+
 - The switcher, search, find in every note, references, backlinks and links preview the selected row's place beside
   the list, read-only, its match marked; under the list on a narrow screen. `ctrl+t` hides it. `alt+enter` opens the
   pick here, in the split or in a new tab, and `space '` brings the last of these lists back as you left it.
@@ -114,6 +120,8 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
   installed while slipbox runs, from another terminal or by `brew upgrade`, is offered as a restart.
 
 ### Changed
+
+- **Breaking:** `space g` is a group now, so the git panel opens on `space g g`. Undo the change asks first.
 
 - Going into another vault asks first, whatever the way in (the explorer, `space v v`, `ctrl+click`, `:e`, git's Open,
   `o` in a peek, `ctrl+o` back): **Go**, **Stay**, or, when you were opening a note, **Peek at** it, read-only, where

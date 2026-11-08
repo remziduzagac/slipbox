@@ -32,7 +32,9 @@ D235, ORG-D1), else the feature's module:
 | `app/clipboard/yanks.ts` | the copies kept: `space p` (`app.yanks`; EG-D20) |
 | `documents/navigation/marks.ts` | marks (`app.noteMarks`, apart from the explorer's `Marks`; EG-D20) |
 | `documents/navigation/calls.ts` | the call hierarchy's list (EG-D19) |
-| `workspace/git/views/log/` | a branch's commits, a commit's files and its change to one (`app.gitLog`; EG-D4) |
+| `workspace/git/views/log/` | a branch's commits: rows and actions, reads, `:log`'s window (`app.gitLog`; EG-D4) |
+| `workspace/git/views/changes/here.ts` | `space g s` / `space g u` from a note: its change or file (EG-D15) |
+| `workspace/git/weblink.ts` | a line's web link, copied or opened (EG-D18) |
 | `workspace/git/blame-column.ts` | blame for the file, as a column (`app.blameColumn`; EG-D16) |
 | `workspace/git/inline-diff.ts` | the inline diff (`app.inlineDiff`; EG-D17) |
 
@@ -202,15 +204,19 @@ as it is.
 
 - **Opening it** (EG-D15): `space g g` (`git.view`) opens it and focuses it, again closes it, as `space e` the
   explorer; `space g` is a group (§ Git).
-- **This branch's commits** (EG-D4; `GitLog`): a section after **This branch against main** — the commits since the
-  branch's own base, newest first, each its short hash, subject, author and day (sanitized, cut by
-  `core/foundation/text/width.ts`, the subject giving way first); none on the base itself. `enter`, `l` or a click opens
-  a commit up into its files, each with its state letter as This branch against main draws them; `enter` on a file
-  shows that commit's change to it in the diff window, drawn as every diff is (§ Git), `esc` back to the panel. Asked
-  in the background whenever git has news (§ Git, "A branch's commits"); its rows kept by what they are (D261: a commit
-  by its hash, a file by its commit and path).
+- **This branch's commits** (EG-D4; `GitLog`, `views/log/log.ts`): a section after **This branch against main** —
+  `This branch's commits (n)`, the commits since the branch's own base, newest first, each its fold, short hash and
+  subject, its author and day at the end (sanitized, cut by `core/foundation/text/width.ts`, the subject giving way
+  first); none on the base itself or a detached HEAD. `/` keeps the commits whose hash or subject matches. `enter`, `l`
+  or a click opens a commit up into its files (`asking git…` until they're read), each with its state letter as This
+  branch against main draws them; `enter`, `l` or a click on a file shows that commit's change to it in the diff
+  window, drawn as every diff is (§ Git), `esc` back to the panel; `o` opens the file as it is now; `h` folds the
+  commit, selected. `.` or a right click: its menu — its files, Copy its hash; a file's, its change, Open it, Copy its
+  path. Asked in the background whenever git has news (§ Git, "A branch's commits"); its rows kept by what they are
+  (D261: a commit by its branch and hash, a file by its commit and path).
 - **The Branches section** (EG-D4): a branch opened up lists its commits too, after its files against its base
-  (`Commits (n)`, its own side of `base...branch`), each opened up and shown as above.
+  (`Commits (n)`, `Commits: asking git…` until they're read; its own side, `base..branch`), each opened up and shown as
+  above; `h` on a commit already folded folds the branch.
 
 Previously: `space g` (`git.view`) opens, focuses and closes the panel (GIT-D12); its sections are Conflicts, Staged,
 Changes, Untracked, This branch against main, This file, Branches and Other repositories; a branch opened up shows its
@@ -264,9 +270,9 @@ worktree, its buttons, its uncommitted files and its files against its base, no 
   on the row's mark, drops a row — that match stays as it is — or brings it back, and the title counts what's kept
   (`18 of 20 to replace`). `enter` replaces the rows kept, the plan built without the matches dropped
   (`planReplaceLater`), one entry of the rename stack (`space v shift+u`), as now.
-- **The which-key popup** (EG-D15): `space g` is a group, named in `DEFAULT_GROUPS` as `space l` is; the `[`, `]`, `z`
-  and `g` groups' explanations, and `space c`, `space f`, `space h`, `space u`, `space w` and `space q`'s, name the keys
-  EG adds.
+- **The which-key popup** (EG-D15): `space g` is a group, named in `DEFAULT_GROUPS` as `space l` is (`git: the panel
+  (g); this line's change: stage (s), undo (d), preview (enter); …`); the `[`, `]`, `z` and `g` groups' explanations,
+  and `space c`, `space f`, `space h`, `space u`, `space w` and `space q`'s, name the keys EG adds.
 
 Previously: pickers are rows of text; only the theme and glyph pickers preview (D95); a list takes the arrows,
 `ctrl+n` / `ctrl+p`, `enter` and `esc`, and nothing opens a pick anywhere else; find in every note asks its text
@@ -449,23 +455,33 @@ After § The Problems panel (EG-D9; `core/documents/diagnostics/todos.ts` finds 
 - **`space g`, a group** (EG-D15): `space g` shows the which-key popup, and `space g g` opens the panel (`git.view`),
   whose keys act there as now. Beside it, the note's own change and file, the cursor standing for the panel's selected
   row — the change on its line (the gutter's hunk) when it's on one, else the note's file — with the panel's letters
-  where the panel has the action: `space g s` stages that change (`git.change_stage`, as the gutter menu's Stage it,
-  `stageSign`) or the file (refused while it's unsaved, as git stages what's on disk); `space g u` unstages the file
-  (the gutter's changes are against what's staged, so the line holds none staged); `space g d` reverts the change
-  (`git.change_undo`, asked first now, one undo step as Revert it is). The rest take letters the panel uses only to
-  move: `space g enter` previews the change (`git.change_preview`, as `enter` shows a row's diff), `space g l` the
-  branch's commits (`git.log`), `space g o` the inline diff, `space g b` the blame column, `space g y` / `space g w` the
-  line's web link. Each is an interaction (D156). This file's history, who changed this line and the file's diff stay
-  where GIT-D12 put them, in the panel's This file and the palette. Commit, amend, fetch, pull, push, stash, review, a
-  new branch, merge, the merge screen and rebase stay the panel's keys. GIT-D12 gets a note: `space g` is a group again,
-  the panel on `space g g`.
-- **A branch's commits** (EG-D4; `git.log`, `:log`; `core/workspace/git/history/gitlog.ts`): `branchLogLater` reads
-  `git log base..branch` (the branch's own base, `Git.baseOf`; this branch, or one opened up in Branches), newest first,
-  each its hash, subject, author and date; `commitFilesLater` a commit's files (`git diff-tree -r -M --name-status
-  --root`, a merge's against its first parent); a file's change, its text in the commit's parent and in the commit
-  (`git show`), read as `readForDiff` reads, drawn in the diff window. Each through `gitReadLater` (§ Asynchronous git
-  reads). `:log` lists the same in a window, as `:changes` lists the files. A list, not a graph: GIT-D1's commit graph
-  stays out.
+  where the panel has the action (`views/changes/here.ts`): `space g s` stages that change (`git.change_stage`, as the
+  gutter menu's Stage it, `stageSign`) or the file (`stageFile`; refused while it's unsaved, as git stages what's on
+  disk, and while it's in conflict, which `:resolve` settles; nothing to stage, said); `space g u` unstages the file
+  (`git.file_unstage`, `unstageFile`; the gutter's changes are against what's staged, so the line holds none staged);
+  `space g d` reverts the change (`git.change_undo`, from the palette too: asked first now, `Undo the change at line
+  N?`, one undo step as Revert it is; answered after the text moved under the question — the change no longer there by
+  its kind, place and lines — nothing is undone, said). The gutter menu's Revert it stays as it was: picked, done. The
+  rest take letters the panel uses only to move: `space g enter` previews the change (`git.change_preview`, as
+  `enter` shows a row's diff), `space g l` the branch's commits (`git.log`), `space g o` the inline diff and
+  `space g b` the blame column (EG-T12's), `space g y` / `space g w` the line's web link. Each is an interaction
+  (D156). This file's history, who changed this line and the file's diff stay where GIT-D12 put them, in the panel's
+  This file and the palette. Commit, amend, fetch, pull, push, stash, review, a new branch, merge, the merge screen and
+  rebase stay the panel's keys. GIT-D12 gets a note at consolidation: `space g` is a group again, the panel on
+  `space g g`.
+- **A branch's commits** (EG-D4; `git.log`, `:log`, `space g l`; `core/workspace/git/history/gitlog.ts`):
+  `branchLogLater` reads `git log --end-of-options base..branch` (the branch's own base, `Git.baseOf`; this branch, or
+  one opened up in Branches), newest first, up to 500, each its hash, first parent, author, time and subject;
+  `commitFilesLater` a commit's files (`git diff-tree -r -M --name-status -z` against its first parent, a merge's too;
+  the first commit's with `--root`, all added), by path; a file's change, its text in the parent (a rename's under its
+  old name; none for a file added) and in the commit (none for one deleted), by `showLater`, drawn in the diff window.
+  Each through `gitReadLater` (§ Asynchronous git reads); `CommitReads` (`views/log/reads.ts`) keeps a branch's list by
+  git's generation, its root, base and tip, the last answer shown while the next is asked, and a commit's files by its
+  hash. `:log` (`views/log/list.ts`) lists the same in a window, as `:changes` lists the files —
+  `<branch>: n commits since <base>`, each its short hash and subject, its author and day — `enter` a commit's files
+  (their letters and colours as `:changes` has them, a rename's old name beside it), `enter` a file's change; `esc`
+  goes back a step: the files, the commits (the one picked selected), out. On the base itself or a detached HEAD, said.
+  A list, not a graph: GIT-D1's commit graph stays out.
 - **Blame for the file** (EG-D16; `git.blame_file`, `space g b`; `BlameColumn`): toggles a dim column beside the
   text, after the gutter: the file blamed as the cursor's line is (the last commit, never the working tree;
   `blameFileLater`, `git blame --porcelain HEAD`), mapped to the text now through the line diff, a line changed since
@@ -480,15 +496,25 @@ After § The Problems panel (EG-D9; `core/documents/diagnostics/todos.ts` finds 
   lines are tinted (`diff_add`, a changed line's words on `diff_add_word`, paired as the diff pairs them). By block in
   a rendered note: the before-and-after's groups (`blockDiff`), a removed block drawn before its place, a changed one
   tinted. `] c` / `[ c` step through the hunks of the diff shown. The window's, not saved. **Open:** the code view.
-- **A line's web link** (EG-D18; `git.web_copy` `space g y`, `git.web_open` `space g w`;
-  `core/workspace/git/forge.ts`): the cursor's line, or a selection's lines as a range, at the commit checked out (its
-  hash), on the forge the remote names (the branch's upstream's remote, else origin) — its URL, `git@host:owner/repo`,
-  `ssh://` or `https://`, read for GitHub or GitLab, each in its own form (GitHub's
-  `/blob/<hash>/<path>#L10-L20`, GitLab's `#L10-20`; memory, checked in its task). `space g y` copies it, `space g w`
-  opens it with the platform's opener, as a problem report opens (RPT-D3: `open`, `wslview` or `explorer.exe`,
-  `xdg-open` with a display) — never over SSH, where it's copied instead, as § Following links says of a URL. Another
-  forge's remote, or none, is said. Pull request and issue pickers stay `gh`'s. **Open:** a line not committed, a
-  commit not pushed.
+- **A line's web link** (EG-D18; `git.web_copy` `space g y`, `git.web_open` `space g w`; `workspace/git/weblink.ts`,
+  `core/workspace/git/forge.ts`): the cursor's line, or a selection's lines as a range (a rendered row's, every line
+  its text came from), at the commit checked out (its hash), on the forge the remote names (the branch's upstream's
+  remote, `branch.<name>.remote`, else origin) — its URL in any of git's forms (scp's `[user@]host:path`, `ssh://`,
+  `git+ssh://`, `git://`, `http(s)://`, a user, a token or a port in it, `.git` or not) read for GitHub or GitLab by
+  its host's name (`github` or `gitlab` a label of it: an enterprise or self-managed server too; `ssh.github.com` and
+  `altssh.gitlab.com`, SSH over 443, the forges' own), GitHub's project two parts, GitLab's its group's subgroups too.
+  Each in its own form, as their docs give it: GitHub's `/blob/<hash>/<path>#L10-L20`, GitLab's
+  `/-/blob/<hash>/<path>#L10-20`, a single line `#L12`; a file the forge renders (Markdown, AsciiDoc, a notebook, CSV,
+  SVG…) with `?plain=1`, its source, where the lines are; the path's parts URL-encoded. `space g y` copies it,
+  `space g w` opens it with the platform's opener, as a problem report opens (RPT-D3: `open`, `wslview` or
+  `explorer.exe`, `xdg-open` with a display), given five seconds to say it failed — never over SSH, where it's copied
+  instead, as § Following links says of a URL; no opener, or one that fails, copies it too, said. Another forge's
+  remote, or none, is said. Pull request and issue pickers stay `gh`'s. The lines are the commit's: each end mapped
+  through the changes since (`linesInHead`, as blame maps a line; unsaved typing counted), a selection keeping its
+  committed lines; a line not committed, or a file not in the commit, has no link, said. A commit no branch of the
+  remote's holds as of the last fetch (`git for-each-ref --contains <hash> refs/remotes/<remote>`) is linked all the
+  same, and said (`<hash> isn't on origin yet`): `space g y` copies it, `space g w` copies it rather than opening a page
+  not there yet.
 
 Previously: `space g` is the git panel (`git.view`, GIT-D12), with no `space g` keys of their own; the cursor's change
 is `] c` / `[ c`, the gutter sign's menu (Revert it, Stage it) and the palette's Preview the change and Undo the change,

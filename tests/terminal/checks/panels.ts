@@ -191,12 +191,12 @@ export const PANELS: Check[] = [
   },
   {
     area: "outside-and-code",
-    name: "git panel: toPanel presses space g once to open and focus it, never again once focused",
+    name: "git panel: toPanel presses space g g once to open and focus it, never again once focused",
     covers: { cases: ["git"], commands: ["git.view"] },
     options: { home: true, startAt: "home/work/kestrel/README.md" },
     run: async (s) => {
       await inMode(s, "READ");
-      s.expect((await presses(s, "git.view", () => toPanel(s))) === 1, "space g once");
+      s.expect((await presses(s, "git.view", () => toPanel(s))) === 1, "space g g once");
       await inMode(s, "GIT");
       s.expect((await presses(s, "git.view", () => toPanel(s))) === 0, "focused already, no press");
     },

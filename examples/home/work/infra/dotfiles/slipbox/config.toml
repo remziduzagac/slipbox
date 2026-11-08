@@ -507,6 +507,12 @@ sidebar_vault = { bold = true, underline = true }
 "leader ; 1 i" = "git.skip"
 "leader ; 1 j" = "git.abort"
 "leader ; 1 k" = "git.diff_view"
+# git's from a note: the change staged, the file unstaged, the branch's commits, the line's web link
+"leader ; 3 a" = "git.change_stage"
+"leader ; 3 b" = "git.file_unstage"
+"leader ; 3 c" = "git.log"
+"leader ; 3 d" = "git.web_copy"
+"leader ; 3 e" = "git.web_open"
 "leader ; Y a" = "type.list"
 "leader ; Y b" = "type.next"
 "leader ; Y c" = "type.prev"

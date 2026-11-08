@@ -20,7 +20,7 @@ or worktree to compare; substitute its names and paths. A reading-only review do
 slipbox ~/code/app
 ```
 
-Check the repository and branch in the middle of the top bar. Open a changed file with `ctrl+p`, and press `space g`
+Check the repository and branch in the middle of the top bar. Open a changed file with `ctrl+p`, and press `space g g`
 for the Git panel. Compare what the panel reports with `git status` in your shell if you are unsure which checkout is
 active.
 
@@ -46,7 +46,7 @@ edge ([Git](../manual/git.md)).
 
 ## Commit
 
-1. Press `space g`, or click `±` on the left rail. The git panel, source control, opens in the left panel. It lists
+1. Press `space g g`, or click `±` on the left rail. The git panel, source control, opens in the left panel. It lists
    the changed files under Conflicts, Staged, Changes and Untracked, each with its letter (`M`, `A`, `D`, `R`, `?`).
 2. Move with `j` and `k`, or point at a file. Press `enter`, or click the file, to see its diff. Press `l` to open the
    file into its changes, each of which you can stage alone.
@@ -73,7 +73,7 @@ Usually, an agent works on a branch of its own, in a git worktree beside your ch
 
 ### Find its work in the git panel
 
-1. Press `space g`. The git panel opens on the left, as in [Commit](#commit). At its top, it says where your branch
+1. Press `space g g`. The git panel opens on the left, as in [Commit](#commit). At its top, it says where your branch
    stands: how far it's ahead of its base and behind it, and against its upstream.
 2. Under Branches, the agent's branch shows. It's marked `⎇`: checked out in a worktree. At its end, it says how far
    it's ahead of its base (`↑3 on main`) and how many files it hasn't committed (`✎2`). `◆` marks work to review.

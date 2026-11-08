@@ -3,6 +3,7 @@ import { expect, spyOn, test } from "bun:test";
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import * as branchIO from "../../../../../src/core/workspace/git/branches/gitbranches.ts";
+import * as gitlog from "../../../../../src/core/workspace/git/history/gitlog.ts";
 import { glyphsFor } from "../../../../../src/core/rendering/theme/glyphs.ts";
 import {
   branchesLater,
@@ -12,6 +13,7 @@ import {
 import type { BranchList, BranchReadHost, SectionId } from "../../../../../src/tui/workspace/git/views/contracts.ts";
 import { BranchReads, shownOn } from "../../../../../src/tui/workspace/git/views/branches/reads.ts";
 import { BranchRows } from "../../../../../src/tui/workspace/git/views/branches/rows.ts";
+import { CommitReads } from "../../../../../src/tui/workspace/git/views/log/reads.ts";
 import { PanelPresentation } from "../../../../../src/tui/workspace/git/views/panel/presentation.ts";
 import { makeGitFixtures } from "./fixture.ts";
 
@@ -80,7 +82,11 @@ test("branch row buttons stay in place before stats arrive, and live filtering c
   let stats: BranchStats | null = null;
   const host = {
     opened: new Set(["feature"]),
-    app: { now: () => 1_000_000, gitPanel: { filter: () => query, folded: new Set<SectionId>() } },
+    app: {
+      now: () => 1_000_000,
+      gitPanel: { filter: () => query, folded: new Set<SectionId>() },
+      gitLog: { branchRows: () => [] },
+    },
     branches: () => ({ branches, merged: new Set<string>() }),
     statsOf: () => stats,
     filesOf: () => null,
@@ -185,5 +191,29 @@ test("comparison invalidation drops only the named branch's cached stat and file
   } finally {
     ahead.mockRestore();
     files.mockRestore();
+  }
+});
+
+test("a branch's commits read in another checkout leave this one's: back in it, its last answer shows at once", async () => {
+  const commit = (hash: string): gitlog.BranchCommit => ({ hash, parent: null, author: "a", time: 1, subject: hash });
+  const read = spyOn(gitlog, "branchLogLater").mockImplementation((c) => Promise.resolve([commit(c.root)]));
+  try {
+    const app = { git: { checkout: { root: "/main" }, generation: 1 }, host: { requestRender() {} } };
+    const reads = new CommitReads(app as unknown as ConstructorParameters<typeof CommitReads>[0]);
+    expect(reads.commitsOf("agent/ahead", "main")).toBeNull();
+    await Bun.sleep(0);
+    expect(reads.commitsOf("agent/ahead", "main")).toEqual([commit("/main")]);
+    // Into the branch's own worktree, where the panel lists it too.
+    app.git.checkout = { root: "/worktree" };
+    app.git.generation++;
+    expect(reads.commitsOf("agent/ahead", "main")).toBeNull();
+    await Bun.sleep(0);
+    expect(reads.commitsOf("agent/ahead", "main")).toEqual([commit("/worktree")]);
+    // Back: the main checkout's answer while git is asked again, no row waiting on it to move the rest.
+    app.git.checkout = { root: "/main" };
+    app.git.generation++;
+    expect(reads.commitsOf("agent/ahead", "main")).toEqual([commit("/main")]);
+  } finally {
+    read.mockRestore();
   }
 });

@@ -98,7 +98,7 @@ describe("commit (26.3)", () => {
     // Nothing staged: said, no editor.
     await h.keys("c");
     expect(h.app.floating).toBeNull();
-    expect(h.app.messages.at(-1)?.text).toBe("nothing staged — s stages a file in the git panel (space g)");
+    expect(h.app.messages.at(-1)?.text).toBe("nothing staged — s stages a file in the git panel (space g g)");
     // The repository's own config signs commits with a program of its choosing: not run in a root not trusted.
     const signer = join(root, ".git", "signer.sh");
     writeFileSync(signer, `#!/bin/sh\ntouch ${JSON.stringify(join(root, ".git", "SIGNER_RAN"))}\nexit 1\n`);

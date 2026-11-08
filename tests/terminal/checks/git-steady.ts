@@ -188,7 +188,7 @@ export const GIT_STEADY: Check[] = [
       await s.until(() => order(s) === "beta,gamma,alpha", 15_000, "by what needs attention");
       const y = rowWith(s, /▸ alpha\b/);
       // The panel closed; the pointer where alpha's row was; the panel again, by keys, under it.
-      await leader(s, "g");
+      await leader(s, "g", "g");
       await s.until(() => rowWith(s, /▸ alpha\b/) < 0, undefined, "the panel closed");
       await mouse(s, 10, y, "move");
       await toPanel(s);

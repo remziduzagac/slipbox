@@ -58,16 +58,20 @@ the one that says what's indexed ([A row's marks](files.md#a-rows-marks)).
 slipbox asks git in the background, a moment after anything changes. That can be a save, a file an agent wrote, or a
 branch switch.
 
-Everything else is in the git panel:
+Git's keys are a group: press `space g` and the which-key popup lists them.
 
 | Keys | What it does |
 | --- | --- |
-| `space g` | Opens the git panel, focuses it, and closes it, in turn |
+| `space g g` | Opens the git panel, focuses it, and closes it, in turn |
+| `space g s` / `space g u` | Stages the change at the cursor (off a change, the file) / unstages the file |
+| `space g d` / `space g enter` | Undoes the change at the cursor, after asking / previews it |
+| `space g l` | This branch's commits since its base ([Commits on a branch](#commits-on-a-branch)) |
+| `space g y` / `space g w` | Copies / opens the cursor's line's web link ([A line's web link](#a-lines-web-link)) |
 | `] c` / `[ c` | Goes to the next / previous changed line in this file |
 
-The rest are the panel's own keys, its buttons, and commands in the palette (`:`): `:changes`, `:diff`, `:worktrees`,
-`:merge-review`, `:fetch`, `:pull`, `:push`, `:stash`, `:review`, `:resolve`, `:rebase`, and Branches, Who changed this
-line, This file's history, Preview the change and Undo the change, by their titles.
+The rest are the panel's own keys, its buttons, and commands in the palette (`:`): `:changes`, `:diff`, `:log`,
+`:worktrees`, `:merge-review`, `:fetch`, `:pull`, `:push`, `:stash`, `:review`, `:resolve`, `:rebase`, and Branches,
+Who changed this line and This file's history, by their titles.
 
 [Keys](keys.md) has every key. You can change these like any other.
 
@@ -156,6 +160,10 @@ go.
 | Keys | What it does |
 | --- | --- |
 | `] c` / `[ c` | Goes to the next / previous change, going round at the file's ends |
+| `space g enter` | Shows the change at the cursor: its lines as staged, then as they are now |
+| `space g s` | Stages the change at the cursor alone, as `git add -p` does. Off a change, the whole file |
+| `space g d` | Undoes the change at the cursor, after asking: its lines go back as staged |
+| `space g u` | Unstages the file |
 | a click on a change's sign | Shows the change, with Revert and Stage |
 
 The click shows the change's lines as staged, then as they are now, in a menu at the sign:
@@ -164,14 +172,18 @@ The click shows the change's lines as staged, then as they are now, in a menu at
   the file unsaved.
 - **Stage it** (`s`) stages that change alone, as `git add -p` does. Save the file first: git stages what's on disk.
 
-The palette has the same for the cursor's line: Preview the change, and Undo the change.
+`space g d` does what Revert does, once you say yes. If the text changed under the question, the change moved, and
+nothing is undone. `space g s` stages what's on disk too: a file with unsaved changes isn't staged until you save it.
+A file in conflict waits for `:resolve` ([Merge conflicts](#merge-conflicts)).
+
+The palette has them by their titles: Stage the change, Unstage this file, Preview the change, and Undo the change.
 
 `git.signs = false` turns the signs off ([Configuration](configuration.md)).
 
 ## The git panel
 
-Press `space g`, or click `±` on the left rail. The git panel, source control, opens in the left panel with the keys:
-the status line says `GIT`. `space g` again closes it. It works by mouse as by keys, and says its keys as it goes.
+Press `space g g`, or click `±` on the left rail. The git panel, source control, opens in the left panel with the keys:
+the status line says `GIT`. `space g g` again closes it. It works by mouse as by keys, and says its keys as it goes.
 
 At its top:
 
@@ -194,6 +206,8 @@ Under them are its sections, each under a heading that `enter` or a click folds 
 - **This branch against main**: what the branch changed against its base, committed or not
   ([Reviewing a branch](#reviewing-a-branch)). On the base itself there's none. With nothing uncommitted, it's what
   the panel shows, so an agent's committed work is never "nothing changed".
+- **This branch's commits**: the commits since its base, newest first, each opened up into its files
+  ([Commits on a branch](#commits-on-a-branch)).
 - **This file**: the note on screen's diff against the base, its history, and who changed the cursor's line.
 - **Branches**: the repository's branches, their worktrees marked ([Branches](#branches)).
 - **Other repositories**: the others in the explorer's zoom, folded
@@ -570,6 +584,45 @@ The list follows the file back through renames. A commit from before a rename sa
 - **Its diff to the text now**: each line removed or added since, drawn as [a diff](#how-a-diff-is-drawn). `enter`
   on a line goes there.
 
+## Commits on a branch
+
+A branch's commits are the ones since its base ([The base of each branch](#the-base-of-each-branch)), newest first,
+each with its short hash, subject, author and day. On the base itself, or with HEAD detached, there are none. slipbox
+reads them in the background, up to 500.
+
+- The git panel's **This branch's commits** lists the branch checked out's. `/` filters them by their hash or subject.
+- A branch opened up under Branches lists its own, under **Commits**, after its files.
+- `:log`, or `space g l`, lists them in a window.
+
+`enter`, `l` or a click on a commit opens it up into its files, each with its state letter: `M`, `A`, `D`, or `R` for
+a rename. A merge's files are what it brought against its first parent; the first commit's are all added. `enter` on a
+file shows the commit's change to it, drawn as [a diff](#how-a-diff-is-drawn); `esc` goes back to the panel. `o` opens
+the file as it is now, `h` folds the commit again, and `.` is its menu, which copies its hash.
+
+In `:log`'s window, `enter` on a commit lists its files, and `enter` on a file shows its change. `esc` goes back a
+step each time: to the files, then the commits.
+
+## A line's web link
+
+`space g y` copies the web link to the cursor's line on the forge the repository's remote is on: GitHub, or GitLab. A
+selection gives its lines, as a range. `space g w` opens the link in your browser instead. Over SSH, the browser would
+open on the wrong machine, so slipbox copies the link and says so.
+
+The link is to the commit checked out, so it keeps pointing at the same lines as the branch moves on. They're the
+commit's lines. A line you've added or changed since has none, and slipbox says it isn't committed yet. Lines added
+above the cursor don't shift it: the link still finds the line where the commit has it. A selection keeps its lines
+that are committed.
+
+The remote is the branch's upstream's, else `origin`. Its address can be in any of git's forms: `git@github.com:…`,
+`ssh://`, or `https://`. A GitHub Enterprise or self-managed GitLab server is recognised by `github` or `gitlab` in its
+name. A remote elsewhere has no link, and slipbox says so.
+
+A commit not pushed yet has no page on the forge until you push it. slipbox still makes its link, and copies it. It
+says the commit isn't on the remote yet, as far as the last fetch knows. `space g w` copies it then rather than opening
+a page that isn't there.
+
+A Markdown note's link opens its source, not its rendered page, where the lines are (`?plain=1`).
+
 ## Branches
 
 The git panel's Branches section lists the local branches, in this order:
@@ -592,6 +645,7 @@ not merged; `✓` when it's merged. Short of room, the base's name goes first.
   then Merge…; and Remove… for a worktree
 - a worktree's uncommitted files, and the files the branch changed against its base, each showing its diff on a click
   or `enter`
+- its commits since its base, under Commits ([Commits on a branch](#commits-on-a-branch))
 
 `.`, or a right click, opens a branch's menu: what its buttons do, Compare against…, a new branch from it, and Copy
 its name.

@@ -1,5 +1,6 @@
 // A file's changes against what's staged, from the TUI (plan 26.1): to the next or the one before (`] c`, `[ c`),
-// one's diff in the floating window, one undone — its lines as staged put back in the text, an edit like any other.
+// one's diff in the floating window, one undone after asking — its lines as staged put back in the text, an edit like
+// any other.
 // The gutter's signs are draw-pane.ts's; the changes, `core/workspace/git/gitsigns.ts`.
 
 import { changeAt, changeDiff, type GitChange } from "../../../../../core/workspace/git/gitsigns.ts";
@@ -7,7 +8,7 @@ import type { App, View } from "../../../../app/runtime/app.ts";
 import { cannotEdit, lineOf, offsetOf } from "../../../../documents/editing/editing.ts";
 
 /** The source lines the cursor is on: its line in source mode; a rendered row's, the ones its text came from. */
-function cursorLines(app: App, view: View): number[] {
+export function cursorLines(app: App, view: View): number[] {
   if (view.source) return [lineOf(view, offsetOf(app, view))];
   const row = app.currentLayout(view).lines[view.cur.row];
   return [...new Set([row?.src ?? 1, ...(row?.spans ?? []).flatMap((s) => (s.src === undefined ? [] : [s.src]))])];
@@ -42,35 +43,62 @@ export function gitStep(app: App, view: View, dir: 1 | -1): void {
   app.placeAtLine(view, startOf(next));
 }
 
-/** The change on the cursor's line, or why there's none (said). */
-function changeHere(app: App, view: View): GitChange | null {
-  const changes = changesHere(app, view);
-  if (!changes) return null;
-  for (const line of cursorLines(app, view)) {
-    const c = changeAt(changes, line);
+/** The change on the cursor's line, quietly: null where there's none, or git hasn't answered. */
+export function changeAtCursor(app: App, view: View): GitChange | null {
+  const changes = app.git.changesOf(view);
+  for (const line of changes?.length ? cursorLines(app, view) : []) {
+    const c = changeAt(changes!, line);
     if (c) return c;
   }
-  app.message("info", "no change on this line — ] c goes to the next");
   return null;
+}
+
+/** The change on the cursor's line, or why there's none (said). */
+function changeHere(app: App, view: View): GitChange | null {
+  if (!changesHere(app, view)) return null;
+  const c = changeAtCursor(app, view);
+  if (!c) app.message("info", "no change on this line — ] c goes to the next");
+  return c;
+}
+
+/** Where a change is, as its preview's title and its question say it. */
+export function changeWhere(c: GitChange): string {
+  return c.kind === "delete"
+    ? `${c.was.length} line${c.was.length === 1 ? "" : "s"} deleted after line ${c.from - 1}`
+    : c.from === c.to
+      ? `line ${c.from}`
+      : `lines ${c.from}–${c.to}`;
 }
 
 /** The change on the cursor's line as a diff, in the floating window: its lines as staged, then as they are. */
 export function gitPreview(app: App, view: View): void {
   const c = changeHere(app, view);
   if (!c) return;
-  const where =
-    c.kind === "delete"
-      ? `${c.was.length} line${c.was.length === 1 ? "" : "s"} deleted after line ${c.from - 1}`
-      : c.from === c.to
-        ? `line ${c.from}`
-        : `lines ${c.from}–${c.to}`;
-  app.overlays.openHover(`\`\`\`diff\n${changeDiff(c)}\n\`\`\``, `${where}, against what's staged`);
+  app.overlays.openHover(`\`\`\`diff\n${changeDiff(c)}\n\`\`\``, `${changeWhere(c)}, against what's staged`);
 }
 
-/** The change on the cursor's line undone: its lines as staged put back — one undo step, left unsaved. */
+/** The same change: its kind, its place and its lines, as it was and as it is. */
+const sameChange = (a: GitChange, b: GitChange) =>
+  a.kind === b.kind &&
+  a.from === b.from &&
+  a.to === b.to &&
+  a.was.join("\n") === b.was.join("\n") &&
+  a.now.join("\n") === b.now.join("\n");
+
+/**
+ * The change on the cursor's line undone (`space g d`, EG-D15), after asking: its lines as staged put back — one undo
+ * step, left unsaved. Answered after the text moved under it (an agent's rewrite, typing elsewhere), nothing undone.
+ */
 export function gitReset(app: App, view: View): void {
   const c = changeHere(app, view);
-  if (c) revertChange(app, view, c);
+  if (!c) return;
+  const why = cannotEdit(view);
+  if (why) return app.message("warn", `${why} — not editing`);
+  app.overlays.confirm(`Undo the change at ${changeWhere(c)}? Its lines go back as staged; u brings them back.`, () => {
+    const now = app.git.changesOf(view)?.find((x) => sameChange(x, c));
+    if (!now) return app.message("info", "the change moved since — nothing undone");
+    revertChange(app, view, now);
+  });
 }
 
 /** A change undone: its lines as staged put back — one undo step, left unsaved (its sign clicked: Revert, GIT-D12). */

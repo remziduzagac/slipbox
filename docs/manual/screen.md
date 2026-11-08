@@ -206,7 +206,7 @@ Each side of the screen has a panel that shows one view at a time, and a rail of
 | --- | --- | --- | --- | --- |
 | left | the explorer: the folder's notes and files | `≡` | `space e` | [Files](files.md) |
 | left | the history: where this window has been | `◷` | `space h h` | [Finding things](finding.md) |
-| left | source control, the git panel: the files changed, the branches | `±` | `space g` | [Git](git.md) |
+| left | source control, the git panel: the files changed, the branches | `±` | `space g g` | [Git](git.md) |
 | right | Info: what the file on screen is | `ℹ` | `space n i` | [below](#the-info-view) |
 | right | the outline: the note's headings | `▤` | `space o` | [Finding things](finding.md) |
 | right | the footnotes: the note's footnotes | `¹` | `space n f` | [Finding things](finding.md) |

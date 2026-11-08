@@ -69,6 +69,7 @@ export function rowActions(app: App, row: PanelRow): RowAction[] {
     case "ahead":
     case "bfile":
     case "rfile":
+    case "cfile":
       return [diff];
     case "repo":
       return [{ glyph: app.glyphs.navForward, action: "go", desc: "goes into it" }];
