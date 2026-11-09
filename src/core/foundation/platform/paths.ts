@@ -97,9 +97,10 @@ export const CACHEDIR_TAG =
 
 let tagged = "";
 
-/** The cache folder, made when missing, with its `CACHEDIR.TAG` (14.9); once per process and folder. */
+/** The cache folder, made when missing, with its `CACHEDIR.TAG` (14.9); once per process and folder, and again when
+ *  it has gone meanwhile (emptied by hand, or a test's sandbox removed): a cache made in it otherwise couldn't open. */
 export function ensureCacheHome(dir = cacheHome()): string {
-  if (tagged === dir) return dir;
+  if (tagged === dir && existsSync(dir)) return dir;
   try {
     mkdirSync(dir, { recursive: true });
     const tag = join(dir, "CACHEDIR.TAG");
