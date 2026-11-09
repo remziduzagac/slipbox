@@ -138,6 +138,11 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
   hidden ones. `files.show = "auto"` and `files.hidden = false` give the old explorer. The switcher and replace in every
   note list the files the explorer does, code files included. Going into a vault inside a hidden folder, such as a
   worktree in `.claude/`, keeps the explorer where it is, that folder unfolded.
+- `files.show = "auto"` lists every text file in a git repository, whose top holds `.git`, with a `.slipbox/` or
+  without one: a repository named with `slipbox init --name` lists its code now, where it listed only notes and data
+  files. A `.slipbox/` with no `.git` beside it, a notes folder or a notes vault inside a repository, still lists notes
+  and data files. When the explorer leaves files out, or lists every text file because of git, a line at its foot says
+  why and names `[files] show`, the setting that changes it.
 - The top bar: `slipbox` at the left opens About slipbox, not the command palette, with a green `↑` right after it when
   an upgrade is available. The version is no longer on the bar; About slipbox shows it. Where you are moved from the
   middle to the right, next to the work and messages counts.

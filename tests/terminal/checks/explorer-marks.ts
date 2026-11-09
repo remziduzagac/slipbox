@@ -1,11 +1,11 @@
-// The explorer view following its folder, and row marks explaining indexing and access.
+// The explorer view following its folder, row marks explaining indexing and access, and what it lists and why.
 
-import { utimesSync } from "node:fs";
+import { readFileSync, utimesSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { type Check, explorerOpen, explorerRow, leader, opened } from "../check.ts";
+import { type Check, explorerOpen, explorerRow, goInto, leader, opened } from "../check.ts";
 import { CheckFailed } from "../session.ts";
 import { crumbs, lastMessage, listed } from "../support/links.ts";
-import { markOf, rowEnd, symlinkOnce, UNWALKED } from "../support/vaults.ts";
+import { markOf, rowEnd, symlinkOnce, UNWALKED, WIDE } from "../support/vaults.ts";
 
 // --- the view ---------------------------------------------------------------------------------------------------
 
@@ -282,6 +282,52 @@ const MARKED: Check[] = [
       await s.keys("shift+h");
       await s.message("explorer: hidden files shown");
       await s.until(() => markOf(s, ".vscode") === "⊘", 3000, ".vscode listed again: ⊘");
+    },
+  },
+  {
+    area: "navigating",
+    name: "files.show auto: kestrel, a repository with .slipbox/, lists its code, the explorer's foot saying why; a narrows it, said; a notes vault leaves its code out, said (D272)",
+    covers: { cases: ["explorer", "vault"], commands: ["note.open"] },
+    // kestrel: a repository whose .slipbox/ only names it; photography: a notes vault, its site and tools code. Each
+    // vault's own `[files] show` taken out, so yours, `auto`, is what they list by.
+    options: {
+      home: true,
+      startAt: "home/work/kestrel/README.md",
+      config: `${WIDE}[files]\nshow = "auto"\n`,
+      setup: (s) => {
+        for (const vault of ["~/work/kestrel", "~/hobbies/photography"]) {
+          const file = s.path(`${vault}/.slipbox/config.toml`);
+          writeFileSync(file, readFileSync(file, "utf8").replace(/^show = .*\n/m, ""));
+        }
+      },
+    },
+    run: async (s) => {
+      await explorerOpen(s);
+      // Its code listed: git at the vault's top, .slipbox/ or not.
+      await explorerRow(s, "Makefile");
+      await s.see("every text file: git repository · [files] show");
+      // a: notes and data files for now — the code gone, said, and why.
+      await s.keys("a");
+      await s.message("explorer: notes and data files");
+      await s.see(/\d[\d,]* files not listed for now \(a\) · \[files\] show/);
+      await s.until(() => rowEnd(s, "Makefile") === null, 3000, "Makefile not listed");
+      await s.keys("a");
+      await s.see("every text file: git repository · [files] show");
+      await s.until(() => rowEnd(s, "Makefile") !== null, 3000, "Makefile listed again");
+      // photography, a notes vault, no git: notes and data files, its code left out, said.
+      await s.ex(`e ${s.path("~/hobbies/photography/index.md")}`);
+      await goInto(s);
+      await s.where(/photography/, /index\.md/, 5000);
+      await explorerOpen(s);
+      await explorerRow(s, "tools");
+      await s.see(/\d+ files not listed: notes vault · \[files\] show/);
+      // tools unfolded: its Swift not listed; a lists it, nothing left out to say.
+      await s.keys("l");
+      s.expect(rowEnd(s, "ContactSheet.swift") === null, "photography's code not listed");
+      await s.keys("a");
+      await s.message("explorer: every text file");
+      await s.until(() => rowEnd(s, "ContactSheet.swift") !== null, 3000, "a lists photography's code");
+      await s.notSee(/files not listed/);
     },
   },
 ];

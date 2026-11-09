@@ -25,10 +25,45 @@ import { drawDescribed, sideHScrollbar, sideRow, sideView } from "../../../shell
 import { followSelection } from "../../../shell/panels/drawing/selection.ts";
 import { smallButton } from "../../../shell/panels/drawing/chrome.ts";
 
-/** The explorer's tree (filtered while the filter holds text, its matches highlighted). */
-export function drawTree(app: App, c: Canvas, list: Rect, bg: Color | null, geo: Geometry): Rect {
+/** Words into at most two rows of `w` columns, a setting (`[files] show`) kept whole, a row never starting or ending
+ *  with the ` · ` between parts; what's left over cut short. */
+function noticeRows(text: string, w: number): string[] {
+  const rows: string[] = [];
+  text.split(" · ").forEach((part, i) => {
+    for (const [j, word] of (part.match(/\[[^\]]*\] \S+|\S+/g) ?? []).entries()) {
+      const joined = `${rows.at(-1)}${i > 0 && j === 0 ? " · " : " "}${word}`;
+      if (rows.length === 2 || (rows.length > 0 && stringWidth(joined) <= w)) rows[rows.length - 1] = joined;
+      else rows.push(word);
+    }
+  });
+  return rows.map((row) => truncate(row, w));
+}
+
+/**
+ * The line under the tree saying why it lists what it does (D272): a rule, then the line, dim as the explorer's other
+ * notices are (`listing…`, `no matches`), wrapped onto a second row where it doesn't fit on one. Only on a pane as tall
+ * as the git panel's footer needs. Returns the rect left for the tree.
+ */
+function drawNotice(app: App, c: Canvas, pane: Rect, bg: Color | null, geo: Geometry): Rect {
+  const text = app.explorer.filesNotice();
+  if (!text || pane.h < 8) return pane;
+  const w = pane.w - 2;
+  const lines = noticeRows(text, w);
+  const h = 1 + lines.length;
+  const y = pane.y + pane.h - h;
+  drawText(c, pane.x, y, app.glyphs.hbar.repeat(pane.w), { ...roleStyle(app.theme, "border", bg), bg }, pane.w);
+  geo.rules.push({ y, x0: pane.x, x1: pane.x + pane.w });
+  const dim = { ...roleStyle(app.theme, "dim", bg), bg };
+  lines.forEach((line, i) => drawText(c, pane.x + 1, y + 1 + i, sanitize(line), dim, w));
+  return { ...pane, h: pane.h - h };
+}
+
+/** The explorer's tree (filtered while the filter holds text, its matches highlighted), the line under it saying why it
+ *  lists what it does. */
+export function drawTree(app: App, c: Canvas, pane: Rect, bg: Color | null, geo: Geometry): Rect {
   const theme = app.theme;
   const rows = app.explorer.rows();
+  const list = drawNotice(app, c, pane, bg, geo);
   const lines = treeLines(rows.map((r) => r.depth));
   const s = app.sidebar;
   const g = app.glyphs;

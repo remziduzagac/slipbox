@@ -531,3 +531,14 @@ dates. Each says what was asked, decided, built and found, and cites the decisio
   [EG](workstreams/editor-gaps/README.md), whose notes say how each was settled.
 - It reopens D141 (one split), D155 (marks; closing pairs opt-in) and GIT-D12 (`space g` the panel alone), each
   raised with the user and kept; their notes are written when EG is consolidated.
+
+## `files.show = "auto"` in a named repository (2026-11-09)
+
+- The issue (#105): `auto` took any folder with `.slipbox/` for a notes vault, but `slipbox init --name` makes one in a
+  code repository only to name it, so a named repository's code, slipbox's own, wasn't listed, and the screen didn't
+  say why. It set out the problem, a direction (git at the vault's top) and four points to settle.
+- The maintainer settled them in its comments: the rule, git at the vault's top; a git repository of notes fine as it
+  is, `init` asking nothing; a line saying why when the explorer lists every text file because of git, or leaves files
+  out, naming `[files] show`; and a CHANGELOG line under Changed, since vaults with both list their code after
+  upgrading. Recorded as D272; the line's wording and place, at the explorer's foot under a rule, were the pull
+  request's, written to match the explorer's dim notices.

@@ -894,9 +894,10 @@ keys.
   (`explorer.top`, absolute) is a folder: its rows are what's in it. In the vault open, the vault's own tree from there
   (`rootTree(sub)`): the walked notes, directories first, with the files `files.show` lists beside them — by default
   (`all`, D271) every text file, shown with their extension and their own icon (`auto`: every text file in a repository,
-  where code lives, and the data files — JSON, YAML, TOML, INI, CSV — in a notes vault, one with `.slipbox/`); `a`
-  toggles the other way and back, to notes and data files while every text file is listed, else to every text file
-  (`16.5`, "Files beyond notes" below), `shift+h` to the hidden names too and back (below) — the walk's folders, nested
+  where code lives — a vault whose top holds `.git`, `.slipbox/` or not, D272 — and the data files — JSON, YAML, TOML,
+  INI, CSV — in a notes vault, `.slipbox/` without `.git` beside it); `a` toggles the other way and back, to notes and
+  data files while every text file is listed, else to every text file (`16.5`, "Files beyond notes" below; the line at
+  its foot says which, below), `shift+h` to the hidden names too and back (below) — the walk's folders, nested
   vaults by their rows. Anywhere else — above the vault, beside it, in another vault, a nested one's folder — the folder
   is listed a level at a time, never walked (`outsideRows`): its folders, then its files as this vault's `files.show`
   lists them (`auto` worked out from the listed folder's own vault), hidden ones left out unless `files.hidden` is on,
@@ -1010,6 +1011,18 @@ keys.
   vault's — are unchanged: only what the explorer lists changes. The switcher, the explorer's filter, search and find
   list what's indexed, as for the busy folders: a hidden file only once reached. Hidden again, a view in a hidden folder
   (not the vault's own way to it) goes out to the folder holding it.
+- **The line at its foot: why it lists what it does** (D272; `ExplorerFileRows.filesNotice`, `drawNotice` in
+  `tui/workspace/explorer/drawing/panel.ts`). Under the tree, a rule joined to the border (as the git panel's footer
+  has) and a dim line, as the explorer's other notices are (`listing…`, `no matches`), naming the setting that changes
+  it: `every text file: git repository · [files] show` when `auto` lists every text file because the vault's top holds
+  `.git`; when the vault open's files are left out, how many of its text files — not counting those `files.include`
+  lists anyway, nor those `files.exclude` leaves out — and why: `12 files not listed: notes vault · [files] show`
+  (`auto` in a notes vault), `… for now (a) · [files] show` (`a`), `… · [files] show` alone (`files.show` set to
+  fewer). Nothing when nothing is left out and git isn't the reason, as with the default (`all`). Worked out once for
+  each tree built (`Explorer.filesNotice`), drawn at every frame. Where it doesn't fit on one row it takes a second,
+  the words wrapped, a setting's name (`[files] show`) never split and a row never starting or ending with the `·`; on
+  a pane shorter than eight rows it isn't drawn, the tree keeping its rows. Not a row of the tree: never selected,
+  clicked or scrolled.
 - **A row's marks** (VV-D9; `tui/workspace/explorer/marks.ts`, drawn by `drawTree`). At a row's right, in columns that
   line up: the index's state in the last (`indexGlyph`, `INDEX_ROLE`) — indexed `●` (`sidebar_mark`: dimmer than a
   name), indexing `◐` (`info`), not indexed `⊘` (`sidebar`), can't read `⚿` (a lock in Nerd; `warn`), a problem `⚠`
@@ -2221,13 +2234,15 @@ the only one (`16.16`, `16.17`; D112): Org and AsciiDoc files open as text.
 - **Editing and saving** work as for notes: the same undo, saves, autosave and conflict prompt; an
   agent's change to an open file reloads it.
 - **What lists them.** The explorer and the switcher show what `files.show` says (`all`, the default since D271: every
-  text file; `renderable` — notes and data files; `notes`; or `auto`: `renderable` in a notes vault — one with
-  `.slipbox/` — and `all` elsewhere, a repository where code lives), plus `files.include` patterns, minus
-  `files.exclude`; the explorer's `a` toggles the other way and back (`renderable` from `all`, else `all`), and its
-  `shift+h` hides the hidden names or lists them again (`files.hidden`, D250; § Side panes), which the switcher never
-  lists unless reached. The explorer, the tabs and the history show every name with its extension (the switcher lists
-  paths), notes' too (`home.md`, `halley.toml`): the formats sit side by side, and the extension says which is which.
-  Folders show whether or not anything in them is listed, so a new or empty one is there to open and create in.
+  text file; `renderable` — notes and data files; `notes`; or `auto`: `renderable` in a notes vault — `.slipbox/`
+  without `.git` beside it — and `all` elsewhere: a repository, where code lives, its top holding `.git`, `.slipbox/`
+  or not (`autoWhy`, D272); home; Elsewhere), plus `files.include` patterns, minus `files.exclude`; the explorer's `a`
+  toggles the other way and back (`renderable` from `all`, else `all`), a line at its foot saying why it lists what it
+  does (§ Side panes), and its `shift+h` hides the hidden names or lists them again (`files.hidden`, D250; § Side
+  panes), which the switcher never lists unless reached. The explorer, the tabs and the history show every name with
+  its extension (the switcher lists paths), notes' too (`home.md`, `halley.toml`): the formats sit side by side, and
+  the extension says which is which. Folders show whether or not anything in them is listed, so a new or empty one is
+  there to open and create in.
 - **New notes and folders** (`ctrl+n`, `space n n`, `:new`; `space d n`, `:mkdir`; `n` and `shift+n` in
   the explorer): a name, from the current note's folder — or the explorer's selected folder when it
   has focus, or the vault's top with a leading `/` — and folders on the way are made. `.md` is added

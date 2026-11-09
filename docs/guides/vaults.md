@@ -206,8 +206,10 @@ From kestrel, now:
 In `notes`:
 
 - `/` at a path's start, and a wikilink's name, reach the notes' own.
-- The explorer lists every text file in it, as anywhere. `a` narrows it to the notes and data files, and
-  `files.show = "auto"` does that in every folder with a `.slipbox/`.
+- The explorer lists every text file in it, as anywhere. `a` narrows it to the notes and data files.
+  `files.show = "auto"` does that in every notes vault, a `.slipbox/` with no `.git` beside it, as here. In kestrel,
+  whose top holds `.git`, `"auto"` lists every text file, and so it would with a `.slipbox/` there to name it. A line
+  at the explorer's foot says which it does, and why.
 - The top bar says `◈ kestrel-notes │ ⎇ main`: its git is the repository's, and you commit from the git panel as in
   kestrel.
 

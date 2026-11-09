@@ -593,6 +593,10 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
   lines', 'the wheel scrolls the explorer')
 - files beyond notes: default data files shown, 'a' toggles all text, binaries never — `notes/.slipbox/config.toml`,
   `work/kestrel/README.md` (tui.md Files beyond notes; test 'the explorer lists data files by default')
+- files.show auto: a repository with `.slipbox/` lists every text file, a notes vault (no `.git` beside its
+  `.slipbox/`) its notes and data files; the line at the explorer's foot says why, naming `[files] show` —
+  `work/kestrel/.slipbox/config.toml`, `hobbies/photography/tools/ContactSheet.swift` (tui.md Side panes; D272; check
+  'files.show auto')
 - hidden and git-ignored files and folders, node\_modules, walk.exclude — `.build/extras.toml`,
   `work/kestrel/.gitignore` (tui.md Opening 20.8; test ':e of a git-ignored or hidden file opens it')
 - a row's marks: indexed `●` dimmed, not indexed `⊘` (node\_modules, build, vendor, tmp listed and browsed), git's

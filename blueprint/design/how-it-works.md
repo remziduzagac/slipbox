@@ -202,6 +202,7 @@ Theme vocabulary and compatibility aliases live in `rendering/theme/roles.ts` be
 | [remotes.ts][o30] | 21.6 | a repository's remotes as `host/path`: what names it, what hosting URLs are its |
 | [parsecache.ts][o43] | 20.11 | notes' parsed content by content hash, shared by every copy on the machine |
 | [names.ts][o25] | 21.9 | a vault as it's told: its name, else its path (`~/…`); `name@branch`; `~`, `Elsewhere` |
+| `core/workspace/vaults/notes-vault.ts` | 16.5, D272 | what `files.show = "auto"` takes a vault for: git at its top |
 | `core/workspace/git/git.ts` | 17.19 | a vault's git checkout, from `.git`: the main one or a worktree, the branch |
 | [gitops.ts][o73] | 5.11–5.14, 23.6 | git run for what `.git` can't say cheaply: status, changes, a file at a commit |
 | [mergereview.ts][o74] | 20.21 | before a merge: the links `git merge-tree`'s result would break, each cause and fix |
