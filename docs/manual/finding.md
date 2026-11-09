@@ -78,6 +78,9 @@ As you type, the list shows what's in the folder typed so far, its folders first
 The file opens as `:e` opens it. A file of another vault asks first whether to go into that vault, as every way in does
 ([Switching vaults](vaults.md#switching-vaults)). When nothing in the list matches, `enter` opens the path as typed.
 
+A folder reached through a link you haven't followed isn't listed: one row says where the link leads, and `enter` on it
+asks whether to follow it, just look, or leave it ([Links that lead out](vaults.md#links-that-lead-out)).
+
 The switcher takes a path too: type one that starts with `/`, `~/`, `./` or `../` in `ctrl+p`, and it lists that
 folder the same way, with the same keys. Its preview shows the selected file.
 

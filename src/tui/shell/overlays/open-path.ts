@@ -2,15 +2,18 @@
 // `/`, `~/`, `./` or `../`). What's typed is read as `:e` reads it — `~` home, a relative path from the vault's top —
 // and its folder listed as it's typed: the entries whose names hold what's begun after its last `/`. `tab` completes
 // the selected entry into the path, `enter` goes into a folder or opens a file through `:e` (`note.open`: into another
-// vault, asked first, D270), `ctrl+w` goes back a folder. A folder is read as the explorer reads one outside the vault:
-// off the main thread (T12), so one on a disk that answers slowly never holds up the keys.
+// vault, asked first, D270), `ctrl+w` goes back a folder. A folder is read off the main thread (T12), one at a time, so
+// one on a disk that answers slowly never holds up the keys, nor the explorer's listings behind it; one a link not
+// followed leads to (VV-D6) is listed only once you've said so.
 
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { unreadableWords } from "../../../core/foundation/platform/fsutil.ts";
 import { tildePath, untildePath } from "../../../core/foundation/platform/paths.ts";
+import { locationAt } from "../../../core/workspace/vaults/vault.ts";
 import { type FolderListing, type ListedEntry, listFolder } from "../../../core/workspace/walk/listing.ts";
 import { listThreads } from "../../../core/workspace/walk/walk-thread.ts";
 import type { App } from "../../app/runtime/app.ts";
+import { noAnswer } from "../../workspace/explorer/listings.ts";
 import type { ListItem, ListOverlay } from "./list-types.ts";
 import { rank } from "./match.ts";
 import { refilter } from "./overlays.ts";
@@ -26,6 +29,8 @@ export class PathPick {
     readonly abs: string,
     readonly dir: boolean,
     readonly typed: string,
+    /** The row of a folder a link not followed keeps from being listed (VV-D6): `enter` asks about the link. */
+    readonly unfollowed = false,
   ) {}
 }
 
@@ -70,11 +75,24 @@ function said(text: string): ListItem {
 }
 
 /**
+ * The folder being read for a list of paths on a listing thread, when one is — whichever list asked it, open or since
+ * closed: never more than one at a time, so a folder that doesn't answer holds one of the two threads the explorer
+ * shares, never both. Once it answers, every list waiting on it keeps it, and asks for the folder typed meanwhile.
+ */
+let reading: { dir: string; done: Promise<FolderListing> } | null = null;
+
+/**
  * The paths of one list while it's open: the folders typed into, each read once and kept, and its keys. `when` says
- * whether what's typed is a path (the switcher's is only sometimes).
+ * whether what's typed is a path (the switcher's is only sometimes). A folder a link not followed leads to (VV-D6) is
+ * never listed unasked: one row says so, and `enter` on it asks, as the explorer does. In the TUI one folder at a time
+ * is read (`reading`), on the listing threads the explorer shares: never one behind another that hasn't answered.
  */
 export class PathCompletion {
-  private readonly kept = new Map<string, FolderListing | null>();
+  private readonly kept = new Map<string, FolderListing>();
+  /** What keeps each folder typed from being listed — a link not followed on its way — or null; looked at once. */
+  private readonly links = new Map<string, { link: string; target: string | null } | null>();
+  /** The read it waits on to ask for its own, another list's or one of its own before. */
+  private waits: Promise<FolderListing> | null = null;
   /** The list it serves, once open: a folder read meanwhile fills it, while it's open and a path is typed. */
   private list: ListOverlay | null = null;
 
@@ -88,41 +106,73 @@ export class PathCompletion {
     this.list = o?.kind === "list" ? o : null;
   }
 
-  /** The rows for what's typed: its folder's entries for the name begun; a line while it's read, or why it can't be. */
+  /**
+   * The rows for what's typed: its folder's entries for the name begun; a line while it's read, or why it can't be; or,
+   * a link not followed on its way, the row that asks about it.
+   */
   rows(input: string): ListItem[] {
     const a = this.app;
     if (input === "~") return [{ label: "~/", data: new PathPick(a.home, true, "~/") }];
     const t = typedPath(input, a.loc.root, a.home);
-    const listing = this.listing(t.dir);
     const where = tildePath(t.dir, a.home);
-    if (!listing) return [said(`reading ${where}…`)];
+    const link = this.linkTo(t.dir);
+    if (link) {
+      const to = link.target ? tildePath(link.target, a.home) : "nowhere";
+      return [{ label: `→ ${to}  not followed`, hint: "enter asks", data: new PathPick(t.dir, true, input, true) }];
+    }
+    const listing = this.listing(t.dir);
+    if (!listing) {
+      const before = reading && reading.dir !== t.dir ? ` once ${tildePath(reading.dir, a.home)} answers` : "";
+      return [said(`reading ${where}…${before}`)];
+    }
     if (listing.error) return [said(`${where}: ${unreadableWords(listing.error)}`)];
     return entryRows(listing, t.typedDir, t.name, a.ui.hidden_files);
+  }
+
+  /** The link not followed keeping `dir` from being listed (VV-D6): by the vault open's rule, or its place's. */
+  private linkTo(dir: string): { link: string; target: string | null } | null {
+    const had = this.links.get(dir);
+    if (had !== undefined) return had;
+    const f = this.app.following;
+    const link = f.blocked(dir) ?? f.blockedThere(dir);
+    this.links.set(dir, link);
+    return link;
   }
 
   /** `dir` as read for this list: null while it's read on a listing thread (the TUI's; a test's App reads it here). */
   private listing(dir: string): FolderListing | null {
     const a = this.app;
     const had = this.kept.get(dir);
-    if (had !== undefined) return had;
+    if (had) return had;
     if (!a.explorer.listings.offThread) {
       const now = listFolder(dir, a.config.walk, true);
       this.kept.set(dir, now);
       return now;
     }
-    this.kept.set(dir, null);
-    listThreads()
-      .list(dir, a.config.walk, true)
-      .then(
-        (listing) => this.came(dir, listing),
-        (err: Error) => this.came(dir, { dir, error: err.message, entries: [], notes: false, scope: null }),
-      );
+    // One at a time: the folder typed now is asked for once the one being read answers.
+    if (!reading) {
+      const done = listThreads()
+        .list(dir, a.config.walk, true)
+        .then(
+          (listing) => listing,
+          (err: Error): FolderListing => ({ dir, error: noAnswer(err), entries: [], notes: false, scope: null }),
+        )
+        .finally(() => {
+          reading = null;
+        });
+      reading = { dir, done };
+    }
+    const waits = reading.done;
+    if (this.waits !== waits) {
+      this.waits = waits;
+      void waits.then((listing) => this.came(listing));
+    }
     return null;
   }
 
-  /** A folder read: kept, and the list filled again if it's still open on a path. */
-  private came(dir: string, listing: FolderListing): void {
-    this.kept.set(dir, listing);
+  /** A folder read, kept: the list filled again if it's still open on a path — asking for the one typed now. */
+  private came(listing: FolderListing): void {
+    this.kept.set(listing.dir, listing);
     const o = this.list;
     if (!o || this.app.overlay !== o || !this.when(o.input) || this.app.quitting) return;
     const at = o.selected;
@@ -138,13 +188,33 @@ export class PathCompletion {
   }
 
   /**
-   * A key, while what's typed is a path: `tab` completes it to the selected entry, `enter` on a folder goes into it,
-   * `ctrl+w` (`ctrl+backspace`) goes back a folder. True when it took the key.
+   * The link keeping `dir` from being listed, asked about (VV-D6) — follow it, just look, or no — as the explorer asks;
+   * followed or looked at, the list back with the folder listed.
+   */
+  private ask(o: ListOverlay, dir: string): void {
+    const a = this.app;
+    const back = () => {
+      this.links.clear();
+      if (a.overlay) return;
+      a.overlay = o;
+      refilter(o);
+      a.host.requestRender();
+    };
+    if (!a.following.gate(dir, back, locationAt(dirname(dir)))) back();
+  }
+
+  /**
+   * A key, while what's typed is a path: `tab` completes it to the selected entry, `enter` on a folder goes into it (on
+   * a link not followed, asks about it), `ctrl+w` (`ctrl+backspace`) goes back a folder. True when it took the key.
    */
   key(key: string, item: ListItem | undefined): boolean {
     const o = this.list;
     if (!o || !this.when(o.input)) return false;
     const pick = pathPick(item);
+    if (pick?.unfollowed && (key === "tab" || key === "enter")) {
+      if (key === "enter") this.ask(o, pick.abs);
+      return true;
+    }
     if (key === "tab") {
       if (pick) this.type(o, pick.typed);
       return true;
@@ -170,10 +240,14 @@ export class PathCompletion {
     return true;
   }
 
-  /** A row picked: a file opened as `:e` opens it; a folder (`alt+enter`'s Here) gone into, the list open again. */
+  /**
+   * A row picked: a file opened as `:e` opens it; a folder (`alt+enter`'s Here) gone into, the list open again; a link
+   * not followed, asked about.
+   */
   async open(pick: PathPick): Promise<void> {
     const o = this.list;
     if (pick.dir && o) {
+      if (pick.unfollowed) return this.ask(o, pick.abs);
       this.app.overlay = o;
       return this.type(o, pick.typed);
     }

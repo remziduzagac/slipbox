@@ -1675,9 +1675,14 @@ past theirs), so the content behind never runs up to the edge.
   begun starts with `.`), the entries holding the name begun after it, as every list matches (§ Filtering below).
   `tab` completes the path to the selected entry; `enter` goes into a folder, the list open, or opens a file through
   `note.open` — another vault's asked first (D270; § Going into a vault); `ctrl+w` goes back a folder. `enter` with no
-  entry to pick opens the path as typed, `:e` saying why when it can't. A folder is read as the explorer reads one
-  outside the vault, on a listing thread (T12; `listThreads`), once while the list is open: `reading ~/x…` until it
-  comes, why when it can't be (`~/x: it isn't there`). `:e` reads `~/` as home too.
+  entry to pick opens the path as typed, `:e` saying why when it can't. A folder a link not followed leads to (VV-D6;
+  `Following.blocked`, else `blockedThere` by the rule of the place holding it) isn't listed: one row says where the
+  link leads, `→ ~/out  not followed`, and `enter` on it asks as the explorer does (follow it, just look, no); followed
+  or looked at, the list comes back with the folder listed. Folders are read on the listing threads the explorer
+  shares (T12; `listThreads`), each once while the list is open, and one at a time across every list of paths: a folder
+  typed while another is read waits for it (`reading ~/x… once ~/y answers`), so one that doesn't answer holds one
+  thread, never both. `reading ~/x…` until it comes; why when it can't be (`~/x: it isn't there`, `no answer in
+  time`). `:e` reads `~/` as home too.
 - **Replace in every note** (`25.4`, D155; `ctrl+shift+h`, `space f shift+r`): what to find — the window's find, or a
   selection on one line, typed already — then what with, then the rename's preview of each line it changes in every
   note and every file the explorer shows (`slipbox replace --all`'s, `--files` as the explorer has them). `enter` does

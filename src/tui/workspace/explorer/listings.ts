@@ -34,7 +34,7 @@ interface Kept {
 }
 
 /** Why a listing's thread gave no answer, as its row says it — of the folder (`walkFailure` says it of the walk). */
-function noAnswer(err: Error): string {
+export function noAnswer(err: Error): string {
   const kind = err instanceof WorkerRequestError ? err.kind : null;
   if (kind === "deadline") return "no answer in time";
   if (kind === "unavailable" || kind === "crashed") return "its thread stopped";
