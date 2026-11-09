@@ -333,7 +333,9 @@ a check sends with `signal`. Rows are read up to the width: narrowed, xterm keep
 them: Kitty's way once slipbox has pushed its flags — `escape` is `CSI 27 u`, never the start of `alt+…`, so no key
 waits on a clock — or a legacy terminal's (control characters, an escape before alt, xterm's modifyOtherKeys for what
 legacy can't say). A check about the legacy path asks for that keyboard; there an escape is seen taking effect before
-the next key goes.
+the next key goes. slipbox pushes its flags once the terminal has answered its questions, on a slow machine after its
+first frame, so a session's start waits for them too: a check's first `escape`, sent the old way, would be read with
+the key after it as `alt+` that key.
 
 **A session** (`tests/terminal/session.ts`) is one check's slipbox: a fresh copy of the demo vault, or the reference
 set built (`home`); its own config, state, cache, data, home and temporary folders (`XDG_*`, `HOME`, `TMPDIR`), with

@@ -640,9 +640,6 @@ export const PEEK_BACKLINKS: Check[] = [
     area: "links-and-files",
     name: "peek backlinks: a vault nested in this one, never indexed — its links among this note's backlinks, its index built on the thread (#10)",
     covers: { cases: ["links/backlinks", "vault"], commands: ["backlinks.open"] },
-    // Fails at random on CI's macOS runner, on `dev` itself (run 40106060865): timed out at about 34 s, waiting for the
-    // nested vault's link among the backlinks.
-    quarantined: "#74",
     options: {
       home: true,
       startAt: "home/notes/index.md",
@@ -653,17 +650,24 @@ export const PEEK_BACKLINKS: Check[] = [
     },
     run: async (s) => {
       const nest = join(s.home, "notes", "nest");
-      // The backlinks of the index: the nested vault found, its index built on the thread, its link listed.
+      await explorerOpen(s);
+      await s.keys("escape"); // the keys back to the note
+      // The backlinks of the index: the nested vault found, its index built on the thread — its row in the explorer
+      // says so once the thread has written it, however long the thread takes (VV-D9).
+      await leader(s, "l", "b");
+      await s.see("Linking to index.md");
+      await s.keys("escape");
+      await s.until(() => markOf(s, "nest") === "●", SLOW, "nest, its index built on the thread: ●");
+      s.expect(existsSync(indexOf(s, nest)), "the nested vault's index built");
+      // Its link listed: asked until the list shows it (a press as the answer is read lists them as they were).
       await s.retry(
         async () => {
-          await s.keys("escape", "space", "l", "b");
+          if (s.rowOf("Linking to") >= 0) await s.keys("escape");
+          await leader(s, "l", "b");
         },
         () => s.rowOf("nest/n.md") >= 0,
         "the nested vault's link among the backlinks",
-        2000,
-        SLOW,
       );
-      s.expect(existsSync(indexOf(s, nest)), "the nested vault's index built");
     },
   },
   {

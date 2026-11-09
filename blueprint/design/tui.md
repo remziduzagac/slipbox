@@ -2314,7 +2314,10 @@ and the reload is one more undo step: `u` brings back what was there before an a
 disk opens the **conflict prompt** (D139), which each choice answers with its key. While you're typing (into
 it or any note) it waits: a message says the file changed, and the prompt opens with the first key
 after typing ends — not the `esc` itself, which a second `esc` closing the lens would answer — so
-letters meant for the text never pick a choice.
+letters meant for the text never pick a choice. The watcher's word is checked against the file: one it says came or
+changed that is still as the note was read or saved — its text, its BOM, whether its bytes are UTF-8 — changed
+nothing (a folder it only now watches, a link followed, says each of its files came). It is neither reloaded nor asked
+about, and is left as a reload leaves it: no conflict kept or waiting over a change the file no longer has.
 
 - **(l) Load theirs** — the file's version; yours is one `u` away.
 - **(k) Keep yours** — the status line says `⚠ differs from disk`; autosave stays off for it, and

@@ -190,6 +190,10 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 
 ### Fixed
 
+- A note with unsaved changes no longer says it "changed on disk" and asks what to keep when nothing changed it, as
+  when you had just followed a link out of the vault to it: watching the folder the link leads to, slipbox took the
+  note for one that had just come. A file whose text is still what you opened or saved isn't reloaded or asked about.
+
 - Moving a folder that holds a followed symlink to another vault no longer records that vault at the link's new path,
   dropping it from the machine's list of vaults: the link moves with its folder, and the vault stays where it is.
 
