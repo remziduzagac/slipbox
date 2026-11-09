@@ -73,7 +73,7 @@ roots = []                     # paths and globs, each with what's inside it: ["
 
 [files]                        # files besides notes, in the explorer and the switcher
 show = "all"                   # all (every text file) | renderable (notes and data files) | notes
-                               # | auto (renderable in a vault with .slipbox/, else all)
+                               # | auto (renderable in a vault with .slipbox/ and no .git, else all)
 include = []                   # always listed, in .gitignore's syntax: ["*.ts", "scripts/"]
 exclude = []                   # never listed, in .gitignore's syntax
 hidden = true                  # hidden files and folders listed too, never indexed (.git never); shift+h there

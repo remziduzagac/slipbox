@@ -21,7 +21,7 @@ extensions = ["md", "markdown"]
 exclude = ["templates/drafts/**", "*.private.md", "!reading-log.private.md"]
 
 [files]
-show = "renderable"            # notes and data files, the default
+show = "renderable"            # notes and data files alone; the default, "all", lists code too
 
 [context]
 depth = 2                      # a bundle follows links twice: note, what it links to, what those link to

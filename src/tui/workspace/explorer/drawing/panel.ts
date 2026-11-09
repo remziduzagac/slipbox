@@ -25,10 +25,53 @@ import { drawDescribed, sideHScrollbar, sideRow, sideView } from "../../../shell
 import { followSelection } from "../../../shell/panels/drawing/selection.ts";
 import { smallButton } from "../../../shell/panels/drawing/chrome.ts";
 
-/** The explorer's tree (filtered while the filter holds text, its matches highlighted). */
-export function drawTree(app: App, c: Canvas, list: Rect, bg: Color | null, geo: Geometry): Rect {
+/** Words into at most two rows of `w` columns, a row never starting or ending with the ` · ` between parts, the setting
+ *  at the end (`[files] show`) never split: where the words would take more rows, the reason cut short on the first
+ *  and the setting alone on the second; no rows where even the setting doesn't fit (D272). */
+function noticeRows(text: string, w: number): string[] {
+  const parts = text.split(" · ");
+  const setting = parts.length > 1 ? parts.at(-1)! : null;
+  if (setting !== null && stringWidth(setting) > w) return [];
+  const rows: string[] = [];
+  parts.forEach((part, i) => {
+    const words = i > 0 && i === parts.length - 1 ? [part] : (part.match(/\S+/g) ?? []);
+    for (const [j, word] of words.entries()) {
+      const joined = `${rows.at(-1)}${i > 0 && j === 0 ? " · " : " "}${word}`;
+      if (rows.length > 0 && stringWidth(joined) <= w) rows[rows.length - 1] = joined;
+      else rows.push(word);
+    }
+  });
+  if (rows.length <= 2 && rows.every((row) => stringWidth(row) <= w)) return rows;
+  if (setting === null) return [truncate(text, w)];
+  return [truncate(parts.slice(0, -1).join(" · "), w), setting];
+}
+
+/**
+ * The line under the tree saying why it lists what it does (D272): a rule, then the line, dim as the explorer's other
+ * notices are (`listing…`, `no matches`), wrapped onto a second row where it doesn't fit on one. Only on a pane as tall
+ * as the git panel's footer needs. Returns the rect left for the tree.
+ */
+function drawNotice(app: App, c: Canvas, pane: Rect, bg: Color | null, geo: Geometry): Rect {
+  const text = app.explorer.filesNotice();
+  if (!text || pane.h < 8) return pane;
+  const w = pane.w - 2;
+  const lines = noticeRows(sanitize(text), w);
+  if (lines.length === 0) return pane;
+  const h = 1 + lines.length;
+  const y = pane.y + pane.h - h;
+  drawText(c, pane.x, y, app.glyphs.hbar.repeat(pane.w), { ...roleStyle(app.theme, "border", bg), bg }, pane.w);
+  geo.rules.push({ y, x0: pane.x, x1: pane.x + pane.w });
+  const dim = { ...roleStyle(app.theme, "dim", bg), bg };
+  lines.forEach((line, i) => drawText(c, pane.x + 1, y + 1 + i, line, dim, w));
+  return { ...pane, h: pane.h - h };
+}
+
+/** The explorer's tree (filtered while the filter holds text, its matches highlighted), the line under it saying why it
+ *  lists what it does. */
+export function drawTree(app: App, c: Canvas, pane: Rect, bg: Color | null, geo: Geometry): Rect {
   const theme = app.theme;
   const rows = app.explorer.rows();
+  const list = drawNotice(app, c, pane, bg, geo);
   const lines = treeLines(rows.map((r) => r.depth));
   const s = app.sidebar;
   const g = app.glyphs;

@@ -210,6 +210,7 @@ test("Bun file-local timeout sites stay named; update this map when a file moves
     ["tests/core/workspace/vaults/init.test.ts", "UNIT_TIMEOUT_MS"],
     ["tests/core/workspace/vaults/named-folders.test.ts", "UNIT_TIMEOUT_MS"],
     ["tests/core/workspace/vaults/nested.test.ts", "UNIT_TIMEOUT_MS"],
+    ["tests/core/workspace/vaults/notes-vault.test.ts", "UNIT_TIMEOUT_MS"],
     ["tests/core/workspace/vaults/symlinks/answers.test.ts", "UNIT_TIMEOUT_MS"],
     ["tests/core/workspace/vaults/symlinks/following.test.ts", "UNIT_TIMEOUT_MS"],
     ["tests/core/workspace/vaults/symlinks/reading-writing.test.ts", "UNIT_TIMEOUT_MS"],

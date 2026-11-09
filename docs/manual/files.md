@@ -197,11 +197,18 @@ Which other files it lists is up to `files.show` ([Configuration](configuration.
 - `"all"`, the default, lists every text file.
 - `"renderable"` lists notes and data files. Data files are JSON, YAML, TOML, INI, CSV and the like.
 - `"notes"` lists notes only.
-- `"auto"` lists notes and data files in a folder with a `.slipbox/`. Anywhere else, such as a code repository, it
-  lists every text file.
+- `"auto"` decides by the vault. A git repository, whose top holds `.git`, lists every text file, with a `.slipbox/` or
+  without one. A notes vault, a folder with a `.slipbox/` and no `.git` beside it, lists notes and data files. Anywhere
+  else, it lists every text file. A notes vault inside a repository is a notes vault: its `.slipbox/` has no `.git`
+  beside it ([Working across folders and vaults](../guides/vaults.md#a-notes-vault-inside-a-repository)).
 
 `a` in the explorer switches the other way for the moment, and back: to notes and data files while it lists every
 text file, and to every text file otherwise.
+
+When the explorer leaves files out, a line at its foot says how many and why, and names `[files] show`, the setting
+that changes it: `12 files not listed: notes vault · [files] show`. With `"auto"` in a git repository, the line says
+why it lists every text file: `every text file: git repository · [files] show`. With the default, nothing is left
+out, and there is no line.
 
 Two more settings name files:
 

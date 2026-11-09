@@ -15,7 +15,8 @@ import { mountsIn, recentMountTable } from "../vaults/mounts.ts";
 import { vaultKey } from "../../foundation/platform/paths.ts";
 import { readIdentity, vaultConfigFile } from "../vaults/registry.ts";
 import { linkKey, linkScope, linkTarget } from "../vaults/symlinks.ts";
-import { findVaultRoot, hasMarker, isVaultRoot, locationAt } from "../vaults/vault.ts";
+import { isNotesVault } from "../vaults/notes-vault.ts";
+import { findVaultRoot, isVaultRoot, locationAt } from "../vaults/vault.ts";
 import { type BusyWhy, busyFolderWhyAt, readFolder } from "./walk.ts";
 
 /** One entry of a folder listed, and what's known of it. */
@@ -46,7 +47,8 @@ export interface FolderListing {
   /** Why it couldn't be listed (`EACCES`, `ENOENT`…); null when it was. */
   error: string | null;
   entries: ListedEntry[];
-  /** It's in a notes vault (one with `.slipbox/`): which of its files are listed (`files.show`). */
+  /** It's in a notes vault (`.slipbox/` at its top, no `.git` beside it: `isNotesVault`): which of its files `files.show
+   *  = "auto"` lists. */
   notes: boolean;
   /** Where its links are taken from (`linkScope`): its vault's real path, home's, none in Elsewhere. */
   scope: string | null;
@@ -115,7 +117,7 @@ export function listFolder(dir: string, walk: Config["walk"], hidden: boolean): 
     dir,
     error: null,
     entries: [],
-    notes: !!own && hasMarker(own),
+    notes: !!own && isNotesVault(own),
     scope: linkScope(locationAt(dir)),
   };
   let names: Dirent[];

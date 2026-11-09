@@ -1194,16 +1194,24 @@ describe("the explorer's listings off the main thread (T12, #9)", () => {
   });
 
   test("a listing's digest covers what its rows are built from: a folder become a notes vault's lists anew", () => {
-    const repo = tree({ ".git/HEAD": "ref: refs/heads/main\n", "a.md": "# A\n", "b.png": "png\n" });
-    const before = listFolder(repo, DEFAULT_CONFIG.walk, false);
+    const folder = tree({ "a.md": "# A\n", "b.png": "png\n" });
+    const before = listFolder(folder, DEFAULT_CONFIG.walk, false);
     expect(before.notes).toBe(false);
     // `.slipbox/` given it: hidden, nothing of its entries changes — but which of its files the explorer lists does.
-    mkdirSync(join(repo, ".slipbox"));
-    writeFileSync(join(repo, ".slipbox", "config.toml"), "");
-    const after = listFolder(repo, DEFAULT_CONFIG.walk, false);
+    mkdirSync(join(folder, ".slipbox"));
+    writeFileSync(join(folder, ".slipbox", "config.toml"), "");
+    const after = listFolder(folder, DEFAULT_CONFIG.walk, false);
     expect(after.entries).toEqual(before.entries);
     expect(after.notes).toBe(true);
     expect(after.digest).not.toBe(before.digest);
+    // A repository given `.slipbox/` stays a repository (D272): every text file, its listing as it was.
+    const repo = tree({ ".git/HEAD": "ref: refs/heads/main\n", "a.md": "# A\n", "b.png": "png\n" });
+    const was = listFolder(repo, DEFAULT_CONFIG.walk, false);
+    mkdirSync(join(repo, ".slipbox"));
+    writeFileSync(join(repo, ".slipbox", "config.toml"), "");
+    const named = listFolder(repo, DEFAULT_CONFIG.walk, false);
+    expect([was.notes, named.notes]).toEqual([false, false]);
+    expect(named.digest).toBe(was.digest);
   });
 
   test("a folder whose listing fails says why in its row, in the words `l` says it in", async () => {

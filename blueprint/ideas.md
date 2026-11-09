@@ -291,6 +291,12 @@ idea without an outcome is still open. Nothing here is agreed: the decisions are
 - Org (through `uniorg`) and AsciiDoc as note formats, off by default. (2026-09-29) Built, then not chosen (D112).
 - Prebuilt grammars from a bundle, `tree-sitter-wasms`. (2026-10-07) Not chosen (D121): its Swift is older.
 - A file in several languages parsed with tree-sitter's included ranges on one parser. (2026-10-07) Not chosen (D122).
+- `files.show = "auto"` by git at the vault's top: every text file where `.git` is, `.slipbox/` or not; notes and data
+  files where a `.slipbox/` has no `.git` beside it (#105). (2026-11-09) Chosen (D272).
+- `auto` by other signs of a notes vault: the share of notes among its files, or a setting `init` writes when it makes
+  one. (2026-11-09) Not chosen (D272).
+- `init` asking, in a git repository of notes, which files the explorer lists. (2026-11-09) Not chosen (D272): fine as
+  it is, a line at the explorer's foot saying why it lists every text file.
 
 ## Code view
 

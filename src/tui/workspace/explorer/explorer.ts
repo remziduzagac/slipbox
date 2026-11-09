@@ -225,8 +225,8 @@ export class Explorer {
   }
 
   /**
-   * What `files.show` lists here: `auto` — notes and data files in a notes root (one with `.slipbox/`),
-   * every text file anywhere else (a repository, where code lives; a plain folder).
+   * What `files.show` lists here: `auto` — notes and data files in a notes vault (`.slipbox/` without `.git` beside
+   * it), every text file anywhere else (a repository's top, where code lives, `.slipbox/` or not; a plain folder; D272).
    */
   filesShown(): "notes" | "renderable" | "all" {
     return this.fileRows.filesShown();
@@ -236,6 +236,16 @@ export class Explorer {
   explorerShows(): "notes" | "renderable" | "all" {
     return this.fileRows.explorerShows();
   }
+
+  /** The line under the tree saying why it lists what it does (D272; `ExplorerFileRows.filesNotice`), or null: worked
+   *  out once for each tree built, as drawn at every frame. */
+  filesNotice(): string | null {
+    const tree = this.treeRows();
+    if (this.notice?.tree !== tree) this.notice = { tree, text: this.fileRows.filesNotice() };
+    return this.notice.text;
+  }
+
+  private notice: { tree: TreeRow[]; text: string | null } | null = null;
 
   treeRows(): TreeRow[] {
     if (this.tree) return this.tree;

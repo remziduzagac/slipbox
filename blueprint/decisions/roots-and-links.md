@@ -1181,6 +1181,9 @@ refused, or made as the shell's `mv` makes it, with a warning; the answers of li
 
 ## D271: Every text file and the hidden names listed by default; `a` the other way (2026-11-08)
 
+> **Amended by D272 (2026-11-09):** `auto` lists every text file where the vault's top holds `.git`, `.slipbox/` or not,
+> and notes and data files only where a `.slipbox/` has no `.git` beside it.
+
 **Decision:** `files.show` defaults to `"all"`, every text file, wherever the explorer is, and `files.hidden` to `true`,
 the hidden names listed `⊘` as D250 lists them. `auto`, the default before (notes and data files in a folder with
 `.slipbox/`, every text file elsewhere), stays a value to choose. The explorer's `a` switches for the moment to the
@@ -1202,3 +1205,37 @@ line first). Each folder shown reads its hidden entries too (D250's cost, now by
 
 **Not chosen:** `files.hidden` alone changed, `auto` kept; `a` kept as "every text file", which would do nothing with
 `all` the default.
+
+## D272: `auto` lists every text file where git is at the vault's top; a line says why (#105, 2026-11-09)
+
+**Decision:** `files.show = "auto"` goes by git at the vault's top, not by `.slipbox/`: a vault whose top holds `.git` —
+a repository's top, a worktree's or a submodule's `.git` file too — lists every text file, `.slipbox/` or not; a
+`.slipbox/` without `.git` beside it — a notes folder, or a notes vault inside a repository (`slipbox init notes` in
+one) — lists notes and data files, as before; anywhere else, home and Elsewhere among them, every text file, as before.
+A folder listed a level at a time goes by its own vault's top, as before. A git repository of notes lists every text
+file too, and `init` asks nothing. A line at the explorer's foot, dim under a rule, says why it lists what it does and
+names `[files] show`: `every text file: git repository · [files] show` where `auto` found git; where it leaves files
+out, how many of the vault's text files (not those `files.include` lists anyway, nor those `files.exclude` leaves out)
+and why — `N files not listed: notes vault`, `… for now (a)` after `a`, nothing more when `files.show` itself lists
+fewer. Nothing is said where nothing is left out and git isn't the reason, as with the default, `all`. On a narrow pane
+it takes a second row, never splitting the setting's name: where two rows of words aren't enough, the reason is cut
+short (`…`) above the setting, alone on its row; a pane narrower than the setting, or shorter than eight rows, has
+none. As built: `autoWhy`, `isNotesVault` (`core/workspace/vaults/notes-vault.ts`, read by `listFolder`),
+`ExplorerFileRows.filesShown` and `filesNotice` (`tui/workspace/explorer/rows/files.ts`), `drawNotice`
+(`tui/workspace/explorer/drawing/panel.ts`); design/tui.md § Side panes, § Files beyond notes. Decided by an issue
+(#105) and one pull request (D223).
+
+**Why:** The maintainer's choice, 2026-11-09 (#105). `.slipbox/` doesn't mean notes: `slipbox init --name` (or `space v
+n`) makes one in a code repository only to name it, so `auto` hid a named repository's code, slipbox's own among them,
+and nothing on the screen said why. Git at the vault's top says code may live there, at the cost of one more `stat`; a
+notes vault inside a repository, which `.slipbox/` is there to make, keeps its notes and data files. A git repository
+of notes listing every text file was judged fine as it is, with the line saying how to narrow it.
+
+**Cost:** With `auto`, a git repository of notes lists its other text files beside its notes until `[files] show =
+"renderable"` is set, and a vault with both `.slipbox/` and `.git` lists its code after upgrading. The line takes up to
+three of the tree's rows while it has something to say, and counting what's left out goes over the vault's files once
+each time the tree is built.
+
+**Not chosen:** other signs of a notes vault — the share of notes among its files, a setting `init` writes when it
+makes one; `init` asking, in a git repository of notes, what to list; leaving the screen silent, `a` and the setting
+found only in the docs.
