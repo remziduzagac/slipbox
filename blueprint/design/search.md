@@ -25,9 +25,11 @@ any vault does, over what its index holds (VV-D2). Elsewhere has no index and no
 it: …`; `needsIndex` in `cli/common.ts`) (VV-D3).
 
 The index is a cache (D39): one of another version, or one SQLite can't read, is deleted and made again, and one that
-can't be made (a read-only cache) leaves the scan. It asks of SQLite only FTS5 with `unicode61`, `bm25`, WAL and a
-busy timeout. That SQLite is the runtime's own, `node:sqlite` (D196); which it is on each platform, and the few calls
-`core/foundation/platform/sqlite.ts` makes of it, are [distribution.md](distribution.md) § SQLite.
+can't be made (a read-only cache) leaves the scan. Its busy timeout is set first as it opens: another slipbox making it
+at the same moment is waited for, not taken for an index SQLite can't read and deleted under it. It asks of SQLite only
+FTS5 with `unicode61`, `bm25`, WAL and a busy timeout. That SQLite is the runtime's own, `node:sqlite` (D196); which it
+is on each platform, and the few calls `core/foundation/platform/sqlite.ts` makes of it, are
+[distribution.md](distribution.md) § SQLite.
 
 ## A row per file
 

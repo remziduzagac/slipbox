@@ -142,4 +142,29 @@ describe("the parse cache by content (20.11)", () => {
       else process.env.XDG_CACHE_HOME = was;
     }
   });
+
+  test("another holding the cache's file a moment as it opens: waited for, the cache opened, not gone without", async () => {
+    const { ParseCache } = await import("../../../../src/core/documents/markdown/parsecache.ts");
+    const file = join(mkdtempSync(join(tmpdir(), "slipbox-pclock-")), "parsed.db");
+    // Another process with the file to itself for 300 ms, as a second slipbox can have it.
+    const holder = Bun.spawn(
+      [
+        process.execPath,
+        "-e",
+        `const { Database } = require("bun:sqlite");
+         const db = new Database(${JSON.stringify(file)});
+         db.exec("begin exclusive");
+         console.log("held");
+         Bun.sleepSync(300);
+         db.exec("commit");`,
+      ],
+      { stdout: "pipe" },
+    );
+    await holder.stdout.getReader().read(); // held now
+    const cache = ParseCache.open(file);
+    expect(ParseCache.failure).toBeNull();
+    expect(cache).not.toBeNull();
+    cache?.close();
+    expect(await holder.exited).toBe(0);
+  });
 });

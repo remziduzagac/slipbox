@@ -276,6 +276,35 @@ describe("search: the index and the scan (6.x)", () => {
     fresh.close();
   });
 
+  test("an index another slipbox is making as this one opens it: waited for, theirs kept — not deleted under them", async () => {
+    const { SearchIndex } = await import("../../../../src/core/workspace/search/search.ts");
+    const { cacheDir } = await import("../../../../src/core/foundation/platform/paths.ts");
+    const { g } = setup();
+    mkdirSync(cacheDir(g.loc), { recursive: true });
+    const file = join(cacheDir(g.loc), "search.db");
+    // Another process making it, the file its own for 300 ms: what it writes meanwhile, a table of its own.
+    const holder = Bun.spawn(
+      [
+        process.execPath,
+        "-e",
+        `const { Database } = require("bun:sqlite");
+         const db = new Database(${JSON.stringify(file)});
+         db.exec("begin exclusive");
+         db.exec("create table theirs (x)");
+         console.log("held");
+         Bun.sleepSync(300);
+         db.exec("commit");`,
+      ],
+      { stdout: "pipe" },
+    );
+    await holder.stdout.getReader().read(); // held now
+    const idx = SearchIndex.open(g.loc)!;
+    expect(idx).not.toBeNull();
+    expect(idx.db.prepare("select name from sqlite_master where name = 'theirs'").get()).toEqual({ name: "theirs" });
+    idx.close();
+    expect(await holder.exited).toBe(0);
+  });
+
   test("filters alone with `only` (the TUI's unsaved notes): just those files read", async () => {
     const { search } = await import("../../../../src/core/workspace/search/search.ts");
     const dir = mkdtempSync(join(tmpdir(), "slipbox-search-only-"));
