@@ -42,7 +42,7 @@ import {
   type SteppedWalk,
   type Walker,
 } from "../../../../src/core/workspace/walk/walkers.ts";
-import { SLOW_MS, STUCK_MS, slowFolders } from "../../../fixtures/walk/slow.ts";
+import { Hold, SLOW_MS, STUCK_MS, slowFolders } from "../../../fixtures/walk/slow.ts";
 import type { TreeRow } from "../../../../src/tui/workspace/explorer/explorer.ts";
 import { Listings, PENDING_MS, REREAD_MS } from "../../../../src/tui/workspace/explorer/listings.ts";
 import { answerSwitch, type Harness, harness, makeSandbox, stepToEnd } from "../../../tui-harness.ts";
@@ -85,55 +85,72 @@ async function walked(w: SteppedWalk) {
   return { done: w.done, capped: w.capped, rest: w.rest(), nested: w.nested(), failed: w.failed ?? null };
 }
 
+/** The test's hold on its `held` folders (`holding`): let go of when it ends, no thread left waiting. */
+let hold: Hold | null = null;
+
+/** A hold on the `held` folders of the walk's thread and the listings' (`setWalkWorker`) — and this thread's, once its
+ *  reader is `slowFolders`. */
+function holding(): Hold {
+  hold = new Hold();
+  setWalkWorker(hold.worker);
+  return hold;
+}
+
+/** A job stepped until its walk's thread waits in a `held` folder: each slice handed back meanwhile. */
+async function stepUntilHeld(job: { step(budgetMs: number): boolean }, held: Hold): Promise<void> {
+  while (!held.waiting) {
+    expect(job.step(15)).toBe(true);
+    await Bun.sleep(5);
+  }
+}
+
+/** Home's graph asked for again (`homeIndexed`), `folder` (a `held` one) changed since, so the thread lists it again:
+ *  once the thread waits there, its walk under way. */
+async function askedAgain(h: Harness, held: Hold, folder: string): Promise<void> {
+  held.again();
+  const back = new Date(Date.now() - 60_000);
+  utimesSync(folder, back, back);
+  (h.app.watch as unknown as { homeIndexed(capped: null): void }).homeIndexed(null);
+  while (!held.waiting) await Bun.sleep(5);
+}
+
 afterEach(() => {
+  hold?.release();
+  hold = null;
   setWalkWorker(null);
   setFolderReader(null);
 });
 
 describe("the TUI's walks on their own thread (T12, #9)", () => {
-  // quarantined: #75 — fails at random on CI, mostly on macOS (run 40089628823): once `homeRefreshed` settles, home's
-  // graph has no walk kept (`graph.home.walked` null).
-  test.skip("home's walk, stepped while nobody works, never holds the keys or the screen while a folder is read slowly", async () => {
+  test("home's walk, stepped while nobody works, never holds the keys or the screen while a folder is read slowly", async () => {
     const home = tree({
       "a.md": "# A\n",
       "notes/n.md": "# N\n",
-      "slow/s1.md": "# S1\n\n[a](../a.md)\n",
-      "slow/deep/d.md": "# D\n",
+      "held/s1.md": "# S1\n\n[a](../a.md)\n",
+      "held/deep/d.md": "# D\n",
     });
-    // Slow on either thread: the main thread's walk, as the TUI made it before, waits on it too.
+    // Held on either thread: the main thread's walk, as the TUI made it before, waits on it too.
     setFolderReader(slowFolders);
-    setWalkWorker(slowWorker);
+    const held = holding();
     await inHome(home, async () => {
       const h = await harness({ loc: homeAt(home), open: "a.md" });
       const job = h.app.watch.indexJob()!;
-      let longest = 0;
-      let keyed = false;
-      const started = performance.now();
-      for (;;) {
-        const at = performance.now();
-        const more = job.step(15);
-        longest = Math.max(longest, performance.now() - at);
-        if (!more) break;
-        // A key while the slow folder is read on the thread: handled, and drawn, at once.
-        if (!keyed && performance.now() - started > SLOW_MS / 4) {
-          keyed = true;
-          const pressed = performance.now();
-          await h.keys("ctrl+p");
-          expect(performance.now() - pressed).toBeLessThan(SLOW_MS / 2);
-          expect(h.frame()).toContain("Open note");
-          await h.keys("escape");
-        }
-        await Bun.sleep(5);
-      }
+      await stepUntilHeld(job, held);
+      // A slice, and a key, while the folder is read on the thread: handled, and drawn, the folder still unread.
+      expect(job.step(15)).toBe(true);
+      await h.keys("ctrl+p");
+      expect(h.frame()).toContain("Open note");
+      await h.keys("escape");
+      expect(held.waiting).toBe(1);
+      held.release();
+      await stepToEnd(job, 15);
       await h.app.watch.homeRefreshed;
-      expect(keyed).toBe(true);
-      // The slow folder was read, slowly, on the thread; no slice here waited on it.
-      expect(performance.now() - started).toBeGreaterThanOrEqual(SLOW_MS);
-      expect(longest).toBeLessThan(SLOW_MS / 4);
+      // Only the thread waited on it: none here waited till it gave up.
+      expect(held.gaveUp).toBe(0);
       // And home's index is what the walk found.
       expect(h.app.graph.home?.walked).not.toBeNull();
-      expect(h.app.graph.notes.has("slow/deep/d.md")).toBe(true);
-      expect(h.app.graph.backlinks("a.md").map((b) => b.from)).toEqual(["slow/s1.md"]);
+      expect(h.app.graph.notes.has("held/deep/d.md")).toBe(true);
+      expect(h.app.graph.backlinks("a.md").map((b) => b.from)).toEqual(["held/s1.md"]);
     });
   });
 
@@ -142,55 +159,55 @@ describe("the TUI's walks on their own thread (T12, #9)", () => {
       "a.md": "# A\n",
       "proj/.slipbox/config.toml": "",
       "proj/index.md": "[home's](../a.md)\n",
-      "proj/slow/x.md": "# X\n",
+      "proj/held/x.md": "# X\n",
     });
     setFolderReader(slowFolders);
-    setWalkWorker(slowWorker);
+    const held = holding();
     await inHome(home, async () => {
       const h = await harness({ loc: homeAt(home), open: "a.md", config: (c) => (c.index.background = true) });
       const job = h.app.watch.indexJob()!;
-      let longest = 0;
-      for (;;) {
-        const at = performance.now();
-        const more = job.step(15);
-        longest = Math.max(longest, performance.now() - at);
-        if (!more) break;
-        await Bun.sleep(5);
-      }
+      await stepUntilHeld(job, held);
+      expect(job.step(15)).toBe(true);
+      held.release();
+      await stepToEnd(job, 15);
       await h.app.watch.homeRefreshed;
-      expect(longest).toBeLessThan(SLOW_MS / 4);
+      expect(held.gaveUp).toBe(0);
       expect(job.status.found).toBe(1);
       expect(job.status.indexed).toBe(1);
     });
   });
 
+  // The tests below ask for home's graph again and hold its walk on the thread in `held` (`askedAgain`) while something
+  // happens here. A walk timed by `slow` alone could answer first: a folder home's walk listed long enough after it last
+  // changed isn't listed again, so the thread answers at once (#75).
   test("home's graph built again from a walk on the thread is dropped when the graph was built since, or the vault left", async () => {
-    const home = tree({ "a.md": "# A\n", "slow/s.md": "# S\n" });
-    setWalkWorker(slowWorker);
+    const home = tree({ "a.md": "# A\n", "held/s.md": "# S\n" });
+    const held = holding();
+    held.release();
     await inHome(home, async () => {
       const h = await harness({ loc: homeAt(home), open: "a.md" });
       await stepToEnd(h.app.watch.indexJob()!);
       await h.app.watch.homeRefreshed;
-      const homeIndexed = () => (h.app.watch as unknown as { homeIndexed(capped: null): void }).homeIndexed(null);
-      // Asked again: the thread lists `slow` slowly, and a note comes meanwhile that a reindex here takes in.
-      homeIndexed();
-      await Bun.sleep(SLOW_MS / 4);
+      // Asked again: the thread lists `held`, and a note comes meanwhile that a reindex here takes in.
+      await askedAgain(h, held, join(home, "held"));
       writeFileSync(join(home, "new.md"), "# New\n");
       await h.app.run("vault.reindex");
       expect(h.app.graph.notes.has("new.md")).toBe(true);
       const builds = h.app.graph.builds;
+      held.release();
       await h.app.watch.homeRefreshed;
       // The thread's answer was older than the reindex: dropped, the graph as the reindex left it.
       expect(h.app.graph.builds).toBe(builds);
       expect(h.app.graph.notes.has("new.md")).toBe(true);
       // Gone into another vault while the thread walks: its answer is no graph's now.
-      homeIndexed();
+      await askedAgain(h, held, join(home, "held"));
       const v = tree({ ".slipbox/config.toml": "", "index.md": "# V\n" });
       expect(h.app.vaults.intoOther(join(v, "index.md"))).toBe(true);
       await answerSwitch(h);
       expect(h.app.loc.root).toBe(v);
       const graph = h.app.graph;
       const vaultBuilds = graph.builds;
+      held.release();
       await h.app.watch.homeRefreshed;
       expect(h.app.graph).toBe(graph);
       expect(graph.builds).toBe(vaultBuilds);
@@ -198,19 +215,20 @@ describe("the TUI's walks on their own thread (T12, #9)", () => {
   });
 
   test("home's graph built again from a walk on the thread keeps a change the watcher took in meanwhile, newer than the walk", async () => {
-    const home = tree({ "a.md": "# A\n", "slow/s.md": "# S\n" });
-    setWalkWorker(slowWorker);
+    const home = tree({ "a.md": "# A\n", "held/s.md": "# S\n" });
+    const held = holding();
+    held.release();
     await inHome(home, async () => {
       const h = await harness({ loc: homeAt(home), open: "a.md" });
       await stepToEnd(h.app.watch.indexJob()!);
       await h.app.watch.homeRefreshed;
-      // Asked again: the thread reads home's top, then lists `slow` slowly; a note comes meanwhile, which the watcher
-      // takes in — newer than what the thread read.
-      (h.app.watch as unknown as { homeIndexed(capped: null): void }).homeIndexed(null);
-      await Bun.sleep(SLOW_MS / 4);
+      // Asked again: the thread reads home's top, then lists `held`; a note comes meanwhile, which the watcher takes in
+      // — newer than what the thread read.
+      await askedAgain(h, held, join(home, "held"));
       writeFileSync(join(home, "new.md"), "# New\n");
       h.app.watch.applyChanges({ changes: [{ rel: "new.md", kind: "created", isNote: true }], rescan: false });
       expect(h.app.graph.notes.has("new.md")).toBe(true);
+      held.release();
       await h.app.watch.homeRefreshed;
       // Never the older walk over it: the change taken in again over the walk.
       expect(h.app.graph.notes.has("new.md")).toBe(true);
@@ -219,42 +237,42 @@ describe("the TUI's walks on their own thread (T12, #9)", () => {
   });
 
   test("home's graph built again from a walk on the thread keeps a note slipbox wrote meanwhile, which told no watcher", async () => {
-    const home = tree({ "a.md": "# A\n", "slow/s.md": "# S\n" });
-    setWalkWorker(slowWorker);
+    const home = tree({ "a.md": "# A\n", "held/s.md": "# S\n" });
+    const held = holding();
+    held.release();
     await inHome(home, async () => {
       const h = await harness({ loc: homeAt(home), open: "a.md" });
       await stepToEnd(h.app.watch.indexJob()!);
       await h.app.watch.homeRefreshed;
-      (h.app.watch as unknown as { homeIndexed(capped: null): void }).homeIndexed(null);
-      await Bun.sleep(SLOW_MS / 4);
+      await askedAgain(h, held, join(home, "held"));
       // A note made here while the thread reads home: in the graph at once, its own write told no watcher.
       expect(h.app.files.createNote("made", "")?.created).toBe(true);
       expect(h.app.graph.notes.has("made.md")).toBe(true);
+      held.release();
       await h.app.watch.homeRefreshed;
       expect(h.app.graph.notes.has("made.md")).toBe(true);
     });
   });
 
-  // quarantined: #75 — fails at random on CI, on macOS (run 40104659534): once `homeRefreshed` settles, home's graph
-  // wasn't built again (`graph.builds` 3, expected 4).
-  test.skip("home's graph built again from a walk on the thread keeps a file reached meanwhile as reached, never one of home's own", async () => {
+  test("home's graph built again from a walk on the thread keeps a file reached meanwhile as reached, never one of home's own", async () => {
     // Home past its cap of folders: a note in a folder below its top's is one its walk leaves out.
-    const home = tree({ "a.md": "# A\n", "slow/s.md": "# S\n", "z0000/deep/r.md": "# R\n" });
+    const home = tree({ "a.md": "# A\n", "held/s.md": "# S\n", "z0000/deep/r.md": "# R\n" });
     for (let i = 1; i < 5_000; i++) mkdirSync(join(home, `z${String(i).padStart(4, "0")}`));
     const far = "z0000/deep/r.md";
-    setWalkWorker(slowWorker);
+    const held = holding();
+    held.release();
     await inHome(home, async () => {
       const h = await harness({ loc: homeAt(home), open: "a.md" });
       await stepToEnd(h.app.watch.indexJob()!);
       await h.app.watch.homeRefreshed;
       expect(h.app.graph.home?.capped).toBe("folders");
       expect(h.app.graph.notes.has(far)).toBe(false);
-      (h.app.watch as unknown as { homeIndexed(capped: null): void }).homeIndexed(null);
-      await Bun.sleep(SLOW_MS / 4);
+      await askedAgain(h, held, join(home, "held"));
       // Reached while the thread reads home (20.8), as a link to it reaches it.
       expect(h.app.graph.reachFile(far)).toBe(true);
       expect(h.app.graph.reached.has(far)).toBe(true);
       const builds = h.app.graph.builds;
+      held.release();
       await h.app.watch.homeRefreshed;
       expect(h.app.graph.builds).toBe(builds + 1);
       expect(h.app.graph.notes.has(far)).toBe(true);
@@ -923,15 +941,15 @@ describe("the explorer's listings off the main thread (T12, #9)", () => {
   /** The explorer's rows, each by its name, indented by its depth. */
   const names = (h: Harness) => h.app.explorer.treeRows().map((r) => `${"  ".repeat(r.depth)}${r.name}`);
 
-  /** A vault, and beside it in their folder `slow` (listed slowly) and `quick`: the explorer's view on that folder, its
-   *  listings read off the main thread, as the TUI reads them. */
-  async function besideSlow(files: Record<string, string> = {}) {
+  /** A vault, and beside it in their folder `slow` (listed slowly; or `held`, as `slow` names it) and `quick`: the
+   *  explorer's view on that folder, its listings read off the main thread, as the TUI reads them. */
+  async function besideSlow(files: Record<string, string> = {}, slow = "slow") {
     const top = tree({
       "vault/.slipbox/config.toml": "",
       "vault/index.md": "# Index\n",
-      "slow/a.md": "# A\n",
-      "slow/b.txt": "b\n",
-      "slow/sub/c.md": "# C\n",
+      [`${slow}/a.md`]: "# A\n",
+      [`${slow}/b.txt`]: "b\n",
+      [`${slow}/sub/c.md`]: "# C\n",
       "quick/q.md": "# Q\n",
       ...files,
     });
@@ -944,33 +962,33 @@ describe("the explorer's listings off the main thread (T12, #9)", () => {
   }
 
   test("a folder beside the vault listed slowly: keys and the screen go on, `listing…` after a moment, then its rows", async () => {
-    setWalkWorker(slowWorker);
-    // As slow here: a listing on the main thread, as the explorer made it before, would wait on it.
+    const held = holding();
+    // Held here too: a listing on the main thread, as the explorer made it before, would wait on it.
     setFolderReader(slowFolders);
-    const { top, h } = await besideSlow({ "slow/slow/d.md": "# D\n" });
+    const { top, h } = await besideSlow({ "held/held/d.md": "# D\n" }, "held");
     const ex = h.app.explorer;
-    expect(names(h)).toEqual(["quick", "slow", "vault", "  index.md"]);
-    ex.expanded.add(join(top, "slow"));
+    expect(names(h)).toEqual(["held", "quick", "vault", "  index.md"]);
+    ex.expanded.add(join(top, "held"));
     ex.invalidateTree();
-    const at = performance.now();
     const rows = ex.treeRows();
-    expect(performance.now() - at).toBeLessThan(SLOW_MS / 4);
     // Not said at once: a fast disk never shows it.
     expect(rows.some((r) => r.placeholder)).toBe(false);
     await Bun.sleep(PENDING_MS + 50);
-    expect(names(h)).toEqual(["quick", "slow", "  listing…", "vault", "  index.md"]);
+    expect(names(h)).toEqual(["held", "  listing…", "quick", "vault", "  index.md"]);
     expect(h.frame()).toContain("listing…");
-    // A key meanwhile: handled, and drawn, at once.
-    const pressed = performance.now();
+    // A key while the listing's thread reads it: handled, and drawn, the folder still unread.
+    while (!held.waiting) await Bun.sleep(5);
     await h.keys("ctrl+p");
-    expect(performance.now() - pressed).toBeLessThan(SLOW_MS / 4);
     expect(h.frame()).toContain("Open note");
     await h.keys("escape");
+    expect(held.waiting).toBe(1);
+    held.release();
     await listed(h);
-    expect(names(h)).toEqual(["quick", "slow", "  slow", "  sub", "  a.md", "  b.txt", "vault", "  index.md"]);
+    expect(names(h)).toEqual(["held", "  held", "  sub", "  a.md", "  b.txt", "quick", "vault", "  index.md"]);
     expect(h.frame()).not.toContain("listing…");
     // The row only says something: never opened.
-    ex.expanded.add(join(top, "slow", "slow"));
+    held.again();
+    ex.expanded.add(join(top, "held", "held"));
     ex.invalidateTree();
     ex.treeRows();
     await Bun.sleep(PENDING_MS + 50);
@@ -980,6 +998,9 @@ describe("the explorer's listings off the main thread (T12, #9)", () => {
     const before = h.app.view?.buf.abs;
     await ex.action("open");
     expect(h.app.view?.buf.abs).toBe(before);
+    // Only the listings' thread waited on it: none here waited till it gave up.
+    held.release();
+    expect(held.gaveUp).toBe(0);
   });
 
   test("an answer no row asks for any more: kept for the folder unfolded again, dropped for one let go of, or read under settings since changed", async () => {
