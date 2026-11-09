@@ -521,8 +521,9 @@ export class App {
   }
 
   async run(spec: string): Promise<void> {
+    spec = currentCommand(spec); // named by an id it had before, as a script may still name it: by its id now (D274)
     // The terminal tests' coverage (tests/terminal): every command run, one id per line.
-    if (TRACE) appendFileSync(TRACE, `${currentCommand(spec).split(" ")[0]}\n`); // by its id now (D274)
+    if (TRACE) appendFileSync(TRACE, `${spec.split(" ")[0]}\n`);
     if (!(await this.registry.run(this, spec))) this.message("error", `unknown command: ${spec}`);
   }
 

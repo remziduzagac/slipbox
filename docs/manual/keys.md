@@ -887,8 +887,8 @@ The rest of `space n` is with what it does: its views, its tasks and a conflict 
 
 ### The file: `space f`
 
-Any file, a note or not. These keys act on the explorer's selected file when the explorer has the focus, and on the
-file you are reading otherwise.
+Any file, a note or not: the file you are reading. When the explorer has the focus, renaming, moving, deleting,
+copying and cutting take its selected file instead, and a new note goes in its selected folder.
 
 | Keys | What |
 | --- | --- |

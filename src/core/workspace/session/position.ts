@@ -7,6 +7,7 @@
 
 import { existsSync, rmSync } from "node:fs";
 import { isAbsolute, join, relative, sep } from "node:path";
+import { currentCommand } from "../../application/commands/catalog.ts";
 import { climbsOut, ensureDir, readJson, writeJson } from "../../foundation/platform/fsutil.ts";
 import type { Layout } from "../../rendering/layout/ir.ts";
 import { type Keyed, stateDir, stateHome } from "../../foundation/platform/paths.ts";
@@ -357,6 +358,12 @@ export function sessionFile(place: StatePlace): string {
 /** Load the session, dropping anything malformed rather than failing to start. */
 export function loadSession(place: StatePlace): SessionState | null {
   return sessionFrom(readJson<unknown>(sessionFile(place), null));
+}
+
+/** The commands a session ran last from the palette or help, most recent first, at most `max`: each by its id now,
+ *  one kept before its command was renamed too (D274), and each once, where it came first. */
+export function recentCommands(session: SessionState | null, max: number): string[] {
+  return [...new Set((session?.recent_commands ?? []).map(currentCommand))].slice(0, max);
 }
 
 /** A session as read — the file's, a restart's note's (UPG: another version may have written it) — checked, anything

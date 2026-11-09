@@ -589,6 +589,22 @@ describe("the explorer's file operations and buttons (18.x)", () => {
     expect((v.app.overlay as ListOverlay).title).toMatch(/^nested-vault\/ → part of fixture/);
   });
 
+  test("space n o says what it needs in a note's words: the explorer on a folder, or nothing open (D274)", async () => {
+    const root = makeVault();
+    const e = await at(root, "projects");
+    await e.keys("space", "n", "o");
+    expect(e.app.messages.at(-1)!.text).toBe("space n acts on a note: select one (space d on a folder)");
+    const none = await harness({ root });
+    await none.app.run("tab.close_all");
+    expect(none.app.view).toBeNull();
+    none.app.region = "content"; // the explorer, focused once the last tab closed, given the keys back: no file at all
+    await none.app.run("note.export");
+    expect(none.app.messages.at(-1)!.text).toBe("open a note of this vault, or select one in the explorer");
+    // space f's own say a file.
+    await none.app.run("file.delete");
+    expect(none.app.messages.at(-1)!.text).toBe("open a file of this vault, or select one in the explorer");
+  });
+
   test("space v shift+m inside a vault nested in another: made a plain folder of it, and into it, the note still open (18.13)", async () => {
     const root = makeVault();
     writeFileSync(join(root, "to-nested.md"), "[inner](nested-vault/inner.md)\n");

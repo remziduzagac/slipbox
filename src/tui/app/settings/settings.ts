@@ -2,7 +2,6 @@
 // the overrides a session keeps, and the live reload of the config files when one is saved.
 
 import { canonKey, canonSeq, Keymap, unknownModifiers } from "../../../core/application/commands/registry.ts";
-import { currentCommand } from "../../../core/application/commands/catalog.ts";
 import { type Config, loadConfig } from "../../../core/application/config/config.ts";
 import { glyphsFor, type Glyphs } from "../../../core/rendering/theme/glyphs.ts";
 import { Graph } from "../../../core/workspace/graph/graph.ts";
@@ -70,13 +69,9 @@ export class Settings {
     }
     this.app.leader = leader;
     const { visual, explorer, git, outline, footnotes, info, resize, source, ...normal } = c.keys;
-    // The tables naming commands take an id a command had before as the one it has now (D274): its keys are the
-    // command's, in help and the palette too.
-    const current = (table: Record<string, string>) =>
-      Object.fromEntries(Object.entries(table).map(([k, v]) => [k, currentCommand(v)]));
-    this.app.keymap = new Keymap(DEFAULT_KEYS, current(normal as Record<string, string>), this.app.leader);
-    this.app.visualKeys = new Keymap(DEFAULT_VISUAL_KEYS, current(visual ?? {}), this.app.leader);
-    this.app.sourceKeys = new Keymap(DEFAULT_SOURCE_KEYS, current(source ?? {}), this.app.leader);
+    this.app.keymap = new Keymap(DEFAULT_KEYS, normal as Record<string, string>, this.app.leader);
+    this.app.visualKeys = new Keymap(DEFAULT_VISUAL_KEYS, visual ?? {}, this.app.leader);
+    this.app.sourceKeys = new Keymap(DEFAULT_SOURCE_KEYS, source ?? {}, this.app.leader);
     this.app.explorerKeys = new Keymap(DEFAULT_EXPLORER_KEYS, explorer ?? {}, this.app.leader);
     this.app.gitKeys = new Keymap(DEFAULT_GIT_KEYS, git ?? {}, this.app.leader);
     this.app.problemsKeys = new Keymap(
@@ -96,7 +91,7 @@ export class Settings {
     this.app.aliases = Object.assign(Object.create(null) as Record<string, string>, DEFAULT_ALIASES);
     for (const [k, v] of Object.entries(c.aliases)) {
       if (v === "") delete this.app.aliases[k];
-      else this.app.aliases[k] = currentCommand(v);
+      else this.app.aliases[k] = v;
     }
     this.app.groups = new Map();
     for (const [k, v] of Object.entries({ ...DEFAULT_GROUPS, ...c.groups }))

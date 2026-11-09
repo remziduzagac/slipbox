@@ -10,7 +10,7 @@ import type { LoadConfigOptions, LoadedConfig } from "./contracts.ts";
 import { DEFAULT_CONFIG } from "./defaults.ts";
 import { dropUserOnly } from "./trust.ts";
 import { isPlainObject, isSafeRelative } from "./validation/predicates.ts";
-import { merge } from "./validation/merge.ts";
+import { merge, renewCommands } from "./validation/merge.ts";
 
 export function loadConfig(opts: LoadConfigOptions = {}): LoadedConfig {
   const warnings: string[] = [];
@@ -48,6 +48,7 @@ export function loadConfig(opts: LoadConfigOptions = {}): LoadedConfig {
         warnings.push(`config: ${shown}: [vault] belongs in a folder's .slipbox/config.toml (its identity); ignored`);
       delete data.vault;
     }
+    renewCommands(data); // a command named by an id it had before, by its id now (D274)
     if (file !== userFile) dropUserOnly(data, shown, warnings);
     // `marks` was on or off before it was a severity: on marked every problem shown, off none.
     const diag = data.diagnostics;

@@ -652,8 +652,10 @@ Every one of these has a leader key too, so which-key lists them (`18.13`, D274)
 (new, rename or move by path, move, delete, copy, cut, `shift+y` a copy beside it), `space d` for a folder (new,
 rename, move, delete, copy, cut, paste), `space v` for a vault (make one, make it part of the vault holding it, rename
 it, the trash, restore). With the explorer focused they act on its selected row, elsewhere on the current file, its
-folder, or this vault — made part of the vault holding it, it's left for that vault, the file still open. What they
-do is the CLI's `rm`, `mv`, `cp`, `init` and `deinit` ([cli.md](../../docs/manual/cli.md)).
+folder, or this vault — made part of the vault holding it, it's left for that vault, the file still open. Of `space f`,
+only rename, move, delete, copy and cut take the selected row (and new its folder); a copy beside, save, reload, Info,
+send and the rest act on the file open. What they do is the CLI's `rm`, `mv`, `cp`, `init` and `deinit`
+([cli.md](../../docs/manual/cli.md)).
 
 ## Following links
 

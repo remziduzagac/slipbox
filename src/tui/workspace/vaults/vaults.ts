@@ -7,7 +7,6 @@ import { existsSync, statSync } from "node:fs";
 import { basename, dirname, isAbsolute, join } from "node:path";
 import { writeDirty } from "../../../core/workspace/git/merge/stale.ts";
 import { loadConfig } from "../../../core/application/config/config.ts";
-import { currentCommand } from "../../../core/application/commands/catalog.ts";
 import { Graph } from "../../../core/workspace/graph/graph.ts";
 import { leftOutOfHome, walksInto } from "../../../core/workspace/vaults/home.ts";
 import { lintCommand } from "../../../core/documents/diagnostics/lint.ts";
@@ -17,6 +16,7 @@ import {
   type CursorAnchor,
   loadSession,
   PositionStore,
+  recentCommands,
   type SessionTab,
 } from "../../../core/workspace/session/position.ts";
 import { stopBacklinkJobs } from "../../../core/workspace/graph/backlinks-jobs.ts";
@@ -334,10 +334,7 @@ export class Vaults {
     if (process.env.NO_COLOR) this.app.ui.theme = "mono";
     this.app.settings.uiOverrides = {};
     const session = loadSession(target);
-    this.app.recentCommands = (session?.recent_commands ?? [])
-      .filter((id) => typeof id === "string")
-      .map(currentCommand) // by its name now (D274)
-      .slice(0, RECENT_MAX);
+    this.app.recentCommands = recentCommands(session, RECENT_MAX);
     this.app.handoff.remoteServer = session?.remote_server;
     this.app.history.recentNotes = (session?.recent_notes ?? []).slice(0, RECENT_NOTES_MAX);
     this.app.session.restoreUiOverrides();

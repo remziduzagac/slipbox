@@ -301,7 +301,7 @@ export const DEFAULT_GROUPS: Record<string, string> = {
   "leader t": "tabs: open, switch, reorder, close",
   "leader /": "find: in this note, in every note, search, replace; a heading, the tags, the types, a line",
   "leader f":
-    "file: new, rename, move, delete, copy, cut, save, reload, info, send, problems; open by name or path, reveal — any file, the explorer's selected one when it has focus",
+    "file: open by name or path, new, rename, move, delete, copy, cut, save, reload, info, send, problems, reveal — the file open; rename, move, delete, copy and cut the explorer's selected one when it has focus",
   "leader u": "ui: theme, icons, width, zen, toggles",
   "leader s": "scratch: collect references for agents",
   "leader k": "cell: fold, edit, copy, references, problems, scratch — the code view's cell at the cursor",

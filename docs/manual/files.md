@@ -328,8 +328,8 @@ The folder is made in the same place a new note would be, and its parents too. I
 | rename or move a file by typing its new path | | `space f m`, `:rename`, `:mv` |
 | move it by cutting and pasting | `x`, then `p` on the folder | `space f x` / `space d x`, then `space d p` |
 
-`space f` acts on the file you are reading, and `space d` on its folder. When the explorer has the keys, they act on its
-selected row.
+`space f` acts on the file you are reading, and `space d` on its folder. When the explorer has the keys, `space d` and
+`space f`'s renaming, moving, deleting, copying and cutting act on its selected row.
 
 - **`r`** asks for the new name, with the old one typed already. A note's `.md` is kept for you. Type `espresso`, and
   `coffee.md` becomes `espresso.md`. A name with a `/` is refused, because `m` is what moves.

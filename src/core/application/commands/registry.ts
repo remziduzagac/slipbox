@@ -12,21 +12,13 @@ export interface Command<Ctx> {
   /** When false, the palette greys the command out. */
   enabled?: (ctx: Ctx) => boolean;
   run: (ctx: Ctx, arg?: string) => void | Promise<void>;
-  /** The ids it had before (D274), each still found and run as this one; never listed. */
-  formerly?: string[];
 }
 
 export class CommandRegistry<Ctx> {
   private readonly commands = new Map<string, Command<Ctx>>();
-  /** A former id → the id now. */
-  private readonly former = new Map<string, string>();
 
   register(cmd: Command<Ctx>): void {
-    if (this.commands.has(cmd.id) || this.former.has(cmd.id)) throw new Error(`command registered twice: ${cmd.id}`);
-    for (const old of cmd.formerly ?? []) {
-      if (this.commands.has(old) || this.former.has(old)) throw new Error(`command registered twice: ${old}`);
-      this.former.set(old, cmd.id);
-    }
+    if (this.commands.has(cmd.id)) throw new Error(`command registered twice: ${cmd.id}`);
     this.commands.set(cmd.id, cmd);
   }
 
@@ -34,9 +26,8 @@ export class CommandRegistry<Ctx> {
     for (const c of cmds) this.register(c);
   }
 
-  /** The command by its id, or by an id it had before. */
   get(id: string): Command<Ctx> | undefined {
-    return this.commands.get(this.former.get(id) ?? id);
+    return this.commands.get(id);
   }
 
   list(): Command<Ctx>[] {
@@ -48,7 +39,7 @@ export class CommandRegistry<Ctx> {
     const space = spec.indexOf(" ");
     const id = space < 0 ? spec : spec.slice(0, space);
     const arg = space < 0 ? undefined : spec.slice(space + 1);
-    const cmd = this.get(id);
+    const cmd = this.commands.get(id);
     if (!cmd) return false;
     if (cmd.enabled && !cmd.enabled(ctx)) return true;
     await cmd.run(ctx, arg);

@@ -3,6 +3,7 @@
 import { deepMerge, type LanguageConfig, type ServerConfig } from "../../../documents/servers/languages.ts";
 import type { LinterConfig } from "../../../documents/servers/linters.ts";
 import type { TypeConfig } from "../../../documents/model/doctypes.ts";
+import { currentCommand } from "../../commands/catalog.ts";
 import { isPlainObject } from "./predicates.ts";
 import { LANGUAGE_FIELDS, LINTER_FIELDS, SERVER_FIELDS, TYPE_FIELDS, checkFields } from "./fields.ts";
 
@@ -19,10 +20,28 @@ const OLD_VALUES: Record<string, Record<string, string>> = {
   "keys.explorer": { rename_vault: "rename_root", make_vault: "make_root", unmake_vault: "unmake_root" },
 };
 
+/** The tables whose values name commands: a command renamed is read by its id now there (D274). */
+const COMMAND_TABLES = new Set(["keys", "keys.visual", "keys.source", "aliases"]);
+
 /** The word that took an old one's place where `path` takes it, else the value as given. */
 function renewed(path: string, value: string): string {
+  if (COMMAND_TABLES.has(path)) return currentCommand(value);
   const old = Object.hasOwn(OLD_VALUES, path) ? OLD_VALUES[path]! : {};
   return Object.hasOwn(old, value) ? old[value]! : value;
+}
+
+/** A file's `[keys]` and `[aliases]` as read, each command by its id now (D274): before anything checks them, a
+ *  vault's forbidden commands among them. */
+export function renewCommands(data: Record<string, unknown>): void {
+  const renew = (table: unknown, path: string) => {
+    if (!isPlainObject(table)) return;
+    for (const [k, v] of Object.entries(table)) {
+      if (typeof v === "string") table[k] = renewed(path, v);
+      else if (path === "keys") renew(v, `keys.${k}`);
+    }
+  };
+  renew(data.keys, "keys");
+  renew(data.aliases, "aliases");
 }
 
 /** Keys whose values come from a fixed set. Anything else is a warning and the default stays. */

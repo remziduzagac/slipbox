@@ -1,12 +1,8 @@
 import { UNIT_TIMEOUT_MS } from "../../../support/timeouts.ts";
 import { describe, expect, setDefaultTimeout, test } from "bun:test";
-import {
-  canonKey,
-  CommandRegistry,
-  Keymap,
-  unknownModifiers,
-} from "../../../../src/core/application/commands/registry.ts";
+import { canonKey, Keymap, unknownModifiers } from "../../../../src/core/application/commands/registry.ts";
 import { COMMAND_SPECS, currentCommand, FORMER_IDS } from "../../../../src/core/application/commands/catalog.ts";
+import { recentCommands, type SessionState } from "../../../../src/core/workspace/session/position.ts";
 import { makeCoreSandbox } from "../../../support/core-sandbox.ts";
 
 // File-local default: tests/support/timeouts.ts.
@@ -42,24 +38,18 @@ describe("a command's former ids (D274)", () => {
     expect(currentCommand("no.such thing")).toBe("no.such thing");
   });
 
-  test("the registry finds and runs a command by a former id, and lists it by its id alone", async () => {
-    const r = new CommandRegistry<string[]>();
-    r.register({
-      id: "file.rename",
-      title: "Rename",
-      formerly: ["note.rename"],
-      run: (ran, arg) => void ran.push(arg ?? ""),
-    });
-    expect(r.get("note.rename")?.id).toBe("file.rename");
-    const ran: string[] = [];
-    expect(await r.run(ran, "note.rename b.md")).toBe(true);
-    expect(ran).toEqual(["b.md"]);
-    expect(r.list().map((c) => c.id)).toEqual(["file.rename"]);
-    // A former id is no command's own, and no two commands share one.
-    expect(() => r.register({ id: "note.rename", title: "x", run: () => {} })).toThrow("registered twice");
-    expect(() => r.register({ id: "y", title: "y", formerly: ["note.rename"], run: () => {} })).toThrow(
-      "registered twice",
-    );
+  test("a session's recent commands come back by their ids now, each once, where it came first", () => {
+    const kept = (ids: string[]) => ({ version: 1, tabs: [], activeTab: 0, sidebar: true, recent_commands: ids });
+    // Run before the rename and after it: Rename was listed twice in the palette's Recent.
+    const ids = ["note.rename", "ui.zen", "file.rename", "folders.open", "vault.open", "note.save", "help.open"];
+    expect(recentCommands(kept(ids) as SessionState, 5)).toEqual([
+      "file.rename",
+      "ui.zen",
+      "vault.open",
+      "file.save",
+      "help.open",
+    ]);
+    expect(recentCommands(null, 5)).toEqual([]);
   });
 });
 

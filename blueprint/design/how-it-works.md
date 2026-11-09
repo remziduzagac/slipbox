@@ -31,9 +31,11 @@ Every user action is a named command (D11). `core/application/commands/areas/*.t
 mark it an interaction. `tui/actions/` holds registration and the documents, workspace and shell command-area folders;
 each implementation is registered in the `CommandRegistry` (`core/application/commands/registry.ts`), and keys, the
 palette and the `:` prompt run them by id. A command renamed keeps its ids from before (`formerly` in its spec,
-`FORMER_IDS` and `currentCommand` in the catalog; D274): `[keys]`, `[aliases]`, the recent commands and a run by id
-still reach it, read as its id now, and only that one is listed. A command implemented without a spec, or specified
-without an implementation, fails at start-up and fails a test ([tui.md](tui.md) § Parity with the CLI).
+`FORMER_IDS` and `currentCommand` in the catalog; D274), each read as its id now where one comes in, and only there:
+a config's `[keys]` and `[aliases]` as the file is loaded (`renewCommands`, before a vault's forbidden commands are
+checked), the session's recent commands (`recentCommands`, each once), and a run by id (`App.run`). The registry
+knows only the ids now. A command implemented without a spec, or under an id it had, or specified without an
+implementation, fails at start-up and fails a test ([tui.md](tui.md) § Parity with the CLI).
 
 ### The boundary is enforced, not hoped for
 
