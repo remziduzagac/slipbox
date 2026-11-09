@@ -679,6 +679,22 @@ describe("starting slipbox (session.ts)", () => {
     },
     TEST_BUDGETS.terminalPreload,
   );
+  test("started once its keys go Kitty's way: the flags it pushes after its first frame waited for (#74)", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "slipbox-flags-"));
+    const bin = join(dir, "late-flags");
+    // Its first frame, the status line in it; then, a moment later — the answers to its questions slow to come — the
+    // Kitty keyboard flags.
+    const script = String.raw`printf '\033[2J\033[H READ  notes  home.md'; sleep 0.5; printf '\033[>1u'; exec sleep 30`;
+    writeFileSync(bin, `#!/bin/sh\n${script}\n`, { mode: 0o755 });
+    const s = new Session({ bin });
+    try {
+      await s.start();
+      expect(s.term.kittyKeys).toBe(true);
+    } finally {
+      s.cleanup();
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
 });
 
 describe("where you are, read off the grouped bar", () => {

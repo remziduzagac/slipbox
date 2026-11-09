@@ -225,10 +225,6 @@ export const LINKED: Check[] = [
     area: "links-and-files",
     name: "links: a note too big to index, through a link followed, typed into and saved — never written: a vault never writes out of itself",
     covers: { cases: ["links/state", "safety"], commands: ["link.follow"] },
-    // Fails at random on CI's Linux runners. Job 120896065125, 3.3 s in: `:w` refused, but the Messages list looked up
-    // after it never opened, the needle typed into the report window instead (the last commands run `palette.open,
-    // note.save, help.report`). Job 120903950535, 33 s in: slipbox not exiting cleanly.
-    quarantined: "#73",
     options: {
       home: true,
       startAt: "home/notes/to-big.md",
@@ -257,6 +253,10 @@ export const LINKED: Check[] = [
       await s.keys("o");
       await s.status("INSERT");
       await s.type("Typed here.");
+      // The shelf watched once followed, its files said to have come, this one among them: as it was read, nothing to
+      // settle. A conflict's prompt would take the keys below (#73).
+      await sleep(2500);
+      s.expect(!s.text().includes("changed on disk"), "no conflict asked: the note as it was read");
       await s.keys("escape");
       await s.ex("w");
       s.expect((await lastMessage(s, "resolves outside")).includes("resolves outside the vault"), ":w refused");

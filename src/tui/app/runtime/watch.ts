@@ -2,7 +2,7 @@
 // can't see polled, the background auto-index (20.9), and a note changed on disk reloaded.
 
 import { existsSync } from "node:fs";
-import { stamp } from "../../../core/foundation/platform/fsutil.ts";
+import { readText, stamp } from "../../../core/foundation/platform/fsutil.ts";
 import { offsetOf } from "../../documents/editing/editing.ts";
 import { planRelink } from "../../../core/workspace/mutations/rename/rename.ts";
 import type { AutoIndex } from "../../../core/workspace/graph/autoindex.ts";
@@ -381,6 +381,12 @@ export class Watch {
     for (const c of last.values()) {
       const buf = this.app.buffers.get(c.rel);
       if (!buf || (c.isNote && c.kind !== "deleted" && !existsSync(buf.abs))) continue;
+      // Its file as it was read or written: nothing came to read again, or to settle with what's unsaved here — a
+      // folder the watcher only now watches (a link followed) says each of its files came.
+      if (c.kind !== "deleted" && asRead(buf)) {
+        this.app.claim(buf);
+        continue;
+      }
       this.reloadBuffer(buf, c.kind === "deleted");
     }
     if (setChanged) {
@@ -441,4 +447,23 @@ export class Watch {
     // Read as it is now: the vault's, the graph knowing it (`App.claim`).
     this.app.claim(buf);
   }
+}
+
+/**
+ * Whether an open file's text on disk is the one its buffer last read or wrote, its stamp then brought up to date: the
+ * watcher's word that it came or changed brings nothing new. The text, not the stamp: writes a moment apart can share
+ * an mtime. Never one gone since, or never written.
+ */
+function asRead(buf: NoteBuffer): boolean {
+  if (buf.virtual || buf.deleted || buf.newFile) return false;
+  // Stamped before it's read: a write landing between the two leaves it changed on disk.
+  const at = stamp(buf.abs);
+  try {
+    const d = readText(buf.abs);
+    if (d.text !== buf.baseText || d.bom !== buf.bom) return false;
+  } catch {
+    return false;
+  }
+  buf.stamp = at;
+  return true;
 }

@@ -226,6 +226,10 @@ export class Session {
     this.term.spawn(argv, { cwd, env: this.processEnv() });
     if (this.opts.noWait) return;
     await this.until(() => /\b(READ|SOURCE|FILES|LENS|NORMAL)\b/.test(this.statusLine()), 15000, "slipbox to start");
+    // Its keys Kitty's way, as it asks once the terminal has answered its questions — on a slow machine after its first
+    // frame. A key sent before goes the old way: an escape, the start of alt+ the key after it.
+    if (this.opts.keyboard !== "legacy")
+      await this.until(() => this.term.kittyKeys, 15000, "slipbox to ask for Kitty's keys");
     // Its first frame isn't its last at start: what it reads after drawing (the index, git) redraws it.
     await this.settle();
   }

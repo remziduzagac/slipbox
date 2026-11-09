@@ -38,6 +38,23 @@ describe("review cycle 1 (TUI)", () => {
     await h.keys("0");
     expect((h.app.overlay as ListOverlay).title).toContain("changed on disk");
   });
+  test("the watcher saying an open note came, its file as it was read (a folder it only now watches): nothing asked, nothing reloaded (#73)", async () => {
+    const { h, v, file } = await source("mine\n");
+    await h.keys("shift+a", "!", "escape");
+    h.app.watch.applyChanges({ changes: [{ rel: "r.md", kind: "created", isNote: true }], rescan: false });
+    expect(h.app.overlay).toBeNull();
+    expect(v.buf.source).toBe("mine!\n");
+    expect(v.buf.dirty).toBe(true);
+    // Saved, then said again: not read again either.
+    await h.keys("ctrl+s");
+    h.app.watch.applyChanges({ changes: [{ rel: "r.md", kind: "changed", isNote: true }], rescan: false });
+    expect(h.app.messages.some((m) => m.text.includes("reloaded"))).toBe(false);
+    // Changed there since: asked.
+    await h.keys("shift+a", "?", "escape");
+    await touch(file, "theirs\n");
+    h.app.watch.applyChanges({ changes: [{ rel: "r.md", kind: "changed", isNote: true }], rescan: false });
+    expect((h.app.overlay as ListOverlay).title).toContain("changed on disk");
+  });
 });
 
 describe("review cycle 4 (TUI)", () => {
