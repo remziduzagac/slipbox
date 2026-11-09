@@ -1,0 +1,194 @@
+# Design changes
+
+Each change names the root's file and section. The text is what the design will say once the tasks are built; what a
+task settles is marked **Open**, with the task. None of it holds yet: the root's files change at consolidation
+(SD-T12). A link in the text points from here to the root's file; consolidation writes it relative to design/.
+
+## ADDED design/tui.md § A slow disk
+
+After § Asynchronous git reads.
+
+What the TUI reads of the vault open's disk, and of its own state, cache and config folders, it reads off the screen's
+thread, so a disk that answers slowly — a network share, a drive asleep, a FUSE mount — never stops the keys or the
+screen (SD-D1). T12 moved the walks it makes by itself and the listings of folders outside the vault (design/roots.md
+§ The index; § Side panes); this section is the rest. Writes stay on the screen's thread (below).
+
+**The disk threads** (SD-D2; `DiskThreads` in `core/workspace/walk/walk-thread.ts`, served by `list-worker.ts`): two,
+light — no index, no parser — each started on its first request. A request goes to a thread once one is free, in the
+order asked, so never behind one that doesn't answer while the other is free; a walk takes a thread only while the
+other is left for the rest. They answer, with what the asking thread knows and they can't see for themselves
+(`walkContext`):
+
+- `list`: a folder listed (`listFolder`, as the explorer's listings have it); for a folder of the vault open, each
+  entry with the walk's filter's verdict on it (`exclusion`), made there;
+- `stat`: a batch of paths, each one's kind, mtime, ctime and size, or its error's code;
+- `read`: a file's text, decoded as `readText` decodes it (its BOM, line endings, invalid UTF-8), with its stamp;
+  refused, as `readRegular` refuses, when it isn't a regular file;
+- `access`: whether a folder can be listed and gone into, in `folderUnreadable`'s words;
+- `walk`: the vault open's walk for a build (`walkVault`; `listDirectory` in Elsewhere; home's walk kept brought up to
+  now, `homeWalk`), with its index's text and stamp.
+
+Every read goes through one seam (`core/foundation/platform/disk.ts`): a folder's listing, a path's `stat` and
+`lstat`, a file's bytes. The CLI reads through it too, on its own thread.
+
+**Nobody asked, nothing waits** (SD-D3). A read on a timer or in the background never holds a key: what the screen's
+thread last knew stays, and is shown, until the answer comes — the watcher's stamps, the graph (links, backlinks,
+search), the explorer's rows, an open note's text. Where you'd act on what isn't read yet, it says so: a build's row
+among the background tasks (`reading the vault…`, beside `Indexing`), `listing…` under a folder not listed yet,
+`⚠ disk not answering` on the status line while the watcher's look doesn't answer.
+
+**A key's own read** (SD-D4). Opening a note — as a tab, by a link, from a list, at the start — zooming into or
+unfolding a folder, `:e!` and a reload by hand (`space n r`) read on a disk thread. The key waits, and the keys after
+it wait their turn (`Input.handleKey`), as for a big note's parse (§ Known limits); the screen draws, `reading
+<note>…` in the window the note will be in. `esc` is taken at once, out of turn: it gives the read up and leaves you
+where you were. Past its deadline the read is said (`<note> didn't answer: not opened`), nothing opened. A list's
+preview reads without holding the keys, `reading…` in the preview until it comes. **Open** (SD-T5): a click on a
+link while a read waits — dropped, as during a big note's parse, or taken after it.
+
+**Every answer checked** (SD-D5). A request carries what it was read for, and its answer is taken only while that
+holds: the watcher's `sync`s, the graph's `builds` and the vault open, a buffer's version and stamp, the tree's
+settings, the view. Otherwise it's dropped, or asked again at once when only the settings moved. A build's answer
+taken, what changed in the graph while it was out (the watcher's, slipbox's own writes, a file reached) is applied
+again over it, as home's refresh does. A stamp is compared with what's known when it comes: an own write recorded
+meanwhile (`noteOwnWrite`) decides.
+
+**Deadlines** (SD-D6). A look's batch, a key's read and a folder's check have a minute; a walk ten, a listing ten
+(T12's); `SLIPBOX_SLOW_DISK`'s third part shortens them all. A request past its deadline is failed and its thread
+started afresh for the rest; it's never read on the screen's thread instead. The watcher's look given up on says
+`⚠ disk not answering` once and is asked again a minute later; a key's read is said; a build says `reading the vault
+gave up: a folder didn't answer in time` and the graph stays as it was.
+
+**What's read where:**
+
+- **The watcher's look** (SD-D8, SD-T3; § Bun's watcher, and what covers its gaps). The watcher keeps its state and
+  logic here, and its `fs.watch` registrations, whose events come here. Each tick asks one batch: the watched folders'
+  stamps, their `.gitignore`s', the notes followed into folders left to home's walk, the polled folders' listings; and
+  every 15th tick the sweep's stats of the known notes, a slice of them a request, carried on where it was when the
+  next is due. A tick whose answer hasn't come asks nothing new. A folder whose mtime moved is listed again there; the
+  settle by stat (`flush`) asks its stats there too, and the batch goes to the feed when they answer, events meanwhile
+  waiting for the next. A folder registered takes its stamps from the walk that found it (`Graph.dirStamps`), or asks
+  them there; one that came is listed there with all it holds. **Open** (SD-T3): the sweep's slice.
+- **The TUI's look each second** (SD-T4; § External changes). One request a second: the open files no watcher sees,
+  your config's and the vault's `.slipbox/config.toml`'s stamps, git's `HEAD`, its branch's ref, its `index.lock` and
+  its rebase folders, and the CLI's activity file, which the background index asked every quarter second.
+- **A note's text** (SD-T6). A changed note's (the watcher's batch, an open note reloaded) and the background parse's
+  are read on a disk thread and parsed here as before (`extractText` from the text given); the background parse reads
+  a slice ahead and parses what came. A note asked for before its text came (a backlink, a hover) is parsed when it
+  comes, its place shown as not parsed yet meanwhile. **Open** (SD-T6): how far ahead.
+- **The explorer's own tree** (SD-T7; § Side panes). The vault's own folders the tree shows are listed as the folders
+  outside it are (`Listings`), each entry with the walk's verdict on it; its rows' marks are their listing's
+  (`Marks.listedFacts`); the view and the trail are statted there as the tree is built, and the view gives way when
+  the answer says its folder is gone.
+- **The vault built again** (SD-T8). A reindex, the watcher's rescan, a setting of the walk changed, a vault gone into,
+  a branch's tabs and the folders asked for in home read the walk and the index on a disk thread (`walk`); the graph
+  stays as it was meanwhile, `reading the vault…` among the background tasks. **Open** (SD-T8): a rename's and a folder
+  operation's build (question for the maintainer: on the thread, the key waiting as an open does, or as now).
+- **slipbox's own folders** (SD-T9). What's read of them on a timer or at a vault gone into — the positions, the
+  session, the machine's lists, the background index's place, the answers kept for links — is read there.
+- **The start** (SD-D9, SD-T10). The screen is taken first; the vault's walk and index are read on a disk thread, the
+  note waiting for its graph (`reading the vault…`), `q` and `ctrl+c` quitting meanwhile. Your config, the path named
+  and `--base` are read before, as they say what the screen is.
+- **Drawing a note** (SD-T11). **Open**: what a layout asks of the disk (a `/…` link's first folder, a nested vault's
+  file, a name's case on macOS, a picture) answered from what's kept, asked of a disk thread when it isn't.
+
+**What stays on the screen's thread** (SD-D7). A note's save (`App.writeBuffer`: its check that the file is as read,
+its atomic write, its write through a link, D220, its stamp told to the watcher), a file operation with the checks its
+guards make before writing, the scratch, an export and slipbox's own state are written here: their order against the
+watcher's next look and against quitting is what keeps a note safe. So does registering a folder's watch, and the
+CLI's every read. Another vault's graph, built for a peek or the reach, is built here (root ideas.md § Roots and
+vaults). Parsing stays here, and with it the parse cache (`parsed.db`).
+
+## MODIFIED design/roots.md § The index
+
+In the bullet "Off the main thread, in the TUI", the paragraph beginning "Not done:" becomes:
+
+> The rest of what the TUI reads of the vault open, and of its own state, cache and config folders, is read off the
+> main thread as well, on the disk threads ([tui.md](../../design/tui.md) § A slow disk): the watcher's looks, a
+> note's text, the vault open built again, the explorer's own tree, and the walk at the start, made once the screen is
+> up. Writes stay on the main thread.
+
+Previously: "Not done: the rest of what reads a slow disk on the main thread still holds the TUI up while it's read —
+the watcher's polling of the vault open (a stat per watched folder every two seconds, per note every thirty; its
+folders listed again), the vault open built again (a reindex, the watcher's rescan, a vault gone into, a setting
+changed, a rename, a branch's tabs in folders of home not walked), a note's text read to parse or open it, the
+explorer's own tree of the vault open (`fromDisk`, its rows' marks) and the view's folder statted as its tree is built,
+slipbox's own state, cache and config folders (under home by default: the machine's lists, the place the background
+index keeps), and the walk at the start: a vault's before the screen is up, home's as it comes up, with the folders it
+asks for (its tabs')." The draft adds a sentence pointing at this workstream; consolidation replaces both.
+
+## MODIFIED design/tui.md § Side panes: explorer, history, the git panel, Info, outline and footnotes
+
+- In "What the walk leaves out, listed", "what's on the disk that the walk didn't give is read (`fromDisk`)" becomes
+  "what's on the disk that the walk didn't give is read off the main thread, as a folder outside the vault is
+  (`fromDisk`, from `Listings`; the walk's verdict on each entry made on the listing's thread: § A slow disk)".
+- In "A row's marks", "What the disk says of a row (`Facts`: access, a broken link, the size, a vault's index and
+  branch) is read once per row drawn, again when the tree is built again" becomes "What the disk says of a row
+  (`Facts`: access, a broken link, the size, a vault's index and branch) is its folder's listing's
+  (`Marks.listedFacts`), read with it off the main thread, again when the listing is".
+- In the explorer's bullet, "gives way to its nearest folder still there when the tree or the breadcrumb is built
+  again (`keepToWhatsThere`)" becomes "gives way to its nearest folder still there once a stat made off the main thread
+  as the tree or the breadcrumb is built again says it's gone (`keepToWhatsThere`)".
+
+Previously: "what's on the disk that the walk didn't give is read (`fromDisk`)"; "What the disk says of a row
+(`Facts`: access, a broken link, the size, a vault's index and branch) is read once per row drawn, again when the tree
+is built again"; "gives way to its nearest folder still there when the tree or the breadcrumb is built again
+(`keepToWhatsThere`)".
+
+## MODIFIED design/tui.md § External changes
+
+"Events are debounced (`watch.debounce_ms`) and settled by `stat` (D137)" becomes "Events are debounced
+(`watch.debounce_ms`) and settled by `stat`, on a disk thread (D137; § A slow disk)".
+
+Previously: "Events are debounced (`watch.debounce_ms`) and settled by `stat` (D137)".
+
+## MODIFIED design/tui.md § Bun's watcher, and what covers its gaps
+
+- "So each tick stats every watched directory" becomes "So each tick stats every watched directory, one batch on a
+  disk thread (§ A slow disk; a tick whose answer hasn't come asks nothing new),".
+- "The tick runs every `watch.poll_ms`, and every 15th tick sweeps all known notes." becomes "The tick runs every
+  `watch.poll_ms`, and every 15th tick sweeps all known notes, a slice of them a request, carried on where it was."
+
+Previously: "So each tick stats every watched directory"; "The tick runs every `watch.poll_ms`, and every 15th tick
+sweeps all known notes."
+
+## MODIFIED design/tui.md § Known limits
+
+Added, after "A big note's first open reads for a moment":
+
+- **A save on a slow disk holds the screen for its write** (SD-D7): a note's save, a file operation, the scratch and
+  slipbox's own state are written on the main thread, where their order against the watcher and quitting is kept.
+
+Previously: the section's two bullets alone.
+
+## MODIFIED design/testing.md § The terminal tests
+
+In "A slow disk, stood in for", "makes a folder of that name take so long to list, on whichever thread lists it
+(`slowDisk` in `core/workspace/walk/walk.ts`), and shortens the walk's and the listings' threads' deadlines to the
+third" becomes "makes a folder of that name take so long to list, and each path under it so long to stat or read, on
+whichever thread reads it (`slowDisk`, through the seam: `core/foundation/platform/disk.ts`), and shortens the walk's
+and the disk threads' deadlines to the third"; and "the unit tests hold a folder up on a thread of their own
+(`setFolderReader`, …)" holds a listing, a stat or a read alike, on every thread, the main thread's included.
+**Open** (SD-T1): one delay for every kind of read, or a listing's and a stat's apart (a walk stats each file, so a
+check's start takes their sum).
+
+Previously: "makes a folder of that name take so long to list, on whichever thread lists it (`slowDisk` in
+`core/workspace/walk/walk.ts`), and shortens the walk's and the listings' threads' deadlines to the third"; "the unit
+tests hold a folder up on a thread of their own (`setFolderReader`, a worker of their own: `tests/fixtures/walk/`)".
+
+## MODIFIED design/how-it-works.md § The parts
+
+In "Vaults", "the TUI makes its own walks, and lists the explorer's folders, on threads of their own (T12)" becomes "the
+TUI makes its own walks on a thread of their own (T12), and reads everything else of the vault open on the disk threads
+(§ A slow disk in [tui.md](../../design/tui.md))".
+
+Previously: "the TUI makes its own walks, and lists the explorer's folders, on threads of their own (T12)".
+
+## MODIFIED design/how-it-works.md § Module map
+
+- The row for `walk-thread.ts` says "the walk's thread and the two disk threads (`walk-worker.ts`, `list-worker.ts`):
+  asked", and cites SD-D2 beside T12.
+- A row added after `fsutil.ts`'s: "`core/foundation/platform/disk.ts` | SD-D10 | the one seam every read of the
+  disk goes through: a listing, a stat, a file's bytes; the slow disk stood in for".
+
+Previously: "the walk's thread and the listings' two (`walk-worker.ts`, `list-worker.ts`): asked"; no row for
+`disk.ts`.

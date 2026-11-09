@@ -564,6 +564,7 @@ deleted (D61). Each vault's is in its cache folder (the link index, the search i
   vault open (`fromDisk`, its rows' marks) and the view's folder statted as its tree is built, slipbox's own state,
   cache and config folders (under home by default: the machine's lists, the place the background index keeps), and the
   walk at the start: a vault's before the screen is up, home's as it comes up, with the folders it asks for (its tabs').
+  The workstream [SD](../workstreams/slow-disk/README.md) proposes how they move off it (a draft, #46).
 - **Freshness is checked, not assumed:** a build lists the folders again and keeps a file's entry only while its size
   and modification time match, since a folder's own time doesn't change when a file in it is edited; a file gone is
   dropped, or paired as a move ([links.md](links.md) § Repairs). Folders open are watched. What is covered and how

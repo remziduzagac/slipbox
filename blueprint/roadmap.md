@@ -746,6 +746,16 @@ Items 5 and 7 are consolidated as CIW. The remaining work is tracked in the root
   the file; the servers' hints, uses, calls and imports; copies kept and marks; windows split freely and zoomed;
   several selections. Its windows wait on the Later item below on windows and tabs.
 
+## A slow disk never freezes the screen (#46)
+
+*Not a phase. Drafted 2026-11-09, for the maintainer's approval; not built.*
+
+- [ ] **[A slow disk never freezes the screen](workstreams/slow-disk/README.md)** (SD): what still reads the disk on
+  the screen's thread moved off it, onto the listing threads grown into disk threads — the watcher's look and the TUI's
+  each second, a note opened or changed, the explorer's tree of the vault open, the vault built again, slipbox's own
+  folders, and the walk at the start, made once the screen is up. A key's own read waits for it and `esc` gives it up;
+  saves stay where they are.
+
 ## Later
 
 Agreed, but not scheduled.

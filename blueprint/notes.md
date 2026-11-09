@@ -557,3 +557,11 @@ dates. Each says what was asked, decided, built and found, and cites the decisio
 - D272 went to another pull request of the same day (#245); this one is D273.
 - The record and the version CIW-T7 asked for needed nothing: D266 had already stopped a pull request's pass counting
   for a push's.
+
+## A slow disk: the workstream drafted (2026-11-09)
+
+- Issue #46, what T12 left on the screen's thread, drafted as a workstream for the maintainer's approval:
+  [SD](workstreams/slow-disk/README.md). Its inventory was checked against the code on `dev` (0df9a0a6) and adds
+  what the issue didn't name: the `.gitignore` stamped every look, the events' settle by stat, the config's and git's
+  stamps every second, the activity file, what drawing a note reads, the Problems panel's notes.
+- Nothing is decided: its decisions are proposed (SD-D1 to SD-D10) and its questions open, for the maintainer.
