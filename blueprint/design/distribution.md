@@ -649,10 +649,14 @@ meanwhile, else once the TUI is quiet. The question about notes unsaved, opened 
 restart, drops what arrives before it's drawn and in the half second after: a second `enter`, a double click, never
 answers it.
 
-**The screen given back first.** OpenTUI's `destroy()` returns before its native teardown (raw mode off, the main
-screen back, mouse reporting off) is written; its `closed` settles once it is, or failed, or after a second. slipbox
-waits for `closed` before it ends at all, and the hand-over a turn of the event loop more, before it writes a line or
-replaces the process.
+**The screen given back first.** OpenTUI's `destroy()` turns raw mode off and returns before the rest of its native
+teardown (the main screen back, mouse reporting off) is written, behind whatever output was queued before it: a
+picture's megabytes take seconds over a slow link. Its `closed` resolves once the teardown is out, and rejects when the
+terminal failed or ten seconds passed (`CLOSE_WAIT_MS` in `run.ts`; OpenTUI's own wait is a second), what was left
+then cancelled, the terminal not restored. slipbox then restores it itself, writing at once a string terminator, which
+ends a picture's sequence cut short, and OpenTUI's own teardown (`RESTORE`, which a test holds to what OpenTUI's setup
+turns on and its teardown turns off). slipbox waits for `closed` before it ends at all, and the hand-over a turn of the
+event loop more, before it writes a line or replaces the process.
 
 **The hand-over** (`core/application/distribution/restart.ts`; UPG-D2) runs in the same process, in order:
 

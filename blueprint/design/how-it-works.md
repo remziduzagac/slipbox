@@ -647,7 +647,9 @@ OpenTUI is pre-1.0 and moves fast, so it is pinned to an exact version in `packa
 3. Launch the TUI and check what the adapter uses: `drawText` and `fillRect` output, key names (`keyName` in
    `tui/shell/input/keys.ts`), paste, mouse and resize events, `widthMethod` (a wcwidth terminal's rows must not drift),
    `suspend`/`resume` (the `$EDITOR` hand-off, each awaited), `setTerminalTitle`, `setBackgroundColor`, `useMouse`,
-   `copyToClipboardOSC52`, and `destroy` with `closed` (the terminal given back after `destroy()` returns). And
+   `copyToClipboardOSC52`, and `destroy` with `closed` (the terminal given back after `destroy()` returns; when it
+   isn't, slipbox writes OpenTUI's teardown itself, `RESTORE` in `run.ts`, which
+   `tests/tui/shell/terminal/closing.test.ts` holds to what this version's setup and teardown write). And
    pictures: `NativeImage` (decode, `resize`, `raw`), `drawImage` for sixel, and the `NativeSession` slipbox makes and
    hands the renderer, whose `write` sends Kitty placeholders' pictures in order with the frames (12.7).
 4. Only `tui/shell/terminal/opentui.ts` and `tui/shell/terminal/run.ts` should need changes. If anything else does, the
