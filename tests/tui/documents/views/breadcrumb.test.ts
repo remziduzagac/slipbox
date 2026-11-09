@@ -7,10 +7,12 @@ makeSandbox();
 
 describe("breadcrumb collapse (…) and the path dropdown", () => {
   test("space f b with the which-key popup drawn over the breadcrumb after space f: the dropdown under it all the same (#40)", async () => {
+    // Tall enough for the popup to hold `space f`'s keys in two columns with their explanations, reaching up over the
+    // breadcrumb: on a shorter screen it takes three columns, under it.
     const h = await harness({
       open: "samples/handbook/operations-handbook.md",
       width: 100,
-      height: 34,
+      height: 36,
       config: (c) => (c.ui.outline = false),
     });
     const v = h.app.view!;

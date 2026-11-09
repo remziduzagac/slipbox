@@ -14,7 +14,8 @@ import { folderIdentity, readFolders, recordFolder, copyAvailable } from "../../
 import { tildePath, rootLabel } from "../../../core/workspace/vaults/names.ts";
 import { describeCap } from "../../../core/workspace/vaults/home.ts";
 import { describeBackground, backgroundStatus } from "../../../core/workspace/graph/autoindex.ts";
-import { cacheDir, stateDir } from "../../../core/foundation/platform/paths.ts";
+import { cacheDir, stateDir, untildePath } from "../../../core/foundation/platform/paths.ts";
+import { openPathPrompt } from "../../shell/overlays/open-path.ts";
 import { statSync } from "node:fs";
 import type { App } from "../../app/runtime/app.ts";
 
@@ -36,6 +37,8 @@ export function fileActions(): Record<string, Run> {
     "note.export_many": (a) => a.exporter.compose(),
     "note.open": (a, arg) => {
       if (!arg) return void a.run("switcher.open");
+      // `~/…` from the home folder, as a shell reads it: a whole path from then on.
+      arg = untildePath(arg, a.home);
       // A pointer (21.10): the file it names, in its folder's copy here.
       if (isPointer(arg)) {
         const r = a.graph.resolveLink({ kind: "markdown", target: arg }, a.view?.buf.rel ?? "");
@@ -72,6 +75,8 @@ export function fileActions(): Record<string, Run> {
       if (rel && isInside(a.loc.root, abs) && isFile(abs)) return a.open(a.explorer.rowPath(abs));
       a.message("warn", `no note or file "${arg}"`);
     },
+    // A file by its path, asked for and completed as it's typed (`space f e`); given one, opened as `:e` opens it.
+    "note.open_path": (a, arg) => (arg ? a.run(`note.open ${arg}`) : openPathPrompt(a)),
     // note, vault, app
     // Unsaved changes and the file as it was (DF-D6): yours thrown away only when you say so, autosave as it was; a file
     // that changed too is the conflict prompt's.

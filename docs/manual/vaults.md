@@ -261,6 +261,7 @@ Elsewhere, by any of these:
 - a repository or a worktree in the git panel, `o` on it, or a branch's `[Open]` ([Git](git.md))
 - a named folder picked from `space v v`, or from the list the top bar's vault opens when clicked
 - `:e` with the path of one of its notes, or a pointer
+- a file of it opened by its path: `space f e`, or a path typed in the switcher
 
 Following a link, a pointer, a backlink or a search hit into another vault only peeks at the note. Nothing switches
 until you choose to go.

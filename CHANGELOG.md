@@ -8,6 +8,11 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 
 ### Added
 
+- `space f e` opens a file by its path, anywhere on the machine: it asks for the path, `~` your home folder, and lists
+  the folders and files as you type. `tab` completes the path, `enter` goes into a folder or opens the file, `ctrl+w`
+  goes back a folder. The switcher (`ctrl+p`) takes a path too, one starting with `/`, `~/`, `./` or `../`. A file of
+  another vault asks first, as every way into it does. `:e` reads `~` as your home folder.
+
 - `space g` is git's group of keys. From a note, `space g s` stages the change at the cursor, or the file;
   `space g u` unstages the file; `space g d` undoes the change, after asking; `space g enter` previews it. A branch's
   commits since its base are in the git panel, under a branch in Branches and in `:log` (`space g l`): each opens into

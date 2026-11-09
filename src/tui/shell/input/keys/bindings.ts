@@ -231,6 +231,8 @@ export const DEFAULT_KEYS: Record<string, string> = {
   "leader f shift+r": "find.replace_vault",
   "ctrl+p": "switcher.open",
   "leader f f": "switcher.open",
+  // A file by its path (`e` as in `:e`): asked for, completed as it's typed.
+  "leader f e": "note.open_path",
   // Lists of places (EG-D2): the last one again; in one, alt+enter asks where its pick opens.
   "leader '": "list.resume",
   "alt+enter": "list.open_where",

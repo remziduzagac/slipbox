@@ -416,11 +416,11 @@ styles in `support/diagnostics.ts`, and export controls and held-publication fix
 Source mappings still select their unchanged check names and areas (ORG-D1, ORG-D2).
 
 Navigation checks register directly in their original order under `windows-and-tabs.ts`, `navigation-tools.ts`,
-`finding.ts`, `palette.ts`, `ui-settings.ts`, `terminal-state.ts`, `terminal-input.ts`, `appearance.ts`,
-`list-interactions.ts`, `help.ts`, `index-settings.ts`, `which-key.ts` and `quitting.ts`. Their area, names, coverage
-and session lifecycle stay with each check. Shared screen and cursor helpers live in `support/navigation.ts`;
-theme style helpers live in `support/appearance.ts`. Source mappings retain the same name pieces and areas
-(ORG-D1, ORG-D2).
+`finding.ts`, `palette.ts`, `open-by-path.ts`, `ui-settings.ts`, `terminal-state.ts`, `terminal-input.ts`,
+`appearance.ts`, `list-interactions.ts`, `help.ts`, `index-settings.ts`, `which-key.ts` and `quitting.ts`. Their area,
+names, coverage and session lifecycle stay with each check. Shared screen and cursor helpers live in
+`support/navigation.ts`; theme style helpers live in `support/appearance.ts`. Source mappings retain the same name
+pieces and areas (ORG-D1, ORG-D2).
 
 Reading checks register directly in their original order under `start.ts`, `diagrams.ts`, `markdown-content.ts`,
 `text-files.ts`, `data-files.ts`, `code-files.ts`, `markdown-inline.ts`, `info.ts`, `trust-and-privacy.ts`,

@@ -33,6 +33,11 @@ export function tildePath(abs: string, home = process.env.HOME || homedir()): st
   return abs === home ? "~" : abs.startsWith(`${home}/`) ? `~/${abs.slice(home.length + 1)}` : abs;
 }
 
+/** A path as typed, `~` read as the home folder (`~`, `~/…`), `tildePath` the other way; any other as it is. */
+export function untildePath(path: string, home = process.env.HOME || homedir()): string {
+  return path === "~" ? home : path.startsWith("~/") ? join(home, path.slice(2)) : path;
+}
+
 /** slipbox's folder for a kind of thing, on a platform (14.9). */
 export function storeDir(
   kind: StoreKind,

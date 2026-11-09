@@ -8,6 +8,7 @@ Following links and backlinks, the other way to get around, is in [Links and bac
 | To find | Keys |
 | --- | --- |
 | a note or file by its name | `ctrl+p`, `space f f` |
+| a file by its path, anywhere | `space f e`, or a path in `ctrl+p` |
 | notes by the words in them, ranked | `space f s` |
 | text in this note | `ctrl+f`, `/` |
 | text in every note, line by line | `ctrl+shift+f`, `space f g` |
@@ -48,9 +49,43 @@ Start with `#` to find a symbol instead:
 
 `enter` opens the file there.
 
-`:e <note>` opens a note by its name, its path or a pointer, without the list. `:e` alone opens the switcher.
+Start with `/`, `~/`, `./` or `../` to open a file by its path instead, as [A file by its path](#a-file-by-its-path)
+describes.
+
+`:e <note>` opens a note by its name, its path or a pointer, without the list. `~` in a path is your home folder.
+`:e` alone opens the switcher.
 
 From the command line, `slipbox ls` lists the notes.
+
+## A file by its path
+
+Press `space f e` (`e` as in `:e`) and type a file's path. The file can be anywhere: in this vault, in another one, or
+elsewhere on the machine.
+
+- `~` is your home folder, as in `~/work/kestrel/README.md`.
+- A path that doesn't start with `/` or `~` starts at the vault's top, as `:e` reads it: `docs/plan.md`, or
+  `../other/notes.md` beside the vault.
+
+As you type, the list shows what's in the folder typed so far, its folders first. The name you've begun after the last
+`/` narrows it, matched as every list matches.
+
+| Keys | What |
+| --- | --- |
+| `tab` | complete the path to the selected entry |
+| `enter` | go into the selected folder, or open the selected file |
+| `ctrl+w` | go back a folder |
+
+The file opens as `:e` opens it. A file of another vault asks first whether to go into that vault, as every way in does
+([Switching vaults](vaults.md#switching-vaults)). When nothing in the list matches, `enter` opens the path as typed.
+
+A folder reached through a link you haven't followed isn't listed: one row says where the link leads, and `enter` on it
+asks whether to follow it, just look, or leave it ([Links that lead out](vaults.md#links-that-lead-out)).
+
+The switcher takes a path too: type one that starts with `/`, `~/`, `./` or `../` in `ctrl+p`, and it lists that
+folder the same way, with the same keys. Its preview shows the selected file.
+
+Hidden files are listed when the explorer lists them (`shift+h` there). While it doesn't, start a name with `.` to see
+them.
 
 ## Search
 

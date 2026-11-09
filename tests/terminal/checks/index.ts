@@ -40,6 +40,7 @@ import { NAMED } from "./named-folders.ts";
 import { NAVIGATION_TOOLS } from "./navigation-tools.ts";
 import { NEW_FILE } from "./new-file.ts";
 import { NOTES } from "./notes.ts";
+import { OPEN_BY_PATH } from "./open-by-path.ts";
 import { PALETTE } from "./palette.ts";
 import { PANELS } from "./panels.ts";
 import { PEEK_BACKLINKS } from "./peek-backlinks.ts";
@@ -108,6 +109,8 @@ export const CHECK_FILES: Record<string, Check[]> = {
   "syntax-structure": SYNTAX_STRUCTURE,
   finding: FINDING,
   palette: PALETTE,
+  // A file opened by its path (#104): `space f e`, and the switcher given a path; a file of its own.
+  "open-by-path": OPEN_BY_PATH,
   "ui-settings": UI_SETTINGS,
   "terminal-state": TERMINAL_STATE,
   "terminal-input": TERMINAL_INPUT,
