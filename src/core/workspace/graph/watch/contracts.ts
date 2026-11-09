@@ -1,6 +1,7 @@
 // Watch batches/options and the live capabilities used by directory and reconciliation owners.
 
 import type { WalkFilter } from "../../walk/filtering/filter.ts";
+import type { Stamp } from "../../walk/contracts.ts";
 import type { WatchState } from "./state.ts";
 export interface WatchChange {
   rel: string;
@@ -46,6 +47,9 @@ export interface WatcherOptions {
   /** When the walk that found the directories given (`dirs`, or `sync`'s) began: one changed since
    *  may hold what it didn't see, so it is listed again on the next tick. */
   walkedAt?: () => number;
+  /** Each folder's stamp as the walk listed it (home's, #12): one whose times are still those isn't listed again for
+   *  `walkedAt` alone, however long before it the walk began; one changed since, or stamped to list again, is. */
+  dirStamps?: () => ReadonlyMap<string, Stamp>;
   /** A folder listed, not walked (`~` or `/`, 20.22): its subdirectories aren't the vault's, so a
    *  second look at it takes in none of them, nor any file but a note. */
   listed?: boolean;
@@ -104,7 +108,7 @@ export type DirectoryState = Pick<
 >;
 export type DirectoryOptions = Pick<
   WatcherOptions,
-  "filter" | "known" | "leftToWalk" | "maxDirs" | "onWarn" | "pollMs" | "root" | "walkedAt"
+  "dirStamps" | "filter" | "known" | "leftToWalk" | "maxDirs" | "onWarn" | "pollMs" | "root" | "walkedAt"
 >;
 
 export type ReconciliationState = Pick<

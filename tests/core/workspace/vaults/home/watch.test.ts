@@ -1,7 +1,17 @@
 import { watcherState, watcherDirectories } from "../../../../support/watcher-access.ts";
 import { UNIT_TIMEOUT_MS } from "../../../../support/timeouts.ts";
 import { describe, expect, setDefaultTimeout, test } from "bun:test";
-import { mkdtempSync, mkdirSync, realpathSync, renameSync, rmSync, statSync, utimesSync, writeFileSync } from "node:fs";
+import {
+  mkdtempSync,
+  mkdirSync,
+  readFileSync,
+  realpathSync,
+  renameSync,
+  rmSync,
+  statSync,
+  utimesSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
@@ -45,6 +55,7 @@ describe("home, a vault without a marker (VV-D2)", () => {
       ...(opts.maxDirs === undefined ? {} : { maxDirs: opts.maxDirs }),
       attachments: g.filePaths(),
       walkedAt: () => g.walkedAt,
+      dirStamps: () => g.dirStamps,
       leftToWalk: (rel) => g.waitsForHomeWalk(rel),
       walkPending: () => g.home?.walked === null,
       now: () => Date.now() + clock.ahead,
@@ -270,6 +281,37 @@ describe("home, a vault without a marker (VV-D2)", () => {
         (w as unknown as { degrade(reason: string): void }).degrade("ENOSPC: test");
         expect(await look()).toEqual(none);
         expect(await look()).toEqual(none);
+      } finally {
+        w.close();
+      }
+    });
+  });
+
+  test("a folder of home changed after its walk began, as the walk listed it: not listed again at the first tick; changed since, it is (#12)", async () => {
+    const { homeWalkFile } = await import("../../../../../src/core/workspace/vaults/home.ts");
+    await withHome({ "a.md": "# A\n", "garden/plan.md": "# Plan\n", "garden/seeds.md": "# Seeds\n" }, async (home) => {
+      const ago = (hours: number) => new Date(Date.now() - hours * 3_600_000);
+      for (const d of ["", "garden"]) utimesSync(join(home, d), ago(3), ago(3));
+      walkHomeNow(homeAt(home), DEFAULT_CONFIG);
+      // As a walk made in slices leaves it: begun two hours back, garden listed later, its time an hour back then. And
+      // seeds.md out of the walk, so that garden listed again would bring it.
+      utimesSync(join(home, "garden"), ago(1), ago(1));
+      const file = homeWalkFile(homeAt(home));
+      const kept = JSON.parse(readFileSync(file, "utf8"));
+      const st = statSync(join(home, "garden"));
+      kept.times[kept.dirs.indexOf("garden")] = [st.mtimeMs, st.ctimeMs];
+      const walked = ago(2).toISOString();
+      const notes = kept.notes.filter((n: string) => n !== "garden/seeds.md");
+      writeFileSync(file, JSON.stringify({ ...kept, walked, notes }));
+      const g = openGraph(homeAt(home), DEFAULT_CONFIG, true, "lazy");
+      expect(g.walkedAt).toBe(Date.parse(walked));
+      expect(g.known("garden/seeds.md")).toBe(false);
+      const { w, look } = await watchHome(home, g);
+      try {
+        expect(await look()).toEqual(none);
+        // A note come since: garden's time moved off its stamp, listed again — what the walk left out with it.
+        writeFileSync(join(home, "garden", "late.md"), "# Late\n");
+        expect((await look()).reported).toEqual(["garden/late.md", "garden/seeds.md"]);
       } finally {
         w.close();
       }

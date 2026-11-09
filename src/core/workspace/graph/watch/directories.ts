@@ -142,7 +142,7 @@ export class WatchDirectories {
       });
       this.state.watchers.set(dirRel, w);
       this.state.gitignores.set(dirRel, this.gitignoreStamp(dirRel));
-      this.state.stamps.set(dirRel, settled(dirMtime(join(this.opts.root, dirRel)), readAt));
+      this.state.stamps.set(dirRel, this.startStamp(dirRel, readAt));
     } catch (err) {
       const code = (err as NodeJS.ErrnoException).code;
       if (code === "ENOSPC" || code === "EMFILE" || code === "ENFILE")
@@ -150,6 +150,22 @@ export class WatchDirectories {
           `${code}: the system watch limit is exhausted (${this.state.watchers.size} directories watched)`,
         );
       else if (existsSync(join(this.opts.root, dirRel))) this.pollDir(dirRel, (err as Error).message);
+    }
+  }
+
+  /**
+   * The stamp a folder is watched from, its contents read at `readAt`: its mtime, or -1 to list it again at the next
+   * tick. The walk's stamp of it (`dirStamps`), its times still those: as the walk listed it, whenever the walk began.
+   */
+  private startStamp(dirRel: string, readAt: number): number {
+    const abs = join(this.opts.root, dirRel);
+    const seen = this.opts.dirStamps?.().get(dirRel);
+    if (!seen) return settled(dirMtime(abs), readAt);
+    try {
+      const st = statSync(abs);
+      return st.mtimeMs === seen[0] && st.ctimeMs === seen[1] ? st.mtimeMs : -1;
+    } catch {
+      return -1;
     }
   }
 

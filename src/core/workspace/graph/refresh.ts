@@ -9,7 +9,15 @@ import { cacheDir } from "../../foundation/platform/paths.ts";
 import type { ParseCache as ChunkCache } from "../../documents/markdown/parse.ts";
 import { sharedParseCache } from "../../documents/markdown/parsecache.ts";
 import { LinkIndex, onDisk } from "../links/links.ts";
-import { HOME_LIMITS, listDirectory, walkVault, type NoteFile, type Skipped, type WalkFilter } from "../walk/walk.ts";
+import {
+  HOME_LIMITS,
+  listDirectory,
+  walkVault,
+  type NoteFile,
+  type Skipped,
+  type Stamp,
+  type WalkFilter,
+} from "../walk/walk.ts";
 import { homeWalk, inFolders, walksInto, type HomeWalk } from "../vaults/home.ts";
 import { isListed, type VaultLocation } from "../vaults/vault.ts";
 import { extractNote, INDEX_VERSION } from "./graph-extract.ts";
@@ -35,6 +43,7 @@ interface RefreshGraph {
   home: HomeWalkState;
   builds: number;
   walkedAt: number;
+  dirStamps: ReadonlyMap<string, Stamp>;
   indexRead: boolean;
   writesState: boolean;
   writesIndex: boolean;
@@ -165,6 +174,7 @@ export class GraphRefresh {
     g.home = home ? { walked: home.walked, capped: home.capped, ...(home.asked ? { asked: home.asked } : {}) } : null;
     const walk = home ? home.walk : isListed(g.loc) ? listDirectory(g.root, g.filter) : walkVault(g.root, g.filter);
     g.dirs = walk.dirs;
+    g.dirStamps = walk.times ?? new Map();
     g.assets.clear();
     for (const a of walk.assets) g.addAsset(a);
     g.skipped = walk.skipped;

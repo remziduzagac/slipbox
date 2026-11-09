@@ -21,7 +21,7 @@ import { Redirects } from "../links/redirects.ts";
 import { classify, extensionOf } from "../../documents/model/filetypes.ts";
 import type { AskedWhole, HomeWalk } from "../vaults/home.ts";
 import { findVaultRoot, isListed, type VaultLocation } from "../vaults/vault.ts";
-import { type NoteFile, type Skipped, type WalkCap, WalkFilter } from "../walk/walk.ts";
+import { type NoteFile, type Skipped, type Stamp, type WalkCap, WalkFilter } from "../walk/walk.ts";
 import type {
   LinkRef,
   NoteEntry,
@@ -71,6 +71,8 @@ export class Graph {
   dirs: string[] = [];
   /** When the last walk began (epoch ms): a folder changed since may hold what it didn't see. */
   walkedAt = 0;
+  /** Each folder's stamp as the walk listed it (home's: `WalkResult.times`), for the watcher (#12). */
+  dirStamps: ReadonlyMap<string, Stamp> = new Map();
   /** lower(basename) → vault-relative paths of non-note files. */
   assets = new Map<string, string[]>();
   skipped: Skipped[] = [];

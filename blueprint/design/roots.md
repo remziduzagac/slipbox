@@ -117,8 +117,9 @@ couldn't read), or it would be listed again at every build. One whose time only 
 stamps. A walk is kept by a graph built on the main thread, and by the TUI in home from the walk its walk's thread
 brings up to date and hands back (`refreshHome`, T12); never by one built on a thread of a peek's backlinks or an
 export's, whose walk may be older than the main thread's (`Graph.keepsWalk`). The graph's `walkedAt` is the walk's, so
-the watcher lists again the folders changed since. So an agent's note made in home is there at its next command, and a
-folder made a vault by hand (`git init`) leaves home. The walk is kept with its filter's settings
+the watcher lists again the folders changed since; not one whose times are still the stamp the walk listed it with
+(`Graph.dirStamps`), though that was after the walk began. So an agent's note made in home is there at its next
+command, and a folder made a vault by hand (`git init`) leaves home. The walk is kept with its filter's settings
 (`WalkFilter.signature`: the note extensions, `walk.exclude`, the root markers, where Downloads is): kept under others,
 it's no walk of home's, so a `[walk]` setting changed is home never walked, its walk made again (the TUI's reload asks
 for it; the background index makes a walk under way again; the CLI walks it at once). Never walked, home is its top

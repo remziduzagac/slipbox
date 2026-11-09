@@ -2405,10 +2405,12 @@ moment. So each tick stats every watched directory (the check that each still ex
 lists one again only when its mtime moved since what it held was last known. What it holds that isn't known (a note,
 an attachment, a folder, adopted with all inside) is pending as if its event had come, and so is what's known there
 and gone; the debounce settles them with the events that did come. A folder that changed after the walk began, which
-the walk may have read before its watch began, is listed on the first tick. A folder read within 2 s of its last
-change is listed again on each tick until that change is older, since a coarse clock (FAT's, HFS+'s) can give the
-next change the same mtime. In a folder listed, not walked (`~`, `/`), the second look takes in notes only. A note
-rewritten in place moves no folder's mtime: the sweep finds that.
+the walk may have read before its watch began, is listed on the first tick — unless the walk stamped it as it listed
+it (home's walk, `Graph.dirStamps`) and its mtime and ctime are still the stamp's: the walk read it as it is, however
+long after the walk began. A folder read within 2 s of its last change is listed again on each tick until that change
+is older, since a coarse clock (FAT's, HFS+'s) can give the next change the same mtime. In a folder listed, not walked
+(`~`, `/`), the second look takes in notes only. A note rewritten in place moves no folder's mtime: the sweep finds
+that.
 
 The tick runs every `watch.poll_ms`, and every 15th tick sweeps all known notes. A change counts
 when a note's mtime or size differs, so a rewrite in the same second is still seen. Attachments (any
