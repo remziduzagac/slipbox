@@ -570,3 +570,6 @@ dates. Each says what was asked, decided, built and found, and cites the decisio
   SD-D8 and SD-D10 stay proposed.
 - Later that day the maintainer agreed those four as proposed and had the tasks' own questions decided with the
   recommendation (SD-D11, SD-D12): every decision is agreed, and SD is active, its tasks not started.
+- On 2026-11-10 the design's review was answered: the inventory grew by the reads it had missed, the boundary check
+  became an allow list, a look's deadline is set by what asked, and two decisions came of it (SD-D13, what's drawn is
+  kept; SD-D14, each task's terminal checks run before it merges); the workstream's notes say each.

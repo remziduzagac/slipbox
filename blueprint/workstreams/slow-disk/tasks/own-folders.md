@@ -1,7 +1,7 @@
 ---
 status: todo
 assignee: ""
-blocked_by: [SD-T2, SD-T4]
+blocked_by: [SD-T3, SD-T4, SD-T5]
 tracker: [gh:#46]
 created: "2026-11-09"
 ---
@@ -22,6 +22,12 @@ index, home's walk kept).
 - Each read the measurement finds made on a timer or at a vault gone into asked of a disk thread, what's kept here
   used meanwhile (SD-D3); one made before the screen is up stays (SD-D9): a vault gone into opens with its
   positions once they're read; the Vaults window lists what it last read, then what's on disk.
+- Link completion's other vaults (`src/tui/documents/editing/completion/items.ts:50`–`:55`): the machine's list
+  (`readRoots`), each vault's folder looked for and its `index.json` read on a disk thread, kept from the last read;
+  a completion offers what's kept, and the rest once it answers.
+- The upgrade check every ten seconds (`update-observation.ts:71` → `currentVersion`,
+  `src/core/application/distribution/install.ts:25`) reads slipbox's data folder, not its state, cache or config: not
+  this task's. It stays, said as a known limit in design/tui.md § Known limits (SD-D1's note of 2026-11-10).
 - Writes stay (SD-D7, agreed: question 4 of README.md).
 - The parse cache (`parsed.db`, `src/core/documents/markdown/parsecache.ts:44`) stays on the screen's thread, said as
   a known limit in design/tui.md § Known limits.
@@ -32,7 +38,11 @@ index, home's walk kept).
 - Held: slipbox's state folder under `held` — going into another vault, a key handled and drawn while its positions
   are read; let go, its notes open where they were left.
 - Held: the same for the Vaults window, its list drawn from what was kept.
+- Held: another vault's cache folder under `held` — a link's completion opens at once with this vault's notes, a key
+  handled meanwhile; let go, the other vault's notes are offered too.
 - Mutation: each read put back here, its test fails (checked once).
+- `CHECKS_FOR` (`scripts/ci-scope.ts`) names the terminal checks this task's files reach; before its pull request
+  merges, they run locally, listed for approval first, with its unit tests (SD-D14).
 
 ## Terminal check
 

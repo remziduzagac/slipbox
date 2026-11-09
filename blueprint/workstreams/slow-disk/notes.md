@@ -57,3 +57,21 @@ said in design/roots.md § The index, "Not done", and in issue #46. This workstr
 - Deciding them found one more read the inventory had missed: `ensureAll` reads every note not parsed yet when the
   tags, the problems, the link forms or a note's backlinks are asked of the graph on the screen's thread. It's in
   § 4 of the inventory now, and SD-T6 takes it: a key that needs those notes waits for them, as an open does.
+
+## The review (2026-11-10)
+
+- The design's pull request was reviewed, and its twelve findings fixed; where one needed a choice, the recommended
+  one was taken, by the maintainer's instruction, and recorded as a note under the decision it changes or as a new
+  one (SD-D13, SD-D14).
+- The inventory had missed reads made as the screen is drawn — git's `HEAD` and the operation under way for the top
+  bar and the git panel, every note for the Problems tab's count and the Info panel, the scratch's places — and made
+  by the watcher for each entry it lists (the walk's filter, a link's verdict, where a note went), by the TUI's look
+  (each open file's links, the config read again), by an open (its links), by git's keys, by link completion, by the
+  explorer (nested vaults' names, what's left out) and, since `9912f519`, `asRead`. Each is in its task now; the
+  upgrade check, which reads slipbox's data folder, stays as a known limit.
+- The boundary check could not refuse every read in the inventory's files, as SD-D12 had it: some keep theirs until
+  their task lands, some for good (SD-D7's guards, a save, SD-D9's `prepare`). It holds an allow list now, and says
+  what it doesn't see; the held tests see the rest.
+- A look's deadline had two values; it's set by what asked now. The tasks' `blocked_by` follow SD-D1. The pointer
+  added to design/roots.md went: the workstream writes only in its own folder, and consolidation replaces that
+  paragraph.

@@ -1,7 +1,7 @@
 ---
 status: todo
 assignee: ""
-blocked_by: [SD-T1, SD-T2]
+blocked_by: [SD-T3, SD-T4, SD-T5]
 tracker: [gh:#46]
 created: "2026-11-09"
 ---
@@ -24,6 +24,12 @@ SD-D3, SD-D4, SD-D5.
 - `Navigation.keepToWhatsThere` (`navigation.ts:214`) asks a `stat` of the view and the trail as the tree is built,
   one out at a time; the view gives way when the answer says its folder's gone, and only while the view is the one
   asked about.
+- The nested vaults' names (`rows/tree.ts:177` → `rootRows` → `Paths.rootName` → `vaultName`,
+  `src/core/workspace/walk/listing.ts:83`) come with the listing that found them; in Elsewhere, its top is listed by
+  `Listings` too (`tree.ts:49`).
+- Whether a row is left out (`Paths.leftOut`, `src/tui/workspace/explorer/rows/paths.ts:55`: a `stat`, `:69`, and the
+  filter's verdict on each folder on its way) comes from the listings the tree is built of, for each row's path
+  (`rowPath`, `:38`) and the tree's top (`leftOutAt`, `tree.ts:27`).
 - A zoom (`zoomTo`, `navigation.ts:88`), `l` on a folder (`actions/items.ts:279`) and slipbox opened on a folder
   (`startup.ts:69`) ask `access` as a key's own read (SD-D4): `can't read …` said as now, once it answers.
 
@@ -35,9 +41,13 @@ SD-D3, SD-D4, SD-D5.
   `tests/tui/workspace/explorer/walk-thread.test.ts`'s "the rows and their marks are the ones the listing here gives"
   covers, and for the vault's own: a busy folder with and without a note, an ignored file, `walk.exclude`, a note too
   big, a nested vault's index and branch.
+- Held: a nested vault under `held` with a name of its own — its row drawn by its folder's name, a key handled
+  meanwhile; let go, by its name. A row under `held` that the walk leaves out is placed once its listing answers.
 - Held: the view's folder deleted while its stat is out — the view stays until the answer, then gives way, said.
 - Held: `z` on a folder under `held` — the key waits, a frame drawn; `esc` gives it up and the view stays.
 - Mutation: `fromDisk` reading here again, the first test fails (checked once).
+- `CHECKS_FOR` (`scripts/ci-scope.ts`) names the terminal checks this task's files reach; before its pull request
+  merges, they run locally, listed for approval first, with its unit tests (SD-D14).
 
 ## Terminal check
 

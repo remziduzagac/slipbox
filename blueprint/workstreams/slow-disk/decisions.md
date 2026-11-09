@@ -4,7 +4,9 @@
 was agreed: SD-D2, SD-D3, SD-D4, SD-D6, SD-D7 and SD-D9 by the maintainer's answers ([README.md](README.md)
 § Questions answered, the option recommended in each); SD-D1, SD-D5, SD-D8 and SD-D10 by the maintainer, as proposed;
 SD-D11 and SD-D12, the questions the tasks had left open, by the maintainer's instruction to take the recommended
-answer. An entry is never rewritten; a dated note goes under it (blueprint/README.md § How things are recorded).
+answer; SD-D13 and SD-D14, and the notes of 2026-11-10 under SD-D1, SD-D6, SD-D8 and SD-D12, the same way, from the
+design's review. An entry is never rewritten; a dated note goes under it (blueprint/README.md § How things are
+recorded).
 
 ## SD-D1: The parts, in order (2026-11-09)
 
@@ -26,6 +28,14 @@ unfolded), less often. Small steps keep each review to one kind of read, and eac
 
 **Not chosen:** one change for all of it (one review of everything, nothing shipped until all is); the start first,
 as the issue lists it last (it's felt once a session, the looks every two seconds).
+
+> **Note (2026-11-10), by the maintainer's instruction to take the recommended answer, from the review:** the inventory
+> grows by what it had missed, each read moved by the task of its area: the watcher's checks of each entry it lists and
+> of where a note went (SD-T3); the open files' links, the config read again, git's state for what's drawn and the
+> tool's settings (SD-T4); the open's links and git's keys' reads (SD-T5); `asRead` and what's drawn of every note
+> (SD-T6); the nested vaults' names and what's left out (SD-T7); completion's other vaults (SD-T9); the scratch's places
+> (SD-T11). Staying out, with the rest: the upgrade check every ten seconds, which reads slipbox's data folder, said as
+> a known limit.
 
 ## SD-D2: One pool, the disk threads (2026-11-09)
 
@@ -135,6 +145,11 @@ the screen's thread is T12's rule: falling back is the freeze.
 **Not chosen:** five minutes for everything, as a slice of home's walk; three seconds, as a followed link's probe
 (VV-D6), which a disk waking up can miss.
 
+> **Note (2026-11-10), by the maintainer's instruction to take the recommended answer, from the review:** a deadline is
+> set by what asked, not by the request's kind. Whatever a look asks — a `stat` or a `list` — has a minute, and a key's
+> read a minute; the explorer's listings keep T12's ten, and a walk has ten. "A listing keeps its ten" above means the
+> explorer's.
+
 ## SD-D7: Writes stay on the screen's thread (2026-11-09)
 
 Agreed: question 4, answered (a).
@@ -173,6 +188,13 @@ batch.
 
 **Not chosen:** the whole watcher on a thread of its own, its batches sent here (its state mirrored, own writes
 crossing threads before their events).
+
+> **Note (2026-11-10), by the maintainer's instruction to take the recommended answer, from the review:** a look's
+> batch, in the disk threads' terms (SD-T2), is one `stat` request holding every path the look stats and one `list`
+> request for each folder it lists, asked together, each with the look's minute; the look's answer is in once all have
+> answered or one has given up. Each entry a listing or the settle finds is judged on the listing's thread with it, as
+> the explorer's are (SD-T7): the walk's filter (`exclusion`), a link's verdict (`symlinkVerdict`) and where a note that
+> went has gone (`movedTo`).
 
 ## SD-D9: The start takes the screen first (2026-11-09)
 
@@ -219,11 +241,11 @@ every test's App on threads.
 Agreed by the maintainer's instruction to take the recommended answer.
 
 **Decision:** After a rename or a folder operation (`renaming.ts:206`, `:220`; `mutations/files.ts:102`, `:148`;
-`rename-apply.ts:319`, `:421`), the vault's walk and index are read on a disk thread (SD-T8's `walk`), and the keys
-after it wait their turn, as after a note opened (SD-D4); the screen draws, `reading the vault…` in the status line.
-The write itself stays on the screen's thread (SD-D7), and `esc` doesn't give the build up: the write is made, and the
-graph must follow it. Past its deadline the build is said, the graph as the write left it, the vault asked again a
-minute later.
+`mutations/rename/rename-apply.ts:319`, `:421`), the vault's walk and index are read on a disk thread (SD-T8's `walk`),
+and the keys after it wait their turn, as after a note opened (SD-D4); the screen draws, `reading the vault…` in the
+status line. The write itself stays on the screen's thread (SD-D7), and `esc` doesn't give the build up: the write is
+made, and the graph must follow it. Past its deadline the build is said, the graph as the write left it, the vault asked
+again a minute later.
 
 **Why:** The next key must see the graph the write made — a link followed to the note renamed, a second rename
 planned from the new paths. Waiting keeps that; the disk thread keeps the screen drawing and `q` answering.
@@ -293,3 +315,56 @@ was drafted; the task's file says it as decided.
   changes only for the few that don't. Not chosen: dim until checked (every link changing on a slow disk).
 - **SD-T11, pictures:** in SD-T11. Why: the same kind of read, measured with the rest, under one rule for what
   drawing asks. Not chosen: a step under the roadmap's Images (`12.x`).
+
+> **Note (2026-11-10), by the maintainer's instruction to take the recommended answer, from the review:**
+>
+> - **The check for the seam** can't refuse every read in the inventory's files: some keep theirs until their task
+>   lands (`graph-resolve.ts`, `graph-lookup.ts`, `links.ts`, `refresh.ts`, `home/cache.ts`, `images.ts`,
+>   `opening.ts`, `vaults.ts`), and some for good — SD-D7's guards before a write (`mutations/files.ts`,
+>   `mutations/rename/rename-apply.ts`), a save (`saving.ts`), and SD-D9's `prepare` (`run.ts`). So `check:boundary`
+>   holds a list of the files still allowed to import `node:fs`'s reads, each with why (the task that moves it, or the
+>   decision that keeps it), shrinking as each task lands; it fails on a file of the inventory that reads and isn't
+>   listed, and on one listed that no longer needs to be. What it sees is direct imports only: a read through a
+>   helper (`fsutil.ts`'s `readText`, `stamp`, `readJson`), or a call to the seam made synchronously on the screen's
+>   thread, passes it. Those are caught by the held-folder tests: the hold reaches the seam on every thread, so a read
+>   left on the screen's thread holds the key past the hold's deadline, and its test sees `gaveUp`. The check keeps
+>   the list honest; the tests show the reads moved. This replaces the first bullet's "Why" above.
+> - **What's drawn of every note** never waits for it. The Problems tab's count, the Info panel's backlinks and
+>   convention, and whatever else is drawn from `ensureAll`, count what's parsed so far, marked as partial while
+>   notes are unread, and are drawn again when the parse is done. A key that needs every note still waits for them,
+>   as above.
+
+## SD-D13: What's drawn is kept (2026-11-10)
+
+Agreed by the maintainer's instruction to take the recommended answer, from the review.
+
+**Decision:** A draw never reads the disk and never waits. What the top bar and the git panel show of git — the
+branch (`headOf`), the operation under way (`operationOf`) — is kept, and the TUI's look each second (SD-T4) brings
+it up to date off the screen's thread; the draws read what's kept. A count of every note is of what's parsed so far,
+marked partial (SD-D12's note). The scratch's places, the nested vaults' names, what's left out, a picture, a link's
+target and the tool's settings (`toolSays`) are read the same way: kept, asked of a disk thread, drawn again when
+they answer.
+
+**Why:** A frame is drawn many times a second; one read of a slow disk in it stops every frame. Git's state changes
+when git runs, which the look sees within a second.
+
+**Cost:** What's drawn of git can be a second behind; a count can be short while the vault is parsed, said so.
+
+**Not chosen:** reading in the draw, with a cache of half a second (as `operationNow` does), which still stops a frame
+whenever the cache runs out.
+
+## SD-D14: Each task's terminal checks run before it merges (2026-11-10)
+
+Agreed by the maintainer's instruction to take the recommended answer, from the review.
+
+**Decision:** Pull requests skip the terminal job (D266). So before each task's pull request merges, the terminal
+checks it reaches run locally — listed for the maintainer's approval first (D207) — as well as its unit tests. Each
+task adds `CHECKS_FOR` entries in `scripts/ci-scope.ts` for the files it moves, and SD-T1 for
+`core/foundation/platform/disk.ts`, so the checks it reaches are named.
+
+**Why:** Every task changes where a read is made under the slow-disk checks; a pull request merged with them broken
+turns `dev` red for everyone after it.
+
+**Cost:** A local run of the reached checks per task, minutes each.
+
+**Not chosen:** CI's run after the merge alone.

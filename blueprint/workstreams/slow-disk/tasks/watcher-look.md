@@ -23,6 +23,12 @@ SD-D3, SD-D5, SD-D6, SD-D8. The first thing you'd feel: on a slow disk, the scre
 - `lookAgain` (`watch.ts:252`) lists the folders whose mtime moved on a disk thread; `flush` (`watch.ts:313`) asks
   `WatchReconciliation.settle`'s and `vanished`'s stats and listings there, and the batch goes to `onBatch` when they
   answer; events meanwhile wait for the next flush.
+- Each entry a listing or the settle finds is judged on the listing's thread with it, as SD-T7 judges the explorer's:
+  the walk's filter (`WalkFilter.exclusion`, `src/core/workspace/walk/filtering/filter.ts:162`: a nested vault's
+  marker, a busy folder's note at its top, a `.gitignore`), a link's verdict (`WatchDirectories.symlinkKept` →
+  `symlinkVerdict`, `src/core/workspace/walk/traversal/symlinks.ts:29`), and where a note that went has gone
+  (`WatchReconciliation.movedTo`, `watch/reconciliation.ts:24`: its candidates statted and their folders listed).
+- The batch is SD-T2's: a `stat` request and a `list` per folder, asked together, each with the look's minute.
 - `watchDir`'s two stats (`.gitignore`, `startStamp`; `watch/directories.ts:124`) come from the walk's stamps
   (`Graph.dirStamps`, made on the thread) or are asked there; `adoptTree`'s listing is a `list` there. `fs.watch`'s
   registration stays.
@@ -36,11 +42,16 @@ SD-D3, SD-D5, SD-D6, SD-D8. The first thing you'd feel: on a slow disk, the scre
   graph and an open one reloaded; `held.gaveUp` 0. With `pollTick`'s stats back here, the test fails (checked once).
 - The sweep held: the same, a note rewritten in place (no folder's mtime moved) seen once let go.
 - The settle held: an event's batch waits for its stats; a key handled meanwhile.
+- Held: a polled folder under `held` holding a busy folder, an ignored file, a nested vault and a link out — a key
+  handled meanwhile; let go, each judged as the walk judges it. A note moved into `held` meanwhile is found moved
+  (`movedTo`), not gone and new.
 - Races: a save of ours while the look is out isn't taken for a change; an answer from before a `sync` (a build
   meanwhile) is dropped; a second tick while one is out asks nothing.
 - Past a shortened deadline: `⚠ disk not answering` once; the next look that answers clears it.
 - The watcher's existing tests (`tests/core/workspace/graph/watch*.test.ts` and the TUI's) pass unchanged, a test's
   App asking at once.
+- `CHECKS_FOR` (`scripts/ci-scope.ts`) names the terminal checks this task's files reach; before its pull request
+  merges, they run locally, listed for approval first, with its unit tests (SD-D14).
 
 ## Terminal check
 

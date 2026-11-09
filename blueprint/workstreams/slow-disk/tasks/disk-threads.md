@@ -20,8 +20,13 @@ SD-D2, SD-D6. No caller changes but the listings': the requests the later tasks 
   (`folderUnreadable`'s words), `walk` (a vault's walk, as SD-T8 asks). Each with what the asking thread knows
   (`walkContext`).
 - A `walk` takes a thread only while the other is left free; a second waits in the line behind the first.
-- Deadlines (SD-D6): `stat`, `read` and `access` a minute; `list` and `walk` ten (`WALK_DEADLINES.whole`); each
-  shortened to the third by `SLIPBOX_SLOW_DISK`.
+- Deadlines (SD-D6, its note of 2026-11-10): each request carries the deadline of what asked it, not of its kind —
+  whatever a look asks (a `stat` or a `list`) and a key's read a minute; the explorer's listings and a walk ten
+  (`WALK_DEADLINES.whole`); each shortened to the third by `SLIPBOX_SLOW_DISK`.
+- A look's batch (SD-D8, its note of 2026-11-10): one `stat` request holding every path the look stats and one `list`
+  request for each folder it lists, asked together; the batch is answered once all have, or failed once one gives up.
+  A `list` for the watcher carries the walk's filter and the links' rules (`walkContext`), and answers each entry's
+  verdict with it (SD-T3).
 - Measured: the TUI's resident memory with no disk thread started, one and two (`tmp`'s script, as T12's
   `stall.ts`), recorded in the log here and on #56.
 
@@ -31,9 +36,12 @@ SD-D2, SD-D6. No caller changes but the listings': the requests the later tasks 
   may not read, a FIFO refused, CRLF, a BOM and invalid UTF-8 read as `readText` reads them.
 - Held (`Hold`): a `stat` under `held` holds one thread, and a `stat` elsewhere asked meanwhile is answered by the
   other; a `walk` held, a `stat` asked meanwhile answered, a second `walk` waiting for the first.
-- Past a shortened deadline: the request fails `deadline`, the thread is started afresh, the next request answered.
+- Past a shortened deadline: the request fails `deadline`, the thread is started afresh, the next request answered;
+  a `list` a look asked gives up at the look's deadline, one the explorer asked at the explorer's.
 - Stopped (quitting): a request asked or waiting is refused, no thread started again for it (as the listings').
 - The explorer's listings' tests pass unchanged.
+- `CHECKS_FOR` (`scripts/ci-scope.ts`) names the terminal checks this task's files reach; before its pull request
+  merges, they run locally, listed for approval first, with its unit tests (SD-D14).
 
 ## Terminal check
 

@@ -47,6 +47,8 @@ preview reads without holding the keys, `reading…` in the preview until it com
 dropped, as during a big note's parse. At a start the tab shown is read first, then the rest in order, one at a time.
 A key that needs notes not parsed yet — a rename's or a move's plan, the tags, the problems, the link forms, a
 backlinks list — waits for their texts the same way (`reading notes…`), and nothing is planned from notes not read.
+The open's check of the way for a link not followed is made with its read; git's keys ask their stats (git's index,
+`HEAD`, the note's) and whether a file is there before opening it the same way.
 
 **Every answer checked** (SD-D5). A request carries what it was read for, and its answer is taken only while that
 holds: the watcher's `sync`s, the graph's `builds` and the vault open, a buffer's version and stamp, the tree's
@@ -55,52 +57,63 @@ taken, what changed in the graph while it was out (the watcher's, slipbox's own 
 again over it, as home's refresh does. A stamp is compared with what's known when it comes: an own write recorded
 meanwhile (`noteOwnWrite`) decides.
 
-**Deadlines** (SD-D6). A look's batch, a key's read and a folder's check have a minute; a walk ten, a listing ten
-(T12's); `SLIPBOX_SLOW_DISK`'s third part shortens them all. A request past its deadline is failed and its thread
-started afresh for the rest; it's never read on the screen's thread instead. The watcher's look given up on says
-`⚠ disk not answering` once and is asked again a minute later; a key's read is said; a build says `reading the vault
-gave up: a folder didn't answer in time` and the graph stays as it was. A disk thread with nothing asked of it for a
-minute is let go of, and started again on the next request.
+**Deadlines** (SD-D6). A deadline is set by what asked, not by the request's kind: whatever a look asks (a `stat` or a
+`list`), a key's read and a folder's check have a minute; the explorer's listings ten (T12's), a walk ten;
+`SLIPBOX_SLOW_DISK`'s third part shortens them all. A request past its deadline is failed and its thread started afresh
+for the rest; it's never read on the screen's thread instead. The watcher's look given up on says `⚠ disk not answering`
+once and is asked again a minute later; a key's read is said; a build says `reading the vault gave up: a folder didn't
+answer in time` and the graph stays as it was. A disk thread with nothing asked of it for a minute is let go of, and
+started again on the next request.
 
 **What's read where:**
 
 - **The watcher's look** (SD-D8, SD-T3; § Bun's watcher, and what covers its gaps). The watcher keeps its state and
-  logic here, and its `fs.watch` registrations, whose events come here. Each tick asks one batch: the watched folders'
-  stamps, their `.gitignore`s', the notes followed into folders left to home's walk, the polled folders' listings; and
-  every 15th tick the sweep's stats of the known notes, a hundred a request, each asked when the last answers; a sweep
-  still under way at the next 15th tick goes on, and none other starts. A tick whose answer hasn't come asks nothing
-  new. A folder whose mtime moved is listed again there; the
-  settle by stat (`flush`) asks its stats there too, and the batch goes to the feed when they answer, events meanwhile
-  waiting for the next. A folder registered takes its stamps from the walk that found it (`Graph.dirStamps`), or asks
-  them there; one that came is listed there with all it holds.
+  logic here, and its `fs.watch` registrations, whose events come here. Each tick asks one batch — a `stat` request of
+  every path it stats and a `list` request of each folder it lists, asked together — of the watched folders' stamps,
+  their `.gitignore`s', the notes followed into folders left to home's walk, the polled folders' listings; and every
+  15th tick the sweep's stats of the known notes, a hundred a request, each asked when the last answers; a sweep still
+  under way at the next 15th tick goes on, and none other starts. A tick whose answer hasn't come asks nothing new. A
+  folder whose mtime moved is listed again there; the settle by stat (`flush`) asks its stats there too, and where a
+  note that went has gone (`movedTo`); the batch goes to the feed when they answer, events meanwhile waiting for the
+  next. Each entry a listing finds is judged there with it, by the walk's filter (`exclusion`) and a link's verdict
+  (`symlinkVerdict`), as the explorer's are. A folder registered takes its stamps from the walk that found it
+  (`Graph.dirStamps`), or asks them there; one that came is listed there with all it holds.
 - **The TUI's look each second** (SD-T4; § External changes). One request a second: the open files no watcher sees,
   your config's and the vault's `.slipbox/config.toml`'s stamps, git's `HEAD`, its branch's ref, its `index.lock` and
-  its rebase folders, and the CLI's activity file, which the background index asked every quarter second. While git
-  holds its lock, the lock alone is asked every 100 ms, one stat out at a time.
+  its rebase folders and what an operation under way leaves there, and the CLI's activity file, which the background
+  index asked every quarter second. Each open file's way is checked there for a link not followed; your config and the
+  vault's, and Obsidian's or zk's settings, are read again there when they moved. While git holds its lock, the lock
+  alone is asked every 100 ms, one stat out at a time. What the top bar and the git panel draw of git — the branch, the
+  operation under way — is what this look last found (SD-D13), never read as they're drawn.
 - **A note's text** (SD-T6). A changed note's (the watcher's batch, an open note reloaded) and the background parse's
   are read on a disk thread and parsed here as before (`extractText` from the text given); the background parse reads
   the next slice's notes while one is parsed. What a hover or completion asks of a note not parsed yet is shown
-  without it, and again once it's parsed; a key that needs it waits (above).
+  without it, and again once it's parsed; a key that needs it waits (above). An open note the watcher's batch names is
+  checked against what it holds (`asRead`) with its text read there. What's drawn of every note — the Problems tab's
+  count, the Info panel's backlinks and convention — counts what's parsed so far, marked as partial while notes are
+  unread, and is drawn again when the parse is done (SD-D12).
 - **The explorer's own tree** (SD-T7; § Side panes). The vault's own folders the tree shows are listed as the folders
   outside it are (`Listings`), each entry with the walk's verdict on it; its rows' marks are their listing's
   (`Marks.listedFacts`); the view and the trail are statted there as the tree is built, and the view gives way when
-  the answer says its folder is gone. One `Listings` keeps both sides' folders, 256 at most.
+  the answer says its folder is gone. A nested vault's name, and whether a row is left out (`Paths.leftOut`), come with
+  the listing. One `Listings` keeps both sides' folders, 256 at most.
 - **The vault built again** (SD-T8). A reindex, the watcher's rescan, a setting of the walk changed, a vault gone into,
   a branch's tabs and the folders asked for in home read the walk and the index on a disk thread (`walk`); the graph
   stays as it was meanwhile, `reading the vault…` among the background tasks. The index crosses as its text, parsed
   here as it is now. After a rename or a folder operation (SD-D11), the build is read there too, but the keys after it
   wait their turn, as after an open, and `esc` doesn't give it up: the write is made, and the graph must follow it.
 - **slipbox's own folders** (SD-T9). What's read of them on a timer or at a vault gone into — the positions, the
-  session, the machine's lists, the background index's place, the answers kept for links — is read there.
+  session, the machine's lists, the background index's place, the answers kept for links — is read there, and link
+  completion's other vaults (the machine's list, each one's index), kept from the last read meanwhile.
 - **The start** (SD-D9, SD-T10). The screen is taken first; the vault's walk and index are read on a disk thread, the
   note waiting for its graph (`reading the vault…`), `q` and `ctrl+c` quitting meanwhile. Your config, the path named
   and `--base` are read before, as they say what the screen is. A vault that doesn't answer in time: its note shown as
   its text if its own read answered, its links drawn as resolved, the vault asked again a minute later and the note
   drawn again when it comes. A restart is brought back the same way.
-- **Drawing a note** (SD-T11, the last code task, measured first). What a layout asks of the disk (a `/…` link's
-  first folder, a nested vault's file, a name's case on macOS, a picture) is answered from what's kept, and asked of a
-  disk thread when it isn't, the layout drawn again when it answers; meanwhile a link is drawn as resolved, and a
-  picture's place is said.
+- **What's drawn** (SD-D13; SD-T11, the last code task, measured first). A draw never reads the disk and never
+  waits. What a layout asks of the disk (a `/…` link's first folder, a nested vault's file, a name's case on macOS, a
+  picture), and the scratch's places, are answered from what's kept, and asked of a disk thread when they aren't, drawn
+  again when they answer; meanwhile a link is drawn as resolved, and a picture's place is said.
 
 **What stays on the screen's thread** (SD-D7). A note's save (`App.writeBuffer`: its check that the file is as read,
 its atomic write, its write through a link, D220, its stamp told to the watcher), a file operation with the checks its
@@ -125,7 +138,8 @@ changed, a rename, a branch's tabs in folders of home not walked), a note's text
 explorer's own tree of the vault open (`fromDisk`, its rows' marks) and the view's folder statted as its tree is built,
 slipbox's own state, cache and config folders (under home by default: the machine's lists, the place the background
 index keeps), and the walk at the start: a vault's before the screen is up, home's as it comes up, with the folders it
-asks for (its tabs')." The draft adds a sentence pointing at this workstream; consolidation replaces both.
+asks for (its tabs')." Until consolidation the root's paragraph stays as it is: the workstream writes only inside its
+own folder, and consolidation (SD-T12) puts this text, pointing at § A slow disk, in its place.
 
 ## MODIFIED design/tui.md § Side panes: explorer, history, the git panel, Info, outline and footnotes
 
@@ -171,6 +185,8 @@ Added, after "A big note's first open reads for a moment":
   slipbox's own state are written on the main thread, where their order against the watcher and quitting is kept.
 - **The parse cache is read on the main thread** (SD-D12): it's in the cache folder, local by default, and goes with
   the parse, which stays.
+- **The upgrade check reads on the main thread** (SD-D1's note): every ten seconds, a `readlink` in slipbox's data
+  folder, where its versions are; never the vault's disk.
 
 Previously: the section's two bullets alone.
 
@@ -182,7 +198,10 @@ third" becomes "makes a folder of that name take so long to list, on whichever t
 the seam: `core/foundation/platform/disk.ts`), and shortens the walk's and the disk threads' deadlines to the third; a
 fourth part, when given, makes each stat and read under it take so long too"; and "the unit tests hold a folder up on
 a thread of their own (`setFolderReader`, …)" holds a listing, a stat or a read alike, on every thread, the main
-thread's included. `check:boundary` keeps the files that read the vault reading it only through the seam.
+thread's included. `check:boundary` holds a list of the files of the inventory still allowed to import `node:fs`'s
+reads, each with why, and fails on one that reads and isn't listed, or is listed and no longer reads; it sees direct
+imports only, and a read left on the main thread through a helper or the seam is found by the held tests
+(`gaveUp`).
 
 Previously: "makes a folder of that name take so long to list, on whichever thread lists it (`slowDisk` in
 `core/workspace/walk/walk.ts`), and shortens the walk's and the listings' threads' deadlines to the third"; "the unit

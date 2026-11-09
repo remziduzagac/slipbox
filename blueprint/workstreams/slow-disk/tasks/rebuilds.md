@@ -1,7 +1,7 @@
 ---
 status: todo
 assignee: ""
-blocked_by: [SD-T1, SD-T2]
+blocked_by: [SD-T3, SD-T4, SD-T5]
 tracker: [gh:#46]
 created: "2026-11-09"
 ---
@@ -24,8 +24,9 @@ SD-D3, SD-D5, SD-D6.
   the graph took in meanwhile (the watcher's, slipbox's own writes, a file reached) applied again over it, as
   `GraphRefresh.homeBuilt` does (`since`). A second ask while one is out waits for it and asks again once.
 - A rename's and a folder operation's build (`renaming.ts:206`, `:220`; `mutations/files.ts:102`, `:148`;
-  `rename-apply.ts:319`, `:421`), SD-D11: read on a disk thread too, the keys after it waiting their turn as after an
-  open, `reading the vault…` in the status line, `esc` not giving it up; the write stays on the screen's thread.
+  `mutations/rename/rename-apply.ts:319`, `:421`), SD-D11: read on a disk thread too, the keys after it waiting their
+  turn as after an open, `reading the vault…` in the status line, `esc` not giving it up; the write stays on the
+  screen's thread.
 - The index crosses as its text, parsed here as it is now (`readJson`, `refresh.ts:186`).
 - The index written at the end of the background parse (`writeCache`, `refresh.ts:384`) stays a write (SD-D7).
 - Measured: the screen's thread's longest gap as a 10,000-note vault's walk and index cross, sent whole or the index
@@ -43,6 +44,8 @@ SD-D3, SD-D5, SD-D6.
   drawn and `j` waiting; let go, `j` acts on the graph the rename made, the link to the renamed note followed.
 - Past a shortened deadline: `reading the vault gave up: …`, the graph as it was.
 - Mutation: the walk made here again, the first test fails (checked once).
+- `CHECKS_FOR` (`scripts/ci-scope.ts`) names the terminal checks this task's files reach; before its pull request
+  merges, they run locally, listed for approval first, with its unit tests (SD-D14).
 
 ## Terminal check
 

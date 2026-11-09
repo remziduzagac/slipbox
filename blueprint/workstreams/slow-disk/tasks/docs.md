@@ -15,8 +15,9 @@ created: "2026-11-09"
   and wherever the watcher is said; no blueprint IDs (`tests/docs.test.ts`). A CHANGELOG line per task that changed
   what you see, gathered.
 - The design consolidated, with the maintainer's approval: design.md's changes applied to the root, requirements.md's
-  quality goal added, the "Previously:" texts reconciled; the decisions agreed recorded with their dates; the roadmap
-  item ticked; the folder archived.
+  quality goal added, the "Previously:" texts reconciled — design/roots.md's "Not done" paragraph among them, which the
+  workstream leaves as it is until then; the decisions agreed recorded with their dates; the roadmap item ticked; the
+  folder archived.
 - Every slow-disk terminal check run (listed for approval first, D207) on Linux and macOS, and live once on a FUSE
   mount that answers slowly, the screen's longest stall recorded.
 

@@ -14,12 +14,13 @@ two seconds while the watcher looks. This workstream moves those reads off it.
 **Agreed on 2026-11-09; nothing built yet.** The maintainer answered its seven questions that day, each with the
 option recommended (§ Questions answered), and agreed its other decisions as proposed; the questions its tasks had
 left open were decided with the recommendation, by the maintainer's instruction to take the recommended answer
-(§ Decisions). Its tasks are `todo`.
+(§ Decisions). Reviewed on 2026-11-10: the inventory grew, and the review's choices are recorded as notes under the
+decisions they change and as SD-D13 and SD-D14. Its tasks are `todo`.
 
 - [requirements.md](requirements.md): its goals, what it builds on, its acceptance criteria, its change to the root's
   requirements.
 - [design.md](design.md): its changes to the root's design.
-- [decisions.md](decisions.md): SD-D1 to SD-D12, agreed on 2026-11-09.
+- [decisions.md](decisions.md): SD-D1 to SD-D14, agreed on 2026-11-09 and 2026-11-10.
 - [tasks/](tasks/README.md): SD-T1 to SD-T12, in order, each `todo`.
 - [notes.md](notes.md): how it was drafted, and what was checked against the code.
 - [research.md](research.md): what's known of slow disks and of the ways round them, with provenance.
@@ -53,7 +54,8 @@ Out:
 
 ## The inventory: what still reads the disk on the screen's thread
 
-Each read was checked against `dev` at `0df9a0a6` (2026-11-09). The issue named files before the code was organized:
+Each read was checked against `dev` at `0df9a0a6` (2026-11-09), and again at `9912f519` after the review
+(2026-11-10). The issue named files before the code was organized:
 `src/core/watch.ts` is now `src/core/workspace/graph/watch.ts` with its parts in `watch/`, `src/tui/run.ts` is
 `src/tui/shell/terminal/run.ts`, and the walk's thread is `src/core/workspace/walk/walk-thread.ts`. What the issue
 didn't list is marked **(not in #46)**.
@@ -72,6 +74,13 @@ didn't list is marked **(not in #46)**.
 - `flush` (`watch.ts:313`), after every batch of events too, not only the look: `WatchReconciliation.settle` and
   `vanished` (`watch/reconciliation.ts:86`, `:188`) settle each pending path by `stat`, `existsSync` and
   `readdirSync` **(the events' half not in #46)**;
+- each entry those listings and the settle find, asked of the walk's rules as the walk asks them **(not in #46)**:
+  the filter (`WalkFilter.exclusion`, `src/core/workspace/walk/filtering/filter.ts:162`: a nested vault's marker
+  looked for, `:176`, `:188`; a busy folder statted and listed for a note at its top, `notesIn`, `:223`, `:229`; a
+  `.gitignore` read, `gitignoreFor`, `:273`), a link's verdict (`WatchDirectories.symlinkKept` → `symlinkVerdict`,
+  `src/core/workspace/walk/traversal/symlinks.ts:29`: a `realpath` and a `stat`, `:32`, `:38`), and where a note that
+  went has gone (`WatchReconciliation.movedTo`, `watch/reconciliation.ts:24`, from `watch.ts:331`: each candidate
+  statted, `existsSync`, each folder it may be in listed, `:34`, `:64`, `:72`);
 - registering a folder (`WatchDirectories.watchDir`, `watch/directories.ts:124`), at the start and at each `sync`
   after a build: two `stat`s per folder (its `.gitignore`'s, `startStamp`'s); a folder that came (`adoptTree`) listed
   with all it holds **(not in #46)**.
@@ -85,10 +94,13 @@ The batch then goes to `VaultFeed.receive` (an `existsSync` of git's `index.lock
 
 - `Watch.poll` (`watch.ts:232`): a `stat` of each open file no watcher sees (`NoteBuffer.changedOnDisk`,
   `src/tui/documents/buffers/buffer.ts:271`): the scratch, a reached file, one of home's skip list; all of them when
-  the watcher is degraded; and after every build, every open file (`Watch.rebuilt` → `poll(true)`). One changed is
-  read again (`reloadBuffer` → `NoteBuffer.load`, § 4);
+  the watcher is degraded; and after every build, every open file (`Watch.rebuilt` → `poll(true)`). Each one's way
+  checked first for a link not followed (`following.blocked` → `unfollowedLink`, `watch.ts:244`,
+  `src/core/workspace/vaults/symlinks.ts:297`: an `lstat` of each folder on its way, `:310`) **(not in #46)**. One
+  changed is read again (`reloadBuffer` → `NoteBuffer.load`, § 4);
 - `Settings.changedOnDisk` (`src/tui/app/settings/settings.ts:188`): a `stat` of your config and the vault's
-  `.slipbox/config.toml` **(not in #46)**;
+  `.slipbox/config.toml`; one moved, both read and parsed again (`Settings.reload`, `:198` → `loadConfig`, from
+  `watch.ts:210`) **(not in #46)**;
 - `Git.checkHead` → `VaultFeed.checkHead` (`vault-feed.ts:199`): `existsSync` of `index.lock`, `rebase-merge` and
   `rebase-apply`, a `stat` and a read of `HEAD`, a read of the branch's ref or `packed-refs`
   (`src/core/workspace/git/git.ts:85`, `:111`) **(not in #46)**; while git holds its lock, `waitForGit` looks every
@@ -106,7 +118,7 @@ ones listed, and the folders asked for walked to their end), the index read (`re
 in a big vault) and its stamp, the moves found by reading each new note's text (`moves/reconcile.ts:38`), git's
 renames (`catchUpWithGit`), and the index written when it changed. Made by:
 
-- a reindex (`vault.reindex`, `src/tui/actions/workspace/actions-files.ts:91`);
+- a reindex (`vault.reindex`, `src/tui/actions/workspace/actions-files.ts:95`);
 - the watcher's rescan (`applyToGraph`'s `rescan`, `vault-feed.ts:38`; a `.gitignore` changed, HEAD moved on its
   branch with renames);
 - a setting of the walk changed (`settings.ts:244`);
@@ -114,7 +126,7 @@ renames (`catchUpWithGit`), and the index written when it changed. Made by:
 - a branch's tabs brought back in home (`Vaults.askTabs`, `vaults.ts:103`);
 - a rename or move that takes vaults or the vault's own config with it (`src/tui/workspace/explorer/renaming.ts:206`,
   `:220`), and a folder moved or deleted (`src/core/workspace/mutations/files.ts:102`, `:148`;
-  `rename/rename-apply.ts:319`, `:421`).
+  `mutations/rename/rename-apply.ts:319`, `:421`).
 
 Home's refresh after its walk on the thread (`GraphRefresh.homeBuilt`, `graph-refresh.ts:295`) is given the walk,
 but still reads the index and its stamp here.
@@ -126,12 +138,15 @@ but still reads the index and its stamp here.
   small note's text in twelve-millisecond slices; one read can't be cut short. The index written at its end
   (`writeCache`, `refresh.ts:384`).
 - **A changed note**: the watcher's batch (`applyToGraph` → `Graph.updateFile` → `extractNote`,
-  `src/core/workspace/graph/feed.ts:73`); an open one reloaded (`Watch.reloadBuffer`, `watch.ts:403` →
-  `NoteBuffer.load`, `buffer.ts:230`).
+  `src/core/workspace/graph/feed.ts:73`); an open one reloaded (`Watch.reloadBuffer`, `watch.ts:409` →
+  `NoteBuffer.load`, `buffer.ts:230`); before that, since `9912f519`, an open one the batch names checked against what
+  it holds (`asRead`, `src/tui/app/runtime/watch.ts:457`, from `:386`: a `stat` and its whole text read), after an
+  `existsSync` of it (`:383`).
 - **Opening it**: `Opening.buffer` (`src/tui/documents/buffers/opening.ts:106`): `NoteBuffer.load` (its text, its
-  stamp), `lockedSaid` (an access check), `vaultOf` (each folder above it asked for a marker), and `:e!` and a reload
-  by hand (`actions-edit.ts:259`, `saving.ts:140`); a list's preview (`src/tui/shell/overlays/preview.ts:115`) and a
-  peek (`peek/opening.ts:69`) the same.
+  stamp), `lockedSaid` (an access check), `vaultOf` (each folder above it asked for a marker), its way checked for a
+  link not followed (`following.blocked`, `lookedAt`: `opening.ts:124`, `:150` → `unfollowedLink`) **(not in #46)**,
+  and `:e!` and a reload by hand (`actions-edit.ts:259`, `saving.ts:140`); a list's preview
+  (`src/tui/shell/overlays/preview.ts:115`) and a peek (`peek/opening.ts:69`) the same.
 - **On demand**: `Graph.entry` parses a note not parsed yet when a backlink, hover or completion asks for it, and
   `ensureAll` (`refresh.ts:369`) every one when the tags, the problems, the link forms or a note's backlinks are asked
   of the graph here (`src/core/workspace/graph/graph.ts:469`, `:483`, `:492`, `:515`); `reachFile` (`refresh.ts:278`)
@@ -146,7 +161,13 @@ but still reads the index and its stamp here.
   `existsSync`, an access check and a `stat` for a note's size; for a vault's row, its key (a `realpath`), its branch
   (git's `HEAD`) and whether its index is in the cache folder.
 - `Navigation.keepToWhatsThere` (`src/tui/workspace/explorer/navigation.ts:214`): a `stat` of the view and of the
-  trail at every build of the tree (`explorer.ts:243`).
+  trail at every build of the tree (`explorer.ts:253`).
+- The nested vaults' names (`rows/tree.ts:177` → `rootRows`, `:38` → `Paths.rootName` → `vaultName`,
+  `src/core/workspace/walk/listing.ts:83`: the nested vault's config read and its checkout looked for), and in
+  Elsewhere its top listed (`tree.ts:49`), at every build of the tree **(not in #46)**.
+- `Paths.leftOut` (`src/tui/workspace/explorer/rows/paths.ts:55`): a `stat` of the path (`:69`) and the walk's filter
+  asked of each folder on its way, for each row's path (`rowPath`, `:38`) and the tree's top (`leftOutAt`,
+  `tree.ts:27`) **(not in #46)**.
 - `folderUnreadable` (`src/core/foundation/platform/fsutil.ts:347`): a folder checked when you zoom into it
   (`navigation.ts:88`), unfold it (`actions/items.ts:279`) or open slipbox on it (`app/runtime/startup.ts:69`).
 
@@ -157,6 +178,14 @@ second (§ 2), the config's stamps every second (§ 2), the index and home's wal
 every build (§ 3), the positions and the session at a vault gone into (`PositionStore`, `Session`), the machine's
 lists (`registry.ts`, `folders.ts`) and the background index's place (`autoindex.json`) as the background index
 records what it found, and the answers kept for links followed (`links.json`, read again when its mtime moved).
+Link completion reads the machine's list (`readRoots`), looks for each other vault's folder (`existsSync`) and reads
+its index whole (`index.json`), once per completion (`src/tui/documents/editing/completion/items.ts:50`–`:55`)
+**(not in #46)**.
+
+Not § 6's, and kept: the upgrade check every ten seconds (`src/tui/app/distribution/update-observation.ts:71` →
+`lookUnderneath` → `currentVersion`, `src/core/application/distribution/install.ts:25`: a `readlink` of the
+installer's `current`) reads slipbox's data folder, where its versions are, not the vault or its state, cache or
+config. It stays on the screen's thread, said as a known limit (SD-D1, note of 2026-11-10) **(not in #46)**.
 
 ### 7. The start
 
@@ -164,7 +193,7 @@ records what it found, and the answers kept for links followed (`links.json`, re
 before the screen is taken; home's graph is built as the screen comes up (`Vaults.ask` → `Graph.askFolders` →
 `homeWalk`), with the folders its tabs are in.
 
-### 8. Drawing a note, and the Problems panel (not in #46)
+### 8. What's drawn (not in #46)
 
 What a note's layout asks of the disk as it's drawn: a `/…` link checked for its first folder (`existsSync`,
 `src/core/workspace/graph/graph-resolve.ts:298`); a link into a nested vault statted (`graph-lookup.ts:249`); on a
@@ -172,6 +201,28 @@ disk that folds case (macOS's), a name's case found by listing each folder on it
 `src/core/workspace/links/links.ts:264`); a picture's file statted and read (`src/tui/documents/media/images.ts:93`,
 `:101`). And the Problems panel, given the vault's lint findings, reads and parses each file they name, once
 (`src/tui/documents/diagnostics/problems.ts:83`).
+
+What the bars and panels read as they're drawn, every frame for the top bar:
+
+- **Git's state.** The top bar's where you are (`src/tui/shell/screen/topbar/where.ts:22`, `:23`): `Git.branch` →
+  `headOf` (`src/core/workspace/git/git.ts:85`: a `stat` of `HEAD`, read when it moved), and `operationStatus` →
+  `operationNow` → `operationOf` (`src/core/workspace/git/branches/gitrebase.ts:82`: git's rebase folders and
+  `MERGE_HEAD` and the like looked for and read, at most every half second or when git's news came,
+  `operation-status.ts:15`). The git panel's head and standing the same (`views/panel/draw-git.ts:73`, `:132`).
+- **Counts of every note.** The Problems tab's title (`draw-problems.ts:31` → `Problems.count`, `problems.ts:320` →
+  `graph.problems`), and the Info panel's backlinks (`src/tui/documents/tools/info/info.ts:180`) and convention
+  (`:190` → `conventionOf` → `linkForms`, `src/core/workspace/links/convention.ts:180`): `ensureAll`, every note not
+  parsed yet read (§ 4). The convention also reads Obsidian's or zk's settings (`toolSays`, `convention.ts:112`).
+- **The scratch's places.** Each `At:` place checked as the scratch is drawn (`problems.ts:154` → `Scratch.places`,
+  `src/tui/app/scratch/scratch.ts:35`: its file statted and read, `:42`, `:51`), again every two seconds at most.
+
+### 9. A key's other reads (not in #46)
+
+- **Link completion**: the convention's tool settings (`toolSays`, as above) and other vaults' notes (§ 6).
+- **Git's keys**: before each git read, `beginGitRead` (`src/tui/workspace/git/gitquery.ts:7`: a `stat` of git's
+  index, `HEAD` read, the note's `stat`, `:15`, `:22`, `:27`); and a file looked for before it's opened from the git
+  panel, a merge or the log (`existsSync`: `src/tui/workspace/git/git.ts:254`, `:371`, `:439`;
+  `views/panel/gitview.ts:307`, `:317`; `views/log/log.ts:162`).
 
 ## Approach
 
@@ -195,63 +246,80 @@ The rules, each an agreed decision:
   dropped, or asked again, as `Graph.builds` and `Listings.answered` do now. What changed in the graph while a build
   was read is applied again over it, as home's refresh does (`homeBuilt`'s `since`).
 - **Deadlines (SD-D6).** A request that doesn't answer in time is given up on, its thread started afresh, and never
-  made on the screen's thread instead: a look or a key's read a minute, a walk ten (T12's); `SLIPBOX_SLOW_DISK`'s
+  made on the screen's thread instead. Its deadline is set by what asked, not by its kind: whatever a look asks (a
+  `stat` or a `list`) and a key's read a minute; the explorer's listings and a walk ten (T12's); `SLIPBOX_SLOW_DISK`'s
   third shortens them all.
 - **Writes stay (SD-D7).** A note's save, a file operation (with the checks its guards make before writing), the
   scratch and an export are written on the screen's thread, as now.
 - **The watcher stays, its reads go (SD-D8).** The watcher's state and logic stay on the screen's thread; each look
-  asks one batch of the disk threads and compares the answer with what's known when it comes; a look whose answer
-  hasn't come asks nothing new.
+  asks one batch of the disk threads — a `stat` request of every path it stats and a `list` request of each folder it
+  lists, asked together — and compares the answer with what's known when it comes; a look whose answer hasn't come
+  asks nothing new. Each entry's verdict (the filter's, a link's) is made with its listing, on the listing's thread.
 - **The screen first (SD-D9).** The start takes the screen, then reads the vault: its note waits for its graph
   (`reading the vault…`), as a big note waits for its parse; `q` quits meanwhile.
 - **The tests' seam (SD-D10).** Every read moved goes through one module, which the stand-in (`SLIPBOX_SLOW_DISK`) and
   the tests' hold (`Hold`) reach on every thread; a test's App reads on the screen's thread unless asked, as T12's
   listings do (`AppOptions.listOffThread`).
+- **What's drawn is kept (SD-D13).** A draw never reads the disk and never waits: git's `HEAD` and the operation under
+  way are kept, the look each second bringing them up to date; a count of every note is of what's parsed so far,
+  marked as partial while notes are unread, and drawn again when the parse is done.
+- **Terminal checks before a merge (SD-D14).** Pull requests skip the terminal job (D266), so before each task's pull
+  request merges, the terminal checks it reaches run locally, listed for approval first (D207), beside its unit tests.
 
 By area:
 
 - **§ 1, the watcher's look** (SD-T3): one batch per tick on a disk thread — the folders' stamps, the `.gitignore`s',
   the followed notes', the polled folders' listings — and the sweep in slices, carried on from where it was when the
-  next is due. The relisting and the settle by stat asked there too; the batch delivered when they answer. Shown:
+  next is due. The relisting and the settle by stat asked there too, each entry's verdict and a move's search with
+  them; the batch delivered when they answer. Shown:
   nothing (the last look stands). Not answering: `⚠ disk not answering` on the status line, said once in Messages,
   looked at again a minute later. The registration's stamps come from the walk (`Graph.dirStamps`, made on the
   thread) or are asked there; the registration itself stays.
-- **§ 2, the TUI's look** (SD-T4): the open files' stamps, the config's and git's `HEAD` asked of a disk thread in
-  one request a second; the activity file's stamp with them, not every quarter second on its own. Shown: nothing.
-- **§ 4, opening a note** (SD-T5): SD-D4's rule; `vaultOf` and `lockedSaid` answered with the read. A list's preview
-  reads on the thread without holding the keys: `reading…` in the preview until it comes.
+- **§ 2, the TUI's look** (SD-T4): the open files' stamps and their ways' links, the config's and git's `HEAD` and
+  operation asked of a disk thread in one request a second, the config and the tool's settings read again there when
+  they moved; the activity file's stamp with them, not every quarter second on its own. What's drawn of git (§ 8)
+  reads what this look last found (SD-D13). Shown: nothing.
+- **§ 4, opening a note** (SD-T5): SD-D4's rule; `vaultOf`, `lockedSaid` and the way's links answered with the read.
+  A list's preview reads on the thread without holding the keys: `reading…` in the preview until it comes. Git's keys
+  (§ 9) ask their stats and a file's presence the same way.
 - **§ 4, a changed note and the background parse** (SD-T6): the text read on a disk thread, parsed here as now
-  (`extractText` from the text given); the background parse reads ahead of its slice and parses what came.
+  (`extractText` from the text given), `asRead`'s check with it; the background parse reads ahead of its slice and
+  parses what came. What's drawn of every note counts what's parsed, marked partial (§ 8, SD-D12).
 - **§ 5, the explorer's own tree** (SD-T7): the vault's own folders listed through `Listings` like the others, the
   walk's filter's verdict on each entry made on the thread; its rows' marks from their listings
-  (`Marks.listedFacts`); the view's and the trail's stat asked there; a zoom's check SD-D4's.
+  (`Marks.listedFacts`), the nested vaults' names and what's left out with them; the view's and the trail's stat
+  asked there; a zoom's check SD-D4's.
 - **§ 3, the vault built again** (SD-T8): the walk and the index's read on a disk thread (`walk`), the graph kept as
   it was meanwhile; the answer taken only while `builds` and the vault open haven't moved, the watcher's changes since
   applied again over it.
-- **§ 6, slipbox's own folders** (SD-T9): what's read of them on a timer or at a switch, on a disk thread; their
-  writes stay (SD-D7, question 4).
+- **§ 6, slipbox's own folders** (SD-T9): what's read of them on a timer or at a switch, and completion's other
+  vaults, on a disk thread; their writes stay (SD-D7, question 4). The upgrade check stays, a known limit.
 - **§ 7, the start** (SD-T10): SD-D9.
-- **§ 8, drawing a note** (SD-T11): the answers a layout needs kept and asked of a disk thread; in this workstream as
-  its last code task, measured first (question 6).
+- **§ 8, what's drawn** (SD-T11; git's state SD-T4's, the counts SD-T6's): the answers a layout needs, and the
+  scratch's places, kept and asked of a disk thread; in this workstream as its last code task, measured first
+  (question 6).
+- **§ 9, a key's other reads**: completion's in SD-T9 (other vaults) and SD-T4 (the tool's settings, kept); git's keys
+  in SD-T5.
 
 ## Tasks
 
-In order, most felt first: SD-T1 and SD-T2 first, which everything uses; then SD-T3 and SD-T4, the looks that freeze
-the screen every second or two whatever you do, and SD-T5, opening a note; SD-T6 to SD-T9 after them, any order;
-SD-T10 after SD-T5 and SD-T8; SD-T11 last of the code; SD-T12 at the end. Each is shippable alone: its own pull
-request into `dev`, its test, its terminal check, its design text.
+In SD-D1's order, most felt first: SD-T1, then SD-T2, which everything uses; then SD-T3, SD-T4 and SD-T5, the looks
+that freeze the screen every second or two whatever you do and opening a note, in any order; then SD-T6 to SD-T9, in
+any order; SD-T10 once SD-T5 and SD-T8 are in; SD-T11 last of the code; SD-T12 at the end. Each task's `blocked_by`
+says the same. Each is shippable alone: its own pull request into `dev`, its test, its terminal check run before it
+merges (SD-D14), its design text.
 
 - [SD-T1](tasks/seam.md): every read the workstream moves through one seam the stand-in and the hold reach. `todo`
 - [SD-T2](tasks/disk-threads.md): the listing threads become the disk threads: stat, read, access, walk. `todo`
 - [SD-T3](tasks/watcher-look.md): the watcher's look every two seconds, and its settle, on the disk threads. `todo`
-- [SD-T4](tasks/tui-look.md): the TUI's look every second (open files, config, HEAD) and the activity file. `todo`
+- [SD-T4](tasks/tui-look.md): the TUI's look every second, what's drawn of git, and the activity file. `todo`
 - [SD-T5](tasks/opening-a-note.md): a note opened reads on a disk thread; the key waits, `esc` gives it up. `todo`
 - [SD-T6](tasks/note-text.md): a changed note's text, and the background parse's, read on the disk threads. `todo`
 - [SD-T7](tasks/explorer-tree.md): the explorer's own tree of the vault open listed and marked off the thread. `todo`
 - [SD-T8](tasks/rebuilds.md): the vault open built again from a walk and an index read on a disk thread. `todo`
 - [SD-T9](tasks/own-folders.md): slipbox's own state, cache and config folders read off the thread. `todo`
 - [SD-T10](tasks/start.md): the start takes the screen first, then reads the vault. `todo`
-- [SD-T11](tasks/drawing.md): what drawing a note reads: links' targets, pictures, the Problems' notes. `todo`
+- [SD-T11](tasks/drawing.md): what drawing reads: links' targets, pictures, the scratch's places, the Problems'. `todo`
 - [SD-T12](tasks/docs.md): the user docs, the design consolidated, the workstream closed. `todo`
 
 ## Decisions
@@ -286,6 +354,15 @@ By the maintainer's instruction to take the recommended answer, for the question
   folder; the index sent as its text; the parse cache a known limit; a start whose vault doesn't answer showing its
   note's text; a link not checked yet drawn as resolved; pictures in SD-T11.
 
+From the review, on 2026-11-10, by the maintainer's instruction to take the recommended answer:
+
+- Notes under **SD-D1** (the inventory's new reads, each in its task; the upgrade check a known limit), **SD-D6** (a
+  deadline set by what asked), **SD-D8** (a look's batch in the disk threads' terms; each entry's verdict made with
+  its listing) and **SD-D12** (the boundary check an allow list that shrinks, and what it doesn't see; a draw needing
+  every note never waits).
+- **SD-D13**, what's drawn is kept: git's state from the look, counts of what's parsed marked partial.
+- **SD-D14**, each task's reached terminal checks run before it merges; `CHECKS_FOR` names them.
+
 ## Test strategy
 
 - **Held, never timed** (design/testing.md § The terminal tests, "A slow disk, stood in for"; #75). Each moved read
@@ -302,8 +379,10 @@ By the maintainer's instruction to take the recommended answer, for the question
   do): said, never read on the screen's thread instead, asked again later.
 - **Terminal checks.** `tests/terminal/checks/slow-disk.ts` gains a check per task (`slow disk: …`), with the stand-in
   reaching stats and reads (SD-T1): keys pressed while a slow folder is read, each answered within a bound short of
-  the folder's time (design/testing.md § The terminal tests), then what the read was for on the screen. Listed for
-  the maintainer's approval before they run (D207); CI runs them on Linux and macOS.
+  the folder's time (design/testing.md § The terminal tests), then what the read was for on the screen. CI runs them
+  on Linux and macOS after a merge, not on the pull request (D266): before each task's pull request merges, the checks
+  it reaches run locally, listed for the maintainer's approval first (D207, SD-D14), and the task adds `CHECKS_FOR`
+  entries (`scripts/ci-scope.ts`) for `disk.ts` and the files it moves.
 - **Live.** Each task tried live on a FUSE mount that answers slowly, on Linux, as T12 was (the longest stall of the
   screen's thread, before and after, in the task's log); macOS has no FUSE of its own, so the stand-in alone there.
 - **What stays.** The watcher's, the explorer's, the vaults' and the CLI's tests pass unchanged.

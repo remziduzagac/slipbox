@@ -6,7 +6,7 @@ tracker: [gh:#46]
 created: "2026-11-09"
 ---
 
-# SD-T4: The TUI's look every second, and the activity file
+# SD-T4: The TUI's look every second, what's drawn of git, and the activity file
 
 SD-D3, SD-D5, SD-D6. Beside SD-T3: the second timer that stops the screen on a slow disk, every second.
 
@@ -21,17 +21,33 @@ SD-D3, SD-D5, SD-D6. Beside SD-T3: the second timer that stops the screen on a s
   (`vault-feed.ts:144`) ask a `stat` of the lock there, a batch held until it answers.
 - `GraphRefresh.nobodyWorking` (`graph-refresh.ts:172`) reads the activity file's last stamp, not a `stat` every
   quarter second.
+- Each open file's way checked there for a link not followed (`following.blocked` → `unfollowedLink`, `watch.ts:244`,
+  `src/core/workspace/vaults/symlinks.ts:297`), with its stamp.
+- Your config and the vault's read and parsed there when their stamps moved (`Settings.reload`, `settings.ts:198` →
+  `loadConfig`), and Obsidian's or zk's settings with them (`toolSays`, `src/core/workspace/links/convention.ts:112`),
+  kept for the Info panel and completion.
+- What's drawn of git is kept (SD-D13): the branch (`headOf`, `src/core/workspace/git/git.ts:85`) and the operation
+  under way (`operationOf`, `src/core/workspace/git/branches/gitrebase.ts:82`) are read with the look's `HEAD` and
+  rebase folders, and the top bar (`src/tui/shell/screen/topbar/where.ts:22`, `:23`: `Git.branch`,
+  `operationStatus` → `operationNow`) and the git panel (`views/panel/draw-git.ts:73`, `:132`) draw what's kept,
+  never reading as they're drawn.
 - A changed open file is read by SD-T5's and SD-T6's `read`; until they land, read here as now.
 
 ## Acceptance criteria
 
 - Held: the scratch (outside the vault) under `held`, a key handled and drawn while its stat is out; let go, a change
   an agent made to it is reloaded.
-- Held: the vault's `.git` under `held`: a key handled while `HEAD` is asked; let go, a branch switched by the test
-  meanwhile is seen (`switched to branch …`).
+- Held: the vault's `.git` under `held`: a key handled and its frame drawn, the top bar showing the branch kept,
+  while `HEAD` is asked; let go, a branch switched by the test meanwhile is seen (`switched to branch …`) and drawn. A
+  rebase started meanwhile is drawn once the look answers (`rebasing 1/2`).
+- Held: an open file whose way goes through a folder under `held` — a key handled meanwhile; let go, a link not
+  followed on its way is still refused.
 - Held: the config folder under `held`: a key handled; let go, a setting changed meanwhile is applied.
 - Races: an answer for a vault left meanwhile is dropped; one for a buffer closed meanwhile too.
-- Mutation: each of the three reads put back here, its test fails (checked once).
+- Mutation: each read put back here, its test fails (checked once); `headOf` read in the draw again, the `.git` test
+  fails.
+- `CHECKS_FOR` (`scripts/ci-scope.ts`) names the terminal checks this task's files reach; before its pull request
+  merges, they run locally, listed for approval first, with its unit tests (SD-D14).
 
 ## Terminal check
 

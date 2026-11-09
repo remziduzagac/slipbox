@@ -23,14 +23,18 @@ SD-D9, SD-D4.
 
 ## Acceptance criteria
 
-- Held: slipbox started on a vault under `held` — the screen drawn, `reading the vault…`, `q` quits; let go before,
-  the note is drawn with its links checked, its backlinks there.
+- Held: slipbox started on a vault with a folder inside it under `held` (`notes/held/`), not the vault itself — so
+  `openingPath`'s marker checks and `.slipbox/config.toml` (`run.ts:74`, `:83`), which stay before the screen
+  (SD-D9), answer, and the walk is what waits: the screen drawn, `reading the vault…`, `q` quits; let go before, the
+  note is drawn with its links checked, its backlinks there.
 - A start on a vault that answers at once draws its note as now: the terminal checks that start on a note pass
   unchanged.
 - Past a shortened deadline: said, the screen up; the note shown as its text if its own read answered, its links
   drawn as resolved, the vault asked again a minute later and the note drawn again when it comes; nothing opened, and
   said, if the note's read gave up too.
 - A restart (`UPG`) waiting for its vault: its tabs brought back as a start's, their places kept.
+- `CHECKS_FOR` (`scripts/ci-scope.ts`) names the terminal checks this task's files reach; before its pull request
+  merges, they run locally, listed for approval first, with its unit tests (SD-D14).
 
 ## Terminal check
 
