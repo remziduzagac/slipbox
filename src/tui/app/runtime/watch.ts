@@ -109,6 +109,7 @@ export class Watch {
       sizes: this.sizesFromGraph(),
       attachments: this.app.graph.filePaths(),
       walkedAt: () => this.app.graph.walkedAt,
+      dirStamps: () => this.app.graph.dirStamps,
       listed: isListed(this.app.loc),
       // Home's cap held by what comes while it's open too (VV-D2); before its first walk, what its graph hasn't looked
       // into is the walk's, made while nobody works, and a note moved there followed.

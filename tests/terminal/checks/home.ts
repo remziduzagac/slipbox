@@ -537,7 +537,13 @@ export const HOME: Check[] = [
     area: "links-and-files",
     name: "home: a folder whose time was set back with nothing new in it — the walk kept again with its new time, so the next start doesn't list it again",
     covers: { cases: ["vault", "switcher"], commands: ["switcher.open"] },
-    options: { home: true, startAt: "home", config: UNWALKED, setup: (s) => homeWalked(s) },
+    // The watcher looking again every 200 ms: its first looks are over by the time the switcher's asked.
+    options: {
+      home: true,
+      startAt: "home",
+      config: `${UNWALKED}\n[watch]\npoll_ms = 200\n`,
+      setup: (s) => homeWalked(s),
+    },
     run: async (s) => {
       await s.where(/^~(?: |$)/);
       await quits(s);
@@ -585,6 +591,8 @@ export const HOME: Check[] = [
       );
       await s.restart();
       await s.where(/^~(?: |$)/);
+      // Nor by the watcher: garden as the walk listed it, though after the walk began (#12).
+      await sleep(1000);
       await switcherShows(s, "plan", "garden/plan.md");
       await switcherShows(s, "seeds", "garden/seeds.md", false);
     },
