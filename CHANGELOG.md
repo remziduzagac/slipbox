@@ -185,6 +185,9 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 
 ### Fixed
 
+- Typing `[[` or `](` in a note whose language server completes at `[` no longer lets the server's late answer
+  replace the list of notes to link to, or close it.
+
 - Two slipbox processes making a vault's search index at the same moment (the TUI starting as an agent searches) no
   longer have one delete the other's index and make its own; it waits for the other. The shared parse cache waits
   likewise, rather than going without for ten seconds.

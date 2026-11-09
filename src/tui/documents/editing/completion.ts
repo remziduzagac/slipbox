@@ -61,6 +61,13 @@ let asked = 0;
  *  older text stands (the server's for the text at the `(`, the argument typed since): only the last ask's counts. */
 let signatureAsked = 0;
 
+/** A server's ask waiting on a pause, or its answer on the way, dropped: what's shown stays. */
+function dropAsk(): void {
+  if (timer) clearTimeout(timer);
+  timer = null;
+  asked++;
+}
+
 /** A word of the open files, to complete one with (25.5): two of a word's characters or more. */
 const WORDS = /[\p{L}\p{N}_$]{2,}/gu;
 
@@ -72,9 +79,7 @@ const WORDS = /[\p{L}\p{N}_$]{2,}/gu;
  */
 export function completeWords(app: App, view: View, back: boolean): void {
   // Asked for these: a server's ask waiting on a pause, or its answer on the way, would put its own in their place.
-  if (timer) clearTimeout(timer);
-  timer = null;
-  asked++;
+  dropAsk();
   const src = view.buf.source;
   const at = offsetOf(app, view);
   const from = wordStart(src, at);
@@ -124,6 +129,8 @@ export function afterInsertKey(app: App, view: View, key: string): void {
     const from = md ?? wiki;
     const c = app.completion;
     if (from !== null) {
+      // Slipbox's own list, server or not: an ask its first `[` (or `]`, `(`) made would put the server's in its place.
+      dropAsk();
       const style: LinkStyle = md !== null ? "markdown" : "wiki";
       const start = view.buf.source.lastIndexOf("\n", from - 1) + 1;
       const before = view.buf.source.slice(start, from).trimStart();
@@ -183,9 +190,7 @@ export function afterInsertKey(app: App, view: View, key: string): void {
   }
   // Anything else typed — a space, an operator — ends the word, and the ask its pause was to make, or made (#37):
   // else a slow answer (signature help's, at `(`) lets the pause pass, and the popup opens after the `(`.
-  if (timer) clearTimeout(timer);
-  timer = null;
-  asked++;
+  dropAsk();
   app.completion = null;
 }
 
@@ -194,9 +199,7 @@ export function afterInsertKey(app: App, view: View, key: string): void {
  * never writes over what was pasted; the next key typed in a link's target makes its list again.
  */
 export function afterPaste(app: App): void {
-  if (timer) clearTimeout(timer);
-  timer = null;
-  asked++;
+  dropAsk();
   app.completion = null;
 }
 
