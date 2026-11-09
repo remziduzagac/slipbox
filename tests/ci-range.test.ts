@@ -1,11 +1,12 @@
 // Where a push's range starts (CIW-D1, CIW-D2, CIW-D3, scripts/ci-range.ts), and the workflow that hands it on: in
-// repositories made for each case, GitHub's API faked.
+// repositories made for each case, GitHub's API faked. And where macOS runs (D272): after Linux, and on a pull request
+// only for what differs there.
 import { afterAll, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { type Api, githubApi, pushRange, recordName, recordRun, versionAt } from "../scripts/ci-range.ts";
-import { changedFiles, SCOPE_VERSION } from "../scripts/ci-scope.ts";
+import { changedFiles, eventLabels, MACOS, macosFor, SCOPE_VERSION } from "../scripts/ci-scope.ts";
 
 const ROOT = join(import.meta.dir, "..");
 const sandbox = mkdtempSync(join(tmpdir(), "slipbox-ci-range-"));
@@ -330,11 +331,20 @@ describe("a PR without terminal coverage does not certify complete checks (D266)
     const temp = mkdtempSync(join(sandbox, "temp-"));
     const out = join(temp, "out");
     writeFileSync(out, "");
+    const event = join(temp, "event.json");
+    writeFileSync(event, JSON.stringify({ pull_request: { labels: [] } }));
     Bun.spawnSync([process.execPath, join(ROOT, "scripts", "ci-scope.ts")], {
       cwd: r.dir,
-      env: { ...gitEnv, GITHUB_EVENT_NAME: "pull_request", GITHUB_OUTPUT: out, RUNNER_TEMP: temp, GH_TOKEN: "" },
+      env: {
+        ...gitEnv,
+        GITHUB_EVENT_NAME: "pull_request",
+        GITHUB_EVENT_PATH: event,
+        GITHUB_OUTPUT: out,
+        RUNNER_TEMP: temp,
+        GH_TOKEN: "",
+      },
     });
-    expect(readFileSync(out, "utf8")).toBe("code=false\nchecks=false\n");
+    expect(readFileSync(out, "utf8")).toBe("code=false\nchecks=false\nmacos=false\n");
     expect(existsSync(join(temp, "ci-tested.txt"))).toBe(false);
   });
 });
@@ -411,6 +421,9 @@ describe("the workflow hands the range on (CIW-D1–CIW-D4)", () => {
     unknown
   >;
   type Job = {
+    name?: string;
+    needs?: string | string[];
+    "runs-on"?: string;
     permissions?: Record<string, string>;
     outputs?: Record<string, string>;
     steps?: Step[];
@@ -418,6 +431,7 @@ describe("the workflow hands the range on (CIW-D1–CIW-D4)", () => {
     strategy?: { matrix: { os: string | string[] } };
   };
   const ci = Bun.YAML.parse(readFileSync(join(ROOT, ".github", "workflows", "ci.yml"), "utf8")) as {
+    on: { pull_request?: { types?: string[] } | null };
     concurrency: { group: string; "cancel-in-progress": string };
     jobs: Record<string, Job>;
   };
@@ -426,9 +440,11 @@ describe("the workflow hands the range on (CIW-D1–CIW-D4)", () => {
     const expression = (text: string) => text.replace(/^\$\{\{(.*)\}\}$/s, "$1");
     for (const event_name of ["pull_request", "push", "merge_group", "workflow_dispatch"]) {
       const github = { event_name };
-      const matrix = ci.jobs.test?.strategy?.matrix.os;
-      expect(matrix).toEqual(["ubuntu-24.04", "macos-15"]);
-      expect(ci.jobs.terminal?.strategy?.matrix.os).toEqual(["ubuntu-24.04", "ubuntu-24.04-arm", "macos-15"]);
+      // Linux in the matrices; macOS in jobs of their own, after them (D272).
+      expect(ci.jobs.test?.strategy?.matrix.os).toEqual(["ubuntu-24.04"]);
+      expect(ci.jobs["test-macos"]?.["runs-on"]).toBe("macos-15");
+      expect(ci.jobs.terminal?.strategy?.matrix.os).toEqual(["ubuntu-24.04", "ubuntu-24.04-arm"]);
+      expect(ci.jobs["terminal-macos"]?.["runs-on"]).toBe("macos-15");
       expect(ci.jobs.site?.if).toBeUndefined();
       for (const checks of ["true", "false"]) {
         const run = new Function("github", "needs", `return ${expression(ci.jobs.terminal!.if!)}`)(github, {
@@ -453,7 +469,7 @@ describe("the workflow hands the range on (CIW-D1–CIW-D4)", () => {
   });
 
   test("`test` and `terminal` read the range `changes` worked out, never the event's `before`", () => {
-    for (const job of ["test", "terminal"]) {
+    for (const job of ["test", "test-macos", "terminal", "terminal-macos"]) {
       const steps = ci.jobs[job]?.steps ?? [];
       const runs = steps.find((s) => s.run === "bun run test:changed" || s.run === "bun run test:terminal:changed");
       expect([job, runs?.env?.SCOPE_RANGE]).toEqual([job, "${{ needs.changes.outputs.range }}"]);
@@ -535,9 +551,9 @@ describe("the workflow hands the range on (CIW-D1–CIW-D4)", () => {
       return { ...said, log };
     };
     try {
-      // Since a: the docs alone.
+      // Since a: the docs alone. A push runs macOS whatever changed (D272).
       passes = [a];
-      expect(await run({})).toMatchObject({ range: `${a}..${b}`, code: "false", checks: "false" });
+      expect(await run({})).toMatchObject({ range: `${a}..${b}`, code: "false", checks: "false", macos: "true" });
       // b itself passed (dev moved to test): nothing runs, and the log says so.
       passes = [b];
       const same = await run({ GITHUB_REF_NAME: "test", SCOPE_BEFORE: a });
@@ -549,5 +565,232 @@ describe("the workflow hands the range on (CIW-D1–CIW-D4)", () => {
     } finally {
       server.stop(true);
     }
+  });
+});
+
+describe("macOS after Linux, and on a pull request only for what differs there (D272)", () => {
+  test("each of MACOS's patterns names a file there is: one stale would leave its part to the push", () => {
+    const tracked = Bun.spawnSync(["git", "-C", ROOT, "ls-files"]).stdout.toString().split("\n").filter(Boolean);
+    expect(tracked).toContain("scripts/ci-scope.ts");
+    expect(MACOS.filter((re) => !tracked.some((f) => re.test(f))).map(String)).toEqual([]);
+  });
+
+  test("a pull request runs macOS for a file of what differs there, the tests beside it among them", () => {
+    for (const f of [
+      // The terminal's input and output.
+      "src/tui/shell/terminal/opentui.ts",
+      "src/tui/documents/saving/handoff.ts",
+      "src/core/documents/external-editors/nvim.ts",
+      "tests/terminal/terminal.ts",
+      // Spawning processes and the system's tools, Apple's SQLite among them.
+      "src/core/foundation/platform/tool-process.ts",
+      "src/core/foundation/platform/clipboard.ts",
+      "tests/core/foundation/platform/sqlite.test.ts",
+      "src/core/documents/servers/locks.ts",
+      "src/core/workspace/search/search-index.ts",
+      // The file system's paths, times and watchers.
+      "src/core/workspace/graph/watch.ts",
+      "src/core/workspace/graph/watch/directories.ts",
+      "tests/core/workspace/graph/watch-mechanisms.test.ts",
+      "src/core/workspace/walk/io/stamps.ts",
+      "src/core/workspace/walk/filtering/policy.ts",
+      "src/core/workspace/vaults/mounts.ts",
+      "tests/core/workspace/vaults/symlinks/following.test.ts",
+      "src/core/workspace/links/links.ts",
+      "tests/setup.ts",
+      // Fonts and pictures.
+      "src/core/rendering/export/assets/fonts.ts",
+      "src/core/rendering/export/formats/pdf/fonts/adapter.ts",
+      "tests/core/rendering/export/pdf/fonts.test.ts",
+      "src/core/rendering/media/images/svg.ts",
+      "src/tui/documents/media/pictures.ts",
+      // The installer.
+      "scripts/install.template.sh",
+      "scripts/homebrew.template.rb",
+      "scripts/release.ts",
+      "src/core/application/distribution/restart.ts",
+      "src/tui/app/distribution/updates.ts",
+      "src/cli/install.ts",
+      "tests/terminal/release-builds.ts",
+      "tests/distribution/installation.test.ts",
+      // The workflows and what decides what they run; the packages and the toolchain.
+      ".github/workflows/ci.yml",
+      "scripts/ci-scope.ts",
+      "package.json",
+      "bun.lock",
+      "mise.toml",
+    ])
+      expect([f, macosFor([f], [])]).toEqual([f, `${f} differs there`]);
+  });
+
+  test("…and not for a file that only uses them, nor the docs; the first that differs is the reason", () => {
+    for (const f of [
+      "src/tui/app/runtime/app.ts",
+      "src/core/workspace/graph/graph.ts",
+      "src/core/documents/markdown/parse/headings.ts",
+      "src/core/documents/servers/transport.ts",
+      "src/core/application/distribution/skill.ts",
+      "src/core/application/distribution/skill-lifecycle.ts",
+      "src/tui/workspace/git/views/branches/gitbranchview.ts",
+      "tests/tui/workspace/git/panel/branches.test.ts",
+      "tests/terminal/checks/vaults.ts",
+      "examples/home/CASES.md",
+      "scripts/check-docs.ts",
+      "docs/guides/getting-started.md",
+    ])
+      expect([f, macosFor([f], [])]).toEqual([f, null]);
+    expect(macosFor(["src/tui/app/runtime/app.ts", "bun.lock", ".github/workflows/ci.yml"], [])).toBe(
+      "bun.lock differs there",
+    );
+  });
+
+  test("the `macos` label runs it whatever changed; another label, or one like it, doesn't; unread, it runs", () => {
+    const app = ["src/tui/app/runtime/app.ts"];
+    expect(macosFor(app, ["enhancement", "macos"])).toBe("the `macos` label");
+    for (const labels of [[], ["enhancement"], ["macOS"], ["macos "], ["no-macos"]])
+      expect([labels, macosFor(app, labels)]).toEqual([labels, null]);
+    expect(macosFor(app, null)).toBe("its labels can't be read");
+    expect(macosFor(null, [])).toBe("the diff can't be read");
+    // A file that differs is the reason before the labels are looked at.
+    expect(macosFor(["bun.lock"], null)).toBe("bun.lock differs there");
+  });
+
+  test("a pull request's labels, from the event's file: their names as strings; anything else unread", () => {
+    const dir = mkdtempSync(join(sandbox, "event-"));
+    const file = (name: string, text: string) => {
+      writeFileSync(join(dir, name), text);
+      return join(dir, name);
+    };
+    const labels = [{ name: "macos" }, { name: "$(touch x) `y`" }, null, { name: 5 }, "macos", { color: "fff" }];
+    expect(eventLabels(file("a.json", JSON.stringify({ pull_request: { labels } })))).toEqual([
+      "macos",
+      "$(touch x) `y`",
+    ]);
+    expect(eventLabels(file("b.json", JSON.stringify({ pull_request: { labels: [] } })))).toEqual([]);
+    expect(eventLabels(file("c.json", JSON.stringify({ pull_request: {} })))).toBeNull();
+    expect(eventLabels(file("d.json", JSON.stringify({ labels: [{ name: "macos" }] })))).toBeNull();
+    expect(eventLabels(file("e.json", "{"))).toBeNull();
+    expect(eventLabels(join(dir, "missing.json"))).toBeNull();
+    expect(eventLabels("")).toBeNull();
+  });
+
+  test("ci:scope writes `macos`: a pull request's by its files and labels, every other run's true", () => {
+    const r = repo();
+    r.commit({ "src/a.ts": "1" });
+    r.commit({ "src/a.ts": "2" });
+    const dir = mkdtempSync(join(sandbox, "macos-"));
+    let n = 0;
+    /** The run's outputs and log, for `event`; a pull request's labels in its event's file, none: no file. */
+    const run = (event: string, labels?: unknown[]) => {
+      const out = join(dir, `out-${++n}`);
+      const path = join(dir, `event-${n}.json`);
+      writeFileSync(out, "");
+      if (labels) writeFileSync(path, JSON.stringify({ pull_request: { labels } }));
+      const p = Bun.spawnSync([process.execPath, join(ROOT, "scripts", "ci-scope.ts")], {
+        cwd: r.dir,
+        env: { ...gitEnv, GITHUB_EVENT_NAME: event, GITHUB_EVENT_PATH: path, GITHUB_OUTPUT: out, GH_TOKEN: "" },
+      });
+      return { out: readFileSync(out, "utf8"), log: p.stdout.toString() };
+    };
+    const unlabelled = run("pull_request", []);
+    expect(unlabelled.out).toBe("code=true\nchecks=false\nmacos=false\n");
+    expect(unlabelled.log).toContain("macOS: skipped, nothing that differs there changed (the `macos` label runs it)");
+    expect(run("pull_request", [{ name: "bug" }]).out).toEndWith("macos=false\n");
+    const labelled = run("pull_request", [{ name: "bug" }, { name: "macos" }]);
+    expect(labelled.out).toEndWith("macos=true\n");
+    expect(labelled.log).toContain("macOS: runs, the `macos` label");
+    expect(run("pull_request").out).toEndWith("macos=true\n"); // no event's file: its labels unread
+    for (const event of ["push", "merge_group", "workflow_dispatch"])
+      expect([event, run(event).out]).toEqual([event, expect.stringContaining("macos=true\n")]);
+    // A file of what differs there, unlabelled.
+    r.commit({ "src/core/foundation/platform/x.ts": "1" });
+    const differs = run("pull_request", []);
+    expect(differs.out).toEndWith("macos=true\n");
+    expect(differs.log).toContain("macOS: runs, src/core/foundation/platform/x.ts differs there");
+  });
+
+  type Job = {
+    name?: string;
+    needs?: string | string[];
+    if?: string;
+    "runs-on"?: string;
+    "timeout-minutes"?: number;
+    permissions?: Record<string, string>;
+    steps?: { run?: string }[];
+    strategy?: { matrix: { os: string[] } };
+  };
+  const ci = Bun.YAML.parse(readFileSync(join(ROOT, ".github", "workflows", "ci.yml"), "utf8")) as {
+    on: { pull_request?: { types?: string[] } | null };
+    jobs: Record<string, Job>;
+  };
+  /** Each macOS job, and the Linux job it waits for. */
+  const PAIRS = [
+    ["test-macos", "test"],
+    ["terminal-macos", "terminal"],
+  ] as const;
+  /** A job's `if:` as JavaScript: `&&`, `!=`, `==` and the operands as GitHub has them. */
+  const runs = (job: string, github: object, needs: object): boolean =>
+    new Function("github", "needs", `return ${(ci.jobs[job]?.if ?? "").replace(/^\$\{\{(.*)\}\}$/s, "$1")};`)(
+      github,
+      needs,
+    );
+
+  test("each macOS job waits for its Linux job, with its steps and its check's name; no other job runs on macOS", () => {
+    const onMac = Object.entries(ci.jobs)
+      .filter(([, j]) => JSON.stringify([j["runs-on"], j.strategy?.matrix.os]).includes("macos"))
+      .map(([name]) => name);
+    expect(onMac.sort()).toEqual(["terminal-macos", "test-macos"]);
+    for (const [mac, linux] of PAIRS) {
+      const [m, l] = [ci.jobs[mac]!, ci.jobs[linux]!];
+      expect([mac, m.needs, m.name, m["runs-on"]]).toEqual([
+        mac,
+        ["changes", linux],
+        `${linux} (macos-15)`,
+        "macos-15",
+      ]);
+      expect(m.steps).toEqual(l.steps!);
+      expect([m.permissions, m["timeout-minutes"]]).toEqual([l.permissions, l["timeout-minutes"]]);
+      // No status function: GitHub's own `success()`, so a Linux job failed, cancelled or skipped skips it.
+      expect(m.if).not.toMatch(/always\(\)|cancelled\(\)|failure\(\)|success\(\)/);
+    }
+  });
+
+  test("a macOS job runs when its Linux job would and `changes` says `macos`", () => {
+    for (const event_name of ["pull_request", "push", "merge_group", "workflow_dispatch"])
+      for (const code of ["true", "false"])
+        for (const checks of ["true", "false"])
+          for (const macos of ["true", "false"]) {
+            const [github, needs] = [{ event_name }, { changes: { outputs: { code, checks, macos } } }];
+            const at = `${event_name} code=${code} checks=${checks} macos=${macos}`;
+            for (const [mac, linux] of PAIRS)
+              expect([mac, at, runs(mac, github, needs)]).toEqual([
+                mac,
+                at,
+                runs(linux, github, needs) && macos === "true",
+              ]);
+          }
+  });
+
+  test("adding a label runs a pull request's checks again: the `macos` label's way in", () => {
+    expect(ci.on.pull_request?.types).toEqual(["opened", "synchronize", "reopened", "labeled"]);
+  });
+
+  test("`ci` counts a macOS job skipped as passed, and one failed or cancelled, or its Linux job failed, as failed", () => {
+    const script = ci.jobs.ci?.steps?.[0]?.run ?? "";
+    const jobs = [ci.jobs.ci?.needs ?? []].flat();
+    expect(jobs).toEqual(expect.arrayContaining(["test", "test-macos", "terminal", "terminal-macos"]));
+    const passes = (results: Record<string, string>) => {
+      const needs = Object.fromEntries(jobs.map((j) => [j, { result: results[j] ?? "success", outputs: {} }]));
+      return Bun.spawnSync(["bash", "-e", "-c", script], {
+        env: { ...process.env, NEEDS: JSON.stringify(needs) },
+        stdout: "ignore",
+      }).success;
+    };
+    expect(passes({})).toBe(true);
+    expect(passes({ "test-macos": "skipped", "terminal-macos": "skipped", terminal: "skipped" })).toBe(true);
+    expect(passes({ test: "failure", "test-macos": "skipped" })).toBe(false);
+    expect(passes({ terminal: "failure", "terminal-macos": "skipped" })).toBe(false);
+    expect(passes({ "test-macos": "failure" })).toBe(false);
+    expect(passes({ "terminal-macos": "cancelled" })).toBe(false);
   });
 });

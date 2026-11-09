@@ -50,16 +50,25 @@ GitHub's releases are, with `SLIPBOX_RELEASES_URL`. A person able to take over w
 
 Every change reaches `dev`, the default branch, through a pull request: the rules require the aggregate `ci` check. A
 pull request runs lint (Biome, sizes, workflows, docs and docs tests), CodeQL, the site and the typecheck, boundary,
-dependency gates and reached unit tests on Ubuntu and macOS. Only the terminal job is skipped on pull requests (D266).
+dependency gates and reached unit tests on Ubuntu. Only the terminal job is skipped on pull requests (D266).
 Docs-only pull requests still skip the unit job (D230). No ruleset changes are needed: `ci` accepts successful or
 skipped jobs. Lint checks Markdown, spelling and links between files on every PR.
 
-Pushes to `dev` and `test`, merge groups and runs by hand keep the original unit and terminal matrices; a run by hand
-stays full. Scope version 3 disables CIW-D2's PR-tree shortcut: a PR pass covers no terminal checks. A squash push
-retains the range since the last passing push, repeating units on both platforms too; old-version passes cannot shorten
-it. Site remains on every PR and push. A promotion already covered by a passing push can still skip tests (CIW-D3). A
-superseded push gives way to its successor, which retains untested commits (CIW-D4). A terminal-only break can therefore
-sit on `dev` until its push run finds it. No approval is required, since there is no second person to give one.
+macOS runs after Linux (D272): each macOS job, `test (macos-15)` and `terminal (macos-15)`, waits for its Linux job and
+runs only once it passed. A pull request runs `test (macos-15)` only when it changes what differs on macOS (`MACOS` in
+`scripts/ci-scope.ts`: the terminal's input and output, spawning processes, the file system's paths, times and watchers,
+fonts and pictures, the installer, the workflows, the packages and the toolchain), or carries the `macos` label: add
+the label to a pull request whose change might behave otherwise on a Mac, and its checks run again with macOS. The
+`changes` job's log says which file ran it, or that it was skipped.
+
+Pushes to `dev` and `test`, merge groups and runs by hand run macOS whatever changed, so every change is tested on macOS
+after its merge; a run by hand stays full. Their macOS jobs wait for Linux too, so those runs take longer. Scope
+version 3 disables CIW-D2's PR-tree shortcut: a PR pass covers no terminal checks. A squash push retains the range since
+the last passing push, repeating units on both platforms too; old-version passes cannot shorten it. Site remains on
+every PR and push. A promotion already covered by a passing push can still skip tests (CIW-D3). A superseded push gives
+way to its successor, which retains untested commits (CIW-D4). A terminal-only break, or a macOS-only one outside the
+list, can therefore sit on `dev` until its push run finds it. No approval is required, since there is no second person
+to give one.
 
 - **Who:** agents and collaborators work on a branch and open the pull request; the maintainer merges it, or asks an
   agent to review and merge it. Agents merge, run the full suite, move `test` or `main` and release only when the

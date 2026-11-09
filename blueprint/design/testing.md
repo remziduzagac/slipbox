@@ -215,16 +215,17 @@ reports it skipped with its issue (`tests/terminal/run.ts`). `bun test` and the 
 `grep -rn "quarantined:" tests/` lists them all; each comes back with its fix, which removes its quarantine. An
 assertion is never deleted or loosened to make a test pass.
 
-**CI runs the suite on Linux and macOS** (GR-D9): for a pull request, the tests and the terminal checks its files
-reach (D239), the docs' tests only for one of the docs alone (D230), and a push to `dev` or `test` the same for what
-changed since the last passing run, less what a pull
-request's run passed on the same tree: nothing for `dev` moved to `test`
-([repository.md](repository.md) § What a push tests); every test and check in the full run, `ci` run by hand on `test`
-(`full`), which a commit needs before `main`
-takes it and a release builds it (D251). The scripts `bun run check` runs, split into jobs
-([repository.md](repository.md)
-§ CI). While working: your change's own tests and its feature's terminal check (`bun run test:terminal <its name>`),
-then `bun run test:changed` for what else it reaches — never the whole suite. A failure the full run finds is fixed
+**CI runs the suite on Linux and macOS** (GR-D9), each macOS job once its Linux job passed (D272). For a pull
+request, the tests its files reach (D239): on Linux, and on macOS only when it changes what differs there or carries
+the `macos` label (D272; [repository.md](repository.md) § CI); the docs' tests only for one of the docs alone (D230);
+no terminal check (D266). For a push to `dev` or `test`, the tests and the terminal checks for what changed since the
+last passing run, on Linux and macOS whatever changed: nothing for `dev` moved to `test`
+([repository.md](repository.md) § What a push tests). Every test and check in the full run, `ci` run by hand on `test`
+(`full`), which a commit needs before `main` takes it and a release builds it (D251). A pull request whose change
+might behave otherwise on macOS, outside the list, takes the `macos` label. The scripts `bun run check` runs, split
+into jobs ([repository.md](repository.md) § CI). While working: your change's own tests and its feature's terminal
+check (`bun run test:terminal <its name>`), then `bun run test:changed` for what else it reaches — never the whole
+suite. A failure the full run finds is fixed
 by a pull request of its own, into `dev`.
 
 **Biome formats and lints the code** (`biome.jsonc`: 120 columns, the recommended rules but the code's idioms, each

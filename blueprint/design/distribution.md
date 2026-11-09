@@ -174,9 +174,9 @@ SQLite is the runtime's own, through `node:sqlite` (D196). Bun implements it as 
 and Windows (3.53.2 in Bun 1.4.2), macOS's system one on macOS, so nothing native is packaged per platform for it,
 and a Linux build needs only the glibc Bun and OpenTUI need, 2.17. On macOS the SQLite is Apple's, older and of the
 OS's version: slipbox asks only FTS5 with `unicode61` (3.27 and up), `bm25`, WAL and a busy timeout, and loads no
-extension; CI runs the suite on macOS on every change, so Apple's runs them there (`14.13`;
-[repository.md](repository.md)
-§ CI). Both its databases, the search index and the parse cache, are caches, made again when they don't open.
+extension; CI runs the suite on macOS for every change, a pull request's when it touches the index's tables or queries
+and every one after its merge (D272), so Apple's runs them there (`14.13`; [repository.md](repository.md) § CI).
+Both its databases, the search index and the parse cache, are caches, made again when they don't open.
 `core/foundation/platform/sqlite.ts` keeps the calls slipbox makes (`get`, `all`, `run`, `pragma`, `transaction` with
 savepoints
 inside, `exec`, `close`); integers the schema needs are bound `CAST(? AS INTEGER)`, harmless whatever a binding

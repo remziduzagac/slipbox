@@ -95,6 +95,9 @@ accepted deviation until then, with a review date.
 
 ## GR-D9: Hardened CI, on Linux and macOS (2026-10-12)
 
+> **Amended by D272 (2026-11-09):** a pull request runs macOS only when it changes what differs there or carries the
+> `macos` label, after Linux passed; every push and the full run still run it.
+
 > **Amended by CIW-D4 (2026-10-26):** superseded pushes to a branch are cancelled alongside superseded
 > pull-request runs. Reruns, manual runs and merge groups keep distinct groups and finish.
 

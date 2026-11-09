@@ -101,11 +101,13 @@ workflow: actionlint 1.7.12 doesn't know the token's `vulnerability-alerts` scop
 
 ## CI
 
-`.github/workflows/ci.yml` runs on every pull request, every push to `dev` or `test`, a merge queue's group (listed for
-later: a merge queue needs an organisation's repository) and by hand (GR-D9, D251). A pull request runs lint, the
-typecheck, boundary and dependency gates, reached unit tests on Linux and macOS, CodeQL, site and the aggregate `ci`
-check. Only terminal checks move after merge (D266). A push runs the full changed scope; a run by hand runs everything
-and reports `full` instead of `ci`. Jobs call package.json scripts.
+`.github/workflows/ci.yml` runs on every pull request (opened, pushed to, reopened or given a label: D272), every push
+to `dev` or `test`, a merge queue's group (listed for later: a merge queue needs an organisation's repository) and by
+hand (GR-D9, D251). A pull request runs lint, the typecheck, boundary and dependency gates, reached unit tests on Linux
+and, once they passed, on macOS when it changes what differs there or carries the `macos` label (D272), CodeQL, site
+and the aggregate `ci` check. Only terminal checks move after merge (D266). A push runs the full changed scope, macOS
+included; a run by hand runs everything and reports `full` instead of `ci`. Each macOS job waits for its Linux job and
+runs only once it passed, whatever the event (D272). Jobs call package.json scripts.
 
 - **`lint`**, on `ubuntu-24.04`: Biome (`bun run lint`), the workflows (`bun run check:actions`, zizmor online with
   the job's token), the docs (`bun run check:docs`) and the tests that read the docs (`bun run test:docs`: the docs'
@@ -116,22 +118,27 @@ and reports `full` instead of `ci`. Jobs call package.json scripts.
   Markdown file at the top), `test` and `terminal` are skipped: no test reads those files but the docs' own, which
   `lint` runs (D230). Otherwise it says whether any terminal check reaches the change (`checks`); `terminal` is skipped
   when none does (D239). A merge group, a run by hand, a branch just made and a diff that can't be read run everything.
-  A test holds every test that reads the docs to `test:docs`'s list, so a new one can't be skipped with them.
-- **`test`**, on `ubuntu-24.04` and `macos-15` (arm64) for every event, neither stopping the other: the typecheck,
-  boundary, supply chain's gates and reached unit tests (`bun run test:changed`; everything in the full run). On macOS
-  SQLite is Apple's; its FTS5 and ranking run when a change reaches them and in the full run (`tests/core/`,
-  `tests/cli/`; `14.13`).
-- **`terminal`**, skipped entirely for pull requests. Pushes, merge groups and full runs keep `ubuntu-24.04`,
-  `ubuntu-24.04-arm` and `macos-15`: the terminal checks a change's files reach (`bun run test:terminal:changed`; every
-  one in the full run, TT-D6). No job runs on an Intel Mac, for which nothing is built after 0.3.0 (D238); a test holds
-  every workflow to it.
+  A test holds every test that reads the docs to `test:docs`'s list, so a new one can't be skipped with them. It says
+  whether the macOS jobs run (`macos`, D272): always, but for a pull request that changes no file of what differs on
+  macOS (below) and has no `macos` label, which it reads from the event's file as data; a diff or labels it can't read
+  run them.
+- **`test`**, on `ubuntu-24.04` for every event: the typecheck, boundary, supply chain's gates and reached unit tests
+  (`bun run test:changed`; everything in the full run). **`test-macos`**, `test (macos-15)` (arm64), the same steps
+  once `test` passed, when `changes` says `macos` (D272). On macOS SQLite is Apple's; its FTS5 and ranking run when a
+  change reaches them and in the full run (`tests/core/`, `tests/cli/`; `14.13`).
+- **`terminal`**, skipped entirely for pull requests. Pushes, merge groups and full runs keep `ubuntu-24.04` and
+  `ubuntu-24.04-arm` in it, and `macos-15` in **`terminal-macos`**, `terminal (macos-15)`, once both passed (D272):
+  the terminal checks a change's files reach (`bun run test:terminal:changed`; every one in the full run, TT-D6). A
+  test holds each macOS job to its Linux job's steps, and no other job runs on macOS. No job runs on an Intel Mac, for
+  which nothing is built after 0.3.0 (D238); a test holds every workflow to it.
 - **`site`**, on `ubuntu-24.04` for every event: the docs' site built (`bun run site`), every link within it landing
   (DS). Lint separately checks Markdown, spelling and links between files on every PR.
 - **`ci`**, the aggregator and the one required check: it always runs, waits for every other job, and fails unless
-  each passed or was skipped. A job skipped by its `if:` counts as passed; one that failed, was cancelled or never
-  started doesn't. A test holds it to waiting for every job but `status`, so a job added can't be left out of the
-  required check. Run by hand, its name is `full` (D251): `dev`'s and `test`'s rulesets require `ci`, `main`'s requires
-  `full`, and a release refuses a tag whose commit didn't pass it.
+  each passed or was skipped. A job skipped by its `if:` counts as passed — a macOS job a pull request doesn't need, or
+  one whose Linux job failed, which fails `ci` itself; one that failed, was cancelled or never started doesn't. A test
+  holds it to waiting for every job but `status`, so a job added can't be left out of the required check. Run by hand,
+  its name is `full` (D251): `dev`'s and `test`'s rulesets require `ci`, `main`'s requires `full`, and a release
+  refuses a tag whose commit didn't pass it.
 - **`status`**, on `ubuntu-24.04`, run by hand alone, once `full` passed: `full` again, as a commit status the run's
   token posts (`statuses: write`, D257). A ruleset counts no check a run by hand reports (GitHub's "Troubleshooting
   required status checks"), so `main`'s, which requires `full` from GitHub Actions, sees this status, never the check;
@@ -152,6 +159,18 @@ The packages, the lockfile, the toolchain, the workflows, the tests' preload and
 the lint's own configs, only the lint. A test holds `CHECKS_FOR` to the files and the checks there are. Locally,
 `bun run test:changed` and `bun run test:terminal:changed` run the same against where the branch left `origin/dev`;
 `bun run check` runs the first.
+
+**What differs on macOS** (D272, `MACOS` in `scripts/ci-scope.ts`, beside `CHECKS_FOR`): path patterns, in groups,
+over the parts whose behaviour on macOS is the system's own, and the tests beside them. The terminal's input and output
+(`tui/shell/terminal/`, the hand-off to an editor, the checks' pseudo-terminal); spawning processes and the system's
+tools (`core/foundation/platform/`: tools and their process groups, the shell, the clipboard, the browser, libc,
+Apple's SQLite; the language servers' processes and per-platform installs; the search index's FTS5 tables and
+queries); the file system's paths, times and watchers (the watcher, the walk's folder times and filters, mounts,
+symbolic links, a link's case, the tests' preload); fonts and pictures (the fonts found on the machine, pictures drawn
+and copied); the installer (the install and bootstrap scripts, Homebrew's formula, the release builds, installing,
+upgrading and restarting); the workflows and `scripts/ci-scope.ts` and `ci-range.ts`; the packages and the toolchain.
+A file that only uses these, most of the app, waits for the push after the merge. `bun run ci:scope` says which file
+ran macOS, or that it's skipped; a test holds each pattern to a file there is.
 
 No permission by default (`permissions: {}`): each job grants its own with a comment saying why — `contents: read` to
 check out, `changes` also `actions: read` for passing runs and records, the aggregator nothing. Every job has a timeout.
