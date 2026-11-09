@@ -214,7 +214,8 @@ The cursor moves over the text of the cells, never their borders. The one except
 row, where `z a` opens it again.
 
 The outline (`space o`) and the breadcrumb list the definitions, as in SOURCE view. `] ]` and `[ [` move from one to
-the next.
+the next. `] f` and `[ f` go to the next and previous function, `] a` and `[ a` to the next and previous argument, and
+`] o` and `[ o` to the next and previous block. The cursor lands on the row where it starts.
 
 Editing works as in a rendered note. [Editing](editing.md) has the lens and SOURCE view.
 
@@ -262,6 +263,11 @@ problems, described below. It's counted here and in the code view, where a cell'
 
 Syntax errors are checked as you pause typing. They show once you leave insert mode, since a half-typed line is always
 broken. Once a language server has answered, its own errors take their place.
+
+**Structure for editing**: the text objects `f` (a function), `c` (a class or type), `a` (an argument) and `o` (a
+block), so `d a f` deletes a function and `c i a` changes an argument. `] f`, `] a` and `] o` move to the next of each,
+and `alt+o` grows a selection by the code's syntax. [Editing](editing.md#the-vim-keys) says what each takes. They work
+in a note's fenced block too, by the block's language.
 
 ## Links in code
 

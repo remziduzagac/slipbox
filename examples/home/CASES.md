@@ -1030,6 +1030,11 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
   at the edges')
 - text objects: iw aw iW, quotes " ' \`, brackets ( \[ { \< b B across lines, ip ap — `notes/projects/kestrel-v2-3.md`,
   `work/kestrel/src/sync/queue.ts` (Text objects)
+- text objects by structure: a function, class, argument and block (af if ac aa ao io) in TypeScript, Python and Rust,
+  and in a note's fenced block by its language; a note's section, list item, fenced block and link (ah ih al il ao io ak
+  ik); counts; v i o going to rows — `notes/projects/sync-rewrite.md`, `work/kestrel/src/sync/queue.ts`,
+  `work/kestrel/api/kestrel_api/sync.py`, `work/kestrel/crates/route-engine/src/lib.rs` (editing.md Text objects; tests
+  'structure.test.ts')
 - put/yank register: p P linewise vs charwise, clipboard, CRLF charwise put — `notes/daily/2026-09-15.md`,
   `notes/daily/2026-10-05.md` (edit.paste\_\*; test 'a charwise put of lines into a CRLF note keeps it CRLF')
 - s S r J \~ D C x . and dot-repeat with counts, insert records, visual change repeat — `notes/daily/2026-08-31.md`,
@@ -1174,6 +1179,9 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
 - jump labels (s, g w) on the words and links of both windows of a split, the nearest the shortest; esc, or a key no
   label goes on with, leaves the cursor — `notes/index.md`, `notes/projects/kestrel-v2-3.md` (cursor.jump; tests
   'jump labels: s and g w')
+- syntax jumps \] f \[ f \] a \[ a \] o \[ o by the code's grammar, in every view; a note's fenced blocks; a count; as
+  motions (d \] f) — `work/kestrel/src/sync/queue.ts`, `work/kestrel/crates/route-engine/src/lib.rs`,
+  `notes/projects/sync-rewrite.md` (keys.md Moving; tests 'structure.test.ts')
 
 ### selection
 
@@ -1186,6 +1194,9 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
   the same source lines when the width changes')
 - mouse drag copy, double-click word, triple-click row — `hobbies/cooking/Recipes/Family/مقلوبة.md`,
   `notes/research/unicode-in-route-names.md` (Mouse; tests 'double-click selects a word, triple-click the row')
+- alt+o grows the selection from the cursor's word through the note's link, item, list and section, or the code's
+  nodes; alt+i goes back step by step to the cursor; a move forgets the steps; reading says where it works —
+  `notes/projects/sync-rewrite.md`, `work/kestrel/src/sync/queue.ts` (editing.md Growing the selection)
 
 ### copy
 
@@ -2526,6 +2537,18 @@ A long note: headings, paragraphs, pages to move through; the daily note has the
 - `cursor.goto_line` — Go to line — `notes/meetings/all-hands-archive.md`, `notes/daily/2026-10-05.md`
   (catalog.ts)
 - `cursor.jump` — Jump to a label — `notes/index.md`, `notes/projects/kestrel-v2-3.md` (catalog.ts)
+- `cursor.function_next` — Next function — `work/kestrel/src/sync/queue.ts`, `notes/projects/sync-rewrite.md`
+  (catalog.ts)
+- `cursor.function_prev` — Previous function — `work/kestrel/api/kestrel_api/sync.py`, `notes/projects/sync-rewrite.md`
+  (catalog.ts)
+- `cursor.argument_next` — Next argument — `work/kestrel/src/sync/queue.ts`,
+  `work/kestrel/crates/route-engine/src/lib.rs` (catalog.ts)
+- `cursor.argument_prev` — Previous argument — `work/kestrel/src/sync/queue.ts`,
+  `work/kestrel/crates/route-engine/src/lib.rs` (catalog.ts)
+- `cursor.block_next` — Next block — `work/kestrel/crates/route-engine/src/lib.rs`, `notes/projects/sync-rewrite.md`
+  (catalog.ts)
+- `cursor.block_prev` — Previous block — `work/kestrel/crates/route-engine/src/lib.rs`, `notes/projects/sync-rewrite.md`
+  (catalog.ts)
 
 ### scroll
 
@@ -2560,6 +2583,9 @@ A long note: headings, paragraphs, pages to move through; the daily note has the
   (catalog.ts)
 - `visual.reflow` — Reflow the selection — `work/product/drafts/2.3-retro.md` (catalog.ts)
 - `visual.unwrap` — Unwrap the selection — `work/product/drafts/2.3-retro.md` (catalog.ts)
+- `visual.grow` — Grow the selection — `notes/projects/sync-rewrite.md`, `work/kestrel/src/sync/queue.ts` (catalog.ts)
+- `visual.shrink` — Shrink the selection back — `notes/projects/sync-rewrite.md`, `work/kestrel/src/sync/queue.ts`
+  (catalog.ts)
 
 ### app
 

@@ -24,6 +24,7 @@ import { countWords } from "../../../core/foundation/text/words.ts";
 import { readerFor } from "../../../core/documents/model/readers.ts";
 import type {
   CodeModel,
+  CodeStructure,
   CommentLink,
   OutlineEntry,
   Span as SyntaxSpan,
@@ -171,6 +172,8 @@ export class NoteBuffer {
     links: (CommentLink & { href?: string })[];
     languages: Map<number, string>;
     code: CodeModel | null;
+    /** Its text objects and nodes, for the structure keys (EG-D6, EG-D7). */
+    structure: CodeStructure;
   } | null = null;
   /** The code view's runs of imports unfolded (24.5), by their first line. */
   readonly codeOpen = new Set<number>();

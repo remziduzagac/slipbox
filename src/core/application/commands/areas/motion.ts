@@ -32,6 +32,43 @@ export const MOTION_SPECS: CommandSpec[] = [
     desc: "Moves to the blank row before this block",
   },
   { id: "cursor.paragraph_next", title: "Next paragraph", cli: I, desc: "Moves to the blank row after this block" },
+  // Syntax jumps (EG-D6): by the code's grammar; in a note, its fenced blocks' code, `] o` the fences themselves.
+  {
+    id: "cursor.function_next",
+    title: "Next function",
+    cli: I,
+    desc: "Moves to where the next function starts, by the code's grammar (in a note, its fenced blocks' code)",
+  },
+  {
+    id: "cursor.function_prev",
+    title: "Previous function",
+    cli: I,
+    desc: "Moves to where the function before the cursor starts (this one's, from inside it)",
+  },
+  {
+    id: "cursor.argument_next",
+    title: "Next argument",
+    cli: I,
+    desc: "Moves to the next argument or parameter, by the code's grammar",
+  },
+  {
+    id: "cursor.argument_prev",
+    title: "Previous argument",
+    cli: I,
+    desc: "Moves to the argument or parameter before the cursor, by the code's grammar",
+  },
+  {
+    id: "cursor.block_next",
+    title: "Next block",
+    cli: I,
+    desc: "Moves to the next block of code, by its grammar; in a note, to the next fenced block",
+  },
+  {
+    id: "cursor.block_prev",
+    title: "Previous block",
+    cli: I,
+    desc: "Moves to the block of code before the cursor; in a note, to the fenced block before it",
+  },
   {
     id: "cursor.find_char",
     title: "To a character on the line",
@@ -119,6 +156,19 @@ export const MOTION_SPECS: CommandSpec[] = [
   { id: "visual.char", title: "Visual mode (characters)", cli: I, desc: "Starts selecting by character as you move" },
   { id: "visual.line", title: "Visual mode (rows)", cli: I, desc: "Starts selecting whole rows as you move" },
   { id: "visual.swap", title: "Swap selection ends", cli: I, desc: "Jumps to the other end of the selection" },
+  // Growing the selection by syntax (EG-D7): a note's Markdown tree, code's grammar.
+  {
+    id: "visual.grow",
+    title: "Grow the selection",
+    cli: I,
+    desc: "Selects the cursor's word, then each time the node around the selection: a paragraph, a list item, a section; a call, a block, a function (SOURCE view and the lens)",
+  },
+  {
+    id: "visual.shrink",
+    title: "Shrink the selection back",
+    cli: I,
+    desc: "Goes back a step the selection grew through, to the cursor alone after the first",
+  },
   {
     id: "visual.yank",
     title: "Copy selection and leave visual mode",

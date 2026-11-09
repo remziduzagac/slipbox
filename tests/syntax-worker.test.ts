@@ -18,6 +18,7 @@ test("the code worker preserves the complete extracted structure", async () => {
     links: commentLinks(tree.comments()),
     languages: [...tree.languages()],
     code: tree.codeModel(),
+    structure: tree.structure(),
   };
   tree.delete();
   // Worker entry paths stay core-relative when the URL helper moves into a nested folder.

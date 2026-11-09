@@ -50,3 +50,53 @@ export const HIGHLIGHT: Partial<Record<Grammar, string>> = {
   svelte: "xml",
   astro: "xml",
 };
+
+/** A fenced block's language as its info string names it, by the names and short forms Markdown writers use. */
+const FENCES: Record<string, Grammar> = {
+  ts: "typescript",
+  typescript: "typescript",
+  mts: "typescript",
+  cts: "typescript",
+  tsx: "tsx",
+  js: "javascript",
+  javascript: "javascript",
+  jsx: "javascript",
+  mjs: "javascript",
+  cjs: "javascript",
+  py: "python",
+  python: "python",
+  python3: "python",
+  rs: "rust",
+  rust: "rust",
+  go: "go",
+  golang: "go",
+  lua: "lua",
+  sh: "bash",
+  bash: "bash",
+  shell: "bash",
+  zsh: "bash",
+  c: "c",
+  h: "c",
+  cpp: "cpp",
+  "c++": "cpp",
+  cc: "cpp",
+  cxx: "cpp",
+  hpp: "cpp",
+  rb: "ruby",
+  ruby: "ruby",
+  php: "php",
+  swift: "swift",
+  css: "css",
+  scss: "scss",
+  html: "html",
+  vue: "vue",
+  svelte: "svelte",
+  astro: "astro",
+  dockerfile: "dockerfile",
+  docker: "dockerfile",
+};
+
+/** The grammar for a fenced block's language (` ```ts `), if slipbox has one (EG-D6). */
+export function grammarForFence(lang: string | null | undefined): Grammar | null {
+  return FENCES[(lang ?? "").trim().toLowerCase()] ?? null;
+}

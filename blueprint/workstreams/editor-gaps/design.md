@@ -40,6 +40,10 @@ D235, ORG-D1), else the feature's module:
 
 In the core, pure: `core/documents/editing/reflow.ts` and the width's search, `core/documents/editing/reflow-width.ts`
 (EG-D12), `core/documents/diagnostics/todos.ts` (EG-D9), `core/workspace/git/forge.ts` (EG-D18).
+The structure's (EG-D6, EG-D7): `core/documents/editing/structure.ts`, pure (a note's objects, fenced blocks and nodes;
+the object around a place; the jumps' and growing's arithmetic); in the syntax worker,
+`core/documents/syntax/tree/structure.ts` (code's objects and nodes from a tree) and the queries it runs,
+`core/documents/syntax/grammar/textobjects.ts`.
 
 Previously: none of these; the table ends with the OpenTUI binding.
 
@@ -94,19 +98,31 @@ Adds, after "What follows from it":
   nothing.
 - **Syntax jumps** (EG-D6): `] f` / `[ f` (`cursor.function_next`, `cursor.function_prev`) the next or previous
   function, `] a` / `[ a` (`cursor.argument_next`, `_prev`) argument, `] o` / `[ o` (`cursor.block_next`, `_prev`)
-  block, by the code's grammar (§ Editing, "The structure"); in a note, `] o` / `[ o` go to the next or previous fenced
-  code block. Classes and types stay on `]]` / `[[`. Each is a motion, after an operator too. **Open:** inside a note's
-  fenced block, whether `] o` is the code's next block or the next fence; in which views (the code view's reading too).
+  block, by the code's grammar (§ Editing, "The structure"): to the start of the object's whole, an argument's own
+  start rather than its comma's. In a note, `] o` / `[ o` go to the next or previous fenced block's opening fence (in a
+  list or a quote too), and `] f`, `] a` by its fenced blocks' code, each by its language. Classes and types stay on
+  `]]` / `[[`. Each is a motion, after an operator too (`d ] f`, through `motionRange` as the cursor's commands are). A
+  count before goes that many (`2 ] f`: the command reads it, since the dispatch repeats no key of two); none goes past
+  the file's ends, and says so ("no function after the cursor"); none makes a history entry, as `] ]` makes none.
+  **Settled (EG-T5):** inside a note's fenced block, `] o` is the next fence, never the code's next block: a note's
+  `o` is the fence throughout (§ Editing, "Text objects"). They work in every view: on the character in SOURCE view
+  and the lens; while reading, a rendered note or the code view, on the row the node's line starts (`placeAtLine`),
+  at its column where that row is the text's own (a code cell's).
 
 And to **Selection**:
 
-- **Growing and shrinking it** (EG-D7; `visual.grow` `alt+o`, `visual.shrink` `alt+i`; in SOURCE view and the
-  lens): `alt+o` with nothing selected selects the cursor's word, in visual mode; each `alt+o` after it selects the
-  smallest node that encloses the selection and is larger than it; `alt+i` goes back a step. A note's nodes
-  are its Markdown tree's (a word, an inline node, a paragraph, a list item, a list, a section with its heading); code's
-  are its grammar's — a code file's, a code cell's, a fenced block's by its language, then the fence and the note's
-  tree above it. The steps grown through are kept on the view (`Structure`), so `alt+i` returns exactly; any other
-  change of the selection drops them. `ctrl+space` stays unbound: it's the user's.
+- **Growing and shrinking it** (EG-D7; `visual.grow` `alt+o` in `[keys.source]` and the visual keymap,
+  `visual.shrink` `alt+i` in the visual keymap; in SOURCE view and the lens): `alt+o` with nothing selected selects the
+  cursor's word (letters, digits, `_`, marks), in visual mode by characters; off a word, the smallest node there. Each
+  `alt+o` after it selects the smallest node that holds the selection and is larger than it, each node without the
+  white space at its ends. A note's nodes are its Markdown tree's — every node but text (an inline node, a paragraph,
+  a list item, a list, a heading, a table…) and each section, its heading to the next of its level — and, in a fenced
+  block, its code's by the block's language and the code between the fences, under the fence; code's are its
+  grammar's named nodes (one covering just what its parent does left out). The steps grown through are kept on the
+  view (`Structure.steps`, by window, with the text's version and the selection made), so `alt+i` returns exactly, from
+  the word to the cursor alone where it was; any other change of the selection or of the text drops them, and `alt+i`
+  then says there's nothing to go back from. At the top, `alt+o` says there's nothing bigger; while reading, it says
+  where it works. `ctrl+space` stays unbound: it's the user's.
 - **Several at once** (EG-D14; `Selections`): Helix's model. A view's selection becomes a list, the primary first, each
   an anchor and a cursor kept as source anchors (§ Positions) and drawn as one is (`selection`; the other cursors in a
   role of their own). Its commands: a cursor added below or above, the goal column kept (`visual.add_below`,
@@ -313,19 +329,40 @@ Previously: the lens's rows are source rows with their `srcMap`, so everything i
 
 Adds:
 
-- **The structure** (EG-D6, EG-D7; `Structure`): the text objects, the syntax jumps and growing the selection read the
-  nodes around the cursor. A note's are its Markdown tree's, from the parse of the text as it is (only the chunks
-  typing touched parsed again, D120). Code's are its grammar's — a code file's, a code cell's, a note's fenced block's —
-  from a query per language (the function, class, parameter and block captures of the textobject queries nvim and
-  Helix ship; memory, checked in its task) run in the syntax worker beside its pass
-  (`core/documents/syntax/syntax-worker.ts`): its answer gains the nodes' ranges, for the text it parsed. A key that
-  needs a pass still under way waits for its answer, as a key waits for what it does.
-- **Text objects** (EG-D6): `textObject` (`tui/shell/input/vim/motions.ts`) gains, in code, `f` a function, `c` a class
-  or type, `a` an argument, `o` a block; in a note, `h` a section (its heading to the next of its level or higher;
-  `i h` without the heading's line), `l` a list item (`i l` its text, without its marker), `o` a fenced block (`i o`
-  its lines between the fences), `k` a link (`i k` its text, `a k` the whole) — `i` the inside, `a` the whole. After
-  the operators and in visual mode, in SOURCE view and the lens; a count takes the enclosing one. **Open:** in a note's
-  fenced block, `o` is both the code's block and the fence.
+- **The structure** (EG-D6, EG-D7; `Structure`, `app.structure`): the text objects, the syntax jumps and growing the
+  selection read the nodes around the cursor. A note's are its Markdown tree's, from the parse of the text as it is
+  (`buf.parsed`: only the chunks typing touched parsed again, D120), made once a version (`noteStructure`): its objects,
+  its fenced blocks with their language, its nodes. Code's are its grammar's, from a query per language
+  (`core/documents/syntax/grammar/textobjects.ts`: the captures `@function.around` / `.inside`, `@class.around` /
+  `.inside`, `@parameter.inside` and `@block`, after the textobject queries of nvim-treesitter-textobjects and Helix,
+  written for the node names of slipbox's grammars: JavaScript, TypeScript, TSX, Python, Rust, Go, C, C++, Lua, Ruby,
+  Bash, PHP, Swift, CSS and SCSS), compiled with the grammar (`Loaded.objects`) and run in the syntax worker beside its
+  pass (`core/documents/syntax/tree/structure.ts`). The snapshot gains `structure` (`CodeStructure`: the objects, each
+  its whole and its inside, and the named nodes' ranges as an `Int32Array`, two million at most), an embedded part's
+  (a component's script) placed in the file. A code file's, and so a code cell's, comes with its pass
+  (`Languages.syntaxNow`): a key that needs a pass still under way, or one the text has changed since, starts it at
+  once and waits for its answer, as a key waits for what it does. A note's fenced block's comes from a pass of its own
+  on the syntax thread (`structureOnThread`, the structure alone), its lines sent without what the container puts
+  before each (a list's indent, a quote's `>`) as far as the fence's own, so Python reads its indentation; the last 64
+  kept by language and text. Only those whose lines hold the cursor become objects to choose among.
+- **Text objects** (EG-D6): beside `textObject` (`tui/shell/input/vim/motions.ts`), whose objects stay as they were,
+  the operators and visual mode send `f` `c` `a` `o` `h` `l` `k` to `Structure.object`. In code, `f` a function, method,
+  lambda or closure; `c` a class, interface, enum, struct, trait, impl or type; `a` an argument or a parameter; `o` a
+  block. A definition's whole takes its `export`, its decorators or attributes, and a declaration of the one name whose
+  value it is (`const f = () => …`); its inside is its body, between the braces where it has them. In Python, a
+  block's whole is the statement it's the block of, its header line with it. An argument's whole takes its comma and
+  the space after it, the last's the comma before it; its inside, the argument. As vim takes its own objects: a whole
+  with its lines to itself is those lines, and an inside between braces on lines of their own is the lines between;
+  else characters. In a note, `h` a section (its heading to the next of its level or higher, whole lines; `i h` the
+  lines after its heading, none when there are none), `l` a list item (its lines, with what's nested in it; its
+  characters when it shares its line with its parent's; `i l` its own text, without its marker, its task box or what's
+  nested), `o` a fenced block (its fences' lines, an unclosed or indented one too; `i o` the lines between), `k` a link
+  (inline, reference, wikilink, image, autolink; `i k` its text: a wikilink's alias or target, an image's description;
+  off one, the next on the line, as vim finds quotes). Inside a note's fenced block, `f`, `c` and `a` are its code's,
+  by its language. A count takes the enclosing one (`d 2 a h`). After the operators and in visual mode, where a
+  linewise object turns it to `V-LINE`; in SOURCE view and the lens; `.` repeats it. **Settled (EG-T5):** in a note,
+  `o` is the fence (`a o` its lines, `i o` its code's), and so is `] o`: the note's own structure, as `h`, `l` and `k`
+  are. The code's blocks in a fenced block are reached by `alt+o`, which grows through them to the fence.
 - **Surround** (EG-D8; `edit.surround_add` `y s <motion or object> <mark>`, `edit.surround_delete` `d s <mark>`,
   `edit.surround_change` `c s <old> <new>`, `visual.surround` `shift+s <mark>`; `[keys.source]` and the visual
   keymap): the marks are `*` italic, `b` bold, `` ` `` code (as many backticks as the text inside needs), `~`
@@ -590,8 +627,10 @@ Adds:
 - **Folding** (EG-D11): `z a` folds the cell as now, through `fold.toggle`; `z c` / `z o` close and open it; `z
   shift+m` folds every cell to its header (a class with its members), `z shift+r` opens them all. Restored with the
   tab (tui.md § Positions).
-- **The structure** (EG-D6, EG-D7): in its lens, the text objects and growing the selection by the grammar; `] f`, `]
-  a` and `] o` across its cells, landing on the row the node starts on, by each cell's map to the file.
+- **The structure** (EG-D6, EG-D7): `] f`, `] a` and `] o` while reading, across its cells, landing on the row the
+  node's line starts, by each cell's map to the file; in its lens, as in SOURCE view, the text objects and growing the
+  selection by the grammar. **Settled (EG-T5):** its reading takes the jumps, not the objects nor growing, which act on
+  an operator or a selection that reading hasn't; `alt+o` there says where it works.
 - **Inlay hints and uses** (EG-D19): on rows of code only, never on a header, a border or prose.
 - **TODOs** (EG-D9): coloured in its documentation's and comments' prose.
 - **Open:** the blame column and the inline diff here (EG-D16, EG-D17): by row of code, or by cell.

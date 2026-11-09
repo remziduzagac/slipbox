@@ -78,6 +78,7 @@ test("Bun file-local timeout sites stay named; update this map when a file moves
     ["tests/core/documents/syntax/documentation.test.ts", "UNIT_TIMEOUT_MS"],
     ["tests/core/documents/syntax/grammar.test.ts", "UNIT_TIMEOUT_MS"],
     ["tests/core/documents/syntax/links.test.ts", "UNIT_TIMEOUT_MS"],
+    ["tests/core/documents/syntax/structure.test.ts", "UNIT_TIMEOUT_MS"],
     ["tests/core/foundation/platform/clipboard.test.ts", "UNIT_TIMEOUT_MS"],
     ["tests/core/foundation/platform/lazy.test.ts", "UNIT_TIMEOUT_MS"],
     ["tests/core/foundation/platform/paths.test.ts", "UNIT_TIMEOUT_MS"],

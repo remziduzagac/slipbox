@@ -30,6 +30,25 @@ export interface Loaded {
   defs: Query | null;
   comments: Query;
   strings: Query;
+  /** Its text objects' query (EG-D6, `grammar/textobjects.ts`); null: it has none. */
+  objects: Query | null;
+}
+
+/** A text object of code (EG-D6), as UTF-16 offsets into the text parsed: the whole (`a`) and its inside (`i`): a
+ *  body's, between its braces where it has them; an argument's own text, its whole with the comma between it and the
+ *  next (or the one before). */
+export interface CodeObject {
+  kind: "function" | "class" | "argument" | "block";
+  from: number;
+  to: number;
+  inner: [number, number];
+}
+
+/** What the structure keys read of code (EG-D6, EG-D7): its text objects, and every named node's range as pairs of
+ *  offsets (`from, to, from, to…`), a node left out where it covers what its parent does. */
+export interface CodeStructure {
+  objects: CodeObject[];
+  nodes: Int32Array;
 }
 
 export interface OutlineEntry {

@@ -110,6 +110,9 @@ window's edge. [Reading](reading.md) says more.
 | the note's top / bottom | `g g` / `shift+g` | `ctrl+home` / `ctrl+end`, `cmd+up` / `cmd+down` |
 | previous / next heading | `[ [` / `] ]` | `alt+up` / `alt+down` |
 | previous / next paragraph | `{` / `}` | `ctrl+up` / `ctrl+down` |
+| previous / next function, by the code's language | `[ f` / `] f` | |
+| previous / next argument | `[ a` / `] a` | |
+| previous / next block; in a note, fenced block | `[ o` / `] o` | |
 | the window's top / middle / bottom row | `shift+h` / `shift+m` / `shift+l` | |
 | the matching bracket (SOURCE view and the lens) | `%` | |
 | onto the next / previous character you type, on the row | `f` / `shift+f` | |
@@ -122,6 +125,10 @@ window's edge. [Reading](reading.md) says more.
 tab show. Each Chinese, Japanese or Korean character counts as a word; punctuation, single letters and icons get none.
 Type a label to move the cursor there, into its window. The nearest labels are the shortest. `esc`, or a key no label
 goes on with, leaves the cursor where it was. In SOURCE view and the lens, `s` replaces a character, so use `g w` there.
+
+`] f`, `] a` and `] o` go by the code's own structure, as its language reads it: in a code file, and in a note's fenced
+block by the block's language. In a note, `] o` goes to the next fenced block. A count goes that many: `2 ] f`. After an
+operator, they're motions: `d ] f` deletes up to the next function.
 
 ### Scrolling
 
@@ -585,6 +592,7 @@ These keys belong to SOURCE view and the lens. In your configuration, they are u
 | switch the character's case, and move on | `~` |
 | put what was last deleted or copied after / before the cursor (a line goes under / over) | `p` / `shift+p` |
 | do the last change again, here | `.` |
+| select the word at the cursor, the start of growing the selection | `alt+o` |
 
 The motions are the cursor's keys: `w`, `b`, `e`, `0`, `^`, `$`, `j`, `k`, `g g`, `shift+g`, `{`, `}`, `%`, `f`, `t` and
 the rest. A jump label isn't one: `d g w` does nothing.
@@ -605,6 +613,13 @@ A text object follows `i` (inside) or `a` (around): `d i w`, `c i "`, `y a p`.
 | text in quotes, on the line | `"`, `'`, `` ` `` |
 | text in brackets, nested, across lines | `(`, `)` or `b`; `[` or `]`; `{`, `}` or `shift+b`; `<` or `>` |
 | a paragraph | `p` |
+| a function, by the code's language (in a note, in a fenced block) | `f` |
+| a class, or a type | `c` |
+| an argument; around, with its comma | `a` |
+| a block; in a note, a fenced block | `o` |
+| in a note, a section: its heading and what's under it, up to the next heading of its level | `h` |
+| in a note, a list item; inside, its text without its marker or task box | `l` |
+| in a note, a link; inside, its text | `k` |
 
 [Editing](editing.md) lists where these differ from vim.
 
@@ -621,6 +636,7 @@ they are under [`[keys.visual]`](configuration.md).
 | comment or uncomment its lines | `g c`, `ctrl+/` |
 | wrap its paragraphs to the width / join each back to one line | `g q` / `g shift+q` |
 | select a text object (`v i w`, `v i (`) | `i` or `a`, then the object |
+| grow the selection to the next thing around it, by the text's structure / back a step | `alt+o` / `alt+i` |
 | filter its lines through a shell command (types `:'<,'>!`) | `!` |
 
 A count works here too: `v 2 j`, `shift+v 3 >`.

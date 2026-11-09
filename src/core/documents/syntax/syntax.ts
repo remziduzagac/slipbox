@@ -23,10 +23,12 @@ export type {
   CodeComment,
   CodeImports,
   CodeModel,
+  CodeObject,
+  CodeStructure,
   CommentLink,
 } from "./contracts.ts";
 export { GRAMMARS } from "./grammar/assets.ts";
-export { grammarFor } from "./grammar/descriptors.ts";
+export { grammarFor, grammarForFence } from "./grammar/descriptors.ts";
 export { grammarNow, grammar } from "./grammar/loader.ts";
 export { SyntaxTree, parseSyntax } from "./tree/tree.ts";
 export { DOCUMENT_GRAMMARS, codeKind } from "./model/code-model.ts";

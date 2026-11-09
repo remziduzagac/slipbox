@@ -5,6 +5,7 @@ import { keyChar } from "../keys.ts";
 import { takeCount } from "./state.ts";
 import { textObject } from "./motions.ts";
 import { operatorKey } from "./operators.ts";
+import { STRUCTURE_OBJECTS } from "../../../documents/editing/structure.ts";
 function idle(app: App, view: View): boolean {
   const s = app.vim;
   return !s.count && !s.op && !s.awaitChar && !view.insert;
@@ -89,8 +90,14 @@ export async function visualKey(app: App, view: View, key: string, dispatch: () 
     s.visualObject = null;
     const ch = key === "escape" ? null : keyChar(key);
     if (ch === null) return;
-    const r = textObject(view, E.offsetOf(app, view), kind, ch, takeCount(app));
+    const at = E.offsetOf(app, view);
+    const structure = STRUCTURE_OBJECTS.has(ch);
+    const r = structure
+      ? await app.structure.object(view, at, kind, ch, takeCount(app))
+      : textObject(view, at, kind, ch, takeCount(app));
     if (!r) return app.message("info", `no ${kind}${ch} here`);
+    // A section, a fenced block's lines, a list item's: by whole lines, as they're taken (EG-D6).
+    if (structure && r.linewise) view.visual = "line";
     E.placeAt(app, view, r.from);
     app.views.select(view, { ...view.cur }, view.visual === "line");
     E.placeAt(app, view, Math.max(r.from, E.prevBoundary(view.buf.source, r.to)));

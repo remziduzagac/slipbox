@@ -14,6 +14,12 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
   its files, and a file into the commit's change. `space g y` copies the web link to the cursor's line, or a
   selection's, on GitHub or GitLab; `space g w` opens it, and copies it over SSH.
 
+- Text objects by structure: `f` a function, `c` a class or type, `a` an argument and `o` a block in code, by its
+  language; `h` a section, `l` a list item, `o` a fenced block and `k` a link in a note, and the code's in its fenced
+  blocks. `] f`, `] a` and `] o` (and `[`) go to the next function, argument and block, a note's fenced block for
+  `] o`. `alt+o` grows the selection from the word at the cursor to what's around it, step by step, and `alt+i` goes
+  back.
+
 - The switcher, search, find in every note, references, backlinks and links preview the selected row's place beside
   the list, read-only, its match marked; under the list on a narrow screen. `ctrl+t` hides it. `alt+enter` opens the
   pick here, in the split or in a new tab, and `space '` brings the last of these lists back as you left it.
