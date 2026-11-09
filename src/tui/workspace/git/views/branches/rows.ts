@@ -100,6 +100,8 @@ export class BranchRows {
           letter: GIT_MARK[f.state],
           base: st.base,
         });
+      // Its commits since the base (EG-D4), after its files.
+      rows.push(...this.app.gitLog.branchRows(b, st.base));
     }
     return rows;
   }

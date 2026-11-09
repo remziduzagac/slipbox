@@ -1,13 +1,13 @@
 // Who changed what, and a file's history (plans 26.4 and 22.1): a line's last commit by `git blame` — of the last
 // commit, never the working tree, which could run a repository's filter (docs: the code-execution review); a line
 // changed since is the working tree's own — and a file's commits by `git log --follow`, each with the path it had then,
-// so a version from before a rename can be read. Every command with `23.6`'s guards in a root not trusted, a file's
-// path taken as that file, literally (`literalArgs`).
+// so a version from before a rename can be read; a branch's commits since its base, and the files each changed (EG-D4).
+// Every command with `23.6`'s guards in a root not trusted, a file's path taken as that file, literally (`literalArgs`).
 
 import { execFileSync } from "node:child_process";
 import { posix, sep } from "node:path";
 import type { Checkout } from "../git.ts";
-import { gitArgs, gitReadLater, literalArgs, literalEnv } from "../branches/gitops.ts";
+import { type Changed, gitArgs, gitReadLater, literalArgs, literalEnv, parseNameStatus } from "../branches/gitops.ts";
 import { diffLines } from "../merge/merge.ts";
 
 const OPTS = {
@@ -53,6 +53,35 @@ export function lineInHead(head: string, now: string, line: number): number | nu
     shift += h.aLen - h.bLen;
   }
   return line + shift;
+}
+
+/**
+ * Lines `from` to `to` of the text now (from 1) as the last commit has them: the first and the last of them that are
+ * committed, each where it was there; null when none is (each changed since, or the range past the text's end).
+ */
+export function linesInHead(head: string, now: string, from: number, to = from): { from: number; to: number } | null {
+  // A byte order mark is no change to the first line, nor a line ending to any.
+  const lines = (text: string) => text.replace(/^﻿/, "").replace(/\r\n/g, "\n").split("\n");
+  const a = lines(head);
+  const b = lines(now);
+  const hunks = diffLines(a, b);
+  /** Line `line` of the text now in the commit's, or null: changed since. */
+  const at = (line: number): number | null => {
+    let shift = 0;
+    for (const h of hunks) {
+      if (line - 1 < h.bStart) break;
+      if (line - 1 < h.bStart + h.bLen) return null;
+      shift += h.aLen - h.bLen;
+    }
+    return line + shift;
+  };
+  const [lo, hi] = from <= to ? [from, Math.min(to, b.length)] : [to, Math.min(from, b.length)];
+  let first: number | null = null;
+  for (let l = lo; l <= hi && first === null; l++) first = at(l);
+  if (first === null) return null;
+  let last: number | null = null;
+  for (let l = hi; l >= lo && last === null; l--) last = at(l);
+  return { from: first, to: last ?? first };
 }
 
 /** git blame's porcelain for one line: its commit's hash, author, time and subject. */
@@ -153,4 +182,68 @@ export async function fileLogLater(
     signal,
   );
   return out === null ? null : parseLog(out);
+}
+
+/** A commit of a branch's (EG-D4), as the git panel and `:log` list it: its first parent, for its files' changes. */
+export interface BranchCommit {
+  hash: string;
+  /** Its first parent; null for a root commit. A merge's files are its changes against this one. */
+  parent: string | null;
+  author: string;
+  /** Seconds since the epoch. */
+  time: number;
+  subject: string;
+}
+
+/** The format `branchLogLater` asks for: `\x01`, then hash, parents, author, time and subject apart by `\0`. */
+const COMMIT_FORMAT = "--format=%x01%H%x00%P%x00%an%x00%at%x00%s";
+
+/** `git log`'s records in `COMMIT_FORMAT`. */
+export function parseCommits(out: string): BranchCommit[] {
+  return out
+    .split("\x01")
+    .filter((r) => r.trim())
+    .flatMap((r) => {
+      const [hash = "", parents = "", author = "", time = "", subject = ""] = r.replace(/\n+$/, "").split("\0");
+      return /^[0-9a-f]{40,64}$/.test(hash)
+        ? [{ hash, parent: parents.split(" ")[0] || null, author, time: Number(time) || 0, subject }]
+        : [];
+    });
+}
+
+/** The commits on `branch` since it left `base` (`git log base..branch`), newest first, up to `max`; null without git. */
+export async function branchLogLater(
+  c: Pick<Checkout, "root">,
+  base: string,
+  branch: string,
+  max = 500,
+  signal?: AbortSignal,
+): Promise<BranchCommit[] | null> {
+  const out = await gitReadLater(
+    c,
+    ["log", `--max-count=${max}`, COMMIT_FORMAT, "--end-of-options", `${base}..${branch}`],
+    false,
+    signal,
+  );
+  return out === null ? null : parseCommits(out);
+}
+
+/**
+ * The files a commit changed (`git diff-tree -r -M --name-status`): against its first parent, a merge's too; a root
+ * commit's, every file added. By path; null without git.
+ */
+export async function commitFilesLater(
+  c: Pick<Checkout, "root">,
+  commit: Pick<BranchCommit, "hash" | "parent">,
+  signal?: AbortSignal,
+): Promise<Changed[] | null> {
+  const against = commit.parent ? [commit.parent, commit.hash] : [commit.hash];
+  const root = commit.parent ? [] : ["--root"];
+  const out = await gitReadLater(
+    c,
+    ["diff-tree", "-r", "-M", "--name-status", "-z", "--no-commit-id", ...root, "--end-of-options", ...against],
+    false,
+    signal,
+  );
+  return out === null ? null : parseNameStatus(out).sort((a, b) => (a.path < b.path ? -1 : 1));
 }

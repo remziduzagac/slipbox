@@ -76,6 +76,11 @@ export const CHECKS_FOR: [RegExp, string[]][] = [
     ["git"],
   ],
   [/^src\/tui\/workspace\/git\/views\/changes\/diffview\.ts$/, ["git", "conflict"]],
+  // `space g`'s own (EG-D15): the change and the file from a note, a branch's commits, a line's web link.
+  [
+    /^src\/(?:core\/workspace\/git\/forge|tui\/workspace\/git\/(?:weblink|views\/(?:changes\/here|log\/(?:log|list|reads))))\.ts$/,
+    ["git"],
+  ],
   // Export.
   [/^src\/core\/rendering\/export\/(?!export-worker\.ts$)/, ["export"]],
   [/^src\/tui\/documents\/export\/exporter\.ts$/, ["export"]],

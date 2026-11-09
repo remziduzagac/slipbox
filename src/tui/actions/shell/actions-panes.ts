@@ -7,6 +7,8 @@ import type { App } from "../../app/runtime/app.ts";
 import { diffSwitch } from "../../workspace/git/views/changes/diffview.ts";
 import { blameHere, historyHere } from "../../workspace/git/views/history/githistory.ts";
 import { gitStep, gitPreview, gitReset } from "../../workspace/git/views/changes/gitchanges.ts";
+import { stageHere, unstageHere } from "../../workspace/git/views/changes/here.ts";
+import { webLinkHere } from "../../workspace/git/weblink.ts";
 import { gitFetch, gitPull, gitPush, gitStash } from "../../workspace/git/gitremote.ts";
 import {
   mergeAgent,
@@ -203,6 +205,12 @@ export function paneActions(): Record<string, Run> {
     "git.change_prev": (a) => withView(a, (v) => gitStep(a, v, -1)),
     "git.change_preview": (a) => withView(a, (v) => gitPreview(a, v)),
     "git.change_undo": (a) => withView(a, (v) => gitReset(a, v)),
+    // `space g`'s own (EG-D15): the cursor's change or the note's file; the branch's commits; the line's web link.
+    "git.change_stage": (a) => withView(a, (v) => stageHere(a, v)),
+    "git.file_unstage": (a) => withView(a, (v) => unstageHere(a, v)),
+    "git.log": (a) => a.gitLog.open(),
+    "git.web_copy": (a) => withView(a, (v) => webLinkHere(a, v, "copy")),
+    "git.web_open": (a) => withView(a, (v) => webLinkHere(a, v, "open")),
     "git.worktrees": (a) => a.git.openWorktrees(),
     "git.merge_review": (a) => a.git.openMergeReview(),
     // The remote's commands and stash (26.6): in the background, asked for, never on a timer.

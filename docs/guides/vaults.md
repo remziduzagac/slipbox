@@ -102,7 +102,7 @@ its branch dimmed at its end:
 - `enter` on it goes into product, with your workspace there. The top bar says `◈ product │ ⎇ feature/okrs`, and the
   zoom stays at `~/work`.
 - `ctrl+o` comes back into kestrel, its tabs as you left them.
-- The git panel (`space g`) in kestrel is kestrel's, the other two folded under it, in Other repositories.
+- The git panel (`space g g`) in kestrel is kestrel's, the other two folded under it, in Other repositories.
 
 Started on the folder itself, `slipbox ~/work`, you're in home, with the explorer zoomed to `~/work`. The rows are the
 same, once
@@ -141,7 +141,7 @@ line names it by its repository and its branch: `kestrel@agent/sync-retry`.
 
 To review the agent's work from your checkout:
 
-1. In kestrel, `space g` opens the git panel. Under Branches, `agent/sync-retry` is marked `⎇`, with its folder.
+1. In kestrel, `space g g` opens the git panel. Under Branches, `agent/sync-retry` is marked `⎇`, with its folder.
 2. `enter` opens it up in place: its files changed against its base, each with its diff a click away.
 3. `[Open]` goes into the worktree, at the note you were on if the branch has it. Or `:worktrees` lists the checkouts,
    and `enter` goes into one.

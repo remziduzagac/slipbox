@@ -230,7 +230,38 @@ export const GIT_SPECS: CommandSpec[] = [
     id: "git.change_undo",
     title: "Undo the change",
     cli: I,
-    desc: "Puts the change's lines back as staged: one undo step, left unsaved",
+    desc: "Puts the change's lines back as staged, after asking: one undo step, left unsaved",
+  },
+  // `space g`, the note's own change and file (EG-D15); a branch's commits (EG-D4); a line's web link (EG-D18).
+  {
+    id: "git.change_stage",
+    title: "Stage the change",
+    cli: I,
+    desc: "Stages the change on the cursor's line, as its sign's Stage it; off a change, this file. Saved first: git stages what's on disk",
+  },
+  {
+    id: "git.file_unstage",
+    title: "Unstage this file",
+    cli: I,
+    desc: "What's staged of this file goes back to the last commit's; the file itself stays as it is",
+  },
+  {
+    id: "git.log",
+    title: "This branch's commits",
+    cli: I,
+    desc: "The commits since the branch's base, newest first: enter lists one's files, enter on a file shows its change",
+  },
+  {
+    id: "git.web_copy",
+    title: "Copy the line's web link",
+    cli: I,
+    desc: "The cursor's line, or the selection's lines, on GitHub or GitLab at the commit checked out, copied",
+  },
+  {
+    id: "git.web_open",
+    title: "Open the line's web link",
+    cli: I,
+    desc: "The cursor's line, or the selection's lines, on GitHub or GitLab, opened in your browser; over SSH, copied",
   },
   {
     id: "git.diff",

@@ -303,7 +303,7 @@ export function worktreeFolder(template: string, repo: string, branch: string, h
 }
 
 /**
- * What this checkout changed against `base` (GIT-D8), as `space g c` lists it: since the branch left the base (the
+ * What this checkout changed against `base` (GIT-D8), as `:changes` lists it: since the branch left the base (the
  * merge base), committed or not, its untracked files and its conflicts (from `entries`, git's status); in the
  * background. Null without git or a commit in common.
  */

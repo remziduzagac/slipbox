@@ -11,7 +11,7 @@ export const GIT_PANEL: Check[] = [
     options: { startAt: "projects/a.md", config: "[ui]\nsidebar_width = 90\n", setup: repositories },
     run: async (s) => {
       await s.where(/projects$/, /a\.md/);
-      await leader(s, "g");
+      await leader(s, "g", "g");
       await s.status("GIT");
       await s.see(/projects holds 3 repositories/, 10_000);
       // By what needs attention, as git says: beta's worktree to review, gamma's change, alpha clean.

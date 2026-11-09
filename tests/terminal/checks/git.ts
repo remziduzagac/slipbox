@@ -390,8 +390,8 @@ export const GIT: Check[] = [
       await s.type("Commit");
       await s.keys("enter");
       await s.message("nothing staged — s stages a file in the git panel");
-      // space g: the git panel, the changed files by section; s stages the one selected.
-      await leader(s, "g");
+      // space g g: the git panel, the changed files by section; s stages the one selected.
+      await leader(s, "g", "g");
       await s.see("Source control");
       await s.see(/Changes \(\d+\)/, 5000);
       await s.see(/M sync\.md +docs/);
@@ -490,7 +490,7 @@ export const GIT: Check[] = [
       chmodSync(hook, 0o755);
       await s.where(/ │ main$/);
       // Source control's keys: shift+p pushes, f fetches, p pulls.
-      await leader(s, "g");
+      await leader(s, "g", "g");
       await s.see("Source control");
       // main has no upstream: asked to push it to origin/main and track it there.
       await s.keys("shift+p");
@@ -572,7 +572,7 @@ export const GIT: Check[] = [
       s.write(SYNC, `${s.read(SYNC)}\n${LINE}\n`);
       await s.status("reloaded", 5000);
       // Source control's z; then the palette's :stash.
-      await leader(s, "g");
+      await leader(s, "g", "g");
       await s.see("Source control");
       await s.keys("z");
       await s.see("Stashes (0) — enter: pop, apply or drop one");
@@ -653,7 +653,7 @@ export const GIT: Check[] = [
   },
   {
     area: "links-and-files",
-    name: "git: the gutter's changes — ] c and [ c go to them, Preview the change shows one, Undo the change undoes it",
+    name: "git: the gutter's changes — ] c and [ c go to them, Preview the change shows one, Undo the change undoes it after asking",
     covers: {
       cases: ["git"],
       commands: ["git.change_next", "git.change_prev", "git.change_preview", "git.change_undo"],
@@ -678,8 +678,10 @@ export const GIT: Check[] = [
       await s.see(`line ${first}, against what's staged`);
       await s.see("+How an edit travels between devices.");
       await s.keys("escape");
-      // Undone: its lines as staged, put back; unsaved, one undo step.
+      // Undone, after asking: its lines as staged, put back; unsaved, one undo step.
       await s.ex("Undo the change");
+      await s.see(`Undo the change at line ${first}?`);
+      await s.keys("y");
       await s.message(`the change at line ${first} undone, as staged (unsaved)`);
       await s.see("How an edit gets from one device to the others.");
       await s.status("unsaved");

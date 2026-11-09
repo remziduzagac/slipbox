@@ -1,6 +1,6 @@
 ---
-status: todo
-assignee: ""
+status: done
+assignee: claude-cli
 blocked_by: []
 created: "2026-11-08"
 ---
@@ -30,4 +30,7 @@ EG-D15, EG-D4, EG-D18.
 
 ## Open
 
-- A line not committed, or a commit not pushed, in a web link.
+- A line not committed, or a commit not pushed, in a web link. Settled: the lines are the commit's, mapped through the
+  changes since as blame maps a line; one not committed has no link, said, and a selection keeps its committed lines.
+  A commit no branch of the remote's holds (as of the last fetch) is linked all the same and said; `space g w` copies
+  it rather than opening a page not there yet (design.md § Git).

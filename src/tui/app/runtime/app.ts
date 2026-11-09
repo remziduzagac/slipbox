@@ -65,6 +65,7 @@ import { Pictures } from "../../documents/media/pictures.ts";
 import { Languages } from "../../documents/diagnostics/languages.ts";
 import { Git } from "../../workspace/git/git.ts";
 import { GitPanel } from "../../workspace/git/views/panel/gitpanel.ts";
+import { GitLog } from "../../workspace/git/views/log/log.ts";
 import { Search } from "../../workspace/search/search.ts";
 import { Views } from "../../documents/views/views.ts";
 import { Lens } from "../../documents/editing/lens.ts";
@@ -220,6 +221,7 @@ export class App {
   readonly git = new Git(this);
   /** The git panel (GIT-D8): its message, its sections folded, its branches and repositories, its keys and mouse. */
   readonly gitPanel = new GitPanel(this);
+  readonly gitLog = new GitLog(this); // a branch's commits (EG-D4): the panel's, Branches', `:log`
   /** Search: the index and its list, tags and types, replace across notes. */
   readonly search = new Search(this);
   /** Views: layout, anchors, cursor and selection, scrolling. */

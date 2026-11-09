@@ -63,7 +63,7 @@ export const SHOTS: Shot[] = [
     options: HOME("work/infra/k8s/tiles.yaml"),
     take: async (s) => {
       await s.status("tiles.yaml");
-      await leader(s, "g");
+      await leader(s, "g", "g");
       await s.see("Changes");
       // The first file, under its section's heading: its changes opened up under it.
       await s.keys("g", "g", "j", "l");
@@ -88,7 +88,7 @@ export const SHOTS: Shot[] = [
     take: async (s) => {
       await s.status("sync.md");
       await quiet(s);
-      await leader(s, "g");
+      await leader(s, "g", "g");
       await s.see("Changes");
       // The review's first change: the sync doc's, its paragraph before and after.
       await s.keys("v");

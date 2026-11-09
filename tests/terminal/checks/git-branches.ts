@@ -362,12 +362,12 @@ export const GIT_BRANCHES: Check[] = [
       await panelRow(s, "agent/sifted");
       s.expect(!isSelected(s, "agent/sifted"), "the selection left where the filter's keys put it");
       await s.keys("escape");
-      // The panel closed (space g, focused) before git answers: nothing unfolded or selected in it, unseen — the
+      // The panel closed (space g g, focused) before git answers: nothing unfolded or selected in it, unseen — the
       // Branches folded first, folded still.
       await selectRow(s, "▾ Branches");
       await s.keys("enter");
       await panelRow(s, "▸ Branches");
-      await newBranch(s, "agent/unseen", "main", "enter", "space", "g");
+      await newBranch(s, "agent/unseen", "main", "enter", "space", "g", "g");
       await s.message("made agent/unseen from main, in a new worktree");
       await Bun.sleep(1500);
       await toPanel(s);
@@ -490,9 +490,11 @@ export const GIT_BRANCHES: Check[] = [
       await goInto(s);
       await s.where(/ │ main(?: |$)/);
       await toPanel(s);
-      // Back in the main checkout: its row clicked, selected (and opened up).
+      // Back in the main checkout: its row clicked, selected (and opened up), its commits in (rows that land under it,
+      // above agent/done's, before that's clicked).
       await on(s, "⎇ agent/ahead");
       await s.until(() => isSelected(s, "agent/ahead"), undefined, "agent/ahead selected");
+      await panelRow(s, "Commits (1)");
       await s.keys(".", "down", "enter", ":", ..."worktrees", "enter", ..."agent/done", "enter");
       await goInto(s);
       await s.where(/trail-agent-done │ agent\/done(?: |$)/);

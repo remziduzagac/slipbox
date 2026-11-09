@@ -68,6 +68,7 @@ export const DEFAULT_ALIASES: Record<string, string> = {
   "export-notes": "note.export_many",
   search: "search.open",
   changes: "git.changes",
+  log: "git.log",
   diff: "git.diff",
   worktrees: "git.worktrees",
   "merge-review": "git.merge_review",

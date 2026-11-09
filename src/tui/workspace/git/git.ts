@@ -155,7 +155,7 @@ export class Git {
     return this.bases.baseLater(c, query);
   }
 
-  /** `space g c` (5.13): what this branch changed against the base, committed or not; enter: its diff. */
+  /** `:changes` (5.13): what this branch changed against the base, committed or not; enter: its diff. */
   async openChanges(): Promise<void> {
     const c = this.checkout;
     if (!c) return this.app.message("info", "not in a git repository");
@@ -192,7 +192,7 @@ export class Git {
     });
   }
 
-  /** `space g d` (5.13): this note's changes on the branch — against where it left the base. */
+  /** `:diff` (5.13): this note's changes on the branch — against where it left the base. */
   openDiff(): void | Promise<void> {
     const rel = this.app.view?.buf.rel;
     if (!rel) return this.app.message("info", "diff: open a note first");
@@ -344,7 +344,7 @@ export class Git {
     void this.refreshNow().then(() => this.app.host.requestRender());
   }
 
-  /** `space g w` (5.14): the repository's checkouts by branch; enter goes into one, at this note. */
+  /** `:worktrees` (5.14): the repository's checkouts by branch; enter goes into one, at this note. */
   openWorktrees(): void {
     const c = this.checkout;
     if (!c) return this.app.message("info", "not in a git repository");
@@ -516,7 +516,7 @@ export class Git {
     if (this.app.floating && !this.app.overlays.closeFloating()) return;
     const staged = sections(this.entries ?? []).staged.map((e) => e.path);
     if (!amend && !staged.length)
-      return this.app.message("info", "nothing staged — s stages a file in the git panel (space g)");
+      return this.app.message("info", "nothing staged — s stages a file in the git panel (space g g)");
     const last = amend ? (typed.trim() ? typed.replace(/\s+$/, "") : lastMessage(c)) : typed.replace(/\s+$/, "");
     if (amend && last === null) return this.app.message("info", "no commit to amend yet");
     const trusted = isTrusted(c.root);

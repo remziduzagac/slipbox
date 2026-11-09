@@ -283,7 +283,8 @@ async function betweenFrames(s: Session, ok: () => boolean): Promise<boolean> {
 export async function panelFocused(s: Session, key: string, panelMode: string, title: RegExp): Promise<void> {
   const focused = () => s.rowOf(title) >= 0 && mode(s) === panelMode;
   if (await betweenFrames(s, focused)) return;
-  await leader(s, key);
+  // A key in a group (`g g`): each of its keys after the leader.
+  await leader(s, ...key.split(" "));
   await s.until(focused, undefined, `space ${key} to open the panel and focus it`);
 }
 

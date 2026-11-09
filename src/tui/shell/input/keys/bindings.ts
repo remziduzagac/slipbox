@@ -271,7 +271,15 @@ export const DEFAULT_KEYS: Record<string, string> = {
   "leader s c": "context.copy",
   "leader s d": "scratch.clear",
   // The git panel (GIT-D12): open, focus, close, as space e the explorer; its own keys act there ([keys.git]).
-  "leader g": "git.view",
+  // `space g`, a group (EG-D15): the panel; the note's change and file; the branch's commits; the line's web link.
+  "leader g g": "git.view",
+  "leader g s": "git.change_stage",
+  "leader g u": "git.file_unstage",
+  "leader g d": "git.change_undo",
+  "leader g enter": "git.change_preview",
+  "leader g l": "git.log",
+  "leader g y": "git.web_copy",
+  "leader g w": "git.web_open",
   // note, folder, app
   "leader n r": "note.reload",
   "leader n e": "note.edit",

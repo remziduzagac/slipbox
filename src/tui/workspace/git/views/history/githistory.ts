@@ -1,6 +1,7 @@
-// Blame and a file's history from the TUI (plans 26.4, 22.1): `space g b`, who last changed the cursor's line — its
-// commit, author, date and message, in the floating window; a line changed since is said to be the working tree's —
-// and `space g h`, the file's commits (followed through renames), each opened to read as it was or diffed to now.
+// Blame and a file's history from the TUI (plans 26.4, 22.1): Who changed this line (`git.blame`), who last changed the
+// cursor's line — its commit, author, date and message, in the floating window; a line changed since is said to be the
+// working tree's — and This file's history (`git.history`), the file's commits (followed through renames), each opened
+// to read as it was or diffed to now. Both in the git panel's This file, and the palette (GIT-D12, EG-D23).
 
 import { join, relative } from "node:path";
 import {
@@ -36,7 +37,7 @@ function cursorLine(app: App, view: View): number {
   return app.currentLayout(view).lines[view.cur.row]?.src ?? 1;
 }
 
-/** `space g b`: who last changed the cursor's line, in the floating window: the commit, its author and date, its message. */
+/** `git.blame`: who last changed the cursor's line, in the floating window: the commit, its author and date, its message. */
 export async function blameHere(app: App): Promise<void> {
   const view = app.view;
   const path = fileHere(app, view);
@@ -55,12 +56,12 @@ export async function blameHere(app: App): Promise<void> {
   const message = (await messageLater(c, b.hash, query.signal)) || b.subject;
   if (!query.current()) return;
   app.overlays.openHover(
-    `**${b.hash.slice(0, 8)}** · ${b.author} · ${day(b.time)}\n\n\`\`\`text\n${message}\n\`\`\`\n\n\`space g h\`: the file's history`,
+    `**${b.hash.slice(0, 8)}** · ${b.author} · ${day(b.time)}\n\n\`\`\`text\n${message}\n\`\`\`\n\nThis file's history, in the git panel or the palette, lists its commits`,
     `line ${line}, last changed in ${b.hash.slice(0, 8)}`,
   );
 }
 
-/** `space g h`: the file's commits, newest first; one picked, read as it was or diffed to the text now. */
+/** `git.history`: the file's commits, newest first; one picked, read as it was or diffed to the text now. */
 export async function historyHere(app: App): Promise<void> {
   const view = app.view;
   const path = fileHere(app, view);

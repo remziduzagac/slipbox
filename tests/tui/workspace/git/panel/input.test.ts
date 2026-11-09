@@ -55,7 +55,7 @@ describe("the git panel by mouse as by keys (GIT-D8)", () => {
     await keys("i", "x", "enter");
     expect(app.gitPanel.typing).toBe(false);
     // Nothing staged: said, no editor.
-    expect(app.messages.at(-1)?.text).toBe("nothing staged — s stages a file in the git panel (space g)");
+    expect(app.messages.at(-1)?.text).toBe("nothing staged — s stages a file in the git panel (space g g)");
   });
 
   test("a line starting with # is the message's own: the box commits it as typed; the editor's guide starts with ; then", async () => {

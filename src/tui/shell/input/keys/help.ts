@@ -309,6 +309,8 @@ export const DEFAULT_GROUPS: Record<string, string> = {
   "leader v":
     "folders: go into one, its copies, name it, .slipbox/ in or out, the trash, restore, reindex, info, reload config, symlinks answered",
   "leader q": "session: quit",
+  "leader g":
+    "git: the panel (g); this line's change: stage (s), undo (d), preview (enter); this file unstaged (u); the branch's commits (l); the line's web link: copy (y), open (w)",
   y: "copy: selection, path, reference, link",
   "ctrl+w": "window: split, focus, move, resize",
   "ctrl+t": "tabs: open, switch, reorder, close",

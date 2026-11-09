@@ -8,14 +8,14 @@ import { makeGitPanelFixture } from "../../../../support/tui/git-panel-fixture.t
 // File-owned Git-panel setup preserves its environment restoration and cleanup.
 const { git, repo, until, panel } = makeGitPanelFixture();
 
-describe("space g, the status line's branch, a change's sign (GIT-D8, GIT-D12)", () => {
-  test("space g opens the git panel and focuses it; again, closes it", async () => {
+describe("space g g, the status line's branch, a change's sign (GIT-D8, GIT-D12)", () => {
+  test("space g g opens the git panel and focuses it; again, closes it", async () => {
     const root = repo();
     const { app, keys } = await panel(root, "a.md", false);
     expect(app.panels.sidebarShown && app.leftView === "git").toBe(false);
-    await keys("space", "g");
+    await keys("space", "g", "g");
     expect([app.leftView, app.region, app.panels.sidebarShown]).toEqual(["git", "sidebar", true]);
-    await keys("space", "g");
+    await keys("space", "g", "g");
     expect(app.panels.sidebarShown).toBe(false);
   });
 

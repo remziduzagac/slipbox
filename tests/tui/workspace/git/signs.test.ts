@@ -30,6 +30,11 @@ describe("changes against what's staged, in the gutter (26.1)", () => {
     expect(await until(() => (h.frame(), h.app.git.changesOf(h.app.view!) !== null))).toBe(true);
     return h.app.git.changesOf(h.app.view!)!;
   };
+  /** The change at the cursor undone: the question it asks first answered yes (none in a file it can't edit). */
+  const undoAsked = async (h: Harness) => {
+    await h.app.run("git.change_undo");
+    if (h.app.overlay?.kind === "prompt") await h.keys("y");
+  };
   /** The gutter cell just before a row's text, and its style. Looked for in the window alone: the explorer's
    *  breadcrumb names the root's folder, `signs-` and six random letters, which may hold the text too. */
   const signAt = (h: Harness, text: string) => {
@@ -74,14 +79,14 @@ describe("changes against what's staged, in the gutter (26.1)", () => {
     expect(h.app.floating!.title).toBe("1 line deleted after line 5, against what's staged");
     await h.keys("escape");
     // Undone: the deletion's line back at the end; then the change on line 2.
-    await h.app.run("git.change_undo");
+    await undoAsked(h);
     expect(buf.source).toBe("one\nTWO\nthree\nnew\nfour\nfive\n");
     expect(h.app.messages.at(-1)?.text).toBe("the change at line 5 undone, as staged (unsaved)");
     await h.keys("g", "g", "]", "c");
-    await h.app.run("git.change_undo");
+    await undoAsked(h);
     expect(buf.source).toBe("one\ntwo\nthree\nnew\nfour\nfive\n");
     await h.keys("]", "c");
-    await h.app.run("git.change_undo");
+    await undoAsked(h);
     expect(buf.source).toBe("one\ntwo\nthree\nfour\nfive\n");
     expect(await changes(h)).toEqual([]);
     await h.app.run("git.change_next");
@@ -106,7 +111,7 @@ describe("changes against what's staged, in the gutter (26.1)", () => {
       if (edit !== undefined) h.app.view!.buf.edit(0, h.app.view!.buf.source.length, edit);
       expect((await changes(h)).length).toBe(1);
       await h.keys("g", "g", "]", "c");
-      await h.app.run("git.change_undo");
+      await undoAsked(h);
       return h.app.view!.buf.source;
     };
     expect(await undo("g3.md", "a\nB")).toBe("a\nb");

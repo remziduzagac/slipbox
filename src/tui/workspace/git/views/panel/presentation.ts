@@ -134,7 +134,10 @@ export class PanelPresentation {
       case "ahead":
       case "bfile":
       case "rfile":
+      case "cfile":
         return [...k("open", "diff"), ...(row.kind !== "bfile" ? k("go", "open") : []), ...k("menu", "more")];
+      case "commit":
+        return [...k("open", row.open ? "fold" : "its files"), ...k("menu", "more")];
       case "thisfile":
         return k("open", row.label.toLowerCase());
       case "branch":
