@@ -557,3 +557,19 @@ dates. Each says what was asked, decided, built and found, and cites the decisio
 - D272 went to another pull request of the same day (#245); this one is D273.
 - The record and the version CIW-T7 asked for needed nothing: D266 had already stopped a pull request's pass counting
   for a push's.
+
+## A slow disk: the workstream drafted (2026-11-09)
+
+- Issue #46, what T12 left on the screen's thread, drafted as a workstream for the maintainer's approval:
+  [SD](workstreams/slow-disk/README.md). Its inventory was checked against the code on `dev` (0df9a0a6) and adds
+  what the issue didn't name: the `.gitignore` stamped every look, the events' settle by stat, the config's and git's
+  stamps every second, the activity file, what drawing a note reads, the Problems panel's notes.
+- Nothing is decided: its decisions are proposed (SD-D1 to SD-D10) and its questions open, for the maintainer.
+- The same day, the maintainer answered its seven questions, each with the option recommended: SD-D2, SD-D3, SD-D4,
+  SD-D6, SD-D7 and SD-D9 are agreed, and what drawing a note reads is in, as the last code task. SD-D1's order, SD-D5,
+  SD-D8 and SD-D10 stay proposed.
+- Later that day the maintainer agreed those four as proposed and had the tasks' own questions decided with the
+  recommendation (SD-D11, SD-D12): every decision is agreed, and SD is active, its tasks not started.
+- On 2026-11-10 the design's review was answered: the inventory grew by the reads it had missed, the boundary check
+  became an allow list, a look's deadline is set by what asked, and two decisions came of it (SD-D13, what's drawn is
+  kept; SD-D14, each task's terminal checks run before it merges); the workstream's notes say each.
