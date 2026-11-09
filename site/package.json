@@ -9,8 +9,8 @@
     "build": "bun scripts/gather.ts && bun --bun astro build && bun scripts/check-links.ts && bun scripts/check-meta.ts"
   },
   "dependencies": {
-    "@astrojs/starlight": "0.42.6",
-    "astro": "7.3.8"
+    "@astrojs/starlight": "0.42.7",
+    "astro": "7.4.2"
   },
   "overrides": {
     "sharp": "file:./stubs/sharp"

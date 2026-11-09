@@ -221,9 +221,9 @@ another, from a fixed `dev`.
 - **Security updates** open as soon as an advisory is published, and are looked at when they come.
 - **OpenTUI** is pinned exactly and moves fast: an update to it follows its upgrade policy,
   `blueprint/design/how-it-works.md` § OpenTUI upgrade policy, which includes trying the TUI by hand.
-- **The scanner** checks `bun.lock` against known advisories on a schedule and when the lockfile changes; what it finds
-  is in the health issue. Each finding is fixed by an update, or ignored in the scanner's config with the reason and a
-  date to look again.
+- **The scanner** checks `bun.lock` and the docs' site's `site/bun.lock` against known advisories on a schedule and
+  when either lockfile changes; what it finds is in the health issue. Each finding is fixed by an update, or ignored in
+  the scanner's config with the reason and a date to look again.
 
 ### The supply chain's gates
 
