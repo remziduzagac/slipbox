@@ -244,7 +244,7 @@ const ALIKE = 0.5;
 const PAIR_LIMIT = 2500;
 /** The tokens a hunk's pairs may diff by word, the two lines' together: past them, the lines not yet tried pair with
  *  none (a note rewritten whole shows its blocks removed and added, at once). */
-const PAIR_TOKENS = 100_000;
+export const PAIR_TOKENS = 100_000;
 
 /** A line's tokens, and how many times each word is in it. */
 interface Tokens {

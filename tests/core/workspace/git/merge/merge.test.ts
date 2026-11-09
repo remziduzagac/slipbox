@@ -24,8 +24,9 @@ describe("diff and three-way merge (5.5)", () => {
     let best = Number.POSITIVE_INFINITY;
     for (let k = 0; k < 3; k++) {
       const t = performance.now();
-      diffLines(big, changed);
+      const hunks = diffLines(big, changed);
       best = Math.min(best, performance.now() - t);
+      expect(hunks.length).toBe(2);
     }
     expect(best).toBeLessThan(200);
   });

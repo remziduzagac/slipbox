@@ -6,6 +6,7 @@ import {
   diffView,
   diffWords,
   inRanges,
+  PAIR_TOKENS,
   pairLines,
   unseenChange,
   unseenRows,
@@ -394,7 +395,8 @@ describe("a note's diff as blocks, before and after (GIT-D2)", () => {
 
   test("a note rewritten whole: its blocks removed and added, at once — a pair diffed by word only if it could be alike", () => {
     // The work counted, not timed: every diff, of a note's lines, its blocks or a pair's words, is a Myers diff, and
-    // what it compares is the tokens of both sides.
+    // what it compares is the tokens of both sides. The rest (each pair's words tallied, the table of pairs) grows with
+    // the pairs alone; the test's own timeout bounds it.
     const diffs = spyOn(myers, "diffLines");
     const compared = () => diffs.mock.calls.reduce((n, [a, b]) => n + a.length + b.length, 0);
     try {
@@ -403,9 +405,12 @@ describe("a note's diff as blocks, before and after (GIT-D2)", () => {
       const note = (seed: string) => `${Array.from({ length: 50 }, (_, i) => para(seed, i, 400)).join("\n\n")}\n`;
       const d = blockDiff(note("w"), note("v"));
       expect(new Set(d.items.map((i) => i.kind))).toEqual(new Set(["@@", "removed", "added"]));
-      expect(compared()).toBeLessThan(1600);
+      const notes = compared();
+      expect(notes).toBeGreaterThan(0);
+      expect(notes).toBeLessThan(1600);
       // The same fifty words in every paragraph, in another order on each side: every pair could be alike by its words,
-      // and only so many are diffed — 100,000 tokens' worth of the 2,500 pairs (4,000,000), and the note's lines.
+      // and only so many are diffed — the budget's worth of the 2,500 pairs (4,000,000 tokens), less than a pair over,
+      // besides the note's lines and blocks, as many as above.
       diffs.mockClear();
       let seed = 7;
       const shuffled = () =>
@@ -416,7 +421,9 @@ describe("a note's diff as blocks, before and after (GIT-D2)", () => {
           }).join(" "),
         ).join("\n\n")}\n`;
       blockDiff(shuffled(), shuffled());
-      expect(compared()).toBeLessThan(101_000);
+      const pairs = compared() - notes;
+      expect(pairs).toBeLessThanOrEqual(PAIR_TOKENS);
+      expect(pairs).toBeGreaterThan(PAIR_TOKENS - 1600);
     } finally {
       diffs.mockRestore();
     }
