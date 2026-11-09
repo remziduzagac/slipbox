@@ -76,6 +76,45 @@ describe("writing", () => {
     expect(readFileSync(join(out, "far.md"), "utf8")).toBe("# Far\n\nKept out of the vault.\n");
     expect(existsSync(join(out, "sub", "s.md"))).toBe(true);
   });
+
+  test("a folder moved with a followed link to a vault elsewhere in it: the link moves, that vault stays where it is (#53)", () => {
+    const dir = realpathSync(mkdtempSync(join(sandbox, "linked-vault-")));
+    const own = {
+      XDG_STATE_HOME: join(dir, "state"),
+      XDG_CACHE_HOME: join(dir, "cache"),
+      XDG_DATA_HOME: join(dir, "d"),
+    };
+    const root = join(dir, "root");
+    const ov = join(dir, "elsewhere", "ov");
+    for (const d of [join(root, ".slipbox"), join(root, "f"), join(ov, ".slipbox")]) mkdirSync(d, { recursive: true });
+    writeFileSync(join(root, "f", "a.md"), "# A\n\n[o](ov/o.md)\n");
+    writeFileSync(join(root, "top.md"), "# Top\n\n[o](f/ov/o.md)\n");
+    writeFileSync(join(ov, "o.md"), "# O\n\n[back](../../root/f/a.md)\n");
+    const link = join(root, "f", "ov");
+    symlinkSync(ov, link);
+    mkdirSync(join(dir, "state", "slipbox"), { recursive: true });
+    writeFileSync(
+      join(dir, "state", "slipbox", "links.json"),
+      JSON.stringify({ version: 1, links: [{ link, target: ov, answer: "follow", at: new Date().toISOString() }] }),
+    );
+    const roots = () =>
+      (JSON.parse(readFileSync(join(dir, "state", "slipbox", "roots.json"), "utf8")).roots as { path: string }[])
+        .map((r) => r.path)
+        .sort();
+    // Both opened once: both in the machine's list.
+    for (const cwd of [root, ov]) expect(slipbox(["ls"], { cwd, env: own }).code).toBe(0);
+    expect(roots()).toEqual([ov, root].sort());
+    const r = slipbox(["mv", "f", "g2"], { cwd: root, env: own });
+    expect([r.code, r.err]).toEqual([0, ""]);
+    // The link moved with its folder, as any file in it; the vault it leads to didn't move.
+    expect(realpathSync(join(root, "g2", "ov"))).toBe(ov);
+    expect(roots()).toEqual([ov, root].sort());
+    // Its own link into what moved follows it, as any other vault's does.
+    expect(readFileSync(join(ov, "o.md"), "utf8")).toBe("# O\n\n[back](../../root/g2/a.md)\n");
+    expect(readFileSync(join(root, "g2", "a.md"), "utf8")).toBe("# A\n\n[o](ov/o.md)\n");
+    // A link through it from what stays: to where the link is now.
+    expect(readFileSync(join(root, "top.md"), "utf8")).toBe("# Top\n\n[o](g2/ov/o.md)\n");
+  });
 });
 
 describe("the vault and the tool", () => {

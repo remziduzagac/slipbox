@@ -7,7 +7,8 @@ import { holdsNotes } from "../../../walk/walk.ts";
 import { RenameError, type RenamePlan } from "../collecting/contracts.ts";
 import type { Collector } from "../collecting/collector.ts";
 import { sameEntry } from "../collecting/policy.ts";
-import { NOTE_EXT } from "../rename-links.ts";
+import { NOTE_EXT, real } from "../rename-links.ts";
+import { isInside } from "../../../vaults/vault.ts";
 import { checkSource, cleanTarget } from "./targets.ts";
 import { planMove } from "./move.ts";
 import { nestedRootEdits } from "./nested.ts";
@@ -61,8 +62,10 @@ export function planFolderMove(g: Graph, fromDir: string, toInput: string): Rena
   const toAbs = join(g.root, to);
   const moving = (abs: string) => abs === fromAbs || abs.startsWith(`${fromAbs}/`);
   const shift = (abs: string) => (moving(abs) ? toAbs + abs.slice(fromAbs.length) : abs);
+  // One reached through a followed link in it isn't in it: the link moves, not the vault (#53).
+  const inIt = (r: string) => isInside(real(fromAbs), real(join(g.root, r)));
   const roots = nested.length
-    ? (c: Collector) => nested.flatMap((r) => nestedRootEdits(g, c, join(g.root, r), moving, shift))
+    ? (c: Collector) => nested.flatMap((r) => nestedRootEdits(g, c, join(g.root, r), moving, shift, !inIt(r)))
     : undefined;
   return planMove(
     g,

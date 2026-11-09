@@ -62,16 +62,10 @@ export function nestedRootEdits(
   rootAbs: string,
   moving: (abs: string) => boolean,
   shift: (abs: string) => string,
+  throughLink = false,
 ): [string, string][] {
   // Other vaults' links are read from their indexes: the parent's, fresh.
   parent.ensureAll();
-  const graphs: Graph[] = [];
-  const queue = [rootAbs];
-  while (queue.length) {
-    const g = openVault(queue.shift()!);
-    graphs.push(g);
-    for (const n of g.nestedRoots()) queue.push(join(g.root, n));
-  }
   // The parent's own links into it, from its index in memory (a note moving with it keeps its link)…
   for (const l of linksIntoFolder(parent, rootAbs)) {
     if (moving(l.backlink.from)) continue;
@@ -88,6 +82,16 @@ export function nestedRootEdits(
         next,
         null,
       );
+  }
+  // Reached through a followed link in what moves (VV-D6): the link moves as any file, so the parent's paths through it
+  // change; the vault doesn't move, so neither do its links out of it nor its place in the machine's list (#53).
+  if (throughLink) return [];
+  const graphs: Graph[] = [];
+  const queue = [rootAbs];
+  while (queue.length) {
+    const g = openVault(queue.shift()!);
+    graphs.push(g);
+    for (const n of g.nestedRoots()) queue.push(join(g.root, n));
   }
   for (const g of graphs) {
     g.ensureAll();

@@ -185,6 +185,9 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 
 ### Fixed
 
+- Moving a folder that holds a followed symlink to another vault no longer records that vault at the link's new path,
+  dropping it from the machine's list of vaults: the link moves with its folder, and the vault stays where it is.
+
 - Typing `[[` or `](` in a note whose language server completes at `[` no longer lets the server's late answer
   replace the list of notes to link to, or close it.
 
