@@ -1,7 +1,8 @@
 import { expect, test } from "bun:test";
 import { join } from "node:path";
 import { writeFileSync } from "node:fs";
-import { OptimizedBuffer, type RenderContext } from "@opentui/core";
+import type { RenderContext } from "@opentui/core";
+import { frameBuffer } from "../../../support/tui/frame-buffer.ts";
 import { onLoaded } from "../../../../src/core/foundation/platform/lazy.ts";
 import { loadRasterizer } from "../../../../src/core/rendering/media/images/svg.ts";
 import { BufferCanvas, Pictures } from "../../../../src/tui/shell/terminal/opentui.ts";
@@ -45,10 +46,10 @@ test("pictures drawn every frame stay decoded: with ten on screen, the decoding 
     writeFileSync(file, r.png(svg, 1200)!);
     return file;
   });
-  const pictures = new Pictures(() => "kitty", { write: () => {}, cell: () => ({ width: 8, height: 16 }) });
+  const pictures = new Pictures(() => "kitty", { write: () => true, cell: () => ({ width: 8, height: 16 }) });
   // Its jobs' own wait: a frame's decodes in, as the next frame would find them.
   const settle = () => (pictures as unknown as { jobs: { settle(): Promise<void> } }).jobs.settle();
-  const buf = OptimizedBuffer.create(20, 4, "unicode");
+  const buf = frameBuffer(20, 4);
   let decoded = 0;
   const stop = onLoaded((name) => void (name === "pictures" && decoded++));
   try {
@@ -79,9 +80,9 @@ test("the picture drawn every frame is kept while 24 others are drawn once each:
   )!;
   const files = Array.from({ length: 25 }, (_, i) => join(root, `q${i}.png`));
   for (const f of files) writeFileSync(f, png);
-  const pictures = new Pictures(() => "kitty", { write: () => {}, cell: () => ({ width: 8, height: 16 }) });
+  const pictures = new Pictures(() => "kitty", { write: () => true, cell: () => ({ width: 8, height: 16 }) });
   const settle = () => (pictures as unknown as { jobs: { settle(): Promise<void> } }).jobs.settle();
-  const buf = OptimizedBuffer.create(20, 4, "unicode");
+  const buf = frameBuffer(20, 4);
   let decoded = 0;
   const stop = onLoaded((name) => void (name === "pictures" && decoded++));
   try {
@@ -108,7 +109,7 @@ test("native INSERT cursor translates canvas cells to terminal coordinates", () 
     setCursorStyle: () => {},
     setCursorPosition: (...args: unknown[]) => positions.push(args),
   } as unknown as RenderContext;
-  const buf = OptimizedBuffer.create(20, 4, "unicode");
+  const buf = frameBuffer(20, 4);
   try {
     const canvas = new BufferCanvas(buf, undefined, context);
     canvas.cursor({ x: 0, y: 0 });

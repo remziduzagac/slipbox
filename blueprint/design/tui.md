@@ -2013,10 +2013,11 @@ git — it's refused, said: that file is never written from there.
 **Handing off to another editor** (`4.1`, `4.2`, `4.12`; D145) comes in two kinds, both opening the note at
 the cursor's source line. `space n e` steps aside: the renderer suspends, the editor
 (`[editor] command`, else `$VISUAL`, `$EDITOR`, `vi`, given `+line` or `file:line` when it's a
-known editor) runs in this terminal, and when it exits slipbox resumes and reloads the note if it
-changed. `space n s` sends the note to an editor already running elsewhere and doesn't wait; the
-watcher shows its saves as they land. From the properties editor, either closes it first (its text written back)
-and hands off its note at the top; from a hover, which isn't a file, nothing is handed off.
+known editor) runs in this terminal once the main screen is back, and when it exits slipbox resumes — its screen
+written back before anything else — and reloads the note if it changed. `space n s` sends the note to an editor
+already running elsewhere and doesn't wait; the watcher shows its saves as they land. From the properties editor,
+either closes it first (its text written back) and hands off its note at the top; from a hover, which isn't a file,
+nothing is handed off.
 
 **The nvim preset** (`[editor] remote = ["nvim"]`, the default) finds that editor itself. Every
 nvim since 0.9 listens on a socket in `$XDG_RUNTIME_DIR` (or `/tmp/nvim.$USER/…`), named `nvim.*`;

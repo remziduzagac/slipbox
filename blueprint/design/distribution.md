@@ -649,9 +649,10 @@ meanwhile, else once the TUI is quiet. The question about notes unsaved, opened 
 restart, drops what arrives before it's drawn and in the half second after: a second `enter`, a double click, never
 answers it.
 
-**The screen given back first.** OpenTUI's `destroy` finishes later when a frame is being drawn, and its native
-teardown (raw mode off, the main screen back, mouse reporting off) comes after its `destroy` event: the hand-over waits
-for that event, then a turn of the event loop, before it writes a line or replaces the process.
+**The screen given back first.** OpenTUI's `destroy()` returns before its native teardown (raw mode off, the main
+screen back, mouse reporting off) is written; its `closed` settles once it is, or failed, or after a second. slipbox
+waits for `closed` before it ends at all, and the hand-over a turn of the event loop more, before it writes a line or
+replaces the process.
 
 **The hand-over** (`core/application/distribution/restart.ts`; UPG-D2) runs in the same process, in order:
 

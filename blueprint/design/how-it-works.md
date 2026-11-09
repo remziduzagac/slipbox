@@ -589,7 +589,7 @@ package — no build toolchain). SQLite is the runtime's own, `node:sqlite` (D19
 
 | Package | Used for |
 | --- | --- |
-| `@opentui/core` **0.5.12, pinned exactly** | the TUI renderer and input |
+| `@opentui/core` **0.6.8, pinned exactly** | the TUI renderer and input |
 | `unified`, `remark-parse`, `remark-gfm`, `remark-frontmatter` | parsing, with source positions |
 | `mdast-util-to-string` | heading text fallback |
 | `highlight.js` | code-fence highlighting, in the core so CLI and TUI match |
@@ -639,19 +639,26 @@ The synchronous clipboard functions remain available for file-only callers and c
 ### OpenTUI upgrade policy (`0.6`)
 
 OpenTUI is pre-1.0 and moves fast, so it is pinned to an exact version in `package.json`
-(`"0.5.12"`, no caret; D6). To upgrade:
+(`"0.6.8"`, no caret; D6). To upgrade:
 
 1. Read the changelog from the pinned version to the target.
 2. Bump the pin, run `bun run check`. The `OpenTUI end to end` test in `tests/tui/shell/terminal/integration.test.ts`
    exercises the adapter through OpenTUI's own test renderer.
 3. Launch the TUI and check what the adapter uses: `drawText` and `fillRect` output, key names (`keyName` in
    `tui/shell/input/keys.ts`), paste, mouse and resize events, `widthMethod` (a wcwidth terminal's rows must not drift),
-   `suspend`/`resume` (the `$EDITOR` hand-off), `setTerminalTitle`, `setBackgroundColor`, `useMouse`,
-   `copyToClipboardOSC52`, and `destroy`. And pictures: `NativeImage` (decode, `resize`, `raw`), `drawImage` for sixel,
-   and the **private** `writeOut` that sends Kitty placeholders' pictures in step with the frames (12.7) — still there,
-   still ordered with the frame's output.
+   `suspend`/`resume` (the `$EDITOR` hand-off, each awaited), `setTerminalTitle`, `setBackgroundColor`, `useMouse`,
+   `copyToClipboardOSC52`, and `destroy` with `closed` (the terminal given back after `destroy()` returns). And
+   pictures: `NativeImage` (decode, `resize`, `raw`), `drawImage` for sixel, and the `NativeSession` slipbox makes and
+   hands the renderer, whose `write` sends Kitty placeholders' pictures in order with the frames (12.7).
 4. Only `tui/shell/terminal/opentui.ts` and `tui/shell/terminal/run.ts` should need changes. If anything else does, the
    boundary has leaked; fix that first.
+
+Since 0.6 the app's `renderSelf` draws into a recording that native code plays back: it can't read the frame's cells,
+and a draw call with a fractional coordinate fails the whole frame. `BufferCanvas` passes whole cells, the fraction
+dropped, as OpenTUI did before 0.6. A test's buffer needs an owner (`tests/support/tui/frame-buffer.ts`). OpenTUI
+also looks again at what's under the pointer after every frame, and says `out` and `over` when that changes, the
+pointer not moved; `AppRenderable` keeps both from the app, whose one renderable they'd only name (the pointer moved
+comes as `move`), so the git panel never holds its rows for a pointer that stayed still (D261).
 
 ## Storage
 

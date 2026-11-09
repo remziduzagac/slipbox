@@ -1,6 +1,6 @@
 // The one file that touches OpenTUI's drawing API: a Canvas over its frame buffer, and the
-// Renderable that hosts the app. Pinned at @opentui/core 0.5.12 (see blueprint/design/how-it-works.md
-// for the upgrade policy) — if the API churns, this file and run.ts are what change.
+// Renderable that hosts the app. @opentui/core is pinned exactly in package.json (see
+// blueprint/design/how-it-works.md for the upgrade policy) — if the API churns, this file and run.ts are what change.
 
 import { readFileSync, statSync } from "node:fs";
 import { isMainThread } from "node:worker_threads";
@@ -9,6 +9,7 @@ import { workerUrl } from "../../../core/foundation/workers/url.ts";
 import { notifyLoaded } from "../../../core/foundation/platform/lazy.ts";
 import {
   imageInfo,
+  type MouseEvent,
   NativeImage,
   type OptimizedBuffer,
   Renderable,
@@ -62,10 +63,11 @@ export class Pictures {
   private readonly sent = new Set<number>();
   constructor(
     readonly protocol: () => "kitty" | "sixel" | null,
-    /** Kitty graphics as Unicode placeholders (12.7): what writes to the terminal in step with the frames, and the
-     *  cell's size in pixels (a picture is sent that size). Without them, OpenTUI's own picture path. */
+    /** Kitty graphics as Unicode placeholders (12.7): what writes to the terminal in step with the frames — false when
+     *  it couldn't take the bytes, the picture then sent at a later frame — and the cell's size in pixels (a picture is
+     *  sent that size). Without them, OpenTUI's own picture path. */
     private readonly placeholders?: {
-      write: (s: string) => void;
+      write: (s: string) => boolean;
       cell: () => { width: number; height: number } | null;
     },
   ) {}
@@ -147,7 +149,8 @@ export class Pictures {
     } catch {
       return null;
     }
-    this.placeholders!.write(transmit(id, rgba, w, h, cols, rows));
+    // Not taken (the output full): not sent, so neither placed nor counted — a later frame sends it.
+    if (!this.placeholders!.write(transmit(id, rgba, w, h, cols, rows))) return null;
     this.sent.add(id);
     if (this.sent.size > 48) {
       const old = this.sent.values().next().value!;
@@ -213,6 +216,12 @@ function modified(path: string): number | null {
   }
 }
 
+/**
+ * A cell's coordinate or count as OpenTUI took it before 0.6, its fraction dropped (a 32-bit integer, NaN 0). Since
+ * 0.6 one with a fraction throws in the frame's paint step, and the whole frame is lost.
+ */
+const whole = (n: number) => n | 0;
+
 export class BufferCanvas implements Canvas {
   asciiGlyphs?: boolean;
   constructor(
@@ -227,32 +236,39 @@ export class BufferCanvas implements Canvas {
     return this.buf.height;
   }
   fill(x: number, y: number, w: number, h: number, bg: Color | null): void {
-    if (w <= 0 || h <= 0) return;
-    this.buf.fillRect(x, y, w, h, toRGBA(bg, false));
+    if (whole(w) <= 0 || whole(h) <= 0) return;
+    this.buf.fillRect(whole(x), whole(y), whole(w), whole(h), toRGBA(bg, false));
   }
   cell(x: number, y: number, g: string, _w: number, s: CellStyle): void {
-    this.buf.drawText(glyphCell(this, g), x, y, toRGBA(s.fg, true), toRGBA(s.bg, false), attrs(s));
+    this.buf.drawText(glyphCell(this, g), whole(x), whole(y), toRGBA(s.fg, true), toRGBA(s.bg, false), attrs(s));
   }
   cursor(at: { x: number; y: number } | null): void {
     this.context?.setCursorStyle({ style: "line", blinking: false });
-    this.context?.setCursorPosition(at ? at.x + 1 : 0, at ? at.y + 1 : 0, at !== null);
+    this.context?.setCursorPosition(at ? whole(at.x) + 1 : 0, at ? whole(at.y) + 1 : 0, at !== null);
   }
   ascii(x: number, y: number, text: string, s: CellStyle): void {
-    this.buf.drawText(text, x, y, toRGBA(s.fg, true), toRGBA(s.bg, false), attrs(s));
+    this.buf.drawText(text, whole(x), whole(y), toRGBA(s.fg, true), toRGBA(s.bg, false), attrs(s));
   }
   image(x: number, y: number, cols: number, rows: number, src: string, crop: Crop): void {
-    this.pictures?.draw(this.buf, x, y, cols, rows, src, crop);
+    this.pictures?.draw(this.buf, whole(x), whole(y), whole(cols), whole(rows), src, crop);
   }
 }
 
-/** A full-screen renderable whose paint step is the app's draw. */
+/**
+ * A full-screen renderable whose paint step is the app's draw, and whose mouse events are the pointer's (`pointer`).
+ * Not OpenTUI's `over` and `out`, which say which renderable the pointer is over — this one always — and since 0.6 are
+ * sent again after a frame in which it looked again, the pointer not moved: the app took one for the pointer moving.
+ * Each that comes with the pointer moved comes with a `move`.
+ */
 export class AppRenderable extends Renderable {
   constructor(
     ctx: RenderContext,
     private readonly paint: (canvas: Canvas) => void,
     private readonly pictures?: Pictures,
+    pointer?: (e: MouseEvent) => void,
   ) {
     super(ctx, { width: "100%", height: "100%", position: "absolute", left: 0, top: 0 });
+    if (pointer) this.onMouse = (e) => void (e.type !== "over" && e.type !== "out" && pointer(e));
   }
 
   protected override renderSelf(buffer: OptimizedBuffer): void {
